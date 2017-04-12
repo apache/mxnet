@@ -106,7 +106,7 @@ inline void BilinearSamplingForward(const Tensor<gpu, 4, DType> &output,
     int i_c = input.size(1), i_h = input.size(2), i_w = input.size(3);
     using namespace cuda;
     const int max_block = (output.shape_.Size() + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
-    dim3 num_blocks(kMaxGridNum, (max_block + kMaxGridNum - 1) / kMaxGridNum);
+    dim3 num_blocks(kMaxGridDim, (max_block + kMaxGridDim - 1) / kMaxGridDim);
     dim3 threads_per_block(kMaxThreadsPerBlock);
     CheckLaunchParam(num_blocks, threads_per_block, "spatial transformer forward");
     cudaStream_t stream = Stream<gpu>::GetStream(output.stream_);
@@ -129,7 +129,7 @@ inline void BilinearSamplingBackward(const Tensor<gpu, 4, DType> &input_grad,
   using namespace cuda;
   const int max_block = (output_grad.shape_.Size() / o_c + kMaxThreadsPerBlock - 1)
                         / kMaxThreadsPerBlock;
-  dim3 num_blocks(kMaxGridNum, (max_block + kMaxGridNum - 1) / kMaxGridNum);
+  dim3 num_blocks(kMaxGridDim, (max_block + kMaxGridDim - 1) / kMaxGridDim);
   dim3 threads_per_block(kMaxThreadsPerBlock);
   CheckLaunchParam(num_blocks, threads_per_block, "spatial transformer backward");
   cudaStream_t stream = Stream<gpu>::GetStream(input_grad.stream_);

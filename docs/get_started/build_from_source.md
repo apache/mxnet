@@ -1,34 +1,31 @@
 # Build MXNet from Source
 
-This document explains how to build MXNet from source codes for the following
-platforms.
-The build process contains two steps:
+This document explains how to build MXNet from sources. Building MXNet from sources is a 2 step process.
 
-1. Build the shared `libmxnet` library from [C++ source files](#build-the-shared-library)
-2. Select a language package, such as [Python](#build-the-python-package),
+1. Build the MXNet shared library, `libmxnet.so`, from [C++ source files](#build-the-shared-library)
+2. Install the language binding for MXNet. MXNet supports - [Python](#build-the-python-package),
    [Scala](#build-the-scala-package), [R](#build-the-r-package), and
-   [Julia](#build-the-julia-package), to build and install.
+   [Julia](#build-the-julia-package).
 
 ## Build the shared library
 
 ### Prerequisites
 
-The minimum requirements to build MXNet's shared library include C++ build tools
-and a BLAS library. There are optional dependencies for enhanced features.
+You need C++ build tools and BLAS library to build MXNet shared library. If you want to run MXNet on GPUs, you need to install CUDA and CuDNN.
 
 #### C++ build tools
 
-1. A C++ compiler that supports C++ 11 such as
-[G++ (4.8 or later)](https://gcc.gnu.org/gcc-4.8/) and
+1. A C++ compiler that supports C++ 11.
+[G++ (4.8 or later)](https://gcc.gnu.org/gcc-4.8/) or
 [Clang](http://clang.llvm.org/) is required.
 
-2. [Git](https://git-scm.com/downloads) for downloading the source codes
+2. [Git](https://git-scm.com/downloads) for downloading the sources from Github repository.
 
 3. [GNU Make](https://www.gnu.org/software/make/) ([cmake](https://cmake.org/)
    for Windows) to build the library.
 
 
-Please select the platform you prefer:
+Select your preferences and follow the instructions to install MXNet from sources.
 <div class="btn-group opt-group" role="group">
 <button type="button" class="btn btn-default opt active">Linux</button>
 <button type="button" class="btn btn-default opt">macOS</button>
@@ -53,7 +50,7 @@ Then select the Linux distribution:
 
 <div class="ubuntu">
 
-For `Ubuntu >= 13.10` and `Debian >= 8` you can install them by
+Install build tools and git on `Ubuntu >= 13.10` and `Debian >= 8`.
 
 ```bash
 sudo apt-get update && sudo apt-get install build-essential git
@@ -63,10 +60,10 @@ sudo apt-get update && sudo apt-get install build-essential git
 
 <div class="centos">
 
-For `CentOS >= 7` and `Fedora >= 19`, you can install them by
+Install build tools and git on `CentOS >= 7` and `Fedora >= 19`.
 
 ```bash
-sudo yum groupinstall -y "Development Tools" && sudo yum git
+sudo yum groupinstall -y "Development Tools" && sudo yum install -y git
 ```
 
 </div>
@@ -115,7 +112,7 @@ straightforward. Here we provide the instructions to build `gcc-4.8` from source
 <div class="windows">
 
 1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
-2. DownLoad and Install [CMake](https://cmake.org/) if it is not already installed.
+2. Download and Install [CMake](https://cmake.org/) if it is not already installed.
 
 </div>
 
@@ -129,10 +126,10 @@ Install [Xcode](https://developer.apple.com/xcode/).
 
 MXNet relies on the
 [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) (Basic
-Linear Algebra Subprograms) library for numerical computations. Installing
+Linear Algebra Subprograms) library for numerical computations. You can install
 any one among [ATLAS](http://math-atlas.sourceforge.net/),
 [OpenBLAS](http://www.openblas.net/) and
-[MKL](https://software.intel.com/en-us/intel-mkl) is enough.
+[MKL](https://software.intel.com/en-us/intel-mkl).
 
 <div class="linux">
 <div class="ubuntu">
@@ -153,7 +150,7 @@ sudo yum install atlas-devel
 
 <div class="linux">
 
-One can follow this link to build
+You can follow this link to build
 [OpenBlas from source](https://github.com/xianyi/OpenBLAS#installation-from-source).
 
 </div>
@@ -161,13 +158,13 @@ One can follow this link to build
 
 <div class="macos">
 
-macOS users can skip this step because `xcode` ships with a BLAS library.
+macOS users can skip this step as `xcode` ships with a BLAS library.
 
 </div>
 
 <div class="windows">
 
-1. Download pre-build binaries for [OpenBLAS](https://sourceforge.net/projects/openblas/files/)
+1. Download pre-built binaries for [OpenBLAS](https://sourceforge.net/projects/openblas/files/)
 2. Set the environment variable `OpenBLAS_HOME` to point to the OpenBLAS
    directory that contains the `include/` and `lib/` directories. Typically, you
    can find the directory in `C:\Program files (x86)\OpenBLAS\`.
@@ -195,7 +192,7 @@ sudo apt-get install opencv-devel
 
 <div class="others">
 
-To build OpenCV from source code, you need the [cmake](https://cmake.org) library .
+To build OpenCV from source code, you need the [cmake](https://cmake.org) library.
 
 1. If you don't have cmake or if your version of cmake is earlier than 3.6.1, run the following commands to install a newer version of cmake:
 
@@ -244,7 +241,7 @@ the environment variable `OpenCV_DIR` to point to the OpenCV build directory.
 
 #### Optional: [CUDA](https://developer.nvidia.com/cuda-downloads)/[cuDNN](https://developer.nvidia.com/cudnn) for Nvidia GPUs
 
-Both CUDA 7.5 and 8.0 are tested. For cuDNN we suggest to use version 5.
+MXNet is compatible with both CUDA 7.5 and 8.0. It is recommended to use cuDNN 5.
 
 <div class="linux">
 <div class="ubuntu">
@@ -276,21 +273,20 @@ cd mxnet
 
 File
 [`make/config.mk`](https://github.com/dmlc/mxnet/blob/master/make/config.mk)
-contains all compilation options. You can edit it and then `make`. There are
+contains all the compilation options. You can edit it and then `make`. There are
 some example build options
 
 </div>
 
 <div class="linux">
 
-- Build without using OpenCV. `-j` means using multithread to build.
+- Build without using OpenCV. `-j` runs multiple jobs against multi-core CPUs.
 
   ```bash
   make -j USE_OPENCV=0
   ```
 
-
-- Build with both GPU and Opencv supports
+- Build with both GPU and OpenCV support
 
   ```bash
   make -j USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
@@ -304,7 +300,7 @@ some example build options
   is disabled because it is not supported in default by clang).
 
   ```bash
-  make -j USE_BLAS=apple UES_OPENCV=0 USE_OPENMP=0
+  make -j USE_BLAS=apple USE_OPENCV=0 USE_OPENMP=0
   ```
 
 </div>
@@ -337,38 +333,36 @@ other python libraries for MXNet.
 
 The Python package can be installed by one of the following three ways:
 
-1. Setup the environment variable `PYTHONPATH=/path/to/mxnet/python`. For example, assume `mxnet` is
-   placed on the home directory, then add the following line in the `rc` file
+1. Setup the environment variable `PYTHONPATH=/path/to/mxnet/python`. For example, assuming `mxnet` is
+   cloned in the home directory, then we need to add `~/mxnet/python` to `PYTHONPATH` in the `rc` file
    (e.g. `~/.bashrc`):
 
    ```bash
-   export PYTHONPATH=${PATHPATH}:/~/mxnet/python
+   export PYTHONPATH=~/mxnet/python:${PYTHONPATH}
    ```
 
-   It is recommend for users who may change MXNet's codes.
-
-2. Install for the current user by running
+2. Install MXNet Python bindings for the current user:
 
    ```bash
-   cd python; python setup.py --usr
+   cd python; python setup.py install --usr
    ```
 
    in the `mxnet/python` directory
 
-3. Install system widely:
+3. Install MXNet Python bindings system wide:
 
    ```bash
-   cd python; sudo python setup.py
+   cd python; sudo python setup.py install
    ```
 
 ## Build the R package
 
-The R package requires `R` is installed.
+The R package requires `R` to be installed.
 
 <div class="ubuntu">
 
-The following codes install the latest R on Ubuntu 14.04 (trusty) and also the libraries used
-to build other depended R packages
+Follow the below instructions to install the latest R on Ubuntu 14.04 (trusty) and also the libraries used
+to build other R package dependencies.
 
 ```bash
 echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list
@@ -381,7 +375,7 @@ apt-get install -y r-base r-base-dev libxml2-dev libxt-dev libssl-dev
 
 </div>
 
-Next install required R packages:
+Install the required R package dependencies:
 
 ```bash
 cd R-package
@@ -389,7 +383,7 @@ Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
 Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
 ```
 
-Once finished, build and install the R package:
+Next, build and install the MXNet R package:
 
 ```bash
 cd ..
@@ -409,7 +403,7 @@ sudo apt-get install -y maven default-jdk
 
 </div>
 
-The following command build the `.jar` package:
+The following command builds the `.jar` package:
 
 ```bash
 make scalapkg
@@ -455,7 +449,7 @@ ln -s $(pwd)/julia-6445c82d00/bin/julia /usr/bin/julia
 Next set the environment variable `MXNET_HOME=/path/to/mxnet` so that Julia
 can find the pre-built library.
 
-Then install the Julia package by using:
+Install the Julia package for MXNet with:
 
 ```bash
 julia -e 'Pkg.add("MXNet")'
