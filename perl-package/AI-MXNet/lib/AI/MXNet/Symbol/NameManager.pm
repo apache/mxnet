@@ -6,9 +6,9 @@ use AI::MXNet::Function::Parameters;
 
 =head1
 
-NameManager that does an automatic naming.
+    NameManager that does an automatic naming.
 
-A user can also inherit this object to change the naming behavior.
+    A user can also inherit this object to change the naming behavior.
 =cut
 
 has 'counter' => (
@@ -21,27 +21,27 @@ our $current;
 
 =head2 get
 
-Get the canonical name for a symbol.
+    Get the canonical name for a symbol.
 
-This is default implementation.
-When user specified a name,
-the user specified name will be used.
+    This is default implementation.
+    When user specified a name,
+    the user specified name will be used.
 
-When user did not, we will automatically generate a
-name based on hint string.
+    When user did not, we will automatically generate a
+    name based on hint string.
 
-Parameters
-----------
-name : str or undef
-    The name the user has specified.
+    Parameters
+    ----------
+    name : str or undef
+        The name the user has specified.
 
-hint : str
-    A hint string, which can be used to generate name.
+    hint : str
+        A hint string, which can be used to generate name.
 
-Returns
--------
-full_name : str
-    A canonical name for the symbol.
+    Returns
+    -------
+    full_name : str
+        A canonical name for the symbol.
 =cut
 
 method get(Str|Undef $name, Str $hint)
@@ -68,14 +68,14 @@ use Mouse;
 
 =head1 NAME
 
-AI::MXNet::Symbol::Prefix
+    AI::MXNet::Symbol::Prefix
 =cut
 
 extends 'AI::MXNet::Symbol::NameManager';
 
 =head1 DESCRIPTION
 
-A name manager that always attaches a prefix to all names.
+    A name manager that always attaches a prefix to all names.
 =cut
 
 has prefix => (

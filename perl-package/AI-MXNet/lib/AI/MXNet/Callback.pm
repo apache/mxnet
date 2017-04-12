@@ -8,28 +8,28 @@ use overload "&{}" => sub { my $self = shift; sub { $self->call(@_) } };
 
 =head1 NAME
 
-AI::MXNet::Callback - A collection of predefined callback functions
+    AI::MXNet::Callback - A collection of predefined callback functions
 =cut
 
 =head2 module_checkpoint
 
-Callback to checkpoint Module to prefix every epoch.
+    Callback to save the module setup in the checkpoint files.
 
-Parameters
-----------
-$mod : subclass of AI::MXNet::Module::Base
-    The module to checkpoint.
-$prefix : str
-    The file prefix to checkpoint to
-$period=1 : int
-    How many epochs to wait before checkpointing. Default is 1.
-$save_optimizer_states=0 : Bool
-    Whether to save optimizer states for continue training
+    Parameters
+    ----------
+    $mod : subclass of AI::MXNet::Module::Base
+        The module to checkpoint.
+    $prefix : str
+        The file prefix to checkpoint to
+    $period=1 : int
+        How many epochs to wait before checkpointing. Default is 1.
+    $save_optimizer_states=0 : Bool
+        Whether to save optimizer states for later training.
 
-Returns
--------
-$callback : sub ref
-    The callback function that can be passed as iter_end_callback to fit.
+    Returns
+    -------
+    $callback : sub ref
+        The callback function that can be passed as iter_end_callback to fit.
 =cut
 
 method module_checkpoint(
@@ -51,19 +51,19 @@ method module_checkpoint(
 
 =head2 log_train_metric
 
-Callback to log the training evaluation result every period.
+    Callback to log the training evaluation result every period.
 
-Parameters
-----------
-$period : Int
-    The number of batch to log the training evaluation metric.
-$auto_reset : Bool
-    Reset the metric after each log
+    Parameters
+    ----------
+    $period : Int
+        The number of batches after which to log the training evaluation metric.
+    $auto_reset : Bool
+        Whether to reset the metric after the logging.
 
-Returns
--------
-$callback : sub ref
-    The callback function that can be passed as iter_epoch_callback to fit.
+    Returns
+    -------
+    $callback : sub ref
+        The callback function that can be passed as iter_epoch_callback to fit.
 =cut
 
 method log_train_metric(Int $period, Int $auto_reset=0)
@@ -92,12 +92,12 @@ extends 'AI::MXNet::Callback';
 
 =head1 NAME
 
-AI::MXNet::Speedometer - A callback that logs training speed 
+    AI::MXNet::Speedometer - A callback that logs training speed 
 =cut
 
 =head1 DESCRIPTION
 
-Calculate and log training speed periodically.
+    Calculate and log training speed periodically.
 
     Parameters
     ----------
@@ -165,18 +165,18 @@ extends 'AI::MXNet::Callback';
 
 =head1 NAME
 
-AI::MXNet::ProgressBar - A callback to show a progress bar.
+    AI::MXNet::ProgressBar - A callback to show a progress bar.
 
 =head1 DESCRIPTION
 
-Show a progress bar.
+    Shows a progress bar.
 
-Parameters
-----------
-total: Int
-    total batch size, 1
-length: Int
-    length or progress bar, 80
+    Parameters
+    ----------
+    total: Int
+        batch size, default is 1
+    length: Int
+        the length of the progress bar, default is 80 chars
 =cut
 
 has 'length'  => (is => 'ro', isa => 'Int', default => 80);
@@ -200,7 +200,7 @@ extends 'AI::MXNet::Callback';
 
 =head1 NAME
 
-AI::MXNet::LogValidationMetricsCallback - A callback to log the eval metrics at the end of an epoch.
+    AI::MXNet::LogValidationMetricsCallback - A callback to log the eval metrics at the end of an epoch.
 =cut
 
 method call(AI::MXNet::BatchEndParam $param)
@@ -218,17 +218,17 @@ method call(AI::MXNet::BatchEndParam $param)
 
 package AI::MXNet::Callback;
 
-method Speedometer()
+method Speedometer(@args)
 {
     AI::MXNet::Speedometer->new(
-        @_ == 2 ? (batch_size => $_[0], frequent => $_[1]) : (batch_size => $_[0])
+        @args == 2 ? (batch_size => $args[0], frequent => $args[1]) : (batch_size => $args[0])
     )
 }
 
-method ProgressBar()
+method ProgressBar(@args)
 {
     AI::MXNet::ProgressBar->new(
-        @_ == 2 ? (total => $_[0], 'length' => $_[1]) : (total => $_[0])
+        @args == 2 ? (total => $args[0], 'length' => $args[1]) : (total => $args[0])
     )
 }
 

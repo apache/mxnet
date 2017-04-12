@@ -5,25 +5,25 @@ use AI::MXNet::Base;
 
 =head1 NAME
 
-AI::MXNet::Monitor - Monitor outputs, weights, and gradients for debugging.
+    AI::MXNet::Monitor - Monitor outputs, weights, and gradients for debugging.
 
 =head1 DESCRIPTION
 
-Monitor outputs, weights, and gradients for debugging.
+    Monitor outputs, weights, and gradients for debugging.
 
-Parameters
-----------
-interval : int
-    Number of batches between printing.
-stat_func : function
-    a function that computes statistics of tensors.
-    Takes a NDArray and returns a NDArray. defaults to mean
-    absolute value |x|/size(x).
-pattern : str
-    A regular expression specifying which tensors to monitor.
-    Only tensors with names that match name_pattern will be included.
-    For example, '.*weight|.*output' will print all weights and outputs;
-    '.*backward.*' will print all gradients.
+    Parameters
+    ----------
+    interval : int
+        Number of batches between printing.
+    stat_func : function
+        a function that computes statistics of tensors.
+        Takes a NDArray and returns a NDArray. defaults to mean
+        absolute value |x|/size(x).
+    pattern : str
+        A regular expression specifying which tensors to monitor.
+        Only tensors with names that match name_pattern will be included.
+        For example, '.*weight|.*output' will print all weights and outputs;
+        '.*backward.*' will print all gradients.
 =cut
 
 has 'interval'  => (is => 'ro', isa => 'Int', required => 1);
@@ -72,13 +72,13 @@ has 'stat_helper'          => (
 
 =head2 install
 
-install callback to executor.
-Supports installing to multiple exes
+    install callback to executor.
+    Supports installing to multiple exes.
 
-Parameters
-----------
-exe : AI::MXNet::Executor
-    the Executor (returned by $symbol->bind) to install to.
+    Parameters
+    ----------
+    exe : AI::MXNet::Executor
+        the Executor (returned by $symbol->bind) to install to.
 =cut
 
 method install(AI::MXNet::Executor $exe)
@@ -89,8 +89,8 @@ method install(AI::MXNet::Executor $exe)
 
 =head2 tic
 
-start collecting stats for current batch.
-Call before forward
+    start collecting stats for current batch.
+    Call before forward
 =cut
 
 method tic()
@@ -110,12 +110,12 @@ method tic()
 
 =head2 toc
 
-End collecting for current batch and return results.
-Call after computation of current batch.
+    End collecting for current batch and return results.
+    Call after computation of current batch.
 
-Returns
--------
-res : array ref of array refs with debug info
+    Returns
+    -------
+    res : array ref of array refs with debug info
 =cut
 
 method toc()
@@ -172,7 +172,7 @@ method toc()
 
 =head2 toc_print
 
-End collecting and print results
+    End collecting and print results
 =cut
 
 method toc_print()

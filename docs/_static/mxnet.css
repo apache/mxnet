@@ -880,3 +880,12 @@ table.docutils tr:nth-child(even) {
     margin-top: 10px;
     margin-bottom: 10px;
 }
+
+/*----------------Copy code button------------------------*/
+.copy-btn {
+    display: none;
+    position: absolute;
+    right: 0;
+    width: 40px;
+    height: 38px;
+}

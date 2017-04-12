@@ -24,9 +24,7 @@ class Softmax(mx.operator.CustomOp):
         self.assign(out_data[0], req[0], mx.nd.array(y))
 ```
 
-We defined the computation for the forward pass of our operator. The forward function takes a list of input and a list of output NDArrays. For convenience, We called `.asnumpy()` on the input NDArray to convert it to CPU-based NumPy arrays.
-
-This can be very slow. If you want the best performance, keep data in NDArray format and use operators under mx.nd to do the computation.
+We defined the computation for the forward pass of our operator. The forward function takes a list of input and a list of output NDArrays. For convenience, we called `.asnumpy()` on the first NDArray in input and convert it to a CPU-based NumPy array. This can be very slow. If you want the best performance, keep data in the NDArray format and use operators under mx.nd to do the computation.
 
 At the end, we used CustomOp.assign to assign the resulting array y to out_data[0]. It handles assignment based on the value of req, which can be 'write', 'add', or 'null'.
 

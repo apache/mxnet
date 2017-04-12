@@ -67,7 +67,7 @@ struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
 
 inline int CheckAxis(int axis, int ndim) {
   CHECK(axis < ndim && axis >= -ndim)
-    << "axis " << axis << " exceeds input dimension of " << ndim;
+    << "axis " << axis << " exceeds the input dimension of " << ndim;
   return (axis + ndim)%ndim;
 }
 

@@ -118,9 +118,8 @@ struct MKLMemoryDescriptor : MKLMemoryDescriptorBase<DType> {
   // in backward a conversion done already in the forward direction.
   DType* get_converted_prv(DType *data_ptr, bool set_prv_ptr,
       const TBlob &blob);
-  void* get_output_ptr(DType *data_ptr,
-    std::shared_ptr<MKLMemoryDescriptor<DType> > self_ptr,
-    std::shared_ptr<MKLMemHolder> dnn_chunk = NULL);
+  void* get_output_ptr(DType *data_ptr, std::shared_ptr<MKLMemoryDescriptor<DType> > self_ptr,
+    const TBlob &blob, bool in_place = false);
   bool copy_from(std::shared_ptr<MKLMemHolder> dnn_chunk);
   MKLMemoryDescriptor() {}
 };

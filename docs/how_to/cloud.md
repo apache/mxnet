@@ -32,7 +32,18 @@ wget http://data.mxnet.io/mxnet/data/mnist.zip
 unzip mnist.zip && s3cmd put t*-ubyte s3://dmlc/mnist/
 ```
 
-### Set Up an EC2 GPU Instance
+### Use Pre-installed EC2 GPU Instance
+The [Deep Learning AMI](https://aws.amazon.com/marketplace/pp/B01M0AXXQB?qid=1475211685369&sr=0-1&ref_=srh_res_product_title) is an Amazon Linux image supported and maintained by Amazon Web Services for use on Amazon Elastic Compute Cloud (Amazon EC2). It contains [MXNet-v0.9.3 tag](https://github.com/dmlc/mxnet) and needed components to speed productivity including Nvidia drivers, CUDA, cuDNN, Anaconda, Python2 and Python3.   
+The AMI Ids are the following:
+
+* us-east-1: ami-e7c96af1
+* us-west-2: ami-dfb13ebf
+* eu-west-1: ami-6e5d6808
+
+Now, you can launch MXNet easily and directly within an EC2 GPU instance.  
+You can also use [Jupyter](http://jupyter.org) notebook on EC2 machine. Here is a [good tutorial](https://github.com/dmlc/mxnet-notebooks) on how to run it.
+
+### Set Up an EC2 GPU Instance from Scratch
 
 MXNet requires the following libraries:
 
