@@ -1104,32 +1104,29 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
     """Returns evenly spaced values within a given interval.
 
     Values are generated within the half-open interval [start, stop). In other
-    words, the interval includes start but excludes stop. For integer
-    arguments, the function is equivalent to the built-in Python function ``range``
-    and to ``numpy.arange``, but returns an ``NDArray``.
+    words, the interval includes start but excludes stop. The function is
+    similar to the built-in Python function ``range`` and to ``numpy.arange``,
+    but returns an ``NDArray``.
 
     Parameters
     ----------
-    start : int, optional
-        An optional start of interval, the default value is 0.
-    stop : int
-        The end of interval.
-    step : int, optional
-        A optional spacing between values, the default value is 1.
+    start : float, optional
+        Start of interval. The default start value is 0.
+    stop : float
+        End of interval.
+    step : float, optional
+        Spacing between values. The default step size is 1.
     repeat : int, optional
-        The repeating time of all elements.
+        Number of times to repeat each element. The default repeat count is 1.
     ctx : Context, optional
-        An optional device context (default is the current default context)
+        Device context. Default context is the current default context.
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`).
-
-    dtype : str or numpy.dtype, optional
-        The value type of the NDArray, default to np.float32.
+        The data type of the NDArray. The default datatype is np.float32.
 
     Returns
     -------
     NDArray
-        The created NDArray
+        NDArray of evenly spaced values.
 
     Examples
     --------
