@@ -1132,17 +1132,17 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
     --------
     >>> mx.nd.arange(3).asnumpy()
     array([ 0.,  1.,  2.], dtype=float32)
-    >>> mx.nd.arange(2,6).asnumpy()
+    >>> mx.nd.arange(2, 6).asnumpy()
     array([ 2.,  3.,  4.,  5.], dtype=float32)
-    >>> mx.nd.arange(2,6,2).asnumpy()
+    >>> mx.nd.arange(2, 6, 2).asnumpy()
     array([ 2.,  4.], dtype=float32)
-    >>> mx.nd.arange(2,6,step=2).asnumpy()
+    >>> mx.nd.arange(2, 6, step=2).asnumpy()
     array([ 2.,  4.], dtype=float32)
-    >>> mx.nd.arange(2,6,step=2,repeat=2).asnumpy()
+    >>> mx.nd.arange(2, 6, step=2, repeat=2).asnumpy()
     array([ 2.,  2.,  4.,  4.], dtype=float32)
-    >>> mx.nd.arange(2,6,step=2,repeat=3).asnumpy()
+    >>> mx.nd.arange(2, 6, step=2, repeat=3).asnumpy()
     array([ 2.,  2.,  2.,  4.,  4.,  4.], dtype=float32)
-    >>> mx.nd.arange(2,6,step=2,repeat=3,dtype='int32').asnumpy()
+    >>> mx.nd.arange(2, 6, step=2, repeat=3, dtype='int32').asnumpy()
     array([2, 2, 2, 4, 4, 4], dtype=int32)
     """
     if ctx is None:
