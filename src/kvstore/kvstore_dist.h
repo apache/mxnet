@@ -213,6 +213,7 @@ class KVStoreDist : public KVStoreLocal {
       }
 
       // push to servers
+      send_buf.WaitToRead();
       size_t size = send_buf.shape().Size();
 #if MKL_EXPERIMENTAL == 1
       mkl_set_tblob_eager_mode(send_buf.data());
