@@ -5,7 +5,7 @@ from mxnet.test_utils import *
 def autograd_assert(*args, **kwargs):
     func   = kwargs["func"]
     grad_f = kwargs["grad_func"]
-    argnum = kwargs["argnum"] if kwargs.has_key('argnum') else None
+    argnum = kwargs["argnum"] if 'argnum' in kwargs else None
 
     grad_func = grad_and_loss(func, argnum)
     grad_vals, output = grad_func(*args)
