@@ -11,11 +11,11 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-AI::MXNet::KVStore - Key value store interface of MXNet.
+    AI::MXNet::KVStore - Key value store interface of MXNet.
 
 =head1 DESCRIPTION 
 
-Key value store interface of MXNet for parameter synchronization, over multiple devices.
+    Key value store interface of MXNet for parameter synchronization, over multiple devices.
 =cut
 
 has 'handle' => (is => 'ro', isa => 'KVStoreHandle', required => 1);
@@ -29,17 +29,17 @@ sub DEMOLISH
 
 =head2  init
 
-Initialize a single or a sequence of key-value pairs into the store.
-For each key, one must init it before push and pull.
-Only worker 0's (rank == 0) data are used.
-This function returns after data have been initialized successfully
+    Initialize a single or a sequence of key-value pairs into the store.
+    For each key, one must init it before push and pull.
+    Only worker 0's (rank == 0) data are used.
+    This function returns after data have been initialized successfully
 
-Parameters
-----------
-key : int or an array ref of int
-    The keys.
-value : NDArray or an array ref of NDArray objects
-    The values.
+    Parameters
+    ----------
+    key : int or an array ref of int
+        The keys.
+    value : NDArray or an array ref of NDArray objects
+        The values.
 
     Examples
     --------
@@ -73,22 +73,22 @@ method init(
 
 =head2  push
 
-Push a single or a sequence of key-value pairs into the store.
-Data consistency:
-1. this function returns after adding an operator to the engine.
-2. push is always called after all previous push and pull on the same
-key are finished
-3. there is no synchronization between workers. One can use _barrier()
-to sync all workers
+    Push a single or a sequence of key-value pairs into the store.
+    Data consistency:
+    1. this function returns after adding an operator to the engine.
+    2. push is always called after all previous push and pull on the same
+        key are finished.
+    3. there is no synchronization between workers. One can use _barrier()
+    to sync all workers.
 
-Parameters
-----------
-key : int or array ref of int
-value : NDArray or array ref of NDArray or array ref of array refs of NDArray
-priority : int, optional
-    The priority of the push operation.
-    The higher the priority, the faster this action is likely
-    to be executed before other push actions.
+    Parameters
+    ----------
+    key : int or array ref of int
+    value : NDArray or array ref of NDArray or array ref of array refs of NDArray
+    priority : int, optional
+        The priority of the push operation.
+        The higher the priority, the faster this action is likely
+        to be executed before other push actions.
 
     Examples
     --------
@@ -142,27 +142,27 @@ method push(
 
 =head2 pull
 
-Pull a single value or a sequence of values from the store.
+    Pull a single value or a sequence of values from the store.
 
-Data consistency:
+    Data consistency:
 
-1. this function returns after adding an operator to the engine. But any
-further read on out will be blocked until it is finished.
-2. pull is always called after all previous push and pull on the same
-key are finished.
-3. It pulls the newest value from the store.
+    1. this function returns after adding an operator to the engine. But any
+        further read on out will be blocked until it is finished.
+    2. pull is always called after all previous push and pull on the same
+        key are finished.
+    3. It pulls the newest value from the store.
 
-Parameters
-----------
-key : int or array ref of int
-    Keys
-out: NDArray or array ref of NDArray or array ref of array refs of NDArray
-    According values
+    Parameters
+    ----------
+    key : int or array ref of int
+        Keys
+    out: NDArray or array ref of NDArray or array ref of array refs of NDArray
+        According values
 
-priority : int, optional
-    The priority of the push operation.
-    The higher the priority, the faster this action is likely
-    to be executed before other push actions.
+    priority : int, optional
+        The priority of the push operation.
+        The higher the priority, the faster this action is likely
+        to be executed before other push actions.
 
     Examples
     --------
@@ -212,16 +212,16 @@ method pull(
 
 =head2  set_optimizer
 
-Register an optimizer to the store
+    Register an optimizer to the store
 
-If there are multiple machines, this process (should be a worker node)
-will pack this optimizer and send it to all servers. It returns after
-this action is done.
+    If there are multiple machines, this process (should be a worker node)
+    will pack this optimizer and send it to all servers. It returns after
+    this action is done.
 
-Parameters
-----------
-optimizer : Optimizer
-    the optimizer
+    Parameters
+    ----------
+    optimizer : Optimizer
+        the optimizer
 =cut
 
 method set_optimizer(AI::MXNet::Optimizer $optimizer)
@@ -241,12 +241,12 @@ method set_optimizer(AI::MXNet::Optimizer $optimizer)
 
 =head2  type
 
-Get the type of this kvstore
+    Get the type of this kvstore
 
-Returns
--------
-type : str
-    the string type
+    Returns
+    -------
+    type : str
+        the string type
 =cut
 
 method type()
@@ -256,12 +256,12 @@ method type()
 
 =head2  rank
 
-Get the rank of this worker node
+    Get the rank of this worker node
 
-Returns
--------
-rank : int
-    The rank of this node, which is in [0, get_num_workers())
+    Returns
+    -------
+    rank : int
+        The rank of this node, which is in [0, get_num_workers())
 =cut
 
 method rank()
@@ -271,12 +271,12 @@ method rank()
 
 =head2  num_workers
 
-Get the number of worker nodes
+    Get the number of worker nodes
 
-Returns
--------
-size :int
-    The number of worker nodes
+    Returns
+    -------
+    size :int
+        The number of worker nodes
 =cut
 
 method num_workers()
@@ -286,12 +286,12 @@ method num_workers()
 
 =head2 save_optimizer_states
 
-Save optimizer (updater) state to file
+    Save optimizer (updater) state to file
 
-Parameters
-----------
-fname : str
-    Path to output states file.
+    Parameters
+    ----------
+    fname : str
+        Path to output states file.
 =cut
 
 method save_optimizer_states(Str $fname)
@@ -305,12 +305,12 @@ method save_optimizer_states(Str $fname)
 
 =head2 load_optimizer_states
 
-Load optimizer (updater) state from file.
+    Load optimizer (updater) state from file.
 
-Parameters
-----------
-fname : str
-    Path to input states file.
+    Parameters
+    ----------
+    fname : str
+        Path to input states file.
 =cut
 
 method load_optimizer_states(Str $fname)
@@ -326,15 +326,15 @@ method load_optimizer_states(Str $fname)
 
 =head2 _set_updater
 
-Set a push updater into the store.
+    Set a push updater into the store.
 
-This function only changes the local store. Use set_optimizer for
-multi-machines.
+    This function only changes the local store. Use set_optimizer for
+    multi-machines.
 
-Parameters
-----------
-updater : function
-    the updater function
+    Parameters
+    ----------
+    updater : function
+        the updater function
 
     Examples
     --------
@@ -376,12 +376,12 @@ method _set_updater(CodeRef $updater_func)
 
 =head2 _barrier
 
-Global barrier among all worker nodes
+    Global barrier between all worker nodes.
 
-For example, assume there are n machines, we want to let machine 0 first
-init the values, and then pull the inited value to all machines. Before
-pulling, we can place a barrier to guarantee that the initialization is
-finished.
+    For example, assume there are n machines, we want to let machine 0 first
+    init the values, and then pull the inited value to all machines. Before
+    pulling, we can place a barrier to guarantee that the initialization is
+    finished.
 =cut
 
 method _barrier()
@@ -391,18 +391,18 @@ method _barrier()
 
 =head2 _send_command_to_servers
 
-Send a command to all server nodes
-Send a command to all server nodes, which will make each server node run
-KVStoreServer.controller
-This function returns after the command has been executed in all server
-nodes
+    Send a command to all server nodes
+    Send a command to all server nodes, which will make each server node run
+    KVStoreServer.controller
+    This function returns after the command has been executed in all server
+    nodes.
 
-Parameters
-----------
-head : int
-    the head of the command
-body : str
-    the body of the command
+    Parameters
+    ----------
+    head : int
+        the head of the command
+    body : str
+        the body of the command
 =cut
 
 method _send_command_to_servers(Int $head, Str $body)
@@ -418,18 +418,18 @@ method _send_command_to_servers(Int $head, Str $body)
 
 =head2 create
 
-Create a new KVStore.
+    Create a new KVStore.
 
-Parameters
-----------
-name : {'local'}
-The type of KVStore
-    - local works for multiple devices on a single machine (single process)
-    - dist works for multi-machines (multiple processes)
-Returns
--------
-kv : KVStore
-    The created AI::MXNet::KVStore
+    Parameters
+    ----------
+    name : {'local'}
+    The type of KVStore
+        - local works for multiple devices on a single machine (single process)
+        - dist works for multi-machines (multiple processes)
+    Returns
+    -------
+    kv : KVStore
+        The created AI::MXNet::KVStore
 =cut
 
 method create(Str $name='local')

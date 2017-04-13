@@ -31,12 +31,7 @@ class GraphExecutor;
 
 // forward declaration
 namespace autograd {
-exec::GraphExecutor *Bind(nnvm::Symbol symbol,
-                          const nnvm::NodeEntryMap<TShape>& shapes,
-                          const nnvm::NodeEntryMap<Context>& ctxs,
-                          const NodeOperatorMap& saved_opr);
-std::vector<NDArray> Run(exec::GraphExecutor* exec,
-                         const nnvm::NodeEntryMap<NDArray>& feed_dict);
+class AutogradRuntime;
 }
 
 namespace exec {
@@ -46,13 +41,7 @@ using nnvm::Graph;
 // graph executors
 class GraphExecutor : public Executor {
  public:
-  friend GraphExecutor *autograd::Bind(nnvm::Symbol symbol,
-                                       const nnvm::NodeEntryMap<TShape>& shapes,
-                                       const nnvm::NodeEntryMap<Context>& ctxs,
-                                       const NodeOperatorMap& saved_opr);
-  friend std::vector<NDArray> autograd::Run(GraphExecutor* exec,
-                                            const nnvm::NodeEntryMap<NDArray>& feed_dict);
-
+  friend class autograd::AutogradRuntime;
   using Executor::MonitorCallback;
 
   virtual ~GraphExecutor();
@@ -134,6 +123,8 @@ class GraphExecutor : public Executor {
    *  ret.opr Can be nullptr if creation failed.
   */
   CachedSegOpr CreateCachedSegOpr(size_t topo_start, size_t topo_end);
+  // run the monitor callback for node `nid`
+  void ExecuteMonCallback(size_t nid);
 
   // internal graph
   nnvm::Graph graph_;

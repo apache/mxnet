@@ -8,11 +8,11 @@ use List::Util qw(max);
 
 =head1 NAME
 
-AI::MXNet::Optimizer - Common Optimization algorithms with regularizations.
+    AI::MXNet::Optimizer - Common Optimization algorithms with regularizations.
 
 =head1  DESCRIPTION
 
-Common Optimization algorithms with regularizations.
+    Common Optimization algorithms with regularizations.
 =cut
 
 use Mouse;
@@ -232,7 +232,7 @@ method _get_wd(Index $index)
 
 =head1 NAME
 
-AI::MXNet::SGD - A very simple SGD optimizer with momentum and weight regularization.
+    AI::MXNet::SGD - A very simple SGD optimizer with momentum and weight regularization.
 =cut
 
 =head1 DESCRIPTION
@@ -341,7 +341,7 @@ extends 'AI::MXNet::Optimizer';
 
 =head1 NAME
 
-AI::MXNet::DCASGD - DCASGD optimizer with momentum and weight regularization.
+    AI::MXNet::DCASGD - DCASGD optimizer with momentum and weight regularization.
 =cut
 
 =head1 DESCRIPTION
@@ -493,7 +493,7 @@ __PACKAGE__->register;
 
 =head1 NAME
 
-AI::MXNet::SLGD - Stochastic Langevin Dynamics Updater to sample from a distribution.
+    AI::MXNet::SLGD - Stochastic Langevin Dynamics Updater to sample from a distribution.
 =cut
 
 =head1 DESCRIPTION
@@ -560,7 +560,7 @@ __PACKAGE__->register;
 
 =head1 NAME
 
-AI::MXNet::Adam - Adam optimizer as described in [King2014]_.
+    AI::MXNet::Adam - Adam optimizer as described in [King2014]_.
 =cut
 
 =head1 DESCRIPTION
@@ -670,7 +670,7 @@ __PACKAGE__->register;
 
 =head1 NAME
 
-AI::MXNet::AdaGrad - AdaGrad optimizer of Duchi et al., 2011
+    AI::MXNet::AdaGrad - AdaGrad optimizer of Duchi et al., 2011
 =cut
 
 =head1 DESCRIPTION
@@ -756,7 +756,7 @@ __PACKAGE__->register;
 
 =head1 NAME
 
-AI::MXNet::RMSProp - RMSProp optimizer of Tieleman & Hinton, 2012.
+    AI::MXNet::RMSProp - RMSProp optimizer of Tieleman & Hinton, 2012.
 =cut
 
 =head1 DESCRIPTION
@@ -901,7 +901,7 @@ __PACKAGE__->register;
 
 =head1 NAME
 
-AI::MXNet::AdaDelta - AdaDelta optimizer.
+    AI::MXNet::AdaDelta - AdaDelta optimizer.
 =cut
 
 =head1 DESCRIPTION

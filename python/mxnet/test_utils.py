@@ -513,8 +513,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
-        if g:
-            g[:] = 0
+        g[:] = 0
 
     executor.forward(is_train=False)
     outputs = [x.asnumpy() for x in executor.outputs]
@@ -882,3 +881,25 @@ def download(url, fname=None, dirname=None, overwrite=False):
                 f.write(chunk)
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
+
+def set_env_var(key, val, default_val=""):
+    """Set environment variable
+
+    Parameters
+    ----------
+
+    key : str
+        Env var to set
+    val : str
+        New value assigned to the env var
+    default_val : str, optional
+        Default value returned if the env var doesn't exist
+
+    Returns
+    -------
+    str
+        The value of env var before it is set to the new value
+    """
+    prev_val = os.environ.get(key, default_val)
+    os.environ[key] = val
+    return prev_val

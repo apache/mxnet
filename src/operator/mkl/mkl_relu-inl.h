@@ -167,12 +167,8 @@ class MKLReluOp : public Operator {
     void* relu_res[dnnResourceNumber];
     relu_res[dnnResourceSrc] = bottom_data;
 
-    std::shared_ptr<MKLMemHolder> top_mem = NULL;
-#if MKL_EXPERIMENTAL == 1
-    top_mem = out_data[activation::kOut].Mkl_mem_;
-#endif
     relu_res[dnnResourceDst] = fwd_top_data_->get_output_ptr(
-      out.dptr_, fwd_top_data_, top_mem);
+      out.dptr_, fwd_top_data_, out_data[activation::kOut], (data.dptr_ == out.dptr_));
     e = dnnExecute<DType>(reluFwd_, relu_res);
     CHECK_EQ(e, E_SUCCESS);
 #if MKL_EXPERIMENTAL == 0
@@ -200,15 +196,14 @@ class MKLReluOp : public Operator {
     Tensor<xpu, 4, DType> m_out_grad;
     Tensor<xpu, 4, DType> m_out_data;
     Tensor<xpu, 4, DType> m_in_grad;
-    Tensor<xpu, 4, DType> m_in_data;
 
     if (out_grad[activation::kOut].ndim() == 2) {
       Shape<4> dshape = Shape4(out_grad[activation::kOut].shape_[0],
                                out_grad[activation::kOut].shape_[1], 1, 1);
       m_out_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
         out_grad[activation::kOut], dshape, s);
-      m_in_data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
-        in_data[activation::kData], dshape, s);
+      m_out_data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        out_data[activation::kOut], dshape, s);
       m_in_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
         in_grad[activation::kData], dshape, s);
     } else if (out_grad[activation::kOut].ndim() == 3) {
@@ -217,13 +212,13 @@ class MKLReluOp : public Operator {
         out_grad[activation::kOut].shape_[2], 1);
       m_out_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
         out_grad[activation::kOut], dshape, s);
-      m_in_data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
-        in_data[activation::kData], dshape, s);
+      m_out_data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        out_data[activation::kOut], dshape, s);
       m_in_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
         in_grad[activation::kData], dshape, s);
     } else {
       m_out_grad = mkl_experimental_direct_get<xpu, 4, DType>(out_grad[activation::kOut], s);
-      m_in_data = mkl_experimental_direct_get<xpu, 4, DType>(in_data[activation::kData], s);
+      m_out_data = mkl_experimental_direct_get<xpu, 4, DType>(out_data[activation::kOut], s);
       m_in_grad = mkl_experimental_direct_get<xpu, 4, DType>(in_grad[activation::kData], s);
     }
     dnnError_t e;
@@ -231,22 +226,16 @@ class MKLReluOp : public Operator {
 
     void* bottom_data = NULL;
 #if MKL_EXPERIMENTAL == 1
-    bottom_data =
-          reinterpret_cast<void *>(mkl_prv_data<DType>(in_data[activation::kData]));
+    bottom_data = reinterpret_cast<void *>(mkl_prv_data<DType>(out_data[activation::kOut]));
 #endif
     if (NULL == bottom_data) {
-      bottom_data =
-        reinterpret_cast<void *>(const_cast<DType*>(m_in_data.dptr_));
+      bottom_data = reinterpret_cast<void *>(const_cast<DType*>(m_out_data.dptr_));
     }
     relu_res[dnnResourceSrc] = bottom_data;
     relu_res[dnnResourceDiffDst] = bwd_top_diff_->get_converted_prv(m_out_grad.dptr_,
                 true, out_grad[activation::kOut]);
-    std::shared_ptr<MKLMemHolder> bottom_diff_mem = NULL;
-#if MKL_EXPERIMENTAL == 1
-    bottom_diff_mem = in_grad[activation::kData].Mkl_mem_;
-#endif
     relu_res[dnnResourceDiffSrc] = bwd_bottom_diff_->get_output_ptr(
-      m_in_grad.dptr_, bwd_bottom_diff_, bottom_diff_mem);
+      m_in_grad.dptr_, bwd_bottom_diff_, in_grad[activation::kData]);
     e = dnnExecute<DType>(reluBwd_, relu_res);
     CHECK_EQ(e, E_SUCCESS);
 #if MKL_EXPERIMENTAL == 0
