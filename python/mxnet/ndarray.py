@@ -1995,7 +1995,51 @@ def lesser_equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def true_divide(lhs, rhs):
-    """Same as ``divide``.
+
+    """Same as ``divide``. Returns element-wise division of the input arrays with broadcasting.
+
+    Equivalent to ``lhs / rhs`` and ``mx.nd.broadcast_div(lhs, rhs)``.
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+    then the arrays are broadcastable to a common shape.
+
+    Parameters
+    ----------
+    lhs : scalar or array
+        First array in division.
+    rhs : scalar or array
+         Second array in division.
+        The arrays to be divided. If ``lhs.shape != rhs.shape``, they must be
+        broadcastable to a common shape.
+
+    Returns
+    -------
+    NDArray
+        The element-wise division of the input arrays.
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((2,3))*6
+    >>> y = mx.nd.ones((2,1))*2
+    >>> x.asnumpy()
+    array([[ 6.,  6.,  6.],
+           [ 6.,  6.,  6.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 2.],
+           [ 2.]], dtype=float32)
+    >>> x/2
+    <NDArray 2x3 @cpu(0)>
+    >>> (x/3).asnumpy()
+    array([[ 2.,  2.,  2.],
+           [ 2.,  2.,  2.]], dtype=float32)
+    >>> (x/y).asnumpy()
+    array([[ 3.,  3.,  3.],
+           [ 3.,  3.,  3.]], dtype=float32)
+    >>> mx.nd.true_divide(x,y).asnumpy()
+    array([[ 3.,  3.,  3.],
+           [ 3.,  3.,  3.]], dtype=float32)
     """
     return divide(lhs, rhs)
 

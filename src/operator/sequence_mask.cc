@@ -56,59 +56,58 @@ this operator works as the `identity` operator.
 Example::
 
    x = [[[  1.,   2.,   3.],
-         [  4.,   5.,   6.],
-         [  7.,   8.,   9.]],
+         [  4.,   5.,   6.]],
 
-        [[ 10.,   11.,   12.],
-         [ 13.,   14.,   15.],
-         [ 16.,   17.,   18.]],
+        [[  7.,   8.,   9.],
+         [ 10.,  11.,  12.]],
 
-        [[  19.,   20.,   21.],
-         [  22.,   23.,   24.],
-         [  25.,   26.,   27.]]]
+        [[ 13.,  14.,   15.],
+         [ 16.,  17.,   18.]]]
+
+   // Batch 1
+   B1 = [[  1.,   2.,   3.],
+         [  7.,   8.,   9.],
+         [ 13.,  14.,  15.]]
+
+   // Batch 2
+   B2 = [[  4.,   5.,   6.],
+         [ 10.,  11.,  12.],
+         [ 16.,  17.,  18.]]
 
    // works as identity operator when sequence_length parameter is not used
    SequenceMask(x) = [[[  1.,   2.,   3.],
-                       [  4.,   5.,   6.],
-                       [  7.,   8.,   9.]],
+                       [  4.,   5.,   6.]],
 
-                      [[ 10.,   11.,   12.],
-                       [ 13.,   14.,   15.],
-                       [ 16.,   17.,   18.]],
+                      [[  7.,   8.,   9.],
+                       [ 10.,  11.,  12.]],
 
-                      [[  19.,   20.,   21.],
-                       [  22.,   23.,   24.],
-                       [  25.,   26.,   27.]]]
+                      [[ 13.,  14.,   15.],
+                       [ 16.,  17.,   18.]]]
 
-   y = [1,1,1]
+   y = [1,1]
 
-   // sequence_length y is used with default mask value = 0
+   // sequence_length [1,1] means 1 of each batch will be kept and other rows are masked with default mask value = 0
    SequenceMask(x, y, use_sequence_length=True) = [[[  1.,   2.,   3.],
-                                                    [  4.,   5.,   6.],
-                                                    [  7.,   8.,   9.]],
+                                                    [  4.,   5.,   6.]],
 
                                                    [[  0.,   0.,   0.],
-                                                    [  0.,   0.,   0.],
                                                     [  0.,   0.,   0.]],
 
                                                    [[  0.,   0.,   0.],
-                                                    [  0.,   0.,   0.],
                                                     [  0.,   0.,   0.]]]
 
-   y = [1,2,3]
+   y = [2,3]
 
-   // sequence_length y is used with mask value = 1
+   // sequence_length [2,3] means 2 of batch B1 and 3 of batch B2 will be kept and
+   // other rows are masked with value = 1
    SequenceMask(x, y, use_sequence_length=True, value=1) = [[[  1.,   2.,   3.],
-                                                             [  4.,   5.,   6.],
-                                                             [  7.,   8.,   9.]],
+                                                             [  4.,   5.,   6.]],
+
+                                                            [[  7.,   8.,   9.],
+                                                             [  10.,  11.,  12.]],
 
                                                             [[   1.,   1.,   1.],
-                                                             [  13.,  14.,  15.],
-                                                             [  16.,  17.,  18.]],
-
-                                                            [[   1.,   1.,   1.],
-                                                             [   1.,   1.,   1.],
-                                                             [  25.,  26.,   27.]]]
+                                                             [  16.,  17.,  18.]]]
 
 )code" ADD_FILELINE)
     .add_argument("data", "NDArray-or-Symbol",
