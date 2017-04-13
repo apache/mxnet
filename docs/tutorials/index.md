@@ -59,7 +59,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 ### R
 
-- [Neural Networks with _MXNet_ in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
+- [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
 
 - [Classifying Handwritten Digits with Convolutional Neural Networks](http://mxnet.io/tutorials/r/mnistCompetition.html)
 
@@ -72,7 +72,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 ### Scala
 
-- [Create _MXNet_ Scala Applications with the IntelliJ IDE](http://mxnet.io/tutorials/scala/mxnet_scala_on_intellij.html)
+- [Create MXNet Scala Applications with the IntelliJ IDE](http://mxnet.io/tutorials/scala/mxnet_scala_on_intellij.html)
 
 - [Handwritten Digit Classification with Multilayer Perceptrons](http://mxnet.io/tutorials/scala/mnist.html)
 
