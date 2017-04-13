@@ -72,7 +72,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 ### Scala
 
-- [Creating _MXNet_ Scala Applications with the IntelliJ IDE](http://mxnet.io/tutorials/scala/mxnet_scala_on_intellij.html)
+- [Create _MXNet_ Scala Applications with the IntelliJ IDE](http://mxnet.io/tutorials/scala/mxnet_scala_on_intellij.html)
 
 - [Handwritten Digit Classification with Multilayer Perceptrons](http://mxnet.io/tutorials/scala/mnist.html)
 
