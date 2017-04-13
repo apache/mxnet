@@ -265,7 +265,7 @@ class CuDNNPoolingOp : public Operator {
                                             static_cast<int>(oshape.size()),
                                             &oshape[0],
                                             &ostride[0]), CUDNN_STATUS_SUCCESS);
-        #if CUDNN_MAJOR == 5
+        #if CUDNN_MAJOR >= 5
         CHECK_EQ(cudnnSetPoolingNdDescriptor(pooling_desc_,
                                              mode_,
                                              nan_prop_,

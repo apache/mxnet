@@ -119,7 +119,7 @@ class CuDNNDeconvolutionOp : public Operator {
                &beta,
                out_desc_,
                out_ptr + out_offset_ * g), CUDNN_STATUS_SUCCESS);
-      #elif CUDNN_MAJOR == 5
+      #elif CUDNN_MAJOR >= 5
       CHECK_EQ(cudnnConvolutionBackwardData(s->dnn_handle_,
                &alpha,
                filter_desc_,
@@ -242,7 +242,7 @@ class CuDNNDeconvolutionOp : public Operator {
                  &weight_beta,
                  filter_desc_,
                  gwmat_ptr + weight_offset_ * g), CUDNN_STATUS_SUCCESS);
-        #elif CUDNN_MAJOR == 5
+        #elif CUDNN_MAJOR >= 5
         CHECK_EQ(cudnnConvolutionBackwardFilter(s->dnn_handle_,
                  &alpha,
                  out_desc_,

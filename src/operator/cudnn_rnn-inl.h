@@ -17,7 +17,7 @@
 
 namespace mxnet {
 namespace op {
-#if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR == 5
+#if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
 template<typename DType>
 class CuDNNRNNOp : public Operator {
  public:
@@ -286,7 +286,7 @@ class CuDNNRNNOp : public Operator {
                    const std::vector<TBlob> &in_data,
                    const std::vector<TBlob> &out_data) {
     using namespace mshadow;
-    #if CUDNN_MAJOR == 5
+    #if CUDNN_MAJOR >= 5
     format_ = CUDNN_TENSOR_NCHW;
     #endif
     size_t in_expected = param_.lstm_q_ ? 4 : 3;
@@ -537,7 +537,7 @@ class CuDNNRNNOp : public Operator {
 
   cudnnFilterDescriptor_t w_desc_, dw_desc_;
 
-  #if CUDNN_MAJOR == 5
+  #if CUDNN_MAJOR >= 5
   cudnnTensorFormat_t format_;
   #endif
   RNNParam param_;
