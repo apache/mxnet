@@ -13,7 +13,7 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How do I create new operators with _MXNet_?](new_op.md)
 
-* [How do I visualize the neural networks as computation graph?](http://mxnet.io/how_to/visualize_graph.html)
+* [How do I visualize neural networks as computation graphs?](http://mxnet.io/how_to/visualize_graph.html)
 
 
 ## Speed
@@ -22,7 +22,7 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How can I train with multiple GPUs with model parallelism?](http://mxnet.io/how_to/model_parallel_lstm.html)
 
-* [Can I use nnpack to improve CPU performance of _MXNet_](http://mxnet.io/how_to/nnpack.html)
+* [Can I use nnpack to improve the CPU performance of _MXNet_?](http://mxnet.io/how_to/nnpack.html)
 
 
 ## Deployment Environments
@@ -34,6 +34,6 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How do I work with__MXNet__within a Matlab environment?](https://github.com/dmlc/mxnet/tree/master/matlab)
 
-* [Can I run _MXNet_ in a browser using Java Script?](https://github.com/dmlc/mxnet.js/)
+* [Can I run _MXNet_ in a browser using JavaScript?](https://github.com/dmlc/mxnet.js/)
 
 * [How do I run _MXNet_ on a Raspberry Pi for computer vision?](http://mxnet.io/tutorials/embedded/wine_detector.html)
