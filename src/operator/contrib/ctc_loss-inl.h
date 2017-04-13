@@ -11,6 +11,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
+#include <algorithm>
 #include <map>
 #include <vector>
 #include <string>
@@ -32,15 +33,15 @@ enum CTCLossOpForwardResource { kTempSpace };
 }
 
 template <typename T>
-inline void get_workspace_size(std::vector<int> &label_lengths,
-                               std::vector<int> &input_lengths,
+inline void get_workspace_size(std::vector<int> *label_lengths,
+                               std::vector<int> *input_lengths,
                                int alphabet_size, int minibatch, bool gpu,
                                size_t *size_bytes) {
   // This is the max of all S and T for all examples in the minibatch.
-  int maxL =
-      *std::max_element(label_lengths.data(), label_lengths.data() + minibatch);
-  int maxT =
-      *std::max_element(input_lengths.data(), input_lengths.data() + minibatch);
+  int maxL = *std::max_element(label_lengths->data(),
+                               label_lengths->data() + minibatch);
+  int maxT = *std::max_element(input_lengths->data(),
+                               input_lengths->data() + minibatch);
 
   const int S = 2 * maxL + 1;
 
@@ -130,8 +131,9 @@ struct CTCLossParam : public dmlc::Parameter<CTCLossParam> {
   DMLC_DECLARE_PARAMETER(CTCLossParam) {}
 };
 
-template <typename xpu> class CTCLossOp : public Operator {
-public:
+template <typename xpu>
+class CTCLossOp : public Operator {
+ public:
   explicit CTCLossOp(CTCLossParam p) { this->param_ = p; }
 
   virtual void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
@@ -167,7 +169,7 @@ public:
     std::vector<int> input_lengths(batch_size, max_seq_len);
     size_t size_bytes;
     bool gpu = data.kDevCPU ? false : true;
-    get_workspace_size<real_t>(label_lengths, input_lengths, alphabet_size,
+    get_workspace_size<real_t>(&label_lengths, &input_lengths, alphabet_size,
                                batch_size, gpu, &size_bytes);
 
     // round-up so there are enough elems in memory
@@ -176,9 +178,9 @@ public:
         ctx.requested[ctc_loss::kTempSpace].get_space_typed<xpu, 1, real_t>(
             Shape1(num_tmp_elems), s);
 
-    compute_ctc_cost(data, costs.dptr_, grad.dptr_, packed_labels,
-                     label_lengths, input_lengths, workspace.dptr_,
-                     ctx.is_train);
+    compute_ctc_cost(data, costs.dptr_, grad.dptr_, packed_labels.data(),
+                     label_lengths.data(), input_lengths.data(),
+                     workspace.dptr_, ctx.is_train);
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -205,15 +207,16 @@ public:
            broadcast<1>(output_grad, data_grad.shape_) * data_grad_computed);
   }
 
-private:
+ private:
   CTCLossParam param_;
-}; // class CTCLossOp
+};  // class CTCLossOp
 
-template <typename xpu> Operator *CreateOp(CTCLossParam param, int dtype);
+template <typename xpu>
+Operator *CreateOp(CTCLossParam param, int dtype);
 
 #if DMLC_USE_CXX11
 class CTCLossProp : public OperatorProperty {
-public:
+ public:
   int NumVisibleOutputs() const override { return 1; }
 
   int NumOutputs() const override { return 2; }
@@ -252,10 +255,10 @@ public:
                                       "input.";
 
     TShape oshape(1);
-    oshape[0] = dshape[1]; // batch size
+    oshape[0] = dshape[1];  // batch size
     out_shape->clear();
     out_shape->push_back(oshape);
-    out_shape->push_back(dshape); // grad output
+    out_shape->push_back(dshape);  // grad output
     return true;
   }
 
@@ -267,15 +270,14 @@ public:
 
   std::string TypeString() const override { return "CTCLoss"; }
 
-  std::vector<ResourceRequest>
-  ForwardResource(const std::vector<TShape> &in_shape) const override {
+  std::vector<ResourceRequest> ForwardResource(
+      const std::vector<TShape> &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
-  std::vector<int>
-  DeclareBackwardDependency(const std::vector<int> &out_grad,
-                            const std::vector<int> &in_data,
-                            const std::vector<int> &out_data) const override {
+  std::vector<int> DeclareBackwardDependency(
+      const std::vector<int> &out_grad, const std::vector<int> &in_data,
+      const std::vector<int> &out_data) const override {
     return {out_grad[ctc_loss::kOut], out_data[ctc_loss::kGrad]};
   }
 
@@ -287,10 +289,10 @@ public:
   Operator *CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                              std::vector<int> *in_type) const override;
 
-private:
+ private:
   CTCLossParam param_;
-};     // class CTCLossProp
-#endif // DMLC_USE_CXX11
-} // namespace op
-} // namespace mxnet
-#endif // MXNET_OPERATOR_CONTRIB_CTC_LOSS_INL_H_
+};      // class CTCLossProp
+#endif  // DMLC_USE_CXX11
+}  // namespace op
+}  // namespace mxnet
+#endif  // MXNET_OPERATOR_CONTRIB_CTC_LOSS_INL_H_
