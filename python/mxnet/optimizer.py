@@ -778,6 +778,9 @@ class AdaDelta(Optimizer):
 
 @register
 class Ftrl(Optimizer):
+    """
+    Reference:Ad Click Prediction: a View from the Trenches.H. Brendan McMahan, Gary Holt, D. Sculley et al.
+    """
 
     def __init__(self, lamda1=0.01, lamda2=1, alpha=0.1, beta=1, epsilon=1e-5, **kwargs):
         super(Ftrl, self).__init__(**kwargs)
