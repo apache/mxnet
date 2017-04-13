@@ -1869,7 +1869,8 @@ def greater_equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def lesser(lhs, rhs):
-    """Returns the result of element-wise **lesser than** (<) comparison operation with broadcasting.
+    """Returns the result of element-wise **lesser than** (<) comparison operation
+    with broadcasting.
 
     For each element in input arrays, return 1(true) if lhs elements are less than rhs,
     otherwise return 0(false).
