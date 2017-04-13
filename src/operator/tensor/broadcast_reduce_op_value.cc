@@ -58,8 +58,6 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_prod)
 MXNET_OPERATOR_REGISTER_REDUCE(nansum)
 .describe(R"code(Compute the sum of array elements over given axes treating Not a Numbers ``NaNs`` as zero.
 
-Refer to ``sum`` for more details.
-
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow_op::nansum>)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_nansum" });
@@ -70,8 +68,6 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_nansum)
 
 MXNET_OPERATOR_REGISTER_REDUCE(nanprod)
 .describe(R"code(Compute the product of array elements over given axes treating Not a Numbers ``NaNs`` as zero.
-
-Refer to ``prod`` for more details.
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow_op::nanprod>)
