@@ -6,30 +6,19 @@
 #include <algorithm>
 #include <numeric>
 
-#if !defined(CTC_DISABLE_OMP) && !defined(APPLE)
-#include <omp.h>
-#endif
+#include <dmlc/omp.h>
 
 #include "ctc_helper.h"
-
 
 template<typename ProbT>
 class CpuCTC {
 public:
     // Noncopyable
-    CpuCTC(int alphabet_size, int minibatch, void* workspace, int num_threads,
+    CpuCTC(int alphabet_size, int minibatch, void* workspace,
            int blank_label) :
             alphabet_size_(alphabet_size), minibatch_(minibatch),
-            num_threads_(num_threads), workspace_(workspace),
-            blank_label_(blank_label) {
-#if defined(CTC_DISABLE_OMP) || defined(APPLE)
-#else
-        if (num_threads > 0) {
-            omp_set_num_threads(num_threads);
-        } else {
-            num_threads_ = omp_get_max_threads();
-        }
-#endif
+            workspace_(workspace), blank_label_(blank_label) {
+
     };
 
     CpuCTC(const CpuCTC&) = delete;
@@ -72,7 +61,6 @@ private:
 
     int alphabet_size_; // Number of characters plus blank
     int minibatch_;
-    int num_threads_;
     int blank_label_;
     void* workspace_;
 

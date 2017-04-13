@@ -1,7 +1,7 @@
 #pragma once
 
-#include <contrib/moderngpu/include/device/ctascan.cuh>
-#include <contrib/moderngpu/include/device/ctamerge.cuh>
+#include "../contrib/moderngpu/include/device/ctascan.cuh"
+#include "../contrib/moderngpu/include/device/ctamerge.cuh"
 
 #include "ctc_helper.h"
 

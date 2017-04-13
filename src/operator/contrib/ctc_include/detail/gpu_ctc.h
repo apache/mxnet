@@ -2,7 +2,6 @@
 
 #include "ctc_helper.h"
 #include "gpu_ctc_kernels.h"
-#include "reduce.h"
 
 template <typename ProbT>
 class GpuCTC {
@@ -365,12 +364,18 @@ GpuCTC<ProbT>::compute_probs(const ProbT* const activations) {
     if (cuda_status != cudaSuccess)
         return CTC_STATUS_MEMOPS_FAILED;
 
-    // Numerically stable SM
-    ctcStatus_t ctc_status =
-        reduce_max(probs_, denoms_, out_dim_,
-                   activation_cols_, 1, stream_);
-    if (ctc_status != CTC_STATUS_SUCCESS)
-        return ctc_status;
+
+
+    // create mshadow handles to data
+    using namespace mshadow;
+    using namespace mshadow::expr;
+    Stream<mxnet::gpu> mxstream;
+    mxstream.stream_ = stream_;
+    Tensor<mxnet::gpu, 2, ProbT> probs_handle(probs_, mshadow::Shape2(activation_cols_, out_dim_), &mxstream);
+    Tensor<mxnet::gpu, 1, ProbT> denoms_handle(denoms_, mshadow::Shape1(activation_cols_), &mxstream);
+    denoms_handle = reduce_with_axis<red::maximum, false>(probs_handle, 1);
+
+
 
     // Kernel launch to subtract maximum
     const int NT = 128;
@@ -383,12 +388,13 @@ GpuCTC<ProbT>::compute_probs(const ProbT* const activations) {
        (ctc_helper::identity<ProbT>(), probs_,
         denoms_, out_dim_, num_elements);
 
-    // Reduce along columns to calculate denominator
-    ctc_status =
-        reduce_exp(probs_, denoms_, out_dim_,
-                   activation_cols_, 1, stream_);
-    if (ctc_status != CTC_STATUS_SUCCESS)
-        return ctc_status;
+    // compute denominators for softmax
+    denoms_handle = reduce_with_axis<red::sum, false>(
+        F<mxnet::op::mshadow_op::exp>(
+            probs_handle -
+            broadcast<0>(reduce_with_axis<red::maximum, false>(probs_handle, 1),
+                         probs_handle.shape_)),
+        1);
 
     // Kernel launch to calculate probabilities
     compute_probs_kernel<ProbT, VT><<<grid_size, NT, 0, stream_>>>

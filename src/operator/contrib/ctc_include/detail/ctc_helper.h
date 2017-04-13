@@ -6,6 +6,19 @@
 
 #include "hostdevice.h"
 
+typedef enum {
+    CTC_STATUS_SUCCESS = 0,
+    CTC_STATUS_MEMOPS_FAILED = 1,
+    CTC_STATUS_INVALID_VALUE = 2,
+    CTC_STATUS_EXECUTION_FAILED = 3,
+    CTC_STATUS_UNKNOWN_ERROR = 4
+} ctcStatus_t;
+
+typedef enum {
+    CTC_CPU = 0,
+    CTC_GPU = 1
+} ctcComputeLocation;
+
 namespace ctc_helper {
 
 static const float threshold = 1e-1;
