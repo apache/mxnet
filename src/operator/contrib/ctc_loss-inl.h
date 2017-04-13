@@ -115,7 +115,7 @@ inline void LabelTensorToPackedVector(mshadow::Tensor<xpu, 2, DType> labels,
   int batch = labels.size(0);
   int max_num_labels = labels.size(1);
   std::vector<index_t> cpu_labels(max_num_labels);
-  
+
   for (int b = 0; b < batch; ++b) {
     IndexTensorToVector(labels[b], &cpu_labels);
     auto res = std::find(cpu_labels.begin(), cpu_labels.end(), 0);
@@ -157,7 +157,6 @@ public:
     int max_seq_len = data.size(0);
     int batch_size = data.size(1);
     int alphabet_size = data.size(2);
-    int max_label_len = labels.size(1);
 
     // label_lengths
     std::vector<int> packed_labels;
@@ -177,13 +176,9 @@ public:
         ctx.requested[ctc_loss::kTempSpace].get_space_typed<xpu, 1, real_t>(
             Shape1(num_tmp_elems), s);
 
-    if (ctx.is_train) {
-      compute_ctc_cost(data, costs.dptr_, grad.dptr_, packed_labels,
-                       label_lengths, input_lengths, workspace.dptr_);
-    } else {
-      compute_ctc_cost(data, costs.dptr_, grad.dptr_, packed_labels,
-                       label_lengths, input_lengths, workspace.dptr_);
-    }
+    compute_ctc_cost(data, costs.dptr_, grad.dptr_, packed_labels,
+                     label_lengths, input_lengths, workspace.dptr_,
+                     ctx.is_train);
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -195,9 +190,19 @@ public:
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1U);
-    CHECK_EQ(out_data.size(), 1U);
+
     Stream<xpu> *s = ctx.get_stream<xpu>();
+
+    Tensor<xpu, 3, real_t> data_grad =
+        in_grad[ctc_loss::kData].get<xpu, 3, real_t>(s);
+    Tensor<xpu, 1, real_t> output_grad =
+        out_grad[ctc_loss::kOut].get<xpu, 1, real_t>(s);
+
+    Tensor<xpu, 3, real_t> data_grad_computed =
+        out_data[ctc_loss::kGrad].get<xpu, 3, real_t>(s);
+
+    Assign(data_grad, req[ctc_loss::kData],
+           broadcast<1>(output_grad, data_grad.shape_) * data_grad_computed);
   }
 
 private:

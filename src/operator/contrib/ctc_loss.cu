@@ -15,19 +15,18 @@ ctcStatus_t compute_ctc_cost(const Tensor<gpu, 3, DType> activations,
                              DType *costs, DType *grads,
                              std::vector<int> &labels,
                              std::vector<int> &label_lengths,
-                             std::vector<int> &input_lengths, void *workspace) {
+                             std::vector<int> &input_lengths, void *workspace, int train) {
   int minibatch = static_cast<int>(activations.size(1));
   int alphabet_size = static_cast<int>(activations.size(2));
   int blank_label = 0;
   GpuCTC<DType> ctc(alphabet_size, minibatch, workspace,
                     activations.stream_->stream_, blank_label);
-  if (grads == NULL) {
-    return ctc.score_forward(activations.dptr_, costs, labels.data(),
-                             label_lengths.data(), input_lengths.data());
-  } else {
+  if (train)
     return ctc.cost_and_grad(activations.dptr_, grads, costs, labels.data(),
                              label_lengths.data(), input_lengths.data());
-  }
+  else
+    return ctc.score_forward(activations.dptr_, costs, labels.data(),
+                             label_lengths.data(), input_lengths.data());
 };
 
 } // namespace mshadow
