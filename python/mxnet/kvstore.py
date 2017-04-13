@@ -102,7 +102,7 @@ class KVStore(object):
     def push(self, key, value, priority=0):
         """ Pushes a single or a sequence of key-value pairs into the store.
 
-        This function returns immeadiately after adding an operator to the engine.
+        This function returns immediately after adding an operator to the engine.
         The actual operation is executed asynchronously after all previous `push`
         and `pull` calls for the same input key(s) are finished.
         There is no synchronization between workers. One can use ``_barrier()``
@@ -169,7 +169,7 @@ class KVStore(object):
         pull operation completes.
 
         `pull` is executed asynchronously after all previous `push` and `pull` calls
-        for the input key(s) are finished.
+        for the same input key(s) are finished.
 
         The returned values are gauranteed to the latest values in the store.
 
@@ -316,7 +316,7 @@ class KVStore(object):
         """Sets a push updater into the store.
 
         This function only changes the local store. When running on multiple machines one must
-        use `set_optimzer`.
+        use `set_optimizer`.
 
         Parameters
         ----------
@@ -351,7 +351,7 @@ class KVStore(object):
         """Invokes global barrier among all worker nodes.
 
         For example, assume there are `n` machines. We would like machine `0` to first
-        `init` the values, and then have all the workers `pull` the initialized value.
+        `init` the values and then have all the workers `pull` the initialized value.
         Before pulling, we can place invoke `_barrier()` to guarantee that the
         initialization is finished.
         """
@@ -360,7 +360,7 @@ class KVStore(object):
     def _send_command_to_servers(self, head, body):
         """Sends a command to all server nodes.
 
-        Sending command to a server nodes, which cause that server node to invoke
+        Sending command to a server node will cause that server node to invoke
         ``KVStoreServer.controller`` to execute the command.
 
         This function returns after the command has been executed on all server
