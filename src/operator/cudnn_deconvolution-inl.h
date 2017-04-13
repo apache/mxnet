@@ -301,7 +301,17 @@ class CuDNNDeconvolutionOp : public Operator {
       index_t o_pad[2];
       index_t o_adj[2];
       param_.InferPad(dshape, o_pad, o_adj);
-
+      #if CUDNN_MAJOR >= 6
+      CHECK_EQ(cudnnSetConvolution2dDescriptor(conv_desc_,
+                                               o_pad[0],
+                                               o_pad[1],
+                                               param_.stride[0],
+                                               param_.stride[1],
+                                               1,
+                                               1,
+                                               CUDNN_CROSS_CORRELATION,
+                                               dtype_), CUDNN_STATUS_SUCCESS);
+      #else
       CHECK_EQ(cudnnSetConvolution2dDescriptor(conv_desc_,
                                                o_pad[0],
                                                o_pad[1],
@@ -310,7 +320,7 @@ class CuDNNDeconvolutionOp : public Operator {
                                                1,
                                                1,
                                                CUDNN_CROSS_CORRELATION), CUDNN_STATUS_SUCCESS);
-
+      #endif
       #if CUDNN_MAJOR >= 5
       wshape = ConvertLayout(wshape.get<4>(), param_.layout.value(), kNCHW);
       CHECK_EQ(cudnnSetFilter4dDescriptor(filter_desc_,
