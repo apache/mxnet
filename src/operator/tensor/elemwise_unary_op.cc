@@ -303,7 +303,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_log)
 MXNET_OPERATOR_REGISTER_UNARY(sin)
 .describe(R"code(Computes the element-wise sine of the input.
 
-The should be in radians (:math:`2\pi` rad equals 360 degrees).
+The input should be in radians (:math:`2\pi` rad equals 360 degrees).
 
 .. math::
    sin([0, \pi/4, \pi/2]) = [0, 0.707, 1]
@@ -331,7 +331,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_log1p)
 
 // expm1
 MXNET_OPERATOR_REGISTER_UNARY(expm1)
-.describe(R"code(Returns element-wise ``exp(x) - 1`` value of the input.
+.describe(R"code(Returns ``exp(x) - 1`` computed element-wise on the input.
 
 This function provides greater precision than ``exp(x) - 1`` for small values of ``x``.
 
@@ -482,7 +482,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_cosh)
 
 // tanh
 MXNET_OPERATOR_REGISTER_UNARY(tanh)
-.describe(R"code(Returns the hyperbolic tansgent of the input array, computed element-wise.
+.describe(R"code(Returns the hyperbolic tangent of the input array, computed element-wise.
 
 .. math::
    tanh(x) = sinh(x) / cosh(x)

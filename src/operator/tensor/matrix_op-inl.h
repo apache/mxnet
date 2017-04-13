@@ -673,9 +673,9 @@ struct SliceParam : public dmlc::Parameter<SliceParam> {
   nnvm::Tuple<dmlc::optional<int> > begin, end;
   DMLC_DECLARE_PARAMETER(SliceParam) {
     DMLC_DECLARE_FIELD(begin)
-    .describe("starting indices for the slice operation, Supports negative indices.");
+    .describe("starting indices for the slice operation, supports negative indices.");
     DMLC_DECLARE_FIELD(end)
-    .describe("ending indices for the slice operation, Supports negative indices.");
+    .describe("ending indices for the slice operation, supports negative indices.");
   }
 };
 
@@ -1008,10 +1008,10 @@ struct SliceAxisParam : public dmlc::Parameter<SliceAxisParam> {
       .describe("Axis along which to be sliced, supports negative indexes.");
     DMLC_DECLARE_FIELD(begin)
       .describe("The beginning index along the axis to be sliced, "
-                " Supports negative indexes.");
+                " supports negative indexes.");
     DMLC_DECLARE_FIELD(end)
       .describe("The ending index along the axis to be sliced, "
-                " Supports negative indexes.");
+                " supports negative indexes.");
   }
 };
 

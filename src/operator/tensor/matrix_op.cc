@@ -220,7 +220,7 @@ NNVM_REGISTER_OP(slice)
 .add_alias("crop")
 .describe(R"code(Slice a continuous region of the array.
 
-.. note:: ``crop`` is Deprecated. Use ``slice`` instead.
+.. note:: ``crop`` is deprecated. Use ``slice`` instead.
 
 This function returns a sliced continous region of the array between the indices given 
 by `begin` and `end`.
@@ -302,7 +302,7 @@ NNVM_REGISTER_OP(_crop_assign_scalar)
 NNVM_REGISTER_OP(slice_axis)
 .describe(R"code(Slice along a given axis.
 
-Returns a Sliced array along a given `axis` starting from the `begin` index
+Returns an array slice along a given `axis` starting from the `begin` index
  to the `end` index.
 
 Examples::
@@ -427,7 +427,7 @@ NNVM_REGISTER_OP(clip)
 Given an interval, values outside the interval are clipped to the interval edges.
 Clipping ``x`` between `a_min` and `a_x` would be::
 
-   clip(x) = max(min(x, a_max), a_min))
+   clip(x, a_min, a_max) = max(min(x, a_max), a_min))
 
 Example::
 
