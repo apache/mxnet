@@ -440,6 +440,10 @@ The parameter axis specifies the axis along which to perform repeat::
                                   [ 1.,  2.],
                                   [ 3.,  4.],
                                   [ 3.,  4.]]
+
+  repeat(x, repeats=2, axis=-1) = [[ 1.,  1.,  2.,  2.],
+                                   [ 3.,  3.,  4.,  4.]]
+
 )code" ADD_FILELINE)
 .set_num_outputs(1)
 .set_num_inputs(1)
@@ -523,7 +527,7 @@ NNVM_REGISTER_OP(reverse)
 .describe(R"code(Reverse the order of elements in an array along given axis.
 The shape of the array is preserved.
 
-Note: reverse and flip are equivalent. We use reverse in the following examples. 
+Note: reverse and flip are equivalent. We use reverse in the following examples.
 
 Examples::
 
