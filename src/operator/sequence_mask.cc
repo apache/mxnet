@@ -43,20 +43,79 @@ Operator *SequenceMaskProp::CreateOperatorEx(Context ctx,
 DMLC_REGISTER_PARAMETER(SequenceMaskParam);
 
 MXNET_REGISTER_OP_PROPERTY(SequenceMask, SequenceMaskProp)
-    .describe(
-"Sets all elements outside the sequence to a constant value. Takes an n-dimensional tensor of the "
-"form [max sequence length, batchsize, other dims] and returns a tensor of the same "
-"shape. This operator takes an optional input tensor sequence_length of positive ints of "
-"dimension [batchsize] when the sequence_length option is set to true. This allows the "
-"operator to handle variable-length sequences. If sequence_length is false, then each "
-"example in the batch is assumed to have the max sequence length, and this operator becomes "
-"the identity operator."
-)
+    .describe(R"code(Sets all elements outside the sequence to a constant value.
+
+This function takes an n-dimensional input array of the form [max sequence length, batch size, other dims]
+and returns an array of the same shape.
+
+Parameter `sequence_length` is used to handle variable-length sequences. `sequence_length` should be an input array of
+positive ints of dimension [batch size]. To use this parameter, set `use_sequence_length` to `True`,
+otherwise each example in the batch is assumed to have the max sequence length and
+this operator works as the `identity` operator.
+
+Example::
+
+   x = [[[  1.,   2.,   3.],
+         [  4.,   5.,   6.],
+         [  7.,   8.,   9.]],
+
+        [[ 10.,   11.,   12.],
+         [ 13.,   14.,   15.],
+         [ 16.,   17.,   18.]],
+
+        [[  19.,   20.,   21.],
+         [  22.,   23.,   24.],
+         [  25.,   26.,   27.]]]
+
+   // works as identity operator when sequence_length parameter is not used
+   SequenceMask(x) = [[[  1.,   2.,   3.],
+                       [  4.,   5.,   6.],
+                       [  7.,   8.,   9.]],
+
+                      [[ 10.,   11.,   12.],
+                       [ 13.,   14.,   15.],
+                       [ 16.,   17.,   18.]],
+
+                      [[  19.,   20.,   21.],
+                       [  22.,   23.,   24.],
+                       [  25.,   26.,   27.]]]
+
+   y = [1,1,1]
+
+   // sequence_length y is used with default mask value = 0
+   SequenceMask(x, y, use_sequence_length=True) = [[[  1.,   2.,   3.],
+                                                    [  4.,   5.,   6.],
+                                                    [  7.,   8.,   9.]],
+
+                                                   [[  0.,   0.,   0.],
+                                                    [  0.,   0.,   0.],
+                                                    [  0.,   0.,   0.]],
+
+                                                   [[  0.,   0.,   0.],
+                                                    [  0.,   0.,   0.],
+                                                    [  0.,   0.,   0.]]]
+
+   y = [1,2,3]
+
+   // sequence_length y is used with mask value = 1
+   SequenceMask(x, y, use_sequence_length=True, value=1) = [[[  1.,   2.,   3.],
+                                                             [  4.,   5.,   6.],
+                                                             [  7.,   8.,   9.]],
+
+                                                            [[   1.,   1.,   1.],
+                                                             [  13.,  14.,  15.],
+                                                             [  16.,  17.,  18.]],
+
+                                                            [[   1.,   1.,   1.],
+                                                             [   1.,   1.,   1.],
+                                                             [  25.,  26.,   27.]]]
+
+)code" ADD_FILELINE)
     .add_argument("data", "NDArray-or-Symbol",
-                  "n-dimensional input tensor of the form [max sequence "
-                  "length, batchsize, other dims]")
+                  "n-dimensional input array of the form [max sequence "
+                  "length, batchsize, other dims] where n>2")
     .add_argument("sequence_length", "NDArray-or-Symbol",
-                  "vector of sequence lengths of size batchsize")
+                  "vector of sequence lengths of the form [batch size]")
     .add_arguments(SequenceMaskParam::__FIELDS__());
 
 }  // namespace op

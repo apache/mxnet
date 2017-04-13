@@ -30,7 +30,7 @@ Operator *SequenceLastProp::CreateOperatorEx(Context ctx,
 DMLC_REGISTER_PARAMETER(SequenceLastParam);
 
 MXNET_REGISTER_OP_PROPERTY(SequenceLast, SequenceLastProp)
-    .describe(R"code(Returns an (n-1)-dimensional array of the form [batch size, other dims]
+    .describe(R"code(Takes the last element of a sequence.
 
 This function takes an n-dimensional input array of the form [max sequence length, batch size, other dims]
 and returns a (n-1)-dimensional array of the form [batch size, other dims].
@@ -53,21 +53,21 @@ Example::
          [  22.,   23.,   24.],
          [  25.,   26.,   27.]]]
 
-   // returns last sequence when sequence_length vector is not used
+   // returns last sequence when sequence_length parameter is not used
    SequenceLast(x) = [[  19.,   20.,   21.],
                       [  22.,   23.,   24.],
                       [  25.,   26.,   27.]]
 
    y = [1,1,1]
 
-   // variable-length sequence y is used
+   // sequence_length y is used
    SequenceLast(x, y, use_sequence_length=True) =  [[  1.,   2.,   3.],
                                                     [  4.,   5.,   6.],
                                                     [  7.,   8.,   9.]]
 
    y = [1,2,3]
 
-   // variable-length sequence y is used
+   // sequence_length y is used
    SequenceLast(x, y, use_sequence_length=True) = [[  1.,    2.,   3.],
                                                    [  13.,  14.,  15.],
                                                    [  25.,  26.,  27.]]
