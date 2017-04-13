@@ -19,14 +19,14 @@ Example::  
         [ 3.,  4.,  5.]]  
 
    // argmax along axis 0
-   mx.nd.argmax(x, axis=0) = [ 1.,  1.,  1.]   
+   argmax(x, axis=0) = [ 1.,  1.,  1.]   
 
    // argmax along axis 1
-   mx.nd.argmax(x, axis=1) = [ 2.,  2.]   
+   argmax(x, axis=1) = [ 2.,  2.]   
 
    // argmax along axis 1 keeping same dims as an input array
-   mx.nd.argmax(x, axis=1, keepdims=True) = [[ 2.], 
-                                             [ 2.]]   
+   argmax(x, axis=1, keepdims=True) = [[ 2.], 
+                                       [ 2.]]   
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
@@ -43,14 +43,14 @@ Example::  
         [ 3.,  4.,  5.]]  
 
    // argmin along axis 0
-   mx.nd.argmin(x, axis=0) = [ 0.,  0.,  0.]   
+   argmin(x, axis=0) = [ 0.,  0.,  0.]   
 
    // argmin along axis 1
-   mx.nd.argmin(x, axis=1) = [ 0.,  0.]   
+   argmin(x, axis=1) = [ 0.,  0.]   
 
    // argmin along axis 1 keeping same dims as an input array
-   mx.nd.argmin(x, axis=1, keepdims=True) = [[ 0.], 
-                                             [ 0.]]   
+   argmin(x, axis=1, keepdims=True) = [[ 0.], 
+                                       [ 0.]]   
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::minimum>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
@@ -69,7 +69,7 @@ Example::  
    x = [[ 0.,  1.,  2.], 
         [ 3.,  4.,  5.]]  
 
-   mx.nd.argmax_channel(x) = [ 2.,  2.]   
+   argmax_channel(x) = [ 2.,  2.]   
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)

@@ -54,23 +54,23 @@ Example::
          [  25.,   26.,   27.]]]
 
    // returns last sequence when sequence_length vector is not used
-   mx.nd.SequenceLast(x) = [[  19.,   20.,   21.],
-                            [  22.,   23.,   24.],
-                            [  25.,   26.,   27.]]
+   SequenceLast(x) = [[  19.,   20.,   21.],
+                      [  22.,   23.,   24.],
+                      [  25.,   26.,   27.]]
 
    y = [1,1,1]
 
    // variable-length sequence y is used
-   mx.nd.SequenceLast(x, y, use_sequence_length=True) =  [[  1.,   2.,   3.],
-                                                          [  4.,   5.,   6.],
-                                                          [  7.,   8.,   9.]]
+   SequenceLast(x, y, use_sequence_length=True) =  [[  1.,   2.,   3.],
+                                                    [  4.,   5.,   6.],
+                                                    [  7.,   8.,   9.]]
 
    y = [1,2,3]
 
    // variable-length sequence y is used
-   mx.nd.SequenceLast(x, y, use_sequence_length=True) = [[  1.,    2.,   3.],
-                                                         [  13.,  14.,  15.],
-                                                         [  25.,  26.,  27.]]
+   SequenceLast(x, y, use_sequence_length=True) = [[  1.,    2.,   3.],
+                                                   [  13.,  14.,  15.],
+                                                   [  25.,  26.,  27.]]
 
 )code" ADD_FILELINE)
     .add_argument("data", "NDArray-or-Symbol",
