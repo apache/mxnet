@@ -98,25 +98,7 @@ struct SGDMomParam : public dmlc::Parameter<SGDMomParam> {
   }
 };
 
-#define ASSIGN_REQ_SWITCH(req, Req, ...) \
-  switch (req) {                      \
-    case kNullOp:                     \
-      break;                          \
-    case kWriteTo:                    \
-    case kWriteInplace:               \
-      {                               \
-        const OpReqType Req = kWriteInplace; \
-        {__VA_ARGS__}                 \
-      }                               \
-      break;                          \
-    case kAddTo:                      \
-      (out) += (exp);                 \
-      break;                          \
-    default:                          \
-      LOG(FATAL) << "not reached";    \
-  }                                   \
-
-#define AssignCUDA(out, req, exp)           \
+#define AssignCUDA(out, req, exp)       \
   {                                     \
     switch (req) {                      \
       case kNullOp:                     \
@@ -134,11 +116,19 @@ struct SGDMomParam : public dmlc::Parameter<SGDMomParam> {
 struct SGDMomKernel {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, DType* mom_data, const DType* weight_data,
-    const DType* grad_data, const DType param_momentum, const DType param_lr, const DType param_wd,
-    const DType param_rescale_grad, const OpReqType req) {
-    mom_data[i] = param_momentum*mom_data[i]
+    const DType* grad_data, const DType param_clip_gradient, const DType param_momentum,
+    const DType param_lr, const DType param_wd, const DType param_rescale_grad,
+    const OpReqType req) {
+    if (param_clip_gradient >= 0.0f) {
+      mom_data[i] = param_momentum*mom_data[i]
               - param_lr*param_wd*weight_data[i]
-              - param_lr*param_rescale_grad*grad_data[i];
+              - param_lr
+              *mshadow_op::clip::Map(param_rescale_grad*grad_data[i], param_clip_gradient);
+    } else {
+      mom_data[i] = param_momentum*mom_data[i]
+                - param_lr*param_wd*weight_data[i]
+                - param_lr*param_rescale_grad*grad_data[i];
+    }
     AssignCUDA(out_data[i], req, weight_data[i] + mom_data[i]);
   }
 };
@@ -149,16 +139,7 @@ inline void SGDMomUpdate(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob> &inputs,
                          const std::vector<OpReqType> &req,
                          const std::vector<TBlob> &outputs) {
-#if 1
-  // using namespace mshadow;
-  // using namespace mshadow::expr;
-  // using namespace mshadow_op;
   using namespace mxnet_op;
-#else
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  using namespace mshadow_op;
-#endif
   SGDMomParam param = nnvm::get<SGDMomParam>(attrs.parsed);
   Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
@@ -166,41 +147,10 @@ inline void SGDMomUpdate(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 2, DType> grad = inputs[1].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> mom = inputs[2].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    // fprintf(stderr, "weight %d %d grad %d %d mom %d %d out %d %d\n",
-    //   weight.shape_[0], weight.shape_[1], grad.shape_[0], grad.shape_[1],
-    //   mom.shape_[0], mom.shape_[1], out.shape_[0], out.shape_[1]);
-    // fprintf(stderr, "%s\n", );
-#if 1
-    if (param.clip_gradient >= 0.0f) {
-      // mom = scalar<DType>(param.momentum)*mom
-      //         - scalar<DType>(param.lr*param.wd)*weight
-      //         - scalar<DType>(param.lr)
-      //           * F<clip>(scalar<DType>(param.rescale_grad)*grad,
-      //                     DType(param.clip_gradient));
-      // Assign(out, req[0], weight + mom);
-    } else {
-      Kernel<SGDMomKernel, xpu>::Launch(s, weight.shape_.Size(), out.dptr_, mom.dptr_, weight.dptr_,
-        grad.dptr_, static_cast<DType>(param.momentum), static_cast<DType>(param.lr),
-        static_cast<DType>(param.wd), static_cast<DType>(param.rescale_grad), req[0]);
-      // mom = scalar<DType>(param.momentum)*mom
-      //         - scalar<DType>(param.lr*param.wd)*weight
-      //         - scalar<DType>(param.lr*param.rescale_grad)*grad;
-      // Assign(out, req[0], weight + mom);
-    }
-#else
-    if (param.clip_gradient >= 0.0f) {
-      mom = scalar<DType>(param.momentum)*mom
-              - scalar<DType>(param.lr*param.wd)*weight
-              - scalar<DType>(param.lr)
-                * F<clip>(scalar<DType>(param.rescale_grad)*grad,
-                          DType(param.clip_gradient));
-    } else {
-      mom = scalar<DType>(param.momentum)*mom
-              - scalar<DType>(param.lr*param.wd)*weight
-              - scalar<DType>(param.lr*param.rescale_grad)*grad;
-    }
-    Assign(out, req[0], weight + mom);
-#endif
+    Kernel<SGDMomKernel, xpu>::Launch(s, weight.shape_.Size(), out.dptr_, mom.dptr_, weight.dptr_,
+      grad.dptr_, static_cast<DType>(param.clip_gradient), static_cast<DType>(param.momentum),
+      static_cast<DType>(param.lr), static_cast<DType>(param.wd),
+      static_cast<DType>(param.rescale_grad), req[0]);
   });
 }
 
