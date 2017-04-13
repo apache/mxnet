@@ -96,10 +96,10 @@ Example::
 
 )code" ADD_FILELINE)
     .add_argument("data", "NDArray-or-Symbol",
-                  "n-dimensional input tensor of the form [max sequence "
-                  "length, batchsize, other dims]")
+                  "n-dimensional input array of the form [max sequence "
+                  "length, batchsize, other dims] where n>2 ")
     .add_argument("sequence_length", "NDArray-or-Symbol",
-                  "vector of sequence lengths of size batchsize")
+                  "vector of sequence lengths of the form [batch size]")
     .add_arguments(SequenceReverseParam::__FIELDS__());
 
 }  // namespace op
