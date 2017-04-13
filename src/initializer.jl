@@ -48,29 +48,28 @@ function _init_loc_bias(self :: AbstractInitializer, name :: Base.Symbol, array 
 end
 
 function _init_bilinear(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
-  # ported from python version:
-  #weight = np.zeros(np.prod(arr.shape), dtype='float32')
-  #shape = arr.shape
-  #f = np.ceil(shape[3] / 2.)
-  #c = (2 * f - 1 - f % 2) / (2. * f)
-  #for i in range(np.prod(shape)):
-  #  x = i % shape[3]
-  #  y = (i / shape[3]) % shape[2]
-  #  weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
-  #arr[:] = weight.reshape(shape)
-  
-  weight=zeros(array)
-  
-  h,w,channels,n=size(array)
-  f = ceil(w / 2.)
-  c = (2 * f - 1 - f % 2) / (2. * f)
-  
-  for i=1:length(weight)
-    x = i % w
-    y = (i / w) % h
-    weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
+  @assert ndims(array) == 4
+
+  W, H, C, N = size(array) # Inverse of NCHW layout
+  filter = Base.zeros(eltype(array), W, H)
+
+  @assert H == W
+
+  f = ceil(Int, W / 2) # factor
+  c = (2 * f - 1 - f % 2) / (2 * f) # center
+  for x in 0:(W-1)
+    for y in 0:(H-1)
+      filter[x+1, y+1] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
+    end
   end
-  array[:,:,:,:]=weight
+
+  @nd_as_jl rw=array begin
+    for i in 1:N
+      for j in 1:C
+        array[:,:, j, i] = filter
+      end
+    end
+  end
 end
 
 function _init_bias(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
