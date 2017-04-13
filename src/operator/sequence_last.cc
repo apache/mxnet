@@ -30,13 +30,13 @@ Operator *SequenceLastProp::CreateOperatorEx(Context ctx,
 DMLC_REGISTER_PARAMETER(SequenceLastParam);
 
 MXNET_REGISTER_OP_PROPERTY(SequenceLast, SequenceLastProp)
-    .describe(R"code(Returns an (n-1)-dimensional array of the form [batchsize, other dims]
+    .describe(R"code(Returns an (n-1)-dimensional array of the form [batch size, other dims]
 
-This function takes an n-dimensional input array of the form [max sequence length, batchsize, other dims]
-and returns a (n-1)-dimensional array of the form [batchsize, other dims].
+This function takes an n-dimensional input array of the form [max sequence length, batch size, other dims]
+and returns a (n-1)-dimensional array of the form [batch size, other dims].
 
 Parameter `sequence_length` is used to handle variable-length sequences. `sequence_length` should be an input array of
-positive ints of dimension [batchsize]. To use this parameter, set `use_sequence_length` to `True`,
+positive ints of dimension [batch size]. To use this parameter, set `use_sequence_length` to `True`,
 otherwise each example in the batch is assumed to have the max sequence length.
 
 Example::
@@ -65,13 +65,6 @@ Example::
                                                           [  4.,   5.,   6.],
                                                           [  7.,   8.,   9.]]
 
-   y = [2,2,2]
-
-   // variable-length sequence y is used
-   mx.nd.SequenceLast(x, y, use_sequence_length=True) = [[ 10.,   11.,   12.],
-                                                         [ 13.,   14.,   15.],
-                                                         [ 16.,   17.,   18.]]
-
    y = [1,2,3]
 
    // variable-length sequence y is used
@@ -82,9 +75,9 @@ Example::
 )code" ADD_FILELINE)
     .add_argument("data", "NDArray-or-Symbol",
                   "n-dimensional input array of the form [max sequence "
-                  "length, batchsize, other dims] where n>2")
+                  "length, batch size, other dims] where n>2")
     .add_argument("sequence_length", "NDArray-or-Symbol",
-                  "vector of sequence lengths of batchsize")
+                  "vector of sequence lengths of the form [batch size]")
     .add_arguments(SequenceLastParam::__FIELDS__());
 
 }  // namespace op
