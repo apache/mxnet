@@ -32,7 +32,6 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Large Scale Image Classification - Training with 14 million images on a single machine](http://mxnet.io/tutorials/computer_vision/imagenet_full.html)
 
-
 #### Natural Language Processing
 
 - [Character-Level LSTM - Generate new text, one character at a time](http://mxnet.io/tutorials/python/char_lstm.html)
@@ -64,10 +63,9 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Classifying Handwritten Digits with Convolutional Neural Networks](http://mxnet.io/tutorials/r/mnistCompetition.html)
 
-- [Classify Real-World Images with a Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
+- [Classify Real-world Images with a Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
 
-- [Dogs vs. Cats Classification with Fine-tuning](https://statist-bhfz.github.io/cats_dogs_finetune)
-([source RMD](https://github.com/dmlc/mxnet/tree/master/docs/tutorials/r/CatsDogsFinetune.rmd))
+- [Dogs vs. Cats Classification with Fine-tuning](https://statist-bhfz.github.io/cats_dogs_finetune) ([source RMD](https://github.com/dmlc/mxnet/tree/master/docs/tutorials/r/CatsDogsFinetune.rmd))
 
 - [Character-Level Language Modeling with LSTM RNNs](http://mxnet.io/tutorials/r/charRnnModel.html)
 
