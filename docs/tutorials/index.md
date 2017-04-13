@@ -10,15 +10,15 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Introduction to Symbol - Neural network graphs and auto-differentiation](http://mxnet.io/tutorials/python/symbol.html)
 
-- [Introduction to Module - MXNet's high-level interface for Neural Network Training](http://mxnet.io/tutorials/python/module.html)
+- [Introduction to Module - MXNet's high-level interface for neural network training](http://mxnet.io/tutorials/python/module.html)
 
 - [MXNet Iterators - Load data for neural network training](http://mxnet.io/tutorials/python/data.html)
 
 - [Image IO - Loading and pre-processing images](http://mxnet.io/tutorials/python/image_io.html)
 
-- [Record IO - Pack Free-format data in binary files ](http://mxnet.io/tutorials/python/record_io.html)
+- [Record IO - Pack free-format data in binary files ](http://mxnet.io/tutorials/python/record_io.html)
 
-- [Custom Image IO - Write High-performance data-pipelines using `mxnet.image`](http://mxnet.io/tutorials/python/advanced_img_io.html)
+- [Custom Image IO - Write high-performance data-pipelines using `mxnet.image`](http://mxnet.io/tutorials/python/advanced_img_io.html)
 
 #### Computer Vision
 
@@ -28,10 +28,9 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Object Detection using Faster R-CNN](http://mxnet.io/tutorials/computer_vision/detection.html)
 
-- [Neural Art: Transfer the style of one image onto the content the content of another image](http://mxnet.io/tutorials/computer_vision/neural_art.html)
+- [Neural Art - Transfer the style of one image onto the content the content of another image](http://mxnet.io/tutorials/computer_vision/neural_art.html)
 
-- [Large Scale Image Classification: Training With 14 Million Images on a Single Machine](http://mxnet.io/tutorials/computer_vision/imagenet_full.html)
-
+- [Large Scale Image Classification - Training with 14 million images on a single machine](http://mxnet.io/tutorials/computer_vision/imagenet_full.html)
 
 #### Natural Language Processing
 
@@ -51,7 +50,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Generative Adversarial Networks](http://mxnet.io/tutorials/unsupervised_learning/gan.html)
 
-- [Auto Encoders- Find low dimensional representations of data](http://mxnet.io/tutorials/unsupervised_learning/auto_encoders.html)
+- [Autoencoders - Find low dimensional representations of data](http://mxnet.io/tutorials/unsupervised_learning/auto_encoders.html)
 
 - [Matrix Factorization - Discover latent factors of user preference in MovieLens data](http://mxnet.io/tutorials/python/matrix_factorization.html)
 
@@ -60,21 +59,20 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 ### R
 
-- [Neural Networks with _MXNet_ in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
+- [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
 
 - [Classifying Handwritten Digits with Convolutional Neural Networks](http://mxnet.io/tutorials/r/mnistCompetition.html)
 
-- [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
+- [Classify Real-world Images with a Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
 
-- [Dogs vs. Cats classification with _MXNet_ and R](https://statist-bhfz.github.io/cats_dogs_finetune) *End-to-end tutorial with an example of fine-tuning in R*
-([source RMD](https://github.com/dmlc/mxnet/tree/master/docs/tutorials/r/CatsDogsFinetune.rmd))
+- [Dogs vs. Cats Classification with Fine-tuning](https://statist-bhfz.github.io/cats_dogs_finetune) ([source RMD](https://github.com/dmlc/mxnet/tree/master/docs/tutorials/r/CatsDogsFinetune.rmd))
 
 - [Character-Level Language Modeling with LSTM RNNs](http://mxnet.io/tutorials/r/charRnnModel.html)
 
 
 ### Scala
 
-- [Create _MXNet_ Scala Applications with the IntelliJ IDE](http://mxnet.io/tutorials/scala/mxnet_scala_on_intellij.html)
+- [Create MXNet Scala Applications with the IntelliJ IDE](http://mxnet.io/tutorials/scala/mxnet_scala_on_intellij.html)
 
 - [Handwritten Digit Classification with Multilayer Perceptrons](http://mxnet.io/tutorials/scala/mnist.html)
 
