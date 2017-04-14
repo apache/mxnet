@@ -15,18 +15,18 @@ are returned.
 
 Example::  
 
-   x = [[ 0.,  1.,  2.], 
-        [ 3.,  4.,  5.]]  
+  x = [[ 0.,  1.,  2.], 
+       [ 3.,  4.,  5.]]  
 
-   // argmax along axis 0
-   argmax(x, axis=0) = [ 1.,  1.,  1.]   
+  // argmax along axis 0
+  argmax(x, axis=0) = [ 1.,  1.,  1.]   
 
-   // argmax along axis 1
-   argmax(x, axis=1) = [ 2.,  2.]   
+  // argmax along axis 1
+  argmax(x, axis=1) = [ 2.,  2.]   
 
-   // argmax along axis 1 keeping same dims as an input array
-   argmax(x, axis=1, keepdims=True) = [[ 2.], 
-                                       [ 2.]]   
+  // argmax along axis 1 keeping same dims as an input array
+  argmax(x, axis=1, keepdims=True) = [[ 2.], 
+                                      [ 2.]]   
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
@@ -39,18 +39,19 @@ are returned.
 
 Example::  
 
-   x = [[ 0.,  1.,  2.], 
-        [ 3.,  4.,  5.]]  
+  x = [[ 0.,  1.,  2.], 
+       [ 3.,  4.,  5.]]  
 
-   // argmin along axis 0
-   argmin(x, axis=0) = [ 0.,  0.,  0.]   
+  // argmin along axis 0
+  argmin(x, axis=0) = [ 0.,  0.,  0.]   
 
-   // argmin along axis 1
-   argmin(x, axis=1) = [ 0.,  0.]   
+  // argmin along axis 1
+  argmin(x, axis=1) = [ 0.,  0.]   
 
-   // argmin along axis 1 keeping same dims as an input array
-   argmin(x, axis=1, keepdims=True) = [[ 0.], 
-                                       [ 0.]]   
+  // argmin along axis 1 keeping same dims as an input array
+  argmin(x, axis=1, keepdims=True) = [[ 0.], 
+                                      [ 0.]]   
+
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::minimum>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
@@ -66,10 +67,10 @@ are returned.
 
 Example::  
 
-   x = [[ 0.,  1.,  2.], 
-        [ 3.,  4.,  5.]]  
+  x = [[ 0.,  1.,  2.], 
+       [ 3.,  4.,  5.]]  
 
-   argmax_channel(x) = [ 2.,  2.]   
+  argmax_channel(x) = [ 2.,  2.]   
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
