@@ -982,23 +982,23 @@ def ones(shape, ctx=None, dtype=mx_real_t):
     # pylint: enable= no-member, protected-access
 
 def full(shape, val, ctx=None, dtype=mx_real_t):
-    """Returns a new array of given shape and type, filled with the given value ``val``.
+    """Returns a new array of given shape and type, filled with the given value `val`.
 
     Parameters
     --------
-    shape : int or tuple of int)
-        The shape of the empty array.
+    shape : int or tuple of int
+        The shape of the new array.
     val : scalar
-        Fill value
+        Fill value.
     ctx : Context, optional
-        An optional device context (default is the current default context).
-    dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`).
+        Device context (default is the current default context).
+    dtype : `str` or `numpy.dtype`, optional
+        The data type of the returned NDArray. The default datatype is `float32`.
 
     Returns
     -------
     NDArray
-        A created array
+        `NDArray` filled with `val`, with the given shape, ctx, and dtype.
 
     Examples
     --------
