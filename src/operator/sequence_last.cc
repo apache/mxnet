@@ -32,12 +32,14 @@ DMLC_REGISTER_PARAMETER(SequenceLastParam);
 MXNET_REGISTER_OP_PROPERTY(SequenceLast, SequenceLastProp)
     .describe(R"code(Takes the last element of a sequence.
 
-This function takes an n-dimensional input array of the form [max sequence length, batch size, other dims]
-and returns a (n-1)-dimensional array of the form [batch size, other dims].
+This function takes an n-dimensional input array of the form
+[max_sequence_length, batch_size, other_feature_dims] and returns a (n-1)-dimensional array
+of the form [batch_size, other_feature_dims].
 
-Parameter `sequence_length` is used to handle variable-length sequences. `sequence_length` should be an input array of
-positive ints of dimension [batch size]. To use this parameter, set `use_sequence_length` to `True`,
-otherwise each example in the batch is assumed to have the max sequence length.
+Parameter `sequence_length` is used to handle variable-length sequences. `sequence_length` should be
+an input array of positive ints of dimension [batch_size]. To use this parameter,
+set `use_sequence_length` to `True`, otherwise each example in the batch is assumed
+to have the max sequence length.
 
 Example::
 
@@ -70,12 +72,14 @@ Example::
              [  13.,  14.,  15.],
              [  25.,  26.,  27.]]
 
+.. note:: Alternatively, you can also use `take` operator.
+
 )code" ADD_FILELINE)
     .add_argument("data", "NDArray-or-Symbol",
-                  "n-dimensional input array of the form [max sequence "
-                  "length, batch size, other dims] where n>2")
+                  "n-dimensional input array of the form [max_sequence_length,"
+                  " batch_size, other_feature_dims] where n>2")
     .add_argument("sequence_length", "NDArray-or-Symbol",
-                  "vector of sequence lengths of the form [batch size]")
+                  "vector of sequence lengths of the form [batch_size]")
     .add_arguments(SequenceLastParam::__FIELDS__());
 
 }  // namespace op

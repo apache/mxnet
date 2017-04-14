@@ -32,11 +32,12 @@ DMLC_REGISTER_PARAMETER(SequenceReverseParam);
 MXNET_REGISTER_OP_PROPERTY(SequenceReverse, SequenceReverseProp)
     .describe(R"code(Reverses the elements of each sequence.
 
-This function takes an n-dimensional input array of the form [max sequence length, batch size, other dims]
+This function takes an n-dimensional input array of the form [max_sequence_length, batch_size, other_feature_dims]
 and returns an array of the same shape.
 
-Parameter `sequence_length` is used to handle variable-length sequences. `sequence_length` should be an input array of
-positive ints of dimension [batch size]. To use this parameter, set `use_sequence_length` to `True`,
+Parameter `sequence_length` is used to handle variable-length sequences.
+`sequence_length` should be an input array of positive ints of dimension [batch_size].
+To use this parameter, set `use_sequence_length` to `True`,
 otherwise each example in the batch is assumed to have the max sequence length.
 
 Example::
@@ -70,11 +71,9 @@ Example::
                          [[  1.,   2.,   3.],
                           [  4.,   5.,   6.]]]
 
-   y = [2,2]
-
    // sequence_length [2,2] means 2 rows of
    // both batch B1 and B2 will be reversed.
-   SequenceReverse(x, y, use_sequence_length=True) =
+   SequenceReverse(x, y=[2,2], use_sequence_length=True) =
                      [[[  7.,   8.,   9.],
                        [ 10.,  11.,  12.]],
 
@@ -84,11 +83,9 @@ Example::
                       [[ 13.,  14.,   15.],
                        [ 16.,  17.,   18.]]]
 
-   y = [2,3]
-
    // sequence_length [2,3] means 2 of batch B2 and 3 of batch B3
    // will be reversed.
-   SequenceReverse(x, y, use_sequence_length=True) =
+   SequenceReverse(x, y=[2,3], use_sequence_length=True) =
                     [[[  7.,   8.,   9.],
                       [ 16.,  17.,  18.]],
 
@@ -100,10 +97,10 @@ Example::
 
 )code" ADD_FILELINE)
     .add_argument("data", "NDArray-or-Symbol",
-                  "n-dimensional input array of the form [max sequence "
-                  "length, batchsize, other dims] where n>2 ")
+                  "n-dimensional input array of the form [max_sequence_length,"
+                  " batch_size, other dims] where n>2 ")
     .add_argument("sequence_length", "NDArray-or-Symbol",
-                  "vector of sequence lengths of the form [batch size]")
+                  "vector of sequence lengths of the form [batch_size]")
     .add_arguments(SequenceReverseParam::__FIELDS__());
 
 }  // namespace op
