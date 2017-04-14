@@ -66,13 +66,14 @@ DMLC_REGISTER_PARAMETER(ActivationParam);
 
 MXNET_REGISTER_OP_PROPERTY(Activation, ActivationProp)
 .describe(R"code(Elementwise activation function.
-The activation operations are applied elementwisely to each array elements. The
-following types are supported:
+The activation operations are applied elementwisely to each array elements.
 
-- `relu`: Rectified Linear Unit, `y = max(x, 0)`
-- `sigmoid`: `y = 1 / (1 + exp(-x))`
-- `tanh`: Hyperbolic tangent, `y = (exp(x) - exp(-x)) / (exp(x) + exp(-x))`
-- `softrelu`: Soft ReLU, or SoftPlus, `y = log(1 + exp(x))`
+The following types are supported:
+
+- `relu`: Rectified Linear Unit, :math:`y = max(x, 0)`
+- `sigmoid`: :math:`y = \frac{1}{1 + e^{-x}}`
+- `tanh`: Hyperbolic tangent, :math:`y = \frac{e^x - e^{-x}}{e^x + e^{-x}}`
+- `softrelu`: Soft ReLU, or SoftPlus, :math:`y = log(1 + e^x)`
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input data to activation function.")
 .add_arguments(ActivationParam::__FIELDS__());
