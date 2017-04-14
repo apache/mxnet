@@ -4,6 +4,7 @@ language: julia
 os:
   - linux
   - osx
+osx_image: xcode8
 julia:
   - 0.5
 #  - nightly 0.6 supports depends on #170
