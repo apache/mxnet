@@ -86,28 +86,31 @@ Example::
 
    y = [1,1]
 
-   // sequence_length [1,1] means 1 of each batch will be kept and other rows are masked with default mask value = 0
-   SequenceMask(x, y, use_sequence_length=True) = [[[  1.,   2.,   3.],
-                                                    [  4.,   5.,   6.]],
+   // sequence_length [1,1] means 1 of each batch will be kept
+   // and other rows are masked with default mask value = 0
+   SequenceMask(x, y, use_sequence_length=True) =
+                [[[  1.,   2.,   3.],
+                  [  4.,   5.,   6.]],
 
-                                                   [[  0.,   0.,   0.],
-                                                    [  0.,   0.,   0.]],
+                 [[  0.,   0.,   0.],
+                  [  0.,   0.,   0.]],
 
-                                                   [[  0.,   0.,   0.],
-                                                    [  0.,   0.,   0.]]]
+                 [[  0.,   0.,   0.],
+                  [  0.,   0.,   0.]]]
 
    y = [2,3]
 
-   // sequence_length [2,3] means 2 of batch B1 and 3 of batch B2 will be kept and
-   // other rows are masked with value = 1
-   SequenceMask(x, y, use_sequence_length=True, value=1) = [[[  1.,   2.,   3.],
-                                                             [  4.,   5.,   6.]],
+   // sequence_length [2,3] means 2 of batch B1 and 3 of batch B2 will be kept
+   // and other rows are masked with value = 1
+   SequenceMask(x, y, use_sequence_length=True, value=1) =
+                [[[  1.,   2.,   3.],
+                  [  4.,   5.,   6.]],
 
-                                                            [[  7.,   8.,   9.],
-                                                             [  10.,  11.,  12.]],
+                 [[  7.,   8.,   9.],
+                  [  10.,  11.,  12.]],
 
-                                                            [[   1.,   1.,   1.],
-                                                             [  16.,  17.,  18.]]]
+                 [[   1.,   1.,   1.],
+                  [  16.,  17.,  18.]]]
 
 )code" ADD_FILELINE)
     .add_argument("data", "NDArray-or-Symbol",

@@ -72,27 +72,31 @@ Example::
 
    y = [2,2]
 
-   // sequence_length [2,2] means 2 rows of both batch B1 and B2 will be reversed.
-   SequenceReverse(x, y, use_sequence_length=True) =  [[[  7.,   8.,   9.],
-                                                        [ 10.,  11.,  12.]],
+   // sequence_length [2,2] means 2 rows of
+   // both batch B1 and B2 will be reversed.
+   SequenceReverse(x, y, use_sequence_length=True) =
+                     [[[  7.,   8.,   9.],
+                       [ 10.,  11.,  12.]],
 
-                                                       [[  1.,   2.,   3.],
-                                                        [  4.,   5.,   6.]],
+                      [[  1.,   2.,   3.],
+                       [  4.,   5.,   6.]],
 
-                                                       [[ 13.,  14.,   15.],
-                                                        [ 16.,  17.,   18.]]]
+                      [[ 13.,  14.,   15.],
+                       [ 16.,  17.,   18.]]]
 
    y = [2,3]
 
-   // sequence_length [2,3] means 2 of batch B2 and 3 of batch B3 will be reversed.
-   SequenceReverse(x, y, use_sequence_length=True) = [[[  7.,   8.,   9.],
-                                                       [ 16.,  17.,  18.]],
+   // sequence_length [2,3] means 2 of batch B2 and 3 of batch B3
+   // will be reversed.
+   SequenceReverse(x, y, use_sequence_length=True) =
+                    [[[  7.,   8.,   9.],
+                      [ 16.,  17.,  18.]],
 
-                                                      [[  1.,   2.,   3.],
-                                                       [ 10.,  11.,  12.]],
+                     [[  1.,   2.,   3.],
+                      [ 10.,  11.,  12.]],
 
-                                                      [[ 13.,  14,   15.],
-                                                       [  4.,   5.,   6.]]]
+                     [[ 13.,  14,   15.],
+                      [  4.,   5.,   6.]]]
 
 )code" ADD_FILELINE)
     .add_argument("data", "NDArray-or-Symbol",

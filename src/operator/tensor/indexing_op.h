@@ -337,10 +337,10 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
     .add_enum("clip", take_::kClip)
     .set_default(take_::kClip)
     .describe("Specify how out-of-bound indices bahave."
-              " * 'clip' -- clip to the range. All indices that are too large"
-              " are replaced by the index that addresses the last element along an axis. "
-              " * 'wrap' -- wrap around  "
-              " * 'raise' -- raise an error   ");
+              " \"clip\" means clip to the range. So, if all indices mentioned are too large,"
+              " they are replaced by the index that addresses the last element along an axis. "
+              " \"wrap\" means to wrap around. "
+              " \"raise\" means to raise an error. ");
   }
 };
 
