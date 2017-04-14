@@ -11,6 +11,16 @@ interfaces:
 abstract AbstractEvalMetric
 
 """
+    hasNDArraySupport(metric) -> Val{true/false}
+
+Trait for `_update_single_output` should return `Val{true}() if metric can handle `NDArray`
+directly and `Val{false}()i` if requires `Array`. Metric that work with NDArrays can be
+async, while native Julia arrays require that we copy the output of the network, which is
+a blocking operation.
+"""
+hasNDArraySupport(::AbstractEvalMetric) = Val{true}()
+
+"""
     update!(metric, labels, preds)
 
 Update and accumulate metrics.
@@ -21,6 +31,21 @@ Update and accumulate metrics.
 * `preds::Vector{NDArray}`: the outputs (predictions) of the network.
 """
 function update!{T <: AbstractEvalMetric}(metric :: T, labels :: Vector{NDArray}, preds :: Vector{NDArray})
+  _update!(metric, labels, preds, hasNDArraySupport(metric))
+end
+
+function _update!{T<: AbstractEvalMetric}(metric :: T, labels :: Vector{NDArray}, preds :: Vector{NDArray}, :: Val{true})
+  if length(labels) != length(preds)
+    Base.warn_once(
+      "The number of labels ($(length(labels))) does not correspond to the\
+      number of outputs ($(length(preds))). The calculated metric might not be accuracte.")
+  end
+  for (label, pred) in zip(labels, preds)
+    _update_single_output(metric, label, pred)
+  end
+end
+
+function _update!{T<: AbstractEvalMetric}(metric :: T, labels :: Vector{NDArray}, preds :: Vector{NDArray}, :: Val{false})
   if length(labels) != length(preds)
     Base.warn_once(
       "The number of labels ($(length(labels))) does not correspond to the\
@@ -29,9 +54,7 @@ function update!{T <: AbstractEvalMetric}(metric :: T, labels :: Vector{NDArray}
   for (label, pred) in zip(labels, preds)
      @nd_as_jl ro=(label, pred) begin
        # This is a dynamic dispatch since the conversion from NDArray to
-       # Array is not type-stable. We could use a trait to decide if we should
-       # convert the NDArray here so that the called function will be type-stable
-       # or if we should forward the NDArray.
+       # Array is not type-stable.
       _update_single_output(metric, label, pred)
     end
   end
@@ -160,6 +183,8 @@ type Accuracy <: AbstractEvalMetric
   Accuracy() = new(0.0, 0)
 end
 
+hasNDArraySupport(::Accuracy) = Val{false}()
+
 function _update_single_output(metric :: Accuracy, label :: Array, pred :: Array)
   # Samples are stored in the last dimension
   @assert size(label, ndims(label)) == size(pred, ndims(pred))
@@ -216,6 +241,8 @@ type MSE <: AbstractEvalMetric
 
   MSE() = new(0.0, 0)
 end
+
+hasNDArraySupport(::MSE) = Val{false}()
 
 function _update_single_output{T}(metric :: MSE, label :: Array{T}, pred :: Array{T})
   @assert size(label) == size(pred)
@@ -287,6 +314,8 @@ type NMSE <: AbstractEvalMetric
   NMSE() = new(0.0, 0)
 end
 
+hasNDArraySupport(::NMSE) = Val{false}()
+
 function _update_single_output(metric :: NMSE, label :: Array, pred :: Array)
   n_sample = size(pred)[end]
   metric.n_sample += n_sample
@@ -333,6 +362,8 @@ function reset!(metric :: ACE)
   metric.ace_sum = 0.0
   metric.n_sample = 0
 end
+
+hasNDArraySupport(::ACE) = Val{false}()
 
 function _update_single_output{T}(metric :: ACE, label :: Array{T}, pred :: Array{T})
   eps = convert(T, metric.eps)
@@ -395,6 +426,8 @@ function reset!(metric :: MultiACE)
   metric.aces = Base.zero(metric.aces)
   metric.counts = Base.zero(metric.counts)
 end
+
+hasNDArraySupport(::MultiACE) = Val{false}()
 
 function _update_single_output{T}(metric :: MultiACE, label :: Array{T}, pred :: Array{T})
   eps = convert(T, metric.eps)
