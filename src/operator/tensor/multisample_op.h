@@ -45,7 +45,7 @@ inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
   // Get shape to be sampled for each parameter set.
   const MultiSampleParam& param = nnvm::get<MultiSampleParam>(attrs.parsed);
   TShape sshape = param.shape;
-  for ( int i = 0; i < sshape.ndim(); ++i ) {
+  for ( size_t i = 0; i < sshape.ndim(); ++i ) {
     CHECK_GT((int)sshape[i], 0) << "shape parameter must be non-zero within each dimension";
   }
   // Examine output shape whether it is already defined.
@@ -57,10 +57,10 @@ inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
     tshape = TShape(tshape.begin(), tshape.begin()+(tshape.ndim()-sshape.ndim()));
   }
   // Shape assignemnt/checking for inputs.
-  for ( int i = 0; i < in_attrs->size(); ++i ) {
+  for ( size_t i = 0; i < in_attrs->size(); ++i ) {
     if ( !shape_assign(&tshape, (*in_attrs)[i])) return false;
   }
-  for ( int i = 0; i < in_attrs->size(); ++i ) {
+  for ( size_t i = 0; i < in_attrs->size(); ++i ) {
     SHAPE_ASSIGN_CHECK(*in_attrs, i, tshape);
   }
   if ( tshape.ndim() > 0 ) {
@@ -84,10 +84,10 @@ inline bool MultiSampleOpType(const nnvm::NodeAttrs& attrs,
 
   // All inputs must have same type.
   int dtype = -1;
-  for ( int i = 0; i < in_attrs->size(); ++i ) {
+  for ( size_t i = 0; i < in_attrs->size(); ++i ) {
     if (!type_assign(&dtype, (*in_attrs)[i])) return false;
   }
-  for ( int i = 0; i < in_attrs->size(); ++i ) {
+  for ( size_t i = 0; i < in_attrs->size(); ++i ) {
     TYPE_ASSIGN_CHECK(*in_attrs, i, dtype);
   }
   if (-1 == dtype) return false;

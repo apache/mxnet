@@ -194,7 +194,8 @@ class Shuffler {
 
 class BucketSentenceIter : public DataIter {
   Shuffler* random;
-  int batch, current, end, sequence_length;
+  int batch, current, end;
+  unsigned int sequence_length;
   Context device;
   vector<vector<mx_float>> sequences;
   vector<wchar_t> index2chars;
@@ -582,7 +583,7 @@ void predict(wstring* ptext, int sequence_length, const string param_file,
   LoadCheckpoint(param_file, exe);
 
   mx_float index;
-  wchar_t next;
+  wchar_t next = 0;
   vector<mx_float> softmax;
   softmax.resize(input_dim);
   for (auto c : *ptext) {
@@ -642,7 +643,7 @@ void predictWithBuiltInRNNOp(wstring* ptext, int sequence_length, const string p
   LoadCheckpoint(param_file, exe);
 
   mx_float index;
-  wchar_t next;
+  wchar_t next = 0;
   vector<mx_float> softmax;
   softmax.resize(input_dim);
   for (auto c : *ptext) {
