@@ -236,27 +236,30 @@ Requires that label and prediction have the same shape.
 """
 
 type MSE <: AbstractEvalMetric
-  mse_sum  :: Float64
+  mse_sum  :: Vector{NDArray}
   n_sample :: Int
 
-  MSE() = new(0.0, 0)
+  MSE() = new(Vector{NDArray}(), 0)
 end
 
-hasNDArraySupport(::MSE) = Val{false}()
+hasNDArraySupport(::MSE) = Val{true}()
 
-function _update_single_output{T}(metric :: MSE, label :: Array{T}, pred :: Array{T})
+function _update_single_output(metric :: MSE, label :: NDArray, pred :: NDArray)
   @assert size(label) == size(pred)
   metric.n_sample += length(label)
-  metric.mse_sum += sumabs2(label .- pred)
+  mse_sum = mx.sum(mx._PowerScalar(label - pred,scalar=2))
+  push!(metric.mse_sum, mse_sum)
   return nothing
 end
 
 function get(metric :: MSE)
-  return [(:MSE, metric.mse_sum / metric.n_sample)]
+  # Delay copy until last possible moment
+  mse_sum = mapreduce(nda->copy(nda)[1], +, 0.0, metric.mse_sum)
+  return [(:MSE, mse_sum / metric.n_sample)]
 end
 
 function reset!(metric :: MSE)
-  metric.mse_sum  = 0.0
+  metric.mse_sum = Vector{NDArray}()
   metric.n_sample = 0
 end
 
