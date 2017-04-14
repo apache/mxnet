@@ -798,8 +798,8 @@ end
 # pointers from CPU) leads to undefined behavior.
 import Base.pointer
 function pointer(arr :: NDArray)
-  pdata = Ref{Ptr{MX_float}}(0)
-  @mxcall(:MXNDArrayGetData, (MX_handle, Ref{Ptr{MX_float}}), arr, pdata)
+  pdata = Ref{Ptr{Void}}(0)
+  @mxcall(:MXNDArrayGetData, (MX_handle, Ref{Ptr{Void}}), arr, pdata)
   return convert(Ptr{eltype(arr)}, pdata[])
 end
 function _wait_to_read(arr :: NDArray)
