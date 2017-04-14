@@ -28,7 +28,7 @@ end
 
 function loglikelihood{T <: AbstractFloat}(labels::Vector{T}, probs::Array{T, 2})
     LL = 0.0
-    eps = 1.0e-8
+    eps = convert(T, 1.0e-8)
     for i = 1:size(labels, 1)
         LL += log(probs[Int(labels[i]) + 1, i] + eps)    # labels are zero-based
     end

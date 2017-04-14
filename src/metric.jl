@@ -334,8 +334,8 @@ function reset!(metric :: ACE)
   metric.n_sample = 0
 end
 
-function _update_single_output(metric :: ACE, label :: Array, pred :: Array)
-  eps = metric.eps
+function _update_single_output{T}(metric :: ACE, label :: Array{T}, pred :: Array{T})
+  eps = convert(T, metric.eps)
   # Samples are stored in the last dimension
   @assert size(label, ndims(label)) == size(pred, ndims(pred))
   if size(label) == size(pred) # simply calculate the cross entropy of the probabilities
@@ -396,8 +396,8 @@ function reset!(metric :: MultiACE)
   metric.counts = Base.zero(metric.counts)
 end
 
-function _update_single_output(metric :: MultiACE, label :: Array, pred :: Array)
-  eps = metric.eps
+function _update_single_output{T}(metric :: MultiACE, label :: Array{T}, pred :: Array{T})
+  eps = convert(T, metric.eps)
   # Samples are stored in the last dimension
   @assert size(label, ndims(label)) == size(pred, ndims(pred))
   @assert size(metric.aces) == size(metric.counts)
