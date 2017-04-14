@@ -20,9 +20,6 @@ NNVM_REGISTER_OP(take)
 NNVM_REGISTER_OP(_backward_take)
 .set_attr<FCompute>("FCompute<gpu>", TakeOpBackward<gpu>);
 
-NNVM_REGISTER_OP(batch_take)
-.set_attr<FCompute>("FCompute<gpu>", BatchTakeOpForward<gpu>);
-
 NNVM_REGISTER_OP(one_hot)
 .set_attr<FCompute>("FCompute<gpu>", OneHotOpForward<gpu>);
 

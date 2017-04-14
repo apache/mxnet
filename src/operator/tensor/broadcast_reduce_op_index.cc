@@ -7,6 +7,8 @@
 
 namespace mxnet {
 namespace op {
+DMLC_REGISTER_PARAMETER(PickParam);
+
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmax)
 .MXNET_DESCRIBE("Returns the indices of the maximum values along an axis.")
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
@@ -33,9 +35,37 @@ NNVM_REGISTER_OP(argmax_channel)
 .add_argument("data", "NDArray-or-Symbol", "Source input");
 
 NNVM_REGISTER_OP(pick)
+.add_alias("batch_take")
+.describe(R"code(Pick elements from a data batch.
+
+Given an ``(d0, d1, ..., dn-1)`` input array, and ``(d0, ..., di-1, di+1, ..., dn-1)`` indices,
+the output will be a
+``(d0, ..., di-1, di+1, ..., dn-1)`` computed by::
+
+  output[..., i, ...] = input[..., indices[..., i, ...], ...]
+
+Examples::
+
+  x = [[ 1.,  2.],
+       [ 3.,  4.],
+       [ 5.,  6.]]
+
+  pick(x, [0,1,0], axis=-1) = [ 1.  4.  5.]
+
+  x = [[[ 1.,  2.],
+        [ 3.,  4.]],
+       [[ 5.,  6.],
+        [ 7.,  8.]]]
+  ind = [[0, 1],
+         [2, 1]]
+
+  pick(x, ind, axis=1) = [[1., 4.],
+                          [7., 8.]]
+
+)code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<ReduceAxisParam>)
+.set_attr_parser(ParamParser<PickParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "index"};
@@ -54,13 +84,13 @@ NNVM_REGISTER_OP(pick)
   })
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_argument("index", "NDArray-or-Symbol", "Index array")
-.add_arguments(ReduceAxisParam::__FIELDS__());
+.add_arguments(PickParam::__FIELDS__());
 
 
 NNVM_REGISTER_OP(_backward_pick)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<ReduceAxisParam>)
+.set_attr_parser(ParamParser<PickParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", PickOpBackward<cpu>);
 
