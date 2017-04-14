@@ -1020,18 +1020,18 @@ def array(source_array, ctx=None, dtype=None):
     Parameters
     ----------
     source_array : array_like
-        An object exposing the array interface, an object whose ``__array__``
+        An object exposing the array interface, an object whose `__array__`
         method returns an array, or any (nested) sequence.
     ctx : Context, optional
         Device context (default is the current default context).
     dtype : str or numpy.dtype, optional
         The data type of the output array. The default dtype is ``source_array.dtype``
-        if ``source_array`` is an NDArray, ``float32`` otherwise.
+        if `source_array` is an NDArray, `float32` otherwise.
 
     Returns
     -------
     NDArray
-        An ``NDArray`` array satisfying the specified requirements.
+        An `NDArray` satisfying the requirements specified by the parameters.
 
     Examples
     --------
@@ -1104,8 +1104,8 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
 
     Values are generated within the half-open interval [start, stop). In other
     words, the interval includes start but excludes stop. The function is
-    similar to the built-in Python function ``range`` and to ``numpy.arange``,
-    but returns an ``NDArray``.
+    similar to the built-in Python function `range` and to ``numpy.arange``,
+    but returns an `NDArray`.
 
     Parameters
     ----------
@@ -1133,14 +1133,10 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
     array([ 0.,  1.,  2.], dtype=float32)
     >>> mx.nd.arange(2, 6).asnumpy()
     array([ 2.,  3.,  4.,  5.], dtype=float32)
-    >>> mx.nd.arange(2, 6, 2).asnumpy()
-    array([ 2.,  4.], dtype=float32)
     >>> mx.nd.arange(2, 6, step=2).asnumpy()
     array([ 2.,  4.], dtype=float32)
-    >>> mx.nd.arange(2, 6, step=2, repeat=2).asnumpy()
-    array([ 2.,  2.,  4.,  4.], dtype=float32)
-    >>> mx.nd.arange(2, 6, step=2, repeat=3).asnumpy()
-    array([ 2.,  2.,  2.,  4.,  4.,  4.], dtype=float32)
+    >>> mx.nd.arange(2, 6, step=1.5, repeat=2).asnumpy()
+    array([ 2. ,  2. ,  3.5,  3.5,  5. ,  5. ], dtype=float32)
     >>> mx.nd.arange(2, 6, step=2, repeat=3, dtype='int32').asnumpy()
     array([2, 2, 2, 4, 4, 4], dtype=int32)
     """
