@@ -36,7 +36,7 @@ It updates the weights using::
 NNVM_REGISTER_OP(sgd_mom_update)
 .describe(R"code(Momentum update function for Stochastic Gradient Descent (SDG) optimizer.
 
-Momentum update has better converge rates on neural networks. Mathematically it looks
+Momentum update has better convergence rates on neural networks. Mathematically it looks
 like below:
 
 .. math::

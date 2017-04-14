@@ -30,12 +30,12 @@ struct SGDParam : public dmlc::Parameter<SGDParam> {
     .describe("Learning rate");
     DMLC_DECLARE_FIELD(wd)
     .set_default(0.0f)
-    .describe("Weight decay. "
-              "It is a regularization term that penalzies big weights, "
-              "which causes weight to decay in proportion to its size.");
+    .describe("Weight decay augments the objective function with a "
+              "regularization term that penalizes large weights. "
+              "The penalty scales with the square of the magnitude of each weight.");
     DMLC_DECLARE_FIELD(rescale_grad)
     .set_default(1.0f)
-    .describe("Rescale gradient. grad = rescale_grad*grad.");
+    .describe("Rescale gradient to grad = rescale_grad*grad.");
     DMLC_DECLARE_FIELD(clip_gradient)
     .set_default(-1.0f)
     .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
@@ -87,12 +87,12 @@ struct SGDMomParam : public dmlc::Parameter<SGDMomParam> {
     .describe("The decay rate of momentum estimates at each epoch.");
     DMLC_DECLARE_FIELD(wd)
     .set_default(0.0f)
-    .describe("Weight decay. "
-              "It is a regularization term that penalzies big weights, "
-              "which causes weight to decay in proportion to its size.");
+    .describe("Weight decay augments the objective function with a "
+              "regularization term that penalizes large weights. "
+              "The penalty scales with the square of the magnitude of each weight.");
     DMLC_DECLARE_FIELD(rescale_grad)
     .set_default(1.0f)
-    .describe("Rescale gradient. grad = rescale_grad*grad.");
+    .describe("Rescale gradient to grad = rescale_grad*grad.");
     DMLC_DECLARE_FIELD(clip_gradient)
     .set_default(-1.0f)
     .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
@@ -154,12 +154,12 @@ struct AdamParam : public dmlc::Parameter<AdamParam> {
     .describe("A small constant for numerical stability.");
     DMLC_DECLARE_FIELD(wd)
     .set_default(0.0f)
-    .describe("Weight decay. "
-              "It is a regularization term that penalzies big weights, "
-              "which causes weight to decay in proportion to its size.");
+    .describe("Weight decay augments the objective function with a "
+              "regularization term that penalizes large weights. "
+              "The penalty scales with the square of the magnitude of each weight.");
     DMLC_DECLARE_FIELD(rescale_grad)
     .set_default(1.0f)
-    .describe("Rescale gradient. grad = rescale_grad*grad.");
+    .describe("Rescale gradient to grad = rescale_grad*grad.");
     DMLC_DECLARE_FIELD(clip_gradient)
     .set_default(-1.0f)
     .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
@@ -227,12 +227,12 @@ struct RMSPropAlexParam : public dmlc::Parameter<RMSPropAlexParam> {
     DMLC_DECLARE_FIELD(epsilon).set_default(1e-8f)
     .describe("A small constant for numerical stability.");
     DMLC_DECLARE_FIELD(wd).set_default(0.0f)
-    .describe("Weight decay. "
-              "It is a regularization term that penalzies big weights, "
-              "which causes weight to decay in proportion to its size.");
+    .describe("Weight decay augments the objective function with a "
+              "regularization term that penalizes large weights. "
+              "The penalty scales with the square of the magnitude of each weight.");
     DMLC_DECLARE_FIELD(rescale_grad)
     .set_default(1.0f)
-    .describe("Rescale gradient. grad = rescale_grad*grad.");
+    .describe("Rescale gradient to grad = rescale_grad*grad.");
     DMLC_DECLARE_FIELD(clip_gradient)
     .set_default(-1.0f)
     .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
@@ -319,12 +319,12 @@ struct RMSPropParam : public dmlc::Parameter<RMSPropParam> {
     DMLC_DECLARE_FIELD(epsilon).set_default(1e-8f)
     .describe("A small constant for numerical stability.");
     DMLC_DECLARE_FIELD(wd).set_default(0.0f)
-    .describe("Weight decay. "
-              "It is a regularization term that penalzies big weights, "
-              "which causes weight to decay in proportion to its size.");
+    .describe("Weight decay augments the objective function with a "
+              "regularization term that penalizes large weights. "
+              "The penalty scales with the square of the magnitude of each weight.");
     DMLC_DECLARE_FIELD(rescale_grad)
     .set_default(1.0f)
-    .describe("rescale gradient as grad = rescale_grad*grad.");
+    .describe("Rescale gradient to grad = rescale_grad*grad.");
     DMLC_DECLARE_FIELD(clip_gradient)
     .set_default(-1.0f)
     .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
