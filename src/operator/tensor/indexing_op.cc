@@ -61,6 +61,10 @@ will have shape ``(i0, i1, d1, d2)``, computed by::
 
   output[i,j,:,:] = input[indices[i,j],:,:]
 
+.. note::
+   - `axis`- Only slicing along axis 0 is supported for now.
+   - `mode`- Only `clip` mode is supported for now.
+
 Examples::
 
   x = [[ 1.,  2.],
@@ -73,10 +77,6 @@ Examples::
 
                             [[ 3.,  4.],
                              [ 5.,  6.]]]
-
-.. note::
-  `axis`- Only slicing along axis 0 is supported for now.
-  `mode`- Only `clip` mode is supported for now.
 
 )code" ADD_FILELINE)
 .set_num_inputs(2)
@@ -116,6 +116,9 @@ NNVM_REGISTER_OP(_backward_take)
 NNVM_REGISTER_OP(batch_take)
 .describe(R"code(Takes elements from a data batch.
 
+.. note::
+  `batch_take` is deprecated. Use `pick` instead.
+
 Given an input array of shape ``(d0, d1)`` and indices of shape ``(d0,)``, the result will be
 an output array of shape ``(d0,)`` with::
 
@@ -129,9 +132,6 @@ Examples::
 
   // takes elements with specified indices
   batch_take(x, [0,1,0]) = [ 1.  4.  5.]
-
-.. note::
-  `batch_take` is deprecated. Use `pick` instead.
 
 )code" ADD_FILELINE)
 .set_num_outputs(1)

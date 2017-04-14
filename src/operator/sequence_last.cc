@@ -41,6 +41,8 @@ an input array of positive ints of dimension [batch_size]. To use this parameter
 set `use_sequence_length` to `True`, otherwise each example in the batch is assumed
 to have the max sequence length.
 
+.. note:: Alternatively, you can also use `take` operator.
+
 Example::
 
    x = [[[  1.,   2.,   3.],
@@ -71,8 +73,6 @@ Example::
             [[  1.,    2.,   3.],
              [  13.,  14.,  15.],
              [  25.,  26.,  27.]]
-
-.. note:: Alternatively, you can also use `take` operator.
 
 )code" ADD_FILELINE)
     .add_argument("data", "NDArray-or-Symbol",

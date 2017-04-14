@@ -1210,8 +1210,8 @@ def add(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1271,8 +1271,8 @@ def subtract(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1331,8 +1331,8 @@ def multiply(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1391,8 +1391,8 @@ def divide(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1448,8 +1448,8 @@ def power(base, exp):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1508,8 +1508,8 @@ def maximum(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1564,8 +1564,8 @@ def minimum(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1624,8 +1624,8 @@ def equal(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1687,8 +1687,8 @@ def not_equal(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1753,8 +1753,8 @@ def greater(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1816,8 +1816,8 @@ def greater_equal(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1879,8 +1879,8 @@ def lesser(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1943,8 +1943,8 @@ def lesser_equal(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
