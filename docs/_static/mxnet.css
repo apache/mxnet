@@ -49,26 +49,26 @@ h1 {
     font-size: 22px;
     font-weight: bold;
     padding-top: 10px;
-    color: gray;
+    color: slategray;
 }
 
 h2 {
     font-size: 20px;
     /* font-weight: bold; */
     padding-top: 10px;
-    color: dimgray;
+    color: slategray;
 }
 
 h3 {
     font-size: 18px;
     padding-top: 8px;
     /* font-weight: bold; */
-    color: gray;
+    color: slategray;
 }
 
 
 h4 {
-    color: dimgray;
+    color: slategray;
     font-size: 16px;
     padding-top: 6px;
     font-style: italic;
