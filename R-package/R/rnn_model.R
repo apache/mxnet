@@ -174,18 +174,18 @@ train.rnn <- function (model, train.data, eval.data,
 
             nbatch <- nbatch + seq.len
             if ((epoch.counter %% log.period) == 0) {
-                cat(paste0("Epoch [", epoch.counter,
+                message(paste0("Epoch [", epoch.counter,
                            "] Train: NLL=", train.nll / nbatch,
-                           ", Perp=", exp(train.nll / nbatch), "\n"))
+                           ", Perp=", exp(train.nll / nbatch)))
             }
         }
         train.data$reset()
         # end of training loop
         toc <- Sys.time()
-        cat(paste0("Iter [", iteration,
+        message(paste0("Iter [", iteration,
                    "] Train: Time: ", as.numeric(toc - tic, units="secs"),
                    " sec, NLL=", train.nll / nbatch,
-                   ", Perp=", exp(train.nll / nbatch), "\n"))
+                   ", Perp=", exp(train.nll / nbatch)))
 
         if (!is.null(eval.data)) {
             val.nll <- 0.0
@@ -216,9 +216,9 @@ train.rnn <- function (model, train.data, eval.data,
             }
             eval.data$reset()
             perp <- exp(val.nll / nbatch)
-            cat(paste0("Iter [", iteration,
+            message(paste0("Iter [", iteration,
                        "] Val: NLL=", val.nll / nbatch,
-                       ", Perp=", exp(val.nll / nbatch), "\n"))
+                       ", Perp=", exp(val.nll / nbatch)))
         }
     }
 
