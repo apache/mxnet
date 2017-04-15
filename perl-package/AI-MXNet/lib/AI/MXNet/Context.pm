@@ -51,41 +51,41 @@ use overload
     };
 =head1 NAME
 
-AI::MXNet::Context - A device context.
+    AI::MXNet::Context - A device context.
 =cut
 
 =head1 DESCRIPTION
 
-This class governs the device context of AI::MXNet::NDArray objects.
+    This class governs the device context of AI::MXNet::NDArray objects.
 =cut
 
 =head2
 
-Constructing a context.
+    Constructing a context.
 
-Parameters
-----------
-device_type : {'cpu', 'gpu'} or Context.
-    String representing the device type
+    Parameters
+    ----------
+    device_type : {'cpu', 'gpu'} or Context.
+        String representing the device type
 
-device_id : int (default=0)
-    The device id of the device, needed for GPU
+    device_id : int (default=0)
+        The device id of the device, needed for GPU
 =cut
 
 =head2 cpu
 
-Returns a CPU context.
+    Returns a CPU context.
 
-Parameters
-----------
-device_id : int, optional
-The device id of the device. device_id is not needed for CPU.
-This is included to make interface compatible with GPU.
+    Parameters
+    ----------
+    device_id : int, optional
+        The device id of the device. device_id is not needed for CPU.
+        This is included to make interface compatible with GPU.
 
-Returns
--------
-context : AI::MXNet::Context
-    The corresponding CPU context.
+    Returns
+    -------
+    context : AI::MXNet::Context
+        The corresponding CPU context.
 =cut
 
 method cpu(Int $device_id=0)
@@ -95,16 +95,16 @@ method cpu(Int $device_id=0)
 
 =head2 gpu
 
-Returns a GPU context.
+    Returns a GPU context.
 
-Parameters
-----------
-device_id : int, optional
+    Parameters
+    ----------
+    device_id : int, optional
 
-Returns
--------
-context : AI::MXNet::Context
-    The corresponding GPU context.
+    Returns
+    -------
+    context : AI::MXNet::Context
+        The corresponding GPU context.
 =cut
 
 method gpu(Int $device_id=0)
@@ -114,11 +114,11 @@ method gpu(Int $device_id=0)
 
 =head2 current_context
 
-Returns the current context.
+    Returns the current context.
 
-Returns
--------
-$default_ctx : AI::MXNet::Context
+    Returns
+    -------
+    $default_ctx : AI::MXNet::Context
 =cut
 
 method current_ctx()

@@ -32,7 +32,7 @@ def default_context():
 
 
 def set_default_context(ctx):
-    """Set default ``ctx``."""
+    """Set default context."""
     Context.default_ctx = ctx
 
 
@@ -77,10 +77,10 @@ def np_reduce(dat, axis, keepdims, numpy_reduce_func):
         Same as NumPy.
 
     keepdims : bool
-        Same as Numpy.
+        Same as NumPy.
 
     numpy_reduce_func : function
-        Numpy reducing function like `np.sum` or `np.max`
+        A NumPy reducing function like ``np.sum`` or ``np.max``.
     """
     if isinstance(axis, int):
         axis = [axis]
@@ -98,7 +98,7 @@ def np_reduce(dat, axis, keepdims, numpy_reduce_func):
 
 
 def find_max_violation(a, b, rtol=None, atol=None):
-    """Find the location of maximum violation."""
+    """Finds and returns the location of maximum violation."""
     rtol = get_rtol(rtol)
     atol = get_atol(atol)
     diff = np.abs(a-b)
@@ -152,7 +152,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b')):
 
 
 def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
-    """Test that two numpy arrays are almost equal (ignoring NaN in either array).
+    """Test that two NumPy arrays are almost equal (ignoring NaN in either array).
     Combines a relative and absolute measure of approximate eqality.
     If either the relative or absolute check passes, the arrays are considered equal.
     Including an absolute check resolves issues with the relative check where all
@@ -176,7 +176,7 @@ def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
     return almost_equal(a, b, rtol, atol)
 
 def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b')):
-    """Test that two numpy arrays are almost equal (ignoring NaN in either array).
+    """Test that two NumPy arrays are almost equal (ignoring NaN in either array).
     Combines a relative and absolute measure of approximate eqality.
     If either the relative or absolute check passes, the arrays are considered equal.
     Including an absolute check resolves issues with the relative check where all
@@ -253,11 +253,11 @@ def _parse_location(sym, location, ctx):
     Parameters
     ----------
     sym : Symbol
-    location : ``None`` or list of ``np.ndarray`` or dict of str to np.ndarray
+    location : ``None`` or list of ``np.ndarray`` or dict of str to ``np.ndarray``.
 
     Returns
     -------
-    dict of str to np.ndarray.
+    dict of str to np.ndarray
     """
     assert isinstance(location, (dict, list, tuple))
     if isinstance(location, dict):
@@ -376,17 +376,17 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
             maps the name of arguments to the corresponding numpy.ndarray.
         *In either case, value of all the arguments must be provided.*
     aux_states : ist or tuple or dict, optional
-        The auxiliary states required when generating the executor for the symbol
+        The auxiliary states required when generating the executor for the symbol.
     numeric_eps : float, optional
-        Delta for the finite difference method that approximates the gradient
+        Delta for the finite difference method that approximates the gradient.
     check_eps : float, optional
-        relative error eps used when comparing numeric grad to symbolic grad
+        relative error eps used when comparing numeric grad to symbolic grad.
     grad_nodes : None or list or tuple or dict, optional
         Names of the nodes to check gradient on
     use_forward_train : bool
-        Whether to use is_train=True when computing the finite-difference
+        Whether to use is_train=True when computing the finite-difference.
     ctx : Context, optional
-        Check the gradient computation on the specified device
+        Check the gradient computation on the specified device.
     References
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
@@ -482,23 +482,23 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
         The evaluation point
 
         - if type is list of np.ndarray
-            contain all the numpy arrays corresponding to `sym.list_arguments()`
+            Contains all the numpy arrays corresponding to `sym.list_arguments()`.
         - if type is dict of str to np.ndarray
-            contain the mapping between argument names and their values
+            Contains the mapping between argument names and their values.
     expected : list of np.ndarray or dict of str to np.ndarray
         The expected output value
 
         - if type is list of np.ndarray
-            contain arrays corresponding to exe.outputs
+            Contains arrays corresponding to exe.outputs.
         - if type is dict of str to np.ndarray
-            contain mapping between sym.list_output() and exe.outputs
+            Contains mapping between sym.list_output() and exe.outputs.
     check_eps : float, optional
-        relative error to check to
+        Relative error to check to.
     aux_states : list of np.ndarray of dict, optional
         - if type is list of np.ndarray
-            contain all the numpy arrays corresponding to sym.list_auxiliary_states
+            Contains all the NumPy arrays corresponding to sym.list_auxiliary_states
         - if type is dict of str to np.ndarray
-            contain the mapping between names of auxiliary states and their values
+            Contains the mapping between names of auxiliary states and their values.
     ctx : Context, optional
         running context
     """
@@ -513,8 +513,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
-        if g:
-            g[:] = 0
+        g[:] = 0
 
     executor.forward(is_train=False)
     outputs = [x.asnumpy() for x in executor.outputs]
@@ -536,30 +535,30 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         The evaluation point
 
         - if type is list of np.ndarray
-            contain all the numpy arrays corresponding to mxnet.sym.list_arguments
+            Contains all the NumPy arrays corresponding to ``mx.sym.list_arguments``.
         - if type is dict of str to np.ndarray
-            contain the mapping between argument names and their values
+            Contains the mapping between argument names and their values.
     out_grads : None or list of np.ndarray or dict of str to np.ndarray
-        numpy arrays corresponding to sym.outputs for incomming gradient
+        NumPys arrays corresponding to sym.outputs for incomming gradient.
 
         - if type is list of np.ndarray
-            contains arrays corresponding to exe.outputs
+            Contains arrays corresponding to ``exe.outputs``.
         - if type is dict of str to np.ndarray
             contains mapping between mxnet.sym.list_output() and Executor.outputs
     expected : list of np.ndarray or dict of str to np.ndarray
         expected gradient values
 
         - if type is list of np.ndarray
-            contains arrays corresponding to exe.grad_arrays
+            Contains arrays corresponding to exe.grad_arrays
         - if type is dict of str to np.ndarray
-            contains mapping between sym.list_arguments() and exe.outputs
+            Contains mapping between ``sym.list_arguments()`` and exe.outputs.
     check_eps: float, optional
-        relative error to check to
+        Relative error to check to.
     aux_states : list of np.ndarray or dict of str to np.ndarray
     grad_req : str or list of str or dict of str to str, optional
-        gradient requirements. 'write', 'add' or 'null'
+        Gradient requirements. 'write', 'add' or 'null'.
     ctx : Context, optional
-        running context
+        Running context.
     """
     if ctx is None:
         ctx = default_context()
@@ -602,27 +601,27 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
 
 def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
                 **kwargs):
-    """Check the running speed of a symbol
+    """Check the running speed of a symbol.
 
     Parameters
     ----------
     sym : Symbol
-        symbol to run the speed test
+        Symbol to run the speed test.
     location : none or dict of str to np.ndarray
-        location to evaluate the inner executor
+        Location to evaluate the inner executor.
     ctx : Context
-        running context
+        Running context.
     N : int, optional
-        repeat times
+        Repeat times.
     grad_req : None or str or list of str or dict of str to str, optional
-        gradient requirements
+        Gradient requirements.
     typ : str, optional
         "whole" or "forward"
 
         - "whole"
-            test the forward_backward speed
+            Test the forward_backward speed.
         - "forward"
-            only test the forward speed
+            Only test the forward speed.
     """
     if ctx is None:
         ctx = default_context()
@@ -682,13 +681,13 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
     Parameters
     ----------
     sym : Symbol or list of Symbols
-        symbol(s) to run the consistency test
+        Symbol(s) to run the consistency test.
     ctx_list : list
-        running context. See example for more detail.
+        Running context. See example for more detail.
     scale : float, optional
-        standard deviation of the inner normal distribution. Used in initialization
+        Standard deviation of the inner normal distribution. Used in initialization.
     grad_req : str or list of str or dict of str to str
-        gradient requirement.
+        Gradient requirement.
 
     Examples
     --------
@@ -882,3 +881,25 @@ def download(url, fname=None, dirname=None, overwrite=False):
                 f.write(chunk)
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
+
+def set_env_var(key, val, default_val=""):
+    """Set environment variable
+
+    Parameters
+    ----------
+
+    key : str
+        Env var to set
+    val : str
+        New value assigned to the env var
+    default_val : str, optional
+        Default value returned if the env var doesn't exist
+
+    Returns
+    -------
+    str
+        The value of env var before it is set to the new value
+    """
+    prev_val = os.environ.get(key, default_val)
+    os.environ[key] = val
+    return prev_val

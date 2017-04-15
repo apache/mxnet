@@ -4,19 +4,19 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-AI::MXNet::RNN::Params
+    AI::MXNet::RNN::Params
 =cut
 
 =head1 DESCRIPTION
 
-Container for holding variables.
-Used by RNN cells for parameter sharing between cells.
+    A container for holding variables.
+    Used by RNN cells for parameter sharing between cells.
 
-Parameters
-----------
-prefix : str
-    All variables name created by this container will
-    be prepended with the prefix
+    Parameters
+    ----------
+    prefix : str
+        All variables name created by this container will
+        be prepended with the prefix
 =cut
 has '_prefix' => (is => 'ro', init_arg => 'prefix', isa => 'Str', default => '');
 has '_params' => (is => 'rw', init_arg => undef);
@@ -36,14 +36,14 @@ sub BUILD
 
 =head2 get
 
-Get a variable with the name or create a new one id does not exist.
+    Get a variable with the name or create a new one if does not exist.
 
-Parameters
-----------
-$name : str
-    name of the variable
-@kwargs:
-    more arguments that are passed to mx->sym->Variable call
+    Parameters
+    ----------
+    $name : str
+        name of the variable
+    @kwargs:
+        more arguments that are passed to mx->sym->Variable call
 =cut
 
 method get(Str $name, @kwargs)
@@ -59,21 +59,21 @@ method get(Str $name, @kwargs)
 package AI::MXNet::RNN::Cell::Base;
 =head1 NAME
 
-AI::MXNet::RNNCell::Base
+    AI::MXNet::RNNCell::Base
 =cut
 
 =head1 DESCRIPTION
 
-Abstract base class for RNN cells
+    Abstract base class for RNN cells
 
-Parameters
-----------
-prefix : str
-    prefix for name of layers
-    (and name of weight if params is undef)
-params : AI::MXNet::RNN::Params or undef
-    container for weight sharing between cells.
-    created if undef.
+    Parameters
+    ----------
+    prefix : str
+        prefix for name of layers
+        (and name of weight if params is undef)
+    params : AI::MXNet::RNN::Params or undef
+        container for weight sharing between cells.
+        created if undef.
 =cut
 
 use AI::MXNet::Base;
@@ -112,7 +112,7 @@ sub BUILD
 
 =head2 reset
 
-Reset before re-using the cell for another graph
+    Reset before re-using the cell for another graph
 =cut
 
 method reset()
@@ -123,22 +123,22 @@ method reset()
 
 =head2 call
 
-Construct symbol for one step of RNN.
+    Construct symbol for one step of RNN.
 
-Parameters
-----------
-$inputs : mx->sym->Variable
-    input symbol, 2D, batch * num_units
-%states : mx->sym->Variable or ArrayRef[AI::MXNet::Symbol]
-    state from previous step or begin_state().
+    Parameters
+    ----------
+    $inputs : mx->sym->Variable
+        input symbol, 2D, batch * num_units
+    $states : mx->sym->Variable or ArrayRef[AI::MXNet::Symbol]
+        state from previous step or begin_state().
 
-Returns
--------
-$output : AI::MXNet::Symbol
-    output symbol
-$states : ArrayRef[AI::MXNet::Symbol]
-    state to next step of RNN.
-Can be called via overloaded &{}: &{$cell}($inputs, $states);
+    Returns
+    -------
+    $output : AI::MXNet::Symbol
+        output symbol
+    $states : ArrayRef[AI::MXNet::Symbol]
+        state to next step of RNN.
+    Can be called via overloaded &{}: &{$cell}($inputs, $states);
 =cut
 
 method call(AI::MXNet::Symbol $inputs, AI::MXNet::Symbol|ArrayRef[AI::MXNet::Symbol] $states)
@@ -153,7 +153,7 @@ method _gate_names()
 
 =head2 params
 
-Parameters of this cell
+    Parameters of this cell
 =cut
 
 method params()
@@ -164,7 +164,7 @@ method params()
 
 =head2 state_shape
 
-shape(s) of states
+    shape(s) of states
 =cut
 
 method state_shape()
@@ -174,24 +174,24 @@ method state_shape()
 
 =head2 begin_state
 
-Initial state for this cell.
+    Initial state for this cell.
 
-Parameters
-----------
-$:func : sub ref, default is AI::MXNet::Symbol->can('zeros')
-    Function for creating initial state.
-    Can be AI::MXNet::Symbol->can('zeros'),
-    AI::MXNet::Symbol->can('uniform'), AI::MXNet::Symbol->can('Variable') etc.
-    Use AI::MXNet::Symbol->can('Variable') if you want to directly
-    feed input as states.
-@kwargs :
-    more keyword arguments passed to func. For example
-    mean, std, dtype, etc.
+    Parameters
+    ----------
+    :$func : sub ref, default is AI::MXNet::Symbol->can('zeros')
+        Function for creating initial state.
+        Can be AI::MXNet::Symbol->can('zeros'),
+        AI::MXNet::Symbol->can('uniform'), AI::MXNet::Symbol->can('Variable') etc.
+        Use AI::MXNet::Symbol->can('Variable') if you want to directly
+        feed the input as states.
+    @kwargs :
+        more keyword arguments passed to func. For example
+        mean, std, dtype, etc.
 
-Returns
--------
-$states : ArrayRef[AI::MXNet::Symbol]
-    starting states for first RNN step
+    Returns
+    -------
+    $states : ArrayRef[AI::MXNet::Symbol]
+        starting states for first RNN step
 =cut
 
 method begin_state(CodeRef :$func=AI::MXNet::Symbol->can('zeros'), @kwargs)
@@ -224,20 +224,20 @@ method begin_state(CodeRef :$func=AI::MXNet::Symbol->can('zeros'), @kwargs)
 
 =head2 unpack_weights
 
-Unpack fused weight matrices into separate
-weight matrices
+    Unpack fused weight matrices into separate
+    weight matrices
 
-Parameters
-----------
-$args : HashRef[AI::MXNet::NDArray]
-    hash ref containing packed weights.
-    usually from AI::MXNet::Module->get_output()
+    Parameters
+    ----------
+    $args : HashRef[AI::MXNet::NDArray]
+        hash ref containing packed weights.
+        usually from AI::MXNet::Module->get_output()
 
-Returns
--------
-$args : HashRef[AI::MXNet::NDArray]
-    hash ref with weights associated with
-    this cell, unpacked.
+    Returns
+    -------
+    $args : HashRef[AI::MXNet::NDArray]
+        hash ref with weights associated with
+        this cell, unpacked.
 =cut
 
 method unpack_weights(HashRef[AI::MXNet::NDArray] $args)
@@ -261,19 +261,19 @@ method unpack_weights(HashRef[AI::MXNet::NDArray] $args)
 
 =head2 pack_weights
 
-Pack fused weight matrices into common
-weight matrices
+    Pack fused weight matrices into common
+    weight matrices
 
-Parameters
-----------
-args : HashRef[AI::MXNet::NDArray]
-    hash ref containing unpacked weights.
+    Parameters
+    ----------
+    args : HashRef[AI::MXNet::NDArray]
+        hash ref containing unpacked weights.
 
-Returns
--------
-$args : HashRef[AI::MXNet::NDArray]
-    hash ref with weights associated with
-    this cell, packed.
+    Returns
+    -------
+    $args : HashRef[AI::MXNet::NDArray]
+        hash ref with weights associated with
+        this cell, packed.
 =cut
 
 method pack_weights(HashRef[AI::MXNet::NDArray] $args)
@@ -303,48 +303,48 @@ method pack_weights(HashRef[AI::MXNet::NDArray] $args)
 
 =head2 unroll
 
-Unroll an RNN cell across time steps.
+    Unroll an RNN cell across time steps.
 
-Parameters
-----------
-:$length : Int
-    number of steps to unroll
-:$inputs : AI::MXNet::Symbol, array ref of Symbols, or undef
-    if inputs is a single Symbol (usually the output
-    of Embedding symbol), it should have shape
-    of [$batch_size, $length, ...] if layout == 'NTC' (batch, time series)
-    or ($length, $batch_size, ...) if layout == 'TNC' (time series, batch).
+    Parameters
+    ----------
+    :$length : Int
+        number of steps to unroll
+    :$inputs : AI::MXNet::Symbol, array ref of Symbols, or undef
+        if inputs is a single Symbol (usually the output
+        of Embedding symbol), it should have shape
+        of [$batch_size, $length, ...] if layout == 'NTC' (batch, time series)
+        or ($length, $batch_size, ...) if layout == 'TNC' (time series, batch).
 
-    If inputs is a array ref of symbols (usually output of
-    previous unroll), they should all have shape
-    ($batch_size, ...).
+        If inputs is a array ref of symbols (usually output of
+        previous unroll), they should all have shape
+        ($batch_size, ...).
 
-    If inputs is undef, a placeholder variables are
-    automatically created.
-:$begin_state : array ref of Symbol
-    input states. Created by begin_state()
-    or output state of another cell. Created
-    from begin_state() if undef.
-:$input_prefix : str
-    prefix for automatically created input
-    placehodlers.
-:$layout : str
-    layout of input symbol. Only used if the input
-    is a single Symbol.
-:$merge_outputs : Bool
-    If 0, returns outputs as an array ref of Symbols.
-    If 1, concatenates the output across the time steps
-    and returns a single symbol with the shape
-    [$batch_size, $length, ...) if the layout equal to 'NTC',
-    or [$length, $batch_size, ...) if the layout equal tp 'TNC'.
-    If undef, output whatever is faster
+        If inputs is undef, a placeholder variables are
+        automatically created.
+    :$begin_state : array ref of Symbol
+        input states. Created by begin_state()
+        or output state of another cell. Created
+        from begin_state() if undef.
+    :$input_prefix : str
+        prefix for automatically created input
+        placehodlers.
+    :$layout : str
+        layout of input symbol. Only used if the input
+        is a single Symbol.
+    :$merge_outputs : Bool
+        If 0, returns outputs as an array ref of Symbols.
+        If 1, concatenates the output across the time steps
+        and returns a single symbol with the shape
+        [$batch_size, $length, ...) if the layout equal to 'NTC',
+        or [$length, $batch_size, ...) if the layout equal tp 'TNC'.
+        If undef, output whatever is faster
 
-Returns
--------
-$outputs : array ref of Symbol or Symbol
-    output symbols.
-$states : Symbol or nested list of Symbol
-    has the same structure as begin_state()
+    Returns
+    -------
+    $outputs : array ref of Symbol or Symbol
+        output symbols.
+    $states : Symbol or nested list of Symbol
+        has the same structure as begin_state()
 =cut
 
 
@@ -442,27 +442,27 @@ package AI::MXNet::RNN::Cell;
 use Mouse;
 extends 'AI::MXNet::RNN::Cell::Base';
 
-=head1 NAME 
+=head1 NAME
 
-AI::MXNet::RNN::Cell
+    AI::MXNet::RNN::Cell
 =cut
 
 =head1 DESCRIPTION
 
-Simple recurrent neural network cell
+    Simple recurrent neural network cell
 
-Parameters
-----------
-num_hidden : int
-    number of units in output symbol
-activation : str or Symbol, default 'tanh'
-    type of activation function
-prefix : str, default 'rnn_'
-    prefix for name of layers
-    (and name of weight if params is undef)
-params : AI::MXNet::RNNParams or undef
-    container for weight sharing between cells.
-    created if undef.
+    Parameters
+    ----------
+    num_hidden : int
+        number of units in output symbol
+    activation : str or Symbol, default 'tanh'
+        type of activation function
+    prefix : str, default 'rnn_'
+        prefix for name of layers
+        (and name of weight if params is undef)
+    params : AI::MXNet::RNNParams or undef
+        container for weight sharing between cells.
+        created if undef.
 =cut
 
 has '_num_hidden'  => (is => 'ro', init_arg => 'num_hidden', isa => 'Int', required => 1);
@@ -544,20 +544,20 @@ extends 'AI::MXNet::RNN::Cell';
 
 =head1 DESCRIPTION
 
-Long-Short Term Memory (LSTM) network cell.
+    Long-Short Term Memory (LSTM) network cell.
 
-Parameters
-----------
-num_hidden : int
-    number of units in output symbol
-prefix : str, default 'lstm_'
-    prefix for name of layers
-    (and name of weight if params is undef)
-params : AI::MXNet::RNN::Params or None
-    container for weight sharing between cells.
-    created if undef.
-forget_bias : bias added to forget gate, default 1.0.
-    Jozefowicz et al. 2015 recommends setting this to 1.0
+    Parameters
+    ----------
+    num_hidden : int
+        number of units in output symbol
+    prefix : str, default 'lstm_'
+        prefix for name of layers
+        (and name of weight if params is undef)
+    params : AI::MXNet::RNN::Params or None
+        container for weight sharing between cells.
+        created if undef.
+    forget_bias : bias added to forget gate, default 1.0.
+        Jozefowicz et al. 2015 recommends setting this to 1.0
 =cut
 
 has '+_prefix'     => (default => 'lstm_');
@@ -631,25 +631,25 @@ extends 'AI::MXNet::RNN::Cell';
 
 =head1 NAME
 
-AI::MXNet::RNN::GRUCell
+    AI::MXNet::RNN::GRUCell
 =cut
 
 =head1 DESCRIPTION
 
-Gated Rectified Unit (GRU) network cell.
-Note: this is an implementation of the cuDNN version of GRUs
-(slight modification compared to Cho et al. 2014).
+    Gated Rectified Unit (GRU) network cell.
+    Note: this is an implementation of the cuDNN version of GRUs
+    (slight modification compared to Cho et al. 2014).
 
-Parameters
-----------
-num_hidden : int
-    number of units in output symbol
-prefix : str, default 'gru_'
-    prefix for name of layers
-    (and name of weight if params is undef)
-params : AI::MXNet::RNN::Params or undef
-    container for weight sharing between cells.
-    created if undef.
+    Parameters
+    ----------
+    num_hidden : int
+        number of units in output symbol
+    prefix : str, default 'gru_'
+        prefix for name of layers
+        (and name of weight if params is undef)
+    params : AI::MXNet::RNN::Params or undef
+        container for weight sharing between cells.
+        created if undef.
 =cut
 
 has '+_prefix'     => (default => 'gru_');
@@ -710,14 +710,14 @@ extends 'AI::MXNet::RNN::Cell::Base';
 
 =head1 NAME
 
-AI::MXNet::RNN::FusedCell
+    AI::MXNet::RNN::FusedCell
 =cut
 
 =head1 DESCRIPTION
 
-Fusing RNN layers across time step into one kernel.
-Improves speed but is less flexible. Currently only
-supported if using cuDNN on GPU.
+    Fusing RNN layers across time step into one kernel.
+    Improves speed but is less flexible. Currently only
+    supported if using cuDNN on GPU.
 =cut
 
 has '_num_hidden'      => (is => 'ro', isa => 'Int',  init_arg => 'num_hidden',     required => 1);
@@ -998,12 +998,12 @@ method unroll(
 
 =head2 unfuse
 
-Unfuse the fused RNN
+    Unfuse the fused RNN
 
-Returns
--------
-$cell : AI::MXNet::RNN::SequentialCell
-    unfused cell that can be used for stepping, and can run on CPU.
+    Returns
+    -------
+    $cell : AI::MXNet::RNN::SequentialCell
+        unfused cell that can be used for stepping, and can run on CPU.
 =cut
 
 method unfuse()
@@ -1064,18 +1064,18 @@ extends 'AI::MXNet::RNN::Cell::Base';
 
 =head1 NAME
 
-AI:MXNet::RNN::SequentialCell
+    AI:MXNet::RNN::SequentialCell
 =cut
 
 =head1 DESCRIPTION
 
-Sequentially stacking multiple RNN cells
+    Sequentially stacking multiple RNN cells
 
-Parameters
-----------
-params : AI::MXNet::RNN::Params or undef
-    container for weight sharing between cells.
-created if undef.
+    Parameters
+    ----------
+    params : AI::MXNet::RNN::Params or undef
+        container for weight sharing between cells.
+        created if undef.
 =cut
 
 has [qw/_override_cell_params _cells/] => (is => 'rw', init_arg => undef);
@@ -1089,11 +1089,11 @@ sub BUILD
 
 =head2 add
 
-Append a cell into the stack.
+    Append a cell to the stack.
 
-Parameters
-----------
-$cell : AI::MXNet::RNN::Cell::Base
+    Parameters
+    ----------
+    $cell : AI::MXNet::RNN::Cell::Base
 =cut
 
 method add(AI::MXNet::RNN::Cell::Base $cell)
@@ -1166,6 +1166,7 @@ method unroll(
     $begin_state //= $self->begin_state;
     my $p = 0;
     my $states;
+    my @next_states;
     enumerate(sub {
         my ($i, $cell) = @_;
         my $n   = @{ $cell->state_shape };
@@ -1179,8 +1180,9 @@ method unroll(
             layout          => $layout,
             merge_outputs   => ($i < $num_cells-1) ? undef : $merge_outputs
         );
+        push @next_states, $states;
     }, $self->_cells);
-    return ($inputs, $states);
+    return ($inputs, [map { @{ $_ } } @next_states]);
 }
 
 package AI::MXNet::RNN::BidirectionalCell;
@@ -1190,21 +1192,21 @@ extends 'AI::MXNet::RNN::Cell::Base';
 
 =head1 NAME
 
-AI::MXNet::RNN::BidirectionalCell
+    AI::MXNet::RNN::BidirectionalCell
 =cut
 
 =head1 DESCRIPTION
 
-Bidirectional RNN cell
+    Bidirectional RNN cell
 
-Parameters
-----------
-l_cell : AI::MXNet::RNN::Cell::Base
-    cell for forward unrolling
-r_cell : AI::MXNet::RNN::Cell::Base
-    cell for backward unrolling
-output_prefix : str, default 'bi_'
-    prefix for name of output
+    Parameters
+    ----------
+    l_cell : AI::MXNet::RNN::Cell::Base
+        cell for forward unrolling
+    r_cell : AI::MXNet::RNN::Cell::Base
+        cell for backward unrolling
+    output_prefix : str, default 'bi_'
+        prefix for name of output
 =cut
 
 has 'l_cell'         => (is => 'ro', isa => 'AI::MXNet::RNN::Cell::Base', required => 1);
@@ -1379,18 +1381,18 @@ extends 'AI::MXNet::RNN::Cell::Base';
 
 =head1 NAME
 
-AI::MXNet::RNN::ModifierCell
+    AI::MXNet::RNN::ModifierCell
 =cut
 
 =head1 DESCRIPTION
 
-Base class for modifier cells. A modifier
-cell takes a base cell, apply modifications
-on it (e.g. Dropout), and returns a new cell.
+    Base class for modifier cells. A modifier
+    cell takes a base cell, apply modifications
+    on it (e.g. Dropout), and returns a new cell.
 
-After applying modifiers the base cell should
-no longer be called directly. The modifer cell
-should be used instead.
+    After applying modifiers the base cell should
+    no longer be called directly. The modifer cell
+    should be used instead.
 =cut
 
 has 'base_cell' => (is => 'ro', isa => 'AI::MXNet::RNN::Cell::Base', required => 1);
@@ -1458,12 +1460,12 @@ has [qw/dropout_outputs dropout_states/] => (is => 'ro', isa => 'Num', default =
 
 =head1 NAME
 
-AI::MXNet::RNN::DropoutCell
+    AI::MXNet::RNN::DropoutCell
 =cut
 
 =head1 DESCRIPTION
 
-Apply the dropout on base cell
+    Apply the dropout on base cell
 =cut
 
 method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
@@ -1482,23 +1484,83 @@ method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
 
 package AI::MXNet::RNN::ZoneoutCell;
 use Mouse;
+use AI::MXNet::Base;
 extends 'AI::MXNet::RNN::ModifierCell';
 has [qw/zoneout_outputs zoneout_states/] => (is => 'ro', isa => 'Num', default => 0);
 has 'prev_output' => (is => 'rw', init_arg => undef);
 
 =head1 NAME
 
-AI::MXNet::RNN::ZoneoutCell
+    AI::MXNet::RNN::ZoneoutCell
 =cut
 
 =head1 DESCRIPTION
 
-Apply Zoneout on base cell
+    Apply Zoneout on base cell
 =cut
+
+sub BUILD
+{
+    my $self = shift;
+    assert(
+        (not $self->base_cell->isa('AI::MXNet::RNN::FusedCell')),
+        "FusedRNNCell doesn't support zoneout. ".
+        "Please unfuse first."
+    );
+    assert(
+        (not $self->base_cell->isa('AI::MXNet::RNN::BidirectionalCell')),
+        "BidirectionalCell doesn't support zoneout since it doesn't support step. ".
+        "Please add ZoneoutCell to the cells underneath instead."
+    );
+    assert(
+        (not $self->base_cell->isa('AI::MXNet::RNN::SequentialCell') or not $self->_bidirectional),
+        "Bidirectional SequentialCell doesn't support zoneout. ".
+        "Please add ZoneoutCell to the cells underneath instead."
+    );
+}
+
+method reset()
+{
+    $self->SUPER::reset;
+    $self->prev_output(undef);
+}
 
 method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
 {
-    confess("Not Implemented")
+    my ($cell, $p_outputs, $p_states) = ($self->base_cell, $self->zoneout_outputs, $self->zoneout_states);
+    my ($next_output, $next_states) = &{$cell}($inputs, $states);
+    my $mask = sub {
+        my ($p, $like) = @_;
+        AI::MXNet::Symbol->Dropout(
+            AI::MXNet::Symbol->_identity_with_attr_like_rhs(
+                AI::MXNet::Symbol->ones(shape => [0, 0]),
+                $like
+            ),
+            p => $p
+        );
+    };
+    my $prev_output = $self->prev_output || AI::MXNet::Symbol->zeros(shape => [0, 0]);
+    my $output = $p_outputs != 0
+        ? AI::MXNet::Symbol->where(
+            &{$mask}($p_outputs, $next_output),
+            $next_output,
+            $prev_output
+        )
+        : $next_output;
+    my @states;
+    if($p_states != 0)
+    {
+        zip(sub {
+            my ($new_s, $old_s) = @_;
+            push @states, AI::MXNet::Symbol->where(
+                &{$mask}($p_states, $new_s),
+                $new_s,
+                $old_s
+            );
+        }, $next_states, $states);
+    }
+    $self->prev_output($output);
+    return ($output, @states ? \@states : $next_states);
 }
 
 1;

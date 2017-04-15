@@ -400,7 +400,7 @@ class ProposalGPUOp : public Operator{
                                       in_data[proposal::kClsProb].shape_[1] / 2,
                                       in_data[proposal::kClsProb].shape_[2],
                                       in_data[proposal::kClsProb].shape_[3]);
-    real_t* foreground_score_ptr = reinterpret_cast<real_t *>(in_data[proposal::kClsProb].dptr_)
+    real_t* foreground_score_ptr = in_data[proposal::kClsProb].dptr<real_t>()
                                     + fg_scores_shape.Size();
     Tensor<xpu, 4> scores = Tensor<xpu, 4>(foreground_score_ptr, fg_scores_shape);
     Tensor<xpu, 4> bbox_deltas = in_data[proposal::kBBoxPred].get<xpu, 4, real_t>(s);

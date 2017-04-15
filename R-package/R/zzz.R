@@ -27,9 +27,9 @@ NULL
 .onUnload <- function(libpath) {
   message("Start unload")
   mx.internal.notify.shutdown()
-  unloadModule("mxnet")
   library.dynam.unload("mxnet", libpath)
   library.dynam.unload("libmxnet", libpath)
+  message("MXNet shutdown")
 }
 
 .onAttach <- function(...) {

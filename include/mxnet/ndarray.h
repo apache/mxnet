@@ -31,8 +31,26 @@ namespace mxnet {
 
 // forward declaration
 namespace autograd {
+class AGNode;
+
+using AGNodePtr = std::shared_ptr<AGNode>;
+
+class AGNodeEntry {
+ public:
+  AGNodePtr ag_node;
+  uint32_t index;
+  uint32_t version;
+
+  void clear() {
+    ag_node.reset();
+    index = version = 0;
+  }
+
+  nnvm::NodeEntry nn_entry() const;
+};
+
 class AutogradRuntime;
-}
+}  // namespace autograd
 
 /*!
  * \brief ndarray interface
@@ -423,7 +441,7 @@ class NDArray {
   /*! \brief type of data */
   int dtype_ = -1;
   /*! \brief node entry for autograd */
-  nnvm::NodeEntry entry_;
+  autograd::AGNodeEntry entry_;
 };
 
 /*!
@@ -517,7 +535,6 @@ void RandomSeed(uint32_t seed);
  * \param out output NDArray.
  */
 void SampleUniform(real_t begin, real_t end, NDArray *out);
-
 /*!
  * \brief Sample gaussian distribution for each elements of out.
  * \param mu mean of gaussian distribution.
@@ -525,6 +542,41 @@ void SampleUniform(real_t begin, real_t end, NDArray *out);
  * \param out output NDArray.
  */
 void SampleGaussian(real_t mu, real_t sigma, NDArray *out);
+/*!
+ * \brief Sample gamma distribution for each elements of out.
+ * \param alpha parameter (shape) of the gamma distribution
+ * \param beta parameter (scale) of the gamma distribution
+ * \param out output NDArray.
+ */
+void SampleGamma(real_t alpha, real_t beta, NDArray *out);
+/*!
+ * \brief Sample exponential distribution for each elements of out.
+ * \param lambda parameter (rate) of the exponential distribution
+ * \param out output NDArray.
+ */
+void SampleExponential(real_t lambda, NDArray *out);
+/*!
+ * \brief Sample Poisson distribution for each elements of out.
+ * \param lambda parameter (rate) of the Poisson distribution
+ * \param out output NDArray.
+ */
+void SamplePoisson(real_t lambda, NDArray *out);
+/*!
+ * \brief Sample negative binomial distribution for each elements of out.
+ * \param k failure limit
+ * \param p success probability 
+ * \param out output NDArray.
+ */
+void SampleNegBinomial(int32_t k, real_t p, NDArray *out);
+/*!
+ * \brief Sample generalized negative binomial distribution for each elements of out.
+ * \param mu parameter (mean) of the distribution
+ * \param alpha parameter (over dispersion) of the distribution
+ * \param out output NDArray.
+ */
+void SampleGenNegBinomial(real_t mu, real_t alpha, NDArray *out);
+
+
 //--------------------------------------------------------------
 // The following part are API Registration of NDArray functions.
 //--------------------------------------------------------------

@@ -9,7 +9,7 @@ use JSON::PP;
 
 =head1 NAME
 
-AI::MXNet::Vizualization - Vizualization support for Perl interface to MXNet machine learning library
+    AI::MXNet::Vizualization - Vizualization support for Perl interface to MXNet machine learning library
 
 =head1 SYNOPSIS
 

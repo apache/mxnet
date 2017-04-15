@@ -13,11 +13,11 @@ use Mouse;
 
 =head2 new
 
-Parameters
-----------
-uri : Str
+    Parameters
+    ----------
+    uri : Str
         uri path to recordIO file.
-flag: Str
+    flag: Str
         "r" for reading or "w" writing.
 =cut
 
@@ -41,7 +41,7 @@ sub DEMOLISH
 
 =head2 open
 
-Open record file
+    Open record file.
 =cut
 
 method open()
@@ -63,7 +63,7 @@ method open()
 
 =head2 close
 
-Close record file
+    Close record file.
 =cut
 
 method close()
@@ -82,8 +82,8 @@ method close()
 
 =head2 reset
 
-Reset pointer to first item. If record is opened with 'w',
-this will truncate the file to empty.
+    Reset pointer to first item. If record is opened with 'w',
+    this will truncate the file to empty.
 =cut
 
 method reset()
@@ -94,11 +94,11 @@ method reset()
 
 =head2 write
 
-Write a string buffer as a record
+    Write a string buffer as a record.
 
-Parameters
-----------
-$buf : buffer to write.
+    Parameters
+    ----------
+    $buf : a buffer to write.
 =cut
 
 method write(Str $buf)
@@ -115,11 +115,11 @@ method write(Str $buf)
 
 =head2 read
 
-Read a record as string
+    Read a record as a string.
 
-Returns
-----------
-$buf : string
+    Returns
+    ----------
+    $buf : string
 =cut
 
 method read()
@@ -160,19 +160,19 @@ package AI::MXNet::RecordIO;
 
 =head2 unpack
 
-unpack a MXImageRecord to a string
+    unpack a MXImageRecord to a string
 
-Parameters
-----------
-s : str
-string buffer from MXRecordIO.read
+    Parameters
+    ----------
+    s : str
+        string buffer from MXRecordIO.read
 
-Returns
--------
-header : AI::MXNet::IRHeader
-header of the image record
-s : str
-unpacked string
+    Returns
+    -------
+    header : AI::MXNet::IRHeader
+        header of the image record
+    s : str
+        unpacked string
 =cut
 
 method unpack(Str $s)
@@ -196,15 +196,15 @@ method unpack(Str $s)
 
 =head2 pack
 
-pack a string into MXImageRecord
+    pack a string into MXImageRecord
 
-Parameters
-----------
-$header : AI::MXNet::IRHeader or ArrayRef suitable for AI::MXNet::IRHeader->new(@{ ArrayRef })
-header of the image record.
-$header->label can be a number or an array ref.
-s : str
-string to pack
+    Parameters
+    ----------
+    $header : AI::MXNet::IRHeader or ArrayRef suitable for AI::MXNet::IRHeader->new(@{ ArrayRef })
+        header of the image record.
+        $header->label can be a number or an array ref.
+    s : str
+        string to pack
 =cut
 
 method pack(AI::MXNet::IRHeader|ArrayRef $header, Str $s)
@@ -233,19 +233,19 @@ extends 'AI::MXNet::RecordIO';
 
 =head1 NAME
 
-AI::MXNet::IndexedRecordIO - Read/write RecordIO format data supporting random access.
+    AI::MXNet::IndexedRecordIO - Read/write RecordIO format data supporting random access.
 =cut
 
 =head2 new
 
-Parameters
-----------
-idx_path : str
-    Path to index file
-uri : str
-    Path to record file. Only support file types that are seekable.
-flag : str
-    'w' for write or 'r' for read
+    Parameters
+    ----------
+    idx_path : str
+        Path to index file
+    uri : str
+        Path to record file. Only support file types that are seekable.
+    flag : str
+        'w' for write or 'r' for read
 =cut
 
 has 'idx_path'  => (is => 'ro', isa => 'Str', required => 1);
@@ -280,7 +280,7 @@ method close()
 
 =head2 seek
 
-Query current read head position
+    Query current read head position.
 =cut
 
 method seek(Int $idx)
@@ -292,7 +292,7 @@ method seek(Int $idx)
 
 =head2 tell
 
-Query current write head position
+    Query current write head position.
 =cut
 
 method tell()
@@ -303,10 +303,11 @@ method tell()
 
 =head2 read_idx
 
-Read record with index
+    Read record with the index.
 
-Parameters:
-$idx
+    Parameters:
+    -----------
+    $idx
 =cut
 
 method read_idx(Int $idx)
@@ -317,10 +318,12 @@ method read_idx(Int $idx)
 
 =head2 write_idx
 
-Write record with index
+    Write record with index.
 
-Parameters:
-$idx, $buf
+    Parameters:
+    -----------
+    Int $idx
+    Str $buf
 =cut
 
 method write_idx(Int $idx, Str $buf)

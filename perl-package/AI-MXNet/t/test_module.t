@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 15;
+use Test::More tests => 17;
 use AI::MXNet qw(mx);
 use AI::MXNet::Base;
 use AI::MXNet::TestUtils qw(almost_equal);
