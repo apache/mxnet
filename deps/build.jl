@@ -115,7 +115,8 @@ if !libmxnet_detected
           `git -C mshadow checkout -- make/mshadow.mk`
           `git fetch`
           `git checkout $libmxnet_curr_ver`
-          `git submodule update`
+          `git submodule update --init`
+          `make clean`
           `sed -i -s "s/MSHADOW_CFLAGS = \(.*\)/MSHADOW_CFLAGS = \1 $ilp64/" mshadow/make/mshadow.mk`
         end
         FileRule(joinpath(_mxdir, "config.mk"), @build_steps begin
