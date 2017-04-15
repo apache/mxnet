@@ -97,7 +97,7 @@ end
 
 A convenient function to construct a callback that runs every `n` full data-passes.
 
-* `call_on_0::Int`: keyword argument, default false. Unless set, the callback
+* `call_on_0::Bool`: keyword argument, default false. Unless set, the callback
           will *not* be run on epoch 0. Epoch 0 means no training has been performed
           yet. This is useful if you want to inspect the randomly initialized model
           that has not seen any data yet.
