@@ -23,7 +23,7 @@ SHORT_SIDE = config.SCALES[0][0]
 LONG_SIDE = config.SCALES[0][1]
 PIXEL_MEANS = config.PIXEL_MEANS
 DATA_NAMES = ['data', 'im_info']
-LABEL_NAMES = ['cls_prob_label']
+LABEL_NAMES = None
 DATA_SHAPES = [('data', (1, 3, LONG_SIDE, SHORT_SIDE)), ('im_info', (1, 3))]
 LABEL_SHAPES = None
 # visualization

@@ -686,17 +686,27 @@ def test_activation_with_type():
 
 
 def test_embedding_with_type():
-    sym = mx.sym.Embedding(name='embedding', input_dim=10, output_dim=20)
-    ctx_list = [{'ctx': mx.gpu(0), 'embedding_data': (2, 10), 'type_dict': {'embedding_data': np.float64}},
-                {'ctx': mx.gpu(0), 'embedding_data': (2, 10), 'type_dict': {'embedding_data': np.float32}},
-                {'ctx': mx.gpu(0), 'embedding_data': (2, 10), 'type_dict': {'embedding_data': np.float16}},
-                {'ctx': mx.cpu(0), 'embedding_data': (2, 10), 'type_dict': {'embedding_data': np.float64}},
-                {'ctx': mx.cpu(0), 'embedding_data': (2, 10), 'type_dict': {'embedding_data': np.float32}},
-                {'ctx': mx.cpu(0), 'embedding_data': (2, 10), 'type_dict': {'embedding_data': np.float16}}]
-    arg_params = {'embedding_data': np.random.randint(low=0, high=10, size=(2, 10))}
-    check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'},
-                      arg_params=arg_params)
+    def test_embedding_helper(data_types, weight_types, low_pad, high_pad):
+        NVD = [[20, 10, 20], [200, 10, 300]]
+        for N, V, D in NVD:
+            sym = mx.sym.Embedding(name='embedding', input_dim=V, output_dim=D)
+            ctx_list = []
+            for data_type in data_types:
+                for weight_type in weight_types:
+                    ctx_list.append({'ctx': mx.gpu(0), 'embedding_data': (N,),
+                        'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
+                    ctx_list.append({'ctx': mx.cpu(0), 'embedding_data': (N,),
+                        'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
+            arg_params = {'embedding_data': np.random.randint(low=-low_pad, high=V+high_pad, size=(N,))}
+            check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'},
+                              arg_params=arg_params)
 
+    data_types = [np.float16, np.float32, np.float64, np.int32]
+    weight_types = [np.float16, np.float32, np.float64]
+    test_embedding_helper(data_types, weight_types, 5, 5)
+    data_types = [np.uint8]
+    weight_types = [np.float16, np.float32, np.float64]
+    test_embedding_helper(data_types, weight_types, 0, 5)
 
 def test_svmoutput_with_type():
     sym = mx.sym.SVMOutput(name='svmoutput', use_linear=True)
