@@ -28,7 +28,7 @@ end
 
 function loglikelihood{T <: AbstractFloat}(labels::Vector{T}, probs::Array{T, 2})
     LL = 0.0
-    eps = 1.0e-8
+    eps = convert(T, 1.0e-8)
     for i = 1:size(labels, 1)
         LL += log(probs[Int(labels[i]) + 1, i] + eps)    # labels are zero-based
     end
@@ -48,7 +48,7 @@ function test_ace()
     probs          = convert(Array{Float32}, generate_probs(n_categories, n_observations))
     LL             = loglikelihood(labels, probs)
     metric         = mx.ACE()    # For categorical variables, ACE == -LL
-    mx._update_single_output(metric, mx.NDArray(labels), mx.NDArray(probs))
+    mx._update_single_output(metric, labels, probs)
     LL_v2 = metric.ace_sum / metric.n_sample
     @static if VERSION >= v"0.6.0-dev.2075"
       @test LL ≈ LL_v2 atol=1e-12
