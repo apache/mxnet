@@ -1,19 +1,22 @@
 require(argparse)
 require(mxnet)
 
-download_ <- function(data_dir) {
-    dir.create(data_dir, showWarnings = FALSE)
+get_data <- function(data_dir) {
+  if (!dir.exists(data_dir)) dir.create(data_dir, recursive = TRUE)
+  cwd <- getwd()
+  print(paste("Current working directory:", cwd))
+  print(paste("Data directory:", data_dir))
+  if ((!file.exists(paste0(data_dir,"train-images-idx3-ubyte"))) ||
+      (!file.exists(paste0(data_dir,"train-labels-idx1-ubyte"))) ||
+      (!file.exists(paste0(data_dir,"t10k-images-idx3-ubyte" ))) ||
+      (!file.exists(paste0(data_dir,"t10k-labels-idx1-ubyte" )))  ) {
     setwd(data_dir)
-    if ((!file.exists('train-images-idx3-ubyte')) ||
-        (!file.exists('train-labels-idx1-ubyte')) ||
-        (!file.exists('t10k-images-idx3-ubyte')) ||
-        (!file.exists('t10k-labels-idx1-ubyte'))) {
-        download.file(url='http://data.mxnet.io/mxnet/data/mnist.zip',
-                      destfile='mnist.zip', method='wget')
-        unzip("mnist.zip")
-        file.remove("mnist.zip")
-    }
-    setwd("..")
+    download.file(url='http://data.mxnet.io/mxnet/data/mnist.zip',
+                  destfile='mnist.zip', method='wget')
+    unzip("mnist.zip", junkpaths = T)  # unzip only files not dirs
+    file.remove("mnist.zip")
+    setwd(cwd)
+  }
 }
 
 # multi-layer perceptron
@@ -55,46 +58,45 @@ get_lenet <- function() {
 }
 
 get_iterator <- function(data_shape) {
-    get_iterator_impl <- function(args) {
-        data_dir = args$data_dir
-        if (!grepl('://', args$data_dir))
-            download_(args$data_dir)
-        flat <- TRUE
-        if (length(data_shape) == 3) flat <- FALSE
+    flat <- TRUE
+    if (length(data_shape) == 3) flat <- FALSE
 
-        train           = mx.io.MNISTIter(
-            image       = paste0(data_dir, "train-images-idx3-ubyte"),
-            label       = paste0(data_dir, "train-labels-idx1-ubyte"),
-            input_shape = data_shape,
-            batch_size  = args$batch_size,
-            shuffle     = TRUE,
-            flat        = flat)
+    train           = mx.io.MNISTIter(
+        image       = paste0(args$data_dir, "train-images-idx3-ubyte"),
+        label       = paste0(args$data_dir, "train-labels-idx1-ubyte"),
+        input_shape = data_shape,
+        batch_size  = args$batch_size,
+        shuffle     = TRUE,
+        flat        = flat)
 
-        val = mx.io.MNISTIter(
-            image       = paste0(data_dir, "t10k-images-idx3-ubyte"),
-            label       = paste0(data_dir, "t10k-labels-idx1-ubyte"),
-            input_shape = data_shape,
-            batch_size  = args$batch_size,
-            flat        = flat)
+    val = mx.io.MNISTIter(
+        image       = paste0(args$data_dir, "t10k-images-idx3-ubyte"),
+        label       = paste0(args$data_dir, "t10k-labels-idx1-ubyte"),
+        input_shape = data_shape,
+        batch_size  = args$batch_size,
+        flat        = flat)
 
-        ret = list(train=train, value=val)
-    }
-    get_iterator_impl
+    ret = list(train=train, value=val)
 }
 
 parse_args <- function() {
     parser <- ArgumentParser(description='train an image classifer on mnist')
     parser$add_argument('--network', type='character', default='mlp',
-                        choices = c('mlp', 'lenet'),
+    #parser$add_argument('--network', type='character', default='lenet',
+                                            choices = c('mlp', 'lenet'),
                         help = 'the cnn to use')
-    parser$add_argument('--data-dir', type='character', default='mnist/',
-                        help='the input data directory')
+    parser$add_argument('--data-dir', type='character', default='data/mnist/', # needs trailing /
+                        help='the input data directory (needs trailing /)')
     parser$add_argument('--gpus', type='character',
                         help='the gpus will be used, e.g "0,1,2,3"')
     parser$add_argument('--batch-size', type='integer', default=128,
                         help='the batch size')
-    parser$add_argument('--lr', type='double', default=.05,
+    parser$add_argument('--lr_factor', type='double', default=.05,
                         help='the initial learning rate')
+    parser$add_argument('--momentum', type='double', default=.9,
+                        help='the momentum')
+    parser$add_argument('--num_examples', type='double', default=60000,
+                        help='the number of examples (60000 in the traning set)')
     parser$add_argument('--model-prefix', type='character',
                         help='the prefix of the model to load/save')
     parser$add_argument('--num-round', type='integer', default=10,
@@ -113,6 +115,9 @@ if (args$network == 'mlp') {
     data_shape <- c(28, 28, 1)
     net <- get_lenet()
 }
+# loda data
+get_data(args$data_dir)
+
 # train
 source("train_model.R")
 train_model.fit(args, net, get_iterator(data_shape))
