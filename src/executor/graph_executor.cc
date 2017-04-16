@@ -617,33 +617,23 @@ void GraphExecutor::InitCachedOps() {
     bool is_gpu = op_nodes_[nid].ctx.dev_mask() == gpu::kDevMask;
 
     // the variables
-    std::vector<Engine::VarHandle> use_vars, mutate_vars, all_vars, inplace_vars;
-    // inplace_vars are supposed to be removed from use_vars and all_vars
-    for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
-      uint32_t eid = idx.entry_id(nid, index);
-      // must check exec->req because, vstorage_inplace is only a hint.
-      if (vstorage_inplace[eid] >= 0 && exec->req.at(index) == kWriteInplace) {
-        auto inplace_offset = vstorage_inplace[eid];
-        inplace_vars.push_back(exec->in_array[inplace_offset].var());
-      }
-    }
+    std::vector<Engine::VarHandle> use_vars, mutate_vars;
     for (size_t i = 0; i < exec->in_array.size(); ++i) {
       auto& nd = exec->in_array[i];
-      all_vars.push_back(nd.var());
       use_vars.push_back(nd.var());
     }
     for (auto& r : exec->op_ctx.requested) {
-      all_vars.push_back(r.var);
       mutate_vars.push_back(r.var);
     }
     for (auto& nd : exec->out_array) {
-      all_vars.push_back(nd.var());
       mutate_vars.push_back(nd.var());
     }
     // dedup vars
     Engine::Get()->DeduplicateVarHandle(&use_vars, &mutate_vars);
-    Engine::Get()->DeduplicateVarHandle(&use_vars, &inplace_vars);
-    Engine::Get()->DeduplicateVarHandle(&all_vars, &inplace_vars);
+    // all vars include both mutate vars and use vars
+    std::vector<Engine::VarHandle> all_vars(use_vars);
+    std::copy(mutate_vars.begin(), mutate_vars.end(),
+              std::inserter(all_vars, all_vars.end()));
     // setup exec vars
     Engine::Get()->PushSync([exec](RunContext rctx) {
         exec->Setup();
