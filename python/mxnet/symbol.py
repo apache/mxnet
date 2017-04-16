@@ -1424,3 +1424,46 @@ def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
         dtype = _numpy.float32
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              name=name, dtype=dtype)
+
+# pylint: disable=undefined-variable
+def global_norm(t_list, name=None):
+    """Computes the global norm of multiple tensors.
+
+    Given a tuple or list of tensors t_list, this operation returns the global norm of the elements
+     in all tensors in t_list. The global norm is computed as:
+
+    ``global_norm = sqrt(sum([l2norm(t)**2 for t in t_list]))``
+
+    Any entries in t_list that are of type None are ignored.
+
+    Parameters
+    ----------
+    t_list: list or tuple
+        The symbol list
+    name: str, optional
+        Name of the global norm symbol
+
+    Returns
+    -------
+    ret: Symbol
+        The global norm. The shape of the resulting symbols will be (1,)
+
+    Examples
+    --------
+    >>> x = mx.sym.ones((2, 3))
+    >>> y = mx.sym.ones((5, 6))
+    >>> z = mx.sym.ones((4, 2, 3))
+    >>> ret = mx.sym.global_norm([x, y, z])
+    >>> ret.eval()[0].asscalar()
+    7.74597
+    """
+    ret = None
+    for t in t_list:
+        if t is not None:
+            if ret is None:
+                ret = square(norm(t))
+            else:
+                ret += square(norm(t))
+    ret = sqrt(ret, name=name)
+    return ret
+# pylint: enable=undefined-variable

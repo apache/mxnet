@@ -2206,5 +2206,48 @@ def imdecode(str_img, clip_rect=(0, 0, 0, 0), out=None, index=0, channels=3, mea
                                    str_img=str_img,
                                    out=out)
 
+
+def global_norm(t_list):
+    """Computes the global norm of multiple tensors.
+
+    Given a tuple or list of tensors t_list, this operation returns the global norm of the elements
+     in all tensors in t_list. The global norm is computed as:
+
+    ``global_norm = sqrt(sum([l2norm(t)**2 for t in t_list]))``
+
+    Any entries in t_list that are of type None are ignored.
+
+    Parameters
+    ----------
+    t_list: list or tuple
+        The NDArray list
+
+    Returns
+    -------
+    ret: NDArray
+        The global norm. The shape of the NDArray will be (1,)
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((2, 3))
+    >>> y = mx.nd.ones((5, 6))
+    >>> z = mx.nd.ones((4, 2, 3))
+    >>> print(mx.nd.global_norm([x, y, z]).asscalar())
+    7.74597
+    >>> xnone = None
+    >>> ret = mx.nd.global_norm([x, y, z, xnone])
+    >>> print(ret.asscalar())
+    7.74597
+    """
+    ret = None
+    for arr in t_list:
+        if arr is not None:
+            if ret is None:
+                ret = square(norm(arr))
+            else:
+                ret += square(norm(arr))
+    ret = sqrt(ret)
+    return ret
+
 # from .base import add_fileline_to_docstring
 # add_fileline_to_docstring(__name__)

@@ -4,6 +4,7 @@
 """Online evaluation metric module."""
 from __future__ import absolute_import
 
+import math
 import numpy
 from . import ndarray
 

@@ -25,13 +25,13 @@ parser.add_argument('--kv-store', type=str, default='device',
                     help='key-value store type')
 parser.add_argument('--num-epochs', type=int, default=25,
                     help='max num of epochs')
-parser.add_argument('--lr', type=float, default=0.01,
+parser.add_argument('--lr', type=float, default=1.0,
                     help='initial learning rate')
 parser.add_argument('--optimizer', type=str, default='sgd',
                     help='the optimizer type')
 parser.add_argument('--mom', type=float, default=0.0,
                     help='momentum for sgd')
-parser.add_argument('--wd', type=float, default=0.00001,
+parser.add_argument('--wd', type=float, default=1E-7,
                     help='weight decay for sgd')
 parser.add_argument('--batch-size', type=int, default=32,
                     help='the batch size.')
@@ -45,11 +45,11 @@ parser.add_argument('--disp-batches', type=int, default=50,
 # multiple GPUs.
 parser.add_argument('--stack-rnn', default=False,
                     help='stack fused RNN cells to reduce communication overhead')
-parser.add_argument('--dropout', type=float, default='0.0',
+parser.add_argument('--dropout', type=float, default=0.5,
                     help='dropout probability (1.0 - keep probability)')
 
 #buckets = [32]
-buckets = [10, 20, 30, 40, 50, 60]
+buckets = [10, 20, 30, 40, 85]
 
 start_label = 1
 invalid_label = 0
@@ -63,26 +63,30 @@ def tokenize_text(fname, vocab=None, invalid_label=-1, start_label=0):
 def get_data(layout):
     train_sent, vocab = tokenize_text("./data/ptb.train.txt", start_label=start_label,
                                       invalid_label=invalid_label)
-    val_sent, _ = tokenize_text("./data/ptb.test.txt", vocab=vocab, start_label=start_label,
+    val_sent, _ = tokenize_text("./data/ptb.valid.txt", vocab=vocab, start_label=start_label,
                                 invalid_label=invalid_label)
+    test_sent, _ = tokenize_text("./data/ptb.test.txt", vocab=vocab, start_label=start_label,
+                                 invalid_label=invalid_label)
 
     data_train  = mx.rnn.BucketSentenceIter(train_sent, args.batch_size, buckets=buckets,
                                             invalid_label=invalid_label, layout=layout)
     data_val    = mx.rnn.BucketSentenceIter(val_sent, args.batch_size, buckets=buckets,
                                             invalid_label=invalid_label, layout=layout)
-    return data_train, data_val, vocab
+    data_test   = mx.rnn.BucketSentenceIter(val_sent, args.batch_size, buckets=buckets,
+                                            invalid_label=invalid_label, layout=layout)
+    return data_train, data_val, data_test, vocab
 
 
 def train(args):
-    data_train, data_val, vocab = get_data('TN')
+    data_train, data_val, data_test, vocab = get_data('TN')
     if args.stack_rnn:
         cell = mx.rnn.SequentialRNNCell()
         for i in range(args.num_layers):
             cell.add(mx.rnn.FusedRNNCell(args.num_hidden, num_layers=1,
-                                         mode='lstm', prefix='lstm_l%d'%i,
+                                         mode='lstm', prefix='lstm_l%d_'%i,
                                          bidirectional=args.bidirectional))
             if args.dropout > 0 and i < args.num_layers - 1:
-                cell.add(mx.rnn.DropoutCell(args.dropout, prefix='lstm_d%d'%i))
+                cell.add(mx.rnn.DropoutCell(args.dropout, prefix='lstm_d%d_'%i))
     else:
         cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers, dropout=args.dropout,
                                    mode='lstm', bidirectional=args.bidirectional)
@@ -119,34 +123,41 @@ def train(args):
     else:
         arg_params = None
         aux_params = None
+    lr_scheduler = mx.lr_scheduler.FactorScheduler(step=10000, factor=1 / 1.15)
 
     opt_params = {
       'learning_rate': args.lr,
-      'wd': args.wd
+      'wd': args.wd,
+      'rescale_grad': 1.0 / args.batch_size,
+      'lr_scheduler': lr_scheduler
     }
 
     if args.optimizer not in ['adadelta', 'adagrad', 'adam', 'rmsprop']:
         opt_params['momentum'] = args.mom
-
+    model.bind(data_shapes=data_train.provide_data, label_shapes=data_train.provide_label)
+    model.init_params(initializer=mx.init.Uniform(0.1))
+    model.summary(level=2)
+    model.init_optimizer(kvstore = args.kv_store,
+                         optimizer=args.optimizer,
+                         optimizer_params=opt_params)
     model.fit(
         train_data          = data_train,
         eval_data           = data_val,
         eval_metric         = mx.metric.Perplexity(invalid_label),
-        kvstore             = args.kv_store,
-        optimizer           = args.optimizer,
-        optimizer_params    = opt_params, 
-        initializer         = mx.init.Xavier(factor_type="in", magnitude=2.34),
         arg_params          = arg_params,
         aux_params          = aux_params,
         begin_epoch         = args.load_epoch,
         num_epoch           = args.num_epochs,
+        max_norm            = 5.0 * args.batch_size, # We need to multiply the batch_size here
+                                                     #  because we will divide the batch_size
+                                                     # in model.update()
         batch_end_callback  = mx.callback.Speedometer(args.batch_size, args.disp_batches),
         epoch_end_callback  = mx.rnn.do_rnn_checkpoint(cell, args.model_prefix, 1)
                               if args.model_prefix else None)
 
 def test(args):
     assert args.model_prefix, "Must specifiy path to load from"
-    _, data_val, vocab = get_data('NT')
+    _, data_val, data_test, vocab = get_data('NT')
 
     if not args.stack_rnn:
         stack = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers,
@@ -187,9 +198,9 @@ def test(args):
 
     model = mx.mod.BucketingModule(
         sym_gen             = sym_gen,
-        default_bucket_key  = data_val.default_bucket_key,
+        default_bucket_key  = data_test.default_bucket_key,
         context             = contexts)
-    model.bind(data_val.provide_data, data_val.provide_label, for_training=False)
+    model.bind(data_test.provide_data, data_test.provide_label, for_training=False)
 
     # note here we load using SequentialRNNCell instead of FusedRNNCell.
     _, arg_params, aux_params = mx.rnn.load_rnn_checkpoint(stack, args.model_prefix, args.load_epoch)

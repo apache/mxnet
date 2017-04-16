@@ -17,18 +17,20 @@ parser.add_argument('--kv-store', type=str, default='device',
                     help='key-value store type')
 parser.add_argument('--num-epochs', type=int, default=25,
                     help='max num of epochs')
-parser.add_argument('--lr', type=float, default=0.01,
+parser.add_argument('--lr', type=float, default=1,
                     help='initial learning rate')
 parser.add_argument('--optimizer', type=str, default='sgd',
                     help='the optimizer type')
 parser.add_argument('--mom', type=float, default=0.0,
                     help='momentum for sgd')
-parser.add_argument('--wd', type=float, default=0.00001,
+parser.add_argument('--wd', type=float, default=1E-7,
                     help='weight decay for sgd')
 parser.add_argument('--batch-size', type=int, default=32,
                     help='the batch size.')
 parser.add_argument('--disp-batches', type=int, default=50,
                     help='show progress for every n batches')
+parser.add_argument('--dropout', type=float, default=0.5,
+                    help='dropout probability (1.0 - keep probability)')
 
 
 def tokenize_text(fname, vocab=None, invalid_label=-1, start_label=0):
@@ -47,7 +49,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     #buckets = []
-    buckets = [10, 20, 30, 40, 50, 60]
+    buckets = [10, 20, 30, 40, 85]
 
     start_label = 1
     invalid_label = 0
@@ -65,6 +67,8 @@ if __name__ == '__main__':
     stack = mx.rnn.SequentialRNNCell()
     for i in range(args.num_layers):
         stack.add(mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_l%d_'%i))
+        if args.dropout > 0 and i < args.num_layers - 1:
+            stack.add(mx.rnn.DropoutCell(args.dropout, prefix='lstm_d%d_' % i))
 
     def sym_gen(seq_len):
         data = mx.sym.Variable('data')
@@ -92,16 +96,23 @@ if __name__ == '__main__':
         sym_gen             = sym_gen,
         default_bucket_key  = data_train.default_bucket_key,
         context             = contexts)
-
+    model.bind(data_shapes=data_train.provide_data,
+               label_shapes=data_train.provide_label)
+    model.init_params(initializer=mx.init.Uniform(0.1))
+    model.summary(level=2)
+    lr_scheduler = mx.lr_scheduler.FactorScheduler(step=10000, factor=1 / 1.15)
+    model.init_optimizer(kvstore = args.kv_store,
+                         optimizer=args.optimizer,
+                         optimizer_params={ 'learning_rate': args.lr,
+                                            'momentum': args.mom,
+                                            'rescale_grad' : 1.0 / args.batch_size,
+                                            'wd': args.wd})
     model.fit(
         train_data          = data_train,
         eval_data           = data_val,
         eval_metric         = mx.metric.Perplexity(invalid_label),
-        kvstore             = args.kv_store,
-        optimizer           = args.optimizer,
-        optimizer_params    = { 'learning_rate': args.lr,
-                                'momentum': args.mom,
-                                'wd': args.wd },
-        initializer         = mx.init.Xavier(factor_type="in", magnitude=2.34),
         num_epoch           = args.num_epochs,
+        max_norm            = 5.0 * args.batch_size,  # We need to multiply the batch_size here
+                                                      #  because we will divide the batch_size
+                                                      # in model.update()
         batch_end_callback  = mx.callback.Speedometer(args.batch_size, args.disp_batches))
