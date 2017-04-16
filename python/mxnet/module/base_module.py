@@ -1,4 +1,4 @@
-# pylint: disable=fixme, too-many-arguments, too-many-locals, too-many-public-methods, too-many-branches
+# pylint: disable=fixme, too-many-arguments, too-many-locals, too-many-public-methods, too-many-branches, too-many-lines
 """`BaseModule` defines an API for modules."""
 
 import time

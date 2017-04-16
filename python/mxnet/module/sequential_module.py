@@ -1,4 +1,4 @@
-# pylint: disable=too-many-arguments, too-many-locals, too-many-instance-attributes
+# pylint: disable=too-many-arguments, too-many-locals, too-many-instance-attributes, abstract-method
 """`SequentialModule` is a container module that chains a number of modules together."""
 
 import logging
