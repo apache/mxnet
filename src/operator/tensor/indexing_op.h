@@ -330,13 +330,17 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
     DMLC_DECLARE_FIELD(axis)
     .set_lower_bound(0)
     .set_default(0)
-    .describe("the axis of data tensor to be taken.");
+    .describe("The axis of input array to be taken.");
     DMLC_DECLARE_FIELD(mode)
     .add_enum("raise", take_::kRaise)
     .add_enum("wrap", take_::kWrap)
     .add_enum("clip", take_::kClip)
     .set_default(take_::kClip)
-    .describe("specify how out-of-bound indices bahave.");
+    .describe("Specify how out-of-bound indices bahave."
+              " \"clip\" means clip to the range. So, if all indices mentioned are too large,"
+              " they are replaced by the index that addresses the last element along an axis. "
+              " \"wrap\" means to wrap around. "
+              " \"raise\" means to raise an error. ");
   }
 };
 
