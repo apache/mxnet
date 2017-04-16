@@ -72,7 +72,7 @@ def get_data(layout):
                                             invalid_label=invalid_label, layout=layout)
     data_val    = mx.rnn.BucketSentenceIter(val_sent, args.batch_size, buckets=buckets,
                                             invalid_label=invalid_label, layout=layout)
-    data_test   = mx.rnn.BucketSentenceIter(val_sent, args.batch_size, buckets=buckets,
+    data_test   = mx.rnn.BucketSentenceIter(test_sent, args.batch_size, buckets=buckets,
                                             invalid_label=invalid_label, layout=layout)
     return data_train, data_val, data_test, vocab
 
