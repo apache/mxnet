@@ -663,8 +663,7 @@ class Ftrl(Optimizer):
 
 
     def create_state(self, index, weight):
-        return (zeros(weight.shape, weight.context),  # sigma
-                zeros(weight.shape, weight.context),  # z
+        return (zeros(weight.shape, weight.context),  # z
                 zeros(weight.shape, weight.context))  # n
 
     def update(self, index, weight, grad, state):
@@ -679,11 +678,10 @@ class Ftrl(Optimizer):
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
 
         # accumulated g and delta initlization
-        sigma, z, n = state
+        z, n = state
 
-        #update sigma, z, n
-        sigma[:] = (sqrt(n + grad * grad) - sqrt(n)) / self.alpha
-        z[:] += grad - sigma * weight
+        #update z, n
+        z[:] += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / self.alpha 
         n[:] += grad * grad
 
         # update weight
