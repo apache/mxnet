@@ -49,28 +49,26 @@ h1 {
     font-size: 22px;
     font-weight: bold;
     padding-top: 10px;
-    color: #cc6600;
+    color: slategray;
 }
 
 h2 {
     font-size: 20px;
     /* font-weight: bold; */
     padding-top: 10px;
-    color: #187dbb;
+    color: slategray;
 }
 
 h3 {
     font-size: 18px;
     padding-top: 8px;
     /* font-weight: bold; */
-    color: #187dbb;
+    color: slategray;
 }
 
-h3.orange {
-    color: #cc6600; }
 
 h4 {
-    color: #187dbb;
+    color: slategray;
     font-size: 16px;
     padding-top: 6px;
     font-style: italic;
@@ -888,4 +886,8 @@ table.docutils tr:nth-child(even) {
     right: 0;
     width: 40px;
     height: 38px;
+}
+
+div.toctree-wrapper.compound > ul > li {
+    padding: 5px 0 5px 0;
 }

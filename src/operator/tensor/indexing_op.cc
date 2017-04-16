@@ -52,13 +52,18 @@ NNVM_REGISTER_OP(_backward_Embedding)
 
 
 NNVM_REGISTER_OP(take)
-.describe(R"code(Take elements from an array along an axis.
+.describe(R"code(Takes elements from an input array along the given axis.
 
-Slice along a particular axis with the provided indices. E.g., given an input array
-with shape ``(d0, d1, d2)`` and indices with shape ``(i0, i1)``, then the output
-will have shape ``(i0, i1, d1, d2)``, with::
+This function slices the input array along a particular axis with the provided indices.
+
+Given an input array with shape ``(d0, d1, d2)`` and indices with shape ``(i0, i1)``, the output
+will have shape ``(i0, i1, d1, d2)``, computed by::
 
   output[i,j,:,:] = input[indices[i,j],:,:]
+
+.. note::
+   - `axis`- Only slicing along axis 0 is supported for now.
+   - `mode`- Only `clip` mode is supported for now.
 
 Examples::
 
@@ -66,14 +71,12 @@ Examples::
        [ 3.,  4.],
        [ 5.,  6.]]
 
- take(x, [[0,1],[1,2]]) = [[[ 1.,  2.],
-                            [ 3.,  4.]],
+  // takes elements with specified indices along axis 0
+  take(x, [[0,1],[1,2]]) = [[[ 1.,  2.],
+                             [ 3.,  4.]],
 
-                           [[ 3.,  4.],
-                            [ 5.,  6.]]]
-
-.. note::
-  Only slicing axis 0 is supported now.
+                            [[ 3.,  4.],
+                             [ 5.,  6.]]]
 
 )code" ADD_FILELINE)
 .set_num_inputs(2)
@@ -95,8 +98,8 @@ Examples::
     return MakeNonlossGradNode("_backward_take", n, ograds,
                                {n->inputs[1]}, n->attrs.dict);
   })
-.add_argument("a", "NDArray-or-Symbol", "The source array.")
-.add_argument("indices", "NDArray-or-Symbol", "The indices of the values to extract.")
+.add_argument("a", "NDArray-or-Symbol", "The input array.")
+.add_argument("indices", "NDArray-or-Symbol", "The indices of the values to be extracted.")
 .add_arguments(TakeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_take)
@@ -111,10 +114,13 @@ NNVM_REGISTER_OP(_backward_take)
 
 
 NNVM_REGISTER_OP(batch_take)
-.describe(R"code(Take elements from a data batch.
+.describe(R"code(Takes elements from a data batch.
 
-Given an ``(d0, d1)`` input array, and ``(d0,)`` indices, the output will be a
-``(d0,)`` computed by::
+.. note::
+  `batch_take` is deprecated. Use `pick` instead.
+
+Given an input array of shape ``(d0, d1)`` and indices of shape ``(d0,)``, the result will be
+an output array of shape ``(d0,)`` with::
 
   output[i] = input[i, indices[i]]
 
@@ -124,6 +130,7 @@ Examples::
        [ 3.,  4.],
        [ 5.,  6.]]
 
+  // takes elements with specified indices
   batch_take(x, [0,1,0]) = [ 1.  4.  5.]
 
 )code" ADD_FILELINE)
@@ -136,8 +143,8 @@ Examples::
 .set_attr<nnvm::FInferShape>("FInferShape", BatchTakeOpShape)
 .set_attr<nnvm::FInferType>("FInferType", BatchTakeOpType)
 .set_attr<FCompute>("FCompute<cpu>", BatchTakeOpForward<cpu>)
-.add_argument("a", "NDArray-or-Symbol", "Input data array")
-.add_argument("indices", "NDArray-or-Symbol", "index array");
+.add_argument("a", "NDArray-or-Symbol", "The input array")
+.add_argument("indices", "NDArray-or-Symbol", "The index array");
 
 NNVM_REGISTER_OP(one_hot)
 .describe(R"code(Returns a one-hot array.
