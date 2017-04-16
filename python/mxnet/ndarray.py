@@ -1210,8 +1210,8 @@ def add(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1271,8 +1271,8 @@ def subtract(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1331,8 +1331,8 @@ def multiply(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1391,8 +1391,8 @@ def divide(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1448,8 +1448,8 @@ def power(base, exp):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1508,8 +1508,8 @@ def maximum(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1564,8 +1564,8 @@ def minimum(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1614,7 +1614,7 @@ def minimum(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def equal(lhs, rhs):
-    """Returns the result of element-wise **equal to**(==) comparison operation with
+    """Returns the result of element-wise **equal to** (==) comparison operation with
     broadcasting.
 
     For each element in input arrays, return 1(true) if corresponding elements are same,
@@ -1624,8 +1624,8 @@ def equal(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1677,7 +1677,7 @@ def equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def not_equal(lhs, rhs):
-    """Returns the result of element-wise **not equal to**(!=) comparison operation
+    """Returns the result of element-wise **not equal to** (!=) comparison operation
     with broadcasting.
 
     For each element in input arrays, return 1(true) if corresponding elements are different,
@@ -1687,8 +1687,8 @@ def not_equal(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1743,7 +1743,7 @@ def not_equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def greater(lhs, rhs):
-    """Returns the result of element-wise **greater than**(>) comparison operation
+    """Returns the result of element-wise **greater than** (>) comparison operation
     with broadcasting.
 
     For each element in input arrays, return 1(true) if lhs elements are greater than rhs,
@@ -1753,8 +1753,8 @@ def greater(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1806,7 +1806,7 @@ def greater(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def greater_equal(lhs, rhs):
-    """Returns the result of element-wise **greater than or equal to**(>=) comparison
+    """Returns the result of element-wise **greater than or equal to** (>=) comparison
     operation with broadcasting.
 
     For each element in input arrays, return 1(true) if lhs elements are greater than equal to rhs,
@@ -1816,8 +1816,8 @@ def greater_equal(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1869,7 +1869,8 @@ def greater_equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def lesser(lhs, rhs):
-    """Returns the result of element-wise **lesser than**(<) comparison operation with broadcasting.
+    """Returns the result of element-wise **lesser than** (<) comparison operation
+    with broadcasting.
 
     For each element in input arrays, return 1(true) if lhs elements are less than rhs,
     otherwise return 0(false).
@@ -1878,8 +1879,8 @@ def lesser(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1932,7 +1933,7 @@ def lesser(lhs, rhs):
 
 
 def lesser_equal(lhs, rhs):
-    """Returns the result of element-wise **lesser than or equal to**(<=) comparison
+    """Returns the result of element-wise **lesser than or equal to** (<=) comparison
     operation with broadcasting.
 
     For each element in input arrays, return 1(true) if lhs elements are
@@ -1942,8 +1943,8 @@ def lesser_equal(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-    then the arrays are broadcastable to a common shape.
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1995,7 +1996,8 @@ def lesser_equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def true_divide(lhs, rhs):
-    """Same as ``divide``.
+
+    """This function is similar to :meth:`divide`.
     """
     return divide(lhs, rhs)
 
