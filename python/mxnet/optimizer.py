@@ -1,17 +1,9 @@
 """Weight updating functions."""
 import math
-<<<<<<< HEAD
-import ctypes
-from .base import _LIB, check_call
-from .base import c_array, mx_uint, mx_float, c_str
-from .base import OptimizerHandle, OptimizerCreator
-from .ndarray import NDArray, zeros, clip, sqrt, abs, sign
-=======
 import pickle
 import logging
-from .ndarray import NDArray, zeros, clip, sqrt
+from .ndarray import NDArray, zeros, clip, sqrt, abs, sign
 from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
->>>>>>> 1722b08abfd2952a84594fd16e297905e187a93b
 from .random import normal
 
 
@@ -698,7 +690,6 @@ class Ftrl(Optimizer):
 
         # update weight
         weight[:] = (sign(z) * self.lamda1 - z) / ((self.beta + sqrt(n))/self.alpha + self.lamda2) * (abs(z) > self.lamda1)
-
 
 @register
 class Test(Optimizer):
