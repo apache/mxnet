@@ -2,7 +2,8 @@
 import math
 import pickle
 import logging
-from .ndarray import NDArray, zeros, clip, sqrt, abs, sign
+from .ndarray import NDArray, zeros, clip, sqrt, sign
+import .ndarray as nd
 from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
 from .random import normal
 
@@ -653,14 +654,29 @@ class AdaDelta(Optimizer):
 class Ftrl(Optimizer):
     """
     Reference:Ad Click Prediction: a View from the Trenches
+
+    Parameters
+    ----------
+    lamda1 : float, optional
+        L1 regularization coefficient.
+
+    clip_gradient : float, optional
+        Clip the gradient by projecting onto the box ``[-clip_gradient, clip_gradient]``.
+
+    learning_rate : float, optional
+        The initial learning rate.
+
+    beta : float, optional
+        Per-coordinate learning rate correlation parameter.
+
     """
 
-    def __init__(self, lamda1=0.01, alpha=0.1, beta=1, **kwargs):
+    def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1, clip_gradient, **kwargs):
         super(Ftrl, self).__init__(**kwargs)
         self.lamda1 = lamda1
-        self.alpha = alpha
         self.beta = beta
-
+        self.clip_gradient = clip_gradient
+        self.lr = learning_rate
 
     def create_state(self, index, weight):
         return (zeros(weight.shape, weight.context),  # z
@@ -681,12 +697,12 @@ class Ftrl(Optimizer):
         z, n = state
 
         #update z, n
-        z[:] += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / self.alpha 
+        z[:] += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / self.lr 
         n[:] += grad * grad
 
         # update weight
         weight[:] = (sign(z) * self.lamda1 - z) / \
-            ((self.beta + sqrt(n))/self.alpha + wd) * (abs(z) > self.lamda1)
+            ((self.beta + sqrt(n))/self.lr + wd) * (nd.abs(z) > self.lamda1)
 
 @register
 class Test(Optimizer):
