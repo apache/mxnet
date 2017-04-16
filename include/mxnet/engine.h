@@ -229,7 +229,7 @@ class MXNET_API Engine {
   // For each var vector, sort it and remove the duplicated vars.
   // Also remove vars from read_vars if it also appears in write_vars
   inline void DeduplicateVarHandle(std::vector<engine::VarHandle> *read_vars,
-                                 std::vector<engine::VarHandle> *write_vars) {
+                                   std::vector<engine::VarHandle> *write_vars) {
     std::sort(write_vars->begin(), write_vars->end());
     write_vars->resize(std::unique(write_vars->begin(), write_vars->end()) -
                       write_vars->begin());
@@ -246,8 +246,7 @@ class MXNET_API Engine {
       }
     }
     read_vars->resize(rtop - read_vars->begin());
-}
-
+  }
 };  // class Engine
 #endif  // DMLC_USE_CXX11
 }  // namespace mxnet
