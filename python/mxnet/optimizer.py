@@ -687,7 +687,7 @@ class Ftrl(Optimizer):
         n[:] += grad * grad
 
         # update weight
-        weight[:] = (sign(z) * self.lamda1 - z) /
+        weight[:] = (sign(z) * self.lamda1 - z) / \
             ((self.beta + sqrt(n))/self.alpha + self.lamda2) * (abs(z) > self.lamda1)
 
 @register
