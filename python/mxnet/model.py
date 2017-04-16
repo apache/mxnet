@@ -510,13 +510,13 @@ class FeedForward(BASE_ESTIMATOR):
         aux_names = self.symbol.list_auxiliary_states()
 
         param_name_attrs = [x for x in zip(arg_names, arg_shapes, arg_dtypes)
-            if x[0] in param_names]
+                            if x[0] in param_names]
         arg_params = {k : nd.zeros(shape=s, dtype=t)
-            for k, s, t in param_name_attrs}
+                      for k, s, t in param_name_attrs}
         aux_name_attrs = [x for x in zip(aux_names, aux_shapes, aux_dtypes)
-            if x[0] in aux_names]
+                          if x[0] in aux_names]
         aux_params = {k : nd.zeros(shape=s, dtype=t)
-            for k, s, t in aux_name_attrs}
+                      for k, s, t in aux_name_attrs}
 
         for k, v in arg_params.items():
             if self.arg_params and k in self.arg_params and (not overwrite):
