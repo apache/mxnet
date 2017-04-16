@@ -8,10 +8,10 @@ class Context(object):
     Parameters
     ----------
     device_type : {'cpu', 'gpu'} or Context.
-        String representing the device type
+        String representing the device type.
 
     device_id : int (default=0)
-        The device id of the device, needed for GPU
+        The device id of the device, needed for GPU.
 
     Note
     ----
@@ -20,10 +20,10 @@ class Context(object):
     Examples
     --------
     >>> # array on cpu
-    >>> cpu_array = mx.md.ones((2, 3))
+    >>> cpu_array = mx.nd.ones((2, 3))
     >>> # switch default context to GPU(2)
     >>> with mx.Context(mx.gpu(2)):
-    >>>     gpu_array = mx.md.ones((2, 3))
+    >>>     gpu_array = mx.nd.ones((2, 3))
     >>> gpu_array.context
     gpu(2)
     """
@@ -82,12 +82,12 @@ Context.default_ctx = Context('cpu', 0)
 def cpu(device_id=0):
     """Return a CPU context.
 
-    This function is a short cut for Context('cpu', device_id)
+    This function is a short cut for ``Context('cpu', device_id)``.
 
     Parameters
     ----------
     device_id : int, optional
-        The device id of the device. device_id is not needed for CPU.
+        The device id of the device. `device_id` is not needed for CPU.
         This is included to make interface compatible with GPU.
 
     Returns
@@ -101,12 +101,12 @@ def cpu(device_id=0):
 def gpu(device_id=0):
     """Return a GPU context.
 
-    This function is a short cut for Context('gpu', device_id)
+    This function is a short cut for Context('gpu', device_id).
 
     Parameters
     ----------
     device_id : int, optional
-        The device id of the device, needed for GPU
+        The device id of the device, needed for GPU.
 
     Returns
     -------

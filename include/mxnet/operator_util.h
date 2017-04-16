@@ -2,14 +2,18 @@
  *  Copyright (c) 2015 by Contributors
  * \file operator_util.h
  * \brief Utility functions and registries to help quickly build new operators.
- *
+ *  [Deprecated]
  *  Use the register functions in this file when possible to simplify operator creations.
- *  Operators registred in this file will be exposed to both NDArray API and symbolic API.
+ *  Operators registered in this file will be exposed to both NDArray API and symbolic API.
  *
  * \author Tianqi Chen
  */
 #ifndef MXNET_OPERATOR_UTIL_H_
 #define MXNET_OPERATOR_UTIL_H_
+
+#ifdef _MSC_VER
+#pragma warning(disable:4503)  // disable warning: decorated name length exceeded.
+#endif
 
 #include <dmlc/registry.h>
 #include <dmlc/parameter.h>
@@ -55,6 +59,26 @@ struct EnvArguments {
   /*! \brief pointer to the resources requested */
   std::vector<Resource> resource;
 };
+
+/*!
+ * \brief source function that generate output based on env
+ *  The result container is pre-allocated with the correct shape.
+ * \param env The Environment arguments.
+ * \param ret The containter to store return value.
+ * \param req The requirement to stroe the ret.
+ * \param ctx Runtime context to execute the function.
+ */
+typedef void (*SourceFunction)(const EnvArguments& env,
+                               TBlob* ret,
+                               OpReqType req,
+                               RunContext ctx);
+
+/*!
+ * \brief Shape inference function to get the correct shape.
+ * \param env The Environment arguments.
+ * \return The inferred result shape.
+ */
+typedef TShape (*SourceShapeFunction)(const EnvArguments& env);
 
 /*!
  * \brief Unary function that takes a src and save result to ret.
@@ -262,6 +286,11 @@ class SimpleOpRegEntry {
    */
   virtual TSelf& set_resource_request(ResourceRequest req) = 0;
   /*!
+   * \brief set source inference function.
+   * \param fshapeinfer The source function that peforms the operation.
+   */
+  virtual TSelf& set_shape_function(SourceShapeFunction fshapeinfer) = 0;
+  /*!
    * \brief set shape inference function.
    *  Default: out_shape = in_shape
    * \param fshapeinfer The unary function that peforms the operation.
@@ -273,6 +302,16 @@ class SimpleOpRegEntry {
    * \param fshapeinfer The binary function that peforms the operation.
    */
   virtual TSelf& set_shape_function(BinaryShapeFunction fshapeinfer) = 0;
+  /*!
+   * \brief set function of the function to be fsource
+   * \param dev_mask The device mask of the function can act on.
+   * \param fsource The unary function that peforms the operation.
+   * \param register_symbolic Whether register a symbolic operator as well.
+   */
+  virtual TSelf& set_function(
+      int dev_mask,
+      SourceFunction fsource,
+      SimpleOpRegOption register_symbolic = kRegisterSymbolic) = 0;
   /*!
    * \brief set function of the function to be funary
    * \param dev_mask The device mask of the function can act on.
@@ -351,7 +390,7 @@ class SimpleOpRegEntry {
   /*!
    * \brief Describe the function.
    * \param args argument information.
-   *  Add addtional arguments to the function.
+   *  Add additional arguments to the function.
    * \return reference to self.
    */
   virtual TSelf& add_arguments(const std::vector<dmlc::ParamFieldInfo> &args) = 0;
@@ -412,47 +451,9 @@ class SimpleOpRegistry {
   }
 
 /*!
-* \brief cast dynamic range variable into static variable
-* \param var the source value, constrained to be between 1 and 5
-* \param NDIM the const NDIM that can be used in the template
+* \brief Maximum ndim supported for special operators like broadcasting with non contiguous lhs/rhs
 */
-#define MXNET_RANGE_SWITCH(var, NDIM, ...)         \
-  {                                                \
-    switch (var) {                                 \
-      case 1:                                      \
-        {                                          \
-          static const int NDIM = 1;               \
-          {__VA_ARGS__}                            \
-        }                                          \
-        break;                                     \
-      case 2:                                      \
-        {                                          \
-          static const int NDIM = 2;               \
-          {__VA_ARGS__}                            \
-        }                                          \
-        break;                                     \
-      case 3:                                      \
-        {                                          \
-          static const int NDIM = 3;               \
-          {__VA_ARGS__}                            \
-        }                                          \
-        break;                                     \
-      case 4:                                      \
-        {                                          \
-          static const int NDIM = 4;               \
-          {__VA_ARGS__}                            \
-        }                                          \
-        break;                                     \
-      case 5:                                      \
-        {                                          \
-          static const int NDIM = 5;               \
-          {__VA_ARGS__}                            \
-        }                                          \
-        break;                                     \
-      default:                                     \
-        LOG(FATAL) << "Only support ndim=1 to 5."; \
-    }                                              \
-  }
+#define MXNET_SPECIAL_MAX_NDIM 5
 
 
 //--------------------------------------------------------------

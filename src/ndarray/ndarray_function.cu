@@ -18,8 +18,8 @@ void Copy<cpu, gpu>(const TBlob &from, TBlob *to,
   CHECK_EQ(to->type_flag_, from.type_flag_)
     << "Source and target must have the same data type when copying across devices.";
   MSHADOW_TYPE_SWITCH(to->type_flag_, DType, {
-    mshadow::Copy(to->FlatTo2D<gpu, DType>(),
-                  from.FlatTo2D<cpu, DType>(),
+    mshadow::Copy(to->FlatTo1D<gpu, DType>(),
+                  from.FlatTo1D<cpu, DType>(),
                   static_cast<mshadow::Stream<gpu>*>(ctx.stream));
   });
 }
@@ -31,8 +31,8 @@ void Copy<gpu, cpu>(const TBlob &from, TBlob *to,
   CHECK_EQ(to->type_flag_, from.type_flag_)
     << "Source and target must have the same data type when copying across devices.";
   MSHADOW_TYPE_SWITCH(to->type_flag_, DType, {
-    mshadow::Copy(to->FlatTo2D<cpu, DType>(),
-                  from.FlatTo2D<gpu, DType>(),
+    mshadow::Copy(to->FlatTo1D<cpu, DType>(),
+                  from.FlatTo1D<gpu, DType>(),
                   static_cast<mshadow::Stream<gpu>*>(ctx.stream));
   });
 }
@@ -45,13 +45,13 @@ void Copy<gpu, gpu>(const TBlob &from, TBlob *to,
     mshadow::Stream<gpu>* s = static_cast<mshadow::Stream<gpu>*>(ctx.stream);
     MSHADOW_TYPE_SWITCH(to->type_flag_, DType, {
       if (to->type_flag_ == from.type_flag_) {
-        mshadow::Copy(to->FlatTo2D<gpu, DType>(s),
-                      from.FlatTo2D<gpu, DType>(s),
+        mshadow::Copy(to->FlatTo1D<gpu, DType>(s),
+                      from.FlatTo1D<gpu, DType>(s),
                       s);
       } else {
         MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
-          to->FlatTo2D<gpu, DType>(s) =
-            mshadow::expr::tcast<DType>(from.FlatTo2D<gpu, SrcDType>(s));
+          to->FlatTo1D<gpu, DType>(s) =
+            mshadow::expr::tcast<DType>(from.FlatTo1D<gpu, SrcDType>(s));
         })
       }
     })

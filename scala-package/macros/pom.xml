@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>ml.dmlc.mxnet</groupId>
+    <artifactId>mxnet-parent_2.11</artifactId>
+    <version>0.1.2-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>mxnet-macros_2.11</artifactId>
+  <version>0.1.2-SNAPSHOT</version>
+  <name>MXNet Scala Package - Macros</name>
+
+  <profiles>
+    <profile>
+      <id>osx-x86_64-cpu</id>
+      <properties>
+        <platform>osx-x86_64</platform>
+        <libtype>jnilib</libtype>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux-x86_64-cpu</id>
+      <properties>
+        <platform>linux-x86_64</platform>
+        <libtype>so</libtype>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux-x86_64-gpu</id>
+      <properties>
+        <platform>linux-x86_64</platform>
+        <libtype>so</libtype>
+      </properties>
+    </profile>
+  </profiles>
+
+  <dependencies>
+    <dependency>
+      <groupId>ml.dmlc.mxnet</groupId>
+      <artifactId>mxnet-init_${scala.binary.version}</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>ml.dmlc.mxnet</groupId>
+      <artifactId>libmxnet-init-scala-${platform}</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+      <type>${libtype}</type>
+    </dependency>
+  </dependencies>
+</project>

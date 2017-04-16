@@ -67,6 +67,7 @@ class TensorVector {
 /*!
  * \brief a list of (label, example) pairs, examples can have various shape
  */
+template<typename DType = real_t>
 class InstVector {
  public:
   /*! \brief return the number of (label, example) pairs */
@@ -107,7 +108,7 @@ class InstVector {
     label_.Push(lshape);
   }
   /*! \return the data content */
-  inline const TensorVector<3, real_t>& data() const {
+  inline const TensorVector<3, DType>& data() const {
     return data_;
   }
   /*! \return the label content */
@@ -119,7 +120,7 @@ class InstVector {
   /*! \brief index of the data */
   std::vector<unsigned> index_;
   // label
-  TensorVector<3, real_t> data_;
+  TensorVector<3, DType> data_;
   // data
   TensorVector<1, real_t> label_;
 };
@@ -152,6 +153,58 @@ struct TBlobBatch {
     delete inst_index;
   }
 };  // struct TBlobBatch
+
+class TBlobContainer : public mshadow::TBlob {
+ public:
+  TBlobContainer(void)
+    : mshadow::TBlob(), tensor_container_(nullptr) {}
+  ~TBlobContainer() {
+    if (tensor_container_) {
+      release();
+    }
+  }
+  void resize(const mshadow::TShape &shape, int type_flag) {
+    if (tensor_container_) {
+      CHECK_EQ(this->type_flag_, type_flag);
+      this->shape_ = shape;
+      resize();
+    } else {
+      this->type_flag_ = type_flag;
+      this->shape_ = shape;
+      create();
+    }
+    this->stride_ = shape_[shape_.ndim() - 1];
+  }
+
+ private:
+  void create() {
+    CHECK(tensor_container_ == nullptr);
+    CHECK_EQ(this->dev_mask_, mshadow::cpu::kDevMask);
+    MSHADOW_TYPE_SWITCH(this->type_flag_, DType, {
+        auto tensor_container = new mshadow::TensorContainer<mshadow::cpu, 1, DType>(false);
+        tensor_container->Resize(mshadow::Shape1(shape_.Size()));
+        dptr_ = tensor_container->dptr_;
+        tensor_container_ = tensor_container;
+    });
+  }
+  void resize() {
+    MSHADOW_TYPE_SWITCH(this->type_flag_, DType, {
+        auto tensor_container =
+          (mshadow::TensorContainer<mshadow::cpu, 1, DType>*) tensor_container_;
+        tensor_container->Resize(mshadow::Shape1(shape_.Size()));
+    });
+  }
+  void release() {
+    MSHADOW_TYPE_SWITCH(this->type_flag_, DType, {
+        auto tensor_container =
+          (mshadow::TensorContainer<mshadow::cpu, 1, DType>*) tensor_container_;
+        delete tensor_container;
+    });
+  }
+
+  void* tensor_container_;
+};
+
 }  // namespace io
 }  // namespace mxnet
 #endif  // MXNET_IO_INST_VECTOR_H_

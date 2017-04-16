@@ -1,11 +1,14 @@
 # pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, too-many-lines
 # pylint: disable=too-many-branches, too-many-statements
 """MXNet model module"""
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
-import numpy as np
 import time
 import logging
+import warnings
+from collections import namedtuple
+import numpy as np
+
 from . import io
 from . import nd
 from . import symbol as sym
@@ -14,9 +17,10 @@ from . import metric
 from . import kvstore as kvs
 from .context import Context, cpu
 from .initializer import Uniform
-from collections import namedtuple
 from .optimizer import get_updater
 from .executor_manager import DataParallelExecutorManager, _check_arguments, _load_data
+from .io import DataDesc
+from .base import mx_real_t
 
 BASE_ESTIMATOR = object
 
@@ -35,18 +39,18 @@ BatchEndParam = namedtuple('BatchEndParams',
 
 def _create_kvstore(kvstore, num_device, arg_params):
     """Create kvstore
-    This function select and create a proper kvstore if given the kvstore type
+    This function select and create a proper kvstore if given the kvstore type.
 
     Parameters
     ----------
     kvstore : KVStore or str
-        The kvstore
+        The kvstore.
     num_device : int
         The number of devices
-    arg_params : dict of str to NDArray
-        Model parameter, dict of name to NDArray of net's weights.
+    arg_params : dict of str to `NDArray`.
+        Model parameter, dict of name to `NDArray` of net's weights.
     """
-
+    update_on_kvstore = True
     if kvstore is None:
         kv = None
     elif isinstance(kvstore, kvs.KVStore):
@@ -57,37 +61,32 @@ def _create_kvstore(kvstore, num_device, arg_params):
             # no need to use kv for single device and single machine
             kv = None
         else:
-            if kvstore is 'local':
-                # automatically select a proper local
-                max_size = max(np.prod(param.shape) for param in arg_params.values())
-                if max_size < 1024 * 1024 * 16:
-                    kvstore = 'local_update_cpu'
-                else:
-                    kvstore = 'local_allreduce_cpu'
-                logging.info('Auto-select kvstore type = %s', kvstore)
             kv = kvs.create(kvstore)
+            if kvstore is 'local':
+            # automatically select a proper local
+                max_size = max(np.prod(param.shape) for param in
+                               arg_params.values())
+                if max_size > 1024 * 1024 * 16:
+                    update_on_kvstore = False
     else:
         raise TypeError('kvstore must be KVStore, str or None')
 
-    # detect whether or not update weight on kvstore
-    update_on_kvstore = True
-    if not kv or 'local_allreduce' in kv.type:
+    if kv is None:
         update_on_kvstore = False
 
     return (kv, update_on_kvstore)
 
 def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
                         update_on_kvstore):
-    """ Initialize kvstore"""
-    for idx in range(len(param_arrays)):
-        param_on_devs = param_arrays[idx]
+    """Initialize kvstore"""
+    for idx, param_on_devs in enumerate(param_arrays):
         kvstore.init(idx, arg_params[param_names[idx]])
 
         if update_on_kvstore:
             kvstore.pull(idx, param_on_devs, priority=-idx)
 
 def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore):
-    """ Perform update of param_arrays from grad_arrays on kvstore."""
+    """Perform update of param_arrays from grad_arrays on kvstore."""
     for index, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
         if grad_list[0] is None:
@@ -99,7 +98,7 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore):
 
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None):
-    """ Perform update of param_arrays from grad_arrays not on kvstore."""
+    """Perform update of param_arrays from grad_arrays not on kvstore."""
     for index, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
         if grad_list[0] is None:
@@ -116,6 +115,20 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
             w, g = p
             updater(index*num_device+k, g, w)
 
+
+def _multiple_callbacks(callbacks, *args, **kwargs):
+    """Sends args and kwargs to any configured callbacks.
+    This handles the cases where the 'callbacks' variable
+    is ``None``, a single function, or a list.
+    """
+    if isinstance(callbacks, list):
+        for cb in callbacks:
+            cb(*args, **kwargs)
+        return
+    if callbacks:
+        callbacks(*args, **kwargs)
+
+
 def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         arg_params, aux_params,
                         begin_epoch, end_epoch, epoch_size, optimizer,
@@ -123,14 +136,15 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         train_data, eval_data=None, eval_metric=None,
                         epoch_end_callback=None, batch_end_callback=None,
                         logger=None, work_load_list=None, monitor=None,
-                        eval_batch_end_callback=None, sym_gen=None,
-                        mutable_data_shape=False, max_data_shape=None):
+                        eval_end_callback=None,
+                        eval_batch_end_callback=None, sym_gen=None):
     """Internal training function on multiple devices.
     This function will also work for single device as well.
+
     Parameters
     ----------
     symbol : Symbol
-        The network configuration
+        The network configuration.
     ctx : list of Context
         The training devices.
     arg_names: list of str
@@ -149,7 +163,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         The end training epoch.
     epoch_size : int, optional
         Number of batches in a epoch. In default, it is set to
-        ceil(num_train_examples / batch_size)
+        ``ceil(num_train_examples / batch_size)``.
     optimizer : Optimizer
         The optimization algorithm
     train_data : DataIter
@@ -165,25 +179,20 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         A callback that is invoked at end of each batch.
         This can be used to measure speed, get result from evaluation metric. etc.
     kvstore : KVStore
-        The KVStore
+        The KVStore.
     update_on_kvstore : bool
-        whether or not perform weight updating on kvstore
+        Whether or not perform weight updating on kvstore.
     logger : logging logger
         When not specified, default logger will be used.
     work_load_list : list of float or int, optional
         The list of work load for different devices,
-        in the same order as ctx
+        in the same order as ``ctx``.
     monitor : Monitor, optional
         Monitor installed to executor,
         for monitoring outputs, weights, and gradients for debugging.
-    mutable_data_shape: bool, optional
-        Whether input data have different shapes or not.
-        It is set to False in default.
-    max_data_shape: list of float or int, optional
-        The maximum shape of input data
     Notes
     -----
-    - This function will inplace update the NDArrays in arg_params and aux_states.
+    - This function will inplace update the NDArrays in `arg_params` and `aux_states`.
     """
     if logger is None:
         logger = logging
@@ -195,9 +204,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                                                    arg_names=arg_names,
                                                    aux_names=aux_names,
                                                    work_load_list=work_load_list,
-                                                   logger=logger,
-                                                   mutable_data_shape=mutable_data_shape,
-                                                   max_data_shape=max_data_shape)
+                                                   logger=logger)
     if monitor:
         executor_manager.install_monitor(monitor)
 
@@ -254,23 +261,19 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
 
                 nbatch += 1
                 # batch callback (for print purpose)
-                if batch_end_callback != None:
+                if batch_end_callback is not None:
                     batch_end_params = BatchEndParam(epoch=epoch,
                                                      nbatch=nbatch,
                                                      eval_metric=eval_metric,
                                                      locals=locals())
-                    if isinstance(batch_end_callback, list):
-                        for call in batch_end_callback:
-                            call(batch_end_params)
-                    else:
-                        batch_end_callback(batch_end_params)
+                    _multiple_callbacks(batch_end_callback, batch_end_params)
 
                 # this epoch is done possibly earlier
                 if epoch_size is not None and nbatch >= epoch_size:
                     do_reset = False
                     break
 
-            if do_reset is True:
+            if do_reset:
                 logger.info('Epoch[%d] Resetting Data Iterator', epoch)
                 train_data.reset()
 
@@ -284,34 +287,31 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         if epoch_end_callback or epoch + 1 == end_epoch:
             executor_manager.copy_to(arg_params, aux_params)
 
-        if epoch_end_callback != None:
-            if isinstance(epoch_end_callback, list):
-                for call in epoch_end_callback:
-                    call(epoch, symbol, arg_params, aux_params)
-            else:
-                epoch_end_callback(epoch, symbol, arg_params, aux_params)
+        _multiple_callbacks(epoch_end_callback, epoch, symbol, arg_params, aux_params)
 
         # evaluation
         if eval_data:
             eval_metric.reset()
             eval_data.reset()
+            total_num_batch = 0
             for i, eval_batch in enumerate(eval_data):
                 executor_manager.load_data_batch(eval_batch)
                 executor_manager.forward(is_train=False)
                 executor_manager.update_metric(eval_metric, eval_batch.label)
-                if eval_batch_end_callback != None:
+                if eval_batch_end_callback is not None:
                     batch_end_params = BatchEndParam(epoch=epoch,
                                                      nbatch=i,
                                                      eval_metric=eval_metric,
                                                      locals=locals())
-                    if isinstance(eval_batch_end_callback, list):
-                        for call in eval_batch_end_callback:
-                            call(batch_end_params)
-                    else:
-                        eval_batch_end_callback(batch_end_params)
-            name_value = eval_metric.get_name_value()
-            for name, value in name_value:
-                logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
+                    _multiple_callbacks(eval_batch_end_callback, batch_end_params)
+                total_num_batch += 1
+            if eval_end_callback is not None:
+                eval_end_params = BatchEndParam(epoch=epoch,
+                                                nbatch=total_num_batch,
+                                                eval_metric=eval_metric,
+                                                locals=locals())
+                _multiple_callbacks(eval_end_callback, eval_end_params)
+            eval_data.reset()
     # end of all epochs
     return
 
@@ -326,7 +326,7 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
     epoch : int
         The epoch number of the model.
     symbol : Symbol
-        The input symbol
+        The input Symbol.
     arg_params : dict of str to NDArray
         Model parameter, dict of name to NDArray of net's weights.
     aux_params : dict of str to NDArray
@@ -336,9 +336,11 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
     - ``prefix-symbol.json`` will be saved for symbol.
     - ``prefix-epoch.params`` will be saved for parameters.
     """
-    symbol.save('%s-symbol.json' % prefix)
-    save_dict = {('arg:%s' % k) : v for k, v in arg_params.items()}
-    save_dict.update({('aux:%s' % k) : v for k, v in aux_params.items()})
+    if symbol is not None:
+        symbol.save('%s-symbol.json' % prefix)
+
+    save_dict = {('arg:%s' % k) : v.as_in_context(cpu()) for k, v in arg_params.items()}
+    save_dict.update({('aux:%s' % k) : v.as_in_context(cpu()) for k, v in aux_params.items()})
     param_name = '%s-%04d.params' % (prefix, epoch)
     nd.save(param_name, save_dict)
     logging.info('Saved checkpoint to \"%s\"', param_name)
@@ -365,8 +367,8 @@ def load_checkpoint(prefix, epoch):
 
     Notes
     -----
-    - symbol will be loaded from ``prefix-symbol.json``.
-    - parameters will be loaded from ``prefix-epoch.params``.
+    - Symbol will be loaded from ``prefix-symbol.json``.
+    - Parameters will be loaded from ``prefix-epoch.params``.
     """
     symbol = sym.load('%s-symbol.json' % prefix)
     save_dict = nd.load('%s-%04d.params' % (prefix, epoch))
@@ -380,6 +382,7 @@ def load_checkpoint(prefix, epoch):
             aux_params[name] = v
     return (symbol, arg_params, aux_params)
 
+from .callback import LogValidationMetricsCallback # pylint: disable=wrong-import-position
 
 class FeedForward(BASE_ESTIMATOR):
     """Model class of MXNet for training and predicting feedforward nets.
@@ -396,7 +399,7 @@ class FeedForward(BASE_ESTIMATOR):
         Training parameter, number of training epochs(epochs).
     epoch_size : int, optional
         Number of batches in a epoch. In default, it is set to
-        ceil(num_train_examples / batch_size)
+        ``ceil(num_train_examples / batch_size)``.
     optimizer : str or Optimizer, optional
         Training parameter, name or optimizer object for training.
     initializer : initializer function, optional
@@ -410,9 +413,9 @@ class FeedForward(BASE_ESTIMATOR):
         Model parameter, dict of name to NDArray of net's auxiliary states.
     allow_extra_params : boolean, optional
         Whether allow extra parameters that are not needed by symbol
-        to be passed by aux_params and arg_params.
-        If this is True, no error will be thrown when aux_params and arg_params
-        contain extra parameters than needed.
+        to be passed by aux_params and ``arg_params``.
+        If this is True, no error will be thrown when ``aux_params`` and ``arg_params``
+        contain more parameters than needed.
     begin_epoch : int, optional
         The begining training epoch.
     kwargs : dict
@@ -426,6 +429,10 @@ class FeedForward(BASE_ESTIMATOR):
                  allow_extra_params=False,
                  begin_epoch=0,
                  **kwargs):
+        warnings.warn(
+            '\033[91mmxnet.model.FeedForward has been deprecated. ' + \
+            'Please use mxnet.mod.Module instead.\033[0m',
+            DeprecationWarning, stacklevel=2)
 
         if isinstance(symbol, sym.Symbol):
             self.symbol = symbol
@@ -489,7 +496,7 @@ class FeedForward(BASE_ESTIMATOR):
         return name.endswith('data') or name.endswith('label')
 
     def _init_params(self, input_shapes, overwrite=False):
-        """Initialize weight parameters and auxiliary states"""
+        """Initialize weight parameters and auxiliary states."""
         arg_shapes, _, aux_shapes = self.symbol.infer_shape(**input_shapes)
         assert(arg_shapes is not None)
 
@@ -526,7 +533,7 @@ class FeedForward(BASE_ESTIMATOR):
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-    def _init_predictor(self, input_shapes):
+    def _init_predictor(self, input_shapes, type_dict=None):
         """Initialize the predictor module for running prediction."""
         if self._pred_exec is not None:
             arg_shapes, _, _ = self.symbol.infer_shape(**dict(input_shapes))
@@ -536,7 +543,7 @@ class FeedForward(BASE_ESTIMATOR):
                 return
         # for now only use the first device
         pred_exec = self.symbol.simple_bind(
-            self.ctx[0], grad_req='null', **dict(input_shapes))
+            self.ctx[0], grad_req='null', type_dict=type_dict, **dict(input_shapes))
         pred_exec.copy_params_from(self.arg_params, self.aux_params)
 
         _check_arguments(self.symbol)
@@ -589,11 +596,12 @@ class FeedForward(BASE_ESTIMATOR):
 
     def predict(self, X, num_batch=None, return_data=False, reset=True):
         """Run the prediction, always only use one device.
+
         Parameters
         ----------
         X : mxnet.DataIter
         num_batch : int or None
-            the number of batch to run. Go though all batches if None
+            The number of batch to run. Go though all batches if ``None``.
         Returns
         -------
         y : numpy.ndarray or a list of numpy.ndarray if the network has multiple outputs.
@@ -605,7 +613,14 @@ class FeedForward(BASE_ESTIMATOR):
             X.reset()
         data_shapes = X.provide_data
         data_names = [x[0] for x in data_shapes]
-        self._init_predictor(data_shapes)
+        type_dict = dict((key, value.dtype) for (key, value) in self.arg_params.items())
+        for x in X.provide_data:
+            if isinstance(x, DataDesc):
+                type_dict[x.name] = x.dtype
+            else:
+                type_dict[x[0]] = mx_real_t
+
+        self._init_predictor(data_shapes, type_dict)
         batch_size = X.batch_size
         data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]
         output_list = [[] for _ in range(len(self._pred_exec.outputs))]
@@ -649,18 +664,20 @@ class FeedForward(BASE_ESTIMATOR):
             return outputs
 
     def score(self, X, eval_metric='acc', num_batch=None, batch_end_callback=None, reset=True):
-        """Run the model on X and calculate the score with eval_metric
+        """Run the model given an input and calculate the score
+        as assessed by an evaluation metric.
+
         Parameters
         ----------
         X : mxnet.DataIter
         eval_metric : metric.metric
-            The metric for calculating score
+            The metric for calculating score.
         num_batch : int or None
-            the number of batch to run. Go though all batches if None
+            The number of batches to run. Go though all batches if ``None``.
         Returns
         -------
         s : float
-            the final score
+            The final score.
         """
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):
@@ -672,7 +689,14 @@ class FeedForward(BASE_ESTIMATOR):
 
         data_shapes = X.provide_data
         data_names = [x[0] for x in data_shapes]
-        self._init_predictor(data_shapes)
+        type_dict = dict((key, value.dtype) for (key, value) in self.arg_params.items())
+        for x in X.provide_data:
+            if isinstance(x, DataDesc):
+                type_dict[x.name] = x.dtype
+            else:
+                type_dict[x[0]] = mx_real_t
+
+        self._init_predictor(data_shapes, type_dict)
         data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]
 
         for i, batch in enumerate(X):
@@ -682,48 +706,43 @@ class FeedForward(BASE_ESTIMATOR):
             self._pred_exec.forward(is_train=False)
             eval_metric.update(batch.label, self._pred_exec.outputs)
 
-            if batch_end_callback != None:
+            if batch_end_callback is not None:
                 batch_end_params = BatchEndParam(epoch=0,
                                                  nbatch=i,
                                                  eval_metric=eval_metric,
                                                  locals=locals())
-                if isinstance(batch_end_callback, list):
-                    for call in batch_end_callback:
-                        call(batch_end_params)
-                else:
-                    batch_end_callback(batch_end_params)
+                _multiple_callbacks(batch_end_callback, batch_end_params)
         return eval_metric.get()[1]
-
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
             epoch_end_callback=None, batch_end_callback=None, kvstore='local', logger=None,
-            work_load_list=None, monitor=None, eval_batch_end_callback=None):
+            work_load_list=None, monitor=None, eval_end_callback=LogValidationMetricsCallback(),
+            eval_batch_end_callback=None):
         """Fit the model.
 
         Parameters
         ----------
         X : DataIter, or numpy.ndarray/NDArray
-            Training data. If X is an DataIter, the name or, if not available,
-            position, of its outputs should match the corresponding variable
+            Training data. If `X` is a `DataIter`, the name or (if name not available)
+            the position of its outputs should match the corresponding variable
             names defined in the symbolic graph.
         y : numpy.ndarray/NDArray, optional
             Training set label.
-            If X is numpy.ndarray/NDArray, y is required to be set.
-            While y can be 1D or 2D (with 2nd dimension as 1), its 1st dimension must be
-            the same as X, i.e. the number of data points and labels should be equal.
+            If X is ``numpy.ndarray`` or `NDArray`, `y` is required to be set.
+            While y can be 1D or 2D (with 2nd dimension as 1), its first dimension must be
+            the same as `X`, i.e. the number of data points and labels should be equal.
         eval_data : DataIter or numpy.ndarray/list/NDArray pair
             If eval_data is numpy.ndarray/list/NDArray pair,
-            it should be (valid_data, valid_label).
+            it should be ``(valid_data, valid_label)``.
         eval_metric : metric.EvalMetric or str or callable
-            The evaluation metric, name of evaluation metric.
-            Or a customize evaluation function that returns the statistics
-            based on minibatch.
+            The evaluation metric. This could be the name of evaluation metric
+            or a custom evaluation function that returns statistics
+            based on a minibatch.
         epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
             A callback that is invoked at end of each epoch.
             This can be used to checkpoint model each epoch.
         batch_end_callback: callable(epoch)
-            A callback that is invoked at end of each batch
-            For print purpose
+            A callback that is invoked at end of each batch for purposes of printing.
         kvstore: KVStore or str, optional
            The KVStore or a string kvstore type: 'local', 'dist_sync', 'dist_async'
            In default uses 'local', often no need to change for single machiine.
@@ -731,14 +750,14 @@ class FeedForward(BASE_ESTIMATOR):
             When not specified, default logger will be used.
         work_load_list : float or int, optional
             The list of work load for different devices,
-            in the same order as ctx
+            in the same order as `ctx`.
 
         Note
         ----
         KVStore behavior
         - 'local', multi-devices on a single machine, will automatically choose best type.
-        - 'dist_sync', multi-machines with BSP
-        - 'dist_async', multi-machines with partical asynchronous
+        - 'dist_sync', multiple machines communicating via BSP.
+        - 'dist_async', multiple machines with asynchronous communication.
         """
 
         data = self._init_iter(X, y, is_train=True)
@@ -772,7 +791,7 @@ class FeedForward(BASE_ESTIMATOR):
         # init optmizer
         if isinstance(self.optimizer, str):
             batch_size = data.batch_size
-            if kvstore and kvstore.type == 'dist_sync':
+            if kvstore and 'dist' in kvstore.type and not '_async' in kvstore.type:
                 batch_size *= kvstore.num_workers
             optimizer = opt.create(self.optimizer,
                                    rescale_grad=(1.0/batch_size),
@@ -792,16 +811,17 @@ class FeedForward(BASE_ESTIMATOR):
                             batch_end_callback=batch_end_callback,
                             kvstore=kvstore, update_on_kvstore=update_on_kvstore,
                             logger=logger, work_load_list=work_load_list, monitor=monitor,
+                            eval_end_callback=eval_end_callback,
                             eval_batch_end_callback=eval_batch_end_callback,
                             sym_gen=self.sym_gen)
 
 
     def save(self, prefix, epoch=None):
         """Checkpoint the model checkpoint into file.
-        You can also use pickle to do the job if you only work on python.
-        The advantage of load/save is the file is language agnostic.
-        This means the file saved using save can be loaded by other language binding of mxnet.
-        You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
+        You can also use `pickle` to do the job if you only work on Python.
+        The advantage of `load` and `save` (as compared to `pickle`) is that
+        the resulting file can be loaded from other MXNet language bindings.
+        One can also directly `load`/`save` from/to cloud storage(S3, HDFS)
 
         Parameters
         ----------
@@ -831,7 +851,7 @@ class FeedForward(BASE_ESTIMATOR):
         ctx : Context or list of Context, optional
             The device context of training and prediction.
         kwargs : dict
-            other parameters for model, including num_epoch, optimizer and numpy_batch_size
+            Other parameters for model, including `num_epoch`, optimizer and `numpy_batch_size`.
 
         Returns
         -------
@@ -855,51 +875,52 @@ class FeedForward(BASE_ESTIMATOR):
                eval_data=None, eval_metric='acc',
                epoch_end_callback=None, batch_end_callback=None,
                kvstore='local', logger=None, work_load_list=None,
+               eval_end_callback=LogValidationMetricsCallback(),
                eval_batch_end_callback=None, **kwargs):
         """Functional style to create a model.
-        This function will be more consistent with functional
+        This function is more consistent with functional
         languages such as R, where mutation is not allowed.
 
         Parameters
         ----------
         symbol : Symbol
-            The symbol configuration of computation network.
+            The symbol configuration of a computation network.
         X : DataIter
-            Training data
+            Training data.
         y : numpy.ndarray, optional
-            If X is numpy.ndarray y is required to set
+            If `X` is a ``numpy.ndarray``, `y` must be set.
         ctx : Context or list of Context, optional
             The device context of training and prediction.
-            To use multi GPU training, pass in a list of gpu contexts.
+            To use multi-GPU training, pass in a list of GPU contexts.
         num_epoch : int, optional
-            Training parameter, number of training epochs(epochs).
+            The number of training epochs(epochs).
         epoch_size : int, optional
             Number of batches in a epoch. In default, it is set to
-            ceil(num_train_examples / batch_size)
+            ``ceil(num_train_examples / batch_size)``.
         optimizer : str or Optimizer, optional
-            Training parameter, name or optimizer object for training.
+            The name of the chosen optimizer, or an optimizer object, used for training.
         initializier : initializer function, optional
-            Training parameter, the initialization scheme used.
+            The initialization scheme used.
         eval_data : DataIter or numpy.ndarray pair
-            If eval_set is numpy.ndarray pair, it should be (valid_data, valid_label)
+            If `eval_set` is ``numpy.ndarray`` pair, it should
+            be (`valid_data`, `valid_label`).
         eval_metric : metric.EvalMetric or str or callable
-            The evaluation metric, name of evaluation metric.
-            Or a customize evaluation function that returns the statistics
-            based on minibatch.
+            The evaluation metric. Can be the name of an evaluation metric
+            or a custom evaluation function that returns statistics
+            based on a minibatch.
         epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
             A callback that is invoked at end of each epoch.
             This can be used to checkpoint model each epoch.
         batch_end_callback: callable(epoch)
-            A callback that is invoked at end of each batch
-            For print purpose
+            A callback that is invoked at end of each batch for print purposes.
         kvstore: KVStore or str, optional
-           The KVStore or a string kvstore type: 'local', 'dist_sync', 'dis_async'
-           In default uses 'local', often no need to change for single machiine.
+           The KVStore or a string kvstore type: 'local', 'dist_sync', 'dis_async'.
+           Defaults to 'local', often no need to change for single machiine.
         logger : logging logger, optional
             When not specified, default logger will be used.
         work_load_list : list of float or int, optional
             The list of work load for different devices,
-            in the same order as ctx
+            in the same order as `ctx`.
         """
         model = FeedForward(symbol, ctx=ctx, num_epoch=num_epoch,
                             epoch_size=epoch_size,
@@ -910,5 +931,6 @@ class FeedForward(BASE_ESTIMATOR):
                   kvstore=kvstore,
                   logger=logger,
                   work_load_list=work_load_list,
+                  eval_end_callback=eval_end_callback,
                   eval_batch_end_callback=eval_batch_end_callback)
         return model

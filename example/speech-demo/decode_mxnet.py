@@ -130,23 +130,18 @@ if __name__ == '__main__':
     
     kaldiWriter = KaldiWriteOut(None, out_file)
     kaldiWriter.open_or_fd()
-
     for preds, i_batch, batch in module.iter_predict(data_test):
-        #pred_label = np.array(preds[0].asnumpy().argmax(axis=1))
         label = batch.label[0].asnumpy().astype('int32')
-        posteriors = preds[0].asnumpy().astype('float32')[0]
-        #print np.sum(posteriors[1][:])
+        posteriors = preds[0].asnumpy().astype('float32')
         # copy over states
         if decoding_method == METHOD_BUCKETING:
             for (ind, utt) in enumerate(batch.utt_id):
                 if utt != "GAP_UTT":
-                    #print sum(posteriors[0,:])
                     posteriors = np.log(posteriors[:label[0][0],1:] + 1e-20) - np.log(data_train.label_mean).T
                     kaldiWriter.write(utt, posteriors)
         elif decoding_method == METHOD_SIMPLE:
             for (ind, utt) in enumerate(batch.utt_id):
                 if utt != "GAP_UTT":
-                    #print label[0][0]
                     posteriors = posteriors[:batch.utt_len,1:] - np.log(data_test.label_mean[1:]).T
                     kaldiWriter.write(utt, posteriors)
         else:

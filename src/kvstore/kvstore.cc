@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <dmlc/logging.h>
 #include "./kvstore_local.h"
-#include "./kvstore_device.h"
+// #include "./kvstore_device.h"
 #if MXNET_USE_DIST_KVSTORE
 #include "./kvstore_dist.h"
 #endif  // MXNET_USE_DIST_KVSTORE
@@ -18,22 +18,18 @@ KVStore* KVStore::Create(const char *type_name) {
   std::string tname = type_name;
   std::transform(tname.begin(), tname.end(), tname.begin(), ::tolower);
   KVStore* kv = nullptr;
-  if (tname == "local" ||
-      tname == "local_update_cpu" ||
-      tname == "local_allreduce_cpu") {
-    kv =  new kvstore::KVStoreLocal();
-  } else if (tname == "device" ||
-             tname == "local_allreduce_device") {
-    tname = "local_allreduce_device";
-    kv = new kvstore::KVStoreDevice();
-  } else if (tname == "dist_async" ||
-             tname == "dist_sync" ||
-             tname == "dist") {
+  bool use_device_comm = false;
+  auto has = [tname](const std::string& pattern) {
+    return tname.find(pattern) != std::string::npos;
+  };
+  if (has("device")) {
+    use_device_comm = true;
+  }
+
+  if (has("dist")) {
 #if MXNET_USE_DIST_KVSTORE
-    kv = new kvstore::KVStoreDist();
-    if (tname == "dist_sync" &&
-        kv->IsWorkerNode() &&
-        kv->get_rank() == 0) {
+    kv = new kvstore::KVStoreDist(use_device_comm);
+    if (!has("_async") && kv->IsWorkerNode() && kv->get_rank() == 0) {
       // configure the server to be the sync mode
       kv->SendCommandToServers(kvstore::kSyncMode, "");
     }
@@ -42,7 +38,7 @@ KVStore* KVStore::Create(const char *type_name) {
     return nullptr;
 #endif  // MXNET_USE_DIST_KVSTORE
   } else {
-    LOG(FATAL) << "Unknown KVStore type \"" << tname << "\"";
+    kv =  new kvstore::KVStoreLocal(use_device_comm);
   }
   kv->type_ = tname;
   return kv;

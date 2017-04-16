@@ -14,15 +14,15 @@
 namespace mxnet {
 namespace op {
 
-template<typename xpu, int dim, int cdim>
-inline void concatenate_helper(const std::vector<mshadow::Tensor<xpu, dim> > &input,
-                               mshadow::Tensor<xpu, dim> *output, const int dimension,
+template<typename xpu, int dim, int cdim, typename DType>
+inline void concatenate_helper(const std::vector<mshadow::Tensor<xpu, dim, DType> > &input,
+                               mshadow::Tensor<xpu, dim, DType> *output, const int dimension,
                                const OpReqType req) {
   using mshadow::expr::concat;
   using mshadow::expr::slice;
 
   if (dimension == cdim) {
-    mshadow::Tensor<xpu, dim> out = *output;
+    mshadow::Tensor<xpu, dim, DType> out = *output;
     size_t size = input.size();
     index_t begin = 0;
     for (index_t i = 0; i < size; ++i) {
@@ -35,9 +35,9 @@ inline void concatenate_helper(const std::vector<mshadow::Tensor<xpu, dim> > &in
   }
 }
 
-template<typename xpu, int dim>
-inline void Concatenate(const std::vector<mshadow::Tensor<xpu, dim> > &input,
-                        mshadow::Tensor<xpu, dim> *output, const int dimension,
+template<typename xpu, int dim, typename DType>
+inline void Concatenate(const std::vector<mshadow::Tensor<xpu, dim, DType> > &input,
+                        mshadow::Tensor<xpu, dim, DType> *output, const int dimension,
                         const OpReqType req) {
   if (dimension < 0) {
     LOG(FATAL) << "dimension (" << dimension << ") must be greater than 0";
@@ -49,15 +49,15 @@ inline void Concatenate(const std::vector<mshadow::Tensor<xpu, dim> > &input,
 }
 
 
-template<typename xpu, int dim, int cdim>
-void split_helper(const mshadow::Tensor<xpu, dim> &input,
-           std::vector<mshadow::Tensor<xpu, dim> > *output,
+template<typename xpu, int dim, int cdim, typename DType>
+void split_helper(const mshadow::Tensor<xpu, dim, DType> &input,
+           std::vector<mshadow::Tensor<xpu, dim, DType> > *output,
            const int dimension, const std::vector<OpReqType> &req) {
   using mshadow::expr::concat;
   using mshadow::expr::slice;
 
   if (dimension == cdim) {
-    std::vector<mshadow::Tensor<xpu, dim> > out = *output;
+    std::vector<mshadow::Tensor<xpu, dim, DType> > out = *output;
     size_t size = out.size();
     index_t begin = 0;
     for (index_t i = 0; i < size; ++i) {
@@ -70,9 +70,9 @@ void split_helper(const mshadow::Tensor<xpu, dim> &input,
   }
 }
 
-template<typename xpu, int dim>
-void Split(const mshadow::Tensor<xpu, dim> &input,
-           std::vector<mshadow::Tensor<xpu, dim> > *output,
+template<typename xpu, int dim, typename DType>
+void Split(const mshadow::Tensor<xpu, dim, DType> &input,
+           std::vector<mshadow::Tensor<xpu, dim, DType> > *output,
            const int dimension, const std::vector<OpReqType> &req) {
   if (dimension < 0) {
     LOG(FATAL) << "dimension (" << dimension << ") must be greater than 0";

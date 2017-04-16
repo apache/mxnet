@@ -1,132 +1,76 @@
-import find_mxnet
-import mxnet as mx
+"""
+Train mnist, see more explanation at http://mxnet.io/tutorials/python/mnist.html
+"""
+import os
 import argparse
-import os, sys
-import train_model
+import logging
+logging.basicConfig(level=logging.DEBUG)
+from common import find_mxnet, fit
+from common.util import download_file
+import mxnet as mx
+import numpy as np
+import gzip, struct
 
-def _download(data_dir):
-    if not os.path.isdir(data_dir):
-        os.system("mkdir " + data_dir)
-    os.chdir(data_dir)
-    if (not os.path.exists('train-images-idx3-ubyte')) or \
-       (not os.path.exists('train-labels-idx1-ubyte')) or \
-       (not os.path.exists('t10k-images-idx3-ubyte')) or \
-       (not os.path.exists('t10k-labels-idx1-ubyte')):
-        os.system("wget http://webdocs.cs.ualberta.ca/~bx3/data/mnist.zip")
-        os.system("unzip -u mnist.zip; rm mnist.zip")
-    os.chdir("..")
-
-def get_mlp():
+def read_data(label, image):
     """
-    multi-layer perceptron
+    download and read data into numpy
     """
-    data = mx.symbol.Variable('data')
-    fc1  = mx.symbol.FullyConnected(data = data, name='fc1', num_hidden=128)
-    act1 = mx.symbol.Activation(data = fc1, name='relu1', act_type="relu")
-    fc2  = mx.symbol.FullyConnected(data = act1, name = 'fc2', num_hidden = 64)
-    act2 = mx.symbol.Activation(data = fc2, name='relu2', act_type="relu")
-    fc3  = mx.symbol.FullyConnected(data = act2, name='fc3', num_hidden=10)
-    mlp  = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
-    return mlp
+    base_url = 'http://yann.lecun.com/exdb/mnist/'
+    with gzip.open(download_file(base_url+label, os.path.join('data',label))) as flbl:
+        magic, num = struct.unpack(">II", flbl.read(8))
+        label = np.fromstring(flbl.read(), dtype=np.int8)
+    with gzip.open(download_file(base_url+image, os.path.join('data',image)), 'rb') as fimg:
+        magic, num, rows, cols = struct.unpack(">IIII", fimg.read(16))
+        image = np.fromstring(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
+    return (label, image)
 
-def get_lenet():
+
+def to4d(img):
     """
-    LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick
-    Haffner. "Gradient-based learning applied to document recognition."
-    Proceedings of the IEEE (1998)
+    reshape to 4D arrays
     """
-    data = mx.symbol.Variable('data')
-    # first conv
-    conv1 = mx.symbol.Convolution(data=data, kernel=(5,5), num_filter=20)
-    tanh1 = mx.symbol.Activation(data=conv1, act_type="tanh")
-    pool1 = mx.symbol.Pooling(data=tanh1, pool_type="max",
-                              kernel=(2,2), stride=(2,2))
-    # second conv
-    conv2 = mx.symbol.Convolution(data=pool1, kernel=(5,5), num_filter=50)
-    tanh2 = mx.symbol.Activation(data=conv2, act_type="tanh")
-    pool2 = mx.symbol.Pooling(data=tanh2, pool_type="max",
-                              kernel=(2,2), stride=(2,2))
-    # first fullc
-    flatten = mx.symbol.Flatten(data=pool2)
-    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=500)
-    tanh3 = mx.symbol.Activation(data=fc1, act_type="tanh")
-    # second fullc
-    fc2 = mx.symbol.FullyConnected(data=tanh3, num_hidden=10)
-    # loss
-    lenet = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
-    return lenet
+    return img.reshape(img.shape[0], 1, 28, 28).astype(np.float32)/255
 
-def get_iterator(data_shape):
-    def get_iterator_impl(args, kv):
-        data_dir = args.data_dir
-        if '://' not in args.data_dir:
-            _download(args.data_dir)
-        flat = False if len(data_shape) == 3 else True
-
-        train           = mx.io.MNISTIter(
-            image       = data_dir + "train-images-idx3-ubyte",
-            label       = data_dir + "train-labels-idx1-ubyte",
-            input_shape = data_shape,
-            batch_size  = args.batch_size,
-            shuffle     = True,
-            flat        = flat,
-            num_parts   = kv.num_workers,
-            part_index  = kv.rank)
-
-        val = mx.io.MNISTIter(
-            image       = data_dir + "t10k-images-idx3-ubyte",
-            label       = data_dir + "t10k-labels-idx1-ubyte",
-            input_shape = data_shape,
-            batch_size  = args.batch_size,
-            flat        = flat,
-            num_parts   = kv.num_workers,
-            part_index  = kv.rank)
-
-        return (train, val)
-    return get_iterator_impl
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='train an image classifer on mnist')
-    parser.add_argument('--network', type=str, default='mlp',
-                        choices = ['mlp', 'lenet'],
-                        help = 'the cnn to use')
-    parser.add_argument('--data-dir', type=str, default='mnist/',
-                        help='the input data directory')
-    parser.add_argument('--gpus', type=str,
-                        help='the gpus will be used, e.g "0,1,2,3"')
-    parser.add_argument('--num-examples', type=int, default=60000,
-                        help='the number of training examples')
-    parser.add_argument('--batch-size', type=int, default=128,
-                        help='the batch size')
-    parser.add_argument('--lr', type=float, default=.1,
-                        help='the initial learning rate')
-    parser.add_argument('--model-prefix', type=str,
-                        help='the prefix of the model to load/save')
-    parser.add_argument('--save-model-prefix', type=str,
-                        help='the prefix of the model to save')
-    parser.add_argument('--num-epochs', type=int, default=10,
-                        help='the number of training epochs')
-    parser.add_argument('--load-epoch', type=int,
-                        help="load the model on an epoch using the model-prefix")
-    parser.add_argument('--kv-store', type=str, default='local',
-                        help='the kvstore type')
-    parser.add_argument('--lr-factor', type=float, default=1,
-                        help='times the lr with a factor for every lr-factor-epoch epoch')
-    parser.add_argument('--lr-factor-epoch', type=float, default=1,
-                        help='the number of epoch to factor the lr, could be .5')
-    return parser.parse_args()
-
+def get_mnist_iter(args, kv):
+    """
+    create data iterator with NDArrayIter
+    """
+    (train_lbl, train_img) = read_data(
+            'train-labels-idx1-ubyte.gz', 'train-images-idx3-ubyte.gz')
+    (val_lbl, val_img) = read_data(
+            't10k-labels-idx1-ubyte.gz', 't10k-images-idx3-ubyte.gz')
+    train = mx.io.NDArrayIter(
+        to4d(train_img), train_lbl, args.batch_size, shuffle=True)
+    val = mx.io.NDArrayIter(
+        to4d(val_img), val_lbl, args.batch_size)
+    return (train, val)
 
 if __name__ == '__main__':
-    args = parse_args()
+    # parse args
+    parser = argparse.ArgumentParser(description="train mnist",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--num-classes', type=int, default=10,
+                        help='the number of classes')
+    parser.add_argument('--num-examples', type=int, default=60000,
+                        help='the number of training examples')
+    fit.add_fit_args(parser)
+    parser.set_defaults(
+        # network
+        network        = 'mlp',
+        # train
+        gpus           = None,
+        batch_size     = 64,
+        disp_batches   = 100,
+        num_epochs     = 20,
+        lr             = .05,
+        lr_step_epochs = '10',
+    )
+    args = parser.parse_args()
 
-
-    if args.network == 'mlp':
-        data_shape = (784, )
-        net = get_mlp()
-    else:
-        data_shape = (1, 28, 28)
-        net = get_lenet()
+    # load network
+    from importlib import import_module
+    net = import_module('symbols.'+args.network)
+    sym = net.get_symbol(**vars(args))
 
     # train
-    train_model.fit(args, net, get_iterator(data_shape))
+    fit.fit(args, sym, get_mnist_iter)

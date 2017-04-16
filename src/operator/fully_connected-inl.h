@@ -14,6 +14,7 @@
 #include <string>
 #include <utility>
 #include "./operator_common.h"
+#include "./elemwise_op_common.h"
 
 
 namespace mxnet {
@@ -60,7 +61,7 @@ class FullyConnectedOp : public Operator {
     CHECK_EQ(req[fullc::kOut], kWriteTo);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     // TODO(bing): check the BLAS Handle, be careful
     // maybe need blas handle from context
     // TODO(bing): judge shape to remove flatten op
@@ -93,7 +94,7 @@ class FullyConnectedOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_EQ(req.size(), expected);
@@ -135,7 +136,10 @@ class FullyConnectedOp : public Operator {
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(FullyConnectedParam param, int dtype);
+Operator* CreateOp(FullyConnectedParam param, int dtype,
+                   std::vector<TShape> *in_shape,
+                   std::vector<TShape> *out_shape,
+                   Context ctx);
 
 #if DMLC_USE_CXX11
 class FullyConnectedProp : public OperatorProperty {
@@ -161,11 +165,13 @@ class FullyConnectedProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     if (!param_.no_bias) {
-      CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";
+      CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
     } else {
-      CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
+      CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
     }
-    const TShape &dshape = (*in_shape)[fullc::kData];
+    CHECK_EQ(out_shape->size(), 1U);
+    TShape dshape = (*in_shape)[fullc::kData];
+    TShape oshape = (*out_shape)[0];
     // require data to be known
     if (dshape.ndim() ==  0) return false;
 
@@ -174,29 +180,23 @@ class FullyConnectedProp : public OperatorProperty {
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, fullc::kBias, Shape1(param_.num_hidden));
     }
-    out_shape->clear();
-    out_shape->push_back(Shape2(dshape[0], param_.num_hidden));
+
+    SHAPE_ASSIGN_CHECK(*out_shape, 0, Shape2(dshape[0], param_.num_hidden));
+    if (oshape.ndim() != 0) {
+      dshape[0] = oshape[0];
+      SHAPE_ASSIGN_CHECK(*in_shape, fullc::kData, dshape);
+    }
     return true;
   }
 
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), 1);
-    int dtype = (*in_type)[0];
-    CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (index_t i = 0; i < in_type->size(); ++i) {
-      if ((*in_type)[i] == -1) {
-        (*in_type)[i] = dtype;
-      } else {
-        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
-                                       << "Expected " << dtype << " v.s. given "
-                                       << (*in_type)[i] << " at " << ListArguments()[i];
-      }
-    }
-    out_type->clear();
-    out_type->push_back(dtype);
-    return true;
+    CHECK_GE(in_type->size(), 1U);
+    nnvm::NodeAttrs attrs;
+    attrs.name = "FullyConnected";
+    return ElemwiseAttr<int, type_is_none, type_assign, true>(
+      attrs, in_type, out_type, -1);
   }
 
   OperatorProperty* Copy() const override {

@@ -1,3 +1,6 @@
+if(MKL_FOUND)
+  message(ERROR " OpenBLAS is not required since MKL is enabled")
+endif()
 file(TO_CMAKE_PATH "$ENV{OpenBLAS_HOME}" OpenBLAS_HOME)
 file(TO_CMAKE_PATH "$ENV{OpenBLAS}" OpenBLAS_DIR)
 
@@ -9,6 +12,7 @@ SET(Open_BLAS_INCLUDE_SEARCH_PATHS
   /usr/local/include/openblas
   /usr/local/include/openblas-base
   /opt/OpenBLAS/include
+  /usr/local/opt/openblas/include
   ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/include
   ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/include
   ${OpenBLAS_HOME}
@@ -25,6 +29,7 @@ SET(Open_BLAS_LIB_SEARCH_PATHS
         /usr/local/lib
         /usr/local/lib64
         /opt/OpenBLAS/lib
+        /usr/local/opt/openblas/lib
         ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/lib
         ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/lib
 	${OpenBLAS_DIR}

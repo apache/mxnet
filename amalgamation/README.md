@@ -18,13 +18,15 @@ Dependency
 ----------
 The only dependency is a BLAS library.
 
+Make sure to disable all other dependencies in the `config.mk` file.
+
 Acknowledgement
 ---------------
 This module is created by [Jack Deng](https://github.com/jdeng).
 
 Android
 ---------------
-Setup NDK and build your standalone toolchain. [Instructions](http://developer.android.com/ndk/guides/standalone_toolchain.html#itc) Use the Advanced Method!!! In particular set PATH, CC and CXX.
+Setup NDK and build your standalone toolchain. [Instructions](http://developer.android.com/ndk/guides/standalone_toolchain.html#itc) Use the Advanced Method!!! In particular set PATH, CC and CXX. The minimum API level required is 16.
 
 Example:
 ```
@@ -33,7 +35,7 @@ export CC=arm-linux-androideabi-gcc   # or export CC=arm-linux-androideabi-clang
 export CXX=arm-linux-androideabi-g++  # or export CXX=arm-linux-androideabi-clang++
 ```
 
-Build OpenBlas for Android: [Build OpenBlas](https://github.com/xianyi/OpenBLAS/wiki/How-to-build-OpenBLAS-for-Android)
+Build OpenBLAS for Android: [Build OpenBLAS](https://github.com/xianyi/OpenBLAS/wiki/How-to-build-OpenBLAS-for-Android) Please put OpenBLAS source code outside mxnet directory.
 Modify OPENBLAS_ROOT in Makefile
 Type ```make ANDROID=1```
 
@@ -43,10 +45,15 @@ You can use generated library in [Leliana WhatsThis Android app](https://github.
 
 Javascript
 ---------------
-JS version works without OpenBLAS. You need [emscripten](http://kripken.github.io/emscripten-site/) to build it.
-Type ```make MIN=1 libmxnet_predict.js```
+JS version uses [emscripten](http://kripken.github.io/emscripten-site/) to cross-compile the amalgamation source file into a Javascript library that can be integrated into client side applications.  If you already have emanscripten installed then 
 
-You can use generated library in [mxnet.js](https://github.com/dmlc/mxnet.js)
+```make clean libmxnet_predict.js MIN=1```
+
+otherwise you can use [emscripten docker image](https://hub.docker.com/r/apiaryio/emcc/) to compile in the following way
+
+```make clean libmxnet_predict.js MIN=1 EMCC="docker run -v ${PWD}:/src apiaryio/emcc emcc"```
+
+An example WebApp that uses the generated JS library can be found at [mxnet.js](https://github.com/dmlc/mxnet.js)
 
 iOS
 ---------------
@@ -70,7 +77,7 @@ Add
 #include <Accelerate/Accelerate.h>
 ```
 
-Comment all occurences of
+Comment all occurrences of
 ```
 #include <emmintrin.h>
 ```

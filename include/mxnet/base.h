@@ -11,6 +11,10 @@
 #include <dmlc/type_traits.h>
 #include <dmlc/parameter.h>
 #include <mshadow/tensor.h>
+// nnvm headers for symbolic construction.
+#include <nnvm/op.h>
+#include <nnvm/tuple.h>
+#include <nnvm/symbolic.h>
 #include <string>
 
 /*!
@@ -69,6 +73,29 @@
 #define MXNET_PREDICT_ONLY 0
 #endif
 
+/*!
+ * \brief define operator message for profiler
+ */
+#if MXNET_USE_PROFILER
+#define PROFILER_MESSAGE(msg)     msg
+#else
+#define PROFILER_MESSAGE(msg)     nullptr
+#endif
+
+/*! \brief major version */
+#define MXNET_MAJOR 0
+/*! \brief minor version */
+#define MXNET_MINOR 9
+/*! \brief patch version */
+#define MXNET_PATCH 5
+/*! \brief mxnet version */
+#define MXNET_VERSION (MXNET_MAJOR*10000 + MXNET_MINOR*100 + MXNET_PATCH)
+/*! \brief helper for making version number */
+#define MXNET_MAKE_VERSION(major, minor, patch) ((major)*10000 + (minor)*100 + patch)
+/*!
+ * \brief define function name as profiler message
+ */
+#define PROFILER_MESSAGE_FUNCNAME PROFILER_MESSAGE(__FUNCTION__)
 
 /*! \brief namespace of mxnet */
 namespace mxnet {
@@ -80,13 +107,12 @@ typedef mshadow::gpu gpu;
 typedef mshadow::index_t index_t;
 /*! \brief data type that will be used to store ndarray */
 typedef mshadow::default_real_t real_t;
+/*! \brief Shape data structure used to record shape information */
+using TShape = nnvm::TShape;
+/*! \brief operator structure from NNVM */
+using Op = nnvm::Op;
 
-/*! \brief dynamic shape type */
-typedef mshadow::TShape TShape;
-/*! \brief storage container type */
-typedef mshadow::TBlob TBlob;
-
-/*! \brief Context information about the execution enviroment */
+/*! \brief Context information about the execution environment */
 struct Context {
   /*! \brief Type of device */
   enum DeviceType {
@@ -155,23 +181,29 @@ struct Context {
   /*!
    * \brief Create a new context.
    * \param dev_type device type.
-   * \param dev_id device id.
+   * \param dev_id device id. -1 for current device.
    */
-  inline static Context Create(DeviceType dev_type, int32_t dev_id);
+  inline static Context Create(DeviceType dev_type, int32_t dev_id = -1);
   /*! \return CPU Context */
-  inline static Context CPU();
+  inline static Context CPU(int32_t dev_id = 0);
   /*!
    * Create a GPU context.
    * \param dev_id the device id.
-   * \return GPU Context.
+   * \return GPU Context. -1 for current GPU.
    */
-  inline static Context GPU(int32_t dev_id);
+  inline static Context GPU(int32_t dev_id = -1);
   /*!
    * Create a pinned CPU context.
    * \param dev_id the device id for corresponding GPU.
-   * \return Pinned CPU context.
+   * \return Pinned CPU context. -1 for current GPU.
    */
-  inline static Context CPUPinned(int32_t dev_id);
+  inline static Context CPUPinned(int32_t dev_id = -1);
+  /*!
+   * Create a context from string of the format [cpu|gpu|cpu_pinned](n)
+   * \param str the string pattern
+   * \return Context
+   */
+  inline static Context FromString(std::string str);
 };
 
 /*!
@@ -208,11 +240,22 @@ inline bool Context::operator<(const Context &b) const {
 inline Context Context::Create(DeviceType dev_type, int32_t dev_id) {
   Context ctx;
   ctx.dev_type = dev_type;
-  ctx.dev_id = dev_id;
+  if (dev_id < 0) {
+    ctx.dev_id = 0;
+    if (dev_type != kCPU) {
+#if MXNET_USE_CUDA
+      CHECK_EQ(cudaGetDevice(&ctx.dev_id), cudaSuccess);
+#else
+      LOG(FATAL) << "Please compile with CUDA enabled for cuda features";
+#endif
+    }
+  } else {
+    ctx.dev_id = dev_id;
+  }
   return ctx;
 }
-inline Context Context::CPU() {
-  return Create(kCPU, 0);
+inline Context Context::CPU(int32_t dev_id) {
+  return Create(kCPU, dev_id);
 }
 
 inline Context Context::CPUPinned(int32_t dev_id) {
@@ -222,57 +265,54 @@ inline Context Context::CPUPinned(int32_t dev_id) {
 inline Context Context::GPU(int32_t dev_id) {
   return Create(kGPU, dev_id);
 }
+
+inline Context Context::FromString(std::string str) {
+  Context ret;
+  try {
+    std::string::size_type l = str.find('(');
+    CHECK_NE(l, std::string::npos);
+    std::string::size_type r = str.find(')');
+    CHECK_EQ(r, str.length()-1);
+
+    std::string type = str.substr(0, l);
+    int id = std::stoi(str.substr(l+1, r-l-1));
+    if (type == "cpu") {
+      ret = CPU(id);
+    } else if (type == "gpu") {
+      ret = GPU(id);
+    } else if (type == "cpu_pinned") {
+      ret = CPUPinned(id);
+    } else {
+      LOG(FATAL) << "Invalid context string " << str;
+    }
+  } catch (...) {
+    LOG(FATAL) << "Invalid context string " << str;
+  }
+  return ret;
+}
+
+inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
+  if (ctx.dev_type == Context::kCPU) {
+    out << "cpu(";
+  } else if (ctx.dev_type == Context::kGPU) {
+    out << "gpu(";
+  } else if (ctx.dev_type == Context::kCPUPinned) {
+    out << "cpu_pinned(";
+  } else {
+    out << "unknown(";
+  }
+  out << ctx.dev_id << ")";
+  return out;
+}
+
+// describe op registration point
+#define STRINGIZE_DETAIL(x) #x
+#define STRINGIZE(x) STRINGIZE_DETAIL(x)
+#define MXNET_DESCRIBE(...) describe(__VA_ARGS__ "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
+#define ADD_FILELINE "\n\nDefined in " __FILE__ ":L" STRINGIZE(__LINE__)
+
 }  // namespace mxnet
 
-namespace dmlc {
-// Add a few patches to support TShape in dmlc/parameter.
-DMLC_DECLARE_TYPE_NAME(mxnet::TShape, "Shape(tuple)");
-
-namespace parameter {
-template<>
-class FieldEntry<mxnet::TShape>
-    : public FieldEntryBase<FieldEntry<mxnet::TShape>, mxnet::TShape> {
- public:
-  FieldEntry() : enforce_nonzero_(false), expect_ndim_(0) {}
-  // parent class
-  typedef FieldEntryBase<FieldEntry<mxnet::TShape>, mxnet::TShape> Parent;
-
-  virtual void Check(void *head) const {
-    Parent::Check(head);
-    mxnet::TShape &v = this->Get(head);
-    if (expect_ndim_ != 0 && v.ndim() != expect_ndim_) {
-      std::ostringstream os;
-        os << "value " << v << "for Parameter " << this->key_
-           << " has wrong dimensions, expected dimension=" << expect_ndim_;
-        throw dmlc::ParamError(os.str());
-    }
-    if (enforce_nonzero_) {
-      for (mxnet::index_t i = 0; i < v.ndim(); ++i) {
-        if (v[i] == 0U) {
-          std::ostringstream os;
-          os << "value " << v << "for Parameter " << this->key_
-             << " is invalid, the input shape must be nonzero in all dimensions";
-          throw dmlc::ParamError(os.str());
-        }
-      }
-    }
-  }
-  inline FieldEntry<mxnet::TShape> &enforce_nonzero() {
-    this->enforce_nonzero_ = true;
-    return this->self();
-  }
-  inline FieldEntry<mxnet::TShape> &set_expect_ndim(mshadow::index_t ndim) {
-    expect_ndim_ = ndim;
-    return this->self();
-  }
-
- private:
-  // whether all the entries need to be nonzero
-  bool enforce_nonzero_;
-  // expected number of dimension, default = 0 means no restriction.
-  mxnet::index_t expect_ndim_;
-};
-}  // namespace parameter
-}  // namespace dmlc
+#include "./tensor_blob.h"
 //! \endcond
 #endif  // MXNET_BASE_H_

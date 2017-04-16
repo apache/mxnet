@@ -3,27 +3,25 @@ import numpy as np
 import mxnet as mx
 from PIL import Image
 
-pallete = [ 0,0,0,
-            128,0,0,
-            0,128,0,
-            128,128,0,
-            0,0,128,
-            128,0,128,
-            0,128,128,
-            128,128,128,
-            64,0,0,
-            192,0,0,
-            64,128,0,
-            192,128,0,
-            64,0,128,
-            192,0,128,
-            64,128,128,
-            192,128,128,
-            0,64,0,
-            128,64,0,
-            0,192,0,
-            128,192,0,
-            0,64,128 ]
+def getpallete(num_cls):
+    # this function is to get the colormap for visualizing the segmentation mask
+    n = num_cls
+    pallete = [0]*(n*3)
+    for j in xrange(0,n):
+            lab = j
+            pallete[j*3+0] = 0
+            pallete[j*3+1] = 0
+            pallete[j*3+2] = 0
+            i = 0
+            while (lab > 0):
+                    pallete[j*3+0] |= (((lab >> 0) & 1) << (7-i))
+                    pallete[j*3+1] |= (((lab >> 1) & 1) << (7-i))
+                    pallete[j*3+2] |= (((lab >> 2) & 1) << (7-i))
+                    i = i + 1
+                    lab >>= 3
+    return pallete
+
+pallete = getpallete(256)
 img = "./person_bicycle.jpg"
 seg = img.replace("jpg", "png")
 model_previx = "FCN8s_VGG16"

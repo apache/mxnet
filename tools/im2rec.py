@@ -1,234 +1,303 @@
+# -*- coding: utf-8 -*-
+from __future__ import print_function
 import os
 import sys
+
 curr_path = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(os.path.join(curr_path, "../python"))
 import mxnet as mx
 import random
-import numpy as np
 import argparse
-import threading
-import cv, cv2
+import cv2
 import time
+import traceback
+
+try:
+    import multiprocessing
+except ImportError:
+    multiprocessing = None
+
 def list_image(root, recursive, exts):
-    image_list = []
+    i = 0
     if recursive:
         cat = {}
-        for path, subdirs, files in os.walk(root, followlinks=True):
-	    subdirs.sort()
-            print(len(cat), path)
+        for path, dirs, files in os.walk(root, followlinks=True):
+            dirs.sort()
+            files.sort()
             for fname in files:
                 fpath = os.path.join(path, fname)
                 suffix = os.path.splitext(fname)[1].lower()
                 if os.path.isfile(fpath) and (suffix in exts):
                     if path not in cat:
                         cat[path] = len(cat)
-                    image_list.append((len(image_list), os.path.relpath(fpath, root), cat[path]))
+                    yield (i, os.path.relpath(fpath, root), cat[path])
+                    i += 1
+        for k, v in sorted(cat.items(), key=lambda x: x[1]):
+            print(os.path.relpath(k, root), v)
     else:
-        for fname in os.listdir(root):
+        for fname in sorted(os.listdir(root)):
             fpath = os.path.join(root, fname)
             suffix = os.path.splitext(fname)[1].lower()
             if os.path.isfile(fpath) and (suffix in exts):
-                image_list.append((len(image_list), os.path.relpath(fpath, root), 0))
-    return image_list
+                yield (i, os.path.relpath(fpath, root), 0)
+                i += 1
 
 def write_list(path_out, image_list):
     with open(path_out, 'w') as fout:
-        for i in xrange(len(image_list)):
-            line = '%d\t'%image_list[i][0]
-            for j in image_list[i][2:]:
-                line += '%f\t'%j
-            line += '%s\n'%image_list[i][1]
+        for i, item in enumerate(image_list):
+            line = '%d\t' % item[0]
+            for j in item[2:]:
+                line += '%f\t' % j
+            line += '%s\n' % item[1]
             fout.write(line)
 
-def make_list(prefix_out, root, recursive, exts, num_chunks, train_ratio, test_ratio):
-    image_list = list_image(root, recursive, exts)
-    random.seed(100)
-    random.shuffle(image_list)
+def make_list(args):
+    image_list = list_image(args.root, args.recursive, args.exts)
+    image_list = list(image_list)
+    if args.shuffle is True:
+        random.seed(100)
+        random.shuffle(image_list)
     N = len(image_list)
-    chunk_size = (N+num_chunks-1)/num_chunks
-    for i in xrange(num_chunks):
-        chunk = image_list[i*chunk_size:(i+1)*chunk_size]
-        if num_chunks > 1:
-            str_chunk = '_%d'%i
+    chunk_size = (N + args.chunks - 1) / args.chunks
+    for i in xrange(args.chunks):
+        chunk = image_list[i * chunk_size:(i + 1) * chunk_size]
+        if args.chunks > 1:
+            str_chunk = '_%d' % i
         else:
             str_chunk = ''
-        sep = int(chunk_size*train_ratio)
-	sep_test=int(chunk_size*test_ratio)
-        write_list(prefix_out+str_chunk+'_test.lst', chunk[:sep_test])
-        write_list(prefix_out+str_chunk+'_train.lst', chunk[sep_test:sep_test+sep])
-        write_list(prefix_out+str_chunk+'_val.lst', chunk[sep_test+sep:])
+        sep = int(chunk_size * args.train_ratio)
+        sep_test = int(chunk_size * args.test_ratio)
+        if args.train_ratio == 1.0:
+            write_list(args.prefix + str_chunk + '.lst', chunk)
+        else:
+            if args.test_ratio:
+                write_list(args.prefix + str_chunk + '_test.lst', chunk[:sep_test])
+            if args.train_ratio + args.test_ratio < 1.0:
+                write_list(args.prefix + str_chunk + '_val.lst', chunk[sep_test + sep:])
+            write_list(args.prefix + str_chunk + '_train.lst', chunk[sep_test:sep_test + sep])
 
 def read_list(path_in):
-    image_list = []
     with open(path_in) as fin:
-        for line in fin.readlines():
+        while True:
+            line = fin.readline()
+            if not line:
+                break
             line = [i.strip() for i in line.strip().split('\t')]
-            item = [int(line[0])] + [line[-1]] + [float(i) for i in line[1:-1]]
-            image_list.append(item)
-    return image_list
+            line_len = len(line)
+            if line_len < 3:
+                print('lst should at least has three parts, but only has %s parts for %s' %(line_len, line))
+                continue
+            try:
+                item = [int(line[0])] + [line[-1]] + [float(i) for i in line[1:-1]]
+            except Exception, e:
+                print('Parsing lst met error for %s, detail: %s' %(line, e))
+                continue
+            yield item
 
-def write_record(args, image_list):
-    source = image_list
-    tic = [time.time()]
-    color_modes = {-1: cv2.IMREAD_UNCHANGED,
-                    0: cv2.IMREAD_GRAYSCALE,
-                    1: cv2.IMREAD_COLOR}
-    total = len(source)
-    
-    def image_encode(item, q_out):
-        try:
-            img = cv2.imread(os.path.join(args.root, item[1]), color_modes[args.color])
-        except:
-            print 'imread error:', item[1]
-            return
-        if img is None:
-            print 'read none error:', item[1]
-            return
-        if args.center_crop:
-            if img.shape[0] > img.shape[1]:
-                margin = (img.shape[0] - img.shape[1])/2;
-                img = img[margin:margin+img.shape[1], :]
-            else:
-                margin = (img.shape[1] - img.shape[0])/2;
-                img = img[:, margin:margin+img.shape[0]]
-        if args.resize:
-            if img.shape[0] > img.shape[1]:
-                newsize = (img.shape[0]*args.resize/img.shape[1], args.resize)
-            else:
-                newsize = (args.resize, img.shape[1]*args.resize/img.shape[0])
-            img = cv2.resize(img, newsize)
+def image_encode(args, i, item, q_out):
+    fullpath = os.path.join(args.root, item[1])
+
+    if len(item) > 3 and args.pack_label:
+        header = mx.recordio.IRHeader(0, item[2:], item[0], 0)
+    else:
         header = mx.recordio.IRHeader(0, item[2], item[0], 0)
 
+    if args.pass_through:
         try:
-            s = mx.recordio.pack_img(header, img, quality=args.quality, img_fmt=args.encoding)
-            q_out.put(('data', s, item))
-        except:
-            print 'pack_img error:',item[1]
-            return
-
-    def read_worker(q_in, q_out):
-        while not q_in.empty():
-            item = q_in.get()
-            image_encode(item, q_out)
-
-    def write_worker(q_out, prefix):
-        pre_time = time.time()
-        sink = []
-	record = mx.recordio.MXRecordIO(prefix+'.rec', 'w')
-        while True:
-            stat, s, item = q_out.get()
-            if stat == 'finish':
-                write_list(prefix+'.lst', sink)
-                break
-            record.write(s)
-            sink.append(item)
-            if len(sink) % 1000 == 0:
-                cur_time = time.time()
-                print 'time:', cur_time - pre_time, ' count:', len(sink)
-                pre_time = cur_time
+            with open(fullpath) as fin:
+                img = fin.read()
+            s = mx.recordio.pack(header, img)
+            q_out.put((i, s, item))
+        except Exception, e:
+            traceback.print_exc()
+            print('pack_img error:', item[1], e)
+            q_out.put((i, None, item))
+        return
 
     try:
-        import multiprocessing
-        q_in = [multiprocessing.Queue() for i in range(args.num_thread)]
-        q_out = multiprocessing.Queue(1024)
-        for i in range(len(image_list)):
-            q_in[i % len(q_in)].put(image_list[i])
-        read_process = [multiprocessing.Process(target=read_worker, args=(q_in[i], q_out)) \
-                for i in range(args.num_thread)]
-        for p in read_process:
-            p.start()
-        write_process = multiprocessing.Process(target=write_worker, args=(q_out,args.prefix))
-        write_process.start()
-        for p in read_process:
-            p.join()
-        q_out.put(('finish', '', []))
-        write_process.join()
-    except ImportError:
-        print('multiprocessing not available, fall back to single threaded encoding')
-        import Queue
-        q_out = Queue.Queue()
-	record = mx.recordio.MXRecordIO(args.prefix+'.rec', 'w')
-        cnt = 0
-        pre_time = time.time()
-        for item in image_list:
-            image_encode(item, q_out)
-            if q_out.empty():
-                continue
-            _, s, _ = q_out.get()
-            record.write(s)
-            cnt += 1
-            if cnt % 1000 == 0:
-                cur_time = time.time()
-                print 'time:', cur_time - pre_time, ' count:', cnt
-                pre_time = cur_time
+        img = cv2.imread(fullpath, args.color)
+    except:
+        traceback.print_exc()
+        print('imread error trying to load file: %s ' % fullpath)
+        q_out.put((i, None, item))
+        return
+    if img is None:
+        print('imread read blank (None) image for file: %s' % fullpath)
+        q_out.put((i, None, item))
+        return
+    if args.center_crop:
+        if img.shape[0] > img.shape[1]:
+            margin = (img.shape[0] - img.shape[1]) / 2;
+            img = img[margin:margin + img.shape[1], :]
+        else:
+            margin = (img.shape[1] - img.shape[0]) / 2;
+            img = img[:, margin:margin + img.shape[0]]
+    if args.resize:
+        if img.shape[0] > img.shape[1]:
+            newsize = (args.resize, img.shape[0] * args.resize / img.shape[1])
+        else:
+            newsize = (img.shape[1] * args.resize / img.shape[0], args.resize)
+        img = cv2.resize(img, newsize)
 
-def main():
+    try:
+        s = mx.recordio.pack_img(header, img, quality=args.quality, img_fmt=args.encoding)
+        q_out.put((i, s, item))
+    except Exception, e:
+        traceback.print_exc()
+        print('pack_img error on file: %s' % fullpath, e)
+        q_out.put((i, None, item))
+        return
+
+def read_worker(args, q_in, q_out):
+    while True:
+        deq = q_in.get()
+        if deq is None:
+            break
+        i, item = deq
+        image_encode(args, i, item, q_out)
+
+def write_worker(q_out, fname, working_dir):
+    pre_time = time.time()
+    count = 0
+    fname = os.path.basename(fname)
+    fname_rec = os.path.splitext(fname)[0] + '.rec'
+    fname_idx = os.path.splitext(fname)[0] + '.idx'
+    record = mx.recordio.MXIndexedRecordIO(os.path.join(working_dir, fname_idx),
+                                           os.path.join(working_dir, fname_rec), 'w')
+    buf = {}
+    more = True
+    while more:
+        deq = q_out.get()
+        if deq is not None:
+            i, s, item = deq
+            buf[i] = (s, item)
+        else:
+            more = False
+        while count in buf:
+            s, item = buf[count]
+            del buf[count]
+            if s is not None:
+                record.write_idx(item[0], s)
+
+            if count % 1000 == 0:
+                cur_time = time.time()
+                print('time:', cur_time - pre_time, ' count:', count)
+                pre_time = cur_time
+            count += 1
+
+def parse_args():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         description='Create an image list or \
-    	make a record database by reading from an image list')
-    parser.add_argument('prefix', help='prefix of input/output files.')
+        make a record database by reading from an image list')
+    parser.add_argument('prefix', help='prefix of input/output lst and rec files.')
     parser.add_argument('root', help='path to folder containing images.')
 
     cgroup = parser.add_argument_group('Options for creating image lists')
     cgroup.add_argument('--list', type=bool, default=False,
-        help='If this is set im2rec will create image list(s) by traversing root folder\
+                        help='If this is set im2rec will create image list(s) by traversing root folder\
         and output to <prefix>.lst.\
         Otherwise im2rec will read <prefix>.lst and create a database at <prefix>.rec')
-    cgroup.add_argument('--exts', type=list, default=['.jpeg','.jpg'],
-        help='list of acceptable image extensions.')
+    cgroup.add_argument('--exts', type=list, default=['.jpeg', '.jpg'],
+                        help='list of acceptable image extensions.')
     cgroup.add_argument('--chunks', type=int, default=1, help='number of chunks.')
-    cgroup.add_argument('--train_ratio', type=float, default=1.0,
-        help='Ratio of images to use for training.')
-    cgroup.add_argument('--test_ratio', type=float, default=0,
-	help='Ratio of images to use for testing.')
+    cgroup.add_argument('--train-ratio', type=float, default=1.0,
+                        help='Ratio of images to use for training.')
+    cgroup.add_argument('--test-ratio', type=float, default=0,
+                        help='Ratio of images to use for testing.')
     cgroup.add_argument('--recursive', type=bool, default=False,
-        help='If true recursively walk through subdirs and assign an unique label\
+                        help='If true recursively walk through subdirs and assign an unique label\
         to images in each folder. Otherwise only include images in the root folder\
         and give them label 0.')
+    cgroup.add_argument('--shuffle', type=bool, default=True, help='If this is set as True, \
+        im2rec will randomize the image order in <prefix>.lst')
 
     rgroup = parser.add_argument_group('Options for creating database')
+    rgroup.add_argument('--pass-through', type=bool, default=False,
+                        help='whether to skip transformation and save image as is')
     rgroup.add_argument('--resize', type=int, default=0,
-        help='resize the shorter edge of image to the newsize, original images will\
+                        help='resize the shorter edge of image to the newsize, original images will\
         be packed by default.')
-    rgroup.add_argument('--center_crop', type=bool, default=False,
-        help='specify whether to crop the center image to make it rectangular.')
-    rgroup.add_argument('--quality', type=int, default=80,
-        help='JPEG quality for encoding, 1-100; or PNG compression for encoding, 1-9')
-    rgroup.add_argument('--num_thread', type=int, default=1,
-        help='number of thread to use for encoding. order of images will be different\
+    rgroup.add_argument('--center-crop', type=bool, default=False,
+                        help='specify whether to crop the center image to make it rectangular.')
+    rgroup.add_argument('--quality', type=int, default=95,
+                        help='JPEG quality for encoding, 1-100; or PNG compression for encoding, 1-9')
+    rgroup.add_argument('--num-thread', type=int, default=1,
+                        help='number of thread to use for encoding. order of images will be different\
         from the input list if >1. the input list will be modified to match the\
         resulting order.')
     rgroup.add_argument('--color', type=int, default=1, choices=[-1, 0, 1],
-        help='specify the color mode of the loaded image.\
+                        help='specify the color mode of the loaded image.\
         1: Loads a color image. Any transparency of image will be neglected. It is the default flag.\
         0: Loads image in grayscale mode.\
         -1:Loads image as such including alpha channel.')
     rgroup.add_argument('--encoding', type=str, default='.jpg', choices=['.jpg', '.png'],
-        help='specify the encoding of the images.')
-    rgroup.add_argument('--shuffle', action='store_true',
-        help='If this is set and --list is not, im2rec will randomize the image order\
-        in <prefix>.lst and <prefix>.rec.')
-
+                        help='specify the encoding of the images.')
+    rgroup.add_argument('--pack-label', type=bool, default=False,
+        help='Whether to also pack multi dimensional label in the record file')
     args = parser.parse_args()
-    
-    if args.list:
-        make_list(args.prefix, args.root, args.recursive,
-                  args.exts, args.chunks, args.train_ratio, args.test_ratio)
-    else:
-        files = [f for f in os.listdir('.') if os.path.isfile(f)]
-        for f in files:
-        # do something
-            #print 'path: ', path
-            #print 'subdirs: ', subdirs
-            print 'current file: ', f
-            if f.startswith(args.prefix) is True:
-                print 'OK'
-                image_list = read_list(f)
-                if args.shuffle:
-                    random.shuffle(image_list)
-                write_record(args, image_list)
-            else:
-                print 'not OK'
+    args.prefix = os.path.abspath(args.prefix)
+    args.root = os.path.abspath(args.root)
+    return args
+
 if __name__ == '__main__':
-    main()
+    args = parse_args()
+    if args.list:
+        make_list(args)
+    else:
+        if os.path.isdir(args.prefix):
+            working_dir = args.prefix
+        else:
+            working_dir = os.path.dirname(args.prefix)
+        files = [os.path.join(working_dir, fname) for fname in os.listdir(working_dir)
+                    if os.path.isfile(os.path.join(working_dir, fname))]
+        count = 0
+        for fname in files:
+            if fname.startswith(args.prefix) and fname.endswith('.lst'):
+                print('Creating .rec file from', fname, 'in', working_dir)
+                count += 1
+                image_list = read_list(fname)
+                # -- write_record -- #
+                if args.num_thread > 1 and multiprocessing is not None:
+                    q_in = [multiprocessing.Queue(1024) for i in range(args.num_thread)]
+                    q_out = multiprocessing.Queue(1024)
+                    read_process = [multiprocessing.Process(target=read_worker, args=(args, q_in[i], q_out)) \
+                                    for i in range(args.num_thread)]
+                    for p in read_process:
+                        p.start()
+                    write_process = multiprocessing.Process(target=write_worker, args=(q_out, fname, working_dir))
+                    write_process.start()
+
+                    for i, item in enumerate(image_list):
+                        q_in[i % len(q_in)].put((i, item))
+                    for q in q_in:
+                        q.put(None)
+                    for p in read_process:
+                        p.join()
+
+                    q_out.put(None)
+                    write_process.join()
+                else:
+                    print('multiprocessing not available, fall back to single threaded encoding')
+                    import Queue
+                    q_out = Queue.Queue()
+                    fname = os.path.basename(fname)
+                    fname_rec = os.path.splitext(fname)[0] + '.rec'
+                    fname_idx = os.path.splitext(fname)[0] + '.idx'
+                    record = mx.recordio.MXIndexedRecordIO(os.path.join(working_dir, fname_idx),
+                                                           os.path.join(working_dir, fname_rec), 'w')
+                    cnt = 0
+                    pre_time = time.time()
+                    for i, item in enumerate(image_list):
+                        image_encode(args, i, item, q_out)
+                        if q_out.empty():
+                            continue
+                        _, s, _ = q_out.get()
+                        record.write_idx(item[0], s)
+                        if cnt % 1000 == 0:
+                            cur_time = time.time()
+                            print('time:', cur_time - pre_time, ' count:', cnt)
+                            pre_time = cur_time
+                        cnt += 1
+        if not count:
+            print('Did not find and list file with prefix %s'%args.prefix)

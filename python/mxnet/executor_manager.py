@@ -1,28 +1,33 @@
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments, too-many-statements
-"""Executor manager"""
+"""Executor manager."""
 from __future__ import absolute_import
-
-from .base import mx_real_t
-from . import ndarray as nd
-from .context import cpu
 
 import logging
 import numpy as np
 
+from .base import mx_real_t
+from . import ndarray as nd
+from .context import cpu
+from .io import DataDesc
+
+
 def _split_input_slice(batch_size, work_load_list):
     """Get input slice from the input shape.
+
     Parameters
     ----------
     batch_size : int
         The number of samples in a mini-batch.
     work_load_list : list of float or int, optional
         The list of work load for different devices,
-        in the same order as ctx
+        in the same order as `ctx`.
+
     Returns
     -------
     slices : list of slice
         The split slices to get a specific slice.
+
     Raises
     ------
     ValueError
@@ -48,10 +53,11 @@ def _check_arguments(symbol):
     """Check the argument names of symbol.
     This function checks the duplication of arguments in Symbol.
     The check is done for feedforward net for now.
+
     Parameters
     ----------
     symbol : Symbol
-        The network configuration
+        The network configuration.
     """
     arg_set = set()
     arg_names = symbol.list_arguments()
@@ -74,25 +80,23 @@ def _check_arguments(symbol):
         aux_set.add(name)
 
 def _load_general(data, targets):
-    """Load a list of arrays into a list of arrays specified by slices"""
+    """Load a list of arrays into a list of arrays specified by slices."""
     for d_src, d_targets in zip(data, targets):
         if isinstance(d_targets, nd.NDArray):
             d_src.copyto(d_targets)
         else:
+            assert d_targets[-1][0].stop == d_src.shape[0], \
+                "Batch size miss match. Expected %d, got %d"%( \
+                    d_targets[-1][0].stop, d_src.shape[0])
             for slice_idx, d_dst in d_targets:
-                if d_src[slice_idx].shape != d_dst.shape:
-                    n = d_dst.shape[0] / (slice_idx.stop - slice_idx.start)
-                    new_slice = slice(slice_idx.start * n, slice_idx.stop * n)
-                    d_src[new_slice].copyto(d_dst)
-                else:
-                    d_src[slice_idx].copyto(d_dst)
+                d_src[slice_idx].copyto(d_dst)
 
 def _load_data(batch, targets):
-    """Load data into sliced arrays"""
+    """Load data into sliced arrays."""
     _load_general(batch.data, targets)
 
 def _load_label(batch, targets):
-    """Load label into sliced arrays"""
+    """Load label into sliced arrays."""
     _load_general(batch.label, targets)
 
 # pylint: disable=too-many-branches
@@ -111,11 +115,11 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
 
     arg_names = sym.list_arguments()
 
-    if need_grad == False:
+    if need_grad is False:
         need_grad = set()
-    elif need_grad == True:
+    elif need_grad is True:
         need_grad = set(arg_names) - set(input_shapes.keys())
-    elif need_grad is set:
+    elif isinstance(need_grad, set):
         pass
     else:
         raise AssertionError("need_grad must be boolean or set.")
@@ -123,8 +127,7 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
 
 
     # create or borrow arguments and gradients
-    for i in range(len(arg_names)):
-        name = arg_names[i]
+    for i, name in enumerate(arg_names):
         if not name in param_names:
             # data or label
             if shared_data_arrays is not None and \
@@ -194,21 +197,17 @@ class DataParallelExecutorGroup(object):
     param_names: list of str
         List of names of all trainable parameters.
     ctx: list of Context
-        List of devices for training (data parallelization)
+        List of devices for training (data parallelization).
     slices: list of int
         Describes how the data parallelization splits data into different devices.
     train_data: DataIter (or DataBatch)
         The dataset for training. It could be any object with `provide_data` and
         `provide_label` properties. Loading of actual data is not necessarily needed
         at this stage.
-    max_data_shape: list of float or int
-        Maximum shape of input data
     shared_grop: DataParallelExecutorGroup
         An existing executor group, if to share parameters with it.
     """
-    def __init__(self, sym, arg_names, param_names,
-                 ctx, slices, train_data,
-                 max_data_shape=None, shared_group=None):
+    def __init__(self, sym, arg_names, param_names, ctx, slices, train_data, shared_group=None):
         # make sure the architecture is valid
         _check_arguments(sym)
 
@@ -224,28 +223,20 @@ class DataParallelExecutorGroup(object):
         self.param_names = [arg_names[i] for i in self.param_idx]
 
         self.train_execs = []
-        for i in range(len(ctx)):
+        for i, ctxi in enumerate(ctx):
             data_shapes = {}
-            batch_size = 0
-            for k, v in train_data.provide_data:
-                if k == 'data':
-                    batch_size = v[0]
-            for k, v in train_data.provide_data + train_data.provide_label:
-                if k == 'data':
-                    if shared_group is None and max_data_shape is not None:
-                        # init first executor group
-                        # data size is set to max possible size of input data
-                        data_shapes[k] = tuple([slices[i].stop - slices[i].start] + max_data_shape)
-                    else:
-                        data_shapes[k] = tuple([slices[i].stop - slices[i].start] + list(v[1:]))
+            data_types = {}
+            for x in train_data.provide_data + train_data.provide_label:
+                data_shapes[x[0]] = tuple([slices[i].stop - slices[i].start] + list(x[1][1:]))
+                if isinstance(x, DataDesc):
+                    data_types[x.name] = x.dtype
                 else:
-                    data_shapes[k] = tuple([int((slices[i].stop - slices[i].start) * v[0] \
-                                           / batch_size)] + list(v[1:]))
-
+                    data_types[x[0]] = mx_real_t
             shared_exec = None if shared_group is None else shared_group.train_execs[i]
-            train_exec = _bind_exec(sym, ctx[i], data_shapes, self.param_names,
+            train_exec = _bind_exec(sym, ctxi, data_shapes, self.param_names,
                                     need_grad=True, base_exec=shared_exec,
-                                    shared_data_arrays=self.shared_data_arrays[i])
+                                    shared_data_arrays=self.shared_data_arrays[i],
+                                    input_types=data_types)
             self.train_execs.append(train_exec)
 
         # data structure
@@ -265,36 +256,35 @@ class DataParallelExecutorGroup(object):
         self.slices = slices
 
     def load_data_batch(self, data_batch):
-        """ load data and labels into arrays """
+        """Load data and labels into arrays."""
         _load_data(data_batch, self.data_arrays)
         _load_label(data_batch, self.label_arrays)
 
     def forward(self, is_train=False):
-        """ Perform a forward pass on each executor """
+        """Perform a forward pass on each executor."""
         for texec in self.train_execs:
             texec.forward(is_train=is_train)
 
     def backward(self):
-        """ Perform a backward pass on each executor """
+        """Perform a backward pass on each executor."""
         for texec in self.train_execs:
             texec.backward()
 
     def update_metric(self, metric, labels):
-        """ Update evaluation metric with label and current outputs """
+        """Update evaluation metric with label and current outputs."""
         for texec, islice in zip(self.train_execs, self.slices):
-            n = int(texec.outputs[0].shape[0] / (islice.stop - islice.start))
-            new_slice = slice(islice.start * n, islice.stop * n)
-            labels_slice = [label[new_slice] for label in labels]
+            labels_slice = [label[islice] for label in labels]
             metric.update(labels_slice, texec.outputs)
 
 class DataParallelExecutorManager(object):
     """ Helper class to manage multiple executors for data parallelism.
+
     Parameters
     ----------
     symbol : Symbol
-        output symbol
+        Output symbol.
     ctx : list of Context
-        devices to run on
+        Devices to run on.
     param_names: list of str
         Name of all trainable parameters of the network.
     arg_names: list of str
@@ -305,20 +295,15 @@ class DataParallelExecutorManager(object):
         Training data iterator.
     work_load_list : list of float or int, optional
         The list of work load for different devices,
-        in the same order as ctx
+        in the same order as ctx.
     logger : logging logger
         When not specified, default logger will be used.
-    sym_gen : a function that generate new Symbols depending on different
+    sym_gen : A function that generate new Symbols depending on different
         input shapes. Used only for bucketing.
-    mutable_data_shape: bool
-        Whether input data have different shapes or not.
-    max_data_shape: list of float or int
-        The maximum shape of input data
     """
     def __init__(self, symbol, ctx, train_data,
                  arg_names, param_names, aux_names,
-                 work_load_list=None, logger=None, sym_gen=None,
-                 mutable_data_shape=False, max_data_shape=None):
+                 work_load_list=None, logger=None, sym_gen=None):
         if logger is None:
             logger = logging
         # preparation
@@ -337,10 +322,9 @@ class DataParallelExecutorManager(object):
         self.param_names = param_names
         self.aux_names = aux_names
         self.ctx = ctx
-        self.mutable_data_shape = mutable_data_shape
 
         self.execgrp = DataParallelExecutorGroup(symbol, self.arg_names, self.param_names, self.ctx,
-                                                 self.slices, train_data, max_data_shape)
+                                                 self.slices, train_data)
         self.symbol = symbol
 
         self.sym_gen = sym_gen
@@ -350,7 +334,7 @@ class DataParallelExecutorManager(object):
 
 
     def install_monitor(self, monitor):
-        """ Install monitor on all executors """
+        """Install monitor on all executors."""
         if self.sym_gen is not None:
             raise NotImplementedError("Monitoring is not implemented for bucketing")
 
@@ -358,26 +342,29 @@ class DataParallelExecutorManager(object):
             monitor.install(train_exec)
 
     def set_params(self, arg_params, aux_params):
-        """ set parameter and aux values
+        """Set parameter and aux values.
+
         Parameters
         ----------
         arg_params : list of NDArray
-            source parameter arrays
+            Source parameter arrays
         aux_params : list of NDArray
-            source aux arrays
+            Source aux arrays.
         """
 
         for texec in self.execgrp.train_execs:
             texec.copy_params_from(arg_params, aux_params)
 
     def copy_to(self, arg_params, aux_params):
-        """ Copy data from each executor to `arg_params` and `aux_params`
+        """ Copy data from each executor to ```arg_params`` and ``aux_params``.
+
         Parameters
         ----------
         arg_params : list of NDArray
-            target parameter arrays
+            Target parameter arrays.
         aux_params : list of NDArray
-            target aux arrays
+            Target aux arrays.
+
         Notes
         -----
         - This function will inplace update the NDArrays in arg_params and aux_params.
@@ -391,23 +378,23 @@ class DataParallelExecutorManager(object):
 
     @property
     def param_arrays(self):
-        """shared parameter arrays"""
+        """Shared parameter arrays."""
         # param arrays should be shared by all executor groups
         return self.execgrp.param_arrays
     @property
     def grad_arrays(self):
-        """shared gradient arrays"""
+        """Shared gradient arrays."""
         # grad arrays should be shared by all executor groups
         return self.execgrp.grad_arrays
 
     @property
     def aux_arrays(self):
-        """shared aux states"""
+        """Shared aux states."""
         # aux arrays are also shared by all executor groups
         return self.execgrp.aux_arrays
 
     def load_data_batch(self, data_batch):
-        """ load data and labels into arrays """
+        """Load data and labels into arrays."""
         if self.sym_gen is not None:
             key = data_batch.bucket_key
             if key not in self.execgrp_bucket:
@@ -420,25 +407,19 @@ class DataParallelExecutorManager(object):
                 self.execgrp_bucket[key] = execgrp
 
             self.curr_execgrp = self.execgrp_bucket[key]
-        elif self.mutable_data_shape is True:
-            # for each data batch, generate new execgrp and share params with the initial one
-            execgrp = DataParallelExecutorGroup(self.symbol, self.arg_names,
-                                                self.param_names, self.ctx,
-                                                self.slices, data_batch,
-                                                shared_group=self.execgrp)
-            self.curr_execgrp = execgrp
         else:
             self.curr_execgrp = self.execgrp
+
         self.curr_execgrp.load_data_batch(data_batch)
 
     def forward(self, is_train=False):
-        """run forward on the current executor"""
+        """Run forward on the current executor."""
         self.curr_execgrp.forward(is_train=is_train)
 
     def backward(self):
-        """run backward on the current executor"""
+        """Run backward on the current executor."""
         self.curr_execgrp.backward()
 
     def update_metric(self, metric, labels):
-        """update metric with the current executor"""
+        """Update metric with the current executor."""
         self.curr_execgrp.update_metric(metric, labels)

@@ -1,0 +1,13 @@
+# match line starting with 'error ', case-insensitive
+error /(?i)^error /
+
+# list of warnings here...
+warning /[Ww]arning/
+warning /WARNING/
+
+# create a quick access link to lines in the report containing 'INFO'
+info /INFO/
+
+# each line containing 'BUILD' represents the start of a section for grouping errors and warnings found after the line.
+# also creates a quick access link.
+start /BUILD/

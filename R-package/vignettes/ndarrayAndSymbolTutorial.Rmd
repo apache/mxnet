@@ -67,7 +67,7 @@ d <- c / a - 5
 as.array(d)
 ```
 
-If two `NDArray`s sit on different divices, we need to explicitly move them
+If two `NDArray`s sit on different devices, we need to explicitly move them
 into the same one. For instance:
 
 ```{r, eval=FALSE}
@@ -227,7 +227,7 @@ which provides a detailed explanation of concepts in pictures.
 
 ### How Efficient is Symbolic API
 
-In short, they design to be very efficienct in both memory and runtime.
+In short, they are designed to be very efficient in both memory and runtime.
 
 The major reason for us to introduce Symbolic API, is to bring the efficient C++
 operations in powerful toolkits such as cxxnet and caffe together with the

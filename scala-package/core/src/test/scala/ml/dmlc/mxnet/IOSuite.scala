@@ -1,18 +1,38 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet
 
-import ml.dmlc.mxnet.io.{NDArrayIter, ResizeIter}
+import ml.dmlc.mxnet.io.{NDArrayIter, ResizeIter, PrefetchingIter}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import scala.sys.process._
 
 
 class IOSuite extends FunSuite with BeforeAndAfterAll {
+
+  private var tu = new TestUtil
+
   test("test MNISTIter & MNISTPack") {
     // get data
     "./scripts/get_mnist_data.sh" !
 
     val params = Map(
-      "image" -> "data/train-images-idx3-ubyte",
-      "label" -> "data/train-labels-idx1-ubyte",
+      "image" -> tu.dataFile("train-images-idx3-ubyte"),
+      "label" -> tu.dataFile("train-labels-idx1-ubyte"),
       "data_shape" -> "(784,)",
       "batch_size" -> "100",
       "shuffle" -> "1",
@@ -71,8 +91,8 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     "./scripts/get_cifar_data.sh" !
 
     val params = Map(
-      "path_imgrec" -> "data/cifar/train.rec",
-      "mean_img" -> "data/cifar/cifar10_mean.bin",
+      "path_imgrec" -> tu.dataFile("cifar/train.rec"),
+      "mean_img" -> tu.dataFile("cifar/cifar10_mean.bin"),
       "rand_crop" -> "False",
       "and_mirror" -> "False",
       "shuffle" -> "False",
@@ -118,8 +138,8 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     "./scripts/get_mnist_data.sh" !
 
     val params = Map(
-      "image" -> "data/train-images-idx3-ubyte",
-      "label" -> "data/train-labels-idx1-ubyte",
+      "image" -> tu.dataFile("train-images-idx3-ubyte"),
+      "label" -> tu.dataFile("train-labels-idx1-ubyte"),
       "data_shape" -> "(784,)",
       "batch_size" -> "100",
       "shuffle" -> "1",
@@ -148,6 +168,69 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     }
 
     assert(batchCount === nBatch)
+  }
+
+  test("test PrefetchIter") {
+    // get data
+    "./scripts/get_mnist_data.sh" !
+
+    val params = Map(
+      "image" -> tu.dataFile("train-images-idx3-ubyte"),
+      "label" -> tu.dataFile("train-labels-idx1-ubyte"),
+      "data_shape" -> "(784,)",
+      "batch_size" -> "100",
+      "shuffle" -> "1",
+      "flat" -> "1",
+      "silent" -> "0",
+      "seed" -> "10"
+    )
+
+    val mnistPack1 = IO.MNISTPack(params)
+    val mnistPack2 = IO.MNISTPack(params)
+
+    val nBatch = 600
+    var batchCount = 0
+
+    val mnistIter1 = mnistPack1.iterator
+    val mnistIter2 = mnistPack2.iterator
+
+    var prefetchIter = new PrefetchingIter(
+        IndexedSeq(mnistIter1, mnistIter2),
+        IndexedSeq(Map("data" -> "data1"), Map("data" -> "data2")),
+        IndexedSeq(Map("label" -> "label1"), Map("label" -> "label2"))
+    )
+
+    // test loop
+    while(prefetchIter.hasNext) {
+      prefetchIter.next()
+      batchCount += 1
+    }
+    assert(nBatch === batchCount)
+
+    // test provideData
+    val provideData = prefetchIter.provideData
+    val provideLabel = prefetchIter.provideLabel
+    assert(provideData("data1") === Shape(100, 784))
+    assert(provideData("data2") === Shape(100, 784))
+    assert(provideLabel("label1") === Shape(100))
+    assert(provideLabel("label2") === Shape(100))
+
+    // test reset
+    prefetchIter.reset()
+    prefetchIter.next()
+    val label0 = prefetchIter.getLabel().head.toArray
+    val data0 = prefetchIter.getData().head.toArray
+    prefetchIter.next()
+    prefetchIter.next()
+    prefetchIter.next()
+    prefetchIter.reset()
+    prefetchIter.next()
+    val label1 = prefetchIter.getLabel().head.toArray
+    val data1 = prefetchIter.getData().head.toArray
+    assert(label0 === label1)
+    assert(data0 === data1)
+
+    prefetchIter.dispose()
   }
 
   test("test NDArrayIter") {
@@ -188,5 +271,19 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     }
 
     assert(batchCount === nBatch1)
+
+    // test empty label (for prediction)
+    val dataIter2 = new NDArrayIter(data = data, dataBatchSize = 128, lastBatchHandle = "discard")
+    batchCount = 0
+    while(dataIter2.hasNext) {
+      val tBatch = dataIter2.next()
+      batchCount += 1
+
+      assert(tBatch.data(0).toArray === batchData0.toArray)
+      assert(tBatch.data(1).toArray === batchData1.toArray)
+    }
+
+    assert(batchCount === nBatch1)
+    assert(dataIter2.initLabel == IndexedSeq.empty)
   }
 }

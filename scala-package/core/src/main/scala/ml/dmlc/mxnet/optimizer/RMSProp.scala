@@ -1,13 +1,29 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet.optimizer
 
+import ml.dmlc.mxnet.util.SerializerUtils
 import ml.dmlc.mxnet.{NDArray, Optimizer, LRScheduler}
 import ml.dmlc.mxnet.NDArrayConversions._
 
 /**
  * RMSProp optimizer as described in Tieleman & Hinton, 2012.
  * http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
- *
- * @author Yuan Tang, Yizhi Liu
  *
  * @param learningRate Float, Step size.
  * @param gamma1 Float, decay factor of moving average for gradient, gradient^^2.
@@ -17,9 +33,9 @@ import ml.dmlc.mxnet.NDArrayConversions._
  * @param clipGradient Float, clip gradient in range [-clip_gradient, clip_gradient]
  * @param lrScheduler The learning rate scheduler
  */
-class RMSProp(val learningRate: Float = 0.002f, val rescaleGradient: Float = 1.0f,
-              val gamma1: Float = 0.95f, val gamma2: Float = 0.9f, val wd: Float = 0.0f,
-              val lrScheduler: LRScheduler = null, val clipGradient: Float = 0f) extends Optimizer {
+class RMSProp(val learningRate: Float = 0.002f, rescaleGradient: Float = 1.0f,
+              gamma1: Float = 0.95f, gamma2: Float = 0.9f, wd: Float = 0.0f,
+              lrScheduler: LRScheduler = null, clipGradient: Float = 0f) extends Optimizer {
 
   /**
    * Update the parameters.
@@ -74,6 +90,26 @@ class RMSProp(val learningRate: Float = 0.002f, val rescaleGradient: Float = 1.0
       n.dispose()
       g.dispose()
       delta.dispose()
+    }
+  }
+
+  override def serializeState(state: AnyRef): Array[Byte] = {
+    if (state != null) {
+      val (n, g, delta) = state.asInstanceOf[(NDArray, NDArray, NDArray)]
+      SerializerUtils.serializeNDArrays(n, g, delta)
+    } else {
+      null
+    }
+  }
+
+  override def deserializeState(bytes: Array[Byte]): AnyRef = {
+    if (bytes != null) {
+      val ndArrays = SerializerUtils.deserializeNDArrays(bytes)
+      require(ndArrays.size == 3, s"Got ${ndArrays.size} arrays, expected 3.")
+      val state = (ndArrays(0), ndArrays(1), ndArrays(2))
+      state.asInstanceOf[AnyRef]
+    } else {
+      null
     }
   }
 }

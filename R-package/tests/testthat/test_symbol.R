@@ -18,4 +18,17 @@ test_that("basic symbol operation", {
   expect_equal(arguments(composed), c('data', 'fc1_weight', 'fc1_bias', 'fc2_weight', 'fc2_bias', 'fc3_weight', 'fc3_bias', 'fc4_weight', 'fc4_bias'))
 })
 
+test_that("symbol attributes access", {
+  str <- "(1, 1, 1, 1)"
+  x = mx.symbol.Variable('x')
+  x$attributes <- list(`__shape__` = str)
+  
+  expect_equal(x$attributes$`__shape__`, str)
+  
+  y = mx.symbol.Variable('y')
+  y$attributes$`__shape__` <- str
+  
+  expect_equal(y$attributes$`__shape__`, str)
+})
+
 

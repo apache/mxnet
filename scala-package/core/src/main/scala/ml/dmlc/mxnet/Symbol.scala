@@ -1,6 +1,24 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
+import ml.dmlc.mxnet.DType.DType
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -11,7 +29,6 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  * WARNING: it is your responsibility to clear this object through dispose().
  * NEVER rely on the GC strategy
  * </b>
- * @author Yizhi Liu
  */
 // scalastyle:off finalize
 class Symbol private(private[mxnet] val handle: SymbolHandle) {
@@ -91,7 +108,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    * List all the arguments in the symbol.
    * @return Array of all the arguments.
    */
-  def listArguments(): Seq[String] = {
+  def listArguments(): IndexedSeq[String] = {
     val arr = ArrayBuffer.empty[String]
     checkCall(_LIB.mxSymbolListArguments(handle, arr))
     arr
@@ -101,7 +118,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    * List all outputs in the symbol.
    * @return : List of all the outputs.
    */
-  def listOutputs(): Seq[String] = {
+  def listOutputs(): IndexedSeq[String] = {
     val arr = ArrayBuffer.empty[String]
     checkCall(_LIB.mxSymbolListOutputs(handle, arr))
     arr
@@ -116,7 +133,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    * A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
    * Most operators do not have Auxiliary states.
    */
-  def listAuxiliaryStates(): Seq[String] = {
+  def listAuxiliaryStates(): IndexedSeq[String] = {
     val sarr = ArrayBuffer.empty[String]
     checkCall(_LIB.mxSymbolListAuxiliaryStates(handle, sarr))
     sarr
@@ -138,11 +155,11 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    *            List of types of outputs.
    *            The order is in the same order as list_auxiliary()
    */
-  def inferType(args: Class[_ >: Float with Int with Double]*)
-    : (Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]]) = {
-    val sdata: Array[Int] = args.map(NDArray.DTYPE_NATIVE_TO_MX.getOrElse(_, -1)).toArray
+  def inferType(args: DType*) : (Seq[DType], Seq[DType], Seq[DType]) = {
+    val sdata: Array[Int] = args.map { dtype =>
+      if (dtype == null) -1
+      else dtype.id
+    }.toArray
     inferType(null, sdata)
   }
 
@@ -162,22 +179,14 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    *            List of types of outputs.
    *            The order is in the same order as list_auxiliary()
    */
-  def inferType(kwargs: Map[String, Class[_ >: Float with Int with Double]])
-    : (Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]]) = {
-    val filteredArgs = kwargs.filter { case (key, value) =>
-      NDArray.DTYPE_NATIVE_TO_MX.contains(value)
-    }
-    val keys = filteredArgs.keys.toArray
-    val sdata = filteredArgs.values.map(NDArray.DTYPE_NATIVE_TO_MX(_)).toArray
+  def inferType(kwargs: Map[String, DType]) : (Seq[DType], Seq[DType], Seq[DType]) = {
+    val keys = kwargs.keys.toArray
+    val sdata = kwargs.values.map(_.id).toArray
     inferType(keys, sdata)
   }
 
   private def inferType(keys: Array[String], values: Array[Int])
-    : (Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]]) = {
+    : (Seq[DType], Seq[DType], Seq[DType]) = {
     val argTypeData = ListBuffer.empty[Int]
     val outTypeData = ListBuffer.empty[Int]
     val auxTypeData = ListBuffer.empty[Int]
@@ -185,9 +194,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
     checkCall(_LIB.mxSymbolInferType(
       handle, keys, values, argTypeData, outTypeData, auxTypeData, complete))
     if (complete.value != 0) {
-      (argTypeData.map(NDArray.DTYPE_MX_TO_NATIVE),
-        outTypeData.map(NDArray.DTYPE_MX_TO_NATIVE),
-        auxTypeData.map(NDArray.DTYPE_MX_TO_NATIVE))
+      (argTypeData.map(DType(_)), outTypeData.map(DType(_)), auxTypeData.map(DType(_)))
     } else {
       (null, null, null)
     }
@@ -205,7 +212,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    * outShapes List of shapes of outputs. The order is in the same order as list_outputs()
    * auxShapes List of shapes of outputs. The order is in the same order as list_auxiliary()
    */
-  def inferShape(args: Shape*): (Seq[Shape], Seq[Shape], Seq[Shape]) = {
+  def inferShape(args: Shape*): (IndexedSeq[Shape], IndexedSeq[Shape], IndexedSeq[Shape]) = {
     val keys: Array[String] = null
     val indPtr = ArrayBuffer(0)
     val sdata = ArrayBuffer.empty[Int]
@@ -229,7 +236,8 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    * outShapes List of shapes of outputs. The order is in the same order as list_outputs()
    * auxShapes List of shapes of outputs. The order is in the same order as list_auxiliary()
    */
-  def inferShape(kwargs: Map[String, Shape]): (Seq[Shape], Seq[Shape], Seq[Shape]) = {
+  def inferShape(kwargs: Map[String, Shape])
+      : (IndexedSeq[Shape], IndexedSeq[Shape], IndexedSeq[Shape]) = {
     val keys = ArrayBuffer.empty[String]
     val indPtr = ArrayBuffer(0)
     val sdata = ArrayBuffer.empty[Int]
@@ -242,18 +250,18 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
   }
 
   def inferShape(keys: Array[String], indPtr: Array[Int], values: Array[Int])
-    : (Seq[Shape], Seq[Shape], Seq[Shape]) = {
+    : (IndexedSeq[Shape], IndexedSeq[Shape], IndexedSeq[Shape]) = {
     val argShapeData = ListBuffer.empty[Array[Int]]
     val outShapeData = ListBuffer.empty[Array[Int]]
     val auxShapeData = ListBuffer.empty[Array[Int]]
     val complete = new RefInt
 
-    checkCall(_LIB.mxSymbolInferShape(handle, indPtr.size - 1, keys, indPtr, values,
+    checkCall(_LIB.mxSymbolInferShape(handle, indPtr.length - 1, keys, indPtr, values,
       argShapeData, outShapeData, auxShapeData, complete))
     if (complete.value != 0) {
-      (argShapeData.map(s => Shape(s)),
-       outShapeData.map(s => Shape(s)),
-       auxShapeData.map(s => Shape(s)))
+      (argShapeData.map(s => Shape(s)).toIndexedSeq,
+       outShapeData.map(s => Shape(s)).toIndexedSeq,
+       auxShapeData.map(s => Shape(s)).toIndexedSeq)
     } else {
       (null, null, null)
     }
@@ -358,24 +366,26 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    */
   def simpleBind(ctx: Context, gradReq: String = "write",
                  shapeDict: Map[String, Shape],
-                 typeDict: Map[String, Class[_ >: Float with Int with Double]] = null): Executor = {
+                 typeDict: Map[String, DType] = null)
+                 : Executor = {
     val types =
-      if (typeDict == null) listArguments().map((_, classOf[Float])).toMap
-      else typeDict
+      if (typeDict == null) {
+        listArguments().map((_, MX_REAL_TYPE)).toMap
+      } else {
+        typeDict
+      }
     val (argShapes, _, auxShapes) = inferShape(shapeDict)
     val (argTypes, _, auxTypes) = inferType(types)
     require(argShapes != null && argTypes != null, "Input node is not complete")
     // alloc space
     val argNDArrays = (argShapes zip argTypes) map { case (shape, t) =>
-      // TODO: NDArray dtype
-      NDArray.zeros(shape, ctx)
+      NDArray.zeros(shape, ctx, dtype = t)
     }
     val gradNDArrays =
       if (gradReq != "null") {
         (((listArguments() zip argShapes) zip argTypes) flatMap { case ((name, shape), t) =>
           if (!(name.endsWith("data") || name.endsWith("label"))) {
-            // TODO: NDArray dtype
-            Map(name -> NDArray.zeros(shape, ctx))
+            Map(name -> NDArray.zeros(shape, ctx, dtype = t))
           } else {
             Map.empty[String, NDArray]
           }
@@ -384,8 +394,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
         null
       }
     val auxNDArrays = (auxShapes zip auxTypes) map { case (shape, t) =>
-      // TODO: NDArray dtype
-      NDArray.zeros(shape, ctx)
+      NDArray.zeros(shape, ctx, dtype = t)
     }
     bind(ctx, argNDArrays, gradNDArrays, gradReq, auxNDArrays, null, null)
   }
@@ -749,8 +758,8 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
     executor._group2ctx =
       if (group2ctx == null) null
       else group2ctx.map { case (key, value) =>
-        (key -> new Context(value.deviceType, value.deviceId))
-      }.toMap
+        key -> new Context(value.deviceType, value.deviceId)
+      }
     executor
   }
 
@@ -765,15 +774,14 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
     jsonStr.value
   }
 }
-// scalastyle:on finalize
 
+// scalastyle:on finalize
+@AddSymbolFunctions(false)
 object Symbol {
   private type SymbolCreateNamedFunc = Map[String, Any] => Symbol
   private val logger = LoggerFactory.getLogger(classOf[Symbol])
   private val functions: Map[String, SymbolFunction] = initSymbolModule()
   private val bindReqMap = Map("null" -> 0, "write" -> 1, "add" -> 3)
-
-  // TODO: _CrossDeviceCopy
 
   def pow(sym1: Symbol, sym2: Symbol): Symbol = {
     Symbol.createFromListedSymbols("_Power")(Array(sym1, sym2))
@@ -785,118 +793,6 @@ object Symbol {
 
   def pow[@specialized(Int, Float, Double) V](number: V, sym: Symbol): Symbol = {
     Symbol.createFromListedSymbols("_RPowerScalar")(Array(sym), Map("scalar" -> number.toString))
-  }
-
-  /**
-   * Take absolute value of the src
-   * @param src Source symbolic input to the function
-   */
-  def abs(src: Symbol): Symbol = {
-    createFromListedSymbols("abs")(Array(src))
-  }
-
-  /**
-   * Take sign value of the src
-   * @param src Source symbolic input to the function
-   */
-  def sign(src: Symbol): Symbol = {
-    createFromListedSymbols("sign")(Array(src))
-  }
-
-  /**
-   * Take round value of the src
-   * @param src Source input to the function
-   */
-  def round(src: Symbol): Symbol = {
-    createFromListedSymbols("round")(Array(src))
-  }
-
-  /**
-   * Take ceil value of the src
-   * src Source input to the function
-   */
-  def ceil(src: Symbol): Symbol = {
-    createFromListedSymbols("ceil")(Array(src))
-  }
-
-  /**
-   * Take floor value of the src
-   * @param src Source input to the function
-   */
-  def floor(src: Symbol): Symbol = {
-    createFromListedSymbols("floor")(Array(src))
-  }
-
-  /**
-   * Take square of the src
-   * @param src Source symbolic input to the function
-   */
-  def square(src: Symbol): Symbol = {
-    createFromListedSymbols("square")(Array(src))
-  }
-
-  /**
-   * Take sum of the src
-   * @param src Source symbolic input to the function
-   */
-  def sum(src: Symbol): Symbol = {
-    createFromListedSymbols("sum")(Array(src))
-  }
-
-  /**
-   * Take sqrt of the src
-   * src Source symbolic input to the function
-   */
-  def sqrt(src: Symbol): Symbol = {
-    createFromListedSymbols("sqrt")(Array(src))
-  }
-
-  /**
-   * Take rsqrt of the src
-   * @param src Source symbolic input to the function
-   */
-  def rsqrt(src: Symbol): Symbol = {
-    createFromListedSymbols("rsqrt")(Array(src))
-  }
-
-  /**
-   * Take exp of the src
-   * @param src Source symbolic input to the function
-   */
-  def exp(src: Symbol): Symbol = {
-    createFromListedSymbols("exp")(Array(src))
-  }
-
-  /**
-   * Take log of the src
-   * @param src Source symbolic input to the function
-   */
-  def log(src: Symbol): Symbol = {
-    createFromListedSymbols("log")(Array(src))
-  }
-
-  /**
-   * Take cos of the src
-   * @param src Source symbolic input to the function
-   */
-  def cos(src: Symbol): Symbol = {
-    createFromListedSymbols("cos")(Array(src))
-  }
-
-  /**
-   * Take sin of the src
-   * @param src Source symbolic input to the function
-   */
-  def sin(src: Symbol): Symbol = {
-    createFromListedSymbols("sin")(Array(src))
-  }
-
-  /**
-   * Return transpose of the src
-   * @param src Source symbolic input to the function
-   */
-  def transpose(src: Symbol): Symbol = {
-    createFromListedSymbols("transpose")(Array(src))
   }
 
   def max(left: Symbol, right: Symbol): Symbol = {
@@ -938,422 +834,6 @@ object Symbol {
   }
 
   /**
-   * Get output from a symbol and pass 0 gradient back
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data.
-   */
-  def BlockGrad(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("BlockGrad", name, attr)
-  }
-
-  /**
-   * Crop the 2th and 3th dim of input data, with the corresponding size of w_h or with width
-   * and height of the second input symbol
-   *
-   * Parameters
-   * ----------
-   * num_args : int, required.
-   *            Number of inputs for crop,
-   *            if equals one, then we will use the h_w for crop height and width,
-   *            else if equals two,
-   *            then we will use the height and width of the second input symbol,
-   *            we name crop_like here
-   * offset : Shape(tuple), optional, default=(0, 0), corp offset coordinate: (y, x)
-   * h_w : Shape(tuple), optional, default=(0, 0), corp height and weight: (h, w)
-   * center_crop : boolean, optional, default=False.
-   *               If set to true, then it will use be the center_crop,
-   *               or it will crop using the shape of crop_like
-   */
-  def Crop(name: String = null, attr: Map[String, String] = null)(
-           inputs: Array[Symbol], params: Map[String, Any] = null): Symbol = {
-    createFromListedSymbolsNoCheck("Crop", name, attr)(inputs, params)
-  }
-
-  /**
-   * Apply dropout to input
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to dropout.
-   * p : float, optional, default=0.5. Fraction of the input that gets dropped out at training time
-   */
-  def Dropout(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("Dropout", name, attr)
-  }
-
-  /**
-   * Apply a sparse regularization to the output a sigmoid activation function.
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data.
-   * sparseness_target : float, optional, default=0.1. The sparseness target
-   * penalty : float, optional, default=0.001. The tradeoff parameter for the sparseness penalty
-   * momentum : float, optional, default=0.9. The momentum for running average
-   */
-  def IdentityAttachKLSparseReg(name: String = null,
-                                attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("IdentityAttachKLSparseReg", name, attr)
-  }
-
-  /**
-   * Apply activation function to input.
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to activation function.
-   * act_type : {'elu', 'leaky', 'prelu', 'rrelu'},optional, default='leaky'
-   *            Activation function to be applied.
-   * slope : float, optional, default=0.25. Init slope for the activation. (For leaky and elu only)
-   * lower_bound : float, optional, default=0.125. Lower bound of random slope. (For rrelu only)
-   * upper_bound : float, optional, default=0.334. Upper bound of random slope. (For rrelu only)
-   */
-  def LeakyReLU(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("LeakyReLU", name, attr)
-  }
-
-  /**
-   * Apply convolution to input then add a bias.
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to the ConvolutionOp.
-   * alpha : float, optional, default=0.0001,
-   *         value of the alpha variance scaling parameter in the normalization formula
-   * beta : float, optional, default=0.75,
-   *        value of the beta power parameter in the normalization formula
-   * knorm : float, optional, default=2, value of the k parameter in normalization formula
-   * nsize : int (non-negative), required, normalization window width in elements.
-   */
-  def LRN(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("LRN", name, attr)
-  }
-
-  /**
-   * Use mean absolute error regression for final output, this is used on final output of a net.
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to function.
-   * label : Symbol. Input label to function.
-   * grad_scale : float, optional, default=1. Scale the gradient by a float factor
-   */
-  def MAERegressionOutput(name: String = null,
-                          attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("MAERegressionOutput", name, attr)
-  }
-
-  /**
-   * Reshape input to target shape
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to  reshape.
-   * target_shape : Shape(tuple), required. Target new shape. One and only one dim can be 0,
-   *                in which case it will be infered from the rest of dims
-   */
-  def Reshape(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("Reshape", name, attr)
-  }
-
-  /**
-   * Slice channel into many outputs with equally divided channel
-   *
-   * Parameters
-   * ----------
-   * num_outputs : int, required. Number of outputs to be sliced.
-   */
-  def SliceChannel(name: String = null, attr: Map[String, String] = null)(
-                   inputs: Array[Symbol], params: Map[String, Any] = null): Symbol = {
-    createFromListedSymbolsNoCheck("SliceChannel", name, attr)(inputs, params)
-  }
-
-  /**
-   * Apply softmax activation to input.
-   * This is intended for internal layers. For output (loss layer) please use SoftmaxOutput.
-   * If type=instance,
-   * this operator will compute a softmax for each instance in the batch; this is the default mode.
-   * If type=channel,
-   * this operator will compute a num_channel-class softmax at each position of each instance;
-   * this can be used for fully convolutional network, image segmentation, etc.
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to activation function.
-   * type : {'channel', 'instance'},optional, default='instance'. Softmax Mode.
-   *        If set to instance,
-   *        this operator will compute a softmax for each instance in the batch;
-   *        this is the default mode.
-   *        If set to channel,
-   *        this operator will compute a num_channel-class softmax
-   *        at each position of each instance;
-   *        this can be used for fully convolutional network, image segmentation, etc.
-   */
-  def SoftmaxActivation(name: String = null,
-                        attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("SoftmaxActivation", name, attr)
-  }
-
-  /**
-   * Apply matrix multiplication to input then add a bias.
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to the FullyConnectedOp.
-   * weight : Symbol. Weight matrix.
-   * bias : Symbol. Bias parameter.
-   * num_hidden : int, required. Number of hidden nodes of the output.
-   * no_bias : boolean, optional, default=False. Whether to disable bias parameter.
-   */
-  def FullyConnected(name: String = null,
-                     attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("FullyConnected", name, attr)
-  }
-
-  /**
-   * Apply activation function to input.
-   * Softmax Activation is only available with CUDNN on GPUand will be computed
-   * at each location across channel if input is 4D.
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to activation function.
-   * act_type : {'relu', 'sigmoid', 'softrelu', 'tanh'}, required.
-   *            Activation function to be applied.
-   */
-  def Activation(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("Activation", name, attr)
-  }
-
-  /**
-   * Apply convolution to input then add a bias.
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to the ConvolutionOp.
-   * weight : Symbol. Weight matrix.
-   * bias : Symbol. Bias parameter.
-   * kernel : Shape(tuple), required. Convolution kernel size: (y, x)
-   * stride : Shape(tuple), optional, default=(1, 1). Convolution stride: (y, x)
-   * dilate : Shape(tuple), optional, default=(1, 1). Convolution dilate: (y, x)
-   * pad : Shape(tuple), optional, default=(0, 0). Pad for convolution: (y, x)
-   * num_filter : int (non-negative), required. Convolution filter(channel) number
-   * num_group : int (non-negative), optional, default=1
-   *             Number of groups partition.
-   *             This option is not supported by CuDNN,
-   *             you can use SliceChannel to num_group,
-   *             apply convolution and concat instead to achieve the same need.
-   * workspace : long (non-negative), optional, default=512. Tmp workspace for convolution (MB).
-   * no_bias : boolean, optional, default=False. Whether to disable bias parameter.
-   */
-  def Convolution(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("Convolution", name, attr)
-  }
-
-  /**
-   * Apply deconvolution to input then add a bias.
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to the DeconvolutionOp.
-   * weight : Symbol. Weight matrix.
-   * bias : Symbol. Bias parameter.
-   * kernel : Shape(tuple), required, deconvolution kernel size: (y, x)
-   * stride : Shape(tuple), optional, default=(1, 1), deconvolution stride: (y, x)
-   * pad : Shape(tuple), optional, default=(0, 0), pad for deconvolution: (y, x)
-   * num_filter : int (non-negative), required, deconvolution filter(channel) number
-   * num_group : int (non-negative), optional, default=1, number of groups partition
-   * workspace : long (non-negative), optional, default=512. Tmp workspace for deconvolution (MB)
-   * no_bias : boolean, optional, default=True. Whether to disable bias parameter.
-   */
-  def Deconvolution(name: String = null,
-                    attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("Deconvolution", name, attr)
-  }
-
-  /**
-   * Perform spatial pooling on inputs.
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to the pooling operator.
-   * kernel : Shape(tuple), required, pooling kernel size: (y, x)
-   * pool_type : {'avg', 'max', 'sum'}, required. Pooling type to be applied.
-   * stride : Shape(tuple), optional, default=(1, 1), stride for pooling (y, x)
-   * pad : Shape(tuple), optional, default=(0, 0), pad for pooling: (y, x)
-   */
-  def Pooling(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("Pooling", name, attr)
-  }
-
-  /**
-   * Flatten input
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to flatten.
-   */
-  def Flatten(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("Flatten", name, attr)
-  }
-
-  /**
-   * Perform a softmax transformation on input, backprop with logloss.
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to softmax.
-   * label : Symbol. Label data.
-   * grad_scale : float, optional, default=1. Scale the gradient by a float factor
-   * ignore_label : float, optional, default=-1.
-   *                the ignore_label will not work in backward,
-   *                and this onlybe used when multi_output=true
-   * multi_output : boolean, optional, default=False.
-   *                If set to true, for a (n,k,x_1,..,x_n) dimensionalinput tensor,
-   *                softmax will generate n*x_1*...*x_n output, eachhas k classes
-   * use_ignore : boolean, optional, default=False.
-   *              If set to true,
-   *              the ignore_label value will not contributorto the backward gradient
-   */
-  def SoftmaxOutput(name: String = null,
-                    attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("SoftmaxOutput", name, attr)
-  }
-
-  /**
-   * Cast array to a different data type.
-   * Parameters
-   * ----------
-   * data : Symbol, Input data to cast function.
-   * dtype : {Int, Double, Short, Float}, required, Target data type.
-   */
-  def Cast(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("Cast", name, attr)
-  }
-
-  /**
-   * Perform an elementwise sum over all the inputs.
-   *
-   * Parameters
-   * ----------
-   * num_args : int, required. Number of inputs to be sum.
-   */
-  def ElementWiseSum(name: String = null,
-                     attr: Map[String, String] = null)(
-                     symbols: Array[Symbol], params: Map[String, Any] = null): Symbol = {
-    createFromListedSymbolsNoCheck("ElementWiseSum", name, attr)(symbols, params)
-  }
-
-  /**
-   * Apply batch normalization to input.
-   *
-   * Parameters
-   * ----------
-   * data : Symbol, Input data to batch normalization
-   * eps : float, optional, default=0.001, Epsilon to prevent div 0
-   * momentum : float, optional, default=0.9, Momentum for moving average
-   * fix_gamma : boolean, optional, default=True, Fix gamma while training
-   */
-  def BatchNorm(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("BatchNorm", name, attr)
-  }
-
-  /**
-   * Perform nearest neighbor/bilinear up sampling to inputs
-   *
-   * Parameters
-   * ----------
-   * data : Symbol[]. Array of tensors to upsample
-   * scale : int (non-negative), required. Up sampling scale
-   * num_filter : int (non-negative), optional, default=0.
-   *              Input filter. Only used by nearest sample_type.
-   * sample_type : {'bilinear', 'nearest'}, required, upsampling method
-   * multi_input_mode : {'concat', 'sum'},optional, default='concat'
-   *                    How to handle multiple input.
-   *                    concat means concatenate upsampled images along the channel dimension.
-   *                    sum means add all images together,
-   *                    only available for nearest neighbor upsampling.
-   * num_args : int, required. Number of inputs to be upsampled.
-   *            For nearest neighbor upsampling, this can be 1-N;
-   *            the size of output will be(scale*h_0,scale*w_0)
-   *            and all other inputs will be upsampled to thesame size.
-   *            For bilinear upsampling this must be 2; 1 input and 1 weight.
-   */
-  def UpSampling(name: String = null, attr: Map[String, String] = null)(
-                 inputs: Array[Symbol], params: Map[String, Any] = null): Symbol = {
-    createFromListedSymbolsNoCheck("UpSampling", name, attr)(inputs, params)
-  }
-
-  /**
-   * Perform an feature concat on channel dim (dim 1) over all the inputs.
-   *
-   * Parameters
-   * ----------
-   * data : Symbol[]. List of tensors to concatenate
-   * num_args : int, required. Number of inputs to be concated.
-   * dim : int, optional, default='1'. the dimension to be concated.
-   */
-  def Concat(name: String = null, attr: Map[String, String] = null)(
-             inputs: Array[Symbol], params: Map[String, Any] = null): Symbol = {
-    createFromListedSymbolsNoCheck("Concat", name, attr)(inputs, params)
-  }
-
-  /**
-   * Use Logistic regression for final output, this is used on final output of a net.
-   * Logistic regression is suitable for binary classification or probability prediction tasks.
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to function.
-   * label : Symbol. Input label to function.
-   * grad_scale : float, optional, default=1. Scale the gradient by a float factor
-   */
-  def LogisticRegressionOutput(name: String = null,
-                               attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("LogisticRegressionOutput", name, attr)
-  }
-
-  /**
-   * Use linear regression for final output, this is used on final output of a net.
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to function.
-   * label : Symbol. Input label to function.
-   * grad_scale : float, optional, default=1. Scale the gradient by a float factor
-   */
-  def LinearRegressionOutput(name: String = null,
-                             attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("LinearRegressionOutput", name, attr)
-  }
-
-  /**
-   * Apply swapaxis to input.
-   *
-   * Parameters
-   * ----------
-   * data : Symbol. Input data to the SwapAxisOp.
-   * dim1 : int (non-negative), default=0, the first axis to be swapped.
-   * dim2 : int (non-negative), default=0, the second axis to be swapped.
-   */
-  def SwapAxis(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("SwapAxis", name, attr)
-  }
-
-  /**
-   * Get embedding for one-hot input
-   *
-   * Parameters
-   * ----------
-   * data : Symbol, Input data to the EmbeddingOp.
-   * weight : Symbol, Embedding weight matrix.
-   * input_dim : int, input dim of one-hot encoding
-   * output_dim : int, output dim of embedding
-   */
-  def Embedding(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("Embedding", name, attr)
-  }
-
-  /**
    * Create a symbol that groups symbols together.
    * @param symbols List of symbols to be grouped.
    * @return The created group symbol.
@@ -1367,27 +847,62 @@ object Symbol {
 
   // List and add all the atomic symbol functions to current module.
   private def initSymbolModule(): Map[String, SymbolFunction] = {
-    val symbolList = ListBuffer.empty[SymbolHandle]
-    checkCall(_LIB.mxSymbolListAtomicSymbolCreators(symbolList))
-    symbolList.map(makeAtomicSymbolFunction).toMap
+    val opNames = ListBuffer.empty[String]
+    checkCall(_LIB.mxListAllOpNames(opNames))
+    opNames.map(opName => {
+      val opHandle = new RefLong
+      checkCall(_LIB.nnGetOpHandle(opName, opHandle))
+      makeAtomicSymbolFunction(opHandle.value, opName)
+    }).toMap
   }
 
   // Create an atomic symbol function by handle and function name.
-  private def makeAtomicSymbolFunction(handle: SymbolHandle): (String, SymbolFunction) = {
+  private def makeAtomicSymbolFunction(handle: SymbolHandle, aliasName: String)
+      : (String, SymbolFunction) = {
     val name = new RefString
     val desc = new RefString
     val keyVarNumArgs = new RefString
-    val numArgs = new MXUintRef
+    val numArgs = new RefInt
     val argNames = ListBuffer.empty[String]
     val argTypes = ListBuffer.empty[String]
     val argDescs = ListBuffer.empty[String]
 
     checkCall(_LIB.mxSymbolGetAtomicSymbolInfo(
       handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs))
-    val paramStr = ctypes2docstring(argNames, argTypes, argDescs)
-    val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n"
-    logger.debug("Atomic Symbol function defination:\n{}", docStr)
-    (name.value, new SymbolFunction(handle, keyVarNumArgs.value))
+    (aliasName, new SymbolFunction(handle, keyVarNumArgs.value))
+  }
+
+  // Used by SymbolMacro
+  private[mxnet] def createSymbolGeneral(operator: String, name: String, attr: Map[String, String],
+      symbols: Seq[Symbol], kwargs: Map[String, Any]): Symbol = {
+    val symbolKwargs: Map[String, Symbol] =
+      if (kwargs == null || kwargs.isEmpty) {
+        Map.empty[String, Symbol]
+      } else {
+        kwargs.filter { case (key, value) =>
+          value.isInstanceOf[Symbol]
+        }.map { case (key, value) =>
+          (key, value.asInstanceOf[Symbol])
+        }
+      }
+    val strKwargs: Map[String, String] =
+      if (kwargs == null || kwargs.isEmpty) {
+        Map.empty[String, String]
+      } else {
+        kwargs.filter { case (key, value) =>
+          !value.isInstanceOf[Symbol]
+        }.map { case (key, value) =>
+          (key, value.toString)
+        }
+      }
+    require(symbols.isEmpty || symbolKwargs.isEmpty, String.format(
+      "%s can only accept input Symbols either as positional or keyword arguments, not both",
+      operator))
+    if (symbols.isEmpty) {
+      createFromNamedSymbols(operator, name, attr)(symbolKwargs, strKwargs)
+    } else {
+      createFromListedSymbols(operator, name, attr)(symbols.toArray, strKwargs)
+    }
   }
 
   /**
@@ -1446,7 +961,7 @@ object Symbol {
     val function = functions(operator)
     require(function != null, s"invalid operator name $operator")
     require(function.keyVarNumArgs == null || function.keyVarNumArgs.isEmpty,
-      "This function support variable length of Symbol arguments.\n" +
+      s"[$operator] support variable length of Symbol arguments.\n" +
       "Please pass all the input Symbols via positional arguments instead of keyword arguments.")
 
     val paramKeys =
@@ -1470,6 +985,7 @@ object Symbol {
 
   // a more friendly interface for creating symbols
   // all values except symbols in kwargs will be cast to String using its toString() method
+  @Deprecated
   def createFromNamedSymbolsNoCheck(
       operator: String, name: String = null, attr: Map[String, String] = null)(
       kwargs: Map[String, Any]): Symbol = {
@@ -1488,9 +1004,10 @@ object Symbol {
 
   // a more friendly interface for creating symbols
   // all values except symbols in kwargs will be cast to String using its toString() method
+  @Deprecated
   def createFromListedSymbolsNoCheck(
-       operator: String, name: String = null, attr: Map[String, String] = null)(
-       symbols: Array[Symbol], kwargs: Map[String, Any] = null): Symbol = {
+      operator: String, name: String = null, attr: Map[String, String] = null)(
+      symbols: Array[Symbol], kwargs: Map[String, Any] = null): Symbol = {
     val args =
       if (kwargs == null) null
       else kwargs.map { case (key, value) => (key, value.toString) }
@@ -1588,11 +1105,15 @@ class SymbolConversions[@specialized(Int, Float, Double) V](val value: V) {
   }
 
   def *(other: Symbol): Symbol = {
-    other + value
+    other * value
   }
 
   def /(other: Symbol): Symbol = {
     Symbol.createFromListedSymbols("_RDivScalar")(
       Array(other), Map("scalar" -> value.toString))
   }
+}
+
+trait SymbolGenerator {
+  def generate(key: AnyRef): Symbol
 }

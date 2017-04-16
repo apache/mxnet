@@ -4,11 +4,11 @@ require(mxnet)
 download_ <- function(data_dir) {
     dir.create(data_dir, showWarnings = FALSE)
     setwd(data_dir)
-    if ((!file.exists('train-images-idx3-ubyte')) || 
+    if ((!file.exists('train-images-idx3-ubyte')) ||
         (!file.exists('train-labels-idx1-ubyte')) ||
         (!file.exists('t10k-images-idx3-ubyte')) ||
         (!file.exists('t10k-labels-idx1-ubyte'))) {
-        download.file(url='http://webdocs.cs.ualberta.ca/~bx3/data/mnist.zip',
+        download.file(url='http://data.mxnet.io/mxnet/data/mnist.zip',
                       destfile='mnist.zip', method='wget')
         unzip("mnist.zip")
         file.remove("mnist.zip")
@@ -83,7 +83,7 @@ get_iterator <- function(data_shape) {
 }
 
 parse_args <- function() {
-    parser <- ArgumentParser(description='train an image classifer on mnist')  
+    parser <- ArgumentParser(description='train an image classifer on mnist')
     parser$add_argument('--network', type='character', default='mlp',
                         choices = c('mlp', 'lenet'),
                         help = 'the cnn to use')
@@ -93,8 +93,10 @@ parse_args <- function() {
                         help='the gpus will be used, e.g "0,1,2,3"')
     parser$add_argument('--batch-size', type='integer', default=128,
                         help='the batch size')
-    parser$add_argument('--lr', type='double', default=.1,
+    parser$add_argument('--lr', type='double', default=.05,
                         help='the initial learning rate')
+    parser$add_argument('--mom', type='double', default=.9,
+                        help='momentum for sgd')
     parser$add_argument('--model-prefix', type='character',
                         help='the prefix of the model to load/save')
     parser$add_argument('--num-round', type='integer', default=10,
@@ -113,6 +115,32 @@ if (args$network == 'mlp') {
     data_shape <- c(28, 28, 1)
     net <- get_lenet()
 }
+
 # train
-source("train_model.R")
-train_model.fit(args, net, get_iterator(data_shape))
+data_loader <- get_iterator(data_shape)
+data <- data_loader(args)
+train <- data$train
+val <- data$value 
+
+if (is.null(args$gpus)) {
+  devs <- mx.cpu()  
+} else {
+  devs <- lapply(unlist(strsplit(args$gpus, ",")), function(i) {
+    mx.gpu(as.integer(i))
+  })
+}
+
+mx.set.seed(0)
+
+model <- mx.model.FeedForward.create(
+  X                  = train,
+  eval.data          = val,
+  ctx                = devs,
+  symbol             = net,
+  num.round          = args$num_round,
+  array.batch.size   = args$batch_size,
+  learning.rate      = args$lr,
+  momentum           = args$mom,
+  eval.metric        = mx.metric.accuracy,
+  initializer        = mx.init.uniform(0.07),
+  batch.end.callback = mx.callback.log.train.metric(100))

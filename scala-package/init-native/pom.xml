@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>ml.dmlc.mxnet</groupId>
+    <artifactId>mxnet-parent_2.11</artifactId>
+    <version>0.1.2-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>mxnet-scala-init-native-parent</artifactId>
+  <version>0.1.2-SNAPSHOT</version>
+  <name>MXNet Scala Package - Initializer Native Parent</name>
+  <packaging>pom</packaging>
+
+  <profiles>
+    <profile>
+      <id>osx-x86_64-cpu</id>
+      <modules>
+        <module>osx-x86_64</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>linux-x86_64-cpu</id>
+      <modules>
+        <module>linux-x86_64</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>linux-x86_64-gpu</id>
+      <modules>
+        <module>linux-x86_64</module>
+      </modules>
+    </profile>
+  </profiles>
+</project>

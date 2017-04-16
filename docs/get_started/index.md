@@ -1,319 +1,165 @@
-# Getting Started
+# MXNet: A Scalable Deep Learning Framework
 
-This is a getting started tutorial of MXNet.
-We will train a
-[multi-layer perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron)
-(MLP) on
-the [MNIST handwritten digit dataset](http://yann.lecun.com/exdb/mnist/) to get
-the basic idea of how to use MXNet.
+MXNet is an open-source deep learning framework that allows you to define,
+train, and deploy deep neural networks on a wide array of devices, from cloud
+infrastructure to mobile devices.  It is highly scalable, allowing for fast
+model training, and supports a flexible programming model and multiple
+languages. MXNet allows you to mix symbolic and imperative programming flavors
+to maximize both efficiency and productivity.  MXNet is built on a dynamic
+dependency scheduler that automatically parallelizes both symbolic and
+imperative operations on the fly.  A graph optimization layer on top of that
+makes symbolic execution fast and memory efficient. The MXNet library is
+portable and lightweight, and it scales to multiple GPUs and multiple machines.
 
-## Links to Other Resources
-Here are some other resources that can also be helpful
-- See [Installation Guide](../how_to/build.md) on how to install mxnet.
-- See [How to pages](../how_to/index.md) on various tips on using mxnet.
-- See [Tutorials](../tutorials/index.md) on tutorials on specific tasks.
+Please choose the programming language of your choice for the rest of this document.
 
-## Train MLP on MNIST
+<div class="btn-group opt-group" role="group">
+<button type="button" class="btn btn-default opt active">Python</button>
+<button type="button" class="btn btn-default opt">R</button>
+<button type="button" class="btn btn-default opt">Scala</button>
+<button type="button" class="btn btn-default opt">Julia</button>
+<button type="button" class="btn btn-default opt">Perl</button>
+</div>
+<script type="text/javascript" src='../../_static/js/options.js'></script>
 
-On MNIST, each example consists of a 28 x 28 gray image of a handwritten digit
-such as
-<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mnist.png"
-height="36" >
-and its label, which is an integer between 0 and 9. Denote by *x* and *y* the
-784-length vector of the image pixels and the label, respectively.
+## Installation
 
-MLP with no hidden layer predicts the label probabilities by
+<div class="btn-group opt-group" role="group">
+<button type="button" class="btn btn-default opt active">Pre-built Binaries</button>
+<button type="button" class="btn btn-default opt">Docker</button>
+<button type="button" class="btn btn-default opt">Cloud</button>
+<button type="button" class="btn btn-default opt">Build From Source</button>
+</div> <!-- opt-group -->
 
-```eval_rst
-.. math ::
-  \textrm{softmax}(W x + b)
+<div class="pre-built-binaries">
+
+<div class="r scala julia perl">
+Pre-built binaries will be available soon.
+</div>
+
+<div class="python">
+
+Installing the pre-build python package requires a recent version of `pip`,
+which, for example, can be installed by
+
+```bash
+wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
-here *W* is a 784-by-10 weight matrix, *b* is a 10-length bias vector. The
-*softmax* normalizes a vector into a probability distribution, namely
+<div class="btn-group opt-group" role="group">
+<button type="button" class="btn btn-default opt active">Linux</button>
+<button type="button" class="btn btn-default opt">macOS</button>
+<button type="button" class="btn btn-default opt">Windows</button>
+</div> <!-- opt-group -->
 
-```eval_rst
-.. math ::
-  \textrm{softmax}(x) = \left[ \ldots, \frac{\exp(x_i)}{\sum_j \exp(x_j)}\ldots \right]
+<div class="windows">
+
+Will be available soon.
+
+</div> <!-- windows -->
+
+<div class="macos">
+
+Install by:
+
+```bash
+pip install mxnet
 ```
 
-We can stack the layers one by one to get a MLP with multiple hidden layers. Let
-*x<sub>0</sub> = x* be the output of layer 0. Then layer *i*  outputs a
-*n<sub>i</sub>*-length vector
+</div> <!-- macos -->
 
-```eval_rst
-.. math ::
-  x_i = \sigma_i (W_i x_{i-1} + b_i)
+<div class="linux">
+
+Use one of following commands to install the desired release:
+
+```bash
+pip install mxnet       # CPU
+pip install mxnet-mkl   # CPU with MKL-DNN acceleration
+pip install mxnet-cu75  # GPU with CUDA 7.5
+pip install mxnet-cu80  # GPU with CUDA 8.0
 ```
 
-where *σ<sub>i</sub>* is the activation function such as *tanh*, and
-*W<sub>i</sub>* is of size *n<sub>i</sub>*-by-*n<sub>i-1</sub>*. Next we apply
-*softmax* to the last layer to obtain the prediction.
+The CUDA versions require both [CUDA](https://developer.nvidia.com/cuda-toolkit)
+  and [cuDNN](https://developer.nvidia.com/cudnn) are installed.
 
-The goal of training is to obtain both weights and bias for each layer to
-minimize the difference between the predicted label and the real label on the
-training data.
+</div> <!-- linux -->
 
-In the following section we will show how to implement the training program
-using different languages in MXNet.
+</div> <!-- python -->
 
-### Python
+</div> <!-- pre-build-binaries -->
 
-We first import MXNet
-```python
-import mxnet as mx
+<div class="cloud">
+
+AWS images with MXNet installed:
+
+- [Deep Learning AMI for Ubuntu](https://aws.amazon.com/marketplace/pp/B06VSPXKDX)
+- [Deep Learning AMI for Amazon Linux](https://aws.amazon.com/marketplace/pp/B01M0AXXQB)
+
+</div> <!-- cloud -->
+
+<div class="docker">
+
+Pre-build docker images are available at [docker hub](https://hub.docker.com/r/mxnet/).
+
+<div class="python">
+
+```bash
+docker pull mxnet/python
+docker pull mxnet/python:gpu
 ```
 
-Then we declare the data iterators to the training and validation datasets
-```python
-train = mx.io.MNISTIter(
-    image      = "mnist/train-images-idx3-ubyte",
-    label      = "mnist/train-labels-idx1-ubyte",
-    batch_size = 128,
-    data_shape = (784, ))
-val   = mx.io.MNISTIter(...)
+</div> <!-- python -->
+
+<div class="scala">
+
+```bash
+docker pull mxnet/scala
 ```
 
-and declare a two-layer MLP
-```python
-data = mx.symbol.Variable('data')
-fc1  = mx.symbol.FullyConnected(data = data, num_hidden=128)
-act1 = mx.symbol.Activation(data = fc1, act_type="relu")
-fc2  = mx.symbol.FullyConnected(data = act1, num_hidden = 64)
-act2 = mx.symbol.Activation(data = fc2, act_type="relu")
-fc3  = mx.symbol.FullyConnected(data = act2, num_hidden=10)
-mlp  = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
+</div> <!-- scala -->
+
+<div class="r">
+
+```bash
+docker pull mxnet/r-lang
+docker pull mxnet/r-lang:gpu
 ```
 
-Next we train a model on the data
-```python
-model = mx.model.FeedForward(
-    symbol = mlp,
-    num_epoch = 20,
-    learning_rate = .1)
-model.fit(X = train, eval_data = val)
+</div> <!-- r -->
+
+<div class="julia">
+
+```bash
+docker pull mxnet/julia
+docker pull mxnet/julia:gpu
 ```
 
-Finally we can predict by
-```python
-test = mx.io.MNISTIter(...)
-model.predict(X = test)
-```
+</div> <!-- julia -->
 
-### R
+Refer to [docker/](../../docker/) for more details.
 
-First we `require` the `mxnet` package
+</div> <!-- docker -->
 
-```r
-require(mxnet)
-```
+<div class="build-from-source">
 
-Then we declare the data iterators to the training and validation datasets
+Refer to the [building from source document](./build_from_source.md) for details
+on building MXNet from source codes for various platforms.
 
-```r
-train <- mx.io.MNISTIter(
-  image       = "train-images-idx3-ubyte",
-  label       = "train-labels-idx1-ubyte",
-  input_shape = c(28, 28, 1),
-  batch_size  = 100,
-  shuffle     = TRUE,
-  flat        = TRUE
-)
-
-val <- mx.io.MNISTIter(
-  image       = "t10k-images-idx3-ubyte",
-  label       = "t10k-labels-idx1-ubyte",
-  input_shape = c(28, 28, 1),
-  batch_size  = 100,
-  flat        = TRUE)
-```
-
-and a two-layer MLP
-
-```r
-data <- mx.symbol.Variable('data')
-fc1  <- mx.symbol.FullyConnected(data = data, name = 'fc1', num_hidden = 128)
-act1 <- mx.symbol.Activation(data = fc1, name = 'relu1', act_type = "relu")
-fc2  <- mx.symbol.FullyConnected(data = act1, name = 'fc2', num_hidden = 64)
-act2 <- mx.symbol.Activation(data = fc2, name = 'relu2', act_type = "relu")
-fc3  <- mx.symbol.FullyConnected(data = act2, name = 'fc3', num_hidden = 10)
-mlp  <- mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
-```
-
-Next let's train the model
-
-```r
-model <- mx.model.FeedForward.create(
-  X                  = train,
-  eval.data          = val,
-  ctx                = mx.cpu(),
-  symbol             = mlp,
-  eval.metric        = mx.metric.accuracy,
-  num.round          = 5,
-  learning.rate      = 0.1,
-  momentum           = 0.9,
-  wd                 = 0.0001,
-  array.batch.size   = 100,
-  epoch.end.callback = mx.callback.save.checkpoint("mnist"),
-  batch.end.callback = mx.callback.log.train.metric(50)
-)
-```
-
-Finally we can read a new dataset and predict
-
-```r
-test <- mx.io.MNISTIter(...)
-preds <- predict(model, test)
-```
-
-### Scala
-
-We first import MXNet
-
-```scala
-import ml.dmlc.mxnet._
-```
-
-Then we declare the data iterators to the training and validation datasets
-
-```scala
-val trainDataIter = IO.MNISTIter(Map(
-  "image" -> "data/train-images-idx3-ubyte",
-  "label" -> "data/train-labels-idx1-ubyte",
-  "data_shape" -> "(1, 28, 28)",
-  "label_name" -> "sm_label",
-  "batch_size" -> batchSize.toString,
-  "shuffle" -> "1",
-  "flat" -> "0",
-  "silent" -> "0",
-  "seed" -> "10"))
-
-val valDataIter = IO.MNISTIter(Map(
-  "image" -> "data/t10k-images-idx3-ubyte",
-  "label" -> "data/t10k-labels-idx1-ubyte",
-  "data_shape" -> "(1, 28, 28)",
-  "label_name" -> "sm_label",
-  "batch_size" -> batchSize.toString,
-  "shuffle" -> "1",
-  "flat" -> "0", "silent" -> "0"))
-```
-
-and declare a two-layer MLP
-
-```scala
-val data = Symbol.Variable("data")
-val fc1 = Symbol.FullyConnected(name = "fc1")(Map("data" -> data, "num_hidden" -> 128))
-val act1 = Symbol.Activation(name = "relu1")(Map("data" -> fc1, "act_type" -> "relu"))
-val fc2 = Symbol.FullyConnected(name = "fc2")(Map("data" -> act1, "num_hidden" -> 64))
-val act2 = Symbol.Activation(name = "relu2")(Map("data" -> fc2, "act_type" -> "relu"))
-val fc3 = Symbol.FullyConnected(name = "fc3")(Map("data" -> act2, "num_hidden" -> 10))
-val mlp = Symbol.SoftmaxOutput(name = "sm")(Map("data" -> fc3))
-```
-
-Next we train a model on the data
-
-```scala
-import ml.dmlc.mxnet.optimizer.SGD
-// setup model and fit the training set
-val model = FeedForward.newBuilder(mlp)
-      .setContext(Context.cpu())
-      .setNumEpoch(10)
-      .setOptimizer(new SGD(learningRate = 0.1f, momentum = 0.9f, wd = 0.0001f))
-      .setTrainData(trainDataIter)
-      .setEvalData(valDataIter)
-      .build()
-```
-
-Finally we can predict by
-
-```scala
-val probArrays = model.predict(valDataIter)
-// in this case, we do not have multiple outputs
-require(probArrays.length == 1)
-val prob = probArrays(0)
-// get predicted labels
-val py = NDArray.argmaxChannel(prob)
-// deal with predicted labels 'py'
-```
-
-### Julia
-
-We first import MXNet
-
-```julia
-using MXNet
-```
-
-Then load data
-```julia
-batch_size = 100
-include("mnist-data.jl")
-train_provider, eval_provider = get_mnist_providers(batch_size)
-```
-
-and define the MLP
-```julia
-mlp = @mx.chain mx.Variable(:data)  =>
-  mx.FullyConnected(num_hidden=128) =>
-  mx.Activation(act_type=:relu)     =>
-  mx.FullyConnected(num_hidden=64)  =>
-  mx.Activation(act_type=:relu)     =>
-  mx.FullyConnected(num_hidden=10)  =>
-  mx.SoftmaxOutput(name=:softmax)
-```
-
-The model can be trained by
-
-```julia
-model = mx.FeedForward(mlp, context=mx.cpu())
-optimizer = mx.SGD(lr=0.1, momentum=0.9, weight_decay=0.00001)
-mx.fit(model, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
-```
-
-and finally predict by
-```julia
-probs = mx.predict(model, test_provider)
-```
-
-## Tensor Computation
-
-Next we briefly introduce the tensor computation interface, which is often more
-flexiable to use than the previous symbolic interface. It is often used to
-implement the layers, define weight updating rules, and debug.
+</div> <!-- build-from-source -->
 
 
-### Python
+## Quick Overview
 
-The python inferface is similar to `numpy.NDArray`.
+MXNet provides an imperative *n*-dimensional array interface:
 
 ```python
 >>> import mxnet as mx
->>> a = mx.nd.ones((2, 3),
-... mx.gpu())
->>> print (a * 2).asnumpy()
-[[ 2.  2.  2.]
- [ 2.  2.  2.]]
+>>> a = mx.nd.ones((2, 3))
+>>> b = a * 2 + 1
+>>> b.asnumpy()  # print b by converting to a numpy.ndarray object
+array([[ 3.,  3.,  3.],
+       [ 3.,  3.,  3.]], dtype=float32)
 ```
-
-### R
-
-```r
-> require(mxnet)
-Loading required package: mxnet
-> a <- mx.nd.ones(c(2,3))
-> a
-     [,1] [,2] [,3]
-[1,]    1    1    1
-[2,]    1    1    1
-> a + 1
-     [,1] [,2] [,3]
-[1,]    2    2    2
-[2,]    2    2    2
-```
-
-### Scala
-
-You can do tensor/matrix computation in pure Scala.
 
 ```scala
 scala> import ml.dmlc.mxnet._
@@ -322,14 +168,83 @@ import ml.dmlc.mxnet._
 scala> val arr = NDArray.ones(2, 3)
 arr: ml.dmlc.mxnet.NDArray = ml.dmlc.mxnet.NDArray@f5e74790
 
-scala> arr.shape
-res0: ml.dmlc.mxnet.Shape = (2,3)
-
-scala> (arr * 2).toArray
-res2: Array[Float] = Array(2.0, 2.0, 2.0, 2.0, 2.0, 2.0)
-
-scala> (arr * 2).shape
-res3: ml.dmlc.mxnet.Shape = (2,3)
+scala> (arr * 2 + 1).toArray
+res0: Array[Float] = Array(3.0, 3.0, 3.0, 3.0, 3.0, 3.0)
 ```
 
-### Julia
+```r
+> require(mxnet)
+Loading required package: mxnet
+> a <- mx.nd.ones(c(2,3))
+> a * 2 + 1
+     [,1] [,2] [,3]
+[1,]    3    3    3
+[2,]    3    3    3
+```
+
+```julia
+julia> using MXNet
+
+julia> a = mx.ones((2,3))
+mx.NDArray{Float32}(2,3)
+
+julia> Array{Float32}(a * 2 + 1)
+2×3 Array{Float32,2}:
+ 3.0  3.0  3.0
+ 3.0  3.0  3.0
+```
+
+```perl
+pdl> use AI::MXNet qw(mx)
+pdl> $a = mx->nd->ones([2, 3], ctx => mx->gpu())
+pdl> print (($a * 2 + 1)->aspdl)
+[
+ [3 3 3]
+ [3 3 3]
+]
+```
+
+MXNet also provides a symbolic programming interface:
+
+```python
+>>> a = mx.sym.var('a')  # it requires the latest mxnet
+>>> b = a * 2 + 1  # b is a Symbol object
+>>> c = b.eval(a=mx.nd.ones((2,3)))
+>>> c[0].asnumpy()  # the list of outputs
+array([[ 3.,  3.,  3.],
+       [ 3.,  3.,  3.]], dtype=float32)
+```
+
+Run the above codes in GPU in straightforward:
+
+```python
+>>> a = mx.nd.ones((2, 3), mx.gpu())  # create a on GPU 0, then the result a*2+1 will sit on GPU 0 as well
+>>> c = b.eval(a=a, ctx=mx.gpu())  # feed a as the input to eval b, the result c will be also on GPU 0
+```
+
+```r
+> a <- mx.nd.ones(c(2,3), mx.gpu())
+```
+
+```julia
+julia> a = mx.ones((2,3), mx.gpu())
+```
+
+In additional, MXNet provides a large number of neural network layers and
+training modules to facilitate developing deep learning algorithms.
+
+```python
+>>> data = mx.sym.var('data')
+>>> fc1  = mx.sym.FullyConnected(data, num_hidden=128)
+>>> act1 = mx.sym.Activation(fc1, act_type="relu")
+>>> fc2  = mx.sym.FullyConnected(act1, num_hidden=10)
+>>> loss  = mx.sym.SoftmaxOutput(fc2)
+>>> mod = mx.mod.Module(loss)
+>>> mod.fit(train_data, ctx=[mx.gpu(0), mx.gpu(1)]) # fit on the training data by using 2 GPUs
+```
+
+## Next Steps
+
+* [Tutorials](http://mxnet.io/tutorials/index.html)
+* [How To](http://mxnet.io/how_to/index.html)
+* [API Documents](http://mxnet.io/api/index.html)

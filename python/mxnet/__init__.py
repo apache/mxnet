@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 # coding: utf-8
-"""MXNet: a concise, fast and flexible framework for deep learning. """
+"""MXNet: a concise, fast and flexible framework for deep learning."""
 from __future__ import absolute_import
 
 from .context import Context, current_context, cpu, gpu
 from .base import MXNetError
 from . import base
+from . import contrib
 from . import ndarray
 from . import name
 # use mx.sym as short for symbol
 from . import symbol as sym
 from . import symbol
+from . import symbol_doc
 from . import io
 from . import recordio
 from . import operator
@@ -44,7 +46,17 @@ from . import monitor as mon
 from . import torch
 from . import torch as th
 
+from . import profiler
+from . import log
+
 from . import module
 from . import module as mod
+
+from . import image
+from . import image as img
+
+from . import test_utils
+
+from . import rnn
 
 __version__ = base.__version__

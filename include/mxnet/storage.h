@@ -14,7 +14,7 @@ namespace mxnet {
 /*!
  * \brief Storage manager across multiple devices.
  */
-class MXNET_API Storage {
+class Storage {
  public:
   /*!
    * \brief Storage handle.
@@ -46,6 +46,16 @@ class MXNET_API Storage {
    */
   virtual void Free(Handle handle) = 0;
   /*!
+   * \brief Free storage directly, without putting it into memory pool.
+   *  This can synchronization of all previous runned device functions.
+   *
+   *  This function is suitable for conatiner structure with requirement on upsizing
+   *  in the beginning phase of the iteration.
+   *
+   * \param handle Handle struct.
+   */
+  virtual void DirectFree(Handle handle) = 0;
+  /*!
    * \brief Destructor.
    */
   virtual ~Storage() {}
@@ -54,7 +64,7 @@ class MXNET_API Storage {
    */
   static Storage* Get();
   /*!
-   * \brief Get shared pointer reference to engine singleton.
+   * \brief Get shared pointer reference to storage singleton.
    *  Most user should not call this function.
    *  This function is called by another singleton X who requires
    *  Storage to be destructed after X.

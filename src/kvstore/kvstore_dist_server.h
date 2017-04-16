@@ -179,10 +179,15 @@ class KVStoreDistServer {
         if (merged.request.size() == (size_t)ps::NumWorkers()) {
           // let the main thread to execute updater_, which is necessary for
           // python
-          exec_.Exec([this, key, &merged, &stored](){
-              CHECK(updater_);
-              updater_(key, merged.array, &stored);
-            });
+          if (updater_) {
+            exec_.Exec([this, key, &merged, &stored](){
+                CHECK(updater_);
+                updater_(key, merged.array, &stored);
+              });
+          } else {
+            // if no updater, just copy
+            CopyFromTo(merged.array, &stored);
+          }
           for (const auto& req : merged.request) {
             server->Response(req);
           }
@@ -207,6 +212,7 @@ class KVStoreDistServer {
       int len = stored.shape()[0];
       response.keys = req_data.keys;
       response.lens = {len};
+      // TODO(mli) try to remove this CopyFrom
       response.vals.CopyFrom(static_cast<const float*>(stored.data().dptr_), len);
       server->Response(req_meta, response);
     }
@@ -236,8 +242,6 @@ class KVStoreDistServer {
 
   ps::KVServer<float>* ps_server_;
 };
-
-
 
 }  // namespace kvstore
 }  // namespace mxnet

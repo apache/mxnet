@@ -41,7 +41,7 @@ struct ROIPoolingParam : public dmlc::Parameter<ROIPoolingParam> {
   }
 };
 
-template<typename xpu>
+template<typename xpu, typename DType>
 class ROIPoolingOp : public Operator {
  public:
   explicit ROIPoolingOp(ROIPoolingParam p) {
@@ -61,10 +61,10 @@ class ROIPoolingOp : public Operator {
     CHECK_EQ(out_data[roipool::kMaxIdx].shape_[0], in_data[roipool::kBox].shape_[0]);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
-    Tensor<xpu, 4> data = in_data[roipool::kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 2> bbox = in_data[roipool::kBox].get<xpu, 2, real_t>(s);
-    Tensor<xpu, 4> out = out_data[roipool::kOut].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> max_idx = out_data[roipool::kMaxIdx].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4, DType> data = in_data[roipool::kData].get<xpu, 4, DType>(s);
+    Tensor<xpu, 2, DType> bbox = in_data[roipool::kBox].get<xpu, 2, DType>(s);
+    Tensor<xpu, 4, DType> out = out_data[roipool::kOut].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> max_idx = out_data[roipool::kMaxIdx].get<xpu, 4, DType>(s);
     CHECK_EQ(data.CheckContiguous(), true);
     CHECK_EQ(bbox.CheckContiguous(), true);
     CHECK_EQ(out.CheckContiguous(), true);
@@ -87,19 +87,30 @@ class ROIPoolingOp : public Operator {
     CHECK_EQ(out_data.size(), expected);
     CHECK_EQ(out_grad[roipool::kOut].shape_[0], in_data[roipool::kBox].shape_[0]);
     CHECK_EQ(out_data[roipool::kMaxIdx].shape_[0], in_data[roipool::kBox].shape_[0]);
-    CHECK_EQ(req[roipool::kOut], kWriteTo);
+    CHECK_NE(req[roipool::kData], kWriteInplace) <<
+      "ROIPooling: Backward doesn't support kWriteInplace.";
+    CHECK_NE(req[roipool::kBox], kWriteInplace) <<
+      "ROIPooling: Backward doesn't support kWriteInplace.";
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
-    Tensor<xpu, 4> grad_out = out_grad[roipool::kOut].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 2> bbox = in_data[roipool::kBox].get<xpu, 2, real_t>(s);
-    Tensor<xpu, 4> max_idx = out_data[roipool::kMaxIdx].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> grad_in = in_grad[roipool::kData].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4, DType> grad_out = out_grad[roipool::kOut].get<xpu, 4, DType>(s);
+    Tensor<xpu, 2, DType> bbox = in_data[roipool::kBox].get<xpu, 2, DType>(s);
+    Tensor<xpu, 4, DType> max_idx = out_data[roipool::kMaxIdx].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> grad_in = in_grad[roipool::kData].get<xpu, 4, DType>(s);
+    Tensor<xpu, 2, DType> grad_roi = in_grad[roipool::kBox].get<xpu, 2, DType>(s);
     CHECK_EQ(grad_out.CheckContiguous(), true);
     CHECK_EQ(bbox.CheckContiguous(), true);
     CHECK_EQ(max_idx.CheckContiguous(), true);
     CHECK_EQ(grad_in.CheckContiguous(), true);
-    grad_in = 0.0f;
-    ROIPoolBackward(grad_in, grad_out, bbox, max_idx, param_.spatial_scale);
+    if (kAddTo == req[roipool::kData] || kWriteTo == req[roipool::kData]) {
+      if (kWriteTo == req[roipool::kData]) {
+        grad_in = 0.0f;
+      }
+      ROIPoolBackwardAcc(grad_in, grad_out, bbox, max_idx, param_.spatial_scale);
+    }
+    if (kWriteTo == req[roipool::kBox]) {
+      grad_roi = 0.0f;
+    }
   }
 
  private:
@@ -108,7 +119,7 @@ class ROIPoolingOp : public Operator {
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(ROIPoolingParam param);
+Operator* CreateOp(ROIPoolingParam param, int dtype);
 
 #if DMLC_USE_CXX11
 class ROIPoolingProp : public OperatorProperty {
@@ -141,16 +152,16 @@ class ROIPoolingProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 2) << "Input:[data, rois]";
+    CHECK_EQ(in_shape->size(), 2U) << "Input:[data, rois]";
 
     // data: [batch_size, c, h, w]
     TShape dshape = in_shape->at(roipool::kData);
-    CHECK_EQ(dshape.ndim(), 4) << "data should be a 4D tensor";
+    CHECK_EQ(dshape.ndim(), 4U) << "data should be a 4D tensor";
 
     // bbox: [num_rois, 5]
     TShape bshape = in_shape->at(roipool::kBox);
-    CHECK_EQ(bshape.ndim(), 2) << "bbox should be a 2D tensor of shape [batch, 5]";
-    CHECK_EQ(bshape[1], 5) << "bbox should be a 2D tensor of shape [batch, 5]";
+    CHECK_EQ(bshape.ndim(), 2U) << "bbox should be a 2D tensor of shape [batch, 5]";
+    CHECK_EQ(bshape[1], 5U) << "bbox should be a 2D tensor of shape [batch, 5]";
 
     // out: [num_rois, c, pooled_h, pooled_w]
     // max_idx: [num_rois, c, pooled_h, pooled_w]
@@ -159,6 +170,20 @@ class ROIPoolingProp : public OperatorProperty {
          Shape4(bshape[0], dshape[1], param_.pooled_size[0], param_.pooled_size[1]));
     out_shape->push_back(
          Shape4(bshape[0], dshape[1], param_.pooled_size[0], param_.pooled_size[1]));
+    return true;
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    CHECK_EQ(in_type->size(), 2U);
+    int dtype = (*in_type)[0];
+    CHECK_EQ(dtype, (*in_type)[1]);
+    CHECK_NE(dtype, -1) << "Input must have specified type";
+
+    out_type->clear();
+    out_type->push_back(dtype);
+    out_type->push_back(dtype);
     return true;
   }
 
@@ -180,7 +205,13 @@ class ROIPoolingProp : public OperatorProperty {
     return {out_grad[roipool::kOut], in_data[roipool::kBox], out_data[roipool::kMaxIdx]};
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented.";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   ROIPoolingParam param_;

@@ -45,7 +45,7 @@ Refer to the next section for how to build it from the very source.
 Build
 ------------
 
-Checkout the [Installation Guide](http://mxnet.readthedocs.org/en/latest/how_to/build.html) contains instructions to install mxnet.
+Checkout the [Installation Guide](http://mxnet.io/get_started/setup.html) contains instructions to install mxnet.
 Then you can compile the Scala Package by
 
 ```bash
@@ -58,13 +58,19 @@ make scalapkg
 make scalatest
 ```
 
+Or run a subset of unit tests by, e.g.,
+
+```bash
+make SCALA_TEST_ARGS=-Dsuites=ml.dmlc.mxnet.NDArraySuite scalatest
+```
+
 If everything goes well, you will find jars for `assembly`, `core` and `example` modules.
 Also it produces the native library in `native/{your-architecture}/target`, which you can use to cooperate with the `core` module.
 
 Once you've downloaded and unpacked MNIST dataset to `./data/`, run the training example by
 
 ```bash
-java -Xmx4m -cp \
+java -Xmx4G -cp \
   scala-package/assembly/{your-architecture}/target/*:scala-package/examples/target/*:scala-package/examples/target/classes/lib/* \
   ml.dmlc.mxnet.examples.imclassification.TrainMnist \
   --data-dir=./data/ \
@@ -74,11 +80,11 @@ java -Xmx4m -cp \
 ```
 
 If you've compiled with `USE_DIST_KVSTORE` enabled, the python tools in `mxnet/tracker` can be used to launch distributed training.
-The following command runs the above example using 2 worker nodes (and 2 server nodes) in local. Refer to [Distributed Training](http://mxnet.readthedocs.org/en/latest/distributed_training.html) for more details.
+The following command runs the above example using 2 worker nodes (and 2 server nodes) in local. Refer to [Distributed Training](http://mxnet.io/how_to/multi_devices.html) for more details.
 
 ```bash
 tracker/dmlc_local.py -n 2 -s 2 \
-  java -Xmx4m -cp \
+  java -Xmx4G -cp \
   scala-package/assembly/{your-architecture}/target/*:scala-package/examples/target/*:scala-package/examples/target/classes/lib/* \
   ml.dmlc.mxnet.examples.imclassification.TrainMnist \
   --data-dir=./data/ \
@@ -92,7 +98,7 @@ Change the arguments and have fun!
 
 Usage
 -------
-Here is a Scala example of how training a simple 3-layer MLP on MNIST looks like:
+Here is a Scala example of what training a simple 3-layer multilayer perceptron on MNIST looks like. You can download the MNIST dataset using [get_mnist_data script](https://github.com/dmlc/mxnet/blob/master/scala-package/core/scripts/get_mnist_data.sh).
 
 ```scala
 import ml.dmlc.mxnet._
@@ -100,12 +106,12 @@ import ml.dmlc.mxnet.optimizer.SGD
 
 // model definition
 val data = Symbol.Variable("data")
-val fc1 = Symbol.FullyConnected(name = "fc1")(Map("data" -> data, "num_hidden" -> 128))
-val act1 = Symbol.Activation(name = "relu1")(Map("data" -> fc1, "act_type" -> "relu"))
-val fc2 = Symbol.FullyConnected(name = "fc2")(Map("data" -> act1, "num_hidden" -> 64))
-val act2 = Symbol.Activation(name = "relu2")(Map("data" -> fc2, "act_type" -> "relu"))
-val fc3 = Symbol.FullyConnected(name = "fc3")(Map("data" -> act2, "num_hidden" -> 10))
-val mlp = Symbol.SoftmaxOutput(name = "sm")(Map("data" -> fc3))
+val fc1 = Symbol.FullyConnected(name = "fc1")()(Map("data" -> data, "num_hidden" -> 128))
+val act1 = Symbol.Activation(name = "relu1")()(Map("data" -> fc1, "act_type" -> "relu"))
+val fc2 = Symbol.FullyConnected(name = "fc2")()(Map("data" -> act1, "num_hidden" -> 64))
+val act2 = Symbol.Activation(name = "relu2")()(Map("data" -> fc2, "act_type" -> "relu"))
+val fc3 = Symbol.FullyConnected(name = "fc3")()(Map("data" -> act2, "num_hidden" -> 10))
+val mlp = Symbol.SoftmaxOutput(name = "sm")()(Map("data" -> fc3))
 
 // load MNIST dataset
 val trainDataIter = IO.MNISTIter(Map(
@@ -113,7 +119,7 @@ val trainDataIter = IO.MNISTIter(Map(
   "label" -> "data/train-labels-idx1-ubyte",
   "data_shape" -> "(1, 28, 28)",
   "label_name" -> "sm_label",
-  "batch_size" -> batchSize.toString,
+  "batch_size" -> "50",
   "shuffle" -> "1",
   "flat" -> "0",
   "silent" -> "0",
@@ -124,7 +130,7 @@ val valDataIter = IO.MNISTIter(Map(
   "label" -> "data/t10k-labels-idx1-ubyte",
   "data_shape" -> "(1, 28, 28)",
   "label_name" -> "sm_label",
-  "batch_size" -> batchSize.toString,
+  "batch_size" -> "50",
   "shuffle" -> "1",
   "flat" -> "0", "silent" -> "0"))
 
@@ -157,7 +163,7 @@ while (valDataIter.hasNext) {
 val y = NDArray.concatenate(labels)
 
 // get predicted labels
-val py = NDArray.argmaxChannel(prob)
+val py = NDArray.argmax_channel(prob)
 require(y.shape == py.shape)
 
 // calculate accuracy

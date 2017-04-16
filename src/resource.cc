@@ -5,6 +5,7 @@
  */
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
+#include <dmlc/thread_local.h>
 #include <mxnet/base.h>
 #include <mxnet/engine.h>
 #include <mxnet/resource.h>
@@ -31,31 +32,30 @@ struct SpaceAllocator {
     host_handle.dptr = nullptr;
     host_handle.size = 0;
   }
-
-  inline void Release() {
+  inline void ReleaseAll() {
     if (handle.size != 0) {
-      Storage::Get()->Free(handle);
+      Storage::Get()->DirectFree(handle);
       handle.size = 0;
     }
-  }
-
-  inline void ReleaseHost() {
     if (host_handle.size != 0) {
-      Storage::Get()->Free(host_handle);
+      Storage::Get()->DirectFree(host_handle);
       host_handle.size = 0;
     }
   }
-
   inline void* GetSpace(size_t size) {
     if (handle.size >= size) return handle.dptr;
-    this->Release();
+    if (handle.size != 0) {
+      Storage::Get()->DirectFree(handle);
+    }
     handle = Storage::Get()->Alloc(size, ctx);
     return handle.dptr;
   }
 
   inline void* GetHostSpace(size_t size) {
     if (host_handle.size >= size) return host_handle.dptr;
-    this->ReleaseHost();
+    if (host_handle.size != 0) {
+      Storage::Get()->DirectFree(host_handle);
+    }
     host_handle = Storage::Get()->Alloc(size, Context());
     return host_handle.dptr;
   }
@@ -67,8 +67,8 @@ class ResourceManagerImpl : public ResourceManager {
  public:
   ResourceManagerImpl() noexcept(false)
       : global_seed_(0) {
-    cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 16);
-    gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 4);
+    cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 4);
+    gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 1);
     engine_ref_ = Engine::_GetSharedRef();
     storage_ref_ = Storage::_GetSharedRef();
     cpu_rand_.reset(new ResourceRandom<cpu>(
@@ -171,7 +171,8 @@ class ResourceManagerImpl : public ResourceManager {
       Engine::Get()->PushSync([r, seed](RunContext rctx) {
           r->set_stream(rctx.get_stream<xpu>());
           r->Seed(seed);
-        }, ctx, {}, {resource.var});
+        }, ctx, {}, {resource.var},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceRandomSetSeed"));
     }
   };
 
@@ -194,7 +195,7 @@ class ResourceManagerImpl : public ResourceManager {
         resource[i].ptr_ = &space[i];
         resource[i].req = ResourceRequest(ResourceRequest::kTempSpace);
         space[i].ctx = ctx;
-        CHECK_EQ(space[i].handle.size, 0);
+        CHECK_EQ(space[i].handle.size, 0U);
       }
     }
     ~ResourceTempSpace() {
@@ -203,8 +204,7 @@ class ResourceManagerImpl : public ResourceManager {
         Engine::Get()->DeleteVariable(
             [r](RunContext rctx){
               SpaceAllocator rcpy = r;
-              MSHADOW_CATCH_ERROR(rcpy.Release());
-              MSHADOW_CATCH_ERROR(rcpy.ReleaseHost());
+              MSHADOW_CATCH_ERROR(rcpy.ReleaseAll());
             }, ctx, resource[i].var);
       }
     }
@@ -252,7 +252,7 @@ void* Resource::get_host_space_internal(size_t size) const {
 }
 
 ResourceManager* ResourceManager::Get() {
-  static resource::ResourceManagerImpl inst;
-  return &inst;
+  typedef dmlc::ThreadLocalStore<resource::ResourceManagerImpl> inst;
+  return inst::Get();
 }
 }  // namespace mxnet

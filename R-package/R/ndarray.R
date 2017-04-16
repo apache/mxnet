@@ -176,7 +176,7 @@ as.matrix.MXNDArray <- function(nd) {
   if (length(dim(nd)) != 2) {
     stop("The input argument is not two dimensional matrix.")
   }
-  as.matrix(as.array(x))
+  as.matrix(as.array(nd))
 }
 
 #' print operator overload of mx.ndarray

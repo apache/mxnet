@@ -183,7 +183,7 @@ def setup_rnn_model(default_ctx,
         arg_arrays = []
         args_grad = {}
         for shape, name in zip(arg_shape, arg_names):
-            group = internals[name].attr("ctx_group")
+            group = internals[name].attr("__ctx_group__")
             ctx = group2ctx[group] if group is not None else default_ctx
             arg_arrays.append(mx.nd.zeros(shape, ctx))
             if is_param_name(name):
@@ -199,7 +199,7 @@ def setup_rnn_model(default_ctx,
                                 grad_req="add", group2ctx=group2ctx)
               max_rnn_exec = rnn_exec
         else:
-              assert max_rnn_exec != None
+              assert max_rnn_exec is not None
               rnn_exec = rnn_sym.bind(default_ctx, args=arg_arrays,
                             args_grad=args_grad,
                             grad_req="add", group2ctx=group2ctx,

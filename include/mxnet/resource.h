@@ -74,6 +74,12 @@ struct Resource {
    * \brief Get space requested as mshadow Tensor.
    *  The caller can request arbitrary size.
    *
+   *  This space can be shared with other calls to this->get_space.
+   *  So the caller need to serialize the calls when using the conflicted space.
+   *  The old space can get freed, however, this will incur a synchronization,
+   *  when running on device, so the launched kernels that depend on the temp space
+   *  can finish correctly.
+   *
    * \param shape the Shape of returning tensor.
    * \param stream the stream of retruning tensor.
    * \return the mshadow tensor requested.

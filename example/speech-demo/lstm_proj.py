@@ -6,8 +6,8 @@ from collections import namedtuple
 LSTMState = namedtuple("LSTMState", ["c", "h"])
 LSTMParam = namedtuple("LSTMParam", ["i2h_weight", "i2h_bias",
                                      "h2h_weight", "h2h_bias",
-                                     "ph2h_weight"
-                                     ])
+                                     "ph2h_weight",
+                                     "c2i_bias", "c2f_bias", "c2o_bias"])
 LSTMModel = namedtuple("LSTMModel", ["rnn_exec", "symbol",
                                      "init_states", "last_states",
                                      "seq_data", "seq_labels", "seq_outputs",
@@ -32,11 +32,18 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0., nu
     gates = i2h + h2h
     slice_gates = mx.sym.SliceChannel(gates, num_outputs=4,
                                       name="t%d_l%d_slice" % (seqidx, layeridx))
-    in_gate = mx.sym.Activation(slice_gates[0], act_type="sigmoid")
+
+    Wcidc = mx.sym.broadcast_mul(param.c2i_bias,  prev_state.c) + slice_gates[0]
+    in_gate = mx.sym.Activation(Wcidc, act_type="sigmoid")
     in_transform = mx.sym.Activation(slice_gates[1], act_type="tanh")
-    forget_gate = mx.sym.Activation(slice_gates[2], act_type="sigmoid")
-    out_gate = mx.sym.Activation(slice_gates[3], act_type="sigmoid")
+
+    Wcfdc = mx.sym.broadcast_mul(param.c2f_bias, prev_state.c) + slice_gates[2]
+    forget_gate = mx.sym.Activation(Wcfdc, act_type="sigmoid")
     next_c = (forget_gate * prev_state.c) + (in_gate * in_transform)
+
+    Wcoct = mx.sym.broadcast_mul(param.c2o_bias, next_c) + slice_gates[3]
+    out_gate = mx.sym.Activation(Wcoct, act_type="sigmoid")
+
     next_h = out_gate * mx.sym.Activation(next_c, act_type="tanh")
 
     if num_hidden_proj > 0:
@@ -62,7 +69,10 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                                      i2h_bias = mx.sym.Variable("l%d_i2h_bias" % i),
                                      h2h_weight = mx.sym.Variable("l%d_h2h_weight" % i),
                                      h2h_bias = mx.sym.Variable("l%d_h2h_bias" % i),
-                                     ph2h_weight = mx.sym.Variable("l%d_ph2h_weight" % i)
+                                     ph2h_weight = mx.sym.Variable("l%d_ph2h_weight" % i),
+                                     c2i_bias = mx.sym.Variable("l%d_c2i_bias" % i, shape=(1,num_hidden)),
+                                     c2f_bias = mx.sym.Variable("l%d_c2f_bias" % i, shape=(1,num_hidden)),
+                                     c2o_bias = mx.sym.Variable("l%d_c2o_bias" % i, shape=(1, num_hidden))
                                      ))
         state = LSTMState(c=mx.sym.Variable("l%d_init_c" % i),
                           h=mx.sym.Variable("l%d_init_h" % i))
@@ -102,8 +112,8 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
         hidden_final = mx.sym.Reshape(hidden_concat, target_shape=(0, num_hidden))
     pred = mx.sym.FullyConnected(data=hidden_final, num_hidden=num_label,
                                  weight=cls_weight, bias=cls_bias, name='pred')
-    pred = mx.sym.Reshape(pred, target_shape=(0, seq_len, num_label))
-    
+    pred = mx.sym.Reshape(pred, shape=(-1, num_label))
+    label = mx.sym.Reshape(label, shape=(-1,))
     if take_softmax:
         sm = mx.sym.SoftmaxOutput(data=pred, label=label, ignore_label=0, 
                                   use_ignore=True, name='softmax')

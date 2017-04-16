@@ -1,3 +1,4 @@
+from __future__ import print_function
 import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
@@ -307,7 +308,7 @@ def run_synthetic_SGLD():
     for i in xrange(total_iter_num):
         if (i + 1) % 100000 == 0:
             end = time.time()
-            print "Iter:%d, Time spent: %f" % (i + 1, end - start)
+            print("Iter:%d, Time spent: %f" % (i + 1, end - start))
             start = time.time()
         ind = numpy.random.randint(0, X.shape[0])
         synthetic_grad(X[ind], theta, sigma1, sigma2, sigmax, rescale_grad=

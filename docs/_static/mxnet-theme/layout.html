@@ -52,15 +52,31 @@
         VERSION:     '{{ release|e }}',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '{{ '' if no_search_suffix else file_suffix }}',
-        HAS_SOURCE:  {{ has_source|lower }}
+        HAS_SOURCE:  {{ has_source|lower }},
+        SOURCELINK_SUFFIX: '{{ sourcelink_suffix }}'
       };
     </script>
 
-    {% for name in ['jquery.js', 'underscore.js', 'doctools.js', 'searchtools.js'] %}
+    <script type="text/javascript" src="{{ pathto('_static/jquery-1.11.1.js', 1) }}"></script>
+
+    {% for name in ['underscore.js', 'searchtools.js', 'doctools.js', 'selectlang.js'] %}
     <script type="text/javascript" src="{{ pathto('_static/' + name, 1) }}"></script>
     {% endfor %}
 
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript"> jQuery(function() { Search.loadIndex("searchindex.js"); Search.init();}); </script>
+
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new
+      Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-96378503-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
 
     <!-- {%- for scriptfile in script_files %} -->
     <!-- <script type="text/javascript" src="{{ pathto(scriptfile, 1) }}"></script> -->
@@ -69,14 +85,14 @@
 
 {%- macro css() %}
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
-    {% if pagename == 'index' %}
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
-    {%- else %}
+
+    {% if pagename != 'index' %}
     <link rel="stylesheet" href="{{ pathto('_static/' + style, 1) }}" type="text/css" />
     <link rel="stylesheet" href="{{ pathto('_static/pygments.css', 1) }}" type="text/css" />
     {%- endif %}
 
-    <link rel="stylesheet" href="{{ pathto('_static/mxnet.css', 1) }}">
+    <link rel="stylesheet" href="{{ pathto('_static/mxnet.css', 1) }}" type="text/css">
 {%- endmacro %}
 
 <html lang="en">
@@ -89,6 +105,7 @@
     {{ metatags }}
     {%- block htmltitle %}
     {%- if pagename != 'index' %}
+
     <title>{{ title|striptags|e }}{{ titlesuffix }}</title>
     {%- else %}
     <title>MXNet Documents</title>
@@ -152,5 +169,10 @@
     {%- endif %} <!-- pagename != index -->
 
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="{{ pathto('_static/js/sidebar.js', 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto('_static/js/search.js', 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto('_static/js/navbar.js', 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto('_static/js/clipboard.min.js', 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto('_static/js/copycode.js', 1) }}"></script>
   </body>
 </html>

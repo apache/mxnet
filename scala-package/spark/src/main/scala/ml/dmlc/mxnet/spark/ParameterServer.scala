@@ -1,6 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet.spark
 
-import java.io.IOException
+import java.io.{IOException, InputStream, OutputStream}
 import java.util.concurrent.atomic.AtomicReference
 
 import ml.dmlc.mxnet.KVStoreServer
@@ -12,9 +29,8 @@ import scala.collection.JavaConverters._
 
 /**
  * Start ps scheduler/server in a new process
- * @author Yizhi Liu
  */
-object ParameterServer {
+private[mxnet] object ParameterServer {
   private val logger: Logger = LoggerFactory.getLogger(classOf[ParameterServer])
   def main(args: Array[String]): Unit = {
     val cmdLine = new CommandLine
@@ -25,7 +41,7 @@ object ParameterServer {
       KVStoreServer.init(buildEnv(
         cmdLine.role, cmdLine.rootUri, cmdLine.rootPort,
         cmdLine.numServer, cmdLine.numWorker))
-      KVStoreServer.start()
+      KVStoreServer.start(dieIfOthersGoOutTimeout = cmdLine.timeout)
     } catch {
       case e: Throwable =>
         logger.error(e.getMessage, e)
@@ -55,6 +71,8 @@ object ParameterServer {
     val numServer: Int = 1
     @Option(name = "--num-worker", usage = "PS worker number")
     val numWorker: Int = 1
+    @Option(name = "--timeout", usage = "PS go out timeout")
+    val timeout: Int = 0
 
     def checkArguments(): Unit = {
       require(role != null, "Undefined role")
@@ -72,19 +90,52 @@ class ParameterServer(private val classpath: String,
                       private val rootPort: Int,
                       private val numServer: Int = 1,
                       private val numWorker: Int = 1,
+                      private val timeout: Int = 0,
                       private val java: String = "java",
                       private val jvmOpts: String = "") {
   private val logger: Logger = LoggerFactory.getLogger(classOf[ParameterServer])
   private val trackerProcess: AtomicReference[Process] = new AtomicReference[Process]
 
+  /**
+   * A utility class to redirect the child process's stdout or stderr.
+   */
+  private class RedirectThread(
+      in: InputStream,
+      out: OutputStream,
+      name: String,
+      propagateEof: Boolean = false)
+    extends Thread(name) {
+
+    setDaemon(true)
+    override def run() {
+      val buf = new Array[Byte](1024)
+      var len = in.read(buf)
+      while (len != -1) {
+        out.write(buf, 0, len)
+        out.flush()
+        len = in.read(buf)
+      }
+      if (propagateEof) {
+        out.close()
+      }
+    }
+  }
+
   def startProcess(): Boolean = {
     val cp = if (classpath == null) "" else s"-cp $classpath"
     val cmd = s"$java $jvmOpts $cp $runningClass " +
       s"--role=$role --root-uri=$rootUri --root-port=$rootPort " +
-      s"--num-server=$numServer --num-worker=$numWorker"
+      s"--num-server=$numServer --num-worker=$numWorker --timeout=$timeout"
     logger.info(s"Start process: $cmd")
     try {
-      trackerProcess.set(Runtime.getRuntime.exec(cmd))
+      val childProcess = Runtime.getRuntime.exec(cmd)
+      trackerProcess.set(childProcess)
+      val inputStream = childProcess.getInputStream
+      val errorStream = childProcess.getErrorStream
+      logger.info("Starting InputStream-Redirecter Thread")
+      new RedirectThread(inputStream, System.out, "InputStream-Redirecter", true).start()
+      logger.info("Starting ErrorStream-Redirecter Thread")
+      new RedirectThread(errorStream, System.err, "ErrorStream-Redirecter", true).start()
       true
     } catch {
       case ioe: IOException =>

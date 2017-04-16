@@ -27,7 +27,7 @@
 # 基本背景知识<a id="orgheadline1"></a>
 
 MXNET中有一个依赖引擎，这个引擎是用来分析计算过程的依赖关系，把不依赖的计算并行
-化，以达到提高性能的目的。它的基本原理可以看官方的[文档](https://mxnet-bing.readthedocs.io/en/latest/system/note_engine.html)。 简单的说就是给每一个对
+化，以达到提高性能的目的。它的基本原理可以看官方的[文档](http://mxnet.io/architecture/note_engine.html)。 简单的说就是给每一个对
 象打上一个tag，这个tag叫做Var，每一个计算(op)都会依赖一个或者多个Var，依赖有两种
 类型：写依赖和读依赖。依赖引擎为每一个Var都维护一个队列，然后根据op的依赖关系向
 队列中添加ReadDependency和WriteDependency，当各个依赖完成后要更新队列的状态。
@@ -48,8 +48,7 @@ Op实际上是用来代表计算过程以及它依赖的var，先来看看它的
 
 # Var<a id="orgheadline9"></a>
 
-var可以看做是一个tag，用来标示每一个对象的，这样Op对对象的依赖可以简化成对var的
-依赖，这样就可以构建出一个不依赖于具体的对象的通用的依赖引擎。Var是依赖引擎的关键。
+var可以看做是一个tag，用来标示每一个对象的，这样Op对对象的依赖可以简化成对var的依赖，从而可以构建出一个不依赖于具体对象的通用的依赖引擎。Var是依赖引擎的关键。
 
 ## 类图<a id="orgheadline3"></a>
 
@@ -250,15 +249,15 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
       assert(end_of_read_chain->write == true);
       pending_write_ = end_of_read_chain;
       if (num_pending_reads_ == 0) {
-        // mark write as already actived in this var
+        // mark write as already activated in this var
         num_pending_reads_ = kWriteTriggered;
         trigger_write = end_of_read_chain->trigger;
       }
     }
   }
   // This is outside of lock scope
-  // Be very carful, pending_write_ and num_pending_reads_
-  // can change now, do not reply ont the two variables.
+  // Be very careful, pending_write_ and num_pending_reads_
+  // can change now, do not reply on the two variables.
   // The linked list \in [old_pending_write, end_of_read_chain)
   // is already detached from this Var.
   // So it is safe to modify these
@@ -290,7 +289,7 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
 1.  这两个指针的中间有多个元素，很显然这是多个读依赖，第二个 `while` 循环就是用来
     并行的执行这两个指针中间的读依赖的。
 2.  这两个指针之间没有元素，那么意味着没有读依赖，那么就直接执行
-    `end_of_read_chian` 指向的写依赖，如果该指针指向 `head_` 那么意味着队列为空，
+    `end_of_read_chain` 指向的写依赖，如果该指针指向 `head_` 那么意味着队列为空，
     什么也不用做。 最后 一部分的 `if` 就是用来处理这个情况的。
 
 # Engine<a id="orgheadline11"></a>
@@ -400,7 +399,7 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
     finished_cv_.notify_all();
   }
 
-  // delte operator if it is temperory
+  // delta operator if it is temporary
   if (threaded_opr->temporary) {
     ThreadedOpr::Delete(threaded_opr);
   }

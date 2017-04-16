@@ -49,7 +49,7 @@ mx.runif <- function(shape, min=0, max=1, ctx=NULL) {
   if (!is.numeric(min)) stop("mx.rnorm only accept numeric min")
   if (!is.numeric(max)) stop("mx.rnorm only accept numeric max")
   ret <- mx.nd.internal.empty(shape, ctx)
-  return (mx.nd.internal.random.uniform(min, max, out=ret))
+  return (mx.nd.internal.sample.uniform(min, max, shape=shape, out=ret))
 }
 
 #' Generate nomal distribution with mean and sd.
@@ -73,5 +73,5 @@ mx.rnorm <- function(shape, mean=0, sd=1, ctx=NULL) {
   if (!is.numeric(mean)) stop("mx.rnorm only accept numeric mean")
   if (!is.numeric(sd)) stop("mx.rnorm only accept numeric sd")
   ret <- mx.nd.internal.empty(shape, ctx)
-  return (mx.nd.internal.random.gaussian(mean, sd, out=ret))
+  return (mx.nd.internal.sample.normal(mean, sd, shape=shape, out=ret))
 }

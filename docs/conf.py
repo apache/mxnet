@@ -27,7 +27,7 @@ from sphinx_util import MarkdownParser, AutoStructify
 
 # -- mock out modules
 import mock
-MOCK_MODULES = ['numpy', 'scipy', 'scipy.sparse', 'sklearn', 'matplotlib']
+MOCK_MODULES = ['numpy', 'numpy.testing', 'scipy', 'scipy.sparse', 'sklearn', 'matplotlib']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
@@ -55,8 +55,8 @@ source_parsers = {
 }
 os.environ['MXNET_BUILD_DOC'] = '1'
 # Version information.
-version = '0.7.0'
-release = '0.7.0'
+version = '0.9.3'
+release = '0.9.3'
 # import mxnet
 # version = mxnet.__version__
 # release = mxnet.__version__

@@ -1,11 +1,26 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
-import ml.dmlc.mxnet.NDArray.{randomGaussian, randomUniform, empty}
 
 /**
  * Random Number interface of mxnet.
- * @author Yuan Tang
  */
 object Random {
   /**
@@ -28,24 +43,25 @@ object Random {
       require(shape == null && ctx == null, "shape and ctx is not needed when out is specified.")
     } else {
       require(shape != null, "shape is required when out is not specified")
-      outCopy = empty(shape, ctx)
+      outCopy = NDArray.empty(shape, ctx)
     }
-    randomUniform(low, high, outCopy)
+    NDArray.genericNDArrayFunctionInvoke("_sample_uniform", Seq(low, high),
+      Map("shape" -> outCopy.shape, "out" -> outCopy))
   }
 
 
   /**
    * Generate normal(Gaussian) distribution N(mean, stdvar^^2) with shape.
    *
-   * @param mean The mean of the normal distribution.
-   * @param stdvar The standard deviation of normal distribution.
+   * @param loc The mean of the normal distribution.
+   * @param scale The standard deviation of normal distribution.
    * @param shape Output shape of the NDArray generated.
    * @param ctx Context of output NDArray, will use default context if not specified.
    * @param out Output place holder
    * @return The result NDArray with generated result.
    */
-  def normal(mean: Float,
-             stdvar: Float,
+  def normal(loc: Float,
+             scale: Float,
              shape: Shape = null,
              ctx: Context = null,
              out: NDArray = null): NDArray = {
@@ -54,9 +70,10 @@ object Random {
       require(shape == null & ctx == null, "shape and ctx is not needed when out is specified.")
     } else {
       require(shape != null, "shape is required when out is not specified")
-      outCopy = empty(shape, ctx)
+      outCopy = NDArray.empty(shape, ctx)
     }
-    randomGaussian(mean, stdvar, outCopy)
+    NDArray.genericNDArrayFunctionInvoke("_sample_normal", Seq.empty[NDArray],
+      Map("loc" -> loc, "scale" -> scale, "shape" -> outCopy.shape, "out" -> outCopy))
   }
 
 

@@ -64,3 +64,6 @@ USE_S3 = 0
 
 # path to libjvm.so
 LIBJVM=$(JAVA_HOME)/jre/lib/amd64/server
+
+# uses O0 instead of O3 for better performance
+DEBUG = 1

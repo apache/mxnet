@@ -60,7 +60,7 @@ class MXRtc {
             unsigned int  block_dim_Z);
 
  private:
-  static const std::string str_type;
+  static const char str_type[];
   static std::unordered_map<std::string, char*> kernel_registry;
 
   std::string name_;

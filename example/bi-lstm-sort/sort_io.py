@@ -1,5 +1,6 @@
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
+from __future__ import print_function
 import sys
 sys.path.insert(0, "../../python")
 import numpy as np
@@ -62,7 +63,7 @@ def default_gen_buckets(sentences, batch_size, the_vocab):
 
     tl = 0
     buckets = []
-    for l, n in len_dict.iteritems(): # TODO: There are better heuristic ways to do this    
+    for l, n in len_dict.items(): # TODO: There are better heuristic ways to do this
         if n + tl >= batch_size:
             buckets.append(l)
             tl = 0
@@ -117,11 +118,11 @@ class BucketSentenceIter(mx.io.DataIter):
                  seperate_char=' <eos> ', text2id=None, read_content=None):
         super(BucketSentenceIter, self).__init__()
 
-        if text2id == None:
+        if text2id is None:
             self.text2id = default_text2id
         else:
             self.text2id = text2id
-        if read_content == None:
+        if read_content is None:
             self.read_content = default_read_content
         else:
             self.read_content = read_content
@@ -130,7 +131,7 @@ class BucketSentenceIter(mx.io.DataIter):
 
         if len(buckets) == 0:
             buckets = default_gen_buckets(sentences, batch_size, vocab)
-        print buckets
+        print(buckets)
         self.vocab_size = len(vocab)
         self.data_name = data_name
         self.label_name = label_name
@@ -214,7 +215,7 @@ class BucketSentenceIter(mx.io.DataIter):
             idx = self.bucket_idx_all[i_bucket][i_idx:i_idx+self.batch_size]
             self.bucket_curr_idx[i_bucket] += self.batch_size
             data[:] = self.data[i_bucket][idx]
-            
+
             for k in range(len(data)):
                 label[k] = sorted(data[k])
                 #count = len(data[k]) / 2
@@ -231,7 +232,7 @@ class BucketSentenceIter(mx.io.DataIter):
 
             data_batch = SimpleBatch(data_names, data_all, label_names, label_all,
                                      self.buckets[i_bucket])
-            
+
             yield data_batch
 
     def reset(self):

@@ -29,6 +29,10 @@ class NaiveStorageManager final : public StorageManager {
   void* Alloc(size_t size) override;
   void Free(void* ptr, size_t) override;
 
+  void DirectFree(void* ptr, size_t size) override {
+    DeviceStorage::Free(ptr);
+  }
+
  private:
   DISALLOW_COPY_AND_ASSIGN(NaiveStorageManager);
 };  // class NaiveStorageManager

@@ -217,7 +217,7 @@ void NDArray::Save(const Rcpp::List& data_lst,
                    const std::string& filename) {
   std::vector<std::string> lst_names;
   if (HasName(data_lst)) {
-    lst_names = data_lst.names();
+    lst_names = Rcpp::as<std::vector<std::string> >(data_lst.names());
   }
   size_t num_args = data_lst.size();
   std::vector<NDArrayHandle> handles(num_args);
@@ -268,7 +268,8 @@ NDArray::RObjectType NDArray::Empty(
 
 std::vector<NDArrayHandle> NDArray::GetHandles(const Rcpp::List& array_list,
                                                const std::string& list_name,
-                                               bool allow_null) {
+                                               bool allow_null,
+                                               bool move_old_array) {
   std::vector<NDArrayHandle> ret(array_list.size());
   for (size_t i = 0; i < ret.size(); ++i) {
     if (array_list[i] == R_NilValue) {
@@ -283,6 +284,11 @@ std::vector<NDArrayHandle> NDArray::GetHandles(const Rcpp::List& array_list,
       Rcpp::RObject attr = ptr.attr("class");
       RCHECK(attr != R_NilValue && Rcpp::as<std::string>(attr) == "MXNDArray")
           << "Expect " << list_name << " to  be list of " << NDArray::TypeName();
+      if (move_old_array) {
+        RCHECK(ptr->writable)
+            << "Passing a read only NDArray to mutate function";
+        ptr->moved = true;
+      }
       ret[i] = ptr->handle;
     }
   }
@@ -290,12 +296,16 @@ std::vector<NDArrayHandle> NDArray::GetHandles(const Rcpp::List& array_list,
 }
 
 void NDArray::CopyFromTo(const NDArray& from, NDArray* to) {
-  static FunctionHandle copy_handle = NDArrayFunction::FindHandle("_copyto");
+  static OpHandle copy_handle = NDArrayFunction::FindHandle("_copyto");
   NDArrayHandle from_handle = from->handle;
   NDArrayHandle to_handle = (*to)->handle;
   RCHECK(from_handle != to_handle)
       << "Attempt to copy NDArray to itself";
-  MX_CALL(MXFuncInvoke(copy_handle, &from_handle, nullptr, &to_handle));
+  NDArrayHandle* p_output_vars = &to_handle;
+  int num_output = 1;
+  MX_CALL(MXImperativeInvoke(copy_handle, 1, &from_handle,
+                             &num_output, &p_output_vars,
+                             0, nullptr, nullptr));
 }
 
 NDArray::RObjectType NDArray::Array(
@@ -313,155 +323,144 @@ NDArray::RObjectType NDArray::Array(
   return ret;
 }
 
-NDArrayFunction::NDArrayFunction(FunctionHandle handle)
+NDArrayFunction::NDArrayFunction(OpHandle handle, std::string name)
     : handle_(handle) {
   // initialize the docstring
-  {
-    const char *name;
-    const char *description;
-    mx_uint num_args;
-    const char **arg_names;
-    const char **arg_type_infos;
-    const char **arg_descriptions;
-    const char *ret_type;
-    MX_CALL(MXFuncGetInfo(handle, &name, &description, &num_args,
-                          &arg_names, &arg_type_infos, &arg_descriptions,
-                          &ret_type));
-    if (name[0] == '_') {
-      name_ = std::string("mx.nd.internal.") + (name + 1);
-    } else {
-      name_ = std::string("mx.nd.") + name;
-    }
-    for (size_t i = 0; i < name_.length(); ++i) {
-      if (name_[i] == '_') name_[i] = '.';
-    }
-    // dostring: generate python style for now, change to R style later
-    std::ostringstream os;
-    os << description << "\n\n"
-       << MakeDocString(num_args, arg_names, arg_type_infos, arg_descriptions)
-       << "@return out The result mx.ndarray\n\n"
-       << "@export\n";
-    this->docstring = os.str();
-  }
-  // initialize the function information
-  {
-    const int kNDArrayArgBeforeScalar = 1;
-    const int kAcceptEmptyMutateTarget = 1 << 2;
-    int type_mask;
+  const char* real_name;
+  const char* description;
+  mx_uint num_args;
+  const char **arg_names;
+  const char **arg_type_infos;
+  const char **arg_descriptions;
+  const char *key_var_num_args;
+  const char *ret_type;
 
-    MX_CALL(MXFuncDescribe(
-        handle, &num_use_vars_, &num_scalars_,
-        &num_mutate_vars_, &type_mask));
-    if ((type_mask & kNDArrayArgBeforeScalar) != 0) {
-      begin_use_vars_ = 0;
-      begin_scalars_ = num_use_vars_;
-    } else {
-      begin_use_vars_ = num_scalars_;
-      begin_scalars_ = 0;
-    }
-    begin_mutate_vars_ = num_use_vars_ + num_scalars_;
-    num_args_ = num_use_vars_ + num_scalars_ + num_mutate_vars_;
-    accept_empty_out_ = ((type_mask & kAcceptEmptyMutateTarget) != 0) && num_mutate_vars_ == 1;
+  MX_CALL(MXSymbolGetAtomicSymbolInfo(
+      handle_, &real_name, &description, &num_args,
+      &arg_names, &arg_type_infos, &arg_descriptions,
+      &key_var_num_args, &ret_type));
+  if (key_var_num_args != nullptr) {
+    key_var_num_args_ = key_var_num_args;
   }
 
-  // construct formals
-  {
-    Rcpp::List arg_values(num_args_);
-    std::vector<std::string> arg_names(num_args_);
-    for (mx_uint i = 0; i < num_use_vars_; ++i) {
-      std::ostringstream os;
-      os << "X" << (i + 1);
-      arg_names[begin_use_vars_ + i] = os.str();
-    }
-    for (mx_uint i = 0; i < num_scalars_; ++i) {
-      std::ostringstream os;
-      os << "s" << (i + 1);
-      arg_names[begin_scalars_ + i] = os.str();
-    }
-    if (accept_empty_out_) {
-      arg_names[begin_mutate_vars_] = "out";
-      // this is really optional
-      arg_values[begin_mutate_vars_] = R_NilValue;
-    } else {
-      for (mx_uint i = 0; i < num_mutate_vars_; ++i) {
-        std::ostringstream os;
-        os << "out" << (i + 1);
-        arg_names[begin_mutate_vars_ + i] = os.str();
-      }
-    }
-    formals_ = arg_values;
-    formals_.attr("names") = arg_names;
+  if (name[0] == '_') {
+    name_ = std::string("mx.nd.internal.") + (name.c_str() + 1);
+  } else {
+    name_ = std::string("mx.nd.") + name;
   }
+  for (size_t i = 0; i < name_.length(); ++i) {
+    if (name_[i] == '_') name_[i] = '.';
+  }
+
+  // dostring: generate python style for now, change to R style later
+  std::ostringstream os;
+  std::string descp = description;
+  if (descp.length() == 0) {
+    os << name;
+  } else {
+    os << description;
+  }
+  os << "\n\n"
+     << MakeDocString(num_args, arg_names, arg_type_infos, arg_descriptions)
+     << "@return out The result mx.ndarray\n\n"
+     << "@export\n";
+  this->docstring = os.str();
+
+  Rcpp::List arg_values(num_args + 1);
+  arg_names_.resize(num_args + 1);
+  arg_nd_array_.resize(num_args + 1, false);
+
+  for (mx_uint i = 0; i < num_args; ++i) {
+    arg_names_[i] = arg_names[i];
+    std::string dtype = arg_type_infos[i];
+    // check data type.
+    if (dtype.substr(0, 7) == "NDArray" ||
+        dtype.substr(0, 6) == "Symbol") {
+      arg_nd_array_[i] = true;
+    } else {
+      // all kwargs are optional in front-end
+      arg_values[i] = R_NilValue;
+    }
+  }
+  arg_names_[num_args + 0] = "out";
+  // out is are optional in front-end
+  arg_values[num_args + 0] = R_NilValue;
+  formals_ = arg_values;
+  formals_.attr("names") = arg_names_;
 }
 
 SEXP NDArrayFunction::operator() (SEXP* args) {
   BEGIN_RCPP;
 
-  std::vector<mx_float> scalars(num_scalars_);
-  std::vector<NDArrayHandle> use_vars(num_use_vars_);
+  std::vector<NDArrayHandle> nd_args;
+  std::vector<std::string> sparam_vals;
+  std::vector<const char*> param_keys;
+  std::vector<const char*> param_vals;
+  std::vector<NDArrayHandle> out_args;
 
-  for (mx_uint i = 0; i < num_scalars_; ++i) {
-    scalars[i] = Rcpp::as<mx_float>(args[begin_scalars_ + i]);
-  }
-  for (mx_uint i = 0; i < num_use_vars_; ++i) {
-    use_vars[i] = NDArray(args[begin_use_vars_ + i])->handle;
-  }
 
-  std::vector<NDArrayHandle> mutate_vars(num_mutate_vars_);
-  std::vector<NDArray> out;
-  out.reserve(num_mutate_vars_);
-
-  for (mx_uint i = 0; i < num_mutate_vars_; ++i) {
-    if (args[begin_mutate_vars_ + i] == R_NilValue) {
-      if (accept_empty_out_) {
-        NDArrayHandle ohandle;
-        MX_CALL(MXNDArrayCreateNone(&ohandle));
-        mutate_vars[i] = ohandle;
-        out.push_back(NDArray(ohandle, true));
-      } else {
-        RLOG_FATAL << "Parameter out need to be specified";
-      }
+  for (mx_uint i = 0; i < arg_names_.size() - 1; ++i) {
+    if (arg_nd_array_[i]) {
+      nd_args.push_back(NDArray(args[i])->handle);
     } else {
-      // move the old parameters, these are no longer valid
-      NDArray nd(args[begin_mutate_vars_ + i]);
-      mutate_vars[i] = nd->handle;
-      out.push_back(nd.Move());
+      if (args[i] != R_NilValue) {
+        param_keys.push_back(arg_names_[i].c_str());
+        sparam_vals.push_back(toPyString(arg_names_[i], args[i]));
+      }
+    }
+  }
+  param_vals.resize(sparam_vals.size());
+  for (size_t i = 0; i < sparam_vals.size(); ++i) {
+    param_vals[i] = sparam_vals[i].c_str();
+  }
+  // contain out
+  if (args[arg_names_.size()-1] != R_NilValue) {
+    SEXP old_output = args[arg_names_.size() - 1];
+    if (TYPEOF(old_output) == VECSXP) {
+      out_args = NDArray::GetHandles(old_output, "out", false, true);
+    } else {
+      out_args.push_back(NDArray(old_output)->handle);
     }
   }
 
-  MX_CALL(MXFuncInvoke(handle_,
-                       dmlc::BeginPtr(use_vars),
-                       dmlc::BeginPtr(scalars),
-                       dmlc::BeginPtr(mutate_vars)));
-  if (num_mutate_vars_ == 1) {
-    return out[0].RObject();
+  int num_output = static_cast<int>(out_args.size());
+  NDArrayHandle* p_output_vars = nullptr;
+
+  if (num_output != 0) {
+    p_output_vars = &out_args[0];
+  }
+
+  MXImperativeInvoke(
+      handle_,
+      static_cast<int>(nd_args.size()),
+      dmlc::BeginPtr(nd_args),
+      &num_output,
+      &p_output_vars,
+      static_cast<int>(param_keys.size()),
+      dmlc::BeginPtr(param_keys),
+      dmlc::BeginPtr(param_vals));
+
+  if (num_output == 1) {
+    if (out_args.size() != 0) {
+      return NDArray(args[arg_names_.size() - 1]).Move().RObject();
+    } else {
+      return NDArray(p_output_vars[0], true).RObject();
+    }
   } else {
-    Rcpp::List olist(out.size());
-    for (size_t i = 0; i < out.size(); ++i) {
-      olist[i] = out[i].RObject();
+    Rcpp::List olist(num_output);
+    for (int i = 0; i < num_output; ++i) {
+      olist[i] = NDArray(p_output_vars[i], true).RObject();
     }
     return olist;
   }
+
   END_RCPP;
 }
 
-FunctionHandle NDArrayFunction::FindHandle(const std::string& hname) {
-  mx_uint out_size;
-  FunctionHandle *arr;
-  MX_CALL(MXListFunctions(&out_size, &arr));
-  for (int i = 0; i < out_size; ++i) {
-    FunctionHandle handle = arr[i];
-    const char *name;
-    const char *description;
-    mx_uint num_args;
-    const char **arg_names;
-    const char **arg_type_infos;
-    const char **arg_descriptions;
-    const char *ret_type;
-    MX_CALL(MXFuncGetInfo(handle, &name, &description, &num_args,
-                          &arg_names, &arg_type_infos, &arg_descriptions,
-                          &ret_type));
-    if (name == hname) return handle;
+OpHandle NDArrayFunction::FindHandle(const std::string& hname) {
+  OpHandle h;
+  if (NNGetOpHandle(hname.c_str(), &h) == 0 && h != nullptr)  {
+    return h;
   }
   RLOG_FATAL << "FindHandle: cannot find function " << hname;
   return nullptr;
@@ -477,14 +476,14 @@ namespace ndarray {
  * \param value the output value, if it is numeric type.
  * \return whether it is NDArray type
 */
-inline bool ParseNDArrayArg(SEXP sexp, NDArrayHandle *handle, float *value) {
+inline bool ParseNDArrayArg(SEXP sexp, NDArrayHandle *handle, std::string *value) {
   switch (TYPEOF(sexp)) {
     case REALSXP: {
-      *value = static_cast<float>(Rcpp::as<double>(sexp));
+      *value = toString<double>(sexp);
       return false;
     }
     case INTSXP: {
-      *value = static_cast<float>(Rcpp::as<int>(sexp));
+      *value = toString<int>(sexp);
       return false;
     }
     case EXTPTRSXP: {
@@ -505,66 +504,90 @@ inline bool ParseNDArrayArg(SEXP sexp, NDArrayHandle *handle, float *value) {
   return true;
 }
 
+inline NDArrayHandle BinaryOp(OpHandle op, NDArrayHandle* handles) {
+  int num_output = 0;
+  NDArrayHandle* p_output_vars = nullptr;
+  MX_CALL(MXImperativeInvoke(op, 2, handles,
+                             &num_output, &p_output_vars,
+                             0, nullptr, nullptr));
+  RCHECK(num_output == 1);
+  return p_output_vars[0];
+}
+
+inline NDArrayHandle BinaryScalarOp(
+    OpHandle op, NDArrayHandle handle, const std::string &scalar) {
+  int num_output = 0;
+  NDArrayHandle* p_output_vars = nullptr;
+  const char* skey = "scalar";
+  const char* svalue = scalar.c_str();
+
+  MX_CALL(MXImperativeInvoke(op, 1, &handle,
+                             &num_output, &p_output_vars,
+                             1, &skey, &svalue));
+  RCHECK(num_output == 1);
+  return p_output_vars[0];
+}
+
 // dispatch the binary ops of MXNDArray
 NDArray::RObjectType DispatchOps(SEXP op, SEXP lhs, SEXP rhs) {
   // function handles
-  static FunctionHandle plus = NDArrayFunction::FindHandle("_plus");
-  static FunctionHandle plus_scalar = NDArrayFunction::FindHandle("_plus_scalar");
-  static FunctionHandle minus = NDArrayFunction::FindHandle("_minus");
-  static FunctionHandle minus_scalar = NDArrayFunction::FindHandle("_minus_scalar");
-  static FunctionHandle rminus_scalar = NDArrayFunction::FindHandle("_rminus_scalar");
-  static FunctionHandle mul = NDArrayFunction::FindHandle("_mul");
-  static FunctionHandle mul_scalar = NDArrayFunction::FindHandle("_mul_scalar");
-  static FunctionHandle div = NDArrayFunction::FindHandle("_div");
-  static FunctionHandle div_scalar = NDArrayFunction::FindHandle("_div_scalar");
-  static FunctionHandle rdiv_scalar = NDArrayFunction::FindHandle("_rdiv_scalar");
+  static OpHandle plus = NDArrayFunction::FindHandle("_plus");
+  static OpHandle plus_scalar = NDArrayFunction::FindHandle("_plus_scalar");
+  static OpHandle minus = NDArrayFunction::FindHandle("_minus");
+  static OpHandle minus_scalar = NDArrayFunction::FindHandle("_minus_scalar");
+  static OpHandle rminus_scalar = NDArrayFunction::FindHandle("_rminus_scalar");
+  static OpHandle mul = NDArrayFunction::FindHandle("_mul");
+  static OpHandle mul_scalar = NDArrayFunction::FindHandle("_mul_scalar");
+  static OpHandle div = NDArrayFunction::FindHandle("_div");
+  static OpHandle div_scalar = NDArrayFunction::FindHandle("_div_scalar");
+  static OpHandle rdiv_scalar = NDArrayFunction::FindHandle("_rdiv_scalar");
   // parse the arguments
-  float values[2];
-  NDArrayHandle handles[2], out;
+  std::string values[2];
+  NDArrayHandle handles[2];
+  NDArrayHandle out = nullptr;
   bool lhs_nd = ParseNDArrayArg(lhs, &handles[0], &values[0]);
   bool rhs_nd = ParseNDArrayArg(rhs, &handles[1], &values[1]);
   RCHECK(lhs_nd || rhs_nd);
   // create output and dispatch.
-  MX_CALL(MXNDArrayCreateNone(&out));
   std::string sop = Rcpp::as<std::string>(op);
   switch (sop[0]) {
     case '+': {
       if (lhs_nd && rhs_nd) {
-        MX_CALL(MXFuncInvoke(plus, handles, nullptr, &out));
+        out = BinaryOp(plus, handles);
       } else if (lhs_nd && !rhs_nd) {
-        MX_CALL(MXFuncInvoke(plus_scalar, &handles[0], &values[1], &out));
-      } else if (!lhs_nd && rhs_nd) {
-        MX_CALL(MXFuncInvoke(plus_scalar, &handles[1], &values[0], &out));
+        out = BinaryScalarOp(plus_scalar, handles[0], values[1]);
+      } else {
+        out = BinaryScalarOp(plus_scalar, handles[1], values[0]);
       }
       break;
     }
     case '-': {
       if (lhs_nd && rhs_nd) {
-        MX_CALL(MXFuncInvoke(minus, handles, nullptr, &out));
+        out = BinaryOp(minus, handles);
       } else if (lhs_nd && !rhs_nd) {
-        MX_CALL(MXFuncInvoke(minus_scalar, &handles[0], &values[1], &out));
-      } else if (!lhs_nd && rhs_nd) {
-        MX_CALL(MXFuncInvoke(rminus_scalar, &handles[1], &values[0], &out));
+        out = BinaryScalarOp(minus_scalar, handles[0], values[1]);
+      } else {
+        out = BinaryScalarOp(rminus_scalar, handles[1], values[0]);
       }
       break;
     }
     case '*': {
       if (lhs_nd && rhs_nd) {
-        MX_CALL(MXFuncInvoke(mul, handles, nullptr, &out));
+        out = BinaryOp(mul, handles);
       } else if (lhs_nd && !rhs_nd) {
-        MX_CALL(MXFuncInvoke(mul_scalar, &handles[0], &values[1], &out));
-      } else if (!lhs_nd && rhs_nd) {
-        MX_CALL(MXFuncInvoke(mul_scalar, &handles[1], &values[0], &out));
+        out = BinaryScalarOp(mul_scalar, handles[0], values[1]);
+      } else {
+        out = BinaryScalarOp(mul_scalar, handles[1], values[0]);
       }
       break;
     }
     case '/': {
       if (lhs_nd && rhs_nd) {
-        MX_CALL(MXFuncInvoke(div, handles, nullptr, &out));
+        out = BinaryOp(div, handles);
       } else if (lhs_nd && !rhs_nd) {
-        MX_CALL(MXFuncInvoke(div_scalar, &handles[0], &values[1], &out));
-      } else if (!lhs_nd && rhs_nd) {
-        MX_CALL(MXFuncInvoke(rdiv_scalar, &handles[1], &values[0], &out));
+        out = BinaryScalarOp(div_scalar, handles[0], values[1]);
+      } else {
+        out = BinaryScalarOp(rdiv_scalar, handles[1], values[0]);
       }
       break;
     }
@@ -627,11 +650,19 @@ void NDArrayFunction::InitRcppModule() {
   Rcpp::Module* scope = ::getCurrentScope();
   RCHECK(scope != nullptr)
       << "Init Module need to be called inside scope";
+
   mx_uint out_size;
-  FunctionHandle *arr;
-  MX_CALL(MXListFunctions(&out_size, &arr));
+  const char** op_name_ptrs;
+  std::vector<std::string> op_names;
+  MX_CALL(MXListAllOpNames(&out_size, &op_name_ptrs));
+  for (size_t i = 0; i < out_size; ++i) {
+    op_names.push_back(std::string(op_name_ptrs[i]));
+  }
+
   for (int i = 0; i < out_size; ++i) {
-    NDArrayFunction *f = new NDArrayFunction(arr[i]);
+    OpHandle handle;
+    MX_CALL(NNGetOpHandle(op_names[i].c_str(), &handle));
+    NDArrayFunction *f = new NDArrayFunction(handle, op_names[i]);
     scope->Add(f->get_name(), f);
   }
 }

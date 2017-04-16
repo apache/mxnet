@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.io.NDArrayIter
@@ -10,6 +27,7 @@ import scala.collection.mutable.ListBuffer
  * Model class of MXNet for training and predicting feedforward nets.
  * This class is designed for a single-data single output supervised network.
  * @param symbol The symbol configuration of computation network.
+ * @param symGen Symbol generator for bucketing.
  * @param ctx The device context of training and prediction.
  *            To use multi GPU training, pass in a list of gpu contexts.
  * @param numEpoch Training parameter, number of training epochs(epochs).
@@ -26,42 +44,26 @@ import scala.collection.mutable.ListBuffer
  *                         contain extra parameters than needed.
  * @param beginEpoch The beginning training epoch.
  */
-class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cpu()),
-                  val numEpoch: Int = -1, val epochSize: Int = -1,
-                  val optimizer: Optimizer = new SGD(),
-                  val initializer: Initializer = new Uniform(0.01f),
-                  val batchSize: Int = 128,
-                  argParams: Map[String, NDArray] = null,
-                  auxParams: Map[String, NDArray] = null,
-                  allowExtraParams: Boolean = false,
-                  val beginEpoch: Int = 0) {
-  val logger: Logger = LoggerFactory.getLogger(classOf[FeedForward])
-  // check if symbol contain duplicated names.
-  Executor.checkArguments(symbol)
+class FeedForward private(
+    private var symbol: Symbol,
+    symGen: SymbolGenerator,
+    ctx: Array[Context],
+    numEpoch: Int, val epochSize: Int,
+    optimizer: Optimizer,
+    initializer: Initializer,
+    batchSize: Int,
+    argParams: Map[String, NDArray],
+    auxParams: Map[String, NDArray],
+    private val allowExtraParams: Boolean,
+    val beginEpoch: Int) {
 
-  // rematch parameters to delete useless ones
-  private var _argParams =
-    if (allowExtraParams) {
-      if (argParams != null) {
-        val argNames = symbol.listArguments().toSet
-        argParams.filter { case (k, v) => argNames.contains(k) }
-      } else {
-        null
-      }
-    } else {
-      argParams
-    }
-  private var _auxParams =
-    if (allowExtraParams) {
-      if (auxParams != null) {
-        val auxNames = symbol.listAuxiliaryStates().toSet
-        auxParams.filter { case (k, v) => auxNames.contains(k) }
-      } else {
-        null
-      }
-    } else {
-      auxParams
-    }
+  val logger: Logger = LoggerFactory.getLogger(classOf[FeedForward])
+  private var argumentChecked = false
+  private var _argParams = argParams
+  private var _auxParams = auxParams
+  if (symGen == null) {
+    checkArguments()
+  }
 
   def getArgParams: Map[String, NDArray] = _argParams
   def getAuxParams: Map[String, NDArray] = _auxParams
@@ -70,6 +72,50 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
   var predExec: Executor = null
 
   private var monitor: Option[Monitor] = None
+
+  // scalastyle:off parameterNum
+  def this(symbol: Symbol, ctx: Array[Context] = Array(Context.cpu()),
+           numEpoch: Int = -1, epochSize: Int = -1,
+           optimizer: Optimizer = new SGD(),
+           initializer: Initializer = new Uniform(0.01f),
+           batchSize: Int = 128,
+           argParams: Map[String, NDArray] = null,
+           auxParams: Map[String, NDArray] = null,
+           allowExtraParams: Boolean = false,
+           beginEpoch: Int = 0) {
+    this(symbol, null, ctx, numEpoch, epochSize, optimizer, initializer, batchSize,
+          argParams, auxParams, allowExtraParams, beginEpoch)
+  }
+
+  def this(symbol: SymbolGenerator, ctx: Array[Context], numEpoch: Int, epochSize: Int,
+           optimizer: Optimizer, initializer: Initializer, batchSize: Int,
+           argParams: Map[String, NDArray], auxParams: Map[String, NDArray],
+           allowExtraParams: Boolean, beginEpoch: Int) {
+    this(null, symbol, ctx, numEpoch, epochSize, optimizer, initializer, batchSize,
+      argParams, auxParams, allowExtraParams, beginEpoch)
+  }
+  // scalastyle:on parameterNum
+
+  // verify the argument of the default symbol and user provided parameters
+  def checkArguments(): Unit = {
+    if (!argumentChecked) {
+      require(symbol != null)
+      // check if symbol contain duplicated names.
+      ExecutorManager.checkArguments(symbol)
+      // rematch parameters to delete useless ones
+      if (allowExtraParams) {
+        if (_argParams != null) {
+          val argNames = symbol.listArguments().toSet
+          _argParams = _argParams.filter { case (k, v) => argNames.contains(k) }
+        }
+        if (auxParams != null) {
+          val auxNames = symbol.listAuxiliaryStates().toSet
+          _auxParams = _auxParams.filter { case (k, v) => auxNames.contains(k) }
+        }
+      }
+      argumentChecked = true
+    }
+  }
 
   def setMonitor(m: Monitor): Unit = {
     monitor = Option(m)
@@ -81,11 +127,11 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
 
   // Initialize weight parameters and auxiliary states
   private def initParams(inputShapes: Map[String, Shape], overwrite: Boolean = false)
-  : (Seq[String], Seq[String], Seq[String]) = {
+  : (IndexedSeq[String], IndexedSeq[String], IndexedSeq[String]) = {
     val (argShapes, _, auxShapes) = symbol.inferShape(inputShapes)
     val argNames = symbol.listArguments()
-    val inputNames = inputShapes.keys
-    val paramNames = argNames.toSet -- inputNames.toSet
+    val inputNames = inputShapes.keys.toSet
+    val paramNames = argNames.filter(!inputNames.contains(_))
     val auxNames = symbol.listAuxiliaryStates()
 
     val paramNameShapes = (argNames zip argShapes).filter { case (name, _) =>
@@ -116,17 +162,24 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
 
     _argParams = argParams
     _auxParams = auxParams
-    (argNames, paramNames.toSeq, auxNames)
+    (argNames, paramNames, auxNames)
   }
 
   // Initialize the predictor module for running prediction.
   private def initPredictor(inputShapes: Map[String, Shape]): Unit = {
-    if (this.predExec == null) {
-      val predExec = symbol.simpleBind(ctx(0), gradReq = "null", shapeDict = inputShapes)
-      predExec.copyParamsFrom(_argParams, _auxParams)
-      Executor.checkArguments(symbol)
-      this.predExec = predExec
+    if (this.predExec != null) {
+      val (argShapes, _, _) = symbol.inferShape(inputShapes)
+      require(argShapes != null, "Incomplete input shapes")
+      val predShapes = this.predExec.argArrays.map(_.shape)
+      if (argShapes.sameElements(predShapes)) {
+        return
+      }
     }
+    // for now only use the first device
+    val predExec = symbol.simpleBind(ctx(0), gradReq = "null", shapeDict = inputShapes)
+    predExec.copyParamsFrom(_argParams, _auxParams)
+    ExecutorManager.checkArguments(symbol)
+    this.predExec = predExec
   }
 
   // Initialize the iterator given input.
@@ -172,7 +225,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
     while (data.hasNext && i != numBatch) {
       val batch = data.next()
       i += 1
-      Executor.loadData(batch, dataArrays)
+      ExecutorManager.loadData(batch, dataArrays)
       predExec.forward(isTrain = false)
       val padded = batch.pad
       val realSize = batchSize - padded
@@ -210,6 +263,8 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
   def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric, kvStoreType: String,
           epochEndCallback: EpochEndCallback, batchEndCallback: BatchEndCallback,
           logger: Logger, workLoadList: Seq[Float]): Unit = {
+    // init params first to allow kv store use _argParams to decide its type
+    initSymbolParams(trainData)
     // create kvstore
     val (kvStore, updateOnKVStore) = Model.createKVStore(kvStoreType, ctx.length, _argParams)
     fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
@@ -243,6 +298,8 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
           epochEndCallback: EpochEndCallback,
           batchEndCallback: BatchEndCallback, logger: Logger,
           workLoadList: Seq[Float]): Unit = {
+    // init params first to allow kv store use _argParams to decide its type
+    initSymbolParams(trainData)
     // create kvstore
     val (kvStore, updateOnKVStore) = Model.createKVStore(kv)
     fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
@@ -266,14 +323,22 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
     fit(trainData, evalData, new Accuracy(), kvStore)
   }
 
+  private def initSymbolParams(trainData: DataIter)
+    : (IndexedSeq[String], IndexedSeq[String], IndexedSeq[String]) = {
+    if (symGen != null) {
+      this.symbol = symGen.generate(trainData.defaultBucketKey)
+      checkArguments()
+    }
+    initParams(trainData.provideData ++ trainData.provideLabel)
+  }
+
   private def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric = new Accuracy(),
                   kvStore: Option[KVStore], updateOnKVStore: Boolean,
                   epochEndCallback: EpochEndCallback = null,
                   batchEndCallback: BatchEndCallback = null, logger: Logger = FeedForward.logger,
                   workLoadList: Seq[Float] = null): Unit = {
     require(evalMetric != null, "evalMetric cannot be null")
-    val (argNames, paramNames, auxNames) =
-      initParams(trainData.provideData ++ trainData.provideLabel)
+    val (argNames, paramNames, auxNames) = initSymbolParams(trainData)
 
     // init optimizer
     val batchSizeMultiplier = kvStore.map { kv =>
@@ -286,6 +351,16 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
     val batchSize = trainData.batchSize * batchSizeMultiplier.getOrElse(1)
     this.optimizer.setArgNames(argNames)
     this.optimizer.setRescaleGrad(1f / batchSize)
+    this.optimizer.setSymbol(this.symbol)
+    val paramIdx2Name =
+      if (updateOnKVStore) {
+        paramNames.zipWithIndex.map { case (name, idx) => idx -> name }.toMap
+      } else {
+        paramNames.zipWithIndex.flatMap { case (name, idx) =>
+          (0 until ctx.length).map(k => (idx * ctx.length + k) -> name).toMap
+        }.toMap
+      }
+    this.optimizer.setIdx2Name(paramIdx2Name)
 
     logger.debug("Start training on multi-device")
     Model.trainMultiDevice(
@@ -298,8 +373,9 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
       evalMetric = evalMetric,
       epochEndCallback = Option(epochEndCallback),
       batchEndCallback = Option(batchEndCallback),
-      logger = logger, workLoadList = workLoadList,
-      monitor = monitor)
+      workLoadList = workLoadList,
+      monitor = monitor,
+      symGen = symGen)
   }
 
   /**
@@ -383,9 +459,11 @@ object FeedForward {
       allowExtraParams = allowExtraParams)
   }
 
-  def newBuilder(modelDef: Symbol): Builder = new Builder(modelDef)
+  def newBuilder(modelDef: Symbol): Builder = new Builder(modelDef, null)
+  def newBuilder(symGen: SymbolGenerator): Builder = new Builder(null, symGen)
 
-  class Builder private[FeedForward](modelDef: Symbol) {
+  class Builder private[FeedForward](private val modelDef: Symbol,
+                                     private val symGen: SymbolGenerator) {
     private var ctx: Array[Context] = Array(Context.cpu())
     private var numEpoch: Int = -1
     private var epochSize: Int = -1
@@ -580,7 +658,7 @@ object FeedForward {
     def build(): FeedForward = {
       require(trainData != null, "Training data missing")
       val model = new FeedForward(
-        modelDef, ctx, numEpoch, epochSize,
+        modelDef, symGen, ctx, numEpoch, epochSize,
         optimizer, initializer, batchSize,
         argParams, auxParams, allowExtraParams, beginEpoch)
       if (kvStoreInst == null) {
@@ -591,6 +669,17 @@ object FeedForward {
                   epochEndCallback, batchEndCallback, logger, workLoadList)
       }
       model
+    }
+
+    /**
+     * Construct the FeedForward model but do NOT train
+     * @return the un-trained model
+     */
+    def setup(): FeedForward = {
+      new FeedForward(
+        modelDef, symGen, ctx, numEpoch, epochSize,
+        optimizer, initializer, batchSize,
+        argParams, auxParams, allowExtraParams, beginEpoch)
     }
   }
 }

@@ -65,6 +65,7 @@ inline void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
 template<typename xpu, typename OP>
 inline void EvalOneHot_(const TBlob &index, const TBlob &rhs,
                         TBlob *ret, RunContext ctx) {
+  LOG(INFO) << "The operator onehot_encode is deprecated; use one_hot instead.";
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   // TODO(eric): support mixed type encoding, i.e. int index and float rhs.
@@ -194,6 +195,152 @@ void EvalRandom<DEVICE, GaussianDistribution>(
       mshadow::Random<xpu, double> *prnd = resource.get_random<xpu, double>(s);
       mshadow::Tensor<xpu, 2, double> tmp = ret->FlatTo2D<xpu, double>(s);
       prnd->SampleGaussian(&tmp, double(mu), double(sigma));  // NOLINT(*)
+      break;
+    }
+  default:
+    LOG(FATAL) << "Random only support float32 and float64";
+  }
+}
+
+template<>
+void EvalRandom<DEVICE, GammaDistribution>(
+    const real_t &alpha,
+    const real_t &beta,
+    const Resource &resource,
+    TBlob *ret,
+    RunContext ctx) {
+  typedef cpu xpu;  // No support for gpu for this distribution.
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  switch (ret->type_flag_) {
+  case mshadow::kFloat32:
+    {
+      mshadow::Random<xpu, float> *prnd = resource.get_random<xpu, float>(s);
+      mshadow::Tensor<xpu, 2, float> tmp = ret->FlatTo2D<xpu, float>(s);
+      prnd->SampleGamma(&tmp, float(alpha), float(beta));  // NOLINT(*)
+      break;
+    }
+  case mshadow::kFloat64:
+    {
+      mshadow::Random<xpu, double> *prnd = resource.get_random<xpu, double>(s);
+      mshadow::Tensor<xpu, 2, double> tmp = ret->FlatTo2D<xpu, double>(s);
+      prnd->SampleGamma(&tmp, double(alpha), double(beta));  // NOLINT(*)
+      break;
+    }
+  default:
+    LOG(FATAL) << "Random only support float32 and float64";
+  }
+}
+
+
+template<>
+void EvalRandom<DEVICE, ExponentialDistribution>(
+    const real_t &lambda,
+    const real_t &dummy,  // this is to satisfy the SampleOp lambda signature
+    const Resource &resource,
+    TBlob *ret,
+    RunContext ctx) {
+  typedef cpu xpu;  // No support for gpu for this distribution.
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  switch (ret->type_flag_) {
+  case mshadow::kFloat32:
+    {
+      mshadow::Random<xpu, float> *prnd = resource.get_random<xpu, float>(s);
+      mshadow::Tensor<xpu, 2, float> tmp = ret->FlatTo2D<xpu, float>(s);
+      prnd->SampleExponential(&tmp, float(lambda));  // NOLINT(*)
+      break;
+    }
+  case mshadow::kFloat64:
+    {
+      mshadow::Random<xpu, double> *prnd = resource.get_random<xpu, double>(s);
+      mshadow::Tensor<xpu, 2, double> tmp = ret->FlatTo2D<xpu, double>(s);
+      prnd->SampleExponential(&tmp, double(lambda));  // NOLINT(*)
+      break;
+    }
+  default:
+    LOG(FATAL) << "Random only support float32 and float64";
+  }
+}
+
+template<>
+void EvalRandom<DEVICE, PoissonDistribution>(
+    const real_t &lambda,
+    const real_t &dummy,  // this is to satisfy the SampleOp lambda signature
+    const Resource &resource,
+    TBlob *ret,
+    RunContext ctx) {
+  typedef cpu xpu;  // No support for gpu for this distribution.
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  switch (ret->type_flag_) {
+  case mshadow::kFloat32:
+    {
+      mshadow::Random<xpu, float> *prnd = resource.get_random<xpu, float>(s);
+      mshadow::Tensor<xpu, 2, float> tmp = ret->FlatTo2D<xpu, float>(s);
+      prnd->SamplePoisson(&tmp, float(lambda));  // NOLINT(*)
+      break;
+    }
+  case mshadow::kFloat64:
+    {
+      mshadow::Random<xpu, double> *prnd = resource.get_random<xpu, double>(s);
+      mshadow::Tensor<xpu, 2, double> tmp = ret->FlatTo2D<xpu, double>(s);
+      prnd->SamplePoisson(&tmp, double(lambda));  // NOLINT(*)
+      break;
+    }
+  default:
+    LOG(FATAL) << "Random only support float32 and float64";
+  }
+}
+
+template<>
+void EvalRandom<DEVICE, NegBinomialDistribution>(
+    const real_t &k,
+    const real_t &p,
+    const Resource &resource,
+    TBlob *ret,
+    RunContext ctx) {
+  typedef cpu xpu;  // No support for gpu for this distribution.
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  switch (ret->type_flag_) {
+  case mshadow::kFloat32:
+    {
+      mshadow::Random<xpu, float> *prnd = resource.get_random<xpu, float>(s);
+      mshadow::Tensor<xpu, 2, float> tmp = ret->FlatTo2D<xpu, float>(s);
+      prnd->SampleNegativeBinomial(&tmp, float(k), float(p));  // NOLINT(*)
+      break;
+    }
+  case mshadow::kFloat64:
+    {
+      mshadow::Random<xpu, double> *prnd = resource.get_random<xpu, double>(s);
+      mshadow::Tensor<xpu, 2, double> tmp = ret->FlatTo2D<xpu, double>(s);
+      prnd->SampleNegativeBinomial(&tmp, double(k), double(p));  // NOLINT(*)
+      break;
+    }
+  default:
+    LOG(FATAL) << "Random only support float32 and float64";
+  }
+}
+
+template<>
+void EvalRandom<DEVICE, GenNegBinomialDistribution>(
+    const real_t &mu,
+    const real_t &alpha,
+    const Resource &resource,
+    TBlob *ret,
+    RunContext ctx) {
+  typedef cpu xpu;  // No support for gpu for this distribution.
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  switch (ret->type_flag_) {
+  case mshadow::kFloat32:
+    {
+      mshadow::Random<xpu, float> *prnd = resource.get_random<xpu, float>(s);
+      mshadow::Tensor<xpu, 2, float> tmp = ret->FlatTo2D<xpu, float>(s);
+      prnd->SampleGeneralizedNegativeBinomial(&tmp, float(mu), float(alpha));  // NOLINT(*)
+      break;
+    }
+  case mshadow::kFloat64:
+    {
+      mshadow::Random<xpu, double> *prnd = resource.get_random<xpu, double>(s);
+      mshadow::Tensor<xpu, 2, double> tmp = ret->FlatTo2D<xpu, double>(s);
+      prnd->SampleGeneralizedNegativeBinomial(&tmp, double(mu), double(alpha));  // NOLINT(*)
       break;
     }
   default:

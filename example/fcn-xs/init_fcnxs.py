@@ -11,7 +11,7 @@ logger.setLevel(logging.INFO)
 def upsample_filt(size):
     factor = (size + 1) // 2
     if size % 2 == 1:
-        center = factor - 1
+        center = factor - 1.0
     else:
         center = factor - 0.5
     og = np.ogrid[:size, :size]

@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet.io
 
 import ml.dmlc.mxnet.Base._
@@ -5,6 +22,7 @@ import ml.dmlc.mxnet.{DataPack, DataBatch, DataIter, NDArray, Shape}
 import ml.dmlc.mxnet.IO._
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -12,9 +30,9 @@ import scala.collection.mutable.ListBuffer
  * @param handle the handle to the underlying C++ Data Iterator
  */
 // scalastyle:off finalize
-class MXDataIter private[mxnet](private[mxnet] val handle: DataIterHandle,
-                                private val dataName: String = "data",
-                                private val labelName: String = "label") extends DataIter {
+private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
+                                dataName: String = "data",
+                                labelName: String = "label") extends DataIter {
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
 
   // use currentBatch to implement hasNext
@@ -22,16 +40,18 @@ class MXDataIter private[mxnet](private[mxnet] val handle: DataIterHandle,
   // fix me if any better way found)
   private var currentBatch: DataBatch = null
 
-  private val (_provideData: Map[String, Shape],
-               _provideLabel: Map[String, Shape],
+  private val (_provideData: ListMap[String, Shape],
+               _provideLabel: ListMap[String, Shape],
                _batchSize: Int) =
     if (hasNext) {
       iterNext()
       val data = currentBatch.data(0)
       val label = currentBatch.label(0)
-      reset()
       // properties
-      (Map(dataName -> data.shape), Map(labelName -> label.shape), data.shape(0))
+      val res = (ListMap(dataName -> data.shape), ListMap(labelName -> label.shape), data.shape(0))
+      currentBatch.dispose()
+      reset()
+      res
     } else {
       (null, null, 0)
     }
@@ -133,10 +153,10 @@ class MXDataIter private[mxnet](private[mxnet] val handle: DataIterHandle,
   }
 
   // The name and shape of data provided by this iterator
-  override def provideData: Map[String, Shape] = _provideData
+  override def provideData: ListMap[String, Shape] = _provideData
 
   // The name and shape of label provided by this iterator
-  override def provideLabel: Map[String, Shape] = _provideLabel
+  override def provideLabel: ListMap[String, Shape] = _provideLabel
 
   override def hasNext: Boolean = {
     if (currentBatch != null) {
@@ -150,8 +170,7 @@ class MXDataIter private[mxnet](private[mxnet] val handle: DataIterHandle,
 }
 
 // scalastyle:on finalize
-class MXDataPack(val iterName: String,
-                 val params: Map[String, String]) extends DataPack {
+private[mxnet] class MXDataPack(iterName: String, params: Map[String, String]) extends DataPack {
   /**
     * get data iterator
     * @return DataIter

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 dmlc_download() {
-    url=http://data.dmlc.ml/mxnet/datasets/
+    url=http://data.mxnet.io/mxnet/datasets/
     dir=$1
     file=$2
     if [ ! -e data/${dir}/$file ]; then

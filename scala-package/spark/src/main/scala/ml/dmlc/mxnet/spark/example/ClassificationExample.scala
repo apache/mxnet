@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet.spark.example
 
 import ml.dmlc.mxnet.spark.MXNet
@@ -70,7 +87,7 @@ object ClassificationExample {
         val probArrays = brModel.value.predict(points.toIterator)
         require(probArrays.length == 1)
         val prob = probArrays(0)
-        val py = NDArray.argmaxChannel(prob.get)
+        val py = NDArray.argmax_channel(prob.get)
         require(y.length == py.size, s"${y.length} mismatch ${py.size}")
 
         // I'm too lazy to calculate the accuracy
@@ -134,12 +151,12 @@ object ClassificationExample {
 
   def getMlp: Symbol = {
     val data = Symbol.Variable("data")
-    val fc1 = Symbol.FullyConnected(name = "fc1")(Map("data" -> data, "num_hidden" -> 128))
-    val act1 = Symbol.Activation(name = "relu1")(Map("data" -> fc1, "act_type" -> "relu"))
-    val fc2 = Symbol.FullyConnected(name = "fc2")(Map("data" -> act1, "num_hidden" -> 64))
-    val act2 = Symbol.Activation(name = "relu2")(Map("data" -> fc2, "act_type" -> "relu"))
-    val fc3 = Symbol.FullyConnected(name = "fc3")(Map("data" -> act2, "num_hidden" -> 10))
-    val mlp = Symbol.SoftmaxOutput(name = "softmax")(Map("data" -> fc3))
+    val fc1 = Symbol.FullyConnected(name = "fc1")()(Map("data" -> data, "num_hidden" -> 128))
+    val act1 = Symbol.Activation(name = "relu1")()(Map("data" -> fc1, "act_type" -> "relu"))
+    val fc2 = Symbol.FullyConnected(name = "fc2")()(Map("data" -> act1, "num_hidden" -> 64))
+    val act2 = Symbol.Activation(name = "relu2")()(Map("data" -> fc2, "act_type" -> "relu"))
+    val fc3 = Symbol.FullyConnected(name = "fc3")()(Map("data" -> act2, "num_hidden" -> 10))
+    val mlp = Symbol.SoftmaxOutput(name = "softmax")()(Map("data" -> fc3))
     mlp
   }
 
@@ -149,23 +166,25 @@ object ClassificationExample {
   def getLenet: Symbol = {
     val data = Symbol.Variable("data")
     // first conv
-    val conv1 = Symbol.Convolution()(Map("data" -> data, "kernel" -> "(5, 5)", "num_filter" -> 20))
-    val tanh1 = Symbol.Activation()(Map("data" -> conv1, "act_type" -> "tanh"))
-    val pool1 = Symbol.Pooling()(Map("data" -> tanh1, "pool_type" -> "max",
+    val conv1 = Symbol.Convolution()()(
+      Map("data" -> data, "kernel" -> "(5, 5)", "num_filter" -> 20))
+    val tanh1 = Symbol.Activation()()(Map("data" -> conv1, "act_type" -> "tanh"))
+    val pool1 = Symbol.Pooling()()(Map("data" -> tanh1, "pool_type" -> "max",
       "kernel" -> "(2, 2)", "stride" -> "(2, 2)"))
     // second conv
-    val conv2 = Symbol.Convolution()(Map("data" -> pool1, "kernel" -> "(5, 5)", "num_filter" -> 50))
-    val tanh2 = Symbol.Activation()(Map("data" -> conv2, "act_type" -> "tanh"))
-    val pool2 = Symbol.Pooling()(Map("data" -> tanh2, "pool_type" -> "max",
+    val conv2 = Symbol.Convolution()()(
+      Map("data" -> pool1, "kernel" -> "(5, 5)", "num_filter" -> 50))
+    val tanh2 = Symbol.Activation()()(Map("data" -> conv2, "act_type" -> "tanh"))
+    val pool2 = Symbol.Pooling()()(Map("data" -> tanh2, "pool_type" -> "max",
       "kernel" -> "(2, 2)", "stride" -> "(2, 2)"))
     // first fullc
-    val flatten = Symbol.Flatten()(Map("data" -> pool2))
-    val fc1 = Symbol.FullyConnected()(Map("data" -> flatten, "num_hidden" -> 500))
-    val tanh3 = Symbol.Activation()(Map("data" -> fc1, "act_type" -> "tanh"))
+    val flatten = Symbol.Flatten()()(Map("data" -> pool2))
+    val fc1 = Symbol.FullyConnected()()(Map("data" -> flatten, "num_hidden" -> 500))
+    val tanh3 = Symbol.Activation()()(Map("data" -> fc1, "act_type" -> "tanh"))
     // second fullc
-    val fc2 = Symbol.FullyConnected()(Map("data" -> tanh3, "num_hidden" -> 10))
+    val fc2 = Symbol.FullyConnected()()(Map("data" -> tanh3, "num_hidden" -> 10))
     // loss
-    val lenet = Symbol.SoftmaxOutput(name = "softmax")(Map("data" -> fc2))
+    val lenet = Symbol.SoftmaxOutput(name = "softmax")()(Map("data" -> fc2))
     lenet
   }
 }

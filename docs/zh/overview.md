@@ -1,11 +1,11 @@
 The following is an overview of MXNet in Chinese. For english readers, please
-refer to our [NIPS learnsys paper](http://learningsys.org/papers/LearningSys_2015_paper_1.pdf)
+refer to our [NIPS LearningSys paper](http://learningsys.org/papers/LearningSys_2015_paper_1.pdf)
 
 # MXNet设计和实现简介
 
-神经网络本质上是一种语言，我们通过它来表达对应用问题的理解。例如我们用卷积层来表达空间相关性，RNN来表达时间连续性。根据问题的复杂性和信息如何从输入到输出一步步提取，我们将不同大小的层按一定原则连接起来。近年来随着数据的激增和计算能力的大幅提升，神经网络也变得越来越深和大。例如最近几次imagnet竞赛的冠军都使用有数十至百层的网络。对于这一类神经网络我们通常称之为深度学习。从应用的角度而言，对深度学习最重要的是如何方便地表述神经网络，以及如何快速训练得到模型。
+神经网络本质上是一种语言，我们通过它来表达对应用问题的理解。例如我们用卷积层来表达空间相关性，RNN来表达时间连续性。根据问题的复杂性和信息如何从输入到输出一步步提取，我们将不同大小的层按一定原则连接起来。近年来随着数据的激增和计算能力的大幅提升，神经网络也变得越来越深和大。例如最近几次imagenet竞赛的冠军都使用有数十至百层的网络。对于这一类神经网络我们通常称之为深度学习。从应用的角度而言，对深度学习最重要的是如何方便地表述神经网络，以及如何快速训练得到模型。
 
-对于一个优秀的深度学习系统，或者更广来说优秀的科学计算系统，最重要的是编程接口的设计。他们都采用将一个*领域特定语言(domain specific language)*嵌入到一个主语言中。例如numpy将矩阵运算嵌入到python中。这类嵌入一般分为两种，其中一种嵌入的较浅，其中每个语句都按原来的意思执行，且通常采用*命令式编程(imperative programming)*，其中numpy和Torch就是属于这种。而另一种则用一种深的嵌入方式，提供一整套针对具体应用的迷你语言。这一种通常使用*声明式语言(declarative programing)*，既用户只需要声明要做什么，而具体执行则由系统完成。这类系统包括Caffe，theano和刚公布的TensorFlow。
+对于一个优秀的深度学习系统，或者更广来说优秀的科学计算系统，最重要的是编程接口的设计。他们都采用将一个*领域特定语言(domain specific language)*嵌入到一个主语言中。例如numpy将矩阵运算嵌入到python中。这类嵌入一般分为两种，其中一种嵌入的较浅，其中每个语句都按原来的意思执行，且通常采用*命令式编程(imperative programming)*，其中numpy和Torch就是属于这种。而另一种则用一种深的嵌入方式，提供一整套针对具体应用的迷你语言。这一种通常使用*声明式语言(declarative programming)*，既用户只需要声明要做什么，而具体执行则由系统完成。这类系统包括Caffe，Theano和刚公布的TensorFlow。
 
 这两种方式各有利弊，总结如下
 
@@ -27,7 +27,7 @@ refer to our [NIPS learnsys paper](http://learningsys.org/papers/LearningSys_201
 ======= =======  ========== ======== ================== ==========
 框架    Caffe     Torch      Theano    TensorFlow         MXNet
 主语言  C++       Lua        Python     C++                C++
-从语言  Python,     x         x         Python             Python, R, Julia, Scala, Javascript, Matlab, Go
+从语言  Python,     x         x         Python             Python, R, Julia, Scala, Javascript, Matlab, Go, Perl
         Matlab
 硬件    CPU,      CPU, GPU, CPU,      CPU, GPU, mobile     CPU, GPU,mobile
         GPU,      FPGA      GPU,
@@ -88,7 +88,7 @@ for (int i = 0; i < n; ++i) {
 
 这里梯度由Symbol计算而得。Symbol的输出结果均表示成NDArray，我们可以通过NDArray提供的张量计算来更新权重。此外，我们还利用了主语言的for循环来进行迭代，学习率eta也是在主语言中进行修改。
 
-上面的混合实现跟使用纯符号表达式实现的性能相差无二，然后后者在表达控制逻辑时会更加复杂。其原因是NDArray的执行会和Symbol类似的构建一个计算图，并与其他运算一同交由后台引擎执行。对于运算`-=`由于我们只是将其结果交给另一个Symbol的forward作为输入，因此我们不需要立即得到结果。当上面的for循环结束时，我们只是将数个Symbol和NDarray对应的计算图提交给了后台引擎。当我们最终需要结果的时候，例如将weight复制到主语言中或者保存到磁盘时，程序才会被阻塞直到所有计算完成。
+上面的混合实现跟使用纯符号表达式实现的性能相差无二，然后后者在表达控制逻辑时会更加复杂。其原因是NDArray的执行会和Symbol类似的构建一个计算图，并与其他运算一同交由后台引擎执行。对于运算`-=`由于我们只是将其结果交给另一个Symbol的forward作为输入，因此我们不需要立即得到结果。当上面的for循环结束时，我们只是将数个Symbol和NDArray对应的计算图提交给了后台引擎。当我们最终需要结果的时候，例如将weight复制到主语言中或者保存到磁盘时，程序才会被阻塞直到所有计算完成。
 
 ### `KVStore`：多设备间的数据交互
 
@@ -185,7 +185,7 @@ KVStore的实现是基于参数服务器。但它跟前面的工作有两个显�
 
 ### 可移植性
 
-轻量和可移植性是MXNet的一个重要目标。MXNet核心使用C++实现，并提供C风格的头文件。因此方便系统移植，也使得其很容易被其他支持C FFI (forigen language interface )的语言调用。此外，我们也提供一个脚本将MXNet核心功能的代码连同所有依赖打包成一个单一的只有数万行的C++源文件，使得其在一些受限的平台，例如智能设备，方便编译和使用。
+轻量和可移植性是MXNet的一个重要目标。MXNet核心使用C++实现，并提供C风格的头文件。因此方便系统移植，也使得其很容易被其他支持C FFI (foreign function interface )的语言调用。此外，我们也提供一个脚本将MXNet核心功能的代码连同所有依赖打包成一个单一的只有数万行的C++源文件，使得其在一些受限的平台，例如智能设备，方便编译和使用。
 
 ## 实验结果
 
@@ -239,5 +239,5 @@ MXNet是DMLC第一个结合了所有成员努力的项目，也同时吸引了�
 ## 扩展阅读
 
 1. 此文大部分内容已经发表在NIPS LearningSys 2015上，[paper link](http://www.cs.cmu.edu/~muli/file/MXNet-learning-sys.pdf)
-2. 本文只是对MXNet各个部件做了初步的介绍，更多文档参见 [MXNet/doc](http://MXNet.readthedocs.org/en/latest/index.html)
+2. 本文只是对MXNet各个部件做了初步的介绍，更多文档参见 [MXNet/doc](http://mxnet.io/)
 3. 本文实验代码均在 [MXNet/example](https://github.com/dmlc/mxnet/tree/master/example)

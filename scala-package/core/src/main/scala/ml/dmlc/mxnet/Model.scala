@@ -1,14 +1,30 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet
 
 import java.nio.ByteBuffer
 
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
 /**
  * Describe the model flow
- * @author Yizhi Liu
  */
 class Model
 object Model {
@@ -139,11 +155,11 @@ object Model {
   }
 
   // Initialize kvstore
-  private def initializeKVStore(kvStore: KVStore,
-                                paramArrays: IndexedSeq[Array[NDArray]],
-                                argParams: Map[String, NDArray],
-                                paramNames: IndexedSeq[String],
-                                updateOnKVStore: Boolean): Unit = {
+  private[mxnet] def initializeKVStore(kvStore: KVStore,
+                                       paramArrays: IndexedSeq[Array[NDArray]],
+                                       argParams: Map[String, NDArray],
+                                       paramNames: IndexedSeq[String],
+                                       updateOnKVStore: Boolean): Unit = {
     require(paramArrays.length == paramNames.length)
     for (idx <- 0 until paramArrays.length) {
       val paramOnDevs = paramArrays(idx)
@@ -155,9 +171,9 @@ object Model {
   }
 
   // Perform update of param_arrays from grad_arrays on kvstore
-  private def updateParamsOnKVStore(paramArrays: Array[Array[NDArray]],
-                                    gradArrays: Array[Array[NDArray]],
-                                    kvStore: Option[KVStore]): Unit = {
+  private[mxnet] def updateParamsOnKVStore(paramArrays: IndexedSeq[Array[NDArray]],
+                                           gradArrays: IndexedSeq[Array[NDArray]],
+                                           kvStore: Option[KVStore]): Unit = {
     (paramArrays zip gradArrays).zipWithIndex.foreach { case ((argList, gradList), index) =>
       if (gradList != null) {
         // push gradient, priority is negative index
@@ -169,11 +185,11 @@ object Model {
   }
 
   // Perform update of param_arrays from grad_arrays not on kvstore
-  private def updateParams(paramArrays: Array[Array[NDArray]],
-                           gradArrays: Array[Array[NDArray]],
-                           updater: MXKVStoreUpdater,
-                           numDevice: Int,
-                           kvStore: Option[KVStore] = None) {
+  private[mxnet] def updateParams(paramArrays: IndexedSeq[Array[NDArray]],
+                                  gradArrays: IndexedSeq[Array[NDArray]],
+                                  updater: MXKVStoreUpdater,
+                                  numDevice: Int,
+                                  kvStore: Option[KVStore] = None) {
     (paramArrays zip gradArrays).zipWithIndex.foreach { case ((argList, gradList), index) =>
       if (gradList != null) {
         kvStore.foreach(kv => {
@@ -217,36 +233,35 @@ object Model {
    * @param batchEndCallback A callback that is invoked at end of each batch.
    *                         This can be used to measure speed,
    *                         get result from evaluation metric. etc.
-   * @param logger When not specified, default logger will be used.
    * @param workLoadList The list of work load for different devices, in the same order as ctx
    * @param monitor Monitor outputs, weights, and gradients for debugging
    * @note This function will inplace update the NDArrays in argParams and auxStates.
    */
   // scalastyle:off parameterNum
   private[mxnet] def trainMultiDevice(symbol: Symbol, ctx: Array[Context],
-                                      argNames: Seq[String], paramNames: Seq[String],
-                                      auxNames: Seq[String], argParams: Map[String, NDArray],
+                                      argNames: IndexedSeq[String], paramNames: IndexedSeq[String],
+                                      auxNames: IndexedSeq[String], argParams: Map[String, NDArray],
                                       auxParams: Map[String, NDArray],
                                       beginEpoch: Int, endEpoch: Int, epochSize: Int,
                                       optimizer: Optimizer,
                                       kvStore: Option[KVStore], updateOnKVStore: Boolean,
-                                      trainData: DataIter = null,
+                                      trainData: DataIter,
                                       evalData: Option[DataIter] = None,
                                       evalMetric: EvalMetric,
                                       epochEndCallback: Option[EpochEndCallback] = None,
                                       batchEndCallback: Option[BatchEndCallback] = None,
-                                      logger: Logger = logger,
                                       workLoadList: Seq[Float] = Nil,
-                                      monitor: Option[Monitor] = None): Unit = {
+                                      monitor: Option[Monitor] = None,
+                                      symGen: SymbolGenerator = null): Unit = {
     val executorManager = new DataParallelExecutorManager(
         symbol = symbol,
+        symGen = symGen,
         ctx = ctx,
         trainData = trainData,
         paramNames = paramNames,
         argNames = argNames,
         auxNames = auxNames,
-        workLoadList = workLoadList,
-        logger = logger)
+        workLoadList = workLoadList)
 
     monitor.foreach(executorManager.installMonitor)
     executorManager.setParams(argParams, auxParams)
@@ -255,7 +270,7 @@ object Model {
     val updaterLocal = Optimizer.getUpdater(optimizer)
 
     kvStore.foreach(initializeKVStore(_, executorManager.paramArrays,
-      argParams, executorManager._paramNames, updateOnKVStore))
+      argParams, executorManager.paramNames, updateOnKVStore))
     if (updateOnKVStore) {
       kvStore.foreach(_.setOptimizer(optimizer))
     }
@@ -289,7 +304,7 @@ object Model {
           }
           monitor.foreach(_.tocPrint())
           // evaluate at end, so out_cpu_array can lazy copy
-          evalMetric.update(dataBatch.label, executorManager.cpuOutputArrays)
+          executorManager.updateMetric(evalMetric, dataBatch.label)
 
           nBatch += 1
           batchEndCallback.foreach(_.invoke(epoch, nBatch, evalMetric))
@@ -298,7 +313,6 @@ object Model {
           if (epochSize != -1 && nBatch >= epochSize) {
             doReset = false
           }
-          dataBatch.dispose()
         }
         if (doReset) {
           trainData.reset()
@@ -321,8 +335,7 @@ object Model {
           val evalBatch = evalDataIter.next()
           executorManager.loadDataBatch(evalBatch)
           executorManager.forward(isTrain = false)
-          evalMetric.update(evalBatch.label, executorManager.cpuOutputArrays)
-          evalBatch.dispose()
+          executorManager.updateMetric(evalMetric, evalBatch.label)
         }
 
         val (name, value) = evalMetric.get

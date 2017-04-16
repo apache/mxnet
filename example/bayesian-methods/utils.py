@@ -40,7 +40,7 @@ def get_executor(sym, ctx, data_inputs, initializer=None):
     exe = sym.bind(ctx=ctx, args=dict(params, **data_inputs),
                    args_grad=params_grad,
                    aux_states=aux_states)
-    if initializer != None:
+    if initializer is not None:
         for k, v in params.items():
             initializer(k, v)
     return exe, params, params_grad, aux_states
@@ -151,16 +151,16 @@ def sample_test_regression(exe, X, Y, sample_pool=None, minibatch_size=100, save
 def pred_test(testing_data, exe, param_list=None, save_path=""):
     ret = numpy.zeros((testing_data.shape[0], 2))
     if param_list is None:
-        for i in xrange(testing_data.shape[0]):
+        for i in range(testing_data.shape[0]):
             exe.arg_dict['data'][:] = testing_data[i, 0]
             exe.forward(is_train=False)
             ret[i, 0] = exe.outputs[0].asnumpy()
             ret[i, 1] = numpy.exp(exe.outputs[1].asnumpy())
         numpy.savetxt(save_path, ret)
     else:
-        for i in xrange(testing_data.shape[0]):
+        for i in range(testing_data.shape[0]):
             pred = numpy.zeros((len(param_list),))
-            for j in xrange(len(param_list)):
+            for j in range(len(param_list)):
                 exe.copy_params_from(param_list[j])
                 exe.arg_dict['data'][:] = testing_data[i, 0]
                 exe.forward(is_train=False)

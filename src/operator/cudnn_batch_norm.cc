@@ -6,6 +6,8 @@
 */
 
 #include "./cudnn_batch_norm-inl.h"
+#include <nnvm/op_attr_types.h>
+
 namespace mxnet {
 namespace op {
 #if CUDNN_MAJOR >= 4
@@ -27,8 +29,19 @@ Operator *CuDNNBatchNormProp::CreateOperator(Context ctx) const {
 
 MXNET_REGISTER_OP_PROPERTY(CuDNNBatchNorm, CuDNNBatchNormProp)
 .describe("Apply batch normalization to input.")
-.add_argument("data", "Symbol", "Input data to batch normalization")
+.add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")
 .add_arguments(BatchNormParam::__FIELDS__());
+
+NNVM_REGISTER_OP(CuDNNBatchNorm)
+.set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
+    [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
+      if (var->attrs.dict.find("__init__") != var->attrs.dict.end()) return;
+      if (index == 3) {
+        var->attrs.dict["__init__"] = "[\"zero\", {}]";
+      } else if (index == 4) {
+        var->attrs.dict["__init__"] = "[\"zero\", {}]";
+      }
+    });
 #endif  // CUDNN_MAJOR >= 4
 }  // namespace op
 }  // namespace mxnet

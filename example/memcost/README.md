@@ -1,7 +1,7 @@
 Memory Cost of Deep Nets under Different Allocations
 ====================================================
 This folder contains a script to show the memory cost of different allocation strategies,
-discussed in [Note on Memory Optimization](http://mxnet.readthedocs.org/en/latest/developer-guide/note_memory.html).
+discussed in [Note on Memory Optimization](http://mxnet.io/architecture/note_memory.html).
 
 We use inception-bn as an example, with batch size of 32.
 

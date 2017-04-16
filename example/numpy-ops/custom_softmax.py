@@ -1,7 +1,5 @@
 # pylint: skip-file
 import os
-# MXNET_CPU_WORKER_NTHREADS must be greater than 1 for custom op to work on CPU
-os.environ["MXNET_CPU_WORKER_NTHREADS"] = "2"
 from data import mnist_iterator
 import mxnet as mx
 import numpy as np
@@ -37,6 +35,9 @@ class SoftmaxProp(mx.operator.CustomOpProp):
         label_shape = (in_shape[0][0],)
         output_shape = in_shape[0]
         return [data_shape, label_shape], [output_shape], []
+
+    def infer_type(self, in_type):
+        return in_type, [in_type[0]], []
 
     def create_operator(self, ctx, shapes, dtypes):
         return Softmax()

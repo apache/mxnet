@@ -1,9 +1,11 @@
 # pylint: skip-file
+from __future__ import print_function
 import mxnet as mx
 import numpy as np
 import logging
 import data
 from autoencoder import AutoEncoderModel
+
 
 if __name__ == '__main__':
     # set to INFO to see less information during training
@@ -21,5 +23,5 @@ if __name__ == '__main__':
                    lr_scheduler=mx.misc.FactorScheduler(20000,0.1))
     ae_model.save('mnist_pt.arg')
     ae_model.load('mnist_pt.arg')
-    print "Training error:", ae_model.eval(train_X)
-    print "Validation error:", ae_model.eval(val_X)
+    print("Training error:", ae_model.eval(train_X))
+    print("Validation error:", ae_model.eval(val_X))

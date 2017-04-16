@@ -6,4 +6,17 @@ It allows you to mix the flavours of deep learning programs together to maximize
 
 Installation
 ------------
-To install, check [Build Instruction](http://mxnet.readthedocs.org/en/latest/build.html)
+To install, check [Build Instruction](http://mxnet.io/get_started/setup.html)
+
+
+Running the tests
+-----------------
+
+For running the tests you can do the following in the parent directory.
+
+```
+nosetests tests/python/unittest
+nosetests tests/python/train
+
+```
+

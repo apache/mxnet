@@ -15,6 +15,7 @@ namespace mxnet {
 namespace op {
 
 class SimpleOpPropBase;
+class SimpleSourceOpProp;
 class SimpleUnaryOpProp;
 class SimpleBinaryOpProp;
 
@@ -64,6 +65,12 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
     return *this;
   }
 
+  TSelf& set_shape_function(SourceShapeFunction fshapeinfer) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    source_shape_ = fshapeinfer;
+    return *this;
+  }
+
   TSelf& set_shape_function(UnaryShapeFunction fshapeinfer) override {
     std::lock_guard<std::mutex> lock(mutex_);
     unary_shape_ = fshapeinfer;
@@ -73,6 +80,21 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
   TSelf& set_shape_function(BinaryShapeFunction fshapeinfer) override {
     std::lock_guard<std::mutex> lock(mutex_);
     binary_shape_ = fshapeinfer;
+    return *this;
+  }
+
+  TSelf& set_function(int dev_mask,
+                      SourceFunction fsource,
+                      SimpleOpRegOption register_symbolic) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    SetFunction(&fsource_, dev_mask, fsource, "SourceFunction");
+    if (++reg_counter_ == 1) {
+      this->RegisterSourceImperative();
+      register_symbolic_ = (register_symbolic == kRegisterSymbolic);
+      if (register_symbolic_) {
+        this->RegisterSourceSymbolic();
+      }
+    }
     return *this;
   }
 
@@ -178,6 +200,7 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
  protected:
   // make friend with unary op
   friend class SimpleOpPropBase;
+  friend class SimpleSourceOpProp;
   friend class SimpleUnaryOpProp;
   friend class SimpleBinaryOpProp;
   // internal mutex
@@ -196,6 +219,11 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
   bool enable_kwargs_{false};
   // resource requirements
   std::vector<ResourceRequest> resource_requests_;
+  // ------ source functions ----
+  // source shape inference information.
+  SourceShapeFunction source_shape_{nullptr};
+  // source functions on each device mask
+  std::vector<SourceFunction> fsource_;
   // ------ unary functions -----
   // unary shape inference information.
   UnaryShapeFunction unary_shape_{nullptr};
@@ -266,6 +294,10 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
     }
     return *op_reg_;
   }
+  // register source function.
+  void RegisterSourceImperative();
+  // register source symbolic function.
+  void RegisterSourceSymbolic();
   // register unary function.
   void RegisterUnaryImperative();
   // register unary symbolic function.
@@ -295,168 +327,8 @@ SimpleOpRegistry::~SimpleOpRegistry() {
     delete kv.second;
   }
 }
-//-------------------------------------
-// unary function Implementation
-//-------------------------------------
-void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
-  CHECK_EQ(reg_counter_, 1);
-  // The body to be registered
-  auto body = [this] (NDArray** used_vars,
-                      real_t* s,
-                      NDArray** mutate_vars,
-                      int num_params,
-                      char** param_keys,
-                      char** param_vals) {
-    NDArray& src = *used_vars[0];
-    NDArray* out = mutate_vars[0];
-    // setup env.
-    EnvArguments env;
-    if (enable_scalar_) env.scalar = s[0];
-    if (enable_kwargs_) {
-      for (int i = 0; i < num_params; ++i) {
-        env.kwargs.emplace_back(std::make_pair(
-            std::string(param_keys[i]), std::string(param_vals[i])));
-      }
-    } else {
-      CHECK_EQ(num_params, 0)
-        << "operator " << this->name << " do not take keyword arguments";
-    }
-    // shape inference.
-    TShape dshape;
-    if (unary_shape_ != nullptr) {
-      dshape = unary_shape_(src.shape(), env);
-    } else {
-      dshape = src.shape();
-    }
-    // check output shape.
-    if (out->is_none()) {
-      *out = NDArray(dshape, src.ctx(), true, src.dtype());
-    } else {
-      CHECK(out->ctx() == src.ctx()) << "target context mismatch";
-      CHECK(out->dtype() == src.dtype()) << "target data type mismatch";
-      CHECK(out->shape() == dshape) << "target shape mismatch "
-      << out->shape() << " vs. " << dshape;
-    }
-    // important: callback must always capture by value
-    NDArray ret = *out;
-    // get the const variables
-    std::vector<Engine::VarHandle> const_vars;
-    if (src.var() != ret.var()) {
-      const_vars.push_back(src.var());
-    }
 
-    // request resources.
-    std::vector<Engine::VarHandle> write_vars = {ret.var()};
-    for (ResourceRequest req : resource_requests_) {
-      env.resource.push_back(ResourceManager::Get()->Request(src.ctx(), req));
-      write_vars.push_back(env.resource.back().var);
-    }
-
-    // check if the function exist
-    int dev_mask = src.ctx().dev_mask();
-    // error message
-    if (static_cast<size_t>(dev_mask) >= funary_.size() ||
-        funary_[dev_mask] == nullptr) {
-      if (dev_mask == gpu::kDevMask) {
-        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-      }
-      LOG(FATAL) << "Function " << this->name
-                 << "not registered for device " << dev_mask;
-    }
-    // invoke the function
-    UnaryFunction fun = funary_[dev_mask];
-    OpReqType req = kWriteTo;
-    if (src.var() == ret.var()) {
-      req = kWriteInplace;
-      CHECK(unary_forward_inplace_in_out_)
-          << "inplace operation is not enabled for operator " << name;
-    }
-
-    Engine::Get()->PushSync([src, ret, fun, dev_mask, req, env](RunContext ctx) {
-        ret.CheckAndAlloc();
-        TBlob tmp = ret.data();
-        (*fun)(src.data(), env, &tmp, req, ctx);
-#if MXNET_USE_CUDA
-        if (dev_mask == gpu::kDevMask) {
-          ctx.get_stream<gpu>()->Wait();
-        }
-#endif
-      }, src.ctx(), const_vars, write_vars);
-  };
-  // register the function.
-  NDArrayReg()
-      .set_body(body)
-      .set_num_use_vars(1)
-      .set_num_mutate_vars(1);
-  if (enable_scalar_) {
-    if (scalar_type_mask_ == kArrayBeforeScalar) {
-      NDArrayReg()
-          .set_num_scalars(1)
-          .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
-          .add_argument("src", "NDArray", "Source input to the function")
-          .add_argument("scalar", "float", "scalar input to the function");
-    } else {
-      NDArrayReg()
-          .set_num_scalars(1)
-          .set_type_mask(kScalarArgBeforeNDArray | kAcceptEmptyMutateTarget)
-          .add_argument("scalar", "float", "scalar input to the function")
-          .add_argument("src", "NDArray", "Source input to the function");
-    }
-  } else {
-    NDArrayReg()
-      .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
-      .add_argument("src", "NDArray", "Source input to the function");
-  }
-}
-
-// operator to invoke unary function.
-struct SimpleUnaryOperator : public Operator {
-  EnvArguments env;
-  UnaryFunction forward;
-  UnaryGradFunctionT0 backward0{nullptr};
-  UnaryGradFunctionT1 backward1{nullptr};
-  UnaryGradFunctionT2 backward2{nullptr};
-
-  void Forward(const OpContext &ctx,
-               const std::vector<TBlob> &in_data,
-               const std::vector<OpReqType> &req,
-               const std::vector<TBlob> &out_data,
-               const std::vector<TBlob> &aux_args) override {
-    if (ctx.requested.size() != 0) env.resource = ctx.requested;
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
-    TBlob out = out_data[0];
-    (*forward)(in_data[0], env, &out, req[0], ctx.run_ctx);
-  }
-
-  void Backward(const OpContext &ctx,
-                const std::vector<TBlob> &out_grad,
-                const std::vector<TBlob> &in_data,
-                const std::vector<TBlob> &out_data,
-                const std::vector<OpReqType> &req,
-                const std::vector<TBlob> &in_grad,
-                const std::vector<TBlob> &aux_args) override {
-    if (ctx.requested.size() != 0) env.resource = ctx.requested;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK(in_data.size() == 1 && in_grad.size() == 1);
-    CHECK_EQ(req.size(), 1);
-    OutputGrad ograd; ograd.data = out_grad[0];
-    TBlob igrad = in_grad[0];
-
-    if (backward0 != nullptr) {
-      (*backward0)(ograd, env, &igrad, req[0], ctx.run_ctx);
-    } else if (backward1 != nullptr) {
-      OutputValue out_value; out_value.data = out_data[0];
-      (*backward1)(ograd, out_value, env, &igrad, req[0], ctx.run_ctx);
-    } else if (backward2 != nullptr) {
-      Input0 in0; in0.data = in_data[0];
-      (*backward2)(ograd, in0, env, &igrad, req[0], ctx.run_ctx);
-    } else {
-      LOG(FATAL) << "Backward is not supported";
-    }
-  }
-};  // class SimpleUnaryOperator
-
+// base class
 struct SimpleOpScalarParam :
       public dmlc::Parameter<SimpleOpScalarParam> {
   float scalar;
@@ -549,6 +421,333 @@ class SimpleOpPropBase : public OperatorProperty {
     return name;
   }
 };
+
+//-------------------------------------
+// source function Implementation
+//-------------------------------------
+void SimpleOpRegEntryImpl::RegisterSourceImperative() {
+  CHECK_EQ(reg_counter_, 1);
+  // The body to be registered
+  auto body = [this] (NDArray** used_vars,
+                      real_t* s,
+                      NDArray** mutate_vars,
+                      int num_params,
+                      char** param_keys,
+                      char** param_vals) {
+    NDArray* out = mutate_vars[0];
+    // setup env.
+    EnvArguments env;
+    if (enable_scalar_) env.scalar = s[0];
+    if (enable_kwargs_) {
+      for (int i = 0; i < num_params; ++i) {
+        env.kwargs.emplace_back(std::make_pair(
+            std::string(param_keys[i]), std::string(param_vals[i])));
+      }
+    } else {
+      CHECK_EQ(num_params, 0)
+        << "operator " << this->name << " do not take keyword arguments";
+    }
+    // shape inference.
+    CHECK(source_shape_ != nullptr);
+    TShape dshape = source_shape_(env);
+    // check output shape.
+    CHECK(!out->is_none());
+    CHECK(out->shape() == dshape) << "target shape mismatch "
+    << out->shape() << " vs. " << dshape;
+
+    // important: callback must always capture by value
+    NDArray ret = *out;
+    // request resources.
+    std::vector<Engine::VarHandle> write_vars = {ret.var()};
+    for (ResourceRequest req : resource_requests_) {
+      env.resource.push_back(ResourceManager::Get()->Request(ret.ctx(), req));
+      write_vars.push_back(env.resource.back().var);
+    }
+    // check if the function exist
+    int dev_mask = ret.ctx().dev_mask();
+    // error message
+    if (static_cast<size_t>(dev_mask) >= fsource_.size() ||
+        fsource_[dev_mask] == nullptr) {
+      if (dev_mask == gpu::kDevMask) {
+        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      }
+      LOG(FATAL) << "Function " << this->name
+                 << "not registered for device " << dev_mask;
+    }
+    // invoke the function
+    SourceFunction fun = fsource_[dev_mask];
+    OpReqType req = kWriteTo;
+
+    Engine::Get()->PushSync([ret, fun, dev_mask, req, env](RunContext ctx) {
+        ret.CheckAndAlloc();
+        TBlob tmp = ret.data();
+        (*fun)(env, &tmp, req, ctx);
+#if MXNET_USE_CUDA
+        if (dev_mask == gpu::kDevMask) {
+          ctx.get_stream<gpu>()->Wait();
+        }
+#endif
+      }, ret.ctx(), {}, write_vars,
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("RegisterSourceImperative"));
+  };
+  // register the function.
+  NDArrayReg()
+      .set_body(body)
+      .set_num_use_vars(0)
+      .set_num_mutate_vars(1);
+  if (enable_scalar_) {
+      NDArrayReg()
+          .set_num_scalars(1)
+          .add_argument("scalar", "float", "scalar input to the function");
+  }
+}
+
+// operator to invoke unary function.
+struct SimpleSourceOperator : public Operator {
+  EnvArguments env;
+  SourceFunction forward;
+
+  void Forward(const OpContext &ctx,
+               const std::vector<TBlob> &in_data,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &out_data,
+               const std::vector<TBlob> &aux_args) override {
+    if (ctx.requested.size() != 0) env.resource = ctx.requested;
+    CHECK_EQ(in_data.size(), 0);
+    CHECK_EQ(out_data.size(), 1);
+    TBlob out = out_data[0];
+    (*forward)(env, &out, req[0], ctx.run_ctx);
+  }
+
+  void Backward(const OpContext &ctx,
+                const std::vector<TBlob> &out_grad,
+                const std::vector<TBlob> &in_data,
+                const std::vector<TBlob> &out_data,
+                const std::vector<OpReqType> &req,
+                const std::vector<TBlob> &in_grad,
+                const std::vector<TBlob> &aux_args) override {
+    LOG(FATAL) << "no gradient can be done";
+    // no nothing.
+  }
+};  // class SimpleUnaryOperator
+
+class SimpleSourceOpProp : public SimpleOpPropBase {
+ public:
+  bool InferShape(std::vector<TShape> *in_shape,
+                  std::vector<TShape> *out_shape,
+                  std::vector<TShape> *aux_shape) const override {
+    CHECK_EQ(in_shape->size(), 0)
+        << in_shape->size();
+    CHECK(source->source_shape_ != nullptr);
+    out_shape->clear();
+    out_shape->push_back((*(source->source_shape_))(env));
+    return true;
+  }
+
+  OperatorProperty* Copy() const override {
+    auto ptr = new SimpleSourceOpProp();
+    ptr->source = source;
+    ptr->name = name;
+    ptr->env = env;
+    return ptr;
+  }
+
+  Operator* CreateOperator(Context ctx) const override {
+    size_t dev_mask = ctx.dev_mask();
+    SimpleSourceOperator *op = new SimpleSourceOperator();
+    CHECK(dev_mask < source->fsource_.size() && source->fsource_[dev_mask] != nullptr);
+    op->forward = source->fsource_[dev_mask];
+    op->env = this->env;
+    return op;
+  }
+
+  std::vector<std::string> ListArguments() const override {
+    return {};
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    out_type->clear();
+    out_type->push_back(mshadow::kFloat32);
+    return true;
+  }
+};
+
+void SimpleOpRegEntryImpl::RegisterSourceSymbolic() {
+  // register the operator
+  auto op_factory = [this]() {
+    SimpleSourceOpProp *prop = new SimpleSourceOpProp();
+    prop->name = this->symbol_name_;
+    prop->source = this;
+    return prop;
+  };
+  OpReg()
+      .set_body(op_factory);
+}
+
+//-------------------------------------
+// unary function Implementation
+//-------------------------------------
+void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
+  CHECK_EQ(reg_counter_, 1);
+  // The body to be registered
+  auto body = [this] (NDArray** used_vars,
+                      real_t* s,
+                      NDArray** mutate_vars,
+                      int num_params,
+                      char** param_keys,
+                      char** param_vals) {
+    NDArray& src = *used_vars[0];
+    NDArray* out = mutate_vars[0];
+    // setup env.
+    EnvArguments env;
+    if (enable_scalar_) env.scalar = s[0];
+    if (enable_kwargs_) {
+      for (int i = 0; i < num_params; ++i) {
+        env.kwargs.emplace_back(std::make_pair(
+            std::string(param_keys[i]), std::string(param_vals[i])));
+      }
+    } else {
+      CHECK_EQ(num_params, 0)
+        << "operator " << this->name << " do not take keyword arguments";
+    }
+    // shape inference.
+    TShape dshape;
+    if (unary_shape_ != nullptr) {
+      dshape = unary_shape_(src.shape(), env);
+    } else {
+      dshape = src.shape();
+    }
+    // check output shape.
+    if (out->is_none()) {
+      *out = NDArray(dshape, src.ctx(), true, src.dtype());
+    } else {
+      CHECK(out->ctx() == src.ctx()) << "target context mismatch";
+      CHECK(out->dtype() == src.dtype()) << "target data type mismatch";
+      CHECK(out->shape() == dshape) << "target shape mismatch "
+      << out->shape() << " vs. " << dshape;
+    }
+    // important: callback must always capture by value
+    NDArray ret = *out;
+    // get the const variables
+    std::vector<Engine::VarHandle> const_vars;
+    if (src.var() != ret.var()) {
+      const_vars.push_back(src.var());
+    }
+
+    // request resources.
+    std::vector<Engine::VarHandle> write_vars = {ret.var()};
+    for (ResourceRequest req : resource_requests_) {
+      env.resource.push_back(ResourceManager::Get()->Request(src.ctx(), req));
+      write_vars.push_back(env.resource.back().var);
+    }
+
+    // check if the function exist
+    int dev_mask = src.ctx().dev_mask();
+    // error message
+    if (static_cast<size_t>(dev_mask) >= funary_.size() ||
+        funary_[dev_mask] == nullptr) {
+      if (dev_mask == gpu::kDevMask) {
+        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      }
+      LOG(FATAL) << "Function " << this->name
+                 << "not registered for device " << dev_mask;
+    }
+    // invoke the function
+    UnaryFunction fun = funary_[dev_mask];
+    OpReqType req = kWriteTo;
+    if (src.var() == ret.var()) {
+      req = kWriteInplace;
+      CHECK(unary_forward_inplace_in_out_)
+          << "inplace operation is not enabled for operator " << name;
+    }
+
+    Engine::Get()->PushSync([src, ret, fun, dev_mask, req, env](RunContext ctx) {
+        ret.CheckAndAlloc();
+        TBlob tmp = ret.data();
+        (*fun)(src.data(), env, &tmp, req, ctx);
+#if MXNET_USE_CUDA
+        if (dev_mask == gpu::kDevMask) {
+          ctx.get_stream<gpu>()->Wait();
+        }
+#endif
+      }, src.ctx(), const_vars, write_vars,
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("RegisterUnaryImperative"));
+  };
+  // register the function.
+  NDArrayReg()
+      .set_body(body)
+      .set_num_use_vars(1)
+      .set_num_mutate_vars(1);
+  if (enable_scalar_) {
+    if (scalar_type_mask_ == kArrayBeforeScalar) {
+      NDArrayReg()
+          .set_num_scalars(1)
+          .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
+          .add_argument("src", "NDArray-or-Symbol", "Source input to the function")
+          .add_argument("scalar", "float", "scalar input to the function");
+    } else {
+      NDArrayReg()
+          .set_num_scalars(1)
+          .set_type_mask(kScalarArgBeforeNDArray | kAcceptEmptyMutateTarget)
+          .add_argument("scalar", "float", "scalar input to the function")
+          .add_argument("src", "NDArray-or-Symbol", "Source input to the function");
+    }
+  } else {
+    NDArrayReg()
+      .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
+      .add_argument("src", "NDArray-or-Symbol", "Source input to the function");
+  }
+}
+
+// operator to invoke unary function.
+struct SimpleUnaryOperator : public Operator {
+  EnvArguments env;
+  UnaryFunction forward;
+  UnaryGradFunctionT0 backward0{nullptr};
+  UnaryGradFunctionT1 backward1{nullptr};
+  UnaryGradFunctionT2 backward2{nullptr};
+
+  void Forward(const OpContext &ctx,
+               const std::vector<TBlob> &in_data,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &out_data,
+               const std::vector<TBlob> &aux_args) override {
+    if (ctx.requested.size() != 0) env.resource = ctx.requested;
+    CHECK_EQ(in_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1);
+    TBlob out = out_data[0];
+    (*forward)(in_data[0], env, &out, req[0], ctx.run_ctx);
+  }
+
+  void Backward(const OpContext &ctx,
+                const std::vector<TBlob> &out_grad,
+                const std::vector<TBlob> &in_data,
+                const std::vector<TBlob> &out_data,
+                const std::vector<OpReqType> &req,
+                const std::vector<TBlob> &in_grad,
+                const std::vector<TBlob> &aux_args) override {
+    if (ctx.requested.size() != 0) env.resource = ctx.requested;
+    CHECK_EQ(out_grad.size(), 1);
+    CHECK(in_data.size() == 1 && in_grad.size() == 1);
+    CHECK_EQ(req.size(), 1);
+    OutputGrad ograd; ograd.data = out_grad[0];
+    TBlob igrad = in_grad[0];
+
+    if (backward0 != nullptr) {
+      (*backward0)(ograd, env, &igrad, req[0], ctx.run_ctx);
+    } else if (backward1 != nullptr) {
+      OutputValue out_value; out_value.data = out_data[0];
+      (*backward1)(ograd, out_value, env, &igrad, req[0], ctx.run_ctx);
+    } else if (backward2 != nullptr) {
+      Input0 in0; in0.data = in_data[0];
+      (*backward2)(ograd, in0, env, &igrad, req[0], ctx.run_ctx);
+    } else {
+      LOG(FATAL) << "Backward is not supported";
+    }
+  }
+};  // class SimpleUnaryOperator
 
 class SimpleUnaryOpProp : public SimpleOpPropBase {
  public:
@@ -644,10 +843,8 @@ void SimpleOpRegEntryImpl::RegisterUnarySymbolic() {
   };
   OpReg()
       .set_body(op_factory)
-      .add_argument("lhs", "Symbol", "Left symbolic input to the function")
-      .add_argument("rhs", "Symbol", "Left symbolic input to the function");
+      .add_argument("src", "NDArray-or-Symbol", "Left symbolic input to the function");
 }
-
 
 //-------------------------------------
 // binary function Implementation
@@ -688,7 +885,7 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
 
     // no check if all of them are on cpu
     if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask) {
-      CHECK_EQ(lhs.ctx(), rhs.ctx())
+      CHECK(lhs.ctx() == rhs.ctx())
         << "operands context mismatch " << lhs.ctx().dev_type << " " << lhs.ctx().dev_id << \
         " vs. " << rhs.ctx().dev_type << " " << rhs.ctx().dev_id;
     }
@@ -750,7 +947,8 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
           ctx.get_stream<gpu>()->Wait();
         }
         #endif
-      }, lhs.ctx(), const_vars, write_vars);
+      }, lhs.ctx(), const_vars, write_vars,
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("RegisterBinaryImperative"));
   };
   // register the function.
   NDArrayReg()
@@ -762,23 +960,23 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
       NDArrayReg()
           .set_num_scalars(1)
           .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
-          .add_argument("lhs", "NDArray", "Left operand  to the function")
-          .add_argument("rhs", "NDArray", "Right operand to the function")
+          .add_argument("lhs", "NDArray-or-Symbol", "Left operand  to the function")
+          .add_argument("rhs", "NDArray-or-Symbol", "Right operand to the function")
           .add_argument("scalar", "float", "scalar input to the function");
     } else {
       NDArrayReg()
           .set_num_scalars(1)
           .set_type_mask(kScalarArgBeforeNDArray | kAcceptEmptyMutateTarget)
           .add_argument("scalar", "float", "scalar input to the function")
-          .add_argument("src", "NDArray", "Source input to the function")
-          .add_argument("lhs", "NDArray", "Left operand  to the function")
-          .add_argument("rhs", "NDArray", "Right operand to the function");
+          .add_argument("src", "NDArray-or-Symbol", "Source input to the function")
+          .add_argument("lhs", "NDArray-or-Symbol", "Left operand  to the function")
+          .add_argument("rhs", "NDArray-or-Symbol", "Right operand to the function");
     }
   } else {
     NDArrayReg()
         .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
-        .add_argument("lhs", "NDArray", "Left operand  to the function")
-        .add_argument("rhs", "NDArray", "Right operand to the function");
+        .add_argument("lhs", "NDArray-or-Symbol", "Left operand  to the function")
+        .add_argument("rhs", "NDArray-or-Symbol", "Right operand to the function");
   }
 }
 
@@ -932,8 +1130,8 @@ void SimpleOpRegEntryImpl::RegisterBinarySymbolic() {
   };
   OpReg()
       .set_body(op_factory)
-      .add_argument("lhs", "Symbol", "Left symbolic input to the function")
-      .add_argument("rhs", "Symbol", "Left symbolic input to the function");
+      .add_argument("lhs", "NDArray-or-Symbol", "Left symbolic input to the function")
+      .add_argument("rhs", "NDArray-or-Symbol", "Right symbolic input to the function");
 }
 
 }  // namespace op

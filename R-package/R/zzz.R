@@ -12,6 +12,8 @@
 #' @import methods Rcpp
 NULL
 
+.MXNetEnv <- new.env()
+
 .onLoad <- function(libname, pkgname) {
   # Require methods for older versions of R
   require(methods)
@@ -23,9 +25,22 @@ NULL
 }
 
 .onUnload <- function(libpath) {
-  print("Start unload")
+  message("Start unload")
   mx.internal.notify.shutdown()
-  unloadModule("mxnet")
   library.dynam.unload("mxnet", libpath)
   library.dynam.unload("libmxnet", libpath)
+  message("MXNet shutdown")
+}
+
+.onAttach <- function(...) {
+  if (!interactive() || stats::runif(1) > 0.1) return()
+
+  tips <- c(
+    "Need help? Feel free to open an issue on https://github.com/dmlc/mxnet/issues",
+    "For more documents, please visit http://mxnet.io",
+    "Use suppressPackageStartupMessages() to eliminate package startup messages."
+  )
+
+  tip <- sample(tips, 1)
+  packageStartupMessage(paste(strwrap(tip), collapse = "\n"))
 }

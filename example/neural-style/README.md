@@ -8,7 +8,7 @@ A. Gatys, Alexander S. Ecker, and Matthias Bethge.
 
 First use `download.sh` to download pre-trained model and sample inputs
 
-Then run `python run.py`, use `-h` to see more options
+Then run `python nstyle.py`, use `-h` to see more options
 
 ## Sample results
 
@@ -21,3 +21,5 @@ It takes 30 secs for a Titan X to generate the above 600x400 image.
 * The current implementation is based the
   [torch implementation](https://github.com/jcjohnson/neural-style). But we may
   change it dramatically in the near future.
+
+* We will release multi-GPU version soon.

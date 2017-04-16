@@ -11,6 +11,7 @@
 #include <dmlc/json.h>
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
+#include <nnvm/node.h>
 #include <vector>
 #include <map>
 #include <string>
@@ -537,7 +538,7 @@ struct OperatorPropertyReg
 #define MXNET_REGISTER_OP_PROPERTY(name, OperatorPropertyType)          \
   DMLC_REGISTRY_REGISTER(::mxnet::OperatorPropertyReg, OperatorPropertyReg, name) \
   .set_body([]() { return new OperatorPropertyType(); })                \
-  .set_return_type("Symbol") \
+  .set_return_type("NDArray-or-Symbol") \
   .check_name()
 
 #endif  // DMLC_USE_CXX11

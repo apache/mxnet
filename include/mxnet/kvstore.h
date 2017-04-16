@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <string>
 #include <functional>
+#include <atomic>
 #include "./ndarray.h"
 #if MXNET_USE_DIST_KVSTORE
 #include "ps/ps.h"
@@ -190,6 +191,14 @@ class KVStore {
 #endif  // MXNET_USE_DIST_KVSTORE
   }
 
+  void set_barrier_before_exit(const bool barrier_before_exit) {
+#if MXNET_USE_DIST_KVSTORE
+    if (!IsWorkerNode()) LOG(FATAL) << "barrier_before_exit takes effect only on worker nodes";
+    barrier_before_exit_ = barrier_before_exit;
+#else
+    LOG(FATAL) << "compile with USE_DIST_KVSTORE=1 to enable barrier";
+#endif
+  }
 
   /**
    * \return whether or not this process is a scheduler node.
@@ -220,6 +229,18 @@ class KVStore {
    */
   virtual int get_group_size() const {
     return 1;
+  }
+
+  /*!
+   * \return the number of dead node(s) specified by {node_id}
+   * \param node_id can be a node group or a single node
+   * \param timeout a node fails to send heartbeart in {timeout} seconds
+   *        will be presumed as 'dead'
+   *
+   * Always return 0 when type == "local"
+   */
+  virtual int get_num_dead_node(int node_id, int timeout = 60) const {
+    return 0;
   }
 
   /*!
@@ -274,6 +295,11 @@ class KVStore {
    * \brief the kvstore type
    */
   std::string type_;
+
+  /**
+   * \brief whether to do barrier when finalize
+   */
+  std::atomic<bool> barrier_before_exit_{true};
 };
 
 }  // namespace mxnet

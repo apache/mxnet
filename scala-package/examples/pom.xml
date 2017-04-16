@@ -5,15 +5,14 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
-    <artifactId>mxnet-parent_2.10</artifactId>
+    <artifactId>mxnet-parent_2.11</artifactId>
     <version>0.1.2-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>mxnet-examples_2.10</artifactId>
+  <artifactId>mxnet-examples_2.11</artifactId>
   <version>0.1.2-SNAPSHOT</version>
   <name>MXNet Scala Package - Examples</name>
-  <packaging>pom</packaging>
 
   <profiles>
     <profile>
@@ -115,6 +114,7 @@
       </plugin>
     </plugins>
   </build>
+
   <dependencies>
     <dependency>
       <groupId>ml.dmlc.mxnet</groupId>
@@ -123,47 +123,24 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-library</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>commons-codec</groupId>
-      <artifactId>commons-codec</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>args4j</groupId>
-      <artifactId>args4j</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.scalacheck</groupId>
-      <artifactId>scalacheck_${scala.binary.version}</artifactId>
-    </dependency>
-    <dependency>
       <groupId>com.sksamuel.scrimage</groupId>
-      <artifactId>scrimage-core_2.10</artifactId>
+      <artifactId>scrimage-core_2.11</artifactId>
       <version>2.1.5</version>
     </dependency>
     <dependency>
       <groupId>com.sksamuel.scrimage</groupId>
-      <artifactId>scrimage-io-extra_2.10</artifactId>
+      <artifactId>scrimage-io-extra_2.11</artifactId>
       <version>2.1.5</version>
     </dependency>
     <dependency>
       <groupId>com.sksamuel.scrimage</groupId>
-      <artifactId>scrimage-filters_2.10</artifactId>
+      <artifactId>scrimage-filters_2.11</artifactId>
       <version>2.1.5</version>
+    </dependency>
+    <dependency>
+      <groupId>nu.pattern</groupId>
+      <artifactId>opencv</artifactId>
+      <version>2.4.9-7</version>
     </dependency>
   </dependencies>
 </project>
