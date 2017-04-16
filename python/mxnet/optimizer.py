@@ -3,7 +3,7 @@ import math
 import pickle
 import logging
 from .ndarray import NDArray, zeros, clip, sqrt, sign
-import .ndarray as nd
+import ndarray as nd
 from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
 from .random import normal
 
