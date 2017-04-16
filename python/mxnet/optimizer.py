@@ -660,9 +660,6 @@ class Ftrl(Optimizer):
     lamda1 : float, optional
         L1 regularization coefficient.
 
-    clip_gradient : float, optional
-        Clip the gradient by projecting onto the box ``[-clip_gradient, clip_gradient]``.
-
     learning_rate : float, optional
         The initial learning rate.
 
@@ -671,11 +668,10 @@ class Ftrl(Optimizer):
 
     """
 
-    def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1, clip_gradient, **kwargs):
+    def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1 **kwargs):
         super(Ftrl, self).__init__(**kwargs)
         self.lamda1 = lamda1
         self.beta = beta
-        self.clip_gradient = clip_gradient
         self.lr = learning_rate
 
     def create_state(self, index, weight):
