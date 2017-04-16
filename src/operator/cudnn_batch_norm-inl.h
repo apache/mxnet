@@ -13,10 +13,6 @@
 #include <utility>
 #include "./batch_norm-inl.h"
 
-#if MXNET_USE_CUDNN == 1
-#include <cudnn.h>
-#endif  // MXNET_USE_CUDNN == 1
-
 namespace mxnet {
 namespace op {
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 4
