@@ -440,6 +440,36 @@ void SampleGaussian(real_t mu, real_t sigma, NDArray *out) {
   SampleOP<ndarray::GaussianDistribution>(mu, sigma, out);
 }
 
+void SampleExponential(real_t lambda, NDArray *out) {
+  if ( out->ctx().dev_mask() != cpu::kDevMask ) {
+    LOG(FATAL) <<"exponential sampling only valid on cpu";
+  }
+  real_t dummy;
+  SampleOP<ndarray::ExponentialDistribution>(lambda, dummy, out);
+}
+
+void SamplePoisson(real_t lambda, NDArray *out) {
+  if ( out->ctx().dev_mask() != cpu::kDevMask ) {
+    LOG(FATAL) <<"poisson sampling only valid on cpu";
+  }
+  real_t dummy;
+  SampleOP<ndarray::PoissonDistribution>(lambda, dummy, out);
+}
+
+void SampleNegBinomial(int32_t k, real_t p, NDArray *out) {
+  if ( out->ctx().dev_mask() != cpu::kDevMask ) {
+    LOG(FATAL) <<"negative binomial sampling only valid on cpu";
+  }
+  SampleOP<ndarray::NegBinomialDistribution>(k, p, out);
+}
+
+void SampleGenNegBinomial(real_t mu, real_t alpha, NDArray *out) {
+  if ( out->ctx().dev_mask() != cpu::kDevMask ) {
+    LOG(FATAL) <<"negative binomial sampling only valid on cpu";
+  }
+  SampleOP<ndarray::GenNegBinomialDistribution>(mu, alpha, out);
+}
+
 void RandomSeed(uint32_t seed) {
   ResourceManager::Get()->SeedRandom(seed);
 }

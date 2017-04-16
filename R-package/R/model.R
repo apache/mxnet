@@ -85,7 +85,7 @@ mx.model.create.kvstore <- function(kvstore, arg.params, ndevice, verbose=TRUE) 
     } else {
       kvstore <- 'local_allreduce_cpu'
     }
-    if(verbose) cat(paste0("Auto-select kvstore type = ", kvstore, "\n"))
+    if(verbose) message(paste0("Auto-select kvstore type = ", kvstore))
   }
   return(mx.kv.create(kvstore))
 }
@@ -101,7 +101,7 @@ mx.model.train <- function(symbol, ctx, input.shape,
                            kvstore,
                            verbose=TRUE) {
   ndevice <- length(ctx)
-  if(verbose) cat(paste0("Start training with ", ndevice, " devices\n"))
+  if(verbose) message(paste0("Start training with ", ndevice, " devices"))
   # create the executors
   sliceinfo <- mx.model.slice.shape(input.shape, ndevice)
   train.execs <- lapply(1:ndevice, function(i) {
@@ -204,7 +204,7 @@ mx.model.train <- function(symbol, ctx, input.shape,
     train.data$reset()
     if (!is.null(metric)) {
       result <- metric$get(train.metric)
-      if(verbose) cat(paste0("[", iteration, "] Train-", result$name, "=", result$value, "\n"))
+      if(verbose) message(paste0("[", iteration, "] Train-", result$name, "=", result$value))
     }
     if (!is.null(eval.data)) {
       if (!is.null(metric)) {
@@ -238,7 +238,7 @@ mx.model.train <- function(symbol, ctx, input.shape,
       eval.data$reset()
       if (!is.null(metric)) {
         result <- metric$get(eval.metric)
-        if(verbose) cat(paste0("[", iteration, "] Validation-", result$name, "=", result$value, "\n"))
+        if(verbose) message(paste0("[", iteration, "] Validation-", result$name, "=", result$value))
       }
     } else {
       eval.metric <- NULL
