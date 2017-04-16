@@ -655,10 +655,9 @@ class Ftrl(Optimizer):
     Reference:Ad Click Prediction: a View from the Trenches
     """
 
-    def __init__(self, lamda1=0.01, lamda2=1, alpha=0.1, beta=1, **kwargs):
+    def __init__(self, lamda1=0.01, alpha=0.1, beta=1, **kwargs):
         super(Ftrl, self).__init__(**kwargs)
         self.lamda1 = lamda1
-        self.lamda2 = lamda2
         self.alpha = alpha
         self.beta = beta
 
@@ -672,6 +671,7 @@ class Ftrl(Optimizer):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         self._update_count(index)
+        wd = self._get_wd(index)
 
         # preprocess grad
         grad *= self.rescale_grad
@@ -688,7 +688,7 @@ class Ftrl(Optimizer):
 
         # update weight
         weight[:] = (sign(z) * self.lamda1 - z) / \
-            ((self.beta + sqrt(n))/self.alpha + self.lamda2) * (abs(z) > self.lamda1)
+            ((self.beta + sqrt(n))/self.alpha + wd) * (abs(z) > self.lamda1)
 
 @register
 class Test(Optimizer):
