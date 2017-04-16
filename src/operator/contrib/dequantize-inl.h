@@ -3,8 +3,8 @@
  * \file dequantize-inl.h
  * \brief Implementation of dequantize operation
  */
-#ifndef MXNET_OPERATOR_DEQUANTIZE_H_
-#define MXNET_OPERATOR_DEQUANTIZE_H_
+#ifndef MXNET_OPERATOR_DEQUANTIZE_INL_H_
+#define MXNET_OPERATOR_DEQUANTIZE_INL_H_
 
 #include <mxnet/operator_util.h>
 #include <vector>
@@ -75,4 +75,4 @@ inline bool DequantizeType(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_DEQUANTIZE_H_
+#endif  // MXNET_OPERATOR_DEQUANTIZE_INL_H_

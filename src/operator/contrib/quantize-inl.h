@@ -3,8 +3,8 @@
  * \file quantize-inl.h
  * \brief implementation of quantize operation
  */
-#ifndef MXNET_OPERATOR_CONTRIB_QUANTIZE_H_
-#define MXNET_OPERATOR_CONTRIB_QUANTIZE_H_
+#ifndef MXNET_OPERATOR_CONTRIB_QUANTIZE_INL_H_
+#define MXNET_OPERATOR_CONTRIB_QUANTIZE_INLH_
 
 #include <mxnet/operator_util.h>
 #include <vector>
@@ -72,4 +72,4 @@ inline bool QuantizeType(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_CONTRIB_QUANTIZE_H_
+#endif  // MXNET_OPERATOR_CONTRIB_QUANTIZE_INL_H_
