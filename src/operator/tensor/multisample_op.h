@@ -45,25 +45,25 @@ inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
   // Get shape to be sampled for each parameter set.
   const MultiSampleParam& param = nnvm::get<MultiSampleParam>(attrs.parsed);
   TShape sshape = param.shape;
-  for (size_t i = 0; i < sshape.ndim(); ++i ) {
+  for (size_t i = 0; i < sshape.ndim(); ++i) {
     CHECK_GT(sshape[i], 0) << "shape parameter must be non-zero within each dimension";
   }
   // Examine output shape whether it is already defined.
   TShape tshape((*out_attrs)[0]);
   // The illegal case of tshape.ndim() <= sshape.ndim() will
   // automatically crash when we back-propagate from inputs to outputs.
-  if ( tshape.ndim() > sshape.ndim() ) {
+  if (tshape.ndim() > sshape.ndim()) {
     // Promote down by removing last dimensions which represent the samples.
     tshape = TShape(tshape.begin(), tshape.begin()+(tshape.ndim()-sshape.ndim()));
   }
   // Shape assignemnt/checking for inputs.
-  for (size_t i = 0; i < in_attrs->size(); ++i ) {
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
     if ( !shape_assign(&tshape, (*in_attrs)[i])) return false;
   }
-  for (size_t i = 0; i < in_attrs->size(); ++i ) {
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
     SHAPE_ASSIGN_CHECK(*in_attrs, i, tshape);
   }
-  if ( tshape.ndim() > 0 ) {
+  if (tshape.ndim() > 0) {
     // Shape assignment/check for propagation from inputs to output.
     std::vector<int> cshape(tshape.begin(), tshape.end());
     cshape.insert(cshape.end(), sshape.begin(), sshape.end());
@@ -84,10 +84,10 @@ inline bool MultiSampleOpType(const nnvm::NodeAttrs& attrs,
 
   // All inputs must have same type.
   int dtype = -1;
-  for (size_t i = 0; i < in_attrs->size(); ++i ) {
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
     if (!type_assign(&dtype, (*in_attrs)[i])) return false;
   }
-  for (size_t i = 0; i < in_attrs->size(); ++i ) {
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
     TYPE_ASSIGN_CHECK(*in_attrs, i, dtype);
   }
   if (-1 == dtype) return false;
@@ -162,7 +162,7 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
           typename generator::template Sampler<OType> sampler(iptr1[i], iptr2[i], seed);
           // Get the sub-tensor that will hold the results of this sampler.
           Tensor<xpu, 1, OType> slice = samples.Slice(i, i+1).FlatTo1D();
-          for (int j = 0; j < M; ++j ) {
+          for (int j = 0; j < M; ++j) {
             KERNEL_ASSIGN(slice[j], req_type, sampler());
           }
         }
