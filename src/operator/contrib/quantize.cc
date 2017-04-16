@@ -10,7 +10,14 @@ namespace op {
 DMLC_REGISTER_PARAMETER(QuantizeParam);
 
 NNVM_REGISTER_OP(_contrib_quantize)
-.MXNET_DESCRIBE("Quantize the input tensor of type float to output tensor of type 'out_type'.")
+.describe(R"code(Quantize a input tensor from float to `out_type`, with user-specified `min_range` and `max_range`.
+
+[min_range, max_range] are scalar floats that spcify the range for the input data. Each value of the tensor will undergo the following:
+
+`out[i] = (in[i] - min_range) * range(OUTPUT_TYPE) / (max_range - min_range)`
+
+here `range(T) = numeric_limits<T>::max() - numeric_limits<T>::min()`
+)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<QuantizeParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)

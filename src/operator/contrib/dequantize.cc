@@ -10,7 +10,15 @@ namespace op {
 DMLC_REGISTER_PARAMETER(DequantizeParam);
 
 NNVM_REGISTER_OP(_contrib_dequantize)
-.MXNET_DESCRIBE("Dequantize")
+.describe(R"code(Dequantize the input tensor into a float tensor.
+[min_range, max_range] are scalar floats that spcify the range for the output data.
+
+Each value of the tensor will undergo the following:
+
+`out[i] = min_range + (in[i] * (max_range - min_range) / range(INPUT_TYPE))`
+
+here `range(T) = numeric_limits<T>::max() - numeric_limits<T>::min()`
+)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<DequantizeParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)

@@ -3,11 +3,12 @@
  * \file quantize-inl.h
  * \brief implementation of quantize operation
  */
-#ifndef MXNET_OPERATOR_QUANTIZE_H_
-#define MXNET_OPERATOR_QUANTIZE_H_
+#ifndef MXNET_OPERATOR_CONTRIB_QUANTIZE_H_
+#define MXNET_OPERATOR_CONTRIB_QUANTIZE_H_
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <limits>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 
@@ -63,7 +64,7 @@ inline bool QuantizeType(const nnvm::NodeAttrs& attrs,
   const QuantizeParam& param = nnvm::get<QuantizeParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  CHECK_EQ((*in_attrs)[0] = mshadow::kFloat32)
+  CHECK_EQ((*in_attrs)[0], mshadow::kFloat32)
     << "`quantize` only supports float32 input for now";
   TYPE_ASSIGN_CHECK(*out_attrs, 0, param.out_type);
   return (*in_attrs)[0] != -1;
@@ -71,4 +72,4 @@ inline bool QuantizeType(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_QUANTIZE_H_
+#endif  // MXNET_OPERATOR_CONTRIB_QUANTIZE_H_

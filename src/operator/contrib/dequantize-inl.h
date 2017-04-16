@@ -1,13 +1,14 @@
 /*!
  *  Copyright (c) 2017 by Contributors
  * \file dequantize-inl.h
- * \brief
+ * \brief Implementation of dequantize operation
  */
 #ifndef MXNET_OPERATOR_DEQUANTIZE_H_
 #define MXNET_OPERATOR_DEQUANTIZE_H_
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <limits>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 
@@ -66,7 +67,7 @@ inline bool DequantizeType(const nnvm::NodeAttrs& attrs,
   const DequantizeParam& param = nnvm::get<DequantizeParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  CHECK_EQ((*in_attrs)[0] = mshadow::Uint8)
+  CHECK_EQ((*in_attrs)[0], mshadow::kUint8)
     << "`dequantize` only supports uint8 input for now";
   TYPE_ASSIGN_CHECK(*out_attrs, 0, param.out_type);
   return (*in_attrs)[0] != -1;
