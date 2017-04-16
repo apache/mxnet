@@ -4,7 +4,7 @@
  * \brief implementation of quantize operation
  */
 #ifndef MXNET_OPERATOR_CONTRIB_QUANTIZE_INL_H_
-#define MXNET_OPERATOR_CONTRIB_QUANTIZE_INLH_
+#define MXNET_OPERATOR_CONTRIB_QUANTIZE_INL_H_
 
 #include <mxnet/operator_util.h>
 #include <vector>
