@@ -70,7 +70,8 @@ Operator* CreateOp<gpu>(DeconvolutionParam param, int dtype,
                                           backward_compute_type);
       }
       if (!deconvolutionIsSupported) {
-        LOG(INFO) << "This deconvolution is not supported by cudnn, MXNET deconvolution is applied.";
+        LOG(INFO) <<
+          "This deconvolution is not supported by cudnn, MXNET deconvolution is applied.";
         op = new DeconvolutionOp<gpu, DType>(param);
       } else {
         if ((forward_compute_type != desired_forward_compute_type) ||

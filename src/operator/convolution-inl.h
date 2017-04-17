@@ -80,6 +80,10 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     .describe("Set layout for input, output and weight. Empty for\n    "
               "default layout: NCW for 1d, NCHW for 2d and NCDHW for 3d.");
   }
+  // Adjusts kernel size for effects of dilation in the dimension `dim`.
+  index_t DilatedKernelSize(int dim) const {
+    return 1 + (kernel[dim] - 1) * dilate[dim];
+  }
 };
 
 template<typename xpu, typename DType>
@@ -339,6 +343,7 @@ class ConvolutionProp : public OperatorProperty {
     out_shape->resize(1, TShape());
     const TShape &dshp = (*in_shape)[conv::kData];
     if (dshp.ndim() ==  0) return false;
+
     if (param_.kernel.ndim() == 1) {
       // 1d conv
       CHECK_EQ(dshp.ndim(), 3U) << "Input data should be 3D in batch-num_filter-x";
@@ -352,9 +357,8 @@ class ConvolutionProp : public OperatorProperty {
         SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
       }
 
-      const index_t ksize_x = static_cast<index_t>(param_.kernel[0]);
-      const index_t dilated_ksize_x = DilatedKernelSize(ksize_x, param_.dilate[0]);
-      CHECK_EQ(dshape[1] % param_.num_group, 0) \
+      const index_t dilated_ksize_x = param_.DilatedKernelSize(0);
+      CHECK_EQ(dshape[1] % param_.num_group, 0U) \
           << "input num_filter must divide group size";
       CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
           << "output num_filter must divide group size";
@@ -364,7 +368,7 @@ class ConvolutionProp : public OperatorProperty {
           << "incorrect stride size: " << param_.stride;
       CHECK_GT(param_.dilate.Size(), 0U) \
           << "incorrect dilate size: " << param_.dilate;
-      CHECK(ksize_x <= dshape[2] + 2 * param_.pad[0])
+      CHECK(dilated_ksize_x <= AddPad(dshape[2], param_.pad[0]))
           << "kernel size exceed input";
       Shape<3> oshape;
       oshape[0] = dshape[0];
@@ -377,7 +381,8 @@ class ConvolutionProp : public OperatorProperty {
       CHECK_EQ(dshp.ndim(), 4U) \
           << "Input data should be 4D in batch-num_filter-y-x";
       Shape<4> dshape = ConvertLayout(dshp.get<4>(), param_.layout.value(), kNCHW);
-      Shape<4> wshape = Shape4(param_.num_filter / param_.num_group, dshape[1] / param_.num_group,
+      Shape<4> wshape = Shape4(param_.num_filter / param_.num_group,
+                               dshape[1] / param_.num_group,
                                param_.kernel[0], param_.kernel[1]);
       wshape = ConvertLayout(wshape, kNCHW, param_.layout.value());
       wshape[0] *= param_.num_group;
@@ -386,10 +391,8 @@ class ConvolutionProp : public OperatorProperty {
         SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
       }
 
-      const index_t ksize_y = static_cast<index_t>(param_.kernel[0]);
-      const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
-      const index_t dilated_ksize_y = DilatedKernelSize(ksize_y, param_.dilate[0]);
-      const index_t dilated_ksize_x = DilatedKernelSize(ksize_x, param_.dilate[1]);
+      const index_t dilated_ksize_y = param_.DilatedKernelSize(0);
+      const index_t dilated_ksize_x = param_.DilatedKernelSize(1);
       CHECK_EQ(dshape[1] % param_.num_group, 0U) \
           << "input num_filter must divide group size";
       CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
@@ -441,14 +444,11 @@ class ConvolutionProp : public OperatorProperty {
         SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
       }
 
-      const index_t ksize_d = static_cast<index_t>(param_.kernel[0]);
-      const index_t ksize_y = static_cast<index_t>(param_.kernel[1]);
-      const index_t ksize_x = static_cast<index_t>(param_.kernel[2]);
       // Note: 3D dilation currently not supported.
       // Calculations below done to preserve symmetry with 1D/2D code.
-      const index_t dilated_ksize_d = DilatedKernelSize(ksize_d, param_.dilate[0]);
-      const index_t dilated_ksize_y = DilatedKernelSize(ksize_y, param_.dilate[1]);
-      const index_t dilated_ksize_x = DilatedKernelSize(ksize_x, param_.dilate[2]);
+      const index_t dilated_ksize_d = param_.DilatedKernelSize(0);
+      const index_t dilated_ksize_y = param_.DilatedKernelSize(1);
+      const index_t dilated_ksize_x = param_.DilatedKernelSize(2);
       CHECK_EQ(dshape[1] % param_.num_group, 0U)
         << "input num_filter must divide group size";
       CHECK_EQ(param_.num_filter % param_.num_group, 0U)
@@ -557,10 +557,6 @@ class ConvolutionProp : public OperatorProperty {
                              std::vector<int> *in_type) const override;
 
  private:
-  // Adjusts kernel size for effects of dilation (in one dimension)
-  index_t DilatedKernelSize(index_t ksize, index_t dilation) const {
-    return 1 + (ksize - 1) * dilation;
-  }
   // Adds symmetric padding to a data input (in one dimension)
   index_t AddPad(index_t dsize, index_t pad) const {
     return dsize + 2 * pad;

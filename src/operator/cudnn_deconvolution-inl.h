@@ -272,7 +272,7 @@ class CuDNNDeconvolutionOp : public Operator {
     // used in CuDNNConvolution::Supports().
     return filterDilationFactor == 1 ||
            filterDilationFactor > 1 && (CUDNN_MAJOR >= 6) &&
-           (backward_compute_type != kFloat16) && 
+           (backward_compute_type != kFloat16) &&
            (forward_compute_type != kFloat16);
   }
 
@@ -326,10 +326,8 @@ class CuDNNDeconvolutionOp : public Operator {
                                                o_pad[1],
                                                param_.stride[0],
                                                param_.stride[1],
-                                               1,
-                                               1,
-      //                                               param_.dilate[0],
-      //                                               param_.dilate[1],
+                                               param_.dilate[0],
+                                               param_.dilate[1],
                                                CUDNN_CROSS_CORRELATION,
                                                cudnn_forward_compute_type),
                CUDNN_STATUS_SUCCESS);
@@ -338,10 +336,8 @@ class CuDNNDeconvolutionOp : public Operator {
                                                o_pad[1],
                                                param_.stride[0],
                                                param_.stride[1],
-                                               1,
-                                               1,
-      //                                               param_.dilate[0],
-      //                                               param_.dilate[1],
+                                               param_.dilate[0],
+                                               param_.dilate[1],
                                                CUDNN_CROSS_CORRELATION,
                                                cudnn_backward_compute_type),
                CUDNN_STATUS_SUCCESS);
@@ -351,10 +347,8 @@ class CuDNNDeconvolutionOp : public Operator {
                                                o_pad[1],
                                                param_.stride[0],
                                                param_.stride[1],
-                                               1,
-                                               1,
-      //                                               param_.dilate[0],
-      //                                               param_.dilate[1],
+                                               param_.dilate[0],
+                                               param_.dilate[1],
                                                CUDNN_CROSS_CORRELATION),
                CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetConvolution2dDescriptor(backward_conv_desc_,
@@ -362,10 +356,8 @@ class CuDNNDeconvolutionOp : public Operator {
                                                o_pad[1],
                                                param_.stride[0],
                                                param_.stride[1],
-                                               1,
-                                               1,
-      //                                               param_.dilate[0],
-      //                                               param_.dilate[1],
+                                               param_.dilate[0],
+                                               param_.dilate[1],
                                                CUDNN_CROSS_CORRELATION),
                CUDNN_STATUS_SUCCESS);
       #endif
@@ -535,7 +527,7 @@ class CuDNNDeconvolutionOp : public Operator {
         CHECK_EQ(cudnnGetConvolutionBackwardDataAlgorithm(s->dnn_handle_,
                  filter_desc_,
                  in_desc_,
-                 forward_conv_desc_, // this backward algorithm used for inference
+                 forward_conv_desc_,  // this backward algorithm used for inference
                  out_desc_,
                  CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT,
                  workspace_byte,
@@ -619,6 +611,16 @@ class CuDNNDeconvolutionOp : public Operator {
     }, ctx, {}, {var});
     Engine::Get()->WaitForVar(var);
     Engine::Get()->DeleteVariable([](RunContext s) {}, ctx, var);
+
+    if (param_.cudnn_algo_verbose) {
+      LOG(INFO) << "Algo selection for deconvolution: " << key;
+      LOG(INFO) << "Note: backprop-to-data kernel is used for inference.";
+      LOG(INFO) << "      Forward and backprop-to-filter kernels are used for training.";
+      LOG(INFO) << "    backprop-to-data: " << back_algo_;
+      LOG(INFO) << "            forward : " << algo_;
+      LOG(INFO) << "  backprop-to-filter: " << back_algo_;
+      LOG(INFO) << "";
+    }
   }
 
   void GetTempSize(const OpContext& ctx) {
