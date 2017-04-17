@@ -20,6 +20,8 @@ inline Engine* CreateEngine() {
   #if MXNET_PREDICT_ONLY == 0
   if (stype == "NaiveEngine") {
     ret = CreateNaiveEngine();
+  } else if (stype == "StreamingEnginePerDevice") {
+      ret = CreateStreamingEnginePerDevice();
   } else if (stype == "ThreadedEngine") {
     ret = CreateThreadedEnginePooled();
   } else if (stype == "ThreadedEnginePerDevice") {

@@ -96,7 +96,7 @@ double EvaluateWorloads(const std::vector<Workload>& workloads,
 TEST(Engine, RandSumExpr) {
   std::vector<Workload> workloads;
   int num_repeat = 5;
-  const int num_engine = 4;
+  const int num_engine = 5;
 
   std::vector<double> t(num_engine, 0.0);
   std::vector<mxnet::Engine*> engine(num_engine);
@@ -105,6 +105,7 @@ TEST(Engine, RandSumExpr) {
   engine[1] = mxnet::engine::CreateNaiveEngine();
   engine[2] = mxnet::engine::CreateThreadedEnginePooled();
   engine[3] = mxnet::engine::CreateThreadedEnginePerDevice();
+  engine[4] = mxnet::engine::CreateStreamingEnginePerDevice();
 
   for (int repeat = 0; repeat < num_repeat; ++repeat) {
     srand(time(NULL) + repeat);
@@ -122,11 +123,11 @@ TEST(Engine, RandSumExpr) {
     LOG(INFO) << "data: " << data[0][1] << " " << data[0][2] << "...";
   }
 
-
   LOG(INFO) << "baseline\t\t"  << t[0] << " sec";
   LOG(INFO) << "NaiveEngine\t\t"  << t[1] << " sec";
   LOG(INFO) << "ThreadedEnginePooled\t" << t[2] << " sec";
   LOG(INFO) << "ThreadedEnginePerDevice\t" << t[3] << " sec";
+  LOG(INFO) << "StreamingEnginePerDevice\t" << t[4] << " sec";
 }
 
 void Foo(mxnet::RunContext, int i) { printf("The fox says %d\n", i); }

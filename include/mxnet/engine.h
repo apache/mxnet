@@ -226,6 +226,8 @@ class MXNET_API Engine {
     ret.param_ = param;
     return ret;
   }
+
+  virtual bool SupportsAsynchronousKernelExecution() { return false; }
 };  // class Engine
 #endif  // DMLC_USE_CXX11
 }  // namespace mxnet
