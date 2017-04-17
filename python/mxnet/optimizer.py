@@ -664,7 +664,7 @@ class Ftrl(Optimizer):
 
     beta : float, optional
         Per-coordinate learning rate correlation parameter.
-    $\eta_{t,i}=\frac{learning_rate}{\beta+\sqrt{\sum_{s=1^}tg_{s,i}^t}$
+    eta_{t,i}=frac{learning_rate}{beta+sqrt{sum_{s=1^}tg_{s,i}^t}
 
     """
 
