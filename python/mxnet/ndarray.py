@@ -1026,12 +1026,12 @@ def array(source_array, ctx=None, dtype=None):
         Device context (default is the current default context).
     dtype : str or numpy.dtype, optional
         The data type of the output array. The default dtype is ``source_array.dtype``
-        if `source_array` is an NDArray, `float32` otherwise.
+        if `source_array` is an `NDArray`, `float32` otherwise.
 
     Returns
     -------
     NDArray
-        An `NDArray` satisfying the requirements specified by the parameters.
+        An `NDArray` with the same contents as the `source_array`.
 
     Examples
     --------
@@ -1102,9 +1102,9 @@ def moveaxis(tensor, source, destination):
 def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
     """Returns evenly spaced values within a given interval.
 
-    Values are generated within the half-open interval [start, stop). In other
-    words, the interval includes start but excludes stop. The function is
-    similar to the built-in Python function `range` and to ``numpy.arange``,
+    Values are generated within the half-open interval [`start`, `stop`). In other
+    words, the interval includes `start` but excludes `stop`. The function is
+    similar to the built-in Python function `range` and to `numpy.arange`,
     but returns an `NDArray`.
 
     Parameters
@@ -1120,12 +1120,12 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
     ctx : Context, optional
         Device context. Default context is the current default context.
     dtype : str or numpy.dtype, optional
-        The data type of the NDArray. The default datatype is np.float32.
+        The data type of the `NDArray`. The default datatype is `np.float32`.
 
     Returns
     -------
     NDArray
-        NDArray of evenly spaced values.
+        `NDArray` of evenly spaced values in the specified range.
 
     Examples
     --------
