@@ -993,7 +993,7 @@ def full(shape, val, ctx=None, dtype=mx_real_t):
     ctx : Context, optional
         Device context (default is the current default context).
     dtype : `str` or `numpy.dtype`, optional
-        The data type of the returned NDArray. The default datatype is `float32`.
+        The data type of the returned `NDArray`. The default datatype is `float32`.
 
     Returns
     -------
