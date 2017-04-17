@@ -84,7 +84,7 @@ def random_crop(src, size, interp=2):
 
 
 def center_crop(src, size, interp=2):
-    """Randomly crop src with size. Upsample result if src is smaller than size."""
+    """Centrally crop src with size. Upsample result if src is smaller than size."""
     h, w, _ = src.shape
     new_w, new_h = scale_down((w, h), size)
 
