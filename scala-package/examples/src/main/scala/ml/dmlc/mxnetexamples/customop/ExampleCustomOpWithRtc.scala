@@ -203,7 +203,10 @@ object ExampleCustomOpWithRtc {
           }
           epochDone = true
         }
-        logger.info(s"Epoch[$epoch] Train-accuracy=${evalMetric.get}")
+        val (name, value) = evalMetric.get
+        name.zip(value).foreach { case (n, v) =>
+          logger.info(s"Epoch[$epoch] Train-accuracy=$v")
+        }
         val toc = System.currentTimeMillis
         logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
 
@@ -217,7 +220,10 @@ object ExampleCustomOpWithRtc {
           evalMetric.update(evalBatch.label, executor.outputs)
           evalBatch.dispose()
         }
-        logger.info(s"Epoch[$epoch] Validation-accuracy=${evalMetric.get}")
+        val (names, values) = evalMetric.get
+        names.zip(values).foreach { case (n, v) =>
+          logger.info(s"Epoch[$epoch] Validation-accuracy=$v")
+        }
       }
       executor.dispose()
     } catch {
