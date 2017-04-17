@@ -23,27 +23,6 @@ namespace mxnet {
 namespace common {
 
 #if DMLC_USE_CXX11
-
-inline void DeduplicateVarHandle(std::vector<engine::VarHandle> *read_vars,
-                                 std::vector<engine::VarHandle> *write_vars) {
-  std::sort(write_vars->begin(), write_vars->end());
-  write_vars->resize(std::unique(write_vars->begin(), write_vars->end()) -
-                    write_vars->begin());
-  std::sort(read_vars->begin(), read_vars->end());
-  read_vars->resize(std::unique(read_vars->begin(), read_vars->end()) -
-                   read_vars->begin());
-  auto wit = write_vars->begin();
-  auto rtop = read_vars->begin();
-  for (auto rit = read_vars->begin(); rit != read_vars->end(); ++rit) {
-    while (wit != write_vars->end() && *wit < *rit) ++wit;
-    if (wit == write_vars->end() || *wit != *rit) {
-      *rtop = *rit;
-      ++rtop;
-    }
-  }
-  read_vars->resize(rtop - read_vars->begin());
-}
-
 // heuristic to dermine number of threads per GPU
 inline int GetNumThreadPerGPU() {
   // This is resource efficient option.
