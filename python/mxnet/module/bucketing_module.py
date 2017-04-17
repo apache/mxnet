@@ -425,12 +425,12 @@ class BucketingModule(BaseModule):
         An example of using clip_grad_norm to clip the gradient before updating the parameters::
             >>> #Get the gradient via back-propagation
             >>> net.forward_backward(data_batch=data_batch)
-            >>> norm_val = net.clip_grad_norm(max_norm=1.0)
+            >>> norm_val = net.clip_by_global_norm(max_norm=1.0)
             >>> net.update()
         """
         return self._curr_module.clip_by_global_norm(max_norm=max_norm)
 
-    def global_norm(self):
+    def global_grad_norm(self):
         """Calculate global gradient norm.
 
         The L2 norm is computed over all gradients together, as if they were
@@ -449,10 +449,10 @@ class BucketingModule(BaseModule):
         An example of using global_norm to calculate the gradient norm after back-propgation::
             >>> #Get the gradient via back-propagation
             >>> net.forward_backward(data_batch=data_batch)
-            >>> norm_val = net.global_norm()
+            >>> norm_val = net.global_grad_norm()
             >>> print(norm_val)
         """
-        return self._curr_module.global_norm()
+        return self._curr_module.global_grad_norm()
 
     def get_outputs(self, merge_multi_context=True):
         """Get outputs from a previous forward computation.

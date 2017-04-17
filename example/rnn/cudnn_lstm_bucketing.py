@@ -27,6 +27,10 @@ parser.add_argument('--num-epochs', type=int, default=25,
                     help='max num of epochs')
 parser.add_argument('--lr', type=float, default=1.0,
                     help='initial learning rate')
+parser.add_argument('--lr-decay', type=float, default=0.5,
+                    help='the decay rate of lr')
+parser.add_argument('--decay-epoch-num', type=float, default=4,
+                    help='the number of epochs per learning rate decay')
 parser.add_argument('--optimizer', type=str, default='sgd',
                     help='the optimizer type')
 parser.add_argument('--mom', type=float, default=0.0,
@@ -43,7 +47,7 @@ parser.add_argument('--disp-batches', type=int, default=50,
 # completed. Breaking a multi-layer fused RNN cell into several one-layer ones allows
 # gradients to be processed ealier. This reduces communication overhead, especially with
 # multiple GPUs.
-parser.add_argument('--stack-rnn', default=False,
+parser.add_argument('--stack-rnn', default=True,
                     help='stack fused RNN cells to reduce communication overhead')
 parser.add_argument('--dropout', type=float, default=0.5,
                     help='dropout probability (1.0 - keep probability)')
@@ -123,7 +127,9 @@ def train(args):
     else:
         arg_params = None
         aux_params = None
-    lr_scheduler = mx.lr_scheduler.FactorScheduler(step=10000, factor=1 / 1.15)
+    step = int(data_train.seq_num / args.batch_size)
+    lr_scheduler = mx.lr_scheduler.FactorScheduler(step=step * args.decay_epoch_num,
+                                                   factor=args.lr_decay)
 
     opt_params = {
       'learning_rate': args.lr,
@@ -148,9 +154,7 @@ def train(args):
         aux_params          = aux_params,
         begin_epoch         = args.load_epoch,
         num_epoch           = args.num_epochs,
-        max_norm            = 5.0 * args.batch_size, # We need to multiply the batch_size here
-                                                     #  because we will divide the batch_size
-                                                     # in model.update()
+        max_norm            = 5.0,
         batch_end_callback  = mx.callback.Speedometer(args.batch_size, args.disp_batches),
         epoch_end_callback  = mx.rnn.do_rnn_checkpoint(cell, args.model_prefix, 1)
                               if args.model_prefix else None)

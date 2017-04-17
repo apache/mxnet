@@ -592,11 +592,11 @@ class Module(BaseModule):
         An example of using clip_grad_norm to clip the gradient before updating the parameters::
             >>> #Get the gradient via back-propagation
             >>> net.forward_backward(data_batch=data_batch)
-            >>> norm_val = net.clip_grad_norm(max_norm=1.0)
+            >>> norm_val = net.clip_by_global_norm(max_norm=1.0)
             >>> net.update()
         """
-        assert self.binded and self.params_initialized
-        norm_val = self.global_norm()
+        assert self.binded and self.params_initialized and self.optimizer_initialized
+        norm_val = self.global_grad_norm()
         if norm_val > max_norm:
             ratio = max_norm / float(norm_val)
             for grads in self._exec_group.grad_arrays:
@@ -604,7 +604,7 @@ class Module(BaseModule):
                     grad *= ratio
         return norm_val
 
-    def global_norm(self):
+    def global_grad_norm(self):
         """Calculate global gradient norm.
 
         The L2 norm is computed over all gradients together, as if they were
@@ -623,15 +623,16 @@ class Module(BaseModule):
         An example of using global_norm to calculate the gradient norm after back-propgation::
             >>> #Get the gradient via back-propagation
             >>> net.forward_backward(data_batch=data_batch)
-            >>> norm_val = net.global_norm()
+            >>> norm_val = net.global_grad_norm()
             >>> print(norm_val)
         """
-        assert self.binded and self.params_initialized
+        assert self.binded and self.params_initialized and self.optimizer_initialized
         # The code in the following will cause the estimated norm to be different for multiple gpus
         norm_val = 0.0
         for exe in self._exec_group.execs:
             norm_val += nd.global_norm(exe.grad_arrays).asscalar()
         norm_val /= float(len(self._exec_group.execs))
+        norm_val *= self._optimizer.rescale_grad
         return norm_val
 
     def get_outputs(self, merge_multi_context=True):
@@ -787,7 +788,7 @@ class Module(BaseModule):
             - Level = 1
                 Print the shape of all parameters + The total number of paremter numbers
             - Level = 2
-                Print the shape of the data and other available information in Level 1
+                Print the shape of the data/state and other available information in Level 1
         """
         assert self.binded and self.params_initialized
         assert 0 <= level <= 2,\
@@ -820,6 +821,13 @@ class Module(BaseModule):
             else:
                 self.logger.info("Data:")
                 for k, v in zip(self.data_names, self.data_shapes):
+                    _log_var(k, v, typ="data")
+            if len(self._state_names) == 0:
+                self.logger.info("State: None")
+            else:
+                self.logger.info("State:")
+                for k in self._state_names:
+                    v = self._exec_group.execs[0].arg_dict[k]
                     _log_var(k, v, typ="data")
         if level >= 1:
             if len(self._param_names) == 0:

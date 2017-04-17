@@ -216,12 +216,12 @@ class BaseModule(object):
         An example of using clip_grad_norm to clip the gradient before updating the parameters::
             >>> #Get the gradient via back-propagation
             >>> net.forward_backward(data_batch=data_batch)
-            >>> norm_val = net.clip_grad_norm(max_norm=1.0)
+            >>> norm_val = net.clip_by_global_norm(max_norm=1.0)
             >>> net.update()
         """
         raise NotImplementedError()
 
-    def global_norm(self):
+    def global_grad_norm(self):
         """Calculate global gradient norm.
 
         The L2 norm is computed over all gradients together, as if they were
@@ -240,7 +240,7 @@ class BaseModule(object):
         An example of using global_norm to calculate the gradient norm after back-propgation::
             >>> #Get the gradient via back-propagation
             >>> net.forward_backward(data_batch=data_batch)
-            >>> norm_val = net.global_norm()
+            >>> norm_val = net.global_grad_norm()
             >>> print(norm_val)
         """
         raise NotImplementedError()
