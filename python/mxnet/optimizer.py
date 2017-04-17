@@ -668,7 +668,7 @@ class Ftrl(Optimizer):
 
     """
 
-    def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1 **kwargs):
+    def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1, **kwargs):
         super(Ftrl, self).__init__(**kwargs)
         self.lamda1 = lamda1
         self.beta = beta
@@ -693,7 +693,7 @@ class Ftrl(Optimizer):
         z, n = state
 
         #update z, n
-        z[:] += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / self.lr 
+        z[:] += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / self.lr
         n[:] += grad * grad
 
         # update weight
