@@ -13,7 +13,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmax)
 In the case of multiple occurrences of maximum values, the indices corresponding to the first occurrence
 are returned.
 
-Example::  
+Examples::  
 
   x = [[ 0.,  1.,  2.], 
        [ 3.,  4.,  5.]]  
@@ -27,6 +27,7 @@ Example::  
   // argmax along axis 1 keeping same dims as an input array
   argmax(x, axis=1, keepdims=True) = [[ 2.], 
                                       [ 2.]]   
+
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
@@ -37,7 +38,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
 In the case of multiple occurrences of minimum values, the indices corresponding to the first occurrence
 are returned.
 
-Example::  
+Examples::  
 
   x = [[ 0.,  1.,  2.], 
        [ 3.,  4.,  5.]]  
@@ -65,7 +66,7 @@ The result will be an NDArray of shape (num_channel,).
 In case of multiple occurrences of the maximum values, the indices corresponding to the first occurrence
 are returned.
 
-Example::  
+Examples::  
 
   x = [[ 0.,  1.,  2.], 
        [ 3.,  4.,  5.]]  

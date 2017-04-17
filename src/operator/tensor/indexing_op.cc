@@ -13,10 +13,15 @@ DMLC_REGISTER_PARAMETER(TakeParam);
 DMLC_REGISTER_PARAMETER(OneHotParam);
 
 NNVM_REGISTER_OP(Embedding)
-.MXNET_DESCRIBE("Map integer index to vector representations (embeddings)."
-                " Those embeddings are learnable parameters. For a input of shape"
-                " (d1, ..., dK), the output shape is (d1, ..., dK, output_dim)."
-                " All the input values should be integers in the range [0, input_dim).")
+.describe(R"code(Maps integer indices to vector representations (embeddings).
+
+
+Those embeddings are learnable parameters.
+For an input of shape (d1, ..., dK),
+the shape of output array is (d1, ..., dK, output_dim).
+All the input values should be integers in the range [0, input_dim).
+
+)code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<EmbeddingParam>)
