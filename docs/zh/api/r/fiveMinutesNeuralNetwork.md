@@ -94,7 +94,7 @@ model <- mx.mlp(train.x, train.y, hidden_node=10, out_node=2, out_activation="so
 想要知道具体发生了什么，我们可以在R中轻松看到计算图：
 
 ```{r}
-graph.viz(model$symbol$as.json())
+graph.viz(model$symbol)
 ```
 
 [![](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/knitr/graph.computation.png)](https://github.com/dmlc/mxnet)

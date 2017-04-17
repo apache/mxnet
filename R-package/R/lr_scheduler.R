@@ -19,12 +19,12 @@ mx.lr_scheduler.FactorScheduler <- function(step, factor_val, stop_factor_lr=1e-
       lr    <- lr * factor_val
       if(lr < stop_factor_lr){
         lr <- stop_factor_lr
-        if(verbose) cat(paste0("Update[", num_update, 
+        if(verbose) message(paste0("Update[", num_update, 
                                "]: now learning rate arrived at ", lr, 
-                               "will not change in the future\n"))
+                               "will not change in the future"))
       } else{
-        if(verbose) cat(paste0("Update[", num_update, 
-                               "]: learning rate is changed to ", lr, "\n"))
+        if(verbose) message(paste0("Update[", num_update, 
+                               "]: learning rate is changed to ", lr))
       }
       optimizerEnv$lr    <- lr
       optimizerEnv$count <- count      
@@ -62,12 +62,12 @@ mx.lr_scheduler.MultiFactorScheduler <- function(step, factor_val, stop_factor_l
         lr <-  lr * factor_val
         if(lr < stop_factor_lr){
           lr <- stop_factor_lr
-          if(verbose) cat(paste0("Update[", num_update, 
+          if(verbose) message(paste0("Update[", num_update, 
                                  "]: now learning rate arrived at ", lr, 
-                                 "will not change in the future\n"))
+                                 "will not change in the future"))
         } else{
-          if(verbose) cat(paste0("Update[", num_update, 
-                                 "]: learning rate is changed to ", lr, "\n"))
+          if(verbose) message(paste0("Update[", num_update, 
+                                 "]: learning rate is changed to ", lr))
           
         }
         optimizerEnv$lr           <- lr
