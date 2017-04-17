@@ -52,7 +52,7 @@ NNVM_REGISTER_OP(_backward_Embedding)
 
 
 NNVM_REGISTER_OP(take)
-.describe(R"code(Takes elements from an input array along the given axis.
+.describe(R"code(Takes elements from an input array according to the input indices along the given axis.
 
 This function slices the input array along a particular axis with the provided indices.
 
@@ -114,13 +114,13 @@ NNVM_REGISTER_OP(_backward_take)
 
 
 NNVM_REGISTER_OP(batch_take)
-.describe(R"code(Takes elements from a data batch.
+.describe(R"code(Takes elements according to the input indices from a data batch.
 
 .. note::
   `batch_take` is deprecated. Use `pick` instead.
 
-Given an input array of shape ``(d0, d1)`` and indices of shape ``(d0,)``, the result will be
-an output array of shape ``(d0,)`` with::
+Given an input array of shape ``(d0, d1)`` and indices of shape ``(i0,)``, the result will be
+an output array of shape ``(i0,)`` with::
 
   output[i] = input[i, indices[i]]
 
