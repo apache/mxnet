@@ -64,7 +64,7 @@ For example::
                          [ 3.,  3.],
                          [ 3.,  3.]]
 
-  Concat(x,y,z,dim=1) = [[ 1.,  1.,  2.,  2.],
+  Concat(x,y,dim=1) = [[ 1.,  1.,  2.,  2.],
                          [ 1.,  1.,  2.,  2.]]
 
 )code" ADD_FILELINE)

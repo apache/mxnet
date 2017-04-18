@@ -49,7 +49,7 @@ def make(docker_type, make_flag) {
       sh "${docker_run} ${docker_type} make ${make_flag}"
     } catch (exc) {
       echo 'Incremental compilation failed. Fall back to build from scratch'
-      sh "${docker_run} ${docker_type} make clean"
+      sh "${docker_run} ${docker_type} sudo make clean"
       sh "${docker_run} ${docker_type} make ${make_flag}"
     }
   }
@@ -81,6 +81,7 @@ stage('Build') {
         init_git()
         def flag = """ \
 USE_PROFILER=1                \
+USE_CPP_PACKAGE=1             \
 USE_BLAS=openblas             \
 -j\$(nproc)
 """
@@ -99,6 +100,7 @@ USE_BLAS=openblas             \
 USE_CUDA=1                    \
 USE_CUDA_PATH=/usr/local/cuda \
 USE_CUDNN=1                   \
+USE_CPP_PACKAGE=1             \
 -j\$(nproc)
 """
         make('gpu', flag)
@@ -126,6 +128,7 @@ USE_MKL2017_EXPERIMENTAL=1    \
 USE_CUDA=1                    \
 USE_CUDA_PATH=/usr/local/cuda \
 USE_CUDNN=1                   \
+USE_CPP_PACKAGE=1             \
 -j\$(nproc)
 """
         make('mklml_gpu', flag)

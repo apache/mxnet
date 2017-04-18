@@ -613,48 +613,28 @@ void GraphExecutor::InitCachedOps() {
     if (inode.source->is_variable()) continue;
     if (op_nodes_[nid].skip_exec_node) continue;
     auto& exec = op_nodes_[nid].exec;
-
-    std::vector<uint32_t> inplace_inputs;
-    for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
-      uint32_t eid = idx.entry_id(nid, index);
-      // must check exec->req because, vstorage_inplace is only a hint.
-      if (vstorage_inplace[eid] >= 0 && exec->req.at(index) == kWriteInplace) {
-        inplace_inputs.push_back(vstorage_inplace[eid]);
-      }
-    }
-    std::sort(inplace_inputs.begin(), inplace_inputs.end());
-
     bool is_async = op_nodes_[nid].exec->exec_type() == Operator::kAsync;
     bool is_gpu = op_nodes_[nid].ctx.dev_mask() == gpu::kDevMask;
-    // the variable
-    std::vector<Engine::VarHandle> use_vars, mutate_vars, all_vars;
+
+    // the variables
+    std::vector<Engine::VarHandle> use_vars, mutate_vars;
     for (size_t i = 0; i < exec->in_array.size(); ++i) {
-      if (!std::binary_search(inplace_inputs.begin(), inplace_inputs.end(), i)) {
-        auto& nd = exec->in_array[i];
-        all_vars.push_back(nd.var());
-        use_vars.push_back(nd.var());
-      }
+      auto& nd = exec->in_array[i];
+      use_vars.push_back(nd.var());
     }
     for (auto& r : exec->op_ctx.requested) {
-      all_vars.push_back(r.var);
       mutate_vars.push_back(r.var);
     }
     for (auto& nd : exec->out_array) {
-      all_vars.push_back(nd.var());
       mutate_vars.push_back(nd.var());
     }
-    auto dedup = [] (std::vector<Engine::VarHandle>& vars) {  // NOLINT(*)
-      std::sort(vars.begin(), vars.end());
-      vars.resize(std::unique(vars.begin(), vars.end()) - vars.begin());
-    };
-    dedup(use_vars);
-    for (auto v : use_vars) {
-      if (std::binary_search(mutate_vars.begin(), mutate_vars.end(), v)) {
-        LOG(FATAL) << "var duplication happens for op " << inode.source->attrs.name;
-      }
-    }
-    dedup(mutate_vars);
-    dedup(all_vars);
+    // dedup vars
+    Engine::Get()->DeduplicateVarHandle(&use_vars, &mutate_vars);
+    // all vars include both mutate vars and use vars
+    std::vector<Engine::VarHandle> all_vars(use_vars);
+    std::copy(mutate_vars.begin(), mutate_vars.end(),
+              std::inserter(all_vars, all_vars.end()));
+    // setup exec vars
     Engine::Get()->PushSync([exec](RunContext rctx) {
         exec->Setup();
       }, Context::CPU(), {}, all_vars, FnProperty::kNormal, 0,
@@ -845,8 +825,6 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
 GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start, size_t topo_end) {
   std::vector<Engine::VarHandle> use_vars;
   std::vector<Engine::VarHandle> mutate_vars;
-  std::unordered_set<Engine::VarHandle> use_var_set;
-  std::unordered_set<Engine::VarHandle> mutate_var_set;
   Context *pctx = nullptr;
   GraphExecutor::CachedSegOpr ret;
   ret.topo_start = topo_start;
@@ -878,9 +856,9 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     }
     auto& exec = op_nodes_[nid].exec;
     std::copy(op_node.mutate_vars.begin(), op_node.mutate_vars.end(),
-              std::inserter(mutate_var_set, mutate_var_set.end()));
+              std::inserter(mutate_vars, mutate_vars.end()));
     std::copy(op_node.use_vars.begin(), op_node.use_vars.end(),
-              std::inserter(use_var_set, use_var_set.end()));
+              std::inserter(use_vars, use_vars.end()));
     ret.exec_list.push_back(exec.get());
 #if MXNET_USE_PROFILER
     opr_names += inode.source->op()->name + ",";
@@ -889,17 +867,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
 
   if (pctx == nullptr) return ret;
   ret.ctx = *pctx;
-  // remove mutate vars to const var list
-  for (auto iter = use_var_set.begin(); iter != use_var_set.end();) {
-    if (mutate_var_set.find(*iter) != mutate_var_set.end()) {
-      iter = use_var_set.erase(iter);
-    } else {
-      iter++;
-    }
-  }
-
-  std::copy(mutate_var_set.begin(), mutate_var_set.end(), std::back_inserter(mutate_vars));
-  std::copy(use_var_set.begin(), use_var_set.end(), std::back_inserter(use_vars));
+  Engine::Get()->DeduplicateVarHandle(&use_vars, &mutate_vars);
 
   bool is_gpu = pctx->dev_mask() == gpu::kDevMask;
   auto exec_fun = [exec_list, is_gpu] (
