@@ -118,7 +118,7 @@ inline Symbol Crop(const std::string& symbol_name,
 }
 
 /*!
- * \breif Apply activation function to input.
+ * \brief Apply activation function to input.
  *        Softmax Activation is only available with CUDNN on GPUand will be
  *        computed at each location across channel if input is 4D.
  * \param symbol_name name of the resulting symbol.
