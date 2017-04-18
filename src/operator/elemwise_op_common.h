@@ -14,6 +14,7 @@
 #include <nnvm/node.h>
 #include <nnvm/op_attr_types.h>
 #include <vector>
+#include <string>
 #include <utility>
 #include "./operator_common.h"
 
