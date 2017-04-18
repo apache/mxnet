@@ -71,11 +71,12 @@ The activation operations are applied elementwisely to each array elements.
 The following types are supported:
 
 - `relu`: Rectified Linear Unit, :math:`y = max(x, 0)`
-- `sigmoid`: :math:`y = \frac{1}{1 + e^{-x}}`
-- `tanh`: Hyperbolic tangent, :math:`y = \frac{e^x - e^{-x}}{e^x + e^{-x}}`
-- `softrelu`: Soft ReLU, or SoftPlus, :math:`y = log(1 + e^x)`
+- `sigmoid`: :math:`y = \frac{1}{1 + exp(-x)}`
+- `tanh`: Hyperbolic tangent, :math:`y = \frac{exp(x) - exp(-x)}{exp(x) + exp(-x)}`
+- `softrelu`: Soft ReLU, or SoftPlus, :math:`y = log(1 + exp(x))`
+
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol", "Input data to activation function.")
+.add_argument("data", "NDArray-or-Symbol", "Input array to activation function.")
 .add_arguments(ActivationParam::__FIELDS__());
 
 }  // namespace op
