@@ -183,8 +183,10 @@ Operator* CustomOpProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_sh
 MXNET_REGISTER_OP_PROPERTY(Custom, CustomOpProp)
 .describe(R"code(Apply a custom operator implemented in the frontend language (Python).
 
-Custom operators can be created in Python by subclassing `mx.operator.CustomOp` and overriding the required methods like `forward` and `backward`.
-The custom operator should be registered using `mx.operator.register` before it can be used. Please check the tutorial here: http://mxnet.io/how_to/new_op.html.
+Custom operators can be created in Python by subclassing `mx.operator.
+CustomOp` and overriding the required methods like `forward` and `backward`.
+The custom operator should be registered using `mx.operator.register` before it can be used.
+Please check the tutorial here: http://mxnet.io/how_to/new_op.html.
 
 Example::
 
