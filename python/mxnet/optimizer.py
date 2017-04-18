@@ -1,3 +1,4 @@
+#pylint: disable=invalid-name
 """Weight updating functions."""
 import math
 import pickle
