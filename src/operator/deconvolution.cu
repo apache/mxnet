@@ -70,14 +70,16 @@ Operator* CreateOp<gpu>(DeconvolutionParam param, int dtype,
                                           backward_compute_type);
       }
       if (!deconvolutionIsSupported) {
-        LOG(INFO) <<
+        LOG(WARNING) <<
           "This deconvolution is not supported by cudnn, MXNET deconvolution is applied.";
         op = new DeconvolutionOp<gpu, DType>(param);
       } else {
         if ((forward_compute_type != desired_forward_compute_type) ||
-            (backward_compute_type != desired_backward_compute_type))
-          LOG(INFO) << "True fp16 deconvolution by cudnn not supported in this configuration.  " <<
-                       "Falling back to pseudo fp16.";
+            (backward_compute_type != desired_backward_compute_type)) {
+          LOG(WARNING) <<
+            "True fp16 deconvolution by cudnn not supported in this configuration.  " <<
+            "Falling back to pseudo fp16.";
+        }
         op = new CuDNNDeconvolutionOp<DType>(param,
                                          forward_compute_type,
                                          backward_compute_type,

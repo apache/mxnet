@@ -362,7 +362,7 @@ class CuDNNConvolutionOp : public Operator {
 /*!
  * \brief Returns whether the cuDNN library version supports the convolution
  * operation described by `param`: cuDNN v5 and earlier does not support
- * dilated convolutions.
+ * dilated convolutions.  Dilation only enabled after v6.0.20.
  */
   static bool Supports(ConvolutionParam param,
                        int forward_compute_type,
@@ -380,8 +380,9 @@ class CuDNNConvolutionOp : public Operator {
     auto filterDilationFactor = param.dilate.Size();
 
     // The v6 kernels that backprop a dilated convolution don't handle fp16.
+    // Dilation support across all architectures only available after v6.0.20.
     return filterDilationFactor == 1 ||
-           filterDilationFactor > 1 && (CUDNN_MAJOR >= 6) &&
+           filterDilationFactor > 1 && (CUDNN_VERSION > 6020) &&
            (backward_compute_type != kFloat16);
   }
 
