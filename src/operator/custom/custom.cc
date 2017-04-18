@@ -192,7 +192,8 @@ Example::
 
    output = mx.symbol.Custom(op_type='my_custom_operator', data=input)
 )code")
-.add_argument("op_type", "string", "Name of the custom operator. This is the name that was passed to `mx.operator.register` to register the operator.")
+.add_argument("op_type", "string", "Name of the custom operator. "
+		"This is the name that was passed to `mx.operator.register` to register the operator.")
 .add_argument("data", "NDArray", "Input data for the custom operator.");
 
 
