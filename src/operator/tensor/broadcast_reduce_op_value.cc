@@ -115,21 +115,21 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_min)
 
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_axis)
 .add_alias("broadcast_axes")
-.describe(R"code(Broadcast an array over particular axes.
+.describe(R"code(Broadcasts the input array over particular axes.
 
-Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
-``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
+Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
+`(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
 
-For example::
+Example::
 
-   // given (1,2,1) shape x
+   // given x of shape (1,2,1)
    x = [[[ 1.],
          [ 2.]]]
 
-   // broadcast on axis 2
+   // broadcast x on on axis 2
    broadcast_axis(x, axis=2, size=3) = [[[ 1.,  1.,  1.],
                                          [ 2.,  2.,  2.]]]
-   // broadcast on axes 0 and 2
+   // broadcast x on on axes 0 and 2
    broadcast_axis(x, axis=(0,2), size=(2,3)) = [[[ 1.,  1.,  1.],
                                                  [ 2.,  2.,  2.]],
                                                 [[ 1.,  1.,  1.],
@@ -141,19 +141,22 @@ For example::
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
-.describe(R"code(Broadcast an array to a new shape.
+.describe(R"code(Broadcasts the input array to a new shape.
 
-Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
-``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
+Broadcasting is a mechanism that allows NDArrays to perform arithmetic operations
+with arrays of different shapes efficiently without creating multiple copies of arrays.
+Also see, `Broadcasting <https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`_ for more explanation.
+
+Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
+`(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
 
 For example::
 
    broadcast_to([[1,2,3]], shape=(2,3)) = [[ 1.,  2.,  3.],
                                            [ 1.,  2.,  3.]])
 
-The dimensions that will not be changed can also use the special code ``0`` that
-means copy the original value. So with ``shape=(2,0)`` we will obtain the same
-results in the above example.
+The dimension which you do not want to change can also be kept as `0` which means copy the original value.
+So with `shape=(2,0)`, we will obtain the same result as in the above example.
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BroadcastToParam>)
@@ -168,9 +171,9 @@ NNVM_REGISTER_OP(_broadcast_backward)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>);
 
 NNVM_REGISTER_OP(norm)
-.describe(R"code(Compute the L2 norm.
+.describe(R"code(Computes the L2 norm of the input array.
 
-Flatten then input array and then compute the l2 norm.
+Flattens the input array and then computes the l2 norm.
 
 Examples::
 
@@ -194,7 +197,7 @@ Examples::
   })
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", L2NormCompute<cpu>)
-.add_argument("src", "ndarray-or-symbol", "Source input");
+.add_argument("data", "NDArray-or-Symbol", "Source input");
 
 }  // namespace op
 }  // namespace mxnet

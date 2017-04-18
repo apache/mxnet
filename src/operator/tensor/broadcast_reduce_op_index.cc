@@ -8,17 +8,71 @@
 namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmax)
-.MXNET_DESCRIBE("Returns the indices of the maximum values along an axis.")
+.describe(R"code(Returns indices of the maximum values along an axis.  
+
+In the case of multiple occurrences of maximum values, the indices corresponding to the first occurrence
+are returned.
+
+Example::  
+
+  x = [[ 0.,  1.,  2.], 
+       [ 3.,  4.,  5.]]  
+
+  // argmax along axis 0
+  argmax(x, axis=0) = [ 1.,  1.,  1.]   
+
+  // argmax along axis 1
+  argmax(x, axis=1) = [ 2.,  2.]   
+
+  // argmax along axis 1 keeping same dims as an input array
+  argmax(x, axis=1, keepdims=True) = [[ 2.], 
+                                      [ 2.]]   
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
-.MXNET_DESCRIBE("Returns the indices of the minimum values along an axis.")
+.describe(R"code(Returns indices of the minimum values along an axis.
+
+In the case of multiple occurrences of minimum values, the indices corresponding to the first occurrence
+are returned.
+
+Example::  
+
+  x = [[ 0.,  1.,  2.], 
+       [ 3.,  4.,  5.]]  
+
+  // argmin along axis 0
+  argmin(x, axis=0) = [ 0.,  0.,  0.]   
+
+  // argmin along axis 1
+  argmin(x, axis=1) = [ 0.,  0.]   
+
+  // argmin along axis 1 keeping same dims as an input array
+  argmin(x, axis=1, keepdims=True) = [[ 0.], 
+                                      [ 0.]]   
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::minimum>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // Legacy support
 NNVM_REGISTER_OP(argmax_channel)
+.describe(R"code(Returns argmax indices of each channel from the input array.
+
+The result will be an NDArray of shape (num_channel,).
+
+In case of multiple occurrences of the maximum values, the indices corresponding to the first occurrence
+are returned.
+
+Example::  
+
+  x = [[ 0.,  1.,  2.], 
+       [ 3.,  4.,  5.]]  
+
+  argmax_channel(x) = [ 2.,  2.]   
+
+)code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser([](NodeAttrs* attrs) {
@@ -30,7 +84,7 @@ NNVM_REGISTER_OP(argmax_channel)
 .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxisShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
-.add_argument("src", "ndarray-or-symbol", "Source input");
+.add_argument("data", "NDArray-or-Symbol", "The input array");
 
 NNVM_REGISTER_OP(pick)
 .set_num_inputs(2)
@@ -45,20 +99,15 @@ NNVM_REGISTER_OP(pick)
 .set_attr<FCompute>("FCompute<cpu>", PickOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
-    heads.push_back(n->inputs[1]);
-    auto ret = MakeGradNode("_backward_pick", n, heads, n->attrs.dict);
-
-    nnvm::NodePtr p = nnvm::Node::Create();
-    p->attrs.op = nnvm::Op::Get("_zeros");
-    p->attrs.name = n->attrs.name + "_index_backward";
-    p->control_deps.emplace_back(n);
+    auto ret = MakeNonlossGradNode("_backward_pick", n, ograds,
+                                   {n->inputs[1]}, n->attrs.dict);
+    auto p = MakeNode("zeros_like", n->attrs.name + "_index_backward",
+                      {n->inputs[1]}, nullptr, &n);
     ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
-
     return ret;
   })
-.add_argument("data", "NDArray", "Source input")
-.add_argument("index", "NDArray", "Index array")
+.add_argument("data", "NDArray-or-Symbol", "The input array")
+.add_argument("index", "NDArray-or-Symbol", "Index array")
 .add_arguments(ReduceAxisParam::__FIELDS__());
 
 

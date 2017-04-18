@@ -81,8 +81,8 @@ Operator *ConvolutionProp::CreateOperatorEx(Context ctx,
 MXNET_REGISTER_OP_PROPERTY(Convolution, ConvolutionProp)
 .describe(R"code(Compute *N*-D convolution on *(N+2)*-D input.
 
-In the simplest 2-D convolution, given input data with shape *(batch_size,
-channel, height, weight)*, the output is computed by
+In the 2-D convolution, given input data with shape *(batch_size,
+channel, height, width)*, the output is computed by
 
 .. math::
 
@@ -93,10 +93,10 @@ where :math:`\star` is the 2-D cross-correlation operator.
 
 For general 2-D convolution, the shapes are
 
-- **data**: *(batch_size, channel, height, weight)*
+- **data**: *(batch_size, channel, height, width)*
 - **weight**: *(num_filter, channel, kernel[0], kernel[1])*
 - **bias**: *(num_filter,)*
-- **out**: *(batch_size, num_filter, out_height, out_weight)*.
+- **out**: *(batch_size, num_filter, out_height, out_width)*.
 
 Define::
 
@@ -105,12 +105,12 @@ Define::
 then we have::
 
   out_height=f(height, kernel[0], pad[0], stride[0], dilate[0])
-  out_weight=f(weight, kernel[1], pad[1], stride[1], dilate[1])
+  out_width=f(width, kernel[1], pad[1], stride[1], dilate[1])
 
 If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 
 The default data ``layout`` is *NCHW*, namely *(batch_size, channle, height,
-weight)*. We can choose other layouts such as *NHWC*.
+width)*. We can choose other layouts such as *NHWC*.
 
 If ``num_group`` is larger than 1, denoted by *g*, then split the input ``data``
 evenly into *g* parts along the channel axis, and also evenly split ``weight``
@@ -118,16 +118,20 @@ along the first dimension. Next compute the convolution on the *i*-th part of
 the data with the *i*-th weight part. The output is obtained by concating all
 the *g* results.
 
-To perform 1-D convolution, simply use 2-D convolution but set the last axis
-size to be 1 for both data and weight.
+1-D convolution does not have *height* dimension but only *width* in space.
 
-3-D convolution adds an additional depth dimension besides height and
-weight. The shapes are
+- **data**: *(batch_size, channel, width)*
+- **weight**: *(num_filter, channel, kernel[0])*
+- **bias**: *(num_filter,)*
+- **out**: *(batch_size, num_filter, out_width)*.
 
-- **data**: *(batch_size, channel, depth, height, weight)*
+3-D convolution adds an additional *depth* dimension besides *height* and
+*width*. The shapes are
+
+- **data**: *(batch_size, channel, depth, height, width)*
 - **weight**: *(num_filter, channel, kernel[0], kernel[1], kernel[2])*
 - **bias**: *(num_filter,)*
-- **out**: *(batch_size, num_filter, out_depth, out_height, out_weight)*.
+- **out**: *(batch_size, num_filter, out_depth, out_height, out_width)*.
 
 Both ``weight`` and ``bias`` are learnable parameters.
 
@@ -148,9 +152,9 @@ There are other options to tune the performance.
   the performance.
 
 )code" ADD_FILELINE)
-.add_argument("data", "ndarray-or-symbol", "Input data to the ConvolutionOp.")
-.add_argument("weight", "ndarray-or-symbol", "Weight matrix.")
-.add_argument("bias", "ndarray-or-symbol", "Bias parameter.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the ConvolutionOp.")
+.add_argument("weight", "NDArray-or-Symbol", "Weight matrix.")
+.add_argument("bias", "NDArray-or-Symbol", "Bias parameter.")
 .add_arguments(ConvolutionParam::__FIELDS__());
 
 }  // namespace op

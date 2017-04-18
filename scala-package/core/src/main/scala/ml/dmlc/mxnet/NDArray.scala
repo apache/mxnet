@@ -30,7 +30,7 @@ import scala.ref.WeakReference
 /**
  * NDArray API of mxnet
  */
-@AddNDArrayFunctions
+@AddNDArrayFunctions(false)
 object NDArray {
   implicit def getFirstResult(ret: NDArrayFuncReturn): NDArray = ret(0)
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
@@ -171,7 +171,7 @@ object NDArray {
       handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs))
     val arguments = (argTypes zip argNames).filter { case (dtype, _) =>
       !(dtype.startsWith("NDArray") || dtype.startsWith("Symbol")
-        || dtype.startsWith("ndarray-or-symbol"))
+        || dtype.startsWith("NDArray-or-Symbol"))
     }.map { case (_, argName) =>
       argName
     }

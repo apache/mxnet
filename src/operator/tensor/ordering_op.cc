@@ -15,23 +15,31 @@ DMLC_REGISTER_PARAMETER(SortParam);
 DMLC_REGISTER_PARAMETER(ArgSortParam);
 
 NNVM_REGISTER_OP(topk)
-.describe(R"code(Return the top *k* elements in an array.
+.describe(R"code(Returns the top *k* elements in an input array along the given axis.
 
 Examples::
 
   x = [[ 0.3,  0.2,  0.4],
        [ 0.1,  0.3,  0.2]]
 
-  // return the index of the largest element on last axis
+  // returns an index of the largest element on last axis
   topk(x) = [[ 2.],
              [ 1.]]
 
-  // return the value of the top-2 elements on last axis
+  // returns the value of top-2 largest elements on last axis
   topk(x, ret_typ='value', k=2) = [[ 0.4,  0.3],
                                    [ 0.3,  0.2]]
 
-  // flatten and then return both index and value
-  topk(x, ret_typ='both', k=2, axis=None) = [ 0.4,  0.3], [ 2.,  0.]
+  // returns the value of top-2 smallest elements on last axis
+  topk(x, ret_typ='value', k=2, is_ascend=1) = [[ 0.2 ,  0.3],
+                                               [ 0.1 ,  0.2]]
+
+  // returns the value of top-2 largest elements on axis 0
+  topk(x, axis=0, ret_typ='value', k=2) = [[ 0.3,  0.3,  0.4],
+                                           [ 0.1,  0.2,  0.2]]
+
+  // flattens and then returns list of both values and indices
+  topk(x, ret_typ='both', k=2) = [[[ 0.4,  0.3], [ 0.3,  0.2]] ,  [[ 2.,  0.], [ 1.,  2.]]]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -45,12 +53,12 @@ Examples::
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const TopKParam& param = nnvm::get<TopKParam>(n->attrs.parsed);
     if (param.ret_typ == topk_enum::kReturnValue || param.ret_typ == topk_enum::kReturnBoth) {
-      std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.begin() + 1);
+      std::vector<nnvm::NodeEntry> inputs;
       index_t n_out = n->num_outputs();
       for (index_t i = 0; i < n_out; ++i) {
-        heads.emplace_back(nnvm::NodeEntry{ n, i, 0 });
+        inputs.emplace_back(nnvm::NodeEntry{ n, i, 0 });
       }
-      return MakeGradNode("_backward_topk", n, heads, n->attrs.dict);
+      return MakeNonlossGradNode("_backward_topk", n, {ograds[0]}, inputs, n->attrs.dict);
     } else {
       return MakeZeroGradNodes(n, ograds);
     }
@@ -59,7 +67,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.add_argument("src", "ndarray-or-symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_arguments(TopKParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_topk)
@@ -74,21 +82,21 @@ NNVM_REGISTER_OP(_backward_topk)
 });
 
 NNVM_REGISTER_OP(sort)
-.describe(R"code(Return a sorted copy of an array.
+.describe(R"code(Returns a sorted copy of an input array along the given axis.
 
 Examples::
 
   x = [[ 1, 4],
        [ 3, 1]]
 
-  // sort along the last axis
+  // sorts along the last axis
   sort(x) = [[ 1.,  4.],
              [ 1.,  3.]]
 
-  // flatten and then sort
-  sort(x, axis=None) = [ 1.,  1.,  3.,  4.]
+  // flattens and then sorts
+  sort(x) = [ 1.,  1.,  3.,  4.]
 
-  // sort long the first axis
+  // sorts along the first axis
   sort(x, axis=0) = [[ 1.,  1.],
                      [ 3.,  4.]]
 
@@ -107,26 +115,29 @@ Examples::
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const SortParam& param = nnvm::get<SortParam>(n->attrs.parsed);
-    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.begin() + 1);
+    std::vector<nnvm::NodeEntry> inputs;
     index_t n_out = n->num_outputs();
     for (index_t i = 0; i < n_out; ++i) {
-      heads.emplace_back(nnvm::NodeEntry{ n, i, 0 });
+      inputs.emplace_back(nnvm::NodeEntry{ n, i, 0 });
     }
-    return MakeGradNode("_backward_topk", n, heads,
-                         {{"axis", n->attrs.dict["axis"]},
-                          {"k", "0"},
-                          {"ret_typ", "value"},
-                          {"is_ascend", std::to_string(param.is_ascend)}});
+    return MakeNonlossGradNode("_backward_topk", n, {ograds[0]}, inputs,
+                               {{"axis", n->attrs.dict["axis"]},
+                                {"k", "0"},
+                                {"ret_typ", "value"},
+                                {"is_ascend", std::to_string(param.is_ascend)}});
   })
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.add_argument("src", "ndarray-or-symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_arguments(SortParam::__FIELDS__());
 
 NNVM_REGISTER_OP(argsort)
-.describe(R"code(Returns the indices that can sort an array.
+.describe(R"code(Returns the indices that would sort an input array along the given axis.
+
+This function performs sorting along the given axis and returns an array of indices having same shape
+as an input array that index data in sorted order.
 
 Examples::
 
@@ -142,7 +153,7 @@ Examples::
                         [ 0.,  1.,  0.]]
 
   // flatten and then sort
-  argsort(x, axis=None) = [ 3.,  1.,  5.,  0.,  4.,  2.]
+  argsort(x) = [ 3.,  1.,  5.,  0.,  4.,  2.]
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -155,7 +166,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.add_argument("src", "ndarray-or-symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_arguments(ArgSortParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

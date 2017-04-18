@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef MXNETCPP_OPTIMIZER_H
-#define MXNETCPP_OPTIMIZER_H
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_H_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_H_
 
 #include <map>
 #include <vector>
@@ -81,7 +81,7 @@ class Optimizer {
 
  protected:
   std::map<std::string, std::string> params_;
-  static OpMap *op_map_;
+  static OpMap*& op_map();
   const std::vector<const char*> GetParamKeys_() const;
   const std::vector<const char*> GetParamValues_() const;
 };
@@ -93,7 +93,7 @@ class OptimizerRegistry {
   static Optimizer* Find(const std::string& name);
   static int __REGISTER__(const std::string& name, OptimizerCreator creator);
  private:
-  static std::map<std::string, OptimizerCreator> cmap_;
+  static std::map<std::string, OptimizerCreator>& cmap();
   OptimizerRegistry() = delete;
   ~OptimizerRegistry() = delete;
 };
@@ -119,4 +119,4 @@ class SGDOptimizer : public Optimizer {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // MXNETCPP_OPTIMIZER_H
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_H_

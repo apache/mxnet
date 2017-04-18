@@ -20,13 +20,10 @@ namespace op {
 template<>
 Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
   Operator *op = NULL;
-  // TODO(junwu): Since MKL has a bug when pad and stride > 0,
-  // we disable MKL in those cases and will re-enable it after
-  // it is fixed by deleting lines 28 and 29.
+  // TODO(lingyan): kFull use exclude padding algorithm now
 #if MXNET_USE_MKL2017 == 1
     if (param.kernel.ndim() == 2
-      && 0 == param.pad[0] && 0 == param.pad[1]
-      && 0 == param.stride[0] && 0 == param.stride[1]
+      && (param.pooling_convention == pool_enum::kValid)
       && ((param.pool_type == pool_enum::kMaxPooling)
       || (param.pool_type == pool_enum::kAvgPooling))) {
       switch (dtype) {
@@ -50,7 +47,7 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
     && (param.stride[0] == 2) && (param.stride[1] == 2)) {
     switch (dtype) {
     case mshadow::kFloat32:
-      return new NNPACKPoolingOp<cpu, mshadow::red::maximum, float>(param);
+      return new NNPACKPoolingOp<cpu, float>(param);
     default:
       break;
     }
@@ -86,10 +83,11 @@ MXNET_REGISTER_OP_PROPERTY(Pooling, PoolingProp)
 .describe(R"code(Perform pooling on the input.
 
 The shapes for 1-D pooling are
+
 - **data**: *(batch_size, channel, width)*,
 - **out**: *(batch_size, num_filter, out_width)*.
 
-The shapes for 2-D pooling is
+The shapes for 2-D pooling are
 
 - **data**: *(batch_size, channel, height, width)*
 - **out**: *(batch_size, num_filter, out_height, out_width)*, with::
@@ -116,15 +114,12 @@ Three pooling options are supported by ``pool_type``:
 - **max**: max pooling
 - **sum**: sum pooling
 
-1-D pooling is special case of 2-D pooling with *width=1* and
-*kernel[1]=1*.
-
 For 3-D pooling, an additional *depth* dimension is added before
 *height*. Namely the input data will have shape *(batch_size, channel, depth,
 height, width)*.
 
 )code" ADD_FILELINE)
-.add_argument("data", "ndarray-or-symbol", "Input data to the pooling operator.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the pooling operator.")
 .add_arguments(PoolingParam::__FIELDS__());
 
 }  // namespace op

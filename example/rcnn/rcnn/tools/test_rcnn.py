@@ -58,7 +58,7 @@ def test_rcnn(network, dataset, image_set, root_path, dataset_path,
 
     # decide maximum shape
     data_names = [k[0] for k in test_data.provide_data]
-    label_names = ['cls_prob_label']
+    label_names = None
     max_data_shape = [('data', (1, 3, max([v[0] for v in config.SCALES]), max([v[1] for v in config.SCALES])))]
     if not has_rpn:
         max_data_shape.append(('rois', (1, config.TEST.PROPOSAL_POST_NMS_TOP_N + 30, 5)))

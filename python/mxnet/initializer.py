@@ -1,4 +1,4 @@
-"""Weight initialization"""
+"""Weight initializer."""
 from __future__ import absolute_import, print_function
 
 import re
@@ -12,16 +12,16 @@ from . import random
 
 # inherit str for backward compatibility
 class InitDesc(str):
-    """Descriptor for initialization pattern.
+    """Descriptor for the initialization pattern.
 
     Parameter
     ---------
     name : str
-        name of variable
+        Name of variable.
     attrs : dict of str to str
-        attributes of this variable taken from Symbol.attr_dict
+        Attributes of this variable taken from ``Symbol.attr_dict``.
     global_init : Initializer
-        global initializer to fallback to.
+        Global initializer to fallback to.
     """
     def __new__(cls, name, attrs=None, global_init=None):
         ret = super(InitDesc, cls).__new__(cls, name)
@@ -32,8 +32,7 @@ class InitDesc(str):
 _INITIALIZER_REGISTRY = {}
 
 def register(klass):
-    """Register an intializer to the initializer factory
-    """
+    """Register an intializer to the initializer factory."""
     assert issubclass(klass, Initializer), "Can only register subclass of Initializer"
     name = klass.__name__.lower()
     if name in _INITIALIZER_REGISTRY:
@@ -47,8 +46,7 @@ def register(klass):
     return klass
 
 class Initializer(object):
-    """The base class of an initializer.
-    """
+    """The base class of an initializer."""
     def __init__(self, **kwargs):
         self.kwargs = kwargs
 
@@ -62,10 +60,10 @@ class Initializer(object):
         Parameters
         ----------
         desc : InitDesc
-            Initialization pattern descriptor
+            Initialization pattern descriptor.
 
         arr : NDArray
-            The array to be Initialized
+            The array to be initialized.
         """
         if not isinstance(desc, InitDesc):
             self._legacy_init(desc, arr)
@@ -99,10 +97,10 @@ class Initializer(object):
         Parameters
         ----------
         name : str
-            name of corrosponding ndarray
+            Name of corrosponding NDArray.
 
         arr : NDArray
-            ndarray to be Initialized
+            NDArray to be initialized.
         """
         warnings.warn(
             "\033[91mCalling initializer with init(str, NDArray) has been deprecated." \
@@ -169,7 +167,7 @@ class Initializer(object):
         arr[:] = 0.0
 
     def _init_weight(self, name, arr):
-        """Abstract method to Initialize weight"""
+        """Abstract method to Initialize weight."""
         raise NotImplementedError("Must override it")
 
     def _init_default(self, name, _):
@@ -181,16 +179,16 @@ class Initializer(object):
 
 
 class Load(object):
-    """Initialize by loading data from file or dict
+    """Initialize by loading data from file or dict.
 
     Parameters
     ----------
     param: str or dict of str->NDArray
-        param file or dict mapping name to NDArray.
+        Parameter file or dict mapping name to NDArray.
     default_init: Initializer
-        default initializer when name is not found in param.
+        Default initializer when name is not found in param.
     verbose: bool
-        log source when initializing.
+        Log source when initializing.
     """
     def __init__(self, param, default_init=None, verbose=False):
         if isinstance(param, str):
@@ -224,14 +222,14 @@ class Load(object):
 
 
 class Mixed(object):
-    """Initialize with multiple initializers
+    """Initialize with multiple initializers.
 
     Parameters
     ----------
     patterns: list of str
-        list of regular expression patterns to match parameter names.
+        List of regular expression patterns to match parameter names.
     initializers: list of Initializer
-        list of Initializer corrosponding to patterns
+        List of Initializer corrosponding to patterns.
     """
     def __init__(self, patterns, initializers):
         assert len(patterns) == len(initializers)
@@ -247,7 +245,7 @@ class Mixed(object):
 
 @register
 class Zero(Initializer):
-    """Initialize the weight to 0"""
+    """Initialize the weight to 0."""
     def __init__(self):
         super(Zero, self).__init__()
 
@@ -256,7 +254,7 @@ class Zero(Initializer):
 
 @register
 class One(Initializer):
-    """Initialize the weight to 1"""
+    """Initialize the weight to 1."""
     def __init__(self):
         super(One, self).__init__()
 
@@ -265,7 +263,7 @@ class One(Initializer):
 
 @register
 class Constant(Initializer):
-    """Initialize the weight to a scalar value"""
+    """Initialize the weight to a scalar value."""
     def __init__(self, value):
         super(Constant, self).__init__(value=value)
         self.value = value
@@ -275,12 +273,12 @@ class Constant(Initializer):
 
 @register
 class Uniform(Initializer):
-    """Initialize the weight with value uniformly sampled from ``[-scale, scale]``
+    """Initialize the weight with value uniformly sampled from ``[-scale, scale]``.
 
     Parameters
     ----------
     scale : float, optional
-        The scale of uniform distribution
+        The scale of uniform distribution.
     """
     def __init__(self, scale=0.07):
         super(Uniform, self).__init__(scale=scale)
@@ -291,7 +289,7 @@ class Uniform(Initializer):
 
 @register
 class Normal(Initializer):
-    """Initialize the weight with value sampled according to ``normal(0, sigma)``
+    """Initialize the weight with value sampled according to ``normal(0, sigma)``.
 
     Parameters
     ----------
@@ -307,19 +305,19 @@ class Normal(Initializer):
 
 @register
 class Orthogonal(Initializer):
-    """Initialize weight as orthogonal matrix
+    """Initialize weight as orthogonal matrix.
 
     This initializer implements *Exact solutions to the nonlinear dynamics of
     learning in deep linear neural networks*, available at
-    https://arxiv.org/abs/1312.6120
+    https://arxiv.org/abs/1312.6120.
 
     Parameters
     ----------
     scale : float optional
-        scaling factor of weight
+        Scaling factor of weight.
 
     rand_type: string optional
-        use "uniform" or "normal" random number to initialize weight
+        Use "uniform" or "normal" random number to initialize weight.
 
     """
     def __init__(self, scale=1.414, rand_type="uniform"):
@@ -352,10 +350,10 @@ class Xavier(Initializer):
         Random generator type, can be ```gaussian`` or ``uniform``.
 
     factor_type: str, optional
-        Can be ``avg``, ``in``, or ``out``
+        Can be ``avg``, ``in``, or ``out``.
 
     magnitude: float, optional
-        scale of random number range
+        Scale of random number range.
     """
     def __init__(self, rnd_type="uniform", factor_type="avg", magnitude=3):
         super(Xavier, self).__init__(rnd_type=rnd_type, factor_type=factor_type,
@@ -394,12 +392,12 @@ class MSRAPrelu(Xavier):
 
     This initializer implements *Delving Deep into Rectifiers: Surpassing
     Human-Level Performance on ImageNet Classification*, available at
-    https://arxiv.org/abs/1502.01852
+    https://arxiv.org/abs/1502.01852.
 
     Parameters
     ----------
     factor_type: str, optional
-        Can be ``avg``, ``in``, or ``out``
+        Can be ``avg``, ``in``, or ``out``.
 
     slope: float, optional
         initial slope of any PReLU (or similar) nonlinearities.
@@ -411,7 +409,7 @@ class MSRAPrelu(Xavier):
 
 @register
 class Bilinear(Initializer):
-    """Initialize weight for upsampling layers"""
+    """Initialize weight for upsampling layers."""
     def __init__(self):
         super(Bilinear, self).__init__()
 
@@ -451,7 +449,7 @@ class LSTMBias(Initializer):
 
 @register
 class FusedRNN(Initializer):
-    """Initialize parameters for fused rnn layers
+    """Initialize parameters for fused rnn layers.
 
     Parameters
     ----------

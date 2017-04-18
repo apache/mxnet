@@ -100,6 +100,16 @@ struct UniformDistribution {};
 
 struct GaussianDistribution {};
 
+struct GammaDistribution {};
+
+struct ExponentialDistribution {};
+
+struct PoissonDistribution {};
+
+struct NegBinomialDistribution {};
+
+struct GenNegBinomialDistribution {};
+
 template<typename Device>
 void EvalClip(const TBlob &src, const real_t &a_min, const real_t &a_max,
               TBlob *ret, RunContext ctx);

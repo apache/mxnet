@@ -1,22 +1,22 @@
-"""Scheduling learning rate"""
+"""Scheduling learning rate."""
 import logging
 
 class LRScheduler(object):
-    """Base class of a learning rate scheduler
+    """Base class of a learning rate scheduler.
 
-    A scheduler returns a new learning rate based on the number of updates have
+    A scheduler returns a new learning rate based on the number of updates that have
     been performed.
 
     Parameters
     ----------
     base_lr : float, optional
-        The initial learning rate
+        The initial learning rate.
     """
     def __init__(self, base_lr=0.01):
         self.base_lr = base_lr
 
     def __call__(self, num_update):
-        """Return a new learning rate
+        """Return a new learning rate.
 
         The ``num_update`` is the upper bound of the number of updates applied to
         every weight.
@@ -34,7 +34,7 @@ class LRScheduler(object):
         raise NotImplementedError("must override this")
 
 class FactorScheduler(LRScheduler):
-    """Reduce the learning rate by a factor for every *n* steps
+    """Reduce the learning rate by a factor for every *n* steps.
 
     It returns a new learning rate by::
 
@@ -43,11 +43,11 @@ class FactorScheduler(LRScheduler):
     Parameters
     ----------
     step : int
-        changes the learning rate for every n updates
+        Changes the learning rate for every n updates.
     factor : float, optional
-        the factor to change the learning rate
+        The factor to change the learning rate.
     stop_factor_lr : float, optional
-        stop to change the learning rate if it is less than this value
+        Stop updating the learning rate if it is less than this value.
     """
     def __init__(self, step, factor=1, stop_factor_lr=1e-8):
         super(FactorScheduler, self).__init__()
@@ -75,7 +75,7 @@ class FactorScheduler(LRScheduler):
         return self.base_lr
 
 class MultiFactorScheduler(LRScheduler):
-    """Reduce the learning rate by given a list of steps
+    """Reduce the learning rate by given a list of steps.
 
     Assume there exists *k* such that::
 
@@ -90,7 +90,7 @@ class MultiFactorScheduler(LRScheduler):
     step: list of int
         The list of steps to schedule a change
     factor: float
-        the factor to change the learning rate
+        The factor to change the learning rate.
     """
     def __init__(self, step, factor=1):
         super(MultiFactorScheduler, self).__init__()

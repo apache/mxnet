@@ -776,7 +776,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
 }
 
 // scalastyle:on finalize
-@AddSymbolFunctions
+@AddSymbolFunctions(false)
 object Symbol {
   private type SymbolCreateNamedFunc = Map[String, Any] => Symbol
   private val logger = LoggerFactory.getLogger(classOf[Symbol])
@@ -873,7 +873,7 @@ object Symbol {
   }
 
   // Used by SymbolMacro
-  private def createSymbolGeneral(operator: String, name: String, attr: Map[String, String],
+  private[mxnet] def createSymbolGeneral(operator: String, name: String, attr: Map[String, String],
       symbols: Seq[Symbol], kwargs: Map[String, Any]): Symbol = {
     val symbolKwargs: Map[String, Symbol] =
       if (kwargs == null || kwargs.isEmpty) {

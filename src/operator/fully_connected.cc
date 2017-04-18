@@ -4,11 +4,6 @@
  * \brief fully connect operator
 */
 #include "./fully_connected-inl.h"
-#if MXNET_USE_MKL2017 == 1
-#include <mkl_memory.h>
-#include "./mkl/mkl_memory-inl.h"
-#include "./mkl/mkl_fully_connected-inl.h"
-#endif  // MXNET_USE_MKL2017
 #if MXNET_USE_NNPACK == 1
 #include "./nnpack/nnpack_fully_connected-inl.h"
 #endif  // MXNET_USE_NNPACK
@@ -21,17 +16,6 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype,
                         std::vector<TShape> *out_shape,
                         Context ctx) {
   Operator *op = NULL;
-#if MXNET_USE_MKL2017 == 1
-  switch (dtype) {
-  case mshadow::kFloat32:
-    return new MKLFullyConnectedOp<cpu, float>(param);
-  case mshadow::kFloat64:
-    return new MKLFullyConnectedOp<cpu, double>(param);
-  default:
-    LOG(INFO) << MKLFullyConnectedOp<cpu, float>::getName() << " Skip MKL optimization";
-    break;
-  }
-#endif
 #if MXNET_USE_NNPACK == 1
   const size_t batch_size = (*in_shape)[0][0];
   // nnp_fully_connected_inference will do optimization for batch-size = 1
@@ -88,9 +72,9 @@ The learnable parameters include both ``weight`` and ``bias``.
 If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 
 )code" ADD_FILELINE)
-.add_argument("data", "ndarray-or-symbol", "Input data.")
-.add_argument("weight", "ndarray-or-symbol", "Weight matrix.")
-.add_argument("bias", "ndarray-or-symbol", "Bias parameter.")
+.add_argument("data", "NDArray-or-Symbol", "Input data.")
+.add_argument("weight", "NDArray-or-Symbol", "Weight matrix.")
+.add_argument("bias", "NDArray-or-Symbol", "Bias parameter.")
 .add_arguments(FullyConnectedParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

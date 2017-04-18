@@ -100,44 +100,49 @@ struct NDArrayOpInfo {
   void* p_declare_backward_dependency;
 };
 
-struct CustomOpInfo {
-  bool (*forward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
-                  const int* /*reqs*/, const bool /*is_train*/, void* /*state*/);
-  bool (*backward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
-                   const int* /*reqs*/, const bool /*is_train*/, void* /*state*/);
-  bool (*del)(void* /*state*/);
-  // all functions also pass a payload void* pointer
-  void* p_forward;
-  void* p_backward;
-  void* p_del;
+typedef int (*MXGenericCallback)(void);
+
+struct MXCallbackList {
+  int num_callbacks;
+  int (**callbacks)(void);
+  void **contexts;
 };
 
-struct CustomOpPropInfo {
-  bool (*list_arguments)(char*** /*args*/, void* /*state*/);
-  bool (*list_outputs)(char*** /*outputs*/, void* /*state*/);
-  bool (*infer_shape)(int /*num_input*/, int* /*ndims*/, unsigned** /*shapes*/,
-                      void* /*state*/);
-  bool (*declare_backward_dependency)(const int* /*out_grad*/, const int* /*in_data*/,
-                                      const int* /*out_data*/, int* /*num_deps*/,
-                                      int** /*rdeps*/, void* /*state*/);
-  bool (*create_operator)(const char* /*ctx*/, int /*num_inputs*/, unsigned** /*shapes*/,
-                          int* /*ndims*/, int* /*dtypes*/,
-                          struct CustomOpInfo* /*ret*/, void* /*state*/);
-  bool (*list_auxiliary_states)(char*** /*aux*/, void* /*state*/);
-  bool (*del)(void* /*state*/);
-  // all functions also pass a payload void* pointer
-  void* p_list_arguments;
-  void* p_list_outputs;
-  void* p_infer_shape;
-  void* p_declare_backward_dependency;
-  void* p_create_operator;
-  void* p_list_auxiliary_states;
-  void* p_del;
+enum CustomOpCallbacks {
+  kCustomOpDelete,
+  kCustomOpForward,
+  kCustomOpBackward
 };
 
-typedef bool (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
-                                    const char** /*keys*/, const char** /*values*/,
-                                    struct CustomOpPropInfo* /*ret*/);
+enum CustomOpPropCallbacks {
+  kCustomOpPropDelete,
+  kCustomOpPropListArguments,
+  kCustomOpPropListOutputs,
+  kCustomOpPropListAuxiliaryStates,
+  kCustomOpPropInferShape,
+  kCustomOpPropDeclareBackwardDependency,
+  kCustomOpPropCreateOperator,
+  kCustomOpPropInferType
+};
+
+typedef int (*CustomOpFBFunc)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
+                              const int* /*reqs*/, const int /*is_train*/,
+                              void* /*state*/);
+typedef int (*CustomOpDelFunc)(void* /*state*/);
+typedef int (*CustomOpListFunc)(char*** /*args*/, void* /*state*/);
+typedef int (*CustomOpInferShapeFunc)(int /*num_input*/, int* /*ndims*/,
+                                      unsigned** /*shapes*/, void* /*state*/);
+typedef int (*CustomOpInferTypeFunc)(int /*num_input*/, int* /*types*/, void* /*state*/);
+typedef int (*CustomOpBwdDepFunc)(const int* /*out_grad*/, const int* /*in_data*/,
+                                  const int* /*out_data*/, int* /*num_deps*/,
+                                  int** /*rdeps*/, void* /*state*/);
+typedef int (*CustomOpCreateFunc)(const char* /*ctx*/, int /*num_inputs*/,
+                                  unsigned** /*shapes*/, int* /*ndims*/,
+                                  int* /*dtypes*/, struct MXCallbackList* /*ret*/,
+                                  void* /*state*/);
+typedef int (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
+                                     const char** /*keys*/, const char** /*values*/,
+                                     struct MXCallbackList* /*ret*/);
 
 /*!
  * \brief return str message of the last error
@@ -387,7 +392,7 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayGetData(NDArrayHandle handle,
-                               mx_float **out_pdata);
+                               void **out_pdata);
 /*!
  * \brief get the type of the data in NDArray
  * \param handle the handle to the narray
@@ -515,7 +520,30 @@ MXNET_DLL int MXImperativeInvoke(AtomicSymbolCreator creator,
                                  int num_params,
                                  const char **param_keys,
                                  const char **param_vals);
-
+/*!
+ * \brief set whether to record operator for autograd
+ * \param recording 1 when turn on recording, 0 when turn off recording
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXAutogradSetRecording(int recording);
+/*!
+ * \brief mark NDArrays as variables to compute gradient for autograd
+ * \param num_var number of variable NDArrays
+ * \param var_handles variable NDArrays
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXAutogradMarkVariables(mx_uint num_var,
+                                      NDArrayHandle *var_handles,
+                                      mx_uint *reqs_array,
+                                      NDArrayHandle *grad_handles);
+/*!
+ * \brief compute the gradient of outputs w.r.t variabels
+ * \param num_output number of output NDArray
+ * \param output_handles output NDArrays
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXAutogradComputeGradient(mx_uint num_output,
+                                        NDArrayHandle* output_handles);
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------

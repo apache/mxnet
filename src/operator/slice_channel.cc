@@ -54,7 +54,8 @@ be removed from the shape if it becomes 1::
   y[0] = [ 1.,  2.]  // (2,) vector
 
 )code" ADD_FILELINE)
-.set_return_type("ndarray-or-symbol[]")
+.set_return_type("NDArray-or-Symbol[]")
+.add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(SliceChannelParam::__FIELDS__());
 
 NNVM_REGISTER_OP(SliceChannel).add_alias("split");

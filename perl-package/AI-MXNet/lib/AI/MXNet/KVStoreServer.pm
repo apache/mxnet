@@ -10,16 +10,16 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-AI::MXNet::KVStoreServer - The key-value store server
+    AI::MXNet::KVStoreServer - The key-value store server
 =cut
 
 =head2 new
 
-Initialize a new KVStoreServer.
+    Initialize a new KVStoreServer.
 
-Parameters
+    Parameters
     ----------
-kvstore : KVStore
+    kvstore : KVStore
 =cut
 
 has 'kvstore' => (is => 'ro', isa => 'AI::MXNet::KVStore', required => 1);
@@ -52,10 +52,10 @@ method _controller()
 
 =head2 run
 
-run the server, whose behavior is like
->>> while receive(x):
-...     if is_command x: controller(x)
-...     else if is_key_value x: updater(x)
+    run the server, whose behavior is like
+    >>> while receive(x):
+    ...     if is_command x: controller(x)
+    ...     else if is_key_value x: updater(x)
 =cut
 
 method run()

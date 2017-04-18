@@ -10,8 +10,25 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(SampleUniformParam);
 DMLC_REGISTER_PARAMETER(SampleNormalParam);
+DMLC_REGISTER_PARAMETER(SampleGammaParam);
+DMLC_REGISTER_PARAMETER(SampleExponentialParam);
+DMLC_REGISTER_PARAMETER(SamplePoissonParam);
+DMLC_REGISTER_PARAMETER(SampleNegBinomialParam);
+DMLC_REGISTER_PARAMETER(SampleGenNegBinomialParam);
 
-MXNET_OPERATOR_REGISTER_SAMPLE(uniform, SampleUniformParam)
+#define MXNET_OPERATOR_REGISTER_SAMPLE(name, ParamType)                 \
+  NNVM_REGISTER_OP(name)                                                \
+  .set_num_inputs(0)                                                    \
+  .set_num_outputs(1)                                                   \
+  .set_attr_parser(ParamParser<ParamType>)                              \
+  .set_attr<nnvm::FInferShape>("FInferShape", InitShape<ParamType>)     \
+  .set_attr<nnvm::FInferType>("FInferType", SampleOpType<ParamType>)    \
+  .set_attr<FResourceRequest>("FResourceRequest", SampleResource)       \
+  .add_arguments(ParamType::__FIELDS__())
+
+// Add "uniform" alias for backward compatibility
+MXNET_OPERATOR_REGISTER_SAMPLE(random_uniform, SampleUniformParam)
+.add_alias("uniform")
 .add_alias("_sample_uniform")
 .describe(R"code(Draw samples from a uniform distribution.
 
@@ -24,7 +41,9 @@ Samples are uniformly distributed over the half-open interval [low, high)
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", SampleUniform_<cpu>);
 
-MXNET_OPERATOR_REGISTER_SAMPLE(normal, SampleNormalParam)
+// Add "normal" alias for backward compatibility
+MXNET_OPERATOR_REGISTER_SAMPLE(random_normal, SampleNormalParam)
+.add_alias("normal")
 .add_alias("_sample_normal")
 .describe(R"code(Draw random samples from a normal (Gaussian) distribution.
 
@@ -34,6 +53,31 @@ Examples::
                                          [-1.23474145,  1.55807114]]
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", SampleNormal_<cpu>);
+
+MXNET_OPERATOR_REGISTER_SAMPLE(random_gamma, SampleGammaParam)
+.add_alias("_sample_gamma")
+.describe("Sample a gamma distribution")
+.set_attr<FCompute>("FCompute<cpu>", SampleGamma_<cpu>);
+
+MXNET_OPERATOR_REGISTER_SAMPLE(random_exponential, SampleExponentialParam)
+.add_alias("_sample_exponential")
+.describe("Sample an exponential distribution")
+.set_attr<FCompute>("FCompute<cpu>", SampleExponential_<cpu>);
+
+MXNET_OPERATOR_REGISTER_SAMPLE(random_poisson, SamplePoissonParam)
+.add_alias("_sample_poisson")
+.describe("Sample a Poisson distribution")
+.set_attr<FCompute>("FCompute<cpu>", SamplePoisson_<cpu>);
+
+MXNET_OPERATOR_REGISTER_SAMPLE(random_negative_binomial, SampleNegBinomialParam)
+.add_alias("_sample_negbinomial")
+.describe("Sample a negative binomial distribution")
+.set_attr<FCompute>("FCompute<cpu>", SampleNegBinomial_<cpu>);
+
+MXNET_OPERATOR_REGISTER_SAMPLE(random_generalized_negative_binomial, SampleGenNegBinomialParam)
+.add_alias("_sample_gennegbinomial")
+.describe("Sample a generalized negative binomial distribution")
+.set_attr<FCompute>("FCompute<cpu>", SampleGenNegBinomial_<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -405,7 +405,7 @@ MXNET_REGISTER_OP_PROPERTY(Pad, PadProp)
 Only supports 4-D and 5-D input array.
 
 )code" ADD_FILELINE)
-.add_argument("data", "ndarray-or-symbol", "An n-dimensional input tensor.")
+.add_argument("data", "NDArray-or-Symbol", "An n-dimensional input tensor.")
 .add_arguments(PadParam::__FIELDS__());
 
 NNVM_REGISTER_OP(Pad).add_alias("pad");

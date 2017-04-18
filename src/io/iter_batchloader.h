@@ -14,23 +14,10 @@
 #include <vector>
 #include <string>
 #include "./inst_vector.h"
+#include "./image_iter_common.h"
 
 namespace mxnet {
 namespace io {
-// Batch parameters
-struct BatchParam : public dmlc::Parameter<BatchParam> {
-  /*! \brief label width */
-  index_t batch_size;
-  /*! \brief use round roubin to handle overflow batch */
-  bool round_batch;
-  // declare parameters
-  DMLC_DECLARE_PARAMETER(BatchParam) {
-    DMLC_DECLARE_FIELD(batch_size)
-        .describe("Batch size.");
-    DMLC_DECLARE_FIELD(round_batch).set_default(true)
-        .describe("If or not use round robin to handle overflow batch.");
-  }
-};
 
 /*! \brief create a batch iterator from single instance iterator */
 class BatchLoader : public IIterator<TBlobBatch> {

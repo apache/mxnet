@@ -440,6 +440,36 @@ void SampleGaussian(real_t mu, real_t sigma, NDArray *out) {
   SampleOP<ndarray::GaussianDistribution>(mu, sigma, out);
 }
 
+void SampleExponential(real_t lambda, NDArray *out) {
+  if ( out->ctx().dev_mask() != cpu::kDevMask ) {
+    LOG(FATAL) <<"exponential sampling only valid on cpu";
+  }
+  real_t dummy;
+  SampleOP<ndarray::ExponentialDistribution>(lambda, dummy, out);
+}
+
+void SamplePoisson(real_t lambda, NDArray *out) {
+  if ( out->ctx().dev_mask() != cpu::kDevMask ) {
+    LOG(FATAL) <<"poisson sampling only valid on cpu";
+  }
+  real_t dummy;
+  SampleOP<ndarray::PoissonDistribution>(lambda, dummy, out);
+}
+
+void SampleNegBinomial(int32_t k, real_t p, NDArray *out) {
+  if ( out->ctx().dev_mask() != cpu::kDevMask ) {
+    LOG(FATAL) <<"negative binomial sampling only valid on cpu";
+  }
+  SampleOP<ndarray::NegBinomialDistribution>(k, p, out);
+}
+
+void SampleGenNegBinomial(real_t mu, real_t alpha, NDArray *out) {
+  if ( out->ctx().dev_mask() != cpu::kDevMask ) {
+    LOG(FATAL) <<"negative binomial sampling only valid on cpu";
+  }
+  SampleOP<ndarray::GenNegBinomialDistribution>(mu, alpha, out);
+}
+
 void RandomSeed(uint32_t seed) {
   ResourceManager::Get()->SeedRandom(seed);
 }
@@ -800,7 +830,7 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
   if (ret->shape().ndim() == 3) {
     buff = ret->Reshape(mshadow::Shape4(1, ret->shape()[0], ret->shape()[1], ret->shape()[2]));
   } else {
-    CHECK_EQ(ret->shape().ndim(), 4);
+    CHECK_EQ(ret->shape().ndim(), 4U);
     buff = ret->Slice(index, index+1);
   }
   CHECK_EQ(buff.ctx().dev_mask(), cpu::kDevMask);
@@ -860,7 +890,7 @@ MXNET_REGISTER_NDARRAY_FUN(_broadcast)
 .set_num_scalars(2)
 .set_num_mutate_vars(1)
 .describe("Broadcast array in the given axis to the given size")
-.add_argument("src", "NDArray", "source ndarray")
+.add_argument("src", "NDArray-or-Symbol", "source ndarray")
 .add_argument("axis", "int", "axis to broadcast")
 .add_argument("size", "int", "size of broadcast");
 
@@ -883,7 +913,7 @@ MXNET_REGISTER_NDARRAY_FUN(_imdecode)
 .set_num_scalars(7)
 .set_num_mutate_vars(1)
 .describe("Decode an image, clip to (x0, y0, x1, y1), subtract mean, and write to buffer")
-.add_argument("mean", "NDArray", "image mean")
+.add_argument("mean", "NDArray-or-Symbol", "image mean")
 .add_argument("index", "int", "buffer position for output")
 .add_argument("x0", "int", "x0")
 .add_argument("y0", "int", "y0")

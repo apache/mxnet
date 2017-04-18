@@ -231,8 +231,8 @@ MXNET_REGISTER_OP_PROPERTY(ROIPooling, ROIPoolingProp)
 "spatial_scale and crop input feature maps accordingly. The cropped feature maps are pooled "
 "by max pooling to a fixed size output indicated by pooled_size. batch_size will change to "
 "the number of region bounding boxes after ROIPooling")
-.add_argument("data", "Symbol", "Input data to the pooling operator, a 4D Feature maps")
-.add_argument("rois", "Symbol", "Bounding box coordinates, a 2D array of "
+.add_argument("data", "NDArray-or-Symbol", "Input data to the pooling operator, a 4D Feature maps")
+.add_argument("rois", "NDArray-or-Symbol", "Bounding box coordinates, a 2D array of "
 "[[batch_index, x1, y1, x2, y2]]. (x1, y1) and (x2, y2) are top left and down right corners "
 "of designated region of interest. batch_index indicates the index of corresponding image "
 "in the input data")
