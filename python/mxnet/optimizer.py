@@ -694,8 +694,8 @@ class Ftrl(Optimizer):
         dn, n = state
 
         #update dn, n
-        dn[:] += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / self.lr
-        n[:] += grad * grad
+        dn += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / self.lr
+        n += grad * grad
 
         # update weight
         weight[:] = (sign(dn) * self.lamda1 - dn) / \
