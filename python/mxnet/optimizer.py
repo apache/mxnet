@@ -675,7 +675,7 @@ class Ftrl(Optimizer):
         self.lr = learning_rate
 
     def create_state(self, index, weight):
-        return (zeros(weight.shape, weight.context),  # zn
+        return (zeros(weight.shape, weight.context),  # dn
                 zeros(weight.shape, weight.context))  # n
 
     def update(self, index, weight, grad, state):
@@ -690,15 +690,15 @@ class Ftrl(Optimizer):
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
 
         # accumulated g and delta initlization
-        zn, n = state
+        dn, n = state
 
-        #update zn, n
-        zn[:] += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / self.lr
+        #update dn, n
+        dn[:] += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / self.lr
         n[:] += grad * grad
 
         # update weight
-        weight[:] = (sign(zn) * self.lamda1 - zn) / \
-            ((self.beta + sqrt(n))/self.lr + wd) * (NDArray.abs(zn) > self.lamda1)
+        weight[:] = (sign(dn) * self.lamda1 - dn) / \
+            ((self.beta + sqrt(n))/self.lr + wd) * (NDArray.abs(dn) > self.lamda1)
 
 @register
 class Test(Optimizer):
