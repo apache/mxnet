@@ -36,7 +36,7 @@ The output of this function is the gradient of loss with respect to the input da
 For example, if you are a making a weighted cross entropy loss function.
 
 .. math::
-  \sum_i w_i * (\log \hat{y_i} + (1 - y_i) * \log(1 - \hat{y}))
+  \sum_i w_i * (\log \hat{y_i} + (1 - y_i) * \log(1 - \hat{y_i}))
 
 
 The following is a pseudocode snippet to create the customized loss::

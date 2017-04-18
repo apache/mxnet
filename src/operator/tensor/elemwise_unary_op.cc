@@ -29,7 +29,13 @@ NNVM_REGISTER_OP(_backward_copy)
 
 MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
 .add_alias("stop_gradient")
-.MXNET_DESCRIBE("Get output from a symbol and pass 0 gradient back")
+.MXNET_DESCRIBE(R"code(Stops gradient computation.
+
+Stops the accumulated gradient of the inputs from flowing through this operator
+in the backward direction. In other words, this operator prevents the contribution
+of its inputs to be taken into account for computing gradients.
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
@@ -187,10 +193,10 @@ Example::
 
 // fix
 MXNET_OPERATOR_REGISTER_UNARY(fix)
-.describe(R"code(Returns element-wise rounded value to the nearest integer towards zero of the input. 
+.describe(R"code(Returns element-wise rounded value to the nearest integer towards zero of the input.
 
 Example::
-  
+
    fix([-2.1, -1.9, 1.9, 2.1]) = [-2., -1.,  1., 2.]
 
 )code" ADD_FILELINE)
