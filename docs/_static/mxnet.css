@@ -609,6 +609,7 @@ div.content {
     left: 310px;
     right: 0;
     margin-right: 5%;
+    padding-top: 40px;
     z-index: -1;
 }
 
@@ -627,7 +628,7 @@ div.sphinxsidebar {
     left: 30px;
     margin-left: 0;
     width: 250px;
-    padding:20px 30px 15px 0;
+    padding:40px 30px 15px 0;
     height: calc(100% - 80px);
     display: none;
     overflow: auto;
@@ -888,6 +889,6 @@ table.docutils tr:nth-child(even) {
     height: 38px;
 }
 
-div.toctree-wrapper.compound > ul > li {
+div.toctree-wrapper.compound > ul > li, div.section > ul > li {
     padding: 5px 0 5px 0;
 }
