@@ -431,7 +431,7 @@ elements::
 
   repeat(x, repeats=2) = [ 1.,  1.,  2.,  2.,  3.,  3.,  4.,  4.]
 
-The parameter axis specifies the axis along which to perform repeat::
+The parameter ``axis`` specifies the axis along which to perform repeat::
 
   repeat(x, repeats=2, axis=1) = [[ 1.,  1.,  2.,  2.],
                                   [ 3.,  3.,  4.,  4.]]
