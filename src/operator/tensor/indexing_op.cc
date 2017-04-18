@@ -15,11 +15,42 @@ DMLC_REGISTER_PARAMETER(OneHotParam);
 NNVM_REGISTER_OP(Embedding)
 .describe(R"code(Maps integer indices to vector representations (embeddings).
 
+This operator is generally used for NLP tasks. It maps words to real-valued vectors in a high-dimensional space,
+these are called as word embeddings.
+These word embeddings can learn semantic and syntactic information of the words
+i.e, similar words are close to each other in this space and dissimilar words far apart.
 
-Those embeddings are learnable parameters.
-For an input of shape (d1, ..., dK),
-the shape of output array is (d1, ..., dK, output_dim).
+For an input array of shape (d1, ..., dK),
+the shape of an output array is (d1, ..., dK, output_dim).
 All the input values should be integers in the range [0, input_dim).
+
+If the input_dim is ip0 and output_dim is op0, then shape of the embedding weight matrix must be
+(ip0, op0).
+
+By default, if any index mentioned is too large, it is replaced by the index that addresses
+the last vector in an embedding matrix.
+
+Examples::
+
+  input_dim = 4
+  output_dim = 5
+
+  // Each row in weight matrix y represents a word. So, y = (w0,w1,w2,w3)
+  y = [[  0.,   1.,   2.,   3.,   4.],
+       [  5.,   6.,   7.,   8.,   9.],
+       [ 10.,  11.,  12.,  13.,  14.],
+       [ 15.,  16.,  17.,  18.,  19.]]
+
+  // Input array x represents n-grams(2-gram). So, x = [(w1,w3), (w0,w2)]
+  x = [[ 1.,  3.],
+       [ 0.,  2.]]
+
+  // Mapped input x to its vector representation y.
+  Embedding(x, y, 4, 5) = [[[  5.,   6.,   7.,   8.,   9.],
+                            [ 15.,  16.,  17.,  18.,  19.]],
+
+                           [[  0.,   1.,   2.,   3.,   4.],
+                            [ 10.,  11.,  12.,  13.,  14.]]]
 
 )code" ADD_FILELINE)
 .set_num_inputs(2)
