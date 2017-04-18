@@ -33,17 +33,18 @@ struct L2NormalizationParam : public dmlc::Parameter<L2NormalizationParam> {
   int mode;
   DMLC_DECLARE_PARAMETER(L2NormalizationParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-10f)
-    .describe("Epsilon to prevent div 0");
+    .describe("A small constant for numerical stability.");
     DMLC_DECLARE_FIELD(mode)
     .add_enum("instance", l2_normalization::kInstance)
     .add_enum("spatial", l2_normalization::kSpatial)
     .add_enum("channel", l2_normalization::kChannel)
     .set_default(l2_normalization::kInstance)
-    .describe("Normalization Mode. If set to instance, this operator will compute a "
-    "norm for each instance in the batch; this is the default mode. "
-    "If set to channel, this operator will compute a cross channel norm at "
-    "each position of each instance. If set to spatial, this operator will compute "
-    "a norm for each channel.");
+    .describe("Normalization Mode. By default it is set to ``instance``, and the "
+    "operator will compute an L2 norm for each instance in the tensor. "
+    "If it is set to ``channel``, the operator will compute an L2 norm for each channel in "
+    "the tensor. "
+    "If it is set to ``spatial``, the operator will compute a cross channel norm for each "
+    "position in the Tensor.");
   }
 };
 
