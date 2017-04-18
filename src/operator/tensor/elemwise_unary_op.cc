@@ -35,7 +35,7 @@ Stops the accumulated gradient of the inputs from flowing through this operator
 in the backward direction. In other words, this operator prevents the contribution
 of its inputs to be taken into account for computing gradients.
 
-)code" ADD_FILELINE)
+)code")
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
