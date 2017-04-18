@@ -76,7 +76,7 @@ Operator* CreateOp<gpu>(ConvolutionParam param, int dtype,
       } else {
         if ((forward_compute_type != desired_forward_compute_type) ||
             (backward_compute_type != desired_backward_compute_type))
-          LOG(INFO) << "True fp16 convolution by cudnn not supported in this configuration.  " <<
+          LOG(WARNING) << "True fp16 convolution by cudnn not supported in this configuration.  " <<
                        "Falling back to pseudo fp16.";
         op = new CuDNNConvolutionOp<DType>(param,
                                          forward_compute_type,

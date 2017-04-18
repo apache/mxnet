@@ -603,10 +603,6 @@ class DeconvolutionProp : public OperatorProperty {
       LOG(FATAL) << "Unknown convolution type";
       return false;
     }
-    if (param_.target_shape[1] > 0) {
-      CHECK_EQ(param_.target_shape[1], (*out_shape)[deconv::kOut][3]) \
-          << "param_.target_shape[1] was not reasonable, pelase set it carefully";
-    }
   }
 
   bool InferType(std::vector<int> *in_type,

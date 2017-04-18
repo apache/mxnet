@@ -127,7 +127,7 @@ class CuDNNDeconvolutionOp : public Operator {
                wmat_ptr + weight_offset_ * g,
                in_desc_,
                data_ptr + data_offset_ * g,
-               forward_conv_desc_,
+               forward_conv_desc_,  // this backward algorithm used for inference
                back_algo_,
                workspace.dptr_,
                backward_workspace_byte_,
@@ -141,7 +141,7 @@ class CuDNNDeconvolutionOp : public Operator {
                wmat_ptr + weight_offset_ * g,
                in_desc_,
                data_ptr + data_offset_ * g,
-               forward_conv_desc_,
+               forward_conv_desc_,  // this backward algorithm used for inference
                back_algo_,
                workspace.dptr_,
                backward_workspace_byte_,
@@ -280,7 +280,7 @@ class CuDNNDeconvolutionOp : public Operator {
                                          grad_ptr + out_offset_ * g,
                                          filter_desc_,
                                          wmat_ptr + weight_offset_ * g,
-                                         backward_conv_desc_,
+                                         backward_conv_desc_,   // fwd alg used to backprop-to-data
                                          algo_,
                                          workspace.dptr_,
                                          forward_workspace_byte_,
@@ -636,7 +636,7 @@ class CuDNNDeconvolutionOp : public Operator {
         CHECK_EQ(cudnnFindConvolutionBackwardDataAlgorithm(s->dnn_handle_,
                  filter_desc_,
                  in_desc_,
-                 forward_conv_desc_,
+                 forward_conv_desc_,  // this backward algorithm used for inference
                  out_desc_,
                  kMaxAlgos,
                  &nalgo,
