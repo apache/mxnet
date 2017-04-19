@@ -40,11 +40,11 @@ struct L2NormalizationParam : public dmlc::Parameter<L2NormalizationParam> {
     .add_enum("channel", l2_normalization::kChannel)
     .set_default(l2_normalization::kInstance)
     .describe("Normalization Mode. By default it is set to ``instance``, and the "
-    "operator will compute an L2 norm for each instance in the tensor. "
+    "operator will compute an L2 norm for each instance in the multidimensional array. "
     "If it is set to ``channel``, the operator will compute an L2 norm for each channel in "
-    "the tensor. "
+    "the multidimensional array. "
     "If it is set to ``spatial``, the operator will compute a cross channel norm for each "
-    "position in the Tensor.");
+    "position in the multidimensional array.");
   }
 };
 
