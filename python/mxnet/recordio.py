@@ -17,7 +17,7 @@ except ImportError:
     cv2 = None
 
 class MXRecordIO(object):
-    """Read/write RecordIO formmat data.
+    """Read/write RecordIO format data.
 
     Parameters
     ----------
@@ -98,7 +98,7 @@ class MXRecordIO(object):
             return None
 
 class MXIndexedRecordIO(MXRecordIO):
-    """Read/write RecordIO formmat data supporting random access.
+    """Read/write RecordIO format data supporting random access.
 
     Parameters
     ----------
