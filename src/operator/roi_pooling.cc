@@ -230,44 +230,41 @@ MXNET_REGISTER_OP_PROPERTY(ROIPooling, ROIPoolingProp)
 .describe(R"code(Performs region of interest(ROI) pooling on the input array.
 
 ROI pooling is a variant of max pooling layer, in which output size is fixed and
-input rectangle is a parameter. It is a neural-net layer mostly used in training
-a Fast R-CNN network for object detection tasks.
+input rectangle is a parameter.  Its purpose is to perform max pooling on the inputs
+of non-uniform sizes to obtain fixed-size feature maps. ROI pooling is a neural-net
+layer mostly used in training a `Fast R-CNN` network for object detection tasks.
 
-This operator takes a 4D feature map as input array and region proposals as rois,
+This operator takes a 4D feature map as an input array and region proposals as rois,
 then it pools over sub-regions of input and produces a fixed sized output array
 regardless of the ROI size.
-
-The cropped feature maps are pooled by standard max pooling to a fixed size output indicated by
-`pooled_size` parameter. batch_size will change to the number of region bounding boxes
-after ROIPooling.
-
-The size of the region of interest(`rois`) doesn’t have to be perfectly divisible by
-the number of pooling sections(`pooled_size`).
 
 To crop input feature map accordingly, you can resize the bounding box coordinates
 by changing the parameters `rois` and `spatial_scale`.
 
+The cropped feature maps are pooled by standard max pooling operation to a fixed size output
+indicated by a `pooled_size` parameter. batch_size will change to the number of region
+bounding boxes after ROIPooling.
+
+The size of the region of interest(`rois`) doesn’t have to be perfectly divisible by
+the number of pooling sections(`pooled_size`).
+
 Example::
 
-  x = [[[[  0.,   1.,   2.,   3.],
-         [  4.,   5.,   6.,   7.],
-         [  8.,   9.,  10.,  11.],
-         [ 12.,  13.,  14.,  15.]],
-
-        [[ 16.,  17.,  18.,  19.],
-         [ 20.,  21.,  22.,  23.],
-         [ 24.,  25.,  26.,  27.],
-         [ 28.,  29.,  30.,  31.]]]
+  x = [[[[  0.,   1.,   2.,   3.,   4.,   5.],
+         [  6.,   7.,   8.,   9.,  10.,  11.],
+         [ 12.,  13.,  14.,  15.,  16.,  17.],
+         [ 18.,  19.,  20.,  21.,  22.,  23.],
+         [ 24.,  25.,  26.,  27.,  28.,  29.],
+         [ 30.,  31.,  32.,  33.,  34.,  35.],
+         [ 36.,  37.,  38.,  39.,  40.,  41.],
+         [ 42.,  43.,  44.,  45.,  46.,  47.]]]]
 
   // roi i.e. bounding box coordinates
-  y = [[0,0,0,3,3]]
+  y = [[0,0,0,4,4]]
 
   // returns array of shape (2,2) according to the given roi with max pooling
-  ROIPooling(x, y, (2,2), 1.0) = [[[[  5.,   7.],
-                                    [ 13.,  15.]],
-
-                                   [[ 21.,  23.],
-                                    [ 29.,  31.]]]]
+  ROIPooling(x, y, (2,2), 1.0) = [[[[ 14.,  16.],
+                                    [ 26.,  28.]]]]
 
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "The input array to the pooling operator, "
