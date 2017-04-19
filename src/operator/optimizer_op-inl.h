@@ -124,17 +124,16 @@ struct SGDMomKernel {
               - param_lr*param_wd*weight_data[i]
               - param_lr
               *mshadow_op::clip::Map(param_rescale_grad*grad_data[i], param_clip_gradient);
-      AssignCUDA(out_data[i], req, weight_data[i] + mom_data[i]);
     } else {
       mom_data[i] = param_momentum*mom_data[i]
                 - param_lr*param_wd*weight_data[i]
                 - param_lr*param_rescale_grad*grad_data[i];
-      AssignCUDA(out_data[i], req, weight_data[i] + mom_data[i]);
     }
+    AssignCUDA(out_data[i], req, weight_data[i] + mom_data[i]);
   }
 };
+#undef AssignCUDA
 
-#if 1
 template<typename xpu>
 inline void SGDMomUpdate(const nnvm::NodeAttrs& attrs,
                          const OpContext &ctx,
@@ -153,41 +152,8 @@ inline void SGDMomUpdate(const nnvm::NodeAttrs& attrs,
       grad.dptr_, static_cast<DType>(param.clip_gradient), static_cast<DType>(param.momentum),
       static_cast<DType>(param.lr), static_cast<DType>(param.wd),
       static_cast<DType>(param.rescale_grad), req[0]);
-    // Assign(out, req[0], weight + mom);
   });
 }
-#else
-template<typename xpu>
-inline void SGDMomUpdate(const nnvm::NodeAttrs& attrs,
-                         const OpContext &ctx,
-                         const std::vector<TBlob> &inputs,
-                         const std::vector<OpReqType> &req,
-                         const std::vector<TBlob> &outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  using namespace mshadow_op;
-  SGDMomParam param = nnvm::get<SGDMomParam>(attrs.parsed);
-  Stream<xpu>* s = ctx.get_stream<xpu>();
-  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> grad = inputs[1].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> mom = inputs[2].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    if (param.clip_gradient >= 0.0f) {
-      mom = scalar<DType>(param.momentum)*mom
-              - scalar<DType>(param.lr*param.wd)*weight
-              - scalar<DType>(param.lr)
-                * F<clip>(scalar<DType>(param.rescale_grad)*grad,
-                          DType(param.clip_gradient));
-    } else {
-      mom = scalar<DType>(param.momentum)*mom
-              - scalar<DType>(param.lr*param.wd)*weight
-              - scalar<DType>(param.lr*param.rescale_grad)*grad;
-    }
-    Assign(out, req[0], weight + mom);
-  });
-}
-#endif
 
 struct AdamParam : public dmlc::Parameter<AdamParam> {
   float lr;
