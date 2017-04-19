@@ -281,8 +281,28 @@ class CuDNNConvolutionOp : public Operator {
     TShape oshape = out_shape[conv::kOut];
     TShape dstride, ostride;
     wshape[0] /= param_.num_group;
+    cudnnDataType_t dtype = dtype_;
+    #if CUDNN_MAJOR >= 6
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, ctx.dev_id);
+    if (prop.major <= 5 && prop.minor <= 2 && dtype_ == CUDNN_DATA_HALF) {
+      dtype = CUDNN_DATA_FLOAT;
+    }
+    #endif
     if (param_.kernel.ndim() == 2) {
       // 2d conv
+      #if CUDNN_MAJOR >= 6
+
+      CHECK_EQ(cudnnSetConvolution2dDescriptor(conv_desc_,
+                                               param_.pad[0],
+                                               param_.pad[1],
+                                               param_.stride[0],
+                                               param_.stride[1],
+                                               param_.dilate[0],
+                                               param_.dilate[1],
+                                               CUDNN_CROSS_CORRELATION,
+                                               dtype), CUDNN_STATUS_SUCCESS);
+      #else
       CHECK_EQ(cudnnSetConvolution2dDescriptor(conv_desc_,
                                                param_.pad[0],
                                                param_.pad[1],
@@ -291,7 +311,7 @@ class CuDNNConvolutionOp : public Operator {
                                                1,
                                                1,
                                                CUDNN_CROSS_CORRELATION), CUDNN_STATUS_SUCCESS);
-
+      #endif
       #if CUDNN_MAJOR >= 5
       wshape = ConvertLayout(wshape.get<4>(), param_.layout.value(), kNCHW);
       CHECK_EQ(cudnnSetFilter4dDescriptor(filter_desc_,
@@ -345,7 +365,7 @@ class CuDNNConvolutionOp : public Operator {
                                                reinterpret_cast<int*>(&param_.stride[0]),
                                                &upscale_vec[0],
                                                CUDNN_CROSS_CORRELATION,
-                                               dtype_), CUDNN_STATUS_SUCCESS);
+                                               dtype), CUDNN_STATUS_SUCCESS);
 
       dstride = ConvertLayout(Shape5(dshape[1] * dshape[2] * dshape[3] * dshape[4],
                                      dshape[2] * dshape[3] * dshape[4],
@@ -440,7 +460,7 @@ class CuDNNConvolutionOp : public Operator {
                  workspace_byte,
                  &(this->back_algo_)), CUDNN_STATUS_SUCCESS);
       } else {
-        const int kMaxAlgos = 10;
+        const int kMaxAlgos = 25;
         int nalgo = kMaxAlgos;
         int i;
 
