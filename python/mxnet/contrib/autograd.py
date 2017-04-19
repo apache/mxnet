@@ -10,15 +10,70 @@ from ..base import mx_uint, NDArrayHandle, c_array
 from ..ndarray import NDArray, zeros_like
 from ..symbol import _GRAD_REQ_MAP
 
-def set_recording(recording):
-    """Turn on or turn off operator recording.
+
+def set_is_training(is_train):
+    """Set status to training/not training. When training, graph will be constructed
+    for gradient computation. Operators will also run with ctx.is_train=True. For example,
+    Dropout will drop inputs randomly when is_train=True while simply passing through
+    if is_train=False.
 
     Parameters
     ----------
-    recording: bool
+    is_train: bool
+
+    Returns
+    -------
+    previous state before this set.
     """
-    check_call(_LIB.MXAutogradSetRecording(
-        ctypes.c_int(recording)))
+    prev = ctypes.c_int()
+    check_call(_LIB.MXAutogradSetIsTraining(
+        ctypes.c_int(is_train), ctypes.byref(prev)))
+    return bool(prev.value)
+
+
+class TrainingStateScope(object):
+    """Scope for managing training state.
+
+    Example::
+        with TrainingStateScope(True):
+            y = model(x)
+            compute_gradient([y])
+    """
+    def __init__(self, enter_state):
+        self._enter_state = enter_state
+        self._prev = None
+
+    def __enter__(self):
+        self._prev = set_is_training(self._enter_state)
+
+    def __exit__(self, ptype, value, trace):
+        if self._prev != self._enter_state:
+            set_is_training(self._prev)
+
+
+def train():
+    """Returns a training TrainingStateScope
+
+    Example::
+        with autograd.train():
+            y = model(x)
+            compute_gradient([y])
+    """
+    return TrainingStateScope(True)
+
+
+def test():
+    """Returns a testing TrainingStateScope.
+
+    Example::
+        with autograd.train():
+            y = model(x)
+            compute_gradient([y])
+            with autograd.test():
+                # testing, IO, gradient updates...
+    """
+    return TrainingStateScope(False)
+
 
 def mark_variables(variables, gradients, grad_reqs='write'):
     """Mark NDArrays as variables to compute gradient for autograd.
@@ -91,9 +146,8 @@ def grad_and_loss(func, argnum=None):
             assert isinstance(x, NDArray), "type of autograd input should NDArray."
         grads = [zeros_like(x) for x in variables]
         mark_variables(variables, grads)
-        set_recording(True)
-        outputs = func(*args)
-        set_recording(False)
+        with train():
+            outputs = func(*args)
         compute_gradient([outputs] if isinstance(outputs, NDArray) else outputs)
         return grads, outputs
     return wrapped

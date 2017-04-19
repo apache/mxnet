@@ -105,12 +105,12 @@ struct SampleGammaParam : public dmlc::Parameter<SampleGammaParam> {
 };
 
 struct SampleExponentialParam : public dmlc::Parameter<SampleExponentialParam> {
-  float lambda;
+  float lam;
   TShape shape;
   std::string ctx;
   int dtype;
   DMLC_DECLARE_PARAMETER(SampleExponentialParam) {
-    DMLC_DECLARE_FIELD(lambda).set_default(1.0f)
+    DMLC_DECLARE_FIELD(lam).set_default(1.0f)
     .describe("lambda parameter (rate) of the exponential distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
@@ -131,12 +131,12 @@ struct SampleExponentialParam : public dmlc::Parameter<SampleExponentialParam> {
 };
 
 struct SamplePoissonParam : public dmlc::Parameter<SamplePoissonParam> {
-  float lambda;
+  float lam;
   TShape shape;
   std::string ctx;
   int dtype;
   DMLC_DECLARE_PARAMETER(SamplePoissonParam) {
-    DMLC_DECLARE_FIELD(lambda).set_default(1.0f)
+    DMLC_DECLARE_FIELD(lam).set_default(1.0f)
     .describe("lambda parameter (rate) of the Poisson distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
@@ -278,11 +278,11 @@ void SampleExponential_(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const SampleExponentialParam& param = nnvm::get<SampleExponentialParam>(attrs.parsed);
-  CHECK_GT(param.lambda, 0) << "lambda parameter in exponential distribution has to be positive";
+  CHECK_GT(param.lam, 0) << "lambda parameter in exponential distribution has to be positive";
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
     mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    prnd->SampleExponential(&out, param.lambda);  // NOLINT(*)
+    prnd->SampleExponential(&out, param.lam);  // NOLINT(*)
   });
 }
 
@@ -296,11 +296,11 @@ void SamplePoisson_(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const SamplePoissonParam& param = nnvm::get<SamplePoissonParam>(attrs.parsed);
-  CHECK_GE(param.lambda, 0) << "lambda parameter in poisson distribution has to be non-negative";
+  CHECK_GE(param.lam, 0) << "lambda parameter in poisson distribution has to be non-negative";
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
     mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    prnd->SamplePoisson(&out, param.lambda);  // NOLINT(*)
+    prnd->SamplePoisson(&out, param.lam);  // NOLINT(*)
   });
 }
 
