@@ -207,8 +207,7 @@ struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
   int axis;
   DMLC_DECLARE_PARAMETER(SoftmaxParam) {
     DMLC_DECLARE_FIELD(axis).set_default(-1)
-      .describe("The axis along which to compute softmax. "
-                "Default axis is the last axis.");
+      .describe("The axis along which to compute softmax.");
   }
 };
 

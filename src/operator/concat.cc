@@ -46,29 +46,39 @@ Operator* ConcatProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shap
 DMLC_REGISTER_PARAMETER(ConcatParam);
 
 MXNET_REGISTER_OP_PROPERTY(Concat, ConcatProp)
-.describe(R"code(Concate a list of array along a given axis.
+.describe(R"code(Join input arrays along the given axis.
 
-The dimension sizes of the input arrays on the given axis should be the same.
+.. note:: `Concat` is deprecated. Use `concat` instead.
 
-For example::
+The dimensions of the input arrays should be the same except the axis along
+ which they will concatenated.
+The dimension of the output array along the concatenated axis will be equal
+to the sum of the corresponding dimensions of the input arrays.
 
-  x = [[1,1],[1,1]]
-  y = [[2,2],[2,2]]
-  z = [[3,3],[3,3],[3,3]]
+Example::
 
-  Concat(x,y,z,dim=0) = [[ 1.,  1.],
-                         [ 1.,  1.],
-                         [ 2.,  2.],
-                         [ 2.,  2.],
-                         [ 3.,  3.],
-                         [ 3.,  3.],
-                         [ 3.,  3.]]
+   x = [[1,1],[2,2]]
+   y = [[3,3],[4,4],[5,5]]
+   z = [[6,6], [7,7],[8,8]]
 
-  Concat(x,y,dim=1) = [[ 1.,  1.,  2.,  2.],
-                         [ 1.,  1.,  2.,  2.]]
+   concat(x,y,z,dim=0) = [[ 1.,  1.],
+                          [ 2.,  2.],
+                          [ 3.,  3.],
+                          [ 4.,  4.],
+                          [ 5.,  5.],
+                          [ 6.,  6.],
+                          [ 7.,  7.],
+                          [ 8.,  8.]]
+
+   Note that you cannot concat x,y,z along dimension 1 since dimension
+   0 is not the same for all the input arrays.
+
+   concat(y,z,dim=1) = [[ 3.,  3.,  6.,  6.],
+                         [ 4.,  4.,  7.,  7.],
+                         [ 5.,  5.,  8.,  8.]]
 
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol[]", "List of tensors to concatenate")
+.add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
 .add_arguments(ConcatParam::__FIELDS__())
 .set_key_var_num_args("num_args");
 
