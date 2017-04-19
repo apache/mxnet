@@ -66,10 +66,12 @@ def parse_args():
                              'Increase batch size when using multiple gpus for best performance.')
     parser.add_argument('--kv-store', type=str, default='device',
                         help='key-value store type')
-    parser.add_argument('--num-epochs', type=int, default=25,
+    parser.add_argument('--num-epochs', type=int, default=55,
                         help='max num of epochs')
     parser.add_argument('--bptt', type=int, default=35,
                         help='length of the sequence length used in BPTT.')
+    parser.add_argument('--init-scale', type=float, default=0.1,
+                        help='the scale of the uniform initializer.')
     parser.add_argument('--lr', type=float, default=1.0,
                         help='initial learning rate')
     parser.add_argument('--lr-decay', type=float, default=0.5,
@@ -195,7 +197,7 @@ def train(args, contexts):
                         state_names=[state.name for state in prev_state_list],
                         context=contexts)
     net.bind(data_shapes=data_desc, label_shapes=label_desc)
-    net.init_params(initializer=mx.init.Uniform(0.1))
+    net.init_params(initializer=mx.init.Uniform(args.init_scale))
     net.summary()
     net.init_optimizer(kvstore=args.kv_store, optimizer=args.optimizer,
                        optimizer_params={'learning_rate': args.lr,
