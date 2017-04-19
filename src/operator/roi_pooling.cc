@@ -229,23 +229,23 @@ DMLC_REGISTER_PARAMETER(ROIPoolingParam);
 MXNET_REGISTER_OP_PROPERTY(ROIPooling, ROIPoolingProp)
 .describe(R"code(Performs region of interest(ROI) pooling on the input array.
 
-ROI pooling is a variant of max pooling layer, in which output size is fixed and
-input rectangle is a parameter.  Its purpose is to perform max pooling on the inputs
+ROI pooling is a variant of a max pooling layer, in which the output size is fixed and
+region of interest is a parameter. Its purpose is to perform max pooling on the inputs
 of non-uniform sizes to obtain fixed-size feature maps. ROI pooling is a neural-net
-layer mostly used in training a `Fast R-CNN` network for object detection tasks.
+layer mostly used in training a `Fast R-CNN` network for object detection.
 
-This operator takes a 4D feature map as an input array and region proposals as rois,
-then it pools over sub-regions of input and produces a fixed sized output array
+This operator takes a 4D feature map as an input array and region proposals as `rois`,
+then it pools over sub-regions of input and produces a fixed-sized output array
 regardless of the ROI size.
 
-To crop input feature map accordingly, you can resize the bounding box coordinates
+To crop the feature map accordingly, you can resize the bounding box coordinates
 by changing the parameters `rois` and `spatial_scale`.
 
 The cropped feature maps are pooled by standard max pooling operation to a fixed size output
 indicated by a `pooled_size` parameter. batch_size will change to the number of region
-bounding boxes after ROIPooling.
+bounding boxes after `ROIPooling`.
 
-The size of the region of interest(`rois`) doesn’t have to be perfectly divisible by
+The size of each region of interest doesn’t have to be perfectly divisible by
 the number of pooling sections(`pooled_size`).
 
 Example::
@@ -266,7 +266,7 @@ Example::
   ROIPooling(x, y, (2,2), 1.0) = [[[[ 14.,  16.],
                                     [ 26.,  28.]]]]
 
-  // region of interest is changed due to the change in spacial_scale parameter.
+  // region of interest is changed due to the change in `spacial_scale` parameter.
   ROIPooling(x, y, (2,2), 0.7) = [[[[  7.,   9.],
                                     [ 19.,  21.]]]]
 

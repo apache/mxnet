@@ -16,9 +16,9 @@ NNVM_REGISTER_OP(Embedding)
 .describe(R"code(Maps integer indices to vector representations (embeddings).
 
 This operator maps words to real-valued vectors in a high-dimensional space,
-these are called as word embeddings.
-These word embeddings can learn semantic and syntactic information of the words
-i.e, similar words are close to each other in this space and dissimilar words far apart.
+called word embeddings. These embeddings can capture semantic and syntactic properties of the words.
+For example, it has been noted that in the learned embedding spaces, similar words tend
+to be close to each other and dissimilar words far apart.
 
 For an input array of shape (d1, ..., dK),
 the shape of an output array is (d1, ..., dK, output_dim).
@@ -88,7 +88,7 @@ NNVM_REGISTER_OP(_backward_Embedding)
 
 
 NNVM_REGISTER_OP(take)
-.describe(R"code(Takes elements from an input array according to the input indices along the given axis.
+.describe(R"code(Takes elements from an input array along the given axis.
 
 This function slices the input array along a particular axis with the provided indices.
 
@@ -150,7 +150,7 @@ NNVM_REGISTER_OP(_backward_take)
 
 
 NNVM_REGISTER_OP(batch_take)
-.describe(R"code(Takes elements according to the input indices from a data batch.
+.describe(R"code(Takes elements from a data batch.
 
 .. note::
   `batch_take` is deprecated. Use `pick` instead.
