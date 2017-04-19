@@ -195,7 +195,7 @@ Example::
 .add_argument("op_type", "string", "Name of the custom operator. "
               "This is the name that is passed to `mx.operator.register` "
               "to register the operator.")
-.add_argument("data", "NDArray", "Input data for the custom operator.");
+.add_argument("data", "NDArray-or-Symbol", "Input data for the custom operator.");
 
 
 }  // namespace op
