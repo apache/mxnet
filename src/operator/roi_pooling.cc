@@ -259,12 +259,16 @@ Example::
          [ 36.,  37.,  38.,  39.,  40.,  41.],
          [ 42.,  43.,  44.,  45.,  46.,  47.]]]]
 
-  // roi i.e. bounding box coordinates
+  // region of interest i.e. bounding box coordinates.
   y = [[0,0,0,4,4]]
 
-  // returns array of shape (2,2) according to the given roi with max pooling
+  // returns array of shape (2,2) according to the given roi with max pooling.
   ROIPooling(x, y, (2,2), 1.0) = [[[[ 14.,  16.],
                                     [ 26.,  28.]]]]
+
+  // region of interest is changed due to the change in spacial_scale parameter.
+  ROIPooling(x, y, (2,2), 0.7) = [[[[  7.,   9.],
+                                    [ 19.,  21.]]]]
 
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "The input array to the pooling operator, "
