@@ -43,32 +43,42 @@ struct SGDParam : public dmlc::Parameter<SGDParam> {
   }
 };
 
+struct SGDKernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* weight_data,
+    const DType* grad_data, const DType param_clip_gradient,
+    const DType param_lr, const DType param_wd, const DType param_rescale_grad,
+    const OpReqType req) {
+    if (param_clip_gradient >= 0.0f) {
+      Assign(out_data[i], req,
+             (1.f-param_lr*param_wd)*weight_data[i]
+               - (param_lr)
+                 * mshadow_op::clip::Map(param_rescale_grad*grad_data[i], param_clip_gradient));
+    } else {
+      Assign(out_data[i], req,
+             (1.f-param_lr*param_wd)*weight_data[i]
+               - (param_lr*param_rescale_grad)*grad_data[i]);
+    }
+  }
+};
+
 template<typename xpu>
 inline void SGDUpdate(const nnvm::NodeAttrs& attrs,
                       const OpContext &ctx,
                       const std::vector<TBlob> &inputs,
                       const std::vector<OpReqType> &req,
                       const std::vector<TBlob> &outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  using namespace mshadow_op;
+  using namespace mxnet_op;
   const SGDParam& param = nnvm::get<SGDParam>(attrs.parsed);
   Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> grad = inputs[1].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    if (param.clip_gradient >= 0.0f) {
-      Assign(out, req[0],
-             scalar<DType>(1.f-param.lr*param.wd)*weight
-               - scalar<DType>(param.lr)
-                 * F<clip>(scalar<DType>(param.rescale_grad)*grad,
-                           DType(param.clip_gradient)));
-    } else {
-      Assign(out, req[0],
-             scalar<DType>(1.f-param.lr*param.wd)*weight
-               - scalar<DType>(param.lr*param.rescale_grad)*grad);
-    }
+    Kernel<SGDKernel, xpu>::Launch(s, weight.shape_.Size(), out.dptr_, weight.dptr_,
+      grad.dptr_, static_cast<DType>(param.clip_gradient),
+      static_cast<DType>(param.lr), static_cast<DType>(param.wd),
+      static_cast<DType>(param.rescale_grad), req[0]);
   });
 }
 
@@ -98,21 +108,6 @@ struct SGDMomParam : public dmlc::Parameter<SGDMomParam> {
   }
 };
 
-#define AssignCUDA(out, req, exp)       \
-  {                                     \
-    switch (req) {                      \
-      case kNullOp:                     \
-        break;                          \
-      case kWriteTo:                    \
-      case kWriteInplace:               \
-        (out) = (exp);                  \
-        break;                          \
-      case kAddTo:                      \
-        (out) += (exp);                 \
-        break;                          \
-    }                                   \
-  }
-
 struct SGDMomKernel {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, DType* mom_data, const DType* weight_data,
@@ -129,10 +124,9 @@ struct SGDMomKernel {
                 - param_lr*param_wd*weight_data[i]
                 - param_lr*param_rescale_grad*grad_data[i];
     }
-    AssignCUDA(out_data[i], req, weight_data[i] + mom_data[i]);
+    Assign(out_data[i], req, weight_data[i] + mom_data[i]);
   }
 };
-#undef AssignCUDA
 
 template<typename xpu>
 inline void SGDMomUpdate(const nnvm::NodeAttrs& attrs,
