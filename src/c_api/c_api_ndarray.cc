@@ -227,7 +227,7 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
       write_vars.push_back(ndinputs[i].var());
     }
   }
-  common::DeduplicateVarHandle(&read_vars, &write_vars);
+  Engine::Get()->DeduplicateVarHandle(&read_vars, &write_vars);
 }
 
 void PushFCompute(const FCompute& fn,

@@ -323,7 +323,9 @@ object Model {
       }
 
       val (name, value) = evalMetric.get
-      logger.info(s"Epoch[$epoch] Train-$name=$value")
+      name.zip(value).foreach { case (n, v) =>
+        logger.info(s"Epoch[$epoch] Train-$n=$v")
+      }
       val toc = System.currentTimeMillis
       logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
 
@@ -339,7 +341,9 @@ object Model {
         }
 
         val (name, value) = evalMetric.get
-        logger.info(s"Epoch[$epoch] Validation-$name=$value")
+        name.zip(value).foreach { case (n, v) =>
+          logger.info(s"Epoch[$epoch] Train-$n=$v")
+        }
       }
 
       if (epochEndCallback.isDefined || epoch + 1 == endEpoch) {
