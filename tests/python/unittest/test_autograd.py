@@ -1,5 +1,5 @@
 import mxnet.ndarray as nd
-from mxnet.contrib.autograd import grad, grad_and_loss
+from mxnet.contrib.autograd import grad, grad_and_loss, train, test
 from mxnet.test_utils import *
 
 def autograd_assert(*args, **kwargs):
@@ -73,7 +73,18 @@ def test_argnum():
     autograd_assert(a, b, False,
         argnum=[0, 1], func=f_with_mode, grad_func=f_mul_grad)
 
+def test_training():
+    x = nd.ones((10, 10))
+    with train():
+        y = nd.Dropout(x, p=0.5)
+        assert not (y.asnumpy() == x.asnumpy()).all()
+        with test():
+            y = nd.Dropout(x, p=0.5)
+            assert (y.asnumpy() == x.asnumpy()).all()
+
+
 if __name__ == "__main__":
+    test_training()
     test_unary_func()
     test_binary_func()
     test_operator_with_state()

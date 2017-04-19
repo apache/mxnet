@@ -51,9 +51,15 @@ class AGNode {
 class AutogradRuntime {
  public:
   /*! \brief turn on or turn off operator recording for autograd. */
-  void SetRecording(bool recording);
+  bool SetIsTraining(bool is_train) {
+      bool old = is_train_;
+      is_train_ = is_train;
+      return old;
+  }
   /*! \brief whether operator recording is on. */
-  bool IsRecording() const;
+  bool IsTraining() const {
+    return is_train_;
+  }
   /*! \brief mark variables for computing gradients. */
   void MarkVariables(const std::vector<NDArray*>& variables,
                      const std::vector<mx_uint>& grad_reqs,
@@ -96,8 +102,12 @@ class AutogradRuntime {
                      const std::shared_ptr<Operator>& opr);
   /*! \brief AutogradRuntime singleton. */
   static AutogradRuntime* instance_;
-  /*! \brief indicate whether operator recording is on. */
-  bool is_recording_{false};
+  /*! \brief indicate whether is training. */
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local bool is_train_;
+#else
+  static MX_TREAD_LOCAL bool is_train_;
+#endif
   /*! \brief node count used for naming */
   std::atomic<uint64_t> node_count_{0};
   /*! \brief variable count used for naming */
