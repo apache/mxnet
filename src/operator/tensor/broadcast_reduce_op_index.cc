@@ -98,6 +98,8 @@ an output array of shape ``(i0,)`` with::
 By default, if any index mentioned is too large, it is replaced by the index that addresses
 the last element along an axis.
 
+Pick operator supports n-dimensional input and (n-1)-dimensional indices arrays.
+
 Examples::
 
   x = [[ 1.,  2.],

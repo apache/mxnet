@@ -15,7 +15,7 @@ DMLC_REGISTER_PARAMETER(OneHotParam);
 NNVM_REGISTER_OP(Embedding)
 .describe(R"code(Maps integer indices to vector representations (embeddings).
 
-This operator is generally used for NLP tasks. It maps words to real-valued vectors in a high-dimensional space,
+This operator maps words to real-valued vectors in a high-dimensional space,
 these are called as word embeddings.
 These word embeddings can learn semantic and syntactic information of the words
 i.e, similar words are close to each other in this space and dissimilar words far apart.
@@ -72,8 +72,8 @@ Examples::
     return MakeNonlossGradNode("_backward_Embedding", n, ograds,
                                {n->inputs[0]}, n->attrs.dict);
   })
-.add_argument("data", "NDArray-or-Symbol", "Input data to the EmbeddingOp.")
-.add_argument("weight", "NDArray-or-Symbol", "Embedding weight matrix.")
+.add_argument("data", "NDArray-or-Symbol", "The input array to the embedding operator.")
+.add_argument("weight", "NDArray-or-Symbol", "The embedding weight matrix.")
 .add_arguments(EmbeddingParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Embedding)
