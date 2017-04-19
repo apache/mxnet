@@ -1,4 +1,3 @@
-#pylint: disable=invalid-name
 """Weight updating functions."""
 import math
 import pickle
@@ -650,6 +649,7 @@ class AdaDelta(Optimizer):
         # update weight
         weight[:] -= current_delta + wd * weight
 
+#pylint: disable=invalid-name
 @register
 class Ftrl(Optimizer):
     """
@@ -684,6 +684,7 @@ class Ftrl(Optimizer):
         assert(isinstance(grad, NDArray))
         self._update_count(index)
         wd = self._get_wd(index)
+        lr = self._get_lr(index)
 
         # preprocess grad
         grad *= self.rescale_grad
@@ -694,12 +695,12 @@ class Ftrl(Optimizer):
         dn, n = state
 
         #update dn, n
-        dn += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / self.lr
+        dn += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / lr
         n += grad * grad
 
         # update weight
         weight[:] = (sign(dn) * self.lamda1 - dn) / \
-            ((self.beta + sqrt(n))/self.lr + wd) * (NDArray.abs(dn) > self.lamda1)
+            ((self.beta + sqrt(n)) / lr + wd) * (NDArray.abs(dn) > self.lamda1)
 
 @register
 class Test(Optimizer):
