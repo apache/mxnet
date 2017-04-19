@@ -35,7 +35,7 @@ struct MakeLossParam : public dmlc::Parameter<MakeLossParam> {
     .describe("Gradient scale as a supplement to unary and binary operators");
     DMLC_DECLARE_FIELD(valid_thresh).set_default(0.0f)
     .describe("Clip x to 0 when x <= valid_thresh, where x is the elements in the "
-              "array. This is used when normalization is set to ``valid``.");
+              "array. This is used when ``normalization`` is set to ``'valid'``.");
     DMLC_DECLARE_FIELD(normalization)
     .add_enum("null", make_loss_enum::kNull)
     .add_enum("batch", make_loss_enum::kBatch)
