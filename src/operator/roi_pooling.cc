@@ -233,16 +233,21 @@ ROI pooling is a variant of max pooling layer, in which output size is fixed and
 input rectangle is a parameter. It is a neural-net layer mostly used in training
 a Fast R-CNN network for object detection tasks.
 
-This operator takes a 4D feature map as input array and rectangular windows into a conv feature map
-as rois and produces a fixed sized output array regardless of the ROI size.
-
-To crop input feature map according to your interest, resize the bounding box coordinates
-by changing parameters `rois` and `spatial_scale`.
+This operator takes a 4D feature map as input array and region proposals as rois,
+then it pools over sub-regions of input and produces a fixed sized output array
+regardless of the ROI size.
 
 The cropped feature maps are pooled by standard max pooling to a fixed size output indicated by
-`pooled_size` parameter. batch_size will change to the number of region bounding boxes after ROIPooling.
+`pooled_size` parameter. batch_size will change to the number of region bounding boxes
+after ROIPooling.
 
-Examples::
+The size of the region of interest(`rois`) doesn’t have to be perfectly divisible by
+the number of pooling sections(`pooled_size`).
+
+To crop input feature map accordingly, you can resize the bounding box coordinates
+by changing the parameters `rois` and `spatial_scale`.
+
+Example::
 
   x = [[[[  0.,   1.,   2.,   3.],
          [  4.,   5.,   6.,   7.],
@@ -265,11 +270,12 @@ Examples::
                                     [ 29.,  31.]]]]
 
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol", "The input array to the pooling operator, a 4D Feature maps")
+.add_argument("data", "NDArray-or-Symbol", "The input array to the pooling operator, "
+                                            " a 4D Feature maps ")
 .add_argument("rois", "NDArray-or-Symbol", "Bounding box coordinates, a 2D array of "
-"[[batch_index, x1, y1, x2, y2]], where (x1, y1) and (x2, y2) are top left and down right corners "
-"of designated region of interest. `batch_index` indicates the index of corresponding image "
-"in the input array")
+"[[batch_index, x1, y1, x2, y2]], where (x1, y1) and (x2, y2) are top left and bottom right "
+"corners of designated region of interest. `batch_index` indicates the index of corresponding "
+"image in the input array")
 .add_arguments(ROIPoolingParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet
