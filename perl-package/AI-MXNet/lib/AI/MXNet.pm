@@ -27,7 +27,7 @@ use AI::MXNet::Visualization;
 use AI::MXNet::RecordIO;
 use AI::MXNet::Image;
 use AI::MXNet::Contrib;
-our $VERSION = '0.9502';
+our $VERSION = '0.9503';
 
 sub import
 {
