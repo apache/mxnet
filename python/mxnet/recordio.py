@@ -1,4 +1,4 @@
-"""Read and write for the RecrodIO data format."""
+"""Read and write for the RecordIO data format."""
 from __future__ import absolute_import
 from collections import namedtuple
 
