@@ -133,6 +133,21 @@ class Symbol(SymbolBase):
         return self.__deepcopy__(None)
 
     def __deepcopy__(self, _):
+        """Returns a deep copy (i.e. not just a pointer to) of the object,
+           including the current state of its parameters (e.g. weight, biases etc. if any).
+
+        Any changes made to a deep copy of object do not reflect in the original object.
+
+        Example usage:
+        ----------
+        >>> import copy
+        >>> data = mx.sym.Variable('data')
+        >>> data_1 = copy.deepcopy(data)
+        >>> data_1 =2*data
+        >>> data_1.tojson()
+        >>> data_1 is data    # Data got modified
+        False
+        """
         handle = SymbolHandle()
         check_call(_LIB.MXSymbolCopy(self.handle,
                                      ctypes.byref(handle)))
@@ -407,8 +422,8 @@ class Symbol(SymbolBase):
 
         Example usage:
         ----------
-        >>> a = mxnet.sym.var('a')
-        >>> b = mxnet.sym.var('b')
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
         >>> c = a + b
         >>> d = c.get_internals()
         >>> d
@@ -450,8 +465,8 @@ class Symbol(SymbolBase):
 
         Example usage:
         ----------
-        >>> a = mxnet.sym.var('a')
-        >>> b = mxnet.sym.var('b')
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
         >>> c = a + b
         >>> c.list_arguments
         ['a', 'b']
@@ -516,8 +531,8 @@ class Symbol(SymbolBase):
 
         Example usage:
         ----------
-        >>> a = mxnet.sym.var('a')
-        >>> b = mxnet.sym.var('b')
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
         >>> c = a + b
         >>> c.infer_type(a='float32')
         ([numpy.float32, numpy.float32], [numpy.float32], [])
@@ -601,17 +616,35 @@ class Symbol(SymbolBase):
         and all outputs.
 
         You can pass in the known shapes in either positional way or keyword argument
-        way. A tuple of ``None`` values is returned if there is not enough information
+        way. A tuple of `None` values is returned if there is not enough information
         to deduce the missing shapes.
-        Inconsistencies in the known shapes will cause an error to be raised.
 
         Example usage:
         ----------
-        >>> a = mxnet.sym.var('a')
-        >>> b = mxnet.sym.var('b')
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
         >>> c = a + b
-        >>> c.infer_shape(a=(3,3))
-        ([(3L, 3L), (3L, 3L)], [(3L, 3L)], [])
+        >>> arg_shapes, out_shapes, aux_shapes = c.infer_shape(a=(3,3))
+        >>> arg_shapes
+        [(3L, 3L), (3L, 3L)]
+        >>> out_shapes
+        [(3L, 3L)]
+        >>> aux_shapes
+        []
+        >>> c.infer_shape(a=(0,3)) # 0s in shape means unknown dimensions. So, returns None.
+        (None, None, None)
+
+        Inconsistencies in the known shapes will cause an error to be raised.
+        See following example:
+
+        >>> data = mx.sym.Variable('data')
+        >>> out = mx.sym.FullyConnected(data=data, name='fc1', num_hidden=1000)
+        >>> out = mx.sym.Activation(data=out, act_type='relu')
+        >>> out = mx.sym.FullyConnected(data=out, name='fc2', num_hidden=10)
+        >>> weight_shape= (1, 100)
+        >>> data_shape = (100, 100)
+        >>> out.infer_shape(data=data_shape, fc1_weight=weight_shape)
+        Error in operator fc1: Shape inconsistent, Provided=(1,100), inferred shape=(1000,100)
 
         Parameters
         ----------
@@ -661,8 +694,48 @@ class Symbol(SymbolBase):
             raise
 
     def infer_shape_partial(self, *args, **kwargs):
-        """Partially infer the shape. The same as `infer_shape`, except that the partial
-        results can be returned.
+        """Infers the shape partially. This functions works same as `infer_shape`,
+        except that the partial results can be returned.
+
+        In following example, information about fc2 is not available. So, infer_shape
+        will return tuple of `None` values but `infer_shape_partial` will return partial values.
+
+        Example usage:
+        ----------
+        >>> data = mx.sym.Variable('data')
+        >>> prev = mx.sym.Variable('prev')
+        >>> fc1  = mx.sym.FullyConnected(data=data, name='fc1', num_hidden=128)
+        >>> fc2  = mx.sym.FullyConnected(data=prev, name='fc2', num_hidden=128)
+        >>> out  = mx.sym.Activation(data=mx.sym.elemwise_add(fc1, fc2), name='out', act_type='relu')
+        >>> out.list_arguments()
+        ['data', 'fc1_weight', 'fc1_bias', 'prev', 'fc2_weight', 'fc2_bias']
+        >>> out.infer_shape(data=(10,64))
+        (None, None, None)
+        >>> out.infer_shape_partial(data=(10,64))
+        ([(10L, 64L), (128L, 64L), (128L,), (), (), ()], [(10L, 128L)], [])
+        >>> out.infer_shape(data=(10,64), prev=(10,128))  # infers shape if you give information about fc2
+        ([(10L, 64L), (128L, 64L), (128L,), (10L, 128L), (128L, 128L), (128L,)], [(10L, 128L)], [])
+
+        Parameters
+        ----------
+        *args :
+            Provide shape of arguments in a positional way.
+            Unknown shape can be marked as None
+
+        **kwargs :
+            Provide keyword arguments of known shapes.
+
+        Returns
+        -------
+        arg_shapes : list of tuple or None
+            List of shapes of arguments.
+            The order is in the same order as list_arguments()
+        out_shapes : list of tuple or None
+            List of shapes of outputs.
+            The order is in the same order as list_outputs()
+        aux_shapes : list of tuple or None
+            List of shapes of outputs.
+            The order is in the same order as list_auxiliary_states()
         """
         return self._infer_shape_impl(True, *args, **kwargs)
 
