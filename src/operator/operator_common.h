@@ -27,22 +27,6 @@ namespace op {
  * \tparam OType output type
  * \tparam Exp expression type
  */
-#ifdef __CUDACC__
-#define Assign(out, req, exp)           \
-  {                                     \
-    switch (req) {                      \
-      case kNullOp:                     \
-        break;                          \
-      case kWriteTo:                    \
-      case kWriteInplace:               \
-        (out) = (exp);                  \
-        break;                          \
-      case kAddTo:                      \
-        (out) += (exp);                 \
-        break;                          \
-    }                                   \
-  }
-#else
 #define Assign(out, req, exp)           \
   {                                     \
     switch (req) {                      \
@@ -59,7 +43,6 @@ namespace op {
         LOG(FATAL) << "not reached";    \
     }                                   \
   }
-#endif
 
 /*! \brief exception throwed by InferShape error */
 struct InferShapeError : public dmlc::Error {

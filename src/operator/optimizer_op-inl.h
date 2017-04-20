@@ -50,12 +50,12 @@ struct SGDKernel {
     const DType param_lr, const DType param_wd, const DType param_rescale_grad,
     const OpReqType req) {
     if (param_clip_gradient >= 0.0f) {
-      Assign(out_data[i], req,
+      KERNEL_ASSIGN(out_data[i], req,
              (1.f-param_lr*param_wd)*weight_data[i]
                - (param_lr)
                  * mshadow_op::clip::Map(param_rescale_grad*grad_data[i], param_clip_gradient));
     } else {
-      Assign(out_data[i], req,
+      KERNEL_ASSIGN(out_data[i], req,
              (1.f-param_lr*param_wd)*weight_data[i]
                - (param_lr*param_rescale_grad)*grad_data[i]);
     }
@@ -124,7 +124,7 @@ struct SGDMomKernel {
                 - param_lr*param_wd*weight_data[i]
                 - param_lr*param_rescale_grad*grad_data[i];
     }
-    Assign(out_data[i], req, weight_data[i] + mom_data[i]);
+    KERNEL_ASSIGN(out_data[i], req, weight_data[i] + mom_data[i]);
   }
 };
 
