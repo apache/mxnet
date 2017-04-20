@@ -19,7 +19,7 @@ Operator* L2NormalizationProp::CreateOperator(Context ctx) const {
 DMLC_REGISTER_PARAMETER(L2NormalizationParam);
 
 MXNET_REGISTER_OP_PROPERTY(L2Normalization, L2NormalizationProp)
-.describe(R"code(Normalize the input array using a L2 norm.
+.describe(R"code(Normalize the input array using the L2 norm.
 
 For 1-D NDArray, it computes::
 
