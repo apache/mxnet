@@ -3,9 +3,13 @@ import sys
 sys.path.insert(0, '../../python')
 import mxnet as mx
 import numpy as np
-import os, pickle, gzip
+import os, pickle, gzip, argparse
 import logging
 from common import get_data
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--gpu', action='store_true', help='use gpu to train')
+args = parser.parse_args()
 
 # symbol net
 batch_size = 100
@@ -27,7 +31,8 @@ fc2 = mx.symbol.FullyConnected(data = fl, name='fc2', num_hidden=10)
 softmax = mx.symbol.SoftmaxOutput(data = fc2, name = 'sm')
 
 num_epoch = 1
-model = mx.model.FeedForward(softmax, mx.cpu(),
+ctx=mx.gpu() if args.gpu else mx.cpu()
+model = mx.model.FeedForward(softmax, ctx,
                              num_epoch=num_epoch,
                              learning_rate=0.1, wd=0.0001,
                              momentum=0.9)
