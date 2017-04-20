@@ -44,6 +44,7 @@ namespace op {
     }                                   \
   }
 
+
 /*! \brief exception throwed by InferShape error */
 struct InferShapeError : public dmlc::Error {
   /*! \brief analyze message */
