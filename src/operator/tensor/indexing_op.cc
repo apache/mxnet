@@ -149,11 +149,11 @@ Examples::
 NNVM_REGISTER_OP(one_hot)
 .describe(R"code(Returns a one-hot array.
 
-The locations represented by ``indices`` take value ``on_value``, while all
-other locations take value ``off_value``.
+The locations represented by `indices` take value `on_value`, while all
+other locations take value `off_value`.
 
-Assume ``indices`` has shape ``(i0, i1)``, then the output will have shape
-``(i0, i1, depth)`` and::
+`one_hot` operation with `indices` of shape ``(i0, i1)`` and `depth`  of ``d`` would result
+ in an output array of shape ``(i0, i1, d)`` with::
 
   output[i,j,:] = off_value
   output[i,j,indices[i,j]] = on_value

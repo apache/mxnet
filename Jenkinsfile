@@ -80,6 +80,7 @@ stage('Build') {
       ws('workspace/build-cpu') {
         init_git()
         def flag = """ \
+DEV=1                         \
 USE_PROFILER=1                \
 USE_CPP_PACKAGE=1             \
 USE_BLAS=openblas             \
@@ -95,6 +96,7 @@ USE_BLAS=openblas             \
       ws('workspace/build-gpu') {
         init_git()
         def flag = """ \
+DEV=1                         \
 USE_PROFILER=1                \
 USE_BLAS=openblas             \
 USE_CUDA=1                    \
@@ -121,6 +123,7 @@ USE_CPP_PACKAGE=1             \
       ws('workspace/build-mklml') {
         init_git()
         def flag = """ \
+DEV=1                         \
 USE_PROFILER=1                \
 USE_BLAS=openblas             \
 USE_MKL2017=1                 \
@@ -148,7 +151,7 @@ cmake -G \"Visual Studio 14 2015 Win64\" -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=
 
           bat '''rmdir /s/q pkg_vc14_gpu
 mkdir pkg_vc14_cpu\\lib
-mkdir pkg_vc14_cpu\\python 
+mkdir pkg_vc14_cpu\\python
 mkdir pkg_vc14_cpu\\include
 mkdir pkg_vc14_cpu\\build
 copy build_vc14_cpu\\Release\\libmxnet.lib pkg_vc14_cpu\\lib
@@ -178,7 +181,7 @@ cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_
              bat 'C:\\mxnet\\build_vc14_gpu.bat'
              bat '''rmdir /s/q pkg_vc14_gpu
 mkdir pkg_vc14_gpu\\lib
-mkdir pkg_vc14_gpu\\python 
+mkdir pkg_vc14_gpu\\python
 mkdir pkg_vc14_gpu\\include
 mkdir pkg_vc14_gpu\\build
 copy build_vc14_gpu\\libmxnet.lib pkg_vc14_gpu\\lib
