@@ -33,12 +33,12 @@ array by its L2 norm.::
   for i in 0...N
     out[i,:,:,...,:] = data[i,:,:,...,:] / sqrt(sum(data[i,:,:,...,:] ** 2) + eps)
 
-with ``mode`` = ``channel``, it normalize each channel in the array by its L2 norm.::
+with ``mode`` = ``channel``, it normalizes each channel in the array by its L2 norm.::
 
   for i in 0...N
     out[:,i,:,...,:] = data[:,i,:,...,:] / sqrt(sum(data[:,i,:,...,:] ** 2) + eps)
 
-with ``mode`` = ``spatial``, it normalize the cross channel norm for each position
+with ``mode`` = ``spatial``, it normalizes the cross channel norm for each position
 in the array by its L2 norm.::
 
   for dim in 2...N

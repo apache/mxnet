@@ -65,8 +65,8 @@ Operator *ActivationProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_
 DMLC_REGISTER_PARAMETER(ActivationParam);
 
 MXNET_REGISTER_OP_PROPERTY(Activation, ActivationProp)
-.describe(R"code(Elementwise activation function.
-The activation operations are applied elementwisely to each array elements.
+.describe(R"code(Element-wise activation function.
+The activation operations are applied element-wisely to each array elements.
 
 The following types are supported:
 
