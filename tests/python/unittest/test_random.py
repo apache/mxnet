@@ -49,11 +49,11 @@ def check_with_device(device):
             'symbol': mx.sym.random_exponential,
             'multisymbol': mx.sym.sample_exponential,
             'ndop': mx.random.exponential,
-            'params': { 'lambda': 4.0 },
-            'inputs': [ ('lambda', [ [ 1.0, 8.5 ], [ 2.7 , 0.5 ] ]) ],
+            'params': { 'lam': 4.0 },
+            'inputs': [ ('lam', [ [ 1.0, 8.5 ], [ 2.7 , 0.5 ] ]) ],
             'checks': [
-                ('mean', lambda x, params: np.mean(x) - 1.0 / params['lambda'], tol),
-                ('std', lambda x, params: np.std(x) - 1.0 / params['lambda'], tol)
+                ('mean', lambda x, params: np.mean(x) - 1.0 / params['lam'], tol),
+                ('std', lambda x, params: np.std(x) - 1.0 / params['lam'], tol)
             ]
         },
         {
@@ -61,11 +61,11 @@ def check_with_device(device):
             'symbol': mx.sym.random_poisson,
             'ndop': mx.random.poisson,
             'multisymbol': mx.sym.sample_poisson,
-            'params': { 'lambda': 4.0 },
-            'inputs': [ ('lambda', [ [ 1.0, 8.5 ], [ 2.7 , 0.5 ] ]) ],
+            'params': { 'lam': 4.0 },
+            'inputs': [ ('lam', [ [ 1.0, 8.5 ], [ 2.7 , 0.5 ] ]) ],
             'checks': [
-                ('mean', lambda x, params: np.mean(x) - params['lambda'], tol),
-                ('std', lambda x, params: np.std(x) - np.sqrt(params['lambda']), tol)
+                ('mean', lambda x, params: np.mean(x) - params['lam'], tol),
+                ('std', lambda x, params: np.std(x) - np.sqrt(params['lam']), tol)
             ]
         },
         {
