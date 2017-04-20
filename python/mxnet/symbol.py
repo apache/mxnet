@@ -404,6 +404,9 @@ class Symbol(SymbolBase):
         outputs of all of the internal nodes.
 
         Consider the following code:
+
+        Example usage:
+        ----------
         >>> a = mxnet.sym.var('a')
         >>> b = mxnet.sym.var('b')
         >>> c = a + b
@@ -445,14 +448,13 @@ class Symbol(SymbolBase):
     def list_arguments(self):
         """List all the arguments in the symbol.
 
-        A
-        ~~~~
+        Example usage:
+        ----------
         >>> a = mxnet.sym.var('a')
         >>> b = mxnet.sym.var('b')
         >>> c = a + b
         >>> c.list_arguments
         ['a', 'b']
-        ~~~~
 
         Returns
         -------
@@ -517,7 +519,7 @@ class Symbol(SymbolBase):
         >>> a = mxnet.sym.var('a')
         >>> b = mxnet.sym.var('b')
         >>> c = a + b
-        >>> c.infer_type(a=float32)
+        >>> c.infer_type(a='float32')
         ([numpy.float32, numpy.float32], [numpy.float32], [])
 
         Parameters
@@ -599,7 +601,7 @@ class Symbol(SymbolBase):
         and all outputs.
 
         You can pass in the known shapes in either positional way or keyword argument
-        way. A tuple of ``None`` vakyes is returned if there is not enough information
+        way. A tuple of ``None`` values is returned if there is not enough information
         to deduce the missing shapes.
         Inconsistencies in the known shapes will cause an error to be raised.
 
