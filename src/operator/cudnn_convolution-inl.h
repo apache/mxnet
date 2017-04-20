@@ -209,8 +209,7 @@ class CuDNNConvolutionOp : public Operator {
       typename DataType<DType>::ScaleType alpha = 1.0f;
       typename DataType<DType>::ScaleType beta = 0.0f;
       typename DataType<DType>::ScaleType beta_add = 1.0f;
-      if (!param_.no_bias) {
-        CHECK_NE(req[conv::kBias], kNullOp);
+      if (!param_.no_bias && (req[conv::kBias] != kNullOp)) {
         Tensor<gpu, 1, DType> gbias = in_grad[conv::kBias].get<gpu, 1, DType>(s);
         CUDNN_CALL(cudnnConvolutionBackwardBias(s->dnn_handle_,
                                               &alpha,
