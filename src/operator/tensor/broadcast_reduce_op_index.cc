@@ -13,7 +13,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmax)
 In the case of multiple occurrences of maximum values, the indices corresponding to the first occurrence
 are returned.
 
-Example::  
+Examples::  
 
   x = [[ 0.,  1.,  2.], 
        [ 3.,  4.,  5.]]  
@@ -27,6 +27,7 @@ Example::  
   // argmax along axis 1 keeping same dims as an input array
   argmax(x, axis=1, keepdims=True) = [[ 2.], 
                                       [ 2.]]   
+
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
@@ -37,7 +38,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
 In the case of multiple occurrences of minimum values, the indices corresponding to the first occurrence
 are returned.
 
-Example::  
+Examples::  
 
   x = [[ 0.,  1.,  2.], 
        [ 3.,  4.,  5.]]  
@@ -65,7 +66,7 @@ The result will be an NDArray of shape (num_channel,).
 In case of multiple occurrences of the maximum values, the indices corresponding to the first occurrence
 are returned.
 
-Example::  
+Examples::  
 
   x = [[ 0.,  1.,  2.], 
        [ 3.,  4.,  5.]]  
@@ -87,6 +88,40 @@ Example::  
 .add_argument("data", "NDArray-or-Symbol", "The input array");
 
 NNVM_REGISTER_OP(pick)
+.describe(R"code(Picks elements from an input array according to the input indices along the given axis.
+
+Given an input array of shape ``(d0, d1)`` and indices of shape ``(i0,)``, the result will be
+an output array of shape ``(i0,)`` with::
+
+  output[i] = input[i, indices[i]]
+
+By default, if any index mentioned is too large, it is replaced by the index that addresses
+the last element along an axis.
+
+This function supports n-dimensional input and (n-1)-dimensional indices arrays.
+
+Examples::
+
+  x = [[ 1.,  2.],
+       [ 3.,  4.],
+       [ 5.,  6.]]
+
+  // picks elements with specified indices along axis 0
+  pick(x, y=[0,1], 0) = [ 1.,  4.]
+
+  // picks elements with specified indices along axis 1
+  pick(x, y=[0,1,0], 1) = [ 1.,  4.,  5.]
+
+  y = [[ 1.],
+       [ 0.],
+       [ 2.]]
+
+  // picks elements with specified indices along axis 1 and dims are maintained
+  pick(x,y, 1, keepdims=True) = [[ 2.],
+                                 [ 3.],
+                                 [ 6.]]
+
+)code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ReduceAxisParam>)
@@ -107,7 +142,7 @@ NNVM_REGISTER_OP(pick)
     return ret;
   })
 .add_argument("data", "NDArray-or-Symbol", "The input array")
-.add_argument("index", "NDArray-or-Symbol", "Index array")
+.add_argument("index", "NDArray-or-Symbol", "The index array")
 .add_arguments(ReduceAxisParam::__FIELDS__());
 
 

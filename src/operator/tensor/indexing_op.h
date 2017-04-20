@@ -38,9 +38,9 @@ struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(EmbeddingParam) {
     DMLC_DECLARE_FIELD(input_dim).set_lower_bound(1)
-    .describe("vocabulary size of the input indices.");
+    .describe("Vocabulary size of the input indices.");
     DMLC_DECLARE_FIELD(output_dim).set_lower_bound(1)
-    .describe("dimension of the embedding vectors.");
+    .describe("Dimension of the embedding vectors.");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
