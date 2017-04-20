@@ -3,9 +3,8 @@
 
 """Online evaluation metric module."""
 from __future__ import absolute_import
-
-import numpy
 import math
+import numpy
 from . import ndarray
 
 def check_label_shapes(labels, preds, shape=0):
