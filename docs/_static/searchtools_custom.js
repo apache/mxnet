@@ -555,7 +555,7 @@ var Search = {
     var objects = this._index.objects;
     var objnames = this._index.objnames;
     var titles = this._index.titles;
-    var objLowLimit = 5;
+    var objLowLimit = 10;
 
     var i;
     var results = [];
