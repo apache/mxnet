@@ -29,7 +29,7 @@ NNVM_REGISTER_OP(_backward_copy)
 
 MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
 .add_alias("stop_gradient")
-.MXNET_DESCRIBE(R"code(Stops gradient computation.
+.describe(R"code(Stops gradient computation.
 
 Stops the accumulated gradient of the inputs from flowing through this operator
 in the backward direction. In other words, this operator prevents the contribution
@@ -54,14 +54,14 @@ Example::
   [ 0.  0.]
   [ 1.  1.]
 
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_UNARY(make_loss)
-.MXNET_DESCRIBE(R"code(Get output from a symbol and pass 1 gradient back.
+.describe(R"code(Stops gradient computation.
 .. note:: ``make_loss`` is deprecated, use ``MakeLoss``.
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
