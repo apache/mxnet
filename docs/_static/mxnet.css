@@ -237,6 +237,10 @@ img {
     width: 140px;
 }
 
+#search-input-wrap ul {
+    list-style-type: none;
+}
+
 #searchIcon {
     display: none;
     position: fixed;
@@ -250,6 +254,16 @@ img {
     top: 0;
     left: 0;
     width: 140px;
+    background: #87CEFA;
+}
+
+.searchBox input {
+    background: #87CEFA;
+    border-radius: 2px;
+}
+
+.searchBox input::placeholder {
+    color: white;
 }
 
 .searchBtn {
@@ -889,6 +903,32 @@ table.docutils tr:nth-child(even) {
     height: 38px;
 }
 
-div.toctree-wrapper.compound > ul > li, div.section > ul > li {
-    padding: 5px 0 5px 0;
+
+/*----------------Search function style------------------*/
+#searchPage {
+    width: 60%;
+    margin-left: 20%;
+}
+
+#search-preview {
+    display: none;
+    background-color: white;
+    margin-top: 35px;
+    border: solid;
+    border-width: 1px;
+    border-color: #87CEFA;
+    width: 100%;
+}
+
+#search-preview p {
+    color: dimgray;
+    padding: 5px 0 0 40px;
+}
+
+#search-preview li {
+    padding-top: 10px;
+}
+
+#search-results ul {
+    list-style-type: none;
 }
