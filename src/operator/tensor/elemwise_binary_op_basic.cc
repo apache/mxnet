@@ -10,16 +10,7 @@ namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
 .add_alias("_add").add_alias("_plus").add_alias("_Plus")
-.describe(R"code(Adds arguments element-wise.
-
-Example::
-
-  >>> x = mx.nd.array([1, 2, 3, 4])
-  >>> y = mx.nd.array([1.1, 2.1, 3.1, 4.1])
-  >>> mx.nd.elemwise_add(x, y).asnumpy()
-  array([ 2.0999999 ,  4.0999999 ,  6.0999999 ,  8.10000038], dtype=float32)
-
-)code")
+.describe("Adds arguments element-wise.")
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, mshadow::op::plus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_add"});
 
