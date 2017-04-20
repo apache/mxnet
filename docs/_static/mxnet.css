@@ -903,10 +903,6 @@ table.docutils tr:nth-child(even) {
     height: 38px;
 }
 
-div.toctree-wrapper.compound > ul > li, div.section > ul > li {
-    padding: 5px 0 5px 0;
-}
-
 
 /*----------------Search function style------------------*/
 #searchPage {
