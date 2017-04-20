@@ -35,15 +35,33 @@ Stops the accumulated gradient of the inputs from flowing through this operator
 in the backward direction. In other words, this operator prevents the contribution
 of its inputs to be taken into account for computing gradients.
 
+Example::
+
+  v1 = [1, 2]
+  v2 = [0, 1]
+  a = Variable('a')
+  b = Variable('b')
+  b_stop_grad = stop_gradient(3 * b)
+  loss = MakeLoss(b_stop_grad + a)
+
+  executor = loss.simple_bind(ctx=cpu(), a=(1,2), b=(1,2))
+  executor.forward(is_train=True, a=v1, b=v2)
+  executor.outputs
+  [ 1.  5.]
+
+  executor.backward()
+  executor.grad_arrays
+  [ 0.  0.]
+  [ 1.  1.]
+
 )code")
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_UNARY(make_loss)
-.MXNET_DESCRIBE("Get output from a symbol and pass 1 gradient back. "
-  "This is used as a terminal loss if unary and binary operator "
-  "are used to composite a loss with no declaration of backward "
-  "dependency")
+.MXNET_DESCRIBE(R"code(Get output from a symbol and pass 1 gradient back.
+.. note:: ``make_loss`` is deprecated, use ``MakeLoss``.
+)code")
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {

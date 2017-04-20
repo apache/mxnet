@@ -29,25 +29,25 @@ DMLC_REGISTER_PARAMETER(MakeLossParam);
 
 MXNET_REGISTER_OP_PROPERTY(MakeLoss, MakeLossProp)
 .describe(R"code(Make your own loss function in network construction.
+
 This operator accepts a customized loss function symbol as a terminal loss and
 the symbol should be an operator with no backward dependency.
 The output of this function is the gradient of loss with respect to the input data.
 
-For example, if you are a making a weighted cross entropy loss function.
+For example, if you are a making a cross entropy loss function. Assume ``out`` is the
+predicted output and ``label`` is the true label, then the cross entropy can be defined as::
 
-.. math::
-  \sum_i w_i * (y_i * \log \hat{y_i} + (1 - y_i) * \log(1 - \hat{y_i}))
+  cross_entropy = label * log(out) + (1 - label) * log(1 - out)
+  loss = MakeLoss(cross_entropy)
 
+We will need to use ``MakeLoss`` when we are creating our own loss function or we want to
+combine multiple loss functions. Also we may want to stop some variables' gradients
+from backpropagation. See more detail in ``BlockGrad`` or ``stop_gradient``.
 
-The following is a pseudocode snippet to create the customized loss::
+In addition, we can give a scale to the loss by setting ``grad_scale``,
+so that the gradient of the loss will be rescaled in the backpropagation.
 
-  y = Variable('y')
-  w = Variable('w')
-  out = Activation(data = data, act_type = 'sigmoid')
-  cross_entropy = y * log(out) + (1 - y) * log(1 - out)
-  loss = MakeLoss(w * cross_entropy)
-
-Notice: ``This operator is only useful as a Symbol instead of NDArray``
+.. note:: This operator should be used as a Symbol instead of NDArray.
 
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input array.")
