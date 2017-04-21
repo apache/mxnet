@@ -314,12 +314,20 @@ class Symbol(SymbolBase):
     def __getitem__(self, index):
         """x.__getitem__(i) <=> x[i]
 
-        Get an output of this symbol
+        Returns a sliced view of the input symbol.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.var('a')
+        >>> a.__getitem__(0)
+        <Symbol a>
+        >>> a[0]
+        <Symbol a>
 
         Parameters
         ----------
         index : int or str
-            indexing key
+            Indexing key
 
         """
         if isinstance(index, string_types):
@@ -775,14 +783,15 @@ class Symbol(SymbolBase):
         >>> prev = mx.sym.Variable('prev')
         >>> fc1  = mx.sym.FullyConnected(data=data, name='fc1', num_hidden=128)
         >>> fc2  = mx.sym.FullyConnected(data=prev, name='fc2', num_hidden=128)
-        >>> out  = mx.sym.Activation(data=mx.sym.elemwise_add(fc1, fc2), name='out', act_type='relu')
+        >>> out  = mx.sym.Activation(data=mx.sym.elemwise_add(fc1, fc2), act_type='relu')
         >>> out.list_arguments()
         ['data', 'fc1_weight', 'fc1_bias', 'prev', 'fc2_weight', 'fc2_bias']
         >>> out.infer_shape(data=(10,64))
         (None, None, None)
         >>> out.infer_shape_partial(data=(10,64))
         ([(10L, 64L), (128L, 64L), (128L,), (), (), ()], [(10L, 128L)], [])
-        >>> out.infer_shape(data=(10,64), prev=(10,128))  # infers shape if you give information about fc2
+        >>> # infers shape if you give information about fc2
+        >>> out.infer_shape(data=(10,64), prev=(10,128))
         ([(10L, 64L), (128L, 64L), (128L,), (10L, 128L), (128L, 128L), (128L,)], [(10L, 128L)], [])
 
         Parameters
