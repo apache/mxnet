@@ -183,7 +183,7 @@ __global__ void BatchNormalizationUpdateOutputInference_kernel(
                                            : Acctype(1);
   Acctype beta = bias.numElements() > 0 ? ScalarConvert<Dtype, Acctype>::to(bias[plane])
                                         : Acctype(0);
-  if(threadIdx.x == 0) {
+  if (threadIdx.x == 0) {
     saveMean[plane] = runningMean[plane];
     saveStd[plane]  = runningVar[plane];
   }
@@ -291,7 +291,7 @@ static __global__ void BatchNormalizationBackward_kernel(
   Acctype projScale = dotP * norm * stdVal * stdVal;
   Acctype gradScale = stdVal * weightVal;
 
-  if(threadIdx.x == 0 && train) {
+  if (threadIdx.x == 0 && train) {
     const Dtype variance = saveStd[plane];
     const Dtype   mean   = saveMean[plane];
 
@@ -318,7 +318,7 @@ static __global__ void BatchNormalizationBackward_kernel(
 
   if (gradWeight.numElements() > 0) {
     if (threadIdx.x == 0) {
-      if(!fix_gamma) {
+      if (!fix_gamma) {
         gradWeight[plane] += ScalarConvert<Acctype, Dtype>::to(scale * dotP * stdVal);
       } else {
         gradWeight[plane] += Dtype(0);
