@@ -198,7 +198,7 @@ def parse_args():
                         help='If this is set im2rec will create image list(s) by traversing root folder\
         and output to <prefix>.lst.\
         Otherwise im2rec will read <prefix>.lst and create a database at <prefix>.rec')
-    cgroup.add_argument('--exts', type=list, default=['.jpeg', '.jpg'],
+    cgroup.add_argument('--exts', nargs='+', default=['.jpeg', '.jpg'],
                         help='list of acceptable image extensions.')
     cgroup.add_argument('--chunks', type=int, default=1, help='number of chunks.')
     cgroup.add_argument('--train-ratio', type=float, default=1.0,
