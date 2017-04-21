@@ -1,4 +1,4 @@
-# pylint: disable=fixme, too-many-arguments, too-many-locals, too-many-public-methods, too-many-branches
+# pylint: disable=fixme, too-many-arguments, too-many-locals, too-many-public-methods, too-many-branches, too-many-lines
 """`BaseModule` defines an API for modules."""
 
 import time
@@ -193,6 +193,58 @@ class BaseModule(object):
         self.forward(data_batch, is_train=True)
         self.backward()
 
+    def clip_by_global_norm(self, max_norm=1.0):
+        """Clips gradient norm.
+
+        The norm is computed over all gradients together, as if they were
+         concatenated into a single vector. Gradients are modified in-place.
+        The method is first used in
+         `[ICML2013] On the difficulty of training recurrent neural networks`
+
+        Parameters
+        ----------
+        max_norm : float or int
+            The maximum clipping threshold of the gradient norm.
+
+        Returns
+        -------
+        norm_val : float
+            The computed norm of the gradients.
+
+        Examples
+        --------
+        An example of using clip_grad_norm to clip the gradient before updating the parameters::
+            >>> #Get the gradient via back-propagation
+            >>> net.forward_backward(data_batch=data_batch)
+            >>> norm_val = net.clip_by_global_norm(max_norm=1.0)
+            >>> net.update()
+        """
+        raise NotImplementedError()
+
+    def global_grad_norm(self):
+        """Calculate global gradient norm.
+
+        The L2 norm is computed over all gradients together, as if they were
+         concatenated into a single vector.
+
+        Could be used to debug the optimization process.
+         See http://videolectures.net/deeplearning2015_goodfellow_network_optimization/
+
+        Returns
+        -------
+        norm_val : float
+            The computed norm of the gradients.
+
+        Examples
+        --------
+        An example of using global_norm to calculate the gradient norm after back-propgation::
+            >>> #Get the gradient via back-propagation
+            >>> net.forward_backward(data_batch=data_batch)
+            >>> norm_val = net.global_grad_norm()
+            >>> print(norm_val)
+        """
+        raise NotImplementedError()
+
     def score(self, eval_data, eval_metric, num_batch=None, batch_end_callback=None,
               score_end_callback=None,
               reset=True, epoch=0):
@@ -369,7 +421,7 @@ class BaseModule(object):
             epoch_end_callback=None, batch_end_callback=None, kvstore='local',
             optimizer='sgd', optimizer_params=(('learning_rate', 0.01),),
             eval_end_callback=None,
-            eval_batch_end_callback=None, initializer=Uniform(0.01),
+            eval_batch_end_callback=None, initializer=Uniform(0.01), max_norm=None,
             arg_params=None, aux_params=None, allow_missing=False,
             force_rebind=False, force_init=False, begin_epoch=0, num_epoch=None,
             validation_metric=None, monitor=None):
@@ -407,6 +459,9 @@ class BaseModule(object):
         initializer : Initializer
             The initializer is called to initialize the module parameters when they are
             not already initialized.
+        max_norm : float or None
+            The max_norm for global L2 norm clipping. Norm clip will not be triggered
+             if setting to zero
         arg_params : dict
             Defaults to ``None``, if not ``None``, should be existing parameters from a trained
             model or loaded from a checkpoint (previously saved model). In this case,
@@ -470,6 +525,8 @@ class BaseModule(object):
                 if monitor is not None:
                     monitor.tic()
                 self.forward_backward(data_batch)
+                if max_norm is not None:
+                    self.clip_by_global_norm(max_norm=max_norm)
                 self.update()
                 try:
                     # pre fetch next batch
@@ -950,3 +1007,20 @@ class BaseModule(object):
         not even be associated with any symbols.
         """
         return self._symbol
+
+    def summary(self, level=2):
+        """Summarize the network parameters.
+
+        Parameters
+        ----------
+        level : int, optional
+            Level of the summarization logs to print.
+            The log becomes more verbose with higher summary level.
+            - Level = 0
+                Print the total param number + aux param number
+            - Level = 1
+                Print the shape of all parameters + The total number of paremter numbers
+            - Level = 2
+                Print the shape of the data and other available information in Level 1
+        """
+        raise NotImplementedError()

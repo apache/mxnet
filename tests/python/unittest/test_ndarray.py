@@ -616,6 +616,17 @@ def test_iter():
     for i in range(x.size):
         assert same(y[i].asnumpy(), x[i].asnumpy())
 
+def test_global_norm():
+    nd_list = []
+    npy_norm = 0.0
+    for i in range(5):
+        data_npy = np.random.normal(loc=0, scale=1, size=(np.random.randint(1, 4),
+                                                          np.random.randint(1, 4)))
+        npy_norm += np.square(data_npy).sum()
+        nd_list.append(mx.nd.array(data_npy))
+    npy_norm = np.sqrt(npy_norm)
+    nd_val = mx.nd.global_norm(nd_list).asscalar()
+    assert_allclose(nd_val, npy_norm)
 
 if __name__ == '__main__':
     test_broadcast_binary()
@@ -642,3 +653,4 @@ if __name__ == '__main__':
     test_ndarray_equal()
     test_take()
     test_iter()
+    test_global_norm()

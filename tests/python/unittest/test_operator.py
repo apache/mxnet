@@ -3005,6 +3005,20 @@ def test_custom_op():
     x = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
     check_numeric_gradient(op, [x])
 
+def test_global_norm():
+    a = mx.sym.var('a')
+    b = mx.sym.var('b')
+    c = mx.sym.var('c')
+    d = mx.sym.global_norm([a, b, c])
+    a_npy = np.random.normal(0, 1, (2, 4))
+    b_npy = np.random.normal(0, 1, (3, 3))
+    c_npy = np.random.normal(0, 1, (3, 1, 2, 3))
+    res = d.eval(ctx=default_context(),
+                 a=mx.nd.array(a_npy),
+                 b=mx.nd.array(b_npy),
+                 c=mx.nd.array(c_npy))[0].asscalar()
+    npy_res = np.sqrt((a_npy ** 2).sum() + (b_npy ** 2).sum() + (c_npy ** 2).sum())
+    assert_allclose(res, npy_res)
 
 if __name__ == '__main__':
     test_custom_op()
@@ -3071,3 +3085,4 @@ if __name__ == '__main__':
     test_tile()
     test_one_hot()
     test_where()
+    test_global_norm()

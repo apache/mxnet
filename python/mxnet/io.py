@@ -86,8 +86,8 @@ class DataBatch(object):
     ----------
     data : list of NDArray
           A list of input data.
-    label : list of NDArray
-          A list of input labels.
+    label : list of NDArray, optional
+          A list of input labels. It's none by default
     pad : int, optional
           The number of examples padded at the batch end. It is used when the
           examples read is less than the batch size.
@@ -100,7 +100,7 @@ class DataBatch(object):
     provide_label : list of (name, shape), optional
           The *i*-th elements describes the name and shape of ``label[i]``.
     """
-    def __init__(self, data, label, pad=None, index=None,
+    def __init__(self, data, label=None, pad=None, index=None,
                  bucket_key=None, provide_data=None, provide_label=None):
         if data is not None:
             assert isinstance(data, (list, tuple)), "Data must be list of NDArrays"

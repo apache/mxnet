@@ -402,6 +402,58 @@ class BucketingModule(BaseModule):
         self._params_dirty = True
         self._curr_module.update()
 
+    def clip_by_global_norm(self, max_norm=1.0):
+        """Clips gradient norm.
+
+        The norm is computed over all gradients together, as if they were
+         concatenated into a single vector. Gradients are modified in-place.
+        The method is first used in
+         `[ICML2013] On the difficulty of training recurrent neural networks`
+
+        Parameters
+        ----------
+        max_norm : float or int
+            The maximum clipping threshold of the gradient norm.
+
+        Returns
+        -------
+        norm_val : float
+            The computed norm of the gradients.
+
+        Examples
+        --------
+        An example of using clip_grad_norm to clip the gradient before updating the parameters::
+            >>> #Get the gradient via back-propagation
+            >>> net.forward_backward(data_batch=data_batch)
+            >>> norm_val = net.clip_by_global_norm(max_norm=1.0)
+            >>> net.update()
+        """
+        return self._curr_module.clip_by_global_norm(max_norm=max_norm)
+
+    def global_grad_norm(self):
+        """Calculate global gradient norm.
+
+        The L2 norm is computed over all gradients together, as if they were
+         concatenated into a single vector.
+
+        Could be used to debug the optimization process.
+         See http://videolectures.net/deeplearning2015_goodfellow_network_optimization/
+
+        Returns
+        -------
+        norm_val : float
+            The computed norm of the gradients.
+
+        Examples
+        --------
+        An example of using global_norm to calculate the gradient norm after back-propgation::
+            >>> #Get the gradient via back-propagation
+            >>> net.forward_backward(data_batch=data_batch)
+            >>> norm_val = net.global_grad_norm()
+            >>> print(norm_val)
+        """
+        return self._curr_module.global_grad_norm()
+
     def get_outputs(self, merge_multi_context=True):
         """Get outputs from a previous forward computation.
 
@@ -465,3 +517,21 @@ class BucketingModule(BaseModule):
         assert self.binded
         for mod in self._buckets.values():
             mod.install_monitor(mon)
+
+    def summary(self, level=2):
+        """Summarize the network parameters.
+
+        Parameters
+        ----------
+        level : int, optional
+            Level of the summarization logs to print.
+            The log becomes more verbose with higher summary level.
+            - Level = 0
+                Print the total param number + aux param number
+            - Level = 1
+                Print the shape of all parameters + The total number of paremter numbers
+            - Level = 2
+                Print the shape of the data and other available information in Level 1
+        """
+        assert self.binded and self.params_initialized
+        self._curr_module.summary(level=level)
