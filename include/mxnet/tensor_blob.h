@@ -184,7 +184,7 @@ class TBlob {
         mshadow::Shape1(shape_.Size()), stream);
   }
   /*! \brief return number of dimension of the tensor inside */
-  inline int ndim(void) const {
+  inline index_t ndim(void) const {
     return shape_.ndim();
   }
   /*!

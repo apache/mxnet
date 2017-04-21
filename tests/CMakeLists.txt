@@ -24,7 +24,9 @@ if(GTEST_FOUND)
 
   enable_testing()
 
-  file(GLOB_RECURSE UNIT_TEST_SOURCE "cpp/*.cc")
+  file(GLOB_RECURSE UNIT_TEST_SOURCE "cpp/*.cc" "cpp/*.h")
+
+  include_directories(cpp/include)
 
   add_executable(${PROJECT_NAME}_unit_tests ${UNIT_TEST_SOURCE})
 
