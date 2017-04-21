@@ -74,7 +74,8 @@ DMLC_REGISTER_PARAMETER(SVMOutputParam);
 MXNET_REGISTER_OP_PROPERTY(SVMOutput, SVMOutputProp)
 .describe(R"code(Computes support vector machine based transformation of the input.
 
-This tutorial demonstrates using SVM as output layer for classification instead of softmax: https://github.com/dmlc/mxnet/tree/master/example/svm_mnist.
+This tutorial demonstrates using SVM as output layer for classification instead of softmax:
+https://github.com/dmlc/mxnet/tree/master/example/svm_mnist.
 
 )code")
 .add_argument("data", "NDArray-or-Symbol", "Input data for SVM transformation.")

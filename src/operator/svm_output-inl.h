@@ -35,9 +35,11 @@ struct SVMOutputParam : public dmlc::Parameter<SVMOutputParam> {
   bool use_linear;
   DMLC_DECLARE_PARAMETER(SVMOutputParam) {
     DMLC_DECLARE_FIELD(margin).set_default(1.0f)
-    .describe("The loss function penalizes outputs that lie outside this margin. Default margin is 1.");
+    .describe("The loss function penalizes outputs that lie outside this margin. "
+        "Default margin is 1.");
     DMLC_DECLARE_FIELD(regularization_coefficient).set_default(1.0f)
-    .describe("Regularization parameter for the SVM. This balances the tradeoff between coefficient size and error.");
+    .describe("Regularization parameter for the SVM. "
+        "This balances the tradeoff between coefficient size and error.");
     DMLC_DECLARE_FIELD(use_linear).set_default(false)
     .describe("Whether to use L1-SVM objective. L2-SVM objective is used by default.");
   };
