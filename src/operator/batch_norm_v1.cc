@@ -2,35 +2,21 @@
  * Copyright (c) 2015 by Contributors
  * \file batch_norm.cc
  * \brief
- * \author Bing Xu, Chris Olivier
+ * \author Bing Xu
 */
 
-
-#include "batch_norm-inl.h"
+#include "batch_norm_v1-inl.h"
 #include <nnvm/op_attr_types.h>
-#if MXNET_USE_MKL2017 == 1
-#include <mkl_memory.h>
-#include "./mkl/mkl_memory-inl.h"
-#include "./mkl/mkl_batch_norm-inl.h"
-#endif  // MXNET_USE_MKL2017
 
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
-#if MXNET_USE_MKL2017 == 1
-  return new MKLBatchNormOp<cpu, float>(param);
-#endif
-  Operator *op = nullptr;
-  MSHADOW_REAL_TYPE_SWITCH_EX(dtype,
-                           DType,
-                           AccReal,
-                           { op = new BatchNormOp<cpu, DType, AccReal>(param); });
-  return op;
+Operator *CreateOp<cpu>(BatchNormV1Param param, int dtype) {
+  return new BatchNormV1Op<cpu>(param);
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
-Operator *BatchNormProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator *BatchNormV1Prop::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
     std::vector<int> *in_type) const {
     std::vector<TShape> out_shape, aux_shape;
     std::vector<int> out_type, aux_type;
@@ -39,9 +25,9 @@ Operator *BatchNormProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_s
     DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
-DMLC_REGISTER_PARAMETER(BatchNormParam);
+DMLC_REGISTER_PARAMETER(BatchNormV1Param);
 
-MXNET_REGISTER_OP_PROPERTY(BatchNorm, BatchNormProp)
+MXNET_REGISTER_OP_PROPERTY(BatchNormV1, BatchNormV1Prop)
 .describe(R"code(Batch normalization.
 
 Normalizes a data batch by mean and variance, and applies a scale ``gamma`` as
@@ -83,12 +69,12 @@ Both ``gamma`` and ``beta`` are learnable parameters. But if ``fix_gamma`` is tr
 then set ``gamma`` to 1 and its gradient to 0.
 
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")
-.add_argument("gamma", "NDArray-or-Symbol", "gamma array")
-.add_argument("beta", "NDArray-or-Symbol", "beta array")
-.add_arguments(BatchNormParam::__FIELDS__());
+.add_argument("data", "ndarray-or-symbol", "Input data to batch normalization")
+.add_argument("gamma", "ndarray-or-symbol", "gamma array")
+.add_argument("beta", "ndarray-or-symbol", "beta array")
+.add_arguments(BatchNormV1Param::__FIELDS__());
 
-NNVM_REGISTER_OP(BatchNorm)
+NNVM_REGISTER_OP(BatchNormV1)
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
     [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
       if (var->attrs.dict.find("__init__") != var->attrs.dict.end()) return;
@@ -101,4 +87,3 @@ NNVM_REGISTER_OP(BatchNorm)
 
 }  // namespace op
 }  // namespace mxnet
-

@@ -17,7 +17,7 @@ MXNET_OPERATOR_REGISTER_UNARY(softmax)
 
 .. math::
    softmax(\mathbf{z})_j = \frac{e^{z_j}}{\sum_{k=1}^K e^{z_k}}
-  
+
 for :math:`j = 1, ..., K`
 
 Example::
@@ -30,7 +30,7 @@ Example::
 
   softmax(x,axis=1) = [[ 0.33333334,  0.33333334,  0.33333334],
                        [ 0.33333334,  0.33333334,  0.33333334]]
- 
+
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<SoftmaxParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxCompute<cpu, mxnet_op::softmax_fwd>)

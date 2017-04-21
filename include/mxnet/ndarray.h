@@ -564,7 +564,7 @@ void SamplePoisson(real_t lambda, NDArray *out);
 /*!
  * \brief Sample negative binomial distribution for each elements of out.
  * \param k failure limit
- * \param p success probability 
+ * \param p success probability
  * \param out output NDArray.
  */
 void SampleNegBinomial(int32_t k, real_t p, NDArray *out);

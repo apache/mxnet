@@ -1,4 +1,11 @@
+/*!
+ * Copyright (c) 2017 by Contributors
+ * \file test_main.cc
+ * \brief operator unit test utility functions
+ * \author Chris Olivier
+*/
 #include <gtest/gtest.h>
+#include "mxnet/base.h"
 
 #ifdef USE_BREAKPAD
 #include <breakpad/client/linux/handler/exception_handler.h>
@@ -9,7 +16,38 @@ static bool dumpCallback(const google_breakpad::MinidumpDescriptor& descriptor, 
 }
 #endif
 
+namespace mxnet { namespace test {
 bool unitTestsWithCuda = false;
+#ifdef NDEBUG
+bool debugOutput = false;
+#else
+bool debugOutput = true;
+#endif
+}}
+
+#if MXNET_USE_CUDA
+
+static bool checkForWorkingCuda()
+{
+  int count = 0;
+  if (cudaSuccess == cudaGetDeviceCount(&count)) {
+    if (count == 0) return -1;
+    for (int device = 0; device < count; ++device) {
+      cudaDeviceProp prop;
+      if (cudaSuccess == cudaGetDeviceProperties(&prop, device)) {
+        std::printf("%d.%d ", prop.major, prop.minor);
+        return true;
+      }
+    }
+  }
+  std::fprintf(stderr, "Warning: Could not find working CUDA driver\n");
+  return false;
+}
+#else
+static bool checkForWorkingCuda() {
+  return false;
+}
+#endif
 
 int main(int argc, char ** argv) {
 
@@ -21,14 +59,19 @@ int main(int argc, char ** argv) {
   testing::InitGoogleTest(&argc, argv);
   testing::FLAGS_gtest_death_test_style = "threadsafe";
 
+  mxnet::test::unitTestsWithCuda = checkForWorkingCuda(); // auto-determine
+
   for(int x = 1; x < argc; ++x)
   {
     // force checks with CUDA
     if(!strcmp(argv[x], "--with-cuda"))
     {
-      unitTestsWithCuda = true;
+      mxnet::test::unitTestsWithCuda = true; // override (ie force attempt CUDA)
+    } else if(!strcmp(argv[x], "--debug")) {
+      mxnet::test::debugOutput = true;
     }
   }
 
+  std::cout << std::endl << std::flush;
   return RUN_ALL_TESTS();
 }
