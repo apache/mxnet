@@ -15,7 +15,8 @@
 
 {%- macro searchform(classes, button) %}
 <form class="{{classes}}" role="search" action="{{ pathto('search') }}" method="get" autocomplete="off">
-  <div class="form-group">
+  <div class="form-group inner-addon left-addon">
+    <i class="glyphicon glyphicon-search"></i>
     <input type="text" name="q" class="form-control" placeholder="Search">
   </div>
   <input type="hidden" name="check_keywords" value="yes" />
