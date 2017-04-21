@@ -796,11 +796,11 @@ class Symbol(SymbolBase):
         Parameters
         ----------
         *args :
-            Provide the shape of arguments in a positional way.
+            Shape of arguments in a positional way.
             Unknown shape can be marked as None
 
         **kwargs :
-            Provide keyword arguments of known shapes.
+            Keyword arguments of known shapes.
 
         Returns
         -------
