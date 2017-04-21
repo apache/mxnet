@@ -22,6 +22,11 @@ using nnvm::NodeEntry;
 using nnvm::NodeEntryMap;
 using exec::GraphExecutor;
 
+#if DMLC_CXX11_THREAD_LOCAL
+thread_local bool AutogradRuntime::is_train_;
+#else
+MX_TREAD_LOCAL bool AutogradRuntime::is_train_;
+#endif
 
 template<typename FVisit>
 inline void AGDFSVisit(const std::vector<AGNodeEntry>& heads,
@@ -45,14 +50,6 @@ nnvm::NodeEntry AGNodeEntry::nn_entry() const {
 }
 
 AutogradRuntime::AutogradRuntime() {}
-
-void AutogradRuntime::SetRecording(bool recording) {
-  is_recording_ = recording;
-}
-
-bool AutogradRuntime::IsRecording() const {
-  return is_recording_;
-}
 
 void AutogradRuntime::MarkVariables(
     const std::vector<NDArray*>& variables,
@@ -137,6 +134,9 @@ void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs) {
   Symbol sym;
   NodeEntryMap<NDArray> feed_dict;
   for (const auto& i : outputs) {
+    CHECK(i.entry_.ag_node.get() != nullptr)
+      << "Cannot differentiate node because it doesn't have "
+      << "computation history. Did you forget to set is_training?";
     heads.emplace_back(i.entry_);
     sym.outputs.emplace_back(i.entry_.nn_entry());
     feed_dict.insert({i.entry_.nn_entry(), i});
@@ -166,17 +166,8 @@ void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs) {
     // (TODO) too hack here
     exec->saved_opr_ = saved_opr;
     exec->Init(sym, args[0].ctx(), ctx_map,
-               args, args_grad, grad_reqs, aux_states);
-
-
-    const nnvm::IndexedGraph& idx = exec->graph_.indexed_graph();
-
-    for (const auto& kv : feed_dict) {
-      if (idx.exist(kv.first.node.get())) {
-        uint32_t entry_id = idx.entry_id(kv.first);
-        CopyFromTo(kv.second, &(exec->data_entry_[entry_id]));
-      }
-    }
+               args, args_grad, grad_reqs,
+               aux_states, nullptr, feed_dict);
 
     std::vector<NDArray> head_grads;
     head_grads.reserve(exec->head_grad_array_.size());

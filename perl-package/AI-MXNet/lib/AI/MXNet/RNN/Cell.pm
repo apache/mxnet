@@ -169,6 +169,16 @@ method params()
 
 method state_shape()
 {
+    return [map { $_->{shape} } @{ $self->state_info }];
+}
+
+=head2 state_info
+
+    shape and layout information of states
+=cut
+
+method state_info()
+{
     confess("Not Implemented");
 }
 
@@ -203,19 +213,27 @@ method begin_state(CodeRef :$func=AI::MXNet::Symbol->can('zeros'), @kwargs)
     );
     my @states;
     my $func_needs_named_name = $func ne AI::MXNet::Symbol->can('Variable');
-    for my $shape (@{ $self->state_shape })
+    for my $info (@{ $self->state_info })
     {
         $self->_init_counter($self->_init_counter + 1);
         my @name = (sprintf("%sbegin_state_%d", $self->_prefix, $self->_init_counter));
+        my %info = %{ $info//{} };
         if($func_needs_named_name)
         {
             unshift(@name, 'name');
         }
+        else
+        {
+            if(exists $info{__layout__})
+            {
+                $info{kwargs} = { __layout__ => delete $info{__layout__} };
+            }
+        }
+        my %kwargs = (@kwargs, %info);
         my $state = &{$func}(
             'AI::MXNet::Symbol',
             @name,
-            (defined $shape ? (shape => $shape) : ()),
-            @kwargs
+            %kwargs
         );
         push @states, $state;
     }
@@ -421,6 +439,11 @@ method _cells_state_shape($cells)
     return [map { @{ $_->state_shape } } @$cells];
 }
 
+method _cells_state_info($cells)
+{
+    return [map { @{ $_->state_info } } @$cells];
+}
+
 method _cells_begin_state($cells, @kwargs)
 {
     return [map { @{ $_->begin_state(@kwargs) } } @$cells];
@@ -501,9 +524,9 @@ sub BUILD
     $self->_hB($self->params->get('h2h_bias'));
 }
 
-method state_shape()
+method state_info()
 {
-    return [[0, $self->_num_hidden]];
+    return [{ shape => [0, $self->_num_hidden], __layout__ => 'NC' }];
 }
 
 method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
@@ -564,9 +587,9 @@ has '+_prefix'     => (default => 'lstm_');
 has '+_activation' => (init_arg => undef);
 has '+forget_bias' => (is => 'ro', isa => 'Num', default => 1);
 
-method state_shape()
+method state_info()
 {
-    return [[0, $self->_num_hidden], [0, $self->_num_hidden]];
+    return [{ shape => [0, $self->_num_hidden], __layout__ => 'NC' } , { shape => [0, $self->_num_hidden], __layout__ => 'NC' }];
 }
 
 method _gate_names()
@@ -777,11 +800,11 @@ sub BUILD
 }
 
 
-method state_shape()
+method state_info()
 {
     my $b = @{ $self->_directions };
     my $n = $self->_mode eq 'lstm' ? 2 : 1;
-    return [([$b*$self->_num_layers, 0, $self->_num_hidden])x$n];
+    return [map { +{ shape => [$b*$self->_num_layers, 0, $self->_num_hidden], __layout__ => 'LNC' } } 0..$n-1];
 }
 
 method _gate_names()
@@ -1111,9 +1134,9 @@ method add(AI::MXNet::RNN::Cell::Base $cell)
     %{ $self->params->_params } = (%{ $self->params->_params }, %{ $cell->params->_params });
 }
 
-method state_shape()
+method state_info()
 {
-    return $self->_cells_state_shape($self->_cells);
+    return $self->_cells_state_info($self->_cells);
 }
 
 method begin_state(@kwargs)
@@ -1144,7 +1167,7 @@ method call($inputs, $states)
     for my $cell (@{ $self->_cells })
     {
         assert(not $cell->isa('AI::MXNet::BidirectionalCell'));
-        my $n = scalar(@{ $cell->state_shape });
+        my $n = scalar(@{ $cell->state_info });
         my $state = [@{ $states }[$p..$p+$n-1]];
         $p += $n;
         ($inputs, $state) = &{$cell}($inputs, $state);
@@ -1169,7 +1192,7 @@ method unroll(
     my @next_states;
     enumerate(sub {
         my ($i, $cell) = @_;
-        my $n   = @{ $cell->state_shape };
+        my $n   = @{ $cell->state_info };
         $states = [@{$begin_state}[$p..$p+$n-1]];
         $p += $n;
         ($inputs, $states) = $cell->unroll(
@@ -1252,9 +1275,9 @@ method call($inputs, $states)
     confess("Bidirectional cannot be stepped. Please use unroll");
 }
 
-method state_shape()
+method state_info()
 {
-    return $self->_cells_state_shape($self->_cells);
+    return $self->_cells_state_info($self->_cells);
 }
 
 method begin_state(@kwargs)
@@ -1306,13 +1329,13 @@ method unroll(
     my ($l_cell, $r_cell) = @{ $self->_cells };
     my ($l_outputs, $l_states) = $l_cell->unroll(
         $length, inputs => $inputs,
-        begin_state     => [@{$states}[0..@{$l_cell->state_shape}-1]],
+        begin_state     => [@{$states}[0..@{$l_cell->state_info}-1]],
         layout          => $layout,
         merge_outputs   => $merge_outputs
     );
     my ($r_outputs, $r_states) = $r_cell->unroll(
         $length, inputs => [reverse @{$inputs}],
-        begin_state     => [@{$states}[@{$l_cell->state_shape}..@{$states}-1]],
+        begin_state     => [@{$states}[@{$l_cell->state_info}..@{$states}-1]],
         layout          => $layout,
         merge_outputs   => $merge_outputs
     );
@@ -1420,9 +1443,9 @@ method params()
     return $self->base_cell->params;
 }
 
-method state_shape()
+method state_info()
 {
-    return $self->base_cell->state_shape;
+    return $self->base_cell->state_info;
 }
 
 method begin_state(CodeRef :$init_sym=AI::MXNet::Symbol->can('zeros'), @kwargs)
