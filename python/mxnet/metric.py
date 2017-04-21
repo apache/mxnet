@@ -263,7 +263,7 @@ class Perplexity(EvalMetric):
             num += pred.size
         self.sum_metric += loss
         self.num_inst += num
-        
+
     def get(self):
         return (self.name, math.exp(self.sum_metric/self.num_inst))
 
