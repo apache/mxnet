@@ -62,7 +62,9 @@ class BatchNormOp : public Operator
   typedef ::mxnet::TBlob TBlob;
 
   /*! \brief offset, given indices such as bn, channel, depth, row, column */
-  static inline index_t offset(const TShape& shape, const size_t *indices, const size_t indicesSize) {
+  static inline index_t offset(const TShape& shape,
+                               const size_t *indices,
+                               const size_t indicesSize) {
     const size_t dim = shape.ndim();
     size_t offset = 0;
     for (size_t i = 0; i < dim; ++i) {
@@ -101,7 +103,7 @@ class BatchNormOp : public Operator
     const size_t channels = dim > 1 ? shape[1] : 1;
     const size_t matrixSize = shape.Size() / (channels * num);
 
-    size_t indices[dim] = {0,};
+    size_t indices[dim] = {0, };
     indices[1] = channel;
 
     for (size_t batchItem = 0; batchItem < num; ++batchItem) {
@@ -122,7 +124,7 @@ class BatchNormOp : public Operator
     const size_t channels = dim > 1 ? shape[1] : 1;
     const size_t matrixSize = shape.Size() / (channels * num);
 
-    size_t indices[dim] = {0,};
+    size_t indices[dim] = {0, };
     indices[1] = channel;
 
     for (size_t batchItem = 0; batchItem < num; ++batchItem) {
@@ -435,7 +437,6 @@ class BatchNormOp : public Operator
 
     #pragma omp parallel for
     for (size_t channel = 0; channel < channelCount; ++channel) {
-
       Dtype *weight = weights.dptr<Dtype>();
       const Dtype w = weight ? weight[channel] : Dtype(1);
       Dtype mean, invstd;
@@ -643,7 +644,7 @@ class BatchNormProp : public OperatorProperty {
            };
   }
 
-  // TODO: Remove this as it is no longer needed
+  // TODO(cjolivier01): Remove this as it is no longer needed
   std::vector<ResourceRequest> BackwardResource(
     const std::vector<TShape> &in_shape) const override {
     return {ResourceRequest::kTempSpace};
