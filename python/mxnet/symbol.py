@@ -55,7 +55,9 @@ class Symbol(SymbolBase):
         return (self[i] for i in self.list_outputs())
 
     def __add__(self, other):
-        """x.__add__(y) <=> x+y """
+        """x.__add__(y) <=> x+y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_add` instead. """
         if isinstance(other, Symbol):
             return _internal._Plus(self, other)
         if isinstance(other, Number):
@@ -67,7 +69,9 @@ class Symbol(SymbolBase):
         return self.__add__(other)
 
     def __sub__(self, other):
-        """x.__sub__(y) <=> x-y """
+        """x.__sub__(y) <=> x-y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_sub` instead. """
         if isinstance(other, Symbol):
             return _internal._Minus(self, other)
         if isinstance(other, Number):
@@ -83,7 +87,9 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __mul__(self, other):
-        """x.__mul__(y) <=> x*y """
+        """x.__mul__(y) <=> x*y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_mul` instead. """
         if isinstance(other, Symbol):
             return _internal._Mul(self, other)
         if isinstance(other, Number):
@@ -95,7 +101,9 @@ class Symbol(SymbolBase):
         return self.__mul__(other)
 
     def __div__(self, other):
-        """x.__div__(y) <=> x/y """
+        """x.__div__(y) <=> x/y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_div` instead. """
         if isinstance(other, Symbol):
             return _internal._Div(self, other)
         if isinstance(other, Number):
@@ -117,7 +125,9 @@ class Symbol(SymbolBase):
         return self.__rdiv__(other)
 
     def __pow__(self, other):
-        """x.__pow__(y) <=> x**y """
+        """x.__pow__(y) <=> x**y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_pow` instead. """
         if isinstance(other, Symbol):
             return _internal._Power(self, other)
         if isinstance(other, Number):
@@ -157,7 +167,9 @@ class Symbol(SymbolBase):
         return Symbol(handle)
 
     def __eq__(self, other):
-        """x.__eq__(y) <=> x==y """
+        """x.__eq__(y) <=> x==y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_equal` instead. """
         if isinstance(other, Symbol):
             return _internal._equal(self, other)
         if isinstance(other, numeric_types):
@@ -166,7 +178,9 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __ne__(self, other):
-        """x.__ne__(y) <=> x!=y """
+        """x.__ne__(y) <=> x!=y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_not_equal` instead. """
         if isinstance(other, Symbol):
             return _internal._not_equal(self, other)
         if isinstance(other, numeric_types):
@@ -175,7 +189,9 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __gt__(self, other):
-        """x.__gt__(y) <=> x>y """
+        """x.__gt__(y) <=> x>y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_greater` instead. """
         if isinstance(other, Symbol):
             return _internal._greater(self, other)
         if isinstance(other, numeric_types):
@@ -184,7 +200,9 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __ge__(self, other):
-        """x.__ge__(y) <=> x>=y """
+        """x.__ge__(y) <=> x>=y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_greater_equal` instead. """
         if isinstance(other, Symbol):
             return _internal._greater_equal(self, other)
         if isinstance(other, numeric_types):
@@ -193,7 +211,9 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __lt__(self, other):
-        """x.__lt__(y) <=> x<y """
+        """x.__lt__(y) <=> x<y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_lesser` instead. """
         if isinstance(other, Symbol):
             return _internal._lesser(self, other)
         if isinstance(other, numeric_types):
@@ -202,7 +222,9 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __le__(self, other):
-        """x.__le__(y) <=> x<=y """
+        """x.__le__(y) <=> x<=y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_lesser_equal` instead. """
         if isinstance(other, Symbol):
             return _internal._lesser_equal(self, other)
         if isinstance(other, numeric_types):
@@ -562,12 +584,13 @@ class Symbol(SymbolBase):
         return [py_str(sarr[i]) for i in range(size.value)]
 
     def infer_type(self, *args, **kwargs):
-        """Given known types for some arguments, infers the type all arguments
-        and all outputs.
+        """Infers the type of all arguments and all outputs, given the known types
+        for some arguments.
 
-        You can pass in the known types in either positional way or keyword argument way.
-        A tuple of ``None`` values is returned if there is not enough information
-        to deduce the missing types.
+        This function takes the known types of some arguments in either positional way
+        or keyword argument way as input. It returns a tuple of `None` values
+        if there is not enough information to deduce the missing types.
+
         Inconsistencies in the known types will cause an error to be raised.
 
         Example usage:
@@ -575,13 +598,18 @@ class Symbol(SymbolBase):
         >>> a = mx.sym.var('a')
         >>> b = mx.sym.var('b')
         >>> c = a + b
-        >>> c.infer_type(a='float32')
-        ([numpy.float32, numpy.float32], [numpy.float32], [])
+        >>> arg_types, out_types, aux_types = c.infer_type(a='float32')
+        >>> arg_types
+        [<type 'numpy.float32'>, <type 'numpy.float32'>]
+        >>> out_types
+        [<type 'numpy.float32'>]
+        >>> aux_types
+        []
 
         Parameters
         ----------
         *args :
-            Provide type of arguments in a positional way.
+            Provide the type of arguments in a positional way.
             Unknown type can be marked as None
 
         **kwargs :
@@ -653,12 +681,12 @@ class Symbol(SymbolBase):
         # pylint: enable=too-many-locals
 
     def infer_shape(self, *args, **kwargs):
-        """Given known shapes for some arguments, infers the shapes of all arguments
-        and all outputs.
+        """Infers the shapes of all arguments and all outputs given the known shapes of
+        some arguments.
 
-        You can pass in the known shapes in either positional way or keyword argument
-        way. A tuple of `None` values is returned if there is not enough information
-        to deduce the missing shapes.
+        This function takes the known shapes of some arguments in either positional way
+        or keyword argument way as input. It returns a tuple of `None` values
+        if there is not enough information to deduce the missing shapes.
 
         Example usage:
         ----------
@@ -690,7 +718,7 @@ class Symbol(SymbolBase):
         Parameters
         ----------
         *args :
-            Provide shape of arguments in a positional way.
+            Provide the shape of arguments in a positional way.
             Unknown shape can be marked as None
 
         **kwargs :
@@ -735,11 +763,11 @@ class Symbol(SymbolBase):
             raise
 
     def infer_shape_partial(self, *args, **kwargs):
-        """Infers the shape partially. This functions works same as `infer_shape`,
+        """Infers the shape partially. This functions works the same as `infer_shape`,
         except that the partial results can be returned.
 
         In the following example, information about fc2 is not available. So, `infer_shape`
-        will return tuple of `None` values but `infer_shape_partial` will return partial values.
+        will return a tuple of `None` values but `infer_shape_partial` will return partial values.
 
         Example usage:
         ----------
@@ -760,7 +788,7 @@ class Symbol(SymbolBase):
         Parameters
         ----------
         *args :
-            Provide shape of arguments in a positional way.
+            Provide the shape of arguments in a positional way.
             Unknown shape can be marked as None
 
         **kwargs :
