@@ -51,7 +51,7 @@ class Symbol(SymbolBase):
                             'Grouped' if name is None else name)
 
     def __iter__(self):
-        """Return all outputs in a list"""
+        """Returns all outputs in a list"""
         return (self[i] for i in self.list_outputs())
 
     def __add__(self, other):
@@ -133,8 +133,11 @@ class Symbol(SymbolBase):
         return self.__deepcopy__(None)
 
     def __deepcopy__(self, _):
-        """Returns a deep copy (i.e. not just a pointer to) of the object,
-           including the current state of its parameters (e.g. weight, biases etc. if any).
+        """Returns a deep copy of the input object.
+
+        This functions takes an object as an input and returns a deep copy of that object
+        (i.e. not just a pointer to) including the current state of its parameters
+        (e.g. weight, biases etc. if any).
 
         Any changes made to a deep copy of object do not reflect in the original object.
 
@@ -143,7 +146,7 @@ class Symbol(SymbolBase):
         >>> import copy
         >>> data = mx.sym.Variable('data')
         >>> data_1 = copy.deepcopy(data)
-        >>> data_1 =2*data
+        >>> data_1 = 2*data
         >>> data_1.tojson()
         >>> data_1 is data    # Data got modified
         False
@@ -336,7 +339,7 @@ class Symbol(SymbolBase):
             return None
 
     def attr(self, key):
-        """Get attribute string from the symbol. This function only works for non-grouped symbols.
+        """Gets attribute string from the symbol. This function only works for non-grouped symbols.
 
         Parameters
         ----------
@@ -358,7 +361,7 @@ class Symbol(SymbolBase):
             return None
 
     def list_attr(self, recursive=False):
-        """Get all attributes from the symbol.
+        """Gets all attributes from the symbol.
 
         Returns
         -------
@@ -375,7 +378,7 @@ class Symbol(SymbolBase):
         return {py_str(pairs[i*2]): py_str(pairs[i*2+1]) for i in range(size.value)}
 
     def attr_dict(self):
-        """Recursively get all attributes from the symbol and its children.
+        """Recursively gets all attributes from the symbol and its children.
 
         Returns
         -------
@@ -398,7 +401,7 @@ class Symbol(SymbolBase):
         return ret
 
     def _set_attr(self, **kwargs):
-        """Set an attribute of the symbol.
+        """Sets an attribute of the symbol.
 
         For example. A._set_attr(foo="bar") adds the mapping ``"{foo: bar}"``
         to the symbol's attribute dictionary.
@@ -415,7 +418,7 @@ class Symbol(SymbolBase):
                 self.handle, c_str(key), c_str(str(value))))
 
     def get_internals(self):
-        """Get a new grouped symbol sgroup. The output of sgroup is a list of the
+        """Gets a new grouped symbol `sgroup`. The output of `sgroup` is a list of the
         outputs of all of the internal nodes.
 
         Consider the following code:
@@ -435,7 +438,7 @@ class Symbol(SymbolBase):
         -------
         sgroup : Symbol
             A symbol group containing all internal and leaf nodes of the computation graph
-            used to compute the symbol
+            used to compute the symbol.
         """
         handle = SymbolHandle()
         check_call(_LIB.MXSymbolGetInternals(
@@ -443,8 +446,22 @@ class Symbol(SymbolBase):
         return Symbol(handle=handle)
 
     def get_children(self):
-        """Get a new grouped symbol whose output contains
-        inputs to output nodes of the original symbol
+        """Gets a new grouped symbol whose output contains
+        inputs to output nodes of the original symbol.
+
+        Example usage:
+        ----------
+        >>> x = mx.sym.Variable('x')
+        >>> y = mx.sym.Variable('y')
+        >>> z = mx.sym.Variable('z')
+        >>> a = y+z
+        >>> b = x+a
+        >>> b.get_children()
+        <Symbol Grouped>
+        >>> b.get_children().list_outputs()
+        ['x', '_plus10_output']
+        >>> b.get_children().get_children().list_outputs()
+        ['y', 'z']
 
         Returns
         -------
@@ -461,7 +478,7 @@ class Symbol(SymbolBase):
         return ret
 
     def list_arguments(self):
-        """List all the arguments in the symbol.
+        """Lists all the arguments in the symbol.
 
         Example usage:
         ----------
@@ -483,7 +500,15 @@ class Symbol(SymbolBase):
         return [py_str(sarr[i]) for i in range(size.value)]
 
     def list_outputs(self):
-        """List all outputs in the symbol.
+        """Lists all the outputs in the symbol.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
+        >>> c = a + b
+        >>> c.list_outputs()
+        ['_plus12_output']
 
         Returns
         -------
@@ -500,7 +525,23 @@ class Symbol(SymbolBase):
         return [py_str(sarr[i]) for i in range(size.value)]
 
     def list_auxiliary_states(self):
-        """List all auxiliary states in the symbol.
+        """Lists all the auxiliary states in the symbol.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
+        >>> c = a + b
+        >>> c.list_auxiliary_states()
+        []
+
+        Auxiliary states list with batch norm.
+        >>> data = mx.symbol.Variable('data')
+        >>> weight = mx.sym.Variable(name='fc1_weight')
+        >>> fc1  = mx.symbol.FullyConnected(data = data, weight=weight, name='fc1', num_hidden=128)
+        >>> fc2 = mx.symbol.BatchNorm(fc1, name='batchnorm0')
+        >>> fc2.list_auxiliary_states()
+        ['batchnorm0_moving_mean', 'batchnorm0_moving_var']
 
         Returns
         -------
@@ -697,7 +738,7 @@ class Symbol(SymbolBase):
         """Infers the shape partially. This functions works same as `infer_shape`,
         except that the partial results can be returned.
 
-        In following example, information about fc2 is not available. So, infer_shape
+        In the following example, information about fc2 is not available. So, `infer_shape`
         will return tuple of `None` values but `infer_shape_partial` will return partial values.
 
         Example usage:
@@ -805,7 +846,7 @@ class Symbol(SymbolBase):
         # pylint: enable=too-many-locals
 
     def debug_str(self):
-        """Get a debug string.
+        """Gets a debug string.
 
         Returns
         -------
@@ -818,7 +859,7 @@ class Symbol(SymbolBase):
         return py_str(debug_str.value)
 
     def save(self, fname):
-        """Save symbol into file.
+        """Saves symbol into file.
 
         You can also use pickle to do the job if you only work on python.
         The advantage of load/save is the file is language agnostic.
@@ -842,7 +883,7 @@ class Symbol(SymbolBase):
         check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
 
     def tojson(self):
-        """Save symbol into a JSON string.
+        """Saves symbol into a JSON string.
 
         See Also
         --------
