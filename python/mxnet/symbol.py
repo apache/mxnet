@@ -145,11 +145,10 @@ class Symbol(SymbolBase):
     def __deepcopy__(self, _):
         """Returns a deep copy of the input object.
 
-        This functions takes an object as an input and returns a deep copy of that object
-        (i.e. not just a pointer to) including the current state of its parameters
-        (e.g. weight, biases etc. if any).
+        This function returns a deep copy of the input object including the current state
+        of all its parameters such as weights, biases, etc.
 
-        Any changes made to a deep copy of object do not reflect in the original object.
+        Any changes made to the deep copy do not reflect in the original object.
 
         Example usage:
         ----------
@@ -448,7 +447,7 @@ class Symbol(SymbolBase):
                 self.handle, c_str(key), c_str(str(value))))
 
     def get_internals(self):
-        """Gets a new grouped symbol `sgroup`. The output of `sgroup` is a list of the
+        """Gets a new grouped symbol `sgroup`. The output of `sgroup` is a list of
         outputs of all of the internal nodes.
 
         Consider the following code:
@@ -565,7 +564,7 @@ class Symbol(SymbolBase):
         >>> c.list_auxiliary_states()
         []
 
-        Auxiliary states list with batch norm.
+        Example of auxiliary states in `BatchNorm`.
         >>> data = mx.symbol.Variable('data')
         >>> weight = mx.sym.Variable(name='fc1_weight')
         >>> fc1  = mx.symbol.FullyConnected(data = data, weight=weight, name='fc1', num_hidden=128)
@@ -576,7 +575,7 @@ class Symbol(SymbolBase):
         Returns
         -------
         aux_states : list of string
-            List the names of the auxiliary states.
+            List of the auxiliary states in input symbol.
 
         Notes
         -----
@@ -617,23 +616,23 @@ class Symbol(SymbolBase):
         Parameters
         ----------
         *args :
-            Provide the type of arguments in a positional way.
-            Unknown type can be marked as None
+            Type of known arguments in a positional way.
+            Unknown type can be marked as None.
 
         **kwargs :
-            Provide keyword arguments of known types.
+            Keyword arguments of known types.
 
         Returns
         -------
         arg_types : list of numpy.dtype or None
-            List of types of arguments.
-            The order is in the same order as list_arguments()
+            List of argument types.
+            The order is same as the order of list_arguments().
         out_types : list of numpy.dtype or None
-            List of types of outputs.
-            The order is in the same order as list_outputs()
+            List of output types.
+            The order is same as the order of list_outputs().
         aux_types : list of numpy.dtype or None
-            List of types of outputs.
-            The order is in the same order as list_auxiliary_states()
+            List of auxiliary state types.
+            The order is same as the order of list_auxiliary_states().
         """
         # pylint: disable=too-many-locals
         if len(args) != 0 and len(kwargs) != 0:
@@ -712,7 +711,7 @@ class Symbol(SymbolBase):
         (None, None, None)
 
         Inconsistencies in the known shapes will cause an error to be raised.
-        See following example:
+        See the following example:
 
         >>> data = mx.sym.Variable('data')
         >>> out = mx.sym.FullyConnected(data=data, name='fc1', num_hidden=1000)
@@ -726,23 +725,23 @@ class Symbol(SymbolBase):
         Parameters
         ----------
         *args :
-            Provide the shape of arguments in a positional way.
-            Unknown shape can be marked as None
+            Shape of arguments in a positional way.
+            Unknown shape can be marked as None.
 
         **kwargs :
-            Provide keyword arguments of known shapes.
+            Keyword arguments of the known shapes.
 
         Returns
         -------
         arg_shapes : list of tuple or None
-            List of shapes of arguments.
-            The order is in the same order as list_arguments()
+            List of argument shapes.
+            The order is same as the order of list_arguments().
         out_shapes : list of tuple or None
-            List of shapes of outputs.
-            The order is in the same order as list_outputs()
+            List of output shapes.
+            The order is same as the order of list_outputs().
         aux_shapes : list of tuple or None
-            List of shapes of outputs.
-            The order is in the same order as list_auxiliary_states()
+            List of auxiliary state shapes.
+            The order is same as the order of list_auxiliary_states().
         """
         try:
             res = self._infer_shape_impl(False, *args, **kwargs)
@@ -771,8 +770,8 @@ class Symbol(SymbolBase):
             raise
 
     def infer_shape_partial(self, *args, **kwargs):
-        """Infers the shape partially. This functions works the same as `infer_shape`,
-        except that the partial results can be returned.
+        """Infers the shape partially. This functions works the same way as `infer_shape`,
+        except that this function can return partial results.
 
         In the following example, information about fc2 is not available. So, `infer_shape`
         will return a tuple of `None` values but `infer_shape_partial` will return partial values.
@@ -806,14 +805,14 @@ class Symbol(SymbolBase):
         Returns
         -------
         arg_shapes : list of tuple or None
-            List of shapes of arguments.
-            The order is in the same order as list_arguments()
+            List of argument shapes.
+            The order is same as the order of list_arguments().
         out_shapes : list of tuple or None
-            List of shapes of outputs.
-            The order is in the same order as list_outputs()
+            List of output shapes.
+            The order is same as the order of list_outputs().
         aux_shapes : list of tuple or None
-            List of shapes of outputs.
-            The order is in the same order as list_auxiliary_states()
+            List of auxiliary state shapes.
+            The order is same as the order of list_auxiliary_states().
         """
         return self._infer_shape_impl(True, *args, **kwargs)
 
@@ -896,7 +895,7 @@ class Symbol(SymbolBase):
         return py_str(debug_str.value)
 
     def save(self, fname):
-        """Saves symbol into file.
+        """Saves symbol to a file.
 
         You can also use pickle to do the job if you only work on python.
         The advantage of load/save is the file is language agnostic.
@@ -920,7 +919,7 @@ class Symbol(SymbolBase):
         check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
 
     def tojson(self):
-        """Saves symbol into a JSON string.
+        """Saves symbol to a JSON string.
 
         See Also
         --------
