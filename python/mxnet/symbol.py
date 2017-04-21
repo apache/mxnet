@@ -1210,6 +1210,8 @@ class Symbol(SymbolBase):
 
         This function can only be used if current symbol is a loss function.
 
+        .. note:: This function is currently not implemented.
+
         Parameters
         ----------
         wrt : Array of String
