@@ -268,6 +268,7 @@ static const test::op::kwargs_t blank_kwargs;
 static const test::op::kwargs_t nonfixgamma_kwargs = { {"fix_gamma", "False"} };
 static const test::op::kwargs_t useglobalstats_kwargs = { {"use_global_stats", "True"} };
 
+#if !DISABLE_VALIDATION
 static bool isUGS(const test::op::kwargs_t& kwargs) {
   for(test::op::kwargs_t::const_iterator i = useglobalstats_kwargs.begin(),
         e = useglobalstats_kwargs.end(); i != e; ++i) {
@@ -277,6 +278,7 @@ static bool isUGS(const test::op::kwargs_t& kwargs) {
   }
   return false;
 }
+#endif  // DISABLE_VALIDATION
 
 /*! \brief Test batch norm operator forward pass */
 template<typename OperatorProp, typename Dtype>
@@ -479,7 +481,7 @@ static void timingTest(const std::string& label,
                        const bool includeBackward = true) {
   std::cout << std::endl << std::flush;
 
-  const size_t COUNT = 1000;
+  const size_t COUNT = 5000;
 
   test::perf::TimingInstrument timing;
 

@@ -189,13 +189,13 @@ class BasicOperatorData {
     perf::TimingItem timeF(&timing_, Backward, "Backward");
     if(!isGPU_) {
       VTuneResume profile; // VTune sample only this scope
-      op()->Backward(opContext_,
-                     c_.blob_out_grad_,
-                     c_.blob_input_vec_,
-                     c_.blob_output_vec_,
-                     {kWriteTo, kWriteTo, kWriteTo},
-                     c_.blob_in_grad_,
-                     c_.blob_aux_states_);
+        op()->Backward(opContext_,
+                       c_.blob_out_grad_,
+                       c_.blob_input_vec_,
+                       c_.blob_output_vec_,
+                       {kWriteTo, kWriteTo, kWriteTo},
+                       c_.blob_in_grad_,
+                       c_.blob_aux_states_);
     } else {
       MXNET_CUDA_ONLY(op()->Backward(opContext_,
                                      gpuData->blob_out_grad_,

@@ -21,6 +21,8 @@
 namespace mxnet {
 namespace op {
 
+#define BATCHNORM_USE_OMP 1
+
 namespace batchnorm {
 enum BatchNormOpInputs {kData, kGamma, kBeta};  // kGamma: weights, kBeta: biases
 enum BatchNormOpOutputs {kOut, kMean, kVar};  // req, out_data
@@ -144,7 +146,7 @@ class BatchNormOp : public Operator
     const size_t matrixSize = shape.Size() / (channels * num);
 
     for (size_t batchItem = 0; batchItem < num; ++batchItem) {
-      #pragma openmp for
+      #pragma omp parallel for
       for (size_t channel = 0; channel < channels; ++channel) {
         for (size_t i = 0; i < matrixSize; ++i) {
           onData(channel, in_data++, out_data++);
@@ -210,6 +212,7 @@ class BatchNormOp : public Operator
                 });
 
     const size_t itemCount = ishape.Size() / channelCount;
+    #pragma omp parallel for
     for (size_t channel = 0; channel < channelCount; ++channel) {
       const DType sum = save_std[channel];
 
