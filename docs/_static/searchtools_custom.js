@@ -419,6 +419,9 @@ var Search = {
           $('#search-preview').append('<ul id="preview-list"></ul>');
           while(prevNum < 10 && results.length > 0) {
             var item = results.pop();
+            if(item[0].endsWith('.md')) {
+              item[0] = item[0].substring(0, item[0].length - 3);
+            }
             var listItem = $('<li></li>');
             if (DOCUMENTATION_OPTIONS.FILE_SUFFIX === '') {
               // dirhtml builder
@@ -460,6 +463,9 @@ var Search = {
       // results left, load the summary and display it
       if (results.length) {
         var item = results.pop();
+        if(item[0].endsWith('.md')) {
+          item[0] = item[0].substring(0, item[0].length - 3);
+        }
         var listItem = $('<li style="display:none"></li>');
         if (DOCUMENTATION_OPTIONS.FILE_SUFFIX === '') {
           // dirhtml builder
@@ -549,7 +555,7 @@ var Search = {
     var objects = this._index.objects;
     var objnames = this._index.objnames;
     var titles = this._index.titles;
-    var objLowLimit = 5;
+    var objLowLimit = 10;
 
     var i;
     var results = [];
