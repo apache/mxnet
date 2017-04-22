@@ -117,7 +117,6 @@ inline Symbol Crop(const std::string& symbol_name,
     .CreateSymbol(symbol_name);
 }
 
-
 /*!
  * \brief Apply activation function to input.
  *        Softmax Activation is only available with CUDNN on GPUand will be
