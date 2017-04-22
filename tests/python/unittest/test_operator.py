@@ -2965,11 +2965,11 @@ def test_pick():
     test_pick_helper(np.float32)
 
 def test_quantization_op():
-  min_range = 0.0
-  max_range = 1.0
+  min0 = mx.nd.array([0.0])
+  max0 = mx.nd.array([1.0])
   a  = mx.nd.array([[0.1392, 0.5928], [0.6027, 0.8579]])
-  qa = mx.contrib.nd.quantize(a, min_range=min_range, max_range=max_range, out_type='uint8')
-  a_ = mx.contrib.nd.dequantize(qa, min_range=min_range, max_range=max_range, out_type='float32')
+  qa, min1, max1 = mx.contrib.nd.quantize(a, min0, max0, out_type='uint8')
+  a_ = mx.contrib.nd.dequantize(qa, min1, max1, out_type='float32')
 
   qa_real = mx.nd.array([[35, 151], [154, 219]])
   a_real  = mx.nd.array([[0.13725491, 0.59215689], [0.60392159, 0.8588236]])

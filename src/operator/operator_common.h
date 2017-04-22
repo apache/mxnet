@@ -77,6 +77,11 @@ inline bool type_is_none(const int& x) {
   return x == -1;
 }
 
+/*! \brief check if shape is scalar({1}). */
+inline bool shape_is_scalar(const TShape& x) {
+  return x.ndim() == 1 && x.Size() == 1;
+}
+
 /*! \brief get string representation of shape */
 inline std::string shape_string(const TShape& x) {
   std::ostringstream os;
