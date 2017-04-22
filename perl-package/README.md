@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
-[![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.readthedocs.io/en/latest/api/perl/index.html)
+[![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.io/api/perl/index.html)
 
 You have found MXNet Perl Package! The MXNet Perl packages brings flexible and efficient GPU
 computing and state-of-art deep learning to Perl.
