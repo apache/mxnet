@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file batch_norm.cu
+ * \file batch_norm_v1.cu
  * \brief
  * \author Bing Xu
 */
