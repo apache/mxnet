@@ -21,8 +21,6 @@
 namespace mxnet {
 namespace op {
 
-#define BATCHNORM_USE_OMP 1
-
 namespace batchnorm {
 enum BatchNormOpInputs {kData, kGamma, kBeta};  // kGamma: weights, kBeta: biases
 enum BatchNormOpOutputs {kOut, kMean, kVar};  // req, out_data
