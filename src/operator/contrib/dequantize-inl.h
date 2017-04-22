@@ -46,7 +46,7 @@ void DequantizeCompute(const nnvm::NodeAttrs& attrs,
 
   const DequantizeParam& param = nnvm::get<DequantizeParam>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DstDType, {
-  MSHADOW_TYPE_SWITCH( inputs[0].type_flag_, SrcDType, {
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, SrcDType, {
     float min_range = inputs[1].dptr<float>()[0];
     float max_range = inputs[2].dptr<float>()[0];
     float half_range = !std::is_signed<SrcDType>::value
