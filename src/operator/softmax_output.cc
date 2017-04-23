@@ -30,59 +30,66 @@ Operator *SoftmaxOutputProp::CreateOperatorEx(Context ctx, std::vector<TShape> *
 DMLC_REGISTER_PARAMETER(SoftmaxOutputParam);
 
 MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
-.describe(R"code(Computes softmax with logit loss.
+.describe(R"code(Computes the gradient of cross entropy loss with respect to softmax output.
 
-In the forward pass, the softmax output is returned. Assume the input data has
-shape *(n,k)*, then the output will have the same shape as the input, which is computed by
-
-.. math::
-   out[i,:] = softmax(data[i,:])
-
-for :math:`i=0,...,n-1`, where
+- Softmax Function:
 
 .. math::
-   softmax(x) = \left[..., \frac{exp(x[j])}{exp(x[0])+...+exp(x[k-1])}, ...\right]
 
-For general *N*-D input array with shape :math:`(d_1, ..., d_n)`. Denoted by the size
-:math:`s=d_1d_2...d_n`. The way to compute softmax various:
+  \text{softmax}(x)_i = \frac{exp(x_i)}{\sum_j exp(x_j)}
 
-- ``preserve_shape`` is false (default). Reshape input into a 2-D array with
-  shape :math:`(d_1, s/d_1)` beforing computing the softmax, and then reshaped back to the
-  original shape.
+- Cross Entropy Function:
 
-- ``preserve_shape`` is true. For all :math:`i_1, ..., i_{n-1}`, compute
+.. math::
 
-  .. math::
-    out[i_1, ..., i_{n-1}, :] = softmax(data[i_1, ..., i_{n-1},:])
+  \text{CE(label, output)} = - \sum_i \text{label}_i \log(\text{output}_i)
 
-- ``multi_output`` is true. For all :math:`i_1, ..., i_{n-1}`, compute
+- The gradient of cross entropy loss w.r.t softmax output:
 
-  .. math::
-    out[i_1, :, ..., i_{n-1}] = softmax(data[i_1, :, ..., i_{n-1}])
+.. math::
 
-In the backward pass, the logit loss, also called cross-entroy loss, is
-added. The provided label can be a *(N-1)*-D label index array or a *N*-D label
-probability array.
+  \text{gradient} = \text{output} - \text{label}
 
-Examples with a particular label can be ignored during backward by specifying
-``ignore_label`` (also need ``use_ignore`` to be true).
+- In the forward propagation, the softmax function is computed for each instance in the input array.
 
-A scale can be applied to the gradient by ``grad_scale``, which is often used in
-mutli-loss object function in which we can given each loss different weight. It
-also supports various ways to normalize the gradient by ``normalization``:
+  For general *N*-D input arrays with shape :math:`(d_1, d_2, ..., d_n)`. The size is
+  :math:`s=d_1 \cdot d_2 \cdot \cdot \cdot d_n`. We can use the parameter ``preserve_shape``
+  and ``multi_output`` to specify the way to compute softmax:
 
-- **null**: do nothing
-- **batch**: divide by batch size (number of examples)
-- **valid**: divide by the number of examples which are not ignored.
+  By Default, ``preserve_shape`` is ``false``. This operator will reshape the input array
+  into a 2-D array with shape :math:`(d_1, \frac{s}{d_1})` and then compute the softmax function for
+  each row in the reshaped array, and afterwards reshape it back to the original shape
+  :math:`(d_1, d_2, ..., d_n)`.
+
+  If ``preserve_shape`` is ``true``, the softmax function will be computed along with the last axis.
+  If ``multi_output`` is ``true``, the softmax function will be computed along with second axis.
+
+- In the backward propagation, the gradient of cross-entroy loss w.r.t softmax output array is computed.
+  The provided label can be a one-hot label array or a probability label array.
+
+- If the parameter ``use_ignore`` is ``true``, ``ignore_label`` can specify input instances
+  with a particular label to be ignored during backward propagation.
+
+- The parameter ``grad_scale`` can be used to rescale the gradient, which is often used to
+  give each loss function different weights.
+
+- This operator also supports various ways to normalize the gradient by ``normalization``:
+  **null**: do nothing.
+  **batch**: divide the gradient by the batch size.
+  **valid**: divide the gradient by the number of instances which are not ignored.
+
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol", "Input data.")
+.add_argument("data", "NDArray-or-Symbol", "Input array.")
 .add_argument("label", "NDArray-or-Symbol", "Ground truth label.")
 .add_arguments(SoftmaxOutputParam::__FIELDS__());
 
+
 MXNET_REGISTER_OP_PROPERTY(Softmax, DeprecatedSoftmaxProp)
-.describe("Perform a softmax transformation on input. Please use SoftmaxOutput"
-          ".. note::  `Softmax`` is deprecated. Use `softmax`")
-.add_argument("data", "NDArray-or-Symbol", "Input data to softmax.")
+.describe("Please use SoftmaxOutput."
+          ".. note::  This operator has been renamed to ``SoftmaxOutput``, which "
+          "computes the gradient of cross-entroy loss w.r.t softmax output. "
+          "There is another operator called ``softmax``, which computes softmax output only.")
+.add_argument("data", "NDArray-or-Symbol", "Input array.")
 .add_arguments(SoftmaxOutputParam::__FIELDS__());
 
 }  // namespace op

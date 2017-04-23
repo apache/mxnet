@@ -9,7 +9,21 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(softmax_cross_entropy)
-.MXNET_DESCRIBE("Calculate cross_entropy(data, one_hot(label))")
+.describe(R"code(Calculate cross entropy of softmax output and one-hot label.
+
+- Softmax Function:
+
+.. math::
+
+  \text{softmax}(x)_i = \frac{exp(x_i)}{\sum_j exp(x_j)}
+
+- Cross Entropy Function:
+
+.. math::
+
+  \text{CE(label, output)} = - \sum_i \text{label}_i \log(\text{output}_i)
+
+)code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", SoftmaxCrossEntropyShape)
