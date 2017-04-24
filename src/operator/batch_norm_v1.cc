@@ -27,7 +27,7 @@ Operator *BatchNormV1Prop::CreateOperatorEx(Context ctx, std::vector<TShape> *in
 
 DMLC_REGISTER_PARAMETER(BatchNormV1Param);
 
-MXNET_REGISTER_OP_PROPERTY(BatchNormV1, BatchNormV1Prop)
+MXNET_REGISTER_OP_PROPERTY(BatchNorm_v1, BatchNormV1Prop)
 .describe(R"code(Batch normalization.
 
 Normalizes a data batch by mean and variance, and applies a scale ``gamma`` as
@@ -74,7 +74,7 @@ then set ``gamma`` to 1 and its gradient to 0.
 .add_argument("beta", "ndarray-or-symbol", "beta array")
 .add_arguments(BatchNormV1Param::__FIELDS__());
 
-NNVM_REGISTER_OP(BatchNormV1)
+NNVM_REGISTER_OP(BatchNorm_v1)
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
     [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
       if (var->attrs.dict.find("__init__") != var->attrs.dict.end()) return;
