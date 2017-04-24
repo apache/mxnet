@@ -314,6 +314,16 @@ static bool isUGS(const test::op::kwargs_t& kwargs) {
 }
 #endif  // DISABLE_VALIDATION
 
+static size_t getChannelPosition(const test::op::kwargs_t& kwargs) {
+  for(test::op::kwargs_t::const_iterator i = kwargs.begin(),
+        e = kwargs.end(); i != e; ++i) {
+    if(!i->first.compare("channel_position")) {
+      return static_cast<size_t>(atoi(i->second.c_str()));
+    }
+  }
+  return 1;
+}
+
 /*! \brief Test batch norm operator forward pass */
 template<typename OperatorProp, typename DType>
 static test::op::OpInfo<OperatorProp, DType> testBatchNormOperatorForward(
@@ -352,7 +362,12 @@ static test::op::OpInfo<OperatorProp, DType> testBatchNormOperatorForward(
 
 #if !DISABLE_VALIDATION
   if(!isUGS(kwargs) && count == 1) {
-    BatchNormValidator<DType>::validateForward(*info.data_);
+    op::DeviceTensor3<DType> inputTensor(info.data_->getBlobVect(
+        test::op::BasicOperatorData<DType>::kInput)[op::batchnorm::kData],
+        getChannelPosition(kwargs));
+    if(inputTensor.SpatialSize() > 1) {
+      BatchNormValidator<DType>::validateForward(*info.data_);
+    }
   }
 #endif
 
@@ -632,13 +647,13 @@ TEST(BATCH_NORM, TestBackward2D_Simple) {
       false, inputShape, blank_kwargs);  // Keep it simple
 }
 
-//TEST(BATCH_NORM, TestBackward2D_SimpleEx) {
-//  typedef float DType;
-//  const TShape inputShape({2, 3});
-//  test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
-//    testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
-//      false, inputShape, blank_kwargs);  // Keep it simple
-//}
+TEST(BATCH_NORM, TestBackward2D_SimpleEx) {
+  typedef float DType;
+  const TShape inputShape({2, 3});
+  test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
+    testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
+      false, inputShape, blank_kwargs);  // Keep it simple
+}
 
 TEST(BATCH_NORM, TestBackward2D_SimpleNFG) {
   typedef float DType;

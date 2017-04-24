@@ -55,6 +55,49 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   }
 };
 
+template<typename DType>
+class DeviceTensor3 {
+  DeviceTensor3(const DeviceTensor3&) = delete;
+ public:
+  inline DeviceTensor3(const TBlob& blob, const size_t indexOfChannel)
+    : dptr_(blob.dptr<DType>())
+      , shape_(3) {
+    shape_[0] = 1;
+    for(size_t i = 0; i < indexOfChannel; ++i) {
+      shape_[0] *= blob.shape_[i];
+    }
+    shape_[1] = blob.shape_[indexOfChannel];
+    shape_[2] = 1;
+    for(size_t i = indexOfChannel + 1, n = blob.shape_.ndim(); i < n; ++i) {
+      shape_[2] *= blob.shape_[i];
+    }
+  }
+
+  inline size_t Size() const {
+    size_t n = 1;
+    for (int i = 0; i < 3; ++i) {
+      n *= shape_[i];
+    }
+    return n;
+  }
+
+  inline size_t ChannelCount() const {
+    return shape_[1];
+  }
+
+  inline size_t BatchSize() const {
+    return shape_[0];
+  }
+
+  inline size_t SpatialSize() const {
+    return shape_[2];
+  }
+
+  DType *dptr_;
+  TShape shape_;
+};
+
+
 /*! \brief Batch normalization operator */
 template<typename xpu, typename DType, typename AccType>
 class BatchNormOp : public Operator
@@ -62,47 +105,6 @@ class BatchNormOp : public Operator
   typedef ::nnvm::TShape TShape;
   typedef ::mxnet::TBlob TBlob;
 
-
-  class DeviceTensor3 {
-    DeviceTensor3(const DeviceTensor3&) = delete;
-   public:
-    inline DeviceTensor3(const TBlob& blob, const size_t indexOfChannel)
-      : dptr_(blob.dptr<DType>())
-        , shape_(3) {
-      shape_[0] = 1;
-      for(size_t i = 0; i < indexOfChannel; ++i) {
-        shape_[0] *= blob.shape_[i];
-      }
-      shape_[1] = blob.shape_[indexOfChannel];
-      shape_[2] = 1;
-      for(size_t i = indexOfChannel + 1, n = blob.shape_.ndim(); i < n; ++i) {
-        shape_[2] *= blob.shape_[i];
-      }
-    }
-
-    inline size_t Size() const {
-      size_t n = 1;
-      for (int i = 0; i < 3; ++i) {
-        n *= shape_[i];
-      }
-      return n;
-    }
-
-    inline size_t ChannelCount() const {
-      return shape_[1];
-    }
-
-    inline size_t BatchSize() const {
-      return shape_[0];
-    }
-
-    inline size_t SpatialSize() const {
-      return shape_[2];
-    }
-
-    DType *dptr_;
-    TShape shape_;
-  };
 
  private:
   /*! \brief offset, given indices such as bn, channel, depth, row, column */
@@ -122,7 +124,7 @@ class BatchNormOp : public Operator
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
   template<typename OnData>
-  static inline void forEachFast(DeviceTensor3& tensor, const size_t channel, OnData onData) {
+  static inline void forEachFast(DeviceTensor3<DType>& tensor, const size_t channel, OnData onData) {
     const size_t num        = tensor.BatchSize();
     const size_t matrixSize = tensor.SpatialSize();
 
@@ -139,7 +141,7 @@ class BatchNormOp : public Operator
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
   template<typename OnData>
-  inline void forEachFast(DeviceTensor3& in_data, DeviceTensor3& out_data,
+  inline void forEachFast(DeviceTensor3<DType>& in_data, DeviceTensor3<DType>& out_data,
                           const size_t channel, OnData onData) {
     const size_t num        = in_data.BatchSize();
     const size_t matrixSize = in_data.SpatialSize();
@@ -159,7 +161,7 @@ class BatchNormOp : public Operator
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
   template<typename OnData>
-  static inline void forEachFast(DeviceTensor3& tensor, OnData onData) {
+  static inline void forEachFast(DeviceTensor3<DType>& tensor, OnData onData) {
     const size_t num        = tensor.BatchSize();
     const size_t channels   = tensor.ChannelCount();
     const size_t matrixSize = tensor.SpatialSize();
@@ -179,7 +181,9 @@ class BatchNormOp : public Operator
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
   template<typename OnData>
-  static inline void forEachFast(DeviceTensor3& in_data, DeviceTensor3& out_data, OnData onData) {
+  static inline void forEachFast(DeviceTensor3<DType>& in_data,
+                                 DeviceTensor3<DType>& out_data,
+                                 OnData onData) {
     const size_t num        = in_data.BatchSize();
     const size_t channels   = in_data.ChannelCount();
     const size_t matrixSize = in_data.SpatialSize();
@@ -199,7 +203,7 @@ class BatchNormOp : public Operator
   }
 
   /*! \brief Compute the mean of each input channel */
-  static inline void computeMean(DeviceTensor3& tensor, DType *save_mean) {
+  static inline void computeMean(DeviceTensor3<DType>& tensor, DType *save_mean) {
     const size_t channelCount = tensor.ChannelCount();
 
     for (size_t i = 0; i < channelCount; ++i) {
@@ -227,7 +231,7 @@ class BatchNormOp : public Operator
 
   /*! \brief Compute the variance of each input channel, as well as update moving mean/variants */
   template<typename  Shape>
-  inline void computeVariance(DeviceTensor3& tensor,
+  inline void computeVariance(DeviceTensor3<DType>& tensor,
                               const DType *mean_data,
                               const DType eps,
                               const DType momentum,
@@ -293,7 +297,7 @@ class BatchNormOp : public Operator
                  const std::vector<TBlob> &out_data,
                  const std::vector<TBlob> &aux_states) {
     // Input
-    DeviceTensor3 inputData(in_data[batchnorm::kData], param_.channel_position);
+    DeviceTensor3<DType> inputData(in_data[batchnorm::kData], param_.channel_position);
     const TBlob &weights         = in_data[batchnorm::kGamma];
     const TBlob &bias            = in_data[batchnorm::kBeta];
 
@@ -302,7 +306,7 @@ class BatchNormOp : public Operator
     const TBlob &runningVariance = aux_states[batchnorm::kMovingVar];
 
     // Output
-    DeviceTensor3 outputData(out_data[batchnorm::kOut], param_.channel_position);
+    DeviceTensor3<DType> outputData(out_data[batchnorm::kOut], param_.channel_position);
     const TBlob &meanVector      = out_data[batchnorm::kMean];
     const TBlob &varianceVector  = out_data[batchnorm::kVar];
 
@@ -431,11 +435,11 @@ class BatchNormOp : public Operator
                   const std::vector<TBlob> &in_grad,
                   const std::vector<TBlob> &aux_states) {
     // Input Data
-    DeviceTensor3 inputData(in_data[batchnorm::kData], param_.channel_position);
+    DeviceTensor3<DType> inputData(in_data[batchnorm::kData], param_.channel_position);
     const TBlob &weights   = in_data[batchnorm::kGamma];
 
     // Input Grad
-    DeviceTensor3 gradIn(in_grad[batchnorm::kData], param_.channel_position);
+    DeviceTensor3<DType> gradIn(in_grad[batchnorm::kData], param_.channel_position);
     const TBlob &gradWeight = in_grad[batchnorm::kGamma];
     const TBlob &gradBias   = in_grad[batchnorm::kBeta];
 
@@ -444,7 +448,7 @@ class BatchNormOp : public Operator
     const TBlob &runningVariance = aux_states[batchnorm::kMovingVar];
 
     // Output
-    DeviceTensor3 gradOut(out_grad[batchnorm::kOut], param_.channel_position);
+    DeviceTensor3<DType> gradOut(out_grad[batchnorm::kOut], param_.channel_position);
     const TBlob &saveMean = out_data[batchnorm::kMean];
     const TBlob &saveStd  = out_data[batchnorm::kVar];
 
