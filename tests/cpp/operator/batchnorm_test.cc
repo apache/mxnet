@@ -301,6 +301,8 @@ class BNOperatorData : public test::op::BasicOperatorData<DType> {
 static const test::op::kwargs_t blank_kwargs;
 static const test::op::kwargs_t nonfixgamma_kwargs = { {"fix_gamma", "False"} };
 static const test::op::kwargs_t useglobalstats_kwargs = { {"use_global_stats", "True"} };
+static const test::op::kwargs_t nfs_ugd_kwargs = { {"fix_gamma", "False"},
+                                                   {"use_global_stats", "True"} };
 
 #if !DISABLE_VALIDATION
 static bool isUGS(const test::op::kwargs_t& kwargs) {
@@ -650,9 +652,23 @@ TEST(BATCH_NORM, TestBackward2D_Simple) {
 TEST(BATCH_NORM, TestBackward2D_SimpleEx) {
   typedef float DType;
   const TShape inputShape({2, 3});
+
+//  test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
+//    testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
+//      false, inputShape, blank_kwargs);  // Keep it simple
+//
+//  test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
+//    testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
+//      false, inputShape, useglobalstats_kwargs);  // Keep it simple
+//
+//  test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
+//    testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
+//      false, inputShape, nonfixgamma_kwargs);  // Keep it simple
+
   test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
     testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
-      false, inputShape, blank_kwargs);  // Keep it simple
+      false, inputShape, nfs_ugd_kwargs);  // Keep it simple
+
 }
 
 TEST(BATCH_NORM, TestBackward2D_SimpleNFG) {
