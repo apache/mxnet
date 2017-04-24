@@ -274,7 +274,8 @@ def test_convolution_with_type():
                np.dtype(np.uint8): 0,
                np.dtype(np.int32): 0}
     check_consistency(sym, ctx_list, tol=tol)
-
+    # test ability to turn off training on bias
+    check_consistency(sym, ctx_list, grad_req={'conv_data': 'write', 'conv_weight': 'write', 'conv_bias': 'null'}, tol=tol)
 
 # Apply N symbols against each of M contexts, checking that all NxM combinations match.
 def check_consistency_NxM(sym_list, ctx_list):
