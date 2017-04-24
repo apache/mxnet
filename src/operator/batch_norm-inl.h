@@ -645,12 +645,6 @@ class BatchNormProp : public OperatorProperty {
            };
   }
 
-  // TODO(cjolivier01): Remove this as it is no longer needed
-  std::vector<ResourceRequest> BackwardResource(
-    const std::vector<TShape> &in_shape) const override {
-    return {ResourceRequest::kTempSpace};
-  }
-
   int NumVisibleOutputs() const override {
     if (param_.output_mean_var) {
       return 3;

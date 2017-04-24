@@ -301,7 +301,7 @@ class BatchNormV1Prop : public OperatorProperty {
   }
 
   std::string TypeString() const override {
-    return "BatchNormV1";
+    return "BatchNorm_v1";
   }
 
   std::vector<int> DeclareBackwardDependency(

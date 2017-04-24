@@ -509,7 +509,11 @@ static void timingTest(const std::string& label,
                        const size_t count = 1) {
   std::cout << std::endl << std::flush;
 
+#ifdef NDEBUG
   const size_t COUNT = 50;
+#else
+  const size_t COUNT = 5;
+#endif
 
   test::perf::TimingInstrument timing;
 
@@ -566,12 +570,18 @@ static void timingTest(const std::string& label,
   std::cout << std::endl << std::flush;
 }
 
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+#define GPU_TEST_DIMENSIONS  2  /* Only support 2D */
+#else
+#define GPU_TEST_DIMENSIONS  0  /* Allow stochastic */
+#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+
 /*! \brief Stress-test random batch size/channels/dimension(s) */
 TEST(BATCH_NORM, TestStochasticTiming_2D) {
-  timingTest<op::BatchNormProp,   float>("RANDOM: BatchNormProp<cpu>", false, true);
+  timingTest<op::BatchNormProp,   float>("RANDOM: BatchNormProp<cpu>", false, true, GPU_TEST_DIMENSIONS);
 #if MXNET_USE_CUDA
   if(test::unitTestsWithCuda) {
-    timingTest<op::BatchNormProp,   float>("RANDOM: BatchNormProp<gpu>", true, true);
+    timingTest<op::BatchNormProp,   float>("RANDOM: BatchNormProp<gpu>", true, true, GPU_TEST_DIMENSIONS);
   }
 #endif
 }
