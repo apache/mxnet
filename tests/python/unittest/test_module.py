@@ -1,5 +1,23 @@
 import mxnet as mx
+import numpy as np
 from functools import reduce
+
+def test_module_dtype():
+  dtype = np.float16
+  dshape = (3, 8, 7)
+
+  sym = mx.sym.Variable('data')
+  sym = mx.sym.Activation(data=sym, act_type='relu', __layout__='TNC')
+
+  mod = mx.mod.Module(sym, ('data',), None, context=[mx.cpu(0), mx.cpu(1)])
+  mod.bind(data_shapes=[mx.io.DataDesc('data', dshape, dtype, layout='TNC')])
+  mod.init_params()
+  mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape, dtype=dtype)],
+                              label=None))
+  mod.backward([mx.nd.ones(dshape, dtype=dtype)])
+
+  for x in mod.get_outputs():
+      assert x.dtype == dtype
 
 def test_module_layout():
     sym = mx.sym.Variable('data')
@@ -211,6 +229,7 @@ def test_monitor():
     assert(mon_result_counts == [2, 2, 1, 6, 6, 4])
 
 if __name__ == '__main__':
+    test_module_dtype()
     test_module_states()
     test_module_reshape()
     test_save_load()
