@@ -51,37 +51,37 @@ struct VTuneResume {
 
 constexpr const size_t MPRINT_PRECISION = 5;
 
-template<typename Dtype>
-inline void fill(const TBlob& blob, const Dtype val) {
-  Dtype *p1 = blob.dptr<Dtype>();
+template<typename DType>
+inline void fill(const TBlob& blob, const DType val) {
+  DType *p1 = blob.dptr<DType>();
   for(size_t i = 0, n = blob.Size(); i < n; ++i) {
     *p1++ = val;
   }
 }
 
-template<typename Dtype>
-inline void fill(const TBlob& blob, const Dtype *valArray) {
-  Dtype *p1 = blob.dptr<Dtype>();
+template<typename DType>
+inline void fill(const TBlob& blob, const DType *valArray) {
+  DType *p1 = blob.dptr<DType>();
   for(size_t i = 0, n = blob.Size(); i < n; ++i) {
     *p1++ = *valArray++;
   }
 }
 
-template<typename Dtype>
-inline void try_fill(const std::vector<TBlob>& container, size_t index, const Dtype value) {
+template<typename DType>
+inline void try_fill(const std::vector<TBlob>& container, size_t index, const DType value) {
   if(index < container.size()) {
     test::fill(container[index], value);
   }
 }
 
-template<typename Dtype, typename Stream>
+template<typename DType, typename Stream>
 inline void dump(Stream& os, const TBlob& blob, const char *suffix = "f") {
-  Dtype *p1 = blob.dptr<Dtype>();
+  DType *p1 = blob.dptr<DType>();
   for(size_t i = 0, n = blob.Size(); i < n; ++i) {
     if(i) {
       os << ", ";
     }
-    const Dtype val = *p1++;
+    const DType val = *p1++;
 
     std::stringstream stream;
     stream << val;
@@ -118,15 +118,15 @@ inline index_t offset(const TShape& shape, const std::vector<size_t>& indices) {
 }
 
 /*! \brief Return reference to data at position indexes */
-template<typename Dtype>
-inline const Dtype& data_at(const TBlob *blob, const std::vector<size_t>& indices) {
-  return blob->dptr<Dtype>()[offset(blob->shape_, indices)];
+template<typename DType>
+inline const DType& data_at(const TBlob *blob, const std::vector<size_t>& indices) {
+  return blob->dptr<DType>()[offset(blob->shape_, indices)];
 }
 
 /*! \brief Set data at position indexes */
-template<typename Dtype>
-inline Dtype& data_ref(const TBlob *blob, const std::vector<size_t>& indices) {
-  return blob->dptr<Dtype>()[offset(blob->shape_, indices)];
+template<typename DType>
+inline DType& data_ref(const TBlob *blob, const std::vector<size_t>& indices) {
+  return blob->dptr<DType>()[offset(blob->shape_, indices)];
 }
 
 inline std::string repeatedStr(const char *s, const signed int count, const bool trailSpace = false) {
@@ -149,26 +149,26 @@ inline std::string repeatedStr(const char *s, const signed int count, const bool
 }
 
 /*! \brief Pretty print a 1D, 2D, or 3D blob */
-template<typename Dtype, typename StreamType>
+template<typename DType, typename StreamType>
 inline StreamType& print_blob(StreamType &os, const TBlob &blob, bool doChannels = true, bool doBatches = true) {
 
   const size_t dim = blob.ndim();
 
   if (dim == 1) {
     // probably a tensor (mshadow::Tensor is deprecated)
-    TBlob changed(blob.dptr<Dtype>(), TShape(3), blob.dev_mask_);
+    TBlob changed(blob.dptr<DType>(), TShape(3), blob.dev_mask_);
     changed.shape_[0] = 1;
     changed.shape_[1] = 1;
     changed.shape_[2] = blob.shape_[0];
-    return print_blob<Dtype>(os, changed, false, false);
+    return print_blob<DType>(os, changed, false, false);
   } else if (dim == 2) {
     // probably a tensor (mshadow::Tensor is deprecated)
-    TBlob changed(blob.dptr<Dtype>(), TShape(4), blob.dev_mask_);
+    TBlob changed(blob.dptr<DType>(), TShape(4), blob.dev_mask_);
     changed.shape_[0] = 1;
     changed.shape_[1] = 1;
     changed.shape_[2] = blob.shape_[0];
     changed.shape_[3] = blob.shape_[1];
-    return print_blob<Dtype>(os, changed, false, false);
+    return print_blob<DType>(os, changed, false, false);
   }
   CHECK_GE(dim, 3U) << "Invalid dimension zero (0)";
 
@@ -222,16 +222,16 @@ inline StreamType& print_blob(StreamType &os, const TBlob &blob, bool doChannels
             os << "[";
           }
           for(size_t dd = 0; dd < depth; ++dd) {
-            Dtype val;
+            DType val;
             switch(dim) {
               case 3:
-                val = data_at<Dtype>(&blob, {thisBatch, thisChannel, c });
+                val = data_at<DType>(&blob, {thisBatch, thisChannel, c });
                 break;
               case 4:
-                val = data_at<Dtype>(&blob, {thisBatch, thisChannel, r, c});
+                val = data_at<DType>(&blob, {thisBatch, thisChannel, r, c});
                 break;
               case 5:
-                val = data_at<Dtype>(&blob, {thisBatch, thisChannel, dd, r, c});
+                val = data_at<DType>(&blob, {thisBatch, thisChannel, dd, r, c});
                 break;
               default:
                 CHECK(false) << "Unsupported blob dimension" << dim;
@@ -259,9 +259,9 @@ inline StreamType& print_blob(StreamType &os, const TBlob &blob, bool doChannels
   return os;
 }
 
-template<typename Dtype>
+template<typename DType>
 inline size_t shapeMemorySize(const TShape& shape) {
-  return shape.Size() * sizeof(Dtype);
+  return shape.Size() * sizeof(DType);
 }
 
 class BlobMemory
@@ -293,13 +293,13 @@ class BlobMemory
   Storage::Handle handle_;
 };
 
-template<typename Dtype>
+template<typename DType>
 class StandaloneBlob : public TBlob {
  public:
   inline StandaloneBlob(const TShape& shape, const bool isGPU)
-    : TBlob(static_cast<Dtype *>(nullptr), shape, isGPU ? gpu::kDevMask : cpu::kDevMask)
+    : TBlob(static_cast<DType *>(nullptr), shape, isGPU ? gpu::kDevMask : cpu::kDevMask)
       , memory_(isGPU) {
-    this->dptr_ = memory_.Alloc(shapeMemorySize<Dtype>(shape));
+    this->dptr_ = memory_.Alloc(shapeMemorySize<DType>(shape));
   }
   inline ~StandaloneBlob() {
     this->dptr_ = nullptr;
@@ -316,7 +316,7 @@ class StandaloneBlob : public TBlob {
  *  2D: batch item -> channel -> row -> col
  *  3D: batch item -> channel -> col
  */
-template<typename Dtype, typename GetNextData>
+template<typename DType, typename GetNextData>
 static inline void patternFill(TBlob *blob, GetNextData getNextData) {
   const size_t dim = blob->ndim();
   CHECK_LE(dim, 5U) << "Will need to handle above 3 dimensions (another for loop)";
@@ -338,7 +338,7 @@ static inline void patternFill(TBlob *blob, GetNextData getNextData) {
                     if (dim == 5) {
                       const size_t idx = test::offset(blob->shape_, {n, ch, d, row, col});
                       CHECK_LT(idx, numberOfIndexes);
-                      Dtype &f = blob->dptr<Dtype>()[idx];
+                      DType &f = blob->dptr<DType>()[idx];
                       f = getNextData();
                     } else {
                       CHECK(dim <= 5) << "Unimplemented dimension: " << dim;
@@ -347,28 +347,28 @@ static inline void patternFill(TBlob *blob, GetNextData getNextData) {
                 } else {
                   const size_t idx = test::offset(blob->shape_, {n, ch, d, row});
                   CHECK_LT(idx, numberOfIndexes);
-                  Dtype &f = blob->dptr<Dtype>()[idx];
+                  DType &f = blob->dptr<DType>()[idx];
                   f = getNextData();
                 }
               }
             } else {
               const size_t idx = test::offset(blob->shape_, {n, ch, d});
               CHECK_LT(idx, numberOfIndexes);
-              Dtype &f = blob->dptr<Dtype>()[idx];
+              DType &f = blob->dptr<DType>()[idx];
               f = getNextData();
             }
           }
         } else {
           const size_t idx = test::offset(blob->shape_, {n, ch});
           CHECK_LT(idx, numberOfIndexes);
-          Dtype &f = blob->dptr<Dtype>()[idx];
+          DType &f = blob->dptr<DType>()[idx];
           f = getNextData();
         }
       }
     } else {
       const size_t idx = test::offset(blob->shape_, {n});
       CHECK_LT(idx, numberOfIndexes);
-      Dtype &f = blob->dptr<Dtype>()[idx];
+      DType &f = blob->dptr<DType>()[idx];
       f = getNextData();
     }
   }
