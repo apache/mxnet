@@ -35,6 +35,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   bool fix_gamma;
   bool use_global_stats;
   bool output_mean_var;
+  int channel_position;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
     .describe("Epsilon to prevent div 0. "
@@ -49,6 +50,8 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
               "This will force change batch-norm into a scale shift operator.");
     DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
     .describe("Output All,normal mean and var");
+    DMLC_DECLARE_FIELD(channel_position).set_default(1)
+      .describe("Position of the channel field in the shape array");
   }
 };
 
@@ -59,6 +62,48 @@ class BatchNormOp : public Operator
   typedef ::nnvm::TShape TShape;
   typedef ::mxnet::TBlob TBlob;
 
+
+  class DeviceTensor3 {
+   public:
+    inline DeviceTensor3(const TBlob& blob, const size_t indexOfChannel)
+      : dptr_(blob.dptr<DType>())
+        , shape_(3) {
+      shape_[0] = 1;
+      for(size_t i = 0; i < indexOfChannel; ++i) {
+        shape_[0] *= blob.shape_[i];
+      }
+      shape_[1] = blob.shape_[indexOfChannel];
+      shape_[2] = 1;
+      for(size_t i = indexOfChannel + 1, n = blob.shape_.ndim(); i < n; ++i) {
+        shape_[2] *= blob.shape_[i];
+      }
+    }
+
+    inline size_t Size() const {
+      size_t n = 1;
+      for (int i = 0; i < 3; ++i) {
+        n *= shape_[i];
+      }
+      return n;
+    }
+
+    inline size_t ChannelCount() const {
+      return shape_[1];
+    }
+
+    inline size_t BatchSize() const {
+      return shape_[0];
+    }
+
+    inline size_t SpatialSize() const {
+      return shape_[2];
+    }
+
+    DType *dptr_;
+    TShape shape_;
+  };
+
+ private:
   /*! \brief offset, given indices such as bn, channel, depth, row, column */
   static inline index_t offset(const TShape& shape,
                                const size_t *indices,
@@ -75,12 +120,30 @@ class BatchNormOp : public Operator
   }
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
+
+//  inline void forEachFast(DeviceTensor3& tensor3, const size_t channel, OnData onData) {
+//    const size_t dim = shape.ndim();
+//    const size_t num = shape[0];
+//    const size_t channels = dim > 1 ? shape[param_.channel_position] : 1;
+//    const size_t matrixSize = shape.Size() / (channels * num);
+//
+//    size_t indices[2] = {0, channel};
+//
+//    for (size_t batchItem = 0; batchItem < num; ++batchItem) {
+//      indices[0] = batchItem;
+//      DType *data = in_data + offset(shape, &indices[0], sizeof(indices)/sizeof(indices[0]));
+//      for (size_t i = 0; i < matrixSize; ++i) {
+//        onData(data++);
+//      }
+//    }
+//  }
+
   template<typename Shape, typename OnData>
-  static inline void forEachFast(DType *in_data, const Shape& shape,
+  inline void forEachFast(DType *in_data, const Shape& shape,
                                  const size_t channel, OnData onData) {
     const size_t dim = shape.ndim();
     const size_t num = shape[0];
-    const size_t channels = dim > 1 ? shape[1] : 1;
+    const size_t channels = dim > 1 ? shape[param_.channel_position] : 1;
     const size_t matrixSize = shape.Size() / (channels * num);
 
     size_t indices[2] = {0, channel};
@@ -96,11 +159,11 @@ class BatchNormOp : public Operator
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
   template<typename Shape, typename OnData>
-  static inline void forEachFast(const DType *in_data, DType *out_data,
-                                 const Shape& shape, const size_t channel, OnData onData) {
+  inline void forEachFast(const DType *in_data, DType *out_data,
+                          const Shape& shape, const size_t channel, OnData onData) {
     const size_t dim = shape.ndim();
     const size_t num = shape[0];
-    const size_t channels = dim > 1 ? shape[1] : 1;
+    const size_t channels = dim > 1 ? shape[param_.channel_position] : 1;
     const size_t matrixSize = shape.Size() / (channels * num);
 
     size_t indices[2] = {0, channel};
@@ -118,10 +181,10 @@ class BatchNormOp : public Operator
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
   template<typename Shape, typename OnData>
-  static inline void forEachFast(const DType *in_data, const Shape& shape, OnData onData) {
+  inline void forEachFast(const DType *in_data, const Shape& shape, OnData onData) {
     const size_t dim = shape.ndim();
     const size_t num = shape[0];
-    const size_t channels = dim > 1 ? shape[1] : 1;
+    const size_t channels = dim > 1 ? shape[param_.channel_position] : 1;
     const size_t matrixSize = shape.Size() / (channels * num);
 
     for (size_t batchItem = 0; batchItem < num; ++batchItem) {
@@ -139,11 +202,11 @@ class BatchNormOp : public Operator
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
   template<typename Shape, typename OnData>
-  static inline void forEachFast(const DType *in_data, DType *out_data,
+  inline void forEachFast(const DType *in_data, DType *out_data,
                                  const Shape& shape, OnData onData) {
     const size_t dim = shape.ndim();
     const size_t num = shape[0];
-    const size_t channels = dim > 1 ? shape[1] : 1;
+    const size_t channels = dim > 1 ? shape[param_.channel_position] : 1;
     const size_t matrixSize = shape.Size() / (channels * num);
 
     for (size_t batchItem = 0; batchItem < num; ++batchItem) {
@@ -162,12 +225,11 @@ class BatchNormOp : public Operator
 
   /*! \brief Compute the mean of each input channel */
   template<typename Shape>
-  static inline void computeMean(const DType *in_data,
-                                 const Shape &ishape,
-                                 const Shape &stride,
-                                 const Shape &oshape,
-                                 DType *save_mean) {
-    const size_t channelCount = ishape[1];
+  inline void computeMean(const DType *in_data,
+                          const Shape &ishape,
+                          const Shape &oshape,
+                          DType *save_mean) {
+    const size_t channelCount = ishape[param_.channel_position];
 
     for (size_t i = 0, n = oshape.Size(); i < n; ++i) {
       save_mean[i] = 0;
@@ -196,7 +258,6 @@ class BatchNormOp : public Operator
   template<typename  Shape>
   inline void computeVariance(const DType *in_data,
                               const Shape &ishape,
-                              const Shape &stride,
                               const DType *mean_data,
                               const DType eps,
                               const DType momentum,
@@ -205,7 +266,7 @@ class BatchNormOp : public Operator
     for (size_t i = 0, n = oshape.Size(); i < n; ++i) {
       save_std[i] = 0;
     }
-    const size_t channelCount = ishape[1];
+    const size_t channelCount = ishape[param_.channel_position];
     CHECK(oshape.Size() == channelCount);
 
     forEachFast(in_data, ishape,
@@ -264,7 +325,7 @@ class BatchNormOp : public Operator
                  const std::vector<TBlob> &out_data,
                  const std::vector<TBlob> &aux_states) {
     // Input
-    const TBlob &inputData       = in_data[batchnorm::kData];
+    DeviceTensor3 inputData(in_data[batchnorm::kData], param_.channel_position);
     const TBlob &weights         = in_data[batchnorm::kGamma];
     const TBlob &bias            = in_data[batchnorm::kBeta];
 
@@ -273,7 +334,7 @@ class BatchNormOp : public Operator
     const TBlob &runningVariance = aux_states[batchnorm::kMovingVar];
 
     // Output
-    const TBlob &outputData      = out_data[batchnorm::kOut];
+    DeviceTensor3 outputData(out_data[batchnorm::kOut], param_.channel_position);
     const TBlob &meanVector      = out_data[batchnorm::kMean];
     const TBlob &varianceVector  = out_data[batchnorm::kVar];
 
@@ -281,13 +342,12 @@ class BatchNormOp : public Operator
       const TShape stride(2);
 
       // compute mean per input
-      computeMean(inputData.dptr<DType>(), inputData.shape_, stride, meanVector.shape_,
-                  meanVector.dptr<DType>());
+      computeMean(inputData.dptr_, inputData.shape_,
+                  meanVector.shape_, meanVector.dptr<DType>());
 
       // compute variance per input
-      computeVariance(inputData.dptr<DType>(),
+      computeVariance(inputData.dptr_,
                       inputData.shape_,
-                      stride,
                       meanVector.dptr<DType>(),
                       param_.eps,
                       param_.momentum,
@@ -299,7 +359,7 @@ class BatchNormOp : public Operator
       const DType *rm = runningMean.dptr<DType>();
       const DType *rv = runningVariance.dptr<DType>();
 
-      for (size_t i = 0, n = inputData.shape_[1]; i < n; ++i) {
+      for (size_t i = 0, n = inputData.shape_[param_.channel_position]; i < n; ++i) {
         m[i] = rm[i];
         v[i] = rv[i];
       }
@@ -319,7 +379,7 @@ class BatchNormOp : public Operator
     }
 
     if (req[batchnorm::kData] == kWriteTo || req[batchnorm::kData] == kWriteInplace) {
-      forEachFast(inputData.dptr<DType>(), outputData.dptr<DType>(), inputData.shape_,
+      forEachFast(inputData.dptr_, outputData.dptr_, inputData.shape_,
                   [w, b, mean, var](const size_t channel, const DType *in_data, DType *out_data) {
                     *out_data = static_cast<DType>(
                       ((*in_data - mean[channel]) * var[channel]) * w[channel] + b[channel]);});
@@ -328,7 +388,7 @@ class BatchNormOp : public Operator
     // Convert back to "real" variance in order to be consistent
     // with the original operator
     if (ctx.is_train && !param_.use_global_stats) {
-      for (size_t i = 0, n = inputData.shape_[1]; i < n; ++i) {
+      for (size_t i = 0, n = inputData.shape_[param_.channel_position]; i < n; ++i) {
         var[i] = INVSTD_TO_VARIANCE(var[i], param_.eps);
       }
     }
@@ -405,11 +465,11 @@ class BatchNormOp : public Operator
                   const std::vector<TBlob> &in_grad,
                   const std::vector<TBlob> &aux_states) {
     // Input Data
-    const TBlob &inputData = in_data[batchnorm::kData];
+    DeviceTensor3 inputData(in_data[batchnorm::kData], param_.channel_position);
     const TBlob &weights   = in_data[batchnorm::kGamma];
 
     // Input Grad
-    const TBlob &gradIn     = in_grad[batchnorm::kData];
+    DeviceTensor3 gradIn(in_grad[batchnorm::kData], param_.channel_position);
     const TBlob &gradWeight = in_grad[batchnorm::kGamma];
     const TBlob &gradBias   = in_grad[batchnorm::kBeta];
 
@@ -418,21 +478,21 @@ class BatchNormOp : public Operator
     const TBlob &runningVariance = aux_states[batchnorm::kMovingVar];
 
     // Output
-    const TBlob &gradOut  = out_grad[batchnorm::kOut];
+    DeviceTensor3 gradOut(out_grad[batchnorm::kOut], param_.channel_position);
     const TBlob &saveMean = out_data[batchnorm::kMean];
     const TBlob &saveStd  = out_data[batchnorm::kVar];
 
-    const size_t channelCount = inputData.shape_[1];
+    const size_t channelCount = inputData.shape_[param_.channel_position];
     const size_t itemCount    = inputData.Size() / channelCount;
 
     // Avoid multiple dptr() call within the channel loop
-    DType *inputDataPtr = inputData.dptr<DType>();
-    DType *gradOutDataPtr = gradOut.dptr<DType>();
+    DType *inputDataPtr = inputData.dptr_;
+    DType *gradOutDataPtr = gradOut.dptr_;
     DType *runningMeanDataPtr = runningMean.dptr<DType>();
     DType *runningVarDataPtr  = runningVariance.dptr<DType>();
     DType *saveMeanDataPtr = saveMean.dptr<DType>();
     DType *saveVarianceDataPtr = saveStd.dptr<DType>();
-    DType *gradInDataPtr = gradIn.dptr<DType>();
+    DType *gradInDataPtr = gradIn.dptr_;
     DType *gradWeightData = gradWeight.dptr<DType>();
     DType *gradBiasData = gradBias.dptr<DType>();
 
@@ -568,17 +628,21 @@ class BatchNormProp : public OperatorProperty {
       return false;
     }
 
-    in_shape->at(1) = TShape(Shape1(dshape[1]));
-    in_shape->at(2) = TShape(Shape1(dshape[1]));
+    CHECK_LT(param_.channel_position, dshape.ndim())
+      << "Invalid channel position " << param_.channel_position
+      << " for a " << dshape.ndim() << "-dimensional shape";
+
+    in_shape->at(1) = TShape(Shape1(dshape[param_.channel_position]));
+    in_shape->at(2) = TShape(Shape1(dshape[param_.channel_position]));
 
     out_shape->clear();
     out_shape->push_back(dshape);             // kOut
-    out_shape->push_back(Shape1(dshape[1]));  // kMean
-    out_shape->push_back(Shape1(dshape[1]));  // kVar
+    out_shape->push_back(Shape1(dshape[param_.channel_position]));  // kMean
+    out_shape->push_back(Shape1(dshape[param_.channel_position]));  // kVar
 
     aux_shape->clear();
-    aux_shape->push_back(Shape1(dshape[1]));  // kMovingMean
-    aux_shape->push_back(Shape1(dshape[1]));  // kMovingVar
+    aux_shape->push_back(Shape1(dshape[param_.channel_position]));  // kMovingMean
+    aux_shape->push_back(Shape1(dshape[param_.channel_position]));  // kMovingVar
     return true;
   }
 

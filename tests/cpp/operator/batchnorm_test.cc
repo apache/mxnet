@@ -43,6 +43,16 @@ class BatchNormValidator : public test::op::Validator<DType>
   typedef test::op::Validator<DType> Super;
   using Super::compare;
 
+  class Tensor3 {
+   public:
+    inline Tensor3(DType *dptr, const TShape& shape)
+    : dptr_(dptr) {
+
+    }
+    DType *dptr_;
+    size_t shape_[3];
+  };
+
   /*! \brief Only static functions in this class */
   BatchNormValidator() = delete;
 
@@ -621,6 +631,14 @@ TEST(BATCH_NORM, TestBackward2D_Simple) {
     testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
       false, inputShape, blank_kwargs);  // Keep it simple
 }
+
+//TEST(BATCH_NORM, TestBackward2D_SimpleEx) {
+//  typedef float DType;
+//  const TShape inputShape({2, 3});
+//  test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
+//    testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
+//      false, inputShape, blank_kwargs);  // Keep it simple
+//}
 
 TEST(BATCH_NORM, TestBackward2D_SimpleNFG) {
   typedef float DType;

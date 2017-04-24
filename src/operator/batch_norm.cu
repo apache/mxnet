@@ -409,6 +409,9 @@ static DeviceTensor<DType, Dim> devicetensor(const TBlob& blob) {
 #define DeviceTensor1 DeviceTensor<DType, 1>
 #define DeviceTensor3 DeviceTensor<DType, 3>
 
+//typedef DeviceTensor<DType, 1> DeviceTensor1;
+//typedef DeviceTensor<DType, 3> DeviceTensor3;
+
 template <typename DType, typename accreal>
 static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
                                             const OpContext &ctx,
