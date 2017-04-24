@@ -26,7 +26,8 @@ from . import recordio
 def imdecode(buf, **kwargs):
     """Decode an image to an NDArray.
 
-    Note: `imdecode` uses OpenCV. MXNet must have been built with OpenCV for `imdecode` to work.
+    Note: `imdecode` uses OpenCV (not the CV2 Python library).
+    MXNet must have been built with OpenCV for `imdecode` to work.
 
     Parameters
     ----------
