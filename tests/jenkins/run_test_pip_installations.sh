@@ -15,7 +15,6 @@ PYTHON_VERSIONS=('2.7' '3.4' '3.5' '3.6')
 DEVICES=('pip_cpu' 'pip_cu75' 'pip_cu80')
 
 CI_BUILD_DIR=tests/ci_build/pip_tests
-
 # build Docker images and test pip installation for each device
 for DEV in "${DEVICES[@]}"; do
 

@@ -1,9 +1,9 @@
 use strict;
 use warnings;
-use Test::More tests => 17;
+use Test::More tests => 19;
 use AI::MXNet qw(mx);
 use AI::MXNet::Base;
-use AI::MXNet::TestUtils qw(almost_equal);
+use AI::MXNet::TestUtils qw(almost_equal enumerate);
 
 sub test_module_layout
 {
@@ -218,6 +218,61 @@ sub test_module_switch_bucket
     );
 }
 
+sub test_monitor
+{
+    mx->random->seed(11);
+    my $data = mx->nd->array([[0.05, .10]]);
+    my $label = mx->nd->array([[.01, 0.99]]);
+    my $train_data = mx->io->NDArrayIter($data, label => $label, batch_size=>1);
+
+    # symbols
+    my $x = mx->symbol->Variable('data');
+    $x = mx->symbol->FullyConnected(name=>'fc_0', data=>$x, num_hidden=>2);
+    $x = mx->symbol->Activation(name=>"act_0", data=>$x, act_type=>'sigmoid');
+    $x = mx->symbol->FullyConnected(name=>'fc_1', data=>$x, num_hidden=>2);
+    $x = mx->symbol->Activation(name=>"act_1", data=>$x, act_type=>'sigmoid');
+    $x = mx->symbol->LinearRegressionOutput(data=>$x, name=>'softmax', grad_scale=>2);
+
+    # create monitor
+    my $mean_abs = sub { my ($x) = @_;
+        return $x->abs->sum/$x->size;
+    };
+    my $mon = mx->mon->Monitor(1, stat_func=>$mean_abs, pattern=>'.*', sort=>1);
+
+    # create module
+    my $mod = mx->mod->Module($x, context=>[mx->cpu()]);
+    $mod->bind(data_shapes=>$train_data->provide_data, label_shapes=>$train_data->provide_label,
+                    for_training=>1);
+    $mod->install_monitor($mon);
+    my $arg_params = {fc_0_weight => mx->nd->array([[.15, .20], [.25, .30]]),
+                  fc_0_bias  => mx->nd->array([.35, .35]),
+                  fc_1_weight => mx->nd->array([[.40, .45], [.50, .55]]),
+                  fc_1_bias  => mx->nd->array([.60, .60])};
+    $mod->init_params(arg_params=>$arg_params);
+
+    my $data_batch = <$train_data>;
+    $mon->tic();
+    $mod->forward_backward($data_batch);
+    my $res = $mon->toc();
+    my $keys = ['act_0', 'act_1', 'data', 'fc_0', 'fc_1', 'softmax'];
+    my $mon_result_counts = [0, 0, 0, 0, 0, 0];
+    ok(@$res == 21);
+    for my $r (@$res)
+    {
+        my ($n, $k, $v) = @$r;
+        enumerate(sub {
+            my ($idx, $key) = @_;
+            if($k =~ /^$key/)
+            {
+                $mon_result_counts->[$idx] += 1;
+                return;
+            }
+        }, $keys);
+    }
+    is_deeply($mon_result_counts, [2, 2, 1, 6, 6, 4]);
+}
+
+test_monitor();
 test_module_switch_bucket();
 test_module_layout();
 test_module_states();

@@ -243,6 +243,7 @@ In the rest of this document, we first overview the methods provided by the
     take
     batch_take
     one_hot
+    pick
 ```
 
 ## Mathematical functions

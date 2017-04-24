@@ -21,9 +21,15 @@ Operator* CropProp::CreateOperator(Context ctx) const {
 DMLC_REGISTER_PARAMETER(CropParam);
 
 MXNET_REGISTER_OP_PROPERTY(Crop, CropProp)
-.describe("Crop the 2nd and 3rd dim of input data, with the corresponding size of h_w or "
-"with width and height of the second input symbol, i.e., with one input, we need h_w to "
-"specify the crop height and width, otherwise the second input symbol's size will be used")
+.describe(R"code(
+
+.. note:: `Crop` is deprecated. Use `slice` instead.
+
+Crop the 2nd and 3rd dim of input data, with the corresponding size of h_w or
+with width and height of the second input symbol, i.e., with one input, we need h_w to
+specify the crop height and width, otherwise the second input symbol's size will be used
+)code" ADD_FILELINE)
+
 .add_argument("data", "Symbol or Symbol[]", "Tensor or List of Tensors, the second input "
 "will be used as crop_like shape reference")
 .add_arguments(CropParam::__FIELDS__())

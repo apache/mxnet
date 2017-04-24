@@ -38,9 +38,9 @@ struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(EmbeddingParam) {
     DMLC_DECLARE_FIELD(input_dim).set_lower_bound(1)
-    .describe("vocabulary size of the input indices.");
+    .describe("Vocabulary size of the input indices.");
     DMLC_DECLARE_FIELD(output_dim).set_lower_bound(1)
-    .describe("dimension of the embedding vectors.");
+    .describe("Dimension of the embedding vectors.");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
@@ -330,13 +330,17 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
     DMLC_DECLARE_FIELD(axis)
     .set_lower_bound(0)
     .set_default(0)
-    .describe("the axis of data tensor to be taken.");
+    .describe("The axis of input array to be taken.");
     DMLC_DECLARE_FIELD(mode)
     .add_enum("raise", take_::kRaise)
     .add_enum("wrap", take_::kWrap)
     .add_enum("clip", take_::kClip)
     .set_default(take_::kClip)
-    .describe("specify how out-of-bound indices bahave.");
+    .describe("Specify how out-of-bound indices bahave."
+              " \"clip\" means clip to the range. So, if all indices mentioned are too large,"
+              " they are replaced by the index that addresses the last element along an axis. "
+              " \"wrap\" means to wrap around. "
+              " \"raise\" means to raise an error. ");
   }
 };
 
@@ -548,7 +552,7 @@ struct OneHotParam : public dmlc::Parameter<OneHotParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(OneHotParam) {
     DMLC_DECLARE_FIELD(depth)
-      .describe("The dimension size at dim = axis.");
+      .describe("Depth of the one hot dimension.");
     DMLC_DECLARE_FIELD(on_value)
       .set_default(1.0f)
       .describe("The value assigned to the locations represented by indices.");

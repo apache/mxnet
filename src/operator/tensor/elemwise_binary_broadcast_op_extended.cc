@@ -10,8 +10,7 @@
 namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_power)
-.describe(R"code(Returns result of first array elements raised to powers from second array, element-wise
-                     with broadcasting.
+.describe(R"code(Returns result of first array elements raised to powers from second array, element-wise with broadcasting.
 
 Example::
 
