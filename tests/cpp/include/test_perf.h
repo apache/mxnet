@@ -134,7 +134,7 @@ class TimingInstrument {
       i->second.baseTime_ = getMicroTickCount();
     }
   }
-  void stopTiming(int id) {
+  void stopTiming(int id, const size_t subIterationCount = 1) {
     std::unique_lock<std::recursive_mutex>  lk(mutex_);
     std::unordered_map<int, Info>::iterator i = data_.find(id);
     CHECK_NE(i == data_.end(), true) << "Can't stop timing on an object that we don't know about";
@@ -144,7 +144,7 @@ class TimingInstrument {
         CHECK_NE(i->second.baseTime_, 0U) << "Invalid base time";
         i->second.duration_.fetch_add(getMicroTickCount() - i->second.baseTime_);
         i->second.baseTime_  = 0;
-        ++i->second.cycleCount_;
+        i->second.cycleCount_.fetch_add(subIterationCount);
       }
     }
   }
@@ -256,22 +256,27 @@ class TimingInstrument {
 class TimingItem {
 
  public:
-  inline TimingItem(TimingInstrument *ti, int id, const char *name)
+  inline TimingItem(TimingInstrument *ti,
+                    int id,
+                    const char *name,
+                    const size_t subIterationCount = 1)
     : ti_(ti)
-      , id_(id) {
+      , id_(id)
+      , subIterationCount_(subIterationCount) {
     if(ti_) {
       ti_->startTiming(id, name);
     }
   }
   inline ~TimingItem() {
     if(ti_) {
-      ti_->stopTiming(id_);
+      ti_->stopTiming(id_, subIterationCount_);
     }
   }
 
  private:
   TimingInstrument *ti_;
   const int         id_;
+  const size_t      subIterationCount_;
 };
 
 

@@ -160,35 +160,40 @@ class BasicOperatorData {
   }
 
   /*! \brief Run operator forward */
-  void forward() {
+  void forward(const size_t count = 1) {
     // Possibly move data to/from CPU and GPU (outside of timing scope)
     MXNET_CUDA_ONLY(std::unique_ptr<GPUOpData> gpuData(isGPU_ ?
                        new GPUOpData(c_, opContext_) : nullptr));
-    perf::TimingItem timeF(&timing_, Forward, "Forward");
+    perf::TimingItem timeF(&timing_, Forward, "Forward", count);
     if(!isGPU_) {
       VTuneResume profile;  // VTune sample only this scope
-      op()->Forward(opContext_,
-                    c_.blob_input_vec_,
-                    {kWriteTo, kWriteTo, kWriteTo},
-                    c_.blob_output_vec_,
-                    c_.blob_aux_states_);
+      for(size_t x = 0; x < count; ++x) {
+        op()->Forward(opContext_,
+                      c_.blob_input_vec_,
+                      {kWriteTo, kWriteTo, kWriteTo},
+                      c_.blob_output_vec_,
+                      c_.blob_aux_states_);
+      }
     } else {
-      MXNET_CUDA_ONLY(op()->Forward(opContext_,
-                                    gpuData->blob_input_vec_,
-                                    {kWriteTo, kWriteTo, kWriteTo},
-                                    gpuData->blob_output_vec_,
-                                    gpuData->blob_aux_states_));
+      for(size_t x = 0; x < count; ++x) {
+        MXNET_CUDA_ONLY(op()->Forward(opContext_,
+                                      gpuData->blob_input_vec_,
+                                      {kWriteTo, kWriteTo, kWriteTo},
+                                      gpuData->blob_output_vec_,
+                                      gpuData->blob_aux_states_));
+      }
     }
   }
 
   /*! \brief Run operator backwards */
-  void backward() {
+  void backward(const size_t count = 1) {
     // Possibly move data to/from CPU and GPU (outside of timing scope)
     MXNET_CUDA_ONLY(std::unique_ptr<GPUOpData> gpuData(isGPU_ ?
                       new GPUOpData(c_, opContext_) : nullptr));
-    perf::TimingItem timeF(&timing_, Backward, "Backward");
+    perf::TimingItem timeF(&timing_, Backward, "Backward", count);
     if(!isGPU_) {
       VTuneResume profile; // VTune sample only this scope
+      for(size_t x = 0; x < count; ++x) {
         op()->Backward(opContext_,
                        c_.blob_out_grad_,
                        c_.blob_input_vec_,
@@ -196,14 +201,17 @@ class BasicOperatorData {
                        {kWriteTo, kWriteTo, kWriteTo},
                        c_.blob_in_grad_,
                        c_.blob_aux_states_);
+      }
     } else {
-      MXNET_CUDA_ONLY(op()->Backward(opContext_,
-                                     gpuData->blob_out_grad_,
-                                     gpuData->blob_input_vec_,
-                                     gpuData->blob_output_vec_,
-                                     {kWriteTo, kWriteTo, kWriteTo},
-                                     gpuData->blob_in_grad_,
-                                     gpuData->blob_aux_states_));
+      for (size_t x = 0; x < count; ++x) {
+        MXNET_CUDA_ONLY(op()->Backward(opContext_,
+                                       gpuData->blob_out_grad_,
+                                       gpuData->blob_input_vec_,
+                                       gpuData->blob_output_vec_,
+                                       {kWriteTo, kWriteTo, kWriteTo},
+                                       gpuData->blob_in_grad_,
+                                       gpuData->blob_aux_states_));
+      }
     }
   }
 

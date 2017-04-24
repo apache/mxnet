@@ -32,6 +32,7 @@ static constexpr int DW = 2;
 
 static constexpr int TIMING_BATCH_SIZE = 128;
 static constexpr int TIMING_CHANNELS = 3;
+static constexpr int TIMING_DEPTH = 2;
 static constexpr int TIMING_DH = 28;
 static constexpr int TIMING_DW = 28;
 
@@ -308,7 +309,8 @@ template<typename OperatorProp, typename DType>
 static test::op::OpInfo<OperatorProp, DType> testBatchNormOperatorForward(
   bool isGPU,
   const TShape& inputShape,
-  const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  const std::vector<std::pair<std::string, std::string> >& kwargs,
+  const size_t count = 1) {
 
 #if MXNET_USE_CUDA
   if(isGPU && !test::unitTestsWithCuda) {
@@ -336,10 +338,10 @@ static test::op::OpInfo<OperatorProp, DType> testBatchNormOperatorForward(
       );
   }
 
-  info.data_->forward();
+  info.data_->forward(count);
 
 #if !DISABLE_VALIDATION
-  if(!isUGS(kwargs)) {
+  if(!isUGS(kwargs) && count == 1) {
     BatchNormValidator<DType>::validateForward(*info.data_);
   }
 #endif
@@ -350,11 +352,12 @@ static test::op::OpInfo<OperatorProp, DType> testBatchNormOperatorForward(
 /*! \brief Test batch norm operator backward pass */
 template<typename DType, typename OperatorProp>
 static test::op::OpInfo<OperatorProp, DType> runOperatorBackward(
-  test::op::OpInfo<OperatorProp, DType> &info) {
+  test::op::OpInfo<OperatorProp, DType> &info,
+  const size_t count = 1) {
 
   info.data_->initBackward(*info.prop_, info.in_type_);
 
-  info.data_->backward();
+  info.data_->backward(count);
   return info;
 }
 
@@ -424,13 +427,14 @@ inline test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType> testBackward(
   const bool isGPU2,
   const TShape &inputShape,
   const test::op::kwargs_t& kwargs,
-  const bool dumpC) {
+  const bool dumpC,
+  const size_t count = 1) {
 
   test::op::OpInfo<OperatorProp1, DType> info_1 =
-    testBatchNormOperatorForward<OperatorProp1, DType>(isGPU1, inputShape, kwargs);
+    testBatchNormOperatorForward<OperatorProp1, DType>(isGPU1, inputShape, kwargs, count);
 
   test::op::OpInfo<OperatorProp2, DType> info_2 =
-    testBatchNormOperatorForward<OperatorProp2, DType>(isGPU2, inputShape, kwargs);
+    testBatchNormOperatorForward<OperatorProp2, DType>(isGPU2, inputShape, kwargs, count);
 
   dumpF(std::cout, 1, info_1);
   dumpF(std::cout, 2, info_2);
@@ -446,8 +450,8 @@ inline test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType> testBackward(
   info_2.data_->initBackward(*info_2.prop_, info_2.in_type_);
 
   // return backward
-  runOperatorBackward<DType>(info_1);
-  runOperatorBackward<DType>(info_2);
+  runOperatorBackward<DType>(info_1, count);
+  runOperatorBackward<DType>(info_2, count);
 
   dumpB(std::cout, 1, info_1);
   dumpB(std::cout, 2, info_2);
@@ -501,14 +505,11 @@ static void timingTest(const std::string& label,
                        const bool isGPU,
                        const bool stochastic,
                        const int dim = 0,
-                       const bool includeBackward = true) {
+                       const bool includeBackward = true,
+                       const size_t count = 1) {
   std::cout << std::endl << std::flush;
 
-#ifdef NDEBUG
-  const size_t COUNT = 5000;
-#else
   const size_t COUNT = 50;
-#endif
 
   test::perf::TimingInstrument timing;
 
@@ -524,11 +525,11 @@ static void timingTest(const std::string& label,
     index_t width;
 
     do {
-      batchSize = stochastic ? test::rangedRand(1U, BATCH_SIZE * 2U) : BATCH_SIZE * 2U;
-      channels = stochastic ? test::rangedRand(1U, CHANNELS * 2U) : CHANNELS * 2U;
-      depth = stochastic ? test::rangedRand(1U, DEPTH * 2U) : DEPTH * 2U;
-      height = stochastic ? test::rangedRand(1U, DH * 2U) : DH * 2U;
-      width = stochastic ? test::rangedRand(1U, DW * 2U) : DW * 2U;
+      batchSize = stochastic ? test::rangedRand(1U, BATCH_SIZE * 2U) : TIMING_BATCH_SIZE;
+      channels = stochastic ? test::rangedRand(1U, CHANNELS * 2U) : TIMING_CHANNELS;
+      depth = stochastic ? test::rangedRand(1U, DEPTH * 2U) : TIMING_DEPTH;
+      height = stochastic ? test::rangedRand(1U, DH * 2U) : TIMING_DH;
+      width = stochastic ? test::rangedRand(1U, DW * 2U) : TIMING_DW;
     } while (stochastic && (height * width) == 1U);
 
     const size_t D = dim ? dim - 1U : test::rangedRand(0U, 2U);
@@ -538,24 +539,24 @@ static void timingTest(const std::string& label,
       case 0:
         info = testBatchNormOperatorForward<PropType, DType>(isGPU,
                                                              {batchSize, channels, width},
-                                                             blank_kwargs);
+                                                             blank_kwargs, count);
         break;
       case 1:
         info = testBatchNormOperatorForward<PropType, DType>(isGPU,
                                                              {batchSize, channels, height, width},
-                                                             blank_kwargs);
+                                                             blank_kwargs, count);
         break;
       case 2:
         info = testBatchNormOperatorForward<PropType, DType>(isGPU,
                                                              {batchSize, channels, depth, height, width},
-                                                             blank_kwargs);
+                                                             blank_kwargs, count);
         break;
       default:
         CHECK(false) << "rangedRand() returned unexpected value";
     }
     if (info.data_.get()) {
       if (includeBackward) {
-        runOperatorBackward<DType>(info);
+        runOperatorBackward<DType>(info, count);
       }
       timing += info.data_->timing_;
     }
@@ -570,19 +571,24 @@ TEST(BATCH_NORM, TestStochasticTiming_2D) {
   timingTest<op::BatchNormProp,   float>("RANDOM: BatchNormProp<cpu>", false, true);
 #if MXNET_USE_CUDA
   if(test::unitTestsWithCuda) {
-    timingTest<op::BatchNormProp,   float>("RANDOM: BatchNormProp<gpu>", true, false, 2);
+    timingTest<op::BatchNormProp,   float>("RANDOM: BatchNormProp<gpu>", true, true);
   }
 #endif
 }
 
 /*! \brief Performance tests */
 TEST(BATCH_NORM, TestTiming_2D) {
-  timingTest<op::BatchNormV1Prop, float>("BatchNormV1Prop<cpu> 2D", false, false, 2);
-  timingTest<op::BatchNormProp,   float>("BatchNormProp<cpu> 2D", false, false, 2);
+#ifdef NDEBUG
+  const size_t THISCOUNT = 10;
+#else
+  const size_t THISCOUNT = 2;
+#endif
+  timingTest<op::BatchNormV1Prop, float>("BatchNormV1Prop<cpu> 2D", false, false, 2, true, THISCOUNT);
+  timingTest<op::BatchNormProp,   float>("BatchNormProp<cpu> 2D", false, false, 2, true, THISCOUNT);
 #if MXNET_USE_CUDA
   if(test::unitTestsWithCuda) {
-    timingTest<op::BatchNormV1Prop, float>("BatchNormV1Prop<gpu> 2D", true, false, 2);
-    timingTest<op::BatchNormProp,   float>("BatchNormProp<gpu> 2D", true, false, 2);
+    timingTest<op::BatchNormV1Prop, float>("BatchNormV1Prop<gpu> 2D", true, false, 2, true, THISCOUNT);
+    timingTest<op::BatchNormProp,   float>("BatchNormProp<gpu> 2D", true, false, 2, true, THISCOUNT);
   }
 #endif
 }
@@ -619,7 +625,6 @@ TEST(BATCH_NORM, Test2DBackward_Complex) {
   typedef float DType;
   test::ScopeSet<bool> noDebugOutput(test::debugOutput, false);
   const TShape inputShape({9, 14, 16, 91});
-  //const TShape inputShape({1, 2, 2, 1});
   test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
     testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(false, inputShape, blank_kwargs);
 }
