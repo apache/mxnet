@@ -35,11 +35,19 @@ enum EmbeddingOpResource {kTempSpace};
 struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
   int input_dim;
   int output_dim;
+  int dtype;
   DMLC_DECLARE_PARAMETER(EmbeddingParam) {
     DMLC_DECLARE_FIELD(input_dim).set_lower_bound(1)
     .describe("vocabulary size of the input indices.");
     DMLC_DECLARE_FIELD(output_dim).set_lower_bound(1)
     .describe("dimension of the embedding vectors.");
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("uint8", mshadow::kUint8)
+    .add_enum("int32", mshadow::kInt32)
+    .describe("Data type of weight.");
   }
 };
 
@@ -122,22 +130,46 @@ inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
 inline bool EmbeddingOpType(const nnvm::NodeAttrs& attrs,
                             std::vector<int> *in_type,
                             std::vector<int> *out_type) {
-  CHECK_GE(in_type->size(), 1U);
-  int dtype = (*in_type)[0];
-  CHECK_NE(dtype, -1) << "First input must have specified type";
-  for (index_t i = 0; i < in_type->size(); ++i) {
-    if ((*in_type)[i] == -1) {
-      (*in_type)[i] = dtype;
-    } else {
-      CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
-                                     << "Expected " << dtype << " v.s. given "
-                                     << (*in_type)[i];
-    }
+  const EmbeddingParam& param = nnvm::get<EmbeddingParam>(attrs.parsed);
+  CHECK_EQ(in_type->size(), 2U);
+  CHECK_GE(out_type->size(), 1U);
+  int itype = (*in_type)[0];
+  CHECK_NE(itype, -1) << "First input must have specified type";
+  int dtype_in = (*in_type)[1];
+  int dtype_out = (*out_type)[0];
+  int dtype = param.dtype;
+  if (dtype_in != -1 && dtype_out != -1) {
+    // Both types defined, make sure they are the same
+    CHECK_EQ(dtype_in, dtype_out) << "Input and output weights must have same type";
+    dtype = dtype_in;
+  } else if (dtype_in != -1 || dtype_out != -1) {
+    // One of the types defined, choose the one that was defined
+    dtype = (dtype_in != -1) ? dtype_in : dtype_out;
   }
+  if ((*in_type)[1] == -1) (*in_type)[1] = dtype;
   out_type->clear();
   out_type->push_back(dtype);
   return true;
 }
+
+/*! \brief name the struct Take instead of take
+ * to avoid conflict with the take function in mshadow
+ */
+struct Take {
+  // assume that idx have been flattened to a 1-D tensor (N,)
+  // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
+  // M is the number of columns of in_data and out_data
+  // K is the number of rows of in_data
+  // i is the index of out_data
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+                                  const IType* idx, const int M, const int K) {
+    int j = static_cast<int>(idx[i/M]);
+    if (j <= 0) j = 0;
+    else if (j >= K) j = K - 1;
+    out_data[i] = in_data[j * M + i % M];
+  }
+};
 
 template<typename xpu>
 void EmbeddingOpForward(const nnvm::NodeAttrs& attrs,
@@ -145,8 +177,7 @@ void EmbeddingOpForward(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& inputs,
                         const std::vector<OpReqType>& req,
                         const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
+  using namespace mxnet_op;
   CHECK_EQ(req[embedding::kOut], kWriteTo);
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
@@ -160,12 +191,15 @@ void EmbeddingOpForward(const nnvm::NodeAttrs& attrs,
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Tensor<xpu, 1, DType> data = inputs[embedding::kData].get_with_shape<xpu, 1, DType>(
-      Shape1(ishape.ProdShape(0, ishape.ndim())), s);
-    Tensor<xpu, 2, DType> wmat = inputs[embedding::kWeight].get<xpu, 2, DType>(s);
-    Tensor<xpu, 2, DType> out = outputs[embedding::kOut].get_with_shape<xpu, 2, DType>(
-      Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-    out = take(data, wmat);
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
+      Tensor<xpu, 1, IType> data = inputs[embedding::kData].get_with_shape<xpu, 1, IType>(
+        Shape1(ishape.ProdShape(0, ishape.ndim())), s);
+      Tensor<xpu, 2, DType> wmat = inputs[embedding::kWeight].get<xpu, 2, DType>(s);
+      Tensor<xpu, 2, DType> out = outputs[embedding::kOut].get_with_shape<xpu, 2, DType>(
+        Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
+      Kernel<Take, xpu>::Launch(s, oshape.Size(), out.dptr_, wmat.dptr_,
+        data.dptr_, wmat.shape_[1], wmat.shape_[0]);
+    });
   });
 }
 
@@ -176,11 +210,24 @@ inline int ilog2(unsigned int a) {
   return k;
 }
 
+/*! \brief cast to type and clip to range [0, K - 1]
+ */
+struct tcast_clip {
+  template<typename OType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, OType* out_data, const IType* in_data,
+                                  const OType K) {
+    OType j = static_cast<OType>(in_data[i]);
+    if (j <= 0) j = 0;
+    else if (j >= K) j = K - 1;
+    out_data[i] = j;
+  }
+};
+
 template<typename xpu, typename IndexType, typename DType>
 void AddTakeGradLargeBatchCaller(const OpContext& ctx, mshadow::Tensor<xpu, 2, DType> dst,
                                  const mshadow::Tensor<xpu, 1, IndexType>& index,
                                  const mshadow::Tensor<xpu, 2, DType> &src) {
-  using namespace mshadow;
+  using namespace mxnet_op;
   using namespace mshadow::expr;
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -207,7 +254,8 @@ void AddTakeGradLargeBatchCaller(const OpContext& ctx, mshadow::Tensor<xpu, 2, D
     Shape1(index.shape_.Size()), s);
   pos += index.shape_.Size()*sizeof(int);
   Tensor<xpu, 1, char> temp_storage(&workspace[pos], Shape1(temp_storage_size), s);
-  sorted_data = tcast<int>(index);
+  Kernel<tcast_clip, xpu>::Launch(s, index.shape_.Size(), sorted_data.dptr_, index.dptr_,
+    static_cast<int>(dst.shape_[0]));
   original_index = range<int>(0, index.shape_.Size());
   int num_bits = ilog2((dst.shape_[0] - 1));
   mxnet::op::SortByKey(sorted_data, original_index, true, &temp_storage, 0, num_bits);
@@ -226,41 +274,44 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 2U);
   CHECK_EQ(req[embedding::kData], kNullOp)
           << "Embedding layer doesn't support calculate data gradient";
+  CHECK_EQ(outputs[1].type_flag_, inputs[0].type_flag_);
 
   const TShape& ishape = inputs[1].shape_;
   const TShape& oshape = inputs[0].shape_;
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Tensor < xpu, 1, DType > data = inputs[1].get_with_shape<xpu, 1, DType>(
-      Shape1(ishape.ProdShape(0, ishape.ndim())), s);
-    Tensor<xpu, 2, DType> grad_out = inputs[0].get_with_shape<xpu, 2, DType>(
-    Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-    Tensor<xpu, 2, DType> grad_in = outputs[1].get<xpu, 2, DType>(s);
+  MSHADOW_TYPE_SWITCH(outputs[1].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {
+      Tensor < xpu, 1, IType > data = inputs[1].get_with_shape<xpu, 1, IType>(
+        Shape1(ishape.ProdShape(0, ishape.ndim())), s);
+      Tensor<xpu, 2, DType> grad_out = inputs[0].get_with_shape<xpu, 2, DType>(
+      Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
+      Tensor<xpu, 2, DType> grad_in = outputs[1].get<xpu, 2, DType>(s);
 
 
-    if (req[embedding::kWeight] == kWriteTo || req[embedding::kWeight] == kAddTo) {
-      if (req[embedding::kWeight] == kWriteTo) {
-        grad_in = scalar<DType>(0.0f);
-      }
-      // shape_out_prod ~= the number of elements loaded in AddTakeGrad
-      // shape_in_prod  ~= the number of elements stored in AddTakeGrad
-      // When the number of elements processed is low, use AddTakeGrad.
-      // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
-      uint64_t shape_in_prod =
-        static_cast<uint64_t>(grad_in.shape_[0])*
-        static_cast<uint64_t>(grad_in.shape_[1]);
-      uint64_t shape_out_prod =
-        static_cast<uint64_t>(grad_out.shape_[0])*
-        static_cast<uint64_t>(grad_out.shape_[1]);
-      if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
-        AddTakeGrad(grad_in, data, grad_out);
+      if (req[embedding::kWeight] == kWriteTo || req[embedding::kWeight] == kAddTo) {
+        if (req[embedding::kWeight] == kWriteTo) {
+          grad_in = scalar<DType>(0.0f);
+        }
+        // shape_out_prod ~= the number of elements loaded in AddTakeGrad
+        // shape_in_prod  ~= the number of elements stored in AddTakeGrad
+        // When the number of elements processed is low, use AddTakeGrad.
+        // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
+        uint64_t shape_in_prod =
+          static_cast<uint64_t>(grad_in.shape_[0])*
+          static_cast<uint64_t>(grad_in.shape_[1]);
+        uint64_t shape_out_prod =
+          static_cast<uint64_t>(grad_out.shape_[0])*
+          static_cast<uint64_t>(grad_out.shape_[1]);
+        if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
+          AddTakeGrad(grad_in, data, grad_out);
+        } else {
+          AddTakeGradLargeBatchCaller(ctx, grad_in, data, grad_out);
+        }
       } else {
-        AddTakeGradLargeBatchCaller(ctx, grad_in, data, grad_out);
+        LOG(FATAL) << "wrong req";
       }
-    } else {
-      LOG(FATAL) << "wrong req";
-    }
+    });
   });
 }
 
@@ -279,13 +330,17 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
     DMLC_DECLARE_FIELD(axis)
     .set_lower_bound(0)
     .set_default(0)
-    .describe("the axis of data tensor to be taken.");
+    .describe("The axis of input array to be taken.");
     DMLC_DECLARE_FIELD(mode)
     .add_enum("raise", take_::kRaise)
     .add_enum("wrap", take_::kWrap)
     .add_enum("clip", take_::kClip)
     .set_default(take_::kClip)
-    .describe("specify how out-of-bound indices bahave.");
+    .describe("Specify how out-of-bound indices bahave."
+              " \"clip\" means clip to the range. So, if all indices mentioned are too large,"
+              " they are replaced by the index that addresses the last element along an axis. "
+              " \"wrap\" means to wrap around. "
+              " \"raise\" means to raise an error. ");
   }
 };
 
@@ -333,25 +388,6 @@ inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
   return (*in_attrs)[0] != -1;
 }
-
-/*! \brief name the struct Take instead of take
- * to avoid conflict with the take function in mshadow
- */
-struct Take {
-  // assume that idx have been flattened to a 1-D tensor (N,)
-  // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
-  // M is the number of columns of in_data and out_data
-  // K is the number of rows of in_data
-  // i is the index of out_data
-  template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
-                                  const IType* idx, const int M, const int K) {
-    int j = static_cast<int>(idx[i/M]);
-    if (j <= 0) j = 0;
-    else if (j >= K) j = K - 1;
-    out_data[i] = in_data[j * M + i % M];
-  }
-};
 
 template<typename xpu>
 void TakeOpForward(const nnvm::NodeAttrs& attrs,

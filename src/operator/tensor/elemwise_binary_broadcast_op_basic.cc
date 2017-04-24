@@ -52,7 +52,7 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_sub)
 .add_alias("broadcast_minus")
 .describe(R"code(Returns element-wise difference of the input arrays with broadcasting.
 
-`broadcast_minus` is an alias to the function `broadcast_sub`
+`broadcast_minus` is an alias to the function `broadcast_sub`.
 
 Example::
 

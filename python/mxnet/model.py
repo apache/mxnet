@@ -497,12 +497,13 @@ class FeedForward(BASE_ESTIMATOR):
 
     def _init_params(self, inputs, overwrite=False):
         """Initialize weight parameters and auxiliary states."""
+        inputs = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in inputs]
         input_shapes = {item.name: item.shape for item in inputs}
         arg_shapes, _, aux_shapes = self.symbol.infer_shape(**input_shapes)
-        assert(arg_shapes is not None)
+        assert arg_shapes is not None
         input_dtypes = {item.name: item.dtype for item in inputs}
         arg_dtypes, _, aux_dtypes = self.symbol.infer_type(**input_dtypes)
-        assert(arg_dtypes is not None)
+        assert arg_dtypes is not None
 
         arg_names = self.symbol.list_arguments()
         input_names = input_shapes.keys()

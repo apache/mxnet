@@ -34,7 +34,7 @@ struct SequenceLastParam : public dmlc::Parameter<SequenceLastParam> {
     DMLC_DECLARE_FIELD(use_sequence_length)
         .set_default(false)
         .describe(
-            "If set to true, this layer takes in extra input sequence_length "
+            "If set to true, this layer takes in an extra input parameter `sequence_length` "
             "to specify variable length sequence");
   }
 };
