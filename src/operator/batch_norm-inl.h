@@ -53,7 +53,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
 };
 
 /*! \brief Batch normalization operator */
-template<typename xpu, typename Dtype, typename AccType>
+template<typename xpu, typename DType, typename AccType>
 class BatchNormOp : public Operator
                   , public Callbacker<Operator> {
   typedef ::nnvm::TShape TShape;
@@ -76,37 +76,18 @@ class BatchNormOp : public Operator
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
   template<typename Shape, typename OnData>
-  static inline void forEachFast(const Dtype *in_data, const Shape& shape, OnData onData) {
-    const size_t dim = shape.ndim();
-    const size_t num = shape[0];
-    const size_t channels = dim > 1 ? shape[1] : 1;
-    const size_t matrixSize = shape.Size() / (channels * num);
-
-    for (size_t batchItem = 0; batchItem < num; ++batchItem) {
-      #pragma openmp for
-      for (size_t channel = 0; channel < channels; ++channel) {
-        for (size_t i = 0; i < matrixSize; ++i) {
-          onData(channel, in_data++);
-        }
-      }
-    }
-  }
-
-  /*! \brief Fast-foreach when you don't care about the position other than channel */
-  template<typename Shape, typename OnData>
-  static inline void forEachFast(Dtype *in_data, const Shape& shape,
+  static inline void forEachFast(DType *in_data, const Shape& shape,
                                  const size_t channel, OnData onData) {
     const size_t dim = shape.ndim();
     const size_t num = shape[0];
     const size_t channels = dim > 1 ? shape[1] : 1;
     const size_t matrixSize = shape.Size() / (channels * num);
 
-    size_t indices[dim] = {0, };
-    indices[1] = channel;
+    size_t indices[2] = {0, channel};
 
     for (size_t batchItem = 0; batchItem < num; ++batchItem) {
       indices[0] = batchItem;
-      Dtype *data = in_data + offset(shape, indices, dim);
+      DType *data = in_data + offset(shape, &indices[0], sizeof(indices)/sizeof(indices[0]));
       for (size_t i = 0; i < matrixSize; ++i) {
         onData(data++);
       }
@@ -115,21 +96,20 @@ class BatchNormOp : public Operator
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
   template<typename Shape, typename OnData>
-  static inline void forEachFast(const Dtype *in_data, Dtype *out_data,
+  static inline void forEachFast(const DType *in_data, DType *out_data,
                                  const Shape& shape, const size_t channel, OnData onData) {
     const size_t dim = shape.ndim();
     const size_t num = shape[0];
     const size_t channels = dim > 1 ? shape[1] : 1;
     const size_t matrixSize = shape.Size() / (channels * num);
 
-    size_t indices[dim] = {0, };
-    indices[1] = channel;
+    size_t indices[2] = {0, channel};
 
     for (size_t batchItem = 0; batchItem < num; ++batchItem) {
       indices[0] = batchItem;
-      const size_t off = offset(shape, indices, dim);
-      const Dtype *data = in_data + off;
-      Dtype *odata = out_data + off;
+      const size_t off = offset(shape, &indices[0], sizeof(indices)/sizeof(indices[0]));
+      const DType *data = in_data + off;
+      DType *odata = out_data + off;
       for (size_t i = 0; i < matrixSize; ++i) {
         onData(data++, odata++);
       }
@@ -138,7 +118,28 @@ class BatchNormOp : public Operator
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
   template<typename Shape, typename OnData>
-  static inline void forEachFast(const Dtype *in_data, Dtype *out_data,
+  static inline void forEachFast(const DType *in_data, const Shape& shape, OnData onData) {
+    const size_t dim = shape.ndim();
+    const size_t num = shape[0];
+    const size_t channels = dim > 1 ? shape[1] : 1;
+    const size_t matrixSize = shape.Size() / (channels * num);
+
+    for (size_t batchItem = 0; batchItem < num; ++batchItem) {
+      #pragma openmp for
+      for (size_t channel = 0; channel < channels; ++channel) {
+        size_t indices[2] = { batchItem, channel };
+        const size_t off = offset(shape, &indices[0], sizeof(indices)/sizeof(indices[0]));
+        const DType *inData = in_data + off;
+        for (size_t i = 0; i < matrixSize; ++i) {
+          onData(channel, inData++);
+        }
+      }
+    }
+  }
+
+  /*! \brief Fast-foreach when you don't care about the position other than channel */
+  template<typename Shape, typename OnData>
+  static inline void forEachFast(const DType *in_data, DType *out_data,
                                  const Shape& shape, OnData onData) {
     const size_t dim = shape.ndim();
     const size_t num = shape[0];
@@ -148,8 +149,12 @@ class BatchNormOp : public Operator
     for (size_t batchItem = 0; batchItem < num; ++batchItem) {
       #pragma omp parallel for
       for (size_t channel = 0; channel < channels; ++channel) {
+        size_t indices[2] = { batchItem, channel };
+        const size_t off = offset(shape, &indices[0], sizeof(indices)/sizeof(indices[0]));
+        const DType *inData = in_data + off;
+        DType *outData = out_data + off;
         for (size_t i = 0; i < matrixSize; ++i) {
-          onData(channel, in_data++, out_data++);
+          onData(channel, inData++, outData++);
         }
       }
     }
@@ -157,11 +162,11 @@ class BatchNormOp : public Operator
 
   /*! \brief Compute the mean of each input channel */
   template<typename Shape>
-  static inline void computeMean(const Dtype *in_data,
+  static inline void computeMean(const DType *in_data,
                                  const Shape &ishape,
                                  const Shape &stride,
                                  const Shape &oshape,
-                                 Dtype *save_mean) {
+                                 DType *save_mean) {
     const size_t channelCount = ishape[1];
 
     for (size_t i = 0, n = oshape.Size(); i < n; ++i) {
@@ -169,7 +174,7 @@ class BatchNormOp : public Operator
     }
 
     forEachFast(in_data, ishape,
-                [&save_mean](const size_t channel, const Dtype *in_data){
+                [&save_mean](const size_t channel, const DType *in_data){
                   save_mean[channel] += *in_data;
                 });
 
@@ -184,19 +189,19 @@ class BatchNormOp : public Operator
   }
 
   /*! \brief inverse standard deviation <-> variance */
-  #define VARIANCE_TO_INVSTD(__var$,    __eps$)   (1.0/sqrt((__var$) + Dtype(__eps$)))
+  #define VARIANCE_TO_INVSTD(__var$,    __eps$)   (1.0/sqrt((__var$) + DType(__eps$)))
   #define INVSTD_TO_VARIANCE(__invstd$, __eps$)   ((1.0 / ((__invstd$) * (__invstd$))) - (__eps$))
 
   /*! \brief Compute the variance of each input channel, as well as update moving mean/variants */
-  template<typename DType, typename  Shape>
+  template<typename  Shape>
   inline void computeVariance(const DType *in_data,
                               const Shape &ishape,
                               const Shape &stride,
                               const DType *mean_data,
-                              const Dtype eps,
-                              const Dtype momentum,
+                              const DType eps,
+                              const DType momentum,
                               const Shape &oshape,
-                              Dtype *save_std) {
+                              DType *save_std) {
     for (size_t i = 0, n = oshape.Size(); i < n; ++i) {
       save_std[i] = 0;
     }
@@ -219,7 +224,7 @@ class BatchNormOp : public Operator
         // Nobody likes to divide by zero
         invstd = 0;
       } else {
-        const Dtype variance = sum/itemCount;
+        const DType variance = sum/itemCount;
         invstd = VARIANCE_TO_INVSTD(variance, eps);
       }
       save_std[channel] = invstd;
@@ -242,8 +247,8 @@ class BatchNormOp : public Operator
    *        need, epecial case like Batch Norm requires.
    * \sa OpReqType, OpContext
    */
-#ifdef MXNET_USE_CUDA
-  void doForward(mshadow::Stream<gpu> *stream,
+#if MXNET_USE_CUDA
+  void DoForward(mshadow::Stream<gpu> *stream,
                  const OpContext &ctx,
                  const std::vector<TBlob> &in_data,
                  const std::vector<OpReqType> &req,
@@ -252,7 +257,7 @@ class BatchNormOp : public Operator
 #endif  // MXNET_USE_CUDA
 
   /*! \brief Forward CPU */
-  void doForward(mshadow::Stream<cpu> *stream,
+  void DoForward(mshadow::Stream<cpu> *stream,
                  const OpContext &ctx,
                  const std::vector<TBlob> &in_data,
                  const std::vector<OpReqType> &req,
@@ -276,23 +281,23 @@ class BatchNormOp : public Operator
       const TShape stride(2);
 
       // compute mean per input
-      computeMean(inputData.dptr<Dtype>(), inputData.shape_, stride, meanVector.shape_,
-                  meanVector.dptr<Dtype>());
+      computeMean(inputData.dptr<DType>(), inputData.shape_, stride, meanVector.shape_,
+                  meanVector.dptr<DType>());
 
       // compute variance per input
-      computeVariance(inputData.dptr<Dtype>(),
+      computeVariance(inputData.dptr<DType>(),
                       inputData.shape_,
                       stride,
-                      meanVector.dptr<Dtype>(),
+                      meanVector.dptr<DType>(),
                       param_.eps,
                       param_.momentum,
                       varianceVector.shape_,
-                      varianceVector.dptr<Dtype>());
+                      varianceVector.dptr<DType>());
     } else {
-      Dtype *m = meanVector.dptr<Dtype>();
-      Dtype *v = varianceVector.dptr<Dtype>();
-      const Dtype *rm = runningMean.dptr<Dtype>();
-      const Dtype *rv = runningVariance.dptr<Dtype>();
+      DType *m = meanVector.dptr<DType>();
+      DType *v = varianceVector.dptr<DType>();
+      const DType *rm = runningMean.dptr<DType>();
+      const DType *rv = runningVariance.dptr<DType>();
 
       for (size_t i = 0, n = inputData.shape_[1]; i < n; ++i) {
         m[i] = rm[i];
@@ -301,22 +306,22 @@ class BatchNormOp : public Operator
     }
 
     // compute output
-    Dtype          *w = weights.dptr<Dtype>();
-    const Dtype    *b = bias.dptr<Dtype>();
-    const Dtype *mean = meanVector.dptr<Dtype>();
-    Dtype  *var = varianceVector.dptr<Dtype>();
+    DType          *w = weights.dptr<DType>();
+    const DType    *b = bias.dptr<DType>();
+    const DType *mean = meanVector.dptr<DType>();
+    DType  *var = varianceVector.dptr<DType>();
 
     // optionally, keep weights fixed at 1
     if (param_.fix_gamma) {
       for (size_t i =0, n = weights.Size(); i < n; ++i) {
-        w[i] = Dtype(1);
+        w[i] = DType(1);
       }
     }
 
     if (req[batchnorm::kData] == kWriteTo || req[batchnorm::kData] == kWriteInplace) {
-      forEachFast(inputData.dptr<Dtype>(), outputData.dptr<Dtype>(), inputData.shape_,
-                  [w, b, mean, var](const size_t channel, const Dtype *in_data, Dtype *out_data) {
-                    *out_data = static_cast<Dtype>(
+      forEachFast(inputData.dptr<DType>(), outputData.dptr<DType>(), inputData.shape_,
+                  [w, b, mean, var](const size_t channel, const DType *in_data, DType *out_data) {
+                    *out_data = static_cast<DType>(
                       ((*in_data - mean[channel]) * var[channel]) * w[channel] + b[channel]);});
     }
 
@@ -349,7 +354,7 @@ class BatchNormOp : public Operator
       CHECK_EQ(req[batchnorm::kOut], kWriteTo);
     }
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    doForward(s, ctx, in_data, req, out_data, aux_states);
+    DoForward(s, ctx, in_data, req, out_data, aux_states);
   }
 
   /*!
@@ -380,8 +385,8 @@ class BatchNormOp : public Operator
    * \param aux_states Auxiliary states of operator. Normally operator doesn't need
    * \sa OperatorProperty, OpReqType, OpContext
    */
-#ifdef MXNET_USE_CUDA
-  void doBackward(mshadow::Stream<gpu> *stream,
+#if MXNET_USE_CUDA
+  void DoBackward(mshadow::Stream<gpu> *stream,
                   const OpContext &ctx,
                   const std::vector<TBlob> &out_grad,
                   const std::vector<TBlob> &in_data,
@@ -391,7 +396,7 @@ class BatchNormOp : public Operator
                   const std::vector<TBlob> &aux_states);
 #endif  // MXNET_USE_CUDA
 
-  void doBackward(mshadow::Stream<cpu> *stream,
+  void DoBackward(mshadow::Stream<cpu> *stream,
                   const OpContext &ctx,
                   const std::vector<TBlob> &out_grad,
                   const std::vector<TBlob> &in_data,
@@ -421,32 +426,32 @@ class BatchNormOp : public Operator
     const size_t itemCount    = inputData.Size() / channelCount;
 
     // Avoid multiple dptr() call within the channel loop
-    Dtype *inputDataPtr = inputData.dptr<Dtype>();
-    Dtype *gradOutDataPtr = gradOut.dptr<Dtype>();
-    Dtype *runningMeanDataPtr = runningMean.dptr<Dtype>();
-    Dtype *runningVarDataPtr  = runningVariance.dptr<Dtype>();
-    Dtype *saveMeanDataPtr = saveMean.dptr<Dtype>();
-    Dtype *saveVarianceDataPtr = saveStd.dptr<Dtype>();
-    Dtype *gradInDataPtr = gradIn.dptr<Dtype>();
-    Dtype *gradWeightData = gradWeight.dptr<Dtype>();
-    Dtype *gradBiasData = gradBias.dptr<Dtype>();
+    DType *inputDataPtr = inputData.dptr<DType>();
+    DType *gradOutDataPtr = gradOut.dptr<DType>();
+    DType *runningMeanDataPtr = runningMean.dptr<DType>();
+    DType *runningVarDataPtr  = runningVariance.dptr<DType>();
+    DType *saveMeanDataPtr = saveMean.dptr<DType>();
+    DType *saveVarianceDataPtr = saveStd.dptr<DType>();
+    DType *gradInDataPtr = gradIn.dptr<DType>();
+    DType *gradWeightData = gradWeight.dptr<DType>();
+    DType *gradBiasData = gradBias.dptr<DType>();
 
     #pragma omp parallel for
     for (size_t channel = 0; channel < channelCount; ++channel) {
-      Dtype *weight = weights.dptr<Dtype>();
-      const Dtype w = weight ? weight[channel] : Dtype(1);
-      Dtype mean, invstd;
+      DType *weight = weights.dptr<DType>();
+      const DType w = weight ? weight[channel] : DType(1);
+      DType mean, invstd;
       if (ctx.is_train) {
         mean = saveMeanDataPtr[channel];
-        const Dtype variance = saveVarianceDataPtr[channel];
+        const DType variance = saveVarianceDataPtr[channel];
         invstd = VARIANCE_TO_INVSTD(variance, param_.eps);
 
         // update running averages
         runningMeanDataPtr[channel] = runningMeanDataPtr[channel] * param_.momentum
-                                      + mean * (Dtype(1) - param_.momentum);
+                                      + mean * (DType(1) - param_.momentum);
 
         runningVarDataPtr[channel] = runningVarDataPtr[channel] * param_.momentum
-                                     + variance * (Dtype(1) - param_.momentum);
+                                     + variance * (DType(1) - param_.momentum);
 
       } else {
         mean = runningMeanDataPtr[channel];
@@ -454,16 +459,16 @@ class BatchNormOp : public Operator
       }
 
       // sumGradOut over all gradOutput in feature plane
-      Dtype sumGradOut = 0;
+      DType sumGradOut = 0;
       forEachFast(gradOutDataPtr, gradOut.shape_, channel,
-                  [&sumGradOut](const Dtype *gradOut_data) {
+                  [&sumGradOut](const DType *gradOut_data) {
                     sumGradOut += *gradOut_data;
                   });
 
       // dot product of the Q(X) and gradOuput
-      Dtype dotp = 0;
+      DType dotp = 0;
       forEachFast(inputDataPtr, gradOutDataPtr, gradOut.shape_, channel,
-                  [&dotp, mean](const Dtype *thisInputData, const Dtype *gradOut_data) {
+                  [&dotp, mean](const DType *thisInputData, const DType *gradOut_data) {
                     dotp += (*thisInputData - mean) * (*gradOut_data);
                   });
 
@@ -475,16 +480,16 @@ class BatchNormOp : public Operator
           // dL/dX = (Q(dL/dY) - dot(Y, dL/dY) * Y) / σ * w
 
           // projection of gradOutput on to output scaled by std
-          const Dtype k = dotp * invstd * invstd / itemCount;
+          const DType k = dotp * invstd * invstd / itemCount;
           forEachFast(inputDataPtr, gradInDataPtr, gradOut.shape_, channel,
-                      [&mean, &k](const Dtype *in_data, Dtype *gradIn_data) {
+                      [&mean, &k](const DType *in_data, DType *gradIn_data) {
                         *gradIn_data = (*in_data - mean) * k;
                       });
 
-          const Dtype iw = invstd * w;
-          const Dtype gradMean = sumGradOut / itemCount;
+          const DType iw = invstd * w;
+          const DType gradMean = sumGradOut / itemCount;
           forEachFast(gradOutDataPtr, gradInDataPtr, gradOut.shape_, channel,
-                      [iw, gradMean](const Dtype *gradOut_data, Dtype *gradIn_data) {
+                      [iw, gradMean](const DType *gradOut_data, DType *gradIn_data) {
                         *gradIn_data = (*gradOut_data - gradMean - *gradIn_data) * iw;
                       });
         } else {
@@ -492,22 +497,22 @@ class BatchNormOp : public Operator
           // Q(X) = X - running_mean  ; i.e. input centered to zero mean
           // Y = Q(X) / running_std    ; i.e. BN output before weight and bias
           // dL/dX = w / running_std
-          const Dtype iw = invstd * w;
+          const DType iw = invstd * w;
           forEachFast(gradOutDataPtr, gradInDataPtr, gradOut.shape_, channel,
-                      [iw](const Dtype *gradOut_data, Dtype *gradIn_data) {
+                      [iw](const DType *gradOut_data, DType *gradIn_data) {
                         *gradIn_data = *gradOut_data  * iw;
                       });
         }
       }
 
       // May want to make this a param eventually
-      const Dtype scale = 1.0;
+      const DType scale = 1.0;
 
       if (isWriting(req[batchnorm::kGamma])) {
         if (!param_.fix_gamma) {
           gradWeightData[channel] = gradWeightData[channel] + scale * dotp * invstd;
         } else {
-          gradWeightData[channel] = Dtype(0);
+          gradWeightData[channel] = DType(0);
         }
       }
 
@@ -529,7 +534,7 @@ class BatchNormOp : public Operator
     CHECK_EQ(out_data.size(), 3U);
     CHECK_EQ(in_grad.size(), 3U);
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    doBackward(s, ctx, out_grad, in_data,
+    DoBackward(s, ctx, out_grad, in_data,
                out_data, req, in_grad, aux_states);
   }
 
