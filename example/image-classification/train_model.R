@@ -33,9 +33,9 @@ train_model.fit <- function(args, network, data_loader) {
     }
 
     # data
-    data <- data_loader
+    data <- data_loader(args)
     train <- data$train
-    val <- data$value  
+    val <- data$value 
     
     # devices
     if (is.null(args$gpus)) {

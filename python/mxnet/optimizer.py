@@ -1,8 +1,8 @@
-"""Weight updating functions"""
+"""Weight updating functions."""
 import math
 import pickle
 import logging
-from .ndarray import NDArray, zeros, clip, sqrt
+from .ndarray import NDArray, zeros, clip, sqrt, sign
 from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
 from .random import normal
 
@@ -13,7 +13,7 @@ class Optimizer(object):
     Parameters
     ----------
     rescale_grad : float, optional
-        Multiply the gradient with ``rescale_grad`` before updating. Often
+        Multiply the gradient with `rescale_grad` before updating. Often
         choose to be ``1.0/batch_size``.
 
     param_idx2name : dict from int to string, optional
@@ -72,7 +72,7 @@ class Optimizer(object):
         """Register a new optimizer.
 
         Once an optimizer is registered, we can create an instance of this
-        optimizer with ``create_optimizer`` later.
+        optimizer with `create_optimizer` later.
 
         Examples
         --------
@@ -101,7 +101,7 @@ class Optimizer(object):
 
         Notes
         -----
-        We can use the alias ``create`` for ``Optimizer.create_optimizer``
+        We can use the alias `create` for ``Optimizer.create_optimizer``
 
         Parameters
         ----------
@@ -137,7 +137,7 @@ class Optimizer(object):
 
         Some optimizers require additional states, e.g. as momentum, in addition
         to gradients in order to update weights. This function creates state
-        for a given weight which will be used in ``update``. This function is
+        for a given weight which will be used in `update`. This function is
         called only once for each weight.
 
         Parameters
@@ -145,7 +145,7 @@ class Optimizer(object):
         index : int
             An unique index to identify the weight.
         weight : NDArray
-            The weight
+            The weight.
 
         Returns
         -------
@@ -253,7 +253,7 @@ class Optimizer(object):
 
     def _get_wd(self, index):
         """get weight decay for index.
-        Returns 0 for non-weights if the name of weights are provided for __init__.
+        Returns 0 for non-weights if the name of weights are provided for `__init__`.
 
         Parameters
         ----------
@@ -314,7 +314,7 @@ class SGD(Optimizer):
         wd = self._get_wd(index)
         self._update_count(index)
 
-        if state:
+        if state is not None:
             sgd_mom_update(weight, grad, state, out=weight,
                            lr=lr, wd=wd, **self.kwargs)
         else:
@@ -401,7 +401,7 @@ class NAG(SGD):
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
 
-        if state:
+        if state is not None:
             mom = state
             mom[:] *= self.momentum
             grad += wd * weight
@@ -648,6 +648,59 @@ class AdaDelta(Optimizer):
 
         # update weight
         weight[:] -= current_delta + wd * weight
+
+#pylint: disable=invalid-name
+@register
+class Ftrl(Optimizer):
+    """
+    Reference:Ad Click Prediction: a View from the Trenches
+
+    Parameters
+    ----------
+    lamda1 : float, optional
+        L1 regularization coefficient.
+
+    learning_rate : float, optional
+        The initial learning rate.
+
+    beta : float, optional
+        Per-coordinate learning rate correlation parameter.
+    eta_{t,i}=frac{learning_rate}{beta+sqrt{sum_{s=1^}tg_{s,i}^t}
+
+    """
+
+    def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1, **kwargs):
+        super(Ftrl, self).__init__(**kwargs)
+        self.lamda1 = lamda1
+        self.beta = beta
+        self.lr = learning_rate
+
+    def create_state(self, index, weight):
+        return (zeros(weight.shape, weight.context),  # dn
+                zeros(weight.shape, weight.context))  # n
+
+    def update(self, index, weight, grad, state):
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        self._update_count(index)
+        wd = self._get_wd(index)
+        lr = self._get_lr(index)
+
+        # preprocess grad
+        grad *= self.rescale_grad
+        if self.clip_gradient is not None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        # accumulated g and delta initlization
+        dn, n = state
+
+        #update dn, n
+        dn += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / lr
+        n += grad * grad
+
+        # update weight
+        weight[:] = (sign(dn) * self.lamda1 - dn) / \
+            ((self.beta + sqrt(n)) / lr + wd) * (NDArray.abs(dn) > self.lamda1)
 
 @register
 class Test(Optimizer):

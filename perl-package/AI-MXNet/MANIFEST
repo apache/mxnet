@@ -14,6 +14,7 @@ t/test_init.t
 t/test_model_parallel.t
 t/test_optimizers.t
 t/test_multi_device_exec.t
+t/test_ndarray.t
 t/test_io.t
 t/AI-MXNet.t
 t/test_kvstore.t

@@ -6,7 +6,6 @@ with convolutions." arXiv preprint arXiv:1409.4842 (2014).
 
 """
 
-import find_mxnet
 import mxnet as mx
 
 def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0), name=None, suffix=''):

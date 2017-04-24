@@ -87,7 +87,7 @@ def cpu(device_id=0):
     Parameters
     ----------
     device_id : int, optional
-        The device id of the device. ``device_id`` is not needed for CPU.
+        The device id of the device. `device_id` is not needed for CPU.
         This is included to make interface compatible with GPU.
 
     Returns

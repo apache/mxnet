@@ -152,8 +152,8 @@ method load_checkpoint(Str $prefix, Int $epoch)
 
 =head1 NAME
 
-AI::MXNet::Module - FeedForward interface of MXNet.
-See AI::MXNet::Module::Base for the details.
+    AI::MXNet::Module - FeedForward interface of MXNet.
+    See AI::MXNet::Module::Base for the details.
 =cut
 
 extends 'AI::MXNet::Module::Base';
@@ -223,7 +223,7 @@ sub BUILD
 method Module(@args) { return @args ?  __PACKAGE__->new(@args) : __PACKAGE__ }
 method BucketingModule(@args) { return AI::MXNet::Module::Bucketing->new(@args) }
 
-=head load
+=head2 load
 
         Create a model from previously saved checkpoint.
 
@@ -275,17 +275,17 @@ method load(
 
 =head2 save_checkpoint
 
-Save current progress to checkpoint.
-Use mx->callback->module_checkpoint as epoch_end_callback to save during training.
+    Save current progress to a checkpoint.
+    Use mx->callback->module_checkpoint as epoch_end_callback to save during training.
 
-Parameters
-----------
-prefix : str
-    The file prefix to checkpoint to
-epoch : int
-    The current epoch number
-save_optimizer_states : bool
-    Whether to save optimizer states for continue training
+    Parameters
+    ----------
+    prefix : str
+        The file prefix to checkpoint to
+    epoch : int
+        The current epoch number
+    save_optimizer_states : bool
+        Whether to save optimizer states for later training
 =cut
 
 
@@ -501,28 +501,28 @@ method set_params(
 
 =head2 bind
 
-Bind the symbols to construct executors. This is necessary before one
-can perform computation with the module.
+    Bind the symbols to construct executors. This is necessary before one
+    can perform computation with the module.
 
-Parameters
-----------
-:$data_shapes : ArrayRef[AI::MXNet::DataDesc|NameShape]
-    Typically is $data_iter->provide_data.
-:$label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
-    Typically is $data_iter->provide_label.
-:$for_training : bool
-    Default is 1. Whether the executors should be bind for training.
-:$inputs_need_grad : bool
-    Default is 0. Whether the gradients to the input data need to be computed.
-    Typically this is not needed. But this might be needed when implementing composition
-    of modules.
-:$force_rebind : bool
-    Default is 0. This function does nothing if the executors are already
-    binded. But with this 1, the executors will be forced to rebind.
-:$shared_module : Module
-    Default is undef. This is used in bucketing. When not undef, the shared module
-    essentially corresponds to a different bucket -- a module with different symbol
-    but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
+    Parameters
+    ----------
+    :$data_shapes : ArrayRef[AI::MXNet::DataDesc|NameShape]
+        Typically is $data_iter->provide_data.
+    :$label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
+        Typically is $data_iter->provide_label.
+    :$for_training : bool
+        Default is 1. Whether the executors should be bind for training.
+    :$inputs_need_grad : bool
+        Default is 0. Whether the gradients to the input data need to be computed.
+        Typically this is not needed. But this might be needed when implementing composition
+        of modules.
+    :$force_rebind : bool
+        Default is 0. This function does nothing if the executors are already
+        binded. But with this 1, the executors will be forced to rebind.
+    :$shared_module : Module
+        Default is undef. This is used in bucketing. When not undef, the shared module
+        essentially corresponds to a different bucket -- a module with different symbol
+        but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
 =cut
 
 method bind(
@@ -623,13 +623,13 @@ method bind(
 
 =head2 reshape
 
-Reshape the module for new input shapes.
-Parameters
-----------
-:$data_shapes : ArrayRef[AI::MXNet::DataDesc]
-    Typically is $data_iter->provide_data.
-:$label_shapes= : Maybe[ArrayRef[AI::MXNet::DataDesc]]
-    Typically is $data_iter->provide_label.
+    Reshape the module for new input shapes.
+    Parameters
+    ----------
+    :$data_shapes : ArrayRef[AI::MXNet::DataDesc]
+        Typically is $data_iter->provide_data.
+    :$label_shapes= : Maybe[ArrayRef[AI::MXNet::DataDesc]]
+        Typically is $data_iter->provide_label.
 =cut
 
 method reshape(
@@ -746,12 +746,12 @@ method init_optimizer(
 
 =head2 borrow_optimizer
 
-Borrow optimizer from a shared module. Used in bucketing, where exactly the same
-optimizer (esp. kvstore) is used.
+    Borrow optimizer from a shared module. Used in bucketing, where exactly the same
+    optimizer (esp. kvstore) is used.
 
-Parameters
-----------
-shared_module : AI::MXNet::Module
+    Parameters
+    ----------
+    shared_module : AI::MXNet::Module
 =cut
 
 method borrow_optimizer(AI::MXNet::Module $shared_module)
@@ -837,9 +837,9 @@ method update_metric(
 
 =head2 _sync_params_from_devices
 
-Synchronize parameters from devices to CPU. This function should be called after
-calling 'update' that updates the parameters on the devices, before one can read the
-latest parameters from $self->_arg_params and $self->_aux_params.
+    Synchronize parameters from devices to CPU. This function should be called after
+    calling 'update' that updates the parameters on the devices, before one can read the
+    latest parameters from $self->_arg_params and $self->_aux_params.
 =cut
 
 method _sync_params_from_devices()

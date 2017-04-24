@@ -39,14 +39,96 @@ def compare_optimizer(opt1, opt2, shape):
 
     state1 = opt1.create_state(0, w1)
     state2 = opt2.create_state(0, w2)
-    for s1, s2, in zip(state1, state2):
-        assert(same(s1.asnumpy(), s2.asnumpy()))
+    if state1 is not None and state2 is not None:
+        for s1, s2, in zip(state1, state2):
+            assert(same(s1.asnumpy(), s2.asnumpy()))
 
     opt1.update(0, w1, g1, state1)
     opt2.update(0, w2, g2, state2)
-    for s1, s2, in zip(state1, state2):
-        assert_almost_equal(s1.asnumpy(), s2.asnumpy(), rtol=1e-4, atol=1e-5)
+    if state1 is not None and state2 is not None:
+        for s1, s2, in zip(state1, state2):
+            assert_almost_equal(s1.asnumpy(), s2.asnumpy(), rtol=1e-4, atol=1e-5)
     assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=1e-4, atol=1e-5)
+
+# SGD
+
+class PySGD(mx.optimizer.Optimizer):
+    """python reference implemenation of sgd"""
+    def __init__(self, learning_rate=0.01, momentum=0.0, **kwargs):
+        super(PySGD, self).__init__(learning_rate=learning_rate, **kwargs)
+        self.momentum = momentum
+
+    def create_state(self, index, weight):
+        """Create additional optimizer state: momentum
+
+        Parameters
+        ----------
+        weight : NDArray
+        The weight data
+
+        """
+        if self.momentum == 0.0:
+            return None
+        else:
+            return mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype)
+
+    def update(self, index, weight, grad, state):
+        """Update the parameters.
+
+        Parameters
+        ----------
+        index : int
+        An unique integer key used to index the parameters
+
+        weight : NDArray
+        weight ndarray
+
+        grad : NDArray
+        grad ndarray
+
+        state : NDArray or other objects returned by init_state
+        The auxiliary state used in optimization.
+        """
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        self._update_count(index)
+
+        if self.momentum == 0.0:
+            if self.clip_gradient is not None:
+                weight[:] = ((1 - lr*wd)*weight -
+                    lr*mx.nd.clip(grad*self.rescale_grad, -self.clip_gradient, self.clip_gradient))
+            else:
+                weight[:] = (1 - lr*wd)*weight - lr*self.rescale_grad*grad
+        else:
+            mom = state
+            if self.clip_gradient is not None:
+                mom[:] = (self.momentum*mom - lr*wd*weight -
+                    lr*mx.nd.clip(grad*self.rescale_grad, -self.clip_gradient, self.clip_gradient))
+                weight += mom
+            else:
+                mom[:] = self.momentum*mom - lr*wd*weight - lr*self.rescale_grad*grad
+                weight += mom
+
+def test_sgd():
+    mx.random.seed(0)
+    opt1 = PySGD
+    opt2 = mx.optimizer.SGD
+    shape = (3, 4, 5)
+    kwargs = [{}, {'momentum': 0.9},
+              {'clip_gradient': 0.5},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14},
+              {'rescale_grad': 0.8},
+              {'clip_gradient': 0.5, 'wd': 0.07},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03},
+              {'rescale_grad': 0.8, 'wd': 0.05},
+              {'clip_gradient': 0.5, 'momentum': 0.9},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'momentum': 0.9},
+              {'rescale_grad': 0.8, 'momentum': 0.9},
+              {'clip_gradient': 0.5, 'wd': 0.07, 'momentum': 0.9},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03, 'momentum': 0.9},
+              {'rescale_grad': 0.8, 'wd': 0.05, 'momentum': 0.9}]
+    for kwarg in kwargs:
+        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape)
 
 # ADAM
 
@@ -271,3 +353,4 @@ def test_rms():
 if __name__ == '__main__':
     test_adam()
     test_rms()
+    test_sgd()

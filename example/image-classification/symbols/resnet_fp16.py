@@ -134,9 +134,8 @@ def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck
     weight = mx.symbol.Cast(data=weight, dtype=np.float16)
     bias = mx.symbol.Cast(data=bias, dtype=np.float16)
     fc1 = mx.symbol.FullyConnected(data=flat, weight=weight, bias=bias, num_hidden=num_classes, name='fc1')
-    label = mx.symbol.Variable(name='softmax_label')
-    label = mx.symbol.Cast(data=label, dtype=np.float16)
-    return mx.symbol.SoftmaxOutput(data=fc1, name='softmax', label=label)
+    fc1 = mx.symbol.Cast(data=fc1, dtype=np.float32)
+    return mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
 
 def get_symbol(num_classes, num_layers, image_shape, conv_workspace=256, **kwargs):
     """
