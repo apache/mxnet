@@ -31,7 +31,7 @@ class Comm {
   /**
    * \brief init key with the data shape
    */
-  virtual void Init(int key, const TShape& shape, int dtype=mshadow::kFloat32) = 0;
+  virtual void Init(int key, const TShape& shape, int dtype = mshadow::kFloat32) = 0;
   /**
    * \brief returns src[0] + .. + src[src.size()-1]
    */
@@ -67,7 +67,7 @@ class CommCPU : public Comm {
   }
   virtual ~CommCPU() { }
 
-  void Init(int key, const TShape& shape, int type=mshadow::kFloat32) override {
+  void Init(int key, const TShape& shape, int type = mshadow::kFloat32) override {
     merge_buf_[key].merged = NDArray(shape, pinned_ctx_, false, type);
   }
 
@@ -216,7 +216,7 @@ class CommDevice : public Comm {
 
   virtual ~CommDevice() { }
 
-  void Init(int key, const TShape& shape, int dtype=mshadow::kFloat32) override {
+  void Init(int key, const TShape& shape, int dtype = mshadow::kFloat32) override {
     sorted_key_attrs_.push_back(std::make_tuple(key, shape, dtype));
   }
 
