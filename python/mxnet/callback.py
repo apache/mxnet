@@ -99,7 +99,7 @@ class Speedometer(object):
     auto_reset : bool
         Reset the metric after each log.
     """
-    def __init__(self, batch_size, frequent=50, auto_reset=False):
+    def __init__(self, batch_size, frequent=50, auto_reset=True):
         self.batch_size = batch_size
         self.frequent = frequent
         self.init = False
