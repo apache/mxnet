@@ -230,8 +230,7 @@ class CuDNNDeconvolutionOp : public Operator {
         req[deconv::kData] == kAddTo ? 1.0f : 0.0f;
       typename DataType<DType>::ScaleType weight_beta =
         req[deconv::kWeight] == kAddTo ? 1.0f : 0.0f;
-      if (!param_.no_bias) {
-        CHECK_NE(req[deconv::kBias], kNullOp);
+      if (!param_.no_bias && (req[deconv::kBias] != kNullOp)) {
         Tensor<gpu, 1, DType> gbias = in_grad[deconv::kBias].get<gpu, 1, DType>(s);
         CHECK_EQ(cudnnConvolutionBackwardBias(s->dnn_handle_,
                                               &alpha,
