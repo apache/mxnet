@@ -14,6 +14,8 @@ WORKSPACE=$( echo "$1" | tr '[:upper:]' '[:lower:]' )
 PYTHON_VERSIONS=('2.7' '3.4' '3.5' '3.6')
 DEVICES=('pip_cpu' 'pip_cu75' 'pip_cu80')
 
+CI_BUILD_DIR=tests/ci_build/pip_tests
+
 # build Docker images and test pip installation for each device
 for DEV in "${DEVICES[@]}"; do
 
@@ -28,8 +30,8 @@ for DEV in "${DEVICES[@]}"; do
     DOCKERFILE="Dockerfile.${DEV}"
     DOCKERFILE_DEVICE="Dockerfile.in.${DEV}"
     rm -rf ${DOCKERFILE}
-    cp ${DOCKERFILE_DEVICE} ${DOCKERFILE}
-    cat Dockerfile.pip_dependencies >> ${DOCKERFILE}
+    cp ${CI_BUILD_DIR}/${DOCKERFILE_DEVICE} ${DOCKERFILE}
+    cat ${CI_BUILD_DIR}/Dockerfile.pip_dependencies >> ${DOCKERFILE}
 
     # build Docker image
     DOCKER_TAG="mxnet/${DEV}"
