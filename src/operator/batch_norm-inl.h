@@ -183,9 +183,7 @@ class BatchNormOp : public Operator
     return ort == kWriteTo || ort == kWriteInplace;
   }
 
-  /*! \brief inverse standard deviation <-> variance
-   * Note that these aren't entirely reversible due to eps
-   **/
+  /*! \brief inverse standard deviation <-> variance */
   #define VARIANCE_TO_INVSTD(__var$,    __eps$)   (1.0/sqrt((__var$) + Dtype(__eps$)))
   #define INVSTD_TO_VARIANCE(__invstd$, __eps$)   ((1.0 / ((__invstd$) * (__invstd$))) - (__eps$))
 

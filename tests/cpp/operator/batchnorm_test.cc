@@ -481,7 +481,11 @@ static void timingTest(const std::string& label,
                        const bool includeBackward = true) {
   std::cout << std::endl << std::flush;
 
+#ifdef NDEBUG
   const size_t COUNT = 5000;
+#else
+  const size_t COUNT = 50;
+#endif
 
   test::perf::TimingInstrument timing;
 
