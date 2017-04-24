@@ -238,7 +238,7 @@ def simple_forward(sym, ctx=None, is_train=False, **inputs):
     be returned as a list of NumPy arrays.
     """
     ctx = ctx or default_context()
-    inputs = {k: array(v) for k, v in inputs.iteritems()}
+    inputs = {k: array(v) for k, v in inputs.items()}
     exe = sym.bind(ctx, args=inputs)
     exe.forward(is_train=is_train)
     outputs = [x.asnumpy() for x in exe.outputs]

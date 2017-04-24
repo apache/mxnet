@@ -377,6 +377,6 @@ def args_wrapper(*args):
     out = defaultdict(list)
     for callback in args:
         callback_args = callback.callback_args()
-        for k, v in callback_args.iteritems():
+        for k, v in callback_args.items():
             out[k].append(v)
     return dict(out)
