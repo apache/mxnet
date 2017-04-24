@@ -954,7 +954,7 @@ def ones(shape, ctx=None, dtype=mx_real_t):
 
     Parameters
     ----------
-    shape : int or tuple of int
+    shape : int or tuple of int or list of int
         The shape of the empty array.
     ctx : Context, optional
         An optional device context.
