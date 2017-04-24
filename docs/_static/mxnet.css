@@ -237,11 +237,15 @@ img {
     width: 140px;
 }
 
+#search-input-wrap ul {
+    list-style-type: none;
+}
+
 #searchIcon {
     display: none;
     position: fixed;
     top: 20px;
-    right: 155px;
+    right: 20px;
     color: white;
 }
 
@@ -250,6 +254,24 @@ img {
     top: 0;
     left: 0;
     width: 140px;
+    background: #87CEFA;
+    border-radius: 5px;
+}
+
+.searchBox input {
+    background: #87CEFA;
+}
+
+.searchBox input::placeholder {
+    font-weight: 200;
+}
+
+.searchBoxNorm input::placeholder {
+    color: white;
+}
+
+.searchBoxExp input::placeholder {
+    color: dimgray;
 }
 
 .searchBtn {
@@ -263,15 +285,8 @@ img {
 @media screen and (max-width: 510px) {
     #search-input-wrap {
         display: none;
-        top: 50px;
-        left: 50%;
-        right: initial;
+        right: 40px;
         margin-left: -100px;
-        width: 200px;
-    }
-
-    div .searchBox {
-        width: 200px;
     }
 
     #searchIcon {
@@ -449,7 +464,7 @@ li.dropdown-submenu ul.dropdown-menu a {
         display: block;
         position: fixed;
         top: 10px;
-        left: 150px;
+        left: 160px;
     }
 }
 /*--------------------------banner---------------------------*/
@@ -889,6 +904,87 @@ table.docutils tr:nth-child(even) {
     height: 38px;
 }
 
-div.toctree-wrapper.compound > ul > li, div.section > ul > li {
-    padding: 5px 0 5px 0;
+
+/*----------------Search function style------------------*/
+#searchPage {
+    width: 60%;
+    margin-left: 20%;
+}
+
+#search-preview {
+    display: none;
+    background-color: white;
+    margin-top: -10px;
+    border: solid;
+    border-width: 1px;
+    border-color: #87CEFA;
+    width: 100%;
+}
+
+
+#search-preview p {
+    color: dimgray;
+    padding: 5px 20px 0 20px;
+}
+
+#search-preview li {
+    padding-top: 10px;
+}
+
+#search-preview ul {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+#search-preview hr {
+    margin: 10px 0 10px 0;
+    border-top: 1px solid dimgray;
+}
+
+#search-results ul {
+    list-style-type: none;
+}
+
+@media screen and (max-width: 510px) {
+    #search-preview {
+        position: fixed;
+        left: 0;
+        width: 100vw;
+    }
+    
+    #search-preview li {
+        font-size: 12px;
+    }
+}
+
+/* enable absolute positioning */
+.inner-addon { 
+    position: relative; 
+}
+
+/* style icon */
+.inner-addon .glyphicon {
+    position: absolute;
+    padding: 10px;
+    pointer-events: none;
+}
+
+/* align icon */
+.left-addon .glyphicon  { 
+    left:  0px;
+}
+.right-addon .glyphicon { 
+    right: 0px;
+}
+
+/* add padding  */
+.left-addon input  { 
+    padding-left:  40px; 
+}
+.right-addon input { 
+    padding-right: 40px; 
+}
+
+.form-group .glyphicon-search {
+    color: white;
 }

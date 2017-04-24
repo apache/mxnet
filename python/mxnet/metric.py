@@ -3,7 +3,7 @@
 
 """Online evaluation metric module."""
 from __future__ import absolute_import
-
+import math
 import numpy
 from . import ndarray
 
@@ -261,9 +261,11 @@ class Perplexity(EvalMetric):
                 pred = pred*(1-ignore) + ignore
             loss -= ndarray.sum(ndarray.log(ndarray.maximum(1e-10, pred))).asscalar()
             num += pred.size
-        self.sum_metric += math.exp(loss/num)
-        self.num_inst += 1
+        self.sum_metric += loss
+        self.num_inst += num
 
+    def get(self):
+        return (self.name, math.exp(self.sum_metric/self.num_inst))
 
 ####################
 # REGRESSION METRICS
