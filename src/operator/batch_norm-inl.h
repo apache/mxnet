@@ -64,6 +64,7 @@ class BatchNormOp : public Operator
 
 
   class DeviceTensor3 {
+    DeviceTensor3(const DeviceTensor3&) = delete;
    public:
     inline DeviceTensor3(const TBlob& blob, const size_t indexOfChannel)
       : dptr_(blob.dptr<DType>())
@@ -120,37 +121,16 @@ class BatchNormOp : public Operator
   }
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
-
-//  inline void forEachFast(DeviceTensor3& tensor3, const size_t channel, OnData onData) {
-//    const size_t dim = shape.ndim();
-//    const size_t num = shape[0];
-//    const size_t channels = dim > 1 ? shape[param_.channel_position] : 1;
-//    const size_t matrixSize = shape.Size() / (channels * num);
-//
-//    size_t indices[2] = {0, channel};
-//
-//    for (size_t batchItem = 0; batchItem < num; ++batchItem) {
-//      indices[0] = batchItem;
-//      DType *data = in_data + offset(shape, &indices[0], sizeof(indices)/sizeof(indices[0]));
-//      for (size_t i = 0; i < matrixSize; ++i) {
-//        onData(data++);
-//      }
-//    }
-//  }
-
-  template<typename Shape, typename OnData>
-  inline void forEachFast(DType *in_data, const Shape& shape,
-                                 const size_t channel, OnData onData) {
-    const size_t dim = shape.ndim();
-    const size_t num = shape[0];
-    const size_t channels = dim > 1 ? shape[param_.channel_position] : 1;
-    const size_t matrixSize = shape.Size() / (channels * num);
+  template<typename OnData>
+  static inline void forEachFast(DeviceTensor3& tensor, const size_t channel, OnData onData) {
+    const size_t num        = tensor.BatchSize();
+    const size_t matrixSize = tensor.SpatialSize();
 
     size_t indices[2] = {0, channel};
 
     for (size_t batchItem = 0; batchItem < num; ++batchItem) {
       indices[0] = batchItem;
-      DType *data = in_data + offset(shape, &indices[0], sizeof(indices)/sizeof(indices[0]));
+      DType *data = tensor.dptr_ + offset(tensor.shape_, &indices[0], sizeof(indices)/sizeof(indices[0]));
       for (size_t i = 0; i < matrixSize; ++i) {
         onData(data++);
       }
@@ -158,21 +138,19 @@ class BatchNormOp : public Operator
   }
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
-  template<typename Shape, typename OnData>
-  inline void forEachFast(const DType *in_data, DType *out_data,
-                          const Shape& shape, const size_t channel, OnData onData) {
-    const size_t dim = shape.ndim();
-    const size_t num = shape[0];
-    const size_t channels = dim > 1 ? shape[param_.channel_position] : 1;
-    const size_t matrixSize = shape.Size() / (channels * num);
+  template<typename OnData>
+  inline void forEachFast(DeviceTensor3& in_data, DeviceTensor3& out_data,
+                          const size_t channel, OnData onData) {
+    const size_t num        = in_data.BatchSize();
+    const size_t matrixSize = in_data.SpatialSize();
 
     size_t indices[2] = {0, channel};
 
     for (size_t batchItem = 0; batchItem < num; ++batchItem) {
       indices[0] = batchItem;
-      const size_t off = offset(shape, &indices[0], sizeof(indices)/sizeof(indices[0]));
-      const DType *data = in_data + off;
-      DType *odata = out_data + off;
+      const size_t off = offset(in_data.shape_, &indices[0], sizeof(indices)/sizeof(indices[0]));
+      const DType *data = in_data.dptr_ + off;
+      DType *odata = out_data.dptr_ + off;
       for (size_t i = 0; i < matrixSize; ++i) {
         onData(data++, odata++);
       }
@@ -180,19 +158,18 @@ class BatchNormOp : public Operator
   }
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
-  template<typename Shape, typename OnData>
-  inline void forEachFast(const DType *in_data, const Shape& shape, OnData onData) {
-    const size_t dim = shape.ndim();
-    const size_t num = shape[0];
-    const size_t channels = dim > 1 ? shape[param_.channel_position] : 1;
-    const size_t matrixSize = shape.Size() / (channels * num);
+  template<typename OnData>
+  static inline void forEachFast(DeviceTensor3& tensor, OnData onData) {
+    const size_t num        = tensor.BatchSize();
+    const size_t channels   = tensor.ChannelCount();
+    const size_t matrixSize = tensor.SpatialSize();
 
     for (size_t batchItem = 0; batchItem < num; ++batchItem) {
       #pragma openmp for
       for (size_t channel = 0; channel < channels; ++channel) {
         size_t indices[2] = { batchItem, channel };
-        const size_t off = offset(shape, &indices[0], sizeof(indices)/sizeof(indices[0]));
-        const DType *inData = in_data + off;
+        const size_t off = offset(tensor.shape_, &indices[0], sizeof(indices)/sizeof(indices[0]));
+        const DType *inData = tensor.dptr_ + off;
         for (size_t i = 0; i < matrixSize; ++i) {
           onData(channel, inData++);
         }
@@ -201,21 +178,19 @@ class BatchNormOp : public Operator
   }
 
   /*! \brief Fast-foreach when you don't care about the position other than channel */
-  template<typename Shape, typename OnData>
-  inline void forEachFast(const DType *in_data, DType *out_data,
-                                 const Shape& shape, OnData onData) {
-    const size_t dim = shape.ndim();
-    const size_t num = shape[0];
-    const size_t channels = dim > 1 ? shape[param_.channel_position] : 1;
-    const size_t matrixSize = shape.Size() / (channels * num);
+  template<typename OnData>
+  static inline void forEachFast(DeviceTensor3& in_data, DeviceTensor3& out_data, OnData onData) {
+    const size_t num        = in_data.BatchSize();
+    const size_t channels   = in_data.ChannelCount();
+    const size_t matrixSize = in_data.SpatialSize();
 
     for (size_t batchItem = 0; batchItem < num; ++batchItem) {
       #pragma omp parallel for
       for (size_t channel = 0; channel < channels; ++channel) {
         size_t indices[2] = { batchItem, channel };
-        const size_t off = offset(shape, &indices[0], sizeof(indices)/sizeof(indices[0]));
-        const DType *inData = in_data + off;
-        DType *outData = out_data + off;
+        const size_t off = offset(in_data.shape_, &indices[0], sizeof(indices)/sizeof(indices[0]));
+        const DType *inData = in_data.dptr_ + off;
+        DType *outData = out_data.dptr_ + off;
         for (size_t i = 0; i < matrixSize; ++i) {
           onData(channel, inData++, outData++);
         }
@@ -224,23 +199,19 @@ class BatchNormOp : public Operator
   }
 
   /*! \brief Compute the mean of each input channel */
-  template<typename Shape>
-  inline void computeMean(const DType *in_data,
-                          const Shape &ishape,
-                          const Shape &oshape,
-                          DType *save_mean) {
-    const size_t channelCount = ishape[param_.channel_position];
+  static inline void computeMean(DeviceTensor3& tensor, DType *save_mean) {
+    const size_t channelCount = tensor.ChannelCount();
 
-    for (size_t i = 0, n = oshape.Size(); i < n; ++i) {
+    for (size_t i = 0; i < channelCount; ++i) {
       save_mean[i] = 0;
     }
 
-    forEachFast(in_data, ishape,
+    forEachFast(tensor,
                 [&save_mean](const size_t channel, const DType *in_data){
                   save_mean[channel] += *in_data;
                 });
 
-    const size_t itemCount = ishape.Size() / channelCount;
+    const size_t itemCount = tensor.Size() / channelCount;
     for (size_t i = 0, n = channelCount; i < n; ++i) {
       save_mean[i] /= itemCount;
     }
@@ -256,28 +227,25 @@ class BatchNormOp : public Operator
 
   /*! \brief Compute the variance of each input channel, as well as update moving mean/variants */
   template<typename  Shape>
-  inline void computeVariance(const DType *in_data,
-                              const Shape &ishape,
+  inline void computeVariance(DeviceTensor3& tensor,
                               const DType *mean_data,
                               const DType eps,
                               const DType momentum,
                               const Shape &oshape,
                               DType *save_std) {
-    for (size_t i = 0, n = oshape.Size(); i < n; ++i) {
+    const size_t channels   = tensor.ChannelCount();
+    for (size_t i = 0; i < channels; ++i) {
       save_std[i] = 0;
     }
-    const size_t channelCount = ishape[param_.channel_position];
-    CHECK(oshape.Size() == channelCount);
-
-    forEachFast(in_data, ishape,
+    forEachFast(tensor,
                 [&save_std, &mean_data](const index_t channel, const DType *current_in_data) {
                   const DType mean = mean_data[channel];
                   save_std[channel] += (*current_in_data - mean) * (*current_in_data - mean);
                 });
 
-    const size_t itemCount = ishape.Size() / channelCount;
+    const size_t itemCount = tensor.Size() / channels;
     #pragma omp parallel for
-    for (size_t channel = 0; channel < channelCount; ++channel) {
+    for (size_t channel = 0; channel < channels; ++channel) {
       const DType sum = save_std[channel];
 
       DType invstd;
@@ -342,12 +310,10 @@ class BatchNormOp : public Operator
       const TShape stride(2);
 
       // compute mean per input
-      computeMean(inputData.dptr_, inputData.shape_,
-                  meanVector.shape_, meanVector.dptr<DType>());
+      computeMean(inputData, meanVector.dptr<DType>());
 
       // compute variance per input
-      computeVariance(inputData.dptr_,
-                      inputData.shape_,
+      computeVariance(inputData,
                       meanVector.dptr<DType>(),
                       param_.eps,
                       param_.momentum,
@@ -379,7 +345,7 @@ class BatchNormOp : public Operator
     }
 
     if (req[batchnorm::kData] == kWriteTo || req[batchnorm::kData] == kWriteInplace) {
-      forEachFast(inputData.dptr_, outputData.dptr_, inputData.shape_,
+      forEachFast(inputData, outputData,
                   [w, b, mean, var](const size_t channel, const DType *in_data, DType *out_data) {
                     *out_data = static_cast<DType>(
                       ((*in_data - mean[channel]) * var[channel]) * w[channel] + b[channel]);});
@@ -486,13 +452,10 @@ class BatchNormOp : public Operator
     const size_t itemCount    = inputData.Size() / channelCount;
 
     // Avoid multiple dptr() call within the channel loop
-    DType *inputDataPtr = inputData.dptr_;
-    DType *gradOutDataPtr = gradOut.dptr_;
     DType *runningMeanDataPtr = runningMean.dptr<DType>();
     DType *runningVarDataPtr  = runningVariance.dptr<DType>();
     DType *saveMeanDataPtr = saveMean.dptr<DType>();
     DType *saveVarianceDataPtr = saveStd.dptr<DType>();
-    DType *gradInDataPtr = gradIn.dptr_;
     DType *gradWeightData = gradWeight.dptr<DType>();
     DType *gradBiasData = gradBias.dptr<DType>();
 
@@ -520,14 +483,14 @@ class BatchNormOp : public Operator
 
       // sumGradOut over all gradOutput in feature plane
       DType sumGradOut = 0;
-      forEachFast(gradOutDataPtr, gradOut.shape_, channel,
+      forEachFast(gradOut, channel,
                   [&sumGradOut](const DType *gradOut_data) {
                     sumGradOut += *gradOut_data;
                   });
 
       // dot product of the Q(X) and gradOuput
       DType dotp = 0;
-      forEachFast(inputDataPtr, gradOutDataPtr, gradOut.shape_, channel,
+      forEachFast(inputData, gradOut, channel,
                   [&dotp, mean](const DType *thisInputData, const DType *gradOut_data) {
                     dotp += (*thisInputData - mean) * (*gradOut_data);
                   });
@@ -541,14 +504,14 @@ class BatchNormOp : public Operator
 
           // projection of gradOutput on to output scaled by std
           const DType k = dotp * invstd * invstd / itemCount;
-          forEachFast(inputDataPtr, gradInDataPtr, gradOut.shape_, channel,
+          forEachFast(inputData, gradIn, channel,
                       [&mean, &k](const DType *in_data, DType *gradIn_data) {
                         *gradIn_data = (*in_data - mean) * k;
                       });
 
           const DType iw = invstd * w;
           const DType gradMean = sumGradOut / itemCount;
-          forEachFast(gradOutDataPtr, gradInDataPtr, gradOut.shape_, channel,
+          forEachFast(gradOut, gradIn, channel,
                       [iw, gradMean](const DType *gradOut_data, DType *gradIn_data) {
                         *gradIn_data = (*gradOut_data - gradMean - *gradIn_data) * iw;
                       });
@@ -558,7 +521,7 @@ class BatchNormOp : public Operator
           // Y = Q(X) / running_std    ; i.e. BN output before weight and bias
           // dL/dX = w / running_std
           const DType iw = invstd * w;
-          forEachFast(gradOutDataPtr, gradInDataPtr, gradOut.shape_, channel,
+          forEachFast(gradOut, gradIn, channel,
                       [iw](const DType *gradOut_data, DType *gradIn_data) {
                         *gradIn_data = *gradOut_data  * iw;
                       });
