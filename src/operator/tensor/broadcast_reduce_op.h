@@ -22,9 +22,14 @@ struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
   bool keepdims;
   DMLC_DECLARE_PARAMETER(ReduceAxesParam) {
     DMLC_DECLARE_FIELD(axis).set_default(TShape())
-        .describe("The axes to perform the reduction.");
+      .describe("The axis or axes along which to perform the reduction. "
+                "The default, `axis=()`, will compute over all elements into a "
+                "scalar array with shape `(1,)`.\n\nIf axis is int, "
+                "a reduction is performed on a particular axis.\n\n"
+                "If axis is a tuple of ints, a reduction is performed "
+                "on all the axes specified in the tuple.");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
-      .describe("If true, the axes which are reduced are left "
+      .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
   }
 };
@@ -34,11 +39,12 @@ struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
   bool keepdims;
   DMLC_DECLARE_PARAMETER(ReduceAxisParam) {
     DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<int>())
-      .describe("int or None. The axis to perform the reduction. "
+      .describe("The axis along which to perform the reduction. "
                 "Negative values means indexing from right to left. "
-                "If is `None`, a global reduction will be performed.");
+                "``Requires axis to be set as int, because global reduction "
+                "is not supported yet.``");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
-      .describe("If true, the axis which is reduced is left "
+      .describe("If this is set to `True`, the reduced axis is left "
                 "in the result as dimension with size one.");
   }
 };

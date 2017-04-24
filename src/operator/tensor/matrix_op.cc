@@ -456,7 +456,7 @@ NNVM_REGISTER_OP(_backward_clip)
 NNVM_REGISTER_OP(repeat)
 .describe(R"code(Repeat elements of an array.
 
-In default, ``repeat`` flatten the input array into 1-D and then repeat the
+By default, ``repeat`` flattens the input array into 1-D and then repeats the
 elements::
 
   x = [[ 1, 2],
@@ -464,16 +464,19 @@ elements::
 
   repeat(x, repeats=2) = [ 1.,  1.,  2.,  2.,  3.,  3.,  4.,  4.]
 
-We can also choose a particular axis to repeat, in which a negative axis is
-interpreted counting from the backward::
+The parameter ``axis`` specifies the axis along which to perform repeat::
 
   repeat(x, repeats=2, axis=1) = [[ 1.,  1.,  2.,  2.],
                                   [ 3.,  3.,  4.,  4.]]
 
-  repeat(x, repeats=2, axis=-1) = [[ 1.,  2.],
-                                   [ 1.,  2.],
-                                   [ 3.,  4.],
-                                   [ 3.,  4.]]
+  repeat(x, repeats=2, axis=0) = [[ 1.,  2.],
+                                  [ 1.,  2.],
+                                  [ 3.,  4.],
+                                  [ 3.,  4.]]
+
+  repeat(x, repeats=2, axis=-1) = [[ 1.,  1.,  2.,  2.],
+                                   [ 3.,  3.,  4.,  4.]]
+
 )code" ADD_FILELINE)
 .set_num_outputs(1)
 .set_num_inputs(1)
@@ -554,7 +557,22 @@ NNVM_REGISTER_OP(_backward_tile)
 .set_attr<FCompute>("FCompute<cpu>", TileOpBackward<cpu>);
 
 NNVM_REGISTER_OP(reverse)
-.MXNET_DESCRIBE("Reverse elements of an array with axis")
+.describe(R"code(Reverse the order of elements in an array along given axis.
+The shape of the array is preserved.
+
+Note: reverse and flip are equivalent. We use reverse in the following examples.
+
+Examples::
+
+  x = [[ 0.,  1.,  2.,  3.,  4.],
+       [ 5.,  6.,  7.,  8.,  9.]]
+
+  reverse(x, axis=0) = [[ 5.,  6.,  7.,  8.,  9.],
+                        [ 0.,  1.,  2.,  3.,  4.]]
+
+  reverse(x, axis=1) = [[ 4.,  3.,  2.,  1.,  0.],
+                        [ 9.,  8.,  7.,  6.,  5.]]
+)code" ADD_FILELINE)
 .set_num_outputs(1)
 .set_num_inputs(1)
 .add_alias("flip")
