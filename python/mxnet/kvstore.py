@@ -77,7 +77,7 @@ class KVStore(object):
         key : int or sequence of int
             The keys.
         value : NDArray or sequence of NDArray
-            Values corresponding to the Keys
+            Values corresponding to the keys.
 
         Examples
         --------
@@ -111,15 +111,15 @@ class KVStore(object):
         Parameters
         ----------
         key : int or list of int
-            Keys
+            Keys.
 
         value : NDArray or list of NDArray or list of list of NDArray
-            Values corresponding to the Keys
+            Values corresponding to the keys.
 
         priority : int, optional
             The priority of the push operation.
             Higher priority push operations are likely to be executed before
-            other push actions
+            other push actions.
 
         Examples
         --------
@@ -171,7 +171,7 @@ class KVStore(object):
         `pull` is executed asynchronously after all previous `push` and `pull` calls
         for the same input key(s) are finished.
 
-        The returned values are gauranteed to the latest values in the store.
+        The returned values are gauranteed to be the latest values in the store.
 
         Parameters
         ----------
@@ -179,12 +179,12 @@ class KVStore(object):
             Keys.
 
         out: NDArray or list of NDArray or list of list of NDArray
-            Values corresponding to the Keys.
+            Values corresponding to the keys.
 
         priority : int, optional
             The priority of the pull operation.
             Higher priority pull operations are likely to be executed before
-            other pull actions
+            other pull actions.
 
         Examples
         --------
@@ -233,7 +233,7 @@ class KVStore(object):
         Parameters
         ----------
         optimizer : Optimizer
-            the optimizer
+            the optimizer.
         """
         is_worker = ctypes.c_int()
         check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
@@ -369,9 +369,9 @@ class KVStore(object):
         Parameters
         ----------
         head : int
-            the head of the command
+            the head of the command.
         body : str
-            the body of the command
+            the body of the command.
         """
         check_call(_LIB.MXKVStoreSendCommmandToServers(
             self.handle, mx_uint(head), c_str(body)))
@@ -382,7 +382,7 @@ def create(name='local'):
     Parameters
     ----------
     name : {'local'}
-        The type of KVStore
+        The type of KVStore.
         - local works for multiple devices on a single machine (single process).
         - dist works for multiple machines (multiple processes).
     Returns
