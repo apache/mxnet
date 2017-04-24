@@ -368,7 +368,7 @@ class Module(BaseModule):
             # that consumes the labels
             # assert label_shapes is not None
 
-        data_attrs  = data_shapes
+        data_attrs = data_shapes
         label_attrs = label_shapes
         self._data_attrs, self._label_attrs = _parse_data_desc(
             self.data_names, self.label_names, data_attrs, label_attrs)
