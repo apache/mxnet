@@ -246,7 +246,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 
                 if (nbatch+1) % updateFreq == 0:
                     if update_on_kvstore:
-                        print "[INA Deferred Aggregation] " + str(nbatch+1)
+                        #print "[INA Deferred Aggregation] " + str(nbatch+1)
                         _update_params_on_kvstore(executor_manager.param_arrays,
                                                   executor_manager.grad_arrays,
                                                   kvstore)
