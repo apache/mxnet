@@ -22,9 +22,14 @@ struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
   bool keepdims;
   DMLC_DECLARE_PARAMETER(ReduceAxesParam) {
     DMLC_DECLARE_FIELD(axis).set_default(TShape())
-        .describe("The axes to perform the reduction.");
+      .describe("The axis or axes along which to perform the reduction. "
+                "The default, `axis=()`, will compute over all elements into a "
+                "scalar array with shape `(1,)`.\n\nIf axis is int, "
+                "a reduction is performed on a particular axis.\n\n"
+                "If axis is a tuple of ints, a reduction is performed "
+                "on all the axes specified in the tuple.");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
-      .describe("If true, the axes which are reduced are left "
+      .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
   }
 };
@@ -34,11 +39,28 @@ struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
   bool keepdims;
   DMLC_DECLARE_PARAMETER(ReduceAxisParam) {
     DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<int>())
-      .describe("int or None. The axis to perform the reduction. "
+      .describe("The axis along which to perform the reduction. "
                 "Negative values means indexing from right to left. "
-                "If is `None`, a global reduction will be performed.");
+                "``Requires axis to be set as int, because global reduction "
+                "is not supported yet.``");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
-      .describe("If true, the axis which is reduced is left "
+      .describe("If this is set to `True`, the reduced axis is left "
+                "in the result as dimension with size one.");
+  }
+};
+
+struct PickParam : public dmlc::Parameter<PickParam> {
+  dmlc::optional<int> axis;
+  int mode;
+  bool keepdims;
+  DMLC_DECLARE_PARAMETER(PickParam) {
+    DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<int>(-1))
+      .describe("int or None. The axis to picking the elements. "
+                "Negative values means indexing from right to left. "
+                "If is `None`, the elements in the index w.r.t the "
+                "flattened input will be picked.");
+    DMLC_DECLARE_FIELD(keepdims).set_default(false)
+      .describe("If true, the axis where we pick the elements is left "
                 "in the result as dimension with size one.");
   }
 };
@@ -522,11 +544,13 @@ inline bool PickOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
   const TShape& ishape = (*in_attrs)[0];
   if (ishape.ndim() == 0) return false;
-  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
+  const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
   if (!param.axis) LOG(FATAL)
     << "axis=None is not supported by pick yet. Must specify an axis.";
-
-  TShape oshape = ReduceAxisShapeImpl(param, ishape);
+  ReduceAxisParam tmp_param;
+  tmp_param.axis = param.axis;
+  tmp_param.keepdims = param.keepdims;
+  TShape oshape = ReduceAxisShapeImpl(tmp_param, ishape);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   SHAPE_ASSIGN_CHECK(*in_attrs, 1, oshape);
   return true;
@@ -553,7 +577,7 @@ void PickOpForward(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(req[0], kWriteTo);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
+  const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
 
   const TShape& ishape = inputs[0].shape_;
   int axis = CheckAxis(param.axis.value(), ishape.ndim());
@@ -587,7 +611,7 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   if (req[0] == kNullOp) return;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
+  const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
 
   const TShape& ishape = outputs[0].shape_;
   int axis = CheckAxis(param.axis.value(), ishape.ndim());

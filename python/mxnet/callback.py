@@ -96,13 +96,16 @@ class Speedometer(object):
     frequent: int
         How many batches between calculations.
         Defaults to calculating & logging every 50 batches.
+    auto_reset : bool
+        Reset the metric after each log.
     """
-    def __init__(self, batch_size, frequent=50):
+    def __init__(self, batch_size, frequent=50, auto_reset=True):
         self.batch_size = batch_size
         self.frequent = frequent
         self.init = False
         self.tic = 0
         self.last_count = 0
+        self.auto_reset = auto_reset
 
     def __call__(self, param):
         """Callback to Show speed."""
@@ -116,7 +119,8 @@ class Speedometer(object):
                 speed = self.frequent * self.batch_size / (time.time() - self.tic)
                 if param.eval_metric is not None:
                     name_value = param.eval_metric.get_name_value()
-                    param.eval_metric.reset()
+                    if self.auto_reset:
+                        param.eval_metric.reset()
                     for name, value in name_value:
                         logging.info('Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f',
                                      param.epoch, count, speed, name, value)

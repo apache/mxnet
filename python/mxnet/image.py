@@ -24,18 +24,35 @@ from . import recordio
 
 
 def imdecode(buf, **kwargs):
-    """Decode an image from string. Requires OpenCV to work.
+    """Decode an image to an NDArray.
+
+    Note: `imdecode` uses OpenCV (not the CV2 Python library).
+    MXNet must have been built with OpenCV for `imdecode` to work.
 
     Parameters
     ----------
-    buf : str/bytes, or numpy.ndarray
-        Binary image data.
-    flag : int
-        0 for grayscale. 1 for colored.
-    to_rgb : int
-        0 for BGR format (OpenCV default). 1 for RGB format (MXNet default).
-    out : NDArray
-        Output buffer. Use None for automatic allocation.
+    buf : str/bytes or numpy.ndarray
+        Binary image data as string or numpy ndarray.
+    flag : int, optional, default=1
+        1 for three channel color output. 0 for grayscale output.
+    to_rgb : int, optional, default=1
+        1 for RGB formatted output (MXNet default). 0 for BGR formatted output (OpenCV default).
+    out : NDArray, optional
+        Output buffer. Use `None` for automatic allocation.
+
+    Returns
+    -------
+    NDArray
+        An `NDArray` containing the image.
+
+    Example
+    -------
+    >>> with open("flower.jpg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.img.imdecode(str_image)
+    >>> image
+    <NDArray 224x224x3 @cpu(0)>
     """
     if not isinstance(buf, nd.NDArray):
         buf = nd.array(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
