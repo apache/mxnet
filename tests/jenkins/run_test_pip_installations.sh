@@ -11,8 +11,8 @@ fi
 
 WORKSPACE=$( echo "$1" | tr '[:upper:]' '[:lower:]' )
 
-PYTHON_VERSIONS=('2.7' '3.4' '3.5' '3.6')
-DEVICES=('pip_cpu' 'pip_cu75' 'pip_cu80')
+PYTHON_VERSIONS=('2.7' '3.4' '3.6' '3.5')
+DEVICES=('pip_cu75' 'pip_cu80' 'pip_cpu')
 
 CI_BUILD_DIR=tests/ci_build/pip_tests
 # build Docker images and test pip installation for each device
