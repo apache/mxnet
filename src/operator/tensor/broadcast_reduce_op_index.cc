@@ -7,6 +7,8 @@
 
 namespace mxnet {
 namespace op {
+DMLC_REGISTER_PARAMETER(PickParam);
+
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmax)
 .describe(R"code(Returns indices of the maximum values along an axis.
 
@@ -96,7 +98,7 @@ an output array of shape ``(i0,)`` with::
   output[i] = input[i, indices[i]]
 
 By default, if any index mentioned is too large, it is replaced by the index that addresses
-the last element along an axis.
+the last element along an axis (the `clip` mode).
 
 This function supports n-dimensional input and (n-1)-dimensional indices arrays.
 
@@ -124,7 +126,7 @@ Examples::
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<ReduceAxisParam>)
+.set_attr_parser(ParamParser<PickParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "index"};
@@ -149,7 +151,7 @@ Examples::
 NNVM_REGISTER_OP(_backward_pick)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<ReduceAxisParam>)
+.set_attr_parser(ParamParser<PickParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", PickOpBackward<cpu>);
 
