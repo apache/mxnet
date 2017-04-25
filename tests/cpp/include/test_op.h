@@ -633,14 +633,26 @@ typedef std::vector<std::pair<std::string, std::string> > kwargs_t;
 
 /*! \brief Create operator data, prop, the operator itself and init default forward input */
 template<typename OperatorProp, typename OperatorData, typename DType>
-static test::op::OpInfo<OperatorProp, DType> createOpAndInfo(const bool isGPU,
-                                                             const TShape &inputShape,
-                                                             const kwargs_t &kwargs) {
+static test::op::OpInfo<OperatorProp, DType> createOpAndInfoF(const bool isGPU,
+                                                              const TShape &inputShape,
+                                                              const kwargs_t &kwargs) {
   test::op::OpInfo<OperatorProp, DType> info;
   info.data_ = std::make_shared<OperatorData>(isGPU, inputShape);
   info.prop_ = std::make_shared<OperatorProp>();
-  info.in_type_ = { mshadow::kFloat32 };
-
+  // Note, assuming floating point
+  switch(sizeof(DType)) {
+    case sizeof(float):
+      info.in_type_ = {mshadow::kFloat32};
+      break;
+    case sizeof(double):
+      info.in_type_ = {mshadow::kFloat64};
+      break;
+    case sizeof(mshadow::half::half_t::half_):
+      info.in_type_ = {mshadow::kFloat16};
+      break;
+    default:
+      break;
+  }
   info.prop_->Init(kwargs);
   info.data_->initForward(*info.prop_, info.in_type_);
   return info;
