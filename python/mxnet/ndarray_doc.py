@@ -77,6 +77,15 @@ class BroadcastToDoc(NDArrayDoc):
     (2L, 2L, 2L, 3L)
     """
 
+class CustomDoc(NDArrayDoc):
+    """
+    Example
+    -------
+    Applies a custom operator named `my_custom_operator` to `input`.
+
+    >>> output = mx.symbol.Custom(op_type='my_custom_operator', data=input)
+    """
+
 def _build_doc(func_name,
                desc,
                arg_names,
