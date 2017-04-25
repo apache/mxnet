@@ -168,9 +168,9 @@ MXNET_OPERATOR_REGISTER_SAMPLING2(normal, NormalSampler, "mu", "sigma",
   "normal distributions with parameters mu and sigma")
 MXNET_OPERATOR_REGISTER_SAMPLING2(gamma, GammaSampler, "alpha", "beta",
   "gamma distributions with parameters alpha and beta")
-MXNET_OPERATOR_REGISTER_SAMPLING1(exponential, ExponentialSampler, "lambda",
+MXNET_OPERATOR_REGISTER_SAMPLING1(exponential, ExponentialSampler, "lam",
   "exponential distributions with parameters lambda")
-MXNET_OPERATOR_REGISTER_SAMPLING1(poisson, PoissonSampler, "lambda",
+MXNET_OPERATOR_REGISTER_SAMPLING1(poisson, PoissonSampler, "lam",
   "Poisson distributions with parameters lambda")
 MXNET_OPERATOR_REGISTER_SAMPLING2(negative_binomial, NegativeBinomialSampler, "k", "p",
   "negative binomial distributions with parameters k (failure limit) and p (failure probability)")

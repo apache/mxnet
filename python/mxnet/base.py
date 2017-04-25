@@ -27,6 +27,12 @@ else:
     numeric_types = (float, int, long, np.float32, np.int32)
     py_str = lambda x: x
 
+class _NullType(object):
+    """Placeholder for arguments"""
+    def __repr__(self):
+        return '_Null'
+
+_Null = _NullType()
 
 class MXNetError(Exception):
     """Error that will be throwed by all mxnet functions."""

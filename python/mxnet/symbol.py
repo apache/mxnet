@@ -51,11 +51,13 @@ class Symbol(SymbolBase):
                             'Grouped' if name is None else name)
 
     def __iter__(self):
-        """Return all outputs in a list"""
+        """Returns all outputs in a list"""
         return (self[i] for i in self.list_outputs())
 
     def __add__(self, other):
-        """x.__add__(y) <=> x+y """
+        """x.__add__(y) <=> x+y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_add` instead. """
         if isinstance(other, Symbol):
             return _internal._Plus(self, other)
         if isinstance(other, Number):
@@ -67,7 +69,9 @@ class Symbol(SymbolBase):
         return self.__add__(other)
 
     def __sub__(self, other):
-        """x.__sub__(y) <=> x-y """
+        """x.__sub__(y) <=> x-y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_sub` instead. """
         if isinstance(other, Symbol):
             return _internal._Minus(self, other)
         if isinstance(other, Number):
@@ -83,7 +87,9 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __mul__(self, other):
-        """x.__mul__(y) <=> x*y """
+        """x.__mul__(y) <=> x*y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_mul` instead. """
         if isinstance(other, Symbol):
             return _internal._Mul(self, other)
         if isinstance(other, Number):
@@ -95,7 +101,9 @@ class Symbol(SymbolBase):
         return self.__mul__(other)
 
     def __div__(self, other):
-        """x.__div__(y) <=> x/y """
+        """x.__div__(y) <=> x/y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_div` instead. """
         if isinstance(other, Symbol):
             return _internal._Div(self, other)
         if isinstance(other, Number):
@@ -117,7 +125,9 @@ class Symbol(SymbolBase):
         return self.__rdiv__(other)
 
     def __pow__(self, other):
-        """x.__pow__(y) <=> x**y """
+        """x.__pow__(y) <=> x**y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_pow` instead. """
         if isinstance(other, Symbol):
             return _internal._Power(self, other)
         if isinstance(other, Number):
@@ -133,13 +143,32 @@ class Symbol(SymbolBase):
         return self.__deepcopy__(None)
 
     def __deepcopy__(self, _):
+        """Returns a deep copy of the input object.
+
+        This function returns a deep copy of the input object including the current state
+        of all its parameters such as weights, biases, etc.
+
+        Any changes made to the deep copy do not reflect in the original object.
+
+        Example usage:
+        ----------
+        >>> import copy
+        >>> data = mx.sym.Variable('data')
+        >>> data_1 = copy.deepcopy(data)
+        >>> data_1 = 2*data
+        >>> data_1.tojson()
+        >>> data_1 is data    # Data got modified
+        False
+        """
         handle = SymbolHandle()
         check_call(_LIB.MXSymbolCopy(self.handle,
                                      ctypes.byref(handle)))
         return Symbol(handle)
 
     def __eq__(self, other):
-        """x.__eq__(y) <=> x==y """
+        """x.__eq__(y) <=> x==y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_equal` instead. """
         if isinstance(other, Symbol):
             return _internal._equal(self, other)
         if isinstance(other, numeric_types):
@@ -148,7 +177,9 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __ne__(self, other):
-        """x.__ne__(y) <=> x!=y """
+        """x.__ne__(y) <=> x!=y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_not_equal` instead. """
         if isinstance(other, Symbol):
             return _internal._not_equal(self, other)
         if isinstance(other, numeric_types):
@@ -157,7 +188,9 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __gt__(self, other):
-        """x.__gt__(y) <=> x>y """
+        """x.__gt__(y) <=> x>y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_greater` instead. """
         if isinstance(other, Symbol):
             return _internal._greater(self, other)
         if isinstance(other, numeric_types):
@@ -166,7 +199,9 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __ge__(self, other):
-        """x.__ge__(y) <=> x>=y """
+        """x.__ge__(y) <=> x>=y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_greater_equal` instead. """
         if isinstance(other, Symbol):
             return _internal._greater_equal(self, other)
         if isinstance(other, numeric_types):
@@ -175,7 +210,9 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __lt__(self, other):
-        """x.__lt__(y) <=> x<y """
+        """x.__lt__(y) <=> x<y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_lesser` instead. """
         if isinstance(other, Symbol):
             return _internal._lesser(self, other)
         if isinstance(other, numeric_types):
@@ -184,7 +221,9 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __le__(self, other):
-        """x.__le__(y) <=> x<=y """
+        """x.__le__(y) <=> x<=y
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_lesser_equal` instead. """
         if isinstance(other, Symbol):
             return _internal._lesser_equal(self, other)
         if isinstance(other, numeric_types):
@@ -274,12 +313,20 @@ class Symbol(SymbolBase):
     def __getitem__(self, index):
         """x.__getitem__(i) <=> x[i]
 
-        Get an output of this symbol
+        Returns a sliced view of the input symbol.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.var('a')
+        >>> a.__getitem__(0)
+        <Symbol a>
+        >>> a[0]
+        <Symbol a>
 
         Parameters
         ----------
         index : int or str
-            indexing key
+            Indexing key
 
         """
         if isinstance(index, string_types):
@@ -321,7 +368,7 @@ class Symbol(SymbolBase):
             return None
 
     def attr(self, key):
-        """Get attribute string from the symbol. This function only works for non-grouped symbols.
+        """Gets attribute string from the symbol. This function only works for non-grouped symbols.
 
         Parameters
         ----------
@@ -343,7 +390,7 @@ class Symbol(SymbolBase):
             return None
 
     def list_attr(self, recursive=False):
-        """Get all attributes from the symbol.
+        """Gets all attributes from the symbol.
 
         Returns
         -------
@@ -360,7 +407,7 @@ class Symbol(SymbolBase):
         return {py_str(pairs[i*2]): py_str(pairs[i*2+1]) for i in range(size.value)}
 
     def attr_dict(self):
-        """Recursively get all attributes from the symbol and its children.
+        """Recursively gets all attributes from the symbol and its children.
 
         Returns
         -------
@@ -383,7 +430,7 @@ class Symbol(SymbolBase):
         return ret
 
     def _set_attr(self, **kwargs):
-        """Set an attribute of the symbol.
+        """Sets an attribute of the symbol.
 
         For example. A._set_attr(foo="bar") adds the mapping ``"{foo: bar}"``
         to the symbol's attribute dictionary.
@@ -400,12 +447,15 @@ class Symbol(SymbolBase):
                 self.handle, c_str(key), c_str(str(value))))
 
     def get_internals(self):
-        """Get a new grouped symbol sgroup. The output of sgroup is a list of the
+        """Gets a new grouped symbol `sgroup`. The output of `sgroup` is a list of
         outputs of all of the internal nodes.
 
         Consider the following code:
-        >>> a = mxnet.sym.var('a')
-        >>> b = mxnet.sym.var('b')
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
         >>> c = a + b
         >>> d = c.get_internals()
         >>> d
@@ -417,7 +467,7 @@ class Symbol(SymbolBase):
         -------
         sgroup : Symbol
             A symbol group containing all internal and leaf nodes of the computation graph
-            used to compute the symbol
+            used to compute the symbol.
         """
         handle = SymbolHandle()
         check_call(_LIB.MXSymbolGetInternals(
@@ -425,8 +475,22 @@ class Symbol(SymbolBase):
         return Symbol(handle=handle)
 
     def get_children(self):
-        """Get a new grouped symbol whose output contains
-        inputs to output nodes of the original symbol
+        """Gets a new grouped symbol whose output contains
+        inputs to output nodes of the original symbol.
+
+        Example usage:
+        ----------
+        >>> x = mx.sym.Variable('x')
+        >>> y = mx.sym.Variable('y')
+        >>> z = mx.sym.Variable('z')
+        >>> a = y+z
+        >>> b = x+a
+        >>> b.get_children()
+        <Symbol Grouped>
+        >>> b.get_children().list_outputs()
+        ['x', '_plus10_output']
+        >>> b.get_children().get_children().list_outputs()
+        ['y', 'z']
 
         Returns
         -------
@@ -443,16 +507,15 @@ class Symbol(SymbolBase):
         return ret
 
     def list_arguments(self):
-        """List all the arguments in the symbol.
+        """Lists all the arguments in the symbol.
 
-        A
-        ~~~~
-        >>> a = mxnet.sym.var('a')
-        >>> b = mxnet.sym.var('b')
+        Example usage:
+        ----------
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
         >>> c = a + b
         >>> c.list_arguments
         ['a', 'b']
-        ~~~~
 
         Returns
         -------
@@ -466,7 +529,15 @@ class Symbol(SymbolBase):
         return [py_str(sarr[i]) for i in range(size.value)]
 
     def list_outputs(self):
-        """List all outputs in the symbol.
+        """Lists all the outputs in the symbol.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
+        >>> c = a + b
+        >>> c.list_outputs()
+        ['_plus12_output']
 
         Returns
         -------
@@ -483,12 +554,28 @@ class Symbol(SymbolBase):
         return [py_str(sarr[i]) for i in range(size.value)]
 
     def list_auxiliary_states(self):
-        """List all auxiliary states in the symbol.
+        """Lists all the auxiliary states in the symbol.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
+        >>> c = a + b
+        >>> c.list_auxiliary_states()
+        []
+
+        Example of auxiliary states in `BatchNorm`.
+        >>> data = mx.symbol.Variable('data')
+        >>> weight = mx.sym.Variable(name='fc1_weight')
+        >>> fc1  = mx.symbol.FullyConnected(data = data, weight=weight, name='fc1', num_hidden=128)
+        >>> fc2 = mx.symbol.BatchNorm(fc1, name='batchnorm0')
+        >>> fc2.list_auxiliary_states()
+        ['batchnorm0_moving_mean', 'batchnorm0_moving_var']
 
         Returns
         -------
         aux_states : list of string
-            List the names of the auxiliary states.
+            List of the auxiliary states in input symbol.
 
         Notes
         -----
@@ -504,42 +591,48 @@ class Symbol(SymbolBase):
         return [py_str(sarr[i]) for i in range(size.value)]
 
     def infer_type(self, *args, **kwargs):
-        """Given known types for some arguments, infers the type all arguments
-        and all outputs.
+        """Infers the type of all arguments and all outputs, given the known types
+        for some arguments.
 
-        You can pass in the known types in either positional way or keyword argument way.
-        A tuple of ``None`` values is returned if there is not enough information
-        to deduce the missing types.
+        This function takes the known types of some arguments in either positional way
+        or keyword argument way as input. It returns a tuple of `None` values
+        if there is not enough information to deduce the missing types.
+
         Inconsistencies in the known types will cause an error to be raised.
 
         Example usage:
         ----------
-        >>> a = mxnet.sym.var('a')
-        >>> b = mxnet.sym.var('b')
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
         >>> c = a + b
-        >>> c.infer_type(a=float32)
-        ([numpy.float32, numpy.float32], [numpy.float32], [])
+        >>> arg_types, out_types, aux_types = c.infer_type(a='float32')
+        >>> arg_types
+        [<type 'numpy.float32'>, <type 'numpy.float32'>]
+        >>> out_types
+        [<type 'numpy.float32'>]
+        >>> aux_types
+        []
 
         Parameters
         ----------
         *args :
-            Provide type of arguments in a positional way.
-            Unknown type can be marked as None
+            Type of known arguments in a positional way.
+            Unknown type can be marked as None.
 
         **kwargs :
-            Provide keyword arguments of known types.
+            Keyword arguments of known types.
 
         Returns
         -------
         arg_types : list of numpy.dtype or None
-            List of types of arguments.
-            The order is in the same order as list_arguments()
+            List of argument types.
+            The order is same as the order of list_arguments().
         out_types : list of numpy.dtype or None
-            List of types of outputs.
-            The order is in the same order as list_outputs()
+            List of output types.
+            The order is same as the order of list_outputs().
         aux_types : list of numpy.dtype or None
-            List of types of outputs.
-            The order is in the same order as list_auxiliary_states()
+            List of auxiliary state types.
+            The order is same as the order of list_auxiliary_states().
         """
         # pylint: disable=too-many-locals
         if len(args) != 0 and len(kwargs) != 0:
@@ -595,42 +688,60 @@ class Symbol(SymbolBase):
         # pylint: enable=too-many-locals
 
     def infer_shape(self, *args, **kwargs):
-        """Given known shapes for some arguments, infers the shapes of all arguments
-        and all outputs.
+        """Infers the shapes of all arguments and all outputs given the known shapes of
+        some arguments.
 
-        You can pass in the known shapes in either positional way or keyword argument
-        way. A tuple of ``None`` vakyes is returned if there is not enough information
-        to deduce the missing shapes.
-        Inconsistencies in the known shapes will cause an error to be raised.
+        This function takes the known shapes of some arguments in either positional way
+        or keyword argument way as input. It returns a tuple of `None` values
+        if there is not enough information to deduce the missing shapes.
 
         Example usage:
         ----------
-        >>> a = mxnet.sym.var('a')
-        >>> b = mxnet.sym.var('b')
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
         >>> c = a + b
-        >>> c.infer_shape(a=(3,3))
-        ([(3L, 3L), (3L, 3L)], [(3L, 3L)], [])
+        >>> arg_shapes, out_shapes, aux_shapes = c.infer_shape(a=(3,3))
+        >>> arg_shapes
+        [(3L, 3L), (3L, 3L)]
+        >>> out_shapes
+        [(3L, 3L)]
+        >>> aux_shapes
+        []
+        >>> c.infer_shape(a=(0,3)) # 0s in shape means unknown dimensions. So, returns None.
+        (None, None, None)
+
+        Inconsistencies in the known shapes will cause an error to be raised.
+        See the following example:
+
+        >>> data = mx.sym.Variable('data')
+        >>> out = mx.sym.FullyConnected(data=data, name='fc1', num_hidden=1000)
+        >>> out = mx.sym.Activation(data=out, act_type='relu')
+        >>> out = mx.sym.FullyConnected(data=out, name='fc2', num_hidden=10)
+        >>> weight_shape= (1, 100)
+        >>> data_shape = (100, 100)
+        >>> out.infer_shape(data=data_shape, fc1_weight=weight_shape)
+        Error in operator fc1: Shape inconsistent, Provided=(1,100), inferred shape=(1000,100)
 
         Parameters
         ----------
         *args :
-            Provide shape of arguments in a positional way.
-            Unknown shape can be marked as None
+            Shape of arguments in a positional way.
+            Unknown shape can be marked as None.
 
         **kwargs :
-            Provide keyword arguments of known shapes.
+            Keyword arguments of the known shapes.
 
         Returns
         -------
         arg_shapes : list of tuple or None
-            List of shapes of arguments.
-            The order is in the same order as list_arguments()
+            List of argument shapes.
+            The order is same as the order of list_arguments().
         out_shapes : list of tuple or None
-            List of shapes of outputs.
-            The order is in the same order as list_outputs()
+            List of output shapes.
+            The order is same as the order of list_outputs().
         aux_shapes : list of tuple or None
-            List of shapes of outputs.
-            The order is in the same order as list_auxiliary_states()
+            List of auxiliary state shapes.
+            The order is same as the order of list_auxiliary_states().
         """
         try:
             res = self._infer_shape_impl(False, *args, **kwargs)
@@ -659,8 +770,49 @@ class Symbol(SymbolBase):
             raise
 
     def infer_shape_partial(self, *args, **kwargs):
-        """Partially infer the shape. The same as `infer_shape`, except that the partial
-        results can be returned.
+        """Infers the shape partially. This functions works the same way as `infer_shape`,
+        except that this function can return partial results.
+
+        In the following example, information about fc2 is not available. So, `infer_shape`
+        will return a tuple of `None` values but `infer_shape_partial` will return partial values.
+
+        Example usage:
+        ----------
+        >>> data = mx.sym.Variable('data')
+        >>> prev = mx.sym.Variable('prev')
+        >>> fc1  = mx.sym.FullyConnected(data=data, name='fc1', num_hidden=128)
+        >>> fc2  = mx.sym.FullyConnected(data=prev, name='fc2', num_hidden=128)
+        >>> out  = mx.sym.Activation(data=mx.sym.elemwise_add(fc1, fc2), act_type='relu')
+        >>> out.list_arguments()
+        ['data', 'fc1_weight', 'fc1_bias', 'prev', 'fc2_weight', 'fc2_bias']
+        >>> out.infer_shape(data=(10,64))
+        (None, None, None)
+        >>> out.infer_shape_partial(data=(10,64))
+        ([(10L, 64L), (128L, 64L), (128L,), (), (), ()], [(10L, 128L)], [])
+        >>> # infers shape if you give information about fc2
+        >>> out.infer_shape(data=(10,64), prev=(10,128))
+        ([(10L, 64L), (128L, 64L), (128L,), (10L, 128L), (128L, 128L), (128L,)], [(10L, 128L)], [])
+
+        Parameters
+        ----------
+        *args :
+            Shape of arguments in a positional way.
+            Unknown shape can be marked as None
+
+        **kwargs :
+            Keyword arguments of known shapes.
+
+        Returns
+        -------
+        arg_shapes : list of tuple or None
+            List of argument shapes.
+            The order is same as the order of list_arguments().
+        out_shapes : list of tuple or None
+            List of output shapes.
+            The order is same as the order of list_outputs().
+        aux_shapes : list of tuple or None
+            List of auxiliary state shapes.
+            The order is same as the order of list_auxiliary_states().
         """
         return self._infer_shape_impl(True, *args, **kwargs)
 
@@ -730,7 +882,7 @@ class Symbol(SymbolBase):
         # pylint: enable=too-many-locals
 
     def debug_str(self):
-        """Get a debug string.
+        """Gets a debug string.
 
         Returns
         -------
@@ -743,7 +895,7 @@ class Symbol(SymbolBase):
         return py_str(debug_str.value)
 
     def save(self, fname):
-        """Save symbol into file.
+        """Saves symbol to a file.
 
         You can also use pickle to do the job if you only work on python.
         The advantage of load/save is the file is language agnostic.
@@ -767,7 +919,7 @@ class Symbol(SymbolBase):
         check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
 
     def tojson(self):
-        """Save symbol into a JSON string.
+        """Saves symbol to a JSON string.
 
         See Also
         --------
@@ -1057,6 +1209,8 @@ class Symbol(SymbolBase):
         """Get the autodiff of current symbol.
 
         This function can only be used if current symbol is a loss function.
+
+        .. note:: This function is currently not implemented.
 
         Parameters
         ----------
