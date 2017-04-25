@@ -1103,11 +1103,11 @@ class Symbol(SymbolBase):
         if group2ctx is not None:
             attr_dict = self.attr_dict()
             arg_ctx = [group2ctx.get(attr_dict[name]['__ctx_group__'], ctx) \
-                           if name in attr_dict and '__ctx_group__' in attr_dict[name] \
-                           else ctx for name in self.list_arguments()]
+                         if name in attr_dict and '__ctx_group__' in attr_dict[name] \
+                         else ctx for name in self.list_arguments()]
             aux_ctx = [group2ctx.get(attr_dict[name]['__ctx_group__'], ctx) \
-                           if name in attr_dict and '__ctx_group__' in attr_dict[name] \
-                           else ctx for name in self.list_auxiliary_states()]
+                         if name in attr_dict and '__ctx_group__' in attr_dict[name] \
+                         else ctx for name in self.list_auxiliary_states()]
         else:
             arg_ctx = [ctx] * len(arg_shapes)
             aux_ctx = [ctx] * len(aux_shapes)
