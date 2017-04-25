@@ -31,13 +31,9 @@ MXNET_OPERATOR_REGISTER_SAMPLE(random_uniform, SampleUniformParam)
 .add_alias("uniform")
 .add_alias("_sample_uniform")
 .describe(R"code(Draw samples from a uniform distribution.
-
 Samples are uniformly distributed over the half-open interval [low, high)
-(includes low, but excludes high)::
-
-  nd.uniform(low=0, high=1, shape=(2,2)) = [[ 0.60276335,  0.85794562],
-                                            [ 0.54488319,  0.84725171]]
-
+(includes low, but excludes high). In other words, any value within the given
+interval is equally likely to be drawn.
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", SampleUniform_<cpu>);
 
@@ -45,38 +41,32 @@ Samples are uniformly distributed over the half-open interval [low, high)
 MXNET_OPERATOR_REGISTER_SAMPLE(random_normal, SampleNormalParam)
 .add_alias("normal")
 .add_alias("_sample_normal")
-.describe(R"code(Draw random samples from a normal (Gaussian) distribution.
-
-Examples::
-
-  normal(loc=0, scale=1, shape=(2,2)) = [[ 1.89171135, -1.16881478],
-                                         [-1.23474145,  1.55807114]]
-)code" ADD_FILELINE)
+.describe("Draw samples from a normal (Gaussian) distribution.")
 .set_attr<FCompute>("FCompute<cpu>", SampleNormal_<cpu>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(random_gamma, SampleGammaParam)
 .add_alias("_sample_gamma")
-.describe("Sample a gamma distribution")
+.describe("Draw samples from a gamma distribution.")
 .set_attr<FCompute>("FCompute<cpu>", SampleGamma_<cpu>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(random_exponential, SampleExponentialParam)
 .add_alias("_sample_exponential")
-.describe("Sample an exponential distribution")
+.describe("Draw samples from an exponential distribution.")
 .set_attr<FCompute>("FCompute<cpu>", SampleExponential_<cpu>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(random_poisson, SamplePoissonParam)
 .add_alias("_sample_poisson")
-.describe("Sample a Poisson distribution")
+.describe("Draw samples from a Poisson distribution.")
 .set_attr<FCompute>("FCompute<cpu>", SamplePoisson_<cpu>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(random_negative_binomial, SampleNegBinomialParam)
 .add_alias("_sample_negbinomial")
-.describe("Sample a negative binomial distribution")
+.describe("Draw samples from a negative binomial distribution.")
 .set_attr<FCompute>("FCompute<cpu>", SampleNegBinomial_<cpu>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(random_generalized_negative_binomial, SampleGenNegBinomialParam)
 .add_alias("_sample_gennegbinomial")
-.describe("Sample a generalized negative binomial distribution")
+.describe("Draw samples from a generalized negative binomial distribution.")
 .set_attr<FCompute>("FCompute<cpu>", SampleGenNegBinomial_<cpu>);
 
 }  // namespace op
