@@ -310,6 +310,9 @@ class BatchNormOp : public Operator
     const TBlob &meanVector      = out_data[batchnorm::kMean];
     const TBlob &varianceVector  = out_data[batchnorm::kVar];
 
+    DType *mean = meanVector.dptr<DType>();
+    DType  *var = varianceVector.dptr<DType>();
+
     if (ctx.is_train && !param_.use_global_stats) {
       const TShape stride(2);
 
@@ -324,22 +327,18 @@ class BatchNormOp : public Operator
                       varianceVector.shape_,
                       varianceVector.dptr<DType>());
     } else {
-      DType *m = meanVector.dptr<DType>();
-      DType *v = varianceVector.dptr<DType>();
       const DType *rm = runningMean.dptr<DType>();
       const DType *rv = runningVariance.dptr<DType>();
 
       for (size_t i = 0, n = inputData.shape_[param_.channel_position]; i < n; ++i) {
-        m[i] = rm[i];
-        v[i] = rv[i];
+        mean[i] = rm[i];
+        var[i]  = VARIANCE_TO_INVSTD(rv[i], param_.eps);
       }
     }
 
     // compute output
     DType          *w = weights.dptr<DType>();
     const DType    *b = bias.dptr<DType>();
-    const DType *mean = meanVector.dptr<DType>();
-    DType  *var = varianceVector.dptr<DType>();
 
     // optionally, keep weights fixed at 1
     if (param_.fix_gamma) {
@@ -468,7 +467,7 @@ class BatchNormOp : public Operator
       DType *weight = weights.dptr<DType>();
       const DType w = weight ? weight[channel] : DType(1);
       DType mean, invstd;
-      if (ctx.is_train) {
+      if (ctx.is_train && !param_.use_global_stats) {
         mean = saveMeanDataPtr[channel];
         const DType variance = saveVarianceDataPtr[channel];
         invstd = VARIANCE_TO_INVSTD(variance, param_.eps);
@@ -500,7 +499,7 @@ class BatchNormOp : public Operator
                   });
 
       if (gradIn.shape_.ndim()) {  // if there's a grad input
-        if (ctx.is_train) {
+        if (ctx.is_train && !param_.use_global_stats) {
           // when in training mode
           // Q(X) = X - E[x] ; i.e. input centered to zero mean
           // Y = Q(X) / σ    ; i.e. BN output before weight and bias
