@@ -32,26 +32,26 @@ def check_countsketch(in_dim,out_dim,n):
     for exe in exe_list:
         exe.forward(is_train= True)
     out1 = [exe.outputs[0].asnumpy() for exe in exe_list]
-    
+
     a = np.zeros((n,out_dim))
     temp = np.multiply(x, s)
     for num_sample in np.arange(0,n):
         for idx in np.arange(0,in_dim):
             a[num_sample][h[0][idx]] += temp[num_sample][idx]
     assert_almost_equal(a,out1[0],rtol=1e-3, atol=1e-12)
-    
+
     # backward
     out_grad = mx.nd.empty((n,out_dim))
     out_grad[:] = np.random.normal(-3, 3, (n,out_dim))
     for exe in exe_list:
-        exe.backward([out_grad])  
-    
+        exe.backward([out_grad])
+
         a = np.zeros((n,in_dim))
         for j in np.arange(0,n):
             for i in np.arange(0,in_dim):
                 a[j,i] = out_grad.asnumpy()[j, h[0,i]] * s[0,i]
     assert_almost_equal(a,arr_grad[0].asnumpy(),rtol=1e-3, atol=1e-12)
-    
+
 def test_countsketch():
     np.random.seed(0)
     nrepeat = 2
@@ -87,7 +87,7 @@ def check_ifft(shape):
     arr_grad = [mx.nd.empty(shape)]
     ctx_list = [{'ctx': mx.gpu(0),'ifft_data': shape, 'type_dict': {'ifft_data': np.float32}}]
     exe_list = [sym.simple_bind(args_grad=arr_grad,**ctx) for ctx in ctx_list]
-    
+
     for exe in exe_list:
         for arr, iarr in zip(exe.arg_arrays, init):
             arr[:] = iarr.astype(arr.dtype)
@@ -95,7 +95,7 @@ def check_ifft(shape):
     for exe in exe_list:
         exe.forward(is_train= True)
         out1 = [exe.outputs[0].asnumpy() for exe in exe_list]
-    
+
     if len(shape) == 2:
         init_complex = np.zeros(shape_old,dtype = np.complex64)
         for i in range(0,shape_old[1]):
@@ -103,7 +103,7 @@ def check_ifft(shape):
             init_complex.imag[:,i] = init[0][:,2*i+1]
         a = np.fft.ifft(init_complex, n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, out1[0]/shape_old[1],rtol=1e-3, atol=1e-12)
-    
+
     if len(shape) == 4:
         init_complex = np.zeros(shape_old,dtype = np.complex64)
         for i in range(0,shape_old[3]):
@@ -121,7 +121,7 @@ def check_ifft(shape):
             temp = np.zeros(shape_old)
             for i in range(shape_old[1]):
                 temp[:,i] = exe.grad_arrays[0].asnumpy()[:,2*i]
-                
+
         a = np.fft.fft(out_grad.asnumpy(), n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-12)
     if len(shape) == 4:
@@ -133,11 +133,11 @@ def check_ifft(shape):
             temp = np.zeros(shape_old)
             for i in range(shape_old[3]):
                 temp[:,:,:,i] = exe.grad_arrays[0].asnumpy()[:,:,:,2*i]
-                
+
         a = np.fft.fft(out_grad.asnumpy(), n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-12)
-             
-    
+
+
 def test_ifft():
     np.random.seed(0)
     nrepeat = 2
@@ -165,7 +165,7 @@ def check_fft(shape):
     arr_grad = [mx.nd.empty(shape)]
     ctx_list = [{'ctx': mx.gpu(0),'fft_data': shape, 'type_dict': {'fft_data': np.float32}}]
     exe_list = [sym.simple_bind(args_grad=arr_grad,**ctx) for ctx in ctx_list]
-    
+
     for exe in exe_list:
         for arr, iarr in zip(exe.arg_arrays, init):
             arr[:] = iarr.astype(arr.dtype)
@@ -183,7 +183,7 @@ def check_fft(shape):
             a[:,p] = out2[:,i]
             a[:,p+1] = out2[:,i+out2.shape[1]//2]
             p = p+2
-   
+
     if len(shape) == 4:
         out = np.reshape(out,(out.shape[1],out.shape[2],out.shape[3],out.shape[4]))
         out2 = np.append(out.real, out.imag, axis = 1)
@@ -195,9 +195,9 @@ def check_fft(shape):
                     a[i,j,:,p] = out2[i,j,:,k]
                     a[i,j,:,p+1] = out2[i,j+out1[0].shape[1],:,k]
                     p = p+2
-    
+
     assert_almost_equal(a, out1[0],rtol=1e-3, atol=1e-6)
-    
+
     # backward
     if len(shape) == 2:
         out_grad = mx.nd.empty((shape[0],2*shape[1]))
@@ -208,10 +208,10 @@ def check_fft(shape):
             out_grad_complex.real[:,i] = out_grad.asnumpy()[:,2*i]
             out_grad_complex.imag[:,i] = out_grad.asnumpy()[:,2*i+1]
         for exe in exe_list:
-            exe.backward([out_grad])  
+            exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[1],rtol=1e-3, atol=1e-8)
-         
+
     if len(shape) == 4:
         out_grad = mx.nd.empty(out1[0].shape)
         out_grad[:] = np.random.normal(-3, 3, out1[0].shape)
@@ -221,7 +221,7 @@ def check_fft(shape):
             out_grad_complex.real[:,:,:,i] = out_grad.asnumpy()[:,:,:,2*i]
             out_grad_complex.imag[:,:,:,i] = out_grad.asnumpy()[:,:,:,2*i+1]
         for exe in exe_list:
-            exe.backward([out_grad])  
+            exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-6)
 
@@ -235,13 +235,145 @@ def test_fft():
             check_fft(shape)
 
 def test_batchnorm_with_type():
-    sym = mx.sym.BatchNorm(name='norm', fix_gamma=False)
-    ctx_list = [{'ctx': mx.gpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
-                {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}}]
-    check_consistency(sym, ctx_list)
+  ctx_list = [{'ctx': mx.gpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
+              {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}}]
 
-    sym = mx.sym.BatchNorm(name='norm', fix_gamma=True)
-    check_consistency(sym, ctx_list)
+  sym = mx.sym.BatchNorm_v1(name='norm', fix_gamma=False)
+  check_consistency(sym, ctx_list)
+
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False)
+  check_consistency(sym, ctx_list)
+
+  sym = mx.sym.BatchNorm_v1(name='norm', fix_gamma=True)
+  check_consistency(sym, ctx_list)
+
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True)
+  check_consistency(sym, ctx_list)
+
+def test_batchnorm_versions():
+  def test_batchnorm_versions_helper(batchnorm_op_list, data, fix_gamma, use_global_stats):
+    ctx_list = []
+    sym_list = []
+    # BatchNormV1 cpu
+    if 'batchnorm_v1_cpu' in batchnorm_op_list:
+      ctx_list.append({'ctx': mx.cpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
+      sym_list.append(mx.sym.BatchNorm_v1(fix_gamma=fix_gamma,
+                                          use_global_stats=use_global_stats,
+                                          name='batchnorm'))
+
+    # BatchNormV1 gpu
+    if 'batchnorm_v1_gpu' in batchnorm_op_list:
+      ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
+      sym_list.append(mx.sym.BatchNorm_v1(fix_gamma=fix_gamma,
+                                          use_global_stats=use_global_stats,
+                                          name='batchnorm'))
+
+    # BatchNorm cpu
+    if 'batchnorm_cpu' in batchnorm_op_list:
+      ctx_list.append({'ctx': mx.cpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
+      sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
+                                       use_global_stats=use_global_stats,
+                                       name='batchnorm'))
+
+    # BatchNorm gpu
+    if 'batchnorm_gpu' in batchnorm_op_list:
+      ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
+      sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
+                                       use_global_stats=use_global_stats,
+                                       name='batchnorm', cudnn_off=True))
+
+    # BatchNorm gpu cudnn
+    if 'batchnorm_cudnn' in batchnorm_op_list:
+      ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
+      sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
+                                       use_global_stats=use_global_stats,
+                                       name='batchnorm', cudnn_off=False))
+
+    check_consistency(sym_list, ctx_list)
+
+  def test_1d_batchnorm(fix_gamma, use_global_stats):
+    data = (2, 3, 20)
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats,)
+
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats,)
+
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+  def test_2d_batchnorm(fix_gamma, use_global_stats):
+    data = (2, 3, 10, 10)
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_v1_cpu', 'batchnorm_v1_gpu', 'batchnorm_cpu', 'batchnorm_gpu', 'batchnorm_cudnn'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+    # batchnorm_v1 has bugs when pad is not 0, do not test BatchNormV1 here
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu', 'batchnorm_cudnn'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_v1_cpu', 'batchnorm_v1_gpu', 'batchnorm_cpu', 'batchnorm_gpu', 'batchnorm_cudnn'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+    # batchnorm_v1 has bugs when pad is not 0, do not test BatchNormV1 here
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu', 'batchnorm_cudnn'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_v1_cpu', 'batchnorm_v1_gpu', 'batchnorm_cpu', 'batchnorm_gpu', 'batchnorm_cudnn'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+  def test_3d_batchnorm(fix_gamma, use_global_stats):
+    data = (2, 3, 3, 5, 5)
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+  test_1d_batchnorm(True,  False)
+  test_1d_batchnorm(False, False)
+  test_1d_batchnorm(False, True)
+  test_1d_batchnorm(True,  True)
+
+  test_2d_batchnorm(True,  False)
+  test_2d_batchnorm(False, False)
+  test_2d_batchnorm(False, True)
+  test_2d_batchnorm(True,  True)
+
+  test_3d_batchnorm(True,  False)
+  test_3d_batchnorm(False, False)
+  test_3d_batchnorm(False, True)
+  test_3d_batchnorm(True,  True)
+
 
 def test_convolution_with_type():
     np.random.seed(1234)
@@ -950,33 +1082,33 @@ def test_unfuse():
         check_rnn_consistency(stack, fused)
 
 if __name__ == '__main__':
-    test_countsketch()
-    test_ifft()
-    test_fft()
-    test_bidirectional()
-    test_lstm()
-    test_lstm_forget_bias()
-    test_gru()
-    test_rnn()
-    test_unfuse()
-    test_convolution_options()
-    test_convolution_versions()
-    test_convolution_with_type()
-    test_pooling_versions()
-    test_batchnorm_with_type()
-    test_batchnorm_with_type()
-    test_deconvolution_with_type()
-    test_deconvolution_options()
-    test_upsampling_with_type()
-    test_concat_with_type()
-    test_elementwisesum_with_type()
-    test_reshape_with_type()
-    test_blockgrad_with_type()
-    test_swapaxis_with_type()
-    test_fullyconnected_with_type()
-    test_activation_with_type()
-    test_embedding_with_type()
-    test_svmoutput_with_type()
-    test_take_with_type()
-    test_bilinear_sampler_with_type()
-    test_grid_generator_with_type()
+    # test_countsketch()
+    # test_ifft()
+    # test_fft()
+    # test_bidirectional()
+    # test_lstm()
+    # test_lstm_forget_bias()
+    # test_gru()
+    # test_rnn()
+    # test_unfuse()
+    # test_convolution_options()
+    # test_convolution_versions()
+    # test_convolution_with_type()
+    #test_pooling_versions()
+    #test_batchnorm_with_type()
+    test_batchnorm_versions()
+    # test_deconvolution_with_type()
+    # test_deconvolution_options()
+    # test_upsampling_with_type()
+    # test_concat_with_type()
+    # test_elementwisesum_with_type()
+    # test_reshape_with_type()
+    # test_blockgrad_with_type()
+    # test_swapaxis_with_type()
+    # test_fullyconnected_with_type()
+    # test_activation_with_type()
+    # test_embedding_with_type()
+    # test_svmoutput_with_type()
+    # test_take_with_type()
+    # test_bilinear_sampler_with_type()
+    # test_grid_generator_with_type()
