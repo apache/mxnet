@@ -246,9 +246,9 @@ class BatchNormValidator : public test::op::Validator<DType>
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
                           test::op::BasicOperatorData<DType>::kInGrad, op::batchnorm::kData));
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                          test::op::BasicOperatorData<DType>::kInGrad, op::batchnorm::kGamma, true));
+                          test::op::BasicOperatorData<DType>::kInGrad, op::batchnorm::kGamma));
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                          test::op::BasicOperatorData<DType>::kInGrad, op::batchnorm::kBeta, true));
+                          test::op::BasicOperatorData<DType>::kInGrad, op::batchnorm::kBeta));
       // OutGrad
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
                           test::op::BasicOperatorData<DType>::kOutGrad, op::batchnorm::kData));
@@ -703,7 +703,7 @@ TEST(BATCH_NORM, TestBackward2D_Simple) {
 }
 
 template<typename DType>
-static void testEx(const test::op::kwargs_t& kwargs) {
+static void testEx(const test::op::kwargs_t& kwargs, const size_t count) {
 
   TShape shapes[2] = {2, 3};
   const TShape inputShape({2, 3});
@@ -745,29 +745,26 @@ static void testEx(const test::op::kwargs_t& kwargs) {
   test::data_ref<DType>(&info_1.data_->c_.blob_input_vec_[op::batchnorm::kBeta], {0}) = 3;
   test::data_ref<DType>(&info_2.data_->c_.blob_input_vec_[op::batchnorm::kBeta], {0}) = 3;
 
-  info_1.data_->forward();
-  info_2.data_->forward();
+  for(size_t x = 0; x < count; ++x) {
+    info_1.data_->forward();
+    info_2.data_->forward();
 
-  dumpF(std::cout, info_1, 1);
-  dumpF(std::cout, info_2, 2);
+    BatchNormValidator<DType>::compare(info_1, info_2);
 
-  BatchNormValidator<DType>::compare(info_1, info_2);
+    info_1.data_->backward();
+    info_2.data_->backward();
 
-  info_1.data_->backward();
-  info_2.data_->backward();
+    BatchNormValidator<DType>::compare(info_1, info_2);
+  }
 
-  dumpB(std::cout, info_1, 1);
-  dumpB(std::cout, info_2, 2);
-
-  BatchNormValidator<DType>::compare(info_1, info_2);
 }
 
 
 TEST(BATCH_NORM, TestBackward2D_SimpleEx) {
-  testEx<float>(blank_kwargs);
-  testEx<float>(nonfixgamma_kwargs);
-  testEx<float>(useglobalstats_kwargs);
-  testEx<float>(nfs_ugd_kwargs);
+  testEx<float>(blank_kwargs, 2);
+  testEx<float>(nonfixgamma_kwargs, 2);
+  testEx<float>(useglobalstats_kwargs, 2);
+  testEx<float>(nfs_ugd_kwargs, 2);
 }
 
 TEST(BATCH_NORM, TestBackward2D_SimpleNFG) {

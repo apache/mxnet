@@ -532,18 +532,18 @@ class BatchNormOp : public Operator
       }
 
       // May want to make this a param eventually
-      const DType scale = 1.0;
+      const DType scale = 1.0f;
 
       if (isWriting(req[batchnorm::kGamma])) {
         if (!param_.fix_gamma) {
-          gradWeightData[channel] = gradWeightData[channel] + scale * dotp * invstd;
+          gradWeightData[channel] = scale * dotp * invstd;
         } else {
           gradWeightData[channel] = DType(0);
         }
       }
 
       if (isWriting(req[batchnorm::kBeta])) {
-        gradBiasData[channel] = gradBiasData[channel] + scale * sumGradOut;
+        gradBiasData[channel] = scale * sumGradOut;
       }
     }
   }
