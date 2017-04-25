@@ -51,7 +51,25 @@ class Symbol(SymbolBase):
                             'Grouped' if name is None else name)
 
     def __iter__(self):
-        """Returns all outputs in a list"""
+        """Returns a generator object of symbol.
+        You can loop through the returned object to get outputs.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.Variable('a')
+        >>> b = mx.sym.Variable('b')
+        >>> c = a+b
+        >>> d = mx.sym.Variable('d')
+        >>> e = d+c
+        >>> out = e.get_children()
+        >>> out
+        <Symbol Grouped>
+        >>> for i in out.__iter__():
+        ...     i
+        ...
+        <Symbol d>
+        <Symbol _plus0>
+        """
         return (self[i] for i in self.list_outputs())
 
     def __add__(self, other):
@@ -136,7 +154,18 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __neg__(self):
-        """x.__neg__(y) <=> -x """
+        """x.__neg__(y) <=> -x
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.Variable('a')
+        >>> a
+        <Symbol a>
+        >>> -a
+        <Symbol _mulscalar0>
+        >>> a.__neg__()
+        <Symbol _mulscalar1>
+        """
         return self.__mul__(-1.0)
 
     def __copy__(self):
@@ -250,7 +279,7 @@ class Symbol(SymbolBase):
             self.handle = None
 
     def __call__(self, *args, **kwargs):
-        """Compose symbol on inputs.
+        """Composes symbol on inputs.
 
         x.__call__(y, z) <=> x(y,z)
 
@@ -270,17 +299,32 @@ class Symbol(SymbolBase):
         return s
 
     def _compose(self, *args, **kwargs):
-        """Compose symbol on inputs.
+        """Composes symbol on inputs.
 
-        This call mutates the current symbol.
+        x._compose(y, z) <=> x(y,z)
+
+        This function call mutates the current symbol.
+
+        Example usage:
+        ----------
+        >>> data = mx.symbol.Variable('data')
+        >>> net1 = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
+        >>> net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
+        >>> composed = net2(fc3_data=net1, name='composed')
+        >>> composed
+        <Symbol composed>
+        >>> called = net2.__call__(fc3_data=net1, name='composed')
+        >>> called
+        <Symbol composed>
 
         Parameters
         ----------
         args:
-            Positional arguments
+            Positional arguments.
 
         kwargs:
-            Keyword arguments
+            Keyword arguments.
+
         Returns
         -------
             The resulting symbol.
@@ -368,7 +412,14 @@ class Symbol(SymbolBase):
             return None
 
     def attr(self, key):
-        """Gets attribute string from the symbol. This function only works for non-grouped symbols.
+        """Returns an attribute string for corresponding input key from the symbol.
+        This function only works for non-grouped symbols.
+
+        Example usage:
+        ----------
+        >>> data = mx.sym.Variable('data', attr={'mood': 'angry'})
+        >>> data.attr('mood')
+        'angry'
 
         Parameters
         ----------
@@ -378,7 +429,7 @@ class Symbol(SymbolBase):
         Returns
         -------
         value : str
-            The desired attribute value, returns None if attribute does not exist.
+            The desired attribute value, returns `None` if the attribute does not exist.
         """
         ret = ctypes.c_char_p()
         success = ctypes.c_int()
@@ -392,10 +443,16 @@ class Symbol(SymbolBase):
     def list_attr(self, recursive=False):
         """Gets all attributes from the symbol.
 
+        Example usage:
+        ----------
+        >>> data = mx.sym.Variable('data', attr={'mood': 'angry'})
+        >>> data.list_attr()
+        {'mood': 'angry'}
+
         Returns
         -------
         ret : dict of str to str
-            A dicitonary mapping attribute keys to values.
+            A dictionary mapping attribute keys to values.
         """
         if recursive:
             raise DeprecationWarning("Symbol.list_attr with recursive=True has been deprecated. "
@@ -408,6 +465,14 @@ class Symbol(SymbolBase):
 
     def attr_dict(self):
         """Recursively gets all attributes from the symbol and its children.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.Variable('a', attr={'a1':'a2'})
+        >>> b = mx.sym.Variable('b', attr={'b1':'b2'})
+        >>> c = a+b
+        >>> c.attr_dict()
+        {'a': {'a1': 'a2'}, 'b': {'b1': 'b2'}}
 
         Returns
         -------
@@ -685,7 +750,7 @@ class Symbol(SymbolBase):
             return (arg_types, out_types, aux_types)
         else:
             return (None, None, None)
-        # pylint: enable=too-many-locals
+            # pylint: enable=too-many-locals
 
     def infer_shape(self, *args, **kwargs):
         """Infers the shapes of all arguments and all outputs given the known shapes of
@@ -879,7 +944,7 @@ class Symbol(SymbolBase):
             return (arg_shapes, out_shapes, aux_shapes)
         else:
             return (None, None, None)
-        # pylint: enable=too-many-locals
+            # pylint: enable=too-many-locals
 
     def debug_str(self):
         """Gets a debug string.
@@ -898,17 +963,18 @@ class Symbol(SymbolBase):
         """Saves symbol to a file.
 
         You can also use pickle to do the job if you only work on python.
-        The advantage of load/save is the file is language agnostic.
-        This means the file saved using save can be loaded by other language binding of mxnet.
-        You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
+        The advantage of `load`/`save` functions is that the file is language agnostic.
+        This means that the file saved using `save` function can be loaded by other
+        language bindings of MXNet.
+        You also get the benefit of being able to directly load/save from cloud storage(S3, HDFS).
 
         Parameters
         ----------
         fname : str
-            The name of the file
-            - s3://my-bucket/path/my-s3-symbol
-            - hdfs://my-bucket/path/my-hdfs-symbol
-            - /path-to/my-local-symbol
+            The name of the file.
+            - "s3://my-bucket/path/my-s3-symbol"
+            - "hdfs://my-bucket/path/my-hdfs-symbol"
+            - "/path-to/my-local-symbol"
 
         See Also
         --------
@@ -990,7 +1056,7 @@ class Symbol(SymbolBase):
                     type_dict=None,
                     group2ctx=None,
                     **kwargs):
-        """Bind current symbol to get an executor, allocate all the ndarrays needed.
+        """Binds current symbol to get an executor, allocate all the ndarrays needed.
         Allows specifying data types.
 
         This function will ask user to pass in an `NDArray` of position
@@ -1037,11 +1103,11 @@ class Symbol(SymbolBase):
         if group2ctx is not None:
             attr_dict = self.attr_dict()
             arg_ctx = [group2ctx.get(attr_dict[name]['__ctx_group__'], ctx) \
-                         if name in attr_dict and '__ctx_group__' in attr_dict[name] \
-                         else ctx for name in self.list_arguments()]
+                           if name in attr_dict and '__ctx_group__' in attr_dict[name] \
+                           else ctx for name in self.list_arguments()]
             aux_ctx = [group2ctx.get(attr_dict[name]['__ctx_group__'], ctx) \
-                         if name in attr_dict and '__ctx_group__' in attr_dict[name] \
-                         else ctx for name in self.list_auxiliary_states()]
+                           if name in attr_dict and '__ctx_group__' in attr_dict[name] \
+                           else ctx for name in self.list_auxiliary_states()]
         else:
             arg_ctx = [ctx] * len(arg_shapes)
             aux_ctx = [ctx] * len(aux_shapes)
@@ -1068,7 +1134,7 @@ class Symbol(SymbolBase):
 
     def bind(self, ctx, args, args_grad=None, grad_req='write',
              aux_states=None, group2ctx=None, shared_exec=None):
-        """Bind current symbol to get an executor.
+        """Binds the current symbol to get an executor.
 
         Parameters
         ----------
@@ -1232,7 +1298,7 @@ class Symbol(SymbolBase):
     # pylint: enable= no-member
 
     def eval(self, ctx=cpu(), **kwargs):
-        """Evaluate a symbol given arguments
+        """Evaluates a symbol given arguments
 
         The `eval` method combines a call to `bind` (which returns an executor)
         with a call to `forward` (executor method).
@@ -1266,27 +1332,38 @@ class Symbol(SymbolBase):
 
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None, **kwargs):
-    """Create a symbolic variable with specified name.
+    """Creates a symbolic variable with specified name.
+    Equivalent to mx.sym.Variable.
+
+    Example usage:
+    ----------
+    >>> data = mx.sym.Variable('data', attr={'a': 'b'})
+    >>> data
+    <Symbol data>
+    >>> data = mx.sym.Variable('data', shape = (2,3), __shape__=(9,0))
+    >>> data # shape (9,0) will be set
+    <Symbol v>
 
     Parameters
     ----------
     name : str
-        Name of the variable.
-    attr : dict of string -> string
-        Additional attributes to set on the variable.
+        Variable name.
+    attr : dict of strings
+        Additional attributes to set on the variable. Format {string : string}.
     shape : tuple
-        The shape of a variable. If specified, this will be used during shape inference.
-        If the user specified a different shape for this variable using
+        The shape of a variable. If specified, this will be used during the shape inference.
+        If the user has specified a different shape for this variable using
         a keyword argument when calling shape inference, this shape information will be ignored.
     lr_mult : float
-        The learning rate muliplier for this variable.
+        The learning rate multiplier for input variable.
     wd_mult : float
-        Weight decay muliplier for this variable.
+        Weight decay multiplier for input variable.
     dtype : str or numpy.dtype
-        The dtype for this variable. If not specified, this value will be inferred.
+        The dtype for input variable. If not specified, this value will be inferred.
     init : initializer (mxnet.init.*)
-        Initializer for this variable to (optionally) override the default initializer
-    kwargs : other additional attribute variables
+        Initializer for this variable to (optionally) override the default initializer.
+    kwargs : Additional attribute variables
+        Additional attributes must start and end with double underscores.
 
     Returns
     -------
