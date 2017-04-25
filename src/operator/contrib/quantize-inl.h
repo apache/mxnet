@@ -28,9 +28,14 @@ struct QuantizeParam : public dmlc::Parameter<QuantizeParam> {
 
 struct quantize {
   template<typename DstDType, typename SrcDType>
-  MSHADOW_XINLINE static void Map(int i, DstDType *out, const SrcDType *in,
-                                  float min_range, float max_range, float scale) {
-    out[i] = static_cast<DstDType>((in[i] - min_range) * scale + 0.5);
+  MSHADOW_XINLINE static void Map(int i, DstDType *out, float *omin_range,
+                                  float *omax_range, const SrcDType *in,
+                                  const float *imin_range, const float *imax_range,
+                                  double min_limit, double max_limit) {
+    float scale = (max_limit - min_limit) / (*imax_range - *imin_range);
+    out[i] = static_cast<DstDType>((in[i] - *imin_range) * scale + 0.5);
+    *omin_range = *imin_range;
+    *omax_range = *imax_range;
   }
 };
 
@@ -47,17 +52,10 @@ void QuantizeCompute(const nnvm::NodeAttrs& attrs,
   const QuantizeParam& param = nnvm::get<QuantizeParam>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DstDType, {
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, SrcDType, {
-    float min_range = inputs[1].dptr<float>()[0];
-    float max_range = inputs[2].dptr<float>()[0];
-    float scale =
-      (static_cast<double>(std::numeric_limits<DstDType>::max()) -
-       static_cast<double>(std::numeric_limits<DstDType>::min())) /
-      (max_range - min_range);
-
-    Kernel<quantize, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DstDType>(),
-      inputs[0].dptr<SrcDType>(), min_range, max_range, scale);
-    outputs[1].dptr<float>()[0] = min_range;
-    outputs[2].dptr<float>()[0] = max_range;
+    Kernel<quantize, xpu>::Launch(s, outputs[0].Size(),
+      outputs[0].dptr<DstDType>(), outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+      inputs[0].dptr<SrcDType>(), inputs[1].dptr<float>(), inputs[2].dptr<float>(),
+      std::numeric_limits<DstDType>::min(), std::numeric_limits<DstDType>::max());
   });
   });
 }

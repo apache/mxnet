@@ -28,9 +28,11 @@ struct DequantizeParam : public dmlc::Parameter<DequantizeParam> {
 struct dequantize {
   template<typename DstDType, typename SrcDType>
   MSHADOW_XINLINE static void Map(int i, DstDType *out, const SrcDType *in,
-                                  float min_range, float max_range,
-                                  float scale, float half_range) {
-    out[i] = static_cast<DstDType>((in[i] + half_range) * scale + min_range);
+                                  float *imin_range, float *imax_range,
+                                  double imin_limit, double imax_limit,
+                                  float half_range) {
+    float scale = (*imax_range - *imin_range) / (imax_limit - imin_limit);
+    out[i] = static_cast<DstDType>((in[i] + half_range) * scale + *imin_range);
   }
 };
 
@@ -47,19 +49,15 @@ void DequantizeCompute(const nnvm::NodeAttrs& attrs,
   const DequantizeParam& param = nnvm::get<DequantizeParam>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DstDType, {
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, SrcDType, {
-    float min_range = inputs[1].dptr<float>()[0];
-    float max_range = inputs[2].dptr<float>()[0];
+    double min_limit = static_cast<double>(std::numeric_limits<SrcDType>::min());
+    double max_limit = static_cast<double>(std::numeric_limits<SrcDType>::max());
     float half_range = !std::is_signed<SrcDType>::value
       ? 0.0f
-      : ((static_cast<double>(std::numeric_limits<SrcDType>::max()) -
-          static_cast<double>(std::numeric_limits<SrcDType>::min()) + 1) / 2.0);
-    float scale =
-      (max_range - min_range) /
-      (static_cast<double>(std::numeric_limits<SrcDType>::max()) -
-       static_cast<double>(std::numeric_limits<SrcDType>::min()));
+      : (max_limit - min_limit + 1) / 2.0;
 
     Kernel<dequantize, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DstDType>(),
-      inputs[0].dptr<SrcDType>(), min_range, max_range, scale, half_range);
+      inputs[0].dptr<SrcDType>(), inputs[1].dptr<float>(), inputs[2].dptr<float>(),
+      min_limit, max_limit, half_range);
   });
   });
 }
