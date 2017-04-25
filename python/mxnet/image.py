@@ -337,12 +337,12 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
 
 class ImageIter(io.DataIter):
     """Image data iterator with a large number of augmentation choices.
-    This iterator supports reading from both .rec files and raw image files with image list.
+    This iterator supports reading from both .rec files and raw image files.
 
-    To load from .rec files, please specify `path_imgrec` parameter.
+    To load input images from .rec files, use `path_imgrec` parameter and to load from raw image
+    files, use `path_imglist` and `path_root` parameters.
+
     To use data partition (for distributed training) or shuffling, specify `path_imgidx` parameter.
-
-    To load from raw image files, specify `path_imglist` and `path_root` parameters.
 
     Parameters
     ----------
@@ -532,7 +532,7 @@ class ImageIter(io.DataIter):
             raise RuntimeError('Data shape is wrong')
 
     def imdecode(self, s):
-        """Decodes a string or byte string into an image.
+        """Decodes a string or byte string to an NDArray.
         See mx.img.imdecode for more details."""
         return imdecode(s)
 
@@ -549,7 +549,7 @@ class ImageIter(io.DataIter):
         return img
 
     def augmentation_transform(self, data):
-        """Transforms data with specified augmentation."""
+        """Transforms input data with specified augmentation."""
         for aug in self.auglist:
             data = [ret for src in data for ret in aug(src)]
         return data
