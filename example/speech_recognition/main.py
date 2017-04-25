@@ -95,6 +95,13 @@ def load_data(args):
     from importlib import import_module
     prepare_data_template = import_module(args.config.get('arch', 'arch_file'))
     init_states = prepare_data_template.prepare_data(args)
+    if mode == "train":
+        sort_by_duration=True
+        shuffle=False
+    else:
+        sort_by_duration=False
+	shuffle=True
+
     data_loaded = STTIter(partition="train",
                           count=datagen.count,
                           datagen=datagen,
@@ -104,8 +111,8 @@ def load_data(args):
                           seq_length=max_t_count,
                           width=whcs.width,
                           height=whcs.height,
-                          sort_by_duration=True,
-                          shuffle=False)
+                          sort_by_duration=sort_by_duration,
+                          shuffle=shuffle)
 
     if mode == 'predict':
         return data_loaded, args
@@ -128,10 +135,12 @@ def load_model(args, contexts, data_train):
     # load model from model_name prefix and epoch of model_num_epoch with gpu contexts of contexts
     mode = args.config.get('common', 'mode')
     load_optimizer_states = args.config.getboolean('load', 'load_optimizer_states')
+
+    from importlib import import_module
+    symbol_template = import_module(args.config.get('arch', 'arch_file'))
+    model_loaded = symbol_template.arch(args)
+
     if mode == 'train':
-        from importlib import import_module
-        symbol_template = import_module(args.config.get('arch', 'arch_file'))
-        model_loaded = symbol_template.arch(args)
         model_num_epoch = None
     else:
         model_file = args.config.get('common', 'model_file')
@@ -207,7 +216,7 @@ if __name__ == '__main__':
         do_training(args=args, module=module, data_train=data_train, data_val=data_val)
     # if mode is 'load', it loads model from the checkpoint and continues the training.
     elif mode == 'load':
-        do_training(args=args, module=model_loaded, data_train=data_train, data_val=data_val, begin_epoch=model_num_epoch)
+        do_training(args=args, module=model_loaded, data_train=data_train, data_val=data_val, begin_epoch=model_num_epoch+1)
     # if mode is 'predict', it predict label from the input by the input model
     elif mode == 'predict':
         # predict through data
