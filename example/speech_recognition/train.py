@@ -70,6 +70,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
     clip_gradient = args.config.getfloat('train', 'clip_gradient')
     weight_decay = args.config.getfloat('train', 'weight_decay')
     save_optimizer_states = args.config.getboolean('train', 'save_optimizer_states')
+    show_every = args.config.getint('train', 'show_every')
 
     if clip_gradient == 0:
         clip_gradient = None
@@ -104,7 +105,8 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
 
             module.forward_backward(data_batch)
             module.update()
-            module.update_metric(eval_metric, data_batch.label)
+            if (nbatch+1) % show_every == 0:
+                module.update_metric(eval_metric, data_batch.label)
         # commented for Libri_sample data set to see only train cer
         log.info('---------validation---------')
         for nbatch, data_batch in enumerate(data_val):
