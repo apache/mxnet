@@ -368,10 +368,8 @@ class Module(BaseModule):
             # that consumes the labels
             # assert label_shapes is not None
 
-        data_attrs = data_shapes
-        label_attrs = label_shapes
-        self._data_attrs, self._label_attrs = _parse_data_desc(
-            self.data_names, self.label_names, data_attrs, label_attrs)
+        self._data_shapes, self._label_shapes = _parse_data_desc(
+            self.data_names, self.label_names, data_shapes, label_shapes)
 
         if shared_module is not None:
             assert isinstance(shared_module, Module) and \
@@ -381,8 +379,8 @@ class Module(BaseModule):
             shared_group = None
 
         self._exec_group = DataParallelExecutorGroup(self._symbol, self._context,
-                                                     self._work_load_list, self._data_attrs,
-                                                     self._label_attrs, self._param_names,
+                                                     self._work_load_list, self._data_shapes,
+                                                     self._label_shapes, self._param_names,
                                                      for_training, inputs_need_grad,
                                                      shared_group, logger=self.logger,
                                                      fixed_param_names=self._fixed_param_names,
