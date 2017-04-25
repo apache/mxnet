@@ -1,3 +1,7 @@
+/*!
+ * Copyright (c) 2017 by Contributors
+ * Xin Li yakumolx@gmail.com
+ */
 #include <chrono>
 #include "mxnet-cpp/MxNetCpp.h"
 
@@ -12,15 +16,14 @@ Symbol mlp(const vector<int> &layers) {
   vector<Symbol> biases(layers.size());
   vector<Symbol> outputs(layers.size());
 
-  for (int i=0; i<layers.size(); ++i) {
+  for (int i = 0; i < layers.size(); ++i) {
     weights[i] = Symbol::Variable("w" + to_string(i));
     biases[i] = Symbol::Variable("b" + to_string(i));
     Symbol fc = FullyConnected(
-      i == 0? x : outputs[i-1], // data
+      i == 0? x : outputs[i-1],  // data
       weights[i],
       biases[i],
-      layers[i]
-    );
+      layers[i]);
     outputs[i] = i == layers.size()-1 ? fc : Activation(fc, ActivationActType::relu);
   }
 
@@ -50,7 +53,7 @@ int main(int argc, char** argv) {
 
   auto net = mlp(layers);
 
-  Context ctx = Context::cpu(); // Use CPU for training
+  Context ctx = Context::cpu();  // Use CPU for training
 
   std::map<string, NDArray> args;
   args["X"] = NDArray(Shape(batch_size, image_size*image_size), ctx);

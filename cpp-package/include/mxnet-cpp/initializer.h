@@ -77,7 +77,7 @@ class Initializer {
 
 class Zero : public Initializer {
  public:
-  Zero(){}
+  Zero() {}
  protected:
   void InitWeight(NDArray *arr) override {
     InitZero(arr);
@@ -86,7 +86,7 @@ class Zero : public Initializer {
 
 class One : public Initializer {
  public:
-  One(){}
+  One() {}
  protected:
   void InitWeight(NDArray *arr) override {
     InitOne(arr);
@@ -95,7 +95,7 @@ class One : public Initializer {
 
 class Constant : public Initializer {
  public:
-  Constant(float value)
+  explicit Constant(float value)
     : value(value) {}
  protected:
   float value;
@@ -106,7 +106,7 @@ class Constant : public Initializer {
 
 class Uniform : public Initializer {
  public:
-  Uniform(float scale)
+  explicit Uniform(float scale)
     : Uniform(-scale, scale) {}
   Uniform(float begin, float end)
     : begin(begin), end(end) {}
@@ -130,11 +130,11 @@ class Normal : public Initializer {
 
 class Bilinear : public Initializer {
  public:
-   Bilinear() {}
+  Bilinear() {}
  protected:
-   void InitWeight(NDArray *arr) override {
-     InitBilinear(arr);
-   }
+  void InitWeight(NDArray *arr) override {
+    InitBilinear(arr);
+  }
 };
 
 class Xavier : public Initializer {
