@@ -352,6 +352,33 @@ def test_pow_fn():
     check_symbolic_forward(y, [x], [2**x])
     check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
 
+def test_relu():
+    def frelu(x):
+        return np.maximum(x, 0.0)
+    def frelu_grad(x):
+        return 1.0 * (x > 0.0)
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.sym.relu(x)
+    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    ya = frelu(xa)
+    ga = frelu_grad(xa)
+    check_numeric_gradient(y, [xa], numeric_eps=1E-3)
+    check_symbolic_forward(y, [xa], [ya])
+    check_symbolic_backward(y, [xa], [np.ones(shape)], [ga])
+
+def test_sigmoid():
+    def fsigmoid(a):
+        return np.divide(1.0, (1.0 + np.exp(-a)))
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.sym.sigmoid(x)
+    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    ya = fsigmoid(xa)
+    check_numeric_gradient(y, [xa], numeric_eps=1E-3)
+    check_symbolic_forward(y, [xa], [ya])
+    check_symbolic_backward(y, [xa], [np.ones(shape)], [ya * (1 - ya)])
+
 def test_binary_logic():
     def _inner_test(forward_gt, logic_sym, x_shape, y_shape, test_scalar=True):
         x = mx.symbol.Variable("x")
@@ -3071,3 +3098,5 @@ if __name__ == '__main__':
     test_tile()
     test_one_hot()
     test_where()
+    test_relu()
+    test_sigmoid()
