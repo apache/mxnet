@@ -22,33 +22,41 @@ namespace mxnet {
 namespace op {
 template<typename AttrType, bool (*is_none)(const AttrType&),
          bool (*assign)(AttrType*, const AttrType&), bool reverse_infer,
-         std::string (*attr_string)(const AttrType&)>
+         std::string (*attr_string)(const AttrType&),
+         int in_attr_size = -1, int out_attr_size = -1>
 inline bool ElemwiseAttr(const nnvm::NodeAttrs& attrs,
                          std::vector<AttrType> *in_attrs,
                          std::vector<AttrType> *out_attrs,
                          const AttrType& none) {
   AttrType dattr = none;
-  auto deduce = [&](std::vector<AttrType> *vec, const char *name) {
-      for (size_t i = 0; i < vec->size(); ++i) {
+  size_t in_size = in_attrs->size();
+  size_t out_size = out_attrs->size();
+  if (in_attr_size != -1)
+    in_size = static_cast<size_t>(in_attr_size);
+  if (out_attr_size != -1)
+    out_size = static_cast<size_t>(out_attr_size);
+
+  auto deduce = [&](std::vector<AttrType> *vec, size_t size, const char *name) {
+      for (size_t i = 0; i < size; ++i) {
         CHECK(assign(&dattr, (*vec)[i]))
           << "Incompatible attr in node " << attrs.name << " at " << i << "-th "
           << name << ": " << "expected " << attr_string(dattr)
           << ", got " << attr_string((*vec)[i]);
       }
     };
-  deduce(in_attrs, "input");
-  if (reverse_infer) deduce(out_attrs, "output");
+  deduce(in_attrs, in_size, "input");
+  if (reverse_infer) deduce(out_attrs, out_size, "output");
 
-  auto write = [&](std::vector<AttrType> *vec, const char *name) {
-      for (size_t i = 0; i < vec->size(); ++i) {
+  auto write = [&](std::vector<AttrType> *vec, size_t size, const char *name) {
+      for (size_t i = 0; i < size; ++i) {
         CHECK(assign(&(*vec)[i], dattr))
           << "Incompatible attr in node " << attrs.name << " at " << i << "-th "
           << name << ": " << "expected " << attr_string(dattr)
           << ", got " << attr_string((*vec)[i]);
       }
     };
-  write(in_attrs, "input");
-  write(out_attrs, "output");
+  write(in_attrs, in_size, "input");
+  write(out_attrs, out_size, "output");
   if (is_none(dattr)) return false;
   return true;
 }
@@ -63,13 +71,13 @@ inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
     attrs, in_attrs, out_attrs, TShape());
 }
 
-template<int n_in, int n_out>
+template<int n_in, int n_out, int total_in = n_in, int total_out = n_out>
 inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_attrs,
                          std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_in)) << " in operator " << attrs.name;
-  CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
-  return ElemwiseAttr<int, type_is_none, type_assign, true, type_string>(
+  CHECK_EQ(in_attrs->size(), static_cast<size_t>(total_in)) << " in operator " << attrs.name;
+  CHECK_EQ(out_attrs->size(), static_cast<size_t>(total_out)) << " in operator " << attrs.name;
+  return ElemwiseAttr<int, type_is_none, type_assign, true, type_string, n_in, n_out>(
     attrs, in_attrs, out_attrs, -1);
 }
 

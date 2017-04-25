@@ -2,9 +2,10 @@
 import math
 import pickle
 import logging
-from .ndarray import NDArray, zeros, clip, sqrt, sign
-from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
+from .ndarray import NDArray, zeros, clip, sqrt, sign, array
+from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update, mp_sgd_update, mp_sgd_mom_update
 from .random import normal
+import numpy
 
 
 class Optimizer(object):
@@ -355,6 +356,51 @@ class SGD(Optimizer):
             sgd_update(weight, grad, out=weight,
                        lr=lr, wd=wd, **kwargs)
 
+@register
+class MultiPrecisionSGD(Optimizer):
+    """The SGD optimizer with momentum and weight decay.
+
+    The optimizer updates the weight by:
+
+      state = momentum * state + lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
+      weight = weight - state
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`:
+
+    Parameters
+    ----------
+    momentum : float, optional
+       The momentum value.
+    """
+    def __init__(self, momentum=0.0, **kwargs):
+        super(MultiPrecisionSGD, self).__init__(**kwargs)
+        self.momentum = momentum
+        self.kwargs = {'rescale_grad': self.rescale_grad}
+        if self.momentum > 0:
+            self.kwargs['momentum'] = self.momentum
+        if self.clip_gradient:
+            self.kwargs['clip_gradient'] = self.clip_gradient
+
+    def create_state(self, index, weight):
+        if self.momentum == 0.0:
+            return (None, array(weight, ctx=weight.ctx, dtype=numpy.float32))
+        else:
+            return (zeros(weight.shape, weight.context, dtype=numpy.float32), array(weight, ctx=weight.ctx, dtype=numpy.float32))
+
+    def update(self, index, weight, grad, state):
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        self._update_count(index)
+
+        if state[0] is not None:
+            mp_sgd_mom_update(weight, grad, state[0], state[1], out=weight,
+                              lr=lr, wd=wd, **self.kwargs)
+        else:
+            mp_sgd_update(weight, grad, state[1], out=weight,
+                          lr=lr, wd=wd, **self.kwargs)
 @register
 class DCASGD(Optimizer):
     """The DCASGD optimizer
