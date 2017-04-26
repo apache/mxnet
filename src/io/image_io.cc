@@ -98,29 +98,41 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
   const auto& param = nnvm::get<ImdecodeParam>(attrs.parsed);
 
   CHECK_EQ(inputs[0].ctx().dev_mask(), cpu::kDevMask) << "Only supports cpu input";
-  CHECK_EQ(inputs[0].dtype(), mshadow::kUint8) << "Input needs to be uint8 buffer";
-  const uint8_t* str_img = reinterpret_cast<uint8_t*>(inputs[0].data().dptr_);
-  uint32_t len = inputs[0].shape().Size();
+  // CHECK_EQ(inputs[0].dtype(), mshadow::kUint8) << "Input needs to be uint8 buffer";
 
+  static const int CVTYPEMAP[] = {CV_8U, CV_8UC3, CV_16U, CV_16UC3};
+  static const int CVBASETYPEMAP[] = {CV_8U, CV_8U, CV_16U, CV_16U};
+  
   NDArray ndin = inputs[0];
   ndin.WaitToRead();
   TShape oshape(3);
-  oshape[2] = param.flag == 0 ? 1 : 3;
-  if (get_jpeg_size(str_img, len, &oshape[1], &oshape[0])) {
-  } else if (get_png_size(str_img, len, &oshape[1], &oshape[0])) {
-  } else {
-    cv::Mat buf(1, ndin.shape().Size(), CV_8U, ndin.data().dptr_);
-    cv::Mat res = cv::imdecode(buf, param.flag);
+  oshape[2] = param.flag % 2 == 0 ? 1 : 3;
+  if (param.flag < 2) {
+    const uint8_t* str_img = reinterpret_cast<uint8_t*>(inputs[0].data().dptr_);
+    uint32_t len = inputs[0].shape().Size();
+    if (get_jpeg_size(str_img, len, &oshape[1], &oshape[0])) {
+    } else if (get_png_size(str_img, len, &oshape[1], &oshape[0])) {
+
+    } else {
+      // TODO
+      LOG(INFO) << "Something went wrong";
+      (*outputs)[0] = NDArray();
+    }
+  } else { 
+    CHECK_LT(param.flag, 4) << "flag must be < 4";
+    cv::Mat buf(1, ndin.shape().Size(), CVBASETYPEMAP[param.flag], ndin.data().dptr_);
+    cv::Mat res = cv::imdecode(buf, param.flag % 2 != 0);
     if (res.empty()) {
-      LOG(INFO) << "Invalid image file. Only supports png and jpg.";
+      LOG(INFO) << "Invalid image file. Only supports png and jpg."; //TODO
       (*outputs)[0] = NDArray();
       return;
     }
     oshape[0] = res.rows;
     oshape[1] = res.cols;
-    NDArray ndout(oshape, Context::CPU(), false, mshadow::kUint8);
+    
+    NDArray ndout(oshape, Context::CPU(), false, mshadow::kUint8); // There is no uint16 flag in mshadow. Please Advise
     cv::Mat dst(ndout.shape()[0], ndout.shape()[1],
-                param.flag == 0 ? CV_8U : CV_8UC3,
+                CVTYPEMAP[param.flag],
                 ndout.data().dptr_);
     res.copyTo(dst);
     if (param.to_rgb) {
@@ -130,17 +142,19 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
     return;
   }
 
+  // If you are here then flag < 2
+  CHECK_LT(param.flag, 2) << "flag must be < 2";
   NDArray ndout(oshape, Context::CPU(), true, mshadow::kUint8);
   Engine::Get()->PushSync([ndin, ndout, param](RunContext ctx){
       ndout.CheckAndAlloc();
-      cv::Mat buf(1, ndin.shape().Size(), CV_8U, ndin.data().dptr_);
+      cv::Mat buf(1, ndin.shape().Size(), CVBASETYPEMAP[param.flag], ndin.data().dptr_);
       cv::Mat dst(ndout.shape()[0], ndout.shape()[1],
-                  param.flag == 0 ? CV_8U : CV_8UC3,
+                  CVTYPEMAP[param.flag],
                   ndout.data().dptr_);
 #if (CV_MAJOR_VERSION > 2 || (CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >=4))
       cv::imdecode(buf, param.flag, &dst);
 #else
-      cv::Mat tmp = cv::imdecode(buf, param.flag);
+      cv::Mat tmp = cv::imdecode(buf, param.flag % 2 != 0);
       CHECK(!tmp.empty());
       tmp.copyTo(dst);
 #endif
