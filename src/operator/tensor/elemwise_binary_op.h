@@ -10,11 +10,30 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include "../mxnet_op.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {
+template<typename xpu, typename op>
+void BinaryLaunch(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Kernel<op, xpu>::Launch(s, outputs[0].Size(),
+      outputs[0].dptr<DType>(), inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
+  });
+}
+
 template<typename xpu, typename OP>
 void BinaryCompute(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
