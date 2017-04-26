@@ -369,7 +369,7 @@ class LSTMCell(BaseRNNCell):
     ----------
     num_hidden : int
         number of units in output symbol
-    prefix : str, default 'rnn_'
+    prefix : str, default 'lstm_'
         prefix for name of layers
         (and name of weight if params is None)
     params : RNNParams or None
