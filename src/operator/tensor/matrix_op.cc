@@ -23,7 +23,7 @@ DMLC_REGISTER_PARAMETER(ReverseParam);
 
 NNVM_REGISTER_OP(Reshape)
 .add_alias("reshape")
-.describe(R"code(Reshapes the input array into a new shape.
+.describe(R"code(Reshapes the input array.
 
 .. note:: ``Reshape`` is deprecated, use ``reshape``
 
@@ -138,7 +138,7 @@ Example::
 .add_argument("data", "NDArray-or-Symbol", "Input array.");
 
 NNVM_REGISTER_OP(transpose)
-.describe(R"code(Permute the dimensions of an array.
+.describe(R"code(Permutes the dimensions of an array.
 
 Examples::
 
@@ -196,7 +196,7 @@ Examples::
 
 
 NNVM_REGISTER_OP(expand_dims)
-.describe(R"code(Insert a new axis with size 1 into the array shape
+.describe(R"code(Inserts a new axis of size 1 into the array shape
 
 For example, given ``x`` with shape ``(2,3,4)``, then ``expand_dims(x, axis=1)``
 will return a new array with shape ``(2,1,3,4)``.
@@ -218,7 +218,7 @@ will return a new array with shape ``(2,1,3,4)``.
 
 NNVM_REGISTER_OP(slice)
 .add_alias("crop")
-.describe(R"code(Slice a continuous region of the array.
+.describe(R"code(Slices a contiguous region of the array.
 
 .. note:: ``crop`` is deprecated. Use ``slice`` instead.
 
@@ -300,7 +300,7 @@ NNVM_REGISTER_OP(_crop_assign_scalar)
 .add_arguments(SimpleCropAssignScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice_axis)
-.describe(R"code(Slice along a given axis.
+.describe(R"code(Slices along a given axis.
 
 Returns an array slice along a given `axis` starting from the `begin` index
  to the `end` index.
@@ -422,7 +422,7 @@ NNVM_REGISTER_OP(_backward_batch_dot)
 .set_attr<FCompute>("FCompute<cpu>", BatchDotBackward_<cpu>);
 
 NNVM_REGISTER_OP(clip)
-.describe(R"code(Clip (limit) the values in an array.
+.describe(R"code(Clips (limits) the values in an array.
 
 Given an interval, values outside the interval are clipped to the interval edges.
 Clipping ``x`` between `a_min` and `a_x` would be::
@@ -454,7 +454,7 @@ NNVM_REGISTER_OP(_backward_clip)
 .set_attr<FCompute>("FCompute<cpu>", ClipGrad_<cpu>);
 
 NNVM_REGISTER_OP(repeat)
-.describe(R"code(Repeat elements of an array.
+.describe(R"code(Repeats elements of an array.
 
 By default, ``repeat`` flattens the input array into 1-D and then repeats the
 elements::
@@ -500,7 +500,7 @@ NNVM_REGISTER_OP(_backward_repeat)
 .set_attr<FCompute>("FCompute<cpu>", RepeatOpBackward<cpu>);
 
 NNVM_REGISTER_OP(tile)
-.describe(R"code(Repeat the whole array by multiple times.
+.describe(R"code(Repeats the whole array multiple times.
 
 If ``reps`` has length *d*, and input array has dimension of *n*. There are
 there cases:
@@ -557,8 +557,7 @@ NNVM_REGISTER_OP(_backward_tile)
 .set_attr<FCompute>("FCompute<cpu>", TileOpBackward<cpu>);
 
 NNVM_REGISTER_OP(reverse)
-.describe(R"code(Reverse the order of elements in an array along given axis.
-The shape of the array is preserved.
+.describe(R"code(Reverses the order of elements along given axis while preserving array shape.
 
 Note: reverse and flip are equivalent. We use reverse in the following examples.
 

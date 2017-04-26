@@ -58,7 +58,7 @@ Operator *FullyConnectedProp::CreateOperatorEx(Context ctx, std::vector<TShape> 
 DMLC_REGISTER_PARAMETER(FullyConnectedParam);
 
 MXNET_REGISTER_OP_PROPERTY(FullyConnected, FullyConnectedProp)
-.describe(R"code(Apply a linear transformation: :math:`Y = XW^T + b`.
+.describe(R"code(Applies a linear transformation: :math:`Y = XW^T + b`.
 
 Shapes:
 
