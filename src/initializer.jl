@@ -44,7 +44,7 @@ end
 
 function _init_loc_bias(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
  assert(size(array) == (6,))
- array=[1.0, 0, 0, 0, 1.0, 0]
+ array[:]= [1.0, 0, 0, 0, 1.0, 0]
 end
 
 function _init_bilinear(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
