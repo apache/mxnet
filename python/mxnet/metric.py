@@ -455,7 +455,7 @@ def create(metric, **kwargs):
     Examples
     --------
     >>> def custom_metric(label, pred):
-    ...     return np.mean(np.abs(label-pred))
+    ...     return np.mean(np.abs(label - pred))
     ...
     >>> metric1 = mx.metric.create('acc')
     >>> metric2 = mx.metric.create(custom_metric)
