@@ -8,7 +8,43 @@
 
 namespace mxnet {
 namespace op {
-DMLC_REGISTER_PARAMETER(CastParam);
+// relu
+MXNET_OPERATOR_REGISTER_UNARY(relu)
+.describe(R"code(Computes rectified linear.
+
+.. math::
+   max(features, 0)
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_relu"})
+.set_attr<FCompute>("FCompute<cpu>",
+    UnaryLaunch<cpu, kernel_launch_op::relu>);
+
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_relu)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>",
+    BinaryLaunch<cpu, kernel_launch_op::relu_grad>);
+
+
+// sigmoid
+MXNET_OPERATOR_REGISTER_UNARY(sigmoid)
+.describe(R"code(Computes sigmoid of x element-wise.
+
+.. math::
+   y = 1 / (1 + exp(-x))
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sigmoid"})
+.set_attr<FCompute>("FCompute<cpu>",
+    UnaryLaunch<cpu, kernel_launch_op::sigmoid>);
+
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_sigmoid)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>",
+    BinaryLaunch<cpu, kernel_launch_op::sigmoid_grad>);
+
 
 // copy
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
@@ -95,6 +131,7 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
       return lhs;
     });
 
+DMLC_REGISTER_PARAMETER(CastParam);
 NNVM_REGISTER_OP(Cast)
 .add_alias("cast")
 .describe(R"code(Casts all elements of the input to the new type.
