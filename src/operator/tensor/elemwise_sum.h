@@ -40,8 +40,6 @@ void ElementWiseSumCompute_(const nnvm::NodeAttrs& attrs,
                             const std::vector<TBlob>& in_data,
                             const std::vector<OpReqType>& req,
                             const std::vector<TBlob>& out_data) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
   using namespace mxnet_op;
   if (req[0] == kNullOp) return;
   size_t size = in_data.size();
@@ -93,7 +91,7 @@ void ElementWiseSumCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   MSHADOW_TYPE_SWITCH2(outputs[0].type_flag_, DType, {
       ElementWiseSumCompute_<xpu, DType>(attrs, ctx, inputs, req, outputs);
-    });
+  });
 }
 
 }  // namespace op

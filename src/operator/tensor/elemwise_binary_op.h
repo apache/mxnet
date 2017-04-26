@@ -12,9 +12,40 @@
 #include <utility>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
+#include "../mxnet_op.h"
 
 namespace mxnet {
 namespace op {
+
+template<typename OP>
+struct BinaryOp {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const OpReqType req, const DType* lhs,
+    const DType* rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+};
+
+// Basic version of binary compute that implements add, sub, mul, div and supports half2 type
+template<typename xpu, typename OP>
+void BinaryComputeBasic(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  if (req[0] == kNullOp) return;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH2(outputs[0].type_flag_, DType, {
+    int out_size = static_cast<int>((outputs[0].Size() + DataType<DType>::kPack - 1)
+                                    /DataType<DType>::kPack);
+    DType* out_dptr = outputs[0].dptr<DType>();
+    DType* lhs_dptr = inputs[0].dptr<DType>();
+    DType* rhs_dptr = inputs[1].dptr<DType>();
+    // Kernel<BinaryOp<OP>, xpu>::Launch(s, out_size, out_dptr, req[0], lhs_dptr, rhs_dptr);
+  });
+}
+
 template<typename xpu, typename OP>
 void BinaryCompute(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
