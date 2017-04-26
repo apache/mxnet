@@ -433,26 +433,19 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
 else()
   if(UNIX)
-    set(MXNET_DYNAMIC_ONLY ON)
-    if(MXNET_DYNAMIC_ONLY)
-      add_library(mxnet SHARED ${SOURCE})
-    else()
-      set(INITIALIZE_SOURCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/src/initialize.cc)
-      list(REMOVE_ITEM SOURCE ${INITIALIZE_SOURCE_FILE})
-      add_library(mxnet_static STATIC ${INITIALIZE_SOURCE_FILE} ${SOURCE})
-      # Need an arbitrary source file to trigger CMake to build the library
-      add_library(mxnet SHARED ${INITIALIZE_SOURCE_FILE})
-      # This has prolems, as it adds libmxnet_static to INTERFACE_LINK_LIBRARIES
-      target_link_libraries(mxnet "-Wl,--whole-archive $<TARGET_FILE:mxnet_static> -Wl,--no-whole-archive")
-      #target_link_libraries(mxnet mxnet_static)
-      add_custom_target(
-          StaticallyLinkStaticMXNetLibrary ALL
-          BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
-          WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
-          COMMAND ln -sf libmxnet_static.a libmxnet.a
-          DEPENDS mxnet_static
-      )
-    endif()
+    add_library(mxnet_static STATIC ${SOURCE})
+    # Need an arbitrary source file to trigger CMake to build the library
+    add_library(mxnet SHARED)
+    # This has prolems, as it adds libmxnet_static to INTERFACE_LINK_LIBRARIES
+    target_link_libraries(mxnet "-Wl,--whole-archive $<TARGET_FILE:mxnet_static> -Wl,--no-whole-archive")
+    target_link_libraries(mxnet mxnet_static) # Let cmake understand the dependency
+    add_custom_target(
+        StaticallyLinkStaticMXNetLibrary ALL
+        BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
+        WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+        COMMAND ln -sf libmxnet_static.a libmxnet.a
+        DEPENDS mxnet_static
+    )
   else()
     add_library(mxnet SHARED ${SOURCE})
   endif()

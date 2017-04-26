@@ -409,11 +409,4 @@ struct ScopeSet {
 }  // namespace test
 }  // namespace mxnet
 
-/*! \brief override to print blob vector/matrix data */
-template<typename StreamType>
-inline StreamType& operator<<(StreamType &os, const mxnet::TBlob &blob) {
-  mxnet::test::print_blob<float>(os, blob);
-  return os;
-};
-
 #endif  // MXNET_TEST_TEST_UTIL_H

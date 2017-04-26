@@ -43,6 +43,16 @@ class BatchNormValidator : public test::op::Validator<DType>
   typedef test::op::Validator<DType> Super;
   using Super::compare;
 
+  class Tensor3 {
+   public:
+    inline Tensor3(DType *dptr, const TShape& shape)
+    : dptr_(dptr) {
+
+    }
+    DType *dptr_;
+    size_t shape_[3];
+  };
+
   /*! \brief Only static functions in this class */
   BatchNormValidator() = delete;
 
@@ -236,9 +246,9 @@ class BatchNormValidator : public test::op::Validator<DType>
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
                           test::op::BasicOperatorData<DType>::kInGrad, op::batchnorm::kData));
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                          test::op::BasicOperatorData<DType>::kInGrad, op::batchnorm::kGamma, true));
+                          test::op::BasicOperatorData<DType>::kInGrad, op::batchnorm::kGamma));
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                          test::op::BasicOperatorData<DType>::kInGrad, op::batchnorm::kBeta, true));
+                          test::op::BasicOperatorData<DType>::kInGrad, op::batchnorm::kBeta));
       // OutGrad
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
                           test::op::BasicOperatorData<DType>::kOutGrad, op::batchnorm::kData));
@@ -291,6 +301,8 @@ class BNOperatorData : public test::op::BasicOperatorData<DType> {
 static const test::op::kwargs_t blank_kwargs;
 static const test::op::kwargs_t nonfixgamma_kwargs = { {"fix_gamma", "False"} };
 static const test::op::kwargs_t useglobalstats_kwargs = { {"use_global_stats", "True"} };
+static const test::op::kwargs_t nfs_ugd_kwargs = { {"fix_gamma", "False"},
+                                                   {"use_global_stats", "True"} };
 
 #if !DISABLE_VALIDATION
 static bool isUGS(const test::op::kwargs_t& kwargs) {
@@ -304,9 +316,53 @@ static bool isUGS(const test::op::kwargs_t& kwargs) {
 }
 #endif  // DISABLE_VALIDATION
 
+static size_t getChannelPosition(const test::op::kwargs_t& kwargs) {
+  for(test::op::kwargs_t::const_iterator i = kwargs.begin(),
+        e = kwargs.end(); i != e; ++i) {
+    if(!i->first.compare("channel_position")) {
+      return static_cast<size_t>(atoi(i->second.c_str()));
+    }
+  }
+  return 1;
+}
+
+static size_t SpatialSize(const TBlob& blob, const size_t channel_position = 1) {
+  size_t sz = 1;
+  for(size_t x = 0, n = blob.ndim(); x < n; ++x) {
+    if(x != channel_position) {
+      sz *= blob.shape_[x];
+    }
+  }
+  return sz;
+}
+
 /*! \brief Test batch norm operator forward pass */
 template<typename OperatorProp, typename DType>
-static test::op::OpInfo<OperatorProp, DType> testBatchNormOperatorForward(
+static test::op::OpInfo<OperatorProp, DType> TestBatchNormOperatorForward(
+  test::op::OpInfo<OperatorProp, DType>& opInfo,
+  const std::vector<std::pair<std::string, std::string> >& kwargs,
+  const size_t count = 1) {
+
+  opInfo.data_->initForward(*opInfo.prop_, opInfo.in_type_);
+
+  opInfo.data_->forward(count);
+
+#if !DISABLE_VALIDATION
+  if(!isUGS(kwargs) && count == 1) {
+    if(SpatialSize(opInfo.data_->getBlobVect(
+      test::op::BasicOperatorData<DType>::kInput)[op::batchnorm::kData],
+                   getChannelPosition(kwargs)) > 1) {
+      BatchNormValidator<DType>::validateForward(*opInfo.data_);
+    }
+  }
+#endif
+
+  return opInfo;
+}
+
+/*! \brief Test batch norm operator forward pass */
+template<typename OperatorProp, typename DType>
+static test::op::OpInfo<OperatorProp, DType> TestBatchNormOperatorForward(
   bool isGPU,
   const TShape& inputShape,
   const std::vector<std::pair<std::string, std::string> >& kwargs,
@@ -320,28 +376,17 @@ static test::op::OpInfo<OperatorProp, DType> testBatchNormOperatorForward(
   isGPU = false;
 #endif
 
-  test::op::OpInfo<OperatorProp, DType> info = test::op::createOpAndInfo<
+  test::op::OpInfo<OperatorProp, DType> info = test::op::createOpAndInfoF<
     OperatorProp,
     BNOperatorData<DType>,
     DType>(isGPU, inputShape, kwargs);
 
   info.data_->initForward(*info.prop_, info.in_type_);
 
-  if(mxnet::op::Callbacker<Operator> *callbacker =
-    dynamic_cast<mxnet::op::Callbacker<Operator> *>(info.data_->op())) {
-      callbacker->setCallback(
-        [](const std::string& label, const Operator &op, const TBlob &blob) {
-          if(test::debugOutput) {
-            std::cout << label << ": " << std::endl << blob << std::endl << std::flush;
-          }
-        }
-      );
-  }
-
-  info.data_->forward(count);
+  info.data_->forward();
 
 #if !DISABLE_VALIDATION
-  if(!isUGS(kwargs) && count == 1) {
+  if(!isUGS(kwargs)) {
     BatchNormValidator<DType>::validateForward(*info.data_);
   }
 #endif
@@ -361,12 +406,19 @@ static test::op::OpInfo<OperatorProp, DType> runOperatorBackward(
   return info;
 }
 
-#define PRT(__obj$, __bvt$, __idx$) \
-  test::op::BasicOperatorData<DType>::bvt2String(test::op::BasicOperatorData<DType>::__bvt$) \
-    << ": " #__idx$ << ": " << (__obj$).data_->getBlobVect(test::op::BasicOperatorData<DType>::__bvt$)[__idx$]
+template<typename StreamType, typename DType>
+static StreamType& PRT(StreamType& os,
+                       const test::op::BasicOperatorData<DType>& obj,
+                       const typename test::op::BasicOperatorData<DType>::BlobVectorType bvt,
+                       const size_t idx) {
+  os << test::op::BasicOperatorData<DType>::bvt2String(bvt) << ": " << idx
+     << ": ";
+  test::print_blob<DType>(os, obj.getBlobVect(bvt)[idx]);
+  return os;
+}
 
 template<typename StreamType, typename Prop, typename DType>
-static StreamType& dumpF(StreamType& os, const size_t x, const test::op::OpInfo<Prop, DType>& prop) {
+static StreamType& dumpF(StreamType& os, const test::op::OpInfo<Prop, DType>& prop, const size_t x = 0) {
   if(test::debugOutput) {
     os << std::endl;
     if (x) {
@@ -374,23 +426,23 @@ static StreamType& dumpF(StreamType& os, const size_t x, const test::op::OpInfo<
       os << "= " << x << std::endl;
       os << "=============================" << std::endl;
     }
+    typedef typename test::op::BasicOperatorData<DType>::BlobVectorType BlobVectorType;
+    PRT(os, *prop.data_, BlobVectorType::kInput, op::batchnorm::kData);
+    PRT(os, *prop.data_, BlobVectorType::kInput, op::batchnorm::kGamma);
+    PRT(os, *prop.data_, BlobVectorType::kInput, op::batchnorm::kBeta);
 
-    os << PRT(prop, kInput, op::batchnorm::kData) << std::endl;
-    os << PRT(prop, kInput, op::batchnorm::kGamma) << std::endl;
-    os << PRT(prop, kInput, op::batchnorm::kBeta) << std::endl;
+    PRT(os, *prop.data_, BlobVectorType::kAux, op::batchnorm::kMovingMean);
+    PRT(os, *prop.data_, BlobVectorType::kAux, op::batchnorm::kMovingVar);
 
-    os << PRT(prop, kAux, op::batchnorm::kMovingMean) << std::endl;
-    os << PRT(prop, kAux, op::batchnorm::kMovingVar) << std::endl;
-
-    os << PRT(prop, kOutput, op::batchnorm::kOut) << std::endl;
-    os << PRT(prop, kOutput, op::batchnorm::kMean) << std::endl;
-    os << PRT(prop, kOutput, op::batchnorm::kVar) << std::endl;
+    PRT(os, *prop.data_, BlobVectorType::kOutput, op::batchnorm::kOut);
+    PRT(os, *prop.data_, BlobVectorType::kOutput, op::batchnorm::kMean);
+    PRT(os, *prop.data_, BlobVectorType::kOutput, op::batchnorm::kVar);
   }
   return os;
 }
 
 template<typename StreamType, typename Prop, typename DType>
-static StreamType& dumpB(StreamType& os, const size_t x, const test::op::OpInfo<Prop, DType>& prop) {
+static StreamType& dumpB(StreamType& os, const test::op::OpInfo<Prop, DType>& prop, const size_t x = 0) {
   if(test::debugOutput) {
     os << std::endl;
     if (x) {
@@ -399,30 +451,31 @@ static StreamType& dumpB(StreamType& os, const size_t x, const test::op::OpInfo<
       os << "=============================" << std::endl;
     }
 
-    os << PRT(prop, kAux, op::batchnorm::kMovingMean) << std::endl;
-    os << PRT(prop, kAux, op::batchnorm::kMovingVar) << std::endl;
+    typedef typename test::op::BasicOperatorData<DType>::BlobVectorType BlobVectorType;
+    PRT(os, *prop.data_, BlobVectorType::kInGrad, op::batchnorm::kData);
+    PRT(os, *prop.data_, BlobVectorType::kInGrad, op::batchnorm::kGamma);
+    PRT(os, *prop.data_, BlobVectorType::kInGrad, op::batchnorm::kBeta);
 
-    os << PRT(prop, kInGrad, op::batchnorm::kData) << std::endl;
-    os << PRT(prop, kInGrad, op::batchnorm::kGamma) << std::endl;
-    os << PRT(prop, kInGrad, op::batchnorm::kBeta) << std::endl;
+    PRT(os, *prop.data_, BlobVectorType::kAux, op::batchnorm::kMovingMean);
+    PRT(os, *prop.data_, BlobVectorType::kAux, op::batchnorm::kMovingVar);
 
-    os << PRT(prop, kOutGrad, op::batchnorm::kOut) << std::endl;
+    PRT(os, *prop.data_, BlobVectorType::kOutGrad, op::batchnorm::kOut);
   }
   return os;
 }
 
 template<typename StreamType, typename Prop1, typename Prop2, typename DType>
 static StreamType& dumpF(StreamType& os, const test::op::OpInfoPair<Prop1, Prop2, DType>& bi) {
-  return dumpF(dumpF(os, 1, bi.info_1_), 2, bi.info_2_);
+  return dumpF(dumpF(os, bi.info_1_, 1), bi.info_2_, 2);
 }
 
 template<typename StreamType, typename Prop1, typename Prop2, typename DType>
 static StreamType& dumpB(StreamType& os, const test::op::OpInfoPair<Prop1, Prop2, DType>& bi) {
-  return dumpB(dumpB(os, 1, bi.info_1_), 2, bi.info_2_);
+  return dumpB(dumpB(os, bi.info_1_, 1), bi.info_2_, 2);
 }
 
 template<typename OperatorProp1, typename OperatorProp2, typename DType>
-inline test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType> testBackward(
+static test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType> testForwardAndBackward(
   const bool isGPU1,
   const bool isGPU2,
   const TShape &inputShape,
@@ -431,13 +484,13 @@ inline test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType> testBackward(
   const size_t count = 1) {
 
   test::op::OpInfo<OperatorProp1, DType> info_1 =
-    testBatchNormOperatorForward<OperatorProp1, DType>(isGPU1, inputShape, kwargs, count);
+    TestBatchNormOperatorForward<OperatorProp1, DType>(isGPU1, inputShape, kwargs, count);
 
   test::op::OpInfo<OperatorProp2, DType> info_2 =
-    testBatchNormOperatorForward<OperatorProp2, DType>(isGPU2, inputShape, kwargs, count);
+    TestBatchNormOperatorForward<OperatorProp2, DType>(isGPU2, inputShape, kwargs, count);
 
-  dumpF(std::cout, 1, info_1);
-  dumpF(std::cout, 2, info_2);
+  dumpF(std::cout, info_1, 1);
+  dumpF(std::cout, info_2, 2);
 
   // Check that everything is the same after the forward pass
   BatchNormValidator<DType>::compare(info_1, info_2);
@@ -453,8 +506,8 @@ inline test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType> testBackward(
   runOperatorBackward<DType>(info_1, count);
   runOperatorBackward<DType>(info_2, count);
 
-  dumpB(std::cout, 1, info_1);
-  dumpB(std::cout, 2, info_2);
+  dumpB(std::cout, info_1, 1);
+  dumpB(std::cout, info_2, 2);
 
 
   // Check that everything is the same after the backward pass
@@ -468,36 +521,68 @@ inline test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType> testBackward(
 }
 
 template<typename OperatorProp1, typename OperatorProp2, typename DType>
-inline test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType> testBackward(
+static test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType> testForwardAndBackward(
   const bool isGPU,
   const TShape &inputShape,
   const test::op::kwargs_t kwargs,
   const bool dumpC = false) {
 
-  return testBackward<OperatorProp1, OperatorProp2, DType>(isGPU, isGPU, inputShape, kwargs, dumpC);
+  return testForwardAndBackward<OperatorProp1, OperatorProp2, DType>(isGPU,
+                                                                     isGPU,
+                                                                     inputShape,
+                                                                     kwargs,
+                                                                     dumpC);
+}
+
+template<typename DType>
+static test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> testBNForwardAndBackward(
+  const bool isGPU,
+  const TShape &inputShape,
+  const test::op::kwargs_t kwargs,
+  const bool dumpC = false) {
+
+  return testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(isGPU,
+                                                                               isGPU,
+                                                                               inputShape,
+                                                                               kwargs,
+                                                                               dumpC);
 }
 
 /*
  * Forward tests
  */
-TEST(BATCH_NORM, Test2DForwardV1) {
-  test::op::OpInfo<op::BatchNormV1Prop, float> opInfo =
-    testBatchNormOperatorForward<op::BatchNormV1Prop, float>(false, {BATCH_SIZE, CHANNELS, DH, DW}, blank_kwargs);
-  dumpF(std::cout, 0, opInfo);
+TEST(BATCH_NORM, Test2DForwardV1V2) {
+  auto infoA = testBNForwardAndBackward<float>(false, {BATCH_SIZE, CHANNELS, DH, DW}, blank_kwargs);
+  dumpF(std::cout, infoA);
 }
 
 TEST(BATCH_NORM, Test1DForward) {
-  testBatchNormOperatorForward<op::BatchNormProp, float>(false, {BATCH_SIZE, CHANNELS, DW}, blank_kwargs);
+  TestBatchNormOperatorForward<op::BatchNormProp, double>(false, {BATCH_SIZE, CHANNELS, DW},
+                                                          blank_kwargs);
+  TestBatchNormOperatorForward<op::BatchNormProp, float>(false, {BATCH_SIZE, CHANNELS, DW},
+                                                         blank_kwargs);
 }
 
 TEST(BATCH_NORM, Test2DForward) {
-  test::op::OpInfo<op::BatchNormProp, float> opInfo =
-    testBatchNormOperatorForward<op::BatchNormProp, float>(false, {BATCH_SIZE, CHANNELS, DH, DW}, blank_kwargs);
-  dumpF(std::cout, 0, opInfo);
+  auto opInfoFloat = TestBatchNormOperatorForward<op::BatchNormProp, float>(false,
+                                                                            {BATCH_SIZE, CHANNELS,
+                                                                             DH, DW},
+                                                                            blank_kwargs);
+  dumpF(std::cout, opInfoFloat);
+  auto opInfoDbl = TestBatchNormOperatorForward<op::BatchNormProp, double>(false,
+                                                                           {BATCH_SIZE, CHANNELS,
+                                                                            DH, DW},
+                                                                           blank_kwargs);
+  dumpF(std::cout, opInfoDbl);
 }
 
 TEST(BATCH_NORM, Test3DForward) {
-  testBatchNormOperatorForward<op::BatchNormProp, float>(false, {BATCH_SIZE, CHANNELS, DEPTH, DH, DW}, blank_kwargs);
+  TestBatchNormOperatorForward<op::BatchNormProp, float>(false, {BATCH_SIZE, CHANNELS,
+                                                                 DEPTH, DH, DW},
+                                                         blank_kwargs);
+  TestBatchNormOperatorForward<op::BatchNormProp, double>(false, {BATCH_SIZE, CHANNELS,
+                                                                  DEPTH, DH, DW},
+                                                          blank_kwargs);
 }
 
 template<typename PropType, typename DType>
@@ -541,17 +626,17 @@ static void timingTest(const std::string& label,
     test::op::OpInfo<PropType, DType> info;
     switch (D) {
       case 0:
-        info = testBatchNormOperatorForward<PropType, DType>(isGPU,
+        info = TestBatchNormOperatorForward<PropType, DType>(isGPU,
                                                              {batchSize, channels, width},
                                                              blank_kwargs, count);
         break;
       case 1:
-        info = testBatchNormOperatorForward<PropType, DType>(isGPU,
+        info = TestBatchNormOperatorForward<PropType, DType>(isGPU,
                                                              {batchSize, channels, height, width},
                                                              blank_kwargs, count);
         break;
       case 2:
-        info = testBatchNormOperatorForward<PropType, DType>(isGPU,
+        info = TestBatchNormOperatorForward<PropType, DType>(isGPU,
                                                              {batchSize, channels, depth, height, width},
                                                              blank_kwargs, count);
         break;
@@ -618,15 +703,80 @@ TEST(BATCH_NORM, TestBackward2D_Simple) {
   typedef float DType;
   const TShape inputShape({1, 1, 2, 1});
   test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
-    testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
+    testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
       false, inputShape, blank_kwargs);  // Keep it simple
+}
+
+template<typename DType>
+static void testEx(const test::op::kwargs_t& kwargs, const size_t count) {
+
+  TShape shapes[2] = {2, 3};
+  const TShape inputShape({2, 3});
+
+  test::op::OpInfo<op::BatchNormV1Prop, DType> info_1 = test::op::createOpAndInfoF<
+    op::BatchNormV1Prop,
+    BNOperatorData<DType>,
+    DType>(false, inputShape, kwargs);
+
+  test::op::OpInfo<op::BatchNormProp, DType> info_2 = test::op::createOpAndInfoF<
+    op::BatchNormProp,
+    BNOperatorData<DType>,
+    DType>(false, inputShape, kwargs);
+
+  info_1.data_->initForward(*info_1.prop_, info_1.in_type_);
+  info_2.data_->initForward(*info_1.prop_, info_1.in_type_);
+  info_1.data_->initBackward(*info_1.prop_, info_1.in_type_);
+  info_2.data_->initBackward(*info_1.prop_, info_1.in_type_);
+
+  TBlob& blob1 = info_1.data_->c_.blob_input_vec_[op::batchnorm::kData];
+  test::data_ref<DType>(&blob1, {0, 0}) = -0.05f;
+  test::data_ref<DType>(&blob1, {0, 1}) = -0.19f;
+  test::data_ref<DType>(&blob1, {0, 2}) = 0.02f;
+  test::data_ref<DType>(&blob1, {1, 0}) = -0.12f;
+  test::data_ref<DType>(&blob1, {1, 1}) = 0.06f;
+  test::data_ref<DType>(&blob1, {1, 2}) = -0.01f;
+
+  TBlob& blob2 = info_2.data_->c_.blob_input_vec_[op::batchnorm::kData];
+  test::data_ref<DType>(&blob2, {0, 0}) = -0.05f;
+  test::data_ref<DType>(&blob2, {0, 1}) = -0.19f;
+  test::data_ref<DType>(&blob2, {0, 2}) = 0.02f;
+  test::data_ref<DType>(&blob2, {1, 0}) = -0.12f;
+  test::data_ref<DType>(&blob2, {1, 1}) = 0.06f;
+  test::data_ref<DType>(&blob2, {1, 2}) = -0.01f;
+
+  test::data_ref<DType>(&info_1.data_->c_.blob_input_vec_[op::batchnorm::kGamma], {1}) = 3;
+  test::data_ref<DType>(&info_2.data_->c_.blob_input_vec_[op::batchnorm::kGamma], {1}) = 3;
+
+  test::data_ref<DType>(&info_1.data_->c_.blob_input_vec_[op::batchnorm::kBeta], {0}) = 3;
+  test::data_ref<DType>(&info_2.data_->c_.blob_input_vec_[op::batchnorm::kBeta], {0}) = 3;
+
+  for(size_t x = 0; x < count; ++x) {
+    info_1.data_->forward();
+    info_2.data_->forward();
+
+    BatchNormValidator<DType>::compare(info_1, info_2);
+
+    info_1.data_->backward();
+    info_2.data_->backward();
+
+    BatchNormValidator<DType>::compare(info_1, info_2);
+  }
+
+}
+
+
+TEST(BATCH_NORM, TestBackward2D_SimpleEx) {
+  testEx<float>(blank_kwargs, 2);
+  testEx<float>(nonfixgamma_kwargs, 2);
+  testEx<float>(useglobalstats_kwargs, 2);
+  testEx<float>(nfs_ugd_kwargs, 2);
 }
 
 TEST(BATCH_NORM, TestBackward2D_SimpleNFG) {
   typedef float DType;
   const TShape inputShape({1, 1, 2, 1});
   test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
-    testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(false,
+    testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(false,
                                                                 inputShape,
                                                                 nonfixgamma_kwargs);
 }
@@ -636,7 +786,7 @@ TEST(BATCH_NORM, Test2DBackward_Complex) {
   test::ScopeSet<bool> noDebugOutput(test::debugOutput, false);
   const TShape inputShape({9, 14, 16, 91});
   test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
-    testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(false, inputShape, blank_kwargs);
+    testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(false, inputShape, blank_kwargs);
 }
 
 TEST(BATCH_NORM, Test2DBackward2DPlusLoadAndCompareLogic) {
@@ -644,7 +794,7 @@ TEST(BATCH_NORM, Test2DBackward2DPlusLoadAndCompareLogic) {
   typedef float DType;
   const TShape inputShape({1, 1, 2, 1});
   test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
-    testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(false, inputShape, blank_kwargs);
+    testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(false, inputShape, blank_kwargs);
 
   // Expected data state when running forward+backward starting with default values
   // Note: This data structure generated by dumpC()
@@ -676,7 +826,7 @@ TEST(BATCH_NORM, Test2DBackward2DPlusLoadAndCompareLogic) {
 
   // Test loaded data agsinst calculated data
   test::op::OpInfo<op::BatchNormProp, DType> info_checkLoad =
-    test::op::createOpAndInfo<op::BatchNormProp, BNOperatorData<DType>, DType>(false, inputShape, blank_kwargs);
+    test::op::createOpAndInfoF<op::BatchNormProp, BNOperatorData<DType>, DType>(false, inputShape, blank_kwargs);
   info_checkLoad.data_->initForward(*info_checkLoad.prop_, info_checkLoad.in_type_);
   info_checkLoad.data_->initBackward(*info_checkLoad.prop_, info_checkLoad.in_type_);
   info_checkLoad.data_->load(___BN_Test2DBackward_data_shape_1_1_2_1___);
@@ -689,7 +839,7 @@ void compare(const bool isGPU,
              const std::vector< std::vector< std::vector<float> > >& values) {
 
   test::op::OpInfo<PropType, DType> info_checkLoad =
-    test::op::createOpAndInfo<PropType, BNOperatorData<DType>, DType>(
+    test::op::createOpAndInfoF<PropType, BNOperatorData<DType>, DType>(
       isGPU, object.data_->c_.blob_input_vec_[0].shape_, blank_kwargs);
   info_checkLoad.data_->initForward(*info_checkLoad.prop_, info_checkLoad.in_type_);
   info_checkLoad.data_->initBackward(*info_checkLoad.prop_, info_checkLoad.in_type_);
@@ -702,7 +852,7 @@ TEST(BATCH_NORM, TestBackward1D_Simple) {
   typedef float DType;
   const TShape inputShape({1, 1, 2});
   test::op::OpInfo<op::BatchNormProp, DType> info =
-    testBatchNormOperatorForward<op::BatchNormProp, DType>(false, inputShape, blank_kwargs);
+    TestBatchNormOperatorForward<op::BatchNormProp, DType>(false, inputShape, blank_kwargs);
   info.data_->initBackward(*info.prop_, info.in_type_);
   runOperatorBackward(info);
 
@@ -744,7 +894,7 @@ TEST(BATCH_NORM, TestBackward3D) {
   typedef float DType;
   const TShape inputShape({2, 3, 2, 3, 5});
   test::op::OpInfo<op::BatchNormProp, DType> info =
-    testBatchNormOperatorForward<op::BatchNormProp, DType>(false, inputShape, blank_kwargs);
+    TestBatchNormOperatorForward<op::BatchNormProp, DType>(false, inputShape, blank_kwargs);
   info.data_->initBackward(*info.prop_, info.in_type_);
   runOperatorBackward(info);
 #if MXNET_DUMP_C
@@ -757,7 +907,7 @@ TEST(BATCH_NORM, Test2DBackwardMixed_cpu_cpu_nfg) {
   typedef float DType;
   const TShape inputShape({1, 1, 2, 1});
   test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
-    testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
+    testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
       false, false, inputShape, nonfixgamma_kwargs, false);
   dumpF(std::cout, bi);
   dumpB(std::cout, bi);
@@ -768,7 +918,7 @@ TEST(BATCH_NORM, Test2DBackwardMixed_cpu_cpu_ugs) {
   typedef float DType;
   const TShape inputShape({1, 1, 2, 1});
   test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
-    testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
+    testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
       false, false, inputShape, useglobalstats_kwargs, false);
   dumpF(std::cout, bi);
   dumpB(std::cout, bi);
@@ -778,14 +928,14 @@ TEST(BATCH_NORM, Test2DBackwardMixed_cpu_cpu_ugs) {
 
 TEST(BATCH_NORM, Test2DForwardV12D_gpu) {
   test::op::OpInfo<op::BatchNormV1Prop, float> opInfo =
-    testBatchNormOperatorForward<op::BatchNormV1Prop, float>(true, {BATCH_SIZE, CHANNELS, DH, DW}, blank_kwargs);
-  dumpF(std::cout, 0, opInfo);
+    TestBatchNormOperatorForward<op::BatchNormV1Prop, float>(true, {BATCH_SIZE, CHANNELS, DH, DW}, blank_kwargs);
+  dumpF(std::cout, opInfo);
 }
 
 TEST(BATCH_NORM, Test2DForward2D_gpu) {
   test::op::OpInfo<op::BatchNormProp, float> opInfo =
-    testBatchNormOperatorForward<op::BatchNormProp, float>(true, {BATCH_SIZE, CHANNELS, DH, DW}, blank_kwargs);
-  dumpF(std::cout, 0, opInfo);
+    TestBatchNormOperatorForward<op::BatchNormProp, float>(true, {BATCH_SIZE, CHANNELS, DH, DW}, blank_kwargs);
+  dumpF(std::cout, opInfo);
 }
 
 // blank_kwargs
@@ -793,7 +943,7 @@ TEST(BATCH_NORM, Test2DBackwardMixedV1_gpu_cpu) {
   typedef float DType;
   const TShape inputShape({1, 1, 2, 1});
   test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormV1Prop, DType> bi =
-    testBackward<op::BatchNormV1Prop, op::BatchNormV1Prop, DType>(
+    testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormV1Prop, DType>(
       false, true, inputShape, blank_kwargs, false);
   dumpF(std::cout, bi);
   dumpB(std::cout, bi);
@@ -803,7 +953,7 @@ TEST(BATCH_NORM, Test2DBackwardMixedV1Complex_gpu_cpu) {
   typedef float DType;
   const TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
   test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormV1Prop, DType> bi =
-    testBackward<op::BatchNormV1Prop, op::BatchNormV1Prop, DType>(
+    testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormV1Prop, DType>(
       false, true, inputShape, blank_kwargs, false);
   dumpF(std::cout, bi);
   dumpB(std::cout, bi);
@@ -813,7 +963,7 @@ TEST(BATCH_NORM, Test2DBackwardMixed_gpu_cpu) {
   typedef float DType;
   const TShape inputShape({1, 1, 2, 1});
   test::op::OpInfoPair<op::BatchNormProp, op::BatchNormProp, DType> bi =
-    testBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
       false, true, inputShape, blank_kwargs, false);
   dumpF(std::cout, bi);
   dumpB(std::cout, bi);
@@ -823,7 +973,7 @@ TEST(BATCH_NORM, Test2DBackwardMixedComplex_gpu_cpu) {
   typedef float DType;
   const TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
   test::op::OpInfoPair<op::BatchNormProp, op::BatchNormProp, DType> bi =
-    testBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
       false, true, inputShape, blank_kwargs, false);
   dumpF(std::cout, bi);
   dumpB(std::cout, bi);
@@ -836,7 +986,7 @@ TEST(BATCH_NORM, Test2DBackwardMixedV1V2Complex_cpu_cpu_nfg) {
   typedef float DType;
   const TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
   test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
-    testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
+    testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
       false, false, inputShape, nonfixgamma_kwargs, false);
   dumpF(std::cout, bi);
   dumpB(std::cout, bi);
@@ -846,7 +996,7 @@ TEST(BATCH_NORM, Test2DBackwardMixed_gpu_cpu_nfg) {
   typedef float DType;
   const TShape inputShape({1, 1, 2, 1});
   test::op::OpInfoPair<op::BatchNormProp, op::BatchNormProp, DType> bi =
-    testBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
       false, true, inputShape, nonfixgamma_kwargs, false);
   dumpF(std::cout, bi);
   dumpB(std::cout, bi);
@@ -856,7 +1006,7 @@ TEST(BATCH_NORM, Test2DBackwardMixedComplex_gpu_cpu_nfg) {
   typedef float DType;
   const TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
   test::op::OpInfoPair<op::BatchNormProp, op::BatchNormProp, DType> bi =
-    testBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
       false, true, inputShape, nonfixgamma_kwargs, false);
   dumpF(std::cout, bi);
   dumpB(std::cout, bi);
@@ -869,7 +1019,7 @@ TEST(BATCH_NORM, Test2DBackwardMixedV1V2Complex_cpu_cpu_ugs) {
   typedef float DType;
   const TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
   test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
-    testBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
+    testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
       false, false, inputShape, useglobalstats_kwargs, false);
   dumpF(std::cout, bi);
   dumpB(std::cout, bi);
@@ -879,7 +1029,7 @@ TEST(BATCH_NORM, Test2DBackwardMixed_gpu_cpu_ugs) {
   typedef float DType;
   const TShape inputShape({1, 1, 2, 1});
   test::op::OpInfoPair<op::BatchNormProp, op::BatchNormProp, DType> bi =
-    testBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
       false, true, inputShape, useglobalstats_kwargs, false);
   dumpF(std::cout, bi);
   dumpB(std::cout, bi);
@@ -889,7 +1039,7 @@ TEST(BATCH_NORM, Test2DBackwardMixedComplex_gpu_cpu_ugs) {
   typedef float DType;
   const TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
   test::op::OpInfoPair<op::BatchNormProp, op::BatchNormProp, DType> bi =
-    testBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
       false, true, inputShape, useglobalstats_kwargs, false);
   dumpF(std::cout, bi);
   dumpB(std::cout, bi);

@@ -314,34 +314,6 @@ inline void ParamParser(nnvm::NodeAttrs* attrs) {
   attrs->parsed = std::move(param);
 }
 
-/*! \brief Callback class to allow for convenient development and testing */
-template<typename Type>
-class Callbacker {
-  typedef void(*callback_t)(const std::string& label, const Type& op, const TBlob& blob);
-
- public:
-  explicit inline Callbacker(callback_t callback = nullptr)
-    : callback_(callback) {
-  }
-
-  void setCallback(callback_t callback) {
-    callback_ = callback;
-  }
-
-  /*! \brief 'const char *' label in order to avoid superfluous
-   * std::string production when no callback is available */
-  inline void doCallback(const char *label, const Type& op, const TBlob& blob) const {
-    if (callback_) {
-      callback_(label ? label : std::string(), op, blob);
-    }
-  }
-
- protected:
-  /*! \brief Testing callback */
-  callback_t     callback_;
-};
-
-
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_OPERATOR_COMMON_H_

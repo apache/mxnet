@@ -15,9 +15,13 @@
 #include <mshadow/cuda/tensor_gpu-inl.cuh>
 #include "../common/cuda_utils.h"
 
+/*! \brief inverse standard deviation <-> variance */
+#define VARIANCE_TO_INVSTD(__var$,    __eps$)   (1.0/sqrt((__var$) + DType(__eps$)))
+#define INVSTD_TO_VARIANCE(__invstd$, __eps$)   ((1.0 / ((__invstd$) * (__invstd$))) - (__eps$))
+
 namespace mxnet {
 namespace op {
-namespace cuda {
+namespace batchnorm_cuda {
 
 static const unsigned WARP_SIZE = 32;
 
@@ -409,17 +413,20 @@ static DeviceTensor<DType, Dim> devicetensor(const TBlob& blob) {
 #define DeviceTensor1 DeviceTensor<DType, 1>
 #define DeviceTensor3 DeviceTensor<DType, 3>
 
+//typedef DeviceTensor<DType, 1> DeviceTensor1;
+//typedef DeviceTensor<DType, 3> DeviceTensor3;
+
 template <typename DType, typename accreal>
 static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
-                                            const OpContext &ctx,
-                                            const std::vector<TBlob> &in_data,
-                                            const std::vector<OpReqType> &req,
-                                            const std::vector<TBlob> &out_data,
-                                            const std::vector<TBlob> &aux_states,
-                                            bool train,
-                                            const bool fix_gamma,
-                                            double momentum,
-                                            double eps) {
+                                           const OpContext &ctx,
+                                           const std::vector<TBlob> &in_data,
+                                           const std::vector<OpReqType> &req,
+                                           const std::vector<TBlob> &out_data,
+                                           const std::vector<TBlob> &aux_states,
+                                           bool train,
+                                           const bool fix_gamma,
+                                           double momentum,
+                                           double eps) {
   DeviceTensor3 input = devicetensor<DType, 3>(in_data[batchnorm::kData]);
   DeviceTensor3 output = devicetensor<DType, 3>(out_data[batchnorm::kOut]);
   DeviceTensor1 weight = fix_gamma ? DeviceTensor1(nullptr, nullptr)
@@ -496,16 +503,18 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<gpu> *stream,
                                                  const std::vector<OpReqType> &req,
                                                  const std::vector<TBlob> &out_data,
                                                  const std::vector<TBlob> &aux_states) {
-  cuda::BatchNormalizationUpdateOutput<DType, AccReal>(stream,
-                                                        ctx,
-                                                        in_data,
-                                                        req,
-                                                        out_data,
-                                                        aux_states,
-                                                        ctx.is_train && !param_.use_global_stats,
-                                                        param_.fix_gamma,
-                                                        param_.momentum,
-                                                        param_.eps);
+  batchnorm_cuda::BatchNormalizationUpdateOutput<DType, AccReal>(
+    stream,
+    ctx,
+    in_data,
+    req,
+    out_data,
+    aux_states,
+    ctx.is_train
+    && !param_.use_global_stats,
+    param_.fix_gamma,
+    param_.momentum,
+    param_.eps);
   MSHADOW_CUDA_POST_KERNEL_CHECK(BatchNormOp_doForward_gpu);
 }
 
@@ -519,19 +528,20 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<gpu> *stream,
                                                   const std::vector<OpReqType> &req,
                                                   const std::vector<TBlob> &in_grad,
                                                   const std::vector<TBlob> &aux_states) {
-  cuda::BatchNormalizationBackward<DType, AccReal>(stream,
-                                                    ctx,
-                                                    out_grad,
-                                                    in_data,
-                                                    out_data,
-                                                    req,
-                                                    in_grad,
-                                                    aux_states,
-                                                    ctx.is_train,
-                                                    param_.fix_gamma,
-                                                    1.0,
-                                                    param_.momentum,
-                                                    param_.eps);
+  batchnorm_cuda::BatchNormalizationBackward<DType, AccReal>(
+    stream,
+    ctx,
+    out_grad,
+    in_data,
+    out_data,
+    req,
+    in_grad,
+    aux_states,
+    ctx.is_train && !param_.use_global_stats,
+    param_.fix_gamma,
+    1.0,
+    param_.momentum,
+    param_.eps);
   MSHADOW_CUDA_POST_KERNEL_CHECK(BatchNormOp_doBackward_gpu);
 }
 
@@ -540,7 +550,7 @@ template<>
 Operator *CreateOp<gpu>(BatchNormParam param, int dtype) {
   Operator *op = NULL;
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
-  if (!param.use_global_stats) {
+  if (!param.use_global_stats && !param.cudnn_off) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       op = new CuDNNBatchNormOp<DType>(param);
     })
