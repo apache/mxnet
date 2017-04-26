@@ -1,12 +1,9 @@
-
 if(NOT MSVC)
   set(UNITTEST_STATIC_LINK ON)
 endif()
 
 set(CPP_EXAMPLE_LIBS
-  rt
-  ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE}
-  dmlccore
+  ${BEGIN_WHOLE_ARCHIVE} mxnet ${END_WHOLE_ARCHIVE}
   ${mxnet_LINKER_LIBS}
   )
 
