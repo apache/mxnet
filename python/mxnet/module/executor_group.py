@@ -258,9 +258,9 @@ class DataParallelExecutorGroup(object):
 
         data_names = [x[0] for x in self.data_shapes]
         if self.inputs_need_grad:
-            self.input_grad_arrays = [[exec_.grad_arrays[i] for exec_ in self.execs]
-                                      for i, name in enumerate(self.arg_names)
-                                      if name in data_names]
+            self.input_grad_arrays = [[exec_.grad_arrays[self.arg_names.index(name)]
+                                       for exec_ in self.execs]
+                                      for name in data_names if name in self.arg_names]
         else:
             self.input_grad_arrays = None
 
@@ -505,7 +505,6 @@ class DataParallelExecutorGroup(object):
                     out_grads_slice.append(og_my_slice.as_in_context(self.contexts[i]))
                 else:
                     out_grads_slice.append(grad.copyto(self.contexts[i]))
-
             exec_.backward(out_grads=out_grads_slice)
 
     def update_metric(self, eval_metric, labels):
