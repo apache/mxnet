@@ -823,8 +823,7 @@ def test_nearest_upsampling():
                     check_nearest_upsampling_with_shape(shapes, scale, root_scale)
 
 def test_batchnorm_training():
-    #for shape in [(2, 3), (2, 3, 2, 2)]:
-    for shape in [(2, 3)]:
+    for shape in [(2, 3), (2, 3, 2, 2)]:
         data_tmp = np.random.normal(-0.1, 0.1, size=shape)
         s = shape[1],
         gamma = np.ones(s)

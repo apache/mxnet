@@ -293,69 +293,23 @@ def test_batchnorm_versions():
 
   def test_1d_batchnorm(fix_gamma, use_global_stats):
     data = (2, 3, 20)
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
-
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats,)
-
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats,)
-
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
-
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
+                                                      'batchnorm_gpu', 'batchnorm_cudnn'],
                                    data=data,
                                    fix_gamma=fix_gamma, use_global_stats=use_global_stats)
 
   def test_2d_batchnorm(fix_gamma, use_global_stats):
     data = (2, 3, 10, 10)
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_v1_cpu', 'batchnorm_v1_gpu', 'batchnorm_cpu', 'batchnorm_gpu', 'batchnorm_cudnn'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
-
-    # batchnorm_v1 has bugs when pad is not 0, do not test BatchNormV1 here
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu', 'batchnorm_cudnn'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
-
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_v1_cpu', 'batchnorm_v1_gpu', 'batchnorm_cpu', 'batchnorm_gpu', 'batchnorm_cudnn'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
-
-    # batchnorm_v1 has bugs when pad is not 0, do not test BatchNormV1 here
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu', 'batchnorm_cudnn'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
-
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_v1_cpu', 'batchnorm_v1_gpu', 'batchnorm_cpu', 'batchnorm_gpu', 'batchnorm_cudnn'],
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_v1_cpu', 'batchnorm_v1_gpu',
+                                                      'batchnorm_cpu',
+                                                      'batchnorm_gpu', 'batchnorm_cudnn'],
                                    data=data,
                                    fix_gamma=fix_gamma, use_global_stats=use_global_stats)
 
   def test_3d_batchnorm(fix_gamma, use_global_stats):
     data = (2, 3, 3, 5, 5)
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
-
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
-
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
-
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
-
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu', 'batchnorm_gpu'],
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
+                                                      'batchnorm_gpu'],
                                    data=data,
                                    fix_gamma=fix_gamma, use_global_stats=use_global_stats)
 
@@ -1082,33 +1036,33 @@ def test_unfuse():
         check_rnn_consistency(stack, fused)
 
 if __name__ == '__main__':
-    # test_countsketch()
-    # test_ifft()
-    # test_fft()
-    # test_bidirectional()
-    # test_lstm()
-    # test_lstm_forget_bias()
-    # test_gru()
-    # test_rnn()
-    # test_unfuse()
-    # test_convolution_options()
-    # test_convolution_versions()
-    # test_convolution_with_type()
-    #test_pooling_versions()
-    #test_batchnorm_with_type()
+    test_countsketch()
+    test_ifft()
+    test_fft()
+    test_bidirectional()
+    test_lstm()
+    test_lstm_forget_bias()
+    test_gru()
+    test_rnn()
+    test_unfuse()
+    test_convolution_options()
+    test_convolution_versions()
+    test_convolution_with_type()
+    test_pooling_versions()
+    test_batchnorm_with_type()
     test_batchnorm_versions()
-    # test_deconvolution_with_type()
-    # test_deconvolution_options()
-    # test_upsampling_with_type()
-    # test_concat_with_type()
-    # test_elementwisesum_with_type()
-    # test_reshape_with_type()
-    # test_blockgrad_with_type()
-    # test_swapaxis_with_type()
-    # test_fullyconnected_with_type()
-    # test_activation_with_type()
-    # test_embedding_with_type()
-    # test_svmoutput_with_type()
-    # test_take_with_type()
-    # test_bilinear_sampler_with_type()
-    # test_grid_generator_with_type()
+    test_deconvolution_with_type()
+    test_deconvolution_options()
+    test_upsampling_with_type()
+    test_concat_with_type()
+    test_elementwisesum_with_type()
+    test_reshape_with_type()
+    test_blockgrad_with_type()
+    test_swapaxis_with_type()
+    test_fullyconnected_with_type()
+    test_activation_with_type()
+    test_embedding_with_type()
+    test_svmoutput_with_type()
+    test_take_with_type()
+    test_bilinear_sampler_with_type()
+    test_grid_generator_with_type()
