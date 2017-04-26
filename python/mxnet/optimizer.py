@@ -384,9 +384,9 @@ class MultiPrecisionSGD(Optimizer):
 
     def create_state(self, index, weight):
         if self.momentum == 0.0:
-            return (None, array(weight, ctx=weight.ctx, dtype=numpy.float32))
+            return (None, array(weight, ctx=weight.context, dtype=numpy.float32))
         else:
-            return (zeros(weight.shape, weight.context, dtype=numpy.float32), array(weight, ctx=weight.ctx, dtype=numpy.float32))
+            return (zeros(weight.shape, weight.context, dtype=numpy.float32), array(weight, ctx=weight.context, dtype=numpy.float32))
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))

@@ -87,7 +87,7 @@ NNVM_REGISTER_OP(mp_sgd_mom_update)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SGDMomParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1, 2, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1, 4, 1>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2};
