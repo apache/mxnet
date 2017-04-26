@@ -195,7 +195,7 @@ class FullyConnectedProp : public OperatorProperty {
     CHECK_GE(in_type->size(), 1U);
     nnvm::NodeAttrs attrs;
     attrs.name = "FullyConnected";
-    return ElemwiseAttr<int, type_is_none, type_assign, true>(
+    return ElemwiseAttr<int, type_is_none, type_assign, true, type_string>(
       attrs, in_type, out_type, -1);
   }
 

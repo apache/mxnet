@@ -6,12 +6,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 function show_usage() {
     echo ""
-    echo "Usage: $(basename $0) COMMAND DEVICE LANGUAGE "
+    echo "Usage: $(basename $0) COMMAND LANGUAGE DEVICE"
     echo ""
     echo "   COMMAND: build or commit."
     echo "            commit needs logined in docker hub"
-    echo "   DEVICE: targed device, e.g. cpu, or gpu"
     echo "   LANGUAGE: the language binding to buld, e.g. python, r-lang, julia, or scala"
+    echo "   DEVICE: targed device, e.g. cpu, or gpu"
     echo ""
 }
 

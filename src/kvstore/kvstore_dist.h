@@ -63,7 +63,7 @@ class KVStoreDist : public KVStoreLocal {
             const std::vector<NDArray>& values) override {
     CheckUnique(keys);
     for (size_t i = 0; i < keys.size(); ++i) {
-      comm_->Init(keys[i], values[i].shape());
+      comm_->Init(keys[i], values[i].shape(), values[i].dtype());
     }
     if (get_rank() == 0) {
       Push_(keys, values, 0, false);
@@ -99,7 +99,8 @@ class KVStoreDist : public KVStoreLocal {
       auto& recv_buf = comm_buf_[key];
       if (recv_buf.is_none()) {
         // it may happen for the first time a no-rank-0 worker pull the weight.
-        recv_buf = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_);
+        recv_buf = NDArray(
+          grouped_vals[i][0]->shape(), pinned_ctx_, false, grouped_vals[i][0]->dtype());
       }
 #if MKL_EXPERIMENTAL == 1
       mkl_set_tblob_eager_mode(recv_buf.data());
@@ -207,7 +208,7 @@ class KVStoreDist : public KVStoreLocal {
         send_buf = merged;  // avoid memory copy
       } else {
         if (send_buf.is_none()) {
-          send_buf = NDArray(merged.shape(), pinned_ctx_);
+          send_buf = NDArray(merged.shape(), pinned_ctx_, false, merged.dtype());
         }
         CopyFromTo(merged, &send_buf);
       }

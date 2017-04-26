@@ -75,6 +75,68 @@ class Initializer {
   virtual void InitDefault(NDArray* arr) {}
 };
 
+class Zero : public Initializer {
+ public:
+  Zero() {}
+ protected:
+  void InitWeight(NDArray *arr) override {
+    InitZero(arr);
+  }
+};
+
+class One : public Initializer {
+ public:
+  One() {}
+ protected:
+  void InitWeight(NDArray *arr) override {
+    InitOne(arr);
+  }
+};
+
+class Constant : public Initializer {
+ public:
+  explicit Constant(float value)
+    : value(value) {}
+ protected:
+  float value;
+  void InitWeight(NDArray *arr) override {
+    (*arr) = value;
+  }
+};
+
+class Uniform : public Initializer {
+ public:
+  explicit Uniform(float scale)
+    : Uniform(-scale, scale) {}
+  Uniform(float begin, float end)
+    : begin(begin), end(end) {}
+ protected:
+  float begin, end;
+  void InitWeight(NDArray *arr) override {
+    NDArray::SampleUniform(begin, end, arr);
+  }
+};
+
+class Normal : public Initializer {
+ public:
+  Normal(float mu, float sigma)
+    : mu(mu), sigma(sigma) {}
+ protected:
+  float mu, sigma;
+  void InitWeight(NDArray *arr) override {
+    NDArray::SampleGaussian(mu, sigma, arr);
+  }
+};
+
+class Bilinear : public Initializer {
+ public:
+  Bilinear() {}
+ protected:
+  void InitWeight(NDArray *arr) override {
+    InitBilinear(arr);
+  }
+};
+
 class Xavier : public Initializer {
  public:
   enum RandType {
@@ -92,7 +154,7 @@ class Xavier : public Initializer {
       : rand_type(rand_type), factor_type(factor_type), magnitude(magnitude) {}
 
  protected:
-  virtual void InitWeight(NDArray* arr) {
+  void InitWeight(NDArray* arr) override {
     Shape shape(arr->GetShape());
     float hw_scale = 1.0f;
     if (shape.ndim() > 2) {

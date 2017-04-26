@@ -13,10 +13,46 @@ DMLC_REGISTER_PARAMETER(TakeParam);
 DMLC_REGISTER_PARAMETER(OneHotParam);
 
 NNVM_REGISTER_OP(Embedding)
-.MXNET_DESCRIBE("Map integer index to vector representations (embeddings)."
-                " Those embeddings are learnable parameters. For a input of shape"
-                " (d1, ..., dK), the output shape is (d1, ..., dK, output_dim)."
-                " All the input values should be integers in the range [0, input_dim).")
+.describe(R"code(Maps integer indices to vector representations (embeddings).
+
+This operator maps words to real-valued vectors in a high-dimensional space,
+called word embeddings. These embeddings can capture semantic and syntactic properties of the words.
+For example, it has been noted that in the learned embedding spaces, similar words tend
+to be close to each other and dissimilar words far apart.
+
+For an input array of shape (d1, ..., dK),
+the shape of an output array is (d1, ..., dK, output_dim).
+All the input values should be integers in the range [0, input_dim).
+
+If the input_dim is ip0 and output_dim is op0, then shape of the embedding weight matrix must be
+(ip0, op0).
+
+By default, if any index mentioned is too large, it is replaced by the index that addresses
+the last vector in an embedding matrix.
+
+Examples::
+
+  input_dim = 4
+  output_dim = 5
+
+  // Each row in weight matrix y represents a word. So, y = (w0,w1,w2,w3)
+  y = [[  0.,   1.,   2.,   3.,   4.],
+       [  5.,   6.,   7.,   8.,   9.],
+       [ 10.,  11.,  12.,  13.,  14.],
+       [ 15.,  16.,  17.,  18.,  19.]]
+
+  // Input array x represents n-grams(2-gram). So, x = [(w1,w3), (w0,w2)]
+  x = [[ 1.,  3.],
+       [ 0.,  2.]]
+
+  // Mapped input x to its vector representation y.
+  Embedding(x, y, 4, 5) = [[[  5.,   6.,   7.,   8.,   9.],
+                            [ 15.,  16.,  17.,  18.,  19.]],
+
+                           [[  0.,   1.,   2.,   3.,   4.],
+                            [ 10.,  11.,  12.,  13.,  14.]]]
+
+)code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<EmbeddingParam>)
@@ -36,8 +72,8 @@ NNVM_REGISTER_OP(Embedding)
     return MakeNonlossGradNode("_backward_Embedding", n, ograds,
                                {n->inputs[0]}, n->attrs.dict);
   })
-.add_argument("data", "NDArray-or-Symbol", "Input data to the EmbeddingOp.")
-.add_argument("weight", "NDArray-or-Symbol", "Embedding weight matrix.")
+.add_argument("data", "NDArray-or-Symbol", "The input array to the embedding operator.")
+.add_argument("weight", "NDArray-or-Symbol", "The embedding weight matrix.")
 .add_arguments(EmbeddingParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Embedding)
@@ -119,8 +155,8 @@ NNVM_REGISTER_OP(batch_take)
 .. note::
   `batch_take` is deprecated. Use `pick` instead.
 
-Given an input array of shape ``(d0, d1)`` and indices of shape ``(d0,)``, the result will be
-an output array of shape ``(d0,)`` with::
+Given an input array of shape ``(d0, d1)`` and indices of shape ``(i0,)``, the result will be
+an output array of shape ``(i0,)`` with::
 
   output[i] = input[i, indices[i]]
 
@@ -149,11 +185,11 @@ Examples::
 NNVM_REGISTER_OP(one_hot)
 .describe(R"code(Returns a one-hot array.
 
-The locations represented by ``indices`` take value ``on_value``, while all
-other locations take value ``off_value``.
+The locations represented by `indices` take value `on_value`, while all
+other locations take value `off_value`.
 
-Assume ``indices`` has shape ``(i0, i1)``, then the output will have shape
-``(i0, i1, depth)`` and::
+`one_hot` operation with `indices` of shape ``(i0, i1)`` and `depth`  of ``d`` would result
+ in an output array of shape ``(i0, i1, d)`` with::
 
   output[i,j,:] = off_value
   output[i,j,indices[i,j]] = on_value
