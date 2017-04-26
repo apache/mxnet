@@ -34,7 +34,7 @@ def check_with_device(device, dtype):
         }
     ]
     if device.device_type == 'cpu':
-        symbols.append([
+        symbols.extend([
             {
                 'name': 'gamma',
                 'symbol': mx.sym.random_gamma,
