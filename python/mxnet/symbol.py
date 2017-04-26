@@ -469,7 +469,7 @@ class Symbol(SymbolBase):
 
         Returns
         -------
-        ret : dict of str to str
+        ret : Dict of str to str
             A dictionary mapping attribute keys to values.
         """
         if recursive:
@@ -494,7 +494,7 @@ class Symbol(SymbolBase):
 
         Returns
         -------
-        ret : dict of str to dict
+        ret : Dict of str to dict
             There is a key in the returned dict for every child with non-empty attribute set.
             For each symbol, the name of the symbol is its key in the dict
             and the correspond value is that symbol's attribute list (itself a dictionary).
@@ -1107,19 +1107,19 @@ class Symbol(SymbolBase):
 
         grad_req: string
             {'write', 'add', 'null'}, or list of str or dict of str to str, optional
-            To specify how we should update the gradient to the args_grad.
+            To specify how we should update the gradient to the `args_grad`.
 
-            - 'write' means everytime gradient is write to specified args_grad NDArray.
+            - 'write' means everytime gradient is write to specified `args_grad` NDArray.
             - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
 
-        type_dict  : dict of str->numpy.dtype
+        type_dict  : Dict of str->numpy.dtype
             Input type dictionary, name->dtype
 
-        group2ctx : dict of string to mx.Context
+        group2ctx : Dict of string to mx.Context
             The dict mapping the `ctx_group` attribute to the context assignment.
 
-        kwargs : dict of str->shape
+        kwargs : Dict of str->shape
             Input shape dictionary, name->shape
 
         Returns
@@ -1220,7 +1220,7 @@ class Symbol(SymbolBase):
         grad_req : {'write', 'add', 'null'}, or list of str or dict of str to str, optional
             To specify how we should update the gradient to the `args_grad`.
 
-            - 'write' means everytime gradient is write to specified args_grad `NDArray`.
+            - 'write' means everytime gradient is write to specified `args_grad` `NDArray`.
             - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
 
@@ -1234,7 +1234,7 @@ class Symbol(SymbolBase):
               `auxiliary_states` to the corresponding `NDArray`,
             - In either case, all the auxiliary states need to be provided.
 
-        group2ctx : dict of string to mx.Context
+        group2ctx : Dict of string to mx.Context
             The dict mapping the `ctx_group` attribute to the context assignment.
 
         shared_exec : mx.executor.Executor
