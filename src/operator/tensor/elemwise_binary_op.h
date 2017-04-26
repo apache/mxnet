@@ -45,8 +45,24 @@ void BinaryBackwardUseNone(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, DType> lgrad = outputs[0].FlatTo1D<xpu, DType>(s);
     Tensor<xpu, 1, DType> rgrad = outputs[1].FlatTo1D<xpu, DType>(s);
     Tensor<xpu, 1, DType> ograd = inputs[0].FlatTo1D<xpu, DType>(s);
-    ASSIGN_DISPATCH(lgrad, req[0], F<LOP>(ograd));
-    ASSIGN_DISPATCH(rgrad, req[1], F<ROP>(ograd));
+    if (std::is_same<LOP, mshadow_op::identity>::value) {
+      if (req[0] == kWriteInplace) {
+        CHECK_EQ(ograd.dptr_, lgrad.dptr_);
+      } else {
+        ASSIGN_DISPATCH(lgrad, req[0], F<LOP>(ograd));
+      }
+    } else {
+      ASSIGN_DISPATCH(lgrad, req[0], F<LOP>(ograd));
+    }
+    if (std::is_same<ROP, mshadow_op::identity>::value) {
+      if (req[1] == kWriteInplace) {
+        CHECK_EQ(ograd.dptr_, rgrad.dptr_);
+      } else {
+        ASSIGN_DISPATCH(rgrad, req[1], F<ROP>(ograd));
+      }
+    } else {
+      ASSIGN_DISPATCH(rgrad, req[1], F<ROP>(ograd));
+    }
   });
 }
 
