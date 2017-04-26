@@ -282,17 +282,31 @@ class Symbol(SymbolBase):
         """Composes symbol on inputs.
 
         x.__call__(y, z) <=> x(y,z)
+        This function internally calls `_compose` to compose the symbol.
+
+        Example usage:
+        ----------
+        >>> data = mx.symbol.Variable('data')
+        >>> net1 = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
+        >>> net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
+        >>> composed = net2(fc3_data=net1, name='composed')
+        >>> composed
+        <Symbol composed>
+        >>> called = net2.__call__(fc3_data=net1, name='composed')
+        >>> called
+        <Symbol composed>
 
         Parameters
         ----------
         args:
-            provide positional arguments
+            Positional arguments.
 
         kwargs:
-            provide keyword arguments
+            Keyword arguments.
+
         Returns
         -------
-        the resulting symbol
+            The resulting symbol.
         """
         s = self.__copy__()
         s._compose(*args, **kwargs)
@@ -310,11 +324,10 @@ class Symbol(SymbolBase):
         >>> data = mx.symbol.Variable('data')
         >>> net1 = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
         >>> net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
-        >>> composed = net2(fc3_data=net1, name='composed')
-        >>> composed
-        <Symbol composed>
-        >>> called = net2.__call__(fc3_data=net1, name='composed')
-        >>> called
+        >>> net2
+        <Symbol fc3>
+        >>> net2._compose(fc3_data=net1, name='composed')
+        >>> net2
         <Symbol composed>
 
         Parameters
@@ -972,6 +985,7 @@ class Symbol(SymbolBase):
         ----------
         fname : str
             The name of the file.
+
             - "s3://my-bucket/path/my-s3-symbol"
             - "hdfs://my-bucket/path/my-hdfs-symbol"
             - "/path-to/my-local-symbol"
@@ -1056,12 +1070,30 @@ class Symbol(SymbolBase):
                     type_dict=None,
                     group2ctx=None,
                     **kwargs):
-        """Binds current symbol to get an executor, allocate all the ndarrays needed.
+        """Binds current symbol to get an executor, allocate all the arguments needed.
         Allows specifying data types.
 
-        This function will ask user to pass in an `NDArray` of position
-        they like to bind to, and it will automatically allocate the ndarray
-        for arguments and auxiliary states that user did not specify explicitly.
+        This function simplifies the binding procedure. You need to specify only input data shapes.
+        The function allocates the arguments and auxiliary states that you did not specify
+        explicitly and binds the executor for you.
+
+        Example usage:
+        ----------
+        >>> x = mx.sym.Variable('x')
+        >>> y = mx.sym.FullyConnected(x, num_hidden=4)
+        >>> exe = y.simple_bind(mx.cpu(), x=(5,4), grad_req=[])
+        >>> exe.forward()
+        [<NDArray 5x4 @cpu(0)>]
+        >>> exe.outputs[0].asnumpy()
+        array([[ 0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.]], dtype=float32)
+        >>> exe.arg_arrays
+        [<NDArray 5x4 @cpu(0)>, <NDArray 4x4 @cpu(0)>, <NDArray 4 @cpu(0)>]
+        >>> exe.grad_arrays
+        [<NDArray 5x4 @cpu(0)>, <NDArray 4x4 @cpu(0)>, <NDArray 4 @cpu(0)>]
 
         Parameters
         ----------
@@ -1070,7 +1102,8 @@ class Symbol(SymbolBase):
 
         grad_req: string
             {'write', 'add', 'null'}, or list of str or dict of str to str, optional
-            Specifies how we should update the gradient to the args_grad.
+            To Specify how we should update the gradient to the args_grad.
+
             - 'write' means everytime gradient is write to specified args_grad NDArray.
             - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
@@ -1087,7 +1120,7 @@ class Symbol(SymbolBase):
         Returns
         -------
         executor : mxnet.Executor
-            The generated Executor
+            The generated executor
         """
         # pylint: disable=too-many-locals
         if type_dict is None:
@@ -1136,6 +1169,23 @@ class Symbol(SymbolBase):
              aux_states=None, group2ctx=None, shared_exec=None):
         """Binds the current symbol to get an executor.
 
+        We first declare the computation and then bind it with the data to run.
+        This function returns an executor which provides method `forward()` for evaluation
+        and `outputs()` to get all the results.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.Variable('a')
+        >>> b = mx.sym.Variable('b')
+        >>> c = a + b
+        <Symbol _plus1>
+        >>> ex = c.bind(ctx=mx.cpu(), args={'a' : mx.nd.ones([2,3]), 'b' : mx.nd.ones([2,3])})
+        >>> ex.forward()
+        [<NDArray 2x3 @cpu(0)>]
+        >>> ex.outputs[0].asnumpy()
+        [[ 2.  2.  2.]
+        [ 2.  2.  2.]]
+
         Parameters
         ----------
         ctx : Context
@@ -1144,38 +1194,40 @@ class Symbol(SymbolBase):
         args : list of NDArray or dict of str to NDArray
             Input arguments to the symbol.
 
-            - If type is list of `NDArray`, the position is in the same order of list_arguments.
-            - If type is dict of str to `NDArray`, then it maps the name of arguments
+            - If the input type is a list of `NDArray`, the order should be same as the order
+              of `list_arguments()`.
+            - If the input type is a dict of str to `NDArray`, then it maps the name of arguments
               to the corresponding `NDArray`.
             - In either case, all the arguments must be provided.
 
         args_grad : list of NDArray or dict of str to `NDArray`, optional
-            When specified, args_grad provide NDArrays to hold
+            When specified, `args_grad` provides NDArrays to hold
             the result of gradient value in backward.
 
-            - If type is list of `NDArray`, the position is in the same order of list_arguments.
-            - If type is dict of str to `NDArray`, then it maps the name of arguments
+            - If the input type is a list of `NDArray`, the order should be same as the order
+              of `list_arguments()`.
+            - If the input type is a dict of str to `NDArray`, then it maps the name of arguments
               to the corresponding NDArray.
-            - When the type is dict of str to `NDArray`, users only need to provide the dict
-              for needed argument gradient.
+            - When the type is a dict of str to `NDArray`, you only need to provide the dict
+              for required argument gradient.
               Only the specified argument gradient will be calculated.
 
         grad_req : {'write', 'add', 'null'}, or list of str or dict of str to str, optional
-            Specifies how we should update the gradient to the args_grad.
+            To Specify how we should update the gradient to the `args_grad`.
 
             - 'write' means everytime gradient is write to specified args_grad `NDArray`.
             - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
 
         aux_states : list of `NDArray`, or dict of str to `NDArray`, optional
-            Input auxiliary states to the symbol, only need to specify when
-            list_auxiliary_states is not empty.
+            Input auxiliary states to the symbol, only need to specify when the output of
+            `list_auxiliary_states()` is not empty.
 
-            - If type is list of `NDArray`, the position is in the same order
-              of `list_auxiliary_states`.
-            - If type is dict of str to `NDArray`, then it maps the name of `auxiliary_states`
-              to the corresponding `NDArray`,
-            - In either case, all the auxiliary_states need to be provided.
+            - If the input type is a list of `NDArray`, the order should be same as the order
+              of `list_auxiliary_states()`.
+            - If the input type is a dict of str to `NDArray`, then it maps the name of
+              `auxiliary_states` to the corresponding `NDArray`,
+            - In either case, all the auxiliary states need to be provided.
 
         group2ctx : dict of string to mx.Context
             The dict mapping the `ctx_group` attribute to the context assignment.
@@ -1188,12 +1240,12 @@ class Symbol(SymbolBase):
         Returns
         -------
         executor : Executor
-            The generated Executor
+            The generated executor
 
         Notes
         -----
-        Auxiliary states are special states of symbols that do not correspond
-        to an argument, and do not have gradient. But still be useful
+        Auxiliary states are the special states of symbols that do not correspond
+        to an argument, and do not have gradient but still are useful
         for the specific operations. Common examples of auxiliary states include
         the `moving_mean` and `moving_variance` states in `BatchNorm`.
         Most operators do not have auxiliary states and in those cases,
@@ -1298,33 +1350,39 @@ class Symbol(SymbolBase):
     # pylint: enable= no-member
 
     def eval(self, ctx=cpu(), **kwargs):
-        """Evaluates a symbol given arguments
+        """Evaluates a symbol given arguments.
 
         The `eval` method combines a call to `bind` (which returns an executor)
         with a call to `forward` (executor method).
         For the common use case, where you might repeatedly evaluate with same arguments,
         eval is slow.
         In that case, you should call `bind` once and then repeatedly call forward.
-        Eval allows simpler syntax for less cumbersome introspection.
+        This function allows simpler syntax for less cumbersome introspection.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.Variable('a')
+        >>> b = mx.sym.Variable('b')
+        >>> c = a + b
+        >>> ex = c.eval(ctx = mx.cpu(), a = mx.nd.ones([2,3]), b = mx.nd.ones([2,3]))
+        >>> ex
+        [<NDArray 2x3 @cpu(0)>]
+        >>> ex[0].asnumpy()
+        array([[ 2.,  2.,  2.],
+               [ 2.,  2.,  2.]], dtype=float32)
 
         Parameters
         ----------
         ctx : Context
             The device context the generated executor to run on.
 
-        kwargs : list of NDArray or dict of str to NDArray
-            Input arguments to the symbol.
-
-            - If type is list of `NDArray`, the position is in the same order of `list_arguments`.
-            - If type is dict of str to `NDArray`, then it maps the name of arguments
-              to the corresponding `NDArray`.
-            - In either case, all the arguments must be provided.
+        kwargs : Keyword arguments of type `NDArray`
+            Input arguments to the symbol. All the arguments must be provided.
 
         Returns
         ----------
-        result :  a list of NDArrays corresponding to the values
-        taken by each symbol when evaluated on given args.
-        When called on a single symbol (not a group),
+        result :  a list of NDArrays corresponding to the values taken by each symbol when
+        evaluated on given args. When called on a single symbol (not a group),
         the result will be a list with one element.
         """
         return self.bind(ctx, kwargs).forward()
