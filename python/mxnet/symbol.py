@@ -154,7 +154,8 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __neg__(self):
-        """x.__neg__(y) <=> -x
+        """x.__neg__() <=> -x
+        This function applies negative to the input, element-wise.
 
         Example usage:
         ----------
@@ -163,8 +164,12 @@ class Symbol(SymbolBase):
         <Symbol a>
         >>> -a
         <Symbol _mulscalar0>
-        >>> a.__neg__()
-        <Symbol _mulscalar1>
+        >>> a_neg = a.__neg__()
+        >>> c = a_neg*b
+        >>> ex = c.eval(ctx=mx.cpu(), a=mx.nd.ones([2,3]), b=mx.nd.ones([2,3]))
+        >>> ex[0].asnumpy()
+        array([[-1., -1., -1.],
+               [-1., -1., -1.]], dtype=float32)
         """
         return self.__mul__(-1.0)
 
