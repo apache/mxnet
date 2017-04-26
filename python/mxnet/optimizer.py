@@ -2,7 +2,7 @@
 import math
 import pickle
 import logging
-from .ndarray import NDArray, zeros, clip, sqrt
+from .ndarray import NDArray, zeros, clip, sqrt, sign
 from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
 from .random import normal
 
@@ -648,6 +648,59 @@ class AdaDelta(Optimizer):
 
         # update weight
         weight[:] -= current_delta + wd * weight
+
+#pylint: disable=invalid-name
+@register
+class Ftrl(Optimizer):
+    """
+    Reference:Ad Click Prediction: a View from the Trenches
+
+    Parameters
+    ----------
+    lamda1 : float, optional
+        L1 regularization coefficient.
+
+    learning_rate : float, optional
+        The initial learning rate.
+
+    beta : float, optional
+        Per-coordinate learning rate correlation parameter.
+    eta_{t,i}=frac{learning_rate}{beta+sqrt{sum_{s=1^}tg_{s,i}^t}
+
+    """
+
+    def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1, **kwargs):
+        super(Ftrl, self).__init__(**kwargs)
+        self.lamda1 = lamda1
+        self.beta = beta
+        self.lr = learning_rate
+
+    def create_state(self, index, weight):
+        return (zeros(weight.shape, weight.context),  # dn
+                zeros(weight.shape, weight.context))  # n
+
+    def update(self, index, weight, grad, state):
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        self._update_count(index)
+        wd = self._get_wd(index)
+        lr = self._get_lr(index)
+
+        # preprocess grad
+        grad *= self.rescale_grad
+        if self.clip_gradient is not None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        # accumulated g and delta initlization
+        dn, n = state
+
+        #update dn, n
+        dn += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / lr
+        n += grad * grad
+
+        # update weight
+        weight[:] = (sign(dn) * self.lamda1 - dn) / \
+            ((self.beta + sqrt(n)) / lr + wd) * (NDArray.abs(dn) > self.lamda1)
 
 @register
 class Test(Optimizer):

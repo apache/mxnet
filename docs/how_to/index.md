@@ -24,8 +24,6 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [Can I use nnpack to improve the CPU performance of MXNet?](http://mxnet.io/how_to/nnpack.html)
 
-* [Can I use nnpack to improve CPU performance of MXNet](http://mxnet.io/how_to/nnpack.html)
-
 ## Deployment Environments
 * [Can I run MXNet on smart or mobile devices?](http://mxnet.io/how_to/smart_device.html)
 

@@ -132,3 +132,4 @@ List of Contributors
 * [Pedro Larroy](https://github.com/larroy)
 * [Jun Wu](https://github.com/reminisce)
 * [Dom Divakaruni](https://github.com/domdivakaruni)
+* [David Salinas](https://github.com/geoalgo)

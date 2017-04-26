@@ -80,7 +80,8 @@ also supports various ways to normalize the gradient by ``normalization``:
 .add_arguments(SoftmaxOutputParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(Softmax, DeprecatedSoftmaxProp)
-.describe("DEPRECATED: Perform a softmax transformation on input. Please use SoftmaxOutput")
+.describe("Perform a softmax transformation on input. Please use SoftmaxOutput"
+          ".. note::  `Softmax`` is deprecated. Use `softmax`")
 .add_argument("data", "NDArray-or-Symbol", "Input data to softmax.")
 .add_arguments(SoftmaxOutputParam::__FIELDS__());
 

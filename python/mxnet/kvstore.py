@@ -12,7 +12,7 @@ from . import optimizer as opt
 
 def _ctype_key_value(keys, vals):
     """
-    Return ctype arrays for the key-value args, for internal use.
+    Returns ctype arrays for the key-value args. For internal use.
     """
     if isinstance(keys, int):
         if isinstance(vals, NDArray):
@@ -49,7 +49,7 @@ def _updater_wrapper(updater):
 class KVStore(object):
     """A key-value store for synchronization of values, over multiple devices."""
     def __init__(self, handle):
-        """Initialize a new KVStore.
+        """Initializes a new KVStore.
 
         Parameters
         ----------
@@ -65,20 +65,19 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreFree(self.handle))
 
     def init(self, key, value):
-        """ Initialize a single or a sequence of key-value pairs into the store.
+        """ Initializes a single or a sequence of key-value pairs into the store.
 
-        For each key, one must init it before push and pull.
-
-        Only worker 0's (rank == 0) data are used.
-
-        This function returns after data have been initialized successfully.
+        For each key, one must `init` it before calling `push` or `pull`.
+        When multiple workers invoke `init` for the same key, only
+        the value supplied by worker with rank `0` is used. This function returns
+        after data has been initialized successfully.
 
         Parameters
         ----------
         key : int or sequence of int
             The keys.
         value : NDArray or sequence of NDArray
-            The values.
+            Values corresponding to the keys.
 
         Examples
         --------
@@ -101,30 +100,26 @@ class KVStore(object):
             self.handle, mx_uint(len(ckeys)), ckeys, cvals))
 
     def push(self, key, value, priority=0):
-        """ Push a single or a sequence of key-value pairs into the store.
+        """ Pushes a single or a sequence of key-value pairs into the store.
 
-        Data consistency:
-
-        1. This function returns after adding an operator to the engine.
-
-        2. `push` is always called after all previous push and pull on the same
-        key are finished
-
-        3. There is no synchronization between workers. One can use ``_barrier()``
+        This function returns immediately after adding an operator to the engine.
+        The actual operation is executed asynchronously after all previous `push`
+        and `pull` calls for the same input key(s) are finished.
+        There is no synchronization between workers. One can use ``_barrier()``
         to sync all workers.
 
         Parameters
         ----------
         key : int or list of int
-            Keys
+            Keys.
 
         value : NDArray or list of NDArray or list of list of NDArray
-            According values
+            Values corresponding to the keys.
 
         priority : int, optional
             The priority of the push operation.
-            The higher the priority, the faster this action is likely
-            to be executed before other push actions.
+            Higher priority push operations are likely to be executed before
+            other push actions.
 
         Examples
         --------
@@ -167,17 +162,16 @@ class KVStore(object):
             ctypes.c_int(priority)))
 
     def pull(self, key, out=None, priority=0):
-        """ Pull a single value or a sequence of values from the store.
+        """ Pulls a single value or a sequence of values from the store.
 
-        Data consistency:
+        This function returns immediately after adding an operator to the engine.
+        Subsequent attempts to read from the `out` variable will be blocked until the
+        pull operation completes.
 
-        1. This function returns after adding an operator to the engine. But any
-        further read on out will be blocked until it is finished.
+        `pull` is executed asynchronously after all previous `push` and `pull` calls
+        for the same input key(s) are finished.
 
-        2. `pull` is always called after all previous push and pull on the same
-        key are finished.
-
-        3. It pulls the newest value from the store.
+        The returned values are gauranteed to be the latest values in the store.
 
         Parameters
         ----------
@@ -185,12 +179,12 @@ class KVStore(object):
             Keys.
 
         out: NDArray or list of NDArray or list of list of NDArray
-            According values.
+            Values corresponding to the keys.
 
         priority : int, optional
-            The priority of the push operation.
-            The higher the priority, the faster this action is likely
-            to be executed before other push actions.
+            The priority of the pull operation.
+            Higher priority pull operations are likely to be executed before
+            other pull actions.
 
         Examples
         --------
@@ -230,16 +224,16 @@ class KVStore(object):
             ctypes.c_int(priority)))
 
     def set_optimizer(self, optimizer):
-        """Register an optimizer to the store
+        """ Registers an optimizer with the store.
 
-        If there are multiple machines, this process (should be a worker node)
-        will pack this optimizer and send it to all servers. It returns after
+        When there are multiple machines, this operation (invoked from a worker node)
+        will pack the optimizer and send it to all servers. It returns after
         this action is done.
 
         Parameters
         ----------
         optimizer : Optimizer
-            the optimizer
+            the optimizer.
         """
         is_worker = ctypes.c_int()
         check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
@@ -258,7 +252,7 @@ class KVStore(object):
 
     @property
     def type(self):
-        """Get the type of this kvstore.
+        """ Returns the type of this kvstore.
 
         Returns
         -------
@@ -271,12 +265,12 @@ class KVStore(object):
 
     @property
     def rank(self):
-        """Get the rank of this worker node.
+        """ Returns the rank of this worker node.
 
         Returns
         -------
         rank : int
-            The rank of this node, which is in [0, get_num_workers())
+            The rank of this node, which is in range [0, num_workers())
         """
         rank = ctypes.c_int()
         check_call(_LIB.MXKVStoreGetRank(self.handle, ctypes.byref(rank)))
@@ -284,7 +278,7 @@ class KVStore(object):
 
     @property
     def num_workers(self):
-        """Get the number of worker nodes.
+        """Returns the number of worker nodes.
 
         Returns
         -------
@@ -296,7 +290,7 @@ class KVStore(object):
         return size.value
 
     def save_optimizer_states(self, fname):
-        """Save optimizer (updater) state to file.
+        """Saves optimizer (updater) state to file.
 
         Parameters
         ----------
@@ -308,7 +302,7 @@ class KVStore(object):
             fout.write(self._updater.get_states())
 
     def load_optimizer_states(self, fname):
-        """Load optimizer (updater) state from file.
+        """Loads optimizer (updater) state from file.
 
         Parameters
         ----------
@@ -319,10 +313,10 @@ class KVStore(object):
         self._updater.set_states(open(fname, 'rb').read())
 
     def _set_updater(self, updater):
-        """Set a push updater into the store.
+        """Sets a push updater into the store.
 
-        This function only changes the local store. Use set_optimizer for
-        multiple machines.
+        This function only changes the local store. When running on multiple machines one must
+        use `set_optimizer`.
 
         Parameters
         ----------
@@ -354,41 +348,41 @@ class KVStore(object):
 
 
     def _barrier(self):
-        """Global barrier among all worker nodes.
+        """Invokes global barrier among all worker nodes.
 
-        For example, assume there are n machines. We want to let machine 0 first
-        init the values, and then pull the initialized value to all machines. Before
-        pulling, we can place a barrier to guarantee that the initialization is
-        finished.
+        For example, assume there are `n` machines. We would like machine `0` to first
+        `init` the values and then have all the workers `pull` the initialized value.
+        Before pulling, we can place invoke `_barrier()` to guarantee that the
+        initialization is finished.
         """
         check_call(_LIB.MXKVStoreBarrier(self.handle))
 
     def _send_command_to_servers(self, head, body):
-        """Send a command to all server nodes.
+        """Sends a command to all server nodes.
 
-        Send a command to all server nodes, which will make each server node run
-        ``KVStoreServer.controller``
+        Sending command to a server node will cause that server node to invoke
+        ``KVStoreServer.controller`` to execute the command.
 
-        This function returns after the command has been executed in all server
+        This function returns after the command has been executed on all server
         nodes.
 
         Parameters
         ----------
         head : int
-            the head of the command
+            the head of the command.
         body : str
-            the body of the command
+            the body of the command.
         """
         check_call(_LIB.MXKVStoreSendCommmandToServers(
             self.handle, mx_uint(head), c_str(body)))
 
 def create(name='local'):
-    """Create a new KVStore.
+    """Creates a new KVStore.
 
     Parameters
     ----------
     name : {'local'}
-        The type of KVStore
+        The type of KVStore.
         - local works for multiple devices on a single machine (single process).
         - dist works for multiple machines (multiple processes).
     Returns

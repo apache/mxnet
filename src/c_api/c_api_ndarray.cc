@@ -239,8 +239,9 @@ void PushFCompute(const FCompute& fn,
                   const std::vector<Resource>& requested,
                   const std::vector<NDArray>& ndinputs,
                   const std::vector<NDArray>& ndoutputs) {
+  bool is_train = AutogradRuntime::Get()->IsTraining();
   Engine::Get()->PushAsync(
-    [ctx, attrs, fn, ndinputs, ndoutputs, requested](
+    [ctx, attrs, fn, ndinputs, ndoutputs, requested, is_train](
         RunContext rctx,
         engine::CallbackOnComplete on_complete) {
       std::vector<TBlob> input_blobs, output_blobs;
@@ -251,7 +252,7 @@ void PushFCompute(const FCompute& fn,
         i.CheckAndAlloc();
         output_blobs.push_back(i.data());
       }
-      OpContext opctx{false, rctx,
+      OpContext opctx{is_train, rctx,
                       engine::CallbackOnComplete(),
                       requested};
       std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
@@ -279,8 +280,9 @@ void PushOperator(std::shared_ptr<Operator> opr,
     std::shared_ptr<Operator> opr;
   };
 
+  bool is_train = AutogradRuntime::Get()->IsTraining();
   Engine::Get()->PushAsync(
-    [ctx, opr, auxidx, ndinputs, ndoutputs, requested](
+    [ctx, opr, auxidx, ndinputs, ndoutputs, requested, is_train](
         RunContext rctx,
         engine::CallbackOnComplete on_complete) {
       std::vector<TBlob> input_blobs, aux_blobs, output_blobs;
@@ -298,7 +300,7 @@ void PushOperator(std::shared_ptr<Operator> opr,
         output_blobs.push_back(i.data());
       }
       Capture* capture = new Capture({on_complete, opr});
-      OpContext opctx{false, rctx,
+      OpContext opctx{is_train, rctx,
                       Engine::Get()->CreateCallback(
                         [](Engine* engine, void *cpt_handle) {
                             Capture* cpt = static_cast<Capture*>(cpt_handle);
@@ -371,7 +373,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     }
 
     if (fn) {
-      if (AutogradRuntime::Get()->IsRecording()) {
+      if (AutogradRuntime::Get()->IsTraining()) {
         AutogradRuntime::Get()->RecordImperativeFCompute(fn, op,
             attrs, &ndinputs, &ndoutputs);
       }
@@ -380,7 +382,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     } else if (createop.count(op)) {
       std::shared_ptr<Operator> opr(
           createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types));
-      if (AutogradRuntime::Get()->IsRecording()) {
+      if (AutogradRuntime::Get()->IsTraining()) {
         AutogradRuntime::Get()->RecordImperativeOperator(opr, op,
             attrs, &ndinputs, &ndoutputs);
       }
@@ -410,9 +412,9 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
   API_END();
 }
 
-int MXAutogradSetRecording(int recording) {
+int MXAutogradSetIsTraining(int is_training, int* prev) {
   API_BEGIN();
-  AutogradRuntime::Get()->SetRecording(static_cast<bool>(recording));
+  *prev = AutogradRuntime::Get()->SetIsTraining(static_cast<bool>(is_training));
   API_END();
 }
 

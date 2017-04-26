@@ -522,10 +522,11 @@ MXNET_DLL int MXImperativeInvoke(AtomicSymbolCreator creator,
                                  const char **param_vals);
 /*!
  * \brief set whether to record operator for autograd
- * \param recording 1 when turn on recording, 0 when turn off recording
+ * \param is_train 1 when training, 0 when testing
+ * \param prev returns the previous status before this set.
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXAutogradSetRecording(int recording);
+MXNET_DLL int MXAutogradSetIsTraining(int is_training, int* prev);
 /*!
  * \brief mark NDArrays as variables to compute gradient for autograd
  * \param num_var number of variable NDArrays
