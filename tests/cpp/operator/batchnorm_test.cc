@@ -335,18 +335,6 @@ static test::op::OpInfo<OperatorProp, DType> testBatchNormOperatorForward(
 
   opInfo.data_->initForward(*opInfo.prop_, opInfo.in_type_);
 
-  if(mxnet::op::Callbacker<Operator> *callbacker =
-    dynamic_cast<mxnet::op::Callbacker<Operator> *>(opInfo.data_->op())) {
-    callbacker->setCallback(
-      [](const std::string& label, const Operator &op, const TBlob &blob) {
-        if(test::debugOutput) {
-          std::cout << label << ": " << std::endl;
-          test::print_blob<DType>(std::cout, blob) << std::endl << std::flush;
-        }
-      }
-    );
-  }
-
   opInfo.data_->forward(count);
 
 #if !DISABLE_VALIDATION
@@ -386,7 +374,15 @@ static test::op::OpInfo<OperatorProp, DType> testBatchNormOperatorForward(
 
   info.data_->initForward(*info.prop_, info.in_type_);
 
-  return testBatchNormOperatorForward(info, kwargs, count);
+  info.data_->forward();
+
+#if !DISABLE_VALIDATION
+  if(!isUGS(kwargs)) {
+    BatchNormValidator<DType>::validateForward(*info.data_);
+  }
+#endif
+
+  return info;
 }
 
 /*! \brief Test batch norm operator backward pass */

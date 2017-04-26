@@ -124,7 +124,6 @@ class BasicOperatorData {
         }
         allocateResources(opProp.ForwardResource(inputShapes));
 
-        initCallback();
         resetForward();
         return true;
       }
@@ -151,7 +150,6 @@ class BasicOperatorData {
       std::vector<TShape> ishapes;
       allocateResources(opProp.BackwardResource(ishapes));
 
-      initCallback();
       resetBackward();
       return false;
     } else {
@@ -452,18 +450,6 @@ class BasicOperatorData {
         opContext_.requested.push_back(ResourceManager::Get()->Request(ctx, req));
       } else {
         LOG(FATAL) << "resource type not yet supported";
-      }
-    }
-  }
-
-  /*! Initialize operator's analysis callback */
-  void initCallback() {
-    if(!initializeCallback_++) {
-      if(mxnet::op::Callbacker<Operator> *callbacker = dynamic_cast<mxnet::op::Callbacker<Operator> *>(op())) {
-        callbacker->setCallback([](const std::string& label, const Operator &op, const mxnet::TBlob &blob) {
-          std::cout << label << ": " << std::endl;
-          print_blob<DType>(std::cout, blob) << std::endl << std::flush;
-        });
       }
     }
   }

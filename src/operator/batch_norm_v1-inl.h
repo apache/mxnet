@@ -49,8 +49,7 @@ struct BatchNormV1Param : public dmlc::Parameter<BatchNormV1Param> {
 };
 
 template<typename xpu>
-class BatchNormV1Op : public Operator
-                    , public Callbacker<Operator> {
+class BatchNormV1Op : public Operator {
  public:
   explicit BatchNormV1Op(BatchNormV1Param param) {
     this->param_ = param;

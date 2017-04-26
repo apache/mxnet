@@ -64,14 +64,19 @@ class DeviceTensor3 {
  public:
   inline DeviceTensor3(const TBlob& blob, const size_t indexOfChannel)
     : dptr_(blob.dptr<DType>())
+      , indexOfChannel_(indexOfChannel)
       , shape_(3) {
-    shape_[0] = 1;
-    for(size_t i = 0; i < indexOfChannel; ++i) {
-      shape_[0] *= blob.shape_[i];
+    if(indexOfChannel) {
+      shape_[0] = 1;
+      for (size_t i = 0; i < indexOfChannel_; ++i) {
+        shape_[0] *= blob.shape_[i];
+      }
+    } else {
+      shape_[0] = 0;
     }
-    shape_[1] = blob.shape_[indexOfChannel];
+    shape_[1] = blob.shape_[indexOfChannel_];
     shape_[2] = 1;
-    for(size_t i = indexOfChannel + 1, n = blob.shape_.ndim(); i < n; ++i) {
+    for(size_t i = indexOfChannel_ + 1, n = blob.shape_.ndim(); i < n; ++i) {
       shape_[2] *= blob.shape_[i];
     }
   }
@@ -97,14 +102,14 @@ class DeviceTensor3 {
   }
 
   DType *dptr_;
+  size_t indexOfChannel_;
   TShape shape_;
 };
 
 
 /*! \brief Batch normalization operator */
-template<typename xpu, typename DType, typename AccType>
-class BatchNormOp : public Operator
-                  , public Callbacker<Operator> {
+template <typename xpu, typename DType, typename AccReal>
+class BatchNormOp : public Operator {
   typedef ::nnvm::TShape TShape;
   typedef ::mxnet::TBlob TBlob;
 
