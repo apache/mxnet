@@ -52,7 +52,7 @@ class Symbol(SymbolBase):
 
     def __iter__(self):
         """Returns a generator object of symbol.
-        You can loop through the returned object to get outputs.
+        One can loop through the returned object to get outputs.
 
         Example usage:
         ----------
@@ -155,7 +155,7 @@ class Symbol(SymbolBase):
 
     def __neg__(self):
         """x.__neg__() <=> -x
-        This function applies negative to the input, element-wise.
+        Numerical negative, element-wise.
 
         Example usage:
         ----------
@@ -284,7 +284,7 @@ class Symbol(SymbolBase):
             self.handle = None
 
     def __call__(self, *args, **kwargs):
-        """Composes symbol on inputs.
+        """Composes symbol using inputs.
 
         x.__call__(y, z) <=> x(y,z)
         This function internally calls `_compose` to compose the symbol.
@@ -318,7 +318,7 @@ class Symbol(SymbolBase):
         return s
 
     def _compose(self, *args, **kwargs):
-        """Composes symbol on inputs.
+        """Composes symbol using inputs.
 
         x._compose(y, z) <=> x(y,z)
 
@@ -430,7 +430,7 @@ class Symbol(SymbolBase):
             return None
 
     def attr(self, key):
-        """Returns an attribute string for corresponding input key from the symbol.
+        """Returns the attribute string for corresponding input key from the symbol.
         This function only works for non-grouped symbols.
 
         Example usage:
@@ -981,9 +981,9 @@ class Symbol(SymbolBase):
         """Saves symbol to a file.
 
         You can also use pickle to do the job if you only work on python.
-        The advantage of `load`/`save` functions is that the file is language agnostic.
-        This means that the file saved using `save` function can be loaded by other
-        language bindings of MXNet.
+        The advantage of `load`/`save` functions is that the file contents are language agnostic.
+        This means the model saved by one language binding can be loaded by a different
+        language binding of MXNet.
         You also get the benefit of being able to directly load/save from cloud storage(S3, HDFS).
 
         Parameters
@@ -1079,8 +1079,8 @@ class Symbol(SymbolBase):
         Allows specifying data types.
 
         This function simplifies the binding procedure. You need to specify only input data shapes.
-        The function allocates the arguments and auxiliary states that you did not specify
-        explicitly and binds the executor for you.
+        Before binding the executor, the function allocates arguments and auxiliary states
+        that were not explicitly specified.
 
         Example usage:
         ----------
@@ -1107,7 +1107,7 @@ class Symbol(SymbolBase):
 
         grad_req: string
             {'write', 'add', 'null'}, or list of str or dict of str to str, optional
-            To Specify how we should update the gradient to the args_grad.
+            To specify how we should update the gradient to the args_grad.
 
             - 'write' means everytime gradient is write to specified args_grad NDArray.
             - 'add' means everytime gradient is add to the specified NDArray.
@@ -1172,11 +1172,11 @@ class Symbol(SymbolBase):
 
     def bind(self, ctx, args, args_grad=None, grad_req='write',
              aux_states=None, group2ctx=None, shared_exec=None):
-        """Binds the current symbol to get an executor.
+        """Binds the current symbol to an executor and returns it.
 
-        We first declare the computation and then bind it with the data to run.
-        This function returns an executor which provides method `forward()` for evaluation
-        and `outputs()` to get all the results.
+        We first declare the computation and then bind to the data to run.
+        This function returns an executor which provides method `forward()` method for evaluation
+        and a `outputs()` method to get all the results.
 
         Example usage:
         ----------
@@ -1213,19 +1213,19 @@ class Symbol(SymbolBase):
               of `list_arguments()`.
             - If the input type is a dict of str to `NDArray`, then it maps the name of arguments
               to the corresponding NDArray.
-            - When the type is a dict of str to `NDArray`, you only need to provide the dict
+            - When the type is a dict of str to `NDArray`, one only need to provide the dict
               for required argument gradient.
               Only the specified argument gradient will be calculated.
 
         grad_req : {'write', 'add', 'null'}, or list of str or dict of str to str, optional
-            To Specify how we should update the gradient to the `args_grad`.
+            To specify how we should update the gradient to the `args_grad`.
 
             - 'write' means everytime gradient is write to specified args_grad `NDArray`.
             - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
 
         aux_states : list of `NDArray`, or dict of str to `NDArray`, optional
-            Input auxiliary states to the symbol, only need to specify when the output of
+            Input auxiliary states to the symbol, only needed when the output of
             `list_auxiliary_states()` is not empty.
 
             - If the input type is a list of `NDArray`, the order should be same as the order
@@ -1250,7 +1250,7 @@ class Symbol(SymbolBase):
         Notes
         -----
         Auxiliary states are the special states of symbols that do not correspond
-        to an argument, and do not have gradient but still are useful
+        to an argument, and do not have gradient but are still useful
         for the specific operations. Common examples of auxiliary states include
         the `moving_mean` and `moving_variance` states in `BatchNorm`.
         Most operators do not have auxiliary states and in those cases,
@@ -1411,7 +1411,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, ini
     ----------
     name : str
         Variable name.
-    attr : dict of strings
+    attr : Dict of strings
         Additional attributes to set on the variable. Format {string : string}.
     shape : tuple
         The shape of a variable. If specified, this will be used during the shape inference.
