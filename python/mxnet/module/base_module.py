@@ -65,7 +65,7 @@ def _check_names_match(data_names, data_shapes, name, throw):
 
 
 def _parse_data_desc(data_names, label_names, data_shapes, label_shapes):
-    """parse data_shapes into DataDesc format and check that names match"""
+    """parse data_attrs into DataDesc format and check that names match"""
     data_shapes = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in data_shapes]
     _check_names_match(data_names, data_shapes, 'data', True)
     if label_shapes is not None:

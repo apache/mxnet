@@ -78,6 +78,10 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Character-Level Language Modeling with LSTM RNNs](http://mxnet.io/tutorials/scala/char_lstm.html)
 
+### C++
+
+- [Basics](http://mxnet.io/tutorials/c++/basics.html)
+
 ## Contributing Tutorials
 
 Want to contribute an MXNet tutorial? To get started, download the [tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).

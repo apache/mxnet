@@ -83,7 +83,7 @@ class STTIter(mx.io.DataIter):
                     random.shuffle(self.trainDataList)
                     self.trainDataIter = iter(self.trainDataList)
                     duration, audio_path, text = self.trainDataIter.next()
-                print(audio_path, text)
+                #print(audio_path, text)
                 audio_paths.append(audio_path)
                 texts.append(text)
             if self.is_first_epoch:

@@ -32,19 +32,19 @@ struct MakeLossParam : public dmlc::Parameter<MakeLossParam> {
   float valid_thresh;
   DMLC_DECLARE_PARAMETER(MakeLossParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
-    .describe("gradient scale as a supplement to unary and binary operators");
+    .describe("Gradient scale as a supplement to unary and binary operators");
     DMLC_DECLARE_FIELD(valid_thresh).set_default(0.0f)
-    .describe("regard element valid when x > valid_thresh, this is "
-    "used only in valid normalization mode.");
+    .describe("clip each element in the array to 0 when it is less than ``valid_thresh``."
+              " This is used when ``normalization`` is set to ``'valid'``.");
     DMLC_DECLARE_FIELD(normalization)
     .add_enum("null", make_loss_enum::kNull)
     .add_enum("batch", make_loss_enum::kBatch)
     .add_enum("valid", make_loss_enum::kValid)
     .set_default(make_loss_enum::kNull)
-    .describe("If set to null, op will not normalize on output gradient."
-              "If set to batch, op will normalize gradient by divide batch size."
-              "If set to valid, op will normalize gradient by divide # sample "
-              "marked as valid");
+    .describe("If this is set to null, the output gradient will not be normalized. "
+              "If this is set to batch, the output gradient will be divided by the batch size. "
+              "If this is set to valid, the output gradient will be divided by the number of "
+              "valid input elements.");
   }
 };
 
