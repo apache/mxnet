@@ -381,14 +381,20 @@ class Perplexity(EvalMetric):
     The perplexity of the model q is defined as
 
     .. math::
-        b\\big(-\\frac{\sum_{i=1}^N \log_b q(x_i)}{N}\\big)
+        b^{\\big(-\\frac{1}{N} \\sum_{i=1}^N \\log_b q(x_i) \\big)}
+        = \\exp \\big(-\\frac{1}{N} \\sum_{i=1}^N \\log q(x_i)\\big)
 
-    We let `b = e`. :math:`q(x_i)` is the predicted value of its ground truth label on sample :math:`x_i`.
+    where we let `b = e`.
 
-    For example, we have three samples :math:`x_1, x_2, x_3` and their label is :math:`[0, 1, 1]`.
-    Suppose our model predicts :math:`q(x_1) = p(y_1 = 0 | x_1) = 0.3` and :math:`q(x_2) = 1.0`,
+    :math:`q(x_i)` is the predicted value of its ground truth
+    label on sample :math:`x_i`.
+
+    For example, we have three samples :math:`x_1, x_2, x_3` and their label
+    is :math:`[0, 1, 1]`.
+    Suppose our model predicts :math:`q(x_1) = p(y_1 = 0 | x_1) = 0.3`
+    and :math:`q(x_2) = 1.0`,
     :math:`q(x_3) = 0.6`. The perplexity of model q is
-    :math:`exp\\big(-(\log 0.3 + \log 1.0 + \log 0.6) / 3\\big) = 1.77109762852`.
+    :math:`exp\\big(-(\\log 0.3 + \\log 1.0 + \\log 0.6) / 3\\big) = 1.77109762852`.
 
     Parameters
     ----------
@@ -463,7 +469,7 @@ class MAE(EvalMetric):
     The mean absolute error is given by
 
     .. math::
-        \\frac{\sum_i^n |y_i - \hat{y}_i|}{n}
+        \\frac{\\sum_i^n |y_i - \\hat{y}_i|}{n}
 
     Examples
     --------
@@ -508,7 +514,7 @@ class MSE(EvalMetric):
     The mean squared error is given by
 
     .. math::
-        \\frac{\sum_i^n (y_i - \hat{y}_i)^2}{n}
+        \\frac{\\sum_i^n (y_i - \\hat{y}_i)^2}{n}
 
     Examples
     --------
@@ -551,7 +557,7 @@ class RMSE(EvalMetric):
     The root mean squared error is given by
 
     .. math::
-        \sqrt{\\frac{\sum_i^n |y_i - \hat{y}_i|}{n}}
+        \\sqrt{\\frac{\\sum_i^n |y_i - \\hat{y}_i|}{n}}
 
     Examples
     --------
@@ -594,13 +600,13 @@ class CrossEntropy(EvalMetric):
     The cross entropy is given by
 
     .. math::
-        -y\log \hat{y} + (1-y)\log (1-\hat{y})
+        -y\\log \\hat{y} + (1-y)\\log (1-\\hat{y})
 
     Parameters
     ----------
     eps : float
-        Cross Entropy loss is undefined for predicted value is 0 or 1, so predicted values
-        are added with the small constant.
+        Cross Entropy loss is undefined for predicted value is 0 or 1,
+        so predicted values are added with the small constant.
 
     Examples
     --------

@@ -50,33 +50,33 @@ MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
 
   \text{gradient} = \text{output} - \text{label}
 
-- In the forward propagation, the softmax function is computed for each instance in the input array.
+- During forward propagation, the softmax function is computed for each instance in the input array.
 
   For general *N*-D input arrays with shape :math:`(d_1, d_2, ..., d_n)`. The size is
-  :math:`s=d_1 \cdot d_2 \cdot \cdot \cdot d_n`. We can use the parameter ``preserve_shape``
-  and ``multi_output`` to specify the way to compute softmax:
+  :math:`s=d_1 \cdot d_2 \cdot \cdot \cdot d_n`. We can use the parameter `preserve_shape`
+  and `multi_output` to specify the way to compute softmax:
 
-  By Default, ``preserve_shape`` is ``false``. This operator will reshape the input array
+  By default, `preserve_shape` is ``false``. This operator will reshape the input array
   into a 2-D array with shape :math:`(d_1, \frac{s}{d_1})` and then compute the softmax function for
   each row in the reshaped array, and afterwards reshape it back to the original shape
   :math:`(d_1, d_2, ..., d_n)`.
 
-  If ``preserve_shape`` is ``true``, the softmax function will be computed along with the last axis.
-  If ``multi_output`` is ``true``, the softmax function will be computed along with second axis.
+  If `preserve_shape` is ``true``, the softmax function will be computed along the last axis.
+  If `multi_output` is ``true``, the softmax function will be computed along second axis.
 
-- In the backward propagation, the gradient of cross-entroy loss w.r.t softmax output array is computed.
+- During backward propagation, the gradient of cross-entroy loss w.r.t softmax output array is computed.
   The provided label can be a one-hot label array or a probability label array.
 
-- If the parameter ``use_ignore`` is ``true``, ``ignore_label`` can specify input instances
+- If the parameter `use_ignore` is ``true``, `ignore_label` can specify input instances
   with a particular label to be ignored during backward propagation.
 
-- The parameter ``grad_scale`` can be used to rescale the gradient, which is often used to
+- The parameter `grad_scale` can be used to rescale the gradient, which is often used to
   give each loss function different weights.
 
-- This operator also supports various ways to normalize the gradient by ``normalization``:
-  **null**: do nothing.
-  **batch**: divide the gradient by the batch size.
-  **valid**: divide the gradient by the number of instances which are not ignored.
+- This operator also supports various ways to normalize the gradient by `normalization`:
+  - ``'null'``: do nothing.
+  - ``'batch'``: divide the gradient by the batch size.
+  - ``'valid'``: divide the gradient by the number of instances which are not ignored.
 
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input array.")
@@ -85,10 +85,15 @@ MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
 
 
 MXNET_REGISTER_OP_PROPERTY(Softmax, DeprecatedSoftmaxProp)
-.describe("Please use SoftmaxOutput."
-          ".. note::  This operator has been renamed to ``SoftmaxOutput``, which "
-          "computes the gradient of cross-entroy loss w.r.t softmax output. "
-          "There is another operator called ``softmax``, which computes softmax output only.")
+.describe(R"code(Please use `SoftmaxOutput`.
+
+.. note::
+
+  This operator has been renamed to `SoftmaxOutput`, which
+  computes the gradient of cross-entroy loss w.r.t softmax output.
+  To just compute softmax output, use the `softmax` operator.
+
+)code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input array.")
 .add_arguments(SoftmaxOutputParam::__FIELDS__());
 

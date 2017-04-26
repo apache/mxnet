@@ -37,18 +37,18 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
   bool out_grad;
   DMLC_DECLARE_PARAMETER(SoftmaxOutputParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
-    .describe("Scale the gradient by multiplying a float factor.");
+    .describe("Scale the gradient by a float factor.");
     DMLC_DECLARE_FIELD(ignore_label).set_default(-1.0f)
-    .describe("The instances whose ``labels == {ignore_label}``will be ignored "
-              "during backward. (if and only if ``use_ignore`` is set to be ``true``).");
+    .describe("The instances whose `labels` == `ignore_label` will be ignored "
+              "during backward, if `use_ignore` is set to ``true``).");
     DMLC_DECLARE_FIELD(multi_output).set_default(false)
-    .describe("If this is set to ``true``, the softmax function will be computed along with "
+    .describe("If set to ``true``, the softmax function will be computed along "
               "the second axis.");
     DMLC_DECLARE_FIELD(use_ignore).set_default(false)
-    .describe("If this is set to ``true``, the ``ignore_label`` value will not contribute "
+    .describe("If set to ``true``, the `ignore_label` value will not contribute "
               "to the backward gradient.");
     DMLC_DECLARE_FIELD(preserve_shape).set_default(false)
-    .describe("If this is set to ``true``, the softmax function will be computed along with "
+    .describe("If set to ``true``, the softmax function will be computed along with "
               "the last axis.");
     DMLC_DECLARE_FIELD(normalization)
     .add_enum("null", softmaxout_enum::kNull)
