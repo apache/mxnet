@@ -452,7 +452,7 @@ class LSTMBias(Initializer):
     Parameters
     ----------
     forget_bias: float, bias for the forget gate.
-    Jozefowicz et al. 2015 recommends setting this to 1.0.
+        Jozefowicz et al. 2015 recommends setting this to 1.0.
     """
     def __init__(self, forget_bias):
         super(LSTMBias, self).__init__(forget_bias=forget_bias)
