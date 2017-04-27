@@ -17,14 +17,19 @@ except ImportError:
     cv2 = None
 
 class MXRecordIO(object):
-    """Read/write RecordIO format data.
+    """Reads/writes `RecordIO` data format, supporting sequential read and write.
+
+    Example usage:
+    ----------
+    >>> record = mx.recordio.MXRecordIO('tmp.rec', 'w')
+    <mxnet.recordio.MXRecordIO object at 0x10ef40ed0>
 
     Parameters
     ----------
     uri : string
-        uri path to recordIO file.
+        Path to the record file.
     flag : string
-        "r" for reading or "w" writing.
+        'w' for write or 'r' for read.
     """
     def __init__(self, uri, flag):
         self.uri = c_str(uri)
@@ -34,7 +39,7 @@ class MXRecordIO(object):
         self.open()
 
     def open(self):
-        """Open record file."""
+        """Opens the record file."""
         if self.flag == "w":
             check_call(_LIB.MXRecordIOWriterCreate(self.uri, ctypes.byref(self.handle)))
             self.writable = True
@@ -49,7 +54,7 @@ class MXRecordIO(object):
         self.close()
 
     def close(self):
-        """Close record file."""
+        """Closes the record file."""
         if not self.is_open:
             return
         if self.writable:
@@ -59,13 +64,35 @@ class MXRecordIO(object):
         self.is_open = False
 
     def reset(self):
-        """Reset pointer to first item. If record is opened with 'w',
-        this will truncate the file to empty."""
+        """Resets the pointer to first item.
+
+        If the record is opened with 'w', this function will truncate the file to empty.
+
+        Example usage:
+        ----------
+        >>> record = mx.recordio.MXRecordIO('tmp.rec', 'r')
+        >>> for i in range(2):
+        ...    item = record.read()
+        ...    print(item)
+        record_0
+        record_1
+        >>> record.reset()  # Pointer is reset.
+        >>> print(record.read()) # Started reading from start again.
+        record_0
+        >>> record.close()
+        """
         self.close()
         self.open()
 
     def write(self, buf):
-        """Write a string buffer as a record.
+        """Inserts a string buffer as a record.
+
+        Example usage:
+        ----------
+        >>> record = mx.recordio.MXRecordIO('tmp.rec', 'w')
+        >>> for i in range(5):
+        ...    record.write('record_%d'%i)
+        >>> record.close()
 
         Parameters
         ----------
@@ -78,7 +105,20 @@ class MXRecordIO(object):
                                                     ctypes.c_size_t(len(buf))))
 
     def read(self):
-        """Read a record as string.
+        """Returns record as a string.
+
+        Example usage:
+        ----------
+        >>> record = mx.recordio.MXRecordIO('tmp.rec', 'r')
+        >>> for i in range(5):
+        ...    item = record.read()
+        ...    print(item)
+        record_0
+        record_1
+        record_2
+        record_3
+        record_4
+        >>> record.close()
 
         Returns
         ----------
