@@ -30,7 +30,7 @@ Operator *SoftmaxOutputProp::CreateOperatorEx(Context ctx, std::vector<TShape> *
 DMLC_REGISTER_PARAMETER(SoftmaxOutputParam);
 
 MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
-.describe(R"code(Softmax with logit loss.
+.describe(R"code(Computes softmax with logit loss.
 
 In the forward pass, the softmax output is returned. Assume the input data has
 shape *(n,k)*, then the output will have the same shape as the input, which is computed by
