@@ -24,12 +24,13 @@ namespace batchnorm {
 template<typename DType>
 class DeviceTensor3 {
   DeviceTensor3(const DeviceTensor3&) = delete;
+
  public:
   inline DeviceTensor3(const TBlob& blob, const size_t indexOfChannel)
     : dptr_(blob.dptr<DType>())
       , indexOfChannel_(indexOfChannel)
       , shape_(3) {
-    if(indexOfChannel) {
+    if (indexOfChannel) {
       shape_[0] = 1;
       for (size_t i = 0; i < indexOfChannel_; ++i) {
         shape_[0] *= blob.shape_[i];
@@ -39,7 +40,7 @@ class DeviceTensor3 {
     }
     shape_[1] = blob.shape_[indexOfChannel_];
     shape_[2] = 1;
-    for(size_t i = indexOfChannel_ + 1, n = blob.shape_.ndim(); i < n; ++i) {
+    for (size_t i = indexOfChannel_ + 1, n = blob.shape_.ndim(); i < n; ++i) {
       shape_[2] *= blob.shape_[i];
     }
   }
@@ -86,7 +87,9 @@ static inline index_t offset(const TShape& shape,
 
 /*! \brief Fast-foreach when you don't care about the position other than channel */
 template<typename DType, typename OnData>
-static inline void ForEachFast(DeviceTensor3<DType> &tensor, const size_t channel, OnData onData) {
+static inline void ForEachFast(const DeviceTensor3<DType> &tensor,
+                               const size_t channel,
+                               OnData onData) {
   const size_t num        = tensor.BatchSize();
   const size_t matrixSize = tensor.SpatialSize();
 
@@ -94,7 +97,8 @@ static inline void ForEachFast(DeviceTensor3<DType> &tensor, const size_t channe
 
   for (size_t batchItem = 0; batchItem < num; ++batchItem) {
     indices[0] = batchItem;
-    DType *data = tensor.dptr_ + offset(tensor.shape_, &indices[0], sizeof(indices)/sizeof(indices[0]));
+    DType *data = tensor.dptr_ + offset(tensor.shape_, &indices[0],
+                                        sizeof(indices)/sizeof(indices[0]));
     for (size_t i = 0; i < matrixSize; ++i) {
       onData(data++);
     }
@@ -103,8 +107,10 @@ static inline void ForEachFast(DeviceTensor3<DType> &tensor, const size_t channe
 
 /*! \brief Fast-foreach when you don't care about the position other than channel */
 template<typename DType, typename OnData>
-static inline void ForEachFast(DeviceTensor3<DType> &in_data, DeviceTensor3<DType> &out_data,
-                               const size_t channel, OnData onData) {
+static inline void ForEachFast(const DeviceTensor3<DType> &in_data,
+                               const DeviceTensor3<DType> &out_data,
+                               const size_t channel,
+                               OnData onData) {
   const size_t num        = in_data.BatchSize();
   const size_t matrixSize = in_data.SpatialSize();
 
@@ -123,7 +129,8 @@ static inline void ForEachFast(DeviceTensor3<DType> &in_data, DeviceTensor3<DTyp
 
 /*! \brief Fast-foreach when you don't care about the position other than channel */
 template<typename DType, typename OnData>
-static inline void ForEachFast(DeviceTensor3<DType>& tensor, OnData onData) {
+static inline void ForEachFast(const DeviceTensor3<DType>& tensor,
+                               OnData onData) {
   const size_t num        = tensor.BatchSize();
   const size_t channels   = tensor.ChannelCount();
   const size_t matrixSize = tensor.SpatialSize();
@@ -143,8 +150,8 @@ static inline void ForEachFast(DeviceTensor3<DType>& tensor, OnData onData) {
 
 /*! \brief Fast-foreach when you don't care about the position other than channel */
 template<typename DType, typename OnData>
-static inline void ForEachFast(DeviceTensor3<DType>& in_data,
-                               DeviceTensor3<DType>& out_data,
+static inline void ForEachFast(const DeviceTensor3<DType>& in_data,
+                               const DeviceTensor3<DType>& out_data,
                                OnData onData) {
   const size_t num        = in_data.BatchSize();
   const size_t channels   = in_data.ChannelCount();
@@ -166,7 +173,8 @@ static inline void ForEachFast(DeviceTensor3<DType>& in_data,
 
 /*! \brief Compute the mean of each input channel */
 template<typename DType>
-static inline void ComputeMean(DeviceTensor3<DType> &tensor, DType *save_mean) {
+static inline void ComputeMean(const DeviceTensor3<DType> &tensor,
+                               DType *save_mean) {
   const size_t channelCount = tensor.ChannelCount();
 
   for (size_t i = 0; i < channelCount; ++i) {
@@ -190,7 +198,7 @@ static inline bool IsWriting(const OpReqType ort) {
 
 /*! \brief Compute the variance of each input channel, as well as update moving mean/variants */
 template<typename DType>
-static inline void ComputeVariance(DeviceTensor3<DType> &tensor,
+static inline void ComputeVariance(const DeviceTensor3<DType> &tensor,
                                    const DType *mean_data,
                                    const DType eps,
                                    const TShape &oshape,

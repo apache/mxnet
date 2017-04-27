@@ -61,7 +61,6 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
 /*! \brief Batch normalization operator */
 template <typename xpu, typename DType, typename AccReal>
 class BatchNormOp : public Operator {
-
  public:
   explicit BatchNormOp(BatchNormParam param) {
     this->param_ = param;
@@ -145,7 +144,6 @@ class BatchNormOp : public Operator {
   }
 
  private:
-
   void DoForward(mshadow::Stream<cpu> *stream,
                  const OpContext &ctx,
                  const std::vector<TBlob> &in_data,
@@ -169,6 +167,7 @@ class BatchNormOp : public Operator {
                  const std::vector<OpReqType> &req,
                  const std::vector<TBlob> &out_data,
                  const std::vector<TBlob> &aux_states);
+
   void DoBackward(mshadow::Stream<gpu> *stream,
                   const OpContext &ctx,
                   const std::vector<TBlob> &out_grad,
