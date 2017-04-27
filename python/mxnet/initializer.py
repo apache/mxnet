@@ -222,14 +222,33 @@ class Load(object):
 
 
 class Mixed(object):
-    """Initialize with multiple initializers.
+    """Initialize parameters using multiple initializers.
 
     Parameters
     ----------
     patterns: list of str
-        List of regular expression patterns to match parameter names.
+        List of regular expressions matching parameter names.
     initializers: list of Initializer
-        List of Initializer corrosponding to patterns.
+        List of initializers corresponding to `patterns`.
+
+    Example
+    -------
+    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize biases to zero
+    ... # and every other parameter to random values with uniform distribution.
+    ...
+    >>> init = mx.initializer.Mixed(['bias', '.*'], [mx.init.Zero(), mx.init.Uniform(0.1)])
+    >>> module.init_params(init)
+    >>>
+    >>> for dictionary in module.get_params():
+    ...     for key in dictionary:
+    ...         print(key)
+    ...         print(dictionary[key].asnumpy())
+    ...
+    fullyconnected1_weight
+    [[ 0.0097627   0.01856892  0.04303787]]
+    fullyconnected1_bias
+    [ 0.]
+
     """
     def __init__(self, patterns, initializers):
         assert len(patterns) == len(initializers)

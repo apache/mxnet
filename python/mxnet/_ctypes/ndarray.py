@@ -132,7 +132,7 @@ def %s(%s):
         # NDArray args
         for name in ndarg_names:
             code.append("""
-    if {name} is not _Null:
+    if {name} is not None:
         assert isinstance({name}, NDArrayBase), \\
             "Argument {name} must have NDArray type, but got %s"%str(type({name}))
         ndargs.append({name}.handle)""".format(name=name))

@@ -28,18 +28,20 @@ struct SGDParam : public dmlc::Parameter<SGDParam> {
   float clip_gradient;
   DMLC_DECLARE_PARAMETER(SGDParam) {
     DMLC_DECLARE_FIELD(lr)
-    .describe("learning_rate");
+    .describe("Learning rate");
     DMLC_DECLARE_FIELD(wd)
     .set_default(0.0f)
-    .describe("weight decay");
+    .describe("Weight decay augments the objective function with a "
+              "regularization term that penalizes large weights. "
+              "The penalty scales with the square of the magnitude of each weight.");
     DMLC_DECLARE_FIELD(rescale_grad)
     .set_default(1.0f)
-    .describe("rescale gradient as grad = rescale_grad*grad.");
+    .describe("Rescale gradient to grad = rescale_grad*grad.");
     DMLC_DECLARE_FIELD(clip_gradient)
     .set_default(-1.0f)
-    .describe("If greater than 0, clip gradient to "
-              "grad = max(min(grad, -clip_gradient), clip_gradient). "
-              "Otherwise turned off.");
+    .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
+              "If clip_gradient <= 0, gradient clipping is turned off. "
+              "grad = max(min(grad, clip_gradient), -clip_gradient).");
   }
 };
 
@@ -90,21 +92,23 @@ struct SGDMomParam : public dmlc::Parameter<SGDMomParam> {
   float clip_gradient;
   DMLC_DECLARE_PARAMETER(SGDMomParam) {
     DMLC_DECLARE_FIELD(lr)
-    .describe("learning_rate");
+    .describe("Learning rate");
     DMLC_DECLARE_FIELD(momentum)
     .set_default(0.0f)
-    .describe("momentum");
+    .describe("The decay rate of momentum estimates at each epoch.");
     DMLC_DECLARE_FIELD(wd)
     .set_default(0.0f)
-    .describe("weight decay");
+    .describe("Weight decay augments the objective function with a "
+              "regularization term that penalizes large weights. "
+              "The penalty scales with the square of the magnitude of each weight.");
     DMLC_DECLARE_FIELD(rescale_grad)
     .set_default(1.0f)
-    .describe("rescale gradient as grad = rescale_grad*grad.");
+    .describe("Rescale gradient to grad = rescale_grad*grad.");
     DMLC_DECLARE_FIELD(clip_gradient)
     .set_default(-1.0f)
-    .describe("If greater than 0, clip gradient to "
-              "grad = max(min(grad, -clip_gradient), clip_gradient). "
-              "Otherwise turned off.");
+    .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
+              "If clip_gradient <= 0, gradient clipping is turned off. "
+              "grad = max(min(grad, clip_gradient), -clip_gradient).");
   }
 };
 
@@ -159,27 +163,29 @@ struct AdamParam : public dmlc::Parameter<AdamParam> {
   float clip_gradient;
   DMLC_DECLARE_PARAMETER(AdamParam) {
     DMLC_DECLARE_FIELD(lr)
-    .describe("learning_rate");
+    .describe("Learning rate");
     DMLC_DECLARE_FIELD(beta1)
     .set_default(0.9f)
-    .describe("beta1");
+    .describe("The decay rate for the 1st moment estimates.");
     DMLC_DECLARE_FIELD(beta2)
     .set_default(0.999f)
-    .describe("beta2");
+    .describe("The decay rate for the 2nd moment estimates.");
     DMLC_DECLARE_FIELD(epsilon)
     .set_default(1e-8f)
-    .describe("epsilon");
+    .describe("A small constant for numerical stability.");
     DMLC_DECLARE_FIELD(wd)
     .set_default(0.0f)
-    .describe("weight decay");
+    .describe("Weight decay augments the objective function with a "
+              "regularization term that penalizes large weights. "
+              "The penalty scales with the square of the magnitude of each weight.");
     DMLC_DECLARE_FIELD(rescale_grad)
     .set_default(1.0f)
-    .describe("rescale gradient as grad = rescale_grad*grad.");
+    .describe("Rescale gradient to grad = rescale_grad*grad.");
     DMLC_DECLARE_FIELD(clip_gradient)
     .set_default(-1.0f)
-    .describe("If greater than 0, clip gradient to "
-              "grad = max(min(grad, -clip_gradient), clip_gradient). "
-              "Otherwise turned off.");
+    .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
+              "If clip_gradient <= 0, gradient clipping is turned off. "
+              "grad = max(min(grad, clip_gradient), -clip_gradient).");
   }
 };
 
@@ -233,24 +239,31 @@ struct RMSPropAlexParam : public dmlc::Parameter<RMSPropAlexParam> {
   float clip_gradient;
   float clip_weights;
   DMLC_DECLARE_PARAMETER(RMSPropAlexParam) {
-    DMLC_DECLARE_FIELD(lr).describe("learning_rate");
-    DMLC_DECLARE_FIELD(gamma1).set_default(0.95f).describe("gamma1");
-    DMLC_DECLARE_FIELD(gamma2).set_default(0.9f).describe("gamma2");
-    DMLC_DECLARE_FIELD(epsilon).set_default(1e-8f).describe("epsilon");
-    DMLC_DECLARE_FIELD(wd).set_default(0.0f).describe("weight decay");
+    DMLC_DECLARE_FIELD(lr)
+    .describe("Learning rate");
+    DMLC_DECLARE_FIELD(gamma1).set_default(0.95f)
+    .describe("Decay rate.");
+    DMLC_DECLARE_FIELD(gamma2).set_default(0.9f)
+    .describe("Decay rate.");
+    DMLC_DECLARE_FIELD(epsilon).set_default(1e-8f)
+    .describe("A small constant for numerical stability.");
+    DMLC_DECLARE_FIELD(wd).set_default(0.0f)
+    .describe("Weight decay augments the objective function with a "
+              "regularization term that penalizes large weights. "
+              "The penalty scales with the square of the magnitude of each weight.");
     DMLC_DECLARE_FIELD(rescale_grad)
     .set_default(1.0f)
-    .describe("rescale gradient as grad = rescale_grad*grad.");
+    .describe("Rescale gradient to grad = rescale_grad*grad.");
     DMLC_DECLARE_FIELD(clip_gradient)
     .set_default(-1.0f)
-    .describe("If greater than 0, clip gradient to "
-              "grad = max(min(grad, -clip_gradient), clip_gradient). "
-              "Otherwise turned off.");
+    .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
+              "If clip_gradient <= 0, gradient clipping is turned off. "
+              "grad = max(min(grad, clip_gradient), -clip_gradient).");
     DMLC_DECLARE_FIELD(clip_weights)
-      .set_default(-1.0f)
-      .describe("If greater than 0, clip weights to "
-                "weights = max(min(weights, -clip_weights), clip_weights). "
-                "Otherwise turned off.");
+    .set_default(-1.0f)
+    .describe("Clip weights to the range of [-clip_weights, clip_weights] "
+              "If clip_weights <= 0, weight clipping is turned off. "
+              "weights = max(min(weights, clip_weights), -clip_weights).");
   }
 };
 
@@ -320,23 +333,29 @@ struct RMSPropParam : public dmlc::Parameter<RMSPropParam> {
   float clip_gradient;
   float clip_weights;
   DMLC_DECLARE_PARAMETER(RMSPropParam) {
-    DMLC_DECLARE_FIELD(lr).describe("learning_rate");
-    DMLC_DECLARE_FIELD(gamma1).set_default(0.95f).describe("gamma1");
-    DMLC_DECLARE_FIELD(epsilon).set_default(1e-8f).describe("epsilon");
-    DMLC_DECLARE_FIELD(wd).set_default(0.0f).describe("weight decay");
+    DMLC_DECLARE_FIELD(lr)
+    .describe("Learning rate");
+    DMLC_DECLARE_FIELD(gamma1).set_default(0.95f)
+    .describe("The dacay rate of momentum estimates.");
+    DMLC_DECLARE_FIELD(epsilon).set_default(1e-8f)
+    .describe("A small constant for numerical stability.");
+    DMLC_DECLARE_FIELD(wd).set_default(0.0f)
+    .describe("Weight decay augments the objective function with a "
+              "regularization term that penalizes large weights. "
+              "The penalty scales with the square of the magnitude of each weight.");
     DMLC_DECLARE_FIELD(rescale_grad)
     .set_default(1.0f)
-    .describe("rescale gradient as grad = rescale_grad*grad.");
+    .describe("Rescale gradient to grad = rescale_grad*grad.");
     DMLC_DECLARE_FIELD(clip_gradient)
     .set_default(-1.0f)
-    .describe("If greater than 0, clip gradient to "
-              "grad = max(min(grad, -clip_gradient), clip_gradient). "
-              "Otherwise turned off.");
+    .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
+              "If clip_gradient <= 0, gradient clipping is turned off. "
+              "grad = max(min(grad, clip_gradient), -clip_gradient).");
     DMLC_DECLARE_FIELD(clip_weights)
-      .set_default(-1.0f)
-      .describe("If greater than 0, clip weights to "
-                "weights = max(min(weights, -clip_weights), clip_weights). "
-                "Otherwise turned off.");
+    .set_default(-1.0f)
+    .describe("Clip weights to the range of [-clip_weights, clip_weights] "
+              "If clip_weights <= 0, weight clipping is turned off. "
+              "weights = max(min(weights, clip_weights), -clip_weights).");
   }
 };
 

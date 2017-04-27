@@ -419,6 +419,9 @@ var Search = {
           $('#search-preview').append('<ul id="preview-list"></ul>');
           while(prevNum < 10 && results.length > 0) {
             var item = results.pop();
+            if(item[0].endsWith('.md')) {
+              item[0] = item[0].substring(0, item[0].length - 3);
+            }
             var listItem = $('<li></li>');
             if (DOCUMENTATION_OPTIONS.FILE_SUFFIX === '') {
               // dirhtml builder
@@ -441,6 +444,7 @@ var Search = {
             var html = listItem.children().html();
             listItem.children().html(html.replace(RegExp(query, 'gi'), '<strong>$&</strong>'));
             $('#preview-list').append(listItem);
+            if(prevNum < 9 && results.length > 0) $('#preview-list').append('<hr>');
             prevNum++;
           }
         }
@@ -460,6 +464,9 @@ var Search = {
       // results left, load the summary and display it
       if (results.length) {
         var item = results.pop();
+        if(item[0].endsWith('.md')) {
+          item[0] = item[0].substring(0, item[0].length - 3);
+        }
         var listItem = $('<li style="display:none"></li>');
         if (DOCUMENTATION_OPTIONS.FILE_SUFFIX === '') {
           // dirhtml builder
@@ -485,7 +492,7 @@ var Search = {
             displayNextItem();
           });
         } else if (DOCUMENTATION_OPTIONS.HAS_SOURCE) {
-          $.ajax({url: DOCUMENTATION_OPTIONS.URL_ROOT + '_sources/' + item[0] + '.txt',
+          $.ajax({url: DOCUMENTATION_OPTIONS.URL_ROOT + '_sources/' + item[0] + '.md.txt',
                   dataType: "text",
                   complete: function(jqxhr, textstatus) {
                     var data = jqxhr.responseText;
@@ -549,7 +556,7 @@ var Search = {
     var objects = this._index.objects;
     var objnames = this._index.objnames;
     var titles = this._index.titles;
-    var objLowLimit = 5;
+    var objLowLimit = 10;
 
     var i;
     var results = [];
@@ -751,15 +758,35 @@ var Search = {
 $(document).ready(function() {
   var searchBoxWidth = 140;
   var searchBoxWidthModifier = 200;
+    
+  var focusInputColor = "white";
+  var focusIconColor = "dimgray";
+  var focusPlaceColor = "searchBoxExp";
+  var normalInputColor = "#87CEFA";
+  var normalIconColor = "white";
+  var normalPlaceColor = "searchBoxNorm";
+    
+  function focusOut() {
+    $("#search-input-wrap").width(searchBoxWidth);
+    $(".searchBox").width(searchBoxWidth);
+    $(".searchBox").css("background-color", normalInputColor);
+    $('#search-input-wrap input').css("background-color", normalInputColor);
+    $(".searchBox .glyphicon-search").css("color", normalIconColor);
+    $(".searchBox").addClass(normalPlaceColor);
+    $(".searchBox").removeClass(focusPlaceColor);
+    $('#search-preview').hide();
+  }
 
   Search.init();
   $('#search-input-wrap input').focus(function () {
     var modifiedWidth = $(window).width() - searchBoxWidthModifier;
     $("#search-input-wrap").width(modifiedWidth);
     $(".searchBox").width(modifiedWidth);
-    $(".searchBox").css("background-color", "white");
-    $(this).css("background-color", "white");
-      
+    $(".searchBox").css("background-color", focusInputColor);
+    $(this).css("background-color", focusInputColor);
+    $(".searchBox .glyphicon-search").css("color", focusIconColor);
+    $(".searchBox").addClass(focusPlaceColor);
+    $(".searchBox").removeClass(normalPlaceColor);
     if($(this).val().length > 0) {
       isPreview = true;
       Search.performSearch($(this).val());
@@ -767,14 +794,19 @@ $(document).ready(function() {
     }
   });
     
+  //Click to focus out
   $('body').click(function (e) {
     if(e.target.id == 'search-preview' || e.target.name == 'q' || $(e.target).parents("#search-preview").size()) return;
 
-    $("#search-input-wrap").width(searchBoxWidth);
-    $(".searchBox").width(searchBoxWidth);
-    $(".searchBox").parent().css("background-color", '#87CEFA');
-    $('#search-input-wrap input').css("background-color", '#87CEFA');
-    $('#search-preview').hide();
+    focusOut();
+  });
+    
+  //Press esc to focus out
+  $(document).keyup(function(e) {
+     if (e.keyCode == 27) { // escape key maps to keycode `27`
+       $('#search-input-wrap input').blur();
+       focusOut();
+     }
   });
     
   //Add search result preview
