@@ -264,7 +264,22 @@ class Mixed(object):
 
 @register
 class Zero(Initializer):
-    """Initialize the weight to 0."""
+    """Initialize weights to zero. Note that this does not initialize the biases.
+
+    Example
+    -------
+    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights to zero.
+    ...
+    >>> init = mx.initializer.Zero()
+    >>> module.init_params(init)
+    >>> for dictionary in module.get_params():
+    ...     for key in dictionary:
+    ...         print(key)
+    ...         print(dictionary[key].asnumpy())
+    ...
+    fullyconnected0_weight
+    [[ 0.  0.  0.]]
+    """
     def __init__(self):
         super(Zero, self).__init__()
 
@@ -273,7 +288,22 @@ class Zero(Initializer):
 
 @register
 class One(Initializer):
-    """Initialize the weight to 1."""
+    """Initialize weights to one. Note that this does not initialize the biases.
+
+    Example
+    -------
+    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights to one.
+    ...
+    >>> init = mx.initializer.One()
+    >>> module.init_params(init)
+    >>> for dictionary in module.get_params():
+    ...     for key in dictionary:
+    ...         print(key)
+    ...         print(dictionary[key].asnumpy())
+    ...
+    fullyconnected0_weight
+    [[ 1.  1.  1.]]
+    """
     def __init__(self):
         super(One, self).__init__()
 
@@ -292,12 +322,29 @@ class Constant(Initializer):
 
 @register
 class Uniform(Initializer):
-    """Initialize the weight with value uniformly sampled from ``[-scale, scale]``.
+    """Initialize weights with random values uniformly sampled from a given range.
 
     Parameters
     ----------
     scale : float, optional
-        The scale of uniform distribution.
+        The bound on the range of the generated random values.
+        Values are generated from the range [-`scale`, `scale`].
+        Default scale is 0.07.
+
+    Example
+    -------
+    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights
+    >>> # to random values uniformly sampled between -0.1 and 0.1.
+    ...
+    >>> init = mx.init.Uniform(0.1)
+    >>> module.init_params(init)
+    >>> for dictionary in module.get_params():
+    ...     for key in dictionary:
+    ...         print(key)
+    ...         print(dictionary[key].asnumpy())
+    ...
+    fullyconnected0_weight
+    [[ 0.01360891 -0.02144304  0.08511933]]
     """
     def __init__(self, scale=0.07):
         super(Uniform, self).__init__(scale=scale)
