@@ -1413,7 +1413,7 @@ class Symbol(SymbolBase):
 
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None, **kwargs):
-    """Creates a symbolic variable with specified name. 
+    """Creates a symbolic variable with specified name.
 
     Example usage:
     ----------
