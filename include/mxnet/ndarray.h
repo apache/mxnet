@@ -102,6 +102,7 @@ class NDArray {
    * \return the data TBlob
    */
   inline TBlob data() const {
+    CheckAndAlloc();
     TBlob res;
     MSHADOW_TYPE_SWITCH(dtype_, DType, {
       res = TBlob(static_cast<DType*>(ptr_->shandle.dptr)
@@ -116,6 +117,7 @@ class NDArray {
    * \return a chunk of raw data in TBlob
    */
   inline TBlob raw_data(index_t offset, index_t length) const {
+    CheckAndAlloc();
     TBlob res;
     TShape raw_shape(1);
     raw_shape[0] = length;

@@ -21,7 +21,7 @@ MXNET_OPERATOR_REGISTER_UNARY(relu)
     UnaryLaunch<cpu, kernel_launch_op::relu>);
 
 
-MXNET_OPERATOR_REGISTER_BINARY(_backward_relu)
+NNVM_REGISTER_OP(_backward_relu)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>",
     BinaryLaunch<cpu, kernel_launch_op::relu_grad>);
@@ -40,7 +40,7 @@ MXNET_OPERATOR_REGISTER_UNARY(sigmoid)
     UnaryLaunch<cpu, kernel_launch_op::sigmoid>);
 
 
-MXNET_OPERATOR_REGISTER_BINARY(_backward_sigmoid)
+NNVM_REGISTER_OP(_backward_sigmoid)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>",
     BinaryLaunch<cpu, kernel_launch_op::sigmoid_grad>);
