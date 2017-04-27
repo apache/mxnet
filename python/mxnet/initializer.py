@@ -32,7 +32,7 @@ class InitDesc(str):
 _INITIALIZER_REGISTRY = {}
 
 def register(klass):
-    """Register a custom initializer.
+    """Registers a custom initializer.
 
     Custom initializers can be created by extending `mx.init.Initializer` and implementing the
     required functions like `_init_weight` and `_init_bias`. The created initializer must be
