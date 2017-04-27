@@ -136,7 +136,7 @@ class NaiveEngine final : public Engine {
         streams_.resize(dev_id + 1, nullptr);
       }
       if (streams_[dev_id] == nullptr) {
-        streams_[dev_id] = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0);
+        streams_[dev_id] = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, dev_id);
       }
       ctx_.stream = streams_[dev_id];
       exec_fun(ctx_, callback);

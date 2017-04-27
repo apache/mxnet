@@ -32,17 +32,21 @@ Operator* CreateOp<gpu>(DeconvolutionParam param, int dtype,
   // perform the deconvolution calculation in 16-bit when the tensor type is
   // also 16-bit.  For NVIDIA architectures earlier than Pascal (so Maxwell
   // and Kepler), the computation precision is always at least 32-bits.
-#if MSHADOW_USE_PASCAL == 1
+
   // true fp16
   int desired_forward_compute_type = dtype;
   int desired_backward_compute_type = dtype;
-#else
-  // pseudo fp16
-  int desired_forward_compute_type =
-    (dtype == mshadow::kFloat16) ? mshadow::kFloat32 : dtype;
-  int desired_backward_compute_type =
-    (dtype == mshadow::kFloat16) ? mshadow::kFloat32 : dtype;
-#endif  // MSHADOW_USE_PASCAL == 1
+
+
+  #if CUDNN_MAJOR >= 6
+  cudaDeviceProp prop;
+  cudaGetDeviceProperties(&prop, ctx.dev_id);
+  if (prop.major <= 5 && prop.minor <= 2 && dtype == mshadow::kFloat16) {
+    // pseudo fp16
+    desired_forward_compute_type = mshadow::kFloat32;
+    desired_backward_compute_type = mshadow::kFloat32;
+  }
+  #endif
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     if (param.cudnn_off) {
