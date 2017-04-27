@@ -22,7 +22,7 @@ Operator *LeakyReLUProp::CreateOperator(Context ctx) const {
 DMLC_REGISTER_PARAMETER(LeakyReLUParam);
 
 MXNET_REGISTER_OP_PROPERTY(LeakyReLU, LeakyReLUProp)
-.describe(R"code(Leaky ReLu activation
+.describe(R"code(Applies leaky ReLU activation element-wise to the input.
 
 The following types are supported:
 

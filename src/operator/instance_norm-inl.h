@@ -30,7 +30,7 @@ struct InstanceNormParam : public dmlc::Parameter<InstanceNormParam> {
   float eps;
   DMLC_DECLARE_PARAMETER(InstanceNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f).describe(
-        "Epsilon to prevent division by 0.");
+        "An `epsilon` parameter to prevent division by 0.");
   }
 };  // struct InstanceNormParam
 

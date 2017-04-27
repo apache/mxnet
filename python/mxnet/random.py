@@ -14,7 +14,7 @@ from ._ndarray_internal import _sample_negbinomial as negative_binomial
 from ._ndarray_internal import _sample_gennegbinomial as generalized_negative_binomial
 
 def seed(seed_state):
-    """Seed the random number generators in MXNet.
+    """Seeds the random number generators in MXNet.
 
     This seed will affect behavior of functions in this module.
     It also affects the results from executors that contain random numbers
