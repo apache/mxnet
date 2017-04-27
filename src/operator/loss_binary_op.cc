@@ -11,6 +11,9 @@ namespace op {
 NNVM_REGISTER_OP(softmax_cross_entropy)
 .describe(R"code(Calculate cross entropy of softmax output and one-hot label.
 
+This operator is finished in two steps. (1) Apply softmax function on the input array.
+(2) Compute and return the cross entropy loss between the softmax output and the labels.
+
 - Softmax Function:
 
 .. math::

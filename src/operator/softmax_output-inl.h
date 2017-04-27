@@ -37,7 +37,7 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
   bool out_grad;
   DMLC_DECLARE_PARAMETER(SoftmaxOutputParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
-    .describe("Scale the gradient by a float factor.");
+    .describe("Scales the gradient by a float factor.");
     DMLC_DECLARE_FIELD(ignore_label).set_default(-1.0f)
     .describe("The instances whose `labels` == `ignore_label` will be ignored "
               "during backward, if `use_ignore` is set to ``true``).");
@@ -55,10 +55,10 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
     .add_enum("batch", softmaxout_enum::kBatch)
     .add_enum("valid", softmaxout_enum::kValid)
     .set_default(softmaxout_enum::kNull)
-    .describe("Normalize the gradient.");
+    .describe("Normalizes the gradient.");
     DMLC_DECLARE_FIELD(out_grad)
     .set_default(false)
-    .describe("Multiply gradient with output gradient element-wise.");
+    .describe("Multiplies gradient with output gradient element-wise.");
   };
 };
 
