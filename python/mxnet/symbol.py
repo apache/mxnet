@@ -52,6 +52,7 @@ class Symbol(SymbolBase):
 
     def __iter__(self):
         """Returns a generator object of symbol.
+
         One can loop through the returned object to get outputs.
 
         Example usage:
@@ -74,6 +75,7 @@ class Symbol(SymbolBase):
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_add` instead. """
         if isinstance(other, Symbol):
@@ -88,6 +90,7 @@ class Symbol(SymbolBase):
 
     def __sub__(self, other):
         """x.__sub__(y) <=> x-y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_sub` instead. """
         if isinstance(other, Symbol):
@@ -106,6 +109,7 @@ class Symbol(SymbolBase):
 
     def __mul__(self, other):
         """x.__mul__(y) <=> x*y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_mul` instead. """
         if isinstance(other, Symbol):
@@ -120,6 +124,7 @@ class Symbol(SymbolBase):
 
     def __div__(self, other):
         """x.__div__(y) <=> x/y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_div` instead. """
         if isinstance(other, Symbol):
@@ -144,6 +149,7 @@ class Symbol(SymbolBase):
 
     def __pow__(self, other):
         """x.__pow__(y) <=> x**y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_pow` instead. """
         if isinstance(other, Symbol):
@@ -155,6 +161,7 @@ class Symbol(SymbolBase):
 
     def __neg__(self):
         """x.__neg__() <=> -x
+
         Numerical negative, element-wise.
 
         Example usage:
@@ -201,6 +208,7 @@ class Symbol(SymbolBase):
 
     def __eq__(self, other):
         """x.__eq__(y) <=> x==y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_equal` instead. """
         if isinstance(other, Symbol):
@@ -212,6 +220,7 @@ class Symbol(SymbolBase):
 
     def __ne__(self, other):
         """x.__ne__(y) <=> x!=y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_not_equal` instead. """
         if isinstance(other, Symbol):
@@ -223,6 +232,7 @@ class Symbol(SymbolBase):
 
     def __gt__(self, other):
         """x.__gt__(y) <=> x>y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_greater` instead. """
         if isinstance(other, Symbol):
@@ -234,6 +244,7 @@ class Symbol(SymbolBase):
 
     def __ge__(self, other):
         """x.__ge__(y) <=> x>=y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_greater_equal` instead. """
         if isinstance(other, Symbol):
@@ -245,6 +256,7 @@ class Symbol(SymbolBase):
 
     def __lt__(self, other):
         """x.__lt__(y) <=> x<y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_lesser` instead. """
         if isinstance(other, Symbol):
@@ -256,6 +268,7 @@ class Symbol(SymbolBase):
 
     def __le__(self, other):
         """x.__le__(y) <=> x<=y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_lesser_equal` instead. """
         if isinstance(other, Symbol):
@@ -287,7 +300,9 @@ class Symbol(SymbolBase):
         """Composes symbol using inputs.
 
         x.__call__(y, z) <=> x(y,z)
-        This function internally calls `_compose` to compose the symbol.
+
+        This function internally calls `_compose` to compose the symbol and
+        returns the composed symbol.
 
         Example usage:
         ----------
@@ -431,6 +446,7 @@ class Symbol(SymbolBase):
 
     def attr(self, key):
         """Returns the attribute string for corresponding input key from the symbol.
+
         This function only works for non-grouped symbols.
 
         Example usage:
@@ -648,6 +664,7 @@ class Symbol(SymbolBase):
         []
 
         Example of auxiliary states in `BatchNorm`.
+
         >>> data = mx.symbol.Variable('data')
         >>> weight = mx.sym.Variable(name='fc1_weight')
         >>> fc1  = mx.symbol.FullyConnected(data = data, weight=weight, name='fc1', num_hidden=128)
@@ -853,7 +870,9 @@ class Symbol(SymbolBase):
             raise
 
     def infer_shape_partial(self, *args, **kwargs):
-        """Infers the shape partially. This functions works the same way as `infer_shape`,
+        """Infers the shape partially.
+
+        This functions works the same way as `infer_shape`,
         except that this function can return partial results.
 
         In the following example, information about fc2 is not available. So, `infer_shape`
@@ -1076,11 +1095,10 @@ class Symbol(SymbolBase):
                     group2ctx=None,
                     **kwargs):
         """Binds current symbol to get an executor, allocate all the arguments needed.
-        Allows specifying data types.
 
         This function simplifies the binding procedure. You need to specify only input data shapes.
         Before binding the executor, the function allocates arguments and auxiliary states
-        that were not explicitly specified.
+        that were not explicitly specified. Allows specifying data types.
 
         Example usage:
         ----------
@@ -1256,7 +1274,7 @@ class Symbol(SymbolBase):
         Most operators do not have auxiliary states and in those cases,
         this parameter can be safely ignored.
 
-        Users can give up gradient by using a dict in `args_grad` and only specify
+        One can give up gradient by using a dict in `args_grad` and only specify
         gradient they interested in.
         """
         # pylint: disable=too-many-locals, too-many-branches
@@ -1396,7 +1414,6 @@ class Symbol(SymbolBase):
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None, **kwargs):
     """Creates a symbolic variable with specified name.
-    Equivalent to mx.sym.Variable.
 
     Example usage:
     ----------
@@ -1415,7 +1432,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, ini
         Additional attributes to set on the variable. Format {string : string}.
     shape : tuple
         The shape of a variable. If specified, this will be used during the shape inference.
-        If the user has specified a different shape for this variable using
+        If one has specified a different shape for this variable using
         a keyword argument when calling shape inference, this shape information will be ignored.
     lr_mult : float
         The learning rate multiplier for input variable.
