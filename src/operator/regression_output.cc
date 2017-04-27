@@ -34,7 +34,7 @@ Operator *RegressionOutputProp<type>::CreateOperator(Context ctx) const {
 DMLC_REGISTER_PARAMETER(RegressionOutputParam);
 
 MXNET_REGISTER_OP_PROPERTY(LinearRegressionOutput, RegressionOutputProp<reg_enum::kLinear>)
-.describe(R"code(LinearRegressionOutput computes and optimizes for squared loss.
+.describe(R"code(Computes and optimizes for squared loss.
 
 .. note::
    Use the LinearRegressionOutput as the final output layer of a net.
@@ -48,7 +48,7 @@ The parameter `grad_scale` can be used to change this scale to `grad_scale/n`.
 .add_arguments(RegressionOutputParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(MAERegressionOutput, RegressionOutputProp<reg_enum::kMAE>)
-.describe(R"code(MAERegressionOutput function computes mean absolute error.
+.describe(R"code(Computes mean absolute error of the input.
 
 MAE is a risk metric corresponding to the expected value of the absolute error.
 
@@ -69,7 +69,7 @@ The parameter `grad_scale` can be used to change this scale to `grad_scale/n`.
 .add_arguments(RegressionOutputParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(LogisticRegressionOutput, RegressionOutputProp<reg_enum::kLogistic>)
-.describe(R"code(LogisticRegressionOutput applies a logistic function to the input.
+.describe(R"code(Applies a logistic function to the input.
 
 The logistic function, also known as the sigmoid function, is computed as
 :math:`\frac{1}{1+exp(-x)}`.

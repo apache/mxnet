@@ -400,9 +400,9 @@ Operator *PadProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
 DMLC_REGISTER_PARAMETER(PadParam);
 
 MXNET_REGISTER_OP_PROPERTY(Pad, PadProp)
-.describe(R"code(Pad an array.
+.describe(R"code(Pads an array.
 
-Only supports 4-D and 5-D input array.
+Only supports 4-D and 5-D input arrays.
 
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "An n-dimensional input tensor.")

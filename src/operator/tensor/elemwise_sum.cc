@@ -54,7 +54,7 @@ bool ElementWiseSumType(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(add_n)
 .add_alias("ElementWiseSum")
-.describe(R"doc(Add all input arguments element-wise.
+.describe(R"doc(Adds all input arguments element-wise.
 
 .. math::
    add\_n(a_1, a_2, ..., a_n) = a_1 + a_2 + ... + a_n
