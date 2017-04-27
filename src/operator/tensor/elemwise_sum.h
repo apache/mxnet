@@ -89,7 +89,7 @@ void ElementWiseSumCompute(const nnvm::NodeAttrs& attrs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
   CHECK_EQ(outputs.size(), 1U);
-  MSHADOW_TYPE_SWITCH2(outputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
       ElementWiseSumCompute_<xpu, DType>(attrs, ctx, inputs, req, outputs);
   });
 }
