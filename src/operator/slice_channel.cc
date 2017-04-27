@@ -27,7 +27,7 @@ Operator* SliceChannelProp::CreateOperatorEx(Context ctx,
 DMLC_REGISTER_PARAMETER(SliceChannelParam);
 
 MXNET_REGISTER_OP_PROPERTY(SliceChannel, SliceChannelProp)
-.describe(R"code(Split an array along a particular axis into multiple sub-arrays.
+.describe(R"code(Splits an array along a particular axis into multiple sub-arrays.
 
 Assume the input array has shape ``(d_0, ..., d_n)`` and we slice it into *m*
 (``num_outputs=m``) subarrays along axis *k*, then we will obtain a list of *m*

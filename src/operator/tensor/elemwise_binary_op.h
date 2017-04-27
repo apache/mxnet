@@ -10,11 +10,30 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include "../mxnet_op.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {
+template<typename xpu, typename op>
+void BinaryLaunch(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Kernel<op, xpu>::Launch(s, outputs[0].Size(),
+      outputs[0].dptr<DType>(), inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
+  });
+}
+
 template<typename xpu, typename OP>
 void BinaryCompute(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
@@ -45,8 +64,24 @@ void BinaryBackwardUseNone(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, DType> lgrad = outputs[0].FlatTo1D<xpu, DType>(s);
     Tensor<xpu, 1, DType> rgrad = outputs[1].FlatTo1D<xpu, DType>(s);
     Tensor<xpu, 1, DType> ograd = inputs[0].FlatTo1D<xpu, DType>(s);
-    ASSIGN_DISPATCH(lgrad, req[0], F<LOP>(ograd));
-    ASSIGN_DISPATCH(rgrad, req[1], F<ROP>(ograd));
+    if (std::is_same<LOP, mshadow_op::identity>::value) {
+      if (req[0] == kWriteInplace) {
+        CHECK_EQ(ograd.dptr_, lgrad.dptr_);
+      } else {
+        ASSIGN_DISPATCH(lgrad, req[0], F<LOP>(ograd));
+      }
+    } else {
+      ASSIGN_DISPATCH(lgrad, req[0], F<LOP>(ograd));
+    }
+    if (std::is_same<ROP, mshadow_op::identity>::value) {
+      if (req[1] == kWriteInplace) {
+        CHECK_EQ(ograd.dptr_, rgrad.dptr_);
+      } else {
+        ASSIGN_DISPATCH(rgrad, req[1], F<ROP>(ograd));
+      }
+    } else {
+      ASSIGN_DISPATCH(rgrad, req[1], F<ROP>(ograd));
+    }
   });
 }
 
