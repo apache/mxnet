@@ -241,7 +241,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
                                                  const std::vector<TBlob> &out_data,
                                                  const std::vector<TBlob> &aux_states) {
   // Input
-  batchnorm::DeviceTensor3<DType> inputData(in_data[batchnorm::kData], param_.channel_position);
+  batchnorm::DeviceTensor3<DType> inputData(in_data[batchnorm::kData], 1);
   const TBlob &weights         = in_data[batchnorm::kGamma];
   const TBlob &bias            = in_data[batchnorm::kBeta];
 
@@ -250,7 +250,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
   const TBlob &runningVariance = aux_states[batchnorm::kMovingVar];
 
   // Output
-  batchnorm::DeviceTensor3<DType> outputData(out_data[batchnorm::kOut], param_.channel_position);
+  batchnorm::DeviceTensor3<DType> outputData(out_data[batchnorm::kOut], 1);
   const TBlob &meanVector      = out_data[batchnorm::kMean];
   const TBlob &varianceVector  = out_data[batchnorm::kVar];
 
@@ -273,7 +273,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
     const DType *rm = runningMean.dptr<DType>();
     const DType *rv = runningVariance.dptr<DType>();
 
-    for (size_t i = 0, n = inputData.shape_[param_.channel_position]; i < n; ++i) {
+    for (size_t i = 0, n = inputData.shape_[1]; i < n; ++i) {
       mean[i] = rm[i];
       var[i]  = VARIANCE_TO_INVSTD(rv[i], param_.eps);
     }
@@ -300,7 +300,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
   // Convert back to "real" variance in order to be consistent
   // with the original operator
   if (ctx.is_train && !param_.use_global_stats) {
-    for (size_t i = 0, n = inputData.shape_[param_.channel_position]; i < n; ++i) {
+    for (size_t i = 0, n = inputData.shape_[1]; i < n; ++i) {
       var[i] = INVSTD_TO_VARIANCE(var[i], param_.eps);
     }
   }
@@ -316,11 +316,11 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *stream,
                                                   const std::vector<TBlob> &in_grad,
                                                   const std::vector<TBlob> &aux_states) {
   // Input Data
-  batchnorm::DeviceTensor3<DType> inputData(in_data[batchnorm::kData], param_.channel_position);
+  batchnorm::DeviceTensor3<DType> inputData(in_data[batchnorm::kData], 1);
   const TBlob &weights   = in_data[batchnorm::kGamma];
 
   // Input Grad
-  batchnorm::DeviceTensor3<DType> gradIn(in_grad[batchnorm::kData], param_.channel_position);
+  batchnorm::DeviceTensor3<DType> gradIn(in_grad[batchnorm::kData], 1);
   const TBlob &gradWeight = in_grad[batchnorm::kGamma];
   const TBlob &gradBias   = in_grad[batchnorm::kBeta];
 
@@ -329,11 +329,11 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *stream,
   const TBlob &runningVariance = aux_states[batchnorm::kMovingVar];
 
   // Output
-  batchnorm::DeviceTensor3<DType> gradOut(out_grad[batchnorm::kOut], param_.channel_position);
+  batchnorm::DeviceTensor3<DType> gradOut(out_grad[batchnorm::kOut], 1);
   const TBlob &saveMean = out_data[batchnorm::kMean];
   const TBlob &saveStd  = out_data[batchnorm::kVar];
 
-  const size_t channelCount = inputData.shape_[param_.channel_position];
+  const size_t channelCount = inputData.shape_[1];
   const size_t itemCount    = inputData.Size() / channelCount;
 
   // Avoid multiple dptr() call within the channel loop

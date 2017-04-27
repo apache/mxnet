@@ -35,7 +35,6 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   bool fix_gamma;
   bool use_global_stats;
   bool output_mean_var;
-  int channel_position;
   bool cudnn_off;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
@@ -51,8 +50,6 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
               "This will force change batch-norm into a scale shift operator.");
     DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
     .describe("Output All,normal mean and var");
-    DMLC_DECLARE_FIELD(channel_position).set_default(1)
-      .describe("Position of the channel field in the shape array");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
       .describe("Do not select CUDNN operator, if available");
   }
@@ -207,21 +204,17 @@ class BatchNormProp : public OperatorProperty {
       return false;
     }
 
-    CHECK_LT(param_.channel_position, dshape.ndim())
-      << "Invalid channel position " << param_.channel_position
-      << " for a " << dshape.ndim() << "-dimensional shape";
-
-    in_shape->at(1) = TShape(Shape1(dshape[param_.channel_position]));
-    in_shape->at(2) = TShape(Shape1(dshape[param_.channel_position]));
+    in_shape->at(1) = TShape(Shape1(dshape[1]));
+    in_shape->at(2) = TShape(Shape1(dshape[1]));
 
     out_shape->clear();
     out_shape->push_back(dshape);             // kOut
-    out_shape->push_back(Shape1(dshape[param_.channel_position]));  // kMean
-    out_shape->push_back(Shape1(dshape[param_.channel_position]));  // kVar
+    out_shape->push_back(Shape1(dshape[1]));  // kMean
+    out_shape->push_back(Shape1(dshape[1]));  // kVar
 
     aux_shape->clear();
-    aux_shape->push_back(Shape1(dshape[param_.channel_position]));  // kMovingMean
-    aux_shape->push_back(Shape1(dshape[param_.channel_position]));  // kMovingVar
+    aux_shape->push_back(Shape1(dshape[1]));  // kMovingMean
+    aux_shape->push_back(Shape1(dshape[1]));  // kMovingVar
     return true;
   }
 

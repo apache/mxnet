@@ -316,26 +316,6 @@ static bool isUGS(const test::op::kwargs_t& kwargs) {
 }
 #endif  // DISABLE_VALIDATION
 
-static size_t getChannelPosition(const test::op::kwargs_t& kwargs) {
-  for(test::op::kwargs_t::const_iterator i = kwargs.begin(),
-        e = kwargs.end(); i != e; ++i) {
-    if(!i->first.compare("channel_position")) {
-      return static_cast<size_t>(atoi(i->second.c_str()));
-    }
-  }
-  return 1;
-}
-
-static size_t SpatialSize(const TBlob& blob, const size_t channel_position = 1) {
-  size_t sz = 1;
-  for(size_t x = 0, n = blob.ndim(); x < n; ++x) {
-    if(x != channel_position) {
-      sz *= blob.shape_[x];
-    }
-  }
-  return sz;
-}
-
 /*! \brief Test batch norm operator forward pass */
 template<typename OperatorProp, typename DType>
 static test::op::OpInfo<OperatorProp, DType> TestBatchNormOperatorForward(
@@ -349,11 +329,7 @@ static test::op::OpInfo<OperatorProp, DType> TestBatchNormOperatorForward(
 
 #if !DISABLE_VALIDATION
   if(!isUGS(kwargs) && count == 1) {
-    if(SpatialSize(opInfo.data_->getBlobVect(
-      test::op::BasicOperatorData<DType>::kInput)[op::batchnorm::kData],
-                   getChannelPosition(kwargs)) > 1) {
-      BatchNormValidator<DType>::validateForward(*opInfo.data_);
-    }
+    BatchNormValidator<DType>::validateForward(*opInfo.data_);
   }
 #endif
 
