@@ -55,14 +55,14 @@ MXNET_REGISTER_OP_PROPERTY(CTCLoss, CTCLossProp)
 The shapes of the inputs and outputs:
 
 - **data**: *(sequence_length, batch_size, alphabet_size + 1)*
-- **labels**: *(batch_size, label_sequence_length)*
+- **label**: *(batch_size, label_sequence_length)*
 - **out**: *(batch_size)*.
 
-``labels`` is a tensor of integers between 1 and *alphabet_size*. If a 
+``label`` is a tensor of integers between 1 and *alphabet_size*. If a 
 sequence of labels is shorter than *label_sequence_length*, use the special 
 padding character 0 at the end of the sequence to conform it to the correct 
 length. For example, if *label_sequence_length* = 4, and one has two sequences 
-of labels [2, 1] and [3, 2, 2], the resulting ```labels``` tensor should be 
+of labels [2, 1] and [3, 2, 2], the resulting ```label``` tensor should be 
 padded to be::
 
   [[2, 1, 0, 0], [3, 2, 2, 0]]
@@ -77,8 +77,8 @@ Sequence Data with Recurrent Neural Networks*, A. Graves *et al*. for more
 information.
 
 )code" ADD_FILELINE)
-    .add_argument("data", "ndarray-or-symbol", "Input data to the ctc_loss op.")
-    .add_argument("labels", "ndarray-or-symbol",
+    .add_argument("data", "NDArray-or-Symbol", "Input data to the ctc_loss op.")
+    .add_argument("label", "NDArray-or-Symbol",
                   "Ground-truth labels for the loss.")
     .add_arguments(CTCLossParam::__FIELDS__());
 

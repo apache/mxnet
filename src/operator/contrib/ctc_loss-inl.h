@@ -27,7 +27,7 @@ namespace mxnet {
 namespace op {
 
 namespace ctc_loss {
-enum CTCLossOpInputs { kData, kLabels };
+enum CTCLossOpInputs { kData, kLabel };
 enum CTCLossOpOutputs { kOut, kGrad };
 enum CTCLossOpForwardResource { kTempSpace };
 }
@@ -149,7 +149,7 @@ class CTCLossOp : public Operator {
     Tensor<xpu, 3, real_t> data =
         in_data[ctc_loss::kData].get<xpu, 3, real_t>(s);
     Tensor<xpu, 2, real_t> labels =
-        in_data[ctc_loss::kLabels].get<xpu, 2, real_t>(s);
+        in_data[ctc_loss::kLabel].get<xpu, 2, real_t>(s);
 
     Tensor<xpu, 1, real_t> costs =
         out_data[ctc_loss::kOut].get<xpu, 1, real_t>(s);
@@ -222,7 +222,7 @@ class CTCLossProp : public OperatorProperty {
   int NumOutputs() const override { return 2; }
 
   std::vector<std::string> ListArguments() const override {
-    return {"data", "labels"};
+    return {"data", "label"};
   }
 
   std::vector<std::string> ListOutputs() const override {
@@ -244,7 +244,7 @@ class CTCLossProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 2U) << "Expect two inputs to the symbol.";
 
     const TShape &dshape = (*in_shape)[ctc_loss::kData];
-    const TShape &lshape = (*in_shape)[ctc_loss::kLabels];
+    const TShape &lshape = (*in_shape)[ctc_loss::kLabel];
     CHECK_EQ(dshape.ndim(), 3U) << "The data array must be of rank 3.";
     CHECK_EQ(lshape.ndim(), 2U) << "The labels array must be of rank 2.";
     CHECK_EQ(dshape[1], lshape[0])
