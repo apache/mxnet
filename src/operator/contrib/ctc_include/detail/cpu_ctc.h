@@ -61,8 +61,8 @@ private:
 
     int alphabet_size_; // Number of characters plus blank
     int minibatch_;
-    int blank_label_;
     void* workspace_;
+    int blank_label_;
 
     void softmax(const ProbT* const activations, ProbT* probs,
                  const int* const input_lengths);
