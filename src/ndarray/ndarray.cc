@@ -63,7 +63,6 @@ void TernaryOp(const NDArray &lhs,
   switch (lhs.ctx().dev_mask()) {
   case cpu::kDevMask: {
     Engine::Get()->PushSync([lhs, mhs, rhs, ret](RunContext ctx) {
-      ret.CheckAndAlloc();
       TBlob tmp = ret.data();
       ndarray::Eval<cpu, OP>(lhs.data(), mhs.data(), rhs.data(), &tmp, ctx);
     }, lhs.ctx(), const_vars, { ret.var() },
@@ -73,7 +72,6 @@ void TernaryOp(const NDArray &lhs,
 #if MXNET_USE_CUDA
   case gpu::kDevMask: {
     Engine::Get()->PushSync([lhs, mhs, rhs, ret](RunContext ctx) {
-      ret.CheckAndAlloc();
       TBlob tmp = ret.data();
       ndarray::Eval<gpu, OP>(lhs.data(), mhs.data(), rhs.data(), &tmp, ctx);
       // Wait GPU kernel to complete
@@ -125,7 +123,6 @@ void BinaryOp(const NDArray &lhs,
   switch (lhs.ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
         }, lhs.ctx(), const_vars, {ret.var()},
@@ -135,7 +132,6 @@ void BinaryOp(const NDArray &lhs,
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<gpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
           // Wait GPU kernel to complete
@@ -156,7 +152,6 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
   switch (ret.ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<cpu>(rhs, &tmp, ctx);
         }, ret.ctx(), {}, {ret.var()},
@@ -166,7 +161,6 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
       Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<gpu>(rhs, &tmp, ctx);
           // Wait GPU kernel to complete
@@ -207,7 +201,6 @@ void ScalarOp(const NDArray &lhs,
   switch (lhs.ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<cpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
         }, lhs.ctx(), const_vars, {ret.var()},
@@ -217,7 +210,6 @@ void ScalarOp(const NDArray &lhs,
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<gpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
           // Wait GPU kernel to complete
@@ -251,7 +243,6 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
 
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     Engine::Get()->PushSync([from, ret](RunContext ctx) {
-        ret.CheckAndAlloc();
         TBlob tmp = ret.data();
         ndarray::Copy<cpu, cpu>(from.data(), &tmp,
                                 from.ctx(), ret.ctx(), ctx);
@@ -261,7 +252,6 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Copy<cpu, gpu>(from.data(), &tmp,
                                   from.ctx(), ret.ctx(), ctx);
@@ -271,7 +261,6 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
         FnProperty::kCopyToGPU, priority, PROFILER_MESSAGE("CopyCPU2GPU"));
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Copy<gpu, cpu>(from.data(), &tmp,
                                   from.ctx(), ret.ctx(), ctx);
@@ -281,7 +270,6 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
         FnProperty::kCopyFromGPU, priority, PROFILER_MESSAGE("CopyGPU2CPU"));
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Copy<gpu, gpu>(from.data(), &tmp,
                                   from.ctx(), ret.ctx(), ctx);
@@ -326,7 +314,6 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
           for (size_t i = 0; i < source.size(); ++i) {
             source_tblob[i] = source[i].data();
           }
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::ElementwiseSum<cpu>(source_tblob, &tmp, ctx);
         }, out->ctx(), const_vars, {ret.var()},
@@ -340,7 +327,6 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
           for (size_t i = 0; i < source.size(); ++i) {
             source_tblob[i] = source[i].data();
           }
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::ElementwiseSum<gpu>(source_tblob, &tmp, ctx);
           // Wait GPU kernel to complete
@@ -369,7 +355,6 @@ void ClipOp(const NDArray &src,
   switch (src.ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([src, a_min, a_max, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::EvalClip<cpu>(src.data(), a_min, a_max, &tmp, ctx);
         }, src.ctx(), const_vars, {ret.var()},
@@ -379,7 +364,6 @@ void ClipOp(const NDArray &src,
     #if MXNET_USE_CUDA
     case gpu::kDevMask: {
       Engine::Get()->PushSync([src, a_min, a_max, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::EvalClip<gpu>(src.data(), a_min, a_max, &tmp, ctx);
         }, src.ctx(), const_vars, {ret.var()},
@@ -408,7 +392,6 @@ void SampleOP(const real_t &a,
   switch (out->ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([a, b, resource, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::EvalRandom<cpu, Distribution>(a, b, resource, &tmp, ctx);
         }, out->ctx(), {}, {ret.var(), resource.var},
@@ -418,7 +401,6 @@ void SampleOP(const real_t &a,
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
       Engine::Get()->PushSync([a, b, resource, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::EvalRandom<gpu, Distribution>(a, b, resource, &tmp, ctx);
           // Wait GPU kernel to complete
@@ -721,7 +703,6 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToWrite();
-    this->CheckAndAlloc();
     RunContext rctx;
     rctx.stream = nullptr;
     TBlob dst = this->data();
@@ -729,7 +710,6 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushSync([&](RunContext rctx) {
-        this->CheckAndAlloc();
         TBlob dst = this->data();
         ndarray::Copy<cpu, gpu>(src, &dst,
                                 Context::CPU(), this->ctx(), rctx);

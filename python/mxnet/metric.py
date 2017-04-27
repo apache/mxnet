@@ -403,21 +403,31 @@ class CustomMetric(EvalMetric):
 
 # pylint: disable=invalid-name
 def np(numpy_feval, name=None, allow_extra_outputs=False):
-    """Create a customized metric from numpy function.
+    """Creates a custom evaluation metric that receives its inputs as numpy arrays.
 
     Parameters
     ----------
     numpy_feval : callable(label, pred)
-        Customized evaluation function.
-        This will get called with the labels and predictions
-        for a minibatch, each as NumPy arrays.  This function
-        should return a single float.
+        Custom evaluation function that receives labels and predictions for a minibatch
+        as numpy arrays and returns the corresponding custom metric as a floating point number.
     name : str, optional
-        The name of the metric.
-    allow_extra_outputs : bool
-        If true, the prediction outputs can have extra outputs.
-        This is useful in RNN, where the states are also produced
-        in outputs for forwarding.
+        Name of the custom metric.
+    allow_extra_outputs : bool, optional
+        Whether prediction output is allowed to have extra outputs. This is useful in cases
+        like RNN where states are also part of output which can then be fed back to the RNN
+        in the next step. By default, extra outputs are not allowed.
+
+    Returns
+    -------
+    float
+        Custom metric corresponding to the provided labels and predictions.
+
+    Example
+    -------
+    >>> def custom_metric(label, pred):
+    ...     return np.mean(np.abs(label-pred))
+    ...
+    >>> metric = mx.metric.np(custom_metric)
     """
     def feval(label, pred):
         """Internal eval function."""
