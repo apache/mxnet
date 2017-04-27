@@ -147,14 +147,14 @@ class MXIndexedRecordIO(MXRecordIO):
     def seek(self, idx):
         """Sets the current reader pointer position.
 
-        This function is internally called by `read_idx` to find the current
+        This function is internally called by `read_idx(idx)` to find the current
         reader pointer position. It doesn't return anything."""
         assert not self.writable
         pos = ctypes.c_size_t(self.idx[idx])
         check_call(_LIB.MXRecordIOReaderSeek(self.handle, pos))
 
     def tell(self):
-        """Queries current writer pointer position and returns it.
+        """Returns the current position of write head.
 
         Example usage:
         ----------
@@ -176,7 +176,7 @@ class MXIndexedRecordIO(MXRecordIO):
         return pos.value
 
     def read_idx(self, idx):
-        """Reads the record on the given index and returns it.
+        """Returns record at given index.
 
         Example usage:
         ----------
@@ -192,7 +192,7 @@ class MXIndexedRecordIO(MXRecordIO):
         return self.read()
 
     def write_idx(self, idx, buf):
-        """Writes the record on the given index.
+        """Inserts record at given index.
 
         Example usage:
         ----------
