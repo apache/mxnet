@@ -355,12 +355,29 @@ class Uniform(Initializer):
 
 @register
 class Normal(Initializer):
-    """Initialize the weight with value sampled according to ``normal(0, sigma)``.
+    """Initializes weights with random values sampled from a normal distribution
+    with a mean of zero and standard deviation of `sigma`.
 
     Parameters
     ----------
     sigma : float, optional
-        Standard deviation for gaussian distribution.
+        Standard deviation of the normal distribution.
+        Default standard deviation is 0.01.
+
+    Example
+    -------
+    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights
+    >>> # to random values sampled from a normal distribution.
+    ...
+    >>> init = mx.init.Normal(0.5)
+    >>> module.init_params(init)
+    >>> for dictionary in module.get_params():
+    ...     for key in dictionary:
+    ...         print(key)
+    ...         print(dictionary[key].asnumpy())
+    ...
+    fullyconnected0_weight
+    [[-0.3214761  -0.12660924  0.53789419]]
     """
     def __init__(self, sigma=0.01):
         super(Normal, self).__init__(sigma=sigma)
