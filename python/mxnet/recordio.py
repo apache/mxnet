@@ -23,6 +23,20 @@ class MXRecordIO(object):
     ----------
     >>> record = mx.recordio.MXRecordIO('tmp.rec', 'w')
     <mxnet.recordio.MXRecordIO object at 0x10ef40ed0>
+    >>> for i in range(5):
+    ...    record.write('record_%d'%i)  
+    >>> record.close()
+    >>> record = mx.recordio.MXRecordIO('tmp.rec', 'r')
+    >>> for i in range(5):
+    ...    item = record.read()
+    ...    print(item)
+    record_0
+    record_1
+    record_2
+    record_3
+    record_4
+    >>> record.close()
+
 
     Parameters
     ----------
@@ -145,6 +159,12 @@ class MXIndexedRecordIO(MXRecordIO):
     >>> record = mx.recordio.MXIndexedRecordIO('tmp.idx', 'tmp.rec', 'w')
     >>> record
     <mxnet.recordio.MXIndexedRecordIO object at 0x10ef40a50>
+    >>> for i in range(5):
+    ...     record.write_idx(i, 'record_%d'%i)
+    >>> record.close()
+    >>> record = mx.recordio.MXIndexedRecordIO('tmp.idx', 'tmp.rec', 'r')
+    >>> record.read_idx(3)
+    record_3
 
     Parameters
     ----------
@@ -185,7 +205,7 @@ class MXIndexedRecordIO(MXRecordIO):
         self.fidx.close()
 
     def seek(self, idx):
-        """Sets the current reader pointer position.
+        """Sets the current read pointer position.
 
         This function is internally called by `read_idx(idx)` to find the current
         reader pointer position. It doesn't return anything."""
