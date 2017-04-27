@@ -18,12 +18,12 @@
 namespace mxnet {
 namespace op {
 
-template<typename OP>
+template<typename OP, int Req>
 struct BinaryOp {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const OpReqType req, const DType* lhs,
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* lhs,
     const DType* rhs) {
-    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+    KERNEL_ASSIGN(out[i], Req, OP::Map(lhs[i], rhs[i]));
   }
 };
 
@@ -43,7 +43,9 @@ void BinaryComputeWithHalf2(const nnvm::NodeAttrs& attrs,
     DType* out_dptr = outputs[0].dptr<DType>();
     DType* lhs_dptr = inputs[0].dptr<DType>();
     DType* rhs_dptr = inputs[1].dptr<DType>();
-    Kernel<BinaryOp<OP>, xpu>::Launch(s, size, out_dptr, req[0], lhs_dptr, rhs_dptr);
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req,
+      {Kernel<BinaryOp<OP, Req>, xpu>::Launch(s, size, out_dptr, lhs_dptr, rhs_dptr);}
+      );
   });
 }
 
@@ -82,13 +84,39 @@ void BinaryCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<typename LOP, typename ROP>
+// template<typename LOP, typename ROP, int Req0, int Req1>
+// struct BinaryOpBackwardUseNone {
+//   template<typename DType>
+//   MSHADOW_XINLINE static void Map(int i, DType* __restrict__ lgrad, DType* __restrict__ rgrad,
+//     const DType* __restrict__ ograd) {
+//     const DType lop_val = LOP::Map(ograd[i]);
+//     const DType rop_val = ROP::Map(ograd[i]);
+//     if (Req0 == kWriteTo) {
+//       lgrad[i] = lop_val;
+//     } else if (Req0 == kAddTo) {
+//       lgrad[i] += lop_val;
+//     }
+//     if (Req1 == kWriteTo) {
+//       rgrad[i] = rop_val;
+//     } else if (Req1 == kAddTo) {
+//       rgrad[i] += rop_val;
+//     }
+//     // KERNEL_ASSIGN(lgrad[i], Req0, lop_val);
+//     // KERNEL_ASSIGN(rgrad[i], Req1, rop_val);
+//   }
+// };
+
+template<typename OP, int Req >
 struct BinaryOpBackwardUseNone {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* lgrad, DType* rgrad,
-    const OpReqType req0, const OpReqType req1, const DType* ograd) {
-    KERNEL_ASSIGN(lgrad[i], req0, LOP::Map(ograd[i]));
-    KERNEL_ASSIGN(rgrad[i], req1, ROP::Map(ograd[i]));
+  MSHADOW_XINLINE static void Map(int i, DType* __restrict__ igrad, const DType* __restrict__ ograd) {
+    KERNEL_ASSIGN(igrad[i], Req, OP::Map(ograd[i]));
+    // const DType val = OP::Map(ograd[i]);
+    // if (Req == kWriteTo) {
+    //   igrad[i] = val;
+    // } else if (Req == kAddTo) {
+    //   igrad[i] += val;
+    // }
   }
 };
 
@@ -100,7 +128,6 @@ void BinaryBackwardUseNoneWithHalf2(const nnvm::NodeAttrs& attrs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
-  if (req[0] == kNullOp && req[1] == kNullOp) return;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
     int size = static_cast<int>((outputs[0].Size() + DataType<DType>::kPack - 1)
@@ -108,8 +135,36 @@ void BinaryBackwardUseNoneWithHalf2(const nnvm::NodeAttrs& attrs,
     DType* lgrad_dptr = outputs[0].dptr<DType>();
     DType* rgrad_dptr = outputs[1].dptr<DType>();
     DType* ograd_dptr = inputs[0].dptr<DType>();
-    Kernel<BinaryOpBackwardUseNone<LOP, ROP>, xpu>::Launch(s, size, lgrad_dptr, rgrad_dptr,
-      req[0], req[1], ograd_dptr);
+    if (std::is_same<LOP, mshadow_op::identity>::value) {
+      if (req[0] == kWriteInplace) {
+        CHECK_EQ(ograd_dptr, lgrad_dptr);
+      } else if (req[0] != kNullOp) {
+        MXNET_ASSIGN_REQ_SWITCH(req[0], Req,
+          {Kernel<BinaryOpBackwardUseNone<LOP, Req>, xpu>::Launch(s, size, lgrad_dptr,
+            ograd_dptr);}
+          );
+      }
+    } else if (req[0] != kNullOp) {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req,
+        {Kernel<BinaryOpBackwardUseNone<LOP, Req>, xpu>::Launch(s, size, lgrad_dptr,
+          ograd_dptr);}
+        );
+    }
+    if (std::is_same<ROP, mshadow_op::identity>::value) {
+      if (req[1] == kWriteInplace) {
+        CHECK_EQ(ograd_dptr, rgrad_dptr);
+      } else if (req[1] != kNullOp) {
+        MXNET_ASSIGN_REQ_SWITCH(req[1], Req,
+          {Kernel<BinaryOpBackwardUseNone<ROP, Req>, xpu>::Launch(s, size, rgrad_dptr,
+            ograd_dptr);}
+          );
+      }
+    } else if (req[1] != kNullOp) {
+      MXNET_ASSIGN_REQ_SWITCH(req[1], Req,
+        {Kernel<BinaryOpBackwardUseNone<ROP, Req>, xpu>::Launch(s, size, rgrad_dptr,
+          ograd_dptr);}
+        );
+    }
   });
 }
 
@@ -166,14 +221,13 @@ void BinaryBackwardUseNone(const nnvm::NodeAttrs& attrs,
 //   });
 // }
 
-template<typename LOP, typename ROP>
+template<typename LOP, typename ROP, int Req0, int Req1>
 struct BinaryOpBackwardUseIn {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* lgrad, DType* rgrad,
-    const OpReqType req0, const OpReqType req1, const DType* ograd,
-    const DType* lhs, const DType* rhs) {
-    KERNEL_ASSIGN(lgrad[i], req0, ograd[i]*LOP::Map(lhs[i], rhs[i]));
-    KERNEL_ASSIGN(rgrad[i], req1, ograd[i]*ROP::Map(lhs[i], rhs[i]));
+    const DType* ograd, const DType* lhs, const DType* rhs) {
+    KERNEL_ASSIGN(lgrad[i], Req0, ograd[i]*LOP::Map(lhs[i], rhs[i]));
+    KERNEL_ASSIGN(rgrad[i], Req1, ograd[i]*ROP::Map(lhs[i], rhs[i]));
   }
 };
 
@@ -195,8 +249,12 @@ void BinaryBackwardUseInWithHalf2(const nnvm::NodeAttrs& attrs,
     DType* ograd_dptr = inputs[0].dptr<DType>();
     DType* lhs_dptr = inputs[1].dptr<DType>();
     DType* rhs_dptr = inputs[2].dptr<DType>();
-    Kernel<BinaryOpBackwardUseIn<LOP, ROP>, xpu>::Launch(s, size, lgrad_dptr, rgrad_dptr,
-      req[0], req[1], ograd_dptr, lhs_dptr, rhs_dptr);
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req0,
+      {MXNET_ASSIGN_REQ_SWITCH(req[1], Req1,
+        {Kernel<BinaryOpBackwardUseIn<LOP, ROP, Req0, Req1>, xpu>::Launch(s, size, lgrad_dptr,
+          rgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);}
+        );}
+      );
   });
 }
 
