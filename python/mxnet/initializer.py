@@ -459,18 +459,29 @@ class Orthogonal(Initializer):
 
 @register
 class Xavier(Initializer):
-    """Initialize the weight with Xavier or other similar schemes.
+    """Returns an initializer performing "Xavier" initialization for weights.
+
+    This initializer is designed to keep the scale of graidents roughly the same
+    in all layers.
+
+    By default `rnd_type` is ``'uniform'`` and `factor_type` is ``'avg'``,
+    the initializer fills the weights with random numbers in the range
+    of :math:`[-c, c]`, where :math:`c = \\sqrt{\\frac{6.}{\\text{in} + \\text{out}}}`.
+
+    If `rnd_type` is ``'gaussian'`` and `factor_type` is ``'avg'``,
+    the initializer fills the weights with numbers from normal distribution with
+    a standard deviation of :math:`\\sqrt{\\frac{6.}{\\text{in} + \\text{out}}}`.
 
     Parameters
     ----------
     rnd_type: str, optional
-        Random generator type, can be ```gaussian`` or ``uniform``.
+        Random generator type, can be ``'gaussian'`` or ``'uniform'``.
 
     factor_type: str, optional
-        Can be ``avg``, ``in``, or ``out``.
+        Can be ``'avg'``, ``'in'``, or ``'out'``.
 
     magnitude: float, optional
-        Scale of random number range.
+        Scale of random number.
     """
     def __init__(self, rnd_type="uniform", factor_type="avg", magnitude=3):
         super(Xavier, self).__init__(rnd_type=rnd_type, factor_type=factor_type,
@@ -514,7 +525,7 @@ class MSRAPrelu(Xavier):
     Parameters
     ----------
     factor_type: str, optional
-        Can be ``avg``, ``in``, or ``out``.
+        Can be ``'avg'``, ``'in'``, or ``'out'``.
 
     slope: float, optional
         initial slope of any PReLU (or similar) nonlinearities.
