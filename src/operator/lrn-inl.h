@@ -31,9 +31,9 @@ struct LRNParam : public dmlc::Parameter<LRNParam> {
   uint32_t nsize;
   DMLC_DECLARE_PARAMETER(LRNParam) {
     DMLC_DECLARE_FIELD(alpha).set_default(1e-4f)
-    .describe("The variance scaling parameter :math:`{\alpha}` in the LRN expression.");
+    .describe("The variance scaling parameter :math:`\alpha` in the LRN expression.");
     DMLC_DECLARE_FIELD(beta).set_default(0.75f)
-    .describe("The power parameter :math:`{\beta}` in the LRN expression.");
+    .describe("The power parameter :math:`\beta` in the LRN expression.");
     DMLC_DECLARE_FIELD(knorm).set_default(2.0f)
     .describe("The parameter :math:`k` in the LRN expression.");
     DMLC_DECLARE_FIELD(nsize)
