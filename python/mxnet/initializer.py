@@ -264,7 +264,7 @@ class Mixed(object):
 
 @register
 class Zero(Initializer):
-    """Initialize weights to zero. Note that this does not initialize the biases.
+    """Initializes weights to zero. Note that this does not initialize the biases.
 
     Example
     -------
@@ -288,7 +288,7 @@ class Zero(Initializer):
 
 @register
 class One(Initializer):
-    """Initialize weights to one. Note that this does not initialize the biases.
+    """Initializes weights to one. Note that this does not initialize the biases.
 
     Example
     -------
@@ -322,7 +322,7 @@ class Constant(Initializer):
 
 @register
 class Uniform(Initializer):
-    """Initialize weights with random values uniformly sampled from a given range.
+    """Initializes weights with random values uniformly sampled from a given range.
 
     Parameters
     ----------
