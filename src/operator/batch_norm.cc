@@ -345,7 +345,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *stream,
   DType *gradBiasData = gradBias.dptr<DType>();
 
 #pragma omp parallel for
-  for (size_t channel = 0; channel < channelCount; ++channel) {
+  for (int channel = 0; channel < static_cast<int>(channelCount); ++channel) {
     DType *weight = weights.dptr<DType>();
     const DType w = weight ? weight[channel] : DType(1);
     DType mean, invstd;

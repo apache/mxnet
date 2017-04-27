@@ -14,7 +14,7 @@
 
 using namespace mxnet;
 
-#define MXNET_DUMP_C  0
+#define MXNET_DUMP_C  1
 #define DISABLE_VALIDATION 0 /* If performance profiling, may do things
                               * that cause validation to fail */
 
@@ -269,9 +269,9 @@ class BNOperatorData : public test::op::BasicOperatorData<DType> {
 
   virtual void resetForward() override {
     // Init input data
-    DType val = 1;
+    DType val = 0;
     test::patternFill<DType>(&this->c_.blob_input_vec_[mxnet::op::batchnorm::kData],
-                             [&val]{ return val++; });
+                             [&val]{ return val += 1; });
     test::fill(this->c_.blob_input_vec_[mxnet::op::batchnorm::kGamma], DType(1));  // weights
     test::fill(this->c_.blob_input_vec_[mxnet::op::batchnorm::kBeta], DType(0));   // bias
 
@@ -285,9 +285,9 @@ class BNOperatorData : public test::op::BasicOperatorData<DType> {
   }
 
   virtual void resetBackward() override {
-    DType val = .001;
+    DType val = -.001;
     test::patternFill<DType>(&this->c_.blob_out_grad_[mxnet::op::batchnorm::kOut],
-                             [&val]{ return val++; });
+                             [&val]{ return val += 1; });
     test::try_fill(this->c_.blob_out_grad_, mxnet::op::batchnorm::kGamma, DType(0.1));  // weights
     test::try_fill(this->c_.blob_out_grad_, mxnet::op::batchnorm::kBeta,  DType(0.1));  // bias
 
@@ -299,10 +299,20 @@ class BNOperatorData : public test::op::BasicOperatorData<DType> {
 };
 
 static const test::op::kwargs_t blank_kwargs;
-static const test::op::kwargs_t nonfixgamma_kwargs = { {"fix_gamma", "False"} };
-static const test::op::kwargs_t useglobalstats_kwargs = { {"use_global_stats", "True"} };
-static const test::op::kwargs_t nfs_ugd_kwargs = { {"fix_gamma", "False"},
-                                                   {"use_global_stats", "True"} };
+static const test::op::kwargs_t blank_kwargs_nocudnn = {
+  {"cudnn_off", "True"} };
+static const test::op::kwargs_t nonfixgamma_kwargs = {
+  {"fix_gamma", "False"} };
+static const test::op::kwargs_t nonfixgamma_kwargs_nocudnn = {
+  {"fix_gamma", "False"}, {"cudnn_off", "True"} };
+static const test::op::kwargs_t useglobalstats_kwargs = {
+  {"use_global_stats", "True"} };
+static const test::op::kwargs_t useglobalstats_kwargs_nocudnn = {
+  {"use_global_stats", "True"}, {"cudnn_off", "True"} };
+static const test::op::kwargs_t nfs_ugd_kwargs = {
+  {"fix_gamma", "False"}, {"use_global_stats", "True"}};
+static const test::op::kwargs_t nfs_ugd_kwargs_nocudnn = {
+  {"fix_gamma", "False"}, {"use_global_stats", "True"}, {"cudnn_off", "True"}  };
 
 #if !DISABLE_VALIDATION
 static bool isUGS(const test::op::kwargs_t& kwargs) {
@@ -533,32 +543,33 @@ TEST(BATCH_NORM, Test2DForwardV1V2) {
 }
 
 TEST(BATCH_NORM, Test1DForward) {
-  TestBatchNormOperatorForward<op::BatchNormProp, double>(false, {BATCH_SIZE, CHANNELS, DW},
-                                                          blank_kwargs);
-  TestBatchNormOperatorForward<op::BatchNormProp, float>(false, {BATCH_SIZE, CHANNELS, DW},
-                                                         blank_kwargs);
+  TestBatchNormOperatorForward<op::BatchNormProp, mshadow::half::half_t>(
+    false, {BATCH_SIZE, CHANNELS, DW}, blank_kwargs);
+  TestBatchNormOperatorForward<op::BatchNormProp, double>(
+    false, {BATCH_SIZE, CHANNELS, DW}, blank_kwargs);
+  TestBatchNormOperatorForward<op::BatchNormProp, float>(
+    false, {BATCH_SIZE, CHANNELS, DW}, blank_kwargs);
 }
 
 TEST(BATCH_NORM, Test2DForward) {
-  auto opInfoFloat = TestBatchNormOperatorForward<op::BatchNormProp, float>(false,
-                                                                            {BATCH_SIZE, CHANNELS,
-                                                                             DH, DW},
-                                                                            blank_kwargs);
+  auto opInfoFloatH = TestBatchNormOperatorForward<op::BatchNormProp, mshadow::half::half_t>(
+    false, {BATCH_SIZE, CHANNELS, DH, DW}, blank_kwargs);
+  dumpF(std::cout, opInfoFloatH);
+  auto opInfoFloat = TestBatchNormOperatorForward<op::BatchNormProp, float>(
+    false, {BATCH_SIZE, CHANNELS, DH, DW}, blank_kwargs);
   dumpF(std::cout, opInfoFloat);
-  auto opInfoDbl = TestBatchNormOperatorForward<op::BatchNormProp, double>(false,
-                                                                           {BATCH_SIZE, CHANNELS,
-                                                                            DH, DW},
-                                                                           blank_kwargs);
+  auto opInfoDbl = TestBatchNormOperatorForward<op::BatchNormProp, double>(
+    false, {BATCH_SIZE, CHANNELS, DH, DW}, blank_kwargs);
   dumpF(std::cout, opInfoDbl);
 }
 
 TEST(BATCH_NORM, Test3DForward) {
-  TestBatchNormOperatorForward<op::BatchNormProp, float>(false, {BATCH_SIZE, CHANNELS,
-                                                                 DEPTH, DH, DW},
-                                                         blank_kwargs);
-  TestBatchNormOperatorForward<op::BatchNormProp, double>(false, {BATCH_SIZE, CHANNELS,
-                                                                  DEPTH, DH, DW},
-                                                          blank_kwargs);
+  TestBatchNormOperatorForward<op::BatchNormProp, float>(
+    false, {BATCH_SIZE, CHANNELS, DEPTH, DH, DW}, blank_kwargs);
+  TestBatchNormOperatorForward<op::BatchNormProp, double>(
+    false, {BATCH_SIZE, CHANNELS, DEPTH, DH, DW}, blank_kwargs);
+  TestBatchNormOperatorForward<op::BatchNormProp, mshadow::half::half_t>(
+    false, {BATCH_SIZE, CHANNELS, DEPTH, DH, DW}, blank_kwargs);
 }
 
 template<typename PropType, typename DType>
@@ -772,40 +783,44 @@ TEST(BATCH_NORM, Test2DBackward2DPlusLoadAndCompareLogic) {
   test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
     testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(false, inputShape, blank_kwargs);
 
+#if MXNET_DUMP_C
+  bi.info_1_.data_->dumpC(std::cerr, "Test2DBackward2DPlusLoadAndCompareLogic");
+#endif
+
   // Expected data state when running forward+backward starting with default values
   // Note: This data structure generated by dumpC()
-  static const std::vector< std::vector< std::vector<float> > > ___BN_Test2DBackward_data_shape_1_1_2_1___ =
+  static const std::vector< std::vector< std::vector<float> > >
+    ___Test2DBackward2DPlusLoadAndCompareLogic_data_shape_1_1_2_1___ =
     {
       { /* kInput */
-        { 1.00000f, 2.00000f },
-        { 1.00000f },
-        { 0.00000f }
+        { 1.0f, 2.0f },
+        { 1.0f },
+        { 0.0f }
       },
       { /* kOutput */
-        { -0.99801f, 0.99801f },
-        { 1.50000f },
-        { 0.25000f }
+        { -0.998006f, 0.998006f },
+        { 1.5f },
+        { 0.25f }
       },
       { /* kAux */
-        { 0.15000f },
-        { 0.92500f }
+        { 0.15f },
+        { 0.925f }
       },
       { /* kInGrad */
-        { -0.00398f, 0.00398f },
-        { 0.00000f },
-        { 1.00200f }
+        { -0.00397611f, 0.00397611f },
+        { 0.0f },
+        { 2.998f }
       },
       { /* kOutGrad */
-        { 0.00100f, 1.00100f }
+        { 0.999f, 1.999f }
       }
     };
-
   // Test loaded data agsinst calculated data
   test::op::OpInfo<op::BatchNormProp, DType> info_checkLoad =
     test::op::createOpAndInfoF<op::BatchNormProp, BNOperatorData<DType>, DType>(false, inputShape, blank_kwargs);
   info_checkLoad.data_->initForward(*info_checkLoad.prop_, info_checkLoad.in_type_);
   info_checkLoad.data_->initBackward(*info_checkLoad.prop_, info_checkLoad.in_type_);
-  info_checkLoad.data_->load(___BN_Test2DBackward_data_shape_1_1_2_1___);
+  info_checkLoad.data_->load(___Test2DBackward2DPlusLoadAndCompareLogic_data_shape_1_1_2_1___);
   BatchNormValidator<DType>::compare(bi.info_1_, info_checkLoad);
 }
 
@@ -833,7 +848,7 @@ TEST(BATCH_NORM, TestBackward1D_Simple) {
   runOperatorBackward(info);
 
 #if MXNET_DUMP_C
-  //info.data_->dumpC(std::cerr, "BN_TestBackward1D_Simple");
+  info.data_->dumpC(std::cerr, "BN_TestBackward1D_Simple");
 #endif
 
   // Expected data state when running forward+backward starting with default values
@@ -857,10 +872,10 @@ TEST(BATCH_NORM, TestBackward1D_Simple) {
       { /* kInGrad */
         { -0.00397621f, 0.00397609f },
         { 0.0f },
-        { 1.002f }
+        { 2.998f }
       },
       { /* kOutGrad */
-        { 0.001f, 1.001f }
+        { 0.999f, 1.999f }
       }
     };
   compare(false, info, ___BN_TestBackward1D_Simple_data_shape_1_1_2___);
@@ -903,56 +918,54 @@ TEST(BATCH_NORM, Test2DBackwardMixed_cpu_cpu_ugs) {
 #if MXNET_USE_CUDA
 
 TEST(BATCH_NORM, Test2DForwardV12D_gpu) {
-  test::op::OpInfo<op::BatchNormV1Prop, float> opInfo =
-    TestBatchNormOperatorForward<op::BatchNormV1Prop, float>(true, {BATCH_SIZE, CHANNELS, DH, DW}, blank_kwargs);
-  dumpF(std::cout, opInfo);
+    TestBatchNormOperatorForward<op::BatchNormV1Prop, float>(true,
+                                                             {BATCH_SIZE, CHANNELS, DH, DW},
+                                                             blank_kwargs);
+    TestBatchNormOperatorForward<op::BatchNormV1Prop, float>(true,
+                                                             {BATCH_SIZE, CHANNELS, DH, DW},
+                                                             blank_kwargs_nocudnn);
 }
 
 TEST(BATCH_NORM, Test2DForward2D_gpu) {
-  test::op::OpInfo<op::BatchNormProp, float> opInfo =
-    TestBatchNormOperatorForward<op::BatchNormProp, float>(true, {BATCH_SIZE, CHANNELS, DH, DW}, blank_kwargs);
-  dumpF(std::cout, opInfo);
+    TestBatchNormOperatorForward<op::BatchNormProp, float>(true,
+                                                           {BATCH_SIZE, CHANNELS, DH, DW},
+                                                           blank_kwargs);
+    TestBatchNormOperatorForward<op::BatchNormProp, float>(true,
+                                                           {BATCH_SIZE, CHANNELS, DH, DW},
+                                                           blank_kwargs_nocudnn);
 }
 
 // blank_kwargs
 TEST(BATCH_NORM, Test2DBackwardMixedV1_gpu_cpu) {
   typedef float DType;
   const TShape inputShape({1, 1, 2, 1});
-  test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormV1Prop, DType> bi =
-    testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormV1Prop, DType>(
-      false, true, inputShape, blank_kwargs, false);
-  dumpF(std::cout, bi);
-  dumpB(std::cout, bi);
+  testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormV1Prop, DType>(
+    false, true, inputShape, blank_kwargs, false);
 }
 
 TEST(BATCH_NORM, Test2DBackwardMixedV1Complex_gpu_cpu) {
   typedef float DType;
   const TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
-  test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormV1Prop, DType> bi =
-    testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormV1Prop, DType>(
-      false, true, inputShape, blank_kwargs, false);
-  dumpF(std::cout, bi);
-  dumpB(std::cout, bi);
+  testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormV1Prop, DType>(
+    false, true, inputShape, blank_kwargs, false);
 }
 
 TEST(BATCH_NORM, Test2DBackwardMixed_gpu_cpu) {
   typedef float DType;
   const TShape inputShape({1, 1, 2, 1});
-  test::op::OpInfoPair<op::BatchNormProp, op::BatchNormProp, DType> bi =
-    testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
-      false, true, inputShape, blank_kwargs, false);
-  dumpF(std::cout, bi);
-  dumpB(std::cout, bi);
+  testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    false, true, inputShape, blank_kwargs, false);
+  testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    false, true, inputShape, blank_kwargs_nocudnn, false);
 }
 
 TEST(BATCH_NORM, Test2DBackwardMixedComplex_gpu_cpu) {
   typedef float DType;
   const TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
-  test::op::OpInfoPair<op::BatchNormProp, op::BatchNormProp, DType> bi =
-    testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
-      false, true, inputShape, blank_kwargs, false);
-  dumpF(std::cout, bi);
-  dumpB(std::cout, bi);
+  testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    false, true, inputShape, blank_kwargs, false);
+  testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    false, true, inputShape, blank_kwargs_nocudnn, false);
 }
 
 // nonfixgamma_kwargs
@@ -961,31 +974,26 @@ TEST(BATCH_NORM, Test2DBackwardMixedComplex_gpu_cpu) {
 TEST(BATCH_NORM, Test2DBackwardMixedV1V2Complex_cpu_cpu_nfg) {
   typedef float DType;
   const TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
-  test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType> bi =
-    testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
-      false, false, inputShape, nonfixgamma_kwargs, false);
-  dumpF(std::cout, bi);
-  dumpB(std::cout, bi);
+  testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType>(
+    false, false, inputShape, nonfixgamma_kwargs, false);
 }
 
 TEST(BATCH_NORM, Test2DBackwardMixed_gpu_cpu_nfg) {
   typedef float DType;
   const TShape inputShape({1, 1, 2, 1});
-  test::op::OpInfoPair<op::BatchNormProp, op::BatchNormProp, DType> bi =
-    testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
-      false, true, inputShape, nonfixgamma_kwargs, false);
-  dumpF(std::cout, bi);
-  dumpB(std::cout, bi);
+  testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    false, true, inputShape, nonfixgamma_kwargs, false);
+  testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    false, true, inputShape, nonfixgamma_kwargs_nocudnn, false);
 }
 
 TEST(BATCH_NORM, Test2DBackwardMixedComplex_gpu_cpu_nfg) {
   typedef float DType;
   const TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
-  test::op::OpInfoPair<op::BatchNormProp, op::BatchNormProp, DType> bi =
-    testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
-      false, true, inputShape, nonfixgamma_kwargs, false);
-  dumpF(std::cout, bi);
-  dumpB(std::cout, bi);
+  testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    false, true, inputShape, nonfixgamma_kwargs, false);
+  testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    false, true, inputShape, nonfixgamma_kwargs_nocudnn, false);
 }
 
 // useglobalstats_kwargs
@@ -1004,21 +1012,19 @@ TEST(BATCH_NORM, Test2DBackwardMixedV1V2Complex_cpu_cpu_ugs) {
 TEST(BATCH_NORM, Test2DBackwardMixed_gpu_cpu_ugs) {
   typedef float DType;
   const TShape inputShape({1, 1, 2, 1});
-  test::op::OpInfoPair<op::BatchNormProp, op::BatchNormProp, DType> bi =
-    testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
-      false, true, inputShape, useglobalstats_kwargs, false);
-  dumpF(std::cout, bi);
-  dumpB(std::cout, bi);
+  testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    false, true, inputShape, useglobalstats_kwargs, false);
+  testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    false, true, inputShape, useglobalstats_kwargs_nocudnn, false);
 }
 
 TEST(BATCH_NORM, Test2DBackwardMixedComplex_gpu_cpu_ugs) {
   typedef float DType;
   const TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
-  test::op::OpInfoPair<op::BatchNormProp, op::BatchNormProp, DType> bi =
-    testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
-      false, true, inputShape, useglobalstats_kwargs, false);
-  dumpF(std::cout, bi);
-  dumpB(std::cout, bi);
+  testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    false, true, inputShape, useglobalstats_kwargs, false);
+  testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType>(
+    false, true, inputShape, useglobalstats_kwargs_nocudnn, false);
 }
 
 #endif  // MXNET_USE_CUDA

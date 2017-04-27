@@ -522,15 +522,22 @@ class Validator {
 
  public:
 
-  static constexpr DType ERROR_BOUND = 0.001;
+  static inline DType ERROR_BOUND() {
+    switch(sizeof(DType)) {
+      case sizeof(mshadow::half::half_t):
+        return 0.01f;
+      default:
+        return 0.001f;
+    }
+  }
 
   static inline DType errorBound(const TBlob *blob) {
     // Due to eps, for a small number of entries, the error will be a bit higher for one pass
     if(blob->shape_.ndim() >= 3) {
-      return (blob->Size() / blob->shape_[1]) <= 4 ? (ERROR_BOUND * 15) : ERROR_BOUND;
+      return (blob->Size() / blob->shape_[1]) <= 4 ? (ERROR_BOUND() * 15) : ERROR_BOUND();
     } else {
       // Probably just a vector
-      return ERROR_BOUND;
+      return ERROR_BOUND();
     }
   }
 
@@ -549,7 +556,7 @@ class Validator {
   }
 
   static bool isNear(const DType v1, const DType v2, const DType error) {
-    return fabs(v2 - v1) <= error;
+    return error > fabs(v2 - v1);
   }
 
   /*! \brief Compare blob data */
