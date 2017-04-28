@@ -159,8 +159,8 @@ static inline void ForEachFast(const DeviceTensor3<DType>& in_data,
 
   for (size_t batchItem = 0; batchItem < num; ++batchItem) {
 #pragma omp parallel for
-    for (size_t channel = 0; channel < channels; ++channel) {
-      size_t indices[2] = { batchItem, channel };
+    for (int channel = 0; channel < channels; ++channel) {
+      size_t indices[2] = { batchItem, static_cast<size_t>(channel) };
       const size_t off = offset(in_data.shape_, &indices[0], sizeof(indices)/sizeof(indices[0]));
       const DType *inData = in_data.dptr_ + off;
       DType *outData = out_data.dptr_ + off;
@@ -215,7 +215,7 @@ static inline void ComputeVariance(const DeviceTensor3<DType> &tensor,
 
   const size_t itemCount = tensor.Size() / channels;
 #pragma omp parallel for
-  for (size_t channel = 0; channel < channels; ++channel) {
+  for (int channel = 0; channel < channels; ++channel) {
     const AccReal sum = save_std[channel];
 
     AccReal invstd;
