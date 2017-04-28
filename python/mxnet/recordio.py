@@ -24,7 +24,7 @@ class MXRecordIO(object):
     >>> record = mx.recordio.MXRecordIO('tmp.rec', 'w')
     <mxnet.recordio.MXRecordIO object at 0x10ef40ed0>
     >>> for i in range(5):
-    ...    record.write('record_%d'%i)  
+    ...    record.write('record_%d'%i)
     >>> record.close()
     >>> record = mx.recordio.MXRecordIO('tmp.rec', 'r')
     >>> for i in range(5):
