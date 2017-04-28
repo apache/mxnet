@@ -24,21 +24,21 @@ NNVM_REGISTER_OP(_sub)
 
 NNVM_REGISTER_OP(_backward_sub)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBackwardUseNoneWithHalf2<gpu, mshadow_op::identity,
-                                                                mshadow_op::negation>);
+                                                                    mshadow_op::negation>);
 
 NNVM_REGISTER_OP(_mul)
 .set_attr<FCompute>("FCompute<gpu>", BinaryComputeWithHalf2<gpu, mshadow::op::mul>);
 
 NNVM_REGISTER_OP(_backward_mul)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBackwardUseInWithHalf2<gpu, mshadow_op::right,
-                                                              mshadow_op::left>);
+                                                                  mshadow_op::left>);
 
 NNVM_REGISTER_OP(_div)
 .set_attr<FCompute>("FCompute<gpu>", BinaryComputeWithHalf2<gpu, mshadow::op::div>);
 
 NNVM_REGISTER_OP(_backward_div)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBackwardUseInWithHalf2<gpu, mshadow_op::div_grad,
-                                                              mshadow_op::div_rgrad>);
+                                                                  mshadow_op::div_rgrad>);
 
 }  // namespace op
 }  // namespace mxnet
