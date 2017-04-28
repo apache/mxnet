@@ -42,7 +42,7 @@ namespace op {
  * and resources for both forward and backward passes
  * \tparam DType
  */
-template <typename DType>
+template <typename DType, typename AccReal>
 class BasicOperatorData {
 
   struct GPUStreamScope {
@@ -496,10 +496,10 @@ class BasicOperatorData {
 };
 
 /*! \brief Top-level operator test state info structure */
-template<typename OperatorProp, typename DType>
+template<typename OperatorProp, typename DType, typename AccReal>
 struct OpInfo {
   /*! \brief The operator data */
-  std::shared_ptr< test::op::BasicOperatorData<DType> > data_;
+  std::shared_ptr< test::op::BasicOperatorData<DType, AccReal> > data_;
   /*! \brief The operator prop class */
   std::shared_ptr<OperatorProp>                         prop_;
   /*! \brief The input type(s) */
@@ -507,17 +507,17 @@ struct OpInfo {
 };
 
 /*! \brief Pair of op info objects, generally for validating ops against each other */
-template<typename OperatorProp1, typename OperatorProp2, typename DType>
+template<typename OperatorProp1, typename OperatorProp2, typename DType, typename AccReal>
 struct OpInfoPair
 {
   /*! \brief Operator item 1 */
-  test::op::OpInfo<OperatorProp1, DType>  info_1_;
+  test::op::OpInfo<OperatorProp1, DType, AccReal>  info_1_;
   /*! \brief Operator item 2 */
-  test::op::OpInfo<OperatorProp2, DType>  info_2_;
+  test::op::OpInfo<OperatorProp2, DType, AccReal>  info_2_;
 };
 
 /*! \brief Base validator class for validating test data */
-template<typename DType>
+template<typename DType, typename AccReal>
 class Validator {
 
  public:
@@ -597,10 +597,11 @@ class Validator {
   }
 
   /*! \brief Compare similar blobs in two operator data structs */
-  static bool compare(const test::op::BasicOperatorData<DType>& i1,
-                      const test::op::BasicOperatorData<DType>& i2,
-                      const typename test::op::BasicOperatorData<DType>::BlobVectorType bvt,
-                      const size_t idx, bool print = false) {
+  static bool compare(
+    const test::op::BasicOperatorData<DType, AccReal>& i1,
+    const test::op::BasicOperatorData<DType, AccReal>& i2,
+    const typename test::op::BasicOperatorData<DType, AccReal>::BlobVectorType bvt,
+    const size_t idx, bool print = false) {
     const std::vector<TBlob>& bv1 = i1.getBlobVect(bvt);
     const std::vector<TBlob>& bv2 = i2.getBlobVect(bvt);
 
@@ -625,11 +626,11 @@ class Validator {
 typedef std::vector<std::pair<std::string, std::string> > kwargs_t;
 
 /*! \brief Create operator data, prop, the operator itself and init default forward input */
-template<typename OperatorProp, typename OperatorData, typename DType>
-static test::op::OpInfo<OperatorProp, DType> createOpAndInfoF(const bool isGPU,
+template<typename OperatorProp, typename OperatorData, typename DType, typename AccReal>
+static test::op::OpInfo<OperatorProp, DType, AccReal> createOpAndInfoF(const bool isGPU,
                                                               const TShape &inputShape,
                                                               const kwargs_t &kwargs) {
-  test::op::OpInfo<OperatorProp, DType> info;
+  test::op::OpInfo<OperatorProp, DType, AccReal> info;
   info.data_ = std::make_shared<OperatorData>(isGPU, inputShape);
   info.prop_ = std::make_shared<OperatorProp>();
   // Note, assuming floating point
