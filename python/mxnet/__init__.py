@@ -77,6 +77,7 @@ from . import image as img
 from . import test_utils
 
 from . import rnn
+from . import quantization
 
 from . import gluon
 
