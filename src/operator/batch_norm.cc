@@ -290,7 +290,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
     }
   }
 
-  if (req[batchnorm::kData] == kWriteTo || req[batchnorm::kData] == kWriteInplace) {
+  if (batchnorm::IsWriting(req[batchnorm::kData])) {
     ForEachFast(inputData, outputData,
                 [w, b, mean, var](const size_t channel, const DType *in_data, DType *out_data) {
                   *out_data = static_cast<DType>(
