@@ -18,6 +18,11 @@
 #include "./operator_common.h"
 #include "mxnet_op.h"
 
+#ifdef __GNUG__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-local-typedefs"
+#endif
+
 namespace mxnet {
 namespace op {
 
@@ -228,7 +233,9 @@ class BatchNormProp : public OperatorProperty {
     // For float16 input type beta, gamma, mean, and average are stored in float32.
     // For other input types, these parameters have the same type as input
     // NOTE: This requirement is from cuDNN (v. 4 and 5)
-    int dtype_param = (dtype == kFloat16) ? kFloat32 : dtype;
+    int dtype_param;
+    MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX, {
+         dtype_param = mshadow::DataType<AccRealX>::kFlag; });
     for (index_t i = 1; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype_param;
@@ -323,5 +330,10 @@ class BatchNormProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
+
+#ifdef __GNUG__
+#pragma GCC diagnostic pop
+#endif
+
 #endif  // MXNET_OPERATOR_BATCH_NORM_INL_H_
 
