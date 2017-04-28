@@ -24,13 +24,11 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Classifying Handwritten Digits with Convolutional Neural Networks](http://mxnet.io/tutorials/python/mnist.html)
 
-- [Image Segmentation - Separate out distinct objects in a photograph](http://mxnet.io/tutorials/computer_vision/segmentation.html)
+- Object Detection using [Faster R-CNN](https://github.com/dmlc/mxnet/tree/master/example/rcnn) and [SSD](https://github.com/dmlc/mxnet/tree/master/example/ssd)
 
-- [Object Detection using Faster R-CNN](http://mxnet.io/tutorials/computer_vision/detection.html)
+- [Neural Art - Transfer the style of one image onto the content the content of another image](https://github.com/dmlc/mxnet/tree/master/example/neural-style)
 
-- [Neural Art - Transfer the style of one image onto the content the content of another image](http://mxnet.io/tutorials/computer_vision/neural_art.html)
-
-- [Large Scale Image Classification - Training with 14 million images on a single machine](http://mxnet.io/tutorials/computer_vision/imagenet_full.html)
+- [Large Scale Image Classification](https://github.com/dmlc/mxnet/tree/master/example/image-classification)
 
 #### Natural Language Processing
 
