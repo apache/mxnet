@@ -101,7 +101,18 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rsub__(self, other):
-        """x.__rsub__(y) <=> y-x """
+        """x.__rsub__(y) <=> y-x
+
+        Only NDArray is supported for now.
+
+        Example usage:
+        ----------
+        >>> x = mx.nd.ones((2,3))*3
+        >>> y = mx.nd.ones((2,3))
+        >>> x.__rsub__(y).asnumpy()
+        array([[-2., -2., -2.],
+               [-2., -2., -2.]], dtype=float32)
+        """
         if isinstance(other, Number):
             return _internal._RMinusScalar(self, scalar=other)
         else:
@@ -135,7 +146,18 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rdiv__(self, other):
-        """x.__rdiv__(y) <=> y/x """
+        """x.__rdiv__(y) <=> y/x
+
+        Only NDArray is supported for now.
+
+        Example usage:
+        ----------
+        >>> x = mx.nd.ones((2,3))*3
+        >>> y = mx.nd.ones((2,3))
+        >>> x.__rdiv__(y).asnumpy()
+        array([[ 0.33333334,  0.33333334,  0.33333334],
+               [ 0.33333334,  0.33333334,  0.33333334]], dtype=float32)
+        """
         if isinstance(other, Number):
             return _internal._RDivScalar(self, scalar=other)
         else:
