@@ -17,8 +17,8 @@
  * test_perf.h: Performance-related classes
  * test_op.h:   Operator-specific testing classes
  */
-#ifndef MXNET_TEST_TEST_OP_H
-#define MXNET_TEST_TEST_OP_H
+#ifndef TESTS_CPP_INCLUDE_TEST_OP_H_
+#define TESTS_CPP_INCLUDE_TEST_OP_H_
 
 #include "test_perf.h"
 #include "test_util.h"
@@ -691,4 +691,4 @@ static test::op::OpInfo<OperatorProp, DType, AccReal> createOpAndInfoF(const boo
 }  // namespace test
 }  // namespace mxnet
 
-#endif  // MXNET_TEST_TEST_OP_H
+#endif  // TESTS_CPP_INCLUDE_TEST_OP_H_

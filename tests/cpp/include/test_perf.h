@@ -5,6 +5,9 @@
  * \author Chris Olivier
 */
 
+#ifndef TESTS_CPP_INCLUDE_TEST_PERF_H_
+#define TESTS_CPP_INCLUDE_TEST_PERF_H_
+
 #include <sys/time.h>
 #include <dmlc/logging.h>
 #include <iomanip>
@@ -15,9 +18,6 @@
 #include <mutex>
 #include <string>
 #include <map>
-
-#ifndef MXNET_TEST_TEST_PERF_H
-#define MXNET_TEST_TEST_PERF_H
 
 namespace mxnet {
 namespace test {
@@ -286,4 +286,4 @@ class TimingItem {
 }  // namespace test
 }  // namespace mxnet
 
-#endif  // MXNET_TEST_TEST_PERF_H
+#endif  // TESTS_CPP_INCLUDE_TEST_PERF_H_
