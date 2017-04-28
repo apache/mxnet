@@ -259,31 +259,79 @@ class BNOperatorData : public test::op::BasicOperatorData<DType, AccReal> {
 
   virtual void resetForward() override {
     // Init input data
-    DType val = 0;
-    test::patternFill<DType>(&this->c_.blob_input_vec_[mxnet::op::batchnorm::kData],
-                             [&val]{ return val += 1; });
-    test::fill(this->c_.blob_input_vec_[mxnet::op::batchnorm::kGamma], AccReal(1));  // weights
-    test::fill(this->c_.blob_input_vec_[mxnet::op::batchnorm::kBeta], AccReal(0));   // bias
+    MSHADOW_TYPE_SWITCH(
+      this->c_.blob_input_vec_[mxnet::op::batchnorm::kData].type_flag_,
+      DTypeX,
+      {
+        DTypeX val = 0;
+        test::patternFill<DTypeX>(&this->c_.blob_input_vec_[mxnet::op::batchnorm::kData],
+                                  [&val]{ return val += 1; }); });
+
+    MSHADOW_TYPE_SWITCH(
+      this->c_.blob_input_vec_[mxnet::op::batchnorm::kGamma].type_flag_,
+      DTypeX, {
+        test::fill(this->c_.blob_input_vec_[mxnet::op::batchnorm::kGamma], DTypeX(1));});
+    MSHADOW_TYPE_SWITCH(
+      this->c_.blob_input_vec_[mxnet::op::batchnorm::kBeta].type_flag_,
+      DTypeX, {
+        test::fill(this->c_.blob_input_vec_[mxnet::op::batchnorm::kBeta], DTypeX(0));});
 
     // Init the moving data (all mean = 0, all var = 1)
-    test::fill(this->c_.blob_aux_states_[mxnet::op::batchnorm::kMovingMean], AccReal(0));
-    test::fill(this->c_.blob_aux_states_[mxnet::op::batchnorm::kMovingVar], AccReal(1));
+    MSHADOW_TYPE_SWITCH(
+      this->c_.blob_aux_states_[mxnet::op::batchnorm::kMovingMean].type_flag_,
+      DTypeX, {
+        test::fill(this->c_.blob_aux_states_[mxnet::op::batchnorm::kMovingMean], DTypeX(0));
+      });
+    MSHADOW_TYPE_SWITCH(
+      this->c_.blob_aux_states_[mxnet::op::batchnorm::kMovingVar].type_flag_,
+      DTypeX, {
+        test::fill(this->c_.blob_aux_states_[mxnet::op::batchnorm::kMovingVar], DTypeX(1));});
 
     for(size_t i = 0, n = this->c_.blob_output_vec_.size(); i < n; ++i) {
-      test::fill(this->c_.blob_output_vec_[i], DType(0.1234));
+      const int dtype = this->c_.blob_output_vec_[i].type_flag_;
+      MSHADOW_TYPE_SWITCH(dtype, DTypeX,
+                          { test::fill(this->c_.blob_output_vec_[i], DTypeX(0.1234)); });
     }
   }
 
   virtual void resetBackward() override {
     DType val = -.001;
-    test::patternFill<DType>(&this->c_.blob_out_grad_[mxnet::op::batchnorm::kOut],
-                             [&val]{ return val += 1; });
-    test::try_fill(this->c_.blob_out_grad_, mxnet::op::batchnorm::kGamma, AccReal(0.1));  // weights
-    test::try_fill(this->c_.blob_out_grad_, mxnet::op::batchnorm::kBeta,  AccReal(0.1));  // bias
+    MSHADOW_TYPE_SWITCH(
+      this->c_.blob_out_grad_[mxnet::op::batchnorm::kOut].type_flag_,
+      DTypeX, {
+        test::patternFill<DTypeX>(&this->c_.blob_out_grad_[mxnet::op::batchnorm::kOut],
+                                 [&val]{ return val += 1; });
+      });
 
-    test::fill(this->c_.blob_in_grad_[mxnet::op::batchnorm::kData],  DType(0));    // the data
-    test::fill(this->c_.blob_in_grad_[mxnet::op::batchnorm::kGamma], AccReal(0));    // weights
-    test::fill(this->c_.blob_in_grad_[mxnet::op::batchnorm::kBeta],  AccReal(0));    // bias
+    // out-grad weights
+    MSHADOW_TYPE_SWITCH(
+      this->c_.blob_out_grad_[mxnet::op::batchnorm::kGamma].type_flag_,
+      DTypeX,
+      { test::try_fill(this->c_.blob_out_grad_, mxnet::op::batchnorm::kGamma, DTypeX(0.1)); });
+
+    // out-grad biases
+    MSHADOW_TYPE_SWITCH(
+      this->c_.blob_out_grad_[mxnet::op::batchnorm::kBeta].type_flag_,
+      DTypeX,
+      { test::try_fill(this->c_.blob_out_grad_, mxnet::op::batchnorm::kBeta, DTypeX(0.1)); });
+
+    // in-grad
+    MSHADOW_TYPE_SWITCH(
+      this->c_.blob_in_grad_[mxnet::op::batchnorm::kData].type_flag_,
+      DTypeX,
+      { test::try_fill(this->c_.blob_in_grad_, mxnet::op::batchnorm::kData, DTypeX(0)); });
+
+    // in-grad weights
+    MSHADOW_TYPE_SWITCH(
+      this->c_.blob_in_grad_[mxnet::op::batchnorm::kGamma].type_flag_,
+      DTypeX,
+      { test::try_fill(this->c_.blob_in_grad_, mxnet::op::batchnorm::kGamma, DTypeX(0)); });
+
+    // in-grad biases
+    MSHADOW_TYPE_SWITCH(
+      this->c_.blob_in_grad_[mxnet::op::batchnorm::kBeta].type_flag_,
+      DTypeX,
+      { test::try_fill(this->c_.blob_in_grad_, mxnet::op::batchnorm::kBeta, DTypeX(0)); });
   }
 
 };

@@ -91,6 +91,21 @@ class BasicOperatorData {
   /*! \brief Initialize backward blob data values */
   virtual void resetBackward() {}
 
+  template<typename Type>
+  static inline int type_as_int() {
+    switch(sizeof(Type)) {
+      case sizeof(float):
+        return mshadow::kFloat32;
+      case sizeof(double):
+        return mshadow::kFloat64;
+      case sizeof(mshadow::half::half_t):
+        return mshadow::kFloat16;
+      default:
+        LOG(FATAL) << "Unknown type size: " << sizeof(Type);
+        return mshadow::kFloat32;
+    }
+  }
+
   /*! \brief Initialize auxiliary and output blobs */
   virtual bool initForward(OperatorProperty &opProp, std::vector<int> &in_type) {
     if(!initializeForward_++) {
@@ -101,20 +116,31 @@ class BasicOperatorData {
         // Figure out what sort of blobs we need to allocate
         std::vector<TShape> out_shape, aux_shape;
         opProp.InferShape(&shape_input_vec_, &out_shape, &aux_shape);
+        std::vector<int> out_type, aux_type;
+        opProp.InferType(&in_type, &out_type, &aux_type);
 
         // Allocate top blobs (input)
         for (size_t x = 0, n = shape_input_vec_.size(); x < n; ++x) {
-          allocateBlob(c_.blob_input_vec_, shape_input_vec_[x], false);
+          int type;
+          if (x < in_type.size()) {
+            type = in_type[x];
+          } else {
+            type = x ? type_as_int<AccReal>() : type_as_int<DType>();
+          }
+
+          allocateBlob(c_.blob_input_vec_, shape_input_vec_[x], false, type);
         }
 
         // Allocate aux blobs (scratch, hidden, etc.)
         for (size_t x = 0, n = aux_shape.size(); x < n; ++x) {
-          allocateBlob(c_.blob_aux_states_, aux_shape[x], false);
+          CHECK(x < aux_type.size());
+          allocateBlob(c_.blob_aux_states_, aux_shape[x], false, aux_type[x]);
         }
 
         // Allocate bottom blobs (output)
         for (size_t x = 0, n = out_shape.size(); x < n; ++x) {
-          allocateBlob(c_.blob_output_vec_, out_shape[x], false);
+          CHECK(x < out_type.size());
+          allocateBlob(c_.blob_output_vec_, out_shape[x], false, out_type[x]);
         }
 
         // Get the resource of temporal space
@@ -137,13 +163,16 @@ class BasicOperatorData {
   virtual bool initBackward(OperatorProperty &opProp, std::vector<int> &in_type) {
     initForward(opProp, in_type);
     if (!initializeBackward_++) {
-
-      for (size_t x = 0, n = opProp.NumVisibleOutputs(); x < n; ++x) {
-        allocateBlob(c_.blob_out_grad_, c_.blob_input_vec_[x].shape_, false);
+      for (size_t x = 0, n = static_cast<size_t>(opProp.NumVisibleOutputs()); x < n; ++x) {
+        CHECK_LT(x, c_.blob_input_vec_.size());
+        allocateBlob(c_.blob_out_grad_, c_.blob_input_vec_[x].shape_,
+                     false, c_.blob_input_vec_[x].type_flag_);
       }
 
       for (size_t x = 0, n = c_.blob_output_vec_.size(); x < n; ++x) {
-        allocateBlob(c_.blob_in_grad_,  c_.blob_output_vec_[x].shape_, false);
+        CHECK_LT(x, c_.blob_output_vec_.size());
+        allocateBlob(c_.blob_in_grad_,  c_.blob_output_vec_[x].shape_,
+                     false, c_.blob_output_vec_[x].type_flag_);
       }
 
       // Get the resource of temporal space
@@ -378,7 +407,7 @@ class BasicOperatorData {
     : cpuData_(cpuData)
       , allocGPUSTream_(opContext) {
       // Copy CPU->GPU
-      std::list<std::unique_ptr<test::StandaloneBlob<DType>>> gpuBlobs;
+      std::list<std::unique_ptr<test::StandaloneBlob>> gpuBlobs;
       OpData gpuData;
       CHECK_EQ(cpuData_.all_blob_vects_.size(), this->all_blob_vects_.size());
       for(size_t bvt = 0, nbvt = cpuData_.all_blob_vects_.size(); bvt < nbvt; ++bvt) {
@@ -386,7 +415,8 @@ class BasicOperatorData {
         std::vector<TBlob>& bvt_dest = *this->all_blob_vects_[bvt];
         for(size_t i = 0, n = bv_src.size(); i < n; ++i) {
           const TBlob& srcBlob = bv_src[i];
-          TBlob *destBlob = allocateBlob(gpuBlobs, bvt_dest, srcBlob.shape_, true);
+          TBlob *destBlob = allocateBlob(gpuBlobs, bvt_dest, srcBlob.shape_,
+                                         true, srcBlob.type_flag_);
 
           Context cpu_ctx, gpu_ctx;
           cpu_ctx.dev_type = Context::kCPU;
@@ -455,20 +485,22 @@ class BasicOperatorData {
   }
 
   /*! \brief Locally allocate a managed TBlob and insert into the supplied vector */
-  static TBlob *allocateBlob(std::list<std::unique_ptr<test::StandaloneBlob<DType>>>& standalone_blobs,
+  static TBlob *allocateBlob(std::list<std::unique_ptr<test::StandaloneBlob>>& standalone_blobs,
                              std::vector<TBlob>& dest,
                              const TShape& shape,
-                             const bool isGPU) {
-    test::StandaloneBlob<DType> *blob = new test::StandaloneBlob<DType>(shape, isGPU);
+                             const bool isGPU,
+                             const int dtype) {
+    test::StandaloneBlob *blob = new test::StandaloneBlob(shape, isGPU, dtype);
     CHECK_NE(blob, static_cast<TBlob *>(nullptr));
-    standalone_blobs.push_back(std::unique_ptr<test::StandaloneBlob<DType>>(blob));
+    standalone_blobs.push_back(std::unique_ptr<test::StandaloneBlob>(blob));
     dest.push_back(*blob);
     return blob;
   }
 
   /*! \brief Locally allocate a managed TBlob and insert into the supplied vector */
-  inline TBlob *allocateBlob(std::vector<TBlob>& dest, const TShape& shape, const bool isGPU) {
-    return allocateBlob(standalone_blobs_, dest, shape, isGPU);
+  inline TBlob *allocateBlob(std::vector<TBlob>& dest, const TShape& shape,
+                             const bool isGPU, const int dtype) {
+    return allocateBlob(standalone_blobs_, dest, shape, isGPU, dtype);
   }
 
   /*! \brief Performance timing categories */
@@ -488,7 +520,7 @@ class BasicOperatorData {
   /*! \brief Assure that the callback is initialized only once */
   std::atomic<int>            initializeCallback_;
   /*! \brief scoped lifecycle management of allocated blobs */
-  std::list<std::unique_ptr<test::StandaloneBlob<DType>>> standalone_blobs_;
+  std::list<std::unique_ptr<test::StandaloneBlob>> standalone_blobs_;
 
  public:
   /*! Timing instrumentation */

@@ -293,13 +293,13 @@ class BlobMemory
   Storage::Handle handle_;
 };
 
-template<typename DType>
 class StandaloneBlob : public TBlob {
  public:
-  inline StandaloneBlob(const TShape& shape, const bool isGPU)
-    : TBlob(static_cast<DType *>(nullptr), shape, isGPU ? gpu::kDevMask : cpu::kDevMask)
+  inline StandaloneBlob(const TShape& shape, const bool isGPU, const int dtype)
+    : TBlob(nullptr, shape, isGPU ? gpu::kDevMask : cpu::kDevMask, dtype)
       , memory_(isGPU) {
-    this->dptr_ = memory_.Alloc(shapeMemorySize<DType>(shape));
+    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+      this->dptr_ = memory_.Alloc(shapeMemorySize<DType>(shape)); });
   }
   inline ~StandaloneBlob() {
     this->dptr_ = nullptr;
