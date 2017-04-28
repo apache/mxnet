@@ -236,7 +236,7 @@ class MXIndexedRecordIO(MXRecordIO):
         return pos.value
 
     def read_idx(self, idx):
-        """Returns record at given index.
+        """Returns a record at given index.
 
         Example usage:
         ----------
@@ -252,7 +252,7 @@ class MXIndexedRecordIO(MXRecordIO):
         return self.read()
 
     def write_idx(self, idx, buf):
-        """Inserts record at given index.
+        """Inserts input record at given index.
 
         Example usage:
         ----------
