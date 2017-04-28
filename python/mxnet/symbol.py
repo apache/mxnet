@@ -53,7 +53,7 @@ class Symbol(SymbolBase):
     def __iter__(self):
         """Returns a generator object of symbol.
 
-        One can loop through the returned object to get outputs.
+        One can loop through the returned object list to get outputs.
 
         Example usage:
         ----------
@@ -103,7 +103,7 @@ class Symbol(SymbolBase):
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y-x
 
-        Only NDArray is supported for now.
+        Only `NDArray` is supported for now.
 
         Example usage:
         ----------
@@ -148,7 +148,7 @@ class Symbol(SymbolBase):
     def __rdiv__(self, other):
         """x.__rdiv__(y) <=> y/x
 
-        Only NDArray is supported for now.
+        Only `NDArray` is supported for now.
 
         Example usage:
         ----------
@@ -359,7 +359,7 @@ class Symbol(SymbolBase):
 
         x._compose(y, z) <=> x(y,z)
 
-        This function call mutates the current symbol.
+        This function mutates the current symbol.
 
         Example usage:
         ----------
@@ -485,7 +485,7 @@ class Symbol(SymbolBase):
         Returns
         -------
         value : str
-            The desired attribute value, returns `None` if the attribute does not exist.
+            The desired attribute value, returns ``None`` if the attribute does not exist.
         """
         ret = ctypes.c_char_p()
         success = ctypes.c_int()
@@ -1024,7 +1024,7 @@ class Symbol(SymbolBase):
         You can also use pickle to do the job if you only work on python.
         The advantage of `load`/`save` functions is that the file contents are language agnostic.
         This means the model saved by one language binding can be loaded by a different
-        language binding of MXNet.
+        language binding of `MXNet`.
         You also get the benefit of being able to directly load/save from cloud storage(S3, HDFS).
 
         Parameters
@@ -1149,8 +1149,8 @@ class Symbol(SymbolBase):
             {'write', 'add', 'null'}, or list of str or dict of str to str, optional
             To specify how we should update the gradient to the `args_grad`.
 
-            - 'write' means everytime gradient is write to specified `args_grad` NDArray.
-            - 'add' means everytime gradient is add to the specified NDArray.
+            - 'write' means every time gradient is written to specified `args_grad` NDArray.
+            - 'add' means every time gradient is added to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
 
         type_dict  : Dict of str->numpy.dtype
