@@ -22,6 +22,7 @@
 
 #include <atomic>
 #include <ndarray/ndarray_function.h>
+#include <mshadow/base.h>
 #include <mshadow/stream_gpu-inl.h>
 #include "test_perf.h"
 #include "test_util.h"
@@ -91,21 +92,6 @@ class BasicOperatorData {
   /*! \brief Initialize backward blob data values */
   virtual void resetBackward() {}
 
-  template<typename Type>
-  static inline int type_as_int() {
-    switch(sizeof(Type)) {
-      case sizeof(float):
-        return mshadow::kFloat32;
-      case sizeof(double):
-        return mshadow::kFloat64;
-      case sizeof(mshadow::half::half_t):
-        return mshadow::kFloat16;
-      default:
-        LOG(FATAL) << "Unknown type size: " << sizeof(Type);
-        return mshadow::kFloat32;
-    }
-  }
-
   /*! \brief Initialize auxiliary and output blobs */
   virtual bool initForward(OperatorProperty &opProp, std::vector<int> &in_type) {
     if(!initializeForward_++) {
@@ -125,7 +111,7 @@ class BasicOperatorData {
           if (x < in_type.size()) {
             type = in_type[x];
           } else {
-            type = x ? type_as_int<AccReal>() : type_as_int<DType>();
+            type = x ? mshadow::DataType<AccReal>::kFlag : mshadow::DataType<DType>::kFlag;
           }
 
           allocateBlob(c_.blob_input_vec_, shape_input_vec_[x], false, type);
@@ -169,10 +155,9 @@ class BasicOperatorData {
                      false, c_.blob_input_vec_[x].type_flag_);
       }
 
-      for (size_t x = 0, n = c_.blob_output_vec_.size(); x < n; ++x) {
-        CHECK_LT(x, c_.blob_output_vec_.size());
-        allocateBlob(c_.blob_in_grad_,  c_.blob_output_vec_[x].shape_,
-                     false, c_.blob_output_vec_[x].type_flag_);
+      for (size_t x = 0, n = c_.blob_input_vec_.size(); x < n; ++x) {
+        allocateBlob(c_.blob_in_grad_,  c_.blob_input_vec_[x].shape_,
+                     false, c_.blob_input_vec_[x].type_flag_);
       }
 
       // Get the resource of temporal space
@@ -574,10 +559,11 @@ class Validator {
   }
 
   /*! \brief Adjusted error based upon significant digits */
-  static inline DType errorBound(const TBlob *blob, const DType v1, const DType v2) {
+  template<typename DTypeX>
+  static inline DType errorBound(const TBlob *blob, const DTypeX v1, const DTypeX v2) {
     const DType initialErrorBound = errorBound(blob);
     DType kErrorBound = initialErrorBound;  // This error is based upon the range [0.1x, 0.9x]
-    DType avg = (fabs(v1) + fabs(v2)) / 2;
+    DTypeX avg = static_cast<DTypeX>((fabs(v1) + fabs(v2)) / 2);
     if(avg >= 1) {
       long vv = static_cast<unsigned long>(avg + 0.5);
       do {
@@ -587,39 +573,58 @@ class Validator {
     return kErrorBound;
   }
 
-  static bool isNear(const DType v1, const DType v2, const DType error) {
+  template<typename DTypeX>
+  static bool isNear(const DTypeX v1, const DTypeX v2, const DType error) {
     return error > fabs(v2 - v1);
   }
 
   /*! \brief Compare blob data */
   static bool compare(const TBlob& b1, const TBlob& b2) {
-    if(b1.shape_ == b2.shape_) {
-      const DType *d1 = b1.dptr<DType>();
-      const DType *d2 = b2.dptr<DType>();
-      CHECK_NE(d1, d2);  // don't compare the same memory
-      for(size_t i = 0, n = b1.Size(), warningCount = 0; i < n; ++i) {
-        const DType v1 = *d1++;
-        const DType v2 = *d2++;
-        const DType kErrorBound = errorBound(&b1, v1, v2);
-        EXPECT_NEAR(v1, v2, kErrorBound);
-        if(!isNear(v1, v2, kErrorBound) && !warningCount++) {
-          LOG(WARNING) << "Near test failure: at i = " << i << ", n = "
-                       << n << ", kErrorBound = " << kErrorBound << std::endl << std::flush;
-        }
-      }
-      return true;
+    if(b1.shape_ == b2.shape_)
+    {
+      MSHADOW_REAL_TYPE_SWITCH(
+        b1.type_flag_,
+        DTypeX,
+        {
+          CHECK_EQ(b1.type_flag_, b2.type_flag_) << "Can't compare blobs of different data types";
+          const DTypeX *d1 = b1.dptr<DTypeX>();
+          const DTypeX *d2 = b2.dptr<DTypeX>();
+          CHECK_NE(d1, d2);  // don't compare the same memory
+          for(
+            size_t i = 0, n = b1.Size(), warningCount = 0;
+            i<n;
+            ++i)
+          {
+            const DTypeX v1 = *d1++;
+            const DTypeX v2 = *d2++;
+            const DType kErrorBound = errorBound(&b1, v1, v2);
+            EXPECT_NEAR(v1, v2, kErrorBound);
+            if(!
+                 isNear(v1, v2, kErrorBound
+                 ) && !warningCount++)
+            {
+              LOG(WARNING)
+
+                << "Near test failure: at i = " << i << ", n = "
+                << n << ", kErrorBound = " << kErrorBound << std::endl <<
+                std::flush;
+            }
+          }
+          return true;
+        });
     }
     return false;
   }
 
   /*! \brief Compare blob data to a pointer to data */
-  static bool compare(const TBlob& b1, const DType *valuePtr) {
-    const DType *d1 = b1.dptr<DType>();
+  template<typename DTypeX>
+  static bool compare(const TBlob& b1, const DTypeX *valuePtr) {
+    const DTypeX *d1 = b1.dptr<DType>();
     CHECK_NE(d1, valuePtr);  // don't compare the same memory
     const DType kErrorBound = errorBound(&b1);
     for(size_t i = 0, n = b1.Size(), warningCount = 0; i < n; ++i) {
-      const DType v1 = *d1++;
-      const DType v2 = *valuePtr++;
+      const DTypeX v1 = *d1++;
+      const DTypeX v2 = *valuePtr++;
       EXPECT_NEAR(v1, v2, kErrorBound);
       if(!isNear(v1, v2, kErrorBound) && !warningCount++) {
         LOG(WARNING) << "Near test failure: " << i << ", " << n << std::endl << std::flush;
@@ -646,8 +651,13 @@ class Validator {
     const TBlob& b1 = bv1[idx];
     const TBlob& b2 = bv2[idx];
     if(print && test::debugOutput) {
-      test::print_blob<DType>(std::cout << "Blob 1:", b1, true, true);
-      test::print_blob<DType>(std::cout << "Blob 2:", b2, true, true);
+      MSHADOW_REAL_TYPE_SWITCH(
+        b1.type_flag_,
+        DTypeX,
+        {
+          test::print_blob<DTypeX>(std::cout << "Blob 1:", b1, true, true);
+          test::print_blob<DTypeX>(std::cout << "Blob 2:", b2, true, true);
+        });
     }
     return compare(b1, b2);
   }

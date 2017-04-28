@@ -14,7 +14,7 @@
 
 using namespace mxnet;
 
-#define MXNET_DUMP_C  1
+#define MXNET_DUMP_C  0
 #define DISABLE_VALIDATION 0 /* If performance profiling, may do things
                               * that cause validation to fail */
 
@@ -23,12 +23,6 @@ static constexpr int CHANNELS = 3;
 static constexpr int DEPTH = 2;
 static constexpr int DH = 3;
 static constexpr int DW = 2;
-
-//static constexpr int BATCH_SIZE = 1;
-//static constexpr int CHANNELS = 1;
-//static constexpr int DEPTH = 1;
-//static constexpr int DH = 2;
-//static constexpr int DW = 2;
 
 static constexpr int TIMING_BATCH_SIZE = 128;
 static constexpr int TIMING_CHANNELS = 3;
@@ -77,12 +71,12 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal>
         const DType kErrorBound = Super::errorBound(blob);
         // expect zero mean
         EXPECT_NEAR(0, sum, kErrorBound);
-        if(!Super::isNear(0, sum, kErrorBound)) {
+        if(!Super::isNear(AccReal(0), sum, kErrorBound)) {
           LOG(WARNING) << "Sum is not close enough to zero";
         }
         // expect unit variance
         EXPECT_NEAR(1, var, kErrorBound);
-        if(!Super::isNear(1, var, kErrorBound)) {
+        if(!Super::isNear(AccReal(1), var, kErrorBound)) {
           LOG(WARNING) << "Variance is not close enough to 1";
         }
       }
@@ -122,12 +116,12 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal>
         const DType kErrorBound = Super::errorBound(blob);
         // expect zero mean
         EXPECT_NEAR(0, sum, kErrorBound);
-        if(!Super::isNear(0, sum, kErrorBound)) {
+        if(!Super::isNear(AccReal(0), sum, kErrorBound)) {
           LOG(WARNING) << "Sum is not close enough to zero";
         }
         // expect unit variance
         EXPECT_NEAR(1, var, kErrorBound);
-        if(!Super::isNear(1, var, kErrorBound)) {
+        if(!Super::isNear(AccReal(1), var, kErrorBound)) {
           LOG(WARNING) << "Variance is not close enough to 1";
         }
       }
@@ -168,12 +162,12 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal>
         const DType kErrorBound = Super::errorBound(blob);
         // expect zero mean
         EXPECT_NEAR(0, sum, kErrorBound);
-        if(!Super::isNear(0, sum, kErrorBound)) {
+        if(!Super::isNear(AccReal(0), sum, kErrorBound)) {
           LOG(WARNING) << "Sum is not close enough to zero";
         }
         // expect unit variance
         EXPECT_NEAR(1, var, kErrorBound);
-        if(!Super::isNear(1, var, kErrorBound)) {
+        if(!Super::isNear(AccReal(1), var, kErrorBound)) {
           LOG(WARNING) << "Variance is not close enough to 1";
         }
       }
@@ -300,20 +294,24 @@ class BNOperatorData : public test::op::BasicOperatorData<DType, AccReal> {
       this->c_.blob_out_grad_[mxnet::op::batchnorm::kOut].type_flag_,
       DTypeX, {
         test::patternFill<DTypeX>(&this->c_.blob_out_grad_[mxnet::op::batchnorm::kOut],
-                                 [&val]{ return val += 1; });
+                                  [&val]{ return val += 1; });
       });
 
     // out-grad weights
-    MSHADOW_TYPE_SWITCH(
-      this->c_.blob_out_grad_[mxnet::op::batchnorm::kGamma].type_flag_,
-      DTypeX,
-      { test::try_fill(this->c_.blob_out_grad_, mxnet::op::batchnorm::kGamma, DTypeX(0.1)); });
+    if (mxnet::op::batchnorm::kGamma < this->c_.blob_out_grad_.size()) {
+      MSHADOW_TYPE_SWITCH(
+        this->c_.blob_out_grad_[mxnet::op::batchnorm::kGamma].type_flag_,
+        DTypeX,
+        { test::try_fill(this->c_.blob_out_grad_, mxnet::op::batchnorm::kGamma, DTypeX(0.1)); });
+    }
 
     // out-grad biases
-    MSHADOW_TYPE_SWITCH(
-      this->c_.blob_out_grad_[mxnet::op::batchnorm::kBeta].type_flag_,
-      DTypeX,
-      { test::try_fill(this->c_.blob_out_grad_, mxnet::op::batchnorm::kBeta, DTypeX(0.1)); });
+    if (mxnet::op::batchnorm::kBeta < this->c_.blob_out_grad_.size()) {
+      MSHADOW_TYPE_SWITCH(
+        this->c_.blob_out_grad_[mxnet::op::batchnorm::kBeta].type_flag_,
+        DTypeX,
+        { test::try_fill(this->c_.blob_out_grad_, mxnet::op::batchnorm::kBeta, DTypeX(0.1)); });
+    }
 
     // in-grad
     MSHADOW_TYPE_SWITCH(
@@ -322,16 +320,20 @@ class BNOperatorData : public test::op::BasicOperatorData<DType, AccReal> {
       { test::try_fill(this->c_.blob_in_grad_, mxnet::op::batchnorm::kData, DTypeX(0)); });
 
     // in-grad weights
-    MSHADOW_TYPE_SWITCH(
-      this->c_.blob_in_grad_[mxnet::op::batchnorm::kGamma].type_flag_,
-      DTypeX,
-      { test::try_fill(this->c_.blob_in_grad_, mxnet::op::batchnorm::kGamma, DTypeX(0)); });
+    if (mxnet::op::batchnorm::kGamma < this->c_.blob_in_grad_.size()) {
+      MSHADOW_TYPE_SWITCH(
+        this->c_.blob_in_grad_[mxnet::op::batchnorm::kGamma].type_flag_,
+        DTypeX,
+        { test::try_fill(this->c_.blob_in_grad_, mxnet::op::batchnorm::kGamma, DTypeX(0)); });
+    }
 
     // in-grad biases
-    MSHADOW_TYPE_SWITCH(
-      this->c_.blob_in_grad_[mxnet::op::batchnorm::kBeta].type_flag_,
-      DTypeX,
-      { test::try_fill(this->c_.blob_in_grad_, mxnet::op::batchnorm::kBeta, DTypeX(0)); });
+    if (mxnet::op::batchnorm::kBeta < this->c_.blob_in_grad_.size()) {
+      MSHADOW_TYPE_SWITCH(
+        this->c_.blob_in_grad_[mxnet::op::batchnorm::kBeta].type_flag_,
+        DTypeX,
+        { test::try_fill(this->c_.blob_in_grad_, mxnet::op::batchnorm::kBeta, DTypeX(0)); });
+    }
   }
 
 };
@@ -436,7 +438,8 @@ static StreamType& PRT(
   const size_t idx) {
   os << test::op::BasicOperatorData<DType, AccReal>::bvt2String(bvt) << ": " << idx
      << ": ";
-  test::print_blob<DType>(os, obj.getBlobVect(bvt)[idx]);
+  const TBlob& blob = obj.getBlobVect(bvt)[idx];
+  MSHADOW_REAL_TYPE_SWITCH(blob.type_flag_, DTypeX, { test::print_blob<DTypeX>(os, blob); });
   return os;
 }
 
@@ -573,10 +576,10 @@ testBNForwardAndBackward(const bool isGPU,
 
   return testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType, AccReal>(
     isGPU,
-      isGPU,
-      inputShape,
-      kwargs,
-      dumpC);
+    isGPU,
+    inputShape,
+    kwargs,
+    dumpC);
 }
 
 /*
@@ -595,7 +598,9 @@ TEST(BATCH_NORM, Test2DForwardV1V2) {
     });
 }
 
-static const std::vector<int> v2_types = {mshadow::kFloat32, mshadow::kFloat64, mshadow::kFloat16};
+static const std::vector<int> v2_types = {mshadow::kFloat32,
+                                          mshadow::kFloat64,
+                                          mshadow::kFloat16};
 
 TEST(BATCH_NORM, Test1DForward) {
   for (int type :  v2_types) {
@@ -1037,7 +1042,7 @@ TEST(BATCH_NORM, Test2DForwardV12D_gpu) {
       TestBatchNormOperatorForward<op::BatchNormV1Prop, DType, AccReal>(
         true,
         {BATCH_SIZE, CHANNELS, DH, DW},
-        blank_kwargs_nocudnn);
+        blank_kwargs);
     });
 }
 
