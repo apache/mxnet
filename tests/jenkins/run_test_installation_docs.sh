@@ -56,7 +56,7 @@ function remove_out_of_range() {
     echo "${return_arr[@]}"
 }
 
-FILE=~/Downloads/install.md
+FILE=install.md
 
 # range of lines inside Linux-Python-CPU instructions
 LINUX_PYTHON_CPU_START_LINENO=$(grep -n "START - Linux Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
@@ -155,8 +155,9 @@ function retrieve_commands() {
         do
             # 1) get the line from file given the line number
             # 2) remove everything up to the prompt character '$'
-            # 3) trim leading and trailing spaces
-            cmd=`sed -n ${j}p ${FILE} | sed 's/^.*$\(.*\)$/\1/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'` 
+	    # 3) remove everything after a comment character"#"
+            # 4) trim leading and trailing spaces
+            cmd=`sed -n ${j}p ${FILE} | sed 's/^.*$\(.*\).*$/\1/' | sed 's/\(.*\)#.*$/\1/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'` 
             if [[ ! -z $cmd ]];
             then
                 commands="${commands} ${cmd};"
@@ -188,7 +189,7 @@ echo ${pip_commands}
 echo ${docker_commands}
 echo ${buildfromsource_commands}
 
-docker run --rm ubuntu:14.04 bash -c "${virtualenv_commands}"
+#docker run --rm ubuntu:14.04 bash -c "${virtualenv_commands}"
 #docker run --rm ubuntu:14.04 bash -c "${pip_commands}"
-#docker run --rm ubuntu:14.04 bash -c "${docker_commands}"
-#docker run --rm ubuntu:14.04 bash -c "${buildfromsource_commands}"
+#eval ${docker_commands}
+docker run --rm ubuntu:14.04 bash -c "${buildfromsource_commands}"
