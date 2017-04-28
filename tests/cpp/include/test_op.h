@@ -20,12 +20,19 @@
 #ifndef MXNET_TEST_TEST_OP_H
 #define MXNET_TEST_TEST_OP_H
 
-#include <atomic>
+#include "test_perf.h"
+#include "test_util.h"
+
 #include <ndarray/ndarray_function.h>
 #include <mshadow/base.h>
 #include <mshadow/stream_gpu-inl.h>
-#include "test_perf.h"
-#include "test_util.h"
+#include <atomic>
+#include <algorithm>
+#include <map>
+#include <list>
+#include <string>
+#include <vector>
+#include <utility>
 
 namespace mxnet {
 namespace test {
@@ -45,10 +52,9 @@ namespace op {
  */
 template <typename DType, typename AccReal>
 class BasicOperatorData {
-
   struct GPUStreamScope {
-    inline GPUStreamScope(OpContext& opContext)
-    : opContext_(opContext) {
+    explicit inline GPUStreamScope(OpContext *opContext)
+    : opContext_(*opContext) {
       CHECK_EQ(opContext_.run_ctx.stream == nullptr, true)
         << "Invalid runtime context stream state";
       opContext_.run_ctx.stream = mshadow::NewStream<gpu>(true, true);
@@ -56,7 +62,7 @@ class BasicOperatorData {
         << "Unable to allocate a GPU stream";
     }
     inline ~GPUStreamScope() {
-      if(opContext_.run_ctx.stream) {
+      if (opContext_.run_ctx.stream) {
         mshadow::DeleteStream<gpu>(static_cast<mshadow::Stream<gpu> *>(opContext_.run_ctx.stream));
         opContext_.run_ctx.stream = nullptr;
       }
@@ -65,7 +71,6 @@ class BasicOperatorData {
   };
 
  public:
-
   /*! \brief Manage test blobs and context */
   BasicOperatorData(const bool isGPU, const TShape& topShape)
     : isGPU_(isGPU)
@@ -79,7 +84,6 @@ class BasicOperatorData {
     opContext_.run_ctx.stream = nullptr;
 
     shape_input_vec_.push_back(topShape);
-
   }
 
   inline mxnet::Context getContext() {
@@ -93,45 +97,44 @@ class BasicOperatorData {
   virtual void resetBackward() {}
 
   /*! \brief Initialize auxiliary and output blobs */
-  virtual bool initForward(OperatorProperty &opProp, std::vector<int> &in_type) {
-    if(!initializeForward_++) {
+  virtual bool initForward(const OperatorProperty &opProp, std::vector<int> *in_type) {
+    if (!initializeForward_++) {
       shape_input_vec_.resize(opProp.ListArguments().size());
-      op_.reset(opProp.CreateOperatorEx(getContext(), &shape_input_vec_, &in_type));
+      op_.reset(opProp.CreateOperatorEx(getContext(), &shape_input_vec_, in_type));
       if (op_) {
-
         // Figure out what sort of blobs we need to allocate
         std::vector<TShape> out_shape, aux_shape;
         opProp.InferShape(&shape_input_vec_, &out_shape, &aux_shape);
         std::vector<int> out_type, aux_type;
-        opProp.InferType(&in_type, &out_type, &aux_type);
+        opProp.InferType(in_type, &out_type, &aux_type);
 
         // Allocate top blobs (input)
         for (size_t x = 0, n = shape_input_vec_.size(); x < n; ++x) {
           int type;
-          if (x < in_type.size()) {
-            type = in_type[x];
+          if (x < in_type->size()) {
+            type = (*in_type)[x];
           } else {
             type = x ? mshadow::DataType<AccReal>::kFlag : mshadow::DataType<DType>::kFlag;
           }
 
-          allocateBlob(c_.blob_input_vec_, shape_input_vec_[x], false, type);
+          allocateBlob(&c_.blob_input_vec_, shape_input_vec_[x], false, type);
         }
 
         // Allocate aux blobs (scratch, hidden, etc.)
         for (size_t x = 0, n = aux_shape.size(); x < n; ++x) {
           CHECK(x < aux_type.size());
-          allocateBlob(c_.blob_aux_states_, aux_shape[x], false, aux_type[x]);
+          allocateBlob(&c_.blob_aux_states_, aux_shape[x], false, aux_type[x]);
         }
 
         // Allocate bottom blobs (output)
         for (size_t x = 0, n = out_shape.size(); x < n; ++x) {
           CHECK(x < out_type.size());
-          allocateBlob(c_.blob_output_vec_, out_shape[x], false, out_type[x]);
+          allocateBlob(&c_.blob_output_vec_, out_shape[x], false, out_type[x]);
         }
 
         // Get the resource of temporal space
         std::vector<TShape> inputShapes;
-        for(size_t x = 0, n = shape_input_vec_.size(); x < n; ++x) {
+        for (size_t x = 0, n = shape_input_vec_.size(); x < n; ++x) {
           inputShapes.push_back(shape_input_vec_[x]);
         }
         allocateResources(opProp.ForwardResource(inputShapes));
@@ -146,17 +149,17 @@ class BasicOperatorData {
   }
 
   /*! \brief Initialize auxiliary and output blobs */
-  virtual bool initBackward(OperatorProperty &opProp, std::vector<int> &in_type) {
+  virtual bool initBackward(const OperatorProperty &opProp, std::vector<int> *in_type) {
     initForward(opProp, in_type);
     if (!initializeBackward_++) {
       for (size_t x = 0, n = static_cast<size_t>(opProp.NumVisibleOutputs()); x < n; ++x) {
         CHECK_LT(x, c_.blob_input_vec_.size());
-        allocateBlob(c_.blob_out_grad_, c_.blob_input_vec_[x].shape_,
+        allocateBlob(&c_.blob_out_grad_, c_.blob_input_vec_[x].shape_,
                      false, c_.blob_input_vec_[x].type_flag_);
       }
 
       for (size_t x = 0, n = c_.blob_input_vec_.size(); x < n; ++x) {
-        allocateBlob(c_.blob_in_grad_,  c_.blob_input_vec_[x].shape_,
+        allocateBlob(&c_.blob_in_grad_,  c_.blob_input_vec_[x].shape_,
                      false, c_.blob_input_vec_[x].type_flag_);
       }
 
@@ -175,11 +178,11 @@ class BasicOperatorData {
   void forward(const size_t count = 1) {
     // Possibly move data to/from CPU and GPU (outside of timing scope)
     MXNET_CUDA_ONLY(std::unique_ptr<GPUOpData> gpuData(isGPU_ ?
-                       new GPUOpData(c_, opContext_) : nullptr));
+                       new GPUOpData(c_, &opContext_) : nullptr));
     perf::TimingItem timeF(&timing_, Forward, "Forward", count);
-    if(!isGPU_) {
+    if (!isGPU_) {
       VTuneResume profile;  // VTune sample only this scope
-      for(size_t x = 0; x < count; ++x) {
+      for (size_t x = 0; x < count; ++x) {
         op()->Forward(opContext_,
                       c_.blob_input_vec_,
                       {kWriteTo, kWriteTo, kWriteTo},
@@ -187,7 +190,7 @@ class BasicOperatorData {
                       c_.blob_aux_states_);
       }
     } else {
-      for(size_t x = 0; x < count; ++x) {
+      for (size_t x = 0; x < count; ++x) {
         MXNET_CUDA_ONLY(op()->Forward(opContext_,
                                       gpuData->blob_input_vec_,
                                       {kWriteTo, kWriteTo, kWriteTo},
@@ -201,11 +204,11 @@ class BasicOperatorData {
   void backward(const size_t count = 1) {
     // Possibly move data to/from CPU and GPU (outside of timing scope)
     MXNET_CUDA_ONLY(std::unique_ptr<GPUOpData> gpuData(isGPU_ ?
-                      new GPUOpData(c_, opContext_) : nullptr));
+                      new GPUOpData(c_, &opContext_) : nullptr));
     perf::TimingItem timeF(&timing_, Backward, "Backward", count);
-    if(!isGPU_) {
-      VTuneResume profile; // VTune sample only this scope
-      for(size_t x = 0; x < count; ++x) {
+    if (!isGPU_) {
+      VTuneResume profile;  // VTune sample only this scope
+      for (size_t x = 0; x < count; ++x) {
         op()->Backward(opContext_,
                        c_.blob_out_grad_,
                        c_.blob_input_vec_,
@@ -244,7 +247,7 @@ class BasicOperatorData {
 
   /*! \brief Convert BlobVectorType enum into a string */
   static inline const char *bvt2String(const BlobVectorType bvt) {
-    switch(bvt) {
+    switch (bvt) {
       CASE_STR(kInput);
       CASE_STR(kOutput);
       CASE_STR(kAux);
@@ -259,7 +262,7 @@ class BasicOperatorData {
 
   /*! \brief Return a particular blob in a test data set */
   inline const std::vector<TBlob>& getBlobVect(const BlobVectorType bvt) const {
-    switch(bvt) {
+    switch (bvt) {
       case kInput:
         return c_.blob_input_vec_;
       case kOutput:
@@ -284,28 +287,29 @@ class BasicOperatorData {
    * the operator that you are testing.
    */
   template<typename Stream>
-  inline void dumpC(Stream& os, const std::string& label) {
+  inline void dumpC(Stream *_os, const std::string& label) {
+    Stream& os = *_os;
     os << "static const std::vector< std::vector< std::vector<float> > > ___"
        << label << "_data_shape_";
     const TShape& shape = shape_input_vec_[0];
-    for(size_t i = 0, n = shape.ndim(); i < n; ++i) {
+    for (size_t i = 0, n = shape.ndim(); i < n; ++i) {
       os << shape[i] << "_";
     }
     os << "__ =" << std::endl << "{" << std::endl;
-    for(size_t x = 0; x < kBlobVectorTypeCount; ++x) {
+    for (size_t x = 0; x < kBlobVectorTypeCount; ++x) {
       os << "  { /* " << bvt2String(BlobVectorType(x)) << " */" << std::endl;
       const std::vector<TBlob>& blobVect = getBlobVect(BlobVectorType(x));
-      for(size_t i = 0, n = blobVect.size(); i < n; ++i) {
+      for (size_t i = 0, n = blobVect.size(); i < n; ++i) {
         os << "    { ";
-        test::dump<DType>(os, blobVect[i]);
+        test::dump<DType>(&os, blobVect[i]);
         os << " }";
-        if(i < n - 1) {
+        if (i < n - 1) {
           os << ",";
         }
         os << std::endl;
       }
       os << "  }";
-      if(x < kBlobVectorTypeCount - 1) {
+      if (x < kBlobVectorTypeCount - 1) {
         os << ",";
       }
       os << std::endl;
@@ -317,7 +321,7 @@ class BasicOperatorData {
                           const size_t start, const size_t end) {
     const size_t blobSize = blob.Size();
     DType *p = blob.dptr<DType>();
-    for(size_t i = 0, n = end - start; i < n; ++i) {
+    for (size_t i = 0, n = end - start; i < n; ++i) {
       CHECK_LT(i, blobSize);
       p[i] = array[i + start];
     }
@@ -325,8 +329,8 @@ class BasicOperatorData {
 
   /*! \brief Runtime load of the C++ data code generated by dumpC() */
   void load(const std::vector<std::vector<std::vector<DType>>>& cData) {
-    for(size_t i = 0, ni = cData.size(); i < ni; ++i) {
-      for(size_t j = 0, nj = cData[i].size(); j < nj; ++j)  {
+    for (size_t i = 0, ni = cData.size(); i < ni; ++i) {
+      for (size_t j = 0, nj = cData[i].size(); j < nj; ++j)  {
         const TBlob& blob = getBlobVect(BlobVectorType(i))[j];
         const size_t sourceDataSize = cData[i][j].size();
         CHECK_EQ(sourceDataSize, blob.Size());
@@ -340,7 +344,7 @@ class BasicOperatorData {
   void load(const std::vector<std::vector<std::vector<DType>>>& cData,
             const BlobVectorType type) {
     CHECK_LT(type, cData.size());
-    for(size_t j = 0, nj = cData[type].size(); j < nj; ++j)  {
+    for (size_t j = 0, nj = cData[type].size(); j < nj; ++j)  {
       const TBlob& blob = getBlobVect(type)[j];
       const size_t sourceDataSize = cData[type][j].size();
       CHECK_EQ(sourceDataSize, blob.Size());
@@ -387,20 +391,21 @@ class BasicOperatorData {
   class GPUOpData : public OpData {
     GPUOpData() = delete;
     GPUOpData(const GPUOpData& o) = delete;
+
    public:
-    inline GPUOpData(OpData& cpuData, OpContext& opContext)
+    inline GPUOpData(const OpData& cpuData, OpContext *opContext)
     : cpuData_(cpuData)
       , allocGPUSTream_(opContext) {
       // Copy CPU->GPU
       std::list<std::unique_ptr<test::StandaloneBlob>> gpuBlobs;
       OpData gpuData;
       CHECK_EQ(cpuData_.all_blob_vects_.size(), this->all_blob_vects_.size());
-      for(size_t bvt = 0, nbvt = cpuData_.all_blob_vects_.size(); bvt < nbvt; ++bvt) {
+      for (size_t bvt = 0, nbvt = cpuData_.all_blob_vects_.size(); bvt < nbvt; ++bvt) {
         std::vector<TBlob>& bv_src = *cpuData_.all_blob_vects_[bvt];
         std::vector<TBlob>& bvt_dest = *this->all_blob_vects_[bvt];
-        for(size_t i = 0, n = bv_src.size(); i < n; ++i) {
+        for (size_t i = 0, n = bv_src.size(); i < n; ++i) {
           const TBlob& srcBlob = bv_src[i];
-          TBlob *destBlob = allocateBlob(gpuBlobs, bvt_dest, srcBlob.shape_,
+          TBlob *destBlob = allocateBlob(&gpuBlobs, &bvt_dest, srcBlob.shape_,
                                          true, srcBlob.type_flag_);
 
           Context cpu_ctx, gpu_ctx;
@@ -415,10 +420,10 @@ class BasicOperatorData {
     }
     inline ~GPUOpData() {
       // Copy GPU->CPU
-      for(size_t bvt = 0, nbvt = this->all_blob_vects_.size(); bvt < nbvt; ++bvt) {
+      for (size_t bvt = 0, nbvt = this->all_blob_vects_.size(); bvt < nbvt; ++bvt) {
         std::vector<TBlob>& bv_src = *this->all_blob_vects_[bvt];
         std::vector<TBlob>& bvt_dest = *cpuData_.all_blob_vects_[bvt];
-        for(size_t i = 0, n = bv_src.size(); i < n; ++i) {
+        for (size_t i = 0, n = bv_src.size(); i < n; ++i) {
           const TBlob& srcBlob = bv_src[i];
           TBlob *destBlob = &bvt_dest[i];
 
@@ -432,9 +437,10 @@ class BasicOperatorData {
         }
       }
     }
+
    private:
     /*! \brief Reference to the src/dest CPU data */
-    OpData&        cpuData_;
+    const OpData& cpuData_;
     /*! \brief Scoped GPU stream */
     GPUStreamScope allocGPUSTream_;
   };
@@ -443,7 +449,6 @@ class BasicOperatorData {
   OpData                    c_;
 
  protected:
-
   /*! \brief Allocate the operator's resource requets */
   void allocateResources(const std::vector<ResourceRequest>& reqs) {
     std::map<Context, Resource> cached_temp;
@@ -470,22 +475,22 @@ class BasicOperatorData {
   }
 
   /*! \brief Locally allocate a managed TBlob and insert into the supplied vector */
-  static TBlob *allocateBlob(std::list<std::unique_ptr<test::StandaloneBlob>>& standalone_blobs,
-                             std::vector<TBlob>& dest,
+  static TBlob *allocateBlob(std::list<std::unique_ptr<test::StandaloneBlob>> *standalone_blobs,
+                             std::vector<TBlob> *dest,
                              const TShape& shape,
                              const bool isGPU,
                              const int dtype) {
     test::StandaloneBlob *blob = new test::StandaloneBlob(shape, isGPU, dtype);
     CHECK_NE(blob, static_cast<TBlob *>(nullptr));
-    standalone_blobs.push_back(std::unique_ptr<test::StandaloneBlob>(blob));
-    dest.push_back(*blob);
+    standalone_blobs->push_back(std::unique_ptr<test::StandaloneBlob>(blob));
+    (*dest).push_back(*blob);
     return blob;
   }
 
   /*! \brief Locally allocate a managed TBlob and insert into the supplied vector */
-  inline TBlob *allocateBlob(std::vector<TBlob>& dest, const TShape& shape,
+  inline TBlob *allocateBlob(std::vector<TBlob> *dest, const TShape& shape,
                              const bool isGPU, const int dtype) {
-    return allocateBlob(standalone_blobs_, dest, shape, isGPU, dtype);
+    return allocateBlob(&standalone_blobs_, dest, shape, isGPU, dtype);
   }
 
   /*! \brief Performance timing categories */
@@ -525,8 +530,7 @@ struct OpInfo {
 
 /*! \brief Pair of op info objects, generally for validating ops against each other */
 template<typename OperatorProp1, typename OperatorProp2, typename DType, typename AccReal>
-struct OpInfoPair
-{
+struct OpInfoPair {
   /*! \brief Operator item 1 */
   test::op::OpInfo<OperatorProp1, DType, AccReal>  info_1_;
   /*! \brief Operator item 2 */
@@ -536,11 +540,9 @@ struct OpInfoPair
 /*! \brief Base validator class for validating test data */
 template<typename DType, typename AccReal>
 class Validator {
-
  public:
-
   static inline DType ERROR_BOUND() {
-    switch(sizeof(DType)) {
+    switch (sizeof(DType)) {
       case sizeof(mshadow::half::half_t):
         return 0.01f;
       default:
@@ -550,7 +552,7 @@ class Validator {
 
   static inline DType errorBound(const TBlob *blob) {
     // Due to eps, for a small number of entries, the error will be a bit higher for one pass
-    if(blob->shape_.ndim() >= 3) {
+    if (blob->shape_.ndim() >= 3) {
       return (blob->Size() / blob->shape_[1]) <= 4 ? (ERROR_BOUND() * 15) : ERROR_BOUND();
     } else {
       // Probably just a vector
@@ -564,8 +566,8 @@ class Validator {
     const DType initialErrorBound = errorBound(blob);
     DType kErrorBound = initialErrorBound;  // This error is based upon the range [0.1x, 0.9x]
     DTypeX avg = static_cast<DTypeX>((fabs(v1) + fabs(v2)) / 2);
-    if(avg >= 1) {
-      long vv = static_cast<unsigned long>(avg + 0.5);
+    if (avg >= 1) {
+      uint64_t vv = static_cast<uint64_t>(avg + 0.5);
       do {
         kErrorBound *= 10;  // shift error to the right one digit
       } while (vv /= 10);
@@ -580,34 +582,26 @@ class Validator {
 
   /*! \brief Compare blob data */
   static bool compare(const TBlob& b1, const TBlob& b2) {
-    if(b1.shape_ == b2.shape_)
-    {
+    if (b1.shape_ == b2.shape_) {
       MSHADOW_REAL_TYPE_SWITCH(
         b1.type_flag_,
         DTypeX,
         {
-          CHECK_EQ(b1.type_flag_, b2.type_flag_) << "Can't compare blobs of different data types";
+          CHECK_EQ(b1.type_flag_, b2.type_flag_)
+            << "Can't compare blobs of different data types";
           const DTypeX *d1 = b1.dptr<DTypeX>();
           const DTypeX *d2 = b2.dptr<DTypeX>();
           CHECK_NE(d1, d2);  // don't compare the same memory
-          for(
-            size_t i = 0, n = b1.Size(), warningCount = 0;
-            i<n;
-            ++i)
-          {
+          for (size_t i = 0, n = b1.Size(), warningCount = 0; i < n; ++i) {
             const DTypeX v1 = *d1++;
             const DTypeX v2 = *d2++;
             const DType kErrorBound = errorBound(&b1, v1, v2);
             EXPECT_NEAR(v1, v2, kErrorBound);
-            if(!
-                 isNear(v1, v2, kErrorBound
-                 ) && !warningCount++)
-            {
+            if (!isNear(v1, v2, kErrorBound) && !warningCount++) {
               LOG(WARNING)
-
                 << "Near test failure: at i = " << i << ", n = "
-                << n << ", kErrorBound = " << kErrorBound << std::endl <<
-                std::flush;
+                << n << ", kErrorBound = " << kErrorBound << std::endl
+                << std::flush;
             }
           }
           return true;
@@ -622,11 +616,11 @@ class Validator {
     const DTypeX *d1 = b1.dptr<DType>();
     CHECK_NE(d1, valuePtr);  // don't compare the same memory
     const DType kErrorBound = errorBound(&b1);
-    for(size_t i = 0, n = b1.Size(), warningCount = 0; i < n; ++i) {
+    for (size_t i = 0, n = b1.Size(), warningCount = 0; i < n; ++i) {
       const DTypeX v1 = *d1++;
       const DTypeX v2 = *valuePtr++;
       EXPECT_NEAR(v1, v2, kErrorBound);
-      if(!isNear(v1, v2, kErrorBound) && !warningCount++) {
+      if (!isNear(v1, v2, kErrorBound) && !warningCount++) {
         LOG(WARNING) << "Near test failure: " << i << ", " << n << std::endl << std::flush;
       }
     }
@@ -644,24 +638,23 @@ class Validator {
 
     // If this is an invalid index, at least make sure the two blob vects
     // are similarly too small for the index
-    if(bv1.size() <= idx) {
+    if (bv1.size() <= idx) {
       CHECK(bv1.size() == bv2.size());
       return true;
     }
     const TBlob& b1 = bv1[idx];
     const TBlob& b2 = bv2[idx];
-    if(print && test::debugOutput) {
+    if (print && test::debugOutput) {
       MSHADOW_REAL_TYPE_SWITCH(
         b1.type_flag_,
         DTypeX,
         {
-          test::print_blob<DTypeX>(std::cout << "Blob 1:", b1, true, true);
-          test::print_blob<DTypeX>(std::cout << "Blob 2:", b2, true, true);
+          test::print_blob<DTypeX>(&(std::cout << "Blob 1:"), b1, true, true);
+          test::print_blob<DTypeX>(&(std::cout << "Blob 2:"), b2, true, true);
         });
     }
     return compare(b1, b2);
   }
-
 };
 
 /*! \brief Operator Prop argument key/value pairs */
@@ -676,7 +669,7 @@ static test::op::OpInfo<OperatorProp, DType, AccReal> createOpAndInfoF(const boo
   info.data_ = std::make_shared<OperatorData>(isGPU, inputShape);
   info.prop_ = std::make_shared<OperatorProp>();
   // Note, assuming floating point
-  switch(sizeof(DType)) {
+  switch (sizeof(DType)) {
     case sizeof(float):
       info.in_type_ = {mshadow::kFloat32};
       break;
@@ -690,9 +683,9 @@ static test::op::OpInfo<OperatorProp, DType, AccReal> createOpAndInfoF(const boo
       break;
   }
   info.prop_->Init(kwargs);
-  info.data_->initForward(*info.prop_, info.in_type_);
+  info.data_->initForward(*info.prop_, &info.in_type_);
   return info;
-};
+}
 
 }  // namespace op
 }  // namespace test
