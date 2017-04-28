@@ -36,34 +36,52 @@ along which to split the array.
 
 Example::
 
-   x = [[1, 2],
-        [3, 4],
-        [5, 6],
-        [7, 8]]
-   x.shape = (4, 2)
-   y = split(x, axis=0, num_outputs=4) // a list of 4 arrays
-   y = [[ 1.  2.]],
-       [[ 3.  4.]],
-       [[ 5.  6.]],
-       [[ 7.  8.]]
+   x  = [[[ 1.]
+          [ 2.]]
+         [[ 3.]
+          [ 4.]]
+         [[ 5.]
+          [ 6.]]]
+   x.shape = (3, 2, 1)
 
-   y[0].shape = (1, 2)
+   y = split(x, axis=1, num_outputs=2) // a list of 2 arrays with shape (3, 1, 1)
+   y = [[[ 1.]]
+        [[ 3.]]
+        [[ 5.]]]
 
-   z = split(x, axis=0, num_outputs=2) // a list of 2 arrays
-   z = [[ 1.  2.]
-        [ 3.  4.]],
-       [[ 5.  6.]
-        [ 7.  8.]]
+       [[[ 2.]]
+        [[ 4.]]
+        [[ 6.]]]
 
-   z[0].shape = (2, 2)
+   y[0].shape = (3, 1, 1)
 
-`squeeze_axis=1` removes the dimension of length 1 along the `axis` 
-of split from the output shape.
-This is true when ``input.shape[axis] == num_outputs``.
+   z = split(x, axis=0, num_outputs=3) // a list of 3 arrays with shape (1, 2, 1)
+   z = [[[ 1.]
+         [ 2.]]]
 
-   y = split(x, axis=0, num_outputs=4, squeeze_axis=1)
-   y[0] = [ 1.,  2.]
-   y[0].shape = (2 ,) // vector
+       [[[ 3.]
+         [ 4.]]]
+
+       [[[ 5.]
+         [ 6.]]]
+
+   z[0].shape = (1, 2, 1)
+
+`squeeze_axis=1` removes the axis with length 1 from the shapes of the output arrays.
+**Note** that setting `squeeze_axis` to ``1`` removes axis with length 1 only
+along the `axis` which it is split.
+Also `squeeze_axis` can be set to true only if ``input.shape[axis] == num_outputs``.
+
+   z = split(x, axis=0, num_outputs=3, squeeze_axis=1) // a list of 3 arrays with shape (2, 1)
+   z = [[ 1.]
+        [ 2.]]
+
+       [[ 3.]
+        [ 4.]]
+
+       [[ 5.]
+        [ 6.]]
+   z[0].shape = (2 ,1 )
 
 )code" ADD_FILELINE)
 .set_return_type("NDArray-or-Symbol[]")
