@@ -37,7 +37,7 @@ struct ScalarConvert {
 static unsigned getNumThreads(int nElem) {
   unsigned threadSizes[5] = {32, 64, 128, 256, MAX_BLOCK_SIZE};
   for (int i = 0; i != 5; ++i) {
-    if (nElem <= threadSizes[i]) {
+    if (static_cast<unsigned>(nElem) <= threadSizes[i]) {
       return threadSizes[i];
     }
   }
