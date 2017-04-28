@@ -202,40 +202,53 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal>
                       const test::op::OpInfo<PropType2, DType, AccReal>& info_2) {
     // Input
     EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                        test::op::BasicOperatorData<DType, AccReal>::kInput, op::batchnorm::kData));
+                        test::op::BasicOperatorData<DType, AccReal>::kInput,
+                        op::batchnorm::kData));
     EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                        test::op::BasicOperatorData<DType, AccReal>::kInput, op::batchnorm::kGamma));
+                        test::op::BasicOperatorData<DType, AccReal>::kInput,
+                        op::batchnorm::kGamma));
     EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                        test::op::BasicOperatorData<DType, AccReal>::kInput, op::batchnorm::kBeta));
+                        test::op::BasicOperatorData<DType, AccReal>::kInput,
+                        op::batchnorm::kBeta));
     // Output
     EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                        test::op::BasicOperatorData<DType, AccReal>::kOutput, op::batchnorm::kOut));
-    CHECK_EQ(info_2.prop_->getParam().use_global_stats, info_1.prop_->getParam().use_global_stats);
+                        test::op::BasicOperatorData<DType, AccReal>::kOutput,
+                        op::batchnorm::kOut));
+    CHECK_EQ(info_2.prop_->getParam().use_global_stats,
+             info_1.prop_->getParam().use_global_stats);
 
 #if MXNET_USE_CUDNN != 1 /* CUDNN takes a slightly different approach here on first pass */
     // Aux
     EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                        test::op::BasicOperatorData<DType>::kAux, op::batchnorm::kMovingMean));
+                        test::op::BasicOperatorData<DType, AccReal>::kAux,
+                        op::batchnorm::kMovingMean));
     EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                        test::op::BasicOperatorData<DType>::kAux, op::batchnorm::kMovingVar));
+                        test::op::BasicOperatorData<DType, AccReal>::kAux,
+                        op::batchnorm::kMovingVar));
 #endif
     if(!info_2.prop_->getParam().use_global_stats) {
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                          test::op::BasicOperatorData<DType, AccReal>::kOutput, op::batchnorm::kMean));
+                          test::op::BasicOperatorData<DType, AccReal>::kOutput,
+                          op::batchnorm::kMean));
 #if !MXNET_USE_CUDNN  /* CUDNN operator stores invstd instead of variance */
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                          test::op::BasicOperatorData<DType>::kOutput, op::batchnorm::kVar));
+                          test::op::BasicOperatorData<DType, AccReal>::kOutput,
+                          op::batchnorm::kVar));
 #endif
       // InGrad
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                          test::op::BasicOperatorData<DType, AccReal>::kInGrad, op::batchnorm::kData));
+                          test::op::BasicOperatorData<DType, AccReal>::kInGrad,
+                          op::batchnorm::kData));
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                          test::op::BasicOperatorData<DType, AccReal>::kInGrad, op::batchnorm::kGamma));
+                          test::op::BasicOperatorData<DType, AccReal>::kInGrad,
+                          op::batchnorm::kGamma));
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                          test::op::BasicOperatorData<DType, AccReal>::kInGrad, op::batchnorm::kBeta));
+                          test::op::BasicOperatorData<DType, AccReal>::kInGrad,
+                          op::batchnorm::kBeta));
       // OutGrad
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                          test::op::BasicOperatorData<DType, AccReal>::kOutGrad, op::batchnorm::kData));
+                          test::op::BasicOperatorData<DType, AccReal>::kOutGrad,
+                          op::batchnorm::kData));
     }
   }
 
