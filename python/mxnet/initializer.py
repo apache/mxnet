@@ -466,11 +466,17 @@ class Xavier(Initializer):
 
     By default `rnd_type` is ``'uniform'`` and `factor_type` is ``'avg'``,
     the initializer fills the weights with random numbers in the range
-    of :math:`[-c, c]`, where :math:`c = \\sqrt{\\frac{6.}{\\text{in} + \\text{out}}}`.
+    of :math:`[-c, c]`, where :math:`c = \\sqrt{\\frac{3.}{0.5 * (n_{in} + n_{out})}}`.
+    :math:`n_in` is the number of neurons feeding into weights, and :math:`n_out` is
+    the number of neurons the result is fed to.
+
+    If `rnd_type` is ``'uniform'`` and `factor_type` is ``'in'``,
+    the :math:`c = \\sqrt{\\frac{3.}{n_{in}}}`.
+    Similarly when `factor_type` is ``'out'``, the :math:`c = \\sqrt{\\frac{3.}{n_{out}}}`.
 
     If `rnd_type` is ``'gaussian'`` and `factor_type` is ``'avg'``,
     the initializer fills the weights with numbers from normal distribution with
-    a standard deviation of :math:`\\sqrt{\\frac{6.}{\\text{in} + \\text{out}}}`.
+    a standard deviation of :math:`\\sqrt{\\frac{3.}{0.5 * (n_{in} + n_{out})}}`.
 
     Parameters
     ----------
@@ -521,6 +527,9 @@ class MSRAPrelu(Xavier):
     This initializer implements *Delving Deep into Rectifiers: Surpassing
     Human-Level Performance on ImageNet Classification*, available at
     https://arxiv.org/abs/1502.01852.
+
+    This initializer is proposed for initialization related to ReLu activation,
+    it maked some changes on top of Xavier method.
 
     Parameters
     ----------
