@@ -437,7 +437,7 @@ def np(numpy_feval, name=None, allow_extra_outputs=False):
 # pylint: enable=invalid-name
 
 def create(metric, **kwargs):
-    """Creates an evaluation metric from metric name(s) or instance(s) of EvalMetric
+    """Creates evaluation metric from metric names or instances of EvalMetric
     or a custom metric function.
 
     Parameters
