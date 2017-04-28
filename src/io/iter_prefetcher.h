@@ -31,6 +31,7 @@
 #include <dmlc/threadediter.h>
 #include <dmlc/optional.h>
 #include <mshadow/tensor.h>
+#include <mshadow/tensor_blob.h>
 #include <climits>
 #include <utility>
 #include <string>

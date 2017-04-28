@@ -99,5 +99,6 @@ If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 .add_argument("weight", "NDArray-or-Symbol", "Weight matrix.")
 .add_argument("bias", "NDArray-or-Symbol", "Bias parameter.")
 .add_arguments(FullyConnectedParam::__FIELDS__());
+
 }  // namespace op
 }  // namespace mxnet
