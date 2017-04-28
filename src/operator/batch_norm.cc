@@ -368,14 +368,14 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *stream,
 
     // sumGradOut over all gradOutput in feature plane
     AccReal sumGradOut = 0;
-    ForEachFast(gradOut, channel,
+    ForEachFast(gradOut, static_cast<size_t>(channel),
                 [&sumGradOut](const DType *gradOut_data) {
                   sumGradOut += *gradOut_data;
                 });
 
     // dot product of the Q(X) and gradOuput
     AccReal dotp = 0;
-    ForEachFast(inputData, gradOut, channel,
+    ForEachFast(inputData, gradOut, static_cast<size_t>(channel),
                 [&dotp, mean](const DType *thisInputData, const DType *gradOut_data) {
                   dotp += (*thisInputData - mean) * (*gradOut_data);
                 });
@@ -389,14 +389,14 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *stream,
 
         // projection of gradOutput on to output scaled by std
         const AccReal k = dotp * invstd * invstd / itemCount;
-        ForEachFast(inputData, gradIn, channel,
-                    [&mean, &k](const DType *in_data, DType *gradIn_data) {
-                      *gradIn_data = (*in_data - mean) * k;
+        ForEachFast(inputData, gradIn, static_cast<size_t>(channel),
+                    [&mean, &k](const DType *inputDataPtr, DType *gradIn_data) {
+                      *gradIn_data = (*inputDataPtr - mean) * k;
                     });
 
         const AccReal iw = invstd * w;
         const AccReal gradMean = sumGradOut / itemCount;
-        ForEachFast(gradOut, gradIn, channel,
+        ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
                     [iw, gradMean](const DType *gradOut_data, DType *gradIn_data) {
                       *gradIn_data = (*gradOut_data - gradMean - *gradIn_data) * iw;
                     });
@@ -406,7 +406,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *stream,
         // Y = Q(X) / running_std    ; i.e. BN output before weight and bias
         // dL/dX = w / running_std
         const AccReal iw = invstd * w;
-        ForEachFast(gradOut, gradIn, channel,
+        ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
                     [iw](const DType *gradOut_data, DType *gradIn_data) {
                       *gradIn_data = *gradOut_data * iw;
                     });

@@ -313,7 +313,7 @@ def test_batchnorm_versions():
                                           use_global_stats=use_global_stats,
                                           name='batchnorm'))
 
-    # BatchNormV1 gpu
+    # BatchNormV1 gpu (organic)
     if 'batchnorm_v1_gpu' in batchnorm_op_list:
       ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
       sym_list.append(mx.sym.BatchNorm_v1(fix_gamma=fix_gamma,
@@ -327,14 +327,14 @@ def test_batchnorm_versions():
                                        use_global_stats=use_global_stats,
                                        name='batchnorm'))
 
-    # BatchNorm gpu
+    # BatchNorm gpu (organic)
     if 'batchnorm_gpu' in batchnorm_op_list:
       ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
       sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
                                        use_global_stats=use_global_stats,
                                        name='batchnorm', cudnn_off=True))
 
-    # BatchNorm gpu cudnn
+    # BatchNorm gpu cudnn (if cudnn is enabled)
     if 'batchnorm_cudnn' in batchnorm_op_list:
       ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
       sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
@@ -1088,33 +1088,33 @@ def test_unfuse():
         check_rnn_consistency(stack, fused)
 
 if __name__ == '__main__':
-    # test_countsketch()
-    # test_ifft()
-    # test_fft()
-    # test_bidirectional()
-    # test_lstm()
-    # test_lstm_forget_bias()
-    # test_gru()
-    # test_rnn()
-    # test_unfuse()
-    # test_convolution_options()
-    # test_convolution_versions()
-    # test_convolution_with_type()
-    # test_pooling_versions()
+    test_countsketch()
+    test_ifft()
+    test_fft()
+    test_bidirectional()
+    test_lstm()
+    test_lstm_forget_bias()
+    test_gru()
+    test_rnn()
+    test_unfuse()
+    test_convolution_options()
+    test_convolution_versions()
+    test_convolution_with_type()
+    test_pooling_versions()
     test_batchnorm_with_type()
     test_batchnorm_versions()
-    # test_deconvolution_with_type()
-    # test_deconvolution_options()
-    # test_upsampling_with_type()
-    # test_concat_with_type()
-    # test_elementwisesum_with_type()
-    # test_reshape_with_type()
-    # test_blockgrad_with_type()
-    # test_swapaxis_with_type()
-    # test_fullyconnected_with_type()
-    # test_activation_with_type()
-    # test_embedding_with_type()
-    # test_svmoutput_with_type()
-    # test_take_with_type()
-    # test_bilinear_sampler_with_type()
-    # test_grid_generator_with_type()
+    test_deconvolution_with_type()
+    test_deconvolution_options()
+    test_upsampling_with_type()
+    test_concat_with_type()
+    test_elementwisesum_with_type()
+    test_reshape_with_type()
+    test_blockgrad_with_type()
+    test_swapaxis_with_type()
+    test_fullyconnected_with_type()
+    test_activation_with_type()
+    test_embedding_with_type()
+    test_svmoutput_with_type()
+    test_take_with_type()
+    test_bilinear_sampler_with_type()
+    test_grid_generator_with_type()

@@ -22,6 +22,7 @@
 
 #include <atomic>
 #include <ndarray/ndarray_function.h>
+#include <mshadow/base.h>
 #include <mshadow/stream_gpu-inl.h>
 #include "test_perf.h"
 #include "test_util.h"
@@ -101,20 +102,31 @@ class BasicOperatorData {
         // Figure out what sort of blobs we need to allocate
         std::vector<TShape> out_shape, aux_shape;
         opProp.InferShape(&shape_input_vec_, &out_shape, &aux_shape);
+        std::vector<int> out_type, aux_type;
+        opProp.InferType(&in_type, &out_type, &aux_type);
 
         // Allocate top blobs (input)
         for (size_t x = 0, n = shape_input_vec_.size(); x < n; ++x) {
-          allocateBlob(c_.blob_input_vec_, shape_input_vec_[x], false);
+          int type;
+          if (x < in_type.size()) {
+            type = in_type[x];
+          } else {
+            type = x ? mshadow::DataType<AccReal>::kFlag : mshadow::DataType<DType>::kFlag;
+          }
+
+          allocateBlob(c_.blob_input_vec_, shape_input_vec_[x], false, type);
         }
 
         // Allocate aux blobs (scratch, hidden, etc.)
         for (size_t x = 0, n = aux_shape.size(); x < n; ++x) {
-          allocateBlob(c_.blob_aux_states_, aux_shape[x], false);
+          CHECK(x < aux_type.size());
+          allocateBlob(c_.blob_aux_states_, aux_shape[x], false, aux_type[x]);
         }
 
         // Allocate bottom blobs (output)
         for (size_t x = 0, n = out_shape.size(); x < n; ++x) {
-          allocateBlob(c_.blob_output_vec_, out_shape[x], false);
+          CHECK(x < out_type.size());
+          allocateBlob(c_.blob_output_vec_, out_shape[x], false, out_type[x]);
         }
 
         // Get the resource of temporal space
@@ -137,13 +149,15 @@ class BasicOperatorData {
   virtual bool initBackward(OperatorProperty &opProp, std::vector<int> &in_type) {
     initForward(opProp, in_type);
     if (!initializeBackward_++) {
-
-      for (size_t x = 0, n = opProp.NumVisibleOutputs(); x < n; ++x) {
-        allocateBlob(c_.blob_out_grad_, c_.blob_input_vec_[x].shape_, false);
+      for (size_t x = 0, n = static_cast<size_t>(opProp.NumVisibleOutputs()); x < n; ++x) {
+        CHECK_LT(x, c_.blob_input_vec_.size());
+        allocateBlob(c_.blob_out_grad_, c_.blob_input_vec_[x].shape_,
+                     false, c_.blob_input_vec_[x].type_flag_);
       }
 
-      for (size_t x = 0, n = c_.blob_output_vec_.size(); x < n; ++x) {
-        allocateBlob(c_.blob_in_grad_,  c_.blob_output_vec_[x].shape_, false);
+      for (size_t x = 0, n = c_.blob_input_vec_.size(); x < n; ++x) {
+        allocateBlob(c_.blob_in_grad_,  c_.blob_input_vec_[x].shape_,
+                     false, c_.blob_input_vec_[x].type_flag_);
       }
 
       // Get the resource of temporal space
@@ -378,7 +392,7 @@ class BasicOperatorData {
     : cpuData_(cpuData)
       , allocGPUSTream_(opContext) {
       // Copy CPU->GPU
-      std::list<std::unique_ptr<test::StandaloneBlob<DType>>> gpuBlobs;
+      std::list<std::unique_ptr<test::StandaloneBlob>> gpuBlobs;
       OpData gpuData;
       CHECK_EQ(cpuData_.all_blob_vects_.size(), this->all_blob_vects_.size());
       for(size_t bvt = 0, nbvt = cpuData_.all_blob_vects_.size(); bvt < nbvt; ++bvt) {
@@ -386,7 +400,8 @@ class BasicOperatorData {
         std::vector<TBlob>& bvt_dest = *this->all_blob_vects_[bvt];
         for(size_t i = 0, n = bv_src.size(); i < n; ++i) {
           const TBlob& srcBlob = bv_src[i];
-          TBlob *destBlob = allocateBlob(gpuBlobs, bvt_dest, srcBlob.shape_, true);
+          TBlob *destBlob = allocateBlob(gpuBlobs, bvt_dest, srcBlob.shape_,
+                                         true, srcBlob.type_flag_);
 
           Context cpu_ctx, gpu_ctx;
           cpu_ctx.dev_type = Context::kCPU;
@@ -455,20 +470,22 @@ class BasicOperatorData {
   }
 
   /*! \brief Locally allocate a managed TBlob and insert into the supplied vector */
-  static TBlob *allocateBlob(std::list<std::unique_ptr<test::StandaloneBlob<DType>>>& standalone_blobs,
+  static TBlob *allocateBlob(std::list<std::unique_ptr<test::StandaloneBlob>>& standalone_blobs,
                              std::vector<TBlob>& dest,
                              const TShape& shape,
-                             const bool isGPU) {
-    test::StandaloneBlob<DType> *blob = new test::StandaloneBlob<DType>(shape, isGPU);
+                             const bool isGPU,
+                             const int dtype) {
+    test::StandaloneBlob *blob = new test::StandaloneBlob(shape, isGPU, dtype);
     CHECK_NE(blob, static_cast<TBlob *>(nullptr));
-    standalone_blobs.push_back(std::unique_ptr<test::StandaloneBlob<DType>>(blob));
+    standalone_blobs.push_back(std::unique_ptr<test::StandaloneBlob>(blob));
     dest.push_back(*blob);
     return blob;
   }
 
   /*! \brief Locally allocate a managed TBlob and insert into the supplied vector */
-  inline TBlob *allocateBlob(std::vector<TBlob>& dest, const TShape& shape, const bool isGPU) {
-    return allocateBlob(standalone_blobs_, dest, shape, isGPU);
+  inline TBlob *allocateBlob(std::vector<TBlob>& dest, const TShape& shape,
+                             const bool isGPU, const int dtype) {
+    return allocateBlob(standalone_blobs_, dest, shape, isGPU, dtype);
   }
 
   /*! \brief Performance timing categories */
@@ -488,7 +505,7 @@ class BasicOperatorData {
   /*! \brief Assure that the callback is initialized only once */
   std::atomic<int>            initializeCallback_;
   /*! \brief scoped lifecycle management of allocated blobs */
-  std::list<std::unique_ptr<test::StandaloneBlob<DType>>> standalone_blobs_;
+  std::list<std::unique_ptr<test::StandaloneBlob>> standalone_blobs_;
 
  public:
   /*! Timing instrumentation */
@@ -542,10 +559,11 @@ class Validator {
   }
 
   /*! \brief Adjusted error based upon significant digits */
-  static inline DType errorBound(const TBlob *blob, const DType v1, const DType v2) {
+  template<typename DTypeX>
+  static inline DType errorBound(const TBlob *blob, const DTypeX v1, const DTypeX v2) {
     const DType initialErrorBound = errorBound(blob);
     DType kErrorBound = initialErrorBound;  // This error is based upon the range [0.1x, 0.9x]
-    DType avg = (fabs(v1) + fabs(v2)) / 2;
+    DTypeX avg = static_cast<DTypeX>((fabs(v1) + fabs(v2)) / 2);
     if(avg >= 1) {
       long vv = static_cast<unsigned long>(avg + 0.5);
       do {
@@ -555,39 +573,58 @@ class Validator {
     return kErrorBound;
   }
 
-  static bool isNear(const DType v1, const DType v2, const DType error) {
+  template<typename DTypeX>
+  static bool isNear(const DTypeX v1, const DTypeX v2, const DType error) {
     return error > fabs(v2 - v1);
   }
 
   /*! \brief Compare blob data */
   static bool compare(const TBlob& b1, const TBlob& b2) {
-    if(b1.shape_ == b2.shape_) {
-      const DType *d1 = b1.dptr<DType>();
-      const DType *d2 = b2.dptr<DType>();
-      CHECK_NE(d1, d2);  // don't compare the same memory
-      for(size_t i = 0, n = b1.Size(), warningCount = 0; i < n; ++i) {
-        const DType v1 = *d1++;
-        const DType v2 = *d2++;
-        const DType kErrorBound = errorBound(&b1, v1, v2);
-        EXPECT_NEAR(v1, v2, kErrorBound);
-        if(!isNear(v1, v2, kErrorBound) && !warningCount++) {
-          LOG(WARNING) << "Near test failure: at i = " << i << ", n = "
-                       << n << ", kErrorBound = " << kErrorBound << std::endl << std::flush;
-        }
-      }
-      return true;
+    if(b1.shape_ == b2.shape_)
+    {
+      MSHADOW_REAL_TYPE_SWITCH(
+        b1.type_flag_,
+        DTypeX,
+        {
+          CHECK_EQ(b1.type_flag_, b2.type_flag_) << "Can't compare blobs of different data types";
+          const DTypeX *d1 = b1.dptr<DTypeX>();
+          const DTypeX *d2 = b2.dptr<DTypeX>();
+          CHECK_NE(d1, d2);  // don't compare the same memory
+          for(
+            size_t i = 0, n = b1.Size(), warningCount = 0;
+            i<n;
+            ++i)
+          {
+            const DTypeX v1 = *d1++;
+            const DTypeX v2 = *d2++;
+            const DType kErrorBound = errorBound(&b1, v1, v2);
+            EXPECT_NEAR(v1, v2, kErrorBound);
+            if(!
+                 isNear(v1, v2, kErrorBound
+                 ) && !warningCount++)
+            {
+              LOG(WARNING)
+
+                << "Near test failure: at i = " << i << ", n = "
+                << n << ", kErrorBound = " << kErrorBound << std::endl <<
+                std::flush;
+            }
+          }
+          return true;
+        });
     }
     return false;
   }
 
   /*! \brief Compare blob data to a pointer to data */
-  static bool compare(const TBlob& b1, const DType *valuePtr) {
-    const DType *d1 = b1.dptr<DType>();
+  template<typename DTypeX>
+  static bool compare(const TBlob& b1, const DTypeX *valuePtr) {
+    const DTypeX *d1 = b1.dptr<DType>();
     CHECK_NE(d1, valuePtr);  // don't compare the same memory
     const DType kErrorBound = errorBound(&b1);
     for(size_t i = 0, n = b1.Size(), warningCount = 0; i < n; ++i) {
-      const DType v1 = *d1++;
-      const DType v2 = *valuePtr++;
+      const DTypeX v1 = *d1++;
+      const DTypeX v2 = *valuePtr++;
       EXPECT_NEAR(v1, v2, kErrorBound);
       if(!isNear(v1, v2, kErrorBound) && !warningCount++) {
         LOG(WARNING) << "Near test failure: " << i << ", " << n << std::endl << std::flush;
@@ -614,8 +651,13 @@ class Validator {
     const TBlob& b1 = bv1[idx];
     const TBlob& b2 = bv2[idx];
     if(print && test::debugOutput) {
-      test::print_blob<DType>(std::cout << "Blob 1:", b1, true, true);
-      test::print_blob<DType>(std::cout << "Blob 2:", b2, true, true);
+      MSHADOW_REAL_TYPE_SWITCH(
+        b1.type_flag_,
+        DTypeX,
+        {
+          test::print_blob<DTypeX>(std::cout << "Blob 1:", b1, true, true);
+          test::print_blob<DTypeX>(std::cout << "Blob 2:", b2, true, true);
+        });
     }
     return compare(b1, b2);
   }
