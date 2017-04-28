@@ -950,6 +950,14 @@ TEST(BATCH_NORM, Test2DBackwardMixedV1Complex_gpu_cpu) {
     false, true, inputShape, blank_kwargs, false);
 }
 
+TEST(BATCH_NORM, Test2DBackwardMixed_gpu_cpu_half) {
+  const TShape inputShape({1, 1, 2, 1});
+  testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, mshadow::half::half_t>(
+    false, true, inputShape, blank_kwargs_nocudnn, false);
+  testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, mshadow::half::half_t>(
+    false, true, inputShape, blank_kwargs, false);
+}
+
 TEST(BATCH_NORM, Test2DBackwardMixed_gpu_cpu) {
   typedef float DType;
   const TShape inputShape({1, 1, 2, 1});
