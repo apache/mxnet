@@ -112,16 +112,14 @@ void BinaryBackwardUseNone_(const nnvm::NodeAttrs& attrs,
   } else if (req[0] != kNullOp) {
     MXNET_ASSIGN_REQ_SWITCH(req[0], Req,
       {Kernel<BinaryOpBackwardUseNone<LOP, Req>, xpu>::Launch(s, size, lgrad_dptr,
-        ograd_dptr);}
-      );
+        ograd_dptr);});
   }
   if (std::is_same<ROP, mshadow_op::identity>::value && req[1] == kWriteInplace) {
     CHECK_EQ(ograd_dptr, rgrad_dptr);
   } else if (req[1] != kNullOp) {
     MXNET_ASSIGN_REQ_SWITCH(req[1], Req,
       {Kernel<BinaryOpBackwardUseNone<ROP, Req>, xpu>::Launch(s, size, rgrad_dptr,
-        ograd_dptr);}
-      );
+        ograd_dptr);});
   }
 }
 
@@ -174,12 +172,10 @@ void BinaryBackwardUseIn_(const nnvm::NodeAttrs& attrs,
   DType* rhs_dptr = inputs[2].dptr<DType>();
   MXNET_ASSIGN_REQ_SWITCH(req[0], Req,
     {Kernel<BinaryOpBackwardUseIn<LOP, Req>, xpu>::Launch(s, size, lgrad_dptr, ograd_dptr,
-      lhs_dptr, rhs_dptr);}
-    );
+      lhs_dptr, rhs_dptr);});
   MXNET_ASSIGN_REQ_SWITCH(req[1], Req,
     {Kernel<BinaryOpBackwardUseIn<ROP, Req>, xpu>::Launch(s, size, rgrad_dptr, ograd_dptr,
-      lhs_dptr, rhs_dptr);}
-    );
+      lhs_dptr, rhs_dptr);});
 }
 
 template<typename xpu, typename LOP, typename ROP>
