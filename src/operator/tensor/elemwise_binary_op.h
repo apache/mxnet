@@ -86,23 +86,6 @@ void BinaryLaunch(const nnvm::NodeAttrs& attrs,
   });
 }
 
-// template<typename xpu, typename OP>
-// void BinaryCompute(const nnvm::NodeAttrs& attrs,
-//                    const OpContext& ctx,
-//                    const std::vector<TBlob>& inputs,
-//                    const std::vector<OpReqType>& req,
-//                    const std::vector<TBlob>& outputs) {
-//   using namespace mshadow;
-//   using namespace mshadow::expr;
-//   Stream<xpu> *s = ctx.get_stream<xpu>();
-//   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-//     Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-//     Tensor<xpu, 1, DType> lhs = inputs[0].FlatTo1D<xpu, DType>(s);
-//     Tensor<xpu, 1, DType> rhs = inputs[1].FlatTo1D<xpu, DType>(s);
-//     ASSIGN_DISPATCH(out, req[0], F<OP>(lhs, rhs));
-//   });
-// }
-
 template<typename OP, int Req >
 struct BinaryOpBackwardUseNone {
   template<typename DType>
@@ -164,47 +147,12 @@ void BinaryBackwardUseNoneWithHalf2(const nnvm::NodeAttrs& attrs,
   });
 }
 
-// template<typename xpu, typename LOP, typename ROP>
-// void BinaryBackwardUseNone(const nnvm::NodeAttrs& attrs,
-//                            const OpContext& ctx,
-//                            const std::vector<TBlob>& inputs,
-//                            const std::vector<OpReqType>& req,
-//                            const std::vector<TBlob>& outputs) {
-//   using namespace mshadow;
-//   using namespace mshadow::expr;
-//   Stream<xpu> *s = ctx.get_stream<xpu>();
-//   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-//     Tensor<xpu, 1, DType> lgrad = outputs[0].FlatTo1D<xpu, DType>(s);
-//     Tensor<xpu, 1, DType> rgrad = outputs[1].FlatTo1D<xpu, DType>(s);
-//     Tensor<xpu, 1, DType> ograd = inputs[0].FlatTo1D<xpu, DType>(s);
-//     if (std::is_same<LOP, mshadow_op::identity>::value) {
-//       if (req[0] == kWriteInplace) {
-//         CHECK_EQ(ograd.dptr_, lgrad.dptr_);
-//       } else {
-//         ASSIGN_DISPATCH(lgrad, req[0], F<LOP>(ograd));
-//       }
-//     } else {
-//       ASSIGN_DISPATCH(lgrad, req[0], F<LOP>(ograd));
-//     }
-//     if (std::is_same<ROP, mshadow_op::identity>::value) {
-//       if (req[1] == kWriteInplace) {
-//         CHECK_EQ(ograd.dptr_, rgrad.dptr_);
-//       } else {
-//         ASSIGN_DISPATCH(rgrad, req[1], F<ROP>(ograd));
-//       }
-//     } else {
-//       ASSIGN_DISPATCH(rgrad, req[1], F<ROP>(ograd));
-//     }
-//   });
-// }
-
-template<typename LOP, typename ROP, int Req0, int Req1>
+template<typename OP, int Req>
 struct BinaryOpBackwardUseIn {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* lgrad, DType* rgrad,
+  MSHADOW_XINLINE static void Map(int i, DType* igrad,
     const DType* ograd, const DType* lhs, const DType* rhs) {
-    KERNEL_ASSIGN(lgrad[i], Req0, ograd[i]*LOP::Map(lhs[i], rhs[i]));
-    KERNEL_ASSIGN(rgrad[i], Req1, ograd[i]*ROP::Map(lhs[i], rhs[i]));
+    KERNEL_ASSIGN(igrad[i], Req, ograd[i]*OP::Map(lhs[i], rhs[i]));
   }
 };
 
@@ -224,11 +172,13 @@ void BinaryBackwardUseIn_(const nnvm::NodeAttrs& attrs,
   DType* ograd_dptr = inputs[0].dptr<DType>();
   DType* lhs_dptr = inputs[1].dptr<DType>();
   DType* rhs_dptr = inputs[2].dptr<DType>();
-  MXNET_ASSIGN_REQ_SWITCH(req[0], Req0,
-    {MXNET_ASSIGN_REQ_SWITCH(req[1], Req1,
-      {Kernel<BinaryOpBackwardUseIn<LOP, ROP, Req0, Req1>, xpu>::Launch(s, size, lgrad_dptr,
-        rgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);}
-      );}
+  MXNET_ASSIGN_REQ_SWITCH(req[0], Req,
+    {Kernel<BinaryOpBackwardUseIn<LOP, Req>, xpu>::Launch(s, size, lgrad_dptr, ograd_dptr,
+      lhs_dptr, rhs_dptr);}
+    );
+  MXNET_ASSIGN_REQ_SWITCH(req[1], Req,
+    {Kernel<BinaryOpBackwardUseIn<ROP, Req>, xpu>::Launch(s, size, rgrad_dptr, ograd_dptr,
+      lhs_dptr, rhs_dptr);}
     );
 }
 
@@ -253,26 +203,6 @@ void BinaryBackwardUseInWithHalf2(const nnvm::NodeAttrs& attrs,
     BinaryBackwardUseIn_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
   });
 }
-
-// template<typename xpu, typename LOP, typename ROP>
-// void BinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
-//                          const OpContext& ctx,
-//                          const std::vector<TBlob>& inputs,
-//                          const std::vector<OpReqType>& req,
-//                          const std::vector<TBlob>& outputs) {
-//   using namespace mshadow;
-//   using namespace mshadow::expr;
-//   Stream<xpu> *s = ctx.get_stream<xpu>();
-//   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-//     Tensor<xpu, 1, DType> lgrad = outputs[0].FlatTo1D<xpu, DType>(s);
-//     Tensor<xpu, 1, DType> rgrad = outputs[1].FlatTo1D<xpu, DType>(s);
-//     Tensor<xpu, 1, DType> ograd = inputs[0].FlatTo1D<xpu, DType>(s);
-//     Tensor<xpu, 1, DType> lhs = inputs[1].FlatTo1D<xpu, DType>(s);
-//     Tensor<xpu, 1, DType> rhs = inputs[2].FlatTo1D<xpu, DType>(s);
-//     ASSIGN_DISPATCH(lgrad, req[0], ograd*F<LOP>(lhs, rhs));
-//     ASSIGN_DISPATCH(rgrad, req[1], ograd*F<ROP>(lhs, rhs));
-//   });
-// }
 
 #define MXNET_OPERATOR_REGISTER_BINARY(name)                        \
   NNVM_REGISTER_OP(name)                                            \
