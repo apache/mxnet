@@ -3,7 +3,17 @@
 from __future__ import absolute_import
 
 class Context(object):
-    """Constructing a context.
+    """Constructs a context.
+
+    MXNet can run operations on CPU and different GPUs.
+    A context describes the device type and id on which computation should be carried on.
+
+    One can use mx.cpu and mx.gpu for short.
+
+    See also
+    ----------
+    `How to run MXNet on multiple CPU/GPUs <http://mxnet.io/how_to/multi_devices.html>`
+    for more details.
 
     Parameters
     ----------
@@ -15,7 +25,7 @@ class Context(object):
 
     Note
     ----
-    Context can also be used a way to change default context.
+    Context can also be used as a way to change the default context.
 
     Examples
     --------
@@ -23,7 +33,7 @@ class Context(object):
     >>> cpu_array = mx.nd.ones((2, 3))
     >>> # switch default context to GPU(2)
     >>> with mx.Context(mx.gpu(2)):
-    >>>     gpu_array = mx.nd.ones((2, 3))
+    ...     gpu_array = mx.nd.ones((2, 3))
     >>> gpu_array.context
     gpu(2)
     """
@@ -42,7 +52,14 @@ class Context(object):
 
     @property
     def device_type(self):
-        """Return device type of current context.
+        """Returns the device type of current context.
+
+        Examples
+        -------
+        >>> mx.context.current_context().device_type
+        'cpu'
+        >>> mx.current_context().device_type
+        'cpu'
 
         Returns
         -------
@@ -51,13 +68,13 @@ class Context(object):
         return Context.devtype2str[self.device_typeid]
 
     def __eq__(self, other):
-        """Compare two contexts. Two contexts are equal if they
+        """Compares two contexts. Two contexts are equal if they
         have the same device type and device id.
         """
         if not isinstance(other, Context):
             return False
         if self.device_typeid == other.device_typeid and \
-                self.device_id == other.device_id:
+                        self.device_id == other.device_id:
             return True
         return False
 
@@ -80,9 +97,21 @@ Context.default_ctx = Context('cpu', 0)
 
 
 def cpu(device_id=0):
-    """Return a CPU context.
+    """Returns a CPU context.
 
     This function is a short cut for ``Context('cpu', device_id)``.
+    cpu() is usually the default context for many operations when no context is specified.
+
+    Examples
+    ----------
+    >>> with mx.Context('cpu', 1):
+    ...     cpu_array = mx.nd.ones((2, 3))
+    >>> cpu_array.context
+    cpu(1)
+    >>> with mx.cpu(1):
+    ...    cpu_array = mx.nd.ones((2, 3))
+    >>> cpu_array.context
+    cpu(1)
 
     Parameters
     ----------
@@ -102,6 +131,18 @@ def gpu(device_id=0):
     """Return a GPU context.
 
     This function is a short cut for Context('gpu', device_id).
+    The K GPUs on a node is typically numbered as 0,...,K-1.
+
+    Examples
+    ----------
+    >>> with mx.Context('gpu', 1):
+    ...     gpu_array = mx.nd.ones((2, 3))
+    >>> gpu_array.context
+    gpu(1)
+    >>> with mx.gpu(1):
+    ...    gpu_array = mx.nd.ones((2, 3))
+    >>> gpu_array.context
+    gpu(1)
 
     Parameters
     ----------
@@ -117,7 +158,17 @@ def gpu(device_id=0):
 
 
 def current_context():
-    """Return the current context.
+    """Returns the current default context.
+
+    One can change the current context by `Context(x)` where x can be
+    cpu(device_id) or gpu(device_id).
+
+    Examples
+    -------
+    >>> mx.current_context()
+    cpu(0)
+    >>> mx.Context(mx.cpu(1))
+    cpu(1)
 
     Returns
     -------
