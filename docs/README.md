@@ -12,7 +12,7 @@ execept for Python):
 ```bash
 git clone --recursive https://github.com/dmlc/mxnet
 cd mxnet
-tests/ci_build/ci_build.sh doc DEV=1 make -C docs/ html
+tests/ci_build/ci_build.sh doc make -C docs/ html
 ```
 
 The built documents will be available at `docs/_build/html/`.

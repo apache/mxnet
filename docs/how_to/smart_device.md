@@ -27,7 +27,7 @@ If you plan to amalgamate your system, there are a few guidelines you need to ob
 
 With amalgamation, deploying the system on smart devices (such as Android or iOS) is simple. But there are two additional considerations:
 
-- The model should be small enough to fit into the device’s memory.
+- The model should be small enough to fit into the device's memory.
 - The model shouldn't be too expensive to run given the relatively low computational power of these devices.
 
 Let's use image recognition as an example to show how to get such a model. We start with the state-of-the-art inception model. We train it on an ImageNet dataset, using multiple servers with GTX 980 cards. The resulting model fits into memory, but it's too expensive to run. We remove some layers, but now the results are poor.
@@ -46,13 +46,11 @@ Besides this pre-trained Inception-BatchNorm network, we've provided two  pre-tr
 We tested our model on Nexus 5:
 
 
- ```
-    |                  | Top-1 Validation on ILSVRC2012      | Time  | App Size  | Runtime Temp Memory Req |
-    | ---------------- | ----------------------------------- | ----- | ----————— | ---------------———————— |
-    | FastPoorNet      | around 52%, similar to 2011 winner  | 1s    | <10MB     |      <5MB               |
-    | Sub InceptionBN  | around 64%, similar to 2013 winner  | 2.7s  | <40MB     |      <10MB              |
-    | InceptionBN      | around 70%                          | 4s-5s | <60MB     |       10MB              |
- ```
+|                  | Top-1 Validation on ILSVRC2012      | Time  | App Size  | Runtime Temp Memory Req |
+| ---------------- | ----------------------------------- | ----- | --- | ------------ |
+| FastPoorNet      | around 52%, similar to 2011 winner  | 1s    | <10MB    |  <5MB               |
+| Sub InceptionBN  | around 64%, similar to 2013 winner  | 2.7s  | <40MB    |  <10MB              |
+| InceptionBN      | around 70%                          | 4s-5s | <60MB    | 10MB               |
 
 These models are for demonstration only. They aren't fine-tuned for mobile devices, and there is definitely great room for improvement.  We believe making a lightweight, portable, and fast deep learning library is fun and interesting, and hope you enjoy using the library.
 
