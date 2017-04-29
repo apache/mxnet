@@ -60,11 +60,11 @@ The defintion of *f* depends on ``pooling_convention``, which has two options:
 
 - **valid** (default)::
 
-    f(x, k, p, s) = floor(x+2*p-k)/s+1
+    f(x, k, p, s) = floor((x+2*p-k)/s)+1
 
 - **full**, which is compatible with Caffe::
 
-    f(x, k, p, s) = ceil(x+2*p-k)/s+1
+    f(x, k, p, s) = ceil((x+2*p-k)/s)+1
 
 But ``global_pool`` is set to be true, then do a global pooling, namely reset
 ``kernel=(height, width)``.
