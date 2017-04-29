@@ -339,7 +339,7 @@ inline Context NDArray::GetContext() const {
 
 std::ostream & operator<<(std::ostream &out, const NDArray &ndarray) {
   // TODO(lx75249): Consider DType / beautify like numpy
-  auto& shape = ndarray.GetShape();
+  auto shape = ndarray.GetShape();
   NDArray cpu_array(ndarray.GetShape(), Context::cpu());
   if (ndarray.GetContext().GetDeviceType() != DeviceType::kGPU) {
     cpu_array = ndarray;
