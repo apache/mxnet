@@ -80,7 +80,7 @@ Operator* PoolingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_sha
 DMLC_REGISTER_PARAMETER(PoolingParam);
 
 MXNET_REGISTER_OP_PROPERTY(Pooling, PoolingProp)
-.describe(R"code(Perform pooling on the input.
+.describe(R"code(Performs pooling on the input.
 
 The shapes for 1-D pooling are
 

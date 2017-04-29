@@ -27,7 +27,7 @@ Operator* SliceChannelProp::CreateOperatorEx(Context ctx,
 DMLC_REGISTER_PARAMETER(SliceChannelParam);
 
 MXNET_REGISTER_OP_PROPERTY(SliceChannel, SliceChannelProp)
-.describe(R"code(Split an array along a particular axis into multiple sub-arrays.
+.describe(R"code(Splits an array along a particular axis into multiple sub-arrays.
 
 Assume the input array has shape ``(d_0, ..., d_n)`` and we slice it into *m*
 (``num_outputs=m``) subarrays along axis *k*, then we will obtain a list of *m*
@@ -55,6 +55,7 @@ be removed from the shape if it becomes 1::
 
 )code" ADD_FILELINE)
 .set_return_type("NDArray-or-Symbol[]")
+.add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(SliceChannelParam::__FIELDS__());
 
 NNVM_REGISTER_OP(SliceChannel).add_alias("split");

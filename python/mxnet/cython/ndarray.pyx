@@ -137,7 +137,7 @@ cdef _make_ndarray_function(OpHandle handle, string name):
                 pos_param_arg = pos_param_arg + 1
 
         original_output = None
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if k == "out":
                 original_output = v
                 if isinstance(v, NDArrayBase):

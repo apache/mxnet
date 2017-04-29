@@ -3,7 +3,7 @@
 
 """Online evaluation metric module."""
 from __future__ import absolute_import
-
+import math
 import numpy
 from . import ndarray
 
@@ -250,28 +250,22 @@ class Perplexity(EvalMetric):
         assert len(labels) == len(preds)
         loss = 0.
         num = 0
-        probs = []
-
         for label, pred in zip(labels, preds):
             assert label.size == pred.size/pred.shape[-1], \
                 "shape mismatch: %s vs. %s"%(label.shape, pred.shape)
-            label = label.as_in_context(pred.context).astype(dtype='int32').reshape((label.size,))
-            pred = ndarray.pick(pred, label, axis=self.axis)
-            probs.append(pred)
-
-        for label, prob in zip(labels, probs):
-            prob = prob.asnumpy()
+            label = label.as_in_context(pred.context).reshape((label.size,))
+            pred = ndarray.pick(pred, label.astype(dtype='int32'), axis=self.axis)
             if self.ignore_label is not None:
-                ignore = label.asnumpy().flatten() == self.ignore_label
-                prob = prob*(1-ignore) + ignore
-                num += prob.size - ignore.sum()
-            else:
-                num += prob.size
-            loss += -numpy.log(numpy.maximum(1e-10, prob)).sum()
+                ignore = label == self.ignore_label
+                num -= ndarray.sum(ignore).asscalar()
+                pred = pred*(1-ignore) + ignore
+            loss -= ndarray.sum(ndarray.log(ndarray.maximum(1e-10, pred))).asscalar()
+            num += pred.size
+        self.sum_metric += loss
+        self.num_inst += num
 
-        self.sum_metric += numpy.exp(loss / num)
-        self.num_inst += 1
-
+    def get(self):
+        return (self.name, math.exp(self.sum_metric/self.num_inst))
 
 ####################
 # REGRESSION METRICS
@@ -409,21 +403,31 @@ class CustomMetric(EvalMetric):
 
 # pylint: disable=invalid-name
 def np(numpy_feval, name=None, allow_extra_outputs=False):
-    """Create a customized metric from numpy function.
+    """Creates a custom evaluation metric that receives its inputs as numpy arrays.
 
     Parameters
     ----------
     numpy_feval : callable(label, pred)
-        Customized evaluation function.
-        This will get called with the labels and predictions
-        for a minibatch, each as NumPy arrays.  This function
-        should return a single float.
+        Custom evaluation function that receives labels and predictions for a minibatch
+        as numpy arrays and returns the corresponding custom metric as a floating point number.
     name : str, optional
-        The name of the metric.
-    allow_extra_outputs : bool
-        If true, the prediction outputs can have extra outputs.
-        This is useful in RNN, where the states are also produced
-        in outputs for forwarding.
+        Name of the custom metric.
+    allow_extra_outputs : bool, optional
+        Whether prediction output is allowed to have extra outputs. This is useful in cases
+        like RNN where states are also part of output which can then be fed back to the RNN
+        in the next step. By default, extra outputs are not allowed.
+
+    Returns
+    -------
+    float
+        Custom metric corresponding to the provided labels and predictions.
+
+    Example
+    -------
+    >>> def custom_metric(label, pred):
+    ...     return np.mean(np.abs(label-pred))
+    ...
+    >>> metric = mx.metric.np(custom_metric)
     """
     def feval(label, pred):
         """Internal eval function."""

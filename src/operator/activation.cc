@@ -65,16 +65,17 @@ Operator *ActivationProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_
 DMLC_REGISTER_PARAMETER(ActivationParam);
 
 MXNET_REGISTER_OP_PROPERTY(Activation, ActivationProp)
-.describe(R"code(Elementwise activation function.
-The activation operations are applied elementwisely to each array elements. The
-following types are supported:
+.describe(R"code(Applies an activation function element-wise to the input.
 
-- `relu`: Rectified Linear Unit, `y = max(x, 0)`
-- `sigmoid`: `y = 1 / (1 + exp(-x))`
-- `tanh`: Hyperbolic tangent, `y = (exp(x) - exp(-x)) / (exp(x) + exp(-x))`
-- `softrelu`: Soft ReLU, or SoftPlus, `y = log(1 + exp(x))`
+The following activation functions are supported:
+
+- `relu`: Rectified Linear Unit, :math:`y = max(x, 0)`
+- `sigmoid`: :math:`y = \frac{1}{1 + exp(-x)}`
+- `tanh`: Hyperbolic tangent, :math:`y = \frac{exp(x) - exp(-x)}{exp(x) + exp(-x)}`
+- `softrelu`: Soft ReLU, or SoftPlus, :math:`y = log(1 + exp(x))`
+
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol", "Input data to activation function.")
+.add_argument("data", "NDArray-or-Symbol", "Input array to activation function.")
 .add_arguments(ActivationParam::__FIELDS__());
 
 }  // namespace op

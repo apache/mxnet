@@ -13,19 +13,7 @@ DMLC_REGISTER_PARAMETER(BroadcastAxesParam);
 DMLC_REGISTER_PARAMETER(BroadcastToParam);
 
 inline std::string get_reduce_axes_description(const std::string& op_name, int line) {
-  std::string doc = R"code(Compute the __op__ of array elements over given axes.
-
-The argument ``axis`` specifies the axes to compute over:
-
-- **()**: compute over all elements into a scalar array with shape ``(1,)``. This is
-  the default option.
-- **int**: compute over along a particular axis. If input has shape ``(n, m, k)``,
-  use ``axis=0`` will result in an array with shape ``(m, k)``.
-- **tuple of int**: compute over multiple axes. Again assume input shape ``(n, m,
-  k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
-
-If ``keepdims = 1``, then the result array will has the same number of dimensions
-as the input, while the reduced axes will have size 1.
+  std::string doc = R"code(Computes the __op__ of array elements over given axes.
 
 
 Defined in )code";
@@ -68,9 +56,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_prod)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut< cpu, mshadow_op::rdiv>);
 
 MXNET_OPERATOR_REGISTER_REDUCE(nansum)
-.describe(R"code(Compute the sum of array elements over given axes with ``NaN`` ignored
-
-Refer to ``sum`` for more details.
+.describe(R"code(Computes the sum of array elements over given axes treating Not a Numbers (``NaN``) as zero.
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow_op::nansum>)
@@ -81,9 +67,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_nansum)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut<cpu, mshadow_op::nansum_grad>);
 
 MXNET_OPERATOR_REGISTER_REDUCE(nanprod)
-.describe(R"code(Compute the product of array elements over given axes with ``NaN`` ignored
-
-Refer to ``prod`` for more details.
+.describe(R"code(Computes the product of array elements over given axes treating Not a Numbers (``NaN``) as one.
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow_op::nanprod>)
@@ -115,21 +99,21 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_min)
 
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_axis)
 .add_alias("broadcast_axes")
-.describe(R"code(Broadcast an array over particular axes.
+.describe(R"code(Broadcasts the input array over particular axes.
 
-Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
-``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
+Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
+`(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
 
-For example::
+Example::
 
-   // given (1,2,1) shape x
+   // given x of shape (1,2,1)
    x = [[[ 1.],
          [ 2.]]]
 
-   // broadcast on axis 2
+   // broadcast x on on axis 2
    broadcast_axis(x, axis=2, size=3) = [[[ 1.,  1.,  1.],
                                          [ 2.,  2.,  2.]]]
-   // broadcast on axes 0 and 2
+   // broadcast x on on axes 0 and 2
    broadcast_axis(x, axis=(0,2), size=(2,3)) = [[[ 1.,  1.,  1.],
                                                  [ 2.,  2.,  2.]],
                                                 [[ 1.,  1.,  1.],
@@ -141,19 +125,22 @@ For example::
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
-.describe(R"code(Broadcast an array to a new shape.
+.describe(R"code(Broadcasts the input array to a new shape.
 
-Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
-``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
+Broadcasting is a mechanism that allows NDArrays to perform arithmetic operations
+with arrays of different shapes efficiently without creating multiple copies of arrays.
+Also see, `Broadcasting <https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`_ for more explanation.
+
+Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
+`(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
 
 For example::
 
    broadcast_to([[1,2,3]], shape=(2,3)) = [[ 1.,  2.,  3.],
                                            [ 1.,  2.,  3.]])
 
-The dimensions that will not be changed can also use the special code ``0`` that
-means copy the original value. So with ``shape=(2,0)`` we will obtain the same
-results in the above example.
+The dimension which you do not want to change can also be kept as `0` which means copy the original value.
+So with `shape=(2,0)`, we will obtain the same result as in the above example.
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BroadcastToParam>)
@@ -168,9 +155,7 @@ NNVM_REGISTER_OP(_broadcast_backward)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>);
 
 NNVM_REGISTER_OP(norm)
-.describe(R"code(Compute the L2 norm.
-
-Flatten then input array and then compute the l2 norm.
+.describe(R"code(Flattens the input array and then computes the l2 norm.
 
 Examples::
 

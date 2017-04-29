@@ -51,13 +51,13 @@ struct TopKParam : public dmlc::Parameter<TopKParam> {
     .add_enum("indices", topk_enum::kReturnIndices)
     .add_enum("mask", topk_enum::kReturnMask)
     .add_enum("both", topk_enum::kReturnBoth)
-    .describe("The return type."
-        " \"value\" means returning the top k values,"
-        " \"indices\" means returning the indices of the top k values,"
+    .describe("The return type.\n"
+        " \"value\" means to return the top k values,"
+        " \"indices\" means to return the indices of the top k values,"
         " \"mask\" means to return a mask array containing 0 and 1. 1 means the top k values."
-        " \"both\" means to return both value and indices.");
+        " \"both\" means to return a list of both values and indices of top k elements.");
     DMLC_DECLARE_FIELD(is_ascend).set_default(false)
-      .describe("Whether to choose k largest or k smallest."
+      .describe("Whether to choose k largest or k smallest elements."
                 " Top K largest elements will be chosen if set to false.");
   }
 };
@@ -70,7 +70,7 @@ struct SortParam : public dmlc::Parameter<SortParam> {
     .describe("Axis along which to choose sort the input tensor."
               " If not given, the flattened array is used. Default is -1.");
     DMLC_DECLARE_FIELD(is_ascend).set_default(true)
-      .describe("Whether sort in ascending or descending order.");
+      .describe("Whether to sort in ascending or descending order.");
   }
 };
 
@@ -82,7 +82,7 @@ struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
     .describe("Axis along which to sort the input tensor."
               " If not given, the flattened array is used. Default is -1.");
     DMLC_DECLARE_FIELD(is_ascend).set_default(true)
-      .describe("Whether sort in ascending or descending order.");
+      .describe("Whether to sort in ascending or descending order.");
   }
 };
 
@@ -410,7 +410,7 @@ inline uint32_t TopKNumVisibleOutputs(const NodeAttrs& attrs) {
 inline bool TopKType(const nnvm::NodeAttrs& attrs,
                      std::vector<int> *in_attrs,
                      std::vector<int> *out_attrs) {
-  return ElemwiseAttr<int, type_is_none, type_assign, true>(
+  return ElemwiseAttr<int, type_is_none, type_assign, true, type_string>(
     attrs, in_attrs, out_attrs, -1);
 }
 

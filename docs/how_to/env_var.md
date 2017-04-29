@@ -20,7 +20,7 @@ Typically, you wouldn't need to change these settings, but they are listed here 
 
 * MXNET_EXEC_ENABLE_INPLACE (default=true)
   - Whether to enable in-place optimization in symbolic execution.
-* MXNET_EXEC_MATCH_RANGE (default=10)
+* NNVM_EXEC_MATCH_RANGE (default=16)
   - The rough matching scale in the symbolic execution memory allocator.
   - Set this to 0 if you don't want to enable memory sharing between graph nodes(for debugging purposes).
 * MXNET_EXEC_NUM_TEMP (default=1)
@@ -38,6 +38,15 @@ Typically, you wouldn't need to change these settings, but they are listed here 
     - NaiveEngine: A very simple engine that uses the master thread to do computation.
     - ThreadedEngine: A threaded engine that uses a global thread pool to schedule jobs.
     - ThreadedEnginePerDevice: A threaded engine that allocates thread per GPU.
+
+## Execution Options
+
+* MXNET_EXEC_BULK_EXEC_INFERENCE (default=1)
+  - If set to `1`, during inference MXNet executes the entire computation graph in bulk mode, which reduces kernel launch gaps in between symbolic operators.
+* MXNET_EXEC_BULK_EXEC_TRAIN (default=1)
+  - If set to `1`, during training MXNet executes the computation graph as several subgraphs in bulk mode.
+* MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN (default=15)
+  - The maximum number of nodes in the subgraph executed in bulk during training(not inference). Setting this to a larger number may reduce the degree of parallelism for multi-GPU training.
 
 ## Control the Data Communication
 
@@ -59,7 +68,7 @@ Typically, you wouldn't need to change these settings, but they are listed here 
 
 ## Control the profiler
 
-When USE_PROFILER is enabled in Makefile or CMake, the following environments can be used to profile the application without changing code.
+When USE_PROFILER is enabled in Makefile or CMake, the following environments can be used to profile the application without changing code. Execution options may affect the granularity of profiling result. If you need profiling result of every operator, please set MXNET_EXEC_BULK_EXEC_INFERENCE and MXNET_EXEC_BULK_EXEC_TRAIN to 0.
 
 * MXNET_PROFILER_AUTOSTART (default=0)
 	- Set to 1, MXNet starts the profiler automatically. The profiling result is stored into profile.json in the working directory.
