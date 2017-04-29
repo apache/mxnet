@@ -140,12 +140,13 @@ By default, the CSVIter has `round_batch` set to True. So, if `batch_size`
 is 3 and there are 4 total rows in CSV file, 2 more examples
 are consumed at the first round. If `reset()` function is called after first round,
 the call is ignored and you will get next remaining examples in the second round.
-If you want all examples in your second round after `reset()`, make sure to set
-`round_batch`=False.
+
+If you want all the instances in your second round after calling `reset()`, make sure
+to set `round_batch`=False.
 
 If ``data_csv = 'data/'`` is set, then all the files in this directory will be read.
 
-Examples:
+Examples::
 
   // CSV file content called ``data/data.csv``
   1,2,3
@@ -176,7 +177,7 @@ Examples:
   [2.  3.  4.]
   [3.  4.  5.]]
 
-  // Now, `reset` method is called
+  // Now, `reset()` method is called
   CSVIter.reset()
 
   // Batch read from the above iterator in second pass is as follows:
