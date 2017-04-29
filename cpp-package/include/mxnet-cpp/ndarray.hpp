@@ -8,6 +8,7 @@
 #ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_HPP_
 #define CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_HPP_
 
+#include <algorithm>
 #include <map>
 #include <string>
 #include <vector>
@@ -350,7 +351,8 @@ std::ostream & operator<<(std::ostream &out, const NDArray &ndarray) {
 
   out << '[';
   cpu_array.WaitToRead();
-  std::copy(cpu_array.GetData(), cpu_array.GetData() + ndarray.Size(), std::ostream_iterator<float>(out, ", "));
+  std::copy(cpu_array.GetData(), cpu_array.GetData() + ndarray.Size(),
+      std::ostream_iterator<float>(out, ", "));
   out << ']';
   return out;
 }

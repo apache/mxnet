@@ -10,6 +10,8 @@
 
 #include <sstream>
 #include <algorithm>
+#include <vector>
+#include <string>
 #include "mxnet-cpp/monitor.h"
 
 namespace mxnet {
@@ -19,11 +21,13 @@ inline NDArray _default_monitor_func(const NDArray &x) {
 }
 
 inline Monitor::Monitor(int interval, std::regex pattern, StatFunc stat_func)
- : interval(interval), pattern(pattern), stat_func(stat_func), step(0) {
+  : interval(interval), pattern(pattern), stat_func(stat_func), step(0) {
 }
 
 inline void Monitor::install(Executor *exe) {
-  MXExecutorSetMonitorCallback(exe->handle_, static_cast<ExecutorMonitorCallback>(&Monitor::executor_callback), this);
+  MXExecutorSetMonitorCallback(exe->handle_,
+      static_cast<ExecutorMonitorCallback>(&Monitor::executor_callback),
+      this);
   exes.push_back(exe);
 }
 
@@ -83,7 +87,7 @@ inline void Monitor::toc_print() {
       out << ndarray;
       str = out.str();
     }
-    
+
     LG << "Batch: " << std::get<0>(stat) << ' ' << std::get<1>(stat) << ' ' << str;
   }
 }

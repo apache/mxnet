@@ -30,7 +30,7 @@ class Optimizer {
   * \brief constructor
   * \param beign_num_update The initial number of updates
   */
-  Optimizer(unsigned begin_num_update);
+  explicit Optimizer(unsigned begin_num_update);
   /*!
   * \brief get optimizer type
   * \return string of optimizer type
@@ -113,7 +113,7 @@ class OptimizerRegistry {
 
 class SGDOptimizer : public Optimizer {
  public:
-  SGDOptimizer(unsigned begin_num_update = 0);
+  explicit SGDOptimizer(unsigned begin_num_update = 0);
   std::string GetType() const override;
   void Update(int index, NDArray weight, NDArray grad) override;
  private:
@@ -126,7 +126,7 @@ class SGDOptimizer : public Optimizer {
 
 class RMSPropOptimizer : public Optimizer {
  public:
-  RMSPropOptimizer(unsigned begin_num_update = 0);
+  explicit RMSPropOptimizer(unsigned begin_num_update = 0);
   std::string GetType() const override;
   void Update(int index, NDArray weight, NDArray grad) override;
  private:
@@ -139,7 +139,7 @@ class RMSPropOptimizer : public Optimizer {
 
 class AdamOptimizer : public Optimizer {
  public:
-  AdamOptimizer(unsigned begin_num_update = 0);
+  explicit AdamOptimizer(unsigned begin_num_update = 0);
   std::string GetType() const override;
   void Update(int index, NDArray weight, NDArray grad) override;
  private:
@@ -152,7 +152,7 @@ class AdamOptimizer : public Optimizer {
 
 class AdaGradOptimizer : public Optimizer {
  public:
-  AdaGradOptimizer(unsigned begin_num_update = 0);
+  explicit AdaGradOptimizer(unsigned begin_num_update = 0);
   std::string GetType() const override;
   void Update(int index, NDArray weight, NDArray grad) override;
  private:
@@ -163,7 +163,7 @@ class AdaGradOptimizer : public Optimizer {
 
 class AdaDeltaOptimizer : public Optimizer {
  public:
-  AdaDeltaOptimizer(unsigned begin_num_update = 0);
+  explicit AdaDeltaOptimizer(unsigned begin_num_update = 0);
   std::string GetType() const override;
   void Update(int index, NDArray weight, NDArray grad) override;
  private:

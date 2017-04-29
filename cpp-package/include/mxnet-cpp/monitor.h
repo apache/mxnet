@@ -9,6 +9,7 @@
 #define CPP_PACKAGE_INCLUDE_MXNET_CPP_MONITOR_H_
 
 #include <regex>
+#include <tuple>
 #include <vector>
 #include <map>
 #include <set>
