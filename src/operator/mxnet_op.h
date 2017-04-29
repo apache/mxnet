@@ -7,6 +7,7 @@
 #ifndef MXNET_OPERATOR_MXNET_OP_H_
 #define MXNET_OPERATOR_MXNET_OP_H_
 
+#include <dmlc/omp.h>
 #include <mxnet/base.h>
 #include <algorithm>
 
@@ -22,6 +23,8 @@ const float PI = 3.14159265358979323846;
 using std::isnan;
 #endif
 
+template<typename xpu>
+int get_num_threads(const int N);
 
 #ifdef __CUDACC__
 #define CUDA_KERNEL_LOOP(i, n) \
@@ -37,8 +40,18 @@ inline int cuda_get_num_blocks(const int N) {
   using namespace mshadow::cuda;
   return std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
 }
+
+template<>
+inline int get_num_threads<gpu>(const int N) {
+  using namespace mshadow::cuda;
+  return kBaseThreadNum * cuda_get_num_blocks(N);
+}
 #endif  // __CUDACC__
 
+template<>
+inline int get_num_threads<cpu>(const int N) {
+  return omp_get_max_threads();
+}
 
 /*! \brief operator request type switch */
 #define MXNET_ASSIGN_REQ_SWITCH(req, ReqType, ...)  \

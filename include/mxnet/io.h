@@ -44,6 +44,19 @@ class IIterator : public dmlc::DataIter<DType> {
   }
 };  // class IIterator
 
+/*!
+ * \brief iterator type
+ * \param DType data type
+ */
+template<typename DType>
+class SparseIIterator : public IIterator<DType> {
+ public:
+  /*! \brief storage type of the data or label */
+  virtual const NDArrayStorageType GetStorageType(bool is_data) const = 0;
+  /*! \brief shape of the data or label */
+  virtual const TShape GetShape(bool is_data) const = 0;
+};  // class SparseIIterator
+
 /*! \brief a single data instance */
 struct DataInst {
   /*! \brief unique id for instance */

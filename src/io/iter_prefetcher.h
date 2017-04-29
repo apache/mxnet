@@ -28,8 +28,7 @@ namespace io {
 class PrefetcherIter : public IIterator<DataBatch> {
  public:
   explicit PrefetcherIter(IIterator<TBlobBatch>* base)
-      : loader_(base), out_(nullptr) {
-  }
+      : loader_(base), out_(nullptr) {}
 
   ~PrefetcherIter() {
     while (recycle_queue_.size() != 0) {
@@ -38,21 +37,24 @@ class PrefetcherIter : public IIterator<DataBatch> {
       delete batch;
     }
     delete out_;
-    iter_.Destroy();
+    iter.Destroy();
   }
 
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void InitParams(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     // init image rec param
     kwargs_left = param_.InitAllowUnknown(kwargs);
-    // use the kwarg to init batch loader
-    loader_->Init(kwargs);
     // maximum prefetch threaded iter internal size
     const int kMaxPrefetchBuffer = 16;
     // init thread iter
-    iter_.set_max_capacity(kMaxPrefetchBuffer);
+    iter.set_max_capacity(kMaxPrefetchBuffer);
+  }
 
-    iter_.Init([this](DataBatch **dptr) {
+  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+    InitParams(kwargs);
+    // use the kwarg to init batch loader
+    loader_->Init(kwargs);
+    iter.Init([this](DataBatch **dptr) {
         if (!loader_->Next()) return false;
         const TBlobBatch& batch = loader_->Value();
         if (*dptr == nullptr) {
@@ -91,7 +93,7 @@ class PrefetcherIter : public IIterator<DataBatch> {
   }
 
   virtual void BeforeFirst(void) {
-    iter_.BeforeFirst();
+    iter.BeforeFirst();
   }
 
   virtual bool Next(void) {
@@ -106,9 +108,9 @@ class PrefetcherIter : public IIterator<DataBatch> {
         arr.WaitToWrite();
       }
       recycle_queue_.pop();
-      iter_.Recycle(&old_batch);
+      iter.Recycle(&old_batch);
     }
-    return iter_.Next(&out_);
+    return iter.Next(&out_);
   }
   virtual const DataBatch &Value(void) const {
     return *out_;
@@ -117,16 +119,16 @@ class PrefetcherIter : public IIterator<DataBatch> {
  protected:
   /*! \brief prefetcher parameters */
   PrefetcherParam param_;
-  /*! \brief internal batch loader */
-  std::unique_ptr<IIterator<TBlobBatch> > loader_;
+  /*! \brief backend thread */
+  dmlc::ThreadedIter<DataBatch> iter;
 
  private:
+  /*! \brief internal batch loader */
+  std::unique_ptr<IIterator<TBlobBatch> > loader_;
   /*! \brief output data */
   DataBatch *out_;
   /*! \brief queue to be recycled */
   std::queue<DataBatch*> recycle_queue_;
-  /*! \brief backend thread */
-  dmlc::ThreadedIter<DataBatch> iter_;
 };
 }  // namespace io
 }  // namespace mxnet

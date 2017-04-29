@@ -1,9 +1,12 @@
 import mxnet as mx
 import mxnet.ndarray as nd
+from mxnet.test_utils import *
 import numpy as np
 from functools import reduce
 from mxnet.module.executor_group import DataParallelExecutorGroup
 
+import numpy.random as rnd
+import scipy
 
 def test_module_dtype():
     dtype = np.float16
@@ -262,7 +265,6 @@ def test_monitor():
                 break
     assert(mon_result_counts == [2, 2, 1, 6, 6, 4])
 
-
 def test_executor_group():
     def get_rnn_sym(num_layers, num_words, num_hidden, num_embed, seq_len):
         stack = mx.rnn.SequentialRNNCell()
@@ -374,6 +376,73 @@ def test_executor_group():
     test_shared_exec_group(exec_grp_shared=exec_group1, exec_grp_created=exec_group2,
                            shared_arg_names=shared_arg_names, extra_args=extra_args)
 
+def test_module_fm():
+    mx.random.seed(11)
+    rnd.seed(11)
+    def fm_model(k, feature_dim, storage_type='default'):
+         initializer = mx.initializer.Normal(sigma=0.01)
+         x = mx.symbol.Variable("data", storage_type=storage_type)
+         v = mx.symbol.Variable("v", shape=(feature_dim, k), init=initializer)
+
+         w1_weight = mx.symbol.var('w1_weight', shape=(feature_dim, 1), init=initializer)
+         w1 = mx.symbol.dot(x, w1_weight)
+
+         v_s = mx.symbol.sum(data=mx.symbol.square(data=v), axis=1)
+         x_s = mx.symbol.square(data=x)
+         bd = 0.5 * mx.symbol.negative(data=mx.symbol.broadcast_mul(x_s, v_s))
+
+         w2 = mx.symbol.dot(x, v)
+         w2_squared = 0.5 * mx.symbol.square(data=w2)
+
+         w_all = mx.symbol.Concat(w1, w2_squared, bd, dim=1)
+         model = mx.symbol.sum(data=w_all, axis=1, keepdims=True)
+         y = mx.symbol.Variable("out_label")
+         model = mx.symbol.LinearRegressionOutput(data=model, label=y, name="out")
+         return model
+
+    ctx = default_context()
+    k = 5
+    feature_dim = 20
+    model = fm_model(k, feature_dim, 'csr')
+
+    num_batches = 8
+    batch_size = 25
+    import scipy.sparse as sp
+    scipy_data = sp.rand(num_batches * batch_size, feature_dim,
+                         density=0.5, format='csr')
+    dns_label = mx.nd.ones((num_batches * batch_size,1))
+    csr_data = mx.sparse_nd.csr(scipy_data.data, scipy_data.indptr, scipy_data.indices,
+                                (num_batches * batch_size, feature_dim))
+    data = csr_data
+
+    train_iter = mx.io.NDArrayIter(data=data,
+                                   label={'out_label':dns_label},
+                                   batch_size=batch_size)
+
+    # create module
+    mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['out_label'])
+    # allocate memory by given the input data and lable shapes
+    mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
+    # initialize parameters by uniform random numbers
+    mod.init_params(initializer=mx.init.Uniform(scale=.1))
+    # use Sparse SGD with learning rate 0.1 to train
+    mod.init_optimizer(optimizer='sgd')
+    # use accuracy as the metric
+    metric = mx.metric.create('MSE')
+    # train 5 epoch, i.e. going over the data iter one pass
+    storage_type_dict = {'v' : 'row_sparse'}
+
+    for epoch in range(10):
+        train_iter.reset()
+        metric.reset()
+        for batch in train_iter:
+            mod.forward(batch, is_train=True)       # compute predictions
+            mod.update_metric(metric, batch.label)  # accumulate prediction accuracy
+            mod.backward()                          # compute gradients
+            mod.update(storage_type_dict)           # update parameters
+        # print('Epoch %d, Training %s' % (epoch, metric.get()))
+    assert(metric.get()[1] < 0.2)
+
 
 if __name__ == '__main__':
     test_module_dtype()
@@ -385,3 +454,4 @@ if __name__ == '__main__':
     test_module_switch_bucket()
     test_monitor()
     test_executor_group()
+    test_module_fm()

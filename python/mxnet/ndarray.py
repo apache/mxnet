@@ -19,7 +19,7 @@ import operator
 import numpy as np
 from .base import _LIB, string_types, numeric_types
 from .base import c_array, py_str, c_str, mx_real_t, _Null  # pylint: disable=unused-import
-from .base import mx_uint, NDArrayHandle, check_call, OpHandle
+from .base import mx_uint, NDArrayHandle, check_call
 from .base import ctypes2buffer
 from .context import Context
 from . import _ndarray_internal as _internal
@@ -54,7 +54,6 @@ _DTYPE_NP_TO_MX = {
     np.uint8   : 3,
     np.int32   : 4
 }
-
 _DTYPE_MX_TO_NP = {
     0 : np.float32,
     1 : np.float64,
@@ -62,7 +61,18 @@ _DTYPE_MX_TO_NP = {
     3 : np.uint8,
     4 : np.int32
 }
-# pylint: enable= no-member
+_STORAGE_TYPE_ID_TO_STR = {
+    -1 : 'undefined',
+    0  : 'default',
+    1  : 'row_sparse',
+    2  : 'csr',
+}
+_STORAGE_TYPE_STR_TO_ID = {
+    'undefined'  : -1,
+    'default'    : 0,
+    'row_sparse' : 1,
+    'csr'        : 2,
+}
 
 def _new_empty_handle():
     """Returns a new empty handle.
@@ -106,6 +116,11 @@ def waitall():
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
+def _storage_type(handle):
+    storage_type = ctypes.c_int(0)
+    check_call(_LIB.MXNDArrayGetStorageType(handle, ctypes.byref(storage_type)))
+    return _STORAGE_TYPE_ID_TO_STR[storage_type.value]
+
 class NDArray(NDArrayBase):
     """An array object representing a multidimensional, homogeneous array of
 fixed-size items.
@@ -118,6 +133,9 @@ fixed-size items.
         shape_info = 'x'.join(['%d' % x for x in self.shape])
         return '<%s %s @%s>' % (self.__class__.__name__,
                                 shape_info, self.context)
+
+    def __reduce__(self):
+        return (NDArray, (None,), self.__getstate__())
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """
@@ -629,7 +647,6 @@ fixed-size items.
         """
         check_call(_LIB.MXNDArrayWaitToRead(self.handle))
 
-
     @property
     def ndim(self):
         """Returns the number of dimensions of this array
@@ -663,6 +680,7 @@ fixed-size items.
         check_call(_LIB.MXNDArrayGetShape(
             self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
         return tuple(pdata[:ndim.value])
+
 
     @property
     def size(self):
@@ -724,6 +742,10 @@ fixed-size items.
         check_call(_LIB.MXNDArrayGetDType(
             self.handle, ctypes.byref(mx_dtype)))
         return _DTYPE_MX_TO_NP[mx_dtype.value]
+
+    @property
+    def storage_type(self):
+        return _storage_type(self.handle)
 
     @property
     # pylint: disable= invalid-name, undefined-variable
@@ -949,6 +971,13 @@ fixed-size items.
             c_array(NDArrayHandle, ograd_handles),
             ctypes.c_int(retain_graph)))
 
+    def to_csr(self):
+        # pylint: disable=undefined-variable
+        return cast_storage(self, storage_type='csr')
+
+    def to_rsp(self):
+        # pylint: disable=undefined-variable
+        return cast_storage(self, storage_type='row_sparse')
 
 def onehot_encode(indices, out):
     """One-hot encoding indices into matrix out.
@@ -2405,38 +2434,6 @@ def %s(%s):
     ndarray_function.__doc__ = doc_str
     ndarray_function.__module__ = 'mxnet.ndarray'
     return ndarray_function
-
-
-# pylint: enable=too-many-locals, invalid-name
-def _init_ndarray_module(ndarray_class, root_namespace):
-    """List and add all the ndarray functions to current module."""
-    _set_ndarray_class(ndarray_class)
-    plist = ctypes.POINTER(ctypes.c_char_p)()
-    size = ctypes.c_uint()
-
-    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
-                                     ctypes.byref(plist)))
-    op_names = []
-    for i in range(size.value):
-        op_names.append(py_str(plist[i]))
-
-    module_obj = _sys.modules["%s.ndarray" % root_namespace]
-    module_internal = _sys.modules["%s._ndarray_internal" % root_namespace]
-    module_contrib = _sys.modules["%s.contrib.ndarray" % root_namespace]
-    for name in op_names:
-        hdl = OpHandle()
-        check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
-        function = _make_ndarray_function(hdl, name)
-        if function.__name__.startswith('_contrib_'):
-            function.__name__ = function.__name__[9:]
-            function.__module__ = 'mxnet.contrib.ndarray'
-            setattr(module_contrib, function.__name__, function)
-        elif function.__name__.startswith('_'):
-            setattr(module_internal, function.__name__, function)
-        else:
-            setattr(module_obj, function.__name__, function)
-
-_init_ndarray_module(NDArray, "mxnet")
 
 # from .base import add_fileline_to_docstring
 # add_fileline_to_docstring(__name__)

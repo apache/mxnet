@@ -232,6 +232,9 @@ and ``end=(e_1, e_2, ... e_n)`` indices will result in an array with the shape
 The resulting array's *k*-th dimension contains elements
 from the *k*-th dimension of the input array with the open range ``[b_k, e_k)``.
 
+For an input array of non-default storage type(e.g. `csr` or `row_sparse`), it only supports
+slicing on the first dimension.
+
 Example::
 
   x = [[  1.,   2.,   3.,   4.],
@@ -245,8 +248,10 @@ Example::
 .set_attr_parser(ParamParser<SliceParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", SliceShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", Slice<cpu>)
+.set_attr<FComputeEx>(FCOMP_EX_CPU, SliceEx<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(SliceParam::__FIELDS__());
 
@@ -370,7 +375,13 @@ NNVM_REGISTER_OP(dot)
   })
 .set_attr<nnvm::FInferShape>("FInferShape", DotShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<nnvm::FInferStorageType>("FInferStorageType", DotForwardInferStorageType)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<FCompute>("FCompute<cpu>", DotForward_<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", DotForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_dot"})
 .add_argument("lhs", "NDArray-or-Symbol", "The first input")
 .add_argument("rhs", "NDArray-or-Symbol", "The second input")
@@ -381,7 +392,13 @@ NNVM_REGISTER_OP(_backward_dot)
 .set_num_outputs(2)
 .set_attr_parser(ParamParser<DotParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInferStorageType>("FInferStorageType", DotBackwardInferStorageType)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<FCompute>("FCompute<cpu>", DotBackward_<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", DotBackwardEx<cpu>)
 .add_arguments(DotParam::__FIELDS__());
 
 NNVM_REGISTER_OP(batch_dot)

@@ -22,6 +22,9 @@ It updates the weights using::
 
  weight = weight - learning_rate * gradient
 
+If gradients are stored with `row_sparse` storage,
+where update is applied only to rows whose gradient has non-zero entries.
+
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
@@ -29,6 +32,7 @@ It updates the weights using::
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FCompute>("FCompute<cpu>", SGDUpdate<cpu>)
+.set_attr<FComputeEx>(FCOMP_EX_CPU, SGDUpdateEx<cpu>)
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
 .add_argument("grad", "NDArray-or-Symbol", "Gradient")
 .add_arguments(SGDParam::__FIELDS__());
@@ -52,6 +56,9 @@ It updates the weights using::
 
 Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
 
+If gradients are stored with `row_sparse` storage,
+only rows whose gradients contain non-zero entries are updated (for both weight and momentum).
+
 )code" ADD_FILELINE)
 .set_num_inputs(3)
 .set_num_outputs(1)
@@ -63,11 +70,11 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
     return std::vector<uint32_t>{2};
   })
 .set_attr<FCompute>("FCompute<cpu>", SGDMomUpdate<cpu>)
+.set_attr<FComputeEx>(FCOMP_EX_CPU, SGDMomUpdateEx<cpu>)
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
 .add_argument("grad", "NDArray-or-Symbol", "Gradient")
 .add_argument("mom", "NDArray-or-Symbol", "Momentum")
 .add_arguments(SGDMomParam::__FIELDS__());
-
 
 NNVM_REGISTER_OP(adam_update)
 .describe(R"code(Update function for Adam optimizer. Adam is seen as a generalization

@@ -9,7 +9,8 @@
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(elemwise_add)
-.set_attr<FCompute>("FCompute<gpu>", BinaryComputeWithHalf2<gpu, mshadow::op::plus>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryComputeWithHalf2<gpu, mshadow::op::plus>)
+.set_attr<FComputeEx>(FCOMP_EX_GPU, BinaryComputeEx<gpu, mshadow::op::plus>);
 
 NNVM_REGISTER_OP(_grad_add)
 .set_attr<FCompute>("FCompute<gpu>", BinaryComputeWithHalf2<gpu, mshadow::op::plus>);
@@ -17,7 +18,9 @@ NNVM_REGISTER_OP(_grad_add)
 NNVM_REGISTER_OP(_backward_add)
 .set_attr<FCompute>("FCompute<gpu>",
                     BinaryBackwardUseNoneWithHalf2<gpu,
-                    mshadow_op::identity, mshadow_op::identity>);
+                    mshadow_op::identity, mshadow_op::identity>)
+.set_attr<FComputeEx>(FCOMP_EX_GPU,
+                      BinaryBackwardUseNoneEx<gpu, mshadow_op::identity, mshadow_op::identity>);
 
 NNVM_REGISTER_OP(_sub)
 .set_attr<FCompute>("FCompute<gpu>", BinaryComputeWithHalf2<gpu, mshadow::op::minus>);

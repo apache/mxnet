@@ -48,7 +48,7 @@ def _updater_wrapper(updater):
 
 class KVStore(object):
     """A key-value store for synchronization of values, over multiple devices."""
-    def __init__(self, handle):
+    def __init__(self, handle, name2idx=None):
         """Initializes a new KVStore.
 
         Parameters
@@ -58,6 +58,7 @@ class KVStore(object):
         """
         assert isinstance(handle, KVStoreHandle)
         self.handle = handle
+        self.name2idx = name2idx if name2idx is not None else {}
         self._updater = None
         self._updater_func = None
 
@@ -395,7 +396,7 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreSendCommmandToServers(
             self.handle, mx_uint(head), c_str(body)))
 
-def create(name='local'):
+def create(name='local', name2idx=None):
     """Creates a new KVStore.
 
     For single machine training, there are two commonly used types:
@@ -435,4 +436,4 @@ def create(name='local'):
     handle = KVStoreHandle()
     check_call(_LIB.MXKVStoreCreate(c_str(name),
                                     ctypes.byref(handle)))
-    return KVStore(handle)
+    return KVStore(handle, name2idx=name2idx)

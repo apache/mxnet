@@ -12,6 +12,7 @@
 #include <mxnet/resource.h>
 #include <mshadow/tensor.h>
 #include "./ndarray_function.h"
+#include "../operator/tensor/matrix_op-inl.h"
 #include "./autograd.h"
 
 #if MXNET_USE_OPENCV
@@ -26,6 +27,8 @@ namespace mxnet {
 
 NDArray NDArray::Reshape(const TShape &shape) const {
   using namespace autograd;
+  CHECK(storage_type() == kDefaultStorage) << "Reshape for storage type " <<
+        storage_type() << " is not implemented yet";
   if (AutogradRuntime::Get()->IsTraining()) {
     CHECK_GE(shape_.Size(), shape.Size())
       << "NDArray.Reshape: target shape must have must have the same size as "
@@ -56,12 +59,14 @@ NDArray NDArray::Reshape(const TShape &shape) const {
   }
 }
 
-
 NDArray NDArray::Slice(index_t begin, index_t end) const {
   using namespace autograd;
+  using namespace mshadow;
   NDArray ret = *this;
   CHECK(!is_none()) << "NDArray is not initialized";
   CHECK_GE(shape_[0], end) << "Slice end index out of range";
+  auto stype = storage_type();
+  CHECK_EQ(stype, kDefaultStorage);
   size_t length = shape_.ProdShape(1, shape_.ndim());
   MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
     ret.byte_offset_ += begin * length * sizeof(DType);
@@ -88,8 +93,69 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
   }
 }
 
+void NDArray::SliceEx(index_t begin, index_t end, NDArray *ret) const {
+  using namespace autograd;
+  using namespace mshadow;
+  CHECK(!is_none()) << "NDArray is not initialized";
+  CHECK_GE(shape_[0], end) << "Slice end index out of range";
+  auto stype = storage_type();
+  CHECK_NE(stype, kDefaultStorage);
+  if (stype == kCSRStorage) {
+    using namespace csr;
+    ret->shape_[0] = end - begin;
+    NDArray src = *this;
+    // destination NDArray shares the same variable
+    ret->ptr_->var = var();
+    Engine::Get()->PushSync([src, ret, begin, end](RunContext ctx) {
+      NDArray dst = *ret;
+      // create a new chunk for dst NDArray
+      NDArray::Chunk chunk = *src.ptr_;
+      // void indptr storage handle
+      chunk.aux_handles[kIndPtr] = Storage::Handle();
+      // shape for indptr is end - begin + 1
+      chunk.CheckAndAllocAuxData(kIndPtr, Shape1(end - begin + 1));
+      if (src.ctx().dev_mask() == cpu::kDevMask) {
+        MSHADOW_INT_TYPE_SWITCH(src.aux_type(kIndPtr), IType, {
+          MSHADOW_TYPE_SWITCH(src.dtype(), DType, {
+            // create new indptr
+            const IType* src_indptr = src.aux_data(kIndPtr).dptr<IType>();
+            IType* dst_indptr = static_cast<IType*> (chunk.aux_handles[kIndPtr].dptr);
+            op::SliceCsrIndPtrImpl<cpu, IType>(begin, end, ctx, src_indptr, dst_indptr);
+            // advance idx and values pointers (CPU implementation)
+            // TODO(haibin) refactor for GPU implementation later
+            IType offset = src_indptr[begin];
+            IType* idx = static_cast<IType*>(chunk.aux_handles[kIdx].dptr);
+            DType* values = static_cast<DType*>(chunk.shandle.dptr);
+            chunk.aux_handles[kIdx].dptr = idx + offset;
+            chunk.shandle.dptr = values + offset;
+            // update storage shape and aux shape (CPU implementation)
+            auto nnz = dst_indptr[end - begin];
+            chunk.aux_shapes[kIdx] = Shape1(nnz);
+            chunk.storage_shape = Shape1(nnz);
+            chunk.static_data = true;
+            chunk.skip_delete_var = true;
+            // update dst chunk
+            *dst.ptr_ = chunk;
+          });
+        });
+      } else {
+#if MXNET_USE_CUDA
+       LOG(FATAL) << "SliceEx CSR not implemented yet";
+#else
+       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif
+      }
+      }, ctx(), {}, {var()},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
+  } else {
+    LOG(FATAL) << "Slice not yet implemented for storage " << stype;
+  }
+  // TODO(haibin) support auto_grad for SliceEx
+}
 
 NDArray NDArray::At(index_t idx) const {
+  CHECK(storage_type() == kDefaultStorage) << "Storage type "
+                                           << storage_type() << " doesn't support At()";
   NDArray ret = this->Slice(idx, idx+1);
   if (shape_.ndim() > 1) {
     return ret.Reshape(TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
@@ -212,11 +278,11 @@ void BinaryOp(const NDArray &lhs,
   // redirect everything to mshadow operations
   switch (lhs.ctx().dev_mask()) {
     case cpu::kDevMask: {
-      Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
-          TBlob tmp = ret.data();
-          ndarray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
-        }, lhs.ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
+        Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
+            TBlob tmp = ret.data();
+            ndarray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
+          }, lhs.ctx(), const_vars, {ret.var()},
+          FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #if MXNET_USE_CUDA
@@ -242,6 +308,7 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
   switch (ret.ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
+          CHECK(ret.storage_type() == kDefaultStorage);
           TBlob tmp = ret.data();
           ndarray::Eval<cpu>(rhs, &tmp, ctx);
         }, ret.ctx(), {}, {ret.var()},
@@ -313,6 +380,7 @@ void ScalarOp(const NDArray &lhs,
   }
 }
 
+
 void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
   if (from.var() == to->var()) {
     // skip to copy to itself
@@ -327,44 +395,33 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
   NDArray ret = *to;
   int a = from.ctx().dev_mask();
   int b = to->ctx().dev_mask();
-
   std::vector<Engine::VarHandle> const_vars;
   if (from.var() != ret.var()) const_vars.push_back(from.var());
 
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     Engine::Get()->PushSync([from, ret](RunContext ctx) {
-        TBlob tmp = ret.data();
-        ndarray::Copy<cpu, cpu>(from.data(), &tmp,
-                                from.ctx(), ret.ctx(), ctx);
+        NDArray nd(ret);
+        CopyFromToImpl<cpu, cpu>(from, &nd, ctx);
       }, from.ctx(), const_vars, {ret.var()},
       FnProperty::kNormal, priority, PROFILER_MESSAGE("CopyCPU2CPU"));
   } else {
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
-          TBlob tmp = ret.data();
-          ndarray::Copy<cpu, gpu>(from.data(), &tmp,
-                                  from.ctx(), ret.ctx(), ctx);
-          // Wait GPU kernel to complete
-          ctx.get_stream<gpu>()->Wait();
+          NDArray nd(ret);
+          CopyFromToImpl<cpu, gpu>(from, &nd, ctx);
         }, ret.ctx(), const_vars, {ret.var()},
         FnProperty::kCopyToGPU, priority, PROFILER_MESSAGE("CopyCPU2GPU"));
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
-          TBlob tmp = ret.data();
-          ndarray::Copy<gpu, cpu>(from.data(), &tmp,
-                                  from.ctx(), ret.ctx(), ctx);
-          // Wait GPU kernel to complete
-          ctx.get_stream<gpu>()->Wait();
+          NDArray nd(ret);
+          CopyFromToImpl<gpu, cpu>(from, &nd, ctx);
         }, from.ctx(), const_vars, {ret.var()},
         FnProperty::kCopyFromGPU, priority, PROFILER_MESSAGE("CopyGPU2CPU"));
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
-          TBlob tmp = ret.data();
-          ndarray::Copy<gpu, gpu>(from.data(), &tmp,
-                                  from.ctx(), ret.ctx(), ctx);
-          // Wait GPU kernel to complete
-          ctx.get_stream<gpu>()->Wait();
+          NDArray nd(ret);
+          CopyFromToImpl<gpu, gpu>(from, &nd, ctx);
         }, from.ctx(), const_vars, {ret.var()},
         from.dtype() != ret.dtype() ? FnProperty::kNormal : FnProperty::kCopyFromGPU,
         priority, PROFILER_MESSAGE("CopyGPU2GPU"));

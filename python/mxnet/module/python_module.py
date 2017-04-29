@@ -110,7 +110,7 @@ class PythonModule(BaseModule):
         """
         pass
 
-    def update(self):
+    def update(self, storage_type_dict=None):
         """Updates parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch. Currently we do nothing here. Subclass should
         override this method if contains parameters.

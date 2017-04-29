@@ -37,7 +37,7 @@ BatchEndParam = namedtuple('BatchEndParams',
                             'eval_metric',
                             'locals'])
 
-def _create_kvstore(kvstore, num_device, arg_params):
+def _create_kvstore(kvstore, num_device, arg_params, name2idx=None):
     """Create kvstore
     This function select and create a proper kvstore if given the kvstore type.
 
@@ -61,8 +61,8 @@ def _create_kvstore(kvstore, num_device, arg_params):
             # no need to use kv for single device and single machine
             kv = None
         else:
-            kv = kvs.create(kvstore)
-            if kvstore == 'local':
+            kv = kvs.create(kvstore, name2idx=name2idx)
+            if kvstore is 'local':
             # automatically select a proper local
                 max_size = max(np.prod(param.shape) for param in
                                arg_params.values())
@@ -85,25 +85,50 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
         if update_on_kvstore:
             kvstore.pull(idx, param_on_devs, priority=-idx)
 
-def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore):
-    """Perform update of param_arrays from grad_arrays on kvstore."""
-    for index, pair in enumerate(zip(param_arrays, grad_arrays)):
+def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore,
+                              stype_dict=None, param_names=None):
+    """Perform update of param_arrays from grad_arrays on kvstore.
+       If `param_names` is None or kvstore doesn't have a `name2idx` dictionary,
+       the index of a param is determined by the order it appears in `param_arrays`. """
+    stype_dict = {} if stype_dict is None else stype_dict
+    for i, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
         if grad_list[0] is None:
             continue
+        index = i
+        if param_names is not None:
+            name = param_names[i]
+            index = index if name not in kvstore.name2idx else kvstore.name2idx[name]
+            # cast storage type if stype doesn't match
+            if name in stype_dict:
+                for i, grad in enumerate(grad_list):
+                    stype = stype_dict[name]
+                    if grad_list[i].storage_type != stype:
+                        grad_list[i] = nd.cast_storage(grad, stype)
         # push gradient, priority is negative index
         kvstore.push(index, grad_list, priority=-index)
         # pull back the weights
         kvstore.pull(index, arg_list, priority=-index)
 
 def _update_params(param_arrays, grad_arrays, updater, num_device,
-                   kvstore=None):
+                   kvstore=None, stype_dict=None, param_names=None):
     """Perform update of param_arrays from grad_arrays not on kvstore."""
-    for index, pair in enumerate(zip(param_arrays, grad_arrays)):
+    stype_dict = {} if stype_dict is None else stype_dict
+    for i, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
         if grad_list[0] is None:
             continue
+        # cast storage type if stype doesn't match
+        if param_names is not None and param_names[i] in stype_dict:
+            for i, grad in enumerate(grad_list):
+                stype = stype_dict[param_names[i]]
+                if grad_list[i].storage_type != stype:
+                    grad_list[i] = nd.cast_storage(grad, stype)
+        index = i
         if kvstore:
+            if param_names is not None:
+                name = param_names
+                index = index if name not in kvstore.name2idx else kvstore.name2idx[name]
             # push gradient, priority is negative index
             kvstore.push(index, grad_list, priority=-index)
             # pull back the sum gradients, to the same locations.

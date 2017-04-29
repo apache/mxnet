@@ -246,6 +246,38 @@ MXNET_DLL int MXNDArrayCreateEx(const mx_uint *shape,
                               int delay_alloc,
                               int dtype,
                               NDArrayHandle *out);
+
+
+/*!
+ * \brief create an empty sparse NDArray with specified shape and data type
+ * \param storage_type the storage type of the ndarray
+ * \param shape the pointer to the shape
+ * \param ndim the dimension of the shape
+ * \param dev_type device type, specify device we want to take
+ * \param dev_id the device id of the specific device
+ * \param delay_alloc whether to delay allocation until
+ *        the narray is first mutated
+ * \param dtype data type of created array
+ * \param num_aux the number of aux data to support this ndarray
+ * \param aux_type data type of the aux data for the created array
+ * \param aux_ndims the dimension of the shapes of aux data
+ * \param aux_shape the shapes of aux data
+ * \param out the returning handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayCreateSparseEx(int storage_type,
+                    const mx_uint *shape,
+                    mx_uint ndim,
+                    int dev_type,
+                    int dev_id,
+                    int delay_alloc,
+                    int dtype,
+                    mx_uint num_aux,
+                    int *aux_type,
+                    mx_uint *aux_ndims,
+                    const mx_uint *aux_shape,
+                    NDArrayHandle *out);
+
 /*!
  * \brief create a NDArray handle that is loaded from raw bytes.
  * \param buf the head of the raw bytes
@@ -358,6 +390,19 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
                              mx_uint slice_begin,
                              mx_uint slice_end,
                              NDArrayHandle *out);
+
+/*!
+ * \brief Slice the NDArray with non-default storage along axis 0.
+ * \param handle the handle to the NDArray
+ * \param slice_begin The beginning index of slice
+ * \param slice_end The ending index of slice
+ * \param out The NDArrayHandle of sliced NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArraySliceEx(NDArrayHandle handle,
+                   mx_uint slice_begin,
+                   mx_uint slice_end,
+                   NDArrayHandle out);
 /*!
  * \brief Index the NDArray along axis 0.
  * \param handle the handle to the NDArray
@@ -368,6 +413,13 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
 MXNET_DLL int MXNDArrayAt(NDArrayHandle handle,
                           mx_uint idx,
                           NDArrayHandle *out);
+
+/*!
+ * \brief get the storage type of the array
+ */
+MXNET_DLL int MXNDArrayGetStorageType(NDArrayHandle handle,
+                                    int *out_storage_type);
+
 /*!
  * \brief Reshape the NDArray.
  * \param handle the handle to the narray
@@ -406,6 +458,26 @@ MXNET_DLL int MXNDArrayGetData(NDArrayHandle handle,
  */
 MXNET_DLL int MXNDArrayGetDType(NDArrayHandle handle,
                                int *out_dtype);
+
+/*!
+ * \brief get the type of the ith aux data in NDArray
+ * \param handle the handle to the narray
+ * \param i the index of the aux data
+ * \param out_type pointer holder to get type of aux data
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayGetAuxType(NDArrayHandle handle,
+                                  mx_uint i,
+                                  int *out_type);
+
+// Get the ith aux data blob wrapped in an NDArray
+MXNET_DLL int MXNDArrayGetAuxNDArray(NDArrayHandle handle,
+                                     mx_uint i,
+                                     NDArrayHandle *out);
+
+// Get the data blob wrapped in an NDArray
+MXNET_DLL int MXNDArrayGetDataNDArray(NDArrayHandle handle,
+                                      NDArrayHandle *out);
 /*!
  * \brief get the context of the NDArray
  * \param handle the handle to the narray
@@ -1003,6 +1075,25 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
                                 mx_uint *aux_type_size,
                                 const int **aux_type_data,
                                 int *complete);
+
+
+
+
+/*!
+ * \brief infer storage type of unknown input types given the known one.
+ */
+MXNET_DLL int MXSymbolInferStorageType(SymbolHandle sym,
+                      mx_uint num_args,
+                      const char** keys,
+                      const int *arg_storage_type_data,
+                      mx_uint *in_storage_type_size,
+                      const int **in_storage_type_data,
+                      mx_uint *out_storage_type_size,
+                      const int **out_storage_type_data,
+                      mx_uint *aux_storage_type_size,
+                      const int **aux_storage_type_data,
+                      int *complete);
+
 //--------------------------------------------
 // Part 4: Executor interface
 //--------------------------------------------
@@ -1167,6 +1258,9 @@ MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                          const mx_uint num_provided_arg_dtypes,
                          const char** provided_arg_dtype_names,
                          const int* provided_arg_dtypes,
+                         const mx_uint num_provided_arg_stypes,
+                         const char** provided_arg_stype_names,
+                         const int* provided_arg_stypes,
                          const mx_uint num_shared_arg_names,
                          const char** shared_arg_name_list,
                          int* shared_buffer_len,

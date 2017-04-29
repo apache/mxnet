@@ -454,8 +454,12 @@ class Module(BaseModule):
 
         if self._params_dirty:
             self._sync_params_from_devices()
+        name2idx = {}
+        for idx, name in enumerate(self._exec_group.param_names):
+            name2idx[name] = idx
+
         (kvstore, update_on_kvstore) = \
-                _create_kvstore(kvstore, len(self._context), self._arg_params)
+                _create_kvstore(kvstore, len(self._context), self._arg_params, name2idx=name2idx)
 
         batch_size = self._exec_group.batch_size
         if kvstore and 'dist' in kvstore.type and '_sync' in kvstore.type:
@@ -558,7 +562,7 @@ class Module(BaseModule):
         assert self.binded and self.params_initialized
         self._exec_group.backward(out_grads=out_grads)
 
-    def update(self):
+    def update(self, storage_type_dict=None):
         """Updates parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch.
 
@@ -572,7 +576,9 @@ class Module(BaseModule):
         if self._update_on_kvstore:
             _update_params_on_kvstore(self._exec_group.param_arrays,
                                       self._exec_group.grad_arrays,
-                                      self._kvstore)
+                                      self._kvstore,
+                                      stype_dict=storage_type_dict,
+                                      param_names=self._param_names)
         else:
             _update_params(self._exec_group.param_arrays,
                            self._exec_group.grad_arrays,

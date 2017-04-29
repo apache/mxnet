@@ -15,6 +15,8 @@
 #include <string>
 #include <limits>
 #include "../elemwise_op_common.h"
+#include "../mxnet_op.h"
+
 
 namespace mxnet {
 namespace op {
@@ -111,7 +113,6 @@ inline bool InitType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-
 template<typename xpu, int value>
 void FillCompute(const nnvm::NodeAttrs& attrs,
                  const OpContext& ctx,
@@ -127,6 +128,51 @@ void FillCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+// Fill a rsp NDArray with zeros by updating the aux shape.
+template<typename xpu>
+void FillZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
+  if (!dst->storage_initialized()) return;
+  // reset the shapes if it's not zeros
+  auto storage_shape = dst->storage_shape();
+  storage_shape[0] = 0;
+  dst->SetAuxShape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
+  dst->SetStorageShape(storage_shape);
+}
+
+// Fill a CSR NDArray with zeros by updating the aux shape.
+template<typename xpu>
+void FillZerosCsrImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
+  if (!dst->storage_initialized()) return;
+  // reset the shapes if it's not zeros
+  TShape new_shape(mshadow::Shape1(0));
+  dst->SetAuxShape(csr::kIndPtr, new_shape);
+  dst->SetAuxShape(csr::kIdx, new_shape);
+  dst->SetStorageShape(new_shape);
+}
+
+// This operator never needs to fall back, since there's no input NDArray
+template<typename xpu>
+void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
+                 const std::vector<NDArray>& inputs,
+                 const std::vector<OpReqType>& req,
+                 const std::vector<NDArray>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(inputs.size(), 0);
+  auto stype = outputs[0].storage_type();
+  if (stype == kRowSparseStorage) {
+    NDArray nd(outputs[0]);
+    FillZerosRspImpl<xpu>(s, &nd);
+  } else if (stype == kCSRStorage) {
+    NDArray nd(outputs[0]);
+    FillZerosCsrImpl<xpu>(s, &nd);
+  } else {
+    LOG(FATAL) << "storage type not implemented.";
+  }
+}
 
 template<typename xpu>
 void RangeCompute(const nnvm::NodeAttrs& attrs,

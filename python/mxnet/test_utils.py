@@ -10,11 +10,13 @@ import subprocess
 import os
 import errno
 import logging
+import scipy.sparse as sp
 import numpy as np
 import numpy.testing as npt
+import numpy.random as rnd
 import mxnet as mx
 from .context import Context
-from .ndarray import array
+from .ndarray import array, _STORAGE_TYPE_STR_TO_ID
 from .symbol import Symbol
 try:
     import requests
@@ -65,6 +67,51 @@ def random_arrays(*shapes):
         return arrays[0]
     return arrays
 
+
+def random_sample(population, k):
+    """Return a k length list of the elements chosen from the population sequence."""
+    assert 0 <= k <= len(population)
+    population_copy = population[:]
+    np.random.shuffle(population_copy)
+    return population_copy[0:k]
+
+
+# TODO(haibin) also include types in arguments
+def rand_sparse_ndarray(shape, storage_type, density=None):
+    """Generate a random sparse ndarray. Returns the ndarray, value(np) and indices(np) """
+    density = rnd.rand() if density is None else density
+    if storage_type == 'row_sparse':
+        # TODO(haibin) support high dim sparse ndarray
+        assert(len(shape) < 3)
+        prod = np.prod(shape)
+        num_cols = int(prod / shape[0])
+        # sample index
+        idx_sample = rnd.rand(shape[0])
+        indices = np.argwhere(idx_sample < density).flatten()
+        if indices.shape[0] == 0:
+            result = mx.sparse_nd.zeros('row_sparse', shape)
+            return result, (np.array([]), np.array([], dtype='int32'))
+        # generate random values
+        val = rnd.rand(indices.shape[0], num_cols)
+        arr = mx.sparse_nd.row_sparse(val, indices, shape, indices_type=np.int32)
+        return arr, (val, indices)
+    elif storage_type == 'csr':
+        assert(len(shape) == 2)
+        csr = sp.rand(shape[0], shape[1], density=density, format='csr')
+        result = mx.sparse_nd.csr(csr.data, csr.indptr, csr.indices, shape)
+        return result, (csr.indptr, csr.indices, csr.data)
+    else:
+        assert(False), "unknown storage type"
+
+def rand_ndarray(shape, storage_type, density=None):
+    if storage_type == 'default':
+        arr = mx.nd.array(random_arrays(shape))
+    else:
+        arr, _ = rand_sparse_ndarray(shape, storage_type, density=density)
+    return arr
+
+def rand_shape_2d():
+    return (rnd.randint(1, 10), rnd.randint(1, 10))
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
     """Compatible reduce for old version of NumPy.
@@ -297,7 +344,8 @@ def _parse_location(sym, location, ctx):
                              % (str(set(sym.list_arguments())), str(set(location.keys()))))
     else:
         location = {k: v for k, v in zip(sym.list_arguments(), location)}
-    location = {k: mx.nd.array(v, ctx=ctx) for k, v in location.items()}
+    location = {k: mx.nd.array(v, ctx=ctx) if isinstance(v, np.ndarray) \
+               else v for k, v in location.items()}
     return location
 
 
@@ -418,7 +466,8 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
 
 
 def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rtol=1e-2,
-                           atol=None, grad_nodes=None, use_forward_train=True, ctx=None):
+                           atol=None, grad_nodes=None, use_forward_train=True, ctx=None,
+                           grad_stype_dict=None):
     """Verify an operation by checking backward pass via finite difference method.
 
     Based on Theano's `theano.gradient.verify_grad` [1]
@@ -435,7 +484,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         - if type is dict of str -> numpy.ndarray
             maps the name of arguments to the corresponding numpy.ndarray.
         *In either case, value of all the arguments must be provided.*
-    aux_states : ist or tuple or dict, optional
+    aux_states : list or tuple or dict, optional
         The auxiliary states required when generating the executor for the symbol.
     numeric_eps : float, optional
         Delta for the finite difference method that approximates the gradient.
@@ -447,6 +496,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         Whether to use is_train=True when computing the finite-difference.
     ctx : Context, optional
         Check the gradient computation on the specified device.
+    grad_stype_dict : dict of str->str, optional
+        Storage type dictionary for gradient ndarrays.
     References
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
@@ -470,7 +521,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     location_npy = {k:v.asnumpy() for k, v in location.items()}
     aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
     if aux_states is not None:
-        aux_states_npy = {k:v.asnumpy() for k, v in aux_states.items()}
+        aux_states_npy = {k: v.asnumpy() for k, v in aux_states.items()}
     else:
         aux_states_npy = None
     if grad_nodes is None:
@@ -497,6 +548,11 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
                          + [("__random_proj", _rng.normal(0, 0.01, size=out_shape[0]))])
 
     args_grad = {k: mx.nd.array(v, ctx=ctx) for k, v in args_grad_npy.items()}
+    if grad_stype_dict is not None:
+        assert isinstance(grad_stype_dict, dict), "grad_stype_dict must be a dict"
+        for k, v in grad_stype_dict.items():
+            if k in args_grad and v in _STORAGE_TYPE_STR_TO_ID and v != 'default':
+                args_grad[k] = mx.nd.cast_storage(args_grad[k], storage_type=v)
 
     executor = out.bind(ctx, grad_req=grad_req,
                         args=location, args_grad=args_grad, aux_states=aux_states)
@@ -588,8 +644,8 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
         g[:] = 0
 
     executor.forward(is_train=False)
-    outputs = [x.asnumpy() for x in executor.outputs]
 
+    outputs = [x.asnumpy() for x in executor.outputs]
     for output_name, expect, output in zip(sym.list_outputs(), expected, outputs):
         assert_almost_equal(expect, output, rtol, atol,
                             ("EXPECTED_%s"%output_name, "FORWARD_%s"%output_name))
@@ -657,14 +713,29 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     if isinstance(expected, (list, tuple)):
         expected = {k:v for k, v in zip(sym.list_arguments(), expected)}
     args_grad_npy = {k:_rng.normal(size=v.shape) for k, v in expected.items()}
-    args_grad_data = {k: mx.nd.array(v, ctx=ctx) for k, v in args_grad_npy.items()}
+    # args_grad_data should be casted to storage type if hinted
+    # TODO(haibin) this is a temporary solution for testing. remove later
+    attrs = sym.attr_dict()
+    args_grad_data = {}
+    for k, v in args_grad_npy.items():
+        attr = attrs.get(k, {})
+        grad_stype = attr.get('grad_stype_hint', None)
+        nd = mx.nd.array(v, ctx=ctx)
+        if grad_stype is not None:
+            out = mx.nd.cast_storage(nd, storage_type=grad_stype)
+            args_grad_data[k] = out
+        else:
+            args_grad_data[k] = nd
+
     if isinstance(grad_req, str):
         grad_req = {k:grad_req for k in sym.list_arguments()}
     elif isinstance(grad_req, (list, tuple)):
         grad_req = {k:v for k, v in zip(sym.list_arguments(), grad_req)}
 
-    executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
+    executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data,
+                        aux_states=aux_states, grad_req=grad_req)
     executor.forward(is_train=True)
+
     if isinstance(out_grads, (tuple, list)):
         out_grads = [mx.nd.array(v, ctx=ctx) for v in out_grads]
     elif isinstance(out_grads, (dict)):

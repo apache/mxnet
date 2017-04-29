@@ -2993,7 +2993,6 @@ def test_where():
     test_where_numeric_gradient((5, 7, 9), True)
     test_where_numeric_gradient((5, 7, 9), False)
 
-
 def test_new_softmax():
     for ndim in range(1, 5):
         for _ in range(5):

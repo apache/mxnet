@@ -849,9 +849,17 @@ class BaseModule(object):
         """
         raise NotImplementedError()
 
-    def update(self):
+    def update(self, storage_type_dict=None):
         """Updates parameters according to the installed optimizer and the gradients computed
-        in the previous forward-backward batch.
+        in the previous forward-backward batch. The storage type of parameters is casted according
+        to `storage_type_dict`, if provided.
+
+        Parameters
+        ----------
+        storage_type_dict: dict of str to str
+            Defaults to ``None``. Desired storage types of parameters for parameter update. If the
+            parameter gradient is not of desired storage type, its storage type will be casted
+            before the update.
 
         Examples
         --------
