@@ -90,7 +90,7 @@ class Optimizer {
   const std::vector<const char*> GetParamKeys_() const;
   const std::vector<const char*> GetParamValues_() const;
   std::map<int, unsigned> count_;
-  unsigned num_update_, begin_num_update_;
+  unsigned begin_num_update_, num_update_;
   unsigned UpdateCount_(int index);
   virtual void CreateState_(int index, NDArray weight);
 };
