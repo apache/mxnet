@@ -117,11 +117,10 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                             pre_filter = pre_filter + int(shape[0])
         cur_param = 0
         if op == 'Convolution':
-            cur_param = pre_filter \
-                * int(_str2tuple(node["attr"]["kernel"])[0]) \
-                * int(_str2tuple(node["attr"]["kernel"])[1]) \
-                * int(node["attr"]["num_filter"]) \
-                + int(node["attr"]["num_filter"])
+            cur_param = pre_filter * int(node["attr"]["num_filter"])
+            for k in _str2tuple(node["attr"]["kernel"]):
+                cur_param *= int(k)
+            cur_param += int(node["attr"]["num_filter"])
         elif op == 'FullyConnected':
             cur_param = pre_filter * (int(node["attr"]["num_hidden"]) + 1)
         elif op == 'BatchNorm':
@@ -250,11 +249,10 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             label = node["name"]
             attr["fillcolor"] = cm[0]
         elif op == "Convolution":
-            label = r"Convolution\n%sx%s/%s, %s" % (_str2tuple(node["attr"]["kernel"])[0],
-                                                    _str2tuple(node["attr"]["kernel"])[1],
-                                                    _str2tuple(node["attr"]["stride"])[0]
-                                                    if "stride" in node["attr"] else '1',
-                                                    node["attr"]["num_filter"])
+            label = r"Convolution\n%s/%s, %s" % ("x".join(_str2tuple(node["attr"]["kernel"])),
+                                                 "x".join(_str2tuple(node["attr"]["stride"]))
+                                                 if "stride" in node["attr"] else "1",
+                                                 node["attr"]["num_filter"])
             attr["fillcolor"] = cm[1]
         elif op == "FullyConnected":
             label = r"FullyConnected\n%s" % node["attr"]["num_hidden"]
@@ -265,11 +263,10 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             label = r"%s\n%s" % (op, node["attr"]["act_type"])
             attr["fillcolor"] = cm[2]
         elif op == "Pooling":
-            label = r"Pooling\n%s, %sx%s/%s" % (node["attr"]["pool_type"],
-                                                _str2tuple(node["attr"]["kernel"])[0],
-                                                _str2tuple(node["attr"]["kernel"])[1],
-                                                _str2tuple(node["attr"]["stride"])[0]
-                                                if "stride" in node["attr"] else '1')
+            label = r"Pooling\n%s, %s/%s" % (node["attr"]["pool_type"],
+                                             "x".join(_str2tuple(node["attr"]["kernel"])),
+                                             "x".join(_str2tuple(node["attr"]["stride"]))
+                                             if "stride" in node["attr"] else "1")
             attr["fillcolor"] = cm[4]
         elif op == "Concat" or op == "Flatten" or op == "Reshape":
             attr["fillcolor"] = cm[5]
