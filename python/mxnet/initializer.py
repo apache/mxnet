@@ -292,7 +292,22 @@ class Mixed(object):
 
 @register
 class Zero(Initializer):
-    """Initialize the weight to 0."""
+    """Initializes weights to zero.
+
+    Example
+    -------
+    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights to zero.
+    ...
+    >>> init = mx.initializer.Zero()
+    >>> module.init_params(init)
+    >>> for dictionary in module.get_params():
+    ...     for key in dictionary:
+    ...         print(key)
+    ...         print(dictionary[key].asnumpy())
+    ...
+    fullyconnected0_weight
+    [[ 0.  0.  0.]]
+    """
     def __init__(self):
         super(Zero, self).__init__()
 
@@ -301,7 +316,22 @@ class Zero(Initializer):
 
 @register
 class One(Initializer):
-    """Initialize the weight to 1."""
+    """Initializes weights to one.
+
+    Example
+    -------
+    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights to one.
+    ...
+    >>> init = mx.initializer.One()
+    >>> module.init_params(init)
+    >>> for dictionary in module.get_params():
+    ...     for key in dictionary:
+    ...         print(key)
+    ...         print(dictionary[key].asnumpy())
+    ...
+    fullyconnected0_weight
+    [[ 1.  1.  1.]]
+    """
     def __init__(self):
         super(One, self).__init__()
 
@@ -320,12 +350,29 @@ class Constant(Initializer):
 
 @register
 class Uniform(Initializer):
-    """Initialize the weight with value uniformly sampled from ``[-scale, scale]``.
+    """Initializes weights with random values uniformly sampled from a given range.
 
     Parameters
     ----------
     scale : float, optional
-        The scale of uniform distribution.
+        The bound on the range of the generated random values.
+        Values are generated from the range [-`scale`, `scale`].
+        Default scale is 0.07.
+
+    Example
+    -------
+    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights
+    >>> # to random values uniformly sampled between -0.1 and 0.1.
+    ...
+    >>> init = mx.init.Uniform(0.1)
+    >>> module.init_params(init)
+    >>> for dictionary in module.get_params():
+    ...     for key in dictionary:
+    ...         print(key)
+    ...         print(dictionary[key].asnumpy())
+    ...
+    fullyconnected0_weight
+    [[ 0.01360891 -0.02144304  0.08511933]]
     """
     def __init__(self, scale=0.07):
         super(Uniform, self).__init__(scale=scale)
@@ -336,12 +383,29 @@ class Uniform(Initializer):
 
 @register
 class Normal(Initializer):
-    """Initialize the weight with value sampled according to ``normal(0, sigma)``.
+    """Initializes weights with random values sampled from a normal distribution
+    with a mean of zero and standard deviation of `sigma`.
 
     Parameters
     ----------
     sigma : float, optional
-        Standard deviation for gaussian distribution.
+        Standard deviation of the normal distribution.
+        Default standard deviation is 0.01.
+
+    Example
+    -------
+    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights
+    >>> # to random values sampled from a normal distribution.
+    ...
+    >>> init = mx.init.Normal(0.5)
+    >>> module.init_params(init)
+    >>> for dictionary in module.get_params():
+    ...     for key in dictionary:
+    ...         print(key)
+    ...         print(dictionary[key].asnumpy())
+    ...
+    fullyconnected0_weight
+    [[-0.3214761  -0.12660924  0.53789419]]
     """
     def __init__(self, sigma=0.01):
         super(Normal, self).__init__(sigma=sigma)
