@@ -32,7 +32,35 @@ class InitDesc(str):
 _INITIALIZER_REGISTRY = {}
 
 def register(klass):
-    """Register an intializer to the initializer factory."""
+    """Registers a custom initializer.
+
+    Custom initializers can be created by extending `mx.init.Initializer` and implementing the
+    required functions like `_init_weight` and `_init_bias`. The created initializer must be
+    registered using `mx.init.register` before it can be used.
+
+    Parameters
+    ----------
+    klass : class
+        A subclass of `mx.init.Initializer` that needs to be registered as a custom initializer.
+
+    Example
+    -------
+    >>> # Create and register a custom initializer that
+    ... # initializes weights to 0.1 and biases to 1.
+    ...
+    >>> @mx.init.register
+    ... class CustomInit(mx.init.Initializer):
+    ...   def __init__(self):
+    ...     super(CustomInit, self).__init__()
+    ...   def _init_weight(self, _, arr):
+    ...     arr[:] = 0.1
+    ...   def _init_bias(self, _, arr):
+    ...     arr[:] = 1
+    ...
+    >>> # Module is an instance of 'mxnet.module.Module'
+    ...
+    >>> module.init_params(CustomInit())
+    """
     assert issubclass(klass, Initializer), "Can only register subclass of Initializer"
     name = klass.__name__.lower()
     if name in _INITIALIZER_REGISTRY:
