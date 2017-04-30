@@ -43,7 +43,8 @@ if !libmxnet_detected
     run(`cmd /c copy "usr\\3rdparty\\openblas\\bin\\*.dll" "usr\\lib"`)
 
     run(download_cmd(package_url, "mxnet.7z"))
-    run(`7z x mxnet.7z -y -ousr`)
+    exe7z = joinpath(JULIA_HOME, "7z.exe")
+    run(`$exe7z x mxnet.7z -y -ousr`)
 
     return
   end
