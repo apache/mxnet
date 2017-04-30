@@ -280,7 +280,7 @@ class CuDNNDeconvolutionOp : public Operator {
                                            grad_ptr + out_offset_ * g,
                                            filter_desc_,
                                            wmat_ptr + weight_offset_ * g,
-                                           backward_conv_desc_,   // fwd alg used to backprop-to-data
+                                           backward_conv_desc_,
                                            algo_,
                                            workspace.dptr_,
                                            forward_workspace_byte_,

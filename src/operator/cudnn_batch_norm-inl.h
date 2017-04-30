@@ -197,25 +197,26 @@ class CuDNNBatchNormOp : public Operator {
 
       if (param_.fix_gamma) gamma = 1.f;
 
-      CUDNN_CALL(cudnnBatchNormalizationBackward(s->dnn_handle_,
-                                                 CUDNN_BATCHNORM_SPATIAL,
-                                                 &a,
-                                                 &b,
-                                                 &a,
-                                                 req[cudnnbatchnorm::kGamma] == kWriteTo ? &b: &b_add,
-                                                 io_desc_,
-                                                 x.dptr_,
-                                                 io_desc_,
-                                                 dy.dptr_,
-                                                 io_desc_,
-                                                 dx.dptr_,
-                                                 mean_desc_,
-                                                 gamma.dptr_,
-                                                 dgamma.dptr_,
-                                                 dbeta.dptr_,
-                                                 param_.eps,
-                                                 save_mean.dptr_,
-                                                 save_inv_var.dptr_));
+      CUDNN_CALL(cudnnBatchNormalizationBackward(
+        s->dnn_handle_,
+        CUDNN_BATCHNORM_SPATIAL,
+        &a,
+        &b,
+        &a,
+        req[cudnnbatchnorm::kGamma] == kWriteTo ? &b: &b_add,
+        io_desc_,
+        x.dptr_,
+        io_desc_,
+        dy.dptr_,
+        io_desc_,
+        dx.dptr_,
+        mean_desc_,
+        gamma.dptr_,
+        dgamma.dptr_,
+        dbeta.dptr_,
+        param_.eps,
+        save_mean.dptr_,
+        save_inv_var.dptr_));
       if (param_.fix_gamma) dgamma = 0.f;
     })
 #else  // CUDNN_VERSION < 4007
