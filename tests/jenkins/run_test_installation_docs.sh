@@ -61,32 +61,48 @@ FILE=install.md
 # range of lines inside Linux-Python-CPU instructions
 LINUX_PYTHON_CPU_START_LINENO=$(grep -n "START - Linux Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
 LINUX_PYTHON_CPU_END_LINENO=$(grep -n "END - Linux Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
+
+LINUX_PYTHON_GPU_START_LINENO=$(grep -n "START - Linux Python GPU Installation Instructions" "${FILE}" | cut -d : -f 1)
+LINUX_PYTHON_GPU_END_LINENO=$(grep -n "END - Linux Python GPU Installation Instructions" "${FILE}" | cut -d : -f 1)
 #VERIFY ONLY ONE ELEMENT FOR EACH OF ABOVE
 
 
 # line numbers of the start of installation type instructions
 # ARE THESE WITHIN THE RANGE ABOVE?
-LINUX_PYTHON_CPU_VIRTUALENV_LINENO=($(grep -n "<div class=\"virtualenv\">" "${FILE}" | cut -d : -f 1))
-LINUX_PYTHON_CPU_PIP_LINENO=($(grep -n "<div class=\"pip\">" "${FILE}" | cut -d : -f 1))
-LINUX_PYTHON_CPU_DOCKER_LINENO=($(grep -n "<div class=\"docker\">" "${FILE}" | cut -d : -f 1))
-LINUX_PYTHON_CPU_BUILDFROMSOURCE_LINENO=($(grep -n "<div class=\"build-from-source\">" "${FILE}" | cut -d : -f 1))
+LINUX_PYTHON_CPU_VIRTUALENV_LINENO_ALL=($(grep -n "<div class=\"virtualenv\">" "${FILE}" | cut -d : -f 1))
+LINUX_PYTHON_CPU_PIP_LINENO_ALL=($(grep -n "<div class=\"pip\">" "${FILE}" | cut -d : -f 1))
+LINUX_PYTHON_CPU_DOCKER_LINENO_ALL=($(grep -n "<div class=\"docker\">" "${FILE}" | cut -d : -f 1))
+LINUX_PYTHON_CPU_BUILDFROMSOURCE_LINENO_ALL=($(grep -n "<div class=\"build-from-source\">" "${FILE}" | cut -d : -f 1))
 
 printf "\nStart: ${LINUX_PYTHON_CPU_START_LINENO}\n"
 printf "\nEnd: ${LINUX_PYTHON_CPU_END_LINENO}\n"
+printf "\nStart: ${LINUX_PYTHON_GPU_START_LINENO}\n"
+printf "\nEnd: ${LINUX_PYTHON_GPU_END_LINENO}\n"
 #printf "\nVirtualEnv: ${LINUX_PYTHON_CPU_VIRTUALENV_LINENO[*]}\n"
 #printf "\nPip: ${LINUX_PYTHON_CPU_PIP_LINENO[*]}\n"
 #printf "\nDocker: ${LINUX_PYTHON_CPU_DOCKER_LINENO[*]}\n"
 #printf "\nBuildFromSource: ${LINUX_PYTHON_CPU_BUILDFROMSOURCE_LINENO[*]}\n"
 
-LINUX_PYTHON_CPU_VIRTUALENV_LINENO=($(remove_out_of_range LINUX_PYTHON_CPU_VIRTUALENV_LINENO[@] ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO})) 
-LINUX_PYTHON_CPU_PIP_LINENO=($(remove_out_of_range LINUX_PYTHON_CPU_PIP_LINENO[@] ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}))
-LINUX_PYTHON_CPU_DOCKER_LINENO=($(remove_out_of_range LINUX_PYTHON_CPU_DOCKER_LINENO[@] ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}))
-LINUX_PYTHON_CPU_BUILDFROMSOURCE_LINENO=($(remove_out_of_range LINUX_PYTHON_CPU_BUILDFROMSOURCE_LINENO[@] ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}))
+LINUX_PYTHON_CPU_VIRTUALENV_LINENO=($(remove_out_of_range LINUX_PYTHON_CPU_VIRTUALENV_LINENO_ALL[@] ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO})) 
+LINUX_PYTHON_CPU_PIP_LINENO=($(remove_out_of_range LINUX_PYTHON_CPU_PIP_LINENO_ALL[@] ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}))
+LINUX_PYTHON_CPU_DOCKER_LINENO=($(remove_out_of_range LINUX_PYTHON_CPU_DOCKER_LINENO_ALL[@] ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}))
+LINUX_PYTHON_CPU_BUILDFROMSOURCE_LINENO=($(remove_out_of_range LINUX_PYTHON_CPU_BUILDFROMSOURCE_LINENO_ALL[@] ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}))
+
+remove_out_of_range LINUX_PYTHON_CPU_VIRTUALENV_LINENO_ALL[@] ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}
+LINUX_PYTHON_GPU_VIRTUALENV_LINENO=($(remove_out_of_range LINUX_PYTHON_CPU_VIRTUALENV_LINENO_ALL[@] ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}))
+LINUX_PYTHON_GPU_PIP_LINENO=($(remove_out_of_range LINUX_PYTHON_CPU_PIP_LINENO_ALL[@] ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}))
+LINUX_PYTHON_GPU_DOCKER_LINENO=($(remove_out_of_range LINUX_PYTHON_CPU_DOCKER_LINENO_ALL[@] ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}))
+LINUX_PYTHON_GPU_BUILDFROMSOURCE_LINENO=($(remove_out_of_range LINUX_PYTHON_CPU_BUILDFROMSOURCE_LINENO_ALL[@] ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}))
 
 printf "\nVirtualEnv: ${LINUX_PYTHON_CPU_VIRTUALENV_LINENO[*]}\n"
 printf "\nPip: ${LINUX_PYTHON_CPU_PIP_LINENO[*]}\n"
 printf "\nDocker: ${LINUX_PYTHON_CPU_DOCKER_LINENO[*]}\n"
 printf "\nBuildFromSource: ${LINUX_PYTHON_CPU_BUILDFROMSOURCE_LINENO[*]}\n"
+
+printf "\nVirtualEnv: ${LINUX_PYTHON_GPU_VIRTUALENV_LINENO[*]}\n"
+printf "\nPip: ${LINUX_PYTHON_GPU_PIP_LINENO[*]}\n"
+printf "\nDocker: ${LINUX_PYTHON_GPU_DOCKER_LINENO[*]}\n"
+printf "\nBuildFromSource: ${LINUX_PYTHON_GPU_BUILDFROMSOURCE_LINENO[*]}\n"
 # MAKE SURE ONLY ONE ITEM IN EACH
 
 SOURCE_REGEX="\`\`\`"
@@ -130,9 +146,9 @@ function retrieve_closest_index() {
 
 # retrieves all bash commands between two given line numbers in a file
 function retrieve_commands() {
-
     section_start_index=${1}
     section_end_index=${2}
+    echo "inside retrieve_Command *${section_start_index}* *${section_end_index}*"
 
     if [[ -z ${section_start_index} || -z ${section_end_index} ]]
     then
@@ -143,11 +159,7 @@ function retrieve_commands() {
     commands=""
 
     for (( index=${section_start_index}; index < ${section_end_index}; index+=2 ))
-    #for (( i=0; i <= ${#SOURCE_LINES[@]}; i+=2 ))
     do
-        #open_line_number=${SOURCE_LINES[${i}]}
-        #close_line_number=${SOURCE_LINES[${i} + 1]}
-
         open_line_number=${SOURCE_LINES[${index}]}
         close_line_number=${SOURCE_LINES[${index} + 1]}
 
@@ -167,11 +179,67 @@ function retrieve_commands() {
     echo ${commands}
 }
 
+function sort() {
+    declare -a lineno_array=("${!1}")
+    return_arr=()
+    #printf "unsorted *${lineno_array[*]}* *${lineno_array[0]} ${lineno_array[1]} ${lineno_array[2]}* *${#lineno_array[@]}*"
+    index=0
+    size=${#lineno_array[@]}
+    for (( i=1; i<=$(( $size-1)); i++ ))
+    do
+        j=$i
+    #    echo "hey" ${#lineno_array[@]} $i $j
+     #   printf "sorting... *${lineno_array[0]} ${lineno_array[1]} ${lineno_array[2]}* *${#lineno_array[@]}*"
+        while (( ${j} > 0 && ${lineno_array[$j-1]} > ${lineno_array[$j]} )); do
+            x=${lineno_array[$j-1]}
+            lineno_array[$j-1]=${lineno_array[$j]}
+            lineno_array[$j]=$x
+            j=$j-1
+        done
+    done
+    printf "${lineno_array[*]}"
+#    return_arr+=(${number})
+}
+
+#function search() {
+
+#}
+
+# CPU
 start_virtualenv_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_CPU_VIRTUALENV_LINENO[0]} true)
 start_pip_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_CPU_PIP_LINENO[0]} true)
 start_docker_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_CPU_DOCKER_LINENO[0]} true)
 start_buildfromsource_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_CPU_BUILDFROMSOURCE_LINENO[0]} true)
 end_pythoncpulinux_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_CPU_END_LINENO[0]} true)
+
+#virtualenv_commands=$(retrieve_commands ${start_virtualenv_command_index} ${start_pip_command_index})
+#pip_commands=$(retrieve_commands ${start_pip_command_index} ${start_docker_command_index})
+#docker_commands=$(retrieve_commands ${start_docker_command_index} ${start_buildfromsource_command_index})
+#buildfromsource_commands=$(retrieve_commands ${start_buildfromsource_command_index} ${end_pythoncpulinux_index})
+
+echo "CPU"
+echo "virtualenv start index: " ${start_virtualenv_command_index} "\n" ${virtualenv_commands}
+echo "pip start index: " ${start_pip_command_index} "\n" ${pip_commands}
+echo "docker start index: " ${start_docker_command_index} "\n" ${docker_commands}
+echo "buildfromsource start index: " ${start_buildfromsource_command_index} "\n" ${buildfromsource_commands}
+
+#################################
+
+# GPU
+#echo "retrieve commands for gpu"
+#retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_GPU_VIRTUALENV_LINENO[0]} true
+#exit
+start_virtualenv_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_GPU_VIRTUALENV_LINENO[0]} true)
+start_pip_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_GPU_PIP_LINENO[0]} true)
+start_docker_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_GPU_DOCKER_LINENO[0]} true)
+start_buildfromsource_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_GPU_BUILDFROMSOURCE_LINENO[0]} true)
+end_pythoncpulinux_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_GPU_END_LINENO[0]} true)
+echo "sort"
+a=(${start_virtualenv_command_index} ${start_pip_command_index} ${start_docker_command_index} ${start_buildfromsource_command_index} ${end_pythoncpulinux_index})
+#a=(10 5 2)
+printf "unsorted ${a[*]}"
+sorted_indexes=($(sort a[@]))
+printf "sorted ${sorted_indexes[*]}"
 
 echo "virtualenv start index: " ${start_virtualenv_command_index}
 echo "pip start index: " ${start_pip_command_index}
@@ -179,17 +247,35 @@ echo "docker start index: " ${start_docker_command_index}
 echo "buildfromsource start index: " ${start_buildfromsource_command_index}
 echo "pythoncpulinux end index: " ${end_pythoncpulinux_index}
 
-virtualenv_commands=$(retrieve_commands ${start_virtualenv_command_index} ${start_pip_command_index})
-pip_commands=$(retrieve_commands ${start_pip_command_index} ${start_docker_command_index})
-docker_commands=$(retrieve_commands ${start_docker_command_index} ${start_buildfromsource_command_index})
-buildfromsource_commands=$(retrieve_commands ${start_buildfromsource_command_index} ${end_pythoncpulinux_index})
 
-echo ${virtualenv_commands}
-echo ${pip_commands}
-echo ${docker_commands}
-echo ${buildfromsource_commands}
+end_virtualenv_command_index=$(retrieve_closest_index sorted_indexes[@] $(( ${start_virtualenv_command_index} + 1 )) true)
+echo "virtualenv start: ${start_virtualenv_command_index}  end: ${sorted_indexes[$end_virtualenv_command_index]}"
+end_pip_command_index=$(retrieve_closest_index sorted_indexes[@] $(( ${start_pip_command_index} + 1)) true)
+echo "pip start: ${start_pip_command_index}  end: ${sorted_indexes[$end_pip_command_index]}"
+end_docker_command_index=$(retrieve_closest_index sorted_indexes[@] $(( ${start_docker_command_index} + 1 )) true)
+echo "docker start: ${start_docker_command_index}  end: ${sorted_indexes[$end_docker_command_index]}"
+end_buildfromsource_command_index=$(retrieve_closest_index sorted_indexes[@] $(( ${start_buildfromsource_command_index} +1 )) true)
+echo "buildfromsource start: ${start_buildfromsource_command_index}  end: ${sorted_indexes[$end_buildfromsource_command_index]}"
+
+echo "retrieve commands"
+retrieve_commands ${start_virtualenv_command_index} ${sorted_indexes[$end_virtualenv_command_index]}
+virtualenv_commands=$(retrieve_commands ${start_virtualenv_command_index} ${sorted_indexes[$end_virtualenv_command_index]})
+pip_commands=$(retrieve_commands ${start_pip_command_index} ${sorted_indexes[$end_pip_command_index]})
+docker_commands=$(retrieve_commands ${start_docker_command_index} ${sorted_indexes[$end_docker_command_index]})
+buildfromsource_commands=$(retrieve_commands ${start_buildfromsource_command_index} ${sorted_indexes[$end_buildfromsource_command_index]})
+
+#echo "GPU"
+echo "virtualenv start index: " ${start_virtualenv_command_index} "\n" ${virtualenv_commands}
+echo "pip start index: " ${start_pip_command_index} "\n" ${pip_commands}
+echo "docker start index: " ${start_docker_command_index} "\n" ${docker_commands}
+echo "buildfromsource start index: " ${start_buildfromsource_command_index} "\n" ${buildfromsource_commands}
+
+
+
+
+#################################
 
 #docker run --rm ubuntu:14.04 bash -c "${virtualenv_commands}"
 #docker run --rm ubuntu:14.04 bash -c "${pip_commands}"
 #eval ${docker_commands}
-docker run --rm ubuntu:14.04 bash -c "${buildfromsource_commands}"
+#docker run --rm ubuntu:14.04 bash -c "${buildfromsource_commands}"
