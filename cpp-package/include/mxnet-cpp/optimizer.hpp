@@ -12,6 +12,7 @@
 #include <utility>
 #include <numeric>
 #include <map>
+#include <cmath>
 #include <string>
 #include <vector>
 #include "mxnet-cpp/optimizer.h"

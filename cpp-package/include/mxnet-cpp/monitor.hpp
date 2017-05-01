@@ -8,6 +8,7 @@
 #ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_MONITOR_HPP_
 #define CPP_PACKAGE_INCLUDE_MXNET_CPP_MONITOR_HPP_
 
+#include <cmath>
 #include <sstream>
 #include <algorithm>
 #include <vector>
