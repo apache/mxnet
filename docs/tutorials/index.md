@@ -80,6 +80,10 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Basics](http://mxnet.io/tutorials/c++/basics.html)
 
+### Perl
+
+- [Calculator, handwritten digits and roboshakespreare](http://blogs.perl.org/users/sergey_kolychev/2017/04/machine-learning-in-perl-part2-a-calculator-handwritten-digits-and-roboshakespeare.html)
+
 ## Contributing Tutorials
 
 Want to contribute an MXNet tutorial? To get started, download the [tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
