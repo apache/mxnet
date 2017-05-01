@@ -37,7 +37,7 @@ MXNET_REGISTER_OP_PROPERTY(Deconvolution, DeconvolutionProp)
 .add_argument("weight", "NDArray-or-Symbol", "Weight matrix.")
 .add_argument("bias", "NDArray-or-Symbol", "Bias parameter.")
 .add_arguments(DeconvolutionParam::__FIELDS__())
-.describe("Apply deconvolution to input then add a bias.");
+.describe("Applies deconvolution to input and adds a bias.");
 
 }  // namespace op
 }  // namespace mxnet

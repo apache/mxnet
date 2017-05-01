@@ -13,19 +13,7 @@ DMLC_REGISTER_PARAMETER(BroadcastAxesParam);
 DMLC_REGISTER_PARAMETER(BroadcastToParam);
 
 inline std::string get_reduce_axes_description(const std::string& op_name, int line) {
-  std::string doc = R"code(Compute the __op__ of array elements over given axes.
-
-The argument ``axis`` specifies the axes to compute over:
-
-- **()**: compute over all elements into a scalar array with shape ``(1,)``. This is
-  the default option.
-- **int**: compute over along a particular axis. If input has shape ``(n, m, k)``,
-  use ``axis=0`` will result in an array with shape ``(m, k)``.
-- **tuple of int**: compute over multiple axes. Again assume input shape ``(n, m,
-  k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
-
-If ``keepdims = 1``, then the result array will has the same number of dimensions
-as the input, while the reduced axes will have size 1.
+  std::string doc = R"code(Computes the __op__ of array elements over given axes.
 
 
 Defined in )code";
@@ -68,9 +56,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_prod)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut< cpu, mshadow_op::rdiv>);
 
 MXNET_OPERATOR_REGISTER_REDUCE(nansum)
-.describe(R"code(Compute the sum of array elements over given axes with ``NaN`` ignored
-
-Refer to ``sum`` for more details.
+.describe(R"code(Computes the sum of array elements over given axes treating Not a Numbers (``NaN``) as zero.
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow_op::nansum>)
@@ -81,9 +67,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_nansum)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut<cpu, mshadow_op::nansum_grad>);
 
 MXNET_OPERATOR_REGISTER_REDUCE(nanprod)
-.describe(R"code(Compute the product of array elements over given axes with ``NaN`` ignored
-
-Refer to ``prod`` for more details.
+.describe(R"code(Computes the product of array elements over given axes treating Not a Numbers (``NaN``) as one.
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow_op::nanprod>)
@@ -171,9 +155,7 @@ NNVM_REGISTER_OP(_broadcast_backward)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>);
 
 NNVM_REGISTER_OP(norm)
-.describe(R"code(Computes the L2 norm of the input array.
-
-Flattens the input array and then computes the l2 norm.
+.describe(R"code(Flattens the input array and then computes the l2 norm.
 
 Examples::
 
