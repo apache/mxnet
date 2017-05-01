@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use PDL;
 use PDL::Types qw();
-use AI::MXNetCAPI 0.9504;
+use AI::MXNetCAPI 0.9506;
 use AI::NNVMCAPI 0.95;
 use AI::MXNet::Types;
 use Time::HiRes;

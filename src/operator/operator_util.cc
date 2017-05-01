@@ -479,7 +479,6 @@ void SimpleOpRegEntryImpl::RegisterSourceImperative() {
     OpReqType req = kWriteTo;
 
     Engine::Get()->PushSync([ret, fun, dev_mask, req, env](RunContext ctx) {
-        ret.CheckAndAlloc();
         TBlob tmp = ret.data();
         (*fun)(env, &tmp, req, ctx);
 #if MXNET_USE_CUDA
@@ -664,7 +663,6 @@ void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
     }
 
     Engine::Get()->PushSync([src, ret, fun, dev_mask, req, env](RunContext ctx) {
-        ret.CheckAndAlloc();
         TBlob tmp = ret.data();
         (*fun)(src.data(), env, &tmp, req, ctx);
 #if MXNET_USE_CUDA
@@ -939,7 +937,6 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
     }
 
     Engine::Get()->PushSync([lhs, rhs, ret, fun, dev_mask, req, env](RunContext ctx) {
-        ret.CheckAndAlloc();
         TBlob tmp = ret.data();
         (*fun)(lhs.data(), rhs.data(), env, &tmp, req, ctx);
         #if MXNET_USE_CUDA

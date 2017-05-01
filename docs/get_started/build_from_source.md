@@ -4,6 +4,7 @@ This document explains how to build MXNet from sources. Building MXNet from sour
 
 1. Build the MXNet shared library, `libmxnet.so`, from [C++ source files](#build-the-shared-library)
 2. Install the language binding for MXNet. MXNet supports - [Python](#build-the-python-package),
+   [C++](#build-the-cpp-package),
    [Scala](#build-the-scala-package), [R](#build-the-r-package), and
    [Julia](#build-the-julia-package).
 
@@ -276,6 +277,8 @@ File
 contains all the compilation options. You can edit it and then `make`. There are
 some example build options
 
+If you want to build MXNet with C++ language binding, please make sure you read [Build the C++ package](#build-the-cpp-package) first.
+
 </div>
 
 <div class="linux">
@@ -354,6 +357,11 @@ The Python package can be installed by one of the following three ways:
    ```bash
    cd python; sudo python setup.py install
    ```
+
+## Build the C++ package
+The C++ package has the same prerequisites as the MXNet library, you should also have `python` 2 installed. (`python` 3 is not supported currently)
+
+To enable C++ package, just add `USE_CPP_PACKAGE=1` in the build options when building the MXNet shared library.
 
 ## Build the R package
 
@@ -453,4 +461,29 @@ Install the Julia package for MXNet with:
 
 ```bash
 julia -e 'Pkg.add("MXNet")'
+```
+
+### Build the Perl package
+
+Run the following command from the MXNet source root directory to build the MXNet Perl package:
+
+```bash
+    sudo apt-get install libmouse-perl pdl cpanminus swig libgraphviz-perl
+    cpanm -q -L "${HOME}/perl5" Function::Parameters
+
+    MXNET_HOME=${PWD}
+    export LD_LIBRARY_PATH=${MXNET_HOME}/lib
+    export PERL5LIB=${HOME}/perl5/lib/perl5
+
+    cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make install
+
+    cd ${MXNET_HOME}/perl-package/AI-NNVMCAPI/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make install
+
+    cd ${MXNET_HOME}/perl-package/AI-MXNet/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make install
 ```

@@ -396,7 +396,7 @@ void TakeOpForward(const nnvm::NodeAttrs& attrs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
-  CHECK_EQ(req[take_::kOut], kWriteTo);
+  if (req[take_::kOut] == kNullOp) return;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
 
