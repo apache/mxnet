@@ -461,10 +461,10 @@ class Orthogonal(Initializer):
 class Xavier(Initializer):
     """Returns an initializer performing "Xavier" initialization for weights.
 
-    This initializer is designed to keep the scale of graidents roughly the same
+    This initializer is designed to keep the scale of gradients roughly the same
     in all layers.
 
-    By default `rnd_type` is ``'uniform'`` and `factor_type` is ``'avg'``,
+    By default, `rnd_type` is ``'uniform'`` and `factor_type` is ``'avg'``,
     the initializer fills the weights with random numbers in the range
     of :math:`[-c, c]`, where :math:`c = \\sqrt{\\frac{3.}{0.5 * (n_{in} + n_{out})}}`.
     :math:`n_in` is the number of neurons feeding into weights, and :math:`n_out` is

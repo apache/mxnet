@@ -32,8 +32,8 @@ DMLC_REGISTER_PARAMETER(SoftmaxOutputParam);
 MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
 .describe(R"code(Computes the gradient of cross entropy loss with respect to softmax output.
 
-- This operator is finished in two steps.
-  The cross entroy loss does not need to be actually computed.
+- This operator computes the graident in two steps.
+  The cross entropy loss does not actually need to be computed.
 
   - Applies softmax function on the input array.
   - Computes and returns the gradient of cross entropy loss w.r.t. the softmax output.
@@ -55,7 +55,7 @@ MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
 - During forward propagation, the softmax function is computed for each instance in the input array.
 
   For general *N*-D input arrays with shape :math:`(d_1, d_2, ..., d_n)`. The size is
-  :math:`s=d_1 \cdot d_2 \cdot \cdot \cdot d_n`. We can use the parameter `preserve_shape`
+  :math:`s=d_1 \cdot d_2 \cdot \cdot \cdot d_n`. We can use the parameters `preserve_shape`
   and `multi_output` to specify the way to compute softmax:
 
   - By default, `preserve_shape` is ``false``. This operator will reshape the input array
@@ -67,7 +67,7 @@ MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
   - If `multi_output` is ``true``, the softmax function will be computed along
     the second axis (`axis` = ``1``).
 
-- During backward propagation, the gradient of cross-entroy loss w.r.t softmax output array is computed.
+- During backward propagation, the gradient of cross-entropy loss w.r.t softmax output array is computed.
   The provided label can be a one-hot label array or a probability label array.
 
   - If the parameter `use_ignore` is ``true``, `ignore_label` can specify input instances
@@ -96,7 +96,7 @@ MXNET_REGISTER_OP_PROPERTY(Softmax, DeprecatedSoftmaxProp)
 .. note::
 
   This operator has been renamed to `SoftmaxOutput`, which
-  computes the gradient of cross-entroy loss w.r.t softmax output.
+  computes the gradient of cross-entropy loss w.r.t softmax output.
   To just compute softmax output, use the `softmax` operator.
 
 )code" ADD_FILELINE)
