@@ -245,7 +245,7 @@ The cropped feature maps are pooled by standard max pooling operation to a fixed
 indicated by a `pooled_size` parameter. batch_size will change to the number of region
 bounding boxes after `ROIPooling`.
 
-The size of each region of interest doesn’t have to be perfectly divisible by
+The size of each region of interest doesn't have to be perfectly divisible by
 the number of pooling sections(`pooled_size`).
 
 Example::

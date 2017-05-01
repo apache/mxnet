@@ -232,7 +232,7 @@ object Visualization {
       }
       // input data
       val attr = nodeAttr.clone()
-      var label = op
+      var label = name
       var continue = false
       op match {
         case "null" => {
@@ -248,32 +248,38 @@ object Visualization {
           val kernel = str2Tuple(attrs("kernel"))
           val stride = if (attrs.contains("stride")) str2Tuple(attrs("stride")) else List(1)
           label =
-            s""""Convolution\\n${kernel(0)}x${kernel(1)}/${stride(0)}, ${attrs("num_filter")}""""
+            """"Convolution\n%s/%s, %s"""".format(
+              kernel.mkString("x"), stride.mkString("x"), attrs("num_filter"))
           attr("fillcolor") = cm(1)
         }
         case "FullyConnected" => {
-          label = s""""FullyConnected\\n${attrs("num_hidden")}""""
+          label = s""""FullyConnected\n${attrs("num_hidden")}""""
           attr("fillcolor") = cm(1)
         }
         case "BatchNorm" => attr("fillcolor") = cm(3)
         case "Activation" | "LeakyReLU" => {
-          label = s""""${op}\\n${attrs("act_type")}""""
+          label = s""""${op}\n${attrs("act_type")}""""
           attr("fillcolor") = cm(2)
         }
         case "Pooling" => {
           val kernel = str2Tuple(attrs("kernel"))
           val stride = if (attrs.contains("stride")) str2Tuple(attrs("stride")) else List(1)
           label =
-            s""""Pooling\\n${attrs("pool_type")}, ${kernel(0)}x${kernel(1)}/${stride(0)}""""
+            s""""Pooling\n%s, %s/%s"""".format(
+              attrs("pool_type"), kernel.mkString("x"), stride.mkString("x"))
           attr("fillcolor") = cm(4)
         }
         case "Concat" | "Flatten" | "Reshape" => attr("fillcolor") = cm(5)
         case "Softmax" => attr("fillcolor") = cm(6)
-        case _ => attr("fillcolor") = cm(7)
+        case _ => {
+          attr("fillcolor") = cm(7)
+          if (op == "Custom") label = attrs("op_type")
+        }
       }
       if (!continue) dot.node(name = name , label, attr.toMap)
     }
 
+    val outIdx = scala.collection.mutable.Map[String, Int]()
     // add edges
     nodes.foreach { node =>
       val params = node.asInstanceOf[Map[String, Any]]
@@ -289,8 +295,18 @@ object Visualization {
             // add shapes
             if (drawShape) {
               val key = {
-                if (inputNode("op").asInstanceOf[String] != "null") s"${inputName}_output"
-                else inputName
+                if (inputNode("op").asInstanceOf[String] != "null") {
+                  var key = s"${inputName}_output"
+                  if (inputNode.contains("attr")) {
+                    val params = inputNode("attr").asInstanceOf[Map[String, String]]
+                    if (params.contains("num_outputs")) {
+                      if (!outIdx.contains(name)) outIdx(name) = params("num_outputs").toInt - 1
+                      key += outIdx(name)
+                      outIdx(name) = outIdx(name) - 1
+                    }
+                  }
+                  key
+                } else inputName
               }
               val shape = shapeDict(key).toArray.drop(1)
               val label = s""""${shape.mkString("x")}""""

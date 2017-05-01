@@ -403,22 +403,20 @@ method _collect_arrays()
             }
         }
     }
-    my %data_names = map { $_->name => 1 } @{ $self->data_shapes };
+    my @data_names = map { $_->name } @{ $self->data_shapes };
+    my $j = 0; my %arg_names  = map { $_ => $j++ } @{ $self->_p->arg_names };
     if($self->inputs_need_grad)
     {
         $self->_p->input_grad_arrays([]);
-        for my $i (0..@{ $self->_p->arg_names }-1)
+        for my $name (@data_names)
         {
-            my $name = $self->_p->arg_names->[$i];
-            if(exists $data_names{$name})
+            next unless exists $arg_names{$name};
+            my @tmp;
+            for my $exec (@{ $self->_p->execs })
             {
-                my @tmp;
-                for my $exec (@{ $self->_p->execs })
-                {
-                    push @tmp, $exec->grad_arrays->[$i];
-                }
-                push @{ $self->_p->input_grad_arrays }, \@tmp;
+                push @tmp, $exec->grad_arrays->[$arg_names{$name}];
             }
+            push @{ $self->_p->input_grad_arrays }, \@tmp;
         }
     }
     $self->_p->aux_arrays([]);

@@ -40,8 +40,8 @@ class CuDNNBatchNormOp : public Operator {
 
   ~CuDNNBatchNormOp() {
     if (init_cudnn_) {
-      CHECK_EQ(cudnnDestroyTensorDescriptor(io_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyTensorDescriptor(mean_desc_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(io_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(mean_desc_));
     }
   }
 
@@ -73,18 +73,18 @@ class CuDNNBatchNormOp : public Operator {
           shape_[i] = 1;
         }
       }
-      CHECK_EQ(cudnnCreateTensorDescriptor(&io_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnCreateTensorDescriptor(&mean_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensor4dDescriptor(io_desc_,
-                                          CUDNN_TENSOR_NCHW,
-                                          dtype_,
-                                          shape_[0],
-                                          shape_[1],
-                                          shape_[2],
-                                          shape_[3]), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDeriveBNTensorDescriptor(mean_desc_,
-                                             io_desc_,
-                                             CUDNN_BATCHNORM_SPATIAL), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&io_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&mean_desc_));
+      CUDNN_CALL(cudnnSetTensor4dDescriptor(io_desc_,
+                                            CUDNN_TENSOR_NCHW,
+                                            dtype_,
+                                            shape_[0],
+                                            shape_[1],
+                                            shape_[2],
+                                            shape_[3]));
+      CUDNN_CALL(cudnnDeriveBNTensorDescriptor(mean_desc_,
+                                               io_desc_,
+                                               CUDNN_BATCHNORM_SPATIAL));
       init_cudnn_  = true;
     }
 
@@ -117,38 +117,38 @@ class CuDNNBatchNormOp : public Operator {
         Tensor<gpu, 1, DTypeParam> save_inv_var =
           out_data[cudnnbatchnorm::kInvVar]
           .get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
-        CHECK_EQ(cudnnBatchNormalizationForwardTraining(s->dnn_handle_,
-                                                        CUDNN_BATCHNORM_SPATIAL,
-                                                        &a,
-                                                        &b,
-                                                        io_desc_,
-                                                        x.dptr_,
-                                                        io_desc_,
-                                                        y.dptr_,
-                                                        mean_desc_,
-                                                        gamma.dptr_,
-                                                        beta.dptr_,
-                                                        1 - param_.momentum,
-                                                        moving_mean.dptr_,
-                                                        moving_inv_var.dptr_,
-                                                        param_.eps,
-                                                        save_mean.dptr_,
-                                                        save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
+        CUDNN_CALL(cudnnBatchNormalizationForwardTraining(s->dnn_handle_,
+                                                          CUDNN_BATCHNORM_SPATIAL,
+                                                          &a,
+                                                          &b,
+                                                          io_desc_,
+                                                          x.dptr_,
+                                                          io_desc_,
+                                                          y.dptr_,
+                                                          mean_desc_,
+                                                          gamma.dptr_,
+                                                          beta.dptr_,
+                                                          1 - param_.momentum,
+                                                          moving_mean.dptr_,
+                                                          moving_inv_var.dptr_,
+                                                          param_.eps,
+                                                          save_mean.dptr_,
+                                                          save_inv_var.dptr_));
       } else {
-        CHECK_EQ(cudnnBatchNormalizationForwardInference(s->dnn_handle_,
-                                                         CUDNN_BATCHNORM_SPATIAL,
-                                                         &a,
-                                                         &b,
-                                                         io_desc_,
-                                                         x.dptr_,
-                                                         io_desc_,
-                                                         y.dptr_,
-                                                         mean_desc_,
-                                                         gamma.dptr_,
-                                                         beta.dptr_,
-                                                         moving_mean.dptr_,
-                                                         moving_inv_var.dptr_,
-                                                         param_.eps), CUDNN_STATUS_SUCCESS);
+        CUDNN_CALL(cudnnBatchNormalizationForwardInference(s->dnn_handle_,
+                                                           CUDNN_BATCHNORM_SPATIAL,
+                                                           &a,
+                                                           &b,
+                                                           io_desc_,
+                                                           x.dptr_,
+                                                           io_desc_,
+                                                           y.dptr_,
+                                                           mean_desc_,
+                                                           gamma.dptr_,
+                                                           beta.dptr_,
+                                                           moving_mean.dptr_,
+                                                           moving_inv_var.dptr_,
+                                                           param_.eps));
       }
     })
   }
@@ -197,25 +197,26 @@ class CuDNNBatchNormOp : public Operator {
 
       if (param_.fix_gamma) gamma = 1.f;
 
-      CHECK_EQ(cudnnBatchNormalizationBackward(s->dnn_handle_,
-                                               CUDNN_BATCHNORM_SPATIAL,
-                                               &a,
-                                               &b,
-                                               &a,
-                                               req[cudnnbatchnorm::kGamma] == kWriteTo ? &b: &b_add,
-                                               io_desc_,
-                                               x.dptr_,
-                                               io_desc_,
-                                               dy.dptr_,
-                                               io_desc_,
-                                               dx.dptr_,
-                                               mean_desc_,
-                                               gamma.dptr_,
-                                               dgamma.dptr_,
-                                               dbeta.dptr_,
-                                               param_.eps,
-                                               save_mean.dptr_,
-                                               save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnBatchNormalizationBackward(
+        s->dnn_handle_,
+        CUDNN_BATCHNORM_SPATIAL,
+        &a,
+        &b,
+        &a,
+        req[cudnnbatchnorm::kGamma] == kWriteTo ? &b: &b_add,
+        io_desc_,
+        x.dptr_,
+        io_desc_,
+        dy.dptr_,
+        io_desc_,
+        dx.dptr_,
+        mean_desc_,
+        gamma.dptr_,
+        dgamma.dptr_,
+        dbeta.dptr_,
+        param_.eps,
+        save_mean.dptr_,
+        save_inv_var.dptr_));
       if (param_.fix_gamma) dgamma = 0.f;
     })
 #else  // CUDNN_VERSION < 4007
@@ -237,23 +238,23 @@ class CuDNNBatchNormOp : public Operator {
       CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
 
       if (param_.fix_gamma) gamma = 1.f;
-      CHECK_EQ(cudnnBatchNormalizationBackward(s->dnn_handle_,
-                                               CUDNN_BATCHNORM_SPATIAL,
-                                               &a,
-                                               &b,
-                                               io_desc_,
-                                               x.dptr_,
-                                               io_desc_,
-                                               dy.dptr_,
-                                               io_desc_,
-                                               dx.dptr_,
-                                               mean_desc_,
-                                               gamma.dptr_,
-                                               dgamma.dptr_,
-                                               dbeta.dptr_,
-                                               param_.eps,
-                                               save_mean.dptr_,
-                                               save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnBatchNormalizationBackward(s->dnn_handle_,
+                                                 CUDNN_BATCHNORM_SPATIAL,
+                                                 &a,
+                                                 &b,
+                                                 io_desc_,
+                                                 x.dptr_,
+                                                 io_desc_,
+                                                 dy.dptr_,
+                                                 io_desc_,
+                                                 dx.dptr_,
+                                                 mean_desc_,
+                                                 gamma.dptr_,
+                                                 dgamma.dptr_,
+                                                 dbeta.dptr_,
+                                                 param_.eps,
+                                                 save_mean.dptr_,
+                                                 save_inv_var.dptr_));
       if (param_.fix_gamma) dgamma = 0.f;
     })
 #endif

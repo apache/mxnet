@@ -186,8 +186,58 @@ method update($index, $weight, $grad, $state)
     }
 }
 
+package PerlSGD;
+# perl reference implemenation of sgd
+use Mouse;
+extends 'AI::MXNet::Optimizer';
+has '+learning_rate' => (default => 0.01);
+has 'momentum'       => (is => "ro", isa => "Num",  default => 0);
+
+# Create additional optimizer state: momentum
+method create_state(Index $index, AI::MXNet::NDArray $weight)
+{
+    return undef if $self->momentum == 0;
+    return mx->nd->zeros($weight->shape, ctx => $weight->context, dtype => $weight->dtype);
+}
+
+method update($index, $weight, $grad, $state)
+{
+    my $lr = $self->_get_lr($index);
+    my $wd = $self->_get_wd($index);
+    $self->_update_count($index);
+    if($self->momentum == 0)
+    {
+        if(defined $self->clip_gradient)
+        {
+            $weight .= ((1 - $lr*$wd)*$weight -
+                $lr*mx->nd->clip($grad*$self->rescale_grad, -$self->clip_gradient, $self->clip_gradient)
+            );
+        }
+        else
+        {
+            $weight .= (1 - $lr*$wd)*$weight - $lr*$self->rescale_grad*$grad;
+        }
+    }
+    else
+    {
+        my $mom = $state;
+        if(defined $self->clip_gradient)
+        {
+            $mom .= ($self->momentum*$mom - $lr*$wd*$weight -
+                $lr*mx->nd->clip($grad*$self->rescale_grad, -$self->clip_gradient, $self->clip_gradient)
+            );
+            $weight += $mom;
+        }
+        else
+        {
+            $mom .= $self->momentum*$mom - $lr*$wd*$weight - $lr*$self->rescale_grad*$grad;
+            $weight += $mom;
+        }
+    }
+}
+
 package main;
-use Test::More tests => 162;
+use Test::More tests => 190;
 use AI::MXNet::Base;
 use PDL::NiceSlice;
 use AI::MXNet::TestUtils qw(same reldiff almost_equal);
@@ -208,8 +258,8 @@ func compare_optimizer($opt1, $opt2, $shape)
             my ($s1, $s2) = @_;
             ok(same($s1->aspdl, $s2->aspdl))
         },
-        $state1, $state2
-    );
+        ref $state1 eq 'ARRAY' ? $state1 : [$state1], ref $state2 eq 'ARRAY' ? $state2 : [$state2]
+    ) if defined $state1 and defined $state2;
 
     $opt1->update(0, $w1, $g1, $state1);
     $opt2->update(0, $w2, $g2, $state2);
@@ -218,8 +268,8 @@ func compare_optimizer($opt1, $opt2, $shape)
             my ($s1, $s2) = @_;
             ok(reldiff($s1->aspdl, $s2->aspdl) < 1e-5)
         },
-        $state1, $state2
-    );
+        ref $state1 eq 'ARRAY' ? $state1 : [$state1], ref $state2 eq 'ARRAY' ? $state2 : [$state2]
+    ) if defined $state1 and defined $state2;
     ok(reldiff($w1->aspdl, $w2->aspdl) < 1e-5);
 }
 
@@ -278,6 +328,35 @@ func test_rms()
     }
 }
 
+
+sub test_sgd
+{
+    mx->random->seed(0);
+    my $opt1 = 'PerlSGD';
+    my $opt2 = mx->optimizer->SGD;
+    my $shape = [3, 4, 5];
+    my @kwargs = (
+                    {},
+                    {momentum => 0.9},
+                    {clip_gradient => 0.5},
+                    {clip_gradient => 0.4, rescale_grad => 0.14},
+                    {rescale_grad  => 0.8},
+                    {clip_gradient => 0.5, wd => 0.07},
+                    {clip_gradient => 0.4, rescale_grad => 0.14, wd => 0.03},
+                    {rescale_grad  => 0.8, wd => 0.05},
+                    {clip_gradient => 0.5, momentum => 0.9},
+                    {clip_gradient => 0.4, rescale_grad => 0.14, momentum => 0.9},
+                    {rescale_grad  => 0.8, momentum => 0.9},
+                    {clip_gradient => 0.5, wd => 0.07, momentum => 0.9},
+                    {clip_gradient => 0.4, rescale_grad => 0.14, wd => 0.03, momentum => 0.9},
+                    {rescale_grad  => 0.8, wd => 0.05, momentum => 0.9}
+    );
+    for my $kwarg (@kwargs)
+    {
+        compare_optimizer($opt1->new(%$kwarg), $opt2->new(%$kwarg), $shape);
+    }
+}
+
 func test_lr_wd_mult()
 {
     my $data = mx->sym->Variable('data');
@@ -311,5 +390,6 @@ func test_lr_wd_mult()
 
 test_adam();
 test_rms();
+test_sgd();
 test_lr_wd_mult();
 

@@ -16,6 +16,7 @@
 #include <ostream>
 #include <string>
 #include <vector>
+#include "../common/cuda_utils.h"
 
 namespace mxnet {
 namespace op {
