@@ -515,7 +515,7 @@ there cases:
                            [ 1.,  2.,  1.,  2.,  1.,  2.],
                            [ 3.,  4.,  3.,  4.,  3.,  4.]]
 
-- **n>d**. ``reps`` is promoted to length *n* by pre-pending 1’s to it. Thus for
+- **n>d**. ``reps`` is promoted to length *n* by pre-pending 1's to it. Thus for
   an input shape ``(2,3)``, ``repos=(2,)`` is treated as ``(1,2)``::
 
 
