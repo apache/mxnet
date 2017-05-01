@@ -37,7 +37,6 @@ class MXRecordIO(object):
     record_4
     >>> record.close()
 
-
     Parameters
     ----------
     uri : string
