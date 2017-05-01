@@ -6,7 +6,7 @@ class Context(object):
     """Constructs a context.
 
     MXNet can run operations on CPU and different GPUs.
-    A context describes the device type and id on which computation should be carried on.
+    A context describes the device type and ID on which computation should be carried on.
 
     One can use mx.cpu and mx.gpu for short.
 
@@ -100,7 +100,7 @@ def cpu(device_id=0):
     """Returns a CPU context.
 
     This function is a short cut for ``Context('cpu', device_id)``.
-    cpu() is usually the default context for many operations when no context is specified.
+    For most operations, when no context is specified, the default context is `cpu()`.
 
     Examples
     ----------
@@ -128,10 +128,10 @@ def cpu(device_id=0):
 
 
 def gpu(device_id=0):
-    """Return a GPU context.
+    """Returns a GPU context.
 
     This function is a short cut for Context('gpu', device_id).
-    The K GPUs on a node is typically numbered as 0,...,K-1.
+    The K GPUs on a node are typically numbered as 0,...,K-1.
 
     Examples
     ----------

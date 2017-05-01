@@ -132,11 +132,11 @@ DMLC_REGISTER_PARAMETER(CSVIterParam);
 MXNET_REGISTER_IO_ITER(CSVIter)
 .describe(R"code(Returns the CSV file iterator.
 
-In this function, `data_shape` parameter is used to set the shape of each line of the input data.
-If a row in an input file is `1,2,3,4,5,6` and `data_shape` is (3,2), each row
-in csv file will be reshaped to the data [[1,2],[3,4],[5,6]] of shape (3,2).
+In this function, the `data_shape` parameter is used to set the shape of each line of the input data.
+If a row in an input file is `1,2,3,4,5,6`` and `data_shape` is (3,2), that row
+will be reshaped, yielding the array [[1,2],[3,4],[5,6]] of shape (3,2).
 
-By default, the CSVIter has `round_batch` parameter set to True. So, if `batch_size`
+By default, the `CSVIter` has `round_batch` parameter set to ``True``. So, if `batch_size`
 is 3 and there are 4 total rows in CSV file, 2 more examples
 are consumed at the first round. If `reset()` function is called after first round,
 the call is ignored and you will get next remaining examples in the second round.
@@ -154,7 +154,7 @@ Examples::
   3,4,5
   4,5,6
 
-  // Creates a CSVIter with `batch_size`=2 and default `round_batch`=True.
+  // Creates a `CSVIter` with `batch_size`=2 and default `round_batch`=True.
   CSVIter = mx.io.CSVIter(data_csv = 'data/data.csv', data_shape = (3,),
   batch_size = 2)
 
