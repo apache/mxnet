@@ -164,7 +164,7 @@ Examples::
   [[ 3.  4.  5.]
   [ 4.  5.  6.]]
 
-  // Creates a CSVIter with `round_batch`=False.
+  // Creates a `CSVIter` with `round_batch`=False.
   CSVIter = mx.io.CSVIter(data_csv = 'data/data.csv', data_shape = (3,),
   batch_size = 3)
 
@@ -185,7 +185,7 @@ Examples::
   [ 4.  5.  6.]
   [ 1.  2.  3.]]
 
-  // Creates a CSVIter with `round_batch`=False.
+  // Creates a `CSVIter` with `round_batch`=False.
   CSVIter = mx.io.CSVIter(data_csv = 'data/data.csv', data_shape = (3,),
   batch_size = 3, round_batch=True)
 
