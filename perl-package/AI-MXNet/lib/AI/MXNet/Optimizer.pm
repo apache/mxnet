@@ -25,8 +25,10 @@ method get_opt_registry()
 
 method register()
 {
-    my $name = lc $self;
+    my $name = $self;
     ($name) = $name =~ /::(\w+)$/;
+    {  no strict 'refs'; *{__PACKAGE__."::$name"} = sub { $self }; }
+    $name = lc $name;
     if(exists $opt_registry{ $name })
     {
         my $existing = $opt_registry{ $name };
@@ -1006,6 +1008,78 @@ method update(
 }
 
 __PACKAGE__->register;
+
+package AI::MXNet::Ftrl;
+
+=head1 NAME
+
+    AI::MXNet::Ftrl
+=cut
+
+=head1 DESCRIPTION
+
+    Reference:Ad Click Prediction: a View from the Trenches
+
+    Parameters
+    ----------
+    lamda1 : float, optional
+        L1 regularization coefficient.
+
+    learning_rate : float, optional
+        The initial learning rate.
+
+    beta : float, optional
+        Per-coordinate learning rate correlation parameter.
+    eta_{t,i}=frac{learning_rate}{beta+sqrt{sum_{s=1^}tg_{s,i}^t}
+=cut
+
+use Mouse;
+extends 'AI::MXNet::Optimizer';
+has '+learning_rate' => (default => 0.1);
+has 'beta'           => (is => "ro", isa => "Num",  default => 1);
+has 'lambda1'        => (is => "ro", isa => "Num",  default => 0.9);
+
+method create_state(Index $index, AI::MXNet::NDArray $weight)
+{
+    return [
+            AI::MXNet::NDArray->zeros(
+                $weight->shape,
+                ctx => $weight->context
+            ),  # dn
+            AI::MXNet::NDArray->zeros(
+                $weight->shape,
+                ctx => $weight->context
+            )   # n
+    ];
+}
+
+method update(
+    Index $index,
+    AI::MXNet::NDArray $weight,
+    AI::MXNet::NDArray $grad,
+    ArrayRef[AI::MXNet::NDArray] $state
+)
+{
+    $self->_update_count($index);
+    my $wd = $self->_get_wd($index);
+    my $lr = $self->_get_lr($index);
+    $grad *= $self->rescale_grad;
+    if($self->clip_gradient)
+    {
+        $grad = AI::MXNet::NDArray->clip(
+            $grad,
+            -$self->clip_gradient,
+             $self->clip_gradient
+        );
+    }
+    my ($dn, $n) = @{ $state };
+    $dn += $grad - (($n + $grad * $grad)->sqrt - $n->sqrt) * $weight / $lr;
+    $n += $grad * $grad;
+
+    $weight .= ($dn->sign * $self->lamda1 - $dn)
+                    /
+               (($self->beta + $n->sqrtn) / $lr + $wd) * ($dn->abs > $self->lamda1);
+}
 
 # updater for kvstore
 package AI::MXNet::Updater;
