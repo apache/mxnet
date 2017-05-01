@@ -467,7 +467,7 @@ class Xavier(Initializer):
     By default, `rnd_type` is ``'uniform'`` and `factor_type` is ``'avg'``,
     the initializer fills the weights with random numbers in the range
     of :math:`[-c, c]`, where :math:`c = \\sqrt{\\frac{3.}{0.5 * (n_{in} + n_{out})}}`.
-    :math:`n_in` is the number of neurons feeding into weights, and :math:`n_out` is
+    :math:`n_{in}` is the number of neurons feeding into weights, and :math:`n_{out}` is
     the number of neurons the result is fed to.
 
     If `rnd_type` is ``'uniform'`` and `factor_type` is ``'in'``,
