@@ -139,16 +139,16 @@ will be reshaped, yielding the array [[1,2],[3,4],[5,6]] of shape (3,2).
 By default, the `CSVIter` has `round_batch` parameter set to ``True``. So, if `batch_size`
 is 3 and there are 4 total rows in CSV file, 2 more examples
 are consumed at the first round. If `reset` function is called after first round,
-the call is ignored and you will get next remaining examples in the second round.
+the call is ignored and next remaining examples are returned in the second round.
 
-If you want all the instances in your second round after calling `reset`, make sure
+If one wants all the instances in the second round after calling `reset`, make sure
 to set `round_batch`=False.
 
 If ``data_csv = 'data/'`` is set, then all the files in this directory will be read.
 
 Examples::
 
-  // Content of CSV file ``data/data.csv``.
+  // Contents of CSV file ``data/data.csv``.
   1,2,3
   2,3,4
   3,4,5
@@ -189,7 +189,7 @@ Examples::
   CSVIter = mx.io.CSVIter(data_csv = 'data/data.csv', data_shape = (3,),
   batch_size = 3, round_batch=True)
 
-  // Content of two batches read from the above iterator in both passes after calling
+  // Contents of two batches read from the above iterator in both passes after calling
   // `reset` method before second pass is as follows:
   [[1.  2.  3.]
   [2.  3.  4.]
