@@ -182,108 +182,73 @@ function get_instruction_set() {
     buildfromsource_commands=$(retrieve_commands ${start_buildfromsource_command_index} ${sorted_indexes[$end_buildfromsource_command_index]})
 }
 
-########################LINUX-PYTHON-CPU############################
 
+########################LINUX-PYTHON-CPU############################
 echo
 echo
-echo "### Testing LINUX-PYTHON-CPU ###"
+echo "### Testing LINUX-PYTHON-CPU NEW ###"
 echo
 # range of all lines inside Linux-Python-CPU instructions
 LINUX_PYTHON_CPU_START_LINENO=$(grep -n "START - Linux Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
 LINUX_PYTHON_CPU_END_LINENO=$(grep -n "END - Linux Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
 
 get_instruction_set ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}
+
+echo
+echo "### Testing Virtualenv ###"
+echo "${virtualenv_commands}"
+echo
 docker run --rm ubuntu:14.04 bash -c "${virtualenv_commands}"
 
-# get line numbers of the start of each installation method instructions for Linux-Python-CPU
-LINUX_PYTHON_CPU_VIRTUALENV_LINENO=($(remove_out_of_range PYTHON_VIRTUALENV_LINENO_ALL[@] ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}))
-LINUX_PYTHON_CPU_PIP_LINENO=($(remove_out_of_range PYTHON_PIP_LINENO_ALL[@] ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}))
-LINUX_PYTHON_CPU_DOCKER_LINENO=($(remove_out_of_range PYTHON_DOCKER_LINENO_ALL[@] ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}))
-LINUX_PYTHON_CPU_BUILDFROMSOURCE_LINENO=($(remove_out_of_range PYTHON_BUILDFROMSOURCE_LINENO_ALL[@] ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}))
+echo
+echo "### Testing Pip ###"
+echo "${pip_commands}"
+echo
+docker run --rm ubuntu:14.04 bash -c "${pip_commands}"
 
-# get indices (or the next closest thing) of the instruction sets' starting line numbers
-start_virtualenv_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_CPU_VIRTUALENV_LINENO[0]})
-start_pip_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_CPU_PIP_LINENO[0]})
-start_docker_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_CPU_DOCKER_LINENO[0]})
-start_buildfromsource_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_CPU_BUILDFROMSOURCE_LINENO[0]})
-end_pythoncpulinux_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_CPU_END_LINENO[0]})
+echo
+echo "### Testing Docker ###"
+echo "${docker_commands}"
+echo
+eval ${docker_commands}
 
-# sort the indices of the instruction sets' line numbers
-unsorted_indexes=(${start_virtualenv_command_index} ${start_pip_command_index} ${start_docker_command_index} ${start_buildfromsource_command_index} ${end_pythoncpulinux_index})
-sorted_indexes=($(sort unsorted_indexes[@]))
-
-# figure out the index of the instruction sets' ending line numbers
-end_virtualenv_command_index=$(retrieve_closest_index sorted_indexes[@] $(( ${start_virtualenv_command_index} + 1 )))
-end_pip_command_index=$(retrieve_closest_index sorted_indexes[@] $(( ${start_pip_command_index} + 1)))
-end_docker_command_index=$(retrieve_closest_index sorted_indexes[@] $(( ${start_docker_command_index} + 1 )))
-end_buildfromsource_command_index=$(retrieve_closest_index sorted_indexes[@] $(( ${start_buildfromsource_command_index} +1 )))
-
-# retrieve the instruction sets' commands using the starting and ending line numbers' indices
-virtualenv_commands=$(retrieve_commands ${start_virtualenv_command_index} ${sorted_indexes[$end_virtualenv_command_index]})
-pip_commands=$(retrieve_commands ${start_pip_command_index} ${sorted_indexes[$end_pip_command_index]})
-docker_commands=$(retrieve_commands ${start_docker_command_index} ${sorted_indexes[$end_docker_command_index]})
-buildfromsource_commands=$(retrieve_commands ${start_buildfromsource_command_index} ${sorted_indexes[$end_buildfromsource_command_index]})
-
-echo "virtualenv commands: " ${virtualenv_commands}
-echo "pip commands: " ${pip_commands}
-echo "docker commands: " ${docker_commands}
-echo "build from source commands: " ${buildfromsource_commands}
-
-#docker run --rm ubuntu:14.04 bash -c "${virtualenv_commands}"
-#docker run --rm ubuntu:14.04 bash -c "${pip_commands}"
-#eval ${docker_commands}
-#docker run --rm ubuntu:14.04 bash -c "${buildfromsource_commands}"
+echo
+echo "### Testing Build From Source ###"
+echo "${buildfromsource_commands}"
+echo
+docker run --rm ubuntu:14.04 bash -c "${buildfromsource_commands}"
 
 #########################LINUX-PYTHON-GPU###########################
 
 echo
 echo
-echo "### Testing LINUX-PYTHON-GPU ###"
+echo "### Testing LINUX-PYTHON-GPU NEW ###"
 echo
 # range of all lines inside Linux-Python-GPU instructions
 LINUX_PYTHON_GPU_START_LINENO=$(grep -n "START - Linux Python GPU Installation Instructions" "${FILE}" | cut -d : -f 1)
 LINUX_PYTHON_GPU_END_LINENO=$(grep -n "END - Linux Python GPU Installation Instructions" "${FILE}" | cut -d : -f 1)
 #VERIFY ONLY ONE ELEMENT FOR EACH OF ABOVE
 
-get_instruction_set ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}
+echo
+echo "### Testing Virtualenv ###"
+echo "${virtualenv_commands}"
+echo
 nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${virtualenv_commands}"
-exit
 
-# get line numbers of the start of each installation instruction sets for Linux-Python-GPU
-LINUX_PYTHON_GPU_VIRTUALENV_LINENO=($(remove_out_of_range PYTHON_VIRTUALENV_LINENO_ALL[@] ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}))
-LINUX_PYTHON_GPU_PIP_LINENO=($(remove_out_of_range PYTHON_PIP_LINENO_ALL[@] ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}))
-LINUX_PYTHON_GPU_DOCKER_LINENO=($(remove_out_of_range PYTHON_DOCKER_LINENO_ALL[@] ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}))
-LINUX_PYTHON_GPU_BUILDFROMSOURCE_LINENO=($(remove_out_of_range PYTHON_BUILDFROMSOURCE_LINENO_ALL[@] ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}))
-
-# get indices (or the next closest thing) of the instruction sets' starting line numbers
-start_virtualenv_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_GPU_VIRTUALENV_LINENO[0]})
-start_pip_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_GPU_PIP_LINENO[0]})
-start_docker_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_GPU_DOCKER_LINENO[0]})
-start_buildfromsource_command_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_GPU_BUILDFROMSOURCE_LINENO[0]})
-end_pythongpulinux_index=$(retrieve_closest_index SOURCE_LINES[@] ${LINUX_PYTHON_GPU_END_LINENO[0]})
-
-# sort the indices of the instruction sets' line numbers
-unsorted_indexes=(${start_virtualenv_command_index} ${start_pip_command_index} ${start_docker_command_index} ${start_buildfromsource_command_index} ${end_pythongpulinux_index})
-sorted_indexes=($(sort unsorted_indexes[@]))
-
-# figure out the index of the instruction sets' ending line numbers
-end_virtualenv_command_index=$(retrieve_closest_index sorted_indexes[@] $(( ${start_virtualenv_command_index} + 1 )))
-end_pip_command_index=$(retrieve_closest_index sorted_indexes[@] $(( ${start_pip_command_index} + 1)))
-end_docker_command_index=$(retrieve_closest_index sorted_indexes[@] $(( ${start_docker_command_index} + 1 )))
-end_buildfromsource_command_index=$(retrieve_closest_index sorted_indexes[@] $(( ${start_buildfromsource_command_index} +1 )))
-
-# retrieve the instruction sets' commands using the starting and ending line numbers' indices
-virtualenv_commands=$(retrieve_commands ${start_virtualenv_command_index} ${sorted_indexes[$end_virtualenv_command_index]})
-pip_commands=$(retrieve_commands ${start_pip_command_index} ${sorted_indexes[$end_pip_command_index]})
-docker_commands=$(retrieve_commands ${start_docker_command_index} ${sorted_indexes[$end_docker_command_index]})
-buildfromsource_commands=$(retrieve_commands ${start_buildfromsource_command_index} ${sorted_indexes[$end_buildfromsource_command_index]})
-
-echo "virtualenv commands: " ${virtualenv_commands}
-echo "pip commands: " ${pip_commands}
-echo "docker commands: " ${docker_commands}
-echo "build from source commands: " ${buildfromsource_commands}
-
-nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${virtualenv_commands}"
+echo
+echo "### Testing Pip ###"
+echo "${pip_commands}"
+echo
 nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${pip_commands}"
+
+echo
+echo "### Testing Docker ###"
+echo "${docker_commands}"
+echo
 eval ${docker_commands}
+
+echo
+echo "### Testing Build From Source ###"
+echo "${buildfromsource_commands}"
+echo
 nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${buildfromsource_commands}"
