@@ -132,11 +132,11 @@ DMLC_REGISTER_PARAMETER(CSVIterParam);
 MXNET_REGISTER_IO_ITER(CSVIter)
 .describe(R"code(Returns the CSV file iterator.
 
-`data_shape` parameter is used to set the shape of each line of the input data.
-If a row in input file is `1,2,3,4,5,6` and `data_shape` is (3,2), each row
+In this function, `data_shape` parameter is used to set the shape of each line of the input data.
+If a row in an input file is `1,2,3,4,5,6` and `data_shape` is (3,2), each row
 in csv file will be reshaped to the data [[1,2],[3,4],[5,6]] of shape (3,2).
 
-By default, the CSVIter has `round_batch` set to True. So, if `batch_size`
+By default, the CSVIter has `round_batch` parameter set to True. So, if `batch_size`
 is 3 and there are 4 total rows in CSV file, 2 more examples
 are consumed at the first round. If `reset()` function is called after first round,
 the call is ignored and you will get next remaining examples in the second round.
@@ -148,27 +148,27 @@ If ``data_csv = 'data/'`` is set, then all the files in this directory will be r
 
 Examples::
 
-  // CSV file content called ``data/data.csv``
+  // Content of CSV file ``data/data.csv``.
   1,2,3
   2,3,4
   3,4,5
   4,5,6
 
-  // Creates a CSVIter with `batch_size`=2 and default `round_batch`=True
+  // Creates a CSVIter with `batch_size`=2 and default `round_batch`=True.
   CSVIter = mx.io.CSVIter(data_csv = 'data/data.csv', data_shape = (3,),
   batch_size = 2)
 
-  // Two batches read from above iterator are as follows:
+  // Two batches read from the above iterator are as follows:
   [[ 1.  2.  3.]
   [ 2.  3.  4.]]
   [[ 3.  4.  5.]
   [ 4.  5.  6.]]
 
-  // Creates a CSVIter with `round_batch`=False
+  // Creates a CSVIter with `round_batch`=False.
   CSVIter = mx.io.CSVIter(data_csv = 'data/data.csv', data_shape = (3,),
   batch_size = 3)
 
-  // Two batches read from the above iterator in first pass are as follows:
+  // Two batches read from the above iterator in the first pass are as follows:
   [[1.  2.  3.]
   [2.  3.  4.]
   [3.  4.  5.]]
@@ -177,20 +177,20 @@ Examples::
   [2.  3.  4.]
   [3.  4.  5.]]
 
-  // Now, `reset()` method is called
+  // Now, `reset()` method is called.
   CSVIter.reset()
 
-  // Batch read from the above iterator in second pass is as follows:
+  // Batch read from the above iterator in the second pass is as follows:
   [[ 3.  4.  5.]
   [ 4.  5.  6.]
   [ 1.  2.  3.]]
 
-  // Creates a CSVIter with `round_batch`=False
+  // Creates a CSVIter with `round_batch`=False.
   CSVIter = mx.io.CSVIter(data_csv = 'data/data.csv', data_shape = (3,),
   batch_size = 3, round_batch=True)
 
-  // Two batches read from the above iterator in both passes after calling
-  // `reset` method are as follows:
+  // Content of two batches read from the above iterator in both passes after calling
+  // `reset()` method before second pass is as follows:
   [[1.  2.  3.]
   [2.  3.  4.]
   [3.  4.  5.]]
