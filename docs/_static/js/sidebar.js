@@ -1,8 +1,8 @@
 /*Preprocess*/
 var LANG = ['python', 'scala', 'r', 'julia', 'c++', 'perl'];
-var TITLE = ['get_started', 'tutorials', 'how_to', 'architecture'];
+var TITLE_WITH_LANG = ['/get_started/', '/tutorials/', '/how_to/', '/architecture/'];
 for(var i = 0; i < LANG.length; ++i) {
-    TITLE.push('api/' + LANG[i]);
+    TITLE_WITH_LANG.push('/api/' + LANG[i] + '/');
 }
 
 /*Check whether is API page*/
@@ -27,12 +27,13 @@ function render_left_helper(toc, currentText) {
         $(this).css('color', '#337ab7');
     });
 }
+
 /*Render content tree of different pages*/
 function render_lefttoc() {
     var url = window.location.href, indexTrailing = 'index.html';
     if(url.indexOf(indexTrailing) == -1) {
-        for(var i = 0; i < TITLE.length; ++i) {
-            var path = '/' + TITLE[i] + '/';
+        for(var i = 0; i < TITLE_WITH_LANG.length; ++i) {
+            var path = TITLE_WITH_LANG[i];
             if(url.indexOf(path) != -1) {
                 $.get('http://' + window.location.host + path + indexTrailing, null, function(data) {
                     var currentText = $($.parseHTML(data)).find('.leftsidebar >  .sphinxsidebarwrapper > ul.current > li.current > a').html();
@@ -44,6 +45,7 @@ function render_lefttoc() {
                         render_left_helper($($.parseHTML(data)).find('.leftsidebar > .sphinxsidebarwrapper > ul.current > li.current > ul'), currentText);
                     }
                     keepExpand();
+                    $('.sphinxsidebar').css("visibility", "visible");
                 })
             }
         }
@@ -52,6 +54,7 @@ function render_lefttoc() {
         var currentText = $('.leftsidebar >  .sphinxsidebarwrapper > ul.current > li.current > a').html();
         var toc = isAPI ? $('#table-of-contents > div > ul').clone() : $('.leftsidebar > .sphinxsidebarwrapper > ul.current > li.current > ul').clone();
         render_left_helper(toc, currentText);
+        $('.sphinxsidebar').css("visibility", "visible");
     }
 }
 
@@ -75,13 +78,35 @@ function render_righttoc() {
     }
 }
 
+/*Highlight entry when scrolling*/
+function scroll_righttoc() {
+    var navbarHeight = 60;
+    var links = $('.rightsidebar a');
+    for(var i = 1; i < links.length; ++i) {
+        var divID = links.eq(i).attr('href');
+        console.log($(divID).offset().top - $(window).scrollTop());
+        if($(divID).offset().top - $(window).scrollTop() > navbarHeight) {
+            $('.rightsidebar a').css('color', 'black');
+            links.eq(i - 1).css('color', '#337ab7');
+            if(!links.eq(i - 1).parent().hasClass('leaf')) {
+                links.eq(i - 1).parent().removeClass('closed');
+                links.eq(i - 1).parent().addClass('opened');
+                links.eq(i - 1).parent().find('ul').first().show();
+            }
+            break;
+        }
+    }
+}
+
 /*Decorate toc*/
 function addToggle(tocClass) {
     var allEntry = $(tocClass + " div.sphinxsidebarwrapper li");
     var subEntry = $(tocClass + " div.sphinxsidebarwrapper").children("ul").first().children("li");
     if(subEntry.length == 1) {
+        subEntry.prepend("<span class='tocToggle' onclick='toggle(this)'></span>");
+        subEntry.addClass('opened');
         allEntry = subEntry.find("li");
-        subEntry.children("a").hide();
+        //subEntry.children("a").hide();
         subEntry.children("ul").css("padding-left", "0");
         //subEntry.parent().css("margin-left", "-10px");
     }
@@ -173,8 +198,7 @@ $(document).ready(function () {
         render_righttoc();
         if($('.leftsidebar').length) render_lefttoc();
     }
-    else {
-        $('.sphinxsidebar').hide();
-    }
-    $('body').show();
+    $(window).scroll(function () {
+        scroll_righttoc();
+    });
 });

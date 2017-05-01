@@ -7,7 +7,7 @@ html, body {
 }
 
 body {
-    display: none;
+    display: block;
 }
 
 body, div {
@@ -643,6 +643,7 @@ div.sphinxsidebar {
     background-color: white;
     height: calc(100% - 80px);
     display: none;
+    visibility: hidden;
     overflow: auto;
 }
 
@@ -680,7 +681,7 @@ div.sphinxsidebar li {
 }
 
 div.leftsidebar > div.sphinxsidebarwrapper {
-    padding: 10px 5px 10px 10px;
+    padding: 10px 10px 10px 10px;
     background: #f2f2f2;
 }
 
@@ -690,7 +691,6 @@ div.leftsidebar > div.sphinxsidebarwrapper > ul > li {
 
 div.rightsidebar > div.sphinxsidebarwrapper > ul {
     margin-left: 2px;
-    padding-left: 8px;
     border-left: 4px solid #337ab7;
 }
 
