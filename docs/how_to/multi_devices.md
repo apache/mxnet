@@ -5,7 +5,6 @@ _MXNet_ supports training with multiple CPUs and GPUs, which may be located on d
 ## Data Parallelism vs Model Parallelism
 
 By default, _MXNet_ uses data parallelism to partition the workload over multiple
-
 devices.
 Assume there are *n* devices.
 Then each one will receive a copy of the complete model
