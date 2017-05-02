@@ -18,7 +18,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Record IO - Pack free-format data in binary files ](http://mxnet.io/tutorials/python/record_io.html)
 
-- [Custom Image IO - Write high-performance data-pipelines using `mxnet.image`](http://mxnet.io/tutorials/python/advanced_img_io.html)
+- [Custom Image IO - Write high-performance data-pipelines using mxnet.image](http://mxnet.io/tutorials/python/advanced_img_io.html)
 
 #### Computer Vision
 
