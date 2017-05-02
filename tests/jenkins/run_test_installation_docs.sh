@@ -148,7 +148,13 @@ function sort() {
     printf "${lineno_array[*]}"
 }
 
-FILE=../../docs/get_started/install.md
+if (( $# < 1 )); then
+    echo ""
+    echo "Usage: $(basename $0) FILE"
+    echo ""
+    exit 1
+fi
+FILE=${1}
 
 # get all line numbers with "```" signifying start or end of source section and put them in an array
 SOURCE_REGEX="\`\`\`"
