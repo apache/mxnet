@@ -236,7 +236,7 @@ function set_instruction_set() {
 ########################LINUX-PYTHON-CPU############################
 echo
 echo
-echo "### Testing LINUX-PYTHON-CPU NEW ###"
+echo "### Testing LINUX-PYTHON-CPU ###"
 echo
 # range of all lines inside Linux-Python-CPU instructions
 LINUX_PYTHON_CPU_START_LINENO=$(grep -n "START - Linux Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
@@ -272,7 +272,7 @@ docker run --rm ubuntu:14.04 bash -c "${buildfromsource_commands}"
 
 echo
 echo
-echo "### Testing LINUX-PYTHON-GPU NEW ###"
+echo "### Testing LINUX-PYTHON-GPU ###"
 echo
 # range of all lines inside Linux-Python-GPU instructions
 LINUX_PYTHON_GPU_START_LINENO=$(grep -n "START - Linux Python GPU Installation Instructions" "${FILE}" | cut -d : -f 1)
