@@ -550,7 +550,7 @@ class Validator {
     }
   }
 
-  static inline DType errorBound(const TBlob *blob) {
+  static inline DType ErrorBound(const TBlob *blob) {
     // Due to eps, for a small number of entries, the error will be a bit higher for one pass
     if (blob->shape_.ndim() >= 3) {
       return (blob->Size() / blob->shape_[1]) <= 4 ? (ERROR_BOUND() * 15) : ERROR_BOUND();
@@ -562,8 +562,8 @@ class Validator {
 
   /*! \brief Adjusted error based upon significant digits */
   template<typename DTypeX>
-  static inline DType errorBound(const TBlob *blob, const DTypeX v1, const DTypeX v2) {
-    const DType initialErrorBound = errorBound(blob);
+  static inline DType ErrorBound(const TBlob *blob, const DTypeX v1, const DTypeX v2) {
+    const DType initialErrorBound = ErrorBound(blob);
     DType kErrorBound = initialErrorBound;  // This error is based upon the range [0.1x, 0.9x]
     DTypeX avg = static_cast<DTypeX>((fabs(v1) + fabs(v2)) / 2);
     if (avg >= 1) {
@@ -578,6 +578,16 @@ class Validator {
   template<typename DTypeX>
   static bool isNear(const DTypeX v1, const DTypeX v2, const DType error) {
     return error > fabs(v2 - v1);
+  }
+
+  /*! \brief Convenient setpoint for macro-expanded failures */
+  template<typename Type1, typename Type2>
+  static void on_failure(const size_t i, const size_t n,
+                         const Type1 v1, const Type1 v2, const Type2 kErrorBound) {
+    LOG(WARNING)
+      << "Near test failure: at i = " << i << ", n = "
+      << n << ", kErrorBound = " << kErrorBound << std::endl
+      << std::flush;
   }
 
   /*! \brief Compare blob data */
@@ -595,13 +605,10 @@ class Validator {
           for (size_t i = 0, n = b1.Size(), warningCount = 0; i < n; ++i) {
             const DTypeX v1 = *d1++;
             const DTypeX v2 = *d2++;
-            const DType kErrorBound = errorBound(&b1, v1, v2);
+            const DType kErrorBound = ErrorBound(&b1, v1, v2);
             EXPECT_NEAR(v1, v2, kErrorBound);
             if (!isNear(v1, v2, kErrorBound) && !warningCount++) {
-              LOG(WARNING)
-                << "Near test failure: at i = " << i << ", n = "
-                << n << ", kErrorBound = " << kErrorBound << std::endl
-                << std::flush;
+              on_failure(i, n, v1, v2, kErrorBound);
             }
           }
           return true;
@@ -615,7 +622,7 @@ class Validator {
   static bool compare(const TBlob& b1, const DTypeX *valuePtr) {
     const DTypeX *d1 = b1.dptr<DType>();
     CHECK_NE(d1, valuePtr);  // don't compare the same memory
-    const DType kErrorBound = errorBound(&b1);
+    const DType kErrorBound = ErrorBound(&b1);
     for (size_t i = 0, n = b1.Size(), warningCount = 0; i < n; ++i) {
       const DTypeX v1 = *d1++;
       const DTypeX v2 = *valuePtr++;

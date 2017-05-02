@@ -68,7 +68,7 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
 
       if (itemCount > 1) {
         // Due to eps, for a small number of entries, the error will be a bit higher for one pass
-        const DType kErrorBound = Super::errorBound(blob);
+        const DType kErrorBound = Super::ErrorBound(blob);
         // expect zero mean
         EXPECT_NEAR(0, sum, kErrorBound);
         if (!Super::isNear(AccReal(0), sum, kErrorBound)) {
@@ -113,7 +113,7 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
       var /= height * width * num;
 
       if (itemCount > 1) {
-        const DType kErrorBound = Super::errorBound(blob);
+        const DType kErrorBound = Super::ErrorBound(blob);
         // expect zero mean
         EXPECT_NEAR(0, sum, kErrorBound);
         if (!Super::isNear(AccReal(0), sum, kErrorBound)) {
@@ -159,7 +159,7 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
       var /= depth * height * width * num;
 
       if (itemCount > 1) {
-        const DType kErrorBound = Super::errorBound(blob);
+        const DType kErrorBound = Super::ErrorBound(blob);
         // expect zero mean
         EXPECT_NEAR(0, sum, kErrorBound);
         if (!Super::isNear(AccReal(0), sum, kErrorBound)) {
@@ -499,39 +499,58 @@ static test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType, AccReal> testFo
   const TShape &inputShape,
   const test::op::kwargs_t& kwargs,
   const bool dumpC,
-  const size_t count = 1) {
+  const size_t count = 1,
+  const size_t cycleCount = 5) {
   test::op::OpInfo<OperatorProp1, DType, AccReal> info_1 =
     TestBatchNormOperatorForward<OperatorProp1, DType, AccReal>(isGPU1, inputShape, kwargs, count);
 
   test::op::OpInfo<OperatorProp2, DType, AccReal> info_2 =
     TestBatchNormOperatorForward<OperatorProp2, DType, AccReal>(isGPU2, inputShape, kwargs, count);
 
-  dumpF(&std::cout, info_1, 1);
-  dumpF(&std::cout, info_2, 2);
+  size_t thisCount = 0;
 
-  // Check that everything is the same after the forward pass
-  BatchNormValidator<DType, AccReal>::compare(info_1, info_2);
+  do {
 
-  test::op::Validator<DType, AccReal>::compare(*info_1.data_, *info_2.data_,
-                                               test::op::BasicOperatorData<DType, AccReal>::kInput,
-                                               op::batchnorm::kData);
+    const bool isLast = thisCount == cycleCount - 1;
 
-  info_1.data_->initBackward(*info_1.prop_, &info_1.in_type_);
-  info_2.data_->initBackward(*info_2.prop_, &info_2.in_type_);
+    if(thisCount) {
+      info_1.data_->forward(count);
+      info_2.data_->forward(count);
+    }
 
-  // return backward
-  runOperatorBackward(&info_1, count);
-  runOperatorBackward(&info_2, count);
+    if(isLast) {
+      dumpF(&std::cout, info_1, 1);
+      dumpF(&std::cout, info_2, 2);
+    }
 
-  dumpB(&std::cout, info_1, 1);
-  dumpB(&std::cout, info_2, 2);
+    // Check that everything is the same after the forward pass
+    BatchNormValidator<DType, AccReal>::compare(info_1, info_2);
 
+    test::op::Validator<DType, AccReal>::compare(
+      *info_1.data_, *info_2.data_,
+      test::op::BasicOperatorData<DType, AccReal>::kInput,
+      op::batchnorm::kData);
 
-  // Check that everything is the same after the backward pass
-  BatchNormValidator<DType, AccReal>::compare(info_1, info_2);
+    if(!thisCount) {
+      // return backward
+      runOperatorBackward(&info_1, count);
+      runOperatorBackward(&info_2, count);
+    } else {
+      info_1.data_->backward(count);
+      info_2.data_->backward(count);
+    }
+
+    if(isLast) {
+      dumpB(&std::cout, info_1, 1);
+      dumpB(&std::cout, info_2, 2);
+    }
+
+    // Check that everything is the same after the backward pass
+    BatchNormValidator<DType, AccReal>::compare(info_1, info_2);
+  } while (++thisCount < cycleCount);
 
   if (dumpC) {
-    info_1.data_->dumpC(&std::cerr, "BN_Test2DBackward");
+    info_1.data_->dumpC(&std::cerr, "BN_testForwardAndBackward");
   }
 
   return  { info_1, info_2 };
@@ -1147,15 +1166,16 @@ TEST(BATCH_NORM, Test2DBackwardMixedV1V2Complex_cpu_cpu_ugs) {
 }
 
 TEST(BATCH_NORM, Test2DBackwardMixed_gpu_cpu_ugs) {
-  for (int type :  v2_types) {
+  //for (int type :  v2_types) {
+  for (int type :  { 0 }) {
     MSHADOW_REAL_TYPE_SWITCH_EX(
       type, DType, AccReal,
       {
         const TShape inputShape({1, 1, 2, 1});
         testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType, AccReal>(
-          false, true, inputShape, useglobalstats_kwargs, false);
-        testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType, AccReal>(
-          false, true, inputShape, useglobalstats_kwargs_nocudnn, false);
+          false, true, inputShape, useglobalstats_kwargs_nocudnn, false, 1, 2);
+//        testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType, AccReal>(
+//          false, true, inputShape, useglobalstats_kwargs, false);
       });
   }
 }
