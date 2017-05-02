@@ -30,7 +30,7 @@ see [example/model-parallelism-lstm/](https://github.com/dmlc/mxnet/blob/master/
 
 ## Model Parallelism: Using Multiple GPUs As a Pipeline
 Model parallelism in deep learning was first proposed
-for the _super large_ convolutional layer in GoogleNet.
+for the _extraordinarily large_ convolutional layer in GoogleNet.
 From this implementation, we take the idea of placing each layer on a separate GPU.
 Using model parallelism in such a layer-wise fashion
 provides the benefit that no GPU has to maintain all of the model parameters in memory.
