@@ -105,7 +105,7 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 
 ```bash
 $ sudo apt-get update
-$ sudo apt-get install wget
+$ sudo apt-get install -y wget
 $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
