@@ -45,7 +45,7 @@ endif
 
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
-	CFLAGS += -g -O0 -DDMLC_LOG_FATAL_THROW=0
+	CFLAGS += -g -O0
 else
 	CFLAGS += -O3
 endif
