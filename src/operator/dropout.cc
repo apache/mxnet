@@ -31,15 +31,35 @@ Operator *DropoutProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_sha
 DMLC_REGISTER_PARAMETER(DropoutParam);
 
 MXNET_REGISTER_OP_PROPERTY(Dropout, DropoutProp)
-.describe(R"(Applies dropout to input.
+.describe(R"(Applies dropout to input array.
 During training, each element of the input is randomly set to zero with probability p.
-And then the whole tensor is rescaled by 1/(1-p) to keep the expectation the same as
-before applying dropout. During the test time, this behaves as an identity map.
-)")
-.add_argument("data", "NDArray-or-Symbol", "Input data to dropout.")
+And then the whole array is rescaled by 1/(1-p) to keep the expectation of the input the same as
+before applying dropout.
+
+During testing, this operator behaves as an identity map.
+
+Example::
+
+  >>> mx.random.seed(998)
+  >>> input_array = mx.nd.array([[3., 0.5,  -0.5,  2., 7.],
+                                 [2., -0.4,   7.,  3., 0.2]])
+  >>> a = mx.sym.Variable('a')
+  >>> dropout = mx.sym.Dropout(a, p = 0.2)
+  >>> executor = dropout.simple_bind(ctx = mx.cpu(), a = input_array.shape)
+  # If training
+  >>> executor.forward(is_train = True, a = input_array)
+  >>> print executor.outputs[0].asnumpy()
+  [[ 3.75   0.625 -0.     2.5    8.75 ]
+   [ 2.5   -0.5    8.75   3.75   0.   ]]
+
+  # If testing
+  >>> executor.forward(is_train=False, a = input_array)
+  >>> print executor.outputs[0].asnumpy()
+  [[ 3.     0.5   -0.5    2.     7.   ]
+   [ 2.    -0.4    7.     3.     0.2  ]]
+)" ADD_FILELINE)
+.add_argument("data", "NDArray-or-Symbol", "Input array to apply dropout operation.")
 .add_arguments(DropoutParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
-
-
