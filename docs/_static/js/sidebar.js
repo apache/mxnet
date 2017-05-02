@@ -41,7 +41,6 @@ function render_lefttoc() {
                         render_left_helper($($.parseHTML(data)).find('#table-of-contents > div > ul'), currentText);
                     }
                     else {
-                        console.log(currentText);
                         render_left_helper($($.parseHTML(data)).find('.leftsidebar > .sphinxsidebarwrapper > ul.current > li.current > ul'), currentText);
                     }
                     keepExpand();
@@ -84,7 +83,6 @@ function scroll_righttoc() {
     var links = $('.rightsidebar a');
     for(var i = 1; i < links.length; ++i) {
         var divID = links.eq(i).attr('href');
-        console.log($(divID).offset().top - $(window).scrollTop());
         if($(divID).offset().top - $(window).scrollTop() > navbarHeight) {
             $('.rightsidebar a').css('color', 'black');
             links.eq(i - 1).css('color', '#337ab7');
@@ -146,12 +144,15 @@ function autoExpand(elem) {
 /*Keep toc expansion while redirecting*/
 function keepExpand() {
     var url = window.location.href, currentEntry;
-    $('.sphinxsidebar li').each(function () {
-        if(url.endsWith($(this).find('a').first().attr('href'))) {
-            currentEntry = $(this);
-            return false;
+    var entryList = isAPI ? $('.leftsidebar li') : $('.sphinxsidebar li');
+    for(var i = entryList.length - 1; i >= 0; --i) {
+        var entryURL = entryList.eq(i).find('a').first().attr('href');
+        if(entryURL != '#' && url.indexOf(entryURL) != -1) {
+            currentEntry = entryList.eq(i);
+            break;
         }
-    });
+    }
+    
     if(isAPI) {
         var rootEntry = currentEntry;
         if(rootEntry.parent().parent().is('li')) rootEntry = rootEntry.parent().parent();
