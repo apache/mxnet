@@ -432,14 +432,12 @@ var Search = {
                 dirname = '';
               }
               listItem.append($('<a/>').attr('href',
-                DOCUMENTATION_OPTIONS.URL_ROOT + dirname +
-                highlightstring + item[2]).html(item[1]));
+                DOCUMENTATION_OPTIONS.URL_ROOT + dirname).html(item[1]));
             } else {
                 // normal html builders
                 var baseURL = 'http://mxnet.io/';
                 listItem.append($('<a/>').attr('href',
-                baseURL + item[0] + DOCUMENTATION_OPTIONS.FILE_SUFFIX +
-                highlightstring + item[2]).html(item[1]));
+                baseURL + item[0] + DOCUMENTATION_OPTIONS.FILE_SUFFIX).html(item[1]));
             }
             var html = listItem.children().html();
             listItem.children().html(html.replace(RegExp(query, 'gi'), '<strong>$&</strong>'));
@@ -477,13 +475,11 @@ var Search = {
             dirname = '';
           }
           listItem.append($('<a/>').attr('href',
-            DOCUMENTATION_OPTIONS.URL_ROOT + dirname +
-            highlightstring + item[2]).html(item[1]));
+            DOCUMENTATION_OPTIONS.URL_ROOT + dirname).html(item[1]));
         } else {
           // normal html builders
           listItem.append($('<a/>').attr('href',
-            item[0] + DOCUMENTATION_OPTIONS.FILE_SUFFIX +
-            highlightstring + item[2]).html(item[1]));
+            item[0] + DOCUMENTATION_OPTIONS.FILE_SUFFIX).html(item[1]));
         }
         if (item[3]) {
           listItem.append($('<span> (' + item[3] + ')</span>'));
