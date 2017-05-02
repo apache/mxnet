@@ -448,16 +448,17 @@ Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
         break;
     }
   }
+#define BATCHNORM_LOG_MKL_INFO() do { LOG(INFO) << MKLBatchNormOp<cpu, float>::getName() \
+                                          << " Skip MKL optimization"; } while(0)
+#else
+#define BATCHNORM_LOG_MKL_INFO() ((void)0)
 #endif
   if (!op) {
     MSHADOW_REAL_TYPE_SWITCH_EX(dtype,
                                 DType,
                                 AccReal, {
-#if MXNET_USE_MKL2017 == 1
-                                LOG(INFO) << MKLBatchNormOp<cpu, float>::getName()
-                                          << " Skip MKL optimization";
-#endif
-                                op = new BatchNormOp<cpu, DType, AccReal>(param); });
+                                  BATCHNORM_LOG_MKL_INFO();
+                                  op = new BatchNormOp<cpu, DType, AccReal>(param); });
   }
   return op;
 }
