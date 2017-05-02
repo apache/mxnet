@@ -103,7 +103,7 @@ def resize_short(src, size, interp=2):
     MXNet must have been built with OpenCV for `resize_short` to work.
 
     Resize the original image by setting the shorter edge to size
-    and setting the longger edge according to the original proportion.
+    and setting the longer edge according to the original proportion.
     Resizing function is called from OpenCV.
 
     Parameters
