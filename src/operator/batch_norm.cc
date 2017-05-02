@@ -435,7 +435,7 @@ template<>
 Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
   Operator *op = nullptr;
 #if MXNET_USE_MKL2017 == 1
-  if(!param.mkl_off) {
+  if (!param.mkl_off) {
     // MKL operator doesn't support half_t, so fall through
     switch (dtype) {
       case mshadow::kFloat32:
@@ -449,7 +449,7 @@ Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
     }
   }
 #endif
-  if(!op) {
+  if (!op) {
     MSHADOW_REAL_TYPE_SWITCH_EX(dtype,
                                 DType,
                                 AccReal, {
@@ -467,7 +467,7 @@ Operator *BatchNormProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_s
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-  if((*in_shape)[0].ndim() != 4) {
+  if ((*in_shape)[0].ndim() != 4) {
     const_cast<BatchNormParam *>(&param_)->mkl_off = true;
   }
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
