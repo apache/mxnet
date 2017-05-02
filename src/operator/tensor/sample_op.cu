@@ -26,7 +26,7 @@ void SampleUniform_<gpu>(const nnvm::NodeAttrs& attrs,
       // Not float32: use workspace and copy to output
       mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
       mshadow::Tensor<xpu, 1, float> workspace =
-        ctx.requested[ResourceRequest::kTempSpace].get_space_typed<xpu, 1, float>
+        ctx.requested[1].get_space_typed<xpu, 1, float>
         (mshadow::Shape1(out.shape_.Size()), s);
       prnd->SampleUniform(&workspace, param.low, param.high);
       out = reshape(tcast<DType>(workspace), mshadow::Shape2(out.shape_[0], out.shape_[1]));
@@ -55,7 +55,7 @@ void SampleNormal_<gpu>(const nnvm::NodeAttrs& attrs,
       // Not float32: use workspace and copy to output
       mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
       mshadow::Tensor<xpu, 1, float> workspace =
-        ctx.requested[ResourceRequest::kTempSpace].get_space_typed<xpu, 1, float>
+        ctx.requested[1].get_space_typed<xpu, 1, float>
         (mshadow::Shape1(out.shape_.Size()), s);
       prnd->SampleGaussian(&workspace, param.loc, param.scale);
       out = reshape(tcast<DType>(workspace), mshadow::Shape2(out.shape_[0], out.shape_[1]));

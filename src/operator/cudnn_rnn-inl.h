@@ -56,23 +56,23 @@ class CuDNNRNNOp : public Operator {
   ~CuDNNRNNOp() {
     if (init_cudnn_) {
       for (size_t i = 0; i < x_desc_vec_.size(); ++i) {
-        CHECK_EQ(cudnnDestroyTensorDescriptor(x_desc_vec_[i]), CUDNN_STATUS_SUCCESS);
-        CHECK_EQ(cudnnDestroyTensorDescriptor(y_desc_vec_[i]), CUDNN_STATUS_SUCCESS);
-        CHECK_EQ(cudnnDestroyTensorDescriptor(dx_desc_vec_[i]), CUDNN_STATUS_SUCCESS);
-        CHECK_EQ(cudnnDestroyTensorDescriptor(dy_desc_vec_[i]), CUDNN_STATUS_SUCCESS);
+        CUDNN_CALL(cudnnDestroyTensorDescriptor(x_desc_vec_[i]));
+        CUDNN_CALL(cudnnDestroyTensorDescriptor(y_desc_vec_[i]));
+        CUDNN_CALL(cudnnDestroyTensorDescriptor(dx_desc_vec_[i]));
+        CUDNN_CALL(cudnnDestroyTensorDescriptor(dy_desc_vec_[i]));
       }
-      CHECK_EQ(cudnnDestroyTensorDescriptor(hx_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyTensorDescriptor(cx_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyTensorDescriptor(hy_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyTensorDescriptor(cy_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyTensorDescriptor(dhx_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyTensorDescriptor(dcx_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyTensorDescriptor(dhy_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyTensorDescriptor(dcy_desc_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(hx_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(cx_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(hy_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(cy_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(dhx_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(dcx_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(dhy_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(dcy_desc_));
 
-      CHECK_EQ(cudnnDestroyFilterDescriptor(w_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyRNNDescriptor(rnn_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyDropoutDescriptor(dropout_desc_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnDestroyFilterDescriptor(w_desc_));
+      CUDNN_CALL(cudnnDestroyRNNDescriptor(rnn_desc_));
+      CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
       Storage::Get()->Free(dropout_states_);
       Storage::Get()->Free(reserve_space_);
     }
@@ -124,48 +124,48 @@ class CuDNNRNNOp : public Operator {
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
                               mshadow::Shape1(temp_size), s);
     if (ctx.is_train) {
-      CHECK_EQ(cudnnRNNForwardTraining(s->dnn_handle_,
-                                      rnn_desc_,
-                                      param_.seq_length_,
-                                      x_desc_vec_.data(),
-                                      x.dptr_,
-                                      hx_desc_,
-                                      hx.dptr_,
-                                      cx_desc_,
-                                      cx_ptr,
-                                      w_desc_,
-                                      w.dptr_,
-                                      y_desc_vec_.data(),
-                                      y.dptr_,
-                                      hy_desc_,
-                                      hy_ptr,
-                                      cy_desc_,
-                                      cy_ptr,
-                                      temp_space.dptr_,
-                                      workspace_byte_,
-                                      reserve_space_.dptr,
-                                      reserve_space_byte_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnRNNForwardTraining(s->dnn_handle_,
+                                         rnn_desc_,
+                                         param_.seq_length_,
+                                         x_desc_vec_.data(),
+                                         x.dptr_,
+                                         hx_desc_,
+                                         hx.dptr_,
+                                         cx_desc_,
+                                         cx_ptr,
+                                         w_desc_,
+                                         w.dptr_,
+                                         y_desc_vec_.data(),
+                                         y.dptr_,
+                                         hy_desc_,
+                                         hy_ptr,
+                                         cy_desc_,
+                                         cy_ptr,
+                                         temp_space.dptr_,
+                                         workspace_byte_,
+                                         reserve_space_.dptr,
+                                         reserve_space_byte_));
     } else {
       // inference mode
-      CHECK_EQ(cudnnRNNForwardInference(s->dnn_handle_,
-                                      rnn_desc_,
-                                      param_.seq_length_,
-                                      x_desc_vec_.data(),
-                                      x.dptr_,
-                                      hx_desc_,
-                                      hx.dptr_,
-                                      cx_desc_,
-                                      cx_ptr,
-                                      w_desc_,
-                                      w.dptr_,
-                                      y_desc_vec_.data(),
-                                      y.dptr_,
-                                      hy_desc_,
-                                      hy_ptr,
-                                      cy_desc_,
-                                      cy_ptr,
-                                      temp_space.dptr_,
-                                      workspace_byte_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnRNNForwardInference(s->dnn_handle_,
+                                          rnn_desc_,
+                                          param_.seq_length_,
+                                          x_desc_vec_.data(),
+                                          x.dptr_,
+                                          hx_desc_,
+                                          hx.dptr_,
+                                          cx_desc_,
+                                          cx_ptr,
+                                          w_desc_,
+                                          w.dptr_,
+                                          y_desc_vec_.data(),
+                                          y.dptr_,
+                                          hy_desc_,
+                                          hy_ptr,
+                                          cy_desc_,
+                                          cy_ptr,
+                                          temp_space.dptr_,
+                                          workspace_byte_));
     }
   }
 
@@ -237,48 +237,48 @@ class CuDNNRNNOp : public Operator {
     Tensor<gpu, 1, DType> temp_space =
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
                               mshadow::Shape1(temp_size), s);
-    CHECK_EQ(cudnnRNNBackwardData(s->dnn_handle_,
-                                rnn_desc_,
-                                param_.seq_length_,
-                                y_desc_vec_.data(),
-                                y.dptr_,
-                                dy_desc_vec_.data(),
-                                dy.dptr_,
-                                dhy_desc_,
-                                dhy_ptr,
-                                dcy_desc_,
-                                dcy_ptr,
-                                w_desc_,
-                                w.dptr_,
-                                hx_desc_,
-                                hx.dptr_,
-                                cx_desc_,
-                                cx_ptr,
-                                dx_desc_vec_.data(),
-                                dx.dptr_,
-                                dhx_desc_,
-                                dhx.dptr_,
-                                dcx_desc_,
-                                dcx_ptr,
-                                temp_space.dptr_,
-                                workspace_byte_,
-                                reserve_space_.dptr,
-                                reserve_space_byte_), CUDNN_STATUS_SUCCESS);
-    CHECK_EQ(cudnnRNNBackwardWeights(s->dnn_handle_,
+    CUDNN_CALL(cudnnRNNBackwardData(s->dnn_handle_,
                                     rnn_desc_,
                                     param_.seq_length_,
-                                    x_desc_vec_.data(),
-                                    x.dptr_,
-                                    hx_desc_,
-                                    hx.dptr_,
                                     y_desc_vec_.data(),
                                     y.dptr_,
+                                    dy_desc_vec_.data(),
+                                    dy.dptr_,
+                                    dhy_desc_,
+                                    dhy_ptr,
+                                    dcy_desc_,
+                                    dcy_ptr,
+                                    w_desc_,
+                                    w.dptr_,
+                                    hx_desc_,
+                                    hx.dptr_,
+                                    cx_desc_,
+                                    cx_ptr,
+                                    dx_desc_vec_.data(),
+                                    dx.dptr_,
+                                    dhx_desc_,
+                                    dhx.dptr_,
+                                    dcx_desc_,
+                                    dcx_ptr,
                                     temp_space.dptr_,
                                     workspace_byte_,
-                                    dw_desc_,
-                                    dw.dptr_,
                                     reserve_space_.dptr,
-                                    reserve_space_byte_), CUDNN_STATUS_SUCCESS);
+                                    reserve_space_byte_));
+    CUDNN_CALL(cudnnRNNBackwardWeights(s->dnn_handle_,
+                                       rnn_desc_,
+                                       param_.seq_length_,
+                                       x_desc_vec_.data(),
+                                       x.dptr_,
+                                       hx_desc_,
+                                       hx.dptr_,
+                                       y_desc_vec_.data(),
+                                       y.dptr_,
+                                       temp_space.dptr_,
+                                       workspace_byte_,
+                                       dw_desc_,
+                                       dw.dptr_,
+                                       reserve_space_.dptr,
+                                       reserve_space_byte_));
   }
 
  private:
@@ -313,10 +313,10 @@ class CuDNNRNNOp : public Operator {
       int dimA[3];
       int strideA[3];
       for (int i = 0; i < param_.seq_length_; i++) {
-        CHECK_EQ(cudnnCreateTensorDescriptor(&x_vec[i]), CUDNN_STATUS_SUCCESS);
-        CHECK_EQ(cudnnCreateTensorDescriptor(&y_vec[i]), CUDNN_STATUS_SUCCESS);
-        CHECK_EQ(cudnnCreateTensorDescriptor(&dx_vec[i]), CUDNN_STATUS_SUCCESS);
-        CHECK_EQ(cudnnCreateTensorDescriptor(&dy_vec[i]), CUDNN_STATUS_SUCCESS);
+        CUDNN_CALL(cudnnCreateTensorDescriptor(&x_vec[i]));
+        CUDNN_CALL(cudnnCreateTensorDescriptor(&y_vec[i]));
+        CUDNN_CALL(cudnnCreateTensorDescriptor(&dx_vec[i]));
+        CUDNN_CALL(cudnnCreateTensorDescriptor(&dy_vec[i]));
 
         dimA[0] = param_.batch_size_;
         dimA[1] = param_.input_size_;
@@ -327,16 +327,16 @@ class CuDNNRNNOp : public Operator {
         strideA[1] = dimA[2];
         strideA[2] = 1;
 
-        CHECK_EQ(cudnnSetTensorNdDescriptor(x_vec[i],
-                                  dtype_,
-                                  3,
-                                  dimA,
-                                  strideA), CUDNN_STATUS_SUCCESS);
-        CHECK_EQ(cudnnSetTensorNdDescriptor(dx_vec[i],
-                                  dtype_,
-                                  3,
-                                  dimA,
-                                  strideA), CUDNN_STATUS_SUCCESS);
+        CUDNN_CALL(cudnnSetTensorNdDescriptor(x_vec[i],
+                                              dtype_,
+                                              3,
+                                              dimA,
+                                              strideA));
+        CUDNN_CALL(cudnnSetTensorNdDescriptor(dx_vec[i],
+                                              dtype_,
+                                              3,
+                                              dimA,
+                                              strideA));
         dimA[0] = param_.batch_size_;
         dimA[1] = param_.bidirectional ? param_.state_size * 2 : param_.state_size;
         dimA[2] = 1;
@@ -344,16 +344,16 @@ class CuDNNRNNOp : public Operator {
         strideA[1] = dimA[2];
         strideA[2] = 1;
 
-        CHECK_EQ(cudnnSetTensorNdDescriptor(y_vec[i],
-                                  dtype_,
-                                  3,
-                                  dimA,
-                                  strideA), CUDNN_STATUS_SUCCESS);
-        CHECK_EQ(cudnnSetTensorNdDescriptor(dy_vec[i],
-                                  dtype_,
-                                  3,
-                                  dimA,
-                                  strideA), CUDNN_STATUS_SUCCESS);
+        CUDNN_CALL(cudnnSetTensorNdDescriptor(y_vec[i],
+                                             dtype_,
+                                             3,
+                                             dimA,
+                                             strideA));
+        CUDNN_CALL(cudnnSetTensorNdDescriptor(dy_vec[i],
+                                              dtype_,
+                                              3,
+                                              dimA,
+                                              strideA));
       }
       x_desc_vec_ = x_vec;
       y_desc_vec_ = y_vec;
@@ -368,117 +368,117 @@ class CuDNNRNNOp : public Operator {
       strideA[1] = dimA[2];
       strideA[2] = 1;
 
-      CHECK_EQ(cudnnCreateTensorDescriptor(&hx_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnCreateTensorDescriptor(&cx_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnCreateTensorDescriptor(&hy_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnCreateTensorDescriptor(&cy_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnCreateTensorDescriptor(&dhx_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnCreateTensorDescriptor(&dcx_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnCreateTensorDescriptor(&dhy_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnCreateTensorDescriptor(&dcy_desc_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&hx_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&cx_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&hy_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&cy_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&dhx_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&dcx_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&dhy_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&dcy_desc_));
 
-      CHECK_EQ(cudnnSetTensorNdDescriptor(hx_desc_,
-                                          dtype_,
-                                          3,
-                                          dimA,
-                                          strideA), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensorNdDescriptor(cx_desc_,
-                                          dtype_,
-                                          3,
-                                          dimA,
-                                          strideA), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensorNdDescriptor(hy_desc_,
-                                          dtype_,
-                                          3,
-                                          dimA,
-                                          strideA), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensorNdDescriptor(cy_desc_,
-                                          dtype_,
-                                          3,
-                                          dimA,
-                                          strideA), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensorNdDescriptor(dhx_desc_,
-                                          dtype_,
-                                          3,
-                                          dimA,
-                                          strideA), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensorNdDescriptor(dcx_desc_,
-                                          dtype_,
-                                          3,
-                                          dimA,
-                                          strideA), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensorNdDescriptor(dhy_desc_,
-                                          dtype_,
-                                          3,
-                                          dimA,
-                                          strideA), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensorNdDescriptor(dcy_desc_,
-                                          dtype_,
-                                          3,
-                                          dimA,
-                                          strideA), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(hx_desc_,
+                                            dtype_,
+                                            3,
+                                            dimA,
+                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(cx_desc_,
+                                            dtype_,
+                                            3,
+                                            dimA,
+                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(hy_desc_,
+                                            dtype_,
+                                            3,
+                                            dimA,
+                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(cy_desc_,
+                                            dtype_,
+                                            3,
+                                            dimA,
+                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(dhx_desc_,
+                                            dtype_,
+                                            3,
+                                            dimA,
+                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(dcx_desc_,
+                                            dtype_,
+                                            3,
+                                            dimA,
+                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(dhy_desc_,
+                                            dtype_,
+                                            3,
+                                            dimA,
+                                            strideA));
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(dcy_desc_,
+                                            dtype_,
+                                            3,
+                                            dimA,
+                                            strideA));
 
       // Create Dropout descriptors
-      CHECK_EQ(cudnnCreateDropoutDescriptor(&dropout_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDropoutGetStatesSize(s->dnn_handle_,
-                                        &dropout_byte_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropout_desc_));
+      CUDNN_CALL(cudnnDropoutGetStatesSize(s->dnn_handle_,
+                                           &dropout_byte_));
       dropout_size_ = dropout_byte_ / sizeof(DType);
       dropout_states_ = Storage::Get()->Alloc(dropout_byte_, Context::GPU());
-      CHECK_EQ(cudnnSetDropoutDescriptor(dropout_desc_,
-                                        s->dnn_handle_,
-                                        param_.p,  // keep probability
-                                        dropout_states_.dptr,
-                                        dropout_byte_,
-                                        seed_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_,
+                                           s->dnn_handle_,
+                                           param_.p,  // keep probability
+                                           dropout_states_.dptr,
+                                           dropout_byte_,
+                                           seed_));
       // RNN descriptors
-      CHECK_EQ(cudnnCreateRNNDescriptor(&rnn_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetRNNDescriptor(rnn_desc_,
-                                    param_.state_size,
-                                    param_.num_layers,
-                                    dropout_desc_,
-                                    input_mode_,
-                                    direction_,
-                                    mode_,
-                                    dtype_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnCreateRNNDescriptor(&rnn_desc_));
+      CUDNN_CALL(cudnnSetRNNDescriptor(rnn_desc_,
+                                       param_.state_size,
+                                       param_.num_layers,
+                                       dropout_desc_,
+                                       input_mode_,
+                                       direction_,
+                                       mode_,
+                                       dtype_));
       // Get temp space sizes
-      CHECK_EQ(cudnnGetRNNWorkspaceSize(s->dnn_handle_,
-                                        rnn_desc_,
-                                        param_.seq_length_,
-                                        x_desc_vec_.data(),
-                                        &workspace_byte_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnGetRNNTrainingReserveSize(s->dnn_handle_,
-                                        rnn_desc_,
-                                        param_.seq_length_,
-                                        x_desc_vec_.data(),
-                                        &reserve_space_byte_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnGetRNNWorkspaceSize(s->dnn_handle_,
+                                          rnn_desc_,
+                                          param_.seq_length_,
+                                          x_desc_vec_.data(),
+                                          &workspace_byte_));
+      CUDNN_CALL(cudnnGetRNNTrainingReserveSize(s->dnn_handle_,
+                                                rnn_desc_,
+                                                param_.seq_length_,
+                                                x_desc_vec_.data(),
+                                                &reserve_space_byte_));
       workspace_size_ = workspace_byte_ / sizeof(DType);
       // Allocate the reserve space
       reserve_space_ = Storage::Get()->Alloc(reserve_space_byte_, Context::GPU());
 
       // Check that number of params are correct
       size_t cudnn_param_size;
-      CHECK_EQ(cudnnGetRNNParamsSize(s->dnn_handle_,
-                                    rnn_desc_,
-                                    x_desc_vec_[0],
-                                    &cudnn_param_size,
-                                    dtype_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnGetRNNParamsSize(s->dnn_handle_,
+                                       rnn_desc_,
+                                       x_desc_vec_[0],
+                                       &cudnn_param_size,
+                                       dtype_));
       CHECK_EQ(w.shape_[0] * sizeof(DType), cudnn_param_size);
 
       // Set param descriptors
-      CHECK_EQ(cudnnCreateFilterDescriptor(&w_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnCreateFilterDescriptor(&dw_desc_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnCreateFilterDescriptor(&w_desc_));
+      CUDNN_CALL(cudnnCreateFilterDescriptor(&dw_desc_));
       int dim_w[3] = {1, 1, 1};
       dim_w[0] = w.shape_[0];
-      CHECK_EQ(cudnnSetFilterNdDescriptor(w_desc_,
-                                          dtype_,
-                                          format_,
-                                          3,
-                                          dim_w), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetFilterNdDescriptor(dw_desc_,
-                                          dtype_,
-                                          format_,
-                                          3,
-                                          dim_w), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnSetFilterNdDescriptor(w_desc_,
+                                            dtype_,
+                                            format_,
+                                            3,
+                                            dim_w));
+      CUDNN_CALL(cudnnSetFilterNdDescriptor(dw_desc_,
+                                            dtype_,
+                                            format_,
+                                            3,
+                                            dim_w));
 
       // Query weight layout
       // cudnnFilterDescriptor_t m_desc;

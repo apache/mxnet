@@ -9,12 +9,31 @@
 #include <mxnet/operator_util.h>
 #include <vector>
 #include <utility>
+#include "../mxnet_op.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../special_functions-inl.h"
 
 namespace mxnet {
 namespace op {
+template<typename xpu, typename op>
+void UnaryLaunch(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Kernel<op, xpu>::Launch(s, outputs[0].Size(),
+      outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
+  });
+}
+
 template<typename GRAD_OP>
 struct unary_bwd {
   template<typename DType>
@@ -100,6 +119,41 @@ void CastCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+namespace kernel_launch_op {
+/*! \brief sigmoid unit */
+struct sigmoid {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out,
+                                  const DType *in) {
+    out[i] = DType(DType(1.0f) / (DType(1.0f) + expf(-in[i])));
+  }
+};
+struct sigmoid_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out,
+                                  const DType *out_grad, const DType *in) {
+    DType x = in[i];
+    out[i] = out_grad[i] * DType(x * (DType(1.0f) - x));
+  }
+};
+/*! \brief Rectified Linear Operation */
+struct relu {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out,
+                                  const DType *in) {
+    DType x = in[i];
+    out[i] = DType(x > DType(0.0f) ? x : DType(0.0f));
+  }
+};
+struct relu_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out,
+                                  const DType *out_grad, const DType *in) {
+    out[i] = out_grad[i] * DType(in[i] > DType(0.0f) ? DType(1.0f) : DType(0.0f));
+  }
+};
+}  // namespace kernel_launch_op
+
 #define MXNET_OPERATOR_REGISTER_UNARY(name)                         \
   NNVM_REGISTER_OP(name)                                            \
   .set_num_inputs(1)                                                \
@@ -110,7 +164,7 @@ void CastCompute(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs){                                     \
       return std::vector<std::pair<int, int> >{{0, 0}};             \
     })                                                              \
-  .add_argument("data", "NDArray-or-Symbol", "The input")
+  .add_argument("data", "NDArray-or-Symbol", "The input array.")
 
 }  // namespace op
 }  // namespace mxnet

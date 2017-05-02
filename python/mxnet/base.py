@@ -29,7 +29,8 @@ else:
 
 class _NullType(object):
     """Placeholder for arguments"""
-    pass
+    def __repr__(self):
+        return '_Null'
 
 _Null = _NullType()
 

@@ -15,7 +15,7 @@ GetOptions(
     'gpus=s'         => \(my $gpus                   ),
     'kv-store=s'     => \(my $kv_store     = 'device'),
     'num-epoch=i'    => \(my $num_epoch    = 25      ),
-    'lr=f'           => \(my $lr           = 0.01    ),
+    'lr=f'           => \(my $lr           = 0.001    ),
     'optimizer=s'    => \(my $optimizer    = 'adam'   ),
     'mom=f'          => \(my $mom          = 0       ),
     'wd=f'           => \(my $wd           = 0.00001 ),
@@ -208,8 +208,9 @@ $model->fit(
                                 learning_rate => $lr,
                                 momentum      => $mom,
                                 wd            => $wd,
-                                clip_gradient => 1,
-                                rescale_grad  => 1/$batch_size
+                                clip_gradient => 5,
+                                rescale_grad  => 1/$batch_size,
+                                lr_scheduler  => AI::MXNet::FactorScheduler->new(step => 1000, factor => 0.99)
                         },
     initializer         => mx->init->Xavier(factor_type => "in", magnitude => 2.34),
     num_epoch           => $num_epoch,

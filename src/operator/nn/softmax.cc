@@ -43,7 +43,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_softmax)
                                                         mxnet_op::softmax_bwd>);
 
 MXNET_OPERATOR_REGISTER_UNARY(log_softmax)
-.describe(R"code(Compute the log softmax of the input.
+.describe(R"code(Computes the log softmax of the input.
 This is equivalent to computing softmax followed by log.
 
 Examples::

@@ -176,6 +176,9 @@ def _parse_proto(prototxt_fname):
             need_flatten[name] = False
             param = layer[i].reshape_param
             param_string = "shape=(%s)" % (','.join(param.shape.dim),)
+        if layer[i].type == 'AbsVal': 
+        	type_string = 'mx.symbol.abs' 
+        	need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]] 
 
         if skip_layer:
             assert len(layer[i].bottom) == 1

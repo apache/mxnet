@@ -8,7 +8,41 @@
 
 namespace mxnet {
 namespace op {
-DMLC_REGISTER_PARAMETER(CastParam);
+// relu
+MXNET_OPERATOR_REGISTER_UNARY(relu)
+.describe(R"code(Computes rectified linear.
+
+.. math::
+   max(features, 0)
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_relu"})
+.set_attr<FCompute>("FCompute<cpu>",
+    UnaryLaunch<cpu, kernel_launch_op::relu>);
+
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_relu)
+.set_attr<FCompute>("FCompute<cpu>",
+    BinaryLaunch<cpu, kernel_launch_op::relu_grad>);
+
+
+// sigmoid
+MXNET_OPERATOR_REGISTER_UNARY(sigmoid)
+.describe(R"code(Computes sigmoid of x element-wise.
+
+.. math::
+   y = 1 / (1 + exp(-x))
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sigmoid"})
+.set_attr<FCompute>("FCompute<cpu>",
+    UnaryLaunch<cpu, kernel_launch_op::sigmoid>);
+
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_sigmoid)
+.set_attr<FCompute>("FCompute<cpu>",
+    BinaryLaunch<cpu, kernel_launch_op::sigmoid_grad>);
+
 
 // copy
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
@@ -29,15 +63,39 @@ NNVM_REGISTER_OP(_backward_copy)
 
 MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
 .add_alias("stop_gradient")
-.MXNET_DESCRIBE("Get output from a symbol and pass 0 gradient back")
+.describe(R"code(Stops gradient computation.
+
+Stops the accumulated gradient of the inputs from flowing through this operator
+in the backward direction. In other words, this operator prevents the contribution
+of its inputs to be taken into account for computing gradients.
+
+Example::
+
+  v1 = [1, 2]
+  v2 = [0, 1]
+  a = Variable('a')
+  b = Variable('b')
+  b_stop_grad = stop_gradient(3 * b)
+  loss = MakeLoss(b_stop_grad + a)
+
+  executor = loss.simple_bind(ctx=cpu(), a=(1,2), b=(1,2))
+  executor.forward(is_train=True, a=v1, b=v2)
+  executor.outputs
+  [ 1.  5.]
+
+  executor.backward()
+  executor.grad_arrays
+  [ 0.  0.]
+  [ 1.  1.]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_UNARY(make_loss)
-.MXNET_DESCRIBE("Get output from a symbol and pass 1 gradient back. "
-  "This is used as a terminal loss if unary and binary operator "
-  "are used to composite a loss with no declaration of backward "
-  "dependency")
+.describe(R"code(Stops gradient computation.
+.. note:: ``make_loss`` is deprecated, use ``MakeLoss``.
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
@@ -71,9 +129,10 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
       return lhs;
     });
 
+DMLC_REGISTER_PARAMETER(CastParam);
 NNVM_REGISTER_OP(Cast)
 .add_alias("cast")
-.describe(R"code(Casts all elements of the input to the new type.
+.describe(R"code(Casts all elements of the input to a new type.
 
 .. note:: ``Cast`` is deprecated. Use ``cast`` instead.
 
@@ -187,10 +246,10 @@ Example::
 
 // fix
 MXNET_OPERATOR_REGISTER_UNARY(fix)
-.describe(R"code(Returns element-wise rounded value to the nearest integer towards zero of the input. 
+.describe(R"code(Returns element-wise rounded value to the nearest integer towards zero of the input.
 
 Example::
-  
+
    fix([-2.1, -1.9, 1.9, 2.1]) = [-2., -1.,  1., 2.]
 
 )code" ADD_FILELINE)
@@ -301,7 +360,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_log)
 
 // sin
 MXNET_OPERATOR_REGISTER_UNARY(sin)
-.describe(R"code(Computes the element-wise sine of the input.
+.describe(R"code(Computes the element-wise sine of the input array.
 
 The input should be in radians (:math:`2\pi` rad equals 360 degrees).
 
