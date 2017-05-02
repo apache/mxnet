@@ -37,33 +37,33 @@ struct MultiSampleParam : public dmlc::Parameter<MultiSampleParam> {
 inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
                                std::vector<TShape>* in_attrs,
                                std::vector<TShape>* out_attrs) {
-  CHECK_GT((int)in_attrs->size(), 0)
+  CHECK_GT(in_attrs->size(), 0)
     << "sampling operator takes 1 or 2 arguments (" << in_attrs->size() << " given)";
-  CHECK_LT((int)in_attrs->size(), 3)
+  CHECK_LT(in_attrs->size(), 3)
     << "sampling operator takes 1 or 2 arguments (" << in_attrs->size() << " given)";
-  CHECK_EQ((int)out_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
   // Get shape to be sampled for each parameter set.
   const MultiSampleParam& param = nnvm::get<MultiSampleParam>(attrs.parsed);
   TShape sshape = param.shape;
-  for ( int i = 0; i < sshape.ndim(); ++i ) {
-    CHECK_GT((int)sshape[i], 0) << "shape parameter must be non-zero within each dimension";
+  for (size_t i = 0; i < sshape.ndim(); ++i) {
+    CHECK_GT(sshape[i], 0) << "shape parameter must be non-zero within each dimension";
   }
   // Examine output shape whether it is already defined.
   TShape tshape((*out_attrs)[0]);
   // The illegal case of tshape.ndim() <= sshape.ndim() will
   // automatically crash when we back-propagate from inputs to outputs.
-  if ( tshape.ndim() > sshape.ndim() ) {
+  if (tshape.ndim() > sshape.ndim()) {
     // Promote down by removing last dimensions which represent the samples.
     tshape = TShape(tshape.begin(), tshape.begin()+(tshape.ndim()-sshape.ndim()));
   }
   // Shape assignemnt/checking for inputs.
-  for ( int i = 0; i < in_attrs->size(); ++i ) {
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
     if ( !shape_assign(&tshape, (*in_attrs)[i])) return false;
   }
-  for ( int i = 0; i < in_attrs->size(); ++i ) {
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
     SHAPE_ASSIGN_CHECK(*in_attrs, i, tshape);
   }
-  if ( tshape.ndim() > 0 ) {
+  if (tshape.ndim() > 0) {
     // Shape assignment/check for propagation from inputs to output.
     std::vector<int> cshape(tshape.begin(), tshape.end());
     cshape.insert(cshape.end(), sshape.begin(), sshape.end());
@@ -76,18 +76,18 @@ inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
 inline bool MultiSampleOpType(const nnvm::NodeAttrs& attrs,
                               std::vector<int>* in_attrs,
                               std::vector<int>* out_attrs) {
-  CHECK_GT((int)in_attrs->size(), 0)
+  CHECK_GT(in_attrs->size(), 0)
     << "sampling operator takes 1 or 2 arguments (" << in_attrs->size() << " given)";
-  CHECK_LT((int)in_attrs->size(), 3)
+  CHECK_LT(in_attrs->size(), 3)
     << "sampling operator takes 1 or 2 arguments (" << in_attrs->size() << " given)";
-  CHECK_EQ((int)out_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
 
   // All inputs must have same type.
   int dtype = -1;
-  for ( int i = 0; i < in_attrs->size(); ++i ) {
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
     if (!type_assign(&dtype, (*in_attrs)[i])) return false;
   }
-  for ( int i = 0; i < in_attrs->size(); ++i ) {
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
     TYPE_ASSIGN_CHECK(*in_attrs, i, dtype);
   }
   if (-1 == dtype) return false;
@@ -122,10 +122,10 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
                        const std::vector<OpReqType>& req,
                        const std::vector<TBlob>& outputs) {
   using namespace mshadow;
-  CHECK_GT((int)inputs.size(), 0);
-  CHECK_LT((int)inputs.size(), 3);
-  CHECK_EQ((int)outputs.size(), 1);
-  CHECK_EQ((int)req.size(), 1);
+  CHECK_GT(inputs.size(), 0);
+  CHECK_LT(inputs.size(), 3);
+  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(req.size(), 1);
   using namespace mxnet_op;
   const MultiSampleParam& param = nnvm::get<MultiSampleParam>(attrs.parsed);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -135,9 +135,9 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
   if (out.Size() == 0) return;
   CHECK_EQ(in0.CheckContiguous(), true);
   CHECK_EQ(in1.CheckContiguous(), true);
-  CHECK_GT((int)in0.Size(), 0);
+  CHECK_GT(in0.Size(), 0);
   CHECK_EQ(out.CheckContiguous(), true);
-  CHECK_EQ((int)out.Size() % (int)in0.Size(), 0);
+  CHECK_EQ(out.Size() % in0.Size(), 0);
   const int N(in0.Size()), M(out.Size()/in0.Size());
 
   // Seed for the sampling process. In order to guarantee deterministic
@@ -162,7 +162,7 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
           typename generator::template Sampler<OType> sampler(iptr1[i], iptr2[i], seed);
           // Get the sub-tensor that will hold the results of this sampler.
           Tensor<xpu, 1, OType> slice = samples.Slice(i, i+1).FlatTo1D();
-          for ( int j = 0; j < M; ++j ) {
+          for (int j = 0; j < M; ++j) {
             KERNEL_ASSIGN(slice[j], req_type, sampler());
           }
         }

@@ -400,12 +400,89 @@ Operator *PadProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
 DMLC_REGISTER_PARAMETER(PadParam);
 
 MXNET_REGISTER_OP_PROPERTY(Pad, PadProp)
-.describe(R"code(Pad an array.
+.describe(R"code(Pads an input array with a constant or edge values of the array.
 
-Only supports 4-D and 5-D input array.
+.. note:: `Pad` is deprecated. Use `pad` instead.
+
+.. note:: Current implementation only supports 4D and 5D input arrays with padding applied
+   only on axes 1, 2 and 3. Expects axes 4 and 5 in `pad_width` to be zero.
+
+This operation pads an input array with either a `constant_value` or edge values
+along each axis of the input array. The amount of padding is specified by `pad_width`.
+
+`pad_width` is a tuple of integer padding widths for each axis of the format
+``(before_1, after_1, ... , before_N, after_N)``. The `pad_width` should be of length ``2*N``
+where ``N`` is the number of dimensions of the array.
+
+For dimension ``N`` of the input array, ``before_N`` and ``after_N`` indicates how many values
+to add before and after the elements of the array along dimension ``N``.
+The widths of the higher two dimensions ``before_1``, ``after_1``, ``before_2``,
+``after_2`` must be 0.
+
+Example::
+
+   x = [[[[  1.   2.   3.]
+          [  4.   5.   6.]]
+
+         [[  7.   8.   9.]
+          [ 10.  11.  12.]]]
+
+
+        [[[ 11.  12.  13.]
+          [ 14.  15.  16.]]
+
+         [[ 17.  18.  19.]
+          [ 20.  21.  22.]]]]
+
+   pad(x,mode="edge", pad_width=(0,0,0,0,1,1,1,1)) =
+
+         [[[[  1.   1.   2.   3.   3.]
+            [  1.   1.   2.   3.   3.]
+            [  4.   4.   5.   6.   6.]
+            [  4.   4.   5.   6.   6.]]
+
+           [[  7.   7.   8.   9.   9.]
+            [  7.   7.   8.   9.   9.]
+            [ 10.  10.  11.  12.  12.]
+            [ 10.  10.  11.  12.  12.]]]
+
+
+          [[[ 11.  11.  12.  13.  13.]
+            [ 11.  11.  12.  13.  13.]
+            [ 14.  14.  15.  16.  16.]
+            [ 14.  14.  15.  16.  16.]]
+
+           [[ 17.  17.  18.  19.  19.]
+            [ 17.  17.  18.  19.  19.]
+            [ 20.  20.  21.  22.  22.]
+            [ 20.  20.  21.  22.  22.]]]]
+
+   pad(x, mode="constant", constant_value=0, pad_width=(0,0,0,0,2,2,1,1)) =
+
+         [[[[  0.   0.   0.   0.   0.]
+            [  0.   1.   2.   3.   0.]
+            [  0.   4.   5.   6.   0.]
+            [  0.   0.   0.   0.   0.]]
+
+           [[  0.   0.   0.   0.   0.]
+            [  0.   7.   8.   9.   0.]
+            [  0.  10.  11.  12.   0.]
+            [  0.   0.   0.   0.   0.]]]
+
+
+          [[[  0.   0.   0.   0.   0.]
+            [  0.  11.  12.  13.   0.]
+            [  0.  14.  15.  16.   0.]
+            [  0.   0.   0.   0.   0.]]
+
+           [[  0.   0.   0.   0.   0.]
+            [  0.  17.  18.  19.   0.]
+            [  0.  20.  21.  22.   0.]
+            [  0.   0.   0.   0.   0.]]]]
+
 
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol", "An n-dimensional input tensor.")
+.add_argument("data", "NDArray-or-Symbol", "An n-dimensional input array.")
 .add_arguments(PadParam::__FIELDS__());
 
 NNVM_REGISTER_OP(Pad).add_alias("pad");

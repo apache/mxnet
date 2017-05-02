@@ -1,9 +1,11 @@
 META.yml
 MANIFEST
+examples/calculator.pl
 examples/plot_network.pl
 examples/char_lstm.pl
 examples/get_ptb_data.sh
 examples/lstm_bucketing.pl
+examples/mnist.pl
 examples/cudnn_lstm_bucketing.pl
 Makefile.PL
 Changes
@@ -14,6 +16,7 @@ t/test_init.t
 t/test_model_parallel.t
 t/test_optimizers.t
 t/test_multi_device_exec.t
+t/test_ndarray.t
 t/test_io.t
 t/AI-MXNet.t
 t/test_kvstore.t

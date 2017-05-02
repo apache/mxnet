@@ -1,7 +1,23 @@
 Revision history for Perl extension AI::MXNet
 
+0.9506  Sat Apr 29 20:26:50 PDT 2017
+        - Ftrl optimizer, new tests, bugfixes.
+
+0.9505  Sun Apr 23 21:26:04 PDT 2017
+        - Perplexity bugfix, two new examples.
+
+0.9504  Wed Apr 19 18:59:45 PDT 2017
+        - LR Scheduler bugfix.
+
+0.9503  Wed Apr 19 13:33:57 PDT 2017
+        - added an example of generation of inferred text via pre-trained RNN.
+        - bugfixes/tests.
+
+0.9502  Sat Apr 15 17:18:21 PDT 2017
+        - optimizations/bugfixes.
+
 0.9501  Sat Apr  8 13:01:00 PDT 2017
-        -  ZoneoutCell, nd inferred reshape and moveaxis, cosmetic changes to Image iter,
+        - ZoneoutCell, nd inferred reshape and moveaxis, cosmetic changes to Image iter,
            pod reworked to be readable via metacpan.
 
 0.95  Sun Mar 26 17:42:02 PDT 2017

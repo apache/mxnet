@@ -19,4 +19,4 @@ no_index:
     - inc
 requires:
   Test::More: '0'
-version: '0.95'
+version: '0.9506'

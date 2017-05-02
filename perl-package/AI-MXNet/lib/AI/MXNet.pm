@@ -27,7 +27,7 @@ use AI::MXNet::Visualization;
 use AI::MXNet::RecordIO;
 use AI::MXNet::Image;
 use AI::MXNet::Contrib;
-our $VERSION = '0.9501';
+our $VERSION = '0.9506';
 
 sub import
 {
@@ -57,6 +57,7 @@ sub import
             sub io { 'AI::MXNet::IO' }
             sub metric { 'AI::MXNet::Metric' }
             sub mod { 'AI::MXNet::Module' }
+            sub mon { 'AI::MXNet::Monitor' }
             sub viz { 'AI::MXNet::Visualization' }
             sub rnn { 'AI::MXNet::RNN' }
             sub callback { 'AI::MXNet::Callback' }

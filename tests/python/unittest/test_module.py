@@ -1,5 +1,49 @@
 import mxnet as mx
+import mxnet.ndarray as nd
+import numpy as np
 from functools import reduce
+
+def test_module_dtype():
+    dtype = np.float16
+    dshape = (3, 8, 7)
+
+    sym = mx.sym.Variable('data')
+    sym = mx.sym.Activation(data=sym, act_type='relu', __layout__='TNC')
+
+    mod = mx.mod.Module(sym, ('data',), None, context=[mx.cpu(0), mx.cpu(1)])
+    mod.bind(data_shapes=[mx.io.DataDesc('data', dshape, dtype, layout='TNC')])
+    mod.init_params()
+    mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape, dtype=dtype)],
+                              label=None))
+    mod.backward([mx.nd.ones(dshape, dtype=dtype)])
+
+    for x in mod.get_outputs():
+      assert x.dtype == dtype
+
+
+def test_module_input_grads():
+    a = mx.sym.Variable('a', __layout__='NC')
+    b = mx.sym.Variable('b', __layout__='NC')
+    c = mx.sym.Variable('c', __layout__='NC')
+
+    c = a + 2 * b + 3 * c
+    net = mx.mod.Module(c, data_names=['b', 'c', 'a'], label_names=None,
+                        context=[mx.cpu(0), mx.cpu(1)])
+    net.bind(data_shapes=[['b', (5, 5)], ['c', (5, 5)], ['a', (5, 5)]],
+             label_shapes=None, inputs_need_grad=True)
+    net.init_params()
+
+    net.forward(data_batch=mx.io.DataBatch(data=[nd.ones((5, 5)),
+                                                 nd.ones((5, 5)),
+                                                 nd.ones((5, 5))]))
+    net.backward(out_grads=[nd.ones((5, 5))])
+    input_grads = net.get_input_grads()
+    b_grad = input_grads[0].asnumpy()
+    c_grad = input_grads[1].asnumpy()
+    a_grad = input_grads[2].asnumpy()
+    assert np.all(a_grad == 1), a_grad
+    assert np.all(b_grad == 2), b_grad
+    assert np.all(c_grad == 3), c_grad
 
 def test_module_layout():
     sym = mx.sym.Variable('data')
@@ -211,6 +255,8 @@ def test_monitor():
     assert(mon_result_counts == [2, 2, 1, 6, 6, 4])
 
 if __name__ == '__main__':
+    test_module_dtype()
+    test_module_input_grads()
     test_module_states()
     test_module_reshape()
     test_save_load()

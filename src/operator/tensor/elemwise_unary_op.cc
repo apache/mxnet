@@ -8,11 +8,45 @@
 
 namespace mxnet {
 namespace op {
-DMLC_REGISTER_PARAMETER(CastParam);
+// relu
+MXNET_OPERATOR_REGISTER_UNARY(relu)
+.describe(R"code(Computes rectified linear.
+
+.. math::
+   max(features, 0)
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_relu"})
+.set_attr<FCompute>("FCompute<cpu>",
+    UnaryLaunch<cpu, kernel_launch_op::relu>);
+
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_relu)
+.set_attr<FCompute>("FCompute<cpu>",
+    BinaryLaunch<cpu, kernel_launch_op::relu_grad>);
+
+
+// sigmoid
+MXNET_OPERATOR_REGISTER_UNARY(sigmoid)
+.describe(R"code(Computes sigmoid of x element-wise.
+
+.. math::
+   y = 1 / (1 + exp(-x))
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sigmoid"})
+.set_attr<FCompute>("FCompute<cpu>",
+    UnaryLaunch<cpu, kernel_launch_op::sigmoid>);
+
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_sigmoid)
+.set_attr<FCompute>("FCompute<cpu>",
+    BinaryLaunch<cpu, kernel_launch_op::sigmoid_grad>);
+
 
 // copy
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
-.MXNET_DESCRIBE("Identity mapping, copy src to output")
+.MXNET_DESCRIBE("Returns a copy of the input.")
 .add_alias("identity")
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
@@ -29,15 +63,39 @@ NNVM_REGISTER_OP(_backward_copy)
 
 MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
 .add_alias("stop_gradient")
-.MXNET_DESCRIBE("Get output from a symbol and pass 0 gradient back")
+.describe(R"code(Stops gradient computation.
+
+Stops the accumulated gradient of the inputs from flowing through this operator
+in the backward direction. In other words, this operator prevents the contribution
+of its inputs to be taken into account for computing gradients.
+
+Example::
+
+  v1 = [1, 2]
+  v2 = [0, 1]
+  a = Variable('a')
+  b = Variable('b')
+  b_stop_grad = stop_gradient(3 * b)
+  loss = MakeLoss(b_stop_grad + a)
+
+  executor = loss.simple_bind(ctx=cpu(), a=(1,2), b=(1,2))
+  executor.forward(is_train=True, a=v1, b=v2)
+  executor.outputs
+  [ 1.  5.]
+
+  executor.backward()
+  executor.grad_arrays
+  [ 0.  0.]
+  [ 1.  1.]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_UNARY(make_loss)
-.MXNET_DESCRIBE("Get output from a symbol and pass 1 gradient back. "
-  "This is used as a terminal loss if unary and binary operator "
-  "are used to composite a loss with no declaration of backward "
-  "dependency")
+.describe(R"code(Stops gradient computation.
+.. note:: ``make_loss`` is deprecated, use ``MakeLoss``.
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
@@ -71,11 +129,12 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
       return lhs;
     });
 
+DMLC_REGISTER_PARAMETER(CastParam);
 NNVM_REGISTER_OP(Cast)
 .add_alias("cast")
-.describe(R"code(Casts all elements of the input to the new type.
+.describe(R"code(Casts all elements of the input to a new type.
 
-.. note:: ``Cast`` is deprecated, use ``cast``.
+.. note:: ``Cast`` is deprecated. Use ``cast`` instead.
 
 Example::
 
@@ -187,10 +246,10 @@ Example::
 
 // fix
 MXNET_OPERATOR_REGISTER_UNARY(fix)
-.describe(R"code(Returns element-wise rounded value to the nearest integer towards zero of the input. 
+.describe(R"code(Returns element-wise rounded value to the nearest integer towards zero of the input.
 
 Example::
-  
+
    fix([-2.1, -1.9, 1.9, 2.1]) = [-2., -1.,  1., 2.]
 
 )code" ADD_FILELINE)
@@ -301,9 +360,9 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_log)
 
 // sin
 MXNET_OPERATOR_REGISTER_UNARY(sin)
-.describe(R"code(Returns element-wise trigonometric sine value of the input.
+.describe(R"code(Computes the element-wise sine of the input array.
 
-The input is in radians (:math:`2\pi` rad equals 360 degrees).
+The input should be in radians (:math:`2\pi` rad equals 360 degrees).
 
 .. math::
    sin([0, \pi/4, \pi/2]) = [0, 0.707, 1]
@@ -331,7 +390,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_log1p)
 
 // expm1
 MXNET_OPERATOR_REGISTER_UNARY(expm1)
-.describe(R"code(Calculate ``exp(x) - 1``
+.describe(R"code(Returns ``exp(x) - 1`` computed element-wise on the input.
 
 This function provides greater precision than ``exp(x) - 1`` for small values of ``x``.
 
@@ -344,9 +403,9 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_expm1)
 
 // cos
 MXNET_OPERATOR_REGISTER_UNARY(cos)
-.describe(R"code(Cosine, element-wise.
+.describe(R"code(Computes the element-wise cosine of the input array.
 
-The input is in radians (:math:`2\pi` rad equals 360 degress).
+The input should be in radians (:math:`2\pi` rad equals 360 degrees).
 
 .. math::
    cos([0, \pi/4, \pi/2]) = [1, 0.707, 0]
@@ -360,9 +419,9 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_cos)
 
 // tan
 MXNET_OPERATOR_REGISTER_UNARY(tan)
-.describe(R"code(Tangent, element-wise.
+.describe(R"code(Computes the element-wise tangent of the input array.
 
-Then input is in radians (:math:`2\pi` rad equals 360 degress).
+The input should be in radians (:math:`2\pi` rad equals 360 degrees).
 
 .. math::
    tan([0, \pi/4, \pi/2]) = [0, 1, -inf]
@@ -376,10 +435,10 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_tan)
 
 // arcsin
 MXNET_OPERATOR_REGISTER_UNARY(arcsin)
-.describe(R"code(Inverse sine, element-wise.
+.describe(R"code(Returns element-wise inverse sine of the input array.
 
-The input should be in range :math:`[-1, 1]`.
-The output is in the closed interval :math:`[-\pi/2, \pi/2]`
+The input should be in the range `[-1, 1]`.
+The output is in the closed interval of [:math:`-\pi/2`, :math:`\pi/2`].
 
 .. math::
    arcsin([-1, -.707, 0, .707, 1]) = [-\pi/2, -\pi/4, 0, \pi/4, \pi/2]
@@ -393,9 +452,9 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_arcsin)
 
 // arccos
 MXNET_OPERATOR_REGISTER_UNARY(arccos)
-.describe(R"code(Inverse cosine, element-wise.
+.describe(R"code(Returns element-wise inverse cosine of the input array.
 
-The input should be in range :math:`[-1, 1]`.
+The input should be in range `[-1, 1]`.
 The output is in the closed interval :math:`[0, \pi]`
 
 .. math::
@@ -410,12 +469,12 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_arccos)
 
 // arctan
 MXNET_OPERATOR_REGISTER_UNARY(arctan)
-.describe(R"code(Inverse tangent, element-wise.
+.describe(R"code(Returns element-wise inverse tangent of the input array.
 
 The output is in the closed interval :math:`[-\pi/2, \pi/2]`
 
 .. math::
-   arccos([-1, 0, 1]) = [-\pi/4, 0, \pi/4]
+   arctan([-1, 0, 1]) = [-\pi/4, 0, \pi/4]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::arctan>)
@@ -426,7 +485,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_arctan)
 
 // degrees
 MXNET_OPERATOR_REGISTER_UNARY(degrees)
-.describe(R"code(Convert angles from radians to degrees.
+.describe(R"code(Converts each element of the input array from radians to degrees.
 
 .. math::
    degrees([0, \pi/2, \pi, 3\pi/2, 2\pi]) = [0, 90, 180, 270, 360]
@@ -440,7 +499,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_degrees)
 
 // radians
 MXNET_OPERATOR_REGISTER_UNARY(radians)
-.describe(R"code(Convert angles from degrees to radians.
+.describe(R"code(Converts each element of the input array from degrees to radians.
 
 .. math::
    radians([0, 90, 180, 270, 360]) = [0, \pi/2, \pi, 3\pi/2, 2\pi]
@@ -454,9 +513,9 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_radians)
 
 // sinh
 MXNET_OPERATOR_REGISTER_UNARY(sinh)
-.describe(R"code(Hyperbolic sine, element-wise.
+.describe(R"code(Returns the hyperbolic sine of the input array, computed element-wise.
 
-For example::
+.. math::
    sinh(x) = 0.5\times(exp(x) - exp(-x))
 
 )code" ADD_FILELINE)
@@ -468,9 +527,9 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_sinh)
 
 // cosh
 MXNET_OPERATOR_REGISTER_UNARY(cosh)
-.describe(R"code(Hyperbolic cosine, element-wise.
+.describe(R"code(Returns the hyperbolic cosine  of the input array, computed element-wise.
 
-For example::
+.. math::
    cosh(x) = 0.5\times(exp(x) + exp(-x))
 
 )code" ADD_FILELINE)
@@ -482,9 +541,9 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_cosh)
 
 // tanh
 MXNET_OPERATOR_REGISTER_UNARY(tanh)
-.describe(R"code(Hyperbolic tangent element-wise.
+.describe(R"code(Returns the hyperbolic tangent of the input array, computed element-wise.
 
-For example::
+.. math::
    tanh(x) = sinh(x) / cosh(x)
 
 )code" ADD_FILELINE)
@@ -496,7 +555,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_tanh)
 
 // arcsinh
 MXNET_OPERATOR_REGISTER_UNARY(arcsinh)
-.describe(R"code(Inverse hyperbolic sine, element-wise.
+.describe(R"code(Returns the element-wise inverse hyperbolic sine of the input array, computed element-wise.
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::arcsinh>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arcsinh" });
@@ -506,7 +565,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_arcsinh)
 
 // arccosh
 MXNET_OPERATOR_REGISTER_UNARY(arccosh)
-.describe(R"code(Inverse hyperbolic cosine, element-wise.
+.describe(R"code(Returns the element-wise inverse hyperbolic cosine of the input array, computed element-wise.
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::arccosh>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arccosh" });
@@ -516,7 +575,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_arccosh)
 
 // arctanh
 MXNET_OPERATOR_REGISTER_UNARY(arctanh)
-.describe(R"code(Inverse hyperbolic tangent, element-wise.
+.describe(R"code(Returns the element-wise inverse hyperbolic tangent of the input array, computed element-wise.
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::arctanh>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctanh" });
@@ -526,7 +585,8 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_arctanh)
 
 // gamma
 MXNET_OPERATOR_REGISTER_UNARY(gamma)
-.MXNET_DESCRIBE("The gamma function (extension of the factorial function), element-wise")
+.MXNET_DESCRIBE("Returns the gamma function (extension of the factorial function to the reals)"
+  " , computed element-wise on the input array.")
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::gamma>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_gamma"});
 
@@ -535,7 +595,8 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_gamma)
 
 // gammaln
 MXNET_OPERATOR_REGISTER_UNARY(gammaln)
-.MXNET_DESCRIBE("Log of the absolute value of the gamma function, element-wise")
+.MXNET_DESCRIBE("Returns element-wise log of the absolute value of the gamma function"
+  " of the input.")
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::gammaln>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_gammaln"});
 

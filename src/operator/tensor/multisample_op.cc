@@ -33,9 +33,7 @@ struct NormalSampler {
                                      DType, double>::type GType;
     std::normal_distribution<GType> gen_;
     template<typename PType>
-    Sampler(PType mu, PType sigma, int seed): rnd_(seed), gen_(mu, sigma)
-      { CHECK_EQ(std::is_floating_point<DType>::value, true)
-          << "Normal distribution must have floating point target type"; };
+    Sampler(PType mu, PType sigma, int seed): rnd_(seed), gen_(mu, sigma) {}
     MSHADOW_XINLINE DType operator()() { return gen_(rnd_); }
   };
 };
@@ -49,9 +47,7 @@ struct GammaSampler {
                                       DType, double>::type GType;
     std::gamma_distribution<GType> gen_;
     template<typename PType>
-    Sampler(PType alpha, PType beta, int seed): rnd_(seed), gen_(alpha, beta)
-      { CHECK_EQ(std::is_floating_point<DType>::value, true)
-          << "Gamma distribution must have floating point target type"; };
+    Sampler(PType alpha, PType beta, int seed): rnd_(seed), gen_(alpha, beta) {}
     MSHADOW_XINLINE DType operator()() { return gen_(rnd_); }
   };
 };
@@ -65,9 +61,7 @@ struct ExponentialSampler {
                                       DType, double>::type GType;
     std::exponential_distribution<GType> gen_;
     template<typename PType>
-    Sampler(PType lambda, PType , int seed): rnd_(seed), gen_(lambda)
-      { CHECK_EQ(std::is_floating_point<DType>::value, true)
-          << "Exponential distribution must have floating point target type"; };
+    Sampler(PType lambda, PType , int seed): rnd_(seed), gen_(lambda) {}
     MSHADOW_XINLINE DType operator()() { return gen_(rnd_); }
   };
 };
@@ -168,9 +162,9 @@ MXNET_OPERATOR_REGISTER_SAMPLING2(normal, NormalSampler, "mu", "sigma",
   "normal distributions with parameters mu and sigma")
 MXNET_OPERATOR_REGISTER_SAMPLING2(gamma, GammaSampler, "alpha", "beta",
   "gamma distributions with parameters alpha and beta")
-MXNET_OPERATOR_REGISTER_SAMPLING1(exponential, ExponentialSampler, "lambda",
+MXNET_OPERATOR_REGISTER_SAMPLING1(exponential, ExponentialSampler, "lam",
   "exponential distributions with parameters lambda")
-MXNET_OPERATOR_REGISTER_SAMPLING1(poisson, PoissonSampler, "lambda",
+MXNET_OPERATOR_REGISTER_SAMPLING1(poisson, PoissonSampler, "lam",
   "Poisson distributions with parameters lambda")
 MXNET_OPERATOR_REGISTER_SAMPLING2(negative_binomial, NegativeBinomialSampler, "k", "p",
   "negative binomial distributions with parameters k (failure limit) and p (failure probability)")

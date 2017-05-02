@@ -37,6 +37,17 @@ class ReshapeDoc(NDArrayDoc):
     (4L, 3L, 2L)
     """
 
+class elemwise_addDoc(NDArrayDoc):
+    """
+    Example
+    -------
+
+    >>> x = mx.nd.array([1, 2, 3, 4])
+    >>> y = mx.nd.array([1.1, 2.1, 3.1, 4.1])
+    >>> mx.nd.elemwise_add(x, y).asnumpy()
+    array([ 2.0999999 ,  4.0999999 ,  6.0999999 ,  8.10000038], dtype=float32)
+    """
+
 class BroadcastToDoc(NDArrayDoc):
     """
     Examples
@@ -75,6 +86,15 @@ class BroadcastToDoc(NDArrayDoc):
     (2L, 1L, 1L, 3L)
     >>> d.shape
     (2L, 2L, 2L, 3L)
+    """
+
+class CustomDoc(NDArrayDoc):
+    """
+    Example
+    -------
+    Applies a custom operator named `my_custom_operator` to `input`.
+
+    >>> output = mx.symbol.Custom(op_type='my_custom_operator', data=input)
     """
 
 def _build_doc(func_name,

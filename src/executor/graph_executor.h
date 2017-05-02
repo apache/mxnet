@@ -59,7 +59,9 @@ class GraphExecutor : public Executor {
             const std::vector<NDArray>& arg_grad_store,
             const std::vector<OpReqType>& grad_req_type,
             const std::vector<NDArray>& aux_states,
-            Executor* shared_exec = nullptr);
+            Executor* shared_exec = nullptr,
+            const nnvm::NodeEntryMap<NDArray>& feed_dict
+              = nnvm::NodeEntryMap<NDArray>());
 
  protected:
   // Information about operational node
@@ -100,7 +102,9 @@ class GraphExecutor : public Executor {
                   const std::vector<NDArray>& in_args,
                   const std::vector<NDArray>& arg_grad_store,
                   const std::vector<OpReqType>& grad_req_type,
-                  const std::vector<NDArray>& aux_states);
+                  const std::vector<NDArray>& aux_states,
+                  const nnvm::NodeEntryMap<NDArray>& feed_dict
+                    = nnvm::NodeEntryMap<NDArray>());
   // initialize the full graph, including gradient.
   Graph InitFullGraph(nnvm::Symbol symbol,
                       const std::vector<OpReqType>& grad_req_type,
