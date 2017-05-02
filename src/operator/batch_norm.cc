@@ -449,7 +449,7 @@ Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
     }
   }
 #define BATCHNORM_LOG_MKL_INFO() do { LOG(INFO) << MKLBatchNormOp<cpu, float>::getName() \
-                                          << " Skip MKL optimization"; } while(0)
+                                          << " Skip MKL optimization"; } while (0)
 #else
 #define BATCHNORM_LOG_MKL_INFO() ((void)0)
 #endif
