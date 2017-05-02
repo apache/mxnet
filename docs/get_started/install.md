@@ -193,7 +193,7 @@ $ sudo apt-get install -y libopencv-dev
 ```bash
 $ git clone --recursive https://github.com/dmlc/mxnet
 $ cd mxnet
-$ make -j 1 USE_OPENCV=1 USE_BLAS=openblas
+$ make -j 8 USE_OPENCV=1 USE_BLAS=openblas
 ```
 
 *Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.
@@ -252,7 +252,7 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 
 ```bash
 $ sudo apt-get update
-$ sudo apt-get install wget
+$ sudo apt-get install -y wget python
 $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
