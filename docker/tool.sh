@@ -10,7 +10,7 @@ function show_usage() {
     echo ""
     echo "   COMMAND: build or commit."
     echo "            commit needs logined in docker hub"
-    echo "   LANGUAGE: the language binding to buld, e.g. python, r-lang, julia, or scala"
+    echo "   LANGUAGE: the language binding to buld, e.g. python, r-lang, julia, scala or perl"
     echo "   DEVICE: targed device, e.g. cpu, or gpu"
     echo ""
 }
