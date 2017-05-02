@@ -453,8 +453,10 @@ Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
     MSHADOW_REAL_TYPE_SWITCH_EX(dtype,
                                 DType,
                                 AccReal, {
+#if MXNET_USE_MKL2017 == 1
                                 LOG(INFO) << MKLBatchNormOp<cpu, float>::getName()
                                           << " Skip MKL optimization";
+#endif
                                 op = new BatchNormOp<cpu, DType, AccReal>(param); });
   }
   return op;
