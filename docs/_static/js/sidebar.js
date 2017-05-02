@@ -145,7 +145,6 @@ function autoExpand(elem) {
 function keepExpand() {
     var url = window.location.href, currentEntry;
     var entryList = isAPI ? $('.leftsidebar li') : $('.sphinxsidebar li');
-    var start, end;
     for(var i = entryList.length - 1; i >= 0; --i) {
         var entryURL = entryList.eq(i).find('a').first().attr('href');
         if(entryURL != '#' && url.indexOf(entryURL) != -1) {
