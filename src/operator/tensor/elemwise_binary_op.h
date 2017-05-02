@@ -36,8 +36,8 @@ void BinaryCompute_(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   if (req[0] == kNullOp) return;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  int size = static_cast<int>((outputs[0].Size() + DataType<DType>::kPack - 1)
-    /DataType<DType>::kPack);
+  int size = static_cast<int>((outputs[0].Size() + DataType<DType>::kLanes - 1)
+    /DataType<DType>::kLanes);
   DType* out_dptr = outputs[0].dptr<DType>();
   DType* lhs_dptr = inputs[0].dptr<DType>();
   DType* rhs_dptr = inputs[1].dptr<DType>();
@@ -102,8 +102,8 @@ void BinaryBackwardUseNone_(const nnvm::NodeAttrs& attrs,
                             const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  int size = static_cast<int>((outputs[0].Size() + DataType<DType>::kPack - 1)
-    /DataType<DType>::kPack);
+  int size = static_cast<int>((outputs[0].Size() + DataType<DType>::kLanes - 1)
+    /DataType<DType>::kLanes);
   DType* lgrad_dptr = outputs[0].dptr<DType>();
   DType* rgrad_dptr = outputs[1].dptr<DType>();
   DType* ograd_dptr = inputs[0].dptr<DType>();
@@ -163,8 +163,8 @@ void BinaryBackwardUseIn_(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   if (req[0] == kNullOp && req[1] == kNullOp) return;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  int size = static_cast<int>((outputs[0].Size() + DataType<DType>::kPack - 1)
-    /DataType<DType>::kPack);
+  int size = static_cast<int>((outputs[0].Size() + DataType<DType>::kLanes - 1)
+    /DataType<DType>::kLanes);
   DType* lgrad_dptr = outputs[0].dptr<DType>();
   DType* rgrad_dptr = outputs[1].dptr<DType>();
   DType* ograd_dptr = inputs[0].dptr<DType>();

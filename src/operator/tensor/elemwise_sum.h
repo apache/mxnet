@@ -45,8 +45,8 @@ void ElementWiseSumCompute_(const nnvm::NodeAttrs& attrs,
   size_t size = in_data.size();
   Stream<xpu> *s = ctx.get_stream<xpu>();
   DType* out_dptr = out_data[0].dptr<DType>();
-  int out_size = static_cast<int>((out_data[0].Size() + DataType<DType>::kPack - 1)
-                                  /DataType<DType>::kPack);
+  int out_size = static_cast<int>((out_data[0].Size() + DataType<DType>::kLanes - 1)
+                                  /DataType<DType>::kLanes);
   switch (size) {
     case 2: {
       DType* in_0_dptr = in_data[0].dptr<DType>();
