@@ -155,9 +155,6 @@ class MXIndexedRecordIO(MXRecordIO):
 
     Example usage:
     ----------
-    >>> record = mx.recordio.MXIndexedRecordIO('tmp.idx', 'tmp.rec', 'w')
-    >>> record
-    <mxnet.recordio.MXIndexedRecordIO object at 0x10ef40a50>
     >>> for i in range(5):
     ...     record.write_idx(i, 'record_%d'%i)
     >>> record.close()
