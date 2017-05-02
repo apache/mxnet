@@ -1,7 +1,12 @@
-#include <cstdio>
+/*!
+ * Copyright (c) 2017 by Contributors
+ * \file storage_test.cc
+ * \brief cpu/gpu storage tests
+*/
 #include <gtest/gtest.h>
 #include <dmlc/logging.h>
 #include <mxnet/storage.h>
+#include <cstdio>
 #include "test_util.h"
 
 TEST(Storage, Basic_CPU) {
@@ -20,7 +25,7 @@ TEST(Storage, Basic_CPU) {
 
 #if MXNET_USE_CUDA
 TEST(Storage, Basic_GPU) {
-  if(mxnet::test::unitTestsWithCuda) {
+  if (mxnet::test::unitTestsWithCuda) {
     constexpr size_t kSize = 1024;
     mxnet::Context context_gpu = mxnet::Context::GPU(0);
     auto &&storage = mxnet::Storage::Get();

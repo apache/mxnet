@@ -1,9 +1,18 @@
 # How to visualize Neural Networks as computation graph
 
-This topic demonstrates how to use ```mx.viz.plot_network``` in MXNet for visualizing your Neural Networks built on MXNet. ```mx.viz.plot_network``` helps to represent the Neural Network as a computation graph of nodes; with input nodes, where the computation starts, and output nodes, where the result can be read.
+Here, we'll demonstrate how to use ```mx.viz.plot_network```
+for visualizing your neural networks. ```mx.viz.plot_network```
+represents the neural network as a computation graph consisting of nodes and edges.
+The visualizations make clear which nodes correspond to inputs,
+where the computation starts,
+and which correspond to output nodes,
+from which the result can be read.
 
 ## Prerequisites
-You need [Jupyter Notebook](jupyter.readthedocs.io) and [Graphviz](http://www.graphviz.org/) library to visualize the network. Please Make sure you have followed [installation instructions](http://mxnet.io/get_started/setup.html) in setting up above dependencies along with setting up MXNet.
+You need the [Jupyter Notebook](jupyter.readthedocs.io)
+and [Graphviz](http://www.graphviz.org/) libraries to visualize the network.
+Please make sure you have followed [installation instructions](http://mxnet.io/get_started/setup.html)
+in setting up above dependencies along with setting up MXNet.
 
 ## Visualize the sample Neural Network
 
@@ -14,9 +23,9 @@ We will now try to visualize a sample Neural Network for linear matrix factoriza
 ```bash
   $ jupyter notebook
 ```
-- Access Jupyter Notebook in your browser - http://localhost:8888/.
+- Access Jupyter notebook in your browser - http://localhost:8888/.
 - Create a new notebook - "File -> New Notebook -> Python 2"
-- Copy and run below code to visualize a sample network.
+- Copy and run below code to visualize a simple network.
 
 ```python
   import mxnet as mx
@@ -46,7 +55,7 @@ We will now try to visualize a sample Neural Network for linear matrix factoriza
   # Visualize your network
   mx.viz.plot_network(net)
 ```
-You should be able to see computation graph something like below:
+You should see computation graph something like the following image:
 <img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/SampleNetworkVisualization.png
 width=400/>
 

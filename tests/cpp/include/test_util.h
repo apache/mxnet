@@ -4,11 +4,13 @@
  * \brief unit test performance analysis functions
  * \author Chris Olivier
 */
-#ifndef MXNET_TEST_TEST_UTIL_H
-#define MXNET_TEST_TEST_UTIL_H
+#ifndef TESTS_CPP_INCLUDE_TEST_UTIL_H_
+#define TESTS_CPP_INCLUDE_TEST_UTIL_H_
 
 #include <gtest/gtest.h>
 #include <mxnet/storage.h>
+#include <string>
+#include <vector>
 #include <sstream>
 
 #if MXNET_USE_VTUNE
@@ -54,7 +56,7 @@ constexpr const size_t MPRINT_PRECISION = 5;
 template<typename DType>
 inline void fill(const TBlob& blob, const DType val) {
   DType *p1 = blob.dptr<DType>();
-  for(size_t i = 0, n = blob.Size(); i < n; ++i) {
+  for (size_t i = 0, n = blob.Size(); i < n; ++i) {
     *p1++ = val;
   }
 }
@@ -62,36 +64,36 @@ inline void fill(const TBlob& blob, const DType val) {
 template<typename DType>
 inline void fill(const TBlob& blob, const DType *valArray) {
   DType *p1 = blob.dptr<DType>();
-  for(size_t i = 0, n = blob.Size(); i < n; ++i) {
+  for (size_t i = 0, n = blob.Size(); i < n; ++i) {
     *p1++ = *valArray++;
   }
 }
 
 template<typename DType>
 inline void try_fill(const std::vector<TBlob>& container, size_t index, const DType value) {
-  if(index < container.size()) {
+  if (index < container.size()) {
     test::fill(container[index], value);
   }
 }
 
 template<typename DType, typename Stream>
-inline void dump(Stream& os, const TBlob& blob, const char *suffix = "f") {
+inline void dump(Stream *os, const TBlob& blob, const char *suffix = "f") {
   DType *p1 = blob.dptr<DType>();
-  for(size_t i = 0, n = blob.Size(); i < n; ++i) {
-    if(i) {
-      os << ", ";
+  for (size_t i = 0, n = blob.Size(); i < n; ++i) {
+    if (i) {
+      *os << ", ";
     }
     const DType val = *p1++;
 
     std::stringstream stream;
     stream << val;
     std::string ss = stream.str();
-    if(suffix && *suffix == 'f') {
+    if (suffix && *suffix == 'f') {
       if (std::find(ss.begin(), ss.end(), '.') == ss.end()) {
         ss += ".0";
       }
     }
-    os << ss << suffix;
+    *os << ss << suffix;
   }
 }
 
@@ -129,10 +131,11 @@ inline DType& data_ref(const TBlob *blob, const std::vector<size_t>& indices) {
   return blob->dptr<DType>()[offset(blob->shape_, indices)];
 }
 
-inline std::string repeatedStr(const char *s, const signed int count, const bool trailSpace = false) {
-  if(count <= 0) {
+inline std::string repeatedStr(const char *s, const signed int count,
+                               const bool trailSpace = false) {
+  if (count <= 0) {
     return std::string();
-  } else if(count == 1) {
+  } else if (count == 1) {
     std::stringstream str;
     str << s << " ";
     return str.str();
@@ -141,7 +144,7 @@ inline std::string repeatedStr(const char *s, const signed int count, const bool
     for (int x = 0; x < count; ++x) {
       str << s;
     }
-    if(trailSpace) {
+    if (trailSpace) {
       str << " ";
     }
     return str.str();
@@ -150,9 +153,10 @@ inline std::string repeatedStr(const char *s, const signed int count, const bool
 
 /*! \brief Pretty print a 1D, 2D, or 3D blob */
 template<typename DType, typename StreamType>
-inline StreamType& print_blob(StreamType &os, const TBlob &blob, bool doChannels = true, bool doBatches = true) {
-
-  const size_t dim = blob.ndim();
+inline StreamType& print_blob(StreamType *_os, const TBlob &blob,
+                              bool doChannels = true, bool doBatches = true) {
+  StreamType& os = *_os;
+  const size_t dim = static_cast<size_t>(blob.ndim());
 
   if (dim == 1) {
     // probably a tensor (mshadow::Tensor is deprecated)
@@ -160,7 +164,7 @@ inline StreamType& print_blob(StreamType &os, const TBlob &blob, bool doChannels
     changed.shape_[0] = 1;
     changed.shape_[1] = 1;
     changed.shape_[2] = blob.shape_[0];
-    return print_blob<DType>(os, changed, false, false);
+    return print_blob<DType>(&os, changed, false, false);
   } else if (dim == 2) {
     // probably a tensor (mshadow::Tensor is deprecated)
     TBlob changed(blob.dptr<DType>(), TShape(4), blob.dev_mask_);
@@ -168,7 +172,7 @@ inline StreamType& print_blob(StreamType &os, const TBlob &blob, bool doChannels
     changed.shape_[1] = 1;
     changed.shape_[2] = blob.shape_[0];
     changed.shape_[3] = blob.shape_[1];
-    return print_blob<DType>(os, changed, false, false);
+    return print_blob<DType>(&os, changed, false, false);
   }
   CHECK_GE(dim, 3U) << "Invalid dimension zero (0)";
 
@@ -178,12 +182,12 @@ inline StreamType& print_blob(StreamType &os, const TBlob &blob, bool doChannels
   size_t depth  = 1;
   size_t height = 1;
   size_t width  = 1;
-  if(dim > 1) {
+  if (dim > 1) {
     channels = blob.size(1);
     if (dim > 2) {
-      if(dim == 3) {
+      if (dim == 3) {
         width = blob.size(2);
-      } else if(dim == 4) {
+      } else if (dim == 4) {
         height = blob.size(2);
         width  = blob.size(3);
       } else {
@@ -201,14 +205,14 @@ inline StreamType& print_blob(StreamType &os, const TBlob &blob, bool doChannels
   os << std::endl;
   for (size_t r = 0; r < height; ++r) {
     for (size_t thisBatch = 0; thisBatch < batchSize; ++thisBatch) {
-      if(doBatches) {
+      if (doBatches) {
         std::stringstream ss;
         if (doBatches && !thisBatch) {
           os << "|";
         }
         ss << "N" << thisBatch << "| ";
         const std::string nns = ss.str();
-        if(!r) {
+        if (!r) {
           os << nns;
         } else {
           os << repeatedStr(" ", nns.size());
@@ -221,9 +225,9 @@ inline StreamType& print_blob(StreamType &os, const TBlob &blob, bool doChannels
           } else {
             os << "[";
           }
-          for(size_t dd = 0; dd < depth; ++dd) {
+          for (size_t dd = 0; dd < depth; ++dd) {
             DType val;
-            switch(dim) {
+            switch (dim) {
               case 3:
                 val = data_at<DType>(&blob, {thisBatch, thisChannel, c });
                 break;
@@ -238,7 +242,8 @@ inline StreamType& print_blob(StreamType &os, const TBlob &blob, bool doChannels
                 break;
             }
             os << repeatedStr("(", dd);
-            os << std::fixed << std::setw(7) << std::setprecision(MPRINT_PRECISION) << std::right << val << " ";
+            os << std::fixed << std::setw(7) << std::setprecision(MPRINT_PRECISION)
+               << std::right << val << " ";
             os << repeatedStr(")", dd, true);
           }
         }
@@ -264,24 +269,23 @@ inline size_t shapeMemorySize(const TShape& shape) {
   return shape.Size() * sizeof(DType);
 }
 
-class BlobMemory
-{
+class BlobMemory {
  public:
-  inline BlobMemory(const bool isGPU) : isGPU_(isGPU) {
+  explicit inline BlobMemory(const bool isGPU) : isGPU_(isGPU) {
     this->handle_.dptr = nullptr;
   }
   inline ~BlobMemory() {
     Free();
   }
   void *Alloc(const size_t size) {
-    CHECK_GT(size, 0U); // You've probably made a mistake
+    CHECK_GT(size, 0U);  // You've probably made a mistake
     mxnet::Context context = isGPU_ ? mxnet::Context::GPU(0) : mxnet::Context{};
     Storage *storage = mxnet::Storage::Get();
     handle_ = storage->Alloc(size, context);
     return handle_.dptr;
   }
   void Free() {
-    if(handle_.dptr) {
+    if (handle_.dptr) {
       Storage *storage = mxnet::Storage::Get();
       storage->Free(handle_);
       handle_.dptr = nullptr;
@@ -320,7 +324,7 @@ template<typename DType, typename GetNextData>
 static inline void patternFill(TBlob *blob, GetNextData getNextData) {
   const size_t dim = blob->ndim();
   CHECK_LE(dim, 5U) << "Will need to handle above 3 dimensions (another for loop)";
-  const size_t num = blob->size(0); //
+  const size_t num = blob->size(0);
   const size_t channels = dim > 1 ? blob->size(1) : 1;
   const size_t depth = dim > 2 ? blob->size(2) : 1;
   const size_t height = dim > 3 ? blob->size(3) : 1;
@@ -377,15 +381,14 @@ static inline void patternFill(TBlob *blob, GetNextData getNextData) {
 /*! \brief Return a random number within a given range (inclusive) */
 template<class ScalarType>
 inline ScalarType rangedRand(const ScalarType min, const ScalarType max) {
-
-  unsigned long   num_bins = (unsigned long) max + 1,
-                  num_rand = (unsigned long) RAND_MAX + 1,
-                  bin_size = num_rand / num_bins,
-                  defect   = num_rand % num_bins;
+  uint64_t num_bins = static_cast<uint64_t>(max + 1),
+    num_rand = static_cast<uint64_t>(RAND_MAX),
+    bin_size = num_rand / num_bins,
+    defect   = num_rand % num_bins;
   ScalarType x;
   do {
     x = random();
-  } while (num_rand - defect <= (unsigned long)x);
+  } while (num_rand - defect <= (uint64_t)x);
 
   return static_cast<ScalarType>(x / bin_size + min);
 }
@@ -393,10 +396,10 @@ inline ScalarType rangedRand(const ScalarType min, const ScalarType max) {
 /*! \brief Change a value during the scope of this declaration */
 template<typename T>
 struct ScopeSet {
-  inline ScopeSet(T& var, const T tempValue)
-    : var_(var)
+  inline ScopeSet(T *var, const T tempValue)
+    : var_(*var)
       , saveValue_(var) {
-    var = tempValue;
+    *var = tempValue;
   }
   inline ~ScopeSet() {
     var_ = saveValue_;
@@ -409,4 +412,4 @@ struct ScopeSet {
 }  // namespace test
 }  // namespace mxnet
 
-#endif  // MXNET_TEST_TEST_UTIL_H
+#endif  // TESTS_CPP_INCLUDE_TEST_UTIL_H_

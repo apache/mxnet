@@ -159,8 +159,8 @@ static inline void ForEachFast(const DeviceTensor3<DType>& in_data,
 
   for (size_t batchItem = 0; batchItem < num; ++batchItem) {
 #pragma omp parallel for
-    for (size_t channel = 0; channel < channels; ++channel) {
-      size_t indices[2] = { batchItem, channel };
+    for (int channel = 0; channel < channels; ++channel) {
+      size_t indices[2] = { batchItem, static_cast<size_t>(channel) };
       const size_t off = offset(in_data.shape_, &indices[0], sizeof(indices)/sizeof(indices[0]));
       const DType *inData = in_data.dptr_ + off;
       DType *outData = out_data.dptr_ + off;
@@ -215,7 +215,7 @@ static inline void ComputeVariance(const DeviceTensor3<DType> &tensor,
 
   const size_t itemCount = tensor.Size() / channels;
 #pragma omp parallel for
-  for (size_t channel = 0; channel < channels; ++channel) {
+  for (int channel = 0; channel < channels; ++channel) {
     const AccReal sum = save_std[channel];
 
     AccReal invstd;
@@ -290,7 +290,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
     }
   }
 
-  if (req[batchnorm::kData] == kWriteTo || req[batchnorm::kData] == kWriteInplace) {
+  if (batchnorm::IsWriting(req[batchnorm::kData])) {
     ForEachFast(inputData, outputData,
                 [w, b, mean, var](const size_t channel, const DType *in_data, DType *out_data) {
                   *out_data = static_cast<DType>(
@@ -433,14 +433,30 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *stream,
 
 template<>
 Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
-#if MXNET_USE_MKL2017 == 1
-  return new MKLBatchNormOp<cpu, float>(param);
-#endif
   Operator *op = nullptr;
-  MSHADOW_REAL_TYPE_SWITCH_EX(dtype,
-                           DType,
-                           AccReal,
-                           { op = new BatchNormOp<cpu, DType, AccReal>(param); });
+#if MXNET_USE_MKL2017 == 1
+  if (!param.mkl_off) {
+    switch (dtype) {
+      case mshadow::kFloat32:
+        op = new MKLBatchNormOp<cpu, float>(param);
+        break;
+      case mshadow::kFloat64:
+        op = new MKLBatchNormOp<cpu, double>(param);
+        break;
+      default:
+        // MKL operator doesn't support half_t, so fall through
+        break;
+    }
+  }
+#endif
+  if (!op) {
+    MSHADOW_REAL_TYPE_SWITCH_EX(dtype,
+                                DType,
+                                AccReal, {
+                                LOG(INFO) << MKLBatchNormOp<cpu, float>::getName()
+                                          << " Skip MKL optimization";
+                                op = new BatchNormOp<cpu, DType, AccReal>(param); });
+  }
   return op;
 }
 
@@ -451,7 +467,12 @@ Operator *BatchNormProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_s
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
+  BatchNormParam param = param_;
+  CHECK_GE(in_shape->size(), 1U);
+  if ((*in_shape)[0].ndim() != 4) {
+    param.mkl_off = true;
+  }
+  DO_BIND_DISPATCH(CreateOp, param, (*in_type)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(BatchNormParam);

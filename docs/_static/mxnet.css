@@ -7,7 +7,7 @@ html, body {
 }
 
 body {
-    display: none;
+    display: block;
 }
 
 body, div {
@@ -621,10 +621,10 @@ div.navbar + div.container {
 
 div.content {
     position: absolute;
-    left: 310px;
-    right: 0;
+    left: 320px;
+    right: 200px;
     margin-right: 5%;
-    padding-top: 40px;
+    padding: 40px 0 0 0;
     z-index: -1;
 }
 
@@ -632,6 +632,7 @@ div.content {
     div.content {
         left: 0;
         margin-left: 5%;
+        right: 0;
         overflow-x: auto;
     }
 }
@@ -640,13 +641,23 @@ div.content {
 div.sphinxsidebar {
     position: fixed;
     background-color: white;
-    left: 30px;
-    margin-left: 0;
-    width: 250px;
-    padding:40px 30px 15px 0;
     height: calc(100% - 80px);
     display: none;
+    visibility: hidden;
     overflow: auto;
+}
+
+div.leftsidebar {
+    left: 30px;
+    width: 250px;
+    padding: 40px 0 15px 0;
+    margin: 0;
+}
+
+div.rightsidebar {
+    right: 20px;
+    width: 200px;
+    padding: 40px 0 15px 0;
 }
 
 div.sphinxsidebar ul {
@@ -654,35 +665,58 @@ div.sphinxsidebar ul {
     list-style-type: none !important;
 }
 
-div.sphinxsidebarwrapper > ul {
-    padding-left: 20px;
+div.sphinxsidebar a {
+    color: black;
+}
+
+div.rightsidebar div.sphinxsidebarwrapper > ul {
+    padding-left: 15px;
 }
 
 div.sphinxsidebar li {
     padding-top: 5px;
-    margin-bottom: 10px;
-    font: normal 14px "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
+    margin-bottom: 5px;
+    margin-left: -10px;
+    font: normal 12px "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
+}
+
+div.leftsidebar > div.sphinxsidebarwrapper {
+    padding: 10px 10px 10px 10px;
+    background: #f2f2f2;
+}
+
+div.leftsidebar > div.sphinxsidebarwrapper > ul > li {
+    margin-left: 20px;
+}
+
+div.rightsidebar > div.sphinxsidebarwrapper > ul {
+    margin-left: 2px;
+    border-left: 4px solid #337ab7;
+}
+
+div.rightsidebar > div.sphinxsidebarwrapper > ul > li {
+    margin-left: 5px;
 }
 
 div.sphinxsidebar li.opened .tocToggle:before {
     font-family: 'FontAwesome';
     content: "\f146";
     margin: 0 5px 0 -15px;
-    color: #e47911;
+    color: #337ab7;
 }
 
 div.sphinxsidebar li.closed .tocToggle:before {
     font-family: 'FontAwesome';
     content: "\f0fe";
     margin: 0 5px 0 -15px;
-    color: #e47911;
+    color: #337ab7;
 }
 
 div.sphinxsidebar li.leaf .tocToggle:before {
     font-family: 'FontAwesome';
     content: "\f096";
     margin: 0 5px 0 -15px;
-    color: #e47911;
+    color: #337ab7;
 }
 
 @media (min-width:1000px) {

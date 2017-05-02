@@ -5,17 +5,19 @@
  * \author Chris Olivier
 */
 
-#include <iostream>
+#ifndef TESTS_CPP_INCLUDE_TEST_PERF_H_
+#define TESTS_CPP_INCLUDE_TEST_PERF_H_
+
 #include <sys/time.h>
+#include <dmlc/logging.h>
 #include <iomanip>
+#include <iostream>
 #include <atomic>
 #include <unordered_set>
 #include <unordered_map>
 #include <mutex>
-#include <dmlc/logging.h>
-
-#ifndef MXNET_TEST_TEST_PERF_H
-#define MXNET_TEST_TEST_PERF_H
+#include <string>
+#include <map>
 
 namespace mxnet {
 namespace test {
@@ -54,14 +56,14 @@ inline uint64_t getTickCount() {
 #define MICRO2SF(__micro$)  (MICRO2MSF(__micro$)/1000)
 
 /*! \brief Calculate time between construction and destruction */
-class TimedScope
-{
+class TimedScope {
   std::string     label_;
   uint64_t        startTime_;
   uint64_t        stopTime_;
   const size_t    count_;
+
  public:
-  inline TimedScope(const char *msg = NULL, size_t count = 1, const bool start = true)
+  explicit inline TimedScope(const char *msg = NULL, size_t count = 1, const bool start = true)
     : startTime_(start ? getMicroTickCount() : 0)
       , stopTime_(0)
       , count_(count) {
@@ -71,7 +73,7 @@ class TimedScope
     }
   }
 
-  inline TimedScope(const std::string& msg, size_t count = 1, const bool start = true)
+  explicit inline TimedScope(const std::string& msg, size_t count = 1, const bool start = true)
     : startTime_(start ? getMicroTickCount() : 0)
       , count_(count) {
     CHECK_NE(count, 0U);
@@ -109,28 +111,27 @@ class TimedScope
     }
     ss << "elapsed time: "
        << std::setprecision(4) << std::fixed << MICRO2MSF(diff) << " ms";
-    if(count_ != 0 && count_ != 1) {
+    if (count_ != 0 && count_ != 1) {
       const float microSecondsEach = static_cast<float>(diff) / count_;
       ss << " ( " << MICRO2MSF(microSecondsEach) << " ms each )";
     }
     std::cout << ss.str() << std::endl;
   }
-
 };
 
 /*! \brief Accumulate separate timing values mapped by label/id -> total time spent */
 class TimingInstrument {
  public:
-  TimingInstrument(const char *name = "")
+  explicit TimingInstrument(const char *name = "")
     : name_(name) {
   }
   void startTiming(int id, const char *s) {
     std::unique_lock<std::recursive_mutex>  lk(mutex_);
     std::unordered_map<int, Info>::iterator i = data_.find(id);
-    if(i == data_.end()) {
+    if (i == data_.end()) {
       i = data_.emplace(std::make_pair(id, Info(s))).first;
     }
-    if(!i->second.nestingCount_++) {
+    if (!i->second.nestingCount_++) {
       i->second.baseTime_ = getMicroTickCount();
     }
   }
@@ -138,9 +139,9 @@ class TimingInstrument {
     std::unique_lock<std::recursive_mutex>  lk(mutex_);
     std::unordered_map<int, Info>::iterator i = data_.find(id);
     CHECK_NE(i == data_.end(), true) << "Can't stop timing on an object that we don't know about";
-    if(i != data_.end()) {
+    if (i != data_.end()) {
       CHECK_NE(i->second.nestingCount_, 0U) << "While stopping timing, invalid nesting count of 0";
-      if(!--i->second.nestingCount_) {
+      if (!--i->second.nestingCount_) {
         CHECK_NE(i->second.baseTime_, 0U) << "Invalid base time";
         i->second.duration_.fetch_add(getMicroTickCount() - i->second.baseTime_);
         i->second.baseTime_  = 0;
@@ -151,10 +152,11 @@ class TimingInstrument {
   uint64_t getDuration(int id) {
     std::unique_lock<std::recursive_mutex>  lk(mutex_);
     std::unordered_map<int, Info>::iterator i = data_.find(id);
-    if(i != data_.end()) {
+    if (i != data_.end()) {
       const Info&        info = i->second;
       const uint64_t duration = info.nestingCount_.load()
-                                ? info.duration_.load() + (getMicroTickCount() - info.baseTime_.load())
+                                ? info.duration_.load() +
+                                  (getMicroTickCount() - info.baseTime_.load())
                                 : info.duration_.load();
       return duration;
     }
@@ -162,58 +164,59 @@ class TimingInstrument {
   }
   bool isTiming(int id) {
     std::unordered_map<int, Info>::const_iterator i = data_.find(id);
-    if(i != data_.end()) {
+    if (i != data_.end()) {
       return !!i->second.nestingCount_.load();
     }
     return false;
   }
 
   template <typename StreamType>
-  void print(StreamType& os, const std::string& label_, bool doReset = false) {
+  void print(StreamType *os, const std::string& label_, bool doReset = false) {
     std::unique_lock<std::recursive_mutex>  lk(mutex_);
     // Sorted output
     std::map<int, Info> data(data_.begin(), data_.end());
-    for(std::map<int, Info>::const_iterator i = data.begin(), e = data.end();
+    for (std::map<int, Info>::const_iterator i = data.begin(), e = data.end();
         i != e; ++i) {
       const Info&        info = i->second;
       const uint64_t duration = getDuration(i->first);
-      os << /*std::endl <<*/ label_ << ": " << name_ << " Timing [" << info.name_ << "] "
-         << (info.nestingCount_.load() ? "*" : "")
-         << MICRO2MSF(duration) << " ms";
-        if(info.cycleCount_.load()) {
-          os << ", avg: " << (MICRO2MSF(duration) / info.cycleCount_) << " ms X " << info.cycleCount_ << " passes";
+      *os << /*std::endl <<*/ label_ << ": " << name_ << " Timing [" << info.name_ << "] "
+          << (info.nestingCount_.load() ? "*" : "")
+          << MICRO2MSF(duration) << " ms";
+        if (info.cycleCount_.load()) {
+          *os << ", avg: " << (MICRO2MSF(duration) / info.cycleCount_)
+              << " ms X " << info.cycleCount_ << " passes";
         }
-        os << std::endl;
+        *os << std::endl;
     }
-    os << std::flush;
-    if(doReset) {
+    *os << std::flush;
+    if (doReset) {
       reset();
     }
   }
 
   void reset() {
     std::unique_lock<std::recursive_mutex>  lk(mutex_);
-    for(std::unordered_map<int, Info>::iterator i = data_.begin(), e = data_.end();
+    for (std::unordered_map<int, Info>::iterator i = data_.begin(), e = data_.end();
         i != e; ++i) {
       const int id = i->first;
       const bool wasTiming = isTiming(id);
-      if(wasTiming) {
+      if (wasTiming) {
         stopTiming(id);
       }
       // need zero count here
       CHECK_EQ(i->second.nestingCount_.load(), 0U);
       i->second.duration_ = 0;
-      if(wasTiming) {
+      if (wasTiming) {
         startTiming(id, i->second.name_.c_str());
       }
     }
   }
 
   TimingInstrument& operator += (const TimingInstrument& o) {
-    for(std::unordered_map<int, Info>::const_iterator i = o.data_.begin(), e = o.data_.end();
+    for (std::unordered_map<int, Info>::const_iterator i = o.data_.begin(), e = o.data_.end();
         i != e; ++i) {
       std::unordered_map<int, Info>::iterator j = data_.find(i->first);
-      if(j != data_.end())  {
+      if (j != data_.end())  {
         const Info &oInfo = i->second;
         CHECK_EQ(oInfo.nestingCount_, 0U);
         j->second.duration_   += oInfo.duration_;
@@ -227,7 +230,7 @@ class TimingInstrument {
 
  private:
   struct Info {
-    inline Info(const char *s)
+    explicit inline Info(const char *s)
       : name_(s ? s : "")
         , baseTime_(0)
         , nestingCount_(0)
@@ -244,7 +247,7 @@ class TimingInstrument {
     std::string           name_;
     std::atomic<uint64_t> baseTime_;
     std::atomic<uint64_t> nestingCount_;
-    std::atomic<uint64_t> cycleCount_; // Note that nesting may skew averages
+    std::atomic<uint64_t> cycleCount_;  // Note that nesting may skew averages
     std::atomic<uint64_t> duration_;
   };
   std::string                   name_;
@@ -254,7 +257,6 @@ class TimingInstrument {
 
 /*! \brief Accumulated scoped timing, indexed by ID */
 class TimingItem {
-
  public:
   inline TimingItem(TimingInstrument *ti,
                     int id,
@@ -263,12 +265,12 @@ class TimingItem {
     : ti_(ti)
       , id_(id)
       , subIterationCount_(subIterationCount) {
-    if(ti_) {
+    if (ti_) {
       ti_->startTiming(id, name);
     }
   }
   inline ~TimingItem() {
-    if(ti_) {
+    if (ti_) {
       ti_->stopTiming(id_, subIterationCount_);
     }
   }
@@ -284,4 +286,4 @@ class TimingItem {
 }  // namespace test
 }  // namespace mxnet
 
-#endif  // MXNET_TEST_TEST_PERF_H
+#endif  // TESTS_CPP_INCLUDE_TEST_PERF_H_
