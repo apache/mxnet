@@ -193,7 +193,7 @@ $ sudo apt-get install -y libopencv-dev
 ```bash
 $ git clone --recursive https://github.com/dmlc/mxnet
 $ cd mxnet
-$ make -j$(nproc) USE_OPENCV=1 USE_BLAS=openblas
+$ make -j 1 USE_OPENCV=1 USE_BLAS=openblas
 ```
 
 *Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.
