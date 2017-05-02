@@ -436,7 +436,6 @@ Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
   Operator *op = nullptr;
 #if MXNET_USE_MKL2017 == 1
   if (!param.mkl_off) {
-    // MKL operator doesn't support half_t, so fall through
     switch (dtype) {
       case mshadow::kFloat32:
         op = new MKLBatchNormOp<cpu, float>(param);
@@ -445,6 +444,7 @@ Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
         op = new MKLBatchNormOp<cpu, double>(param);
         break;
       default:
+        // MKL operator doesn't support half_t, so fall through
         break;
     }
   }
@@ -467,10 +467,12 @@ Operator *BatchNormProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_s
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
+  BatchNormParam param = param_;
+  CHECK_GE(in_shape->size(), 1U);
   if ((*in_shape)[0].ndim() != 4) {
-    const_cast<BatchNormParam *>(&param_)->mkl_off = true;
+    param.mkl_off = true;
   }
-  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
+  DO_BIND_DISPATCH(CreateOp, param, (*in_type)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(BatchNormParam);
