@@ -41,6 +41,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   bool use_global_stats;
   bool output_mean_var;
   bool cudnn_off;
+  bool mkl_off;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
     .describe("Epsilon to prevent div 0. "
@@ -57,6 +58,8 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     .describe("Output All,normal mean and var");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
       .describe("Do not select CUDNN operator, if available");
+    DMLC_DECLARE_FIELD(mkl_off).set_default(false)
+      .describe("Do not select MKL operator, if available (ie 3D shape)");
   }
 };
 

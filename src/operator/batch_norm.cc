@@ -433,14 +433,30 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *stream,
 
 template<>
 Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
-#if MXNET_USE_MKL2017 == 1
-  return new MKLBatchNormOp<cpu, float>(param);
-#endif
   Operator *op = nullptr;
-  MSHADOW_REAL_TYPE_SWITCH_EX(dtype,
-                           DType,
-                           AccReal,
-                           { op = new BatchNormOp<cpu, DType, AccReal>(param); });
+#if MXNET_USE_MKL2017 == 1
+  if(!param.mkl_off) {
+    // MKL operator doesn't support half_t, so fall through
+    switch (dtype) {
+      case mshadow::kFloat32:
+        op = new MKLBatchNormOp<cpu, float>(param);
+        break;
+      case mshadow::kFloat64:
+        op = new MKLBatchNormOp<cpu, double>(param);
+        break;
+      default:
+        break;
+    }
+  }
+#endif
+  if(!op) {
+    MSHADOW_REAL_TYPE_SWITCH_EX(dtype,
+                                DType,
+                                AccReal, {
+                                LOG(INFO) << MKLBatchNormOp<cpu, float>::getName()
+                                          << " Skip MKL optimization";
+                                op = new BatchNormOp<cpu, DType, AccReal>(param); });
+  }
   return op;
 }
 
@@ -451,6 +467,9 @@ Operator *BatchNormProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_s
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
+  if((*in_shape)[0].ndim() != 4) {
+    const_cast<BatchNormParam *>(&param_)->mkl_off = true;
+  }
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
