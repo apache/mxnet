@@ -113,10 +113,14 @@ function retrieve_commands() {
             # 2) remove everything up to the prompt character '$'
 	        # 3) remove everything after a comment character"#"
             # 4) trim leading and trailing spaces
-            cmd=`sed -n ${j}p ${FILE} | sed 's/^.*$\(.*\).*$/\1/' | sed 's/\(.*\)#.*$/\1/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'`
-            if [[ ! -z $cmd ]];
+            current_line=`sed -n ${j}p ${FILE}`
+            if [[ ${current_line} == *"$"* ]]
             then
-                commands="${commands} ${cmd};"
+                cmd=`echo ${current_line} | sed 's/^.*$\(.*\).*$/\1/' | sed 's/\(.*\)#.*$/\1/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'`
+                if [[ ! -z $cmd ]];
+                then
+                    commands="${commands} ${cmd};"
+                fi
             fi
         done
     done
