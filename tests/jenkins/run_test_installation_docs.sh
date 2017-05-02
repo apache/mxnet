@@ -116,7 +116,7 @@ function retrieve_commands() {
             current_line=`sed -n ${j}p ${FILE}`
             if [[ ${current_line} == *"$"* ]]
             then
-                cmd=`echo ${current_line} | sed 's/^.*$\(.*\).*$/\1/' | sed 's/\(.*\)#.*$/\1/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'`
+                cmd=`echo ${current_line} | cut -d$ -f2- | sed 's/\(.*\)#.*$/\1/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'`
                 if [[ ! -z $cmd ]];
                 then
                     commands="${commands} ${cmd};"
