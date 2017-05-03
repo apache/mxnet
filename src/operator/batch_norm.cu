@@ -5,6 +5,9 @@
  * \author Chris Olivier, Bing Xu
  * Adapted from Torch
 */
+#include <cuda_runtime_api.h>
+#include <atomic>
+#include <algorithm>
 #include "batch_norm-inl.h"
 #include "../common/cuda_utils.h"
 
@@ -13,6 +16,7 @@
 #endif
 
 #include <mshadow/cuda/tensor_gpu-inl.cuh>
+#include <atomic>
 #include "../common/cuda_utils.h"
 
 /*! \brief inverse standard deviation <-> variance */
@@ -24,10 +28,59 @@ namespace op {
 namespace batchnorm {
 namespace cuda {
 
+static std::atomic<unsigned> MaxThreadCount(0);
+
+static unsigned GetMaxThreadCount(const bool print) {
+  if (MaxThreadCount) {
+    return MaxThreadCount;
+  }
+  int count;
+  ::cudaGetDeviceCount(&count);
+
+  MSHADOW_CUDA_POST_KERNEL_CHECK(GetMaxThreadCount);
+
+  int maxThreadCount = INT_MAX;
+  for (int i = 0; i < count; ++i) {
+    cudaDeviceProp devProp;
+    cudaGetDeviceProperties(&devProp, i);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(GetMaxThreadCount);
+    if (print) {
+      printf("Major revision number:         %d\n", devProp.major);
+      printf("Minor revision number:         %d\n", devProp.minor);
+      printf("Name:                          %s\n", devProp.name);
+      printf("Total global memory:           %u\n", static_cast<unsigned>(
+        devProp.totalGlobalMem));
+      printf("Total shared memory per block: %u\n", static_cast<unsigned>(
+        devProp.sharedMemPerBlock));
+      printf("Total registers per block:     %d\n", devProp.regsPerBlock);
+      printf("Warp size:                     %d\n", devProp.warpSize);
+      printf("Maximum memory pitch:          %u\n", static_cast<unsigned>(devProp.memPitch));
+      printf("Maximum threads per block:     %d\n", devProp.maxThreadsPerBlock);
+      for (int i = 0; i < 3; ++i) {
+        printf("Maximum dimension %d of block:  %d\n", i, devProp.maxThreadsDim[i]);
+      }
+      for (int i = 0; i < 3; ++i) {
+        printf("Maximum dimension %d of grid:   %d\n", i, devProp.maxGridSize[i]);
+      }
+      printf("Clock rate:                    %d\n", devProp.clockRate);
+      printf("Total constant memory:         %u\n", static_cast<unsigned>(
+        devProp.totalConstMem));
+      printf("Texture alignment:             %u\n", static_cast<unsigned>(
+        devProp.textureAlignment));
+      printf("Concurrent copy and execution: %s\n", (devProp.deviceOverlap ? "Yes" : "No"));
+      printf("Number of multiprocessors:     %d\n", devProp.multiProcessorCount);
+      printf("Kernel execution timeout:      %s\n", (devProp.kernelExecTimeoutEnabled
+                                                     ? "Yes" : "No"));
+    }
+    maxThreadCount = std::min(maxThreadCount, devProp.maxThreadsPerBlock);
+  }
+  return maxThreadCount;
+}
+
 static const unsigned WARP_SIZE = 32;
 
 // The maximum number of threads in a block
-static const unsigned MAX_BLOCK_SIZE = 512;
+static const unsigned MAX_BLOCK_SIZE = std::min(GetMaxThreadCount(false), 512);
 
 template<typename In, typename Out>
 struct ScalarConvert {
