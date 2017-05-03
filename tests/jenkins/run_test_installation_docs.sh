@@ -159,6 +159,7 @@ if (( $# < 1 )); then
     exit 1
 fi
 FILE=${1}
+IS_LINUX=${2}
 
 # get all line numbers with "```" signifying start or end of source section and put them in an array
 SOURCE_REGEX="\`\`\`"
@@ -232,74 +233,116 @@ function set_instruction_set() {
         ${sorted_indexes[$end_buildfromsource_command_index]})
 }
 
+if [[ "${IS_LINUX}" == "--linux" ]]
+then
 
-########################LINUX-PYTHON-CPU############################
-echo
-echo
-echo "### Testing LINUX-PYTHON-CPU ###"
-echo
-# range of all lines inside Linux-Python-CPU instructions
-LINUX_PYTHON_CPU_START_LINENO=$(grep -n "START - Linux Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
-LINUX_PYTHON_CPU_END_LINENO=$(grep -n "END - Linux Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
+    ########################LINUX-PYTHON-CPU############################
+    echo
+    echo
+    echo "### Testing LINUX-PYTHON-CPU ###"
+    echo
+    # range of all lines inside Linux-Python-CPU instructions
+    LINUX_PYTHON_CPU_START_LINENO=$(grep -n "START - Linux Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
+    LINUX_PYTHON_CPU_END_LINENO=$(grep -n "END - Linux Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
 
-set_instruction_set ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}
+    set_instruction_set ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}
 
-echo
-echo "### Testing Virtualenv ###"
-echo "${virtualenv_commands}"
-echo
-docker run --rm ubuntu:14.04 bash -c "${virtualenv_commands}"
+    echo
+    echo "### Testing Virtualenv ###"
+    echo "${virtualenv_commands}"
+    echo
+    docker run --rm ubuntu:14.04 bash -c "${virtualenv_commands}"
 
-echo
-echo "### Testing Pip ###"
-echo "${pip_commands}"
-echo
-docker run --rm ubuntu:14.04 bash -c "${pip_commands}"
+    echo
+    echo "### Testing Pip ###"
+    echo "${pip_commands}"
+    echo
+    docker run --rm ubuntu:14.04 bash -c "${pip_commands}"
 
-echo
-echo "### Testing Docker ###"
-echo "${docker_commands}"
-echo
-eval ${docker_commands}
+    echo
+    echo "### Testing Docker ###"
+    echo "${docker_commands}"
+    echo
+    eval ${docker_commands}
 
-echo
-echo "### Testing Build From Source ###"
-echo "${buildfromsource_commands}"
-echo
-docker run --rm ubuntu:14.04 bash -c "${buildfromsource_commands}"
+    echo
+    echo "### Testing Build From Source ###"
+    echo "${buildfromsource_commands}"
+    echo
+    docker run --rm ubuntu:14.04 bash -c "${buildfromsource_commands}"
 
-#########################LINUX-PYTHON-GPU###########################
+    #########################LINUX-PYTHON-GPU###########################
 
-echo
-echo
-echo "### Testing LINUX-PYTHON-GPU ###"
-echo
-# range of all lines inside Linux-Python-GPU instructions
-LINUX_PYTHON_GPU_START_LINENO=$(grep -n "START - Linux Python GPU Installation Instructions" "${FILE}" | cut -d : -f 1)
-LINUX_PYTHON_GPU_END_LINENO=$(grep -n "END - Linux Python GPU Installation Instructions" "${FILE}" | cut -d : -f 1)
+    echo
+    echo
+    echo "### Testing LINUX-PYTHON-GPU ###"
+    echo
+    # range of all lines inside Linux-Python-GPU instructions
+    LINUX_PYTHON_GPU_START_LINENO=$(grep -n "START - Linux Python GPU Installation Instructions" "${FILE}" | cut -d : -f 1)
+    LINUX_PYTHON_GPU_END_LINENO=$(grep -n "END - Linux Python GPU Installation Instructions" "${FILE}" | cut -d : -f 1)
 
-set_instruction_set ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}
+    set_instruction_set ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}
 
-echo
-echo "### Testing Virtualenv ###"
-echo "${virtualenv_commands}"
-echo
-nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${virtualenv_commands}"
+    echo
+    echo "### Testing Virtualenv ###"
+    echo "${virtualenv_commands}"
+    echo
+    nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${virtualenv_commands}"
 
-echo
-echo "### Testing Pip ###"
-echo "${pip_commands}"
-echo
-nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${pip_commands}"
+    echo
+    echo "### Testing Pip ###"
+    echo "${pip_commands}"
+    echo
+    nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${pip_commands}"
 
-echo
-echo "### Testing Docker ###"
-echo "${docker_commands}"
-echo
-eval ${docker_commands}
+    echo
+    echo "### Testing Docker ###"
+    echo "${docker_commands}"
+    echo
+    eval ${docker_commands}
 
-echo
-echo "### Testing Build From Source ###"
-echo "${buildfromsource_commands}"
-echo
-nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${buildfromsource_commands}"
+    echo
+    echo "### Testing Build From Source ###"
+    echo "${buildfromsource_commands}"
+    echo
+    nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${buildfromsource_commands}"
+
+else
+
+    #########################MACOS-PYTHON-CPU###########################
+
+    echo
+    echo
+    echo "### MACOS-PYTHON-CPU ###"
+    echo
+    # range of all lines inside MacOS-Python-CPU instructions
+    MAC_PYTHON_CPU_START_LINENO=$(grep -n "START - MacOS Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
+    MAC_PYTHON_CPU_END_LINENO=$(grep -n "END - Mac OS Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
+
+    set_instruction_set ${MAC_PYTHON_CPU_START_LINENO} ${MAC_PYTHON_CPU_END_LINENO}
+
+    echo
+    echo "### Testing Virtualenv ###"
+    echo "${virtualenv_commands}"
+    echo
+    #nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${virtualenv_commands}"
+
+    echo
+    echo "### Testing Pip ###"
+    echo "${pip_commands}"
+    echo
+    #nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${pip_commands}"
+
+    echo
+    echo "### Testing Docker ###"
+    echo "${docker_commands}"
+    echo
+    #eval ${docker_commands}
+
+    echo
+    echo "### Testing Build From Source ###"
+    echo "${buildfromsource_commands}"
+    echo
+    #nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${buildfromsource_commands}"
+
+fi
