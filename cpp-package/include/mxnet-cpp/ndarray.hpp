@@ -338,7 +338,7 @@ inline Context NDArray::GetContext() const {
   return Context((DeviceType)out_dev_type, out_dev_id);
 }
 
-std::ostream & operator<<(std::ostream &out, const NDArray &ndarray) {
+inline std::ostream & operator<<(std::ostream &out, const NDArray &ndarray) {
   // TODO(lx75249): Consider DType / beautify like numpy
   auto shape = ndarray.GetShape();
   NDArray cpu_array(ndarray.GetShape(), Context::cpu());

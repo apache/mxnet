@@ -93,7 +93,7 @@ inline void Monitor::toc_print() {
   }
 }
 
-void Monitor::executor_callback(const char *name, NDArrayHandle handle,
+inline void Monitor::executor_callback(const char *name, NDArrayHandle handle,
     void *monitor_ptr) {
   Monitor *monitor = static_cast<Monitor*>(monitor_ptr);
   if (monitor->activated && std::regex_match(name, monitor->pattern)) {

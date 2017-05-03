@@ -39,7 +39,7 @@ inline mxnet::cpp::NDArray _sqrt(mxnet::cpp::NDArray data) {
 
 namespace mxnet {
 namespace cpp {
-Optimizer::Optimizer(unsigned begin_num_update)
+inline Optimizer::Optimizer(unsigned begin_num_update)
   : begin_num_update_(begin_num_update),
     num_update_(begin_num_update_) {
 }
@@ -293,7 +293,7 @@ inline void AdamOptimizer::CreateState_(int index, NDArray weight) {
   *var_[index] = 0;
 }
 
-AdaGradOptimizer::AdaGradOptimizer(unsigned begin_num_update)
+inline AdaGradOptimizer::AdaGradOptimizer(unsigned begin_num_update)
   : Optimizer(begin_num_update) {
   SetParam("eps", 1e-7);
 }
