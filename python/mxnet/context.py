@@ -158,9 +158,9 @@ def gpu(device_id=0):
 
 
 def current_context():
-    """Returns the current default context.
+    """Returns the current context.
 
-    One can change the current context by `Context(x)` where x can be
+    One can change the current context by calling `Context(x)` where x can be
     cpu(device_id) or gpu(device_id).
 
     Examples
