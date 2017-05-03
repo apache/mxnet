@@ -80,7 +80,7 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
             return [DataDesc(x[0], x[1]) for x in shapes]
 
 class DataBatch(object):
-    """Returns a batch of data.
+    """A data batch.
 
     MXNet's data iterator returns a batch of data for each `next` call.
     This data contains `batch_size` number of examples.
