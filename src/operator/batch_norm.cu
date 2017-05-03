@@ -80,7 +80,8 @@ static unsigned GetMaxThreadCount(const bool print) {
 static const unsigned WARP_SIZE = 32;
 
 // The maximum number of threads in a block
-static const unsigned MAX_BLOCK_SIZE = std::min(GetMaxThreadCount(false), 512U);
+static const unsigned MAX_BLOCK_SIZE = 512U;
+//static const unsigned MAX_BLOCK_SIZE = std::min(GetMaxThreadCount(false), 512U);
 
 template<typename In, typename Out>
 struct ScalarConvert {
