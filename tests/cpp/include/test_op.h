@@ -417,9 +417,11 @@ class BasicOperatorData {
                                          gpu_ctx, allocGPUStream_.opContext_.run_ctx);
         }
       }
+      cudaDeviceSynchronize();
     }
     inline ~GPUOpData() {
       // Copy GPU->CPU
+      cudaDeviceSynchronize();
       for (size_t bvt = 0, nbvt = this->all_blob_vects_.size(); bvt < nbvt; ++bvt) {
         std::vector<TBlob>& bv_src = *this->all_blob_vects_[bvt];
         std::vector<TBlob>& bvt_dest = *cpuData_.all_blob_vects_[bvt];
@@ -437,6 +439,7 @@ class BasicOperatorData {
         }
       }
       gpuBlobs_.clear();  // Force deallocation of the GPU blob data
+      cudaDeviceSynchronize();
     }
 
    private:
@@ -452,7 +455,7 @@ class BasicOperatorData {
   OpData                    c_;
 
  protected:
-  /*! \brief Allocate the operator's resource requets */
+  /*! \brief Allocate the operator's resource requests */
   void allocateResources(const std::vector<ResourceRequest>& reqs) {
     std::map<Context, Resource> cached_temp;
 

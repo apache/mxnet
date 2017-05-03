@@ -80,7 +80,7 @@ static unsigned GetMaxThreadCount(const bool print) {
 static const unsigned WARP_SIZE = 32;
 
 // The maximum number of threads in a block
-static const unsigned MAX_BLOCK_SIZE = std::min(GetMaxThreadCount(false), 512);
+static const unsigned MAX_BLOCK_SIZE = std::min(GetMaxThreadCount(false), 512U);
 
 template<typename In, typename Out>
 struct ScalarConvert {
@@ -451,6 +451,18 @@ struct DeviceTensor {
     return *(dptr_ + x);
   }
 
+  __forceinline__ size_t SpatialSize() const {
+    size_t sz = 1;
+    for (size_t i = 2; i < Dim; ++i) {
+      sz *= size_[i];
+    }
+    return sz;
+  }
+
+  __forceinline__ size_t ChannelCount() const {
+    return size_[1];
+  }
+
   DType *dptr_;
   int size_[Dim];
 };
@@ -508,15 +520,15 @@ static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
   DCHECK_GT(weight.numElements(), 0);
 
   if (!train || use_global_stats) {
-    dim3 blocks(input.getSize(1));
-    dim3 threads(getNumThreads(input.getSize(2)));
+    dim3 blocks(input.ChannelCount());
+    dim3 threads(getNumThreads(input.SpatialSize()));
     BatchNormalizationUpdateOutputInferenceKernel<DType, AccReal, DeviceTensor1, DeviceTensor3>
       <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
       input, output, runningMean, runningVar, saveMean,
         saveVariance, weight, bias, eps, fixGamma);
   } else {
-    dim3 blocks(input.getSize(1));
-    dim3 threads(getNumThreads(input.getSize(2)));
+    dim3 blocks(input.ChannelCount());
+    dim3 threads(getNumThreads(input.SpatialSize()));
     BatchNormalizationUpdateOutputKernel<DType, AccReal, DeviceTensor1, DeviceTensor3 >
       << < blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >> > (
       input, output, weight, bias, eps, momentum, runningMean, runningVar,
@@ -552,8 +564,8 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
 
   DCHECK_GT(weight.numElements(), 0);
 
-  dim3 blocks(gradOutput.getSize(1));
-  dim3 threads(getNumThreads(gradOutput.getSize(2)));
+  dim3 blocks(gradOutput.ChannelCount());
+  dim3 threads(getNumThreads(gradOutput.SpatialSize()));
   BatchNormalizationBackwardKernel<DType, AccReal, DeviceTensor1, DeviceTensor3>
     <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
     input, gradOutput, gradInput, gradWeight, gradBias, weight, runningMean, runningVar,
@@ -584,7 +596,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<gpu> *stream,
     param_.use_global_stats,
     param_.momentum,
     param_.eps);
-  MSHADOW_CUDA_POST_KERNEL_CHECK(BatchNormOp_doForward_gpu);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(BatchNormOp_DoForward_gpu);
 }
 
 /*! \brief Backward batch-norm pass on GPU */
@@ -611,7 +623,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<gpu> *stream,
     1.0,
     param_.momentum,
     param_.eps);
-  MSHADOW_CUDA_POST_KERNEL_CHECK(BatchNormOp_doBackward_gpu);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(BatchNormOp_DoBackward_gpu);
 }
 
 /*! \brief Create GPU operator for batch normalization */
