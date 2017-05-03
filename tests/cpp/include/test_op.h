@@ -205,7 +205,7 @@ class BasicOperatorData {
     // Possibly move data to/from CPU and GPU (outside of timing scope)
     MXNET_CUDA_ONLY(std::unique_ptr<GPUOpData> gpuData(isGPU_ ?
                       new GPUOpData(c_, &opContext_) : nullptr));
-    perf::TimingItem timeF(&timing_, Backward, "Backward", count);
+    perf::TimingItem timeB(&timing_, Backward, "Backward", count);
     if (!isGPU_) {
       VTuneResume profile;  // VTune sample only this scope
       for (size_t x = 0; x < count; ++x) {
