@@ -1127,7 +1127,8 @@ method Variable(
     Maybe[Num]                    :$wd_mult=,
     Maybe[Dtype]                  :$dtype=,
     Maybe[AI::MXNet::Initializer] :$init=,
-    HashRef[Str]                  :$kwargs={}
+    HashRef[Str]                  :$kwargs={},
+    Maybe[Str]                    :$__layout__=
 )
 {
     my $handle = check_call(AI::MXNetCAPI::SymbolCreateVariable($name));
@@ -1138,6 +1139,7 @@ method Variable(
     $attr->{__wd_mult__} =  $wd_mult if defined $wd_mult;
     $attr->{__dtype__}   = DTYPE_STR_TO_MX->{ $dtype } if $dtype;
     $attr->{__init__}    = "$init" if defined $init;
+    $attr->{__layout__}  = $__layout__ if defined $__layout__;
     while(my ($k, $v) = each %{ $kwargs })
     {
         if($k =~ /^__/ and $k =~ /__$/)

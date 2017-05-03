@@ -1,6 +1,12 @@
 Revision history for Perl extension AI::MXNet
 
-0.9504  18:59:45 PDT 2017
+0.9506  Sat Apr 29 20:26:50 PDT 2017
+        - Ftrl optimizer, new tests, bugfixes.
+
+0.9505  Sun Apr 23 21:26:04 PDT 2017
+        - Perplexity bugfix, two new examples.
+
+0.9504  Wed Apr 19 18:59:45 PDT 2017
         - LR Scheduler bugfix.
 
 0.9503  Wed Apr 19 13:33:57 PDT 2017
