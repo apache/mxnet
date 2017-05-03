@@ -37,21 +37,18 @@ struct PadParam : public dmlc::Parameter<PadParam> {
         .add_enum("constant", pad_enum::kConstant)
         .add_enum("edge", pad_enum::kEdge)
         .describe(
-            "Padding type to use. \"constant\" pads all values with a constant "
-            "value, the value of which can be specified with the "
-            "constant_value option. \"edge\" uses the boundary values of the "
-            "array as padding.");
+            "Padding type to use."
+            " \"constant\" pads with `constant_value` and"
+            " \"edge\" pads using the edge values of the input array.");
 
     DMLC_DECLARE_FIELD(pad_width).describe(
-        "A tuple of padding widths of length 2*r, where r is the rank of the "
-        "input tensor, specifying number of values padded to the edges of each "
-        "axis. (before_1, after_1, ... , before_N, after_N) unique pad widths "
-        "for each axis. Equivalent to pad_width in numpy.pad, but flattened.");
+        "Widths of the padding regions applied to the edges of each axis. "
+        "It is a tuple of integer padding widths for each axis of the format "
+        "``(before_1, after_1, ... , before_N, after_N)``. "
+        "It should be of length ``2*N`` where ``N`` is the number of dimensions of the array."
+        "This is equivalent to pad_width in numpy.pad, but flattened.");
     DMLC_DECLARE_FIELD(constant_value)
-        .describe(
-            "This option is only used when mode is \"constant\". This "
-            "value will be used as the padding value. Defaults to 0 if not "
-            "specified.")
+        .describe("The value used for padding when `mode` is \"constant\".")
         .set_default(0.0);
   }
 };
@@ -74,7 +71,8 @@ class PadOp : public Operator {
     int rank = in_data[pad_enum::kData].ndim();
     auto pad = param_.pad_width;
     DType constant_value = param_.constant_value;
-
+    // TODO(nswamy@): update the documentation and log below when support is added for more than
+    // 4D/5D arrays and not requiring higher dimensions to be zero.
     if ((rank == 4) && !pad[0] && !pad[1] && !pad[2] && !pad[3]) {
       Tensor<xpu, 4, DType> data =
           in_data[pad_enum::kData].get<xpu, 4, DType>(s);
@@ -88,8 +86,10 @@ class PadOp : public Operator {
           out_data[pad_enum::kOut].get<xpu, 5, DType>(s);
       pad_image(out, data, param_.pad_width, param_.mode, constant_value);
     } else {
-      LOG(FATAL) << "Only 4d or 5d input tensors with padding applied to "
-                    "dimensions > 1 is currently implemented.";
+      LOG(FATAL) << "Current implementation only supports 4D and 5D "
+                    "input arrays with padding applied "
+                    "only on axes 1, 2 and 3. "
+                    "Expects axes 4 and 5 in pad_width to be zero.";
     }
 
     // Assign(out, req[pad_enum::kOut], F<mshadow_op::identity>(data));
