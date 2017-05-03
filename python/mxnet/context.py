@@ -166,8 +166,9 @@ def gpu(device_id=0):
 def current_context():
     """Returns the current context.
 
-    One can change the current context by using `Context(x)` in `with` statement,
-    where x can be cpu(device_id) or gpu(device_id).
+    By default, `mx.cpu()` is used for all the computations
+    and it can be overridden by using `with mx.Context(x)` statement where
+    x can be cpu(device_id) or gpu(device_id).
 
     Examples
     -------
@@ -177,7 +178,7 @@ def current_context():
     ...    mx.current_context()  # Computation done here will be on gpu(1).
     ...
     gpu(1)
-    >>> mx.current_context() # Back to default.
+    >>> mx.current_context() # Back to default context.
     cpu(0)
 
     Returns
