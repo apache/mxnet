@@ -189,7 +189,14 @@ __global__ void BatchNormalizationUpdateOutputInferenceKernel(
                                         : AccReal(0);
   if (threadIdx.x == 0) {
     saveMean[plane] = runningMean[plane];
+<<<<<<< Updated upstream
     saveStd[plane]  = runningVar[plane];
+=======
+    saveVariance[plane] = runningVar[plane];
+    if(fixGamma && weight.numElements() > 0) {
+      weight[plane] = AccReal(1);
+    }
+>>>>>>> Stashed changes
   }
   // Write normalized and update the output
   for (int batch = 0, nbatch = input.getSize(0); batch < nbatch; ++batch) {
@@ -232,7 +239,10 @@ __global__ void BatchNormalizationUpdateOutputKernel(
     // For one item (0th) per plane (channel), write the per-channel data (ie mean, variance, etc)
     // Momentum based writeback
     saveMean[plane] = ScalarConvert<AccReal, DType>::to(mean);
-    saveStd[plane] = ScalarConvert<AccReal, DType>::to(INVSTD_TO_VARIANCE(invStd, epsilon));
+    saveVariance[plane] = ScalarConvert<AccReal, DType>::to(INVSTD_TO_VARIANCE(invStd, epsilon));
+    if(fixGamma && weight.numElements() > 0) {
+      weight[plane] = AccReal(1);
+    }
   }
 
   // Write normalized and update the output
@@ -426,27 +436,26 @@ static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
                                            double eps) {
   DeviceTensor3 input = devicetensor<DType, 3>(in_data[batchnorm::kData]);
   DeviceTensor3 output = devicetensor<DType, 3>(out_data[batchnorm::kOut]);
-  DeviceTensor1 weight = fix_gamma ? DeviceTensor1(nullptr, nullptr)
-                                   : devicetensor<AccReal, 1>(in_data[batchnorm::kGamma]);
+  DeviceTensor1 weight = devicetensor<AccReal, 1>(in_data[batchnorm::kGamma]);
   DeviceTensor1 bias = devicetensor<AccReal, 1>(in_data[batchnorm::kBeta]);
   DeviceTensor1 runningMean = devicetensor<AccReal, 1>(aux_states[batchnorm::kMovingMean]);
   DeviceTensor1 runningVar = devicetensor<AccReal, 1>(aux_states[batchnorm::kMovingVar]);
   DeviceTensor1 saveMean = devicetensor<AccReal, 1>(out_data[batchnorm::kMean]);
   DeviceTensor1 saveStd = devicetensor<AccReal, 1>(out_data[batchnorm::kVar]);
 
-  DCHECK(!fix_gamma || weight.numElements() == 0);
+  DCHECK_GT(weight.numElements(), 0);
 
   if (!train) {
     dim3 blocks(input.getSize(1));
     dim3 threads(getNumThreads(input.getSize(2)));
-    BatchNormalizationUpdateOutputInferenceKernel<DType, AccReal, DeviceTensor1, DeviceTensor3>
-      <<<blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
-      input, output, runningMean, runningVar, saveMean, saveStd, weight, bias, eps);
+    BatchNormalizationUpdateOutputInferenceKernel<DType, AccReal, DeviceTensor1, DeviceTensor3 >
+      <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
+      input, output, runningMean, runningVar, saveMean, saveVariance, weight, bias, eps, fix_gamma);
   } else {
     dim3 blocks(input.getSize(1));
     dim3 threads(getNumThreads(input.getSize(2)));
-    BatchNormalizationUpdateOutputKernel<DType, AccReal, DeviceTensor1, DeviceTensor3>
-      <<<blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+    BatchNormalizationUpdateOutputKernel<DType, AccReal, DeviceTensor1, DeviceTensor3 >
+      <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
       input, output, weight, bias, eps, momentum, runningMean, runningVar,
         saveMean, saveStd);
   }
@@ -472,19 +481,18 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
   DeviceTensor3 gradInput = devicetensor<DType, 3>(in_grad[batchnorm::kData]);
   DeviceTensor1 gradWeight = devicetensor<AccReal, 1>(in_grad[batchnorm::kGamma]);
   DeviceTensor1 gradBias = devicetensor<AccReal, 1>(in_grad[batchnorm::kBeta]);
-  DeviceTensor1 weight = fix_gamma ? DeviceTensor1(nullptr, nullptr)
-                                   : devicetensor<AccReal, 1>(in_data[batchnorm::kGamma]);
+  DeviceTensor1 weight = devicetensor<AccReal, 1>(in_data[batchnorm::kGamma]);
   DeviceTensor1 runningMean = devicetensor<AccReal, 1>(aux_states[batchnorm::kMovingMean]);
   DeviceTensor1 runningVar = devicetensor<AccReal, 1>(aux_states[batchnorm::kMovingVar]);
   DeviceTensor1 saveMean = devicetensor<AccReal, 1>(out_data[batchnorm::kMean]);
   DeviceTensor1 saveVar = devicetensor<AccReal, 1>(out_data[batchnorm::kVar]);
 
-  DCHECK(!fix_gamma || weight.numElements() == 0);
+  DCHECK_GT(weight.numElements(), 0);
 
   dim3 blocks(gradOutput.getSize(1));
   dim3 threads(getNumThreads(gradOutput.getSize(2)));
-  BatchNormalizationBackwardKernel<DType,  AccReal,  DeviceTensor1, DeviceTensor3>
-    <<<blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+  BatchNormalizationBackwardKernel<DType, AccReal, DeviceTensor1, DeviceTensor3 >
+    <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
     input, gradOutput, gradInput, gradWeight, gradBias, weight, runningMean, runningVar,
       saveMean, saveVar, train, fix_gamma, scale, momentum, eps);
   MSHADOW_CUDA_POST_KERNEL_CHECK(BatchNormalizationBackward);
