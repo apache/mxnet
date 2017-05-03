@@ -61,7 +61,7 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
   DMLC_DECLARE_PARAMETER(DropoutParam) {
     DMLC_DECLARE_FIELD(p).set_default(0.5)
     .set_range(0, 1)
-    .describe("Fraction of the input that gets dropped out at training time.");
+    .describe("Fraction of the input that gets dropped out during training time.");
   }
 };  // struct DropoutParam
 

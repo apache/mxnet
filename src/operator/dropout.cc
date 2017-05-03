@@ -31,18 +31,18 @@ Operator *DropoutProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_sha
 DMLC_REGISTER_PARAMETER(DropoutParam);
 
 MXNET_REGISTER_OP_PROPERTY(Dropout, DropoutProp)
-.describe(R"(Applies dropout to input array.
-During training, each element of the input is randomly set to zero with probability p.
-And then the whole array is rescaled by 1/(1-p) to keep the expectation of the input the same as
-before applying dropout.
+.describe(R"(Applies dropout operation to input array.
 
-During testing, this operator behaves as an identity map.
+- During training, each element of the input is randomly set to zero with probability p.
+  The whole array is rescaled by :math:`1/(1-p)` to keep the expectated sum of the input unchanged.
+
+- During testing, this operator does not change the input.
 
 Example::
 
   >>> mx.random.seed(998)
   >>> input_array = mx.nd.array([[3., 0.5,  -0.5,  2., 7.],
-                                 [2., -0.4,   7.,  3., 0.2]])
+  ...                            [2., -0.4,   7.,  3., 0.2]])
   >>> a = mx.sym.Variable('a')
   >>> dropout = mx.sym.Dropout(a, p = 0.2)
   >>> executor = dropout.simple_bind(ctx = mx.cpu(), a = input_array.shape)
