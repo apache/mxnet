@@ -82,8 +82,8 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
 class DataBatch(object):
     """Returns a batch of data.
 
-    MXNet's data iterator returns a batch of data in each `next` call.
-    This data often contains `batch_size` number of examples.
+    MXNet's data iterator returns a batch of data for each `next` call.
+    This data contains `batch_size` number of examples.
 
     If the input data consists of images then, these images should be stored in a
     4-D matrix of shape ``(batch_size, num_channel, height, width)``.
@@ -113,11 +113,11 @@ class DataBatch(object):
           The bucket key, used for bucketing module.
     provide_data : list of (name, shape), optional
           The *i*-th element describes the name and shape of ``data[i]``.
-          If not provided, by default the order of `arg_names` of the executor is assumed.
+          If not provided, by default, the order of `arg_names` of the executor is assumed.
           When working with Module, the order of `data_names` argument is assumed.
     provide_label : list of (name, shape), optional
           The *i*-th element describes the name and shape of ``label[i]``.
-          If not provided, the order of `arg_names` of the executor is assumed.
+          If not provided, by default, the order of `arg_names` of the executor is assumed.
           When working with Module, the order of `label_names` argument is assumed.
     """
     def __init__(self, data, label=None, pad=None, index=None,
