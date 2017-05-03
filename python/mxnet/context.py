@@ -173,10 +173,12 @@ def current_context():
     -------
     >>> mx.current_context()
     cpu(0)
-    >>> with mx.Context('gpu', 1):
-    ...    mx.current_context()
+    >>> with mx.Context('gpu', 1):  # Context changed in `with` block.
+    ...    mx.current_context()  # Computation done here will be on gpu(1).
     ...
     gpu(1)
+    >>> mx.current_context() # Back to default.
+    cpu(0)
 
     Returns
     -------
