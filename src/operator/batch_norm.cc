@@ -257,7 +257,9 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
   AccReal *mean = meanVector.dptr<AccReal>();
   AccReal  *var = varianceVector.dptr<AccReal>();
 
-  if (ctx.is_train && !param_.use_global_stats) {
+  const bool is_train_or_global_stats = ctx.is_train && !param_.use_global_stats;
+
+  if (is_train_or_global_stats) {
     const TShape stride(2);
 
     // compute mean per input
@@ -268,14 +270,14 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
                     meanVector.dptr<AccReal>(),
                     static_cast<DType>(param_.eps),
                     varianceVector.shape_,
-                    varianceVector.dptr<AccReal>());
+                    var);  // var is actually returned as invstd
   } else {
     const AccReal *rm = runningMean.dptr<AccReal>();
     const AccReal *rv = runningVariance.dptr<AccReal>();
 
     for (size_t i = 0, n = inputData.shape_[1]; i < n; ++i) {
       mean[i] = rm[i];
-      var[i]  = VARIANCE_TO_INVSTD(rv[i], param_.eps);
+      var[i] = VARIANCE_TO_INVSTD(rv[i], param_.eps);
     }
   }
 
@@ -291,6 +293,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
   }
 
   if (batchnorm::IsWriting(req[batchnorm::kData])) {
+    // note that var is still invstd
     ForEachFast(inputData, outputData,
                 [w, b, mean, var](const size_t channel, const DType *in_data, DType *out_data) {
                   *out_data = static_cast<DType>(
@@ -299,10 +302,8 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
 
   // Convert back to "real" variance in order to be consistent
   // with the original operator
-  if (ctx.is_train && !param_.use_global_stats) {
-    for (size_t i = 0, n = inputData.shape_[1]; i < n; ++i) {
-      var[i] = INVSTD_TO_VARIANCE(var[i], param_.eps);
-    }
+  for (size_t i = 0, n = inputData.shape_[1]; i < n; ++i) {
+    var[i] = INVSTD_TO_VARIANCE(var[i], param_.eps);
   }
 }
 
