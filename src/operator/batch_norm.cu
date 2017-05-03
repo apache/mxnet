@@ -193,7 +193,7 @@ __global__ void BatchNormalizationUpdateOutputInferenceKernel(
   if (threadIdx.x == 0) {
     saveMean[plane] = runningMean[plane];
     saveVariance[plane] = runningVar[plane];
-    if(fixGamma && weight.numElements() > 0) {
+    if (fixGamma && weight.numElements() > 0) {
       weight[plane] = AccReal(1);
     }
   }
@@ -230,7 +230,8 @@ __global__ void BatchNormalizationUpdateOutputKernel(
   const AccReal mean = reduce<AccReal>(
     SumOp<DType, AccReal, DeviceTensor3>(input), input, plane) * norm;
   __syncthreads();
-  const AccReal varN = reduce<AccReal>(VarOp<DType, AccReal, DeviceTensor3>(mean, input), input, plane);
+  const AccReal varN = reduce<AccReal>(VarOp<DType, AccReal, DeviceTensor3>(mean, input),
+                                       input, plane);
   AccReal invStd = 0;
   if (varN != AccReal(0) || epsilon != AccReal(0)) {
     invStd = 1.0 / sqrt(varN * norm + epsilon);
@@ -242,7 +243,7 @@ __global__ void BatchNormalizationUpdateOutputKernel(
     // Momentum based writeback
     saveMean[plane] = ScalarConvert<AccReal, DType>::to(mean);
     saveVariance[plane] = ScalarConvert<AccReal, DType>::to(INVSTD_TO_VARIANCE(invStd, epsilon));
-    if(fixGamma && weight.numElements() > 0) {
+    if (fixGamma && weight.numElements() > 0) {
       weight[plane] = AccReal(1);
     }
   }
@@ -351,8 +352,7 @@ static __global__ void BatchNormalizationBackwardKernel(
 }
 
 template<typename DType, int Dim>
-struct DeviceTensor
-{
+struct DeviceTensor {
  public:
   inline DeviceTensor(DType *p, const int *size)
     : dptr_(p) {
