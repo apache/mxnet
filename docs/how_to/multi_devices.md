@@ -1,10 +1,11 @@
 # Run MXNet on Multiple CPU/GPUs with Data Parallelism
 
-`MXNet` supports training with multiple CPUs and GPUs, which may be located on different physical machines.
+_MXNet_ supports training with multiple CPUs and GPUs, which may be located on different physical machines.
 
 ## Data Parallelism vs Model Parallelism
 
-By default, `MXNet` uses data parallelism to partition the workload over multiple
+By default, _MXNet_ uses data parallelism to partition the workload over multiple
+
 devices.
 Assume there are *n* devices.
 Then each one will receive a copy of the complete model
@@ -23,7 +24,7 @@ For the duration of this tutorial, we'll focus on data parallelism.
 
 ### Workload Partitioning
 
-By default, `MXNet` partitions a data batch evenly among the available GPUs.
+By default, _MXNet_ partitions a data batch evenly among the available GPUs.
 Assume batch size *b* and *k* GPUs, then in one iteration
 each GPU will perform forward and backward on *b/k* examples. The
 gradients are then summed over all GPUs before updating the model.
@@ -68,7 +69,7 @@ weight initialization with different seeds, and CUDNN.
 
 We can control on which devices the gradient is aggregated
 and on which device the model is updated via [`KVStore`](http://mxnet.io/api/python/kvstore.html),
-the `MXNet` module that supports data communication.
+the _MXNet_ module that supports data communication.
 One can either use `mx.kvstore.create(type)` to get an instance
 or use the program flag `--kv-store type`.
 
@@ -163,7 +164,7 @@ python ../../tools/launch.py -n 2 -H hosts --sync-dst-dir /tmp/mxnet \
 
 ### Use a Particular Network Interface
 
-`MXNet` often chooses the first available network interface.
+_MXNet_ often chooses the first available network interface.
 But for machines that have multiple interfaces,
 we can specify which network interface to use for data
 communication by the environment variable `DMLC_INTERFACE`.
