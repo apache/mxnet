@@ -36,6 +36,12 @@ class Context(object):
     ...     gpu_array = mx.nd.ones((2, 3))
     >>> gpu_array.context
     gpu(2)
+
+    One can also explicitly specify the context when creating an array.
+
+    >>> gpu_array = mx.nd.ones((2, 3), mx.gpu(1))
+    >>> gpu_array.context
+    gpu(1)
     """
     # static class variable
     default_ctx = None
@@ -160,15 +166,17 @@ def gpu(device_id=0):
 def current_context():
     """Returns the current context.
 
-    One can change the current context by calling `Context(x)` where x can be
-    cpu(device_id) or gpu(device_id).
+    One can change the current context by using `Context(x)` in `with` statement,
+    where x can be cpu(device_id) or gpu(device_id).
 
     Examples
     -------
     >>> mx.current_context()
     cpu(0)
-    >>> mx.Context(mx.cpu(1))
-    cpu(1)
+    >>> with mx.Context('gpu', 1):
+    ...    mx.current_context()
+    ...
+    gpu(1)
 
     Returns
     -------
