@@ -285,7 +285,7 @@ class BNOperatorData : public test::op::BasicOperatorData<DType, AccReal> {
       DTypeX, {
       const TBlob& blob = this->c_.blob_input_vec_[mxnet::op::batchnorm::kGamma];
         test::fill(blob, DTypeX(1));
-      if(hasWeightAndBias_) {
+      if (hasWeightAndBias_) {
         if (blob.size(0) > 1) {
           blob.dptr<DTypeX>()[1] = DTypeX(3);
         }
@@ -295,7 +295,7 @@ class BNOperatorData : public test::op::BasicOperatorData<DType, AccReal> {
       this->c_.blob_input_vec_[mxnet::op::batchnorm::kBeta].type_flag_,
       DTypeX, {
         const TBlob& blob = this->c_.blob_input_vec_[mxnet::op::batchnorm::kBeta];
-      if(!hasWeightAndBias_) {
+      if (!hasWeightAndBias_) {
         test::fill(blob, DTypeX(0));
       } else {  // This will cause forward pass check to fail when calculating sum == 0
         test::fill(blob, DTypeX(1));
@@ -540,15 +540,14 @@ static test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType, AccReal> testFo
   size_t thisCount = 0;
 
   do {
-
     const bool isLast = thisCount == cycleCount - 1;
 
-    if(thisCount) {
+    if (thisCount) {
       info_1.data_->forward(count);
       info_2.data_->forward(count);
     }
 
-    if(isLast) {
+    if (isLast) {
       dumpF(&std::cout, info_1, 1);
       dumpF(&std::cout, info_2, 2);
     }
@@ -561,7 +560,7 @@ static test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType, AccReal> testFo
       test::op::BasicOperatorData<DType, AccReal>::kInput,
       op::batchnorm::kData);
 
-    if(!thisCount) {
+    if (!thisCount) {
       // return backward
       runOperatorBackward(&info_1, count);
       runOperatorBackward(&info_2, count);
@@ -570,7 +569,7 @@ static test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType, AccReal> testFo
       info_2.data_->backward(count);
     }
 
-    if(isLast) {
+    if (isLast) {
       dumpB(&std::cout, info_1, 1);
       dumpB(&std::cout, info_2, 2);
     }
@@ -1204,17 +1203,14 @@ TEST(BATCH_NORM, Test2DBackwardMixedV1V2Complex_cpu_cpu_ugs) {
 
 TEST(BATCH_NORM, Test2DBackwardMixed_gpu_cpu_ugs) {
   for (int type :  v2_types) {
-  //for (int type :  { 0 }) {
     MSHADOW_REAL_TYPE_SWITCH_EX(
       type, DType, AccReal,
       {
-        //const TShape inputShape({1, 1, 2, 1});
-        //const TShape inputShape({1, 2, 2, 1});
         const TShape inputShape({2, 3, 2, 2});
         testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType, AccReal>(
-          false, true, inputShape, useglobalstats_kwargs_nocudnn, false, 1);
-//        testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType, AccReal>(
-//          false, true, inputShape, useglobalstats_kwargs, false);
+          false, true, inputShape, useglobalstats_kwargs_nocudnn, false);
+        testForwardAndBackward<op::BatchNormProp, op::BatchNormProp, DType, AccReal>(
+          false, true, inputShape, useglobalstats_kwargs, false);
       });
   }
 }
