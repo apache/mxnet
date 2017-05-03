@@ -385,6 +385,7 @@ class BasicOperatorData {
       all_blob_vects_.push_back(&blob_in_grad_);
       all_blob_vects_.push_back(&blob_out_grad_);  // Remaining err (loss) pushing back upstream
     }
+    virtual ~OpData() {}
   };
 
 #if MXNET_USE_CUDA
@@ -395,17 +396,16 @@ class BasicOperatorData {
    public:
     inline GPUOpData(const OpData& cpuData, OpContext *opContext)
     : cpuData_(cpuData)
-      , allocGPUSTream_(opContext) {
+      , allocGPUStream_(opContext) {
       // Copy CPU->GPU
-      std::list<std::unique_ptr<test::StandaloneBlob>> gpuBlobs;
-      OpData gpuData;
+      CHECK_EQ(gpuBlobs_.size(), 0U);
       CHECK_EQ(cpuData_.all_blob_vects_.size(), this->all_blob_vects_.size());
       for (size_t bvt = 0, nbvt = cpuData_.all_blob_vects_.size(); bvt < nbvt; ++bvt) {
         std::vector<TBlob>& bv_src = *cpuData_.all_blob_vects_[bvt];
         std::vector<TBlob>& bvt_dest = *this->all_blob_vects_[bvt];
         for (size_t i = 0, n = bv_src.size(); i < n; ++i) {
           const TBlob& srcBlob = bv_src[i];
-          TBlob *destBlob = allocateBlob(&gpuBlobs, &bvt_dest, srcBlob.shape_,
+          TBlob *destBlob = allocateBlob(&gpuBlobs_, &bvt_dest, srcBlob.shape_,
                                          true, srcBlob.type_flag_);
 
           Context cpu_ctx, gpu_ctx;
@@ -414,7 +414,7 @@ class BasicOperatorData {
           cpu_ctx.dev_id = gpu_ctx.dev_id = 0;
 
           mxnet::ndarray::Copy<cpu, gpu>(srcBlob, destBlob, cpu_ctx,
-                                         gpu_ctx, allocGPUSTream_.opContext_.run_ctx);
+                                         gpu_ctx, allocGPUStream_.opContext_.run_ctx);
         }
       }
     }
@@ -433,16 +433,19 @@ class BasicOperatorData {
           cpu_ctx.dev_id = gpu_ctx.dev_id = 0;
 
           mxnet::ndarray::Copy<gpu, cpu>(srcBlob, destBlob, gpu_ctx,
-                                         cpu_ctx, allocGPUSTream_.opContext_.run_ctx);
+                                         cpu_ctx, allocGPUStream_.opContext_.run_ctx);
         }
       }
+      gpuBlobs_.clear();  // Force deallocation of the GPU blob data
     }
 
    private:
     /*! \brief Reference to the src/dest CPU data */
     const OpData& cpuData_;
+    /*! \brief The GPU-allocated blobs */
+    std::list<std::unique_ptr<test::StandaloneBlob>> gpuBlobs_;
     /*! \brief Scoped GPU stream */
-    GPUStreamScope allocGPUSTream_;
+    GPUStreamScope allocGPUStream_;
   };
 #endif  // MXNET_USE_CUDA
 

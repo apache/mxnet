@@ -285,9 +285,12 @@ class BlobMemory {
     return handle_.dptr;
   }
   void Free() {
+    if(isGPU_) {
+      int x = 0;
+    }
     if (handle_.dptr) {
       Storage *storage = mxnet::Storage::Get();
-      storage->Free(handle_);
+      storage->DirectFree(handle_);
       handle_.dptr = nullptr;
     }
   }

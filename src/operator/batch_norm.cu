@@ -501,7 +501,7 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
 
   dim3 blocks(gradOutput.getSize(1));
   dim3 threads(getNumThreads(gradOutput.getSize(2)));
-  BatchNormalizationBackwardKernel<DType, AccReal, DeviceTensor1, DeviceTensor3 >
+  BatchNormalizationBackwardKernel<DType, AccReal, DeviceTensor1, DeviceTensor3>
     <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
     input, gradOutput, gradInput, gradWeight, gradBias, weight, runningMean, runningVar,
       saveMean, saveVar, train, fixGamma, scale, momentum, eps);
