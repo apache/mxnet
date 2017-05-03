@@ -80,7 +80,22 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
             return [DataDesc(x[0], x[1]) for x in shapes]
 
 class DataBatch(object):
-    """A data batch.
+    """Returns a batch of data.
+
+    MXNet's data iterator returns a batch of data in each `next` call.
+    This data often contains `batch_size` number of examples.
+
+    If the input data consists of images then, these images should be stored in a
+    4-D matrix of shape ``(batch_size, num_channel, height, width)``.
+    The channels are often in RGB order.
+
+    Example usage:
+    ----------
+    >>> class CustomBatch(object):
+    ...    def __init__(self, data, label, pad=0):
+    ...       self.data = data
+    ...       self.label = label
+    ...       self.pad = pad
 
     Parameters
     ----------
@@ -89,20 +104,21 @@ class DataBatch(object):
     label : list of NDArray, optional
           A list of input labels.
     pad : int, optional
-          The number of examples padded at the batch end. It is used when the
-          examples read is less than the batch size.
+          The number of examples padded at the end of a batch. It is used when the
+          total number of examples read is not divisible by the `batch_size`.
+          These are ignored in the result.
     index : numpy.array, optional
           The example indices in this batch.
     bucket_key : int, optional
-          The key of the bucket, used for bucket IO.
+          The bucket key, used for bucketing module.
     provide_data : list of (name, shape), optional
-          The *i*-th elements describes the name and shape of ``data[i]``.
-          If not provided, the order of arg_names of the executor is assumed.
-          When working with Module this is the order of the data_names argument.
+          The *i*-th element describes the name and shape of ``data[i]``.
+          If not provided, by default the order of `arg_names` of the executor is assumed.
+          When working with Module, the order of `data_names` argument is assumed.
     provide_label : list of (name, shape), optional
-          The *i*-th elements describes the name and shape of ``label[i]``.
-          If not provided, the order of arg_names of the executor is assumed.
-          When working with Module this is the order of the label_names argument.
+          The *i*-th element describes the name and shape of ``label[i]``.
+          If not provided, the order of `arg_names` of the executor is assumed.
+          When working with Module, the order of `label_names` argument is assumed.
     """
     def __init__(self, data, label=None, pad=None, index=None,
                  bucket_key=None, provide_data=None, provide_label=None):
@@ -455,26 +471,81 @@ def _init_data(data, allow_empty, default_name):
     return list(data.items())
 
 class NDArrayIter(DataIter):
-    """Iterating on either ``mx.nd.NDArray`` or ``numpy.ndarray``.
+    """Returns an iterator for ``mx.nd.NDArray`` or ``numpy.ndarray``.
+
+    Example usage:
+    ----------
+    >>> data = np.ones([10, 2, 2])
+    >>> labels = np.ones([10, 1])
+    >>> dataiter = mx.io.NDArrayIter(datas, labels, 3, True, last_batch_handle='discard')
+    >>> dataiter
+    <mxnet.io.NDArrayIter object at 0x10bb2fd90>
+    >>> for batch in dataiter:
+    ...    print batch.data[0].asnumpy()
+    ...    batch.data[0].shape
+    array([[[ 1.,  1.],
+            [ 1.,  1.]],
+
+           [[ 1.,  1.],
+            [ 1.,  1.]],
+
+           [[ 1.,  1.],
+            [ 1.,  1.]]], dtype=float32)
+    (3L, 2L, 2L)
+    array([[[ 1.,  1.],
+            [ 1.,  1.]],
+
+           [[ 1.,  1.],
+            [ 1.,  1.]],
+
+           [[ 1.,  1.],
+            [ 1.,  1.]]], dtype=float32)
+    (3L, 2L, 2L)
+    array([[[ 1.,  1.],
+            [ 1.,  1.]],
+
+           [[ 1.,  1.],
+            [ 1.,  1.]],
+
+           [[ 1.,  1.],
+            [ 1.,  1.]]], dtype=float32)
+    (3L, 2L, 2L)
+
+    Usage of `last_batch_handle` parameter:
+
+    >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='pad')
+    >>> batchidx = 0
+    >>> for batch in dataiter:
+    ...    batchidx += 1
+    ...
+    >>> batchidx  # Padding added after the examples read are over
+    4
+    >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')
+    >>> batchidx = 0
+    >>> for batch in dataiter:
+    ...    batchidx += 1
+    ...
+    >>> batchidx # Remaining examples are discarded
+    3
 
     Parameters
     ----------
     data: array or list of array or dict of string to array
-        Input data
+        The input data.
     label: array or list of array or dict of string to array, optional
-        Input label
+        The input label.
     batch_size: int
-        Batch Size
+        Batch size of data.
     shuffle: bool, optional
-        Whether to shuffle the data
+        Whether to shuffle the data.
     last_batch_handle : str, optional
-        How to handle the last batch, can be 'pad', 'discard' or
+        How to handle the last batch. This parameter can be 'pad', 'discard' or
         'roll_over'. 'roll_over' is intended for training and can cause problems
         if used for prediction.
     data_name : str, optional
-        The data name
+        The data name.
     label_name : str, optional
-        The label name
+        The label name.
     """
     def __init__(self, data, label=None, batch_size=1, shuffle=False,
                  last_batch_handle='pad', data_name='data',
