@@ -60,12 +60,10 @@ def imdecode(buf, **kwargs):
 
 
 def scale_down(src_size, size):
-    """Scale down crop size if it's larger than image size.
+    """Scales down crop size if it's larger than image size.
 
     If width/height of the crop is larger than the width/height of the image,
-    set the width/height to the width/height of the image.
-
-    First compare and set the height, then compare and set the width.
+    sets the width/height to the width/height of the image.
 
     Parameters
     ----------
@@ -97,12 +95,12 @@ def scale_down(src_size, size):
 
 
 def resize_short(src, size, interp=2):
-    """Resize shorter edge to size.
+    """Resizes shorter edge to size.
 
     Note: `resize_short` uses OpenCV (not the CV2 Python library).
     MXNet must have been built with OpenCV for `resize_short` to work.
 
-    Resize the original image by setting the shorter edge to size
+    Resizes the original image by setting the shorter edge to size
     and setting the longer edge accordingly.
     Resizing function is called from OpenCV.
 
