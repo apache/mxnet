@@ -26,7 +26,15 @@ def _monitor_callback_wrapper(callback):
     return callback_handle
 
 class Executor(object):
-    """Executor is the actual executing object of MXNet."""
+    """Executor is the actual executing object of MXNet,
+       which provides efficient symbolic graph execution
+       and optimization.
+
+    Examples
+    --------
+    >>> # typical approach to create an executor is to bind symbol
+    >>> texec = symbol.bind(ctx=context, args=arg_arrays)
+    """
     def __init__(self, handle, symbol, ctx, grad_req, group2ctx):
         """Constructor, used Symbol.bind and Symbol.simple_bind instead.
 
@@ -140,6 +148,14 @@ class Executor(object):
             Gradient on the outputs to be propagated back.
             This parameter is only needed when bind is called
             on outputs that are not a loss function.
+
+        Examples
+        --------
+        >>> # executor is created by binding on loss function
+        >>> texec.backward()
+        >>> # executor is created by binding on non-loss function
+        >>> texec.backward(out_grads=out_grads)
+        >>> print(texec.grad_dict)
         """
         if out_grads is None:
             out_grads = []
@@ -164,12 +180,26 @@ class Executor(object):
         self._output_dirty = False
 
     def set_monitor_callback(self, callback):
-        """Install callback.
+        """Install callback for monitor.
 
         Parameters
         ----------
         callback : function
             Takes a string and an NDArrayHandle.
+
+        Examples
+        --------
+        >>> class CustomMonitor(Monitor):
+        >>>     def stat_helper(self, name, array):
+        >>>         array = ctypes.cast(array, NDArrayHandle)
+        >>>         array = NDArray(array, writable=False)
+        >>>         if not self.activated or not self.re_prog.match(py_str(name)):
+        >>>             return
+        >>>         self.queue.append((self.step, py_str(name), self.stat_func(array)))
+        >>>
+        >>>     def install(self, exe):
+        >>>         exe.set_monitor_callback(self.stat_helper)
+        >>>         self.exes.append(exe)
         """
         cb_type = ctypes.CFUNCTYPE(None, ctypes.c_char_p, NDArrayHandle, ctypes.c_void_p)
         self._monitor_callback = cb_type(_monitor_callback_wrapper(callback))
@@ -266,6 +296,13 @@ class Executor(object):
         ------
         ValueError
             If there is additional parameters in the dict but ``allow_extra_params=False``.
+
+        Examples
+        --------
+        >>> # set parameters using existing arguments
+        >>> texec.copy_params_from(arg_params, aux_params)
+        >>> print(texec.arg_dict)
+        >>> print(texec.aux_dict)
         """
         for name, array in arg_params.items():
             if name in self.arg_dict:
@@ -299,10 +336,18 @@ class Executor(object):
             Whether to allow allocating new ndarrays that's larger than the original.
         kwargs : dict of string to tuple of int
             New shape for arguments.
+
         Returns
         -------
         exec : Executor
             A new executor that shares memory with self.
+
+        Examples
+        --------
+        >>> # set parameters using existing arguments
+        >>> new_data_shape = [('data1', (4, 2, 2)), ('data2', (4, 3))]
+        >>> new_label_shape = [('label', (4 1))]
+        >>> texec.reshape(allow_up_sizing=True, **dict(new_data_shape + new_label_shape))
         """
         # pylint: disable=too-many-branches
         arg_shapes, _, aux_shapes = self._symbol.infer_shape(**kwargs)
@@ -369,6 +414,16 @@ class Executor(object):
         -------
         debug_str : string
             Debug string of the executor.
+
+        Examples
+        --------
+        >>> import mxnet as mx
+        >>> a = mx.sym.Variable('a')
+        >>> texec = a.bind(ctx = mx.cpu(), args=[mx.nd.zeros(1)])
+        >>> print(texec.debug_str())
+        Variable:a
+        Total 0 MB allocated
+        Total 11 TempSpace resource requested
         """
         debug_str = ctypes.c_char_p()
         check_call(_LIB.MXExecutorPrint(
