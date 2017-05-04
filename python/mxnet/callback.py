@@ -103,7 +103,7 @@ class Speedometer(object):
     --------
     >>> # Print training speed and evaluation metrics every ten batches. Batch size is one.
     ...
-    >>> module.fit(X=trainingX, y=trainingY,
+    >>> module.fit(iterator, num_epoch=n_epoch,
     ... batch_end_callback=mx.callback.Speedometer(1, 10))
     Epoch[0] Batch [10] Speed: 1910.41 samples/sec  Train-accuracy=0.200000
     Epoch[0] Batch [20] Speed: 1764.83 samples/sec  Train-accuracy=0.400000
