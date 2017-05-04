@@ -133,3 +133,4 @@ List of Contributors
 * [Jun Wu](https://github.com/reminisce)
 * [Dom Divakaruni](https://github.com/domdivakaruni)
 * [David Salinas](https://github.com/geoalgo)
+* [Asmus Hetzel](https://github.com/asmushetzel)
