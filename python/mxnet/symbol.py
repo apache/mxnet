@@ -65,7 +65,7 @@ class Symbol(SymbolBase):
         >>> out = e.get_children()
         >>> out
         <Symbol Grouped>
-        >>> for i in out.__iter__():
+        >>> for i in out:
         ...     i
         ...
         <Symbol d>
@@ -1442,9 +1442,6 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, ini
     >>> data = mx.sym.Variable('data', attr={'a': 'b'})
     >>> data
     <Symbol data>
-    >>> data = mx.sym.Variable('data', shape = (2,3), __shape__=(9,0))
-    >>> data # shape (9,0) will be set
-    <Symbol v>
 
     Parameters
     ----------
