@@ -313,7 +313,7 @@ else
 
     echo
     echo
-    echo "### MACOS-PYTHON-CPU ###"
+    echo "### Testing MACOS-PYTHON-CPU ###"
     echo
     # range of all lines inside MacOS-Python-CPU instructions
     MAC_PYTHON_CPU_START_LINENO=$(grep -n "START - MacOS Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
@@ -325,6 +325,7 @@ else
     echo "### Testing Virtualenv ###"
     echo "${virtualenv_commands}"
     echo
+    eval ${virtualenv_commands}
     #nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${virtualenv_commands}"
 
     echo

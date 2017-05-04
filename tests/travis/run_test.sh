@@ -5,6 +5,10 @@ then
   exit 0
 fi
 
+if [ ${TASK} == "installation" ]; then
+    ./tests/jenkins/run_test_installation_docs.sh docs/get_started/install.md
+fi
+
 if [ ${TASK} == "lint" ]; then
     make lint || exit -1
     echo "Check documentations of c++ code..."
