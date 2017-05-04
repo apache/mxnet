@@ -136,7 +136,7 @@ Operator* CorrelationProp::CreateOperator(Context ctx) const {
 }
 DMLC_REGISTER_PARAMETER(CorrelationParam);
 MXNET_REGISTER_OP_PROPERTY(Correlation, CorrelationProp)
-.describe("Apply correlation to inputs")
+.describe("Applies correlation to inputs.")
 .add_argument("data1", "NDArray-or-Symbol", "Input data1 to the correlation.")
 .add_argument("data2", "NDArray-or-Symbol", "Input data2 to the correlation.")
 .add_arguments(CorrelationParam::__FIELDS__());

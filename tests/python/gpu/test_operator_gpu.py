@@ -4,6 +4,7 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from test_operator import *
 from test_optimizer import *
+from test_random import *
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import check_consistency, set_default_context
@@ -32,26 +33,26 @@ def check_countsketch(in_dim,out_dim,n):
     for exe in exe_list:
         exe.forward(is_train= True)
     out1 = [exe.outputs[0].asnumpy() for exe in exe_list]
-    
+
     a = np.zeros((n,out_dim))
     temp = np.multiply(x, s)
     for num_sample in np.arange(0,n):
         for idx in np.arange(0,in_dim):
             a[num_sample][h[0][idx]] += temp[num_sample][idx]
     assert_almost_equal(a,out1[0],rtol=1e-3, atol=1e-12)
-    
+
     # backward
     out_grad = mx.nd.empty((n,out_dim))
     out_grad[:] = np.random.normal(-3, 3, (n,out_dim))
     for exe in exe_list:
-        exe.backward([out_grad])  
-    
+        exe.backward([out_grad])
+
         a = np.zeros((n,in_dim))
         for j in np.arange(0,n):
             for i in np.arange(0,in_dim):
                 a[j,i] = out_grad.asnumpy()[j, h[0,i]] * s[0,i]
     assert_almost_equal(a,arr_grad[0].asnumpy(),rtol=1e-3, atol=1e-12)
-    
+
 def test_countsketch():
     np.random.seed(0)
     nrepeat = 2
@@ -87,7 +88,7 @@ def check_ifft(shape):
     arr_grad = [mx.nd.empty(shape)]
     ctx_list = [{'ctx': mx.gpu(0),'ifft_data': shape, 'type_dict': {'ifft_data': np.float32}}]
     exe_list = [sym.simple_bind(args_grad=arr_grad,**ctx) for ctx in ctx_list]
-    
+
     for exe in exe_list:
         for arr, iarr in zip(exe.arg_arrays, init):
             arr[:] = iarr.astype(arr.dtype)
@@ -95,7 +96,7 @@ def check_ifft(shape):
     for exe in exe_list:
         exe.forward(is_train= True)
         out1 = [exe.outputs[0].asnumpy() for exe in exe_list]
-    
+
     if len(shape) == 2:
         init_complex = np.zeros(shape_old,dtype = np.complex64)
         for i in range(0,shape_old[1]):
@@ -103,7 +104,7 @@ def check_ifft(shape):
             init_complex.imag[:,i] = init[0][:,2*i+1]
         a = np.fft.ifft(init_complex, n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, out1[0]/shape_old[1],rtol=1e-3, atol=1e-12)
-    
+
     if len(shape) == 4:
         init_complex = np.zeros(shape_old,dtype = np.complex64)
         for i in range(0,shape_old[3]):
@@ -121,7 +122,7 @@ def check_ifft(shape):
             temp = np.zeros(shape_old)
             for i in range(shape_old[1]):
                 temp[:,i] = exe.grad_arrays[0].asnumpy()[:,2*i]
-                
+
         a = np.fft.fft(out_grad.asnumpy(), n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-12)
     if len(shape) == 4:
@@ -133,11 +134,11 @@ def check_ifft(shape):
             temp = np.zeros(shape_old)
             for i in range(shape_old[3]):
                 temp[:,:,:,i] = exe.grad_arrays[0].asnumpy()[:,:,:,2*i]
-                
+
         a = np.fft.fft(out_grad.asnumpy(), n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-12)
-             
-    
+
+
 def test_ifft():
     np.random.seed(0)
     nrepeat = 2
@@ -165,7 +166,7 @@ def check_fft(shape):
     arr_grad = [mx.nd.empty(shape)]
     ctx_list = [{'ctx': mx.gpu(0),'fft_data': shape, 'type_dict': {'fft_data': np.float32}}]
     exe_list = [sym.simple_bind(args_grad=arr_grad,**ctx) for ctx in ctx_list]
-    
+
     for exe in exe_list:
         for arr, iarr in zip(exe.arg_arrays, init):
             arr[:] = iarr.astype(arr.dtype)
@@ -183,7 +184,7 @@ def check_fft(shape):
             a[:,p] = out2[:,i]
             a[:,p+1] = out2[:,i+out2.shape[1]//2]
             p = p+2
-   
+
     if len(shape) == 4:
         out = np.reshape(out,(out.shape[1],out.shape[2],out.shape[3],out.shape[4]))
         out2 = np.append(out.real, out.imag, axis = 1)
@@ -195,9 +196,9 @@ def check_fft(shape):
                     a[i,j,:,p] = out2[i,j,:,k]
                     a[i,j,:,p+1] = out2[i,j+out1[0].shape[1],:,k]
                     p = p+2
-    
+
     assert_almost_equal(a, out1[0],rtol=1e-3, atol=1e-6)
-    
+
     # backward
     if len(shape) == 2:
         out_grad = mx.nd.empty((shape[0],2*shape[1]))
@@ -208,10 +209,10 @@ def check_fft(shape):
             out_grad_complex.real[:,i] = out_grad.asnumpy()[:,2*i]
             out_grad_complex.imag[:,i] = out_grad.asnumpy()[:,2*i+1]
         for exe in exe_list:
-            exe.backward([out_grad])  
+            exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[1],rtol=1e-3, atol=1e-8)
-         
+
     if len(shape) == 4:
         out_grad = mx.nd.empty(out1[0].shape)
         out_grad[:] = np.random.normal(-3, 3, out1[0].shape)
@@ -221,7 +222,7 @@ def check_fft(shape):
             out_grad_complex.real[:,:,:,i] = out_grad.asnumpy()[:,:,:,2*i]
             out_grad_complex.imag[:,:,:,i] = out_grad.asnumpy()[:,:,:,2*i+1]
         for exe in exe_list:
-            exe.backward([out_grad])  
+            exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-6)
 

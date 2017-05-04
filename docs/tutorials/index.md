@@ -18,19 +18,19 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Record IO - Pack free-format data in binary files ](http://mxnet.io/tutorials/python/record_io.html)
 
-- [Custom Image IO - Write high-performance data-pipelines using `mxnet.image`](http://mxnet.io/tutorials/python/advanced_img_io.html)
+- [Custom Image IO - Write high-performance data-pipelines using mxnet.image](http://mxnet.io/tutorials/python/advanced_img_io.html)
 
 #### Computer Vision
 
 - [Classifying Handwritten Digits with Convolutional Neural Networks](http://mxnet.io/tutorials/python/mnist.html)
 
-- [Image Segmentation - Separate out distinct objects in a photograph](http://mxnet.io/tutorials/computer_vision/segmentation.html)
+- [Object Detection using Faster R-CNN](https://github.com/dmlc/mxnet/tree/master/example/rcnn) 
 
-- [Object Detection using Faster R-CNN](http://mxnet.io/tutorials/computer_vision/detection.html)
+- [Object Detection using SSD](https://github.com/dmlc/mxnet/tree/master/example/ssd)
 
-- [Neural Art - Transfer the style of one image onto the content the content of another image](http://mxnet.io/tutorials/computer_vision/neural_art.html)
+- [Neural Art - Transfer the style of one image onto the content the content of another image](https://github.com/dmlc/mxnet/tree/master/example/neural-style)
 
-- [Large Scale Image Classification - Training with 14 million images on a single machine](http://mxnet.io/tutorials/computer_vision/imagenet_full.html)
+- [Large Scale Image Classification](https://github.com/dmlc/mxnet/tree/master/example/image-classification)
 
 #### Natural Language Processing
 
@@ -65,7 +65,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Classify Real-world Images with a Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
 
-- [Dogs vs. Cats Classification with Fine-tuning](https://statist-bhfz.github.io/cats_dogs_finetune) ([source RMD](https://github.com/dmlc/mxnet/tree/master/docs/tutorials/r/CatsDogsFinetune.rmd))
+- [Dogs vs. Cats Classification with Fine-tuning](https://statist-bhfz.github.io/cats_dogs_finetune)
 
 - [Character-Level Language Modeling with LSTM RNNs](http://mxnet.io/tutorials/r/charRnnModel.html)
 
@@ -81,6 +81,10 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 ### C++
 
 - [Basics](http://mxnet.io/tutorials/c++/basics.html)
+
+### Perl
+
+- [Calculator, handwritten digits and roboshakespreare](http://blogs.perl.org/users/sergey_kolychev/2017/04/machine-learning-in-perl-part2-a-calculator-handwritten-digits-and-roboshakespeare.html)
 
 ## Contributing Tutorials
 

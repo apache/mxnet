@@ -32,7 +32,7 @@ Operator *RNNProp::CreateOperatorEx(Context ctx,
 DMLC_REGISTER_PARAMETER(RNNParam);
 
 MXNET_REGISTER_OP_PROPERTY(RNN, RNNProp)
-.describe("Apply a recurrent layer to input.")
+.describe("Applies a recurrent layer to input.")
 .add_argument("data", "NDArray-or-Symbol", "Input data to RNN")
 .add_argument("parameters", "NDArray-or-Symbol",
               "Vector of all RNN trainable parameters concatenated")
