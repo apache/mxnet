@@ -1,170 +1,339 @@
-# Symbolic and Automatic Differentiation
+# Symbol Tutorial
 
-NDArray is the basic computation unit in MXNet. MXNet also provides a
-symbolic interface, named Symbol, to simplify constructing neural networks. Symbol combines flexibility and efficiency. It is similar to
-the network configuration in [Caffe](http://caffe.berkeleyvision.org/) and
-[CXXNet](https://github.com/dmlc/cxxnet) and the symbols define
-the computation graph as in [Theano](http://deeplearning.net/software/theano/).
+Besides the tensor computation interface [NDArray](./ndarray.ipynb), another
+main object in MXNet is the `Symbol` provided by `mxnet.symbol`, or `mxnet.sym`
+for short. A symbol represents a multi-output symbolic expression. They are
+composited by operators, such as simple matrix operations (e.g. “+”), or a
+neural network layer (e.g. convolution layer). An operator can take several
+input variables, produce more than one output variables, and have internal state
+variables. A variable can be either free, which we can bind with value later, or
+an output of another symbol.
 
-## Basic Composition of Symbols
+## Symbol Composition
 
-The following code creates a two-layer perceptron network:
+### Basic Operators
 
- ```python
-    >>> import mxnet as mx
-    >>> net = mx.symbol.Variable('data')
-    >>> net = mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=128)
-    >>> net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
-    >>> net = mx.symbol.FullyConnected(data=net, name='fc2', num_hidden=64)
-    >>> net = mx.symbol.SoftmaxOutput(data=net, name='out')
-    >>> type(net)
-    <class 'mxnet.symbol.Symbol'>
- ```
-
-Each symbol takes a (unique) string name. *Variable* often defines the inputs,
-or free variables. Other symbols take a symbol as their input (*data*),
-and might accept other hyper parameters, such as the number of hidden neurons (*num_hidden*)
-or the activation type (*act_type*).
-
-The symbol can be seen simply as a function taking several arguments whose
-names are automatically generated and can be got with the following:
-
- ```python
-    >>> net.list_arguments()
-    ['data', 'fc1_weight', 'fc1_bias', 'fc2_weight', 'fc2_bias', 'out_label']
- ```
-
- These arguments are the parameters needed by each symbol:
-
-- *data*: Input data needed by the variable *data*
-- *fc1_weight* and *fc1_bias*: The weight and bias for the first fully connected layer *fc1*
-- *fc2_weight* and *fc2_bias*: The weight and bias for the second fully connected layer *fc2*
-- *out_label*: The label needed by the loss
-
-We can also specify the automatically generated names explicitly:
-
- ```python
-    >>> net = mx.symbol.Variable('data')
-    >>> w = mx.symbol.Variable('myweight')
-    >>> net = mx.symbol.FullyConnected(data=net, weight=w, name='fc1', num_hidden=128)
-    >>> net.list_arguments()
-    ['data', 'myweight', 'fc1_bias']
- ```
-
-## More Complicated Composition
-
-MXNet provides well-optimized symbols for layers
-commonly used in deep learning (see
-[src/operator](https://github.com/dmlc/mxnet/tree/master/src/operator)). We can also easily define new operators
-in Python.  The following example first performs an element-wise add between two
-symbols, then feeds them to the fully connected operator:
-
- ```python
-    >>> lhs = mx.symbol.Variable('data1')
-    >>> rhs = mx.symbol.Variable('data2')
-    >>> net = mx.symbol.FullyConnected(data=lhs + rhs, name='fc1', num_hidden=128)
-    >>> net.list_arguments()
-    ['data1', 'data2', 'fc1_weight', 'fc1_bias']
- ```
-
-We can also construct a symbol in a more flexible way than the single
-forward composition exemplified in the preceding example:
-
- ```python
-    >>> net = mx.symbol.Variable('data')
-    >>> net = mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=128)
-    >>> net2 = mx.symbol.Variable('data2')
-    >>> net2 = mx.symbol.FullyConnected(data=net2, name='net2', num_hidden=128)
-    >>> composed_net = net(data=net2, name='compose')
-    >>> composed_net.list_arguments()
-    ['data2', 'net2_weight', 'net2_bias', 'fc1_weight', 'fc1_bias']
- ```
-
-In the preceding example, *net* is used as a function to apply to an existing symbol
-*net*, and the resulting *composed_net* will replace the original argument *data* with
-*net2*.
-
-Once you start building some bigger networks, you might want to name some symbols with a common prefix to outline the structure of your network. You can use the [Prefix](https://github.com/dmlc/mxnet/blob/master/python/mxnet/name.py) NameManager as follow:
+The following example composites a simple expression `a+b`. We first create the
+placeholders `a` and `b` with names using `mx.sym.Variable`, and then construct
+the desired symbol by using the operator `+`. When the string name is not given
+during creating, MXNet will automatically generate a unique name for the symbol,
+which is the case for `c`.
 
 ```python
-   >>> data = mx.sym.Variable("data")
-   >>> net = data
-   >>> n_layer = 2
-   >>> for i in range(n_layer):
-   ...     with mx.name.Prefix("layer%d_" % (i + 1)):
-   ...         net = mx.sym.FullyConnected(data=net, name="fc", num_hidden=100)
-   ...
-   >>> net.list_arguments()
-   ['data', 'layer1_fc_weight', 'layer1_fc_bias', 'layer2_fc_weight', 'layer2_fc_bias']
+import mxnet as mx
+a = mx.sym.Variable('a')
+b = mx.sym.Variable('b')
+c = a + b
+(a, b, c)
 ```
 
-## Argument Shape Inference
+Most `NDArray` operators can be applied to `Symbol`, for example:
 
-Now we know how to define a symbol. Next, we can infer the shapes of
-all of the arguments it needs given the shape of its input data:
+```python
+# elemental wise times
+d = a * b
+# matrix multiplication
+e = mx.sym.dot(a, b)
+# reshape
+f = mx.sym.Reshape(d+e, shape=(1,4))
+# broadcast
+g = mx.sym.broadcast_to(f, shape=(2,4))
+mx.viz.plot_network(symbol=g)
+```
 
- ```python
-    >>> net = mx.symbol.Variable('data')
-    >>> net = mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=10)
-    >>> arg_shape, out_shape, aux_shape = net.infer_shape(data=(100, 100))
-    >>> dict(zip(net.list_arguments(), arg_shape))
-    {'data': (100, 100), 'fc1_weight': (10, 100), 'fc1_bias': (10,)}
-    >>> out_shape
-    [(100, 10)]
- ```
+### Basic Neural Networks
 
-We can use this shape inference as an early debugging mechanism to detect
-shape inconsistency.
+Besides the basic operators, `Symbol` has a rich set of neural network
+layers. The following codes construct a two layer fully connected neural work
+and then visualize the structure by given the input data shape.
 
-## Bind the Symbols and Run
+```python
+# Output may vary
+net = mx.sym.Variable('data')
+net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=128)
+net = mx.sym.Activation(data=net, name='relu1', act_type="relu")
+net = mx.sym.FullyConnected(data=net, name='fc2', num_hidden=10)
+net = mx.sym.SoftmaxOutput(data=net, name='out')
+mx.viz.plot_network(net, shape={'data':(100,200)})
+```
 
-Now we can bind the free variables of the symbol and perform forward and backward operations.
-The ```bind``` function will create a ```Executor``` that can be used to carry out the real computations:
+### Modulelized Construction for Deep Networks
 
- ```python
-    >>> # define computation graphs
-    >>> A = mx.symbol.Variable('A')
-    >>> B = mx.symbol.Variable('B')
-    >>> C = A * B
-    >>> a = mx.nd.ones(3) * 4
-    >>> b = mx.nd.ones(3) * 2
-    >>> # bind the symbol with real arguments
-    >>> c_exec = C.bind(ctx=mx.cpu(), args={'A' : a, 'B': b})
-    >>> # do forward pass calculation.
-    >>> c_exec.forward()
-    >>> c_exec.outputs[0].asnumpy()
-    [ 8.  8.  8.]
- ```
-For neural nets, a more commonly used pattern is ```simple_bind```, which creates all of the argument arrays for you. Then you can call ```forward```, and ```backward``` (if the gradient is needed)
-to get the gradient:
+For deep networks, such as the Google Inception, constructing layer by layer is
+painful given the large number of layers. For these networks, we often
+modularize the construction. Take the Google Inception as an example, we can
+first define a factory function to chain the convolution layer, batch
+normalization layer, and Relu activation layer together:
 
- ```python
-    >>> # define computation graphs
-    >>> net = some symbol
-    >>> texec = net.simple_bind(data=input_shape)
-    >>> texec.forward()
-    >>> texec.backward()
- ```
-The [model API](model.md) is a thin wrapper around the symbolic executors to support neural net training.
+```python
+def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0), name=None, suffix=''):
+    conv = mx.symbol.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, name='conv_%s%s' %(name, suffix))
+    bn = mx.symbol.BatchNorm(data=conv, name='bn_%s%s' %(name, suffix))
+    act = mx.symbol.Activation(data=bn, act_type='relu', name='relu_%s%s' %(name, suffix))
+    return act
+prev = mx.symbol.Variable(name="Previos Output")
+conv_comp = ConvFactory(data=prev, num_filter=64, kernel=(7,7), stride=(2, 2))
+shape = {"Previos Output" : (128, 3, 28, 28)}
+mx.viz.plot_network(symbol=conv_comp, shape=shape)
+```
 
-We strongly encouraged you to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md),
-which provides a detailed explanation of the concepts in pictures.
+Then we define a function that constructs an Inception module based on
+`ConvFactory`
 
-## How Efficient Is the Symbolic API?
+```python
+def InceptionFactoryA(data, num_1x1, num_3x3red, num_3x3, num_d3x3red, num_d3x3, pool, proj, name):
+    # 1x1
+    c1x1 = ConvFactory(data=data, num_filter=num_1x1, kernel=(1, 1), name=('%s_1x1' % name))
+    # 3x3 reduce + 3x3
+    c3x3r = ConvFactory(data=data, num_filter=num_3x3red, kernel=(1, 1), name=('%s_3x3' % name), suffix='_reduce')
+    c3x3 = ConvFactory(data=c3x3r, num_filter=num_3x3, kernel=(3, 3), pad=(1, 1), name=('%s_3x3' % name))
+    # double 3x3 reduce + double 3x3
+    cd3x3r = ConvFactory(data=data, num_filter=num_d3x3red, kernel=(1, 1), name=('%s_double_3x3' % name), suffix='_reduce')
+    cd3x3 = ConvFactory(data=cd3x3r, num_filter=num_d3x3, kernel=(3, 3), pad=(1, 1), name=('%s_double_3x3_0' % name))
+    cd3x3 = ConvFactory(data=cd3x3, num_filter=num_d3x3, kernel=(3, 3), pad=(1, 1), name=('%s_double_3x3_1' % name))
+    # pool + proj
+    pooling = mx.symbol.Pooling(data=data, kernel=(3, 3), stride=(1, 1), pad=(1, 1), pool_type=pool, name=('%s_pool_%s_pool' % (pool, name)))
+    cproj = ConvFactory(data=pooling, num_filter=proj, kernel=(1, 1), name=('%s_proj' %  name))
+    # concat
+    concat = mx.symbol.Concat(*[c1x1, c3x3, cd3x3, cproj], name='ch_concat_%s_chconcat' % name)
+    return concat
+prev = mx.symbol.Variable(name="Previos Output")
+in3a = InceptionFactoryA(prev, 64, 64, 64, 64, 96, "avg", 32, name="in3a")
+mx.viz.plot_network(symbol=in3a, shape=shape)
+```
 
-In short, it is designed to be very efficient in both memory and runtime.
+Finally we can obtain the whole network by chaining multiple inception
+modulas. A complete example is available at
+[mxnet/example/image-classification/symbol_inception-bn.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/symbol_inception-bn.py)
 
-The major reason for introducing the Symbolic API is to bring the efficient C++
-operations in powerful toolkits, such as CXXNet and Caffe, together with the
-flexible dynamic NDArray operations. To maximize runtime performance and memory
-utilization, all of the memory and computation resources are
-allocated statically during the bind operation.
+### Group Multiple Symbols
 
-The coarse-grained operators are equivalent to CXXNet layers, which are
-extremely efficient.  We also provide fine-grained operators for more flexible
-composition. Because we are also performing more in-place memory allocation, MXNet can
-be more memory efficient than CXXNet, and achieves the same runtime, with
-greater flexibility.
+To construct neural networks with multiple loss layers, we can use
+`mxnet.sym.Group` to group multiple symbols together. The following example
+group two outputs:
 
-## Next Steps
-* [KVStore](kvstore.md)
+```python
+net = mx.sym.Variable('data')
+fc1 = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=128)
+net = mx.sym.Activation(data=fc1, name='relu1', act_type="relu")
+out1 = mx.sym.SoftmaxOutput(data=net, name='softmax')
+out2 = mx.sym.LinearRegressionOutput(data=net, name='regression')
+group = mx.sym.Group([out1, out2])
+group.list_outputs()
+```
+
+## Relations to NDArray
+
+As can be seen now, both Symbol and NDArray provide multi-dimensional array
+operations, such as `c=a+b` in MXNet. Sometimes users are confused which way to
+use. We briefly clarify the difference here, more detailed explanation are
+available
+[here](http://mxnet.readthedocs.io/en/latest/system/program_model.html).
+
+The `NDArray` provides an imperative programming alike interface, in which the
+computations are evaluated sentence by sentence. While `Symbol` is closer to
+declarative programming, in which we first declare the computation, and then
+evaluate with data. Examples in this category include regular expression and
+SQL.
+
+The pros for `NDArray`:
+
+- straightforward
+- easy to work with other language features (for loop, if-else condition, ..)
+  and libraries (numpy, ..)
+- easy to step-by-step debug
+
+The pros for `Symbol`:
+
+- provides almost all functionalities of NDArray, such as +, \*, sin, and
+  reshape
+- provides a large number of neural network related operators such as
+  Convolution, Activation, and BatchNorm
+- provides automatic differentiation
+- easy to construct and manipulate complex computations such as deep neural
+  networks
+- easy to save, load, and visualization
+- easy for the backend to optimize the computation and memory usage
+
+We will show on the [mixed programming tutorial](./mixed.ipynb) how these two
+interfaces can be used together to develop a complete training program. This
+tutorial will focus on the usage of Symbol.
+
+## Symbol Manipulation
+
+One important difference of `Symbol` comparing to `NDArray` is that, we first
+declare the computation, and then bind with data to run.
+
+In this section we introduce the functions to manipulate a symbol directly. But
+note that, most of them are wrapped nicely by the
+[`mx.module`](./module.ipynb). One can skip this section safely.
+
+### Shape Inference
+
+For each symbol, we can query its inputs (or arguments) and outputs. We can also
+inference the output shape by given the input shape, which facilitates memory
+allocation.
+
+
+```python
+arg_name = c.list_arguments()  # get the names of the inputs
+out_name = c.list_outputs()    # get the names of the outputs
+arg_shape, out_shape, _ = c.infer_shape(a=(2,3), b=(2,3))
+{'input' : dict(zip(arg_name, arg_shape)),
+ 'output' : dict(zip(out_name, out_shape))}
+```
+
+### Bind with Data and Evaluate
+
+The symbol `c` we constructed declares what computation should be run. To
+evaluate it, we need to feed arguments, namely free variables, with data
+first. We can do it by using the `bind` method, which accepts device context and
+a `dict` mapping free variable names to `NDArray`s as arguments and returns an
+executor. The executor provides method `forward` for evaluation and attribute
+`outputs` to get all results.
+
+```python
+ex = c.bind(ctx=mx.cpu(), args={'a' : mx.nd.ones([2,3]),
+                                'b' : mx.nd.ones([2,3])})
+ex.forward()
+print 'number of outputs = %d\nthe first output = \n%s' % (
+           len(ex.outputs), ex.outputs[0].asnumpy())
+```
+
+We can evaluate the same symbol on GPU with different data
+
+```python
+ex_gpu = c.bind(ctx=mx.gpu(), args={'a' : mx.nd.ones([3,4], mx.gpu())*2,
+                                    'b' : mx.nd.ones([3,4], mx.gpu())*3})
+ex_gpu.forward()
+ex_gpu.outputs[0].asnumpy()
+```
+
+### Load and Save
+
+Similar to NDArray, we can either serialize a `Symbol` object by using `pickle`,
+or use `save` and `load` directly. Different to the binary format chosen by
+`NDArray`, `Symbol` uses the more readable json format for serialization. The
+`tojson` method returns the json string.
+
+```python
+print(c.tojson())
+c.save('symbol-c.json')
+c2 = mx.symbol.load('symbol-c.json')
+c.tojson() == c2.tojson()
+```
+
+## Customized Symbol
+
+Most operators such as `mx.sym.Convolution` and `mx.sym.Reshape` are implemented
+in C++ for better performance. MXNet also allows users to write new operators
+using any frontend language such as Python. It often makes the developing and
+debugging much easier.
+
+To implement an operator in Python, we just need to define the two computation
+methods `forward` and `backward` with several methods for querying the
+properties, such as `list_arguments` and `infer_shape`.
+
+`NDArray` is the default type of arguments in both `forward` and
+`backward`. Therefore we often also implement the computation with `NDArray`
+operations. To show the flexibility of MXNet, however, we will demonstrate an
+implementation of the `softmax` layer using NumPy. Though a NumPy based operator
+can be only run on CPU and also lose some optimizations which can be applied on
+NDArray, it enjoys the rich functionalities provided by NumPy.
+
+We first create a subclass of `mx.operator.CustomOp` and then define `forward`
+and `backward`.
+
+```python
+class Softmax(mx.operator.CustomOp):
+    def forward(self, is_train, req, in_data, out_data, aux):
+        x = in_data[0].asnumpy()
+        y = np.exp(x - x.max(axis=1).reshape((x.shape[0], 1)))
+        y /= y.sum(axis=1).reshape((x.shape[0], 1))
+        self.assign(out_data[0], req[0], mx.nd.array(y))
+
+    def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+        l = in_data[1].asnumpy().ravel().astype(np.int)
+        y = out_data[0].asnumpy()
+        y[np.arange(l.shape[0]), l] -= 1.0
+        self.assign(in_grad[0], req[0], mx.nd.array(y))
+```
+
+Here we use `asnumpy` to convert the `NDArray` inputs into `numpy.ndarray`. Then
+using `CustomOp.assign` to assign the results back to `mxnet.NDArray` based on
+the value of req, which could be "over write" or "add to".
+
+Next we create a subclass of `mx.operator.CustomOpProp` for querying the
+properties.
+
+```python
+# register this operator into MXNet by name "softmax"
+@mx.operator.register("softmax")
+class SoftmaxProp(mx.operator.CustomOpProp):
+    def __init__(self):
+        # softmax is a loss layer so we don’t need gradient input
+        # from layers above.
+        super(SoftmaxProp, self).__init__(need_top_grad=False)
+
+    def list_arguments(self):
+        return ['data', 'label']
+
+    def list_outputs(self):
+        return ['output']
+
+    def infer_shape(self, in_shape):
+        data_shape = in_shape[0]
+        label_shape = (in_shape[0][0],)
+        output_shape = in_shape[0]
+        return [data_shape, label_shape], [output_shape], []
+
+    def create_operator(self, ctx, shapes, dtypes):
+        return Softmax()
+```
+
+Finally, we can use `mx.sym.Custom` with the register name to use this operator
+
+```python
+net = mx.symbol.Custom(data=prev_input, op_type='softmax')
+```
+
+## Advanced Usages
+
+### Type Cast
+
+MXNet uses 32-bit float in default. Sometimes we want to use a lower precision
+data type for better accuracy-performance trade-off. For example, The Nvidia
+Tesla Pascal GPUs (e.g. P100) have improved 16-bit float performance, while GTX
+Pascal GPUs (e.g. GTX 1080) are fast on 8-bit integers.
+
+We can use the `mx.sym.Cast` operator to convert the data type.
+
+```python
+a = mx.sym.Variable('data')
+b = mx.sym.Cast(data=a, dtype='float16')
+arg, out, _ = b.infer_type(data='float32')
+print({'input':arg, 'output':out})
+
+c = mx.sym.Cast(data=a, dtype='uint8')
+arg, out, _ = c.infer_type(data='int32')
+print({'input':arg, 'output':out})
+```
+
+### Variable Sharing
+
+Sometimes we want to share the contents between several symbols. This can be
+simply done by bind these symbols with the same array.
+
+```python
+a = mx.sym.Variable('a')
+b = mx.sym.Variable('b')
+c = mx.sym.Variable('c')
+d = a + b * c
+
+data = mx.nd.ones((2,3))*2
+ex = d.bind(ctx=mx.cpu(), args={'a':data, 'b':data, 'c':data})
+ex.forward()
+ex.outputs[0].asnumpy()
+```
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
