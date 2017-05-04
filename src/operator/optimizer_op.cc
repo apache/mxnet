@@ -133,7 +133,7 @@ http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
 Tieleman & Hinton, 2012.
 
 Hinton suggests the momentum term :math:`\gamma` to be 0.9 and the learning rate
-:math:`eta` to be 0.001.
+:math:`\eta` to be 0.001.
 
 )code" ADD_FILELINE)
 .set_num_inputs(3)
@@ -173,7 +173,7 @@ The RMSPropAlex code follows the version in
 http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
 
 Alex suggests the momentum term :math:`\gamma_1` to be 0.95, :math:`\gamma_2`
-to be 0.9 and the learning rate :math:`eta` to be 0.0001.
+to be 0.9 and the learning rate :math:`\eta` to be 0.0001.
 )code" ADD_FILELINE)
 .set_num_inputs(5)
 .set_num_outputs(1)
