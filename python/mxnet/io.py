@@ -85,17 +85,9 @@ class DataBatch(object):
     MXNet's data iterator returns a batch of data for each `next` call.
     This data contains `batch_size` number of examples.
 
-    If the input data consists of images then, these images should be stored in a
+    If the input data consists of images, then these images should be stored in a
     4-D matrix of shape ``(batch_size, num_channel, height, width)``.
     The channels are often in RGB order.
-
-    Example usage:
-    ----------
-    >>> class CustomBatch(object):
-    ...    def __init__(self, data, label, pad=0):
-    ...       self.data = data
-    ...       self.label = label
-    ...       self.pad = pad
 
     Parameters
     ----------
@@ -475,41 +467,44 @@ class NDArrayIter(DataIter):
 
     Example usage:
     ----------
-    >>> data = np.ones([10, 2, 2])
+    >>> data = np.arange(40).reshape((10,2,2))
     >>> labels = np.ones([10, 1])
-    >>> dataiter = mx.io.NDArrayIter(datas, labels, 3, True, last_batch_handle='discard')
+    >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')
     >>> dataiter
     <mxnet.io.NDArrayIter object at 0x10bb2fd90>
     >>> for batch in dataiter:
     ...    print batch.data[0].asnumpy()
     ...    batch.data[0].shape
-    array([[[ 1.,  1.],
-            [ 1.,  1.]],
+    [[[ 36.  37.]
+      [ 38.  39.]]
 
-           [[ 1.,  1.],
-            [ 1.,  1.]],
+     [[ 16.  17.]
+      [ 18.  19.]]
 
-           [[ 1.,  1.],
-            [ 1.,  1.]]], dtype=float32)
+     [[ 12.  13.]
+      [ 14.  15.]]]
     (3L, 2L, 2L)
-    array([[[ 1.,  1.],
-            [ 1.,  1.]],
+    [[[ 32.  33.]
+      [ 34.  35.]]
 
-           [[ 1.,  1.],
-            [ 1.,  1.]],
+     [[  4.   5.]
+      [  6.   7.]]
 
-           [[ 1.,  1.],
-            [ 1.,  1.]]], dtype=float32)
+     [[ 24.  25.]
+      [ 26.  27.]]]
     (3L, 2L, 2L)
-    array([[[ 1.,  1.],
-            [ 1.,  1.]],
+    [[[  8.   9.]
+      [ 10.  11.]]
 
-           [[ 1.,  1.],
-            [ 1.,  1.]],
+     [[ 20.  21.]
+      [ 22.  23.]]
 
-           [[ 1.,  1.],
-            [ 1.,  1.]]], dtype=float32)
+     [[ 28.  29.]
+      [ 30.  31.]]]
     (3L, 2L, 2L)
+
+    In the above example, data is shuffled as `shuffle` parameter is set to `True`
+    and remaining examples are discarded as `last_batch_handle` parameter is set to `discard`.
 
     Usage of `last_batch_handle` parameter:
 
@@ -518,14 +513,14 @@ class NDArrayIter(DataIter):
     >>> for batch in dataiter:
     ...    batchidx += 1
     ...
-    >>> batchidx  # Padding added after the examples read are over
+    >>> batchidx  # Padding added after the examples read are over. So, 10/3+1 batches are created.
     4
     >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')
     >>> batchidx = 0
     >>> for batch in dataiter:
     ...    batchidx += 1
     ...
-    >>> batchidx # Remaining examples are discarded
+    >>> batchidx # Remaining examples are discarded. So, 10/3 batches are created.
     3
 
     Parameters
