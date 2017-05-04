@@ -106,7 +106,7 @@ class DataBatch(object):
     pad : int, optional
           The number of examples padded at the end of a batch. It is used when the
           total number of examples read is not divisible by the `batch_size`.
-          These are ignored in the result.
+          These extra padded examples are ignored in prediction.
     index : numpy.array, optional
           The example indices in this batch.
     bucket_key : int, optional
