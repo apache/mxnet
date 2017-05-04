@@ -227,7 +227,7 @@ def _get_source(lang, lines):
     return out
 
 def _get_src_download_btn(out_prefix, langs, lines):
-    btn = ''
+    btn = '<div class="btn-group" role="group">\n'
     for lang in langs:
         ipynb = out_prefix + '_' + lang + '.ipynb'
         with open(ipynb, 'w') as f:
@@ -238,8 +238,8 @@ def _get_src_download_btn(out_prefix, langs, lines):
         for f in [ipynb, src]:
             f = f.split('/')[-1]
             btn += '<button type="button" class="btn btn-default">'
-            btn += '<a href="%s">Download %s</button>\n' % (
-                f, f)
+            btn += '<a href="%s"><span class="glyphicon glyphicon-download-alt"></span> %s </a></button>\n' % (f, f)
+    btn += '</div>\n'
     return btn
 
 def add_buttons(app, docname, source):

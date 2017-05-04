@@ -3,7 +3,7 @@
 Besides the tensor computation interface [NDArray](./ndarray.ipynb), another
 main object in MXNet is the `Symbol` provided by `mxnet.symbol`, or `mxnet.sym`
 for short. A symbol represents a multi-output symbolic expression. They are
-composited by operators, such as simple matrix operations (e.g. “+”), or a
+composited by operators, such as simple matrix operations (e.g. "+"), or a
 neural network layer (e.g. convolution layer). An operator can take several
 input variables, produce more than one output variables, and have internal state
 variables. A variable can be either free, which we can bind with value later, or
@@ -271,7 +271,7 @@ properties.
 @mx.operator.register("softmax")
 class SoftmaxProp(mx.operator.CustomOpProp):
     def __init__(self):
-        # softmax is a loss layer so we don’t need gradient input
+        # softmax is a loss layer so we don't need gradient input
         # from layers above.
         super(SoftmaxProp, self).__init__(need_top_grad=False)
 

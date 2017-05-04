@@ -1,7 +1,5 @@
 # MXNet documentation
 
-MXNet's documents can be built by running `make html` in this folder.
-
 A built version of document is available at http://mxnet.io
 
 To build the documents locally, the easiest way is by using `docker`. First make
@@ -19,8 +17,8 @@ The built documents will be available at `docs/_build/html/`.
 
 Note:
 
-- If C++ codes have been changed, we suggest to remove the previous results before
-  building, namely run `rm -rf docs/_build/html/`.
+- If C++ codes have been changed, we suggest to remove the previous results to
+  triggle the rebuild for all pages, namely run `rm -rf docs/_build/html/`.
 
 - If CSS or javascript are changed, we often need to do a *force refresh* in the
   browser to clear the cache.
