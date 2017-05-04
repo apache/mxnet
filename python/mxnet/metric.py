@@ -437,13 +437,29 @@ def np(numpy_feval, name=None, allow_extra_outputs=False):
 # pylint: enable=invalid-name
 
 def create(metric, **kwargs):
-    """Create an evaluation metric.
+    """Creates evaluation metric from metric names or instances of EvalMetric
+    or a custom metric function.
 
     Parameters
     ----------
     metric : str or callable
-        The name of the metric, or a function
-        providing statistics given pred, label NDArray.
+        Specifies the metric to create.
+        This argument must be one of the below:
+
+        - Name of a metric.
+        - An instance of `EvalMetric`.
+        - A list, each element of which is a metric or a metric name.
+        - An evaluation function that computes custom metric for a given batch of
+          labels and predictions.
+
+    Examples
+    --------
+    >>> def custom_metric(label, pred):
+    ...     return np.mean(np.abs(label - pred))
+    ...
+    >>> metric1 = mx.metric.create('acc')
+    >>> metric2 = mx.metric.create(custom_metric)
+    >>> metric3 = mx.metric.create([metric1, metric2, 'rmse'])
     """
 
     if callable(metric):

@@ -18,13 +18,15 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Record IO - Pack free-format data in binary files ](http://mxnet.io/tutorials/python/record_io.html)
 
-- [Custom Image IO - Write high-performance data-pipelines using `mxnet.image`](http://mxnet.io/tutorials/python/advanced_img_io.html)
+- [Custom Image IO - Write high-performance data-pipelines using mxnet.image](http://mxnet.io/tutorials/python/advanced_img_io.html)
 
 #### Computer Vision
 
 - [Classifying Handwritten Digits with Convolutional Neural Networks](http://mxnet.io/tutorials/python/mnist.html)
 
-- Object Detection using [Faster R-CNN](https://github.com/dmlc/mxnet/tree/master/example/rcnn) and [SSD](https://github.com/dmlc/mxnet/tree/master/example/ssd)
+- [Object Detection using Faster R-CNN](https://github.com/dmlc/mxnet/tree/master/example/rcnn) 
+
+- [Object Detection using SSD](https://github.com/dmlc/mxnet/tree/master/example/ssd)
 
 - [Neural Art - Transfer the style of one image onto the content the content of another image](https://github.com/dmlc/mxnet/tree/master/example/neural-style)
 
@@ -63,7 +65,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Classify Real-world Images with a Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
 
-- [Dogs vs. Cats Classification with Fine-tuning](https://statist-bhfz.github.io/cats_dogs_finetune) ([source RMD](https://github.com/dmlc/mxnet/tree/master/docs/tutorials/r/CatsDogsFinetune.rmd))
+- [Dogs vs. Cats Classification with Fine-tuning](https://statist-bhfz.github.io/cats_dogs_finetune)
 
 - [Character-Level Language Modeling with LSTM RNNs](http://mxnet.io/tutorials/r/charRnnModel.html)
 

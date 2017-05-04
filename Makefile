@@ -278,7 +278,8 @@ test: $(TEST)
 lint: cpplint rcpplint jnilint pylint
 
 cpplint:
-	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package
+	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package \
+	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
 # ideally we want to check all, such as: python tools example tests
