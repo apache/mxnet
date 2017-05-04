@@ -85,8 +85,13 @@ class DataBatch(object):
     MXNet's data iterator returns a batch of data for each `next` call.
     This data contains `batch_size` number of examples.
 
-    If the input data consists of images, then these images should be stored in a
-    4-D matrix of shape ``(batch_size, num_channel, height, width)``.
+    If the input data consists of images, then shape of these images depend on
+    the `layout` attribute of `DataDesc` object in `provide_data` parameter.
+
+    If `layout` is set to 'NCHW' then, images should be stored in a 4-D matrix
+    of shape ``(batch_size, num_channel, height, width)``.
+    If `layout` is set to 'NHWC' then, images should be stored in a 4-D matrix
+    of shape ``(batch_size, height, width, num_channel)``.
     The channels are often in RGB order.
 
     Parameters
