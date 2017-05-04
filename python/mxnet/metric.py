@@ -557,7 +557,7 @@ class RMSE(EvalMetric):
     The root mean squared error is given by
 
     .. math::
-        \\sqrt{\\frac{\\sum_i^n |y_i - \\hat{y}_i|}{n}}
+        \\sqrt{\\frac{\\sum_i^n (y_i - \\hat{y}_i)^2}{n}}
 
     Examples
     --------
