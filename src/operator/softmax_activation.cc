@@ -34,7 +34,7 @@ This is the default mode.
 If `mode` = ``channel``, this operator will compute a k-class softmax at each position
 of each instance, where `k` = ``num_channel``. This mode can only be used when the input array
 has at least 3 dimensions.
-This can be used for fully convolutional network, image segmentation, etc.
+This can be used for `fully convolutional network`, `image segmentation`, etc.
 
 Example::
 
