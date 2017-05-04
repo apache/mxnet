@@ -51,11 +51,31 @@ class Symbol(SymbolBase):
                             'Grouped' if name is None else name)
 
     def __iter__(self):
-        """Returns all outputs in a list"""
+        """Returns a generator object of symbol.
+
+        One can loop through the returned object list to get outputs.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.Variable('a')
+        >>> b = mx.sym.Variable('b')
+        >>> c = a+b
+        >>> d = mx.sym.Variable('d')
+        >>> e = d+c
+        >>> out = e.get_children()
+        >>> out
+        <Symbol Grouped>
+        >>> for i in out:
+        ...     i
+        ...
+        <Symbol d>
+        <Symbol _plus0>
+        """
         return (self[i] for i in self.list_outputs())
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_add` instead. """
         if isinstance(other, Symbol):
@@ -70,6 +90,7 @@ class Symbol(SymbolBase):
 
     def __sub__(self, other):
         """x.__sub__(y) <=> x-y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_sub` instead. """
         if isinstance(other, Symbol):
@@ -80,7 +101,18 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rsub__(self, other):
-        """x.__rsub__(y) <=> y-x """
+        """x.__rsub__(y) <=> y-x
+
+        Only `NDArray` is supported for now.
+
+        Example usage:
+        ----------
+        >>> x = mx.nd.ones((2,3))*3
+        >>> y = mx.nd.ones((2,3))
+        >>> x.__rsub__(y).asnumpy()
+        array([[-2., -2., -2.],
+               [-2., -2., -2.]], dtype=float32)
+        """
         if isinstance(other, Number):
             return _internal._RMinusScalar(self, scalar=other)
         else:
@@ -88,6 +120,7 @@ class Symbol(SymbolBase):
 
     def __mul__(self, other):
         """x.__mul__(y) <=> x*y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_mul` instead. """
         if isinstance(other, Symbol):
@@ -102,6 +135,7 @@ class Symbol(SymbolBase):
 
     def __div__(self, other):
         """x.__div__(y) <=> x/y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_div` instead. """
         if isinstance(other, Symbol):
@@ -112,7 +146,18 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rdiv__(self, other):
-        """x.__rdiv__(y) <=> y/x """
+        """x.__rdiv__(y) <=> y/x
+
+        Only `NDArray` is supported for now.
+
+        Example usage:
+        ----------
+        >>> x = mx.nd.ones((2,3))*3
+        >>> y = mx.nd.ones((2,3))
+        >>> x.__rdiv__(y).asnumpy()
+        array([[ 0.33333334,  0.33333334,  0.33333334],
+               [ 0.33333334,  0.33333334,  0.33333334]], dtype=float32)
+        """
         if isinstance(other, Number):
             return _internal._RDivScalar(self, scalar=other)
         else:
@@ -126,6 +171,7 @@ class Symbol(SymbolBase):
 
     def __pow__(self, other):
         """x.__pow__(y) <=> x**y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_pow` instead. """
         if isinstance(other, Symbol):
@@ -136,7 +182,24 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __neg__(self):
-        """x.__neg__(y) <=> -x """
+        """x.__neg__() <=> -x
+
+        Numerical negative, element-wise.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.Variable('a')
+        >>> a
+        <Symbol a>
+        >>> -a
+        <Symbol _mulscalar0>
+        >>> a_neg = a.__neg__()
+        >>> c = a_neg*b
+        >>> ex = c.eval(ctx=mx.cpu(), a=mx.nd.ones([2,3]), b=mx.nd.ones([2,3]))
+        >>> ex[0].asnumpy()
+        array([[-1., -1., -1.],
+               [-1., -1., -1.]], dtype=float32)
+        """
         return self.__mul__(-1.0)
 
     def __copy__(self):
@@ -167,6 +230,7 @@ class Symbol(SymbolBase):
 
     def __eq__(self, other):
         """x.__eq__(y) <=> x==y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_equal` instead. """
         if isinstance(other, Symbol):
@@ -178,6 +242,7 @@ class Symbol(SymbolBase):
 
     def __ne__(self, other):
         """x.__ne__(y) <=> x!=y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_not_equal` instead. """
         if isinstance(other, Symbol):
@@ -189,6 +254,7 @@ class Symbol(SymbolBase):
 
     def __gt__(self, other):
         """x.__gt__(y) <=> x>y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_greater` instead. """
         if isinstance(other, Symbol):
@@ -200,6 +266,7 @@ class Symbol(SymbolBase):
 
     def __ge__(self, other):
         """x.__ge__(y) <=> x>=y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_greater_equal` instead. """
         if isinstance(other, Symbol):
@@ -211,6 +278,7 @@ class Symbol(SymbolBase):
 
     def __lt__(self, other):
         """x.__lt__(y) <=> x<y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_lesser` instead. """
         if isinstance(other, Symbol):
@@ -222,6 +290,7 @@ class Symbol(SymbolBase):
 
     def __le__(self, other):
         """x.__le__(y) <=> x<=y
+
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_lesser_equal` instead. """
         if isinstance(other, Symbol):
@@ -250,37 +319,67 @@ class Symbol(SymbolBase):
             self.handle = None
 
     def __call__(self, *args, **kwargs):
-        """Compose symbol on inputs.
+        """Composes symbol using inputs.
 
         x.__call__(y, z) <=> x(y,z)
+
+        This function internally calls `_compose` to compose the symbol and
+        returns the composed symbol.
+
+        Example usage:
+        ----------
+        >>> data = mx.symbol.Variable('data')
+        >>> net1 = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
+        >>> net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
+        >>> composed = net2(fc3_data=net1, name='composed')
+        >>> composed
+        <Symbol composed>
+        >>> called = net2.__call__(fc3_data=net1, name='composed')
+        >>> called
+        <Symbol composed>
 
         Parameters
         ----------
         args:
-            provide positional arguments
+            Positional arguments.
 
         kwargs:
-            provide keyword arguments
+            Keyword arguments.
+
         Returns
         -------
-        the resulting symbol
+            The resulting symbol.
         """
         s = self.__copy__()
         s._compose(*args, **kwargs)
         return s
 
     def _compose(self, *args, **kwargs):
-        """Compose symbol on inputs.
+        """Composes symbol using inputs.
 
-        This call mutates the current symbol.
+        x._compose(y, z) <=> x(y,z)
+
+        This function mutates the current symbol.
+
+        Example usage:
+        ----------
+        >>> data = mx.symbol.Variable('data')
+        >>> net1 = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
+        >>> net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
+        >>> net2
+        <Symbol fc3>
+        >>> net2._compose(fc3_data=net1, name='composed')
+        >>> net2
+        <Symbol composed>
 
         Parameters
         ----------
         args:
-            Positional arguments
+            Positional arguments.
 
         kwargs:
-            Keyword arguments
+            Keyword arguments.
+
         Returns
         -------
             The resulting symbol.
@@ -368,7 +467,15 @@ class Symbol(SymbolBase):
             return None
 
     def attr(self, key):
-        """Gets attribute string from the symbol. This function only works for non-grouped symbols.
+        """Returns the attribute string for corresponding input key from the symbol.
+
+        This function only works for non-grouped symbols.
+
+        Example usage:
+        ----------
+        >>> data = mx.sym.Variable('data', attr={'mood': 'angry'})
+        >>> data.attr('mood')
+        'angry'
 
         Parameters
         ----------
@@ -378,7 +485,7 @@ class Symbol(SymbolBase):
         Returns
         -------
         value : str
-            The desired attribute value, returns None if attribute does not exist.
+            The desired attribute value, returns ``None`` if the attribute does not exist.
         """
         ret = ctypes.c_char_p()
         success = ctypes.c_int()
@@ -392,10 +499,16 @@ class Symbol(SymbolBase):
     def list_attr(self, recursive=False):
         """Gets all attributes from the symbol.
 
+        Example usage:
+        ----------
+        >>> data = mx.sym.Variable('data', attr={'mood': 'angry'})
+        >>> data.list_attr()
+        {'mood': 'angry'}
+
         Returns
         -------
-        ret : dict of str to str
-            A dicitonary mapping attribute keys to values.
+        ret : Dict of str to str
+            A dictionary mapping attribute keys to values.
         """
         if recursive:
             raise DeprecationWarning("Symbol.list_attr with recursive=True has been deprecated. "
@@ -409,9 +522,17 @@ class Symbol(SymbolBase):
     def attr_dict(self):
         """Recursively gets all attributes from the symbol and its children.
 
+        Example usage:
+        ----------
+        >>> a = mx.sym.Variable('a', attr={'a1':'a2'})
+        >>> b = mx.sym.Variable('b', attr={'b1':'b2'})
+        >>> c = a+b
+        >>> c.attr_dict()
+        {'a': {'a1': 'a2'}, 'b': {'b1': 'b2'}}
+
         Returns
         -------
-        ret : dict of str to dict
+        ret : Dict of str to dict
             There is a key in the returned dict for every child with non-empty attribute set.
             For each symbol, the name of the symbol is its key in the dict
             and the correspond value is that symbol's attribute list (itself a dictionary).
@@ -565,6 +686,7 @@ class Symbol(SymbolBase):
         []
 
         Example of auxiliary states in `BatchNorm`.
+
         >>> data = mx.symbol.Variable('data')
         >>> weight = mx.sym.Variable(name='fc1_weight')
         >>> fc1  = mx.symbol.FullyConnected(data = data, weight=weight, name='fc1', num_hidden=128)
@@ -685,7 +807,7 @@ class Symbol(SymbolBase):
             return (arg_types, out_types, aux_types)
         else:
             return (None, None, None)
-        # pylint: enable=too-many-locals
+            # pylint: enable=too-many-locals
 
     def infer_shape(self, *args, **kwargs):
         """Infers the shapes of all arguments and all outputs given the known shapes of
@@ -770,7 +892,9 @@ class Symbol(SymbolBase):
             raise
 
     def infer_shape_partial(self, *args, **kwargs):
-        """Infers the shape partially. This functions works the same way as `infer_shape`,
+        """Infers the shape partially.
+
+        This functions works the same way as `infer_shape`,
         except that this function can return partial results.
 
         In the following example, information about fc2 is not available. So, `infer_shape`
@@ -879,7 +1003,7 @@ class Symbol(SymbolBase):
             return (arg_shapes, out_shapes, aux_shapes)
         else:
             return (None, None, None)
-        # pylint: enable=too-many-locals
+            # pylint: enable=too-many-locals
 
     def debug_str(self):
         """Gets a debug string.
@@ -898,17 +1022,19 @@ class Symbol(SymbolBase):
         """Saves symbol to a file.
 
         You can also use pickle to do the job if you only work on python.
-        The advantage of load/save is the file is language agnostic.
-        This means the file saved using save can be loaded by other language binding of mxnet.
-        You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
+        The advantage of `load`/`save` functions is that the file contents are language agnostic.
+        This means the model saved by one language binding can be loaded by a different
+        language binding of `MXNet`.
+        You also get the benefit of being able to directly load/save from cloud storage(S3, HDFS).
 
         Parameters
         ----------
         fname : str
-            The name of the file
-            - s3://my-bucket/path/my-s3-symbol
-            - hdfs://my-bucket/path/my-hdfs-symbol
-            - /path-to/my-local-symbol
+            The name of the file.
+
+            - "s3://my-bucket/path/my-s3-symbol"
+            - "hdfs://my-bucket/path/my-hdfs-symbol"
+            - "/path-to/my-local-symbol"
 
         See Also
         --------
@@ -990,12 +1116,29 @@ class Symbol(SymbolBase):
                     type_dict=None,
                     group2ctx=None,
                     **kwargs):
-        """Bind current symbol to get an executor, allocate all the ndarrays needed.
-        Allows specifying data types.
+        """Binds current symbol to get an executor, allocate all the arguments needed.
 
-        This function will ask user to pass in an `NDArray` of position
-        they like to bind to, and it will automatically allocate the ndarray
-        for arguments and auxiliary states that user did not specify explicitly.
+        This function simplifies the binding procedure. You need to specify only input data shapes.
+        Before binding the executor, the function allocates arguments and auxiliary states
+        that were not explicitly specified. Allows specifying data types.
+
+        Example usage:
+        ----------
+        >>> x = mx.sym.Variable('x')
+        >>> y = mx.sym.FullyConnected(x, num_hidden=4)
+        >>> exe = y.simple_bind(mx.cpu(), x=(5,4), grad_req=[])
+        >>> exe.forward()
+        [<NDArray 5x4 @cpu(0)>]
+        >>> exe.outputs[0].asnumpy()
+        array([[ 0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.]], dtype=float32)
+        >>> exe.arg_arrays
+        [<NDArray 5x4 @cpu(0)>, <NDArray 4x4 @cpu(0)>, <NDArray 4 @cpu(0)>]
+        >>> exe.grad_arrays
+        [<NDArray 5x4 @cpu(0)>, <NDArray 4x4 @cpu(0)>, <NDArray 4 @cpu(0)>]
 
         Parameters
         ----------
@@ -1004,24 +1147,25 @@ class Symbol(SymbolBase):
 
         grad_req: string
             {'write', 'add', 'null'}, or list of str or dict of str to str, optional
-            Specifies how we should update the gradient to the args_grad.
-            - 'write' means everytime gradient is write to specified args_grad NDArray.
-            - 'add' means everytime gradient is add to the specified NDArray.
+            To specify how we should update the gradient to the `args_grad`.
+
+            - 'write' means every time gradient is written to specified `args_grad` NDArray.
+            - 'add' means every time gradient is added to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
 
-        type_dict  : dict of str->numpy.dtype
+        type_dict  : Dict of str->numpy.dtype
             Input type dictionary, name->dtype
 
-        group2ctx : dict of string to mx.Context
+        group2ctx : Dict of string to mx.Context
             The dict mapping the `ctx_group` attribute to the context assignment.
 
-        kwargs : dict of str->shape
+        kwargs : Dict of str->shape
             Input shape dictionary, name->shape
 
         Returns
         -------
         executor : mxnet.Executor
-            The generated Executor
+            The generated executor
         """
         # pylint: disable=too-many-locals
         if type_dict is None:
@@ -1068,7 +1212,24 @@ class Symbol(SymbolBase):
 
     def bind(self, ctx, args, args_grad=None, grad_req='write',
              aux_states=None, group2ctx=None, shared_exec=None):
-        """Bind current symbol to get an executor.
+        """Binds the current symbol to an executor and returns it.
+
+        We first declare the computation and then bind to the data to run.
+        This function returns an executor which provides method `forward()` method for evaluation
+        and a `outputs()` method to get all the results.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.Variable('a')
+        >>> b = mx.sym.Variable('b')
+        >>> c = a + b
+        <Symbol _plus1>
+        >>> ex = c.bind(ctx=mx.cpu(), args={'a' : mx.nd.ones([2,3]), 'b' : mx.nd.ones([2,3])})
+        >>> ex.forward()
+        [<NDArray 2x3 @cpu(0)>]
+        >>> ex.outputs[0].asnumpy()
+        [[ 2.  2.  2.]
+        [ 2.  2.  2.]]
 
         Parameters
         ----------
@@ -1078,40 +1239,42 @@ class Symbol(SymbolBase):
         args : list of NDArray or dict of str to NDArray
             Input arguments to the symbol.
 
-            - If type is list of `NDArray`, the position is in the same order of list_arguments.
-            - If type is dict of str to `NDArray`, then it maps the name of arguments
+            - If the input type is a list of `NDArray`, the order should be same as the order
+              of `list_arguments()`.
+            - If the input type is a dict of str to `NDArray`, then it maps the name of arguments
               to the corresponding `NDArray`.
             - In either case, all the arguments must be provided.
 
         args_grad : list of NDArray or dict of str to `NDArray`, optional
-            When specified, args_grad provide NDArrays to hold
+            When specified, `args_grad` provides NDArrays to hold
             the result of gradient value in backward.
 
-            - If type is list of `NDArray`, the position is in the same order of list_arguments.
-            - If type is dict of str to `NDArray`, then it maps the name of arguments
+            - If the input type is a list of `NDArray`, the order should be same as the order
+              of `list_arguments()`.
+            - If the input type is a dict of str to `NDArray`, then it maps the name of arguments
               to the corresponding NDArray.
-            - When the type is dict of str to `NDArray`, users only need to provide the dict
-              for needed argument gradient.
+            - When the type is a dict of str to `NDArray`, one only need to provide the dict
+              for required argument gradient.
               Only the specified argument gradient will be calculated.
 
         grad_req : {'write', 'add', 'null'}, or list of str or dict of str to str, optional
-            Specifies how we should update the gradient to the args_grad.
+            To specify how we should update the gradient to the `args_grad`.
 
-            - 'write' means everytime gradient is write to specified args_grad `NDArray`.
+            - 'write' means everytime gradient is write to specified `args_grad` `NDArray`.
             - 'add' means everytime gradient is add to the specified NDArray.
             - 'null' means no action is taken, the gradient may not be calculated.
 
         aux_states : list of `NDArray`, or dict of str to `NDArray`, optional
-            Input auxiliary states to the symbol, only need to specify when
-            list_auxiliary_states is not empty.
+            Input auxiliary states to the symbol, only needed when the output of
+            `list_auxiliary_states()` is not empty.
 
-            - If type is list of `NDArray`, the position is in the same order
-              of `list_auxiliary_states`.
-            - If type is dict of str to `NDArray`, then it maps the name of `auxiliary_states`
-              to the corresponding `NDArray`,
-            - In either case, all the auxiliary_states need to be provided.
+            - If the input type is a list of `NDArray`, the order should be same as the order
+              of `list_auxiliary_states()`.
+            - If the input type is a dict of str to `NDArray`, then it maps the name of
+              `auxiliary_states` to the corresponding `NDArray`,
+            - In either case, all the auxiliary states need to be provided.
 
-        group2ctx : dict of string to mx.Context
+        group2ctx : Dict of string to mx.Context
             The dict mapping the `ctx_group` attribute to the context assignment.
 
         shared_exec : mx.executor.Executor
@@ -1122,18 +1285,18 @@ class Symbol(SymbolBase):
         Returns
         -------
         executor : Executor
-            The generated Executor
+            The generated executor
 
         Notes
         -----
-        Auxiliary states are special states of symbols that do not correspond
-        to an argument, and do not have gradient. But still be useful
+        Auxiliary states are the special states of symbols that do not correspond
+        to an argument, and do not have gradient but are still useful
         for the specific operations. Common examples of auxiliary states include
         the `moving_mean` and `moving_variance` states in `BatchNorm`.
         Most operators do not have auxiliary states and in those cases,
         this parameter can be safely ignored.
 
-        Users can give up gradient by using a dict in `args_grad` and only specify
+        One can give up gradient by using a dict in `args_grad` and only specify
         gradient they interested in.
         """
         # pylint: disable=too-many-locals, too-many-branches
@@ -1232,33 +1395,39 @@ class Symbol(SymbolBase):
     # pylint: enable= no-member
 
     def eval(self, ctx=cpu(), **kwargs):
-        """Evaluate a symbol given arguments
+        """Evaluates a symbol given arguments.
 
         The `eval` method combines a call to `bind` (which returns an executor)
         with a call to `forward` (executor method).
         For the common use case, where you might repeatedly evaluate with same arguments,
         eval is slow.
         In that case, you should call `bind` once and then repeatedly call forward.
-        Eval allows simpler syntax for less cumbersome introspection.
+        This function allows simpler syntax for less cumbersome introspection.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.Variable('a')
+        >>> b = mx.sym.Variable('b')
+        >>> c = a + b
+        >>> ex = c.eval(ctx = mx.cpu(), a = mx.nd.ones([2,3]), b = mx.nd.ones([2,3]))
+        >>> ex
+        [<NDArray 2x3 @cpu(0)>]
+        >>> ex[0].asnumpy()
+        array([[ 2.,  2.,  2.],
+               [ 2.,  2.,  2.]], dtype=float32)
 
         Parameters
         ----------
         ctx : Context
             The device context the generated executor to run on.
 
-        kwargs : list of NDArray or dict of str to NDArray
-            Input arguments to the symbol.
-
-            - If type is list of `NDArray`, the position is in the same order of `list_arguments`.
-            - If type is dict of str to `NDArray`, then it maps the name of arguments
-              to the corresponding `NDArray`.
-            - In either case, all the arguments must be provided.
+        kwargs : Keyword arguments of type `NDArray`
+            Input arguments to the symbol. All the arguments must be provided.
 
         Returns
         ----------
-        result :  a list of NDArrays corresponding to the values
-        taken by each symbol when evaluated on given args.
-        When called on a single symbol (not a group),
+        result :  a list of NDArrays corresponding to the values taken by each symbol when
+        evaluated on given args. When called on a single symbol (not a group),
         the result will be a list with one element.
         """
         return self.bind(ctx, kwargs).forward()
@@ -1266,27 +1435,34 @@ class Symbol(SymbolBase):
 
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None, **kwargs):
-    """Create a symbolic variable with specified name.
+    """Creates a symbolic variable with specified name.
+
+    Example usage:
+    ----------
+    >>> data = mx.sym.Variable('data', attr={'a': 'b'})
+    >>> data
+    <Symbol data>
 
     Parameters
     ----------
     name : str
-        Name of the variable.
-    attr : dict of string -> string
-        Additional attributes to set on the variable.
+        Variable name.
+    attr : Dict of strings
+        Additional attributes to set on the variable. Format {string : string}.
     shape : tuple
-        The shape of a variable. If specified, this will be used during shape inference.
-        If the user specified a different shape for this variable using
+        The shape of a variable. If specified, this will be used during the shape inference.
+        If one has specified a different shape for this variable using
         a keyword argument when calling shape inference, this shape information will be ignored.
     lr_mult : float
-        The learning rate muliplier for this variable.
+        The learning rate multiplier for input variable.
     wd_mult : float
-        Weight decay muliplier for this variable.
+        Weight decay multiplier for input variable.
     dtype : str or numpy.dtype
-        The dtype for this variable. If not specified, this value will be inferred.
+        The dtype for input variable. If not specified, this value will be inferred.
     init : initializer (mxnet.init.*)
-        Initializer for this variable to (optionally) override the default initializer
-    kwargs : other additional attribute variables
+        Initializer for this variable to (optionally) override the default initializer.
+    kwargs : Additional attribute variables
+        Additional attributes must start and end with double underscores.
 
     Returns
     -------
