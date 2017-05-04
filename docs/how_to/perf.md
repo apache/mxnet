@@ -209,9 +209,9 @@ To make sure you're handling input data in a reasonable way consider the followi
 * Data format: If you are using the `rec` format, then everything should be fine.
 * Decoding: By default, _MXNet_ uses 4 CPU threads for decoding images.
 This is often sufficient to decode more than 1K images per second.
-If  you are using a low-end CPU or your GPUs are very powerful, you can increase the number of threads.
+If you are using a low-end CPU or your GPUs are very powerful, you can increase the number of threads.
 * Storage location. Any local or distributed file system (HDFS, Amazon S3) should be fine.
-If multiple devices read the data from the network shared file system (NFS) at the same time, problems might occur.
+If multiple devices read the data from the shared network file system (NFS) at the same time, problems might occur.
 * Use a large batch size. We often choose the largest one that fits into GPU memory.
 A value that's too large can slow down convergence.
 For example, the safe batch size for CIFAR 10 is approximately 200, while for ImageNet 1K, the batch size can exceed 1K.

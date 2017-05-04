@@ -105,7 +105,7 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 
 ```bash
 $ sudo apt-get update
-$ sudo apt-get install wget
+$ sudo apt-get install -y wget python
 $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
@@ -193,7 +193,7 @@ $ sudo apt-get install -y libopencv-dev
 ```bash
 $ git clone --recursive https://github.com/dmlc/mxnet
 $ cd mxnet
-$ make -j USE_OPENCV=1 USE_BLAS=openblas
+$ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 ```
 
 *Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.
@@ -252,7 +252,7 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 
 ```bash
 $ sudo apt-get update
-$ sudo apt-get install wget
+$ sudo apt-get install -y wget python
 $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
@@ -394,7 +394,7 @@ $ sudo apt-get install -y libopencv-dev
 ```bash
 $ git clone --recursive https://github.com/dmlc/mxnet
 $ cd mxnet
-$ make -j USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
+$ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
 ```
 
 *Note* - USE_OPENCV, USE_BLAS, USE_CUDA, USE_CUDA_PATH AND USE_CUDNN are make file flags to set compilation options to use OpenCV, OpenBLAS, CUDA and cuDNN libraries. You can explore and use more compilation options in `make/config.mk`. Make sure to set USE_CUDA_PATH to right CUDA installation path. In most cases it is - */usr/local/cuda*.
