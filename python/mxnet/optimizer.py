@@ -154,18 +154,18 @@ class Optimizer(object):
         """
 
     def update(self, index, weight, grad, state):
-        """Update the weight given the corresponding gradient and state.
+        """Update the parameters given the corresponding gradients and state.
 
         Parameters
         ----------
         index : int
-            An unique index to identify the weight.
+            A unique index to identify the parameter.
         weight : NDArray
-            The weight
+            The parameter to be updated.
         grad : NDArray
-            The gradient of the objective with respect to this weight.
+            The gradient of the objective with respect to this parameter.
         state : any obj
-            The state associated with this weight.
+            The state returned by `create_state()`.
         """
         raise NotImplementedError()
 
