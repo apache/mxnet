@@ -103,14 +103,12 @@ class DataBatch(object):
           The example indices in this batch.
     bucket_key : int, optional
           The bucket key, used for bucketing module.
-    provide_data : list of (name, shape), optional
-          The *i*-th element describes the name and shape of ``data[i]``.
-          If not provided, by default, the order of `arg_names` of the executor is assumed.
-          When working with Module, the order of `data_names` argument is assumed.
-    provide_label : list of (name, shape), optional
-          The *i*-th element describes the name and shape of ``label[i]``.
-          If not provided, by default, the order of `arg_names` of the executor is assumed.
-          When working with Module, the order of `label_names` argument is assumed.
+    provide_data : list of `DataDesc`, optional
+          A list of `DataDesc` objects having attributes
+          data name, data shape, data type and layout.
+    provide_label : list of `DataDesc`, optional
+          A list of `DataDesc` objects having attributes
+          label name, label shape, label type and layout.
     """
     def __init__(self, data, label=None, pad=None, index=None,
                  bucket_key=None, provide_data=None, provide_label=None):
@@ -502,6 +500,10 @@ class NDArrayIter(DataIter):
      [[ 28.  29.]
       [ 30.  31.]]]
     (3L, 2L, 2L)
+    >>> dataiter.provide_data # Returns a list of `DataDesc`
+    [DataDesc[data,(3, 2L, 2L),<type 'numpy.float32'>,NCHW]]
+    >>> dataiter.provide_label # Returns a list of `DataDesc`
+    [DataDesc[softmax_label,(3, 1L),<type 'numpy.float32'>,NCHW]]
 
     In the above example, data is shuffled as `shuffle` parameter is set to `True`
     and remaining examples are discarded as `last_batch_handle` parameter is set to `discard`.
@@ -522,6 +524,12 @@ class NDArrayIter(DataIter):
     ...
     >>> batchidx # Remaining examples are discarded. So, 10/3 batches are created.
     3
+
+    `NDArrayIter` also supports multiple input and labels.
+
+    >>> data = {'data1':np.zeros(shape=(10,2,2)), 'data2':np.zeros(shape=(20,2,2))}
+    >>> label = {'label1':np.zeros(shape=(10,1)), 'label2':np.zeros(shape=(20,1))}
+    >>> dataiter = mx.io.NDArrayIter(data, label, 3, True, last_batch_handle='discard')
 
     Parameters
     ----------
