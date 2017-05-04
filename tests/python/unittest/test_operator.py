@@ -2991,6 +2991,48 @@ def test_pick():
     test_pick_helper(np.int32)
     test_pick_helper(np.float32)
 
+    
+def check_ctc_loss(acts, labels, loss_truth):
+    in_var = mx.sym.Variable('input')
+    labels_var = mx.sym.Variable('labels')
+    ctc = mx.sym.ctc_loss(in_var, labels_var)
+    acts_nd = mx.nd.array(acts, ctx=default_context())
+    labels_nd = mx.nd.array(labels, ctx=default_context())
+    exe = ctc.bind(ctx=default_context(), args=[acts_nd, labels_nd])
+    # test forward without grad calc
+    exe.forward(is_train=True)
+    outTest = exe.outputs[0]
+    # test forward without grad calc
+    exe.forward(is_train=False)
+    outTrain = exe.outputs[0]
+    # make sure losses calculated with both modes are the same
+    assert_almost_equal(outTest.asnumpy(), outTrain.asnumpy())
+    # test against ground truth, if available
+    if loss_truth is not None:
+        assert_almost_equal(outTest.asnumpy(), loss_truth)
+    # test grad
+    check_numeric_gradient(ctc, [acts, labels], grad_nodes=['input'], rtol=0.05, atol=1e-3)
+
+def test_ctc_loss():
+    # Test 1: check that batches are same + check against Torch WarpCTC
+    acts = np.array([
+        [[1.2, 3.4, 1.2, -0.1, -2.34], [1.2, 3.4, 1.2, -0.1, -2.34]],
+        [[0.1, 0.2, 0.3, 0.22, 0.123], [0.1, 0.2, 0.3, 0.22, 0.123]],
+        [[-15, -14, -13, -12, -11], [-15, -14, -13, -12, -11]]],
+                    dtype=np.float32)
+    labels = np.array([[2, 3, 0], [2, 3, 0]])
+    true_loss = np.array([4.04789, 4.04789], dtype=np.float32) # from Torch
+    check_ctc_loss(acts, labels, true_loss)
+    # Test 2:
+    acts2 = np.array([
+        [[-5, -4, -3, -2, -1], [1.2, 3.4, 1.2, -0.1, -2.34]],
+        [[-10, -9, -8, -7, -6], [0.1, 0.2, 0.3, 0.22, 0.123]],
+        [[-15, -14, -13, -12, -11], [-15, -14.2, -13.5, -12.2, -11.22]]], dtype=np.float32)
+    labels2 = np.array([[2, 3, 1], [2, 0, 0]], dtype=np.float32)
+    true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
+    check_ctc_loss(acts2, labels2, true_loss)
+
+    
 def test_quantization_op():
   min0 = mx.nd.array([0.0])
   max0 = mx.nd.array([1.0])
@@ -3003,6 +3045,7 @@ def test_quantization_op():
 
   assert same(qa.asnumpy(), qa_real.asnumpy())
   assert same(a_.asnumpy(),  a_real.asnumpy())
+
 
 def test_custom_op():
     class Sqr(mx.operator.CustomOp):
@@ -3110,6 +3153,7 @@ if __name__ == '__main__':
     test_tile()
     test_one_hot()
     test_where()
+    test_ctc_loss()
     test_quantization_op()
     test_relu()
     test_sigmoid()

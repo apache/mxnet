@@ -45,7 +45,7 @@ endif
 
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
-	CFLAGS += -g -O0 -DDMLC_LOG_FATAL_THROW=0
+	CFLAGS += -g -O0
 else
 	CFLAGS += -O3
 endif
@@ -278,7 +278,8 @@ test: $(TEST)
 lint: cpplint rcpplint jnilint pylint
 
 cpplint:
-	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package
+	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package \
+	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
 # ideally we want to check all, such as: python tools example tests

@@ -1,9 +1,11 @@
 META.yml
 MANIFEST
+examples/calculator.pl
 examples/plot_network.pl
 examples/char_lstm.pl
 examples/get_ptb_data.sh
 examples/lstm_bucketing.pl
+examples/mnist.pl
 examples/cudnn_lstm_bucketing.pl
 Makefile.PL
 Changes
