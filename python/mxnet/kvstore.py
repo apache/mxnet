@@ -224,16 +224,35 @@ class KVStore(object):
             ctypes.c_int(priority)))
 
     def set_optimizer(self, optimizer):
-        """ Registers an optimizer with the store.
+        """ Registers an optimizer with the kvstore.
 
-        When there are multiple machines, this operation (invoked from a worker node)
-        will pack the optimizer and send it to all servers. It returns after
+        For single machine, it updates the local optimizer.
+
+        For multiple machines, if this operation is invoked from a worker node,
+        it will pack the optimizer and send it to all servers. The function returns after
         this action is done.
 
         Parameters
         ----------
         optimizer : Optimizer
-            the optimizer.
+            the new optimizer for the store
+
+        Examples
+        --------
+
+        >>> kv = mx.kv.create()
+        >>> shape = (2, 2)
+        >>> weight = mx.nd.zeros(shape)
+        >>> kv.init(3, weight)
+        >>> # set the optimizer for kvstore as the default SGD optimizer
+        >>> kv.set_optimizer(mx.optimizer.SGD())
+        >>> grad = mx.nd.ones(shape)
+        >>> kv.push(3, grad)
+        >>> kv.pull(3, out = weight)
+        >>> # weight is updated via gradient descient
+        >>> weight.asnumpy()
+        array([[-0.01, -0.01],
+               [-0.01, -0.01]], dtype=float32)
         """
         is_worker = ctypes.c_int()
         check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
@@ -290,19 +309,21 @@ class KVStore(object):
         return size.value
 
     def save_optimizer_states(self, fname):
-        """Saves optimizer (updater) state to file.
+        """Saves the optimizer (updater) state to a file.
+
+        This is often used when checkpointing the current progress of training a module.
 
         Parameters
         ----------
         fname : str
-            Path to output states file.
+            Path to the output states file.
         """
         assert self._updater is not None, "Cannot save states for distributed training"
         with open(fname, 'wb') as fout:
             fout.write(self._updater.get_states())
 
     def load_optimizer_states(self, fname):
-        """Loads optimizer (updater) state from file.
+        """Loads the optimizer (updater) state from the file.
 
         Parameters
         ----------
@@ -379,12 +400,33 @@ class KVStore(object):
 def create(name='local'):
     """Creates a new KVStore.
 
+    For single machine training, there are two commonly used types:
+
+    ``local``: all gradients are copied to CPU memory and weights are updated there.
+
+    ``device``: both gradient aggregation and weight updates are run on GPUs. With this setting,
+    the KVStore also attempts to use GPU peer-to-peer communication,
+    potentially accelerating the communication.
+
+    For distributed training, KVStore also supports a number of types:
+
+    ``dist_sync``: it behaves similarly to ``local`` but exhibits one major difference.
+    With ``dist_sync``, batch-size now means the batch size used on each machine.
+    So if there are n machines and we use batch size b,
+    then ``dist_sync`` behaves like local with batch size n * b.
+
+    ``dist_device_sync``: it is identical to ``dist_sync`` with the difference similar
+    to ``device`` vs ``local``.
+
+    ``dist_async`` performs asynchronous updates.
+    The weight is updated whenever gradients are received from any machine. The update is atomic,
+    i.e., no two updates happen on the same weight at the same time.
+    However, the order is not guaranteed.
+
     Parameters
     ----------
-    name : {'local'}
+    name : {'local', 'device', 'dist_sync', 'dist_device_sync', 'dist_async'}
         The type of KVStore.
-        - local works for multiple devices on a single machine (single process).
-        - dist works for multiple machines (multiple processes).
     Returns
     -------
     kv : KVStore
