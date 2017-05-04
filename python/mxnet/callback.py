@@ -158,7 +158,8 @@ class Speedometer(object):
 
 
 class ProgressBar(object):
-    """Show a progress bar.
+    """Displays the progress of no. of batches processed
+       within each epoch.
 
     Parameters
     ----------
@@ -166,13 +167,21 @@ class ProgressBar(object):
         total batch size
     length: int
         length or progress bar
+
+    Examples
+    --------
+    >>> progress_bar = mx.callback.ProgressBar(total=2)
+    >>> mod.fit(data, num_epoch=5, batch_end_callback=progress_bar)
+    [========--------] 50.0%
+    [================] 100.0%
     """
     def __init__(self, total, length=80):
         self.bar_len = length
         self.total = total
 
     def __call__(self, param):
-        """Callback to Show progress bar."""
+        """Callback to show progress bar. Will be called by
+           batch_end_callback internally"""
         count = param.nbatch
         filled_len = int(round(self.bar_len * count / float(self.total)))
         percents = math.ceil(100.0 * count / float(self.total))
