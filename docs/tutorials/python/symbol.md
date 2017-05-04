@@ -24,7 +24,7 @@ The following code creates a two-layer perceptron network:
 
 Each symbol takes a (unique) string name. *Variable* often defines the inputs,
 or free variables. Other symbols take a symbol as their input (*data*), and
-might accept other hyper parameters, such as the number of hidden neurons
+might accept other hyperparameters, such as the number of hidden neurons
 (*num_hidden*) or the activation type (*act_type*).
 
 The symbol can be seen simply as a function taking several arguments whose names
@@ -89,7 +89,7 @@ Once you start building some bigger networks, you might want to name some
 symbols with a common prefix to outline the structure of your network. You can
 use the
 [Prefix](https://github.com/dmlc/mxnet/blob/master/python/mxnet/name.py)
-NameManager as follow:
+NameManager as follows:
 
 ```python
    >>> data = mx.sym.Variable("data")
@@ -172,7 +172,7 @@ statically during the bind operation.
 The coarse-grained operators are equivalent to CXXNet layers, which are
 extremely efficient.  We also provide fine-grained operators for more flexible
 composition. Because we are also performing more in-place memory allocation,
-MXNet can be more memory efficient than CXXNet, and achieves the same runtime,
+MXNet can be more memory-efficient than CXXNet, and achieves the same runtime,
 with greater flexibility.
 
 ## Next Steps

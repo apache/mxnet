@@ -39,7 +39,7 @@ on different devices:
     >>> a.copyto(b) # copy data from cpu to gpu
 ```
 
-We can also convert a `NDArray` to a `numpy.ndarray`:
+We can also convert an `NDArray` to a `numpy.ndarray`:
 
 ```python
     >>> a = mx.nd.ones((2, 3))
@@ -64,7 +64,7 @@ and vice versa:
 
 ## Basic Element-wise Operations
 
-By default, a `NDArray` performs element-wise operations:
+By default, an `NDArray` performs element-wise operations:
 
 ```python
     >>> a = mx.nd.ones((2, 3)) * 2
@@ -96,9 +96,9 @@ them onto the same device. The following example performs computations on GPU 0:
 
 ## Load and Save
 
-There are two ways to save data to (or load it from) disks easily. The first way
-uses `pickle`.  A `NDArray` is pickle compatible, which means that you can
-simply pickle the `NDArray` as you do with `numpy.ndarray`:
+There are two ways to save data to (or load it from) disk. The first way
+uses `pickle`.  `NDArray`s are pickle-compatible, which means that you can
+simply pickle an `NDArray` as you do with a `numpy.ndarray`:
 
  ```python
     >>> import mxnet as mx
@@ -112,7 +112,8 @@ simply pickle the `NDArray` as you do with `numpy.ndarray`:
      [ 2.  2.  2.]]
  ```
 
-The second way is to directly dump a list of `NDArray`s to disk in a binary format:
+The second way is to directly dump a list of `NDArray`s to disk in a binary
+format:
 
  ```python
     >>> a = mx.nd.ones((2,3))*2
@@ -149,18 +150,18 @@ HDFS, we can directly save to and load from them. For example:
  ```
 
 ## Automatic Parallelization
-A `NDArray` can automatically execute operations in parallel. This is desirable
+An `NDArray` can automatically execute operations in parallel. This is desirable
 when you use multiple resources, such as CPU and GPU cards, and CPU-to-GPU
 memory bandwidth.
 
 For example, if we write `a += 1` followed by `b += 1`, and `a` is on a CPU
 card while `b` is on a GPU card, then we will want to execute them in parallel
-to improve the efficiency. Furthermore, data copies between CPU and GPU are
+to improve efficiency. Furthermore, data copies between CPU and GPU are
 expensive, so we want to run them in parallel with other computations.
 
 However, finding statements that can be executed in parallel by eye is hard. In
 the following example, `a+=1` and `c*=3` can be executed in parallel, but
-`a+=1` and `b*=3` have to be sequentially executed.
+`a+=1` and `b*=3` must be executed sequentially.
 
  ```python
     a = mx.nd.ones((2,3))
