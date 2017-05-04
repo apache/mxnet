@@ -920,8 +920,7 @@ TEST(BATCH_NORM, Test2DBackward2DPlusLoadAndCompareLogic) {
 #endif
 
       static const std::vector< std::vector< std::vector<DType> > >
-        ___Test2DBackward2DPlusLoadAndCompareLogic_data_shape_1_1_2_1___ =
-        {
+        ___Test2DBackward2DPlusLoadAndCompareLogic_data_shape_1_1_2_1___ = {
           { /* kInput */
             { 1.0f, 2.0f },
             { 1.0f },
