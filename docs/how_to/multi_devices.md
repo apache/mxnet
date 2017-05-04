@@ -23,7 +23,11 @@ For the duration of this tutorial, we'll focus on data parallelism.
 
 ### Workload Partitioning
 
+<<<<<<< HEAD
 By default, _MXNet_ partitions a data batch evenly among the available GPUs.
+=======
+By default, `MXNet` partitions a data batch evenly among the available GPUs.
+>>>>>>> revised English on these documents
 Assume batch size *b* and *k* GPUs, then in one iteration
 each GPU will perform forward and backward on *b/k* examples. The
 gradients are then summed over all GPUs before updating the model.
@@ -68,7 +72,11 @@ weight initialization with different seeds, and CUDNN.
 
 We can control on which devices the gradient is aggregated
 and on which device the model is updated via [`KVStore`](http://mxnet.io/api/python/kvstore.html),
+<<<<<<< HEAD
 the _MXNet_ module that supports data communication.
+=======
+the `MXNet` module that supports data communication.
+>>>>>>> revised English on these documents
 One can either use `mx.kvstore.create(type)` to get an instance
 or use the program flag `--kv-store type`.
 
@@ -163,7 +171,11 @@ python ../../tools/launch.py -n 2 -H hosts --sync-dst-dir /tmp/mxnet \
 
 ### Use a Particular Network Interface
 
+<<<<<<< HEAD
 _MXNet_ often chooses the first available network interface.
+=======
+`MXNet` often chooses the first available network interface.
+>>>>>>> revised English on these documents
 But for machines that have multiple interfaces,
 we can specify which network interface to use for data
 communication by the environment variable `DMLC_INTERFACE`.
