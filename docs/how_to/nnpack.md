@@ -100,4 +100,4 @@ The results show that NNPACK can confer a speedup of about 2X~7X as compared to 
 
 ### Tips
 
-NNPACK aims to provide high-performance implementations of some layers for multi-core CPUs, so you can easily set the thread number by change environment value of `MXNET_CPU_NNPACK_NTHREADS`. However, we found that the performance is not proportional to the number of threads, and suggest using 4~8 threads when using NNPACK.
+NNPACK aims to provide high-performance implementations of some layers for multi-core CPUs, so you can easily set the thread number by changing the environmental variable `MXNET_CPU_NNPACK_NTHREADS`. However, we found that the performance is not proportional to the number of threads, and suggest using 4~8 threads when using NNPACK.
