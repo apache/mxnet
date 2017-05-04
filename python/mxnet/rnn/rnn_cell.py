@@ -92,13 +92,13 @@ class BaseRNNCell(object):
 
     Parameters
     ----------
-    prefix : str
+    prefix : str, optional
         prefix for names of layers
-        (this prefix is also used for names of weights 
-         if params is None i.e. if params are being created and not reused)
-    params : RNNParams or None
+        (this prefix is also used for names of weights if `params` is None 
+        i.e. if `params` are being created and not reused)
+    params : RNNParams or None, optional
         container for weight sharing between cells.
-        A new RNNParams container is created if params is None.
+        A new RNNParams container is created if `params` is None.
     """
     def __init__(self, prefix='', params=None):
         if params is None:
@@ -136,6 +136,11 @@ class BaseRNNCell(object):
             The type of this is same as the output of begin_state().
             This can be used as input state to the next timestep 
             of this RNN.
+
+        See Also
+        --------
+        begin_state: This function can provide the states for the first time step.
+        unroll: This function can be used to unroll the RNN for more than 1 time step.
         """
         raise NotImplementedError()
 
@@ -216,6 +221,10 @@ class BaseRNNCell(object):
         args : dict of str -> NDArray
             dictionary with unpacked weights associated with
             this cell.
+
+        See Also
+        --------
+        pack_weights: Performs the reverse operation of this function.
         """
         args = args.copy()
         if not self._gate_names:
@@ -277,14 +286,14 @@ class BaseRNNCell(object):
             If inputs is a list of symbols (usually output of
             previous unroll), they should all have shape
             (batch_size, ...).
-        begin_state : nested list of Symbol
+        begin_state : nested list of Symbol, optional
             input states. Created by begin_state()
             or output state of another cell. Created
             from begin_state() if None.
-        layout : str
+        layout : str, optional
             layout of input symbol. Only used if inputs
             is a single Symbol.
-        merge_outputs : bool
+        merge_outputs : bool, optional
             If False, return outputs as a list of Symbols.
             If True, concatenate output across time steps
             and return a single symbol with shape
