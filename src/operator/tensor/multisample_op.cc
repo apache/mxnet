@@ -177,7 +177,7 @@ Examples::
    sample_uniform(low, high, shape=(2)) = [[ 0.40451524,  0.18017688],
                                            [ 3.18687344,  3.68352246]]
 )code");
-} 
+}
 
 inline std::string normal_desc() {
   return std::string(R"code(Concurrent sampling from multiple 
@@ -204,7 +204,7 @@ Examples::
    sample_normal(mu, sigma, shape=(2)) = [[-0.56410581,  0.2928229 ],
                                           [ 0.95934606,  4.48287058]]
 )code");
-} 
+}
 
 inline std::string gamma_desc() {
   return std::string(R"code(Concurrent sampling from multiple 
@@ -231,7 +231,7 @@ Examples::
    sample_gamma(alpha, beta, shape=(2)) = [[ 0.        ,  0.        ],
                                            [ 2.25797319,  1.70734084]]
 )code");
-} 
+}
 
 inline std::string exponential_desc() {
   return std::string(R"code(Concurrent sampling from multiple 
@@ -257,7 +257,7 @@ Examples::
    sample_exponential(lam, shape=(2)) = [[ 0.51837951,  0.19866663],
                                          [ 0.09994757,  0.50447971]]
 )code");
-} 
+}
 
 inline std::string poisson_desc() {
   return std::string(R"code(Concurrent sampling from multiple 
@@ -284,7 +284,7 @@ Examples::
    sample_poisson(lam, shape=(2)) = [[  0.,   4.],
                                      [ 13.,   8.]]
 )code");
-} 
+}
 
 inline std::string negative_binomial_desc() {
   return std::string(R"code(Concurrent sampling from multiple 
@@ -312,7 +312,7 @@ Examples::
    sample_negative_binomial(k, p, shape=(2)) = [[ 15.,  50.],
                                                 [ 16.,  12.]]
 )code");
-} 
+}
 
 inline std::string generalized_negative_binomial_desc() {
   return std::string(R"code(Concurrent sampling from multiple 
@@ -340,7 +340,7 @@ Examples::
    sample_generalized_negative_binomial(mu, alpha, shape=(2)) = [[ 0.,  3.],
                                                                  [ 3.,  1.]]
 )code");
-} 
+}
 
 MXNET_OPERATOR_REGISTER_SAMPLING2(uniform, UniformSampler, "low", "high",
   "Lower bounds of the distributions.", "Upper bounds of the distributions.", uniform_desc)
