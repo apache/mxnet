@@ -56,7 +56,7 @@ def do_checkpoint(prefix, period=1):
 
     Example
     -------
-    >>> model.fit(X=trainingX, y=trainingY,
+    >>> module.fit(iterator, num_epoch=n_epoch,
     ... epoch_end_callback  = mx.callback.do_checkpoint("mymodel", 1))
     Start training with [cpu(0)]
     Epoch[0] Resetting Data Iterator
