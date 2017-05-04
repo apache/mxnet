@@ -144,7 +144,7 @@ struct BatchParam : public dmlc::Parameter<BatchParam> {
     DMLC_DECLARE_FIELD(batch_size)
         .describe("Batch size.");
     DMLC_DECLARE_FIELD(round_batch).set_default(true)
-        .describe("If or not use round robin to handle overflow batch.");
+        .describe("Whether to use round robin to handle overflow batch.");
   }
 };
 
@@ -159,11 +159,11 @@ struct ImageRecordParam: public dmlc::Parameter<ImageRecordParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageRecordParam) {
     DMLC_DECLARE_FIELD(shuffle).set_default(false)
-        .describe("If or not randomly shuffle data.");
+        .describe("Whether to shuffle data randomly.");
     DMLC_DECLARE_FIELD(seed).set_default(0)
         .describe("The random seed.");
     DMLC_DECLARE_FIELD(verbose).set_default(true)
-        .describe("If or not output verbose information.");
+        .describe("Whether to output verbose information.");
   }
 };
 
@@ -289,7 +289,7 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(PrefetcherParam) {
     DMLC_DECLARE_FIELD(prefetch_buffer).set_default(4)
-        .describe("Maximal Number of batches to prefetch");
+        .describe("Maximal Number of batches to prefetch.");
     DMLC_DECLARE_FIELD(dtype)
       .add_enum("float32", mshadow::kFloat32)
       .add_enum("float64", mshadow::kFloat64)
@@ -297,7 +297,7 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
       .add_enum("int32", mshadow::kInt32)
       .add_enum("uint8", mshadow::kUint8)
       .set_default(dmlc::optional<int>())
-      .describe("Output data type. None means no change");
+      .describe("Output data type. ``None`` means no change.");
   }
 };
 
