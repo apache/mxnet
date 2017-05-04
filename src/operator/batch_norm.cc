@@ -192,10 +192,6 @@ static inline void ComputeMean(const DeviceTensor3<DType> &tensor,
   }
 }
 
-static inline bool IsWriting(const OpReqType ort) {
-  return ort == kWriteTo || ort == kWriteInplace;
-}
-
 /*! \brief Compute the variance of each input channel, as well as update moving mean/variants */
 template<typename DType, typename AccReal>
 static inline void ComputeVariance(const DeviceTensor3<DType> &tensor,
@@ -292,7 +288,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
     }
   }
 
-  if (batchnorm::IsWriting(req[batchnorm::kData])) {
+  if (IsWriting(req[batchnorm::kData])) {
     // note that var is still invstd
     ForEachFast(inputData, outputData,
                 [w, b, mean, var](const size_t channel, const DType *in_data, DType *out_data) {
@@ -417,7 +413,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *stream,
     // May want to make this a param eventually
     const AccReal scale = 1.0f;
 
-    if (batchnorm::IsWriting(req[batchnorm::kGamma])) {
+    if (IsWriting(req[batchnorm::kGamma])) {
       if (!param_.fix_gamma) {
         gradWeightData[channel] = scale * dotp * invstd;
       } else {
@@ -425,7 +421,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *stream,
       }
     }
 
-    if (batchnorm::IsWriting(req[batchnorm::kBeta])) {
+    if (IsWriting(req[batchnorm::kBeta])) {
       gradBiasData[channel] = scale * sumGradOut;
     }
   }

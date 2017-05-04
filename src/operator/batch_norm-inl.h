@@ -71,6 +71,10 @@ class BatchNormOp : public Operator {
     this->param_ = param;
   }
 
+  static inline bool IsWriting(const OpReqType ort) {
+    return ort == kWriteTo || ort == kWriteInplace;
+  }
+
   /*!
    * \brief perform a forward operation of Operator, save the output to TBlob.
    * \param ctx runtime context available to this call
