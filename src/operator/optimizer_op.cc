@@ -68,6 +68,7 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
 .add_argument("mom", "NDArray-or-Symbol", "Momentum")
 .add_arguments(SGDMomParam::__FIELDS__());
 
+
 NNVM_REGISTER_OP(adam_update)
 .describe(R"code(Update function for Adam optimizer. Adam is seen as a generalization
 of AdaGrad.
@@ -105,9 +106,34 @@ It updates the weights using::
 .add_argument("var", "NDArray-or-Symbol", "Moving variance")
 .add_arguments(AdamParam::__FIELDS__());
 
+
 NNVM_REGISTER_OP(rmsprop_update)
-.describe(R"code(Update function for RMSProp optimizer. The RMSProp code follows the version in
-http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf Tieleman & Hinton, 2012.
+.describe(R"code(Update function for `RMSProp` optimizer.
+
+The `RMSprop` was developped from the need to resolve `Adagrad`'s radically
+diminishing learning rates.
+
+Define the Root Mean Square (RMS) error criterion of the gradient as
+:math:`RMS[g]_t = \sqrt{E[g^2]_t + \epsilon}`, where :math:`g` represents
+gradient and :math:`E[g^2]_t` is the decaying average over past squared gradient.
+
+The :math:`E[g^2]_t` is given by:
+
+.. math::
+  E[g^2]_t = \gamma * E[g^2]_{t-1} + (1-\gamma) * g_t^2
+
+The update step is
+
+.. math::
+  \theta_{t+1} = \theta_t - \frac{\eta}{RMS[g]_t} g_t
+
+The RMSProp code follows the version in
+http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
+Tieleman & Hinton, 2012.
+
+Hinton suggests the momentum term :math:`\gamma` to be 0.9 and the learning rate
+:math:`eta` to be 0.001.
+
 )code" ADD_FILELINE)
 .set_num_inputs(3)
 .set_num_outputs(1)
@@ -125,7 +151,11 @@ http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf Tieleman
 .add_arguments(RMSPropParam::__FIELDS__());
 
 NNVM_REGISTER_OP(rmspropalex_update)
-.describe(R"code(Update function for RMSPropAlex optimizer. The RMSPropAlex code follows the version in
+.describe(R"code(Update function for RMSPropAlex optimizer.
+
+
+
+The RMSPropAlex code follows the version in
 http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
 )code" ADD_FILELINE)
 .set_num_inputs(5)
