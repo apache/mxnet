@@ -43,8 +43,8 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output is specified, set to `dtype` of output. "
-              "If output is not specified and dtype is left undefined (i.e. dtype=None), "
+    .describe("`dtype` of the output. If output is specified, set to `dtype` of output. "
+              "If output is not specified and `dtype` is left undefined (i.e. ``dtype=None``), "
               "set to `float32`.");
   }
 };
@@ -73,8 +73,8 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output is specified, set to `dtype` of output. "
-              "If output is not specified and dtype is left undefined (i.e. dtype=None), "
+    .describe("`dtype` of the output. If output is specified, set to `dtype` of output. "
+              "If output is not specified and `dtype` is left undefined (i.e. ``dtype=None``), "
               "set to `float32`.");
   }
 };
@@ -103,8 +103,8 @@ struct SampleGammaParam : public dmlc::Parameter<SampleGammaParam> {
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output is specified, set to `dtype` of output. "
-              "If output is not specified and dtype is left undefined (i.e. dtype=None), "
+    .describe("`dtype` of the output. If output is specified, set to `dtype` of output. "
+              "If output is not specified and `dtype` is left undefined (i.e. ``dtype=None``), "
               "set to `float32`.");
   }
 };
@@ -130,8 +130,8 @@ struct SampleExponentialParam : public dmlc::Parameter<SampleExponentialParam> {
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output is specified, set to `dtype` of output. "
-              "If output is not specified and dtype is left undefined (i.e. dtype=None), "
+    .describe("`dtype` of the output. If output is specified, set to `dtype` of output. "
+              "If output is not specified and `dtype` is left undefined (i.e. ``dtype=None``), "
               "set to `float32`.");
   }
 };
@@ -157,8 +157,8 @@ struct SamplePoissonParam : public dmlc::Parameter<SamplePoissonParam> {
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output is specified, set to `dtype` of output. "
-              "If output is not specified and dtype is left undefined (i.e. dtype=None), "
+    .describe("`dtype` of the output. If output is specified, set to `dtype` of output. "
+              "If output is not specified and `dtype` is left undefined (i.e. ``dtype=None``), "
               "set to `float32`.");
   }
 };
@@ -187,8 +187,8 @@ struct SampleNegBinomialParam : public dmlc::Parameter<SampleNegBinomialParam> {
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output is specified, set to `dtype` of output. "
-              "If output is not specified and dtype is left undefined (i.e. dtype=None), "
+    .describe("`dtype` of the output. If output is specified, set to `dtype` of output. "
+              "If output is not specified and `dtype` is left undefined (i.e. ``dtype=None``), "
               "set to `float32`.");
   }
 };
@@ -217,8 +217,8 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output is specified, set to `dtype` of output. "
-              "If output is not specified and dtype is left undefined (i.e. dtype=None), "
+    .describe("`dtype` of the output. If output is specified, set to `dtype` of output. "
+              "If output is not specified and `dtype` is left undefined (i.e. ``dtype=None``), "
               "set to `float32`.");
   }
 };
