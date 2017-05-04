@@ -7,6 +7,7 @@ fi
 
 if [ ${TASK} == "installation" ]; then
     ./tests/jenkins/run_test_installation_docs.sh docs/get_started/install.md
+    exit $?
 fi
 
 if [ ${TASK} == "lint" ]; then
