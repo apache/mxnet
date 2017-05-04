@@ -64,7 +64,7 @@ class RNNParams(object):
     Parameters
     ----------
     prefix : str
-        All variables' name created by this container will
+        Names of all variables created by this container will
         be prepended with prefix
     """
     def __init__(self, prefix=''):
@@ -72,7 +72,7 @@ class RNNParams(object):
         self._params = {}
 
     def get(self, name, **kwargs):
-        """Get a variable with name or create a new one if missing.
+        """Get the variable given a name if one exists or create a new one if missing.
 
         Parameters
         ----------
@@ -93,11 +93,12 @@ class BaseRNNCell(object):
     Parameters
     ----------
     prefix : str
-        prefix for name of layers
-        (and name of weight if params is None)
+        prefix for names of layers
+        (this prefix is also used for names of weights 
+         if params is None i.e. if params are being created and not reused)
     params : RNNParams or None
         container for weight sharing between cells.
-        created if None.
+        A new RNNParams container is created if params is None.
     """
     def __init__(self, prefix='', params=None):
         if params is None:
@@ -117,21 +118,24 @@ class BaseRNNCell(object):
         self._counter = -1
 
     def __call__(self, inputs, states):
-        """Construct symbol for one step of RNN.
+        """Unroll the RNN for one time step.
 
         Parameters
         ----------
         inputs : sym.Variable
             input symbol, 2D, batch * num_units
-        states : sym.Variable
-            state from previous step or begin_state().
+        states : list of sym.Variable
+            RNN state from previous step or the output of begin_state().
 
         Returns
         -------
         output : Symbol
-            output symbol
-        states : Symbol
-            state to next step of RNN.
+            output symbol on unrolling this time step.
+        states : list of Symbols
+            states symbol is the new state of this RNN after this unrolling. 
+            The type of this is same as the output of begin_state().
+            This can be used as input state to the next timestep 
+            of this RNN.
         """
         raise NotImplementedError()
 
@@ -173,7 +177,7 @@ class BaseRNNCell(object):
         Returns
         -------
         states : nested list of Symbol
-            starting states for first RNN step
+            starting states for the first RNN step
         """
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
@@ -193,19 +197,25 @@ class BaseRNNCell(object):
 
     def unpack_weights(self, args):
         """Unpack fused weight matrices into separate
-        weight matrices
+        weight matrices. 
+
+        For example, say you use a module object mod to run a network that has an lstm cell.
+        In mod.get_params()[0], the lstm parameters are all present as a single big vector. 
+        cell.unpack_weights(mod.get_params()[0]) will unpack this vector into a dictionary of
+        more readable lstm parameters - c, f, i, o gates for i2h (input to hidden) and 
+        h2h (hidden to hidden) weights.
 
         Parameters
         ----------
         args : dict of str -> NDArray
             dictionary containing packed weights.
-            usually from Module.get_output()
+            usually from Module.get_params()[0].
 
         Returns
         -------
         args : dict of str -> NDArray
-            dictionary with weights associated to
-            this cell unpacked.
+            dictionary with unpacked weights associated with
+            this cell.
         """
         args = args.copy()
         if not self._gate_names:
@@ -222,7 +232,7 @@ class BaseRNNCell(object):
         return args
 
     def pack_weights(self, args):
-        """Pack separate weight matrices into fused
+        """Pack separate weight matrices into a single packed
         weight.
 
         Parameters
@@ -233,8 +243,8 @@ class BaseRNNCell(object):
         Returns
         -------
         args : dict of str -> NDArray
-            dictionary with weights associated to
-            this cell packed.
+            dictionary with packed weights associated with
+            this cell.
         """
         args = args.copy()
         if not self._gate_names:
