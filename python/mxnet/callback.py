@@ -162,9 +162,9 @@ class ProgressBar(object):
     Parameters
     ----------
     total: int
-        total batch size
+        total number of batches
     length: int
-        length or progress bar
+        maximum number of characters used to display the progress bar
 
     Examples
     --------
