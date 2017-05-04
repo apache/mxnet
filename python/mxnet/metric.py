@@ -572,7 +572,7 @@ class RMSE(EvalMetric):
         super(RMSE, self).__init__('rmse')
 
     def update(self, labels, preds):
-        """Update the internal evaluation result.
+        """Updates the internal evaluation result.
 
         Parameters
         ----------
