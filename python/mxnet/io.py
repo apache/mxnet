@@ -577,8 +577,16 @@ class MXDataIter(DataIter):
 
     Parameters
     ----------
-    handle : DataIterHandle
+    handle : DataIterHandle, required
         The handle to the underlying C++ Data Iterator.
+    data_name : str, optional
+        Data name. Default to "data".
+    label_name : str, optional
+        Label name. Default to "softmax_label".
+
+    See Also
+    --------
+    c_api.cc : The underlying C++ data iterator implementation.
     """
     def __init__(self, handle, data_name='data', label_name='softmax_label', **_):
         super(MXDataIter, self).__init__()
@@ -596,7 +604,6 @@ class MXDataIter(DataIter):
         self.provide_data = [DataDesc(data_name, data.shape, data.dtype)]
         self.provide_label = [DataDesc(label_name, label.shape, label.dtype)]
         self.batch_size = data.shape[0]
-
 
     def __del__(self):
         check_call(_LIB.MXDataIterFree(self.handle))
