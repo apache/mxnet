@@ -18,13 +18,13 @@ def check_label_shapes(labels, preds, shape=0):
                          "predictions {}".format(label_shape, pred_shape))
 
 class EvalMetric(object):
-    """Base class of all evaluation metrics.
+    """Base class for all evaluation metrics.
 
     .. note::
 
-        This is a base class that providing common metric interfaces.
-        You should not use it directly. You can create new metric classes on top
-        of this base class.
+        This is a base class that provides common metric interfaces.
+        One should not use this class directly, but instead create new metric
+        classes that extend it.
     """
 
     def __init__(self, name, num=None):
@@ -33,20 +33,20 @@ class EvalMetric(object):
         self.reset()
 
     def update(self, labels, preds):
-        """Update the internal evaluation result.
+        """Updates the internal evaluation result.
 
         Parameters
         ----------
-        labels : list of NDArray
+        labels : list of `NDArray`
             The labels of the data.
 
-        preds : list of NDArray
+        preds : list of `NDArray`
             Predicted values.
         """
         raise NotImplementedError()
 
     def reset(self):
-        """Clear the internal evaluation result to initial state."""
+        """Resets the internal evaluation result to initial state."""
         if self.num is None:
             self.num_inst = 0
             self.sum_metric = 0.0
@@ -55,7 +55,7 @@ class EvalMetric(object):
             self.sum_metric = [0.0] * self.num
 
     def get(self):
-        """Get the current evaluation result.
+        """Gets the current evaluation result.
 
         Returns
         -------
@@ -76,12 +76,12 @@ class EvalMetric(object):
             return (names, values)
 
     def get_name_value(self):
-        """Get zipped name and value pairs.
+        """Returns zipped name and value pairs.
 
         Returns
         -------
         list of tuples
-            A list of tuple of name and value.
+            A (name, value) tuple list.
         """
         name, value = self.get()
         if not isinstance(name, list):
@@ -95,7 +95,7 @@ class EvalMetric(object):
 
 
 class CompositeEvalMetric(EvalMetric):
-    """Manage multiple evaluation metrics.
+    """Manages multiple evaluation metrics.
 
     Examples
     --------
@@ -119,7 +119,7 @@ class CompositeEvalMetric(EvalMetric):
             self.metrics = []
 
     def add(self, metric):
-        """Add a child metric.
+        """Adds a child metric.
 
         Parameters
         ----------
@@ -129,12 +129,12 @@ class CompositeEvalMetric(EvalMetric):
         self.metrics.append(metric)
 
     def get_metric(self, index):
-        """Get a child metric.
+        """Returns a child metric.
 
         Parameters
         ----------
         index : int
-            Indexing the child metric in list of metrics.
+            Index of child metric in the list of metrics.
         """
         try:
             return self.metrics[index]
@@ -143,21 +143,21 @@ class CompositeEvalMetric(EvalMetric):
                 index, len(self.metrics)))
 
     def update(self, labels, preds):
-        """Update the internal evaluation result.
+        """Updates the internal evaluation result.
 
         Parameters
         ----------
-        labels : list of NDArray
+        labels : list of `NDArray`
             The labels of the data.
 
-        preds : list of NDArray
+        preds : list of `NDArray`
             Predicted values.
         """
         for metric in self.metrics:
             metric.update(labels, preds)
 
     def reset(self):
-        """Clear the internal evaluation result to initial state."""
+        """Resets the internal evaluation result to initial state."""
         try:
             for metric in self.metrics:
                 metric.reset()
@@ -165,7 +165,7 @@ class CompositeEvalMetric(EvalMetric):
             pass
 
     def get(self):
-        """Get the current evaluation result.
+        """Returns the current evaluation result.
 
         Returns
         -------
@@ -187,7 +187,7 @@ class CompositeEvalMetric(EvalMetric):
 ########################
 
 class Accuracy(EvalMetric):
-    """Calculate accuracy classification score.
+    """Computes accuracy classification score.
 
     Examples
     --------
@@ -203,14 +203,14 @@ class Accuracy(EvalMetric):
         super(Accuracy, self).__init__('accuracy')
 
     def update(self, labels, preds):
-        """Update the internal evaluation result.
+        """Updates the internal evaluation result.
 
         Parameters
         ----------
-        labels : list of NDArray
+        labels : list of `NDArray`
             The labels of the data.
 
-        preds : list of NDArray
+        preds : list of `NDArray`
             Predicted values.
         """
         check_label_shapes(labels, preds)
@@ -227,13 +227,13 @@ class Accuracy(EvalMetric):
             self.num_inst += len(pred_label.flat)
 
 class TopKAccuracy(EvalMetric):
-    """Calculate top k predictions accuracy.
+    """Computes top k predictions accuracy.
 
-    `TopKAccuracy` computes accuracy slightly different than `Accuracy`.
-    It says the prediction is true if the ground truth
-    label is top k predicted label.
+    `TopKAccuracy` differs from Accuracy in that it considers the prediction
+    to be ``True`` as long as the ground truth label is in the top K
+    predicated labels.
 
-    By default, ``top_k`` = 1, then `TopKAccuracy` is identical to `Accuracy`.
+    If `top_k` = ``1``, then `TopKAccuracy` is identical to `Accuracy`.
 
     Parameters
     ----------
@@ -262,14 +262,14 @@ class TopKAccuracy(EvalMetric):
         self.name += '_%d' % self.top_k
 
     def update(self, labels, preds):
-        """Update the internal evaluation result.
+        """Updates the internal evaluation result.
 
         Parameters
         ----------
-        labels : list of NDArray
+        labels : list of `NDArray`
             The labels of the data.
 
-        preds : list of NDArray
+        preds : list of `NDArray`
             Predicted values.
         """
         check_label_shapes(labels, preds)
@@ -291,7 +291,7 @@ class TopKAccuracy(EvalMetric):
             self.num_inst += num_samples
 
 class F1(EvalMetric):
-    """Calculate the F1 score of a binary classification problem.
+    """Computes the F1 score of a binary classification problem.
 
     The F1 score is equvalent to weighted average of the precision and recall,
     where the best value is 1.0 and the worst value is 0.0. The formula for F1 score is::
@@ -321,14 +321,14 @@ class F1(EvalMetric):
         super(F1, self).__init__('f1')
 
     def update(self, labels, preds):
-        """Update the internal evaluation result.
+        """Updates the internal evaluation result.
 
         Parameters
         ----------
-        labels : list of NDArray
+        labels : list of `NDArray`
             The labels of the data.
 
-        preds : list of NDArray
+        preds : list of `NDArray`
             Predicted values.
         """
         check_label_shapes(labels, preds)
@@ -372,13 +372,13 @@ class F1(EvalMetric):
 
 
 class Perplexity(EvalMetric):
-    """Calculate perplexity.
+    """Computes perplexity.
 
     Perplexity is a measurement of how well a probability distribution
     or model predicts a sample. A low perplexity indicates the model
     is good at predicting the sample.
 
-    The perplexity of the model q is defined as
+    The perplexity of a model q is defined as
 
     .. math::
         b^{\\big(-\\frac{1}{N} \\sum_{i=1}^N \\log_b q(x_i) \\big)}
@@ -389,8 +389,8 @@ class Perplexity(EvalMetric):
     :math:`q(x_i)` is the predicted value of its ground truth
     label on sample :math:`x_i`.
 
-    For example, we have three samples :math:`x_1, x_2, x_3` and their label
-    is :math:`[0, 1, 1]`.
+    For example, we have three samples :math:`x_1, x_2, x_3` and their labels
+    are :math:`[0, 1, 1]`.
     Suppose our model predicts :math:`q(x_1) = p(y_1 = 0 | x_1) = 0.3`
     and :math:`q(x_2) = 1.0`,
     :math:`q(x_3) = 0.6`. The perplexity of model q is
@@ -400,7 +400,7 @@ class Perplexity(EvalMetric):
     ----------
     ignore_label : int or None
         Index of invalid label to ignore when
-        counting. By default it is set to -1.
+        counting. By default, sets to -1.
         If set to `None`, it will include all entries.
     axis : int (default -1)
         The axis from prediction that was used to
@@ -422,14 +422,14 @@ class Perplexity(EvalMetric):
         self.axis = axis
 
     def update(self, labels, preds):
-        """Update the internal evaluation result.
+        """Updates the internal evaluation result.
 
         Parameters
         ----------
-        labels : list of NDArray
+        labels : list of `NDArray`
             The labels of the data.
 
-        preds : list of NDArray
+        preds : list of `NDArray`
             Predicted values.
         """
         assert len(labels) == len(preds)
@@ -450,12 +450,12 @@ class Perplexity(EvalMetric):
         self.num_inst += num
 
     def get(self):
-        """Get the current evaluation result.
+        """Returns the current evaluation result.
 
         Returns
         -------
         Tuple of (str, float)
-            Consist of name of the metric and evaluation result.
+            Representing name of the metric and evaluation result.
         """
         return (self.name, math.exp(self.sum_metric/self.num_inst))
 
@@ -464,7 +464,7 @@ class Perplexity(EvalMetric):
 ####################
 
 class MAE(EvalMetric):
-    """Calculate Mean Absolute Error (MAE) loss.
+    """Computes Mean Absolute Error (MAE) loss.
 
     The mean absolute error is given by
 
@@ -485,14 +485,14 @@ class MAE(EvalMetric):
         super(MAE, self).__init__('mae')
 
     def update(self, labels, preds):
-        """Update the internal evaluation result.
+        """Updates the internal evaluation result.
 
         Parameters
         ----------
-        labels : list of NDArray
+        labels : list of `NDArray`
             The labels of the data.
 
-        preds : list of NDArray
+        preds : list of `NDArray`
             Predicted values.
         """
         check_label_shapes(labels, preds)
@@ -509,7 +509,7 @@ class MAE(EvalMetric):
 
 
 class MSE(EvalMetric):
-    """Calculate Mean Squared Error (MSE) loss.
+    """Computes Mean Squared Error (MSE) loss.
 
     The mean squared error is given by
 
@@ -529,14 +529,14 @@ class MSE(EvalMetric):
         super(MSE, self).__init__('mse')
 
     def update(self, labels, preds):
-        """Update the internal evaluation result.
+        """Updates the internal evaluation result.
 
         Parameters
         ----------
-        labels : list of NDArray
+        labels : list of `NDArray`
             The labels of the data.
 
-        preds : list of NDArray
+        preds : list of `NDArray`
             Predicted values.
         """
         check_label_shapes(labels, preds)
@@ -552,7 +552,7 @@ class MSE(EvalMetric):
             self.num_inst += 1 # numpy.prod(label.shape)
 
 class RMSE(EvalMetric):
-    """Calculate Root Mean Squred Error (RMSE) loss.
+    """Computes Root Mean Squred Error (RMSE) loss.
 
     The root mean squared error is given by
 
@@ -576,10 +576,10 @@ class RMSE(EvalMetric):
 
         Parameters
         ----------
-        labels : list of NDArray
+        labels : list of `NDArray`
             The labels of the data.
 
-        preds : list of NDArray
+        preds : list of `NDArray`
             Predicted values.
         """
         check_label_shapes(labels, preds)
@@ -595,7 +595,7 @@ class RMSE(EvalMetric):
             self.num_inst += 1
 
 class CrossEntropy(EvalMetric):
-    """Calculate Cross Entropy loss.
+    """Computes Cross Entropy loss.
 
     The cross entropy is given by
 
@@ -622,14 +622,14 @@ class CrossEntropy(EvalMetric):
         self.eps = eps
 
     def update(self, labels, preds):
-        """Update the internal evaluation result.
+        """Updates the internal evaluation result.
 
         Parameters
         ----------
-        labels : list of NDArray
+        labels : list of `NDArray`
             The labels of the data.
 
-        preds : list of NDArray
+        preds : list of `NDArray`
             Predicted values.
         """
         check_label_shapes(labels, preds)
@@ -661,7 +661,7 @@ class Caffe(Torch):
         super(Caffe, self).__init__('caffe')
 
 class CustomMetric(EvalMetric):
-    """Calculate a customized evaluation metric.
+    """Computes a customized evaluation metric.
 
     The `feval` function can return a `tuple` of (sum_metric, num_inst) or return
     an `int` sum_metric.
@@ -697,14 +697,14 @@ class CustomMetric(EvalMetric):
         self._allow_extra_outputs = allow_extra_outputs
 
     def update(self, labels, preds):
-        """Update the internal evaluation result.
+        """Updates the internal evaluation result.
 
         Parameters
         ----------
-        labels : list of NDArray
+        labels : list of `NDArray`
             The labels of the data.
 
-        preds : list of NDArray
+        preds : list of `NDArray`
             Predicted values.
         """
         if not self._allow_extra_outputs:
