@@ -34,8 +34,8 @@ MXNET_OPERATOR_REGISTER_SAMPLE(random_uniform, SampleUniformParam)
 
 .. note:: The existing alias ``uniform`` is deprecated.
 
-Samples are uniformly distributed over the half-open interval [low, high)
-(includes low, but excludes high).
+Samples are uniformly distributed over the half-open interval *[low, high)*
+(includes *low*, but excludes *high*).
 
 Example::
 
@@ -53,7 +53,7 @@ MXNET_OPERATOR_REGISTER_SAMPLE(random_normal, SampleNormalParam)
 
 .. note:: The existing alias ``normal`` is deprecated.
 
-Samples are distributed according to a normal distribution parametrized by loc (mean) and scale (standard deviation).
+Samples are distributed according to a normal distribution parametrized by *loc* (mean) and *scale* (standard deviation).
 
 Example::
 
@@ -66,7 +66,7 @@ MXNET_OPERATOR_REGISTER_SAMPLE(random_gamma, SampleGammaParam)
 .add_alias("_sample_gamma")
 .describe(R"code(Draw random samples from a gamma distribution.
 
-Samples are distributed according to a gamma distribution parametrized by alpha (shape) and beta (scale).
+Samples are distributed according to a gamma distribution parametrized by *alpha* (shape) and *beta* (scale).
 
 Example::
 
@@ -79,7 +79,7 @@ MXNET_OPERATOR_REGISTER_SAMPLE(random_exponential, SampleExponentialParam)
 .add_alias("_sample_exponential")
 .describe(R"code(Draw random samples from an exponential distribution.
 
-Samples are distributed according to an exponential distribution parametrized by lambda (rate).
+Samples are distributed according to an exponential distribution parametrized by *lambda* (rate).
 
 Example::
 
@@ -92,7 +92,7 @@ MXNET_OPERATOR_REGISTER_SAMPLE(random_poisson, SamplePoissonParam)
 .add_alias("_sample_poisson")
 .describe(R"code(Draw random samples from a Poisson distribution.
 
-Samples are distributed according to a Poisson distribution parametrized by lambda (rate).
+Samples are distributed according to a Poisson distribution parametrized by *lambda* (rate).
 Samples will always be returned as a floating point data type.
 
 Example::
@@ -107,7 +107,7 @@ MXNET_OPERATOR_REGISTER_SAMPLE(random_negative_binomial, SampleNegBinomialParam)
 .describe(R"code(Draw random samples from a negative binomial distribution.
 
 Samples are distributed according to a negative binomial distribution parametrized by 
-k (limit of unsuccessful experiments) and p (failure probability in each experiment).
+*k* (limit of unsuccessful experiments) and *p* (failure probability in each experiment).
 Samples will always be returned as a floating point data type.
 
 Example::
@@ -122,7 +122,7 @@ MXNET_OPERATOR_REGISTER_SAMPLE(random_generalized_negative_binomial, SampleGenNe
 .describe(R"code(Draw random samples from a generalized negative binomial distribution.
 
 Samples are distributed according to a generalized negative binomial distribution parametrized by 
-mu (mean) and alpha (dispersion). alpha is defined as 1/k where k is the failure limit of the 
+*mu* (mean) and *alpha* (dispersion). *alpha* is defined as *1/k* where *k* is the failure limit of the 
 number of unsuccessful experiments (generalized to real numbers).
 Samples will always be returned as a floating point data type.
 
