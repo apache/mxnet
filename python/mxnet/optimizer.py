@@ -174,14 +174,24 @@ class Optimizer(object):
         raise DeprecationWarning
 
     def set_lr_mult(self, args_lr_mult):
-        """Set individual learning rate for each weight.
+        """Set an individual learning rate multiplier for each parameter.
+
+        If you specify a learning rate multiplier for a parameter, then
+        the learning rate for the parameter will be set as the product of
+        the global learning rate `self.lr` and its multiplier.
+
+        .. note:: The default learning rate multiplier of a `Symbol`
+            can be set with its ``__lr_mult__`` `attr`.
 
         Parameters
         ----------
         args_lr_mult : dict of string/int to float
-            Set the lr multipler for name/index to float.
-            Setting multipler by index is supported for backward compatibility,
-            but we recommend using name and symbol.
+            For each of its key-value entry,
+            the weight decay multipler for the parameter with corresponding name
+            or index in the key will be set as the given value.
+            Specifying a parameter by its index is supported for backward compatibility,
+            but we recommend to use name of the parameter or symbol.
+
         """
         self.lr_mult = {}
         if self.sym is not None:
@@ -192,17 +202,25 @@ class Optimizer(object):
         self.lr_mult.update(args_lr_mult)
 
     def set_wd_mult(self, args_wd_mult):
-        """Set individual weight decay for each weight.
+        """Set an individual weight decay multiplier for each parameter.
 
-        By default wd multipler is 0 for all params whose name doesn't
-        end with _weight, if param_idx2name is provided.
+        By default, if `param_idx2name` was provided in the
+        constructor, weight decay multipler is set as 0 for all
+        parameters whose name don't end with ``_weight`` or
+        ``_gamma``.
+
+        .. note:: The default weight decay multiplier for a `Symbol`
+            can be set with its ``__wd_mult__`` `attr`.
 
         Parameters
         ----------
         args_wd_mult : dict of string/int to float
-            Set the wd multipler for name/index to float.
-            Setting multipler by index is supported for backward compatibility,
-            but we recommend using name and symbol.
+            For each of its key-value entry,
+            the weight decay multipler for the parameter with corresponding name
+            or index in the key will be set as the given value.
+            Specifying a parameter by its index is supported for backward compatibility,
+            but we recommend to use name of the parameter or symbol.
+
         """
         self.wd_mult = {}
         for n in self.idx2name.values():
