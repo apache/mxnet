@@ -4,7 +4,6 @@ from __future__ import absolute_import
 
 import logging
 import math
-import sys
 import time
 from .model import save_checkpoint
 
@@ -134,8 +133,7 @@ class Speedometer(object):
 
 
 class ProgressBar(object):
-    """Displays the progress of no. of batches processed
-       within each epoch.
+    """Displays a progress bar, indicating the percentage of batches processed within each epoch.
 
     Parameters
     ----------
@@ -157,12 +155,12 @@ class ProgressBar(object):
 
     def __call__(self, param):
         """Callback to show progress bar. Will be called by
-           batch_end_callback internally"""
+           batch_end_callback internally."""
         count = param.nbatch
         filled_len = int(round(self.bar_len * count / float(self.total)))
         percents = math.ceil(100.0 * count / float(self.total))
         prog_bar = '=' * filled_len + '-' * (self.bar_len - filled_len)
-        sys.stdout.write('[%s] %s%s\r' % (prog_bar, percents, '%'))
+        logging.info('[%s] %s%s\r', prog_bar, percents, '%')
 
 
 class LogValidationMetricsCallback(object):
