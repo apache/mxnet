@@ -5,7 +5,6 @@ import os
 import json
 from recommonmark import transform
 import pypandoc
-from mdcode import CodeBlocks
 
 # start or end of a code block
 _CODE_MARK = re.compile('^([ ]*)```([\w]*)')
