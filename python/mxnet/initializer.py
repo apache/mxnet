@@ -340,7 +340,7 @@ class One(Initializer):
 
 @register
 class Constant(Initializer):
-    """Initialize the weights to a scalar value.
+    """Initializes the weights to a scalar value.
 
     Parameters
     ----------
