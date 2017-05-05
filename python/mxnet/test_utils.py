@@ -481,14 +481,14 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
         output symbol
     location : list of np.ndarray or dict of str to np.ndarray
         The evaluation point
-        
+
         - if type is list of np.ndarray
             Contains all the numpy arrays corresponding to `sym.list_arguments()`.
         - if type is dict of str to np.ndarray
             Contains the mapping between argument names and their values.
     expected : list of np.ndarray or dict of str to np.ndarray
         The expected output value
-        
+
         - if type is list of np.ndarray
             Contains arrays corresponding to exe.outputs.
         - if type is dict of str to np.ndarray
@@ -502,7 +502,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
             Contains the mapping between names of auxiliary states and their values.
     ctx : Context, optional
         running context
-    
+
     Example
     -------
     >>> shape = (2, 2)
@@ -572,7 +572,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         Gradient requirements. 'write', 'add' or 'null'.
     ctx : Context, optional
         Running context.
-        
+
     Example
     -------
     >>> lhs = mx.symbol.Variable('lhs')

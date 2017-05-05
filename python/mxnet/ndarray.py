@@ -406,7 +406,7 @@ fixed-size items.
         """Performs a synchronized copy from the source_array to the current array.
         This function blocks until all the pending read/write operations with respect
         to the current NDArray are finished and carry out the copy operation to the
-        current NDArray. This function does not work for source arrays living on GPUs. 
+        current NDArray. This function does not work for source arrays living on GPUs.
 
         Parameters
         ----------
@@ -437,11 +437,12 @@ fixed-size items.
             Starting inclusive index of slice in the first dim.
         stop : int
             Finishing exclusive index of slice in the first dim.
-        
+
         Returns
         -------
-            `NDArray` sharing the memory with the current one sliced from start to end in the first dim.
-        
+            `NDArray` sharing the memory with the current one sliced from
+            start to end in the first dim.
+
         Examples:
         >>> a = mx.nd.array([[1,2], [3, 4], [5, 6], [7, 8]])
         >>> a._slice(1, 2).asnumpy()
@@ -463,12 +464,12 @@ fixed-size items.
         ----------
         idx : int
             index for slicing the NDArray in the first dim.
-        
+
         Returns
         -------
         NDArray
             `NDArray` sharing the memory with the current one sliced at idx in the first dim.
-            
+
         Examples
         --------
         >>> a = mx.nd.array([[1,2], [3, 4]])
