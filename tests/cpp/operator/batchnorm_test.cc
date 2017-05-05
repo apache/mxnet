@@ -498,7 +498,7 @@ static test::op::OpInfo<OperatorProp, DType, AccReal> TestBatchNormOperatorForwa
 
   info.data_->initForward(*info.prop_, &info.in_type_);
 
-  info.data_->forward();
+  info.data_->forward(count);
 
 #if !DISABLE_VALIDATION
   if (!isUGS(kwargs)) {
@@ -678,7 +678,6 @@ static void timingTest(const std::string& label,
                        const bool isGPU,
                        const bool stochastic,
                        const int dim = 0,
-                       const bool includeBackward = true,
                        const size_t count = 1) {
   std::cout << std::endl << std::flush;
 
@@ -734,9 +733,7 @@ static void timingTest(const std::string& label,
         CHECK(false) << "rangedRand() returned unexpected value";
     }
     if (info.data_.get()) {
-      if (includeBackward) {
-        runOperatorBackward<DType, AccReal>(&info, count);
-      }
+      runOperatorBackward<DType, AccReal>(&info, count);
       timing += info.data_->timing_;
     }
   } while (false);
@@ -782,15 +779,15 @@ TEST(BATCH_NORM, TestTiming_2D) {
     mshadow::kFloat32, DType, AccReal,
     {
       timingTest<op::BatchNormV1Prop, DType, AccReal>("BatchNormV1Prop<cpu> 2D",
-                                                      false, false, 2, true, THISCOUNT);
+                                                      false, false, 2, THISCOUNT);
       timingTest<op::BatchNormProp, DType, AccReal>("BatchNormProp<cpu> 2D",
-                                                    false, false, 2, true, THISCOUNT);
+                                                    false, false, 2, THISCOUNT);
 #if MXNET_USE_CUDA
       if (test::unitTestsWithCuda) {
-//        timingTest<op::BatchNormV1Prop, DType, AccReal>("BatchNormV1Prop<gpu> 2D",
-//                                                        true, false, 2, true, THISCOUNT);
+        timingTest<op::BatchNormV1Prop, DType, AccReal>("BatchNormV1Prop<gpu> 2D",
+                                                        true, false, 2, THISCOUNT);
         timingTest<op::BatchNormProp, DType, AccReal>("BatchNormProp<gpu> 2D",
-                                                      true, false, 2, true, THISCOUNT);
+                                                      true, false, 2, THISCOUNT);
       }
 #endif
     });

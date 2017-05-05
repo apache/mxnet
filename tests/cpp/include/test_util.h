@@ -238,7 +238,8 @@ inline StreamType& print_blob(StreamType *_os, const TBlob &blob,
                 val = data_at<DType>(&blob, {thisBatch, thisChannel, dd, r, c});
                 break;
               default:
-                CHECK(false) << "Unsupported blob dimension" << dim;
+                LOG(FATAL) << "Unsupported blob dimension" << dim;
+                val = DType(0);
                 break;
             }
             os << repeatedStr("(", dd);
