@@ -85,8 +85,8 @@ DOCKER_IMG_NAME=$(echo "${DOCKER_IMG_NAME}" | sed -e 's/=/_/g' -e 's/,/-/g')
 DOCKER_IMG_NAME=$(echo "${DOCKER_IMG_NAME}" | tr '[:upper:]' '[:lower:]')
 
 # skip with_the_same_user for non-linux
-uname = `uname`
-if [[ $uname != "Linux" ]]; then
+uname=`uname`
+if [[ "$uname" == "Linux" ]]; then
     PRE_COMMAND="tests/ci_build/with_the_same_user"
 else
     PRE_COMMAND=""
