@@ -325,19 +325,19 @@ else
     echo "### Testing Virtualenv ###"
     echo "${virtualenv_commands}"
     echo
-    #eval ${virtualenv_commands}
+    eval ${virtualenv_commands}
 
     echo
     echo "### Testing Pip ###"
     echo "${pip_commands}"
     echo
-    #eval ${pip_commands}
+    eval ${pip_commands}
 
     echo
     echo "### Testing Docker ###"
     echo "${docker_commands}"
     echo
-    #eval ${docker_commands}
+    eval ${docker_commands}
 
     echo
     echo "### Testing Build From Source ###"
