@@ -8,7 +8,7 @@
 #include <cuda_runtime_api.h>
 #include <atomic>
 #include <algorithm>
-#include "../common/cuda_utils.h"
+#include <atomic>
 #include "batch_norm-inl.h"
 
 #define WRITE_DATA_FLAG       1
@@ -23,7 +23,6 @@
 #endif
 
 #include <mshadow/cuda/tensor_gpu-inl.cuh>
-#include <atomic>
 #include "../common/cuda_utils.h"
 
 /*! \brief inverse standard deviation <-> variance */
