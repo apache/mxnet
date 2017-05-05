@@ -154,14 +154,8 @@ def center_crop(src, size, interp=2):
     >>> cropped_image, (x, y, width, height) = mx.image.center_crop(image, (1000, 500))
     >>> cropped_image
     <NDArray 500x1000x3 @cpu(0)>
-    >>> x
-    1241
-    >>> y
-    910
-    >>> width
-    1000
-    >>> height
-    500
+    >>> x, y, width, height
+    (1241, 910, 1000, 500)
     """
 
     h, w, _ = src.shape
