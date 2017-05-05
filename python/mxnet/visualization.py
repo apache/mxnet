@@ -186,8 +186,9 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             ``node_attrs={"shape":"oval","fixedsize":"false"}``
             will use oval shape for nodes and allow variable sized nodes in the visualization.
     hide_weights: bool, optional
-        Whether to hide inputs with names of the form `*_weight` or `*_bias` for a cleaner
-        visualization. `hide_weights` is `true` by default.
+        If True (default), then inputs with names of form *_weight (corresponding to weight
+        tensors) or *_bias (corresponding to bias vectors) will be hidden for a cleaner
+        visualization.
 
     Returns
     -------
