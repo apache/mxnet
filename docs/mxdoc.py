@@ -273,7 +273,7 @@ def setup(app):
     app.connect('source-read', convert_table)
     app.connect('source-read', add_buttons)
     app.add_config_value('recommonmark_config', {
-        'url_resolver': lambda url: 'https://github.com/dmlc/mxnet/tree/master/docs/' + url,
+        'url_resolver': lambda url: 'http://mxnet.io/' + url,
         'enable_eval_rst': True,
     }, True)
     app.add_transform(transform.AutoStructify)

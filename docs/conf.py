@@ -26,7 +26,6 @@ github_doc_root = 'https://github.com/dmlc/mxnet/tree/master/docs/'
 doc_root = 'http://mxnet.io/'
 
 # add markdown parser
-# sphinx_util.MarkdownParser.github_doc_root = github_doc_root
 source_parsers = {
     '.md': parser.CommonMarkParser,
     '.Rmd': parser.CommonMarkParser

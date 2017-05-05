@@ -1,13 +1,13 @@
 # Introduction to Symbol - Neural network graphs and auto-differentiation
 
-Besides the tensor computation interface [NDArray](./ndarray.ipynb), another
-main object in MXNet is the `Symbol` provided by `mxnet.symbol`, or `mxnet.sym`
-for short. A symbol represents a multi-output symbolic expression. They are
-composited by operators, such as simple matrix operations (e.g. "+"), or a
-neural network layer (e.g. convolution layer). An operator can take several
-input variables, produce more than one output variables, and have internal state
-variables. A variable can be either free, which we can bind with value later, or
-an output of another symbol.
+Besides the tensor computation interface `NDArray`, another main object in MXNet
+is the `Symbol` provided by `mxnet.symbol`, or `mxnet.sym` for short. A symbol
+represents a multi-output symbolic expression. They are composited by operators,
+such as simple matrix operations (e.g. "+"), or a neural network layer
+(e.g. convolution layer). An operator can take several input variables, produce
+more than one output variables, and have internal state variables. A variable
+can be either free, which we can bind with value later, or an output of another
+symbol.
 
 ## Symbol Composition
 
@@ -35,7 +35,7 @@ d = a * b
 # matrix multiplication
 e = mx.sym.dot(a, b)
 # reshape
-f = mx.sym.Reshape(d+e, shape=(1,4))
+f = mx.sym.reshape(d+e, shape=(1,4))
 # broadcast
 g = mx.sym.broadcast_to(f, shape=(2,4))
 mx.viz.plot_network(symbol=g)
@@ -48,7 +48,6 @@ layers. The following codes construct a two layer fully connected neural work
 and then visualize the structure by given the input data shape.
 
 ```python
-# Output may vary
 net = mx.sym.Variable('data')
 net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=128)
 net = mx.sym.Activation(data=net, name='relu1', act_type="relu")
@@ -67,11 +66,11 @@ normalization layer, and Relu activation layer together:
 
 ```python
 def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0), name=None, suffix=''):
-    conv = mx.symbol.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, name='conv_%s%s' %(name, suffix))
-    bn = mx.symbol.BatchNorm(data=conv, name='bn_%s%s' %(name, suffix))
-    act = mx.symbol.Activation(data=bn, act_type='relu', name='relu_%s%s' %(name, suffix))
+    conv = mx.sym.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, name='conv_%s%s' %(name, suffix))
+    bn = mx.sym.BatchNorm(data=conv, name='bn_%s%s' %(name, suffix))
+    act = mx.sym.Activation(data=bn, act_type='relu', name='relu_%s%s' %(name, suffix))
     return act
-prev = mx.symbol.Variable(name="Previos Output")
+prev = mx.sym.Variable(name="Previos Output")
 conv_comp = ConvFactory(data=prev, num_filter=64, kernel=(7,7), stride=(2, 2))
 shape = {"Previos Output" : (128, 3, 28, 28)}
 mx.viz.plot_network(symbol=conv_comp, shape=shape)
@@ -92,19 +91,19 @@ def InceptionFactoryA(data, num_1x1, num_3x3red, num_3x3, num_d3x3red, num_d3x3,
     cd3x3 = ConvFactory(data=cd3x3r, num_filter=num_d3x3, kernel=(3, 3), pad=(1, 1), name=('%s_double_3x3_0' % name))
     cd3x3 = ConvFactory(data=cd3x3, num_filter=num_d3x3, kernel=(3, 3), pad=(1, 1), name=('%s_double_3x3_1' % name))
     # pool + proj
-    pooling = mx.symbol.Pooling(data=data, kernel=(3, 3), stride=(1, 1), pad=(1, 1), pool_type=pool, name=('%s_pool_%s_pool' % (pool, name)))
+    pooling = mx.sym.Pooling(data=data, kernel=(3, 3), stride=(1, 1), pad=(1, 1), pool_type=pool, name=('%s_pool_%s_pool' % (pool, name)))
     cproj = ConvFactory(data=pooling, num_filter=proj, kernel=(1, 1), name=('%s_proj' %  name))
     # concat
-    concat = mx.symbol.Concat(*[c1x1, c3x3, cd3x3, cproj], name='ch_concat_%s_chconcat' % name)
+    concat = mx.sym.Concat(*[c1x1, c3x3, cd3x3, cproj], name='ch_concat_%s_chconcat' % name)
     return concat
-prev = mx.symbol.Variable(name="Previos Output")
+prev = mx.sym.Variable(name="Previos Output")
 in3a = InceptionFactoryA(prev, 64, 64, 64, 64, 96, "avg", 32, name="in3a")
 mx.viz.plot_network(symbol=in3a, shape=shape)
 ```
 
 Finally we can obtain the whole network by chaining multiple inception
-modulas. A complete example is available at
-[mxnet/example/image-classification/symbol_inception-bn.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/symbol_inception-bn.py)
+modulas. See a complete example at
+[here](https://github.com/dmlc/mxnet/blob/master/example/image-classification/symbols/inception-bn.py).
 
 ### Group Multiple Symbols
 
@@ -125,10 +124,7 @@ group.list_outputs()
 ## Relations to NDArray
 
 As can be seen now, both Symbol and NDArray provide multi-dimensional array
-operations, such as `c=a+b` in MXNet. Sometimes users are confused which way to
-use. We briefly clarify the difference here, more detailed explanation are
-available
-[here](http://mxnet.readthedocs.io/en/latest/system/program_model.html).
+operations, such as `c=a+b` in MXNet. We briefly clarify the difference here.
 
 The `NDArray` provides an imperative programming alike interface, in which the
 computations are evaluated sentence by sentence. While `Symbol` is closer to
@@ -155,10 +151,6 @@ The pros for `Symbol`:
 - easy to save, load, and visualization
 - easy for the backend to optimize the computation and memory usage
 
-We will show on the [mixed programming tutorial](./mixed.ipynb) how these two
-interfaces can be used together to develop a complete training program. This
-tutorial will focus on the usage of Symbol.
-
 ## Symbol Manipulation
 
 One important difference of `Symbol` comparing to `NDArray` is that, we first
@@ -166,7 +158,7 @@ declare the computation, and then bind with data to run.
 
 In this section we introduce the functions to manipulate a symbol directly. But
 note that, most of them are wrapped nicely by the
-[`mx.module`](./module.ipynb). One can skip this section safely.
+`module` package. One can skip this section safely.
 
 ### Shape Inference
 
@@ -219,7 +211,7 @@ or use `save` and `load` directly. Different to the binary format chosen by
 ```python
 print(c.tojson())
 c.save('symbol-c.json')
-c2 = mx.symbol.load('symbol-c.json')
+c2 = mx.sym.load('symbol-c.json')
 c.tojson() == c2.tojson()
 ```
 
@@ -294,7 +286,7 @@ class SoftmaxProp(mx.operator.CustomOpProp):
 Finally, we can use `mx.sym.Custom` with the register name to use this operator
 
 ```python
-net = mx.symbol.Custom(data=prev_input, op_type='softmax')
+net = mx.sym.Custom(data=prev_input, op_type='softmax')
 ```
 
 ## Advanced Usages

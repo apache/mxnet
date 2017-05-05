@@ -1,43 +1,59 @@
-# Introduction to Module - MXNet's high-level interface for neural network training
+# Introduction to Module - MXNet's interface for neural network training
 
-We modularized commonly used codes for training and inference in the `module` (or `mod` for short) package. This package provides intermediate-level and high-level interface for executing predefined networks.
+We modularized commonly used codes for training and inference in the `module`
+(or `mod` for short) package. This package provides intermediate-level and
+high-level interface for executing predefined networks.
 
-## Basic Usage
+## Preliminary
 
-### Preliminary
+In this tutorial, we will use train a multilayer perception on a
+[UCI letter recognition](https://archive.ics.uci.edu/ml/datasets/letter+recognition)
+dataset to demonostrate the usage of `Module`
 
-In this tutorial, we will use a simple multilayer perception for 10 classes and a synthetic dataset.
+We first download and split the dataset, and then create iterators that return a
+batch of examples each time.
 
 ```python
+import logging
+logging.getLogger().setLevel(logging.INFO)
 import mxnet as mx
-from data_iter import SyntheticData
+import numpy as np
 
-# mlp
+fname = mx.test_utils.download('http://archive.ics.uci.edu/ml/machine-learning-databases/letter-recognition/letter-recognition.data')
+data = np.genfromtxt(fname, delimiter=',')[:,1:]
+label = np.array([ord(l.split(',')[0])-ord('A') for l in open(fname, 'r')])
+
+batch_size = 32
+ntrain = int(data.shape[0]*0.8)
+train_iter = mx.io.NDArrayIter(data[:ntrain, :], label[:ntrain], batch_size, shuffle=True)
+val_iter = mx.io.NDArrayIter(data[ntrain:, :], label[ntrain:], batch_size)
+```
+
+Next we define the network:
+
+```python
 net = mx.sym.Variable('data')
 net = mx.sym.FullyConnected(net, name='fc1', num_hidden=64)
 net = mx.sym.Activation(net, name='relu1', act_type="relu")
-net = mx.sym.FullyConnected(net, name='fc2', num_hidden=10)
+net = mx.sym.FullyConnected(net, name='fc2', num_hidden=26)
 net = mx.sym.SoftmaxOutput(net, name='softmax')
-# synthetic 10 classes dataset with 128 dimension
-data = SyntheticData(10, 128)
 mx.viz.plot_network(net)
 ```
 
+## High-level Interface
+
 ### Create Module
 
-The most widely used module class is `Module`, which wraps a `Symbol` and one or
-more `Executor`s.
+Now we are ready to introduce module. The commonly used module class is
+`Module`. We can construct amodule by specifying:
 
-We construct a module by specify
-
-- symbol : the network Symbol
+- symbol : the network definition
 - context : the device (or a list of devices) for execution
-- data_names : the list of data variable names
-- label_names : the list of label variable names
+- data_names : the list of input data variable names
+- label_names : the list of input label variable names
 
-One can refer to [data.ipynb](./data.ipynb) for more explanations about the last
-two arguments. Here we have only one data named `data`, and one label, with the
-name `softmax_label`, which is automatically named for us following the name
+For `net`, we have only one data named `data`, and one label, with the name
+`softmax_label`, which is automatically named for us following the name
 `softmax` we specified for the `SoftmaxOutput` operator.
 
 ```python
@@ -50,47 +66,37 @@ mod = mx.mod.Module(symbol=net,
 ### Train, Predict, and Evaluate
 
 Modules provide high-level APIs for training, predicting and evaluating. To fit
-a module, simply call the `fit` function with some `DataIters`.
+a module, simply call the `fit` function.
+
 
 ```python
-import logging
-logging.basicConfig(level=logging.INFO)
-
-batch_size=32
-mod.fit(data.get_iter(batch_size),
-        eval_data=data.get_iter(batch_size),
+mod.fit(train_iter,
+        eval_data=val_iter,
         optimizer='sgd',
         optimizer_params={'learning_rate':0.1},
         eval_metric='acc',
-        num_epoch=5)
+        num_epoch=8)
 ```
 
-To predict with a module, simply call `predict()` with a `DataIter`. It will collect and return all the prediction results.
+To predict with a module, simply call `predict()`. It will collect and return
+all the prediction results.
 
 ```python
-y = mod.predict(data.get_iter(batch_size))
-'shape of predict: %s' % (y.shape,)
+y = mod.predict(val_iter)
+assert y.shape == (4000, 26)
 ```
 
-Another convenient API for prediction in the case where the prediction results might be too large to fit in the memory is `iter_predict`:
-
-
-```python
-for preds, i_batch, batch in mod.iter_predict(data.get_iter(batch_size)):
-    pred_label = preds[0].asnumpy().argmax(axis=1)
-    label = batch.label[0].asnumpy().astype('int32')
-    print('batch %d, accuracy %f' % (i_batch, float(sum(pred_label==label))/len(label)))
-```
-
-If we do not need the prediction outputs, but just need to evaluate on a test set, we can call the `score()` function with a `DataIter` and a `EvalMetric`:
+If we do not need the prediction outputs, but just need to evaluate on a test
+set, we can call the `score()` function:
 
 ```python
-mod.score(data.get_iter(batch_size), ['mse', 'acc'])
+mod.score(val_iter, ['mse', 'acc'])
 ```
 
 ### Save and Load
 
-We can save the module parameters in each training epoch by using a checkpoint callback.
+We can save the module parameters in each training epoch by using a checkpoint
+callback.
 
 ```python
 # construct a callback function to save checkpoints
@@ -98,7 +104,7 @@ model_prefix = 'mx_mlp'
 checkpoint = mx.callback.do_checkpoint(model_prefix)
 
 mod = mx.mod.Module(symbol=net)
-mod.fit(data.get_iter(batch_size), num_epoch=5, epoch_end_callback=checkpoint)
+mod.fit(train_iter, num_epoch=5, epoch_end_callback=checkpoint)
 ```
 
 To load the saved module parameters, call the `load_checkpoint` function. It
@@ -108,7 +114,7 @@ parameters into the module.
 
 ```python
 sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, 3)
-print(sym.tojson() == net.tojson())
+assert sym.tojson() == net.tojson()
 
 # assign the loaded parameters to the module
 mod.set_params(arg_params, aux_params)
@@ -120,131 +126,45 @@ parameters, so that `fit()` knows to start from those parameters instead of
 initializing from random. We also set the `begin_epoch` so that so that `fit()`
 knows we are resuming from a previous saved epoch.
 
+
 ```python
 mod = mx.mod.Module(symbol=sym)
-mod.fit(data.get_iter(batch_size),
-        num_epoch=5,
+mod.fit(train_iter,
+        num_epoch=8,
         arg_params=arg_params,
         aux_params=aux_params,
         begin_epoch=3)
 ```
 
-## Module as a computation "machine"
+## Intermediate-level Interface
 
 We already seen how to module for basic training and inference. Now we are going
-to show a more flexiable usage of module.
-
-A module represents a computation component. The design purpose of a module is
-that it abstract a computation "machine", that accpets `Symbol` programs and
-data, and then we can run forward, backward, update parameters, etc.
-
-We aim to make the APIs easy and flexible to use, especially in the case when we
-need to use imperative API to work with multiple modules (e.g. stochastic depth
-network).
-
-A module has several states:
-- **Initial state**. Memory is not allocated yet, not ready for computation yet.
-- **Binded**. Shapes for inputs, outputs, and parameters are all known, memory
-  allocated, ready for computation.
-- **Parameter initialized**. For modules with parameters, doing computation
-  before initializing the parameters might result in undefined outputs.
-- **Optimizer installed**. An optimizer can be installed to a module. After
-  this, the parameters of the module can be updated according to the optimizer
-  after gradients are computed (forward-backward).
-
-The following codes implement a simplified `fit()`. Here we used other
-components including initializer, optimizer, and metric, which are explained in
-other notebooks.
+to show a more flexiable usage of module. Instead of calling the high-level
+`fit` and `predict`, we can write a training program with the intermediate-level
+interface such as `forward` and `backward`.
 
 
 ```python
-# initial state
+# create module
 mod = mx.mod.Module(symbol=net)
-
-# bind, tell the module the data and label shapes, so
-# that memory could be allocated on the devices for computation
-train_iter = data.get_iter(batch_size)
+# allocate memory by given the input data and lable shapes
 mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
-
-# init parameters
-mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
-
-# init optimizer
+# initialize parameters by uniform random numbers
+mod.init_params(initializer=mx.init.Uniform(scale=.1))
+# use SGD with learning rate 0.1 to train
 mod.init_optimizer(optimizer='sgd', optimizer_params=(('learning_rate', 0.1), ))
-
 # use accuracy as the metric
 metric = mx.metric.create('acc')
-
-# train one epoch, i.e. going over the data iter one pass
-for batch in train_iter:
-    mod.forward(batch, is_train=True)       # compute predictions
-    mod.update_metric(metric, batch.label)  # accumulate prediction accuracy
-    mod.backward()                          # compute gradients
-    mod.update()                            # update parameters using SGD
-
-# training accuracy
-print(metric.get())
+# train 5 epoch, i.e. going over the data iter one pass
+for epoch in range(5):
+    train_iter.reset()
+    metric.reset()
+    for batch in train_iter:
+        mod.forward(batch, is_train=True)       # compute predictions
+        mod.update_metric(metric, batch.label)  # accumulate prediction accuracy
+        mod.backward()                          # compute gradients
+        mod.update()                            # update parameters
+    print('Epoch %d, Training %s' % (epoch, metric.get()))
 ```
-
-Beside the operations, a module provides a lot of useful information.
-
-basic names:
-- **data_names**: list of string indicating the names of the required data.
-- **output_names**: list of string indicating the names of the outputs.
-
-state information
-- **binded**: bool, indicating whether the memory buffers needed for computation
-  has been allocated.
-- **for_training**: whether the module is binded for training (if binded).
-- **params_initialized**: bool, indicating whether the parameters of this
-  modules has been initialized.
-- **optimizer_initialized**: bool, indicating whether an optimizer is defined
-  and initialized.
-- **inputs_need_grad**: bool, indicating whether gradients with respect to the
-  input data is needed. Might be useful when implementing composition of
-  modules.
-
-input/output information
-- **data_shapes**: a list of (name, shape). In theory, since the memory is
-  allocated, we could directly provide the data arrays. But in the case of data
-  parallelization, the data arrays might not be of the same shape as viewed from
-  the external world.
-- **label_shapes**: a list of (name, shape). This might be [] if the module does
-  not need labels (e.g. it does not contains a loss function at the top), or a
-  module is not binded for training.
-- **output_shapes**: a list of (name, shape) for outputs of the module.
-
-parameters (for modules with parameters)
-- **get_params()**: return a tuple (arg_params, aux_params). Each of those is a
-  dictionary of name to NDArray mapping. Those NDArray always lives on CPU. The
-  actual parameters used for computing might live on other devices (GPUs), this
-  function will retrieve (a copy of) the latest parameters.
-- **get_outputs()**: get outputs of the previous forward operation.
-- **get_input_grads()**: get the gradients with respect to the inputs computed
-  in the previous backward operation.
-
-
-
-```python
-print((mod.data_shapes, mod.label_shapes, mod.output_shapes))
-print(mod.get_params())
-```
-
-## More on Modules
-
-Module simplifies the implementation of new modules. For example
-
-- [`SequentialModule`](https://github.com/dmlc/mxnet/blob/master/python/mxnet/module/sequential_module.py)
-  can chain multiple modules together
-- [`BucketingModule`](https://github.com/dmlc/mxnet/blob/master/python/mxnet/module/bucketing_module.py)
-  is able to handle bucketing, which is useful for various length inputs and
-  outputs
-- [`PythonModule`](https://github.com/dmlc/mxnet/blob/master/python/mxnet/module/python_module.py)
-  implements many APIs as empty function to ease users to implement customized
-  modules.
-
-See also
-[example/module](https://github.com/dmlc/mxnet/tree/master/example/module) for a
-list of code examples using the module API.
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

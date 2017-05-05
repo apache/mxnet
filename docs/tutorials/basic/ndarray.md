@@ -1,6 +1,6 @@
 # Introduction to NDArray - Imperative tensor operations on CPU
 
-In _MXNet_, `NDArray` is the core datastructure for all mathematical
+In _MXNet_, `NDArray` is the core data structure for all mathematical
 computations.  An `NDArray` represents a multidimensional, fixed-size homogenous
 array.  If you're familiar with the scientific computing python package
 [NumPy](http://www.numpy.org/), you might notice that `mxnet.ndarray` is similar
@@ -13,8 +13,6 @@ hardware configurations, including CPU, GPU, and multi-GPU machines.  _MXNet_
 also scales to distribute systems in the cloud.  Second, MXNet's NDArray
 executes code lazily, allowing it to automatically parallelize multiple
 operations across the available hardware.
-
-## The basics
 
 An `NDArray` is a multidimensional array of numbers with the same type.  We
 could represent the coordinates of a point in 3D space, e.g. `[2, 1, 6]` as a 1D
@@ -40,7 +38,7 @@ Each NDArray supports some important attributes that you'll often want to query:
 - **ndarray.context**: The device on which this array is stored, e.g. `cpu()` or
   `gpu(1)`.
 
-### Array Creation
+## Array Creation
 
 There are a few different ways to create an `NDArray`.
 
@@ -94,7 +92,7 @@ c = mx.nd.full((2,3), 7)
 d = mx.nd.empty((2,3))
 ```
 
-### Printing Arrays
+## Printing Arrays
 
 When inspecting the contents of an `NDArray`, it's often convenient to first
 extract its contents as a `numpy.ndarray` using the `asnumpy` function.  Numpy
@@ -110,7 +108,7 @@ b = mx.nd.arange(18).reshape((3,2,3))
 b.asnumpy()
 ```
 
-### Basic Operations
+## Basic Operations
 
 When applied to NDArrays, the standard arithmetic operators apply *elementwise*
 calculations. The returned value is a new array whose content contains the
@@ -150,7 +148,7 @@ b += a
 b.asnumpy()
 ```
 
-### Indexing and Slicing
+## Indexing and Slicing
 
 The slice operator `[]` applies on axis 0.
 
@@ -167,7 +165,7 @@ d = mx.nd.slice_axis(a, axis=1, begin=1, end=2)
 d.asnumpy()
 ```
 
-### Shape Manipulation
+## Shape Manipulation
 
 Using `reshape`, we can manipulate any arrays shape as long as the size remains
 unchanged.
@@ -188,7 +186,7 @@ c = mx.nd.concatenate([a,b])
 c.asnumpy()
 ```
 
-### Reduce
+## Reduce
 
 Some functions, like `sum` and `mean` reduce arrays to scalars.
 
@@ -205,7 +203,7 @@ c = mx.nd.sum_axis(a, axis=1)
 c.asnumpy()
 ```
 
-### Broadcast
+## Broadcast
 
 We can also broadcast an array. Broadcasting operations, duplicate an array's
 value along an axis with length 1. The following code broadcasts along axis 1:
@@ -234,7 +232,7 @@ c = a + b
 c.asnumpy()
 ```
 
-### Copies
+## Copies
 
 When assigning an NDArray to another Python variable, we copy a reference to the
 *same* NDArray. However, we often need to maek a copy of the data, so that we
