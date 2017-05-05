@@ -404,14 +404,25 @@ fixed-size items.
 
     def _sync_copyfrom(self, source_array):
         """Performs a synchronized copy from the source_array to the current array.
+        This is called through x[:] = source_array, where the source_array
+        is a numpy.ndarray or array_like object.
         This function blocks until all the pending read/write operations with respect
         to the current NDArray are finished and carry out the copy operation to the
-        current NDArray. This function does not work for source arrays living on GPUs.
+        current NDArray.
 
         Parameters
         ----------
         source_array : array_like
             The data source we would like to copy from.
+        
+        Example
+        -------
+        >>> a = mx.nd.array([1, 2])
+        >>> a.asnumpy()
+        array([ 1.,  2.], dtype=float32)
+        >>> a[:] = np.array([3, 4])
+        >> a.asnumpy()
+        array([ 3.,  4.], dtype=float32)
         """
         if not isinstance(source_array, np.ndarray):
             try:
