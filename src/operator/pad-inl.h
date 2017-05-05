@@ -116,7 +116,7 @@ class PadOp : public Operator {
     switch (rank) {
       case 4:
         {
-          Tensor<xpu, 4, DType> in = 
+          Tensor<xpu, 4, DType> in =
             in_grad[pad_enum::kData].get<xpu, 4, DType>(s);
           Tensor<xpu, 4, DType> out =
             out_grad[pad_enum::kOut].get<xpu, 4, DType>(s);
@@ -126,7 +126,7 @@ class PadOp : public Operator {
         }
       case 5:
         {
-          Tensor<xpu, 5, DType> in = 
+          Tensor<xpu, 5, DType> in =
             in_grad[pad_enum::kData].get<xpu, 5, DType>(s);
           Tensor<xpu, 5, DType> out =
             out_grad[pad_enum::kOut].get<xpu, 5, DType>(s);
