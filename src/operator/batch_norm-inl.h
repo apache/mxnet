@@ -30,7 +30,6 @@ namespace batchnorm {
 enum BatchNormOpInputs {kData, kGamma, kBeta};  // kGamma: weights, kBeta: biases
 enum BatchNormOpOutputs {kOut, kMean, kVar};  // req, out_data
 enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};  // aux_states
-enum BatchNormBackResource {kTempSpace};
 }  // namespace batchnorm
 
 /*! \brief Parameters for BatchNoram operator */

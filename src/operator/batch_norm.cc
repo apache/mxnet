@@ -281,19 +281,26 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
   AccReal        *w = weights.dptr<AccReal>();
   const AccReal  *b = bias.dptr<AccReal>();
 
-  // optionally, keep weights fixed at 1
-  if (param_.fix_gamma) {
-    for (size_t i =0, n = weights.Size(); i < n; ++i) {
-      w[i] = AccReal(1);
-    }
-  }
-
   if (IsWriting(req[batchnorm::kData])) {
     // note that var is still invstd
-    ForEachFast(inputData, outputData,
-                [w, b, mean, var](const size_t channel, const DType *in_data, DType *out_data) {
-                  *out_data = static_cast<DType>(
-                    ((*in_data - mean[channel]) * var[channel]) * w[channel] + b[channel]);});
+    if(!param_.fix_gamma) {
+      ForEachFast(inputData, outputData,
+                  [w, b, mean, var](const size_t channel, const DType *in_data, DType *out_data) {
+                    *out_data = static_cast<DType>(
+                      ((*in_data - mean[channel]) * var[channel]) * w[channel] + b[channel]);
+                  });
+    } else {
+      if (param_.fix_gamma && IsWriting(req[batchnorm::kGamma])) {
+        for (size_t i =0, n = weights.Size(); i < n; ++i) {
+          w[i] = AccReal(1);
+        }
+      }
+      ForEachFast(inputData, outputData,
+                  [w, b, mean, var](const size_t channel, const DType *in_data, DType *out_data) {
+                    *out_data = static_cast<DType>(
+                      ((*in_data - mean[channel]) * var[channel]) + b[channel]);
+                  });
+    }
   }
 
   // Convert back to "real" variance in order to be consistent

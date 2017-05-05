@@ -254,7 +254,8 @@ __global__ void BatchNormalizationUpdateOutputInferenceKernel(
   if (threadIdx.x == 0) {
     saveMean[plane] = runningMean[plane];
     saveVariance[plane] = runningVar[plane];
-    if ((flags & FIX_GAMMA_FLAG) != 0 && weight.numElements() > 0) {
+    if ((flags & WRITE_GAMMA_FLAG) != 0 && (flags & FIX_GAMMA_FLAG) != 0
+        && weight.numElements() > 0) {
       weight[plane] = AccReal(1);
     }
   }
@@ -303,7 +304,8 @@ __global__ void BatchNormalizationUpdateOutputKernel(
     // Momentum based writeback
     saveMean[plane] = ScalarConvert<AccReal, DType>::to(mean);
     saveVariance[plane] = ScalarConvert<AccReal, DType>::to(INVSTD_TO_VARIANCE(invStd, epsilon));
-    if ((flags & FIX_GAMMA_FLAG) != 0 && weight.numElements() > 0) {
+    if ((flags & WRITE_GAMMA_FLAG) != 0 && (flags & FIX_GAMMA_FLAG) != 0
+        && weight.numElements() > 0) {
       weight[plane] = AccReal(1);
     }
   }
