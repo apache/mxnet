@@ -1,4 +1,4 @@
-# Training and Inference Module
+# Introduction to Module - MXNet's high-level interface for neural network training
 
 We modularized commonly used codes for training and inference in the `module` (or `mod` for short) package. This package provides intermediate-level and high-level interface for executing predefined networks.
 

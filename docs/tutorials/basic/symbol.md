@@ -1,4 +1,4 @@
-# Symbol Tutorial
+# Introduction to Symbol - Neural network graphs and auto-differentiation
 
 Besides the tensor computation interface [NDArray](./ndarray.ipynb), another
 main object in MXNet is the `Symbol` provided by `mxnet.symbol`, or `mxnet.sym`

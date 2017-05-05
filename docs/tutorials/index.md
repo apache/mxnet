@@ -6,25 +6,23 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 #### Basics
 
-- [Introduction to NDArray - Imperative tensor operations on CPU & GPU](http://mxnet.io/tutorials/python/ndarray.html)
+```eval_rst
+.. toctree::
+   :maxdepth: 1
 
-- [Introduction to Symbol - Neural network graphs and auto-differentiation](http://mxnet.io/tutorials/python/symbol.html)
-
-- [Introduction to Module - MXNet's high-level interface for neural network training](http://mxnet.io/tutorials/python/module.html)
-
-- [MXNet Iterators - Load data for neural network training](http://mxnet.io/tutorials/python/data.html)
-
-- [Image IO - Loading and pre-processing images](http://mxnet.io/tutorials/python/image_io.html)
-
-- [Record IO - Pack free-format data in binary files ](http://mxnet.io/tutorials/python/record_io.html)
-
-- [Custom Image IO - Write high-performance data-pipelines using mxnet.image](http://mxnet.io/tutorials/python/advanced_img_io.html)
+   basic/ndarray
+   basic/symbol
+   basic/module
+   basic/data
+   basic/image_io
+   basic/record_io
+```
 
 #### Computer Vision
 
 - [Classifying Handwritten Digits with Convolutional Neural Networks](http://mxnet.io/tutorials/python/mnist.html)
 
-- [Object Detection using Faster R-CNN](https://github.com/dmlc/mxnet/tree/master/example/rcnn) 
+- [Object Detection using Faster R-CNN](https://github.com/dmlc/mxnet/tree/master/example/rcnn)
 
 - [Object Detection using SSD](https://github.com/dmlc/mxnet/tree/master/example/ssd)
 
