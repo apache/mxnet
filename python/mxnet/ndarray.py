@@ -414,7 +414,7 @@ fixed-size items.
         ----------
         source_array : array_like
             The data source we would like to copy from.
-        
+
         Example
         -------
         >>> a = mx.nd.array([1, 2])
