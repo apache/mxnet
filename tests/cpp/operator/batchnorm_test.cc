@@ -823,7 +823,6 @@ static void test_V1_V2_2D(const test::op::kwargs_t &kwargs, const size_t count) 
 
   for (size_t xx = 0; xx < sizeof(tf)/sizeof(tf[0]); ++xx) {
     for (size_t yy = 0; yy < sizeof(tf)/sizeof(tf[0]); ++yy) {
-
       const bool gpu_V1 = tf[xx];
       const bool gpu_V2 = tf[yy];
 
