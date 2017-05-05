@@ -26,9 +26,7 @@ def _monitor_callback_wrapper(callback):
     return callback_handle
 
 class Executor(object):
-    """Executor is the actual executing object of MXNet,
-       which provides efficient symbolic graph execution
-       and optimization.
+    """Executor is the object providing efficient symbolic graph execution and optimization.
 
     Examples
     --------
@@ -180,7 +178,8 @@ class Executor(object):
          [ 0.5616011   0.5616011   0.5616011   0.5616011 ]]
         >>>
         >>> # Example for binding on non-loss function symbol.
-        >>> # Here the binding symbol is neither built-in loss function nor customized loss created by MakeLoss.
+        >>> # Here the binding symbol is neither built-in loss function
+        >>> # nor customized loss created by MakeLoss.
         >>> # As a result the head gradient is not automatically provided.
         >>> a = mx.sym.Variable('a')
         >>> b = mx.sym.Variable('b')
@@ -193,7 +192,8 @@ class Executor(object):
         >>> print(out.asnumpy())
         [ 4.  7.]
         >>> # out_grads is the head gradient in backward pass.
-        >>> # Here we define 'c' as loss function. Then 'out' is passed as head gradient of backward pass.
+        >>> # Here we define 'c' as loss function.
+        >>> # Then 'out' is passed as head gradient of backward pass.
         >>> texec.backward(out)
         >>> print(texec.grad_arrays[0].asnumpy())
         [ 8.  14.]
