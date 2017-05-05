@@ -332,7 +332,7 @@ else
     echo "### Testing Pip ###"
     echo "${pip_commands}"
     echo
-  #  eval ${pip_commands}
+    eval ${pip_commands}
 
 #    echo
 #    echo "### Testing Docker ###"
@@ -344,5 +344,5 @@ else
     echo "### Testing Build From Source ###"
     echo "${buildfromsource_commands}"
     echo
-#    eval ${buildfromsource_commands}
+    eval ${buildfromsource_commands}
 fi
