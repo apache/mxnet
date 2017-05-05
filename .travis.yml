@@ -1,5 +1,8 @@
 sudo: false
 
+services:
+  - docker
+
 language: cpp
 
 os:

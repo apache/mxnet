@@ -325,14 +325,13 @@ else
     echo "### Testing Virtualenv ###"
     echo "${virtualenv_commands}"
     echo
-    eval ${virtualenv_commands}
-    #nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${virtualenv_commands}"
+    #eval ${virtualenv_commands}
 
     echo
     echo "### Testing Pip ###"
     echo "${pip_commands}"
     echo
-    #nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${pip_commands}"
+    #eval ${pip_commands}
 
     echo
     echo "### Testing Docker ###"
@@ -344,6 +343,5 @@ else
     echo "### Testing Build From Source ###"
     echo "${buildfromsource_commands}"
     echo
-    #nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${buildfromsource_commands}"
-
+    eval ${buildfromsource_commands}
 fi
