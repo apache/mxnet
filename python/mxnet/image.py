@@ -101,18 +101,18 @@ def random_crop(src, size, interp=2):
 
 
 def center_crop(src, size, interp=2):
-    """Crops the image `src` to the given `size` by trimming all the four sides
-    while retaining the center of the image. Upsamples if `src` is smaller than
-    `size`.
+    """Crops the image `src` to the given `size` by trimming on all the four
+    sides and preserving the center of the image. Upsamples if `src` is smaller
+    than `size`.
 
-    Note: This requires OpenCV to be installed.
+    .. note:: This requires MXNet to be compiled with USE_OPENCV.
 
     Parameters
     ----------
     src : NDArray
-        Binary image data as `NDArray`.
+        Binary source image data.
     size : list or tuple of int
-        The putput image size.
+        The desired output image size.
     interp : interpolation, optional, default=Area-based
         The type of interpolation that is done to the image.
 
@@ -139,6 +139,9 @@ def center_crop(src, size, interp=2):
     -------
     NDArray
         The cropped image.
+    Tuple
+        (x, y, width, height) where x, y are the positions of the crop in the
+        original image and width, height the dimensions of the crop.
 
     Example
     -------
@@ -148,10 +151,19 @@ def center_crop(src, size, interp=2):
     >>> image = mx.image.imdecode(str_image)
     >>> image
     <NDArray 2321x3482x3 @cpu(0)>
-    >>> cropped_image = mx.image.center_crop(image, (1000, 500))
+    >>> cropped_image, (x, y, width, height) = mx.image.center_crop(image, (1000, 500))
     >>> cropped_image
-    (<NDArray 500x1000x3 @cpu(0)>, (1241, 910, 1000, 500))
+    <NDArray 500x1000x3 @cpu(0)>
+    >>> x
+    1241
+    >>> y
+    910
+    >>> width
+    1000
+    >>> height
+    500
     """
+
     h, w, _ = src.shape
     new_w, new_h = scale_down((w, h), size)
 
