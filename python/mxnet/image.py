@@ -98,8 +98,8 @@ def random_crop(src, size, interp=2):
     size: Size of the crop formatted as (width, height). If the `size` is larger 
            than the image, then the source image is upsampled to `size` and returned.
     interp: Interpolation method to be used in case the size is larger (default: bicubic). 
-            Uses OPENCV convention for the parameters. NEAREST - 0, Bilinear - 1, bicubic - 2, 
-            area - 3. See OpenCV imresize function for more details.
+            Uses OpenCV convention for the parameters. Nearest - 0, Bilinear - 1, Bicubic - 2, 
+            Area - 3. See OpenCV imresize function for more details.
     Returns
     -------
     NDArray
