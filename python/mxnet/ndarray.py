@@ -430,6 +430,7 @@ fixed-size items.
 
     def _slice(self, start, stop):
         """Returns a sliced NDArray that shares memory with the current one.
+        This is called through x[start:stop].
 
         Parameters
         ----------
@@ -445,9 +446,9 @@ fixed-size items.
 
         Examples:
         >>> a = mx.nd.array([[1,2], [3, 4], [5, 6], [7, 8]])
-        >>> a._slice(1, 2).asnumpy()
+        >>> a[1:2].asnumpy()
         array([[ 3.,  4.]], dtype=float32)
-        >>> a._slice(1, 1).asnumpy()
+        >>> a[1:1].asnumpy()
         array([], shape=(0, 2), dtype=float32)
         """
         handle = NDArrayHandle()
@@ -459,6 +460,7 @@ fixed-size items.
 
     def _at(self, idx):
         """Returns a view of the array sliced at idx in the first dim.
+        This is called through x[idx].
 
         Parameters
         ----------
@@ -473,10 +475,10 @@ fixed-size items.
         Examples
         --------
         >>> a = mx.nd.array([[1,2], [3, 4]])
-        >>> a._at(1).asnumpy()
+        >>> a[1].asnumpy()
         array([ 3.,  4.], dtype=float32)
         >>> b = mx.nd.array([1, 2, 3, 4])
-        >>> b._at(0).asnumpy()
+        >>> b[0].asnumpy()
         array([ 1.], dtype=float32)
         """
         handle = NDArrayHandle()
