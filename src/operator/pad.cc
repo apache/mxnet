@@ -443,18 +443,140 @@ void single_image_constant_grad(const Tensor<cpu, 4, DType> &in_grad,
   }
 }
 
-// Case 3: Reflection Padding (dummy, doesn't do anything)
+// Case 3: Reflection Padding
 template <typename DType>
 void single_image_reflect(const Tensor<cpu, 4, DType> &dst,
                            const Tensor<cpu, 4, DType> src, mxnet::TShape pad) {
-  LOG(FATAL) << "single_image_reflect not supported for 4-D tensors.";
+  const int nslices = src.size(0);
+  const int idepth = src.size(1);
+  const int iheight = src.size(2);
+  const int iwidth = src.size(3);
+
+  const int odepth = dst.size(1);
+  const int oheight = dst.size(2);
+  const int owidth = dst.size(3);
+
+  const int pad_f = pad[4];
+  const int pad_t = pad[6];
+  const int pad_l = pad[8];
+  int iStartX = std::max(0, -pad_l);
+  int iStartY = std::max(0, -pad_t);
+  int iStartZ = std::max(0, -pad_f);
+  int oStartX = std::max(0, pad_l);
+  int oStartY = std::max(0, pad_t);
+  int oStartZ = std::max(0, pad_f);
+
+  int l, ip_x, ip_y, ip_z;
+#pragma omp parallel for private(l, ip_x, ip_y, ip_z)
+  for (l = 0; l < nslices; l++) {
+    int i, j, k;
+    for (k = 0; k < odepth; k++) {
+      for (i = 0; i < oheight; i++) {
+        for (j = 0; j < owidth; j++) {
+          if (j < pad_l) {
+            ip_x = pad_l * 2 - j;
+          } else if (j >= pad_l && j < iwidth + pad_l) {
+            ip_x = j;
+          } else {
+            ip_x = (iwidth + pad_l - 1) * 2 - j;
+          }
+          ip_x = ip_x - oStartX + iStartX;
+
+          if (i < pad_t) {
+            ip_y = pad_t * 2 - i;
+          } else if (i >= pad_t && i < iheight + pad_t) {
+            ip_y = i;
+          } else {
+            ip_y = (iheight + pad_t - 1) * 2 - i;
+          }
+          ip_y = ip_y - oStartY + iStartY;
+
+          if (k < pad_f) {
+            ip_z = pad_f * 2 - k;
+          } else if (k >= pad_f && k < idepth + pad_f) {
+            ip_z = k;
+          } else {
+            ip_z = (idepth + pad_f - 1) * 2 - k;
+          }
+          ip_z = ip_z - oStartZ + iStartZ;
+
+          DType *dest_p = dst.dptr_ + l * owidth * oheight * odepth +
+                          k * owidth * oheight + i * owidth + j;
+          DType *src_p = src.dptr_ + l * iwidth * iheight * idepth +
+                         ip_z * iwidth * iheight + ip_y * iwidth + ip_x;
+          *dest_p = *src_p;
+        }
+      }
+    }
+  }
 }
 
 template <typename DType>
-void single_image_reflect_grad(const Tensor<cpu, 4, DType> &in_grad,
-                                const Tensor<cpu, 4, DType> out_grad,
+void single_image_reflect_grad(const Tensor<cpu, 4, DType> &grad_in,
+                                const Tensor<cpu, 4, DType> grad_out,
                                 mxnet::TShape pad) {
-  LOG(FATAL) << "single_image_reflect_grad not supported for 4-D tensors.";
+  const int nslices = grad_in.size(0);
+  const int idepth = grad_in.size(1);
+  const int iheight = grad_in.size(2);
+  const int iwidth = grad_in.size(3);
+
+  const int odepth = grad_out.size(1);
+  const int oheight = grad_out.size(2);
+  const int owidth = grad_out.size(3);
+
+  const int pad_f = pad[4];
+  const int pad_t = pad[6];
+  const int pad_l = pad[8];
+  int iStartX = std::max(0, -pad_l);
+  int iStartY = std::max(0, -pad_t);
+  int iStartZ = std::max(0, -pad_f);
+  int oStartX = std::max(0, pad_l);
+  int oStartY = std::max(0, pad_t);
+  int oStartZ = std::max(0, pad_f);
+
+  int l, ip_x, ip_y, ip_z;
+/*#pragma omp parallel for private(l, ip_x, ip_y, ip_z)*/
+  for (l = 0; l < nslices; l++) {
+    int i, j, k;
+    for (k = 0; k < odepth; k++) {
+      for (i = 0; i < oheight; i++) {
+        for (j = 0; j < owidth; j++) {
+          if (j < pad_l) {
+            ip_x = pad_l * 2 - j;
+          } else if (j >= pad_l && j < iwidth + pad_l) {
+            ip_x = j;
+          } else {
+            ip_x = (iwidth + pad_l - 1) * 2 - j;
+          }
+          ip_x = ip_x - oStartX + iStartX;
+
+          if (i < pad_t) {
+            ip_y = pad_t * 2 - i;
+          } else if (i >= pad_t && i < iheight + pad_t) {
+            ip_y = i;
+          } else {
+            ip_y = (iheight + pad_t - 1) * 2 - i;
+          }
+          ip_y = ip_y - oStartY + iStartY;
+
+          if (k < pad_f) {
+            ip_z = pad_f * 2 - k;
+          } else if (k >= pad_f && k < idepth + pad_f) {
+            ip_z = k;
+          } else {
+            ip_z = (idepth + pad_f - 1) * 2 - k;
+          }
+          ip_z = ip_z - oStartZ + iStartZ;
+
+          DType *src_p = grad_out.dptr_ + l * owidth * oheight * odepth +
+                         k * owidth * oheight + i * owidth + j;
+          DType *dest_p = grad_in.dptr_ + l * iwidth * iheight * idepth +
+                          ip_z * iwidth * iheight + ip_y * iwidth + ip_x;
+          *dest_p += *src_p;
+        }
+      }
+    }
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

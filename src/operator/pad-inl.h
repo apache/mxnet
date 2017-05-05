@@ -186,10 +186,6 @@ class PadProp : public OperatorProperty {
       LOG(FATAL) << "Input shape vs padding spec mismatch.";
     }
     if (param_.mode == pad_enum::kReflect) {
-      if (rank != 4) {
-        LOG(FATAL) << "Current implementation of reflection padding "
-                        "only supports 4-D input.";
-      }
       auto size = dshape.data();
       if ((pad[4] >= size[2]) || (pad[5] >= size[2]) ||
             (pad[6] >= size[3]) || (pad[7] >= size[3])) {
