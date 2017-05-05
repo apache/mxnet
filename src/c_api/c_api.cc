@@ -8,6 +8,7 @@
 #include <dmlc/io.h>
 #include <dmlc/memory_io.h>
 #include <dmlc/recordio.h>
+#include <dmlc/omp.h>
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/operator.h>
@@ -108,6 +109,12 @@ int MXSetProfilerState(int state) {
 #else
   LOG(FATAL) << "Need to compile with USE_PROFILER=1 for MXNet Profiler";
 #endif
+  API_END();
+}
+
+int MXSetNumOMPThreads(int thread_num) {
+  API_BEGIN();
+  omp_set_num_threads(thread_num);
   API_END();
 }
 
