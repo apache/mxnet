@@ -385,9 +385,9 @@ static const test::op::kwargs_t useglobalstats_kwargs = {
   {"use_global_stats", "True"} };
 static const test::op::kwargs_t useglobalstats_kwargs_nocudnn = {
   {"use_global_stats", "True"}, {"cudnn_off", "True"}, {"mkl_off", "True"} };
-static const test::op::kwargs_t nfs_ugd_kwargs = {
+static const test::op::kwargs_t nfs_ugs_kwargs = {
   {"fix_gamma", "False"}, {"use_global_stats", "True"}};
-static const test::op::kwargs_t nfs_ugd_kwargs_nocudnn = {
+static const test::op::kwargs_t nfs_ugs_kwargs_nocudnn = {
   {"fix_gamma", "False"}, {"use_global_stats", "True"}, {"cudnn_off", "True"}  };
 
 #if !DISABLE_VALIDATION
@@ -818,68 +818,77 @@ TEST(BATCH_NORM, TestBackward2D_Simple) {
 }
 
 template<typename DType, typename AccReal>
-static void testEx(const test::op::kwargs_t& kwargs, const size_t count) {
-  TShape shapes[2] = {2, 3};
-  const TShape inputShape({2, 3});
+static void test_V1_V2_2D(const test::op::kwargs_t &kwargs, const size_t count) {
+  const bool tf[] = { false, true };
 
-  test::op::OpInfo<op::BatchNormV1Prop, DType, AccReal> info_1 = test::op::createOpAndInfoF<
-    op::BatchNormV1Prop,
-    BNOperatorData<DType, AccReal>,
-    DType, AccReal>(false, inputShape, kwargs);
+  for (size_t xx = 0; xx < sizeof(tf)/sizeof(tf[0]); ++xx) {
+    for (size_t yy = 0; yy < sizeof(tf)/sizeof(tf[0]); ++yy) {
 
-  test::op::OpInfo<op::BatchNormProp, DType, AccReal> info_2 = test::op::createOpAndInfoF<
-    op::BatchNormProp, BNOperatorData<DType, AccReal>, DType, AccReal>(
-    false, inputShape, kwargs);
+      const bool gpu_V1 = tf[xx];
+      const bool gpu_V2 = tf[yy];
 
-  info_1.data_->initForward(*info_1.prop_, &info_1.in_type_);
-  info_2.data_->initForward(*info_1.prop_, &info_1.in_type_);
-  info_1.data_->initBackward(*info_1.prop_, &info_1.in_type_);
-  info_2.data_->initBackward(*info_1.prop_, &info_1.in_type_);
+      TShape shapes[2] = {2, 3};
+      const TShape inputShape({2, 3});
 
-  TBlob& blob1 = info_1.data_->c_.blob_input_vec_[op::batchnorm::kData];
-  test::data_ref<DType>(&blob1, {0, 0}) = -0.05f;
-  test::data_ref<DType>(&blob1, {0, 1}) = -0.19f;
-  test::data_ref<DType>(&blob1, {0, 2}) = 0.02f;
-  test::data_ref<DType>(&blob1, {1, 0}) = -0.12f;
-  test::data_ref<DType>(&blob1, {1, 1}) = 0.06f;
-  test::data_ref<DType>(&blob1, {1, 2}) = -0.01f;
+      test::op::OpInfo<op::BatchNormV1Prop, DType, AccReal> info_1 = test::op::createOpAndInfoF<
+        op::BatchNormV1Prop,
+        BNOperatorData<DType, AccReal>,
+        DType, AccReal>(gpu_V1, inputShape, kwargs);
 
-  TBlob& blob2 = info_2.data_->c_.blob_input_vec_[op::batchnorm::kData];
-  test::data_ref<DType>(&blob2, {0, 0}) = -0.05f;
-  test::data_ref<DType>(&blob2, {0, 1}) = -0.19f;
-  test::data_ref<DType>(&blob2, {0, 2}) = 0.02f;
-  test::data_ref<DType>(&blob2, {1, 0}) = -0.12f;
-  test::data_ref<DType>(&blob2, {1, 1}) = 0.06f;
-  test::data_ref<DType>(&blob2, {1, 2}) = -0.01f;
+      test::op::OpInfo<op::BatchNormProp, DType, AccReal> info_2 = test::op::createOpAndInfoF<
+        op::BatchNormProp, BNOperatorData<DType, AccReal>, DType, AccReal>(
+        gpu_V2, inputShape, kwargs);
 
-  test::data_ref<DType>(&info_1.data_->c_.blob_input_vec_[op::batchnorm::kGamma], {1}) = 3;
-  test::data_ref<DType>(&info_2.data_->c_.blob_input_vec_[op::batchnorm::kGamma], {1}) = 3;
+      info_1.data_->initForward(*info_1.prop_, &info_1.in_type_);
+      info_2.data_->initForward(*info_1.prop_, &info_1.in_type_);
+      info_1.data_->initBackward(*info_1.prop_, &info_1.in_type_);
+      info_2.data_->initBackward(*info_1.prop_, &info_1.in_type_);
 
-  test::data_ref<DType>(&info_1.data_->c_.blob_input_vec_[op::batchnorm::kBeta], {0}) = 3;
-  test::data_ref<DType>(&info_2.data_->c_.blob_input_vec_[op::batchnorm::kBeta], {0}) = 3;
+      TBlob &blob1 = info_1.data_->c_.blob_input_vec_[op::batchnorm::kData];
+      test::data_ref<DType>(&blob1, {0, 0}) = -0.05f;
+      test::data_ref<DType>(&blob1, {0, 1}) = -0.19f;
+      test::data_ref<DType>(&blob1, {0, 2}) = 0.02f;
+      test::data_ref<DType>(&blob1, {1, 0}) = -0.12f;
+      test::data_ref<DType>(&blob1, {1, 1}) = 0.06f;
+      test::data_ref<DType>(&blob1, {1, 2}) = -0.01f;
 
-  for (size_t x = 0; x < count; ++x) {
-    info_1.data_->forward();
-    info_2.data_->forward();
+      TBlob &blob2 = info_2.data_->c_.blob_input_vec_[op::batchnorm::kData];
+      test::data_ref<DType>(&blob2, {0, 0}) = -0.05f;
+      test::data_ref<DType>(&blob2, {0, 1}) = -0.19f;
+      test::data_ref<DType>(&blob2, {0, 2}) = 0.02f;
+      test::data_ref<DType>(&blob2, {1, 0}) = -0.12f;
+      test::data_ref<DType>(&blob2, {1, 1}) = 0.06f;
+      test::data_ref<DType>(&blob2, {1, 2}) = -0.01f;
 
-    BatchNormValidator<DType, AccReal>::compare(info_1, info_2);
+      test::data_ref<DType>(&info_1.data_->c_.blob_input_vec_[op::batchnorm::kGamma], {1}) = 3;
+      test::data_ref<DType>(&info_2.data_->c_.blob_input_vec_[op::batchnorm::kGamma], {1}) = 3;
 
-    info_1.data_->backward();
-    info_2.data_->backward();
+      test::data_ref<DType>(&info_1.data_->c_.blob_input_vec_[op::batchnorm::kBeta], {0}) = 3;
+      test::data_ref<DType>(&info_2.data_->c_.blob_input_vec_[op::batchnorm::kBeta], {0}) = 3;
 
-    BatchNormValidator<DType, AccReal>::compare(info_1, info_2);
+      for (size_t x = 0; x < count; ++x) {
+        info_1.data_->forward();
+        info_2.data_->forward();
+
+        BatchNormValidator<DType, AccReal>::compare(info_1, info_2);
+
+        info_1.data_->backward();
+        info_2.data_->backward();
+
+        BatchNormValidator<DType, AccReal>::compare(info_1, info_2);
+      }
+    }
   }
 }
 
-
-TEST(BATCH_NORM, TestBackward2D_SimpleEx) {
+TEST(BATCH_NORM, Test_V1_V2_2D_Permutations) {
   MSHADOW_REAL_TYPE_SWITCH_EX(
     mshadow::kFloat32, DType, AccReal,
     {
-      testEx<DType, AccReal>(blank_kwargs, 2);
-      testEx<DType, AccReal>(nonfixgamma_kwargs, 2);
-      testEx<DType, AccReal>(useglobalstats_kwargs, 2);
-      testEx<DType, AccReal>(nfs_ugd_kwargs, 2);
+      test_V1_V2_2D<DType, AccReal>(blank_kwargs, 20);
+      test_V1_V2_2D<DType, AccReal>(nonfixgamma_kwargs, 20);
+      test_V1_V2_2D<DType, AccReal>(useglobalstats_kwargs, 20);
+      test_V1_V2_2D<DType, AccReal>(nfs_ugs_kwargs, 20);
     });
 }
 

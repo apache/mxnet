@@ -345,7 +345,7 @@ static __global__ void BatchNormalizationBackwardKernel(
   int N = gradOutput.getSize(0) * gradOutput.getSize(2);
 
   AccReal mean, stdVal;
-  if (flags & IS_TRAINING_FLAG) {
+  if ((flags & IS_TRAINING_FLAG) != 0 && (flags & USE_GLOBAL_STATS_FLAG) == 0) {
     mean = ScalarConvert<DType, AccReal>::to(saveMean[plane]);
     stdVal = ScalarConvert<DType, AccReal>::to(VARIANCE_TO_INVSTD(saveVariance[plane], eps));
   } else {
@@ -370,20 +370,22 @@ static __global__ void BatchNormalizationBackwardKernel(
   const AccReal projScale = dotP * norm * stdVal * stdVal;
   const AccReal gradScale = stdVal * weightVal;
 
-  if (threadIdx.x == 0 && (flags & IS_TRAINING_FLAG) != 0) {
-    const DType variance = saveVariance[plane];
-    const DType   mean   = saveMean[plane];
+  if (threadIdx.x == 0
+      && (flags & IS_TRAINING_FLAG) != 0
+      && (flags & USE_GLOBAL_STATS_FLAG) == 0) {
+    const DType   localVariance = saveVariance[plane];
+    const DType   localMean = saveMean[plane];
 
     // update running averages
-    runningMean[plane] = runningMean[plane] * momentum + mean * (DType(1) - momentum);
-    runningVar[plane] = runningVar[plane] * momentum + variance * (DType(1) - momentum);
+    runningMean[plane] = runningMean[plane] * momentum + localMean * (DType(1) - momentum);
+    runningVar[plane] = runningVar[plane] * momentum + localVariance * (DType(1) - momentum);
   }
 
-  if (gradInput.numElements() > 0) {
+  if (gradInput.numElements() > 0 && (flags & WRITE_DATA_FLAG) != 0) {
     for (int batch = 0, nbatch = gradOutput.getSize(0); batch < nbatch; ++batch) {
       for (int x = threadIdx.x, nx = gradOutput.getSize(2); x < nx; x += blockDim.x) {
         const DType gradOut = gradOutput(batch, plane, x);
-        if (flags & IS_TRAINING_FLAG) {
+        if ((flags & IS_TRAINING_FLAG) != 0 && (flags & USE_GLOBAL_STATS_FLAG) == 0) {
           const DType inp = input(batch, plane, x);
           const AccReal proj = (inp - mean) * projScale;
           gradInput(batch, plane, x) =
@@ -395,20 +397,16 @@ static __global__ void BatchNormalizationBackwardKernel(
     }
   }
 
-  if (gradWeight.numElements() > 0) {
-    if (threadIdx.x == 0) {
-      if ((flags & FIX_GAMMA_FLAG) == 0) {
-        gradWeight[plane] = ScalarConvert<AccReal, DType>::to(scale * dotP * stdVal);
-      } else {
-        gradWeight[plane] = DType(0);
-      }
+  if (gradWeight.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_GAMMA_FLAG) != 0) {
+    if ((flags & FIX_GAMMA_FLAG) == 0) {
+      gradWeight[plane] = ScalarConvert<AccReal, DType>::to(scale * dotP * stdVal);
+    } else {
+      gradWeight[plane] = DType(0);
     }
   }
 
-  if (gradBias.numElements() > 0) {
-    if (threadIdx.x == 0) {
-      gradBias[plane] = ScalarConvert<AccReal, DType>::to(scale * gradOutputSum);
-    }
+  if (gradBias.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_BETA_FLAG) != 0) {
+    gradBias[plane] = ScalarConvert<AccReal, DType>::to(scale * gradOutputSum);
   }
 }
 

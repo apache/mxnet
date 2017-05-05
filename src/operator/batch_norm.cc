@@ -281,27 +281,29 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
   AccReal        *w = weights.dptr<AccReal>();
   const AccReal  *b = bias.dptr<AccReal>();
 
-  if (IsWriting(req[batchnorm::kData])) {
     // note that var is still invstd
-    if(!param_.fix_gamma) {
-      ForEachFast(inputData, outputData,
-                  [w, b, mean, var](const size_t channel, const DType *in_data, DType *out_data) {
-                    *out_data = static_cast<DType>(
-                      ((*in_data - mean[channel]) * var[channel]) * w[channel] + b[channel]);
-                  });
+    if (!param_.fix_gamma) {
+      if (IsWriting(req[batchnorm::kData])) {
+        ForEachFast(inputData, outputData,
+                    [w, b, mean, var](const size_t channel, const DType *in_data, DType *out_data) {
+                      *out_data = static_cast<DType>(
+                        ((*in_data - mean[channel]) * var[channel]) * w[channel] + b[channel]);
+                    });
+      }
     } else {
-      if (param_.fix_gamma && IsWriting(req[batchnorm::kGamma])) {
+      if (IsWriting(req[batchnorm::kGamma])) {
         for (size_t i =0, n = weights.Size(); i < n; ++i) {
           w[i] = AccReal(1);
         }
       }
-      ForEachFast(inputData, outputData,
-                  [w, b, mean, var](const size_t channel, const DType *in_data, DType *out_data) {
-                    *out_data = static_cast<DType>(
-                      ((*in_data - mean[channel]) * var[channel]) + b[channel]);
-                  });
+      if (IsWriting(req[batchnorm::kData])) {
+        ForEachFast(inputData, outputData,
+                    [w, b, mean, var](const size_t channel, const DType *in_data, DType *out_data) {
+                      *out_data = static_cast<DType>(
+                        ((*in_data - mean[channel]) * var[channel]) + b[channel]);
+                    });
+      }
     }
-  }
 
   // Convert back to "real" variance in order to be consistent
   // with the original operator
@@ -384,7 +386,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *stream,
                   dotp += (*thisInputData - mean) * (*gradOut_data);
                 });
 
-    if (gradIn.shape_.ndim()) {  // if there's a grad input
+    if (gradIn.shape_.ndim() && IsWriting(req[batchnorm::kData])) {  // if there's a grad input
       if (ctx.is_train && !param_.use_global_stats) {
         // when in training mode
         // Q(X) = X - E[x] ; i.e. input centered to zero mean
