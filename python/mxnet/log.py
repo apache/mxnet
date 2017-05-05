@@ -70,7 +70,8 @@ def getLogger(name=None, filename=None, filemode=None, level=WARNING):
     filename: str, optional
         The filename to which logging output will be sent
     filemode: str, optional
-        The file mode to open the file, default is 'a'
+        The file mode to open the file (corresponding to `filename`),
+        default is 'a'
     level: int, optional
         The `logging` level for the logger
         See: https://docs.python.org/2/library/logging.html#logging-levels
