@@ -79,7 +79,24 @@ class Initializer(object):
         self.kwargs = kwargs
 
     def dumps(self):
-        """Save the initializer to string"""
+        """Saves the initializer to string
+
+        Returns
+        -------
+        str
+            JSON formatted string that describes the initializer.
+
+        Examples
+        --------
+        >>> # Create initializer and retrieve its parameters
+        ...
+        >>> init = mx.init.Normal(0.5)
+        >>> init.dumps()
+        '["normal", {"sigma": 0.5}]'
+        >>> init = mx.init.Xavier(factor_type="in", magnitude=2.34)
+        >>> init.dumps()
+        '["xavier", {"rnd_type": "uniform", "magnitude": 2.34, "factor_type": "in"}]'
+        """
         return json.dumps([self.__class__.__name__.lower(), self.kwargs])
 
     def __call__(self, desc, arr):
