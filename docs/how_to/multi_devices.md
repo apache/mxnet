@@ -1,21 +1,30 @@
-# Run MXNet on Multiple CPU/GPUs with Data Parallel
+# Run MXNet on Multiple CPU/GPUs with Data Parallelism
 
-MXNet supports training with multiple CPUs and GPUs, which may be located on different physical machines.
+_MXNet_ supports training with multiple CPUs and GPUs, which may be located on different physical machines.
 
 ## Data Parallelism vs Model Parallelism
 
-In default, MXNet uses data parallelism to partition the workload over multiple
-devices. Assume there are *n* devices, then each one will get the complete model
-and train it on *1/n* of the data. The results such as the gradient and
-updated model are communicated cross these devices.
+By default, _MXNet_ uses data parallelism to partition the workload over multiple
+devices.
+Assume there are *n* devices.
+Then each one will receive a copy of the complete model
+and train it on *1/n* of the data.
+The results such as the gradient and
+updated model are communicated across these devices.
 
-Model parallelism is also supported. In this parallelism, each device maintains a part of the model. It is useful when the model is too large to fit into a single device. There is [a tutorial](./model_parallel_lstm.md) showing how to do model parallelism for a multi-layer LSTM model. This tutorial will focus on data parallelism.  
+MXNet also supports model parallelism.
+In this approach, each device holds onto only part of the model.
+This proves useful when the model is too large to fit onto a single device.
+As an example, see the following [ tutorial](./model_parallel_lstm.md)
+which shows how to use model parallelism for training a multi-layer LSTM model.
+For the duration of this tutorial, we'll focus on data parallelism.  
 
 ## Multiple GPUs within a Single Machine
 
 ### Workload Partitioning
 
-In default, MXNet will partition a data batch evenly into each GPU. Assume batch size *b* and *k* GPUs, then in one iteration
+By default, _MXNet_ partitions a data batch evenly among the available GPUs.
+Assume batch size *b* and *k* GPUs, then in one iteration
 each GPU will perform forward and backward on *b/k* examples. The
 gradients are then summed over all GPUs before updating the model.
 
@@ -25,57 +34,67 @@ gradients are then summed over all GPUs before updating the model.
 > example, set `USE_CUDA=1` in `config.mk` before `make`. (see
 > [MXNet installation guide](http://mxnet.io/get_started/setup.html) for more options).
 
-If a machine has one or more than one GPU cards installed, then each card is
-labeled by a number starting from 0. To use a particular GPU, one can often
-either specify the context `ctx` in codes or pass `--gpus` in the command line. For
-example, to use GPU 0 and 2 in python one can often create a model with
+If a machine has one or more than one GPU cards installed,
+then each card is labeled by a number starting from 0.
+To use a particular GPU, one can often either
+specify the context `ctx` in codes
+or pass `--gpus` in the command line.
+For example, to use GPU 0 and 2 in python,
+one can typically create a model with
 ```python
 import mxnet as mx
 model = mx.model.FeedForward(ctx=[mx.gpu(0), mx.gpu(2)], ...)
 ```
-while if the program accepts a `--gpus` flag such as
-[example/image-classification](https://github.com/dmlc/mxnet/tree/master/example/image-classification),
+while if the program accepts a `--gpus` flag (as seen in
+[example/image-classification](https://github.com/dmlc/mxnet/tree/master/example/image-classification)),
 then we can try
 ```bash
 python train_mnist.py --gpus 0,2 ...
 ```
 
 ### Advanced Usage
+If the available GPUs are not equally powerful,
+we can partition the workload accordingly.
+For example, if GPU 0 is 3 times faster than GPU 2,
+then we might use the workload option `work_load_list=[3, 1]`,
+see [model.fit](../api/python/model.html#mxnet.model.FeedForward.fit)
+for more details.
 
-If the GPUs have different computation power, we can partition the workload
-according to their powers. For example, if GPU 0 is 3 times faster than GPU 2,
-then we provide an additional workload option `work_load_list=[3, 1]`, see
-[model.fit](../api/python/model.html#mxnet.model.FeedForward.fit) for more
-details.
+Training with multiple GPUs should yield the same results
+as training on a single GPU if all other hyper-parameters are the same.
+In practice, the results may exhibit small differences,
+owing to the randomness of I/O (random order or other augmentations),
+weight initialization with different seeds, and CUDNN.
 
-Training with multiple GPUs should have the same results as a single GPU if all
-other hyper-parameters are the same. But in practice, the results vary mainly due
-to the randomness of I/O (random order or other augmentations), weight
-initialization with different seeds, and CUDNN.
-
-We can control where the gradient is aggregated and model updating if performed
-by creating different `KVStore`, which is the module for data
-communication. One can either use `mx.kvstore.create(type)` to get an instance or use the program flag `--kv-store type`.
+We can control on which devices the gradient is aggregated
+and on which device the model is updated via [`KVStore`](http://mxnet.io/api/python/kvstore.html),
+the _MXNet_ module that supports data communication.
+One can either use `mx.kvstore.create(type)` to get an instance
+or use the program flag `--kv-store type`.
 
 There are two commonly used types,
 
 - `local`: all gradients are copied to CPU memory and weights are updated there.
-- `device`: both gradients' aggregation and weight updating are run on GPUs. It also attempts to use GPU peer-to-peer communication, which potentially accelerates the communication. But this option may result in higher GPU memory usage.
+- `device`: both gradient aggregation and weight updates are run on GPUs.
+With this setting, the `KVStore` also attempts to use GPU peer-to-peer communication,
+potentially accelerating the communication.
+Note that this option may result in higher GPU memory usage.
 
-When there is a large number of GPUs, e.g. >=4, we suggest using `device` for better performance.
+When using a large number of GPUs, e.g. >=4, we suggest using `device` for better performance.
 
 ## Distributed Training with Multiple Machines
 
-We can simply change the `KVStore` type to run with multiple machines.
+`KVStore` also supports a number of types for running on multiple machines.
 
-- `dist_sync` behaviors similarly to `local`. But one major difference is that
-  `batch-size` now means the batch size used on each machine. So if there are *n*
-  machines and we use batch size *b*, then `dist_sync` behaviors equally to `local` with batch size *n\*b*.
+- `dist_sync` behaves similarly to `local` but exhibits one major difference.
+  With `dist_sync`, `batch-size` now means the batch size used on each machine.
+  So if there are *n* machines and we use batch size *b*,
+  then `dist_sync` behaves like `local` with batch size *n\*b*.
 - `dist_device_sync` is identical to `dist_sync`  with the difference similar to `device` vs `local`.  
-- `dist_async`  performs asynchronous updating. The weight is
-  updated once received gradient from any machine. The update is atomic,
-  namely, no two updates happen on the same weight at the same time. However,
-  the order is not guaranteed.
+- `dist_async`  performs asynchronous updates.
+  The weight is updated whenever gradients are received from any machine.
+  The update is atomic, i.e., no two updates happen on the same weight at the same time.
+  However, the order is not guaranteed.
 
 ### How to Launch a Job
 
@@ -87,16 +106,17 @@ machine. MXNet provides
 [tools/launch.py](https://github.com/dmlc/mxnet/blob/master/tools/launch.py) to
 start a job by using `ssh`, `mpi`, `sge`, or `yarn`.
 
-Assume we are at the directory `mxnet/example/image-classification`.  and want
-to train mnist with lenet by using
+Assume we are at the directory `mxnet/example/image-classification`
+and want to train lenet to classify MNIST images, as demonstrated here:
 [train_mnist.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/train_mnist.py).
-On a single machine, we can run by
+
+On a single machine, we can run:
 
 ```bash
 python train_mnist.py --network lenet
 ```
 
-Now if there are two ssh-able machines, and we want to train it on these two
+Now, say we are given two ssh-able machines and we want to train lenet on these two
 machines.
 First, we save the IPs (or hostname) of these two machines in file `hosts`, e.g.
 
@@ -114,7 +134,7 @@ then we can run by
 python ../../tools/launch.py -n 2 --launcher ssh -H hosts python train_mnist.py --network lenet --kv-store dist_sync
 ```
 
-Note that, besides the single machine arguments, here we
+Note that here we
 
 - use `launch.py` to submit the job
 - provide launcher, `ssh` if all machines are ssh-able, `mpi` if `mpirun` is
@@ -126,8 +146,8 @@ Note that, besides the single machine arguments, here we
 
 ### Synchronize Directory
 
-Now consider if the mxnet folder is not accessible. We can first copy the MXNet
-library to this folder by
+Now consider if the mxnet folder is not accessible.
+We can first copy the `MXNet` library to this folder by
 ```bash
 cp -r ../../python/mxnet .
 cp -r ../../lib/libmxnet.so mxnet
@@ -143,10 +163,11 @@ python ../../tools/launch.py -n 2 -H hosts --sync-dst-dir /tmp/mxnet \
 
 ### Use a Particular Network Interface
 
-MXNet often chooses the first available network interface. But for machines have
-multiple interfaces, we can specify which network interface to use for data
-communication by the environment variable `DMLC_INTERFACE`. For example, to use
-the interface `eth0`, we can
+_MXNet_ often chooses the first available network interface.
+But for machines that have multiple interfaces,
+we can specify which network interface to use for data
+communication by the environment variable `DMLC_INTERFACE`.
+For example, to use the interface `eth0`, we can
 
 ```
 export DMLC_INTERFACE=eth0; python ../../tools/launch.py ...
