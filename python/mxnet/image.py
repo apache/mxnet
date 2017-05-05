@@ -101,7 +101,57 @@ def random_crop(src, size, interp=2):
 
 
 def center_crop(src, size, interp=2):
-    """Centrally crop src with size. Upsample result if src is smaller than size."""
+    """Crops the image `src` to the given `size` by trimming all the four sides
+    while retaining the center of the image. Upsamples if `src` is smaller than
+    `size`.
+
+    Note: This requires OpenCV to be installed.
+
+    Parameters
+    ----------
+    src : NDArray
+        Binary image data as `NDArray`.
+    size : list or tuple of int
+        The putput image size.
+    interp : interpolation, optional, default=Area-based
+        The type of interpolation that is done to the image.
+
+         Possible values:
+
+        0: Nearest Neighbors Interpolation.
+
+        1: Bilinear interpolation.
+
+        2: Area-based (resampling using pixel area relation). It may be a
+        preferred method for image decimation, as it gives moire-free
+        results. But when the image is zoomed, it is similar to the Nearest
+        Neighbors method. (used by default).
+
+        3: Bicubic interpolation over 4x4 pixel neighborhood.
+
+        4: Lanczos interpolation over 8x8 pixel neighborhood.
+
+         To shrink an image, it will generally look best with AREA-based
+        interpolation, whereas to enlarge an image, it will generally look best
+        with Bicubic (slow) or Bilinear (faster but still looks OK).
+
+    Returns
+    -------
+    NDArray
+        The cropped image.
+
+    Example
+    -------
+    >>> with open("flower.jpg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.image.imdecode(str_image)
+    >>> image
+    <NDArray 2321x3482x3 @cpu(0)>
+    >>> cropped_image = mx.image.center_crop(image, (1000, 500))
+    >>> cropped_image
+    (<NDArray 500x1000x3 @cpu(0)>, (1241, 910, 1000, 500))
+    """
     h, w, _ = src.shape
     new_w, new_h = scale_down((w, h), size)
 
