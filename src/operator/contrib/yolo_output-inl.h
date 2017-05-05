@@ -24,6 +24,7 @@ namespace op {
 namespace yoloout_enum {
 enum YoloOutputOpInputs {kData, kLabel};
 enum YoloOutputOpOutputs {kOut, kTemp};
+enum YoloOutputOpAuxiliary {kCounter};
 enum YoloOutputOpResource {kTempSpace};
 }  // namespace yoloout_enum
 
@@ -36,6 +37,8 @@ struct YoloOutputParam : public dmlc::Parameter<YoloOutputParam> {
   float class_grad_scale;
   float coord_grad_scale;
   nnvm::Tuple<float> anchors;
+  int warmup_samples;
+  float warmup_grad_scale;
   DMLC_DECLARE_PARAMETER(YoloOutputParam) {
     DMLC_DECLARE_FIELD(num_class).set_lower_bound(1)
     .describe("Number of object classes.");
@@ -51,10 +54,15 @@ struct YoloOutputParam : public dmlc::Parameter<YoloOutputParam> {
     DMLC_DECLARE_FIELD(class_grad_scale).set_default(1.0)
     .describe("Gradient scale for positive objects.");
     DMLC_DECLARE_FIELD(coord_grad_scale).set_default(1.0)
-    .describe("Gradient scale for positive objects.");
+    .describe("Gradient scale for box offsets.");
     DMLC_DECLARE_FIELD(anchors)
     .set_default({1.08, 1.19, 3.42, 4.41, 6.63, 11.38, 9.42, 5.11, 16.62, 10.52})
-    .describe("Gradient scale for positive objects.");
+    .describe("Predefined anchor box widths and heights.");
+    DMLC_DECLARE_FIELD(warmup_samples).set_default(12800)
+    .describe("Number of images to warm up towards averaging position for box "
+    "predictions when start a new training. ");
+    DMLC_DECLARE_FIELD(warmup_grad_scale).set_default(0.01)
+    .describe("Gradient scale for non-critical anchors during warm-up stage.");
   }
 };  // struct YoloOutputParam
 
@@ -94,6 +102,15 @@ struct calc_overlap {
   }
 };
 
+struct clip_zero_one {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    if (a < 0.f) return DType(0.f);
+    if (a > 1.f) return DType(1.f);
+    return DType(a);
+  }
+};  // struct clip_zero_one
+
 // create index mask for labels
 // struct index_mask {
 //   template<typename DType>
@@ -121,76 +138,80 @@ struct box_grad {
       const index_t label_width, const index_t label_offset,
       const index_t pred_width, const index_t pred_offset,
       const index_t grad_width, const index_t grad_offset,
-      const index_t num_anchor, const index_t num_batch,
+      const index_t num_anchor, const index_t num_label,
       const index_t width, const index_t height,
       const float box_scale, const float object_scale) {
-    // int n = i % num_batch;
-    int b = i / num_batch;
-    int offset = i * label_width;
-    DType class_id = label[offset];
-    if (class_id < 0) return;  // padded label
-    offset += label_offset;
-    // ground-truth
-    DType gl = label[offset];
-    DType gt = label[offset + 1];
-    DType gr = label[offset + 2];
-    DType gb = label[offset + 3];
-    DType gx = (gl + gr) / 2;
-    DType gy = (gt + gb) / 2;
-    DType gw = gr - gl;
-    DType gh = gb - gt;
-    if (gx < 0 || gy < 0 || gx > 1 || gy > 1) return;  // invalid gt
-    if (gw <= 0 || gh <= 0 || gw > 1 || gh > 1) return ;  // invalid gt
-    // specific block region only where gt center located
-    int col = static_cast<int>(gx * width);
-    int row = static_cast<int>(gy * height);
-    int best_anchor = 0;
-    DType best_ovp = 0;
-    // find best anchor
-    for (int j = 0; j < num_anchor; ++j) {
-      DType aw = anchor[j * 2] / width;
-      DType ah = anchor[j * 2 + 1] / height;
-      if (aw < 0 || ah < 0) continue;  // invalid param
-      DType minw = gw < aw ? gw : aw;
-      DType minh = gh < ah ? gh : ah;
-      DType ovp = minw * minh;
-      ovp = ovp / (gw * gh + aw * ah - ovp);
-      if (ovp > best_ovp) {
-        best_ovp = ovp;
-        best_anchor = j;
+    for (int ii = 0; ii < num_label; ++ii) {
+      // int n = i % num_label;
+      i = i * num_label + ii;
+      int b = i / num_label;
+      int offset = i * label_width;
+      DType class_id = label[offset];
+      if (class_id < 0) return;  // padded label
+      offset += label_offset;
+      // ground-truth
+      DType gl = label[offset];
+      DType gt = label[offset + 1];
+      DType gr = label[offset + 2];
+      DType gb = label[offset + 3];
+      DType gx = (gl + gr) / 2;
+      DType gy = (gt + gb) / 2;
+      DType gw = gr - gl;
+      DType gh = gb - gt;
+      if (gx < 0 || gy < 0 || gx > 1 || gy > 1) return;  // invalid gt
+      if (gw <= 0 || gh <= 0 || gw > 1 || gh > 1) return ;  // invalid gt
+      // specific block region only where gt center located
+      int col = static_cast<int>(gx * width);
+      int row = static_cast<int>(gy * height);
+      int best_anchor = 0;
+      DType best_ovp = 0;
+      // find best anchor
+      for (int j = 0; j < num_anchor; ++j) {
+        DType aw = anchor[j * 2] / width;
+        DType ah = anchor[j * 2 + 1] / height;
+        if (aw < 0 || ah < 0) continue;  // invalid param
+        DType minw = gw < aw ? gw : aw;
+        DType minh = gh < ah ? gh : ah;
+        DType ovp = minw * minh;
+        ovp = ovp / (gw * gh + aw * ah - ovp);
+        if (ovp > best_ovp) {
+          best_ovp = ovp;
+          best_anchor = j;
+        }
       }
+      // box prediction and box grad
+      // printf("Best anchor: %d, row:%d, col:%d\n", best_anchor, row, col);
+      offset = (b * width * height * num_anchor + row * width * num_anchor +
+        col * num_anchor + best_anchor) * pred_width + pred_offset;
+      DType px = pred[offset];
+      DType py = pred[offset + 1];
+      DType pw = pred[offset + 2];
+      DType ph = pred[offset + 3];
+      int out_offset = (b * width * height * num_anchor + row * width * num_anchor +
+        col * num_anchor + best_anchor) * grad_width + grad_offset;
+      DType aw = anchor[best_anchor * 2];
+      DType ah = anchor[best_anchor * 2 + 1];
+      DType scale = box_scale * (2 - gw * gh);
+      grad[out_offset] = scale * (px - gx * width + col);  // x
+      grad[out_offset + 1] = scale * (py - gy * height + row); // y
+      grad[out_offset + 2] = scale * (pw - log(gw * width / aw));  // w
+      grad[out_offset + 3] = scale * (ph - log(gh * height / ah)); // h
+      // printf("scale:%f, tx:%f, ty:%f, tw:%f, th:%f, x:%f, y:%f, w:%f, h:%f, dx:%f, dy:%f, dw:%f, dh:%f\n",
+      //   scale, gx * width - col, gy * height - row, log(gw * width / aw), log(gh * height / ah),
+      //   px, py, pw, ph, grad[out_offset], grad[out_offset+1], grad[out_offset+2], grad[out_offset+3]);
+
+      // object grad
+      DType iou = IOU(px - pw / 2, py - ph / 2, px + pw / 2, py + ph / 2, gl, gt, gr, gb);
+      --out_offset;  // layout : num_class + 1 + 4
+      --offset;
+      grad[out_offset] = object_scale * (pred[offset] - iou);
+
+      // class target
+      offset = b * width * height * num_anchor + row * width * num_anchor +
+        col * num_anchor + best_anchor;
+      out_label[offset] = class_id;
     }
-    // box prediction and box grad
-    offset = (b * width * height * num_anchor + row * width * num_anchor +
-      col * num_anchor + best_anchor) * pred_width + pred_offset;
-    DType pl = pred[offset];
-    DType pt = pred[offset + 1];
-    DType pr = pred[offset + 2];
-    DType pb = pred[offset + 3];
-    DType px = (pl + pr) / 2;
-    DType py = (pt + pb) / 2;
-    DType pw = pr - pl;
-    DType ph = pb - pt;
-    int out_offset = (b * width * height * num_anchor + row * width * num_anchor +
-      col * num_anchor + best_anchor) * grad_width + grad_offset;
-    DType aw = anchor[best_anchor * 2];
-    DType ah = anchor[best_anchor * 2 + 1];
-    DType scale = box_scale * (2 - gw * gh);
-    grad[out_offset] = scale * (gx * width - col - px);  // x
-    grad[out_offset + 1] = scale * (gy * height - row - py); // y
-    grad[out_offset + 2] = scale * (log(gw * width / aw) - pw);  // w
-    grad[out_offset + 3] = scale * (log(gh * height / ah) - ph); // y
 
-    // object grad
-    DType iou = IOU(pl, pt, pr, pb, gl, gt, gr, gb);
-    --out_offset;  // layout : num_class + 1 + 4
-    --offset;
-    grad[out_offset] = object_scale * (iou - pred[offset]);
-
-    // class target
-    offset = b * width * height * num_anchor + row * width * num_anchor +
-      col * num_anchor + best_anchor;
-    out_label[offset] = class_id;
   }
 };
 
@@ -220,8 +241,18 @@ class YoloOutputOp : public Operator {
      Shape<3> tshape = temp.shape_;
      int nc = param_.num_class;
      tshape[2] = nc;
-     Tensor<xpu, 4, DType> buffer = ctx.requested[yoloout_enum::kTempSpace]
-      .get_space_typed<xpu, 4, DType>(Shape4(2, tshape[0], tshape[1], tshape[2]), s);
+     Shape<4> buffer_shape = Shape4(2, tshape[0], tshape[1], tshape[2]);
+     Shape<1> bias_shape = Shape1(param_.num_anchor * 2);
+     Shape<3> anchors_shape = Shape3(tshape[0], tshape[1], 2);
+     index_t temp_space_size = buffer_shape.Size() + bias_shape.Size()
+      + anchors_shape.Size();
+     Tensor<xpu, 1, DType> temp_buffer = ctx.requested[yoloout_enum::kTempSpace]
+      .get_space_typed<xpu, 1, DType>(Shape1(temp_space_size), s);
+     Tensor<xpu, 4, DType> buffer(temp_buffer.dptr_, buffer_shape, s);
+     Tensor<xpu, 1, DType> xpu_bias(buffer.dptr_ + buffer.MSize(), bias_shape, s);
+     Tensor<xpu, 3, DType> temp_anchors(xpu_bias.dptr_ + xpu_bias.MSize(), anchors_shape, s);
+    //  Tensor<xpu, 4, DType> buffer = ctx.requested[yoloout_enum::kTempSpace]
+    //   .get_space_typed<xpu, 4, DType>(Shape4(2, tshape[0], tshape[1], tshape[2]), s);
      ScalarExp<DType> in_w = ScalarExp<DType>(1.0 / data.shape_[3]);
      ScalarExp<DType> in_h = ScalarExp<DType>(1.0 / data.shape_[2]);
 
@@ -231,41 +262,38 @@ class YoloOutputOp : public Operator {
      Softmax(buffer[0], buffer[1]);
      slice<2>(temp, 0, nc) = buffer[0];
      // class id to output
-     slice<2>(out, 0, 1) = reshape(reduce_with_axis<red::maximum, true>(
-      buffer[0], 2), Shape3(out.shape_[0], out.shape_[1], 1));
+     slice<2>(out, 0, 1) = reduce_keepdim<red::maximum, true>(buffer[0], 2);
+     // apply logistic to score, x, y
+     slice<2>(temp, nc, nc + 3) = F<mshadow_op::sigmoid>(slice<2>(temp, nc, nc + 3));
      // scores to output
-     slice<2>(out, 1, 2) = F<mshadow_op::sigmoid>(slice<2>(
+     slice<2>(out, 1, 2) = F<mshadow_op::identity>(slice<2>(
       temp, nc, nc + 1));
      // x = (logistic(pred[0]) + i) / in_w
      tshape[2] = 1;
-     slice<2>(out, 2, 3) = in_w * (F<mshadow_op::sigmoid>(slice<2>(
-      temp, nc + 1, nc + 2)) +
+     slice<2>(out, 2, 3) = in_w * (slice<2>(temp, nc + 1, nc + 2) +
       reshape(broadcast_with_axis(repmat(range<DType>(
       0, data.shape_[3], 1, param_.num_anchor), data.shape_[2]), -1,
       data.shape_[0]), tshape));
      // y = (logistic(pred[1]) + j) / in_h
-     slice<2>(out, 3, 4) = in_h * (F<mshadow_op::sigmoid>(slice<2>(
-      temp, nc + 2, nc + 3)) +
+     slice<2>(out, 3, 4) = in_h * (slice<2>(temp, nc + 2, nc + 3) +
       reshape(broadcast_with_axis(range<DType>(0,
       data.shape_[2], 1, data.shape_[3] * param_.num_anchor), -1, data.shape_[0]),
       tshape));
      // anchors
-     tshape[2] = 2;
      nnvm::Tuple<DType> anchors(param_.anchors.begin(), param_.anchors.end());
      Tensor<cpu, 1, DType> cpu_bias(anchors.begin(), Shape1(anchors.ndim()));
-     Tensor<xpu, 1, DType> xpu_bias = ctx.requested[yoloout_enum::kTempSpace]
-      .get_space_typed<xpu, 1, DType>(cpu_bias.shape_, s);
+    //  Tensor<xpu, 1, DType> xpu_bias = ctx.requested[yoloout_enum::kTempSpace]
+    //   .get_space_typed<xpu, 1, DType>(cpu_bias.shape_, s);
      Copy(xpu_bias, cpu_bias, s);
-     slice<2>(temp, nc, nc + 2) = reshape(
-      broadcast_with_axis(broadcast_with_axis(reshape(xpu_bias,
+     temp_anchors = reshape(broadcast_with_axis(broadcast_with_axis(reshape(xpu_bias,
       Shape2(param_.num_anchor, 2)), 0, data.shape_[2] * data.shape_[3]),
-      -1, data.shape_[0]), tshape);
+      -1, data.shape_[0]), temp_anchors.shape_);
      // w = exp(pred[2]) * anchor[w] / in_w
      slice<2>(out, 4, 5) = in_w * F<mshadow_op::exp>(slice<2>(temp, nc + 3, nc + 4)) *
-      slice<2>(temp, nc, nc + 1);
+      slice<2>(temp_anchors, 0, 1);
      // h = exp(pred[3]) * anchor[y] / in_h
      slice<2>(out, 5, 6) = in_h * F<mshadow_op::exp>(slice<2>(temp, nc + 4, nc + 5)) *
-      slice<2>(temp, nc + 1, nc + 2);
+      slice<2>(temp_anchors, 1, 2);
 
      // convert output from x, y, w, h to xmin, ymin, xmax, ymax format
      slice<2>(out, 2, 3) -= ScalarExp<DType>(0.5) * slice<2>(out, 4, 5);
@@ -273,11 +301,23 @@ class YoloOutputOp : public Operator {
      slice<2>(out, 4, 5) += slice<2>(out, 2, 3);
      slice<2>(out, 5, 6) += slice<2>(out, 3, 4);
 
+     // clip to boundaries
+     slice<2>(out, 2, 6) = F<clip_zero_one>(slice<2>(out, 2, 6));
+
       // Tensor<cpu, 3, DType> debug_bias = ctx.requested[yoloout_enum::kTempSpace]
       //  .get_host_space_typed<3, DType>(temp.shape_);
       // Copy(debug_bias, temp, s);
       // for (int i = 0; i < 845; ++i) {
       //   LOG(INFO) << i << ": " << debug_bias[0][i][0 + 20] << ", " << debug_bias[0][i][21];
+      // }
+
+      // Tensor<cpu, 2, DType> debug = ctx.requested[yoloout_enum::kTempSpace]
+      //  .get_host_space_typed<2, DType>(Shape2(temp.shape_[1], 6));
+      // Copy(debug, out[0], s);
+      // for (int ii = 0; ii < debug.shape_[0]; ++ii) {
+      //   LOG(INFO) << ii << ": " << debug[ii][0] << ", " << debug[ii][1] << ", "
+      //    << debug[ii][2] << ", " << debug[ii][3] << ", " << debug[ii][4] << ", "
+      //    << debug[ii][5];
       // }
   }
 
@@ -297,10 +337,11 @@ class YoloOutputOp : public Operator {
     Tensor<xpu, 4, DType> grad = in_grad[yoloout_enum::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 3, DType> temp_out = out_data[yoloout_enum::kTemp].get<xpu, 3, DType>(s);
     Tensor<xpu, 3, DType> out = out_data[yoloout_enum::kOut].get<xpu, 3, DType>(s);
+    // Tensor<xpu, 1> counter = aux_states[yoloout_enum::kCounter].get<xpu, 1, int>(s);
     index_t num_batch = label.shape_[0];
     index_t num_label = label.shape_[1];
     index_t label_width = label.shape_[2];
-    index_t pred_width = out.shape_[2];
+    index_t pred_width = temp_out.shape_[2];
     index_t num_box = out.shape_[1];
     index_t in_width = grad.shape_[3];
     index_t in_height = grad.shape_[2];
@@ -311,8 +352,8 @@ class YoloOutputOp : public Operator {
     // LOG(INFO) << "Label size: " << num_label;
 
     // temp space
-    Shape<1> label_shape = Shape1(num_batch * num_box);
-    Shape<2> softmax_shape = Shape2(num_batch * num_box, nc);
+    Shape<2> label_shape = Shape2(num_batch, num_box);
+    Shape<3> softmax_shape = Shape3(num_batch, nc, num_box);
     Shape<4> overlaps_shape = Shape4(9, num_batch, num_box, num_label);
     Shape<3> grad_shape = Shape3(num_batch, num_box, grad_width);
     Shape<1> anchor_shape = Shape1(num_anchor * 2);
@@ -324,12 +365,12 @@ class YoloOutputOp : public Operator {
     Tensor<xpu, 1, DType> temp_space = ctx.requested[yoloout_enum::kTempSpace]
      .get_space_typed<xpu, 1, DType>(Shape1(temp_size_total), s);
     // LOG(INFO) << "Total dptr: " << temp_space.dptr_ << ", " << label_shape.Size();
-    Tensor<xpu, 1, DType> temp_label(temp_space.dptr_, label_shape, s);
+    Tensor<xpu, 2, DType> temp_label(temp_space.dptr_, label_shape, s);
     // LOG(INFO) << "Label dptr: " << temp_label.dptr_ << ", " << label_shape.Size();
-    Tensor<xpu, 2, DType> temp_softmax(temp_label.dptr_ + temp_label.MSize(),
+    Tensor<xpu, 3, DType> temp_softmax(temp_label.dptr_ + temp_label.MSize(),
      softmax_shape, s);
     // LOG(INFO) << "softmax dptr: " << temp_softmax.dptr_ << ", " << softmax_shape.Size();
-    Tensor<xpu, 2, DType> temp_softmax_grad(temp_softmax.dptr_ + temp_softmax.MSize(),
+    Tensor<xpu, 3, DType> temp_softmax_grad(temp_softmax.dptr_ + temp_softmax.MSize(),
      softmax_shape, s);
     // LOG(INFO) << "softmaxgrad dptr: " << temp_softmax_grad.dptr_ << ", " << softmax_shape.Size();
     // [0]-[7] for x1, y1, w1, h1, x2, y2, w2, h2, [8] for overlap
@@ -347,43 +388,110 @@ class YoloOutputOp : public Operator {
       buffer[i] = reshape(broadcast_with_axis(slice<2>(label, i + 1, i + 2), 0,
        num_box), tshape);
       // pred_x, pred_y, pred_w, pred_h
-      buffer[i + 4] = reshape(broadcast_with_axis(slice<2>(temp_out, i + 2, i + 3),
+      buffer[i + 4] = reshape(broadcast_with_axis(slice<2>(out, i + 2, i + 3),
        1, num_label), tshape);
     }
     mxnet_op::Kernel<calc_overlap, xpu>::Launch(s, tshape.Size(), buffer[8].dptr_,
      buffer[0].dptr_, buffer[1].dptr_, buffer[2].dptr_, buffer[3].dptr_,
      buffer[4].dptr_, buffer[5].dptr_, buffer[6].dptr_, buffer[7].dptr_);
 
+    // Tensor<cpu, 2, DType> debug = ctx.requested[yoloout_enum::kTempSpace]
+    //  .get_host_space_typed<2, DType>(Shape2(num_box, num_label));
+    // Copy(debug, buffer[8][0], s);
+    // for (int ii = 0; ii < num_box; ++ii) {
+    //   for (int jj = 0; jj < num_label; ++jj) {
+    //     if (debug[ii][jj] > 0) {
+    //       LOG(INFO) << ii << ", " << jj << ": " << debug[ii][jj];
+    //     }
+    //   }
+    // }
+    // grad = 0;
+    // return;
+
     // objectness grad
     temp_grad = DType(0);
-    slice<2>(temp_grad, nc, nc + 1) = ScalarExp<DType>(-param_.background_grad_scale) *
+    slice<2>(temp_grad, nc, nc + 1) = ScalarExp<DType>(param_.background_grad_scale) *
      slice<2>(out, 1, 2);
-    Shape<3> sshape = Shape3(num_batch, num_box, 1);
     // mask out when iou > thresh
-    slice<2>(temp_grad, nc, nc + 1) *= reshape(F<mshadow_op::lt>(
-     reduce_with_axis<red::maximum, false>(buffer[8], 2),
-     ScalarExp<DType>(param_.overlap_thresh)), sshape);
+    slice<2>(temp_grad, nc, nc + 1) *= F<mshadow_op::lt>(
+     reduce_keepdim<red::maximum, false>(buffer[8], 2),
+     ScalarExp<DType>(param_.overlap_thresh));
 
     // find best match for each ground-truth, and calculate grad for box pred
+
+    const ScalarExp<DType> init_scale = ScalarExp<DType>(param_.warmup_grad_scale *
+      param_.coord_grad_scale);
+    slice<2>(temp_grad, nc + 1, nc + 2) = init_scale * (
+      slice<2>(temp_out, nc + 1, nc + 2) - ScalarExp<DType>(0.5));
+    slice<2>(temp_grad, nc + 2, nc + 3) = init_scale * (
+      slice<2>(temp_out, nc + 2, nc + 3) - ScalarExp<DType>(0.5));
+    slice<2>(temp_grad, nc + 3, nc + 4) = init_scale *
+      slice<2>(temp_out, nc + 3, nc + 4);
+    slice<2>(temp_grad, nc + 4, nc + 5) = init_scale *
+      slice<2>(temp_out, nc + 4, nc + 5);
+
     nnvm::Tuple<DType> anchors(param_.anchors.begin(), param_.anchors.end());
     Tensor<cpu, 1, DType> cpu_bias(anchors.begin(), Shape1(anchors.ndim()));
     Copy(xpu_bias, cpu_bias, s);
     temp_label = ignore_label;  // assign default as ignored
-    mxnet_op::Kernel<box_grad, xpu>::Launch(s, num_batch * num_label,
-     temp_grad.dptr_, temp_label.dptr_, label.dptr_, xpu_bias.dptr_, out.dptr_,
-     label_width, 1, pred_width, 2, grad_width, nc + 1,
-     num_anchor, num_batch, in_width, in_height, param_.coord_grad_scale,
+    mxnet_op::Kernel<box_grad, xpu>::Launch(s, num_batch,
+     temp_grad.dptr_, temp_label.dptr_, label.dptr_, xpu_bias.dptr_, temp_out.dptr_,
+     label_width, 1, pred_width, nc + 1, grad_width, nc + 1,
+     num_anchor, num_label, in_width, in_height, param_.coord_grad_scale,
      param_.object_grad_scale);
 
     // softmax loss
-    temp_softmax = reshape(slice<2>(temp_out, 0, nc), temp_softmax.shape_);
+    temp_softmax = transpose(slice<2>(temp_out, 0, nc), Shape3(0, 2, 1));
     SoftmaxGrad(temp_softmax_grad, temp_softmax, temp_label, ignore_label);
-    slice<2>(temp_grad, 0, nc) = reshape(temp_softmax_grad, Shape3(num_batch,
-     num_box, nc));
+    slice<2>(temp_grad, 0, nc) = transpose(temp_softmax_grad, Shape3(0, 2, 1))
+      * ScalarExp<DType>(param_.class_grad_scale);
+
+    // apply logistic grad to score, x, y
+    slice<2>(temp_grad, nc, nc + 3) *= F<mshadow_op::sigmoid_grad>(
+      slice<2>(temp_out, nc, nc + 3));
 
     // transpose grad to data shape
     grad = transpose(reshape(temp_grad, Shape4(num_batch, in_height,
       in_width, num_anchor * grad_width)), Shape4(0, 3, 1, 2));
+
+    // Tensor<cpu, 3, DType> debug = ctx.requested[yoloout_enum::kTempSpace]
+    //  .get_host_space_typed<3, DType>(Shape3(125, in_height, in_width));
+    // Copy(debug, grad[0], s);
+    // for (int ii = 0; ii < in_height; ++ii) {
+    //   for (int jj = 0; jj < in_width; ++jj) {
+    //     for (int kk = 0; kk < 5; ++kk) {
+    //       std::stringstream ss;
+    //       ss << ii << "-" << jj << "-" << kk << ": ";
+    //       for (int nn = 0; nn < 25; ++nn) {
+    //         ss << "(" << nn << ")" << debug[kk * 25  + nn][jj][ii];
+    //       }
+    //       LOG(INFO) << ss.str();
+    //     }
+    //   }
+    // }
+
+    // store loss in temp_output for metric, [0]:softmax, [1]:object, [2]:box
+    temp_out = 0;
+    Tensor<xpu, 2, DType> metric_out = out_data[yoloout_enum::kTemp]
+     .get_with_shape<xpu, 2, DType>(Shape2(temp_out.shape_.Size() / num_batch,
+     num_batch), s);
+    metric_out[0] = sumall_except_dim<0>(F<mshadow_op::abs>(slice<2>(temp_grad, 0, nc)));
+    metric_out[1] = sumall_except_dim<0>(F<mshadow_op::abs>(slice<2>(temp_grad, nc, nc + 1)));
+    metric_out[2] = sumall_except_dim<0>(F<mshadow_op::abs>(slice<2>(temp_grad, nc + 1, nc + 5)));
+    Tensor<cpu, 2, DType> loss_debug = ctx.requested[yoloout_enum::kTempSpace]
+     .get_host_space_typed<2, DType>(Shape2(3, num_batch));
+    Copy(loss_debug[0], metric_out[0], s);
+    Copy(loss_debug[1], metric_out[1], s);
+    Copy(loss_debug[2], metric_out[2], s);
+    DType l1 = 0;
+    DType l2 = 0;
+    DType l3 = 0;
+    for (int ii = 0; ii < num_batch; ++ii) {
+      l1 += loss_debug[0][ii];
+      l2 += loss_debug[1][ii];
+      l3 += loss_debug[2][ii];
+    }
+    LOG(INFO) << l1 << ", " << l2 << ", " << l3;
   }
 
  private:
@@ -412,8 +520,12 @@ class YoloOutputProp : public OperatorProperty {
     return {"output", "temp"};
   }
 
+  std::vector<std::string> ListAuxiliaryStates() const override {
+    return {"beta"};
+  }
+
   int NumVisibleOutputs() const override {
-    return 1;
+    return 2;
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
@@ -443,6 +555,8 @@ class YoloOutputProp : public OperatorProperty {
     out_shape->push_back(oshape);
     out_shape->push_back(Shape3(dshape[0], param_.num_anchor * dshape[2] * dshape[3],
       param_.num_class + 4 + 1));
+    aux_shape->clear();
+    aux_shape->push_back(Shape1(1));
     return true;
   }
 
@@ -461,6 +575,8 @@ class YoloOutputProp : public OperatorProperty {
                                        << (*in_type)[i] << " at " << ListArguments()[i];
       }
     }
+    aux_type->clear();
+    aux_type->push_back(mshadow::kInt32);  // use int as counter
     out_type->clear();
     out_type->push_back(dtype);
     out_type->push_back(dtype);
