@@ -6,7 +6,6 @@ then
 fi
 
 if [ ${TASK} == "installation" ]; then
-    wget -o docs/get_started/install.md https://raw.githubusercontent.com/sandeep-krishnamurthy/mxnet/b3d2968a026cd2d7f28f3af60b43894f985366d6/docs/get_started/install.md
     ./tests/jenkins/run_test_installation_docs.sh docs/get_started/install.md
     exit $?
 fi
