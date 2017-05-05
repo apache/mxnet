@@ -60,7 +60,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_hypot_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarBackward<cpu, mshadow_op::hypot_grad_left>);
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(smooth_l1)
-.MXNET_DESCRIBE(R"code(Calculate Smooth L1 Loss(lhs, scalar) by summing
+.describe(R"code(Calculate Smooth L1 Loss(lhs, scalar) by summing
 
 .. math::
 
@@ -70,7 +70,7 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(smooth_l1)
     |x|-0.5/\sigma^2,& \text{otherwise}
     \end{cases}
 
-where :math:`x` is an element of the tensor lhs and :math:`\sigma` is the scalar.
+where :math:`x` is an element of the tensor *lhs* and :math:`\sigma` is the scalar.
 
 Example::
 
