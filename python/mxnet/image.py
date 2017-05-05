@@ -89,29 +89,33 @@ def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
 
 
 def random_crop(src, size, interp=2):
-    """Randomly crop src with size. Upsample result if src is smaller than size.
+    """Randomly crop `src` with `size` (width, height). 
+       Upsample result if `src` is smaller than `size`.
 
     Parameters
     ----------
-    src : source ndarray
-    size : (width, height) - size of the crop. If it is larger than the image, then 
-           the image is upsampled to size and returned
-    interp: interpolation to be used in case the size is larger (default: bicubic). Uses 
-           OPENCV convention for the parameters. NEAREST - 0, Bilinear - 1, bicubic - 2, area - 3
+    src: Source image `NDArray`
+    size: Size of the crop formatted as (width, height). If the `size` is larger 
+           than the image, then the source image is upsampled to `size` and returned.
+    interp: Interpolation method to be used in case the size is larger (default: bicubic). 
+            Uses OPENCV convention for the parameters. NEAREST - 0, Bilinear - 1, bicubic - 2, 
+            area - 3. See OpenCV imresize function for more details.
     Returns
     -------
     NDArray
         An `NDArray` containing the cropped image.
     Tuple
-    (x, y, width, height) where (x, y) is top-left position of the crop in the original image 
-           and (width, height) are the dimensions of the cropped image
+        A tuple (x, y, width, height) where (x, y) is top-left position of the crop in the 
+        original image and (width, height) are the dimensions of the cropped image.
 
     Example
     -------
     >>> im = mx.nd.array(cv2.imread("flower.jpg"))
     >>> cropped_im, rect  = mx.image.random_crop(im, (100, 100))
-    >>> print cropped_im, rect
-    (<NDArray 100x100x1 @cpu(0)>, (20, 21, 100, 100))
+    >>> print cropped_im
+    <NDArray 100x100x1 @cpu(0)>
+    >>> print rect
+    (20, 21, 100, 100)
     """
 
     h, w, _ = src.shape
