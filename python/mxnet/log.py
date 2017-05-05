@@ -63,12 +63,37 @@ class _Formatter(logging.Formatter):
 def getLogger(name=None, filename=None, filemode=None, level=WARNING):
     """Get customized logger.
 
-    Args:
-        name: Name of the logger.
-        level: Level to log.
+    Parameters
+    ----------
+    name: str, optional
+        Name of the logger
+    filename: str, optional
+        The filename to which logging output will be sent
+    filemode: str, optional
+        The file mode to open the file, default is 'a'
+    level: int, optional
+        The `logging` level for the logger
+        See: https://docs.python.org/2/library/logging.html#logging-levels
 
-    Returns:
-        A logger.
+    Returns
+    -------
+    `Logger` object
+        A customized Logger object
+
+    Example
+    -------
+    >>> from mxnet.log import getLogger
+    >>> logger = getLogger("Test")
+    >>> logger.warn("Hello World")
+    W0505 00:29:47 3525 <stdin>:<module>:1] Hello World
+    >>> import logging
+    >>> logger = getLogger("Test2", level=logging.WARNING)
+    >>> logger.warn("Hello World")
+    W0505 00:30:50 3525 <stdin>:<module>:1] Hello World
+    >>> logger.debug("Hello World")
+    >>> logger = getLogger("Test3", level=logging.DEBUG)
+    >>> logger.debug("Hello World")
+    D0505 00:31:30 3525 <stdin>:<module>:1] Hello World
     """
     logger = logging.getLogger(name)
     if name is not None and not getattr(logger, '_init_done', None):
