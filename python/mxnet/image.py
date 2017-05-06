@@ -101,7 +101,7 @@ def random_crop(src, size, interp=2):
 
 
 def center_crop(src, size, interp=2):
-    """Crops the image `src` to the given `size` by trimming on all the four
+    """Crops the image `src` to the given `size` by trimming on all four
     sides and preserving the center of the image. Upsamples if `src` is smaller
     than `size`.
 
@@ -131,8 +131,8 @@ def center_crop(src, size, interp=2):
 
         4: Lanczos interpolation over 8x8 pixel neighborhood.
 
-         To shrink an image, it will generally look best with AREA-based
-        interpolation, whereas to enlarge an image, it will generally look best
+         When shrinking an image, it will generally look best with AREA-based
+        interpolation, whereas, when enlarging an image, it will generally look best
         with Bicubic (slow) or Bilinear (faster but still looks OK).
 
     Returns
