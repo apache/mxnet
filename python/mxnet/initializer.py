@@ -207,16 +207,20 @@ class Initializer(object):
 
 
 class Load(object):
-    """Initialize by loading data from file or dict.
+    """Initializes variables by loading data from file or dict.
+
+    **Note** Load will drop ``arg:`` or ``aux:`` from name and
+    initialize the variables that match with the prefix dropped.
 
     Parameters
     ----------
-    param: str or dict of str->NDArray
+    param: str or dict of str->`NDArray`
         Parameter file or dict mapping name to NDArray.
     default_init: Initializer
-        Default initializer when name is not found in param.
+        Default initializer when name is not found in `param`.
     verbose: bool
-        Log source when initializing.
+        Flag for enabling logging of source when initializing.
+
     """
     def __init__(self, param, default_init=None, verbose=False):
         if isinstance(param, str):
