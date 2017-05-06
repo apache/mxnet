@@ -50,14 +50,14 @@ void QuantizeCompute(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
 
   const QuantizeParam& param = nnvm::get<QuantizeParam>(attrs.parsed);
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DstDType, {
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, SrcDType, {
-    Kernel<quantize, xpu>::Launch(s, outputs[0].Size(),
-      outputs[0].dptr<DstDType>(), outputs[1].dptr<float>(), outputs[2].dptr<float>(),
-      inputs[0].dptr<SrcDType>(), inputs[1].dptr<float>(), inputs[2].dptr<float>(),
-      std::numeric_limits<DstDType>::min(), std::numeric_limits<DstDType>::max());
-  });
-  });
+  // for now, only supports quantize from uint8 to float
+  // TODO(ziheng) consider add MSHADOW_INTEGER_TYPE_SWITCH
+  typedef uint8_t DstDType;
+  typedef float SrcDType;
+  Kernel<quantize, xpu>::Launch(s, outputs[0].Size(),
+    outputs[0].dptr<DstDType>(), outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+    inputs[0].dptr<SrcDType>(), inputs[1].dptr<float>(), inputs[2].dptr<float>(),
+    std::numeric_limits<DstDType>::min(), std::numeric_limits<DstDType>::max());
 }
 
 inline bool QuantizeShape(const nnvm::NodeAttrs& attrs,
