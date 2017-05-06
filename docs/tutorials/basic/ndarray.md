@@ -378,7 +378,7 @@ mx.nd.save('s3://mybucket/mydata.ndarray', [a,])  # if compiled with USE_S3=1
 mx.nd.save('hdfs///users/myname/mydata.bin', [a,])  # if compiled with USE_HDFS=1
 ```
 
-### Lazy Evaluation and Automatic Parallelization *
+### Lazy Evaluation and Automatic Parallelization
 
 MXNet uses lazy evaluation to achieve superior performance.  When we run `a=b+1`
 in Python, the Python thread just pushes this operation into the backend engine

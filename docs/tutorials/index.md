@@ -2,9 +2,8 @@
 
 These tutorials introduce fundamental concepts in deep learning and their realizations in _MXNet_. Under the _basics_ section, you'll find tutorials covering manipulating arrays, building networks, loading and preprocessing data, etc. Further sections introduce fundamental models for image classification, natural language processing, speech recognition, and unsupervised learning. While most tutorials are currently presented in Python, we also present a subset of tutorials using the R and Scala front ends.
 
-### Python
 
-#### Basics
+## Basics
 
 ```eval_rst
 .. toctree::
@@ -18,9 +17,15 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
    basic/record_io
 ```
 
-#### Computer Vision
+## Computer Vision
 
-- [Classifying Handwritten Digits with Convolutional Neural Networks](http://mxnet.io/tutorials/python/mnist.html)
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   python/mnist
+   python/predict_image
+```
 
 - [Object Detection using Faster R-CNN](https://github.com/dmlc/mxnet/tree/master/example/rcnn)
 
@@ -30,7 +35,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Large Scale Image Classification](https://github.com/dmlc/mxnet/tree/master/example/image-classification)
 
-#### Natural Language Processing
+## Natural Language Processing
 
 - [Character-Level LSTM - Generate new text, one character at a time](http://mxnet.io/tutorials/python/char_lstm.html)
 
@@ -38,13 +43,13 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [NCE Loss - Speed up text classification with large output layers](http://mxnet.io/tutorials/nlp/nce_loss.html)
 
-#### Speech Recognition
+## Speech Recognition
 
 - [Phoneme Classification - Use LSTM recurrent nets to recognize phonemes in audio](http://mxnet.io/tutorials/speech_recognition/speech_lstm.html)
 
 - [Baidu Warp CTC - Jointly learn predictions and alignments with CTC loss](http://mxnet.io/tutorials/speech_recognition/baidu_warp_ctc.html)
 
-#### Unsupervised Learning and Generative Modeling
+## Unsupervised Learning and Generative Modeling
 
 - [Generative Adversarial Networks](http://mxnet.io/tutorials/unsupervised_learning/gan.html)
 
@@ -54,6 +59,8 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Recommender Systems - Build a complete recommender system with matrix factorization](http://mxnet.io/tutorials/general_ml/recommendation_systems.html)
 
+
+## Lanauges
 
 ### R
 
