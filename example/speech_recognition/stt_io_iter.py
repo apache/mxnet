@@ -31,7 +31,7 @@ class SimpleBatch(object):
 class STTIter(mx.io.DataIter):
     def __init__(self, count, datagen, batch_size, num_label, init_states, seq_length, width, height,
                  sort_by_duration=True,
-                 shuffle=True, partition="train"):
+                 is_bi_graphemes=False, partition="train",):
         super(STTIter, self).__init__()
         self.batch_size = batch_size
         self.num_label = num_label
@@ -41,6 +41,7 @@ class STTIter(mx.io.DataIter):
         self.provide_data = [('data', (batch_size, seq_length, width * height))] + init_states
         self.provide_label = [('label', (self.batch_size, num_label))]
         self.count = count
+        self.is_bi_graphemes = is_bi_graphemes
         # self.partition = datagen.partition
         if partition == 'train':
             durations = datagen.train_durations
@@ -57,16 +58,21 @@ class STTIter(mx.io.DataIter):
         else:
             raise Exception("Invalid partition to load metadata. "
                             "Must be train/validation/test")
+        # if sortagrad
         if sort_by_duration:
-            self.durations, self.audio_paths, self.texts = datagen.sort_by_duration(durations,
-                                                                                    audio_paths,
-                                                                                    texts)
+            durations, audio_paths, texts = datagen.sort_by_duration(durations,
+                                                                     audio_paths,
+                                                                     texts)
         else:
-            self.durations = durations
-            self.audio_paths = audio_paths
-            self.texts = texts
+            durations = durations
+            audio_paths = audio_paths
+            texts = texts
 
-        self.trainDataList = zip(self.durations, self.audio_paths, self.texts)
+        self.trainDataList = zip(durations, audio_paths, texts)
+        # to shuffle data
+        if not sort_by_duration:
+            random.shuffle(self.trainDataList)
+
         self.trainDataIter = iter(self.trainDataList)
         self.is_first_epoch = True
 
@@ -83,13 +89,12 @@ class STTIter(mx.io.DataIter):
                     random.shuffle(self.trainDataList)
                     self.trainDataIter = iter(self.trainDataList)
                     duration, audio_path, text = self.trainDataIter.next()
-                #print(audio_path, text)
                 audio_paths.append(audio_path)
                 texts.append(text)
             if self.is_first_epoch:
-                data_set = self.datagen.prepare_minibatch(audio_paths, texts, overwrite=True)
+                data_set = self.datagen.prepare_minibatch(audio_paths, texts, overwrite=True, is_bi_graphemes=self.is_bi_graphemes)
             else:
-                data_set = self.datagen.prepare_minibatch(audio_paths, texts, overwrite=False)
+                data_set = self.datagen.prepare_minibatch(audio_paths, texts, overwrite=False, is_bi_graphemes=self.is_bi_graphemes)
 
             data_all = [mx.nd.array(data_set['x'])] + self.init_state_arrays
             label_all = [mx.nd.array(data_set['y'])]
