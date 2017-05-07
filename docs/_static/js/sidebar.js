@@ -137,8 +137,14 @@ function toggle(elem) {
 
 /*Automatically expand child level while cilcking an entry*/
 function autoExpand(elem) {
-    elem.parent().removeClass("closed").addClass("opened");
-    elem.parent().children("ul").first().show();
+    if(elem.parent().hasClass("closed")) {
+        elem.parent().removeClass("closed").addClass("opened");
+        elem.parent().children("ul").first().show();
+    }
+    else {
+        elem.parent().removeClass("opened").addClass("closed");
+        elem.parent().children("ul").first().hide();
+    }
 }
 
 /*Keep toc expansion while redirecting*/
