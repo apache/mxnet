@@ -15,7 +15,7 @@
 #include <vector>
 #include "ps/ps.h"
 #include "../../include/mxnet/kvstore.h"
-#include "../../ps-lite/src/DIME.h"
+#include "../../ps-lite/include/dmlc/DIME.h"
 #include <time.h>
 #pragma once
 namespace mxnet {
