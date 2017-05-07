@@ -37,8 +37,8 @@ def imdecode(buf, **kwargs):
         1 for three channel color output. 0 for grayscale output.
     to_rgb : int, optional, default=1
         1 for RGB formatted output (MXNet default). 0 for BGR formatted output (OpenCV default).
-
-    # removed out parameter as it is not used
+    out : NDArray, optional
+        Output buffer. Use `None` for automatic allocation.
 
     Returns
     -------
@@ -54,15 +54,23 @@ def imdecode(buf, **kwargs):
     >>> image
     <NDArray 224x224x3 @cpu(0)>
 
-    flag parameter can be used to get grayscale output, but 
-    make sure to_rgb is set to 0
+    Set `flag` parameter to 0 to get grayscale output
 
     >>> with open("flower.jpg", 'rb') as fp:
     ...     str_image = fp.read()
     ...
-    >>> image = mx.img.imdecode(str_image, flag=0, to_rgb=0)
+    >>> image = mx.img.imdecode(str_image, flag=0)
     >>> image
     <NDArray 224x224x1 @cpu(0)>
+
+    Set `to_rgb` parameter to 0 to get output in OpenCV format (BGR)
+
+    >>> with open("flower.jpg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.img.imdecode(str_image, to_rgb=0)
+    >>> image
+    <NDArray 224x224x3 @cpu(0)>
     """
     if not isinstance(buf, nd.NDArray):
         buf = nd.array(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
