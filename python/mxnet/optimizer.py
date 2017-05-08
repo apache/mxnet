@@ -562,7 +562,7 @@ class RMSProp(Optimizer):
     gamma2: float, optional
         A "momentum" factor. Only used if `centered`=``True``.
     epsilon : float, optional
-        Small value to avoid divided by 0.
+        Small value to avoid division by 0.
     centered : bool, optional
         Flag to control which version of RMSProp to use.
         ``True`` will use Graves's version of `RMSProp`,
