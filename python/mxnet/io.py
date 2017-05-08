@@ -111,9 +111,11 @@ class DataBatch(object):
     provide_data : list of `DataDesc`, optional
           A list of `DataDesc` objects. `DataDesc` is used to store
           name, shape, type and layout information of the data.
+          The *i*-th elements describes the name and shape of ``data[i]``.
     provide_label : list of `DataDesc`, optional
           A list of `DataDesc` objects. `DataDesc` is used to store
           name, shape, type and layout information of the data.
+          The *i*-th elements describes the name and shape of ``label[i]``.
     """
     def __init__(self, data, label=None, pad=None, index=None,
                  bucket_key=None, provide_data=None, provide_label=None):
