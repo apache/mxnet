@@ -78,6 +78,8 @@ def _create_kvstore(kvstore, num_device, arg_params):
 def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
                         update_on_kvstore):
     """ Initialize kvstore"""
+    """ Infiniband Servers, tell them to setup appropriate key sizes """
+    kvstore.init(-1,[arg_params[param_names[idx]].size() for idx in range(len(param_arrays))])
     for idx, param_on_devs in enumerate(param_arrays):
         kvstore.init(idx, arg_params[param_names[idx]])
 

@@ -88,13 +88,21 @@ class Executor {
 class KVStoreDistServer {
  public:
   KVStoreDistServer() {
+    printf("KVStoreDistServer.h 91\n");
     LOG(INFO)<<"*******FULL******Revision 1.1.1.1.3******************"<<std::endl;
     using namespace std::placeholders;
     ps_server_ = new ps::KVServer<float>(0);
+    printf("KVStoreDistServer.h 94\n");
+   
     static_cast<ps::SimpleApp*>(ps_server_)->set_request_handle(
         std::bind(&KVStoreDistServer::CommandHandle, this, _1, _2));
+    printf("KVStoreDistServer.h 98\n");
+   
+    
     ps_server_->set_request_handle(
         std::bind(&KVStoreDistServer::DataHandle, this, _1, _2, _3));
+    printf("KVStoreDistServer.h 103\n");
+   
     sync_mode_ = false;
   }
 

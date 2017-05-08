@@ -11,6 +11,7 @@
 #include "mxnet/engine.h"
 #include "ps/ps.h"
 #include "./kvstore_dist_server.h"
+#include "../../ps-lite/include/dmlc/DIME.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -31,7 +32,9 @@ class KVStoreDist : public KVStoreLocal {
       : KVStoreLocal(use_device_comm), ps_worker_(nullptr), server_(nullptr) {
     if (IsWorkerNode()) {
       ps_worker_ = new ps::KVWorker<real_t>(0);
+      //printf("[IMPORTANT BOOTSTRAP]Setting up worker postoffice\n");
       ps::StartAsync("mxnet\0");
+      //printf("[IMPORTANT BOOTSTRAP]Worker PO up and running\n");
       if (!ps::Postoffice::Get()->is_recovery()) {
         ps::Postoffice::Get()->Barrier(
           ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
@@ -57,42 +60,69 @@ class KVStoreDist : public KVStoreLocal {
 
   void Init(const std::vector<int>& keys,
             const std::vector<NDArray>& values) override {
+    
     CheckUnique(keys);
-    for (size_t i = 0; i < keys.size(); ++i) {
-      comm_->Init(keys[i], values[i].shape());
-    }
-    if (get_rank() == 0) {
-      Push_(keys, values, 0, false);
-      // wait until the push is finished
-      for (const auto& v : values) {
-        v.WaitToWrite();
+    if(keys.size() != 1 || keys[0] == -1)
+      {
+	//copy whatever code it was originally.
+	CheckUnique(keys);
+	for (size_t i = 0; i < keys.size(); ++i) {
+	  comm_->Init(keys[i], values[i].shape());
+	}
+	if (get_rank() == 0) {
+	  Push_(keys, values, 0, false);
+	  // wait until the push is finished
+	  for (const auto& v : values) {
+	    v.WaitToWrite();
+	  }
+	} else {
+	  // do nothing
+	}
+	if (!ps::Postoffice::Get()->is_recovery()) {
+	  Barrier();
+	}
       }
-
-    } else {
-      // do nothing
-    }
-    /*if (!ps::Postoffice::Get()->is_recovery()) {
-      Barrier();
-    }*/
+    else
+      {
+	//this is the initialization code
+	printf("[IMPORTANT BOOTSTRAP][%d]Worker Init\n", ps::Postoffice::Get()->van()->my_node().id);
+	//print_stacktrace();  
+	/*for (size_t i = 0; i < keys.size(); ++i) {
+	  comm_->Init(keys[i], values[i].shape());
+	  }*/
+	if (get_rank() == 0) {
+	  Push_(keys, values, 0, false);
+	  // wait until the push is finished
+	  for (const auto& v : values) {
+	    v.WaitToWrite();
+	  }
+	  
+	} else {
+	  // do nothing
+	}
+	/*if (!ps::Postoffice::Get()->is_recovery()) {
+	  Barrier();
+	  }*/
 	//everyone, setup your key counts!
 	for (int i = 0; i < keys.size(); i++)
-	{
-		//assuming there's only one server.
-		//no need to call EncodeKey
+	  {
+	    //assuming there's only one server.
+	    //no need to call EncodeKey
 		CHECK_EQ(ps::Postoffice::Get()->num_servers(), 1);
+		CHECK_EQ(keys.size(), values.size());
 		ps::Postoffice::Get()->van()->SetKeySize(i, sizeof(real_t)*values[i].shape().Size());
-	}
+	  }
 
 	if (!ps::Postoffice::Get()->is_recovery()) {
-		ps::Postoffice::Get()->Barrier(
-			ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+	  ps::Postoffice::Get()->Barrier(
+					 ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
 	}
 	//everyone, now initiate phase 1 initialization of infiniband.
 	ps::Postoffice::Get()->van()->OnKeyPopulated();
 	if (!ps::Postoffice::Get()->is_recovery()) {
-		ps::Postoffice::Get()->Barrier(
-			ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+	  ps::Postoffice::Get()->Barrier(ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
 	}
+      }
   }
 
   void Push(const std::vector<int>& keys,
@@ -181,13 +211,17 @@ class KVStoreDist : public KVStoreLocal {
 
   void RunServer(const Controller& controller) override {
     CHECK(!IsWorkerNode());
+    if(IsServerNode())
+      LOG(INFO)<<"[IMPORTANT BOOTSTRAP]Server Init\n";
+   
     if (IsServerNode()) {
       server_ = new KVStoreDistServer();
       server_->set_controller(controller);
     }
-
+    if(IsServerNode())
+      LOG(INFO)<<"[IMPORTANT BOOTSTRAP]Server Init Phase2\n";
+   
     ps::StartAsync("mxnet_server\0");
-
 
     if (!ps::Postoffice::Get()->is_recovery()) {
       ps::Postoffice::Get()->Barrier(
@@ -200,6 +234,9 @@ class KVStoreDist : public KVStoreLocal {
 			ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
 	}
 	//now call to setup infiniband qps and etc.
+
+	if(IsServerNode())
+	  LOG(INFO)<<"[IMPORTANT BOOTSTRAP]Server about to call OnKeyPopulated!";
 	ps::Postoffice::Get()->van()->OnKeyPopulated();
 	if (!ps::Postoffice::Get()->is_recovery()) {
 		ps::Postoffice::Get()->Barrier(
