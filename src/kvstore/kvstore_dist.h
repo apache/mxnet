@@ -14,383 +14,389 @@
 #include "../../ps-lite/include/dmlc/DIME.h"
 
 namespace mxnet {
-namespace kvstore {
+	namespace kvstore {
 
-/**
- * \brief distributed kvstore
- *
- * for a worker node, it always guarantees that all push and pull issued from
- * this worker on the same key are serialized. namely push(3) and then pull(3),
- * then the data pulled is always containing the modification from the push(3).
- *
- * it's the server node's job to control the data consistency among all
- * workers. see details on \ref ServerHandle::Start
- */
-class KVStoreDist : public KVStoreLocal {
- public:
-  explicit KVStoreDist(bool use_device_comm)
-      : KVStoreLocal(use_device_comm), ps_worker_(nullptr), server_(nullptr) {
-    if (IsWorkerNode()) {
-      ps_worker_ = new ps::KVWorker<real_t>(0);
-      //printf("[IMPORTANT BOOTSTRAP]Setting up worker postoffice\n");
-      ps::StartAsync("mxnet\0");
-      //printf("[IMPORTANT BOOTSTRAP]Worker PO up and running\n");
-      if (!ps::Postoffice::Get()->is_recovery()) {
-        ps::Postoffice::Get()->Barrier(
-          ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
-      }
-    }
-    bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 10000 * 10000);
-  }
+		/**
+		 * \brief distributed kvstore
+		 *
+		 * for a worker node, it always guarantees that all push and pull issued from
+		 * this worker on the same key are serialized. namely push(3) and then pull(3),
+		 * then the data pulled is always containing the modification from the push(3).
+		 *
+		 * it's the server node's job to control the data consistency among all
+		 * workers. see details on \ref ServerHandle::Start
+		 */
+		class KVStoreDist : public KVStoreLocal {
+		public:
+			explicit KVStoreDist(bool use_device_comm)
+				: KVStoreLocal(use_device_comm), ps_worker_(nullptr), server_(nullptr) {
+				if (IsWorkerNode()) {
+					ps_worker_ = new ps::KVWorker<real_t>(0);
+					//printf("[IMPORTANT BOOTSTRAP]Setting up worker postoffice\n");
+					ps::StartAsync("mxnet\0");
+					//printf("[IMPORTANT BOOTSTRAP]Worker PO up and running\n");
+					if (!ps::Postoffice::Get()->is_recovery()) {
+						ps::Postoffice::Get()->Barrier(
+							ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+					}
+				}
+				bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 10000 * 10000);
+			}
 
-  virtual ~KVStoreDist() {
-    Engine::Get()->WaitForAll();
-    if (IsWorkerNode()) {
-      if (barrier_before_exit_) {
-        Barrier();
-        if (get_rank() == 0) {
-          // stop the executor at servers
-          SendCommandToServers(kStopServer, "");
-        }
-      }
-      ps::Finalize(barrier_before_exit_);
-      delete ps_worker_;
-    }
-  }
+			virtual ~KVStoreDist() {
+				Engine::Get()->WaitForAll();
+				if (IsWorkerNode()) {
+					if (barrier_before_exit_) {
+						Barrier();
+						if (get_rank() == 0) {
+							// stop the executor at servers
+							SendCommandToServers(kStopServer, "");
+						}
+					}
+					ps::Finalize(barrier_before_exit_);
+					delete ps_worker_;
+				}
+			}
 
-  void Init(const std::vector<int>& keys,
-            const std::vector<NDArray>& values) override {
-    
-    CheckUnique(keys);
-    if(keys.size() != 1 || keys[0] == -1)
-      {
-	//copy whatever code it was originally.
-	CheckUnique(keys);
-	for (size_t i = 0; i < keys.size(); ++i) {
-	  comm_->Init(keys[i], values[i].shape());
-	}
-	if (get_rank() == 0) {
-	  Push_(keys, values, 0, false);
-	  // wait until the push is finished
-	  for (const auto& v : values) {
-	    v.WaitToWrite();
-	  }
-	} else {
-	  // do nothing
-	}
-	if (!ps::Postoffice::Get()->is_recovery()) {
-	  Barrier();
-	}
-      }
-    else
-      {
-	//this is the initialization code
-	printf("[IMPORTANT BOOTSTRAP][%d]Worker Init\n", ps::Postoffice::Get()->van()->my_node().id);
-	//print_stacktrace();  
-	/*for (size_t i = 0; i < keys.size(); ++i) {
-	  comm_->Init(keys[i], values[i].shape());
-	  }*/
-	if (get_rank() == 0) {
-	  Push_(keys, values, 0, false);
-	  // wait until the push is finished
-	  for (const auto& v : values) {
-	    v.WaitToWrite();
-	  }
-	  
-	} else {
-	  // do nothing
-	}
-	/*if (!ps::Postoffice::Get()->is_recovery()) {
-	  Barrier();
-	  }*/
-	//everyone, setup your key counts!
-	for (int i = 0; i < keys.size(); i++)
-	  {
-	    //assuming there's only one server.
-	    //no need to call EncodeKey
-		CHECK_EQ(ps::Postoffice::Get()->num_servers(), 1);
-		CHECK_EQ(keys.size(), values.size());
-		ps::Postoffice::Get()->van()->SetKeySize(i, sizeof(real_t)*values[i].shape().Size());
-	  }
+			void Init(const std::vector<int>& keys,
+				const std::vector<NDArray>& values) override {
 
-	if (!ps::Postoffice::Get()->is_recovery()) {
-	  ps::Postoffice::Get()->Barrier(
-					 ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
-	}
-	//everyone, now initiate phase 1 initialization of infiniband.
-	ps::Postoffice::Get()->van()->OnKeyPopulated();
-	if (!ps::Postoffice::Get()->is_recovery()) {
-	  ps::Postoffice::Get()->Barrier(ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
-	}
-      }
-  }
+				CheckUnique(keys);
+				if (keys.size() != 1 || keys[0] != UINT16_MAX)
+				{
+					//copy whatever code it was originally.
+					CheckUnique(keys);
+					for (size_t i = 0; i < keys.size(); ++i) {
+						comm_->Init(keys[i], values[i].shape());
+					}
+					if (get_rank() == 0) {
+						Push_(keys, values, 0, false);
+						// wait until the push is finished
+						for (const auto& v : values) {
+							v.WaitToWrite();
+						}
+					}
+					else {
+						// do nothing
+					}
+					if (!ps::Postoffice::Get()->is_recovery()) {
+						Barrier();
+					}
+				}
+				else
+				{
+					//this is the initialization code
+					printf("[IMPORTANT BOOTSTRAP][%d]Worker Init\n", ps::Postoffice::Get()->van()->my_node().id);
+					//print_stacktrace();  
+					/*for (size_t i = 0; i < keys.size(); ++i) {
+					  comm_->Init(keys[i], values[i].shape());
+					  }*/
+					if (get_rank() == 0) {
+						Push_(keys, values, 0, false);
+						// wait until the push is finished
+						for (const auto& v : values) {
+							v.WaitToWrite();
+						}
+						printf("[IMPORTANT BOOTSTRAP][%d]Worker 0 has exchanged key with server\n", ps::Postoffice::Get()->van()->my_node().id);
+					}
+					else {
+						// do nothing
+					}
+					/*if (!ps::Postoffice::Get()->is_recovery()) {
+					  Barrier();
+					  }*/
+					  //everyone, setup your key counts!
+					for (int i = 0; i < keys.size(); i++)
+					{
+						//assuming there's only one server.
+						//no need to call EncodeKey
+						CHECK_EQ(ps::Postoffice::Get()->num_servers(), 1);
+						CHECK_EQ(keys.size(), values.size());
+						ps::Postoffice::Get()->van()->SetKeySize(i, sizeof(real_t)*values[i].shape().Size());
+					}
 
-  void Push(const std::vector<int>& keys,
-            const std::vector<NDArray>& values,
-            int priority) override {
-    Push_(keys, values, priority, true);
-  }
+					if (!ps::Postoffice::Get()->is_recovery()) {
+						ps::Postoffice::Get()->Barrier(
+							ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+					}
+					//everyone, now initiate phase 1 initialization of infiniband.
+					ps::Postoffice::Get()->van()->OnKeyPopulated();
+					if (!ps::Postoffice::Get()->is_recovery()) {
+						ps::Postoffice::Get()->Barrier(ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+					}
+				}
+			}
 
-  void Pull(const std::vector<int>& keys,
-            const std::vector<NDArray*>& values,
-            int priority) override {
-    std::vector<int> uniq_keys;
-    std::vector<std::vector<NDArray*> > grouped_vals;
-    GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
+			void Push(const std::vector<int>& keys,
+				const std::vector<NDArray>& values,
+				int priority) override {
+				Push_(keys, values, priority, true);
+			}
 
-    for (size_t i = 0; i < uniq_keys.size(); ++i) {
-      int key = uniq_keys[i];
-      // use the same array for merging to guarantee that pull always happens
-      // after the previous push on this key
-      auto& recv_buf = comm_buf_[key];
-      if (recv_buf.is_none()) {
-        // it may happen for the first time a no-rank-0 worker pull the weight.
-        recv_buf = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_);
-      }
-      real_t* data = static_cast<real_t*>(recv_buf.data().dptr_);
-      size_t size = recv_buf.shape().Size();
+			void Pull(const std::vector<int>& keys,
+				const std::vector<NDArray*>& values,
+				int priority) override {
+				std::vector<int> uniq_keys;
+				std::vector<std::vector<NDArray*> > grouped_vals;
+				GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
 
-      auto pull_from_servers = [this, key, data, size](
-          RunContext rctx, Engine::CallbackOnComplete cb) {
-        // convert to ps keys
-        PSKV& pskv = EncodeKey(key, size);
+				for (size_t i = 0; i < uniq_keys.size(); ++i) {
+					int key = uniq_keys[i];
+					// use the same array for merging to guarantee that pull always happens
+					// after the previous push on this key
+					auto& recv_buf = comm_buf_[key];
+					if (recv_buf.is_none()) {
+						// it may happen for the first time a no-rank-0 worker pull the weight.
+						recv_buf = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_);
+					}
+					real_t* data = static_cast<real_t*>(recv_buf.data().dptr_);
+					size_t size = recv_buf.shape().Size();
 
-        // issue pull, false means no delete
-        auto vals = new ps::SArray<real_t>(data, size, false);
-        CHECK_NOTNULL(ps_worker_)->ZPull(
-        pskv.keys, vals, &pskv.lens, 0, [vals, cb](){ delete vals; cb(); });
-      };
+					auto pull_from_servers = [this, key, data, size](
+						RunContext rctx, Engine::CallbackOnComplete cb) {
+						// convert to ps keys
+						PSKV& pskv = EncodeKey(key, size);
 
-      CHECK_NOTNULL(Engine::Get())->PushAsync(
-          pull_from_servers,
-          pinned_ctx_,
-          {},
-          {recv_buf.var()},
-          FnProperty::kNormal,
-          priority,
-          PROFILER_MESSAGE("KVStoreDistPull"));
+						// issue pull, false means no delete
+						auto vals = new ps::SArray<real_t>(data, size, false);
+						CHECK_NOTNULL(ps_worker_)->ZPull(
+							pskv.keys, vals, &pskv.lens, 0, [vals, cb]() { delete vals; cb(); });
+					};
 
-      comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
-    }
-  }
+					CHECK_NOTNULL(Engine::Get())->PushAsync(
+						pull_from_servers,
+						pinned_ctx_,
+						{},
+						{ recv_buf.var() },
+						FnProperty::kNormal,
+						priority,
+						PROFILER_MESSAGE("KVStoreDistPull"));
 
-  void set_updater(const Updater& updater) override {
-    CHECK(updater) << "invalid updater";
-    if (IsServerNode()) {
-      CHECK_NOTNULL(server_)->set_updater(updater);
-    } else {
-      updater_ = updater;
-    }
-  }
+					comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
+				}
+			}
 
-  void Barrier() override {
-    ps::Postoffice::Get()->Barrier(ps::kWorkerGroup);
-  }
+			void set_updater(const Updater& updater) override {
+				CHECK(updater) << "invalid updater";
+				if (IsServerNode()) {
+					CHECK_NOTNULL(server_)->set_updater(updater);
+				}
+				else {
+					updater_ = updater;
+				}
+			}
+
+			void Barrier() override {
+				ps::Postoffice::Get()->Barrier(ps::kWorkerGroup);
+			}
 
 
-  void SendCommandToServers(int cmd_id,
-                            const std::string& cmd_body) override {
-    CHECK_NOTNULL(ps_worker_);
-    ps_worker_->Wait(ps_worker_->Request(cmd_id, cmd_body, ps::kServerGroup));
-  }
+			void SendCommandToServers(int cmd_id,
+				const std::string& cmd_body) override {
+				CHECK_NOTNULL(ps_worker_);
+				ps_worker_->Wait(ps_worker_->Request(cmd_id, cmd_body, ps::kServerGroup));
+			}
 
-  int get_group_size() const override { return ps::NumWorkers(); }
+			int get_group_size() const override { return ps::NumWorkers(); }
 
-  int get_rank() const override { return ps::MyRank(); }
+			int get_rank() const override { return ps::MyRank(); }
 
-  int get_num_dead_node(int node_id, int timeout) const override {
-    int number = 0;
-    auto dead_nodes = ps::Postoffice::Get()->GetDeadNodes(timeout);
-    const auto& watch_nodes = ps::Postoffice::Get()->GetNodeIDs(node_id);
-    std::unordered_set<int> watch_set(watch_nodes.begin(), watch_nodes.end());
-    for (int r : dead_nodes) {
-      if (watch_set.find(r) != watch_set.end()) number++;
-    }
-    return number;
-  }
+			int get_num_dead_node(int node_id, int timeout) const override {
+				int number = 0;
+				auto dead_nodes = ps::Postoffice::Get()->GetDeadNodes(timeout);
+				const auto& watch_nodes = ps::Postoffice::Get()->GetNodeIDs(node_id);
+				std::unordered_set<int> watch_set(watch_nodes.begin(), watch_nodes.end());
+				for (int r : dead_nodes) {
+					if (watch_set.find(r) != watch_set.end()) number++;
+				}
+				return number;
+			}
 
-  void RunServer(const Controller& controller) override {
-    CHECK(!IsWorkerNode());
-    if(IsServerNode())
-      LOG(INFO)<<"[IMPORTANT BOOTSTRAP]Server Init\n";
-   
-    if (IsServerNode()) {
-      server_ = new KVStoreDistServer();
-      server_->set_controller(controller);
-    }
-    if(IsServerNode())
-      LOG(INFO)<<"[IMPORTANT BOOTSTRAP]Server Init Phase2\n";
-   
-    ps::StartAsync("mxnet_server\0");
+			void RunServer(const Controller& controller) override {
+				CHECK(!IsWorkerNode());
+				if (IsServerNode())
+					LOG(INFO) << "[IMPORTANT BOOTSTRAP]Server Init\n";
 
-    if (!ps::Postoffice::Get()->is_recovery()) {
-      ps::Postoffice::Get()->Barrier(
-        ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
-    } //this is the initialization call
+				if (IsServerNode()) {
+					server_ = new KVStoreDistServer();
+					server_->set_controller(controller);
+				}
+				if (IsServerNode())
+					LOG(INFO) << "[IMPORTANT BOOTSTRAP]Server Init Phase2\n";
 
-	//this is the wait for all key size setup call
-	if (!ps::Postoffice::Get()->is_recovery()) {
-		ps::Postoffice::Get()->Barrier(
-			ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
-	}
-	//now call to setup infiniband qps and etc.
+				ps::StartAsync("mxnet_server\0");
 
-	if(IsServerNode())
-	  LOG(INFO)<<"[IMPORTANT BOOTSTRAP]Server about to call OnKeyPopulated!";
-	ps::Postoffice::Get()->van()->OnKeyPopulated();
-	if (!ps::Postoffice::Get()->is_recovery()) {
-		ps::Postoffice::Get()->Barrier(
-			ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
-	}
-	//finally go loop
+				if (!ps::Postoffice::Get()->is_recovery()) {
+					ps::Postoffice::Get()->Barrier(
+						ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+				} //this is the initialization call
 
-    if (server_) server_->Run();
-    ps::Finalize();
-    if (server_) {
-      delete server_;
-    }
-    server_ = nullptr;
-  }
+				//this is the wait for all key size setup call
+				if (!ps::Postoffice::Get()->is_recovery()) {
+					ps::Postoffice::Get()->Barrier(
+						ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+				}
+				//now call to setup infiniband qps and etc.
 
- private:
-  void Push_(const std::vector<int>& keys,
-             const std::vector<NDArray>& values,
-             int priority,
-             bool do_merge)  {
-    // first aggregate the values over keys
-    std::vector<int> uniq_keys;
-    std::vector<std::vector<NDArray> > grouped_vals;
-    GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
+				if (IsServerNode())
+					LOG(INFO) << "[IMPORTANT BOOTSTRAP]Server about to call OnKeyPopulated!";
+				ps::Postoffice::Get()->van()->OnKeyPopulated();
+				if (!ps::Postoffice::Get()->is_recovery()) {
+					ps::Postoffice::Get()->Barrier(
+						ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+				}
+				//finally go loop
 
-    for (size_t i = 0; i < uniq_keys.size(); ++i) {
-      // merge over devcies
-      int key = uniq_keys[i];
-      const auto& vals = grouped_vals[i];
-      NDArray merged = do_merge ? comm_->Reduce(key, vals, priority) : vals[0];
+				if (server_) server_->Run();
+				ps::Finalize();
+				if (server_) {
+					delete server_;
+				}
+				server_ = nullptr;
+			}
 
-      auto& send_buf = comm_buf_[key];
-      if (merged.ctx().dev_mask() == cpu::kDevMask) {
-        send_buf = merged;  // avoid memory copy
-      } else {
-        if (send_buf.is_none()) {
-          send_buf = NDArray(merged.shape(), pinned_ctx_);
-        }
-        CopyFromTo(merged, &send_buf);
-      }
+		private:
+			void Push_(const std::vector<int>& keys,
+				const std::vector<NDArray>& values,
+				int priority,
+				bool do_merge) {
+				// first aggregate the values over keys
+				std::vector<int> uniq_keys;
+				std::vector<std::vector<NDArray> > grouped_vals;
+				GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
 
-      // push to servers
-      size_t size = send_buf.shape().Size();
-      real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
-      auto push_to_servers =
-          [this, key, data, size](RunContext rctx, Engine::CallbackOnComplete cb) {
-         // convert to ps keys
-        PSKV& pskv = EncodeKey(key, size);
+				for (size_t i = 0; i < uniq_keys.size(); ++i) {
+					// merge over devcies
+					int key = uniq_keys[i];
+					const auto& vals = grouped_vals[i];
+					NDArray merged = do_merge ? comm_->Reduce(key, vals, priority) : vals[0];
 
-        // do push. false means no delete
-        ps::SArray<real_t> vals(data, size, false);
-        CHECK_NOTNULL(ps_worker_)->ZPush(
-        pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
-      };
-      Engine::Get()->PushAsync(
-          push_to_servers,
-          pinned_ctx_,
-          {send_buf.var()},
-          {},
-          FnProperty::kNormal,
-          priority,
-          PROFILER_MESSAGE("KVStoreDistPush"));
-    }
-  }
+					auto& send_buf = comm_buf_[key];
+					if (merged.ctx().dev_mask() == cpu::kDevMask) {
+						send_buf = merged;  // avoid memory copy
+					}
+					else {
+						if (send_buf.is_none()) {
+							send_buf = NDArray(merged.shape(), pinned_ctx_);
+						}
+						CopyFromTo(merged, &send_buf);
+					}
 
-  /**
-   * \brief check if the keys are all unique
-   */
-  void CheckUnique(const std::vector<int>& keys) {
-    auto keys_copy = keys;
-    auto last = std::unique(keys_copy.begin(), keys_copy.end());
-    CHECK_EQ(static_cast<size_t>(std::distance(keys_copy.begin(), last)),
-             static_cast<size_t>(keys.size()));
-  }
+					// push to servers
+					size_t size = send_buf.shape().Size();
+					real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
+					auto push_to_servers =
+						[this, key, data, size](RunContext rctx, Engine::CallbackOnComplete cb) {
+						// convert to ps keys
+						PSKV& pskv = EncodeKey(key, size);
 
-  /**
-   * \brief struct for ps keys and lens
-   */
-  struct PSKV {
-    ps::SArray<ps::Key> keys;  // n keys
-    ps::SArray<int> lens;  // the length of the i-th value
-    int size;
-  };
+						// do push. false means no delete
+						ps::SArray<real_t> vals(data, size, false);
+						CHECK_NOTNULL(ps_worker_)->ZPush(
+							pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
+					};
+					Engine::Get()->PushAsync(
+						push_to_servers,
+						pinned_ctx_,
+						{ send_buf.var() },
+						{},
+						FnProperty::kNormal,
+						priority,
+						PROFILER_MESSAGE("KVStoreDistPush"));
+				}
+			}
 
-  /**
-   * \brief cache all key partitions
-   */
-  std::unordered_map<int, PSKV> ps_kv_;
+			/**
+			 * \brief check if the keys are all unique
+			 */
+			void CheckUnique(const std::vector<int>& keys) {
+				auto keys_copy = keys;
+				auto last = std::unique(keys_copy.begin(), keys_copy.end());
+				CHECK_EQ(static_cast<size_t>(std::distance(keys_copy.begin(), last)),
+					static_cast<size_t>(keys.size()));
+			}
 
-  /**
-   * \brief serizelize EncodeKey
-   */
-  std::mutex mu_;
+			/**
+			 * \brief struct for ps keys and lens
+			 */
+			struct PSKV {
+				ps::SArray<ps::Key> keys;  // n keys
+				ps::SArray<int> lens;  // the length of the i-th value
+				int size;
+			};
 
-  /**
-   * \brief convert to keys in ps
-   */
-  inline PSKV& EncodeKey(int key, size_t size) {
-    mu_.lock();
-    PSKV& pskv = ps_kv_[key];
-    mu_.unlock();
+			/**
+			 * \brief cache all key partitions
+			 */
+			std::unordered_map<int, PSKV> ps_kv_;
 
-    if (!pskv.keys.empty()) {
-      CHECK_EQ(static_cast<size_t>(pskv.size), size) << "The value size cannot be changed";
-    } else {
-      auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
-      int num_servers = krs.size();
-      CHECK_GT(num_servers, 0);
+			/**
+			 * \brief serizelize EncodeKey
+			 */
+			std::mutex mu_;
 
-      // a simple heuristic for load balance
-      if (size < bigarray_bound_) {
-        // send it to a single random picked server
-        int server = (key * 9973) % num_servers;
-        ps::Key ps_key = krs[server].begin() + key;
-        CHECK_LT(ps_key, krs[server].end());
-        pskv.keys.push_back(ps_key);
-        pskv.lens.push_back(size);
-        pskv.size = size;
-      } else {
-        // parition it to all servers
-        pskv.size = 0;
-        for (int i = 0; i < num_servers; ++i) {
-          size_t part_size =
-              static_cast<size_t>(static_cast<double>(size)/num_servers*(i+1)) -
-              static_cast<size_t>(static_cast<double>(size)/num_servers*i);
-          ps::Key ps_key = krs[i].begin() + key;
-          CHECK_LT(ps_key, krs[i].end());
-          pskv.keys.push_back(ps_key);
-          pskv.lens.push_back(part_size);
-          pskv.size += part_size;
-        }
-        CHECK_EQ(static_cast<size_t>(pskv.size), size);
-      }
-    }
-    return pskv;
-  }
+			/**
+			 * \brief convert to keys in ps
+			 */
+			inline PSKV& EncodeKey(int key, size_t size) {
+				mu_.lock();
+				PSKV& pskv = ps_kv_[key];
+				mu_.unlock();
 
-  /**
-   * \brief for worker to push and pull data
-   */
-  ps::KVWorker<real_t>* ps_worker_;
-  /**
-   * \brief the server handle
-   */
-  KVStoreDistServer* server_;
-  /**
-   * \brief threshold for partition
-   */
-  size_t bigarray_bound_;
-  /// \brief send & recver buffer
-  std::unordered_map<int, NDArray> comm_buf_;
-};
+				if (!pskv.keys.empty()) {
+					CHECK_EQ(static_cast<size_t>(pskv.size), size) << "The value size cannot be changed";
+				}
+				else {
+					auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
+					int num_servers = krs.size();
+					CHECK_GT(num_servers, 0);
 
-}  // namespace kvstore
+					// a simple heuristic for load balance
+					if (size < bigarray_bound_) {
+						// send it to a single random picked server
+						int server = (key * 9973) % num_servers;
+						ps::Key ps_key = krs[server].begin() + key;
+						CHECK_LT(ps_key, krs[server].end());
+						pskv.keys.push_back(ps_key);
+						pskv.lens.push_back(size);
+						pskv.size = size;
+					}
+					else {
+						// parition it to all servers
+						pskv.size = 0;
+						for (int i = 0; i < num_servers; ++i) {
+							size_t part_size =
+								static_cast<size_t>(static_cast<double>(size) / num_servers*(i + 1)) -
+								static_cast<size_t>(static_cast<double>(size) / num_servers*i);
+							ps::Key ps_key = krs[i].begin() + key;
+							CHECK_LT(ps_key, krs[i].end());
+							pskv.keys.push_back(ps_key);
+							pskv.lens.push_back(part_size);
+							pskv.size += part_size;
+						}
+						CHECK_EQ(static_cast<size_t>(pskv.size), size);
+					}
+				}
+				return pskv;
+			}
+
+			/**
+			 * \brief for worker to push and pull data
+			 */
+			ps::KVWorker<real_t>* ps_worker_;
+			/**
+			 * \brief the server handle
+			 */
+			KVStoreDistServer* server_;
+			/**
+			 * \brief threshold for partition
+			 */
+			size_t bigarray_bound_;
+			/// \brief send & recver buffer
+			std::unordered_map<int, NDArray> comm_buf_;
+		};
+
+	}  // namespace kvstore
 }  // namespace mxnet
 
 
