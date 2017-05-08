@@ -47,19 +47,18 @@ void DequantizeCompute(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
 
   const DequantizeParam& param = nnvm::get<DequantizeParam>(attrs.parsed);
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DstDType, {
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, SrcDType, {
-    double min_limit = static_cast<double>(std::numeric_limits<SrcDType>::min());
-    double max_limit = static_cast<double>(std::numeric_limits<SrcDType>::max());
-    float half_range = !std::is_signed<SrcDType>::value
-      ? 0.0f
-      : (max_limit - min_limit + 1) / 2.0;
+  // for now, only supports dequantize from float to uint8
+  typedef float   DstDType;
+  typedef uint8_t SrcDType;
+  double min_limit = static_cast<double>(std::numeric_limits<SrcDType>::min());
+  double max_limit = static_cast<double>(std::numeric_limits<SrcDType>::max());
+  float half_range = !std::is_signed<SrcDType>::value
+    ? 0.0f
+    : (max_limit - min_limit + 1) / 2.0;
 
-    Kernel<dequantize, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DstDType>(),
-      inputs[0].dptr<SrcDType>(), inputs[1].dptr<float>(), inputs[2].dptr<float>(),
-      min_limit, max_limit, half_range);
-  });
-  });
+  Kernel<dequantize, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DstDType>(),
+    inputs[0].dptr<SrcDType>(), inputs[1].dptr<float>(), inputs[2].dptr<float>(),
+    min_limit, max_limit, half_range);
 }
 
 inline bool DequantizeShape(const nnvm::NodeAttrs& attrs,

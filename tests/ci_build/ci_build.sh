@@ -84,6 +84,14 @@ DOCKER_IMG_NAME=$(echo "${DOCKER_IMG_NAME}" | sed -e 's/=/_/g' -e 's/,/-/g')
 # Convert to all lower-case, as per requirement of Docker image names
 DOCKER_IMG_NAME=$(echo "${DOCKER_IMG_NAME}" | tr '[:upper:]' '[:lower:]')
 
+# skip with_the_same_user for non-linux
+uname=`uname`
+if [[ "$uname" == "Linux" ]]; then
+    PRE_COMMAND="tests/ci_build/with_the_same_user"
+else
+    PRE_COMMAND=""
+fi
+
 # Print arguments.
 echo "WORKSPACE: ${WORKSPACE}"
 echo "CI_DOCKER_EXTRA_PARAMS: ${CI_DOCKER_EXTRA_PARAMS[@]}"
@@ -91,6 +99,7 @@ echo "COMMAND: ${COMMAND[@]}"
 echo "CONTAINER_TYPE: ${CONTAINER_TYPE}"
 echo "BUILD_TAG: ${BUILD_TAG}"
 echo "DOCKER CONTAINER NAME: ${DOCKER_IMG_NAME}"
+echo "PRE_COMMAND: ${PRE_COMMAND}"
 echo ""
 
 
@@ -104,6 +113,7 @@ if [[ $? != "0" ]]; then
     echo "ERROR: docker build failed."
     exit 1
 fi
+
 
 # Run the command inside the container.
 echo "Running '${COMMAND[@]}' inside ${DOCKER_IMG_NAME}..."
@@ -121,5 +131,5 @@ ${DOCKER_BINARY} run --rm --pid=host \
     -e "CI_BUILD_GID=$(id -g)" \
     ${CI_DOCKER_EXTRA_PARAMS[@]} \
     ${DOCKER_IMG_NAME} \
-    tests/ci_build/with_the_same_user \
+    ${PRE_COMMAND} \
     ${COMMAND[@]}
