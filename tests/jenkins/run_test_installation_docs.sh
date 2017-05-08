@@ -334,11 +334,12 @@ else
     echo
     eval ${pip_commands}
 
+    ###COMMENTING THIS OUT FOR NOW AS TRAVIS DOES NOT SUPPORT DOCKER FOR MAC
 #    echo
 #    echo "### Testing Docker ###"
 #    echo "${docker_commands}"
 #    echo
- #   eval ${docker_commands}
+#    eval ${docker_commands}
 
     echo
     echo "### Testing Build From Source ###"

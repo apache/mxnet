@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if ! tests/travis/is_core_changed.sh
+if ! tests/travis/is_core_changed.sh || ${TASK} == "installation"
 then
   exit 0
 fi
