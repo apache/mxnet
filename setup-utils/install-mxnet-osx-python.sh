@@ -76,6 +76,15 @@ runme brew_pkg_install python
 brew install homebrew/science/openblas
 runme brew_pkg_install opencv
 # Needed for /usr/local/lib/graphviz to be created
+echo "debugging"
+echo "before pip ugprade"
+python --version
+pip --version
+pip install --upgrade pip
+
+echo "after pip upgrade"
+pip --version
+
 runme brew_pkg_install graphviz
 runme brew_pkg_install numpy
 
