@@ -37,7 +37,7 @@ class KVStoreDist : public KVStoreLocal {
           ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
       }
     }
-    bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 1000 * 1000);
+    bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 10000 * 10000);
   }
 
   virtual ~KVStoreDist() {
@@ -67,12 +67,32 @@ class KVStoreDist : public KVStoreLocal {
       for (const auto& v : values) {
         v.WaitToWrite();
       }
+
     } else {
       // do nothing
     }
-    if (!ps::Postoffice::Get()->is_recovery()) {
+    /*if (!ps::Postoffice::Get()->is_recovery()) {
       Barrier();
-    }
+    }*/
+	//everyone, setup your key counts!
+	for (int i = 0; i < keys.size(); i++)
+	{
+		//assuming there's only one server.
+		//no need to call EncodeKey
+		CHECK_EQ(ps::Postoffice::Get()->num_servers(), 1);
+		ps::Postoffice::Get()->van()->SetKeySize(i, sizeof(real_t)*values[i].shape().Size());
+	}
+
+	if (!ps::Postoffice::Get()->is_recovery()) {
+		ps::Postoffice::Get()->Barrier(
+			ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+	}
+	//everyone, now initiate phase 1 initialization of infiniband.
+	ps::Postoffice::Get()->van()->OnKeyPopulated();
+	if (!ps::Postoffice::Get()->is_recovery()) {
+		ps::Postoffice::Get()->Barrier(
+			ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+	}
   }
 
   void Push(const std::vector<int>& keys,
@@ -167,10 +187,26 @@ class KVStoreDist : public KVStoreLocal {
     }
 
     ps::StartAsync("mxnet_server\0");
+
+
     if (!ps::Postoffice::Get()->is_recovery()) {
       ps::Postoffice::Get()->Barrier(
         ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
-    }
+    } //this is the initialization call
+
+	//this is the wait for all key size setup call
+	if (!ps::Postoffice::Get()->is_recovery()) {
+		ps::Postoffice::Get()->Barrier(
+			ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+	}
+	//now call to setup infiniband qps and etc.
+	ps::Postoffice::Get()->van()->OnKeyPopulated();
+	if (!ps::Postoffice::Get()->is_recovery()) {
+		ps::Postoffice::Get()->Barrier(
+			ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+	}
+	//finally go loop
+
     if (server_) server_->Run();
     ps::Finalize();
     if (server_) {
