@@ -38,7 +38,7 @@ function render_lefttoc() {
         $('.sphinxsidebar').css("visibility", "visible");
         return;
     }
-    if(url.indexOf(indexTrailing) == -1) {
+    if (url.indexOf(indexTrailing) == -1) {
         for(var i = 0; i < TITLE_WITH_LANG.length; ++i) {
             var path = TITLE_WITH_LANG[i];
             if (url.indexOf(path) != -1) {
