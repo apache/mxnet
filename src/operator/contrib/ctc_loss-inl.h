@@ -268,7 +268,7 @@ class CTCLossProp : public OperatorProperty {
     return ptr;
   }
 
-  std::string TypeString() const override { return "CTCLoss"; }
+  std::string TypeString() const override { return "_contrib_CTCLoss"; }
 
   std::vector<ResourceRequest> ForwardResource(
       const std::vector<TShape> &in_shape) const override {
