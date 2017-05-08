@@ -17,6 +17,6 @@ Note:
 
 - If C++ codes have been changed, we suggest to remove the previous results to
   triggle the rebuild for all pages, namely run `make clean_docs`.
-
+- If C++ codes are failed to build, run `make clean`
 - If CSS or javascript are changed, we often need to do a *force refresh* in the
   browser to clear the cache.
