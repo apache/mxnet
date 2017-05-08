@@ -42,7 +42,7 @@ def _convert_conv_param(param):
                 pad_w = param.pad_w
             if isinstance(param.pad_h, int):
                 pad_h = param.pad_h
-            param_string += ", pad=(%d, %d)" % (pad_w, pad_h)
+            param_string += ", pad=(%d, %d)" % (pad_h, pad_w)
 
     kernel_w = ''
     kernel_h = ''
@@ -58,7 +58,7 @@ def _convert_conv_param(param):
                 kernel_w = param.kernel_w
             if isinstance(param.kernel_h, int):
                 kernel_h = param.kernel_h
-            param_string += ", kernel=(%d,%d)" % (kernel_w, kernel_h)
+            param_string += ", kernel=(%d,%d)" % (kernel_h, kernel_w)
 
     stride = 1
     if isinstance(param.stride, int):
