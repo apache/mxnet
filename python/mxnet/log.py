@@ -61,25 +61,25 @@ class _Formatter(logging.Formatter):
         return super(_Formatter, self).format(record)
 
 def getLogger(name=None, filename=None, filemode=None, level=WARNING):
-    """Get customized logger.
+    """Gets a customized logger.
 
     Parameters
     ----------
     name: str, optional
-        Name of the logger
+        Name of the logger.
     filename: str, optional
-        The filename to which logging output will be sent
+        The filename to which the logger's output will be sent.
     filemode: str, optional
         The file mode to open the file (corresponding to `filename`),
-        default is 'a' if `filename` is not ``None``
+        default is 'a' if `filename` is not ``None``.
     level: int, optional
-        The `logging` level for the logger
+        The `logging` level for the logger.
         See: https://docs.python.org/2/library/logging.html#logging-levels
 
     Returns
     -------
-    `Logger` object
-        A customized `Logger` object
+    Logger
+        A customized `Logger` object.
 
     Example
     -------
