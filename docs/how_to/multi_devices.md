@@ -23,11 +23,7 @@ For the duration of this tutorial, we'll focus on data parallelism.
 
 ### Workload Partitioning
 
-<<<<<<< HEAD
 By default, _MXNet_ partitions a data batch evenly among the available GPUs.
-=======
-By default, `MXNet` partitions a data batch evenly among the available GPUs.
->>>>>>> revised English on these documents
 Assume batch size *b* and *k* GPUs, then in one iteration
 each GPU will perform forward and backward on *b/k* examples. The
 gradients are then summed over all GPUs before updating the model.
