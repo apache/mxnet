@@ -5,12 +5,12 @@ then
   exit 0
 fi
 
-if [ ${TASK} == *"installation"* ]; then
+if [[ ${TASK} == *"installation"* ]]; then
     echo "TASK:" ${TASK}
     ./tests/jenkins/run_test_installation_docs.sh docs/get_started/install.md ${TASK}
     exit $?
 fi
-echo "i didn't go to the right place"
+echo "i didn't go to the right place y" ${TASK}
 if [ ${TASK} == "lint" ]; then
     make lint || exit -1
     echo "Check documentations of c++ code..."
