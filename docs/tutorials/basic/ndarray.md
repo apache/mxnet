@@ -1,4 +1,4 @@
-# Introduction to NDArray - Imperative tensor operations on CPU
+# NDArray - Imperative tensor operations on CPU
 
 In _MXNet_, `NDArray` is the core data structure for all mathematical
 computations.  An `NDArray` represents a multidimensional, fixed-size homogenous

@@ -3,7 +3,9 @@
 These tutorials introduce fundamental concepts in deep learning and their realizations in _MXNet_. Under the _basics_ section, you'll find tutorials covering manipulating arrays, building networks, loading and preprocessing data, etc. Further sections introduce fundamental models for image classification, natural language processing, speech recognition, and unsupervised learning. While most tutorials are currently presented in Python, we also present a subset of tutorials using the R and Scala front ends.
 
 
-## Basics
+## Python
+
+### Basics
 
 ```eval_rst
 .. toctree::
@@ -17,7 +19,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
    basic/record_io
 ```
 
-## Computer Vision
+### Computer Vision
 
 ```eval_rst
 .. toctree::
@@ -35,7 +37,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Large Scale Image Classification](https://github.com/dmlc/mxnet/tree/master/example/image-classification)
 
-## Natural Language Processing
+### Natural Language Processing
 
 - [Character-Level LSTM - Generate new text, one character at a time](http://mxnet.io/tutorials/python/char_lstm.html)
 
@@ -43,13 +45,13 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [NCE Loss - Speed up text classification with large output layers](http://mxnet.io/tutorials/nlp/nce_loss.html)
 
-## Speech Recognition
+### Speech Recognition
 
 - [Phoneme Classification - Use LSTM recurrent nets to recognize phonemes in audio](http://mxnet.io/tutorials/speech_recognition/speech_lstm.html)
 
 - [Baidu Warp CTC - Jointly learn predictions and alignments with CTC loss](http://mxnet.io/tutorials/speech_recognition/baidu_warp_ctc.html)
 
-## Unsupervised Learning and Generative Modeling
+### Unsupervised Learning and Generative Modeling
 
 - [Generative Adversarial Networks](http://mxnet.io/tutorials/unsupervised_learning/gan.html)
 
@@ -60,9 +62,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 - [Recommender Systems - Build a complete recommender system with matrix factorization](http://mxnet.io/tutorials/general_ml/recommendation_systems.html)
 
 
-## Lanauges
-
-### R
+## R
 
 - [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
 
@@ -75,7 +75,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 - [Character-Level Language Modeling with LSTM RNNs](http://mxnet.io/tutorials/r/charRnnModel.html)
 
 
-### Scala
+## Scala
 
 - [Create MXNet Scala Applications with the IntelliJ IDE](http://mxnet.io/tutorials/scala/mxnet_scala_on_intellij.html)
 
@@ -83,18 +83,14 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 - [Character-Level Language Modeling with LSTM RNNs](http://mxnet.io/tutorials/scala/char_lstm.html)
 
-### C++
+## C++
 
 - [Basics](http://mxnet.io/tutorials/c++/basics.html)
 
-### Perl
+## Perl
 
 - [Calculator, handwritten digits and roboshakespreare](http://blogs.perl.org/users/sergey_kolychev/2017/04/machine-learning-in-perl-part2-a-calculator-handwritten-digits-and-roboshakespeare.html)
 
 ## Contributing Tutorials
 
 Want to contribute an MXNet tutorial? To get started, download the [tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
-
-## Other Resources
-- [MXNet Code Examples](https://github.com/dmlc/mxnet/tree/master/example)
-- [MXNet Tutorials for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)

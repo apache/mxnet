@@ -1,11 +1,9 @@
-# MXNet Iterators - Load data for neural network training
+# Iterators - Loading data
 
 This tutorial we focus on how to feeding data into a training and inference
 program. Most training and inference modules in MXNet accepts data iterators,
 which simplifies this procedure, especially when reading large datasets from
 filesystems. Here we discuss the API conventions and several provided iterators.
-
-## Basic Data Iterator
 
 Data iterators in MXNet is similar to the iterator in Python. In Python, we can
 use the built-in function `iter` with an iterable object (such as list) to
@@ -14,16 +12,15 @@ on the list `[1,2,3]`. If we repeatedly call `x.next()` (`__next__()` for Python
 3), then we will get elements from the list one by one, and end with a
 `StopIteration` exception.
 
-MXNet's data iterator returns a batch of data in each `next` call. We first
-introduce what a data batch looks like and then how to write a basic data
-iterator.
+## Introduction
 
 ### Data Batch
 
-A data batch often contains *n* examples and the according labels. Here *n* is
-often called as the batch size.
+A data iterator returns a batch of data in each `next` call.
+A batch often contains *n* examples and the according labels. Here *n* is
+called as the batch size.
 
-The following codes defines a valid data batch is able to be read by most
+The following codes define a simple data batch that is able to be read by most
 training/inference modules.
 
 ```python
@@ -36,93 +33,70 @@ class SimpleBatch(object):
 
 We explain what each attribute means:
 
-- **`data`** is a list of NDArray, each of them has $n$ length first
-  dimension. For example, if an example is an image with size $224 \times 224$
-  and RGB channels, then the array shape should be `(n, 3, 224, 244)`.  Note
-  that the image batch format used by MXNet is
+- `data` is a list of `NDArray`, each array contains *n* examples. For
+  instance, if an example is presented by a length $k$ vector, then the shape of
+  the array will be `(n, k)`.
 
-  $$\textrm{batch_size} \times \textrm{num_channel} \times \textrm{height} \times
-  \textrm{width}$$ The channels are often in RGB order.
+  Each array will be copied into a free variable such as created by
+  `mx.sym.Variable()` later. The mapping from arrays to free variables should be
+  given by the `provide_data` attribute of the iterator, which will be discussed
+  shortly.
 
-  Each array will be copied into a free variable of the Symbol later. The
-  mapping from arrays to free variables should be given by the `provide_data`
-  attribute of the iterator, which will be discussed shortly.
-
-- **`label`** is also a list of NDArray. Often each NDArray is a 1-dimensional
+- `label` is also a list of `NDArray`. Often each array is a 1-dimensional
   array with shape `(n,)`. For classification, each class is represented by an
   integer starting from 0.
 
-- **`pad`** is an integer shows how many examples are for merely used for
-  padding, which should be ignored in the results. A nonzero padding is often
-  used when we reach the end of the data and the total number of examples cannot
-  be divided by the batch size.
+- `pad` is an integer shows the number of examples added in the last of the
+  batch that are merely used for padding. These examples should be ignored in
+  the results, such as computing the gradient. A nonzero padding is often used
+  when we reach the end of the data and the total number of examples cannot be
+  divided by the batch size.
 
-### Symbol and Data Variables
+### Data Variables
 
-Before moving the iterator, we first look at how to find which variables in a
-Symbol are for input data. In MXNet, an operator (`mx.sym.*`) has one or more
-input variables and output variables; some operators may have additional
-auxiliary variables for internal states. For an input variable of an operator,
-if do not assign it with an output of another operator during creating this
-operator, then this input variable is free. We need to assign it with external
-data before running.
+Before showing the data iterator, we first discuss how to find free variables in
+a symbol. A symbol often contains one or more explicit free variables and also
+implicit ones.
 
-The following codes define a simple multilayer perceptron (MLP) and then print
-all free variables.
-
+The following codes define a multilayer perceptron.
 
 ```python
 import mxnet as mx
-num_classes = 10
 net = mx.sym.Variable('data')
 net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=64)
 net = mx.sym.Activation(data=net, name='relu1', act_type="relu")
-net = mx.sym.FullyConnected(data=net, name='fc2', num_hidden=num_classes)
+net = mx.sym.FullyConnected(data=net, name='fc2', num_hidden=10)
 net = mx.sym.SoftmaxOutput(data=net, name='softmax')
-print(net.list_arguments())
-print(net.list_outputs())
+```
+
+We can get the names of the all free variables by calling `list_arguments`:
+
+```python
+net.list_arguments()
 ```
 
 As can be seen, we name a variable either by its operator's name if it is atomic
-(e.g. `sym.Variable`) or by the `opname_varname` convention. The `varname` often
-means what this variable is for:
+(e.g. `Variable`) or by the `opname_varname` convention, where `opname` is the
+operator's name and `varname` is assigned by the operator. The `varname`
+often means what this variable is for:
+
 - `weight` : the weight parameters
 - `bias` : the bias parameters
 - `output` : the output
 - `label` : input label
 
-On the above example, now we know that there are 4 variables for parameters, and
-two for input data: `data` for examples and `softmax_label` for the according
-labels.
+On the above example, now we know that there are 6 variables for free
+variables. Four of them are learnable parameters, `fc1_weight`, `fc1_bias`,
+`fc2_weight`, and `fc2_bias`. These parameters are often initialized by
+`mx.initializer` and updated by `mx.optimizer`. The rest two
+are for input data: `data` for examples and `softmax_label` for the
+according labels. Then it is the iterator's job to fed data into these two
+variables.
 
-The following example define a matrix factorization object function with rank 10
-for recommendation systems. It has three input variables, `user` for user IDs,
-`item` for item IDs, and `score` is the rating `user` gives to `item`.
+### Data iterator
 
+An iterator in _MXNet_ should
 
-```python
-num_users = 1000
-num_items = 1000
-k = 10
-user = mx.symbol.Variable('user')
-item = mx.symbol.Variable('item')
-score = mx.symbol.Variable('score')
-# user feature lookup
-user = mx.symbol.Embedding(data = user, input_dim = num_users, output_dim = k)
-# item feature lookup
-item = mx.symbol.Embedding(data = item, input_dim = num_items, output_dim = k)
-# predict by the inner product, which is elementwise product and then sum
-pred = user * item
-pred = mx.symbol.sum_axis(data = pred, axis = 1)
-pred = mx.symbol.Flatten(data = pred)
-# loss layer
-pred = mx.symbol.LinearRegressionOutput(data = pred, label = score)
-```
-
-### Data Iterators
-
-Now we are ready to show how to create a valid MXNet data iterator. An iterator
-should
 1. return a data batch or raise a `StopIteration` exception if reaching the end
    when call `next()` in python 2 or `__next()__` in python 3
 2. has `reset()` method to restart reading from the beginning
@@ -131,9 +105,53 @@ should
    shape. It is similar for `provide_label`, which provides information about
    input labels.
 
-The following codes define a simple iterator that return some random data each
-time.
+On the above example,  assume the data batch size is *(n,k)* and label size is
+*(n,1)*, the iterator for `net` should have `provide_data` to return
+`[('data', (n,k))]` and `provide_label` to return
+`[('softmax_label', (n,))]`. An training or inference program will then know how
+to assign the arrays in a data batch into the input variables.
 
+## Read array
+
+When data are already in memory and stored by either `NDArray` or numpy ndarray,
+we can create an iterator by `NDArrayIter`:
+
+```python
+import numpy as np
+data = np.random.rand(100,3)
+label = np.random.randint(0, 10, (100,))
+data_iter = mx.io.NDArrayIter(data=data, label=label, batch_size=30)
+for batch in data_iter:
+    print([batch.data, batch.label, batch.pad])
+```
+
+## Read CSV
+
+There is an iterator called to `CSVIter` to read data batches from CSV files. We
+first dump `data` into a csv file, and then load the data
+
+```python
+np.savetxt('data.csv', data, delimiter=',')
+data_iter = mx.io.CSVIter(data_csv='data.csv', data_shape=(3,), batch_size=30)
+for batch in data_iter:
+    print([batch.data, batch.pad])
+```
+
+Note that we have not given a label file, then `batch.label` is empty here.
+
+## Read images
+
+<!-- TODO(mli) move notebooks here -->
+
+- [Read images](https://github.com/dmlc/mxnet-notebooks/blob/master/python/basic/image_io.ipynb)
+- [Advanced image reading](https://github.com/dmlc/mxnet-notebooks/blob/master/python/basic/advanced_img_io.ipynb)
+
+## Write your own data iterators
+
+Sometimes the provided iterators are not enough for some application. There are
+mainly two ways to develop a new iterator. One is creating from scratch, the
+following codes define an iterator that creates a given number of data batches
+through a data generator `data_gen`.
 
 ```python
 import numpy as np
@@ -168,46 +186,23 @@ class SimpleIter:
         if self.cur_batch < self.num_batches:
             self.cur_batch += 1
             data = [mx.nd.array(g(d[1])) for d,g in zip(self._provide_data, self.data_gen)]
-            assert len(data) > 0, "Empty batch data."
             label = [mx.nd.array(g(d[1])) for d,g in zip(self._provide_label, self.label_gen)]
-            assert len(label) > 0, "Empty batch label."
             return SimpleBatch(data, label)
         else:
             raise StopIteration
 ```
 
-Now we can feed the data iterator into a training problem. Here we used the
-`Module` class.
+But in most cases we can reuse the existing data iterators. For example, in the
+image caption application, an input example is an image while the label is a
+sentence. Then we can create
 
+- `image_iter` by `ImageRecordIter` so we can enjoy the provided multithreaded
+pre-fetch and augmentation.
+- `caption_iter` by `NDArrayIter` or bucketing iterator provided in the `rnn`
+package.
 
-```python
-import logging
-logging.basicConfig(level=logging.INFO)
+Next we create an iterator whose `next()` function will both
+`image_iter.next()` and `caption_iter.next()` and return the combined results.
 
-n = 32
-data = SimpleIter(['data'], [(n, 100)],
-                  [lambda s: np.random.uniform(-1, 1, s)],
-                  ['softmax_label'], [(n,)],
-                  [lambda s: np.random.randint(0, num_classes, s)])
-
-mod = mx.mod.Module(symbol=net)
-mod.fit(data, num_epoch=5)
-```
-
-While for Symbol `pred`, we need to provide three inputs, two for examples and
-one for label.
-
-
-```python
-data = SimpleIter(['user', 'item'],
-                  [(n,), (n,)],
-                  [lambda s: np.random.randint(0, num_users, s),
-                   lambda s: np.random.randint(0, num_items, s)],
-                  ['score'], [(n,)],
-                  [lambda s: np.random.randint(0, 5, s)])
-
-mod = mx.mod.Module(symbol=pred, data_names=['user', 'item'], label_names=['score'])
-mod.fit(data, num_epoch=5)
-```
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
