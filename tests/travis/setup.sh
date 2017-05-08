@@ -5,12 +5,7 @@ then
   exit 0
 fi
 
-if [ ${TASK} == "installation" ]; then
-    echo "exit because installation"
-    exit
-fi
-
-if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+if [ ${TRAVIS_OS_NAME} == "osx" && ${TASK} != "installation" ]; then
     brew update
     brew tap homebrew/science
     brew install opencv
