@@ -318,7 +318,7 @@ class CuDNNDeconvolutionOp : public Operator {
 
     // Dilation support across all architectures only available after v6.0.20.
     return filterDilationFactor == 1 ||
-           filterDilationFactor > 1 && (CUDNN_VERSION > 6020) &&
+           filterDilationFactor > 1 && (CUDNN_VERSION >= 6020) &&
            (backward_compute_type != kFloat16) &&
            (forward_compute_type != kFloat16);
   }

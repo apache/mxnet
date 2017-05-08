@@ -307,7 +307,7 @@ class CuDNNConvolutionOp : public Operator {
     // The v6 kernels that backprop a dilated convolution don't handle fp16.
     // Dilation support across all architectures only available after v6.0.20.
     return filterDilationFactor == 1 ||
-           filterDilationFactor > 1 && (CUDNN_VERSION > 6020) &&
+           filterDilationFactor > 1 && (CUDNN_VERSION >= 6020) &&
            (backward_compute_type != kFloat16);
   }
 
