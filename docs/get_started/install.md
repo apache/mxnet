@@ -43,9 +43,24 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 
 <div class="linux macos">
   <div class="python">
-    <div class="cpu gpu">
+    <div class="cpu">
       <div class="btn-group opt-group" role="group">
         <button type="button" class="btn btn-default opt active">Pip</button>
+        <button type="button" class="btn btn-default opt">Virtualenv</button>
+        <button type="button" class="btn btn-default opt">Docker</button>
+        <button type="button" class="btn btn-default opt">Build from Source</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Linux Python GPU Options -->
+
+<div class="linux">
+  <div class="python">
+    <div class="gpu">
+      <div class="btn-group opt-group" role="group">
+        <button type="button" class="btn btn-default opt">Pip</button>
         <button type="button" class="btn btn-default opt">Virtualenv</button>
         <button type="button" class="btn btn-default opt">Docker</button>
         <button type="button" class="btn btn-default opt">Build from Source</button>
@@ -70,7 +85,6 @@ The following installation instructions have been tested on Ubuntu 14.04 and 16.
 **Step 1**  Install virtualenv for Ubuntu.
 
 ```bash
-$ sudo apt-get update
 $ sudo apt-get install -y python-dev python-virtualenv
 ```
 
@@ -152,7 +166,7 @@ Follow the four steps in this [docker documentation](https://docs.docker.com/eng
 
 If you skip this step, you need to use *sudo* each time you invoke Docker.
 
-**Step 3** Pull the MXNet docker image.
+**Step 2** Pull the MXNet docker image.
 
 ```bash
 $ docker pull mxnet/python # Use sudo if you skip Step 2
@@ -167,13 +181,12 @@ REPOSITORY          TAG                 IMAGE ID            CREATED             
 mxnet/python        latest              00d026968b3c        3 weeks ago         1.41 GB
 ```
 
-**Step 4** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+**Step 3** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 
 </div>
 
 <div class="build-from-source">
 <br/>
-
 Building *MXNet* from source is a 2 step process.
 1. Build the *MXNet* core shared library, `libmxnet.so`, from the C++ sources.
 2. Build the language specific bindings. Example - Python bindings, Scala bindings.
@@ -786,7 +799,7 @@ More details and verified validation instructions for macOS, with GPUs, coming s
 <!-- Linux Clean up -->
 <div class="linux">
   <div class="python">
-    <div class="cpu gpu">
+    <div class="cpu">
 
 <div class="pip build-from-source">
 
@@ -811,7 +824,7 @@ $
 
 <div class="docker">
 
-Exit the Python terminal and then the docker container.
+Exit the Python terminal and mxnet/python docker container.
 ```python
 >>> exit()
 root@4919c4f58cac:/# exit
