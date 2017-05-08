@@ -109,11 +109,11 @@ class DataBatch(object):
     bucket_key : int, optional
           The bucket key, used for bucketing module.
     provide_data : list of `DataDesc`, optional
-          A list of `DataDesc` objects having attributes
-          data name, data shape, data type and layout.
+          A list of `DataDesc` objects. `DataDesc` is used to store
+          name, shape, type and layout information of the data.
     provide_label : list of `DataDesc`, optional
-          A list of `DataDesc` objects having attributes
-          label name, label shape, label type and layout.
+          A list of `DataDesc` objects. `DataDesc` is used to store
+          name, shape, type and layout information of the data.
     """
     def __init__(self, data, label=None, pad=None, index=None,
                  bucket_key=None, provide_data=None, provide_label=None):
@@ -473,8 +473,6 @@ class NDArrayIter(DataIter):
     >>> data = np.arange(40).reshape((10,2,2))
     >>> labels = np.ones([10, 1])
     >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')
-    >>> dataiter
-    <mxnet.io.NDArrayIter object at 0x10bb2fd90>
     >>> for batch in dataiter:
     ...    print batch.data[0].asnumpy()
     ...    batch.data[0].shape
