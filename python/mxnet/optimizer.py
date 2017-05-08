@@ -469,7 +469,7 @@ class Adam(Optimizer):
     beta2 : float, optional
         Exponential decay rate for the second moment estimates.
     epsilon : float, optional
-        Small value to avoid divided by 0.
+        Small value to avoid division by 0.
     """
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
                  **kwargs):
@@ -564,7 +564,9 @@ class RMSProp(Optimizer):
     epsilon : float, optional
         Small value to avoid divided by 0.
     centered : bool, optional
-        Uses Graves's version of `RMSProp` or Tieleman & Hinton's version of `RMSProp`.
+        Flag to control which version of RMSProp to use.
+        ``True`` will use Graves's version of `RMSProp`,
+        ``False`` will use Tieleman & Hinton's version of `RMSProp`.
     clip_weights : float, optional
         Clips weights into range ``[-clip_weights, clip_weights]``
     """
