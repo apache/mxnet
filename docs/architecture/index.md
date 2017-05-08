@@ -25,5 +25,5 @@ These pages specifically address the MXNet system architecture and also detail h
 
 * [MXNet System Overview](http://mxnet.io/architecture/overview.html)
 * [How to Read the Code](http://mxnet.io/architecture/read_code.html)
-* [Develop and Hack MXNet](http://mxnet.io/how_to/develop_and_hack.html)
+<!-- * [Develop and Hack MXNet](http://mxnet.io/how_to/develop_and_hack.html) -->
 * [How to Contribute to MXNet](http://mxnet.io/community/contribute.html)
