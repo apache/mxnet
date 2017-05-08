@@ -143,8 +143,8 @@ class AutoEncoderModel(model.MXModel):
             if i == 0:
                 data_iter_i = data_iter
             else:
-                X_i = model.extract_feature(self.internals[i-1], self.args, self.auxs,
-                                            data_iter, X.shape[0], self.xpu).values()[0]
+                X_i = list(model.extract_feature(self.internals[i-1], self.args, self.auxs,
+                                            data_iter, X.shape[0], self.xpu).values())[0]
                 data_iter_i = mx.io.NDArrayIter({'data': X_i}, batch_size=batch_size,
                                                 last_batch_handle='roll_over')
             logging.info('Pre-training layer %d...'%i)
@@ -167,6 +167,6 @@ class AutoEncoderModel(model.MXModel):
         batch_size = 100
         data_iter = mx.io.NDArrayIter({'data': X}, batch_size=batch_size, shuffle=False,
                                       last_batch_handle='pad')
-        Y = model.extract_feature(self.loss, self.args, self.auxs, data_iter,
-                                 X.shape[0], self.xpu).values()[0]
+        Y = list(model.extract_feature(self.loss, self.args, self.auxs, data_iter,
+                                 X.shape[0], self.xpu).values())[0]
         return np.mean(np.square(Y-X))/2.0
