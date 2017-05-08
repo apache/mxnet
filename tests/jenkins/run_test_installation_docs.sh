@@ -152,14 +152,14 @@ function sort() {
     printf "${lineno_array[*]}"
 }
 
-if (( $# < 1 )); then
+if (( $# < 2 )); then
     echo ""
     echo "Usage: $(basename $0) FILE"
     echo ""
     exit 1
 fi
 FILE=${1}
-IS_LINUX=${2}
+TASK=${2}
 
 # get all line numbers with "```" signifying start or end of source section and put them in an array
 SOURCE_REGEX="\`\`\`"
@@ -233,7 +233,7 @@ function set_instruction_set() {
         ${sorted_indexes[$end_buildfromsource_command_index]})
 }
 
-if [[ "${IS_LINUX}" == "--linux" ]]
+if [[ "${TASK}" == "linux" ]]
 then
 
     ########################LINUX-PYTHON-CPU############################
@@ -322,17 +322,22 @@ else
 
     set_instruction_set ${MAC_PYTHON_CPU_START_LINENO} ${MAC_PYTHON_CPU_END_LINENO}
 
-    echo
-    echo "### Testing Virtualenv ###"
-    echo "${virtualenv_commands}"
-    echo
-#    eval ${virtualenv_commands}
+    if [[ "${TASK}" == "installation_packaged_test" ]]
+    then
+        echo
+        echo "### Testing Virtualenv ###"
+        echo "${virtualenv_commands}"
+        echo
+        eval ${virtualenv_commands}
 
-    echo
-    echo "### Testing Pip ###"
-    echo "${pip_commands}"
-    echo
-#    eval ${pip_commands}
+        echo
+        echo "### Testing Pip ###"
+        echo "${pip_commands}"
+        echo
+        eval ${pip_commands}
+
+        exit
+    fi
 
     ###COMMENTING THIS OUT FOR NOW AS TRAVIS DOES NOT SUPPORT DOCKER FOR MAC
 #    echo
@@ -341,9 +346,14 @@ else
 #    echo
 #    eval ${docker_commands}
 
-    echo
-    echo "### Testing Build From Source ###"
-    echo "${buildfromsource_commands}"
-    echo
-    eval ${buildfromsource_commands}
+    if [[ "${TASK}" == "installation_source_test" ]]
+    then
+        echo
+        echo "### Testing Build From Source ###"
+        echo "${buildfromsource_commands}"
+        echo
+        eval ${buildfromsource_commands}
+
+        exit
+    fi
 fi
