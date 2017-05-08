@@ -1,27 +1,40 @@
 # Dependency Engine for Deep Learning
 
-We always want deep learning libraries to run faster and scale to larger
-datasets. One solution is to apply more computation resources by using more than one device (GPU).
+We always want deep learning libraries
+to run faster and scale to larger datasets.
+One natural approach is to see if we can benefit
+from throwing more hardware at the problem,
+as by using multiple GPUs simultaneously.
 
 Library designers then ask:
-How can we *parallelize* computation across devices? And, more important,
-how do we *synchronize* computation when we introduce multi-threading?
+How can we *parallelize* computation across devices?
+And, more importantly, how do we *synchronize* computation when we introduce multi-threading?
 
 A runtime dependency engine is a generic solution to these problems.
 
-This topic examines how to use runtime dependency scheduling in deep learning, and how runtime dependency scheduling speeds and simplified multi-device deep learning. It also
-explores potential designs for a generic dependency engine that is a library and operation independent.
+In this document, we examine approaches for using
+runtime dependency scheduling to accelerate deep learning.
+We aim to explain how runtime dependency scheduling
+can both speed up and simplify multi-device deep learning.
+We also explore potential designs for a generic dependency engine
+that could be both library- and operation-independent.
 
-Most of the design concepts in this topic inspired the MXNet dependency engine. The dependency tracking algorithm was primarily developed by [Yutian Li](https://github.com/hotpxl) and [Mingjie Wang](https://github.com/jermainewang).
+Most of the discussion of on this page draws inspiration
+from the MXNet dependency engine.
+The dependency tracking algorithm we discuss
+was primarily developed by [Yutian Li](https://github.com/hotpxl)
+and [Mingjie Wang](https://github.com/jermainewang).
 
 ## Dependency Scheduling
 
 Although most users want to take advantage of parallel computation,
-most of us are more familiar with serial programs. So, how do we write serial programs and build a library to automatically parallelize
-operations in an asynchronized way?
+most of us are more familiar with serial programs.
+So one natural question is: how can we write serial programs
+and build a library to automatically parallelize our programs
+in an asynchronous way?
 
-For example, in the following code, we can run ```B = A + 1```
-and ```C = A + 2``` in any order, or in parallel:
+For example, in the following code, we can run `B = A + 1`
+and `C = A + 2` in any order, or in parallel:
 
 ```python
     A = 2
@@ -31,7 +44,7 @@ and ```C = A + 2``` in any order, or in parallel:
 ```
 
 However, it's quite hard to code the sequence manually because the last operation,
-```D = B * C```, needs to wait for both of the preceding operations to complete before it starts.
+`D = B * C`, needs to wait for both of the preceding operations to complete before it starts.
 The following dependency graph/data flow graph illustrates this.
 
 ![Dep Simple](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_simple.png)
