@@ -1,8 +1,13 @@
 #!/bin/bash
 
-if [[ ! tests/travis/is_core_changed.sh || ${TASK} == "installation" ]]
+if ! tests/travis/is_core_changed.sh
 then
   exit 0
+fi
+
+if [ ${TASK} == "installation" ]; then
+    echo "exit because installation"
+    exit
 fi
 
 if [ ${TRAVIS_OS_NAME} == "osx" ]; then
