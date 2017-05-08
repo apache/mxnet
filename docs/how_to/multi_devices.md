@@ -163,11 +163,7 @@ python ../../tools/launch.py -n 2 -H hosts --sync-dst-dir /tmp/mxnet \
 
 ### Use a Particular Network Interface
 
-<<<<<<< HEAD
 _MXNet_ often chooses the first available network interface.
-=======
-`MXNet` often chooses the first available network interface.
->>>>>>> revised English on these documents
 But for machines that have multiple interfaces,
 we can specify which network interface to use for data
 communication by the environment variable `DMLC_INTERFACE`.
