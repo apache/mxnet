@@ -94,6 +94,9 @@ class PadOp : public Operator {
           pad_image(out, data, param_.pad_width, param_.mode, constant_value);
           break;
         }
+      default:
+        LOG(FATAL) << "Attempted to run forward pass "
+                        "with input dimensions other than 4 or 5.";
     }
     // Assign(out, req[pad_enum::kOut], F<mshadow_op::identity>(data));
   }
@@ -134,6 +137,9 @@ class PadOp : public Operator {
           pad_image_grad(in, out, param_.pad_width, param_.mode);
           break;
         }
+      default:
+        LOG(FATAL) << "Attempted to run backward pass "
+                        "with input dimensions other than 4 or 5.";
     }
   }
 
