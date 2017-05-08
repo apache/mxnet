@@ -326,13 +326,13 @@ else
     echo "### Testing Virtualenv ###"
     echo "${virtualenv_commands}"
     echo
-    eval ${virtualenv_commands}
+#    eval ${virtualenv_commands}
 
     echo
     echo "### Testing Pip ###"
     echo "${pip_commands}"
     echo
-    eval ${pip_commands}
+#    eval ${pip_commands}
 
     ###COMMENTING THIS OUT FOR NOW AS TRAVIS DOES NOT SUPPORT DOCKER FOR MAC
 #    echo
