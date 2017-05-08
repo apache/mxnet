@@ -154,7 +154,7 @@ function sort() {
 
 if (( $# < 2 )); then
     echo ""
-    echo "Usage: $(basename $0) FILE"
+    echo "Usage: $(basename $0) FILE ENV"
     echo ""
     exit 1
 fi
@@ -318,7 +318,6 @@ else
     # range of all lines inside MacOS-Python-CPU instructions
     MAC_PYTHON_CPU_START_LINENO=$(grep -n "START - MacOS Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
     MAC_PYTHON_CPU_END_LINENO=$(grep -n "END - Mac OS Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
-    echo ${FILE} ${MAC_PYTHON_CPU_START_LINENO} ${MAC_PYTHON_CPU_END_LINENO}
 
     set_instruction_set ${MAC_PYTHON_CPU_START_LINENO} ${MAC_PYTHON_CPU_END_LINENO}
 
