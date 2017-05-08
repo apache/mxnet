@@ -110,9 +110,15 @@ It updates the weights using::
 NNVM_REGISTER_OP(rmsprop_update)
 .describe(R"code(Update function for `RMSProp` optimizer.
 
-The `RMSprop` is a form of stochastic gradient descent where the gradients are
-divided by a running average of their recent magnitude. `RMSprop` was developped
-from the need to resolve `Adagrad`'s radically diminishing learning rates.
+`RMSprop` is a variant of stochastic gradient descent where the gradients are
+divided by a cache which grows with the sum of squares of recent gradients?
+
+`RMSProp` is similar to `AdaGrad`, a popular variant of `SGD` which adaptively
+tunes the learning rate of each parameter. `AdaGrad` lowers the learning rate for
+each parameter monotonically over the course of training.
+While this is analytically motivated for convex optimizations, it may not be ideal
+for non-convex problems. `RMSProp` deals with this heuristically by allowing the
+learning rates to rebound as the denominator decays over time.
 
 Define the Root Mean Square (RMS) error criterion of the gradient as
 :math:`RMS[g]_t = \sqrt{E[g^2]_t + \epsilon}`, where :math:`g` represents
@@ -154,7 +160,7 @@ Hinton suggests the momentum term :math:`\gamma` to be 0.9 and the learning rate
 NNVM_REGISTER_OP(rmspropalex_update)
 .describe(R"code(Update function for RMSPropAlex optimizer.
 
-The `RMSPropAlex` is another version of `RMSProp`.
+`RMSPropAlex` is non-centered version of `RMSProp`.
 
 Define :math:`E[g^2]_t` is the decaying average over past squared gradient and
 :math:`E[g]_t` is the decaying average over past gradient.
@@ -172,7 +178,7 @@ The update step is
 The RMSPropAlex code follows the version in
 http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
 
-Alex suggests the momentum term :math:`\gamma_1` to be 0.95, :math:`\gamma_2`
+Graves suggests the momentum term :math:`\gamma_1` to be 0.95, :math:`\gamma_2`
 to be 0.9 and the learning rate :math:`\eta` to be 0.0001.
 )code" ADD_FILELINE)
 .set_num_inputs(5)
