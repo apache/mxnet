@@ -357,8 +357,20 @@ Composite multiple symbols into a new one by an operator.
 .. autosummary::
     :nosignatures:
 
-    uniform
-    normal
+    random_uniform
+    random_normal
+    random_gamma
+    random_exponential
+    random_poisson
+    random_negative_binomial
+    random_generalized_negative_binomial
+    sample_uniform
+    sample_normal
+    sample_gamma
+    sample_exponential
+    sample_poisson
+    sample_negative_binomial
+    sample_generalized_negative_binomial
     mxnet.random.seed
 ```
 

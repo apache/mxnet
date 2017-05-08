@@ -25,12 +25,12 @@ struct MultiSampleParam : public dmlc::Parameter<MultiSampleParam> {
       .describe("Shape to be sampled from each random distribution.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
+    .add_enum("float16", mshadow::kFloat16)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output given, set to type of output."
-              "If output not given and type not defined (dtype=None), set to float32.");
+    .describe("DType of the output in case this can't be inferred. "
+              "Defaults to float32 if not defined (dtype=None).");
   }
 };
 
