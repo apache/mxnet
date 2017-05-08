@@ -51,9 +51,6 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/*
 
-docs:
-	../tests/ci_build/ci_build.sh doc make -C docs html
-
 livehtml:
 	sphinx-autobuild --ignore "web-data/*" -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 
