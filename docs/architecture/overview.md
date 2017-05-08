@@ -395,11 +395,11 @@ invoking processes and returns to the fundamental elements of operators. Because
 operands, and more operands make dependency-related optimization useful, the unified operator
 is specifically designed for unary and binary operations.
 
-Consider the elements of an operation. Ideally, you need only functions and derivatives to  
+Consider the elements of an operation. Ideally, you need only functions and derivatives to
 describe an operation. Let's restrict that to the space of unary and binary operations. How
 do we classify all operations to maximize the possibility of in-place write optimization? Note
 that you can separate functions by the number of operands. Derivatives are a bit more
-complex. To construct a dependency graph, you need to know whether output value, input data, or neither are needed alongside head gradient. Gradient functions in the unified API are  
+complex. To construct a dependency graph, you need to know whether output value, input data, or neither are needed alongside head gradient. Gradient functions in the unified API are
 differentiated by the types of operands it takes for calculation.
 
 Before you learn more about the SimpleOp interface, we recommend that you review the [mshadow
@@ -682,7 +682,7 @@ in the registration process, we use `set_enable_scalar(true)`, and use `env.scal
 declarations.
 
 ### Crafting a Tensor Operation
-Because computation utilizes the `mshadow` library and we sometimes don't have functions readily available, we 
+Because computation utilizes the `mshadow` library and we sometimes don't have functions readily available, we
 can craft tensor operations in operator implementations. If you define such functions as element-wise, you
 can implement them as a `mxnet::op::mshadow_op`. `src/operator/mshadow_op.h` that contains a lot of `mshadow_op`,
 for example. `mshadow_op` are expression mappers. They deal with the scalar case of desired functions. For details, see
@@ -715,98 +715,6 @@ The gradient, which can be found in `src/operator/smooth_l1_unary-inl.h`, is sim
 The new unified API is designed to fulfill the fundamentals of an operation. For operators with more than two inputs,
 more than one output, or that need more features, see the original [Operator API](http://mxnet.io/architecture/overview.html#operators-in-mxnet).
 
-## KVStore: Multiple Devices and Multiple Computers
-
-MXNet uses a two-level *parameter server* for data synchronization.
-
-<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/multi-node/ps_arch.png width=400/>
-
-- On the first layer, data are synchronized over multiple devices within a
-  single worker machine. A device could be a GPU card, CPU card, or other computational
-  unit. We often use the sequential consistency model, also known as BSP, on this
-  level.
-
-- On the second layer, data are synchronized over multiple workers by way of servers. We can use either a sequential consistency model for guaranteed
-  convergence or a (partial)-asynchronous model for better system performance.
-
-### KVStore
-
-MXNet implemented the two-level parameter server in class *KVStore*. We
-currently provide the following three types. Given the batch size *b*.
-
-```eval_rst
-    ============  ======== ======== ============== ============== =========
-    kvstore type  #devices #workers #ex per device #ex per update max delayN
-    `dist_sync`   *k*       *n*       *b / k*       *b × n*       *0*
-    `dist_async`  *k*       *n*       *b / k*       *b*           inf
-    ============  ======== ======== ============== ============== =========
-```
-
-The number of devices *k* used on a worker could vary for different
-workers.
-
-- **Number examples per update**: For each update, the number of examples used to
-  calculate the averaged gradients. Often, the larger, the slower the convergence.
-- **Number examples per device**: The number of examples batched to one device
-  each time. Often, the larger, the better the performance.
-- **Max delay** : The maximum delay of the weight for a worker. Given a worker,
-  a delay *d* for weight *w* means that when this worker uses *w* (to calculate the
-  gradient), *w* has been already updated by *d* times  in some other places. A
-  larger delay often improves the performance, but can slow
-  convergence.
-
-### Multiple Devices on a Single Computer
-
-KV store `local` synchronizes data over multiple devices on a single computer.
-It produces the same results (e.g., model accuracy) as when running a single device. But
-compared to the latter, assume there are *k* devices, and that each device
-processes only *1 / k* examples each time (and consumes *1 / k* of device memory). We
-often increase the batch size *b* for better system performance.
-
-When you use `local`, the system automatically chooses one of the following
-three types. They differ on where to average
-the gradients over all devices, and where to update the weight.
-
-```eval_rst
-    =======================  ================   ==============
-     kvstore type            average gradient   perform update
-    =======================  ================   ==============
-    `local_update_cpu`       CPU                 CPU
-    `local_allreduce_cpu`    CPU                 all devices
-    `local_allreduce_device` a device            all devices
-    =======================  ================   ==============
-```
-
-They produce (almost) the same results, but can vary on speed.
-
-- `local_update_cpu`, gradients are first copied to main memory, averaged on the CPU,
-  and then they update the weight on the CPU. This is suitable when the average size of
-  weights isn't large and there are a large number of weights. Example: the
-  Google Inception network.
-
-- `local_allreduce_cpu` is similar to `local_update_cpu`, except that the
-  averaged gradients are copied back to the devices, and then weights are
-  updated on devices. When weight size is large, it's faster than the first option; you
-  can use the device to accelerate computation (but you increase the workload
-  by *k* times). Example: AlexNet on ImageNet.
-
-- `local_allreduce_device` is similar to `local_allreduce_cpu` except that the
-  gradients are averaged on a chosen device. It might take advantage of device-to-device communication, and might accelerate averaging. When the gradients are huge, it's faster than the second option, but it requires more
-  device memory.
-
-### Multiple Computers
-
-Both `dist_async` and `dist_sync` can handle using  multiple computers. But they differ in both semantics and performance.
-
-- `dist_sync`: The gradients are first averaged on the servers, and then sent back to workers for updating weight. If you treat a computer as a device, it's similar to `local` and
-  `update_on_kvstore=false`.  If you reduce the batch size to *b / n*, it guarantees
-  almost identical convergence as the single computer, single device scenario. However, it requires synchronization
-  between all workers, and, therefore, might affect system performance.
-
-- `dist_async`: The gradient is sent to the servers, and the weight is updated
-  there. The weights that a worker has might be stale. This loose data consistency
-  model reduces computer synchronization cost and, therefore, could improve
-  system performance. However, it might affect convergence speed.
 
 ## Next Steps
 

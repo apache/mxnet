@@ -54,7 +54,7 @@ MXNet supports many types of recurrent neural networks (RNNs), including Long Sh
 and Gated Recurrent Units (GRU) networks. Some available datasets include:
 
 * [Penn Treebank (PTB)](https://www.cis.upenn.edu/~treebank/): Text corpus with ~1 million words. Vocabulary is limited to 10,000 words. The task is predicting downstream words/characters.
-* [Shakespeare](http://cs.stanford.edu/people/karpathy/char-rnn/): Complete text from Shakespeare’s works.
+* [Shakespeare](http://cs.stanford.edu/people/karpathy/char-rnn/): Complete text from Shakespeare's works.
 * [IMDB reviews](https://s3.amazonaws.com/text-datasets): 25,000 movie reviews, labeled as positive or negative
 * [Facebook bAbI](https://research.facebook.com/researchers/1543934539189348): As a set of 20 question & answer tasks, each with 1,000 training examples.
 * [Flickr8k, COCO](http://mscoco.org/): Images with associated caption (sentences). Flickr8k consists of 8,092 images captioned by AmazonTurkers with ~40,000 captions. COCO has 328,000 images, each with 5 captions. The COCO images also come with labeled objects using segmentation algorithms.
