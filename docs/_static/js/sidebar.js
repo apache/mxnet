@@ -31,7 +31,14 @@ function render_left_helper(toc, currentText) {
 /*Render content tree of different pages*/
 function render_lefttoc() {
     var url = window.location.href, indexTrailing = 'index.html';
-    if (url.indexOf(indexTrailing) == -1) {
+    if (url.indexOf('/get_started/') != -1) {
+        var leftToc = "<ul><li class='leaf'><a href='why_mxnet.html'>Why MXNet</a></li><li class='leaf'><a href='install.html'>Installation</a></li></ul>";
+        render_left_helper($($.parseHTML(leftToc)), 'Get Started');
+        keepExpand();
+        $('.sphinxsidebar').css("visibility", "visible");
+        return;
+    }
+    if(url.indexOf(indexTrailing) == -1) {
         for(var i = 0; i < TITLE_WITH_LANG.length; ++i) {
             var path = TITLE_WITH_LANG[i];
             if (url.indexOf(path) != -1) {
