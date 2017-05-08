@@ -185,7 +185,7 @@ class PadProp : public OperatorProperty {
     if ((rank != 4) && (rank != 5)) {
       LOG(FATAL) << "Current implementation only supports 4-D or 5-D input.";
     }
-    if (pad[0] || pad[1] || pad[2] || pad[3]) {
+    if ((pad[0] != 0) || (pad[1] != 0) || (pad[2] != 0) || (pad[3] != 0)) {
       LOG(FATAL) << "Current implementation expects padding on the first two axes to be zero.";
     }
     if ((2*rank) != pad_spec_len) {
