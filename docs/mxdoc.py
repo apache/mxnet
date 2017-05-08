@@ -39,7 +39,7 @@ def generate_doxygen_xml(app):
 
 def build_mxnet(app):
     """Build mxnet .so lib"""
-    _run_cmd("cd %s/.. && cp make/config.mk config.mk && make -j$(nproc)" %
+    _run_cmd("cd %s/.. && cp make/config.mk config.mk && make -j$(nproc) DEBUG=1" %
             app.builder.srcdir)
 
 def build_r_docs(app):
@@ -267,7 +267,7 @@ def setup(app):
     app.connect("builder-inited", build_mxnet)
     # skipped to build c api doc
     # app.connect("builder-inited", generate_doxygen_xml)
-    # app.connect("builder-inited", build_scala_docs)
+    app.connect("builder-inited", build_scala_docs)
     # skipped to build r, it requires to install latex, which is kinds of too heavy
     # app.connect("builder-inited", build_r_docs)
     app.connect('source-read', convert_table)
