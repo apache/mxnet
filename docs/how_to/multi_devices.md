@@ -68,11 +68,7 @@ weight initialization with different seeds, and CUDNN.
 
 We can control on which devices the gradient is aggregated
 and on which device the model is updated via [`KVStore`](http://mxnet.io/api/python/kvstore.html),
-<<<<<<< HEAD
 the _MXNet_ module that supports data communication.
-=======
-the `MXNet` module that supports data communication.
->>>>>>> revised English on these documents
 One can either use `mx.kvstore.create(type)` to get an instance
 or use the program flag `--kv-store type`.
 
