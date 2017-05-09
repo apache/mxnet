@@ -62,7 +62,10 @@ namespace mxnet {
 				const std::vector<NDArray>& values) override {
 
 				CheckUnique(keys);
-				if (keys.size() != 1 || keys[0] != UINT16_MAX)
+
+
+				//LOG(INFO)<<"Worker Important Bootstrap K = "<<keys[0];
+				if (keys.size() != 1 || keys[0] != INT32_MAX)
 				{
 					//copy whatever code it was originally.
 					CheckUnique(keys);
@@ -106,13 +109,19 @@ namespace mxnet {
 					  Barrier();
 					  }*/
 					  //everyone, setup your key counts!
-					for (int i = 0; i < keys.size(); i++)
+					LOG(INFO)<<"worker setting up "<<values.size()<<" keys";
+					CHECK(values.size() == keys.size());
+					size_t size = values[0].shape().Size();
+					int* data = static_cast<int*>(values[0].data().dptr_);
+				        ps::SArray<int> vals(data,size,false);
+					for (int i = 0; i < size; i++)
 					{
 						//assuming there's only one server.
 						//no need to call EncodeKey
 						CHECK_EQ(ps::Postoffice::Get()->num_servers(), 1);
 						CHECK_EQ(keys.size(), values.size());
-						ps::Postoffice::Get()->van()->SetKeySize(i, sizeof(real_t)*values[i].shape().Size());
+						//printf("[%d]Worker local key population\n",ps::Postoffice::Get()->van()->my_node().id);
+						ps::Postoffice::Get()->van()->SetKeySize(i, sizeof(real_t)*vals[i]);
 					}
 
 					if (!ps::Postoffice::Get()->is_recovery()) {

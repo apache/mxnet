@@ -79,10 +79,13 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
                         update_on_kvstore):
     """ Initialize kvstore"""
     """ Infiniband Servers, tell them to setup appropriate key sizes """
-    kvstore.init(-1,[arg_params[param_names[idx]].size() for idx in range(len(param_arrays))])
+    aggKey = 2**64-1
+    rg = range(len(param_arrays))
+    #print arg_params[param_names[0]].size()
+    kvstore.init(aggKey,[arg_params[param_names[idx]].size for idx in rg])
     for idx, param_on_devs in enumerate(param_arrays):
         kvstore.init(idx, arg_params[param_names[idx]])
-
+        print arg_params[param_names[idx]].size
         if update_on_kvstore:
             kvstore.pull(idx, param_on_devs, priority=-idx)
 
