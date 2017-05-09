@@ -92,7 +92,7 @@ script:
 
 #cache:
 #  directories:
-#    - ${HOME}/.cache/usr
+##    - ${HOME}/.cache/usr
 
 before_cache:
   - dmlc-core/scripts/travis/travis_before_cache.sh
