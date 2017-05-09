@@ -120,18 +120,17 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
             bn_name = layer_name
             mean = layer_blobs[0].data
             var = layer_blobs[1].data
-            moving_average_factor = layer_blobs[2].data
+            rescale_factor = layer_blobs[2].data
+            if rescale_factor != 0:
+            	rescale_factor = 1 / rescale_factor
             mean_name = '{}_moving_mean'.format(bn_name)
             var_name = '{}_moving_var'.format(bn_name)
-            maf_name = '{}_momentum'.format(bn_name)
             mean = mean.reshape(aux_shape_dic[mean_name])
             var = var.reshape(aux_shape_dic[var_name])
             aux_params[mean_name] = mx.nd.zeros(mean.shape)
             aux_params[var_name] = mx.nd.zeros(var.shape)
-            arg_params[maf_name] = mx.nd.zeros(moving_average_factor.shape)
-            aux_params[mean_name][:] = mean
-            aux_params[var_name][:] = var
-            arg_params[maf_name][:] = moving_average_factor
+            aux_params[mean_name][:] = mean * rescale_factor
+            aux_params[var_name][:] = var * rescale_factor
             assert var.flags['C_CONTIGUOUS'] is True
             assert mean.flags['C_CONTIGUOUS'] is True
             print ('converting batchnorm layer, mean shape = {}, var shape = {}'.format(mean.shape, var.shape))
