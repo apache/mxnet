@@ -591,7 +591,7 @@ All the instructions to build *MXNet* core shared library and *MXNet* Python bin
 **Step 1** Download the bash script for building MXNet from source.
 
 ```bash
-$ curl -O https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-osx-python.sh
+$ curl -O https://raw.githubusercontent.com/lxn2/mxnet/test_macosx_installation/setup-utils/install-mxnet-osx-python.sh
 ```
 
 **Step 2** Run the script to get latest MXNet source and build.

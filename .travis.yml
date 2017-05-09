@@ -18,7 +18,7 @@ env:
   # run tests/python
   ###- TASK=python_test
   ###- TASK=r_test
-  - TASK=installation_packaged_test
+  ###- TASK=installation_packaged_test
   - TASK=installation_source_test
   # - TASK=julia JULIA_VER=0.4
   # - TASK=scala_test
