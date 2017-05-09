@@ -1800,14 +1800,16 @@ def check_pad_with_shape(shape, xpu, pad_width, mode):
     check_numeric_gradient(Y, [x.asnumpy()], numeric_eps=1e-2, rtol=1e-2)
 
 def test_pad():
-    shape1 = (2, 3, 2, 3)
+    shape1 = (2, 3, 3, 5)
     pad1 = (0, 0, 0, 0, 1, 2, 3, 4)
-    shape2 = (2, 3, 2, 3, 3)
+    shape2 = (2, 3, 3, 5, 4)
     pad2 = (0, 0, 0, 0, 1, 2, 3, 4, 3, 1)
     check_pad_with_shape(shape1, default_context(), pad1, 'constant')
     check_pad_with_shape(shape1, default_context(), pad1, 'edge')
     check_pad_with_shape(shape2, default_context(), pad2, 'constant')
     check_pad_with_shape(shape2, default_context(), pad2, 'edge')
+    check_pad_with_shape(shape1, default_context(), pad1, 'reflect')
+    check_pad_with_shape(shape2, default_context(), pad2, 'reflect')
 
 def np_instance_norm(data, weight, bias, eps):
     spatial_dims = data.shape[2::]
