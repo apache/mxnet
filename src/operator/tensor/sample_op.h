@@ -25,24 +25,24 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(SampleUniformParam) {
     DMLC_DECLARE_FIELD(low).set_default(0.0f)
-    .describe("The lower bound of distribution");
+    .describe("Lower bound of the distribution.");
     DMLC_DECLARE_FIELD(high).set_default(1.0f)
-    .describe("The upper bound of distribution");
+    .describe("Upper bound of the distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("The shape of the output");
+    .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              "Only used for imperative calls.");
+              " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output given, set to type of output."
-              "If output not given and type not defined (dtype=None), set to float32.");
+    .describe("DType of the output in case this can't be inferred. "
+              "Defaults to float32 if not defined (dtype=None).");
   }
 };
 
@@ -59,19 +59,19 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
     .describe("Standard deviation of the distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("The shape of the output");
+    .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              "Only used for imperative calls.");
+              " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output given, set to type of output."
-              "If output not given and type not defined (dtype=None), set to float32.");
+    .describe("DType of the output in case this can't be inferred. "
+              "Defaults to float32 if not defined (dtype=None).");
   }
 };
 
@@ -83,24 +83,24 @@ struct SampleGammaParam : public dmlc::Parameter<SampleGammaParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(SampleGammaParam) {
     DMLC_DECLARE_FIELD(alpha).set_default(1.0f)
-    .describe("alpha parameter (shape parameter) of the gamma distribution.");
+    .describe("Alpha parameter (shape) of the gamma distribution.");
     DMLC_DECLARE_FIELD(beta).set_default(1.0f)
-    .describe("beta parameter (scale parameter) of the gamma distribution.");
+    .describe("Beta parameter (scale) of the gamma distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("The shape of the output");
+    .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              "Only used for imperative calls.");
+              " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output given, set to type of output."
-              "If output not given and type not defined (dtype=None), set to float32.");
+    .describe("DType of the output in case this can't be inferred. "
+              "Defaults to float32 if not defined (dtype=None).");
   }
 };
 
@@ -111,22 +111,22 @@ struct SampleExponentialParam : public dmlc::Parameter<SampleExponentialParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(SampleExponentialParam) {
     DMLC_DECLARE_FIELD(lam).set_default(1.0f)
-    .describe("lambda parameter (rate) of the exponential distribution.");
+    .describe("Lambda parameter (rate) of the exponential distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("The shape of the output");
+    .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              "Only used for imperative calls.");
+              " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output given, set to type of output."
-              "If output not given and type not defined (dtype=None), set to float32.");
+    .describe("DType of the output in case this can't be inferred. "
+              "Defaults to float32 if not defined (dtype=None).");
   }
 };
 
@@ -137,22 +137,22 @@ struct SamplePoissonParam : public dmlc::Parameter<SamplePoissonParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(SamplePoissonParam) {
     DMLC_DECLARE_FIELD(lam).set_default(1.0f)
-    .describe("lambda parameter (rate) of the Poisson distribution.");
+    .describe("Lambda parameter (rate) of the Poisson distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("The shape of the output");
+    .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              "Only used for imperative calls.");
+              " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output given, set to type of output."
-              "If output not given and type not defined (dtype=None), set to float32.");
+    .describe("DType of the output in case this can't be inferred. "
+              "Defaults to float32 if not defined (dtype=None).");
   }
 };
 
@@ -164,24 +164,24 @@ struct SampleNegBinomialParam : public dmlc::Parameter<SampleNegBinomialParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(SampleNegBinomialParam) {
     DMLC_DECLARE_FIELD(k).set_default(1)
-    .describe("limit of unsuccessful tries.");
+    .describe("Limit of unsuccessful experiments.");
     DMLC_DECLARE_FIELD(p).set_default(1.0f)
-    .describe("success probability.");
+    .describe("Failure probability in each experiment.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("The shape of the output");
+    .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              "Only used for imperative calls.");
+              " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output given, set to type of output."
-              "If output not given and type not defined (dtype=None), set to float32.");
+    .describe("DType of the output in case this can't be inferred. "
+              "Defaults to float32 if not defined (dtype=None).");
   }
 };
 
@@ -193,24 +193,24 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
   int dtype;
   DMLC_DECLARE_PARAMETER(SampleGenNegBinomialParam) {
     DMLC_DECLARE_FIELD(mu).set_default(1.0f)
-    .describe("mean of the negative binomial distribution.");
+    .describe("Mean of the negative binomial distribution.");
     DMLC_DECLARE_FIELD(alpha).set_default(1.0f)
-    .describe("alpha parameter of the negative binomial distribution.");
+    .describe("Alpha (dispersion) parameter of the negative binomial distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("The shape of the output");
+    .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              "Only used for imperative calls.");
+              " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
-    .describe("DType of the output. If output given, set to type of output."
-              "If output not given and type not defined (dtype=None), set to float32.");
+    .describe("DType of the output in case this can't be inferred. "
+              "Defaults to float32 if not defined (dtype=None).");
   }
 };
 

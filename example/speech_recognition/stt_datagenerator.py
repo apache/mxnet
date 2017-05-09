@@ -9,7 +9,7 @@ from stt_utils import calc_feat_dim, spectrogram_from_file
 from config_util import generate_file_path
 from log_util import LogUtil
 from label_util import LabelUtil
-
+from stt_bi_graphemes_util import generate_bi_graphemes_label
 
 class DataGenerator(object):
     def __init__(self, save_dir, model_name, step=10, window=20, max_freq=8000, desc_file=None):
@@ -120,7 +120,7 @@ class DataGenerator(object):
     def normalize(self, feature, eps=1e-14):
         return (feature - self.feats_mean) / (self.feats_std + eps)
 
-    def get_max_label_length(self, partition):
+    def get_max_label_length(self, partition, is_bi_graphemes=False):
         if partition == 'train':
             texts = self.train_texts + self.val_texts
         elif partition == 'test':
@@ -128,7 +128,10 @@ class DataGenerator(object):
         else:
             raise Exception("Invalid partition to load metadata. "
                             "Must be train/validation/test")
-        self.max_label_length = max([len(text) for text in texts])
+        if is_bi_graphemes:
+            self.max_label_length = max([len(generate_bi_graphemes_label(text)) for text in texts])
+        else:
+            self.max_label_length = max([len(text) for text in texts])
         return self.max_label_length
 
     def get_max_seq_length(self, partition):
@@ -146,7 +149,7 @@ class DataGenerator(object):
         self.max_seq_length=max_seq_length
         return max_seq_length
 
-    def prepare_minibatch(self, audio_paths, texts, overwrite=False):
+    def prepare_minibatch(self, audio_paths, texts, overwrite=False, is_bi_graphemes=False):
         """ Featurize a minibatch of audio, zero pad them and return a dictionary
         Params:
             audio_paths (list(str)): List of paths to audio files
@@ -172,8 +175,13 @@ class DataGenerator(object):
             feat = features[i]
             feat = self.normalize(feat)  # Center using means and std
             x[i, :feat.shape[0], :] = feat
-            label = labelUtil.convert_word_to_num(texts[i])
-            y[i, :len(texts[i])] = label
+            if is_bi_graphemes:
+                label = generate_bi_graphemes_label(texts[i])
+                label = labelUtil.convert_bi_graphemes_to_num(label)
+                y[i, :len(label)] = label
+            else:
+                label = labelUtil.convert_word_to_num(texts[i])
+                y[i, :len(texts[i])] = label
             label_lengths.append(len(label))
         return {
             'x': x,  # (0-padded features of shape(mb_size,timesteps,feat_dim)
