@@ -28,7 +28,7 @@ make rcpplint
 ```
 - If necessary, disable the linter warning on certain lines with ```// NOLINT(*)``` comments.
 
-### Auto-Generated API
+#### Auto-Generated API
 - Many MXNet APIs are exposed dynamically from Rcpp.
 - mxnet_generated.R is the auto-generated API and documents for these functions.
 - Remake the file by typing the following command at root folder:
@@ -37,13 +37,13 @@ make rcppexport
 ```
 - Use this command only when there is an update to dynamic functions.
 
-### API Document
+#### API Document
 The document is generated using roxygen2. To remake the documents in the root folder, use the following command:
 ```bash
 make roxygen.
 ```
 
-### R Markdown Vignettes
+#### R Markdown Vignettes
 R Markdown vignettes are located on GitHub in [R-package/vignettes](https://github.com/dmlc/mxnet/tree/master/R-package/vignettes).
 These R Markdown files aren't compiled. We host the compiled version on [doc/R-package](https://github.com/dmlc/mxnet/tree/master/R-package/).
 
@@ -158,7 +158,6 @@ git add conflicted.py.
 
 ### Combining Multiple Commits
 If you are submitting multiple commits with later commits that are just fixes to previous ones, you can combine commits into meaningful groups before creating a push request.
-
 
 * Before doing so, configure Git's default editor if you haven't already done that:
 
