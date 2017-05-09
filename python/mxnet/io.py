@@ -96,9 +96,9 @@ class DataBatch(object):
 
     Parameters
     ----------
-    data : list of NDArray
+    data : list of `NDArray`, each array containing `batch_size` examples.
           A list of input data.
-    label : list of NDArray, optional
+    label : list of `NDArray`, each array often containing a 1-dimensional array. optional
           A list of input labels.
     pad : int, optional
           The number of examples padded at the end of a batch. It is used when the
