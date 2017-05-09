@@ -6,12 +6,12 @@
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
     <artifactId>mxnet-scala-native-parent</artifactId>
-    <version>0.1.2-SNAPSHOT</version>
+    <version>0.9.5-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>libmxnet-scala-osx-x86_64-cpu</artifactId>
-  <version>0.1.2-SNAPSHOT</version>
+  <version>0.9.5-SNAPSHOT</version>
   <name>MXNet Scala Package - Native OSX-x86_64 CPU-only</name>
   <url>http://maven.apache.org</url>
 
