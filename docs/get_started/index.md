@@ -189,7 +189,7 @@ julia> a = mx.ones((2,3))
 mx.NDArray{Float32}(2,3)
 
 julia> Array{Float32}(a * 2 + 1)
-2×3 Array{Float32,2}:
+2x3 Array{Float32,2}:
  3.0  3.0  3.0
  3.0  3.0  3.0
 ```
@@ -215,6 +215,18 @@ array([[ 3.,  3.,  3.],
        [ 3.,  3.,  3.]], dtype=float32)
 ```
 
+```perl
+pdl> use AI::MXNet qw(mx)
+pdl> $a = mx->sym->var('a')
+pdl> $b = $a * 2 + 1
+pdl> $c = $b->eval(args => { a => mx->nd->ones([2,3]) })
+pdl> print @{$c}[0]->aspdl
+[
+ [3 3 3]
+ [3 3 3]
+]
+```
+
 Run the above codes in GPU in straightforward:
 
 ```python
@@ -230,6 +242,9 @@ Run the above codes in GPU in straightforward:
 julia> a = mx.ones((2,3), mx.gpu())
 ```
 
+```perl
+pdl> $a = mx->nd->ones([2,3], ctx => mx->gpu())
+```
 In additional, MXNet provides a large number of neural network layers and
 training modules to facilitate developing deep learning algorithms.
 
@@ -241,6 +256,16 @@ training modules to facilitate developing deep learning algorithms.
 >>> loss  = mx.sym.SoftmaxOutput(fc2)
 >>> mod = mx.mod.Module(loss)
 >>> mod.fit(train_data, ctx=[mx.gpu(0), mx.gpu(1)]) # fit on the training data by using 2 GPUs
+```
+
+```perl
+pdl> $data  = mx->sym->var('data')
+pdl> $fc1   = mx->sym->FullyConnected($data, num_hidden=>128)
+pdl> $act1  = mx->sym.Activation($fc1, act_type=>"relu")
+pdl> $fc2   = mx->sym->FullyConnected($act1, num_hidden=>10)
+pdl> $loss  = mx->sym->SoftmaxOutput($fc2)
+pdl> $mod   = mx->mod->Module($loss)
+pdl> $mod->fit($train_data, ctx=>[mx->gpu(0), mx->gpu(1)]) # fit on the training data by using 2 GPUs
 ```
 
 ## Next Steps

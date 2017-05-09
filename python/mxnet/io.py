@@ -97,8 +97,12 @@ class DataBatch(object):
           The key of the bucket, used for bucket IO.
     provide_data : list of (name, shape), optional
           The *i*-th elements describes the name and shape of ``data[i]``.
+          If not provided, the order of arg_names of the executor is assumed.
+          When working with Module this is the order of the data_names argument.
     provide_label : list of (name, shape), optional
           The *i*-th elements describes the name and shape of ``label[i]``.
+          If not provided, the order of arg_names of the executor is assumed.
+          When working with Module this is the order of the label_names argument.
     """
     def __init__(self, data, label=None, pad=None, index=None,
                  bucket_key=None, provide_data=None, provide_label=None):

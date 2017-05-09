@@ -8,7 +8,9 @@
 
 #set -ex
 
+export TARIKH=`/bin/date +%Y-%m-%d-%H:%M:%S`
 export MXNET_HOME="$HOME/mxnet"
+export MXNET_HOME_OLD="$HOME/mxnet_${TARIKH}"
 export MXNET_LOG=${MXNET_HOME}/buildMXNet_mac.log
 # Insert the Homebrew directory at the top of your PATH environment variable
 export PATH=/usr/local/bin:/usr/local/sbin:$PATH
@@ -16,9 +18,12 @@ LINE="########################################################################"
 
 echo $LINE
 echo " "
-echo "This script installs MXNet on MacOS."
+echo "This script installs MXNet on MacOS in ${MXNET_HOME}"
+echo "If this directory is already present, it is renamed to ${MXNET_HOME_OLD}"
 echo "It has been tested to work successfully on MacOS El Capitan and Sierra"
 echo "and is expected to work fine on other versions as well."
+echo " "
+echo "Approximate run-time is around 5 minutes."
 echo " "
 echo $LINE
 sleep 2
@@ -55,6 +60,16 @@ runme() {
 	fi
 }
 
+download_mxnet() {
+	if [ -d ${MXNET_HOME} ]; then
+		echo "Renaming directory ${MXNET_HOME} to ${MXNET_HOME_OLD}"
+		mv ${MXNET_HOME} ${MXNET_HOME_OLD}
+	fi
+	echo "Downloading MXNET source repositories from github"
+	git clone https://github.com/dmlc/mxnet.git ${MXNET_HOME} --recursive 
+}
+
+download_mxnet
 runme brew update
 runme brew_pkg_install pkg-config
 runme brew_pkg_install python

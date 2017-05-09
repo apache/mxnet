@@ -2019,7 +2019,7 @@ def negative(arr):
     return multiply(arr, -1.0)
 
 def load(fname):
-    """Load array from file.
+    """Loads an array from file.
 
     See more details in ``save``.
 
@@ -2053,7 +2053,7 @@ def load(fname):
 
 
 def save(fname, data):
-    """Save a list of arrays of a str->array dict into file.
+    """Saves a list of arrays or a dict of str->array to file.
 
     Examples of filenames:
 
@@ -2066,7 +2066,7 @@ def save(fname, data):
     fname : str
         The filename.
     data : list of ``NDArray` or dict of str to ``NDArray``
-        The data for saving.
+        The data to save.
 
     Examples
     --------
