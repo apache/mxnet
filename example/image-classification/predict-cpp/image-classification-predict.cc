@@ -196,8 +196,8 @@ int main(int argc, char* argv[]) {
     const mx_uint input_shape_indptr[2] = { 0, 4 };
     const mx_uint input_shape_data[4] = { 1,
                                         static_cast<mx_uint>(channels),
-                                        static_cast<mx_uint>(width),
-                                        static_cast<mx_uint>(height) };
+                                        static_cast<mx_uint>(height), 
+                                        static_cast<mx_uint>(width)};
     PredictorHandle pred_hnd = 0;
 
     if (json_data.GetLength() == 0 ||
