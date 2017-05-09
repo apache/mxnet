@@ -109,7 +109,7 @@ def resize_short(src, size, interp=2):
     src : NDArray
         The original image.
     size : int
-        The number to be set for the shorter edge.
+        The length to be set for the shorter edge.
     interp : int, optional, default=2
         Interpolation method used for resizing the image.
         Default method is bicubic interpolation.
