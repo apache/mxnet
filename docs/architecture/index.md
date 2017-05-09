@@ -23,6 +23,4 @@ abstraction, optimization, and trade-offs between efficiency and flexibility.
 These pages specifically address the MXNet system architecture and also detail how to make modifications (and contribute!) to MXNet.
 
 * [MXNet System Overview](http://mxnet.io/architecture/overview.html)
-* [How to Read the Code](http://mxnet.io/architecture/read_code.html)
-<!-- * [Develop and Hack MXNet](http://mxnet.io/how_to/develop_and_hack.html) -->
 * [How to Contribute to MXNet](http://mxnet.io/community/contribute.html)
