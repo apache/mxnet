@@ -16,6 +16,9 @@ export MXNET_LOG=${MXNET_HOME}/buildMXNet_mac.log
 export PATH=/usr/local/bin:/usr/local/sbin:$PATH
 LINE="########################################################################"
 
+pythonver=`python --version`
+pipver=`pip --version`
+
 echo $LINE
 echo " "
 echo "This script installs MXNet on MacOS in ${MXNET_HOME}"
@@ -23,7 +26,7 @@ echo "If this directory is already present, it is renamed to ${MXNET_HOME_OLD}"
 echo "It has been tested to work successfully on MacOS El Capitan and Sierra"
 echo "and is expected to work fine on other versions as well."
 echo " "
-echo "Approximate run-time is around 5 minutes."
+echo "Approximate run-time is around 5 minutes. VERSIONS ${pythonver} ${pipver}"
 echo " "
 echo $LINE
 sleep 2
@@ -82,9 +85,10 @@ echo "before pip ugprade"
 python --version
 pip --version
 pip install --upgrade pip
+runme pip install --upgrade pip
 
-echo "after pip upgrade"
-pip --version
+runme echo "after pip upgrade"
+runme pip --version
 
 runme brew_pkg_install graphviz
 runme brew_pkg_install numpy
