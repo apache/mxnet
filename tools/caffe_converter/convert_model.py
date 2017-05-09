@@ -43,6 +43,7 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
 
     layers, names = caffe_parser.read_caffemodel(prototxt_fname, caffemodel_fname)
     layer_iter = caffe_parser.layer_iter(layers, names)
+    layers_proto = caffe_parser.get_layers(caffe_parser.read_prototxt(prototxt_fname))
 
     for layer_name, layer_type, layer_blobs in layer_iter:
         if layer_type == 'Convolution' or layer_type == 'InnerProduct' or layer_type == 4 or layer_type == 14 \
@@ -129,8 +130,18 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
             var = var.reshape(aux_shape_dic[var_name])
             aux_params[mean_name] = mx.nd.zeros(mean.shape)
             aux_params[var_name] = mx.nd.zeros(var.shape)
+            # Get the original epsilon
+            for idx, layer in enumerate(layers_proto):
+            	if layer.name == bn_name:
+            		bn_index = idx
+            eps = layers_proto[bn_index].batch_norm_param.eps
+            # Compensate for the epsilon shift performed in convert_symbol
+            eps_correction = 0
+            if eps <= 1e-05:
+            	eps_correction = eps - 1e-04
+            # Fill parameters
             aux_params[mean_name][:] = mean * rescale_factor
-            aux_params[var_name][:] = var * rescale_factor
+            aux_params[var_name][:] = var * rescale_factor + eps_correction
             assert var.flags['C_CONTIGUOUS'] is True
             assert mean.flags['C_CONTIGUOUS'] is True
             print ('converting batchnorm layer, mean shape = {}, var shape = {}'.format(mean.shape, var.shape))

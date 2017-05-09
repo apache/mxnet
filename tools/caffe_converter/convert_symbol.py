@@ -157,7 +157,7 @@ def _parse_proto(prototxt_fname):
             param = layer[i].batch_norm_param
             epsilon = param.eps
             if(epsilon <= 1e-05):
-            	epsilon = 1.1e-05 # CuDNN requires eps to be greater than 1e-05
+            	epsilon = 1e-04 # CuDNN requires eps to be greater than 1e-05
             param_string = 'use_global_stats=%s, fix_gamma=False, eps=%f' % (
             	param.use_global_stats, epsilon)
             need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]]
