@@ -189,7 +189,7 @@ julia> a = mx.ones((2,3))
 mx.NDArray{Float32}(2,3)
 
 julia> Array{Float32}(a * 2 + 1)
-2×3 Array{Float32,2}:
+2x3 Array{Float32,2}:
  3.0  3.0  3.0
  3.0  3.0  3.0
 ```
