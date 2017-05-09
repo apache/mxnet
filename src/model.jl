@@ -143,7 +143,7 @@ function init_model(self :: FeedForward, initializer :: AbstractInitializer; ove
   return (arg_names, param_names, aux_names)
 end
 
-function _setup_predictor(self :: FeedForward, overwrite :: Bool=false; data_shapes...)
+function _setup_predictor(self :: FeedForward, overwrite :: Bool=false; verbosity :: Integer = 1, data_shapes...)
   if !isdefined(self, :pred_exec) || isa(self.pred_exec, Void) || overwrite
     if !isdefined(self, :arg_params) || !isdefined(self, :aux_params)
       @assert(false, "Model weights not defined, please init or train the model, or load from file")
@@ -152,7 +152,7 @@ function _setup_predictor(self :: FeedForward, overwrite :: Bool=false; data_sha
     # the predictor use only the first device
     self.pred_exec = simple_bind(self.arch, self.ctx[1]; grad_req=GRAD_NOP, data_shapes...)
     dbg_str = mx.debug_str(self.pred_exec)
-    info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[1]))
+    verbosity >= 1 && info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[1]))
     copy_params_from(self.pred_exec, self.arg_params, self.aux_params)
   else
     # make sure the new setup is compatible with the existing one
@@ -185,6 +185,10 @@ end
                      then the executor can be potentially be re-used. So, if `overwrite` is false,
                      we will try to re-use, and raise an error if batch-size changed. If `overwrite`
                      is true (the default), a new `Executor` will be created to replace the old one.
+* `verbosity::Integer`: Determines the verbosity of the print messages. Higher numbers
+          leads to more verbose printing. Acceptable values are
+          - `0`: Do not print anything during prediction
+          - `1`: Print allocation information during prediction
 
 !!! note
     Prediction is computationally much less costly than training, so the bottleneck sometimes becomes the IO
@@ -203,13 +207,15 @@ end
 
 See also [`train`](@ref), [`fit`](@ref), [`init_model`](@ref), and [`load_checkpoint`](@ref)
 """
-function predict(callback :: Function, self :: FeedForward, data :: AbstractDataProvider; overwrite :: Bool = true)
-  predict(self, data; overwrite = overwrite, callback=callback)
+function predict(callback :: Function, self :: FeedForward, data :: AbstractDataProvider; 
+                 overwrite :: Bool = true, verbosity :: Integer = 1)
+  predict(self, data; overwrite = overwrite, callback=callback, verbosity = verbosity)
 end
-function predict(self :: FeedForward, data :: AbstractDataProvider; overwrite::Bool=true, callback::Union{Function,Void}=nothing)
+function predict(self :: FeedForward, data :: AbstractDataProvider; 
+                 overwrite::Bool=true, callback::Union{Function,Void}=nothing, verbosity :: Integer = 1)
   data_shapes = provide_data(data)
   data_names  = [x[1] for x in data_shapes]
-  _setup_predictor(self, overwrite; data_shapes...)
+  _setup_predictor(self, overwrite; verbosity = verbosity, data_shapes...)
 
   batch_size  = get_batch_size(data)
   data_arrays =  [self.pred_exec.arg_dict[name] for name in data_names]
