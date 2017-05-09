@@ -17,7 +17,6 @@ abstraction, optimization, and trade-offs between efficiency and flexibility.
 * [Dependency Engine for Deep Learning](http://mxnet.io/architecture/note_engine.html)
 * [Optimizing the Memory Consumption in Deep Learning](http://mxnet.io/architecture/note_memory.html)
 * [Efficient Data Loading Module for Deep Learning](http://mxnet.io/architecture/note_data_loading.html)
-* [Survey of RNN Interface](http://mxnet.io/architecture/rnn_interface.html)
 
 ## MXNet System Design and Architecture
 

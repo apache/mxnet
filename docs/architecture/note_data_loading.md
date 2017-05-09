@@ -236,8 +236,3 @@ that we might consider adding.
 Specifically, we might add specialized support
 for image segmentation, object localization, speech recognition.
 More detail will be provided when such applications have been running on MXNet.
-
-
-# Recommended next steps
-
-* [Survey of RNN Interface](http://mxnet.io/architecture/rnn_interface.html)
