@@ -1,31 +1,46 @@
 # Optimizing Memory Consumption in Deep Learning
 
-In deep learning, we strive to train deeper and larger networks. Although hardware has improved rapidly in recent years, the huge deep network monsters are
-always hungry for more GPU RAM. Using less memory for the same network also means we can
-use a larger batch size and, usually, a higher GPU utilization rate.
+Over the last ten years, a constant trend in deep learning
+is towards deeper and larger networks.
+Despite rapid advances in hardware performance,
+cutting-edge deep learning models continue to push the limits GPU RAM.
+So even today, it's always desirable to find ways
+to train larger models while occupying less memory.
+Doing so enables us to train faster, using larger batch sizes,
+and consequently achieving a higher GPU utilization rate.
 
-This topic discusses how to optimize memory allocation for deep neural networks, and provides
- candidate solutions for some of the problems. The solutions are by no means complete;
-they are examples that we think can be useful in most cases.
+In this document, we explore techniques for optimizing
+memory allocation for deep neural networks.
+We discuss a few candidate solutions.
+While our proposals are by no means exhaustive,
+these solutions are instructive and allow us to
+introduce the major design issues at play.
 
 ## Computation Graph
 
-We'll start the discussion by introducing the computation graph because it's a tool that we will rely on later. A computation graph describes the (data flow) dependencies between the operations in the deep network.
-The operations performed in the graph can be either fine-grained or coarse-grained.
+First, let's revisit the idea of the computation graph.
+A computation graph describes the (data flow) dependencies
+between the operations in the deep network.
+The operations performed in the graph
+can be either fine-grained or coarse-grained.
 The following figure shows two examples of computation graphs.
 
 ![Comp Graph Example](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/comp_graph_example.png)
 
-The concept of a computation graph is deeply rooted in packages such as Theano and CGT. Actually, they also exist implicitly
-in most libraries as the network configuration. The major difference in these libraries comes down to how they calculate gradient.
-There are mainly two ways: doing back-propagation on the same graph or having an explicit backward path that calculates
-the gradient needed.
+The concept of a computation graph is explicitly encoded in packages like Theano and CGT.
+In other libraries, computation graphs appear implicitly as network configuration files.
+The major difference in these libraries comes down to how they calculate gradient.
+There are mainly two ways: performing back-propagation on the _same_ graph
+or explicitly representing a _backwards path_ to calculate the required gradient.
 
 ![Backward Graph](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/back_graph.png)
 
-Libraries like Caffe, CXXNet, and Torch use the backprop on the same graph. Libraries like Theano and CGT takes the explicit
-backward path approach. In this topic, we adopt the *explicit backward path* approach because it has several advantages
-for optimization.
+Libraries like Caffe, CXXNet, and Torch take the former approach,
+performing back-prop on the original graph.
+Libraries like Theano and CGT take the latter approach,
+explicitly representing the backward path.
+In this discussions, we adopt the *explicit backward path* approach
+because it has several advantages for optimization.
 
 However, we should emphasize that choosing the explicit backward path approach doesn't restrict us
 to symbolic libraries, such as Theano and CGT. We can also use the explicit backward path for gradient calculation of
@@ -38,81 +53,111 @@ in the backward operations.
 This discussion applies to almost all existing deep learning libraries.
 (There are differences between libraries,  e.g., high-order differentiation, which is beyond the scope of this topic.)
 
-Why is the explicit backward path better? Let's explain it with two examples. The first reason is that the explicit backward path
-clearly describes the dependency between computations. Consider the following case, where we want to get
-the gradient of A and B. As we can see clearly from the graph, the computation of the ```d(C)``` gradient doesn't depend on F.
-This means that we can free the memory of ```F``` right after the forward computation is done. Similarly the memory
-of ```C``` can be recycled.
+Why is the explicit backward path better? Let's explain it with two examples.
+The first reason is that the explicit backward path
+clearly describes the dependency between computations.
+Consider the following case, where we want to get
+the gradient of A and B. As we can see clearly from the graph,
+the computation of the ```d(C)``` gradient doesn't depend on F.
+This means that we can free the memory of ```F```
+right after the forward computation is done.
+Similarly, the memory of ```C``` can be recycled.
 
 ![Backward Prune](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/back_dep_prune.png)
 
-Another advantage of the explicit backward path is the ability to have a different backward path, instead of a mirror of forward one.
-A common example is the split connection case, as shown in the following figure.
+Another advantage of the explicit backward path
+is the ability to have a different backward path,
+instead of a mirror of forward one.
+A common example is the split connection case,
+as shown in the following figure.
 
 ![Backward Agg](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/back_agg_grad.png)
 
-In this example, the output of B is referenced by two operations. If we want to do the gradient calculation in the same
-network, we need to introduce an explicit split layer. This means we need to do the split for the forward pass, too.
-In this figure, the forward pass doesn't contain a split layer, but the graph will automatically insert a gradient
-aggregation node before passing the gradient back to B. This helps us to save the memory cost of allocating the output of the
-split layer, and the operation cost of replicating the data in the forward pass.
+In this example, the output of B is referenced by two operations.
+If we want to do the gradient calculation in the same
+network, we need to introduce an explicit split layer.
+This means we need to do the split for the forward pass, too.
+In this figure, the forward pass doesn't contain a split layer,
+but the graph will automatically insert a gradient
+aggregation node before passing the gradient back to B.
+This helps us to save the memory cost of allocating the output of the split layer,
+and the operation cost of replicating the data in the forward pass.
 
-If we adopt the explicit backward approach, there's no difference between the forward pass
-and the backward pass. We simply proceed in the chronological order of the computation graph, and carry out computations.
-This also simplifies our discussions. The problem now is: How do we allocate the memory of each output node of a computation graph?
+If we adopt the explicit backward approach,
+there's no difference between the forward pass and the backward pass.
+We simply step through the computation graph in chronological order
+and carry out computations.
+This makes the explicit backward approach easy to analyze.
+We just need to answer the question:
+how do we allocate memory for each output node of a computation graph?
 
-This seems to have nothing to do with deep learning, but is more about the context of compiling, data flow optimization, etc.
-It's really the hungry monster of deep learning that motivates us to attack this problem, and benefits from it.
 
 ## What Can Be Optimized?
 
-We hope you're convinced that the computation graph is a good way to discuss memory allocation optimization techniques.
-As you can see, we've already saved some memory by using the explicit backward graph. Let's explore
-what we can optimize, and determine the baseline.
+As you can see, the computation graph is a useful way
+to discuss memory allocation optimization techniques.
+Already, we've shown how you can save some memory
+by using the explicit backward graph.
+Now let's explore further optimizations,
+and see how we might determine reasonable baselines for benchmarking.
 
-Assume that we want to build a neural network with ```n``` layers. A typical implementation of a neural network will
-need to allocate node space for the output of each layer and gradient values for back-propagation.
-This means we need roughly ```2 n``` memory cells. This is the same in the explicit backward graph approach because
-the number of nodes in a backward pass is roughly the same as in a forward pass.
+Assume that we want to build a neural network with `n` layers.
+Typically, when implementing a neural network,
+we need to allocate node space for both the output of each layer
+and the gradient values used during back-propagation.
+This means we need roughly `2 n` memory cells.
+We face the same requirement when using the explicit backward graph approach
+because the number of nodes in a backward pass
+is roughly the same as in a forward pass.
 
 ### In-place Operations
-One of the very first things that we can do is in-place memory sharing of operations. This is usually done for
-simple operations such as activation functions. Consider the following case, where we want to
-compute the value of three chained sigmoid functions.
+One of the simplest techniques we can employ
+is _in-place memory sharing_ across operations.
+For neural networks, we can usually apply this technique
+for the operations corresponding to activation functions.
+Consider the following case, where we want
+to compute the value of three chained sigmoid functions.
 
 ![Inplace op](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/alloc_inline.png)
 
-Because we can compute sigmoid ```in-place```, that is, use the same memory for input and output, we can simply allocate one copy of memory, and use it to compute an arbitrary length of sigmoid chain.
+Because we can compute sigmoid ```in-place```,
+using the same memory for input and output,
+we can compute an arbitrary-length chain
+of sigmoid functions using constant memory.
 
-However, in-place optimization sometimes can be done incorrectly, especially when the package tries
-to be a bit general. Consider the following case, where the value of B is not only used by C, but also by F.
+Note: it's easy to make mistakes when implementing in-place optimization.
+Consider the following case, where the value of B is used not only by C, but also by F.
 
 ![In-place trap](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/alloc_inline_trap.png)
 
-We can't perform in-place optimization because the value of B is still needed after ```C=sigmoid(B)``` is computed.
-An algorithm that simply does in-place optimization for every sigmoid operation might fall into such trap,
+We can't perform in-place optimization because the value of B
+is still needed after ```C=sigmoid(B)``` is computed.
+An algorithm that simply does in-place optimization
+for every sigmoid operation might fall into such trap,
 so we need to be careful about when we can use it.
 
 ### Standard Memory Sharing
-Memory can be shared in other ways than in in-place operations. In the following case, because the
-value of B is no longer needed when we compute E, we can reuse the memory to hold the result of E.
+In-place operations are not the only places where we can share memory.
+In the following example, because the value of B is no longer needed
+after we compute E, we can reuse B's memory to hold the result of E.
 
 ![Normal Sharing](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/alloc_normal.png)
 
 *Memory sharing doesn't necessarily require the same data shape*.
-In the preceding example, the shape of ```B``` and ```E``` can differ. We can simply allocate a
-memory region that is the maximum of the two sizes and shares it between them.
+Note that in the preceding example, the shapes of `B` and `E` can differ.
+To handle such a situation, we can allocate a memory region
+of size equal to the maximum of that required by `B` and `E` and shares it between them.
 
 ### Example of Real Neural Network Allocation
-The preceding examples, which contain only the computation of the forward pass, are made up.
-But, the same idea holds for real neural networks. The following figure shows an allocation
-plan for a two-layer perceptron.
+Of course, these are only toy examples and they address only the computation of the forward pass.
+But the same ideas apply to real neural networks.
+The following figure shows an allocation plan for a two-layer perceptron.
 
 ![Net Alloc](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/alloc_mlp.png)
 
 In this example:
 
-- In-place optimization is applied on computing ```act1```, ```d(fc1)```, ```out``` and ```d(fc2)```.
+- In-place optimization is applied when computing ```act1```, ```d(fc1)```, ```out``` and ```d(fc2)```.
 - Memory is shared between ```d(act1)``` and ```d(A)```.
 
 ## Memory Allocation Algorithm
