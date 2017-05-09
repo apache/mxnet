@@ -7,7 +7,7 @@ in self-driving cars, machine translation, speech recognition and more.
 While widespread interest in deep learning took off in 2012,
 deep learning has become an indispensable tool for countless industries.
 
-![alt text](img/image-classification.png)
+![alt text](https://raw.githubusercontent.com/kevinthesun/web-data/master/mxnet/get-started/image-classification.png)
 
 It might not come as surprise that researchers
 have investigated neural networks for decades.
@@ -16,7 +16,7 @@ suggested the forerunner of todays artificial neurons back in 1943.
 Each neuron is connected to other neurons along _edges_, analogous to the synapses that connect real neurons. 
 And associated with each edge is a _weight_ that indicates whether the connection is excitatory or inhibitatory and the strength of the connection. 
 
-![alt_text](img/artificial-neuron-2.png)
+![alt_text](https://raw.githubusercontent.com/kevinthesun/web-data/master/mxnet/get-started/artificial-neuron-2.png)
 
 In the 1980s, the modern version of neural networks took shape.
 Researchers arranged artificial neurons into _layers_.
@@ -53,7 +53,7 @@ replacing classical models and hand-engineered features.
 Similarly, nearly every production speech recognition system now relies on neural networks, 
 where replacing the hidden Markov models that previously held sway.
 
-![alt text](img/nvidia-gpus.jpg)
+![alt text](https://raw.githubusercontent.com/kevinthesun/web-data/master/mxnet/get-started/nvidia-gpus.jpg)
 
 While GPUs and clusters present a huge opportunity for accelerating neural network training,
 adapting traditional machine learning code
@@ -103,7 +103,7 @@ The emails may be streaming from an online service (at inference time),
 or from a large offline dataset __D__ (at training time). 
 In either case, the dataset typically must be managed by the CPU.
 
-![alt text](img/architecture.png)
+![alt text](https://raw.githubusercontent.com/kevinthesun/web-data/master/mxnet/get-started/architecture.png)
 
 To compute the transformation of a neural network quickly, we need need both the parameters and data points to make it into GPU memory. For any example _X_, the parameters _W_ are the same. Moreover the size of the model tends to dwarf the size of an individual example. So we might arrive at the natural insight that parameters should always live on the GPU, even if the dataset itself must live on the CPU or stream in. This prevents IO from becoming the bottleneck during training or inference.
 
