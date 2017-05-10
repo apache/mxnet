@@ -659,6 +659,7 @@ You could also run distributed deeplearning with *MXNet* on AWS using [Cloudform
 </div>
 
 <!-- END - Cloud Python Installation Instructions -->
+<br/>
 
 # Validate MXNet Installation
 
