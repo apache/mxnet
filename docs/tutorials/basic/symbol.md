@@ -2,22 +2,25 @@
 
 Besides the tensor computation interface `NDArray`, another main object in MXNet
 is the `Symbol` provided by `mxnet.symbol`, or `mxnet.sym` for short. A symbol
-represents a multi-output symbolic expression. They are composited by operators,
-such as simple matrix operations (e.g. "+"), or a neural network layer
-(e.g. convolution layer). An operator can take several input variables, produce
-more than one output variables, and have internal state variables. A variable
-can be either free, which we can bind with value later, or an output of another
-symbol.
+represents a multi-output symbolic expression and is used to declare the computation.
+
+Symbols are composited by operators, such as simple matrix operations (e.g. "+"),
+or a neural network layer (e.g. convolution layer). An operator can take several
+input variables, produce more than one output variables and have internal state
+variables. A variable can be either free, which we can bind with value later,
+or an output of another symbol.
 
 ## Symbol Composition
+
+There are a few different ways to compose a `Symbol`.
 
 ### Basic Operators
 
 The following example composites a simple expression `a+b`. We first create the
-placeholders `a` and `b` with names using `mx.sym.Variable`, and then construct
-the desired symbol by using the operator `+`. When the string name is not given
-during creating, MXNet will automatically generate a unique name for the symbol,
-which is the case for `c`.
+placeholders `a` and `b` with names using `mx.sym.Variable` and then construct
+the desired symbol by using the operator `+`. If the string name is not given to
+the symbol during creation, MXNet will automatically generate a unique name for
+it, which is the case for `c`.
 
 ```python
 import mxnet as mx
@@ -27,10 +30,10 @@ c = a + b
 (a, b, c)
 ```
 
-Most `NDArray` operators can be applied to `Symbol`, for example:
+Most `NDArray` operators can also be applied to `Symbol`, for example:
 
 ```python
-# elemental wise times
+# elemental wise multiplication
 d = a * b
 # matrix multiplication
 e = mx.sym.dot(a, b)
@@ -38,14 +41,19 @@ e = mx.sym.dot(a, b)
 f = mx.sym.reshape(d+e, shape=(1,4))
 # broadcast
 g = mx.sym.broadcast_to(f, shape=(2,4))
+# plot
 mx.viz.plot_network(symbol=g)
 ```
 
+The computations declared in the above examples can be bound to the input data
+for evaluation by using `bind` method. It is discussed in the
+[symbol manipulation](#Symbol Manipulation) section.
+
 ### Basic Neural Networks
 
-Besides the basic operators, `Symbol` has a rich set of neural network
-layers. The following codes construct a two layer fully connected neural work
-and then visualize the structure by given the input data shape.
+Besides the basic operators, `Symbol` has a rich set of neural network layers.
+The following example constructs a two layer fully connected neural network
+and then visualize the structure of that network given the input data shape.
 
 ```python
 net = mx.sym.Variable('data')
@@ -56,19 +64,24 @@ net = mx.sym.SoftmaxOutput(data=net, name='out')
 mx.viz.plot_network(net, shape={'data':(100,200)})
 ```
 
-### Modulelized Construction for Deep Networks
+### Modularized Construction for Deep Networks
 
-For deep networks, such as the Google Inception, constructing layer by layer is
-painful given the large number of layers. For these networks, we often
-modularize the construction. Take the Google Inception as an example, we can
-first define a factory function to chain the convolution layer, batch
-normalization layer, and Relu activation layer together:
+Constructing a layer by layer deep network, such as the Google Inception, is
+painful given the large number of layers. So, for such networks, we often
+modularize the construction.
+
+For example, in Google Inception network, we can first define a factory function
+which chains the convolution, batch normalization and relu activation
+layers together.
 
 ```python
-def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0), name=None, suffix=''):
-    conv = mx.sym.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, name='conv_%s%s' %(name, suffix))
+def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0),
+    name=None, suffix=''):
+    conv = mx.sym.Convolution(data=data, num_filter=num_filter, kernel=kernel,
+                  stride=stride, pad=pad, name='conv_%s%s' %(name, suffix))
     bn = mx.sym.BatchNorm(data=conv, name='bn_%s%s' %(name, suffix))
-    act = mx.sym.Activation(data=bn, act_type='relu', name='relu_%s%s' %(name, suffix))
+    act = mx.sym.Activation(data=bn, act_type='relu', name='relu_%s%s'
+                  %(name, suffix))
     return act
 prev = mx.sym.Variable(name="Previos Output")
 conv_comp = ConvFactory(data=prev, num_filter=64, kernel=(7,7), stride=(2, 2))
@@ -76,40 +89,50 @@ shape = {"Previos Output" : (128, 3, 28, 28)}
 mx.viz.plot_network(symbol=conv_comp, shape=shape)
 ```
 
-Then we define a function that constructs an Inception module based on
-`ConvFactory`
+Then we can define a function that constructs an inception module based on
+factory function `ConvFactory`.
 
 ```python
-def InceptionFactoryA(data, num_1x1, num_3x3red, num_3x3, num_d3x3red, num_d3x3, pool, proj, name):
+def InceptionFactoryA(data, num_1x1, num_3x3red, num_3x3, num_d3x3red, num_d3x3,
+                      pool, proj, name):
     # 1x1
-    c1x1 = ConvFactory(data=data, num_filter=num_1x1, kernel=(1, 1), name=('%s_1x1' % name))
+    c1x1 = ConvFactory(data=data, num_filter=num_1x1, kernel=(1, 1),
+                      name=('%s_1x1' % name))
     # 3x3 reduce + 3x3
-    c3x3r = ConvFactory(data=data, num_filter=num_3x3red, kernel=(1, 1), name=('%s_3x3' % name), suffix='_reduce')
-    c3x3 = ConvFactory(data=c3x3r, num_filter=num_3x3, kernel=(3, 3), pad=(1, 1), name=('%s_3x3' % name))
+    c3x3r = ConvFactory(data=data, num_filter=num_3x3red, kernel=(1, 1),
+                      name=('%s_3x3' % name), suffix='_reduce')
+    c3x3 = ConvFactory(data=c3x3r, num_filter=num_3x3, kernel=(3, 3), pad=(1, 1),
+                      name=('%s_3x3' % name))
     # double 3x3 reduce + double 3x3
-    cd3x3r = ConvFactory(data=data, num_filter=num_d3x3red, kernel=(1, 1), name=('%s_double_3x3' % name), suffix='_reduce')
-    cd3x3 = ConvFactory(data=cd3x3r, num_filter=num_d3x3, kernel=(3, 3), pad=(1, 1), name=('%s_double_3x3_0' % name))
-    cd3x3 = ConvFactory(data=cd3x3, num_filter=num_d3x3, kernel=(3, 3), pad=(1, 1), name=('%s_double_3x3_1' % name))
+    cd3x3r = ConvFactory(data=data, num_filter=num_d3x3red, kernel=(1, 1),
+                      name=('%s_double_3x3' % name), suffix='_reduce')
+    cd3x3 = ConvFactory(data=cd3x3r, num_filter=num_d3x3, kernel=(3, 3),
+                      pad=(1, 1), name=('%s_double_3x3_0' % name))
+    cd3x3 = ConvFactory(data=cd3x3, num_filter=num_d3x3, kernel=(3, 3),
+                      pad=(1, 1), name=('%s_double_3x3_1' % name))
     # pool + proj
-    pooling = mx.sym.Pooling(data=data, kernel=(3, 3), stride=(1, 1), pad=(1, 1), pool_type=pool, name=('%s_pool_%s_pool' % (pool, name)))
-    cproj = ConvFactory(data=pooling, num_filter=proj, kernel=(1, 1), name=('%s_proj' %  name))
+    pooling = mx.sym.Pooling(data=data, kernel=(3, 3), stride=(1, 1), pad=(1, 1),
+                      pool_type=pool, name=('%s_pool_%s_pool' % (pool, name)))
+    cproj = ConvFactory(data=pooling, num_filter=proj, kernel=(1, 1),
+                      name=('%s_proj' %  name))
     # concat
-    concat = mx.sym.Concat(*[c1x1, c3x3, cd3x3, cproj], name='ch_concat_%s_chconcat' % name)
+    concat = mx.sym.Concat(*[c1x1, c3x3, cd3x3, cproj],
+                      name='ch_concat_%s_chconcat' % name)
     return concat
 prev = mx.sym.Variable(name="Previos Output")
 in3a = InceptionFactoryA(prev, 64, 64, 64, 64, 96, "avg", 32, name="in3a")
 mx.viz.plot_network(symbol=in3a, shape=shape)
 ```
 
-Finally we can obtain the whole network by chaining multiple inception
-modulas. See a complete example at
+Finally, we can obtain the whole network by chaining multiple inception
+modules. See a complete example
 [here](https://github.com/dmlc/mxnet/blob/master/example/image-classification/symbols/inception-bn.py).
 
 ### Group Multiple Symbols
 
 To construct neural networks with multiple loss layers, we can use
 `mxnet.sym.Group` to group multiple symbols together. The following example
-group two outputs:
+groups two outputs:
 
 ```python
 net = mx.sym.Variable('data')
@@ -123,66 +146,70 @@ group.list_outputs()
 
 ## Relations to NDArray
 
-As can be seen now, both Symbol and NDArray provide multi-dimensional array
-operations, such as `c=a+b` in MXNet. We briefly clarify the difference here.
+As you can see now, both `Symbol` and `NDArray` provide multi-dimensional array
+operations, such as `c=a+b` in MXNet. We briefly clarify the differences here.
 
 The `NDArray` provides an imperative programming alike interface, in which the
 computations are evaluated sentence by sentence. While `Symbol` is closer to
-declarative programming, in which we first declare the computation, and then
-evaluate with data. Examples in this category include regular expression and
+declarative programming, in which we first declare the computation and then
+evaluate with data. Examples in this category include regular expressions and
 SQL.
 
 The pros for `NDArray`:
 
-- straightforward
-- easy to work with other language features (for loop, if-else condition, ..)
-  and libraries (numpy, ..)
-- easy to step-by-step debug
+- Straightforward.
+- Easy to work with other language features (for loop, if-else condition, ..)
+  and libraries (numpy, ..).
+- Easy step-by-step code debugging.
 
 The pros for `Symbol`:
 
-- provides almost all functionalities of NDArray, such as +, \*, sin, and
-  reshape
-- provides a large number of neural network related operators such as
-  Convolution, Activation, and BatchNorm
-- provides automatic differentiation
-- easy to construct and manipulate complex computations such as deep neural
-  networks
-- easy to save, load, and visualization
-- easy for the backend to optimize the computation and memory usage
+- Provides almost all functionalities of NDArray, such as +, \*, sin,
+  reshape etc.
+- Provides a large number of neural network related operators such as
+  Convolution, Activation and BatchNorm.
+- Provides automatic differentiation.
+- Easy to construct and manipulate complex computations such as deep neural
+  networks.
+- Easy to save, load and visualization.
+- Easy for the backend to optimize the computation and memory usage.
 
 ## Symbol Manipulation
 
-One important difference of `Symbol` comparing to `NDArray` is that, we first
-declare the computation, and then bind with data to run.
+One important difference of `Symbol` compared to `NDArray` is that, we first
+declare the computation and then bind the computation with data to run.
 
-In this section we introduce the functions to manipulate a symbol directly. But
-note that, most of them are wrapped nicely by the
-`module` package. One can skip this section safely.
+In this section, we introduce the functions to manipulate a symbol directly. But
+note that, most of them are wrapped by the `module` package.
 
-### Shape Inference
+### Shape and Type Inference
 
-For each symbol, we can query its inputs (or arguments) and outputs. We can also
-inference the output shape by given the input shape, which facilitates memory
-allocation.
-
+For each symbol, we can query it's arguments, auxiliary states and outputs.
+We can also infer the output shape and type of the symbol given the known input
+shape or type of some arguments, which facilitates memory allocation.
 
 ```python
 arg_name = c.list_arguments()  # get the names of the inputs
 out_name = c.list_outputs()    # get the names of the outputs
+# infers output shape given the shape of input arguments
 arg_shape, out_shape, _ = c.infer_shape(a=(2,3), b=(2,3))
+# infers output type given the type of input arguments
+arg_type, out_type, _ = c.infer_type(a='float32', b='float32')
 {'input' : dict(zip(arg_name, arg_shape)),
  'output' : dict(zip(out_name, out_shape))}
+{'input' : dict(zip(arg_name, arg_type)),
+ 'output' : dict(zip(out_name, out_type))}
 ```
 
 ### Bind with Data and Evaluate
 
-The symbol `c` we constructed declares what computation should be run. To
-evaluate it, we need to feed arguments, namely free variables, with data
-first. We can do it by using the `bind` method, which accepts device context and
+The symbol `c` we constructed above declares what computation should be run. To
+evaluate it, we first need to feed the arguments, namely free variables, with data.
+
+We can do it by using the `bind` method, which accepts device context and
 a `dict` mapping free variable names to `NDArray`s as arguments and returns an
-executor. The executor provides method `forward` for evaluation and attribute
-`outputs` to get all results.
+executor. The executor provides `forward` method for evaluation and an attribute
+`outputs` to get all the results.
 
 ```python
 ex = c.bind(ctx=mx.cpu(), args={'a' : mx.nd.ones([2,3]),
@@ -192,7 +219,7 @@ print 'number of outputs = %d\nthe first output = \n%s' % (
            len(ex.outputs), ex.outputs[0].asnumpy())
 ```
 
-We can evaluate the same symbol on GPU with different data
+We can evaluate the same symbol on GPU with different data.
 
 ```python
 ex_gpu = c.bind(ctx=mx.gpu(), args={'a' : mx.nd.ones([3,4], mx.gpu())*2,
@@ -201,12 +228,21 @@ ex_gpu.forward()
 ex_gpu.outputs[0].asnumpy()
 ```
 
+We can also use `eval` method to evaluate the symbol. It combines calls to `bind`
+and `forward` methods.
+
+```python
+ex = c.eval(ctx = mx.cpu(), a = mx.nd.ones([2,3]), b = mx.nd.ones([2,3]))
+print 'number of outputs = %d\nthe first output = \n%s' % (
+            len(ex), ex[0].asnumpy())
+```
+
 ### Load and Save
 
-Similar to NDArray, we can either serialize a `Symbol` object by using `pickle`,
-or use `save` and `load` directly. Different to the binary format chosen by
-`NDArray`, `Symbol` uses the more readable json format for serialization. The
-`tojson` method returns the json string.
+Similar to `NDArray`, we can either serialize a `Symbol` object by using `pickle`,
+or by using `save` and `load` methods directly. The only difference is that
+`NDArray` uses binary format while `Symbol` uses more readable `json` format for
+serialization. To convert symbol to json string, use `tojson` method.
 
 ```python
 print(c.tojson())
@@ -219,22 +255,22 @@ c.tojson() == c2.tojson()
 
 Most operators such as `mx.sym.Convolution` and `mx.sym.Reshape` are implemented
 in C++ for better performance. MXNet also allows users to write new operators
-using any frontend language such as Python. It often makes the developing and
+using any front-end language such as Python. It often makes the developing and
 debugging much easier.
 
 To implement an operator in Python, we just need to define the two computation
 methods `forward` and `backward` with several methods for querying the
 properties, such as `list_arguments` and `infer_shape`.
 
-`NDArray` is the default type of arguments in both `forward` and
-`backward`. Therefore we often also implement the computation with `NDArray`
-operations. To show the flexibility of MXNet, however, we will demonstrate an
-implementation of the `softmax` layer using NumPy. Though a NumPy based operator
-can be only run on CPU and also lose some optimizations which can be applied on
-NDArray, it enjoys the rich functionalities provided by NumPy.
+`NDArray` is the default type of arguments in both `forward` and `backward`.
+Therefore we often also implement the computation with `NDArray` operations.
+To show the flexibility of MXNet, we will demonstrate an implementation of the
+`softmax` layer using NumPy. Though a NumPy based operator can be only run on CPU
+and also lose some optimizations which can be applied on NDArray, it enjoys the
+rich functionalities provided by NumPy.
 
 We first create a subclass of `mx.operator.CustomOp` and then define `forward`
-and `backward`.
+and `backward` methods.
 
 ```python
 class Softmax(mx.operator.CustomOp):
@@ -251,11 +287,11 @@ class Softmax(mx.operator.CustomOp):
         self.assign(in_grad[0], req[0], mx.nd.array(y))
 ```
 
-Here we use `asnumpy` to convert the `NDArray` inputs into `numpy.ndarray`. Then
-using `CustomOp.assign` to assign the results back to `mxnet.NDArray` based on
-the value of req, which could be "over write" or "add to".
+Here, we first used `asnumpy` to convert the `NDArray` inputs to `numpy.ndarray`.
+Then we used `CustomOp.assign` to assign the results back to `mxnet.NDArray`.
+It handles assignment based on the value of req, which can be "over write" or "add to".
 
-Next we create a subclass of `mx.operator.CustomOpProp` for querying the
+Now, we can create a subclass of `mx.operator.CustomOpProp` for querying the
 properties.
 
 ```python
@@ -283,7 +319,7 @@ class SoftmaxProp(mx.operator.CustomOpProp):
         return Softmax()
 ```
 
-Finally, we can use `mx.sym.Custom` with the register name to use this operator
+Finally, we can use `mx.sym.Custom` with the register name to use this operator.
 
 ```python
 net = mx.sym.Custom(data=prev_input, op_type='softmax')
@@ -293,12 +329,13 @@ net = mx.sym.Custom(data=prev_input, op_type='softmax')
 
 ### Type Cast
 
-MXNet uses 32-bit float in default. Sometimes we want to use a lower precision
-data type for better accuracy-performance trade-off. For example, The Nvidia
-Tesla Pascal GPUs (e.g. P100) have improved 16-bit float performance, while GTX
-Pascal GPUs (e.g. GTX 1080) are fast on 8-bit integers.
+By default, MXNet uses 32-bit float. But for better accuracy-performance, we can
+also use a lower precision data type. For example, The Nvidia Tesla Pascal GPUs
+(e.g. P100) have improved 16-bit float performance, while GTX Pascal GPUs
+(e.g. GTX 1080) are fast on 8-bit integers.
 
-We can use the `mx.sym.Cast` operator to convert the data type.
+To convert the data type as per the requirements, we can use `mx.sym.Cast` operator
+as follows:
 
 ```python
 a = mx.sym.Variable('data')
@@ -313,8 +350,8 @@ print({'input':arg, 'output':out})
 
 ### Variable Sharing
 
-Sometimes we want to share the contents between several symbols. This can be
-simply done by bind these symbols with the same array.
+To share the contents between several symbols, we can bind these symbols with
+the same array as follows:
 
 ```python
 a = mx.sym.Variable('a')
