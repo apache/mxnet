@@ -152,14 +152,14 @@ class BatchNormOp : public Operator {
   }
 
  private:
-  void DoForward(mshadow::Stream<xpu> *stream,
+  void DoForward(mshadow::Stream<cpu> *stream,
                  const OpContext &ctx,
                  const std::vector<TBlob> &in_data,
                  const std::vector<OpReqType> &req,
                  const std::vector<TBlob> &out_data,
                  const std::vector<TBlob> &aux_states);
 
-  void DoBackward(mshadow::Stream<xpu> *stream,
+  void DoBackward(mshadow::Stream<cpu> *stream,
                   const OpContext &ctx,
                   const std::vector<TBlob> &out_grad,
                   const std::vector<TBlob> &in_data,
@@ -168,6 +168,22 @@ class BatchNormOp : public Operator {
                   const std::vector<TBlob> &in_grad,
                   const std::vector<TBlob> &aux_states);
 
+#if MXNET_USE_CUDA
+  void DoForward(mshadow::Stream<gpu> *stream,
+                 const OpContext &ctx,
+                 const std::vector<TBlob> &in_data,
+                 const std::vector<OpReqType> &req,
+                 const std::vector<TBlob> &out_data,
+                 const std::vector<TBlob> &aux_states);
+  void DoBackward(mshadow::Stream<gpu> *stream,
+                  const OpContext &ctx,
+                  const std::vector<TBlob> &out_grad,
+                  const std::vector<TBlob> &in_data,
+                  const std::vector<TBlob> &out_data,
+                  const std::vector<OpReqType> &req,
+                  const std::vector<TBlob> &in_grad,
+                  const std::vector<TBlob> &aux_states);
+#endif  // MXNET_USE_CUDA
 
   /*! \brief Batch normalization operator parameters */
   BatchNormParam param_;
