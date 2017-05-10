@@ -65,7 +65,7 @@ class RNNParams(object):
     ----------
     prefix : str
         Names of all variables created by this container will
-        be prepended with prefix
+        be prepended with prefix.
     """
     def __init__(self, prefix=''):
         self._prefix = prefix
@@ -130,17 +130,18 @@ class BaseRNNCell(object):
         Returns
         -------
         output : Symbol
-            output symbol on unrolling this time step.
-        states : list of Symbols
-            states symbol is the new state of this RNN after this unrolling. 
-            The type of this is same as the output of begin_state().
-            This can be used as input state to the next timestep 
+            Symbol corresponding to the output from the RNN when unrolling 
+            for a single time step.
+        states : nested list of Symbol
+            The new state of this RNN after this unrolling.. 
+            The type of this symbol is same as the output of begin_state().
+            This can be used as input state to the next time step 
             of this RNN.
 
         See Also
         --------
         begin_state: This function can provide the states for the first time step.
-        unroll: This function can be used to unroll the RNN for more than 1 time step.
+        unroll: This function unrolls an RNN for a given number of (>=1) time steps.
         """
         raise NotImplementedError()
 
@@ -182,7 +183,7 @@ class BaseRNNCell(object):
         Returns
         -------
         states : nested list of Symbol
-            starting states for the first RNN step
+            Starting states for the first RNN step
         """
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
@@ -204,22 +205,22 @@ class BaseRNNCell(object):
         """Unpack fused weight matrices into separate
         weight matrices. 
 
-        For example, say you use a module object mod to run a network that has an lstm cell.
-        In mod.get_params()[0], the lstm parameters are all present as a single big vector. 
-        cell.unpack_weights(mod.get_params()[0]) will unpack this vector into a dictionary of
+        For example, say you use a module object `mod` to run a network that has an lstm cell.
+        In `mod.get_params()[0]`, the lstm parameters are all represented as a single big vector. 
+        `cell.unpack_weights(mod.get_params()[0])` will unpack this vector into a dictionary of
         more readable lstm parameters - c, f, i, o gates for i2h (input to hidden) and 
         h2h (hidden to hidden) weights.
 
         Parameters
         ----------
         args : dict of str -> NDArray
-            dictionary containing packed weights.
-            usually from Module.get_params()[0].
+            Dictionary containing packed weights.
+            usually from `Module.get_params()[0]`.
 
         Returns
         -------
         args : dict of str -> NDArray
-            dictionary with unpacked weights associated with
+            Dictionary with unpacked weights associated with
             this cell.
 
         See Also
@@ -247,12 +248,12 @@ class BaseRNNCell(object):
         Parameters
         ----------
         args : dict of str -> NDArray
-            dictionary containing unpacked weights.
+            Dictionary containing unpacked weights.
 
         Returns
         -------
         args : dict of str -> NDArray
-            dictionary with packed weights associated with
+            Dictionary with packed weights associated with
             this cell.
         """
         args = args.copy()
@@ -278,20 +279,20 @@ class BaseRNNCell(object):
         length : int
             number of steps to unroll
         inputs : Symbol, list of Symbol, or None
-            if inputs is a single Symbol (usually the output
+            If `inputs` is a single Symbol (usually the output
             of Embedding symbol), it should have shape
             (batch_size, length, ...) if layout == 'NTC',
             or (length, batch_size, ...) if layout == 'TNC'.
 
-            If inputs is a list of symbols (usually output of
+            If `inputs` is a list of symbols (usually output of
             previous unroll), they should all have shape
             (batch_size, ...).
         begin_state : nested list of Symbol, optional
-            input states. Created by begin_state()
-            or output state of another cell. Created
-            from begin_state() if None.
+            Input states created by `begin_state()`
+            or output state of another cell. 
+            Created from `begin_state()` if None.
         layout : str, optional
-            layout of input symbol. Only used if inputs
+            `layout` of input symbol. Only used if inputs
             is a single Symbol.
         merge_outputs : bool, optional
             If False, return outputs as a list of Symbols.
@@ -303,10 +304,14 @@ class BaseRNNCell(object):
 
         Returns
         -------
-        outputs : list of Symbol
-            output symbols.
+        outputs : list of Symbol or Symbol
+            Symbol (if `merge_outputs` is True) or list of Symbols
+            (if `merge_outputs` is False) corresponding to the output from 
+            the RNN from this unrolling.
+
         states : Symbol or nested list of Symbol
-            has the same structure as begin_state()
+            The new state of this RNN after this unrolling.
+            The type of this symbol is same as the output of begin_state().
         """
         self.reset()
 
