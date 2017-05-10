@@ -487,7 +487,7 @@ Operator *BatchNormProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_s
 DMLC_REGISTER_PARAMETER(BatchNormParam);
 
 MXNET_REGISTER_OP_PROPERTY(BatchNorm, BatchNormProp)
-  .describe(R"code(Batch normalization.
+.describe(R"code(Batch normalization.
 
 Normalizes a data batch by mean and variance, and applies a scale ``gamma`` as
 well as offset ``beta``.
@@ -528,10 +528,10 @@ Both ``gamma`` and ``beta`` are learnable parameters. But if ``fix_gamma`` is tr
 then set ``gamma`` to 1 and its gradient to 0.
 
 )code" ADD_FILELINE)
-  .add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")
-  .add_argument("gamma", "NDArray-or-Symbol", "gamma array")
-  .add_argument("beta", "NDArray-or-Symbol", "beta array")
-  .add_arguments(BatchNormParam::__FIELDS__());
+.add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")
+.add_argument("gamma", "NDArray-or-Symbol", "gamma array")
+.add_argument("beta", "NDArray-or-Symbol", "beta array")
+.add_arguments(BatchNormParam::__FIELDS__());
 
 NNVM_REGISTER_OP(BatchNorm)
 .set_attr<nnvm::FSetInputVarAttrOnCompose>(
