@@ -238,11 +238,6 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
                           test::op::BasicOperatorData<DType, AccReal>::kOutput,
                           op::batchnorm::kMean));
-#if !MXNET_USE_CUDNN  /* CUDNN operator stores invstd instead of variance */
-      EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
-                          test::op::BasicOperatorData<DType, AccReal>::kOutput,
-                          op::batchnorm::kVar));
-#endif
       // InGrad
       EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
                           test::op::BasicOperatorData<DType, AccReal>::kInGrad,

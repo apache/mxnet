@@ -230,7 +230,7 @@ static inline void ComputeVariance(const DeviceTensor3<DType> &tensor,
 
 /*! \brief Forward CPU */
 template <typename xpu, typename DType, typename AccReal>
-void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
+void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
                                                  const OpContext &ctx,
                                                  const std::vector<TBlob> &in_data,
                                                  const std::vector<OpReqType> &req,
@@ -253,9 +253,9 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
   AccReal *mean = meanVector.dptr<AccReal>();
   AccReal  *var = varianceVector.dptr<AccReal>();
 
-  const bool is_train_or_global_stats = ctx.is_train && !param_.use_global_stats;
+  const bool is_train_and_not_global_stats = ctx.is_train && !param_.use_global_stats;
 
-  if (is_train_or_global_stats) {
+  if (is_train_and_not_global_stats) {
     const TShape stride(2);
 
     // compute mean per input
@@ -304,16 +304,10 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *stream,
                     });
       }
     }
-
-  // Convert back to "real" variance in order to be consistent
-  // with the original operator
-  for (size_t i = 0, n = inputData.shape_[1]; i < n; ++i) {
-    var[i] = INVSTD_TO_VARIANCE(var[i], param_.eps);
-  }
 }
 
 template <typename xpu, typename DType, typename AccReal>
-void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *stream,
+void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
                                                   const OpContext &ctx,
                                                   const std::vector<TBlob> &out_grad,
                                                   const std::vector<TBlob> &in_data,
@@ -346,19 +340,21 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *stream,
   AccReal *runningMeanDataPtr = runningMean.dptr<AccReal>();
   AccReal *runningVarDataPtr  = runningVariance.dptr<AccReal>();
   AccReal *saveMeanDataPtr = saveMean.dptr<AccReal>();
-  AccReal *saveVarianceDataPtr = saveStd.dptr<AccReal>();
+  AccReal *saveInvStdDataPtr = saveStd.dptr<AccReal>();
   AccReal *gradWeightData = gradWeight.dptr<AccReal>();
   AccReal *gradBiasData = gradBias.dptr<AccReal>();
+
+  const bool is_train_and_not_global_stats = ctx.is_train && !param_.use_global_stats;
 
   #pragma omp parallel for
   for (int channel = 0; channel < static_cast<int>(channelCount); ++channel) {
     AccReal *weight = weights.dptr<AccReal>();
     const AccReal w = weight ? weight[channel] : AccReal(1);
     AccReal mean, invstd;
-    if (ctx.is_train && !param_.use_global_stats) {
+    if (is_train_and_not_global_stats) {
       mean = saveMeanDataPtr[channel];
-      const AccReal variance = saveVarianceDataPtr[channel];
-      invstd = VARIANCE_TO_INVSTD(variance, param_.eps);
+      invstd = saveInvStdDataPtr[channel];
+      const AccReal variance = INVSTD_TO_VARIANCE(invstd, param_.eps);
 
       // update running averages
       runningMeanDataPtr[channel] = runningMeanDataPtr[channel] * param_.momentum
@@ -387,7 +383,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *stream,
                 });
 
     if (gradIn.shape_.ndim() && IsWriting(req[batchnorm::kData])) {  // if there's a grad input
-      if (ctx.is_train && !param_.use_global_stats) {
+      if (is_train_and_not_global_stats) {
         // when in training mode
         // Q(X) = X - E[x] ; i.e. input centered to zero mean
         // Y = Q(X) / σ    ; i.e. BN output before weight and bias
