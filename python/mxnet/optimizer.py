@@ -279,10 +279,13 @@ register = Optimizer.register   # pylint: disable=invalid-name
 class SGD(Optimizer):
     """The SGD optimizer with momentum and weight decay.
 
-    The optimizer updates the weight by:
+    The optimizer updates the weight by::
 
-      state = momentum * state + lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
-      weight = weight - state
+        state = momentum * state + lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
+        weight = weight - state
+
+    For details of the update algorithm see :class:`~mxnet.ndarray.sgd_update` and
+    :class:`~mxnet.ndarray.sgd_mom_update`.
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`:
@@ -457,6 +460,8 @@ class Adam(Optimizer):
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`:
 
+    For details of the update algorithm, see :class:`ndarray.adam_update`.
+
     Parameters
     ----------
     beta1 : float, optional
@@ -464,7 +469,7 @@ class Adam(Optimizer):
     beta2 : float, optional
         Exponential decay rate for the second moment estimates.
     epsilon : float, optional
-        Small value to avoid divided by 0.
+        Small value to avoid division by 0.
     """
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
                  **kwargs):
@@ -541,9 +546,11 @@ class RMSProp(Optimizer):
     If ``centered=False``, we follow
     http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf by
     Tieleman & Hinton, 2012.
+    For details of the update algorithm see :class:`~mxnet.ndarray.rmsprop_update`
 
     If ``centered=True``, we follow http://arxiv.org/pdf/1308.0850v5.pdf (38)-(45)
     by Alex Graves, 2013.
+    For details of the update algorithm see :class:`~mxnet.ndarray.rmspropalex_update`
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`:
@@ -551,15 +558,17 @@ class RMSProp(Optimizer):
     Parameters
     ----------
     gamma1: float, optional
-        Decay factor of moving average for ``gradient^2``.
+        A decay factor of moving average over past squared gradient.
     gamma2: float, optional
-        A "momentum" factor. Only used if ``centered=True``.
+        A "momentum" factor. Only used if `centered`=``True``.
     epsilon : float, optional
         Small value to avoid division by 0.
     centered : bool, optional
-        Use Graves' or Tieleman & Hinton's version of RMSProp.
+        Flag to control which version of RMSProp to use.
+        ``True`` will use Graves's version of `RMSProp`,
+        ``False`` will use Tieleman & Hinton's version of `RMSProp`.
     clip_weights : float, optional
-        clip weights into range ``[-clip_weights, clip_weights]``
+        Clips weights into range ``[-clip_weights, clip_weights]``
     """
     def __init__(self, learning_rate=0.001, gamma1=0.9, gamma2=0.9,
                  epsilon=1e-8, centered=False, clip_weights=None, **kwargs):
