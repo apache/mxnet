@@ -93,11 +93,11 @@ class BaseRNNCell(object):
     Parameters
     ----------
     prefix : str, optional
-        prefix for names of layers
-        (this prefix is also used for names of weights if `params` is None 
+        Prefix for names of layers
+        (this prefix is also used for names of weights if `params` is None
         i.e. if `params` are being created and not reused)
     params : RNNParams or None, optional
-        container for weight sharing between cells.
+        Container for weight sharing between cells.
         A new RNNParams container is created if `params` is None.
     """
     def __init__(self, prefix='', params=None):
@@ -130,12 +130,12 @@ class BaseRNNCell(object):
         Returns
         -------
         output : Symbol
-            Symbol corresponding to the output from the RNN when unrolling 
+            Symbol corresponding to the output from the RNN when unrolling
             for a single time step.
         states : nested list of Symbol
-            The new state of this RNN after this unrolling.. 
+            The new state of this RNN after this unrolling.
             The type of this symbol is same as the output of begin_state().
-            This can be used as input state to the next time step 
+            This can be used as input state to the next time step
             of this RNN.
 
         See Also
@@ -183,7 +183,7 @@ class BaseRNNCell(object):
         Returns
         -------
         states : nested list of Symbol
-            Starting states for the first RNN step
+            Starting states for the first RNN step.
         """
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
@@ -203,12 +203,12 @@ class BaseRNNCell(object):
 
     def unpack_weights(self, args):
         """Unpack fused weight matrices into separate
-        weight matrices. 
+        weight matrices.
 
         For example, say you use a module object `mod` to run a network that has an lstm cell.
-        In `mod.get_params()[0]`, the lstm parameters are all represented as a single big vector. 
+        In `mod.get_params()[0]`, the lstm parameters are all represented as a single big vector.
         `cell.unpack_weights(mod.get_params()[0])` will unpack this vector into a dictionary of
-        more readable lstm parameters - c, f, i, o gates for i2h (input to hidden) and 
+        more readable lstm parameters - c, f, i, o gates for i2h (input to hidden) and
         h2h (hidden to hidden) weights.
 
         Parameters
@@ -289,7 +289,7 @@ class BaseRNNCell(object):
             (batch_size, ...).
         begin_state : nested list of Symbol, optional
             Input states created by `begin_state()`
-            or output state of another cell. 
+            or output state of another cell.
             Created from `begin_state()` if None.
         layout : str, optional
             `layout` of input symbol. Only used if inputs
@@ -306,7 +306,7 @@ class BaseRNNCell(object):
         -------
         outputs : list of Symbol or Symbol
             Symbol (if `merge_outputs` is True) or list of Symbols
-            (if `merge_outputs` is False) corresponding to the output from 
+            (if `merge_outputs` is False) corresponding to the output from
             the RNN from this unrolling.
 
         states : Symbol or nested list of Symbol
