@@ -538,7 +538,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=None,
                             aux_states=None, grad_req='write', ctx=None):
     """Compares a symbol's backward results with the expected ones.
-    Prints error messages if the backward results are not the same as the expected one.
+    Prints error messages if the backward results are not the same as the expected results.
 
     Parameters
     ---------

@@ -403,11 +403,11 @@ fixed-size items.
 
 
     def _sync_copyfrom(self, source_array):
-        """Performs a synchronized copy from the source_array to the current array.
-        This is called through x[:] = source_array, where the source_array
-        is a numpy.ndarray or array_like object.
+        """Performs a synchronized copy from the `source_array` to the current array.
+        This is called through ``x[:] = source_array``, where the `source_array`
+        is a `numpy.ndarray` or array-like object.
         This function blocks until all the pending read/write operations with respect
-        to the current NDArray are finished and carry out the copy operation to the
+        to the current `NDArray` are finished and carry out the copy operation to the
         current NDArray.
 
         Parameters
@@ -441,7 +441,7 @@ fixed-size items.
 
     def _slice(self, start, stop):
         """Returns a sliced NDArray that shares memory with the current one.
-        This is called through x[start:stop].
+        This is called through ``x[start:stop]``.
 
         Parameters
         ----------
@@ -453,7 +453,7 @@ fixed-size items.
         Returns
         -------
             `NDArray` sharing the memory with the current one sliced from
-            start to end in the first dim.
+            start to stop in the first dim.
 
         Examples:
         >>> a = mx.nd.array([[1,2], [3, 4], [5, 6], [7, 8]])
@@ -470,18 +470,18 @@ fixed-size items.
         return NDArray(handle=handle, writable=self.writable)
 
     def _at(self, idx):
-        """Returns a view of the array sliced at idx in the first dim.
-        This is called through x[idx].
+        """Returns a view of the array sliced at `idx` in the first dim.
+        This is called through ``x[idx]``.
 
         Parameters
         ----------
         idx : int
-            index for slicing the NDArray in the first dim.
+            index for slicing the `NDArray` in the first dim.
 
         Returns
         -------
         NDArray
-            `NDArray` sharing the memory with the current one sliced at idx in the first dim.
+            `NDArray` sharing the memory with the current one sliced at `idx` in the first dim.
 
         Examples
         --------
