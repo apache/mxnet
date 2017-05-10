@@ -25,7 +25,7 @@ using exec::GraphExecutor;
 #if DMLC_CXX11_THREAD_LOCAL
 thread_local bool AutogradRuntime::is_train_;
 #else
-MX_TREAD_LOCAL bool AutogradRuntime::is_train_;
+MX_THREAD_LOCAL bool AutogradRuntime::is_train_;
 #endif
 
 template<typename FVisit>
