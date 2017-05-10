@@ -1,20 +1,3 @@
-<!-- START - Cloud Python Installation Instructions -->
-
-<div class="cloud">
-  <div class="python">
-
-AWS Marketplace distributes AMIs (Amazon Machine Image) with MXNet pre-installed. You can launch an Amazon EC2 instance with one of the below AMIs:
-1. Deep Learning AMI (Amazon Machine Image) for [Ubuntu](https://aws.amazon.com/marketplace/pp/B06VSPXKDX)
-2. Deep Learning AMI for [Amazon Linux](https://aws.amazon.com/marketplace/pp/B01M0AXXQB)
-
-You could also run distributed deeplearning with *MXNet* on AWS using [Cloudformation Template](https://github.com/awslabs/deeplearning-cfn/blob/master/README.md).
-
-</div>
-</div>
-
-<!-- END - Cloud Python Installation Instructions -->
-
-
 # Installing MXNet
 
 Indicate your preferred configuration. Then, follow the customized commands to install *MXNet*.
