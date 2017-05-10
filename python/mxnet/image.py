@@ -352,7 +352,7 @@ class ImageIter(io.DataIter):
         Data shape in (channels, height, width) format.
         For now, only RGB image with 3 channels is supported.
     label_width : int, optional
-        Label dimension. The default label width is 1.
+        Number of labels per example. The default label width is 1.
     path_imgrec : str
         Path to image record file (.rec).
         Created with tools/im2rec.py or bin/im2rec.
@@ -462,7 +462,7 @@ class ImageIter(io.DataIter):
         self.reset()
 
     def reset(self):
-        """Reset the iterator to the beginning of the data."""
+        """Resets the iterator to the beginning of the data."""
         if self.shuffle:
             random.shuffle(self.seq)
         if self.imgrec is not None:
@@ -494,7 +494,7 @@ class ImageIter(io.DataIter):
             return header.label, img
 
     def next(self):
-        """Return the next batch of data."""
+        """Returns the next batch of data."""
         batch_size = self.batch_size
         c, h, w = self.data_shape
         batch_data = nd.empty((batch_size, c, h, w))

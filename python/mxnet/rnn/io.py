@@ -135,7 +135,7 @@ class BucketSentenceIter(DataIter):
         self.reset()
 
     def reset(self):
-        """Reset the iterator to the beginning of the data."""
+        """Resets the iterator to the beginning of the data."""
         self.curr_idx = 0
         random.shuffle(self.idx)
         for buck in self.data:
@@ -151,7 +151,7 @@ class BucketSentenceIter(DataIter):
             self.ndlabel.append(ndarray.array(label, dtype=self.dtype))
 
     def next(self):
-        """Return the next batch of data."""
+        """Returns the next batch of data."""
         if self.curr_idx == len(self.idx):
             raise StopIteration
         i, j = self.idx[self.curr_idx]

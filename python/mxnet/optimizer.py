@@ -154,12 +154,14 @@ class Optimizer(object):
         """
 
     def update(self, index, weight, grad, state):
-        """Update the parameters given the corresponding gradients and state.
+        """Updates the given parameter using the corresponding gradient and state.
 
         Parameters
         ----------
         index : int
-            A unique index to identify the parameter.
+            The unique index of the parameter into the individual learning
+            rates and weight decays. Learning rates and weight decay
+            may be set via `set_lr_mult()` and `set_wd_mult()`, respectively.
         weight : NDArray
             The parameter to be updated.
         grad : NDArray
