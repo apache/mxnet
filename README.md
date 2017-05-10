@@ -65,6 +65,13 @@ Ask Questions
 -------------
 * Please use [mxnet/issues](https://github.com/dmlc/mxnet/issues) for how to use mxnet and reporting bugs
 
+Discussion
+----------
+You can join the development discussion:
+
+* On the [MXNet Apache mailing list](https://lists.apache.org/list.html?dev@mxnet.apache.org): dev@mxnet.apache.org. To subscribe send an email to dev-subscribe@mxnet.apache.org.
+* On the [MXNet Slack channel](https://apache-mxnet.slack.com). To request an invitation to the channel please email: dominic.divakaruni@gmail.com.
+
 License
 -------
 © Contributors, 2015-2017. Licensed under an [Apache-2.0](https://github.com/dmlc/mxnet/blob/master/LICENSE) license.
