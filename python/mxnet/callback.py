@@ -37,19 +37,34 @@ def module_checkpoint(mod, prefix, period=1, save_optimizer_states=False):
 
 
 def do_checkpoint(prefix, period=1):
-    """Callback to checkpoint the model to prefix every epoch.
+    """A callback that saves a model checkpoint every few epochs.
+    Each checkpoint is made up of a couple of binary files: a model description file and a
+    parameters (weights and biases) file. The model description file is named
+    `prefix`--symbol.json and the parameters file is named `prefix`-`epoch_number`.params
 
     Parameters
     ----------
     prefix : str
-        The file prefix for this checkpoint.
-    period : int
-    	How many epochs to wait before checkpointing. Defaults to 1.
+        Prefix for the checkpoint filenames.
+    period : int, optional
+        Interval (number of epochs) between checkpoints. Default `period` is 1.
 
     Returns
     -------
     callback : function
-        The callback function that can be passed as ``iter_end_callback`` to fit.
+        A callback function that can be passed as `epoch_end_callback` to fit.
+
+    Example
+    -------
+    >>> module.fit(iterator, num_epoch=n_epoch,
+    ... epoch_end_callback  = mx.callback.do_checkpoint("mymodel", 1))
+    Start training with [cpu(0)]
+    Epoch[0] Resetting Data Iterator
+    Epoch[0] Time cost=0.100
+    Saved checkpoint to "mymodel-0001.params"
+    Epoch[1] Resetting Data Iterator
+    Epoch[1] Time cost=0.060
+    Saved checkpoint to "mymodel-0002.params"
     """
     period = int(max(1, period))
     def _callback(iter_no, sym, arg, aux):
@@ -87,17 +102,27 @@ def log_train_metric(period, auto_reset=False):
 
 
 class Speedometer(object):
-    """Calculate and log training speed periodically.
+    """Logs training speed and evaluation metrics periodically.
 
     Parameters
     ----------
     batch_size: int
-        batch_size of data.
+        Batch size of data.
     frequent: int
-        How many batches between calculations.
-        Defaults to calculating & logging every 50 batches.
+        Specifies how frequently training speed and evaluation metrics
+        must be logged. Default behavior is to log once every 50 batches.
     auto_reset : bool
-        Reset the metric after each log.
+        Reset the evaluation metrics after each log.
+
+    Example:
+    --------
+    >>> # Print training speed and evaluation metrics every ten batches. Batch size is one.
+    ...
+    >>> module.fit(iterator, num_epoch=n_epoch,
+    ... batch_end_callback=mx.callback.Speedometer(1, 10))
+    Epoch[0] Batch [10] Speed: 1910.41 samples/sec  Train-accuracy=0.200000
+    Epoch[0] Batch [20] Speed: 1764.83 samples/sec  Train-accuracy=0.400000
+    Epoch[0] Batch [30] Speed: 1740.59 samples/sec  Train-accuracy=0.500000
     """
     def __init__(self, batch_size, frequent=50, auto_reset=True):
         self.batch_size = batch_size

@@ -166,31 +166,45 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
 
 def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs={},
                  hide_weights=True):
-    """Convert a symbol to a dot object for visualization.
+    """Creates a visualization (Graphviz digraph object) of the given computation graph.
+    Graphviz must be installed for this function to work.
 
     Parameters
     ----------
-    title: str
-        Title of the dot graph.
+    title: str, optional
+        Title of the generated visualization.
     symbol: Symbol
-        symbol to be visualized
-    shape: dict
-        If supplied, the visualization will include the shape
-        of each tensor on the edges between nodes.
-        This is a dict of shapes, str->shape (tuple), given input shapes
-    node_attrs: dict
-        dict of node's attributes.
-        for example:
-            node_attrs={"shape":"oval","fixedsize":"fasle"}
-            means to plot the network in "oval"
-    hide_weights: bool
-        If True (default), then inputs with names like `*_weight`
-        or `*_bias` will be hidden.
+        A symbol from the computation graph. The generated digraph will visualize the part
+        of the computation graph required to compute `symbol`.
+    shape: dict, optional
+        Specifies the shape of the input tensors. If specified, the visualization will include
+        the shape of the tensors between the nodes. `shape` is a dictionary mapping
+        input symbol names (str) to the corresponding tensor shape (tuple).
+    node_attrs: dict, optional
+        Specifies the attributes for nodes in the generated visualization. `node_attrs` is
+        a dictionary of Graphviz attribute names and values. For example,
+            ``node_attrs={"shape":"oval","fixedsize":"false"}``
+            will use oval shape for nodes and allow variable sized nodes in the visualization.
+    hide_weights: bool, optional
+        If True (default), then inputs with names of form *_weight (corresponding to weight
+        tensors) or *_bias (corresponding to bias vectors) will be hidden for a cleaner
+        visualization.
 
     Returns
-    ------
-    dot: Diagraph
-        The dot object of `symbol`.
+    -------
+    dot: Digraph
+        A Graphviz digraph object visualizing the computation graph to compute `symbol`.
+
+    Example
+    -------
+    >>> net = mx.sym.Variable('data')
+    >>> net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=128)
+    >>> net = mx.sym.Activation(data=net, name='relu1', act_type="relu")
+    >>> net = mx.sym.FullyConnected(data=net, name='fc2', num_hidden=10)
+    >>> net = mx.sym.SoftmaxOutput(data=net, name='out')
+    >>> digraph = mx.viz.plot_network(net, shape={'data':(100,200)},
+    ... node_attrs={"fixedsize":"false"})
+    >>> digraph.view()
     """
     # todo add shape support
     try:

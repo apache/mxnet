@@ -79,7 +79,24 @@ class Initializer(object):
         self.kwargs = kwargs
 
     def dumps(self):
-        """Save the initializer to string"""
+        """Saves the initializer to string
+
+        Returns
+        -------
+        str
+            JSON formatted string that describes the initializer.
+
+        Examples
+        --------
+        >>> # Create initializer and retrieve its parameters
+        ...
+        >>> init = mx.init.Normal(0.5)
+        >>> init.dumps()
+        '["normal", {"sigma": 0.5}]'
+        >>> init = mx.init.Xavier(factor_type="in", magnitude=2.34)
+        >>> init.dumps()
+        '["xavier", {"rnd_type": "uniform", "magnitude": 2.34, "factor_type": "in"}]'
+        """
         return json.dumps([self.__class__.__name__.lower(), self.kwargs])
 
     def __call__(self, desc, arr):
@@ -207,16 +224,20 @@ class Initializer(object):
 
 
 class Load(object):
-    """Initialize by loading data from file or dict.
+    """Initializes variables by loading data from file or dict.
+
+    **Note** Load will drop ``arg:`` or ``aux:`` from name and
+    initialize the variables that match with the prefix dropped.
 
     Parameters
     ----------
-    param: str or dict of str->NDArray
+    param: str or dict of str->`NDArray`
         Parameter file or dict mapping name to NDArray.
     default_init: Initializer
-        Default initializer when name is not found in param.
+        Default initializer when name is not found in `param`.
     verbose: bool
-        Log source when initializing.
+        Flag for enabling logging of source when initializing.
+
     """
     def __init__(self, param, default_init=None, verbose=False):
         if isinstance(param, str):
@@ -340,7 +361,13 @@ class One(Initializer):
 
 @register
 class Constant(Initializer):
-    """Initialize the weight to a scalar value."""
+    """Initializes the weights to a scalar value.
+
+    Parameters
+    ----------
+    value : float
+        Fill value.
+    """
     def __init__(self, value):
         super(Constant, self).__init__(value=value)
         self.value = value
@@ -453,18 +480,35 @@ class Orthogonal(Initializer):
 
 @register
 class Xavier(Initializer):
-    """Initialize the weight with Xavier or other similar schemes.
+    """Returns an initializer performing "Xavier" initialization for weights.
+
+    This initializer is designed to keep the scale of gradients roughly the same
+    in all layers.
+
+    By default, `rnd_type` is ``'uniform'`` and `factor_type` is ``'avg'``,
+    the initializer fills the weights with random numbers in the range
+    of :math:`[-c, c]`, where :math:`c = \\sqrt{\\frac{3.}{0.5 * (n_{in} + n_{out})}}`.
+    :math:`n_{in}` is the number of neurons feeding into weights, and :math:`n_{out}` is
+    the number of neurons the result is fed to.
+
+    If `rnd_type` is ``'uniform'`` and `factor_type` is ``'in'``,
+    the :math:`c = \\sqrt{\\frac{3.}{n_{in}}}`.
+    Similarly when `factor_type` is ``'out'``, the :math:`c = \\sqrt{\\frac{3.}{n_{out}}}`.
+
+    If `rnd_type` is ``'gaussian'`` and `factor_type` is ``'avg'``,
+    the initializer fills the weights with numbers from normal distribution with
+    a standard deviation of :math:`\\sqrt{\\frac{3.}{0.5 * (n_{in} + n_{out})}}`.
 
     Parameters
     ----------
     rnd_type: str, optional
-        Random generator type, can be ```gaussian`` or ``uniform``.
+        Random generator type, can be ``'gaussian'`` or ``'uniform'``.
 
     factor_type: str, optional
-        Can be ``avg``, ``in``, or ``out``.
+        Can be ``'avg'``, ``'in'``, or ``'out'``.
 
     magnitude: float, optional
-        Scale of random number range.
+        Scale of random number.
     """
     def __init__(self, rnd_type="uniform", factor_type="avg", magnitude=3):
         super(Xavier, self).__init__(rnd_type=rnd_type, factor_type=factor_type,
@@ -505,10 +549,13 @@ class MSRAPrelu(Xavier):
     Human-Level Performance on ImageNet Classification*, available at
     https://arxiv.org/abs/1502.01852.
 
+    This initializer is proposed for initialization related to ReLu activation,
+    it maked some changes on top of Xavier method.
+
     Parameters
     ----------
     factor_type: str, optional
-        Can be ``avg``, ``in``, or ``out``.
+        Can be ``'avg'``, ``'in'``, or ``'out'``.
 
     slope: float, optional
         initial slope of any PReLU (or similar) nonlinearities.
