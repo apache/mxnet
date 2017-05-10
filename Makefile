@@ -239,7 +239,7 @@ lib/libmxnet.so: $(ALLX_DEP)
 $(PS_PATH)/build/libps.a: PSLITE
 
 PSLITE:
-	$(MAKE) CXX=$(CXX)  DEPS_PATH=$(DEPS_PATH) CFLAGS="$(CFLAGS)"  -C $(PS_PATH) 
+	$(MAKE) CXX=$(CXX)  -C $(PS_PATH) # DEPS_PATH=$(DEPS_PATH) CFLAGS="$(CFLAGS)" 
 
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
 
