@@ -76,6 +76,39 @@ def _parse_data_desc(data_names, label_names, data_shapes, label_shapes):
     return data_shapes, label_shapes
 
 
+def _parse_metric(sym, metrics):
+    output_names = []
+    if not metrics:
+        metrics = []
+    sym_metrics = []
+    loss_metrics = []
+    for i in sym:
+        tag = i.attr('__output__')
+        if tag == 'loss':
+            name = i.list_outputs()[0]
+            loss_metrics.append(
+                metric.Loss(name=name, output_names=[name],
+                            label_names=[]))
+        elif tag != 'extra':
+            output_names.append(i.list_outputs()[0])
+
+        str_metric = i.attr('__metric__')
+        if str_metric:
+            sym_metrics.append(metric.create(str_metric))
+
+    if isinstance(metrics, (str, metric.EvalMetric)):
+        metrics = [metrics]
+    metrics = [metric.create(i) for i in metrics]
+    for m in metrics:
+        m.output_names = output_names
+    metrics += sym_metrics
+    metrics += loss_metrics
+    if len(metrics) > 1:
+        return metric.CompositeEvalMetric(metrics)
+    else:
+        return metrics[0]
+
+
 class BaseModule(object):
     """The base class of a module.
 
@@ -230,8 +263,7 @@ class BaseModule(object):
         if reset:
             eval_data.reset()
 
-        if not isinstance(eval_metric, metric.EvalMetric):
-            eval_metric = metric.create(eval_metric)
+        eval_metric = _parse_metric(self._symbol, eval_metric)
 
         eval_metric.reset()
         actual_num_batch = 0
@@ -466,8 +498,7 @@ class BaseModule(object):
 
         if validation_metric is None:
             validation_metric = eval_metric
-        if not isinstance(eval_metric, metric.EvalMetric):
-            eval_metric = metric.create(eval_metric)
+        eval_metric = _parse_metric(self._symbol, eval_metric)
 
         ################################################################################
         # training loop

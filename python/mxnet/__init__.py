@@ -60,4 +60,8 @@ from . import test_utils
 
 from . import rnn
 
+from .contrib import nn as _nn
+contrib.nn = _nn
+del _nn
+
 __version__ = base.__version__
