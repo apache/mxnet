@@ -17,10 +17,4 @@ abstraction, optimization, and trade-offs between efficiency and flexibility.
 * [Dependency Engine for Deep Learning](http://mxnet.io/architecture/note_engine.html)
 * [Optimizing the Memory Consumption in Deep Learning](http://mxnet.io/architecture/note_memory.html)
 * [Efficient Data Loading Module for Deep Learning](http://mxnet.io/architecture/note_data_loading.html)
-
-## MXNet System Design and Architecture
-
-These pages specifically address the MXNet system architecture and also detail how to make modifications (and contribute!) to MXNet.
-
 * [MXNet System Overview](http://mxnet.io/architecture/overview.html)
-* [How to Contribute to MXNet](http://mxnet.io/community/contribute.html)
