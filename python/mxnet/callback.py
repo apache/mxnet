@@ -6,6 +6,12 @@ import logging
 import math
 import sys
 import time
+from collections import defaultdict
+from twisted.internet.protocol import DatagramProtocol
+from twisted.internet import reactor
+from CommandParsing import *
+import socket
+import Queue
 from .model import save_checkpoint
 
 def do_checkpoint(prefix, period=1):
@@ -99,6 +105,83 @@ class Speedometer(object):
         else:
             self.init = True
             self.tic = time.time()
+
+class ConnectedSpeedometer(DatagramProtocol):
+    #myRole: scheduler aggregate and log, workers push only. Servers ignore
+    def __init__(self, batch_size,frequent=50,myRole, numWorker, (schedIP,schedPort)):
+        self.Role = myRole
+        self.MaxBatch = 0
+        self.History = 2
+        self.MaxEpoch = 0
+        self.Records = defaultdict(defaultdict(list))
+        self.NumWorker = numWorker
+        assert isinstance(self.Role,int) and self.Role >= 0 and self.Role <= 2;
+        self.batch_size = batch_size
+        self.frequent = frequent
+        self.init = False
+        self.tic = 0
+        self.last_count = 0
+        self.SendTo = (schedIP,schedPort)
+
+        
+    def datagramReceived(self, data, (host,port)):
+        if self.Role <= 1:
+            return
+        #is the format of %d:epoch,%d:batch,%d:speed
+        strcmd = str(data)
+        segments = strcmd.split('|')
+        head = segments[0]
+        epoch = int(head[0])
+        batch = int(head[1])
+        kvs = segments[1]
+        keyPair = (epoch,batch)
+        for kv in kvs.split(','):
+            kvSeg = kv.split('=')
+            key = kvSeg[0]
+            val = float(kvSeg[1])
+            self.Records[keyPair][key].append(val)
+        self.Records[keyPair]["Counter"].append(0)
+
+        if len(self.Records[keyPair]["Counter"]) == self.NumWorker:
+            #I can produce a broadcast.
+            #foreach key, produce an average
+            output = 'Epoch=%d;Batch=%d;'
+            for key in self.Records[keyPair]:
+                output = output + (';%s=%f' % (key, sum(self.Records[keyPair][key])/float(len(self.Records[keyPair][key]))))
+            logging.info(output)
+        #else do nothing.
+        #purge older
+        if len(self.Records) > self.History:
+            keys = self.Records.keys()
+            keys.sort()
+            for key in keys[-1 * self.History:]:
+                del self.Records[key]
+        #done!
+        
+    def __call__(self, param):
+        """Callback to Show speed."""
+        count = param.nbatch
+        if self.last_count > count:
+            self.init = False
+        self.last_count = count
+
+        if self.init:
+            if count % self.frequent == 0:
+                speed = self.frequent * self.batch_size / (time.time() - self.tic)
+                str = '%d,%d|speed=%.2f'  % (param.epoch, count, speed)
+                if param.eval_metric is not None:
+                    name_value = param.eval_metric.get_name_value()
+                    param.eval_metric.reset()
+                    for name, value in name_value:
+                        #logging.info('Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tT\rain-%s=%f',param.epoch, count, speed, name, value)
+                        str = str + (',%s=%f'  % (name, value))
+                self.transport.write(str,self.SendTo)
+                self.tic = time.time()
+        else:
+            self.init = True
+            self.tic = time.time()
+
+        
 
 
 class ProgressBar(object):
