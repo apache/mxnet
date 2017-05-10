@@ -37,19 +37,34 @@ def module_checkpoint(mod, prefix, period=1, save_optimizer_states=False):
 
 
 def do_checkpoint(prefix, period=1):
-    """Callback to checkpoint the model to prefix every epoch.
+    """A callback that saves a model checkpoint every few epochs.
+    Each checkpoint is made up of a couple of binary files: a model description file and a
+    parameters (weights and biases) file. The model description file is named
+    `prefix`--symbol.json and the parameters file is named `prefix`-`epoch_number`.params
 
     Parameters
     ----------
     prefix : str
-        The file prefix for this checkpoint.
-    period : int
-    	How many epochs to wait before checkpointing. Defaults to 1.
+        Prefix for the checkpoint filenames.
+    period : int, optional
+        Interval (number of epochs) between checkpoints. Default `period` is 1.
 
     Returns
     -------
     callback : function
-        The callback function that can be passed as ``iter_end_callback`` to fit.
+        A callback function that can be passed as `epoch_end_callback` to fit.
+
+    Example
+    -------
+    >>> module.fit(iterator, num_epoch=n_epoch,
+    ... epoch_end_callback  = mx.callback.do_checkpoint("mymodel", 1))
+    Start training with [cpu(0)]
+    Epoch[0] Resetting Data Iterator
+    Epoch[0] Time cost=0.100
+    Saved checkpoint to "mymodel-0001.params"
+    Epoch[1] Resetting Data Iterator
+    Epoch[1] Time cost=0.060
+    Saved checkpoint to "mymodel-0002.params"
     """
     period = int(max(1, period))
     def _callback(iter_no, sym, arg, aux):
