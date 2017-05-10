@@ -180,13 +180,13 @@ class Optimizer(object):
         the learning rate for the parameter will be set as the product of
         the global learning rate `self.lr` and its multiplier.
 
-        .. note:: The default learning rate multiplier of a `Symbol`
-            can be set with its ``__lr_mult__`` `attr`.
+        .. note:: The default learning rate multiplier of a `Variable`
+            can be set with `lr_mult` argument in the constructor.
 
         Parameters
         ----------
         args_lr_mult : dict of str/int to float
-            For each of its key-value entries, the learning rate multipler for the 
+            For each of its key-value entries, the learning rate multipler for the
             parameter specified in the key will be set as the given value.
 
             You can specify the parameter with either its name or its index.
@@ -214,13 +214,13 @@ class Optimizer(object):
         parameters whose name don't end with ``_weight`` or
         ``_gamma``.
 
-        .. note:: The default weight decay multiplier for a `Symbol`
-            can be set with its ``__wd_mult__`` `attr`.
+        .. note:: The default weight decay multiplier for a `Variable`
+            can be set with its `wd_mult` argument in the constructor.
 
         Parameters
         ----------
         args_wd_mult : dict of string/int to float
-            For each of its key-value entries, the weight decay multipler for the 
+            For each of its key-value entries, the weight decay multipler for the
             parameter specified in the key will be set as the given value.
 
             You can specify the parameter with either its name or its index.
