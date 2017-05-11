@@ -1,6 +1,5 @@
 import mxnet.ndarray as nd
 from mxnet.contrib.autograd import *
-from mxnet.contrib import nn
 from mxnet.test_utils import *
 
 def autograd_assert(*args, **kwargs):
@@ -85,19 +84,9 @@ def test_training():
             assert (y.asnumpy() == x.asnumpy()).all()
 
 
-def test_loss():
-    x = mx.nd.ones((5, 10))
-    y = mx.nd.array([1,3,5,9,6])
-    dx = mx.nd.zeros_like(x)
-    mark_variables([x], [dx])
-    with train_section():
-        loss = nn.loss.softmax_cross_entropy_loss(x, y)
-        compute_gradient([loss])
-
 
 if __name__ == "__main__":
     test_training()
-    test_loss()
     test_unary_func()
     test_binary_func()
     test_operator_with_state()
