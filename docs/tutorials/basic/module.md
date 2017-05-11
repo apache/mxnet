@@ -6,9 +6,9 @@ high-level interface for executing predefined networks.
 
 ## Preliminary
 
-In this tutorial, we will use train a multilayer perception on a
+In this tutorial, we will use train a multilayer perceptron on a
 [UCI letter recognition](https://archive.ics.uci.edu/ml/datasets/letter+recognition)
-dataset to demonostrate the usage of `Module`
+dataset to demonstrate the usage of `Module`.
 
 We first download and split the dataset, and then create iterators that return a
 batch of examples each time.
