@@ -56,7 +56,7 @@ To add a new R Markdown vignettes:
 ```bash
 make the-markdown-to-make.md
 ```
-* This generates the markdown, and the figures and places them into ```doc/web-data/mxnet/knitr```.
+* This generates the markdown and the figures and places them into ```doc/web-data/mxnet/knitr```.
 * Modify the ```doc/R-package/index.md``` to point to the generated markdown.
 * Add the generated figure to the ```dmlc/web-data``` repo.
 	* If you have already cloned the repo to doc, use ```git add```.
@@ -65,44 +65,41 @@ make the-markdown-to-make.md
 ```bash
 make html
 ```
-This prevents radically increasing the size of the repo with generated images sizes.
 
 ### Test Cases
 
-* All of the test cases are in GitHub in [tests](https://github.com/dmlc/mxnet/tree/master/tests)
-* We use python nose for python test cases, and gtest for c++ unit tests.
+* All of our tests can be found in the GitHub repo in [this directory](https://github.com/dmlc/mxnet/tree/master/tests).
+* We use Python nose for python test cases, and gtest for C++ unit tests.
 
 ### Examples
 
 * Use cases and examples are on GitHub in [examples](https://github.com/dmlc/mxnet/tree/master/example)
-* If you have blog posts about MXNet or
-  tutorials that use MXNet, please tell us and we'll add
-  a link to them in the examples on GitHub.
+* If you write a blog post or tutorial about or using MXNet, please tell us by creating an issue
+in our github repo. We regularly feature high-quality contributed content from the community.
 
-## Documents Contribution
+## Standard for Contributing APIs
+
+Make sure to add documentation with any code you contribute. Follow these standards:
 
 ### API Documentation
 * Document are created with Sphinx and [recommonmark](http://recommonmark.readthedocs.org/en/latest/).
 * Follow [numpy doc standards](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard) and
 some changes we made [MXNet doc standards](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard).
-* If an API is implemented in python or has a wrapper defined, the documentation and the examples reside
+* If an API is implemented in Python or has a wrapper defined, the documentation and the examples reside
 where the function is defined in `.py` file in [python/mxnet](https://github.com/dmlc/mxnet/tree/master/python/mxnet) folder. Same goes for other languages.
 * If the API is dynamically generated from the MXNet backend, the documentation is in the C++ code(.cc
 file) where the operator is registered in describe method of the `NNVM_REGISTER_OP`. The file and line
-number for the function is usually printed with the API documentation on mxnet.io usually with strings
-"Defined in src/".
+number for the function is usually printed with the API documentation on mxnet.io, usually with strings
+`Defined in src/`.
 * A clear and concise description of the function and its behavior.
-* List and describe each parameter with the valid input values, whether it is required or optional, and default value if the parameter is optional.
+* List and describe each parameter with the valid input values, whether it is required or optional,
+and the default value if the parameter is optional.
 * Add an example to help the user understand the API better. If the example can be language-neutral
 or is conceptual, add it in the C++ documentation. Make sure your example works
-by running a python version of the example.
-  * If a concrete and simple language specific example can further clarify the API and the API arguments, add the
-example in language specific files.
+by running a Python version of the example.
+  * If a concrete and simple language-specific example can further clarify the API and the API arguments, add the
+example in language-specific files.
 * Refer to these examples for guidance:- [Embedding](http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Embedding) , [ROIPooling](http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.ROIPooling) , [Reshape](http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Reshape).
-
-### Tutorials
-
-Want to contribute an MXNet tutorial? To get started, download the [tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
 
 ### Testing and Rendering
 * Make sure not to break any coding standards. Run
