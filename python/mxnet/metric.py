@@ -687,7 +687,7 @@ class MSE(EvalMetric):
 
 
 @register
-class RMSE(EvalMetric)
+class RMSE(EvalMetric):
     """Computes Root Mean Squred Error (RMSE) loss.
 
     The root mean squared error is given by

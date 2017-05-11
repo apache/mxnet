@@ -34,7 +34,7 @@ class InitDesc(str):
 class Initializer(object):
     """The base class of an initializer."""
     def __init__(self, **kwargs):
-        self.kwargs = kwargs
+        self._kwargs = kwargs
 
     def dumps(self):
         """Saves the initializer to string
@@ -55,7 +55,7 @@ class Initializer(object):
         >>> init.dumps()
         '["xavier", {"rnd_type": "uniform", "magnitude": 2.34, "factor_type": "in"}]'
         """
-        return json.dumps([self.__class__.__name__.lower(), self.kwargs])
+        return json.dumps([self.__class__.__name__.lower(), self._kwargs])
 
     def __call__(self, desc, arr):
         """Initialize an array
@@ -562,9 +562,9 @@ class MSRAPrelu(Xavier):
         initial slope of any PReLU (or similar) nonlinearities.
     """
     def __init__(self, factor_type="avg", slope=0.25):
-        self.kwargs = {'factor_type': factor_type, 'slope': slope}
         magnitude = 2. / (1 + slope ** 2)
         super(MSRAPrelu, self).__init__("gaussian", factor_type, magnitude)
+        self._kwargs = {'factor_type': factor_type, 'slope': slope}
 
 @register
 class Bilinear(Initializer):
