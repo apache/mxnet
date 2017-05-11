@@ -89,8 +89,7 @@ some changes we made [MXNet doc standards](https://github.com/numpy/numpy/blob/m
 where the function is defined in `.py` file in [python/mxnet](https://github.com/dmlc/mxnet/tree/master/python/mxnet) folder. Same goes for other languages.
 * If the API is dynamically generated from the MXNet backend, the documentation is in the C++ code(.cc
 file) where the operator is registered in describe method of the `NNVM_REGISTER_OP`. The file and line
-number for the function is usually printed with the API documentation on mxnet.io, usually with strings
-`Defined in src/`.
+number for the function is usually printed with the API documentation on mxnet.io.
 * A clear and concise description of the function and its behavior.
 * List and describe each parameter with the valid input values, whether it is required or optional,
 and the default value if the parameter is optional.
