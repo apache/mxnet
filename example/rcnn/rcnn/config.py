@@ -134,7 +134,7 @@ network.resnet.IMAGE_STRIDE = 0
 network.resnet.RPN_FEAT_STRIDE = 16
 network.resnet.RCNN_FEAT_STRIDE = 16
 network.resnet.FIXED_PARAMS = ['conv0', 'stage1', 'gamma', 'beta']
-network.resnet.FIXED_PARAMS_SHARED = ['conv0', 'stage1', 'stage2', 'stage3', 'bn0', 'bn_data']
+network.resnet.FIXED_PARAMS_SHARED = ['conv0', 'stage1', 'stage2', 'stage3', 'gamma', 'beta']
 
 # dataset settings
 dataset = edict()
