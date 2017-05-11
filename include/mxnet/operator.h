@@ -64,7 +64,7 @@ struct OpContext {
 
 /*!
  * \brief Operator interface.
- *  Operator defins basic operation unit of optimized computation graph in mxnet.
+ *  Operator defines basic operation unit of optimized computation graph in mxnet.
  *  This interface relies on pre-allocated memory in TBlob, the caller need to set
  *  the memory region in TBlob correctly before calling Forward and Backward.
  *

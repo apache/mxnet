@@ -24,18 +24,35 @@ from . import recordio
 
 
 def imdecode(buf, **kwargs):
-    """Decode an image from string. Requires OpenCV to work.
+    """Decode an image to an NDArray.
+
+    Note: `imdecode` uses OpenCV (not the CV2 Python library).
+    MXNet must have been built with OpenCV for `imdecode` to work.
 
     Parameters
     ----------
-    buf : str/bytes, or numpy.ndarray
-        Binary image data.
-    flag : int
-        0 for grayscale. 1 for colored.
-    to_rgb : int
-        0 for BGR format (OpenCV default). 1 for RGB format (MXNet default).
-    out : NDArray
-        Output buffer. Use None for automatic allocation.
+    buf : str/bytes or numpy.ndarray
+        Binary image data as string or numpy ndarray.
+    flag : int, optional, default=1
+        1 for three channel color output. 0 for grayscale output.
+    to_rgb : int, optional, default=1
+        1 for RGB formatted output (MXNet default). 0 for BGR formatted output (OpenCV default).
+    out : NDArray, optional
+        Output buffer. Use `None` for automatic allocation.
+
+    Returns
+    -------
+    NDArray
+        An `NDArray` containing the image.
+
+    Example
+    -------
+    >>> with open("flower.jpg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.img.imdecode(str_image)
+    >>> image
+    <NDArray 224x224x3 @cpu(0)>
     """
     if not isinstance(buf, nd.NDArray):
         buf = nd.array(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
@@ -43,7 +60,31 @@ def imdecode(buf, **kwargs):
 
 
 def scale_down(src_size, size):
-    """Scale down crop size if it's bigger than image size."""
+    """Scales down crop size if it's larger than image size.
+
+    If width/height of the crop is larger than the width/height of the image,
+    sets the width/height to the width/height of the image.
+
+    Parameters
+    ----------
+    src_size : tuple of int
+        Size of the image in (width, height) format.
+    size : tuple of int
+        Size of the crop in (width, height) format.
+
+    Returns
+    -------
+    tuple of int
+        A tuple containing the scaled crop size in (width, height) format.
+
+    Example
+    --------
+    >>> src_size = (640,480)
+    >>> size = (720,120)
+    >>> new_size = mx.img.scale_down(src_size, size)
+    >>> new_size
+    (640,106)
+    """
     w, h = size
     sw, sh = src_size
     if sh < h:
@@ -54,7 +95,45 @@ def scale_down(src_size, size):
 
 
 def resize_short(src, size, interp=2):
-    """Resize shorter edge to size."""
+    """Resizes shorter edge to size.
+
+    Note: `resize_short` uses OpenCV (not the CV2 Python library).
+    MXNet must have been built with OpenCV for `resize_short` to work.
+
+    Resizes the original image by setting the shorter edge to size
+    and setting the longer edge accordingly.
+    Resizing function is called from OpenCV.
+
+    Parameters
+    ----------
+    src : NDArray
+        The original image.
+    size : int
+        The length to be set for the shorter edge.
+    interp : int, optional, default=2
+        Interpolation method used for resizing the image.
+        Default method is bicubic interpolation.
+        More details can be found in the documentation of OpenCV, please refer to
+        http://docs.opencv.org/master/da/d54/group__imgproc__transform.html.
+
+    Returns
+    -------
+    NDArray
+        An 'NDArray' containing the resized image.
+
+    Example
+    -------
+    >>> with open("flower.jpeg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.img.imdecode(str_image)
+    >>> image
+    <NDArray 2321x3482x3 @cpu(0)>
+    >>> size = 640
+    >>> new_image = mx.img.resize_short(image, size)
+    >>> new_image
+    <NDArray 2321x3482x3 @cpu(0)>
+    """
     h, w, _ = src.shape
     if h > w:
         new_h, new_w = size * h / w, size
@@ -128,30 +207,30 @@ def random_size_crop(src, size, min_area, ratio, interp=2):
 
 
 def ResizeAug(size, interp=2):
-    """Make resize shorter edge to size augumenter."""
+    """Make resize shorter edge to size augmenter."""
 
     def aug(src):
-        """Augumenter body"""
+        """Augmenter body"""
         return [resize_short(src, size, interp)]
 
     return aug
 
 
 def RandomCropAug(size, interp=2):
-    """Make random crop augumenter"""
+    """Make random crop augmenter"""
 
     def aug(src):
-        """Augumenter body"""
+        """Augmenter body"""
         return [random_crop(src, size, interp)[0]]
 
     return aug
 
 
 def RandomSizedCropAug(size, min_area, ratio, interp=2):
-    """Make random crop with random resizing and random aspect ratio jitter augumenter."""
+    """Make random crop with random resizing and random aspect ratio jitter augmenter."""
 
     def aug(src):
-        """Augumenter body"""
+        """Augmenter body"""
         return [random_size_crop(src, size, min_area, ratio, interp)[0]]
 
     return aug
@@ -161,7 +240,7 @@ def CenterCropAug(size, interp=2):
     """Make center crop augmenter."""
 
     def aug(src):
-        """Augumenter body"""
+        """Augmenter body"""
         return [center_crop(src, size, interp)[0]]
 
     return aug
@@ -171,7 +250,7 @@ def RandomOrderAug(ts):
     """Apply list of augmenters in random order"""
 
     def aug(src):
-        """Augumenter body"""
+        """Augmenter body"""
         src = [src]
         random.shuffle(ts)
         for t in ts:
@@ -187,7 +266,7 @@ def ColorJitterAug(brightness, contrast, saturation):
     coef = nd.array([[[0.299, 0.587, 0.114]]])
     if brightness > 0:
         def baug(src):
-            """Augumenter body"""
+            """Augmenter body"""
             alpha = 1.0 + random.uniform(-brightness, brightness)
             src *= alpha
             return [src]
@@ -196,7 +275,7 @@ def ColorJitterAug(brightness, contrast, saturation):
 
     if contrast > 0:
         def caug(src):
-            """Augumenter body"""
+            """Augmenter body"""
             alpha = 1.0 + random.uniform(-contrast, contrast)
             gray = src * coef
             gray = (3.0 * (1.0 - alpha) / gray.size) * nd.sum(gray)
@@ -208,7 +287,7 @@ def ColorJitterAug(brightness, contrast, saturation):
 
     if saturation > 0:
         def saug(src):
-            """Augumenter body"""
+            """Augmenter body"""
             alpha = 1.0 + random.uniform(-saturation, saturation)
             gray = src * coef
             gray = nd.sum(gray, axis=2, keepdims=True)
@@ -225,7 +304,7 @@ def LightingAug(alphastd, eigval, eigvec):
     """Add PCA based noise."""
 
     def aug(src):
-        """Augumenter body"""
+        """Augmenter body"""
         alpha = np.random.normal(0, alphastd, size=(3,))
         rgb = np.dot(eigvec * alpha, eigval)
         src += nd.array(rgb)
@@ -240,7 +319,7 @@ def ColorNormalizeAug(mean, std):
     std = nd.array(std)
 
     def aug(src):
-        """Augumenter body"""
+        """Augmenter body"""
         return [color_normalize(src, mean, std)]
 
     return aug
@@ -250,7 +329,7 @@ def HorizontalFlipAug(p):
     """Random horizontal flipping."""
 
     def aug(src):
-        """Augumenter body"""
+        """Augmenter body"""
         if random.random() < p:
             src = nd.flip(src, axis=1)
         return [src]
@@ -262,7 +341,7 @@ def CastAug():
     """Cast to float32"""
 
     def aug(src):
-        """Augumenter body"""
+        """Augmenter body"""
         src = src.astype(np.float32)
         return [src]
 
@@ -272,7 +351,7 @@ def CastAug():
 def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, rand_mirror=False,
                     mean=None, std=None, brightness=0, contrast=0, saturation=0,
                     pca_noise=0, inter_method=2):
-    """Create augumenter list."""
+    """Creates an augmenter list."""
     auglist = []
 
     if resize > 0:
@@ -319,50 +398,50 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
 
 
 class ImageIter(io.DataIter):
-    """Image data iterator with a large number of augumentation choices.
-    Supports reading from both .rec files and raw image files with image list.
+    """Image data iterator with a large number of augmentation choices.
+    This iterator supports reading from both .rec files and raw image files.
 
-    To load from .rec files, please specify path_imgrec. Also specify path_imgidx
-    to use data partition (for distributed training) or shuffling.
+    To load input images from .rec files, use `path_imgrec` parameter and to load from raw image
+    files, use `path_imglist` and `path_root` parameters.
 
-    To load from raw image files, specify path_imglist and path_root.
+    To use data partition (for distributed training) or shuffling, specify `path_imgidx` parameter.
 
     Parameters
     ----------
     batch_size : int
         Number of examples per batch.
     data_shape : tuple
-        Data shape in (channels, height, width).
+        Data shape in (channels, height, width) format.
         For now, only RGB image with 3 channels is supported.
-    label_width : int
-        dimension of label
+    label_width : int, optional
+        Number of labels per example. The default label width is 1.
     path_imgrec : str
-        path to image record file (.rec).
-        Created with tools/im2rec.py or bin/im2rec
+        Path to image record file (.rec).
+        Created with tools/im2rec.py or bin/im2rec.
     path_imglist : str
-        path to image list (.lst)
+        Path to image list (.lst).
         Created with tools/im2rec.py or with custom script.
-        Format: index\t[one or more label separated by \t]\trelative_path_from_root.
+        Format: Tab separated record of index, one or more labels and relative_path_from_root.
     imglist: list
-        a list of image with the label(s)
-        each item is a list [imagelabel: float or list of float, imgpath].
+        A list of images with the label(s).
+        Each item is a list [imagelabel: float or list of float, imgpath].
     path_root : str
-        Root folder of image files
+        Root folder of image files.
     path_imgidx : str
         Path to image index file. Needed for partition and shuffling when using .rec source.
     shuffle : bool
-        Whether to shuffle all images at the start of each iteration.
+        Whether to shuffle all images at the start of each iteration or not.
         Can be slow for HDD.
     part_index : int
-        Partition index
+        Partition index.
     num_parts : int
         Total number of partitions.
     data_name : str
-        data name for provided symbols
+        Data name for provided symbols.
     label_name : str
-        label name for provided symbols
+        Label name for provided symbols.
     kwargs : ...
-        More arguments for creating augumenter. See mx.image.CreateAugmenter.
+        More arguments for creating augmenter. See mx.image.CreateAugmenter.
     """
 
     def __init__(self, batch_size, data_shape, label_width=1,
@@ -445,6 +524,7 @@ class ImageIter(io.DataIter):
         self.reset()
 
     def reset(self):
+        """Resets the iterator to the beginning of the data."""
         if self.shuffle:
             random.shuffle(self.seq)
         if self.imgrec is not None:
@@ -476,6 +556,7 @@ class ImageIter(io.DataIter):
             return header.label, img
 
     def next(self):
+        """Returns the next batch of data."""
         batch_size = self.batch_size
         c, h, w = self.data_shape
         batch_data = nd.empty((batch_size, c, h, w))
@@ -503,33 +584,40 @@ class ImageIter(io.DataIter):
         return io.DataBatch([batch_data], [batch_label], batch_size - i)
 
     def check_data_shape(self, data_shape):
-        """checks that the input data shape is valid"""
+        """Checks if the input data shape is valid"""
         if not len(data_shape) == 3:
             raise ValueError('data_shape should have length 3, with dimensions CxHxW')
         if not data_shape[0] == 3:
             raise ValueError('This iterator expects inputs to have 3 channels.')
 
     def check_valid_image(self, data):
-        """checks that data is valid"""
+        """Checks if the input data is valid"""
         if len(data[0].shape) == 0:
             raise RuntimeError('Data shape is wrong')
 
     def imdecode(self, s):
-        """decodes a sting or byte string into an image."""
+        """Decodes a string or byte string to an NDArray.
+        See mx.img.imdecode for more details."""
         return imdecode(s)
 
     def read_image(self, fname):
-        """reads image from fname and returns the raw bytes to be decoded."""
+        """Reads an input image `fname` and returns the decoded raw bytes.
+
+        Example usage:
+        ----------
+        >>> dataIter.read_image('Face.jpg') # returns decoded raw bytes.
+        '\xff\xd8\xff\xe0\x00...'
+        """
         with open(os.path.join(self.path_root, fname), 'rb') as fin:
             img = fin.read()
         return img
 
     def augmentation_transform(self, data):
-        """transforms data with specificied augmentation."""
+        """Transforms input data with specified augmentation."""
         for aug in self.auglist:
             data = [ret for src in data for ret in aug(src)]
         return data
 
     def postprocess_data(self, datum):
-        """final postprocessing step before image is loaded into the batch."""
+        """Final postprocessing step before image is loaded into the batch."""
         return nd.transpose(datum, axes=(2, 0, 1))

@@ -131,7 +131,7 @@ to calculate the accuracy.
 | `imagenet1k-rexnext-101-64x4d` | 0.7911 | 0.9430 |
 
 Note:
-- our Resnet dose not need to specify the RGB mean due the data batch
+- our Resnet does not need to specify the RGB mean due the data batch
   normalization layer. While the inception models needs `--rgb-mean
   123.68,116.779,103.939`
 - Resnet training logs are available at

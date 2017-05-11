@@ -1,9 +1,12 @@
 # Build MXNet from Source
 
+**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/get_started/install.html).
+
 This document explains how to build MXNet from sources. Building MXNet from sources is a 2 step process.
 
 1. Build the MXNet shared library, `libmxnet.so`, from [C++ source files](#build-the-shared-library)
-2. Install the language binding for MXNet. MXNet supports - [Python](#build-the-python-package),
+2. Install the language binding for MXNet. MXNet supports -
+   [C++](#build-the-cpp-package),
    [Scala](#build-the-scala-package), [R](#build-the-r-package), and
    [Julia](#build-the-julia-package).
 
@@ -276,6 +279,8 @@ File
 contains all the compilation options. You can edit it and then `make`. There are
 some example build options
 
+If you want to build MXNet with C++ language binding, please make sure you read [Build the C++ package](#build-the-cpp-package) first.
+
 </div>
 
 <div class="linux">
@@ -314,46 +319,10 @@ These commands produce a library called ```mxnet.dll``` in the ```./build/Releas
 
 </div>
 
-## Build the Python package
+## Build the C++ package
+The C++ package has the same prerequisites as the MXNet library, you should also have `python` 2 installed. (`python` 3 is not supported currently)
 
-The Python package requires both `python` and `numpy`.
-
-<div class="ubuntu">
-
-The following command install the minimal requirement.
-
-```bash
-sudo apt-get install python-dev python-numpy
-```
-
-[This script](../../docker/install/python.sh) installs both Python 2 and 3 and
-other python libraries for MXNet.
-
-</div> <!-- ubuntu -->
-
-The Python package can be installed by one of the following three ways:
-
-1. Setup the environment variable `PYTHONPATH=/path/to/mxnet/python`. For example, assuming `mxnet` is
-   cloned in the home directory, then we need to add `~/mxnet/python` to `PYTHONPATH` in the `rc` file
-   (e.g. `~/.bashrc`):
-
-   ```bash
-   export PYTHONPATH=~/mxnet/python:${PYTHONPATH}
-   ```
-
-2. Install MXNet Python bindings for the current user:
-
-   ```bash
-   cd python; python setup.py install --usr
-   ```
-
-   in the `mxnet/python` directory
-
-3. Install MXNet Python bindings system wide:
-
-   ```bash
-   cd python; sudo python setup.py install
-   ```
+To enable C++ package, just add `USE_CPP_PACKAGE=1` in the build options when building the MXNet shared library.
 
 ## Build the R package
 

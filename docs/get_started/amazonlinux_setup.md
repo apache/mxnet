@@ -1,36 +1,7 @@
 # Installing MXNet on Amazon Linux
-For users of Python on Amazon Linux operating systems, MXNet provides a set of Git Bash scripts that installs all of the required MXNet dependencies and the MXNet library.
 
-The simple installation scripts set up MXNet for Python on computers running Amazon Linux. The scripts install MXNet in your home folder ```~/mxnet```.
+**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/get_started/install.html).
 
-## Quick Installation
-### Install MXNet for Python
-To clone the MXNet source code repository to your computer, use ```git```.
-```bash
-  # Install git if not already installed.
-  sudo yum -y install git-all
-```
-
-Clone the MXNet source code repository to your computer, run the installation script, and refresh the environment variables. In addition to installing MXNet, the script installs all MXNet dependencies: ```Numpy```, ```OpenBLAS``` and ```OpenCV```.
-It takes around 5 minutes to complete the installation.
-
-```bash
-  # Clone mxnet repository. In terminal, run the commands WITHOUT "sudo"
-  git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
-
-  # Install MXNet for Python with all required dependencies
-  cd ~/mxnet/setup-utils
-  bash install-mxnet-amz-linux.sh
-
-  # We have added MXNet Python package path in your ~/.bashrc.
-  # Run the following command to refresh environment variables.
-  $ source ~/.bashrc
-```
-
-You can view the installation script [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-amz-linux.sh).
-If you are unable to install MXNet with the Bash script, see the following detailed installation instructions.
-
-## Standard installation
 Installing MXNet is a two-step process:
 
 1. Build the shared library from the MXNet C++ source code.
@@ -38,7 +9,7 @@ Installing MXNet is a two-step process:
 
 **Note:** To change the compilation options for your build, edit the ```make/config.mk``` file and submit a build request with the ```make``` command.
 
-### Build the Shared Library
+## Build the Shared Library
 On Amazon Linux, you need the following dependencies:
 
 - Git (to pull code from GitHub)
@@ -122,37 +93,12 @@ Executing these commands creates a library called ```libmxnet.so```
 &nbsp;
 
 We have installed MXNet core library. Next, we will install MXNet interface package for the programming language of your choice:
-- [Python](#install-the-mxnet-package-for-python)
 - [R](#install-the-mxnet-package-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
 - [Scala](#install-the-mxnet-package-for-scala)
 - [Perl](#install-the-mxnet-package-for-perl)
 
-### Install the MXNet Package for Python
-Next, we install Python interface for MXNet. Assuming you are in `~/mxnet` directory, run below commands.
-
-```bash
-	# Install MXNet Python package
-	cd python
-	sudo python setup.py install
-```
-
-Check if MXNet is properly installed.
-
-```bash
-	# You can change mx.cpu to mx.gpu
-	python
-	>>> import mxnet as mx
-	>>> a = mx.nd.ones((2, 3), mx.cpu())
-	>>> print ((a * 2).asnumpy())
-	[[ 2.  2.  2.]
-	 [ 2.  2.  2.]]
-```
-If you don't get an import error, then MXNet is ready for python.
-
-Note: You can update mxnet for python by repeating this step after re-building `libmxnet.so`.
-
-### Install the MXNet Package for R
+## Install the MXNet Package for R
 Run the following commands to install the MXNet dependencies and build the MXNet R package.
 
 ```r
@@ -173,7 +119,7 @@ These commands create the MXNet R package as a tar.gz file that you can install 
   R CMD INSTALL mxnet_current_r.tar.gz
 ```
 
-### Install the MXNet Package for Julia
+## Install the MXNet Package for Julia
 The MXNet package for Julia is hosted in a separate repository, MXNet.jl, which is available on [GitHub](https://github.com/dmlc/MXNet.jl). To use Julia binding it with an existing libmxnet installation, set the ```MXNET_HOME``` environment variable by running the following command:
 
 ```bash
@@ -194,7 +140,7 @@ You might want to add this command to your ```~/.bashrc``` file. If you do, you 
 
 For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
 
-### Install the MXNet Package for Scala
+## Install the MXNet Package for Scala
 
 There are two ways to install the MXNet package for Scala:
 
@@ -202,7 +148,7 @@ There are two ways to install the MXNet package for Scala:
 
 * Build the library from source code
 
-#### Use the Prebuilt Binary Package
+### Use the Prebuilt Binary Package
 For Linux users, MXNet provides prebuilt binary packages that support computers with either GPU or CPU processors. To download and build these packages using ```Maven```, change the ```artifactId``` in the following Maven dependency to match your architecture:
 
 ```HTML
@@ -233,7 +179,7 @@ If your native environment differs slightly from the assembly package, for examp
 </dependency>
 ```
 
-#### Build the Library from Source Code
+### Build the Library from Source Code
 Before you build MXNet for Scala from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Scala package:
 
 ```bash
@@ -248,7 +194,7 @@ To install the MXNet Scala package into your local Maven repository, run the fol
   make scalainstall
 ```
 
-### Install the MXNet Package for Perl
+## Install the MXNet Package for Perl
 
 Before you build MXNet for Scala from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Scala package:
 
@@ -273,7 +219,7 @@ Before you build MXNet for Scala from source code, you must complete [building t
     make install
 ```
 
-**Note - ** You are more than welcome to contribute easy installation scripts for other operating systems and programming languages, see [community page](http://mxnet.io/community/index.html) for contributors guidelines.
+**Note -** You are more than welcome to contribute easy installation scripts for other operating systems and programming languages, see [community page](http://mxnet.io/community/index.html) for contributors guidelines.
 
 ## Next Steps
 

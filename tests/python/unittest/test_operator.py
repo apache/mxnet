@@ -352,6 +352,33 @@ def test_pow_fn():
     check_symbolic_forward(y, [x], [2**x])
     check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
 
+def test_relu():
+    def frelu(x):
+        return np.maximum(x, 0.0)
+    def frelu_grad(x):
+        return 1.0 * (x > 0.0)
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.sym.relu(x)
+    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    ya = frelu(xa)
+    ga = frelu_grad(xa)
+    check_numeric_gradient(y, [xa], numeric_eps=1E-3)
+    check_symbolic_forward(y, [xa], [ya])
+    check_symbolic_backward(y, [xa], [np.ones(shape)], [ga])
+
+def test_sigmoid():
+    def fsigmoid(a):
+        return np.divide(1.0, (1.0 + np.exp(-a)))
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.sym.sigmoid(x)
+    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    ya = fsigmoid(xa)
+    check_numeric_gradient(y, [xa], numeric_eps=1E-3)
+    check_symbolic_forward(y, [xa], [ya])
+    check_symbolic_backward(y, [xa], [np.ones(shape)], [ya * (1 - ya)])
+
 def test_binary_logic():
     def _inner_test(forward_gt, logic_sym, x_shape, y_shape, test_scalar=True):
         x = mx.symbol.Variable("x")
@@ -1773,14 +1800,16 @@ def check_pad_with_shape(shape, xpu, pad_width, mode):
     check_numeric_gradient(Y, [x.asnumpy()], numeric_eps=1e-2, rtol=1e-2)
 
 def test_pad():
-    shape1 = (2, 3, 2, 3)
+    shape1 = (2, 3, 3, 5)
     pad1 = (0, 0, 0, 0, 1, 2, 3, 4)
-    shape2 = (2, 3, 2, 3, 3)
+    shape2 = (2, 3, 3, 5, 4)
     pad2 = (0, 0, 0, 0, 1, 2, 3, 4, 3, 1)
     check_pad_with_shape(shape1, default_context(), pad1, 'constant')
     check_pad_with_shape(shape1, default_context(), pad1, 'edge')
     check_pad_with_shape(shape2, default_context(), pad2, 'constant')
     check_pad_with_shape(shape2, default_context(), pad2, 'edge')
+    check_pad_with_shape(shape1, default_context(), pad1, 'reflect')
+    check_pad_with_shape(shape2, default_context(), pad2, 'reflect')
 
 def np_instance_norm(data, weight, bias, eps):
     spatial_dims = data.shape[2::]
@@ -2964,6 +2993,61 @@ def test_pick():
     test_pick_helper(np.int32)
     test_pick_helper(np.float32)
 
+    
+def check_ctc_loss(acts, labels, loss_truth):
+    in_var = mx.sym.Variable('input')
+    labels_var = mx.sym.Variable('labels')
+    ctc = mx.contrib.sym.ctc_loss(in_var, labels_var)
+    acts_nd = mx.nd.array(acts, ctx=default_context())
+    labels_nd = mx.nd.array(labels, ctx=default_context())
+    exe = ctc.bind(ctx=default_context(), args=[acts_nd, labels_nd])
+    # test forward without grad calc
+    exe.forward(is_train=True)
+    outTest = exe.outputs[0]
+    # test forward without grad calc
+    exe.forward(is_train=False)
+    outTrain = exe.outputs[0]
+    # make sure losses calculated with both modes are the same
+    assert_almost_equal(outTest.asnumpy(), outTrain.asnumpy())
+    # test against ground truth, if available
+    if loss_truth is not None:
+        assert_almost_equal(outTest.asnumpy(), loss_truth)
+    # test grad
+    check_numeric_gradient(ctc, [acts, labels], grad_nodes=['input'], rtol=0.05, atol=1e-3)
+
+def test_ctc_loss():
+    # Test 1: check that batches are same + check against Torch WarpCTC
+    acts = np.array([
+        [[1.2, 3.4, 1.2, -0.1, -2.34], [1.2, 3.4, 1.2, -0.1, -2.34]],
+        [[0.1, 0.2, 0.3, 0.22, 0.123], [0.1, 0.2, 0.3, 0.22, 0.123]],
+        [[-15, -14, -13, -12, -11], [-15, -14, -13, -12, -11]]],
+                    dtype=np.float32)
+    labels = np.array([[2, 3, 0], [2, 3, 0]])
+    true_loss = np.array([4.04789, 4.04789], dtype=np.float32) # from Torch
+    check_ctc_loss(acts, labels, true_loss)
+    # Test 2:
+    acts2 = np.array([
+        [[-5, -4, -3, -2, -1], [1.2, 3.4, 1.2, -0.1, -2.34]],
+        [[-10, -9, -8, -7, -6], [0.1, 0.2, 0.3, 0.22, 0.123]],
+        [[-15, -14, -13, -12, -11], [-15, -14.2, -13.5, -12.2, -11.22]]], dtype=np.float32)
+    labels2 = np.array([[2, 3, 1], [2, 0, 0]], dtype=np.float32)
+    true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
+    check_ctc_loss(acts2, labels2, true_loss)
+
+    
+def test_quantization_op():
+  min0 = mx.nd.array([0.0])
+  max0 = mx.nd.array([1.0])
+  a  = mx.nd.array([[0.1392, 0.5928], [0.6027, 0.8579]])
+  qa, min1, max1 = mx.contrib.nd.quantize(a, min0, max0, out_type='uint8')
+  a_ = mx.contrib.nd.dequantize(qa, min1, max1, out_type='float32')
+
+  qa_real = mx.nd.array([[35, 151], [154, 219]])
+  a_real  = mx.nd.array([[0.13725491, 0.59215689], [0.60392159, 0.8588236]])
+
+  assert same(qa.asnumpy(), qa_real.asnumpy())
+  assert same(a_.asnumpy(),  a_real.asnumpy())
+
 
 def test_custom_op():
     class Sqr(mx.operator.CustomOp):
@@ -3071,3 +3155,7 @@ if __name__ == '__main__':
     test_tile()
     test_one_hot()
     test_where()
+    test_ctc_loss()
+    test_quantization_op()
+    test_relu()
+    test_sigmoid()
