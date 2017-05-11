@@ -27,35 +27,65 @@ Operator* SliceChannelProp::CreateOperatorEx(Context ctx,
 DMLC_REGISTER_PARAMETER(SliceChannelParam);
 
 MXNET_REGISTER_OP_PROPERTY(SliceChannel, SliceChannelProp)
-.describe(R"code(Split an array along a particular axis into multiple sub-arrays.
+.describe(R"code(Splits an array along a particular axis into multiple sub-arrays.
 
-Assume the input array has shape ``(d_0, ..., d_n)`` and we slice it into *m*
-(``num_outputs=m``) subarrays along axis *k*, then we will obtain a list of *m*
-arrays with each of which has shape ``(d_0, ..., d_k/m, ..., d_n)``.
+.. note:: ``SliceChannel`` is depreacted. Use ``split`` instead.
 
-For example::
+**Note** that `num_outputs` should evenly divide the length of the axis 
+along which to split the array.
 
-  x = [[1, 2],
-       [3, 4],
-       [5, 6],
-       [7, 8]]  // 4x2 array
+Example::
 
-  y = split(x, axis=0, num_outputs=4) // a list of 4 arrays
-  y[0] = [[ 1.,  2.]]  // 1x2 array
+   x  = [[[ 1.]
+          [ 2.]]
+         [[ 3.]
+          [ 4.]]
+         [[ 5.]
+          [ 6.]]]
+   x.shape = (3, 2, 1)
 
-  z = split(x, axis=0, num_outputs=2) // a list of 2 arrays
-  z[0] = [[ 1.,  2.],
-          [ 3.,  4.]]
+   y = split(x, axis=1, num_outputs=2) // a list of 2 arrays with shape (3, 1, 1)
+   y = [[[ 1.]]
+        [[ 3.]]
+        [[ 5.]]]
 
-When setting optional argument ``squeeze_axis=1``, then the *k*-dimension will
-be removed from the shape if it becomes 1::
+       [[[ 2.]]
+        [[ 4.]]
+        [[ 6.]]]
 
-  y = split(x, axis=0, num_outputs=4, squeeze_axis=1)
-  y[0] = [ 1.,  2.]  // (2,) vector
+   y[0].shape = (3, 1, 1)
+
+   z = split(x, axis=0, num_outputs=3) // a list of 3 arrays with shape (1, 2, 1)
+   z = [[[ 1.]
+         [ 2.]]]
+
+       [[[ 3.]
+         [ 4.]]]
+
+       [[[ 5.]
+         [ 6.]]]
+
+   z[0].shape = (1, 2, 1)
+
+`squeeze_axis=1` removes the axis with length 1 from the shapes of the output arrays.
+**Note** that setting `squeeze_axis` to ``1`` removes axis with length 1 only
+along the `axis` which it is split.
+Also `squeeze_axis` can be set to true only if ``input.shape[axis] == num_outputs``.
+
+   z = split(x, axis=0, num_outputs=3, squeeze_axis=1) // a list of 3 arrays with shape (2, 1)
+   z = [[ 1.]
+        [ 2.]]
+
+       [[ 3.]
+        [ 4.]]
+
+       [[ 5.]
+        [ 6.]]
+   z[0].shape = (2 ,1 )
 
 )code" ADD_FILELINE)
 .set_return_type("NDArray-or-Symbol[]")
-.add_argument("data", "NDArray-or-Symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "The input")
 .add_arguments(SliceChannelParam::__FIELDS__());
 
 NNVM_REGISTER_OP(SliceChannel).add_alias("split");

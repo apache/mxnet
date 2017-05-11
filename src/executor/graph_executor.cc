@@ -49,7 +49,10 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads) {
       if (!head_grad_array_[i].is_none()) {
         CHECK(i < head_grads.size() && !head_grads[i].is_none())
             << "Because the last operator is not Loss function, "
-            << "head_gradient is required in calling backward.";
+            << "head_gradient is required when calling backward. "
+            << "If you are attempting to minimize the output as "
+            << "an objective, please modify your network and "
+            << "pass it through the make_loss symbol.";
         CopyFromTo(head_grads[i], &(head_grad_array_[i]));
       }
     }

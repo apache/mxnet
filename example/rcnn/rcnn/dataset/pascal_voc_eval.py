@@ -88,10 +88,10 @@ def voc_eval(detpath, annopath, imageset_file, classname, annocache, ovthresh=0.
             if ind % 100 == 0:
                 print('reading annotations for {:d}/{:d}'.format(ind + 1, len(image_filenames)))
         print('saving annotations cache to {:s}'.format(annocache))
-        with open(annocache, 'w') as f:
+        with open(annocache, 'wb') as f:
             cPickle.dump(recs, f, protocol=cPickle.HIGHEST_PROTOCOL)
     else:
-        with open(annocache, 'r') as f:
+        with open(annocache, 'rb') as f:
             recs = cPickle.load(f)
 
     # extract objects in :param classname:

@@ -45,7 +45,7 @@ endif
 
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
-	CFLAGS += -g -O0 -DDMLC_LOG_FATAL_THROW=0
+	CFLAGS += -g -O0
 else
 	CFLAGS += -O3
 endif
@@ -135,7 +135,7 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
-.PHONY: clean all extra-packages test lint doc clean_all rcpplint rcppexport roxygen\
+.PHONY: clean all extra-packages test lint docs clean_all rcpplint rcppexport roxygen\
 	cython2 cython3 cython cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages
@@ -278,13 +278,20 @@ test: $(TEST)
 lint: cpplint rcpplint jnilint pylint
 
 cpplint:
-	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package
+	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package \
+	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
 # ideally we want to check all, such as: python tools example tests
 	pylint python/mxnet --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc
 
-doc: doxygen
+doc: docs
+
+docs:
+	tests/ci_build/ci_build.sh doc make -C docs html
+
+clean_docs:
+	make -C docs clean
 
 doxygen:
 	doxygen docs/Doxyfile
@@ -319,7 +326,7 @@ rpkg:
 	R CMD INSTALL R-package
 	Rscript -e "require(mxnet); mxnet:::mxnet.export(\"R-package\")"
 	rm -rf R-package/NAMESPACE
-	Rscript -e "require(devtools); install_version(\"roxygen2\", version = \"5.0.1\", repos = \"https://cloud.r-project.org/\")"
+	Rscript -e "require(devtools); install_version(\"roxygen2\", version = \"5.0.1\", repos = \"https://cloud.r-project.org/\", quiet = TRUE)"
 	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
 	R CMD build --no-build-vignettes R-package
 	rm -rf mxnet_current_r.tar.gz

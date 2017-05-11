@@ -6,13 +6,13 @@
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
     <artifactId>mxnet-parent_2.11</artifactId>
-    <version>0.1.2-SNAPSHOT</version>
+    <version>0.9.5-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>mxnet-full-parent_2.11</artifactId>
-  <version>0.1.2-SNAPSHOT</version>
+  <version>0.9.5-SNAPSHOT</version>
   <name>MXNet Scala Package - Full Parent</name>
   <packaging>pom</packaging>
 

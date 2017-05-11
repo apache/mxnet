@@ -36,7 +36,7 @@ MXNET_REGISTER_OP_PROPERTY(GridGenerator, GridGeneratorProp)
 .describe("if transformation type is affine, data is affine matrix : (batch, 6)")
 .describe("if transformation type is warp, data is optical flow : (batch, 2, h, w)")
 .add_arguments(GridGeneratorParam::__FIELDS__())
-.describe("generate sampling grid for bilinear sampling.");
+.describe("Generates sampling grid for bilinear sampling.");
 
 }  // namespace op
 }  // namespace mxnet
