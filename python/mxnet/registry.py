@@ -108,6 +108,9 @@ def get_create_func(base_class, nickname):
                 "%s is already an instance. Additional arguments are invalid"%(nickname)
             return name
 
+        if isinstance(name, dict):
+            return create(**name)
+
         assert isinstance(name, string_types), "%s must be of string type"%nickname
 
         if name.startswith('['):

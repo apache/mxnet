@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=no-member
+# pylint: disable=no-member, too-many-lines
 
 """Online evaluation metric module."""
 from __future__ import absolute_import
@@ -8,7 +8,6 @@ from collections import OrderedDict
 
 import numpy
 
-from . import base
 from .base import numeric_types, string_types
 from . import ndarray
 from . import registry
@@ -33,12 +32,21 @@ class EvalMetric(object):
         This is a base class that provides common metric interfaces.
         One should not use this class directly, but instead create new metric
         classes that extend it.
-    """
 
-    def __init__(self, name, num=None, output_names=None,
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+    """
+    def __init__(self, name, output_names=None,
                  label_names=None, **kwargs):
-        self.name = name
-        self.num = num
+        self.name = str(name)
         self.output_names = output_names
         self.label_names = label_names
         self._kwargs = kwargs
@@ -55,11 +63,8 @@ class EvalMetric(object):
         config.update({
             'metric': self.__class__.__name__,
             'name': self.name,
-            'num': self.num,
             'output_names': self.output_names,
-            'label_names': self.label_names,
-            '__type__': 'metric',
-            '__version__': base.__version__})
+            'label_names': self.label_names})
         return config
 
     def update_dict(self, label, pred):
@@ -100,12 +105,8 @@ class EvalMetric(object):
 
     def reset(self):
         """Resets the internal evaluation result to initial state."""
-        if self.num is None:
-            self.num_inst = 0
-            self.sum_metric = 0.0
-        else:
-            self.num_inst = [0] * self.num
-            self.sum_metric = [0.0] * self.num
+        self.num_inst = 0
+        self.sum_metric = 0.0
 
     def get(self):
         """Gets the current evaluation result.
@@ -117,16 +118,10 @@ class EvalMetric(object):
         values : list of float
            Value of the evaluations.
         """
-        if self.num is None:
-            if self.num_inst == 0:
-                return (self.name, float('nan'))
-            else:
-                return (self.name, self.sum_metric / self.num_inst)
+        if self.num_inst == 0:
+            return (self.name, float('nan'))
         else:
-            names = ['%s_%d'%(self.name, i) for i in range(self.num)]
-            values = [x / y if y != 0 else float('nan') \
-                for x, y in list(zip(self.sum_metric, self.num_inst))]
-            return (names, values)
+            return (self.name, self.sum_metric / self.num_inst)
 
     def get_name_value(self):
         """Returns zipped name and value pairs.
@@ -197,6 +192,19 @@ def create(metric, *args, **kwargs):
 class CompositeEvalMetric(EvalMetric):
     """Manages multiple evaluation metrics.
 
+    Parameters
+    ----------
+    metrics : list of EvalMetric
+        List of child metrics.
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+
     Examples
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
@@ -211,11 +219,13 @@ class CompositeEvalMetric(EvalMetric):
     (['accuracy', 'f1'], [0.6666666666666666, 0.8])
     """
 
-    def __init__(self, metrics=None, **kwargs):
-        super(CompositeEvalMetric, self).__init__('composite', **kwargs)
+    def __init__(self, metrics=None, name='composite',
+                 output_names=None, label_names=None):
+        super(CompositeEvalMetric, self).__init__(
+            'composite', output_names=output_names, label_names=label_names)
         if metrics is None:
             metrics = []
-        self.metrics = metrics
+        self.metrics = [create(i) for i in metrics]
 
     def add(self, metric):
         """Adds a child metric.
@@ -225,7 +235,7 @@ class CompositeEvalMetric(EvalMetric):
         metric
             A metric instance.
         """
-        self.metrics.append(metric)
+        self.metrics.append(create(metric))
 
     def get_metric(self, index):
         """Returns a child metric.
@@ -316,6 +326,14 @@ class Accuracy(EvalMetric):
     ----------
     axis : int, default=1
         The axis that represents classes
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
 
     Examples
     --------
@@ -326,8 +344,11 @@ class Accuracy(EvalMetric):
     >>> print acc.get()
     ('accuracy', 0.6666666666666666)
     """
-    def __init__(self, axis=1, name='accuracy', **kwargs):
-        super(Accuracy, self).__init__(name, axis=axis, **kwargs)
+    def __init__(self, axis=1, name='accuracy',
+                 output_names=None, label_names=None):
+        super(Accuracy, self).__init__(
+            name, axis=axis,
+            output_names=output_names, label_names=label_names)
         self.axis = axis
 
     def update(self, labels, preds):
@@ -370,6 +391,14 @@ class TopKAccuracy(EvalMetric):
     ----------
     top_k : int
         Whether targets are in top k predictions.
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
 
     Examples
     --------
@@ -383,8 +412,11 @@ class TopKAccuracy(EvalMetric):
     ('top_k_accuracy', 0.3)
     """
 
-    def __init__(self, top_k=1, name='top_k_accuracy', **kwargs):
-        super(TopKAccuracy, self).__init__(name, top_k=top_k, **kwargs)
+    def __init__(self, top_k=1, name='top_k_accuracy',
+                 output_names=None, label_names=None):
+        super(TopKAccuracy, self).__init__(
+            name, top_k=top_k,
+            output_names=output_names, label_names=label_names)
         self.top_k = top_k
         assert(self.top_k > 1), 'Please use Accuracy if top_k is no more than 1'
         self.name += '_%d' % self.top_k
@@ -437,6 +469,17 @@ class F1(EvalMetric):
 
         This F1 score only supports binary classification.
 
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+
     Examples
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0., 1.], [0.4, 0.6]])]
@@ -447,8 +490,10 @@ class F1(EvalMetric):
     ('f1', 0.8)
     """
 
-    def __init__(self, name='f1', **kwargs):
-        super(F1, self).__init__(name, **kwargs)
+    def __init__(self, name='f1',
+                 output_names=None, label_names=None):
+        super(F1, self).__init__(
+            name, output_names=output_names, label_names=label_names)
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -537,6 +582,14 @@ class Perplexity(EvalMetric):
         The axis from prediction that was used to
         compute softmax. By default use the last
         axis.
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
 
     Examples
     --------
@@ -547,8 +600,11 @@ class Perplexity(EvalMetric):
     >>> print perp.get()
     ('Perplexity', 1.7710976285155853)
     """
-    def __init__(self, ignore_label, axis=-1, name='perplexity', **kwargs):
-        super(Perplexity, self).__init__(name, ignore_label=ignore_label, **kwargs)
+    def __init__(self, ignore_label, axis=-1, name='perplexity',
+                 output_names=None, label_names=None):
+        super(Perplexity, self).__init__(
+            name, ignore_label=ignore_label,
+            output_names=output_names, label_names=label_names)
         self.ignore_label = ignore_label
         self.axis = axis
 
@@ -604,6 +660,17 @@ class MAE(EvalMetric):
     .. math::
         \\frac{\\sum_i^n |y_i - \\hat{y}_i|}{n}
 
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+
     Examples
     --------
     >>> predicts = [mx.nd.array(np.array([3, -0.5, 2, 7]).reshape(4,1))]
@@ -614,8 +681,10 @@ class MAE(EvalMetric):
     ('mae', 0.5)
     """
 
-    def __init__(self, name='mae', **kwargs):
-        super(MAE, self).__init__(name, **kwargs)
+    def __init__(self, name='mae',
+                 output_names=None, label_names=None):
+        super(MAE, self).__init__(
+            name, output_names=output_names, label_names=label_names)
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -650,6 +719,17 @@ class MSE(EvalMetric):
     .. math::
         \\frac{\\sum_i^n (y_i - \\hat{y}_i)^2}{n}
 
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+
     Examples
     --------
     >>> predicts = [mx.nd.array(np.array([3, -0.5, 2, 7]).reshape(4,1))]
@@ -659,8 +739,10 @@ class MSE(EvalMetric):
     >>> print mean_squared_error.get()
     ('mse', 0.375)
     """
-    def __init__(self, name='mse', **kwargs):
-        super(MSE, self).__init__(name, **kwargs)
+    def __init__(self, name='mse',
+                 output_names=None, label_names=None):
+        super(MSE, self).__init__(
+            name, output_names=output_names, label_names=label_names)
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -695,6 +777,17 @@ class RMSE(EvalMetric):
     .. math::
         \\sqrt{\\frac{\\sum_i^n (y_i - \\hat{y}_i)^2}{n}}
 
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+
     Examples
     --------
     >>> predicts = [mx.nd.array(np.array([3, -0.5, 2, 7]).reshape(4,1))]
@@ -704,8 +797,10 @@ class RMSE(EvalMetric):
     >>> print root_mean_squared_error.get()
     ('rmse', 0.612372457981)
     """
-    def __init__(self, name='rmse', **kwargs):
-        super(RMSE, self).__init__(name, **kwargs)
+    def __init__(self, name='rmse',
+                 output_names=None, label_names=None):
+        super(RMSE, self).__init__(
+            name, output_names=output_names, label_names=label_names)
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -746,6 +841,14 @@ class CrossEntropy(EvalMetric):
     eps : float
         Cross Entropy loss is undefined for predicted value is 0 or 1,
         so predicted values are added with the small constant.
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
 
     Examples
     --------
@@ -756,8 +859,11 @@ class CrossEntropy(EvalMetric):
     >>> print ce.get()
     ('cross-entropy', 0.57159948348999023)
     """
-    def __init__(self, eps=1e-8, name='cross-entropy', **kwargs):
-        super(CrossEntropy, self).__init__(name, eps=eps, **kwargs)
+    def __init__(self, eps=1e-8, name='cross-entropy',
+                 output_names=None, label_names=None):
+        super(CrossEntropy, self).__init__(
+            name, eps=eps,
+            output_names=output_names, label_names=label_names)
         self.eps = eps
 
     def update(self, labels, preds):
@@ -787,9 +893,23 @@ class CrossEntropy(EvalMetric):
 
 @register
 class Loss(EvalMetric):
-    """Dummy metric for directly printing loss."""
-    def __init__(self, name='loss', **kwargs):
-        super(Loss, self).__init__(name, **kwargs)
+    """Dummy metric for directly printing loss.
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+    """
+    def __init__(self, name='loss',
+                 output_names=None, label_names=None):
+        super(Loss, self).__init__(
+            name, output_names=output_names, label_names=label_names)
 
     def update(self, _, preds):
         for pred in preds:
@@ -800,15 +920,19 @@ class Loss(EvalMetric):
 @register
 class Torch(Loss):
     """Dummy metric for torch criterions."""
-    def __init__(self, name='torch', **kwargs):
-        super(Torch, self).__init__(name, **kwargs)
+    def __init__(self, name='torch',
+                 output_names=None, label_names=None):
+        super(Torch, self).__init__(
+            name, output_names=output_names, label_names=label_names)
 
 
 @register
 class Caffe(Loss):
     """Dummy metric for caffe criterions."""
-    def __init__(self, name='caffe', **kwargs):
-        super(Caffe, self).__init__(name, **kwargs)
+    def __init__(self, name='caffe',
+                 output_names=None, label_names=None):
+        super(Caffe, self).__init__(
+            name, output_names=output_names, label_names=label_names)
 
 
 @register
@@ -828,6 +952,14 @@ class CustomMetric(EvalMetric):
         If true, the prediction outputs can have extra outputs.
         This is useful in RNN, where the states are also produced
         in outputs for forwarding. (the default is False).
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
 
     Examples
     --------
@@ -839,7 +971,8 @@ class CustomMetric(EvalMetric):
     >>> print eval_metrics.get()
     ('custom(<lambda>)', 6.0)
     """
-    def __init__(self, feval, name=None, allow_extra_outputs=False, **kwargs):
+    def __init__(self, feval, name=None, allow_extra_outputs=False,
+                 output_names=None, label_names=None):
         if name is None:
             name = feval.__name__
             if name.find('<') != -1:
@@ -847,7 +980,7 @@ class CustomMetric(EvalMetric):
         super(CustomMetric, self).__init__(
             name, feval=feval,
             allow_extra_outputs=allow_extra_outputs,
-            **kwargs)
+            output_names=output_names, label_names=label_names)
         self._feval = feval
         self._allow_extra_outputs = allow_extra_outputs
 
