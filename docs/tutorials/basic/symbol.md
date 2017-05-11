@@ -1,36 +1,73 @@
 # Symbol - Neural network graphs and auto-differentiation
 
-NDArray is the basic computation unit in MXNet. MXNet also provides a symbolic
-interface, named Symbol, also known as `mxnet.symbol`, or `mxnet.sym` for short.
-Symbol combines flexibility and efficiency and simplifies constructing neural
-networks.
+In a [previous tutorial](ndarray.md), we introduced `NDArray`,
+the basic data structure for manipulating data in MXNet.
+And just using NDArray by itself, we can execute a wide range of mathematical operations.
+In fact, we could define and update a full neural network just by using `NDArray`.
+`NDArray` allows you to write programs for scientific computation
+in an imperative fashion using, making full use of the native control of any front end language.
+So you might wonder, why don't we just use `NDArray` for all computation?
 
-It is similar to the network configuration in [Caffe](http://caffe.berkeleyvision.org/)
-and [CXXNet](https://github.com/dmlc/cxxnet) and the symbols define the computation
-graph as in [Theano](http://deeplearning.net/software/theano/).
+MXNet also provides the Symbol API, an interface for symbolic programming.
+With symbolic programing, rather than executing operations step by step,
+we first define a *computation graph*.
+This graph contains placeholders for inputs and designated outputs.
+We can then compile the graph, yielding a function
+that can be bound to real data and run.
+MXNet's Symbol API is similar to the network configurations
+used by [Caffe](http://caffe.berkeleyvision.org/)
+and [CXXNet](https://github.com/dmlc/cxxnet)
+and the symbolic programming in [Theano](http://deeplearning.net/software/theano/).
 
-A symbol also represents a multi-output symbolic expression and is used to declare
-the computation. Symbols are composited by operators, such as simple matrix
-operations (e.g. "+"), or a neural network layer (e.g. convolution layer).
-An operator can take several input variables, produce more than one output variables
-and have internal state variables. A variable can be either free, which we can bind
-with value later, or an output of another symbol.
+There are a few reasons for running symbolic operations.
+First, building symbolic computation graphs
+makes it easy to automatically calculate derivatives.
+Nearly all neural networks are trained by defining a model
+with a set of parameters and some objective function.
+The very act of *learning* in neural networks corresponds
+to taking derivatives (the *gradient*) of the objective
+with respect to the parameters.
+By updating the parameters in the direction indicated by the gradient,
+we improve performance with respect to the objective.
+Because taking derivatives is so integral to training neural networks,
+the ability to compute them automatically and efficiently is a tremendous advantage.
 
-We strongly encouraged you to read
-[Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md), which
-provides a detailed explanation of the concepts in pictures.
+Another advantage conferred by symbolic aproach is that
+we can optimize our functions before using them.
+For example, we execute mathematical computations in imperative fashion,
+we don't know at the time that we run each operation,
+which values will be needed later on.
+But with symbolic programming, we declare the required outputs in advance.
+This means that we can recycle memory allocated in intermediate steps,
+as by performing operations in place.
 
+In our design notes, we present [a more thorough disussion on the comparative strengths
+of imperative and symbolic programing](http://mxnet.io/architecture/program_model.html).
+But in this document, we'll focus on teaching you how to use MXNet's Symbol API.
+In MXNet, we can compose Symbols from other Symbols, using operators,
+such as simple matrix operations (e.g. "+"),
+or whole neural network layers (e.g. convolution layer).
+Operator can take multiple input variables,
+can produce multiple output variables
+and can maintain internal state variables.
+Variables can be either free, bound to real data, or represent output of another symbol.
+For a visual explanation of these concepts, see
+[Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md).
+
+To make things concrete, let's take a hands-on look at the Symbol API.
 There are a few different ways to compose a `Symbol`.
 
 ## Basic Symbol Composition
 
 ### Basic Operators
 
-The following example composites a simple expression `a+b`. We first create the
-placeholders `a` and `b` with names using `mx.sym.Variable` and then construct
-the desired symbol by using the operator `+`. If the string name is not given to
-the symbol during creation, MXNet will automatically generate a unique name for
-it, which is the case for `c`.
+The following example builds a simple expression: `a+b`.
+First, we create two placeholders with  `mx.sym.Variable`,
+giving them the names `a` and `b`.
+We then construct the desired symbol by using the operator `+`.
+If we don't name our variables while creating them,
+MXNet will automatically generate a unique name for each.
+In the example below, `c` is assigned a unique name automatically.
 
 ```python
 import mxnet as mx
@@ -40,7 +77,7 @@ c = a + b
 (a, b, c)
 ```
 
-Most `NDArray` operators can also be applied to `Symbol`, for example:
+Most operators supported by `NDArray` are also supported by `Symbol`, for example:
 
 ```python
 # elemental wise multiplication
@@ -56,14 +93,14 @@ mx.viz.plot_network(symbol=g)
 ```
 
 The computations declared in the above examples can be bound to the input data
-for evaluation by using `bind` method. It is discussed in the
+for evaluation by using `bind` method. We discuss this further in the
 [symbol manipulation](#Symbol Manipulation) section.
 
 ### Basic Neural Networks
 
-Besides the basic operators, `Symbol` has a rich set of neural network layers.
+Besides the basic operators, `Symbol` also supports a rich set of neural network layers.
 The following example constructs a two layer fully connected neural network
-and then visualize the structure of that network given the input data shape.
+and then visualizes the structure of that network given the input data shape.
 
 ```python
 net = mx.sym.Variable('data')
@@ -74,13 +111,14 @@ net = mx.sym.SoftmaxOutput(data=net, name='out')
 mx.viz.plot_network(net, shape={'data':(100,200)})
 ```
 
-Each symbol takes a (unique) string name. *Variable* often defines the inputs,
-or free variables. Other symbols take a symbol as their input (*data*), and
-might accept other hyperparameters, such as the number of hidden neurons
-(*num_hidden*) or the activation type (*act_type*).
+Each symbol takes a (unique) string name.
+*Variable* typically represents inputs to the computation graph.
+Symbols defined via operators typically take other symbols as their input data,
+and might additionally accept other hyperparameters,
+such as the number of hidden neurons (*num_hidden*) or the activation type (*act_type*).
 
-The symbol can be seen simply as a function taking several arguments whose names
-are automatically generated and can be retrieved with the following method call:
+We can view a symbol simply as a function taking several arguments.
+And we can retrieve those arguments with the following method call:
 
 ```python
 net.list_arguments()
@@ -106,7 +144,7 @@ net.list_arguments()
 
 MXNet provides well-optimized symbols for layers commonly used in deep learning
 (see [src/operator](https://github.com/dmlc/mxnet/tree/master/src/operator)).
-We can also easily define new operators in Python. The following example first
+We can also define new operators in Python. The following example first
 performs an element-wise add between two symbols, then feeds them to the fully
 connected operator:
 
@@ -118,7 +156,7 @@ net.list_arguments()
 ```
 
 We can also construct a symbol in a more flexible way than the single forward
-composition exemplified in the preceding example:
+composition depicted in the preceding example:
 
 ```python
 net = mx.symbol.Variable('data')
@@ -129,13 +167,12 @@ composed_net = net(data=net2, name='compose')
 composed_net.list_arguments()
 ```
 
-In the preceding example, *net* is used as a function to apply to an existing
-symbol *net*, and the resulting *composed_net* will replace the original
-argument *data* with *net2*.
+In this example, *net* composed from the existing symbol referenced by *net*,
+and the resulting *composed_net* will replace the original argument *data* with *net2*.
 
 Once you start building some bigger networks, you might want to name some
-symbols with a common prefix to outline the structure of your network. You can
-use the
+symbols with a common prefix to outline the structure of your network.
+You can use the
 [Prefix](https://github.com/dmlc/mxnet/blob/master/python/mxnet/name.py)
 NameManager as follows:
 
@@ -151,13 +188,13 @@ net.list_arguments()
 
 ### Modularized Construction for Deep Networks
 
-Constructing a layer by layer deep network, such as the Google Inception, is
-painful given the large number of layers. So, for such networks, we often
-modularize the construction.
+Constructing a *deep* network layer by layer, (like the Google Inception network),
+can be tedious owing to the large number of layers.
+So, for such networks, we often modularize the construction.
 
-For example, in Google Inception network, we can first define a factory function
-which chains the convolution, batch normalization and relu activation
-layers together.
+For example, in Google Inception network,
+we can first define a factory function which chains the convolution,
+batch normalization and rectified linear unit (ReLU) activation layers together.
 
 ```python
 def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0),
@@ -210,7 +247,7 @@ mx.viz.plot_network(symbol=in3a, shape=shape)
 ```
 
 Finally, we can obtain the whole network by chaining multiple inception
-modules. See a complete example
+modules. See a complete example here:
 [here](https://github.com/dmlc/mxnet/blob/master/example/image-classification/symbols/inception-bn.py).
 
 ### Group Multiple Symbols
@@ -261,7 +298,7 @@ The pros for `Symbol`:
 
 ## Symbol Manipulation
 
-One important difference of `Symbol` compared to `NDArray` is that, we first
+One important difference of `Symbol` compared to `NDArray` is that we first
 declare the computation and then bind the computation with data to run.
 
 In this section, we introduce the functions to manipulate a symbol directly. But
@@ -288,7 +325,7 @@ arg_type, out_type, _ = c.infer_type(a='float32', b='float32')
 
 ### Bind with Data and Evaluate
 
-The symbol `c` we constructed above declares what computation should be run. To
+The symbol `c` constructed above declares what computation should be run. To
 evaluate it, we first need to feed the arguments, namely free variables, with data.
 
 We can do it by using the `bind` method, which accepts device context and
@@ -342,24 +379,28 @@ c.tojson() == c2.tojson()
 
 ## Customized Symbol
 
-Most operators such as `mx.sym.Convolution` and `mx.sym.Reshape` are implemented
-in C++ for better performance. MXNet also allows users to write new operators
-using any front-end language such as Python. It often makes the developing and
-debugging much easier.
+Most operators such as `mx.sym.Convolution` and `mx.sym.Reshape`
+are implemented in C++ for better performance.
+MXNet also allows users to write new operators
+using any front-end language such as Python.
+It often makes the developing and debugging much easier.
+To implement an operator in Python, we just need to define
+the two computation methods `forward` and `backward`
+with several methods for querying the properties,
+such as `list_arguments` and `infer_shape`.
 
-To implement an operator in Python, we just need to define the two computation
-methods `forward` and `backward` with several methods for querying the
-properties, such as `list_arguments` and `infer_shape`.
-
-`NDArray` is the default type of arguments in both `forward` and `backward`.
+`NDArray` is the default type of arguments
+in both `forward` and `backward`.
 Therefore we often also implement the computation with `NDArray` operations.
-To show the flexibility of MXNet, we will demonstrate an implementation of the
-`softmax` layer using NumPy. Though a NumPy based operator can be only run on CPU
-and also lose some optimizations which can be applied on NDArray, it enjoys the
-rich functionalities provided by NumPy.
+To show the flexibility of MXNet,
+we will demonstrate an implementation of the
+`softmax` layer using NumPy.
+Although a NumPy based operator can be only run on CPU
+and loses some optimizations which can be applied on NDArray,
+it enjoys the rich functionalities provided by NumPy.
 
-We first create a subclass of `mx.operator.CustomOp` and then define `forward`
-and `backward` methods.
+We first create a subclass of `mx.operator.CustomOp`
+and then define `forward` and `backward` methods.
 
 ```python
 class Softmax(mx.operator.CustomOp):
@@ -378,10 +419,11 @@ class Softmax(mx.operator.CustomOp):
 
 Here, we first used `asnumpy` to convert the `NDArray` inputs to `numpy.ndarray`.
 Then we used `CustomOp.assign` to assign the results back to `mxnet.NDArray`.
-It handles assignment based on the value of req, which can be "over write" or "add to".
+It handles assignment based on the value of req,
+which can be "over write" or "add to".
 
-Now, we can create a subclass of `mx.operator.CustomOpProp` for querying the
-properties.
+Now, we can create a subclass of `mx.operator.CustomOpProp`
+for querying the properties.
 
 ```python
 # register this operator into MXNet by name "softmax"
@@ -408,7 +450,7 @@ class SoftmaxProp(mx.operator.CustomOpProp):
         return Softmax()
 ```
 
-Finally, we can use `mx.sym.Custom` with the register name to use this operator.
+Finally, we can use `mx.sym.Custom` with the registered name to use this operator.
 
 ```python
 net = mx.sym.Custom(data=prev_input, op_type='softmax')
@@ -418,13 +460,15 @@ net = mx.sym.Custom(data=prev_input, op_type='softmax')
 
 ### Type Cast
 
-By default, MXNet uses 32-bit float. But for better accuracy-performance, we can
-also use a lower precision data type. For example, The Nvidia Tesla Pascal GPUs
-(e.g. P100) have improved 16-bit float performance, while GTX Pascal GPUs
-(e.g. GTX 1080) are fast on 8-bit integers.
+By default, MXNet uses 32-bit floats.
+But for better accuracy-performance,
+we can also use a lower precision data type.
+For example, The Nvidia Tesla Pascal GPUs
+(e.g. P100) have improved 16-bit float performance,
+while GTX Pascal GPUs (e.g. GTX 1080) are fast on 8-bit integers.
 
-To convert the data type as per the requirements, we can use `mx.sym.Cast` operator
-as follows:
+To convert the data type as per the requirements,
+we can use `mx.sym.Cast` operator as follows:
 
 ```python
 a = mx.sym.Variable('data')
@@ -439,8 +483,8 @@ print({'input':arg, 'output':out})
 
 ### Variable Sharing
 
-To share the contents between several symbols, we can bind these symbols with
-the same array as follows:
+To share the contents between several symbols,
+we can bind these symbols with the same array as follows:
 
 ```python
 a = mx.sym.Variable('a')
@@ -457,17 +501,17 @@ ex.outputs[0].asnumpy()
 ## How Efficient Is the Symbolic API?
 
 In short, it is designed to be very efficient in both memory and runtime.
-
 The major reason for introducing the Symbolic API is to bring the efficient C++
 operations in powerful toolkits, such as CXXNet and Caffe, together with the
 flexible dynamic NDArray operations. To maximize runtime performance and memory
 utilization, all of the memory and computation resources are allocated
 statically during the bind operation.
 
-The coarse-grained operators are equivalent to CXXNet layers, which are
-extremely efficient.  We also provide fine-grained operators for more flexible
-composition. Because we are also performing more in-place memory allocation,
-MXNet can be more memory-efficient than CXXNet, and achieves the same runtime,
-with greater flexibility.
+The coarse-grained operators are equivalent to CXXNet layers,
+which are extremely efficient.
+We also provide fine-grained operators for more flexible composition.
+Because we are also performing more in-place memory allocation,
+MXNet can be more memory-efficient than CXXNet,
+and achieves the same runtime with greater flexibility.
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
