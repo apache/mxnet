@@ -1,18 +1,24 @@
 # Symbol - Neural network graphs and auto-differentiation
 
-Besides the tensor computation interface `NDArray`, another main object in MXNet
-is the `Symbol` provided by `mxnet.symbol`, or `mxnet.sym` for short. A symbol
-represents a multi-output symbolic expression and is used to declare the computation.
+NDArray is the basic computation unit in MXNet. MXNet also provides a symbolic
+interface, named Symbol, also known as `mxnet.symbol`, or `mxnet.sym` for short.
+Symbol combines flexibility and efficiency and simplifies constructing neural
+networks.
 
-Symbols are composited by operators, such as simple matrix operations (e.g. "+"),
-or a neural network layer (e.g. convolution layer). An operator can take several
-input variables, produce more than one output variables and have internal state
-variables. A variable can be either free, which we can bind with value later,
-or an output of another symbol.
+It is similar to the network configuration in [Caffe](http://caffe.berkeleyvision.org/)
+and [CXXNet](https://github.com/dmlc/cxxnet) and the symbols define the computation
+graph as in [Theano](http://deeplearning.net/software/theano/).
 
-## Symbol Composition
+A symbol also represents a multi-output symbolic expression and is used to declare
+the computation. Symbols are composited by operators, such as simple matrix
+operations (e.g. "+"), or a neural network layer (e.g. convolution layer).
+An operator can take several input variables, produce more than one output variables
+and have internal state variables. A variable can be either free, which we can bind
+with value later, or an output of another symbol.
 
 There are a few different ways to compose a `Symbol`.
+
+## Basic Symbol Composition
 
 ### Basic Operators
 
@@ -62,6 +68,81 @@ net = mx.sym.Activation(data=net, name='relu1', act_type="relu")
 net = mx.sym.FullyConnected(data=net, name='fc2', num_hidden=10)
 net = mx.sym.SoftmaxOutput(data=net, name='out')
 mx.viz.plot_network(net, shape={'data':(100,200)})
+```
+
+Each symbol takes a (unique) string name. *Variable* often defines the inputs,
+or free variables. Other symbols take a symbol as their input (*data*), and
+might accept other hyperparameters, such as the number of hidden neurons
+(*num_hidden*) or the activation type (*act_type*).
+
+The symbol can be seen simply as a function taking several arguments whose names
+are automatically generated and can be retrieved with the following method call:
+
+```python
+net.list_arguments()
+```
+
+These arguments are the parameters needed by each symbol:
+
+- *data*: Input data needed by the variable *data*.
+- *fc1_weight* and *fc1_bias*: The weight and bias for the first fully connected layer *fc1*.
+- *fc2_weight* and *fc2_bias*: The weight and bias for the second fully connected layer *fc2*.
+- *out_label*: The label needed by the loss.
+
+We can also specify the automatically generated names explicitly:
+
+```python
+net = mx.symbol.Variable('data')
+w = mx.symbol.Variable('myweight')
+net = mx.symbol.FullyConnected(data=net, weight=w, name='fc1', num_hidden=128)
+net.list_arguments()
+```
+
+## More Complicated Composition
+
+MXNet provides well-optimized symbols for layers commonly used in deep learning
+(see [src/operator](https://github.com/dmlc/mxnet/tree/master/src/operator)).
+We can also easily define new operators in Python. The following example first
+performs an element-wise add between two symbols, then feeds them to the fully
+connected operator:
+
+```python
+lhs = mx.symbol.Variable('data1')
+rhs = mx.symbol.Variable('data2')
+net = mx.symbol.FullyConnected(data=lhs + rhs, name='fc1', num_hidden=128)
+net.list_arguments()
+```
+
+We can also construct a symbol in a more flexible way than the single forward
+composition exemplified in the preceding example:
+
+```python
+net = mx.symbol.Variable('data')
+net = mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=128)
+net2 = mx.symbol.Variable('data2')
+net2 = mx.symbol.FullyConnected(data=net2, name='net2', num_hidden=128)
+composed_net = net(data=net2, name='compose')
+composed_net.list_arguments()
+```
+
+In the preceding example, *net* is used as a function to apply to an existing
+symbol *net*, and the resulting *composed_net* will replace the original
+argument *data* with *net2*.
+
+Once you start building some bigger networks, you might want to name some
+symbols with a common prefix to outline the structure of your network. You can
+use the
+[Prefix](https://github.com/dmlc/mxnet/blob/master/python/mxnet/name.py)
+NameManager as follows:
+
+```python
+data = mx.sym.Variable("data")
+net = data
+n_layer = 2
+for i in range(n_layer):
+   with mx.name.Prefix("layer%d_" % (i + 1)):
+   net = mx.sym.FullyConnected(data=net, name="fc", num_hidden=100)
+net.list_arguments()
 ```
 
 ### Modularized Construction for Deep Networks
