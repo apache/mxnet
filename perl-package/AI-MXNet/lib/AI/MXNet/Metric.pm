@@ -378,8 +378,13 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
         $loss -= $pred->maximum(1e-10)->log->sum->asscalar;
         $num  += $pred->size;
     }, $labels, $preds);
-    $self->sum_metric($self->sum_metric + exp($loss/$num));
-    $self->num_inst($self->num_inst + 1);
+    $self->sum_metric($self->sum_metric + $loss);
+    $self->num_inst($self->num_inst + $num);
+}
+
+method get()
+{
+    return ($self->name, exp($self->sum_metric / $self->num_inst));
 }
 
 ####################

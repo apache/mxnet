@@ -31,11 +31,11 @@ struct LRNParam : public dmlc::Parameter<LRNParam> {
   uint32_t nsize;
   DMLC_DECLARE_PARAMETER(LRNParam) {
     DMLC_DECLARE_FIELD(alpha).set_default(1e-4f)
-    .describe("value of the alpha variance scaling parameter in the normalization formula");
+    .describe("The variance scaling parameter :math:`\alpha` in the LRN expression.");
     DMLC_DECLARE_FIELD(beta).set_default(0.75f)
-    .describe("value of the beta power parameter in the normalization formula");
+    .describe("The power parameter :math:`\beta` in the LRN expression.");
     DMLC_DECLARE_FIELD(knorm).set_default(2.0f)
-    .describe("value of the k parameter in normalization formula");
+    .describe("The parameter :math:`k` in the LRN expression.");
     DMLC_DECLARE_FIELD(nsize)
     .describe("normalization window width in elements.");
   }
@@ -196,4 +196,3 @@ class LocalResponseNormProp : public OperatorProperty {
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_LRN_INL_H_
-
