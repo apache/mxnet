@@ -60,7 +60,31 @@ def imdecode(buf, **kwargs):
 
 
 def scale_down(src_size, size):
-    """Scale down crop size if it's bigger than image size."""
+    """Scales down crop size if it's larger than image size.
+
+    If width/height of the crop is larger than the width/height of the image,
+    sets the width/height to the width/height of the image.
+
+    Parameters
+    ----------
+    src_size : tuple of int
+        Size of the image in (width, height) format.
+    size : tuple of int
+        Size of the crop in (width, height) format.
+
+    Returns
+    -------
+    tuple of int
+        A tuple containing the scaled crop size in (width, height) format.
+
+    Example
+    --------
+    >>> src_size = (640,480)
+    >>> size = (720,120)
+    >>> new_size = mx.img.scale_down(src_size, size)
+    >>> new_size
+    (640,106)
+    """
     w, h = size
     sw, sh = src_size
     if sh < h:
@@ -71,7 +95,45 @@ def scale_down(src_size, size):
 
 
 def resize_short(src, size, interp=2):
-    """Resize shorter edge to size."""
+    """Resizes shorter edge to size.
+
+    Note: `resize_short` uses OpenCV (not the CV2 Python library).
+    MXNet must have been built with OpenCV for `resize_short` to work.
+
+    Resizes the original image by setting the shorter edge to size
+    and setting the longer edge accordingly.
+    Resizing function is called from OpenCV.
+
+    Parameters
+    ----------
+    src : NDArray
+        The original image.
+    size : int
+        The length to be set for the shorter edge.
+    interp : int, optional, default=2
+        Interpolation method used for resizing the image.
+        Default method is bicubic interpolation.
+        More details can be found in the documentation of OpenCV, please refer to
+        http://docs.opencv.org/master/da/d54/group__imgproc__transform.html.
+
+    Returns
+    -------
+    NDArray
+        An 'NDArray' containing the resized image.
+
+    Example
+    -------
+    >>> with open("flower.jpeg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.img.imdecode(str_image)
+    >>> image
+    <NDArray 2321x3482x3 @cpu(0)>
+    >>> size = 640
+    >>> new_image = mx.img.resize_short(image, size)
+    >>> new_image
+    <NDArray 2321x3482x3 @cpu(0)>
+    """
     h, w, _ = src.shape
     if h > w:
         new_h, new_w = size * h / w, size
