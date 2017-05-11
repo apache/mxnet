@@ -16,6 +16,10 @@ An operator can take several input variables, produce more than one output varia
 and have internal state variables. A variable can be either free, which we can bind
 with value later, or an output of another symbol.
 
+We strongly encouraged you to read
+[Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md), which
+provides a detailed explanation of the concepts in pictures.
+
 There are a few different ways to compose a `Symbol`.
 
 ## Basic Symbol Composition
@@ -318,6 +322,10 @@ print 'number of outputs = %d\nthe first output = \n%s' % (
             len(ex), ex[0].asnumpy())
 ```
 
+For neural nets, a more commonly used pattern is ```simple_bind```, which
+creates all of the argument arrays for you. Then you can call ```forward```,
+and ```backward``` (if the gradient is needed) to get the gradient.
+
 ### Load and Save
 
 Similar to `NDArray`, we can either serialize a `Symbol` object by using `pickle`,
@@ -445,5 +453,21 @@ ex = d.bind(ctx=mx.cpu(), args={'a':data, 'b':data, 'c':data})
 ex.forward()
 ex.outputs[0].asnumpy()
 ```
+
+## How Efficient Is the Symbolic API?
+
+In short, it is designed to be very efficient in both memory and runtime.
+
+The major reason for introducing the Symbolic API is to bring the efficient C++
+operations in powerful toolkits, such as CXXNet and Caffe, together with the
+flexible dynamic NDArray operations. To maximize runtime performance and memory
+utilization, all of the memory and computation resources are allocated
+statically during the bind operation.
+
+The coarse-grained operators are equivalent to CXXNet layers, which are
+extremely efficient.  We also provide fine-grained operators for more flexible
+composition. Because we are also performing more in-place memory allocation,
+MXNet can be more memory-efficient than CXXNet, and achieves the same runtime,
+with greater flexibility.
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
