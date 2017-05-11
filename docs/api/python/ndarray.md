@@ -15,8 +15,9 @@ This document lists the routines of the *n*-dimensional array package
     mxnet.ndarray
 ```
 
-A `NDArray` is a multidimensional container of items of the same type and
-size. Various methods for data manipulation and computation are provided.
+The `NDArray` API, defined in the `ndarray` (or simply `nd`) package, provides
+imperative tensor operations on CPU/GPU.
+A `NDArray` represents a multidimensional, fixed-size homogenous array.
 
 ```python
 >>> x = mx.nd.array([[1, 2, 3], [4, 5, 6]])
@@ -28,40 +29,13 @@ size. Various methods for data manipulation and computation are provided.
 >>> print(y.asnumpy())
 [[ 4.  5.  6.]
  [ 7.  8.  9.]]
->>> z = y.as_in_context(mx.gpu(0))
->>> print(z)
-<NDArray 2x3 @gpu(0)>
-```
+ >>> z = y.as_in_context(mx.gpu(0))
+ >>> print(z)
+ <NDArray 2x3 @gpu(0)>
+ ```
 
 A detailed tutorial is available at
-[http://mxnet.io/tutorials/basic/ndarray.html](http://mxnet.io/tutorials/basic/ndarray.html)..
-
-```eval_rst
-
-.. note:: ``mxnet.ndarray`` is similar to ``numpy.ndarray`` in some aspects. But the difference is not negligible. For example
-
-   - ``NDArray.T`` does real data transpose to return new a copied array, instead
-     of returning a view of the input array.
-   - ``ndarray.dot`` performs dot between the last axis of the first input array
-     and the first axis of the second input, while `numpy.dot` uses the second
-     last axis of the input array.
-
-   In additional, ``NDArray`` supports GPU computation and various neural
-   network layers.
-```
-
-```eval_rst
-
-.. note:: ``ndarray`` also provides almost same routines to ``symbol``. Most
-   routines between these two packages share the same C++ operator source
-   codes. But ``ndarray`` differs to ``symbol`` in several aspects:
-
-   - ``ndarray`` adopts imperative programming, namely sentences are executed
-     step-by-step so that the results can be obtained immediately.
-
-   - Most binary operators such as ``+`` and ``>`` are enabled broadcasting in
-     default.
-```
+[NDArray - Imperative tensor operations on CPU/GPU](http://mxnet.io/tutorials/basic/ndarray.html).
 
 In the rest of this document, we first overview the methods provided by the
 `ndarray.NDArray` class, and then list other routines provided by the
