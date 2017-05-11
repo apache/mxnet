@@ -149,12 +149,12 @@ for batch in data_iter:
 When the in-built iterators does not suit your application, you can create a custom data iterator.
 
 An iterator in _MXNet_ should  
-1. Implements `next()` in ``Python2`` or `__next()__` in ``Python3``,   
+1. Implement `next()` in ``Python2`` or `__next()__` in ``Python3``,   
    returning `DataBatch` or raise `StopIteration` exception at the end of the datastream.  
-2. Implements `reset()` method to restart reading from the beginning.   
-3. Has `provide_lablel` attribute, returning a list of `(str, tuple)` pairs, 
-   each pair storing an input data variable name and its shape.  
-4. Has `provide_label` attribute, returns similar to `provide_label` information about input labels.  
+2. Implement `reset()` method to restart reading from the beginning.   
+3. Have `provide_data` attribute, returning a list of `DataDesc` objects, 
+   described [here](http://mxnet.io/api/python/io.html#mxnet.io.DataBatch).  
+4. Have `provide_label` attribute, returns similar to `provide_label` information about input labels.  
 
 You can either create a iterator from scratch by defining `DataBatch` and the iterator, one such example is show below or reuse existing iterators to create new iterator. For example, in the image caption application, the input example is an image while the label is a sentence. The we can create a new Iterator by:
 - creating image_iter using `ImageRecordIter` which provides multithreaded pre-fetch and augmentation.
