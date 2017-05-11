@@ -226,16 +226,15 @@ class KVStore(object):
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.
 
-        For single machine, it updates the local optimizer.
-
-        For multiple machines, if this operation is invoked from a worker node,
-        it will pack the optimizer and send it to all servers. The function returns after
-        this action is done.
+        When using a single machine, this function updates the local optimizer.
+        If using multiple machines and this operation is invoked from a worker node,
+        it will serialized the optimizer with pickle and send it to all servers.
+        The function returns after all servers have been updated.
 
         Parameters
         ----------
         optimizer : Optimizer
-            the new optimizer for the store
+            The new optimizer for the store
 
         Examples
         --------
@@ -309,9 +308,8 @@ class KVStore(object):
         return size.value
 
     def save_optimizer_states(self, fname):
-        """Saves the optimizer (updater) state to a file.
-
-        This is often used when checkpointing the current progress of training a module.
+        """Saves the optimizer (updater) state to a file. This is often used when checkpointing
+        the model during training.
 
         Parameters
         ----------
@@ -402,26 +400,26 @@ def create(name='local'):
 
     For single machine training, there are two commonly used types:
 
-    ``local``: all gradients are copied to CPU memory and weights are updated there.
+    ``local``: Copies all gradients to CPU memory and updates weights there.
 
-    ``device``: both gradient aggregation and weight updates are run on GPUs. With this setting,
+    ``device``: Aggregates gradients and updates weights on GPUs. With this setting,
     the KVStore also attempts to use GPU peer-to-peer communication,
     potentially accelerating the communication.
 
     For distributed training, KVStore also supports a number of types:
 
-    ``dist_sync``: it behaves similarly to ``local`` but exhibits one major difference.
+    ``dist_sync``: Behaves similarly to ``local`` but with one major difference.
     With ``dist_sync``, batch-size now means the batch size used on each machine.
-    So if there are n machines and we use batch size b,
-    then ``dist_sync`` behaves like local with batch size n * b.
+    So if there are ``n`` machines and we use batch size ``b``,
+    then ``dist_sync`` behaves like ``local`` with batch size ``n * b``.
 
-    ``dist_device_sync``: it is identical to ``dist_sync`` with the difference similar
+    ``dist_device_sync``: Identical to ``dist_sync`` with the difference similar
     to ``device`` vs ``local``.
 
-    ``dist_async`` performs asynchronous updates.
-    The weight is updated whenever gradients are received from any machine. The update is atomic,
-    i.e., no two updates happen on the same weight at the same time.
-    However, the order is not guaranteed.
+    ``dist_async``: Performs asynchronous updates.
+    The weights are updated whenever gradients are received from any machine.
+    No two updates happen on the same weight at the same time. However, the order is not
+    guaranteed.
 
     Parameters
     ----------
