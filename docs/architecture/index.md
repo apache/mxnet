@@ -13,7 +13,7 @@ and builders of other deep learning systems.
 The following pages address general design concepts for deep learning systems.
 Mainly, they focus on the following 3 areas:
 abstraction, optimization, and trade-offs between efficiency and flexibility.
-Additionally we provide an overview of the complete MXNet system.
+Additionally, we provide an overview of the complete MXNet system.
 
 * [Deep Learning Programming Style: Symbolic vs Imperative](http://mxnet.io/architecture/program_model.html)
 * [Dependency Engine for Deep Learning](http://mxnet.io/architecture/note_engine.html)
