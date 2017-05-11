@@ -17,5 +17,6 @@ Operator* CreateOp<gpu>(YoloOutputParam param, int dtype) {
     })
     return op;
 }
+
 }  // namespace op
 }  // namespace mxnet
