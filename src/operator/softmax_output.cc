@@ -71,8 +71,27 @@ MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
   The provided label can be a one-hot label array or a probability label array.
 
   - If the parameter `use_ignore` is ``true``, `ignore_label` can specify input instances
-    with a particular label to be ignored during backward propagation. This is only used when
-    `multi_output` is ``true`` and softmax `output` has different shape than `label`.
+    with a particular label to be ignored during backward propagation. **This is only used when**
+    `multi_output` **is** ``true`` **and softmax** `output` **has different shape than** `label`.
+
+    Example::
+
+      data = [[1,2,3,4],[2,2,2,2],[3,3,3,3],[4,4,4,4]]
+      label = [1,0,2,3]
+      ignore_label = 1
+      SoftmaxOutput(data=data, label = label,\
+                    multi_output=true, use_ignore=true,\
+                    ignore_label=ignore_label)
+      ## forward softmax output
+      [[ 0.0320586   0.08714432  0.23688284  0.64391428]
+       [ 0.25        0.25        0.25        0.25      ]
+       [ 0.25        0.25        0.25        0.25      ]
+       [ 0.25        0.25        0.25        0.25      ]]
+      ## backward gradient output
+      [[ 0.    0.    0.    0.  ]
+       [-0.75  0.25  0.25  0.25]
+       [ 0.25  0.25 -0.75  0.25]
+       [ 0.25  0.25  0.25 -0.75]]
 
   - The parameter `grad_scale` can be used to rescale the gradient, which is often used to
     give each loss function different weights.
