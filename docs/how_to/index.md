@@ -37,3 +37,13 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 * [Can I run MXNet in a browser using JavaScript?](https://github.com/dmlc/mxnet.js/)
 
 * [How do I run MXNet on a Raspberry Pi for computer vision?](http://mxnet.io/tutorials/embedded/wine_detector.html)
+
+## Extend and Contribute to MXNet
+
+* [How do I contribute a patch to MXNet?](http://mxnet.io/community/contribute.html)
+
+* [How do I create new operators in MXNet?](http://mxnet.io/how_to/new_op.html)
+
+* [How do I set MXNet's environmental variables?](http://mxnet.io/how_to/env_var.html)
+
+* [How do I use MXNet as a front end for Torch?](http://mxnet.io/how_to/torch.html)
