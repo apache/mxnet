@@ -176,14 +176,29 @@ class Optimizer(object):
         raise DeprecationWarning
 
     def set_lr_mult(self, args_lr_mult):
-        """Set individual learning rate for each weight.
+        """Sets an individual learning rate multiplier for each parameter.
+
+        If you specify a learning rate multiplier for a parameter, then
+        the learning rate for the parameter will be set as the product of
+        the global learning rate `self.lr` and its multiplier.
+
+        .. note:: The default learning rate multiplier of a `Variable`
+            can be set with `lr_mult` argument in the constructor.
 
         Parameters
         ----------
-        args_lr_mult : dict of string/int to float
-            Set the lr multipler for name/index to float.
-            Setting multipler by index is supported for backward compatibility,
-            but we recommend using name and symbol.
+        args_lr_mult : dict of str/int to float
+            For each of its key-value entries, the learning rate multipler for the
+            parameter specified in the key will be set as the given value.
+
+            You can specify the parameter with either its name or its index.
+            If you use the name, you should pass `sym` in the constructor,
+            and the name you specified in the key of `args_lr_mult` should match
+            the name of the parameter in `sym`. If you use the index, it should
+            correspond to the index of the parameter used in the `update` method.
+
+            Specifying a parameter by its index is only supported for backward
+            compatibility, and we recommend to use the name instead.
         """
         self.lr_mult = {}
         if self.sym is not None:
@@ -194,17 +209,30 @@ class Optimizer(object):
         self.lr_mult.update(args_lr_mult)
 
     def set_wd_mult(self, args_wd_mult):
-        """Set individual weight decay for each weight.
+        """Sets an individual weight decay multiplier for each parameter.
 
-        By default wd multipler is 0 for all params whose name doesn't
-        end with _weight, if param_idx2name is provided.
+        By default, if `param_idx2name` was provided in the
+        constructor, the weight decay multipler is set as 0 for all
+        parameters whose name don't end with ``_weight`` or
+        ``_gamma``.
+
+        .. note:: The default weight decay multiplier for a `Variable`
+            can be set with its `wd_mult` argument in the constructor.
 
         Parameters
         ----------
         args_wd_mult : dict of string/int to float
-            Set the wd multipler for name/index to float.
-            Setting multipler by index is supported for backward compatibility,
-            but we recommend using name and symbol.
+            For each of its key-value entries, the weight decay multipler for the
+            parameter specified in the key will be set as the given value.
+
+            You can specify the parameter with either its name or its index.
+            If you use the name, you should pass `sym` in the constructor,
+            and the name you specified in the key of `args_lr_mult` should match
+            the name of the parameter in `sym`. If you use the index, it should
+            correspond to the index of the parameter used in the `update` method.
+
+            Specifying a parameter by its index is only supported for backward
+            compatibility, and we recommend to use the name instead.
         """
         self.wd_mult = {}
         for n in self.idx2name.values():
