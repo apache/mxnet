@@ -128,7 +128,6 @@ Next, we install ```graphviz``` library that we use for visualizing network grap
 &nbsp;
 
 We have installed MXNet core library. Next, we will install MXNet interface package for programming language of your choice:
-- [Python](#install-the-mxnet-package-for-python)
 - [R](#install-the-mxnet-package-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
 - [Scala](#install-the-mxnet-package-for-scala)
