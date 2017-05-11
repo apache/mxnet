@@ -134,11 +134,10 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
             for idx, layer in enumerate(layers_proto):
             	if layer.name == bn_name:
             		bn_index = idx
-            eps = layers_proto[bn_index].batch_norm_param.eps
+            eps_caffe = layers_proto[bn_index].batch_norm_param.eps
             # Compensate for the epsilon shift performed in convert_symbol
-            eps_correction = 0
-            if eps <= 1e-05:
-            	eps_correction = eps - 1e-04
+            eps_symbol = float( sym.attr_dict()[bn_name + '_moving_mean']['eps'] )
+            eps_correction = eps_caffe - eps_symbol
             # Fill parameters
             aux_params[mean_name][:] = mean * rescale_factor
             aux_params[var_name][:] = var * rescale_factor + eps_correction
