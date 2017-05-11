@@ -22,9 +22,9 @@ Our analysis will motivate several requirements that an effective IO system shou
 
 ***List of Key Requirements***
 - Small file size.
-- Allow parallel (distributed) packing of data.
+- Parallel (distributed) packing of data.
 - Fast data loading and online augmentation.
-- Allow quick read arbitrary parts in distributed setting.
+- Quick reads from arbitrary parts of the dataset in the distributed setting.
 
 ## Design Insight
 To design an IO system, we must address two kinds of tasks:
@@ -234,5 +234,5 @@ some of which might be useful to expose to users, for example:
 In the future, there are some extensions to our data IO
 that we might consider adding.
 Specifically, we might add specialized support
-for image segmentation, object localization, speech recognition.
+for applications including image segmentation, object localization, and speech recognition.
 More detail will be provided when such applications have been running on MXNet.
