@@ -6,7 +6,7 @@ MNIST is a widely used dataset for the hand written digit classification task. I
 
 Here are some sample images from the dataset.
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/mnist.png)
+![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/example/mnist.png)
 
 ## Loading Data
 
@@ -58,7 +58,7 @@ act2 = mx.sym.Activation(data=fc2, act_type="relu")
 The last fully-connected layer often has the hidden size equal to the number of
 output classes in the dataset. Then we stack a softmax layer, which maps its input to a probability score for each class of output type. During the training stage, a loss function computes the cross entropy between the probability distribution (softmax output) predicted by the network and true probability distribution given by the label.
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mlp_mnist.png)
+![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/mlp_mnist.png)
 
 ```python
 # MNIST has 10 classes
