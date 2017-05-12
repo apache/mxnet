@@ -139,15 +139,20 @@ function retrieve_commands() {
 function sort() {
     declare -a lineno_array=("${!1}")
     size=${#lineno_array[@]}
-    for (( i=1; i<=$(( $size-1)); i++ ))
+    for((i=1;i<size;i++))
     do
-        j=$i
-        while (( ${j} > 0 && ${lineno_array[$j-1]} > ${lineno_array[$j]} )); do
-            x=${lineno_array[$j-1]}
-            lineno_array[$j-1]=${lineno_array[$j]}
-            lineno_array[$j]=$x
-            j=$j-1
-        done
+       Temp=${lineno_array[i]}
+       j=$((i-1))
+       while [ $Temp -lt ${lineno_array[j]} ]
+       do
+          lineno_array[j+1]=${lineno_array[j]}
+          j=$(( $j-1 ))
+          if [ $j == -1 ]
+          then
+             break
+          fi
+       done
+       lineno_array[j+1]=$Temp
     done
     printf "${lineno_array[*]}"
 }
