@@ -1009,12 +1009,50 @@ class Symbol(SymbolBase):
             # pylint: enable=too-many-locals
 
     def debug_str(self):
-        """Gets a debug string.
+        """Gets a debug string of symbol. It contains Symbol output, variables and
+        operators in the computation graph with their inputs, variables and attributes.
 
         Returns
         -------
-        debug_str : string
+        String
             Debug string of the symbol.
+
+        Examples
+        --------
+        >>> a = mx.sym.Variable('a')
+        >>> b = mx.sym.sin(a)
+        >>> c = 2 * a + b
+        >>> d = mx.sym.FullyConnected(data=c, num_hidden=10)
+        >>> d,debug_str()
+        >>> print d.debug_str()
+        Symbol Outputs:
+	        output[0]=fullyconnected0(0)
+        Variable:a
+        --------------------
+        Op:_mul_scalar, Name=_mulscalar0
+        Inputs:
+        	arg[0]=a(0) version=0
+        Attrs:
+        	scalar=2
+        --------------------
+        Op:sin, Name=sin0
+        Inputs:
+        	arg[0]=a(0) version=0
+        --------------------
+        Op:elemwise_add, Name=_plus0
+        Inputs:
+        	arg[0]=_mulscalar0(0)
+        	arg[1]=sin0(0)
+        Variable:fullyconnected0_weight
+        Variable:fullyconnected0_bias
+        --------------------
+        Op:FullyConnected, Name=fullyconnected0
+        Inputs:
+        	arg[0]=_plus0(0)
+        	arg[1]=fullyconnected0_weight(0) version=0
+        	arg[2]=fullyconnected0_bias(0) version=0
+        Attrs:
+        	num_hidden=10
         """
         debug_str = ctypes.c_char_p()
         check_call(_LIB.MXSymbolPrint(
@@ -1610,16 +1648,40 @@ _init_symbol_module(Symbol, "mxnet")
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def pow(base, exp):
-    """ Raise base to an exp.
+    """ Returns element-wise result of base element raised to powers
+    from exp element. Both inputs can be Symbol or scalar number.
+    Broadcasting is not supported. Use `broadcast_pow` instead.
 
     Parameters
     ---------
-    base: Symbol or Number
-    exp: Symbol or Number
+    base : Symbol or scalar
+        The base symbol
+    exp : Symbol or scalar
+        The exponent symbol
 
     Returns
     -------
-    result: Symbol or Number
+    Symbol or scalar
+        The bases in x raised to the exponents in y.
+
+    Examples
+    --------
+    >>> mx.sym.pow(2, 3)
+    8
+    >>> x = mx.sym.Variable('x')
+    >>> y = mx.sym.Variable('y')
+    >>> z = mx.sym.pow(x, 2)
+    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([1,2])})
+    >>> texec.forward()[0].asnumpy()
+    array([ 1.,  4.], dtype=float32)
+    >>> z = mx.sym.pow(3, y)
+    >>> texec = z.bind(mx.cpu(), {'y': mx.nd.array([2,3])})
+    >>> texec.forward()[0].asnumpy()
+    array([  9.,  27.], dtype=float32)
+    >>> z = mx.sym.pow(x, y)
+    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([3,4]), 'y':mx.nd.array([2, 3])})
+    >>> texec.forward()[0].asnumpy()
+    array([  9.,  64.], dtype=float32)
     """
     if isinstance(base, Symbol) and isinstance(exp, Symbol):
         return _internal._Power(base, exp)
@@ -1636,16 +1698,35 @@ def pow(base, exp):
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def maximum(left, right):
-    """ maximum left and right
+    """ Returns element-wise maximum of the input elements.
+    Both inputs can be Symbol or scalar number. Broadcasting is not supported.
 
     Parameters
     ---------
-    left: Symbol or Number
-    right: Symbol or Number
+    left : Symbol or scalar
+        First symbol to be compared.
+    rhs : Symbol or scalar
+        Second symbol to be compared.
 
     Returns
     -------
-    result: Symbol or Number
+    Symbol or scalar
+        The element-wise maximum of the input symbols.
+
+    Examples
+    --------
+    >>> mx.sym.maximum(2, 3.5)
+    3.5
+    >>> x = mx.sym.Variable('x')
+    >>> y = mx.sym.Variable('y')
+    >>> z = mx.sym.maximum(x, 4)
+    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([3,5,2,10])})
+    >>> texec.forward()[0].asnumpy()
+    array([  4.,   5.,   4.,  10.], dtype=float32)
+    >>> z = mx.sym.maximum(x, y)
+    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([3,4]), 'y':mx.nd.array([10, 2])})
+    >>> texec.forward()[0].asnumpy()
+    array([ 10.,   4.], dtype=float32)
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
         return _internal._Maximum(left, right)
@@ -1662,16 +1743,35 @@ def maximum(left, right):
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def minimum(left, right):
-    """ minimum left and right
+    """ Returns element-wise minimum of the input elements.
+    Both inputs can be Symbol or scalar number. Broadcasting is not supported.
 
     Parameters
     ---------
-    left: Symbol or Number
-    right: Symbol or Number
+    left : Symbol or scalar
+        First symbol to be compared.
+    rhs : Symbol or scalar
+        Second symbol to be compared.
 
     Returns
     -------
-    result: Symbol or Number
+    Symbol or scalar
+        The element-wise minimum of the input symbols.
+
+    Examples
+    --------
+    >>> mx.sym.minimum(2, 3.5)
+    2
+    >>> x = mx.sym.Variable('x')
+    >>> y = mx.sym.Variable('y')
+    >>> z = mx.sym.minimum(x, 4)
+    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([3,5,2,10])})
+    >>> texec.forward()[0].asnumpy()
+    array([ 3.,  4.,  2.,  4.], dtype=float32)
+    >>> z = mx.sym.minimum(x, y)
+    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([3,4]), 'y':mx.nd.array([10, 2])})
+    >>> texec.forward()[0].asnumpy()
+    array([ 3.,  2.], dtype=float32)
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
         return _internal._Minimum(left, right)
@@ -1680,7 +1780,7 @@ def minimum(left, right):
     if isinstance(left, Number) and isinstance(right, Symbol):
         return _internal._MinimumScalar(right, scalar=left)
     if isinstance(left, Number) and isinstance(right, Number):
-        return left if left > right else right
+        return left if left < right else right
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
@@ -1688,16 +1788,36 @@ def minimum(left, right):
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def hypot(left, right):
-    """ minimum left and right
+    """ Given the "legs" of a right triangle, return its hypotenuse.
+    Equivalent to sqrt(left**2 + right**2), element-wise.
+    Both inputs can be Symbol or scalar number. Broadcasting is not supported.
 
     Parameters
     ---------
-    left: Symbol or Number
-    right: Symbol or Number
+    left : Symbol or scalar
+        First leg of the triangle(s).
+    rhs : Symbol or scalar
+        Second leg of the triangle(s).
 
     Returns
     -------
-    result: Symbol or Number
+    Symbol or scalar
+        The hypotenuse of the triangle(s)
+
+    Examples
+    --------
+    >>> mx.sym.hypot(3, 4)
+    5.0
+    >>> x = mx.sym.Variable('x')
+    >>> y = mx.sym.Variable('y')
+    >>> z = mx.sym.hypot(x, 4)
+    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([3,5,2])})
+    >>> texec.forward()[0].asnumpy()
+    array([ 5.,  6.40312433,  4.47213602], dtype=float32)
+    >>> z = mx.sym.hypot(x, y)
+    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([3,4]), 'y':mx.nd.array([10, 2])})
+    >>> texec.forward()[0].asnumpy()
+    array([ 10.44030666,   4.47213602], dtype=float32)
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
         return _internal._Hypot(left, right)
