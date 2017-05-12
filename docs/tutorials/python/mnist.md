@@ -59,6 +59,7 @@ The last fully-connected layer often has the hidden size equal to the number of
 output classes in the dataset. Then we stack a softmax layer, which maps its input to a probability score for each class of output type. During the training stage, a loss function computes the cross entropy between the probability distribution (softmax output) predicted by the network and true probability distribution given by the label.
 
 ![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/mlp_mnist.png)
+
 **Figure:** MLP network architecture for MNIST.
 
 ```python
