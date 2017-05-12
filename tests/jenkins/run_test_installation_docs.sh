@@ -177,7 +177,8 @@ DOCKER_LINENO_ALL=($(grep -n "<div class=\"docker\">" "${FILE}" | cut -d : -f 1)
 BUILDFROMSOURCE_LINENO_ALL=($(grep -n "<div class=\"build-from-source\">" "${FILE}" | cut -d : -f 1))
 
 # validation instructions
-PYTHON_VALIDATION="import mxnet as mx; a = mx.nd.ones((2, 3), mx.gpu()); b = a * 2 + 1; b.asnumpy()"
+PYTHON_GPU_VALIDATION="import mxnet as mx; a = mx.nd.ones((2, 3), mx.gpu()); b = a * 2 + 1; b.asnumpy()"
+PYTHON_CPU_VALIDATION="import mxnet as mx; a = mx.nd.ones((2, 3)); b = a * 2 + 1; b.asnumpy()"
 
 # Given two line numbers, collects instruction sets for installing via Virtualenv, Pip, Docker, and source within the
 # two lines assuming there is one of each.
@@ -255,35 +256,35 @@ then
 
     set_instruction_set ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}
 
-    virtualenv_commands="${virtualenv_commands} python -c \"${PYTHON_VALIDATION}\""
+    virtualenv_commands="${virtualenv_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
     echo
     echo "### Testing Virtualenv ###"
     echo "${virtualenv_commands}"
     echo
-    #docker run --rm ubuntu:14.04 bash -c "${virtualenv_commands}"
+    docker run --rm ubuntu:14.04 bash -c "${virtualenv_commands}"
 
-    pip_commands="${pip_commands} python -c \"${PYTHON_VALIDATION}\""
+    pip_commands="${pip_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
     echo
     echo "### Testing Pip ###"
     echo "${pip_commands}"
     echo
-    #docker run --rm ubuntu:14.04 bash -c "${pip_commands}"
+    docker run --rm ubuntu:14.04 bash -c "${pip_commands}"
 
     docker_img=$(echo "$docker_commands" | sed 's/.*docker pull \(.*\)/\1/' | sed 's/;.*//')
     echo "image name: ${docker_img}"
-    docker_commands="${docker_commands} docker run ${docker_img} python -c \"${PYTHON_VALIDATION}\""
+    docker_commands="${docker_commands} docker run ${docker_img} python -c \"${PYTHON_CPU_VALIDATION}\""
     echo
     echo "### Testing Docker ###"
     echo "${docker_commands}"
     echo
-    #eval ${docker_commands}
+    eval ${docker_commands}
 
-    buildfromsource_commands="${buildfromsource_commands} python -c \"${PYTHON_VALIDATION}\""
+    buildfromsource_commands="${buildfromsource_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
     echo
     echo "### Testing Build From Source ###"
     echo "${buildfromsource_commands}"
     echo
-    #docker run --rm ubuntu:14.04 bash -c "${buildfromsource_commands}"
+    docker run --rm ubuntu:14.04 bash -c "${buildfromsource_commands}"
 
     #########################LINUX-PYTHON-GPU###########################
 
@@ -297,34 +298,34 @@ then
 
     set_instruction_set ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}
 
-    virtualenv_commands="${virtualenv_commands} python -c \"${PYTHON_VALIDATION}\""
+    virtualenv_commands="${virtualenv_commands} python -c \"${PYTHON_GPU_VALIDATION}\""
     echo
     echo "### Testing Virtualenv ###"
     echo "${virtualenv_commands}"
     echo
-    #nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${virtualenv_commands}"
+    nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${virtualenv_commands}"
 
-    pip_commands="${pip_commands} python -c \"${PYTHON_VALIDATION}\""
+    pip_commands="${pip_commands} python -c \"${PYTHON_GPU_VALIDATION}\""
     echo
     echo "### Testing Pip ###"
     echo "${pip_commands}"
     echo
-    #nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${pip_commands}"
+    nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${pip_commands}"
 
-    docker_img=$(echo "$docker_commands" | sed 's/.*docker pull \(.*\);.*/\1/')
-    docker_commands="${docker_commands} docker run ${docker_img} python -c \"${PYTHON_VALIDATION}\""
+    docker_img=$(echo "$docker_commands" | sed 's/.*docker pull \(.*\)/\1/' | sed 's/;.*//')
+    docker_commands="${docker_commands} nvidia-docker run ${docker_img} python -c \"${PYTHON_GPU_VALIDATION}\""
     echo
     echo "### Testing Docker ###"
     echo "${docker_commands}"
     echo
-    #eval ${docker_commands}
+    eval ${docker_commands}
 
-    buildfromsource_commands="${buildfromsource_commands} python -c \"${PYTHON_VALIDATION}\""
+    buildfromsource_commands="${buildfromsource_commands} python -c \"${PYTHON_GPU_VALIDATION}\""
     echo
     echo "### Testing Build From Source ###"
     echo "${buildfromsource_commands}"
     echo
-    #nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${buildfromsource_commands}"
+    nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${buildfromsource_commands}"
 
 else
 
@@ -342,19 +343,19 @@ else
 
     if [[ "${TASK}" == "installation_packaged_test" ]]
     then
-        virtualenv_commands="${virtualenv_commands} python -c \"${PYTHON_VALIDATION}\""
+        virtualenv_commands="${virtualenv_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
         echo
         echo "### Testing Virtualenv ###"
         echo "${virtualenv_commands}"
         echo
-        #eval ${virtualenv_commands}
+        eval ${virtualenv_commands}
 
-        pip_commands="${pip_commands} python -c \"${PYTHON_VALIDATION}\""
+        pip_commands="${pip_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
         echo
         echo "### Testing Pip ###"
         echo "${pip_commands}"
         echo
-        #eval ${pip_commands}
+        eval ${pip_commands}
 
         exit
     fi
@@ -368,12 +369,12 @@ else
 
     if [[ "${TASK}" == "installation_source_test" ]]
     then
-        buildfromsource_commands="${buildfromsource_commands} python -c \"${PYTHON_VALIDATION}\""
+        buildfromsource_commands="${buildfromsource_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
         echo
         echo "### Testing Build From Source ###"
         echo "${buildfromsource_commands}"
         echo
-        #eval ${buildfromsource_commands}
+        eval ${buildfromsource_commands}
 
         exit
     fi
