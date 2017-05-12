@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 98;
+use Test::More tests => 102;
 use AI::MXNet qw(mx);
 use AI::MXNet::TestUtils qw(mlp2 conv check_consistency zip assert enumerate);
 use Storable qw(freeze thaw);
@@ -220,6 +220,24 @@ sub test_load_000800
 }
 
 test_load_000800();
+
+sub test_cached
+{
+    my $op = mx->sym->CachedOp('Convolution', 3, kernel=>[3, 3], num_filter=>10);
+    my $data = mx->sym->var('data');
+    my $weight = mx->sym->var('weight');
+    my $bias = mx->sym->var('bias');
+    my $out = mx->sym->invoke($op, [$data, $weight, $bias], 'conv');
+    is_deeply($out->list_arguments, ['data', 'weight', 'bias']);
+    is_deeply($out->list_outputs, ['conv_output']);
+    {
+        local($mx::NameManager) = mx->name->Prefix('test_');
+        is(mx->sym->invoke($op, [$data, $weight, $bias])->name,'test_convolution0');
+        is(mx->sym->invoke($op, [$data, $weight, $bias])->name, 'test_convolution1');
+    }
+}
+
+test_cached();
 
 __DATA__
 {

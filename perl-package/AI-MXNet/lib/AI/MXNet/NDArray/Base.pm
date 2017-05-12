@@ -140,6 +140,45 @@ method _init_ndarray_module()
     }
 }
 
+method invoke(
+    AI::MXNet::CachedOp $cached_op,
+    ArrayRef[AI::MXNet::NDArray] $args,
+    Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]] $out=,
+    Maybe[Str] $name=
+)
+{
+    my $original_output;
+    if(defined $out)
+    {
+        $original_output = $out;
+        if(not ref($out) eq 'ARRAY')
+        {
+            $out = [$out];
+        }
+    }
+    else
+    {
+        $out = [];
+    }
+    my $output = check_call(
+        AI::MXNetCAPI::CachedInvoke(
+            $cached_op->handle,
+            scalar(@$args),
+            [map { $_->handle } @$args],
+            [map { $_->handle } @$out]
+        )
+    );
+    return $original_output if defined $original_output;
+    if(@$output == 1)
+    {
+        return $self->new(handle => $output->[0]);
+    }
+    else
+    {
+        return [map { $self->new(handle => $_) } @$output];
+    }
+}
+
 __PACKAGE__->_init_ndarray_module;
 
 1;
