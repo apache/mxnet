@@ -63,6 +63,16 @@ class _Formatter(logging.Formatter):
 def getLogger(name=None, filename=None, filemode=None, level=WARNING):
     """Gets a customized logger.
 
+    .. note:: `getLogger` is deprecated. Use `get_logger` instead.
+
+    """
+    raise DeprecationWarning("getLogger is deprecated," + \
+                             "Use get_logger instead.")
+    return get_logger(name, filename, filemode, level)
+
+def get_logger(name=None, filename=None, filemode=None, level=WARNING):
+    """Gets a customized logger.
+
     Parameters
     ----------
     name: str, optional
@@ -83,21 +93,21 @@ def getLogger(name=None, filename=None, filemode=None, level=WARNING):
 
     Example
     -------
-    ## getLogger call with default parameters.
-    >>> from mxnet.log import getLogger
-    >>> logger = getLogger("Test")
+    ## get_logger call with default parameters.
+    >>> from mxnet.log import get_logger
+    >>> logger = get_logger("Test")
     >>> logger.warn("Hello World")
     W0505 00:29:47 3525 <stdin>:<module>:1] Hello World
 
-    ## getLogger call with WARNING level.
+    ## get_logger call with WARNING level.
     >>> import logging
-    >>> logger = getLogger("Test2", level=logging.WARNING)
+    >>> logger = get_logger("Test2", level=logging.WARNING)
     >>> logger.warn("Hello World")
     W0505 00:30:50 3525 <stdin>:<module>:1] Hello World
     >>> logger.debug("Hello World") # This doesn't return anything as the level is logging.WARNING.
 
-    ## getLogger call with DEBUG level.
-    >>> logger = getLogger("Test3", level=logging.DEBUG)
+    ## get_logger call with DEBUG level.
+    >>> logger = get_logger("Test3", level=logging.DEBUG)
     >>> logger.debug("Hello World") # Logs the debug output as the level is logging.DEBUG.
     D0505 00:31:30 3525 <stdin>:<module>:1] Hello World
     """
