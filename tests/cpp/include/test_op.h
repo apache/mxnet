@@ -583,8 +583,8 @@ class Validator {
   }
 
   template<typename DTypeX>
-  static bool isNear(const DTypeX v1, const DTypeX v2, const DType error) {
-    return error > fabs(v2 - v1);
+  static bool isNear(const DTypeX v1, const DTypeX v2, const AccReal error) {
+    return error >= fabs(v2 - v1);
   }
 
   /*! \brief Convenient setpoint for macro-expanded failures */

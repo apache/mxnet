@@ -206,7 +206,8 @@ static inline void ComputeVariance(const DeviceTensor3<DType> &tensor,
   ForEachFast(tensor,
               [&save_std, &mean_data](const index_t channel, const DType *current_in_data) {
                 const AccReal mean = mean_data[channel];
-                save_std[channel] += (*current_in_data - mean) * (*current_in_data - mean);
+                const AccReal current = *current_in_data;
+                save_std[channel] += (current - mean) * (current - mean);
               });
 
   const size_t itemCount = tensor.Size() / channels;
@@ -256,8 +257,6 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
   const bool is_train_and_not_global_stats = ctx.is_train && !param_.use_global_stats;
 
   if (is_train_and_not_global_stats) {
-    const TShape stride(2);
-
     // compute mean per input
     ComputeMean(inputData, meanVector.dptr<AccReal>());
 

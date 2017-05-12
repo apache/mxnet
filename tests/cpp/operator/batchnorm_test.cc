@@ -20,11 +20,11 @@ using namespace mxnet;
                               // that cause validation to fail
 
 #if !SIMPLE_DIMENSIONS
-static constexpr int BATCH_SIZE = 2;
+static constexpr int BATCH_SIZE = 7;
 static constexpr int CHANNELS = 3;
 static constexpr int DEPTH = 2;
-static constexpr int DH = 3;
-static constexpr int DW = 2;
+static constexpr int DH = 5;
+static constexpr int DW = 3;
 #else
 static constexpr int BATCH_SIZE = 1;
 static constexpr int CHANNELS = 1;
@@ -63,12 +63,14 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
       AccReal sum = 0, var = 0;
       for (size_t i = 0; i < num; ++i) {
         for (size_t k = 0; k < length; ++k) {
-          const DType data = test::data_at<DType>(blob, {i, j, k});
+          const AccReal data = test::data_at<DType>(blob, {i, j, k});
           sum += data;
           var += data * data;
           ++itemCount;
         }
       }
+
+      const AccReal saveSum = sum, saveVar = var;
 
       // not channels
       sum /= length * num;
@@ -80,12 +82,16 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
         // expect zero mean
         EXPECT_NEAR(0, sum, kErrorBound);
         if (!Super::isNear(AccReal(0), sum, kErrorBound)) {
-          LOG(WARNING) << "Sum is not close enough to zero";
+          LOG(WARNING) << "Sum is not close enough to zero "
+                       << saveSum << " (" << sum << "), "
+                       << saveVar << " (" << var << ")";
         }
         // expect unit variance
         EXPECT_NEAR(1, var, kErrorBound);
         if (!Super::isNear(AccReal(1), var, kErrorBound)) {
-          LOG(WARNING) << "Variance is not close enough to 1";
+          LOG(WARNING) << "Variance is not close enough to 1"
+                       << saveSum << " (" << sum << "), "
+                       << saveVar << " (" << var << ")";
         }
       }
     }
@@ -108,13 +114,15 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
       for (size_t i = 0; i < num; ++i) {
         for (size_t k = 0; k < height; ++k) {
           for (size_t l = 0; l < width; ++l) {
-            const DType data = test::data_at<DType>(blob, {i, j, k, l});
+            const AccReal data = test::data_at<DType>(blob, {i, j, k, l});
             sum += data;
             var += data * data;
             ++itemCount;
           }
         }
       }
+
+      const AccReal saveSum = sum, saveVar = var;
 
       // not channels
       sum /= height * width * num;
@@ -125,12 +133,16 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
         // expect zero mean
         EXPECT_NEAR(0, sum, kErrorBound);
         if (!Super::isNear(AccReal(0), sum, kErrorBound)) {
-          LOG(WARNING) << "Sum is not close enough to zero";
+          LOG(WARNING) << "Sum is not close enough to zero "
+                       << saveSum << " (" << sum << "), "
+                       << saveVar << " (" << var << ")";
         }
         // expect unit variance
         EXPECT_NEAR(1, var, kErrorBound);
         if (!Super::isNear(AccReal(1), var, kErrorBound)) {
-          LOG(WARNING) << "Variance is not close enough to 1";
+          LOG(WARNING) << "Variance is not close enough to 1"
+                       << saveSum << " (" << sum << "), "
+                       << saveVar << " (" << var << ")";
         }
       }
     }
@@ -154,14 +166,17 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
         for (size_t d = 0; d < depth; ++d) {
           for (size_t k = 0; k < height; ++k) {
             for (size_t l = 0; l < width; ++l) {
-              const DType data = test::data_at<DType>(blob, {i, j, d, k, l});
-              sum += data;
-              var += data * data;
+              const AccReal data = test::data_at<DType>(blob, {i, j, d, k, l});
+              sum = sum + data;
+              var = var + (data * data);
               ++itemCount;
             }
           }
         }
       }
+
+      const AccReal saveSum = sum, saveVar = var;
+
       // not channels
       sum /= depth * height * width * num;
       var /= depth * height * width * num;
@@ -171,12 +186,16 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
         // expect zero mean
         EXPECT_NEAR(0, sum, kErrorBound);
         if (!Super::isNear(AccReal(0), sum, kErrorBound)) {
-          LOG(WARNING) << "Sum is not close enough to zero";
+          LOG(WARNING) << "Sum is not close enough to zero "
+                       << saveSum << " (" << sum << "), "
+                       << saveVar << " (" << var << ")";
         }
         // expect unit variance
         EXPECT_NEAR(1, var, kErrorBound);
         if (!Super::isNear(AccReal(1), var, kErrorBound)) {
-          LOG(WARNING) << "Variance is not close enough to 1";
+          LOG(WARNING) << "Variance is not close enough to 1"
+                       << saveSum << " (" << sum << "), "
+                       << saveVar << " (" << var << ")";
         }
       }
     }
