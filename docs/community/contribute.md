@@ -103,7 +103,7 @@ example in language-specific files.
 ### Testing and Rendering
 * Make sure not to break any coding standards. Run
 ```bash
-tests/ci_build/ci_build.sh lint make pylint cpplint rcpplint jnilint
+make lint
 ```
 * You can build documents locally to proof them.
 
