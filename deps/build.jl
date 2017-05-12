@@ -38,12 +38,13 @@ if !libmxnet_detected
     # TODO: Get url from JSON.
     package_url = "https://github.com/yajiedesign/mxnet/releases/download/$(curr_win)/$(curr_win)_mxnet_x64_vc12_cpu.7z"
 
+    exe7z = joinpath(JULIA_HOME, "7z.exe")
+
     run(download_cmd(base_url, "mxnet_base.7z"))
-    run(`7z x mxnet_base.7z -y -ousr`)
+    run(`$exe7z x mxnet_base.7z -y -ousr`)
     run(`cmd /c copy "usr\\3rdparty\\openblas\\bin\\*.dll" "usr\\lib"`)
 
     run(download_cmd(package_url, "mxnet.7z"))
-    exe7z = joinpath(JULIA_HOME, "7z.exe")
     run(`$exe7z x mxnet.7z -y -ousr`)
 
     return
