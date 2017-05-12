@@ -1,6 +1,7 @@
 # MXNet
 
 [![Build Status](https://travis-ci.org/dmlc/MXNet.jl.svg?branch=master)](https://travis-ci.org/dmlc/MXNet.jl)
+[![Windows Build](https://ci.appveyor.com/api/projects/status/re90njols2th2ide?svg=true)](https://ci.appveyor.com/project/pluskid/mxnet-jl)
 [![codecov.io](https://codecov.io/github/dmlc/MXNet.jl/coverage.svg?branch=master)](https://codecov.io/github/dmlc/MXNet.jl?branch=master)
 [![](https://img.shields.io/badge/docs-latest-blue.svg)](https://dmlc.github.io/MXNet.jl/latest)
 [![MXNet](http://pkg.julialang.org/badges/MXNet_0.4.svg)](http://pkg.julialang.org/?pkg=MXNet)
