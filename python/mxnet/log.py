@@ -83,17 +83,22 @@ def getLogger(name=None, filename=None, filemode=None, level=WARNING):
 
     Example
     -------
+    ## getLogger call with default parameters.
     >>> from mxnet.log import getLogger
     >>> logger = getLogger("Test")
     >>> logger.warn("Hello World")
     W0505 00:29:47 3525 <stdin>:<module>:1] Hello World
+
+    ## getLogger call with WARNING level.
     >>> import logging
     >>> logger = getLogger("Test2", level=logging.WARNING)
     >>> logger.warn("Hello World")
     W0505 00:30:50 3525 <stdin>:<module>:1] Hello World
-    >>> logger.debug("Hello World")
+    >>> logger.debug("Hello World") # This doesn't return anything as the level is logging.WARNING.
+
+    ## getLogger call with DEBUG level.
     >>> logger = getLogger("Test3", level=logging.DEBUG)
-    >>> logger.debug("Hello World")
+    >>> logger.debug("Hello World") # Logs the debug output as the level is logging.DEBUG.
     D0505 00:31:30 3525 <stdin>:<module>:1] Hello World
     """
     logger = logging.getLogger(name)
