@@ -1001,3 +1001,13 @@ table.docutils tr:nth-child(even) {
 .form-group .glyphicon-search {
     color: white;
 }
+
+/*----------------------Get started page----------------------------*/
+#why-mxnet img {
+    position: relative;
+    width: 60%;
+    left: 50%;
+    margin-right: -50%;
+    transform: translate(-50%);
+}
+

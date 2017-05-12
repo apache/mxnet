@@ -1,4 +1,7 @@
 # Installing MXNet on CentOS
+
+**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/get_started/install.html).
+
 MXNet currently supports Python, R, Julia, Scala, and Perl. For users on CentOS with Docker environment, MXNet provides [Docker installation guide](http://mxnet.io/get_started/docker_setup.html). If you do not have a Docker environment set up, follow below-provided step by step instructions.
 
 
@@ -6,7 +9,7 @@ MXNet currently supports Python, R, Julia, Scala, and Perl. For users on CentOS 
 Make sure you have the root permission, and `yum` is properly installed. Check it using the following command:
 
 ```bash
-sudo yum check-update 
+sudo yum check-update
 ```
 If you don't get an error message, then `yum` is installed.
 
@@ -32,7 +35,7 @@ Make sure your machine is connected to Internet. A few installations need to dow
 	# Install Python, Numpy, pip and set up tools.
 	sudo yum groupinstall -y "Development Tools"
 	sudo yum install -y python27 python27-setuptools python27-tools python-pip
-	sudo yum install -y python27-numpy 
+	sudo yum install -y python27-numpy
 
 	# install graphviz, jupyter
 	sudo pip install graphviz
@@ -50,7 +53,7 @@ Note that OpenBLAS can be replaced by other BLAS libs, e.g, Intel MKL.
 	cd ..
 ```
 ### Install CUDA for GPU
-Note: Setting up CUDA is optional for MXNet. If you do not have a GPU machine (or if you want to train with CPU), you can skip this section and proceed with installation of OpenCV. 
+Note: Setting up CUDA is optional for MXNet. If you do not have a GPU machine (or if you want to train with CPU), you can skip this section and proceed with installation of OpenCV.
 
 If you plan to build with GPU, you need to set up the environment for CUDA and CUDNN.
 
@@ -68,7 +71,7 @@ Unzip the file and change to the cudnn root directory. Move the header and libra
     sudo ldconfig
 ```
 ### Install opencv
-Note: Setting up opencv is optional but strongly recommended for MXNet, unless you do not want to work on Computer Vision and Image Augmentation. If you are quite sure about that, skip this section and  set `USE_OPENCV = 0` in `config.mk`. 
+Note: Setting up opencv is optional but strongly recommended for MXNet, unless you do not want to work on Computer Vision and Image Augmentation. If you are quite sure about that, skip this section and  set `USE_OPENCV = 0` in `config.mk`.
 
 The Open Source Computer Vision (OpenCV) library contains programming functions for computer vision and image augmentation. For more information, see [OpenCV](https://en.wikipedia.org/wiki/OpenCV).
 
@@ -117,30 +120,6 @@ Then build mxnet:
 
 Executing these commands creates a library called ```libmxnet.so``` in `~/mxnet/lib/`.
 
-### Install MXNet for Python
-Next, we install Python interface for MXNet. Assuming you are in `~/mxnet` directory, run below commands.
-
-```bash
-	# Install MXNet Python package
-	cd python
-	sudo python setup.py install
-```
-
-Check if MXNet is properly installed.
-
-```bash
-	# You can change mx.cpu to mx.gpu
-	python
-	>>> import mxnet as mx
-	>>> a = mx.nd.ones((2, 3), mx.cpu())
-	>>> print ((a * 2).asnumpy())
-	[[ 2.  2.  2.]
-	 [ 2.  2.  2.]]
-```
-If you don't get an import error, then MXNet is ready for python.
-
-Note: You can update mxnet for python by repeating this step after re-building `libmxnet.so`.
-
 ### Install MXNet for R, Julia, Scala, and Perl.
 
 - [R](http://mxnet.io/get_started/amazonlinux_setup.html#install-the-mxnet-package-for-r)
@@ -154,7 +133,7 @@ Here is some information to help you troubleshoot, in case you encounter error m
 
 **1. Cannot build opencv from source code**
 
-This may be caused by download failure during building, e.g., `ippicv`. 
+This may be caused by download failure during building, e.g., `ippicv`.
 
 Prepare some large packages by yourself, then copy them to the right place, e.g, `opencv/3rdparty/ippicv/downloads/linux-808XXXXXXXXX/`.
 
@@ -179,4 +158,3 @@ This solution solves this link error, but there are still lots of warnings.
 * [Tutorials](http://mxnet.io/tutorials/index.html)
 * [How To](http://mxnet.io/how_to/index.html)
 * [Architecture](http://mxnet.io/architecture/index.html)
-
