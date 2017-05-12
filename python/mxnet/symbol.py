@@ -1796,7 +1796,7 @@ def hypot(left, right):
     ---------
     left : Symbol or scalar
         First leg of the triangle(s).
-    rhs : Symbol or scalar
+    right : Symbol or scalar
         Second leg of the triangle(s).
 
     Returns
