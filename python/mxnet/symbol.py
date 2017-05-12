@@ -1705,7 +1705,7 @@ def maximum(left, right):
     ---------
     left : Symbol or scalar
         First symbol to be compared.
-    rhs : Symbol or scalar
+    right : Symbol or scalar
         Second symbol to be compared.
 
     Returns
@@ -1750,7 +1750,7 @@ def minimum(left, right):
     ---------
     left : Symbol or scalar
         First symbol to be compared.
-    rhs : Symbol or scalar
+    right : Symbol or scalar
         Second symbol to be compared.
 
     Returns
