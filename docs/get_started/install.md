@@ -22,6 +22,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
   <button type="button" class="btn btn-default opt">Scala</button>
   <button type="button" class="btn btn-default opt">R</button>
   <button type="button" class="btn btn-default opt">Julia</button>
+  <button type="button" class="btn btn-default opt">Perl</button>
 </div>
 </div>
 
@@ -646,7 +647,7 @@ You could also run distributed deeplearning with *MXNet* on AWS using [Cloudform
 <!-- END - Cloud Python Installation Instructions -->
 
 <div class="linux">
-  <div class="scala r julia">
+  <div class="scala r julia perl">
     <div class="cpu gpu">
 
 Follow the installation instructions [in this guide](./ubuntu_setup.md) to set up MXNet.
@@ -656,7 +657,7 @@ Follow the installation instructions [in this guide](./ubuntu_setup.md) to set u
 </div>
 
 <div class="macos">
-  <div class="scala r julia">
+  <div class="scala r julia perl">
     <div class="cpu gpu">
 
 Follow the installation instructions [in this guide](./osx_setup.md) to set up MXNet.
@@ -666,7 +667,7 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 </div>
 
 <div class="windows">
-  <div class="python scala r julia">
+  <div class="python scala r julia perl">
     <div class="cpu gpu">
 
 Follow the installation instructions [in this guide](./windows_setup.md) to set up MXNet.
@@ -957,7 +958,7 @@ array([[ 3.,  3.,  3.],
 </div>
 
 <div class="linux">
-  <div class="scala r julia">
+  <div class="scala r julia perl">
     <div class="cpu gpu">
 
 Will be available soon.
@@ -967,7 +968,7 @@ Will be available soon.
 </div>
 
 <div class="macos">
-  <div class="scala r julia">
+  <div class="scala r julia perl">
     <div class="cpu gpu">
 
 Will be available soon.
@@ -977,7 +978,7 @@ Will be available soon.
 </div>
 
 <div class="windows">
-  <div class="python scala r julia">
+  <div class="python scala r julia perl">
     <div class="cpu gpu">
 
 Will be available soon.
