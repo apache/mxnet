@@ -287,7 +287,6 @@ static __global__ void BatchNormalizationBackwardKernel(
   const DeviceTensor1 saveMean,
   const DeviceTensor1 saveInvstd,
   const uint32_t flags,
-  const AccReal scale,
   const AccReal momentum,
   const double eps) {
   int plane = blockIdx.x;
@@ -349,14 +348,14 @@ static __global__ void BatchNormalizationBackwardKernel(
 
   if (gradWeight.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_GAMMA_FLAG) != 0) {
     if ((flags & FIX_GAMMA_FLAG) == 0) {
-      gradWeight[plane] = ScalarConvert<AccReal, DType>::to(scale * dotP * invstd);
+      gradWeight[plane] = ScalarConvert<AccReal, DType>::to(dotP * invstd);
     } else {
       gradWeight[plane] = DType(0);
     }
   }
 
   if (gradBias.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_BETA_FLAG) != 0) {
-    gradBias[plane] = ScalarConvert<AccReal, DType>::to(scale * gradOutputSum);
+    gradBias[plane] = ScalarConvert<AccReal, DType>::to(gradOutputSum);
   }
 }
 
@@ -500,7 +499,6 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
                                        const std::vector<TBlob> &in_grad,
                                        const std::vector<TBlob> &aux_states,
                                        const uint32_t flags,
-                                       const DType scale,
                                        double momentum,
                                        double eps) {
   DeviceTensor3 input = devicetensor<DType, 3>(in_data[batchnorm::kData]);
@@ -521,7 +519,7 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
   BatchNormalizationBackwardKernel<DType, AccReal, DeviceTensor1, DeviceTensor3>
     <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
     input, gradOutput, gradInput, gradWeight, gradBias, weight, runningMean, runningVar,
-      saveMean, saveInvStd, flags, scale, momentum, eps);
+      saveMean, saveInvStd, flags, momentum, eps);
   MSHADOW_CUDA_POST_KERNEL_CHECK(BatchNormalizationBackward);
 }
 
@@ -587,7 +585,6 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<gpu> *stream,
     in_grad,
     aux_states,
     SetupFlags<xpu, DType, AccReal>(ctx, param_, req),
-    1.0,
     param_.momentum,
     param_.eps);
   MSHADOW_CUDA_POST_KERNEL_CHECK(BatchNormOp_DoBackward_gpu);
