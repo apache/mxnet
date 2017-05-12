@@ -3,7 +3,7 @@ import math
 import pickle
 import logging
 from .ndarray import NDArray, zeros, clip, sqrt, sign
-from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
+from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update, rmsproptf_update
 from .random import normal
 
 
@@ -571,7 +571,7 @@ class AdaGrad(Optimizer):
 class RMSProp(Optimizer):
     """The RMSProp optimizer.
 
-    Two versions of RMSProp are implemented:
+    Three versions of RMSProp are implemented:
 
     If ``centered=False``, we follow
     http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf by
@@ -581,6 +581,9 @@ class RMSProp(Optimizer):
     If ``centered=True``, we follow http://arxiv.org/pdf/1308.0850v5.pdf (38)-(45)
     by Alex Graves, 2013.
     For details of the update algorithm see :class:`~mxnet.ndarray.rmspropalex_update`
+    
+    if ``tf_style=True``, we follow https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/training/rmsprop.py
+    where the epsilon is inside the sqrt operation
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`:
@@ -597,15 +600,18 @@ class RMSProp(Optimizer):
         Flag to control which version of RMSProp to use.
         ``True`` will use Graves's version of `RMSProp`,
         ``False`` will use Tieleman & Hinton's version of `RMSProp`.
+    tf_style : bool, optional
+        Flag to control whether to use tensorflow style RMSProp.
     clip_weights : float, optional
         Clips weights into range ``[-clip_weights, clip_weights]``
     """
     def __init__(self, learning_rate=0.001, gamma1=0.9, gamma2=0.9,
-                 epsilon=1e-8, centered=False, clip_weights=None, **kwargs):
+                 epsilon=1e-8, centered=False, tf_style=False, clip_weights=None, **kwargs):
         super(RMSProp, self).__init__(learning_rate=learning_rate, **kwargs)
         self.gamma1 = gamma1
         self.gamma2 = gamma2
         self.centered = centered
+        self.tf_style = tf_style
         self.clip_weights = clip_weights
         self.kwargs = {'gamma1': gamma1, 'epsilon': epsilon,
                        'rescale_grad': self.rescale_grad}
@@ -617,13 +623,18 @@ class RMSProp(Optimizer):
             self.kwargs['clip_weights'] = self.clip_weights
 
     def create_state(self, index, weight):
-        if self.centered:
+        if self.tf_style:
             return (
                 zeros(weight.shape, weight.context),  # n
-                zeros(weight.shape, weight.context),  # g
                 zeros(weight.shape, weight.context))  # delta
         else:
-            return (zeros(weight.shape, weight.context), )  # n
+            if self.centered:
+                return (
+                    zeros(weight.shape, weight.context),  # n
+                    zeros(weight.shape, weight.context),  # g
+                    zeros(weight.shape, weight.context))  # delta
+            else:
+                return (zeros(weight.shape, weight.context), )  # n
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -631,15 +642,19 @@ class RMSProp(Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
-        if not self.centered:
-            (n, ) = state
-            rmsprop_update(
-                weight, grad, n, out=weight, lr=lr, wd=wd, **self.kwargs)
+        if self.tf_style:
+            n, delta = state
+            rmsproptf_update(weight, grad, n, delta, out=weight,
+                             lr=lr, wd=wd, **self.kwargs)
         else:
-            n, g, delta = state
-            rmspropalex_update(weight, grad, n, g, delta, out=weight,
-                               lr=lr, wd=wd, **self.kwargs)
-
+            if not self.centered:
+                (n, ) = state
+                rmsprop_update(
+                    weight, grad, n, out=weight, lr=lr, wd=wd, **self.kwargs)
+            else:
+                n, g, delta = state
+                rmspropalex_update(weight, grad, n, g, delta, out=weight,
+                                   lr=lr, wd=wd, **self.kwargs)
 @register
 class AdaDelta(Optimizer):
     """The AdaDelta optimizer.
