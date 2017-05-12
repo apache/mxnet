@@ -32,8 +32,7 @@ val_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size
 
 ## Multilayer Perceptron
 
-We first use [multilayer perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron) to solve this problem. We'll define the multilayer perceptron using MXNet's symbolic interface. The
-following command creates a place holder variable for the input data.
+We first use [Multilayer Perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron), MLP for short, to solve this problem. We'll define the MLP using MXNet's symbolic interface. We being by creating a place holder variable for the input data. When working with an MLP, we need to flatten our 28x28 images into a flat 1-D structure of 784 (28 * 28) dimensions. The order of raw pixel values in the flattened vector does not matter as long as we are being consistent about how we do this across all input images. One might wonder if we are discarding valuable information by flattening. That is indeed true and we'll cover this more when we talk about convolutional neural networks where we preserve the input shape. For now, we'll go ahead and work with flattened images.
 
 ```python
 data = mx.sym.var('data')
@@ -41,10 +40,10 @@ data = mx.sym.var('data')
 data = mx.sym.flatten(data=data)
 ```
 
-A multilayer perceptron contains several fully-connected layers. A fully-connected layer, with an *n x m* input matrix *X* outputs a matrix *Y* with size *n x k*, where *k* is often called as the hidden size. This layer has two learnable parameters, the *m x k* weight matrix *W* and the *m x 1* bias vector *b*. It computes the outputs with *Y = W X + b*.
+MLP contains several fully-connected layers. A fully-connected layer, with an *n x m* input matrix *X* outputs a matrix *Y* with size *n x k*, where *k* is often called as the hidden size. This layer has two learnable parameters, the *m x k* weight matrix *W* and the *m x 1* bias vector *b*. It computes the outputs with *Y = W X + b*.
 
 The output of a fully-connected layer is often fed into an activation function,
-which applies an element-wise non-linearity. Common activation functions include sigmoid, tanh, and rectified linear unit ("relu" for short). In this example, we'll use the relu activation function which has several desirable properties and is typically considered a default choice.
+which applies an element-wise non-linearity. Common activation functions include sigmoid, tanh, and [rectified linear unit](https://en.wikipedia.org/wiki/Rectifier_%28neural_networks%29) ("relu" for short). In this example, we'll use the relu activation function which has several desirable properties and is typically considered a default choice.
 
 ```python
 # The first fully-connected layer and the corresponding activation function
@@ -69,8 +68,8 @@ mlp  = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 ```
 
 Now both the neural network definition and data iterators are ready. We can
-start training. The following commands train the multilayer perception on the
-MNIST dataset by minibatch stochastic gradient descent (SGD). We'll select a mini-batch size of 100 and learning rate of 0.1. We'll run the training for 10 epochs and stop. An epoch is one pass over all input data.
+start training. The following commands train the MLP on the
+MNIST dataset by minibatch stochastic gradient descent (SGD). We'll select a mini-batch size of 100 and learning rate of 0.1. Settings such as batch size and learning rate are usually referred to as hyper-parameters. We'll run the training for 10 epochs and stop. An epoch is one pass over all input data.
 
 ```python
 import logging
