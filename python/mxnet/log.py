@@ -4,6 +4,7 @@
 """Logging utilities."""
 import logging
 import sys
+import warnings
 
 CRITICAL = logging.CRITICAL
 ERROR = logging.ERROR
@@ -29,8 +30,7 @@ class _Formatter(logging.Formatter):
             return '\x1b[31m'
         elif logging.INFO <= level:
             return '\x1b[32m'
-        else:
-            return '\x1b[34m'
+        return '\x1b[34m'
 
     def _get_label(self, level):
         # pylint: disable= missing-docstring
@@ -44,8 +44,7 @@ class _Formatter(logging.Formatter):
             return 'I'
         elif level == logging.DEBUG:
             return 'D'
-        else:
-            return 'U'
+        return 'U'
 
     def format(self, record):
         # pylint: disable= missing-docstring
@@ -66,8 +65,8 @@ def getLogger(name=None, filename=None, filemode=None, level=WARNING):
     .. note:: `getLogger` is deprecated. Use `get_logger` instead.
 
     """
-    raise DeprecationWarning("getLogger is deprecated," + \
-                             "Use get_logger instead.")
+    warnings.warn("getLogger is deprecated, Use get_logger instead.",
+                  DeprecationWarning, stacklevel=2)
     return get_logger(name, filename, filemode, level)
 
 def get_logger(name=None, filename=None, filemode=None, level=WARNING):
