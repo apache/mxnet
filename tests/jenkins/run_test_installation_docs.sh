@@ -302,14 +302,14 @@ then
     echo "### Testing Virtualenv ###"
     echo "${virtualenv_commands}"
     echo
-    nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${virtualenv_commands}"
+    nvidia-docker run --rm nvidia/cuda:8.0-cudnn5-devel bash -c "${virtualenv_commands}"
 
     pip_commands="${pip_commands} python -c \"${PYTHON_GPU_VALIDATION}\""
     echo
     echo "### Testing Pip ###"
     echo "${pip_commands}"
     echo
-    nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${pip_commands}"
+    nvidia-docker run --rm nvidia/cuda:8.0-cudnn5-devel bash -c "${pip_commands}"
 
     docker_img=$(echo "$docker_commands" | sed 's/.*docker pull \(.*\)/\1/' | sed 's/;.*//')
     docker_commands="${docker_commands} nvidia-docker run ${docker_img} python -c \"${PYTHON_GPU_VALIDATION}\""
@@ -324,7 +324,7 @@ then
     echo "### Testing Build From Source ###"
     echo "${buildfromsource_commands}"
     echo
-    nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${buildfromsource_commands}"
+    nvidia-docker run --rm nvidia/cuda:8.0-cudnn5-devel bash -c "${buildfromsource_commands}"
 
 else
 
@@ -342,12 +342,12 @@ else
 
     if [[ "${TASK}" == "installation_packaged_test" ]]
     then
-        virtualenv_commands="${virtualenv_commands} python -c \"import sys; print hasattr(sys, 'real_prefix'); ${PYTHON_CPU_VALIDATION}\"; deactivate;"
-        echo
-        echo "### Testing Virtualenv ###"
-        echo "${virtualenv_commands}"
-        echo
-        eval "${virtualenv_commands}"
+        #virtualenv_commands="${virtualenv_commands} python -c \"import sys; print hasattr(sys, 'real_prefix'); ${PYTHON_CPU_VALIDATION}\"; deactivate;"
+        #echo
+        #echo "### Testing Virtualenv ###"
+        #echo "${virtualenv_commands}"
+        #echo
+        #eval "${virtualenv_commands}"
 
         pip_commands="${pip_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
         echo
