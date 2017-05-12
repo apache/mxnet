@@ -99,6 +99,7 @@ if [ ${TASK} == "r_test" ]; then
 fi
 
 if [ ${TASK} == "python_test" ]; then
+    export PYTHONPATH=${PYTHONPATH}:${PWD}/python
     make all || exit -1
     # use cached dir for storing data
     rm -rf ${PWD}/data
