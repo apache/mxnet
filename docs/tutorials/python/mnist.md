@@ -1,17 +1,16 @@
 # Handwritten Digit Recognition
 
-This tutorial guides you through a classic computer vision application: identify
-hand written digits with neural networks.
+In this tutorial we’ll give you a step by step walk-through of how to build a hand written digit classifier using the MNIST dataset. This exercise is arguably the “Hello World” of Deep Learning.
 
-## Loading Data
-
-We first fetch the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset, which is
-commonly used for handwritten digit recognition. Each image in this dataset has
-been resized into 28x28 with grayscale value between 0 and 254.
+MNIST, introduced in 1998 is a widely used dataset for hand written digit classification task. It consists of 70,000 28×28 pixel grayscale images of hand written digits. The dataset is split into 60,000 training images and 10,000 test images.  There are 10 classes (for each of the 10 digits). The task at hand is to train our model using the 60,000 training images and subsequently test the classification accuracy using the 10000 test images.
 
 ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/mnist.png)
 
-The following codes download and load the images and the according labels into
+## Loading Data
+
+We first fetch the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset
+
+The following code downloads and loads the images and the according labels into
 memory.
 
 ```python
@@ -19,13 +18,19 @@ import mxnet as mx
 mnist = mx.test_utils.get_mnist()
 ```
 
-Next we create data iterators for MXNet. A data iterator returns a batch of
-examples with according labels each time. If the examples are images, then they
-are represented by a 4-D matrix with shape `(batch_size, num_channels, width,
-height)`. For the MNIST dataset, there is only one color channel, and both width
-and height are 28, therefore the shape is `(batch_size, 1, 28, 28)`. In
-addition, we often shuffle the images used for training, which accelerates the
-training progress.
+Next we create data iterators for MXNet. A data iterator is the mechanism by which
+we feed input data into our training algorithm. MXNet data iterators are designed with
+speed and efficiency in mind. In our case we'll configure the data iterator to feed examples
+in small batches. For MNIST data set, each example consists of an 28x28 image and the
+corresponding label.
+
+Images are commonly represented by a 4-D matrix with shape `(batch_size, num_channels, width, height)`.
+For MNIST dataset, since the images are grayscale, there is only one color channel.
+Also the images are 28x28 pixels, so each image has width and height equal to 28.
+Therefore, the shape of input is `(batch_size, 2, 28, 28)`. Another important consideration
+is the order of input samples. When feeding training examples it is critical that we don't
+feed samples with same label in succession. Doing so can slow down training.
+Data iterators take care of this by randomly shuffling the inputs.
 
 ```python
 batch_size = 100
@@ -37,7 +42,7 @@ val_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size
 
 We first use [multilayer perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron) to solve this problem. We
 define a multilayer perceptron by using MXNet's symbolic interface. The
-following command create a place holder variable for the input data.
+following command creates a place holder variable for the input data.
 
 ```python
 data = mx.sym.var('data')
@@ -48,15 +53,15 @@ data = mx.sym.flatten(data=data)
 A multilayer perceptron contains several fully-connected layers. A fully-connected
 layer, with an *n x m* input matrix *X* outputs a matrix *Y* with size *n x k*,
 where *k* is often called as the hidden size. This layer has two learnable parameters, the
-*m x k* weight matrix *W* and the *m x 1* bias vector *b*. It compute the
+*m x k* weight matrix *W* and the *m x 1* bias vector *b*. It computes the
 outputs with *Y = W X + b*.
 
-The output of a fully-connected layer is often feed into an activation layer,
+The output of a fully-connected layer is often fed into an activation layer,
 which performs element-wise operations. Common activation functions include
 sigmoid, tanh, and rectifier (or "relu").
 
 ```python
-# The first fully-connected layer and the according activation function
+# The first fully-connected layer and the corresponding activation function
 fc1  = mx.sym.FullyConnected(data=data, num_hidden=128)
 act1 = mx.sym.Activation(data=fc1, act_type="relu")
 
@@ -65,10 +70,11 @@ fc2  = mx.sym.FullyConnected(data=act1, num_hidden = 64)
 act2 = mx.sym.Activation(data=fc2, act_type="relu")
 ```
 
-The last fully-connected layer often has the hidden size equals to the number of
-classes in the dataset. Then we stack a softmax layer, which map the input into
-a probability score. During the training stage, a cross entropy loss is then
-applied between the output and label.
+The last fully-connected layer often has the hidden size equal to the number of
+classes in the dataset. Then we stack a softmax layer, which maps the input to
+a probability score for each class of output type. During the training stage,
+a cross entropy loss is then applied between the output predicted by the network
+and true label.
 
 ```python
 # MNIST has 10 classes
@@ -80,7 +86,7 @@ mlp  = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 Now both the neural network definition and data iterators are ready. We can
 start training. The following commands train the multilayer perception on the
 MNIST dataset by minibatch (batch size is 100) stochastic gradient descent with
-learning rate 0.1. It stops after 10 epochs (data passes).
+learning rate 0.1. It stop the training after 10 epochs (an epoch is one pass over all input data).
 
 ```python
 import logging
@@ -99,18 +105,17 @@ mlp_model.fit(train_iter,  # training data
 ## Convolutional Neural Networks
 
 Note that the fully-connected layer simply reshapes the image into a
-vector during training. It ignores the spatial information that pixels are
+vector during training. It ignores the fact that pixels are spatially
 correlated on both horizontal and vertical dimensions. The convolutional layer
-aims to improve this drawback by using a more structural weight *W*. Instead of
-simply matrix-matrix multiplication, it uses 2-D convolution to obtain the
-output.
+aims to address this drawback by using a more structured weight *W* representation.
+Instead of doing a simple matrix-matrix multiplication, it uses 2-D convolution
+to obtain the output.
 
 Besides the convolutional layer, another major change of the convolutional
 neural network is the adding of pooling layers. A pooling layer reduce a
-*n x m* patch into a single value to make
-the network less sensitive to the spatial location.
+*n x m* patch into a single value to make the network less sensitive to the spatial location.
 
-The following codes define a convolutional neural network called LeNet:
+The following code defines a convolutional neural network called LeNet:
 
 ```python
 data = mx.sym.var('data')
@@ -132,9 +137,9 @@ fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=10)
 lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 ```
 
-Now train LeNet with the same hyper-parameters as before. Note that, if GPU is
+Now we train LeNet with the same hyper-parameters as before. Note that, if GPU is
 available, it is desirable to use GPU for the computation given that LeNet is
-more complex than the previous multilayer perceptron. To do so, we only need to
+more complex and compute intensive than the previous multilayer perceptron. To do so, we only need to
 change `mx.cpu()` to `mx.gpu()`.
 
 ```python
@@ -152,8 +157,8 @@ lenet_model.fit(train_iter,
 
 ## Predict
 
-After training is done, we can predict on new data. The following codes compute
-the predict probaility scores for every images, namely *prob[i][j]* is the
+After training is done, we can predict on test data. The following code computes
+the prediction probaility scores for each test image, namely *prob[i][j]* is the
 probability that the *i*-th image contains the *j*-th object in the label set.
 
 ```python
