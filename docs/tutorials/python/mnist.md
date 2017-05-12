@@ -58,16 +58,15 @@ act2 = mx.sym.Activation(data=fc2, act_type="relu")
 The last fully-connected layer often has the hidden size equal to the number of
 output classes in the dataset. Then we stack a softmax layer, which maps its input to a probability score for each class of output type. During the training stage, a loss function computes the cross entropy between the probability distribution (softmax output) predicted by the network and true probability distribution given by the label.
 
-![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/mlp_mnist.png)
-
-**Figure:** MLP network architecture for MNIST.
-
 ```python
 # MNIST has 10 classes
 fc3  = mx.sym.FullyConnected(data=act2, num_hidden=10)
 # Softmax with cross entropy loss
 mlp  = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 ```
+![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/mlp_mnist.png)
+
+**Figure:** MLP network architecture for MNIST.
 
 Now both the neural network definition and data iterators are ready. We can
 start training. The following commands train the MLP on the
