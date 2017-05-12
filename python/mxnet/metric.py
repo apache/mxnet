@@ -66,9 +66,9 @@ class EvalMetric(object):
         """
         if self.num is None:
             if self.num_inst == 0:
-                return (self.name, float('nan'))
+                return ([self.name], [float('nan')])
             else:
-                return (self.name, self.sum_metric / self.num_inst)
+                return ([self.name], [self.sum_metric / self.num_inst])
         else:
             names = ['%s_%d'%(self.name, i) for i in range(self.num)]
             values = [x / y if y != 0 else float('nan') \
@@ -84,10 +84,6 @@ class EvalMetric(object):
             A (name, value) tuple list.
         """
         name, value = self.get()
-        if not isinstance(name, list):
-            name = [name]
-        if not isinstance(value, list):
-            value = [value]
         return zip(name, value)
 
     def __str__(self):
@@ -178,8 +174,8 @@ class CompositeEvalMetric(EvalMetric):
         results = []
         for metric in self.metrics:
             result = metric.get()
-            names.append(result[0])
-            results.append(result[1])
+            names.extend(result[0])
+            results.extend(result[1])
         return (names, results)
 
 ########################
