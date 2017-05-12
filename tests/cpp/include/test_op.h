@@ -73,13 +73,14 @@ class BasicOperatorData {
  public:
   /*! \brief Manage test blobs and context */
   BasicOperatorData(const bool isGPU, const TShape& topShape)
+#if !MXNET_USE_CUDA
+    : isGPU_(false)
+#else
     : isGPU_(isGPU)
+#endif
       , initializeForward_(0)   // unit testing may call inits in any order based
       , initializeBackward_(0)  // upon its use-case (ie may not want to run forward pass first)
       , initializeCallback_(0) {
-#if !MXNET_USE_CUDA
-    CHECK_EQ(isGPU_, false);
-#endif
     opContext_.is_train = true;
     opContext_.run_ctx.stream = nullptr;
 
