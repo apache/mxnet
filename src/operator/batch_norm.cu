@@ -296,13 +296,13 @@ static __global__ void BatchNormalizationBackwardKernel(
   const bool is_train_and_not_global_stats =
     (flags & IS_TRAINING_FLAG) != 0 && (flags & USE_GLOBAL_STATS_FLAG) == 0;
 
-  AccReal mean, stdVal;
+  AccReal mean, invstd;
   if (is_train_and_not_global_stats) {
     mean = ScalarConvert<DType, AccReal>::to(saveMean[plane]);
-    stdVal = saveInvstd[plane];
+    invstd = saveInvstd[plane];
   } else {
     mean = ScalarConvert<DType, AccReal>::to(runningMean[plane]);
-    stdVal = AccReal(1.0) / sqrt(runningVar[plane] + eps);
+    invstd = VARIANCE_TO_INVSTD(runningVar[plane], eps);
   }
 
   const AccReal weightVal = weight.numElements() > 0 ?
@@ -319,16 +319,16 @@ static __global__ void BatchNormalizationBackwardKernel(
   const AccReal dotP = res.v2;
 
   const AccReal gradMean = gradOutputSum * norm;
-  const AccReal projScale = dotP * norm * stdVal * stdVal;
-  const AccReal gradScale = stdVal * weightVal;
+  const AccReal projScale = dotP * norm * invstd * invstd;
+  const AccReal gradScale = invstd * weightVal;
 
   if (threadIdx.x == 0 && is_train_and_not_global_stats) {
-    const DType   localVariance = VARIANCE_TO_INVSTD(saveInvstd[plane], eps);
-    const DType   localMean = saveMean[plane];
+    const AccReal localVariance = INVSTD_TO_VARIANCE(saveInvstd[plane], eps);
+    const AccReal localMean = saveMean[plane];
 
     // update running averages
-    runningMean[plane] = runningMean[plane] * momentum + localMean * (DType(1) - momentum);
-    runningVar[plane] = runningVar[plane] * momentum + localVariance * (DType(1) - momentum);
+    runningMean[plane] = runningMean[plane] * momentum + localMean * (AccReal(1) - momentum);
+    runningVar[plane] = runningVar[plane] * momentum + localVariance * (AccReal(1) - momentum);
   }
 
   if (gradInput.numElements() > 0 && (flags & WRITE_DATA_FLAG) != 0) {
@@ -349,7 +349,7 @@ static __global__ void BatchNormalizationBackwardKernel(
 
   if (gradWeight.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_GAMMA_FLAG) != 0) {
     if ((flags & FIX_GAMMA_FLAG) == 0) {
-      gradWeight[plane] = ScalarConvert<AccReal, DType>::to(scale * dotP * stdVal);
+      gradWeight[plane] = ScalarConvert<AccReal, DType>::to(scale * dotP * invstd);
     } else {
       gradWeight[plane] = DType(0);
     }

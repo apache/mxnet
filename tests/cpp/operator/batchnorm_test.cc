@@ -20,10 +20,10 @@ using namespace mxnet;
                               // that cause validation to fail
 
 #if !SIMPLE_DIMENSIONS
-static constexpr int BATCH_SIZE = 7;
+static constexpr int BATCH_SIZE = 5;
 static constexpr int CHANNELS = 3;
 static constexpr int DEPTH = 2;
-static constexpr int DH = 5;
+static constexpr int DH = 2;
 static constexpr int DW = 3;
 #else
 static constexpr int BATCH_SIZE = 1;
