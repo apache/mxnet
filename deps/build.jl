@@ -6,7 +6,7 @@ import JSON
 ################################################################################
 libmxnet_detected = false
 libmxnet_curr_ver = "master"
-curr_win = "20161125"
+curr_win = "20170502"
 
 if haskey(ENV, "MXNET_HOME")
   info("MXNET_HOME environment detected: $(ENV["MXNET_HOME"])")
@@ -58,8 +58,7 @@ using BinDeps
 if !libmxnet_detected
   if is_windows()
     info("Downloading pre-built packages for Windows.")
-    name = "20160531_win10_x64_$(HAS_CUDA ? "gpu" : "cpu").7z"
-    base_url = "https://github.com/dmlc/mxnet/releases/download/20160531/$name"
+    base_url = "https://github.com/yajiedesign/mxnet/releases/download/weekly_binary_build/prebuildbase_win10_x64_vc14.7z"
 
     if libmxnet_curr_ver == "master"
       # download_cmd uses powershell 2, but we need powershell 3 to do this
@@ -68,7 +67,7 @@ if !libmxnet_detected
       info("Can't use MXNet master on Windows, using latest binaries from $curr_win.")
     end
     # TODO: Get url from JSON.
-    name = "mxnet_x64_vc12_$(HAS_CUDA ? "gpu" : "cpu").7z"
+    name = "mxnet_x64_vc14_$(HAS_CUDA ? "gpu" : "cpu").7z"
     package_url = "https://github.com/yajiedesign/mxnet/releases/download/$(curr_win)/$(curr_win)_$(name)"
 
     exe7z = joinpath(JULIA_HOME, "7z.exe")
