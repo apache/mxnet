@@ -132,7 +132,7 @@ class BaseRNNCell(object):
         output : Symbol
             Symbol corresponding to the output from the RNN when unrolling
             for a single time step.
-        states : nested list of Symbol
+        states : list of Symbol
             The new state of this RNN after this unrolling.
             The type of this symbol is same as the output of begin_state().
             This can be used as input state to the next time step
@@ -182,7 +182,7 @@ class BaseRNNCell(object):
 
         Returns
         -------
-        states : nested list of Symbol
+        states : list of Symbol
             Starting states for the first RNN step.
         """
         assert not self._modified, \
@@ -287,7 +287,7 @@ class BaseRNNCell(object):
             If `inputs` is a list of symbols (usually output of
             previous unroll), they should all have shape
             (batch_size, ...).
-        begin_state : nested list of Symbol, optional
+        begin_state : list of Symbol, optional
             Input states created by `begin_state()`
             or output state of another cell.
             Created from `begin_state()` if None.
@@ -309,7 +309,7 @@ class BaseRNNCell(object):
             (if `merge_outputs` is False) corresponding to the output from
             the RNN from this unrolling.
 
-        states : Symbol or nested list of Symbol
+        states : list of Symbol
             The new state of this RNN after this unrolling.
             The type of this symbol is same as the output of begin_state().
         """
