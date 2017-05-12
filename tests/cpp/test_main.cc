@@ -22,7 +22,7 @@ bool unitTestsWithCuda = false;
 #ifdef NDEBUG
 bool debugOutput = false;
 #else
-bool debugOutput = true;
+bool debugOutput = false;
 #endif
 }}
 

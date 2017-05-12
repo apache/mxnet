@@ -473,9 +473,14 @@ Operator *BatchNormProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_s
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   BatchNormParam param = param_;
   CHECK_GE(in_shape->size(), 1U);
-  if ((*in_shape)[0].ndim() != 4) {
+  const int dim = (*in_shape)[0].ndim();
+  if (dim != 4) {
     param.mkl_off = true;
+    if (dim > 4) {
+      param.cudnn_off = true;
+    }
   }
+
   DO_BIND_DISPATCH(CreateOp, param, (*in_type)[0]);
 }
 
