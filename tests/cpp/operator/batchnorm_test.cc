@@ -835,21 +835,21 @@ TEST(BATCH_NORM, TestIterAll) {
   };
   const char *tof[2] = { "False", "True" };
   test::op::kwargs_t kwargs;
-  for(size_t x1 = 0; x1 < 2U; ++x1) {
+  for (size_t x1 = 0; x1 < 2U; ++x1) {
     kwargs.push_back({ "fix_gamma", tof[x1] });
-    for(size_t x2 = 0; x2 < 2U; ++x2) {
+    for (size_t x2 = 0; x2 < 2U; ++x2) {
       kwargs.push_back({ "use_global_stats", tof[x2] });
-      for(size_t x3 = 0; x3 < 2U; ++x3) {
-        if(x3) {
+      for (size_t x3 = 0; x3 < 2U; ++x3) {
+        if (x3) {
           kwargs.push_back({ "cudnn_off", "True" });
         }
-        for(size_t x4 = 0; x4 < 2U; ++x4) {
-          if(x4) {
+        for (size_t x4 = 0; x4 < 2U; ++x4) {
+          if (x4) {
             kwargs.push_back({ "mkl_off", "True" });
           }
-          for(TShape shape : shapes) {
-            for(int g1 = 0; g1 < 2U; ++g1) {
-              for(int g2 = 0; g2 < 2U; ++g2) {
+          for (TShape shape : shapes) {
+            for (int g1 = 0; g1 < 2U; ++g1) {
+              for (int g2 = 0; g2 < 2U; ++g2) {
                 for (int type : v2_types) {
                   MSHADOW_REAL_TYPE_SWITCH_EX(
                     type, DType, AccReal,
@@ -858,7 +858,7 @@ TEST(BATCH_NORM, TestIterAll) {
                         bi = testForwardAndBackward<op::BatchNormProp, op::BatchNormProp,
                           DType, AccReal>(
                           g1 != 0, g2 != 0, shape, kwargs, false);  // Keep it simple
-                      if(shape.ndim() == 4 && type == mshadow::kFloat32 && !x3 && !x4) {
+                      if (shape.ndim() == 4 && type == mshadow::kFloat32 && !x3 && !x4) {
                         test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType, AccReal>
                           bi = testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp,
                           DType, AccReal>(
@@ -869,11 +869,11 @@ TEST(BATCH_NORM, TestIterAll) {
               }
             }
           }
-          if(x4) {
+          if (x4) {
             kwargs.pop_back();
           }
         }
-        if(x3) {
+        if (x3) {
           kwargs.pop_back();
         }
       }
