@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#set -e
+set -e
 
 # Given an array of numbers, removes any numbers of it that fall outside a given range.
 #

@@ -71,6 +71,7 @@ The following installation instructions have been tested on Ubuntu 14.04 and 16.
 **Step 1**  Install virtualenv for Ubuntu.
 
 ```bash
+$ sudo apt-get update
 $ sudo apt-get install -y python-dev python-virtualenv
 ```
 
