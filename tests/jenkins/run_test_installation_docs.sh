@@ -75,7 +75,7 @@ function retrieve_closest_index() {
         cur_num=${arr[${i}]}
         if [[ ${cur_num} -eq ${number} || ${cur_num} -gt ${number} ]]
         then
-            echo ${i}
+            echo "${i}"
             return
         fi
     done
@@ -124,7 +124,7 @@ function retrieve_commands() {
             fi
         done
     done
-    echo ${commands}
+    echo "${commands}"
 }
 
 # Sorts array of numbers.
@@ -271,13 +271,12 @@ then
     docker run --rm ubuntu:14.04 bash -c "${pip_commands}"
 
     docker_img=$(echo "$docker_commands" | sed 's/.*docker pull \(.*\)/\1/' | sed 's/;.*//')
-    echo "image name: ${docker_img}"
     docker_commands="${docker_commands} docker run ${docker_img} python -c \"${PYTHON_CPU_VALIDATION}\""
     echo
     echo "### Testing Docker ###"
     echo "${docker_commands}"
     echo
-    eval ${docker_commands}
+    eval "${docker_commands}"
 
     buildfromsource_commands="${buildfromsource_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
     echo
@@ -318,7 +317,7 @@ then
     echo "### Testing Docker ###"
     echo "${docker_commands}"
     echo
-    eval ${docker_commands}
+    eval "${docker_commands}"
 
     buildfromsource_commands="${buildfromsource_commands} python -c \"${PYTHON_GPU_VALIDATION}\""
     echo
@@ -348,14 +347,14 @@ else
         echo "### Testing Virtualenv ###"
         echo "${virtualenv_commands}"
         echo
-        eval ${virtualenv_commands}
+        eval "${virtualenv_commands}"
 
         pip_commands="${pip_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
         echo
         echo "### Testing Pip ###"
         echo "${pip_commands}"
         echo
-        eval ${pip_commands}
+        eval "${pip_commands}"
 
         exit
     fi
@@ -374,7 +373,7 @@ else
         echo "### Testing Build From Source ###"
         echo "${buildfromsource_commands}"
         echo
-        eval ${buildfromsource_commands}
+        eval "${buildfromsource_commands}"
 
         exit
     fi
