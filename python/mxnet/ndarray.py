@@ -403,12 +403,26 @@ fixed-size items.
 
 
     def _sync_copyfrom(self, source_array):
-        """Peforms a synchronized copy from the array.
+        """Performs a synchronized copy from the `source_array` to the current array.
+        This is called through ``x[:] = source_array``, where the `source_array`
+        is a `numpy.ndarray` or array-like object.
+        This function blocks until all the pending read/write operations with respect
+        to the current `NDArray` are finished and carry out the copy operation to the
+        current NDArray.
 
         Parameters
         ----------
-        source_array : array_like)
+        source_array : array_like
             The data source we would like to copy from.
+
+        Example
+        -------
+        >>> a = mx.nd.array([1, 2])
+        >>> a.asnumpy()
+        array([ 1.,  2.], dtype=float32)
+        >>> a[:] = np.array([3, 4])
+        >> a.asnumpy()
+        array([ 3.,  4.], dtype=float32)
         """
         if not isinstance(source_array, np.ndarray):
             try:
@@ -426,14 +440,27 @@ fixed-size items.
             ctypes.c_size_t(source_array.size)))
 
     def _slice(self, start, stop):
-        """Returns a sliced NDArray that shares memory with current one.
+        """Returns a sliced NDArray that shares memory with the current one.
+        This is called through ``x[start:stop]``.
 
         Parameters
         ----------
         start : int
-            Starting index of slice.
+            Starting inclusive index of slice in the first dim.
         stop : int
-            Finishing index of slice.
+            Finishing exclusive index of slice in the first dim.
+
+        Returns
+        -------
+            `NDArray` sharing the memory with the current one sliced from
+            start to stop in the first dim.
+
+        Examples:
+        >>> a = mx.nd.array([[1,2], [3, 4], [5, 6], [7, 8]])
+        >>> a[1:2].asnumpy()
+        array([[ 3.,  4.]], dtype=float32)
+        >>> a[1:1].asnumpy()
+        array([], shape=(0, 2), dtype=float32)
         """
         handle = NDArrayHandle()
         start = mx_uint(start) if start else mx_uint(0)
@@ -443,12 +470,27 @@ fixed-size items.
         return NDArray(handle=handle, writable=self.writable)
 
     def _at(self, idx):
-        """Returns a sliced view of this array.
+        """Returns a view of the array sliced at `idx` in the first dim.
+        This is called through ``x[idx]``.
 
         Parameters
         ----------
         idx : int
-            index of sub array.
+            index for slicing the `NDArray` in the first dim.
+
+        Returns
+        -------
+        NDArray
+            `NDArray` sharing the memory with the current one sliced at `idx` in the first dim.
+
+        Examples
+        --------
+        >>> a = mx.nd.array([[1,2], [3, 4]])
+        >>> a[1].asnumpy()
+        array([ 3.,  4.], dtype=float32)
+        >>> b = mx.nd.array([1, 2, 3, 4])
+        >>> b[0].asnumpy()
+        array([ 1.], dtype=float32)
         """
         handle = NDArrayHandle()
         idx = mx_uint(idx)
