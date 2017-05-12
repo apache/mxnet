@@ -957,7 +957,6 @@ struct Test2DBackward2DPlusLoadAndCompareLogicUtil {
 
 
 TEST(BATCH_NORM, Test2DBackward2DPlusLoadAndCompareLogic) {
-
   MSHADOW_REAL_TYPE_SWITCH_EX(
     mshadow::kFloat32, DType, AccReal,
     {
