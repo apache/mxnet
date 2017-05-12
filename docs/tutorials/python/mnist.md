@@ -87,13 +87,15 @@ mlp_model.fit(train_iter,  # training data
 
 ## Convolutional Neural Networks
 
-Note that with MLP the first fully-connected layer simply reshapes the image into a 784-dimensional vector during training. It ignores the fact that pixels in the image have a strong spatial correlation among both horizontal and vertical dimensions. The convolutional layer aims to address this drawback by using a more structured weight *W* representation. Instead of doing a simple matrix-matrix multiplication, it uses 2-D convolution to obtain the output.
+Earlier we briefly touched on the drawback with MLP where the first fully-connected layer simply reshapes the image into a 784-dimensional vector during training. This discards the fact that pixels in the image have a strong spatial correlation along both horizontal and vertical dimensions. A convolutional neural network (CNN) aims to address this drawback by using a more structured weight *W* representation. Instead of flattening the image and doing a simple matrix-matrix multiplication, it employs one or more convolutional layers that each perform a 2-D convolution on the input image to obtain the output.
 
 Besides the convolutional layer, another major change of the convolutional
 neural network is the addition of pooling layers. A pooling layer reduces a
 *n x m* patch into a single value to make the network less sensitive to the spatial location.
 
-The following code defines a convolutional neural network called LeNet:
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/conv_mnist.png)
+
+The following code defines a convolutional neural network architecture called LeNet:
 
 ```python
 data = mx.sym.var('data')
@@ -115,7 +117,7 @@ fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=10)
 lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 ```
 
-Now we train LeNet with the same hyper-parameters as before. Note that, if a GPU is available, it is desirable to use GPU for the computation given that LeNet is more complex and compute-intensive than the previous multilayer perceptron. To do so, we only need to change `mx.cpu()` to `mx.gpu()`.
+Now we train LeNet with the same hyper-parameters as before. Note that, if a GPU is available, we recommend using it. This greatly speeds up computation given that LeNet is more complex and compute-intensive than the previous multilayer perceptron. To do so, we only need to change `mx.cpu()` to `mx.gpu()`.
 
 ```python
 # create a trainable module on GPU 0
