@@ -222,7 +222,7 @@ NNVM_REGISTER_OP(slice)
 
 .. note:: ``crop`` is deprecated. Use ``slice`` instead.
 
-This function returns a sliced continous region of the array between the indices given 
+This function returns a sliced continous region of the array between the indices given
 by `begin` and `end`.
 
 For an input array of `n` dimensions, slice operation with ``begin=(b_0, b_1...b_n-1)`` indices
@@ -303,7 +303,7 @@ NNVM_REGISTER_OP(slice_axis)
 .describe(R"code(Slices along a given axis.
 
 Returns an array slice along a given `axis` starting from the `begin` index
- to the `end` index.
+to the `end` index.
 
 Examples::
 
