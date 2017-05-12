@@ -6,7 +6,7 @@ MNIST is a widely used dataset for the hand written digit classification task. I
 
 Here are some sample images from the dataset.
 
-![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/example/mnist.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/mnist.png)
 
 ## Loading Data
 
@@ -93,7 +93,7 @@ Besides the convolutional layer, another major change of the convolutional
 neural network is the addition of pooling layers. A pooling layer reduces a
 *n x m* patch into a single value to make the network less sensitive to the spatial location.
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/conv_mnist.png)
+![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/conv_mnist.png)
 
 The following code defines a convolutional neural network architecture called LeNet:
 
