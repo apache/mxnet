@@ -59,6 +59,7 @@ The last fully-connected layer often has the hidden size equal to the number of
 output classes in the dataset. Then we stack a softmax layer, which maps its input to a probability score for each class of output type. During the training stage, a loss function computes the cross entropy between the probability distribution (softmax output) predicted by the network and true probability distribution given by the label.
 
 ![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/mlp_mnist.png)
+**Figure:** MLP network architecture for MNIST.
 
 ```python
 # MNIST has 10 classes
@@ -93,8 +94,6 @@ Besides the convolutional layer, another major change of the convolutional
 neural network is the addition of pooling layers. A pooling layer reduces a
 *n x m* patch into a single value to make the network less sensitive to the spatial location.
 
-![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/conv_mnist.png)
-
 The following code defines a convolutional neural network architecture called LeNet:
 
 ```python
@@ -116,6 +115,8 @@ fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=10)
 # softmax loss
 lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 ```
+![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/conv_mnist.png)
+**Figure:** First conv + pooling layer in LeNet.
 
 Now we train LeNet with the same hyper-parameters as before. Note that, if a GPU is available, we recommend using it. This greatly speeds up computation given that LeNet is more complex and compute-intensive than the previous multilayer perceptron. To do so, we only need to change `mx.cpu()` to `mx.gpu()`.
 
