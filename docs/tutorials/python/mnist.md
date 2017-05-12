@@ -1,36 +1,28 @@
 # Handwritten Digit Recognition
 
-In this tutorial we’ll give you a step by step walk-through of how to build a hand written digit classifier using the MNIST dataset. This exercise is arguably the “Hello World” of Deep Learning.
+In this tutorial, we’ll give you a step by step walk-through of how to build a hand written digit classifier using the [MNIST](https://en.wikipedia.org/wiki/MNIST_database) dataset. For someone new to deep learning, this exercise is arguably the “Hello World” equivalent.
 
-MNIST, introduced in 1998 is a widely used dataset for hand written digit classification task. It consists of 70,000 28×28 pixel grayscale images of hand written digits. The dataset is split into 60,000 training images and 10,000 test images.  There are 10 classes (for each of the 10 digits). The task at hand is to train our model using the 60,000 training images and subsequently test the classification accuracy using the 10000 test images.
+MNIST is a widely used dataset for the hand written digit classification task. It consists of 70,000 28×28 pixel grayscale images of hand written digits. The dataset is split into 60,000 training images and 10,000 test images.  There are 10 classes (for each of the 10 digits). The task at hand is to train our model using the 60,000 training images and subsequently test the classification accuracy using the 10,000 test images.
+
+Here are some sample images from the dataset.
 
 ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/mnist.png)
 
 ## Loading Data
 
-We first fetch the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset
+We first fetch the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset.
 
-The following code downloads and loads the images and the according labels into
-memory.
+The following code downloads and loads the images and the corresponding labels into memory.
 
 ```python
 import mxnet as mx
 mnist = mx.test_utils.get_mnist()
 ```
 
-Next we create data iterators for MXNet. A data iterator is the mechanism by which
-we feed input data into our training algorithm. MXNet data iterators are designed with
-speed and efficiency in mind. In our case we'll configure the data iterator to feed examples
-in small batches. For MNIST data set, each example consists of an 28x28 image and the
-corresponding label.
+Next, we create data iterators for MXNet. Data iterator is the mechanism by which we feed input data into our training algorithm. MXNet data iterators are designed with speed and efficiency in mind. In our case, we'll configure the data iterator to feed examples in small batches. For MNIST dataset, each example consists of a 28x28 grayscale image and the corresponding label.
 
-Images are commonly represented by a 4-D matrix with shape `(batch_size, num_channels, width, height)`.
-For MNIST dataset, since the images are grayscale, there is only one color channel.
-Also the images are 28x28 pixels, so each image has width and height equal to 28.
-Therefore, the shape of input is `(batch_size, 2, 28, 28)`. Another important consideration
-is the order of input samples. When feeding training examples it is critical that we don't
-feed samples with same label in succession. Doing so can slow down training.
-Data iterators take care of this by randomly shuffling the inputs.
+Images are commonly represented by a 4-D matrix with shape `(batch_size, num_channels, width, height)`. For MNIST dataset, since the images are grayscale, there is only one color channel. Also, the images are 28x28 pixels, so each image has width and height equal to 28. Therefore, the shape of input is `(batch_size, 1, 28, 28)`. Another important consideration is the order of input samples. When feeding training examples it is critical that we don't feed samples with the same label in succession. Doing so can slow down training.
+Data iterators take care of this by randomly shuffling the inputs. Note that we only need to shuffle training data. The order does not matter for test data.
 
 ```python
 batch_size = 100
@@ -40,8 +32,7 @@ val_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size
 
 ## Multilayer Perceptron
 
-We first use [multilayer perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron) to solve this problem. We
-define a multilayer perceptron by using MXNet's symbolic interface. The
+We first use [multilayer perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron) to solve this problem. We'll define the multilayer perceptron using MXNet's symbolic interface. The
 following command creates a place holder variable for the input data.
 
 ```python
@@ -50,15 +41,10 @@ data = mx.sym.var('data')
 data = mx.sym.flatten(data=data)
 ```
 
-A multilayer perceptron contains several fully-connected layers. A fully-connected
-layer, with an *n x m* input matrix *X* outputs a matrix *Y* with size *n x k*,
-where *k* is often called as the hidden size. This layer has two learnable parameters, the
-*m x k* weight matrix *W* and the *m x 1* bias vector *b*. It computes the
-outputs with *Y = W X + b*.
+A multilayer perceptron contains several fully-connected layers. A fully-connected layer, with an *n x m* input matrix *X* outputs a matrix *Y* with size *n x k*, where *k* is often called as the hidden size. This layer has two learnable parameters, the *m x k* weight matrix *W* and the *m x 1* bias vector *b*. It computes the outputs with *Y = W X + b*.
 
-The output of a fully-connected layer is often fed into an activation layer,
-which performs element-wise operations. Common activation functions include
-sigmoid, tanh, and rectifier (or "relu").
+The output of a fully-connected layer is often fed into an activation function,
+which applies an element-wise non-linearity. Common activation functions include sigmoid, tanh, and rectified linear unit ("relu" for short). In this example, we'll use the relu activation function which has several desirable properties and is typically considered a default choice.
 
 ```python
 # The first fully-connected layer and the corresponding activation function
@@ -71,10 +57,9 @@ act2 = mx.sym.Activation(data=fc2, act_type="relu")
 ```
 
 The last fully-connected layer often has the hidden size equal to the number of
-classes in the dataset. Then we stack a softmax layer, which maps the input to
-a probability score for each class of output type. During the training stage,
-a cross entropy loss is then applied between the output predicted by the network
-and true label.
+output classes in the dataset. Then we stack a softmax layer, which maps its input to a probability score for each class of output type. During the training stage, a loss function computes the cross entropy between the probability distribution (softmax output) predicted by the network and true probability distribution given by the label.
+
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mlp_mnist.png)
 
 ```python
 # MNIST has 10 classes
@@ -85,8 +70,7 @@ mlp  = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 
 Now both the neural network definition and data iterators are ready. We can
 start training. The following commands train the multilayer perception on the
-MNIST dataset by minibatch (batch size is 100) stochastic gradient descent with
-learning rate 0.1. It stop the training after 10 epochs (an epoch is one pass over all input data).
+MNIST dataset by minibatch stochastic gradient descent (SGD). We'll select a mini-batch size of 100 and learning rate of 0.1. We'll run the training for 10 epochs and stop. An epoch is one pass over all input data.
 
 ```python
 import logging
@@ -104,15 +88,10 @@ mlp_model.fit(train_iter,  # training data
 
 ## Convolutional Neural Networks
 
-Note that the fully-connected layer simply reshapes the image into a
-vector during training. It ignores the fact that pixels are spatially
-correlated on both horizontal and vertical dimensions. The convolutional layer
-aims to address this drawback by using a more structured weight *W* representation.
-Instead of doing a simple matrix-matrix multiplication, it uses 2-D convolution
-to obtain the output.
+Note that with MLP the first fully-connected layer simply reshapes the image into a 784-dimensional vector during training. It ignores the fact that pixels in the image have a strong spatial correlation among both horizontal and vertical dimensions. The convolutional layer aims to address this drawback by using a more structured weight *W* representation. Instead of doing a simple matrix-matrix multiplication, it uses 2-D convolution to obtain the output.
 
 Besides the convolutional layer, another major change of the convolutional
-neural network is the adding of pooling layers. A pooling layer reduce a
+neural network is the addition of pooling layers. A pooling layer reduces a
 *n x m* patch into a single value to make the network less sensitive to the spatial location.
 
 The following code defines a convolutional neural network called LeNet:
@@ -137,10 +116,7 @@ fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=10)
 lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 ```
 
-Now we train LeNet with the same hyper-parameters as before. Note that, if GPU is
-available, it is desirable to use GPU for the computation given that LeNet is
-more complex and compute intensive than the previous multilayer perceptron. To do so, we only need to
-change `mx.cpu()` to `mx.gpu()`.
+Now we train LeNet with the same hyper-parameters as before. Note that, if a GPU is available, it is desirable to use GPU for the computation given that LeNet is more complex and compute-intensive than the previous multilayer perceptron. To do so, we only need to change `mx.cpu()` to `mx.gpu()`.
 
 ```python
 # create a trainable module on GPU 0
@@ -157,9 +133,7 @@ lenet_model.fit(train_iter,
 
 ## Predict
 
-After training is done, we can predict on test data. The following code computes
-the prediction probaility scores for each test image, namely *prob[i][j]* is the
-probability that the *i*-th image contains the *j*-th object in the label set.
+After training is done, we can test the model we trained by running predictions on test data. The following code computes the prediction probability scores for each test image. *prob[i][j]* is the probability that the *i*-th image contains the *j*-th object in the label set.
 
 ```python
 test_iter = mx.io.NDArrayIter(mnist['test_data'], None, batch_size)
@@ -167,7 +141,7 @@ prob = mlp_model.predict(test_iter)
 assert prob.shape == (10000, 10)
 ```
 
-If we have the labels for the new images, then we can compute the metrics.
+Since we also have labels for test images, we can compute the accuracy metric.
 
 ```python
 test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
