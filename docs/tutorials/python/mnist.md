@@ -4,9 +4,11 @@ In this tutorial, we’ll give you a step by step walk-through of how to build a
 
 MNIST is a widely used dataset for the hand written digit classification task. It consists of 70,000 labeled 28×28 pixel grayscale images of hand written digits. The dataset is split into 60,000 training images and 10,000 test images. There are 10 classes (one for each of the 10 digits). The task at hand is to train a model using the 60,000 training images and subsequently test its classification accuracy on the 10,000 test images.
 
-Here are some sample images from the dataset.
+<kbd>
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/mnist.png">
+</kbd>
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/mnist.png)
+**Figure 1:** Sample images from the MNIST dataset.
 
 ## Loading Data
 
@@ -77,7 +79,7 @@ mlp  = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 <img src="https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/mlp_mnist.png">
 </kbd>
 
-**Figure 1:** MLP network architecture for MNIST.
+**Figure 2:** MLP network architecture for MNIST.
 
 Now that both the data iterator and neural network are defined, we can commence training. Here we'll employ the `module` feature in MXNet which provides a high-level abstraction for running training and inference on predefined networks. The module API allows the user to specify appropriate parameters that control how the training proceeds.
 
@@ -152,7 +154,7 @@ lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 <img src="https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/conv_mnist.png">
 </kbd>
 
-**Figure 2:** First conv + pooling layer in LeNet.
+**Figure 3:** First conv + pooling layer in LeNet.
 
 Now we train LeNet with the same hyper-parameters as before. Note that, if a GPU is available, we recommend using it. This greatly speeds up computation given that LeNet is more complex and compute-intensive than the previous multilayer perceptron. To do so, we only need to change `mx.cpu()` to `mx.gpu()` and MXNet takes care of the rest. Just like before, we'll stop training after 10 epochs.
 
