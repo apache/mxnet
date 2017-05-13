@@ -21,9 +21,14 @@ MXNet.jl is built on top of [libmxnet](https://github.com/dmlc/mxnet).
 Upon installation, Julia will try to automatically download and build
 libmxnet.
 
+There are two environment variables that change this behaviour. If you
+already have a pre-installed version of mxnet you can use `MXNET_HOME`
+to point the build-process in the right direction. If the automatic
+cuda detection fails you can also set `CUDA_HOME` to override the process.
+
 The libmxnet source is downloaded to `Pkg.dir("MXNet")/deps/src/mxnet`.
-The automatic build is using default configurations, with OpenCV, CUDA
-disabled. If the compilation failed due to unresolved dependency, or if
+The automatic build is using default configurations, with OpenCV disabled.
+If the compilation failed due to unresolved dependency, or if
 you want to customize the build, you can compile and
 install libmxnet manually. Please see below for more details.
 
