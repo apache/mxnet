@@ -902,46 +902,6 @@ root@4919c4f58cac:/# exit
 </div>
 </div>
 
-<!-- MacOS Clean up -->
-<div class="macos">
-  <div class="python">
-    <div class="cpu">
-
-<div class="pip build-from-source">
-
-Exit the Python terminal.
-
-```python
->>> exit()
-$
-```
-</div>
-
-<div class="virtualenv">
-
-Exit the Python terminal and Deactivate the virtualenv *MXNet* environment.
-```python
->>> exit()
-(mxnet)$ deactivate
-$
-```
-
-</div>
-
-<div class="docker">
-
-Exit the Python terminal and then the docker container.
-```python
->>> exit()
-root@4919c4f58cac:/# exit
-```
-
-</div>
-
-</div>
-</div>
-</div>
-
 <!-- Validation for cloud installation -->
 
 <div class="cloud">
