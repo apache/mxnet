@@ -342,12 +342,12 @@ else
 
     if [[ "${TASK}" == "installation_packaged_test" ]]
     then
-        #virtualenv_commands="${virtualenv_commands} python -c \"import sys; print hasattr(sys, 'real_prefix'); ${PYTHON_CPU_VALIDATION}\"; deactivate;"
-        #echo
-        #echo "### Testing Virtualenv ###"
-        #echo "${virtualenv_commands}"
-        #echo
-        #eval "${virtualenv_commands}"
+        virtualenv_commands="${virtualenv_commands} python -c \"import sys; print hasattr(sys, 'real_prefix'); ${PYTHON_CPU_VALIDATION}\"; deactivate;"
+        echo
+        echo "### Testing Virtualenv ###"
+        echo "${virtualenv_commands}"
+        echo
+        eval "${virtualenv_commands}"
 
         pip_commands="${pip_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
         echo

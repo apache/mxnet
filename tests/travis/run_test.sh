@@ -6,7 +6,6 @@ then
 fi
 
 if [[ ${TASK} == *"installation"* ]]; then
-    echo "TASK:" ${TASK}
     ./tests/jenkins/run_test_installation_docs.sh docs/get_started/install.md ${TASK}
     exit $?
 fi
