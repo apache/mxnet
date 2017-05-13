@@ -46,12 +46,12 @@ data = mx.sym.flatten(data=data)
 ```
 One might wonder if we are discarding valuable information by flattening. That is indeed true and we'll cover this more when we talk about convolutional neural networks where we preserve the input shape. For now, we'll go ahead and work with flattened images.
 
-MLP contains several fully-connected layers. A fully-connected (FC) layer is one where each neuron in the layer is fully connected to every neuron in its preceding layer. From a linear algebra perspective, an FC layer applies an affine transform to the *n x m* input matrix *X* and outputs a matrix *Y* of size *n x k*, where *k* is the number of neurons in the FC layer. *k* is also referred to as the hidden size. The output *Y* is computed according to the equation *Y = W X + b*. The FC layer has two learnable parameters, the *m x k* weight matrix *W* and the *m x 1* bias vector *b*.
+MLP contains several fully connected layers. A fully connected layer or FC layer for short, is one where each neuron in the layer is connected to every neuron in its preceding layer. From a linear algebra perspective, an FC layer applies an affine transform to the *n x m* input matrix *X* and outputs a matrix *Y* of size *n x k*, where *k* is the number of neurons in the FC layer. *k* is also referred to as the hidden size. The output *Y* is computed according to the equation *Y = W X + b*. The FC layer has two learnable parameters, the *m x k* weight matrix *W* and the *m x 1* bias vector *b*.
 
 
-In an MLP the output of an FC layer is often fed into an activation function, which applies an element-wise non-linearity. This step is critical and that is what gives neural networks the ability to classify inputs that are not linearly separable. Common choices for activation functions are sigmoid, tanh, and [rectified linear unit](https://en.wikipedia.org/wiki/Rectifier_%28neural_networks%29) ("relu" for short). In this example, we'll use the relu activation function which has several desirable properties and is typically considered a default choice.
+In an MLP the output of most FC layers is fed into an activation function, which applies an element-wise non-linearity. This step is critical and that is what gives neural networks the ability to classify inputs that are not linearly separable. Common choices for activation functions are sigmoid, tanh, and [rectified linear unit](https://en.wikipedia.org/wiki/Rectifier_%28neural_networks%29) ("relu" for short). In this example, we'll use the relu activation function which has several desirable properties and is typically considered a default choice.
 
-The following code declares two fully connected (hidden) layers with 128 and 64 neurons each. Furthermore, FC layers are sandwiched between relu activation layers which apply the element-wise relu transformation.
+The following code declares two fully connected layers with 128 and 64 neurons each. Furthermore, these FC layers are sandwiched between relu activation layers each one responsible for performing an element-wise relu transformation on the FC layer output.
 
 ```python
 # The first fully-connected layer and the corresponding activation function
@@ -63,9 +63,9 @@ fc2  = mx.sym.FullyConnected(data=act1, num_hidden = 64)
 act2 = mx.sym.Activation(data=fc2, act_type="relu")
 ```
 
-The last fully-connected layer often has its hidden size equal to the number of output classes in the dataset. The activation function for this layer will be the softmax function. Softmax layer maps its input to a probability score for each class of output. During the training stage, a loss function computes the cross entropy between the probability distribution (softmax output) predicted by the network and the true probability distribution given by the label.
+The last fully connected layer often has its hidden size equal to the number of output classes in the dataset. The activation function for this layer will be the softmax function. Softmax layer maps its input to a probability score for each class of output. During the training stage, a loss function computes the cross entropy between the probability distribution (softmax output) predicted by the network and the true probability distribution given by the label.
 
-The following code declares the final fully connected layer of size 10. 10 incidentally is the total number of digits. The output from this layer is fed into a `SoftMaxOutput` layer performs softmax and cross-entropy loss computation in one go.
+The following code declares the final fully connected layer of size 10. 10 incidentally is the total number of digits. The output from this layer is fed into a `SoftMaxOutput` layer that performs softmax and cross-entropy loss computation in one go. Note that loss computation only happens during training.
 
 ```python
 # MNIST has 10 classes
@@ -73,8 +73,9 @@ fc3  = mx.sym.FullyConnected(data=act2, num_hidden=10)
 # Softmax with cross entropy loss
 mlp  = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 ```
+<kbd>
 ![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/mlp_mnist.png)
-
+</kbd>
 **Figure 1:** MLP network architecture for MNIST.
 
 Now that both the data iterator and neural network are defined, we can commence training. Here we'll employ the `module` feature in MXNet which provides a high-level abstraction for running training and inference on predefined networks. The module API allows the user to specify appropriate parameters that control how the training proceeds.
@@ -146,7 +147,9 @@ fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=10)
 # softmax loss
 lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 ```
+<kbd>
 ![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/conv_mnist.png)
+</kbd>
 **Figure 2:** First conv + pooling layer in LeNet.
 
 Now we train LeNet with the same hyper-parameters as before. Note that, if a GPU is available, we recommend using it. This greatly speeds up computation given that LeNet is more complex and compute-intensive than the previous multilayer perceptron. To do so, we only need to change `mx.cpu()` to `mx.gpu()` and MXNet takes care of the rest. Just like before, we'll stop training after 10 epochs.
