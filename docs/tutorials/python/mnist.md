@@ -76,6 +76,7 @@ mlp  = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 <kbd>
 <img src="https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/mlp_mnist.png">
 </kbd>
+
 **Figure 1:** MLP network architecture for MNIST.
 
 Now that both the data iterator and neural network are defined, we can commence training. Here we'll employ the `module` feature in MXNet which provides a high-level abstraction for running training and inference on predefined networks. The module API allows the user to specify appropriate parameters that control how the training proceeds.
@@ -150,6 +151,7 @@ lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 <kbd>
 <img src="https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/conv_mnist.png">
 </kbd>
+
 **Figure 2:** First conv + pooling layer in LeNet.
 
 Now we train LeNet with the same hyper-parameters as before. Note that, if a GPU is available, we recommend using it. This greatly speeds up computation given that LeNet is more complex and compute-intensive than the previous multilayer perceptron. To do so, we only need to change `mx.cpu()` to `mx.gpu()` and MXNet takes care of the rest. Just like before, we'll stop training after 10 epochs.
