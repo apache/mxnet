@@ -173,7 +173,7 @@ test_iter = mx.io.NDArrayIter(mnist['test_data'], None, batch_size)
 prob = lenet_model.predict(test_iter)
 test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
 # predict accuracy for lenet
-acc.reset()
+acc = mx.metric.Accuracy()
 lenet_model.score(test_iter, acc)
 print(acc)
 assert acc.get()[1] > 0.98
