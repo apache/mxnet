@@ -55,6 +55,15 @@ class GPUPooledStorageManager final : public StorageManager {
     used_memory_ -= size;
   }
 
+  void DirectFreeNoLock(void* ptr, size_t size) {
+    cudaError_t err = cudaFree(ptr);
+    // ignore unloading error, as memory has already been recycled
+    if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
+      LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
+    }
+    used_memory_ -= size;
+  }
+
  private:
   void ReleaseAll();
   // used memory
@@ -103,7 +112,7 @@ void GPUPooledStorageManager::Free(void* ptr, size_t raw_size) {
 void GPUPooledStorageManager::ReleaseAll() {
   for (auto&& i : memory_pool_) {
     for (auto&& j : i.second) {
-      DirectFree(j, i.first - NDEV);
+      DirectFreeNoLock(j, i.first);
     }
   }
   memory_pool_.clear();
