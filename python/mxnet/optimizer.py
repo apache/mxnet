@@ -328,11 +328,6 @@ class SGD(Optimizer):
     def __init__(self, momentum=0.0, **kwargs):
         super(SGD, self).__init__(**kwargs)
         self.momentum = momentum
-        self.kwargs = {'rescale_grad': self.rescale_grad}
-        if self.momentum > 0:
-            self.kwargs['momentum'] = self.momentum
-        if self.clip_gradient:
-            self.kwargs['clip_gradient'] = self.clip_gradient
 
     def create_state(self, index, weight):
         if self.momentum == 0.0:
@@ -347,12 +342,18 @@ class SGD(Optimizer):
         wd = self._get_wd(index)
         self._update_count(index)
 
+        kwargs = {'rescale_grad': self.rescale_grad}
+        if self.momentum > 0:
+            kwargs['momentum'] = self.momentum
+        if self.clip_gradient:
+            kwargs['clip_gradient'] = self.clip_gradient
+
         if state is not None:
             sgd_mom_update(weight, grad, state, out=weight,
-                           lr=lr, wd=wd, **self.kwargs)
+                           lr=lr, wd=wd, **kwargs)
         else:
             sgd_update(weight, grad, out=weight,
-                       lr=lr, wd=wd, **self.kwargs)
+                       lr=lr, wd=wd, **kwargs)
 
 @register
 class DCASGD(Optimizer):
@@ -506,10 +507,7 @@ class Adam(Optimizer):
         super(Adam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
-        self.kwargs = {'beta1': beta1, 'beta2': beta2, 'epsilon': epsilon,
-                       'rescale_grad': self.rescale_grad}
-        if self.clip_gradient:
-            self.kwargs['clip_gradient'] = self.clip_gradient
+        self.epsilon = epsilon
 
     def create_state(self, index, weight):
         return (zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
@@ -526,9 +524,15 @@ class Adam(Optimizer):
         coef1 = 1. - self.beta1**t
         coef2 = 1. - self.beta2**t
         lr *= math.sqrt(coef2)/coef1
+
+        kwargs = {'beta1': self.beta1, 'beta2': self.beta2, 'epsilon': self.epsilon,
+                  'rescale_grad': self.rescale_grad}
+        if self.clip_gradient:
+            kwargs['clip_gradient'] = self.clip_gradient
+
         mean, var = state
         adam_update(weight, grad, mean, var, out=weight,
-                    lr=lr, wd=wd, **self.kwargs)
+                    lr=lr, wd=wd, **kwargs)
 
 @register
 class AdaGrad(Optimizer):
@@ -606,15 +610,8 @@ class RMSProp(Optimizer):
         self.gamma1 = gamma1
         self.gamma2 = gamma2
         self.centered = centered
+        self.epsilon = epsilon
         self.clip_weights = clip_weights
-        self.kwargs = {'gamma1': gamma1, 'epsilon': epsilon,
-                       'rescale_grad': self.rescale_grad}
-        if self.centered:
-            self.kwargs['gamma2'] = gamma2
-        if self.clip_gradient:
-            self.kwargs['clip_gradient'] = self.clip_gradient
-        if self.clip_weights:
-            self.kwargs['clip_weights'] = self.clip_weights
 
     def create_state(self, index, weight):
         if self.centered:
@@ -631,14 +628,24 @@ class RMSProp(Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
+
+        kwargs = {'gamma1': self.gamma1, 'epsilon': self.epsilon,
+                  'rescale_grad': self.rescale_grad}
+        if self.centered:
+            kwargs['gamma2'] = self.gamma2
+        if self.clip_gradient:
+            kwargs['clip_gradient'] = self.clip_gradient
+        if self.clip_weights:
+            kwargs['clip_weights'] = self.clip_weights
+
         if not self.centered:
             (n, ) = state
             rmsprop_update(
-                weight, grad, n, out=weight, lr=lr, wd=wd, **self.kwargs)
+                weight, grad, n, out=weight, lr=lr, wd=wd, **kwargs)
         else:
             n, g, delta = state
             rmspropalex_update(weight, grad, n, g, delta, out=weight,
-                               lr=lr, wd=wd, **self.kwargs)
+                               lr=lr, wd=wd, **kwargs)
 
 @register
 class AdaDelta(Optimizer):
