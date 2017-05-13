@@ -57,6 +57,10 @@ using BinDeps
 @BinDeps.setup
 if !libmxnet_detected
   if is_windows()
+    if Sys.ARCH != :x86_64
+      info("Prebuilt windows binaries are only available on 64bit. You will have to built MXNet yourself.")
+      return
+    end
     info("Downloading pre-built packages for Windows.")
     base_url = "https://github.com/yajiedesign/mxnet/releases/download/weekly_binary_build/prebuildbase_win10_x64_vc14.7z"
 
