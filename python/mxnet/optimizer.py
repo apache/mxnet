@@ -154,18 +154,20 @@ class Optimizer(object):
         """
 
     def update(self, index, weight, grad, state):
-        """Update the weight given the corresponding gradient and state.
+        """Updates the given parameter using the corresponding gradient and state.
 
         Parameters
         ----------
         index : int
-            An unique index to identify the weight.
+            The unique index of the parameter into the individual learning
+            rates and weight decays. Learning rates and weight decay
+            may be set via `set_lr_mult()` and `set_wd_mult()`, respectively.
         weight : NDArray
-            The weight
+            The parameter to be updated.
         grad : NDArray
-            The gradient of the objective with respect to this weight.
+            The gradient of the objective with respect to this parameter.
         state : any obj
-            The state associated with this weight.
+            The state returned by `create_state()`.
         """
         raise NotImplementedError()
 
@@ -174,14 +176,29 @@ class Optimizer(object):
         raise DeprecationWarning
 
     def set_lr_mult(self, args_lr_mult):
-        """Set individual learning rate for each weight.
+        """Sets an individual learning rate multiplier for each parameter.
+
+        If you specify a learning rate multiplier for a parameter, then
+        the learning rate for the parameter will be set as the product of
+        the global learning rate `self.lr` and its multiplier.
+
+        .. note:: The default learning rate multiplier of a `Variable`
+            can be set with `lr_mult` argument in the constructor.
 
         Parameters
         ----------
-        args_lr_mult : dict of string/int to float
-            Set the lr multipler for name/index to float.
-            Setting multipler by index is supported for backward compatibility,
-            but we recommend using name and symbol.
+        args_lr_mult : dict of str/int to float
+            For each of its key-value entries, the learning rate multipler for the
+            parameter specified in the key will be set as the given value.
+
+            You can specify the parameter with either its name or its index.
+            If you use the name, you should pass `sym` in the constructor,
+            and the name you specified in the key of `args_lr_mult` should match
+            the name of the parameter in `sym`. If you use the index, it should
+            correspond to the index of the parameter used in the `update` method.
+
+            Specifying a parameter by its index is only supported for backward
+            compatibility, and we recommend to use the name instead.
         """
         self.lr_mult = {}
         if self.sym is not None:
@@ -192,17 +209,30 @@ class Optimizer(object):
         self.lr_mult.update(args_lr_mult)
 
     def set_wd_mult(self, args_wd_mult):
-        """Set individual weight decay for each weight.
+        """Sets an individual weight decay multiplier for each parameter.
 
-        By default wd multipler is 0 for all params whose name doesn't
-        end with _weight, if param_idx2name is provided.
+        By default, if `param_idx2name` was provided in the
+        constructor, the weight decay multipler is set as 0 for all
+        parameters whose name don't end with ``_weight`` or
+        ``_gamma``.
+
+        .. note:: The default weight decay multiplier for a `Variable`
+            can be set with its `wd_mult` argument in the constructor.
 
         Parameters
         ----------
         args_wd_mult : dict of string/int to float
-            Set the wd multipler for name/index to float.
-            Setting multipler by index is supported for backward compatibility,
-            but we recommend using name and symbol.
+            For each of its key-value entries, the weight decay multipler for the
+            parameter specified in the key will be set as the given value.
+
+            You can specify the parameter with either its name or its index.
+            If you use the name, you should pass `sym` in the constructor,
+            and the name you specified in the key of `args_lr_mult` should match
+            the name of the parameter in `sym`. If you use the index, it should
+            correspond to the index of the parameter used in the `update` method.
+
+            Specifying a parameter by its index is only supported for backward
+            compatibility, and we recommend to use the name instead.
         """
         self.wd_mult = {}
         for n in self.idx2name.values():
@@ -279,10 +309,13 @@ register = Optimizer.register   # pylint: disable=invalid-name
 class SGD(Optimizer):
     """The SGD optimizer with momentum and weight decay.
 
-    The optimizer updates the weight by:
+    The optimizer updates the weight by::
 
-      state = momentum * state + lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
-      weight = weight - state
+        state = momentum * state + lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
+        weight = weight - state
+
+    For details of the update algorithm see :class:`~mxnet.ndarray.sgd_update` and
+    :class:`~mxnet.ndarray.sgd_mom_update`.
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`:
@@ -457,6 +490,8 @@ class Adam(Optimizer):
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`:
 
+    For details of the update algorithm, see :class:`ndarray.adam_update`.
+
     Parameters
     ----------
     beta1 : float, optional
@@ -464,7 +499,7 @@ class Adam(Optimizer):
     beta2 : float, optional
         Exponential decay rate for the second moment estimates.
     epsilon : float, optional
-        Small value to avoid divided by 0.
+        Small value to avoid division by 0.
     """
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
                  **kwargs):
@@ -541,9 +576,11 @@ class RMSProp(Optimizer):
     If ``centered=False``, we follow
     http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf by
     Tieleman & Hinton, 2012.
+    For details of the update algorithm see :class:`~mxnet.ndarray.rmsprop_update`
 
     If ``centered=True``, we follow http://arxiv.org/pdf/1308.0850v5.pdf (38)-(45)
     by Alex Graves, 2013.
+    For details of the update algorithm see :class:`~mxnet.ndarray.rmspropalex_update`
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`:
@@ -551,15 +588,17 @@ class RMSProp(Optimizer):
     Parameters
     ----------
     gamma1: float, optional
-        Decay factor of moving average for ``gradient^2``.
+        A decay factor of moving average over past squared gradient.
     gamma2: float, optional
-        A "momentum" factor. Only used if ``centered=True``.
+        A "momentum" factor. Only used if `centered`=``True``.
     epsilon : float, optional
         Small value to avoid division by 0.
     centered : bool, optional
-        Use Graves' or Tieleman & Hinton's version of RMSProp.
+        Flag to control which version of RMSProp to use.
+        ``True`` will use Graves's version of `RMSProp`,
+        ``False`` will use Tieleman & Hinton's version of `RMSProp`.
     clip_weights : float, optional
-        clip weights into range ``[-clip_weights, clip_weights]``
+        Clips weights into range ``[-clip_weights, clip_weights]``
     """
     def __init__(self, learning_rate=0.001, gamma1=0.9, gamma2=0.9,
                  epsilon=1e-8, centered=False, clip_weights=None, **kwargs):

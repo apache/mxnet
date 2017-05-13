@@ -49,7 +49,7 @@ Operator *CTCLossProp::CreateOperatorEx(Context ctx,
 
 DMLC_REGISTER_PARAMETER(CTCLossParam);
 
-MXNET_REGISTER_OP_PROPERTY(CTCLoss, CTCLossProp)
+MXNET_REGISTER_OP_PROPERTY(_contrib_CTCLoss, CTCLossProp)
     .describe(R"code(Connectionist Temporal Classification Loss.
 
 The shapes of the inputs and outputs:
@@ -82,7 +82,7 @@ information.
                   "Ground-truth labels for the loss.")
     .add_arguments(CTCLossParam::__FIELDS__());
 
-NNVM_REGISTER_OP(CTCLoss).add_alias("ctc_loss");
+NNVM_REGISTER_OP(_contrib_CTCLoss).add_alias("_contrib_ctc_loss");
 
 }  // namespace op
 }  // namespace mxnet

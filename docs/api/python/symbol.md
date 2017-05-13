@@ -16,7 +16,7 @@ This document lists the routines of the symbolic expression package:
 ```
 
 A symbol declares computation. It is composited by
-operators, such as simple matrix operations (e.g. “+”), or a neural network
+operators, such as simple matrix operations (e.g. "+"), or a neural network
 layer (e.g. convolution layer). We can bind data to a symbol to execute the
 computation.
 

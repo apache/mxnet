@@ -60,27 +60,27 @@ def encode_sentences(sentences, vocab=None, invalid_label=-1, invalid_key='\n', 
 
 class BucketSentenceIter(DataIter):
     """Simple bucketing iterator for language model.
-    Label for each step is constructed from data of
-    next step.
+    The label at each sequence step is the following token
+    in the sequence.
 
     Parameters
     ----------
     sentences : list of list of int
-        encoded sentences
+        Encoded sentences.
     batch_size : int
-        batch_size of data
-    invalid_label : int, default -1
-        key for invalid label, e.g. <end-of-sentence>
-    dtype : str, default 'float32'
-        data type
-    buckets : list of int
-        size of data buckets. Automatically generated if None.
-    data_name : str, default 'data'
-        name of data
-    label_name : str, default 'softmax_label'
-        name of label
-    layout : str
-        format of data and label. 'NT' means (batch_size, length)
+        Batch size of the data.
+    invalid_label : int, optional
+        Key for invalid label, e.g. <end-of-sentence>. The default is -1.
+    dtype : str, optional
+        Data type of the encoding. The default data type is 'float32'.
+    buckets : list of int, optional
+        Size of the data buckets. Automatically generated if None.
+    data_name : str, optional
+        Name of the data. The default name is 'data'.
+    label_name : str, optional
+        Name of the label. The default name is 'softmax_label'.
+    layout : str, optional
+        Format of data and label. 'NT' means (batch_size, length)
         and 'TN' means (length, batch_size).
     """
     def __init__(self, sentences, batch_size, buckets=None, invalid_label=-1,
@@ -135,6 +135,7 @@ class BucketSentenceIter(DataIter):
         self.reset()
 
     def reset(self):
+        """Resets the iterator to the beginning of the data."""
         self.curr_idx = 0
         random.shuffle(self.idx)
         for buck in self.data:
@@ -150,6 +151,7 @@ class BucketSentenceIter(DataIter):
             self.ndlabel.append(ndarray.array(label, dtype=self.dtype))
 
     def next(self):
+        """Returns the next batch of data."""
         if self.curr_idx == len(self.idx):
             raise StopIteration
         i, j = self.idx[self.curr_idx]
