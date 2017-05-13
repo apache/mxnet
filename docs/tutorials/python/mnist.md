@@ -77,7 +77,7 @@ mlp  = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 
 **Figure 1:** MLP network architecture for MNIST.
 
-Now that both the data iterator and neural network are defined, we can commence training. Here we'll employ the `module` feature in MXNet which provides a high-level abstraction for running training and inference on predefined networks. The module API allows the user specify appropriate parameters that control how the training should proceed.
+Now that both the data iterator and neural network are defined, we can commence training. Here we'll employ the `module` feature in MXNet which provides a high-level abstraction for running training and inference on predefined networks. The module API allows the user to specify appropriate parameters that control how the training proceeds.
 
 The following code initializes a module to train the MLP network we defined above. For our training, we will make use of the stochastic gradient descent (SGD) optimizer. In particular, we'll be using mini-batch SGD. Standard SGD processes training data one example at a time. In practice, this is very slow and one can speed up the process by processing examples in small batches. In this case, our batch size will be 100, which is a reasonable choice. Another parameter we select here is the learning rate, which controls the step size optimizer takes in search of a solution. We'll pick a learning rate of 0.1, again a reasonable choice. Settings such as batch size and learning rate are what are usually referred to as hyper-parameters. What values we give them can have a great impact on training performance. For the purpose of this tutorial, we'll start with some reasonable and safe values. In other tutorials, we'll discuss how one might go about finding a combination of hyper-parameters for optimal model performance.
 
@@ -97,15 +97,35 @@ mlp_model.fit(train_iter,  # training data
               num_epoch=10)  # train at most 10 data passes
 ```
 
+## Predict
+
+After the above training completes, we can evaluate the trained model by running predictions on test data. The following code computes the prediction probability scores for each test image. *prob[i][j]* is the probability that the *i*-th test image contains the *j*-th output class.
+
+```python
+test_iter = mx.io.NDArrayIter(mnist['test_data'], None, batch_size)
+prob = mlp_model.predict(test_iter)
+assert prob.shape == (10000, 10)
+```
+
+Since the dataset also has labels for all test images, we can compute the accuracy metric as follows:
+
+```python
+test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
+# predict accuracy of mlp
+acc = mx.metric.Accuracy()
+mlp_model.score(test_iter, acc)
+print(acc)
+assert acc.get()[1] > 0.96
+```
+If everything went well, we should see an accuracy value that is around 0.96, which means that we are able to accurately predict the digit in 96% of test images. This is a pretty good result. But as we will see in the next part of this tutorial, we can do a lot better than that.
+
 ## Convolutional Neural Network
 
-Earlier we briefly touched on the drawback with MLP where the first fully-connected layer simply reshapes the image into a 784-dimensional vector during training. This discards the fact that pixels in the image have a strong spatial correlation along both horizontal and vertical dimensions. A convolutional neural network (CNN) aims to address this drawback by using a more structured weight *W* representation. Instead of flattening the image and doing a simple matrix-matrix multiplication, it employs one or more convolutional layers that each performs a 2-D convolution on the input image to obtain the output.
+Earlier we briefly touched on a drawback of MLP when we said we need to discard the input image's original shape and flatten it as a vector before we can feed it as input to the MLP's first fully connected layer. Turns out this is an important issue because we don't take advantage of the fact that pixels in the image have natural spatial correlation along the horizontal and vertical axes. A convolutional neural network (CNN) aims to address this problem by using a more structured weight representation. Instead of flattening the image and doing a simple matrix-matrix multiplication, it employs one or more convolutional layers that each performs a 2-D convolution on the input image.
 
-Besides the convolutional layer, another major change of the convolutional
-neural network is the addition of pooling layers. A pooling layer reduces a
-*n x m* patch into a single value to make the network less sensitive to the spatial location.
+A single convolution layer consists of one or more filters that each play the role of a feature detector. During training, a CNN learns appropriate representations (parameters) for these filters. Similar to MLP, the output from the convolutional layer is transformed by applying a non-linearity. Besides the convolutional layer, another key aspect of a CNN is the pooling layer. A pooling layer serves to make the CNN translation invariant: a digit remains the same even when it is shifted left/right/up/down by a few pixels. A pooling layer reduces a *n x m* patch into a single value to make the network less sensitive to the spatial location. Pooling layer is always included after each conv (+ activation) layer in the CNN.
 
-The following code defines a convolutional neural network architecture called LeNet:
+The following code defines a convolutional neural network architecture called LeNet. LeNet is a popular network known to work well on digit classification tasks. We will use a slightly different version from the original LeNet implementation, replacing the sigmoid activations with tanh activations for the neurons
 
 ```python
 data = mx.sym.var('data')
@@ -129,7 +149,7 @@ lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 ![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/conv_mnist.png)
 **Figure 2:** First conv + pooling layer in LeNet.
 
-Now we train LeNet with the same hyper-parameters as before. Note that, if a GPU is available, we recommend using it. This greatly speeds up computation given that LeNet is more complex and compute-intensive than the previous multilayer perceptron. To do so, we only need to change `mx.cpu()` to `mx.gpu()`.
+Now we train LeNet with the same hyper-parameters as before. Note that, if a GPU is available, we recommend using it. This greatly speeds up computation given that LeNet is more complex and compute-intensive than the previous multilayer perceptron. To do so, we only need to change `mx.cpu()` to `mx.gpu()` and MXNet takes care of the rest. Just like before, we'll stop training after 10 epochs.
 
 ```python
 # create a trainable module on GPU 0
@@ -146,29 +166,18 @@ lenet_model.fit(train_iter,
 
 ## Predict
 
-After training is done, we can test the model we trained by running predictions on test data. The following code computes the prediction probability scores for each test image. *prob[i][j]* is the probability that the *i*-th image contains the *j*-th object in the label set.
+Finally, we'll use the trained LeNet model to generate predictions for the test data.
 
 ```python
 test_iter = mx.io.NDArrayIter(mnist['test_data'], None, batch_size)
-prob = mlp_model.predict(test_iter)
-assert prob.shape == (10000, 10)
-```
-
-Since we also have labels for test images, we can compute the accuracy metric.
-
-```python
+prob = lenet_model.predict(test_iter)
 test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
-# predict accuracy of mlp
-acc = mx.metric.Accuracy()
-mlp_model.score(test_iter, acc)
-print(acc)
-assert acc.get()[1] > 0.96
-
 # predict accuracy for lenet
 acc.reset()
 lenet_model.score(test_iter, acc)
 print(acc)
 assert acc.get()[1] > 0.98
 ```
+If all went well, we should see a higher accuracy metric for predications made using LeNet. With CNN we should be able to correctly predict around 98% of all test images.
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
