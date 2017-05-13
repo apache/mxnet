@@ -134,6 +134,51 @@ class KVStoreNCCL : public KVStore {
     }
   }
 
+  void Allreduce(const std::vector<int>& keys,
+                 const std::vector<NDArray>& inputs,
+                 const std::vector<NDArray>& outputs,
+                 int priority) override {
+    std::vector<int> uniq_keys;
+    std::vector<std::pair<NDArray, NDArray> > values(keys.size());
+
+    for (size_t i = 0; i < keys.size(); ++i) {
+      values[i] = std::make_pair(inputs[i], outputs[i]);
+    }
+
+    std::vector<std::vector<std::pair<NDArray, NDArray> > > grouped_vals;
+    GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
+
+    for (size_t i = 0; i < uniq_keys.size(); ++i) {
+      int key = uniq_keys[i];
+      CHECK(local_.find(key) != local_.end())
+        << "key " << key << " has not been inited";
+      std::vector<int32_t> devices;
+      for (size_t j = 0; j < grouped_vals[i].size(); ++j) {
+        CHECK(grouped_vals[i][j].first.ctx().dev_mask() != cpu::kDevMask)
+          << "NCCL KVStore does not support data on the CPU";
+        CHECK(grouped_vals[i][j].second.ctx().dev_mask() != cpu::kDevMask)
+          << "NCCL KVStore does not support data on the CPU";
+        CHECK(grouped_vals[i][j].first.ctx().dev_mask() ==
+              grouped_vals[i][j].second.ctx().dev_mask())
+          << "Order of devices owning inputs and outputs must be the same for NCCL KVStore";
+        devices.push_back(grouped_vals[i][j].first.ctx().dev_id);
+      }
+      Entry & e = local_[key];
+      if (!e.sent_to_device) {
+        if (comms_.find(devices) == comms_.end()) {
+          e.communicators = std::vector<ncclComm_t>(devices.size());
+          ncclCommInitAll(&(e.communicators[0]), devices.size(), &(devices[0]));
+          comms_[devices] = e.communicators;
+        } else {
+          e.communicators = comms_[devices];
+        }
+        e.sent_to_device = true;
+        e.initial_value = NDArray();
+      }
+      Allreduce_(e, grouped_vals[i], priority);
+    }
+  }
+
  protected:
   /**
    * \brief group values on keys
@@ -286,6 +331,45 @@ class KVStoreNCCL : public KVStore {
           for (size_t i = 0; i < dst.size(); ++i) {
             CUDA_CALL(cudaSetDevice(dst[i].ctx().dev_id));
             CUDA_CALL(cudaStreamSynchronize(streams_[dst[i].ctx().dev_id]));
+          }
+        },
+        Context::CPU(),
+        const_vars,
+        mutable_vars,
+        FnProperty::kCPUPrioritized,
+        priority,
+        PROFILER_MESSAGE("KVStoreBroadcast"));
+  }
+
+  void Allreduce_(const Entry & src,
+                  const std::vector<std::pair<NDArray, NDArray> > & values,
+                  int priority) {
+    std::vector<Engine::VarHandle> const_vars;
+    std::vector<Engine::VarHandle> mutable_vars;
+    for (size_t i = 0; i < values.size(); ++i) {
+      if (values[i].first.var() != values[i].second.var()) {
+        const_vars.push_back(values[i].first.var());
+      }
+      mutable_vars.push_back(values[i].second.var());
+    }
+    Engine::Get()->PushSync([src, values, this](RunContext rctx) {
+          {
+            std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+            for (size_t i = 0; i < values.size(); ++i) {
+              cudaSetDevice(values[i].first.ctx().dev_id);
+              MSHADOW_TYPE_SWITCH(values[i].first.dtype(), DType,
+              ncclAllReduce(values[i].first.data().dptr<DType>(),
+                            values[i].second.data().dptr<DType>(),
+                            values[i].first.shape().Size(),
+                            GetNCCLType(values[i].first.dtype()),
+                            ncclSum,
+                            src.communicators[i],
+                            streams_[values[i].first.ctx().dev_id]););
+            }
+          }
+          for (size_t i = 0; i < values.size(); ++i) {
+            CUDA_CALL(cudaSetDevice(values[i].second.ctx().dev_id));
+            CUDA_CALL(cudaStreamSynchronize(streams_[values[i].second.ctx().dev_id]));
           }
         },
         Context::CPU(),
