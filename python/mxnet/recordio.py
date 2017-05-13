@@ -293,7 +293,7 @@ def pack(header, s):
 
     Examples
     --------
-    >>> label = 4
+    >>> label = 4 # labels also could be 1d list, such as: label = [1,2,3]
     >>> id = 2574
     >>> header = mx.recordio.IRHeader(0, label, id, 0)
     >>> with open(path, 'r') as file:
@@ -408,7 +408,7 @@ def pack_img(header, img, quality=95, img_fmt='.jpg'):
 
     Examples
     --------
-    >>> label = 4
+    >>> label = 4 # labels also could be 1d list, such as: label = [1,2,3]
     >>> id = 2574
     >>> header = mx.recordio.IRHeader(0, label, id, 0)
     >>> img = cv2.imread('test.jpg')
