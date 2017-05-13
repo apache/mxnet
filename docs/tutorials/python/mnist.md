@@ -74,6 +74,7 @@ fc3  = mx.sym.FullyConnected(data=act2, num_hidden=10)
 mlp  = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 ```
 ![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/mlp_mnist.png)
+
 **Figure 1:** MLP network architecture for MNIST.
 
 Now that both the data iterator and neural network are defined, we can commence training. Here we'll employ the `module` feature in MXNet which provides a high-level abstraction for running training and inference on predefined networks. The module API allows the user specify appropriate parameters that control how the training should proceed.
