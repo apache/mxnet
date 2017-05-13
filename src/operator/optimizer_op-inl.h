@@ -418,6 +418,87 @@ inline void RMSPropUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   });
 }
 
+// This RMSProp code follows the version in Tensorflow
+// https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/training/rmsprop.py
+
+struct RMSPropTfParam : public dmlc::Parameter<RMSPropTfParam> {
+  float lr;
+  float gamma1;
+  float gamma2;
+  float epsilon;
+  float wd;
+  float rescale_grad;
+  float clip_gradient;
+  float clip_weights;
+  DMLC_DECLARE_PARAMETER(RMSPropTfParam) {
+    DMLC_DECLARE_FIELD(lr).describe("learning_rate");
+    DMLC_DECLARE_FIELD(gamma1).set_default(0.95f).describe("gamma1");
+    DMLC_DECLARE_FIELD(gamma2).set_default(0.90f).describe("gamma2");
+    DMLC_DECLARE_FIELD(epsilon).set_default(1e-8f).describe("epsilon");
+    DMLC_DECLARE_FIELD(wd).set_default(0.0f).describe("weight decay");
+    DMLC_DECLARE_FIELD(rescale_grad)
+    .set_default(1.0f)
+    .describe("rescale gradient as grad = rescale_grad*grad.");
+    DMLC_DECLARE_FIELD(clip_gradient)
+    .set_default(-1.0f)
+    .describe("If greater than 0, clip gradient to "
+              "grad = max(min(grad, -clip_gradient), clip_gradient). "
+              "Otherwise turned off.");
+    DMLC_DECLARE_FIELD(clip_weights)
+      .set_default(-1.0f)
+      .describe("If greater than 0, clip weights to "
+                "weights = max(min(weights, -clip_weights), clip_weights). "
+                "Otherwise turned off.");
+  }
+};
+
+template <typename xpu>
+inline void RMSPropTfUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                          const std::vector<TBlob> &inputs,
+                          const std::vector<OpReqType> &req,
+                          const std::vector<TBlob> &outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mshadow_op;
+  const RMSPropTfParam &param = nnvm::get<RMSPropTfParam>(attrs.parsed);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> grad = inputs[1].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> state_n = inputs[2].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> mom = inputs[3].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
+
+    grad = scalar<DType>(param.rescale_grad) * grad +
+           scalar<DType>(param.wd) * weight;
+
+    if (param.clip_gradient >= 0.0f) {
+      state_n = scalar<DType>(1.f - param.gamma1) *
+                    F<clip>(grad, DType(param.clip_gradient)) *
+                    F<clip>(grad, DType(param.clip_gradient)) +
+                scalar<DType>(param.gamma1) * state_n;
+      mom = scalar<DType>(param.gamma2) * mom -
+                           scalar<DType>(param.lr) *
+                               (F<clip>(grad, DType(param.clip_gradient)) /
+                                (F<square_root>(state_n +
+                                 scalar<DType>(param.epsilon))));
+    } else {
+      state_n = scalar<DType>(1.f - param.gamma1) * (grad * grad) +
+                scalar<DType>(param.gamma1) * state_n;
+      mom = scalar<DType>(param.gamma2) * mom  -
+                            scalar<DType>(param.lr) *
+                               (grad / (F<square_root>(state_n +
+                                        scalar<DType>(param.epsilon))));
+
+    }
+    if (param.clip_weights >= 0.0f) {
+        Assign(out, req[0],
+               F<clip>(weight + mom, DType(param.clip_weights)));
+    } else {
+        Assign(out, req[0], weight + mom);
+    }
+  });
+}
 }  // namespace op
 }  // namespace mxnet
 

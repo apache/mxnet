@@ -198,5 +198,26 @@ to be 0.9 and the learning rate :math:`\eta` to be 0.0001.
 .add_argument("delta", "NDArray-or-Symbol", "delta")
 .add_arguments(RMSPropAlexParam::__FIELDS__());
 
+NNVM_REGISTER_OP(rmsproptf_update)
+.describe("Updater function for RMSProp Tensorflow style optimizer."
+          " The RMSProp code follows the version in"
+          " https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/training/rmsprop.py"
+          " where the epsilon is inside the sqrt operation. ")
+.set_num_inputs(4)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<RMSPropTfParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs &attrs) {
+    return std::vector<uint32_t>{2};
+  })
+.set_attr<FCompute>("FCompute<cpu>", RMSPropTfUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("n", "NDArray-or-Symbol", "n")
+.add_argument("delta", "NDArray-or-Symbol", "delta")
+.add_arguments(RMSPropTfParam::__FIELDS__());
+
 }  // namespace op
 }  // namespace mxnet
