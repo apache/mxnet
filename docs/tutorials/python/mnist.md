@@ -2,7 +2,7 @@
 
 In this tutorial, we’ll give you a step by step walk-through of how to build a hand written digit classifier using the [MNIST](https://en.wikipedia.org/wiki/MNIST_database) dataset. For someone new to deep learning, this exercise is arguably the “Hello World” equivalent.
 
-MNIST is a widely used dataset for the hand written digit classification task. It consists of 70,000 28×28 pixel grayscale images of hand written digits. The dataset is split into 60,000 training images and 10,000 test images.  There are 10 classes (for each of the 10 digits). The task at hand is to train our model using the 60,000 training images and subsequently test the classification accuracy using the 10,000 test images.
+MNIST is a widely used dataset for the hand written digit classification task. It consists of 70,000 labeled 28×28 pixel grayscale images of hand written digits. The dataset is split into 60,000 training images and 10,000 test images. There are 10 classes (one for each of the 10 digits). The task at hand is to train a model using the 60,000 training images and subsequently test its classification accuracy on the 10,000 test images.
 
 Here are some sample images from the dataset.
 
@@ -10,7 +10,7 @@ Here are some sample images from the dataset.
 
 ## Loading Data
 
-We first fetch the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset.
+Before we define the model, lets first fetch the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset.
 
 The following code downloads and loads the images and the corresponding labels into memory.
 
@@ -19,10 +19,12 @@ import mxnet as mx
 mnist = mx.test_utils.get_mnist()
 ```
 
-Next, we create data iterators for MXNet. Data iterator is the mechanism by which we feed input data into our training algorithm. MXNet data iterators are designed with speed and efficiency in mind. In our case, we'll configure the data iterator to feed examples in small batches. For MNIST dataset, each example consists of a 28x28 grayscale image and the corresponding label.
+After running the above code, the entire MNIST dataset should be fully loaded into memory. Note that for large datasets it is not feasible to pre-load the entire dataset first like we did here. What is needed is a mechanism by which we can quickly and efficiency stream data directly from the source. MXNet Data iterators come to the rescue here by providing exactly that. Data iterator is the mechanism by which we feed input data into an MXNet training algorithm and they very simple to initialize to use and are optimized for speed. During training, we typically process training samples in small batches and over the entire training lifetime will end up processing each training example multiple times. In this tutorial, we'll configure the data iterator to feed examples in batches of 100. Keep in mind that each example is a 28x28 grayscale image and the corresponding label.
 
-Images are commonly represented by a 4-D matrix with shape `(batch_size, num_channels, width, height)`. For MNIST dataset, since the images are grayscale, there is only one color channel. Also, the images are 28x28 pixels, so each image has width and height equal to 28. Therefore, the shape of input is `(batch_size, 1, 28, 28)`. Another important consideration is the order of input samples. When feeding training examples it is critical that we don't feed samples with the same label in succession. Doing so can slow down training.
+Image batches are commonly represented by a 4-D matrix with shape `(batch_size, num_channels, width, height)`. For MNIST dataset, since the images are grayscale, there is only one color channel. Also, the images are 28x28 pixels, so each image has width and height equal to 28. Therefore, the shape of input is `(batch_size, 1, 28, 28)`. Another important consideration is the order of input samples. When feeding training examples it is critical that we don't feed samples with the same label in succession. Doing so can slow down training.
 Data iterators take care of this by randomly shuffling the inputs. Note that we only need to shuffle training data. The order does not matter for test data.
+
+The following code initializes the data iterators for MNIST dataset. Note that we initialize two iterators: one for training data and one for test data.
 
 ```python
 batch_size = 100
@@ -30,20 +32,26 @@ train_iter = mx.io.NDArrayIter(mnist['train_data'], mnist['train_label'], batch_
 val_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
 ```
 
+## Training
+We will cover a couple of approaches for performing the hand written digit recognition task. The first approach makes use of a more traditional deep neural network architecture called Multilayer Percepton. We'll discuss its drawbacks and use that as a motivation to introduce a second more advanced approach called Convolution Neural Network that has proven to work very well for image classification tasks.
+
 ## Multilayer Perceptron
 
-We first use [Multilayer Perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron), MLP for short, to solve this problem. We'll define the MLP using MXNet's symbolic interface. We being by creating a place holder variable for the input data. When working with an MLP, we need to flatten our 28x28 images into a flat 1-D structure of 784 (28 * 28) dimensions. The order of raw pixel values in the flattened vector does not matter as long as we are being consistent about how we do this across all input images. One might wonder if we are discarding valuable information by flattening. That is indeed true and we'll cover this more when we talk about convolutional neural networks where we preserve the input shape. For now, we'll go ahead and work with flattened images.
+The first approach makes use of a [Multilayer Perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron), MLP for short, to solve this problem. We'll define the MLP using MXNet's symbolic interface. We being by creating a place holder variable for the input data. When working with an MLP, we need to flatten our 28x28 images into a flat 1-D structure of 784 (28 * 28) raw pixel values. The order of pixel values in the flattened vector does not matter as long as we are being consistent about how we do this across all images.
 
 ```python
 data = mx.sym.var('data')
 # Flatten the data from 4-D shape into 2-D (batch_size, num_channel*width*height)
 data = mx.sym.flatten(data=data)
 ```
+One might wonder if we are discarding valuable information by flattening. That is indeed true and we'll cover this more when we talk about convolutional neural networks where we preserve the input shape. For now, we'll go ahead and work with flattened images.
 
-MLP contains several fully-connected layers. A fully-connected layer, with an *n x m* input matrix *X* outputs a matrix *Y* with size *n x k*, where *k* is often called as the hidden size. This layer has two learnable parameters, the *m x k* weight matrix *W* and the *m x 1* bias vector *b*. It computes the outputs with *Y = W X + b*.
+MLP contains several fully-connected layers. A fully-connected (FC) layer is one where each neuron in the layer is fully connected to every neuron in its preceding layer. From a linear algebra perspective, an FC layer applies an affine transform to the *n x m* input matrix *X* and outputs a matrix *Y* of size *n x k*, where *k* is the number of neurons in the FC layer. *k* is also referred to as the hidden size. The output *Y* is computed according to the equation *Y = W X + b*. The FC layer has two learnable parameters, the *m x k* weight matrix *W* and the *m x 1* bias vector *b*.
 
-The output of a fully-connected layer is often fed into an activation function,
-which applies an element-wise non-linearity. Common activation functions include sigmoid, tanh, and [rectified linear unit](https://en.wikipedia.org/wiki/Rectifier_%28neural_networks%29) ("relu" for short). In this example, we'll use the relu activation function which has several desirable properties and is typically considered a default choice.
+
+In an MLP the output of an FC layer is often fed into an activation function, which applies an element-wise non-linearity. This step is critical and that is what gives neural networks the ability to classify inputs that are not linearly separable. Common choices for activation functions are sigmoid, tanh, and [rectified linear unit](https://en.wikipedia.org/wiki/Rectifier_%28neural_networks%29) ("relu" for short). In this example, we'll use the relu activation function which has several desirable properties and is typically considered a default choice.
+
+The following code declares two fully connected (hidden) layers with 128 and 64 neurons each. Furthermore, FC layers are sandwiched between relu activation layers which apply the element-wise relu transformation.
 
 ```python
 # The first fully-connected layer and the corresponding activation function
@@ -55,8 +63,9 @@ fc2  = mx.sym.FullyConnected(data=act1, num_hidden = 64)
 act2 = mx.sym.Activation(data=fc2, act_type="relu")
 ```
 
-The last fully-connected layer often has the hidden size equal to the number of
-output classes in the dataset. Then we stack a softmax layer, which maps its input to a probability score for each class of output type. During the training stage, a loss function computes the cross entropy between the probability distribution (softmax output) predicted by the network and true probability distribution given by the label.
+The last fully-connected layer often has its hidden size equal to the number of output classes in the dataset. The activation function for this layer will be the softmax function. Softmax layer maps its input to a probability score for each class of output. During the training stage, a loss function computes the cross entropy between the probability distribution (softmax output) predicted by the network and the true probability distribution given by the label.
+
+The following code declares the final fully connected layer of size 10. 10 incidentally is the total number of digits. The output from this layer is fed into a `SoftMaxOutput` layer performs softmax and cross-entropy loss computation in one go.
 
 ```python
 # MNIST has 10 classes
@@ -65,12 +74,13 @@ fc3  = mx.sym.FullyConnected(data=act2, num_hidden=10)
 mlp  = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 ```
 ![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/mlp_mnist.png)
+**Figure 1:** MLP network architecture for MNIST.
 
-**Figure:** MLP network architecture for MNIST.
+Now that both the data iterator and neural network are defined, we can commence training. Here we'll employ the `module` feature in MXNet which provides a high-level abstraction for running training and inference on predefined networks. The module API allows the user specify appropriate parameters that control how the training should proceed.
 
-Now both the neural network definition and data iterators are ready. We can
-start training. The following commands train the MLP on the
-MNIST dataset by minibatch stochastic gradient descent (SGD). We'll select a mini-batch size of 100 and learning rate of 0.1. Settings such as batch size and learning rate are usually referred to as hyper-parameters. We'll run the training for 10 epochs and stop. An epoch is one pass over all input data.
+The following code initializes a module to train the MLP network we defined above. For our training, we will make use of the stochastic gradient descent (SGD) optimizer. In particular, we'll be using mini-batch SGD. Standard SGD processes training data one example at a time. In practice, this is very slow and one can speed up the process by processing examples in small batches. In this case, our batch size will be 100, which is a reasonable choice. Another parameter we select here is the learning rate, which controls the step size optimizer takes in search of a solution. We'll pick a learning rate of 0.1, again a reasonable choice. Settings such as batch size and learning rate are what are usually referred to as hyper-parameters. What values we give them can have a great impact on training performance. For the purpose of this tutorial, we'll start with some reasonable and safe values. In other tutorials, we'll discuss how one might go about finding a combination of hyper-parameters for optimal model performance.
+
+Typically, one runs the training until convergence, which means that we have learned a good set of model parameters (weights + biases) from the training data. For the purpose of this tutorial, we'll run training for 10 epochs and stop. An epoch is one full pass over the entire training data.
 
 ```python
 import logging
@@ -86,9 +96,9 @@ mlp_model.fit(train_iter,  # training data
               num_epoch=10)  # train at most 10 data passes
 ```
 
-## Convolutional Neural Networks
+## Convolutional Neural Network
 
-Earlier we briefly touched on the drawback with MLP where the first fully-connected layer simply reshapes the image into a 784-dimensional vector during training. This discards the fact that pixels in the image have a strong spatial correlation along both horizontal and vertical dimensions. A convolutional neural network (CNN) aims to address this drawback by using a more structured weight *W* representation. Instead of flattening the image and doing a simple matrix-matrix multiplication, it employs one or more convolutional layers that each perform a 2-D convolution on the input image to obtain the output.
+Earlier we briefly touched on the drawback with MLP where the first fully-connected layer simply reshapes the image into a 784-dimensional vector during training. This discards the fact that pixels in the image have a strong spatial correlation along both horizontal and vertical dimensions. A convolutional neural network (CNN) aims to address this drawback by using a more structured weight *W* representation. Instead of flattening the image and doing a simple matrix-matrix multiplication, it employs one or more convolutional layers that each performs a 2-D convolution on the input image to obtain the output.
 
 Besides the convolutional layer, another major change of the convolutional
 neural network is the addition of pooling layers. A pooling layer reduces a
@@ -116,7 +126,7 @@ fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=10)
 lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 ```
 ![png](https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/conv_mnist.png)
-**Figure:** First conv + pooling layer in LeNet.
+**Figure 2:** First conv + pooling layer in LeNet.
 
 Now we train LeNet with the same hyper-parameters as before. Note that, if a GPU is available, we recommend using it. This greatly speeds up computation given that LeNet is more complex and compute-intensive than the previous multilayer perceptron. To do so, we only need to change `mx.cpu()` to `mx.gpu()`.
 
