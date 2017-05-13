@@ -300,8 +300,8 @@ inline void RMSPropAlexUpdate(const nnvm::NodeAttrs &attrs,
       delta = scalar<DType>(param.gamma2) * delta -
               scalar<DType>(param.lr) *
                   (F<clip>(grad, DType(param.clip_gradient)) /
-                   (F<square_root>(state_n - state_g * state_g) +
-                    scalar<DType>(param.epsilon)));
+                   (F<square_root>(state_n - state_g * state_g +
+                                   scalar<DType>(param.epsilon))));
     } else {
       state_n = scalar<DType>(1.f - param.gamma1) * (grad * grad) +
                 scalar<DType>(param.gamma1) * state_n;
@@ -309,8 +309,8 @@ inline void RMSPropAlexUpdate(const nnvm::NodeAttrs &attrs,
                 scalar<DType>(param.gamma1) * state_g;
       delta = scalar<DType>(param.gamma2) * delta -
               scalar<DType>(param.lr) *
-                  (grad / (F<square_root>(state_n - state_g * state_g) +
-                           scalar<DType>(param.epsilon)));
+                  (grad / (F<square_root>(state_n - state_g * state_g +
+                                          scalar<DType>(param.epsilon))));
     }
 
     if (param.clip_weights >= 0.0f) {
