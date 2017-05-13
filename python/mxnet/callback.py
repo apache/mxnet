@@ -114,10 +114,9 @@ class Speedometer(object):
     auto_reset : bool
         Reset the evaluation metrics after each log.
 
-    Example:
-    --------
+    Example
+    -------
     >>> # Print training speed and evaluation metrics every ten batches. Batch size is one.
-    ...
     >>> module.fit(iterator, num_epoch=n_epoch,
     ... batch_end_callback=mx.callback.Speedometer(1, 10))
     Epoch[0] Batch [10] Speed: 1910.41 samples/sec  Train-accuracy=0.200000
