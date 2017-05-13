@@ -75,9 +75,11 @@ if !libmxnet_detected
     run(download_cmd(base_url, "mxnet_base.7z"))
     run(`$exe7z x mxnet_base.7z -y -ousr`)
     run(`cmd /c copy "usr\\3rdparty\\openblas\\bin\\*.dll" "usr\\lib"`)
+    run(`cmd /c copy "usr\\3rdparty\\opencv\\*.dll" "usr\\lib"`)
 
     run(download_cmd(package_url, "mxnet.7z"))
     run(`$exe7z x mxnet.7z -y -ousr`)
+    run(`cmd /c copy "usr\\build\\*.dll" "usr\\lib"`)
 
     return
   end
