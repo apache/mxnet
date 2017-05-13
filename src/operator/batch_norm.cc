@@ -80,6 +80,8 @@ then set ``gamma`` to 1 and its gradient to 0.
 .add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")
 .add_argument("gamma", "NDArray-or-Symbol", "gamma array")
 .add_argument("beta", "NDArray-or-Symbol", "beta array")
+.add_argument("moving_mean", "NDArray-or-Symbol", "running mean of input")
+.add_argument("moving_var", "NDArray-or-Symbol", "running variance of input")
 .add_arguments(BatchNormParam::__FIELDS__());
 
 NNVM_REGISTER_OP(BatchNorm)

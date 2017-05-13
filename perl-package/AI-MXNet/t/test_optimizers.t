@@ -166,7 +166,7 @@ method update($index, $weight, $grad, $state)
             $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
         }
         $n .= (1 - $self->gamma1) * ($grad * $grad) + $self->gamma1 * $n;
-        $weight -= $lr * $grad/(mx->nd->sqrt($n) + $self->epsilon);
+        $weight -= $lr * $grad/(mx->nd->sqrt($n + $self->epsilon));
     }
     else
     {
@@ -177,7 +177,7 @@ method update($index, $weight, $grad, $state)
         }
         $n .= (1 - $self->gamma1) * ($grad * $grad) + $self->gamma1 * $n;
         $g .= (1 - $self->gamma1) * $grad + $self->gamma1 * $g;
-        $delta .= ($self->gamma2) * $delta - $lr * $grad/(mx->nd->sqrt($n - $g*$g) + $self->epsilon);
+        $delta .= ($self->gamma2) * $delta - $lr * $grad/(mx->nd->sqrt($n - $g*$g + $self->epsilon));
         $weight += $delta;
     }
     if($self->clip_weights)

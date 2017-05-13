@@ -9,6 +9,7 @@ import numpy as np
 from .base import string_types
 from .ndarray import NDArray, load
 from . import random
+from . import registry
 
 # inherit str for backward compatibility
 class InitDesc(str):
@@ -29,54 +30,11 @@ class InitDesc(str):
         ret.global_init = global_init
         return ret
 
-_INITIALIZER_REGISTRY = {}
-
-def register(klass):
-    """Registers a custom initializer.
-
-    Custom initializers can be created by extending `mx.init.Initializer` and implementing the
-    required functions like `_init_weight` and `_init_bias`. The created initializer must be
-    registered using `mx.init.register` before it can be used.
-
-    Parameters
-    ----------
-    klass : class
-        A subclass of `mx.init.Initializer` that needs to be registered as a custom initializer.
-
-    Example
-    -------
-    >>> # Create and register a custom initializer that
-    ... # initializes weights to 0.1 and biases to 1.
-    ...
-    >>> @mx.init.register
-    ... class CustomInit(mx.init.Initializer):
-    ...   def __init__(self):
-    ...     super(CustomInit, self).__init__()
-    ...   def _init_weight(self, _, arr):
-    ...     arr[:] = 0.1
-    ...   def _init_bias(self, _, arr):
-    ...     arr[:] = 1
-    ...
-    >>> # Module is an instance of 'mxnet.module.Module'
-    ...
-    >>> module.init_params(CustomInit())
-    """
-    assert issubclass(klass, Initializer), "Can only register subclass of Initializer"
-    name = klass.__name__.lower()
-    if name in _INITIALIZER_REGISTRY:
-        warnings.warn(
-            "\033[91mNew initializer %s.%s is overriding existing initializer %s.%s\033[0m"%(
-                klass.__module__, klass.__name__,
-                _INITIALIZER_REGISTRY[name].__module__,
-                _INITIALIZER_REGISTRY[name].__name__),
-            UserWarning, stacklevel=2)
-    _INITIALIZER_REGISTRY[name] = klass
-    return klass
 
 class Initializer(object):
     """The base class of an initializer."""
     def __init__(self, **kwargs):
-        self.kwargs = kwargs
+        self._kwargs = kwargs
 
     def dumps(self):
         """Saves the initializer to string
@@ -97,7 +55,7 @@ class Initializer(object):
         >>> init.dumps()
         '["xavier", {"rnd_type": "uniform", "magnitude": 2.34, "factor_type": "in"}]'
         """
-        return json.dumps([self.__class__.__name__.lower(), self.kwargs])
+        return json.dumps([self.__class__.__name__.lower(), self._kwargs])
 
     def __call__(self, desc, arr):
         """Initialize an array
@@ -120,8 +78,7 @@ class Initializer(object):
 
         if init:
             # when calling Variable initializer
-            klass, kwargs = json.loads(init)
-            _INITIALIZER_REGISTRY[klass.lower()](**kwargs)._init_weight(desc, arr)
+            create(init)._init_weight(desc, arr)
         else:
             # register nnvm::FSetInputVariableAttrs in the backend for new patterns
             # don't add new cases here.
@@ -223,6 +180,48 @@ class Initializer(object):
             'Please use mx.sym.Variable(init=mx.init.*) to set initialization pattern' % name)
 
 
+# pylint: disable=invalid-name
+_register = registry.get_register_func(Initializer, 'initializer')
+alias = registry.get_alias_func(Initializer, 'initializer')
+create = registry.get_create_func(Initializer, 'initializer')
+# pylint: enable=invalid-name
+
+def register(klass):
+    """Registers a custom initializer.
+
+    Custom initializers can be created by extending `mx.init.Initializer` and implementing the
+    required functions like `_init_weight` and `_init_bias`. The created initializer must be
+    registered using `mx.init.register` before it can be called by name.
+
+    Parameters
+    ----------
+    klass : class
+        A subclass of `mx.init.Initializer` that needs to be registered as a custom initializer.
+
+    Example
+    -------
+    >>> # Create and register a custom initializer that
+    ... # initializes weights to 0.1 and biases to 1.
+    ...
+    >>> @mx.init.register
+    ... @alias('myinit')
+    ... class CustomInit(mx.init.Initializer):
+    ...   def __init__(self):
+    ...     super(CustomInit, self).__init__()
+    ...   def _init_weight(self, _, arr):
+    ...     arr[:] = 0.1
+    ...   def _init_bias(self, _, arr):
+    ...     arr[:] = 1
+    ...
+    >>> # Module is an instance of 'mxnet.module.Module'
+    ...
+    >>> module.init_params("custominit")
+    >>> # module.init_params("myinit")
+    >>> # module.init_params(CustomInit())
+    """
+    return _register(klass)
+
+
 class Load(object):
     """Initializes variables by loading data from file or dict.
 
@@ -312,6 +311,7 @@ class Mixed(object):
                          'add a ".*" pattern at the and with default Initializer.')
 
 @register
+@alias("zeros")
 class Zero(Initializer):
     """Initializes weights to zero.
 
@@ -336,6 +336,7 @@ class Zero(Initializer):
         arr[:] = 0
 
 @register
+@alias("ones")
 class One(Initializer):
     """Initializes weights to one.
 
@@ -561,9 +562,9 @@ class MSRAPrelu(Xavier):
         initial slope of any PReLU (or similar) nonlinearities.
     """
     def __init__(self, factor_type="avg", slope=0.25):
-        self.kwargs = {'factor_type': factor_type, 'slope': slope}
         magnitude = 2. / (1 + slope ** 2)
         super(MSRAPrelu, self).__init__("gaussian", factor_type, magnitude)
+        self._kwargs = {'factor_type': factor_type, 'slope': slope}
 
 @register
 class Bilinear(Initializer):
