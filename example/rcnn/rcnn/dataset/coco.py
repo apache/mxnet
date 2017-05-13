@@ -190,7 +190,7 @@ class coco(IMDB):
         self._print_detection_metrics(coco_eval)
 
         eval_file = os.path.join(res_folder, 'detections_%s_results.pkl' % self.image_set)
-        with open(eval_file, 'w') as f:
+        with open(eval_file, 'wb') as f:
             cPickle.dump(coco_eval, f, cPickle.HIGHEST_PROTOCOL)
         print('coco eval results saved to %s' % eval_file)
 

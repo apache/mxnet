@@ -48,7 +48,8 @@ Previous Navbar Layout End -->
         <a href="{{ url_root }}" id="logo"><img src="http://data.mxnet.io/theme/mxnet.png"></a>
       </h1>
       <nav id="main-nav" class='nav-bar'>
-        {% for name in ['Get Started', 'Tutorials', 'How To'] %}
+        <a class="main-nav-link" href="{{url_root}}get_started/install.html">Get Started</a>
+        {% for name in ['Tutorials', 'How To'] %}
         <a class="main-nav-link" href="{{url_root}}{{name.lower()|replace(" ", "_")}}/index.html">{{name}}</a>
         {% endfor %}
 
@@ -74,7 +75,8 @@ Previous Navbar Layout End -->
       <div class="burgerIcon dropdown">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">☰</a>
           <ul id="burgerMenu" class="dropdown-menu">
-              {% for name in ['Get Started', 'Tutorials', 'How To', 'Model Zoo'] %}
+              <li><a href="{{url_root}}get_started/install.html">Get Started</a></li>
+              {% for name in ['Tutorials', 'How To'] %}
               <li><a href="{{url_root}}{{name.lower()|replace(" ", "_")}}/index.html">{{name}}</a></li>
               {% endfor %}
               {% for name in ['API'] %}
@@ -98,6 +100,7 @@ Previous Navbar Layout End -->
       </div>
       <div id="search-input-wrap">
           {{searchform('', False)}}
+          <div id="search-preview"></div>
       </div>
       <div id='searchIcon'>
           <span class="glyphicon glyphicon-search" aria-hidden="true"></span>

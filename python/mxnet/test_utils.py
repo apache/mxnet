@@ -238,7 +238,7 @@ def simple_forward(sym, ctx=None, is_train=False, **inputs):
     be returned as a list of NumPy arrays.
     """
     ctx = ctx or default_context()
-    inputs = {k: array(v) for k, v in inputs.iteritems()}
+    inputs = {k: array(v) for k, v in inputs.items()}
     exe = sym.bind(ctx, args=inputs)
     exe.forward(is_train=is_train)
     outputs = [x.asnumpy() for x in exe.outputs]
@@ -472,7 +472,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
 
 def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
                            aux_states=None, ctx=None):
-    """Compare foward call to expected value.
+    """Compares a symbol's forward results with the expected ones.
+    Prints error messages if the forward results are not the same as the expected ones.
 
     Parameters
     ---------
@@ -501,6 +502,17 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
             Contains the mapping between names of auxiliary states and their values.
     ctx : Context, optional
         running context
+
+    Example
+    -------
+    >>> shape = (2, 2)
+    >>> lhs = mx.symbol.Variable('lhs')
+    >>> rhs = mx.symbol.Variable('rhs')
+    >>> sym_dot = mx.symbol.dot(lhs, rhs)
+    >>> mat1 = mx.nd.array([[1, 2], [3, 4]])
+    >>> mat2 = mx.nd.array([[5, 6], [7, 8]])
+    >>> ret_expected = np.array([[19, 22], [43, 50]])
+    >>> check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
     """
     if ctx is None:
         ctx = default_context()
@@ -525,7 +537,8 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
 def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=None,
                             aux_states=None, grad_req='write', ctx=None):
-    """Compare backward call to expected value.
+    """Compares a symbol's backward results with the expected ones.
+    Prints error messages if the backward results are not the same as the expected results.
 
     Parameters
     ---------
@@ -559,6 +572,22 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         Gradient requirements. 'write', 'add' or 'null'.
     ctx : Context, optional
         Running context.
+
+    Example
+    -------
+    >>> lhs = mx.symbol.Variable('lhs')
+    >>> rhs = mx.symbol.Variable('rhs')
+    >>> sym_add = mx.symbol.elemwise_add(lhs, rhs)
+    >>> mat1 = mx.nd.array([[1, 2], [3, 4]])
+    >>> mat2 = mx.nd.array([[5, 6], [7, 8]])
+    >>> grad1 = mx.nd.zeros(shape)
+    >>> grad2 = mx.nd.zeros(shape)
+    >>> exec_add = sym_add.bind(default_context(), args={'lhs': mat1, 'rhs': mat2},
+    ... args_grad={'lhs': grad1, 'rhs': grad2}, grad_req={'lhs': 'write', 'rhs': 'write'})
+    >>> exec_add.forward(is_train=True)
+    >>> ograd = mx.nd.ones(shape)
+    >>> grad_expected = ograd.copy().asnumpy()
+    >>> check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
     """
     if ctx is None:
         ctx = default_context()

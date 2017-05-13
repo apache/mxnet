@@ -23,7 +23,7 @@ DMLC_REGISTER_PARAMETER(ReverseParam);
 
 NNVM_REGISTER_OP(Reshape)
 .add_alias("reshape")
-.describe(R"code(Reshapes the input array into a new shape.
+.describe(R"code(Reshapes the input array.
 
 .. note:: ``Reshape`` is deprecated, use ``reshape``
 
@@ -104,8 +104,25 @@ NNVM_REGISTER_OP(Flatten)
 .add_alias("flatten")
 .describe(R"code(Flattens the input array into a 2-D array by collapsing the higher dimensions.
 
-Assume the input array has shape ``(d1, d2, ..., dk)``, then ``flatten`` reshapes
-the input array into shape ``(d1, d2*...*dk)``.
+.. note:: `Flatten` is deprecated. Use `flatten` instead.
+
+For an input array with shape ``(d1, d2, ..., dk)``, `flatten` operation reshapes
+the input array into an output array of shape ``(d1, d2*...*dk)``.
+
+Example::
+
+    x = [[
+        [1,2,3],
+        [4,5,6],
+        [7,8,9]
+    ],
+    [    [1,2,3],
+        [4,5,6],
+        [7,8,9]
+    ]],
+
+    flatten(x) = [[ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9.],
+       [ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9.]]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -118,10 +135,10 @@ the input array into shape ``(d1, d2*...*dk)``.
   [](const NodeAttrs& attrs) {
   return std::vector<std::pair<int, int> >{{0, 0}};
 })
-.add_argument("data", "NDArray-or-Symbol", "Input data to reshape.");
+.add_argument("data", "NDArray-or-Symbol", "Input array.");
 
 NNVM_REGISTER_OP(transpose)
-.describe(R"code(Permute the dimensions of an array.
+.describe(R"code(Permutes the dimensions of an array.
 
 Examples::
 
@@ -179,7 +196,7 @@ Examples::
 
 
 NNVM_REGISTER_OP(expand_dims)
-.describe(R"code(Insert a new axis with size 1 into the array shape
+.describe(R"code(Inserts a new axis of size 1 into the array shape
 
 For example, given ``x`` with shape ``(2,3,4)``, then ``expand_dims(x, axis=1)``
 will return a new array with shape ``(2,1,3,4)``.
@@ -200,24 +217,31 @@ will return a new array with shape ``(2,1,3,4)``.
 .add_arguments(ExpandDimParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice)
-.describe(R"code(Crop a continuous region from the array.
+.add_alias("crop")
+.describe(R"code(Slices a contiguous region of the array.
 
-Assume the input array has *n* dimensions, given ``begin=(b_1, ..., b_n)`` and
-``end=(e_1, ..., e_n)``, then ``crop`` will return a region with shape
-``(e_1-b_1, ..., e_n-b_n)``. The result's *k*-th dimension contains elements
-from the *k*-th dimension of the input array with the open range ``[b_k, e_k)``.
+.. note:: ``crop`` is deprecated. Use ``slice`` instead.
 
-For example::
+This function returns a sliced continous region of the array between the indices given
+by `begin` and `end`.
+
+For an input array of `n` dimensions, slice operation with ``begin=(b_0, b_1...b_n-1)`` indices
+and ``end=(e_1, e_2, ... e_n)`` indices will result in an array with the shape
+``(e_1-b_0, ..., e_n-b_n-1)``.
+
+The resulting array's *k*-th dimension contains elements
+ from the *k*-th dimension of the input array with the open range ``[b_k, e_k)``.
+
+Example::
 
   x = [[  1.,   2.,   3.,   4.],
        [  5.,   6.,   7.,   8.],
        [  9.,  10.,  11.,  12.]]
 
-  crop(x, begin=(0,1), end=(2,4)) = [[ 2.,  3.,  4.],
+  slice(x, begin=(0,1), end=(2,4)) = [[ 2.,  3.,  4.],
                                      [ 6.,  7.,  8.]]
 
 )code" ADD_FILELINE)
-.add_alias("crop")
 .set_attr_parser(ParamParser<SliceParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", SliceShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
@@ -276,9 +300,12 @@ NNVM_REGISTER_OP(_crop_assign_scalar)
 .add_arguments(SimpleCropAssignScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice_axis)
-.describe(R"code(Slice along a given axis.
+.describe(R"code(Slices along a given axis.
 
-Examples:
+Returns an array slice along a given `axis` starting from the `begin` index
+to the `end` index.
+
+Examples::
 
   x = [[  1.,   2.,   3.,   4.],
        [  5.,   6.,   7.,   8.],
@@ -395,12 +422,18 @@ NNVM_REGISTER_OP(_backward_batch_dot)
 .set_attr<FCompute>("FCompute<cpu>", BatchDotBackward_<cpu>);
 
 NNVM_REGISTER_OP(clip)
-.describe(R"code(Clip (limit) the values in an array, elementwise
+.describe(R"code(Clips (limits) the values in an array.
 
-Given an interval, values outside the interval are clipped to the interval
-edges. That is::
+Given an interval, values outside the interval are clipped to the interval edges.
+Clipping ``x`` between `a_min` and `a_x` would be::
 
-   clip(x) = max(min(x, a_max)), a_min)
+   clip(x, a_min, a_max) = max(min(x, a_max), a_min))
+
+Example::
+
+    x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    clip(x,1,8) = [ 1.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  8.]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -410,7 +443,7 @@ edges. That is::
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Clip<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_clip" })
-.add_argument("data", "NDArray-or-Symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "Input array.")
 .add_arguments(ClipParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_clip)
@@ -421,9 +454,9 @@ NNVM_REGISTER_OP(_backward_clip)
 .set_attr<FCompute>("FCompute<cpu>", ClipGrad_<cpu>);
 
 NNVM_REGISTER_OP(repeat)
-.describe(R"code(Repeat elements of an array.
+.describe(R"code(Repeats elements of an array.
 
-In default, ``repeat`` flatten the input array into 1-D and then repeat the
+By default, ``repeat`` flattens the input array into 1-D and then repeats the
 elements::
 
   x = [[ 1, 2],
@@ -431,16 +464,19 @@ elements::
 
   repeat(x, repeats=2) = [ 1.,  1.,  2.,  2.,  3.,  3.,  4.,  4.]
 
-We can also choose a particular axis to repeat, in which a negative axis is
-interpreted counting from the backward::
+The parameter ``axis`` specifies the axis along which to perform repeat::
 
   repeat(x, repeats=2, axis=1) = [[ 1.,  1.,  2.,  2.],
                                   [ 3.,  3.,  4.,  4.]]
 
-  repeat(x, repeats=2, axis=-1) = [[ 1.,  2.],
-                                   [ 1.,  2.],
-                                   [ 3.,  4.],
-                                   [ 3.,  4.]]
+  repeat(x, repeats=2, axis=0) = [[ 1.,  2.],
+                                  [ 1.,  2.],
+                                  [ 3.,  4.],
+                                  [ 3.,  4.]]
+
+  repeat(x, repeats=2, axis=-1) = [[ 1.,  1.,  2.,  2.],
+                                   [ 3.,  3.,  4.,  4.]]
+
 )code" ADD_FILELINE)
 .set_num_outputs(1)
 .set_num_inputs(1)
@@ -464,7 +500,7 @@ NNVM_REGISTER_OP(_backward_repeat)
 .set_attr<FCompute>("FCompute<cpu>", RepeatOpBackward<cpu>);
 
 NNVM_REGISTER_OP(tile)
-.describe(R"code(Repeat the whole array by multiple times.
+.describe(R"code(Repeats the whole array multiple times.
 
 If ``reps`` has length *d*, and input array has dimension of *n*. There are
 there cases:
@@ -479,7 +515,7 @@ there cases:
                            [ 1.,  2.,  1.,  2.,  1.,  2.],
                            [ 3.,  4.,  3.,  4.,  3.,  4.]]
 
-- **n>d**. ``reps`` is promoted to length *n* by pre-pending 1’s to it. Thus for
+- **n>d**. ``reps`` is promoted to length *n* by pre-pending 1's to it. Thus for
   an input shape ``(2,3)``, ``repos=(2,)`` is treated as ``(1,2)``::
 
 
@@ -521,7 +557,21 @@ NNVM_REGISTER_OP(_backward_tile)
 .set_attr<FCompute>("FCompute<cpu>", TileOpBackward<cpu>);
 
 NNVM_REGISTER_OP(reverse)
-.MXNET_DESCRIBE("Reverse elements of an array with axis")
+.describe(R"code(Reverses the order of elements along given axis while preserving array shape.
+
+Note: reverse and flip are equivalent. We use reverse in the following examples.
+
+Examples::
+
+  x = [[ 0.,  1.,  2.,  3.,  4.],
+       [ 5.,  6.,  7.,  8.,  9.]]
+
+  reverse(x, axis=0) = [[ 5.,  6.,  7.,  8.,  9.],
+                        [ 0.,  1.,  2.,  3.,  4.]]
+
+  reverse(x, axis=1) = [[ 4.,  3.,  2.,  1.,  0.],
+                        [ 9.,  8.,  7.,  6.,  5.]]
+)code" ADD_FILELINE)
 .set_num_outputs(1)
 .set_num_inputs(1)
 .add_alias("flip")

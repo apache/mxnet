@@ -1,4 +1,5 @@
 var searchBox = $("#search-input-wrap");
+var TITLE = ['/get_started/', '/tutorials/', '/how_to/', '/api/', '/architecture/'];
 var APIsubMenu;
 $("#burgerMenu").children().each(function () {
     if($(this).children().first().html() == 'API') APIsubMenu = $(this).clone()
@@ -48,9 +49,21 @@ function navbar() {
     }
 };
 
+/*Show bottom border of current tab*/
+function showTab() {
+    var url = window.location.href;
+    for(var i = 0; i < TITLE.length; ++i) {
+        if(url.indexOf(TITLE[i]) != -1) {
+            var tab = $($('#main-nav').children().eq(i));
+            if(!tab.is('a')) tab = tab.find('a').first();
+            tab.css('border-bottom', '3px solid');
+        }
+    }
+}
 
 $(document).ready(function () {
     navbar();
+    showTab();
     $(window).resize(function () {
         navbar();
     });

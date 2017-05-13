@@ -82,25 +82,42 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
 class DataBatch(object):
     """A data batch.
 
+    MXNet's data iterator returns a batch of data for each `next` call.
+    This data contains `batch_size` number of examples.
+
+    If the input data consists of images, then shape of these images depend on
+    the `layout` attribute of `DataDesc` object in `provide_data` parameter.
+
+    If `layout` is set to 'NCHW' then, images should be stored in a 4-D matrix
+    of shape ``(batch_size, num_channel, height, width)``.
+    If `layout` is set to 'NHWC' then, images should be stored in a 4-D matrix
+    of shape ``(batch_size, height, width, num_channel)``.
+    The channels are often in RGB order.
+
     Parameters
     ----------
-    data : list of NDArray
+    data : list of `NDArray`, each array containing `batch_size` examples.
           A list of input data.
-    label : list of NDArray
+    label : list of `NDArray`, each array often containing a 1-dimensional array. optional
           A list of input labels.
     pad : int, optional
-          The number of examples padded at the batch end. It is used when the
-          examples read is less than the batch size.
+          The number of examples padded at the end of a batch. It is used when the
+          total number of examples read is not divisible by the `batch_size`.
+          These extra padded examples are ignored in prediction.
     index : numpy.array, optional
           The example indices in this batch.
     bucket_key : int, optional
-          The key of the bucket, used for bucket IO.
-    provide_data : list of (name, shape), optional
-          The *i*-th elements describes the name and shape of ``data[i]``.
-    provide_label : list of (name, shape), optional
-          The *i*-th elements describes the name and shape of ``label[i]``.
+          The bucket key, used for bucketing module.
+    provide_data : list of `DataDesc`, optional
+          A list of `DataDesc` objects. `DataDesc` is used to store
+          name, shape, type and layout information of the data.
+          The *i*-th element describes the name and shape of ``data[i]``.
+    provide_label : list of `DataDesc`, optional
+          A list of `DataDesc` objects. `DataDesc` is used to store
+          name, shape, type and layout information of the label.
+          The *i*-th element describes the name and shape of ``label[i]``.
     """
-    def __init__(self, data, label, pad=None, index=None,
+    def __init__(self, data, label=None, pad=None, index=None,
                  bucket_key=None, provide_data=None, provide_label=None):
         if data is not None:
             assert isinstance(data, (list, tuple)), "Data must be list of NDArrays"
@@ -451,26 +468,92 @@ def _init_data(data, allow_empty, default_name):
     return list(data.items())
 
 class NDArrayIter(DataIter):
-    """Iterating on either ``mx.nd.NDArray`` or ``numpy.ndarray``.
+    """Returns an iterator for ``mx.nd.NDArray`` or ``numpy.ndarray``.
+
+    Example usage:
+    ----------
+    >>> data = np.arange(40).reshape((10,2,2))
+    >>> labels = np.ones([10, 1])
+    >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')
+    >>> for batch in dataiter:
+    ...    print batch.data[0].asnumpy()
+    ...    batch.data[0].shape
+    [[[ 36.  37.]
+      [ 38.  39.]]
+
+     [[ 16.  17.]
+      [ 18.  19.]]
+
+     [[ 12.  13.]
+      [ 14.  15.]]]
+    (3L, 2L, 2L)
+    [[[ 32.  33.]
+      [ 34.  35.]]
+
+     [[  4.   5.]
+      [  6.   7.]]
+
+     [[ 24.  25.]
+      [ 26.  27.]]]
+    (3L, 2L, 2L)
+    [[[  8.   9.]
+      [ 10.  11.]]
+
+     [[ 20.  21.]
+      [ 22.  23.]]
+
+     [[ 28.  29.]
+      [ 30.  31.]]]
+    (3L, 2L, 2L)
+    >>> dataiter.provide_data # Returns a list of `DataDesc`
+    [DataDesc[data,(3, 2L, 2L),<type 'numpy.float32'>,NCHW]]
+    >>> dataiter.provide_label # Returns a list of `DataDesc`
+    [DataDesc[softmax_label,(3, 1L),<type 'numpy.float32'>,NCHW]]
+
+    In the above example, data is shuffled as `shuffle` parameter is set to `True`
+    and remaining examples are discarded as `last_batch_handle` parameter is set to `discard`.
+
+    Usage of `last_batch_handle` parameter:
+
+    >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='pad')
+    >>> batchidx = 0
+    >>> for batch in dataiter:
+    ...    batchidx += 1
+    ...
+    >>> batchidx  # Padding added after the examples read are over. So, 10/3+1 batches are created.
+    4
+    >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')
+    >>> batchidx = 0
+    >>> for batch in dataiter:
+    ...    batchidx += 1
+    ...
+    >>> batchidx # Remaining examples are discarded. So, 10/3 batches are created.
+    3
+
+    `NDArrayIter` also supports multiple input and labels.
+
+    >>> data = {'data1':np.zeros(shape=(10,2,2)), 'data2':np.zeros(shape=(20,2,2))}
+    >>> label = {'label1':np.zeros(shape=(10,1)), 'label2':np.zeros(shape=(20,1))}
+    >>> dataiter = mx.io.NDArrayIter(data, label, 3, True, last_batch_handle='discard')
 
     Parameters
     ----------
     data: array or list of array or dict of string to array
-        Input data
+        The input data.
     label: array or list of array or dict of string to array, optional
-        Input label
+        The input label.
     batch_size: int
-        Batch Size
+        Batch size of data.
     shuffle: bool, optional
-        Whether to shuffle the data
+        Whether to shuffle the data.
     last_batch_handle : str, optional
-        How to handle the last batch, can be 'pad', 'discard' or
+        How to handle the last batch. This parameter can be 'pad', 'discard' or
         'roll_over'. 'roll_over' is intended for training and can cause problems
         if used for prediction.
     data_name : str, optional
-        The data name
+        The data name.
     label_name : str, optional
-        The label name
+        The label name.
     """
     def __init__(self, data, label=None, batch_size=1, shuffle=False,
                  last_batch_handle='pad', data_name='data',

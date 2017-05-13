@@ -10,8 +10,18 @@
 namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_power)
-.describe(R"code(First array elements raised to powers from second array,
-element-wise with broadcasting.
+.describe(R"code(Returns result of first array elements raised to powers from second array, element-wise with broadcasting.
+
+Example::
+
+   x = [[ 1.,  1.,  1.],
+        [ 1.,  1.,  1.]]
+
+   y = [[ 0.],
+        [ 1.]]
+
+   broadcast_power(x, y) = [[ 2.,  2.,  2.],
+                            [ 4.,  4.,  4.]]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::power>)
@@ -33,7 +43,20 @@ NNVM_REGISTER_OP(_backward_broadcast_power)
                                                               mshadow_op::power_rgrad>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_maximum)
-.describe(R"code(Element-wise maximum of array elements with broadcasting.
+.describe(R"code(Returns element-wise maximum of the input arrays with broadcasting.
+
+This function compares two input arrays and returns a new array having the element-wise maxima.
+
+Example::
+
+   x = [[ 1.,  1.,  1.],
+        [ 1.,  1.,  1.]]
+
+   y = [[ 0.],
+        [ 1.]]
+
+   broadcast_maximum(x, y) = [[ 1.,  1.,  1.],
+                              [ 1.,  1.,  1.]]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::maximum>)
@@ -55,7 +78,20 @@ NNVM_REGISTER_OP(_backward_broadcast_maximum)
                                                               mshadow_op::lt>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_minimum)
-.describe(R"code(Element-wise minimum of array elements with broadcasting.
+.describe(R"code(Returns element-wise minimum of the input arrays with broadcasting.
+
+This function compares two input arrays and returns a new array having the element-wise minima.
+
+Example::
+
+   x = [[ 1.,  1.,  1.],
+        [ 1.,  1.,  1.]]
+
+   y = [[ 0.],
+        [ 1.]]
+
+   broadcast_maximum(x, y) = [[ 0.,  0.,  0.],
+                              [ 1.,  1.,  1.]]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::minimum>)
@@ -77,8 +113,26 @@ NNVM_REGISTER_OP(_backward_broadcast_minimum)
                                                               mshadow_op::gt>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_hypot)
-.describe(R"code(Given the "legs" of a right triangle, return its hypotenuse
+.describe(R"code( Returns the hypotenuse of a right angled triangle, given its "legs"
 with broadcasting.
+
+It is equivalent to doing :math:`sqrt(x_1^2 + x_2^2)`.
+
+Example::
+
+   x = [[ 3.,  3.,  3.]]
+
+   y = [[ 4.],
+        [ 4.]]
+
+   broadcast_hypot(x, y) = [[ 5.,  5.,  5.],
+                            [ 5.,  5.,  5.]]
+
+   z = [[ 0.],
+        [ 4.]]
+
+   broadcast_hypot(x, z) = [[ 3.,  3.,  3.],
+                            [ 5.,  5.,  5.]]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::hypot>)

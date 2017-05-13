@@ -32,7 +32,35 @@ class InitDesc(str):
 _INITIALIZER_REGISTRY = {}
 
 def register(klass):
-    """Register an intializer to the initializer factory."""
+    """Registers a custom initializer.
+
+    Custom initializers can be created by extending `mx.init.Initializer` and implementing the
+    required functions like `_init_weight` and `_init_bias`. The created initializer must be
+    registered using `mx.init.register` before it can be used.
+
+    Parameters
+    ----------
+    klass : class
+        A subclass of `mx.init.Initializer` that needs to be registered as a custom initializer.
+
+    Example
+    -------
+    >>> # Create and register a custom initializer that
+    ... # initializes weights to 0.1 and biases to 1.
+    ...
+    >>> @mx.init.register
+    ... class CustomInit(mx.init.Initializer):
+    ...   def __init__(self):
+    ...     super(CustomInit, self).__init__()
+    ...   def _init_weight(self, _, arr):
+    ...     arr[:] = 0.1
+    ...   def _init_bias(self, _, arr):
+    ...     arr[:] = 1
+    ...
+    >>> # Module is an instance of 'mxnet.module.Module'
+    ...
+    >>> module.init_params(CustomInit())
+    """
     assert issubclass(klass, Initializer), "Can only register subclass of Initializer"
     name = klass.__name__.lower()
     if name in _INITIALIZER_REGISTRY:
@@ -51,7 +79,24 @@ class Initializer(object):
         self.kwargs = kwargs
 
     def dumps(self):
-        """Save the initializer to string"""
+        """Saves the initializer to string
+
+        Returns
+        -------
+        str
+            JSON formatted string that describes the initializer.
+
+        Examples
+        --------
+        >>> # Create initializer and retrieve its parameters
+        ...
+        >>> init = mx.init.Normal(0.5)
+        >>> init.dumps()
+        '["normal", {"sigma": 0.5}]'
+        >>> init = mx.init.Xavier(factor_type="in", magnitude=2.34)
+        >>> init.dumps()
+        '["xavier", {"rnd_type": "uniform", "magnitude": 2.34, "factor_type": "in"}]'
+        """
         return json.dumps([self.__class__.__name__.lower(), self.kwargs])
 
     def __call__(self, desc, arr):
@@ -179,16 +224,20 @@ class Initializer(object):
 
 
 class Load(object):
-    """Initialize by loading data from file or dict.
+    """Initializes variables by loading data from file or dict.
+
+    **Note** Load will drop ``arg:`` or ``aux:`` from name and
+    initialize the variables that match with the prefix dropped.
 
     Parameters
     ----------
-    param: str or dict of str->NDArray
+    param: str or dict of str->`NDArray`
         Parameter file or dict mapping name to NDArray.
     default_init: Initializer
-        Default initializer when name is not found in param.
+        Default initializer when name is not found in `param`.
     verbose: bool
-        Log source when initializing.
+        Flag for enabling logging of source when initializing.
+
     """
     def __init__(self, param, default_init=None, verbose=False):
         if isinstance(param, str):
@@ -222,14 +271,33 @@ class Load(object):
 
 
 class Mixed(object):
-    """Initialize with multiple initializers.
+    """Initialize parameters using multiple initializers.
 
     Parameters
     ----------
     patterns: list of str
-        List of regular expression patterns to match parameter names.
+        List of regular expressions matching parameter names.
     initializers: list of Initializer
-        List of Initializer corrosponding to patterns.
+        List of initializers corresponding to `patterns`.
+
+    Example
+    -------
+    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize biases to zero
+    ... # and every other parameter to random values with uniform distribution.
+    ...
+    >>> init = mx.initializer.Mixed(['bias', '.*'], [mx.init.Zero(), mx.init.Uniform(0.1)])
+    >>> module.init_params(init)
+    >>>
+    >>> for dictionary in module.get_params():
+    ...     for key in dictionary:
+    ...         print(key)
+    ...         print(dictionary[key].asnumpy())
+    ...
+    fullyconnected1_weight
+    [[ 0.0097627   0.01856892  0.04303787]]
+    fullyconnected1_bias
+    [ 0.]
+
     """
     def __init__(self, patterns, initializers):
         assert len(patterns) == len(initializers)
@@ -245,7 +313,22 @@ class Mixed(object):
 
 @register
 class Zero(Initializer):
-    """Initialize the weight to 0."""
+    """Initializes weights to zero.
+
+    Example
+    -------
+    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights to zero.
+    ...
+    >>> init = mx.initializer.Zero()
+    >>> module.init_params(init)
+    >>> for dictionary in module.get_params():
+    ...     for key in dictionary:
+    ...         print(key)
+    ...         print(dictionary[key].asnumpy())
+    ...
+    fullyconnected0_weight
+    [[ 0.  0.  0.]]
+    """
     def __init__(self):
         super(Zero, self).__init__()
 
@@ -254,7 +337,22 @@ class Zero(Initializer):
 
 @register
 class One(Initializer):
-    """Initialize the weight to 1."""
+    """Initializes weights to one.
+
+    Example
+    -------
+    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights to one.
+    ...
+    >>> init = mx.initializer.One()
+    >>> module.init_params(init)
+    >>> for dictionary in module.get_params():
+    ...     for key in dictionary:
+    ...         print(key)
+    ...         print(dictionary[key].asnumpy())
+    ...
+    fullyconnected0_weight
+    [[ 1.  1.  1.]]
+    """
     def __init__(self):
         super(One, self).__init__()
 
@@ -263,7 +361,13 @@ class One(Initializer):
 
 @register
 class Constant(Initializer):
-    """Initialize the weight to a scalar value."""
+    """Initializes the weights to a scalar value.
+
+    Parameters
+    ----------
+    value : float
+        Fill value.
+    """
     def __init__(self, value):
         super(Constant, self).__init__(value=value)
         self.value = value
@@ -273,12 +377,29 @@ class Constant(Initializer):
 
 @register
 class Uniform(Initializer):
-    """Initialize the weight with value uniformly sampled from ``[-scale, scale]``.
+    """Initializes weights with random values uniformly sampled from a given range.
 
     Parameters
     ----------
     scale : float, optional
-        The scale of uniform distribution.
+        The bound on the range of the generated random values.
+        Values are generated from the range [-`scale`, `scale`].
+        Default scale is 0.07.
+
+    Example
+    -------
+    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights
+    >>> # to random values uniformly sampled between -0.1 and 0.1.
+    ...
+    >>> init = mx.init.Uniform(0.1)
+    >>> module.init_params(init)
+    >>> for dictionary in module.get_params():
+    ...     for key in dictionary:
+    ...         print(key)
+    ...         print(dictionary[key].asnumpy())
+    ...
+    fullyconnected0_weight
+    [[ 0.01360891 -0.02144304  0.08511933]]
     """
     def __init__(self, scale=0.07):
         super(Uniform, self).__init__(scale=scale)
@@ -289,12 +410,29 @@ class Uniform(Initializer):
 
 @register
 class Normal(Initializer):
-    """Initialize the weight with value sampled according to ``normal(0, sigma)``.
+    """Initializes weights with random values sampled from a normal distribution
+    with a mean of zero and standard deviation of `sigma`.
 
     Parameters
     ----------
     sigma : float, optional
-        Standard deviation for gaussian distribution.
+        Standard deviation of the normal distribution.
+        Default standard deviation is 0.01.
+
+    Example
+    -------
+    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights
+    >>> # to random values sampled from a normal distribution.
+    ...
+    >>> init = mx.init.Normal(0.5)
+    >>> module.init_params(init)
+    >>> for dictionary in module.get_params():
+    ...     for key in dictionary:
+    ...         print(key)
+    ...         print(dictionary[key].asnumpy())
+    ...
+    fullyconnected0_weight
+    [[-0.3214761  -0.12660924  0.53789419]]
     """
     def __init__(self, sigma=0.01):
         super(Normal, self).__init__(sigma=sigma)
@@ -342,18 +480,35 @@ class Orthogonal(Initializer):
 
 @register
 class Xavier(Initializer):
-    """Initialize the weight with Xavier or other similar schemes.
+    """Returns an initializer performing "Xavier" initialization for weights.
+
+    This initializer is designed to keep the scale of gradients roughly the same
+    in all layers.
+
+    By default, `rnd_type` is ``'uniform'`` and `factor_type` is ``'avg'``,
+    the initializer fills the weights with random numbers in the range
+    of :math:`[-c, c]`, where :math:`c = \\sqrt{\\frac{3.}{0.5 * (n_{in} + n_{out})}}`.
+    :math:`n_{in}` is the number of neurons feeding into weights, and :math:`n_{out}` is
+    the number of neurons the result is fed to.
+
+    If `rnd_type` is ``'uniform'`` and `factor_type` is ``'in'``,
+    the :math:`c = \\sqrt{\\frac{3.}{n_{in}}}`.
+    Similarly when `factor_type` is ``'out'``, the :math:`c = \\sqrt{\\frac{3.}{n_{out}}}`.
+
+    If `rnd_type` is ``'gaussian'`` and `factor_type` is ``'avg'``,
+    the initializer fills the weights with numbers from normal distribution with
+    a standard deviation of :math:`\\sqrt{\\frac{3.}{0.5 * (n_{in} + n_{out})}}`.
 
     Parameters
     ----------
     rnd_type: str, optional
-        Random generator type, can be ```gaussian`` or ``uniform``.
+        Random generator type, can be ``'gaussian'`` or ``'uniform'``.
 
     factor_type: str, optional
-        Can be ``avg``, ``in``, or ``out``.
+        Can be ``'avg'``, ``'in'``, or ``'out'``.
 
     magnitude: float, optional
-        Scale of random number range.
+        Scale of random number.
     """
     def __init__(self, rnd_type="uniform", factor_type="avg", magnitude=3):
         super(Xavier, self).__init__(rnd_type=rnd_type, factor_type=factor_type,
@@ -394,10 +549,13 @@ class MSRAPrelu(Xavier):
     Human-Level Performance on ImageNet Classification*, available at
     https://arxiv.org/abs/1502.01852.
 
+    This initializer is proposed for initialization related to ReLu activation,
+    it maked some changes on top of Xavier method.
+
     Parameters
     ----------
     factor_type: str, optional
-        Can be ``avg``, ``in``, or ``out``.
+        Can be ``'avg'``, ``'in'``, or ``'out'``.
 
     slope: float, optional
         initial slope of any PReLU (or similar) nonlinearities.
@@ -433,7 +591,7 @@ class LSTMBias(Initializer):
     Parameters
     ----------
     forget_bias: float, bias for the forget gate.
-    Jozefowicz et al. 2015 recommends setting this to 1.0.
+        Jozefowicz et al. 2015 recommends setting this to 1.0.
     """
     def __init__(self, forget_bias):
         super(LSTMBias, self).__init__(forget_bias=forget_bias)

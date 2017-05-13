@@ -23,4 +23,4 @@ requires:
   GraphViz: '2.14'
   Mouse: v2.1.0
   PDL: '2.007'
-version: '0.9501'
+version: '0.9506'

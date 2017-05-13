@@ -40,9 +40,23 @@ method seed(Int $seed_state)
     check_call(AI::MXNetCAPI::RandomSeed($seed_state));
 }
 
-*uniform = sub { my $self = shift;
-    return AI::MXNet::NDArray->_sample_uniform(@_);
-};
-*normal = sub { my $self = shift;
-    return AI::MXNet::NDArray->_sample_normal(@_);
-};
+for my $method (
+        [qw/_sample_uniform uniform/],
+        [qw/_sample_normal normal/],
+        [qw/_sample_gamma gamma/],
+        [qw/_sample_exponential exponential/],
+        [qw/_sample_poisson poisson/],
+        [qw/_sample_negbinomial negative_binomial/],
+        [qw/_sample_gennegbinomial generalized_negative_binomial/],
+)
+{
+    my ($nd_method_name, $rnd_method_name) = @{$method};
+    {
+        no strict 'refs';
+        *{__PACKAGE__."::$rnd_method_name"} = sub { shift;
+            return AI::MXNet::NDArray->$nd_method_name(@_);
+        };
+    }
+}
+
+1;

@@ -1,5 +1,11 @@
 Revision history for Perl extension AI::MXNetCAPI
 
+0.9506  Sat Apr 29 20:26:50 PDT 2017
+        - removed compiled swig file.
+
+0.9504  Wed Apr 19 19:07:02 PDT 2017
+        - callbacks bugfix.
+
 0.95  Sun Mar 26 17:42:02 PDT 2017
         - visible on http://mxnet.io
 

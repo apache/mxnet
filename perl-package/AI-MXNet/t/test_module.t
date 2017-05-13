@@ -1,9 +1,9 @@
 use strict;
 use warnings;
-use Test::More tests => 17;
+use Test::More tests => 23;
 use AI::MXNet qw(mx);
 use AI::MXNet::Base;
-use AI::MXNet::TestUtils qw(almost_equal);
+use AI::MXNet::TestUtils qw(almost_equal enumerate);
 
 sub test_module_layout
 {
@@ -218,6 +218,123 @@ sub test_module_switch_bucket
     );
 }
 
+sub test_monitor
+{
+    mx->random->seed(11);
+    my $data = mx->nd->array([[0.05, .10]]);
+    my $label = mx->nd->array([[.01, 0.99]]);
+    my $train_data = mx->io->NDArrayIter($data, label => $label, batch_size=>1);
+
+    # symbols
+    my $x = mx->symbol->Variable('data');
+    $x = mx->symbol->FullyConnected(name=>'fc_0', data=>$x, num_hidden=>2);
+    $x = mx->symbol->Activation(name=>"act_0", data=>$x, act_type=>'sigmoid');
+    $x = mx->symbol->FullyConnected(name=>'fc_1', data=>$x, num_hidden=>2);
+    $x = mx->symbol->Activation(name=>"act_1", data=>$x, act_type=>'sigmoid');
+    $x = mx->symbol->LinearRegressionOutput(data=>$x, name=>'softmax', grad_scale=>2);
+
+    # create monitor
+    my $mean_abs = sub { my ($x) = @_;
+        return $x->abs->sum/$x->size;
+    };
+    my $mon = mx->mon->Monitor(1, stat_func=>$mean_abs, pattern=>'.*', sort=>1);
+
+    # create module
+    my $mod = mx->mod->Module($x, context=>[mx->cpu()]);
+    $mod->bind(data_shapes=>$train_data->provide_data, label_shapes=>$train_data->provide_label,
+                    for_training=>1);
+    $mod->install_monitor($mon);
+    my $arg_params = {fc_0_weight => mx->nd->array([[.15, .20], [.25, .30]]),
+                  fc_0_bias  => mx->nd->array([.35, .35]),
+                  fc_1_weight => mx->nd->array([[.40, .45], [.50, .55]]),
+                  fc_1_bias  => mx->nd->array([.60, .60])};
+    $mod->init_params(arg_params=>$arg_params);
+
+    my $data_batch = <$train_data>;
+    $mon->tic();
+    $mod->forward_backward($data_batch);
+    my $res = $mon->toc();
+    my $keys = ['act_0', 'act_1', 'data', 'fc_0', 'fc_1', 'softmax'];
+    my $mon_result_counts = [0, 0, 0, 0, 0, 0];
+    ok(@$res == 21);
+    for my $r (@$res)
+    {
+        my ($n, $k, $v) = @$r;
+        enumerate(sub {
+            my ($idx, $key) = @_;
+            if($k =~ /^$key/)
+            {
+                $mon_result_counts->[$idx] += 1;
+                return;
+            }
+        }, $keys);
+    }
+    is_deeply($mon_result_counts, [2, 2, 1, 6, 6, 4]);
+}
+
+sub test_module_dtype
+{
+    my $dtype = 'float16';
+    my $dshape = [3, 8, 7];
+
+    my $sym = mx->sym->Variable('data');
+    $sym    = mx->sym->Activation(data=>$sym, act_type=>'relu', __layout__=>'TNC');
+
+    my $mod = mx->mod->Module($sym, data_names=>['data'], context => [mx->cpu(0), mx->cpu(1)]);
+    $mod->bind(data_shapes=>[
+        mx->io->DataDesc('data', $dshape, dtype => $dtype, layout=>'TNC')
+    ]);
+    $mod->init_params();
+    $mod->forward(
+        mx->io->DataBatch(
+            data=>[mx->nd->ones($dshape, dtype=>$dtype)]
+        )
+    );
+    $mod->backward([mx->nd->ones($dshape, dtype=>$dtype)]);
+
+    for my $x (@{ $mod->get_outputs() })
+    {
+        is($x->dtype, $dtype);
+    }
+}
+
+sub test_module_input_grads
+{
+    my $a = mx->sym->Variable('a', __layout__=>'NC');
+    my $b = mx->sym->Variable('b', __layout__=>'NC');
+    my $c = mx->sym->Variable('c', __layout__=>'NC');
+
+    $c = $a + 2 * $b + 3 * $c;
+    my $net = mx->mod->Module(
+        $c, data_names=>['b', 'c', 'a'],
+        context=>[mx->cpu(0), mx->cpu(1)]
+    );
+    $net->bind(
+        data_shapes      => [['b', [5, 5]], ['c', [5, 5]], ['a', [5, 5]]],
+        inputs_need_grad => 1
+    );
+    $net->init_params();
+
+    $net->forward(
+        mx->io->DataBatch(data => [
+            mx->nd->ones([5, 5]),
+            mx->nd->ones([5, 5]),
+            mx->nd->ones([5, 5])
+        ])
+    );
+    $net->backward([mx->nd->ones([5, 5])]);
+    my $input_grads = $net->get_input_grads();
+    my $b_grad = $input_grads->[0]->aspdl;
+    my $c_grad = $input_grads->[1]->aspdl;
+    my $a_grad = $input_grads->[2]->aspdl;
+    ok(($a_grad == 1)->all);
+    ok(($b_grad == 2)->all);
+    ok(($c_grad == 3)->all);
+}
+
+test_module_input_grads();
+test_module_dtype();
+test_monitor();
 test_module_switch_bucket();
 test_module_layout();
 test_module_states();

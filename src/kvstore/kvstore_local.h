@@ -43,7 +43,7 @@ class KVStoreLocal : public KVStore {
       CHECK(local_.find(keys[i]) == local_.end())
           << "duplicate init of key " << keys[i];
       local_[keys[i]] = values[i].Copy(pinned_ctx_);
-      comm_->Init(keys[i], values[i].shape());
+      comm_->Init(keys[i], values[i].shape(), values[i].dtype());
     }
   }
 

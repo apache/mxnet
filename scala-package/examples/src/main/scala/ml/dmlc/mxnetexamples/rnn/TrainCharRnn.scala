@@ -150,7 +150,9 @@ object TrainCharRnn {
           epochDone = true
         }
         val (name, value) = evalMetric.get
-        logger.info(s"Epoch[$epoch] Train-$name=$value")
+        name.zip(value).foreach { case (n, v) =>
+          logger.info(s"Epoch[$epoch] Train-$n=$v")
+        }
         val toc = System.currentTimeMillis
         logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
 
