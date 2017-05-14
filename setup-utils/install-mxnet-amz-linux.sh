@@ -39,7 +39,9 @@ sudo make PREFIX=/usr/local install
 export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 
 # Install MXNet Core without CUDA
-MXNET_HOME="$HOME/mxnet/"
+CUR_DIR=$(dirname $0)
+cd ${CUR_DIR}/..
+MXNET_HOME=$(pwd)
 cd "$MXNET_HOME"
 cp make/config.mk .
 echo "USE_CUDA=0" >>config.mk
