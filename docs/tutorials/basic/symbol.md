@@ -70,9 +70,9 @@ def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0), name=None, s
     bn = mx.sym.BatchNorm(data=conv, name='bn_%s%s' %(name, suffix))
     act = mx.sym.Activation(data=bn, act_type='relu', name='relu_%s%s' %(name, suffix))
     return act
-prev = mx.sym.Variable(name="Previos Output")
+prev = mx.sym.Variable(name="Previous Output")
 conv_comp = ConvFactory(data=prev, num_filter=64, kernel=(7,7), stride=(2, 2))
-shape = {"Previos Output" : (128, 3, 28, 28)}
+shape = {"Previous Output" : (128, 3, 28, 28)}
 mx.viz.plot_network(symbol=conv_comp, shape=shape)
 ```
 
@@ -96,7 +96,7 @@ def InceptionFactoryA(data, num_1x1, num_3x3red, num_3x3, num_d3x3red, num_d3x3,
     # concat
     concat = mx.sym.Concat(*[c1x1, c3x3, cd3x3, cproj], name='ch_concat_%s_chconcat' % name)
     return concat
-prev = mx.sym.Variable(name="Previos Output")
+prev = mx.sym.Variable(name="Previous Output")
 in3a = InceptionFactoryA(prev, 64, 64, 64, 64, 96, "avg", 32, name="in3a")
 mx.viz.plot_network(symbol=in3a, shape=shape)
 ```
