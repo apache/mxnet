@@ -383,7 +383,7 @@ and returns. There are two benefits for to this approach:
 2. It is easier for the backend engine to explore further optimization, such as auto parallelization.
 
 The backend engine can resolve data dependencies and schedule the computations
-correctly in manner that is transparent to the frontend users. We can explicitly call the
+correctly in a manner that is transparent to the frontend users. We can explicitly call the
 method `wait_to_read` on the result NDArray to wait until the computation
 finishes. Operations that copy data from an NDArray to other packages, such as
 `asnumpy`, will implicitly call `wait_to_read`.
