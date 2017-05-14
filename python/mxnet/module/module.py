@@ -527,6 +527,10 @@ class Module(BaseModule):
     def forward(self, data_batch, is_train=None):
         """Forward computation.
 
+        See Also
+        ----------
+        BaseModule :meth:`mxnet.BaseModule.forward`.
+
         Parameters
         ----------
         data_batch : DataBatch
@@ -551,7 +555,7 @@ class Module(BaseModule):
         self._exec_group.backward(out_grads=out_grads)
 
     def update(self):
-        """Update parameters according to the installed optimizer and the gradients computed
+        """Updates parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch.
         """
         assert self.binded and self.params_initialized and self.optimizer_initialized
