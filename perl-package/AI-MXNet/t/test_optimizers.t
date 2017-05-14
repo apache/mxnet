@@ -210,7 +210,7 @@ method update($index, $weight, $grad, $state)
         if(defined $self->clip_gradient)
         {
             $weight .= ((1 - $lr*$wd)*$weight -
-                $lr*mx->nd->clip($grad*$self->rescale_grad, -$self->clip_gradient, $self->clip_gradient)
+                $lr * mx->nd->clip($grad*$self->rescale_grad, -$self->clip_gradient, $self->clip_gradient)
             );
         }
         else
@@ -224,7 +224,7 @@ method update($index, $weight, $grad, $state)
         if(defined $self->clip_gradient)
         {
             $mom .= ($self->momentum*$mom - $lr*$wd*$weight -
-                $lr*mx->nd->clip($grad*$self->rescale_grad, -$self->clip_gradient, $self->clip_gradient)
+                $lr * mx->nd->clip($grad*$self->rescale_grad, -$self->clip_gradient, $self->clip_gradient)
             );
             $weight += $mom;
         }
