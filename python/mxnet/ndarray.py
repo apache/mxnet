@@ -506,8 +506,12 @@ fixed-size items.
         shape : tuple of int
             The new shape should not change the array size, namely
             ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
-            One shape dimension can be -1. In this case, the value is inferred
+
+            One dimension can be -1. In this case, the value is inferred
             from the length of the array and remaining dimensions.
+
+            0 Dimensions in shape will be copied from original shape, i.e.
+            if x.shape == (3, 4, 5), x.reshape((0, 20)).shape will be (3, 20).
 
 
         Returns
@@ -537,22 +541,6 @@ fixed-size items.
                [-1., -1., -1.]], dtype=float32)
         """
         handle = NDArrayHandle()
-
-        # Infer the correct size for dim == -1
-        shape = list(shape)
-        for index, element in enumerate(shape):
-            if element == -1:
-                remainder = list(self.shape)
-                for i, e in enumerate(shape):  # pylint: disable=invalid-name
-                    if i != index and e == -1:
-                        raise ValueError('Only one dimension can be inferred.')
-                    try:
-                        remainder.remove(e)
-                    except ValueError:
-                        pass
-                shape[index] = np.product(remainder)
-                # We have already gone through the whole shape, break
-                break
 
         # Actual reshape
         check_call(_LIB.MXNDArrayReshape(self.handle,
@@ -959,7 +947,7 @@ def empty(shape, ctx=None, dtype=mx_real_t):
         ctx = Context.default_ctx
     return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
 
-def zeros(shape, ctx=None, dtype=mx_real_t):
+def zeros(shape, ctx=None, dtype=mx_real_t, **kwargs):
     """Returns a new array filled with all zeros, with the given shape and type.
 
     Parameters
@@ -985,13 +973,14 @@ def zeros(shape, ctx=None, dtype=mx_real_t):
     >>> mx.nd.zeros((1,2), mx.gpu(0), 'float16').asnumpy()
     array([[ 0.,  0.]], dtype=float16)
     """
+    # pylint: disable= unused-argument
     if ctx is None:
         ctx = Context.default_ctx
     # pylint: disable= no-member, protected-access
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype)
     # pylint: enable= no-member, protected-access
 
-def ones(shape, ctx=None, dtype=mx_real_t):
+def ones(shape, ctx=None, dtype=mx_real_t, **kwargs):
     """Returns a new array filled with all ones, with the given shape and type.
 
     Parameters
@@ -1018,6 +1007,7 @@ def ones(shape, ctx=None, dtype=mx_real_t):
     >>> mx.nd.ones((1,2), dtype='float16').asnumpy()
     array([[ 1.,  1.]], dtype=float16)
     """
+    # pylint: disable= unused-argument
     if ctx is None:
         ctx = Context.default_ctx
     # pylint: disable= no-member, protected-access
