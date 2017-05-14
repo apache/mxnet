@@ -47,8 +47,9 @@ def _apply_weighting(F, loss, weight=None, sample_weight=None):
 
 
 def _unpack_symbol(loss):
+    """unpack a loss symbol into outputs, extra_outputs and losses"""
     assert isinstance(loss, symbol.Symbol)
-    outputs = symbol.Group([i for i in loss if i.attr('__output__') == 'out'])
+    outputs = symbol.Group([i for i in loss if i.attr('__output__') == 'pred'])
     extra_outputs = symbol.Group([i for i in loss if i.attr('__output__') == 'extra'])
     losses = symbol.Group([i for i in loss if i.attr('__output__') == 'loss'])
     return outputs, extra_outputs, losses
@@ -56,14 +57,46 @@ def _unpack_symbol(loss):
 
 def custom_loss(loss, output, label, weight=None, sample_weight=None,
                 extra_outputs=(), metrics=None, name='custom'):
+    """Construct user defined loss symbol.
+
+    Parameters
+    ----------
+    loss : Symbol
+        loss value computed from output and label.
+    output : Symbol
+        output of the network
+    label : Symbol
+        target to compare output against
+    weight : float or None
+        global scalar weight for loss
+    sample_weight : Symbol or None
+        per sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has
+        shape (64, 10) and you want to weight each sample
+        in the batch, sample_weight should have shape (64, 1)
+
+    Returns
+    -------
+    loss : BaseLoss
+        created loss
+
+    Example
+    -------
+    The following code defines a least square loss (same as `nn.l2_loss`)::
+        data = mx.sym.var('data')
+        output = mx.sym.FullyConnected(data, num_hidden=1)
+        label = mx.sym.var('label')
+        loss = mx.sym.square(output - label.reshape((-1, 1)))/2
+        loss = nn.custom_loss(loss, output, label, name='l2')
+    """
     F = _get_F(loss)
     loss = _apply_weighting(F, loss, weight, sample_weight)
     if F is ndarray:
         return loss
-    outputs = [F.stop_gradient(i, name=i.name+'_out', __output__='out')
-               for i in output]
-    extra_outputs = [F.stop_gradient(i, name=i.name+'_out', __output__='extra')
-                     for i in extra_outputs]
+    outputs = symbol.Group([F.stop_gradient(i, name=i.name+'_out', __output__='pred')
+                            for i in output])
+    extra_outputs = symbol.Group([F.stop_gradient(i, name=i.name+'_out', __output__='extra')
+                                  for i in extra_outputs])
 
     loss = F.make_loss(loss, name=name, __output__='loss')
 
@@ -73,11 +106,19 @@ def custom_loss(loss, output, label, weight=None, sample_weight=None,
         metrics.label_names = label.list_outputs()
         loss._set_attr(__metric__=json.dumps(metrics.get_config()))
 
-    return symbol.Group(outputs + extra_outputs + [loss])
+    return symbol.Group([outputs, extra_outputs, loss])
+
+
+def multitask_loss(losses):
+    F = _get_F(losses[0])
+    if F is ndarray:
+        return losses
+    out, extra, loss = zip(*[_unpack_symbol(i) for i in losses])
+    return symbol.Group(out+extra+loss)
 
 
 def l2_loss(output, label, weight=1., sample_weight=None,
-            extra_outputs=(), metrics='mse', name='l2'):
+            extra_outputs=(), metrics=None, name='l2'):
     """Calculate the mean squared error between output and label:
 
     .. math::
@@ -102,19 +143,17 @@ def l2_loss(output, label, weight=1., sample_weight=None,
 
     Returns
     -------
-    loss : BaseLoss
+    loss : Symbol
         created loss
     """
     F = _get_F(output)
-    if weight is None:
-        weight = 1.
     loss = F.square(output.reshape(shape=(-1,)) - label.reshape(shape=(-1,)))
     return custom_loss(loss, output, label, weight/2, sample_weight,
                        extra_outputs, metrics, name)
 
 
 def l1_loss(output, label, weight=None, sample_weight=None,
-            extra_outputs=(), metrics='mae', name='l1'):
+            extra_outputs=(), metrics=None, name='l1'):
     """Calculate the mean absolute error between output and label:
 
     .. math::
@@ -139,7 +178,7 @@ def l1_loss(output, label, weight=None, sample_weight=None,
 
     Returns
     -------
-    loss : BaseLoss
+    loss : Symbol
         created loss
     """
     F = _get_F(output)
@@ -186,7 +225,7 @@ def softmax_cross_entropy_loss(output, label, sparse_label=True, axis=-1,
 
     Returns
     -------
-    loss : BaseLoss
+    loss : Symbol
         created loss
     """
     F = _get_F(output)

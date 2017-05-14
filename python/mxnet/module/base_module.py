@@ -80,33 +80,37 @@ def _parse_metric(sym, metrics):
     output_names = []
     if not metrics:
         metrics = []
+    elif isinstance(metrics, (str, metric.EvalMetric)):
+        metrics = [metric.create(metrics)]
+    else:
+        metrics = [metric.create(i) for i in metrics]
+
     sym_metrics = []
     loss_metrics = []
     for i in sym:
         tag = i.attr('__output__')
-        if tag == 'loss':
+        if tag is None or tag == 'pred':
+            output_names.append(i.list_outputs()[0])
+        elif tag == 'loss':
             name = i.list_outputs()[0]
             loss_metrics.append(
                 metric.Loss(name=name, output_names=[name],
                             label_names=[]))
-        elif tag != 'extra':
-            output_names.append(i.list_outputs()[0])
 
         str_metric = i.attr('__metric__')
         if str_metric:
             sym_metrics.append(metric.create(str_metric))
 
-    if isinstance(metrics, (str, metric.EvalMetric)):
-        metrics = [metrics]
-    metrics = [metric.create(i) for i in metrics]
     for m in metrics:
         m.output_names = output_names
     metrics += sym_metrics
     metrics += loss_metrics
     if len(metrics) > 1:
         return metric.CompositeEvalMetric(metrics)
-    else:
+    elif len(metrics) == 1:
         return metrics[0]
+    else:
+        return None
 
 
 class BaseModule(object):
@@ -223,7 +227,7 @@ class BaseModule(object):
         self.forward(data_batch, is_train=True)
         self.backward()
 
-    def score(self, eval_data, eval_metric, num_batch=None, batch_end_callback=None,
+    def score(self, eval_data, eval_metric=None, num_batch=None, batch_end_callback=None,
               score_end_callback=None,
               reset=True, epoch=0):
         """Runs prediction on ``eval_data`` and evaluates the performance according to
@@ -404,7 +408,7 @@ class BaseModule(object):
 
         return output_list
 
-    def fit(self, train_data, eval_data=None, eval_metric='acc',
+    def fit(self, train_data, eval_data=None, eval_metric=None,
             epoch_end_callback=None, batch_end_callback=None, kvstore='local',
             optimizer='sgd', optimizer_params=(('learning_rate', 0.01),),
             eval_end_callback=None,
@@ -499,6 +503,9 @@ class BaseModule(object):
         if validation_metric is None:
             validation_metric = eval_metric
         eval_metric = _parse_metric(self._symbol, eval_metric)
+        if eval_metric is None:
+            eval_metric = metric.create('acc')
+            validation_metric = 'acc'
 
         ################################################################################
         # training loop
