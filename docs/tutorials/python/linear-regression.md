@@ -1,6 +1,6 @@
 # MXNet Basics - Linear Regression using MXNet
 
-In this tutorial we'll walk though how one can implement Linear Regression using MXNet APIs.
+In this tutorial we'll walk though how one can implement *linear regression* using MXNet APIs.
 
 The function we are trying to learn is: *y = x<sub>1</sub>  +  2x<sub>2</sub>*, where *(x<sub>1</sub>,x<sub>2</sub>)* are input features and *y* is the corresponding label.
 
@@ -28,8 +28,9 @@ eval_label = np.array([11,26,16])
 ```
 
 Once we have the data ready, we need to put it into an iterator and specify
-parameters such as `batch_size` and `shuffle`. `batch_size` determines the amount
-of data the iterator feeds during each time and `shuffle` tells whether or not to shuffle  input data.
+parameters such as `batch_size` and `shuffle`. `batch_size` specifies the number
+of examples shown to the model each time we update its parameters and `shuffle`
+tells the iterator to randomize the order in which examples are shown to the model.
 
 
 ```python
@@ -37,7 +38,7 @@ train_iter = mx.io.NDArrayIter(train_data,train_label, batch_size, shuffle=True,
 eval_iter = mx.io.NDArrayIter(eval_data, eval_label, batch_size, shuffle=False)
 ```
 
-In the above example, we have made use of `NDArrayIter`, which is useful to iterate
+In the above example, we have made use of `NDArrayIter`, which is useful for iterating
 over numpy arrays. In general, there are different types of iterators in
 MXNet and you can use one based on the type of data you are processing.
 Documentation for iterators can be found [here](http://mxnet.io/api/python/io.html).
@@ -49,10 +50,10 @@ Documentation for iterators can be found [here](http://mxnet.io/api/python/io.ht
    
 2. **Symbol:** The actual MXNet neural network is composed using symbols. MXNet has
    different types of symbols, including variable placeholders for input data,
-   neural network layers and operators that manipulate NDArrays.
+   neural network layers, and operators that manipulate NDArrays.
 
 3. **Module:** The module class in MXNet is used to define the overall computation.
-	It is initialized with model we want to train, the training inputs (data and labels)
+	It is initialized with the model we want to train, the training inputs (data and labels)
 	and some additional parameters such as learning rate and the optimization
 	algorithm to use.
 
@@ -63,7 +64,7 @@ and make up various components of the model. Symbols are used to define:
 
 1. **Variables:** A variable is a placeholder for future data. This symbol is used
    to define a spot which will be filled with training data/labels in the future
-   when we are commence training.
+   when we commence training.
 2. **Neural Network Layers:** The layers of a network or any other type of model are
    also defined by Symbols. Such a symbol takes one or more previous symbols as
    inputs, performs some transformations on them, and creates one or more outputs.
@@ -95,11 +96,13 @@ The above network uses the following layers:
    parameters:
 
    - `data`: Input to the layer (specifies the symbol whose output should be fed here)
-   - `num_hidden`: Number of hidden dimensions which specifies the size of the output of the layer
+   - `num_hidden`: Number of hidden neurons in the layer, which is same as the dimensionality
+     of the layer's output
 
-2. `LinearRegressionOutput`: Output layers in MXNet aim to implement a
-   loss. In our example, the `LinearRegressionOutput` layer specifies that an l2 loss
-   needs to be applied against it's input and the labels provided to this layer. The 	parameters to this layer are:
+2. `LinearRegressionOutput`: Output layers in MXNet compute training loss, which is
+	the measure of inaccuracy in the model's predictions. The goal of training is to minimize the
+	training loss. In our example, the `LinearRegressionOutput` layer computes the *l2* loss against
+	its input and the labels provided to it. The parameters to this layer are:
 
    - `data`: Input to this layer (specifies the symbol whose output should be fed here)
    - `label`: The training labels against which we will compare the input to the layer for calculation of l2 loss
@@ -110,8 +113,8 @@ this is `softmax_label`, but we have updated it to `lin_reg_label` in this
 tutorial as you can see in `Y = mx.symbol.Variable('lin_reg_label')` and
 `train_iter = mx.io.NDArrayIter(..., label_name='lin_reg_label')`.
 
-Finally, the network is input to a *Module*, where you define the symbol
-the needs to be minimized (in our case, `lro` or the `lin_reg_output`), the
+Finally, the network is input to a *Module*, where we specify the symbol
+whose output needs to be minimized (in our case, `lro` or the `lin_reg_output`), the
 learning rate to be used while optimization and the number of epochs we want to
 train our model for.
 
@@ -132,7 +135,7 @@ mx.viz.plot_network(symbol=lro)
 ## Training the model
 
 Once we have defined the model structure, the next step is to train the
-parameters of the model to fit the training data. This is done using the
+parameters of the model to fit the training data. This is accomplished using the
 `fit()` function of the `Module` class.
 
 ```python
@@ -144,13 +147,15 @@ model.fit(train_iter, eval_iter,
 
 ## Using a trained model: (Testing and Inference)
 
-Once we have a trained model, we can do couple of things with it - we can either use it for inference or we can evaluate the trained model on test data. The later is shown below:
+Once we have a trained model, we can do a couple of things with it - we can either
+use it for inference or we can evaluate the trained model on test data. The latter is shown below:
 
 ```python
 model.predict(eval_iter).asnumpy()
 ```
 
-We can also evaluate our model for some metric. In this example, we are evaulating our model's mean squared error (MSE) on the evaluation data.
+We can also evaluate our model according to some metric. In this example, we are
+evaulating our model's mean squared error (MSE) on the evaluation data.
 
 ```python
 metric = mx.metric.MSE()
@@ -166,7 +171,7 @@ eval_iter = mx.io.NDArrayIter(eval_data, eval_label, batch_size, shuffle=False)
 model.score(eval_iter, metric)
 ```
 
-Finally, you can create your own metric and use it to evauate your model. More
+We also can create a custom metric and use it to evauate the model. More
 information on metrics can be found [here](http://mxnet-test.readthedocs.io/en/latest/api/metric.html).
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
