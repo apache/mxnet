@@ -44,8 +44,8 @@ mx.viz.plot_network(symbol=g)
 ### Basic Neural Networks
 
 Besides the basic operators, `Symbol` has a rich set of neural network
-layers. The following codes construct a two layer fully connected neural work
-and then visualize the structure by given the input data shape.
+layers. The following code constructs a two layer fully connected neural network
+and then visualizes its structure for a given input data shape.
 
 ```python
 net = mx.sym.Variable('data')
@@ -101,15 +101,15 @@ in3a = InceptionFactoryA(prev, 64, 64, 64, 64, 96, "avg", 32, name="in3a")
 mx.viz.plot_network(symbol=in3a, shape=shape)
 ```
 
-Finally we can obtain the whole network by chaining multiple inception
-modulas. See a complete example at
+Finally, we can obtain the whole network by chaining multiple inception
+modules. See a complete example
 [here](https://github.com/dmlc/mxnet/blob/master/example/image-classification/symbols/inception-bn.py).
 
 ### Group Multiple Symbols
 
 To construct neural networks with multiple loss layers, we can use
 `mxnet.sym.Group` to group multiple symbols together. The following example
-group two outputs:
+groups two outputs:
 
 ```python
 net = mx.sym.Variable('data')
@@ -121,51 +121,49 @@ group = mx.sym.Group([out1, out2])
 group.list_outputs()
 ```
 
-## Relations to NDArray
+## Relationship to NDArray
 
-As can be seen now, both Symbol and NDArray provide multi-dimensional array
-operations, such as `c=a+b` in MXNet. We briefly clarify the difference here.
+As can be seen now, in MXNet, both Symbol and NDArray provide multi-dimensional array
+operations, such as `c=a+b`. We briefly clarify the difference here.
 
-The `NDArray` provides an imperative programming alike interface, in which the
+The `NDArray` provides an imperative programming model, in which the
 computations are evaluated sentence by sentence. While `Symbol` is closer to
 declarative programming, in which we first declare the computation, and then
-evaluate with data. Examples in this category include regular expression and
-SQL.
+evaluate with data. Examples in this declarative programming category include
+regular expressions and SQL.
 
 The pros for `NDArray`:
 
 - straightforward
 - easy to work with other language features (for loop, if-else condition, ..)
   and libraries (numpy, ..)
-- easy to step-by-step debug
+- easy to perform step-by-step debugging
 
 The pros for `Symbol`:
 
-- provides almost all functionalities of NDArray, such as +, \*, sin, and
-  reshape
+- provides almost all functionalities of NDArray, such as `+`, `\*`, `sin`, `reshape`, etc.
 - provides a large number of neural network related operators such as
-  Convolution, Activation, and BatchNorm
+  `Convolution`, `Activation`, and `BatchNorm`
 - provides automatic differentiation
 - easy to construct and manipulate complex computations such as deep neural
   networks
-- easy to save, load, and visualization
-- easy for the backend to optimize the computation and memory usage
+- easy to save, load, and visualize
+- easy for the backend to optimize for compute and memory usage
 
 ## Symbol Manipulation
 
-One important difference of `Symbol` comparing to `NDArray` is that, we first
+One important difference of `Symbol` when compared to `NDArray` is that we first
 declare the computation, and then bind with data to run.
 
-In this section we introduce the functions to manipulate a symbol directly. But
-note that, most of them are wrapped nicely by the
-`module` package. One can skip this section safely.
+In this section, we introduce the functions to manipulate a symbol directly. But
+note that, most of them are wrapped nicely in the
+`module` package. One can, therefore, skip this section safely.
 
 ### Shape Inference
 
 For each symbol, we can query its inputs (or arguments) and outputs. We can also
-inference the output shape by given the input shape, which facilitates memory
+infer the output shape by the given input shape, which facilitates memory
 allocation.
-
 
 ```python
 arg_name = c.list_arguments()  # get the names of the inputs
@@ -181,7 +179,7 @@ The symbol `c` we constructed declares what computation should be run. To
 evaluate it, we need to feed arguments, namely free variables, with data
 first. We can do it by using the `bind` method, which accepts device context and
 a `dict` mapping free variable names to `NDArray`s as arguments and returns an
-executor. The executor provides method `forward` for evaluation and attribute
+executor. The executor provides the method `forward` for evaluation and the attribute
 `outputs` to get all results.
 
 ```python
@@ -204,7 +202,7 @@ ex_gpu.outputs[0].asnumpy()
 ### Load and Save
 
 Similar to NDArray, we can either serialize a `Symbol` object by using `pickle`,
-or use `save` and `load` directly. Different to the binary format chosen by
+or use `save` and `load` directly. As opposed to the binary format chosen by
 `NDArray`, `Symbol` uses the more readable json format for serialization. The
 `tojson` method returns the json string.
 
@@ -219,19 +217,19 @@ c.tojson() == c2.tojson()
 
 Most operators such as `mx.sym.Convolution` and `mx.sym.Reshape` are implemented
 in C++ for better performance. MXNet also allows users to write new operators
-using any frontend language such as Python. It often makes the developing and
-debugging much easier.
+using any frontend language such as Python. This often simplifies development and
+debugging.
 
 To implement an operator in Python, we just need to define the two computation
 methods `forward` and `backward` with several methods for querying the
 properties, such as `list_arguments` and `infer_shape`.
 
-`NDArray` is the default type of arguments in both `forward` and
-`backward`. Therefore we often also implement the computation with `NDArray`
+`NDArray` is the default argument type in both `forward` and
+`backward`. Therefore, we often also implement the computation with `NDArray`
 operations. To show the flexibility of MXNet, however, we will demonstrate an
 implementation of the `softmax` layer using NumPy. Though a NumPy based operator
 can be only run on CPU and also lose some optimizations which can be applied on
-NDArray, it enjoys the rich functionalities provided by NumPy.
+NDArray, it still enjoys the rich features provided by NumPy.
 
 We first create a subclass of `mx.operator.CustomOp` and then define `forward`
 and `backward`.
@@ -252,10 +250,10 @@ class Softmax(mx.operator.CustomOp):
 ```
 
 Here we use `asnumpy` to convert the `NDArray` inputs into `numpy.ndarray`. Then
-using `CustomOp.assign` to assign the results back to `mxnet.NDArray` based on
+using `CustomOp.assign` we assign the results back to `mxnet.NDArray` based on
 the value of req, which could be "over write" or "add to".
 
-Next we create a subclass of `mx.operator.CustomOpProp` for querying the
+Next, we create a subclass of `mx.operator.CustomOpProp` for querying the
 properties.
 
 ```python
@@ -283,7 +281,7 @@ class SoftmaxProp(mx.operator.CustomOpProp):
         return Softmax()
 ```
 
-Finally, we can use `mx.sym.Custom` with the register name to use this operator
+Finally, we can use `mx.sym.Custom` with the registered name to use this operator.
 
 ```python
 net = mx.sym.Custom(data=prev_input, op_type='softmax')
@@ -293,12 +291,12 @@ net = mx.sym.Custom(data=prev_input, op_type='softmax')
 
 ### Type Cast
 
-MXNet uses 32-bit float in default. Sometimes we want to use a lower precision
-data type for better accuracy-performance trade-off. For example, The Nvidia
+MXNet uses 32-bit float by default. Sometimes we may want to use a lower precision
+data type to achieve a better accuracy-performance trade-off. For example, The Nvidia
 Tesla Pascal GPUs (e.g. P100) have improved 16-bit float performance, while GTX
 Pascal GPUs (e.g. GTX 1080) are fast on 8-bit integers.
 
-We can use the `mx.sym.Cast` operator to convert the data type.
+The `mx.sym.Cast` operator facilitates conversion between data types.
 
 ```python
 a = mx.sym.Variable('data')
@@ -313,8 +311,8 @@ print({'input':arg, 'output':out})
 
 ### Variable Sharing
 
-Sometimes we want to share the contents between several symbols. This can be
-simply done by bind these symbols with the same array.
+Sometimes we want to share the contents between several symbols. This can be done by
+simply binding these symbols to the same array.
 
 ```python
 a = mx.sym.Variable('a')
