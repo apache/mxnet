@@ -1,7 +1,17 @@
+# v0.2.2 (2017.05.14)
+* Updated supported version of MXNet to 0.9.4.
+* Improved build-system with support for auto-detecting GPU support.
+* Several updates to Metrics.
+* CI for Windows.
+* Verbosity option for `predict` (@rdeits)
+
+# v0.2.1 (2017.01.29)
+* Bugfix release for Windows
+
 # v0.2.0 (2017.01.26)
 * Drop support for Julia v0.4.
 * Added support for NVVM.
-* Updated supported version of MXNet to 0.9.3.
+* Updated supported version of MXNet to 0.9.2
 * New optimizers (@Arkoniak).
 
 # v0.1.0 (2016.09.08)
