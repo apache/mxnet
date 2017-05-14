@@ -40,6 +40,19 @@ class MXRtc {
         std::vector<std::pair<std::string, NDArray> > const& output,
         const std::string& kernel);
   /*!
+   * \brief Build a new kernel from provided ptx code.
+   *
+   * \param name name of the kernel function.
+   * \param input list input ndarrays and their name.
+   * \param output list of output ndarrays and their name.
+   * \param ptx cuda module.
+   * \param not_used for overload resolution.
+   */
+  MXRtc(const std::string& name,
+        std::vector<std::pair<std::string, NDArray> > const& input,
+        std::vector<std::pair<std::string, NDArray> > const& output,
+        char* ptx, int /*not_used*/);
+  /*!
    * \brief launch a kernel with the engine.
    * \param input list of input ndarray.
    * \param output list of output ndarray.
