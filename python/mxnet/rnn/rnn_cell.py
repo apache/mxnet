@@ -192,7 +192,7 @@ class BaseRNNCell(object):
         return states
 
     def unpack_weights(self, args):
-        """Unpack fused weight matrices into separate
+        """Unpack fused weight matrix into separate
         weight matrices.
 
         Parameters
