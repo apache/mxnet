@@ -10,7 +10,7 @@ computing and state-of-art deep learning to Perl.
 
 Installation
 ---------
-* [MXNet Setup Document](http://mxnet.io/get_started/setup.html)
+* [MXNet Setup Document](http://mxnet.io/get_started/ubuntu_setup.html)
   - Check this out for detailed documents, examples and installation guides.
 
 License

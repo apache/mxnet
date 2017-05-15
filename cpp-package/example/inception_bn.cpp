@@ -23,7 +23,7 @@ Symbol ConvFactoryBN(Symbol data, int num_filter,
   Symbol conv = Convolution("conv_" + name + suffix, data,
                             conv_w, conv_b, kernel,
                             num_filter, stride, Shape(1, 1), pad);
-  Symbol bn = BatchNorm("bn_" + name + suffix, conv, BN_GAMMA, BN_BETA);
+  Symbol bn = BatchNorm("bn_" + name + suffix, conv, Symbol(), Symbol(), Symbol(), Symbol());
   return Activation("relu_" + name + suffix, bn, "relu");
 }
 

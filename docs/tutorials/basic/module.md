@@ -6,9 +6,9 @@ high-level interface for executing predefined networks.
 
 ## Preliminary
 
-In this tutorial, we will use train a multilayer perception on a
+In this tutorial, we will use train a multilayer perceptron on a
 [UCI letter recognition](https://archive.ics.uci.edu/ml/datasets/letter+recognition)
-dataset to demonostrate the usage of `Module`
+dataset to demonstrate the usage of `Module`.
 
 We first download and split the dataset, and then create iterators that return a
 batch of examples each time.
@@ -45,7 +45,7 @@ mx.viz.plot_network(net)
 ### Create Module
 
 Now we are ready to introduce module. The commonly used module class is
-`Module`. We can construct amodule by specifying:
+`Module`. We can construct a module by specifying:
 
 - symbol : the network definition
 - context : the device (or a list of devices) for execution
@@ -108,7 +108,7 @@ mod.fit(train_iter, num_epoch=5, epoch_end_callback=checkpoint)
 ```
 
 To load the saved module parameters, call the `load_checkpoint` function. It
-load the Symbol and the associated parameters. We can then set the loaded
+loads the Symbol and the associated parameters. We can then set the loaded
 parameters into the module.
 
 
@@ -123,7 +123,7 @@ mod.set_params(arg_params, aux_params)
 Or if we just want to resume training from a saved checkpoint, instead of
 calling `set_params()`, we can directly call `fit()`, passing the loaded
 parameters, so that `fit()` knows to start from those parameters instead of
-initializing from random. We also set the `begin_epoch` so that so that `fit()`
+initializing from random. We also set the `begin_epoch` so that `fit()`
 knows we are resuming from a previous saved epoch.
 
 
@@ -138,7 +138,7 @@ mod.fit(train_iter,
 
 ## Intermediate-level Interface
 
-We already seen how to module for basic training and inference. Now we are going
+We already seen how to use module for basic training and inference. Now we are going
 to show a more flexiable usage of module. Instead of calling the high-level
 `fit` and `predict`, we can write a training program with the intermediate-level
 interface such as `forward` and `backward`.

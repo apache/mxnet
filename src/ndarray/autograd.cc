@@ -67,8 +67,7 @@ void AutogradRuntime::MarkVariables(
   }
 }
 
-void AutogradRuntime::RecordImperativeFCompute(FCompute fn,
-                                               const nnvm::Op* op,
+void AutogradRuntime::RecordImperativeFCompute(const nnvm::Op* op,
                                                const nnvm::NodeAttrs& attrs,
                                                std::vector<NDArray> *p_inputs,
                                                std::vector<NDArray> *p_outputs) {
@@ -109,9 +108,16 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
   ag_node->opr = opr;
 
   for (uint32_t i = 0; i < outputs.size(); ++i) {
-    outputs[i].entry_.clear();
-    ag_node->outputs.push_back(outputs[i]);
-    outputs[i].entry_ = AGNodeEntry{ag_node, i, 0};
+    if (outputs[i].entry_.ag_node == nullptr ||
+        !outputs[i].entry_.ag_node->out_grads.size()) {
+      outputs[i].entry_.clear();
+      ag_node->outputs.push_back(outputs[i]);
+      outputs[i].entry_ = AGNodeEntry{ag_node, i, 0};
+    } else {
+      NDArray copy = outputs[i];
+      copy.entry_.clear();
+      ag_node->outputs.push_back(copy);
+    }
   }
 
   for (size_t i = 0; i < inputs.size(); ++i) {
@@ -130,6 +136,7 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
 }
 
 void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs) {
+  static auto& fmutate_inputs = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
   std::vector<AGNodeEntry> heads;
   Symbol sym;
   NodeEntryMap<NDArray> feed_dict;
@@ -139,29 +146,44 @@ void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs) {
       << "computation history. Did you forget to set is_training?";
     heads.emplace_back(i.entry_);
     sym.outputs.emplace_back(i.entry_.nn_entry());
-    feed_dict.insert({i.entry_.nn_entry(), i});
   }
 
+  std::unordered_set<AGNode*> mutable_set;
+  std::vector<AGNodePtr> vlist;
   std::vector<NDArray> args, args_grad;
+  std::vector<NDArray> aux_states;
   std::vector<OpReqType> grad_reqs;
   std::unordered_map<const nnvm::Node*, std::shared_ptr<Operator>> saved_opr;
   AGDFSVisit(heads, [&](const AGNodePtr& n) {
-      if (n->opr != nullptr) {
-        saved_opr.insert({n->nn_node.get(), n->opr});
-      } else if (n->nn_node->is_variable()) {
-        args.push_back(n->outputs[0]);
-        args_grad.push_back(n->out_grads[0]);
-        grad_reqs.push_back(n->grad_req);
+      if (n->nn_node->is_variable()) {
+        vlist.push_back(n);
+      } else {
+        if (n->opr != nullptr) {
+          saved_opr.insert({n->nn_node.get(), n->opr});
+        }
+        if (fmutate_inputs.count(n->nn_node->op())) {
+          for (uint32_t i : fmutate_inputs[n->nn_node->op()](n->nn_node->attrs)) {
+            mutable_set.insert(n->inputs[i].ag_node.get());
+          }
+        }
       }
-      for (const auto& i : n->inputs) {
-        feed_dict.insert({i.nn_entry(), i.ag_node->outputs[i.index]});
+      for (uint32_t i = 0; i < n->outputs.size(); ++i) {
+        feed_dict.insert({NodeEntry{n->nn_node, i, 0}, n->outputs[i]});
       }
     });
 
+  for (const auto& n : vlist) {
+    if (mutable_set.count(n.get())) {
+      aux_states.push_back(n->outputs[0]);
+    } else {
+      args.push_back(n->outputs[0]);
+      args_grad.push_back(n->out_grads[0]);
+      grad_reqs.push_back(n->grad_req);
+    }
+  }
 
   if (args.size()) {
     std::map<std::string, Context> ctx_map;
-    std::vector<NDArray> aux_states;
     auto exec = new exec::GraphExecutor();
     // (TODO) too hack here
     exec->saved_opr_ = saved_opr;
