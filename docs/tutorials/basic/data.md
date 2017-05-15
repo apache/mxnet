@@ -7,11 +7,11 @@ filesystems. Here we discuss the API conventions and several provided iterators.
 ## MXNet Data Iterator  
 Data Iterators in *MXNet* are similar to the built-in function `iter` in ``Python``. In ``Python`` `iter` allows to fetch items sequentially by calling  `next()` on __iterable__ collection objects such as a Python `list`. `iter` provides a abstract interface for traverising various types of __iterable__ collections without needing to expose the underlying data structure.  
 
-In MXNet, __Iterators__ return a batch of data `DataBatch` on each to call `next`.
-A `DataBatch` often contains *n* training examples and their corresponding labels. Here *n* is the `batch_size` of the Iterator. At the end of the data stream when there is no more data to read, the Iterator raises ``StopIteration`` exception just like *Python* `iter`.  
+In MXNet, __Iterators__ return a batch of data `DataBatch` on each call to `next`.
+A `DataBatch` often contains *n* training examples and their corresponding labels. Here *n* is the `batch_size` of the Iterator. At the end of the data stream when there is no more data to read, the Iterator raises ``StopIteration`` exception like *Python* `iter`.  
 The structure of `DataBatch` is defined in [DataBatch](http://mxnet.io/api/python/io.html#mxnet.io.DataBatch).
      
-All IO in *MXNet* is handled via mx.io.DataIter and its subclasses. We will see a below a few commonly used Iterators provided by *MXNet*.
+All IO in *MXNet* is handled via mx.io.DataIter and its subclasses. We will see below a few commonly used Iterators provided by *MXNet*.
 
 Setup environment:
 
@@ -146,7 +146,7 @@ for batch in data_iter:
 
 
 ## Custom  Iterator
-When the in-built iterators does not suit your application, you can create a custom data iterator.
+When the in-built iterators do not suit your application, you can create a custom data iterator.
 
 An iterator in _MXNet_ should  
 1. Implement `next()` in ``Python2`` or `__next()__` in ``Python3``,   
@@ -156,7 +156,7 @@ An iterator in _MXNet_ should
    described [here](http://mxnet.io/api/python/io.html#mxnet.io.DataBatch).  
 4. Have `provide_label` attribute, returns similar to `provide_label` information about input labels.  
 
-You can either create a iterator from scratch by defining `DataBatch` and the iterator, one such example is show below or reuse existing iterators to create new iterator. For example, in the image caption application, the input example is an image while the label is a sentence. The we can create a new Iterator by:
+You can either create a iterator from scratch by defining  `DataBatch` and the iterator(an example is shown below) or reuse existing iterators to create a new iterator. For example, in the image caption application, the input example is an image while the label is a sentence. The we can create a new Iterator by:
 - creating image_iter using `ImageRecordIter` which provides multithreaded pre-fetch and augmentation.
 - creating caption_iter using `NDArrayIter` or bucketing iterator provided in the rnn package.
 - `next()` returns the combined result of `image_iter.next()` and `caption_iter.next()`
@@ -234,9 +234,11 @@ print(net.list_outputs())
 
 Here as you see there are 4 variables that are learnable parameters: the *weights* and *biases* of FullyConnected layers *fc1* and *fc2*, two variables for input data: *data* for the training examples and *softmax_label* contains their respective labels and the *softmax_output*. 
 
-The *data* variables are called __free__ variables in the MXNet Symbol land that needs to bound with data. Learn more about [Symbol](http://mxnet.io/tutorials/basic/symbol.html).  
+The *data* variables are called __free__ variables in the MXNet Symbol land that needs to bound with data.  
+Learn more about [Symbol](http://mxnet.io/tutorials/basic/symbol.html).  
 
-We will feed the data iterator into the training problem using the `module` API. Learn more about [Module](http://mxnet.io/tutorials/basic/module.html).
+We will feed the data iterator into the training problem using the `module` API.  
+Learn more about [Module](http://mxnet.io/tutorials/basic/module.html).
 
 
 ```python
