@@ -698,17 +698,23 @@ def test_concat_with_type():
 
 
 def test_elementwisesum_with_type():
-    sym = mx.sym.ElementWiseSum(name='ews', num_args=2)
-    ctx_list = [{'ctx': mx.gpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
-                 'type_dict': {'ews_arg0': np.float64, 'ews_arg1': np.float64}},
-                {'ctx': mx.gpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
-                 'type_dict': {'ews_arg0': np.float32, 'ews_arg1': np.float32}},
-                {'ctx': mx.gpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
-                 'type_dict': {'ews_arg0': np.float16, 'ews_arg1': np.float16}},
-                {'ctx': mx.cpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
-                 'type_dict': {'ews_arg0': np.float64, 'ews_arg1': np.float64}},
-                {'ctx': mx.cpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
-                 'type_dict': {'ews_arg0': np.float32, 'ews_arg1': np.float32}}]
+    dev_types = [[mx.gpu(0), [np.float64, np.float32, np.float16]],
+                 [mx.cpu(0), [np.float64, np.float32]] ]
+    for num_args in range(1, 6):
+        ews_arg_shape = {}
+        for i in range(num_args):
+            ews_arg_shape['ews_arg'+str(i)] = (2, 10)
+        sym = mx.sym.ElementWiseSum(name='ews', num_args=num_args)
+        ctx_list = []
+        for dev, types in dev_types:
+            for dtype in types:
+                ews_arg_dtype = {'type_dict':{}}
+                for i in range(num_args):
+                    ews_arg_dtype['type_dict']['ews_arg'+str(i)] = dtype
+                ctx_elem = {'ctx': dev}
+                ctx_elem.update(ews_arg_shape)
+                ctx_elem.update(ews_arg_dtype)
+                ctx_list.append(ctx_elem)
     check_consistency(sym, ctx_list)
 
 

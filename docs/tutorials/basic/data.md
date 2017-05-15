@@ -1,6 +1,6 @@
 # Iterators - Loading data
 
-This tutorial we focus on how to feeding data into a training and inference
+In this tutorial we focus on how to feed data into a training and inference
 program. Most training and inference modules in MXNet accepts data iterators,
 which simplifies this procedure, especially when reading large datasets from
 filesystems. Here we discuss the API conventions and several provided iterators.
@@ -34,7 +34,7 @@ class SimpleBatch(object):
 We explain what each attribute means:
 
 - `data` is a list of `NDArray`, each array contains *n* examples. For
-  instance, if an example is presented by a length $k$ vector, then the shape of
+  instance, if an example is presented by a length `k` vector, then the shape of
   the array will be `(n, k)`.
 
   Each array will be copied into a free variable such as created by
@@ -46,7 +46,7 @@ We explain what each attribute means:
   array with shape `(n,)`. For classification, each class is represented by an
   integer starting from 0.
 
-- `pad` is an integer shows the number of examples added in the last of the
+- `pad` is an integer which shows the number of examples added in the last of the
   batch that are merely used for padding. These examples should be ignored in
   the results, such as computing the gradient. A nonzero padding is often used
   when we reach the end of the data and the total number of examples cannot be
@@ -58,7 +58,7 @@ Before showing the data iterator, we first discuss how to find free variables in
 a symbol. A symbol often contains one or more explicit free variables and also
 implicit ones.
 
-The following codes define a multilayer perceptron.
+The following code defines a multilayer perceptron.
 
 ```python
 import mxnet as mx
@@ -69,7 +69,7 @@ net = mx.sym.FullyConnected(data=net, name='fc2', num_hidden=10)
 net = mx.sym.SoftmaxOutput(data=net, name='softmax')
 ```
 
-We can get the names of the all free variables by calling `list_arguments`:
+We can get the names of all the free variables by calling `list_arguments`:
 
 ```python
 net.list_arguments()
@@ -90,7 +90,7 @@ variables. Four of them are learnable parameters, `fc1_weight`, `fc1_bias`,
 `fc2_weight`, and `fc2_bias`. These parameters are often initialized by
 `mx.initializer` and updated by `mx.optimizer`. The rest two
 are for input data: `data` for examples and `softmax_label` for the
-according labels. Then it is the iterator's job to fed data into these two
+according labels. Then it is the iterator's job to feed data into these two
 variables.
 
 ### Data iterator
@@ -127,8 +127,8 @@ for batch in data_iter:
 
 ## Read CSV
 
-There is an iterator called to `CSVIter` to read data batches from CSV files. We
-first dump `data` into a csv file, and then load the data
+There is an iterator called `CSVIter` to read data batches from CSV files. We
+first dump `data` into a csv file, and then load the data.
 
 ```python
 np.savetxt('data.csv', data, delimiter=',')
@@ -149,7 +149,7 @@ Note that we have not given a label file, then `batch.label` is empty here.
 ## Write your own data iterators
 
 Sometimes the provided iterators are not enough for some application. There are
-mainly two ways to develop a new iterator. One is creating from scratch, the
+mainly two ways to develop a new iterator. One is creating from scratch: the
 following codes define an iterator that creates a given number of data batches
 through a data generator `data_gen`.
 

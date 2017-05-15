@@ -15,7 +15,7 @@ use List::Util qw(shuffle);
 @AI::MXNet::Base::EXPORT = qw(product enumerate assert zip check_call build_param_doc 
                               pdl cat dog svd bisect_left pdl_shuffle
                               DTYPE_STR_TO_MX DTYPE_MX_TO_STR DTYPE_MX_TO_PDL
-                              DTYPE_PDL_TO_MX DTYPE_MX_TO_PERL);
+                              DTYPE_PDL_TO_MX DTYPE_MX_TO_PERL GRAD_REQ_MAP);
 @AI::MXNet::Base::EXPORT_OK = qw(pzeros pceil);
 use constant DTYPE_STR_TO_MX => {
     float32 => 0,
@@ -60,6 +60,11 @@ use constant DTYPE_MX_TO_PERL => {
     float16 => 'S',
     uint8   => 'C',
     int32   => 'l'
+};
+use constant GRAD_REQ_MAP => {
+    null  => 0,
+    write => 1,
+    add   => 3
 };
 
 =head1 NAME

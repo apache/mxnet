@@ -10,6 +10,7 @@
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/op_attr_types.h>
+#include <mxnet/c_api.h>
 #include <nnvm/symbolic.h>
 #include <nnvm/op.h>
 #include <nnvm/graph.h>
@@ -65,8 +66,7 @@ class AutogradRuntime {
                      const std::vector<mx_uint>& grad_reqs,
                      const std::vector<NDArray*>& gradients);
   /*! \brief record imperative operator which is executed by fcompute. */
-  void RecordImperativeFCompute(FCompute fn,
-                                const nnvm::Op* op,
+  void RecordImperativeFCompute(const nnvm::Op* op,
                                 const nnvm::NodeAttrs& attrs,
                                 std::vector<NDArray>* p_inputs,
                                 std::vector<NDArray>* p_outputs);

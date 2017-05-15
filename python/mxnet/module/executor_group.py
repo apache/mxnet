@@ -3,6 +3,8 @@
 """Executor group is a convenient tool for managing a group of executors."""
 
 import logging
+from collections import OrderedDict
+
 import numpy as np
 
 from .. import context as ctx
@@ -197,10 +199,14 @@ class DataParallelExecutorGroup(object):
 
         self.data_shapes = None
         self.label_shapes = None
+        self.data_names = None
+        self.label_names = None
         self.data_layouts = None
         self.label_layouts = None
+        self.output_names = self.symbol.list_outputs()
         self.output_layouts = [DataDesc.get_batch_axis(self.symbol[name].attr('__layout__'))
-                               for name in self.symbol.list_outputs()]
+                               for name in self.output_names]
+        self.num_outputs = len(self.symbol.list_outputs())
 
         self.bind_exec(data_shapes, label_shapes, shared_group)
 
@@ -302,6 +308,9 @@ class DataParallelExecutorGroup(object):
 
         self.data_shapes = data_shapes
         self.label_shapes = label_shapes
+        self.data_names = [i.name for i in self.data_shapes]
+        if label_shapes is not None:
+            self.label_names = [i.name for i in self.label_shapes]
         self._collect_arrays()
 
     def reshape(self, data_shapes, label_shapes):
@@ -370,10 +379,8 @@ class DataParallelExecutorGroup(object):
         if is_train is None:
             is_train = self.for_training
 
-        if self.label_arrays is not None:
-            assert not is_train or data_batch.label
-            if data_batch.label:
-                _load_label(data_batch, self.label_arrays, self.label_layouts)
+        if self.label_arrays is not None and data_batch.label:
+            _load_label(data_batch, self.label_arrays, self.label_layouts)
 
         for exec_ in self.execs:
             exec_.forward(is_train=is_train)
@@ -391,8 +398,10 @@ class DataParallelExecutorGroup(object):
             concat_shapes.append((key, tuple(the_shape)))
         return concat_shapes
 
-    def get_outputs(self, merge_multi_context=True):
+    def get_outputs(self, merge_multi_context=True, begin=0, end=None):
         """Get outputs of the previous forward computation.
+        If begin or end is specified, return [begin, end)-th outputs,
+        otherwise return all outputs.
 
         Parameters
         ----------
@@ -401,6 +410,10 @@ class DataParallelExecutorGroup(object):
             will be collected from multiple devices. A `True` value indicate that we
             should merge the collected results so that they look like from a single
             executor.
+        begin : int
+            starting index of returned outputs in all outputs
+        end : int or None
+            ending index (excluded) of returned outputs.
 
         Returns
         -------
@@ -408,8 +421,10 @@ class DataParallelExecutorGroup(object):
         is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
         elements are `NDArray`.
         """
+        if end is None:
+            end = self.num_outputs
         outputs = [[exec_.outputs[i] for exec_ in self.execs]
-                   for i in range(len(self.execs[0].outputs))]
+                   for i in range(begin, end)]
         if merge_multi_context:
             outputs = _merge_multi_context(outputs, self.output_layouts)
         return outputs
@@ -508,7 +523,9 @@ class DataParallelExecutorGroup(object):
             exec_.backward(out_grads=out_grads_slice)
 
     def update_metric(self, eval_metric, labels):
-        """Accumulate the performance according to `eval_metric` on all devices.
+        """Accumulate the performance according to `eval_metric` on all devices
+        by comparing outputs from [begin, end) to labels. By default use all
+        outputs.
 
         Parameters
         ----------
@@ -516,6 +533,10 @@ class DataParallelExecutorGroup(object):
             The metric used for evaluation.
         labels : list of NDArray
             Typically comes from `label` of a `DataBatch`.
+        begin : int
+            Starting index of used outputs.
+        end : int or None
+            Ending index of used outputs.
         """
         for texec, islice in zip(self.execs, self.slices):
             labels_slice = []
@@ -532,7 +553,9 @@ class DataParallelExecutorGroup(object):
                 else:
                     labels_slice.append(label)
 
-            eval_metric.update(labels_slice, texec.outputs)
+            labels = OrderedDict(zip(self.label_names, labels_slice))
+            preds = OrderedDict(zip(self.output_names, texec.outputs))
+            eval_metric.update_dict(labels, preds)
 
     def _bind_ith_exec(self, i, data_shapes, label_shapes, shared_group):
         """Internal utility function to bind the i-th executor.
