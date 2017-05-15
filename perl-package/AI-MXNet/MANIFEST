@@ -10,6 +10,7 @@ examples/cudnn_lstm_bucketing.pl
 Makefile.PL
 Changes
 META.json
+t/test_autograd.t
 t/test_recordio.t
 t/test_random.t
 t/test_init.t
@@ -32,6 +33,7 @@ t/test_infer_shape.t
 lib/AI/MXNet.pm
 lib/AI/MXNet/Random.pm
 lib/AI/MXNet/Context.pm
+lib/AI/MXNet/Contrib/AutoGrad.pm
 lib/AI/MXNet/Contrib/Symbol.pm
 lib/AI/MXNet/Contrib/NDArray.pm
 lib/AI/MXNet/Profiler.pm

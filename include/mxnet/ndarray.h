@@ -283,33 +283,13 @@ class NDArray {
    * \param end end index in first dim
    * \return sliced NDArray
    */
-  inline NDArray Slice(index_t begin, index_t end) const {
-    NDArray ret = *this;
-    CHECK(!is_none()) << "NDArray is not initialized";
-    CHECK_GE(shape_[0], end) << "Slice end index out of range";
-    size_t length = shape_.ProdShape(1, shape_.ndim());
-    ret.offset_ += begin * length;
-    ret.shape_[0] = end - begin;
-    return ret;
-  }
+  NDArray Slice(index_t begin, index_t end) const;
   /*!
    * \brief Index a NDArray
    * \param idx the index
    * \return idx-th sub array NDArray
    */
-  inline NDArray At(index_t idx) const {
-    NDArray ret = *this;
-    CHECK(!is_none()) << "NDArray is not initialized";
-    CHECK_GT(shape_[0], idx) << "index out of range";
-    size_t length = shape_.ProdShape(1, shape_.ndim());
-    ret.offset_ += idx * length;
-    if (shape_.ndim() > 1) {
-      ret.shape_ = TShape(shape_.data()+1, shape_.data()+shape_.ndim());
-    } else {
-      ret.shape_ = mshadow::Shape1(1);
-    }
-    return ret;
-  }
+  NDArray At(index_t idx) const;
   /*!
    * \brief Create a NDArray that shares memory with current one
    *  The new array must have smaller memory size than the current array.
@@ -337,13 +317,7 @@ class NDArray {
    * \param shape new shape
    * \return NDArray in new shape
    */
-  inline NDArray Reshape(const TShape &shape) const {
-    CHECK_GE(shape_.Size(), shape.Size())
-        << "NDArray.Reshape: target shape size is different from current shape";
-    NDArray ret = *this;
-    ret.shape_ = shape;
-    return ret;
-  }
+  NDArray Reshape(const TShape &shape) const;
   /*!
    * \brief Allocate the space if it is delayed allocated.
    * This is an internal function used by system that normal user should not use
@@ -566,7 +540,7 @@ void SamplePoisson(real_t lambda, NDArray *out);
 /*!
  * \brief Sample negative binomial distribution for each elements of out.
  * \param k failure limit
- * \param p success probability 
+ * \param p success probability
  * \param out output NDArray.
  */
 void SampleNegBinomial(int32_t k, real_t p, NDArray *out);

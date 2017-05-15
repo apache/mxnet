@@ -296,8 +296,32 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
                                NDArrayHandle *out) {
   NDArray *ptr = new NDArray();
   API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
   TShape new_shape(dims, dims+ndim);
-  *ptr = static_cast<NDArray*>(handle)->Reshape(new_shape);
+  int size = 1;
+  int pos = -1;
+  for (int i = 0; i < ndim; ++i) {
+    int dim = dims[i];
+    if (dim == -1) {
+      CHECK_EQ(pos, -1)
+        << "Invalid new shape " << new_shape
+        << ": more than one dimensions are -1";
+      pos = i;
+    } else {
+      if (dim == 0) {
+        CHECK_LT(i, arr->shape().ndim())
+          << "Invalid new shape " << new_shape
+          << ": 0 dimension exceeds original shape " << arr->shape();
+        dim = arr->shape()[i];
+      }
+      size *= dim;
+      new_shape[i] = dim;
+    }
+  }
+  if (pos >= 0) {
+    new_shape[pos] = arr->shape().Size() / size;
+  }
+  *ptr = arr->Reshape(new_shape);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);
 }

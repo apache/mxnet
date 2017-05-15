@@ -41,52 +41,27 @@ li, dt a, dt span {
 /*------------------ Headings -------------------*/
 h1, h2, h3 {
     font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
-    margin-top: 10px;
-    margin-bottom: 10px;
+    margin-top: 18px;
+    margin-bottom: 18px;
+    color: #444;
 }
 
 h1 {
-    font-size: 22px;
-    font-weight: bold;
-    padding-top: 10px;
-    color: slategray;
+    margin-top: 0px;
+    margin-bottom: 25px;
+    font-size: 28px;
 }
 
 h2 {
-    font-size: 20px;
-    /* font-weight: bold; */
-    padding-top: 10px;
-    color: slategray;
+    font-size: 24px;
 }
 
 h3 {
-    font-size: 18px;
-    padding-top: 8px;
-    /* font-weight: bold; */
-    color: slategray;
+    font-size: 20px;
 }
-
 
 h4 {
-    color: slategray;
     font-size: 16px;
-    padding-top: 6px;
-    font-style: italic;
-    /* font-weight: bold; */
-}
-
-h5 {
-    color: #333333;
-    font-size: 16px;
-    font-style: italic;
-    font-weight: bold;
-}
-
-h6 {
-    color: #333333;
-    font-size: 14px;
-    font-style: italic;
-    font-weight: bold;
 }
 
 img {
@@ -191,7 +166,7 @@ img {
     -webkit-box-flex: 1;
     flex: 1 auto;
     position: relative;
-    top: -5px;
+    top: -12px;
     white-space: nowrap;
 }
 
@@ -918,6 +893,10 @@ table.docutils tr:nth-child(even) {
     border-color: #0079b2;
 }
 
+.btn-default:hover a {
+    color: #fff;
+}
+
 #setup-options {
     margin-top: 15px;
     margin-bottom: 15px;
@@ -985,15 +964,15 @@ table.docutils tr:nth-child(even) {
         left: 0;
         width: 100vw;
     }
-    
+
     #search-preview li {
         font-size: 12px;
     }
 }
 
 /* enable absolute positioning */
-.inner-addon { 
-    position: relative; 
+.inner-addon {
+    position: relative;
 }
 
 /* style icon */
@@ -1004,21 +983,31 @@ table.docutils tr:nth-child(even) {
 }
 
 /* align icon */
-.left-addon .glyphicon  { 
+.left-addon .glyphicon  {
     left:  0px;
 }
-.right-addon .glyphicon { 
+.right-addon .glyphicon {
     right: 0px;
 }
 
 /* add padding  */
-.left-addon input  { 
-    padding-left:  40px; 
+.left-addon input  {
+    padding-left:  40px;
 }
-.right-addon input { 
-    padding-right: 40px; 
+.right-addon input {
+    padding-right: 40px;
 }
 
 .form-group .glyphicon-search {
     color: white;
 }
+
+/*----------------------Get started page----------------------------*/
+#why-mxnet img {
+    position: relative;
+    width: 60%;
+    left: 50%;
+    margin-right: -50%;
+    transform: translate(-50%);
+}
+

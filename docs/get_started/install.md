@@ -1,20 +1,3 @@
-<!-- START - Cloud Python Installation Instructions -->
-
-<div class="cloud">
-  <div class="python">
-
-AWS Marketplace distributes AMIs (Amazon Machine Image) with MXNet pre-installed. You can launch an Amazon EC2 instance with one of the below AMIs:
-1. Deep Learning AMI (Amazon Machine Image) for [Ubuntu](https://aws.amazon.com/marketplace/pp/B06VSPXKDX)
-2. Deep Learning AMI for [Amazon Linux](https://aws.amazon.com/marketplace/pp/B01M0AXXQB)
-
-You could also run distributed deeplearning with *MXNet* on AWS using [Cloudformation Template](https://github.com/awslabs/deeplearning-cfn/blob/master/README.md).
-
-</div>
-</div>
-
-<!-- END - Cloud Python Installation Instructions -->
-
-
 # Installing MXNet
 
 Indicate your preferred configuration. Then, follow the customized commands to install *MXNet*.
@@ -26,32 +9,51 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active">Linux</button>
   <button type="button" class="btn btn-default opt">MacOS</button>
+  <button type="button" class="btn btn-default opt">Windows</button>
   <button type="button" class="btn btn-default opt">Cloud</button>
+  <button type="button" class="btn btn-default opt">Devices</button>
 </div>
-<br/>
+
+<!-- START - Language Menu -->
+
+<div class="linux macos windows">
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active">Python</button>
+  <button type="button" class="btn btn-default opt">Scala</button>
+  <button type="button" class="btn btn-default opt">R</button>
+  <button type="button" class="btn btn-default opt">Julia</button>
+  <button type="button" class="btn btn-default opt">Perl</button>
 </div>
-<br/>
+</div>
 
+<!-- No CPU GPU for other Devices -->
+<div class="linux macos windows cloud">
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active">CPU</button>
   <button type="button" class="btn btn-default opt">GPU</button>
 </div>
+</div>
 
-<!-- Linux and Mac - Python CPU and GPU installation options -->
+<!-- other devices -->
+<div class="devices">
+<div class="btn-group opt-group" role="group">
+  <button type="button" class="btn btn-default opt active">Raspberry Pi</button>
+</div>
+</div>
+
+<!-- Linux Python GPU Options -->
 
 <div class="linux macos">
-  <div class="python">
-    <div class="cpu gpu">
-      <div class="btn-group opt-group" role="group">
-        <button type="button" class="btn btn-default opt active">Pip</button>
-        <button type="button" class="btn btn-default opt">Virtualenv</button>
-        <button type="button" class="btn btn-default opt">Docker</button>
-        <button type="button" class="btn btn-default opt">Build from Source</button>
-      </div>
-    </div>
-  </div>
+<div class="python">
+<div class="cpu gpu">
+<div class="btn-group opt-group" role="group">
+  <button type="button" class="btn btn-default opt active">Pip</button>
+  <button type="button" class="btn btn-default opt">Virtualenv</button>
+  <button type="button" class="btn btn-default opt">Docker</button>
+  <button type="button" class="btn btn-default opt">Build from Source</button>
+</div>
+</div>
+</div>
 </div>
 
 <!-- END - Main Menu -->
@@ -70,7 +72,6 @@ The following installation instructions have been tested on Ubuntu 14.04 and 16.
 **Step 1**  Install virtualenv for Ubuntu.
 
 ```bash
-$ sudo apt-get update
 $ sudo apt-get install -y python-dev python-virtualenv
 ```
 
@@ -152,7 +153,7 @@ Follow the four steps in this [docker documentation](https://docs.docker.com/eng
 
 If you skip this step, you need to use *sudo* each time you invoke Docker.
 
-**Step 3** Pull the MXNet docker image.
+**Step 2** Pull the MXNet docker image.
 
 ```bash
 $ docker pull mxnet/python # Use sudo if you skip Step 2
@@ -167,7 +168,7 @@ REPOSITORY          TAG                 IMAGE ID            CREATED             
 mxnet/python        latest              00d026968b3c        3 weeks ago         1.41 GB
 ```
 
-**Step 4** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+**Step 3** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 
 </div>
 
@@ -634,7 +635,6 @@ More details and verified installation instructions for macOS, with GPUs, coming
 <!-- START - Cloud Python Installation Instructions -->
 
 <div class="cloud">
-  <div class="python">
 
 AWS Marketplace distributes AMIs (Amazon Machine Image) with MXNet pre-installed. You can launch an Amazon EC2 instance with one of the below AMIs:
 1. Deep Learning AMI (Amazon Machine Image) for [Ubuntu](https://aws.amazon.com/marketplace/pp/B06VSPXKDX)
@@ -643,9 +643,48 @@ AWS Marketplace distributes AMIs (Amazon Machine Image) with MXNet pre-installed
 You could also run distributed deeplearning with *MXNet* on AWS using [Cloudformation Template](https://github.com/awslabs/deeplearning-cfn/blob/master/README.md).
 
 </div>
-</div>
 
 <!-- END - Cloud Python Installation Instructions -->
+
+<div class="linux">
+  <div class="scala r julia perl">
+    <div class="cpu gpu">
+
+Follow the installation instructions [in this guide](./ubuntu_setup.md) to set up MXNet.
+
+</div>
+</div>
+</div>
+
+<div class="macos">
+  <div class="scala r julia perl">
+    <div class="cpu gpu">
+
+Follow the installation instructions [in this guide](./osx_setup.md) to set up MXNet.
+
+</div>
+</div>
+</div>
+
+<div class="windows">
+  <div class="python scala r julia perl">
+    <div class="cpu gpu">
+
+Follow the installation instructions [in this guide](./windows_setup.md) to set up MXNet.
+
+</div>
+</div>
+</div>
+
+<div class="devices">
+  <div class="raspberry-pi">
+
+Follow the installation instructions [in this guide](./raspbian_setup.md) to set up MXNet.
+
+</div>
+</div>
+
+<br/>
 
 # Validate MXNet Installation
 
@@ -786,7 +825,7 @@ More details and verified validation instructions for macOS, with GPUs, coming s
 <!-- Linux Clean up -->
 <div class="linux">
   <div class="python">
-    <div class="cpu gpu">
+    <div class="cpu">
 
 <div class="pip build-from-source">
 
@@ -811,7 +850,7 @@ $
 
 <div class="docker">
 
-Exit the Python terminal and then the docker container.
+Exit the Python terminal and mxnet/python docker container.
 ```python
 >>> exit()
 root@4919c4f58cac:/# exit
@@ -866,7 +905,6 @@ root@4919c4f58cac:/# exit
 <!-- Validation for cloud installation -->
 
 <div class="cloud">
-  <div class="python">
 
 Login to the cloud instance you launched, with pre-installed *MXNet*, following the guide by corresponding cloud provider.
 
@@ -916,6 +954,43 @@ array([[ 3.,  3.,  3.],
 ```
 
 </div>
+
+</div>
+
+<div class="linux">
+  <div class="scala r julia perl">
+    <div class="cpu gpu">
+
+Will be available soon.
+
+</div>
+</div>
+</div>
+
+<div class="macos">
+  <div class="scala r julia perl">
+    <div class="cpu gpu">
+
+Will be available soon.
+
+</div>
+</div>
+</div>
+
+<div class="windows">
+  <div class="python scala r julia perl">
+    <div class="cpu gpu">
+
+Will be available soon.
+
+</div>
+</div>
+</div>
+
+<div class="devices">
+  <div class="raspberry-pi">
+
+Will be available soon.
 
 </div>
 </div>
