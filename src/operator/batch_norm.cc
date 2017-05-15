@@ -449,8 +449,10 @@ Operator *CreateOp<cpu>(const BatchNormParam& param, const int dtype, const TSha
         break;
     }
   }
-#define BATCHNORM_LOG_MKL_INFO() do { LOG(INFO) << MKLBatchNormOp<cpu, float>::getName() \
-                                          << " Skipping MKL optimization (unsupported dimension or type)"; } while (0)
+#define BATCHNORM_LOG_MKL_INFO() do { \
+  LOG(INFO) << MKLBatchNormOp<cpu, float>::getName() \
+    << " Skipping MKL optimization (unsupported dimension or type)"; \
+  } while (0)
 #else
 #define BATCHNORM_LOG_MKL_INFO() ((void)0)
 #endif

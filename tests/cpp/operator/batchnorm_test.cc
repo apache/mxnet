@@ -690,6 +690,7 @@ template<typename PropType, typename DType, typename AccReal>
 static void timingTest(const std::string& label,
                        const bool isGPU,
                        const bool stochastic,
+                       const test::op::kwargs_t& kwargs,
                        const int dim = 0,
                        const size_t count = 1) {
   std::cout << std::endl << std::flush;
@@ -728,19 +729,19 @@ static void timingTest(const std::string& label,
         info = TestBatchNormOperatorForward<PropType, DType, AccReal>(
           isGPU,
           {batchSize, channels, width},
-          blank_kwargs, count);
+          kwargs, count);
         break;
       case 1:
         info = TestBatchNormOperatorForward<PropType, DType, AccReal>(
           isGPU,
           {batchSize, channels, height, width},
-          blank_kwargs, count);
+          kwargs, count);
         break;
       case 2:
         info = TestBatchNormOperatorForward<PropType, DType, AccReal>(
           isGPU,
           {batchSize, channels, depth, height, width},
-          blank_kwargs, count);
+          kwargs, count);
         break;
       default:
         CHECK(false) << "rangedRand() returned unexpected value";
@@ -768,6 +769,7 @@ TEST(BATCH_NORM, TestStochasticTiming_2D) {
     {
       timingTest<op::BatchNormProp, DType, AccReal>("RANDOM: BatchNormProp<cpu>",
                                                     false, true,
+                                                    blank_kwargs_nocudnn,
                                                     GPU_TEST_DIMENSIONS); });
 #if MXNET_USE_CUDA
   if (test::unitTestsWithCuda) {
@@ -776,6 +778,7 @@ TEST(BATCH_NORM, TestStochasticTiming_2D) {
       {
         timingTest<op::BatchNormProp, DType, AccReal>("RANDOM: BatchNormProp<gpu>",
                                                       true, true,
+                                                      blank_kwargs_nocudnn,
                                                       GPU_TEST_DIMENSIONS); });
   }
 #endif
@@ -791,16 +794,34 @@ TEST(BATCH_NORM, TestTiming_2D) {
   MSHADOW_REAL_TYPE_SWITCH_EX(
     mshadow::kFloat32, DType, AccReal,
     {
+      std::string prefix;
+#if MXNET_USE_MKL2017 == 1
+      prefix = "MKL ";
+#endif
       timingTest<op::BatchNormV1Prop, DType, AccReal>("BatchNormV1Prop<cpu> 2D",
-                                                      false, false, 2, THISCOUNT);
-      timingTest<op::BatchNormProp, DType, AccReal>("BatchNormProp<cpu> 2D",
-                                                    false, false, 2, THISCOUNT);
+                                                      false, false,
+                                                      blank_kwargs,
+                                                      2, THISCOUNT);
+      timingTest<op::BatchNormProp, DType, AccReal>(prefix + "BatchNormProp<cpu> 2D",
+                                                    false, false,
+                                                    blank_kwargs_nocudnn,
+                                                    2, THISCOUNT);
 #if MXNET_USE_CUDA
       if (test::unitTestsWithCuda) {
         timingTest<op::BatchNormV1Prop, DType, AccReal>("BatchNormV1Prop<gpu> 2D",
-                                                        true, false, 2, THISCOUNT);
+                                                        true, false,
+                                                        blank_kwargs,
+                                                        2, THISCOUNT);
         timingTest<op::BatchNormProp, DType, AccReal>("BatchNormProp<gpu> 2D",
-                                                      true, false, 2, THISCOUNT);
+                                                      true, false,
+                                                      blank_kwargs_nocudnn,
+                                                      2, THISCOUNT);
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+        timingTest<op::BatchNormProp, DType, AccReal>("CUDNN BatchNormProp<gpu> 2D",
+                                                      true, false,
+                                                      blank_kwargs,
+                                                      2, THISCOUNT);
+#endif
       }
 #endif
     });
