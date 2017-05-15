@@ -43,6 +43,7 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
 
     layers, names = caffe_parser.read_caffemodel(prototxt_fname, caffemodel_fname)
     layer_iter = caffe_parser.layer_iter(layers, names)
+    layers_proto = caffe_parser.get_layers(caffe_parser.read_prototxt(prototxt_fname))
 
     for layer_name, layer_type, layer_blobs in layer_iter:
         if layer_type == 'Convolution' or layer_type == 'InnerProduct' or layer_type == 4 or layer_type == 14 \
@@ -120,18 +121,26 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
             bn_name = layer_name
             mean = layer_blobs[0].data
             var = layer_blobs[1].data
-            moving_average_factor = layer_blobs[2].data
+            rescale_factor = layer_blobs[2].data
+            if rescale_factor != 0:
+            	rescale_factor = 1 / rescale_factor
             mean_name = '{}_moving_mean'.format(bn_name)
             var_name = '{}_moving_var'.format(bn_name)
-            maf_name = '{}_momentum'.format(bn_name)
             mean = mean.reshape(aux_shape_dic[mean_name])
             var = var.reshape(aux_shape_dic[var_name])
             aux_params[mean_name] = mx.nd.zeros(mean.shape)
             aux_params[var_name] = mx.nd.zeros(var.shape)
-            arg_params[maf_name] = mx.nd.zeros(moving_average_factor.shape)
-            aux_params[mean_name][:] = mean
-            aux_params[var_name][:] = var
-            arg_params[maf_name][:] = moving_average_factor
+            # Get the original epsilon
+            for idx, layer in enumerate(layers_proto):
+            	if layer.name == bn_name:
+            		bn_index = idx
+            eps_caffe = layers_proto[bn_index].batch_norm_param.eps
+            # Compensate for the epsilon shift performed in convert_symbol
+            eps_symbol = float( sym.attr_dict()[bn_name + '_moving_mean']['eps'] )
+            eps_correction = eps_caffe - eps_symbol
+            # Fill parameters
+            aux_params[mean_name][:] = mean * rescale_factor
+            aux_params[var_name][:] = var * rescale_factor + eps_correction
             assert var.flags['C_CONTIGUOUS'] is True
             assert mean.flags['C_CONTIGUOUS'] is True
             print ('converting batchnorm layer, mean shape = {}, var shape = {}'.format(mean.shape, var.shape))
