@@ -112,7 +112,7 @@ class BaseRNNCell(object):
         self.reset()
 
     def reset(self):
-        """Reset before re-using the cell for another graph"""
+        """Reset before re-using the cell for another graph."""
         self._init_counter = -1
         self._counter = -1
 
@@ -193,7 +193,7 @@ class BaseRNNCell(object):
 
     def unpack_weights(self, args):
         """Unpack fused weight matrices into separate
-        weight matrices
+        weight matrices.
 
         Parameters
         ----------
@@ -315,7 +315,7 @@ class BaseRNNCell(object):
 
 
 class RNNCell(BaseRNNCell):
-    """Simple recurrent neural network cell
+    """Simple recurrent neural network cell.
 
     Parameters
     ----------
@@ -683,7 +683,7 @@ class FusedRNNCell(BaseRNNCell):
 
 
 class SequentialRNNCell(BaseRNNCell):
-    """Sequantially stacking multiple RNN cells
+    """Sequantially stacking multiple RNN cells.
 
     Parameters
     ----------
@@ -837,7 +837,7 @@ class ModifierCell(BaseRNNCell):
 
 
 class ZoneoutCell(ModifierCell):
-    """Apply Zoneout on base cell"""
+    """Apply Zoneout on base cell."""
     def __init__(self, base_cell, zoneout_outputs=0., zoneout_states=0.):
         assert not isinstance(base_cell, FusedRNNCell), \
             "FusedRNNCell doesn't support zoneout. " \
@@ -876,7 +876,7 @@ class ZoneoutCell(ModifierCell):
 
 
 class BidirectionalCell(BaseRNNCell):
-    """Bidirectional RNN cell
+    """Bidirectional RNN cell.
 
     Parameters
     ----------
