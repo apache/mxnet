@@ -433,10 +433,10 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
 
 
 template<>
-Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
+Operator *CreateOp<cpu>(const BatchNormParam& param, const int dtype, const TShape& shape) {
   Operator *op = nullptr;
 #if MXNET_USE_MKL2017 == 1
-  if (!param.mkl_off) {
+  if (shape.ndim() == 4) {
     switch (dtype) {
       case mshadow::kFloat32:
         op = new MKLBatchNormOp<cpu, float>(param);
@@ -450,7 +450,7 @@ Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
     }
   }
 #define BATCHNORM_LOG_MKL_INFO() do { LOG(INFO) << MKLBatchNormOp<cpu, float>::getName() \
-                                          << " Skip MKL optimization"; } while (0)
+                                          << " Skipping MKL optimization (unsupported dimension or type)"; } while (0)
 #else
 #define BATCHNORM_LOG_MKL_INFO() ((void)0)
 #endif
@@ -471,17 +471,8 @@ Operator *BatchNormProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_s
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-  BatchNormParam param = param_;
   CHECK_GE(in_shape->size(), 1U);
-  const int dim = (*in_shape)[0].ndim();
-  if (dim != 4) {
-    param.mkl_off = true;
-    if (dim > 4) {
-      param.cudnn_off = true;
-    }
-  }
-
-  DO_BIND_DISPATCH(CreateOp, param, (*in_type)[0]);
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_shape)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(BatchNormParam);

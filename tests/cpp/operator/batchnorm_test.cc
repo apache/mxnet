@@ -397,7 +397,7 @@ static const test::op::kwargs_t nonfixgamma_kwargs_nocudnn = {
 static const test::op::kwargs_t useglobalstats_kwargs = {
   {"use_global_stats", "True"} };
 static const test::op::kwargs_t useglobalstats_kwargs_nocudnn = {
-  {"use_global_stats", "True"}, {"cudnn_off", "True"}, {"mkl_off", "True"} };
+  {"use_global_stats", "True"}, {"cudnn_off", "True"} };
 static const test::op::kwargs_t nfs_ugs_kwargs = {
   {"fix_gamma", "False"}, {"use_global_stats", "True"}};
 static const test::op::kwargs_t nfs_ugs_kwargs_nocudnn = {
@@ -843,34 +843,26 @@ TEST(BATCH_NORM, TestIterAll) {
         if (x3) {
           kwargs.push_back({ "cudnn_off", "True" });
         }
-        for (size_t x4 = 0; x4 < 2U; ++x4) {
-          if (x4) {
-            kwargs.push_back({ "mkl_off", "True" });
-          }
-          for (TShape shape : shapes) {
-            for (int g1 = 0; g1 < 2U; ++g1) {
-              for (int g2 = 0; g2 < 2U; ++g2) {
-                for (int type : v2_types) {
-                  MSHADOW_REAL_TYPE_SWITCH_EX(
-                    type, DType, AccReal,
-                    {
-                      test::op::OpInfoPair<op::BatchNormProp, op::BatchNormProp, DType, AccReal>
-                        bi = testForwardAndBackward<op::BatchNormProp, op::BatchNormProp,
-                          DType, AccReal>(
-                          g1 != 0, g2 != 0, shape, kwargs, false);  // Keep it simple
-                      if (shape.ndim() == 4 && type == mshadow::kFloat32 && !x3 && !x4) {
-                        test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType, AccReal>
-                          bi = testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp,
-                          DType, AccReal>(
-                          g1 != 0, g2 != 0, shape, kwargs, false);  // Keep it simple
-                      }
-                    });
-                }
+        for (TShape shape : shapes) {
+          for (int g1 = 0; g1 < 2U; ++g1) {
+            for (int g2 = 0; g2 < 2U; ++g2) {
+              for (int type : v2_types) {
+                MSHADOW_REAL_TYPE_SWITCH_EX(
+                  type, DType, AccReal,
+                  {
+                    test::op::OpInfoPair<op::BatchNormProp, op::BatchNormProp, DType, AccReal>
+                      bi = testForwardAndBackward<op::BatchNormProp, op::BatchNormProp,
+                      DType, AccReal>(
+                      g1 != 0, g2 != 0, shape, kwargs, false);  // Keep it simple
+                    if (shape.ndim() == 4 && type == mshadow::kFloat32 && !x3) {
+                      test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType, AccReal>
+                        bi = testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp,
+                        DType, AccReal>(
+                        g1 != 0, g2 != 0, shape, kwargs, false);  // Keep it simple
+                    }
+                  });
               }
             }
-          }
-          if (x4) {
-            kwargs.pop_back();
           }
         }
         if (x3) {
