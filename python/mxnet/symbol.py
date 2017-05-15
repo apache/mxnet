@@ -1009,12 +1009,14 @@ class Symbol(SymbolBase):
             # pylint: enable=too-many-locals
 
     def debug_str(self):
-        """Gets a debug string of symbol. It contains Symbol output, variables and
-        operators in the computation graph with their inputs, variables and attributes.
+        """Gets a debug string of symbol.
+
+        It contains Symbol output, variables and operators in the computation graph
+        with their inputs, variables and attributes.
 
         Returns
         -------
-        String
+        string
             Debug string of the symbol.
 
         Examples
@@ -1023,7 +1025,7 @@ class Symbol(SymbolBase):
         >>> b = mx.sym.sin(a)
         >>> c = 2 * a + b
         >>> d = mx.sym.FullyConnected(data=c, num_hidden=10)
-        >>> d,debug_str()
+        >>> d.debug_str()
         >>> print d.debug_str()
         Symbol Outputs:
 	        output[0]=fullyconnected0(0)
@@ -1648,8 +1650,9 @@ _init_symbol_module(Symbol, "mxnet")
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def pow(base, exp):
-    """ Returns element-wise result of base element raised to powers
-    from exp element. Both inputs can be Symbol or scalar number.
+    """Returns element-wise result of base element raised to powers from exp element.
+
+    Both inputs can be Symbol or scalar number.
     Broadcasting is not supported. Use `broadcast_pow` instead.
 
     Parameters
@@ -1671,16 +1674,13 @@ def pow(base, exp):
     >>> x = mx.sym.Variable('x')
     >>> y = mx.sym.Variable('y')
     >>> z = mx.sym.pow(x, 2)
-    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([1,2])})
-    >>> texec.forward()[0].asnumpy()
+    >>> z.eval(x=mx.nd.array([1,2]))[0].asnumpy()
     array([ 1.,  4.], dtype=float32)
     >>> z = mx.sym.pow(3, y)
-    >>> texec = z.bind(mx.cpu(), {'y': mx.nd.array([2,3])})
-    >>> texec.forward()[0].asnumpy()
+    >>> z.eval(y=mx.nd.array([2,3]))[0].asnumpy()
     array([  9.,  27.], dtype=float32)
     >>> z = mx.sym.pow(x, y)
-    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([3,4]), 'y':mx.nd.array([2, 3])})
-    >>> texec.forward()[0].asnumpy()
+    >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([2,3]))[0].asnumpy()
     array([  9.,  64.], dtype=float32)
     """
     if isinstance(base, Symbol) and isinstance(exp, Symbol):
@@ -1698,7 +1698,8 @@ def pow(base, exp):
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def maximum(left, right):
-    """ Returns element-wise maximum of the input elements.
+    """Returns element-wise maximum of the input elements.
+
     Both inputs can be Symbol or scalar number. Broadcasting is not supported.
 
     Parameters
@@ -1720,12 +1721,10 @@ def maximum(left, right):
     >>> x = mx.sym.Variable('x')
     >>> y = mx.sym.Variable('y')
     >>> z = mx.sym.maximum(x, 4)
-    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([3,5,2,10])})
-    >>> texec.forward()[0].asnumpy()
+    >>> z.eval(x=mx.nd.array([3,5,2,10]))[0].asnumpy()
     array([  4.,   5.,   4.,  10.], dtype=float32)
     >>> z = mx.sym.maximum(x, y)
-    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([3,4]), 'y':mx.nd.array([10, 2])})
-    >>> texec.forward()[0].asnumpy()
+    >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([10,2]))[0].asnumpy()
     array([ 10.,   4.], dtype=float32)
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
@@ -1743,7 +1742,8 @@ def maximum(left, right):
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def minimum(left, right):
-    """ Returns element-wise minimum of the input elements.
+    """Returns element-wise minimum of the input elements.
+
     Both inputs can be Symbol or scalar number. Broadcasting is not supported.
 
     Parameters
@@ -1765,12 +1765,10 @@ def minimum(left, right):
     >>> x = mx.sym.Variable('x')
     >>> y = mx.sym.Variable('y')
     >>> z = mx.sym.minimum(x, 4)
-    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([3,5,2,10])})
-    >>> texec.forward()[0].asnumpy()
+    >>> z.eval(x=mx.nd.array([3,5,2,10]))[0].asnumpy()
     array([ 3.,  4.,  2.,  4.], dtype=float32)
     >>> z = mx.sym.minimum(x, y)
-    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([3,4]), 'y':mx.nd.array([10, 2])})
-    >>> texec.forward()[0].asnumpy()
+    >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([10,2]))[0].asnumpy()
     array([ 3.,  2.], dtype=float32)
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
@@ -1788,8 +1786,9 @@ def minimum(left, right):
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def hypot(left, right):
-    """ Given the "legs" of a right triangle, return its hypotenuse.
-    Equivalent to sqrt(left**2 + right**2), element-wise.
+    """Given the "legs" of a right triangle, return its hypotenuse.
+
+    Equivalent to "sqrt(left**2 + right**2)", element-wise.
     Both inputs can be Symbol or scalar number. Broadcasting is not supported.
 
     Parameters
@@ -1811,12 +1810,10 @@ def hypot(left, right):
     >>> x = mx.sym.Variable('x')
     >>> y = mx.sym.Variable('y')
     >>> z = mx.sym.hypot(x, 4)
-    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([3,5,2])})
-    >>> texec.forward()[0].asnumpy()
+    >>> z.eval(x=mx.nd.array([3,5,2]))[0].asnumpy()
     array([ 5.,  6.40312433,  4.47213602], dtype=float32)
     >>> z = mx.sym.hypot(x, y)
-    >>> texec = z.bind(mx.cpu(), {'x': mx.nd.array([3,4]), 'y':mx.nd.array([10, 2])})
-    >>> texec.forward()[0].asnumpy()
+    >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([10,2]))[0].asnumpy()
     array([ 10.44030666,   4.47213602], dtype=float32)
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
