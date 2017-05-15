@@ -91,7 +91,7 @@ def _parse_proto(prototxt_fname):
     prev_name = None
 
     # convert reset layers one by one
-    for i,layer in enumerate(layers):
+    for i, layer in enumerate(layers):
         type_string = ''
         param_string = ''
         skip_layer = False
