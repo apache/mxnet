@@ -1,5 +1,8 @@
 Revision history for Perl extension AI::MXNet
 
+0.9507  Thu May 11 17:04:44 PDT 2017
+        - added AutoGrad, bugfixes.
+
 0.9506  Sat Apr 29 20:26:50 PDT 2017
         - Ftrl optimizer, new tests, bugfixes.
 
