@@ -775,7 +775,23 @@ class Updater(object):
         """Update weight given gradient and index."""
         if index not in self.states:
             self.states[index] = self.optimizer.create_state(index, weight)
+        else:
+            if self.states[index]:
+                self.sync_states_context(index, weight.context)
+
         self.optimizer.update(index, weight, grad, self.states[index])
+
+    def sync_states_context(self, index, context):
+        """sync all of ndarray in states to the specified context if needed"""
+        flag = False
+        temp = list(self.states[index])
+        for i, v in enumerate(temp):
+            if isinstance(v, NDArray) and v.context != context:
+                flag = True
+                temp[i] = v.copyto(context)
+
+        if (flag):
+            self.states[index] = tuple(temp)
 
     def set_states(self, states):
         """Set updater states."""
