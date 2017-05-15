@@ -1,3 +1,5 @@
+"""Convert caffe prototxt to symbol
+"""
 from __future__ import print_function
 import argparse
 import re
@@ -47,7 +49,8 @@ def _convert_conv_param(param):
         dilate = 1 if len(param.dilation) == 0 else param.dilation[0]
     # convert to string except for dilation
     param_string = "num_filter=%d, pad=(%d,%d), kernel=(%d,%d), stride=(%d,%d), no_bias=%s" % \
-                   (param.num_output, pad, pad, kernel_size, kernel_size, stride, stride, not param.bias_term)
+                   (param.num_output, pad, pad, kernel_size, kernel_size,
+                    stride, stride, not param.bias_term)
     # deal with dilation. Won't be in deconvolution
     if dilate > 1:
         param_string += ", dilate=(%d, %d)" % (dilate, dilate)
@@ -81,12 +84,8 @@ def _parse_proto(prototxt_fname):
     # only support single input, so always use `data` as the input data
     mapping = {input_name: 'data'}
     need_flatten = {input_name: False}
-    symbol_string = "import mxnet as mx\n" \
-                    + "data = mx.symbol.Variable(name='data')\n";
+    symbol_string = "import mxnet as mx\ndata = mx.symbol.Variable(name='data')\n"
 
-    connection = dict()
-    symbols = dict()
-    top = dict()
     flatten_count = 0
     output_name = ""
     prev_name = None
@@ -158,10 +157,10 @@ def _parse_proto(prototxt_fname):
             # CuDNN requires eps to be greater than 1e-05
             # We compensate for this change in convert_model
             epsilon = param.eps
-            if(epsilon <= 1e-05):
-            	epsilon = 1e-04 
+            if (epsilon <= 1e-05):
+                epsilon = 1e-04
             param_string = 'use_global_stats=%s, fix_gamma=False, eps=%f' % (
-            	param.use_global_stats, epsilon)
+                param.use_global_stats, epsilon)
             need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]]
         if layer[i].type == 'Scale':
             assert layer[i-1].type == 'BatchNorm'
@@ -182,9 +181,9 @@ def _parse_proto(prototxt_fname):
             need_flatten[name] = False
             param = layer[i].reshape_param
             param_string = "shape=(%s)" % (','.join(param.shape.dim),)
-        if layer[i].type == 'AbsVal': 
-        	type_string = 'mx.symbol.abs' 
-        	need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]] 
+        if layer[i].type == 'AbsVal':
+            type_string = 'mx.symbol.abs'
+            need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]]
 
         if skip_layer:
             assert len(layer[i].bottom) == 1
@@ -230,9 +229,9 @@ def convert_symbol(prototxt_fname):
         Input shape
     """
     sym, output_name, input_dim = _parse_proto(prototxt_fname)
-    exec(sym)
+    exec(sym)                   # pylint: disable=exec-used
     _locals = locals()
-    exec("ret = " + output_name, globals(), _locals)
+    exec("ret = " + output_name, globals(), _locals)  # pylint: disable=exec-used
     ret = _locals['ret']
     return ret, input_dim
 

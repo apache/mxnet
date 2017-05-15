@@ -1,12 +1,13 @@
+"""Convert Caffe's modelzoo
+"""
 import os
-import requests
 import argparse
-import logging
 from convert_model import convert_model
 from convert_mean import convert_mean
 import mxnet as mx
 
 _mx_caffe_model = 'http://data.mxnet.io/models/imagenet/test/caffe/'
+
 """Dictionary for model meta information
 
 For each model, it requires three attributes:
@@ -21,6 +22,7 @@ Optionly it takes
   - top-5-acc : top 5 accuracy for testing
 """
 model_meta_info = {
+    # pylint: disable=line-too-long
     'bvlc_alexnet' : {
         'prototxt' : 'https://raw.githubusercontent.com/BVLC/caffe/master/models/bvlc_googlenet/deploy.prototxt',
         'caffemodel' : 'http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel',
@@ -31,7 +33,7 @@ model_meta_info = {
     'bvlc_googlenet' : {
         'prototxt' : 'https://raw.githubusercontent.com/BVLC/caffe/master/models/bvlc_googlenet/deploy.prototxt',
         'caffemodel' : 'http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel',
-        'mean' : (123,117,104),
+        'mean' : (123, 117, 104),
         'top-1-acc' : 0.687,
         'top-5-acc' : 0.889
     },
@@ -39,7 +41,7 @@ model_meta_info = {
         'prototxt' : 'https://gist.githubusercontent.com/ksimonyan/211839e770f7b538e2d8/raw/c3ba00e272d9f48594acef1f67e5fd12aff7a806/VGG_ILSVRC_16_layers_deploy.prototxt',
         # 'caffemodel' : 'http://www.robots.ox.ac.uk/~vgg/software/very_deep/caffe/VGG_ILSVRC_16_layers.caffemodel',
         'caffemodel' : 'http://data.mxnet.io/models/imagenet/test/caffe/VGG_ILSVRC_16_layers.caffemodel',
-        'mean': (123.68,116.779,103.939),
+        'mean': (123.68, 116.779, 103.939),
         'top-1-acc' : 0.734,
         'top-5-acc' : 0.914
     },
@@ -47,7 +49,7 @@ model_meta_info = {
         'prototxt' : 'https://gist.githubusercontent.com/ksimonyan/3785162f95cd2d5fee77/raw/bb2b4fe0a9bb0669211cf3d0bc949dfdda173e9e/VGG_ILSVRC_19_layers_deploy.prototxt',
         # 'caffemodel' : 'http://www.robots.ox.ac.uk/~vgg/software/very_deep/caffe/VGG_ILSVRC_19_layers.caffemodel',
         'caffemodel' : 'http://data.mxnet.io/models/imagenet/test/caffe/VGG_ILSVRC_19_layers.caffemodel',
-        'mean' : (123.68,116.779,103.939),
+        'mean' : (123.68, 116.779, 103.939),
         'top-1-acc' : 0.731,
         'top-5-acc' : 0.913
     },
@@ -110,5 +112,5 @@ if __name__ == '__main__':
     parser.add_argument('model_name', help='can be '+', '.join(model_meta_info.keys()))
     args = parser.parse_args()
     assert args.model_name in model_meta_info, 'Unknown model ' + args.model_name
-    model_name, _ = convert_caffe_model(args.model_name, model_meta_info[args.model_name])
-    print('Model is saved into '+model_name)
+    fname, _ = convert_caffe_model(args.model_name, model_meta_info[args.model_name])
+    print('Model is saved into ' + fname)
