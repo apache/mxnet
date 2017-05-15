@@ -176,8 +176,8 @@ b = a.reshape((2,3,4))
 b.asnumpy()
 ```
 
-The `concat` method stacks multiple arrays along the first axis. (Their
-shapes must be the same along the other axes).
+The `concat` method stacks multiple arrays along the first axis. Their
+shapes must be the same along the other axes.
 
 ```python
 a = mx.nd.ones((2,3))

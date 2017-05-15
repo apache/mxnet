@@ -15,6 +15,14 @@ DMLC_REGISTER_PARAMETER(BroadcastToParam);
 inline std::string get_reduce_axes_description(const std::string& op_name, int line) {
   std::string doc = R"code(Computes the __op__ of array elements over given axes.
 
+The parameter `axis` specifies axis or axes along which to perform the reduction.
+
+- The default, `axis=()`, will compute over all elements into a scalar array with shape `(1,)`.
+
+- If `axis` is int, a reduction is performed on a particular axis.
+
+- If `axis` is a tuple of ints, a reduction is performed on all the axes specified in the tuple.
+
 Defined in )code";
   doc += std::string(__FILE__) + std::string(":L") + std::to_string(line);
   size_t pos = 0;
@@ -34,14 +42,19 @@ MXNET_OPERATOR_REGISTER_REDUCE(sum)
 
   `sum` and `sum_axis` are equivalent.
 
+The parameter `axis` specifies axis or axes along which to perform the reduction.
+
+- The default, `axis=()`, will compute over all elements into a scalar array with shape `(1,)`.
+
+- If axis is int, a reduction is performed on a particular axis.
+
+- If axis is a tuple of ints, a reduction is performed on all the axes specified in the tuple.
+
 Example::
 
   data = [[[1,2],[2,3],[1,3]],
           [[1,4],[4,3],[5,2]],
           [[7,1],[7,2],[7,3]]]
-
-  sum(data, axis=())
-  [58.]
 
   sum(data, axis=1)
   [[  4.   8.]
