@@ -24,7 +24,9 @@ inline Engine* CreateEngine() {
     ret = CreateThreadedEnginePooled();
   } else if (stype == "ThreadedEnginePerDevice") {
     ret = CreateThreadedEnginePerDevice();
-  }
+  } else if (stype == "ThreadedEngineScale") {
+    ret = CreateThreadedEngineScale();
+ }
   #else
   ret = CreateNaiveEngine();
   #endif

@@ -76,6 +76,8 @@ Engine *CreateNaiveEngine();
 Engine *CreateThreadedEnginePooled();
 /*! \return ThreadedEnginePerDevie instance */
 Engine *CreateThreadedEnginePerDevice();
+/*! \return CreateThreadedEngineScale instance */
+Engine *CreateThreadedEngineScale();
 #endif
 }  // namespace engine
 }  // namespace mxnet
