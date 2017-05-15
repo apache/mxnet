@@ -71,8 +71,8 @@ MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
   The provided label can be a one-hot label array or a probability label array.
 
   - If the parameter `use_ignore` is ``true``, `ignore_label` can specify input instances
-    with a particular label to be ignored during backward propagation. **This is disabled when
-    softmax** `output` **has same shape with** `label`.
+    with a particular label to be ignored during backward propagation. **This has no effect when
+    softmax** `output` **has same shape as** `label`.
 
     Example::
 
