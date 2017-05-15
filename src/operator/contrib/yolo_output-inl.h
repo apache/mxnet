@@ -377,9 +377,15 @@ class YoloOutputOp : public Operator {
     //  Tensor<xpu, 1, DType> xpu_bias = ctx.requested[yoloout_enum::kTempSpace]
     //   .get_space_typed<xpu, 1, DType>(cpu_bias.shape_, s);
      Copy(xpu_bias, cpu_bias, s);
-     temp_anchors = reshape(broadcast_with_axis(broadcast_with_axis(reshape(xpu_bias,
-      Shape2(param_.num_anchor, 2)), 0, data.shape_[2] * data.shape_[3]),
-      -1, data.shape_[0]), temp_anchors.shape_);
+     temp_anchors = reshape(repmat(xpu_bias, data.shape_[0] * data.shape_[2] * data.shape_[3]),
+      temp_anchors.shape_);
+    //  Tensor<cpu, 2, DType> debug_anchors = ctx.requested[yoloout_enum::kTempSpace]
+    //   .get_host_space_typed<2, DType>(Shape2(tshape[1], 2));
+    //  Copy(debug_anchors, temp_anchors[0], s);
+    //  for (int ii = 0; ii < tshape[1]; ++ii) {
+    //    LOG(INFO) << "anchor " << ii << ": " << debug_anchors[ii][0] << ", " << debug_anchors[ii][1];
+    //  }
+    //  CHECK_EQ(1, 0);
      // w = exp(pred[2]) * anchor[w] / in_w
      slice<2>(out, 4, 5) = in_w * F<mshadow_op::exp>(slice<2>(temp, nc + 3, nc + 4)) *
       slice<2>(temp_anchors, 0, 1);
