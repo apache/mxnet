@@ -110,6 +110,13 @@ def custom_loss(loss, output, label, weight=None, sample_weight=None,
 
 
 def multitask_loss(losses):
+    """Combine multiple losses together for multitask learning.
+
+    Parameters
+    ----------
+    losses : list of Symbol
+        list of losses to be combined.
+    """
     F = _get_F(losses[0])
     if F is ndarray:
         return losses
