@@ -62,10 +62,11 @@ class Layer(object):
     structure. You can assign sublayers as regular attributes::
         from mxnet import nn
         class Net(nn.Layer):
-            def __init__(self, prefix=None, params=None):
-                super(Net, self).__init__(prefix=prefix, params=params)
-                self.dense1 = nn.Dense(20, in_units=10, prefix=self.prefix+'dense1_')
-                self.dense2 = nn.Dense(20, in_units=20, prefix=self.prefix+'dense2_')
+            def __init__(self, **kwargs):
+                super(Net, self).__init__(**kwargs)
+                with self.scope:
+                    self.dense1 = nn.Dense(20, in_units=10, prefix='dense1_')
+                    self.dense2 = nn.Dense(20, in_units=20, prefix='dense2_')
 
             def forward(self, x):
                 x = self.dense1(x)
