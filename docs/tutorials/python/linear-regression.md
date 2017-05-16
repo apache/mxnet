@@ -39,7 +39,7 @@ eval_iter = mx.io.NDArrayIter(eval_data, eval_label, batch_size, shuffle=False)
 ```
 
 In the above example, we have made use of `NDArrayIter`, which is useful for iterating
-over numpy arrays. In general, there are different types of iterators in
+over both numpy ndarrays and MXNet NDArrays. In general, there are different types of iterators in
 MXNet and you can use one based on the type of data you are processing.
 Documentation for iterators can be found [here](http://mxnet.io/api/python/io.html).
 
