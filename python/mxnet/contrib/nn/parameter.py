@@ -295,6 +295,8 @@ class ParameterDict(object):
             ['net2_w']
         """
         params = self._params
+        if params is other._params:
+            return
         for k, v in other.items():
             assert k not in params or params[k] is v, \
                 "Cannot merge ParameterDicts with prefix %s and %s " \

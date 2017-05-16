@@ -10,7 +10,7 @@ import warnings
 from .. import symbol, init, ndarray
 from ..base import string_types, numeric_types
 # pylint: disable=unused-import
-from ..contrib.nn import ParameterDict, Parameter, SimpleLayer, tensor_types
+from ..contrib.nn import ParameterDict, Parameter, Layer, tensor_types
 from .deprecated import _normalize_sequence, RNNParams, BaseRNNCell
 # pylint: enable=unused-import
 
@@ -86,7 +86,7 @@ def _format_sequence(length, inputs, layout, merge, in_layout=None):
     return inputs, axis, F, batch_size
 
 
-class RecurrentCell(SimpleLayer):
+class RecurrentCell(Layer):
     """Abstract base class for RNN cells
 
     Parameters
@@ -372,7 +372,7 @@ class RNNCell(RecurrentCell):
     def _alias(self):
         return 'rnn'
 
-    def simple_forward(self, F, inputs, states, i2h_weight, i2h_bias,
+    def generic_forward(self, F, inputs, states, i2h_weight, i2h_bias,
                        h2h_weight, h2h_bias):
         name = self._curr_prefix
         i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
@@ -427,7 +427,7 @@ class LSTMCell(RecurrentCell):
     def _alias(self):
         return 'lstm'
 
-    def simple_forward(self, F, inputs, states, i2h_weight, i2h_bias,
+    def generic_forward(self, F, inputs, states, i2h_weight, i2h_bias,
                        h2h_weight, h2h_bias):
         name = self._curr_prefix
         i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
@@ -489,7 +489,7 @@ class GRUCell(RecurrentCell):
     def _alias(self):
         return 'gru'
 
-    def simple_forward(self, F, inputs, states, i2h_weight, i2h_bias,
+    def generic_forward(self, F, inputs, states, i2h_weight, i2h_bias,
                        h2h_weight, h2h_bias):
         # pylint: disable=too-many-locals
         name = self._curr_prefix
@@ -789,7 +789,7 @@ class SequentialRNNCell(RecurrentCell):
 
         return inputs, next_states
 
-    def simple_forward(self, *args, **kwargs):
+    def generic_forward(self, *args, **kwargs):
         raise NotImplementedError
 
 
@@ -813,7 +813,7 @@ class DropoutCell(RecurrentCell):
     def _alias(self):
         return 'dropout'
 
-    def simple_forward(self, F, inputs, states):
+    def generic_forward(self, F, inputs, states):
         if self.dropout > 0:
             inputs = F.Dropout(data=inputs, p=self.dropout)
         return inputs, states
@@ -823,7 +823,7 @@ class DropoutCell(RecurrentCell):
 
         inputs, _, F, _ = _format_sequence(length, inputs, layout, merge_outputs)
         if isinstance(inputs, tensor_types):
-            return self.simple_forward(F, inputs, begin_state if begin_state else [])
+            return self.generic_forward(F, inputs, begin_state if begin_state else [])
         else:
             return super(DropoutCell, self).unroll(
                 length, inputs, begin_state=begin_state, layout=layout,
@@ -867,7 +867,7 @@ class ModifierCell(RecurrentCell):
     def pack_weights(self, args):
         return self.base_cell.pack_weights(args)
 
-    def simple_forward(self, F, inputs, states):
+    def generic_forward(self, F, inputs, states):
         raise NotImplementedError
 
 
@@ -895,7 +895,7 @@ class ZoneoutCell(ModifierCell):
         super(ZoneoutCell, self).reset()
         self.prev_output = None
 
-    def simple_forward(self, F, inputs, states):
+    def generic_forward(self, F, inputs, states):
         cell, p_outputs, p_states = self.base_cell, self.zoneout_outputs, self.zoneout_states
         next_output, next_states = cell(inputs, states)
         mask = (lambda p, like: F.Dropout(F.ones_like(like), p=p))
