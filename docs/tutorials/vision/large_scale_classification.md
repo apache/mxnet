@@ -128,3 +128,45 @@ mv val_meta/*.rec val/
 ```
 
 We now have all training and validation images in recordIO format in `train` and `val` directories respectively. We can now use these `.rec` files for training.
+
+## Training
+
+ResNet has shown its effectiveness on ImageNet competition. Our experiments also reproduced the results reported in the paper. As we increase the number of layers from 18 to 152, we see steady improvement in validation accuracy. Given this is a huge dataset, we will use Resnet with 152 layers.
+
+Due to the huge computation complexity, even the fastest GPU nowadays needs more than one day for a single pass of the data. We often need tens of epochs before the training converges to good validation accuracy. While we can use multiple GPUs in a machine, number of GPUs in a machine is often limited to 8 or 16. For faster training, in this tutorial, we will use multiple machines each using multiple GPUs to train the model.
+
+### Setup
+
+We will use 16 machines (P2.16x instances), each using 16 GPUs (Tesla K80). These machines are connected by 20 Gbps ethernet. 
+
+AWS CloudFormation makes it very easy to create deep learning clusters. We follow instructions from this page and create a deep learning cluster with 16 P2.16x instances.
+
+We load the data and code in the first machine (we’ll refer to this machine as master). We share both the data and code to other machines using EFS.
+
+If you are setting up your cluster without using AWS CloudFormation, remember to do the following: 
+1. Compile MXNet using `USE_DIST_KVSTORE=1` to enable distributed training.
+2. Create a hosts file in the master that contains the hostnames of all the machines in the cluster. Example,
+   ```
+   $ head -3 $DEEPLEARNING_WORKERS_PATH
+   deeplearning-worker1
+   deeplearning-worker2
+   deeplearning-worker3
+   ```
+   It should be possible to ssh into any of these machines from master by invoking `ssh` with just a hostname from the file. Example,
+   ```
+   $ ssh deeplearning-worker2
+   ===================================
+   Deep Learning AMI for Ubuntu
+   ===================================
+   ...
+   ubuntu@ip-10-0-1-199:~$
+   ```
+   One way to do this is to use ssh agent forwarding. Please check this page to learn how to set this up. In short, you’ll configure all machines to login using a particular certificate (mycert.pem) which is present on your local machine. You then login to the master using the certificate and the `-A` switch to enable agent forwarding. Now, from master, you should be able to login to any other machine in the cluster by providing just the hostname (example: ssh deeplearning-worker2).
+   
+### Run Training
+After the cluster is setup, login to master and run the following command from ${MXNET}/example/image-classification
+
+../../tools/launch.py -n 16 -H $DEEPLEARNING_WORKERS_PATH python train_imagenet.py --network resnet --num-layers 152 --data-train ~/data/train --data-val ~/data/val/ --gpus 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 --batch-size 8192 --model ~/data/model/resnet152 --num-epochs 1 --kv-store dist_sync
+
+launch.py launches the command it is provided in all the machine in the cluster. List of machines in the cluster must be provided to launch.py using the -H switch. Here is description of options used for launch.py.
+
