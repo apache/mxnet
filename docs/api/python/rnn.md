@@ -6,7 +6,10 @@
 
 ## Overview
 
-The `rnn` module includes the recurrent neural network (RNN) cell APIs, a suite of tools for building the symbolic graph of RNN.
+The `rnn` module includes the recurrent neural network (RNN) cell APIs, a suite of tools for building an RNN's symbolic graph.
+```eval_rst
+.. note:: The `rnn` module offers higher-level interface while `symbol.RNN` is a lower-level interface. The cell APIs in `rnn` module are easier to use in most cases.
+```
 
 ## The `rnn` module
 
@@ -24,8 +27,8 @@ The `rnn` module includes the recurrent neural network (RNN) cell APIs, a suite 
     BaseRNNCell.pack_weights
 ```
 
-The cell API operates on symbols and returns output symbols based on the type of RNN. Take
-Long-short term memory (LSTM) as an example:
+When working with the cell API, the precise input and output symbols
+depend on the type of RNN you are using. Take Long Short-Term Memory (LSTM) for example:
 
 ```python
 import mxnet as mx
@@ -44,7 +47,7 @@ lstm_cell = mx.rnn.LSTMCell(num_hidden=50)
 begin_state = lstm_cell.begin_state()
 ```
 
-The LSTM cell and other non-fused RNN cells are callable. Calling the cell transforms the input once based on LSTM definition. See this [blog post](http://colah.github.io/posts/2015-08-Understanding-LSTMs/) for a great introduction to LSTM and other RNN.
+The LSTM cell and other non-fused RNN cells are callable. Calling the cell updates it's state once. This transformation depends on both the current input and the previous states. See this [blog post](http://colah.github.io/posts/2015-08-Understanding-LSTMs/) for a great introduction to LSTM and other RNN.
 ```python
 # Call the cell to get the output of one time step for a batch.
 output, states = lstm_cell(embedded_step, begin_state)
@@ -56,8 +59,7 @@ output, states = lstm_cell(embedded_step, begin_state)
 # 'lstm_t0_out_output' has shape (batch_size, hidden_dim), and 'lstm_t0_state_output' has shape (batch_size, hidden_dim).
 ```
 
-Most of the time, we need to process not just one step, but rather a sequence of
-many steps. For this, we need to unroll the LSTM according to the sequence length.
+Most of the time our goal is to process a sequence of many steps. For this, we need to unroll the LSTM according to the sequence length.
 ```python
 # Embed a sequence. 'seq_data' has the shape of (sequence_length, batch_size).
 seq_input = mx.symbol.Variable('seq_data')
@@ -141,9 +143,9 @@ outputs, states = bi_cell.unroll(length=sequence_length, \
     future steps, and thus the whole sequence is required.
 ```
 
-Dropout and zoneout are effective regularization techniques that can be applied on RNN. `rnn`
+Dropout and zoneout are popular regularization techniques that can be applied to RNN. `rnn`
 module provides `DropoutCell` and `ZoneoutCell` for regularization on the output and recurrent
-states of RNN. `ZoneoutCell` takes one RNN cell in the constructor, and are unrolled like
+states of RNN. `ZoneoutCell` takes one RNN cell in the constructor, and supports unrolling like
 other cells.
 ```python
 zoneout_cell = mx.rnn.ZoneoutCell(lstm_cell, zoneout_states=0.5)
@@ -152,7 +154,7 @@ outputs, states = zoneout_cell.unroll(length=sequence_length, \
                                       layout='TNC', \
                                       merge_outputs=True)
 ```
-`DropoutCell` performs dropout on the output of the sequence input. It can be used in a stacked
+`DropoutCell` performs dropout on the input sequence. It can be used in a stacked
 multi-layer RNN setting, which we will cover next.
 
 ### Multi-layer cells
@@ -167,8 +169,7 @@ multi-layer RNN setting, which we will cover next.
 
 The `SequentialRNNCell` allows stacking multiple layers of RNN cells to improve the expressiveness
 and performance of the model. Cells can be added to a `SequentialRNNCell` in order, from bottom to
-top. When unrolling, the output of a lower-level cell is automatically passed to the next
-higher-level.
+top. When unrolling, the output of a lower-level cell is automatically passed to the cell above.
 
 ```python
 stacked_rnn_cells = mx.rnn.SequentialRNNCell()
@@ -201,18 +202,17 @@ outputs, states = stacked_rnn_cells.unroll(length=sequence_length, \
     FusedRNNCell.unfuse
 ```
 
-The computation of RNN for an input sequence consists of many GEMM and point-wise operations with
+The computation of an RNN for an input sequence consists of many GEMM and point-wise operations with
 temporal dependencies dependencies. This could make the computation memory-bound especially on GPU,
 resulting in longer wall-time. By combining the computation of many small matrices into that of
 larger ones and streaming the computation whenever possible, the ratio of computation to memory I/O
 can be increased, which results in better performance on GPU. Such optimization technique is called
-"fusing", which
-[this post](https://devblogs.nvidia.com/parallelforall/optimizing-recurrent-neural-networks-cudnn-5/)
-talks in more details.
+"fusing".
+[This post](https://devblogs.nvidia.com/parallelforall/optimizing-recurrent-neural-networks-cudnn-5/)
+talks in greater detail.
 
 The `rnn` module includes a `FusedRNNCell`, which provides the optimized fused implementation.
-This cell also offers functionalities similar to the modifier cells, such as bidirectional and
-dropout support.
+The FusedRNNCell supports bidirectional RNNs and dropout.
 
 ```python
 fused_lstm_cell = mx.rnn.FusedRNNCell(num_hidden=50, \
@@ -280,8 +280,8 @@ equivalent SequentialRNNCell's parameters are separate:
 ...
 ```
 
-All cells in the `rnn` module has `unpack_weights()` for converting `FusedRNNCell` parameters
-to the unfused format and `pack_weights()` for fusing the parameters. The RNN specific
+All cells in the `rnn` module support the method `unpack_weights()` for converting `FusedRNNCell`
+parameters to the unfused format and `pack_weights()` for fusing the parameters. The RNN-specific
 checkpointing methods (`load_rnn_checkpoint, save_rnn_checkpoint, do_rnn_checkpoint`) handle the
 conversion transparently based on the provided cells.
 
