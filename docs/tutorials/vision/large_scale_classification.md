@@ -51,7 +51,7 @@ n00120010
 ```
 
 ### Remove uncommon classes for transfer learning (optional)
-A common reason to train a network on Imagenet data is to then use it for transfer learning (including feature extraction or fine-tuning other models). According to this study, classes with too few images don’t help in transfer learning. So, we could remove classes with fewer than a certain number of images. The following code will remove classes with less than 500 images.
+A common reason to train a network on Imagenet data is to then use it for transfer learning (including feature extraction or fine-tuning other models). According to [this](https://arxiv.org/pdf/1608.08614v1.pdf) study, classes with too few images don’t help in transfer learning. So, we could remove classes with fewer than a certain number of images. The following code will remove classes with less than 500 images.
 
 ```
 BAK=${ROOT}_filtered
@@ -68,7 +68,7 @@ done
 ```
 
 ### Generate a validation set
-To ensure we don’t overfit the data, we will create a validation set separate from the training set, monitor the loss on the validation set frequently. We create the validation set by picking fifty random images from each class.
+To ensure we don’t overfit the data, we will create a validation set separate from the training set, monitor the loss on the validation set frequently. We create the validation set by picking fifty random images from each class and moving them to the validation set.
 
 ```
 VAL_ROOT=${ROOT}_val
@@ -86,14 +86,14 @@ done
 ### Pack images into record files
 While MXNet can read image files directly, it is recommended to pack the image files into a recordio file for increased performance. MXNet provides a tool (tools/im2rec.py) to do this. To use this tool, MXNet and OpenCV’s python module needs to be installed in the system. OpenCV’s python module can be installed on Ubuntu using the command `sudo apt-get install python-opencv`.
 
-Set the environment variable MXNET to point to the MXNet installation directory and NAME to the name of the dataset. We assume MXNet is installed at ~/mxnet
+Set the environment variable `MXNET` to point to the MXNet installation directory and `NAME` to the name of the dataset. We assume MXNet is installed at `~/mxnet`
 
 ```
 MXNET=~/mxnet
 NAME=full_imagenet_500_filtered
 ```
 
-To create the recordIO files, we first create a list of images we want in the recordIO files and then use im2rec to pack images in the list into recordIO files. We create this list in `train_meta`. Training data is around 1T, we split it into 8 parts, which each part roughly 100 GB.
+To create the recordIO files, we first create a list of images we want in the recordIO files and then use `im2rec` to pack images in the list into recordIO files. We create this list in `train_meta`. Training data is around 1TB. We split it into 8 parts, with each part roughly 100 GB.
 
 ```
 mkdir -p train_meta
@@ -131,7 +131,7 @@ We now have all training and validation images in recordIO format in `train` and
 
 ## Training
 
-ResNet has shown its effectiveness on ImageNet competition. Our experiments also reproduced the results reported in the paper. As we increase the number of layers from 18 to 152, we see steady improvement in validation accuracy. Given this is a huge dataset, we will use Resnet with 152 layers.
+[ResNet](https://arxiv.org/abs/1512.03385) has shown its effectiveness on ImageNet competition. Our experiments also [reproduced](https://github.com/tornadomeet/ResNet) the results reported in the paper. As we increase the number of layers from 18 to 152, we see steady improvement in validation accuracy. Given this is a huge dataset, we will use Resnet with 152 layers.
 
 Due to the huge computation complexity, even the fastest GPU nowadays needs more than one day for a single pass of the data. We often need tens of epochs before the training converges to good validation accuracy. While we can use multiple GPUs in a machine, number of GPUs in a machine is often limited to 8 or 16. For faster training, in this tutorial, we will use multiple machines each using multiple GPUs to train the model.
 
@@ -139,7 +139,7 @@ Due to the huge computation complexity, even the fastest GPU nowadays needs more
 
 We will use 16 machines (P2.16x instances), each using 16 GPUs (Tesla K80). These machines are connected by 20 Gbps ethernet. 
 
-AWS CloudFormation makes it very easy to create deep learning clusters. We follow instructions from this page and create a deep learning cluster with 16 P2.16x instances.
+AWS CloudFormation makes it very easy to create deep learning clusters. We follow instructions from [this](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/) page and create a deep learning cluster with 16 P2.16x instances.
 
 We load the data and code in the first machine (we’ll refer to this machine as master). We share both the data and code to other machines using EFS.
 
@@ -147,7 +147,7 @@ If you are setting up your cluster without using AWS CloudFormation, remember to
 1. Compile MXNet using `USE_DIST_KVSTORE=1` to enable distributed training.
 2. Create a hosts file in the master that contains the hostnames of all the machines in the cluster. Example,
    ```
-   $ head -3 $DEEPLEARNING_WORKERS_PATH
+   $ head -3 hosts
    deeplearning-worker1
    deeplearning-worker2
    deeplearning-worker3
@@ -161,7 +161,7 @@ If you are setting up your cluster without using AWS CloudFormation, remember to
    ...
    ubuntu@ip-10-0-1-199:~$
    ```
-   One way to do this is to use ssh agent forwarding. Please check this page to learn how to set this up. In short, you’ll configure all machines to login using a particular certificate (mycert.pem) which is present on your local machine. You then login to the master using the certificate and the `-A` switch to enable agent forwarding. Now, from master, you should be able to login to any other machine in the cluster by providing just the hostname (example: ssh deeplearning-worker2).
+   One way to do this is to use ssh agent forwarding. Please check [this](https://aws.amazon.com/blogs/security/securely-connect-to-linux-instances-running-in-a-private-amazon-vpc/) page to learn how to set this up. In short, you’ll configure all machines to login using a particular certificate (mycert.pem) which is present on your local machine. You then login to the master using the certificate and the `-A` switch to enable agent forwarding. Now, from master, you should be able to login to any other machine in the cluster by providing just the hostname (example: ssh deeplearning-worker2).
    
 ### Run Training
 After the cluster is setup, login to master and run the following command from ${MXNET}/example/image-classification
