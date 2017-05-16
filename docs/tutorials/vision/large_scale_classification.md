@@ -172,3 +172,24 @@ After the cluster is setup, login to master and run the following command from $
 
 launch.py launches the command it is provided in all the machine in the cluster. List of machines in the cluster must be provided to launch.py using the -H switch. Here is description of options used for launch.py.
 
+Option | Description
+------ | -----------
+n | specifies the number of worker jobs to run on each machine. We run 16 workers since we have 16 machines in the cluster.
+H | specifies the path to a file that has a list of hostnames of machines in the cluster. Since we created the cluster using the AWS deep learning CloudFormation template, the environment variable $DEEPLEARNING_WORKERS_PATH points to the required file.
+
+train_imagenet.py trains the network provided by the --network option using the data provided by the --data-train and --data-val options. Here is description of the options used with train_imagenet.py.
+
+Option | Description
+------ | -----------
+network | The network to train. Could be any of the network available in ${MXNET}/example/image-classification. For this tutorial, we use Resnet.
+num-layers | Number of layers to use in the network. We use 152 layered Resnet.
+data-train | Directory containing the training images. We point to the EFS location (~/data/train/) where we stored the training images.
+data-val   | Directory containing the validation images. We point to the EFS location (~/data/val) where we store the validation images.
+gpus       | Comma separated list of gpu indices to use for training in each machine. We use all 16 GPUs.
+batch-size | Batch size across all GPUs. This is equal to batch size per GPU * total number of GPUs. We use a batch size of 32 images per GPU. So, effective batch size is 32*16*16=8192
+model      | Path prefix for the model file created by the training.
+num-epochs | Number of epochs to train.
+kv-store   | Key/Value store for parameter synchronization. We use distributed kv store since we do distributed training.
+
+After training is complete, trained models are available in the directory specified by the ‘--model’ option. Models are saved in two parts: model-symbol.json for the network definition and model-n.params for the parameters saved on epoch `n`.
+
