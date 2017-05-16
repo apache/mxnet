@@ -494,11 +494,11 @@ li.dropdown-submenu ul.dropdown-menu a {
     margin:2em 0 4em 0;
 }
 
-#splash #get_start {
+#splash #why_mxnet #install_blk {
     margin:2em 0
 }
 
-#splash #get_start_btn {
+#splash #why_mxnet_btn #install_btn {
     border: 1.8px solid #FFFFFF;
     border-radius: 2px;
     color: #FFFFFF;
@@ -510,7 +510,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     transition: .2s;
 }
 
-#splash #get_start_btn:hover {
+#splash #why_mxnet_btn:hover #install_btn:hover {
     background-color: #FFFFFF;
     color: #0079b2;
     opacity: 0.9;
