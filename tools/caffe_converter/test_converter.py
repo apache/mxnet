@@ -39,8 +39,7 @@ def test_imagenet_model(model_name, val_data, gpus, batch_size):
     assert acc[1].get()[1] > meta_info['top-5-acc'] - 0.3
 
 def main():
-    # gpus = mx.test_utils.list_gpus()
-    gpus = '0'
+    gpus = mx.test_utils.list_gpus()
     assert len(gpus) > 0
     batch_size = 32 * len(gpus)
 
