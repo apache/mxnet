@@ -193,7 +193,7 @@ model      | Path prefix for the model file created by the training.
 num-epochs | Number of epochs to train.
 kv-store   | Key/Value store for parameter synchronization. We use distributed kv store since we do distributed training.
 
-After training is complete, trained models are available in the directory specified by the `--model` option. Models are saved in two parts: model-symbol.json for the network definition and model-n.params for the parameters saved on epoch `n`.
+After training is complete, trained models are available in the directory specified by the `--model` option. Models are saved in two parts: model-symbol.json for the network definition and model-n.params for the parameters saved after the n'th epoch.
 
 ## Scalability
 One common concern using large number of machines for training is the scalability. We have benchmarked scalability running several popular networks on up to 256 GPUs and the speedup is very close to ideal speedup.
