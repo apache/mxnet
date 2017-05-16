@@ -6,6 +6,10 @@ then
 fi
 
 if [[ ${TASK} == *"installation"* ]]; then
+    if [[ $(git diff --name-only HEAD^ | grep install.md) ]]; then
+        echo "No changes to install.md. Skipping installation tasks..."
+        exit 0
+    fi
     ./tests/jenkins/run_test_installation_docs.sh docs/get_started/install.md ${TASK}
     exit $?
 fi
