@@ -5,7 +5,7 @@ Training a neural network with a large number of images present several challeng
 ## Preprocessing
 
 ### Disk space
-First step in training with large data is downloading the data and preprocessing it. For this tutorial, we will be using the full imagenet dataset. Note that, at least 2 TB of disk space is required to download and preprocess this data. It is strongly recommended to use SSD instead of HDD. SSD is much better at dealing with large number of small files like images. After the preprocessing is done and images are packed into recordio files, HDD should be fine for training.
+First step in training with large data is downloading the data and preprocessing it. For this tutorial, we will be using the full imagenet dataset. Note that, at least 2 TB of disk space is required to download and preprocess this data. It is strongly recommended to use SSD instead of HDD. SSD is much better at dealing with large number of small files like images. After the preprocessing is done and images are packed into recordIO files, HDD should be fine for training.
 
 For this tutorial, we will use AWS storage instance for data preprocessing. The storage instance `i3.4xlarge` has 3.8 TB of disk space across two NVMe SSD disks. We will use software RAID to combine them into one disk and mount it at `~/data`.
 
@@ -84,7 +84,7 @@ done
 ```
 
 ### Pack images into record files
-While MXNet can read image files directly, it is recommended to pack the image files into a recordio file for increased performance. MXNet provides a tool (tools/im2rec.py) to do this. To use this tool, MXNet and OpenCV’s python module needs to be installed in the system. OpenCV’s python module can be installed on Ubuntu using the command `sudo apt-get install python-opencv`.
+While MXNet can read image files directly, it is recommended to pack the image files into a recordIO file for increased performance. MXNet provides a tool (tools/im2rec.py) to do this. To use this tool, MXNet and OpenCV’s python module needs to be installed in the system. OpenCV’s python module can be installed on Ubuntu using the command `sudo apt-get install python-opencv`.
 
 Set the environment variable `MXNET` to point to the MXNet installation directory and `NAME` to the name of the dataset. We assume MXNet is installed at `~/mxnet`
 
