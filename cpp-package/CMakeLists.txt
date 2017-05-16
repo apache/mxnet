@@ -2,6 +2,10 @@ if(USE_CPP_PACKAGE)
 
 set(CPP_PACKAGE_OP_H_HEADER ${CMAKE_CURRENT_LIST_DIR}/include/mxnet-cpp/op.h)
 
+if(MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8")
+endif(MSVC)
+
 add_custom_target(
   cpp_package_op_h ALL
   BYPRODUCTS ${CPP_PACKAGE_OP_H_HEADER}
