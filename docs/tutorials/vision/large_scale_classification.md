@@ -167,7 +167,9 @@ If you are setting up your cluster without using AWS CloudFormation, remember to
 After the cluster is setup, login to master and run the following command from ${MXNET}/example/image-classification
 
 ```
-../../tools/launch.py -n 16 -H $DEEPLEARNING_WORKERS_PATH python train_imagenet.py --network resnet --num-layers 152 --data-train ~/data/train --data-val ~/data/val/ --gpus 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 --batch-size 8192 --model ~/data/model/resnet152 --num-epochs 1 --kv-store dist_sync
+../../tools/launch.py -n 16 -H $DEEPLEARNING_WORKERS_PATH python train_imagenet.py --network resnet \
+--num-layers 152 --data-train ~/data/train --data-val ~/data/val/ --gpus 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 \
+--batch-size 8192 --model ~/data/model/resnet152 --num-epochs 1 --kv-store dist_sync
 ```
 
 launch.py launches the command it is provided in all the machine in the cluster. List of machines in the cluster must be provided to launch.py using the `-H` switch. Here is description of options used for launch.py.
