@@ -118,6 +118,14 @@ USE_CPP_PACKAGE=1             \
       }
     }
   },
+  'Docs': {
+    node('linux') {
+      ws('workspace/doc) {
+        init_git()
+        make('doc', '-C docs html')
+      }
+    }
+  },
   'GPU: MKLML': {
     node('GPU' && 'linux') {
       ws('workspace/build-mklml') {
