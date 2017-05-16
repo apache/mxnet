@@ -161,7 +161,7 @@ If you are setting up your cluster without using AWS CloudFormation, remember to
    ...
    ubuntu@ip-10-0-1-199:~$
    ```
-   One way to do this is to use ssh agent forwarding. Please check [this](https://aws.amazon.com/blogs/security/securely-connect-to-linux-instances-running-in-a-private-amazon-vpc/) page to learn how to set this up. In short, you’ll configure all machines to login using a particular certificate (mycert.pem) which is present on your local machine. You then login to the master using the certificate and the `-A` switch to enable agent forwarding. Now, from master, you should be able to login to any other machine in the cluster by providing just the hostname (example: ssh deeplearning-worker2).
+   One way to do this is to use ssh agent forwarding. Please check [this](https://aws.amazon.com/blogs/security/securely-connect-to-linux-instances-running-in-a-private-amazon-vpc/) page to learn how to set this up. In short, you’ll configure all machines to login using a particular certificate (mycert.pem) which is present on your local machine. You then login to the master using the certificate and the `-A` switch to enable agent forwarding. Now, from master, you should be able to login to any other machine in the cluster by providing just the hostname (example: `ssh deeplearning-worker2`).
    
 ### Run Training
 After the cluster is setup, login to master and run the following command from ${MXNET}/example/image-classification
@@ -170,35 +170,35 @@ After the cluster is setup, login to master and run the following command from $
 ../../tools/launch.py -n 16 -H $DEEPLEARNING_WORKERS_PATH python train_imagenet.py --network resnet --num-layers 152 --data-train ~/data/train --data-val ~/data/val/ --gpus 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 --batch-size 8192 --model ~/data/model/resnet152 --num-epochs 1 --kv-store dist_sync
 ```
 
-launch.py launches the command it is provided in all the machine in the cluster. List of machines in the cluster must be provided to launch.py using the -H switch. Here is description of options used for launch.py.
+launch.py launches the command it is provided in all the machine in the cluster. List of machines in the cluster must be provided to launch.py using the `-H` switch. Here is description of options used for launch.py.
 
 Option | Description
 ------ | -----------
 n | specifies the number of worker jobs to run on each machine. We run 16 workers since we have 16 machines in the cluster.
-H | specifies the path to a file that has a list of hostnames of machines in the cluster. Since we created the cluster using the AWS deep learning CloudFormation template, the environment variable $DEEPLEARNING_WORKERS_PATH points to the required file.
+H | specifies the path to a file that has a list of hostnames of machines in the cluster. Since we created the cluster using the AWS deep learning CloudFormation template, the environment variable `$DEEPLEARNING_WORKERS_PATH` points to the required file.
 
-train_imagenet.py trains the network provided by the --network option using the data provided by the --data-train and --data-val options. Here is description of the options used with train_imagenet.py.
+train_imagenet.py trains the network provided by the `--network` option using the data provided by the `--data-train` and `--data-val` options. Here is description of the options used with train_imagenet.py.
 
 Option | Description
 ------ | -----------
-network | The network to train. Could be any of the network available in ${MXNET}/example/image-classification. For this tutorial, we use Resnet.
+network | The network to train. Could be any of the network available in `${MXNET}/example/image-classification`. For this tutorial, we use Resnet.
 num-layers | Number of layers to use in the network. We use 152 layered Resnet.
-data-train | Directory containing the training images. We point to the EFS location (~/data/train/) where we stored the training images.
-data-val   | Directory containing the validation images. We point to the EFS location (~/data/val) where we store the validation images.
+data-train | Directory containing the training images. We point to the EFS location (`~/data/train/`) where we stored the training images.
+data-val   | Directory containing the validation images. We point to the EFS location (`~/data/val`) where we store the validation images.
 gpus       | Comma separated list of gpu indices to use for training in each machine. We use all 16 GPUs.
 batch-size | Batch size across all GPUs. This is equal to batch size per GPU * total number of GPUs. We use a batch size of 32 images per GPU. So, effective batch size is 32*16*16=8192
 model      | Path prefix for the model file created by the training.
 num-epochs | Number of epochs to train.
 kv-store   | Key/Value store for parameter synchronization. We use distributed kv store since we do distributed training.
 
-After training is complete, trained models are available in the directory specified by the ‘--model’ option. Models are saved in two parts: model-symbol.json for the network definition and model-n.params for the parameters saved on epoch `n`.
+After training is complete, trained models are available in the directory specified by the `--model` option. Models are saved in two parts: model-symbol.json for the network definition and model-n.params for the parameters saved on epoch `n`.
 
 ## Scalability
-One common concern using large number of machines for training is the scalability. We have benchmarked scalability running several popular networks on up to 256 GPUs and the speedup is very close to ideal speedup except in networks like Alexnet which has lot more parameters than other convolutional neural networks.
+One common concern using large number of machines for training is the scalability. We have benchmarked scalability running several popular networks on up to 256 GPUs and the speedup is very close to ideal speedup.
 
 This scalability test was run on sixteen P2.16xl instances with 256 GPUs in total. We used AWS deep learning AMI with CUDA 7.5 and CUDNN 5.1 installed. 
 
-We fixed the batch size per GPU constant and doubled the number of GPUs for every subsequent test. Synchronized SGD (--kv-store dist_device_sync) was used. The CNNs used are located here.
+We fixed the batch size per GPU constant and doubled the number of GPUs for every subsequent test. Synchronized SGD (--kv-store dist_device_sync) was used. The CNNs used are located [here](https://github.com/dmlc/mxnet/tree/master/example/image-classification/symbols).
 
  || alexnet | inception-v3 | resnet-152
 ---|---------|--------------|-----------
@@ -229,17 +229,17 @@ We fixed the batch size per GPU constant and doubled the number of GPUs for ever
 It is often straightforward to achieve a reasonable validation accuracy, but achieving the state-of-the-art numbers reported in papers can sometime be very hard. Here is a few things you can try to improve validation accuracy.
 - Adding more data augmentations often reduces the gap between training and validation accuracy. Data augmentation could be reduced in epochs closer to the end.
 - Start with a large learning rate and keep it large for a long time. For example, in CIFAR10, you could keep the learning rate at 0.1 for the first 200 epochs and then reduce it to 0.01.
-- Do not use too large batch size, especially for batch size >> number of classes.
+- Do not use too large batch size, especially batch size >> number of classes.
 
 ### Speed
-- Distributed training improves speed when computation cost is high. So, make sure your workload is not too small (example: LeNet on MNIST). Also, make sure batch size is reasonably large. 
+- Distributed training improves speed when computation cost of a batch is high. So, make sure your workload is not too small (example: LeNet on MNIST). Also, make sure batch size is reasonably large. 
 - Make sure data-read and pre-processing is not the bottleneck. Use the `--test-io 1` flag to check how many images can be pre-processed per second.
 - Increase --data-nthreads (default is 4) to use more threads for data pre-processing.
 - Data preprocessing is done by opencv. If opencv is compiled from source codes, check if it is configured correctly.
-- Use --benchmark 1 to use randomly generated data rather than real data.
-- Check this page for more details.
+- Use `--benchmark 1` to use randomly generated data rather than real data to narrow down on where the bottleneck is.
+- Check [this](http://mxnet.io/how_to/perf.html) page for more details.
 
 ### Memory
-If the batch size is too big, it can cause GPU memory to overflow. If this happens, you’ll be the error message “cudaMalloc failed: out of memory” or something similar. There is a couple of ways to fix this:
+If the batch size is too big, it can cause GPU memory to overflow. If this happens, you’ll seee the error message “cudaMalloc failed: out of memory” or something similar. There is a couple of ways to fix this:
 - Reduce the batch size.
-- Set the environment variable MXNET_BACKWARD_DO_MIRROR to 1. It reduces the memory consumption by trading off speed. For example, with batch size 64, inception-v3 uses 10G memory and trains 30 image/sec on a single K80 GPU. When mirroring is enabled, with 10G GPU memory consumption, we can run inception-v3 using batch size 128. The cost is that, the speed reduces to 27 images/sec.
+- Set the environment variable `MXNET_BACKWARD_DO_MIRROR` to 1. It reduces the memory consumption by trading off speed. For example, with batch size 64, inception-v3 uses 10G memory and trains 30 image/sec on a single K80 GPU. When mirroring is enabled, with 10G GPU memory consumption, we can run inception-v3 using batch size 128. The cost is that, the speed reduces to 27 images/sec.
