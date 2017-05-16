@@ -184,7 +184,7 @@ train_imagenet.py trains the network provided by the `--network` option using th
 Option | Description
 ------ | -----------
 network | The network to train. Could be any of the network available in `${MXNET}/example/image-classification`. For this tutorial, we use Resnet.
-num-layers | Number of layers to use in the network. We use 152 layered Resnet.
+num-layers | Number of layers to use in the network. We use 152 layer Resnet.
 data-train | Directory containing the training images. We point to the EFS location (`~/data/train/`) where we stored the training images.
 data-val   | Directory containing the validation images. We point to the EFS location (`~/data/val`) where we store the validation images.
 gpus       | Comma separated list of gpu indices to use for training in each machine. We use all 16 GPUs.
