@@ -494,11 +494,11 @@ li.dropdown-submenu ul.dropdown-menu a {
     margin:2em 0 4em 0;
 }
 
-#splash #why_mxnet #install_blk {
+#why_mxnet, #install_blk {
     margin:2em 0
 }
 
-#splash #why_mxnet_btn #install_btn {
+#why_mxnet_btn, #install_btn {
     border: 1.8px solid #FFFFFF;
     border-radius: 2px;
     color: #FFFFFF;
@@ -508,9 +508,28 @@ li.dropdown-submenu ul.dropdown-menu a {
     padding: 8px 20px;
     -webkit-transition: .2s;
     transition: .2s;
+    width: 180px;
 }
 
-#splash #why_mxnet_btn:hover #install_btn:hover {
+@media (min-width: 768px) {
+    #why_mxnet_btn {
+        margin-right: -30%;
+    }
+    #install_btn {
+        margin-left: -30%;
+    }
+}
+
+@media (max-width: 767px) {
+    #why_mxnet_btn {
+        margin-bottom: -20%;
+    }
+    #install_btn {
+        margin-top: -20%;
+    }
+}
+
+#why_mxnet_btn:hover, #install_btn:hover {
     background-color: #FFFFFF;
     color: #0079b2;
     opacity: 0.9;
