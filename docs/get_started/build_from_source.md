@@ -423,3 +423,28 @@ Install the Julia package for MXNet with:
 ```bash
 julia -e 'Pkg.add("MXNet")'
 ```
+
+### Build the Perl package
+
+Run the following command from the MXNet source root directory to build the MXNet Perl package:
+
+```bash
+    sudo apt-get install libmouse-perl pdl cpanminus swig libgraphviz-perl
+    cpanm -q -L "${HOME}/perl5" Function::Parameters
+
+    MXNET_HOME=${PWD}
+    export LD_LIBRARY_PATH=${MXNET_HOME}/lib
+    export PERL5LIB=${HOME}/perl5/lib/perl5
+
+    cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make install
+
+    cd ${MXNET_HOME}/perl-package/AI-NNVMCAPI/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make install
+
+    cd ${MXNET_HOME}/perl-package/AI-MXNet/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make install
+```

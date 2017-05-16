@@ -12,12 +12,12 @@ If you plan to build with GPU, you need to set up the environment for CUDA and C
 
 First, download and install [CUDA 8 toolkit](https://developer.nvidia.com/cuda-toolkit).
 
-Then download [cudnn 5](https://developer.nvidia.com/cudnn).
+Then download [cudnn 6](https://developer.nvidia.com/cudnn).
 
 Unzip the file and change to the cudnn root directory. Move the header and libraries to your local CUDA Toolkit folder:
 
 ```bash
-    tar xvzf cudnn-8.0-linux-x64-v5.1-ga.tgz
+    tar xvzf cudnn-8.0-linux-x64-v6.0.tgz
     sudo cp -P cuda/include/cudnn.h /usr/local/cuda/include
     sudo cp -P cuda/lib64/libcudnn* /usr/local/cuda/lib64
     sudo chmod a+r /usr/local/cuda/include/cudnn.h /usr/local/cuda/lib64/libcudnn*
@@ -128,7 +128,6 @@ Next, we install ```graphviz``` library that we use for visualizing network grap
 &nbsp;
 
 We have installed MXNet core library. Next, we will install MXNet interface package for programming language of your choice:
-- [Python](#install-the-mxnet-package-for-python)
 - [R](#install-the-mxnet-package-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
 - [Scala](#install-the-mxnet-package-for-scala)
@@ -232,7 +231,7 @@ To install the MXNet Scala package into your local Maven repository, run the fol
 ```
 ### Install the MXNet Package for Perl
 
-Before you build MXNet for Scala from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Scala package:
+Before you build MXNet for Perl from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Perl package:
 
 ```bash
     sudo apt-get install libmouse-perl pdl cpanminus swig libgraphviz-perl
