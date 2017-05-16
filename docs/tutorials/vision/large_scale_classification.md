@@ -193,3 +193,33 @@ kv-store   | Key/Value store for parameter synchronization. We use distributed k
 
 After training is complete, trained models are available in the directory specified by the ‘--model’ option. Models are saved in two parts: model-symbol.json for the network definition and model-n.params for the parameters saved on epoch `n`.
 
+## Scalability
+One common concern using large number of machines for training is the scalability. We have benchmarked scalability running several popular networks on up to 256 GPUs and the speedup is very close to ideal speedup except in networks like Alexnet which has lot more parameters than other convolutional neural networks.
+
+This scalability test was run on sixteen P2.16xl instances with 256 GPUs in total. We used AWS deep learning AMI with CUDA 7.5 and CUDNN 5.1 installed. 
+
+We fixed the batch size per GPU constant and doubled the number of GPUs for every subsequent test. Synchronized SGD (--kv-store dist_device_sync) was used. The CNNs used are located here.
+
+ || alexnet | inception-v3 | resnet-152
+---|---------|--------------|-----------
+ batch per GPU | 512 | 32 | 32
+ model size (MB) | 203 | 95 | 240
+ 
+ Number of images processed per second is shown in the following table:
+ 
+ #GPUs | Alexnet | Inception-v3 | Resnet-152
+ ------|---------|--------------|-----------
+ 1     |457.07   |30.4          |20.8
+ 2     |870.43   |59.61         |38.76
+ 4     |1514.8   |117.9         |77.01
+ 8     |2852.5   |233.39        |153.07
+ 16    |4244.18  |447.61        |298.03
+ 32    |7945.57  |882.57        |595.53
+ 64    |15840.52 |1761.24       |1179.86
+ 128   |31334.88 |3416.2        |2333.47
+ 256   |61938.36 |6660.98       |4630.42
+ 
+ The following figure shows speedup against the number of GPUs used and compares it with ideal speedup.
+ 
+ 
+ 
