@@ -503,20 +503,39 @@ li.dropdown-submenu ul.dropdown-menu a {
     border-radius: 2px;
     color: #FFFFFF;
     display: inline-block;
-    font-size: 22px;
+    font-size: 18px;
     font-family: Helvetica, Helvetica Neue, Arial, sans-serif;
     padding: 8px 20px;
     -webkit-transition: .2s;
     transition: .2s;
-    width: 180px;
+    width: 160px;
+    border-radius: 30px;
 }
 
 @media (min-width: 768px) {
     #why_mxnet_btn {
-        margin-right: -30%;
+        margin-right: -45%;
     }
     #install_btn {
-        margin-left: -30%;
+        margin-left: -45%;
+    }
+}
+
+@media (min-width: 992px) {
+    #why_mxnet_btn {
+        margin-right: -55%;
+    }
+    #install_btn {
+        margin-left: -55%;
+    }
+}
+
+@media (min-width: 1200px) {
+    #why_mxnet_btn {
+        margin-right: -65%;
+    }
+    #install_btn {
+        margin-left: -65%;
     }
 }
 
