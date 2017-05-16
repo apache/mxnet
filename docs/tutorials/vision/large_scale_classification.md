@@ -231,17 +231,17 @@ We fixed the batch size per GPU constant and doubled the number of GPUs for ever
 It is often straightforward to achieve a reasonable validation accuracy, but achieving the state-of-the-art numbers reported in papers can sometime be very hard. Here is a few things you can try to improve validation accuracy.
 - Adding more data augmentations often reduces the gap between training and validation accuracy. Data augmentation could be reduced in epochs closer to the end.
 - Start with a large learning rate and keep it large for a long time. For example, in CIFAR10, you could keep the learning rate at 0.1 for the first 200 epochs and then reduce it to 0.01.
-- Do not use too large batch size, especially batch size >> number of classes.
+- Do not use a batch size that is too large, especially batch size >> number of classes.
 
 ### Speed
-- Distributed training improves speed when computation cost of a batch is high. So, make sure your workload is not too small (example: LeNet on MNIST). Also, make sure batch size is reasonably large. 
+- Distributed training improves speed when computation cost of a batch is high. So, make sure your workload is not too small (like LeNet on MNIST). Also, make sure batch size is reasonably large. 
 - Make sure data-read and pre-processing is not the bottleneck. Use the `--test-io 1` flag to check how many images can be pre-processed per second.
 - Increase --data-nthreads (default is 4) to use more threads for data pre-processing.
-- Data preprocessing is done by opencv. If opencv is compiled from source codes, check if it is configured correctly.
+- Data preprocessing is done by opencv. If opencv is compiled from source code, check if it is configured correctly.
 - Use `--benchmark 1` to use randomly generated data rather than real data to narrow down on where the bottleneck is.
 - Check [this](http://mxnet.io/how_to/perf.html) page for more details.
 
 ### Memory
-If the batch size is too big, it can cause GPU memory to overflow. If this happens, you’ll seee the error message “cudaMalloc failed: out of memory” or something similar. There is a couple of ways to fix this:
+If the batch size is too big, it can cause GPU memory to overflow. If this happens, you’ll see the error message “cudaMalloc failed: out of memory” or something similar. There is a couple of ways to fix this:
 - Reduce the batch size.
-- Set the environment variable `MXNET_BACKWARD_DO_MIRROR` to 1. It reduces the memory consumption by trading off speed. For example, with batch size 64, inception-v3 uses 10G memory and trains 30 image/sec on a single K80 GPU. When mirroring is enabled, with 10G GPU memory consumption, we can run inception-v3 using batch size 128. The cost is that, the speed reduces to 27 images/sec.
+- Set the environment variable `MXNET_BACKWARD_DO_MIRROR` to 1. It reduces the memory consumption by trading off speed. For example, with batch size 64, inception-v3 uses 10G memory and trains 30 image/sec on a single K80 GPU. When mirroring is enabled, with 10G GPU memory consumption, we can run inception-v3 using batch size of 128. The cost is that, the speed reduces to 27 images/sec.
