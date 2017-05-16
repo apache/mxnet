@@ -282,8 +282,7 @@ cpplint:
 	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
-# ideally we want to check all, such as: python tools example tests
-	pylint python/mxnet --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc
+	pylint python/mxnet tools/caffe_converter/*.py --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc
 
 doc: docs
 
