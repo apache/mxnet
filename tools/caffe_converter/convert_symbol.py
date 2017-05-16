@@ -155,7 +155,13 @@ def _parse_proto(prototxt_fname):
         if layer[i].type == 'BatchNorm':
             type_string = 'mx.symbol.BatchNorm'
             param = layer[i].batch_norm_param
-            param_string = 'use_global_stats=%s, fix_gamma=False' % param.use_global_stats
+            # CuDNN requires eps to be greater than 1e-05
+            # We compensate for this change in convert_model
+            epsilon = param.eps
+            if(epsilon <= 1e-05):
+            	epsilon = 1e-04 
+            param_string = 'use_global_stats=%s, fix_gamma=False, eps=%f' % (
+            	param.use_global_stats, epsilon)
             need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]]
         if layer[i].type == 'Scale':
             assert layer[i-1].type == 'BatchNorm'

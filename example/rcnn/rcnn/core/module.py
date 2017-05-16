@@ -44,7 +44,7 @@ class MutableModule(BaseModule):
         if fixed_param_prefix is not None:
             for name in self._symbol.list_arguments():
                 for prefix in self._fixed_param_prefix:
-                    if name.startswith(prefix):
+                    if prefix in name:
                         fixed_param_names.append(name)
         self._fixed_param_names = fixed_param_names
 
