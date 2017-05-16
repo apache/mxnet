@@ -57,9 +57,8 @@ class _Conv(SimpleLayer):
     """
     def __init__(self, filters, kernel_size, strides, padding, dilation,
                  groups, layout, in_filters=0, activation=None, use_bias=True,
-                 kernel_initializer=None, bias_initializer=None,
-                 prefix=None, params=None, **kwargs):
-        super(_Conv, self).__init__(prefix=prefix, params=params, **kwargs)
+                 kernel_initializer=None, bias_initializer=None, **kwargs):
+        super(_Conv, self).__init__(**kwargs)
         self._filters = filters
         self._in_filters = in_filters
         if isinstance(strides, numeric_types):
@@ -152,15 +151,13 @@ class Conv1D(_Conv):
     """
     def __init__(self, filters, kernel_size, strides=1, padding=0, dilation=1,
                  groups=1, layout='NCW', in_filters=0, activation=None, use_bias=True,
-                 kernel_initializer=None, bias_initializer=None,
-                 prefix=None, params=None, **kwargs):
+                 kernel_initializer=None, bias_initializer=None, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
         super(Conv1D, self).__init__(
             filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, kernel_initializer, bias_initializer,
-            prefix=prefix, params=params, **kwargs)
+            in_filters, activation, use_bias, kernel_initializer, bias_initializer, **kwargs)
 
 
 class Conv2D(_Conv):
@@ -218,15 +215,13 @@ class Conv2D(_Conv):
     def __init__(self, filters, kernel_size, strides=(1, 1), padding=(0, 0),
                  dilation=(1, 1), groups=1, layout='NCHW', in_filters=0,
                  activation=None, use_bias=True,
-                 kernel_initializer=None, bias_initializer=None,
-                 prefix=None, params=None, **kwargs):
+                 kernel_initializer=None, bias_initializer=None, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
         super(Conv2D, self).__init__(
             filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, kernel_initializer, bias_initializer,
-            prefix=prefix, params=params, **kwargs)
+            in_filters, activation, use_bias, kernel_initializer, bias_initializer, **kwargs)
 
 
 class Conv3D(_Conv):
@@ -284,23 +279,20 @@ class Conv3D(_Conv):
     def __init__(self, filters, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  dilation=(1, 1, 1), groups=1, layout='NCDHW', in_filters=0,
                  activation=None, use_bias=True,
-                 kernel_initializer=None, bias_initializer=None,
-                 prefix=None, params=None, **kwargs):
+                 kernel_initializer=None, bias_initializer=None, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
         super(Conv3D, self).__init__(
             filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, kernel_initializer, bias_initializer,
-            prefix=prefix, params=params, **kwargs)
+            in_filters, activation, use_bias, kernel_initializer, bias_initializer, **kwargs)
 
 
 class _Pooling(SimpleLayer):
     """Abstract class for different pooling layers.
     """
-    def __init__(self, pool_size, strides, padding, global_pool, pool_type,
-                 prefix=None, params=None, **kwargs):
-        super(_Pooling, self).__init__(prefix=prefix, params=params, **kwargs)
+    def __init__(self, pool_size, strides, padding, global_pool, pool_type, **kwargs):
+        super(_Pooling, self).__init__(**kwargs)
         if strides is None:
             strides = pool_size
         if isinstance(strides, numeric_types):
@@ -333,15 +325,13 @@ class MaxPool1D(_Pooling):
         'N', 'C', 'H', 'W' stands for batch, channel, and width (time) dimensions
         respectively. padding is applied on W dimension.
     """
-    def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW',
-                 prefix=None, params=None, **kwargs):
+    def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW', **kwargs):
         assert layout == 'NCW', "Only supports NCW layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)
         assert len(pool_size) == 1, "pool_size must be a number or a list of 1 ints"
         super(MaxPool1D, self).__init__(
-            pool_size, strides, padding, False, 'max',
-            prefix=prefix, params=params, **kwargs)
+            pool_size, strides, padding, False, 'max', **kwargs)
 
 
 class MaxPool2D(_Pooling):
@@ -363,15 +353,13 @@ class MaxPool2D(_Pooling):
         'N', 'C', 'H', 'W' stands for batch, channel, height, and width
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
     """
-    def __init__(self, pool_size=(2, 2), strides=None, padding=0, layout='NCHW',
-                 prefix=None, params=None, **kwargs):
+    def __init__(self, pool_size=(2, 2), strides=None, padding=0, layout='NCHW', **kwargs):
         assert layout == 'NCHW', "Only supports NCHW layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)*2
         assert len(pool_size) == 2, "pool_size must be a number or a list of 2 ints"
         super(MaxPool2D, self).__init__(
-            pool_size, strides, padding, False, 'max',
-            prefix=prefix, params=params, **kwargs)
+            pool_size, strides, padding, False, 'max', **kwargs)
 
 
 class MaxPool3D(_Pooling):
@@ -394,15 +382,13 @@ class MaxPool3D(_Pooling):
         depth dimensions respectively. padding is applied on 'D', 'H' and 'W'
         dimension.
     """
-    def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0, layout='NCDHW',
-                 prefix=None, params=None, **kwargs):
+    def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0, layout='NCDHW', **kwargs):
         assert layout == 'NCDHW', "Only supports NCDHW layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)*3
         assert len(pool_size) == 3, "pool_size must be a number or a list of 3 ints"
         super(MaxPool3D, self).__init__(
-            pool_size, strides, padding, False, 'max',
-            prefix=prefix, params=params, **kwargs)
+            pool_size, strides, padding, False, 'max', **kwargs)
 
 
 class AvgPool1D(_Pooling):
@@ -422,15 +408,13 @@ class AvgPool1D(_Pooling):
         'N', 'C', 'H', 'W' stands for batch, channel, and width (time) dimensions
         respectively. padding is applied on W dimension.
     """
-    def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW',
-                 prefix=None, params=None, **kwargs):
+    def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW', **kwargs):
         assert layout == 'NCW', "Only supports NCW layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)
         assert len(pool_size) == 1, "pool_size must be a number or a list of 1 ints"
         super(AvgPool1D, self).__init__(
-            pool_size, strides, padding, False, 'avg',
-            prefix=prefix, params=params, **kwargs)
+            pool_size, strides, padding, False, 'avg', **kwargs)
 
 
 class AvgPool2D(_Pooling):
@@ -452,15 +436,13 @@ class AvgPool2D(_Pooling):
         'N', 'C', 'H', 'W' stands for batch, channel, height, and width
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
     """
-    def __init__(self, pool_size=(2, 2), strides=None, padding=0, layout='NCHW',
-                 prefix=None, params=None, **kwargs):
+    def __init__(self, pool_size=(2, 2), strides=None, padding=0, layout='NCHW', **kwargs):
         assert layout == 'NCHW', "Only supports NCHW layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)*2
         assert len(pool_size) == 2, "pool_size must be a number or a list of 2 ints"
         super(AvgPool2D, self).__init__(
-            pool_size, strides, padding, False, 'avg',
-            prefix=prefix, params=params, **kwargs)
+            pool_size, strides, padding, False, 'avg', **kwargs)
 
 
 class AvgPool3D(_Pooling):
@@ -483,71 +465,63 @@ class AvgPool3D(_Pooling):
         depth dimensions respectively. padding is applied on 'D', 'H' and 'W'
         dimension.
     """
-    def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0, layout='NCDHW',
-                 prefix=None, params=None, **kwargs):
+    def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0, layout='NCDHW', **kwargs):
         assert layout == 'NCDHW', "Only supports NCDHW layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)*3
         assert len(pool_size) == 3, "pool_size must be a number or a list of 3 ints"
         super(AvgPool3D, self).__init__(
-            pool_size, strides, padding, False, 'avg',
-            prefix=prefix, params=params, **kwargs)
+            pool_size, strides, padding, False, 'avg', **kwargs)
 
 
 class GlobalMaxPool1D(_Pooling):
     """Global max pooling operation for temporal data.
     """
-    def __init__(self, layout='NCW', prefix=None, params=None, **kwargs):
+    def __init__(self, layout='NCW', **kwargs):
         assert layout == 'NCW', "Only supports NCW layout for now"
         super(GlobalMaxPool1D, self).__init__(
-            (1,), None, 0, True, 'max',
-            prefix=prefix, params=params, **kwargs)
+            (1,), None, 0, True, 'max', **kwargs)
 
 
 class GlobalMaxPool2D(_Pooling):
     """Global max pooling operation for spatial data.
     """
-    def __init__(self, layout='NCHW', prefix=None, params=None, **kwargs):
+    def __init__(self, layout='NCHW', **kwargs):
         assert layout == 'NCHW', "Only supports NCW layout for now"
         super(GlobalMaxPool2D, self).__init__(
-            (1, 1), None, 0, True, 'max',
-            prefix=prefix, params=params, **kwargs)
+            (1, 1), None, 0, True, 'max', **kwargs)
 
 class GlobalMaxPool3D(_Pooling):
     """Global max pooling operation for 3D data.
     """
-    def __init__(self, layout='NCDHW', prefix=None, params=None, **kwargs):
+    def __init__(self, layout='NCDHW', **kwargs):
         assert layout == 'NCDHW', "Only supports NCW layout for now"
         super(GlobalMaxPool3D, self).__init__(
-            (1, 1, 1), None, 0, True, 'max',
-            prefix=prefix, params=params, **kwargs)
+            (1, 1, 1), None, 0, True, 'max', **kwargs)
 
 
 class GlobalAvgPool1D(_Pooling):
     """Global average pooling operation for temporal data.
     """
-    def __init__(self, layout='NCW', prefix=None, params=None, **kwargs):
+    def __init__(self, layout='NCW', **kwargs):
         assert layout == 'NCW', "Only supports NCW layout for now"
         super(GlobalAvgPool1D, self).__init__(
-            (1,), None, 0, True, 'avg',
-            prefix=prefix, params=params, **kwargs)
+            (1,), None, 0, True, 'avg', **kwargs)
 
 
 class GlobalAvgPool2D(_Pooling):
     """Global average pooling operation for spatial data.
     """
-    def __init__(self, layout='NCHW', prefix=None, params=None, **kwargs):
+    def __init__(self, layout='NCHW', **kwargs):
         assert layout == 'NCHW', "Only supports NCW layout for now"
         super(GlobalAvgPool2D, self).__init__(
-            (1, 1), None, 0, True, 'avg',
-            prefix=prefix, params=params, **kwargs)
+            (1, 1), None, 0, True, 'avg', **kwargs)
 
 
 class GlobalAvgPool3D(_Pooling):
     """Global max pooling operation for 3D data.
     """
-    def __init__(self, layout='NCDHW', prefix=None, params=None, **kwargs):
+    def __init__(self, layout='NCDHW', **kwargs):
         assert layout == 'NCDHW', "Only supports NCW layout for now"
         super(GlobalAvgPool3D, self).__init__(
-            (1, 1, 1), None, 0, True, 'avg',
-            prefix=prefix, params=params, **kwargs)
+            (1, 1, 1), None, 0, True, 'avg', **kwargs)
