@@ -6,7 +6,7 @@ then
 fi
 
 if [[ ${TASK} == *"installation"* ]]; then
-    if [[ $(git diff --name-only HEAD^ | grep install.md) ]]; then
+    if [[ ! $(git diff --name-only HEAD^ | grep install.md) ]]; then
         echo "No changes to install.md. Skipping installation tasks..."
         exit 0
     fi
