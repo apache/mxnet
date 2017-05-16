@@ -45,9 +45,10 @@ To enable bucketing, MXNet needs to know how to construct a new unrolled symboli
 
 
 ```python
-model = mx.model.FeedForward(
-        ctx     = contexts,
-        symbol  = sym_gen)
+model = mx.mod.BucketingModule(
+        sym_gen             = sym_gen,
+        default_bucket_key  = data_train.default_bucket_key,
+        context             = contexts)
 ```
 
 `sym_gen` must be a function that takes one argument, `bucket_key`, and returns a `Symbol` for this bucket. We'll use the sequence length as the bucket key. A bucket key could be anything. For example, in neural translation, because different combinations of input-output sequence lengths correspond to different unrolling, the bucket key could be a pair of lengths.

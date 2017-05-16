@@ -59,7 +59,7 @@ Here are some general heuristics that we find useful:
 
 Let's take a quick look at the two pipelines in the preceding diagram.
 They both have eight layers with a decoder and an encoder layer.
-Based on our first principle, it's unwise to place all neighbor layers on separate GPUs.
+Based on our first principle, it's unwise to place all neighboring layers on separate GPUs.
 We also want to balance the workload across GPUs.
 Although the LSTM layers consume less memory than the decoder/encoder layers, they consume more computation time because of the dependency of the unrolled LSTM.
 Thus, the partition on the left will be faster than the one on the right
