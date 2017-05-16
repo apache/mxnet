@@ -5,7 +5,52 @@
 from ... import symbol, ndarray
 from ...symbol import Symbol
 from ...ndarray import NDArray
+from ... import name as _name
 from .parameter import Parameter, ParameterDict
+
+
+class _LayerScope(object):
+    """Scope for collecting sub-layers."""
+    _current = None
+
+    def __init__(self, layer):
+        self._layer = layer
+        self._counter = {}
+        self._old_scope = None
+
+    @staticmethod
+    def get_prefix(prefix, hint):
+        if _LayerScope._current is None:
+            if prefix is None:
+                return _name.NameManager.current.get(None, hint) + '_'
+            return prefix
+        else:
+            if prefix is None:
+                count = _LayerScope._current._counter.get(hint, 0)
+                prefix = '%s%d_'%(hint, count)
+                _LayerScope._current._counter[hint] = count + 1
+            return _LayerScope._current._layer.prefix+prefix
+
+    @staticmethod
+    def get_params(prefix):
+        params = ParameterDict(prefix)
+        if _LayerScope._current is not None:
+            _LayerScope._current._layer.params.merge(params)
+        return params
+
+    @staticmethod
+    def register_sublayer(layer):
+        if _LayerScope._current is not None:
+            _LayerScope._current._layer.register_sublayer(layer)
+
+    def __enter__(self):
+        print self._layer.prefix
+        self._old_scope = _LayerScope._current
+        _LayerScope._current = self
+        return self
+
+    def __exit__(self, ptype, value, trace):
+        _LayerScope._current = self._old_scope
 
 
 class Layer(object):
@@ -43,33 +88,29 @@ class Layer(object):
             dense2 = nn.Dense(20, in_units=10, prefix='dense2_', params=params)
 
         dense1 and dense2 now have shared weights.
-    """
-    _counter = {}
 
+    Layer supports forwarding with both `Symbol` and `NDArray`.
+
+    Layer is mostly used by developers or advanced users as a base class.
+    If you only want to use one of `Symbol` and `NDArray` API you should inherit
+    Layer instead."""
     def __init__(self, prefix=None, params=None):
-        self._prefix = self._make_prefix(prefix)
-        self._name = self.prefix[:-1] if self.prefix.endswith('_') else self.prefix
-        if params is None:
-            params = ParameterDict(prefix=self.prefix)
-        self._params = params
+        self._prefix = _LayerScope.get_prefix(prefix, self._alias())
+        self._params = _LayerScope.get_params(self._prefix)
+        self._scope = _LayerScope(self)
         self._children = []
+        self._reg_params = {}
+
+        _LayerScope.register_sublayer(self)
 
     def __setattr__(self, name, value):
-        """Automatically register sublayers."""
+        """Registers parameters in addition to sublayers."""
         super(Layer, self).__setattr__(name, value)
-        if isinstance(value, Layer):
-            self.register_sublayer(value)
+        if isinstance(value, Parameter):
+            self._reg_params[name] = value
 
     def _alias(self):
         return self.__class__.__name__.lower()
-
-    def _make_prefix(self, prefix=None):
-        """Create prefix. By default use class name plus counter."""
-        if prefix is None:
-            count = Layer._counter.get(type(self), 0)
-            Layer._counter[type(self)] = count + 1
-            return '%s%d_'%(self._alias(), count)
-        return prefix
 
     @property
     def params(self):
@@ -87,6 +128,10 @@ class Layer(object):
             return self.prefix[:-1]
         return self.prefix
 
+    @property
+    def scope(self):
+        return self._scope
+
     def register_sublayer(self, layer):
         """Register layer as sublayer of self. Layers assigned to self as attributes
         will be registered automatically."""
@@ -97,8 +142,40 @@ class Layer(object):
         """Call forward."""
         return self.forward(*args, **kwargs)
 
-    def forward(self, *args, **kwargs):
+    def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either NDArray or Symbol."""
+        if isinstance(x, NDArray):
+            with x.context as ctx:
+                params = {k: v.data(ctx) for k, v in self._reg_params.items()}
+                return self.ndarray_forward(x, *args, **params)
+        else:
+            assert isinstance(x, Symbol), \
+                "Layer requires the first argument to forward be either Symbol or NDArray"
+            params = {k: v.var() for k, v in self._reg_params.items()}
+            return self.symbol_forward(x, *args, **params)
+
+    def ndarray_forward(self, x, *args, **kwargs):
+        return self.generic_forward(ndarray, x, *args, **kwargs)
+
+    def symbol_forward(self, x, *args, **kwargs):
+        return self.generic_forward(symbol, x, *args, **kwargs)
+
+    def generic_forward(self, F, x, *args, **kwargs):
+        """Simple forward supports both `Symbol` and `NDArray` API.
+
+        Parameters
+        ----------
+        F : {mxnet.ndarray, mxnet.symbol}
+            Name space of operators. `F` will be set to `mx.sym` when x is `Symbol`
+            instance and `mx.nd` when x is `NDArray` instance.
+        x : NDArray or Symbol
+            The first input tensor.
+        *args : list of NDArray or list of Symbol
+            Additional input tensors.
+        **kwargs : dict of str to NDArray or dict of str to Symbol
+            `Symbol` or `NDArray` value of registered Parameters.
+        """
+        # pylint: disable= invalid-name
         raise NotImplementedError
 
 
@@ -124,60 +201,7 @@ class Sequential(Layer):
         return x
 
 
-class SimpleLayer(Layer):
-    """SimpleLayer is a Layer that supports forwarding with both `Symbol` and `NDArray`.
-    A SimpleLayer cannot use API that's specific to `NDArray` API, e.g. `.asnumpy()`.
-
-    SimpleLayer is mostly used by developers or advanced users as a base class.
-    If you only want to use one of `Symbol` and `NDArray` API you should inherit
-    Layer instead."""
-    def __init__(self, **kwargs):
-        super(SimpleLayer, self).__init__(**kwargs)
-        self._reg_params = {}
-
-    def __setattr__(self, name, value):
-        """Registers parameters in addition to sublayers."""
-        if isinstance(value, Parameter):
-            self._reg_params[name] = value
-        super(SimpleLayer, self).__setattr__(name, value)
-
-    def forward(self, x, *args):
-        if isinstance(x, NDArray):
-            with x.context as ctx:
-                params = {k: v.data(ctx) for k, v in self._reg_params.items()}
-                return self.ndarray_forward(x, *args, **params)
-        else:
-            assert isinstance(x, Symbol), \
-                "SimpleLayer requires the first argument to forward be either Symbol or NDArray"
-            params = {k: v.var() for k, v in self._reg_params.items()}
-            return self.symbol_forward(x, *args, **params)
-
-    def ndarray_forward(self, x, *args, **kwargs):
-        return self.simple_forward(ndarray, x, *args, **kwargs)
-
-    def symbol_forward(self, x, *args, **kwargs):
-        return self.simple_forward(symbol, x, *args, **kwargs)
-
-    def simple_forward(self, F, x, *args, **kwargs):
-        """Simple forward supports both `Symbol` and `NDArray` API.
-
-        Parameters
-        ----------
-        F : {mxnet.ndarray, mxnet.symbol}
-            Name space of operators. `F` will be set to `mx.sym` when x is `Symbol`
-            instance and `mx.nd` when x is `NDArray` instance.
-        x : NDArray or Symbol
-            The first input tensor.
-        *args : list of NDArray or list of Symbol
-            Additional input tensors.
-        **kwargs : dict of str to NDArray or dict of str to Symbol
-            `Symbol` or `NDArray` value of registered Parameters.
-        """
-        # pylint: disable= invalid-name
-        raise NotImplementedError
-
-
-class Dense(SimpleLayer):
+class Dense(Layer):
     """Just your regular densely-connected NN layer.
 
     `Dense` implements the operation:
@@ -234,20 +258,21 @@ class Dense(SimpleLayer):
                  kernel_initializer=None, bias_initializer=None,
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
-        self._units = units
-        self._use_bias = use_bias
-        self.weight = self.params.get('weight', shape=(units, in_units),
-                                      init=kernel_initializer)
-        if use_bias:
-            self.bias = self.params.get('bias', shape=(units,),
-                                        init=bias_initializer)
-        if activation is not None:
-            self.act = Activation(activation, prefix=self.prefix+activation+'_',
-                                  params=self.params.subdict(activation+'_'))
-        else:
-            self.act = None
+        with self.scope:
+            self._units = units
+            self._use_bias = use_bias
+            self.weight = self.params.get('weight', shape=(units, in_units),
+                                          init=kernel_initializer)
+            if use_bias:
+                self.bias = self.params.get('bias', shape=(units,),
+                                            init=bias_initializer)
+            if activation is not None:
+                self.act = Activation(activation, prefix=self.prefix+activation+'_',
+                                      params=self.params.subdict(activation+'_'))
+            else:
+                self.act = None
 
-    def simple_forward(self, F, x, **kwargs):
+    def generic_forward(self, F, x, **kwargs):
         act = F.FullyConnected(data=x, num_hidden=self._units,
                                no_bias=not self._use_bias,
                                **kwargs)
@@ -256,7 +281,7 @@ class Dense(SimpleLayer):
         return act
 
 
-class Activation(SimpleLayer):
+class Activation(Layer):
     """Applies an activation function to input.
 
     Parameters
@@ -276,11 +301,11 @@ class Activation(SimpleLayer):
         super(Activation, self).__init__(**kwargs)
         self._act_type = activation
 
-    def simple_forward(self, F, x):
+    def generic_forward(self, F, x):
         return F.Activation(x, act_type=self._act_type)
 
 
-class Dropout(SimpleLayer):
+class Dropout(Layer):
     """Applies Dropout to the input.
 
     Dropout consists in randomly setting
@@ -300,11 +325,11 @@ class Dropout(SimpleLayer):
         super(Dropout, self).__init__(**kwargs)
         self._rate = rate
 
-    def simple_forward(self, F, x):
+    def generic_forward(self, F, x):
         return F.Dropout(x, p=self._rate)
 
 
-class BatchNorm(SimpleLayer):
+class BatchNorm(Layer):
     """Batch normalization layer (Ioffe and Szegedy, 2014).
     Normalize the activations of the previous layer at each batch,
     i.e. applies a transformation that maintains the mean activation
@@ -351,5 +376,5 @@ class BatchNorm(SimpleLayer):
                                            shape=(num_features,),
                                            init=running_variance_initializer)
 
-    def simple_forward(self, F, x, gamma, beta, running_mean, running_var):
+    def generic_forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.BatchNorm(x, gamma, beta, running_mean, running_var, **self._kwargs)

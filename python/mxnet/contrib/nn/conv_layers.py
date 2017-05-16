@@ -1,6 +1,6 @@
 # coding: utf-8
 """Convolutional neural network layers."""
-from .layer import SimpleLayer
+from .layer import Layer
 from ... import symbol
 from ...base import numeric_types
 
@@ -8,7 +8,7 @@ def _infer_weight_shape(sym, data_shape, **kwargs):
     return sym(symbol.var('data', shape=data_shape), **kwargs).infer_shape_partial()[0]
 
 
-class _Conv(SimpleLayer):
+class _Conv(Layer):
     """Abstract nD convolution layer (private, used as implementation base).
 
     This layer creates a convolution kernel that is convolved
@@ -59,36 +59,37 @@ class _Conv(SimpleLayer):
                  groups, layout, in_filters=0, activation=None, use_bias=True,
                  kernel_initializer=None, bias_initializer=None, **kwargs):
         super(_Conv, self).__init__(**kwargs)
-        self._filters = filters
-        self._in_filters = in_filters
-        if isinstance(strides, numeric_types):
-            strides = (strides,)*len(kernel_size)
-        if isinstance(padding, numeric_types):
-            padding = (padding,)*len(kernel_size)
-        if isinstance(dilation, numeric_types):
-            dilation = (dilation,)*len(kernel_size)
-        self._kwargs = {
-            'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
-            'pad': padding, 'num_filter': filters, 'num_group': groups,
-            'no_bias': not use_bias, 'layout': layout}
+        with self.scope:
+            self._filters = filters
+            self._in_filters = in_filters
+            if isinstance(strides, numeric_types):
+                strides = (strides,)*len(kernel_size)
+            if isinstance(padding, numeric_types):
+                padding = (padding,)*len(kernel_size)
+            if isinstance(dilation, numeric_types):
+                dilation = (dilation,)*len(kernel_size)
+            self._kwargs = {
+                'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
+                'pad': padding, 'num_filter': filters, 'num_group': groups,
+                'no_bias': not use_bias, 'layout': layout}
 
-        dshape = [0]*(len(kernel_size) + 2)
-        dshape[layout.find('N')] = 1
-        dshape[layout.find('C')] = in_filters
-        wshapes = _infer_weight_shape(symbol.Convolution, dshape, **self._kwargs)
-        self.weight = self.params.get('weight', shape=wshapes[1],
-                                      init=kernel_initializer)
-        if use_bias:
-            self.bias = self.params.get('bias', shape=wshapes[2],
-                                        init=bias_initializer)
+            dshape = [0]*(len(kernel_size) + 2)
+            dshape[layout.find('N')] = 1
+            dshape[layout.find('C')] = in_filters
+            wshapes = _infer_weight_shape(symbol.Convolution, dshape, **self._kwargs)
+            self.weight = self.params.get('weight', shape=wshapes[1],
+                                          init=kernel_initializer)
+            if use_bias:
+                self.bias = self.params.get('bias', shape=wshapes[2],
+                                            init=bias_initializer)
 
-        if activation is not None:
-            self.act = Activation(activation, prefix=self.prefix+activation+'_',
-                                  params=self.params.subdict(activation+'_'))
-        else:
-            self.act = None
+            if activation is not None:
+                self.act = Activation(activation, prefix=self.prefix+activation+'_',
+                                      params=self.params.subdict(activation+'_'))
+            else:
+                self.act = None
 
-    def simple_forward(self, F, x, **kwargs):
+    def generic_forward(self, F, x, **kwargs):
         self._kwargs.update(kwargs)
         act = F.Convolution(data=x, **self._kwargs)
         if self.act is not None:
@@ -288,7 +289,7 @@ class Conv3D(_Conv):
             in_filters, activation, use_bias, kernel_initializer, bias_initializer, **kwargs)
 
 
-class _Pooling(SimpleLayer):
+class _Pooling(Layer):
     """Abstract class for different pooling layers.
     """
     def __init__(self, pool_size, strides, padding, global_pool, pool_type, **kwargs):
@@ -304,7 +305,7 @@ class _Pooling(SimpleLayer):
             'pooling_convention': 'full', 'global_pool': global_pool,
             'pool_type': pool_type}
 
-    def simple_forward(self, F, x):
+    def generic_forward(self, F, x):
         return F.Pooling(x, **self._kwargs)
 
 

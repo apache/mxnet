@@ -10,21 +10,21 @@ def conv3x3(filters, stride, in_filters):
     return nn.Conv2D(filters, kernel_size=3, strides=stride, padding=1,
                      use_bias=False, in_filters=in_filters)
 
-class BasicBlock(nn.SimpleLayer):
-    def __init__(self, filters, stride, downsample=False, in_filters=0,
-                 prefix=None, params=None):
-        super(BasicBlock, self).__init__(prefix=prefix, params=params)
-        self.bn1 = nn.BatchNorm(num_features=in_filters)
-        self.conv1 = conv3x3(filters, stride, in_filters)
-        self.bn2 = nn.BatchNorm(num_features=filters)
-        self.conv2 = conv3x3(filters, 1, filters)
-        if downsample:
-            self.downsample = nn.Conv2D(filters, 1, stride, use_bias=False,
-                                        in_filters=in_filters)
-        else:
-            self.downsample = None
+class BasicBlock(nn.Layer):
+    def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
+        super(BasicBlock, self).__init__(**kwargs)
+        with self.scope:
+            self.bn1 = nn.BatchNorm(num_features=in_filters)
+            self.conv1 = conv3x3(filters, stride, in_filters)
+            self.bn2 = nn.BatchNorm(num_features=filters)
+            self.conv2 = conv3x3(filters, 1, filters)
+            if downsample:
+                self.downsample = nn.Conv2D(filters, 1, stride, use_bias=False,
+                                            in_filters=in_filters)
+            else:
+                self.downsample = None
 
-    def simple_forward(self, domain, x):
+    def generic_forward(self, domain, x):
         if not self.downsample:
             residual = x
         x = self.bn1(x)
@@ -40,23 +40,23 @@ class BasicBlock(nn.SimpleLayer):
         return x + residual
 
 
-class Bottleneck(nn.SimpleLayer):
-    def __init__(self, filters, stride, downsample=False, in_filters=0,
-                 prefix=None, params=None):
-        super(BasicBlock, self).__init__(prefix=prefix, params=params)
-        self.bn1 = nn.BatchNorm(num_features=in_filters)
-        self.conv1 = conv3x3(filters//4, 1, in_filters)
-        self.bn2 = nn.BatchNorm(num_features=filters//4)
-        self.conv2 = conv3x3(filters//4, stride, filters//4)
-        self.bn3 = nn.BatchNorm(num_features=filters//4)
-        self.conv3 = conv3x3(filters, 1, filters//4)
-        if downsample:
-            self.downsample = nn.Conv2D(filters, 1, stride, use_bias=False,
-                                        in_filters=in_filters)
-        else:
-            self.downsample = None
+class Bottleneck(nn.Layer):
+    def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
+        super(Bottleneck, self).__init__(**kwargs)
+        with self.scope:
+            self.bn1 = nn.BatchNorm(num_features=in_filters)
+            self.conv1 = conv3x3(filters//4, 1, in_filters)
+            self.bn2 = nn.BatchNorm(num_features=filters//4)
+            self.conv2 = conv3x3(filters//4, stride, filters//4)
+            self.bn3 = nn.BatchNorm(num_features=filters//4)
+            self.conv3 = conv3x3(filters, 1, filters//4)
+            if downsample:
+                self.downsample = nn.Conv2D(filters, 1, stride, use_bias=False,
+                                            in_filters=in_filters)
+            else:
+                self.downsample = None
 
-    def simple_forward(self, domain, x):
+    def generic_forward(self, domain, x):
         if not self.downsample:
             residual = x
         x = self.bn1(x)
@@ -75,32 +75,32 @@ class Bottleneck(nn.SimpleLayer):
 
         return x + residual
 
-class Resnet(nn.SimpleLayer):
-    def __init__(self, block, classes, layers, filters, thumbnail=False,
-                 prefix=None, params=None):
-        super(Resnet, self).__init__(prefix=prefix, params=params)
-        assert len(layers) == len(filters) - 1
-        self._thumbnail = thumbnail
-        self.bn_data = nn.BatchNorm(num_features=3, scale=False, center=False)
-        if thumbnail:
-            self.conv0 = conv3x3(filters[0], 1, 3)
-        else:
-            self.conv0 = nn.Conv2D(filters[0], 7, 2, 3, use_bias=False,
-                                   in_filters=3)
-            self.bn0 = nn.BatchNorm(num_features=filters[0], in_filters=filters[0])
-            self.pool0 = nn.MaxPool2D(3, 2, 1)
+class Resnet(nn.Layer):
+    def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
+        super(Resnet, self).__init__(**kwargs)
+        with self.scope:
+            assert len(layers) == len(filters) - 1
+            self._thumbnail = thumbnail
+            self.bn_data = nn.BatchNorm(num_features=3, scale=False, center=False)
+            if thumbnail:
+                self.conv0 = conv3x3(filters[0], 1, 3)
+            else:
+                self.conv0 = nn.Conv2D(filters[0], 7, 2, 3, use_bias=False,
+                                       in_filters=3)
+                self.bn0 = nn.BatchNorm(num_features=filters[0])
+                self.pool0 = nn.MaxPool2D(3, 2, 1)
 
-        self.body = nn.Sequential()
-        in_filters = filters[0]
-        for i in range(len(layers)):
-            stride = 1 if i == 0 else 2
-            self.body.add(self._make_layer(block, layers[i], filters[i+1],
-                                           stride, in_filters=in_filters))
-            in_filters = filters[i+1]
+            self.body = nn.Sequential()
+            in_filters = filters[0]
+            for i in range(len(layers)):
+                stride = 1 if i == 0 else 2
+                self.body.add(self._make_layer(block, layers[i], filters[i+1],
+                                               stride, in_filters=in_filters))
+                in_filters = filters[i+1]
 
-        self.bn1 = nn.BatchNorm(num_features=in_filters)
-        self.pool1 = nn.GlobalAvgPool2D()
-        self.dense1 = nn.Dense(classes, in_units=in_filters)
+            self.bn1 = nn.BatchNorm(num_features=in_filters)
+            self.pool1 = nn.GlobalAvgPool2D()
+            self.dense1 = nn.Dense(classes, in_units=in_filters)
 
     def _make_layer(self, block, layers, filters, stride, in_filters=0):
         layer = nn.Sequential()
@@ -109,7 +109,7 @@ class Resnet(nn.SimpleLayer):
             layer.add(block(filters, 1, False, in_filters=filters))
         return layer
 
-    def simple_forward(self, domain, x):
+    def generic_forward(self, domain, x):
         x = self.bn_data(x)
         x = self.conv0(x)
         if not self._thumbnail:
@@ -131,9 +131,12 @@ class Resnet(nn.SimpleLayer):
 def resnet18_cifar(classes):
     return Resnet(BasicBlock, classes, [2, 2, 2], [16, 16, 32, 64], True)
 
-net = resnet18_cifar(10)
+def resnet50_imagenet(classes):
+    return Resnet(Bottleneck, classes, [3, 4, 6, 3], [64, 256, 512, 1024, 2048], False)
 
-train_data, val_data = cifar10_iterator(256, (3, 32, 32))
+net = resnet18_cifar(10)
+batch_size = 32
+train_data, val_data = cifar10_iterator(batch_size, (3, 32, 32))
 
 
 def test(ctx):
@@ -180,11 +183,11 @@ def train(epoch, ctx):
     net.params.save('mnist.params')
 
 if __name__ == '__main__':
-    #train(200, [mx.gpu(0)])
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
-    data = mx.sym.var('data')
-    out = net(data)
-    softmax = mx.sym.SoftmaxOutput(out, name='softmax')
-    mod = mx.mod.Module(softmax, context=[mx.gpu(0)])
-    mod.fit(train_data, num_epoch=100, batch_end_callback = mx.callback.Speedometer(100, 100))
+    train(200, [mx.gpu(0)])
+    # import logging
+    # logging.basicConfig(level=logging.DEBUG)
+    # data = mx.sym.var('data')
+    # out = net(data)
+    # softmax = mx.sym.SoftmaxOutput(out, name='softmax')
+    # mod = mx.mod.Module(softmax, context=[mx.gpu(0)])
+    # mod.fit(train_data, num_epoch=100, batch_end_callback = mx.callback.Speedometer(batch_size, 10))
