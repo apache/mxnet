@@ -2,7 +2,7 @@
 
 This Scala tutorial guides you through a classic computer vision application: identifying hand written digits.
 
-Let's train a 3-layer multilayer perceptron on the MNIST dataset to classify handwritten digits.
+Let's train a 3-layer network (i.e multilayer perceptron network) on the MNIST dataset to classify handwritten digits.
 
 ## Define the Network
 
@@ -107,5 +107,5 @@ Check out more MXNet Scala examples below.
 
 ## Next Steps
 * [Scala API](http://mxnet.io/api/scala/)
-* [More Scala Examples](https://github.com/dmlc/mxnet/tree/master/scala-package/examples/src/main/scala/ml/dmlc/mxnet/examples)
+* [More Scala Examples](https://github.com/dmlc/mxnet/tree/master/scala-package/examples/)
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)
