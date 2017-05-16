@@ -110,8 +110,8 @@ class Sequential(Layer):
         net.add(Dense(10, activation='relu'))
         net.add(Dense(20))
     """
-    def __init__(self, params=None, **kwargs):
-        super(Sequential, self).__init__(prefix='', params=params, **kwargs)
+    def __init__(self, params=None):
+        super(Sequential, self).__init__(prefix='', params=params)
 
     def add(self, layer):
         """Add layer on top of the stack."""
@@ -131,8 +131,8 @@ class SimpleLayer(Layer):
     SimpleLayer is mostly used by developers or advanced users as a base class.
     If you only want to use one of `Symbol` and `NDArray` API you should inherit
     Layer instead."""
-    def __init__(self, prefix=None, params=None, **kwargs):
-        super(SimpleLayer, self).__init__(prefix=prefix, params=params, **kwargs)
+    def __init__(self, **kwargs):
+        super(SimpleLayer, self).__init__(**kwargs)
         self._reg_params = {}
 
     def __setattr__(self, name, value):
@@ -232,8 +232,8 @@ class Dense(SimpleLayer):
     """
     def __init__(self, units, activation=None, use_bias=True,
                  kernel_initializer=None, bias_initializer=None,
-                 in_units=0, prefix=None, params=None, **kwargs):
-        super(Dense, self).__init__(prefix=prefix, params=params, **kwargs)
+                 in_units=0, **kwargs):
+        super(Dense, self).__init__(**kwargs)
         self._units = units
         self._use_bias = use_bias
         self.weight = self.params.get('weight', shape=(units, in_units),
@@ -272,8 +272,8 @@ class Activation(SimpleLayer):
     ------------
     Same shape as input.
     """
-    def __init__(self, activation, prefix=None, params=None, **kwargs):
-        super(Activation, self).__init__(prefix=prefix, params=params, **kwargs)
+    def __init__(self, activation, **kwargs):
+        super(Activation, self).__init__(**kwargs)
         self._act_type = activation
 
     def simple_forward(self, F, x):
@@ -296,8 +296,8 @@ class Dropout(SimpleLayer):
     - [Dropout: A Simple Way to Prevent Neural Networks from Overfitting](
         http://www.cs.toronto.edu/~rsalakhu/papers/srivastava14a.pdf)
     """
-    def __init__(self, rate, prefix=None, params=None, **kwargs):
-        super(Dropout, self).__init__(prefix=prefix, params=params, **kwargs)
+    def __init__(self, rate, **kwargs):
+        super(Dropout, self).__init__(**kwargs)
         self._rate = rate
 
     def simple_forward(self, F, x):
@@ -334,8 +334,8 @@ class BatchNorm(SimpleLayer):
     def __init__(self, axis=1, momentum=0.9, epsilon=1e-3, center=True, scale=True,
                  num_features=0, beta_initializer='zeros', gamma_initializer='ones',
                  running_mean_initializer='zeros', running_variance_initializer='ones',
-                 prefix=None, params=None, **kwargs):
-        super(BatchNorm, self).__init__(prefix=prefix, params=params, **kwargs)
+                 **kwargs):
+        super(BatchNorm, self).__init__(**kwargs)
         assert axis == 1, \
             "Only support NC* layout, i.e. channel must be in the second dimension"
         self._kwargs = {'eps': epsilon, 'momentum': momentum, 'fix_gamma': not center}
