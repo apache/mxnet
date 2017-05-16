@@ -221,5 +221,5 @@ We fixed the batch size per GPU constant and doubled the number of GPUs for ever
  
  The following figure shows speedup against the number of GPUs used and compares it with ideal speedup.
  
- 
+ ![Speedup Graph](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/speedup-p2.png)
  
