@@ -11,7 +11,7 @@
 #include <map>
 #include <string>
 #include <utility>
-#include "./batch_norm-inl.h"
+#include "batch_norm-inl.h"
 
 namespace mxnet {
 namespace op {
