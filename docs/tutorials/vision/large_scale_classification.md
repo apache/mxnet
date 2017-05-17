@@ -187,7 +187,7 @@ num-layers | Number of layers to use in the network. We use 152 layer Resnet.
 data-train | Directory containing the training images. We point to the EFS location (`~/data/train/`) where we stored the training images.
 data-val   | Directory containing the validation images. We point to the EFS location (`~/data/val`) where we stored the validation images.
 gpus       | Comma separated list of gpu indices to use for training on each machine. We use all 16 GPUs.
-batch-size | Batch size across all GPUs. This is equal to batch size per GPU * total number of GPUs. We use a batch size of 32 images per GPU. So, effective batch size is 32*16*16=8192.
+batch-size | Batch size across all GPUs. This is equal to batch size per GPU * total number of GPUs. We use a batch size of 32 images per GPU. So, effective batch size is 32 * 16 * 16 = 8192.
 model      | Path prefix for the model file created by the training.
 num-epochs | Number of epochs to train.
 kv-store   | Key/Value store for parameter synchronization. We use distributed kv store since we are doing distributed training.
