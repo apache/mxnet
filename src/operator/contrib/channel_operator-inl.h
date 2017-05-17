@@ -251,7 +251,7 @@ class ChannelOperatorProp : public OperatorProperty {
       return 2;
     } else {
       LOG(FATAL) << "No that operation type.";
-      return NULL;
+      return 0;
     }
   }
 
