@@ -50,7 +50,7 @@ Otherwise, you can build the complete MXNet library with the following command:
     make
 ```
 
-Executing either of these commands creates a file called ```libmxnet.so``` in the mxnet/lib directory.
+Executing either of these commands start the build process, which can take up to a couple hours, and creates a file called ```libmxnet.so``` in the mxnet/lib directory.
 
 If you are getting build errors in which the compiler is being killed, it is likely that the compiler is running out of memory (espeically if you are on Raspberry Pi 1, 2 or Zero, which have less than 1GB of RAM), this can often be rectified by increasing the swapfile size on the Pi by editing the file /etc/dphys-swapfile and changing the line CONF_SWAPSIZE=100 to CONF_SWAPSIZE=1024, then running:
 ```bash
