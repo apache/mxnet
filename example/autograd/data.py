@@ -50,3 +50,18 @@ def cifar10_iterator(batch_size, data_shape):
         batch_size  = batch_size)
 
     return train, val
+
+class DummyIter(mx.io.DataIter):
+    def __init__(self, batch_size, data_shape):
+        self.data_shape = (batch_size,) + data_shape
+        self.label_shape = (batch_size,)
+        self.provide_data = [('data', self.data_shape)]
+        self.provide_label = [('softmax_label', self.label_shape)]
+
+    def next(self):
+        return mx.io.DataBatch(data=[mx.nd.zeros(self.data_shape)],
+                               label=[mx.nd.zeros(self.label_shape)])
+
+
+def dummy_iterator(batch_size, data_shape):
+    return DummyIter(batch_size, data_shape), DummyIter(batch_size, data_shape)

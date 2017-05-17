@@ -134,9 +134,9 @@ def resnet18_cifar(classes):
 def resnet50_imagenet(classes):
     return Resnet(Bottleneck, classes, [3, 4, 6, 3], [64, 256, 512, 1024, 2048], False)
 
-net = resnet18_cifar(10)
-batch_size = 32
-train_data, val_data = cifar10_iterator(batch_size, (3, 32, 32))
+net = resnet50_imagenet(1000)
+batch_size = 32*8
+train_data, val_data = dummy_iterator(batch_size, (3, 224, 224))
 
 
 def test(ctx):
@@ -162,6 +162,7 @@ def train(epoch, ctx):
     for i in range(epoch):
         tic = time.time()
         train_data.reset()
+        btic = time.time()
         for batch in train_data:
             data = nn.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
             label = nn.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
@@ -172,8 +173,11 @@ def train(epoch, ctx):
                     loss = nn.loss.softmax_cross_entropy_loss(z, y)
                     ag.compute_gradient([loss])
                     outputs.append(z)
-            metric.update(label, outputs)
             optim.step(batch.data[0].shape[0])
+            metric.update(label, outputs)
+            print batch_size/(time.time()-btic)
+            btic = time.time()
+
         name, acc = metric.get()
         metric.reset()
         print 'training acc at epoch %d: %s=%f'%(i, name, acc)
@@ -183,11 +187,11 @@ def train(epoch, ctx):
     net.params.save('mnist.params')
 
 if __name__ == '__main__':
-    train(200, [mx.gpu(0)])
-    # import logging
-    # logging.basicConfig(level=logging.DEBUG)
-    # data = mx.sym.var('data')
-    # out = net(data)
-    # softmax = mx.sym.SoftmaxOutput(out, name='softmax')
-    # mod = mx.mod.Module(softmax, context=[mx.gpu(0)])
-    # mod.fit(train_data, num_epoch=100, batch_end_callback = mx.callback.Speedometer(batch_size, 10))
+    # train(200, [mx.gpu(i) for i in range(8)])
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    data = mx.sym.var('data')
+    out = net(data)
+    softmax = mx.sym.SoftmaxOutput(out, name='softmax')
+    mod = mx.mod.Module(softmax, context=[mx.gpu(i) for i in range(8)])
+    mod.fit(train_data, num_epoch=100, batch_end_callback = mx.callback.Speedometer(batch_size, 10))
