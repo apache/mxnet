@@ -10,7 +10,7 @@ to `numpy.ndarray`.  Like the corresponding NumPy data structure, MXNet's
 So you might wonder, why not just use NumPy?  MXNet offers two compelling
 advantages.  First, MXNet's `NDArray` supports fast execution on a wide range of
 hardware configurations, including CPU, GPU, and multi-GPU machines.  _MXNet_
-also scales to distribute systems in the cloud.  Second, MXNet's NDArray
+scales well to run on distributed clusters in the cloud.  Second, MXNet's NDArray
 executes code lazily, allowing it to automatically parallelize multiple
 operations across the available hardware.
 
@@ -30,11 +30,11 @@ Each NDArray supports some important attributes that you'll often want to query:
 
 - **ndarray.shape**: The dimensions of the array. It is a tuple of integers
   indicating the length of the array along each axis. For a matrix with `n` rows
-  and `m` columns, its `shape` will be `(n, m)`.
+  and `m` columns, the `shape` will be `(n, m)`.
 - **ndarray.dtype**: A `numpy` _type_ object describing the type of its
   elements.
 - **ndarray.size**: the total number of components in the array - equal to the
-  product of the components of its `shape`
+  product of the components of its `shape`.
 - **ndarray.context**: The device on which this array is stored, e.g. `cpu()` or
   `gpu(1)`.
 
@@ -110,7 +110,7 @@ b.asnumpy()
 
 ## Basic Operations
 
-When applied to NDArrays, the standard arithmetic operators apply *elementwise*
+When applied to NDArrays, the standard arithmetic operators perform *elementwise*
 calculations. The returned value is a new array whose content contains the
 result.
 
@@ -167,7 +167,7 @@ d.asnumpy()
 
 ## Shape Manipulation
 
-Using `reshape`, we can manipulate any arrays shape as long as the size remains
+Using `reshape`, we can manipulate any array's shape as long as the size remains
 unchanged.
 
 ```python
@@ -210,7 +210,7 @@ value along an axis with length 1. The following code broadcasts along axis 1:
 
 ```python
 a = mx.nd.array(np.arange(6).reshape(6,1))
-b = a.broadcast_to((6,4))  #
+b = a.broadcast_to((6,4))
 b.asnumpy()
 ```
 
@@ -275,7 +275,7 @@ By default, NDArray operators are executed on CPU. But with MXNet, it's easy to
 switch to another computation resource, such as GPU, when available. Each
 NDArray's device information is stored in `ndarray.context`. When MXNet is
 compiled with flag `USE_CUDA=1` and the machine has at least one NVIDIA GPU, we
-can cause all computations to run on GPU 0 by using context `mx.gpu(0)`, or
+can instruct all computations to run on GPU 0 by using context `mx.gpu(0)`, or
 simply `mx.gpu()`. When we have access to two or more GPUs, the 2nd GPU is
 represented by `mx.gpu(1)`, etc.
 
@@ -315,7 +315,7 @@ e = b.as_in_context(c.context) + c  # same to above
 ### Serialize From/To (Distributed) Filesystems
 
 MXNet offers two simple ways to save (load) data to (from) disk. The first way
-is to use `pickle`, as you might with any other Python objects. `NDArray` is
+is to use `pickle`, as you might with other Python objects. `NDArray` is
 pickle-compatible.
 
 ```python
@@ -356,42 +356,43 @@ The `load` and `save` methods are preferable to pickle in two respects
    and then use it later from another lanuage's binding. For example, if we save
    the data in Python:
 
-```python
-a = mx.nd.ones((2, 3))
-mx.save("temp.ndarray", [a,])
-```
+	```python
+	a = mx.nd.ones((2, 3))
+	mx.save("temp.ndarray", [a,])
+	```
 
-we can later load it from R:
-```
-a <- mx.nd.load("temp.ndarray")
-as.array(a[[1]])
-##      [,1] [,2] [,3]
-## [1,]    1    1    1
-## [2,]    1    1    1
-```
+	we can later load it from R:
+
+	```
+	a <- mx.nd.load("temp.ndarray")
+	as.array(a[[1]])
+	##      [,1] [,2] [,3]
+	## [1,]    1    1    1
+	## [2,]    1    1    1'
+	```
 
 2. When a distributed filesystem such as Amazon S3 or Hadoop HDFS is set up, we
    can directly save to and load from it.
 
-```
-mx.nd.save('s3://mybucket/mydata.ndarray', [a,])  # if compiled with USE_S3=1
-mx.nd.save('hdfs///users/myname/mydata.bin', [a,])  # if compiled with USE_HDFS=1
-```
+	```
+	mx.nd.save('s3://mybucket/mydata.ndarray', [a,])  # if compiled with USE_S3=1
+	mx.nd.save('hdfs///users/myname/mydata.bin', [a,])  # if compiled with USE_HDFS=1
+	```
 
 ### Lazy Evaluation and Automatic Parallelization
 
-MXNet uses lazy evaluation to achieve superior performance.  When we run `a=b+1`
-in Python, the Python thread just pushes this operation into the backend engine
-and then returns.  There are two benefits for to this approach:
+MXNet uses lazy evaluation to achieve superior performance.  When we run `a = b + 1`
+in Python, the Python thread simply pushes this operation onto the backend engine
+and returns. This approach has two benefits:
 
 1. The main Python thread can continue to execute other computations once the
-   previous one is pushed. It is useful for frontend languages with heavy
-   overheads.
-2. It is easier for the backend engine to explore further optimization, such as
+   previous operation is pushed. This is useful for frontend languages that have heavy
+   overhead.
+2. It is easier for the backend engine to explore further optimizations, such as
    auto parallelization.
 
 The backend engine can resolve data dependencies and schedule the computations
-correctly. It is transparent to frontend users. We can explicitly call the
+correctly in manner that is transparent to frontend users. We can explicitly call the
 method `wait_to_read` on the result array to wait until the computation
 finishes. Operations that copy data from an array to other packages, such as
 `asnumpy`, will implicitly call `wait_to_read`.
@@ -443,7 +444,7 @@ print('Time to finish both CPU/CPU workloads: %f sec' % (time.time() - tic))
 ```
 
 Now we issue all workloads at the same time. The backend engine will try to
-parallel the CPU and GPU computations.
+parallelize the CPU and GPU computations.
 
 ```python
 tic = time.time()
