@@ -174,7 +174,7 @@ class EarlyStopping(object):
         any improvement that is small than this number will be considered as non-improvement.
         If 0, any improvement will count.
     patience : int
-        Defaults to 1. Specifies the number of epochs to be tolerated without any improvement. 
+        Defaults to 1. Specifies the number of epochs to be tolerated without any improvement.
         Once this patience was exceeded, the training process will be stopped.
     verbose: int
         Defaults to 0. Higher verbose will give more information
@@ -186,7 +186,7 @@ class EarlyStopping(object):
 
        Example
        -------
-       >>> # Stop the training when there is no improvements in 5 rounds. Using 
+       >>> # Stop the training when there is no improvements in 5 rounds. Using
        >>> module.fit(iterator, num_epoch=n_epoch, eval_metric='acc',
        ... epoch_end_callback=EarlyStopping(eval_metric='acc', patience=5, verbose=1))
         INFO:root:Epoch[21] Train-accuracy=0.640086
