@@ -38,6 +38,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="devices">
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active">Raspberry Pi</button>
+  <button type="button" class="btn btn-default opt">NVIDIA Jetson TX2</button>
 </div>
 </div>
 
@@ -682,6 +683,11 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
 Follow the installation instructions [in this guide](./raspbian_setup.md) to set up MXNet.
 
 </div>
+<div class="jetson-tx2">
+
+Follow the installation instructions [in this guide](./tx2_setup.md) to set up MXNet.
+
+</div>
 </div>
 
 <br/>
@@ -989,6 +995,11 @@ Will be available soon.
 
 <div class="devices">
   <div class="raspberry-pi">
+
+Will be available soon.
+
+</div>
+<div class="jetson-tx2">
 
 Will be available soon.
 
