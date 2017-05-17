@@ -48,7 +48,7 @@ Previous Navbar Layout End -->
         <a href="{{ url_root }}" id="logo"><img src="http://data.mxnet.io/theme/mxnet.png"></a>
       </h1>
       <nav id="main-nav" class='nav-bar'>
-        <a class="main-nav-link" href="{{url_root}}get_started/install.html">Get Started</a>
+        <a class="main-nav-link" href="{{url_root}}get_started/install.html">Install</a>
         {% for name in ['Tutorials', 'How To'] %}
         <a class="main-nav-link" href="{{url_root}}{{name.lower()|replace(" ", "_")}}/index.html">{{name}}</a>
         {% endfor %}
@@ -75,7 +75,7 @@ Previous Navbar Layout End -->
       <div class="burgerIcon dropdown">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">☰</a>
           <ul id="burgerMenu" class="dropdown-menu">
-              <li><a href="{{url_root}}get_started/install.html">Get Started</a></li>
+              <li><a href="{{url_root}}get_started/install.html">Install</a></li>
               {% for name in ['Tutorials', 'How To'] %}
               <li><a href="{{url_root}}{{name.lower()|replace(" ", "_")}}/index.html">{{name}}</a></li>
               {% endfor %}
