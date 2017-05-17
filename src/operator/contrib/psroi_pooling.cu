@@ -152,7 +152,7 @@ __global__ void PSROIPoolBackwardAccKernel(
     DType roi_end_h = static_cast<DType>(round(offset_bottom_rois[4]) + 1.) * spatial_scale;
 
     // Force too small ROIs to be 1x1
-    DType roi_width = max(roi_end_w - roi_start_w, 0.1);  //avoid 0
+    DType roi_width = max(roi_end_w - roi_start_w, 0.1);  // avoid 0
     DType roi_height = max(roi_end_h - roi_start_h, 0.1);
 
     // Compute w and h at bottom
@@ -183,8 +183,8 @@ __global__ void PSROIPoolBackwardAccKernel(
     DType* offset_bottom_diff = bottom_diff + (roi_batch_ind * channels + c) * height * width;
     DType bin_area = (hend - hstart)*(wend - wstart);
     DType diff_val = is_empty ? (DType)0. : top_diff[index] / bin_area;
-    for (int h = hstart; h < hend; ++h){
-      for (int w = wstart; w < wend; ++w){
+    for (int h = hstart; h < hend; ++h) {
+      for (int w = wstart; w < wend; ++w) {
         int bottom_index = h*width + w;
         atomicAdd(offset_bottom_diff + bottom_index, diff_val);
       }

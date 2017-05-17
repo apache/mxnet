@@ -83,7 +83,7 @@ namespace cuda {
       DType roi_end_h = static_cast<DType>(round(offset_bottom_rois[4]) + 1.) * spatial_scale - 0.5;
 
       // Force too small ROIs to be 1x1
-      DType roi_width = max(roi_end_w - roi_start_w, 0.1);  //avoid 0
+      DType roi_width = max(roi_end_w - roi_start_w, 0.1);  // avoid 0
       DType roi_height = max(roi_end_h - roi_start_h, 0.1);
 
       // Compute w and h at bottom
@@ -97,9 +97,13 @@ namespace cuda {
       int part_w = floor(static_cast<DType>(pw) / pooled_width*part_size);
       int class_id = ctop / channels_each_class;
       DType trans_x = no_trans ? static_cast<DType>(0) :
-        bottom_trans[(((n * num_classes + class_id) * 2) * part_size + part_h)*part_size + part_w] * trans_std;
+        bottom_trans[(((n * num_classes + class_id) * 2)
+                        * part_size + part_h)
+                        * part_size + part_w] * trans_std;
       DType trans_y = no_trans ? static_cast<DType>(0) :
-        bottom_trans[(((n * num_classes + class_id) * 2 + 1) * part_size + part_h)*part_size + part_w] * trans_std;
+        bottom_trans[(((n * num_classes + class_id) * 2 + 1)
+                        * part_size + part_h)
+                        * part_size + part_w] * trans_std;
 
       DType wstart = static_cast<DType>(pw)* bin_size_w
         + roi_start_w;
@@ -214,7 +218,7 @@ namespace cuda {
       DType roi_end_h = static_cast<DType>(round(offset_bottom_rois[4]) + 1.) * spatial_scale - 0.5;
 
       // Force too small ROIs to be 1x1
-      DType roi_width = max(roi_end_w - roi_start_w, 0.1);  //avoid 0
+      DType roi_width = max(roi_end_w - roi_start_w, 0.1);  // avoid 0
       DType roi_height = max(roi_end_h - roi_start_h, 0.1);
 
       // Compute w and h at bottom
@@ -228,9 +232,13 @@ namespace cuda {
       int part_w = floor(static_cast<DType>(pw) / pooled_width*part_size);
       int class_id = ctop / channels_each_class;
       DType trans_x = no_trans ? static_cast<DType>(0) :
-        bottom_trans[(((n * num_classes + class_id) * 2) * part_size + part_h)*part_size + part_w] * trans_std;
+        bottom_trans[(((n * num_classes + class_id) * 2)
+                        * part_size + part_h)
+                        * part_size + part_w] * trans_std;
       DType trans_y = no_trans ? static_cast<DType>(0) :
-        bottom_trans[(((n * num_classes + class_id) * 2 + 1) * part_size + part_h)*part_size + part_w] * trans_std;
+        bottom_trans[(((n * num_classes + class_id) * 2 + 1)
+                        * part_size + part_h)
+                        * part_size + part_w] * trans_std;
 
       DType wstart = static_cast<DType>(pw)* bin_size_w
         + roi_start_w;
@@ -291,8 +299,12 @@ namespace cuda {
             *trans_std*diff_val;
           diff_y *= roi_height;
 
-          atomicAdd(bottom_trans_diff + (((n * num_classes + class_id) * 2) * part_size + part_h)*part_size + part_w, diff_x);
-          atomicAdd(bottom_trans_diff + (((n * num_classes + class_id) * 2 + 1)*part_size + part_h)*part_size + part_w, diff_y);
+          atomicAdd(bottom_trans_diff + (((n * num_classes + class_id) * 2)
+                                           * part_size + part_h)
+                                           * part_size + part_w, diff_x);
+          atomicAdd(bottom_trans_diff + (((n * num_classes + class_id) * 2 + 1)
+                                           * part_size + part_h)
+                                           * part_size + part_w, diff_y);
         }
       }
     }
@@ -379,8 +391,9 @@ namespace cuda {
     const int part_size,
     const int sample_per_part,
     const float trans_std) {
-    cuda::DeformablePSROIPoolBackwardAcc(in_grad, trans_grad, out_grad, data, bbox, trans, top_count, no_trans,
-      spatial_scale, output_dim, group_size, pooled_size, part_size, sample_per_part, trans_std);
+    cuda::DeformablePSROIPoolBackwardAcc(in_grad, trans_grad, out_grad, data, bbox, trans,
+      top_count, no_trans, spatial_scale, output_dim, group_size, pooled_size, part_size,
+      sample_per_part, trans_std);
   }
 
 }  // namespace mshadow

@@ -63,9 +63,8 @@ __global__ void ProposalGridKernel(const int count,
     workspace_proposals[index * 5 + 1] = workspace_proposals[a * 5 + 1] + h * feature_stride;
     workspace_proposals[index * 5 + 2] = workspace_proposals[a * 5 + 2] + w * feature_stride;
     workspace_proposals[index * 5 + 3] = workspace_proposals[a * 5 + 3] + h * feature_stride;
-    workspace_proposals[index * 5 + 4] = 
+    workspace_proposals[index * 5 + 4] =
         scores[((b * (2 * num_anchors) + a + num_anchors) * height + h) * width + w];
-    //workspace_proposals[index * 5 + 4] = scores[(a * height + h) * width + w];
   }
 }
 
@@ -432,7 +431,8 @@ class MultiProposalGPUOp : public Operator{
     int count_anchors = num_anchors * height * width;  // count of total anchors
     int count = num_images * count_anchors;
     // set to -1 for max
-    int rpn_pre_nms_top_n = (param_.rpn_pre_nms_top_n > 0) ? param_.rpn_pre_nms_top_n : count_anchors;
+    int rpn_pre_nms_top_n = (param_.rpn_pre_nms_top_n > 0) ? param_.rpn_pre_nms_top_n
+                                                           : count_anchors;
     rpn_pre_nms_top_n = std::min(rpn_pre_nms_top_n, count_anchors);
     int rpn_post_nms_top_n = std::min(param_.rpn_post_nms_top_n, rpn_pre_nms_top_n);
 
@@ -451,11 +451,12 @@ class MultiProposalGPUOp : public Operator{
 
     // Copy generated anchors to GPU
     float* workspace_proposals_ptr = NULL;
-    FRCNN_CUDA_CHECK(cudaMalloc(&workspace_proposals_ptr, sizeof(float) * num_images * count_anchors * 5));
-    Tensor<xpu, 3> workspace_proposals(workspace_proposals_ptr, Shape3(num_images, count_anchors, 5));
-    FRCNN_CUDA_CHECK(cudaMemcpy(workspace_proposals.dptr_,
-                                &anchors[0], sizeof(float) * anchors.size(),
-      cudaMemcpyHostToDevice));
+    FRCNN_CUDA_CHECK(cudaMalloc(&workspace_proposals_ptr,
+                                sizeof(float) * num_images * count_anchors * 5));
+    Tensor<xpu, 3> workspace_proposals(workspace_proposals_ptr,
+                                       Shape3(num_images, count_anchors, 5));
+    FRCNN_CUDA_CHECK(cudaMemcpy(workspace_proposals.dptr_, &anchors[0],
+                                sizeof(float) * anchors.size(), cudaMemcpyHostToDevice));
 
     // Copy proposals to a mesh grid
     dim3 dimGrid((count + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock);
@@ -509,7 +510,8 @@ class MultiProposalGPUOp : public Operator{
     for (int b = 0; b < num_images; b++) {
         CheckLaunchParam(dimGrid, dimBlock, "CopyScore");
         CopyScoreKernel << <dimGrid, dimBlock >> >(
-            count_anchors, workspace_proposals.dptr_ + b * count_anchors * 5, score.dptr_, order.dptr_);
+            count_anchors, workspace_proposals.dptr_ + b * count_anchors * 5,
+            score.dptr_, order.dptr_);
         FRCNN_CUDA_CHECK(cudaPeekAtLastError());
 
         // argsort score, save order
@@ -525,7 +527,8 @@ class MultiProposalGPUOp : public Operator{
         dimGrid.x = (rpn_pre_nms_top_n + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
         CheckLaunchParam(dimGrid, dimBlock, "ReorderProposals");
         ReorderProposalsKernel << <dimGrid, dimBlock >> >(
-            rpn_pre_nms_top_n, workspace_proposals.dptr_ + b * count_anchors * 5, order.dptr_, workspace_ordered_proposals.dptr_);
+            rpn_pre_nms_top_n, workspace_proposals.dptr_ + b * count_anchors * 5,
+            order.dptr_, workspace_ordered_proposals.dptr_);
         FRCNN_CUDA_CHECK(cudaPeekAtLastError());
 
         // perform nms
