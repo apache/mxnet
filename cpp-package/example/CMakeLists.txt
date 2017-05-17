@@ -1,12 +1,9 @@
-
 if(NOT MSVC)
   set(UNITTEST_STATIC_LINK ON)
 endif()
 
 set(CPP_EXAMPLE_LIBS
-  rt
-  ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE}
-  dmlc
+  ${BEGIN_WHOLE_ARCHIVE} mxnet ${END_WHOLE_ARCHIVE}
   ${mxnet_LINKER_LIBS}
   )
 
@@ -18,6 +15,12 @@ file(GLOB_RECURSE CPP_PACKAGE_HEADERS
   "${CPP_PACKAGE_INCLUDE_DIR}/*.h"
   "${CPP_PACKAGE_INCLUDE_DIR}/*.hpp"
   )
+
+add_custom_target(
+  cpp_package_deploy_library ALL
+  DEPENDS mxnet
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:mxnet> $<TARGET_FILE_DIR:mlp>
+)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
