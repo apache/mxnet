@@ -51,25 +51,29 @@ class TrainingStateScope(object):
             set_is_training(self._prev)
 
 
-def train():
-    """Returns a training TrainingStateScope
+def train_section():
+    """Returns a training scope context to be used in 'with' statement
+    and captures training code.
 
     Example::
-        with autograd.train():
+        with autograd.train_section():
             y = model(x)
             compute_gradient([y])
+        metric.update(...)
+        optim.step(...)
     """
     return TrainingStateScope(True)
 
 
-def test():
-    """Returns a testing TrainingStateScope.
+def test_section():
+    """Returns a testing scope context to be used in 'with' statement
+    and captures testing code.
 
     Example::
-        with autograd.train():
+        with autograd.train_section():
             y = model(x)
             compute_gradient([y])
-            with autograd.test():
+            with autograd.test_section():
                 # testing, IO, gradient updates...
     """
     return TrainingStateScope(False)
@@ -146,7 +150,7 @@ def grad_and_loss(func, argnum=None):
             assert isinstance(x, NDArray), "type of autograd input should NDArray."
         grads = [zeros_like(x) for x in variables]
         mark_variables(variables, grads)
-        with train():
+        with train_section():
             outputs = func(*args)
         compute_gradient([outputs] if isinstance(outputs, NDArray) else outputs)
         return grads, outputs
