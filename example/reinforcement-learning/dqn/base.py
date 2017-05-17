@@ -8,6 +8,7 @@ import pickle
 from collections import OrderedDict
 import logging
 from utils import *
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -117,8 +118,12 @@ class Base(object):
             for k, v in self.params.items():
                 self.initializer(k, v)
         else:
-            assert set(arg_name_shape.items()) == \
-                   set(data_shapes.items() + [(k, v.shape) for k, v in self.params.items()])
+            if six.PY2 == True:
+                assert set(arg_name_shape.items()) == \
+                       set(data_shapes.items() + [(k, v.shape) for k, v in self.params.items()])
+            elif six.PY3 == True:
+                assert set(arg_name_shape.items()) == \
+                       set(list(data_shapes.items()) + [(k, v.shape) for k, v in self.params.items()])
         if self.aux_states is None:
             self.aux_states = OrderedDict([(k, nd.empty(s, ctx=self.ctx))
                                            for k, s in zip(aux_names, aux_shapes)])
