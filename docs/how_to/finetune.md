@@ -1,4 +1,4 @@
-# Fine-tune with Pre-trained Models
+# Fine-tune with Pretrained Models
 
 Many of the exciting deep learning algorithms for computer vision require
 massive datasets for training. The most popular benchmark dataset,
@@ -8,9 +8,9 @@ access to comparatively small datasets. In these cases, if we were to train a
 neural network's weights from scratch, starting from random initialized
 parameters, we would overfit the training set badly.
 
-One approach to get around this problem is to first pre-train a deep net on a
+One approach to get around this problem is to first pretrain a deep net on a
 large-scale dataset, like ImageNet. Then, given a new dataset, we can start
-with these pre-trained weights when training on our new task. This process is
+with these pretrained weights when training on our new task. This process is
 commonly called _fine-tuning_. There are a number of variations of fine-tuning.
 Sometimes, the initial neural network is used only as a _feature extractor_.
 That means that we freeze every layer prior to the output layer and simply learn
@@ -25,7 +25,7 @@ weights randomly. Then we continue training as normal. Sometimes it's common to
 use a smaller learning rate based on the intuition that we may already be close
 to a good result.
 
-In this demonstration, we'll fine-tune a model pre-trained on ImageNet to the
+In this demonstration, we'll fine-tune a model pretrained on ImageNet to the
 smaller caltech-256 dataset. Following this example, you can fine-tune to other
 datasets, even for strikingly different applications such as face
 identification.
@@ -102,7 +102,7 @@ def get_iterators(batch_size, data_shape=(3, 224, 224)):
     return (train, val)
 ```
 
-We then download a pre-trained 50-layer ResNet model and load it into memory. Note
+We then download a pretrained 50-layer ResNet model and load it into memory. Note
 that if `load_checkpoint` reports an error, we can remove the downloaded files
 and try `get_model` again.
 
@@ -122,8 +122,8 @@ We first define a function which replaces the last fully-connected layer for a g
 ```python
 def get_fine_tune_model(symbol, arg_params, num_classes, layer_name='flatten0'):
     """
-    symbol: the pre-trained network symbol
-    arg_params: the argument parameters of the pre-trained model
+    symbol: the pretrained network symbol
+    arg_params: the argument parameters of the pretrained model
     num_classes: the number of classes for the fine-tune datasets
     layer_name: the layer name before the last fully-connected layer
     """
@@ -135,7 +135,7 @@ def get_fine_tune_model(symbol, arg_params, num_classes, layer_name='flatten0'):
     return (net, new_args)
 ```
 
-Now we create a module. We first call `init_params` to randomly initialize parameters, next use `set_params` to replace all parameters except for the last fully-connected layer with pre-trained model.
+Now we create a module. We first call `init_params` to randomly initialize parameters, next use `set_params` to replace all parameters except for the last fully-connected layer with pretrained model.
 
 
 ```python
@@ -181,7 +181,7 @@ You will see that, after only 8 epochs, we can get 78% validation accuracy. This
 matches the state-of-the-art results training on caltech-256 alone,
 e.g. [VGG](http://www.robots.ox.ac.uk/~vgg/research/deep_eval/).
 
-Next, we try to use another pre-trained model. This model was trained on the
+Next, we try to use another pretrained model. This model was trained on the
 complete Imagenet dataset, which is 10x larger than the Imagenet 1K classes
 version, and uses a 3x deeper Resnet architecture.
 
