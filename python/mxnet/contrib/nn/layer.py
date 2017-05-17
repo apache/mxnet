@@ -44,7 +44,6 @@ class _LayerScope(object):
             _LayerScope._current._layer.register_sublayer(layer)
 
     def __enter__(self):
-        print self._layer.prefix
         self._old_scope = _LayerScope._current
         _LayerScope._current = self
         return self
