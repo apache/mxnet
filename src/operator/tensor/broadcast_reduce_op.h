@@ -137,8 +137,8 @@ inline TShape ReduceAxisShapeImpl(const ReduceAxisParam& param, const TShape& is
 inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
                             std::vector<TShape> *in_attrs,
                             std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& ishape = (*in_attrs)[0];
   if (ishape.ndim() == 0) return false;
 
@@ -614,7 +614,7 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
   const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
 
   const TShape& ishape = outputs[0].shape_;
-  int axis = CheckAxis(param.axis.value(), ishape.ndim());
+  const index_t axis = CheckAxis(param.axis.value(), ishape.ndim());
   int leading = 1, trailing = 1, M = ishape[axis];
   for (index_t i = 0; i < axis; ++i) leading *= ishape[i];
   for (index_t i = axis+1; i < ishape.ndim(); ++i) trailing *= ishape[i];

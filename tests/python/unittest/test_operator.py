@@ -835,7 +835,26 @@ def test_batchnorm_training():
         rolling_std = np.random.uniform(size=s)
 
         data = mx.symbol.Variable('data')
+
+        test = mx.symbol.BatchNorm_v1(data, fix_gamma=True)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
+        test = mx.symbol.BatchNorm(data, fix_gamma=True)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
+        test = mx.symbol.BatchNorm_v1(data, fix_gamma=True, use_global_stats=True)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
+        test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
+        test = mx.symbol.BatchNorm_v1(data, fix_gamma=False)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
         test = mx.symbol.BatchNorm(data, fix_gamma=False)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
+        test = mx.symbol.BatchNorm_v1(data, fix_gamma=False, use_global_stats=True)
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
 
         test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True)

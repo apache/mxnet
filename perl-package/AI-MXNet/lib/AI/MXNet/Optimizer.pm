@@ -1078,7 +1078,7 @@ method update(
 
     $weight .= ($dn->sign * $self->lamda1 - $dn)
                     /
-               (($self->beta + $n->sqrtn) / $lr + $wd) * ($dn->abs > $self->lamda1);
+               (($self->beta + $n->sqrt) / $lr + $wd) * ($dn->abs > $self->lamda1);
 }
 
 # updater for kvstore

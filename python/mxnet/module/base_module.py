@@ -102,7 +102,7 @@ class BaseModule(object):
     - `data_names`: list of type string indicating the names of the required input data.
     - `output_names`: list of type string indicating the names of the required outputs.
 
-    After binding, a modulse should be able to report the following richer information:
+    After binding, a module should be able to report the following richer information:
 
     - state information
         - `binded`: `bool`, indicates whether the memory buffers needed for computation
