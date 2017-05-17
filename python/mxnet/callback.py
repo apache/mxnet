@@ -9,6 +9,7 @@ import time
 import warnings
 import numpy as np
 
+from mxnet import metric
 from .model import save_checkpoint
 
 
@@ -162,22 +163,24 @@ class Speedometer(object):
 
 
 class EarlyStopping(object):
-    """Apply the early stopping strategy to avoid overfitting. During the training process, it uses the metrics of 
-    performance on validation if the eval data is available, otherwise, the metrics for training data will be used.
+    """Apply the early stopping strategy to avoid over-fitting. During the training process,
+    it uses the metrics of performance on validation if the eval data is available, otherwise,
+    the metrics for training data will be used.
 
     Parameters
     ----------
     min_delta: int
-        Defaults to 0. Specifies the minimum delta to be accepted between two epochs, any improvement that is small
-        than this number will be considered as non-improvement. If 0, any improvement will count.
+        Defaults to 0. Specifies the minimum delta to be accepted between two epochs,
+        any improvement that is small than this number will be considered as non-improvement.
+        If 0, any improvement will count.
     patience : int
-        Defaults to 1. Specifies the number of epochs to be tolerated without any improvement. Once this patience 
-        was exceeded, the training process will be stopped.
+        Defaults to 1. Specifies the number of epochs to be tolerated without any improvement. 
+        Once this patience was exceeded, the training process will be stopped.
     verbose: int
         Defaults to 0. Higher verbose will give more information
     mode: str
-        Defaults to 'auto'. Specifies if the performance is an accuray (higher values are good) or a loss (lower
-        values are good). 'auto' mode automatically detects built in metrics.
+        Defaults to 'auto'. Specifies if the performance is an accuray (higher values are good) or
+        a loss (lower values are good). 'auto' mode automatically detects built in metrics.
         Other possible options are:
         'min', 'max'
 
@@ -218,8 +221,9 @@ class EarlyStopping(object):
         self.best = None
         self.metric_op = None
 
-    def set_eval(self, eval_metric):
-        if type(eval_metric) is not str:
+    def _set_eval(self, eval_metric):
+        """Initialise the evaluation metrics and the best performance"""
+        if isinstance(eval_metric, metric.EvalMetric):
             eval_metric = eval_metric.name
         self.eval_metric = eval_metric
 
@@ -229,8 +233,8 @@ class EarlyStopping(object):
             self.metric_op = np.greater
         else:
             if ('acc' in self.eval_metric or
-                        'f1' in self.eval_metric or
-                        'top_k_accuracy' in self.eval_metric):
+                    'f1' in self.eval_metric or
+                    'top_k_accuracy' in self.eval_metric):
                 self.metric_op = np.greater
             else:
                 self.metric_op = np.less
@@ -241,9 +245,10 @@ class EarlyStopping(object):
             self.min_delta *= -1
         self.best = np.Inf if self.metric_op == np.less else -np.Inf
 
-    def __call__(self, epoch, symbol, arg_params, aux_params, eval_metric, epoch_train_eval_metrics):
+    def __call__(self, epoch, symbol, arg_params, aux_params, eval_metric,
+                 epoch_train_eval_metrics):
         if self.eval_metric is None:
-            self.set_eval(eval_metric)
+            self._set_eval(eval_metric)
         if epoch_train_eval_metrics is None:
             warnings.warn('Early stopping requires metric available!', RuntimeWarning)
         current = epoch_train_eval_metrics

@@ -515,7 +515,7 @@ class BaseModule(object):
                 #TODO: pull this into default
                 for name, val in unpacked_result.items():
                     self.logger.info('Epoch[%d] Validation-%s=%f', epoch, name, val)
-                if type(validation_metric) is not str:
+                if isinstance(validation_metric, metric.EvalMetric):
                     measurement_for_stopping = validation_metric.name
                 else:
                     measurement_for_stopping = validation_metric
@@ -526,8 +526,8 @@ class BaseModule(object):
 
             if epoch_end_callback is not None:
                 for callback in _as_list(epoch_end_callback):
-                    if not callback(epoch, self.symbol, arg_params, aux_params, measurement_for_stopping,
-                                    metric_for_stopping):
+                    if not callback(epoch, self.symbol, arg_params, aux_params,
+                                    measurement_for_stopping, metric_for_stopping):
                         return
 
             # end of 1 epoch, reset the data-iter for another epoch
