@@ -8,6 +8,7 @@ more `Executor` for data parallelization.
 import logging
 import warnings
 
+import sys
 from .. import context as ctx
 from .. import ndarray as nd
 from .. import optimizer as opt
@@ -19,8 +20,6 @@ from ..initializer import Uniform, InitDesc
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
-
-import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
