@@ -75,6 +75,7 @@ inline Symbol Symbol::Group(const std::vector<Symbol> &symbols) {
   return Symbol(out);
 }
 inline Symbol Symbol::Load(const std::string &file_name) {
+  op_map();
   SymbolHandle handle;
   CHECK_EQ(MXSymbolCreateFromFile(file_name.c_str(), &(handle)), 0);
   return Symbol(handle);
