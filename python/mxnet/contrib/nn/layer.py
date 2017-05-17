@@ -32,7 +32,9 @@ class _LayerScope(object):
             return _LayerScope._current._layer.prefix+prefix
 
     @staticmethod
-    def get_params(prefix):
+    def get_params(prefix, params):
+        if params is not None:
+            return params
         params = ParameterDict(prefix)
         if _LayerScope._current is not None:
             _LayerScope._current._layer.params.merge(params)
@@ -96,7 +98,7 @@ class Layer(object):
     Layer instead."""
     def __init__(self, prefix=None, params=None):
         self._prefix = _LayerScope.get_prefix(prefix, self._alias())
-        self._params = _LayerScope.get_params(self._prefix)
+        self._params = _LayerScope.get_params(self._prefix, params)
         self._scope = _LayerScope(self)
         self._children = []
         self._reg_params = {}
@@ -199,6 +201,9 @@ class Sequential(Layer):
         for layer in self._children:
             x = layer(x)
         return x
+
+    def generic_forward(self, F, x, *args, **kwargs):
+        raise NotImplementedError
 
 
 class Dense(Layer):
