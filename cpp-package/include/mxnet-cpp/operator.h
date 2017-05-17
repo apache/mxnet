@@ -120,23 +120,26 @@ class Operator {
   * \param ndarray the input ndarray
   */
   template<int N = 0>
-  void PushInput(const NDArray &ndarray) {
+  Operator &PushInput(const NDArray &ndarray) {
     input_ndarrays.push_back(ndarray.GetHandle());
+    return *this;
   }
   /*!
   * \brief add positional inputs
   */
   template <class T, class... Args, int N = 0>
-  void PushInput(const T &t, Args... args) {
+  Operator &PushInput(const T &t, Args... args) {
     SetParam(N, t);
     PushInput<Args..., N+1>(args...);
+    return *this;
   }
   /*!
   * \brief add the last positional input
   */
   template <class T, int N = 0>
-  void PushInput(const T &t) {
+  Operator &PushInput(const T &t) {
     SetParam(N, t);
+    return *this;
   }
   /*!
   * \brief add input ndarrays

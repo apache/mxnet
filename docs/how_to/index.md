@@ -40,6 +40,8 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 ## Extend and Contribute to MXNet
 
+* [How do I join the MXNet development discussion?](http://mxnet.io/community/mxnet_channels.html)
+
 * [How do I contribute a patch to MXNet?](http://mxnet.io/community/contribute.html)
 
 * [How do I create new operators in MXNet?](http://mxnet.io/how_to/new_op.html)
