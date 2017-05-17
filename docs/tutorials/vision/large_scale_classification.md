@@ -1,13 +1,13 @@
 # Large Scale Image Classification
 
-Training a neural network with a large number of images present several challenges. Even with the latest GPUs it is not possible to train large networks using large amount of images in reasonable time using a single GPU. This problem can be somewhat mitigated by using multiple GPUs in a single machines. But there is limits on how many GPUs can be attached to one machine (typically 8 or 16). This tutorial explains how to train large networks with terabytes of data using multiple machines each using multiple GPUs.
+Training a neural network with a large number of images presents several challenges. Even with the latest GPUs it is not possible to train large networks using large number of images in reasonable amount of time using a single GPU. This problem can be somewhat mitigated by using multiple GPUs in a single machine. But there is a limit to the number of GPUs that can be attached to one machine (typically 8 or 16). This tutorial explains how to train large networks with terabytes of data using multiple machines each containing multiple GPUs.
 
 ## Preprocessing
 
 ### Disk space
-First step in training with large data is downloading the data and preprocessing it. For this tutorial, we will be using the full imagenet dataset. Note that, at least 2 TB of disk space is required to download and preprocess this data. It is strongly recommended to use SSD instead of HDD. SSD is much better at dealing with large number of small files like images. After the preprocessing is done and images are packed into recordIO files, HDD should be fine for training.
+First step in training with large data is downloading the data and preprocessing it. For this tutorial, we will be using the full imagenet dataset. Note that, at least 2 TB of disk space is required to download and preprocess this data. It is strongly recommended to use SSD instead of HDD. SSD is much better at dealing with a large number of small image files. After the preprocessing completes and images are packed into recordIO files, HDD should be fine for training.
 
-For this tutorial, we will use AWS storage instance for data preprocessing. The storage instance `i3.4xlarge` has 3.8 TB of disk space across two NVMe SSD disks. We will use software RAID to combine them into one disk and mount it at `~/data`.
+In this tutorial, we will use an AWS storage instance for data preprocessing. The storage instance `i3.4xlarge` has 3.8 TB of disk space across two NVMe SSD disks. We will use software RAID to combine them into one disk and mount it at `~/data`.
 
 ```
 sudo mdadm --create --verbose /dev/md0 --level=stripe --raid-devices=2 \
@@ -22,7 +22,7 @@ We now have sufficient disk space to download and preprocess the data.
 
 ### Download imagenet
 
-For this tutorial, we will be using the full imagenet dataset which can be downloaded from http://www.image-net.org/download-images. `fall11_whole.tar` contains all the images. This file is 1.2 TB in size and could take a long time to download.
+In this tutorial, we will be using the full imagenet dataset which can be downloaded from http://www.image-net.org/download-images. `fall11_whole.tar` contains all the images. This file is 1.2 TB in size and could take a long time to download.
 
 After downloading, untar the file.
 ```
@@ -31,7 +31,7 @@ mkdir $ROOT
 tar -xvf fall11_whole.tar -C $ROOT
 ```
 
-That should give you a collection of tar files. Each tar file represents a category and contains all images that belong to that category. We can unzip each tar file and copy the images into a folder named after the name of the tar file.
+That should give you a collection of tar files. Each tar file represents a category and contains all images belonging to that category. We can unzip each tar file and copy the images into a folder named after the name of the tar file.
 
 ```
 for i in $ROOT/*.tar; do j=${i%.*}; echo $j;  mkdir -p $j; tar -xf $i -C $j; done
@@ -51,7 +51,7 @@ n00120010
 ```
 
 ### Remove uncommon classes for transfer learning (optional)
-A common reason to train a network on Imagenet data is to then use it for transfer learning (including feature extraction or fine-tuning other models). According to [this](https://arxiv.org/pdf/1608.08614v1.pdf) study, classes with too few images don’t help in transfer learning. So, we could remove classes with fewer than a certain number of images. The following code will remove classes with less than 500 images.
+A common reason to train a network on Imagenet data is to use it for transfer learning (including feature extraction or fine-tuning other models). According to [this](https://arxiv.org/pdf/1608.08614v1.pdf) study, classes with too few images don’t help in transfer learning. So, we could remove classes with fewer than a certain number of images. The following code will remove classes with less than 500 images.
 
 ```
 BAK=${ROOT}_filtered
@@ -68,8 +68,7 @@ done
 ```
 
 ### Generate a validation set
-To ensure we don’t overfit the data, we will create a validation set separate from the training set, monitor the loss on the validation set frequently. We create the validation set by picking fifty random images from each class and moving them to the validation set.
-
+To ensure we don’t overfit the data, we will create a validation set separate from the training set. During training, we will monitor loss on the validation set frequently. We create the validation set by picking fifty random images from each class and moving them to the validation set.
 ```
 VAL_ROOT=${ROOT}_val
 mkdir -p ${VAL_ROOT}
@@ -86,14 +85,14 @@ done
 ### Pack images into record files
 While MXNet can read image files directly, it is recommended to pack the image files into a recordIO file for increased performance. MXNet provides a tool (tools/im2rec.py) to do this. To use this tool, MXNet and OpenCV’s python module needs to be installed in the system. OpenCV’s python module can be installed on Ubuntu using the command `sudo apt-get install python-opencv`.
 
-Set the environment variable `MXNET` to point to the MXNet installation directory and `NAME` to the name of the dataset. We assume MXNet is installed at `~/mxnet`
+Set the environment variable `MXNET` to point to the MXNet installation directory and `NAME` to the name of the dataset. Here, we assume MXNet is installed at `~/mxnet`
 
 ```
 MXNET=~/mxnet
 NAME=full_imagenet_500_filtered
 ```
 
-To create the recordIO files, we first create a list of images we want in the recordIO files and then use `im2rec` to pack images in the list into recordIO files. We create this list in `train_meta`. Training data is around 1TB. We split it into 8 parts, with each part roughly 100 GB.
+To create the recordIO files, we first create a list of images we want in the recordIO files and then use `im2rec` to pack images in the list into recordIO files. We create this list in `train_meta`. Training data is around 1TB. We split it into 8 parts, with each part roughly 100 GB in size.
 
 ```
 mkdir -p train_meta
@@ -101,21 +100,21 @@ python ${MXNET}/tools/im2rec.py --list True --chunks 8 --recursive True \
 train_meta/${NAME} ${ROOT}
 ```
 
-We then resize the images such that the short edge is 480 px and pack the images into recordIO files. Since most of the work is disk I/O, we use multiple (16) threads to get the work done faster.
+We then resize the images such that the short edge is 480 pixels long and pack the images into recordIO files. Since most of the work is disk I/O, we use multiple (16) threads to get the work done faster.
 
 ```
 python ${MXNET}/tools/im2rec.py --resize 480 --quality 90 \
 --num-thread 16 train_meta/${NAME} ${ROOT}
 ```
 
-Once done, we move the rec files into a folder named train.
+Once done, we move the rec files into a folder named `train`.
 
 ```
 mkdir -p train
 mv train_meta/*.rec train/
 ```
 
-We do similar preprocessing for the validation set
+We do similar preprocessing for the validation set.
 
 ```
 mkdir -p val_meta
@@ -133,19 +132,19 @@ We now have all training and validation images in recordIO format in `train` and
 
 [ResNet](https://arxiv.org/abs/1512.03385) has shown its effectiveness on ImageNet competition. Our experiments also [reproduced](https://github.com/tornadomeet/ResNet) the results reported in the paper. As we increase the number of layers from 18 to 152, we see steady improvement in validation accuracy. Given this is a huge dataset, we will use Resnet with 152 layers.
 
-Due to the huge computation complexity, even the fastest GPU nowadays needs more than one day for a single pass of the data. We often need tens of epochs before the training converges to good validation accuracy. While we can use multiple GPUs in a machine, number of GPUs in a machine is often limited to 8 or 16. For faster training, in this tutorial, we will use multiple machines each using multiple GPUs to train the model.
+Due to the huge computational complexity, even the fastest GPU needs more than one day for a single pass of the data. We often need tens of epochs before the training converges to good validation accuracy. While we can use multiple GPUs in a machine, number of GPUs in a machine is often limited to 8 or 16. For faster training, in this tutorial, we will use multiple machines each containing multiple GPUs to train the model.
 
 ### Setup
 
-We will use 16 machines (P2.16x instances), each using 16 GPUs (Tesla K80). These machines are connected by 20 Gbps ethernet. 
+We will use 16 machines (P2.16x instances), each containing 16 GPUs (Tesla K80). These machines are interconnected via 20 Gbps ethernet. 
 
 AWS CloudFormation makes it very easy to create deep learning clusters. We follow instructions from [this](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/) page and create a deep learning cluster with 16 P2.16x instances.
 
 We load the data and code in the first machine (we’ll refer to this machine as master). We share both the data and code to other machines using EFS.
 
-If you are setting up your cluster without using AWS CloudFormation, remember to do the following: 
+If you are setting up your cluster manually, without using AWS CloudFormation, remember to do the following: 
 1. Compile MXNet using `USE_DIST_KVSTORE=1` to enable distributed training.
-2. Create a hosts file in the master that contains the hostnames of all the machines in the cluster. Example,
+2. Create a hosts file in the master that contains the host names of all the machines in the cluster. For example,
    ```
    $ head -3 hosts
    deeplearning-worker1
@@ -186,17 +185,17 @@ Option | Description
 network | The network to train. Could be any of the network available in `${MXNET}/example/image-classification`. For this tutorial, we use Resnet.
 num-layers | Number of layers to use in the network. We use 152 layer Resnet.
 data-train | Directory containing the training images. We point to the EFS location (`~/data/train/`) where we stored the training images.
-data-val   | Directory containing the validation images. We point to the EFS location (`~/data/val`) where we store the validation images.
-gpus       | Comma separated list of gpu indices to use for training in each machine. We use all 16 GPUs.
-batch-size | Batch size across all GPUs. This is equal to batch size per GPU * total number of GPUs. We use a batch size of 32 images per GPU. So, effective batch size is 32*16*16=8192
+data-val   | Directory containing the validation images. We point to the EFS location (`~/data/val`) where we stored the validation images.
+gpus       | Comma separated list of gpu indices to use for training on each machine. We use all 16 GPUs.
+batch-size | Batch size across all GPUs. This is equal to batch size per GPU * total number of GPUs. We use a batch size of 32 images per GPU. So, effective batch size is 32*16*16=8192.
 model      | Path prefix for the model file created by the training.
 num-epochs | Number of epochs to train.
-kv-store   | Key/Value store for parameter synchronization. We use distributed kv store since we do distributed training.
+kv-store   | Key/Value store for parameter synchronization. We use distributed kv store since we are doing distributed training.
 
 After training is complete, trained models are available in the directory specified by the `--model` option. Models are saved in two parts: model-symbol.json for the network definition and model-n.params for the parameters saved after the n'th epoch.
 
 ## Scalability
-One common concern using large number of machines for training is the scalability. We have benchmarked scalability running several popular networks on up to 256 GPUs and the speedup is very close to ideal speedup.
+One common concern using large number of machines for training is the scalability. We have benchmarked scalability running several popular networks on clusters with up to 256 GPUs and the speedup is very close to ideal.
 
 This scalability test was run on sixteen P2.16xl instances with 256 GPUs in total. We used AWS deep learning AMI with CUDA 7.5 and CUDNN 5.1 installed. 
 
@@ -228,20 +227,20 @@ We fixed the batch size per GPU constant and doubled the number of GPUs for ever
 ## Troubleshooting guidelines
 
 ### Validation accuracy
-It is often straightforward to achieve a reasonable validation accuracy, but achieving the state-of-the-art numbers reported in papers can sometime be very hard. Here is a few things you can try to improve validation accuracy.
+It is often straightforward to achieve a reasonable validation accuracy, but achieving the state-of-the-art numbers reported in papers can sometimes be very hard. Here are few things you can try to improve validation accuracy.
 - Adding more data augmentations often reduces the gap between training and validation accuracy. Data augmentation could be reduced in epochs closer to the end.
 - Start with a large learning rate and keep it large for a long time. For example, in CIFAR10, you could keep the learning rate at 0.1 for the first 200 epochs and then reduce it to 0.01.
 - Do not use a batch size that is too large, especially batch size >> number of classes.
 
 ### Speed
-- Distributed training improves speed when computation cost of a batch is high. So, make sure your workload is not too small (like LeNet on MNIST). Also, make sure batch size is reasonably large. 
-- Make sure data-read and pre-processing is not the bottleneck. Use the `--test-io 1` flag to check how many images can be pre-processed per second.
-- Increase --data-nthreads (default is 4) to use more threads for data pre-processing.
+- Distributed training improves speed when computation cost of a batch is high. So, make sure your workload is not too small (like LeNet on MNIST). Make sure batch size is reasonably large. 
+- Make sure data-read and preprocessing is not the bottleneck. Use the `--test-io 1` flag to check how many images can be pre-processed per second.
+- Increase --data-nthreads (default is 4) to use more threads for data preprocessing.
 - Data preprocessing is done by opencv. If opencv is compiled from source code, check if it is configured correctly.
-- Use `--benchmark 1` to use randomly generated data rather than real data to narrow down on where the bottleneck is.
+- Use `--benchmark 1` to use randomly generated data rather than real data to narrow down where the bottleneck is.
 - Check [this](http://mxnet.io/how_to/perf.html) page for more details.
 
 ### Memory
-If the batch size is too big, it can cause GPU memory to overflow. If this happens, you’ll see the error message “cudaMalloc failed: out of memory” or something similar. There is a couple of ways to fix this:
+If the batch size is too big, it can exhaust GPU memory. If this happens, you’ll see the error message “cudaMalloc failed: out of memory” or something similar. There are a couple of ways to fix this:
 - Reduce the batch size.
 - Set the environment variable `MXNET_BACKWARD_DO_MIRROR` to 1. It reduces the memory consumption by trading off speed. For example, with batch size 64, inception-v3 uses 10G memory and trains 30 image/sec on a single K80 GPU. When mirroring is enabled, with 10G GPU memory consumption, we can run inception-v3 using batch size of 128. The cost is that, the speed reduces to 27 images/sec.
