@@ -513,6 +513,8 @@ class BaseModule(object):
                     self.logger.info('Epoch[%d] Validation-%s=%f', epoch, name, val)
                 if isinstance(validation_metric, metric.EvalMetric):
                     measurement_for_stopping = validation_metric.name
+                elif isinstance(validation_metric, metric.CompositeEvalMetric):
+                    measurement_for_stopping = validation_metric.metrics[0].name
                 else:
                     measurement_for_stopping = validation_metric
                 metric_for_stopping = unpacked_result[measurement_for_stopping]
