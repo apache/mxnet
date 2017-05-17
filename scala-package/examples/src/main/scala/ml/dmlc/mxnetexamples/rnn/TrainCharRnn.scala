@@ -170,10 +170,16 @@ object TrainCharRnn {
 }
 
 class TrainCharRnn {
+  /*
+   * Get Training Data:  E.g.
+   * mkdir data; cd data
+   * wget "http://data.mxnet.io/mxnet/data/char_lstm.zip"
+   * unzip -o char_lstm.zip
+   */
   @Option(name = "--data-path", usage = "the input train data file")
-  private val dataPath: String = null
+  private val dataPath: String = "./data/obama.txt"
   @Option(name = "--save-model-path", usage = "the model saving path")
-  private val saveModelPath: String = null
+  private val saveModelPath: String = "./model/"
   @Option(name = "--gpu", usage = "which gpu card to use, default is -1, means using cpu")
   private val gpu: Int = -1
 }
