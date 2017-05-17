@@ -1,6 +1,6 @@
 # Tutorials
 
-These tutorials introduce fundamental concepts in deep learning and their realizations in _MXNet_. Under the _basics_ section, you'll find tutorials covering manipulating arrays, building networks, loading and preprocessing data, etc. Further sections introduce fundamental models for image classification, natural language processing, speech recognition, and unsupervised learning. While most tutorials are currently presented in Python, we also present a subset of tutorials using the R and Scala front ends.
+These tutorials introduce fundamental concepts in deep learning and their realizations in _MXNet_. Under the _basics_ section, you'll find tutorials covering manipulating arrays, building networks, loading and preprocessing data, etc. Further sections introduce fundamental models for image classification, natural language processing, speech recognition, and unsupervised learning. While most tutorials are currently presented in Python, we also present a subset of tutorials using the R and Scala languages.
 
 
 ## Python
