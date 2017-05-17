@@ -203,8 +203,8 @@ struct box_grad {
       DType scale = box_scale * (2 - gw * gh);
       grad[out_offset] = scale * (px - gx * width + col);  // x
       grad[out_offset + 1] = scale * (py - gy * height + row); // y
-      grad[out_offset + 2] = scale * (pw - log(gw * width / aw));  // w
-      grad[out_offset + 3] = scale * (ph - log(gh * height / ah)); // h
+      grad[out_offset + 2] = scale * (pw - logf(gw * width / aw));  // w
+      grad[out_offset + 3] = scale * (ph - logf(gh * height / ah)); // h
       // if (fabs(grad[out_offset + 3] > 5)) {
       //   printf("best_anchor: %d, gw:%f, gh:%f, scale:%f, tx:%f, ty:%f, tw:%f, th:%f, x:%f, y:%f, w:%f, h:%f, dx:%f, dy:%f, dw:%f, dh:%f\n",
       //     best_anchor, gw, gh, scale, gx * width - col, gy * height - row, log(gw * width / aw), log(gh * height / ah),
@@ -213,10 +213,14 @@ struct box_grad {
 
 
       // object grad
-      //DType iou = IOU(px - pw / 2, py - ph / 2, px + pw / 2, py + ph / 2, gl, gt, gr, gb);
+      px = (px + col) / width;
+      py = (py + row) / height;
+      pw = expf(pw) * anchor[best_anchor * 2] / width;
+      ph = expf(ph) * anchor[best_anchor * 2 + 1] / height;
+      DType iou = IOU(px - pw / 2, py - ph / 2, px + pw / 2, py + ph / 2, gl, gt, gr, gb);
       --out_offset;  // layout : num_class + 1 + 4
       --offset;
-      grad[out_offset] = object_scale * (pred[offset] - 1);
+      grad[out_offset] = object_scale * (pred[offset] - iou);
 
       // class target
       offset = i * width * height * num_anchor + row * width * num_anchor +
