@@ -44,7 +44,9 @@ class Parameter(object):
         Specifies how to update gradient to grad arrays.
 
         - 'write' means everytime gradient is written to grad `NDArray`.
-        - 'add' means everytime gradient is added to the grad `NDArray`.
+        - 'add' means everytime gradient is added to the grad `NDArray`. You need
+          to manually call `zero_grad()` to clear the gradient buffer before each
+          iteration when using this option.
         - 'null' means gradient is not reqested for this parameter. gradient arrays
           will not be allocated.
     shape : tuple of int, default None
@@ -189,6 +191,14 @@ class Parameter(object):
             "Parameter %s has not been initialized"%self.name
         return self._data.keys()
 
+    def zero_grad(self):
+        """Set gradient buffer on all contexts to 0. No action is taken if
+        parameter is uninitialized or doesn't require gradient."""
+        if self._grad is None:
+            return
+        for i in self._grad:
+            i[:] = 0
+
     def var(self):
         """Returns a symbol representing this parameter."""
         if self._var is None:
@@ -319,6 +329,11 @@ class ParameterDict(object):
         """
         for _, v in self.items():
             v.initialize(None, ctx, init)
+
+    def zero_grad(self):
+        """Set all Parameters' gradient buffer to 0."""
+        for i in self.values():
+            i.zero_grad()
 
     def save(self, filename):
         arg_dict = {}
