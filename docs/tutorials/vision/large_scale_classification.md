@@ -1,11 +1,11 @@
 # Large Scale Image Classification
 
-Training a neural network with a large number of images presents several challenges. Even with the latest GPUs it is not possible to train large networks using large number of images in reasonable amount of time using a single GPU. This problem can be somewhat mitigated by using multiple GPUs in a single machine. But there is a limit to the number of GPUs that can be attached to one machine (typically 8 or 16). This tutorial explains how to train large networks with terabytes of data using multiple machines each containing multiple GPUs.
+Training a neural network with a large number of images presents several challenges. Even with the latest GPUs, it is not possible to train large networks using a large number of images in a reasonable amount of time using a single GPU. This problem can be somewhat mitigated by using multiple GPUs in a single machine. But there is a limit to the number of GPUs that can be attached to one machine (typically 8 or 16). This tutorial explains how to train large networks with terabytes of data using multiple machines each containing multiple GPUs.
 
 ## Preprocessing
 
 ### Disk space
-First step in training with large data is downloading the data and preprocessing it. For this tutorial, we will be using the full imagenet dataset. Note that, at least 2 TB of disk space is required to download and preprocess this data. It is strongly recommended to use SSD instead of HDD. SSD is much better at dealing with a large number of small image files. After the preprocessing completes and images are packed into recordIO files, HDD should be fine for training.
+The first step in training with large data is downloading the data and preprocessing it. For this tutorial, we will be using the full imagenet dataset. Note that, at least 2 TB of disk space is required to download and preprocess this data. It is strongly recommended to use SSD instead of HDD. SSD is much better at dealing with a large number of small image files. After the preprocessing completes and images are packed into recordIO files, HDD should be fine for training.
 
 In this tutorial, we will use an AWS storage instance for data preprocessing. The storage instance `i3.4xlarge` has 3.8 TB of disk space across two NVMe SSD disks. We will use software RAID to combine them into one disk and mount it at `~/data`.
 
