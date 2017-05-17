@@ -393,7 +393,7 @@ class DeformableConvolutionProp : public OperatorProperty {
         << "output width must equal to offset map width";
       CHECK_EQ(offsetshape[1] % (param_.kernel[0] * param_.kernel[1]), 0U) \
         << "offset filter must divide deformable group size";
-      CHECK_EQ(offsetshape[1] / (2 * param_.kernel[0] * param_.kernel[1]),
+      CHECK_EQ(offsetshape[1] / (2 * param_.kernel[0] * param_.kernel[1]), \
                param_.num_deformable_group) \
         << "offset filter must divide deformable group size";
       // Perform incomplete shape inference. Fill in the missing values in data shape.
