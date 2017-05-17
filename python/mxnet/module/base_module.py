@@ -500,7 +500,6 @@ class BaseModule(object):
             # sync aux params across devices
             arg_params, aux_params = self.get_params()
             self.set_params(arg_params, aux_params)
-            
             #----------------------------------------
             # evaluation on validation set
             if eval_data:
