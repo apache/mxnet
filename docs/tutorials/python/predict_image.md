@@ -1,15 +1,15 @@
 # Predict with pre-trained models
 
-This tutorial explains how to recognize an object in an images with a
+This tutorial explains how to recognize objects in an image with a
 pre-trained model, and how to perform feature extraction.
 
 ## Loading
 
 We first download a pre-trained ResNet 152 layer that is trained on the full
-Imagenet dataset with over 10 millions images and 10 thousands classes. A
+Imagenet dataset with over 10 million images and 10 thousand classes. A
 pre-trained model contains two parts, a json file containing the model
 definition and a binary file containing the parameters. In addition there may be
-a text file for the label.
+a text file for the labels.
 
 ```python
 import mxnet as mx
@@ -19,8 +19,8 @@ path='http://data.mxnet.io/models/imagenet-11k/'
  mx.test_utils.download(path+'synset.txt')]
 ```
 
-Next we load the downloaded model (If GPU is available, we can replace all
-`mx.cpu()` to `mx.gpu()` to accelerate the computing).
+Next, we load the downloaded model. *Note:* If GPU is available, we can replace all
+occurances of `mx.cpu()` with `mx.gpu()` to accelerate the computation.
 
 ```python
 sym, arg_params, aux_params = mx.model.load_checkpoint('resnet-152', 0)
@@ -33,8 +33,8 @@ with open('synset.txt', 'r') as f:
 
 ## Predicting
 
-We first define helper functions that download an image and performs the
-prediction
+We first define helper functions for downloading an image and performing the
+prediction:
 
 ```python
 %matplotlib inline
@@ -73,7 +73,7 @@ def predict(url):
         print('probability=%f, class=%s' %(prob[i], labels[i]))
 ```
 
-Now we can perform predicting with any downloadable URL
+Now, we can perform prediction with any downloadable URL:
 
 ```python
 predict('http://writm.com/wp-content/uploads/2016/08/Cat-hd-wallpapers.jpg')
@@ -101,9 +101,9 @@ all_layers.list_outputs()[-10:]
 
 A often used layer for feature extraction is the one before the last fully
 connected layer. For ResNet, and also Inception, it is the flatten layer with
-name `flatten0` which reshape the 4-D convolutional layer output into 2-D for
-the fully connected layer. The following codes extract a new Symbol which
-outputs the flatten layer and create a model.
+name `flatten0` which reshapes the 4-D convolutional layer output into 2-D for
+the fully connected layer. The following source code extracts a new Symbol which
+outputs the flatten layer and creates a model.
 
 ```python
 fe_sym = all_layers['flatten0_output']
@@ -112,7 +112,7 @@ fe_mod.bind(for_training=False, data_shapes=[('data', (1,3,224,224))])
 fe_mod.set_params(arg_params, aux_params)
 ```
 
-Then perform forward to obtain the features
+We can now invoke `forward` to obtain the features:
 
 ```python
 img = get_image('http://writm.com/wp-content/uploads/2016/08/Cat-hd-wallpapers.jpg')

@@ -4,6 +4,7 @@
 """Logging utilities."""
 import logging
 import sys
+import warnings
 
 CRITICAL = logging.CRITICAL
 ERROR = logging.ERROR
@@ -29,8 +30,7 @@ class _Formatter(logging.Formatter):
             return '\x1b[31m'
         elif logging.INFO <= level:
             return '\x1b[32m'
-        else:
-            return '\x1b[34m'
+        return '\x1b[34m'
 
     def _get_label(self, level):
         # pylint: disable= missing-docstring
@@ -44,8 +44,7 @@ class _Formatter(logging.Formatter):
             return 'I'
         elif level == logging.DEBUG:
             return 'D'
-        else:
-            return 'U'
+        return 'U'
 
     def format(self, record):
         # pylint: disable= missing-docstring
@@ -61,14 +60,55 @@ class _Formatter(logging.Formatter):
         return super(_Formatter, self).format(record)
 
 def getLogger(name=None, filename=None, filemode=None, level=WARNING):
-    """Get customized logger.
+    """Gets a customized logger.
 
-    Args:
-        name: Name of the logger.
-        level: Level to log.
+    .. note:: `getLogger` is deprecated. Use `get_logger` instead.
 
-    Returns:
-        A logger.
+    """
+    warnings.warn("getLogger is deprecated, Use get_logger instead.",
+                  DeprecationWarning, stacklevel=2)
+    return get_logger(name, filename, filemode, level)
+
+def get_logger(name=None, filename=None, filemode=None, level=WARNING):
+    """Gets a customized logger.
+
+    Parameters
+    ----------
+    name: str, optional
+        Name of the logger.
+    filename: str, optional
+        The filename to which the logger's output will be sent.
+    filemode: str, optional
+        The file mode to open the file (corresponding to `filename`),
+        default is 'a' if `filename` is not ``None``.
+    level: int, optional
+        The `logging` level for the logger.
+        See: https://docs.python.org/2/library/logging.html#logging-levels
+
+    Returns
+    -------
+    Logger
+        A customized `Logger` object.
+
+    Example
+    -------
+    ## get_logger call with default parameters.
+    >>> from mxnet.log import get_logger
+    >>> logger = get_logger("Test")
+    >>> logger.warn("Hello World")
+    W0505 00:29:47 3525 <stdin>:<module>:1] Hello World
+
+    ## get_logger call with WARNING level.
+    >>> import logging
+    >>> logger = get_logger("Test2", level=logging.WARNING)
+    >>> logger.warn("Hello World")
+    W0505 00:30:50 3525 <stdin>:<module>:1] Hello World
+    >>> logger.debug("Hello World") # This doesn't return anything as the level is logging.WARNING.
+
+    ## get_logger call with DEBUG level.
+    >>> logger = get_logger("Test3", level=logging.DEBUG)
+    >>> logger.debug("Hello World") # Logs the debug output as the level is logging.DEBUG.
+    D0505 00:31:30 3525 <stdin>:<module>:1] Hello World
     """
     logger = logging.getLogger(name)
     if name is not None and not getattr(logger, '_init_done', None):

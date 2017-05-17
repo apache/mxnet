@@ -295,7 +295,7 @@ class Module(BaseModule):
             If ``True``, params could contain missing values, and the initializer will be
             called to fill those missing params.
         force_init : bool
-            If ``True````, will force re-initialize even if already initialized.
+            If ``True``, will force re-initialize even if already initialized.
 
         Examples
         --------

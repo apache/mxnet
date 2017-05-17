@@ -877,6 +877,21 @@ class ZoneoutCell(ModifierCell):
         return output, states
 
 
+class ResidualCell(ModifierCell):
+    """
+    Adds residual connection as described in Wu et al, 2016
+    (https://arxiv.org/abs/1609.08144).
+    Output of the cell is output of the base cell plus input.
+    """
+
+    def __init__(self, base_cell):
+        super(ResidualCell, self).__init__(base_cell)
+
+    def __call__(self, inputs, states):
+        output, states = self.base_cell(inputs, states)
+        output = symbol.elemwise_add(output, inputs, name="%s_plus_residual" % output.name)
+        return output, states
+
 
 class BidirectionalCell(BaseRNNCell):
     """Bidirectional RNN cell

@@ -134,3 +134,5 @@ List of Contributors
 * [Dom Divakaruni](https://github.com/domdivakaruni)
 * [David Salinas](https://github.com/geoalgo)
 * [Asmus Hetzel](https://github.com/asmushetzel)
+* [Roshani Nagmote](https://github.com/Roshrini)
+* [Chetan Khatri](https://github.com/chetkhatri/)
