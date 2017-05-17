@@ -30,11 +30,46 @@ The following table explains under which conditions NNPACK will work.
 If the trained model meets some conditions of using NNPACK,
 you can build MXNet with NNPACK support.
 Follow these simple steps:  
-* Install NNPACK following their documentation on [GitHub](https://github.com/Maratyszcza/NNPACK#building). Note, you need ninja to build NNPACK. Make sure to add `--enable-shared` when running configure.py (i.e. `python configure.py --enable-shared`), because _MXNet_ will link NNPACK dynamically.  
+* Build NNPACK shared library with the following commands. _MXNet_ will link NNPACK dynamically.
+
+Note: The following NNPACK installation instructions have been tested on Ubuntu 14.04 and 16.04.
+
+```bash
+
+# Install Pip
+$ sudo apt-get update
+$ sudo apt-get install -y python-pip
+$ sudo pip install --upgrade pip
+
+# Install Peach
+$ git clone https://github.com/Maratyszcza/PeachPy.git
+$ cd PeachPy
+$ sudo pip install --upgrade -r requirements.txt
+$ python setup.py generate
+$ sudo pip install --upgrade .
+
+# Install Ninja Build System
+$ sudo apt-get install ninja-build
+$ pip install ninja-syntax
+
+# Build NNPack shared library
+$ cd ~
+$ git clone --recursive https://github.com/Maratyszcza/NNPACK.git
+$ cd NNPACK
+# Latest NNPACK do not support building NNPACK as shared library using --enable-shared flag
+# Reset to commit that supports it.
+$ git reset --hard 9c6747d7b80051b40e6f92d6828e2ed997529cd2
+$ git submodule init && git submodule update --recursive
+$ python ./configure.py --enable-shared
+$ ninja
+$ cd ~
+
+```
+
 * Set lib path of NNPACK as the environment variable, e.g. `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$YOUR_NNPACK_INSTALL_PATH/lib`
-* Add the include file of NNPACK and its third-party to  `ADD_CFLAGS` in config.mk, e.g. `ADD_CFLAGS = -I$(YOUR_NNPACK_INSTALL_PATH)/include -I$(YOUR_NNPACK_INSTALL_PATH)/pthreadpool/include`
+* Add the include file of NNPACK and its third-party to  `ADD_CFLAGS` in config.mk, e.g. `ADD_CFLAGS = -I$(YOUR_NNPACK_INSTALL_PATH)/include/ -I$(YOUR_NNPACK_INSTALL_PATH)/third-party/pthreadpool/include/`
 * Set `USE_NNPACK = 1` in config.mk.
-* [build MXNet](http://mxnet.io/get_started/setup.html#overview).
+* Build MXNet from source following the [install guide](http://mxnet.io/get_started/install.html).
 
 ### NNPACK Performance
 
