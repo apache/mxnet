@@ -56,7 +56,7 @@ __global__ void PSROIPoolForwardKernel(
     DType roi_end_h = static_cast<DType>(round(offset_bottom_rois[4]) + 1.) * spatial_scale;
 
     // Force too small ROIs to be 1x1
-    DType roi_width = max(roi_end_w - roi_start_w, 0.1); //avoid 0
+    DType roi_width = max(roi_end_w - roi_start_w, 0.1);  //avoid 0
     DType roi_height = max(roi_end_h - roi_start_h, 0.1);
 
     // Compute w and h at bottom
@@ -74,7 +74,7 @@ __global__ void PSROIPoolForwardKernel(
     // Add roi offsets and clip to input boundaries
     hstart = min(max(hstart, 0), height);
     hend = min(max(hend, 0), height);
-    wstart = min(max(wstart, 0),width);
+    wstart = min(max(wstart, 0), width);
     wend = min(max(wend, 0), width);
     bool is_empty = (hend <= hstart) || (wend <= wstart);
 
@@ -86,8 +86,8 @@ __global__ void PSROIPoolForwardKernel(
 
     const DType* offset_bottom_data = bottom_data + (roi_batch_ind * channels + c) * height * width;
     DType out_sum = 0;
-    for (int h = hstart; h < hend; ++h){
-      for (int w = wstart; w < wend; ++w){
+    for (int h = hstart; h < hend; ++h) {
+      for (int w = wstart; w < wend; ++w) {
         int bottom_index = h*width + w;
         out_sum += offset_bottom_data[bottom_index];
       }
@@ -152,7 +152,7 @@ __global__ void PSROIPoolBackwardAccKernel(
     DType roi_end_h = static_cast<DType>(round(offset_bottom_rois[4]) + 1.) * spatial_scale;
 
     // Force too small ROIs to be 1x1
-    DType roi_width = max(roi_end_w - roi_start_w, 0.1); //avoid 0
+    DType roi_width = max(roi_end_w - roi_start_w, 0.1);  //avoid 0
     DType roi_height = max(roi_end_h - roi_start_h, 0.1);
 
     // Compute w and h at bottom
@@ -198,7 +198,7 @@ inline void PSROIPoolBackwardAcc(const Tensor<gpu, 4, DType> &in_grad,
                             const Tensor<gpu, 4, DType> &out_grad,
                             const Tensor<gpu, 2, DType> &bbox,
                             const float spatial_scale,
-                            const int output_dim_, 
+                            const int output_dim_,
                             const int group_size_) {
   // LOG(INFO) << "PSROIPoolBackward";
   const DType *top_diff = out_grad.dptr_;
@@ -236,7 +236,7 @@ inline void PSROIPoolBackwardAcc(const Tensor<gpu, 4, DType> &in_grad,
                             const Tensor<gpu, 4, DType> &out_grad,
                             const Tensor<gpu, 2, DType> &bbox,
                             const float spatial_scale,
-                            const int output_dim_, 
+                            const int output_dim_,
                             const int group_size_) {
   cuda::PSROIPoolBackwardAcc(in_grad, out_grad, bbox, spatial_scale, output_dim_, group_size_);
 }

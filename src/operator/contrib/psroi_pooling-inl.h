@@ -6,8 +6,8 @@
  * \brief psroi pooling operator and symbol
  * \author Yi Li, Tairui Chen, Guodong Zhang, Haozhi Qi, Jifeng Dai
 */
-#ifndef MXNET_OPERATOR_PSROI_POOLING_INL_H_
-#define MXNET_OPERATOR_PSROI_POOLING_INL_H_
+#ifndef MXNET_OPERATOR_CONTRIB_PSROI_POOLING_INL_H_
+#define MXNET_OPERATOR_CONTRIB_PSROI_POOLING_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -109,7 +109,6 @@ class PSROIPoolingOp : public Operator {
     if (kWriteTo == req[psroipool::kBox]) {
       grad_roi = 0.0f;
     }
-
   }
 
  private:
@@ -219,4 +218,4 @@ class PSROIPoolingProp : public OperatorProperty {
 #endif
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_PSROI_POOLING_INL_H_
+#endif  // MXNET_OPERATOR_CONTRIB_PSROI_POOLING_INL_H_

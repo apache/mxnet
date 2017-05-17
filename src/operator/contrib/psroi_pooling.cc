@@ -24,7 +24,7 @@ inline void PSROIPoolForward(const Tensor<cpu, 4, DType> &out,
                            const Tensor<cpu, 4, DType> &data,
                            const Tensor<cpu, 2, DType> &bbox,
                            const float spatial_scale_,
-                           const int output_dim_, 
+                           const int output_dim_,
                            const int group_size_) {
   // NOT_IMPLEMENTED;
   return;
@@ -35,7 +35,7 @@ inline void PSROIPoolBackwardAcc(const Tensor<cpu, 4, DType> &in_grad,
                             const Tensor<cpu, 4, DType> &out_grad,
                             const Tensor<cpu, 2, DType> &bbox,
                             const float spatial_scale_,
-                            const int output_dim_, 
+                            const int output_dim_,
                             const int group_size_) {
   // NOT_IMPLEMENTED;
   return;

@@ -63,34 +63,34 @@ namespace mshadow {
 }  // namespace mshadow
 
 namespace mxnet {
-  namespace op {
+namespace op {
 
-    template<>
-    Operator *CreateOp<cpu>(ChannelOperatorParam param, int dtype) {
-      Operator* op = NULL;
-      MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-        op = new ChannelOperatorOp<cpu, DType>(param);
-      });
-      return op;
-    }
+  template<>
+  Operator *CreateOp<cpu>(ChannelOperatorParam param, int dtype) {
+    Operator* op = NULL;
+    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+      op = new ChannelOperatorOp<cpu, DType>(param);
+    });
+    return op;
+  }
 
-    Operator *ChannelOperatorProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-      std::vector<int> *in_type) const {
-      std::vector<TShape> out_shape, aux_shape;
-      std::vector<int> out_type, aux_type;
-      CHECK(InferType(in_type, &out_type, &aux_type));
-      CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-      DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
-    }
+  Operator *ChannelOperatorProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+    std::vector<int> *in_type) const {
+    std::vector<TShape> out_shape, aux_shape;
+    std::vector<int> out_type, aux_type;
+    CHECK(InferType(in_type, &out_type, &aux_type));
+    CHECK(InferShape(in_shape, &out_shape, &aux_shape));
+    DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
+  }
 
-    DMLC_REGISTER_PARAMETER(ChannelOperatorParam);
+  DMLC_REGISTER_PARAMETER(ChannelOperatorParam);
 
-    MXNET_REGISTER_OP_PROPERTY(_contrib_ChannelOperator, ChannelOperatorProp)
-      .describe("Performs channel operation on inputs, including GroupMax, GroupSoftmax,  GroupPick "
-        "and ChannelPick. This layer is designed for FCIS ")
-      .add_argument("data", "Symbol", "Input data to the pooling operator, a 4D Feature maps")
-      .add_argument("pick_idx", "Symbol", "In GroupPick or ChannelPick mode, pick_idx is used to"
-        "pick specific group or channel")
-      .add_arguments(ChannelOperatorParam::__FIELDS__());
-  }  // namespace op
+  MXNET_REGISTER_OP_PROPERTY(_contrib_ChannelOperator, ChannelOperatorProp)
+    .describe("Performs channel operation on inputs, including GroupMax, GroupSoftmax,  GroupPick "
+      "and ChannelPick. This layer is designed for FCIS ")
+    .add_argument("data", "Symbol", "Input data to the pooling operator, a 4D Feature maps")
+    .add_argument("pick_idx", "Symbol", "In GroupPick or ChannelPick mode, pick_idx is used to"
+      "pick specific group or channel")
+    .add_arguments(ChannelOperatorParam::__FIELDS__());
+}  // namespace op
 }  // namespace mxnet

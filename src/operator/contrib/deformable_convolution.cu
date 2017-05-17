@@ -10,20 +10,20 @@
 #include <vector>
 
 namespace mxnet {
-  namespace op {
+namespace op {
 
-    template<>
-    Operator* CreateOp<gpu>(DeformableConvolutionParam param, int dtype,
-      std::vector<TShape> *in_shape,
-      std::vector<TShape> *out_shape,
-      Context ctx) {
-      Operator *op = NULL;
-      MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-        op = new DeformableConvolutionOp<gpu, DType>(param);
-      })
-        return op;
-    }
+  template<>
+  Operator* CreateOp<gpu>(DeformableConvolutionParam param, int dtype,
+    std::vector<TShape> *in_shape,
+    std::vector<TShape> *out_shape,
+    Context ctx) {
+    Operator *op = NULL;
+    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+      op = new DeformableConvolutionOp<gpu, DType>(param);
+    })
+      return op;
+  }
 
-  }  // namespace op
+}  // namespace op
 }  // namespace mxnet
 

@@ -58,39 +58,40 @@ namespace mshadow {
 }  // namespace mshadow
 
 namespace mxnet {
-  namespace op {
+namespace op {
 
-    template<>
-    Operator *CreateOp<cpu>(DeformablePSROIPoolingParam param, int dtype) {
-      Operator* op = NULL;
-      MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-        op = new DeformablePSROIPoolingOp<cpu, DType>(param);
-      });
-      return op;
-    }
+  template<>
+  Operator *CreateOp<cpu>(DeformablePSROIPoolingParam param, int dtype) {
+    Operator* op = NULL;
+    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+      op = new DeformablePSROIPoolingOp<cpu, DType>(param);
+    });
+    return op;
+  }
 
-    Operator *DeformablePSROIPoolingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-      std::vector<int> *in_type) const {
-      std::vector<TShape> out_shape, aux_shape;
-      std::vector<int> out_type, aux_type;
-      CHECK(InferType(in_type, &out_type, &aux_type));
-      CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-      DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
-    }
+  Operator *DeformablePSROIPoolingProp::CreateOperatorEx(
+    Context ctx, std::vector<TShape> *in_shape,
+    std::vector<int> *in_type) const {
+    std::vector<TShape> out_shape, aux_shape;
+    std::vector<int> out_type, aux_type;
+    CHECK(InferType(in_type, &out_type, &aux_type));
+    CHECK(InferShape(in_shape, &out_shape, &aux_shape));
+    DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
+  }
 
-    DMLC_REGISTER_PARAMETER(DeformablePSROIPoolingParam);
+  DMLC_REGISTER_PARAMETER(DeformablePSROIPoolingParam);
 
-    MXNET_REGISTER_OP_PROPERTY(_contrib_DeformablePSROIPooling, DeformablePSROIPoolingProp)
-      .describe("Performs region-of-interest pooling on inputs. Resize bounding box coordinates by "
-        "spatial_scale and crop input feature maps accordingly. The cropped feature maps are pooled "
-        "by max pooling to a fixed size output indicated by pooled_size. batch_size will change to "
-        "the number of region bounding boxes after DeformablePSROIPooling")
-      .add_argument("data", "Symbol", "Input data to the pooling operator, a 4D Feature maps")
-      .add_argument("rois", "Symbol", "Bounding box coordinates, a 2D array of "
-        "[[batch_index, x1, y1, x2, y2]]. (x1, y1) and (x2, y2) are top left and down right corners "
-        "of designated region of interest. batch_index indicates the index of corresponding image "
-        "in the input data")
-      .add_argument("trans", "Symbol", "transition parameter")
-      .add_arguments(DeformablePSROIPoolingParam::__FIELDS__());
-  }  // namespace op
+  MXNET_REGISTER_OP_PROPERTY(_contrib_DeformablePSROIPooling, DeformablePSROIPoolingProp)
+    .describe("Performs region-of-interest pooling on inputs. Resize bounding box coordinates by "
+      "spatial_scale and crop input feature maps accordingly. The cropped feature maps are pooled "
+      "by max pooling to a fixed size output indicated by pooled_size. batch_size will change to "
+      "the number of region bounding boxes after DeformablePSROIPooling")
+    .add_argument("data", "Symbol", "Input data to the pooling operator, a 4D Feature maps")
+    .add_argument("rois", "Symbol", "Bounding box coordinates, a 2D array of "
+      "[[batch_index, x1, y1, x2, y2]]. (x1, y1) and (x2, y2) are top left and down right corners "
+      "of designated region of interest. batch_index indicates the index of corresponding image "
+      "in the input data")
+    .add_argument("trans", "Symbol", "transition parameter")
+    .add_arguments(DeformablePSROIPoolingParam::__FIELDS__());
+}  // namespace op
 }  // namespace mxnet

@@ -86,14 +86,14 @@ namespace op {
  */
 template <typename DType>
 inline void deformable_im2col(mshadow::Stream<cpu>* s,
-  const DType* data_im, const DType* data_offset, 
+  const DType* data_im, const DType* data_offset,
   const TShape& im_shape, const TShape& col_shape, const TShape& kernel_shape,
-  const TShape& pad, const TShape& stride, const TShape& dilation, 
+  const TShape& pad, const TShape& stride, const TShape& dilation,
   const uint32_t deformable_group, DType* data_col) {
   if (2 == kernel_shape.ndim()) {
-	  LOG(FATAL) << "not implemented";
+    LOG(FATAL) << "not implemented";
   } else {
-	  LOG(FATAL) << "not implemented";
+    LOG(FATAL) << "not implemented";
   }
 }
 
