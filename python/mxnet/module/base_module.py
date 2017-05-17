@@ -501,10 +501,6 @@ class BaseModule(object):
             arg_params, aux_params = self.get_params()
             self.set_params(arg_params, aux_params)
 
-            if epoch_end_callback is not None:
-                for callback in _as_list(epoch_end_callback):
-                    callback(epoch, self.symbol, arg_params, aux_params)
-
             # ----------------------------------------
             # evaluation on validation set
             if eval_data:
