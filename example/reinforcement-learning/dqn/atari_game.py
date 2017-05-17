@@ -9,6 +9,7 @@ from utils import *
 from replay_memory import ReplayMemory
 from game import Game
 from game import DEFAULT_MAX_EPISODE_STEP
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -27,18 +28,28 @@ def ale_load_from_rom(rom_path, display_screen):
                            'installation guidance')
 
     ale = ALEInterface()
-    ale.setInt('random_seed', rng.randint(1000))
+    if six.PY2 == True:
+        seed_type_string_text = 'random_seed'
+        display_screen_string_text = 'display_screen'
+        rom_path_string_text = rom_path
+        repeat_action_probability_string_text = 'repeat_action_probability'
+    elif six.PY3 == True:
+        seed_type_string_text = 'random_seed'.encode('utf-8')
+        display_screen_string_text = 'display_screen'.encode('utf-8')
+        rom_path_string_text = rom_path.encode('utf-8')
+        repeat_action_probability_string_text = 'repeat_action_probability'.encode('utf-8')
+    ale.setInt(seed_type_string_text, rng.randint(1000))
     if display_screen:
         import sys
         if sys.platform == 'darwin':
             import pygame
             pygame.init()
             ale.setBool('sound', False) # Sound doesn't work on OSX
-        ale.setBool('display_screen', True)
+        ale.setBool(display_screen_string_text, True)
     else:
-        ale.setBool('display_screen', False)
-    ale.setFloat('repeat_action_probability', 0)
-    ale.loadROM(rom_path)
+        ale.setBool(display_screen_string_text, False)
+    ale.setFloat(repeat_action_probability_string_text, 0)
+    ale.loadROM(rom_path_string_text)
     return ale
 
 
