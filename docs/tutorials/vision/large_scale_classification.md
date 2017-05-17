@@ -151,7 +151,7 @@ If you are setting up your cluster manually, without using AWS CloudFormation, r
    deeplearning-worker2
    deeplearning-worker3
    ```
-   It should be possible to ssh into any of these machines from master by invoking `ssh` with just a hostname from the file. Example,
+   It should be possible to ssh into any of these machines from master by invoking `ssh` with just a hostname from the file. For example,
    ```
    $ ssh deeplearning-worker2
    ===================================
