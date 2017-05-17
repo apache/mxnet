@@ -23,6 +23,8 @@ mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" OFF)
 mxnet_option(USE_CPP_PACKAGE      "Build C++ Package" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
+mxnet_option(USE_GPROF            "Compile with gprof (profiling) flag" OFF)
+mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
@@ -30,7 +32,6 @@ if("$ENV{VERBOSE}" STREQUAL "1")
   message(STATUS " Verbose Makefile ACTIVATED")
   set(CMAKE_VERBOISE_MAKEFILE ON)
 endif()
-
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -46,23 +47,50 @@ if(MSVC)
 else(MSVC)
   include(CheckCXXCompilerFlag)
   check_cxx_compiler_flag("-std=c++11"   SUPPORT_CXX11)
+  check_cxx_compiler_flag("-std=c++0x"   SUPPORT_CXX0X)
   check_cxx_compiler_flag("-msse2"       SUPPORT_MSSE2)
-  set(CMAKE_C_FLAGS "-Wall -Wno-unknown-pragmas -fPIC")
-  if(NDEBUG)
+  set(CMAKE_C_FLAGS "-Wall -Wno-unknown-pragmas -fPIC -Wno-sign-compare")
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -g")
+  elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    add_definitions(-DNDEBUG=1)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -g")
+  else()
+    add_definitions(-DNDEBUG=1)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
-  else(NDEBUG)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -ggdb3")
-  endif(NDEBUG)
-  set(CMAKE_CXX_FLAGS ${CMAKE_C_FLAGS})
-  if(SUPPORT_CXX11)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
   endif()
   if(SUPPORT_MSSE2)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse2")
+  endif()
+  set(CMAKE_CXX_FLAGS ${CMAKE_C_FLAGS})
+  if(SUPPORT_CXX11)
+    add_definitions(-DDMLC_USE_CXX11=1)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  elseif(SUPPORT_CXX0X)
+    add_definitions(-DDMLC_USE_CXX11=1)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
   endif()
 endif(MSVC)
 
 set(mxnet_LINKER_LIBS "")
+
+if(USE_GPROF)
+  message(STATUS "Using GPROF")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -pg")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pg")
+  set(CMAKE_LINK_LIBRARY_FILE_FLAG "${CMAKE_LINK_LIBRARY_FILE_FLAG} -g -pg")
+endif()
+
+if(USE_VTUNE)
+  message(STATUS "Using VTUNE")
+  if(NOT VTUNE_ROOT)
+    set(VTUNE_ROOT /opt/intel/vtune_amplifier_xe_2017)
+  endif()
+  add_definitions(-DMXNET_USE_VTUNE=1)
+  include_directories(${VTUNE_ROOT}/include)
+  list(APPEND mxnet_LINKER_LIBS ${VTUNE_ROOT}/lib64/libittnotify.a)
+  list(APPEND mxnet_LINKER_LIBS dl)
+endif()
 
 if(USE_MKL_IF_AVAILABLE)
   if(USE_MKL_EXPERIMENTAL AND NOT USE_MKLML_MKL)
@@ -301,6 +329,8 @@ if(USE_PLUGIN_CAFFE)
       # Need newer FindCUDA.cmake that correctly handles -std=c++11
       cmake_minimum_required(VERSION 3.3)
       set(CAFFE_PATH ${PROJECT_SOURCE_DIR}/caffe)
+    else()
+      set(CAFFE_PATH $ENV{CAFFE_PATH})
     endif()
   endif()
   list(APPEND CMAKE_MODULE_PATH ${CAFFE_PATH}/cmake)
@@ -403,26 +433,19 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
 else()
   if(UNIX)
-    set(MXNET_DYNAMIC_ONLY ON)
-    if(MXNET_DYNAMIC_ONLY)
-      add_library(mxnet SHARED ${SOURCE})
-    else()
-      set(INITIALIZE_SOURCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/src/initialize.cc)
-      list(REMOVE_ITEM SOURCE ${INITIALIZE_SOURCE_FILE})
-      add_library(mxnet_static STATIC ${INITIALIZE_SOURCE_FILE} ${SOURCE})
-      # Need an arbitrary source file to trigger CMake to build the library
-      add_library(mxnet SHARED ${INITIALIZE_SOURCE_FILE})
-      # This has prolems, as it adds libmxnet_static to INTERFACE_LINK_LIBRARIES
-      target_link_libraries(mxnet "-Wl,--whole-archive $<TARGET_FILE:mxnet_static> -Wl,--no-whole-archive")
-      #target_link_libraries(mxnet mxnet_static)
-      add_custom_target(
-          StaticallyLinkStaticMXNetLibrary ALL
-          BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
-          WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
-          COMMAND ln -sf libmxnet_static.a libmxnet.a
-          DEPENDS mxnet_static
-      )
-    endif()
+    add_library(mxnet_static STATIC ${SOURCE})
+    # Need an arbitrary source file to trigger CMake to build the library
+    add_library(mxnet SHARED)
+    # This has prolems, as it adds libmxnet_static to INTERFACE_LINK_LIBRARIES
+    target_link_libraries(mxnet "-Wl,--whole-archive $<TARGET_FILE:mxnet_static> -Wl,--no-whole-archive")
+    target_link_libraries(mxnet mxnet_static) # Let cmake understand the dependency
+    add_custom_target(
+        StaticallyLinkStaticMXNetLibrary ALL
+        BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
+        WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+        COMMAND ln -sf libmxnet_static.a libmxnet.a
+        DEPENDS mxnet_static
+    )
   else()
     add_library(mxnet SHARED ${SOURCE})
   endif()
@@ -499,6 +522,6 @@ if(MSVC)
   find_package(PythonInterp)
   set(PYTHON_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python executable")
 endif()
-set(LINT_DIRS include src scripts python)
-add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
+set(LINT_DIRS include src scripts python tests cpp-package)
+add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${CMAKE_CURRENT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
 
