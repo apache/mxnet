@@ -6,12 +6,14 @@ then
 fi
 
 if [[ ${TASK} == *"installation"* ]]; then
-    echo "Files changes compared to origin/master:"
+    git remote add main https://github.com/dmlc/mxnet.git
+    git fetch main master
+    echo "File changes compared to origin/master:"
     echo "**********************************"
-    git diff --name-only origin/master HEAD
+    git diff --name-only remotes/main/master
     echo "**********************************"
 
-    if [[ ! $(git diff --name-only origin/master HEAD | grep install.md) ]]; then
+    if [[ ! $(git diff --name-only remotes/main/master | grep install.md) ]]; then
         echo "No changes to install.md. Skipping installation tasks..."
         exit 0
     fi
