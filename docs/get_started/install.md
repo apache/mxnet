@@ -735,7 +735,7 @@ $ python
 
 </div>
 
-Run a short *MXNet* python program to create a 2X3 identity matrix, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
 
 ```python
 >>> import mxnet as mx
@@ -798,7 +798,7 @@ $ python
 
 </div>
 
-Run a short *MXNet* python program to create a 2X3 identity matrix *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
+Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
 
 ```python
 >>> import mxnet as mx
@@ -918,7 +918,7 @@ $ python
 
 <div class="cpu">
 
-Run a short *MXNet* python program to create a 2X3 identity matrix, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
 
 ```python
 >>> import mxnet as mx
@@ -942,7 +942,7 @@ $
 
 <div class="gpu">
 
-Run a short *MXNet* python program to create a 2X3 identity matrix *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
+Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
 
 ```python
 >>> import mxnet as mx
