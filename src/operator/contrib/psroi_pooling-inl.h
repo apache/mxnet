@@ -104,7 +104,8 @@ class PSROIPoolingOp : public Operator {
       if (kWriteTo == req[psroipool::kData]) {
         grad_in = 0.0f;
       }
-      PSROIPoolBackwardAcc(grad_in, grad_out, bbox, param_.spatial_scale, param_.output_dim, param_.group_size);
+      PSROIPoolBackwardAcc(grad_in, grad_out, bbox, param_.spatial_scale,
+                           param_.output_dim, param_.group_size);
     }
     if (kWriteTo == req[psroipool::kBox]) {
       grad_roi = 0.0f;

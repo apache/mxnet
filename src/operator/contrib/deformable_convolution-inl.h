@@ -7,8 +7,8 @@
  * \ref: https://arxiv.org/abs/1703.06211
  * \author Yuwen Xiong, Haozhi Qi, Jifeng Dai
 */
-#ifndef MXNET_OPERATOR_CONTRIB_DEFORMABLE_CONVOLUTION_INL_H_ 
-#define MXNET_OPERATOR_CONTRIB_DEFORMABLE_CONVOLUTION_INL_H_ 
+#ifndef MXNET_OPERATOR_CONTRIB_DEFORMABLE_CONVOLUTION_INL_H_
+#define MXNET_OPERATOR_CONTRIB_DEFORMABLE_CONVOLUTION_INL_H_
 
 #include <mxnet/io.h>
 #include <mxnet/base.h>
@@ -238,7 +238,6 @@ class DeformableConvolutionOp : public Operator {
         Shape3(num_, conv_out_channels_, conv_out_spatial_dim_), s);
       ASSIGN_DISPATCH(dbias, req[conv::kBias], sumall_except_dim<1>(dout));
     }
-
   }
 
  private:
@@ -486,4 +485,4 @@ class DeformableConvolutionProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_CONTRIB_DEFORMABLE_CONVOLUTION_INL_H_ 
+#endif  // MXNET_OPERATOR_CONTRIB_DEFORMABLE_CONVOLUTION_INL_H_

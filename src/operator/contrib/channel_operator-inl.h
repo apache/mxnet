@@ -129,7 +129,6 @@ class ChannelOperatorOp : public Operator {
     } else {
       LOG(FATAL) << "No that operation type.";
     }
-
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -198,8 +197,8 @@ class ChannelOperatorOp : public Operator {
     } else {
       LOG(FATAL) << "No that operation type.";
     }
-
   }
+
  private:
   ChannelOperatorParam param_;
 };  // class ChannelOperatorOp
@@ -309,7 +308,6 @@ class ChannelOperatorProp : public OperatorProperty {
       LOG(FATAL) << "No that operation type.";
       return false;
     }
-
   }
 
   bool InferType(std::vector<int> *in_type,
@@ -341,7 +339,6 @@ class ChannelOperatorProp : public OperatorProperty {
       LOG(FATAL) << "No that operation type.";
       return false;
     }
-
   }
 
   OperatorProperty* Copy() const override {

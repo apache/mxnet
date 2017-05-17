@@ -56,7 +56,7 @@ __global__ void PSROIPoolForwardKernel(
     DType roi_end_h = static_cast<DType>(round(offset_bottom_rois[4]) + 1.) * spatial_scale;
 
     // Force too small ROIs to be 1x1
-    DType roi_width = max(roi_end_w - roi_start_w, 0.1);  //avoid 0
+    DType roi_width = max(roi_end_w - roi_start_w, 0.1);  // avoid 0
     DType roi_height = max(roi_end_h - roi_start_h, 0.1);
 
     // Compute w and h at bottom
