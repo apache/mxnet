@@ -8,6 +8,7 @@ import pickle
 from collections import OrderedDict
 import logging
 from utils import *
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -144,8 +145,12 @@ class Base(object):
         param_saving_path = save_params(dir_path=dir_path, name=self.name, epoch=epoch,
                                         params=self.params,
                                         aux_states=self.aux_states)
-        misc_saving_path = save_misc(dir_path=dir_path, epoch=epoch, name=self.name,
-                                     content={'data_shapes': {k: map(int, v) for k, v in self.data_shapes.items()}})
+        if six.PY2 == True:
+            misc_saving_path = save_misc(dir_path=dir_path, epoch=epoch, name=self.name,
+                                         content={'data_shapes': {k: map(int, v) for k, v in self.data_shapes.items()}})
+        elif six.PY3 == True:
+            misc_saving_path = save_misc(dir_path=dir_path, epoch=epoch, name=self.name,
+                                         content={'data_shapes': {k: list(map(int, v)) for k, v in self.data_shapes.items()}})
         logging.info('Saving %s, params: \"%s\", misc: \"%s\"',
                      self.name, param_saving_path, misc_saving_path)
 
