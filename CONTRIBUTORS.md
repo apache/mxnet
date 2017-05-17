@@ -136,3 +136,4 @@ List of Contributors
 * [Asmus Hetzel](https://github.com/asmushetzel)
 * [Roshani Nagmote](https://github.com/Roshrini)
 * [Chetan Khatri](https://github.com/chetkhatri/)
+* [James Liu](https://github.com/jamesliu/)
