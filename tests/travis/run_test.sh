@@ -6,7 +6,12 @@ then
 fi
 
 if [[ ${TASK} == *"installation"* ]]; then
-    if [[ ! $(git diff --name-only HEAD^ | grep install.md) ]]; then
+    echo "Files changes compared to origin/master:"
+    echo "**********************************"
+    git diff --name-only origin/master HEAD
+    echo "**********************************"
+
+    if [[ ! $(git diff --name-only origin/master HEAD | grep install.md) ]]; then
         echo "No changes to install.md. Skipping installation tasks..."
         exit 0
     fi
