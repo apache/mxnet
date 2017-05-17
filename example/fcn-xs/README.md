@@ -5,7 +5,7 @@ This folder contains the examples of image segmentation in MXNet.
 ## Sample results
 ![fcn-xs pasval_voc result](https://github.com/dmlc/web-data/blob/master/mxnet/image/fcnxs-example-result.jpg)
 
-We have trained a simple fcn-xs model, the parameters is below:
+We have trained a simple fcn-xs model, the hyper-parameters are below:
 
 | model   | lr (fixed) | epoch |
 | ------- | ---------: | ----: |
@@ -70,7 +70,7 @@ INFO:root:Epoch[0] Batch [350]  Speed: 1.12 samples/sec Train-accuracy=0.912080
 
 ## Tips
 * This is the whole image size training, that is to say, we do not need resize/crop the image to the same size, so the batch_size during training is set to 1.
-* The fcn-xs model is based on vgg16 model, with some crop, deconv, element-sum layer added, so the model is quite big, moreover, the example is using whole image size training, if the input image is large(such as 700*500), then it may consume lots of memory, so I suggest you using the GPU with 12G memory.
+* The fcn-xs model is based on vgg16 model, with some crop, deconv, element-sum layer added, so the model is quite big, moreover, the example is using whole image size training, if the input image is large(such as 700*500), then it may consume lots of memories, so I suggest you using the GPU with 12G memory.
 * If you don't have GPU with 12G memory, maybe you should change the ```cut_off_size``` to a small value when you construct your FileIter, like this:  
 ```python
 train_dataiter = FileIter(

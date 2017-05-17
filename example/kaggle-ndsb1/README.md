@@ -30,7 +30,7 @@ Uncompress train.zip and test.zip folders.
 
 #### Step 3: Train Model
 - The network structure is defined in file symbol_dsb.py
-- We will use find_mxnet.py and train_model.py from the image-classification example folder. Generate simbolic links to those files ```ln -s ../image-classification/find_mxnet.py .``` and ```ln -s ../image-classification/train_model.py .```
+- We will use find_mxnet.py and train_model.py from the image-classification example folder. Generate symbolic links to those files ```ln -s ../image-classification/find_mxnet.py .``` and ```ln -s ../image-classification/train_model.py .```
 - ```mkdir models``` , if you want to save the models in that folder.
 - Run ```python train_dsb.py``` to train the model, look to the help of that file to change the parameters. (See Step 4 if you want to make training curve plot)
 - Sample settings would get you
