@@ -11,6 +11,7 @@
 #include "mxnet-cpp/executor.hpp"
 #include "mxnet-cpp/symbol.hpp"
 #include "mxnet-cpp/ndarray.hpp"
+#include "mxnet-cpp/monitor.hpp"
 #include "mxnet-cpp/operator.hpp"
 #include "mxnet-cpp/optimizer.hpp"
 #include "mxnet-cpp/kvstore.hpp"
