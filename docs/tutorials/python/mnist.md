@@ -76,7 +76,7 @@ fc3  = mx.sym.FullyConnected(data=act2, num_hidden=10)
 mlp  = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 ```
 <kbd>
-<img src="https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/mlp_mnist.png">
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mlp_mnist.png">
 </kbd>
 
 **Figure 2:** MLP network architecture for MNIST.
@@ -151,7 +151,7 @@ fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=10)
 lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 ```
 <kbd>
-<img src="https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/conv_mnist.png">
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/conv_mnist.png">
 </kbd>
 
 **Figure 3:** First conv + pooling layer in LeNet.
