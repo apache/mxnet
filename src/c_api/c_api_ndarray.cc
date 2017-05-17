@@ -87,7 +87,8 @@ void SetNDInputsOutputs(const nnvm::Op* op,
     ndoutputs.resize(infered_num_outputs);
   } else {
     CHECK(!AutogradRuntime::Get()->IsTraining())
-      << "Cannot assign to NDArray or specify 'out' when training with autograd";
+      << "Inplace operations (+=, -=, op(..., out=x) etc.) and assignment are "
+      << "not supported when you are inside a train_section using autograd.";
     CHECK(*num_outputs == infered_num_outputs || *num_outputs == num_visible_outputs)
       << "Expecting " << infered_num_outputs << " (all) or "
       << num_visible_outputs << " (visible only) outputs, got "
