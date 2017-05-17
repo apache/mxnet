@@ -79,20 +79,19 @@ def _parse_data_desc(data_names, label_names, data_shapes, label_shapes):
 class BaseModule(object):
     """The base class of a module.
 
-    A module represents a computation component. Modules are designed so that
-    they can be thought of as a computation "machine". Each model can run forward,
-    backward, update its parameters, etc. We aim to make the APIs easy to use,
-    especially in the case when we need to use the imperative API to work with
-    multiple modules (e.g. stochastic depth network).
+    A module represents a computation component. One can think of module as a computation machine.
+    A module can execute forward and backward passes and update parameters in a model.
+    We aim to make the APIs easy to use, especially in the case when we need to use the imperative
+    API to work with multiple modules (e.g. stochastic depth network).
 
     A module has several states:
 
     - Initial state: Memory is not allocated yet, so the module is not ready for computation yet.
     - Binded: Shapes for inputs, outputs, and parameters are all known, memory has been allocated,
       and the module is ready for computation.
-    - Parameters initialized: For modules with parameters, doing computation before initializing
-      the parameters might result in undefined outputs.
-    - Optimizer installed: An optimizer can be installed to a module. After this, the parameters
+    - Parameters are initialized: For modules with parameters, doing computation before
+      initializing the parameters might result in undefined outputs.
+    - Optimizer is installed: An optimizer can be installed to a module. After this, the parameters
       of the module can be updated according to the optimizer after gradients are computed
       (forward-backward).
 
@@ -109,7 +108,7 @@ class BaseModule(object):
           have been allocated.
         - `for_training`: whether the module is bound for training.
         - `params_initialized`: `bool`, indicates whether the parameters of this module
-          has been initialized.
+          have been initialized.
         - `optimizer_initialized`: `bool`, indicates whether an optimizer is defined
           and initialized.
         - `inputs_need_grad`: `bool`, indicates whether gradients with respect to the
@@ -200,12 +199,12 @@ class BaseModule(object):
         the given ``eval_metric``.
 
         Checkout `Module Tutorial <http://mxnet.io/tutorials/basic/module.html>` to see
-        end-to-end use-case.
+        a end-to-end use-case.
 
         Parameters
         ----------
         eval_data : DataIter
-            DataIter to predict on.
+            Evaluation data to run prediction on.
         eval_metric : EvalMetric or list of EvalMetrics
             Evaluation metric to use.
         num_batch : int
@@ -278,7 +277,7 @@ class BaseModule(object):
         Parameters
         ----------
         eval_data : DataIter
-            DataIter to predict on.
+            Evaluation data to run prediction on.
         num_batch : int
             Default is ``None``, indicating running all the batches in the data iterator.
         reset : bool
@@ -319,7 +318,7 @@ class BaseModule(object):
         Parameters
         ----------
         eval_data : DataIter
-            DataIter to predict on.
+            Evaluation data to run prediction on.
         num_batch : int
             Defaults to ``None``, indicates running all the batches in the data iterator.
         merge_batches : bool
@@ -386,7 +385,7 @@ class BaseModule(object):
         """Trains the module parameters.
 
         Checkout `Module Tutorial <http://mxnet.io/tutorials/basic/module.html>` to see
-        end-to-end use-case.
+        a end-to-end use-case.
 
         Parameters
         ----------
