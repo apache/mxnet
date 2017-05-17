@@ -135,6 +135,7 @@ List of Contributors
 * [David Salinas](https://github.com/geoalgo)
 * [Asmus Hetzel](https://github.com/asmushetzel)
 * [Roshani Nagmote](https://github.com/Roshrini)
+* [Chetan Khatri](https://github.com/chetkhatri/)
 * [Yuwen Xiong](https://github.com/Orpine/)
 * [Haozhi Qi](https://github.com/Oh233/)
 * [Yi Li](https://github.com/liyi14/)
