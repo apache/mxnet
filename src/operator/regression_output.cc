@@ -41,7 +41,6 @@ then the squared loss estimated over :math:`n` samples is defined as
 
 :math:`\text{SquaredLoss}(y, \hat{y} ) = \frac{1}{n} \sum_{i=0}^{n-1} \left( y_i - \hat{y}_i \right)^2`
 
-
 .. note::
    Use the LinearRegressionOutput as the final output layer of a net.
 
