@@ -38,6 +38,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="devices">
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active">Raspberry Pi</button>
+  <button type="button" class="btn btn-default opt">NVIDIA Jetson TX2</button>
 </div>
 </div>
 
@@ -682,6 +683,11 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
 Follow the installation instructions [in this guide](./raspbian_setup.md) to set up MXNet.
 
 </div>
+<div class="jetson-tx2">
+
+Follow the installation instructions [in this guide](./tx2_setup.md) to set up MXNet.
+
+</div>
 </div>
 
 <br/>
@@ -735,7 +741,7 @@ $ python
 
 </div>
 
-Run a short *MXNet* python program to create a 2X3 identity matrix, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
 
 ```python
 >>> import mxnet as mx
@@ -798,7 +804,7 @@ $ python
 
 </div>
 
-Run a short *MXNet* python program to create a 2X3 identity matrix *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
+Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
 
 ```python
 >>> import mxnet as mx
@@ -918,7 +924,7 @@ $ python
 
 <div class="cpu">
 
-Run a short *MXNet* python program to create a 2X3 identity matrix, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
 
 ```python
 >>> import mxnet as mx
@@ -942,7 +948,7 @@ $
 
 <div class="gpu">
 
-Run a short *MXNet* python program to create a 2X3 identity matrix *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
+Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
 
 ```python
 >>> import mxnet as mx
@@ -989,6 +995,11 @@ Will be available soon.
 
 <div class="devices">
   <div class="raspberry-pi">
+
+Will be available soon.
+
+</div>
+<div class="jetson-tx2">
 
 Will be available soon.
 
