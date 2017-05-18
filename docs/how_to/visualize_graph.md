@@ -9,9 +9,9 @@ and which correspond to output nodes,
 from which the result can be read.
 
 ## Prerequisites
-You need the [Jupyter Notebook](jupyter.readthedocs.io)
+You need the [Jupyter Notebook](http://jupyter.readthedocs.io/en/latest/)
 and [Graphviz](http://www.graphviz.org/) libraries to visualize the network.
-Please make sure you have followed [installation instructions](http://mxnet.io/get_started/setup.html)
+Please make sure you have followed [installation instructions](http://mxnet.io/get_started/install.html)
 in setting up above dependencies along with setting up MXNet.
 
 ## Visualize the sample Neural Network
