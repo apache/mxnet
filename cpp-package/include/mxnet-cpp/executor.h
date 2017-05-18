@@ -24,7 +24,6 @@ class Optimizer;
 * \brief Executor interface
 */
 class Executor {
-  friend class Monitor;
  public:
   Executor(const Symbol &symbol, Context context,
            const std::vector<NDArray> &arg_arrays,

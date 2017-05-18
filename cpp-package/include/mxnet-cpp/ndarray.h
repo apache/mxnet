@@ -12,7 +12,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <iostream>
 #include "mxnet-cpp/base.h"
 #include "mxnet-cpp/shape.h"
 
@@ -389,7 +388,6 @@ class NDArray {
   */
   int GetDType() const;
   /*!
-  * \brief Get the pointer to data (IMPORTANT: The ndarray should not be in GPU)
   * \return the data pointer to the current NDArray
   */
   const mx_float *GetData() const;
@@ -407,8 +405,6 @@ class NDArray {
  private:
   std::shared_ptr<NDBlob> blob_ptr_;
 };
-
-std::ostream& operator<<(std::ostream& out, const NDArray &ndarray);
 }  // namespace cpp
 }  // namespace mxnet
 
