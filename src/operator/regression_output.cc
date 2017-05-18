@@ -36,6 +36,12 @@ DMLC_REGISTER_PARAMETER(RegressionOutputParam);
 MXNET_REGISTER_OP_PROPERTY(LinearRegressionOutput, RegressionOutputProp<reg_enum::kLinear>)
 .describe(R"code(Computes and optimizes for squared loss.
 
+If :math:`\hat{y}_i` is the predicted value of the i-th sample, and :math:`y_i` is the corresponding target value,
+then the squared loss estimated over :math:`n` samples is defined as
+
+:math:`\text{SquaredLoss}(y, \hat{y} ) = \frac{1}{n} \sum_{i=0}^{n-1} \left( y_i - \hat{y}_i \right)^2`
+
+
 .. note::
    Use the LinearRegressionOutput as the final output layer of a net.
 
