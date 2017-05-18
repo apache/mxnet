@@ -1,6 +1,6 @@
 # Some Tips for Improving MXNet Performance
-Even fixing the training or deployment environment and parallelization scheme,
-a number of configuration settings and data-handling choices can impact performance.
+Even after fixing the training or deployment environment and parallelization scheme,
+a number of configuration settings and data-handling choices can impact the _MXNet_ performance.
 In this document, we address some tips for improving _MXNet_ performance.
 
 Performance is mainly affected by the following 4 factors:
@@ -100,7 +100,7 @@ If using CPUs (not just Intel CPUs -- ARMs also), NNPACK can improve the running
 
 `cuDNN` typically accelerates _MXNet_ performance on NVIDIA GPUs significantly,
 especially for convolution layers.
-We suggest always checking to make sure that a recent CUDNN version is used.
+We suggest always checking to make sure that a recent cuDNN version is used.
 
 Setting the environment `export MXNET_CUDNN_AUTOTUNE_DEFAULT=1` sometimes also helps.
 
@@ -111,7 +111,7 @@ and P100 (DGX-1).
 
 Based on
 [example/image-classification/benchmark_score.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark_score.py)
-and MXNet commit `0a03417`, with CUDNN 5.1
+and MXNet commit `0a03417`, with cuDNN 5.1
 
 - K80 (single GPU)
 
@@ -191,7 +191,7 @@ where the batch size for Alexnet is increased by 8x.
 
 If more than one GPU or machine are used, MXNet uses `kvstore` to communicate data.
 It's critical to use the proper type of `kvstore` to get the best performance.
-Refer to [mutli_device.md](http://mxnet.io/how_to/multi_devices.html) for more
+Refer to [multi_device.md](http://mxnet.io/how_to/multi_devices.html) for more
 details.
 
 Besides, we can use [tools/bandwidth](https://github.com/dmlc/mxnet/tree/master/tools/bandwidth)
@@ -224,7 +224,8 @@ This feature complements general profiling tools like _nvprof_ and _gprof_
 by summarizing at the operator level, instead of a function, kernel, or instruction level.
 
 In order to be able to use the profiler, you must compile _MXNet_ with the `USE_PROFILER=1` flag in `config.mk`.
-Once enabled, the profiler can be enabled with an [environment variable](http://mxnet.io/how_to/env_var.html#control-the-profiler)
+
+The profiler can then be turned on with an [environment variable](http://mxnet.io/how_to/env_var.html#control-the-profiler)
 for an entire program run, or programmatically for just part of a run.
 See [example/profiler](https://github.com/dmlc/mxnet/tree/master/example/profiler)
 for complete examples of how to use the profiler in code, but briefly, the Python code looks like:
@@ -243,7 +244,7 @@ The `mode` parameter can be set to
 * `symbolic` to only include symbolic operations
 * `all` to include all operations
 
-After the program finishes, navigate to chrome://tracing in a Chrome browser and load the `.json` file output by the profiler to inspect the results.
+After the program finishes, navigate to your browser's tracing (Example - chrome://tracing in a Chrome browser) and load the `profile_output.json` file output by the profiler to inspect the results.
 
 ![MLP Profile](https://cloud.githubusercontent.com/assets/17693755/18035938/0a43484a-6d93-11e6-80d4-241c6ca552ea.png)
 
