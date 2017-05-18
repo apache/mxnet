@@ -96,6 +96,10 @@ MXNET_OPERATOR_REGISTER_UNARY(make_loss)
 .describe(R"code(Stops gradient computation.
 .. note:: ``make_loss`` is deprecated, use ``MakeLoss``.
 )code" ADD_FILELINE)
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"loss"};
+  })
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {

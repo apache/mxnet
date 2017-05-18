@@ -60,7 +60,31 @@ def imdecode(buf, **kwargs):
 
 
 def scale_down(src_size, size):
-    """Scale down crop size if it's bigger than image size."""
+    """Scales down crop size if it's larger than image size.
+
+    If width/height of the crop is larger than the width/height of the image,
+    sets the width/height to the width/height of the image.
+
+    Parameters
+    ----------
+    src_size : tuple of int
+        Size of the image in (width, height) format.
+    size : tuple of int
+        Size of the crop in (width, height) format.
+
+    Returns
+    -------
+    tuple of int
+        A tuple containing the scaled crop size in (width, height) format.
+
+    Example
+    --------
+    >>> src_size = (640,480)
+    >>> size = (720,120)
+    >>> new_size = mx.img.scale_down(src_size, size)
+    >>> new_size
+    (640,106)
+    """
     w, h = size
     sw, sh = src_size
     if sh < h:
@@ -71,7 +95,45 @@ def scale_down(src_size, size):
 
 
 def resize_short(src, size, interp=2):
-    """Resize shorter edge to size."""
+    """Resizes shorter edge to size.
+
+    Note: `resize_short` uses OpenCV (not the CV2 Python library).
+    MXNet must have been built with OpenCV for `resize_short` to work.
+
+    Resizes the original image by setting the shorter edge to size
+    and setting the longer edge accordingly.
+    Resizing function is called from OpenCV.
+
+    Parameters
+    ----------
+    src : NDArray
+        The original image.
+    size : int
+        The length to be set for the shorter edge.
+    interp : int, optional, default=2
+        Interpolation method used for resizing the image.
+        Default method is bicubic interpolation.
+        More details can be found in the documentation of OpenCV, please refer to
+        http://docs.opencv.org/master/da/d54/group__imgproc__transform.html.
+
+    Returns
+    -------
+    NDArray
+        An 'NDArray' containing the resized image.
+
+    Example
+    -------
+    >>> with open("flower.jpeg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.img.imdecode(str_image)
+    >>> image
+    <NDArray 2321x3482x3 @cpu(0)>
+    >>> size = 640
+    >>> new_image = mx.img.resize_short(image, size)
+    >>> new_image
+    <NDArray 2321x3482x3 @cpu(0)>
+    """
     h, w, _ = src.shape
     if h > w:
         new_h, new_w = size * h / w, size
@@ -89,7 +151,35 @@ def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
 
 
 def random_crop(src, size, interp=2):
-    """Randomly crop src with size. Upsample result if src is smaller than size."""
+    """Randomly crop `src` with `size` (width, height).
+       Upsample result if `src` is smaller than `size`.
+
+    Parameters
+    ----------
+    src: Source image `NDArray`
+    size: Size of the crop formatted as (width, height). If the `size` is larger
+           than the image, then the source image is upsampled to `size` and returned.
+    interp: Interpolation method to be used in case the size is larger (default: bicubic).
+            Uses OpenCV convention for the parameters. Nearest - 0, Bilinear - 1, Bicubic - 2,
+            Area - 3. See OpenCV imresize function for more details.
+    Returns
+    -------
+    NDArray
+        An `NDArray` containing the cropped image.
+    Tuple
+        A tuple (x, y, width, height) where (x, y) is top-left position of the crop in the
+        original image and (width, height) are the dimensions of the cropped image.
+
+    Example
+    -------
+    >>> im = mx.nd.array(cv2.imread("flower.jpg"))
+    >>> cropped_im, rect  = mx.image.random_crop(im, (100, 100))
+    >>> print cropped_im
+    <NDArray 100x100x1 @cpu(0)>
+    >>> print rect
+    (20, 21, 100, 100)
+    """
+
     h, w, _ = src.shape
     new_w, new_h = scale_down((w, h), size)
 
@@ -351,8 +441,8 @@ class ImageIter(io.DataIter):
     data_shape : tuple
         Data shape in (channels, height, width) format.
         For now, only RGB image with 3 channels is supported.
-    label_width : int
-        Label dimension.
+    label_width : int, optional
+        Number of labels per example. The default label width is 1.
     path_imgrec : str
         Path to image record file (.rec).
         Created with tools/im2rec.py or bin/im2rec.
@@ -462,6 +552,7 @@ class ImageIter(io.DataIter):
         self.reset()
 
     def reset(self):
+        """Resets the iterator to the beginning of the data."""
         if self.shuffle:
             random.shuffle(self.seq)
         if self.imgrec is not None:
@@ -493,6 +584,7 @@ class ImageIter(io.DataIter):
             return header.label, img
 
     def next(self):
+        """Returns the next batch of data."""
         batch_size = self.batch_size
         c, h, w = self.data_shape
         batch_data = nd.empty((batch_size, c, h, w))

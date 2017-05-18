@@ -8,7 +8,8 @@ def fc(net,
        act_type,
        weight=None,
        bias=None,
-       no_bias=False):
+       no_bias=False
+       ):
     # when weight and bias doesn't have specific name
     if weight is None and bias is None:
         net = mx.sym.FullyConnected(data=net, num_hidden=num_hidden, no_bias=no_bias)
@@ -28,7 +29,8 @@ def fc(net,
         else:
             net = mx.sym.FullyConnected(data=net, num_hidden=num_hidden, weight=weight, bias=bias, no_bias=no_bias)
     # activation
-    net = mx.sym.Activation(data=net, act_type=act_type)
+    if act_type is not None:
+        net = mx.sym.Activation(data=net, act_type=act_type)
     return net
 
 
@@ -38,7 +40,8 @@ def sequence_fc(net,
                 prefix,
                 num_hidden_list=[],
                 act_type_list=[],
-                is_batchnorm=False
+                is_batchnorm=False,
+                dropout_rate=0
                 ):
     if num_layer == len(num_hidden_list) == len(act_type_list):
         if num_layer > 0:
@@ -68,20 +71,23 @@ def sequence_fc(net,
                 raise Exception('type of net should be whether mx.symbol.Symbol or list of mx.symbol.Symbol')
             hidden_all = []
             for seq_index in range(seq_len):
+                hidden = net[seq_index]
                 for layer_index in range(num_layer):
-                    hidden = net[seq_index]
+                    if dropout_rate > 0:
+                        hidden = mx.sym.Dropout(data=hidden, p=dropout_rate)
+
                     if is_batchnorm:
                         hidden = fc(net=hidden,
                                     num_hidden=num_hidden_list[layer_index],
-                                    act_type=act_type_list[layer_index],
+                                    act_type=None,
                                     weight=weight_list[layer_index],
                                     no_bias=is_batchnorm
                                     )
                         # last layer doesn't have batchnorm
-                        if layer_index < num_layer - 1:
-                            hidden = batchnorm(net=hidden,
-                                               gamma=gamma_list[layer_index],
-                                               beta=beta_list[layer_index])
+                        hidden = batchnorm(net=hidden,
+                                           gamma=gamma_list[layer_index],
+                                           beta=beta_list[layer_index])
+                        hidden = mx.sym.Activation(data=hidden, act_type=act_type_list[layer_index])
                     else:
                         hidden = fc(net=hidden,
                                     num_hidden=num_hidden_list[layer_index],

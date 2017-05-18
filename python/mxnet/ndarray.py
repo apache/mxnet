@@ -403,12 +403,26 @@ fixed-size items.
 
 
     def _sync_copyfrom(self, source_array):
-        """Peforms a synchronized copy from the array.
+        """Performs a synchronized copy from the `source_array` to the current array.
+        This is called through ``x[:] = source_array``, where the `source_array`
+        is a `numpy.ndarray` or array-like object.
+        This function blocks until all the pending read/write operations with respect
+        to the current `NDArray` are finished and carry out the copy operation to the
+        current NDArray.
 
         Parameters
         ----------
-        source_array : array_like)
+        source_array : array_like
             The data source we would like to copy from.
+
+        Example
+        -------
+        >>> a = mx.nd.array([1, 2])
+        >>> a.asnumpy()
+        array([ 1.,  2.], dtype=float32)
+        >>> a[:] = np.array([3, 4])
+        >> a.asnumpy()
+        array([ 3.,  4.], dtype=float32)
         """
         if not isinstance(source_array, np.ndarray):
             try:
@@ -426,14 +440,27 @@ fixed-size items.
             ctypes.c_size_t(source_array.size)))
 
     def _slice(self, start, stop):
-        """Returns a sliced NDArray that shares memory with current one.
+        """Returns a sliced NDArray that shares memory with the current one.
+        This is called through ``x[start:stop]``.
 
         Parameters
         ----------
         start : int
-            Starting index of slice.
+            Starting inclusive index of slice in the first dim.
         stop : int
-            Finishing index of slice.
+            Finishing exclusive index of slice in the first dim.
+
+        Returns
+        -------
+            `NDArray` sharing the memory with the current one sliced from
+            start to stop in the first dim.
+
+        Examples:
+        >>> a = mx.nd.array([[1,2], [3, 4], [5, 6], [7, 8]])
+        >>> a[1:2].asnumpy()
+        array([[ 3.,  4.]], dtype=float32)
+        >>> a[1:1].asnumpy()
+        array([], shape=(0, 2), dtype=float32)
         """
         handle = NDArrayHandle()
         start = mx_uint(start) if start else mx_uint(0)
@@ -443,12 +470,27 @@ fixed-size items.
         return NDArray(handle=handle, writable=self.writable)
 
     def _at(self, idx):
-        """Returns a sliced view of this array.
+        """Returns a view of the array sliced at `idx` in the first dim.
+        This is called through ``x[idx]``.
 
         Parameters
         ----------
         idx : int
-            index of sub array.
+            index for slicing the `NDArray` in the first dim.
+
+        Returns
+        -------
+        NDArray
+            `NDArray` sharing the memory with the current one sliced at `idx` in the first dim.
+
+        Examples
+        --------
+        >>> a = mx.nd.array([[1,2], [3, 4]])
+        >>> a[1].asnumpy()
+        array([ 3.,  4.], dtype=float32)
+        >>> b = mx.nd.array([1, 2, 3, 4])
+        >>> b[0].asnumpy()
+        array([ 1.], dtype=float32)
         """
         handle = NDArrayHandle()
         idx = mx_uint(idx)
@@ -464,8 +506,12 @@ fixed-size items.
         shape : tuple of int
             The new shape should not change the array size, namely
             ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
-            One shape dimension can be -1. In this case, the value is inferred
+
+            One dimension can be -1. In this case, the value is inferred
             from the length of the array and remaining dimensions.
+
+            0 Dimensions in shape will be copied from original shape, i.e.
+            if x.shape == (3, 4, 5), x.reshape((0, 20)).shape will be (3, 20).
 
 
         Returns
@@ -495,22 +541,6 @@ fixed-size items.
                [-1., -1., -1.]], dtype=float32)
         """
         handle = NDArrayHandle()
-
-        # Infer the correct size for dim == -1
-        shape = list(shape)
-        for index, element in enumerate(shape):
-            if element == -1:
-                remainder = list(self.shape)
-                for i, e in enumerate(shape):  # pylint: disable=invalid-name
-                    if i != index and e == -1:
-                        raise ValueError('Only one dimension can be inferred.')
-                    try:
-                        remainder.remove(e)
-                    except ValueError:
-                        pass
-                shape[index] = np.product(remainder)
-                # We have already gone through the whole shape, break
-                break
 
         # Actual reshape
         check_call(_LIB.MXNDArrayReshape(self.handle,
@@ -917,7 +947,7 @@ def empty(shape, ctx=None, dtype=mx_real_t):
         ctx = Context.default_ctx
     return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
 
-def zeros(shape, ctx=None, dtype=mx_real_t):
+def zeros(shape, ctx=None, dtype=mx_real_t, **kwargs):
     """Returns a new array filled with all zeros, with the given shape and type.
 
     Parameters
@@ -943,13 +973,14 @@ def zeros(shape, ctx=None, dtype=mx_real_t):
     >>> mx.nd.zeros((1,2), mx.gpu(0), 'float16').asnumpy()
     array([[ 0.,  0.]], dtype=float16)
     """
+    # pylint: disable= unused-argument
     if ctx is None:
         ctx = Context.default_ctx
     # pylint: disable= no-member, protected-access
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype)
     # pylint: enable= no-member, protected-access
 
-def ones(shape, ctx=None, dtype=mx_real_t):
+def ones(shape, ctx=None, dtype=mx_real_t, **kwargs):
     """Returns a new array filled with all ones, with the given shape and type.
 
     Parameters
@@ -976,6 +1007,7 @@ def ones(shape, ctx=None, dtype=mx_real_t):
     >>> mx.nd.ones((1,2), dtype='float16').asnumpy()
     array([[ 1.,  1.]], dtype=float16)
     """
+    # pylint: disable= unused-argument
     if ctx is None:
         ctx = Context.default_ctx
     # pylint: disable= no-member, protected-access
