@@ -18,7 +18,40 @@ MXNet provides a prebuilt package for Windows. The prebuilt package includes the
 &nbsp;
 This produces a library called ```libmxnet.dll```.
 
-### Building and Installing Packages on Windows
+### Install and Build MXNet from Source Code via Script
+There is a script setup-util\install-mxnet-windows-python.bat which can install MXNet from source code. If you are running 64bit Windows, you can follow the instruction to do so.
+
+#### Install Visual Studio 2015 Community Edition
+
+Please download the installation package from the following link and run it. https://go.microsoft.com/fwlink/?LinkId=691978 Visual Studio 2015 community edition will be installed. Visual Studio 2015 provides the compiler to compile MXNet.
+
+#### Install MiniConda with Python 3.5
+
+Please download installation package from the following link and run it. https://repo.continuum.io/miniconda/Miniconda3-latest-Windows-x86_64.exe MiniConda will be installed with Python 3.5. Conda is a popular package manage system on Windows maintained by python community. Conda will be used to provide python and other depedencies like opencv, cmake, OpenBLAS, etc for MXNet.
+
+#### Install CUDA (Optional)
+
+If you have nVidia GPU card, strongly suggest you install CUDA. After installation, please reopen cmd window so that NVCC.EXE is added into PATH enviroment.
+
+#### Install CUDNN Library (Optional)
+
+CUDNN can significant speed up CNN training and testing. It is suggested to install if you have nVidia cards. after installation, make sure setting a enviroment variable CUDNN_ROOT to your installation of CUDNN. For exampled SET CUDNN_ROOT=D:\NVIDIA\CUDNN\v5.1\
+
+#### Run the script under administrator
+
+Open a cmd window with administrator privilage. Execute the script:
+setup-utils\install-mxnet-windows-python.bat
+
+The script will download OpenBlas and WinCV2 and build and install MXNet from source code. The script behavior can be tunned via the following enviroment variables:
+    1. CUDNN_ROOT - The root folder of CUDNN
+    2. INTEL_MKL_DIR - The root folder of MKL, the script will use MKL instead of OpenBLAS
+    3. NVCC_CMD - If nvcc.exe is not in PATH, set this enviroment vartiable to find it
+    4. CONDA_CMD - If conda.exe is not in PATH, set this enviroment vartiable to find it
+    5. MXNET_CONDA_ENV - The name of conda enviroment. Don't change it unless you know what you are doing.
+
+*The script only tested in limited combination of operations system and enviroment.
+
+### Building and Installing Packages on Windows Manually
 
 To build and install MXNet yourself, you need the following dependencies. Install the required dependencies:
 
