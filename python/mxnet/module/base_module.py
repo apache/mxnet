@@ -198,7 +198,7 @@ class BaseModule(object):
         """Runs prediction on ``eval_data`` and evaluates the performance according to
         the given ``eval_metric``.
 
-        Checkout `Module Tutorial <http://mxnet.io/tutorials/basic/module.html>` to see
+        Checkout `Module Tutorial <http://mxnet.io/tutorials/basic/module.html>`_ to see
         a end-to-end use-case.
 
         Parameters
@@ -384,7 +384,7 @@ class BaseModule(object):
             validation_metric=None, monitor=None):
         """Trains the module parameters.
 
-        Checkout `Module Tutorial <http://mxnet.io/tutorials/basic/module.html>` to see
+        Checkout `Module Tutorial <http://mxnet.io/tutorials/basic/module.html>`_ to see
         a end-to-end use-case.
 
         Parameters
