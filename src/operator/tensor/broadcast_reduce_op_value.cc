@@ -15,7 +15,6 @@ DMLC_REGISTER_PARAMETER(BroadcastToParam);
 inline std::string get_reduce_axes_description(const std::string& op_name, int line) {
   std::string doc = R"code(Computes the __op__ of array elements over given axes.
 
-
 Defined in )code";
   doc += std::string(__FILE__) + std::string(":L") + std::to_string(line);
   size_t pos = 0;
@@ -29,7 +28,27 @@ Defined in )code";
 
 MXNET_OPERATOR_REGISTER_REDUCE(sum)
 .add_alias("sum_axis")
-.describe(get_reduce_axes_description("sum", __LINE__))
+.describe(R"code(Computes the sum of array elements over given axes.
+
+.. Note::
+
+  `sum` and `sum_axis` are equivalent.
+
+Example::
+
+  data = [[[1,2],[2,3],[1,3]],
+          [[1,4],[4,3],[5,2]],
+          [[7,1],[7,2],[7,3]]]
+
+  sum(data, axis=1)
+  [[  4.   8.]
+   [ 10.   9.]
+   [ 21.   6.]]
+
+  sum(data, axis=[1,2])
+  [ 12.  19.  27.]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_sum"});
 

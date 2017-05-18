@@ -50,7 +50,7 @@ Due to the permission issue, this example is maintained in this [repository](htt
 ### Getting started
 * You will need python modules: `cv2`, `matplotlib` and `numpy`.
 If you use mxnet-python api, you probably have already got them.
-You can install them via pip or package manegers, such as `apt-get`:
+You can install them via pip or package managers, such as `apt-get`:
 ```
 sudo apt-get install python-opencv python-matplotlib python-numpy
 ```
@@ -62,7 +62,7 @@ cp make/config.mk ./config.mk
 # enable cuda, cudnn if applicable
 ```
 Remember to enable CUDA if you want to be able to train, since CPU training is
-insanely slow. Using CUDNN is optional, but highly recommanded.
+insanely slow. Using CUDNN is optional, but highly recommended.
 
 ### Try the demo
 * Download the pretrained model: [`ssd_300_voc_0712.zip`](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.5-beta/vgg16_ssd_300_voc0712_trainval.zip), and extract to `model/` directory.
@@ -136,7 +136,7 @@ Useful when loading python symbol is not available.
 python deploy.py --num-class 20
 ```
 
-### Convert caffemodel
+### Convert caffe model
 Converter from caffe is available at `/path/to/mxnet/example/ssd/tools/caffe_converter`
 
 This is specifically modified to handle custom layer in caffe-ssd. Usage:
