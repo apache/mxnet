@@ -53,6 +53,24 @@ def imdecode(buf, **kwargs):
     >>> image = mx.img.imdecode(str_image)
     >>> image
     <NDArray 224x224x3 @cpu(0)>
+
+    Set `flag` parameter to 0 to get grayscale output
+
+    >>> with open("flower.jpg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.img.imdecode(str_image, flag=0)
+    >>> image
+    <NDArray 224x224x1 @cpu(0)>
+
+    Set `to_rgb` parameter to 0 to get output in OpenCV format (BGR)
+
+    >>> with open("flower.jpg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.img.imdecode(str_image, to_rgb=0)
+    >>> image
+    <NDArray 224x224x3 @cpu(0)>
     """
     if not isinstance(buf, nd.NDArray):
         buf = nd.array(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
