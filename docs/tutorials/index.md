@@ -37,8 +37,6 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
 ### Natural Language Processing
 
-- [Character-Level LSTM - Generate new text, one character at a time](http://mxnet.io/tutorials/python/char_lstm.html)
-
 - [Text Classification using Convolutional Neural Networks](http://mxnet.io/tutorials/nlp/cnn.html)
 
 - [NCE Loss - Speed up text classification with large output layers](http://mxnet.io/tutorials/nlp/nce_loss.html)

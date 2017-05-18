@@ -322,6 +322,12 @@ class CompositeEvalMetric(EvalMetric):
 class Accuracy(EvalMetric):
     """Computes accuracy classification score.
 
+    The accuracy score is defined as
+
+    .. math::
+        \\text{accuracy}(y, \\hat{y}) = \\frac{1}{n} \\sum_{i=0}^{n-1}
+        \\text{1}(\\hat{y_i} == y_i)
+
     Parameters
     ----------
     axis : int, default=1
