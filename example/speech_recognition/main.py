@@ -56,6 +56,21 @@ def load_data(args):
     model_name = args.config.get('common', 'prefix')
     is_bi_graphemes = args.config.getboolean('common', 'is_bi_graphemes')
     overwrite_meta_files = args.config.getboolean('train', 'overwrite_meta_files')
+    language = args.config.get('data', 'language')
+    is_bi_graphemes = args.config.getboolean('common', 'is_bi_graphemes')
+
+    labelUtil = LabelUtil.getInstance()
+    if language == "en":
+        if is_bi_graphemes:
+            try:
+                labelUtil.load_unicode_set("resources/unicodemap_en_baidu_bi_graphemes.csv")
+            except:
+                raise Exception("There is no resources/unicodemap_en_baidu_bi_graphemes.csv. Please set overwrite_meta_files at train section True")
+        else:
+            labelUtil.load_unicode_set("resources/unicodemap_en_baidu.csv")
+    else:
+        raise Exception("Error: Language Type: %s" % language)
+    args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
 
     if mode == 'predict':
         test_json = args.config.get('data', 'test_json')
@@ -70,23 +85,9 @@ def load_data(args):
         datagen.load_train_data(data_json)
         #test bigramphems
 
-        language = args.config.get('data', 'language')
-        is_bi_graphemes = args.config.getboolean('common', 'is_bi_graphemes')
-
         if overwrite_meta_files and is_bi_graphemes:
             generate_bi_graphemes_dictionary(datagen.train_texts)
 
-        labelUtil = LabelUtil.getInstance()
-        if language == "en":
-            if is_bi_graphemes:
-                try:
-                    labelUtil.load_unicode_set("resources/unicodemap_en_baidu_bi_graphemes.csv")
-                except:
-                    raise Exception("There is no resources/unicodemap_en_baidu_bi_graphemes.csv. Please set overwrite_meta_files at train section True")
-            else:
-                labelUtil.load_unicode_set("resources/unicodemap_en_baidu.csv")
-        else:
-            raise Exception("Error: Language Type: %s" % language)
         args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
 
         if mode == "train":
@@ -259,4 +260,11 @@ if __name__ == '__main__':
                           label_shapes=data_train.provide_label)
         max_t_count = args.config.getint('arch', 'max_t_count')
         eval_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, seq_length=max_t_count)
-        model_loaded.score(eval_data=data_train, num_batch=None, eval_metric=eval_metric, reset=True)
+        is_batchnorm = args.config.getboolean('arch', 'is_batchnorm')
+        if is_batchnorm :
+            for nbatch, data_batch in enumerate(data_train):
+                # when is_train = False it leads to high cer when batch_norm
+                model_loaded.forward(data_batch, is_train=True)
+                model_loaded.update_metric(eval_metric, data_batch.label)
+        else :
+            model_loaded.score(eval_data=data_train, num_batch=None, eval_metric=eval_metric, reset=True)

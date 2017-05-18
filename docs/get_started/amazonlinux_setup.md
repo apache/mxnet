@@ -196,7 +196,7 @@ To install the MXNet Scala package into your local Maven repository, run the fol
 
 ## Install the MXNet Package for Perl
 
-Before you build MXNet for Scala from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Scala package:
+Before you build MXNet for Perl from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Perl package:
 
 ```bash
     ## install PDL, Graphviz, Mouse, App::cpanminus, swig via yum before running these commands

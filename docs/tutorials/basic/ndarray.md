@@ -176,13 +176,13 @@ b = a.reshape((2,3,4))
 b.asnumpy()
 ```
 
-The `concatenate` method stacks multiple arrays along the first axis. (Their
-shapes must be the same along the other axes).
+The `concat` method stacks multiple arrays along the first axis. Their
+shapes must be the same along the other axes.
 
 ```python
 a = mx.nd.ones((2,3))
 b = mx.nd.ones((2,3))*2
-c = mx.nd.concatenate([a,b])
+c = mx.nd.concat([a,b])
 c.asnumpy()
 ```
 
@@ -235,7 +235,7 @@ c.asnumpy()
 ## Copies
 
 When assigning an NDArray to another Python variable, we copy a reference to the
-*same* NDArray. However, we often need to maek a copy of the data, so that we
+*same* NDArray. However, we often need to make a copy of the data, so that we
 can manipulate the new array without overwriting the original values.
 
 ```python

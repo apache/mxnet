@@ -14,17 +14,17 @@ We organize this design note as follows:
 
 * **IO Design Insight:**  Guiding principles in data loading design.
 * **Data Format:** Our solution using dmlc-core's binary recordIO implementation.
-* **Data Loading:** Our method to hide IO cost by utilizing the Threaded iterator provided by dmlc-core.
-* **Interface Design:** Facilitating the construction of MXNet data iterators in just a few lines of Python.
+* **Data Loading:** Our method to reduce IO cost by utilizing the threaded iterator provided by dmlc-core.
+* **Interface Design:** Our approach to facilitate writing MXNet data iterators in just a few lines of Python.
 * **Future Extension:** Prospective ideas for making data loading more flexible.
 
 Our analysis will motivate several requirements that an effective IO system should fulfill.
 
 ***List of Key Requirements***
 - Small file size.
-- Allow parallel (distributed) packing of data.
+- Parallel (distributed) packing of data.
 - Fast data loading and online augmentation.
-- Allow quick read arbitrary parts in distributed setting.
+- Quick reads from arbitrary parts of the dataset in the distributed setting.
 
 ## Design Insight
 To design an IO system, we must address two kinds of tasks:
@@ -234,5 +234,5 @@ some of which might be useful to expose to users, for example:
 In the future, there are some extensions to our data IO
 that we might consider adding.
 Specifically, we might add specialized support
-for image segmentation, object localization, speech recognition.
+for applications including image segmentation, object localization, and speech recognition.
 More detail will be provided when such applications have been running on MXNet.

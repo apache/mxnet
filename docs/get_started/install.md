@@ -9,47 +9,52 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active">Linux</button>
   <button type="button" class="btn btn-default opt">MacOS</button>
+  <button type="button" class="btn btn-default opt">Windows</button>
   <button type="button" class="btn btn-default opt">Cloud</button>
+  <button type="button" class="btn btn-default opt">Devices</button>
 </div>
-<br/>
+
+<!-- START - Language Menu -->
+
+<div class="linux macos windows">
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active">Python</button>
+  <button type="button" class="btn btn-default opt">Scala</button>
+  <button type="button" class="btn btn-default opt">R</button>
+  <button type="button" class="btn btn-default opt">Julia</button>
+  <button type="button" class="btn btn-default opt">Perl</button>
 </div>
-<br/>
+</div>
 
+<!-- No CPU GPU for other Devices -->
+<div class="linux macos windows cloud">
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active">CPU</button>
   <button type="button" class="btn btn-default opt">GPU</button>
 </div>
+</div>
 
-<!-- Linux and Mac - Python CPU and GPU installation options -->
-
-<div class="linux macos">
-  <div class="python">
-    <div class="cpu">
-      <div class="btn-group opt-group" role="group">
-        <button type="button" class="btn btn-default opt active">Pip</button>
-        <button type="button" class="btn btn-default opt">Virtualenv</button>
-        <button type="button" class="btn btn-default opt">Docker</button>
-        <button type="button" class="btn btn-default opt">Build from Source</button>
-      </div>
-    </div>
-  </div>
+<!-- other devices -->
+<div class="devices">
+<div class="btn-group opt-group" role="group">
+  <button type="button" class="btn btn-default opt active">Raspberry Pi</button>
+  <button type="button" class="btn btn-default opt">NVIDIA Jetson TX2</button>
+</div>
 </div>
 
 <!-- Linux Python GPU Options -->
 
-<div class="linux">
-  <div class="python">
-    <div class="gpu">
-      <div class="btn-group opt-group" role="group">
-        <button type="button" class="btn btn-default opt">Pip</button>
-        <button type="button" class="btn btn-default opt">Virtualenv</button>
-        <button type="button" class="btn btn-default opt">Docker</button>
-        <button type="button" class="btn btn-default opt">Build from Source</button>
-      </div>
-    </div>
-  </div>
+<div class="linux macos">
+<div class="python">
+<div class="cpu gpu">
+<div class="btn-group opt-group" role="group">
+  <button type="button" class="btn btn-default opt active">Pip</button>
+  <button type="button" class="btn btn-default opt">Virtualenv</button>
+  <button type="button" class="btn btn-default opt">Docker</button>
+  <button type="button" class="btn btn-default opt">Build from Source</button>
+</div>
+</div>
+</div>
 </div>
 
 <!-- END - Main Menu -->
@@ -170,6 +175,7 @@ mxnet/python        latest              00d026968b3c        3 weeks ago         
 
 <div class="build-from-source">
 <br/>
+
 Building *MXNet* from source is a 2 step process.
 1. Build the *MXNet* core shared library, `libmxnet.so`, from the C++ sources.
 2. Build the language specific bindings. Example - Python bindings, Scala bindings.
@@ -630,7 +636,6 @@ More details and verified installation instructions for macOS, with GPUs, coming
 <!-- START - Cloud Python Installation Instructions -->
 
 <div class="cloud">
-  <div class="python">
 
 AWS Marketplace distributes AMIs (Amazon Machine Image) with MXNet pre-installed. You can launch an Amazon EC2 instance with one of the below AMIs:
 1. Deep Learning AMI (Amazon Machine Image) for [Ubuntu](https://aws.amazon.com/marketplace/pp/B06VSPXKDX)
@@ -639,9 +644,52 @@ AWS Marketplace distributes AMIs (Amazon Machine Image) with MXNet pre-installed
 You could also run distributed deeplearning with *MXNet* on AWS using [Cloudformation Template](https://github.com/awslabs/deeplearning-cfn/blob/master/README.md).
 
 </div>
-</div>
 
 <!-- END - Cloud Python Installation Instructions -->
+
+<div class="linux">
+  <div class="scala r julia perl">
+    <div class="cpu gpu">
+
+Follow the installation instructions [in this guide](./ubuntu_setup.md) to set up MXNet.
+
+</div>
+</div>
+</div>
+
+<div class="macos">
+  <div class="scala r julia perl">
+    <div class="cpu gpu">
+
+Follow the installation instructions [in this guide](./osx_setup.md) to set up MXNet.
+
+</div>
+</div>
+</div>
+
+<div class="windows">
+  <div class="python scala r julia perl">
+    <div class="cpu gpu">
+
+Follow the installation instructions [in this guide](./windows_setup.md) to set up MXNet.
+
+</div>
+</div>
+</div>
+
+<div class="devices">
+  <div class="raspberry-pi">
+
+Follow the installation instructions [in this guide](./raspbian_setup.md) to set up MXNet.
+
+</div>
+<div class="jetson-tx2">
+
+Follow the installation instructions [in this guide](./tx2_setup.md) to set up MXNet.
+
+</div>
+</div>
+
 <br/>
 
 # Validate MXNet Installation
@@ -693,7 +741,7 @@ $ python
 
 </div>
 
-Run a short *MXNet* python program to create a 2X3 identity matrix, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
 
 ```python
 >>> import mxnet as mx
@@ -756,7 +804,7 @@ $ python
 
 </div>
 
-Run a short *MXNet* python program to create a 2X3 identity matrix *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
+Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
 
 ```python
 >>> import mxnet as mx
@@ -863,7 +911,6 @@ root@4919c4f58cac:/# exit
 <!-- Validation for cloud installation -->
 
 <div class="cloud">
-  <div class="python">
 
 Login to the cloud instance you launched, with pre-installed *MXNet*, following the guide by corresponding cloud provider.
 
@@ -877,7 +924,7 @@ $ python
 
 <div class="cpu">
 
-Run a short *MXNet* python program to create a 2X3 identity matrix, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
 
 ```python
 >>> import mxnet as mx
@@ -901,7 +948,7 @@ $
 
 <div class="gpu">
 
-Run a short *MXNet* python program to create a 2X3 identity matrix *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
+Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
 
 ```python
 >>> import mxnet as mx
@@ -913,6 +960,48 @@ array([[ 3.,  3.,  3.],
 ```
 
 </div>
+
+</div>
+
+<div class="linux">
+  <div class="scala r julia perl">
+    <div class="cpu gpu">
+
+Will be available soon.
+
+</div>
+</div>
+</div>
+
+<div class="macos">
+  <div class="scala r julia perl">
+    <div class="cpu gpu">
+
+Will be available soon.
+
+</div>
+</div>
+</div>
+
+<div class="windows">
+  <div class="python scala r julia perl">
+    <div class="cpu gpu">
+
+Will be available soon.
+
+</div>
+</div>
+</div>
+
+<div class="devices">
+  <div class="raspberry-pi">
+
+Will be available soon.
+
+</div>
+<div class="jetson-tx2">
+
+Will be available soon.
 
 </div>
 </div>

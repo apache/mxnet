@@ -193,6 +193,9 @@ MXNET_DLL int MXSetProfilerState(int state);
 /*! \brief Save profile and stop profiler */
 MXNET_DLL int MXDumpProfile();
 
+/*! \brief Set the number of OMP threads to use */
+MXNET_DLL int MXSetNumOMPThreads(int thread_num);
+
 //-------------------------------------
 // Part 1: NDArray creation and deletion
 //-------------------------------------

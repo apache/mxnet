@@ -27,6 +27,11 @@ namespace cpp {
 class Optimizer {
  public:
   /*!
+  * \brief constructor
+  * \param beign_num_update The initial number of updates
+  */
+  explicit Optimizer(unsigned begin_num_update);
+  /*!
   * \brief get optimizer type
   * \return string of optimizer type
   */
@@ -84,6 +89,10 @@ class Optimizer {
   static OpMap*& op_map();
   const std::vector<const char*> GetParamKeys_() const;
   const std::vector<const char*> GetParamValues_() const;
+  std::map<int, unsigned> count_;
+  unsigned begin_num_update_, num_update_;
+  unsigned UpdateCount_(int index);
+  virtual void CreateState_(int index, NDArray weight);
 };
 
 typedef std::function<Optimizer*()> OptimizerCreator;
@@ -104,15 +113,63 @@ class OptimizerRegistry {
 
 class SGDOptimizer : public Optimizer {
  public:
-  SGDOptimizer();
-  virtual std::string GetType() const;
-  virtual void Update(int index, NDArray weight, NDArray grad);
+  explicit SGDOptimizer(unsigned begin_num_update = 0);
+  std::string GetType() const override;
+  void Update(int index, NDArray weight, NDArray grad) override;
  private:
   virtual ~SGDOptimizer();
-  virtual void CreateState_(int index, NDArray weight);
+  void CreateState_(int index, NDArray weight) override;
   std::map<int, NDArray*> states_;
   AtomicSymbolCreator update_handle_;
   AtomicSymbolCreator mom_update_handle_;
+};
+
+class RMSPropOptimizer : public Optimizer {
+ public:
+  explicit RMSPropOptimizer(unsigned begin_num_update = 0);
+  std::string GetType() const override;
+  void Update(int index, NDArray weight, NDArray grad) override;
+ private:
+  virtual ~RMSPropOptimizer();
+  void CreateState_(int index, NDArray weight) override;
+  std::map<int, NDArray*> n_, g_, delta_;
+  AtomicSymbolCreator update_handle_;
+  AtomicSymbolCreator alex_update_handle_;
+};
+
+class AdamOptimizer : public Optimizer {
+ public:
+  explicit AdamOptimizer(unsigned begin_num_update = 0);
+  std::string GetType() const override;
+  void Update(int index, NDArray weight, NDArray grad) override;
+ private:
+  virtual ~AdamOptimizer();
+  void CreateState_(int index, NDArray weight) override;
+  std::map<int, NDArray*> mean_;
+  std::map<int, NDArray*> var_;
+  AtomicSymbolCreator update_handle_;
+};
+
+class AdaGradOptimizer : public Optimizer {
+ public:
+  explicit AdaGradOptimizer(unsigned begin_num_update = 0);
+  std::string GetType() const override;
+  void Update(int index, NDArray weight, NDArray grad) override;
+ private:
+  virtual ~AdaGradOptimizer();
+  void CreateState_(int index, NDArray weight) override;
+  std::map<int, NDArray*> history_;
+};
+
+class AdaDeltaOptimizer : public Optimizer {
+ public:
+  explicit AdaDeltaOptimizer(unsigned begin_num_update = 0);
+  std::string GetType() const override;
+  void Update(int index, NDArray weight, NDArray grad) override;
+ private:
+  virtual ~AdaDeltaOptimizer();
+  void CreateState_(int index, NDArray weight) override;
+  std::map<int, NDArray*> acc_g_, acc_delta_;
 };
 
 
