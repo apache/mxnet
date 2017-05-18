@@ -352,10 +352,17 @@ and ```backward``` (if the gradient is needed) to get the gradient.
 
 ### Load and Save
 
-Similar to `NDArray`, we can either serialize a `Symbol` object by using `pickle`,
-or by using `save` and `load` methods directly. The only difference is that
-`NDArray` uses binary format while `Symbol` uses more readable `json` format for
-serialization. To convert symbol to `json` string, use `tojson` method.
+Logically Symbols correspond to NDArrays. They both represent a tensor. They both
+are inputs/outputs of operators. We can either serialize a `Symbol` object by
+using `pickle`, or by using `save` and `load` methods directly.
+Graph is composed by chaining operators.
+We don't have a Graph object in front-end but we do have graph in backend.
+Graphs are implicitly represented by output symbols.
+
+When serializing `NDArray`, we serialize the tensor data in it and it uses binary
+format. When serializing `Symbol`, we serialize the graph of which the symbol is
+an output and it uses more readable `json` format for serialization. To convert
+symbol to `json` string, use `tojson` method.
 
 ```python
 print(c.tojson())
