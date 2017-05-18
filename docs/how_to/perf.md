@@ -1,7 +1,7 @@
 # Some Tips for Improving MXNet Performance
 Even after fixing the training or deployment environment and parallelization scheme,
 a number of configuration settings and data-handling choices can impact the _MXNet_ performance.
-In this document, we address some tips for improving the _MXNet_ performance.
+In this document, we address some tips for improving _MXNet_ performance.
 
 Performance is mainly affected by the following 4 factors:
 
