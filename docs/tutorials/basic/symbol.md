@@ -220,28 +220,19 @@ factory function `ConvFactory`.
 def InceptionFactoryA(data, num_1x1, num_3x3red, num_3x3, num_d3x3red, num_d3x3,
                       pool, proj, name):
     # 1x1
-    c1x1 = ConvFactory(data=data, num_filter=num_1x1, kernel=(1, 1),
-                      name=('%s_1x1' % name))
+    c1x1 = ConvFactory(data=data, num_filter=num_1x1, kernel=(1, 1), name=('%s_1x1' % name))
     # 3x3 reduce + 3x3
-    c3x3r = ConvFactory(data=data, num_filter=num_3x3red, kernel=(1, 1),
-                      name=('%s_3x3' % name), suffix='_reduce')
-    c3x3 = ConvFactory(data=c3x3r, num_filter=num_3x3, kernel=(3, 3), pad=(1, 1),
-                      name=('%s_3x3' % name))
+    c3x3r = ConvFactory(data=data, num_filter=num_3x3red, kernel=(1, 1), name=('%s_3x3' % name), suffix='_reduce')
+    c3x3 = ConvFactory(data=c3x3r, num_filter=num_3x3, kernel=(3, 3), pad=(1, 1), name=('%s_3x3' % name))
     # double 3x3 reduce + double 3x3
-    cd3x3r = ConvFactory(data=data, num_filter=num_d3x3red, kernel=(1, 1),
-                      name=('%s_double_3x3' % name), suffix='_reduce')
-    cd3x3 = ConvFactory(data=cd3x3r, num_filter=num_d3x3, kernel=(3, 3),
-                      pad=(1, 1), name=('%s_double_3x3_0' % name))
-    cd3x3 = ConvFactory(data=cd3x3, num_filter=num_d3x3, kernel=(3, 3),
-                      pad=(1, 1), name=('%s_double_3x3_1' % name))
+    cd3x3r = ConvFactory(data=data, num_filter=num_d3x3red, kernel=(1, 1), name=('%s_double_3x3' % name), suffix='_reduce')
+    cd3x3 = ConvFactory(data=cd3x3r, num_filter=num_d3x3, kernel=(3, 3), pad=(1, 1), name=('%s_double_3x3_0' % name))
+    cd3x3 = ConvFactory(data=cd3x3, num_filter=num_d3x3, kernel=(3, 3), pad=(1, 1), name=('%s_double_3x3_1' % name))
     # pool + proj
-    pooling = mx.sym.Pooling(data=data, kernel=(3, 3), stride=(1, 1), pad=(1, 1),
-                      pool_type=pool, name=('%s_pool_%s_pool' % (pool, name)))
-    cproj = ConvFactory(data=pooling, num_filter=proj, kernel=(1, 1),
-                      name=('%s_proj' %  name))
+    pooling = mx.sym.Pooling(data=data, kernel=(3, 3), stride=(1, 1), pad=(1, 1), pool_type=pool, name=('%s_pool_%s_pool' % (pool, name)))
+    cproj = ConvFactory(data=pooling, num_filter=proj, kernel=(1, 1), name=('%s_proj' %  name))
     # concat
-    concat = mx.sym.Concat(*[c1x1, c3x3, cd3x3, cproj],
-                      name='ch_concat_%s_chconcat' % name)
+    concat = mx.sym.Concat(*[c1x1, c3x3, cd3x3, cproj], name='ch_concat_%s_chconcat' % name)
     return concat
 prev = mx.sym.Variable(name="Previos Output")
 in3a = InceptionFactoryA(prev, 64, 64, 64, 64, 96, "avg", 32, name="in3a")
@@ -365,7 +356,7 @@ and ```backward``` (if the gradient is needed) to get the gradient.
 Similar to `NDArray`, we can either serialize a `Symbol` object by using `pickle`,
 or by using `save` and `load` methods directly. The only difference is that
 `NDArray` uses binary format while `Symbol` uses more readable `json` format for
-serialization. To convert symbol to json string, use `tojson` method.
+serialization. To convert symbol to `json` string, use `tojson` method.
 
 ```python
 print(c.tojson())
@@ -415,11 +406,10 @@ we can bind these symbols with the same array as follows:
 ```python
 a = mx.sym.Variable('a')
 b = mx.sym.Variable('b')
-c = mx.sym.Variable('c')
-d = a + b * c
+b = a + a * a
 
 data = mx.nd.ones((2,3))*2
-ex = d.bind(ctx=mx.cpu(), args={'a':data, 'b':data, 'c':data})
+ex = b.bind(ctx=mx.cpu(), args={'a':data, 'b':data})
 ex.forward()
 ex.outputs[0].asnumpy()
 ```
