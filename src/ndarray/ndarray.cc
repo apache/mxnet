@@ -90,6 +90,20 @@ NDArray NDArray::At(index_t idx) const {
   }
 }
 
+
+bool NDArray::updated_grad() const {
+  if (entry_.ag_node != nullptr) return entry_.ag_node->updated_grad;
+  return false;
+}
+
+
+void NDArray::set_updated_grad(bool state) const {
+  CHECK(entry_.ag_node != nullptr)
+    << "NDArray has not been marked as a variable and does not have gradient state";
+  entry_.ag_node->updated_grad = state;
+}
+
+
 /*!
 * \brief run a ternary operation
 * \param lhs left operand

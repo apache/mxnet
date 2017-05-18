@@ -414,6 +414,26 @@ MXNET_DLL int MXNDArrayGetDType(NDArrayHandle handle,
 MXNET_DLL int MXNDArrayGetContext(NDArrayHandle handle,
                                   int *out_dev_type,
                                   int *out_dev_id);
+/*!
+ * \brief detach and ndarray from computation graph by clearing entry_
+ * \param handle NDArray handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayDetach(NDArrayHandle handle, NDArrayHandle *out);
+/*!
+ * \brief set the flag for gradient array state.
+ * \param handle NDArray handle
+ * \param state the new state.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArraySetGradState(NDArrayHandle handle, int state);
+/*!
+ * \brief set the flag for gradient array state.
+ * \param handle NDArray handle
+ * \param state the new state.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayGetGradState(NDArrayHandle handle, int *out);
 //--------------------------------
 // Part 2: functions on NDArray
 //--------------------------------
@@ -548,6 +568,18 @@ MXNET_DLL int MXAutogradMarkVariables(mx_uint num_var,
  */
 MXNET_DLL int MXAutogradComputeGradient(mx_uint num_output,
                                         NDArrayHandle* output_handles);
+/*!
+ * \brief compute the gradient of outputs w.r.t variabels
+ * \param num_output number of output NDArray
+ * \param output_handles output NDArrays
+ * \param ograd_handles head gradient for NDArrays
+ * \param retain_graph whether to keep the graph after backward
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXAutogradBackward(mx_uint num_output,
+                                 NDArrayHandle* output_handles,
+                                 NDArrayHandle* ograd_handles,
+                                 int retain_graph);
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------

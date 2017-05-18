@@ -439,16 +439,31 @@ int MXAutogradMarkVariables(mx_uint num_var,
 
 int MXAutogradComputeGradient(mx_uint num_output,
                               NDArrayHandle *output_handles) {
+  return MXAutogradBackward(num_output, output_handles, nullptr, 0);
+}
+
+int MXAutogradBackward(mx_uint num_output,
+                       NDArrayHandle *output_handles,
+                       NDArrayHandle *ograd_handles,
+                       int retain_graph) {
   API_BEGIN();
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
-  std::vector<NDArray> outputs;
+  std::vector<NDArray> outputs, ograds;
   outputs.reserve(num_output);
   for (mx_uint i = 0; i < num_output; ++i) {
     outputs.emplace_back(*static_cast<NDArray*>(output_handles[i]));
   }
 
-  AutogradRuntime::Get()->ComputeGradient(outputs);
+  ograds.reserve(num_output);
+  for (mx_uint i = 0; i < num_output; ++i) {
+    if (ograd_handles != nullptr && ograd_handles[i] != nullptr) {
+      ograds.emplace_back(*static_cast<NDArray*>(ograd_handles[i]));
+    } else {
+      ograds.emplace_back();
+    }
+  }
 
+  AutogradRuntime::Get()->ComputeGradient(outputs, ograds, retain_graph);
   API_END();
 }

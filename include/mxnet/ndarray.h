@@ -47,6 +47,7 @@ class AGNodeEntry {
   }
 
   nnvm::NodeEntry nn_entry() const;
+  bool is_none() const;
 };
 
 class AutogradRuntime;
@@ -146,6 +147,10 @@ class NDArray {
   inline bool is_none() const {
     return ptr_.get() == nullptr;
   }
+  /*! \return updated grad state in entry_ */
+  bool updated_grad() const;
+  /*! \return updated grad state in entry_ */
+  void set_updated_grad(bool state) const;
   /*!
    * \brief Block until all the pending write operations with respect
    *    to current NDArray are finished, and read can be performed.
@@ -318,6 +323,14 @@ class NDArray {
    * \return NDArray in new shape
    */
   NDArray Reshape(const TShape &shape) const;
+  /*!
+   * \brief Return a copy of this NDArray without autograd history
+   */
+  NDArray Detach() const {
+    NDArray ret(*this);
+    ret.entry_ = autograd::AGNodeEntry{nullptr, 0, 0};
+    return ret;
+  }
   /*!
    * \brief Allocate the space if it is delayed allocated.
    * This is an internal function used by system that normal user should not use

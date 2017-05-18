@@ -84,10 +84,84 @@ def test_training():
             assert (y.asnumpy() == x.asnumpy()).all()
 
 
+def test_out_grads():
+    x = nd.ones((3, 5))
+    dx = nd.zeros_like(x)
+    mark_variables([x], [dx])
+    da = None
+    db = nd.array([1,2,3,4,5])
+    dc = nd.array([5,4,3,2,1])
+
+    with train_section():
+        a, b, c = nd.split(x, axis=0, num_outputs=3, squeeze_axis=True)
+        backward([a, b, c], [da, db, dc])
+
+    assert (dx.asnumpy() == np.array(
+        [[1,1,1,1,1],
+         [1,2,3,4,5],
+         [5,4,3,2,1]])).all()
+
+
+def test_detach_updated_grad():
+    x = nd.ones((2, 2))
+    dx = nd.zeros_like(x)
+    y = nd.ones_like(x)
+    dy = nd.zeros_like(x)
+    mark_variables([x, y], [dx, dy])
+    assert dx.updated_grad == False
+    assert dy.updated_grad == False
+
+    with train_section():
+        x2 = x + 2
+        y2  = x2 + y
+        y2.backward()
+    assert (dx.asnumpy() == 1).all()
+    assert dx.updated_grad == True
+    assert dy.updated_grad == True
+
+    dx[:] = 0
+    dx.updated_grad = False
+    dy.updated_grad = False
+    assert dx.updated_grad == False
+    assert dy.updated_grad == False
+    with train_section():
+        x2 = x + 2
+        x2 = x2.detach()
+        y2  = x2 + y
+        y2.backward()
+    assert (dx.asnumpy() == 0).all()
+    assert dy.updated_grad == True
+    assert dx.updated_grad == False
+
+
+def test_retain_grad():
+    x = mx.nd.ones((2, 2))
+    dx = mx.nd.zeros((2, 2))
+    mark_variables([x], [dx], grad_reqs='add')
+    with train_section():
+        y = x + 1
+        y.backward(retain_graph=False)
+    assert (dx.asnumpy() == 1).all()
+
+    dx[:] = 0
+    with train_section():
+        y = x + 1
+        y.backward(retain_graph=True)
+        y.backward(retain_graph=False)
+    assert (dx.asnumpy() == 2).all()
+
+    try:
+        with train_section():
+            y = x + 1
+            y.backward()
+            y.backward()
+    except Exception:
+        return
+
+    raise AssertionError(
+        "differentiating the same graph twice without retain_graph should fail")
+
 
 if __name__ == "__main__":
-    test_training()
-    test_unary_func()
-    test_binary_func()
-    test_operator_with_state()
-    test_argnum()
+    import nose
+    nose.runmodule()
