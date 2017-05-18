@@ -206,7 +206,6 @@ def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0),name=None, su
     act = mx.sym.Activation(data=bn, act_type='relu', name='relu_%s%s'
                   %(name, suffix))
     return act
-
 prev = mx.sym.Variable(name="Previous Output")
 conv_comp = ConvFactory(data=prev, num_filter=64, kernel=(7,7), stride=(2, 2))
 shape = {"Previous Output" : (128, 3, 28, 28)}
