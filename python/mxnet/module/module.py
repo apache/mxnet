@@ -1,4 +1,3 @@
-# coding: utf-8
 # pylint: disable=too-many-instance-attributes, too-many-arguments, protected-access, too-many-branches
 # pylint: disable=too-many-public-methods
 """A `Module` implement the `BaseModule` API by wrapping a `Symbol` and one or
@@ -8,7 +7,6 @@ more `Executor` for data parallelization.
 import logging
 import warnings
 
-import sys
 from .. import context as ctx
 from .. import ndarray as nd
 from .. import optimizer as opt
@@ -19,9 +17,6 @@ from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
-
-reload(sys)
-sys.setdefaultencoding('utf-8')
 
 class Module(BaseModule):
     """Module is a basic module that wrap a `Symbol`. It is functionally the same
