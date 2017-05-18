@@ -244,7 +244,7 @@ The `mode` parameter can be set to
 * `symbolic` to only include symbolic operations
 * `all` to include all operations
 
-After the program finishes, navigate to your browser's tracing (Example - chrome://tracing in a Chrome browser) and load the `profile_output.json` file, output by the profiler, to inspect the results.
+After the program finishes, navigate to your browser's tracing (Example - chrome://tracing in a Chrome browser) and load the `profile_output.json` file output by the profiler to inspect the results.
 
 ![MLP Profile](https://cloud.githubusercontent.com/assets/17693755/18035938/0a43484a-6d93-11e6-80d4-241c6ca552ea.png)
 
