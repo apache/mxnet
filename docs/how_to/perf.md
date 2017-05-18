@@ -1,4 +1,7 @@
-# Performance
+# Some Tips for Improving MXNet Performance
+Even fixing the training or deployment environment and parallelization scheme,
+a number of configuration settings and data-handling choices can impact performance.
+In this document, we address some tips for improving _MXNet_ performance.
 
 Performance is mainly affected by the following 4 factors:
 
@@ -14,48 +17,94 @@ Performance is mainly affected by the following 4 factors:
 
 ## Intel CPU
 
-For using Intel Xeon CPUs for training and inference, we suggest to enable
+For using Intel Xeon CPUs for training and inference, we suggest enabling
 both `USE_MKL2017 = 1` and `USE_MKL2017_EXPERIMENTAL = 1` in
 `config.mk`. Check
 [MKL_README.md](https://github.com/dmlc/mxnet/blob/master/MKL_README.md) for
-details
+details.
 
-Also setting the following two environment variables may help:
+We also find that setting the following two environment variables can help:
 - `export KMP_AFFINITY=granularity=fine,compact,1,0` if there are two physical CPUs
 - `export OMP_NUM_THREADS=vCPUs / 2` in which `vCPUs` is the number of virtual CPUs.
-  For linux we can get it by `cat /proc/cpuinfo  | grep processor | wc -l`
+  Whe using Linux, we can access this information by running `cat /proc/cpuinfo  | grep processor | wc -l`
 
-Note that MXNet treats all CPU in a single machine as a single device. So when
-specify `cpu(0)` or `cpu()`, all CPU cores in the machine will be used.
+Note that _MXNet_ treats all CPUs on a single machine as a single device.
+So whether you specify `cpu(0)` or `cpu()`, _MXNet_ will use all CPU cores on the machine.
 
 ### Scoring results
-The following table shows the scoring performance, namely number of images can
-be predicted per second. We used AWS EC2 C4.8xlarge (dual Intel(R) Xeon(R) CPU
-E5-2666 v3 @ 2.90GHz) and
-[example/image-classification/benchmark_score.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark_score.py)
-with MXNet commit `0a03417`
+The following table shows performance,
+namely number of images that can be predicted per second.
+We used [example/image-classification/benchmark_score.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark_score.py)
+to measure the performance on different AWS EC2 machines.
+
+AWS EC2 C4.8xlarge:
 
 | Batch | Alexnet | VGG | Inception-BN | Inception-v3 | Resnet 50 | Resnet 152 |
 | --- | --- | --- | --- | --- | --- | --- |
-|   1 |  122.21 | 34.23 |  99.24 |  52.16 |  46.03 | 20.11 |
-|   2 | 224.83 | 51.02 |  138.88 |  66.76 |  52.27 | 24.82 |
-|   4 | 295.87 | 65.88 |  185.46 |  76.70 |  67.45 | 28.16 |
-|   8 | 389.08 | 77.78 |  212.96 |  84.00 |  69.26 | 29.70 |
-|  16 | 519.87 | 85.08 |  222.81 |  85.10 |  68.94 | 29.11 |
-|  32 | 626.25 | 87.63 |  221.66 |  84.36 |  67.69 | 28.70 |
+|   1 |  119.57 | 34.23 |  111.36 |  54.42 |  42.83 | 19.51 |
+|   2 | 210.58 | 51.63 |  137.10 |  67.30 |  57.54 | 23.56 |
+|   4 | 318.54 | 70.00 |  187.21 |  76.53 |  63.64 | 25.80 |
+|   8 | 389.34 | 77.39 |  211.90 |  84.26 |  63.89 | 28.11 |
+|  16 | 489.12 | 85.26 |  220.52 |  82.00 |  63.93 | 27.08 |
+|  32 | 564.04 | 87.15 |  208.21 |  83.05 |  62.19 | 25.76 |
+
+AWS EC2 C4.4xlarge:
+
+| Batch | Alexnet | VGG | Inception-BN | Inception-v3 | Resnet 50 | Resnet 152 |
+| --- | --- | --- | --- | --- | --- | --- |
+|   1 |  109.96 | 23.00 |  71.82 |  28.10 |  30.66 | 11.81 |
+|   2 | 124.56 | 24.86 |  81.61 |  31.32 |  32.73 | 12.82 |
+|   4 | 157.01 | 26.60 |  86.77 |  32.94 |  33.32 | 13.16 |
+|   8 | 178.40 | 30.67 |  88.58 |  33.52 |  33.32 | 13.32 |
+|  16 | 189.52 | 35.61 |  90.36 |  33.63 |  32.94 | 13.18 |
+|  32 | 196.61 | 38.98 |  105.27 |  33.77 |  32.65 | 13.00 |
+
+AWS EC2 C4.2xlarge:
+
+| Batch | Alexnet | VGG | Inception-BN | Inception-v3 | Resnet 50 | Resnet 152 |
+| --- | --- | --- | --- | --- | --- | --- |
+|   1 |  70.75 | 12.87 |  42.86 |  16.53 |  18.14 | 7.01 |
+|   2 | 71.53 | 13.08 |  45.66 |  17.38 |  18.53 | 7.18 |
+|   4 | 84.72 | 15.38 |  47.50 |  17.80 |  18.96 | 7.35 |
+|   8 | 93.44 | 18.33 |  48.08 |  17.93 |  18.99 | 7.40 |
+|  16 | 97.03 | 20.12 |  55.73 |  18.00 |  18.91 | 7.36 |
+|  32 | 113.90 | 21.10 |  62.54 |  17.98 |  18.80 | 7.33 |
+
+AWS EC2 C4.xlarge:
+
+| Batch | Alexnet | VGG | Inception-BN | Inception-v3 | Resnet 50 | Resnet 152 |
+| --- | --- | --- | --- | --- | --- | --- |
+|   1 |  37.92 | 6.57 |  23.09 |  8.79 |  9.65 | 3.73 |
+|   2 | 36.77 | 7.31 |  24.00 |  9.00 |  9.84 | 3.78 |
+|   4 | 43.18 | 8.94 |  24.42 |  9.12 |  9.91 | 3.83 |
+|   8 | 47.05 | 10.01 |  28.32 |  9.13 |  9.88 | 3.83 |
+|  16 | 55.74 | 10.61 |  31.96 |  9.14 |  9.86 | 3.80 |
+|  32 | 65.05 | 10.91 |  33.86 |  9.34 |  10.31 | 3.86 |
+
+AWS EC2 C4.large:
+
+| Batch | Alexnet | VGG | Inception-BN | Inception-v3 | Resnet 50 | Resnet 152 |
+| --- | --- | --- | --- | --- | --- | --- |
+|   1 |  19.86 | 3.67 |  12.20 |  4.59 |  5.11 | 1.97 |
+|   2 | 19.37 | 4.24 |  12.41 |  4.64 |  5.15 | 1.98 |
+|   4 | 22.64 | 4.89 |  14.34 |  4.66 |  5.16 | 2.00 |
+|   8 | 27.19 | 5.25 |  16.17 |  4.66 |  5.16 | 1.99 |
+|  16 | 31.82 | 5.46 |  17.24 |  4.76 |  5.35 | OOM |
+|  32 | 34.67 | 5.55 |  17.64 |  4.88 |  OOM | OOM |
 
 ## Other CPU
 
-If using CPUs (not just Intel CPUs -- ARMs also), NNPACK will also improve the running performance with 2x~7x, please check [nnpack.md](./nnpack.md) for details.
+If using CPUs (not just Intel CPUs -- ARMs also), NNPACK can improve the running performance with 2x~7x, please check [nnpack.md](./nnpack.md) for details.
 
 ## Nvidia GPU
 
-`cuDNN` often greatly accelerate performance on Nvidia GPUs, especially for
-convolution layers. Please check a recent CUDNN version is used.
+`cuDNN` typically accelerates _MXNet_ performance on NVIDIA GPUs significantly,
+especially for convolution layers.
+We suggest always checking to make sure that a recent CUDNN version is used.
 
 Setting the environment `export MXNET_CUDNN_AUTOTUNE_DEFAULT=1` sometimes also helps.
 
-We show performance results of various GPUs including K80 (EC2 p2.2xlarge), M40,
+We show results when using various GPUs including K80 (EC2 p2.2xlarge), M40,
 and P100 (DGX-1).
 
 ### Scoring results
@@ -107,7 +156,7 @@ where the batch size for Alexnet is increased by 8x.
 
 - K80 (single GPU)
 
-  | Batch | Alexnet(*8) | Inception-v3 | Resnet 50 |
+  | Batch | Alexnet(\*8) | Inception-v3 | Resnet 50 |
   | --- | --- | --- | --- |
   |   1 | 230.69 | 9.81  | 13.83 |
   |   2 | 348.10 | 15.31 | 21.85 |
@@ -118,7 +167,7 @@ where the batch size for Alexnet is increased by 8x.
 
 - M40
 
-  | Batch | Alexnet(*8) | Inception-v3 | Resnet 50 |
+  | Batch | Alexnet(\*8) | Inception-v3 | Resnet 50 |
   | --- | --- | --- | --- |
   |   1 | 405.17  | 14.35 | 21.56 |
   |   2 | 606.32  | 23.96 | 36.48 |
@@ -129,7 +178,7 @@ where the batch size for Alexnet is increased by 8x.
 
 - P100
 
-  | Batch | Alexnet(*8) | Inception-v3 | Resnet 50 |
+  | Batch | Alexnet(\*8) | Inception-v3 | Resnet 50 |
   | --- | --- | --- | --- |
   |   1 | 809.94  | 15.14  | 27.20  |
   |   2 | 1202.93 | 30.34  | 49.55  |
@@ -140,40 +189,45 @@ where the batch size for Alexnet is increased by 8x.
 
 ## Multiple Devices
 
-If more than one GPU or machine are used, MXNet uses `kvstore` to communicate
-data. A proper type of `kvstore` is critical to get the best performance. We can
-refer to [mutli_device.md](http://mxnet.io/how_to/multi_devices.html) for more
+If more than one GPU or machine are used, MXNet uses `kvstore` to communicate data.
+It's critical to use the proper type of `kvstore` to get the best performance.
+Refer to [mutli_device.md](http://mxnet.io/how_to/multi_devices.html) for more
 details.
 
-Besides, we can use
-[tools/bandwidth](https://github.com/dmlc/mxnet/tree/master/tools/bandwidth) to
-find the communication cost per batch. An ideal situation is the cost is less
-than the time to compute a batch. We can
+Besides, we can use [tools/bandwidth](https://github.com/dmlc/mxnet/tree/master/tools/bandwidth)
+to find the communication cost per batch.
+Ideally, the communication cost should be less than the time to compute a batch.
+To reduce the communication cost, we can consider:
 
-- Explore different `--kv-store` options to reduce the cost
-- Increase the batch size to improve the computation and communication ratio.
+- Exploring different `--kv-store` options.
+- Increasing the batch size to improve the computation to communication ratio.
 
 ## Input Data
 
-For the input data, mind the following:
+To make sure you're handling input data in a reasonable way consider the following:
 
-* Data format. If you are using the `rec` format, then everything should be fine.
-* Decoding. By default, MXNet uses 4 CPU threads for decoding images. This is often sufficient to decode more than 1K images per second. If  you are using a low-end CPU or your GPUs are very powerful, you can increase the number of threads.
-* Storage location. Any local or distributed file system (HDFS, Amazon S3) should be fine. If multiple devices read the data from the network shared file system (NFS) at the same time, problems might occur.
-* Use a large batch size. We often choose the largest one that fits into GPU memory. A value that's too large can slow down convergence. For example, the safe batch size for CIFAR 10 is approximately 200, while for ImageNet 1K, the batch size can exceed 1K.
+* Data format: If you are using the `rec` format, then everything should be fine.
+* Decoding: By default, _MXNet_ uses 4 CPU threads for decoding images.
+This is often sufficient to decode more than 1K images per second.
+If you are using a low-end CPU or your GPUs are very powerful, you can increase the number of threads.
+* Storage location. Any local or distributed file system (HDFS, Amazon S3) should be fine.
+If multiple devices read the data from the shared network file system (NFS) at the same time, problems might occur.
+* Use a large batch size. We often choose the largest one that fits into GPU memory.
+A value that's too large can slow down convergence.
+For example, the safe batch size for CIFAR 10 is approximately 200, while for ImageNet 1K, the batch size can exceed 1K.
 
 ## Profiler
 
-As of v0.9.1 (with the NNVM merge) MXNet has a built-in profiler that gives detailed information about
-execution time at the symbol level.
-This feature compliments general profiling tools like nvprof and gprof by summarizing at the operator
-level, instead of a function, kernel, or instruction level.
+As of v0.9.1 (with the NNVM merge), _MXNet_ has a built-in profiler
+that gives detailed information about execution time at the symbol level.
+This feature complements general profiling tools like _nvprof_ and _gprof_
+by summarizing at the operator level, instead of a function, kernel, or instruction level.
 
-To be able to use the profiler, you must compile MXNet with the `USE_PROFILER=1` flag in `config.mk`.
-Once enabled, the profiler can be enabled with an [environment variable](http://mxnet.io/how_to/env_var.html#control-the-profiler) for an entire program run, or
-programmatically for just part of a run.
-See [example/profiler](https://github.com/dmlc/mxnet/tree/master/example/profiler) for complete examples
-of how to use the profiler in code, but briefly, the python code looks like
+In order to be able to use the profiler, you must compile _MXNet_ with the `USE_PROFILER=1` flag in `config.mk`.
+Once enabled, the profiler can be enabled with an [environment variable](http://mxnet.io/how_to/env_var.html#control-the-profiler)
+for an entire program run, or programmatically for just part of a run.
+See [example/profiler](https://github.com/dmlc/mxnet/tree/master/example/profiler)
+for complete examples of how to use the profiler in code, but briefly, the Python code looks like:
 
 ```
     mx.profiler.profiler_set_config(mode='all', filename='profile_output.json')
@@ -189,8 +243,8 @@ The `mode` parameter can be set to
 * `symbolic` to only include symbolic operations
 * `all` to include all operations
 
-After program finishes, navigate to chrome://tracing in a Chrome browser and load profiler output `.json` file to see the results.
+After the program finishes, navigate to chrome://tracing in a Chrome browser and load the `.json` file output by the profiler to inspect the results.
 
 ![MLP Profile](https://cloud.githubusercontent.com/assets/17693755/18035938/0a43484a-6d93-11e6-80d4-241c6ca552ea.png)
 
-Note that the output file can quickly grow to become extremely large, so it is not recommended for general use.
+Note that the output file can grow extremely large, so this approach is not recommended for general use.

@@ -8,7 +8,7 @@
 #include "./bilinear_sampler-inl.h"
 #include <algorithm>
 #include "../common/cuda_utils.h"
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR == 5
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
 #include "./cudnn_bilinear_sampler-inl.h"
 #endif  // MXNET_USE_CUDNN && CUDNN_MAJOR
 
@@ -139,9 +139,9 @@ inline void BilinearSamplerForward(const Tensor<gpu, 4, DType> &output,
     int i_c = input.size(1), i_h = input.size(2), i_w = input.size(3);
     using namespace cuda;
     const int max_block = (output.shape_.Size() + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
-    const int grid_dim_x = (max_block > kMaxGridNum) ? kMaxGridNum : max_block;
+    const int grid_dim_x = (max_block > kMaxGridDim) ? kMaxGridDim : max_block;
     const int grid_dim_y =
-      (max_block > kMaxGridNum) ? (max_block + kMaxGridNum - 1) / kMaxGridNum : 1;
+      (max_block > kMaxGridDim) ? (max_block + kMaxGridDim - 1) / kMaxGridDim : 1;
     dim3 num_blocks(grid_dim_x, grid_dim_y);
     dim3 threads_per_block(kMaxThreadsPerBlock);
     CheckLaunchParam(num_blocks, threads_per_block, "bilinear sampler forward");
@@ -170,9 +170,9 @@ inline void BilinearSamplerBackward(const Tensor<gpu, 4, DType> &input_grad,
   using namespace cuda;
   const int max_block = (output_grad.shape_.Size() / o_c + kMaxThreadsPerBlock - 1)
                         / kMaxThreadsPerBlock;
-  const int grid_dim_x = (max_block > kMaxGridNum) ? kMaxGridNum : max_block;
+  const int grid_dim_x = (max_block > kMaxGridDim) ? kMaxGridDim : max_block;
   const int grid_dim_y =
-    (max_block > kMaxGridNum) ? (max_block + kMaxGridNum - 1) / kMaxGridNum : 1;
+    (max_block > kMaxGridDim) ? (max_block + kMaxGridDim - 1) / kMaxGridDim : 1;
   dim3 num_blocks(grid_dim_x, grid_dim_y);
   dim3 threads_per_block(kMaxThreadsPerBlock);
   CheckLaunchParam(num_blocks, threads_per_block, "bilinear sampler backward");
@@ -191,7 +191,7 @@ namespace op {
 template<>
 Operator* CreateOp<gpu>(BilinearSamplerParam param, int dtype) {
   Operator *op = NULL;
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR == 5
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new CuDNNBilinearSamplerOp<DType>(param);
   })

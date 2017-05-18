@@ -1,4 +1,49 @@
 import mxnet as mx
+import mxnet.ndarray as nd
+import numpy as np
+from functools import reduce
+
+def test_module_dtype():
+    dtype = np.float16
+    dshape = (3, 8, 7)
+
+    sym = mx.sym.Variable('data')
+    sym = mx.sym.Activation(data=sym, act_type='relu', __layout__='TNC')
+
+    mod = mx.mod.Module(sym, ('data',), None, context=[mx.cpu(0), mx.cpu(1)])
+    mod.bind(data_shapes=[mx.io.DataDesc('data', dshape, dtype, layout='TNC')])
+    mod.init_params()
+    mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape, dtype=dtype)],
+                              label=None))
+    mod.backward([mx.nd.ones(dshape, dtype=dtype)])
+
+    for x in mod.get_outputs():
+      assert x.dtype == dtype
+
+
+def test_module_input_grads():
+    a = mx.sym.Variable('a', __layout__='NC')
+    b = mx.sym.Variable('b', __layout__='NC')
+    c = mx.sym.Variable('c', __layout__='NC')
+
+    c = a + 2 * b + 3 * c
+    net = mx.mod.Module(c, data_names=['b', 'c', 'a'], label_names=None,
+                        context=[mx.cpu(0), mx.cpu(1)])
+    net.bind(data_shapes=[['b', (5, 5)], ['c', (5, 5)], ['a', (5, 5)]],
+             label_shapes=None, inputs_need_grad=True)
+    net.init_params()
+
+    net.forward(data_batch=mx.io.DataBatch(data=[nd.ones((5, 5)),
+                                                 nd.ones((5, 5)),
+                                                 nd.ones((5, 5))]))
+    net.backward(out_grads=[nd.ones((5, 5))])
+    input_grads = net.get_input_grads()
+    b_grad = input_grads[0].asnumpy()
+    c_grad = input_grads[1].asnumpy()
+    a_grad = input_grads[2].asnumpy()
+    assert np.all(a_grad == 1), a_grad
+    assert np.all(b_grad == 2), b_grad
+    assert np.all(c_grad == 3), c_grad
 
 def test_module_layout():
     sym = mx.sym.Variable('data')
@@ -162,9 +207,59 @@ def test_module_switch_bucket():
     #the default bucket is expected to reuse the bytes allocated
     assert total_bytes_after == total_bytes_before
 
+def test_monitor():
+    # data iter
+    mx.random.seed(11)
+    data = mx.nd.array([[0.05, .10]]);
+    label = mx.nd.array([[.01, 0.99]]);
+    train_data = mx.io.NDArrayIter(data, label, batch_size=1)
+
+    # symbols
+    x = mx.symbol.Variable('data')
+    x = mx.symbol.FullyConnected(name='fc_0', data=x, num_hidden=2)
+    x = mx.symbol.Activation(name="act_0", data=x, act_type='sigmoid')
+    x = mx.symbol.FullyConnected(name='fc_1', data=x, num_hidden=2)
+    x = mx.symbol.Activation(name="act_1", data=x, act_type='sigmoid')
+    x = mx.symbol.LinearRegressionOutput(data=x, name='softmax', grad_scale=2)
+
+    # create monitor
+    def mean_abs(x):
+        sum_abs = mx.ndarray.sum(mx.ndarray.abs(x))
+        return mx.ndarray.divide(sum_abs, reduce(lambda x, y: x * y, x.shape))
+    mon = mx.mon.Monitor(1, stat_func=mean_abs, pattern='.*', sort=True)
+
+    # create module
+    mod = mx.mod.Module(x, context=[mx.cpu()]);
+    mod.bind(train_data.provide_data, label_shapes=train_data.provide_label,
+                    for_training=True)
+    mod.install_monitor(mon)
+    arg_params = {'fc_0_weight': mx.nd.array([[.15, .20], [.25, .30]]),
+                  'fc_0_bias'  : mx.nd.array([.35, .35]),
+                  'fc_1_weight': mx.nd.array([[.40, .45], [.50, .55]]),
+                  'fc_1_bias'  : mx.nd.array([.60, .60])}
+    mod.init_params(arg_params=arg_params)
+
+    data_iter = iter(train_data)
+    data_batch = next(data_iter)
+    mon.tic()
+    mod.forward_backward(data_batch)
+    res = mon.toc()
+    keys = ['act_0', 'act_1', 'data', 'fc_0', 'fc_1', 'softmax']
+    mon_result_counts = [0, 0, 0, 0, 0, 0]
+    assert(len(res) == 21)
+    for n, k, v in res:
+        for idx, key in enumerate(keys):
+            if k.startswith(key):
+                mon_result_counts[idx] += 1
+                break
+    assert(mon_result_counts == [2, 2, 1, 6, 6, 4])
+
 if __name__ == '__main__':
+    test_module_dtype()
+    test_module_input_grads()
     test_module_states()
     test_module_reshape()
     test_save_load()
     test_module_layout()
     test_module_switch_bucket()
+    test_monitor()

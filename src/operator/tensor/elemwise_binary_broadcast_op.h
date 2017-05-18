@@ -242,7 +242,7 @@ inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
     ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   Reduce<red::sum, ndim, DType, mshadow::op::mul, LOP>(s, lgrad, req[0], workspace,
     ograd, lhs, rhs);
-  Reduce<red::sum, ndim, DType, mshadow::op::mul, ROP>(s, rgrad, req[0], workspace,
+  Reduce<red::sum, ndim, DType, mshadow::op::mul, ROP>(s, rgrad, req[1], workspace,
     ograd, lhs, rhs);
 }
 
@@ -283,8 +283,8 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs){                                       \
       return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};       \
     })                                                                \
-  .add_argument("lhs", "NDArray-or-Symbol", "first input")                      \
-  .add_argument("rhs", "NDArray-or-Symbol", "second input")
+  .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")                      \
+  .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function")
 
 }  // namespace op
 }  // namespace mxnet

@@ -243,6 +243,7 @@ In the rest of this document, we first overview the methods provided by the
     take
     batch_take
     one_hot
+    pick
 ```
 
 ## Mathematical functions
@@ -368,8 +369,13 @@ In the rest of this document, we first overview the methods provided by the
 .. autosummary::
     :nosignatures:
 
-    uniform
-    normal
+    random_uniform
+    random_normal
+    random_gamma
+    random_exponential
+    random_poisson
+    random_negative_binomial
+    random_generalized_negative_binomial
     mxnet.random.seed
 ```
 

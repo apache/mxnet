@@ -42,6 +42,7 @@ For instructions on using these models, see [the python tutorial on using pre-tr
 | [VGG19](http://data.dmlc.ml/models/imagenet/vgg/vgg19-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/vgg/vgg19-0000.params) | [Simonyan et al.., 2015](https://arxiv.org/pdf/1409.1556v6.pdf) | @jspisak |
 | [Inception v3 w/BatchNorm](http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-0126.params) | [Szegedy et al.., 2015](https://arxiv.org/pdf/1512.00567.pdf) | @jspisak |
 | [ResidualNet152](http://data.dmlc.ml/models/imagenet/resnet/152-layers/resnet-152-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/resnet/152-layers/resnet-152-0000.params) | [He et al.., 2015](https://arxiv.org/pdf/1512.03385v1.pdf) | @jspisak |
+| [ResNext101-64x4d](http://data.dmlc.ml/models/imagenet/resnext/101-layers/resnext-101-64x4d-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/resnext/101-layers/resnext-101-64x4d-0000.params) | [Xie et al.., 2016](https://arxiv.org/pdf/1611.05431.pdf) | @Jerryzcn |
 | Fast-RCNN | PASCAL VOC | [Param File] | [Girshick, 2015](https://arxiv.org/pdf/1504.08083v2.pdf) | |
 | Faster-RCNN | PASCAL VOC | [Param File] | [Ren et al..,2016](https://arxiv.org/pdf/1506.01497v3.pdf) | |
 | Single Shot Detection (SSD) | PASCAL VOC | [Param File] | [Liu et al.., 2016](https://arxiv.org/pdf/1512.02325v4.pdf) | |
@@ -53,7 +54,7 @@ MXNet supports many types of recurrent neural networks (RNNs), including Long Sh
 and Gated Recurrent Units (GRU) networks. Some available datasets include:
 
 * [Penn Treebank (PTB)](https://www.cis.upenn.edu/~treebank/): Text corpus with ~1 million words. Vocabulary is limited to 10,000 words. The task is predicting downstream words/characters.
-* [Shakespeare](http://cs.stanford.edu/people/karpathy/char-rnn/): Complete text from Shakespeare’s works.
+* [Shakespeare](http://cs.stanford.edu/people/karpathy/char-rnn/): Complete text from Shakespeare's works.
 * [IMDB reviews](https://s3.amazonaws.com/text-datasets): 25,000 movie reviews, labeled as positive or negative
 * [Facebook bAbI](https://research.facebook.com/researchers/1543934539189348): As a set of 20 question & answer tasks, each with 1,000 training examples.
 * [Flickr8k, COCO](http://mscoco.org/): Images with associated caption (sentences). Flickr8k consists of 8,092 images captioned by AmazonTurkers with ~40,000 captions. COCO has 328,000 images, each with 5 captions. The COCO images also come with labeled objects using segmentation algorithms.

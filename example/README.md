@@ -85,6 +85,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Multi task tutorial](https://github.com/haria/mxnet-multi-task-example/blob/master/multi-task.ipynb) - A demo of how to train and predict multi-task network on both MNIST and your own dataset.
 * [class active maps](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/class_active_maps.ipynb) - A demo of how to localize the discriminative regions in an image using global average pooling (GAP) in CNNs.
 * [DMLC MXNet Notebooks](https://github.com/dmlc/mxnet-notebooks) DMLC's repo for various notebooks ranging from basic usages of MXNet to state-of-the-art deep learning applications.
+* [AWS Seoul Summit 2017 Demos](https://github.com/sxjscience/aws-summit-2017-seoul) The demo codes and ipython notebooks in AWS Seoul Summit 2017.
 
 ### <a name="mobile-apps-examples"></a>Mobile App Examples
 -------------------
@@ -127,7 +128,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 ### <a name="learning-note"></a>Learning Note
 * [Learning Note in Chinese](https://github.com/zhubuntu/MXNet-Learning-Note) - MXNet learning note in Chinese.
 * [Getting Started with MXNet](https://indico.io/blog/getting-started-with-mxnet/) by [indico.io](https://indico.io) (Chinese Translation [MXNet实践](http://www.infoq.com/cn/articles/practise-of-mxnet) by [侠天](http://www.infoq.com/cn/author/%E4%BE%A0%E5%A4%A9) )
-* [{mxnet} R package from MXnet, an intuitive Deep Learning framework including CNN & RNN] (http://tjo-en.hatenablog.com/entry/2016/03/30/233848) by [TJO](http://tjo-en.hatenablog.com/)
+* [{mxnet} R package from MXnet, an intuitive Deep Learning framework including CNN & RNN](http://tjo-en.hatenablog.com/entry/2016/03/30/233848) by [TJO](http://tjo-en.hatenablog.com/)
 * [MXnet with R: combined power of deep learning](http://cos.name/2016/04/mxnet-r/) in Chinese by Tong He
 * [Understand MXNet dependency engine](http://yuyang0.github.io/articles/mxnet-engine.html) in Chinese by [Yu Yang](https://github.com/yuyang0)
 

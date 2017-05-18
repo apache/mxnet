@@ -31,8 +31,26 @@ namespace mxnet {
 
 // forward declaration
 namespace autograd {
+class AGNode;
+
+using AGNodePtr = std::shared_ptr<AGNode>;
+
+class AGNodeEntry {
+ public:
+  AGNodePtr ag_node;
+  uint32_t index;
+  uint32_t version;
+
+  void clear() {
+    ag_node.reset();
+    index = version = 0;
+  }
+
+  nnvm::NodeEntry nn_entry() const;
+};
+
 class AutogradRuntime;
-}
+}  // namespace autograd
 
 /*!
  * \brief ndarray interface
@@ -84,6 +102,7 @@ class NDArray {
    * \return the data TBlob
    */
   inline TBlob data() const {
+    CheckAndAlloc();
     TBlob res;
     MSHADOW_TYPE_SWITCH(dtype_, DType, {
       res = TBlob(static_cast<DType*>(ptr_->shandle.dptr)
@@ -98,6 +117,7 @@ class NDArray {
    * \return a chunk of raw data in TBlob
    */
   inline TBlob raw_data(index_t offset, index_t length) const {
+    CheckAndAlloc();
     TBlob res;
     TShape raw_shape(1);
     raw_shape[0] = length;
@@ -263,33 +283,13 @@ class NDArray {
    * \param end end index in first dim
    * \return sliced NDArray
    */
-  inline NDArray Slice(index_t begin, index_t end) const {
-    NDArray ret = *this;
-    CHECK(!is_none()) << "NDArray is not initialized";
-    CHECK_GE(shape_[0], end) << "Slice end index out of range";
-    size_t length = shape_.ProdShape(1, shape_.ndim());
-    ret.offset_ += begin * length;
-    ret.shape_[0] = end - begin;
-    return ret;
-  }
+  NDArray Slice(index_t begin, index_t end) const;
   /*!
    * \brief Index a NDArray
    * \param idx the index
    * \return idx-th sub array NDArray
    */
-  inline NDArray At(index_t idx) const {
-    NDArray ret = *this;
-    CHECK(!is_none()) << "NDArray is not initialized";
-    CHECK_GT(shape_[0], idx) << "index out of range";
-    size_t length = shape_.ProdShape(1, shape_.ndim());
-    ret.offset_ += idx * length;
-    if (shape_.ndim() > 1) {
-      ret.shape_ = TShape(shape_.data()+1, shape_.data()+shape_.ndim());
-    } else {
-      ret.shape_ = mshadow::Shape1(1);
-    }
-    return ret;
-  }
+  NDArray At(index_t idx) const;
   /*!
    * \brief Create a NDArray that shares memory with current one
    *  The new array must have smaller memory size than the current array.
@@ -317,13 +317,7 @@ class NDArray {
    * \param shape new shape
    * \return NDArray in new shape
    */
-  inline NDArray Reshape(const TShape &shape) const {
-    CHECK_GE(shape_.Size(), shape.Size())
-        << "NDArray.Reshape: target shape size is different from current shape";
-    NDArray ret = *this;
-    ret.shape_ = shape;
-    return ret;
-  }
+  NDArray Reshape(const TShape &shape) const;
   /*!
    * \brief Allocate the space if it is delayed allocated.
    * This is an internal function used by system that normal user should not use
@@ -423,7 +417,7 @@ class NDArray {
   /*! \brief type of data */
   int dtype_ = -1;
   /*! \brief node entry for autograd */
-  nnvm::NodeEntry entry_;
+  autograd::AGNodeEntry entry_;
 };
 
 /*!
@@ -517,7 +511,6 @@ void RandomSeed(uint32_t seed);
  * \param out output NDArray.
  */
 void SampleUniform(real_t begin, real_t end, NDArray *out);
-
 /*!
  * \brief Sample gaussian distribution for each elements of out.
  * \param mu mean of gaussian distribution.
@@ -525,6 +518,41 @@ void SampleUniform(real_t begin, real_t end, NDArray *out);
  * \param out output NDArray.
  */
 void SampleGaussian(real_t mu, real_t sigma, NDArray *out);
+/*!
+ * \brief Sample gamma distribution for each elements of out.
+ * \param alpha parameter (shape) of the gamma distribution
+ * \param beta parameter (scale) of the gamma distribution
+ * \param out output NDArray.
+ */
+void SampleGamma(real_t alpha, real_t beta, NDArray *out);
+/*!
+ * \brief Sample exponential distribution for each elements of out.
+ * \param lambda parameter (rate) of the exponential distribution
+ * \param out output NDArray.
+ */
+void SampleExponential(real_t lambda, NDArray *out);
+/*!
+ * \brief Sample Poisson distribution for each elements of out.
+ * \param lambda parameter (rate) of the Poisson distribution
+ * \param out output NDArray.
+ */
+void SamplePoisson(real_t lambda, NDArray *out);
+/*!
+ * \brief Sample negative binomial distribution for each elements of out.
+ * \param k failure limit
+ * \param p success probability
+ * \param out output NDArray.
+ */
+void SampleNegBinomial(int32_t k, real_t p, NDArray *out);
+/*!
+ * \brief Sample generalized negative binomial distribution for each elements of out.
+ * \param mu parameter (mean) of the distribution
+ * \param alpha parameter (over dispersion) of the distribution
+ * \param out output NDArray.
+ */
+void SampleGenNegBinomial(real_t mu, real_t alpha, NDArray *out);
+
+
 //--------------------------------------------------------------
 // The following part are API Registration of NDArray functions.
 //--------------------------------------------------------------

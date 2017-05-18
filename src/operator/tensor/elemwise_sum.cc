@@ -40,7 +40,7 @@ bool ElementWiseSumShape(const nnvm::NodeAttrs& attrs,
                          std::vector<TShape> *in_attrs,
                          std::vector<TShape> *out_attrs) {
   CHECK_EQ(out_attrs->size(), 1);
-  return ElemwiseAttr<TShape, shape_is_none, shape_assign, true>(
+  return ElemwiseAttr<TShape, shape_is_none, shape_assign, true, shape_string>(
     attrs, in_attrs, out_attrs, TShape());
 }
 
@@ -48,13 +48,13 @@ bool ElementWiseSumType(const nnvm::NodeAttrs& attrs,
                         std::vector<int> *in_attrs,
                         std::vector<int> *out_attrs) {
   CHECK_EQ(out_attrs->size(), 1);
-  return ElemwiseAttr<int, type_is_none, type_assign, true>(
+  return ElemwiseAttr<int, type_is_none, type_assign, true, type_string>(
     attrs, in_attrs, out_attrs, -1);
 }
 
 NNVM_REGISTER_OP(add_n)
 .add_alias("ElementWiseSum")
-.describe(R"doc(Add all input arguments element-wise.
+.describe(R"doc(Adds all input arguments element-wise.
 
 .. math::
    add\_n(a_1, a_2, ..., a_n) = a_1 + a_2 + ... + a_n

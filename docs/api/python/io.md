@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summeries supported data formats and iterator APIs to read the
+This document summarizes supported data formats and iterator APIs to read the
 data including
 
 ```eval_rst
@@ -142,15 +142,15 @@ Functions to read and write RecordIO files.
 ## Develop a new iterator
 
 Writing a new data iterator in Python is straightforward. Most MXNet
-training/inference program accepts an iteratable object with ``provide_data``
+training/inference programs accept an iteratable object with ``provide_data``
 and ``provide_label`` properties.
-This [tutorial](http://mxnet.io/tutorials/python/data.html#data-iterators) how to
+This [tutorial](http://mxnet.io/tutorials/python/data.html#data-iterators) explains how to
 write an iterator from scratch.
 
 The following example demonstrates how to combine
 multiple data iterators into a single one. It can be used for multiple
-modality training such as image captioning, in which images can be  read by
-``ImageRecordIter`` while documents by ``CSVIter``
+modality training such as image captioning, in which images are read by
+``ImageRecordIter`` while documents are read by ``CSVIter``
 
 ```python
 class MultiIter:
@@ -173,7 +173,7 @@ class MultiIter:
 iter = MultiIter([mx.io.ImageRecordIter('image.rec'), mx.io.CSVIter('txt.csv')])
 ```
 
-Parsing and another pre-processing such as augmentation may be expensive.
+Parsing and performing another pre-processing such as augmentation may be expensive.
 If performance is critical, we can implement a data iterator in C++. Refer to
 [src/io](https://github.com/dmlc/mxnet/tree/master/src/io) for examples.
 

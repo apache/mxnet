@@ -6,8 +6,8 @@ from .base import _LIB, NDArrayHandle, RtcHandle, mx_uint, c_array, check_call
 
 class Rtc(object):
     """MXRtc object in mxnet.
-    This class allow you to write a CUDA kernels in Python
-    and call it with NDArray.
+    This class allow you to write CUDA kernels in Python
+    and call them with NDArray.
 
     Parameters
     ----------
@@ -63,10 +63,10 @@ class Rtc(object):
 
         Parameters
         ----------
-        inputs : list of ndarray
-            List of inputs. Can contain different ndarrays than those used for the constructor,
+        inputs : list of NDArray
+            List of inputs. Can contain different NDArrays than those used for the constructor,
             but its elements must have the same shapes and appear in the same order.
-        outputs : list of ndarray
+        outputs : list of NDArray
             List of outputs. Can contain different ndarrays than used for the constructor,
             but must have the same shapes and appear in the same order.
         grid_dims : tuple of 3 uint

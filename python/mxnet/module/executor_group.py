@@ -3,6 +3,8 @@
 """Executor group is a convenient tool for managing a group of executors."""
 
 import logging
+from collections import OrderedDict
+
 import numpy as np
 
 from .. import context as ctx
@@ -12,7 +14,7 @@ from ..executor_manager import _split_input_slice
 
 
 def _load_general(data, targets, major_axis):
-    """Load a list of arrays into a list of arrays specified by slices"""
+    """Load a list of arrays into a list of arrays specified by slices."""
     for d_src, d_targets, axis in zip(data, targets, major_axis):
         if isinstance(d_targets, nd.NDArray):
             d_src.copyto(d_targets)
@@ -41,12 +43,12 @@ def _load_general(data, targets, major_axis):
 
 
 def _load_data(batch, targets, major_axis):
-    """Load data into sliced arrays"""
+    """Load data into sliced arrays."""
     _load_general(batch.data, targets, major_axis)
 
 
 def _load_label(batch, targets, major_axis):
-    """Load label into sliced arrays"""
+    """Load label into sliced arrays."""
     _load_general(batch.label, targets, major_axis)
 
 
@@ -75,7 +77,7 @@ def _merge_multi_context(outputs, major_axis):
 
 
 class DataParallelExecutorGroup(object):
-    """DataParallelExecutorGroup is a group of executors that lives on a group of devices.
+    """A group of executors that lives on a group of devices.
     This is a helper class used to implement data parallelization. Each mini-batch will
     be split and run on the devices.
 
@@ -86,7 +88,7 @@ class DataParallelExecutorGroup(object):
     contexts : list
         A list of contexts.
     workload : list
-        If not `None`, could be a list of numbers that specify the workload to be assigned
+        If not ``None``, could be a list of numbers that specify the workload to be assigned
         to different context. Larger number indicate heavier workload.
     data_shapes : list
         Should be a list of (name, shape) tuples, for the shapes of data. Note the order is
@@ -104,15 +106,15 @@ class DataParallelExecutorGroup(object):
         Indicate whether the gradients for the input data should be computed. This is currently
         not used. It will be useful for implementing composition of modules.
     shared_group : DataParallelExecutorGroup
-        Default is `None`. This is used in bucketing. When not `None`, it should be a executor
+        Defaults to ``None``. This is used in bucketing. When not ``None``, it should be a executor
         group corresponding to a different bucket. In other words, it will correspond to a different
         symbol but with the same set of parameters (e.g. unrolled RNNs with different lengths).
         In this case, many memory will be shared.
     logger : Logger
         Default is `logging`.
     fixed_param_names: list of str
-        Indicate parameters to be fixed during training. Parameters in this list will not allocate
-        space for gradient, nor do gradient calculation.
+        Parameters to be fixed during training. For these parameters, not gradients
+        will be calculated and thus no space will be allocated for the gradient.
     grad_req : str, list of str, dict of str to str
         Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
         (default to 'write').
@@ -197,10 +199,14 @@ class DataParallelExecutorGroup(object):
 
         self.data_shapes = None
         self.label_shapes = None
+        self.data_names = None
+        self.label_names = None
         self.data_layouts = None
         self.label_layouts = None
+        self.output_names = self.symbol.list_outputs()
         self.output_layouts = [DataDesc.get_batch_axis(self.symbol[name].attr('__layout__'))
-                               for name in self.symbol.list_outputs()]
+                               for name in self.output_names]
+        self.num_outputs = len(self.symbol.list_outputs())
 
         self.bind_exec(data_shapes, label_shapes, shared_group)
 
@@ -258,9 +264,9 @@ class DataParallelExecutorGroup(object):
 
         data_names = [x[0] for x in self.data_shapes]
         if self.inputs_need_grad:
-            self.input_grad_arrays = [[exec_.grad_arrays[i] for exec_ in self.execs]
-                                      for i, name in enumerate(self.arg_names)
-                                      if name in data_names]
+            self.input_grad_arrays = [[exec_.grad_arrays[self.arg_names.index(name)]
+                                       for exec_ in self.execs]
+                                      for name in data_names if name in self.arg_names]
         else:
             self.input_grad_arrays = None
 
@@ -302,6 +308,9 @@ class DataParallelExecutorGroup(object):
 
         self.data_shapes = data_shapes
         self.label_shapes = label_shapes
+        self.data_names = [i.name for i in self.data_shapes]
+        if label_shapes is not None:
+            self.label_names = [i.name for i in self.label_shapes]
         self._collect_arrays()
 
     def reshape(self, data_shapes, label_shapes):
@@ -337,9 +346,9 @@ class DataParallelExecutorGroup(object):
         Parameters
         ----------
         arg_params : list of NDArray
-            target parameter arrays
+            Target parameter arrays.
         aux_params : list of NDArray
-            target aux arrays
+            Target aux arrays.
 
         Notes
         -----
@@ -370,10 +379,8 @@ class DataParallelExecutorGroup(object):
         if is_train is None:
             is_train = self.for_training
 
-        if self.label_arrays is not None:
-            assert not is_train or data_batch.label
-            if data_batch.label:
-                _load_label(data_batch, self.label_arrays, self.label_layouts)
+        if self.label_arrays is not None and data_batch.label:
+            _load_label(data_batch, self.label_arrays, self.label_layouts)
 
         for exec_ in self.execs:
             exec_.forward(is_train=is_train)
@@ -391,8 +398,10 @@ class DataParallelExecutorGroup(object):
             concat_shapes.append((key, tuple(the_shape)))
         return concat_shapes
 
-    def get_outputs(self, merge_multi_context=True):
+    def get_outputs(self, merge_multi_context=True, begin=0, end=None):
         """Get outputs of the previous forward computation.
+        If begin or end is specified, return [begin, end)-th outputs,
+        otherwise return all outputs.
 
         Parameters
         ----------
@@ -401,34 +410,40 @@ class DataParallelExecutorGroup(object):
             will be collected from multiple devices. A `True` value indicate that we
             should merge the collected results so that they look like from a single
             executor.
+        begin : int
+            starting index of returned outputs in all outputs
+        end : int or None
+            ending index (excluded) of returned outputs.
 
         Returns
         -------
-        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
-        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        If `merge_multi_context` is ``True``, it is like ``[out1, out2]``. Otherwise, it
+        is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
         elements are `NDArray`.
         """
+        if end is None:
+            end = self.num_outputs
         outputs = [[exec_.outputs[i] for exec_ in self.execs]
-                   for i in range(len(self.execs[0].outputs))]
+                   for i in range(begin, end)]
         if merge_multi_context:
             outputs = _merge_multi_context(outputs, self.output_layouts)
         return outputs
 
     def get_states(self, merge_multi_context=True):
-        """Get states from all devices
+        """Get states from all devices.
 
         Parameters
         ----------
         merge_multi_context : bool
-            Default is `True`. In the case when data-parallelism is used, the states
-            will be collected from multiple devices. A `True` value indicate that we
+            Default is ``True``. In the case when data-parallelism is used, the states
+            will be collected from multiple devices. A ``True`` value indicate that we
             should merge the collected results so that they look like from a single
             executor.
 
         Returns
         -------
-        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
-        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        If `merge_multi_context` is ``True``, it is like ``[out1, out2]``. Otherwise, it
+        is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
         elements are `NDArray`.
         """
         assert not merge_multi_context, \
@@ -462,15 +477,15 @@ class DataParallelExecutorGroup(object):
         Parameters
         ----------
         merge_multi_context : bool
-            Default is `True`. In the case when data-parallelism is used, the outputs
+            Defaults to ``True``. In the case when data-parallelism is used, the outputs
             will be collected from multiple devices. A `True` value indicate that we
             should merge the collected results so that they look like from a single
             executor.
 
         Returns
         -------
-        If `merge_multi_context` is `True`, it is like `[grad1, grad2]`. Otherwise, it
-        is like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`. All the output
+        If `merge_multi_context` is ``True``, it is like ``[grad1, grad2]``. Otherwise, it
+        is like ``[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]``. All the output
         elements are `NDArray`.
         """
         assert self.inputs_need_grad
@@ -481,7 +496,7 @@ class DataParallelExecutorGroup(object):
     def backward(self, out_grads=None):
         """Run backward on all devices. A backward should be called after
         a call to the forward function. Backward cannot be called unless
-        `self.for_training` is `True`.
+        ``self.for_training`` is ``True``.
 
         Parameters
         ----------
@@ -505,11 +520,12 @@ class DataParallelExecutorGroup(object):
                     out_grads_slice.append(og_my_slice.as_in_context(self.contexts[i]))
                 else:
                     out_grads_slice.append(grad.copyto(self.contexts[i]))
-
             exec_.backward(out_grads=out_grads_slice)
 
     def update_metric(self, eval_metric, labels):
-        """Accumulate the performance according to `eval_metric` on all devices.
+        """Accumulate the performance according to `eval_metric` on all devices
+        by comparing outputs from [begin, end) to labels. By default use all
+        outputs.
 
         Parameters
         ----------
@@ -517,6 +533,10 @@ class DataParallelExecutorGroup(object):
             The metric used for evaluation.
         labels : list of NDArray
             Typically comes from `label` of a `DataBatch`.
+        begin : int
+            Starting index of used outputs.
+        end : int or None
+            Ending index of used outputs.
         """
         for texec, islice in zip(self.execs, self.slices):
             labels_slice = []
@@ -533,7 +553,9 @@ class DataParallelExecutorGroup(object):
                 else:
                     labels_slice.append(label)
 
-            eval_metric.update(labels_slice, texec.outputs)
+            labels_ = OrderedDict(zip(self.label_names, labels_slice))
+            preds = OrderedDict(zip(self.output_names, texec.outputs))
+            eval_metric.update_dict(labels_, preds)
 
     def _bind_ith_exec(self, i, data_shapes, label_shapes, shared_group):
         """Internal utility function to bind the i-th executor.
@@ -559,7 +581,7 @@ class DataParallelExecutorGroup(object):
         grad_arrays = {} if self.for_training else None
 
         def _get_or_reshape(name, shared_data_arrays, arg_shape, arg_type, context, logger):
-            """Internal helper to get a memory block or re-use by re-shaping"""
+            """Internal helper to get a memory block or re-use by re-shaping."""
             if name in shared_data_arrays:
                 arg_arr = shared_data_arrays[name]
 

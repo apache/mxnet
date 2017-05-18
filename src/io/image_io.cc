@@ -123,7 +123,7 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
                 param.flag == 0 ? CV_8U : CV_8UC3,
                 ndout.data().dptr_);
     res.copyTo(dst);
-    if (param.to_rgb) {
+    if (param.to_rgb && param.flag != 0) {
       cv::cvtColor(dst, dst, CV_BGR2RGB);
     }
     (*outputs)[0] = ndout;
@@ -132,7 +132,6 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
 
   NDArray ndout(oshape, Context::CPU(), true, mshadow::kUint8);
   Engine::Get()->PushSync([ndin, ndout, param](RunContext ctx){
-      ndout.CheckAndAlloc();
       cv::Mat buf(1, ndin.shape().Size(), CV_8U, ndin.data().dptr_);
       cv::Mat dst(ndout.shape()[0], ndout.shape()[1],
                   param.flag == 0 ? CV_8U : CV_8UC3,
@@ -146,7 +145,7 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
 #endif
       CHECK(!dst.empty());
       CHECK_EQ(static_cast<void*>(dst.ptr()), ndout.data().dptr_);
-      if (param.to_rgb) {
+      if (param.to_rgb && param.flag != 0) {
         cv::cvtColor(dst, dst, CV_BGR2RGB);
       }
     }, ndout.ctx(), {ndin.var()}, {ndout.var()},

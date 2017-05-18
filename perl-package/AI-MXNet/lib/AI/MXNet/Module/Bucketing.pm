@@ -452,7 +452,7 @@ method prepare(AI::MXNet::DataBatch $data_batch)
         label_shapes => $data_batch->provide_label
     );
     # switch back
-    $self->switch_bucket($original_bucket_key);
+    $self->switch_bucket(bucket_key => $original_bucket_key);
 }
 
 method forward(

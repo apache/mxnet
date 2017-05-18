@@ -11,7 +11,6 @@ from . import ndarray as nd
 from .context import cpu
 from .io import DataDesc
 
-
 def _split_input_slice(batch_size, work_load_list):
     """Get input slice from the input shape.
 
@@ -21,7 +20,7 @@ def _split_input_slice(batch_size, work_load_list):
         The number of samples in a mini-batch.
     work_load_list : list of float or int, optional
         The list of work load for different devices,
-        in the same order as ctx.
+        in the same order as `ctx`.
 
     Returns
     -------
