@@ -182,6 +182,12 @@ class EarlyStopping(object):
         a loss (lower values are good). 'auto' mode automatically detects built in metrics.
         Other possible options are:
         'min', 'max'
+    save_model : bool
+        Defaults to False. Specifies whether to save the model when early stopping happens.
+    model_name: str
+        Defaults to 'dummy_model'. Specifies the model name to be saved, if not given, the name
+        'dummy_model' will be used.
+
 
        Example
        -------
@@ -199,9 +205,11 @@ class EarlyStopping(object):
         INFO:root:Epoch[25] Train-accuracy=0.640086
         INFO:root:Epoch[25] Time cost=0.534
         Epoch 00025: early stopping
+        INFO:root:Saved checkpoint to "dummy_model-0025.params"
     """
 
-    def __init__(self, min_delta=0, patience=1, verbose=0, mode='auto'):
+    def __init__(self, min_delta=0, patience=1, verbose=0, mode='auto', save_model=False,
+                 model_name='dummy_model'):
         if mode not in ['auto', 'min', 'max']:
             warnings.warn('EarlyStopping mode %s is unknown, '
                           'fallback to auto mode.' % mode,
@@ -211,6 +219,8 @@ class EarlyStopping(object):
         self.patience = patience
         self.verbose = verbose
         self.min_delta = min_delta
+        self.save_model = save_model
+        self.model_name = model_name
 
         self.wait = 0
         self.stopped_epoch = 0
@@ -260,6 +270,9 @@ class EarlyStopping(object):
                 self.continue_training = False
                 if self.stopped_epoch > 0 and self.verbose > 0:
                     print('Epoch %05d: early stopping' % self.stopped_epoch)
+                if self.save_model:
+                    save_checkpoint(self.model_name, self.stopped_epoch, symbol, arg_params,
+                                    aux_params)
             self.wait += 1
         return self.continue_training
 
