@@ -235,7 +235,7 @@ c.asnumpy()
 ## Copies
 
 When assigning an NDArray to another Python variable, we copy a reference to the
-*same* NDArray. However, we often need to maek a copy of the data, so that we
+*same* NDArray. However, we often need to make a copy of the data, so that we
 can manipulate the new array without overwriting the original values.
 
 ```python

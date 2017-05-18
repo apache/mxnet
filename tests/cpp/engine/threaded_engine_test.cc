@@ -1,15 +1,20 @@
+/*!
+ * Copyright (c) 2017 by Contributors
+ * \file threaded_engine_test.cc
+ * \brief threaded engine tests
+*/
 #include <time.h>
 #include <unistd.h>
 #include <dmlc/logging.h>
-#include <cstdio>
 #include <gtest/gtest.h>
+#include <mxnet/engine.h>
+#include <dmlc/timer.h>
+#include <cstdio>
 #include <thread>
 #include <chrono>
 #include <vector>
 
-#include <mxnet/engine.h>
 #include "../src/engine/engine_impl.h"
-#include <dmlc/timer.h>
 
 /**
  * present the following workload
@@ -23,6 +28,8 @@ struct Workload {
   int time;
 };
 
+static u_int32_t seed_ = 0xdeadbeef;
+
 /**
  * generate a list of workloads
  */
@@ -34,13 +41,13 @@ void GenerateWorkload(int num_workloads, int num_var,
   workloads->resize(num_workloads);
   for (int i = 0; i < num_workloads; ++i) {
     auto& wl = workloads->at(i);
-    wl.write = rand() % num_var;
-    int r = rand();
+    wl.write = rand_r(&seed_) % num_var;
+    int r = rand_r(&seed_);
     int num_read = min_read + (r % (max_read - min_read));
     for (int j = 0; j < num_read; ++j) {
-      wl.reads.push_back(rand() % num_var);
+      wl.reads.push_back(rand_r(&seed_) % num_var);
     }
-    wl.time = min_time + rand() % (max_time - min_time);
+    wl.time = min_time + rand_r(&seed_) % (max_time - min_time);
   }
 }
 
@@ -76,7 +83,7 @@ double EvaluateWorloads(const std::vector<Workload>& workloads,
     if (engine == NULL) {
       EvaluateWorload(wl, data);
     } else {
-      auto func = [wl,data](RunContext ctx, Engine::CallbackOnComplete cb) {
+      auto func = [wl, data](RunContext ctx, Engine::CallbackOnComplete cb) {
         EvaluateWorload(wl, data); cb();
       };
       std::vector<Engine::VarHandle> reads;

@@ -100,6 +100,7 @@ def _make_ndarray_function(handle, name):
             kwarg_names.append(name)
     #signature.append('is_train=False')
     signature.append('out=None')
+    signature.append('name=None')
     signature.append('**kwargs')
     signature = ndsignature + signature
 
@@ -120,6 +121,10 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
         kwargs['%s'] = np.dtype(kwargs['%s']).name"""%(
             dtype_name, dtype_name, dtype_name))
         code.append("""
+    try:
+        kwargs.pop('name')
+    except:
+        pass
     out = kwargs.pop('out', None)
     keys = list(kwargs.keys())
     vals = [str(i) for i in kwargs.values()]""")
