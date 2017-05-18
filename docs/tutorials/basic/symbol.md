@@ -161,16 +161,17 @@ We can also construct a symbol in a more flexible way than the single forward
 composition depicted in the preceding example:
 
 ```python
-net1 = mx.symbol.Variable('data')
-net1 = mx.symbol.FullyConnected(data=net, name='fc1', num_hidden=128)
+data = mx.symbol.Variable('data')
+net1 = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
+net1.list_arguments()
 net2 = mx.symbol.Variable('data2')
-net2 = mx.symbol.FullyConnected(data=net1, name='fc2', num_hidden=128)
-composed_net = net2(data=net1, name='compose')
-composed_net.list_arguments()
+net2 = mx.symbol.FullyConnected(data=net2, name='fc2', num_hidden=10)
+composed = net2(data2=net1, name='composed')
+composed.list_arguments()
 ```
 
-In this example, *net* composed from the existing symbol referenced by *net*,
-and the resulting *composed_net* will replace the original argument *data* with *net2*.
+In this example, *net2* is used as a function to apply to an existing symbol *net1*,
+and the resulting *composed_net* will have all the attributes of *net1* and *net2*.
 
 Once you start building some bigger networks, you might want to name some
 symbols with a common prefix to outline the structure of your network.
@@ -239,7 +240,7 @@ mx.viz.plot_network(symbol=in3a, shape=shape)
 ```
 
 Finally, we can obtain the whole network by chaining multiple inception
-modules. See a complete example here:
+modules. See a complete example
 [here](https://github.com/dmlc/mxnet/blob/master/example/image-classification/symbols/inception-bn.py).
 
 ### Group Multiple Symbols
@@ -352,17 +353,18 @@ and ```backward``` (if the gradient is needed) to get the gradient.
 
 ### Load and Save
 
-Logically Symbols correspond to NDArrays. They both represent a tensor. They both
+Logically symbols correspond to ndarrays. They both represent a tensor. They both
 are inputs/outputs of operators. We can either serialize a `Symbol` object by
-using `pickle`, or by using `save` and `load` methods directly.
-Graph is composed by chaining operators.
-We don't have a Graph object in front-end but we do have graph in backend.
-Graphs are implicitly represented by output symbols.
+using `pickle`, or by using `save` and `load` methods directly as we discussed in
+[NDArray tutorial](http://mxnet.io/tutorials/basic/ndarray.html#serialize-from-to-distributed-filesystems).
 
-When serializing `NDArray`, we serialize the tensor data in it and it uses binary
-format. When serializing `Symbol`, we serialize the graph of which the symbol is
-an output and it uses more readable `json` format for serialization. To convert
-symbol to `json` string, use `tojson` method.
+When serializing `NDArray`, we serialize the tensor data in it and directly dump to
+disk in binary format.
+But symbol uses a concept of graph. Graphs are composed by chaining operators. They are
+implicitly represented by output symbols. So, when serializing a `Symbol`, we
+serialize the graph of which the symbol is an output. While serialization, Symbol
+uses more readable `json` format for serialization. To convert symbol to `json`
+string, use `tojson` method.
 
 ```python
 print(c.tojson())
