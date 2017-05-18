@@ -34,14 +34,6 @@ MXNET_OPERATOR_REGISTER_REDUCE(sum)
 
   `sum` and `sum_axis` are equivalent.
 
-The parameter `axis` specifies axis or axes along which to perform the reduction.
-
-- The default, `axis=()`, will compute over all elements into a scalar array with shape `(1,)`.
-
-- If axis is int, a reduction is performed on a particular axis.
-
-- If axis is a tuple of ints, a reduction is performed on all the axes specified in the tuple.
-
 Example::
 
   data = [[[1,2],[2,3],[1,3]],
