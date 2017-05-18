@@ -143,8 +143,8 @@ class DataBatch(object):
 class DataIter(object):
     """The base class for an MXNet data iterator.
 
-    All I/O in MXNet goes through children of this class. Data-iterators in
-    MXNet are similar to standard-iterators in python. On each call to `next`
+    All I/O in MXNet is handled by specializations of this class. Data iterators
+    in MXNet are similar to standard-iterators in Python. On each call to `next`
     they return a `DataBatch` which represents the next batch of data. When
     there is no more data to return, it raises a `StopIteration` exception.
 
