@@ -134,9 +134,9 @@ def resnet18_cifar(classes):
 def resnet50_imagenet(classes):
     return Resnet(Bottleneck, classes, [3, 4, 6, 3], [64, 256, 512, 1024, 2048], False)
 
-net = resnet50_imagenet(1000)
+net = resnet18_cifar(10)
 batch_size = 32*8
-train_data, val_data = dummy_iterator(batch_size, (3, 224, 224))
+train_data, val_data = cifar10_iterator(batch_size, (3, 32, 32))
 
 
 def test(ctx):
@@ -187,7 +187,7 @@ def train(epoch, ctx):
     net.params.save('mnist.params')
 
 if __name__ == '__main__':
-    # train(200, [mx.gpu(i) for i in range(8)])
+    train(200, [mx.gpu(i) for i in range(8)])
     import logging
     logging.basicConfig(level=logging.DEBUG)
     data = mx.sym.var('data')
