@@ -22,12 +22,15 @@ struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
   bool keepdims;
   DMLC_DECLARE_PARAMETER(ReduceAxesParam) {
     DMLC_DECLARE_FIELD(axis).set_default(TShape())
-      .describe("The axis or axes along which to perform the reduction. "
-                "The default, `axis=()`, will compute over all elements into a "
-                "scalar array with shape `(1,)`.\n\nIf axis is int, "
-                "a reduction is performed on a particular axis.\n\n"
-                "If axis is a tuple of ints, a reduction is performed "
-                "on all the axes specified in the tuple.");
+      .describe(R"code(The axis or axes along which to perform the reduction.
+
+      The default, `axis=()`, will compute over all elements into a
+      scalar array with shape `(1,)`.
+
+      If `axis` is int, a reduction is performed on a particular axis.
+
+      If `axis` is a tuple of ints, a reduction is performed on all the axes
+      specified in the tuple.)code");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
