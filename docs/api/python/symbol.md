@@ -34,7 +34,7 @@ computation.
 array([ 4.,  7.], dtype=float32)
 ```
 
-A detailed tutorial is available at [http://mxnet.io/tutorials/python/symbol.html](http://mxnet.io/tutorials/python/symbol.html).
+A detailed tutorial is available at [http://mxnet.io/tutorials/basic/symbol.html](http://mxnet.io/tutorials/basic/symbol.html.
 
 
 ```eval_rst
