@@ -30,14 +30,14 @@ def _convert_conv_param(param):
     """
     param_string = "num_filter=%d" % param.num_output
 
-    pad_w =0
-    pad_h =0
+    pad_w = 0
+    pad_h = 0
     if isinstance(param.pad, int):
         pad = param.pad
         param_string += ", pad=(%d, %d)" % (pad, pad)
     else:
         if len(param.pad) > 0:
-            pad =  param.pad[0]
+            pad = param.pad[0]
             param_string += ", pad=(%d, %d)" % (pad, pad)
         else:
             if isinstance(param.pad_w, int):
