@@ -15,7 +15,7 @@ updated model are communicated across these devices.
 MXNet also supports model parallelism.
 In this approach, each device holds onto only part of the model.
 This proves useful when the model is too large to fit onto a single device.
-As an example, see the following [ tutorial](./model_parallel_lstm.md)
+As an example, see the following [tutorial](./model_parallel_lstm.md)
 which shows how to use model parallelism for training a multi-layer LSTM model.
 In this tutorial, we'll focus on data parallelism.
 
