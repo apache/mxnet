@@ -26,7 +26,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
    python/mnist
    python/predict_image
 ```
-
+<br>
 More tutorials and examples are available in the GitHub [repository](https://github.com/dmlc/mxnet/tree/master/example).
 
 ## Contributing Tutorials
