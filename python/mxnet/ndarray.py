@@ -632,8 +632,7 @@ fixed-size items.
         >>> x = mx.nd.array([1, 2, 3, 4])
         >>> x.ndim
         1
-        >>> x = mx.nd.array([[1, 2],
-                             [3, 4]])
+        >>> x = mx.nd.array([[1, 2], [3, 4]])
         >>> x.ndim
         2
         """
@@ -1112,10 +1111,9 @@ def moveaxis(tensor, source, destination):
 
     Examples
     --------
-    >>> X = mx.nd.array([[1, 2, 3],
-                         [4, 5, 6]])
+    >>> X = mx.nd.array([[1, 2, 3], [4, 5, 6]])
     >>> mx.nd.moveaxis(X, 0, 1).shape
-    (3, 2)
+    (3L, 2L)
     """
     axes = list(range(tensor.ndim))
     try:
@@ -1262,7 +1260,7 @@ def add(lhs, rhs):
            [ 1.,  1.,  1.]], dtype=float32)
     >>> y.asnumpy()
     array([[ 0.],
-          [ 1.]], dtype=float32)
+           [ 1.]], dtype=float32)
     >>> z.asnumpy()
     array([[ 0.,  1.]], dtype=float32)
     >>> (x+2).asnumpy()
@@ -1323,7 +1321,7 @@ def subtract(lhs, rhs):
            [ 1.,  1.,  1.]], dtype=float32)
     >>> y.asnumpy()
     array([[ 0.],
-          [ 1.]], dtype=float32)
+           [ 1.]], dtype=float32)
     >>> z.asnumpy()
     array([[ 0.,  1.]], dtype=float32)
     >>> (x-2).asnumpy()
@@ -1383,7 +1381,7 @@ def multiply(lhs, rhs):
            [ 1.,  1.,  1.]], dtype=float32)
     >>> y.asnumpy()
     array([[ 0.],
-          [ 1.]], dtype=float32)
+           [ 1.]], dtype=float32)
     >>> z.asnumpy()
     array([[ 0.,  1.]], dtype=float32)
     >>> (x*2).asnumpy()
@@ -1559,7 +1557,7 @@ def maximum(lhs, rhs):
            [ 1.,  1.,  1.]], dtype=float32)
     >>> y.asnumpy()
     array([[ 0.],
-          [ 1.]], dtype=float32)
+           [ 1.]], dtype=float32)
     >>> z.asnumpy()
     array([[ 0.,  1.]], dtype=float32)
     >>> mx.nd.maximum(x, 2).asnumpy()
@@ -1615,7 +1613,7 @@ def minimum(lhs, rhs):
            [ 1.,  1.,  1.]], dtype=float32)
     >>> y.asnumpy()
     array([[ 0.],
-          [ 1.]], dtype=float32)
+           [ 1.]], dtype=float32)
     >>> z.asnumpy()
     array([[ 0.,  1.]], dtype=float32)
     >>> mx.nd.minimum(x, 2).asnumpy()
