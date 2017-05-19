@@ -15,6 +15,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
    basic/symbol
    basic/module
    basic/data
+   vision/large_scale_classification
 ```
 
 ### Computer Vision
