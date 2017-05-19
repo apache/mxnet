@@ -325,5 +325,16 @@ stage('Integration Test') {
         }
       }
     }
+  },
+  'cpp-package': {
+    node('GPU' && 'linux') {
+      ws('workspace/it-cpp-package') {
+        init_git()
+        unpack_lib('gpu')
+        timeout(time: max_time, unit: 'MINUTES') {
+          sh "${docker_run} gpu cpp-package/tests/ci_test.sh"
+        }
+      }
+    }
   }
 }
