@@ -17,7 +17,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
    basic/data
 ```
 
-### MXNet: Training and Inference
+### Training and Inference
 
 ```eval_rst
 .. toctree::
