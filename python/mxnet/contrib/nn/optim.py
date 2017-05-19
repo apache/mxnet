@@ -66,7 +66,7 @@ class Optim(object):
             if update_on_kvstore:
                 kvstore.set_optimizer(self._optimizer)
 
-    def step(self, batch_size):
+    def step(self, batch_size, ignore_stale_grad=False):
         """Make one step of parameter update. Should be called after
         autograd.compute_gradient and outside of train_section() scope.
 
@@ -75,6 +75,9 @@ class Optim(object):
         batch_size : int
             Batch size of data processed. Gradient will be normalized by 1/batch_size.
             Set this to 1 if you normalized loss manually with `loss = mean(loss)`.
+        ignore_stale_grad : bool, optional, default=False
+            If true, ignores Parameters with stale gradient (gradient that has not
+            been updated by `backward` after last step) and skip update.
         """
         self._optimizer.rescale_grad = self._scale / batch_size
 
@@ -82,6 +85,17 @@ class Optim(object):
             assert param.list_ctx() == self._contexts, \
                 "Parameter %s's contexts changed after Optim initialization: " \
                 "was %s, now %s"%(param.name, self._contexts, param.list_ctx())
+            if not ignore_stale_grad:
+                for grad in param.list_grad():
+                    if not grad.updated_grad:
+                        raise UserWarning(
+                            "Gradient of Parameter `%s` has not been updated by backward "
+                            "since last `step`. This could mean a bug in your model that "
+                            "maked it only use a subset of the Parameters (Layers) for this "
+                            "iteration. If you are intentionally only using a subset, "
+                            "call step with ignore_stale_grad=True to suppress this "
+                            "warning and skip updating of Parameters with state gradient" \
+                            %param.name)
             if self._kvstore:
                 self._kvstore.push(i, param.list_grad(), priority=-i)
                 if self._update_on_kvstore:
@@ -90,4 +104,6 @@ class Optim(object):
                 else:
                     self._kvstore.pull(i, param.list_grad(), priority=-i)
             for upd, arr, grad in zip(self._updaters, param.list_data(), param.list_grad()):
-                upd(i, grad, arr)
+                if grad.updated_grad:
+                    upd(i, grad, arr)
+                    grad.updated_grad = False
