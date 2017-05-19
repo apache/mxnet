@@ -1,13 +1,15 @@
 # MXNet - Python API
 
-MXNet provides a rich Python API is one of most popular front-end languages MXNet supports.
-In this section we provide a in-depth discussion of the various MXNet Python packages and the
-functionality they provide. We have made an attempt to include code samples for most of the APIs
-for improved clarity. These code sample will run as-is as long we you first import MXNet by running
+MXNet provides a rich Python API to serve a broad community of Python developers.
+In this section we provide a in-depth discussion of various MXNet Python packages and the
+functionality they provide. We have included code samples for most of the APIs
+for improved clarity. These code samples will run as-is as long as MXNet is first imported by running
 
 ```
 >>> import mxnet as mx
 ```
+
+### For Jupyter Notebook Users:
 
 ```eval_rst
 
