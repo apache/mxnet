@@ -8,7 +8,7 @@ In fact, we could define and update a full neural network just by using `NDArray
 in an imperative fashion using, making full use of the native control of any front end language.
 So you might wonder, why don't we just use `NDArray` for all computation?
 
-MXNet also provides the Symbol API, an interface for symbolic programming.
+MXNet provides the Symbol API, an interface for symbolic programming.
 With symbolic programing, rather than executing operations step by step,
 we first define a *computation graph*.
 This graph contains placeholders for inputs and designated outputs.
@@ -17,17 +17,6 @@ that can be bound to `NDArray`s and run.
 MXNet's Symbol API is similar to the network configurations
 used by [Caffe](http://caffe.berkeleyvision.org/)
 and the symbolic programming in [Theano](http://deeplearning.net/software/theano/).
-
-There are a few reasons for running symbolic operations.
-Nearly all neural networks are trained by defining a model
-with a set of parameters and some objective function.
-The very act of *learning* in neural networks corresponds
-to taking derivatives (the *gradient*) of the objective
-with respect to the parameters.
-By updating the parameters in the direction indicated by the gradient,
-we improve performance with respect to the objective.
-Because taking derivatives is so integral to training neural networks,
-the ability to compute them automatically and efficiently is a tremendous advantage.
 
 Another advantage conferred by symbolic approach is that
 we can optimize our functions before using them.
