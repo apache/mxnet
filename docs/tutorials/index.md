@@ -17,7 +17,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
    basic/data
 ```
 
-### Computer Vision
+### Training and Inference
 
 ```eval_rst
 .. toctree::
@@ -25,6 +25,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
    python/mnist
    python/predict_image
+   vision/large_scale_classification
 ```
 <br>
 More tutorials and examples are available in the GitHub [repository](https://github.com/dmlc/mxnet/tree/master/example).
