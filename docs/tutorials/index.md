@@ -27,6 +27,8 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
    python/predict_image
 ```
 
+More tutorials and examples are available in the GitHub [repository](https://github.com/dmlc/mxnet/tree/master/example).
+
 ## Contributing Tutorials
 
 Want to contribute an MXNet tutorial? To get started, download the [tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
