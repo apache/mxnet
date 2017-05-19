@@ -30,15 +30,13 @@ class EnumType:
             self.enumValues = typeString[typeString.find('{') + 1:typeString.find('}')].split(',')
             for i in range(0, len(self.enumValues)):
                 self.enumValues[i] = self.enumValues[i].strip().strip("'")
-                # make enum classes follow cpp style convention (#6309)
-                self.enumValues[i] = gen_enum_value(self.enumValues[i])
         else:
             logging.warn("trying to parse none-enum type as enum: %s" % typeString)
     def GetDefinitionString(self, indent = 0):
         indentStr = ' ' * indent
         ret = indentStr + 'enum class %s {\n' % self.name
         for i in range(0, len(self.enumValues)):
-            ret = ret + indentStr + '  %s = %d' % (self.enumValues[i], i)
+            ret = ret + indentStr + '  %s = %d' % (gen_enum_value(self.enumValues[i]), i)
             if (i != len(self.enumValues) -1):
                 ret = ret + ","
             ret = ret + "\n"
