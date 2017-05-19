@@ -32,7 +32,7 @@ gradients are then summed over all GPUs before updating the model.
 
 > To use GPUs, we need to compile MXNet with GPU support. For
 > example, set `USE_CUDA=1` in `config.mk` before `make`. (see
-> [MXNet installation guide](http://mxnet.io/get_started/setup.html) for more options).
+> [MXNet installation guide](http://mxnet.io/get_started/install.html) for more options).
 
 If a machine has one or more GPU cards installed,
 then each card is labeled by a number starting from 0.
