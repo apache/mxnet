@@ -1525,6 +1525,13 @@ Variable = var
 def Group(symbols):
     """Creates a symbol that contains a collection of other symbols, grouped together.
 
+    Example usage:
+    ----------
+    >>> a = mx.sym.Variable('a')
+    >>> b = mx.sym.Variable('b')
+    >>> mx.sym.Group([a,b])
+    <Symbol Grouped>
+
     Parameters
     ----------
     symbols : list
@@ -1548,7 +1555,7 @@ def Group(symbols):
 
 
 def load(fname):
-    """Load symbol from a JSON file.
+    """Loads symbol from a JSON file.
 
     You can also use pickle to do the job if you only work on python.
     The advantage of load/save is the file is language agnostic.
@@ -1581,7 +1588,7 @@ def load(fname):
 
 
 def load_json(json_str):
-    """Load symbol from json string.
+    """Loads symbol from json string.
 
     Parameters
     ----------
