@@ -11,10 +11,10 @@ for improved clarity. These code samples will run as-is as long as MXNet is firs
 
 ```eval_rst
 
-.. note jupyter notebook users:: The code examples in API docs are written in 
-    a python-console format. These examples can be executed in Jupyter notebook
-    by using %doctest_mode. Simply copy and paste the example directly into 
-    Jupyter notebook without having to worry about removing the >>> manually.
+.. note:: The code examples in API docs are written in a python-console format.
+    These examples can be executed in Jupyter notebook by using %doctest_mode.
+    Simply copy and paste the example directly into Jupyter notebook without
+    having to worry about removing the >>> manually.
 ```
 ## Table of contents
 
