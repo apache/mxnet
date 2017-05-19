@@ -108,7 +108,7 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
     DMLC_DECLARE_FIELD(path_imglist).set_default("")
         .describe("Path to the image list (.lst) file. Generally created with tools/im2rec.py. "\
                   "Format (Tab separated): "\
-                  "<Record of index>\t<one or more labels>\t<relative path from root folder>.");
+                  "<index of record>\t<one or more labels>\t<relative path from root folder>.");
     DMLC_DECLARE_FIELD(path_imgrec).set_default("")
         .describe("Path to the image RecordIO (.rec) file or a directory path. "\
                   "Created with tools/im2rec.py.");
@@ -201,9 +201,12 @@ struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
     DMLC_DECLARE_FIELD(seed).set_default(0)
         .describe("The random seed.");
     DMLC_DECLARE_FIELD(mirror).set_default(false)
-        .describe("Whether to mirror the image or not.");
+        .describe("Whether to mirror the image or not. If true, images are "\
+                  "flipped along the horizontal axis.");
     DMLC_DECLARE_FIELD(rand_mirror).set_default(false)
-        .describe("Randomly chose whether to mirror an image or not.");
+        .describe("Randomly chose whether to mirror an image or not. If true,"\
+                  "50% of the images will be randomly mirrored (flipped along "\
+                  "the horizontal axis)");
     DMLC_DECLARE_FIELD(mean_img).set_default("")
         .describe("Filename of the mean image.");
     DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
