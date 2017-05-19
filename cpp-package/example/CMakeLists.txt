@@ -52,6 +52,14 @@ add_executable(mlp mlp.cpp ${CPP_PACKAGE_HEADERS})
 target_link_libraries(mlp ${CPP_EXAMPLE_LIBS})
 add_dependencies(mlp ${CPPEX_DEPS})
 
+add_executable(mlp_cpu mlp_cpu.cpp ${CPP_PACKAGE_HEADERS})
+target_link_libraries(mlp_cpu ${CPP_EXAMPLE_LIBS})
+add_dependencies(mlp_cpu ${CPPEX_DEPS})
+
+add_executable(mlp_gpu mlp_gpu.cpp ${CPP_PACKAGE_HEADERS})
+target_link_libraries(mlp_gpu ${CPP_EXAMPLE_LIBS})
+add_dependencies(mlp_gpu ${CPPEX_DEPS})
+
 add_executable(resnet resnet.cpp ${CPP_PACKAGE_HEADERS})
 target_link_libraries(resnet ${CPP_EXAMPLE_LIBS})
 add_dependencies(resnet ${CPPEX_DEPS})
