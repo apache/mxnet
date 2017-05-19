@@ -34,7 +34,7 @@ size. Various methods for data manipulation and computation are provided.
 ```
 
 A detailed tutorial is available at
-[http://mxnet.io/tutorials/python/ndarray.html](http://mxnet.io/tutorials/python/ndarray.html)..
+[http://mxnet.io/tutorials/basic/ndarray.html](http://mxnet.io/tutorials/basic/ndarray.html)..
 
 ```eval_rst
 
