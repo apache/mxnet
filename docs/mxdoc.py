@@ -32,7 +32,7 @@ def _run_cmd(cmds):
         print(err)
         raise err
 
-def generate_doxygen_xml(app):
+def generate_doxygen(app):
     """Run the doxygen make commands"""
     _run_cmd("cd %s/.. && make doxygen" % app.builder.srcdir)
     _run_cmd("cp -rf doxygen/html %s/doxygen" % app.builder.outdir)
@@ -265,8 +265,7 @@ def add_buttons(app, docname, source):
 
 def setup(app):
     app.connect("builder-inited", build_mxnet)
-    # skipped to build c api doc
-    # app.connect("builder-inited", generate_doxygen_xml)
+    app.connect("builder-inited", generate_doxygen)
     app.connect("builder-inited", build_scala_docs)
     # skipped to build r, it requires to install latex, which is kinds of too heavy
     # app.connect("builder-inited", build_r_docs)
