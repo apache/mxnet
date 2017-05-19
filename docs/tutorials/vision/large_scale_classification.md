@@ -208,17 +208,17 @@ We fixed the batch size per GPU constant and doubled the number of GPUs for ever
 
  Number of images processed per second is shown in the following table:
 
- |#GPUs | Alexnet | Inception-v3 | Resnet-152|
- |------|---------|--------------|-----------|
- |1     |457.07   |30.4          |20.8       |
- |2     |870.43   |59.61         |38.76      |
- |4     |1514.8   |117.9         |77.01      |
- |8     |2852.5   |233.39        |153.07     |
- |16    |4244.18  |447.61        |298.03     |
- |32    |7945.57  |882.57        |595.53     |
- |64    |15840.52 |1761.24       |1179.86    |
- |128   |31334.88 |3416.2        |2333.47    |
- |256   |61938.36 |6660.98       |4630.42    |
+ |Number of GPUs  | Alexnet | Inception-v3 | Resnet-152|
+ |----------------|---------|--------------|-----------|
+ |1               |457.07   |30.4          |20.8       |
+ |2               |870.43   |59.61         |38.76      |
+ |4               |1514.8   |117.9         |77.01      |
+ |8               |2852.5   |233.39        |153.07     |
+ |16              |4244.18  |447.61        |298.03     |
+ |32              |7945.57  |882.57        |595.53     |
+ |64              |15840.52 |1761.24       |1179.86    |
+ |128             |31334.88 |3416.2        |2333.47    |
+ |256             |61938.36 |6660.98       |4630.42    |
 
  The following figure shows speedup against the number of GPUs used and compares it with ideal speedup.
 
