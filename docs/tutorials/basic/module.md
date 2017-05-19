@@ -14,8 +14,8 @@ high-level and intermediate-level interface for executing predefined networks.
 ## Preliminary
 
 In this tutorial we will demonstrate `module` usage by training a
-[Multilayer Perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron)(MLP)
-on the [UCI letter recognition](https://archive.ics.uci.edu/ml/datasets letter+recognition) dataset.
+[Multilayer Perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron) (MLP)
+on the [UCI letter recognition](https://archive.ics.uci.edu/ml/datasets/letter+recognition) dataset.
 
 The following code downloads the dataset and creates an 80:20 train:test
 split. It also initializes a training data iterator to return a batch of 32
