@@ -11,7 +11,7 @@ data_iter = mx.io.ImageRecordIter(
     batch_size=4,
     resize=256)
 ```
-Following is more detailed instructions on how to use MXNet's S3 integration.
+Following is detailed instructions on how to use data from S3 for training.
 
 ## Step 1: Build MXNet with S3 integration enabled
 
