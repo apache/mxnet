@@ -11,7 +11,7 @@ data_iter = mx.io.ImageRecordIter(
     batch_size=4,
     resize=256)
 ```
-Following is more detailed instructions on how to use MXNet's S3 integration. 
+Following is more detailed instructions on how to use MXNet's S3 integration.
 
 ## Step 1: Build MXNet with S3 integration enabled
 
@@ -42,7 +42,7 @@ aws s3 sync ./training-data s3://bucket-name/training-data
 
 ## Step 4: Train with data from S3
 
-Once the data is in S3, it is very straightforward to use it from MXNet. Any data iterator that can read/write data from a local drive can also read/write data from S3. 
+Once the data is in S3, it is very straightforward to use it from MXNet. Any data iterator that can read/write data from a local drive can also read/write data from S3.
 
 Let's modify an existing example code in MXNet repo to read from S3 instead of local disk. [`mxnet/tests/python/train/test_conv.py`](https://github.com/dmlc/mxnet/blob/master/tests/python/train/test_conv.py) trains a convolutional network using MNIST data from local disk. We'll do the following change to read the data from S3 instead.
 
@@ -55,7 +55,7 @@ index 039790e..66a60ce 100644
 --- a/tests/python/train/test_conv.py
 +++ b/tests/python/train/test_conv.py
 @@ -39,14 +39,14 @@ def get_iters():
- 
+
      batch_size = 100
      train_dataiter = mx.io.MNISTIter(
 -            image="data/train-images-idx3-ubyte",
@@ -78,7 +78,7 @@ index 039790e..66a60ce 100644
 After the above change `test_conv.py` will fetch data from S3 instead of the local disk.
 
 ```
-python ./tests/python/train/test_conv.py 
+python ./tests/python/train/test_conv.py
 [21:59:19] src/io/s3_filesys.cc:878: No AWS Region set, using default region us-east-1
 [21:59:21] src/io/iter_mnist.cc:94: MNISTIter: load 60000 images, shuffle=1, shape=(100,1,28,28)
 [21:59:21] src/io/iter_mnist.cc:94: MNISTIter: load 10000 images, shuffle=1, shape=(100,1,28,28)
