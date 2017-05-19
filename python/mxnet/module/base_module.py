@@ -79,20 +79,19 @@ def _parse_data_desc(data_names, label_names, data_shapes, label_shapes):
 class BaseModule(object):
     """The base class of a module.
 
-    A module represents a computation component. Modules are designed so that
-    they can be thoughtof as a computation "machine". Each model can run forward,
-    backward, update its parameters, etc. We aim to make the APIs easy to use,
-    especially in the case when we need to use the imperative API to work with
-    multiple modules (e.g. stochastic depth network).
+    A module represents a computation component. One can think of module as a computation machine.
+    A module can execute forward and backward passes and update parameters in a model.
+    We aim to make the APIs easy to use, especially in the case when we need to use the imperative
+    API to work with multiple modules (e.g. stochastic depth network).
 
     A module has several states:
 
-    - Initial state: Memory is not allocated yet, thus the moule is not ready for computation yet.
+    - Initial state: Memory is not allocated yet, so the module is not ready for computation yet.
     - Binded: Shapes for inputs, outputs, and parameters are all known, memory has been allocated,
       and the module is ready for computation.
-    - Parameters initialized: For modules with parameters, doing computation before initializing
-      the parameters might result in undefined outputs.
-    - Optimizer installed: An optimizer can be installed to a module. After this, the parameters
+    - Parameters are initialized: For modules with parameters, doing computation before
+      initializing the parameters might result in undefined outputs.
+    - Optimizer is installed: An optimizer can be installed to a module. After this, the parameters
       of the module can be updated according to the optimizer after gradients are computed
       (forward-backward).
 
@@ -108,8 +107,8 @@ class BaseModule(object):
         - `binded`: `bool`, indicates whether the memory buffers needed for computation
           have been allocated.
         - `for_training`: whether the module is bound for training.
-        - `params_initialized`: `bool`, indicates whether the parameters of this modules
-          has been initialized.
+        - `params_initialized`: `bool`, indicates whether the parameters of this module
+          have been initialized.
         - `optimizer_initialized`: `bool`, indicates whether an optimizer is defined
           and initialized.
         - `inputs_need_grad`: `bool`, indicates whether gradients with respect to the
@@ -145,9 +144,9 @@ class BaseModule(object):
         - `get_input_grads()`: get the gradients with respect to the inputs computed
           in the previous backward operation.
         - `update_metric(metric, labels)`: update performance metric for the previous forward
-           computed results.
+          computed results.
 
-    - other properties (mostly for backward compatability)
+    - other properties (mostly for backward compatibility)
         - `symbol`: the underlying symbolic graph for this module (if any)
           This property is not necessarily constant. For example, for `BucketingModule`,
           this property is simply the *current* symbol being used. For other modules,
@@ -196,13 +195,18 @@ class BaseModule(object):
     def score(self, eval_data, eval_metric, num_batch=None, batch_end_callback=None,
               score_end_callback=None,
               reset=True, epoch=0):
-        """Run prediction on ``eval_data`` and evaluate the performance according to
-        ``eval_metric``.
+        """Runs prediction on ``eval_data`` and evaluates the performance according to
+        the given ``eval_metric``.
+
+        Checkout `Module Tutorial <http://mxnet.io/tutorials/basic/module.html>`_ to see
+        a end-to-end use-case.
 
         Parameters
         ----------
         eval_data : DataIter
-        eval_metric : EvalMetric
+            Evaluation data to run prediction on.
+        eval_metric : EvalMetric or list of EvalMetrics
+            Evaluation metric to use.
         num_batch : int
             Number of batches to run. Defaults to ``None``, indicating run until the `DataIter`
             finishes.
@@ -218,9 +222,10 @@ class BaseModule(object):
         Examples
         --------
         An example of using score for prediction::
-            >>> #Evaluate accuracy on val_dataiter
+            >>> # Evaluate accuracy on val_dataiter
             >>> metric = mx.metric.Accuracy()
             >>> mod.score(val_dataiter, metric)
+            >>> mod.score(val_dataiter, ['mse', 'acc'])
         """
         assert self.binded and self.params_initialized
 
@@ -260,16 +265,19 @@ class BaseModule(object):
         return eval_metric.get_name_value()
 
     def iter_predict(self, eval_data, num_batch=None, reset=True):
-        """Iterate over predictions.
+        """Iterates over predictions.
 
-            for pred, i_batch, batch in module.iter_predict(eval_data):
-                # pred is a list of outputs from the module
-                # i_batch is a integer
-                # batch is the data batch from the data iterator
+        Example Usage:
+        ----------
+        >>> for pred, i_batch, batch in module.iter_predict(eval_data):
+        >>>        # pred is a list of outputs from the module
+        >>>        # i_batch is a integer
+        >>>        # batch is the data batch from the data iterator
 
         Parameters
         ----------
         eval_data : DataIter
+            Evaluation data to run prediction on.
         num_batch : int
             Default is ``None``, indicating running all the batches in the data iterator.
         reset : bool
@@ -292,7 +300,7 @@ class BaseModule(object):
 
     def predict(self, eval_data, num_batch=None, merge_batches=True, reset=True,
                 always_output_list=False):
-        """Run prediction and collect the outputs.
+        """Runs prediction and collects the outputs.
 
         When `merge_batches` is ``True`` (by default), the return value will be a list
         ``[out1, out2, out3]``, where each element is formed by concatenating the outputs for
@@ -310,12 +318,13 @@ class BaseModule(object):
         Parameters
         ----------
         eval_data : DataIter
+            Evaluation data to run prediction on.
         num_batch : int
-            Defaults to ``None``, indicating running all the batches in the data iterator.
+            Defaults to ``None``, indicates running all the batches in the data iterator.
         merge_batches : bool
             Defaults to ``True``, see above for return values.
         reset : bool
-            Defaults to ``True``, indicating whether we should reset the data iter before start
+            Defaults to ``True``, indicates whether we should reset the data iter before
             doing prediction.
         always_output_list : bool
             Defaults to ``False``, see above for return values.
@@ -327,9 +336,9 @@ class BaseModule(object):
 
         Examples
         --------
-        An example of using predict for prediction::
-        >>> #Predict on the first 10 batches of val_dataiter
-        >>> mod.predict(eval_data=val_dataiter, num_batch=10)
+        An example of using `predict` for prediction::
+            >>> # Predict on the first 10 batches of val_dataiter
+            >>> mod.predict(eval_data=val_dataiter, num_batch=10)
         """
         assert self.binded and self.params_initialized
 
@@ -373,18 +382,22 @@ class BaseModule(object):
             arg_params=None, aux_params=None, allow_missing=False,
             force_rebind=False, force_init=False, begin_epoch=0, num_epoch=None,
             validation_metric=None, monitor=None):
-        """Train the module parameters.
+        """Trains the module parameters.
+
+        Checkout `Module Tutorial <http://mxnet.io/tutorials/basic/module.html>`_ to see
+        a end-to-end use-case.
 
         Parameters
         ----------
         train_data : DataIter
+            Train DataIter.
         eval_data : DataIter
-            If not ``None``, will be used as validation set and evaluate the performance
-            after each epoch.
+            If not ``None``, will be used as validation set and the performance
+            after each epoch will be evaluated.
         eval_metric : str or EvalMetric
             Defaults to 'accuracy'. The performance measure used to display during training.
             Other possible predefined metrics are:
-            'ce' (CrossEntropy), 'f1', 'mae', 'mse', 'rmse', 'top_k_accuracy'
+            'ce' (CrossEntropy), 'f1', 'mae', 'mse', 'rmse', 'top_k_accuracy'.
         epoch_end_callback : function or list of functions
             Each callback will be called with the current `epoch`, `symbol`, `arg_params`
             and `aux_params`.
@@ -393,7 +406,7 @@ class BaseModule(object):
         kvstore : str or KVStore
             Defaults to 'local'.
         optimizer : str or Optimizer
-            Defaults to 'sgd'
+            Defaults to 'sgd'.
         optimizer_params : dict
             Defaults to ``(('learning_rate', 0.01),)``. The parameters for
             the optimizer constructor.
@@ -403,7 +416,7 @@ class BaseModule(object):
             These will be called at the end of each full evaluation, with the metrics over
             the entire evaluation set.
         eval_batch_end_callback : function or list of function
-            These will be called at the end of each minibatch during evaluation.
+            These will be called at the end of each mini-batch during evaluation.
         initializer : Initializer
             The initializer is called to initialize the module parameters when they are
             not already initialized.
@@ -412,32 +425,35 @@ class BaseModule(object):
             model or loaded from a checkpoint (previously saved model). In this case,
             the value here will be used to initialize the module parameters, unless they
             are already initialized by the user via a call to `init_params` or `fit`.
-            `arg_params` has higher priority to `initializer`.
+            `arg_params` has a higher priority than `initializer`.
         aux_params : dict
             Defaults to ``None``. Similar to `arg_params`, except for auxiliary states.
         allow_missing : bool
-            Defaults to ``False``. Indicate whether we allow missing parameters when `arg_params`
+            Defaults to ``False``. Indicates whether to allow missing parameters when `arg_params`
             and `aux_params` are not ``None``. If this is ``True``, then the missing parameters
             will be initialized via the `initializer`.
         force_rebind : bool
             Defaults to ``False``. Whether to force rebinding the executors if already bound.
         force_init : bool
-            Defaults to ``False``. Indicate whether we should force initialization even if the
+            Defaults to ``False``. Indicates whether to force initialization even if the
             parameters are already initialized.
         begin_epoch : int
-            Defaults to 0. Indicate the starting epoch. Usually, if we are resuming from a
-            checkpoint saved at a previous training phase at epoch N, then we should specify
-            this value as N+1.
+            Defaults to 0. Indicates the starting epoch. Usually, if resumed from a
+            checkpoint saved at a previous training phase at epoch N, then this value should be
+            N+1.
         num_epoch : int
-            Number of epochs to run training.
+            Number of epochs for training.
 
         Examples
         --------
         An example of using fit for training::
             >>> #Assume training dataIter and validation dataIter are ready
-            >>> mod.fit(train_data=train_dataiter, eval_data=val_dataiter,
+            >>> #Assume loading a previously checkpointed model
+            >>> sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, 3)
+            >>> mod.fit(train_data=train_dataiter, eval_data=val_dataiter, optimizer='sgd',
                         optimizer_params={'learning_rate':0.01, 'momentum': 0.9},
-                        num_epoch=10)
+                        arg_params=arg_params, aux_params=aux_params,
+                        eval_metric='acc', num_epoch=10, begin_epoch=3)
         """
         assert num_epoch is not None, 'please specify number of epochs'
 
@@ -568,10 +584,10 @@ class BaseModule(object):
         Examples
         --------
         An example of getting module parameters::
-        >>> print mod.get_params()
-        ({'fc2_weight': <NDArray 64x128 @cpu(0)>, 'fc1_weight': <NDArray 128x100 @cpu(0)>,
-        'fc3_bias': <NDArray 10 @cpu(0)>, 'fc3_weight': <NDArray 10x64 @cpu(0)>,
-        'fc2_bias': <NDArray 64 @cpu(0)>, 'fc1_bias': <NDArray 128 @cpu(0)>}, {})
+            >>> print mod.get_params()
+            ({'fc2_weight': <NDArray 64x128 @cpu(0)>, 'fc1_weight': <NDArray 128x100 @cpu(0)>,
+            'fc3_bias': <NDArray 10 @cpu(0)>, 'fc3_weight': <NDArray 10x64 @cpu(0)>,
+            'fc2_bias': <NDArray 64 @cpu(0)>, 'fc1_bias': <NDArray 128 @cpu(0)>}, {})
         """
         raise NotImplementedError()
 
@@ -620,8 +636,7 @@ class BaseModule(object):
         Examples
         --------
         An example of setting module parameters::
-            >>> sym, arg_params, aux_params = \
-            >>>     mx.model.load_checkpoint(model_prefix, n_epoch_load)
+            >>> sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, n_epoch_load)
             >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
         """
         self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
@@ -839,7 +854,7 @@ class BaseModule(object):
         raise NotImplementedError()
 
     def update(self):
-        """Update parameters according to the installed optimizer and the gradients computed
+        """Updates parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch.
 
         Examples
@@ -858,11 +873,13 @@ class BaseModule(object):
         raise NotImplementedError()
 
     def update_metric(self, eval_metric, labels):
-        """Evaluate and accumulate evaluation metric on outputs of the last forward computation.
+        """Evaluates and accumulates evaluation metric on outputs of the last forward
+        computation.
 
         Parameters
         ----------
         eval_metric : EvalMetric
+            Evaluation metric to use.
         labels : list of NDArray
             Typically `data_batch.label`.
 
@@ -880,15 +897,17 @@ class BaseModule(object):
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
              grad_req='write'):
-        """Bind the symbols to construct executors. This is necessary before one
+        """Binds the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
         Parameters
         ----------
-        data_shapes : list of (str, tuple)
-            Typically is ``data_iter.provide_data``.
-        label_shapes : list of (str, tuple)
-            Typically is ``data_iter.provide_label``.
+        data_shapes : list of (str, tuple) or DataDesc objects
+            Typically is ``data_iter.provide_data``. Can also be a list of
+            (data name, data shape).
+        label_shapes : list of (str, tuple) or DataDesc objects
+            Typically is ``data_iter.provide_label``. Can also be a list of
+            (label name, label shape).
         for_training : bool
             Default is ``True``. Whether the executors should be bind for training.
         inputs_need_grad : bool
@@ -911,25 +930,27 @@ class BaseModule(object):
         --------
         An example of binding symbols::
             >>> mod.bind(data_shapes=[('data', (1, 10, 10))])
+            >>> #Assume train_iter is already created.
+            >>> mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
         """
         raise NotImplementedError()
 
     def init_optimizer(self, kvstore='local', optimizer='sgd',
                        optimizer_params=(('learning_rate', 0.01),), force_init=False):
-        """Install and initialize optimizers.
+        """Installs and initializes optimizers.
 
         Parameters
         ----------
         kvstore : str or KVStore
             Defaults to `'local'`.
         optimizer : str or Optimizer
-            Defaults to `'sgd'`
+            Defaults to `'sgd'`.
         optimizer_params : dict
             Defaults to ``(('learning_rate', 0.01),)``. The default value is not a dictionary,
             just to avoid pylint warning of dangerous default values.
         force_init : bool
-            Defaults to ``False``, indicating whether we should force re-initializing the
-            optimizer in the case an optimizer is already installed.
+            Defaults to ``False``, indicates whether to force re-initializing an optimizer
+            if it is already installed.
 
         Examples
         --------
