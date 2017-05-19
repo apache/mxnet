@@ -659,11 +659,13 @@ class MXDataIter(DataIter):
     handle : DataIterHandle
         The handle to the underlying C++ Data Iterator.
     """
-    def __init__(self, handle, data_name='data', label_name='softmax_label', **_):
+    def __init__(self, handle, data_name='data', label_name='softmax_label',
+                 data_callback=None, **_):
         super(MXDataIter, self).__init__()
         self.handle = handle
         # debug option, used to test the speed with io effect eliminated
         self._debug_skip_load = False
+        self.data_callback = data_callback
 
         # load the first batch to get shape information
         self.first_batch = None
@@ -704,8 +706,11 @@ class MXDataIter(DataIter):
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         if next_res.value:
-            return DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad(),
-                             index=self.getindex())
+            data_batch = DataBatch(data=[self.getdata()], label=[self.getlabel()],
+                                   pad=self.getpad(), index=self.getindex())
+            if self.data_callback is not None:
+                self.data_callback(data_batch)
+            return data_batch
         else:
             raise StopIteration
 
