@@ -15,6 +15,9 @@ import filecmp
 import shutil
 import codecs
 
+def gen_enum_value(value):
+    return 'k' + value[0].upper() + value[1:]
+
 class EnumType:
     name = ''
     enumValues = []
@@ -33,14 +36,14 @@ class EnumType:
         indentStr = ' ' * indent
         ret = indentStr + 'enum class %s {\n' % self.name
         for i in range(0, len(self.enumValues)):
-            ret = ret + indentStr + '  %s = %d' % (self.enumValues[i], i)
+            ret = ret + indentStr + '  %s = %d' % (gen_enum_value(self.enumValues[i]), i)
             if (i != len(self.enumValues) -1):
                 ret = ret + ","
             ret = ret + "\n"
         ret = ret + "};\n"
         return ret
     def GetDefaultValueString(self, value = ''):
-        return self.name + "::" + value
+        return self.name + "::" + gen_enum_value(value)
     def GetEnumStringArray(self, indent = 0):
         indentStr = ' ' * indent
         ret = indentStr + 'static const char *%sValues[] = {\n' % self.name

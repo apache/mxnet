@@ -7,10 +7,10 @@ This figure shows the major modules and components of the MXNet system and their
 - Runtime Dependency Engine: Schedules and executes the
   operations according to their read/write dependency.
 - Storage Allocator: Efficiently allocates and recycles memory blocks
-  for GPU and CPU processors.
+  on host (CPU) and devices (GPUs).
 - Resource Manager: Manages global resources, such as the random number generator
   and temporal space.
-- NDArray: Dynamic asynchronous n-dimensional arrays,
+- NDArray: Dynamic, asynchronous n-dimensional arrays,
   which provide flexible imperative programs for MXNet.
 - Symbolic Execution: Static symbolic graph executor,
   which provides efficient symbolic graph execution and optimization.
@@ -50,7 +50,7 @@ along with its context information and dependencies, to the engine.
 `exec_ctx` is the context information in which the `exec_fun` should be executed,
 `const_vars` denotes the variables that the function reads from,  
 and `mutate_vars` are the variables to be modified.
-The engine makes the following guarantee:
+The engine provides the following guarantee:
 
 >*The execution of any two functions
 that modify a common variable
@@ -72,7 +72,7 @@ The function type of the engine is:
 	    void *stream;
     };
 ```
-Alternatively, you could use `mxnet::engine::DAGEngine::Fn`, which is the same type definition.
+Alternatively, you could use `mxnet::engine::DAGEngine::Fn`, which has the same type definition.
 
 All of the functions are executed by the engine's internal threads.
 In such a model, it's usually not a good idea to push *blocking* functions
@@ -114,13 +114,14 @@ The engine uses one rule for resolving the dependencies among functions:
 
 >*The execution of any two functions when one of them modifies at least one common variable is serialized in their push order.*
 
-For example, if `Fn1` and `Fn2` both mutate, `V2`, `Fn2`
+For example, if `Fn1` and `Fn2` both mutate `V2` then `Fn2`
 is guaranteed to be executed after `Fn1`
 if `Fn2` is pushed after `Fn1`.
 On the other hand, if `Fn1` and `Fn2` both use `V2`,
 their actual execution order could be random.
 
-This design allows the engine to schedule *state-mutating* operations.
+This design allows the engine to schedule *state-mutating* operations in a manner
+that minimizes calls to allocate new memory.
 For example, the weight update function in DNN
 can now use the `+=` operator
 to update the weights in place,
@@ -132,7 +133,7 @@ To delete a variable, use the `PushDelete` API.
 ### Push and Wait
 
 *All `Push` APIs are asynchronous.* The API call returns immediately
-regardless of whether the pushed `Fn` is finished.
+regardless of whether the pushed `Fn` is finished or not.
 This allows the engine to start computing at the same time
 as the user thread is pushing functions.
 `Push` APIs are not thread-safe.
@@ -485,7 +486,7 @@ Put it in `ConvolutionOpProperty`, and pass it to the operator class during cons
 ```
 
 #### Register the Operator Property Class and the Parameter Class to MXNet
-Use following macros to register the parameter structure and the operator property class to MXNet:
+Use the following macros to register the parameter structure and the operator property class to MXNet:
 
 ```c++
     DMLC_REGISTER_PARAMETER(ConvolutionParam);
@@ -854,10 +855,3 @@ The gradient, which can be found in `src/operator/smooth_l1_unary-inl.h`, is sim
 ### Beyond Two Operands
 The new unified API is designed to fulfill the fundamentals of an operation. For operators with more than two inputs,
 more than one output, or that need more features, see the original [Operator API](http://mxnet.io/architecture/overview.html#operators-in-mxnet).
-
-
-## Next Steps
-
-* [Analogy to other DL systems](http://mxnet.io/architecture/analogy.html)
-* [How to read MXNet code](http://mxnet.io/architecture/read_code.html)
-* [Develop and hack MXNet](http://mxnet.io/how_to/develop_and_hack.html)
