@@ -5,7 +5,7 @@ the basic data structure for manipulating data in MXNet.
 And just using NDArray by itself, we can execute a wide range of mathematical operations.
 In fact, we could define and update a full neural network just by using `NDArray`.
 `NDArray` allows you to write programs for scientific computation
-in an imperative fashion using, making full use of the native control of any front end language.
+in an imperative fashion, making full use of the native control of any front-end language.
 So you might wonder, why don't we just use `NDArray` for all computation?
 
 MXNet provides the Symbol API, an interface for symbolic programming.
@@ -49,7 +49,7 @@ There are a few different ways to compose a `Symbol`.
 
 ### Basic Operators
 
-The following example builds a simple expression: `a+b`.
+The following example builds a simple expression: `a + b`.
 First, we create two placeholders with  `mx.sym.Variable`,
 giving them the names `a` and `b`.
 We then construct the desired symbol by using the operator `+`.
@@ -251,7 +251,7 @@ group.list_outputs()
 ## Relations to NDArray
 
 As you can see now, both `Symbol` and `NDArray` provide multi-dimensional array
-operations, such as `c=a+b` in MXNet. We briefly clarify the differences here.
+operations, such as `c = a + b` in MXNet. We briefly clarify the differences here.
 
 The `NDArray` provides an imperative programming alike interface, in which the
 computations are evaluated sentence by sentence. While `Symbol` is closer to
@@ -268,9 +268,9 @@ The pros for `NDArray`:
 
 The pros for `Symbol`:
 
-- Provides almost all functionalities of NDArray, such as +, \*, sin,
-  reshape etc.
-- Easy to save, load and visualization.
+- Provides almost all functionalities of NDArray, such as `+`, `*`, `sin`,
+  `reshape` etc.
+- Easy to save, load and visualize.
 - Easy for the backend to optimize the computation and memory usage.
 
 ## Symbol Manipulation
