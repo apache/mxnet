@@ -25,7 +25,6 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 
    python/mnist
    python/predict_image
-   vision/large_scale_classification
 ```
 
 ## Contributing Tutorials
