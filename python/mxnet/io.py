@@ -487,32 +487,27 @@ class NDArrayIter(DataIter):
     >>> labels = np.ones([10, 1])
     >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')
     >>> for batch in dataiter:
-    ...    print batch.data[0].asnumpy()
-    ...    batch.data[0].shape
+    ...     print batch.data[0].asnumpy()
+    ...     batch.data[0].shape
+    ...
     [[[ 36.  37.]
       [ 38.  39.]]
-
      [[ 16.  17.]
       [ 18.  19.]]
-
      [[ 12.  13.]
       [ 14.  15.]]]
     (3L, 2L, 2L)
     [[[ 32.  33.]
       [ 34.  35.]]
-
      [[  4.   5.]
       [  6.   7.]]
-
      [[ 24.  25.]
       [ 26.  27.]]]
     (3L, 2L, 2L)
     [[[  8.   9.]
       [ 10.  11.]]
-
      [[ 20.  21.]
       [ 22.  23.]]
-
      [[ 28.  29.]
       [ 30.  31.]]]
     (3L, 2L, 2L)
@@ -529,14 +524,14 @@ class NDArrayIter(DataIter):
     >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='pad')
     >>> batchidx = 0
     >>> for batch in dataiter:
-    ...    batchidx += 1
+    ...     batchidx += 1
     ...
     >>> batchidx  # Padding added after the examples read are over. So, 10/3+1 batches are created.
     4
     >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')
     >>> batchidx = 0
     >>> for batch in dataiter:
-    ...    batchidx += 1
+    ...     batchidx += 1
     ...
     >>> batchidx # Remaining examples are discarded. So, 10/3 batches are created.
     3
