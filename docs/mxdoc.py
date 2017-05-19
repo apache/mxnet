@@ -265,7 +265,6 @@ def add_buttons(app, docname, source):
 
 def setup(app):
     app.connect("builder-inited", build_mxnet)
-    # skipped to build c api doc
     app.connect("builder-inited", generate_doxygen)
     app.connect("builder-inited", build_scala_docs)
     # skipped to build r, it requires to install latex, which is kinds of too heavy
