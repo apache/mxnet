@@ -560,9 +560,9 @@ MXNET_REGISTER_IO_ITER(ImageRecordIter)
 .describe(R"code(Iterates on image RecordIO files
 
 Reads batches of images from .rec RecordIO files. One can use ``im2rec.py`` tool
-(in tools/) to pack raw image files into RecordIO files. To iterate over raw
-images directly use ``ImageIter`` instead (only in Python). This iterator is
-less flexible to customization but is fast and has lot of language bindings.
+(in tools/) to pack raw image files into RecordIO files. This iterator is less
+flexible to customization but is fast and has lot of language bindings. To
+iterate over raw images directly use ``ImageIter`` instead (in Python).
 
 Example::
 
@@ -573,12 +573,12 @@ Example::
     resize=256 # Resize the shorter edge to 256 before cropping.
     # You can specify more augmentation options. Use help(mx.io.ImageRecordIter) to see all the options.
     )
-  # Process batch of images using the data_iter.
-  batch = data_iter.next() # A batch.
+  # You can now use the data_iter to access batches of images.
+  batch = data_iter.next() # first batch.
   images = batch.data[0] # This will contain 4 (=batch_size) images each of 3x227x227.
-  # process the batch of images
+  # process the images
   ...
-  data_iter.reset() # To restart the iterator.
+  data_iter.reset() # To restart the iterator from the beginning.
 
 )code" ADD_FILELINE)
 .add_arguments(ImageRecParserParam::__FIELDS__())
