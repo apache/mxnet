@@ -68,6 +68,12 @@ embedded_seq = mx.symbol.Embedding(data=seq_input, \
                                    output_dim=embed_dim)
 ```
 ```eval_rst
+.. note:: By default, the backend engine treats the first dimension of each data and label variable in data
+          iterators as the batch size (i.e an `NT` layout). The example assumes a `TN` layout since
+          unrolling with `TNC` layout often leads to better performance. Refer to the API doc for
+          I/O to see how to override the layout in iterators.
+```
+```eval_rst
 .. note:: Remember to reset the cell when unrolling/stepping for a new sequence by calling `lstm_cell.reset()`.
 ```
 ```python
