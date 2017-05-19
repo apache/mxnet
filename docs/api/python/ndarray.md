@@ -29,10 +29,10 @@ A `NDArray` represents a multidimensional, fixed-size homogenous array.
 >>> print(y.asnumpy())
 [[ 4.  5.  6.]
  [ 7.  8.  9.]]
- >>> z = y.as_in_context(mx.gpu(0))
- >>> print(z)
- <NDArray 2x3 @gpu(0)>
- ```
+>>> z = y.as_in_context(mx.gpu(0))
+>>> print(z)
+<NDArray 2x3 @gpu(0)>
+```
 
 A detailed tutorial is available at
 [NDArray - Imperative tensor operations on CPU/GPU](http://mxnet.io/tutorials/basic/ndarray.html).

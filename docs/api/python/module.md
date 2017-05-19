@@ -1,7 +1,7 @@
 # Module API
 
 ```eval_rst
-    .. currentmodule:: mxnet.module
+.. currentmodule:: mxnet.module
 ```
 
 ## Overview
