@@ -173,24 +173,24 @@ After the cluster is setup, login to master and run the following command from $
 
 launch.py launches the command it is provided in all the machine in the cluster. List of machines in the cluster must be provided to launch.py using the `-H` switch. Here is description of options used for launch.py.
 
-Option | Description
------- | -----------
-n | specifies the number of worker jobs to run on each machine. We run 16 workers since we have 16 machines in the cluster.
-H | specifies the path to a file that has a list of hostnames of machines in the cluster. Since we created the cluster using the AWS deep learning CloudFormation template, the environment variable `$DEEPLEARNING_WORKERS_PATH` points to the required file.
+|Option | Description|
+|-------|------------|
+|n      | specifies the number of worker jobs to run on each machine. We run 16 workers since we have 16 machines in the cluster.|
+|H      | specifies the path to a file that has a list of hostnames of machines in the cluster. Since we created the cluster using the AWS deep learning CloudFormation template, the environment variable `$DEEPLEARNING_WORKERS_PATH` points to the required file.|
 
 train_imagenet.py trains the network provided by the `--network` option using the data provided by the `--data-train` and `--data-val` options. Here is description of the options used with train_imagenet.py.
 
-Option | Description
------- | -----------
-network | The network to train. Could be any of the network available in `${MXNET}/example/image-classification`. For this tutorial, we use Resnet.
-num-layers | Number of layers to use in the network. We use 152 layer Resnet.
-data-train | Directory containing the training images. We point to the EFS location (`~/data/train/`) where we stored the training images.
-data-val   | Directory containing the validation images. We point to the EFS location (`~/data/val`) where we stored the validation images.
-gpus       | Comma separated list of gpu indices to use for training on each machine. We use all 16 GPUs.
-batch-size | Batch size across all GPUs. This is equal to batch size per GPU * total number of GPUs. We use a batch size of 32 images per GPU. So, effective batch size is 32 * 16 * 16 = 8192.
-model      | Path prefix for the model file created by the training.
-num-epochs | Number of epochs to train.
-kv-store   | Key/Value store for parameter synchronization. We use distributed kv store since we are doing distributed training.
+|Option     | Description|
+|-----------|------------|
+|network    | The network to train. Could be any of the network available in `${MXNET}/example/image-classification`. For this tutorial, we use Resnet.|
+|num-layers | Number of layers to use in the network. We use 152 layer Resnet.|
+|data-train | Directory containing the training images. We point to the EFS location (`~/data/train/`) where we stored the training images.|
+|data-val   | Directory containing the validation images. We point to the EFS location (`~/data/val`) where we stored the validation images.|
+|gpus       | Comma separated list of gpu indices to use for training on each machine. We use all 16 GPUs.|
+|batch-size | Batch size across all GPUs. This is equal to batch size per GPU * total number of GPUs. We use a batch size of 32 images per GPU. So, effective batch size is 32 * 16 * 16 = 8192.|
+|model      | Path prefix for the model file created by the training.|
+|num-epochs | Number of epochs to train.|
+|kv-store   | Key/Value store for parameter synchronization. We use distributed kv store since we are doing distributed training.|
 
 After training is complete, trained models are available in the directory specified by the `--model` option. Models are saved in two parts: model-symbol.json for the network definition and model-n.params for the parameters saved after the n'th epoch.
 
@@ -201,24 +201,24 @@ This scalability test was run on sixteen P2.16xl instances with 256 GPUs in tota
 
 We fixed the batch size per GPU constant and doubled the number of GPUs for every subsequent test. Synchronized SGD (--kv-store dist_device_sync) was used. The CNNs used are located [here](https://github.com/dmlc/mxnet/tree/master/example/image-classification/symbols).
 
- || alexnet | inception-v3 | resnet-152
----|---------|--------------|-----------
- batch per GPU | 512 | 32 | 32
- model size (MB) | 203 | 95 | 240
+|                     | alexnet | inception-v3 | resnet-152|
+|---------------------|---------|--------------|-----------|
+|batch size per GPU   | 512     | 32           | 32        |
+|model size (MB)      | 203     | 95           | 240       |
 
  Number of images processed per second is shown in the following table:
 
- #GPUs | Alexnet | Inception-v3 | Resnet-152
- ------|---------|--------------|-----------
- 1     |457.07   |30.4          |20.8
- 2     |870.43   |59.61         |38.76
- 4     |1514.8   |117.9         |77.01
- 8     |2852.5   |233.39        |153.07
- 16    |4244.18  |447.61        |298.03
- 32    |7945.57  |882.57        |595.53
- 64    |15840.52 |1761.24       |1179.86
- 128   |31334.88 |3416.2        |2333.47
- 256   |61938.36 |6660.98       |4630.42
+ |#GPUs | Alexnet | Inception-v3 | Resnet-152|
+ |------|---------|--------------|-----------|
+ |1     |457.07   |30.4          |20.8       |
+ |2     |870.43   |59.61         |38.76      |
+ |4     |1514.8   |117.9         |77.01      |
+ |8     |2852.5   |233.39        |153.07     |
+ |16    |4244.18  |447.61        |298.03     |
+ |32    |7945.57  |882.57        |595.53     |
+ |64    |15840.52 |1761.24       |1179.86    |
+ |128   |31334.88 |3416.2        |2333.47    |
+ |256   |61938.36 |6660.98       |4630.42    |
 
  The following figure shows speedup against the number of GPUs used and compares it with ideal speedup.
 
