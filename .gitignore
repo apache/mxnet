@@ -51,6 +51,7 @@ tracker
 .vimrc
 .ycm_extra_conf.py
 .ycm_extra_conf.pyc
+.clang-format
 
 # Emacs
 .#*
@@ -62,9 +63,7 @@ __pycache__
 *.json
 *.d
 build
-cmake-build-debug
-cmake-build-release
-cmake-build
+cmake-build*
 data
 recommonmark
 deps
@@ -121,10 +120,6 @@ scala-package/*/*/target/
 .pydevproject
 CMakeFiles
 cmake_install.cmake
-dmlc-core
-ps-lite
-nnvm
-!src/nnvm
 lib
 
 # Visual Studio Code
@@ -149,7 +144,5 @@ bld
 ./tmp/*
 *.jar
 target
-cmake-build
-
 
 bin/im2rec

@@ -135,8 +135,12 @@ method print_summary(
         if($op eq 'Convolution')
         {
             my $num_filter = $node->{attr}{num_filter};
-            $node->{attr}{kernel} =~ /(\d+)\s*,\s*(\d+)/;
-            $cur_param = $pre_filter * $1 * $2 * $num_filter + $num_filter;
+            $cur_param = $pre_filter * $num_filter;
+            while($node->{attr}{kernel} =~ /(\d+)/g)
+            {
+                $cur_param *= $1;
+            }
+            $cur_param += $num_filter;
         }
         elsif($op eq 'FullyConnected')
         {
@@ -304,10 +308,10 @@ method plot_network(
         }
         elsif($op eq 'Convolution')
         {
-            my ($k0, $k1) = $node->{attr}{kernel}       =~ /(\d+)\s*,\s*(\d+)/;
-            my ($stride)  = ($node->{attr}{stride}//'') =~ /(\d+)\s*,\s*(\d+)/;
-            $stride //= 1;
-            $label = "Convolution\n${k0}x$k1/$stride, $node->{attr}{num_filter}";
+            my @k = $node->{attr}{kernel} =~ /(\d+)/g;
+            my @stride = ($node->{attr}{stride}//'') =~ /(\d+)/g;
+            $stride[0] //= 1;
+            $label = "Convolution\n".join('x',@k).'/'.join('x',@stride).", $node->{attr}{num_filter}";
             $attr{fillcolor} = $cm[1];
         }
         elsif($op eq 'FullyConnected')
@@ -326,10 +330,10 @@ method plot_network(
         }
         elsif($op eq 'Pooling')
         {
-            my ($k0, $k1) = $node->{attr}{kernel}       =~ /(\d+)\s*,\s*(\d+)/;
-            my ($stride)  = ($node->{attr}{stride}//'') =~ /(\d+)\s*,\s*(\d+)/;
-            $stride //= 1;
-            $label = "Pooling\n$node->{attr}{pool_type}, ${k0}x$k1/$stride";
+            my @k = $node->{attr}{kernel} =~ /(\d+)/g;
+            my @stride = ($node->{attr}{stride}//'') =~ /(\d+)/g;
+            $stride[0] //= 1;
+            $label = "Pooling\n$node->{attr}{pool_type}, ".join('x',@k).'/'.join('x',@stride);
             $attr{fillcolor} = $cm[4];
         }
         elsif($op eq 'Concat' or $op eq 'Flatten' or $op eq 'Reshape')

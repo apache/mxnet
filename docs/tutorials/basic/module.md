@@ -14,7 +14,7 @@ high-level and intermediate-level interface for executing predefined networks.
 ## Preliminary
 
 In this tutorial we will demonstrate `module` usage by training a
-[Multilayer Perception](https://en.wikipedia.org/wiki/Multilayer_perceptron)(MLP)
+[Multilayer Perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron)(MLP)
 on the [UCI letter recognition](https://archive.ics.uci.edu/ml/datasets letter+recognition) dataset.
 
 The following code downloads the dataset and creates an 80:20 train:test
@@ -127,7 +127,7 @@ mod.set_params(arg_params, aux_params)
 Or if we just want to resume training from a saved checkpoint, instead of
 calling `set_params()`, we can directly call `fit()`, passing the loaded
 parameters, so that `fit()` knows to start from those parameters instead of
-initializing from scratch. We also set the `begin_epoch` parameter so that
+initializing randomly from scratch. We also set the `begin_epoch` parameter so that
 `fit()` knows we are resuming from a previously saved epoch.
 
 ```python
@@ -145,7 +145,6 @@ We already saw how to use module for basic training and inference. Now we are
 going to see a more flexiable usage of module. Instead of calling
 the high-level `fit` and `predict` APIs, one can write a training program with the intermediate-level APIs
 `forward` and `backward`.
-
 
 ```python
 # create module

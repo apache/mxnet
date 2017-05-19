@@ -47,8 +47,11 @@ class Symbol(SymbolBase):
     def __repr__(self):
         """Get a string representation of the symbol."""
         name = self.name
-        return '<%s %s>' % (self.__class__.__name__,
-                            'Grouped' if name is None else name)
+        if name is None:
+            name = ', '.join([i.name for i in self])
+            return '<%s group [%s]>' % (self.__class__.__name__, name)
+        else:
+            return '<%s %s>' % (self.__class__.__name__, name)
 
     def __iter__(self):
         """Returns a generator object of symbol.
@@ -1432,6 +1435,24 @@ class Symbol(SymbolBase):
         """
         return self.bind(ctx, kwargs).forward()
 
+    def reshape(self, shape):
+        """Shorthand for mxnet.sym.reshape.
+
+        Parameters
+        ----------
+        shape : tuple of int
+            The new shape should not change the array size, namely
+            ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
+            One shape dimension can be -1. In this case, the value is inferred
+            from the length of the array and remaining dimensions.
+
+
+        Returns
+        -------
+        Symbol
+            A reshaped symbol.
+        """
+        return reshape(self, shape=shape)
 
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None, **kwargs):
@@ -1485,7 +1506,9 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, ini
     if dtype is not None:
         attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
     if init is not None:
-        attr['__init__'] = init.dumps()
+        if not isinstance(init, string_types):
+            init = init.dumps()
+        attr['__init__'] = init
     for k, v in kwargs.items():
         if k.startswith('__') and k.endswith('__'):
             attr[k] = str(v)
