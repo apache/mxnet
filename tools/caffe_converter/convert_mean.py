@@ -1,6 +1,8 @@
+"""Convert caffe mean
+"""
+import argparse
 import mxnet as mx
 import numpy as np
-import argparse
 import caffe_parser
 
 def convert_mean(binaryproto_fname, output=None):
@@ -27,7 +29,7 @@ def convert_mean(binaryproto_fname, output=None):
         mean_blob.channels, mean_blob.height, mean_blob.width
     )
     # swap channels from Caffe BGR to RGB
-    img_mean_np[[0,2],:,:] = img_mean_np[[2,0],:,:]
+    img_mean_np[[0, 2], :, :] = img_mean_np[[2, 0], :, :]
     nd = mx.nd.array(img_mean_np)
     if output is not None:
         mx.nd.save(output, {"mean_image": nd})

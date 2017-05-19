@@ -106,7 +106,7 @@ class AutogradRuntime {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local bool is_train_;
 #else
-  static MX_TREAD_LOCAL bool is_train_;
+  static MX_THREAD_LOCAL bool is_train_;
 #endif
   /*! \brief node count used for naming */
   std::atomic<uint64_t> node_count_{0};

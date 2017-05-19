@@ -354,6 +354,12 @@ NNVM_REGISTER_OP(dot)
 
     dot(x,y)[i,j,a,b] = sum(x[i,j,:]*y[:,a,b])
 
+  Example::
+
+    x = reshape([0,1,2,3,4,5,6,7], shape=(2,2,2))
+    y = reshape([7,6,5,4,3,2,1,0], shape=(2,2,2))
+    dot(x,y)[0,0,1,1] = 0
+    sum(x[0,0,:]*y[:,1,1]) = 0
 )doc" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)

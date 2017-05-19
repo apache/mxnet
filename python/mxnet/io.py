@@ -141,12 +141,23 @@ class DataBatch(object):
             label_shapes)
 
 class DataIter(object):
-    """The base class of a data iterator.
+    """The base class for an MXNet data iterator.
+
+    All I/O in MXNet is handled by specializations of this class. Data iterators
+    in MXNet are similar to standard-iterators in Python. On each call to `next`
+    they return a `DataBatch` which represents the next batch of data. When
+    there is no more data to return, it raises a `StopIteration` exception.
 
     Parameters
     ----------
     batch_size : int, optional
-        The batch size, namely the number of examples in a batch.
+        The batch size, namely the number of items in the batch.
+
+    See Also
+    --------
+    NDArrayIter : Data-iterator for MXNet NDArray or numpy-ndarray objects.
+    CSVIter : Data-iterator for csv data.
+    ImageIter : Data-iterator for images.
     """
     def __init__(self, batch_size=0):
         self.batch_size = batch_size

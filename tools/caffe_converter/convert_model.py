@@ -1,9 +1,11 @@
+"""Convert caffe model
+"""
 from __future__ import print_function
-import mxnet as mx
-import numpy as np
 import argparse
 import sys
 import caffe_parser
+import mxnet as mx
+import numpy as np
 from convert_symbol import convert_symbol
 
 def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
@@ -32,7 +34,7 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
          Input dimension
     """
     sym, input_dim = convert_symbol(prototxt_fname)
-    arg_shapes, output_shapes, aux_shapes = sym.infer_shape(data=tuple(input_dim))
+    arg_shapes, _, aux_shapes = sym.infer_shape(data=tuple(input_dim))
     arg_names = sym.list_arguments()
     aux_names = sym.list_auxiliary_states()
     arg_shape_dic = dict(zip(arg_names, arg_shapes))
@@ -46,8 +48,8 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
     layers_proto = caffe_parser.get_layers(caffe_parser.read_prototxt(prototxt_fname))
 
     for layer_name, layer_type, layer_blobs in layer_iter:
-        if layer_type == 'Convolution' or layer_type == 'InnerProduct' or layer_type == 4 or layer_type == 14 \
-                or layer_type == 'PReLU':
+        if layer_type == 'Convolution' or layer_type == 'InnerProduct' \
+           or layer_type == 4 or layer_type == 14 or layer_type == 'PReLU':
             if layer_type == 'PReLU':
                 assert (len(layer_blobs) == 1)
                 wmat = layer_blobs[0].data
@@ -60,7 +62,8 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
                 if len(layer_blobs[0].shape.dim) > 0:
                     wmat_dim = layer_blobs[0].shape.dim
                 else:
-                    wmat_dim = [layer_blobs[0].num, layer_blobs[0].channels, layer_blobs[0].height, layer_blobs[0].width]
+                    wmat_dim = [layer_blobs[0].num, layer_blobs[0].channels,
+                                layer_blobs[0].height, layer_blobs[0].width]
             else:
                 wmat_dim = list(layer_blobs[0].shape)
             wmat = np.array(layer_blobs[0].data).reshape(wmat_dim)
@@ -72,7 +75,8 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
                     wmat[:, [0, 2], :, :] = wmat[:, [2, 0], :, :]
 
             assert(wmat.flags['C_CONTIGUOUS'] is True)
-            sys.stdout.write('converting layer {0}, wmat shape = {1}'.format(layer_name, wmat.shape))
+            sys.stdout.write('converting layer {0}, wmat shape = {1}'.format(
+                layer_name, wmat.shape))
             if len(layer_blobs) == 2:
                 bias = np.array(layer_blobs[1].data)
                 bias = bias.reshape((bias.shape[0], 1))
@@ -116,14 +120,15 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
 
             assert gamma.flags['C_CONTIGUOUS'] is True
             assert beta.flags['C_CONTIGUOUS'] is True
-            print ('converting scale layer, beta shape = {}, gamma shape = {}'.format(beta.shape, gamma.shape))
+            print('converting scale layer, beta shape = {}, gamma shape = {}'.format(
+                beta.shape, gamma.shape))
         elif layer_type == 'BatchNorm':
             bn_name = layer_name
             mean = layer_blobs[0].data
             var = layer_blobs[1].data
             rescale_factor = layer_blobs[2].data
             if rescale_factor != 0:
-            	rescale_factor = 1 / rescale_factor
+                rescale_factor = 1 / rescale_factor
             mean_name = '{}_moving_mean'.format(bn_name)
             var_name = '{}_moving_var'.format(bn_name)
             mean = mean.reshape(aux_shape_dic[mean_name])
@@ -132,21 +137,22 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
             aux_params[var_name] = mx.nd.zeros(var.shape)
             # Get the original epsilon
             for idx, layer in enumerate(layers_proto):
-            	if layer.name == bn_name:
-            		bn_index = idx
+                if layer.name == bn_name:
+                    bn_index = idx
             eps_caffe = layers_proto[bn_index].batch_norm_param.eps
             # Compensate for the epsilon shift performed in convert_symbol
-            eps_symbol = float( sym.attr_dict()[bn_name + '_moving_mean']['eps'] )
+            eps_symbol = float(sym.attr_dict()[bn_name + '_moving_mean']['eps'])
             eps_correction = eps_caffe - eps_symbol
             # Fill parameters
             aux_params[mean_name][:] = mean * rescale_factor
             aux_params[var_name][:] = var * rescale_factor + eps_correction
             assert var.flags['C_CONTIGUOUS'] is True
             assert mean.flags['C_CONTIGUOUS'] is True
-            print ('converting batchnorm layer, mean shape = {}, var shape = {}'.format(mean.shape, var.shape))
+            print('converting batchnorm layer, mean shape = {}, var shape = {}'.format(
+                mean.shape, var.shape))
         else:
             assert len(layer_blobs) == 0
-            print ('\tskipping layer {} of type {}'.format(layer_name, layer_type))
+            print('\tskipping layer {} of type {}'.format(layer_name, layer_type))
 
     if output_prefix is not None:
         model = mx.mod.Module(symbol=sym, label_names=['prob_label', ])
@@ -157,8 +163,8 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
     return sym, arg_params, aux_params, input_dim
 
 def main():
-    parser = argparse.ArgumentParser(description='Caffe prototxt to mxnet model parameter converter.\
-                    Note that only basic functions are implemented. You are welcomed to contribute to this file.')
+    parser = argparse.ArgumentParser(
+        description='Caffe prototxt to mxnet model parameter converter.')
     parser.add_argument('prototxt', help='The prototxt filename')
     parser.add_argument('caffemodel', help='The binary caffemodel filename')
     parser.add_argument('save_model_name', help='The name of the output model prefix')

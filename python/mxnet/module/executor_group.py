@@ -553,9 +553,9 @@ class DataParallelExecutorGroup(object):
                 else:
                     labels_slice.append(label)
 
-            labels = OrderedDict(zip(self.label_names, labels_slice))
+            labels_ = OrderedDict(zip(self.label_names, labels_slice))
             preds = OrderedDict(zip(self.output_names, texec.outputs))
-            eval_metric.update_dict(labels, preds)
+            eval_metric.update_dict(labels_, preds)
 
     def _bind_ith_exec(self, i, data_shapes, label_shapes, shared_group):
         """Internal utility function to bind the i-th executor.

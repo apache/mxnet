@@ -45,8 +45,8 @@ Contents
 --------
 * [Documentation and Tutorials](http://mxnet.io/)
 * [Design Notes](http://mxnet.io/architecture/index.html)
-* [Code Examples](example)
-* [Installation](http://mxnet.io/get_started/setup.html)
+* [Code Examples](https://github.com/dmlc/mxnet/tree/master/example)
+* [Installation](http://mxnet.io/get_started/install.html)
 * [Pretrained Models](https://github.com/dmlc/mxnet-model-gallery)
 * [Contribute to MXNet](http://mxnet.io/community/contribute.html)
 * [Frequent Asked Questions](http://mxnet.io/how_to/faq.html)
@@ -58,7 +58,7 @@ Features
 * Mix and match imperative and symbolic programming to maximize flexibility and efficiency
 * Lightweight, memory efficient and portable to smart devices
 * Scales up to multi GPUs and distributed setting with auto parallelism
-* Support for Python, R, C++ and Julia
+* Support for Python, R, Scala, C++ and Julia
 * Cloud-friendly and directly compatible with S3, HDFS, and Azure
 
 Ask Questions
