@@ -24,7 +24,7 @@ Symbol mlp(const vector<int> &layers) {
       weights[i],
       biases[i],
       layers[i]);
-    outputs[i] = i == layers.size()-1 ? fc : Activation(fc, ActivationActType::relu);
+    outputs[i] = i == layers.size()-1 ? fc : Activation(fc, ActivationActType::kRelu);
   }
 
   return SoftmaxOutput(outputs.back(), label);

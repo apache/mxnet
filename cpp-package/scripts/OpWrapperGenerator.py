@@ -15,6 +15,9 @@ import filecmp
 import shutil
 import codecs
 
+def gen_enum_value(value):
+    return 'k' + value[0].upper() + value[1:]
+
 class EnumType:
     name = ''
     enumValues = []
@@ -27,6 +30,8 @@ class EnumType:
             self.enumValues = typeString[typeString.find('{') + 1:typeString.find('}')].split(',')
             for i in range(0, len(self.enumValues)):
                 self.enumValues[i] = self.enumValues[i].strip().strip("'")
+                # make enum classes follow cpp style convention (#6309)
+                self.enumValues[i] = gen_enum_value(self.enumValues[i])
         else:
             logging.warn("trying to parse none-enum type as enum: %s" % typeString)
     def GetDefinitionString(self, indent = 0):
@@ -40,7 +45,7 @@ class EnumType:
         ret = ret + "};\n"
         return ret
     def GetDefaultValueString(self, value = ''):
-        return self.name + "::" + value
+        return self.name + "::" + gen_enum_value(value)
     def GetEnumStringArray(self, indent = 0):
         indentStr = ' ' * indent
         ret = indentStr + 'static const char *%sValues[] = {\n' % self.name
