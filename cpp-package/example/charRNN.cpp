@@ -56,14 +56,14 @@ LSTMState LSTM(int num_hidden, const Symbol& indata, const LSTMState& prev_state
       num_hidden * 4);
   auto gates = i2h + h2h;
   auto slice_gates = SliceChannel(prefix + "_slice", gates, 4);
-  auto in_gate = Activation(slice_gates[0], ActivationActType::sigmoid);
-  auto in_transform = Activation(slice_gates[1], ActivationActType::tanh);
-  auto forget_gate = Activation(slice_gates[2], ActivationActType::sigmoid);
-  auto out_gate = Activation(slice_gates[3], ActivationActType::sigmoid);
+  auto in_gate = Activation(slice_gates[0], ActivationActType::kSigmoid);
+  auto in_transform = Activation(slice_gates[1], ActivationActType::kTanh);
+  auto forget_gate = Activation(slice_gates[2], ActivationActType::kSigmoid);
+  auto out_gate = Activation(slice_gates[3], ActivationActType::kSigmoid);
 
   LSTMState state;
   state.C = (forget_gate * prev_state.C) + (in_gate * in_transform);
-  state.h = out_gate * Activation(state.C, ActivationActType::tanh);
+  state.h = out_gate * Activation(state.C, ActivationActType::kTanh);
   return state;
 }
 
@@ -150,7 +150,7 @@ Symbol LSTMWithBuiltInRNNOp(int num_lstm_layer, int sequence_length, int input_d
   auto rnn_c_init = Symbol::Variable("LSTM_init_c");
   auto rnn_params = Symbol::Variable("LSTM_parameters");  // See explanations near RNNXavier class
   auto rnn = RNN(embed, rnn_params, rnn_h_init, rnn_c_init, num_hidden, num_lstm_layer,
-      RNNMode::lstm, false, dropout, !isTrain);
+      RNNMode::kLstm, false, dropout, !isTrain);
   auto hidden = Reshape(rnn[0], Shape(), false, Shape(-1, num_hidden), false);
 
   auto cls_weight = Symbol::Variable("cls_weight");

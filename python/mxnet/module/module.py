@@ -18,7 +18,6 @@ from ..initializer import Uniform, InitDesc
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
-
 class Module(BaseModule):
     """Module is a basic module that wrap a `Symbol`. It is functionally the same
     as the `FeedForward` model, except under the module API.
@@ -431,7 +430,7 @@ class Module(BaseModule):
 
     def init_optimizer(self, kvstore='local', optimizer='sgd',
                        optimizer_params=(('learning_rate', 0.01),), force_init=False):
-        """Install and initialize optimizers.
+        """Installs and initializes optimizers.
 
         Parameters
         ----------
@@ -510,7 +509,7 @@ class Module(BaseModule):
             self._preload_opt_states = None
 
     def borrow_optimizer(self, shared_module):
-        """Borrow optimizer from a shared module. Used in bucketing, where exactly the same
+        """Borrows optimizer from a shared module. Used in bucketing, where exactly the same
         optimizer (esp. kvstore) is used.
 
         Parameters
@@ -527,6 +526,10 @@ class Module(BaseModule):
     def forward(self, data_batch, is_train=None):
         """Forward computation.
 
+        See Also
+        ----------
+        :meth:`BaseModule.forward`.
+
         Parameters
         ----------
         data_batch : DataBatch
@@ -540,6 +543,10 @@ class Module(BaseModule):
     def backward(self, out_grads=None):
         """Backward computation.
 
+        See Also
+        ----------
+        :meth:`BaseModule.backward`.
+
         Parameters
         ----------
         out_grads : NDArray or list of NDArray, optional
@@ -551,8 +558,12 @@ class Module(BaseModule):
         self._exec_group.backward(out_grads=out_grads)
 
     def update(self):
-        """Update parameters according to the installed optimizer and the gradients computed
+        """Updates parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch.
+
+        See Also
+        ----------
+        :meth:`BaseModule.update`.
         """
         assert self.binded and self.params_initialized and self.optimizer_initialized
 
@@ -569,7 +580,7 @@ class Module(BaseModule):
                            kvstore=self._kvstore)
 
     def get_outputs(self, merge_multi_context=True):
-        """Get outputs of the previous forward computation.
+        """Gets outputs of the previous forward computation.
 
         If ``merge_multi_context`` is ``True``, it is like ``[out1, out2]``. Otherwise, it
         is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
@@ -593,7 +604,7 @@ class Module(BaseModule):
         return self._exec_group.get_outputs(merge_multi_context=merge_multi_context)
 
     def get_input_grads(self, merge_multi_context=True):
-        """Get the gradients with respect to the inputs of the module.
+        """Gets the gradients with respect to the inputs of the module.
 
         If ``merge_multi_context`` is ``True``, it is like ``[grad1, grad2]``. Otherwise, it
         is like ``[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]``. All the output
@@ -616,7 +627,7 @@ class Module(BaseModule):
         return self._exec_group.get_input_grads(merge_multi_context=merge_multi_context)
 
     def get_states(self, merge_multi_context=True):
-        """Get states from all devices
+        """Gets states from all devices.
 
         If `merge_multi_context` is ``True``, it is like ``[out1, out2]``. Otherwise, it
         is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
@@ -639,7 +650,7 @@ class Module(BaseModule):
         return self._exec_group.get_states(merge_multi_context=merge_multi_context)
 
     def set_states(self, states=None, value=None):
-        """Set value for states. Only one of states & value can be specified.
+        """Sets value for states. Only one of the states & value can be specified.
 
         Parameters
         ----------
@@ -653,7 +664,11 @@ class Module(BaseModule):
         self._exec_group.set_states(states, value)
 
     def update_metric(self, eval_metric, labels):
-        """Evaluate and accumulate evaluation metric on outputs of the last forward computation.
+        """Evaluates and accumulates evaluation metric on outputs of the last forward computation.
+
+        See Also
+        ----------
+        :meth:`BaseModule.update_metric`.
 
         Parameters
         ----------
@@ -664,7 +679,7 @@ class Module(BaseModule):
         self._exec_group.update_metric(eval_metric, labels)
 
     def _sync_params_from_devices(self):
-        """Synchronize parameters from devices to CPU. This function should be called after
+        """Synchronizes parameters from devices to CPU. This function should be called after
         calling `update` that updates the parameters on the devices, before one can read the
         latest parameters from ``self._arg_params`` and ``self._aux_params``.
         """
@@ -672,7 +687,7 @@ class Module(BaseModule):
         self._params_dirty = False
 
     def save_optimizer_states(self, fname):
-        """Save optimizer (updater) state to file
+        """Saves optimizer (updater) state to a file.
 
         Parameters
         ----------
@@ -688,7 +703,7 @@ class Module(BaseModule):
                 fout.write(self._updater.get_states())
 
     def load_optimizer_states(self, fname):
-        """Load optimizer (updater) state from file
+        """Loads optimizer (updater) state from a file.
 
         Parameters
         ----------
@@ -703,6 +718,6 @@ class Module(BaseModule):
             self._updater.set_states(open(fname, 'rb').read())
 
     def install_monitor(self, mon):
-        """ Install monitor on all executors """
+        """ Installs monitor on all executors. """
         assert self.binded
         self._exec_group.install_monitor(mon)

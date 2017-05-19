@@ -31,6 +31,8 @@ Symbol mlp(const vector<int> &layers) {
 }
 
 int main(int argc, char** argv) {
+  const float MIN_SCORE = stof(argv[1]);
+
   const int image_size = 28;
   const vector<int> layers{128, 64, 10};
   const int batch_size = 100;
@@ -72,6 +74,7 @@ int main(int argc, char** argv) {
   Optimizer* opt = OptimizerRegistry::Find("sgd");
   opt->SetParam("rescale_grad", 1.0/batch_size);
 
+  float score = 0;
   // Start training
   for (int iter = 0; iter < max_epoch; ++iter) {
     int samples = 0;
@@ -114,8 +117,9 @@ int main(int argc, char** argv) {
     }
     float duration = chrono::duration_cast<chrono::milliseconds>(toc - tic).count() / 1000.0;
     LG << "Epoch: " << iter << " " << samples/duration << " samples/sec Accuracy: " << acc.Get();
+    score = acc.Get();
   }
 
   MXNotifyShutdown();
-  return 0;
+  return score > MIN_SCORE ? 0 : 1;
 }

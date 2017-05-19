@@ -32,10 +32,6 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How do I set up MXNet on the AWS Cloud using Amazon EC2 and Amazon S3?](http://mxnet.io/how_to/cloud.html)
 
-* [How do I work with MXNet within a Matlab environment?](https://github.com/dmlc/mxnet/tree/master/matlab)
-
-* [Can I run MXNet in a browser using JavaScript?](https://github.com/dmlc/mxnet.js/)
-
 * [How do I run MXNet on a Raspberry Pi for computer vision?](http://mxnet.io/tutorials/embedded/wine_detector.html)
 
 ## Extend and Contribute to MXNet
