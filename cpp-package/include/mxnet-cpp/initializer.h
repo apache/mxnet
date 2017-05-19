@@ -75,25 +75,33 @@ class Initializer {
   virtual void InitDefault(NDArray* arr) {}
 };
 
+class Zero : public Initializer {
+ public:
+  Zero() {}
+ protected:
+  void InitWeight(NDArray *arr) override {
+    InitZero(arr);
+  }
+};
+
+class One : public Initializer {
+ public:
+  One() {}
+ protected:
+  void InitWeight(NDArray *arr) override {
+    InitOne(arr);
+  }
+};
+
 class Constant : public Initializer {
  public:
   explicit Constant(float value)
     : value(value) {}
-  void operator()(const std::string &name, NDArray *arr) override {
-    (*arr) = value;
-  }
  protected:
   float value;
-};
-
-class Zero : public Constant {
- public:
-  Zero(): Constant(0.0f) {}
-};
-
-class One : public Constant {
- public:
-  One(): Constant(1.0f) {}
+  void InitWeight(NDArray *arr) override {
+    (*arr) = value;
+  }
 };
 
 class Uniform : public Initializer {
@@ -102,28 +110,29 @@ class Uniform : public Initializer {
     : Uniform(-scale, scale) {}
   Uniform(float begin, float end)
     : begin(begin), end(end) {}
-  void operator()(const std::string &name, NDArray *arr) override {
-    NDArray::SampleUniform(begin, end, arr);
-  }
  protected:
   float begin, end;
+  void InitWeight(NDArray *arr) override {
+    NDArray::SampleUniform(begin, end, arr);
+  }
 };
 
 class Normal : public Initializer {
  public:
   Normal(float mu, float sigma)
     : mu(mu), sigma(sigma) {}
-  void operator()(const std::string &name, NDArray *arr) override {
-    NDArray::SampleGaussian(mu, sigma, arr);
-  }
  protected:
   float mu, sigma;
+  void InitWeight(NDArray *arr) override {
+    NDArray::SampleGaussian(mu, sigma, arr);
+  }
 };
 
 class Bilinear : public Initializer {
  public:
   Bilinear() {}
-  void operator()(const std::string &name, NDArray *arr) override {
+ protected:
+  void InitWeight(NDArray *arr) override {
     InitBilinear(arr);
   }
 };
@@ -144,7 +153,8 @@ class Xavier : public Initializer {
          float magnitude = 3)
       : rand_type(rand_type), factor_type(factor_type), magnitude(magnitude) {}
 
-  void operator()(const std::string &name, NDArray* arr) override {
+ protected:
+  void InitWeight(NDArray* arr) override {
     Shape shape(arr->GetShape());
     float hw_scale = 1.0f;
     if (shape.ndim() > 2) {
