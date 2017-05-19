@@ -9,17 +9,13 @@ for improved clarity. These code samples will run as-is as long as MXNet is firs
 >>> import mxnet as mx
 ```
 
-### For Jupyter Notebook Users:
-
 ```eval_rst
 
-.. note:: A convenient way to execute examples is the ``%doctest_mode`` mode of
-    Jupyter notebook, which allows for pasting of multi-line examples contains
-    ``>>>`` and preserves indentation. Run ``%doctest_mode?`` in Jupyter notebook
-    for more details.
-
+.. note jupyter notebook users:: The code examples in API docs are written in 
+    a python-console format. These examples can be executed in Jupyter notebook
+    by using %doctest_mode. Simply copy and paste the example directly into 
+    Jupyter notebook without having to worry about removing the >>> manually.
 ```
-
 ## Table of contents
 
 ```eval_rst
