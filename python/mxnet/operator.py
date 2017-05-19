@@ -133,6 +133,11 @@ class NumpyOp(PythonOp):
     it cannot be used for multi-gpu training.
     """
     def __init__(self, need_top_grad=True):
+        self._cb_forward = None
+        self._cb_backward = None
+        self._cb_infer = None
+        self._cb_list_out = None
+        self._cb_list_in = None
         super(NumpyOp, self).__init__(need_top_grad)
 
     def get_symbol(self, *args, **kwargs):
@@ -206,12 +211,18 @@ class NumpyOp(PythonOp):
             ret = c_array(c_char_p, ret)
             out[0] = cast(ret, POINTER(POINTER(c_char)))
 
+        # Maintain references to the callbacks
+        self._cb_forward = fb_functype(forward_entry)
+        self._cb_backward = fb_functype(backward_entry)
+        self._cb_infer = infer_functype(infer_shape_entry)
+        self._cb_list_out = list_functype(list_outputs_entry)
+        self._cb_list_in = list_functype(list_arguments_entry)
 
-        self.info_ = NumpyOpInfo(fb_functype(forward_entry),
-                                 fb_functype(backward_entry),
-                                 infer_functype(infer_shape_entry),
-                                 list_functype(list_outputs_entry),
-                                 list_functype(list_arguments_entry),
+        self.info_ = NumpyOpInfo(self._cb_forward,
+                                 self._cb_backward,
+                                 self._cb_infer,
+                                 self._cb_list_out,
+                                 self._cb_list_in,
                                  None, None, None, None, None)
         cb_ptr = format(cast(pointer(self.info_), c_void_p).value, 'x')
         # pylint: disable=E1101
