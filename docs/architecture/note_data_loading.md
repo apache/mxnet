@@ -29,26 +29,26 @@ Our analysis will motivate several requirements that an effective IO system shou
 ## Design Insight
 To design an IO system, we must address two kinds of tasks:
 data preparation and data loading.
-Data preparation usually influences the time consuming offline,
-while data loading influences the online performance.
+Data preparation is usually performed offline,
+whereas data loading influences the online performance.
 In this section, we will introduce our insight of IO design involving the two phases.
 
 ### Data Preparation
 Data preparation describes the process of packing data
 into a desired format for later processing.
-When large datasets like ImageNet, this process can be time-consuming.
+When working with large datasets like ImageNet, this process can be time-consuming.
 In these cases, there are several heuristics we ought to follow:
 
 - Pack the dataset into small numbers of files. A dataset may contain millions of data instances. Packed data distributes easily from machine to machine.
-- Do the packing once. We don't want to repack data every time running settings, like the number of machines, are changed.
+- Do the packing once. We don't want to repack data every time run-time settings, like the number of machines, are changed.
 - Process the packing in parallel to save time.
-- Be able to access arbitrary parts of the data easily. This is crucial for distributed machine learning when data parallelism is introduced. Things may get tricky when the data has been packed into several physical data files. The desired behavior could be: the packed data can be logically separated into arbitrary numbers of partitions, no matter how many physical data files there are. For example, if we pack 1000 images into 4 physical files, then each contains 250 images. If we then use 10 machines to train a DNN, we should be able to load approximately 100 images per machine. Some machines may need images from different physical files.
+- Be able to access arbitrary parts of the data easily. This is crucial for distributed machine learning when data parallelism is introduced. Things may get tricky when the data has been packed into several physical data files. The desired behavior could be: the packed data can be logically separated into arbitrary numbers of partitions, no matter how many physical data files there are. For example, if we pack 1000 images into 4 physical files, then each file contains 250 images. If we then use 10 machines to train a DNN, we should be able to load approximately 100 images per machine. Some machines may need images from different physical files.
 
 ### Data Loading
 The next step to consider is how to load the packed data into RAM.
 Our goal is to load the data as quickly as possible.
 There are several heuristics we try to follow:
-- **Read continuously:** We can read faster if from consecutive locations on disk.
+- **Read continuously:** We can read faster when reading from contiguous locations on disk.
 - **Reduce the bytes to be loaded:** We can achieve this by storing data in a compact way, e.g. saving images in JPEG format.
 - **Load and train in different threads:** This avoids computational bottlenecks while loading data.
 - **Save RAM:** Judiciously decide whether to load entire files into RAM.
@@ -78,7 +78,7 @@ In lrecord,
 After we pack the data, each file contains multiple records.
 Then, loading can be continuous.
 This avoids the low performance that can result
-from reading random locations from disk.
+from reading random locations on disk.
 
 One advantage of storing data via records
 is that each record can vary in length.
@@ -98,7 +98,7 @@ This significantly reduces the cost owing to reading from disk.
 Here's an example of binary recordIO:
 ![baserecordio](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/io/ImageRecordIO.jpg)
 We first resize the image into 256 * 256,
-then compress into JPEG forma.
+then compress into JPEG format.
 After that, we save a header that indicates the index and label
 for that image to be used when constructing the *Data* field for that record.
 We then pack several images together into a file.
@@ -106,7 +106,7 @@ We then pack several images together into a file.
 ### Access Arbitrary Parts Of Data
 
 One desirable property for a data loader might be:
-Te packed data can be logically sliced into arbitrary numbers of partitions,
+The packed data can be logically sliced into an arbitrary number of partitions,
 no matter how many physical packed data files there are.
 Since binary recordIO can easily locate
 the start and end of a record using the Magic Number,
@@ -115,7 +115,7 @@ functionality provided by dmlc-core.
 
 InputSplit takes the following parameters:
 - FileSystem *filesys*: dmlc-core wrapper around the IO operations for different file systems, like hdfs, s3, local. User shouldn't need to worry about the difference between file systems anymore.
-- Char *uri*: The uri of files. Note that it could be a list of files because we may pack the data into several physical parts. File URIs are separated by ';'.
+- Char *uri*: The URI of files. Note that it could be a list of files because we may pack the data into several physical parts. File URIs are separated by ';'.
 - Unsigned *nsplit*: The number of logical splits. *nsplit* could be different from the number of physical files.
 - Unsigned *rank*: Which split to load in this process.
 
@@ -135,8 +135,8 @@ The splitting process is demonstrated below:
 By conducting the above operations,
 we now identify the records belong to each part,
 and the physical data files needed by each logical part.
-InputSplit greatly reduce the difficulty of data parallelism,
-where each process only read part of the data.
+InputSplit greatly simplifies data parallelism,
+where each process only reads part of the data.
 
 Since our partitioning scheme does not depend on the number of physical data files,
 we can process a huge dataset like ImageNet_22K in parallel fashion as illustrated below.
@@ -152,19 +152,19 @@ with the speed of training or evaluation,
 IO can bottleneck the speed of the whole system.
 In this section, we will introduce a few tricks
 to achieve greater efficiency when loading
-and pre-processing data packed in binary recordIO format.
+and preprocessing data packed in binary recordIO format.
 When applied to the ImageNet dataset, our approach achieves
-the IO speed of **3000** images/s **with normal HDD**.
+the IO speed of **3000** images/sec **with a normal HDD**.
 
 ### Loading and preprocessing on the fly
 
 When training deep neural networks,
-we sometimes must load and pre-process the data
+we sometimes must load and preprocess the data
 while simultaneously training for the following reasons:
-- The whole size of the dataset exceed the RAM size, we can't load them in advance;
+- When the whole size of the dataset exceeds available RAM size, we can't load it in advance;
 - Sometimes, to make models robust to things like translations, rotations, and small amounts of color shift of noise, we introduce randomness into the training process. In these cases we must re-preprocess the data each time we revisit an example.
 
-In service of efficiency efficiency, we also address multi-threading techniques. Taking Imagenet training as an example, after loading a bunch of image records, we can start multiple threads to simultaneously perform image decoding and image augmentation. We depict this process in the following illustration:
+In service of efficiency, we also address multi-threading techniques. Taking Imagenet training as an example, after loading a bunch of image records, we can start multiple threads to simultaneously perform image decoding and image augmentation. We depict this process in the following illustration:
 ![process](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/io/process.jpg)
 
 ### Hide IO Cost Using Threadediter
@@ -174,7 +174,7 @@ while the main thread performs the forward and backward passes for training.
 To support more complicated training schemes,
 MXNet provides a more general IO processing pipeline
 using *threadediter* provided by dmlc-core.
-The key of *threadediter* is to start a stand-alone thread acts as a data provider,
+The key of *threadediter* is to start a stand-alone thread that acts as a data provider,
 while the main thread acts as a data consumer as illustrated below.
 
 The threadediter maintains a buffer of a certain size
@@ -218,7 +218,7 @@ Generally, to create a data iterator, you need to provide five kinds of paramete
 * **Dataset Param:** Information needed to access the dataset, e.g. file path, input shape.
 * **Batch Param:** Specifies how to form a batch, e.g. batch size.
 * **Augmentation Param:** Which augmentation operations (e.g. crop, mirror) should be taken on an input image.
-* **Backend Param*:** Controls the behavior of the backend threads to hide data loading cost.
+* **Backend Param:** Controls the behavior of the backend threads to hide data loading cost.
 * **Auxiliary Param:** Provides options to help with debugging.
 
 Usually, **Dataset Param** and **Batch Param** MUST be given,
@@ -226,8 +226,9 @@ otherwise the data batch can't be created.
 Other parameters can be given as needed.
 Ideally, we should separate the MX Data IO into modules,
 some of which might be useful to expose to users, for example:
-* Efficient prefetcher: allows the user to write a data loader that reads their customized binary format enjoy multi-threaded prefetcher support.
-* Data transformer: image random cropping, mirroring, etc.: allows the users to use those tools, or plug in their own customized transformers (maybe they want to add some specific kind of coherent random noise to data, etc.)
+
+* **Efficient prefetcher:** allows the user to write a data loader that reads their customized binary format that automatically gets multi-threaded prefetcher support.
+* **Data transformer:** image random cropping, mirroring, etc. Allows the users to use those tools, or plug in their own customized transformers (maybe they want to add some specific kind of coherent random noise to data, etc.)
 
 ## Future Extensions
 

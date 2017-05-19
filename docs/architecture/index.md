@@ -15,8 +15,8 @@ Mainly, they focus on the following 3 areas:
 abstraction, optimization, and trade-offs between efficiency and flexibility.
 Additionally, we provide an overview of the complete MXNet system.
 
+* [MXNet System Overview](http://mxnet.io/architecture/overview.html)
 * [Deep Learning Programming Style: Symbolic vs Imperative](http://mxnet.io/architecture/program_model.html)
 * [Dependency Engine for Deep Learning](http://mxnet.io/architecture/note_engine.html)
 * [Optimizing the Memory Consumption in Deep Learning](http://mxnet.io/architecture/note_memory.html)
 * [Efficient Data Loading Module for Deep Learning](http://mxnet.io/architecture/note_data_loading.html)
-* [MXNet System Overview](http://mxnet.io/architecture/overview.html)

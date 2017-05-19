@@ -8,6 +8,7 @@ html, body {
 
 body {
     display: block;
+    visibility: hidden;
 }
 
 body, div {
@@ -820,7 +821,7 @@ dl > dt:before {
     content: " ";
     display: block;
     height: 70px; /* fixed header height*/
-    margin-top: -70px; /* negative fixed header height */
+    margin-top: -50px; /* negative fixed header height */
 }
 
 p.rubric {
@@ -829,8 +830,19 @@ p.rubric {
 
 dt:target, .highlighted {
     background-color: #fff;
+    background: transparent;
     border-bottom: 3px solid #c7254e;
     margin-bottom: -3px;
+}
+
+dt em {
+    font-weight: normal;
+    font-style: normal;
+    font-size: 90%; 
+}
+
+code {
+    color: #337ab7;
 }
 
 /*----------------Model zoo page style------------------*/
