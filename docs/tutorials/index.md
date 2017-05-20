@@ -23,6 +23,7 @@ These tutorials introduce fundamental concepts in deep learning and their realiz
 .. toctree::
    :maxdepth: 1
 
+   python/linear-regression
    python/mnist
    python/predict_image
    vision/large_scale_classification
