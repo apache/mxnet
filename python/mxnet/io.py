@@ -24,7 +24,8 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
        for example for image data setting `layout=NCHW` indicates
         that the first axis is number of examples in the batch(N),
         C is number of channels, H is the height and W is the width of the image.
-       for sequential data the `layout` could be set to ``TNC`` where
+
+       for sequential data the `layout` could be set to ``NTC`` where
         T is the temporal axis representing time,
         N is number of examples in the batch and C is the number of channels.
 
