@@ -1,4 +1,4 @@
-# MXNet Basics - Linear Regression using MXNet
+# Linear Regression
 
 In this tutorial we'll walk though how one can implement *linear regression* using MXNet APIs.
 
