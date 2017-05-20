@@ -53,11 +53,7 @@ name `data` and input label variable has name `softmax_label`.
 >>> label = mx.sym.Variable('softmax_label')
 >>> fullc = mx.sym.FullyConnected(data=data, num_hidden=1)
 >>> loss = mx.sym.SoftmaxOutput(data=data, label=label)
->>> mod = mx.mod.Module(loss)
->>> print(mod.data_names)
-['data']
->>> print(mod.label_names)
-['softmax_label']
+>>> mod = mx.mod.Module(loss, data_names=['data'], label_names=['softmax_label'])
 >>> mod.bind(data_shapes=nd_iter.provide_data, label_shapes=nd_iter.provide_label)
 ```
 
