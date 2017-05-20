@@ -204,9 +204,9 @@ struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
         .describe("Whether to mirror the image or not. If true, images are "\
                   "flipped along the horizontal axis.");
     DMLC_DECLARE_FIELD(rand_mirror).set_default(false)
-        .describe("Randomly chose whether to mirror an image or not. If true,"\
-                  "50% of the images will be randomly mirrored (flipped along "\
-                  "the horizontal axis)");
+        .describe("Whether to randomly mirror images or not. If true, 50% of "\
+                  "the images will be randomly mirrored (flipped along the "\
+                  "horizontal axis)");
     DMLC_DECLARE_FIELD(mean_img).set_default("")
         .describe("Filename of the mean image.");
     DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
