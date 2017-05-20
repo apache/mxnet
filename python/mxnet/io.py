@@ -17,7 +17,17 @@ from .ndarray import array
 from .ndarray import concatenate
 
 class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
-    """Data description
+    """DataDesc is used to store name, shape, type and layout
+        information of the data or the label.
+
+       The `layout` describes how the axes in `shape` should be interpreted,
+       for example for image data setting `layout=NCHW` indicates
+        that the first axis is number of examples in the batch(N),
+        C is number of channels, H is the height and W is the width of the image.
+
+       for sequential data, by default `layout` is set to ``NTC`` where
+        N is number of examples in the batch, T the temporal axis representing time
+         and C is the number of channels.
 
     Parameters
     ----------
