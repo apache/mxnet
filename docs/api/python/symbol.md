@@ -41,6 +41,20 @@ array([ 4.,  7.], dtype=float32)
 
 A detailed tutorial is available at [Symbol - Neural network graphs and auto-differentiation](http://mxnet.io/tutorials/basic/symbol.html).
 
+```eval_rst
+
+.. note:: most operators provided in ``symbol`` are similar to ``ndarray``. But
+   also note that ``symbol`` differs to ``ndarray`` in several aspects:
+
+   - ``symbol`` adopts declare programming. In other words, we need to first
+     composite the computations, and then feed with data to execute.
+
+   - Most binary operators such as ``+`` and ``>`` are not enabled broadcasting.
+     We need to call the broadcasted version such as ``broadcast_plus``
+     explicitly.
+
+```
+
 In the rest of this document, we first overview the methods provided by the
 `symbol.Symbol` class, and then list other routines provided by the
 `symbol` package.

@@ -37,6 +37,30 @@ A `NDArray` represents a multidimensional, fixed-size homogenous array.
 A detailed tutorial is available at
 [NDArray - Imperative tensor operations on CPU/GPU](http://mxnet.io/tutorials/basic/ndarray.html).
 
+```eval_rst
+
+.. note:: ``mxnet.ndarray`` is similar to ``numpy.ndarray`` in some aspects. But the difference is not negligible. For example
+
+   - ``NDArray.T`` does real data transpose to return new a copied array, instead
+     of returning a view of the input array.
+   - ``ndarray.dot`` performs dot between the last axis of the first input array
+     and the first axis of the second input, while `numpy.dot` uses the second
+     last axis of the input array.
+
+   In additional, ``NDArray`` supports GPU computation and various neural
+   network layers.
+
+.. note:: ``ndarray`` also provides almost same routines to ``symbol``. Most
+  routines between these two packages share the same C++ operator source
+  codes. But ``ndarray`` differs to ``symbol`` in several aspects:
+
+  - ``ndarray`` adopts imperative programming, namely sentences are executed
+    step-by-step so that the results can be obtained immediately.
+
+  - Most binary operators such as ``+`` and ``>`` are enabled broadcasting in
+    default.
+```
+
 In the rest of this document, we first overview the methods provided by the
 `ndarray.NDArray` class, and then list other routines provided by the
 `ndarray` package.
