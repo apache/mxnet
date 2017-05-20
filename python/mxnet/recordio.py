@@ -273,7 +273,7 @@ class MXIndexedRecordIO(MXRecordIO):
 
 IRHeader = namedtuple('HEADER', ['flag', 'label', 'id', 'id2'])
 """An alias for HEADER. Used to store metadata (e.g. labels) accompanying a record.
-   See mxnet.recordio.pack and mxnet.recordio.pack_img for example uses.
+See mxnet.recordio.pack and mxnet.recordio.pack_img for example uses.
 
 Parameters
 ----------
