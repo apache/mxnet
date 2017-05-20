@@ -18,7 +18,7 @@ import sys as _sys
 import operator
 import numpy as np
 from .base import _LIB, string_types, numeric_types
-from .base import c_array, py_str, c_str, mx_real_t, _Null
+from .base import c_array, py_str, c_str, mx_real_t, _Null  # pylint: disable=unused-import
 from .base import mx_uint, NDArrayHandle, check_call, OpHandle
 from .base import ctypes2buffer
 from .context import Context
@@ -28,6 +28,7 @@ from .ndarray_doc import _build_doc
 
 # Use different verison of SymbolBase
 # When possible, use cython to speedup part of computation.
+# pylint: disable=unused-import
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from ._ctypes.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke
@@ -39,7 +40,7 @@ except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from ._ctypes.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke
-
+# pylint: enable=unused-import
 
 # pylint: disable= no-member
 _DTYPE_NP_TO_MX = {
