@@ -213,7 +213,6 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
         LOG(FATAL) << "resource type not yet supported";
       }
     }
-    CHECK_LE(ntmp, 1) << "Only support 1 temp space request";
   }
 
   for (auto& i : ndinputs) {
