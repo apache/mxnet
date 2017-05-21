@@ -14,24 +14,10 @@ data including
     mxnet.image
 ```
 
-It will also show how to write an iterator for a new data format.
-
-A data iterator reads data batch by batch.
-
-```python
->>> data = mx.nd.ones((100,10))
->>> nd_iter = mx.io.NDArrayIter(data, batch_size=25)
->>> for batch in nd_iter:
-...     print(batch.data)
-[<NDArray 25x10 @cpu(0)>]
-[<NDArray 25x10 @cpu(0)>]
-[<NDArray 25x10 @cpu(0)>]
-[<NDArray 25x10 @cpu(0)>]
-```
-
-If `nd_iter.reset()` is called, then reads the data again from beginning.
-
-In addition, an iterator provides information about the batch, including the
+First, let's see how to write an iterator for a new data format.
+The following iterator can be used to train a symbol whose input data variable has
+name `data` and input label variable has name `softmax_label`.
+The iterator also provides information about the batch, including the
 shapes and name.
 
 ```python
@@ -44,10 +30,7 @@ shapes and name.
 [DataDesc[softmax_label,(25,),<type 'numpy.float32'>,NCHW]]
 ```
 
-So this iterator can be used to train a symbol whose input data variable has
-name `data` and input label variable has name `softmax_label`.
-
-
+Let's see a complete example of how to use data iterator in model training.
 ```python
 >>> data = mx.sym.Variable('data')
 >>> label = mx.sym.Variable('softmax_label')
@@ -55,9 +38,11 @@ name `data` and input label variable has name `softmax_label`.
 >>> loss = mx.sym.SoftmaxOutput(data=data, label=label)
 >>> mod = mx.mod.Module(loss, data_names=['data'], label_names=['softmax_label'])
 >>> mod.bind(data_shapes=nd_iter.provide_data, label_shapes=nd_iter.provide_label)
+>>> mod.fit(nd_iter, num_epoch=2)
 ```
 
-Then we can call `mod.fit(nd_iter, num_epoch=2)` to train `loss` by 2 epochs.
+A detailed tutorial is available at
+[Iterators - Loading data](http://mxnet.io/tutorials/basic/data.html).
 
 ## Data iterators
 
