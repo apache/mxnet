@@ -30,7 +30,11 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 ## Deployment Environments
 * [Can I run MXNet on smart or mobile devices?](http://mxnet.io/how_to/smart_device.html)
 
-* [How do I set up MXNet on the AWS Cloud using Amazon EC2 and Amazon S3?](http://mxnet.io/how_to/cloud.html)
+* [How to use data from S3 for training?](s3_integration.md)
+
+* [How to setup MXNet on AWS?](http://docs.aws.amazon.com/mxnet/latest/dg/mxnet-on-ec2-instance.html)
+
+* [How to do distributed training using MXNet on AWS?](http://docs.aws.amazon.com/mxnet/latest/dg/mxnet-on-ec2-cluster.html)
 
 * [How do I run MXNet on a Raspberry Pi for computer vision?](http://mxnet.io/tutorials/embedded/wine_detector.html)
 

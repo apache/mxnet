@@ -121,5 +121,5 @@ int main(int argc, char** argv) {
   }
 
   MXNotifyShutdown();
-  return score > MIN_SCORE ? 0 : 1;
+  return score >= MIN_SCORE ? 0 : 1;
 }

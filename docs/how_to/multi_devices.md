@@ -90,7 +90,9 @@ When using a large number of GPUs, e.g. >=4, we suggest using `device` for bette
   With `dist_sync`, `batch-size` now means the batch size used on each machine.
   So if there are *n* machines and we use batch size *b*,
   then `dist_sync` behaves like `local` with batch size *n\*b*.
-- `dist_device_sync` is identical to `dist_sync` with the difference similar to `device` vs `local`.
+- `dist_device_sync` is similar to `dist_sync`. The difference between them is that
+  `dist_device_sync` aggregates gradients and updates weight on GPUs
+  while `dist_sync` does so on CPU memory.
 - `dist_async`  performs asynchronous updates.
   The weight is updated whenever gradients are received from any machine.
   The update is atomic, i.e., no two updates happen on the same weight at the same time.
@@ -106,6 +108,10 @@ machine. MXNet provides
 [tools/launch.py](https://github.com/dmlc/mxnet/blob/master/tools/launch.py) to
 start a job by using `ssh`, `mpi`, `sge`, or `yarn`.
 
+An easy way to set up a cluster of EC2 instances for distributed deep learning
+is using an [AWS CloudFormation template](https://github.com/awslabs/deeplearning-cfn).
+If you do not have a cluster, you can check the repository before you continue.
+
 Assume we are at the directory `mxnet/example/image-classification`
 and want to train LeNet to classify MNIST images, as demonstrated here:
 [train_mnist.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/train_mnist.py).
@@ -116,9 +122,9 @@ On a single machine, we can run:
 python train_mnist.py --network lenet
 ```
 
-Now, say we are given two ssh-able machines and we want to train LeNet on these two
-machines.
-First, we save the IPs (or host names) of these two machines in a file named `hosts`, e.g.
+Now, say we are given two ssh-able machines and _MXNet_ is installed on both machines.
+We want to train LeNet on these two machines.
+First, we save the IPs (or hostname) of these two machines in file `hosts`, e.g.
 
 ```bash
 $ cat hosts
@@ -136,7 +142,7 @@ python ../../tools/launch.py -n 2 --launcher ssh -H hosts python train_mnist.py 
 
 Note that here we
 
-- use `launch.py` to submit the job
+- use `launch.py` to submit the job.
 - provide launcher, `ssh` if all machines are ssh-able, `mpi` if `mpirun` is
   available, `sge` for Sun Grid Engine, and `yarn` for Apache Yarn.
 - `-n` number of worker nodes to run on
