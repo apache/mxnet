@@ -31,8 +31,8 @@ def _load_general(data, targets, major_axis):
                     do_crop = (begin[axis] != slice_idx.start or end[axis] != slice_idx.stop)
                     begin[axis] = slice_idx.start
                     end[axis] = slice_idx.stop
-                    # pylint: disable=no-member,protected-access
-                    if do_crop == True:
+                    # pylint: disable=no-member,protected-access,too-many-nested-blocks
+                    if do_crop:
                         if axis == 0:
                             d_src[slice_idx.start:slice_idx.stop].copyto(d_dst)
                         else:
@@ -44,7 +44,7 @@ def _load_general(data, targets, major_axis):
                                 d_dst_copy.copyto(d_dst)
                     else:
                         d_src.copyto(d_dst)
-                    # pylint: enable=no-member,protected-access
+                    # pylint: enable=no-member,protected-access,too-many-nested-blocks
                 else:
                     d_src.copyto(d_dst)
 
