@@ -332,8 +332,6 @@ def unpack(s):
     >>> header, s = mx.recordio.unpack(item)
     >>> header
     HEADER(flag=0, label=14.0, id=20129312, id2=0)
-    >>> s
-    '\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\...xbe\x95)\xd8z\x1f\xff\xd9'
     """
     header = IRHeader(*struct.unpack(_IR_FORMAT, s[:_IR_SIZE]))
     s = s[_IR_SIZE:]
