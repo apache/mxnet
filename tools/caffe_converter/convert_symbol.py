@@ -54,6 +54,11 @@ def _convert_conv_param(param):
     # deal with dilation. Won't be in deconvolution
     if dilate > 1:
         param_string += ", dilate=(%d, %d)" % (dilate, dilate)
+
+    if isinstance(param.group, int):
+        if param.group != 1:
+            param_string += ", num_group=%d" % param.group
+
     return param_string
 
 def _convert_pooling_param(param):
