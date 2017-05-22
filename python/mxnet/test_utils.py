@@ -1,6 +1,5 @@
-# coding: utf-8
 """Tools for testing."""
-# pylint: disable=invalid-name, no-member, too-many-arguments, too-many-locals, too-many-branches, too-many-statements, broad-except, line-too-long, unused-import
+# pylint: disable=too-many-lines
 from __future__ import absolute_import, print_function, division
 import time
 import traceback
@@ -12,7 +11,7 @@ import logging
 import numpy as np
 import numpy.testing as npt
 import mxnet as mx
-from .context import cpu, gpu, Context
+from .context import Context
 from .ndarray import array
 from .symbol import Symbol
 try:
@@ -336,7 +335,8 @@ def _parse_aux_states(sym, aux_states, ctx):
     >>> var_states = np.ones(3)
     >>> _parse_aux_states(fc2, [mean_states, var_states], None)
     {'batchnorm0_moving_var': <NDArray 3 @cpu(0)>, 'batchnorm0_moving_mean': <NDArray 3 @cpu(0)>}
-    >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states, 'batchnorm0_moving_mean': var_states}, None)
+    >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states,
+    ...                         'batchnorm0_moving_mean': var_states}, None)
     {'batchnorm0_moving_var': <NDArray 3 @cpu(0)>, 'batchnorm0_moving_mean': <NDArray 3 @cpu(0)>}
     >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
     ValueError: Symbol aux_states names and given aux_states do not match.
@@ -863,7 +863,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             arr = arr.asnumpy()
             try:
                 assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-            except Exception as e:
+            except AssertionError as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
                 if raise_on_err:
@@ -889,7 +889,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 arr = arr.asnumpy()
                 try:
                     assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-                except Exception as e:
+                except AssertionError as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
                     if raise_on_err:
