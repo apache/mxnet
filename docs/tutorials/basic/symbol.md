@@ -9,7 +9,7 @@ in an imperative fashion, making full use of the native control of any front-end
 So you might wonder, why don't we just use `NDArray` for all computation?
 
 MXNet provides the Symbol API, an interface for symbolic programming.
-With symbolic programing, rather than executing operations step by step,
+With symbolic programming, rather than executing operations step by step,
 we first define a *computation graph*.
 This graph contains placeholders for inputs and designated outputs.
 We can then compile the graph, yielding a function
@@ -103,7 +103,7 @@ Each symbol takes a (unique) string name. NDArray and Symbol both represent
 a single tensor. *Operators* represent the computation between tensors.
 Operators take symbol (or NDArray) as inputs and might also additionally accept
 other hyperparameters such as the number of hidden neurons (*num_hidden*) or the
-activation type (*act_type*) and produces the output.
+activation type (*act_type*) and produce the output.
 
 We can view a symbol simply as a function taking several arguments.
 And we can retrieve those arguments with the following method call:
@@ -160,7 +160,7 @@ composed.list_arguments()
 ```
 
 In this example, *net2* is used as a function to apply to an existing symbol *net1*,
-and the resulting *composed_net* will have all the attributes of *net1* and *net2*.
+and the resulting *composed* symbol will have all the attributes of *net1* and *net2*.
 
 Once you start building some bigger networks, you might want to name some
 symbols with a common prefix to outline the structure of your network.
@@ -283,7 +283,7 @@ note that, most of them are wrapped by the `module` package.
 
 ### Shape and Type Inference
 
-For each symbol, we can query it's arguments, auxiliary states and outputs.
+For each symbol, we can query its arguments, auxiliary states and outputs.
 We can also infer the output shape and type of the symbol given the known input
 shape or type of some arguments, which facilitates memory allocation.
 
