@@ -56,40 +56,36 @@ output, states = lstm_cell(embedded_step, begin_state)
 
 # 'states' has the recurrent states that will be carried over to the next step,
 # which includes both the "hidden state" and the "cell state":
-# 'lstm_t0_out_output' has shape (batch_size, hidden_dim), and 'lstm_t0_state_output' has shape (batch_size, hidden_dim).
+# Both 'lstm_t0_out_output' and 'lstm_t0_state_output' have shape (batch_size, hidden_dim).
 ```
 
 Most of the time our goal is to process a sequence of many steps. For this, we need to unroll the LSTM according to the sequence length.
 ```python
-# Embed a sequence. 'seq_data' has the shape of (sequence_length, batch_size).
+# Embed a sequence. 'seq_data' has the shape of (batch_size, sequence_length).
 seq_input = mx.symbol.Variable('seq_data')
 embedded_seq = mx.symbol.Embedding(data=seq_input, \
                                    input_dim=input_dim, \
                                    output_dim=embed_dim)
 ```
 ```eval_rst
-.. note:: By default, the backend engine treats the first dimension of each data and label variable in data
-          iterators as the batch size (i.e an `NT` layout). The example assumes a `TN` layout since
-          unrolling with `TNC` layout often leads to better performance. Refer to the API doc for
-          I/O to see how to override the layout in iterators.
-```
-```eval_rst
 .. note:: Remember to reset the cell when unrolling/stepping for a new sequence by calling `lstm_cell.reset()`.
 ```
 ```python
 # Note that when unrolling, if 'merge_outputs' is set to True, the 'outputs' is merged into a single symbol
+# In the layout, 'N' represents batch size, 'T' represents sequence length, and 'C' represents the
+# number of dimensions in hidden states.
 outputs, states = lstm_cell.unroll(length=sequence_length, \
                                    inputs=embedded_seq, \
-                                   layout='TNC', \
+                                   layout='NTC', \
                                    merge_outputs=True)
-# 'outputs' is concat0_output of shape (sequence_length, batch_size, hidden_dim).
+# 'outputs' is concat0_output of shape (batch_size, sequence_length, hidden_dim).
 # The hidden state and cell state from the final time step is returned:
-# 'lstm_t4_out_output' has shape (batch_size, hidden_dim), and lstm_t4_state_output has shape (batch_size, hidden_dim).
+# Both 'lstm_t4_out_output' and 'lstm_t4_state_output' have shape (batch_size, hidden_dim).
 
 # If merge_outputs is set to False, a list of symbols for each of the time steps is returned.
 outputs, states = lstm_cell.unroll(length=sequence_length, \
                                    inputs=embedded_seq, \
-                                   layout='TNC', \
+                                   layout='NTC', \
                                    merge_outputs=False)
 # In this case, 'outputs' is a list of symbols. Each symbol is of shape (batch_size, hidden_dim).
 ```
@@ -135,11 +131,10 @@ bi_cell = mx.rnn.BidirectionalCell(
                  mx.rnn.GRUCell(num_hidden=75))
 outputs, states = bi_cell.unroll(length=sequence_length, \
                                  inputs=embedded_seq, \
-                                 layout='TNC', \
                                  merge_outputs=True)
 # The output feature is the concatenation of the forward and backward pass.
 # Thus, the number of output dimensions is the sum of the dimensions of the two cells.
-# 'outputs' is the symbol 'bi_out_output' of shape (sequence_length, batch_size, 125L)
+# 'outputs' is the symbol 'bi_out_output' of shape (batch_size, sequence_length, 125L)
 
 # The states of the BidirectionalCell is a list of two lists, corresponding to the
 # states of the forward and backward cells respectively.
@@ -157,7 +152,6 @@ other cells.
 zoneout_cell = mx.rnn.ZoneoutCell(lstm_cell, zoneout_states=0.5)
 outputs, states = zoneout_cell.unroll(length=sequence_length, \
                                       inputs=embedded_seq, \
-                                      layout='TNC', \
                                       merge_outputs=True)
 ```
 `DropoutCell` performs dropout on the input sequence. It can be used in a stacked
@@ -189,11 +183,10 @@ stacked_rnn_cells.add(mx.rnn.DropoutCell(0.5))
 stacked_rnn_cells.add(mx.rnn.LSTMCell(num_hidden=50))
 outputs, states = stacked_rnn_cells.unroll(length=sequence_length, \
                                            inputs=embedded_seq, \
-                                           layout='TNC', \
                                            merge_outputs=True)
 
 # The output of SequentialRNNCell is the same as that of the last layer.
-# In this case 'outputs' is the symbol 'concat6_output' of shape (sequence_length, batch_size, hidden_dim)
+# In this case 'outputs' is the symbol 'concat6_output' of shape (batch_size, sequence_length, hidden_dim)
 # The states of the SequentialRNNCell is a list of lists, with each list
 # corresponding to the states of each of the added cells respectively.
 ```
@@ -228,10 +221,9 @@ fused_lstm_cell = mx.rnn.FusedRNNCell(num_hidden=50, \
                                       dropout=0.5)
 outputs, _ = fused_lstm_cell.unroll(length=sequence_length, \
                                     inputs=embedded_seq, \
-                                    layout='TNC', \
                                     merge_outputs=True)
 # The 'outputs' is the symbol 'lstm_rnn_output' that has the shape
-# (sequence_length, batch_size, forward_backward_concat_dim)
+# (batch_size, sequence_length, forward_backward_concat_dim)
 ```
 ```eval_rst
 .. note:: `FusedRNNCell` supports GPU-only. It cannot be called or stepped.
@@ -248,10 +240,9 @@ and CPU-compatible `SequentialRNNCell` that mirrors the settings of the `FusedRN
 unfused_lstm_cell = fused_lstm_cell.unfuse()
 unfused_outputs, _ = unfused_lstm_cell.unroll(length=sequence_length, \
                                               inputs=embedded_seq, \
-                                              layout='TNC', \
                                               merge_outputs=True)
 # The 'outputs' is the symbol 'lstm_bi_l2_out_output' that has the shape
-# (sequence_length, batch_size, forward_backward_concat_dim)
+# (batch_size, sequence_length, forward_backward_concat_dim)
 ```
 
 ### RNN checkpoint methods and parameters
