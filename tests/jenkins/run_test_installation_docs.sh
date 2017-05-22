@@ -141,9 +141,9 @@ function sort() {
     size=${#lineno_array[@]}
     for((i=1;i<size;i++))
     do
-       Temp=${lineno_array[i]}
+       temp=${lineno_array[i]}
        j=$((i-1))
-       while [ $Temp -lt ${lineno_array[j]} ]
+       while [ $temp -lt ${lineno_array[j]} ]
        do
           lineno_array[j+1]=${lineno_array[j]}
           j=$(( $j-1 ))
@@ -152,7 +152,7 @@ function sort() {
              break
           fi
        done
-       lineno_array[j+1]=$Temp
+       lineno_array[j+1]=$temp
     done
     printf "${lineno_array[*]}"
 }
@@ -329,7 +329,7 @@ then
 else
 
     #########################MACOS-PYTHON-CPU###########################
-
+    # Currently this section is invoked in ../travis/run_test.sh so this test can run on MacOS.
     echo
     echo
     echo "### Testing MACOS-PYTHON-CPU ###"
