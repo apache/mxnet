@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summeries supported data formats and iterator APIs to read the
+This document summarizes supported data formats and iterator APIs to read the
 data including
 
 ```eval_rst
@@ -14,24 +14,10 @@ data including
     mxnet.image
 ```
 
-It will also show how to write an iterator for a new data format.
-
-A data iterator reads data batch by batch.
-
-```python
->>> data = mx.nd.ones((100,10))
->>> nd_iter = mx.io.NDArrayIter(data, batch_size=25)
->>> for batch in nd_iter:
-...     print(batch.data)
-[<NDArray 25x10 @cpu(0)>]
-[<NDArray 25x10 @cpu(0)>]
-[<NDArray 25x10 @cpu(0)>]
-[<NDArray 25x10 @cpu(0)>]
-```
-
-If `nd_iter.reset()` is called, then reads the data again from beginning.
-
-In addition, an iterator provides information about the batch, including the
+First, let's see how to write an iterator for a new data format.
+The following iterator can be used to train a symbol whose input data variable has
+name `data` and input label variable has name `softmax_label`.
+The iterator also provides information about the batch, including the
 shapes and name.
 
 ```python
@@ -44,24 +30,19 @@ shapes and name.
 [DataDesc[softmax_label,(25,),<type 'numpy.float32'>,NCHW]]
 ```
 
-So this iterator can be used to train a symbol whose input data variable has
-name `data` and input label variable has name `softmax_label`.
-
-
+Let's see a complete example of how to use data iterator in model training.
 ```python
 >>> data = mx.sym.Variable('data')
 >>> label = mx.sym.Variable('softmax_label')
 >>> fullc = mx.sym.FullyConnected(data=data, num_hidden=1)
 >>> loss = mx.sym.SoftmaxOutput(data=data, label=label)
->>> mod = mx.mod.Module(loss)
->>> print(mod.data_names)
-['data']
->>> print(mod.label_names)
-['softmax_label']
+>>> mod = mx.mod.Module(loss, data_names=['data'], label_names=['softmax_label'])
 >>> mod.bind(data_shapes=nd_iter.provide_data, label_shapes=nd_iter.provide_label)
+>>> mod.fit(nd_iter, num_epoch=2)
 ```
 
-Then we can call `mod.fit(nd_iter, num_epoch=2)` to train `loss` by 2 epochs.
+A detailed tutorial is available at
+[Iterators - Loading data](http://mxnet.io/tutorials/basic/data.html).
 
 ## Data iterators
 
@@ -142,15 +123,15 @@ Functions to read and write RecordIO files.
 ## Develop a new iterator
 
 Writing a new data iterator in Python is straightforward. Most MXNet
-training/inference program accepts an iteratable object with ``provide_data``
+training/inference programs accept an iteratable object with ``provide_data``
 and ``provide_label`` properties.
-This [tutorial](http://mxnet.io/tutorials/python/data.html#data-iterators) how to
+This [tutorial](http://mxnet.io/tutorials/basic/data.html) explains how to
 write an iterator from scratch.
 
 The following example demonstrates how to combine
 multiple data iterators into a single one. It can be used for multiple
-modality training such as image captioning, in which images can be  read by
-``ImageRecordIter`` while documents by ``CSVIter``
+modality training such as image captioning, in which images are read by
+``ImageRecordIter`` while documents are read by ``CSVIter``
 
 ```python
 class MultiIter:
@@ -173,7 +154,7 @@ class MultiIter:
 iter = MultiIter([mx.io.ImageRecordIter('image.rec'), mx.io.CSVIter('txt.csv')])
 ```
 
-Parsing and another pre-processing such as augmentation may be expensive.
+Parsing and performing another pre-processing such as augmentation may be expensive.
 If performance is critical, we can implement a data iterator in C++. Refer to
 [src/io](https://github.com/dmlc/mxnet/tree/master/src/io) for examples.
 

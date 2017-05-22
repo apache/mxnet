@@ -22,6 +22,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
   <button type="button" class="btn btn-default opt">Scala</button>
   <button type="button" class="btn btn-default opt">R</button>
   <button type="button" class="btn btn-default opt">Julia</button>
+  <button type="button" class="btn btn-default opt">Perl</button>
 </div>
 </div>
 
@@ -37,6 +38,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="devices">
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active">Raspberry Pi</button>
+  <button type="button" class="btn btn-default opt">NVIDIA Jetson TX2</button>
 </div>
 </div>
 
@@ -646,7 +648,7 @@ You could also run distributed deeplearning with *MXNet* on AWS using [Cloudform
 <!-- END - Cloud Python Installation Instructions -->
 
 <div class="linux">
-  <div class="scala r julia">
+  <div class="scala r julia perl">
     <div class="cpu gpu">
 
 Follow the installation instructions [in this guide](./ubuntu_setup.md) to set up MXNet.
@@ -656,7 +658,7 @@ Follow the installation instructions [in this guide](./ubuntu_setup.md) to set u
 </div>
 
 <div class="macos">
-  <div class="scala r julia">
+  <div class="scala r julia perl">
     <div class="cpu gpu">
 
 Follow the installation instructions [in this guide](./osx_setup.md) to set up MXNet.
@@ -666,7 +668,7 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 </div>
 
 <div class="windows">
-  <div class="python scala r julia">
+  <div class="python scala r julia perl">
     <div class="cpu gpu">
 
 Follow the installation instructions [in this guide](./windows_setup.md) to set up MXNet.
@@ -679,6 +681,11 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
   <div class="raspberry-pi">
 
 Follow the installation instructions [in this guide](./raspbian_setup.md) to set up MXNet.
+
+</div>
+<div class="jetson-tx2">
+
+Follow the installation instructions [in this guide](./tx2_setup.md) to set up MXNet.
 
 </div>
 </div>
@@ -734,7 +741,7 @@ $ python
 
 </div>
 
-Run a short *MXNet* python program to create a 2X3 identity matrix, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
 
 ```python
 >>> import mxnet as mx
@@ -797,7 +804,7 @@ $ python
 
 </div>
 
-Run a short *MXNet* python program to create a 2X3 identity matrix *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
+Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
 
 ```python
 >>> import mxnet as mx
@@ -917,7 +924,7 @@ $ python
 
 <div class="cpu">
 
-Run a short *MXNet* python program to create a 2X3 identity matrix, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
 
 ```python
 >>> import mxnet as mx
@@ -941,7 +948,7 @@ $
 
 <div class="gpu">
 
-Run a short *MXNet* python program to create a 2X3 identity matrix *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
+Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
 
 ```python
 >>> import mxnet as mx
@@ -957,7 +964,7 @@ array([[ 3.,  3.,  3.],
 </div>
 
 <div class="linux">
-  <div class="scala r julia">
+  <div class="scala r julia perl">
     <div class="cpu gpu">
 
 Will be available soon.
@@ -967,7 +974,7 @@ Will be available soon.
 </div>
 
 <div class="macos">
-  <div class="scala r julia">
+  <div class="scala r julia perl">
     <div class="cpu gpu">
 
 Will be available soon.
@@ -977,7 +984,7 @@ Will be available soon.
 </div>
 
 <div class="windows">
-  <div class="python scala r julia">
+  <div class="python scala r julia perl">
     <div class="cpu gpu">
 
 Will be available soon.
@@ -988,6 +995,11 @@ Will be available soon.
 
 <div class="devices">
   <div class="raspberry-pi">
+
+Will be available soon.
+
+</div>
+<div class="jetson-tx2">
 
 Will be available soon.
 

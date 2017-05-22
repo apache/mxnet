@@ -53,6 +53,24 @@ def imdecode(buf, **kwargs):
     >>> image = mx.img.imdecode(str_image)
     >>> image
     <NDArray 224x224x3 @cpu(0)>
+
+    Set `flag` parameter to 0 to get grayscale output
+
+    >>> with open("flower.jpg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.img.imdecode(str_image, flag=0)
+    >>> image
+    <NDArray 224x224x1 @cpu(0)>
+
+    Set `to_rgb` parameter to 0 to get output in OpenCV format (BGR)
+
+    >>> with open("flower.jpg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.img.imdecode(str_image, to_rgb=0)
+    >>> image
+    <NDArray 224x224x3 @cpu(0)>
     """
     if not isinstance(buf, nd.NDArray):
         buf = nd.array(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
@@ -191,7 +209,63 @@ def random_crop(src, size, interp=2):
 
 
 def center_crop(src, size, interp=2):
-    """Centrally crop src with size. Upsample result if src is smaller than size."""
+    """Crops the image `src` to the given `size` by trimming on all four
+    sides and preserving the center of the image. Upsamples if `src` is smaller
+    than `size`.
+
+    .. note:: This requires MXNet to be compiled with USE_OPENCV.
+
+    Parameters
+    ----------
+    src : NDArray
+        Binary source image data.
+    size : list or tuple of int
+        The desired output image size.
+    interp : interpolation, optional, default=Area-based
+        The type of interpolation that is done to the image.
+
+         Possible values:
+
+        0: Nearest Neighbors Interpolation.
+
+        1: Bilinear interpolation.
+
+        2: Area-based (resampling using pixel area relation). It may be a
+        preferred method for image decimation, as it gives moire-free
+        results. But when the image is zoomed, it is similar to the Nearest
+        Neighbors method. (used by default).
+
+        3: Bicubic interpolation over 4x4 pixel neighborhood.
+
+        4: Lanczos interpolation over 8x8 pixel neighborhood.
+
+         When shrinking an image, it will generally look best with AREA-based
+        interpolation, whereas, when enlarging an image, it will generally look best
+        with Bicubic (slow) or Bilinear (faster but still looks OK).
+
+    Returns
+    -------
+    NDArray
+        The cropped image.
+    Tuple
+        (x, y, width, height) where x, y are the positions of the crop in the
+        original image and width, height the dimensions of the crop.
+
+    Example
+    -------
+    >>> with open("flower.jpg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.image.imdecode(str_image)
+    >>> image
+    <NDArray 2321x3482x3 @cpu(0)>
+    >>> cropped_image, (x, y, width, height) = mx.image.center_crop(image, (1000, 500))
+    >>> cropped_image
+    <NDArray 500x1000x3 @cpu(0)>
+    >>> x, y, width, height
+    (1241, 910, 1000, 500)
+    """
+
     h, w, _ = src.shape
     new_w, new_h = scale_down((w, h), size)
 

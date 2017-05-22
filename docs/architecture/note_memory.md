@@ -3,9 +3,9 @@
 Over the last ten years, a constant trend in deep learning
 is towards deeper and larger networks.
 Despite rapid advances in hardware performance,
-cutting-edge deep learning models continue to push the limits GPU RAM.
+cutting-edge deep learning models continue to push the limits of GPU RAM.
 So even today, it's always desirable to find ways
-to train larger models while occupying less memory.
+to train larger models while consuming less memory.
 Doing so enables us to train faster, using larger batch sizes,
 and consequently achieving a higher GPU utilization rate.
 
@@ -29,9 +29,9 @@ The following figure shows two examples of computation graphs.
 
 The concept of a computation graph is explicitly encoded in packages like Theano and CGT.
 In other libraries, computation graphs appear implicitly as network configuration files.
-The major difference in these libraries comes down to how they calculate gradient.
+The major difference in these libraries comes down to how they calculate gradients.
 There are mainly two ways: performing back-propagation on the _same_ graph
-or explicitly representing a _backwards path_ to calculate the required gradient.
+or explicitly representing a _backwards path_ to calculate the required gradients.
 
 ![Backward Graph](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/back_graph.png)
 
@@ -39,7 +39,7 @@ Libraries like Caffe, CXXNet, and Torch take the former approach,
 performing back-prop on the original graph.
 Libraries like Theano and CGT take the latter approach,
 explicitly representing the backward path.
-In this discussions, we adopt the *explicit backward path* approach
+In this discussion, we adopt the *explicit backward path* approach
 because it has several advantages for optimization.
 
 However, we should emphasize that choosing the explicit backward path approach doesn't restrict us
@@ -51,7 +51,7 @@ in the backward operations.
 ![Backward Layer](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/explicit_back_layer.png)
 
 This discussion applies to almost all existing deep learning libraries.
-(There are differences between libraries,  e.g., high-order differentiation, which is beyond the scope of this topic.)
+(There are differences between libraries,  e.g., higher-order differentiation, which is beyond the scope of this topic.)
 
 Why is the explicit backward path better? Let's explain it with two examples.
 The first reason is that the explicit backward path
@@ -146,7 +146,7 @@ after we compute E, we can reuse B's memory to hold the result of E.
 *Memory sharing doesn't necessarily require the same data shape*.
 Note that in the preceding example, the shapes of `B` and `E` can differ.
 To handle such a situation, we can allocate a memory region
-of size equal to the maximum of that required by `B` and `E` and shares it between them.
+of size equal to the maximum of that required by `B` and `E` and share it between them.
 
 ### Example of Real Neural Network Allocation
 Of course, these are only toy examples and they address only the computation of the forward pass.
@@ -176,10 +176,10 @@ but useful tricks to attack the problem.
 
 The key problem is that we need to place resources
 so that they don't conflict with each other.
-More specifically, each variable has a ```life time```
+More specifically, each variable has a *life time*
 between the time it gets computed until the last time it is used.
 In the case of the multi-layer perceptron,
-the ```life time``` of ```fc1``` ends after ```act1``` get computed.
+the *life time* of ```fc1``` ends after ```act1``` get computed.
 
 ![Net Alloc](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/alloc_mlp.png)
 
@@ -195,12 +195,12 @@ This might be too costly.
 
 Let's consider another simple heuristic.
 The idea is to simulate the procedure of traversing the graph,
-and keep a counter of future operations that depends on the node.
+and keep a count of future operations that depends on the node.
 
 ![Alloc](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/alloc_step.png)
 
-- An in-place optimization can be performed when only the current operation depends on the source (i.e., counter=1).
-- Memory can be recycled into the box on the upper right corner when the counter goes to 0.
+- An in-place optimization can be performed when only the current operation depends on the source (i.e., ```count==1```).
+- Memory can be recycled into the box on the upper right corner when the ```count``` goes to 0.
 - When we need new memory, we can either get it from the box or allocate a new one.
 
 ***Note:*** During the simulation, no memory is allocated.
@@ -212,7 +212,7 @@ and allocate the maximum of the shared parts in the final memory plan.
 The preceding strategy exactly simulates
 the dynamic memory allocation procedure
 in imperative languages, such as Python.
-The counter is the reference counter of each memory object,
+The ```count``` is the reference counter for each memory object,
 and the object gets garbage collected
 when the reference counter goes to 0.
 In that sense,
@@ -251,7 +251,7 @@ Let's look at the following two allocation plans for the same graph:
 ![Parallel Alloc](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/parallel_alloc.png)
 
 Both allocation plans are valid
-if we run the computation in serially,
+if we run the computation serially,
 from ```A[1]``` to ```A[8]```.
 However, the allocation plan on the left
 introduces additional dependencies,
@@ -264,7 +264,7 @@ Being correct is our first principle.
 This means to execute in a way that takes implicit dependency
 memory sharing into consideration.
 You can do this by adding the implicit dependency edge to the execution graph.
-Or, even simpler, if the execution engine is mutated aware,
+Or, even simpler, if the execution engine is mutation aware,
 as described in [our discussion of dependency engine design](http://mxnet.io/architecture/note_engine.html),
 push the operation in sequence
 and write to the same variable tag
@@ -279,7 +279,7 @@ from multiple computing streams simultaneously executing on the same GPU.
 
 ### Try to Allow More Parallelization
 Now we can safely perform some optimizations.
-The general idea is to try to encourage memory sharing between nodes that can't be parallelized.
+The general idea is to try and encourage memory sharing between nodes that can't be parallelized.
 You can do this by creating an ancestor relationship
 graph and querying it during allocation,
 which costs approximately ```$O(n^2)$``` in time to construct.

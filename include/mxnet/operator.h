@@ -195,7 +195,7 @@ class OperatorProperty {
     return {"output"};
   }
   /*!
-   * \brief Get name of auxilary states of Operator
+   * \brief Get name of auxiliary states of Operator
    * \return name of return values.
    */
   virtual std::vector<std::string> ListAuxiliaryStates() const {
@@ -327,7 +327,7 @@ class OperatorProperty {
     return std::vector<ResourceRequest>();
   }
   /*!
-   * \brief Decalre additional resource required in backward pass.
+   * \brief Declare additional resource required in backward pass.
    *  These additional resources will be presented in OpContext.requested
    *  in the same order of the returned Resource.
    * \param in_shape The input shape to the operator, corresponds to shapes of in_data.
@@ -342,7 +342,7 @@ class OperatorProperty {
    *
    *  Only the returned list of variables will be used in Backward.
    *  This function is used for memory optimization.
-   *  It is adviced to override and only return what is actually needed.
+   *  It is advised to override and only return what is actually needed.
    *  If this function is not overriden, all the variables will be valid in Backward.
    *
    * \code
