@@ -993,7 +993,7 @@ def get_mnist():
     (train_lbl, train_img) = read_data(
         path+'train-labels-idx1-ubyte.gz', path+'train-images-idx3-ubyte.gz')
     (test_lbl, test_img) = read_data(
-            path+'t10k-labels-idx1-ubyte.gz', path+'t10k-images-idx3-ubyte.gz')
+        path+'t10k-labels-idx1-ubyte.gz', path+'t10k-images-idx3-ubyte.gz')
     return {'train_data':train_img, 'train_label':train_lbl,
             'test_data':test_img, 'test_label':test_lbl}
 
