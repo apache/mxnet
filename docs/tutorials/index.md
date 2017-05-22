@@ -1,6 +1,6 @@
 # Tutorials
 
-These tutorials introduce fundamental concepts in deep learning and their realizations in _MXNet_. Under the _basics_ section, you'll find tutorials covering manipulating arrays, building networks, loading and preprocessing data, etc. Training and Inference section will introduce how to implement Linear Regression in MXNet, How to train a Dand digit classifier using MLP and CNNs and run inference on the trained model, run inference using pre-trained models and lastly how to efficiently train a large scale image classifier.
+These tutorials introduce fundamental concepts in deep learning and their realizations in _MXNet_. Under the _basics_ section, you'll find tutorials covering manipulating arrays, building networks, loading and preprocessing data, etc. Training and Inference section will introduce how to implement Linear Regression in MXNet, How to train a Hand digit classifier using MLP and CNNs and run inference on the trained model, run inference using pre-trained models and lastly how to efficiently train a large scale image classifier.
 
 ## Python
 
