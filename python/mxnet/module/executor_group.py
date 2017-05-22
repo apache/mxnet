@@ -28,15 +28,22 @@ def _load_general(data, targets, major_axis):
                     shape = d_src.shape
                     begin = np.zeros(len(shape), dtype=int)
                     end = np.array(shape)
+                    do_crop = (begin[axis] != slice_idx.start or end[axis] != slice_idx.stop)
                     begin[axis] = slice_idx.start
                     end[axis] = slice_idx.stop
                     # pylint: disable=no-member,protected-access
-                    if d_src.context == d_dst.context:
-                        nd.crop(d_src, begin=tuple(begin), end=tuple(end), out=d_dst)
+                    if do_crop == True:
+                        if axis == 0:
+                            d_src[slice_idx.start:slice_idx.stop].copyto(d_dst)
+                        else:
+                            if d_src.context == d_dst.context:
+                                nd.crop(d_src, begin=tuple(begin), end=tuple(end), out=d_dst)
+                            else:
+                                # on different device, crop and then do cross device copy
+                                d_dst_copy = nd.crop(d_src, begin=tuple(begin), end=tuple(end))
+                                d_dst_copy.copyto(d_dst)
                     else:
-                        # on different device, crop and then do cross device copy
-                        d_dst_copy = nd.crop(d_src, begin=tuple(begin), end=tuple(end))
-                        d_dst_copy.copyto(d_dst)
+                        d_src.copyto(d_dst)
                     # pylint: enable=no-member,protected-access
                 else:
                     d_src.copyto(d_dst)
