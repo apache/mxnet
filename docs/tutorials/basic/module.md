@@ -2,14 +2,14 @@
 
 Training a neural network involves quite a few steps. One need to specify how
 to feed input training data, initialize model parameters, perform forward and
-passes through the network, update weights based on computed gradients, do
+backward passes through the network, update weights based on computed gradients, do
 model checkpoints, etc. During prediction, one ends up repeating most of these
 steps. All this can be quite daunting to both newcomers as well as experienced
 developers.
 
 Luckily, MXNet modularizes commonly used code for training and inference in
 the `module` (`mod` for short) package. `module` provides both a
-high-level and intermediate-level interface for executing predefined networks.
+high-level and intermediate-level interfaces for executing predefined networks.
 
 ## Preliminary
 
@@ -142,14 +142,14 @@ mod.fit(train_iter,
 ## Intermediate-level Interface
 
 We already saw how to use module for basic training and inference. Now we are
-going to see a more flexiable usage of module. Instead of calling
+going to see a more flexible usage of module. Instead of calling
 the high-level `fit` and `predict` APIs, one can write a training program with the intermediate-level APIs
 `forward` and `backward`.
 
 ```python
 # create module
 mod = mx.mod.Module(symbol=net)
-# allocate memory by given the input data and lable shapes
+# allocate memory by given the input data and label shapes
 mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
 # initialize parameters by uniform random numbers
 mod.init_params(initializer=mx.init.Uniform(scale=.1))
@@ -157,7 +157,7 @@ mod.init_params(initializer=mx.init.Uniform(scale=.1))
 mod.init_optimizer(optimizer='sgd', optimizer_params=(('learning_rate', 0.1), ))
 # use accuracy as the metric
 metric = mx.metric.create('acc')
-# train 5 epoch, i.e. going over the data iter one pass
+# train 5 epochs, i.e. going over the data iter one pass
 for epoch in range(5):
     train_iter.reset()
     metric.reset()

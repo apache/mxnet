@@ -74,8 +74,7 @@ where :math:`x` is an element of the tensor *lhs* and :math:`\sigma` is the scal
 
 Example::
 
-  a = mx.nd.array([1, 2, 3, 4]), :math:`\sigma=1`,
-  smooth_l1(a, :math:`\sigma`) = [0.5, 1.5, 2.5, 3.5]
+  smooth_l1([1, 2, 3, 4], sigma=1) = [0.5, 1.5, 2.5, 3.5]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarCompute<cpu, mshadow_op::smooth_l1_loss>)
