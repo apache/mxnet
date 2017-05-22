@@ -118,6 +118,7 @@ outputs, states = lstm_cell.unroll(length=sequence_length, \
     BidirectionalCell
     DropoutCell
     ZoneoutCell
+    ResidualCell
 ```
 
 A modifier cell takes in one or more cells and transforms the output of those cells.
@@ -156,6 +157,17 @@ outputs, states = zoneout_cell.unroll(length=sequence_length, \
 ```
 `DropoutCell` performs dropout on the input sequence. It can be used in a stacked
 multi-layer RNN setting, which we will cover next.
+
+Residual connection is a useful technique for training deep neural models because it helps the
+propagation of gradients by shortening the paths.  `ResidualCell` provides such functionality for
+RNN models.
+```python
+residual_cell = mx.rnn.ResidualCell(lstm_cell)
+outputs, states = residual_cell.unroll(length=sequence_length, \
+                                       inputs=embedded_seq, \
+                                       merge_outputs=True)
+```
+The `outputs` are the element-wise sum of both the input and the output of the LSTM cell.
 
 ### Multi-layer cells
 
@@ -316,6 +328,8 @@ conversion transparently based on the provided cells.
 .. autoclass:: mxnet.rnn.DropoutCell
     :members:
 .. autoclass:: mxnet.rnn.ZoneoutCell
+    :members:
+.. autoclass:: mxnet.rnn.ResidualCell
     :members:
 .. autoclass:: mxnet.rnn.RNNParams
     :members:
