@@ -921,8 +921,9 @@ class ResidualCell(ModifierCell):
                                                 layout=layout, merge_outputs=merge_outputs)
         self.base_cell._modified = True
 
+        merge_outputs = isinstance(outputs, symbol.Symbol) if merge_outputs is None else \
+                        merge_outputs
         inputs, _ = _normalize_sequence(length, inputs, layout, merge_outputs)
-        print(inputs)
         if merge_outputs:
             outputs = symbol.elemwise_add(outputs, inputs, name="%s_plus_residual" % outputs.name)
         else:

@@ -82,6 +82,7 @@ def test_residual():
     assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
     assert np.array_equal(outputs[1].asnumpy(), expected_outputs)
 
+
 def test_residual_bidirectional():
     cell = mx.rnn.ResidualCell(
             mx.rnn.BidirectionalCell(
@@ -89,7 +90,7 @@ def test_residual_bidirectional():
                 mx.rnn.GRUCell(25, prefix='rnn_r_')))
 
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
-    outputs, _ = cell.unroll(2, inputs)
+    outputs, _ = cell.unroll(2, inputs, merge_outputs=False)
     outputs = mx.sym.Group(outputs)
     assert sorted(cell.params._params.keys()) == \
            ['rnn_l_h2h_bias', 'rnn_l_h2h_weight', 'rnn_l_i2h_bias', 'rnn_l_i2h_weight',
