@@ -94,7 +94,7 @@ class Module(BaseModule):
 
     @staticmethod
     def load(prefix, epoch, load_optimizer_states=False, **kwargs):
-        """Create a model from previously saved checkpoint.
+        """Creates a model from previously saved checkpoint.
 
         Parameters
         ----------
@@ -132,8 +132,8 @@ class Module(BaseModule):
         return mod
 
     def save_checkpoint(self, prefix, epoch, save_optimizer_states=False):
-        """Save current progress to checkpoint.
-        Use mx.callback.module_checkpoint as epoch_end_callback to save during training.
+        """Saves current progress to checkpoint.
+        Use `mx.callback.module_checkpoint` as `epoch_end_callback` to save during training.
 
         Parameters
         ----------
@@ -177,7 +177,7 @@ class Module(BaseModule):
 
     @property
     def data_shapes(self):
-        """Get data shapes.
+        """Gets data shapes.
 
         Returns
         -------
@@ -188,7 +188,7 @@ class Module(BaseModule):
 
     @property
     def label_shapes(self):
-        """Get label shapes.
+        """Gets label shapes.
 
         Returns
         -------
@@ -201,7 +201,7 @@ class Module(BaseModule):
 
     @property
     def output_shapes(self):
-        """Get output shapes.
+        """Gets output shapes.
 
         Returns
         -------
@@ -211,11 +211,12 @@ class Module(BaseModule):
         return self._exec_group.get_output_shapes()
 
     def get_params(self):
-        """Get current parameters.
+        """Gets current parameters.
+
         Returns
         -------
-        `(arg_params, aux_params)`, each a dictionary of name to parameters (in
-        `NDArray`) mapping.
+        `(arg_params, aux_params)`
+            A pair of dictionaries each mapping parameter names to NDArray values.
         """
         assert self.binded and self.params_initialized
 
@@ -225,7 +226,7 @@ class Module(BaseModule):
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
                     allow_missing=False, force_init=False):
-        """Initialize the parameters and auxiliary states.
+        """Initializes the parameters and auxiliary states.
 
         Parameters
         ----------
@@ -298,10 +299,9 @@ class Module(BaseModule):
 
         Examples
         --------
-        An example of setting module parameters::
-            >>> sym, arg_params, aux_params = \
-            mx.model.load_checkpoint(model_prefix, n_epoch_load)
-            >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
+        >>> # An example of setting module parameters.
+        >>> sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, n_epoch_load)
+        >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
         """
         if not allow_missing:
             self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,

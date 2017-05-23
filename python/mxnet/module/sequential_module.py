@@ -57,7 +57,7 @@ class SequentialModule(BaseModule):
 
         Examples
         --------
-        >>> #An example of addinging two modules to a chain.
+        >>> # An example of addinging two modules to a chain.
         >>> seq_mod = mx.mod.SequentialModule()
         >>> seq_mod.add(mod1)
         >>> seq_mod.add(mod2)

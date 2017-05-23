@@ -161,7 +161,7 @@ class BaseModule(object):
 
     Examples
     --------
-    >>> #An example of creating a mxnet module.
+    >>> # An example of creating a mxnet module.
     >>> import mxnet as mx
     >>> data = mx.symbol.Variable('data')
     >>> fc1  = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
@@ -219,8 +219,8 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of using score for prediction.
-        >>> #Evaluate accuracy on val_dataiter
+        >>> # An example of using score for prediction.
+        >>> # Evaluate accuracy on val_dataiter
         >>> metric = mx.metric.Accuracy()
         >>> mod.score(val_dataiter, metric)
         >>> mod.score(val_dataiter, ['mse', 'acc'])
@@ -334,8 +334,8 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of using `predict` for prediction.
-        >>> #Predict on the first 10 batches of val_dataiter
+        >>> # An example of using `predict` for prediction.
+        >>> # Predict on the first 10 batches of val_dataiter
         >>> mod.predict(eval_data=val_dataiter, num_batch=10)
         """
         assert self.binded and self.params_initialized
@@ -444,9 +444,9 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of using fit for training.
-        >>> #Assume training dataIter and validation dataIter are ready
-        >>> #Assume loading a previously checkpointed model
+        >>> # An example of using fit for training.
+        >>> # Assume training dataIter and validation dataIter are ready
+        >>> # Assume loading a previously checkpointed model
         >>> sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, 3)
         >>> mod.fit(train_data=train_dataiter, eval_data=val_dataiter, optimizer='sgd',
         ...     optimizer_params={'learning_rate':0.01, 'momentum': 0.9},
@@ -571,7 +571,7 @@ class BaseModule(object):
     # Parameters of a module
     ################################################################################
     def get_params(self):
-        """Get parameters, those are potentially copies of the the actual parameters used
+        """Gets parameters, those are potentially copies of the the actual parameters used
         to do computation on the device.
 
         Returns
@@ -581,7 +581,7 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of getting module parameters.
+        >>> # An example of getting module parameters.
         >>> print mod.get_params()
         ({'fc2_weight': <NDArray 64x128 @cpu(0)>, 'fc1_weight': <NDArray 128x100 @cpu(0)>,
         'fc3_bias': <NDArray 10 @cpu(0)>, 'fc3_weight': <NDArray 10x64 @cpu(0)>,
@@ -591,7 +591,7 @@ class BaseModule(object):
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
                     allow_missing=False, force_init=False):
-        """Initialize the parameters and auxiliary states.
+        """Initializes the parameters and auxiliary states.
 
         Parameters
         ----------
@@ -611,13 +611,13 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of initializing module parameters.
+        >>> # An example of initializing module parameters.
         >>> mod.init_params()
         """
         raise NotImplementedError()
 
     def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True):
-        """Assign parameter and aux state values.
+        """Assigns parameter and aux state values.
 
         Parameters
         ----------
@@ -633,7 +633,7 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of setting module parameters.
+        >>> # An example of setting module parameters.
         >>> sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, n_epoch_load)
         >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
         """
@@ -641,7 +641,7 @@ class BaseModule(object):
                          allow_missing=allow_missing, force_init=force_init)
 
     def save_params(self, fname):
-        """Save model parameters to file.
+        """Saves model parameters to file.
 
         Parameters
         ----------
@@ -650,7 +650,7 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of saving module parameters.
+        >>> # An example of saving module parameters.
         >>> mod.save_params('myfile')
         """
         arg_params, aux_params = self.get_params()
@@ -659,7 +659,7 @@ class BaseModule(object):
         ndarray.save(fname, save_dict)
 
     def load_params(self, fname):
-        """Load model parameters from file.
+        """Loads model parameters from file.
 
         Parameters
         ----------
@@ -668,7 +668,7 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of loading module parameters.
+        >>> # An example of loading module parameters.
         >>> mod.load_params('myfile')
         """
         save_dict = ndarray.load(fname)
@@ -685,7 +685,7 @@ class BaseModule(object):
         self.set_params(arg_params, aux_params)
 
     def get_states(self, merge_multi_context=True):
-        """Get states from all devices
+        """Gets states from all devices
 
         If `merge_multi_context` is ``True``, returns output of form ``[out1, out2]``.
         Otherwise, it returns output of the form
@@ -709,7 +709,7 @@ class BaseModule(object):
         return []
 
     def set_states(self, states=None, value=None):
-        """Set value for states. Only one of states & value can be specified.
+        """Sets value for states. Only one of states & value can be specified.
 
         Parameters
         ----------
@@ -723,14 +723,14 @@ class BaseModule(object):
         assert not states and not value
 
     def install_monitor(self, mon):
-        """Install monitor on all executors."""
+        """Installs monitor on all executors."""
         raise NotImplementedError()
 
     ################################################################################
     # Computations
     ################################################################################
     def prepare(self, data_batch):
-        '''Prepare the module for processing a data batch.
+        '''Prepares the module for processing a data batch.
 
         Usually involves switching bucket and reshaping.
 
@@ -752,7 +752,7 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of forward computation.
+        >>> # An example of forward computation.
         >>> from collections import namedtuple
         >>> Batch = namedtuple('Batch', ['data'])
         >>> mod.bind(data_shapes=[('data', (1, 10, 10))])
@@ -777,7 +777,7 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of backward computation.
+        >>> # An example of backward computation.
         >>> mod.backward()
         >>> print mod.get_input_grads()[0].asnumpy()
         [[[  1.10182791e-05   5.12257748e-06   4.01927764e-06   8.32566820e-06
@@ -788,7 +788,7 @@ class BaseModule(object):
         raise NotImplementedError()
 
     def get_outputs(self, merge_multi_context=True):
-        """Get outputs of the previous forward computation.
+        """Gets outputs of the previous forward computation.
 
         If `merge_multi_context` is ``True``, it is like ``[out1, out2]``. Otherwise,
         it returns out put of form ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``.
@@ -810,7 +810,7 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of getting forward output.
+        >>> # An example of getting forward output.
         >>> print mod.get_outputs()[0].asnumpy()
         [[ 0.09999977  0.10000153  0.10000716  0.10000195  0.09999853  0.09999743
            0.10000272  0.10000113  0.09999088  0.09999888]]
@@ -818,7 +818,7 @@ class BaseModule(object):
         raise NotImplementedError()
 
     def get_input_grads(self, merge_multi_context=True):
-        """Get the gradients to the inputs, computed in the previous backward computation.
+        """Gets the gradients to the inputs, computed in the previous backward computation.
 
         If `merge_multi_context` is ``True``, it is like ``[grad1, grad2]``. Otherwise, it
         is like ``[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]``. All the output
@@ -840,7 +840,7 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of getting input gradients.
+        >>> # An example of getting input gradients.
         >>> print mod.get_input_grads()[0].asnumpy()
         [[[  1.10182791e-05   5.12257748e-06   4.01927764e-06   8.32566820e-06
             -1.59775993e-06   7.24269375e-06   7.28067835e-06  -1.65902311e-05
@@ -855,7 +855,7 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of updating module parameters.
+        >>> # An example of updating module parameters.
         >>> mod.init_optimizer(kvstore='local', optimizer='sgd',
         ...     optimizer_params=(('learning_rate', 0.01), ))
         >>> mod.backward()
@@ -881,7 +881,7 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of updating evaluation metric.
+        >>> # An example of updating evaluation metric.
         >>> mod.forward(data_batch)
         >>> mod.update_metric(metric, data_batch.label)
         """
@@ -924,9 +924,9 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of binding symbols.
+        >>> # An example of binding symbols.
         >>> mod.bind(data_shapes=[('data', (1, 10, 10))])
-        >>> #Assume train_iter is already created.
+        >>> # Assume train_iter is already created.
         >>> mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
         """
         raise NotImplementedError()
@@ -950,7 +950,7 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> #An example of initializing optimizer.
+        >>> # An example of initializing optimizer.
         >>> mod.init_optimizer(optimizer='sgd', optimizer_params=(('learning_rate', 0.005),))
         """
         raise NotImplementedError()
@@ -960,7 +960,7 @@ class BaseModule(object):
     ################################################################################
     @property
     def symbol(self):
-        """Get the symbol associated with this module.
+        """Gets the symbol associated with this module.
 
         Except for `Module`, for other types of modules (e.g. `BucketingModule`), this
         property might not be a constant throughout its life time. Some modules might

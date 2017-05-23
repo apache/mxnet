@@ -158,7 +158,7 @@ class BucketingModule(BaseModule):
 
         Examples
         --------
-        >>> #An example of setting module parameters.
+        >>> # An example of setting module parameters.
         >>> sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, n_epoch_load)
         >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
         """
