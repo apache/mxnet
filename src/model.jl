@@ -207,11 +207,11 @@ end
 
 See also [`train`](@ref), [`fit`](@ref), [`init_model`](@ref), and [`load_checkpoint`](@ref)
 """
-function predict(callback :: Function, self :: FeedForward, data :: AbstractDataProvider; 
+function predict(callback :: Function, self :: FeedForward, data :: AbstractDataProvider;
                  overwrite :: Bool = true, verbosity :: Integer = 1)
   predict(self, data; overwrite = overwrite, callback=callback, verbosity = verbosity)
 end
-function predict(self :: FeedForward, data :: AbstractDataProvider; 
+function predict(self :: FeedForward, data :: AbstractDataProvider;
                  overwrite::Bool=true, callback::Union{Function,Void}=nothing, verbosity :: Integer = 1)
   data_shapes = provide_data(data)
   data_names  = [x[1] for x in data_shapes]
@@ -264,9 +264,9 @@ function _init_model(self :: FeedForward, data :: AbstractDataProvider, initiali
   init_model(self, initializer; overwrite=overwrite, [provide_data(data)..., provide_label(data)...]...)
 end
 
-function _create_kvstore(kv_type :: Base.Symbol, num_device :: Int, arg_params :: Dict{Base.Symbol,NDArray})
+function _create_kvstore(kv_type :: Base.Symbol, num_device :: Int, arg_params :: Dict{Base.Symbol,NDArray}, verbosity :: Int)
   if num_device == 1 && !ismatch(r"dist", string(kv_type))
-    kv = nothing
+    return nothing
   else
     if kv_type == :local
       max_size = maximum([prod(size(param)) for (k,param) in arg_params])
@@ -275,17 +275,10 @@ function _create_kvstore(kv_type :: Base.Symbol, num_device :: Int, arg_params :
       else
         kv_type = :local_allreduce_cpu
       end
-      info("Auto-select kvstore type = $kv_type")
+      verbosity >= 2 && info("Auto-select kvstore type = $kv_type")
     end
-    kv = KVStore(kv_type)
+    return KVStore(kv_type)
   end
-
-  update_on_kvstore = true
-  if isa(kv, Void) || ismatch(r"local_allreduce", string(get_type(kv)))
-    update_on_kvstore = false
-  end
-
-  return (kv, update_on_kvstore)
 end
 
 @defstruct TrainingOptions (
@@ -371,7 +364,12 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   kvstore = opts.kvstore
   if isa(kvstore, Base.Symbol)
     opts.verbosity >= 2 && info("Creating KVStore...")
-    kvstore, update_on_kvstore = _create_kvstore(kvstore, length(self.ctx), self.arg_params)
+    kvstore = _create_kvstore(kvstore, length(self.ctx), self.arg_params, opts.verbosity)
+  end
+
+  update_on_kvstore = true
+  if isa(kvstore, Void) || ismatch(r"local_allreduce", string(get_type(kvstore)))
+    update_on_kvstore = false
   end
 
   # get grad attribute to allow for freezing
