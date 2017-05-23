@@ -839,26 +839,59 @@ def test_batchnorm_training():
         test = mx.symbol.BatchNorm_v1(data, fix_gamma=True)
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
 
-        test = mx.symbol.BatchNorm(data, fix_gamma=True)
-        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
-
         test = mx.symbol.BatchNorm_v1(data, fix_gamma=True, use_global_stats=True)
-        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
-
-        test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True)
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
 
         test = mx.symbol.BatchNorm_v1(data, fix_gamma=False)
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
 
-        test = mx.symbol.BatchNorm(data, fix_gamma=False)
+        test = mx.symbol.BatchNorm_v1(data, fix_gamma=False, use_global_stats=True)
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
 
-        test = mx.symbol.BatchNorm_v1(data, fix_gamma=False, use_global_stats=True)
+        test = mx.symbol.BatchNorm(data, fix_gamma=True)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
+        test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
+        test = mx.symbol.BatchNorm(data, fix_gamma=False)
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
 
         test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True)
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
+        # Test varying channel axis
+        dim = len(shape)
+        for chaxis in range(-1, dim):
+            chaxis_true = chaxis
+            if chaxis == -1:
+                chaxis_true = dim - 1
+
+            shapex = shape
+
+            channel_count = shapex[chaxis_true]
+            data_tmp = np.random.normal(-0.1, 0.1, size=shapex)
+
+            gamma = np.ones(channel_count)
+            beta = np.ones(channel_count)
+            if s > 1:
+                gamma[1] = 3
+            beta[0] = 3
+
+            xrolling_mean = np.random.uniform(size=channel_count)
+            xrolling_std = np.random.uniform(size=channel_count)
+
+            test = mx.symbol.BatchNorm(data, fix_gamma=True, channel_axis=chaxis)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
+
+            test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True, channel_axis=chaxis)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
+
+            test = mx.symbol.BatchNorm(data, fix_gamma=False, channel_axis=chaxis)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
+
+            test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True, channel_axis=chaxis)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
 
 def test_convolution_grouping():
     num_filter = 4
@@ -3012,7 +3045,7 @@ def test_pick():
     test_pick_helper(np.int32)
     test_pick_helper(np.float32)
 
-    
+
 def check_ctc_loss(acts, labels, loss_truth):
     in_var = mx.sym.Variable('input')
     labels_var = mx.sym.Variable('labels')
@@ -3053,7 +3086,7 @@ def test_ctc_loss():
     true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
     check_ctc_loss(acts2, labels2, true_loss)
 
-    
+
 def test_quantization_op():
   min0 = mx.nd.array([0.0])
   max0 = mx.nd.array([1.0])

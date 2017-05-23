@@ -32,6 +32,8 @@ enum BatchNormOpOutputs {kOut, kMean, kVar};  // req, out_data
 enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};  // aux_states
 }  // namespace batchnorm
 
+constexpr int DEFAULT_CHANNEL_AXIS = 1;
+
 /*! \brief Parameters for BatchNoram operator */
 struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   float eps;
@@ -39,6 +41,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   bool fix_gamma;
   bool use_global_stats;
   bool output_mean_var;
+  int channel_axis;
   bool cudnn_off;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
@@ -54,6 +57,8 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
               "This will force change batch-norm into a scale shift operator.");
     DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
     .describe("Output All,normal mean and var");
+    DMLC_DECLARE_FIELD(channel_axis).set_default(DEFAULT_CHANNEL_AXIS)
+      .describe("Specify which shape axis the channel is specified");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
       .describe("Do not select CUDNN operator, if available");
   }
@@ -207,21 +212,26 @@ class BatchNormProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 3U) << "Input:[data, gamma, beta]";
     const TShape &dshape = in_shape->at(0);
 
+    CHECK_GE(param_.channel_axis, -1) << "Invalid channel axis: " << param_.channel_axis;
+
+    const int channelCount = param_.channel_axis == -1
+                             ? dshape[dshape.ndim() - 1] : dshape[param_.channel_axis];
+
     if (dshape.ndim() == 0) {
       return false;
     }
 
-    in_shape->at(1) = TShape(Shape1(dshape[1]));
-    in_shape->at(2) = TShape(Shape1(dshape[1]));
+    in_shape->at(1) = TShape(Shape1(channelCount));
+    in_shape->at(2) = TShape(Shape1(channelCount));
 
     out_shape->clear();
     out_shape->push_back(dshape);             // kOut
-    out_shape->push_back(Shape1(dshape[1]));  // kMean
-    out_shape->push_back(Shape1(dshape[1]));  // kVar
+    out_shape->push_back(Shape1(channelCount));  // kMean
+    out_shape->push_back(Shape1(channelCount));  // kVar
 
     aux_shape->clear();
-    aux_shape->push_back(Shape1(dshape[1]));  // kMovingMean
-    aux_shape->push_back(Shape1(dshape[1]));  // kMovingVar
+    aux_shape->push_back(Shape1(channelCount));  // kMovingMean
+    aux_shape->push_back(Shape1(channelCount));  // kMovingVar
     return true;
   }
 
@@ -328,6 +338,128 @@ class BatchNormProp : public OperatorProperty {
  private:
   BatchNormParam param_;
 };  // class BatchNormProp
+
+namespace batchnorm {
+
+#if defined(__CUDACC__)
+#define __bn_hostonly__        __host__
+#define __bn_hostdevinl__  __host__ __device__ __forceinline__
+#define __bn_localinline__ __forceinline__
+#else
+#define __bn_hostonly__
+#define __bn_hostdevinl__  inline
+#define __bn_localinline__ inline
+#endif
+
+template<typename DType>
+class BNTensor3 {
+  enum { OUTER, CHANNEL, INNER, COUNT };
+
+ public:
+  __bn_hostonly__ inline BNTensor3(const TBlob& blob, const int indexOfChannel)
+    : dptr_(blob.dptr<DType>())
+      , indexOfChannel_(indexOfChannel == -1 ? (blob.shape_.ndim() - 1) : indexOfChannel) {
+    shape_[OUTER] = 1;
+    for (size_t i = 0; i < indexOfChannel_; ++i) {
+      shape_[OUTER] *= blob.shape_[i];
+    }
+    shape_[CHANNEL] = blob.shape_[indexOfChannel_];
+    shape_[INNER] = 1;
+    for (size_t i = indexOfChannel_ + 1, n = blob.shape_.ndim(); i < n; ++i) {
+      shape_[INNER] *= blob.shape_[i];
+    }
+  }
+
+  __bn_hostonly__ inline BNTensor3(DType *p, const TShape& shape, const int indexOfChannel)
+    : dptr_(p)
+      , indexOfChannel_(indexOfChannel == -1 ? (shape.ndim() - 1) : indexOfChannel) {
+    shape_[OUTER] = 1;
+    for (size_t i = 0; i < indexOfChannel_; ++i) {
+      shape_[OUTER] *= shape[i];
+    }
+    shape_[CHANNEL] = shape[indexOfChannel_];
+    shape_[INNER] = 1;
+    for (size_t i = indexOfChannel_ + 1, n = shape.ndim(); i < n; ++i) {
+      shape_[INNER] *= shape[i];
+    }
+  }
+
+  __bn_localinline__ bool IsEmpty() const {
+    return dptr_ == nullptr;
+  }
+
+  __bn_hostdevinl__ size_t Size() const {
+    size_t n = 1;
+    for (int i = 0; i < COUNT; ++i) {
+      n *= shape_[i];
+    }
+    return n;
+  }
+
+  __bn_hostdevinl__ size_t ChannelCount() const {
+    return shape_[CHANNEL];
+  }
+
+  __bn_hostdevinl__ size_t OuterSize() const {
+    return shape_[OUTER];
+  }
+
+  __bn_hostdevinl__ size_t InnerSize() const {
+    return shape_[INNER];
+  }
+
+  /*! \brief start of a given channel's spatial data */
+  __bn_hostdevinl__ size_t StartOffset(const size_t channel) const {
+    return channel * InnerSize();
+  }
+
+  /*! \brief This is the amount to skip to next same-channel data
+   * This is the number of bytes to skip from one past the end of the current spatial data
+   * to the next start of the same channel's "spatial data"
+   * It is assume that the pointer being calculated points just beyond the
+   * end of the last blobk of spatial data
+   * i.e. RGBRGB <-- 2
+   *      RRGGBB <-- 4
+   **/
+  __bn_hostdevinl__ size_t SkipLengthToNextSameChannelData() const {
+    return (ChannelCount() - 1) * InnerSize();
+  }
+
+  __bn_hostdevinl__ size_t offset(const size_t outer,
+                                  const size_t channel,
+                                  const size_t i) const {
+    const size_t spatial_size = InnerSize();
+    const size_t skip_length = SkipLengthToNextSameChannelData();
+    size_t off = StartOffset(channel);
+    off += outer * shape_[CHANNEL] * shape_[INNER];
+    const size_t skips = i / spatial_size;
+    off += (1 + skip_length) * skips;
+    off += i % spatial_size;
+    return off;
+  }
+
+  __bn_hostdevinl__ DType& get_ref(const size_t batch,
+                                   const size_t channel,
+                                   const size_t i) {
+    const size_t off = offset(batch, channel, i);
+    return dptr_[off];
+  }
+
+  __bn_hostdevinl__ const DType& get_ref(const size_t batch,
+                                         const size_t channel,
+                                         const size_t i) const {
+    const size_t off = offset(batch, channel, i);
+    return dptr_[off];
+  }
+
+  DType *dptr_;
+  size_t indexOfChannel_;
+  size_t shape_[COUNT];
+};
+
+extern volatile bool disable_mkl;
+
+}  // namespace batchnorm
 
 #endif  // DMLC_USE_CXX11
 }  // namespace op
