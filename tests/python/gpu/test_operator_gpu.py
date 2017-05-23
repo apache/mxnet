@@ -1153,6 +1153,7 @@ def test_deformable_psroipooling_with_type():
 def test_deformable_convolution_with_type():
     np.random.seed(1234)
     sym = mx.contrib.sym.DeformableConvolution(num_filter=3, kernel=(3,3), name='deformable_conv')
+    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
     ctx_list = [{'ctx': mx.gpu(0),
                  'deformable_conv_data': (2, 2, 10, 10),
                  'deformable_conv_offset': (2, 18, 8, 8),
@@ -1182,6 +1183,7 @@ def test_deformable_convolution_options():
     # 2D convolution
 
     # Pad > 0
+    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
     ctx_list = [{'ctx': mx.gpu(0),
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 7, 7),
@@ -1192,12 +1194,14 @@ def test_deformable_convolution_options():
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 # {'ctx': mx.gpu(0),
                 #  'deformable_conv_data': (2, 2, 7, 7),
+                #  'deformable_offset': (2, 18, 7, 7),
                 #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
                 ]
     sym = mx.contrib.sym.DeformableConvolution(num_filter=3, kernel=(3,3), pad=(1,1), name='deformable_conv')
     check_consistency(sym, ctx_list)
 
     # Stride > 1
+    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
     ctx_list = [{'ctx': mx.gpu(0),
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 3, 3),
@@ -1208,12 +1212,14 @@ def test_deformable_convolution_options():
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 # {'ctx': mx.gpu(0),
                 #  'deformable_conv_data': (2, 2, 7, 7),
+                # 'deformable_conv_offset': (2, 18, 3, 3),
                 #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
                 ]
     sym = mx.contrib.sym.DeformableConvolution(num_filter=3, kernel=(3,3), stride=(2,2), name='deformable_conv')
     check_consistency(sym, ctx_list)
 
     # Dilate > 1
+    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
     ctx_list = [{'ctx': mx.gpu(0),
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 3, 3),
@@ -1224,12 +1230,14 @@ def test_deformable_convolution_options():
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 # {'ctx': mx.gpu(0),
                 #  'deformable_conv_data': (2, 2, 7, 7),
+                # 'deformable_conv_offset': (2, 18, 3, 3),
                 #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
                 ]
     sym = mx.contrib.sym.DeformableConvolution(num_filter=3, kernel=(3,3), dilate=(2,2), name='deformable_conv')
     check_consistency(sym, ctx_list)
 
     # Deformable group > 1
+    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
     ctx_list = [{'ctx': mx.gpu(0),
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 36, 5, 5),
@@ -1240,6 +1248,7 @@ def test_deformable_convolution_options():
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 # {'ctx': mx.gpu(0),
                 #  'deformable_conv_data': (2, 2, 7, 7),
+                #  'deformable_conv_offset': (2, 36, 5, 5),
                 #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
                 ]
     sym = mx.contrib.sym.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2,
