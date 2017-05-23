@@ -186,7 +186,7 @@ not on assumptions about what users can or can't do.
 Here's a summary of goals for the engine:
 
 - The engine should not be aware of what operations it performs, so that users can perform any operations they define.
-- It should not be restricted in what typed of objects it can schedule.
+- It should not be restricted in what type of objects it can schedule.
 	- We should be able to schedule dependencies on GPU and CPU memory.
 	- We should be able to track dependencies on the random number generator, etc.
 - The engine should not allocate resources. It should only track dependencies. Users can allocate their own memory, PRNG, etc.
@@ -232,21 +232,24 @@ The user then calls `push` to tell the engine about the function to execute.
 The user also needs to specify the dependencies of the operation,
 using `read_vars` and `write_vars`:
 
-- `read_vars` are variable tags for objects that the operation will "read from," without changing their internal state.
+- `read_vars` are variable tags for objects that the operation will _read from_, without changing their internal state.
 - `mutate_vars` are variable tags for objects whose internal states the operation will mutate.
 
 ![Push Op](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/push_var.png)
 
-The preceding figure shows how to push operation `B = A + 1` to the dependency engine. `B.data`and
+The preceding figure shows how to push operation `B = A + 1` to the dependency engine. `B.data` and
 `A.data` are the allocated space. Note that the engine is *only aware of variable tags*.
 Any execution function can be processed.
 This interface is generic for the operations and resources we want to schedule.
 
 For fun, let's look at how the engine internals work with the tags by considering the following code snippet:
+
+```
     B = A + 1
     C = A + 2
     A = C * 2
     D = A + 3
+```
 
 The first line reads variable `A` and mutates variable `B`. The second line reads variable `A` and mutates variable `C`. And so on.
 
@@ -254,7 +257,7 @@ The engine maintains a queue for each variable, as the following animation shows
 
 ![Dependency Queue](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_queue.gif)
 
-Upon building this queue, the engine sees that the first two green blocks at the beginning of A's queue could actually be run in parallel because they are both read actions and won't conflict with each other. The following graph illustrates this point.
+Upon building this queue, the engine sees that the first two green blocks at the beginning of `A`'s queue could actually be run in parallel because they are both read actions and won't conflict with each other. The following graph illustrates this point.
 
 ![Dependency Parallelism](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_parallel.png)
 
@@ -321,7 +324,7 @@ to all operations and schedules is an interesting systems problem itself.
 The design that we discussed in this article
 isn't the only solution to the dependency tracking problem.
 It's just one example of how we might approach this.
-To be sure, some of these design choices that are debatable.
+To be sure, some of these design choices are debatable.
 We'll discuss some of them in this section.
 
 ### Dynamic vs. Static

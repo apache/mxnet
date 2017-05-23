@@ -47,8 +47,11 @@ class Symbol(SymbolBase):
     def __repr__(self):
         """Get a string representation of the symbol."""
         name = self.name
-        return '<%s %s>' % (self.__class__.__name__,
-                            'Grouped' if name is None else name)
+        if name is None:
+            name = ', '.join([i.name for i in self])
+            return '<%s group [%s]>' % (self.__class__.__name__, name)
+        else:
+            return '<%s %s>' % (self.__class__.__name__, name)
 
     def __iter__(self):
         """Returns a generator object of symbol.
@@ -1006,12 +1009,52 @@ class Symbol(SymbolBase):
             # pylint: enable=too-many-locals
 
     def debug_str(self):
-        """Gets a debug string.
+        """Gets a debug string of symbol.
+
+        It contains Symbol output, variables and operators in the computation graph
+        with their inputs, variables and attributes.
 
         Returns
         -------
-        debug_str : string
+        string
             Debug string of the symbol.
+
+        Examples
+        --------
+        >>> a = mx.sym.Variable('a')
+        >>> b = mx.sym.sin(a)
+        >>> c = 2 * a + b
+        >>> d = mx.sym.FullyConnected(data=c, num_hidden=10)
+        >>> d.debug_str()
+        >>> print d.debug_str()
+        Symbol Outputs:
+	        output[0]=fullyconnected0(0)
+        Variable:a
+        --------------------
+        Op:_mul_scalar, Name=_mulscalar0
+        Inputs:
+        	arg[0]=a(0) version=0
+        Attrs:
+        	scalar=2
+        --------------------
+        Op:sin, Name=sin0
+        Inputs:
+        	arg[0]=a(0) version=0
+        --------------------
+        Op:elemwise_add, Name=_plus0
+        Inputs:
+        	arg[0]=_mulscalar0(0)
+        	arg[1]=sin0(0)
+        Variable:fullyconnected0_weight
+        Variable:fullyconnected0_bias
+        --------------------
+        Op:FullyConnected, Name=fullyconnected0
+        Inputs:
+        	arg[0]=_plus0(0)
+        	arg[1]=fullyconnected0_weight(0) version=0
+        	arg[2]=fullyconnected0_bias(0) version=0
+        Attrs:
+        	num_hidden=10
         """
         debug_str = ctypes.c_char_p()
         check_call(_LIB.MXSymbolPrint(
@@ -1432,6 +1475,24 @@ class Symbol(SymbolBase):
         """
         return self.bind(ctx, kwargs).forward()
 
+    def reshape(self, shape):
+        """Shorthand for mxnet.sym.reshape.
+
+        Parameters
+        ----------
+        shape : tuple of int
+            The new shape should not change the array size, namely
+            ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
+            One shape dimension can be -1. In this case, the value is inferred
+            from the length of the array and remaining dimensions.
+
+
+        Returns
+        -------
+        Symbol
+            A reshaped symbol.
+        """
+        return reshape(self, shape=shape)
 
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None, **kwargs):
@@ -1485,7 +1546,9 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, ini
     if dtype is not None:
         attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
     if init is not None:
-        attr['__init__'] = init.dumps()
+        if not isinstance(init, string_types):
+            init = init.dumps()
+        attr['__init__'] = init
     for k, v in kwargs.items():
         if k.startswith('__') and k.endswith('__'):
             attr[k] = str(v)
@@ -1501,6 +1564,13 @@ Variable = var
 
 def Group(symbols):
     """Creates a symbol that contains a collection of other symbols, grouped together.
+
+    Example usage:
+    ----------
+    >>> a = mx.sym.Variable('a')
+    >>> b = mx.sym.Variable('b')
+    >>> mx.sym.Group([a,b])
+    <Symbol Grouped>
 
     Parameters
     ----------
@@ -1525,7 +1595,7 @@ def Group(symbols):
 
 
 def load(fname):
-    """Load symbol from a JSON file.
+    """Loads symbol from a JSON file.
 
     You can also use pickle to do the job if you only work on python.
     The advantage of load/save is the file is language agnostic.
@@ -1558,7 +1628,7 @@ def load(fname):
 
 
 def load_json(json_str):
-    """Load symbol from json string.
+    """Loads symbol from json string.
 
     Parameters
     ----------
@@ -1587,16 +1657,38 @@ _init_symbol_module(Symbol, "mxnet")
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def pow(base, exp):
-    """ Raise base to an exp.
+    """Returns element-wise result of base element raised to powers from exp element.
+
+    Both inputs can be Symbol or scalar number.
+    Broadcasting is not supported. Use `broadcast_pow` instead.
 
     Parameters
     ---------
-    base: Symbol or Number
-    exp: Symbol or Number
+    base : Symbol or scalar
+        The base symbol
+    exp : Symbol or scalar
+        The exponent symbol
 
     Returns
     -------
-    result: Symbol or Number
+    Symbol or scalar
+        The bases in x raised to the exponents in y.
+
+    Examples
+    --------
+    >>> mx.sym.pow(2, 3)
+    8
+    >>> x = mx.sym.Variable('x')
+    >>> y = mx.sym.Variable('y')
+    >>> z = mx.sym.pow(x, 2)
+    >>> z.eval(x=mx.nd.array([1,2]))[0].asnumpy()
+    array([ 1.,  4.], dtype=float32)
+    >>> z = mx.sym.pow(3, y)
+    >>> z.eval(y=mx.nd.array([2,3]))[0].asnumpy()
+    array([  9.,  27.], dtype=float32)
+    >>> z = mx.sym.pow(x, y)
+    >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([2,3]))[0].asnumpy()
+    array([  9.,  64.], dtype=float32)
     """
     if isinstance(base, Symbol) and isinstance(exp, Symbol):
         return _internal._Power(base, exp)
@@ -1613,16 +1705,34 @@ def pow(base, exp):
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def maximum(left, right):
-    """ maximum left and right
+    """Returns element-wise maximum of the input elements.
+
+    Both inputs can be Symbol or scalar number. Broadcasting is not supported.
 
     Parameters
     ---------
-    left: Symbol or Number
-    right: Symbol or Number
+    left : Symbol or scalar
+        First symbol to be compared.
+    right : Symbol or scalar
+        Second symbol to be compared.
 
     Returns
     -------
-    result: Symbol or Number
+    Symbol or scalar
+        The element-wise maximum of the input symbols.
+
+    Examples
+    --------
+    >>> mx.sym.maximum(2, 3.5)
+    3.5
+    >>> x = mx.sym.Variable('x')
+    >>> y = mx.sym.Variable('y')
+    >>> z = mx.sym.maximum(x, 4)
+    >>> z.eval(x=mx.nd.array([3,5,2,10]))[0].asnumpy()
+    array([  4.,   5.,   4.,  10.], dtype=float32)
+    >>> z = mx.sym.maximum(x, y)
+    >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([10,2]))[0].asnumpy()
+    array([ 10.,   4.], dtype=float32)
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
         return _internal._Maximum(left, right)
@@ -1639,16 +1749,34 @@ def maximum(left, right):
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def minimum(left, right):
-    """ minimum left and right
+    """Returns element-wise minimum of the input elements.
+
+    Both inputs can be Symbol or scalar number. Broadcasting is not supported.
 
     Parameters
     ---------
-    left: Symbol or Number
-    right: Symbol or Number
+    left : Symbol or scalar
+        First symbol to be compared.
+    right : Symbol or scalar
+        Second symbol to be compared.
 
     Returns
     -------
-    result: Symbol or Number
+    Symbol or scalar
+        The element-wise minimum of the input symbols.
+
+    Examples
+    --------
+    >>> mx.sym.minimum(2, 3.5)
+    2
+    >>> x = mx.sym.Variable('x')
+    >>> y = mx.sym.Variable('y')
+    >>> z = mx.sym.minimum(x, 4)
+    >>> z.eval(x=mx.nd.array([3,5,2,10]))[0].asnumpy()
+    array([ 3.,  4.,  2.,  4.], dtype=float32)
+    >>> z = mx.sym.minimum(x, y)
+    >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([10,2]))[0].asnumpy()
+    array([ 3.,  2.], dtype=float32)
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
         return _internal._Minimum(left, right)
@@ -1657,7 +1785,7 @@ def minimum(left, right):
     if isinstance(left, Number) and isinstance(right, Symbol):
         return _internal._MinimumScalar(right, scalar=left)
     if isinstance(left, Number) and isinstance(right, Number):
-        return left if left > right else right
+        return left if left < right else right
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
@@ -1665,16 +1793,35 @@ def minimum(left, right):
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def hypot(left, right):
-    """ minimum left and right
+    """Given the "legs" of a right triangle, return its hypotenuse.
+
+    Equivalent to "sqrt(left**2 + right**2)", element-wise.
+    Both inputs can be Symbol or scalar number. Broadcasting is not supported.
 
     Parameters
     ---------
-    left: Symbol or Number
-    right: Symbol or Number
+    left : Symbol or scalar
+        First leg of the triangle(s).
+    right : Symbol or scalar
+        Second leg of the triangle(s).
 
     Returns
     -------
-    result: Symbol or Number
+    Symbol or scalar
+        The hypotenuse of the triangle(s)
+
+    Examples
+    --------
+    >>> mx.sym.hypot(3, 4)
+    5.0
+    >>> x = mx.sym.Variable('x')
+    >>> y = mx.sym.Variable('y')
+    >>> z = mx.sym.hypot(x, 4)
+    >>> z.eval(x=mx.nd.array([3,5,2]))[0].asnumpy()
+    array([ 5.,  6.40312433,  4.47213602], dtype=float32)
+    >>> z = mx.sym.hypot(x, y)
+    >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([10,2]))[0].asnumpy()
+    array([ 10.44030666,   4.47213602], dtype=float32)
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
         return _internal._Hypot(left, right)

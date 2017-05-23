@@ -8,9 +8,11 @@
 #ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_HPP_
 #define CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_HPP_
 
+#include <algorithm>
 #include <map>
 #include <string>
 #include <vector>
+#include <iterator>
 #include "dmlc/logging.h"
 #include "mxnet-cpp/ndarray.h"
 
@@ -335,6 +337,26 @@ inline Context NDArray::GetContext() const {
   MXNDArrayGetContext(blob_ptr_->handle_, &out_dev_type, &out_dev_id);
   return Context((DeviceType)out_dev_type, out_dev_id);
 }
+
+inline std::ostream & operator<<(std::ostream &out, const NDArray &ndarray) {
+  // TODO(lx75249): Consider DType / beautify like numpy
+  auto shape = ndarray.GetShape();
+  NDArray cpu_array(ndarray.GetShape(), Context::cpu());
+  if (ndarray.GetContext().GetDeviceType() != DeviceType::kGPU) {
+    cpu_array = ndarray;
+  } else {
+    ndarray.WaitToRead();
+    ndarray.CopyTo(&cpu_array);
+  }
+
+  out << '[';
+  cpu_array.WaitToRead();
+  std::copy(cpu_array.GetData(), cpu_array.GetData() + ndarray.Size(),
+      std::ostream_iterator<float>(out, ", "));
+  out << ']';
+  return out;
+}
+
 }  // namespace cpp
 }  // namespace mxnet
 
