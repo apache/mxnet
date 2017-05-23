@@ -124,7 +124,7 @@ Please see the full code for this example [here](https://github.com/dmlc/mxnet/b
 ## C++
 With MXNet v0.9 (the NNVM refactor) or later, creating new operators has become easier.
 Operators are now registered with NNVM.
-The following code is an example on how to register an operator (checkout [src/operator/tensor](https://github.com/dmlc/mxnet/tree/nnvm/src/operator/tensor) for more examples):
+The following code is an example on how to register an operator (checkout [src/operator/tensor](https://github.com/dmlc/mxnet/tree/master/src/operator/tensor) for more examples):
 
 ```c++
 NNVM_REGISTER_OP(abs)
@@ -155,7 +155,7 @@ For example, `FInferShape` is used for shape inference, `FCompute<cpu>` is used 
 
 As long as all attributes registered with the same key have the same type,
 we can register any attributes to operators.
-The more attribute an operator provide,
+The more attribute an operator provides,
 the more information the system can use for optimization.
 
 ### List of basic attributes
@@ -262,7 +262,7 @@ that the i-th input can share memory with the j-th output.
 
 #### FGradient (Optional for imperative use, required for symbolic use)
 
-If and operator has gradient, it can be described with `FGradient` with prototype
+If an operator has gradient, it can be described with `FGradient` with prototype
 
 ``` c++
 std::vector<nnvm::NodeEntry>(const nnvm::NodePtr& n,

@@ -48,7 +48,8 @@ Symbol getConv(const std::string & name, Symbol data,
                                   kernel, num_filter, stride, Shape(1, 1),
                                   pad, 1, 512);
 
-  Symbol bn = BatchNorm(name + "_bn", conv, BN_GAMMA, BN_BETA, 2e-5, bn_momentum, false);
+  Symbol bn = BatchNorm(name + "_bn", conv, Symbol(), Symbol(), Symbol(),
+                        Symbol(), 2e-5, bn_momentum, false);
 
   if (with_relu) {
     return Activation(name + "_relu", bn, "relu");
@@ -108,7 +109,8 @@ Symbol ResNetSymbol(int num_class, int num_level = 3, int num_block = 9,
   Symbol data = Symbol::Variable("data");
   Symbol data_label = Symbol::Variable("data_label");
 
-  Symbol zscore = BatchNorm("zscore", data, BN_GAMMA, BN_BETA, 0.001, bn_momentum);
+  Symbol zscore = BatchNorm("zscore", data, Symbol(), Symbol(), Symbol(),
+                            Symbol(), 0.001, bn_momentum);
 
   Symbol conv = getConv("conv0", zscore, num_filter,
                         Shape(3, 3), Shape(1, 1), Shape(1, 1),
@@ -116,7 +118,7 @@ Symbol ResNetSymbol(int num_class, int num_level = 3, int num_block = 9,
 
   Symbol body = getBody(conv, num_level, num_block, num_filter, bn_momentum);
 
-  Symbol pool = Pooling("pool", body, pool_kernel, PoolingPoolType::avg);
+  Symbol pool = Pooling("pool", body, pool_kernel, PoolingPoolType::kAvg);
 
   Symbol flat = Flatten("flatten", pool);
 

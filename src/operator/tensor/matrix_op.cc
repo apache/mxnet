@@ -222,7 +222,7 @@ NNVM_REGISTER_OP(slice)
 
 .. note:: ``crop`` is deprecated. Use ``slice`` instead.
 
-This function returns a sliced continous region of the array between the indices given 
+This function returns a sliced continous region of the array between the indices given
 by `begin` and `end`.
 
 For an input array of `n` dimensions, slice operation with ``begin=(b_0, b_1...b_n-1)`` indices
@@ -303,7 +303,7 @@ NNVM_REGISTER_OP(slice_axis)
 .describe(R"code(Slices along a given axis.
 
 Returns an array slice along a given `axis` starting from the `begin` index
- to the `end` index.
+to the `end` index.
 
 Examples::
 
@@ -354,6 +354,12 @@ NNVM_REGISTER_OP(dot)
 
     dot(x,y)[i,j,a,b] = sum(x[i,j,:]*y[:,a,b])
 
+  Example::
+
+    x = reshape([0,1,2,3,4,5,6,7], shape=(2,2,2))
+    y = reshape([7,6,5,4,3,2,1,0], shape=(2,2,2))
+    dot(x,y)[0,0,1,1] = 0
+    sum(x[0,0,:]*y[:,1,1]) = 0
 )doc" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)

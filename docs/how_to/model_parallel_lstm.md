@@ -6,7 +6,7 @@ can be especially slow to train,
 with each layer, at each time step, requiring eight matrix multiplications.
 Fortunately, given cloud services like AWS,
 machine learning practitioners often  have access
-to multiple machines and multiple GPUS.
+to multiple machines and multiple GPUs.
 One key strength of _MXNet_ is its ability to leverage
 powerful heterogeneous hardware environments to achieve significant speedups.
 
