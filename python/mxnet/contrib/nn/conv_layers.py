@@ -84,8 +84,7 @@ class _Conv(Layer):
                                             init=bias_initializer)
 
             if activation is not None:
-                self.act = Activation(activation, prefix=self.prefix+activation+'_',
-                                      params=self.params.subdict(activation+'_'))
+                self.act = Activation(activation)
             else:
                 self.act = None
 

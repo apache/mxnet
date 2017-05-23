@@ -722,16 +722,9 @@ class FusedRNNCell(RecurrentCell):
 
 
 class SequentialRNNCell(RecurrentCell):
-    """Sequantially stacking multiple RNN cells.
-
-    Parameters
-    ----------
-    params : RNNParams or None
-        container for weight sharing between cells.
-        created if None.
-    """
-    def __init__(self, params=None):
-        super(SequentialRNNCell, self).__init__(prefix='', params=params)
+    """Sequantially stacking multiple RNN cells."""
+    def __init__(self):
+        super(SequentialRNNCell, self).__init__(prefix='', params=None)
 
     def add(self, cell):
         """Append a cell into the stack.
@@ -840,10 +833,9 @@ class ModifierCell(RecurrentCell):
     should be used instead.
     """
     def __init__(self, base_cell):
-        super(ModifierCell, self).__init__()
-        with self.scope:
-            base_cell._modified = True
-            self.base_cell = base_cell
+        super(ModifierCell, self).__init__(prefix=None, params=None)
+        base_cell._modified = True
+        self.base_cell = base_cell
 
     @property
     def params(self):
@@ -961,12 +953,11 @@ class BidirectionalCell(RecurrentCell):
     r_cell : RecurrentCell
         cell for backward unrolling
     """
-    def __init__(self, l_cell, r_cell, prefix=None, params=None, output_prefix=None):
-        if output_prefix:
-            prefix = output_prefix
-        super(BidirectionalCell, self).__init__(prefix=prefix, params=params)
+    def __init__(self, l_cell, r_cell, output_prefix='bi_'):
+        super(BidirectionalCell, self).__init__(prefix='', params=None)
         self.register_sublayer(l_cell)
         self.register_sublayer(r_cell)
+        self._output_prefix = output_prefix
 
     def unpack_weights(self, args):
         return _cells_unpack_weights(self._children, args)
@@ -979,9 +970,6 @@ class BidirectionalCell(RecurrentCell):
 
     def state_info(self, batch_size=0):
         return _cells_state_info(self._children, batch_size)
-
-    def _alias(self):
-        return 'bi'
 
     def begin_state(self, **kwargs):
         assert not self._modified, \
@@ -1013,9 +1001,9 @@ class BidirectionalCell(RecurrentCell):
 
         if merge_outputs:
             r_outputs = F.reverse(r_outputs, axis=axis)
-            outputs = F.concat(l_outputs, r_outputs, dim=2, name='%sout'%self.prefix)
+            outputs = F.concat(l_outputs, r_outputs, dim=2, name='%sout'%self._output_prefix)
         else:
-            outputs = [F.concat(l_o, r_o, dim=1, name='%st%d'%(self.prefix, i))
+            outputs = [F.concat(l_o, r_o, dim=1, name='%st%d'%(self._output_prefix, i))
                        for i, (l_o, r_o) in enumerate(zip(l_outputs, reversed(r_outputs)))]
 
         states = [l_states, r_states]
