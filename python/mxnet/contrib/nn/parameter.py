@@ -121,7 +121,7 @@ class Parameter(object):
 
         autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
 
-    def set(self, data):
+    def set_data(self, data):
         """Set this parameter's value on all contexts to data."""
         assert self._data is not None, \
             "Parameter %s has not been initialized"%self.name
