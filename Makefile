@@ -297,13 +297,13 @@ doxygen:
 
 # Cython build
 cython:
-	cd python; python setup.py build_ext --inplace
+	cd python; python setup.py build_ext --inplace --with-cython
 
 cython2:
-	cd python; python2 setup.py build_ext --inplace
+	cd python; python2 setup.py build_ext --inplace --with-cython
 
 cython3:
-	cd python; python3 setup.py build_ext --inplace
+	cd python; python3 setup.py build_ext --inplace --with-cython
 
 cyclean:
 	rm -rf python/mxnet/*/*.so python/mxnet/*/*.cpp
