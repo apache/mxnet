@@ -1,6 +1,5 @@
-# coding: utf-8
 """Tools for testing."""
-# pylint: disable=invalid-name, no-member, too-many-arguments, too-many-locals, too-many-branches, too-many-statements, broad-except, line-too-long, unused-import
+# pylint: disable=too-many-lines
 from __future__ import absolute_import, print_function, division
 import time
 import traceback
@@ -12,7 +11,7 @@ import logging
 import numpy as np
 import numpy.testing as npt
 import mxnet as mx
-from .context import cpu, gpu, Context
+from .context import Context
 from .ndarray import array
 from .symbol import Symbol
 try:
@@ -336,7 +335,8 @@ def _parse_aux_states(sym, aux_states, ctx):
     >>> var_states = np.ones(3)
     >>> _parse_aux_states(fc2, [mean_states, var_states], None)
     {'batchnorm0_moving_var': <NDArray 3 @cpu(0)>, 'batchnorm0_moving_mean': <NDArray 3 @cpu(0)>}
-    >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states, 'batchnorm0_moving_mean': var_states}, None)
+    >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states,
+    ...                         'batchnorm0_moving_mean': var_states}, None)
     {'batchnorm0_moving_var': <NDArray 3 @cpu(0)>, 'batchnorm0_moving_mean': <NDArray 3 @cpu(0)>}
     >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
     ValueError: Symbol aux_states names and given aux_states do not match.
@@ -863,7 +863,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             arr = arr.asnumpy()
             try:
                 assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-            except Exception as e:
+            except AssertionError as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
                 if raise_on_err:
@@ -889,7 +889,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 arr = arr.asnumpy()
                 try:
                     assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-                except Exception as e:
+                except AssertionError as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
                     if raise_on_err:
@@ -968,6 +968,34 @@ def download(url, fname=None, dirname=None, overwrite=False):
                 f.write(chunk)
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
+
+def get_mnist():
+    """Download and load the MNIST dataset
+
+    Returns
+    -------
+    dict
+        A dict containing the data
+    """
+    def read_data(label_url, image_url):
+        with gzip.open(mx.test_utils.download(label_url)) as flbl:
+            struct.unpack(">II", flbl.read(8))
+            label = np.fromstring(flbl.read(), dtype=np.int8)
+        with gzip.open(mx.test_utils.download(image_url), 'rb') as fimg:
+            _, _, rows, cols = struct.unpack(">IIII", fimg.read(16))
+            image = np.fromstring(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
+            image = image.reshape(image.shape[0], 1, 28, 28).astype(np.float32)/255
+        return (label, image)
+
+    # changed to mxnet.io for more stable hosting
+    # path = 'http://yann.lecun.com/exdb/mnist/'
+    path = 'http://data.mxnet.io/data/mnist/'
+    (train_lbl, train_img) = read_data(
+        path+'train-labels-idx1-ubyte.gz', path+'train-images-idx3-ubyte.gz')
+    (test_lbl, test_img) = read_data(
+        path+'t10k-labels-idx1-ubyte.gz', path+'t10k-images-idx3-ubyte.gz')
+    return {'train_data':train_img, 'train_label':train_lbl,
+            'test_data':test_img, 'test_label':test_lbl}
 
 def set_env_var(key, val, default_val=""):
     """Set environment variable
