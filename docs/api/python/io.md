@@ -14,24 +14,10 @@ data including
     mxnet.image
 ```
 
-It will also show how to write an iterator for a new data format.
-
-A data iterator reads data batch by batch.
-
-```python
->>> data = mx.nd.ones((100,10))
->>> nd_iter = mx.io.NDArrayIter(data, batch_size=25)
->>> for batch in nd_iter:
-...     print(batch.data)
-[<NDArray 25x10 @cpu(0)>]
-[<NDArray 25x10 @cpu(0)>]
-[<NDArray 25x10 @cpu(0)>]
-[<NDArray 25x10 @cpu(0)>]
-```
-
-If `nd_iter.reset()` is called, then reads the data again from beginning.
-
-In addition, an iterator provides information about the batch, including the
+First, let's see how to write an iterator for a new data format.
+The following iterator can be used to train a symbol whose input data variable has
+name `data` and input label variable has name `softmax_label`.
+The iterator also provides information about the batch, including the
 shapes and name.
 
 ```python
@@ -44,24 +30,19 @@ shapes and name.
 [DataDesc[softmax_label,(25,),<type 'numpy.float32'>,NCHW]]
 ```
 
-So this iterator can be used to train a symbol whose input data variable has
-name `data` and input label variable has name `softmax_label`.
-
-
+Let's see a complete example of how to use data iterator in model training.
 ```python
 >>> data = mx.sym.Variable('data')
 >>> label = mx.sym.Variable('softmax_label')
 >>> fullc = mx.sym.FullyConnected(data=data, num_hidden=1)
 >>> loss = mx.sym.SoftmaxOutput(data=data, label=label)
->>> mod = mx.mod.Module(loss)
->>> print(mod.data_names)
-['data']
->>> print(mod.label_names)
-['softmax_label']
+>>> mod = mx.mod.Module(loss, data_names=['data'], label_names=['softmax_label'])
 >>> mod.bind(data_shapes=nd_iter.provide_data, label_shapes=nd_iter.provide_label)
+>>> mod.fit(nd_iter, num_epoch=2)
 ```
 
-Then we can call `mod.fit(nd_iter, num_epoch=2)` to train `loss` by 2 epochs.
+A detailed tutorial is available at
+[Iterators - Loading data](http://mxnet.io/tutorials/basic/data.html).
 
 ## Data iterators
 
@@ -144,7 +125,7 @@ Functions to read and write RecordIO files.
 Writing a new data iterator in Python is straightforward. Most MXNet
 training/inference programs accept an iteratable object with ``provide_data``
 and ``provide_label`` properties.
-This [tutorial](http://mxnet.io/tutorials/python/data.html#data-iterators) explains how to
+This [tutorial](http://mxnet.io/tutorials/basic/data.html) explains how to
 write an iterator from scratch.
 
 The following example demonstrates how to combine
@@ -176,6 +157,20 @@ iter = MultiIter([mx.io.ImageRecordIter('image.rec'), mx.io.CSVIter('txt.csv')])
 Parsing and performing another pre-processing such as augmentation may be expensive.
 If performance is critical, we can implement a data iterator in C++. Refer to
 [src/io](https://github.com/dmlc/mxnet/tree/master/src/io) for examples.
+
+### Change batch layout
+
+By default, the backend engine treats the first dimension of each data and label variable in data
+iterators as the batch size (i.e. `NCHW` or `NT` layout). In order to override the axis for batch size,
+the `provide_data` (and `provide_label` if there is label) properties should include the layouts. This
+is especially useful in RNN since `TNC` layouts are often more efficient. For example:
+
+```python
+@property
+def provide_data(self):
+    return [DataDesc(name='seq_var', shape=(seq_length, batch_size), layout='TN')]
+```
+The backend engine will recognize the index of `N` in the `layout` as the axis for batch size.
 
 ## API Reference
 

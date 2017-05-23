@@ -12,7 +12,7 @@ deep learning has become an indispensable tool for countless industries.
 It might not come as a surprise that researchers
 have investigated neural networks for decades.
 Warren McCulloch and Walter Pitts
-suggested the forerunner of todays artificial neurons back in 1943.
+suggested the forerunner of today's artificial neurons back in 1943.
 Each neuron is connected to other neurons along _edges_, analogous to the synapses that connect real neurons. 
 And associated with each edge is a _weight_ that indicates whether the connection is excitatory or inhibitatory and the strength of the connection. 
 

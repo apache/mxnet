@@ -6,7 +6,7 @@ It allows you to mix the flavours of deep learning programs together to maximize
 
 Installation
 ------------
-To install, check [Build Instruction](http://mxnet.io/get_started/setup.html)
+To install, check [Build Instruction](http://mxnet.io/get_started/install.html)
 
 
 Running the tests

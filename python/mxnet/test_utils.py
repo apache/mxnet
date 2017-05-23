@@ -1,6 +1,5 @@
-# coding: utf-8
 """Tools for testing."""
-# pylint: disable=invalid-name, no-member, too-many-arguments, too-many-locals, too-many-branches, too-many-statements, broad-except, line-too-long, unused-import
+# pylint: disable=too-many-lines
 from __future__ import absolute_import, print_function, division
 import time
 import traceback
@@ -12,7 +11,7 @@ import logging
 import numpy as np
 import numpy.testing as npt
 import mxnet as mx
-from .context import cpu, gpu, Context
+from .context import Context
 from .ndarray import array
 from .symbol import Symbol
 try:
@@ -248,16 +247,45 @@ def simple_forward(sym, ctx=None, is_train=False, **inputs):
 
 
 def _parse_location(sym, location, ctx):
-    """Parse the given location to a dictionary.
+    """Parses the given location to a dictionary.
+
+    Arguments of the provided op `sym` are used as dictionary keys
+    and elements of `location` are used as values.
 
     Parameters
     ----------
     sym : Symbol
-    location : ``None`` or list of ``np.ndarray`` or dict of str to ``np.ndarray``.
+        Symbol containing op
+    location : list or tuple or dict
+        Argument values location
+
+        - if type is list or tuple of `np.ndarray`
+            inner elements are arrays correspoding to
+            ``sym.list_arguments()``.
+        - if type is dict of str -> `np.ndarray`
+            maps the name of arguments to the corresponding `np.ndarray`.
+        *In either case, value of all the arguments must be provided.*
+    ctx : Context
+        Device context.
 
     Returns
     -------
-    dict of str to np.ndarray
+    dict
+        Dictionary with `sym` arguments as keys and `location` elements as
+        values.
+
+    Examples
+    -------
+    >>> a = mx.symbol.Variable('a')
+    >>> b = mx.symbol.Variable('b')
+    >>> l1 = np.ndarray([2,3])
+    >>> l2 = np.ndarray([3,4])
+    >>> _parse_location(a * b, [l1, l2], None)
+    {'a': <NDArray 2x3 @cpu(0)>, 'b': <NDArray 3x4 @cpu(0)>}
+    >>> _parse_location(a * b, {'a': l1, 'b': l2}, None)
+    {'a': <NDArray 2x3 @cpu(0)>, 'b': <NDArray 3x4 @cpu(0)>}
+    >>> _parse_location(a * b, {'a': l1}, None)
+    ValueError: Symbol arguments and keys of the given location do not match.
     """
     assert isinstance(location, (dict, list, tuple))
     if isinstance(location, dict):
@@ -272,16 +300,46 @@ def _parse_location(sym, location, ctx):
 
 
 def _parse_aux_states(sym, aux_states, ctx):
-    """
+    """Parses the given auxiliary states to a dictionary.
+
+    Auxiliary states of the provided op `sym` are used as dictionary
+    keys and elements of `aux_states` are used as values.
 
     Parameters
     ----------
     sym : Symbol
-    aux_states : None or list of np.ndarray or dict of str to np.ndarray.
+        Symbol containing op
+    aux_states : None or list or dict
+        Aux states
+
+        - if type is list or tuple of `np.ndarray`
+            inner elements are arrays correspoding to
+            ``sym.list_auxiliary_states()``.
+        - if type is dict of str -> `np.ndarray`
+            maps the name of arguments to the corresponding `np.ndarray`.
+        *In either case, all aux states of `sym` must be provided.*
 
     Returns
     -------
-    dict of str to np.ndarray.
+    dict
+        Dictionary with `sym` aux states as keys and `aux_states` elements
+        as values.
+
+    Examples
+    -------
+    >>> data = mx.symbol.Variable('data')
+    >>> weight = mx.sym.Variable(name='fc1_weight')
+    >>> fc1 = mx.symbol.FullyConnected(data = data, weight=weight, name='fc1', num_hidden=128)
+    >>> fc2 = mx.symbol.BatchNorm(fc1, name='batchnorm0')
+    >>> mean_states = np.ones(3)
+    >>> var_states = np.ones(3)
+    >>> _parse_aux_states(fc2, [mean_states, var_states], None)
+    {'batchnorm0_moving_var': <NDArray 3 @cpu(0)>, 'batchnorm0_moving_mean': <NDArray 3 @cpu(0)>}
+    >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states,
+    ...                         'batchnorm0_moving_mean': var_states}, None)
+    {'batchnorm0_moving_var': <NDArray 3 @cpu(0)>, 'batchnorm0_moving_mean': <NDArray 3 @cpu(0)>}
+    >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
+    ValueError: Symbol aux_states names and given aux_states do not match.
     """
     if aux_states is not None:
         if isinstance(aux_states, dict):
@@ -371,7 +429,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         Argument values used as location to compute gradient
 
         - if type is list of numpy.ndarray
-            inner elements should have the same the same order as mxnet.sym.list_arguments().
+            inner elements should have the same order as mxnet.sym.list_arguments().
         - if type is dict of str -> numpy.ndarray
             maps the name of arguments to the corresponding numpy.ndarray.
         *In either case, value of all the arguments must be provided.*
@@ -509,8 +567,8 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     >>> lhs = mx.symbol.Variable('lhs')
     >>> rhs = mx.symbol.Variable('rhs')
     >>> sym_dot = mx.symbol.dot(lhs, rhs)
-    >>> mat1 = mx.nd.array([[1, 2], [3, 4]])
-    >>> mat2 = mx.nd.array([[5, 6], [7, 8]])
+    >>> mat1 = np.array([[1, 2], [3, 4]])
+    >>> mat2 = np.array([[5, 6], [7, 8]])
     >>> ret_expected = np.array([[19, 22], [43, 50]])
     >>> check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
     """
@@ -578,8 +636,8 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> lhs = mx.symbol.Variable('lhs')
     >>> rhs = mx.symbol.Variable('rhs')
     >>> sym_add = mx.symbol.elemwise_add(lhs, rhs)
-    >>> mat1 = mx.nd.array([[1, 2], [3, 4]])
-    >>> mat2 = mx.nd.array([[5, 6], [7, 8]])
+    >>> mat1 = np.array([[1, 2], [3, 4]])
+    >>> mat2 = np.array([[5, 6], [7, 8]])
     >>> grad1 = mx.nd.zeros(shape)
     >>> grad2 = mx.nd.zeros(shape)
     >>> exec_add = sym_add.bind(default_context(), args={'lhs': mat1, 'rhs': mat2},
@@ -805,7 +863,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             arr = arr.asnumpy()
             try:
                 assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-            except Exception as e:
+            except AssertionError as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
                 if raise_on_err:
@@ -831,7 +889,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 arr = arr.asnumpy()
                 try:
                     assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-                except Exception as e:
+                except AssertionError as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
                     if raise_on_err:
@@ -910,6 +968,34 @@ def download(url, fname=None, dirname=None, overwrite=False):
                 f.write(chunk)
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
+
+def get_mnist():
+    """Download and load the MNIST dataset
+
+    Returns
+    -------
+    dict
+        A dict containing the data
+    """
+    def read_data(label_url, image_url):
+        with gzip.open(mx.test_utils.download(label_url)) as flbl:
+            struct.unpack(">II", flbl.read(8))
+            label = np.fromstring(flbl.read(), dtype=np.int8)
+        with gzip.open(mx.test_utils.download(image_url), 'rb') as fimg:
+            _, _, rows, cols = struct.unpack(">IIII", fimg.read(16))
+            image = np.fromstring(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
+            image = image.reshape(image.shape[0], 1, 28, 28).astype(np.float32)/255
+        return (label, image)
+
+    # changed to mxnet.io for more stable hosting
+    # path = 'http://yann.lecun.com/exdb/mnist/'
+    path = 'http://data.mxnet.io/data/mnist/'
+    (train_lbl, train_img) = read_data(
+        path+'train-labels-idx1-ubyte.gz', path+'train-images-idx3-ubyte.gz')
+    (test_lbl, test_img) = read_data(
+        path+'t10k-labels-idx1-ubyte.gz', path+'t10k-images-idx3-ubyte.gz')
+    return {'train_data':train_img, 'train_label':train_lbl,
+            'test_data':test_img, 'test_label':test_lbl}
 
 def set_env_var(key, val, default_val=""):
     """Set environment variable

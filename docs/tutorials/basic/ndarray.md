@@ -68,7 +68,7 @@ We can specify the element type with the option `dtype`, which accepts a numpy
 type. By default, `float32` is used:
 
 ```python
-# float32 is used in deafult
+# float32 is used in default
 a = mx.nd.array([1,2,3])
 # create an int32 array
 b = mx.nd.array([1,2,3], dtype=np.int32)
@@ -176,13 +176,13 @@ b = a.reshape((2,3,4))
 b.asnumpy()
 ```
 
-The `concatenate` method stacks multiple arrays along the first axis. (Their
-shapes must be the same along the other axes).
+The `concat` method stacks multiple arrays along the first axis. Their
+shapes must be the same along the other axes.
 
 ```python
 a = mx.nd.ones((2,3))
 b = mx.nd.ones((2,3))*2
-c = mx.nd.concatenate([a,b])
+c = mx.nd.concat([a,b])
 c.asnumpy()
 ```
 
@@ -382,7 +382,7 @@ mx.nd.save('hdfs///users/myname/mydata.bin', [a,])  # if compiled with USE_HDFS=
 
 MXNet uses lazy evaluation to achieve superior performance.  When we run `a=b+1`
 in Python, the Python thread just pushes this operation into the backend engine
-and then returns.  There are two benefits for to this approach:
+and then returns.  There are two benefits to this approach:
 
 1. The main Python thread can continue to execute other computations once the
    previous one is pushed. It is useful for frontend languages with heavy
@@ -439,7 +439,7 @@ wait(c)
 print('Time to finish the CPU workload: %f sec' % (time.time() - tic))
 d = do(b, n)
 wait(d)
-print('Time to finish both CPU/CPU workloads: %f sec' % (time.time() - tic))
+print('Time to finish both CPU/GPU workloads: %f sec' % (time.time() - tic))
 ```
 
 Now we issue all workloads at the same time. The backend engine will try to

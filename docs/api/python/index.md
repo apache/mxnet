@@ -1,8 +1,10 @@
 # MXNet - Python API
 
-Many docstrings contain example code, which
-demonstrates the basic usage of the routine. The examples assume that `MXNet` is
-imported with:
+MXNet provides a rich Python API to serve a broad community of Python developers.
+In this section, we provide a in-depth discussion of the functionality provided by
+various MXNet Python packages. We have included code samples for most of the APIs
+for improved clarity. These code samples will run as-is as long as MXNet is first
+imported by running:
 
 ```python
 >>> import mxnet as mx
@@ -11,8 +13,8 @@ imported with:
 ```eval_rst
 
 .. note:: A convenient way to execute examples is the ``%doctest_mode`` mode of
-    Jupyter notebook, which allows for pasting of multi-line examples contains
-    ``>>>`` and preserves indentation. Run ``%doctest_mode?`` in Jupyter notebook
+    Jupyter notebook, which allows for pasting multi-line examples containing
+    ``>>>`` while preserving indentation. Run ``%doctest_mode?`` in Jupyter notebook
     for more details.
 
 ```
@@ -26,6 +28,7 @@ imported with:
    ndarray
    symbol
    module
+   rnn
    kvstore
    io
    optimization

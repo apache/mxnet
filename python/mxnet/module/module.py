@@ -18,7 +18,6 @@ from ..initializer import Uniform, InitDesc
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
-
 class Module(BaseModule):
     """Module is a basic module that wrap a `Symbol`. It is functionally the same
     as the `FeedForward` model, except under the module API.
@@ -41,7 +40,7 @@ class Module(BaseModule):
         Default ``None``, indicating no network parameters are fixed.
     state_names : list of str
         states are similar to data and label, but not provided by data iterator.
-        Instead they are initialized to 0 and can be set by set_states()
+        Instead they are initialized to 0 and can be set by `set_states()`.
     """
     def __init__(self, symbol, data_names=('data',), label_names=('softmax_label',),
                  logger=logging, context=ctx.cpu(), work_load_list=None,
@@ -95,7 +94,7 @@ class Module(BaseModule):
 
     @staticmethod
     def load(prefix, epoch, load_optimizer_states=False, **kwargs):
-        """Create a model from previously saved checkpoint.
+        """Creates a model from previously saved checkpoint.
 
         Parameters
         ----------
@@ -133,17 +132,17 @@ class Module(BaseModule):
         return mod
 
     def save_checkpoint(self, prefix, epoch, save_optimizer_states=False):
-        """Save current progress to checkpoint.
-        Use mx.callback.module_checkpoint as epoch_end_callback to save during training.
+        """Saves current progress to checkpoint.
+        Use `mx.callback.module_checkpoint` as `epoch_end_callback` to save during training.
 
         Parameters
         ----------
         prefix : str
-            The file prefix to checkpoint to
+            The file prefix to checkpoint to.
         epoch : int
-            The current epoch number
+            The current epoch number.
         save_optimizer_states : bool
-            Whether to save optimizer states for continue training
+            Whether to save optimizer states to continue training.
         """
         self._symbol.save('%s-symbol.json'%prefix)
         param_name = '%s-%04d.params' % (prefix, epoch)
@@ -178,7 +177,7 @@ class Module(BaseModule):
 
     @property
     def data_shapes(self):
-        """Get data shapes.
+        """Gets data shapes.
 
         Returns
         -------
@@ -189,11 +188,12 @@ class Module(BaseModule):
 
     @property
     def label_shapes(self):
-        """Get label shapes.
+        """Gets label shapes.
 
         Returns
         -------
-            A list of `(name, shape)` pairs. The return value could be ``None`` if
+        A list of `(name, shape)` pairs.
+            The return value could be ``None`` if
             the module does not need labels, or if the module is not bound for
             training (in this case, label information is not available).
         """
@@ -202,7 +202,7 @@ class Module(BaseModule):
 
     @property
     def output_shapes(self):
-        """Get output shapes.
+        """Gets output shapes.
 
         Returns
         -------
@@ -212,11 +212,12 @@ class Module(BaseModule):
         return self._exec_group.get_output_shapes()
 
     def get_params(self):
-        """Get current parameters.
+        """Gets current parameters.
+
         Returns
         -------
-        `(arg_params, aux_params)`, each a dictionary of name to parameters (in
-        `NDArray`) mapping.
+        `(arg_params, aux_params)`
+            A pair of dictionaries each mapping parameter names to NDArray values.
         """
         assert self.binded and self.params_initialized
 
@@ -226,14 +227,14 @@ class Module(BaseModule):
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
                     allow_missing=False, force_init=False):
-        """Initialize the parameters and auxiliary states.
+        """Initializes the parameters and auxiliary states.
 
         Parameters
         ----------
         initializer : Initializer
             Called to initialize parameters if needed.
         arg_params : dict
-            If not None, should be a dictionary of existing arg_params. Initialization
+            If not ``None``, should be a dictionary of existing arg_params. Initialization
             will be copied from that.
         aux_params : dict
             If not ``None``, should be a dictionary of existing aux_params. Initialization
@@ -283,7 +284,7 @@ class Module(BaseModule):
         self._exec_group.set_params(self._arg_params, self._aux_params)
 
     def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True):
-        """Assign parameter and aux state values.
+        """Assigns parameter and aux state values.
 
         Parameters
         ----------
@@ -299,10 +300,9 @@ class Module(BaseModule):
 
         Examples
         --------
-        An example of setting module parameters::
-            >>> sym, arg_params, aux_params = \
-            mx.model.load_checkpoint(model_prefix, n_epoch_load)
-            >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
+        >>> # An example of setting module parameters.
+        >>> sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, n_epoch_load)
+        >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
         """
         if not allow_missing:
             self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
@@ -323,7 +323,7 @@ class Module(BaseModule):
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
              grad_req='write'):
-        """Bind the symbols to construct executors. This is necessary before one
+        """Binds the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
         Parameters
@@ -414,7 +414,7 @@ class Module(BaseModule):
 
 
     def reshape(self, data_shapes, label_shapes=None):
-        """Reshape the module for new input shapes.
+        """Reshapes the module for new input shapes.
 
         Parameters
         ----------
@@ -431,7 +431,7 @@ class Module(BaseModule):
 
     def init_optimizer(self, kvstore='local', optimizer='sgd',
                        optimizer_params=(('learning_rate', 0.01),), force_init=False):
-        """Install and initialize optimizers.
+        """Installs and initializes optimizers.
 
         Parameters
         ----------
@@ -510,7 +510,7 @@ class Module(BaseModule):
             self._preload_opt_states = None
 
     def borrow_optimizer(self, shared_module):
-        """Borrow optimizer from a shared module. Used in bucketing, where exactly the same
+        """Borrows optimizer from a shared module. Used in bucketing, where exactly the same
         optimizer (esp. kvstore) is used.
 
         Parameters
@@ -527,6 +527,10 @@ class Module(BaseModule):
     def forward(self, data_batch, is_train=None):
         """Forward computation.
 
+        See Also
+        ----------
+        :meth:`BaseModule.forward`.
+
         Parameters
         ----------
         data_batch : DataBatch
@@ -540,6 +544,10 @@ class Module(BaseModule):
     def backward(self, out_grads=None):
         """Backward computation.
 
+        See Also
+        ----------
+        :meth:`BaseModule.backward`.
+
         Parameters
         ----------
         out_grads : NDArray or list of NDArray, optional
@@ -551,8 +559,12 @@ class Module(BaseModule):
         self._exec_group.backward(out_grads=out_grads)
 
     def update(self):
-        """Update parameters according to the installed optimizer and the gradients computed
+        """Updates parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch.
+
+        See Also
+        ----------
+        :meth:`BaseModule.update`.
         """
         assert self.binded and self.params_initialized and self.optimizer_initialized
 
@@ -569,7 +581,7 @@ class Module(BaseModule):
                            kvstore=self._kvstore)
 
     def get_outputs(self, merge_multi_context=True):
-        """Get outputs of the previous forward computation.
+        """Gets outputs of the previous forward computation.
 
         If ``merge_multi_context`` is ``True``, it is like ``[out1, out2]``. Otherwise, it
         is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
@@ -593,7 +605,7 @@ class Module(BaseModule):
         return self._exec_group.get_outputs(merge_multi_context=merge_multi_context)
 
     def get_input_grads(self, merge_multi_context=True):
-        """Get the gradients with respect to the inputs of the module.
+        """Gets the gradients with respect to the inputs of the module.
 
         If ``merge_multi_context`` is ``True``, it is like ``[grad1, grad2]``. Otherwise, it
         is like ``[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]``. All the output
@@ -616,7 +628,7 @@ class Module(BaseModule):
         return self._exec_group.get_input_grads(merge_multi_context=merge_multi_context)
 
     def get_states(self, merge_multi_context=True):
-        """Get states from all devices
+        """Gets states from all devices.
 
         If `merge_multi_context` is ``True``, it is like ``[out1, out2]``. Otherwise, it
         is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
@@ -639,7 +651,7 @@ class Module(BaseModule):
         return self._exec_group.get_states(merge_multi_context=merge_multi_context)
 
     def set_states(self, states=None, value=None):
-        """Set value for states. Only one of states & value can be specified.
+        """Sets value for states. Only one of the states & value can be specified.
 
         Parameters
         ----------
@@ -653,7 +665,11 @@ class Module(BaseModule):
         self._exec_group.set_states(states, value)
 
     def update_metric(self, eval_metric, labels):
-        """Evaluate and accumulate evaluation metric on outputs of the last forward computation.
+        """Evaluates and accumulates evaluation metric on outputs of the last forward computation.
+
+        See Also
+        ----------
+        :meth:`BaseModule.update_metric`.
 
         Parameters
         ----------
@@ -664,7 +680,7 @@ class Module(BaseModule):
         self._exec_group.update_metric(eval_metric, labels)
 
     def _sync_params_from_devices(self):
-        """Synchronize parameters from devices to CPU. This function should be called after
+        """Synchronizes parameters from devices to CPU. This function should be called after
         calling `update` that updates the parameters on the devices, before one can read the
         latest parameters from ``self._arg_params`` and ``self._aux_params``.
         """
@@ -672,7 +688,7 @@ class Module(BaseModule):
         self._params_dirty = False
 
     def save_optimizer_states(self, fname):
-        """Save optimizer (updater) state to file
+        """Saves optimizer (updater) state to a file.
 
         Parameters
         ----------
@@ -688,7 +704,7 @@ class Module(BaseModule):
                 fout.write(self._updater.get_states())
 
     def load_optimizer_states(self, fname):
-        """Load optimizer (updater) state from file
+        """Loads optimizer (updater) state from a file.
 
         Parameters
         ----------
@@ -703,6 +719,6 @@ class Module(BaseModule):
             self._updater.set_states(open(fname, 'rb').read())
 
     def install_monitor(self, mon):
-        """ Install monitor on all executors """
+        """Installs monitor on all executors. """
         assert self.binded
         self._exec_group.install_monitor(mon)
