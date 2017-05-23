@@ -210,20 +210,22 @@ function keepExpand() {
 
 $(document).ready(function () {
     var url = window.location.href, searchFlag = 'search.html';
-    if(url.indexOf('/get_started/') != -1) {
-        $('body').css("visibility", "visible");
-    }
-    if (url.indexOf(searchFlag) == -1) {
-        for(var i = 0; i < API_PAGE.length; ++i) {
-            if (url.indexOf('/api/' + API_PAGE[i]) != -1) {
-                isAPI = true;
-                break;
+    try {
+        if (url.indexOf(searchFlag) == -1) {
+            for(var i = 0; i < API_PAGE.length; ++i) {
+                if (url.indexOf('/api/' + API_PAGE[i]) != -1) {
+                    isAPI = true;
+                    break;
+                }
             }
+            render_righttoc();
+            if ($('.leftsidebar').length) render_lefttoc();
         }
-        render_righttoc();
-        if ($('.leftsidebar').length) render_lefttoc();
+        $(window).scroll(function () {
+            scroll_righttoc();
+        });
     }
-    $(window).scroll(function () {
-        scroll_righttoc();
-    });
+    catch(err) {
+        return;
+    }
 });
