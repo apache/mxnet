@@ -4,6 +4,10 @@
 .. currentmodule:: mxnet.rnn
 ```
 
+.. warning::
+
+    This package is currently experimental and may change in the near future.
+
 ## Overview
 
 The `rnn` module includes the recurrent neural network (RNN) cell APIs, a suite of tools for building an RNN's symbolic graph.
