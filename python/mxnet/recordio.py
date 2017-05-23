@@ -307,7 +307,7 @@ def pack(header, s):
 
     Examples
     --------
-    >>> label = 4 # labels also could be 1d list, such as: label = [1,2,3]
+    >>> label = 4 # label can also be a 1-D array, for example: label = [1,2,3]
     >>> id = 2574
     >>> header = mx.recordio.IRHeader(0, label, id, 0)
     >>> with open(path, 'r') as file:
