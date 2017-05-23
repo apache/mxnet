@@ -40,7 +40,7 @@ class Module(BaseModule):
         Default ``None``, indicating no network parameters are fixed.
     state_names : list of str
         states are similar to data and label, but not provided by data iterator.
-        Instead they are initialized to 0 and can be set by set_states()
+        Instead they are initialized to 0 and can be set by `set_states()`.
     """
     def __init__(self, symbol, data_names=('data',), label_names=('softmax_label',),
                  logger=logging, context=ctx.cpu(), work_load_list=None,
@@ -138,11 +138,11 @@ class Module(BaseModule):
         Parameters
         ----------
         prefix : str
-            The file prefix to checkpoint to
+            The file prefix to checkpoint to.
         epoch : int
-            The current epoch number
+            The current epoch number.
         save_optimizer_states : bool
-            Whether to save optimizer states for continue training
+            Whether to save optimizer states to continue training.
         """
         self._symbol.save('%s-symbol.json'%prefix)
         param_name = '%s-%04d.params' % (prefix, epoch)
@@ -192,7 +192,8 @@ class Module(BaseModule):
 
         Returns
         -------
-            A list of `(name, shape)` pairs. The return value could be ``None`` if
+        A list of `(name, shape)` pairs.
+            The return value could be ``None`` if
             the module does not need labels, or if the module is not bound for
             training (in this case, label information is not available).
         """
@@ -233,7 +234,7 @@ class Module(BaseModule):
         initializer : Initializer
             Called to initialize parameters if needed.
         arg_params : dict
-            If not None, should be a dictionary of existing arg_params. Initialization
+            If not ``None``, should be a dictionary of existing arg_params. Initialization
             will be copied from that.
         aux_params : dict
             If not ``None``, should be a dictionary of existing aux_params. Initialization
@@ -283,7 +284,7 @@ class Module(BaseModule):
         self._exec_group.set_params(self._arg_params, self._aux_params)
 
     def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True):
-        """Assign parameter and aux state values.
+        """Assigns parameter and aux state values.
 
         Parameters
         ----------
@@ -322,7 +323,7 @@ class Module(BaseModule):
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
              grad_req='write'):
-        """Bind the symbols to construct executors. This is necessary before one
+        """Binds the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
         Parameters
@@ -413,7 +414,7 @@ class Module(BaseModule):
 
 
     def reshape(self, data_shapes, label_shapes=None):
-        """Reshape the module for new input shapes.
+        """Reshapes the module for new input shapes.
 
         Parameters
         ----------
@@ -718,6 +719,6 @@ class Module(BaseModule):
             self._updater.set_states(open(fname, 'rb').read())
 
     def install_monitor(self, mon):
-        """ Installs monitor on all executors. """
+        """Installs monitor on all executors. """
         assert self.binded
         self._exec_group.install_monitor(mon)
