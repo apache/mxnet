@@ -913,6 +913,30 @@ class ResidualCell(ModifierCell):
         output = symbol.elemwise_add(output, inputs, name="%s_plus_residual" % output.name)
         return output, states
 
+    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
+        self.reset()
+
+        outputs, states = cell.unroll(length, inputs=inputs, begin_state=begin_state, layout=layout,
+                                      merge_outputs=None)
+
+        if isinstance(outputs, symbol.Symbol):
+            prefix = outputs.name
+        else:
+            prefix = [output.name for output in outputs]
+
+        if isinstance(inputs, symbol.Symbol) != isinstance(outputs, symbol.Symbol):
+            inputs = _normalize_sequence(length, inputs, layout, True)
+            outputs = _normalize_sequence(length, outputs, layout, True)
+
+        if isinstance(inputs, symbol.Symbol):
+            outputs = symbol.elemwise_add(outputs, inputs, name="%s_plus_residual" % prefix)
+        else:
+            outputs = [symbol.elemwise_add(output_sym, input_sym,
+                                           name="%s_plus_residual" % step_prefix)
+                       for output_sym, input_sym, step_prefix in zip(outputs, inputs, prefix)]
+
+        return outputs, states
+
 
 class BidirectionalCell(BaseRNNCell):
     """Bidirectional RNN cell
