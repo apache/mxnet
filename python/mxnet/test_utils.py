@@ -1020,3 +1020,26 @@ def set_env_var(key, val, default_val=""):
     prev_val = os.environ.get(key, default_val)
     os.environ[key] = val
     return prev_val
+
+def same_array(array1, array2):
+    """Check whether two NDArrays sharing the same memory block
+
+    Parameters
+    ----------
+
+    array1 : NDArray
+        First NDArray to be checked
+    array2 : NDArray
+        Second NDArray to be checked
+
+    Returns
+    -------
+    bool
+        Whether two NDArrays share the same memory
+    """
+    array1[:] += 1
+    if not same(array1.asnumpy(), array2.asnumpy()):
+        array1[:] -= 1
+        return False
+    array1[:] -= 1
+    return same(array1.asnumpy(), array2.asnumpy())
