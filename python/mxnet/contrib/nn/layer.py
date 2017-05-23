@@ -103,13 +103,14 @@ class Layer(object):
         self._children = []
         self._reg_params = {}
 
-        _LayerScope.register_sublayer(self)
 
     def __setattr__(self, name, value):
-        """Registers parameters in addition to sublayers."""
+        """Registers parameters."""
         super(Layer, self).__setattr__(name, value)
         if isinstance(value, Parameter):
             self._reg_params[name] = value
+        if isinstance(value, Layer):
+            _LayerScope.register_sublayer(self)
 
     def _alias(self):
         return self.__class__.__name__.lower()
@@ -189,8 +190,8 @@ class Sequential(Layer):
         net.add(Dense(10, activation='relu'))
         net.add(Dense(20))
     """
-    def __init__(self, params=None):
-        super(Sequential, self).__init__(prefix='', params=params)
+    def __init__(self):
+        super(Sequential, self).__init__(prefix='', params=None)
 
     def add(self, layer):
         """Add layer on top of the stack."""
@@ -272,8 +273,7 @@ class Dense(Layer):
                 self.bias = self.params.get('bias', shape=(units,),
                                             init=bias_initializer)
             if activation is not None:
-                self.act = Activation(activation, prefix=self.prefix+activation+'_',
-                                      params=self.params.subdict(activation+'_'))
+                self.act = Activation(activation)
             else:
                 self.act = None
 
@@ -303,8 +303,11 @@ class Activation(Layer):
     Same shape as input.
     """
     def __init__(self, activation, **kwargs):
-        super(Activation, self).__init__(**kwargs)
         self._act_type = activation
+        super(Activation, self).__init__(**kwargs)
+
+    def _alias(self):
+        return self._act_type
 
     def generic_forward(self, F, x):
         return F.Activation(x, act_type=self._act_type)
