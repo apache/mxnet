@@ -92,6 +92,7 @@ MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
        [-0.75  0.25  0.25  0.25]
        [ 0.25  0.25 -0.75  0.25]
        [ 0.25  0.25  0.25 -0.75]]
+      ## notice that the first row is all 0 because label[0] is 1, which is equal to ignore_label.
 
   - The parameter `grad_scale` can be used to rescale the gradient, which is often used to
     give each loss function different weights.
