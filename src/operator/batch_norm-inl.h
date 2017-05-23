@@ -10,6 +10,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
+#include <mshadow/base.h>
 #include <map>
 #include <vector>
 #include <string>
@@ -30,9 +31,11 @@ namespace batchnorm {
 enum BatchNormOpInputs {kData, kGamma, kBeta};  // kGamma: weights, kBeta: biases
 enum BatchNormOpOutputs {kOut, kMean, kVar};  // req, out_data
 enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};  // aux_states
-}  // namespace batchnorm
 
+/*! \brief Default channel axis if none specified int he params */
 constexpr int DEFAULT_CHANNEL_AXIS = 1;
+
+}  // namespace batchnorm
 
 /*! \brief Parameters for BatchNoram operator */
 struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
@@ -57,7 +60,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
               "This will force change batch-norm into a scale shift operator.");
     DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
     .describe("Output All,normal mean and var");
-    DMLC_DECLARE_FIELD(channel_axis).set_default(DEFAULT_CHANNEL_AXIS)
+    DMLC_DECLARE_FIELD(channel_axis).set_default(mxnet::op::batchnorm::DEFAULT_CHANNEL_AXIS)
       .describe("Specify which shape axis the channel is specified");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
       .describe("Do not select CUDNN operator, if available");
@@ -341,22 +344,12 @@ class BatchNormProp : public OperatorProperty {
 
 namespace batchnorm {
 
-#if defined(__CUDACC__)
-#define __bn_hostonly__        __host__
-#define __bn_hostdevinl__  __host__ __device__ __forceinline__
-#define __bn_localinline__ __forceinline__
-#else
-#define __bn_hostonly__
-#define __bn_hostdevinl__  inline
-#define __bn_localinline__ inline
-#endif
-
 template<typename DType>
 class BNTensor3 {
   enum { OUTER, CHANNEL, INNER, COUNT };
 
  public:
-  __bn_hostonly__ inline BNTensor3(const TBlob& blob, const int indexOfChannel)
+  inline BNTensor3(const TBlob& blob, const int indexOfChannel)
     : dptr_(blob.dptr<DType>())
       , indexOfChannel_(indexOfChannel == -1 ? (blob.shape_.ndim() - 1) : indexOfChannel) {
     shape_[OUTER] = 1;
@@ -370,7 +363,7 @@ class BNTensor3 {
     }
   }
 
-  __bn_hostonly__ inline BNTensor3(DType *p, const TShape& shape, const int indexOfChannel)
+  inline BNTensor3(DType *p, const TShape& shape, const int indexOfChannel)
     : dptr_(p)
       , indexOfChannel_(indexOfChannel == -1 ? (shape.ndim() - 1) : indexOfChannel) {
     shape_[OUTER] = 1;
@@ -384,11 +377,11 @@ class BNTensor3 {
     }
   }
 
-  __bn_localinline__ bool IsEmpty() const {
+  MSHADOW_FORCE_INLINE bool IsEmpty() const {
     return dptr_ == nullptr;
   }
 
-  __bn_hostdevinl__ size_t Size() const {
+  MSHADOW_XINLINE size_t Size() const {
     size_t n = 1;
     for (int i = 0; i < COUNT; ++i) {
       n *= shape_[i];
@@ -396,20 +389,20 @@ class BNTensor3 {
     return n;
   }
 
-  __bn_hostdevinl__ size_t ChannelCount() const {
+  MSHADOW_XINLINE size_t ChannelCount() const {
     return shape_[CHANNEL];
   }
 
-  __bn_hostdevinl__ size_t OuterSize() const {
+  MSHADOW_XINLINE size_t OuterSize() const {
     return shape_[OUTER];
   }
 
-  __bn_hostdevinl__ size_t InnerSize() const {
+  MSHADOW_XINLINE size_t InnerSize() const {
     return shape_[INNER];
   }
 
   /*! \brief start of a given channel's spatial data */
-  __bn_hostdevinl__ size_t StartOffset(const size_t channel) const {
+  MSHADOW_XINLINE size_t StartOffset(const size_t channel) const {
     return channel * InnerSize();
   }
 
@@ -421,13 +414,13 @@ class BNTensor3 {
    * i.e. RGBRGB <-- 2
    *      RRGGBB <-- 4
    **/
-  __bn_hostdevinl__ size_t SkipLengthToNextSameChannelData() const {
+  MSHADOW_XINLINE size_t SkipLengthToNextSameChannelData() const {
     return (ChannelCount() - 1) * InnerSize();
   }
 
-  __bn_hostdevinl__ size_t offset(const size_t outer,
-                                  const size_t channel,
-                                  const size_t i) const {
+  MSHADOW_XINLINE size_t offset(const size_t outer,
+                                const size_t channel,
+                                const size_t i) const {
     const size_t spatial_size = InnerSize();
     const size_t skip_length = SkipLengthToNextSameChannelData();
     size_t off = StartOffset(channel);
@@ -438,16 +431,16 @@ class BNTensor3 {
     return off;
   }
 
-  __bn_hostdevinl__ DType& get_ref(const size_t batch,
-                                   const size_t channel,
-                                   const size_t i) {
+  MSHADOW_XINLINE DType& get_ref(const size_t batch,
+                                 const size_t channel,
+                                 const size_t i) {
     const size_t off = offset(batch, channel, i);
     return dptr_[off];
   }
 
-  __bn_hostdevinl__ const DType& get_ref(const size_t batch,
-                                         const size_t channel,
-                                         const size_t i) const {
+  MSHADOW_XINLINE const DType& get_ref(const size_t batch,
+                                       const size_t channel,
+                                       const size_t i) const {
     const size_t off = offset(batch, channel, i);
     return dptr_[off];
   }

@@ -378,11 +378,11 @@ struct DeviceTensor {
     }
   }
 
-  __bn_hostdevinl__ unsigned getSize(const int i) const {
+  MSHADOW_XINLINE unsigned getSize(const int i) const {
     return size_[i];
   }
 
-  __bn_hostdevinl__ int numElements() const {
+  MSHADOW_XINLINE int numElements() const {
     int n = 1;
     for (int i = 0; i < Dim; ++i) {
       n *= size_[i];
@@ -390,7 +390,7 @@ struct DeviceTensor {
     return n;
   }
 
-  __bn_hostdevinl__ DType &operator()(const size_t batch,
+  MSHADOW_XINLINE DType &operator()(const size_t batch,
                                     const size_t plane,
                                     const size_t x) const {
     int offset = 0;
@@ -407,11 +407,11 @@ struct DeviceTensor {
     return *(const_cast<DType *>(dptr_ + offset));
   }
 
-  __bn_hostdevinl__ DType &operator[](const size_t x) const {
+  MSHADOW_XINLINE DType &operator[](const size_t x) const {
     return *(dptr_ + x);
   }
 
-  __bn_localinline__ size_t InnerSize() const {
+  MSHADOW_XINLINE size_t InnerSize() const {
     size_t sz = 1;
     for (size_t i = 2; i < Dim; ++i) {
       sz *= size_[i];
@@ -419,7 +419,7 @@ struct DeviceTensor {
     return sz;
   }
 
-  __bn_localinline__ size_t ChannelCount() const {
+  MSHADOW_XINLINE size_t ChannelCount() const {
     return size_[1];
   }
 
@@ -619,7 +619,7 @@ Operator *CreateOp<gpu>(const BatchNormParam& param, const int dtype, const TSha
   Operator *op = NULL;
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
   if (!param.use_global_stats && !param.cudnn_off && shape.ndim() <= 4
-      && param.channel_axis == DEFAULT_CHANNEL_AXIS) {
+      && param.channel_axis == mxnet::op::batchnorm::DEFAULT_CHANNEL_AXIS) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       op = new CuDNNBatchNormOp<DType>(param);
     })
