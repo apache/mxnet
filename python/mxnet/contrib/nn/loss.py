@@ -55,7 +55,7 @@ def _unpack_symbol(loss):
     return outputs, extra_outputs, losses
 
 
-def custom_loss(loss, output, label, weight=None, sample_weight=None,
+def custom_loss(loss, output, label, weight=None, sample_weight=None, batch_axis=0,
                 extra_outputs=(), metrics=None, name='custom'):
     """Construct user defined loss symbol.
 
@@ -74,6 +74,8 @@ def custom_loss(loss, output, label, weight=None, sample_weight=None,
         the same shape as loss. For example, if loss has
         shape (64, 10) and you want to weight each sample
         in the batch, sample_weight should have shape (64, 1)
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
 
     Returns
     -------
@@ -91,6 +93,7 @@ def custom_loss(loss, output, label, weight=None, sample_weight=None,
     """
     F = _get_F(loss)
     loss = _apply_weighting(F, loss, weight, sample_weight)
+    loss = F.mean(loss, axis=batch_axis, exclude=True)
     if F is ndarray:
         return loss
     outputs = symbol.Group([F.stop_gradient(i, name=i.name+'_out', __output__='pred')
@@ -124,7 +127,7 @@ def multitask_loss(losses):
     return symbol.Group(out+extra+loss)
 
 
-def l2_loss(output, label, weight=1., sample_weight=None,
+def l2_loss(output, label, weight=1., sample_weight=None, batch_axis=0,
             extra_outputs=(), metrics=None, name='l2'):
     """Calculate the mean squared error between output and label:
 
@@ -147,27 +150,30 @@ def l2_loss(output, label, weight=1., sample_weight=None,
         the same shape as loss. For example, if loss has
         shape (64, 10) and you want to weight each sample
         in the batch, sample_weight should have shape (64, 1)
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
 
     Returns
     -------
     loss : Symbol
         created loss
     """
-    F = _get_F(output)
-    loss = F.square(output.reshape(shape=(-1,)) - label.reshape(shape=(-1,)))
-    return custom_loss(loss, output, label, weight/2, sample_weight,
+    if isinstance(output, ndarray.NDArray):
+        loss = ndarray.square(output - label.reshape(output.shape))
+    else:
+        loss = symbol.square(output - label.reshape(()))
+    return custom_loss(loss, output, label, weight/2, sample_weight, batch_axis,
                        extra_outputs, metrics, name)
 
 
-def l1_loss(output, label, weight=None, sample_weight=None,
+def l1_loss(output, label, weight=None, sample_weight=None, batch_axis=0,
             extra_outputs=(), metrics=None, name='l1'):
     """Calculate the mean absolute error between output and label:
 
     .. math::
     L = \\frac{1}{2}\\sum_i \\vert {output}_i - {label}_i \\vert.
 
-    output and label can have arbitrary shape as long as they have the same
-    number of elements.
+    output and label must have the same shape.
 
     Parameters
     ----------
@@ -182,20 +188,24 @@ def l1_loss(output, label, weight=None, sample_weight=None,
         the same shape as loss. For example, if loss has
         shape (64, 10) and you want to weight each sample
         in the batch, sample_weight should have shape (64, 1)
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
 
     Returns
     -------
     loss : Symbol
         created loss
     """
-    F = _get_F(output)
-    loss = F.abs(output.reshape(shape=(-1,)) - label.reshape(shape=(-1,)))
-    return custom_loss(loss, output, label, weight, sample_weight,
+    if isinstance(output, ndarray.NDArray):
+        loss = ndarray.abs(output - label.reshape(output.shape))
+    else:
+        loss = symbol.abs(output - label.reshape(()))
+    return custom_loss(loss, output, label, weight, sample_weight, batch_axis,
                        extra_outputs, metrics, name)
 
 
 def softmax_cross_entropy_loss(output, label, sparse_label=True, axis=-1,
-                               weight=None, sample_weight=None,
+                               weight=None, sample_weight=None, batch_axis=0,
                                extra_outputs=(), metrics='acc', name='ce'):
     """Compute the softmax cross entropy loss.
 
@@ -229,6 +239,8 @@ def softmax_cross_entropy_loss(output, label, sparse_label=True, axis=-1,
         the same shape as loss. For example, if loss has
         shape (64, 10) and you want to weight each sample
         in the batch, sample_weight should have shape (64, 1)
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
 
     Returns
     -------
@@ -238,8 +250,8 @@ def softmax_cross_entropy_loss(output, label, sparse_label=True, axis=-1,
     F = _get_F(output)
     prob = F.log_softmax(output)
     if sparse_label:
-        loss = -F.pick(prob, label, axis=axis, keepdims=False)
+        loss = -F.pick(prob, label, axis=axis, keepdims=True)
     else:
-        loss = -F.sum(prob*label, axis=axis, keepdims=False)
-    return custom_loss(loss, prob, label, weight, sample_weight,
+        loss = -F.sum(prob*label, axis=axis, keepdims=True)
+    return custom_loss(loss, prob, label, weight, sample_weight, batch_axis,
                        extra_outputs, metrics, name)

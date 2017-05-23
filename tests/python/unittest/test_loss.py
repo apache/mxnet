@@ -18,13 +18,13 @@ def test_loss_ndarray():
 
     output = mx.nd.array([[0, 2], [1, 4]])
     label = mx.nd.array([0, 1])
-    weighting = mx.nd.array([[0.5, 1.0]])
+    weighting = mx.nd.array([[0.5], [1.0]])
 
     loss = nn.loss.softmax_cross_entropy_loss(output, label).asnumpy()
     mx.test_utils.assert_almost_equal(loss, np.array([ 2.12692809,  0.04858733]))
 
     loss = nn.loss.softmax_cross_entropy_loss(output, label, sample_weight=weighting).asnumpy()
-    mx.test_utils.assert_almost_equal(loss, np.array([ 2.12692809,  0.04858733])*weighting.asnumpy())
+    mx.test_utils.assert_almost_equal(loss, np.array([ 1.06346405,  0.04858733]))
 
 
 def check_loss(loss):
@@ -156,13 +156,13 @@ def test_multi_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, nclass))
     label1 = mx.nd.array(np.random.randint(0, nclass, size=(N,)), dtype='int32')
-    label2 = mx.random.uniform(-1, 1, shape=(N, 1))
+    label2 = mx.random.uniform(-1, 1, shape=(N, 5, 1))
     data_iter = mx.io.NDArrayIter(data, {'label1': label1, 'label2': label2},
                                   batch_size=10, label_name='label')
     fc3 = get_net(64)
     act3 = mx.symbol.Activation(fc3, name='relu3', act_type="relu")
     output1 = mx.symbol.FullyConnected(act3, name='output1', num_hidden=10)
-    output2 = mx.symbol.FullyConnected(act3, name='output2', num_hidden=1)
+    output2 = mx.symbol.FullyConnected(act3, name='output2', num_hidden=5)
     l1 = mx.symbol.Variable('label1')
     l2 = mx.symbol.Variable('label2')
     loss1 = nn.loss.softmax_cross_entropy_loss(output1, l1)
@@ -176,6 +176,12 @@ def test_multi_loss():
     score = mod.score(data_iter)
     assert score[0][1] == 1.0
     assert score[2][1] < 0.2
+    assert [i.shape for i in mod.get_outputs()] == [(10, 10), (10, 5), (10,), (10,)]
+
+    mod.bind(data_iter.provide_data, [], for_training=False, force_rebind=True)
+    data_iter.reset()
+    mod.forward(data_iter.next())
+    assert [i.shape for i in mod.get_outputs()] == [(10, 10), (10, 5)]
 
 
 def test_saveload():
