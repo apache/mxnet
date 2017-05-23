@@ -4,9 +4,9 @@
 .. currentmodule:: mxnet.rnn
 ```
 
-.. warning::
-
-    This package is currently experimental and may change in the near future.
+```eval_rst
+.. warning:: This package is currently experimental and may change in the near future.
+```
 
 ## Overview
 
