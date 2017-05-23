@@ -46,7 +46,7 @@ A detailed tutorial is available at [Symbol - Neural network graphs and auto-dif
 .. note:: most operators provided in ``symbol`` are similar to ``ndarray``. But
    also note that ``symbol`` differs to ``ndarray`` in several aspects:
 
-   - ``symbol`` adopts declare programming. In other words, we need to first
+   - ``symbol`` adopts declarative programming. In other words, we need to first
      composite the computations, and then feed with data to execute.
 
    - Most binary operators such as ``+`` and ``>`` are not enabled broadcasting.

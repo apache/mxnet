@@ -158,6 +158,20 @@ Parsing and performing another pre-processing such as augmentation may be expens
 If performance is critical, we can implement a data iterator in C++. Refer to
 [src/io](https://github.com/dmlc/mxnet/tree/master/src/io) for examples.
 
+### Change batch layout
+
+By default, the backend engine treats the first dimension of each data and label variable in data
+iterators as the batch size (i.e. `NCHW` or `NT` layout). In order to override the axis for batch size,
+the `provide_data` (and `provide_label` if there is label) properties should include the layouts. This
+is especially useful in RNN since `TNC` layouts are often more efficient. For example:
+
+```python
+@property
+def provide_data(self):
+    return [DataDesc(name='seq_var', shape=(seq_length, batch_size), layout='TN')]
+```
+The backend engine will recognize the index of `N` in the `layout` as the axis for batch size.
+
 ## API Reference
 
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>

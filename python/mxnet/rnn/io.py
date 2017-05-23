@@ -24,8 +24,8 @@ def encode_sentences(sentences, vocab=None, invalid_label=-1, invalid_key='\n', 
         Optional input Vocabulary
     invalid_label : int, default -1
         Index for invalid token, like <end-of-sentence>
-    invalid_key : str, default '\n'
-        Key for invalid token. Use '\n' for end
+    invalid_key : str, default '\\n'
+        Key for invalid token. Use '\\n' for end
         of sentence by default.
     start_label : int
         lowest index.
