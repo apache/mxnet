@@ -1,12 +1,10 @@
 # Handwritten Digit Recognition
 
-In this tutorial, we’ll give you a step by step walk-through of how to build a hand-written digit classifier using the [MNIST](https://en.wikipedia.org/wiki/MNIST_database) dataset. For someone new to deep learning, this exercise is arguably the “Hello World” equivalent.
+In this tutorial, we'll give you a step by step walk-through of how to build a hand-written digit classifier using the [MNIST](https://en.wikipedia.org/wiki/MNIST_database) dataset. For someone new to deep learning, this exercise is arguably the "Hello World" equivalent.
 
-MNIST is a widely used dataset for the hand-written digit classification task. It consists of 70,000 labeled 28×28 pixel grayscale images of hand-written digits. The dataset is split into 60,000 training images and 10,000 test images. There are 10 classes (one for each of the 10 digits). The task at hand is to train a model using the 60,000 training images and subsequently test its classification accuracy on the 10,000 test images.
+MNIST is a widely used dataset for the hand-written digit classification task. It consists of 70,000 labeled 28x28 pixel grayscale images of hand-written digits. The dataset is split into 60,000 training images and 10,000 test images. There are 10 classes (one for each of the 10 digits). The task at hand is to train a model using the 60,000 training images and subsequently test its classification accuracy on the 10,000 test images.
 
-<kbd>
-<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/mnist.png">
-</kbd>
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/mnist.png)
 
 **Figure 1:** Sample images from the MNIST dataset.
 
@@ -37,7 +35,7 @@ val_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size
 ## Training
 We will cover a couple of approaches for performing the hand written digit recognition task. The first approach makes use of a traditional deep neural network architecture called Multilayer Percepton (MLP). We'll discuss its drawbacks and use that as a motivation to introduce a second more advanced approach called Convolution Neural Network (CNN) that has proven to work very well for image classification tasks.
 
-## Multilayer Perceptron
+### Multilayer Perceptron
 
 The first approach makes use of a [Multilayer Perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron) to solve this problem. We'll define the MLP using MXNet's symbolic interface. We begin by creating a place holder variable for the input data. When working with an MLP, we need to flatten our 28x28 images into a flat 1-D structure of 784 (28 * 28) raw pixel values. The order of pixel values in the flattened vector does not matter as long as we are being consistent about how we do this across all images.
 
@@ -75,9 +73,7 @@ fc3  = mx.sym.FullyConnected(data=act2, num_hidden=10)
 # Softmax with cross entropy loss
 mlp  = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 ```
-<kbd>
-<img src="https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/mlp_mnist.png">
-</kbd>
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mlp_mnist.png)
 
 **Figure 2:** MLP network architecture for MNIST.
 
@@ -101,7 +97,7 @@ mlp_model.fit(train_iter,  # train data
               num_epoch=10)  # train for at most 10 dataset passes
 ```
 
-## Prediction
+### Prediction
 
 After the above training completes, we can evaluate the trained model by running predictions on test data. The following source code computes the prediction probability scores for each test image. *prob[i][j]* is the probability that the *i*-th test image contains the *j*-th output class.
 
@@ -123,7 +119,7 @@ assert acc.get()[1] > 0.96
 ```
 If everything went well, we should see an accuracy value that is around 0.96, which means that we are able to accurately predict the digit in 96% of test images. This is a pretty good result. But as we will see in the next part of this tutorial, we can do a lot better than that.
 
-## Convolutional Neural Network
+### Convolutional Neural Network
 
 Earlier, we briefly touched on a drawback of MLP when we said we need to discard the input image's original shape and flatten it as a vector before we can feed it as input to the MLP's first fully connected layer. Turns out this is an important issue because we don't take advantage of the fact that pixels in the image have natural spatial correlation along the horizontal and vertical axes. A convolutional neural network (CNN) aims to address this problem by using a more structured weight representation. Instead of flattening the image and doing a simple matrix-matrix multiplication, it employs one or more convolutional layers that each performs a 2-D convolution on the input image.
 
@@ -150,9 +146,7 @@ fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=10)
 # softmax loss
 lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 ```
-<kbd>
-<img src="https://raw.githubusercontent.com/madjam/web-data/master/mxnet/image/conv_mnist.png">
-</kbd>
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/conv_mnist.png)
 
 **Figure 3:** First conv + pooling layer in LeNet.
 
@@ -171,7 +165,7 @@ lenet_model.fit(train_iter,
                 num_epoch=10)
 ```
 
-## Prediction
+### Prediction
 
 Finally, we'll use the trained LeNet model to generate predictions for the test data.
 
@@ -187,7 +181,7 @@ assert acc.get()[1] > 0.98
 ```
 If all went well, we should see a higher accuracy metric for predictions made using LeNet. With CNN we should be able to correctly predict around 98% of all test images.
 
-# Summary
+## Summary
 
 In this tutorial, we have learned how to use MXNet to solve a standard computer vision problem: classifying images of hand written digits. You have seen how to quickly and easily build, train and evaluate models such as MLP and CNN with MXNet.
 

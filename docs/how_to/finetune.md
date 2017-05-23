@@ -1,32 +1,32 @@
-# Fine-tune with Pre-trained Models
+# Fine-tune with Pretrained Models
 
 Many of the exciting deep learning algorithms for computer vision require
-massive datasets for training.  The most popular benchmark dataset,
+massive datasets for training. The most popular benchmark dataset,
 [ImageNet](http://www.image-net.org/), for example, contains one million images
-from one thousand categories.  But for any practical problem, we typically have
-access to comparatively small datasets.  In these cases, if we were to train a
+from one thousand categories. But for any practical problem, we typically have
+access to comparatively small datasets. In these cases, if we were to train a
 neural network's weights from scratch, starting from random initialized
 parameters, we would overfit the training set badly.
 
 One approach to get around this problem is to first pretrain a deep net on a
-large-scale dataset, like ImageNet.  Then, given a new dataset, we can start
-with these pretrained weights when training on our new task.  This process
-commonly called "fine-tuning".  There are anumber of variations of fine-tuning.
+large-scale dataset, like ImageNet. Then, given a new dataset, we can start
+with these pretrained weights when training on our new task. This process is
+commonly called _fine-tuning_. There are a number of variations of fine-tuning.
 Sometimes, the initial neural network is used only as a _feature extractor_.
 That means that we freeze every layer prior to the output layer and simply learn
-a new output layer.  In [another document](./predict.ipynb), we explained how to
-do this kind of feature extraction.  Another approach is to update all of
-networks weights for the new task, and that's the appraoch we demonstrate in
+a new output layer. In [another document](https://github.com/dmlc/mxnet-notebooks/blob/master/python/how_to/predict.ipynb), we explained how to
+do this kind of feature extraction. Another approach is to update all of
+the network's weights for the new task, and that's the approach we demonstrate in
 this document.
 
 To fine-tune a network, we must first replace the last fully-connected layer
-with a new one that outputs the desired number of classes.  We initialize its
-weights randomly.  Then we continue training as normal.  Sometimes it's common
+with a new one that outputs the desired number of classes. We initialize its
+weights randomly. Then we continue training as normal. Sometimes it's common to
 use a smaller learning rate based on the intuition that we may already be close
 to a good result.
 
-In this demonstration, we'll fine-tune a model pre-trained on ImageNet to the
-smaller caltech-256 dataset.  Following this example, you can finetune to other
+In this demonstration, we'll fine-tune a model pretrained on ImageNet to the
+smaller caltech-256 dataset. Following this example, you can fine-tune to other
 datasets, even for strikingly different applications such as face
 identification.
 
@@ -64,7 +64,7 @@ python ~/mxnet/tools/im2rec.py --resize 256 --quality 90 --num-thread 16 caltech
 python ~/mxnet/tools/im2rec.py --resize 256 --quality 90 --num-thread 16 caltech-256-60-train caltech_256_train_60/
 ```
 
-The following codes download the pre-generated rec files. It may take a few minutes.
+The following code downloads the pregenerated rec files. It may take a few minutes.
 
 ```python
 import os, urllib
@@ -76,7 +76,7 @@ download('http://data.mxnet.io/data/caltech-256/caltech-256-60-train.rec')
 download('http://data.mxnet.io/data/caltech-256/caltech-256-60-val.rec')
 ```
 
-Next we define the function which returns the data iterators:
+Next, we define the function which returns the data iterators:
 
 ```python
 import mxnet as mx
@@ -102,7 +102,7 @@ def get_iterators(batch_size, data_shape=(3, 224, 224)):
     return (train, val)
 ```
 
-We then download a pretrained 50-layer ResNet model and load into memory. Note
+We then download a pretrained 50-layer ResNet model and load it into memory. Note
 that if `load_checkpoint` reports an error, we can remove the downloaded files
 and try `get_model` again.
 
@@ -117,13 +117,13 @@ sym, arg_params, aux_params = mx.model.load_checkpoint('resnet-50', 0)
 
 ## Train
 
-We first define a function which replaces the the last fully-connected layer for a given network.
+We first define a function which replaces the last fully-connected layer for a given network.
 
 ```python
 def get_fine_tune_model(symbol, arg_params, num_classes, layer_name='flatten0'):
     """
-    symbol: the pre-trained network symbol
-    arg_params: the argument parameters of the pre-trained model
+    symbol: the pretrained network symbol
+    arg_params: the argument parameters of the pretrained model
     num_classes: the number of classes for the fine-tune datasets
     layer_name: the layer name before the last fully-connected layer
     """
@@ -135,7 +135,7 @@ def get_fine_tune_model(symbol, arg_params, num_classes, layer_name='flatten0'):
     return (net, new_args)
 ```
 
-Now we create a module. We first call `init_params` to randomly initialize parameters, next use `set_params` to replace all parameters except for the last fully-connected layer with pre-trained model.
+Now we create a module. We first call `init_params` to randomly initialize parameters, next use `set_params` to replace all parameters except for the last fully-connected layer with pretrained model.
 
 
 ```python
@@ -146,12 +146,12 @@ logging.basicConfig(level=logging.DEBUG, format=head)
 def fit(symbol, arg_params, aux_params, train, val, batch_size, num_gpus):
     devs = [mx.gpu(i) for i in range(num_gpus)]
     mod = mx.mod.Module(symbol=symbol, context=devs)
-    mod.fit(train, val, 
+    mod.fit(train, val,
         num_epoch=8,
         arg_params=arg_params,
         aux_params=aux_params,
         allow_missing=True,
-        batch_end_callback = mx.callback.Speedometer(batch_size, 10),        
+        batch_end_callback = mx.callback.Speedometer(batch_size, 10),
         kvstore='device',
         optimizer='sgd',
         optimizer_params={'learning_rate':0.01},

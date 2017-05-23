@@ -15,8 +15,9 @@ This document lists the routines of the *n*-dimensional array package
     mxnet.ndarray
 ```
 
-A `NDArray` is a multidimensional container of items of the same type and
-size. Various methods for data manipulation and computation are provided.
+The `NDArray` API, defined in the `ndarray` (or simply `nd`) package, provides
+imperative tensor operations on CPU/GPU.
+A `NDArray` represents a multidimensional, fixed-size homogenous array.
 
 ```python
 >>> x = mx.nd.array([[1, 2, 3], [4, 5, 6]])
@@ -34,7 +35,7 @@ size. Various methods for data manipulation and computation are provided.
 ```
 
 A detailed tutorial is available at
-[http://mxnet.io/tutorials/python/ndarray.html](http://mxnet.io/tutorials/python/ndarray.html)..
+[NDArray - Imperative tensor operations on CPU/GPU](http://mxnet.io/tutorials/basic/ndarray.html).
 
 ```eval_rst
 
@@ -48,19 +49,16 @@ A detailed tutorial is available at
 
    In additional, ``NDArray`` supports GPU computation and various neural
    network layers.
-```
-
-```eval_rst
 
 .. note:: ``ndarray`` also provides almost same routines to ``symbol``. Most
-   routines between these two packages share the same C++ operator source
-   codes. But ``ndarray`` differs to ``symbol`` in several aspects:
+  routines between these two packages share the same C++ operator source
+  codes. But ``ndarray`` differs to ``symbol`` in several aspects:
 
-   - ``ndarray`` adopts imperative programming, namely sentences are executed
-     step-by-step so that the results can be obtained immediately.
+  - ``ndarray`` adopts imperative programming, namely sentences are executed
+    step-by-step so that the results can be obtained immediately.
 
-   - Most binary operators such as ``+`` and ``>`` are enabled broadcasting in
-     default.
+  - Most binary operators such as ``+`` and ``>`` are enabled broadcasting in
+    default.
 ```
 
 In the rest of this document, we first overview the methods provided by the

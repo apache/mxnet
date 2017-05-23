@@ -38,6 +38,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="devices">
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active">Raspberry Pi</button>
+  <button type="button" class="btn btn-default opt">NVIDIA Jetson TX2</button>
 </div>
 </div>
 
@@ -679,7 +680,159 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
 <div class="devices">
   <div class="raspberry-pi">
 
-Follow the installation instructions [in this guide](./raspbian_setup.md) to set up MXNet.
+MXNet supports the Debian based Raspbian ARM based operating system so you can run MXNet on Raspberry Pi Devices.
+
+These instructions will walk through how to build MXNet for the Raspberry Pi and install the Python bindings for the library.
+
+The complete MXNet library and its requirements can take almost 200MB of RAM, and loading large models with the library can take over 1GB of RAM. Because of this, we recommend running MXNet on the Raspberry Pi 3 or an equivalent device that has more than 1 GB of RAM and a Secure Digital (SD) card that has at least 4 GB of free memory.
+
+**Install MXNet**
+
+Installing MXNet is a two-step process:
+
+1. Build the shared library from the MXNet C++ source code.
+2. Install the supported language-specific packages for MXNet.
+
+**Step 1** Build the Shared Library
+
+On Raspbian versions Wheezy and later, you need the following dependencies:
+
+- Git (to pull code from GitHub)
+
+- libblas (for linear algebraic operations)
+
+- libopencv (for computer vision operations. This is optional if you want to save RAM and Disk Space)
+
+- A C++ compiler that supports C++ 11. The C++ compiler compiles and builds MXNet source code. Supported compilers include the following:
+
+- [G++ (4.8 or later)](https://gcc.gnu.org/gcc-4.8/)
+
+Install these dependencies using the following commands in any directory:
+
+```bash
+    sudo apt-get update
+    sudo apt-get -y install git cmake build-essential g++-4.8 c++-4.8 liblapack* libblas* libopencv*
+```
+
+Clone the MXNet source code repository using the following ```git``` command in your home directory:
+```bash
+    git clone https://github.com/dmlc/mxnet.git --recursive
+    cd mxnet
+```
+
+If you aren't processing images with MXNet on the Raspberry Pi, you can minimize the size of the compiled library by building MXNet without the Open Source Computer Vision (OpenCV) library with the following commands:
+```bash
+    export USE_OPENCV = 0
+    make
+```
+
+Otherwise, you can build the complete MXNet library with the following command:
+```bash
+    make
+```
+
+Executing either of these commands start the build process, which can take up to a couple hours, and creates a file called ```libmxnet.so``` in the mxnet/lib directory.
+
+If you are getting build errors in which the compiler is being killed, it is likely that the compiler is running out of memory (espeically if you are on Raspberry Pi 1, 2 or Zero, which have less than 1GB of RAM), this can often be rectified by increasing the swapfile size on the Pi by editing the file /etc/dphys-swapfile and changing the line CONF_SWAPSIZE=100 to CONF_SWAPSIZE=1024, then running:
+```bash
+  sudo /etc/init.d/dphys-swapfile stop
+  sudo /etc/init.d/dphys-swapfile start
+  free -m # to verify the swapfile size has been increased
+```
+
+**Step 2** Install MXNet Python Bindings
+
+To install python bindings run the following commands in the MXNet directory:
+
+```bash
+    cd python
+    sudo python setup.py install
+```
+
+You are now ready to run MXNet on your Raspberry Pi device. You can get started by following the tutorial on [Real-time Object Detection with MXNet On The Raspberry Pi](http://mxnet.io/tutorials/embedded/wine_detector.html).
+
+*Note - Because the complete MXNet library takes up a significant amount of the Raspberry Pi's limited RAM, when loading training data or large models into memory, you might have to turn off the GUI and terminate running processes to free RAM.*
+
+</div>
+
+
+<div class="nvidia-jetson-tx2">
+
+MXNet supports the Ubuntu Arch64 based operating system so you can run MXNet on NVIDIA Jetson Devices.
+
+These instructions will walk through how to build MXNet for the Pascal based [NVIDIA Jetson TX2](http://www.nvidia.com/object/embedded-systems-dev-kits-modules.html) and install the corresponding python language bindings.
+
+For the purposes of this install guide we will assume that CUDA is already installed on your Jetson device.
+
+**Install MXNet**
+
+Installing MXNet is a two-step process:
+
+1. Build the shared library from the MXNet C++ source code.
+2. Install the supported language-specific packages for MXNet.
+
+**Step 1** Build the Shared Library
+
+You need the following additional dependencies:
+
+- Git (to pull code from GitHub)
+
+- libatlas (for linear algebraic operations)
+
+- libopencv (for computer vision operations)
+
+- python pip (to load relevant python packages for our language bindings)
+
+Install these dependencies using the following commands in any directory:
+
+```bash
+    sudo apt-get update
+    sudo apt-get -y install git build-essential libatlas-base-dev libopencv-dev graphviz python-pip
+    sudo pip install pip --upgrade
+    sudo pip install setuptools numpy --upgrade
+    sudo pip install graphviz jupyter
+```
+
+Clone the MXNet source code repository using the following ```git``` command in your home directory:
+```bash
+    git clone https://github.com/dmlc/mxnet.git --recursive
+    cd mxnet
+```
+
+Edit the Makefile to install the MXNet with CUDA bindings to leverage the GPU on the Jetson:
+```bash
+    cp make/config.mk .
+    echo "USE_CUDA=1" >> config.mk    
+    echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
+    echo "USE_CUDNN=1" >> config.mk
+```
+
+Edit the Mshadow Makefile to ensure MXNet builds with Pascal's hardware level low precision acceleration by editing mshadow/make/mshadow.mk and adding the following after line 122:
+```bash
+MSHADOW_CFLAGS += -DMSHADOW_USE_PASCAL=1
+```
+
+Now you can build the complete MXNet library with the following command:
+```bash
+    make -j $(nproc)
+```
+
+Executing this command creates a file called ```libmxnet.so``` in the mxnet/lib directory.
+
+**Step 2** Install MXNet Python Bindings
+
+To install python bindings run the following commands in the MXNet directory:
+
+```bash
+    cd python
+    sudo python setup.py install
+    cd ..
+    export MXNET_HOME=$(pwd)                       
+    echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.bashrc
+    source ~/.bashrc
+```
+
+You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 
 </div>
 </div>
@@ -735,7 +888,7 @@ $ python
 
 </div>
 
-Run a short *MXNet* python program to create a 2X3 identity matrix, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
 
 ```python
 >>> import mxnet as mx
@@ -798,7 +951,7 @@ $ python
 
 </div>
 
-Run a short *MXNet* python program to create a 2X3 identity matrix *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
+Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
 
 ```python
 >>> import mxnet as mx
@@ -918,7 +1071,7 @@ $ python
 
 <div class="cpu">
 
-Run a short *MXNet* python program to create a 2X3 identity matrix, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
 
 ```python
 >>> import mxnet as mx
@@ -942,7 +1095,7 @@ $
 
 <div class="gpu">
 
-Run a short *MXNet* python program to create a 2X3 identity matrix *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
+Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
 
 ```python
 >>> import mxnet as mx
@@ -989,6 +1142,11 @@ Will be available soon.
 
 <div class="devices">
   <div class="raspberry-pi">
+
+Will be available soon.
+
+</div>
+<div class="nvidia-jetson-tx2">
 
 Will be available soon.
 

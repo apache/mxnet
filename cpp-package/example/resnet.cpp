@@ -118,7 +118,7 @@ Symbol ResNetSymbol(int num_class, int num_level = 3, int num_block = 9,
 
   Symbol body = getBody(conv, num_level, num_block, num_filter, bn_momentum);
 
-  Symbol pool = Pooling("pool", body, pool_kernel, PoolingPoolType::avg);
+  Symbol pool = Pooling("pool", body, pool_kernel, PoolingPoolType::kAvg);
 
   Symbol flat = Flatten("flatten", pool);
 
