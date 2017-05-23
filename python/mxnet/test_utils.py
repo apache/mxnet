@@ -1043,4 +1043,3 @@ def same_array(array1, array2):
         return False
     array1[:] -= 1
     return same(array1.asnumpy(), array2.asnumpy())
-
