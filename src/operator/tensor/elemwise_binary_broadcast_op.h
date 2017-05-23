@@ -195,7 +195,7 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
   using namespace broadcast;
   TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
-                                             &new_lshape, &new_rshape, &new_oshape);
+                                         &new_lshape, &new_rshape, &new_oshape);
   if (!ndim) {
     BinaryBackwardUseNone<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
@@ -266,8 +266,6 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
     });
   }
 }
-
-#undef BROADCAST_NDIM_SWITCH
 
 #define MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(name)                \
   NNVM_REGISTER_OP(name)                                              \
