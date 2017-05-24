@@ -43,13 +43,14 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
               "during backward, if `use_ignore` is set to ``true``).");
     DMLC_DECLARE_FIELD(multi_output).set_default(false)
     .describe("If set to ``true``, the softmax function will be computed along "
-              "the second axis.");
+              "axis ``1``. This is applied when the shape "
+              "of input array differs from the shape of label array.");
     DMLC_DECLARE_FIELD(use_ignore).set_default(false)
     .describe("If set to ``true``, the `ignore_label` value will not contribute "
               "to the backward gradient.");
     DMLC_DECLARE_FIELD(preserve_shape).set_default(false)
     .describe("If set to ``true``, the softmax function will be computed along "
-              "the last axis.");
+              "the last axis (``-1``).");
     DMLC_DECLARE_FIELD(normalization)
     .add_enum("null", softmaxout_enum::kNull)
     .add_enum("batch", softmaxout_enum::kBatch)
