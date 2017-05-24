@@ -1175,8 +1175,8 @@ class ChannelAxisTestData {
     mxnet::op::batchnorm::BNTensor3<DType> tensor3(blob, channel_axis);
     const TShape &shape = blob.shape_;
     CHECK_GT(shape.ndim(), 0);
-    if (channel_axis == -1) {
-      channel_axis = shape.ndim() - 1;
+    if (channel_axis < 0) {
+      channel_axis = shape.ndim() + channel_axis;
     }
     CHECK_LT(channel_axis, shape.ndim());
     const size_t channel_count = shape[channel_axis];
@@ -1288,7 +1288,7 @@ static void compare(const std::vector<std::vector<float>>& d1,
 
 template<typename DType, typename AccReal>
 static void testSaveAndLoad(const std::vector<size_t>& dims,
-                            const size_t channelAxis,
+                            const int channelAxis,
                             const std::vector<std::vector<DType>>& inputChannelData,
                             const std::vector<DType>& expectedBlobData) {
   ChannelAxisTestData<DType> data;
@@ -1341,18 +1341,17 @@ TEST(BATCH_NORM, TestChannelAxisSaveAndLoad) {
 static TShape MakeShape(const std::vector<index_t>& shape,
                         signed int channelAxis,
                         const size_t channelCount) {
-  CHECK_GE(channelAxis, -1);
-  if (channelAxis == -1) {
-    channelAxis = shape.size();
+  if (channelAxis < 0) {
+    channelAxis = int(shape.size() + 1) + channelAxis;
   }
-  CHECK(channelAxis == -1 || channelAxis <= shape.size());
+  CHECK_LT(channelAxis, shape.size() + 1);
   const index_t dim = index_t(shape.size()) + 1;
   TShape newShape(dim);
   for (size_t x = 0; x < channelAxis; ++x) {
     newShape[x] = index_t(shape[x]);
   }
   newShape[channelAxis] = index_t(channelCount);
-  for (size_t x = channelAxis + 1; x < dim; ++x) {
+  for (int x = channelAxis + 1; x < dim; ++x) {
     newShape[x] = shape[x - 1];
   }
   return newShape;
@@ -1486,11 +1485,11 @@ static void runChannelAxisTest(
 
 TEST(BATCH_NORM, TestChannelAxisSimple) {
   std::cout << std::endl << std::flush;
-  const size_t CHANNEL_COUNT = 1;
-  const size_t DEFAULT_AXIS = 1;
-  const size_t NEW_AXIS = 0;
+  const size_t CHANNEL_COUNT = 4;
+  const int DEFAULT_AXIS = 1;
+  const int NEW_AXIS = -2;
   const bool useSimpleData = true;  // change to true sometimes for troubleshooting
-  const std::vector<index_t> shape = {1, 2, 1};
+  const std::vector<index_t> shape = {1, 2, 3};
   // Check against base-case of channel axis position 1
   runChannelAxisTest(false, false,
                      useglobalstats_kwargs_nocudnn,
@@ -1525,7 +1524,8 @@ TEST(BATCH_NORM, TestChannelAxis) {
         for (int g1 = 0; g1 < 2U; ++g1) {
           for (int g2 = 0; g2 < 2U; ++g2) {
             for (const std::vector<index_t> &simpleShape : shapes) {
-              for (signed int channelAxis = -1, shapeDim = simpleShape.size();
+              const int dim = static_cast<int>(simpleShape.size());
+              for (signed int channelAxis = -dim, shapeDim = dim;
                    channelAxis <= shapeDim;
                    ++channelAxis) {
                 for (size_t channelCount = 1; channelCount <= 3; ++channelCount) {

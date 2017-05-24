@@ -34,7 +34,6 @@ enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};  // aux_states
 
 /*! \brief Default channel axis if none specified int he params */
 constexpr int DEFAULT_CHANNEL_AXIS = 1;
-
 }  // namespace batchnorm
 
 /*! \brief Parameters for BatchNoram operator */
@@ -195,7 +194,7 @@ class BatchNormOp : public Operator {
 };  // class BatchNormOp
 
 template<typename xpu>
-Operator *CreateOp(const BatchNormParam& param, const int dtype, const TShape& shape);
+Operator *CreateOp(BatchNormParam param, const int dtype, const TShape& shape);
 
 #if DMLC_USE_CXX11
 class BatchNormProp : public OperatorProperty {
@@ -215,10 +214,12 @@ class BatchNormProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 3U) << "Input:[data, gamma, beta]";
     const TShape &dshape = in_shape->at(0);
 
-    CHECK_GE(param_.channel_axis, -1) << "Invalid channel axis: " << param_.channel_axis;
+    const size_t channelAxis = static_cast<size_t>(param_.channel_axis < 0
+                            ? static_cast<int>(dshape.ndim()) + param_.channel_axis
+                            : param_.channel_axis);
+    CHECK_LT(channelAxis, dshape.ndim()) << "Channel axis out of range: " << param_.channel_axis;
 
-    const int channelCount = param_.channel_axis == -1
-                             ? dshape[dshape.ndim() - 1] : dshape[param_.channel_axis];
+    const int channelCount = dshape[channelAxis];
 
     if (dshape.ndim() == 0) {
       return false;
@@ -228,7 +229,7 @@ class BatchNormProp : public OperatorProperty {
     in_shape->at(2) = TShape(Shape1(channelCount));
 
     out_shape->clear();
-    out_shape->push_back(dshape);             // kOut
+    out_shape->push_back(dshape);                // kOut
     out_shape->push_back(Shape1(channelCount));  // kMean
     out_shape->push_back(Shape1(channelCount));  // kVar
 
@@ -351,7 +352,9 @@ class BNTensor3 {
  public:
   inline BNTensor3(const TBlob& blob, const int indexOfChannel)
     : dptr_(blob.dptr<DType>())
-      , indexOfChannel_(indexOfChannel == -1 ? (blob.shape_.ndim() - 1) : indexOfChannel) {
+      , indexOfChannel_(static_cast<size_t>(indexOfChannel < 0
+                               ? (static_cast<int>(blob.shape_.ndim()) + indexOfChannel)
+                               : indexOfChannel)) {
     shape_[OUTER] = 1;
     for (size_t i = 0; i < indexOfChannel_; ++i) {
       shape_[OUTER] *= blob.shape_[i];
@@ -365,7 +368,9 @@ class BNTensor3 {
 
   inline BNTensor3(DType *p, const TShape& shape, const int indexOfChannel)
     : dptr_(p)
-      , indexOfChannel_(indexOfChannel == -1 ? (shape.ndim() - 1) : indexOfChannel) {
+      , indexOfChannel_(static_cast<size_t>(indexOfChannel < 0
+                               ? (static_cast<int>(shape.ndim()) + indexOfChannel)
+                               : indexOfChannel)) {
     shape_[OUTER] = 1;
     for (size_t i = 0; i < indexOfChannel_; ++i) {
       shape_[OUTER] *= shape[i];
@@ -449,6 +454,13 @@ class BNTensor3 {
   size_t indexOfChannel_;
   size_t shape_[COUNT];
 };
+
+inline int GetRealAxis(const TShape& shape, int axis) {
+  if(axis < 0) {
+    axis += shape.ndim();
+  }
+  return axis;
+}
 
 extern volatile bool disable_mkl;
 

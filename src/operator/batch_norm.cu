@@ -615,7 +615,8 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<gpu> *stream,
 
 /*! \brief Create GPU operator for batch normalization */
 template<>
-Operator *CreateOp<gpu>(const BatchNormParam& param, const int dtype, const TShape& shape) {
+Operator *CreateOp<gpu>(BatchNormParam param, const int dtype, const TShape& shape) {
+  param.channel_axis = mxnet::op::batchnorm::GetRealAxis(shape, param.channel_axis);
   Operator *op = NULL;
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
   if (!param.use_global_stats && !param.cudnn_off && shape.ndim() <= 4

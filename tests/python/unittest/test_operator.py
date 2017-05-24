@@ -862,10 +862,10 @@ def test_batchnorm_training():
 
         # Test varying channel axis
         dim = len(shape)
-        for chaxis in range(-1, dim):
+        for chaxis in range(-dim, dim):
             chaxis_true = chaxis
-            if chaxis == -1:
-                chaxis_true = dim - 1
+            if chaxis < 0:
+                chaxis_true = dim + chaxis
 
             shapex = shape
 
@@ -874,7 +874,7 @@ def test_batchnorm_training():
 
             gamma = np.ones(channel_count)
             beta = np.ones(channel_count)
-            if s > 1:
+            if channel_count > 1:
                 gamma[1] = 3
             beta[0] = 3
 

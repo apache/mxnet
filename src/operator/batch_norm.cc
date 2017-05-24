@@ -296,7 +296,8 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
 }
 
 template<>
-Operator *CreateOp<cpu>(const BatchNormParam& param, const int dtype, const TShape& shape) {
+Operator *CreateOp<cpu>(BatchNormParam param, const int dtype, const TShape& shape) {
+  param.channel_axis = mxnet::op::batchnorm::GetRealAxis(shape, param.channel_axis);
   Operator *op = nullptr;
 #if MXNET_USE_MKL2017 == 1
   if (shape.ndim() == 4
@@ -318,7 +319,7 @@ Operator *CreateOp<cpu>(const BatchNormParam& param, const int dtype, const TSha
   do { \
     if (!mxnet::op::batchnorm::disable_mkl) { \
       LOG(INFO) << MKLBatchNormOp<cpu, float>::getName() \
-        << " Skipping MKL optimization (unsupported dimension or type)"; \
+        << " Skipping MKL optimization (unsupported dimension, axis or type)"; \
     } \
   } while (0)
 #else
