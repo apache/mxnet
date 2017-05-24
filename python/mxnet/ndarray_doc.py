@@ -97,6 +97,40 @@ class CustomDoc(NDArrayDoc):
     >>> output = mx.symbol.Custom(op_type='my_custom_operator', data=input)
     """
 
+class GridGeneratorDoc(NDArrayDoc):
+    """
+    Examples
+    --------
+    >>> data =  mx.nd.array(np.ones((1,2,4,4)) * 1)
+    >>> res = mx.ndarray.GridGenerator(data, "warp")
+    >>> print(res.asnumpy())
+    [[[[-0.33333331  0.33333337  1.          1.66666675]
+       [-0.33333331  0.33333337  1.          1.66666675]
+       [-0.33333331  0.33333337  1.          1.66666675]
+       [-0.33333331  0.33333337  1.          1.66666675]]
+      [[-0.33333331 -0.33333331 -0.33333331 -0.33333331]
+       [ 0.33333337  0.33333337  0.33333337  0.33333337]
+       [ 1.          1.          1.          1.        ]
+       [ 1.66666675  1.66666675  1.66666675  1.66666675]]]]
+    >>>
+    >>> data =  mx.nd.array(np.ones((1,2,4,4)) * 2)
+    >>> res = mx.ndarray.GridGenerator(data, "warp")
+    >>> print(res.asnumpy())
+    [[[[ 0.33333337  1.          1.66666675  2.33333325]
+       [ 0.33333337  1.          1.66666675  2.33333325]
+       [ 0.33333337  1.          1.66666675  2.33333325]
+       [ 0.33333337  1.          1.66666675  2.33333325]]
+      [[ 0.33333337  0.33333337  0.33333337  0.33333337]
+       [ 1.          1.          1.          1.        ]
+       [ 1.66666675  1.66666675  1.66666675  1.66666675]
+       [ 2.33333325  2.33333325  2.33333325  2.33333325]]]]
+    >>>
+    >>> x =  mx.nd.array(np.ones((32, 6)))
+    >>> res = mx.ndarray.GridGenerator(x, "affine", target_shape=(6,6))
+    >>> print(res.asnumpy().shape)
+    (32, 2, 6, 6)
+    """
+
 def _build_doc(func_name,
                desc,
                arg_names,
