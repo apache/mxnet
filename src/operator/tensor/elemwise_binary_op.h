@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_op.h
- * \brief Function defintion of elementwise binary operators
+ * \brief Function definition of elementwise binary operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_OP_H_
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_OP_H_

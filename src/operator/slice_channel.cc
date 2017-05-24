@@ -29,7 +29,7 @@ DMLC_REGISTER_PARAMETER(SliceChannelParam);
 MXNET_REGISTER_OP_PROPERTY(SliceChannel, SliceChannelProp)
 .describe(R"code(Splits an array along a particular axis into multiple sub-arrays.
 
-.. note:: ``SliceChannel`` is depreacted. Use ``split`` instead.
+.. note:: ``SliceChannel`` is deprecated. Use ``split`` instead.
 
 **Note** that `num_outputs` should evenly divide the length of the axis 
 along which to split the array.

@@ -538,7 +538,7 @@ class Adam(Optimizer):
 class AdaGrad(Optimizer):
     """AdaGrad optimizer
 
-    This calss implements the AdaGrad optiizer described in *Adaptive Subgradient
+    This class implements the AdaGrad optimizer described in *Adaptive Subgradient
     Methods for Online Learning and Stochastic Optimization*, and available at
     http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf
 
