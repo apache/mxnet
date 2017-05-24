@@ -26,17 +26,19 @@ def _load_general(data, targets, major_axis):
                 if axis >= 0:
                     # copy slice
                     shape = d_src.shape
-                    do_crop = (0 != slice_idx.start or shape[axis] != slice_idx.stop)
+                    do_crop = (slice_idx.start != 0 or shape[axis] != slice_idx.stop)
                     # pylint: disable=no-member,protected-access
                     if do_crop:
                         if axis == 0:
                             d_src[slice_idx.start:slice_idx.stop].copyto(d_dst)
                         else:
                             if d_src.context == d_dst.context:
-                                nd.slice_axis(d_src, axis=axis, begin=slice_idx.start, end=slice_idx.stop, out=d_dst)
+                                nd.slice_axis(d_src, axis=axis, begin=slice_idx.start,
+                                              end=slice_idx.stop, out=d_dst)
                             else:
                                 # on different device, crop and then do cross device copy
-                                d_dst_copy = nd.slice_axis(d_src, axis=axis, begin=slice_idx.start, end=slice_idx.stop)
+                                d_dst_copy = nd.slice_axis(d_src, axis=axis, begin=slice_idx.start,
+                                                           end=slice_idx.stop)
                                 d_dst_copy.copyto(d_dst)
                     else:
                         d_src.copyto(d_dst)
