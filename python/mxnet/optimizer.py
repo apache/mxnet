@@ -358,8 +358,9 @@ class SGD(Optimizer):
 class DCASGD(Optimizer):
     """The DCASGD optimizer.
 
-    This class implements the optimizer described in *Asynchronous Stochastic Gradient Descent with
-    Delay Compensation for Distributed Deep Learning*, available at https://arxiv.org/abs/1609.08326.
+    This class implements the optimizer described in *Asynchronous Stochastic Gradient Descent
+    with Delay Compensation for Distributed Deep Learning*,
+    available at https://arxiv.org/abs/1609.08326.
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
@@ -712,7 +713,7 @@ class Ftrl(Optimizer):
         Per-coordinate learning rate correlation parameter.
     eta :
         .. math::
-           \eta_{t,i} = \\frac{learningrate}{\\beta+\sqrt{\sum_{s=1}^tg_{s,i}^t}}
+           \\eta_{t,i} = \\frac{learningrate}{\\beta+\\sqrt{\\sum_{s=1}^tg_{s,i}^t}}
     """
 
     def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1, **kwargs):
