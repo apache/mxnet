@@ -353,7 +353,7 @@ os.chdir('../')
 
 Let's take a look at the data. As you can see, under the [root folder](./data/101_ObjectCategories) every category has a [subfolder](./data/101_ObjectCategories/yin_yang).
 
-Now let's convert them into record io format using the `im2rec.py` utility scipt.
+Now let's convert them into record io format using the `im2rec.py` utility script.
 First we need to make a list that contains all the image files and their categories:
 
 ```python

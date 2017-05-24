@@ -155,7 +155,7 @@ model.predict(eval_iter).asnumpy()
 ```
 
 We can also evaluate our model according to some metric. In this example, we are
-evaulating our model's mean squared error (MSE) on the evaluation data.
+evaluating our model's mean squared error (MSE) on the evaluation data.
 
 ```python
 metric = mx.metric.MSE()
@@ -171,7 +171,7 @@ eval_iter = mx.io.NDArrayIter(eval_data, eval_label, batch_size, shuffle=False)
 model.score(eval_iter, metric)
 ```
 
-We also can create a custom metric and use it to evauate the model. More
+We also can create a custom metric and use it to evaluate the model. More
 information on metrics can be found [here](http://mxnet-test.readthedocs.io/en/latest/api/metric.html).
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

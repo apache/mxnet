@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file matrix_op-inl.h
- * \brief Function defintion of matrix related operators
+ * \brief Function definition of matrix related operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_
 #define MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_
