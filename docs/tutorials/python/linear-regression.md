@@ -6,6 +6,12 @@ The function we are trying to learn is: *y = x<sub>1</sub>  +  2x<sub>2</sub>*, 
 
 To begin, the following code imports the necessary packages we'll need for this exercise.
 
+In this tutorial we'll walk though how one can implement *linear regression* using MXNet APIs.
+
+The function we are trying to learn is: *y = x<sub>1</sub>  +  2x<sub>2</sub>*, where *(x<sub>1</sub>,x<sub>2</sub>)* are input features and *y* is the corresponding label.
+
+To begin, the following code imports the necessary packages we'll need for this exercise.
+
 ```python
 import mxnet as mx
 import numpy as np

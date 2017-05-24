@@ -14,6 +14,7 @@ These tutorials introduce the fundamental concepts in deep learning and how to i
    basic/symbol
    basic/module
    basic/data
+   python/linear-regression
 ```
 
 ### Training and Inference
