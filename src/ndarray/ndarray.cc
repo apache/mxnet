@@ -614,8 +614,7 @@ NDArray &NDArray::operator/=(const real_t &src) {
 }
 
 void NDArray::Save(dmlc::Stream *strm) const {
-  // save shape
-  shape_.Save(strm);
+  shape_.Save<uint32_t>(strm);
   if (is_none()) return;
   // save context
   Context ctx = this->ctx();
@@ -639,9 +638,8 @@ void NDArray::Save(dmlc::Stream *strm) const {
 }
 
 bool NDArray::Load(dmlc::Stream *strm) {
-  // load shape
   TShape shape;
-  if (!shape.Load(strm)) return false;
+  shape.Load<uint32_t>(strm);
   if (shape.ndim() == 0) {
     *this = NDArray(); return true;
   }
@@ -710,7 +708,7 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
+  TBlob src((void*)data, dshape, cpu::kDevMask, 0, this->dtype_); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToWrite();
@@ -739,7 +737,7 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob dst(data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
+  TBlob dst(data, dshape, cpu::kDevMask, 0, this->dtype_); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToRead();
