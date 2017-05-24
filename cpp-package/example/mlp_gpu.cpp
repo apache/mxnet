@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
       // CopyTo is imperative, need to wait for it to complete.
       NDArray::WaitAll();
 
-      // Create executor by binding parmeters to the model
+      // Create executor by binding parameters to the model
       auto *exec = net.SimpleBind(ctx, args);
       // Compute gradients
       exec->Forward(true);
