@@ -41,8 +41,7 @@ struct GridGeneratorParam : public dmlc::Parameter<GridGeneratorParam> {
               "(batch, 2, h, w).");
     DMLC_DECLARE_FIELD(target_shape).set_default(TShape(shape, shape + 2))
     .describe("Specifies the output shape. This is required when "
-              "transformation type is `affine`."
-              );
+              "transformation type is `affine`.");
   }
 };
 
