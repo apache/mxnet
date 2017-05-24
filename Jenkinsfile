@@ -107,6 +107,7 @@ USE_CPP_PACKAGE=1             \
 """
         make('gpu', flag)
         pack_lib('gpu')
+        stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
       }
     }
   },
@@ -322,6 +323,18 @@ stage('Integration Test') {
         unpack_lib('gpu')
         timeout(time: max_time, unit: 'MINUTES') {
           sh "${docker_run} caffe_gpu PYTHONPATH=/caffe/python:./python python tools/caffe_converter/test_converter.py"
+        }
+      }
+    }
+  },
+  'cpp-package': {
+    node('GPU' && 'linux') {
+      ws('workspace/it-cpp-package') {
+        init_git()
+        unpack_lib('gpu')
+        unstash 'cpp_test_score'
+        timeout(time: max_time, unit: 'MINUTES') {
+          sh "${docker_run} gpu cpp-package/tests/ci_test.sh"
         }
       }
     }

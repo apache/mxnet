@@ -77,7 +77,7 @@ class KVStore(object):
         key : int or sequence of int
             The keys.
         value : NDArray or sequence of NDArray
-            Values corresponding to the Keys
+            Values corresponding to the keys.
 
         Examples
         --------
@@ -111,15 +111,15 @@ class KVStore(object):
         Parameters
         ----------
         key : int or list of int
-            Keys
+            Keys.
 
         value : NDArray or list of NDArray or list of list of NDArray
-            Values corresponding to the Keys
+            Values corresponding to the keys.
 
         priority : int, optional
             The priority of the push operation.
             Higher priority push operations are likely to be executed before
-            other push actions
+            other push actions.
 
         Examples
         --------
@@ -171,7 +171,7 @@ class KVStore(object):
         `pull` is executed asynchronously after all previous `push` and `pull` calls
         for the same input key(s) are finished.
 
-        The returned values are gauranteed to the latest values in the store.
+        The returned values are gauranteed to be the latest values in the store.
 
         Parameters
         ----------
@@ -179,12 +179,12 @@ class KVStore(object):
             Keys.
 
         out: NDArray or list of NDArray or list of list of NDArray
-            Values corresponding to the Keys.
+            Values corresponding to the keys.
 
         priority : int, optional
             The priority of the pull operation.
             Higher priority pull operations are likely to be executed before
-            other pull actions
+            other pull actions.
 
         Examples
         --------
@@ -224,16 +224,34 @@ class KVStore(object):
             ctypes.c_int(priority)))
 
     def set_optimizer(self, optimizer):
-        """ Registers an optimizer with the store.
+        """ Registers an optimizer with the kvstore.
 
-        When there are multiple machines, this operation (invoked from a worker node)
-        will pack the optimizer and send it to all servers. It returns after
-        this action is done.
+        When using a single machine, this function updates the local optimizer.
+        If using multiple machines and this operation is invoked from a worker node,
+        it will serialized the optimizer with pickle and send it to all servers.
+        The function returns after all servers have been updated.
 
         Parameters
         ----------
         optimizer : Optimizer
-            the optimizer
+            The new optimizer for the store
+
+        Examples
+        --------
+
+        >>> kv = mx.kv.create()
+        >>> shape = (2, 2)
+        >>> weight = mx.nd.zeros(shape)
+        >>> kv.init(3, weight)
+        >>> # set the optimizer for kvstore as the default SGD optimizer
+        >>> kv.set_optimizer(mx.optimizer.SGD())
+        >>> grad = mx.nd.ones(shape)
+        >>> kv.push(3, grad)
+        >>> kv.pull(3, out = weight)
+        >>> # weight is updated via gradient descent
+        >>> weight.asnumpy()
+        array([[-0.01, -0.01],
+               [-0.01, -0.01]], dtype=float32)
         """
         is_worker = ctypes.c_int()
         check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
@@ -290,19 +308,20 @@ class KVStore(object):
         return size.value
 
     def save_optimizer_states(self, fname):
-        """Saves optimizer (updater) state to file.
+        """Saves the optimizer (updater) state to a file. This is often used when checkpointing
+        the model during training.
 
         Parameters
         ----------
         fname : str
-            Path to output states file.
+            Path to the output states file.
         """
         assert self._updater is not None, "Cannot save states for distributed training"
         with open(fname, 'wb') as fout:
             fout.write(self._updater.get_states())
 
     def load_optimizer_states(self, fname):
-        """Loads optimizer (updater) state from file.
+        """Loads the optimizer (updater) state from the file.
 
         Parameters
         ----------
@@ -369,9 +388,9 @@ class KVStore(object):
         Parameters
         ----------
         head : int
-            the head of the command
+            the head of the command.
         body : str
-            the body of the command
+            the body of the command.
         """
         check_call(_LIB.MXKVStoreSendCommmandToServers(
             self.handle, mx_uint(head), c_str(body)))
@@ -379,12 +398,33 @@ class KVStore(object):
 def create(name='local'):
     """Creates a new KVStore.
 
+    For single machine training, there are two commonly used types:
+
+    ``local``: Copies all gradients to CPU memory and updates weights there.
+
+    ``device``: Aggregates gradients and updates weights on GPUs. With this setting,
+    the KVStore also attempts to use GPU peer-to-peer communication,
+    potentially accelerating the communication.
+
+    For distributed training, KVStore also supports a number of types:
+
+    ``dist_sync``: Behaves similarly to ``local`` but with one major difference.
+    With ``dist_sync``, batch-size now means the batch size used on each machine.
+    So if there are ``n`` machines and we use batch size ``b``,
+    then ``dist_sync`` behaves like ``local`` with batch size ``n * b``.
+
+    ``dist_device_sync``: Identical to ``dist_sync`` with the difference similar
+    to ``device`` vs ``local``.
+
+    ``dist_async``: Performs asynchronous updates.
+    The weights are updated whenever gradients are received from any machine.
+    No two updates happen on the same weight at the same time. However, the order is not
+    guaranteed.
+
     Parameters
     ----------
-    name : {'local'}
-        The type of KVStore
-        - local works for multiple devices on a single machine (single process).
-        - dist works for multiple machines (multiple processes).
+    name : {'local', 'device', 'dist_sync', 'dist_device_sync', 'dist_async'}
+        The type of KVStore.
     Returns
     -------
     kv : KVStore

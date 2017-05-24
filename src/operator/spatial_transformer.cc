@@ -132,7 +132,7 @@ MXNET_REGISTER_OP_PROPERTY(SpatialTransformer, SpatialTransformerProp)
               "localisation net, the output dim should be 6 when transform_type "
               "is affine. You shold initialize the weight and bias with identity tranform.")
 .add_arguments(SpatialTransformerParam::__FIELDS__())
-.describe("Apply spatial transformer to input feature map.");
+.describe("Applies a spatial transformer to input feature map.");
 
 }  // namespace op
 }  // namespace mxnet

@@ -1,1 +1,0 @@
-## This is a python script that generates operator wrappers such as FullyConnected, based on current libmxnet.dll. This script is written so that we don't need to write new operator wrappers when new ones are added to the library.

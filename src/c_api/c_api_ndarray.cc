@@ -86,6 +86,8 @@ void SetNDInputsOutputs(const nnvm::Op* op,
     *num_outputs = num_visible_outputs;
     ndoutputs.resize(infered_num_outputs);
   } else {
+    CHECK(!AutogradRuntime::Get()->IsTraining())
+      << "Cannot assign to NDArray or specify 'out' when training with autograd";
     CHECK(*num_outputs == infered_num_outputs || *num_outputs == num_visible_outputs)
       << "Expecting " << infered_num_outputs << " (all) or "
       << num_visible_outputs << " (visible only) outputs, got "
@@ -249,7 +251,6 @@ void PushFCompute(const FCompute& fn,
         input_blobs.push_back(i.data());
       }
       for (auto& i : ndoutputs) {
-        i.CheckAndAlloc();
         output_blobs.push_back(i.data());
       }
       OpContext opctx{is_train, rctx,
@@ -296,7 +297,6 @@ void PushOperator(std::shared_ptr<Operator> opr,
         }
       }
       for (auto& i : ndoutputs) {
-        i.CheckAndAlloc();
         output_blobs.push_back(i.data());
       }
       Capture* capture = new Capture({on_complete, opr});
@@ -374,7 +374,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
 
     if (fn) {
       if (AutogradRuntime::Get()->IsTraining()) {
-        AutogradRuntime::Get()->RecordImperativeFCompute(fn, op,
+        AutogradRuntime::Get()->RecordImperativeFCompute(op,
             attrs, &ndinputs, &ndoutputs);
       }
       PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,

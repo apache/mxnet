@@ -57,8 +57,9 @@ method save_rnn_checkpoint(
 )
 {
     $cells = [$cells] unless ref $cells eq 'ARRAY';
-    $arg_params = $_->unpack_weights($arg_params) for @{ $cells };
-    AI::MXNet::Module->model_save_checkpoint($prefix, $epoch, $symbol, $arg_params, $aux_params);
+    my %arg_params = %{ $arg_params };
+    %arg_params = %{ $_->unpack_weights(\%arg_params) } for @{ $cells };
+    AI::MXNet::Module->model_save_checkpoint($prefix, $epoch, $symbol, \%arg_params, $aux_params);
 }
 
 

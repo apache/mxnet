@@ -1111,7 +1111,8 @@ method grad(ArrayRef[Str] $wrt)
         Similar to shape, we can specify dtype for this variable.
     init : initializer (mx->init->*)
         Specify initializer for this variable to override the default initializer
-
+    kwargs : hash ref
+        other additional attribute variables
     Returns
     -------
     variable : Symbol
@@ -1125,7 +1126,9 @@ method Variable(
     Maybe[Num]                    :$lr_mult=,
     Maybe[Num]                    :$wd_mult=,
     Maybe[Dtype]                  :$dtype=,
-    Maybe[AI::MXNet::Initializer] :$init=
+    Maybe[AI::MXNet::Initializer] :$init=,
+    HashRef[Str]                  :$kwargs={},
+    Maybe[Str]                    :$__layout__=
 )
 {
     my $handle = check_call(AI::MXNetCAPI::SymbolCreateVariable($name));
@@ -1136,9 +1139,31 @@ method Variable(
     $attr->{__wd_mult__} =  $wd_mult if defined $wd_mult;
     $attr->{__dtype__}   = DTYPE_STR_TO_MX->{ $dtype } if $dtype;
     $attr->{__init__}    = "$init" if defined $init;
+    $attr->{__layout__}  = $__layout__ if defined $__layout__;
+    while(my ($k, $v) = each %{ $kwargs })
+    {
+        if($k =~ /^__/ and $k =~ /__$/)
+        {
+            $attr->{$k} = "$v";
+        }
+        else
+        {
+            confess("Attribute name=$k is not supported.".
+                    ' Additional attributes must start and end with double underscores,'.
+                    ' e.g, __yourattr__'
+            );
+        }
+    }
     $ret->_set_attr(%{ $attr });
     return $ret;
 }
+
+=head2 var
+
+    A synonym to Variable.
+=cut
+
+*var = \&Variable;
 
 =head2 Group
 
@@ -1220,14 +1245,14 @@ method load_json(Str $json)
     return __PACKAGE__->new(handle => $handle);
 }
 
-method zeros(Shape :$shape, Dtype :$dtype='float32', Maybe[Str] :$name=)
+method zeros(Shape :$shape, Dtype :$dtype='float32', Maybe[Str] :$name=, Maybe[Str] :$__layout__=)
 {
-    return __PACKAGE__->_zeros({ shape => $shape, dtype => $dtype, name => $name });
+    return __PACKAGE__->_zeros({ shape => $shape, dtype => $dtype, name => $name, ($__layout__ ? (__layout__ => $__layout__) : ()) });
 }
 
-method ones(Shape :$shape, Dtype :$dtype='float32', Maybe[Str] :$name=)
+method ones(Shape :$shape, Dtype :$dtype='float32', Maybe[Str] :$name=, Maybe[Str] :$__layout__=)
 {
-    return __PACKAGE__->_ones({ shape => $shape, dtype => $dtype, name => $name });
+    return __PACKAGE__->_ones({ shape => $shape, dtype => $dtype, name => $name, ($__layout__ ? (__layout__ => $__layout__) : ()) });
 }
 
 =head2 arange
