@@ -1062,3 +1062,6 @@ table.docutils tr:nth-child(even) {
     transform: translate(-50%);
 }
 
+button.download {
+    color: #0079b2;
+}
