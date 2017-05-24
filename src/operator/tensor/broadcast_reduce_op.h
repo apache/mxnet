@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file elementwise_unary_op-inl.h
- * \brief Function defintion of elementwise unary operators
+ * \brief Function definition of elementwise unary operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_OP_H_
 #define MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_OP_H_
@@ -309,22 +309,20 @@ void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
   BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    if (dst_shape.ndim() == 2) {
-      Tensor<xpu, 2, DType> out =
-        outputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
-      Tensor<xpu, 2, DType> data =
-        inputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
-      ReduceToAssign<reducer>(out, req[0], data);
-      if (normalize) out /= scalar<DType>(src_shape.Size()/dst_shape.Size());
-    } else {
-      const int ndim = MXNET_SPECIAL_MAX_NDIM;
-      Tensor<xpu, ndim, DType> out =
-        outputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
-      Tensor<xpu, ndim, DType> data =
-        inputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
-      ReduceToAssign<reducer>(out, req[0], data);
-      if (normalize) out /= scalar<DType>(src_shape.Size()/dst_shape.Size());
-    }
+    const TBlob in_data = inputs[0].reshape(src_shape);
+    const TBlob out_data = outputs[0].reshape(dst_shape);
+    BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
+      size_t workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
+          s, out_data, req[0], in_data);
+      Tensor<xpu, 1, char> workspace =
+          ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+      broadcast::Reduce<reducer, NDim, DType, mshadow::op::identity>(
+          s, out_data, req[0], workspace, in_data);
+      if (normalize) {
+        auto out = out_data.FlatTo2D<xpu, DType>(s);
+        out /= scalar<DType>(src_shape.Size()/dst_shape.Size());
+      }
+    });
   });
 }
 

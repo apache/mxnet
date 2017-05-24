@@ -461,7 +461,7 @@ class TopKAccuracy(EvalMetric):
 class F1(EvalMetric):
     """Computes the F1 score of a binary classification problem.
 
-    The F1 score is equvalent to weighted average of the precision and recall,
+    The F1 score is equivalent to weighted average of the precision and recall,
     where the best value is 1.0 and the worst value is 0.0. The formula for F1 score is::
 
         F1 = 2 * (precision * recall) / (precision + recall)
