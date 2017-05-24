@@ -456,7 +456,7 @@ class BNTensor3 {
 };
 
 inline int GetRealAxis(const TShape& shape, int axis) {
-  if(axis < 0) {
+  if (axis < 0) {
     axis += shape.ndim();
   }
   return axis;
