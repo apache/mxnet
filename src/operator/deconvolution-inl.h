@@ -43,29 +43,30 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   bool cudnn_off;
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(DeconvolutionParam) {
-    DMLC_DECLARE_FIELD(kernel).describe("deconvolution kernel size: (h, w) or (d, h, w).");
+    DMLC_DECLARE_FIELD(kernel).describe("Deconvolution kernel size: (h, w) or (d, h, w). "
+                  "This is same as the kernel size used for the corresponding convolution");
     DMLC_DECLARE_FIELD(stride).set_default(TShape())
-        .describe("The stride of the sliding window for each dimension of the input tensor: "
-                  "(h, w) or (d, h, w).");
+        .describe("The stride used for the corresponding convolution: (h, w) or (d, h, w).");
     DMLC_DECLARE_FIELD(dilate).set_default(TShape())
-        .describe("Dilation factor for each dimension of the kernel: (h, w) or (d, h, w).");
+        .describe("Dilation factor for each dimension of the input: (h, w) or (d, h, w).");
     DMLC_DECLARE_FIELD(pad).set_default(TShape())
-        .describe("The amount of implicit zero padding for each dimension of the input: "
+        .describe("The amount of implicit zero padding added during convolution for each "
+                  "dimension of the input: "
                   "(h, w) or (d, h, w). "
                   "``(kernel-1)/2`` is usually a good choice. "
                   "If `target_shape` is set, "
                   "`pad` will be ignored and a padding that will generate the target shape "
                   "will be used.");
     DMLC_DECLARE_FIELD(adj).set_default(TShape())
-        .describe("adjustment for output shape: (h, w) or (d, h, w). "
+        .describe("Adjustment for output shape: (h, w) or (d, h, w). "
                   "If `target_shape` is set, "
                   "`adj` will be ignored and computed accordingly.");
     DMLC_DECLARE_FIELD(target_shape).set_default(TShape())
-        .describe("shape of the output tensor: (h, w) or (d, h, w).");
+        .describe("Shape of the output tensor: (h, w) or (d, h, w).");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
-        .describe("deconvolution filter (channel) number.");
+        .describe("Number of output filters.");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
-        .describe("number of groups partition.");
+        .describe("Number of groups partition.");
     DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
       .describe("Maximum temporal workspace allowed for deconvolution (MB).");
     DMLC_DECLARE_FIELD(no_bias).set_default(true)

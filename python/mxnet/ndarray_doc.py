@@ -97,6 +97,39 @@ class CustomDoc(NDArrayDoc):
     >>> output = mx.symbol.Custom(op_type='my_custom_operator', data=input)
     """
 
+class DeconvolutionDoc(NDArrayDoc):
+    """
+    Examples
+    --------
+    >>> input_4x4 = mx.nd.normal(shape=[1, 16, 4, 4])
+    >>> input_5x5 = mx.nd.normal(shape=[1, 16, 5, 5])
+    >>> kernel_3x3 = mx.nd.normal(shape=[16, 16, 3, 3])
+    >>>
+    >>> # The transpose of convolving a 3 × 3 kernel over a 4 × 4 input using
+    ... # unit strides (i.e., i = 4, k = 3, s = 1 and p = 0).
+    ...
+    >>> conv = mx.nd.Convolution(data=input_4x4, kernel=(3,3), weight=kernel_3x3,
+    ... num_filter=16, no_bias=True)
+    >>> conv
+    <NDArray 1x16x2x2 @cpu(0)>
+    >>> transpose = mx.nd.Deconvolution(data=conv, kernel=(3,3), weight=kernel_3x3,
+    ... num_filter=16, no_bias=True)
+    >>> transpose # should be of the same size as the input to convolution.
+    <NDArray 1x16x4x4 @cpu(0)>
+    >>>
+    >>> # The transpose of convolving a 3×3 kernel over a 5×5 input padded with a
+    ... # 1 × 1 border of zeros using 2 × 2 strides (i.e., i = 5, k = 3, s = 2 and p = 1).
+    ...
+    >>> conv = mx.nd.Convolution(data=input_5x5, kernel=(3,3), weight=kernel_3x3,
+    ... stride=(2,2), pad=(1,1), num_filter=16, no_bias=True)
+    >>> conv
+    <NDArray 1x16x3x3 @cpu(0)>
+    >>> transpose = mx.nd.Deconvolution(data=conv, kernel=(3,3), weight=kernel_3x3,
+    ... stride=(2,2), pad=(1,1), dilate=(1,1), num_filter=16, no_bias=True)
+    >>> transpose # should be of the same size as the input to convolution.
+    <NDArray 1x16x5x5 @cpu(0)>
+    """
+
 def _build_doc(func_name,
                desc,
                arg_names,
