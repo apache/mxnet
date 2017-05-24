@@ -1342,7 +1342,7 @@ static TShape MakeShape(const std::vector<index_t>& shape,
                         signed int channelAxis,
                         const size_t channelCount) {
   if (channelAxis < 0) {
-    channelAxis = int(shape.size() + 1) + channelAxis;
+    channelAxis += shape.size() + 1;
   }
   CHECK_LT(channelAxis, shape.size() + 1);
   const index_t dim = index_t(shape.size()) + 1;
