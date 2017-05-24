@@ -162,13 +162,14 @@ struct MP_SGDKernel {
     if (param_clip_gradient >= 0.0f) {
       float w = weight32[i];
       w = (1.f - param_lr*param_wd)*w -
-          (param_lr) * mshadow_op::clip::Map(param_rescale_grad*(float)grad_data[i], param_clip_gradient);
+          (param_lr) * mshadow_op::clip::Map(param_rescale_grad*static_cast<float>(grad_data[i]),
+                                             param_clip_gradient);
       weight32[i] = w;
       KERNEL_ASSIGN(out_data[i], req, (DType)w);
     } else {
       float w = weight32[i];
       w = (1.f-param_lr*param_wd)*w
-               - (param_lr*param_rescale_grad)*(float)(grad_data[i]);
+               - (param_lr*param_rescale_grad)*static_cast<float>(grad_data[i]);
       weight32[i] = w;
       KERNEL_ASSIGN(out_data[i], req, (DType)w);
     }
@@ -198,21 +199,22 @@ inline void MP_SGDUpdate(const nnvm::NodeAttrs& attrs,
 
 struct MP_SGDMomKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, float* mom_data, const DType* weight_data,
-    const DType* grad_data, float* weight32, const float param_clip_gradient, const float param_momentum,
-    const float param_lr, const float param_wd, const float param_rescale_grad,
-    const OpReqType req) {
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, float* mom_data,
+    const DType* weight_data, const DType* grad_data, float* weight32,
+    const float param_clip_gradient, const float param_momentum, const float param_lr,
+    const float param_wd, const float param_rescale_grad, const OpReqType req) {
     float w = weight32[i];
     float mom = mom_data[i];
     if (param_clip_gradient >= 0.0f) {
       mom = param_momentum*mom
               - param_lr*param_wd*w
               - param_lr
-              *mshadow_op::clip::Map(param_rescale_grad*(float)grad_data[i], param_clip_gradient);
+              *mshadow_op::clip::Map(param_rescale_grad*static_cast<float>(grad_data[i]),
+                                     param_clip_gradient);
     } else {
       mom = param_momentum*mom
                 - param_lr*param_wd*w
-                - param_lr*param_rescale_grad*(float)grad_data[i];
+                - param_lr*param_rescale_grad*static_cast<float>(grad_data[i]);
     }
     mom_data[i] = mom;
     w = w + mom;
@@ -236,10 +238,9 @@ inline void MP_SGDMomUpdate(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 2, float> mom = inputs[2].FlatTo2D<xpu, float>(s);
     Tensor<xpu, 2, float> weight32 = inputs[3].FlatTo2D<xpu, float>(s);
     Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    Kernel<MP_SGDMomKernel, xpu>::Launch(s, weight.shape_.Size(), out.dptr_, mom.dptr_, weight.dptr_,
-      grad.dptr_, weight32.dptr_, param.clip_gradient, param.momentum,
-      param.lr, param.wd,
-      param.rescale_grad, req[0]);
+    Kernel<MP_SGDMomKernel, xpu>::Launch(s, weight.shape_.Size(), out.dptr_, mom.dptr_,
+      weight.dptr_, grad.dptr_, weight32.dptr_, param.clip_gradient, param.momentum,
+      param.lr, param.wd, param.rescale_grad, req[0]);
   });
 }
 struct AdamParam : public dmlc::Parameter<AdamParam> {
