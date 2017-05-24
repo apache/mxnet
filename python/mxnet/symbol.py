@@ -1795,7 +1795,7 @@ def minimum(left, right):
 def hypot(left, right):
     """Given the "legs" of a right triangle, returns its hypotenuse.
 
-    Equivalent to :math:`\sqrt(left^2 + right^2)`, element-wise.
+    Equivalent to :math:`\\sqrt(left^2 + right^2)`, element-wise.
     Both inputs can be Symbol or scalar number. Broadcasting is not supported.
 
     Parameters
