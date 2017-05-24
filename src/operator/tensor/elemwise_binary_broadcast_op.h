@@ -138,54 +138,6 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   }
 }
 
-template<typename Reducer, typename xpu, typename SrcExp, int ndim, typename DType>
-void ReduceToAssign(mshadow::Tensor<xpu, ndim, DType> out,
-                    const OpReqType req, const SrcExp &src_) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  Shape<ndim> src_shape = ShapeCheck<ndim, SrcExp>::Check(src_);
-  Shape<ndim> axes;
-  index_t reducing_size = 1, remaining_size = 1;
-  int i = 0;
-  for (int k = 0; k < ndim; ++k)
-    if (src_shape[k] != out.shape_[k])
-      ++i;
-  for (int j = ndim-1, k = ndim-1; k >= 0; --k) {
-    if (src_shape[k] == out.shape_[k]) {
-      axes[j--] = k;
-      remaining_size *= src_shape[k];
-    } else {
-      axes[--i] = k;
-      reducing_size *= src_shape[k];
-    }
-  }
-  if (reducing_size == 1) {
-    ASSIGN_DISPATCH(out, req, F<mshadow_op::identity>(src_));
-  } else {
-    ASSIGN_DISPATCH(out.FlatTo1D(), req,
-      (reduce_except_dim<1, Reducer>(reshape(transpose(src_, axes),
-      Shape2(reducing_size, remaining_size)))));
-  }
-}
-
-template<typename Reducer, typename xpu, typename SrcExp, typename DType>
-void ReduceToAssign(mshadow::Tensor<xpu, 2, DType> out, const OpReqType req, const SrcExp &src_) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  Shape<2> src_shape = ShapeCheck<2, SrcExp>::Check(src_);
-  if (src_shape == out.shape_) {
-    ASSIGN_DISPATCH(out, req, F<mshadow_op::identity>(src_));
-  } else if (src_shape[0] == out.shape_[0]) {
-    ASSIGN_DISPATCH(out.FlatTo1D(), req, (reduce_except_dim<0, Reducer>(src_)));
-  } else if (src_shape[1] == out.shape_[1]) {
-    ASSIGN_DISPATCH(out.FlatTo1D(), req, (reduce_except_dim<1, Reducer>(src_)));
-  } else {
-    ASSIGN_DISPATCH(out.FlatTo1D(), req,
-      (reduce_except_dim<1, Reducer>(reshape(src_,
-      Shape2(src_shape.Size(), 1)))));
-  }
-}
-
 template<typename xpu, typename LOP, typename ROP>
 void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
                                     const OpContext& ctx,
