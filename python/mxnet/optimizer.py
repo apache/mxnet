@@ -2,10 +2,11 @@
 import math
 import pickle
 import logging
-from .ndarray import NDArray, zeros, clip, sqrt, sign, array
-from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update, mp_sgd_update, mp_sgd_mom_update
-from .random import normal
 import numpy
+from .ndarray import NDArray, zeros, clip, sqrt, sign, array
+from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
+                      mp_sgd_update, mp_sgd_mom_update)
+from .random import normal
 
 
 class Optimizer(object):
@@ -386,7 +387,8 @@ class MultiPrecisionSGD(Optimizer):
         if self.momentum == 0.0:
             return (None, array(weight, ctx=weight.context, dtype=numpy.float32))
         else:
-            return (zeros(weight.shape, weight.context, dtype=numpy.float32), array(weight, ctx=weight.context, dtype=numpy.float32))
+            return (zeros(weight.shape, weight.context, dtype=numpy.float32),
+                    array(weight, ctx=weight.context, dtype=numpy.float32))
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
