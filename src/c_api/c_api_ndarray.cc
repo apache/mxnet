@@ -396,7 +396,6 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     }
   }
 
-
   if (outarray == nullptr) {
     ret->ret_handles.clear();
     for (int i = 0; i < num_visible_outputs; ++i) {

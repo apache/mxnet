@@ -107,7 +107,7 @@ class CSVIter: public IIterator<DataInst> {
         << "The data size in CSV do not match size of shape: "
         << "specified shape=" << shape << ", the csv row-length=" << row.length;
     const real_t* ptr = row.value;
-    return TBlob((real_t*)ptr, shape, cpu::kDevMask);  // NOLINT(*)
+    return TBlob((real_t*)ptr, shape, cpu::kDevMask, 0);  // NOLINT(*)
   }
 
   CSVIterParam param_;
