@@ -179,13 +179,13 @@ class KVStoreDistServer {
         if (merged.request.size() == (size_t)ps::NumWorkers()) {
           // let the main thread to execute updater_, which is necessary for
           // python
-          if (updater_) {
+          if (updater_ && !req_meta.reset) {
             exec_.Exec([this, key, &merged, &stored](){
                 CHECK(updater_);
                 updater_(key, merged.array, &stored);
               });
           } else {
-            // if no updater, just copy
+            // if no updater or need reset, just copy
             CopyFromTo(merged.array, &stored);
           }
           for (const auto& req : merged.request) {
@@ -198,9 +198,15 @@ class KVStoreDistServer {
         }
       } else {
         // async push
-        exec_.Exec([this, key, &recved, &stored](){
-            CHECK(updater_);
-            updater_(key, recved, &stored);
+        bool reset = req_meta.reset;
+        exec_.Exec([this, key, &recved, &stored, reset](){
+            if (reset) {
+              CopyFromTo(recved, &stored);
+            }
+            else {
+              CHECK(updater_);
+              updater_(key, recved, &stored);
+            }
           });
         server->Response(req_meta);
         stored.WaitToRead();
