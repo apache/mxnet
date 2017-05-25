@@ -1,7 +1,7 @@
 # Iterators - Loading data
-In this tutorial we focus on how to feed data into a training or inference program. 
+In this tutorial we focus on how to feed data into a training or inference program.
 Most training and inference modules in MXNet accept data iterators,
-which simplifies this procedure, especially when reading large datasets. 
+which simplifies this procedure, especially when reading large datasets.
 Here we discuss the API conventions and several provided iterators.
 
 ## MXNet Data Iterator  
@@ -62,7 +62,7 @@ for batch in data_iter:
 ```
 
 ## Custom Iterator
-When the built-in iterators do not suit your application needs, 
+When the built-in iterators do not suit your application needs,
 you can create your own custom data iterator.
 
 An iterator in _MXNet_ should
@@ -167,7 +167,7 @@ Record IO is a file format used by MXNet for data IO.
 It compactly packs the data for efficient read and writes from distributed file system like Hadoop HDFS and AWS S3.
 You can learn more about the design of `RecordIO` [here](http://mxnet.io/architecture/note_data_loading.html).
 
-MXNet provides [__`MXRecordIO`__](http://mxnet.io/api/python/io.html#mxnet.recordio.MXRecordIO) 
+MXNet provides [__`MXRecordIO`__](http://mxnet.io/api/python/io.html#mxnet.recordio.MXRecordIO)
 and [__`MXIndexedRecordIO`__](http://mxnet.io/api/python/io.html#mxnet.recordio.MXIndexedRecordIO)
 for sequential access of data and random access of the data.
 
@@ -351,7 +351,7 @@ tar.close()
 os.chdir('../')
 ```
 
-Let's take a look at the data. As you can see, under the [root folder](./data/101_ObjectCategories) every category has a [subfolder](./data/101_ObjectCategories/yin_yang).
+Let's take a look at the data. As you can see, under the root folder (./data/101_ObjectCategories) every category has a subfolder(./data/101_ObjectCategories/yin_yang).
 
 Now let's convert them into record io format using the `im2rec.py` utility script.
 First we need to make a list that contains all the image files and their categories:
@@ -360,7 +360,7 @@ First we need to make a list that contains all the image files and their categor
 os.system('python %s/tools/im2rec.py --list=1 --recursive=1 --shuffle=1 --test-ratio=0.2 data/caltech data/101_ObjectCategories'%MXNET_HOME)
 ```
 
-The resulting [list file](./data/caltech_train.lst) is in the format `index\t(one or more label)\tpath`. In this case there is only one label for each image but you can modify the list to add in more for multi label training.
+The resulting list file (./data/caltech_train.lst) is in the format `index\t(one or more label)\tpath`. In this case there is only one label for each image but you can modify the list to add in more for multi label training.
 
 Then we can use this list to create our record io file:
 
@@ -369,7 +369,7 @@ Then we can use this list to create our record io file:
 os.system("python %s/tools/im2rec.py --num-thread=4 --pass-through=1 data/caltech data/101_ObjectCategories"%MXNET_HOME)
 ```
 
-The record io files are now saved at [here](./data)
+The record io files are now saved at here (./data)
 
 #### Using ImageRecordIter
 [__`ImageRecordIter`__](http://mxnet.io/api/python/io.html#mxnet.io.ImageRecordIter) can be used for loading image data saved in record io format. To use ImageRecordIter, simply create an instance by loading your record file:
@@ -410,4 +410,3 @@ plt.show()
 ```
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
-
