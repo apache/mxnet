@@ -165,21 +165,21 @@ class NDArray {
   /*!
   * \brief elementwise subtract from current ndarray
   * this mutate the current NDArray
-  * \param scalar the data to substract
+  * \param scalar the data to subtract
   * \return reference of self
   */
   NDArray &operator-=(mx_float scalar);
   /*!
   * \brief elementwise multiplication to current ndarray
   *  this mutate the current NDArray
-  * \param scalar the data to substract
+  * \param scalar the data to subtract
   * \return reference of self
   */
   NDArray &operator*=(mx_float scalar);
   /*!
   * \brief elementwise division from current ndarray
   *  this mutate the current NDArray
-  * \param scalar the data to substract
+  * \param scalar the data to subtract
   * \return reference of self
   */
   NDArray &operator/=(mx_float scalar);
@@ -193,21 +193,21 @@ class NDArray {
   /*!
   * \brief elementwise subtract from current ndarray
   * this mutate the current NDArray
-  * \param src the data to substract
+  * \param src the data to subtract
   * \return reference of self
   */
   NDArray &operator-=(const NDArray &src);
   /*!
   * \brief elementwise multiplication to current ndarray
   *  this mutate the current NDArray
-  * \param src the data to substract
+  * \param src the data to subtract
   * \return reference of self
   */
   NDArray &operator*=(const NDArray &src);
   /*!
   * \brief elementwise division from current ndarray
   *  this mutate the current NDArray
-  * \param src the data to substract
+  * \param src the data to subtract
   * \return reference of self
   */
   NDArray &operator/=(const NDArray &src);

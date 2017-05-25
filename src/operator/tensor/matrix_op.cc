@@ -222,7 +222,7 @@ NNVM_REGISTER_OP(slice)
 
 .. note:: ``crop`` is deprecated. Use ``slice`` instead.
 
-This function returns a sliced continous region of the array between the indices given
+This function returns a sliced continuous region of the array between the indices given
 by `begin` and `end`.
 
 For an input array of `n` dimensions, slice operation with ``begin=(b_0, b_1...b_n-1)`` indices
@@ -503,7 +503,11 @@ NNVM_REGISTER_OP(_backward_repeat)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<RepeatParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", RepeatOpBackward<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", RepeatOpBackward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+[](const NodeAttrs& attrs) {
+  return std::vector<ResourceRequest> {ResourceRequest::kTempSpace};
+});
 
 NNVM_REGISTER_OP(tile)
 .describe(R"code(Repeats the whole array multiple times.
@@ -560,7 +564,11 @@ NNVM_REGISTER_OP(_backward_tile)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<TileParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", TileOpBackward<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", TileOpBackward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+[](const NodeAttrs& attrs) {
+  return std::vector<ResourceRequest> {ResourceRequest::kTempSpace};
+});
 
 NNVM_REGISTER_OP(reverse)
 .describe(R"code(Reverses the order of elements along given axis while preserving array shape.
