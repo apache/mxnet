@@ -36,12 +36,12 @@ struct GridGeneratorParam : public dmlc::Parameter<GridGeneratorParam> {
     DMLC_DECLARE_FIELD(transform_type)
     .add_enum("affine", grid::kAffine)
     .add_enum("warp", grid::kWarp)
-    .describe("transformation type\n    "
-              "if transformation type is affine, data is affine matrix : (batch, 6)\n    "
-              "if transformation type is warp, data is optical flow : (batch, 2, h, w)");
+    .describe("The type of transformation. For `affine`, input data should be an affine matrix "
+              "of size (batch, 6). For `warp`, input data should be an optical flow of size "
+              "(batch, 2, h, w).");
     DMLC_DECLARE_FIELD(target_shape).set_default(TShape(shape, shape + 2))
-    .describe("if transformation type is affine, the operator need a target_shape : (H, W)\n    "
-              "if transofrmation type is warp, the operator will ignore target_shape");
+    .describe("Specifies the output shape (H, W). This is required if transformation type is "
+              "`affine`. If transformation type is `warp`, this parameter is ignored.");
   }
 };
 
