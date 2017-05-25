@@ -1,17 +1,16 @@
 # pylint: disable=fixme, too-many-arguments, too-many-locals, too-many-public-methods, too-many-branches
 """`BaseModule` defines an API for modules."""
 
-import time
 import logging
+import time
+
 import warnings
 
-from .. import metric
-from .. import ndarray
-
+from .. import metric, ndarray
 from ..context import cpu
-from ..model import BatchEndParam
 from ..initializer import Uniform
 from ..io import DataDesc
+from ..model import BatchEndParam
 
 
 def _as_list(obj):
@@ -379,7 +378,8 @@ class BaseModule(object):
             eval_batch_end_callback=None, initializer=Uniform(0.01),
             arg_params=None, aux_params=None, allow_missing=False,
             force_rebind=False, force_init=False, begin_epoch=0, num_epoch=None,
-            validation_metric=None, monitor=None):
+            validation_metric=None, monitor=None,
+            log_eval_epoch_end=True):
         """Trains the module parameters.
 
         Checkout `Module Tutorial <http://mxnet.io/tutorials/basic/module.html>`_ to see
@@ -506,10 +506,11 @@ class BaseModule(object):
                 nbatch += 1
 
             # one epoch of training is finished
-            for name, val in eval_metric.get_name_value():
-                self.logger.info('Epoch[%d] Train-%s=%f', epoch, name, val)
+            if log_eval_epoch_end:
+                for name, val in eval_metric.get_name_value():
+                    self.logger.info('Epoch[%d] Train-%s=%f', epoch, name, val)
             toc = time.time()
-            self.logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc-tic))
+            self.logger.info('Epoch[%d] Time-cost=%.3f', epoch, (toc - tic))
 
             # sync aux params across devices
             arg_params, aux_params = self.get_params()
@@ -525,9 +526,11 @@ class BaseModule(object):
                 res = self.score(eval_data, validation_metric,
                                  score_end_callback=eval_end_callback,
                                  batch_end_callback=eval_batch_end_callback, epoch=epoch)
+
                 #TODO: pull this into default
-                for name, val in res:
-                    self.logger.info('Epoch[%d] Validation-%s=%f', epoch, name, val)
+                if log_eval_epoch_end:
+                    for name, val in res:
+                        self.logger.info('Epoch[%d] Validation-%s=%f', epoch, name, val)
 
             # end of 1 epoch, reset the data-iter for another epoch
             train_data.reset()
