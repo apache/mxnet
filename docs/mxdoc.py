@@ -214,7 +214,8 @@ def _get_source(lang, lines):
             out.append('')
         for l in lines:
             if in_code:
-                out.append(l)
+                if '%matplotlib' not in l:
+                    out.append(l)
             else:
                 if ('<div>' in l or '</div>' in l or
                     '<script>' in l or '</script>' in l or
