@@ -316,7 +316,7 @@ class Module(BaseModule):
 
         self._exec_group.set_params(arg_params, aux_params)
 
-        # by starimpact:mingzhang
+        # by starimpact
         if self._update_on_kvstore:
             param_list = [args[0] for args in self._exec_group.param_arrays]
             _reset_params_on_kvstore(param_list, self._kvstore)
