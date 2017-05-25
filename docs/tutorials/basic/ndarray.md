@@ -182,7 +182,7 @@ shapes must be the same along the other axes.
 ```python
 a = mx.nd.ones((2,3))
 b = mx.nd.ones((2,3))*2
-c = mx.nd.concat([a,b])
+c = mx.nd.concat(a,b)
 c.asnumpy()
 ```
 
@@ -358,7 +358,7 @@ The `load` and `save` methods are preferable to pickle in two respects
 
 ```python
 a = mx.nd.ones((2, 3))
-mx.save("temp.ndarray", [a,])
+mx.nd.save("temp.ndarray", [a,])
 ```
 
 we can later load it from R:
