@@ -170,7 +170,7 @@ def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
 
 def random_crop(src, size, interp=2):
     """Randomly crop `src` with `size` (width, height).
-       Upsample result if `src` is smaller than `size`.
+    Upsample result if `src` is smaller than `size`.
 
     Parameters
     ----------
@@ -239,7 +239,7 @@ def center_crop(src, size, interp=2):
 
         4: Lanczos interpolation over 8x8 pixel neighborhood.
 
-         When shrinking an image, it will generally look best with AREA-based
+        When shrinking an image, it will generally look best with AREA-based
         interpolation, whereas, when enlarging an image, it will generally look best
         with Bicubic (slow) or Bilinear (faster but still looks OK).
 
@@ -708,7 +708,6 @@ class ImageIter(io.DataIter):
         Example usage:
         ----------
         >>> dataIter.read_image('Face.jpg') # returns decoded raw bytes.
-        '\xff\xd8\xff\xe0\x00...'
         """
         with open(os.path.join(self.path_root, fname), 'rb') as fin:
             img = fin.read()
