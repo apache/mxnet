@@ -33,6 +33,7 @@ class CuDNNConvolutionOp : public Operator {
                               const Context& ctx) {
     using namespace mshadow;
     this->param_ = param;
+    InitBufferForParam();
     auto cudnn_forward_compute_type = convertToCuDNNDataType(forward_compute_type);
     auto cudnn_backward_compute_type = convertToCuDNNDataType(backward_compute_type);
     // convert MB to words
@@ -426,27 +427,28 @@ class CuDNNConvolutionOp : public Operator {
       // 3d conv
       #if CUDNN_MAJOR >= 5
       CHECK_EQ(param_.layout.value(), kNCDHW) << "CuDNN only support 3D conv with NCDHW layout";
+      std::vector<int> wshape_buffer(wshape.ndim());
       CUDNN_CALL(cudnnSetFilterNdDescriptor(filter_desc_,
                                           dtype_,
                                           CUDNN_TENSOR_NCHW,
                                           static_cast<int>(wshape.ndim()),
-                                          reinterpret_cast<int*>(&wshape[0])));
+                                          CastTShapeToIntPtr(wshape, &wshape_buffer)));
       #else
       LOG(FATAL) << "Only support CUDNN V5 for 3D convolution";
       #endif
       CUDNN_CALL(cudnnSetConvolutionNdDescriptor(forward_conv_desc_,
                                                3,
-                                               reinterpret_cast<int*>(&param_.pad[0]),
-                                               reinterpret_cast<int*>(&param_.stride[0]),
-                                               reinterpret_cast<int*>(&param_.dilate[0]),
+                                               param_pad_.data(),
+                                               param_stride_.data(),
+                                               param_dilate_.data(),
                                                CUDNN_CROSS_CORRELATION,
                                                cudnn_forward_compute_type));
 
       CUDNN_CALL(cudnnSetConvolutionNdDescriptor(backward_conv_desc_,
                                                3,
-                                               reinterpret_cast<int*>(&param_.pad[0]),
-                                               reinterpret_cast<int*>(&param_.stride[0]),
-                                               reinterpret_cast<int*>(&param_.dilate[0]),
+                                               param_pad_.data(),
+                                               param_stride_.data(),
+                                               param_dilate_.data(),
                                                CUDNN_CROSS_CORRELATION,
                                                cudnn_backward_compute_type));
 
@@ -472,17 +474,26 @@ class CuDNNConvolutionOp : public Operator {
     data_offset_ = dstride[1] * dshape[1];
     out_offset_ = ostride[1] * oshape[1];
 
-    CUDNN_CALL(cudnnSetTensorNdDescriptor(in_desc_,
-                                        dtype_,
-                                        static_cast<int>(dshape.ndim()),
-                                        reinterpret_cast<int*>(&dshape[0]),
-                                        reinterpret_cast<int*>(&dstride[0])));
+    std::vector<int> dshape_buffer(dshape.ndim());
+    nnvm::ShapeTypeCast(dshape.begin(), dshape.end(), dshape_buffer.data());
+    std::vector<int> dstride_buffer(dstride.ndim());
+    nnvm::ShapeTypeCast(dstride.begin(), dstride.end(), dstride_buffer.data());
 
+    CUDNN_CALL(cudnnSetTensorNdDescriptor(in_desc_,
+                                          dtype_,
+                                          static_cast<int>(dshape.ndim()),
+                                          dshape_buffer.data(),
+                                          dstride_buffer.data()));
+
+    std::vector<int> oshape_buffer(oshape.ndim());
+    nnvm::ShapeTypeCast(oshape.begin(), oshape.end(), oshape_buffer.data());
+    std::vector<int> ostride_buffer(ostride.ndim());
+    nnvm::ShapeTypeCast(ostride.begin(), ostride.end(), ostride_buffer.data());
     CUDNN_CALL(cudnnSetTensorNdDescriptor(out_desc_,
-                                        dtype_,
-                                        static_cast<int>(oshape.ndim()),
-                                        reinterpret_cast<int*>(&oshape[0]),
-                                        reinterpret_cast<int*>(&ostride[0])));
+                                          dtype_,
+                                          static_cast<int>(oshape.ndim()),
+                                          oshape_buffer.data(),
+                                          ostride_buffer.data()));
 
     if (!param_.no_bias) {
       TShape bias = in_shape[conv::kBias];
@@ -660,6 +671,22 @@ class CuDNNConvolutionOp : public Operator {
     backward_workspace_ = backward_workspace_byte_ / sizeof(DType) + 1;
     init_temp_size_ = true;
   }
+
+  int *CastTShapeToIntPtr(const TShape& s, std::vector<int> *buffer) {
+    buffer->resize(s.ndim());
+    nnvm::ShapeTypeCast(s.begin(), s.end(), buffer->data());
+    return buffer->data();
+  }
+
+  void InitBufferForParam() {
+    CastTShapeToIntPtr(param_.stride, &param_stride_);
+    CastTShapeToIntPtr(param_.dilate, &param_dilate_);
+    CastTShapeToIntPtr(param_.pad, &param_pad_);
+  }
+
+  std::vector<int> param_stride_;
+  std::vector<int> param_dilate_;
+  std::vector<int> param_pad_;
 
   bool init_cudnn_;
   bool init_temp_size_;

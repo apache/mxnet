@@ -1388,12 +1388,12 @@ void RepeatOpForward(const nnvm::NodeAttrs& attrs,
 
   // reshaped input tblob
   TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask(),
-    inputs[0].dev_id(), inputs[0].type_flag_);
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
   // reshaped output tblob
   TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask(),
-    outputs[0].dev_id(), outputs[0].type_flag_);
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
 
   BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
@@ -1432,12 +1432,12 @@ void RepeatOpBackward(const nnvm::NodeAttrs& attrs,
 
   // reshaped output grad tblob
   TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask(),
-    outputs[0].dev_id(), outputs[0].type_flag_);
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
 
   // reshaped input grad tblob
   TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask(),
-    inputs[0].dev_id(), inputs[0].type_flag_);
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
@@ -1568,11 +1568,11 @@ void TileOpForward(const nnvm::NodeAttrs& attrs,
 
   // reshaped input tblob
   TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask(),
-    inputs[0].dev_id(), inputs[0].type_flag_);
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
   // reshaped output tblob
   TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask(),
-    outputs[0].dev_id(), outputs[0].type_flag_);
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
 
   BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
@@ -1610,11 +1610,11 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
 
   // reshaped output grad tblob
   TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask(),
-    outputs[0].dev_id(), outputs[0].type_flag_);
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
   // reshaped input grad tblob
   TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask(),
-    inputs[0].dev_id(), inputs[0].type_flag_);
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(

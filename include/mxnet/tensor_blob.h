@@ -88,7 +88,7 @@ class TBlob {
    * \param dev_mask the device mask, can be cpu::kDevMask or gpu::kDevMask
    * \param type_flag the type flag. Can be one of enum mshadow::dtype
    */
-  TBlob(void *dptr, const TShape &shape, int dev_mask, int dev_id, int type_flag)
+  TBlob(void *dptr, const TShape &shape, int dev_mask, int type_flag, int dev_id = -1)
       : dptr_(dptr), shape_(shape), type_flag_(type_flag) {
 #if MKL_EXPERIMENTAL == 1
     Mkl_mem_ = NULL;
@@ -139,7 +139,7 @@ class TBlob {
   inline TBlob reshape(const TShape& shape) const {
     CHECK_EQ(this->shape_.Size(), shape.Size()) << "Shape size mismatch "
     << this->shape_.Size() << " v.s. "  << shape.Size();
-    TBlob ret(this->dptr_, shape, this->dev_mask(), this->dev_id(), this->type_flag_);
+    TBlob ret(this->dptr_, shape, this->dev_mask(), this->type_flag_, this->dev_id());
     return ret;
   }
   /*!

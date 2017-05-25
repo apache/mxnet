@@ -708,7 +708,7 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob src((void*)data, dshape, cpu::kDevMask, 0, this->dtype_); // NOLINT(*)
+  TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToWrite();
@@ -737,7 +737,7 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob dst(data, dshape, cpu::kDevMask, 0, this->dtype_); // NOLINT(*)
+  TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToRead();

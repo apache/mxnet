@@ -265,7 +265,8 @@ class DeconvolutionOp : public Operator {
         << "Must init CuBLAS handle in stream";
 #endif
     index_t o_pad[2], o_adj[2];
-    TShape dshape = {data.size(2), data.size(3)};
+    TShape dshape = {static_cast<nnvm::dim_t>(data.size(2)),
+                     static_cast<nnvm::dim_t>(data.size(3))};
     param_.InferPad(dshape, o_pad, o_adj);
 
     const index_t nbatch = data.size(0);
