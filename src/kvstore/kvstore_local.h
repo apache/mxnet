@@ -47,7 +47,7 @@ class KVStoreLocal : public KVStore {
     }
   }
 
-  //by starimpact
+  // by starimpact
   void Reset(const std::vector<int>& keys,
             const std::vector<NDArray>& values,
             int priority) override {

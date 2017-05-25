@@ -600,7 +600,7 @@ int MXKVStoreInit(KVStoreHandle handle,
   API_END();
 }
 
-//by starimpact
+// by starimpact
 int MXKVStoreReset(KVStoreHandle handle,
                   mx_uint num,
                   const int* keys,
