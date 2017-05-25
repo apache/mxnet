@@ -40,8 +40,8 @@ struct GridGeneratorParam : public dmlc::Parameter<GridGeneratorParam> {
               "of size (batch, 6). For `warp`, input data should be an optical flow of size "
               "(batch, 2, h, w).");
     DMLC_DECLARE_FIELD(target_shape).set_default(TShape(shape, shape + 2))
-    .describe("Specifies the output shape. This is required when "
-              "transformation type is `affine`.");
+    .describe("Specifies the output shape (H, W). This is required if transformation type is "
+              "`affine`. If transformation type is `warp`, this parameter is ignored.");
   }
 };
 
