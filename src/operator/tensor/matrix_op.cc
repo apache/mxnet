@@ -230,7 +230,7 @@ and ``end=(e_1, e_2, ... e_n)`` indices will result in an array with the shape
 ``(e_1-b_0, ..., e_n-b_n-1)``.
 
 The resulting array's *k*-th dimension contains elements
- from the *k*-th dimension of the input array with the open range ``[b_k, e_k)``.
+from the *k*-th dimension of the input array with the open range ``[b_k, e_k)``.
 
 Example::
 
