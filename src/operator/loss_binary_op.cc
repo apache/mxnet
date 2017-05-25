@@ -25,7 +25,7 @@ NNVM_REGISTER_OP(softmax_cross_entropy)
 
   .. math:: \text{CE(label, output)} = - \sum_i \text{label}_i \log(\text{output}_i)
 
-  Example::
+Example::
 
   x = [[1, 2, 3],
        [11, 7, 5]]
