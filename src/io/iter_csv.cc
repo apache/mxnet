@@ -189,8 +189,8 @@ Examples::
   CSVIter = mx.io.CSVIter(data_csv = 'data/data.csv', data_shape = (3,),
   batch_size = 3, round_batch=False)
 
-  // Contents of two batches read from the above iterator in both passes after calling
-  // `reset` method before second pass is as follows:
+  // Contents of two batches read from the above iterator in both passes, after calling
+  // `reset` method before second pass, is as follows:
   [[1.  2.  3.]
   [2.  3.  4.]
   [3.  4.  5.]]
