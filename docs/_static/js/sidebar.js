@@ -19,7 +19,7 @@ function render_left_helper(toc, currentText) {
     $('.leftsidebar > .sphinxsidebarwrapper').children().remove();
     $('.leftsidebar > .sphinxsidebarwrapper').append(lefttoc);
     
-    $('.leftsidebar > .sphinxsidebarwrapper').prepend('<h3>' + currentText + ' Contents</h3>');
+    $('.leftsidebar > .sphinxsidebarwrapper').prepend('<h3>Contents</h3>');
     addToggle('.leftsidebar');
     
     $('.leftsidebar li a').click(function () {
@@ -211,6 +211,7 @@ function keepExpand() {
 $(document).ready(function () {
     var url = window.location.href, searchFlag = 'search.html';
     try {
+        if(url.indexOf('/get_started/') != -1) return;
         if (url.indexOf(searchFlag) == -1) {
             for(var i = 0; i < API_PAGE.length; ++i) {
                 if (url.indexOf('/api/' + API_PAGE[i]) != -1) {
