@@ -31,6 +31,13 @@ function render_left_helper(toc, currentText) {
 /*Render content tree of different pages*/
 function render_lefttoc() {
     var url = window.location.href, indexTrailing = 'index.html';
+    if (url.indexOf('/get_started/') != -1) {
+        var leftToc = "<ul><li class='leaf'><a href='install.html'>Installation</a></li><li class='leaf'><a href='why_mxnet.html'>Why MXNet</a></li></ul>";
+        render_left_helper($($.parseHTML(leftToc)), 'Get Started');
+        keepExpand();
+        $('.sphinxsidebar').css("visibility", "visible");
+        return;
+    }
     if (url.indexOf(indexTrailing) == -1) {
         for(var i = 0; i < TITLE_WITH_LANG.length; ++i) {
             var path = TITLE_WITH_LANG[i];
@@ -203,17 +210,22 @@ function keepExpand() {
 
 $(document).ready(function () {
     var url = window.location.href, searchFlag = 'search.html';
-    if (url.indexOf(searchFlag) == -1) {
-        for(var i = 0; i < API_PAGE.length; ++i) {
-            if (url.indexOf('/api/' + API_PAGE[i]) != -1) {
-                isAPI = true;
-                break;
+    try {
+        if (url.indexOf(searchFlag) == -1) {
+            for(var i = 0; i < API_PAGE.length; ++i) {
+                if (url.indexOf('/api/' + API_PAGE[i]) != -1) {
+                    isAPI = true;
+                    break;
+                }
             }
+            render_righttoc();
+            if ($('.leftsidebar').length) render_lefttoc();
         }
-        render_righttoc();
-        if ($('.leftsidebar').length) render_lefttoc();
+        $(window).scroll(function () {
+            scroll_righttoc();
+        });
     }
-    $(window).scroll(function () {
-        scroll_righttoc();
-    });
+    catch(err) {
+        return;
+    }
 });

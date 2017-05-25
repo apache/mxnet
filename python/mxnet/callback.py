@@ -4,7 +4,6 @@ from __future__ import absolute_import
 
 import logging
 import math
-import sys
 import time
 from .model import save_checkpoint
 
@@ -37,19 +36,34 @@ def module_checkpoint(mod, prefix, period=1, save_optimizer_states=False):
 
 
 def do_checkpoint(prefix, period=1):
-    """Callback to checkpoint the model to prefix every epoch.
+    """A callback that saves a model checkpoint every few epochs.
+    Each checkpoint is made up of a couple of binary files: a model description file and a
+    parameters (weights and biases) file. The model description file is named
+    `prefix`--symbol.json and the parameters file is named `prefix`-`epoch_number`.params
 
     Parameters
     ----------
     prefix : str
-        The file prefix for this checkpoint.
-    period : int
-    	How many epochs to wait before checkpointing. Defaults to 1.
+        Prefix for the checkpoint filenames.
+    period : int, optional
+        Interval (number of epochs) between checkpoints. Default `period` is 1.
 
     Returns
     -------
     callback : function
-        The callback function that can be passed as ``iter_end_callback`` to fit.
+        A callback function that can be passed as `epoch_end_callback` to fit.
+
+    Example
+    -------
+    >>> module.fit(iterator, num_epoch=n_epoch,
+    ... epoch_end_callback  = mx.callback.do_checkpoint("mymodel", 1))
+    Start training with [cpu(0)]
+    Epoch[0] Resetting Data Iterator
+    Epoch[0] Time cost=0.100
+    Saved checkpoint to "mymodel-0001.params"
+    Epoch[1] Resetting Data Iterator
+    Epoch[1] Time cost=0.060
+    Saved checkpoint to "mymodel-0002.params"
     """
     period = int(max(1, period))
     def _callback(iter_no, sym, arg, aux):
@@ -99,10 +113,9 @@ class Speedometer(object):
     auto_reset : bool
         Reset the evaluation metrics after each log.
 
-    Example:
-    --------
+    Example
+    -------
     >>> # Print training speed and evaluation metrics every ten batches. Batch size is one.
-    ...
     >>> module.fit(iterator, num_epoch=n_epoch,
     ... batch_end_callback=mx.callback.Speedometer(1, 10))
     Epoch[0] Batch [10] Speed: 1910.41 samples/sec  Train-accuracy=0.200000
@@ -131,9 +144,9 @@ class Speedometer(object):
                     name_value = param.eval_metric.get_name_value()
                     if self.auto_reset:
                         param.eval_metric.reset()
-                    for name, value in name_value:
-                        logging.info('Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f',
-                                     param.epoch, count, speed, name, value)
+                    msg = 'Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec'
+                    msg += '\t%s=%f'*len(name_value)
+                    logging.info(msg, param.epoch, count, speed, *sum(name_value, ()))
                 else:
                     logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
                                  param.epoch, count, speed)
@@ -144,14 +157,21 @@ class Speedometer(object):
 
 
 class ProgressBar(object):
-    """Show a progress bar.
+    """Displays a progress bar, indicating the percentage of batches processed within each epoch.
 
     Parameters
     ----------
     total: int
-        total batch size
+        total number of batches per epoch
     length: int
-        length or progress bar
+        number of chars to define maximum length of progress bar
+
+    Examples
+    --------
+    >>> progress_bar = mx.callback.ProgressBar(total=2)
+    >>> mod.fit(data, num_epoch=5, batch_end_callback=progress_bar)
+    [========--------] 50.0%
+    [================] 100.0%
     """
     def __init__(self, total, length=80):
         self.bar_len = length
@@ -163,7 +183,7 @@ class ProgressBar(object):
         filled_len = int(round(self.bar_len * count / float(self.total)))
         percents = math.ceil(100.0 * count / float(self.total))
         prog_bar = '=' * filled_len + '-' * (self.bar_len - filled_len)
-        sys.stdout.write('[%s] %s%s\r' % (prog_bar, percents, '%'))
+        logging.info('[%s] %s%s\r', prog_bar, percents, '%')
 
 
 class LogValidationMetricsCallback(object):

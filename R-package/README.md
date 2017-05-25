@@ -14,7 +14,7 @@ Sounds exciting? This page contains links to all the related documentation of th
 
 Resources
 ---------
-* [MXNet R Package Document](http://mxnet.io/get_started/setup.html#install-the-mxnet-package-for-r)
+* [MXNet R Package Document](http://mxnet.io/get_started/install.html)
   - Check this out for detailed documents, examples and installation guides.
 
 Installation
@@ -29,7 +29,7 @@ drat:::addRepo("dmlc")
 install.packages("mxnet")
 ```
 
-To use the GPU version or to use it on Linux, please follow [Installation Guide](http://mxnet.io/get_started/setup.html#installing-mxnet-on-a-gpu)
+To use the GPU version or to use it on Linux, please follow [Installation Guide](http://mxnet.io/get_started/install.html)
 
 License
 -------

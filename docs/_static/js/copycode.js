@@ -56,6 +56,7 @@ $(document).ready(function(){
         var lang = btnClass[btnClass.length - 1];
         var lines = e.text.split('\n');
         var hasGap = false;
+        var continueSign = '...';
         
         e.clearSelection();
         
@@ -67,7 +68,8 @@ $(document).ready(function(){
         if(hasGap) {
             var content = '';
             for(var i = 0; i < lines.length; ++i) {
-                if(lines[i].startsWith(LANG_GP[lang])) {
+                if(lines[i].startsWith(LANG_GP[lang]) || ((lang == 'python' || lang == 'default') &&
+                                                          lines[i].startsWith(continueSign))) {
                     content = content.concat(lines[i].substring(LANG_GP[lang].length, lines[i].length) + '<br />');
                 }
                 else if(lines[i].length == 0) content = content.concat('<br />');

@@ -51,7 +51,7 @@ void MLP() {
     Symbol fc = FullyConnected(string("fc") + istr,
       i == 0? sym_x : outputs[i-1],
       weights[i], biases[i], layerSizes[i]);
-    outputs[i] = LeakyReLU(string("act") + istr, fc, LeakyReLUActType::leaky);
+    outputs[i] = LeakyReLU(string("act") + istr, fc, LeakyReLUActType::kLeaky);
   }
   auto sym_out = SoftmaxOutput("softmax", outputs[nLayers - 1], sym_label);
 

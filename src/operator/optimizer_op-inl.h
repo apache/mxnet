@@ -300,8 +300,8 @@ inline void RMSPropAlexUpdate(const nnvm::NodeAttrs &attrs,
       delta = scalar<DType>(param.gamma2) * delta -
               scalar<DType>(param.lr) *
                   (F<clip>(grad, DType(param.clip_gradient)) /
-                   (F<square_root>(state_n - state_g * state_g) +
-                    scalar<DType>(param.epsilon)));
+                   (F<square_root>(state_n - state_g * state_g +
+                                   scalar<DType>(param.epsilon))));
     } else {
       state_n = scalar<DType>(1.f - param.gamma1) * (grad * grad) +
                 scalar<DType>(param.gamma1) * state_n;
@@ -309,8 +309,8 @@ inline void RMSPropAlexUpdate(const nnvm::NodeAttrs &attrs,
                 scalar<DType>(param.gamma1) * state_g;
       delta = scalar<DType>(param.gamma2) * delta -
               scalar<DType>(param.lr) *
-                  (grad / (F<square_root>(state_n - state_g * state_g) +
-                           scalar<DType>(param.epsilon)));
+                  (grad / (F<square_root>(state_n - state_g * state_g +
+                                          scalar<DType>(param.epsilon))));
     }
 
     if (param.clip_weights >= 0.0f) {
@@ -336,7 +336,7 @@ struct RMSPropParam : public dmlc::Parameter<RMSPropParam> {
     DMLC_DECLARE_FIELD(lr)
     .describe("Learning rate");
     DMLC_DECLARE_FIELD(gamma1).set_default(0.95f)
-    .describe("The dacay rate of momentum estimates.");
+    .describe("The decay rate of momentum estimates.");
     DMLC_DECLARE_FIELD(epsilon).set_default(1e-8f)
     .describe("A small constant for numerical stability.");
     DMLC_DECLARE_FIELD(wd).set_default(0.0f)
@@ -386,17 +386,17 @@ inline void RMSPropUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       if (param.clip_weights >= 0.0f) {
         Assign(out, req[0],
                F<clip>(weight -
-                           scalar<DType>(param.lr) *
-                               (F<clip>(grad, DType(param.clip_gradient)) /
-                                (F<square_root>(state_n) +
-                                 scalar<DType>(param.epsilon))),
+                       scalar<DType>(param.lr) *
+                           (F<clip>(grad, DType(param.clip_gradient)) /
+                            (F<square_root>(state_n +
+                                            scalar<DType>(param.epsilon)))),
                        DType(param.clip_weights)));
       } else {
         Assign(out, req[0], weight -
-                                scalar<DType>(param.lr) *
-                                    (F<clip>(grad, DType(param.clip_gradient)) /
-                                     (F<square_root>(state_n) +
-                                      scalar<DType>(param.epsilon))));
+                            scalar<DType>(param.lr) *
+                              (F<clip>(grad, DType(param.clip_gradient)) /
+                               (F<square_root>(state_n +
+                                               scalar<DType>(param.epsilon)))));
       }
     } else {
       state_n = scalar<DType>(1.f - param.gamma1) * (grad * grad) +
@@ -404,15 +404,17 @@ inline void RMSPropUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       if (param.clip_weights >= 0.0f) {
         Assign(out, req[0],
                F<clip>(weight -
-                           scalar<DType>(param.lr) *
-                               (grad / (F<square_root>(state_n) +
-                                        scalar<DType>(param.epsilon))),
+                       scalar<DType>(param.lr) *
+                           (grad /
+                            (F<square_root>(state_n +
+                                            scalar<DType>(param.epsilon)))),
                        DType(param.clip_weights)));
       } else {
         Assign(out, req[0], weight -
-                                scalar<DType>(param.lr) *
-                                    (grad / (F<square_root>(state_n) +
-                                             scalar<DType>(param.epsilon))));
+                            scalar<DType>(param.lr) *
+                              (grad /
+                               (F<square_root>(state_n +
+                                               scalar<DType>(param.epsilon)))));
       }
     }
   });

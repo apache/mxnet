@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <iostream>
 #include "mxnet-cpp/base.h"
 #include "mxnet-cpp/shape.h"
 
@@ -164,21 +165,21 @@ class NDArray {
   /*!
   * \brief elementwise subtract from current ndarray
   * this mutate the current NDArray
-  * \param scalar the data to substract
+  * \param scalar the data to subtract
   * \return reference of self
   */
   NDArray &operator-=(mx_float scalar);
   /*!
   * \brief elementwise multiplication to current ndarray
   *  this mutate the current NDArray
-  * \param scalar the data to substract
+  * \param scalar the data to subtract
   * \return reference of self
   */
   NDArray &operator*=(mx_float scalar);
   /*!
   * \brief elementwise division from current ndarray
   *  this mutate the current NDArray
-  * \param scalar the data to substract
+  * \param scalar the data to subtract
   * \return reference of self
   */
   NDArray &operator/=(mx_float scalar);
@@ -192,21 +193,21 @@ class NDArray {
   /*!
   * \brief elementwise subtract from current ndarray
   * this mutate the current NDArray
-  * \param src the data to substract
+  * \param src the data to subtract
   * \return reference of self
   */
   NDArray &operator-=(const NDArray &src);
   /*!
   * \brief elementwise multiplication to current ndarray
   *  this mutate the current NDArray
-  * \param src the data to substract
+  * \param src the data to subtract
   * \return reference of self
   */
   NDArray &operator*=(const NDArray &src);
   /*!
   * \brief elementwise division from current ndarray
   *  this mutate the current NDArray
-  * \param src the data to substract
+  * \param src the data to subtract
   * \return reference of self
   */
   NDArray &operator/=(const NDArray &src);
@@ -388,6 +389,7 @@ class NDArray {
   */
   int GetDType() const;
   /*!
+  * \brief Get the pointer to data (IMPORTANT: The ndarray should not be in GPU)
   * \return the data pointer to the current NDArray
   */
   const mx_float *GetData() const;
@@ -405,6 +407,8 @@ class NDArray {
  private:
   std::shared_ptr<NDBlob> blob_ptr_;
 };
+
+std::ostream& operator<<(std::ostream& out, const NDArray &ndarray);
 }  // namespace cpp
 }  // namespace mxnet
 

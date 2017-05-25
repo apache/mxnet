@@ -15,10 +15,15 @@ This document lists the routines of the symbolic expression package:
     mxnet.symbol
 ```
 
-A symbol declares computation. It is composited by
-operators, such as simple matrix operations (e.g. "+"), or a neural network
-layer (e.g. convolution layer). We can bind data to a symbol to execute the
-computation.
+The `Symbol` API, defined in the `symbol` (or simply `sym`) package, provides
+neural network graphs and auto-differentiation.
+A symbol represents a multi-output symbolic expression.
+They are composited by operators, such as simple matrix operations (e.g. “+”),
+or a neural network layer (e.g. convolution layer).
+An operator can take several input variables,
+produce more than one output variables, and have internal state variables.
+A variable can be either free, which we can bind with value later,
+or an output of another symbol.
 
 ```python
 >>> a = mx.sym.Variable('a')
@@ -34,15 +39,14 @@ computation.
 array([ 4.,  7.], dtype=float32)
 ```
 
-A detailed tutorial is available at [http://mxnet.io/tutorials/python/symbol.html](http://mxnet.io/tutorials/python/symbol.html).
-
+A detailed tutorial is available at [Symbol - Neural network graphs and auto-differentiation](http://mxnet.io/tutorials/basic/symbol.html).
 
 ```eval_rst
 
 .. note:: most operators provided in ``symbol`` are similar to ``ndarray``. But
    also note that ``symbol`` differs to ``ndarray`` in several aspects:
 
-   - ``symbol`` adopts declare programming. In other words, we need to first
+   - ``symbol`` adopts declarative programming. In other words, we need to first
      composite the computations, and then feed with data to execute.
 
    - Most binary operators such as ``+`` and ``>`` are not enabled broadcasting.
