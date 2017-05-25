@@ -123,7 +123,7 @@ Functions to read and write RecordIO files.
 ## Develop a new iterator
 
 Writing a new data iterator in Python is straightforward. Most MXNet
-training/inference programs accept an iteratable object with ``provide_data``
+training/inference programs accept an iterable object with ``provide_data``
 and ``provide_label`` properties.
 This [tutorial](http://mxnet.io/tutorials/basic/data.html) explains how to
 write an iterator from scratch.

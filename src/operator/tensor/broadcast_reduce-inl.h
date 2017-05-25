@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2015-2017 by Contributors
  * \file broadcast_reduce_kernel.h
- * \brief Function defintion of elementwise unary operators
+ * \brief Function definition of elementwise unary operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_INL_H_
 #define MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_INL_H_
