@@ -499,7 +499,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     margin:2em 0
 }
 
-#why_mxnet_btn, #install_btn {
+#why_mxnet_btn, #install_btn, #release_btn {
     border: 1.8px solid #FFFFFF;
     border-radius: 2px;
     color: #FFFFFF;
@@ -511,6 +511,11 @@ li.dropdown-submenu ul.dropdown-menu a {
     transition: .2s;
     width: 160px;
     border-radius: 30px;
+}
+
+#release_btn {
+    width: auto;
+    border: none;
 }
 
 @media (min-width: 768px) {
@@ -1062,3 +1067,6 @@ table.docutils tr:nth-child(even) {
     transform: translate(-50%);
 }
 
+button.download {
+    color: #0079b2;
+}
