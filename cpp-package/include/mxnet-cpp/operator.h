@@ -74,7 +74,7 @@ class Operator {
   */
   template<int N = 0>
   void PushInput(const Symbol &symbol) {
-    input_symbols.push_back(symbol.GetHandle());
+    input_symbols_.push_back(symbol.GetHandle());
   }
   /*!
   * \brief add input symbols
@@ -87,7 +87,7 @@ class Operator {
   * \return reference of self
   */
   Operator &operator()(const Symbol &symbol) {
-    input_symbols.push_back(symbol.GetHandle());
+    input_symbols_.push_back(symbol.GetHandle());
     return *this;
   }
   /*!
@@ -97,7 +97,7 @@ class Operator {
   */
   Operator &operator()(const std::vector<Symbol> &symbols) {
     for (auto &s : symbols) {
-      input_symbols.push_back(s.GetHandle());
+      input_symbols_.push_back(s.GetHandle());
     }
     return *this;
   }
@@ -121,7 +121,7 @@ class Operator {
   */
   template<int N = 0>
   Operator &PushInput(const NDArray &ndarray) {
-    input_ndarrays.push_back(ndarray.GetHandle());
+    input_ndarrays_.push_back(ndarray.GetHandle());
     return *this;
   }
   /*!
@@ -147,7 +147,7 @@ class Operator {
   * \return reference of self
   */
   Operator &operator()(const NDArray &ndarray) {
-    input_ndarrays.push_back(ndarray.GetHandle());
+    input_ndarrays_.push_back(ndarray.GetHandle());
     return *this;
   }
   /*!
@@ -157,7 +157,7 @@ class Operator {
   */
   Operator &operator()(const std::vector<NDArray> &ndarrays) {
     for (auto &s : ndarrays) {
-      input_ndarrays.push_back(s.GetHandle());
+      input_ndarrays_.push_back(s.GetHandle());
     }
     return *this;
   }
@@ -178,9 +178,9 @@ class Operator {
   std::map<std::string, std::string> params_desc_;
   bool variable_params_ = false;
   std::map<std::string, std::string> params_;
-  std::vector<SymbolHandle> input_symbols;
-  std::vector<NDArrayHandle> input_ndarrays;
-  std::vector<std::string> input_keys;
+  std::vector<SymbolHandle> input_symbols_;
+  std::vector<NDArrayHandle> input_ndarrays_;
+  std::vector<std::string> input_keys_;
   std::vector<std::string> arg_names_;
   AtomicSymbolCreator handle_;
   static OpMap*& op_map();
