@@ -80,7 +80,7 @@ predict('http://writm.com/wp-content/uploads/2016/08/Cat-hd-wallpapers.jpg')
 ```
 
 ```python
-predict('http://images-na.ssl-images-amazon.com/images/G/01/img15/pet-products/small-tiles/23695_pets_vertical_store_dogs_small_tile_8._CB312176604_.jpg')
+predict('http://thenotoriouspug.com/wp-content/uploads/2015/01/Pug-Cookie-1920x1080-1024x576.jpg')
 ```
 
 ## Feature extraction
