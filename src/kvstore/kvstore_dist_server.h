@@ -197,17 +197,16 @@ class KVStoreDistServer {
           merged.array.WaitToRead();
         }
       } else {
-        // async push
-        bool reset = req_meta.reset;
-        exec_.Exec([this, key, &recved, &stored, reset](){
-            if (reset) {
-              CopyFromTo(recved, &stored);
-            }
-            else {
+        // async push or reset
+        if (req_meta.reset) {
+          CopyFromTo(recved, &stored);
+        }
+        else {
+          exec_.Exec([this, key, &recved, &stored](){
               CHECK(updater_);
               updater_(key, recved, &stored);
-            }
           });
+        }
         server->Response(req_meta);
         stored.WaitToRead();
       }
