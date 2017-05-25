@@ -63,6 +63,10 @@ class KVStore {
    */
   virtual void Init(const std::vector<int>& keys,
                     const std::vector<NDArray>& values) = 0;
+  // by starimpact
+  virtual void Reset(const std::vector<int>& keys,
+                    const std::vector<NDArray>& values,
+                    int priority = 0)  = 0;
   /*!
    * \brief push a list of key-value pairs into the store
    *

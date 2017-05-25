@@ -99,6 +99,13 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreInit(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals))
 
+    def reset(self, key, value, priority=0):
+        # by starimpact
+        ckeys, cvals = _ctype_key_value(key, value)
+        check_call(_LIB.MXKVStoreReset(
+            self.handle, mx_uint(len(ckeys)), ckeys, cvals,
+            ctypes.c_int(priority)))
+
     def push(self, key, value, priority=0):
         """ Pushes a single or a sequence of key-value pairs into the store.
 

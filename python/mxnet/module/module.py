@@ -12,7 +12,7 @@ from .. import ndarray as nd
 from .. import optimizer as opt
 
 from .executor_group import DataParallelExecutorGroup
-from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
+from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore, _reset_params_on_kvstore
 from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
 
@@ -315,6 +315,11 @@ class Module(BaseModule):
             return
 
         self._exec_group.set_params(arg_params, aux_params)
+
+        # by starimpact:mingzhang
+        if self._update_on_kvstore:
+            param_list = [args[0] for args in self._exec_group.param_arrays]
+            _reset_params_on_kvstore(param_list, self._kvstore)
 
         # because we didn't update self._arg_params, they are dirty now.
         self._params_dirty = True
