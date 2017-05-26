@@ -171,7 +171,7 @@ eval_iter = mx.io.NDArrayIter(eval_data, eval_label, batch_size, shuffle=False)
 model.score(eval_iter, metric)
 ```
 
-We also can create a custom metric and use it to evaluate the model. More
-information on metrics can be found [here](http://mxnet-test.readthedocs.io/en/latest/api/metric.html).
+We can also create a custom metric and use it to evaluate a model. More
+information on metrics can be found in the [API documentation](http://mxnet.io/api/python/model.html#evaluation-metric-api-reference).
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
