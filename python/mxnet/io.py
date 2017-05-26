@@ -670,10 +670,28 @@ class NDArrayIter(DataIter):
 class MXDataIter(DataIter):
     """A python wrapper a C++ data iterator.
 
+    This iterator is the Python wrapper to all native C++ data iterators, such
+    as `CSVIter, `ImageRecordIter`, `MNISTIter`, etc. When initializing
+    `CSVIter` for example, you will get an `MXDataIter` instance to use in your
+    Python code. Calls to `next`, `reset`, etc will be delegated to the
+    underlying C++ data iterators.
+
+    Usually you don't need to interact with `MXDataIter` directly unless you are
+    implementing your own data iterators in C++. To do that, please refer to
+    examples under the `src/io` folder.
+
     Parameters
     ----------
-    handle : DataIterHandle
+    handle : DataIterHandle, required
         The handle to the underlying C++ Data Iterator.
+    data_name : str, optional
+        Data name. Default to "data".
+    label_name : str, optional
+        Label name. Default to "softmax_label".
+
+    See Also
+    --------
+    src/io : The underlying C++ data iterator implementation, e.g., `CSVIter`.
     """
     def __init__(self, handle, data_name='data', label_name='softmax_label', **_):
         super(MXDataIter, self).__init__()
@@ -691,7 +709,6 @@ class MXDataIter(DataIter):
         self.provide_data = [DataDesc(data_name, data.shape, data.dtype)]
         self.provide_label = [DataDesc(label_name, label.shape, label.dtype)]
         self.batch_size = data.shape[0]
-
 
     def __del__(self):
         check_call(_LIB.MXDataIterFree(self.handle))
