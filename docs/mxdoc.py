@@ -214,11 +214,13 @@ def _get_source(lang, lines):
             out.append('')
         for l in lines:
             if in_code:
-                out.append(l)
+                if '%matplotlib' not in l:
+                    out.append(l)
             else:
                 if ('<div>' in l or '</div>' in l or
                     '<script>' in l or '</script>' in l or
-                    '<!--' in l or '-->' in l):
+                    '<!--' in l or '-->' in l or
+                    '%matplotlib' in l ):
                     continue
                 out.append(cmt+l)
         if in_code:
@@ -238,7 +240,7 @@ def _get_src_download_btn(out_prefix, langs, lines):
         for f in [ipynb, src]:
             f = f.split('/')[-1]
             btn += '<button type="button" class="btn btn-default download" '
-            btn += 'onclick="window.location=\'%s\'"><span class="glyphicon glyphicon-download-alt"></span> %s </a></button>\n' % (f, f)
+            btn += 'onclick="window.location=\'%s\'"><span class="glyphicon glyphicon-download-alt"></span> %s </button>\n' % (f, f)
     btn += '</div>\n'
     return btn
 

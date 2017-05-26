@@ -66,13 +66,14 @@ download_mxnet() {
 		mv ${MXNET_HOME} ${MXNET_HOME_OLD}
 	fi
 	echo "Downloading MXNET source repositories from github"
-	git clone https://github.com/dmlc/mxnet.git ${MXNET_HOME} --recursive 
+	git clone https://github.com/dmlc/mxnet.git ${MXNET_HOME} --recursive
 }
 
 download_mxnet
 runme brew update
 runme brew_pkg_install pkg-config
 runme brew_pkg_install python
+runme pip install --upgrade pip
 brew install homebrew/science/openblas
 runme brew_pkg_install opencv
 # Needed for /usr/local/lib/graphviz to be created
