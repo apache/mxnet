@@ -217,15 +217,19 @@ class CuDNNDeconvolutionOp : public Operator {
       gdata_ptr = gdata.dptr_;
     }
     CHECK_NE(req[deconv::kWeight], kWriteInplace);
-    CHECK_NE(req[deconv::kBias], kWriteInplace);
+    if (!param_.no_bias) {
+      CHECK_NE(req[deconv::kBias], kWriteInplace);
+    }
     CHECK_NE(req[deconv::kData], kWriteInplace);
     Tensor<gpu, 1, DType> workspace =
         ctx.requested[deconv::kTempSpace].get_space_typed<gpu, 1, DType>(
                                  mshadow::Shape1(backward_workspace_), s);
     for (uint32_t g = 0; g < param_.num_group; ++g) {
       typename DataType<DType>::ScaleType alpha = 1.0f;
-      typename DataType<DType>::ScaleType bias_beta =
-        req[deconv::kBias] == kAddTo ? 1.0f : 0.0f;
+      typename DataType<DType>::ScaleType bias_beta = 0.0f;
+      if (!param_.no_bias && req[deconv::kBias] == kAddTo) {
+        bias_beta = 1.0f;
+      }
       typename DataType<DType>::ScaleType data_beta =
         req[deconv::kData] == kAddTo ? 1.0f : 0.0f;
       typename DataType<DType>::ScaleType weight_beta =

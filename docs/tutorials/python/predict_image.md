@@ -24,9 +24,10 @@ occurances of `mx.cpu()` with `mx.gpu()` to accelerate the computation.
 
 ```python
 sym, arg_params, aux_params = mx.model.load_checkpoint('resnet-152', 0)
-mod = mx.mod.Module(symbol=sym, context=mx.cpu())
-mod.bind(for_training=False, data_shapes=[('data', (1,3,224,224))])
-mod.set_params(arg_params, aux_params)
+mod = mx.mod.Module(symbol=sym, context=mx.cpu(), label_names=None)
+mod.bind(for_training=False, data_shapes=[('data', (1,3,224,224))], 
+         label_shapes=mod._label_shapes)
+mod.set_params(arg_params, aux_params, allow_missing=True)
 with open('synset.txt', 'r') as f:
     labels = [l.rstrip() for l in f]
 ```
@@ -68,8 +69,8 @@ def predict(url):
     prob = mod.get_outputs()[0].asnumpy()
     # print the top-5
     prob = np.squeeze(prob)
-    prob = np.argsort(prob)[::-1]
-    for i in prob[0:5]:
+    a = np.argsort(prob)[::-1]
+    for i in a[0:5]:
         print('probability=%f, class=%s' %(prob[i], labels[i]))
 ```
 
@@ -80,7 +81,7 @@ predict('http://writm.com/wp-content/uploads/2016/08/Cat-hd-wallpapers.jpg')
 ```
 
 ```python
-predict('http://images-na.ssl-images-amazon.com/images/G/01/img15/pet-products/small-tiles/23695_pets_vertical_store_dogs_small_tile_8._CB312176604_.jpg')
+predict('http://thenotoriouspug.com/wp-content/uploads/2015/01/Pug-Cookie-1920x1080-1024x576.jpg')
 ```
 
 ## Feature extraction

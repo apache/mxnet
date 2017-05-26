@@ -45,7 +45,7 @@ class Symbol(SymbolBase):
     __slots__ = []
 
     def __repr__(self):
-        """Get a string representation of the symbol."""
+        """Gets a string representation of the symbol."""
         name = self.name
         if name is None:
             name = ', '.join([i.name for i in self])
@@ -453,7 +453,7 @@ class Symbol(SymbolBase):
 
     @property
     def name(self):
-        """Get name string from the symbol, this function only works for non-grouped symbol.
+        """Gets name string from the symbol, this function only works for non-grouped symbol.
 
         Returns
         -------
@@ -1412,7 +1412,7 @@ class Symbol(SymbolBase):
         return executor
 
     def grad(self, wrt):
-        """Get the autodiff of current symbol.
+        """Gets the autodiff of current symbol.
 
         This function can only be used if current symbol is a loss function.
 
@@ -1793,9 +1793,9 @@ def minimum(left, right):
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def hypot(left, right):
-    """Given the "legs" of a right triangle, return its hypotenuse.
+    """Given the "legs" of a right triangle, returns its hypotenuse.
 
-    Equivalent to "sqrt(left**2 + right**2)", element-wise.
+    Equivalent to :math:`\\sqrt(left^2 + right^2)`, element-wise.
     Both inputs can be Symbol or scalar number. Broadcasting is not supported.
 
     Parameters
@@ -1836,7 +1836,7 @@ def hypot(left, right):
 
 
 def zeros(shape, dtype=None, **kwargs):
-    """Return a new symbol of given shape and type, filled with zeros.
+    """Returns a new symbol of given shape and type, filled with zeros.
 
     Parameters
     ----------
@@ -1856,7 +1856,7 @@ def zeros(shape, dtype=None, **kwargs):
 
 
 def ones(shape, dtype=None, **kwargs):
-    """Return a new symbol of given shape and type, filled with ones.
+    """Returns a new symbol of given shape and type, filled with ones.
 
     Parameters
     ----------
@@ -1876,7 +1876,7 @@ def ones(shape, dtype=None, **kwargs):
 
 
 def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
-    """Return evenly spaced values within a given interval.
+    """Returns evenly spaced values within a given interval.
 
     Parameters
     ----------
