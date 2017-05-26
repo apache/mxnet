@@ -18,8 +18,8 @@ how to encode a dataset into an iterator that MXNet can use. The data used in th
 
 ```python
 #Training data
-train_data = np.array([[1,2],[3,4],[5,6],[3,2],[7,1],[6,9]])
-train_label = np.array([5,11,17,7,9,24])
+train_data = np.random.uniform(0, 1, [100, 2])
+train_label = np.array([train_data[i][0] + 2 * train_data[i][1] for i in range(100)])
 batch_size = 1
 
 #Evaluation Data
@@ -140,7 +140,7 @@ parameters of the model to fit the training data. This is accomplished using the
 
 ```python
 model.fit(train_iter, eval_iter,
-            optimizer_params={'learning_rate':0.01, 'momentum': 0.9},
+            optimizer_params={'learning_rate':0.005, 'momentum': 0.9},
             num_epoch=1000,
             batch_end_callback = mx.callback.Speedometer(batch_size, 2))
 ```
