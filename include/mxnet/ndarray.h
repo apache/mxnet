@@ -103,15 +103,17 @@ class NDArray {
    */
   inline const TBlob& data() const {
     CheckAndAlloc();
-    MSHADOW_TYPE_SWITCH(dtype_, DType, {
 #if MKL_EXPERIMENTAL == 1
+    MSHADOW_TYPE_SWITCH(dtype_, DType, {
       tblob_ = TBlob(static_cast<DType*>(ptr_->shandle.dptr) + offset_,
         shape_, ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id, Mkl_mem_);
+    });
 #else
+    MSHADOW_TYPE_SWITCH(dtype_, DType, {
       tblob_ = TBlob(static_cast<DType*>(ptr_->shandle.dptr) + offset_,
         shape_, ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
-#endif
     });
+#endif
     return tblob_;
   }
   /*!
