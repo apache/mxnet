@@ -461,7 +461,7 @@ If not already installed, [download and install Xcode](https://developer.apple.c
 <br/>
 
 **Step 1**  Install prerequisites - Homebrew, python development tools.
-
+<!-- Pipe to /dev/null in case Homebrew or package was already installed to prevent failure -->
 ```bash
 # Install Homebrew
 $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" </dev/null
@@ -522,7 +522,7 @@ Install *MXNet* with OpenBLAS acceleration.
 <br/>
 
 **Step 1**  Install prerequisites - Homebrew, python development tools.
-
+<!-- Pipe to /dev/null in case Homebrew or package was already installed to prevent failure -->
 ```bash
 # Install Homebrew
 $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" </dev/null
