@@ -104,11 +104,14 @@ class NDArray {
   inline const TBlob& data() const {
     CheckAndAlloc();
     MSHADOW_TYPE_SWITCH(dtype_, DType, {
-      tblob_ = TBlob(static_cast<DType*>(ptr_->shandle.dptr) + offset_, shape_, ptr_->shandle.ctx);
-    });
 #if MKL_EXPERIMENTAL == 1
-    tblob_.Mkl_mem_ = Mkl_mem_;
+      tblob_ = TBlob(static_cast<DType*>(ptr_->shandle.dptr) + offset_,
+        shape_, ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id, Mkl_mem_);
+#else
+      tblob_ = TBlob(static_cast<DType*>(ptr_->shandle.dptr) + offset_,
+        shape_, ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
 #endif
+    });
     return tblob_;
   }
   /*!
@@ -120,8 +123,8 @@ class NDArray {
     TShape raw_shape(1);
     raw_shape[0] = length;
     MSHADOW_TYPE_SWITCH(dtype_, DType, {
-      res = TBlob(static_cast<DType*>(ptr_->shandle.dptr)
-        + offset_ + offset, raw_shape, ptr_->shandle.ctx);
+      res = TBlob(static_cast<DType*>(ptr_->shandle.dptr) + offset_ + offset,
+        raw_shape, ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
     });
 #if MKL_EXPERIMENTAL == 1
     res.Mkl_mem_ = Mkl_mem_;

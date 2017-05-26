@@ -61,6 +61,7 @@ class TBlob {
    * \param dptr the pointer to the memory
    * \param shape the shape of the data
    * \param dev_mask the device mask, can be cpu::kDevMask or gpu::kDevMask
+   * \param dev_id the device id
    */
   template<typename DType>
   TBlob(DType *dptr, const TShape &shape, int dev_mask, int dev_id)
@@ -71,22 +72,31 @@ class TBlob {
 #endif
     SetDLTensor(dev_mask, dev_id);
   }
-
-  template<typename DType>
-  TBlob(DType *dptr, const TShape &shape, const Context& ctx)
-      : dptr_(dptr), shape_(shape),
-        type_flag_(mshadow::DataType<DType>::kFlag) {
 #if MKL_EXPERIMENTAL == 1
-    Mkl_mem_ = NULL;
-#endif
-    SetDLTensor(ctx.dev_mask(), ctx.dev_id);
+  /*!
+   * \brief constructor that construct TBlob from contiguous memory
+   * \param dptr the pointer to the memory
+   * \param shape the shape of the data
+   * \param dev_mask the device mask, can be cpu::kDevMask or gpu::kDevMask
+   * \param dev_id the device id
+   * \param Mkl_mem the mkl memory
+   */
+  template<typename DType>
+  TBlob(DType *dptr, const TShape &shape, int dev_mask, int dev_id,
+        std::shared_ptr<MKLMemHolder> Mkl_mem)
+      : dptr_(dptr), shape_(shape),
+        type_flag_(mshadow::DataType<DType>::kFlag),
+        Mkl_mem_(Mkl_mem) {
+    SetDLTensor(dev_mask, dev_id);
   }
+#endif
   /*!
    * \brief constructor that construct TBlob from contiguous memory
    * \param dptr the pointer to the memory
    * \param shape the shape of the data
    * \param dev_mask the device mask, can be cpu::kDevMask or gpu::kDevMask
    * \param type_flag the type flag. Can be one of enum mshadow::dtype
+   * \param dev_id the device id
    */
   TBlob(void *dptr, const TShape &shape, int dev_mask, int type_flag, int dev_id = -1)
       : dptr_(dptr), shape_(shape), type_flag_(type_flag) {
