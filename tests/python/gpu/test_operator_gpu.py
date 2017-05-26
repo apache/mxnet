@@ -1093,6 +1093,25 @@ def test_unfuse():
         check_rnn_consistency(fused, stack)
         check_rnn_consistency(stack, fused)
 
+def test_residual_fused():
+    cell = mx.rnn.ResidualCell(
+            mx.rnn.FusedRNNCell(50, num_layers=3, mode='lstm',
+                               prefix='rnn_', dropout=0.5))
+
+    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
+    outputs, _ = cell.unroll(2, inputs, merge_outputs=None)
+    assert sorted(cell.params._params.keys()) == \
+           ['rnn_parameters']
+
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10, 50), rnn_t1_data=(10, 50))
+    assert outs == [(10, 2, 50)]
+    outputs = outputs.eval(ctx=mx.gpu(0),
+                           rnn_t0_data=mx.nd.ones((10, 50), ctx=mx.gpu(0))+5,
+                           rnn_t1_data=mx.nd.ones((10, 50), ctx=mx.gpu(0))+5,
+                           rnn_parameters=mx.nd.zeros((61200,), ctx=mx.gpu(0)))
+    expected_outputs = np.ones((10, 2, 50))+5
+    assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
+
 if __name__ == '__main__':
     test_countsketch()
     test_ifft()
@@ -1103,6 +1122,7 @@ if __name__ == '__main__':
     test_gru()
     test_rnn()
     test_unfuse()
+    test_residual_fused()
     test_convolution_options()
     test_convolution_versions()
     test_convolution_with_type()
