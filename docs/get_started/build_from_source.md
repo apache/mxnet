@@ -6,7 +6,7 @@ This document explains how to build MXNet from sources. Building MXNet from sour
 
 1. Build the MXNet shared library, `libmxnet.so`, from [C++ source files](#build-the-shared-library)
 2. Install the language binding for MXNet. MXNet supports -
-   [C++](#build-the-cpp-package),
+   [C++](#build-the-c-package),
    [Scala](#build-the-scala-package), [R](#build-the-r-package), and
    [Julia](#build-the-julia-package).
 
@@ -279,7 +279,7 @@ File
 contains all the compilation options. You can edit it and then `make`. There are
 some example build options
 
-If you want to build MXNet with C++ language binding, please make sure you read [Build the C++ package](#build-the-cpp-package) first.
+If you want to build MXNet with C++ language binding, please make sure you read [Build the C++ package](#build-the-c-package) first.
 
 </div>
 
@@ -320,7 +320,7 @@ These commands produce a library called ```mxnet.dll``` in the ```./build/Releas
 </div>
 
 ## Build the C++ package
-The C++ package has the same prerequisites as the MXNet library, you should also have `python` 2 installed. (`python` 3 is not supported currently)
+The C++ package has the same prerequisites as the MXNet library, you should also have `python` installed. (Both `python` 2 and 3 are supported)
 
 To enable C++ package, just add `USE_CPP_PACKAGE=1` in the build options when building the MXNet shared library.
 

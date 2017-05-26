@@ -145,7 +145,7 @@ def get_symbol(num_classes, num_layers, image_shape, num_group=32, conv_workspac
             filter_list = [16, 16, 32, 64]
             bottle_neck = False
         else:
-            raise ValueError("no experiments done on num_layers {}, you can do it youself".format(num_layers))
+            raise ValueError("no experiments done on num_layers {}, you can do it yourself".format(num_layers))
         units = per_unit * num_stages
     else:
         if num_layers >= 50:
@@ -170,7 +170,7 @@ def get_symbol(num_classes, num_layers, image_shape, num_group=32, conv_workspac
         elif num_layers == 269:
             units = [3, 30, 48, 8]
         else:
-            raise ValueError("no experiments done on num_layers {}, you can do it youself".format(num_layers))
+            raise ValueError("no experiments done on num_layers {}, you can do it yourself".format(num_layers))
 
     return resnext(units      = units,
                   num_stages  = num_stages,

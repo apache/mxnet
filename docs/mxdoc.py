@@ -32,7 +32,7 @@ def _run_cmd(cmds):
         print(err)
         raise err
 
-def generate_doxygen_xml(app):
+def generate_doxygen(app):
     """Run the doxygen make commands"""
     _run_cmd("cd %s/.. && make doxygen" % app.builder.srcdir)
     _run_cmd("cp -rf doxygen/html %s/doxygen" % app.builder.outdir)
@@ -214,11 +214,13 @@ def _get_source(lang, lines):
             out.append('')
         for l in lines:
             if in_code:
-                out.append(l)
+                if '%matplotlib' not in l:
+                    out.append(l)
             else:
                 if ('<div>' in l or '</div>' in l or
                     '<script>' in l or '</script>' in l or
-                    '<!--' in l or '-->' in l):
+                    '<!--' in l or '-->' in l or
+                    '%matplotlib' in l ):
                     continue
                 out.append(cmt+l)
         if in_code:
@@ -237,8 +239,8 @@ def _get_src_download_btn(out_prefix, langs, lines):
             f.write('\n'.join(_get_source(lang, lines)))
         for f in [ipynb, src]:
             f = f.split('/')[-1]
-            btn += '<button type="button" class="btn btn-default">'
-            btn += '<a href="%s"><span class="glyphicon glyphicon-download-alt"></span> %s </a></button>\n' % (f, f)
+            btn += '<button type="button" class="btn btn-default download" '
+            btn += 'onclick="window.location=\'%s\'"><span class="glyphicon glyphicon-download-alt"></span> %s </button>\n' % (f, f)
     btn += '</div>\n'
     return btn
 
@@ -265,8 +267,7 @@ def add_buttons(app, docname, source):
 
 def setup(app):
     app.connect("builder-inited", build_mxnet)
-    # skipped to build c api doc
-    # app.connect("builder-inited", generate_doxygen_xml)
+    app.connect("builder-inited", generate_doxygen)
     app.connect("builder-inited", build_scala_docs)
     # skipped to build r, it requires to install latex, which is kinds of too heavy
     # app.connect("builder-inited", build_r_docs)
