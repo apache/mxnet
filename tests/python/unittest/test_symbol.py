@@ -1,10 +1,31 @@
 import copy
+import sys
 import os
 import re
 import mxnet as mx
 import numpy as np
 from common import models
 import pickle as pkl
+from contextlib import contextmanager
+
+@contextmanager
+def discard_stderr():
+    """
+    Discards error output of a routine if invoked as:
+
+    with discard_stderr():
+        ...
+    """
+
+    try:
+        stderr_fileno = sys.stderr.fileno()
+        old_stderr = os.dup(stderr_fileno)
+        bit_bucket = open(os.devnull, 'w')
+        os.dup2(bit_bucket.fileno(), stderr_fileno)
+        yield
+    finally:
+        os.dup2(old_stderr, stderr_fileno)
+        bit_bucket.close()
 
 def test_symbol_basic():
     mlist = []
@@ -216,11 +237,14 @@ def test_zero_prop2():
     exe.forward()
     exe.backward()
 
-    try:
-        y.simple_bind(ctx=mx.cpu(), x=(10, 10), idx=(10,),
-                      type_dict={'x': np.float32, 'idx': np.int32})
-    except:
-        return
+    # The following bind() should throw an exception. We discard the expected stderr
+    # output for this operation only in order to keep the test logs clean.
+    with discard_stderr():
+        try:
+            y.simple_bind(ctx=mx.cpu(), x=(10, 10), idx=(10,),
+                          type_dict={'x': np.float32, 'idx': np.int32})
+        except:
+            return
 
     assert False
 
