@@ -1,4 +1,5 @@
-# Symbol and Automatic Differentiation
+Symbol - Neural network graphs and auto-differentiation
+======================================
 
 The computational unit `NDArray` requires a way to construct neural networks. MXNet provides a symbolic interface, named Symbol, to do this. Symbol combines both flexibility and efficiency.
 
@@ -122,9 +123,4 @@ composition. Because MXNet does more in-place memory allocation, it can
 be more memory efficient than CXXNet and gets to the same runtime with
 greater flexibility.
 
-## Next Steps
-* [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunctionTutorial.html)
-* [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
-* [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
-* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
-* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

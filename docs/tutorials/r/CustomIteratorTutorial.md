@@ -1,23 +1,26 @@
 Custom Iterator Tutorial
 ======================================
 
-This tutorial provides a guideline on how to use and write custom iterators, which can very useful when having a dataset that does not fit into memory.
+This tutorial provides a guideline on how to use and write custom iterators,
+which can very useful when having a dataset that does not fit into memory.
 
-Getting the data
-----------
-The data we are going to use is the [MNIST dataset](http://yann.lecun.com/exdb/mnist/) in CSV format, the data can be found in this [web](http://pjreddie.com/projects/mnist-in-csv/).
+## Getting the data
+
+
+The data we are going to use is the [MNIST dataset](http://yann.lecun.com/exdb/mnist/) in
+CSV format, the data can be found in this [web](http://pjreddie.com/projects/mnist-in-csv/).
 
 To download the data:
 
-```bash
+```
 wget http://pjreddie.com/media/files/mnist_train.csv
 wget http://pjreddie.com/media/files/mnist_test.csv
 ```
 
 You'll get two files, `mnist_train.csv` that contains 60.000 examples of hand written numbers and `mxnist_test.csv` that contains 10.000 examples. The first element of each line in the CSV is the label, which is a number between 0 and 9. The rest of the line are 784 numbers between 0 and 255, corresponding to the levels of grey of a matrix of 28x28. Therefore, each line contains an image of 28x28 pixels of a hand written number and its true label.
 
-Custom CSV Iterator
-----------
+## Custom CSV Iterator
+
 Next we are going to create a custom CSV Iterator based on the [C++ CSVIterator class](https://github.com/dmlc/mxnet/blob/master/src/io/iter_csv.cc).
 
 For that we are going to use the R function `mx.io.CSVIter` as a base class. This class has as parameters `data.csv, data.shape, batch.size` and two main functions, `iter.next()` that calls the iterator in the next batch of data and `value()` that returns the train data and the label.
@@ -132,8 +135,8 @@ batch.size <- 100
 train.iter <- CustomCSVIter$new(iter = NULL, data.csv = "mnist_train.csv", data.shape = 28, batch.size = batch.size)
 ```
 
-CNN Model
-----------
+## CNN Model
+
 
 For this tutorial we are going to use the known LeNet architecture:
 
@@ -156,8 +159,8 @@ lenet.model <- function(){
 network <- lenet.model()
 ```
 
-Training with the Custom Iterator
-----------
+## Training with the Custom Iterator
+
 Finally, we can directly add the custom iterator as the training data source.
 
 ```r
@@ -176,7 +179,7 @@ model <- mx.model.FeedForward.create(symbol=network,
 
 The last 2 iterations with a K80 GPU looks like this:
 
-```bash
+```
 [8] Train-accuracy=0.998866666666667
 Batch [100] Speed: 15413.0104454713 samples/sec Train-accuracy=0.999
 Batch [200] Speed: 16629.3412459049 samples/sec Train-accuracy=0.99935
@@ -194,9 +197,11 @@ Batch [600] Speed: 13818.7899518255 samples/sec Train-accuracy=0.99975
 [10] Train-accuracy=0.99975
 ```
 
-Conclusion
-----------
+## Conclusion
+
 
 We have shown how to create a custom CSV Iterator by extending the class `mx.io.CSVIter`. In our class, we iteratively read from a CSV file a batch of data that will be transformed and then processed in the stochastic gradient descent optimization. That way, we are able to manage CSV files that are bigger than the memory of the machine we are using.
 
 Based of this custom iterator, we can also create data loaders that internally transform or expand the data, allowing to manage files of any size.
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
