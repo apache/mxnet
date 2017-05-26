@@ -239,7 +239,7 @@ def _get_src_download_btn(out_prefix, langs, lines):
         for f in [ipynb, src]:
             f = f.split('/')[-1]
             btn += '<button type="button" class="btn btn-default download" '
-            btn += 'onclick="window.location=\'%s\'"><span class="glyphicon glyphicon-download-alt"></span> %s </a></button>\n' % (f, f)
+            btn += 'onclick="window.location=\'%s\'"><span class="glyphicon glyphicon-download-alt"></span> %s </button>\n' % (f, f)
     btn += '</div>\n'
     return btn
 
