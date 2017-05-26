@@ -32,6 +32,8 @@ Finally, add configurations to config.mk file:
 
 ## Quick Installation
 
+Note: The Cython version should be >= 0.23, since there would be syntax errors with a lower version compiler.
+
 ### Install MXNet for R
 
 MXNet requires R-version to be 3.2.0 and above. If you are running an earlier version of R, run below commands to update your R version, before running the installation script.
