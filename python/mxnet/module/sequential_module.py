@@ -11,9 +11,11 @@ from .base_module import BaseModule
 class SequentialModule(BaseModule):
     """A SequentialModule is a container module that can chain multiple modules together.
 
-    Note building a computation graph with this kind of imperative container is less
-    flexible and less efficient than the symbolic graph. So this should be only used as a
-    handy utility.
+    .. note::
+
+        Building a computation graph with this kind of imperative container is less
+        flexible and less efficient than the symbolic graph. So, this should be only used as a
+        handy utility.
     """
 
     META_TAKE_LABELS = 'take_labels'
@@ -31,7 +33,7 @@ class SequentialModule(BaseModule):
                                if x.startswith('META_')])
 
     def add(self, module, **kwargs):
-        """Add a module to the chain.
+        """Adds a module to the chain.
 
         Parameters
         ----------
@@ -55,10 +57,10 @@ class SequentialModule(BaseModule):
 
         Examples
         --------
-        An example of addinging two modules to a chain::
-            >>> seq_mod = mx.mod.SequentialModule()
-            >>> seq_mod.add(mod1)
-            >>> seq_mod.add(mod2)
+        >>> # An example of addinging two modules to a chain.
+        >>> seq_mod = mx.mod.SequentialModule()
+        >>> seq_mod.add(mod1)
+        >>> seq_mod.add(mod2)
         """
         self._modules.append(module)
 
@@ -92,7 +94,7 @@ class SequentialModule(BaseModule):
 
     @property
     def data_shapes(self):
-        """Get data shapes.
+        """Gets data shapes.
 
         Returns
         -------
@@ -105,7 +107,7 @@ class SequentialModule(BaseModule):
 
     @property
     def label_shapes(self):
-        """Get label shapes.
+        """Gets label shapes.
 
         Returns
         -------
@@ -119,7 +121,7 @@ class SequentialModule(BaseModule):
 
     @property
     def output_shapes(self):
-        """Get output shapes.
+        """Gets output shapes.
 
         Returns
         -------
@@ -131,12 +133,12 @@ class SequentialModule(BaseModule):
         return self._modules[-1].output_shapes
 
     def get_params(self):
-        """Get current parameters.
+        """Gets current parameters.
 
         Returns
         -------
         (arg_params, aux_params)
-            each a dictionary of name to parameters (in `NDArray`) mapping. This
+            A pair of dictionaries each mapping parameter names to NDArray values. This
             is a merged dictionary of all the parameters in the modules.
         """
         assert self.binded and self.params_initialized
@@ -153,7 +155,7 @@ class SequentialModule(BaseModule):
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
                     allow_missing=False, force_init=False):
-        """Initialize parameters.
+        """Initializes parameters.
 
         Parameters
         ----------
@@ -201,7 +203,7 @@ class SequentialModule(BaseModule):
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
              grad_req='write'):
-        """Bind the symbols to construct executors. This is necessary before one
+        """Binds the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
         Parameters
@@ -274,7 +276,7 @@ class SequentialModule(BaseModule):
     def init_optimizer(self, kvstore='local', optimizer='sgd',
                        optimizer_params=(('learning_rate', 0.01),),
                        force_init=False):
-        """Install and initialize optimizers.
+        """Installs and initializes optimizers.
 
         Parameters
         ----------
@@ -343,7 +345,7 @@ class SequentialModule(BaseModule):
             out_grads = module.get_input_grads()
 
     def update(self):
-        """Update parameters according to installed optimizer and the gradient computed
+        """Updates parameters according to installed optimizer and the gradient computed
         in the previous forward-backward cycle.
         """
         assert self.binded and self.params_initialized and self.optimizer_initialized
@@ -352,7 +354,7 @@ class SequentialModule(BaseModule):
             module.update()
 
     def get_outputs(self, merge_multi_context=True):
-        """Get outputs from a previous forward computation.
+        """Gets outputs from a previous forward computation.
 
         Parameters
         ----------
@@ -373,7 +375,7 @@ class SequentialModule(BaseModule):
         return self._modules[-1].get_outputs(merge_multi_context=merge_multi_context)
 
     def get_input_grads(self, merge_multi_context=True):
-        """Get the gradients with respect to the inputs of the module.
+        """Gets the gradients with respect to the inputs of the module.
 
         Parameters
         ----------
@@ -385,7 +387,7 @@ class SequentialModule(BaseModule):
 
         Returns
         -------
-        list of NDArray or list of list of NDArray
+        list of NDArrays or list of list of NDArrays
             If `merge_multi_context` is ``True``, it is like ``[grad1, grad2]``. Otherwise, it
             is like ``[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]``. All the output
             elements are `NDArray`.
@@ -394,7 +396,7 @@ class SequentialModule(BaseModule):
         return self._modules[0].get_input_grads(merge_multi_context=merge_multi_context)
 
     def update_metric(self, eval_metric, labels):
-        """Evaluate and accumulate evaluation metric on outputs of the last forward computation.
+        """Evaluates and accumulates evaluation metric on outputs of the last forward computation.
 
         Parameters
         ----------
@@ -410,7 +412,7 @@ class SequentialModule(BaseModule):
                 module.update_metric(eval_metric, labels)
 
     def install_monitor(self, mon):
-        """ Install monitor on all executors."""
+        """Installs monitor on all executors."""
         assert self.binded
         for module in self._modules:
             module.install_monitor(mon)

@@ -172,7 +172,7 @@ object Visualization {
    * @param shape Map of shapes, str -> shape, given input shapes
    * @param nodeAttrs Map of node's attributes
    *               for example:
-   *                      nodeAttrs = Map("shape" -> "oval", "fixedsize" -> "fasle")
+   *                      nodeAttrs = Map("shape" -> "oval", "fixedsize" -> "false")
    *                      means to plot the network in "oval"
    * @param hideWeights
    *               if true (default) then inputs with names like `*_weight`

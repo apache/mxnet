@@ -109,13 +109,13 @@ then we have::
 
 If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 
-The default data ``layout`` is *NCHW*, namely *(batch_size, channle, height,
+The default data ``layout`` is *NCHW*, namely *(batch_size, channel, height,
 width)*. We can choose other layouts such as *NHWC*.
 
 If ``num_group`` is larger than 1, denoted by *g*, then split the input ``data``
 evenly into *g* parts along the channel axis, and also evenly split ``weight``
 along the first dimension. Next compute the convolution on the *i*-th part of
-the data with the *i*-th weight part. The output is obtained by concating all
+the data with the *i*-th weight part. The output is obtained by concatenating all
 the *g* results.
 
 1-D convolution does not have *height* dimension but only *width* in space.

@@ -94,6 +94,7 @@ class BucketingModule(BaseModule):
     @property
     def data_shapes(self):
         """Get data shapes.
+
         Returns
         -------
         A list of `(name, shape)` pairs.
@@ -104,18 +105,21 @@ class BucketingModule(BaseModule):
     @property
     def label_shapes(self):
         """Get label shapes.
+
         Returns
         -------
-        A list of `(name, shape)` pairs. The return value could be ``None`` if
-        the module does not need labels, or if the module is not bound for
-        training (in this case, label information is not available).
+        A list of `(name, shape)` pairs.
+            The return value could be ``None`` if the module does not need labels,
+            or if the module is not bound for training (in this case, label information
+            is not available).
         """
         assert self.binded
         return self._curr_module.label_shapes
 
     @property
     def output_shapes(self):
-        """Get output shapes.
+        """Gets output shapes.
+
         Returns
         -------
         A list of `(name, shape)` pairs.
@@ -124,11 +128,12 @@ class BucketingModule(BaseModule):
         return self._curr_module.output_shapes
 
     def get_params(self):
-        """Get current parameters.
+        """Gets current parameters.
+
         Returns
         -------
-        `(arg_params, aux_params)`, each a dictionary mapping names to parameters
-        (`NDArray`).
+        `(arg_params, aux_params)`
+            A pair of dictionaries each mapping parameter names to NDArray values.
         """
         assert self.binded and self.params_initialized
         self._curr_module._params_dirty = self._params_dirty
@@ -137,7 +142,7 @@ class BucketingModule(BaseModule):
         return params
 
     def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True):
-        """Assign parameter and aux state values.
+        """Assigns parameters and aux state values.
 
         Parameters
         ----------
@@ -153,10 +158,9 @@ class BucketingModule(BaseModule):
 
         Examples
         --------
-        An example of setting module parameters::
-            >>> sym, arg_params, aux_params = \
-            >>>     mx.model.load_checkpoint(model_prefix, n_epoch_load)
-            >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
+        >>> # An example of setting module parameters.
+        >>> sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, n_epoch_load)
+        >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
         """
         if not allow_missing:
             self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
@@ -177,7 +181,7 @@ class BucketingModule(BaseModule):
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
                     allow_missing=False, force_init=False):
-        """Initialize parameters.
+        """Initializes parameters.
 
         Parameters
         ----------
@@ -204,7 +208,7 @@ class BucketingModule(BaseModule):
         self.params_initialized = True
 
     def get_states(self, merge_multi_context=True):
-        """Get states from all devices
+        """Gets states from all devices.
 
         Parameters
         ----------
@@ -216,15 +220,16 @@ class BucketingModule(BaseModule):
 
         Returns
         -------
-        If `merge_multi_context` is ``True``, it is like ``[out1, out2]``. Otherwise, it
-        is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
-        elements are `NDArray`.
+        list of NDArrays or list of list of NDArrays
+            If `merge_multi_context` is ``True``, it is like ``[out1, out2]``. Otherwise, it
+            is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
+            elements are `NDArray`.
         """
         assert self.binded and self.params_initialized
         return self._curr_module.get_states(merge_multi_context=merge_multi_context)
 
     def set_states(self, states=None, value=None):
-        """Set value for states. Only one of states & value can be specified.
+        """Sets value for states. Only one of states & values can be specified.
 
         Parameters
         ----------
@@ -300,7 +305,7 @@ class BucketingModule(BaseModule):
             self.set_params(arg_params, aux_params)
 
     def switch_bucket(self, bucket_key, data_shapes, label_shapes=None):
-        """Switch to a different bucket. This will change ``self.curr_module``.
+        """Switches to a different bucket. This will change ``self.curr_module``.
 
         Parameters
         ----------
@@ -330,7 +335,7 @@ class BucketingModule(BaseModule):
     def init_optimizer(self, kvstore='local', optimizer='sgd',
                        optimizer_params=(('learning_rate', 0.01),),
                        force_init=False):
-        """Install and initialize optimizers.
+        """Installs and initializes optimizers.
 
         Parameters
         ----------
@@ -359,12 +364,12 @@ class BucketingModule(BaseModule):
         self.optimizer_initialized = True
 
     def prepare(self, data_batch):
-        '''Prepare a data batch for forward.
+        """Prepares a data batch for forward.
 
         Parameters
         ----------
         data_batch : DataBatch
-        '''
+        """
         # perform bind if haven't done so
         assert self.binded and self.params_initialized
         bucket_key = data_batch.bucket_key
@@ -395,7 +400,7 @@ class BucketingModule(BaseModule):
         self._curr_module.backward(out_grads=out_grads)
 
     def update(self):
-        """Update parameters according to installed optimizer and the gradient computed
+        """Updates parameters according to installed optimizer and the gradient computed
         in the previous forward-backward cycle.
         """
         assert self.binded and self.params_initialized and self.optimizer_initialized
@@ -403,7 +408,7 @@ class BucketingModule(BaseModule):
         self._curr_module.update()
 
     def get_outputs(self, merge_multi_context=True):
-        """Get outputs from a previous forward computation.
+        """Gets outputs from a previous forward computation.
 
         Parameters
         ----------
@@ -415,15 +420,16 @@ class BucketingModule(BaseModule):
 
         Returns
         -------
-        If `merge_multi_context` is ``True``, it is like ``[out1, out2]``. Otherwise, it
-        is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
-        elements are numpy arrays.
+        list of numpy arrays or list of list of numpy arrays
+            If `merge_multi_context` is ``True``, it is like ``[out1, out2]``. Otherwise, it
+            is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
+            elements are numpy arrays.
         """
         assert self.binded and self.params_initialized
         return self._curr_module.get_outputs(merge_multi_context=merge_multi_context)
 
     def get_input_grads(self, merge_multi_context=True):
-        """Get the gradients with respect to the inputs of the module.
+        """Gets the gradients with respect to the inputs of the module.
 
         Parameters
         ----------
@@ -435,15 +441,16 @@ class BucketingModule(BaseModule):
 
         Returns
         -------
-        If `merge_multi_context` is ``True``, it is like ``[grad1, grad2]``. Otherwise, it
-        is like ``[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]``. All the output
-        elements are `NDArray`.
+        list of NDArrays or list of list of NDArrays
+            If `merge_multi_context` is ``True``, it is like ``[grad1, grad2]``. Otherwise, it
+            is like ``[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]``. All the output
+            elements are `NDArray`.
         """
         assert self.binded and self.params_initialized and self.inputs_need_grad
         return self._curr_module.get_input_grads(merge_multi_context=merge_multi_context)
 
     def update_metric(self, eval_metric, labels):
-        """Evaluate and accumulate evaluation metric on outputs of the last forward computation.
+        """Evaluates and accumulates evaluation metric on outputs of the last forward computation.
 
         Parameters
         ----------
@@ -461,7 +468,7 @@ class BucketingModule(BaseModule):
         return self._curr_module.symbol
 
     def install_monitor(self, mon):
-        """ Install monitor on all executors """
+        """Installs monitor on all executors """
         assert self.binded
         for mod in self._buckets.values():
             mod.install_monitor(mon)
