@@ -73,6 +73,7 @@ The following installation instructions have been tested on Ubuntu 14.04 and 16.
 **Step 1**  Install virtualenv for Ubuntu.
 
 ```bash
+$ sudo apt-get update
 $ sudo apt-get install -y python-dev python-virtualenv
 ```
 
@@ -125,7 +126,7 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 
 ```bash
 $ sudo apt-get update
-$ sudo apt-get install -y wget python
+$ sudo apt-get install -y wget python gcc
 $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
