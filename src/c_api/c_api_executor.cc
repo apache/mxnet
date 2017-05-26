@@ -443,14 +443,17 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
   }
 
   if (use_shared_buffer) {
+    ret->ret_vec_str.clear();
+    ret->ret_vec_str.reserve(shared_buffer_map.size());
     ret->ret_vec_charp.clear();
     ret->ret_vec_charp.reserve(shared_buffer_map.size());
-    for (const auto kv : shared_buffer_map) {
+    for (const auto& kv : shared_buffer_map) {
       if (kv.second.is_none()) {
         LOG(FATAL) << "Shared data NDArray cannot be un-allocated";
       }
       ret->ret_handles.push_back(new NDArray(kv.second));
-      ret->ret_vec_charp.push_back(kv.first.c_str());
+      ret->ret_vec_str.emplace_back(kv.first);
+      ret->ret_vec_charp.push_back(ret->ret_vec_str.back().c_str());
     }
     *shared_buffer_len = shared_buffer_map.size();
     *updated_shared_buffer_handle_list = &(ret->ret_handles[nd_idx]);
