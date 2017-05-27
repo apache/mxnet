@@ -98,21 +98,18 @@ class KVStoreLocal : public KVStore {
                     std::vector<std::vector<V> >* grouped_vals) {
     CHECK_EQ(keys.size(), values.size());
     // TODO(mli) check if already sorted as an optimization
-    using Idx = std::pair<int, int>;
-    std::vector<Idx> idx(keys.size());
-    for (size_t i = 0; i < keys.size(); ++i) {
-      idx[i].first = keys[i]; idx[i].second = i;
+    std::vector<int> temp_keys(keys.size());
+    for (size_t i = 0; i < keys.size(); i++) {
+        temp_keys[i] = keys[i];
     }
-    std::sort(idx.begin(), idx.end(), [](const Idx& a, const Idx& b) {
-        return a.first < b.first;
-      });
-
-    int pre_key = idx[0].first - 1;
-    for (auto i : idx) {
-      if (i.first != pre_key) {
-        uniq_keys->push_back(i.first);
-        grouped_vals->push_back({values[i.second]});
-        pre_key = i.first;;
+    std::sort(temp_keys.begin(), temp_keys.end(),
+              [](int i, int j) { return i < j; });
+    int pre_key = temp_keys[0] - 1;
+    for (size_t i = 0; i < temp_keys.size(); i++) {
+        if (temp_keys[i] != pre_key) {
+            uniq_keys->push_back(temp_keys[i]);
+            grouped_vals->push_back({values[i]});
+            pre_key = temp_keys[i];
       } else {
         grouped_vals->back().push_back(values[i.second]);
       }
