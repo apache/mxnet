@@ -283,8 +283,8 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
     }
   } else {
     CHECK_EQ(shp.ndim(), param.axes.ndim());
-    for (index_t i = 0; i < shp.ndim(); ++i) {
-      CHECK(param.axes[i] < shp.ndim());
+    for (size_t i = 0; i < shp.ndim(); ++i) {
+      CHECK(param.axes[i] < static_cast<int64_t>(shp.ndim()));
       ret[i] = shp[param.axes[i]];
     }
   }
@@ -1387,11 +1387,13 @@ void RepeatOpForward(const nnvm::NodeAttrs& attrs,
   std::pair<TShape, TShape> rshapes = ReshapeInputOutputForRepeatOp(ishape, axisOpt, repeats);
 
   // reshaped input tblob
-  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask_, inputs[0].type_flag_);
+  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask(),
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
   // reshaped output tblob
-  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask_, outputs[0].type_flag_);
+  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask(),
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
 
   BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
@@ -1429,11 +1431,13 @@ void RepeatOpBackward(const nnvm::NodeAttrs& attrs,
     ReshapeInputOutputForRepeatOp(oshape, axisOpt, repeats);
 
   // reshaped output grad tblob
-  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask_, outputs[0].type_flag_);
+  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask(),
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
 
   // reshaped input grad tblob
-  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask_, inputs[0].type_flag_);
+  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask(),
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
@@ -1563,10 +1567,12 @@ void TileOpForward(const nnvm::NodeAttrs& attrs,
   std::pair<TShape, TShape> rshapes = ReshapeInputOutputForTileOp(ishape, reps);
 
   // reshaped input tblob
-  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask_, inputs[0].type_flag_);
+  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask(),
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
   // reshaped output tblob
-  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask_, outputs[0].type_flag_);
+  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask(),
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
 
   BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
@@ -1603,10 +1609,12 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
   std::pair<TShape, TShape> rshapes = ReshapeInputOutputForTileOp(oshape, reps);
 
   // reshaped output grad tblob
-  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask_, outputs[0].type_flag_);
+  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask(),
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
   // reshaped input grad tblob
-  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask_, inputs[0].type_flag_);
+  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask(),
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
