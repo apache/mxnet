@@ -3114,7 +3114,6 @@ def test_psroipooling():
     for num_rois in [1, 2]:
         for num_classes, num_group in itertools.product([2, 3], [2, 3]):
             for image_height, image_width in itertools.product([168, 224], [168, 224]):
-                print num_rois, num_classes, num_group, (image_height, image_width)
                 for grad_nodes in [['im_data']]:
                     spatial_scale = 0.0625
                     feat_height = image_height * spatial_scale
@@ -3139,7 +3138,6 @@ def test_deformable_convolution():
         for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
             for input_height, input_width in itertools.product([5, 6], [5, 6]):
                 for dilate in [(1, 1), (2, 2)]:
-                    print num_batch, num_channel_data, num_deformable_group, (input_height, input_width), dilate
                     for grad_nodes in [['im_data'], ['offset_data']]:
                         output_height = input_height
                         output_width = input_width
@@ -3166,7 +3164,6 @@ def test_deformable_convolution():
                             rtol, atol = 1.0, 1e-2
                         else:
                             rtol, atol = 0.05, 1e-4
-                        print rtol, atol
                         check_numeric_gradient(op, [im_data, offset_data, weight, bias], rtol=rtol, atol=atol,
                                                grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
@@ -3176,7 +3173,6 @@ def test_deformable_psroipooling():
     for num_rois in [1, 2]:
         for num_classes, num_group in itertools.product([2, 3], [2, 3]):
             for image_height, image_width in itertools.product([168, 224], [168, 224]):
-                print num_rois, num_classes, num_group, (image_height, image_width)
                 for grad_nodes in [['im_data'], ['offset_data']]:
                     spatial_scale = 0.0625
                     feat_height = image_height * spatial_scale
@@ -3200,7 +3196,6 @@ def test_deformable_psroipooling():
                         rtol, atol = 1.0, 1e-2
                     else:
                         rtol, atol = 1e-2, 1e-4
-                    print rtol, atol
                     check_numeric_gradient(op, [im_data, rois_data, offset_data], rtol=rtol, atol=atol,
                                            grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
