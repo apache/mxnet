@@ -173,8 +173,8 @@ data = mx.sym.Variable("data")
 net = data
 n_layer = 2
 for i in range(n_layer):
-   with mx.name.Prefix("layer%d_" % (i + 1)):
-   net = mx.sym.FullyConnected(data=net, name="fc", num_hidden=100)
+    with mx.name.Prefix("layer%d_" % (i + 1)):
+        net = mx.sym.FullyConnected(data=net, name="fc", num_hidden=100)
 net.list_arguments()
 ```
 

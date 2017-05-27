@@ -10,7 +10,7 @@ to `numpy.ndarray`.  Like the corresponding NumPy data structure, MXNet's
 So you might wonder, why not just use NumPy?  MXNet offers two compelling
 advantages.  First, MXNet's `NDArray` supports fast execution on a wide range of
 hardware configurations, including CPU, GPU, and multi-GPU machines.  _MXNet_
-also scales to distribute systems in the cloud.  Second, MXNet's NDArray
+also scales to distributed systems in the cloud.  Second, MXNet's `NDArray`
 executes code lazily, allowing it to automatically parallelize multiple
 operations across the available hardware.
 
@@ -182,7 +182,7 @@ shapes must be the same along the other axes.
 ```python
 a = mx.nd.ones((2,3))
 b = mx.nd.ones((2,3))*2
-c = mx.nd.concat([a,b])
+c = mx.nd.concat(a,b)
 c.asnumpy()
 ```
 
@@ -358,7 +358,7 @@ The `load` and `save` methods are preferable to pickle in two respects
 
 ```python
 a = mx.nd.ones((2, 3))
-mx.save("temp.ndarray", [a,])
+mx.nd.save("temp.ndarray", [a,])
 ```
 
 we can later load it from R:
