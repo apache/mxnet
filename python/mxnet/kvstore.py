@@ -248,7 +248,7 @@ class KVStore(object):
         >>> grad = mx.nd.ones(shape)
         >>> kv.push(3, grad)
         >>> kv.pull(3, out = weight)
-        >>> # weight is updated via gradient descient
+        >>> # weight is updated via gradient descent
         >>> weight.asnumpy()
         array([[-0.01, -0.01],
                [-0.01, -0.01]], dtype=float32)

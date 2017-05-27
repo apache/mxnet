@@ -1,4 +1,8 @@
 ﻿# -*- coding: utf-8 -*-
+# This is a python script that generates operator wrappers such as FullyConnected,
+# based on current libmxnet.dll. This script is written so that we don't need to
+# write new operator wrappers when new ones are added to the library.
+
 from ctypes import *
 from ctypes.util import find_library
 import os
@@ -7,6 +11,12 @@ import platform
 import re
 import sys
 import tempfile
+import filecmp
+import shutil
+import codecs
+
+def gen_enum_value(value):
+    return 'k' + value[0].upper() + value[1:]
 
 class EnumType:
     name = ''
@@ -26,14 +36,14 @@ class EnumType:
         indentStr = ' ' * indent
         ret = indentStr + 'enum class %s {\n' % self.name
         for i in range(0, len(self.enumValues)):
-            ret = ret + indentStr + '  %s = %d' % (self.enumValues[i], i)
+            ret = ret + indentStr + '  %s = %d' % (gen_enum_value(self.enumValues[i]), i)
             if (i != len(self.enumValues) -1):
                 ret = ret + ","
             ret = ret + "\n"
         ret = ret + "};\n"
         return ret
     def GetDefaultValueString(self, value = ''):
-        return self.name + "::" + value
+        return self.name + "::" + gen_enum_value(value)
     def GetEnumStringArray(self, indent = 0):
         indentStr = ' ' * indent
         ret = indentStr + 'static const char *%sValues[] = {\n' % self.name
@@ -86,7 +96,7 @@ class Arg:
             try:
                 self.type = self.typeDict[typeString.split(',')[0]]
             except:
-                print 'argument "%s" of operator "%s" has unknown type "%s"' % (argName, opName, typeString)
+                print('argument "%s" of operator "%s" has unknown type "%s"' % (argName, opName, typeString))
                 pass
         if typeString.find('default=') != -1:
             self.hasDefault = True
@@ -316,19 +326,19 @@ def ParseAllOps():
             byref(nArgs), byref(argNames), byref(argTypes), \
             byref(argDescs), byref(varArgName), byref(return_type))
 
-        if name.value[0]=='_':     # get rid of functions like __init__
+        if name.value.decode('utf-8').startswith('_'):     # get rid of functions like __init__
             continue
 
         args = []
 
         for i in range(0, nArgs.value):
-            arg = Arg(name.value,
-                      argNames[i],
-                      argTypes[i],
-                      argDescs[i])
+            arg = Arg(name.value.decode('utf-8'),
+                      argNames[i].decode('utf-8'),
+                      argTypes[i].decode('utf-8'),
+                      argDescs[i].decode('utf-8'))
             args.append(arg)
 
-        op = Op(name.value, description.value, args)
+        op = Op(name.value.decode('utf-8'), description.value.decode('utf-8'), args)
 
         ret = ret + op.GetOpDefinitionString(True) + "\n"
         ret2 = ret2 + op.GetOpDefinitionString(False) + "\n"
@@ -336,8 +346,6 @@ def ParseAllOps():
 
 if __name__ == "__main__":
     #et = EnumType(typeName = 'MyET')
-    reload(sys)
-    sys.setdefaultencoding('UTF8')
     #print(et.GetDefinitionString())
     #print(et.GetEnumStringArray())
     #arg = Arg()
@@ -354,7 +362,7 @@ if __name__ == "__main__":
     #print(decl)
 
     temp_file_name = ""
-    output_file = '../../include/mxnet-cpp/op.h'
+    output_file = '../include/mxnet-cpp/op.h'
     try:
         # generate file header
         patternStr = ("/*!\n"
@@ -387,15 +395,16 @@ if __name__ == "__main__":
         tf = tempfile.NamedTemporaryFile()
         temp_file_name = tf.name
         tf.close()
-        with open(temp_file_name, 'w') as f:
+        with codecs.open(temp_file_name, 'w', 'utf-8') as f:
             f.write(patternStr % ParseAllOps())
-
-    except Exception, e:
-      os.remove(output_file)
+    except Exception as e:
+      if (os.path.exists(output_file)):
+        os.remove(output_file)
       if len(temp_file_name) > 0:
         os.remove(temp_file_name)
       raise(e)
-
-    os.system('./move-if-change.sh ' + temp_file_name + ' ' + output_file)
-    pass
-
+    if os.path.exists(output_file):
+      if not filecmp.cmp(temp_file_name, output_file):
+          os.remove(output_file)
+    if not os.path.exists(output_file):
+      shutil.move(temp_file_name, output_file)

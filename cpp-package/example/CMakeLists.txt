@@ -1,12 +1,9 @@
-
 if(NOT MSVC)
   set(UNITTEST_STATIC_LINK ON)
 endif()
 
 set(CPP_EXAMPLE_LIBS
-  rt
-  ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE}
-  dmlc
+  ${BEGIN_WHOLE_ARCHIVE} mxnet ${END_WHOLE_ARCHIVE}
   ${mxnet_LINKER_LIBS}
   )
 
@@ -18,6 +15,12 @@ file(GLOB_RECURSE CPP_PACKAGE_HEADERS
   "${CPP_PACKAGE_INCLUDE_DIR}/*.h"
   "${CPP_PACKAGE_INCLUDE_DIR}/*.hpp"
   )
+
+add_custom_target(
+  cpp_package_deploy_library ALL
+  DEPENDS mxnet
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:mxnet> $<TARGET_FILE_DIR:mlp>
+)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
@@ -48,6 +51,14 @@ add_dependencies(inception_bn ${CPPEX_DEPS})
 add_executable(mlp mlp.cpp ${CPP_PACKAGE_HEADERS})
 target_link_libraries(mlp ${CPP_EXAMPLE_LIBS})
 add_dependencies(mlp ${CPPEX_DEPS})
+
+add_executable(mlp_cpu mlp_cpu.cpp ${CPP_PACKAGE_HEADERS})
+target_link_libraries(mlp_cpu ${CPP_EXAMPLE_LIBS})
+add_dependencies(mlp_cpu ${CPPEX_DEPS})
+
+add_executable(mlp_gpu mlp_gpu.cpp ${CPP_PACKAGE_HEADERS})
+target_link_libraries(mlp_gpu ${CPP_EXAMPLE_LIBS})
+add_dependencies(mlp_gpu ${CPPEX_DEPS})
 
 add_executable(resnet resnet.cpp ${CPP_PACKAGE_HEADERS})
 target_link_libraries(resnet ${CPP_EXAMPLE_LIBS})

@@ -9,10 +9,10 @@ deep learning has become an indispensable tool for countless industries.
 
 ![alt text](https://raw.githubusercontent.com/kevinthesun/web-data/master/mxnet/get-started/image-classification.png)
 
-It might not come as surprise that researchers
+It might not come as a surprise that researchers
 have investigated neural networks for decades.
 Warren McCulloch and Walter Pitts
-suggested the forerunner of todays artificial neurons back in 1943.
+suggested the forerunner of today's artificial neurons back in 1943.
 Each neuron is connected to other neurons along _edges_, analogous to the synapses that connect real neurons. 
 And associated with each edge is a _weight_ that indicates whether the connection is excitatory or inhibitatory and the strength of the connection. 
 
@@ -105,7 +105,7 @@ In either case, the dataset typically must be managed by the CPU.
 
 ![alt text](https://raw.githubusercontent.com/kevinthesun/web-data/master/mxnet/get-started/architecture.png)
 
-To compute the transformation of a neural network quickly, we need need both the parameters and data points to make it into GPU memory. For any example _X_, the parameters _W_ are the same. Moreover the size of the model tends to dwarf the size of an individual example. So we might arrive at the natural insight that parameters should always live on the GPU, even if the dataset itself must live on the CPU or stream in. This prevents IO from becoming the bottleneck during training or inference.
+To compute the transformation of a neural network quickly, we need both the parameters and data points to make it into GPU memory. For any example _X_, the parameters _W_ are the same. Moreover the size of the model tends to dwarf the size of an individual example. So we might arrive at the natural insight that parameters should always live on the GPU, even if the dataset itself must live on the CPU or stream in. This prevents IO from becoming the bottleneck during training or inference.
 
 Fortunately, _MXNet_ makes this kind of assignment easy.
 ~~~~
@@ -125,7 +125,7 @@ with mx.Context(mx.gpu()):          # Absent this statement, by default, MXNet w
     y = nd.sigmoid(nd.dot(h1, W2))
 ~~~~
 
-Thus, with only a high-level understand of how our numerical computation maps onto an execution environment, _MXNet_ allows us to exert fine-grained control when needed.
+Thus, with only a high-level understanding of how our numerical computation maps onto an execution environment, _MXNet_ allows us to exert fine-grained control when needed.
 
 ## Nuts and Bolts
 
@@ -171,7 +171,7 @@ result = executor.forward()
 ~~~~
 
 
-Symbolic computation is useful for several reasons. First, because we define a full computation graph before executing it, _MXNet_ can perform sophisticated optimizations to eliminate unnecessary or repeated work. This tends to give better performance than imperative programming. Second, because we store the relationships between different variables in the computation graph, _MXNet_ can then perform efficient perform auto-differentiation. In this case
+Symbolic computation is useful for several reasons. First, because we define a full computation graph before executing it, _MXNet_ can perform sophisticated optimizations to eliminate unnecessary or repeated work. This tends to give better performance than imperative programming. Second, because we store the relationships between different variables in the computation graph, _MXNet_ can then perform efficient auto-differentiation.
 
 
 ## Building Models with _MXNet_ Layers

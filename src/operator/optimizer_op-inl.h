@@ -336,7 +336,7 @@ struct RMSPropParam : public dmlc::Parameter<RMSPropParam> {
     DMLC_DECLARE_FIELD(lr)
     .describe("Learning rate");
     DMLC_DECLARE_FIELD(gamma1).set_default(0.95f)
-    .describe("The dacay rate of momentum estimates.");
+    .describe("The decay rate of momentum estimates.");
     DMLC_DECLARE_FIELD(epsilon).set_default(1e-8f)
     .describe("A small constant for numerical stability.");
     DMLC_DECLARE_FIELD(wd).set_default(0.0f)
