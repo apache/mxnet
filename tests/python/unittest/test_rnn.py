@@ -72,8 +72,6 @@ def test_residual():
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10, 50), rnn_t1_data=(10, 50))
     assert outs == [(10, 50), (10, 50)]
-    print(args)
-    print(outputs.list_arguments())
     outputs = outputs.eval(rnn_t0_data=mx.nd.ones((10, 50)),
                            rnn_t1_data=mx.nd.ones((10, 50)),
                            rnn_i2h_weight=mx.nd.zeros((150, 50)),
@@ -81,6 +79,38 @@ def test_residual():
                            rnn_h2h_weight=mx.nd.zeros((150, 50)),
                            rnn_h2h_bias=mx.nd.zeros((150,)))
     expected_outputs = np.ones((10, 50))
+    assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
+    assert np.array_equal(outputs[1].asnumpy(), expected_outputs)
+
+
+def test_residual_bidirectional():
+    cell = mx.rnn.ResidualCell(
+            mx.rnn.BidirectionalCell(
+                mx.rnn.GRUCell(25, prefix='rnn_l_'),
+                mx.rnn.GRUCell(25, prefix='rnn_r_')))
+
+    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
+    outputs, _ = cell.unroll(2, inputs, merge_outputs=False)
+    outputs = mx.sym.Group(outputs)
+    assert sorted(cell.params._params.keys()) == \
+           ['rnn_l_h2h_bias', 'rnn_l_h2h_weight', 'rnn_l_i2h_bias', 'rnn_l_i2h_weight',
+            'rnn_r_h2h_bias', 'rnn_r_h2h_weight', 'rnn_r_i2h_bias', 'rnn_r_i2h_weight']
+    assert outputs.list_outputs() == \
+           ['bi_t0_plus_residual_output', 'bi_t1_plus_residual_output']
+
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10, 50), rnn_t1_data=(10, 50))
+    assert outs == [(10, 50), (10, 50)]
+    outputs = outputs.eval(rnn_t0_data=mx.nd.ones((10, 50))+5,
+                           rnn_t1_data=mx.nd.ones((10, 50))+5,
+                           rnn_l_i2h_weight=mx.nd.zeros((75, 50)),
+                           rnn_l_i2h_bias=mx.nd.zeros((75,)),
+                           rnn_l_h2h_weight=mx.nd.zeros((75, 25)),
+                           rnn_l_h2h_bias=mx.nd.zeros((75,)),
+                           rnn_r_i2h_weight=mx.nd.zeros((75, 50)),
+                           rnn_r_i2h_bias=mx.nd.zeros((75,)),
+                           rnn_r_h2h_weight=mx.nd.zeros((75, 25)),
+                           rnn_r_h2h_bias=mx.nd.zeros((75,)))
+    expected_outputs = np.ones((10, 50))+5
     assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
     assert np.array_equal(outputs[1].asnumpy(), expected_outputs)
 

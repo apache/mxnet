@@ -23,6 +23,7 @@ from . import random as rnd
 from . import random
 from . import optimizer
 from . import model
+from . import notebook
 from . import initializer
 # use mx.init as short for mx.initializer
 from . import initializer as init

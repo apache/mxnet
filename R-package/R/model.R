@@ -91,7 +91,7 @@ mx.model.create.kvstore <- function(kvstore, arg.params, ndevice, verbose=TRUE) 
 }
 
 # Internal function to do multiple device training.
-mx.model.train <- function(symbol, ctx, input.shape,
+mx.model.train <- function(symbol, ctx, input.shape, output.shape,
                            arg.params, aux.params,
                            begin.round, end.round, optimizer,
                            train.data, eval.data,
@@ -104,8 +104,14 @@ mx.model.train <- function(symbol, ctx, input.shape,
   if(verbose) message(paste0("Start training with ", ndevice, " devices"))
   # create the executors
   sliceinfo <- mx.model.slice.shape(input.shape, ndevice)
+  sliceinfo2 <- mx.model.slice.shape(output.shape, ndevice)
+  arg_names <- arguments(symbol)
+  label_name <- arg_names[endsWith(arg_names, "label")]
   train.execs <- lapply(1:ndevice, function(i) {
-    mx.simple.bind(symbol, ctx=ctx[[i]], data=sliceinfo[[i]]$shape, grad.req="write")
+    arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write",
+                    data=sliceinfo[[i]]$shape)
+    arg_lst[[label_name]] = sliceinfo2[[i]]$shape
+    do.call(mx.simple.bind, arg_lst)
   })
   # set the parameters into executors
   for (texec in train.execs) {
@@ -259,9 +265,14 @@ mx.model.train <- function(symbol, ctx, input.shape,
 }
 
 # Initialize parameters
-mx.model.init.params <- function(symbol, input.shape, initializer, ctx) {
+mx.model.init.params <- function(symbol, input.shape, output.shape, initializer, ctx) {
   if (!is.MXSymbol(symbol)) stop("symbol need to be MXSymbol")
-  slist <- mx.symbol.infer.shape(symbol, data=input.shape)
+  arg_names <- arguments(symbol)
+  label_name <- arg_names[endsWith(arg_names, "label")]
+  arg_lst <- list(symbol = symbol, data=input.shape)
+  arg_lst[[label_name]] = output.shape
+
+  slist <- do.call(mx.symbol.infer.shape, arg_lst)
   if (is.null(slist)) stop("Not enough information to get shapes")
   arg.params <- mx.init.create(initializer, slist$arg.shapes, ctx, skip.unknown=TRUE)
   aux.params <- mx.init.create(initializer, slist$aux.shapes, ctx, skip.unknown=FALSE)
@@ -413,7 +424,8 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
     if (!X$iter.next()) stop("Empty input")
   }
   input.shape <- dim((X$value())$data)
-  params <- mx.model.init.params(symbol, input.shape, initializer, mx.cpu())
+  output.shape <- dim((X$value())$label)
+  params <- mx.model.init.params(symbol, input.shape, output.shape, initializer, mx.cpu())
   if (!is.null(arg.params)) params$arg.params <- arg.params
   if (!is.null(aux.params)) params$aux.params <- aux.params
   if (is.null(ctx)) ctx <- mx.ctx.default()
@@ -444,7 +456,7 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
     eval.data <- mx.model.init.iter(eval.data$data, eval.data$label, batch.size=array.batch.size, is.train = TRUE)
   }
   kvstore <- mx.model.create.kvstore(kvstore, params$arg.params, length(ctx), verbose=verbose)
-  model <- mx.model.train(symbol, ctx, input.shape,
+  model <- mx.model.train(symbol, ctx, input.shape, output.shape,
                           params$arg.params, params$aux.params,
                           begin.round, num.round, optimizer=optimizer,
                           train.data=X, eval.data=eval.data,
@@ -484,7 +496,13 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128,
   X$reset()
   if (!X$iter.next()) stop("Cannot predict on empty iterator")
   dlist = X$value()
-  pexec <- mx.simple.bind(model$symbol, ctx=ctx, data=dim(dlist$data), grad.req="null")
+  arg_names <- arguments(model$symbol)
+  label_name <- arg_names[endsWith(arg_names, "label")]
+  arg_lst <- list(symbol = model$symbol, ctx = ctx, data = dim(dlist$data), grad.req="null")
+  arg_lst[[label_name]] <- dim(dlist$label)
+
+
+  pexec <- do.call(mx.simple.bind, arg_lst)
   mx.exec.update.arg.arrays(pexec, model$arg.params, match.name=TRUE)
   mx.exec.update.aux.arrays(pexec, model$aux.params, match.name=TRUE)
   packer <- mx.nd.arraypacker()

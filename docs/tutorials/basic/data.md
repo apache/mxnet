@@ -1,7 +1,7 @@
 # Iterators - Loading data
-In this tutorial we focus on how to feed data into a training or inference program. 
+In this tutorial we focus on how to feed data into a training or inference program.
 Most training and inference modules in MXNet accept data iterators,
-which simplifies this procedure, especially when reading large datasets. 
+which simplifies this procedure, especially when reading large datasets.
 Here we discuss the API conventions and several provided iterators.
 
 ## MXNet Data Iterator  
@@ -15,7 +15,7 @@ In MXNet, data iterators return a batch of data as `DataBatch` on each call to `
 A `DataBatch` often contains *n* training examples and their corresponding labels. Here *n* is the `batch_size` of the iterator. At the end of the data stream when there is no more data to read, the iterator raises ``StopIteration`` exception like Python `iter`.  
 The structure of `DataBatch` is defined [here](http://mxnet.io/api/python/io.html#mxnet.io.DataBatch).
 
-Information such as name, shape, type and layout on each training example and their corresponding label can be provided as Data descriptors `DataDesc` objects via the `provide_data` and `provide_label` properties in `DataBatch`.  
+Information such as name, shape, type and layout on each training example and their corresponding label can be provided as `DataDesc` data descriptor objects via the `provide_data` and `provide_label` properties in `DataBatch`.
 The structure of `DataDesc` is defined [here](http://mxnet.io/api/python/io.html#mxnet.io.DataDesc).
 
 All IO in MXNet is handled via `mx.io.DataIter` and its subclasses. In this tutorial, we'll discuss a few commonly used iterators provided by MXNet.
@@ -62,7 +62,7 @@ for batch in data_iter:
 ```
 
 ## Custom Iterator
-When the built-in iterators do not suit your application needs, 
+When the built-in iterators do not suit your application needs,
 you can create your own custom data iterator.
 
 An iterator in _MXNet_ should
@@ -141,7 +141,7 @@ two variables for input data: *data* for the training examples
 and *softmax_label* contains the respective labels and the *softmax_output*.
 
 The *data* variables are called free variables in MXNet's Symbol API.
-To execute a Symbol, they need to bound with data.
+To execute a Symbol, they need to be bound with data.
 [Click here learn more about Symbol](http://mxnet.io/tutorials/basic/symbol.html).
 
 We use the data iterator to feed examples to a neural networks via MXNet's `module` API.
@@ -167,7 +167,7 @@ Record IO is a file format used by MXNet for data IO.
 It compactly packs the data for efficient read and writes from distributed file system like Hadoop HDFS and AWS S3.
 You can learn more about the design of `RecordIO` [here](http://mxnet.io/architecture/note_data_loading.html).
 
-MXNet provides [__`MXRecordIO`__](http://mxnet.io/api/python/io.html#mxnet.recordio.MXRecordIO) 
+MXNet provides [__`MXRecordIO`__](http://mxnet.io/api/python/io.html#mxnet.recordio.MXRecordIO)
 and [__`MXIndexedRecordIO`__](http://mxnet.io/api/python/io.html#mxnet.recordio.MXIndexedRecordIO)
 for sequential access of data and random access of the data.
 
@@ -183,7 +183,7 @@ for i in range(5):
 record.close()
 ```
 
-We can read the data back by opening the file with a option `r` as below:
+We can read the data back by opening the file with an option `r` as below:
 
 ```python
 record = mx.recordio.MXRecordIO('tmp.rec', 'r')
@@ -227,7 +227,7 @@ record.keys
 Each record in a .rec file can contain arbitrary binary data. However most deep learning tasks require data to be input in label/data format.
 The `mx.recordio` package provides a few utility functions for such operations, namely: `pack`, `unpack`, `pack_img`, and `unpack_img`.
 
-#### Packing/Unpacking Binary Data.
+#### Packing/Unpacking Binary Data
 
 [__`pack`__](http://mxnet.io/api/python/io.html#mxnet.recordio.pack) and [__`unpack`__](http://mxnet.io/api/python/io.html#mxnet.recordio.unpack) are used for storing float (or 1d array of float) label and binary data. The data is packed along with a header. The header structure is defined [here](http://mxnet.io/api/python/io.html#mxnet.recordio.IRHeader).
 
@@ -250,7 +250,7 @@ print(mx.recordio.unpack(s1))
 print(mx.recordio.unpack(s2))
 ```
 
-#### Packing/Unpacking Image Data.
+#### Packing/Unpacking Image Data
 
 MXNet provides [__`pack_img`__](http://mxnet.io/api/python/io.html#mxnet.recordio.pack_img) and [__`unpack_img`__](http://mxnet.io/api/python/io.html#mxnet.recordio.unpack_img) to pack/unpack image data.
 Records packed by `pack_img` can be loaded by `mx.io.ImageRecordIter`.
@@ -296,7 +296,7 @@ Images can be preprocessed in different ways. We list some of them below:
 - Using `mx.recordio.unpack_img` (or `cv2.imread`, `skimage`, etc) + `numpy` is flexible but slow due to Python Global Interpreter Lock (GIL).
 - Using MXNet provided `mx.image` package. It stores images in [__`NDArray`__](http://mxnet.io/tutorials/basic/ndarray.html) format and leverages MXNet's [dependency engine](http://mxnet.io/architecture/note_engine.html) to automatically parallelize processing and circumvent GIL.
 
-Below, we demonstrrate some of the frequently used preprocessing routines provided by the `mx.image` package.
+Below, we demonstrate some of the frequently used preprocessing routines provided by the `mx.image` package.
 
 Let's download sample images that we can work with.
 
@@ -338,7 +338,7 @@ plt.imshow(tmp.asnumpy()); plt.show()
 ### Loading Data using Image Iterators
 
 Before we see how to read data using the two built-in Image iterators,
- lets get a sample dataset __Caltech 101__ dataset
+ lets get a sample __Caltech 101__ dataset
  that contains 101 classes of objects and converts them into record io format.
 Download and unzip
 
@@ -346,21 +346,21 @@ Download and unzip
 ```python
 fname = mx.test_utils.download(url='http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz', dirname='data', overwrite=False)
 tar = tarfile.open(fname)
-tar.extracall()
+tar.extractall()
 tar.close()
 os.chdir('../')
 ```
 
-Let's take a look at the data. As you can see, under the [root folder](./data/101_ObjectCategories) every category has a [subfolder](./data/101_ObjectCategories/yin_yang).
+Let's take a look at the data. As you can see, under the root folder (./data/101_ObjectCategories) every category has a subfolder(./data/101_ObjectCategories/yin_yang).
 
-Now let's convert them into record io format using the `im2rec.py` utility scipt.
+Now let's convert them into record io format using the `im2rec.py` utility script.
 First we need to make a list that contains all the image files and their categories:
 
 ```python
 os.system('python %s/tools/im2rec.py --list=1 --recursive=1 --shuffle=1 --test-ratio=0.2 data/caltech data/101_ObjectCategories'%MXNET_HOME)
 ```
 
-The resulting [list file](./data/caltech_train.lst) is in the format `index\t(one or more label)\tpath`. In this case there is only one label for each image but you can modify the list to add in more for multi label training.
+The resulting list file (./data/caltech_train.lst) is in the format `index\t(one or more label)\tpath`. In this case there is only one label for each image but you can modify the list to add in more for multi label training.
 
 Then we can use this list to create our record io file:
 
@@ -369,7 +369,7 @@ Then we can use this list to create our record io file:
 os.system("python %s/tools/im2rec.py --num-thread=4 --pass-through=1 data/caltech data/101_ObjectCategories"%MXNET_HOME)
 ```
 
-The record io files are now saved at [here](./data)
+The record io files are now saved at here (./data)
 
 #### Using ImageRecordIter
 [__`ImageRecordIter`__](http://mxnet.io/api/python/io.html#mxnet.io.ImageRecordIter) can be used for loading image data saved in record io format. To use ImageRecordIter, simply create an instance by loading your record file:
@@ -393,7 +393,7 @@ plt.show()
 ```
 
 #### Using ImageIter
-[__ImageIter__](http://mxnet.io/api/python/io.html#mxnet.io.ImageIter) is a flexible interface that supports loading of images from both in RecordIO and Raw format.
+[__ImageIter__](http://mxnet.io/api/python/io.html#mxnet.io.ImageIter) is a flexible interface that supports loading of images in both RecordIO and Raw format.
 
 
 ```python
@@ -410,4 +410,3 @@ plt.show()
 ```
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
-

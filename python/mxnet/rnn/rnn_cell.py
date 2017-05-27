@@ -113,7 +113,7 @@ class BaseRNNCell(object):
         self.reset()
 
     def reset(self):
-        """Reset before re-using the cell for another graph"""
+        """Reset before re-using the cell for another graph."""
         self._init_counter = -1
         self._counter = -1
 
@@ -339,7 +339,7 @@ class BaseRNNCell(object):
 
 
 class RNNCell(BaseRNNCell):
-    """Simple recurrent neural network cell
+    """Simple recurrent neural network cell.
 
     Parameters
     ----------
@@ -707,7 +707,7 @@ class FusedRNNCell(BaseRNNCell):
 
 
 class SequentialRNNCell(BaseRNNCell):
-    """Sequantially stacking multiple RNN cells
+    """Sequantially stacking multiple RNN cells.
 
     Parameters
     ----------
@@ -861,7 +861,7 @@ class ModifierCell(BaseRNNCell):
 
 
 class ZoneoutCell(ModifierCell):
-    """Apply Zoneout on base cell"""
+    """Apply Zoneout on base cell."""
     def __init__(self, base_cell, zoneout_outputs=0., zoneout_states=0.):
         assert not isinstance(base_cell, FusedRNNCell), \
             "FusedRNNCell doesn't support zoneout. " \
@@ -913,9 +913,29 @@ class ResidualCell(ModifierCell):
         output = symbol.elemwise_add(output, inputs, name="%s_plus_residual" % output.name)
         return output, states
 
+    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
+        self.reset()
+
+        self.base_cell._modified = False
+        outputs, states = self.base_cell.unroll(length, inputs=inputs, begin_state=begin_state,
+                                                layout=layout, merge_outputs=merge_outputs)
+        self.base_cell._modified = True
+
+        merge_outputs = isinstance(outputs, symbol.Symbol) if merge_outputs is None else \
+                        merge_outputs
+        inputs, _ = _normalize_sequence(length, inputs, layout, merge_outputs)
+        if merge_outputs:
+            outputs = symbol.elemwise_add(outputs, inputs, name="%s_plus_residual" % outputs.name)
+        else:
+            outputs = [symbol.elemwise_add(output_sym, input_sym,
+                                           name="%s_plus_residual" % output_sym.name)
+                       for output_sym, input_sym in zip(outputs, inputs)]
+
+        return outputs, states
+
 
 class BidirectionalCell(BaseRNNCell):
-    """Bidirectional RNN cell
+    """Bidirectional RNN cell.
 
     Parameters
     ----------
@@ -928,9 +948,18 @@ class BidirectionalCell(BaseRNNCell):
     """
     def __init__(self, l_cell, r_cell, params=None, output_prefix='bi_'):
         super(BidirectionalCell, self).__init__('', params=params)
-        self._override_cell_params = params is not None
-        self._cells = [l_cell, r_cell]
         self._output_prefix = output_prefix
+        self._override_cell_params = params is not None
+
+        if self._override_cell_params:
+            assert l_cell._own_params and r_cell._own_params, \
+                "Either specify params for BidirectionalCell " \
+                "or child cells, not both."
+            l_cell.params._params.update(self.params._params)
+            r_cell.params._params.update(self.params._params)
+        self.params._params.update(l_cell.params._params)
+        self.params._params.update(r_cell.params._params)
+        self._cells = [l_cell, r_cell]
 
     def unpack_weights(self, args):
         return _cells_unpack_weights(self._cells, args)

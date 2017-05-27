@@ -15,7 +15,6 @@ cdef py_str(const char* x):
     else:
         return x.decode("utf-8")
 
-
 cdef c_str(pystr):
     """Create ctypes char * from a python string
     Parameters

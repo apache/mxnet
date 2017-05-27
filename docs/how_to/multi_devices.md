@@ -101,7 +101,7 @@ When using a large number of GPUs, e.g. >=4, we suggest using `device` for bette
 ### How to Launch a Job
 
 > To use distributed training, we need to compile with `USE_DIST_KVSTORE=1`
-> (see [MXNet installation guide](http://mxnet.io/get_started/setup.html) for more options).
+> (see [MXNet installation guide](http://mxnet.io/get_started/install.html) for more options).
 
 Launching a distributed job is a bit different from running on a single
 machine. MXNet provides
