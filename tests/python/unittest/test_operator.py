@@ -3116,8 +3116,8 @@ def test_psroipooling():
             for image_height, image_width in itertools.product([168, 224], [168, 224]):
                 for grad_nodes in [['im_data']]:
                     spatial_scale = 0.0625
-                    feat_height = image_height * spatial_scale
-                    feat_width = image_width * spatial_scale
+                    feat_height = np.int(image_height * spatial_scale)
+                    feat_width = np.int(image_width * spatial_scale)
                     im_data = np.random.rand(1, num_classes*num_group*num_group, feat_height, feat_width)
                     rois_data = np.zeros([num_rois, 5])
                     rois_data[:, [1,3]] = np.sort(np.random.rand(num_rois, 2)*(image_width-1))
@@ -3129,8 +3129,10 @@ def test_psroipooling():
                                                      group_size=num_group, pooled_size=num_group,
                                                      output_dim=num_classes, name='test_op')
                     rtol, atol = 1e-2, 1e-4
-                    check_numeric_gradient(op, [im_data, rois_data], rtol=rtol, atol=atol,
-                                           grad_nodes=grad_nodes, ctx=mx.gpu(0))
+                    # By now we only have gpu implementation
+                    if mx.Context.default_ctx.device_type == 'gpu':
+                        check_numeric_gradient(op, [im_data, rois_data], rtol=rtol, atol=atol,
+                                               grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 def test_deformable_convolution():
 
@@ -3164,8 +3166,10 @@ def test_deformable_convolution():
                             rtol, atol = 1.0, 1e-2
                         else:
                             rtol, atol = 0.05, 1e-4
-                        check_numeric_gradient(op, [im_data, offset_data, weight, bias], rtol=rtol, atol=atol,
-                                               grad_nodes=grad_nodes, ctx=mx.gpu(0))
+                        # By now we only have gpu implementation
+                        if mx.Context.default_ctx.device_type == 'gpu':
+                            check_numeric_gradient(op, [im_data, offset_data, weight, bias], rtol=rtol, atol=atol,
+                                                   grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
 def test_deformable_psroipooling():
@@ -3175,8 +3179,8 @@ def test_deformable_psroipooling():
             for image_height, image_width in itertools.product([168, 224], [168, 224]):
                 for grad_nodes in [['im_data'], ['offset_data']]:
                     spatial_scale = 0.0625
-                    feat_height = image_height * spatial_scale
-                    feat_width = image_width * spatial_scale
+                    feat_height = np.int(image_height * spatial_scale)
+                    feat_width = np.int(image_width * spatial_scale)
                     im_data = np.random.rand(1, num_classes*num_group*num_group, feat_height, feat_width)
                     rois_data = np.zeros([num_rois, 5])
                     rois_data[:, [1,3]] = np.sort(np.random.rand(num_rois, 2)*(image_width-1))
@@ -3196,8 +3200,10 @@ def test_deformable_psroipooling():
                         rtol, atol = 1.0, 1e-2
                     else:
                         rtol, atol = 1e-2, 1e-4
-                    check_numeric_gradient(op, [im_data, rois_data, offset_data], rtol=rtol, atol=atol,
-                                           grad_nodes=grad_nodes, ctx=mx.gpu(0))
+                    # By now we only have gpu implementation
+                    if mx.Context.default_ctx.device_type == 'gpu':
+                        check_numeric_gradient(op, [im_data, rois_data, offset_data], rtol=rtol, atol=atol,
+                                               grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
 
