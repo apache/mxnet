@@ -3135,7 +3135,6 @@ def test_psroipooling():
                                                grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 def test_deformable_convolution():
-
     for num_batch in [1, 2]:
         for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
             for input_height, input_width in itertools.product([5, 6], [5, 6]):
@@ -3173,7 +3172,6 @@ def test_deformable_convolution():
 
 
 def test_deformable_psroipooling():
-
     for num_rois in [1, 2]:
         for num_classes, num_group in itertools.product([2, 3], [2, 3]):
             for image_height, image_width in itertools.product([168, 224], [168, 224]):
@@ -3204,9 +3202,6 @@ def test_deformable_psroipooling():
                     if mx.Context.default_ctx.device_type == 'gpu':
                         check_numeric_gradient(op, [im_data, rois_data, offset_data], rtol=rtol, atol=atol,
                                                grad_nodes=grad_nodes, ctx=mx.gpu(0))
-
-
-
 
 
 if __name__ == '__main__':
