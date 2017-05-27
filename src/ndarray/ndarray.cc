@@ -4,6 +4,7 @@
  * \brief ndarry module of mxnet
  */
 #include <dmlc/io.h>
+#include <dmlc/memory_io.h>
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
 #include <mxnet/base.h>
@@ -613,8 +614,12 @@ NDArray &NDArray::operator/=(const real_t &src) {
   return ScalarOpApply<ndarray::Div>(this, src);
 }
 
+/* magic number for ndarray version 1, with int64_t TShape */
+static const uint32_t NDARRAY_V1_MAGIC = 0xF993fac8;
+
 void NDArray::Save(dmlc::Stream *strm) const {
-  shape_.Save<uint32_t>(strm);
+  strm->Write(NDARRAY_V1_MAGIC);
+  shape_.Save(strm);
   if (is_none()) return;
   // save context
   Context ctx = this->ctx();
@@ -638,24 +643,35 @@ void NDArray::Save(dmlc::Stream *strm) const {
 }
 
 bool NDArray::Load(dmlc::Stream *strm) {
+  auto *seek_strm = dynamic_cast<dmlc::SeekStream*>(strm);
+  // load shape
   TShape shape;
-  shape.Load<uint32_t>(strm);
+  uint32_t maybe_magic;
+  seek_strm->Read(&maybe_magic, sizeof(uint32_t));
+  if (maybe_magic == NDARRAY_V1_MAGIC) {
+    shape.Load(seek_strm);
+  } else {
+    // load legacy TShape
+    size_t pos = seek_strm->Tell();
+    seek_strm->Seek(pos - sizeof(uint32_t));  // reset to the origin position
+    shape.Load<uint32_t>(seek_strm);
+  }
   if (shape.ndim() == 0) {
     *this = NDArray(); return true;
   }
   // load context
   Context ctx;
-  if (!ctx.Load(strm)) return false;
+  if (!ctx.Load(seek_strm)) return false;
   // load type flag
   int32_t type_flag;
-  if (strm->Read(&type_flag, sizeof(type_flag)) != sizeof(type_flag)) return false;
+  if (seek_strm->Read(&type_flag, sizeof(type_flag)) != sizeof(type_flag)) return false;
   // load data into CPU
   NDArray temp(shape, Context::CPU(), false, type_flag);
   TBlob load_data = temp.data();
   size_t type_size = mshadow::mshadow_sizeof(type_flag);
   size_t nread = type_size * shape.Size();
 
-  if (strm->Read(load_data.dptr_, nread) != nread) return false;
+  if (seek_strm->Read(load_data.dptr_, nread) != nread) return false;
   if (ctx.dev_mask() == cpu::kDevMask) {
     *this = std::move(temp); return true;
   } else {
