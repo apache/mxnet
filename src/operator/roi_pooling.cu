@@ -176,12 +176,9 @@ __global__ void ROIPoolBackwardAccKernel(const int count, const Dtype* top_diff,
       pwstart = min(max(pwstart, 0), pooled_width);
       pwend = min(max(pwend, 0), pooled_width);
 
-      for (int ph = phstart; ph < phend; ++ph) {
-        for (int pw = pwstart; pw < pwend; ++pw) {
-          if (static_cast<int>(offset_argmax_data[ph * pooled_width + pw]) == (h * width + w)) {
-            gradient += offset_top_diff[ph * pooled_width + pw];
-          }
-        }
+      const int pooled_index = phstart * pooled_width_ + pwstart;
+      if (static_cast<int>(offset_argmax_data[pooled_index]) == h * width_ + w) {
+          gradient += offset_top_diff[pooled_index];
       }
     }
     bottom_diff[index] += gradient;
