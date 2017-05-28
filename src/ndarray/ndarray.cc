@@ -642,36 +642,44 @@ void NDArray::Save(dmlc::Stream *strm) const {
   strm->Write(save_data.dptr_, type_size * shape_.Size());
 }
 
+bool LegacyTShapeLoad(dmlc::Stream *strm, TShape *shape) {
+  uint32_t magic;
+  if (strm->Read(&magic, sizeof(uint32_t)) != sizeof(uint32_t)) return false;
+  switch (magic) {
+    case NDARRAY_V1_MAGIC:
+      return shape->Load(strm);
+    default:
+      // meet legacy TShape, magic is ndim here
+      uint32_t ndim = magic;
+      *shape = TShape(ndim);
+      std::vector<uint32_t> buffer(ndim);
+      size_t nread = ndim * sizeof(uint32_t);
+      if (strm->Read(buffer.data(), nread) != nread) return false;
+      nnvm::ShapeTypeCast(buffer.begin(), buffer.end(), shape->begin());
+      return true;
+  }
+}
+
 bool NDArray::Load(dmlc::Stream *strm) {
-  auto *seek_strm = dynamic_cast<dmlc::SeekStream*>(strm);
   // load shape
   TShape shape;
-  uint32_t maybe_magic;
-  seek_strm->Read(&maybe_magic, sizeof(uint32_t));
-  if (maybe_magic == NDARRAY_V1_MAGIC) {
-    shape.Load(seek_strm);
-  } else {
-    // load legacy TShape
-    size_t pos = seek_strm->Tell();
-    seek_strm->Seek(pos - sizeof(uint32_t));  // reset to the origin position
-    shape.Load<uint32_t>(seek_strm);
-  }
+  if (!LegacyTShapeLoad(strm, &shape)) return false;
   if (shape.ndim() == 0) {
     *this = NDArray(); return true;
   }
   // load context
   Context ctx;
-  if (!ctx.Load(seek_strm)) return false;
+  if (!ctx.Load(strm)) return false;
   // load type flag
   int32_t type_flag;
-  if (seek_strm->Read(&type_flag, sizeof(type_flag)) != sizeof(type_flag)) return false;
+  if (strm->Read(&type_flag, sizeof(type_flag)) != sizeof(type_flag)) return false;
   // load data into CPU
   NDArray temp(shape, Context::CPU(), false, type_flag);
   TBlob load_data = temp.data();
   size_t type_size = mshadow::mshadow_sizeof(type_flag);
   size_t nread = type_size * shape.Size();
 
-  if (seek_strm->Read(load_data.dptr_, nread) != nread) return false;
+  if (strm->Read(load_data.dptr_, nread) != nread) return false;
   if (ctx.dev_mask() == cpu::kDevMask) {
     *this = std::move(temp); return true;
   } else {

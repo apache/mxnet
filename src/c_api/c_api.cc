@@ -249,7 +249,7 @@ int MXNDArrayLoad(const char* fname,
   std::vector<NDArray> data;
   std::vector<std::string> &names = ret->ret_vec_str;
   {
-    std::unique_ptr<dmlc::Stream> fi(dmlc::SeekStream::CreateForRead(fname));
+    std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
     mxnet::NDArray::Load(fi.get(), &data, &names);
   }
   ret->ret_handles.resize(data.size());
