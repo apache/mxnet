@@ -8,6 +8,7 @@ import pickle
 from collections import OrderedDict
 import logging
 from utils import *
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -100,9 +101,14 @@ class Base(object):
         aux_names = sym.list_auxiliary_states()
         param_names = [n for n in arg_names
                        if n in self.learn_init_keys or (n not in data_shapes.keys())]
-        for k, v in data_shapes.items():
-            assert isinstance(v, tuple), "Data_shapes must be tuple! Find k=%s, v=%s, " \
-                                         "data_shapes=%s" % (k, str(v), str(data_shapes))
+        if sys.version_info.major == 3:
+            for k, v in list(data_shapes.items()):
+                assert isinstance(v, tuple), "Data_shapes must be tuple! Find k=%s, v=%s, " \
+                                             "data_shapes=%s" % (k, str(v), str(data_shapes))
+        else:
+            for k, v in data_shapes.items():
+                assert isinstance(v, tuple), "Data_shapes must be tuple! Find k=%s, v=%s, " \
+                                             "data_shapes=%s" % (k, str(v), str(data_shapes))
         arg_shapes, _, aux_shapes = sym.infer_shape(**data_shapes)
         arg_name_shape = OrderedDict([(k, s) for k, s in zip(arg_names, arg_shapes)])
         if self.params is None:
@@ -117,8 +123,12 @@ class Base(object):
             for k, v in self.params.items():
                 self.initializer(k, v)
         else:
-            assert set(arg_name_shape.items()) == \
-                   set(data_shapes.items() + [(k, v.shape) for k, v in self.params.items()])
+            if sys.version_info.major == 3:
+                assert set(arg_name_shape.items()) == \
+                       set(list(data_shapes.items()) + [(k, v.shape) for k, v in self.params.items()])
+            else:
+                assert set(arg_name_shape.items()) == \
+                       set(data_shapes.items() + [(k, v.shape) for k, v in self.params.items()])
         if self.aux_states is None:
             self.aux_states = OrderedDict([(k, nd.empty(s, ctx=self.ctx))
                                            for k, s in zip(aux_names, aux_shapes)])
@@ -144,8 +154,12 @@ class Base(object):
         param_saving_path = save_params(dir_path=dir_path, name=self.name, epoch=epoch,
                                         params=self.params,
                                         aux_states=self.aux_states)
-        misc_saving_path = save_misc(dir_path=dir_path, epoch=epoch, name=self.name,
-                                     content={'data_shapes': {k: map(int, v) for k, v in self.data_shapes.items()}})
+        if sys.version_info.major == 3:
+            misc_saving_path = save_misc(dir_path=dir_path, epoch=epoch, name=self.name,
+                                         content={'data_shapes': {k: list(map(int, v)) for k, v in self.data_shapes.items()}})
+        else:
+            misc_saving_path = save_misc(dir_path=dir_path, epoch=epoch, name=self.name,
+                                         content={'data_shapes': {k: map(int, v) for k, v in self.data_shapes.items()}})
         logging.info('Saving %s, params: \"%s\", misc: \"%s\"',
                      self.name, param_saving_path, misc_saving_path)
 
