@@ -930,15 +930,13 @@ class ResidualCell(ModifierCell):
                                                 layout=layout, merge_outputs=merge_outputs)
         self.base_cell._modified = True
 
-        merge_outputs = isinstance(outputs, symbol.Symbol) if merge_outputs is None else \
+        merge_outputs = isinstance(outputs, tensor_types) if merge_outputs is None else \
                         merge_outputs
-        inputs, _ = _normalize_sequence(length, inputs, layout, merge_outputs)
+        inputs, _, F, _ = _format_sequence(length, inputs, layout, merge_outputs)
         if merge_outputs:
-            outputs = symbol.elemwise_add(outputs, inputs, name="%s_plus_residual" % outputs.name)
+            outputs = F.elemwise_add(outputs, inputs)
         else:
-            outputs = [symbol.elemwise_add(output_sym, input_sym,
-                                           name="%s_plus_residual" % output_sym.name)
-                       for output_sym, input_sym in zip(outputs, inputs)]
+            outputs = [F.elemwise_add(i, j) for i, j in zip(outputs, inputs)]
 
         return outputs, states
 
