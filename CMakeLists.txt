@@ -20,12 +20,13 @@ mxnet_option(USE_MKL_EXPERIMENTAL "Use experimental MKL (if MKL enabled and foun
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   OFF)
 mxnet_option(USE_PROFILER         "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
-mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
+mxnet_option(USE_PLUGINS_WARPCTC  "Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" OFF)
 mxnet_option(USE_CPP_PACKAGE      "Build C++ Package" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 mxnet_option(USE_GPROF            "Compile with gprof (profiling) flag" OFF)
 mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
+mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
@@ -398,10 +399,12 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
 endif()
 
+set(MXNET_INSTALL_TARGETS mxnet)
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
 else()
   if(UNIX)
+    list(APPEND MXNET_INSTALL_TARGETS mxnet_static)
     add_library(mxnet_static STATIC ${SOURCE})
     # Need an arbitrary source file to trigger CMake to build the library
     add_library(mxnet SHARED)
@@ -461,6 +464,18 @@ if(USE_PROFILER)
 endif()
 
 add_subdirectory(tests)
+
+include(GNUInstallDirs)
+install(TARGETS ${MXNET_INSTALL_TARGETS}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+if (INSTALL_EXAMPLES)
+  install(DIRECTORY example  DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
+endif()
 
 # AUTO_INSTALL_DIR -> Optional: specify post-build install direcory
 if(AUTO_INSTALL_DIR)
