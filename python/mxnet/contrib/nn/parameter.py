@@ -355,4 +355,4 @@ class ParameterDict(object):
                     "Parameter %s loaded from file %s is not present in ParameterDict"%(
                         name, filename)
                 continue
-            self[name].set(arg_dict[name])
+            self[name].set_data(arg_dict[name])
