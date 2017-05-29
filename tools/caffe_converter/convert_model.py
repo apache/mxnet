@@ -82,6 +82,10 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
                 bias = bias.reshape((bias.shape[0], 1))
                 assert(bias.flags['C_CONTIGUOUS'] is True)
                 bias_name = layer_name + "_bias"
+
+                if bias_name not in arg_shape_dic:
+                    print(bias_name + ' not found in arg_shape_dic.')
+                    continue
                 bias = bias.reshape(arg_shape_dic[bias_name])
                 arg_params[bias_name] = mx.nd.zeros(bias.shape)
                 arg_params[bias_name][:] = bias
