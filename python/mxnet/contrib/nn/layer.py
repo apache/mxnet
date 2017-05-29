@@ -237,30 +237,40 @@ class _Binary(Layers):
 
 
 class Add(_Binary):
+    """ lhs + rhs
+    """
     def __init__(self, lhs, rhs):
         from operator import add
         super(Add, self).__init__(lhs, rhs, add)
 
 
 class Sub(_Binary):
+    """ lhs - rhs
+    """
     def __init__(self, lhs, rhs):
         from operator import sub
         super(Sub, self).__init__(lhs, rhs, sub)
 
 
 class Mul(_Binary):
+    """ lhs * rhs
+    """
     def __init__(self, lhs, rhs):
         from operator import mul
         super(Mul, self).__init__(lhs, rhs, mul)
 
 
 class Div(_Binary):
+    """ lhs / rhs (classic division)
+    """
     def __init__(self, lhs, rhs):
         from operator import div
         super(Div, self).__init__(lhs, rhs, div)
 
 
 class TrueDiv(_Binary):
+    """ lhs / rhs (true division)
+    """
     def __init__(self, lhs, rhs):
         from operator import truediv
         super(TrueDiv, self).__init__(lhs, rhs, truediv)
