@@ -2,7 +2,7 @@
 # pylint: disable=
 """Parallelization utility optimizer."""
 
-from ... import ndarray
+from .. import ndarray
 
 def split_data(data, num_slice, batch_axis=0, even_split=True):
     """Split a NDArray into num_slice slices along batch_axis.

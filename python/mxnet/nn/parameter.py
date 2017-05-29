@@ -5,10 +5,10 @@
 from collections import OrderedDict
 import numpy as np
 
-from ...base import mx_real_t
-from ... import symbol, ndarray, initializer, context
-from ...context import Context
-from ...contrib import autograd
+from ..base import mx_real_t
+from .. import symbol, ndarray, initializer, context
+from ..context import Context
+from ..contrib import autograd
 
 # pylint: disable= invalid-name
 tensor_types = (symbol.Symbol, ndarray.NDArray)

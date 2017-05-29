@@ -1,5 +1,5 @@
 import mxnet as mx
-from mxnet.contrib import nn
+from mxnet import nn
 import numpy as np
 
 

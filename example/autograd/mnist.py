@@ -1,7 +1,7 @@
 # pylint: skip-file
 from data import mnist_iterator
 import mxnet as mx
-from mxnet.contrib import nn
+from mxnet import nn
 import numpy as np
 import logging
 from mxnet.contrib import autograd as ag

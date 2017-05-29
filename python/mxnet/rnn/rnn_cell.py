@@ -10,7 +10,7 @@ import warnings
 from .. import symbol, init, ndarray
 from ..base import string_types, numeric_types
 # pylint: disable=unused-import
-from ..contrib.nn import ParameterDict, Parameter, Layer, tensor_types
+from ..nn import ParameterDict, Parameter, Layer, tensor_types
 from .deprecated import _normalize_sequence, RNNParams, BaseRNNCell
 # pylint: enable=unused-import
 

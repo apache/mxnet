@@ -2,7 +2,7 @@ from __future__ import division
 
 import time
 import mxnet as mx
-from mxnet.contrib import nn
+from mxnet import nn
 from mxnet.contrib import autograd as ag
 from data import *
 

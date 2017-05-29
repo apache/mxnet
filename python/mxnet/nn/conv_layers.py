@@ -1,8 +1,8 @@
 # coding: utf-8
 """Convolutional neural network layers."""
 from .layer import Layer
-from ... import symbol
-from ...base import numeric_types
+from .. import symbol
+from ..base import numeric_types
 
 def _infer_weight_shape(sym, data_shape, **kwargs):
     return sym(symbol.var('data', shape=data_shape), **kwargs).infer_shape_partial()[0]

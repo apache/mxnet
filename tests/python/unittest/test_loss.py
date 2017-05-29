@@ -1,6 +1,6 @@
 import mxnet as mx
 import numpy as np
-from mxnet.contrib import nn
+from mxnet import nn
 
 
 def test_loss_ndarray():

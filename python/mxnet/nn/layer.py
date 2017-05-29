@@ -2,10 +2,10 @@
 # pylint: disable= arguments-differ
 """Neural network layers."""
 
-from ... import symbol, ndarray
-from ...symbol import Symbol
-from ...ndarray import NDArray
-from ... import name as _name
+from .. import symbol, ndarray
+from ..symbol import Symbol
+from ..ndarray import NDArray
+from .. import name as _name
 from .parameter import Parameter, ParameterDict
 
 

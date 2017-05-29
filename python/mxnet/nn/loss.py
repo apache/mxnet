@@ -6,8 +6,8 @@ from __future__ import absolute_import
 
 import json
 
-from ... import symbol, ndarray, metric
-from ...base import numeric_types
+from .. import symbol, ndarray, metric
+from ..base import numeric_types
 
 
 def _get_F(x):

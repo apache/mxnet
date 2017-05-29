@@ -2,8 +2,8 @@
 # pylint: disable=
 """Parameter optimizer."""
 
-from ... import optimizer as opt
-from ...model import _create_kvstore
+from .. import optimizer as opt
+from ..model import _create_kvstore
 
 class Optim(object):
     """Optimizes a set of Parameters. Optim should be used together with autograd.
