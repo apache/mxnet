@@ -578,3 +578,32 @@ mx.model.save <- function(model, prefix, iteration) {
   mx.symbol.save(model$symbol, paste0(prefix, "-symbol.json"))
   mx.nd.save(save.dict, sprintf("%s-%04d.params", prefix, iteration))
 }
+
+#' Save model checkpoint into RData file.
+#'
+#' @param model The mxnet model to be saved.
+#' @param filename The filename
+#' 
+#' @export
+mx.model.save.RData <- function(model, filename) {
+  if (!inherits(model, "MXFeedForwardModel")) stop("Not a MXNet model!")
+  model_rdata <- list()
+  model_rdata[['symbol_json']] <- model$symbol$as.json()
+  model_rdata[['arg.params']] <- lapply(model$arg.params, as.array)
+  model_rdata[['aux.params']] <- lapply(model$aux.params, as.array)
+  saveRDS(model_rdata, filename)
+}
+
+#' Load model checkpoint from RData file.
+#'
+#' @param filename The RData filename.
+#'
+#' @export
+mx.model.load.RData <- function(filename) {
+  model_rdata <- readRDS(filename)
+  symbol <- mx.symbol.load.json(model_rdata$symbol_json)
+  arg.params <- lapply(model_rdata$arg.params, mx.nd.array)
+  aux.params <- lapply(model_rdata$aux.params, mx.nd.array)
+  model <- list(symbol=symbol, arg.params=arg.params, aux.params=aux.params)
+  return(structure(model, class="MXFeedForwardModel"))
+}
