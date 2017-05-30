@@ -1,31 +1,27 @@
----
-title: "Dogs vs. Cats classification with mxnet and R"
-author: "Andrey Ogurtsov (https://github.com/statist-bhfz/)"
-date: "February 25, 2017"
----
+Dogs vs. Cats classification with MXNet and R
+======================================
 
-## 1. Packages and prerequisites
+## Packages and prerequisites
 
-Ubuntu 16, **mxnet** 0.9.4 (compiled with GPU support), **imager** for image processind, **abind** for manipulations with arrays. It is almost end-to-end R solution for Kaggle competition https://www.kaggle.com/c/dogs-vs-cats-redux-kernels-edition/, we will use Python only for creating .rec-files.
+Ubuntu 16.04, **mxnet** (compiled with GPU support), **imager** for image processind,
+**abind** for manipulations with arrays. It is almost end-to-end R solution for Kaggle
+competition <https://www.kaggle.com/c/dogs-vs-cats-redux-kernels-edition/>,
+we will use Python only for creating .rec-files.
 
-Thanks to [jeremiedb](https://github.com/jeremiedb), my code for fine-tuning is largely based on his [answers](https://github.com/dmlc/mxnet/issues/4817).
+Thanks to [jeremiedb](https://github.com/jeremiedb), my code for fine-tuning is
+largely based on his [answers](https://github.com/dmlc/mxnet/issues/4817).
 
-```{r}
-knitr::opts_chunk$set(eval = FALSE)
-```
-
-```{r}
+```r
 library(imager)
 library(mxnet)
 library(abind)
 ```
 
+## Image processing
 
-## 2. Image processing
+### Renaming train files
 
-### 2.1. Renaming train files
-
-```{r}
+```r
 files <- list.files("train")
 old_names <- sapply(files, strsplit, split = ".", fixed = TRUE)
 max_length <- max(sapply(old_names, function(x) nchar(x[[2]])))
@@ -50,9 +46,9 @@ dir.create("./train/dog")
 Map(function(x, y) file.rename(from = x, to = y), files, new_names)
 ```
 
-### 2.2. Train images: 224x224, padded with empty space
+### Train images: 224x224, padded with empty space
 
-```{r}
+```r
 files <- list.files("train", recursive = TRUE)
 new_names <- paste0("train_pad_224x224/", files)
 files <- paste0("./train/", files)
@@ -76,9 +72,9 @@ Map(function(x, y) {
 }, x = files, y = new_names)
 ```
 
-### 2.3. Renaming test files
+### Renaming test files
 
-```{r}
+```r
 files <- list.files("test")
 max_length <- max(sapply(files, nchar))
 zeros <- max_length - sapply(files, nchar)
@@ -91,9 +87,9 @@ Map(function(x, y) file.rename(from = x, to = y), files, newnames)
 ```
 
 
-### 2.4. Test images: 224x224, padded with empty space
+### Test images: 224x224, padded with empty space
 
-```{r}
+```r
 files <- list.files("test")
 new_names <- paste0("test_pad_224x224/", files)
 files <- paste0("./test/", files)
@@ -106,18 +102,18 @@ Map(function(x, y) {
 }, x = files, y = new_names)
 ```
 
-### 2.5. Creating .rec files
+### Creating .rec files
 
-```{bash, eval = FALSE}
+```
 python ~/mxnet/tools/im2rec.py --list=1 --recursive=1 --train-ratio=0.8 cats_dogs train_pad_224x224
 python ~/mxnet/tools/im2rec.py --num-thread=4 --pass-through=1 cats_dogs_train.lst train_pad_224x224
 python ~/mxnet/tools/im2rec.py --num-thread=4 --pass-through=1 cats_dogs_val.lst train_pad_224x224
 ```
 
 
-## 3. Iterators
+## Iterators
 
-```{r}
+```r
 get_iterator <- function(data_shape, 
 						 train_data, 
 						 val_data, 
@@ -142,7 +138,7 @@ get_iterator <- function(data_shape,
 ```
 
 
-```{r}
+```r
 data  <- get_iterator(data_shape = c(224, 224, 3),
          train_data = "/media/andrey/Data/KAGGLE/cats_dogs/cats_dogs_train.rec",
          val_data   = "/media/andrey/Data/KAGGLE/cats_dogs/cats_dogs_val.rec",
@@ -152,13 +148,13 @@ val   <- data$val
 ```
 
 
-## 4. Load pretrained model
+## Load pretrained model
 
 Model from http://data.dmlc.ml/models/imagenet/
 Last fully connected layes for 1000 classes replaced with new layer for 2 classes.
 
 
-```{r}
+```r
 inception_bn <- mx.model.load("models/inception_bn/Inception-BN", 
 							  iteration = 126)
 
@@ -193,9 +189,9 @@ arg_params_new[["fc1_bias"]] <- fc1_bias_new
 ```
 
 
-## 5. Train (fine-tune) model
+## Train (fine-tune) model
 
-```{r}
+```r
 model <- mx.model.FeedForward.create(
   symbol             = new_soft,
   X                  = train,
@@ -217,13 +213,13 @@ model <- mx.model.FeedForward.create(
 )
 ```
 
-```{r}
+```r
 model <- mx.model.load("inception_bn", 1)
 ```
 
 Continue training with decreased speed (`learning.rate = 0.03`):
 
-```{r}
+```r
 model <- mx.model.FeedForward.create(
   symbol             = model$symbol,
   X                  = train,
@@ -245,16 +241,16 @@ model <- mx.model.FeedForward.create(
 )
 ```
 
-```{r}
+```r
 model <- mx.model.load("inception_bn", 1)
 ```
 
 My R session crashed after each iteration, so I made some iterations manually.
 
 
-## 6. Make predictions
+## Make predictions
 
-```{r}
+```r
 preprocImage<- function(src,              # URL or file location
 						height = 224,        
 						width = 224,  
@@ -279,7 +275,7 @@ preprocImage<- function(src,              # URL or file location
 } 
 ```
 
-```{r}
+```r
 files <- list.files("test_pad_224x224/")
 files <- paste0("./test_pad_224x224/", files)
 
@@ -303,3 +299,5 @@ probs <- t(do.call(cbind, probs))
 preds <- data.frame(id = 1:12500, label = probs[, 2])
 write.csv(preds, "subm.csv", row.names = FALSE, quote = FALSE)
 ```
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
