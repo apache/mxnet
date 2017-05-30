@@ -36,8 +36,8 @@ def test_imagenet_model(model_name, val_data, gpus, batch_size):
     logging.info('speed : %f image/sec', speed)
     for a in acc:
         logging.info(a.get())
-    assert acc[0].get()[1] > meta_info['top-1-acc'] - 0.3
-    assert acc[1].get()[1] > meta_info['top-5-acc'] - 0.3
+    assert acc[0].get()[1] > meta_info['top-1-acc'] - 0.03
+    assert acc[1].get()[1] > meta_info['top-5-acc'] - 0.03
 
 def main():
     parser = argparse.ArgumentParser(description='Test Caffe converter')
