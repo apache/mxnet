@@ -20,6 +20,7 @@ namespace op {
 struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
   TShape axis;
   bool keepdims;
+  bool exclude;
   DMLC_DECLARE_PARAMETER(ReduceAxesParam) {
     DMLC_DECLARE_FIELD(axis).set_default(TShape())
       .describe(R"code(The axis or axes along which to perform the reduction.
@@ -30,10 +31,15 @@ struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
       If `axis` is int, a reduction is performed on a particular axis.
 
       If `axis` is a tuple of ints, a reduction is performed on all the axes
-      specified in the tuple.)code");
+      specified in the tuple.
+
+      If `exclude` is true, reduction will be performed on the axes that are
+      NOT in axis instead.)code");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
+    DMLC_DECLARE_FIELD(exclude).set_default(false)
+      .describe("Whether to perform reduction on axis that are NOT in axis instead.");
   }
 };
 
@@ -113,28 +119,28 @@ inline TShape AxisShapeCompact(TShape shape, int *axis, bool allow_2d) {
   return mshadow::Shape3(leading, M, trailing);
 }
 
-inline TShape ReduceAxisShapeImpl(const ReduceAxisParam& param, const TShape& ishape) {
-  if (!param.axis || ishape.ndim() == 1) {
-    if (param.keepdims) {
+inline TShape ReduceAxisShapeImpl(const TShape& ishape, const dmlc::optional<int>& axis,
+                                  bool keepdims) {
+  if (!axis || ishape.ndim() == 1) {
+    if (keepdims) {
       return TShape(ishape.ndim());
-    } else {
-      return mshadow::Shape1(1);
     }
-  } else {
-    int axis = CheckAxis(param.axis.value(), ishape.ndim());
-    if (param.keepdims) {
-      TShape oshape = ishape;
-      oshape[axis] = 1;
-      return oshape;
-    } else {
-      TShape oshape(ishape.ndim() - 1);
-      for (int i = 0; i < axis; ++i) oshape[i] = ishape[i];
-      for (int i = axis+1; i < static_cast<int>(ishape.ndim()); ++i) {
-        oshape[i-1] = ishape[i];
-      }
-      return oshape;
-    }
+    return mshadow::Shape1(1);
   }
+
+  int new_axis = CheckAxis(axis.value(), ishape.ndim());
+  if (keepdims) {
+    TShape oshape = ishape;
+    oshape[new_axis] = 1;
+    return oshape;
+  }
+
+  TShape oshape(ishape.ndim() - 1);
+  for (int i = 0; i < new_axis; ++i) oshape[i] = ishape[i];
+  for (int i = new_axis+1; i < static_cast<int>(ishape.ndim()); ++i) {
+    oshape[i-1] = ishape[i];
+  }
+  return oshape;
 }
 
 inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
@@ -146,8 +152,61 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
   if (ishape.ndim() == 0) return false;
 
   const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, ReduceAxisShapeImpl(param, ishape));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+                     ReduceAxisShapeImpl(ishape, param.axis, param.keepdims));
   return true;
+}
+
+inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axis,
+                                  bool keepdims, bool exclude) {
+  if (axis.ndim() == 0) {
+    if (keepdims) {
+      return TShape(ishape.ndim());
+    } else {
+      return TShape(1);
+    }
+  }
+
+  CHECK_LT(axis[axis.ndim()-1], ishape.ndim())
+    << "Reduction axis " << axis[axis.ndim()-1]
+    << " Exceeds input dimensions " << ishape;
+
+  if (keepdims) {
+    TShape oshape(ishape);
+    if (exclude) {
+      for (index_t i = 0, j = 0; i < ishape.ndim(); ++i) {
+        if (j < axis.ndim() && i == axis[j]) {
+          ++j;
+          continue;
+        }
+        oshape[i] = 1;
+      }
+      return oshape;
+    }
+
+    for (index_t i = 0; i < axis.ndim(); ++i) {
+      oshape[axis[i]] = 1;
+    }
+    return oshape;
+  }
+
+  if (exclude) {
+    TShape oshape = TShape(axis.ndim());
+    for (index_t i = 0; i < axis.ndim(); ++i) {
+      oshape[i] = ishape[axis[i]];
+    }
+    return oshape;
+  }
+
+  TShape oshape = TShape(std::max<index_t>(1, ishape.ndim() - axis.ndim()));
+  for (index_t i = 0, j = 0, k = 0; i < ishape.ndim(); ++i) {
+    if (j < axis.ndim() && i == axis[j]) {
+      ++j;
+      continue;
+    }
+    oshape[k++] = ishape[i];
+  }
+  return oshape;
 }
 
 inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
@@ -157,35 +216,9 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   if ((*in_attrs)[0].ndim() == 0) return false;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  TShape &ishape = (*in_attrs)[0];
-  TShape oshape;
-  if (param.axis.ndim() == 0) {
-    if (param.keepdims) {
-      oshape = TShape(ishape.ndim());
-    } else {
-      oshape = TShape(1);
-    }
-  } else {
-    if (param.keepdims) {
-      oshape = ishape;
-      for (index_t i = 0; i < param.axis.ndim(); ++i) {
-        oshape[param.axis[i]] = 1;
-      }
-    } else {
-      CHECK_LT(param.axis[param.axis.ndim()-1], ishape.ndim())
-        << "Reduction axis " << param.axis[param.axis.ndim()-1]
-        << " Exceeds input dimensions " << ishape;
-      oshape = TShape(std::max<index_t>(1, ishape.ndim() - param.axis.ndim()));
-      for (index_t i = 0, j = 0, k = 0; i < ishape.ndim(); ++i) {
-        if (j < param.axis.ndim() && i == param.axis[j]) {
-          ++j;
-          continue;
-        }
-        oshape[k++] = ishape[i];
-      }
-    }
-  }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+                     ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
+                                         param.keepdims, param.exclude));
   return true;
 }
 
@@ -332,20 +365,12 @@ void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,
                        const std::vector<TBlob>& outputs) {
-  // using namespace mshadow;
-  // using namespace mshadow::expr;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   TShape small;
-  if (!param.keepdims) {
-    if (param.axis.ndim() == 0) {
-      small = TShape(inputs[0].shape_.ndim());
-    } else {
-      small = inputs[0].shape_;
-      for (index_t i = 0; i < param.axis.ndim(); ++i)
-        small[param.axis[i]] = 1;
-    }
-  } else {
+  if (param.keepdims) {
     small = outputs[0].shape_;
+  } else {
+    small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, param.exclude);
   }
 
   ReduceAxesComputeImpl<xpu, reducer, normalize>(attrs, ctx, inputs, req, outputs, small);
@@ -362,12 +387,10 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   TShape small;
-  if (param.axis.ndim() == 0) {
-    small = TShape(outputs[0].shape_.ndim());
+  if (param.keepdims) {
+    small = inputs[0].shape_;
   } else {
-    small = outputs[0].shape_;
-    for (index_t i = 0; i < param.axis.ndim(); ++i)
-      small[param.axis[i]] = 1;
+    small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, param.exclude);
   }
 
   TShape src_shape, dst_shape;
@@ -452,13 +475,12 @@ inline void ReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   TShape small;
-  if (param.axis.ndim() == 0) {
-    small = TShape(outputs[0].shape_.ndim());
+  if (param.keepdims) {
+    small = inputs[0].shape_;
   } else {
-    small = outputs[0].shape_;
-    for (index_t i = 0; i < param.axis.ndim(); ++i)
-      small[param.axis[i]] = 1;
+    small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, param.exclude);
   }
+
   BroadcastComputeImpl<xpu>(attrs, ctx, inputs, req, outputs, small);
   if (normalize)  {
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -548,12 +570,16 @@ inline bool PickOpShape(const nnvm::NodeAttrs& attrs,
   const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
   if (!param.axis) LOG(FATAL)
     << "axis=None is not supported by pick yet. Must specify an axis.";
-  ReduceAxisParam tmp_param;
-  tmp_param.axis = param.axis;
-  tmp_param.keepdims = param.keepdims;
-  TShape oshape = ReduceAxisShapeImpl(tmp_param, ishape);
+  TShape oshape = ReduceAxisShapeImpl(ishape, param.axis, param.keepdims);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  SHAPE_ASSIGN_CHECK(*in_attrs, 1, oshape);
+  if (!(*in_attrs)[1].ndim()) return false;
+  if ((*in_attrs)[1].ndim() == ishape.ndim()) {
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1,
+                       ReduceAxisShapeImpl(ishape, param.axis, true));
+  } else {
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1,
+                       ReduceAxisShapeImpl(ishape, param.axis, false));
+  }
   return true;
 }
 

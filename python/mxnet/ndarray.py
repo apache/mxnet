@@ -749,6 +749,23 @@ fixed-size items.
         return transpose(self)
     # pylint: enable= invalid-name, undefined-variable
 
+    @property
+    def updated_grad(self):
+        """Whether this array has been updated as gradient
+        by `autograd.backward`.
+
+        Users need to manually set `updated_grad` to False
+        after consuming gradient, e.g. after updating the
+        corresponding weight.
+        """
+        out = ctypes.c_int()
+        check_call(_LIB.MXNDArrayGetGradState(self.handle, ctypes.byref(out)))
+        return out.value
+
+    @updated_grad.setter
+    def updated_grad(self, state):
+        check_call(_LIB.MXNDArraySetGradState(self.handle, ctypes.c_int(state)))
+
     def asnumpy(self):
         """Returns a ``numpy.ndarray`` object with value copied from this array.
 
@@ -910,7 +927,7 @@ fixed-size items.
         check_call(_LIB.MXNDArrayDetach(self.handle, ctypes.byref(hdl)))
         return NDArray(hdl)
 
-    def backward(self, out_grad=None):
+    def backward(self, out_grad=None, retain_graph=False):
         """Compute the gradients of this NDArray w.r.t variables.
 
         Parameters
@@ -924,7 +941,8 @@ fixed-size items.
 
         check_call(_LIB.MXAutogradBackward(
             1, c_array(NDArrayHandle, [self.handle]),
-            c_array(NDArrayHandle, ograd_handles)))
+            c_array(NDArrayHandle, ograd_handles),
+            ctypes.c_int(retain_graph)))
 
 
 def onehot_encode(indices, out):
