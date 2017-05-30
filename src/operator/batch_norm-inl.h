@@ -33,7 +33,7 @@ enum BatchNormOpOutputs {kOut, kMean, kVar};  // req, out_data
 enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};  // aux_states
 
 /*! \brief Default channel axis if none specified int he params */
-constexpr int DEFAULT_CHANNEL_AXIS = 1;
+constexpr int DEFAULT_AXIS = 1;
 }  // namespace batchnorm
 
 /*! \brief Parameters for BatchNoram operator */
@@ -59,7 +59,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
               "This will force change batch-norm into a scale shift operator.");
     DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
     .describe("Output All,normal mean and var");
-    DMLC_DECLARE_FIELD(axis).set_default(mxnet::op::batchnorm::DEFAULT_CHANNEL_AXIS)
+    DMLC_DECLARE_FIELD(axis).set_default(mxnet::op::batchnorm::DEFAULT_AXIS)
       .describe("Specify which shape axis the channel is specified");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
       .describe("Do not select CUDNN operator, if available");

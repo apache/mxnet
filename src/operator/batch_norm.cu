@@ -620,7 +620,7 @@ Operator *CreateOp<gpu>(BatchNormParam param, const int dtype, const TShape& sha
   Operator *op = NULL;
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
   if (!param.use_global_stats && !param.cudnn_off && shape.ndim() <= 4
-      && param.axis == mxnet::op::batchnorm::DEFAULT_CHANNEL_AXIS) {
+      && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       op = new CuDNNBatchNormOp<DType>(param);
     })

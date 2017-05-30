@@ -301,7 +301,7 @@ Operator *CreateOp<cpu>(BatchNormParam param, const int dtype, const TShape& sha
   Operator *op = nullptr;
 #if MXNET_USE_MKL2017 == 1
   if (shape.ndim() == 4
-      && param.axis == mxnet::op::batchnorm::DEFAULT_CHANNEL_AXIS
+      && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
       && !mxnet::op::batchnorm::disable_mkl) {
     switch (dtype) {
       case mshadow::kFloat32:
