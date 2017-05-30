@@ -160,11 +160,16 @@ void CustomOp<xpu>::Backward(const OpContext &ctx,
 
 Operator* CustomOpProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                          std::vector<int> *in_type) const {
-  std::vector<unsigned*> shapes;
+  std::vector<uint32_t*> shapes;
   std::vector<int> ndims;
+  size_t size = 0;
+  for (const auto& s : *in_shape) size += s.ndim();
+  shapes_buffer_.resize(size);
+  uint32_t *ptr = shapes_buffer_.data();
   for (auto iter = in_shape->begin(); iter != in_shape->end(); ++iter) {
-    shapes.push_back(iter->data());
+    shapes.push_back(ptr);
     ndims.push_back(iter->ndim());
+    ptr = nnvm::ShapeTypeCast(iter->begin(), iter->end(), ptr);
   }
   std::string str_ctx;
   if (ctx.dev_mask() == cpu::kDevMask) {

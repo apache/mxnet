@@ -390,7 +390,7 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
                                 const mx_uint **out_pdata);
 /*!
  * \brief get the content of the data in NDArray
- * \param handle the handle to the narray
+ * \param handle the handle to the ndarray
  * \param out_pdata pointer holder to get pointer of data
  * \return 0 when success, -1 when failure happens
  */

@@ -230,6 +230,15 @@ def test_ndarray_saveload():
             assert np.sum(x.asnumpy() != y.asnumpy()) == 0
     os.remove(fname)
 
+def test_ndarray_legacy_load():
+    data = []
+    for i in range(6):
+        data.append(mx.nd.arange(128))
+    path = os.path.dirname(os.path.realpath(__file__))
+    legacy_data = mx.nd.load(os.path.join(path, 'legacy_ndarray.v0'))
+    assert len(data) == len(legacy_data)
+    for i in range(len(data)):
+        assert same(data[i].asnumpy(), legacy_data[i].asnumpy())
 
 def test_ndarray_slice():
     shape = (10,)
