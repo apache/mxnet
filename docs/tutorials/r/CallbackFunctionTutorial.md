@@ -1,11 +1,11 @@
-Callback Function
+Callback function Tutorial
 ======================================
 
 This tutorial provides guidelines for using and writing callback functions,
 which can very useful in model training.
 
-Model Training Example
-----------
+## Model Training Example
+
 
 Let's begin with a small example. We can build and train a model with the following code:
 
@@ -56,8 +56,8 @@ Let's begin with a small example. We can build and train a model with the follow
 
 We also provide two optional parameters, `batch.end.callback` and `epoch.end.callback`, which can provide great flexibility in model training.
 
-How to Use Callback Functions
----------
+## How to Use Callback Functions
+
 
 This package provides two callback functions:
 
@@ -148,8 +148,8 @@ You also can save the training and evaluation errors for later use by passing a 
     ## [1] 12.715069 14.810532 15.840361 10.898733  9.349706  9.363087
  ```
 
-How to Write Your Own Callback Functions
-----------
+## How to Write Your Own Callback Functions
+
 
 You can find the source code for the two callback functions on [GitHub](https://github.com/dmlc/mxnet/blob/master/R-package/R/callback.R) and use it as a template:
 
@@ -247,8 +247,4 @@ Yes! You can stop the training early with `return(FALSE)`. See the following exa
 
 When the validation metric dips below the threshold we set, the training process stops.
 
-## Next Steps
-* [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
-* [Classify Real-World Images with a Pretrained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
-* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
-* [Character Language Model Using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
