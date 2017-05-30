@@ -64,7 +64,7 @@ class TBlob {
    * \param dev_id the device id
    */
   template<typename DType>
-  TBlob(DType *dptr, const TShape &shape, int dev_mask, int dev_id)
+  TBlob(DType *dptr, const TShape &shape, int dev_mask, int dev_id = -1)
       : dptr_(dptr), shape_(shape),
         type_flag_(mshadow::DataType<DType>::kFlag) {
 #if MKL_EXPERIMENTAL == 1
