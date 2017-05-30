@@ -144,9 +144,10 @@ include_directories("nnvm/include")
 include_directories("dmlc-core/include")
 include_directories("dlpack/include")
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/dlpack)
-  add_subdirectory(dlpack)
-endif()
+# commented out until PR goes through
+#if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/dlpack)
+#  add_subdirectory(dlpack)
+#endif()
 
 if(NOT MSVC)
   set(BEGIN_WHOLE_ARCHIVE -Wl,--whole-archive)
