@@ -4,6 +4,7 @@
  * \brief ndarry module of mxnet
  */
 #include <dmlc/io.h>
+#include <dmlc/memory_io.h>
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
 #include <mxnet/base.h>
@@ -613,8 +614,11 @@ NDArray &NDArray::operator/=(const real_t &src) {
   return ScalarOpApply<ndarray::Div>(this, src);
 }
 
+/* magic number for ndarray version 1, with int64_t TShape */
+static const uint32_t NDARRAY_V1_MAGIC = 0xF993fac8;
+
 void NDArray::Save(dmlc::Stream *strm) const {
-  // save shape
+  strm->Write(NDARRAY_V1_MAGIC);
   shape_.Save(strm);
   if (is_none()) return;
   // save context
@@ -638,10 +642,28 @@ void NDArray::Save(dmlc::Stream *strm) const {
   strm->Write(save_data.dptr_, type_size * shape_.Size());
 }
 
+bool LegacyTShapeLoad(dmlc::Stream *strm, TShape *shape) {
+  uint32_t magic;
+  if (strm->Read(&magic, sizeof(uint32_t)) != sizeof(uint32_t)) return false;
+  switch (magic) {
+    case NDARRAY_V1_MAGIC:
+      return shape->Load(strm);
+    default:
+      // meet legacy TShape, magic is ndim here
+      uint32_t ndim = magic;
+      *shape = TShape(ndim);
+      std::vector<uint32_t> buffer(ndim);
+      size_t nread = ndim * sizeof(uint32_t);
+      if (strm->Read(buffer.data(), nread) != nread) return false;
+      nnvm::ShapeTypeCast(buffer.begin(), buffer.end(), shape->begin());
+      return true;
+  }
+}
+
 bool NDArray::Load(dmlc::Stream *strm) {
   // load shape
   TShape shape;
-  if (!shape.Load(strm)) return false;
+  if (!LegacyTShapeLoad(strm, &shape)) return false;
   if (shape.ndim() == 0) {
     *this = NDArray(); return true;
   }
@@ -710,7 +732,7 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
+  TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToWrite();
@@ -739,7 +761,7 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob dst(data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
+  TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToRead();
