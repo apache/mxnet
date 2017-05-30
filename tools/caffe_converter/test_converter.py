@@ -40,6 +40,7 @@ def test_imagenet_model(model_name, val_data, gpus, batch_size):
     assert acc[1].get()[1] > meta_info['top-5-acc'] - 0.03
 
 def main():
+    """Entrypoint for test_converter"""
     parser = argparse.ArgumentParser(description='Test Caffe converter')
     parser.add_argument('--cpu', action='store_true', help='use cpu?')
     args = parser.parse_args()
@@ -48,7 +49,7 @@ def main():
         batch_size = 32
     else:
         gpus = mx.test_utils.list_gpus()
-        assert len(gpus) > 0
+        assert gpus, 'At least one GPU is needed to run test_converter in GPU mode'
         batch_size = 32 * len(gpus)
 
     models = ['bvlc_googlenet', 'vgg-16', 'resnet-50']
