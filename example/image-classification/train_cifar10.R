@@ -1,3 +1,5 @@
+# this program should be run or sourced from the directory 
+# where the models are (i.e. the "symbol_*.R" files)
 require(mxnet)
 require(argparse)
 
@@ -39,7 +41,7 @@ parse_args <- function() {
                       help = 'the network to use')
   parser$add_argument('--data-dir',
                       type = 'character',
-                      default = 'data/cifar10/',
+                      default = 'data/cifar10/',   # needs a trailing /
                       help = 'the input data directory')
   # num-examples
   parser$add_argument('--cpu',
@@ -74,6 +76,27 @@ parse_args <- function() {
   parser$parse_args()
 }
 args <- parse_args()
+
+get_data <- function(data_dir) {
+  if (!dir.exists(data_dir)) dir.create(data_dir, recursive = TRUE)
+  cwd <- getwd()
+  print(paste("Current working directory:", cwd))
+  print(paste("Data directory:", data_dir))
+  setwd(data_dir)
+
+  if ((!file.exists("train.rec")) ||
+      (!file.exists("test.rec" ))  ) {
+    download.file(url='http://data.mxnet.io/mxnet/data/cifar10.zip',
+                  destfile='cifar10.zip', method='wget')
+    unzip("cifar10.zip", junkpaths = T)
+    file.remove("cifar10.zip")
+  }
+  setwd(cwd)
+}
+
+# load data
+
+get_data(args$data_dir)
 
 # load network definition
 source(paste("symbol_", args$network, ".R", sep = ''))
