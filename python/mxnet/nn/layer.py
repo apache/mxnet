@@ -389,3 +389,23 @@ class BatchNorm(Layer):
 
     def generic_forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.call_cached(self._op, [x, gamma, beta, running_mean, running_var])
+
+
+class LeakyReLU(Layer):
+    """Leaky version of a Rectified Linear Unit.
+
+    It allows a small gradient when the unit is not active:
+    `f(x) = alpha * x for x < 0`,
+    `f(x) = x for x >= 0`.
+
+    Parameters
+    ----------
+    alpha: float
+        Negative slope coefficient. Must be >= 0.
+    """
+    def __init__(self, alpha, **kwargs):
+        super(LeakyReLU, self).__init__(**kwargs)
+        self._op = symbol.CachedOp('LeakyReLU', 1, act_type='leaky', slope=alpha)
+
+    def generic_forward(self, F, x):
+        return F.call_cached(self._op, [x])

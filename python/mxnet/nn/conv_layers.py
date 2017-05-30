@@ -4,8 +4,9 @@ from .layer import Layer
 from .. import symbol
 from ..base import numeric_types
 
-def _infer_weight_shape(sym, data_shape, **kwargs):
-    return sym(symbol.var('data', shape=data_shape), **kwargs).infer_shape_partial()[0]
+def _infer_weight_shape(op, data_shape):
+    sym = symbol.call_cached(op, [symbol.var('data', shape=data_shape)])
+    return sym.infer_shape_partial()[0]
 
 
 class _Conv(Layer):
@@ -57,8 +58,9 @@ class _Conv(Layer):
     """
     def __init__(self, filters, kernel_size, strides, padding, dilation,
                  groups, layout, in_filters=0, activation=None, use_bias=True,
-                 kernel_initializer=None, bias_initializer=None, **kwargs):
-        super(_Conv, self).__init__(**kwargs)
+                 kernel_initializer=None, bias_initializer=None,
+                 op_name='Convolution', prefix=None, params=None, **kwargs):
+        super(_Conv, self).__init__(prefix=prefix, params=params)
         with self.scope:
             self._filters = filters
             self._in_filters = in_filters
@@ -72,12 +74,13 @@ class _Conv(Layer):
                 'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
                 'pad': padding, 'num_filter': filters, 'num_group': groups,
                 'no_bias': not use_bias, 'layout': layout}
-            self._op = symbol.CachedOp('Convolution', 3 if use_bias else 2, **attrs)
+            attrs.update(kwargs)
+            self._op = symbol.CachedOp(op_name, 3 if use_bias else 2, **attrs)
 
             dshape = [0]*(len(kernel_size) + 2)
             dshape[layout.find('N')] = 1
             dshape[layout.find('C')] = in_filters
-            wshapes = _infer_weight_shape(symbol.Convolution, dshape, **attrs)
+            wshapes = _infer_weight_shape(self._op, dshape)
             self.weight = self.params.get('weight', shape=wshapes[1],
                                           init=kernel_initializer)
             if use_bias:
@@ -289,6 +292,214 @@ class Conv3D(_Conv):
         super(Conv3D, self).__init__(
             filters, kernel_size, strides, padding, dilation, groups, layout,
             in_filters, activation, use_bias, kernel_initializer, bias_initializer, **kwargs)
+
+
+class Conv1DTranspose(_Conv):
+    """Transposed 1D convolution layer (sometimes called Deconvolution).
+
+    The need for transposed convolutions generally arises
+    from the desire to use a transformation going in the opposite direction
+    of a normal convolution, i.e., from something that has the shape of the
+    output of some convolution to something that has the shape of its input
+    while maintaining a connectivity pattern that is compatible with
+    said convolution.
+
+    When using this layer with NDArray API,
+    provide an `in_filters` argument
+    (integers, the number of input channels).
+
+    Parameters
+    ----------
+    filters: Integer, the dimensionality of the output space
+        (i.e. the number output of filters in the convolution).
+    kernel_size: An integer or tuple/list of 1 integers, specifying the
+        dimensions of the convolution window.
+    strides: An integer or tuple/list of 1 integers,
+        specifying the strides of the convolution.
+        Specifying any stride value != 1 is incompatible with specifying
+        any `dilation_rate` value != 1.
+    padding: An integer or a tuple/list of 1 integers,
+        If padding is non-zero, then the input is implicitly zero-padded
+        on both sides for padding number of points
+    output_padding: An integer or a tuple/list of 1 integers,
+        Zero-padding added to one side of the output
+    dilation: An integer or tuple/list of 1 integers, specifying
+        the dilation rate to use for dilated convolution.
+    groups: int
+        controls the connections between inputs and outputs.
+        At groups=1, all inputs are convolved to all outputs.
+        At groups=2, the operation becomes equivalent to having two conv
+        layers side by side, each seeing half the input channels, and producing
+        half the output channels, and both subsequently concatenated.
+    layout: A string,
+        Can be 'NCW', 'NWC', etc.
+        'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
+        respectively.
+    in_filters: int, default 0
+        The number of input channels to this layer. Only required when using
+        NDArray API.
+    activation: Activation function to use
+        see mx.sym.Activation.
+        If you don't specify anything, no activation is applied
+        (ie. "linear" activation: `a(x) = x`).
+    use_bias: Boolean, whether the layer uses a bias vector.
+    kernel_initializer: Initializer for the `kernel` weights matrix
+        see Initializer.
+    bias_initializer: Initializer for the bias vector
+        see Initializer.
+    """
+    def __init__(self, filters, kernel_size, strides=1, padding=0, output_padding=0,
+                 dilation=1, groups=1, layout='NCW', in_filters=0, activation=None,
+                 use_bias=True, kernel_initializer=None, bias_initializer=None,
+                 **kwargs):
+        if isinstance(kernel_size, numeric_types):
+            kernel_size = (kernel_size,)
+        if isinstance(output_padding, numeric_types):
+            output_padding = (output_padding,)
+        assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
+        assert len(output_padding) == 1, "output_padding must be a number or a list of 1 ints"
+        super(Conv1DTranspose, self).__init__(
+            filters, kernel_size, strides, padding, dilation, groups, layout,
+            in_filters, activation, use_bias, kernel_initializer,
+            bias_initializer, op_name='Deconvolution', adj=output_padding, **kwargs)
+
+
+class Conv2DTranspose(_Conv):
+    """Transposed 2D convolution layer (sometimes called Deconvolution).
+
+    The need for transposed convolutions generally arises
+    from the desire to use a transformation going in the opposite direction
+    of a normal convolution, i.e., from something that has the shape of the
+    output of some convolution to something that has the shape of its input
+    while maintaining a connectivity pattern that is compatible with
+    said convolution.
+
+    When using this layer with NDArray API,
+    provide an `in_filters` argument
+    (integers, the number of input channels).
+
+
+    Parameters
+    ----------
+    filters: Integer, the dimensionality of the output space
+        (i.e. the number output of filters in the convolution).
+    kernel_size: An integer or tuple/list of 2 integers, specifying the
+        dimensions of the convolution window.
+    strides: An integer or tuple/list of 2 integers,
+        specifying the strides of the convolution.
+        Specifying any stride value != 1 is incompatible with specifying
+        any `dilation_rate` value != 1.
+    padding: An integer or a tuple/list of 2 integers,
+        If padding is non-zero, then the input is implicitly zero-padded
+        on both sides for padding number of points
+    dilation: An integer or tuple/list of 2 integers, specifying
+        the dilation rate to use for dilated convolution.
+    groups: int
+        controls the connections between inputs and outputs.
+        At groups=1, all inputs are convolved to all outputs.
+        At groups=2, the operation becomes equivalent to having two conv
+        layers side by side, each seeing half the input channels, and producing
+        half the output channels, and both subsequently concatenated.
+    layout: A string,
+        Can be 'NCHW', 'NHWC', etc.
+        'N', 'C', 'H', 'W' stands for batch, channel, height, and width
+        dimensions respectively.
+    in_filters: int, default 0
+        The number of input channels to this layer. Only required when using
+        NDArray API.
+    activation: Activation function to use
+        see mx.sym.Activation.
+        If you don't specify anything, no activation is applied
+        (ie. "linear" activation: `a(x) = x`).
+    use_bias: Boolean, whether the layer uses a bias vector.
+    kernel_initializer: Initializer for the `kernel` weights matrix
+        see Initializer.
+    bias_initializer: Initializer for the bias vector
+        see Initializer.
+    """
+    def __init__(self, filters, kernel_size, strides=(1, 1), padding=(0, 0),
+                 output_padding=(0, 0), dilation=(1, 1), groups=1, layout='NCHW',
+                 in_filters=0, activation=None, use_bias=True,
+                 kernel_initializer=None, bias_initializer=None, **kwargs):
+        if isinstance(kernel_size, numeric_types):
+            kernel_size = (kernel_size,)*2
+        if isinstance(output_padding, numeric_types):
+            output_padding = (output_padding,)*2
+        assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
+        assert len(output_padding) == 2, "output_padding must be a number or a list of 2 ints"
+        super(Conv2DTranspose, self).__init__(
+            filters, kernel_size, strides, padding, dilation, groups, layout,
+            in_filters, activation, use_bias, kernel_initializer,
+            bias_initializer, op_name='Deconvolution', adj=output_padding, **kwargs)
+
+
+class Conv3DTranspose(_Conv):
+    """Transposed 3D convolution layer (sometimes called Deconvolution).
+
+    The need for transposed convolutions generally arises
+    from the desire to use a transformation going in the opposite direction
+    of a normal convolution, i.e., from something that has the shape of the
+    output of some convolution to something that has the shape of its input
+    while maintaining a connectivity pattern that is compatible with
+    said convolution.
+
+    When using this layer with NDArray API,
+    provide an `in_filters` argument
+    (integers, the number of input channels).
+
+
+    Parameters
+    ----------
+    filters: Integer, the dimensionality of the output space
+        (i.e. the number output of filters in the convolution).
+    kernel_size: An integer or tuple/list of 3 integers, specifying the
+        dimensions of the convolution window.
+    strides: An integer or tuple/list of 3 integers,
+        specifying the strides of the convolution.
+        Specifying any stride value != 1 is incompatible with specifying
+        any `dilation_rate` value != 1.
+    padding: An integer or a tuple/list of 3 integers,
+        If padding is non-zero, then the input is implicitly zero-padded
+        on both sides for padding number of points
+    dilation: An integer or tuple/list of 3 integers, specifying
+        the dilation rate to use for dilated convolution.
+    groups: int
+        controls the connections between inputs and outputs.
+        At groups=1, all inputs are convolved to all outputs.
+        At groups=2, the operation becomes equivalent to having two conv
+        layers side by side, each seeing half the input channels, and producing
+        half the output channels, and both subsequently concatenated.
+    layout: A string,
+        Can be 'NCDHW', 'NDHWC', etc.
+        'N', 'C', 'H', 'W', 'D' stands for batch, channel, height, width and
+        depth dimensions respectively.
+    in_filters: int, default 0
+        The number of input channels to this layer. Only required when using
+        NDArray API.
+    activation: Activation function to use
+        see mx.sym.Activation.
+        If you don't specify anything, no activation is applied
+        (ie. "linear" activation: `a(x) = x`).
+    use_bias: Boolean, whether the layer uses a bias vector.
+    kernel_initializer: Initializer for the `kernel` weights matrix
+        see Initializer.
+    bias_initializer: Initializer for the bias vector
+        see Initializer.
+    """
+    def __init__(self, filters, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
+                 output_padding=(0, 0, 0), dilation=(1, 1, 1), groups=1, layout='NCDHW',
+                 in_filters=0, activation=None, use_bias=True,
+                 kernel_initializer=None, bias_initializer=None, **kwargs):
+        if isinstance(kernel_size, numeric_types):
+            kernel_size = (kernel_size,)*3
+        if isinstance(output_padding, numeric_types):
+            output_padding = (output_padding,)*3
+        assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
+        assert len(output_padding) == 3, "output_padding must be a number or a list of 3 ints"
+        super(Conv3DTranspose, self).__init__(
+            filters, kernel_size, strides, padding, dilation, groups, layout,
+            in_filters, activation, use_bias, kernel_initializer, bias_initializer,
+            op_name='Deconvolution', adj=output_padding, **kwargs)
 
 
 class _Pooling(Layer):

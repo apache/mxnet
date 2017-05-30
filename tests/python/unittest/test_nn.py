@@ -45,7 +45,7 @@ def check_layer_forward(layer, dshape):
     layer.params.initialize()
     with mx.contrib.autograd.train_section():
         out = layer(mx.nd.ones(shape=dshape))
-    mx.contrib.autograd.compute_gradient([out])
+    out.backward()
 
 def test_conv():
     layers1d = [
@@ -85,6 +85,48 @@ def test_conv():
 
     layer = nn.Conv3D(16, (3, 3, 3), layout='NDHWC', in_filters=4)
     # check_layer_forward(layer, (1, 10, 10, 10, 4))
+
+
+def test_deconv():
+    # layers1d = [
+    #     nn.Conv1DTranspose(16, 3, in_filters=4),
+    #     nn.Conv1DTranspose(16, 3, groups=2, in_filters=4),
+    #     nn.Conv1DTranspose(16, 3, strides=3, groups=2, in_filters=4),
+    #     ]
+    # for layer in layers1d:
+    #     check_layer_forward(layer, (1, 4, 10))
+
+
+    layers2d = [
+        nn.Conv2DTranspose(16, (3, 4), in_filters=4),
+        nn.Conv2DTranspose(16, (5, 4), in_filters=4),
+        nn.Conv2DTranspose(16, (3, 4), groups=2, in_filters=4),
+        nn.Conv2DTranspose(16, (3, 4), strides=4, in_filters=4),
+        nn.Conv2DTranspose(16, (3, 4), dilation=4, in_filters=4),
+        nn.Conv2DTranspose(16, (3, 4), padding=4, in_filters=4),
+        nn.Conv2DTranspose(16, (3, 4), strides=4, output_padding=3, in_filters=4),
+        ]
+    for layer in layers2d:
+        check_layer_forward(layer, (1, 4, 20, 20))
+
+
+    # layers3d = [
+    #     nn.Conv3DTranspose(16, (1, 8, 4), in_filters=4),
+    #     nn.Conv3DTranspose(16, (5, 4, 3), in_filters=4),
+    #     nn.Conv3DTranspose(16, (3, 3, 3), groups=2, in_filters=4),
+    #     nn.Conv3DTranspose(16, 4, strides=4, in_filters=4),
+    #     nn.Conv3DTranspose(16, (3, 3, 3), padding=4, in_filters=4),
+    #     ]
+    # for layer in layers3d:
+    #     check_layer_forward(layer, (1, 4, 10, 10, 10))
+    #
+    #
+    # layer = nn.Conv2DTranspose(16, (3, 3), layout='NHWC', in_filters=4)
+    # # check_layer_forward(layer, (1, 10, 10, 4))
+    #
+    # layer = nn.Conv3DTranspose(16, (3, 3, 3), layout='NDHWC', in_filters=4)
+    # # check_layer_forward(layer, (1, 10, 10, 10, 4))
+
 
 
 def test_pool():
@@ -158,5 +200,6 @@ def test_at():
 
 
 if __name__ == '__main__':
+    test_deconv()
     import nose
     nose.runmodule()
