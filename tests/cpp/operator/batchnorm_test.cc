@@ -1416,14 +1416,14 @@ static void runChannelAxisTest(
   const TShape shape_c2 = MakeShape(shape, channelAxis2, channelCount);
 
   // Create operator 1 with ChannelAxis2 (normally the experimental one)
-  kwargs.push_back({"channel_axis", std::to_string(channelAxis1)});
+  kwargs.push_back({"axis", std::to_string(channelAxis1)});
   test::op::OpInfo<op::BatchNormProp, DType, AccReal> info_c1 = test::op::createOpAndInfoF<
     op::BatchNormProp, BNOperatorData<DType, AccReal>, DType, AccReal>(
     isGPU1, shape_c1, kwargs);
 
   // Create operator 2 with ChannelAxis2 (normally the control one)
   kwargs.pop_back();
-  kwargs.push_back({"channel_axis", std::to_string(channelAxis2)});
+  kwargs.push_back({"axis", std::to_string(channelAxis2)});
   test::op::OpInfo<op::BatchNormProp, DType, AccReal> info_c2 = test::op::createOpAndInfoF<
     op::BatchNormProp, BNOperatorData<DType, AccReal>, DType, AccReal>(
     isGPU2, shape_c2, kwargs);

@@ -881,16 +881,16 @@ def test_batchnorm_training():
             xrolling_mean = np.random.uniform(size=channel_count)
             xrolling_std = np.random.uniform(size=channel_count)
 
-            test = mx.symbol.BatchNorm(data, fix_gamma=True, channel_axis=chaxis)
+            test = mx.symbol.BatchNorm(data, fix_gamma=True, axis=chaxis)
             check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
 
-            test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True, channel_axis=chaxis)
+            test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True, axis=chaxis)
             check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
 
-            test = mx.symbol.BatchNorm(data, fix_gamma=False, channel_axis=chaxis)
+            test = mx.symbol.BatchNorm(data, fix_gamma=False, axis=chaxis)
             check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
 
-            test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True, channel_axis=chaxis)
+            test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True, axis=chaxis)
             check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
 
 def test_convolution_grouping():

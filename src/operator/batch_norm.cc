@@ -77,7 +77,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
                                                  const std::vector<TBlob> &out_data,
                                                  const std::vector<TBlob> &aux_states) {
   // Input
-  batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.channel_axis);
+  batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.axis);
   const TBlob &weights         = in_data[batchnorm::kGamma];
   const TBlob &bias            = in_data[batchnorm::kBeta];
 
@@ -86,7 +86,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
   const TBlob &runningVariance = aux_states[batchnorm::kMovingVar];
 
   // Output
-  batchnorm::BNTensor3<DType> outputData(out_data[batchnorm::kOut], param_.channel_axis);
+  batchnorm::BNTensor3<DType> outputData(out_data[batchnorm::kOut], param_.axis);
   const TBlob &meanVector      = out_data[batchnorm::kMean];
   const TBlob &varianceVector  = out_data[batchnorm::kVar];
 
@@ -179,11 +179,11 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
                                                   const std::vector<TBlob> &in_grad,
                                                   const std::vector<TBlob> &aux_states) {
   // Input Data
-  batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.channel_axis);
+  batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.axis);
   const TBlob &weights   = in_data[batchnorm::kGamma];
 
   // Input Grad
-  batchnorm::BNTensor3<DType> gradIn(in_grad[batchnorm::kData], param_.channel_axis);
+  batchnorm::BNTensor3<DType> gradIn(in_grad[batchnorm::kData], param_.axis);
   const TBlob &gradWeight = in_grad[batchnorm::kGamma];
   const TBlob &gradBias   = in_grad[batchnorm::kBeta];
 
@@ -192,7 +192,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
   const TBlob &runningVariance = aux_states[batchnorm::kMovingVar];
 
   // Output
-  batchnorm::BNTensor3<DType> gradOut(out_grad[batchnorm::kOut], param_.channel_axis);
+  batchnorm::BNTensor3<DType> gradOut(out_grad[batchnorm::kOut], param_.axis);
   const TBlob &saveMean = out_data[batchnorm::kMean];
   const TBlob &saveStd  = out_data[batchnorm::kVar];
 
@@ -297,11 +297,11 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
 
 template<>
 Operator *CreateOp<cpu>(BatchNormParam param, const int dtype, const TShape& shape) {
-  param.channel_axis = mxnet::op::batchnorm::GetRealAxis(shape, param.channel_axis);
+  param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
   Operator *op = nullptr;
 #if MXNET_USE_MKL2017 == 1
   if (shape.ndim() == 4
-      && param.channel_axis == mxnet::op::batchnorm::DEFAULT_CHANNEL_AXIS
+      && param.axis == mxnet::op::batchnorm::DEFAULT_CHANNEL_AXIS
       && !mxnet::op::batchnorm::disable_mkl) {
     switch (dtype) {
       case mshadow::kFloat32:
@@ -386,7 +386,7 @@ If ``use_global_stats`` is set to be true, then ``moving_mean`` and
 ``moving_var`` are used instead of ``data_mean`` and ``data_var`` to compute
 the output. It is often used during inference.
 
-The parameter ``channel_axis`` specifies which axis of the input shape denotes
+The parameter ``axis`` specifies which axis of the input shape denotes
 the 'channel' (separately normalized groups).  The default is 1.  Specifying -1 sets the channel
 axis to be the last item in the input shape.
 

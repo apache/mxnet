@@ -43,7 +43,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   bool fix_gamma;
   bool use_global_stats;
   bool output_mean_var;
-  int channel_axis;
+  int axis;
   bool cudnn_off;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
@@ -59,7 +59,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
               "This will force change batch-norm into a scale shift operator.");
     DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
     .describe("Output All,normal mean and var");
-    DMLC_DECLARE_FIELD(channel_axis).set_default(mxnet::op::batchnorm::DEFAULT_CHANNEL_AXIS)
+    DMLC_DECLARE_FIELD(axis).set_default(mxnet::op::batchnorm::DEFAULT_CHANNEL_AXIS)
       .describe("Specify which shape axis the channel is specified");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
       .describe("Do not select CUDNN operator, if available");
@@ -214,10 +214,10 @@ class BatchNormProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 3U) << "Input:[data, gamma, beta]";
     const TShape &dshape = in_shape->at(0);
 
-    const size_t channelAxis = static_cast<size_t>(param_.channel_axis < 0
-                            ? static_cast<int>(dshape.ndim()) + param_.channel_axis
-                            : param_.channel_axis);
-    CHECK_LT(channelAxis, dshape.ndim()) << "Channel axis out of range: " << param_.channel_axis;
+    const size_t channelAxis = static_cast<size_t>(param_.axis < 0
+                            ? static_cast<int>(dshape.ndim()) + param_.axis
+                            : param_.axis);
+    CHECK_LT(channelAxis, dshape.ndim()) << "Channel axis out of range: " << param_.axis;
 
     const int channelCount = dshape[channelAxis];
 

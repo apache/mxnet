@@ -469,9 +469,9 @@ static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
                                            double momentum,
                                            double eps) {
   batchnorm::BNTensor3<DType> input  = batchnorm::BNTensor3<DType>(
-    in_data[batchnorm::kData], param.channel_axis);
+    in_data[batchnorm::kData], param.axis);
   batchnorm::BNTensor3<DType> output = batchnorm::BNTensor3<DType>(
-    out_data[batchnorm::kOut], param.channel_axis);
+    out_data[batchnorm::kOut], param.axis);
   DeviceTensor1 weight = devicetensor<AccReal, 1>(in_data[batchnorm::kGamma]);
   DeviceTensor1 bias = devicetensor<AccReal, 1>(in_data[batchnorm::kBeta]);
   DeviceTensor1 runningMean = devicetensor<AccReal, 1>(aux_states[batchnorm::kMovingMean]);
@@ -514,11 +514,11 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
                                        double momentum,
                                        double eps) {
   batchnorm::BNTensor3<DType> input = batchnorm::BNTensor3<DType>(
-    in_data[batchnorm::kData], param.channel_axis);
+    in_data[batchnorm::kData], param.axis);
   batchnorm::BNTensor3<DType>gradOutput = batchnorm::BNTensor3<DType>(
-    out_grad[batchnorm::kOut], param.channel_axis);
+    out_grad[batchnorm::kOut], param.axis);
   batchnorm::BNTensor3<DType>gradInput = batchnorm::BNTensor3<DType>(
-    in_grad[batchnorm::kData], param.channel_axis);
+    in_grad[batchnorm::kData], param.axis);
 
   CUDATensors<DeviceTensor1> tensors;
 
@@ -616,11 +616,11 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<gpu> *stream,
 /*! \brief Create GPU operator for batch normalization */
 template<>
 Operator *CreateOp<gpu>(BatchNormParam param, const int dtype, const TShape& shape) {
-  param.channel_axis = mxnet::op::batchnorm::GetRealAxis(shape, param.channel_axis);
+  param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
   Operator *op = NULL;
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
   if (!param.use_global_stats && !param.cudnn_off && shape.ndim() <= 4
-      && param.channel_axis == mxnet::op::batchnorm::DEFAULT_CHANNEL_AXIS) {
+      && param.axis == mxnet::op::batchnorm::DEFAULT_CHANNEL_AXIS) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       op = new CuDNNBatchNormOp<DType>(param);
     })
