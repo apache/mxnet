@@ -86,16 +86,16 @@ class Optim(object):
                 "Parameter %s's contexts changed after Optim initialization: " \
                 "was %s, now %s"%(param.name, self._contexts, param.list_ctx())
             if not ignore_stale_grad:
-                for grad in param.list_grad():
-                    if not grad.updated_grad:
+                for data in param.list_data():
+                    if not data._fresh_grad:
                         raise UserWarning(
-                            "Gradient of Parameter `%s` has not been updated by backward "
-                            "since last `step`. This could mean a bug in your model that "
-                            "maked it only use a subset of the Parameters (Layers) for this "
-                            "iteration. If you are intentionally only using a subset, "
+                            "Gradient of Parameter `%s` on context %s has not been updated "
+                            "by backward since last `step`. This could mean a bug in your "
+                            "model that maked it only use a subset of the Parameters (Layers) "
+                            "for this iteration. If you are intentionally only using a subset, "
                             "call step with ignore_stale_grad=True to suppress this "
                             "warning and skip updating of Parameters with state gradient" \
-                            %param.name)
+                            %(param.name, str(data.context)))
             if self._kvstore:
                 self._kvstore.push(i, param.list_grad(), priority=-i)
                 if self._update_on_kvstore:
@@ -104,6 +104,6 @@ class Optim(object):
                 else:
                     self._kvstore.pull(i, param.list_grad(), priority=-i)
             for upd, arr, grad in zip(self._updaters, param.list_data(), param.list_grad()):
-                if grad.updated_grad:
+                if arr._fresh_grad:
                     upd(i, grad, arr)
-                    grad.updated_grad = False
+                    grad._fresh_grad = False

@@ -187,11 +187,11 @@ def train(epoch, ctx):
     net.params.save('mnist.params')
 
 if __name__ == '__main__':
-    train(200, [mx.gpu(i) for i in range(8)])
+    train(200, [mx.gpu(i) for i in range(2)])
     import logging
     logging.basicConfig(level=logging.DEBUG)
     data = mx.sym.var('data')
     out = net(data)
     softmax = mx.sym.SoftmaxOutput(out, name='softmax')
-    mod = mx.mod.Module(softmax, context=[mx.gpu(i) for i in range(8)])
+    mod = mx.mod.Module(softmax, context=[mx.gpu(i) for i in range(1)])
     mod.fit(train_data, num_epoch=100, batch_end_callback = mx.callback.Speedometer(batch_size, 10))
