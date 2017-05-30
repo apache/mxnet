@@ -57,10 +57,10 @@ class AutogradRuntime;
  */
 class NDArray {
  public:
-  /*! \brief default cosntructor */
+  /*! \brief default constructor */
   NDArray() {
 #if MKL_EXPERIMENTAL == 1
-      Mkl_mem_ = MKLMemHolder::create();
+    Mkl_mem_ = MKLMemHolder::create();
 #endif
   }
   /*!
@@ -75,7 +75,7 @@ class NDArray {
       : ptr_(std::make_shared<Chunk>(shape.Size(), ctx, delay_alloc, dtype)),
         shape_(shape), offset_(0), dtype_(dtype), entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
-      Mkl_mem_ = std::make_shared<MKLMemHolder>();
+    Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
   }
   /*!
@@ -89,29 +89,32 @@ class NDArray {
       : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_), offset_(0),
         dtype_(data.type_flag_), entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
-      Mkl_mem_ = std::make_shared<MKLMemHolder>();
+    Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
   }
   /*!
    * \return the shape of current NDArray
    */
-  inline const TShape &shape() const {
+  inline const TShape& shape() const {
     return shape_;
   }
   /*!
    * \return the data TBlob
    */
-  inline TBlob data() const {
+  inline const TBlob& data() const {
     CheckAndAlloc();
-    TBlob res;
-    MSHADOW_TYPE_SWITCH(dtype_, DType, {
-      res = TBlob(static_cast<DType*>(ptr_->shandle.dptr)
-        + offset_, shape_, ptr_->shandle.ctx.dev_mask());
-    });
 #if MKL_EXPERIMENTAL == 1
-    res.Mkl_mem_ = Mkl_mem_;
+    MSHADOW_TYPE_SWITCH(dtype_, DType, {
+      tblob_ = TBlob(static_cast<DType*>(ptr_->shandle.dptr) + offset_,
+        shape_, ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id, Mkl_mem_);
+    });
+#else
+    MSHADOW_TYPE_SWITCH(dtype_, DType, {
+      tblob_ = TBlob(static_cast<DType*>(ptr_->shandle.dptr) + offset_,
+        shape_, ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
+    });
 #endif
-    return res;
+    return tblob_;
   }
   /*!
    * \return a chunk of raw data in TBlob
@@ -122,8 +125,8 @@ class NDArray {
     TShape raw_shape(1);
     raw_shape[0] = length;
     MSHADOW_TYPE_SWITCH(dtype_, DType, {
-      res = TBlob(static_cast<DType*>(ptr_->shandle.dptr)
-        + offset_ + offset, raw_shape, ptr_->shandle.ctx.dev_mask());
+      res = TBlob(static_cast<DType*>(ptr_->shandle.dptr) + offset_ + offset,
+        raw_shape, ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
     });
 #if MKL_EXPERIMENTAL == 1
     res.Mkl_mem_ = Mkl_mem_;
@@ -326,7 +329,7 @@ class NDArray {
     ptr_->CheckAndAlloc();
   }
   /*!
-   * \brief Save list of narray into the Stream.x
+   * \brief Save list of ndarray into the Stream.x
    * \param fo The stream of output.
    * \param data the NDArrays to be saved.
    * \param names the name of the NDArray, optional, can be zero length.
@@ -335,7 +338,7 @@ class NDArray {
                    const std::vector<NDArray>& data,
                    const std::vector<std::string>& names);
   /*!
-   * \brief Load list of narray into from the stream.
+   * \brief Load list of ndarray into from the stream.
    * \param fi The stream of the input file.
    * \param data the NDArrays to be loaded
    * \param keys the name of the NDArray, if saved in the file.
@@ -368,10 +371,10 @@ class NDArray {
         : static_data(true),
           delay_alloc(false) {
       var = Engine::Get()->NewVariable();
-      if (data.dev_mask_ == cpu::kDevMask) {
+      if (data.dev_mask() == cpu::kDevMask) {
         shandle.ctx = Context::CPU();
       } else {
-        CHECK_EQ(data.dev_mask_, gpu::kDevMask);
+        CHECK_EQ(data.dev_mask(), gpu::kDevMask);
         shandle.ctx = Context::GPU(dev_id);
       }
       shandle.dptr = data.dptr_;
@@ -418,6 +421,14 @@ class NDArray {
   int dtype_ = -1;
   /*! \brief node entry for autograd */
   autograd::AGNodeEntry entry_;
+  /*!
+   * \brief internal TBlob
+   * \note When user access tblob_ by some const methods like
+   *     NDArray::data(), the dptr in tblob_ still need to be updated
+   *     in case that allocation happens. So we make it mutable for
+   *     this situation.
+   */
+  mutable TBlob tblob_;
 };
 
 /*!

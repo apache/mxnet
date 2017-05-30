@@ -336,12 +336,16 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
 int MXNDArrayGetShape(NDArrayHandle handle,
                       mx_uint *out_dim,
                       const mx_uint **out_pdata) {
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
     const TShape &s = arr->shape();
     *out_dim = s.ndim();
-    *out_pdata = s.data();
+    std::vector<uint32_t>& buffer = ret->arg_shape_buffer;
+    buffer.resize(s.ndim());
+    nnvm::ShapeTypeCast(s.begin(), s.end(), buffer.data());
+    *out_pdata = buffer.data();
   } else {
     *out_dim = 0;
   }
