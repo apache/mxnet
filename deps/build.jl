@@ -168,9 +168,9 @@ if !libmxnet_detected
           ChangeDirectory(_mxdir)
           `cp ../../cblas.h include/cblas.h`
           if USE_JULIA_BLAS
-            `make -j$(nprocs()) USE_BLAS=$blas_name $MSHADOW_LDFLAGS`
+            `make -j$(min(Sys.CPU_CORES,8)) USE_BLAS=$blas_name $MSHADOW_LDFLAGS`
           else
-            `make -j$(nprocs())`
+            `make -j$(min(Sys.CPU_CORES,8))`
           end
         end
         FileRule(joinpath(_libdir, "libmxnet.so"), @build_steps begin
