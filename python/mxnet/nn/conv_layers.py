@@ -68,15 +68,16 @@ class _Conv(Layer):
                 padding = (padding,)*len(kernel_size)
             if isinstance(dilation, numeric_types):
                 dilation = (dilation,)*len(kernel_size)
-            self._kwargs = {
+            attrs = {
                 'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
                 'pad': padding, 'num_filter': filters, 'num_group': groups,
                 'no_bias': not use_bias, 'layout': layout}
+            self._op = symbol.CachedOp('Convolution', 3 if use_bias else 2, **attrs)
 
             dshape = [0]*(len(kernel_size) + 2)
             dshape[layout.find('N')] = 1
             dshape[layout.find('C')] = in_filters
-            wshapes = _infer_weight_shape(symbol.Convolution, dshape, **self._kwargs)
+            wshapes = _infer_weight_shape(symbol.Convolution, dshape, **attrs)
             self.weight = self.params.get('weight', shape=wshapes[1],
                                           init=kernel_initializer)
             if use_bias:
@@ -88,9 +89,11 @@ class _Conv(Layer):
             else:
                 self.act = None
 
-    def generic_forward(self, F, x, **kwargs):
-        self._kwargs.update(kwargs)
-        act = F.Convolution(data=x, **self._kwargs)
+    def generic_forward(self, F, x, weight, bias=None):
+        if bias is None:
+            act = F.call_cached(self._op, [x, weight])
+        else:
+            act = F.call_cached(self._op, [x, weight, bias])
         if self.act is not None:
             act = self.act(act)
         return act
@@ -299,13 +302,14 @@ class _Pooling(Layer):
             strides = (strides,)*len(pool_size)
         if isinstance(padding, numeric_types):
             padding = (padding,)*len(pool_size)
-        self._kwargs = {
+        attrs = {
             'kernel': pool_size, 'stride': strides, 'pad': padding,
             'pooling_convention': 'full', 'global_pool': global_pool,
             'pool_type': pool_type}
+        self._op = symbol.CachedOp('Pooling', 1, **attrs)
 
     def generic_forward(self, F, x):
-        return F.Pooling(x, **self._kwargs)
+        return F.call_cached(self._op, [x])
 
 
 class MaxPool1D(_Pooling):

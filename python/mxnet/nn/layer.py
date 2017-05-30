@@ -265,8 +265,8 @@ class Dense(Layer):
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
         with self.scope:
-            self._units = units
-            self._use_bias = use_bias
+            self._op = symbol.CachedOp('FullyConnected', 3 if use_bias else 2,
+                                        num_hidden=units, no_bias=not use_bias)
             self.weight = self.params.get('weight', shape=(units, in_units),
                                           init=kernel_initializer)
             if use_bias:
@@ -277,10 +277,11 @@ class Dense(Layer):
             else:
                 self.act = None
 
-    def generic_forward(self, F, x, **kwargs):
-        act = F.FullyConnected(data=x, num_hidden=self._units,
-                               no_bias=not self._use_bias,
-                               **kwargs)
+    def generic_forward(self, F, x, weight, bias=None):
+        if bias is None:
+            act = F.call_cached(self._op, [x, weight])
+        else:
+            act = F.call_cached(self._op, [x, weight, bias])
         if self.act is not None:
             act = self.act(act)
         return act
@@ -305,12 +306,13 @@ class Activation(Layer):
     def __init__(self, activation, **kwargs):
         self._act_type = activation
         super(Activation, self).__init__(**kwargs)
+        self._op = symbol.CachedOp('Activation', 1, act_type=self._act_type)
 
     def _alias(self):
         return self._act_type
 
     def generic_forward(self, F, x):
-        return F.Activation(x, act_type=self._act_type)
+        return F.call_cached(self._op, [x])
 
 
 class Dropout(Layer):
@@ -331,10 +333,10 @@ class Dropout(Layer):
     """
     def __init__(self, rate, **kwargs):
         super(Dropout, self).__init__(**kwargs)
-        self._rate = rate
+        self._op = symbol.CachedOp('Dropout', 1, p=rate)
 
     def generic_forward(self, F, x):
-        return F.Dropout(x, p=self._rate)
+        return F.call_cached(self._op, [x])
 
 
 class BatchNorm(Layer):
@@ -371,7 +373,8 @@ class BatchNorm(Layer):
         super(BatchNorm, self).__init__(**kwargs)
         assert axis == 1, \
             "Only support NC* layout, i.e. channel must be in the second dimension"
-        self._kwargs = {'eps': epsilon, 'momentum': momentum, 'fix_gamma': not center}
+        attrs = {'eps': epsilon, 'momentum': momentum, 'fix_gamma': not center}
+        self._op = symbol.CachedOp('BatchNorm', 5, **attrs)
 
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
                                      shape=(num_features,), init=gamma_initializer)
@@ -385,4 +388,4 @@ class BatchNorm(Layer):
                                            init=running_variance_initializer)
 
     def generic_forward(self, F, x, gamma, beta, running_mean, running_var):
-        return F.BatchNorm(x, gamma, beta, running_mean, running_var, **self._kwargs)
+        return F.call_cached(self._op, [x, gamma, beta, running_mean, running_var])
