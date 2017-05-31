@@ -398,6 +398,27 @@ int MXNDArrayGetContext(NDArrayHandle handle,
   API_END();
 }
 
+int MXNDArrayDetach(NDArrayHandle handle, NDArrayHandle *out) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  *out = new NDArray(arr->Detach());
+  API_END();
+}
+
+int MXNDArraySetGradState(NDArrayHandle handle, int state) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  arr->set_fresh_out_grad(static_cast<bool>(state));
+  API_END();
+}
+
+int MXNDArrayGetGradState(NDArrayHandle handle, int *out) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  *out = arr->fresh_out_grad();
+  API_END();
+}
+
 int MXListFunctions(mx_uint *out_size,
                     FunctionHandle **out_array) {
   API_BEGIN();

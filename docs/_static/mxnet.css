@@ -644,6 +644,7 @@ div.content {
     right: 200px;
     margin-right: 5%;
     padding: 40px 0 0 0;
+    overflow-x: hidden;
     z-index: -1;
 }
 
