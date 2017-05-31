@@ -340,8 +340,8 @@ class SGD(Optimizer):
         ret = (None, None)
         if self.momentum != 0.0:
             ret[0] = zeros(weight.shape, weight.context, dtype=weight.dtype)
-        if self.multi_precision and
-           (weight.dtype != numpy.float32 or weight.dtype != numpy.float64):
+        if (self.multi_precision and
+            (weight.dtype != numpy.float32 or weight.dtype != numpy.float64)):
             ret[1] = array(weight, ctx=weight.context, dtype=numpy.float32)
         if weight.dtype == numpy.float16 and not self.multi_precision:
             warnings.warn("Using 16-bit precision accumulation in the optimizer. "
