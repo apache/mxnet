@@ -1789,13 +1789,6 @@ def load_json(json_str):
     return Symbol(handle)
 
 
-<<<<<<< HEAD
-=======
-# Initialize the atomic symbol in startups
-_init_symbol_module(Symbol, "mxnet")
-
-
->>>>>>> Initial checkin
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
 def pow(base, exp):
