@@ -142,6 +142,7 @@ include_directories("mshadow")
 include_directories("cub")
 include_directories("nnvm/include")
 include_directories("dmlc-core/include")
+include_directories("dlpack/include")
 
 if(NOT MSVC)
   set(BEGIN_WHOLE_ARCHIVE -Wl,--whole-archive)

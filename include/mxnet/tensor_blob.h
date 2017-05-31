@@ -11,6 +11,7 @@
 
 #include <dmlc/logging.h>
 #include <dmlc/json.h>
+#include <dlpack/dlpack.h>
 #include <vector>
 #include <iostream>
 #include <utility>
@@ -39,12 +40,6 @@ class TBlob {
   void *dptr_;
   /*! \brief shape of the tensor */
   TShape shape_;
-  /*!
-   * \brief storing the stride information in x dimension
-   */
-  index_t stride_;
-  /*! \brief device mask of the corresponding device */
-  int dev_mask_;
   /*! \brief type flag of the tensor blob */
   int type_flag_;
 
@@ -54,49 +49,61 @@ class TBlob {
 #endif
   /*! \brief default constructor, default copy assign will work */
   TBlob(void)
-      : dptr_(NULL), dev_mask_(cpu::kDevMask),
+      : dptr_(NULL),
         type_flag_(mshadow::DataType<real_t>::kFlag) {
 #if MKL_EXPERIMENTAL == 1
-      Mkl_mem_ = NULL;
+    Mkl_mem_ = NULL;
 #endif
+    SetDLTensor(cpu::kDevMask, 0);
   }
   /*!
    * \brief constructor that construct TBlob from contiguous memory
    * \param dptr the pointer to the memory
    * \param shape the shape of the data
    * \param dev_mask the device mask, can be cpu::kDevMask or gpu::kDevMask
+   * \param dev_id the device id
    */
   template<typename DType>
-  TBlob(DType *dptr,
-        const TShape &shape,
-        int dev_mask)
+  TBlob(DType *dptr, const TShape &shape, int dev_mask, int dev_id = -1)
       : dptr_(dptr), shape_(shape),
-        stride_(shape[shape.ndim() - 1]),
-        dev_mask_(dev_mask),
         type_flag_(mshadow::DataType<DType>::kFlag) {
 #if MKL_EXPERIMENTAL == 1
-      Mkl_mem_ = NULL;
+    Mkl_mem_ = NULL;
 #endif
+    SetDLTensor(dev_mask, dev_id);
   }
-
+#if MKL_EXPERIMENTAL == 1
+  /*!
+   * \brief constructor that construct TBlob from contiguous memory
+   * \param dptr the pointer to the memory
+   * \param shape the shape of the data
+   * \param dev_mask the device mask, can be cpu::kDevMask or gpu::kDevMask
+   * \param dev_id the device id
+   * \param Mkl_mem the mkl memory
+   */
+  template<typename DType>
+  TBlob(DType *dptr, const TShape &shape, int dev_mask, int dev_id,
+        std::shared_ptr<MKLMemHolder> Mkl_mem)
+      : dptr_(dptr), shape_(shape),
+        type_flag_(mshadow::DataType<DType>::kFlag),
+        Mkl_mem_(Mkl_mem) {
+    SetDLTensor(dev_mask, dev_id);
+  }
+#endif
   /*!
    * \brief constructor that construct TBlob from contiguous memory
    * \param dptr the pointer to the memory
    * \param shape the shape of the data
    * \param dev_mask the device mask, can be cpu::kDevMask or gpu::kDevMask
    * \param type_flag the type flag. Can be one of enum mshadow::dtype
+   * \param dev_id the device id
    */
-  TBlob(void *dptr,
-        const TShape &shape,
-        int dev_mask,
-        int type_flag)
-      : dptr_(dptr), shape_(shape),
-        stride_(shape[shape.ndim() - 1]),
-        dev_mask_(dev_mask),
-        type_flag_(type_flag) {
+  TBlob(void *dptr, const TShape &shape, int dev_mask, int type_flag, int dev_id = -1)
+      : dptr_(dptr), shape_(shape), type_flag_(type_flag) {
 #if MKL_EXPERIMENTAL == 1
-      Mkl_mem_ = NULL;
+    Mkl_mem_ = NULL;
 #endif
+    SetDLTensor(dev_mask, dev_id);
   }
   /*!
    * \brief constructor from tensor
@@ -108,9 +115,6 @@ class TBlob {
   template<typename Device, int dim, typename DType>
   TBlob(const mshadow::Tensor<Device, dim, DType> &src) {  // NOLINT(*)
     *this = src;
-#if MKL_EXPERIMENTAL == 1
-    Mkl_mem_ = NULL;
-#endif
   }
   /*!
    * \brief assignment from tensor
@@ -121,20 +125,21 @@ class TBlob {
    * \return reference of self
    */
   template<typename Device, int dim, typename DType>
-  inline TBlob
-  &operator=(const mshadow::Tensor<Device, dim, DType> &src) {
+  inline TBlob &operator=(const mshadow::Tensor<Device, dim, DType> &src) {
     dptr_ = src.dptr_;
     shape_ = src.shape_;
-    stride_ = src.stride_;
-    dev_mask_ = Device::kDevMask;
     type_flag_ = mshadow::DataType<DType>::kFlag;
+    SetDLTensor(Device::kDevMask, -1);
+#if MKL_EXPERIMENTAL == 1
+    Mkl_mem_ = NULL;
+#endif
     return *this;
   }
   /*!
    * \return whether the tensor's memory is continuous
    */
   inline bool CheckContiguous(void) const {
-    return shape_[shape_.ndim() - 1] == stride_;
+    return true;
   }
   /*!
    * \brief reshape to shape
@@ -144,7 +149,7 @@ class TBlob {
   inline TBlob reshape(const TShape& shape) const {
     CHECK_EQ(this->shape_.Size(), shape.Size()) << "Shape size mismatch "
     << this->shape_.Size() << " v.s. "  << shape.Size();
-    TBlob ret(this->dptr_, shape, this->dev_mask_, this->type_flag_);
+    TBlob ret(this->dptr_, shape, this->dev_mask(), this->type_flag_, this->dev_id());
     return ret;
   }
   /*!
@@ -157,7 +162,7 @@ class TBlob {
   template<typename Device, typename DType>
   inline mshadow::Tensor<Device, 2, DType> FlatTo2D(
     mshadow::Stream<Device> *stream = NULL) const {
-    CHECK(Device::kDevMask == dev_mask_)
+    CHECK(Device::kDevMask == this->dev_mask())
       << "TBlob.get: device type do not match specified type";
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
@@ -168,7 +173,9 @@ class TBlob {
     }
 #endif
     return mshadow::Tensor<Device, 2, DType>(static_cast<DType*>(dptr_),
-                                             shape_.FlatTo2D(), stride_, stream);
+                                             shape_.FlatTo2D(),
+                                             shape_[shape_.ndim() - 1],
+                                             stream);
   }
   /*!
    * \brief flatten the tensor to 1 dimension, collapse all the dimensions together.
@@ -212,6 +219,22 @@ class TBlob {
 #endif
     return static_cast<DType*>(dptr_);
   }
+  /*! \brief device mask of the corresponding device */
+  inline int dev_mask() const {
+    return dltensor_.ctx.device_type;
+  }
+  /*! \brief device index of the corresponding device */
+  inline int dev_id() const {
+    return dltensor_.ctx.device_id;
+  }
+  /*!
+   * \brief return the corresponding DLTensor
+   * \return the address of internal DLTensor
+   */
+  inline const DLTensor& dltensor() {
+    return dltensor_;
+  }
+
   /*!
    * \brief fetch the tensor, with respect to specific dimension
    * if dim do not match the stored dimension, an error will be issued
@@ -223,9 +246,10 @@ class TBlob {
    */
   template<typename Device, int dim, typename DType>
   inline mshadow::Tensor<Device, dim, DType> get(mshadow::Stream<Device> *stream = NULL) const {
-    CHECK(Device::kDevMask == dev_mask_)
+    CHECK(Device::kDevMask == this->dev_mask())
       << "TBlob.get: device type do not match specified type";
-    return mshadow::Tensor<Device, dim, DType>(dptr<DType>(), shape_.get<dim>(), stride_, stream);
+    return mshadow::Tensor<Device, dim, DType>(dptr<DType>(),
+        shape_.get<dim>(), shape_[shape_.ndim() - 1], stream);
   }
   /*!
    * \brief fetch a tensor in given shape
@@ -241,7 +265,7 @@ class TBlob {
   inline mshadow::Tensor<Device, dim, DType> get_with_shape(
       const mshadow::Shape<dim> &shape,
       mshadow::Stream<Device> *stream = NULL) const {
-    CHECK(Device ::kDevMask == dev_mask_)
+    CHECK(Device::kDevMask == this->dev_mask())
       << "TBlob.get: device type do not match specified type";
     CHECK_EQ(this->CheckContiguous(), true) << "TBlob.get_reshape: must be contiguous";
     CHECK_EQ(this->shape_.Size(), shape.Size())
@@ -281,6 +305,34 @@ class TBlob {
     return this->get_with_shape<Device, 3, DType>(
         this->shape_.FlatTo3D(axis_begin, axis_end), stream);
   }
+
+ private:
+  static DLDataType DTypeTransform(int type_flag) {
+    static std::unordered_map<int, DLDataType>
+      MSHADOW_DTYPE_TO_DLPACK_DTYPE = {
+        {0, {2, 32, 1}},  // Float32
+        {1, {2, 64, 1}},  // Float64
+        {2, {2, 16, 1}},  // Float16
+        {3, {1,  8, 1}},  // UInt8
+        {4, {0, 32, 1}},  // Int32
+        {5, {0,  8, 1}}   // Int8
+      };
+    return MSHADOW_DTYPE_TO_DLPACK_DTYPE[type_flag];
+  }
+
+  inline void SetDLTensor(int dev_mask, int dev_id) {
+    dltensor_.data = dptr_;
+    dltensor_.ctx = DLContext{static_cast<DLDeviceType>(dev_mask), dev_id};
+    dltensor_.ndim = shape_.ndim();
+    dltensor_.dtype = DTypeTransform(type_flag_);
+    dltensor_.shape = shape_.data();
+    dltensor_.strides = NULL;
+    dltensor_.byte_offset = 0;
+  }
+
+ private:
+  /*! \brief corresponding DLTensor of this TBlob */
+  DLTensor dltensor_;
 };
 }  // namespace mxnet
 

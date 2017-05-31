@@ -160,14 +160,14 @@ inline StreamType& print_blob(StreamType *_os, const TBlob &blob,
 
   if (dim == 1) {
     // probably a tensor (mshadow::Tensor is deprecated)
-    TBlob changed(blob.dptr<DType>(), TShape(3), blob.dev_mask_);
+    TBlob changed(blob.dptr<DType>(), TShape(3), blob.dev_mask(), blob.dev_id());
     changed.shape_[0] = 1;
     changed.shape_[1] = 1;
     changed.shape_[2] = blob.shape_[0];
     return print_blob<DType>(&os, changed, false, false);
   } else if (dim == 2) {
     // probably a tensor (mshadow::Tensor is deprecated)
-    TBlob changed(blob.dptr<DType>(), TShape(4), blob.dev_mask_);
+    TBlob changed(blob.dptr<DType>(), TShape(4), blob.dev_mask(), blob.dev_id());
     changed.shape_[0] = 1;
     changed.shape_[1] = 1;
     changed.shape_[2] = blob.shape_[0];

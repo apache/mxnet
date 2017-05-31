@@ -613,7 +613,7 @@ class FusedRNN(Initializer):
     Parameters
     ----------
     init : Initializer
-        intializer applied to unpacked weights. Fall back to global
+        initializer applied to unpacked weights. Fall back to global
         initializer if None.
     num_hidden : int
         should be the same with arguments passed to FusedRNNCell.

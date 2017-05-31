@@ -26,7 +26,7 @@ MXNET_REGISTER_OP_PROPERTY(SoftmaxActivation, SoftmaxActivationProp)
 
 .. note::
 
-  This operator has been depreated, please use `softmax`.
+  This operator has been deprecated, please use `softmax`.
 
 If `mode` = ``instance``, this operator will compute a softmax for each instance in the batch.
 This is the default mode.
