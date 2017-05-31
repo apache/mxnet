@@ -72,6 +72,8 @@ Example::
 along the `axis` which it is split.
 Also `squeeze_axis` can be set to true only if ``input.shape[axis] == num_outputs``.
 
+Example::
+
    z = split(x, axis=0, num_outputs=3, squeeze_axis=1) // a list of 3 arrays with shape (2, 1)
    z = [[ 1.]
         [ 2.]]

@@ -1,5 +1,7 @@
 # Faster R-CNN in MXNet with distributed implementation and data parallelization
 
+![example detections](https://cloud.githubusercontent.com/assets/13162287/22101032/92085dc0-de6c-11e6-9228-67e72606ddbc.png)
+
 ## Why?
 There exist good implementations of Faster R-CNN yet they lack support for recent 
 ConvNet architectures. The aim of reproducing it from scratch is to fully utilize 
@@ -43,9 +45,8 @@ MXNet engines and parallelization for object detection.
 | Faster R-CNN end-to-end | VGG16 | COCO train | COCO val | 21.2 | 22.8 |
 | Faster R-CNN end-to-end | ResNet-101 | COCO train | COCO val | 27.2 | 26.1 |
 
-All reference results are from original publications.
-All VOC experiments are conducted in MXNet-v0.9.1-nnvm. MXNet-v0.8 have similar results.
-All COCO experiments are conducted in MXNet-v0.8.
+The above experiments were conducted at [mx-rcnn](https://github.com/precedenceguo/mx-rcnn/tree/6a1ab0eec5035a10a1efb5fc8c9d6c54e101b4d0)
+using [a MXNet fork, based on MXNet 0.9.1 nnvm pre-release](https://github.com/precedenceguo/mxnet/tree/simple).
 
 ## I'm Feeling Lucky
 * Prepare: `bash script/additional_deps.sh`
@@ -56,9 +57,8 @@ All COCO experiments are conducted in MXNet-v0.8.
 ## Getting started
 See if `bash script/additional_deps.sh` will do the following for you.
 * Suppose `HOME` represents where this file is located. All commands, unless stated otherwise, should be started from `HOME`.
-  Executing scripts in `script` must also be from `HOME`.
 * Install python package `cython easydict matplotlib scikit-image`.
-* Install MXNet Python Interface. Open `python` type `import mxnet` to confirm.
+* Install MXNet version v0.9.5 or higher and MXNet Python Interface. Open `python` type `import mxnet` to confirm.
 * Run `make` in `HOME`.
 
 Command line arguments have the same meaning as in mxnet/example/image-classification.
@@ -82,7 +82,7 @@ Refer to `script/vgg_voc07.sh` and other experiments for examples.
 
 ### Prepare Training Data
 See `bash script/get_voc.sh` and `bash script/get_coco.sh` will do the following for you.
-* Make a folder `data` in `HOME`. `data` folder will be used to place the training data folder `VOCdevkit` and `coco`. 
+* Make a folder `data` in `HOME`. `data` folder will be used to place the training data folder `VOCdevkit` and `coco`.
 * Download and extract [Pascal VOC data](http://host.robots.ox.ac.uk/pascal/VOC/), place the `VOCdevkit` folder in `HOME/data`.
 * Download and extract [coco dataset](http://mscoco.org/dataset/), place all images to `coco/images` and annotation jsons to `data/annotations`.
 
@@ -94,6 +94,7 @@ See `bash script/get_voc.sh` and `bash script/get_coco.sh` will do the following
 ### Prepare Pretrained Models
 See if `bash script/get_pretrained_model.sh` will do this for you. If not,
 * Make a folder `model` in `HOME`. `model` folder will be used to place model checkpoints along the training process. 
+  It is recommended to set `model` as a symbolic link to somewhere else in hard disk.
 * Download VGG16 pretrained model `vgg16-0000.params` from [MXNet model gallery](https://github.com/dmlc/mxnet-model-gallery/blob/master/imagenet-1k-vgg.md) to `model` folder.
 * Download ResNet pretrained model `resnet-101-0000.params` from [ResNet](https://github.com/tornadomeet/ResNet) to `model` folder.
 
@@ -174,7 +175,7 @@ History of this implementation is:
 * Faster R-CNN with end-to-end training and module testing (v4)
 * Faster R-CNN with accelerated training and resnet (v5)  
 
-mxnet/example/rcnn was v1, v2 and v3.5.
+mxnet/example/rcnn was v1, v2, v3.5 and now v5.
 
 ## References
 1. Tianqi Chen, Mu Li, Yutian Li, Min Lin, Naiyan Wang, Minjie Wang, Tianjun Xiao, Bing Xu, Chiyuan Zhang, and Zheng Zhang. MXNet: A Flexible and Efficient Machine Learning Library for Heterogeneous Distributed Systems. In Neural Information Processing Systems, Workshop on Machine Learning Systems, 2015
@@ -186,3 +187,4 @@ mxnet/example/rcnn was v1, v2 and v3.5.
 7. Karen Simonyan, and Andrew Zisserman. "Very deep convolutional networks for large-scale image recognition." arXiv preprint arXiv:1409.1556 (2014).
 8. Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun. "Deep Residual Learning for Image Recognition". In Computer Vision and Pattern Recognition, IEEE Conference on, 2016.
 9. Tsung-Yi Lin, Michael Maire, Serge Belongie, James Hays, Pietro Perona, Deva Ramanan, Piotr Dollár, and C. Lawrence Zitnick. "Microsoft COCO: Common Objects in Context" In European Conference on Computer Vision, pp. 740-755. Springer International Publishing, 2014.
+

@@ -2,6 +2,8 @@
 # pylint: disable=too-many-lines
 from __future__ import absolute_import, print_function, division
 import time
+import gzip
+import struct
 import traceback
 import numbers
 import subprocess
