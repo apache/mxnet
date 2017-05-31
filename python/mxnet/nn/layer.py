@@ -279,9 +279,9 @@ class Dense(Layer):
 
     def generic_forward(self, F, x, weight, bias=None):
         if bias is None:
-            act = F.call_cached(self._op, [x, weight])
+            act = F.invoke(self._op, [x, weight])
         else:
-            act = F.call_cached(self._op, [x, weight, bias])
+            act = F.invoke(self._op, [x, weight, bias])
         if self.act is not None:
             act = self.act(act)
         return act
@@ -312,7 +312,7 @@ class Activation(Layer):
         return self._act_type
 
     def generic_forward(self, F, x):
-        return F.call_cached(self._op, [x])
+        return F.invoke(self._op, [x])
 
 
 class Dropout(Layer):
@@ -336,7 +336,7 @@ class Dropout(Layer):
         self._op = symbol.CachedOp('Dropout', 1, p=rate)
 
     def generic_forward(self, F, x):
-        return F.call_cached(self._op, [x])
+        return F.invoke(self._op, [x])
 
 
 class BatchNorm(Layer):
@@ -388,7 +388,7 @@ class BatchNorm(Layer):
                                            init=running_variance_initializer)
 
     def generic_forward(self, F, x, gamma, beta, running_mean, running_var):
-        return F.call_cached(self._op, [x, gamma, beta, running_mean, running_var])
+        return F.invoke(self._op, [x, gamma, beta, running_mean, running_var])
 
 
 class LeakyReLU(Layer):
@@ -408,4 +408,4 @@ class LeakyReLU(Layer):
         self._op = symbol.CachedOp('LeakyReLU', 1, act_type='leaky', slope=alpha)
 
     def generic_forward(self, F, x):
-        return F.call_cached(self._op, [x])
+        return F.invoke(self._op, [x])

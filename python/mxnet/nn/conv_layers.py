@@ -5,7 +5,7 @@ from .. import symbol
 from ..base import numeric_types
 
 def _infer_weight_shape(op, data_shape):
-    sym = symbol.call_cached(op, [symbol.var('data', shape=data_shape)])
+    sym = symbol.invoke(op, [symbol.var('data', shape=data_shape)])
     return sym.infer_shape_partial()[0]
 
 
@@ -94,9 +94,9 @@ class _Conv(Layer):
 
     def generic_forward(self, F, x, weight, bias=None):
         if bias is None:
-            act = F.call_cached(self._op, [x, weight])
+            act = F.invoke(self._op, [x, weight])
         else:
-            act = F.call_cached(self._op, [x, weight, bias])
+            act = F.invoke(self._op, [x, weight, bias])
         if self.act is not None:
             act = self.act(act)
         return act
@@ -520,7 +520,7 @@ class _Pooling(Layer):
         self._op = symbol.CachedOp('Pooling', 1, **attrs)
 
     def generic_forward(self, F, x):
-        return F.call_cached(self._op, [x])
+        return F.invoke(self._op, [x])
 
 
 class MaxPool1D(_Pooling):
