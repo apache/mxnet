@@ -205,7 +205,7 @@ def parse_args():
                         help='Ratio of images to use for training.')
     cgroup.add_argument('--test-ratio', type=float, default=0,
                         help='Ratio of images to use for testing.')
-    cgroup.add_argument('--num-perclass', type=int, default=1e23,
+    cgroup.add_argument('--num-perclass', type=int, default=int(1e23),
                         help='The maxium number of per class ')
     cgroup.add_argument('--recursive', type=bool, default=False,
                         help='If true recursively walk through subdirs and assign an unique label\
