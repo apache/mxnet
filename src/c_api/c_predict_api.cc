@@ -25,6 +25,8 @@ struct MXAPIPredictor {
   std::vector<NDArray> arg_arrays;
   // output shapes
   std::vector<TShape> out_shapes;
+  // uint32_t buffer for output shapes
+  std::vector<uint32_t> out_shapes_buffer;
   // key to arguments
   std::unordered_map<std::string, size_t> key2arg;
   // executor
@@ -34,6 +36,7 @@ struct MXAPIPredictor {
 struct MXAPINDList {
   std::vector<std::string> keys;
   std::vector<TShape> shapes;
+  std::vector<uint32_t> shapes_buffer;
   std::vector<size_t> indptr;
   std::vector<mx_float> data;
 };
@@ -228,7 +231,11 @@ int MXPredGetOutputShape(PredictorHandle handle,
   API_BEGIN();
   CHECK_LT(out_index, p->out_arrays.size())
       << "Index exceed number of outputs";
-  *shape_data = p->out_shapes[out_index].data();
+
+  const TShape& s = p->out_shapes[out_index];
+  p->out_shapes_buffer.resize(s.ndim());
+  nnvm::ShapeTypeCast(s.begin(), s.end(), p->out_shapes_buffer.data());
+  *shape_data = p->out_shapes_buffer.data();
   *shape_ndim = p->out_shapes[out_index].ndim();
   API_END();
 }
@@ -322,7 +329,10 @@ int MXNDListGet(NDListHandle handle,
       << "Index out of range";
   *out_key = p->keys[index].c_str();
   *out_data = dmlc::BeginPtr(p->data) + p->indptr[index];
-  *out_shape = p->shapes[index].data();
+  const TShape& s = p->shapes[index];
+  p->shapes_buffer.resize(s.ndim());
+  nnvm::ShapeTypeCast(s.begin(), s.end(), p->shapes_buffer.data());
+  *out_shape = p->shapes_buffer.data();
   *out_ndim = p->shapes[index].ndim();
   API_END();
 }

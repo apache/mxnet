@@ -230,6 +230,15 @@ def test_ndarray_saveload():
             assert np.sum(x.asnumpy() != y.asnumpy()) == 0
     os.remove(fname)
 
+def test_ndarray_legacy_load():
+    data = []
+    for i in range(6):
+        data.append(mx.nd.arange(128))
+    path = os.path.dirname(os.path.realpath(__file__))
+    legacy_data = mx.nd.load(os.path.join(path, 'legacy_ndarray.v0'))
+    assert len(data) == len(legacy_data)
+    for i in range(len(data)):
+        assert same(data[i].asnumpy(), legacy_data[i].asnumpy())
 
 def test_ndarray_slice():
     shape = (10,)
@@ -616,6 +625,17 @@ def test_iter():
 
     for i in range(x.size):
         assert same(y[i].asnumpy(), x[i].asnumpy())
+
+
+def test_cached():
+    op = mx.nd.CachedOp('Convolution', 3, kernel=(3, 3), num_filter=10)
+    data = mx.nd.ones((3, 4, 10, 10))
+    weight = mx.nd.ones((10, 4, 3, 3))
+    bias = mx.nd.ones((10,))
+    o1 = mx.nd.invoke(op, [data, weight, bias])
+    bias[:] = 2
+    o2 = mx.nd.invoke(op, [data, weight, bias])
+    assert_almost_equal(o2.asnumpy(), o1.asnumpy()+1)
 
 
 if __name__ == '__main__':
