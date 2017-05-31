@@ -200,6 +200,5 @@ def test_at():
 
 
 if __name__ == '__main__':
-    test_deconv()
     import nose
     nose.runmodule()
