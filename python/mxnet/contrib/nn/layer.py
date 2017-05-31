@@ -222,7 +222,7 @@ class Sequential(Layer):
         raise NotImplementedError
 
 
-class _Binary(Layers):
+class _Binary(Layer):
     def __init__(self, lhs, rhs, operator):
         super(Sequential, self).__init__(prefix='', params=None)
         self._lhs = lhs
