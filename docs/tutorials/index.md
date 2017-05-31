@@ -27,23 +27,6 @@ These tutorials introduce a few fundamental concepts in deep learning and how to
    python/predict_image
    vision/large_scale_classification
 ```
-
-## R
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   r/ndarray
-   r/symbol
-   r/fiveMinutesNeuralNetwork
-   r/classifyRealImageWithPretrainedModel
-   r/CatsDogsFinetune
-   r/mnistCompetition
-   r/charRnnModel
-   r/CallbackFunctionTutorial
-   r/CustomIteratorTutorial
-```
 <br>
 More tutorials and examples are available in the GitHub [repository](https://github.com/dmlc/mxnet/tree/master/example).
 

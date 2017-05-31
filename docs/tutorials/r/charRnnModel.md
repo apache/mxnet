@@ -1,4 +1,4 @@
-Character language model using RNN
+Char RNN Example
 =============================================
 
 This tutorial shows how to use an LSTM model to build a char-level language model, and generate text from it. For demonstration purposes, we use a Shakespearean text. You can find the data on [GitHub](https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare).
@@ -310,4 +310,5 @@ In `mxnet`, other RNN models, like custom RNN and GRU, are also provided:
 - For a custom RNN model, you can replace `mx.lstm` with `mx.rnn` to train an RNN model. You can replace `mx.lstm.inference` and `mx.lstm.forward` with `mx.rnn.inference` and `mx.rnn.forward` to build inference from an RNN model and get the forward result from the inference model.
 - For a GRU model, you can replace `mx.lstm` with `mx.gru` to train a GRU model. You can replace `mx.lstm.inference` and `mx.lstm.forward` with `mx.gru.inference` and `mx.gru.forward` to build inference from a GRU model and get the forward result from the inference model.
 
-<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
+## Next Steps
+* [MXNet tutorials index](http://mxnet.io/tutorials/index.html)
