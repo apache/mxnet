@@ -87,7 +87,8 @@ void SetNDInputsOutputs(const nnvm::Op* op,
     ndoutputs.resize(infered_num_outputs);
   } else {
     CHECK(!AutogradRuntime::Get()->IsTraining())
-      << "Cannot assign to NDArray or specify 'out' when training with autograd";
+      << "Inplace operations (+=, -=, op(..., out=x) etc.) and assignment are "
+      << "not supported when you are inside a train_section using autograd.";
     CHECK(*num_outputs == infered_num_outputs || *num_outputs == num_visible_outputs)
       << "Expecting " << infered_num_outputs << " (all) or "
       << num_visible_outputs << " (visible only) outputs, got "
@@ -321,26 +322,18 @@ void PushOperator(std::shared_ptr<Operator> opr,
     0, PROFILER_MESSAGE(op->name.c_str()));
 }
 
-int MXImperativeInvoke(AtomicSymbolCreator creator,
-                       int num_inputs,
-                       NDArrayHandle *inputs,
-                       int *num_outputs,
-                       NDArrayHandle **outputs,
-                       int num_params,
-                       const char **param_keys,
-                       const char **param_vals) {
+void ImperativeInvokeImpl(const nnvm::NodeAttrs& attrs,
+                          int num_inputs,
+                          NDArrayHandle *inputs,
+                          int *num_outputs,
+                          NDArrayHandle **outputs) {
   static auto& fcpu = nnvm::Op::GetAttr<FCompute>("FCompute<cpu>");
   static auto& fgpu = nnvm::Op::GetAttr<FCompute>("FCompute<gpu>");
   static auto& ndfunc = nnvm::Op::GetAttr<FNDArrayFunction>("FNDArrayFunction");
   static auto& createop = nnvm::Op::GetAttr<FCreateLayerOp>("FCreateLayerOp");
-  const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
-  NDArray** outarray = *reinterpret_cast<NDArray***>(outputs);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
-
-  API_BEGIN();
-  nnvm::NodeAttrs attrs;
-  SetOpAttrs(op, &attrs,
-      num_inputs, num_params, param_keys, param_vals);
+  NDArray** outarray = *reinterpret_cast<NDArray***>(outputs);
+  const nnvm::Op *op = attrs.op;
 
   int infered_num_outputs;
   int num_visible_outputs;
@@ -408,6 +401,57 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
       *outarray[i] = std::move(ndoutputs[i]);
     }
   }
+}
+
+int MXImperativeInvoke(AtomicSymbolCreator creator,
+                       int num_inputs,
+                       NDArrayHandle *inputs,
+                       int *num_outputs,
+                       NDArrayHandle **outputs,
+                       int num_params,
+                       const char **param_keys,
+                       const char **param_vals) {
+  const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
+
+  API_BEGIN();
+  nnvm::NodeAttrs attrs;
+  SetOpAttrs(op, &attrs, num_inputs, num_params, param_keys, param_vals);
+  ImperativeInvokeImpl(attrs, num_inputs, inputs, num_outputs, outputs);
+  API_END();
+}
+
+int MXCachedCreateOp(AtomicSymbolCreator creator,
+                     int num_inputs,
+                     int num_params,
+                     const char **param_keys,
+                     const char **param_vals,
+                     CachedOpHandle *out) {
+  const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
+
+  API_BEGIN();
+  nnvm::NodeAttrs *attrs = new nnvm::NodeAttrs;
+  SetOpAttrs(op, attrs, num_inputs, num_params, param_keys, param_vals);
+  *out = attrs;
+  API_END();
+}
+
+int MXCachedFree(CachedOpHandle handle) {
+  nnvm::NodeAttrs *attrs = static_cast<nnvm::NodeAttrs*>(handle);
+
+  API_BEGIN();
+  delete attrs;
+  API_END();
+}
+
+int MXCachedInvoke(CachedOpHandle handle,
+                   int num_inputs,
+                   NDArrayHandle *inputs,
+                   int *num_outputs,
+                   NDArrayHandle **outputs) {
+  nnvm::NodeAttrs *attrs = static_cast<nnvm::NodeAttrs*>(handle);
+
+  API_BEGIN();
+  ImperativeInvokeImpl(*attrs, num_inputs, inputs, num_outputs, outputs);
   API_END();
 }
 
@@ -438,16 +482,31 @@ int MXAutogradMarkVariables(mx_uint num_var,
 
 int MXAutogradComputeGradient(mx_uint num_output,
                               NDArrayHandle *output_handles) {
+  return MXAutogradBackward(num_output, output_handles, nullptr, 0);
+}
+
+int MXAutogradBackward(mx_uint num_output,
+                       NDArrayHandle *output_handles,
+                       NDArrayHandle *ograd_handles,
+                       int retain_graph) {
   API_BEGIN();
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
-  std::vector<NDArray> outputs;
+  std::vector<NDArray> outputs, ograds;
   outputs.reserve(num_output);
   for (mx_uint i = 0; i < num_output; ++i) {
     outputs.emplace_back(*static_cast<NDArray*>(output_handles[i]));
   }
 
-  AutogradRuntime::Get()->ComputeGradient(outputs);
+  ograds.reserve(num_output);
+  for (mx_uint i = 0; i < num_output; ++i) {
+    if (ograd_handles != nullptr && ograd_handles[i] != nullptr) {
+      ograds.emplace_back(*static_cast<NDArray*>(ograd_handles[i]));
+    } else {
+      ograds.emplace_back();
+    }
+  }
 
+  AutogradRuntime::Get()->ComputeGradient(outputs, ograds, retain_graph);
   API_END();
 }

@@ -1,4 +1,4 @@
-# NDArray - Imperative tensor operations on CPU/GPU
+# NDArray: Vectorized Tensor Computations on CPUs and GPUs
 
 `NDArray` is the basic vectorized operation unit in MXNet for matrix and tensor computations.
 Users can perform usual calculations as on an R"s array, but with two additional features:
@@ -197,4 +197,10 @@ parallel.
 The actual computations are finished, allowing us to copy the results someplace else, such as `as.array(a)` or `mx.nd.save(a, "temp.dat")`. To write highly parallelized codes, we only need to postpone when we need
 the results.
 
-<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
+## Next Steps
+* [Symbol](http://mxnet.io/tutorials/r/symbol.html)
+* [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunctionTutorial.html)
+* [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
+* [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
+* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
+* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)

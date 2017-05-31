@@ -1,4 +1,4 @@
-Neural networks with MXNet in five minutes
+Develop a Neural Network with MXNet in Five Minutes
 =============================================
 
 This tutorial is designed for new users of the `mxnet` package for R. It shows how to construct a neural network to do regression in 5 minutes. It shows how to perform classification and regression tasks, respectively. The data we use is in the `mlbench` package.
@@ -169,9 +169,35 @@ Next, make prediction with this structure and other parameters with `mx.model.Fe
     ## [8] Train-rmse=9.10463850277417
     ## [9] Train-rmse=9.03977049028532
     ## [10] Train-rmse=8.96870685004475
-
-    ............
-
+    ## [11] Train-rmse=8.93113287361574
+    ## [12] Train-rmse=8.89937257821847
+    ## [13] Train-rmse=8.87182096922953
+    ## [14] Train-rmse=8.84476075083586
+    ## [15] Train-rmse=8.81464673014974
+    ## [16] Train-rmse=8.78672567900196
+    ## [17] Train-rmse=8.76265872846474
+    ## [18] Train-rmse=8.73946101419974
+    ## [19] Train-rmse=8.71651926303267
+    ## [20] Train-rmse=8.69457600919277
+    ## [21] Train-rmse=8.67354928674563
+    ## [22] Train-rmse=8.65328755392436
+    ## [23] Train-rmse=8.63378039680078
+    ## [24] Train-rmse=8.61488162586984
+    ## [25] Train-rmse=8.5965105183022
+    ## [26] Train-rmse=8.57868133563275
+    ## [27] Train-rmse=8.56135851937663
+    ## [28] Train-rmse=8.5444819772098
+    ## [29] Train-rmse=8.52802114610432
+    ## [30] Train-rmse=8.5119504512622
+    ## [31] Train-rmse=8.49624261719241
+    ## [32] Train-rmse=8.48087453238701
+    ## [33] Train-rmse=8.46582689119887
+    ## [34] Train-rmse=8.45107881002491
+    ## [35] Train-rmse=8.43661331401712
+    ## [36] Train-rmse=8.42241575909639
+    ## [37] Train-rmse=8.40847217331365
+    ## [38] Train-rmse=8.39476931796395
+    ## [39] Train-rmse=8.38129658373974
     ## [40] Train-rmse=8.36804269059018
     ## [41] Train-rmse=8.35499817678397
     ## [42] Train-rmse=8.34215505742154
@@ -237,9 +263,35 @@ This is an example of the mean absolute error metric. Simply plug it into the tr
     ## [8] Train-mae=7.02742733055105
     ## [9] Train-mae=7.00618194618469
     ## [10] Train-mae=6.92541576984028
-
-    ............
-
+    ## [11] Train-mae=6.87530243690643
+    ## [12] Train-mae=6.84757369098564
+    ## [13] Train-mae=6.82966501611388
+    ## [14] Train-mae=6.81151759574811
+    ## [15] Train-mae=6.78394182841811
+    ## [16] Train-mae=6.75914719419347
+    ## [17] Train-mae=6.74180388773481
+    ## [18] Train-mae=6.725853071279
+    ## [19] Train-mae=6.70932178215848
+    ## [20] Train-mae=6.6928868798746
+    ## [21] Train-mae=6.6769521329138
+    ## [22] Train-mae=6.66184809505939
+    ## [23] Train-mae=6.64754504809777
+    ## [24] Train-mae=6.63358514060577
+    ## [25] Train-mae=6.62027640889088
+    ## [26] Train-mae=6.60738245232238
+    ## [27] Train-mae=6.59505546771818
+    ## [28] Train-mae=6.58346195800437
+    ## [29] Train-mae=6.57285477783945
+    ## [30] Train-mae=6.56259003960424
+    ## [31] Train-mae=6.5527790788975
+    ## [32] Train-mae=6.54353428422991
+    ## [33] Train-mae=6.5344172368447
+    ## [34] Train-mae=6.52557652526432
+    ## [35] Train-mae=6.51697905850079
+    ## [36] Train-mae=6.50847898812758
+    ## [37] Train-mae=6.50014844106303
+    ## [38] Train-mae=6.49207674844397
+    ## [39] Train-mae=6.48412070125341
     ## [40] Train-mae=6.47650500999557
     ## [41] Train-mae=6.46893867486053
     ## [42] Train-mae=6.46142131653097
@@ -255,4 +307,8 @@ This is an example of the mean absolute error metric. Simply plug it into the tr
 
 Congratulations! You've learned the basics for using MXNet in R. To learn how to use MXNet's advanced features, see the other tutorials.
 
-<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
+
+## Next Steps
+* [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
+* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
+* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)

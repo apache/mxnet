@@ -193,10 +193,10 @@ The custom operator must be registered before it can be used.
 Please check the tutorial here: http://mxnet.io/how_to/new_op.html.
 
 )code")
+.add_argument("data", "NDArray-or-Symbol[]", "Input data for the custom operator.")
 .add_argument("op_type", "string", "Name of the custom operator. "
               "This is the name that is passed to `mx.operator.register` "
-              "to register the operator.")
-.add_argument("data", "NDArray-or-Symbol", "Input data for the custom operator.");
+              "to register the operator.");
 
 
 }  // namespace op

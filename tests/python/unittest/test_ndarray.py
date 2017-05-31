@@ -627,6 +627,17 @@ def test_iter():
         assert same(y[i].asnumpy(), x[i].asnumpy())
 
 
+def test_cached():
+    op = mx.nd.CachedOp('Convolution', 3, kernel=(3, 3), num_filter=10)
+    data = mx.nd.ones((3, 4, 10, 10))
+    weight = mx.nd.ones((10, 4, 3, 3))
+    bias = mx.nd.ones((10,))
+    o1 = mx.nd.invoke(op, [data, weight, bias])
+    bias[:] = 2
+    o2 = mx.nd.invoke(op, [data, weight, bias])
+    assert_almost_equal(o2.asnumpy(), o1.asnumpy()+1)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
