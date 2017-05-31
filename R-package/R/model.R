@@ -579,31 +579,37 @@ mx.model.save <- function(model, prefix, iteration) {
   mx.nd.save(save.dict, sprintf("%s-%04d.params", prefix, iteration))
 }
 
-#' Save model checkpoint into RData file.
+#' Serialize MXNet model into RData-compatiable format.
 #'
-#' @param model The mxnet model to be saved.
-#' @param filename The filename
+#' @param model The mxnet model
 #' 
 #' @export
-mx.model.save.RData <- function(model, filename) {
-  if (!inherits(model, "MXFeedForwardModel")) stop("Not a MXNet model!")
-  model_rdata <- list()
-  model_rdata[['symbol_json']] <- model$symbol$as.json()
-  model_rdata[['arg.params']] <- lapply(model$arg.params, as.array)
-  model_rdata[['aux.params']] <- lapply(model$aux.params, as.array)
-  saveRDS(model_rdata, filename)
+mx.serialize <- function(model) {
+  if (is.null(model[['from_rdata']])) {
+    model_rdata <- list()
+    model_rdata[['symbol_json']] <- model$symbol$as.json()
+    model_rdata[['arg.params']] <- lapply(model$arg.params, as.array)
+    model_rdata[['aux.params']] <- lapply(model$aux.params, as.array)
+    model_rdata[['from_rdata']] <- TRUE
+    return(model_rdata)    
+  } else {
+    return(model)
+  }
 }
 
-#' Load model checkpoint from RData file.
+#' Unserialize MXNet model from Robject.
 #'
-#' @param filename The RData filename.
-#'
+#' @param model The mxnet model
+#' 
 #' @export
-mx.model.load.RData <- function(filename) {
-  model_rdata <- readRDS(filename)
-  symbol <- mx.symbol.load.json(model_rdata$symbol_json)
-  arg.params <- lapply(model_rdata$arg.params, mx.nd.array)
-  aux.params <- lapply(model_rdata$aux.params, mx.nd.array)
-  model <- list(symbol=symbol, arg.params=arg.params, aux.params=aux.params)
-  return(structure(model, class="MXFeedForwardModel"))
+mx.unserialize <- function(model) {
+  if (is.null(model[['from_rdata']])) {
+    return(model)
+  } else {
+    symbol <- mx.symbol.load.json(model$symbol_json)
+    arg.params <- lapply(model$arg.params, mx.nd.array)
+    aux.params <- lapply(model$aux.params, mx.nd.array)
+    model <- list(symbol=symbol, arg.params=arg.params, aux.params=aux.params)
+    return(structure(model, class="MXFeedForwardModel"))    
+  }
 }
