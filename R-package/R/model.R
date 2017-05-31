@@ -483,6 +483,7 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
 #'
 #' @export
 predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128, array.layout="auto") {
+  if (is.serialized(model)) model <- mx.unserialize(model)
   if (is.null(ctx)) ctx <- mx.ctx.default()
   if (is.array(X) || is.matrix(X)) {
     if (array.layout == "auto") {
@@ -579,19 +580,33 @@ mx.model.save <- function(model, prefix, iteration) {
   mx.nd.save(save.dict, sprintf("%s-%04d.params", prefix, iteration))
 }
 
+#' Check if the model has been serialized into RData-compatiable format.
+#'
+#' @return Logical indicator
+#'
+#' @export
+is.serialized <- function(model) {
+  if (!is.null(model[['is.serialized']])) {
+    return(model[['is.serialized']])
+  } else {
+    return(FALSE)
+  }
+}
+
 #' Serialize MXNet model into RData-compatiable format.
 #'
 #' @param model The mxnet model
 #' 
 #' @export
 mx.serialize <- function(model) {
-  if (is.null(model[['from_rdata']])) {
+  if (!is.serialized(model)) {
     model_rdata <- list()
     model_rdata[['symbol_json']] <- model$symbol$as.json()
     model_rdata[['arg.params']] <- lapply(model$arg.params, as.array)
     model_rdata[['aux.params']] <- lapply(model$aux.params, as.array)
-    model_rdata[['from_rdata']] <- TRUE
-    return(model_rdata)    
+    model_rdata[['is.serialized']] <- TRUE
+    class(model_rdata) <- "MXFeedForwardModel"
+    return(model_rdata)
   } else {
     return(model)
   }
@@ -599,11 +614,11 @@ mx.serialize <- function(model) {
 
 #' Unserialize MXNet model from Robject.
 #'
-#' @param model The mxnet model
+#' @param model The mxnet model loaded from RData files.
 #' 
 #' @export
 mx.unserialize <- function(model) {
-  if (is.null(model[['from_rdata']])) {
+  if (!is.serialized(model)) {
     return(model)
   } else {
     symbol <- mx.symbol.load.json(model$symbol_json)
