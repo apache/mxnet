@@ -462,14 +462,14 @@ If not already installed, [download and install Xcode](https://developer.apple.c
 <br/>
 
 **Step 1**  Install prerequisites - Homebrew, python development tools.
-
+<!-- Pipe to /dev/null in case Homebrew or package was already installed to prevent failure -->
 ```bash
 # Install Homebrew
-$ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+$ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" </dev/null
 $ export PATH=/usr/local/bin:/usr/local/sbin:$PATH
 
 # Install python development tools - python2.7, pip, python-setuptools
-$ brew install python
+$ brew list python &>/dev/null || brew install python
 ```
 
 **Step 2**  Install virtualenv for macOS.
@@ -523,14 +523,14 @@ Install *MXNet* with OpenBLAS acceleration.
 <br/>
 
 **Step 1**  Install prerequisites - Homebrew, python development tools.
-
+<!-- Pipe to /dev/null in case Homebrew or package was already installed to prevent failure -->
 ```bash
 # Install Homebrew
-$ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+$ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" </dev/null
 $ export PATH=/usr/local/bin:/usr/local/sbin:$PATH
 
 # Install python development tools - python2.7, pip, python-setuptools
-$ brew install python
+$ brew list python &>/dev/null || brew install python
 ```
 
 **Step 2** Install MXNet with OpenBLAS acceleration.
