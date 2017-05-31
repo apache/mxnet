@@ -119,28 +119,28 @@ inline TShape AxisShapeCompact(TShape shape, int *axis, bool allow_2d) {
   return mshadow::Shape3(leading, M, trailing);
 }
 
-inline TShape ReduceAxisShapeImpl(const ReduceAxisParam& param, const TShape& ishape) {
-  if (!param.axis || ishape.ndim() == 1) {
-    if (param.keepdims) {
+inline TShape ReduceAxisShapeImpl(const TShape& ishape, const dmlc::optional<int>& axis,
+                                  bool keepdims) {
+  if (!axis || ishape.ndim() == 1) {
+    if (keepdims) {
       return TShape(ishape.ndim());
-    } else {
-      return mshadow::Shape1(1);
     }
-  } else {
-    int axis = CheckAxis(param.axis.value(), ishape.ndim());
-    if (param.keepdims) {
-      TShape oshape = ishape;
-      oshape[axis] = 1;
-      return oshape;
-    } else {
-      TShape oshape(ishape.ndim() - 1);
-      for (int i = 0; i < axis; ++i) oshape[i] = ishape[i];
-      for (int i = axis+1; i < static_cast<int>(ishape.ndim()); ++i) {
-        oshape[i-1] = ishape[i];
-      }
-      return oshape;
-    }
+    return mshadow::Shape1(1);
   }
+
+  int new_axis = CheckAxis(axis.value(), ishape.ndim());
+  if (keepdims) {
+    TShape oshape = ishape;
+    oshape[new_axis] = 1;
+    return oshape;
+  }
+
+  TShape oshape(ishape.ndim() - 1);
+  for (int i = 0; i < new_axis; ++i) oshape[i] = ishape[i];
+  for (int i = new_axis+1; i < static_cast<int>(ishape.ndim()); ++i) {
+    oshape[i-1] = ishape[i];
+  }
+  return oshape;
 }
 
 inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
@@ -152,7 +152,8 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
   if (ishape.ndim() == 0) return false;
 
   const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, ReduceAxisShapeImpl(param, ishape));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+                     ReduceAxisShapeImpl(ishape, param.axis, param.keepdims));
   return true;
 }
 
@@ -569,12 +570,16 @@ inline bool PickOpShape(const nnvm::NodeAttrs& attrs,
   const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
   if (!param.axis) LOG(FATAL)
     << "axis=None is not supported by pick yet. Must specify an axis.";
-  ReduceAxisParam tmp_param;
-  tmp_param.axis = param.axis;
-  tmp_param.keepdims = param.keepdims;
-  TShape oshape = ReduceAxisShapeImpl(tmp_param, ishape);
+  TShape oshape = ReduceAxisShapeImpl(ishape, param.axis, param.keepdims);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  SHAPE_ASSIGN_CHECK(*in_attrs, 1, oshape);
+  if (!(*in_attrs)[1].ndim()) return false;
+  if ((*in_attrs)[1].ndim() == ishape.ndim()) {
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1,
+                       ReduceAxisShapeImpl(ishape, param.axis, true));
+  } else {
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1,
+                       ReduceAxisShapeImpl(ishape, param.axis, false));
+  }
   return true;
 }
 
