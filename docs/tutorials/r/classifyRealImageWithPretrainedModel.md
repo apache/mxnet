@@ -9,8 +9,8 @@ image. For information about the network architecture, see  [1].
 The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](http://data.mxnet.io/mxnet/data/Inception.zip)
 This model gives the recent state-of-art prediction accuracy on image net dataset.
 
-## Load the MXNet Package
-
+Load the MXNet Package
+---------------
 To get started, load the mxnet package:
 
  ```r
@@ -60,8 +60,8 @@ Now load the imager package to load and preprocess the images in R:
     ##     save.image
  ```
 
-## Load the PreTrained Model
-
+Load the PreTrained Model
+-------------------------
 Make sure you unzip the pre-trained model in the current folder. Use the model
 loading function to load the model into R:
 
@@ -76,8 +76,8 @@ Load in the mean image, which is used for preprocessing using:
     mean.img = as.array(mx.nd.load("Inception/mean_224.nd")[["mean_img"]])
  ```
 
-## Load and Preprocess the Image
-
+Load and Preprocess the Image
+-----------------------------
 Now, we are ready to classify a real image. In this example, we simply take the parrots image
 from the imager package. You can use another image, if   you prefer.
 
@@ -89,7 +89,7 @@ Load and plot the image:
     plot(im)
  ```
 
-![](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/knitr/classifyRealImageWithPretrainedModel-unnamed-chunk-5-1.png)
+![plot of chunk unnamed-chunk-5](../../web-data/mxnet/knitr/classifyRealImageWithPretrainedModel-unnamed-chunk-5-1.png)
 
 Before feeding the image to the deep network, we need to perform some preprocessing
 to make the image meet the deep network input requirements. Preprocessing
@@ -125,8 +125,8 @@ Use the defined preprocessing function to get the normalized image:
     normed <- preproc.image(im, mean.img)
  ```
 
-## Classify the Image
-
+Classify the Image
+------------------
 Now we are ready to classify the image! Use the ```predict``` function
 to get the probability over classes:
 
@@ -179,4 +179,6 @@ Reference
 ---------
 [1] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating deep network training by reducing internal covariate shift." arXiv preprint arXiv:1502.03167 (2015).
 
-<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
+## Next Steps
+* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
+* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)

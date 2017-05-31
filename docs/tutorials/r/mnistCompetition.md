@@ -1,4 +1,4 @@
-Handwritten digits classification competition
+Handwritten Digits Classification Competition
 =============================================
 
 [MNIST](http://yann.lecun.com/exdb/mnist/) is a handwritten digits image data set created by Yann LeCun. Every digit is represented by a 28 x 28 pixel image. It's become a standard data set for testing classifiers on simple image input. A neural network is a strong model for image classification tasks. There's a [long-term hosted competition](https://www.kaggle.com/c/digit-recognizer) on Kaggle using this data set.
@@ -93,7 +93,7 @@ We assign CPU to `mxnet`. Now, you can run the following command to train the ne
                                          ctx=devices, num.round=10, array.batch.size=100,
                                          learning.rate=0.07, momentum=0.9,  eval.metric=mx.metric.accuracy,
                                          initializer=mx.init.uniform(0.07),
-                                         epoch.end.callback=mx.callback.log.train.metric(100))
+                                            epoch.end.callback=mx.callback.log.train.metric(100))
  ```
 
  ```
@@ -108,9 +108,35 @@ We assign CPU to `mxnet`. Now, you can run the following command to train the ne
     ## Batch [300] Train-accuracy=0.955866666666666
     ## Batch [400] Train-accuracy=0.957525000000001
     ## [2] Train-accuracy=0.958309523809525
-
-    ............
-
+    ## Batch [100] Train-accuracy=0.968
+    ## Batch [200] Train-accuracy=0.9677
+    ## Batch [300] Train-accuracy=0.9696
+    ## Batch [400] Train-accuracy=0.970650000000002
+    ## [3] Train-accuracy=0.970809523809526
+    ## Batch [100] Train-accuracy=0.973
+    ## Batch [200] Train-accuracy=0.974249999999999
+    ## Batch [300] Train-accuracy=0.976
+    ## Batch [400] Train-accuracy=0.977100000000003
+    ## [4] Train-accuracy=0.977452380952384
+    ## Batch [100] Train-accuracy=0.9834
+    ## Batch [200] Train-accuracy=0.981949999999999
+    ## Batch [300] Train-accuracy=0.981900000000001
+    ## Batch [400] Train-accuracy=0.982600000000003
+    ## [5] Train-accuracy=0.983000000000003
+    ## Batch [100] Train-accuracy=0.983399999999999
+    ## Batch [200] Train-accuracy=0.98405
+    ## Batch [300] Train-accuracy=0.985000000000001
+    ## Batch [400] Train-accuracy=0.985725000000003
+    ## [6] Train-accuracy=0.985952380952384
+    ## Batch [100] Train-accuracy=0.988999999999999
+    ## Batch [200] Train-accuracy=0.9876
+    ## Batch [300] Train-accuracy=0.988100000000001
+    ## Batch [400] Train-accuracy=0.988750000000003
+    ## [7] Train-accuracy=0.988880952380955
+    ## Batch [100] Train-accuracy=0.991999999999999
+    ## Batch [200] Train-accuracy=0.9912
+    ## Batch [300] Train-accuracy=0.990066666666668
+    ## Batch [400] Train-accuracy=0.990275000000003
     ## [8] Train-accuracy=0.990452380952384
     ## Batch [100] Train-accuracy=0.9937
     ## Batch [200] Train-accuracy=0.99235
@@ -174,12 +200,12 @@ data <- mx.symbol.Variable('data')
 conv1 <- mx.symbol.Convolution(data=data, kernel=c(5,5), num_filter=20)
 tanh1 <- mx.symbol.Activation(data=conv1, act_type="tanh")
 pool1 <- mx.symbol.Pooling(data=tanh1, pool_type="max",
-                           kernel=c(2,2), stride=c(2,2))
+                          kernel=c(2,2), stride=c(2,2))
 # second conv
 conv2 <- mx.symbol.Convolution(data=pool1, kernel=c(5,5), num_filter=50)
 tanh2 <- mx.symbol.Activation(data=conv2, act_type="tanh")
 pool2 <- mx.symbol.Pooling(data=tanh2, pool_type="max",
-                           kernel=c(2,2), stride=c(2,2))
+                          kernel=c(2,2), stride=c(2,2))
 # first fullc
 flatten <- mx.symbol.Flatten(data=pool2)
 fc1 <- mx.symbol.FullyConnected(data=flatten, num_hidden=500)
@@ -221,10 +247,10 @@ Start by training on the CPU first. Because this takes a bit time, we run it for
     mx.set.seed(0)
     tic <- proc.time()
     model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
-                                         ctx=device.cpu, num.round=1, array.batch.size=100,
-                                         learning.rate=0.05, momentum=0.9, wd=0.00001,
-                                         eval.metric=mx.metric.accuracy,
-                                         epoch.end.callback=mx.callback.log.train.metric(100))
+                                     ctx=device.cpu, num.round=1, array.batch.size=100,
+                                     learning.rate=0.05, momentum=0.9, wd=0.00001,
+                                     eval.metric=mx.metric.accuracy,
+                                       epoch.end.callback=mx.callback.log.train.metric(100))
  ```
 
  ```
@@ -252,10 +278,10 @@ Train on a GPU:
     mx.set.seed(0)
     tic <- proc.time()
     model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
-                                         ctx=device.gpu, num.round=5, array.batch.size=100,
-                                         learning.rate=0.05, momentum=0.9, wd=0.00001,
-                                         eval.metric=mx.metric.accuracy,
-                                         epoch.end.callback=mx.callback.log.train.metric(100))
+                                     ctx=device.gpu, num.round=5, array.batch.size=100,
+                                     learning.rate=0.05, momentum=0.9, wd=0.00001,
+                                     eval.metric=mx.metric.accuracy,
+                                       epoch.end.callback=mx.callback.log.train.metric(100))
  ```
 
  ```
@@ -307,7 +333,7 @@ Now, we can submit the result to Kaggle to see the improvement of our ranking!
     write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
  ```
 
-![](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/knitr/mnistCompetition-kaggle-submission.png)
+![](../../web-data/mxnet/knitr/mnistCompetition-kaggle-submission.png)
 
-
-<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
+##  Next Steps
+* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
