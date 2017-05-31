@@ -152,7 +152,7 @@ class DataParallelExecutorGroup(object):
             grad_req = 'null'
 
         data_shapes = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in data_shapes]
-        if label_shapes is not None:
+        if label_shapes:
             label_shapes = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in label_shapes]
 
         data_names = [x.name for x in data_shapes]
@@ -248,7 +248,7 @@ class DataParallelExecutorGroup(object):
         self.state_arrays = [[e.arg_dict[name] for e in self.execs]
                              for name in self.state_names]
 
-        if self.label_shapes is not None:
+        if self.label_shapes:
             self.label_arrays = [[(self.slices[i], e.arg_dict[name])
                                   for i, e in enumerate(self.execs)]
                                  for name, _ in self.label_shapes]
@@ -291,13 +291,13 @@ class DataParallelExecutorGroup(object):
 
         # calculate workload and bind executors
         self.data_layouts = self.decide_slices(data_shapes)
-        if label_shapes is not None:
+        if label_shapes:
             # call it to make sure labels has the same batch size as data
             self.label_layouts = self.decide_slices(label_shapes)
 
         for i in range(len(self.contexts)):
             data_shapes_i = self._sliced_shape(data_shapes, i, self.data_layouts)
-            if label_shapes is not None:
+            if label_shapes:
                 label_shapes_i = self._sliced_shape(label_shapes, i, self.label_layouts)
             else:
                 label_shapes_i = []
@@ -312,7 +312,7 @@ class DataParallelExecutorGroup(object):
         self.data_shapes = data_shapes
         self.label_shapes = label_shapes
         self.data_names = [i.name for i in self.data_shapes]
-        if label_shapes is not None:
+        if label_shapes:
             self.label_names = [i.name for i in self.label_shapes]
         self._collect_arrays()
 
@@ -573,11 +573,11 @@ class DataParallelExecutorGroup(object):
         shared_data_arrays = self.shared_data_arrays[i]
 
         input_shapes = dict(data_shapes)
-        if label_shapes is not None:
+        if label_shapes:
             input_shapes.update(dict(label_shapes))
 
         input_types = {x.name: x.dtype for x in data_shapes}
-        if label_shapes is not None:
+        if label_shapes:
             input_types.update({x.name: x.dtype for x in label_shapes})
 
         executor = self.symbol.simple_bind(ctx=context, grad_req=self.grad_req,
