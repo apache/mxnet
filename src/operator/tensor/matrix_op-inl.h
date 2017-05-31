@@ -28,7 +28,6 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   nnvm::Tuple<int> shape;
   bool reverse;
   DMLC_DECLARE_PARAMETER(ReshapeParam) {
-    int tmp[] = {0, 0};
     DMLC_DECLARE_FIELD(shape)
     .set_default(nnvm::Tuple<int>())
     .describe("The target shape");
@@ -36,7 +35,7 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
     .set_default(false)
     .describe("If true then the special values are inferred from right to left");
     DMLC_DECLARE_FIELD(target_shape)
-    .set_default(TShape(tmp, tmp + 2))
+    .set_default(TShape())
     .describe("(Deprecated! Use ``shape`` instead.) "
               "Target new shape. One and only one dim can be 0, "
               "in which case it will be inferred from the rest of dims");
@@ -53,8 +52,6 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
   const ReshapeParam& param_ = nnvm::get<ReshapeParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
   CHECK_EQ(out_attrs->size(), 1U);
-  CHECK_EQ(param_.target_shape.ndim() > 0 ||
-           param_.shape.ndim() > 0, true) << "targe_shape or shape must be present.";
   const TShape &dshape = (*in_attrs)[0];
   if (dshape.ndim() == 0) return false;
   if (param_.shape.ndim() != 0) {
@@ -138,9 +135,8 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
       << "Target shape size is different to source. "
       << "Target: " << oshape
       << "\nSource: " << dshape;
-    out_attrs->clear();
-    out_attrs->push_back(oshape);
-  } else {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  } else if (param_.target_shape.ndim()) {
     LOG(INFO) << "Using target_shape will be deprecated.";
     TShape oshape = param_.target_shape;
     int neg_count = 0;
@@ -164,8 +160,9 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
         << "Target shape size is different to source. "
         << "Target: " << param_.target_shape.Size()
         << "\nSource: " << dshape.Size();
-    out_attrs->clear();
-    out_attrs->push_back(oshape);
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  } else {
+    return (*out_attrs)[0].ndim();
   }
   return true;
 }
@@ -177,12 +174,11 @@ inline bool FlattenShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const TShape &dshape = (*in_attrs)[0];
   if (dshape.ndim() == 0) return false;
-  out_attrs->clear();
   uint32_t target_dim = 1;
   for (uint32_t i = 1; i < dshape.ndim(); ++i) {
     target_dim *= dshape[i];
   }
-  out_attrs->push_back(mshadow::Shape2(dshape[0], target_dim));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(dshape[0], target_dim));
   return true;
 }
 

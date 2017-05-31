@@ -9,6 +9,7 @@ import warnings
 
 from .. import context as ctx
 from .. import ndarray as nd
+from .. import symbol as _sym
 from .. import optimizer as opt
 
 from .executor_group import DataParallelExecutorGroup
@@ -57,6 +58,7 @@ class Module(BaseModule):
         self._work_load_list = work_load_list
 
         self._symbol = symbol
+        self._pred_symbol = _sym.Group([i for i in symbol if i.attr('__output__') != 'loss'])
 
         data_names = list(data_names) if data_names is not None else []
         label_names = list(label_names) if label_names is not None else []
@@ -371,16 +373,14 @@ class Module(BaseModule):
         self.binded = True
         self._grad_req = grad_req
 
-        if not for_training:
-            assert not inputs_need_grad
+        if not for_training and self._label_names and not label_shapes:
+            symbol = self._pred_symbol
+            self._data_shapes, self._label_shapes = _parse_data_desc(
+                self.data_names, [], data_shapes, [])
         else:
-            pass
-            # this is not True, as some module might not contains a loss function
-            # that consumes the labels
-            # assert label_shapes is not None
-
-        self._data_shapes, self._label_shapes = _parse_data_desc(
-            self.data_names, self.label_names, data_shapes, label_shapes)
+            symbol = self._symbol
+            self._data_shapes, self._label_shapes = _parse_data_desc(
+                self.data_names, self.label_names, data_shapes, label_shapes)
 
         if shared_module is not None:
             assert isinstance(shared_module, Module) and \
@@ -389,7 +389,7 @@ class Module(BaseModule):
         else:
             shared_group = None
 
-        self._exec_group = DataParallelExecutorGroup(self._symbol, self._context,
+        self._exec_group = DataParallelExecutorGroup(symbol, self._context,
                                                      self._work_load_list, self._data_shapes,
                                                      self._label_shapes, self._param_names,
                                                      for_training, inputs_need_grad,

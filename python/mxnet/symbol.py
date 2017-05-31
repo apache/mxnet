@@ -15,9 +15,9 @@ import numpy as _numpy
 from .base import _LIB, numeric_types
 from .base import c_array, c_str, mx_uint, py_str, string_types
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle, OpHandle
-from .base import check_call, MXNetError, _Null # pylint: disable=unused-import
+from .base import check_call, MXNetError, _Null  # pylint: disable=unused-import
 from .context import Context, cpu
-from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
+from .ndarray import NDArray, zeros as _nd_zeros, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .name import NameManager  # pylint: disable=unused-import
 from .executor import Executor
 from . import _symbol_internal as _internal
@@ -1638,7 +1638,7 @@ class Symbol(SymbolBase):
 
     # pylint: enable= no-member
 
-    def eval(self, ctx=cpu(), **kwargs):
+    def eval(self, ctx=None, **kwargs):
         """Evaluates a symbol given arguments.
 
         The `eval` method combines a call to `bind` (which returns an executor)
@@ -1674,6 +1674,8 @@ class Symbol(SymbolBase):
         evaluated on given args. When called on a single symbol (not a group),
         the result will be a list with one element.
         """
+        if ctx is None:
+            ctx = Context.default_ctx
         return self.bind(ctx, kwargs).forward()
 
     def reshape(self, shape):
