@@ -266,7 +266,7 @@ class Dense(Layer):
         super(Dense, self).__init__(**kwargs)
         with self.scope:
             self._op = symbol.CachedOp('FullyConnected', 3 if use_bias else 2,
-                                        num_hidden=units, no_bias=not use_bias)
+                                       num_hidden=units, no_bias=not use_bias)
             self.weight = self.params.get('weight', shape=(units, in_units),
                                           init=kernel_initializer)
             if use_bias:

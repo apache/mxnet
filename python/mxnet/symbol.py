@@ -16,7 +16,7 @@ from .base import _LIB, numeric_types
 from .base import c_array, c_str, mx_uint, py_str, string_types, mx_real_t
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle, OpHandle
 from .base import check_call, MXNetError, _Null  # pylint: disable=unused-import
-from .context import Context, cpu
+from .context import Context
 from .ndarray import NDArray, zeros as _nd_zeros, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .name import NameManager  # pylint: disable=unused-import
 from .executor import Executor

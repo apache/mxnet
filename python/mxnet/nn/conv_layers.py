@@ -1,4 +1,5 @@
 # coding: utf-8
+# pylint: disable= arguments-differ
 """Convolutional neural network layers."""
 from .layer import Layer
 from .. import symbol
