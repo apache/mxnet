@@ -338,7 +338,7 @@ class SGD(Optimizer):
         self.multi_precision = multi_precision
 
     def create_state(self, index, weight):
-        ret = (None, None)
+        ret = [None, None]
         if self.momentum != 0.0:
             ret[0] = zeros(weight.shape, weight.context, dtype=weight.dtype)
         if (self.multi_precision and
@@ -348,7 +348,7 @@ class SGD(Optimizer):
             warnings.warn("Using 16-bit precision accumulation in the optimizer. "
                           "Consider using multi_precision=True option of the "
                           "SGD optimizer")
-        return ret
+        return tuple(ret)
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
