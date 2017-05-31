@@ -29,6 +29,6 @@ def test_aux_init():
 
 
 if __name__ == '__main__':
-    test_default_init()
     test_variable_init()
+    test_default_init()
     test_aux_init()

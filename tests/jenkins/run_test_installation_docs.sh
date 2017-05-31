@@ -75,7 +75,7 @@ function retrieve_closest_index() {
         cur_num=${arr[${i}]}
         if [[ ${cur_num} -eq ${number} || ${cur_num} -gt ${number} ]]
         then
-            echo ${i}
+            echo "${i}"
             return
         fi
     done
@@ -124,7 +124,7 @@ function retrieve_commands() {
             fi
         done
     done
-    echo ${commands}
+    echo "${commands}"
 }
 
 # Sorts array of numbers.
@@ -139,26 +139,32 @@ function retrieve_commands() {
 function sort() {
     declare -a lineno_array=("${!1}")
     size=${#lineno_array[@]}
-    for (( i=1; i<=$(( $size-1)); i++ ))
+    for((i=1;i<size;i++))
     do
-        j=$i
-        while (( ${j} > 0 && ${lineno_array[$j-1]} > ${lineno_array[$j]} )); do
-            x=${lineno_array[$j-1]}
-            lineno_array[$j-1]=${lineno_array[$j]}
-            lineno_array[$j]=$x
-            j=$j-1
-        done
+       temp=${lineno_array[i]}
+       j=$((i-1))
+       while [ $temp -lt ${lineno_array[j]} ]
+       do
+          lineno_array[j+1]=${lineno_array[j]}
+          j=$(( $j-1 ))
+          if [ $j == -1 ]
+          then
+             break
+          fi
+       done
+       lineno_array[j+1]=$temp
     done
     printf "${lineno_array[*]}"
 }
 
-if (( $# < 1 )); then
+if (( $# < 2 )); then
     echo ""
-    echo "Usage: $(basename $0) FILE"
+    echo "Usage: $(basename $0) FILE ENV"
     echo ""
     exit 1
 fi
 FILE=${1}
+TASK=${2}
 
 # get all line numbers with "```" signifying start or end of source section and put them in an array
 SOURCE_REGEX="\`\`\`"
@@ -169,6 +175,10 @@ VIRTUALENV_LINENO_ALL=($(grep -n "<div class=\"virtualenv\">" "${FILE}" | cut -d
 PIP_LINENO_ALL=($(grep -n "<div class=\"pip\">" "${FILE}" | cut -d : -f 1))
 DOCKER_LINENO_ALL=($(grep -n "<div class=\"docker\">" "${FILE}" | cut -d : -f 1))
 BUILDFROMSOURCE_LINENO_ALL=($(grep -n "<div class=\"build-from-source\">" "${FILE}" | cut -d : -f 1))
+
+# validation instructions
+PYTHON_GPU_VALIDATION="import mxnet as mx; a = mx.nd.ones((2, 3), mx.gpu()); b = a * 2 + 1; b.asnumpy()"
+PYTHON_CPU_VALIDATION="import mxnet as mx; a = mx.nd.ones((2, 3)); b = a * 2 + 1; b.asnumpy()"
 
 # Given two line numbers, collects instruction sets for installing via Virtualenv, Pip, Docker, and source within the
 # two lines assuming there is one of each.
@@ -232,74 +242,139 @@ function set_instruction_set() {
         ${sorted_indexes[$end_buildfromsource_command_index]})
 }
 
+if [[ "${TASK}" == "linux" ]]
+then
 
-########################LINUX-PYTHON-CPU############################
-echo
-echo
-echo "### Testing LINUX-PYTHON-CPU ###"
-echo
-# range of all lines inside Linux-Python-CPU instructions
-LINUX_PYTHON_CPU_START_LINENO=$(grep -n "START - Linux Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
-LINUX_PYTHON_CPU_END_LINENO=$(grep -n "END - Linux Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
+    ########################LINUX-PYTHON-CPU############################
+    echo
+    echo
+    echo "### Testing LINUX-PYTHON-CPU ###"
+    echo
+    # range of all lines inside Linux-Python-CPU instructions
+    LINUX_PYTHON_CPU_START_LINENO=$(grep -n "START - Linux Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
+    LINUX_PYTHON_CPU_END_LINENO=$(grep -n "END - Linux Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
 
-set_instruction_set ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}
+    set_instruction_set ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINENO}
 
-echo
-echo "### Testing Virtualenv ###"
-echo "${virtualenv_commands}"
-echo
-docker run --rm ubuntu:14.04 bash -c "${virtualenv_commands}"
+    virtualenv_commands="${virtualenv_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
+    echo
+    echo "### Testing Virtualenv ###"
+    echo "${virtualenv_commands}"
+    echo
+    docker run --rm ubuntu:14.04 bash -c "${virtualenv_commands}"
 
-echo
-echo "### Testing Pip ###"
-echo "${pip_commands}"
-echo
-docker run --rm ubuntu:14.04 bash -c "${pip_commands}"
+    pip_commands="${pip_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
+    echo
+    echo "### Testing Pip ###"
+    echo "${pip_commands}"
+    echo
+    docker run --rm ubuntu:14.04 bash -c "${pip_commands}"
 
-echo
-echo "### Testing Docker ###"
-echo "${docker_commands}"
-echo
-eval ${docker_commands}
+    docker_img=$(echo "$docker_commands" | sed 's/.*docker pull \(.*\)/\1/' | sed 's/;.*//')
+    docker_commands="${docker_commands} docker run ${docker_img} python -c \"${PYTHON_CPU_VALIDATION}\""
+    echo
+    echo "### Testing Docker ###"
+    echo "${docker_commands}"
+    echo
+    eval "${docker_commands}"
 
-echo
-echo "### Testing Build From Source ###"
-echo "${buildfromsource_commands}"
-echo
-docker run --rm ubuntu:14.04 bash -c "${buildfromsource_commands}"
+    buildfromsource_commands="${buildfromsource_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
+    echo
+    echo "### Testing Build From Source ###"
+    echo "${buildfromsource_commands}"
+    echo
+    docker run --rm ubuntu:14.04 bash -c "${buildfromsource_commands}"
 
-#########################LINUX-PYTHON-GPU###########################
+    #########################LINUX-PYTHON-GPU###########################
 
-echo
-echo
-echo "### Testing LINUX-PYTHON-GPU ###"
-echo
-# range of all lines inside Linux-Python-GPU instructions
-LINUX_PYTHON_GPU_START_LINENO=$(grep -n "START - Linux Python GPU Installation Instructions" "${FILE}" | cut -d : -f 1)
-LINUX_PYTHON_GPU_END_LINENO=$(grep -n "END - Linux Python GPU Installation Instructions" "${FILE}" | cut -d : -f 1)
+    echo
+    echo
+    echo "### Testing LINUX-PYTHON-GPU ###"
+    echo
+    # range of all lines inside Linux-Python-GPU instructions
+    LINUX_PYTHON_GPU_START_LINENO=$(grep -n "START - Linux Python GPU Installation Instructions" "${FILE}" | cut -d : -f 1)
+    LINUX_PYTHON_GPU_END_LINENO=$(grep -n "END - Linux Python GPU Installation Instructions" "${FILE}" | cut -d : -f 1)
 
-set_instruction_set ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}
+    set_instruction_set ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}
 
-echo
-echo "### Testing Virtualenv ###"
-echo "${virtualenv_commands}"
-echo
-nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${virtualenv_commands}"
+    virtualenv_commands="${virtualenv_commands} python -c \"${PYTHON_GPU_VALIDATION}\""
+    echo
+    echo "### Testing Virtualenv ###"
+    echo "${virtualenv_commands}"
+    echo
+    nvidia-docker run --rm nvidia/cuda:8.0-cudnn5-devel-ubuntu14.04 bash -c "${virtualenv_commands}"
 
-echo
-echo "### Testing Pip ###"
-echo "${pip_commands}"
-echo
-nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${pip_commands}"
+    pip_commands="${pip_commands} python -c \"${PYTHON_GPU_VALIDATION}\""
+    echo
+    echo "### Testing Pip ###"
+    echo "${pip_commands}"
+    echo
+    nvidia-docker run --rm nvidia/cuda:8.0-cudnn5-devel-ubuntu14.04 bash -c "${pip_commands}"
 
-echo
-echo "### Testing Docker ###"
-echo "${docker_commands}"
-echo
-eval ${docker_commands}
+    docker_img=$(echo "$docker_commands" | sed 's/.*docker pull \(.*\)/\1/' | sed 's/;.*//')
+    docker_commands="${docker_commands} nvidia-docker run ${docker_img} python -c \"${PYTHON_GPU_VALIDATION}\""
+    echo
+    echo "### Testing Docker ###"
+    echo "${docker_commands}"
+    echo
+    eval "${docker_commands}"
 
-echo
-echo "### Testing Build From Source ###"
-echo "${buildfromsource_commands}"
-echo
-nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${buildfromsource_commands}"
+    buildfromsource_commands="${buildfromsource_commands} python -c \"${PYTHON_GPU_VALIDATION}\""
+    echo
+    echo "### Testing Build From Source ###"
+    echo "${buildfromsource_commands}"
+    echo
+    nvidia-docker run --rm nvidia/cuda:8.0-cudnn5-devel-ubuntu14.04 bash -c "${buildfromsource_commands}"
+
+else
+
+    #########################MACOS-PYTHON-CPU###########################
+    # Currently this section is invoked in ../travis/run_test.sh so this test can run on MacOS.
+    echo
+    echo
+    echo "### Testing MACOS-PYTHON-CPU ###"
+    echo
+    # range of all lines inside MacOS-Python-CPU instructions
+    MAC_PYTHON_CPU_START_LINENO=$(grep -n "START - MacOS Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
+    MAC_PYTHON_CPU_END_LINENO=$(grep -n "END - Mac OS Python CPU Installation Instructions" "${FILE}" | cut -d : -f 1)
+
+    set_instruction_set ${MAC_PYTHON_CPU_START_LINENO} ${MAC_PYTHON_CPU_END_LINENO}
+
+    if [[ "${TASK}" == "installation_packaged_test" ]]
+    then
+        virtualenv_commands="${virtualenv_commands} python -c \"import sys; print hasattr(sys, 'real_prefix'); ${PYTHON_CPU_VALIDATION}\"; deactivate;"
+        echo
+        echo "### Testing Virtualenv ###"
+        echo "${virtualenv_commands}"
+        echo
+        eval "${virtualenv_commands}"
+
+        pip_commands="${pip_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
+        echo
+        echo "### Testing Pip ###"
+        echo "${pip_commands}"
+        echo
+        eval "${pip_commands}"
+
+        exit
+    fi
+
+    ###COMMENTING THIS OUT FOR NOW AS TRAVIS DOES NOT SUPPORT DOCKER FOR MAC
+#    echo
+#    echo "### Testing Docker ###"
+#    echo "${docker_commands}"
+#    echo
+#    eval ${docker_commands}
+
+    if [[ "${TASK}" == "installation_source_test" ]]
+    then
+        buildfromsource_commands="${buildfromsource_commands} python -c \"${PYTHON_CPU_VALIDATION}\""
+        echo
+        echo "### Testing Build From Source ###"
+        echo "${buildfromsource_commands}"
+        echo
+        eval "${buildfromsource_commands}"
+
+        exit
+    fi
+fi

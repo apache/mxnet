@@ -104,7 +104,7 @@ def image_encode(args, i, item, q_out):
 
     if args.pass_through:
         try:
-            with open(fullpath) as fin:
+            with open(fullpath, 'rb') as fin:
                 img = fin.read()
             s = mx.recordio.pack(header, img)
             q_out.put((i, s, item))
