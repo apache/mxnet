@@ -329,7 +329,8 @@ class SGD(Optimizer):
     multi_precision: bool, optional
        Flag to control the internal precision of the optimizer.
        ``False`` results in using the same precision as the weights (default),
-       ``True`` makes internal 32-bit copy of the weights and applies gradients in 32-bit precision even if actual weights used in the model have lower precision.
+       ``True`` makes internal 32-bit copy of the weights and applies gradients
+                in 32-bit precision even if actual weights used in the model have lower precision.
     """
     def __init__(self, momentum=0.0, multi_precision=False, **kwargs):
         super(SGD, self).__init__(**kwargs)
@@ -341,7 +342,7 @@ class SGD(Optimizer):
         if self.momentum != 0.0:
             ret[0] = zeros(weight.shape, weight.context, dtype=weight.dtype)
         if (self.multi_precision and
-            (weight.dtype != numpy.float32 or weight.dtype != numpy.float64)):
+                (weight.dtype != numpy.float32 or weight.dtype != numpy.float64)):
             ret[1] = array(weight, ctx=weight.context, dtype=numpy.float32)
         if weight.dtype == numpy.float16 and not self.multi_precision:
             warnings.warn("Using 16-bit precision accumulation in the optimizer. "
