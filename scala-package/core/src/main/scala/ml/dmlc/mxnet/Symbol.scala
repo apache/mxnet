@@ -820,6 +820,17 @@ object Symbol {
   }
 
   /**
+   * Return a new symbol of given shape and type, filled with zeros.
+   * @param shape Shape of the new array.
+   * @param dtype The value type of the inner value, default to DType.Float32
+   * @return The created Symbol.
+   */
+  def zeros(shape: Shape, dtype: DType = DType.Float32, ctx: String = ""): Symbol = {
+    val kwargs = Map("shape" -> shape.toString, "dtype" -> dtype.toString, "ctx" -> ctx)
+    Symbol.createFromListedSymbols("_zeros")(Array.empty[Symbol], kwargs)
+  }
+
+  /**
    * Create a symbolic variable with specified name.
    * @param name Name of the variable.
    * @param attr Additional attributes to set on the variable.

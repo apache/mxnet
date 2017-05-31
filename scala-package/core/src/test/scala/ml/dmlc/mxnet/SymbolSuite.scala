@@ -71,4 +71,16 @@ class SymbolSuite extends FunSuite with BeforeAndAfterAll {
     val data2 = data.clone()
     assert(data.toJson === data2.toJson)
   }
+
+  test("symbol zeros") {
+    val zeros = Symbol.zeros(new Shape(2, 1))
+    val data = Symbol.Variable("data")
+    val mul = data * zeros
+    val exec = mul.bind(ctx = Context.cpu(), args = Map("data" -> NDArray.ones(2, 1)))
+    exec.forward()
+    assert(exec.outputs.length === 1)
+    val result = exec.outputs(0)
+    assert(result.shape === new Shape(2, 1))
+    assert(result.toArray === Array(0f, 0f))
+  }
 }

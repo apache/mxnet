@@ -15,22 +15,24 @@
  * limitations under the License.
  */
 
-package ml.dmlc.mxnet
+package ml.dmlc.mxnet.rnn
 
-object DType extends Enumeration {
-  type DType = Value
-  val Float32 = Value(0, "float32")
-  val Float64 = Value(1, "float64")
-  val Float16 = Value(2, "float16")
-  val UInt8 = Value(3, "uint8")
-  val Int32 = Value(4, "int32")
-  private[mxnet] def numOfBytes(dtype: DType): Int = {
-    dtype match {
-      case DType.UInt8 => 1
-      case DType.Int32 => 4
-      case DType.Float16 => 2
-      case DType.Float32 => 4
-      case DType.Float64 => 8
-    }
+import ml.dmlc.mxnet.DType
+import ml.dmlc.mxnet.DType.DType
+import ml.dmlc.mxnet.{Shape, Symbol}
+
+class RNNStateInfo(val shape: Shape,
+                   val layout: String,
+                   val kwargsOpt: Option[Map[String, Any]] = None)
+
+trait RNNStateInitFunction {
+  def invoke(name: String, stateInfo: RNNStateInfo = null): Symbol
+}
+
+class RNNStateInitFuncZeros extends RNNStateInitFunction {
+  override def invoke(name: String, stateInfo: RNNStateInfo): Symbol = {
+    val kwargs = stateInfo.kwargsOpt.getOrElse(Map.empty[String, Any])
+    val dtype = kwargs.getOrElse("dtype", DType.Float32).asInstanceOf[DType]
+    Symbol.zeros(stateInfo.shape, dtype)
   }
 }
