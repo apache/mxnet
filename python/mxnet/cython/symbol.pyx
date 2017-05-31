@@ -79,7 +79,7 @@ cdef NewSymbol(SymbolHandle handle):
     return sym
 
 
-def call_cached(cached_op, args, name=None):
+def invoke(cached_op, args, name=None):
     cdef SymbolHandle ret
     cdef vector[SymbolHandle] sym_args
     hint = cached_op.op.lower()

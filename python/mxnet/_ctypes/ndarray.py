@@ -81,7 +81,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
                 for i in range(num_output.value)]
 
 
-def call_cached(cached_op, args, out=None, name=None):  # pylint: disable=unused-argument
+def invoke(cached_op, args, out=None, name=None):  # pylint: disable=unused-argument
     """ctypes implementation of imperative invoke wrapper"""
     if out is not None:
         original_output = out

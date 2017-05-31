@@ -26,11 +26,12 @@ namespace mxnet {
 
 NDArray NDArray::Reshape(const TShape &shape) const {
   using namespace autograd;
-  CHECK_GE(shape_.Size(), shape.Size())
-      << "NDArray.Reshape: target shape size is different from current shape";
-  NDArray ret = *this;
-  ret.shape_ = shape;
   if (AutogradRuntime::Get()->IsTraining()) {
+    CHECK_GE(shape_.Size(), shape.Size())
+      << "NDArray.Reshape: target shape must have must have the same size as "
+      << "current shape when in train_section.";
+    NDArray ret = *this;
+    ret.shape_ = shape;
     // fake a Reshape op
     ret.entry_.clear();
     const nnvm::Op* op = nnvm::Op::Get("Reshape");
@@ -47,6 +48,10 @@ NDArray NDArray::Reshape(const TShape &shape) const {
       op, attrs, &inputs, &outputs);
     return outputs[0];
   } else {
+    CHECK_GE(shape_.Size(), shape.Size())
+      << "NDArray.Reshape: target shape size is larger current shape";
+    NDArray ret = *this;
+    ret.shape_ = shape;
     return ret;
   }
 }

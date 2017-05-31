@@ -230,12 +230,12 @@ def test_cached():
     data = mx.sym.var('data')
     weight = mx.sym.var('weight')
     bias = mx.sym.var('bias')
-    out = mx.sym.call_cached(op, [data, weight, bias], 'conv')
+    out = mx.sym.invoke(op, [data, weight, bias], 'conv')
     assert out.list_arguments() == ['data', 'weight', 'bias']
     assert out.list_outputs() == ['conv_output']
     with mx.name.Prefix('test_'):
-        assert mx.sym.call_cached(op, [data, weight, bias]).name == 'test_convolution0'
-        assert mx.sym.call_cached(op, [data, weight, bias]).name == 'test_convolution1'
+        assert mx.sym.invoke(op, [data, weight, bias]).name == 'test_convolution0'
+        assert mx.sym.invoke(op, [data, weight, bias]).name == 'test_convolution1'
 
 
 if __name__ == '__main__':

@@ -102,7 +102,7 @@ def _set_symbol_class(cls):
     _symbol_cls = cls
 
 
-def call_cached(cached_op, args, name=None):
+def invoke(cached_op, args, name=None):
     """Call cached symbolic operator"""
     ret = SymbolHandle()
     hint = cached_op.op.lower()

@@ -61,7 +61,7 @@ cdef NewArray(NDArrayHandle handle):
     return nd
 
 
-def call_cached(cached_op, args, out=None, name=None):
+def invoke(cached_op, args, out=None, name=None):
     """ctypes implementation of imperative invoke wrapper"""
     cdef vector[NDArrayHandle] ndvars
     cdef vector[NDArrayHandle] output_vars

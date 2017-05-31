@@ -29,18 +29,18 @@ from .symbol_doc import _build_doc
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from ._ctypes.symbol import SymbolBase, _set_symbol_class
-        from ._ctypes.symbol import CachedOp, call_cached, _symbol_creator  # pylint: disable=unused-import
+        from ._ctypes.symbol import CachedOp, invoke, _symbol_creator  # pylint: disable=unused-import
     elif _sys.version_info >= (3, 0):
         from ._cy3.symbol import SymbolBase, _set_symbol_class
-        from ._cy3.symbol import CachedOp, call_cached, _symbol_creator  # pylint: disable=unused-import
+        from ._cy3.symbol import CachedOp, invoke, _symbol_creator  # pylint: disable=unused-import
     else:
         from ._cy2.symbol import SymbolBase, _set_symbol_class
-        from ._cy2.symbol import CachedOp, call_cached, _symbol_creator  # pylint: disable=unused-import
+        from ._cy2.symbol import CachedOp, invoke, _symbol_creator  # pylint: disable=unused-import
 except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from ._ctypes.symbol import SymbolBase, _set_symbol_class
-    from ._ctypes.symbol import CachedOp, call_cached, _symbol_creator  # pylint: disable=unused-import
+    from ._ctypes.symbol import CachedOp, invoke, _symbol_creator  # pylint: disable=unused-import
 
 _GRAD_REQ_MAP = {'null': 0, 'write': 1, 'add': 3}
 
