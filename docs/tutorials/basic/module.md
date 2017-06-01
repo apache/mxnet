@@ -80,7 +80,7 @@ mod = mx.mod.Module(symbol=net,
 
 ## Intermediate-level Interface
 
-We have created module. Now let us see how to run training and inference using module's intermediate-level APIs. This API gives developers flexibility to do step-by-step
+We have created module. Now let us see how to run training and inference using module's intermediate-level APIs. These APIs give developers flexibility to do step-by-step
 computation by running `forward` and `backward` passes. It's also useful for debugging.
 
 To train a module, we need to perform following steps:
