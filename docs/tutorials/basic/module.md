@@ -8,9 +8,16 @@ steps. All this can be quite daunting to both newcomers as well as experienced
 developers.
 
 Luckily, MXNet modularizes commonly used code for training and inference in
-the `module` (`mod` for short) package. `module` provides both a
-high-level and intermediate-level interfaces for executing predefined networks.
+the `module` (`mod` for short) package. `Module` provides both high-level and
+intermediate-level interfaces for executing predefined networks.
 We will discuss and show the usage of both interfaces in this tutorial.
+
+## Prerequisites
+
+To complete this tutorial, you need:
+
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- [Python](https://www.python.org/downloads/)
 
 ## Preliminary
 
@@ -100,15 +107,16 @@ If we do not need the prediction outputs, but just need to evaluate on a test
 set, we can call the `score()` function. It runs prediction in the input validation
 dataset and evaluates the performance according to the given input metric.
 
-Some of the different metrics which can be used are `acc`(accuracy), `top_k_acc`(top-k-accuracy),
-`F1`, `RMSE`, `mse`(MSE), `MAE`, `ce`(CrossEntropy). To learn more about the metrics,
-visit [Evaluation metric](http://mxnet.io/api/python/model.html#evaluation-metric-api-reference).
-
 It can be used as follows:
 
 ```python
-mod.score(val_iter, ['mse', 'acc'])
+score = mod.score(val_iter, ['mse', 'acc'])
+print "Accuracy score is ", score
 ```
+
+Some of the other metrics which can be used are `top_k_acc`(top-k-accuracy),
+`F1`, `RMSE`, `MSE`, `MAE`, `ce`(CrossEntropy). To learn more about the metrics,
+visit [Evaluation metric](http://mxnet.io/api/python/model.html#evaluation-metric-api-reference).
 
 One can vary number of epochs, learning_rate, optimizer parameters to change the score
 and tune these parameters to get best score.
