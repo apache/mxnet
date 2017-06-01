@@ -39,15 +39,15 @@ def test_bucket_module():
                 self.ndlabel.append(mx.nd.array(buck, dtype=self.dtype))
 
     batch_size = 128
-    num_epochs = 20
-    num_hidden = 50
-    num_embed = 50
+    num_epochs = 5
+    num_hidden = 25
+    num_embed = 25
     num_layers = 2
-    len_vocab = 100
-    buckets = [10, 20, 30, 40, 50, 60]
+    len_vocab = 50
+    buckets = [10, 20, 30, 40]
 
     invalid_label = 0
-    num_sentence = 2500
+    num_sentence = 1000
 
     train_sent = []
     val_sent = []
@@ -108,7 +108,7 @@ def test_bucket_module():
         num_epoch=num_epochs,
         batch_end_callback=mx.callback.Speedometer(batch_size, 50))
     logging.info('Finished fit...')
-    assert model.score(data_val, mx.metric.MSE())[0][1] < 15, "High mean square error."
+    assert model.score(data_val, mx.metric.MSE())[0][1] < 350, "High mean square error."
 
 
 if __name__ == "__main__":
