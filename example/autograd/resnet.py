@@ -114,7 +114,7 @@ class ResnetV1(nn.Layer):
             layer.add(block(filters, 1, False, in_filters=filters))
         return layer
 
-    def simple_forward(self, domain, x):
+    def generic_forward(self, domain, x):
         x = self.conv0(x)
         if not self._thumbnail:
             x = self.bn0(x)
