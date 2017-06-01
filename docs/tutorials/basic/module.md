@@ -78,14 +78,70 @@ mod = mx.mod.Module(symbol=net,
                     label_names=['softmax_label'])
 ```
 
+## Intermediate-level Interface
+
+We have created module. Now we can use module's intermediate-level APIs to do
+training and inference. This API gives developers flexibility to do step-by-step
+computation by running `forward` and `backward` passes. It's also useful for debugging.
+
+To train a module, we need to perform following steps:
+
+- `bind` : Prepares environment for the computation by allocating memory.
+- `init_params` : Assigns and initializes parameters.
+- `init_optimizer` : Initializes optimizers. Defaults to `sgd`.
+- `metric.create` : Creates evaluation metric from input metric name.
+- `forward` : Forward computation.
+- `update_metric` : Evaluates and accumulates evaluation metric on outputs of the last forward computation.
+- `backward` : Backward computation.
+- `update` : Updates parameters according to the installed optimizer and the gradients computed in the previous forward-backward batch.
+
+This can be used as follows:
+
+```python
+# allocate memory given the input data and label shapes
+mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
+# initialize parameters by uniform random numbers
+mod.init_params(initializer=mx.init.Uniform(scale=.1))
+# use SGD with learning rate 0.1 to train
+mod.init_optimizer(optimizer='sgd', optimizer_params=(('learning_rate', 0.1), ))
+# use accuracy as the metric
+metric = mx.metric.create('acc')
+# train 5 epochs, i.e. going over the data iter one pass
+for epoch in range(5):
+    train_iter.reset()
+    metric.reset()
+    for batch in train_iter:
+        mod.forward(batch, is_train=True)       # compute predictions
+        mod.update_metric(metric, batch.label)  # accumulate prediction accuracy
+        mod.backward()                          # compute gradients
+        mod.update()                            # update parameters
+    print('Epoch %d, Training %s' % (epoch, metric.get()))
+```
+
+To learn more about these APIs, visit [Module API](http://mxnet.io/api/python/module.html).
+
 ## High-level Interface
 
 ### Train
 
-Module provides high-level APIs for training, predicting and evaluating for
-user convenience. To fit a module, simply call the [fit API](http://mxnet.io/api/python/module.html#mxnet.module.BaseModule.fit) as follows:
+Module also provides high-level APIs for training, predicting and evaluating for
+user convenience. Instead of doing all the steps mentioned in the intermediate-level
+APIs section, one can simply call `fit` function and it will internally do all
+those steps.
+
+To fit a module, call the [fit API](http://mxnet.io/api/python/module.html#mxnet.module.BaseModule.fit) as follows:
 
 ```python
+# resetting train_iter as it was used above
+train_iter.reset()
+
+# create a module
+mod = mx.mod.Module(symbol=net,
+                    context=mx.cpu(),
+                    data_names=['data'],
+                    label_names=['softmax_label'])
+
+# fit the module
 mod.fit(train_iter,
         eval_data=val_iter,
         optimizer='sgd',
@@ -161,52 +217,5 @@ mod.fit(train_iter,
         aux_params=aux_params,
         begin_epoch=3)
 ```
-
-## Intermediate-level Interface
-
-We can also use module's intermediate-level APIs to do training and inference.
-This API gives developers flexibility to do step-by-step computation by running
-`forward` and `backward` passes. It's also useful for debugging.
-
-To train a module, we need to perform following steps:
-
-- `bind` : Prepares environment for the computation by allocating memory.
-- `init_params` : Assigns and initializes parameters.
-- `init_optimizer` : Initializes optimizers. Defaults to `sgd`.
-- `metric.create` : Creates evaluation metric from input metric name.
-- `forward` : Forward computation.
-- `update_metric` : Evaluates and accumulates evaluation metric on outputs of the last forward computation.
-- `backward` : Backward computation.
-- `update` : Updates parameters according to the installed optimizer and the gradients computed in the previous forward-backward batch.
-
-This can be used as follows:
-
-```python
-# create module
-mod = mx.mod.Module(symbol=net)
-# allocate memory given the input data and label shapes
-mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
-# initialize parameters by uniform random numbers
-mod.init_params(initializer=mx.init.Uniform(scale=.1))
-# use SGD with learning rate 0.1 to train
-mod.init_optimizer(optimizer='sgd', optimizer_params=(('learning_rate', 0.1), ))
-# use accuracy as the metric
-metric = mx.metric.create('acc')
-# train 5 epochs, i.e. going over the data iter one pass
-for epoch in range(5):
-    train_iter.reset()
-    metric.reset()
-    for batch in train_iter:
-        mod.forward(batch, is_train=True)       # compute predictions
-        mod.update_metric(metric, batch.label)  # accumulate prediction accuracy
-        mod.backward()                          # compute gradients
-        mod.update()                            # update parameters
-    print('Epoch %d, Training %s' % (epoch, metric.get()))
-```
-
-Instead of doing all these above steps one can simply use module's intermediate-level
-APIs by simply calling `fit` function and it will internally do all these steps.
-
-To learn more about these APIs, visit [Module API](http://mxnet.io/api/python/module.html).
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
