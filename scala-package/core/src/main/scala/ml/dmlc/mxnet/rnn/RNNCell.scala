@@ -49,14 +49,14 @@ class RNNParams(private val prefix: String = "") {
  * @param prefix prefix for name of layers (and name of weight if params is None)
  * @param inputParams container for weight sharing between cells. created if None.
  */
-abstract class BaseRNNCell(prefix: String = "",
+abstract class BaseRNNCell(protected val prefix: String = "",
                            inputParams: Option[RNNParams],
-                           private val numHidden: Int) {
+                           protected val numHidden: Int) {
   private var (myParams, ownParams) =
     inputParams.map(p => (p, false)).getOrElse((new RNNParams(prefix), true))
   private var modified = false
   private var initCounter = -1
-  private var counter = -1
+  protected var counter = -1
   reset()
 
   private def normalizeSequence(inputs: Symbol*)(length: Int, layout: String, merge: Boolean,
@@ -240,5 +240,50 @@ abstract class BaseRNNCell(prefix: String = "",
   }
 }
 
-class RNNCell {
+/**
+ * Simple recurrent neural network cell
+ * @param numHidden number of units in output symbol
+ * @param activation type of activation function
+ * @param prefix prefix for name of layers (and name of weight if params is None)
+ * @param params container for weight sharing between cells. created if None.
+ */
+class RNNCell(override protected val numHidden: Int,
+              protected val activation: String = "tanh",
+              override protected val prefix: String = "rnn_",
+              params: Option[RNNParams]) extends BaseRNNCell(prefix, params, numHidden) {
+  require(params != None)
+  private val paramsInst = params.get
+  private val iW = paramsInst.get("i2h_weight")
+  private val iB = paramsInst.get("i2h_bias")
+  private val hW = paramsInst.get("h2h_weight")
+  private val hB = paramsInst.get("h2h_bias")
+
+  /**
+   * Construct symbol for one step of RNN.
+   * @param inputs : sym.Variable input symbol, 2D, batch * num_units
+   * @param states : sym.Variable state from previous step or begin_state().
+   * @return  output symbol & state to next step of RNN.
+   */
+  override def apply(inputs: Symbol, states: IndexedSeq[Symbol]): (Symbol, IndexedSeq[Symbol]) = {
+    counter += 1
+    val name = s"${prefix}t${counter}_"
+
+    val i2h = Symbol.FullyConnected(name = s"${name}i2h")()(
+      Map("data" -> inputs, "weight" -> iW, "bias" -> iB, "num_hidden" -> numHidden))
+    val h2h = Symbol.FullyConnected(name = s"${name}h2h")()(
+      Map("data" -> states(0), "weight" -> hW, "bias" -> hB, "num_hidden" -> numHidden))
+    val output: Symbol = Symbol.Activation(name = s"${name}out")(i2h + h2h)(
+      Map("act_type" -> activation))
+    (output, IndexedSeq(output))
+  }
+
+  override def gateNames: IndexedSeq[String] = {
+    IndexedSeq("")
+  }
+
+  // shape and layout information of states
+  override def stateInfo: IndexedSeq[Option[RNNStateInfo]] = {
+    val state = new RNNStateInfo(shape = Shape(0, numHidden), layout = "NC")
+    IndexedSeq(Option(state))
+  }
 }
