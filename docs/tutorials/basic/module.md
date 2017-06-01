@@ -10,12 +10,14 @@ developers.
 Luckily, MXNet modularizes commonly used code for training and inference in
 the `module` (`mod` for short) package. `module` provides both a
 high-level and intermediate-level interfaces for executing predefined networks.
+We will discuss and show the usage of both interfaces in this tutorial.
 
 ## Preliminary
 
 In this tutorial we will demonstrate `module` usage by training a
 [Multilayer Perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron) (MLP)
-on the [UCI letter recognition](https://archive.ics.uci.edu/ml/datasets/letter+recognition) dataset.
+on the [UCI letter recognition](https://archive.ics.uci.edu/ml/datasets/letter+recognition)
+dataset.
 
 The following code downloads the dataset and creates an 80:20 train:test
 split. It also initializes a training data iterator to return a batch of 32
@@ -48,9 +50,7 @@ net = mx.sym.SoftmaxOutput(net, name='softmax')
 mx.viz.plot_network(net)
 ```
 
-## High-level Interface
-
-### Creating a Module
+## Creating a Module
 
 Now we are ready to introduce module. The commonly used module class is
 `Module`. We can construct a module by specifying the following parameters:
@@ -70,10 +70,12 @@ mod = mx.mod.Module(symbol=net,
                     label_names=['softmax_label'])
 ```
 
-### Train, Predict, and Evaluate
+## High-level Interface
 
-Module provides high-level APIs for training, predicting and evaluating.
-To fit a module, simply call the `fit` function.
+### Train
+
+Module provides high-level APIs for training, predicting and evaluating for
+user convenience. To fit a module, simply call the `fit` function.
 
 ```python
 mod.fit(train_iter,
@@ -84,7 +86,9 @@ mod.fit(train_iter,
         num_epoch=8)
 ```
 
-To predict with module, simply call `predict()`. It will collect and
+### Predict and Evaluate
+
+To predict with module, we can call `predict()`. It will collect and
 return all the prediction results.
 
 ```python
@@ -93,11 +97,21 @@ assert y.shape == (4000, 26)
 ```
 
 If we do not need the prediction outputs, but just need to evaluate on a test
-set, we can call the `score()` function:
+set, we can call the `score()` function. It runs prediction in the input validation
+dataset and evaluates the performance according to the given input metric.
+
+Some of the different metrics which can be used are `acc`(accuracy), `top_k_acc`(top-k-accuracy),
+`F1`, `RMSE`, `mse`(MSE), `MAE`, `ce`(CrossEntropy). To learn more about the metrics,
+visit [Evaluation metric](http://mxnet.io/api/python/model.html#evaluation-metric-api-reference).
+
+It can be used as follows:
 
 ```python
 mod.score(val_iter, ['mse', 'acc'])
 ```
+
+One can vary number of epochs, learning_rate, optimizer parameters to change the score
+and tune these parameters to get best score.
 
 ### Save and Load
 
@@ -141,15 +155,27 @@ mod.fit(train_iter,
 
 ## Intermediate-level Interface
 
-We already saw how to use module for basic training and inference. Now we are
-going to see a more flexible usage of module. Instead of calling
-the high-level `fit` and `predict` APIs, one can write a training program with the intermediate-level APIs
-`forward` and `backward`.
+We can also use module's intermediate-level APIs to do training and inference.
+This API gives developers flexibility to do step-by-step computation by running
+`forward` and `backward` passes. It's also useful for debugging.
+
+To train a module, we need to perform following steps:
+
+- `bind` : Prepares environment for the computation by allocating memory.
+- `init_params` : Assigns and initializes parameters.
+- `init_optimizer` : Initializes optimizers. Defaults to `sgd`.
+- `metric.create` : Creates evaluation metric from input metric name.
+- `forward` : Forward computation.
+- `update_metric` : Evaluates and accumulates evaluation metric on outputs of the last forward computation.
+- `backward` : Backward computation.
+- `update` : Updates parameters according to the installed optimizer and the gradients computed in the previous forward-backward batch.
+
+This can be used as follows:
 
 ```python
 # create module
 mod = mx.mod.Module(symbol=net)
-# allocate memory by given the input data and label shapes
+# allocate memory given the input data and label shapes
 mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
 # initialize parameters by uniform random numbers
 mod.init_params(initializer=mx.init.Uniform(scale=.1))
@@ -168,5 +194,10 @@ for epoch in range(5):
         mod.update()                            # update parameters
     print('Epoch %d, Training %s' % (epoch, metric.get()))
 ```
+
+Instead of doing all these above steps one can simply use module's intermediate-level
+APIs by simply calling `fit` function and it will internally do all these steps.
+
+To learn more about these APIs, visit [Module API](http://mxnet.io/api/python/module.html).
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
