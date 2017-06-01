@@ -38,11 +38,11 @@ function Base.copy(self :: SymbolicNode)
   Base.deepcopy(self)
 end
 
-@compat function (self::SymbolicNode)(args :: SymbolicNode...)
+function (self::SymbolicNode)(args :: SymbolicNode...)
   s = deepcopy(self)
   _compose!(s, args...)
 end
-@compat function (self::SymbolicNode)(;kwargs...)
+function (self::SymbolicNode)(;kwargs...)
   s = deepcopy(self)
   _compose!(s; kwargs...)
 end
@@ -217,7 +217,7 @@ function get_name(self :: mx.SymbolicNode)
     success = Ref(0)
     @mxcall(:MXSymbolGetName, (MX_handle, Ref{char_p}, Ref{Int}), self.handle.value, name, success)
     @assert success[] != -1
-    return Symbol(unsafe_wrap(String, name[]))
+    return Symbol(unsafe_string(name[]))
 end
 
 """
@@ -435,7 +435,8 @@ function Base.getindex(self :: SymbolicNode, idx :: Int)
   return SymbolicNode(MX_SymbolHandle(ref_hdr[]))
 end
 
-import Base: +, .+
+import Base.broadcast
+import Base: +
 function +(self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
   ret = self
   for arg in args
@@ -447,34 +448,35 @@ function +(self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
   end
   ret
 end
-function .+(self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
+@compatdot function Base.broadcast(::typeof(+), self::SymbolicNode, args::Union{SymbolicNode,Real}...)
   +(self, args...)
 end
 function +(s1 :: Real, self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
   +(self, s1, args...)
 end
-function .+(s1 :: Real, self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
+@compatdot function Base.broadcast(::typeof(+), s1::Real, self::SymbolicNode,
+                                   args::Union{SymbolicNode,Real}...)
   +(self, s1, args...)
 end
 
-import Base: -, .-
+import Base: -
 function -(self :: SymbolicNode, arg :: SymbolicNode)
   _Minus(self, arg)
 end
-function .-(self :: SymbolicNode, arg :: SymbolicNode)
+@compatdot function Base.broadcast(::typeof(-), self :: SymbolicNode, arg :: SymbolicNode)
   -(self, arg)
 end
 function -(self :: SymbolicNode, arg :: Real)
   _MinusScalar(self, scalar=MX_float(arg))
 end
-function .-(self :: SymbolicNode, arg :: Real)
+@compatdot function Base.broadcast(::typeof(-), self :: SymbolicNode, arg :: Real)
   -(self, arg)
 end
 
 function -(arg :: Real, self :: SymbolicNode)
   _RMinusScalar(self, scalar=arg)
 end
-function .-(arg :: Real, self :: SymbolicNode)
+@compatdot function Base.broadcast(::typeof(-), arg :: Real, self :: SymbolicNode)
   -(arg, self)
 end
 
@@ -482,8 +484,8 @@ function -(self :: SymbolicNode)
   -(0, self)
 end
 
-import Base: .*, *
-function .*(self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
+import Base: *
+@compatdot function Base.broadcast(::typeof(*), self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
   ret = self
   for arg in args
     if isa(arg, SymbolicNode)
@@ -494,8 +496,9 @@ function .*(self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
   end
   ret
 end
-function .*(arg :: Real, self :: SymbolicNode, args :: Union{SymbolicNode,Real}...)
-  .*(self, arg, args...)
+@compatdot function Base.broadcast(::typeof(*), arg :: Real, self :: SymbolicNode,
+                                   args :: Union{SymbolicNode,Real}...)
+  broadcast(*, self, arg, args...)
 end
 function *(arg :: Real, self :: SymbolicNode)
   _MulScalar(self, scalar=arg)
@@ -504,32 +507,32 @@ function *(self :: SymbolicNode, arg :: Real)
   *(arg, self)
 end
 
-import Base: ./, /
-function ./(self :: SymbolicNode, arg :: SymbolicNode)
+import Base: /
+@compatdot function Base.broadcast(::typeof(/), self :: SymbolicNode, arg :: SymbolicNode)
   _Div(self, arg)
 end
-function ./(self :: SymbolicNode, arg :: Real)
+@compatdot function Base.broadcast(::typeof(/), self :: SymbolicNode, arg :: Real)
   _DivScalar(self, scalar=MX_float(arg))
 end
 function /(self :: SymbolicNode, arg :: Real)
-  ./(self, arg)
+  self ./ arg
 end
 function /(arg :: Real, self :: SymbolicNode)
   _RDivScalar(self, scalar=arg)
 end
-function ./(arg :: Real, self :: SymbolicNode)
+@compatdot function Base.broadcast(::typeof(/), arg :: Real, self :: SymbolicNode)
   _RDivScalar(self, scalar=arg)
 end
 
-import Base: .^, ^
-function .^(self :: SymbolicNode, pow :: SymbolicNode)
+import Base: ^
+@compatdot function Base.broadcast(::typeof(^), self :: SymbolicNode, pow :: SymbolicNode)
   _Power(self, pow)
 end
-function .^(self :: SymbolicNode, pow :: AbstractFloat)
+@compatdot function Base.broadcast(::typeof(^), self :: SymbolicNode, pow :: AbstractFloat)
   _PowerScalar(self, scalar=pow)
 end
 function ^(self :: SymbolicNode, pow :: AbstractFloat)
-  .^(self, pow)
+  self .^ pow
 end
 
 function _compose!(node :: SymbolicNode; kwargs...)
@@ -750,26 +753,31 @@ end
 # Utility macros to chain up symbols
 ################################################################################
 macro chain(layers)
-  exprs = []
-  last_layer = nothing
-  function _chain_layer(layer, last_layer)
-    if isa(last_layer, Void)
-      esc(layer)
-    else
-      @assert(isa(layer, Expr) && layer.head == :call, "Do not know how to chain up $layer")
-      return Expr(:call, esc(layer.args[1]), last_layer, map(esc, layer.args[2:end])...)
+    exprs = []
+    last_layer = nothing
+
+    function _chain_layer(layer, last_layer)
+        if isa(last_layer, Void)
+            return esc(layer)
+        else
+            if @capture(layer, f_(x__))
+                return :($f($last_layer, $(x...)))
+            else
+                throw(AssertionError("$layer is not a valid function call and cannot be chained."))
+            end
+        end
     end
-  end
-  while true
-    if layers.head == :(=>)
-      new_layer = gensym()
-      push!(exprs, :($new_layer = $(_chain_layer(layers.args[1], last_layer))))
-      last_layer = new_layer
-      layers = layers.args[2]
-    else
-      push!(exprs, _chain_layer(layers, last_layer))
-      break
+
+    while true
+        if @capture(layers, l1_=>l2_)
+            new_layer = gensym()
+            push!(exprs, :($new_layer = $(_chain_layer(l1, last_layer))))
+            last_layer = new_layer
+            layers = l2
+        else
+            push!(exprs, _chain_layer(layers, last_layer))
+            break
+        end
     end
-  end
-  return Expr(:block, exprs...)
+    Expr(:block, exprs...)
 end

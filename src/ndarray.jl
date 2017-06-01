@@ -1,7 +1,7 @@
 # All the types supported by mshadow.
-typealias DType Union{Float32, Float64, Float16, UInt8, Int32}
+const DType = Union{Float32, Float64, Float16, UInt8, Int32}
 @enum TypeFlag kFloat32 kFloat64 kFloat16 kUint8 kInt32
-typealias DEFAULT_DTYPE Float32
+const DEFAULT_DTYPE = Float32
 
 function toTypeFlag{T <: DType}(:: Type{T})
   if T == Float32
@@ -300,7 +300,6 @@ function eltype{T <: Union{NDArray, MX_NDArrayHandle}}(arr :: T)
 end
 
 
-import Base: slice
 """
     slice(arr :: NDArray, start:stop)
 
@@ -532,7 +531,8 @@ function add_to!(dst :: NDArray, args :: Union{Real, NDArray}...)
   return dst
 end
 
-import Base: +, .+
+import Base.broadcast
+import Base: +
 
 """
     +(args...)
@@ -546,14 +546,15 @@ function +(arg0 :: NDArray, args :: Union{Real, NDArray}...)
   ret = copy(arg0, context(arg0))
   add_to!(ret, args...)
 end
-function .+(arg0 :: NDArray, args :: Union{Real, NDArray}...)
+@compatdot function Base.broadcast(::typeof(+), arg0 :: NDArray, args :: Union{Real, NDArray}...)
   +(arg0, args...)
 end
 function +(arg0 :: Real, arg1 :: NDArray, args :: Union{Real, NDArray}...)
   +(arg1, arg0, args...)
 end
-function .+(arg0 :: Real, arg1 :: NDArray, args :: Union{Real, NDArray}...)
-  .+(arg1, arg0, args...)
+@compatdot function Base.broadcast(::typeof(+), arg0 :: Real, arg1 :: NDArray,
+                                   args :: Union{Real, NDArray}...)
+  broadcast(+, arg1, arg0, args...)
 end
 
 """
@@ -570,7 +571,7 @@ function sub_from!(dst :: NDArray, arg :: Union{Real, NDArray})
   end
 end
 
-import Base: -, .-
+import Base: -
 
 """
     -(arg0, arg1)
@@ -584,7 +585,7 @@ function -(arg0 :: NDArray, arg1 :: Union{Real, NDArray})
   ret = copy(arg0, context(arg0))
   sub_from!(ret, arg1)
 end
-function .-(arg0 :: NDArray, arg1 :: Union{Real, NDArray})
+@compatdot function Base.broadcast(::typeof(-), arg0 :: NDArray, arg1 :: Union{Real, NDArray})
   -(arg0, arg1)
 end
 function -(arg0 :: Real, arg1 :: NDArray)
@@ -592,7 +593,7 @@ function -(arg0 :: Real, arg1 :: NDArray)
   add_to!(ret, arg0)
   return ret
 end
-function .-(arg0 :: Real, arg1 :: NDArray)
+@compatdot function Base.broadcast(::typeof(-), arg0 :: Real, arg1 :: NDArray)
   -(arg0, arg1)
 end
 
@@ -616,19 +617,19 @@ function mul_to!(dst :: NDArray, arg :: Union{Real, NDArray})
   return dst
 end
 
-import Base: .*, *
+import Base: *
 
 """
     .*(arg0, arg1)
 
 Elementwise multiplication of `arg0` and `arg`, could be either scalar or `NDArray`.
 """
-function .*(arg0 :: NDArray, arg :: Union{Real, NDArray})
+@compatdot function Base.broadcast(::typeof(*), arg0 :: NDArray, arg :: Union{Real, NDArray})
   ret = copy(arg0, context(arg0))
   mul_to!(ret, arg)
 end
-function .*(arg0 :: Real, arg :: NDArray)
-  .*(arg, arg0)
+@compatdot function Base.broadcast(::typeof(*), arg0 :: Real, arg :: NDArray)
+  arg .* arg0
 end
 
 """
@@ -659,13 +660,13 @@ function div_from!(dst :: NDArray, arg :: Union{Real, NDArray})
   end
 end
 
-import Base: ./, /
+import Base: /
 """
     ./(arg0 :: NDArray, arg :: Union{Real, NDArray})
 
 Elementwise dividing an `NDArray` by a scalar or another `NDArray` of the same shape.
 """
-function ./(arg0 :: NDArray, arg :: Union{Real, NDArray})
+@compatdot function Base.broadcast(::typeof(/), arg0 :: NDArray, arg :: Union{Real, NDArray})
   ret = copy(arg0, context(arg0))
   div_from!(ret, arg)
 end
@@ -676,7 +677,7 @@ end
 Divide an `NDArray` by a scalar. Matrix division (solving linear systems) is not implemented yet.
 """
 function /(arg0 :: NDArray, arg :: Real)
-  ./(arg0, arg)
+  arg0 ./ arg
 end
 
 
@@ -1063,7 +1064,8 @@ macro _import_ndarray_functions()
 
     func_name = Symbol(name)
     expr = quote
-      $(isdefined(Base, func_name) ? :(import Base.$func_name) : :())
+      # TODO the explicit exclusion of take will no longer be necessary when it is removed from Base
+      $((isdefined(Base, func_name) && func_name ≠ :take)? :(import Base.$func_name) : :())
       $func_def
       @doc $desc ->
       $func_def2

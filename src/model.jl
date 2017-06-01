@@ -3,7 +3,7 @@
 
 The abstract super type of all models in MXNet.jl.
 """
-abstract AbstractModel
+@compat abstract type AbstractModel end
 
 """
     FeedForward

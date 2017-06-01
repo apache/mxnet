@@ -6,12 +6,12 @@ end
 ################################################################################
 # Common types used in MXNet API
 ################################################################################
-typealias MX_uint Cuint
-typealias MX_float Cfloat
-typealias MX_handle Ptr{Void}
+const MX_uint = Cuint
+const MX_float = Cfloat
+const MX_handle = Ptr{Void}
 
-typealias char_p Ptr{UInt8}
-typealias char_pp Ptr{char_p}
+const char_p = Ptr{UInt8}
+const char_pp = Ptr{char_p}
 
 ################################################################################
 # Initialization and library API entrance

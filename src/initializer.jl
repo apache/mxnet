@@ -15,7 +15,7 @@ Or, if full behavior customization is needed, override the following function
 
     init(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
 """
-abstract AbstractInitializer
+@compat abstract type AbstractInitializer end
 
 function init{T<:AbstractInitializer}(self :: T, name :: Base.Symbol, array :: NDArray)
   strname = string(name)

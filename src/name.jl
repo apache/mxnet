@@ -1,6 +1,6 @@
-abstract AbstractNameManager
-typealias NameType Union{Base.Symbol, AbstractString}
-typealias NameCounter Dict{Base.Symbol, Int}
+@compat abstract type AbstractNameManager end
+const NameType = Union{Base.Symbol, AbstractString}
+const NameCounter = Dict{Base.Symbol, Int}
 
 import Base: get!
 

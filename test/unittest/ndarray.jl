@@ -73,7 +73,7 @@ function test_slice()
   array = mx.zeros((2,4))
   array[2:3] = ones(2,2)
   @test copy(array) == [0 1 1 0; 0 1 1 0]
-  @test copy(slice(array, 2:3)) == [1 1; 1 1]
+  @test copy(mx.slice(array, 2:3)) == [1 1; 1 1]
 end
 
 function test_plus()

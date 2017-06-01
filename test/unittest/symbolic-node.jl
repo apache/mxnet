@@ -2,7 +2,7 @@ module TestSymbolicNode
 using MXNet
 using Base.Test
 
-using ..Main: mlp2, reldiff
+using ..Main: mlp2, mlpchain, reldiff
 
 ################################################################################
 # Test Implementations
@@ -11,6 +11,15 @@ function test_basic()
   info("SymbolicNode::basic")
 
   model = mlp2()
+  @test mx.list_arguments(model) == [:data,:fc1_weight,:fc1_bias,:fc2_weight,:fc2_bias]
+  @test mx.list_outputs(model) == [:fc2_output]
+  @test mx.list_auxiliary_states(model) == Symbol[]
+end
+
+function test_chain()
+  info("SymbolicNode::chain")
+
+  model = mlpchain()
   @test mx.list_arguments(model) == [:data,:fc1_weight,:fc1_bias,:fc2_weight,:fc2_bias]
   @test mx.list_outputs(model) == [:fc2_output]
   @test mx.list_auxiliary_states(model) == Symbol[]
@@ -140,6 +149,7 @@ end
 ################################################################################
 @testset "SymbolicNode Test" begin
   test_basic()
+  test_chain()
   test_internal()
   test_compose()
   test_infer_shape()

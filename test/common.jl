@@ -19,3 +19,9 @@ function mlp2()
   return out
 end
 
+function mlpchain()
+  mx.@chain mx.Variable(:data) =>
+            mx.FullyConnected(name=:fc1, num_hidden=1000) =>
+            mx.Activation(act_type=:relu) =>
+            mx.FullyConnected(name=:fc2, num_hidden=10)
+end

@@ -7,6 +7,7 @@ os:
 osx_image: xcode8
 julia:
   - 0.5
+  - 0.6
 #  - nightly 0.6 supports depends on #170
 
 # dependent apt packages

@@ -16,12 +16,16 @@ if VERSION >= v"0.6.0-dev.1024"
 end
 
 using Formatting
+using MacroTools
 
 # Functions from base that we can safely extend and that are defined by libmxnet.
 import Base: round, ceil, floor, cos, sin, abs, sign, exp, sqrt, exp, log, norm,
              transpose
 
 include("base.jl")
+
+include("compat.jl")
+
 include("context.jl")
 include("util.jl")
 

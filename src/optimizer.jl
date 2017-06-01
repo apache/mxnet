@@ -3,21 +3,21 @@
 
 Base type for all optimizers.
 """
-abstract AbstractOptimizer
+@compat abstract type AbstractOptimizer end
 
 """
     AbstractLearningRateScheduler
 
 Base type for all learning rate scheduler.
 """
-abstract AbstractLearningRateScheduler
+@compat abstract type AbstractLearningRateScheduler end
 
 """
     AbstractMomentumScheduler
 
 Base type for all momentum scheduler.
 """
-abstract AbstractMomentumScheduler
+@compat abstract type AbstractMomentumScheduler end
 
 
 
@@ -62,6 +62,7 @@ function get_learning_rate end
 ################################################################################
 # The learning rate module
 module LearningRate
+using Compat
 import ..mx: AbstractLearningRateScheduler, OptimizationState, get_learning_rate
 
 """
@@ -137,6 +138,7 @@ end
 ################################################################################
 # The Momentum module
 module Momentum
+using Compat
 import ..mx: AbstractMomentumScheduler, OptimizationState, get_momentum
 
 """
@@ -145,7 +147,7 @@ import ..mx: AbstractMomentumScheduler, OptimizationState, get_momentum
 The null momentum scheduler always returns 0 for momentum. It is also used to
 explicitly indicate momentum should not be used.
 """
-type Null <: AbstractMomentumScheduler
+immutable Null <: AbstractMomentumScheduler
 end
 get_momentum(self :: Null, state :: OptimizationState) = 0.0
 
@@ -240,7 +242,7 @@ end
 
 Base class for all optimizer options.
 """
-abstract AbstractOptimizerOptions
+@compat abstract type AbstractOptimizerOptions end
 
 """
     normalized_gradient(opts, state, weight, grad)

@@ -61,7 +61,7 @@ function update(self :: ADAM, index :: Int, weight :: NDArray, grad :: NDArray, 
   grad = normalized_gradient(self.opts, self.state, weight, grad)
 
   state.mt = self.opts.beta1 * state.mt + (1 - self.opts.beta1) * grad
-  state.vt = self.opts.beta2 * state.vt + (1 - self.opts.beta2) * (grad .* grad)
+  state.vt = self.opts.beta2 * state.vt + (1 - self.opts.beta2) * @compatmul(grad, grad)
 
   at = sqrt(1.0 - state.beta2Power)/(1.0 - state.beta1Power)
 
