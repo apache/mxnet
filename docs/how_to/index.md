@@ -11,8 +11,6 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How do I work with variable-length input in MXNet (bucketing)?](http://mxnet.io/how_to/bucketing.html)
 
-* [How do I create new operators with MXNet?](new_op.md)
-
 * [How do I visualize neural networks as computation graphs?](http://mxnet.io/how_to/visualize_graph.html)
 
 
