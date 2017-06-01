@@ -80,8 +80,7 @@ mod = mx.mod.Module(symbol=net,
 
 ## Intermediate-level Interface
 
-We have created module. Now we can use module's intermediate-level APIs to do
-training and inference. This API gives developers flexibility to do step-by-step
+We have created module. Now let us see how to run training and inference using module's intermediate-level APIs. This API gives developers flexibility to do step-by-step
 computation by running `forward` and `backward` passes. It's also useful for debugging.
 
 To train a module, we need to perform following steps:
@@ -125,14 +124,14 @@ To learn more about these APIs, visit [Module API](http://mxnet.io/api/python/mo
 ### Train
 
 Module also provides high-level APIs for training, predicting and evaluating for
-user convenience. Instead of doing all the steps mentioned in the intermediate-level
-APIs section, one can simply call `fit` function and it will internally do all
-those steps.
+user convenience. Instead of doing all the steps mentioned in the above section,
+one can simply call [fit API](http://mxnet.io/api/python/module.html#mxnet.module.BaseModule.fit)
+and it internally executes the same steps.
 
-To fit a module, call the [fit API](http://mxnet.io/api/python/module.html#mxnet.module.BaseModule.fit) as follows:
+To fit a module, call the `fit` function as follows:
 
 ```python
-# resetting train_iter as it was used above
+# reset train_iter to the beginning
 train_iter.reset()
 
 # create a module
@@ -149,6 +148,9 @@ mod.fit(train_iter,
         eval_metric='acc',
         num_epoch=8)
 ```
+
+By default, `fit` function has `eval_metric` set to `accuracy`, `optimizer` to `sgd`
+and optimizer_params to `(('learning_rate', 0.01),)`.
 
 ### Predict and Evaluate
 
