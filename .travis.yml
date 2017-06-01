@@ -17,9 +17,7 @@ env:
   - TASK=cpp_test
   # run tests/python
   - TASK=python_test
-  #- TASK=r_test
-  - TASK=installation_packaged_test
-  - TASK=installation_source_test
+  - TASK=r_test
   # - TASK=julia JULIA_VER=0.4
   # - TASK=scala_test
 
@@ -80,6 +78,7 @@ addons:
 before_install:
   - export NVCC_PREFIX=${HOME}
   - source dmlc-core/scripts/travis/travis_setup_env.sh
+  - export PYTHONPATH=${PYTHONPATH}:${PWD}/python
   - export MAVEN_SKIP_RC=true
   - export MAVEN_OPTS="-Xmx512m -XX:MaxPermSize=256m -XX:-UseGCOverheadLimit -XX:+CMSClassUnloadingEnabled -XX:+UseConcMarkSweepGC"
 
