@@ -83,7 +83,7 @@ mod = mx.mod.Module(symbol=net,
 ### Train
 
 Module provides high-level APIs for training, predicting and evaluating for
-user convenience. To fit a module, simply call the `fit` function.
+user convenience. To fit a module, simply call the [fit API](http://mxnet.io/api/python/module.html#mxnet.module.BaseModule.fit) as follows:
 
 ```python
 mod.fit(train_iter,
