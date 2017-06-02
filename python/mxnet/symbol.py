@@ -1336,37 +1336,43 @@ class Symbol(SymbolBase):
         num_aux_states = ctypes.c_uint()
         aux_state_handles = ctypes.POINTER(NDArrayHandle)()
 
-        check_call(_LIB.MXExecutorSimpleBind(self.handle,
-                                             ctypes.c_int(ctx.device_typeid),
-                                             ctypes.c_int(ctx.device_id),
-                                             num_ctx_map_keys,
-                                             ctx_map_keys,
-                                             ctx_map_dev_types,
-                                             ctx_map_dev_ids,
-                                             mx_uint(provided_req_type_list_len),
-                                             provided_grad_req_names,
-                                             provided_grad_req_types,
-                                             mx_uint(len(provided_arg_shape_names)),
-                                             c_array(ctypes.c_char_p, provided_arg_shape_names),
-                                             c_array(mx_uint, provided_arg_shape_data),
-                                             c_array(mx_uint, provided_arg_shape_idx),
-                                             num_provided_arg_types,
-                                             provided_arg_type_names,
-                                             provided_arg_type_data,
-                                             mx_uint(len(shared_arg_name_list)),
-                                             c_array(ctypes.c_char_p, shared_arg_name_list),
-                                             ctypes.byref(shared_buffer_len),
-                                             shared_buffer_names,
-                                             shared_buffer_handles,
-                                             ctypes.byref(updated_shared_buffer_names),
-                                             ctypes.byref(updated_shared_buffer_handles),
-                                             ctypes.byref(num_in_args),
-                                             ctypes.byref(in_arg_handles),
-                                             ctypes.byref(arg_grad_handles),
-                                             ctypes.byref(num_aux_states),
-                                             ctypes.byref(aux_state_handles),
-                                             shared_exec_handle,
-                                             ctypes.byref(exe_handle)))
+        try:
+            check_call(_LIB.MXExecutorSimpleBind(self.handle,
+                                                 ctypes.c_int(ctx.device_typeid),
+                                                 ctypes.c_int(ctx.device_id),
+                                                 num_ctx_map_keys,
+                                                 ctx_map_keys,
+                                                 ctx_map_dev_types,
+                                                 ctx_map_dev_ids,
+                                                 mx_uint(provided_req_type_list_len),
+                                                 provided_grad_req_names,
+                                                 provided_grad_req_types,
+                                                 mx_uint(len(provided_arg_shape_names)),
+                                                 c_array(ctypes.c_char_p, provided_arg_shape_names),
+                                                 c_array(mx_uint, provided_arg_shape_data),
+                                                 c_array(mx_uint, provided_arg_shape_idx),
+                                                 num_provided_arg_types,
+                                                 provided_arg_type_names,
+                                                 provided_arg_type_data,
+                                                 mx_uint(len(shared_arg_name_list)),
+                                                 c_array(ctypes.c_char_p, shared_arg_name_list),
+                                                 ctypes.byref(shared_buffer_len),
+                                                 shared_buffer_names,
+                                                 shared_buffer_handles,
+                                                 ctypes.byref(updated_shared_buffer_names),
+                                                 ctypes.byref(updated_shared_buffer_handles),
+                                                 ctypes.byref(num_in_args),
+                                                 ctypes.byref(in_arg_handles),
+                                                 ctypes.byref(arg_grad_handles),
+                                                 ctypes.byref(num_aux_states),
+                                                 ctypes.byref(aux_state_handles),
+                                                 shared_exec_handle,
+                                                 ctypes.byref(exe_handle)))
+        except MXNetError:
+            print("simple_bind error. Arguments:")
+            for k, v in kwargs.items():
+                print("  %s: %s" % (k, v))
+            raise RuntimeError('simple_bind failed')
 
         # update shared_buffer
         if shared_buffer is not None:

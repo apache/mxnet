@@ -359,6 +359,53 @@ Graph AssignContext(Graph g,
   return g;
 }
 
+void HandleInferShapeError(const size_t num_forward_inputs,
+                           const nnvm::IndexedGraph& idx,
+                           const nnvm::ShapeVector& inferred_shapes) {
+  int cnt = 10;
+  std::ostringstream oss;
+  for (size_t i = 0; i < num_forward_inputs; ++i) {
+    const uint32_t nid = idx.input_nodes().at(i);
+    const uint32_t eid = idx.entry_id(nid, 0);
+    const TShape& inferred_shape = inferred_shapes[eid];
+    if (inferred_shape.ndim() == 0 || inferred_shape.Size() == 0U) {
+      const std::string& arg_name = idx[nid].source->attrs.name;
+      oss << arg_name << ": " << inferred_shape << ", ";
+      if (--cnt == 0) {
+        oss << "...";
+        break;
+      }
+    }
+  }
+  LOG(FATAL) << "InferShape pass cannot decide shapes for the following arguments "
+                "(0s in shapes mean unknown dimension size). Please consider "
+                "providing them as inputs:\n"
+             << oss.str();
+}
+
+void HandleInferTypeError(const size_t num_forward_inputs,
+                          const nnvm::IndexedGraph& idx,
+                          const nnvm::DTypeVector& inferred_dtypes) {
+  int cnt = 10;
+  std::ostringstream oss;
+  for (size_t i = 0; i < num_forward_inputs; ++i) {
+    const uint32_t nid = idx.input_nodes().at(i);
+    const uint32_t eid = idx.entry_id(nid, 0);
+    const int inferred_dtype = inferred_dtypes[eid];
+    if (inferred_dtype == -1) {
+      const std::string& arg_name = idx[nid].source->attrs.name;
+      oss << arg_name << ": " << inferred_dtype << ", ";
+      if (--cnt == 0) {
+        oss << "...";
+        break;
+      }
+    }
+  }
+  LOG(FATAL) << "InferType pass cannot decide dtypes for the following arguments "
+                "(-1 means unknown dtype). Please consider providing them as inputs:\n"
+             << oss.str();
+}
+
 /*!
  * \brief GraphExecutor initializer for regular bind flow in which
  * input arguments and gradients are provided by users. This initializer
@@ -391,7 +438,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
 
   // create arg_shapes and arg_dtypes for shape and type inferences
   const auto& idx = g.indexed_graph();
-  auto mutable_nodes = idx.mutable_input_nodes();
+  const auto& mutable_nodes = idx.mutable_input_nodes();
   size_t arg_top = 0, aux_top = 0;
   data_entry_.resize(idx.num_node_entries());
   nnvm::ShapeVector arg_shapes;
@@ -422,16 +469,18 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
 
   // expand arg_shapes and arg_dtypes to contain backward inputs
   arg_shapes.resize(idx.input_nodes().size(), TShape());
-  arg_dtypes.resize(idx.input_nodes().size(), -1);
-  // Infer shapes and dtypes
   g = nnvm::pass::InferShape(g, arg_shapes, "__shape__");
-  CHECK_EQ(g.GetAttr<size_t>("shape_num_unknown_nodes"), 0)
-    << "Shape inference failed in bind. Please provide"
-       " sufficient shapes to make inference for the symbol";
+  if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
+    HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
+                          g.GetAttr<nnvm::ShapeVector>("shape"));
+  }
+
+  arg_dtypes.resize(idx.input_nodes().size(), -1);
   g = nnvm::pass::InferType(g, arg_dtypes, "__dtype__");
-  CHECK_EQ(g.GetAttr<size_t>("dtype_num_unknown_nodes"), 0)
-    << "Type inference failed in bind. Please provide"
-       " sufficcient types to make inference for the symbol";
+  if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
+    HandleInferTypeError(num_forward_inputs_, g.indexed_graph(),
+                         g.GetAttr<nnvm::DTypeVector>("dtype"));
+  }
 
   // Initialize the rest attributes of the graph.
   // This function can be called by regular bind
@@ -459,8 +508,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
   // populate grad_store_
   data_entry_.resize(idx.num_node_entries());
   size_t arg_top = 0, aux_top = 0;
-  auto mutable_nodes = idx.mutable_input_nodes();
-  // TODO(junwu): populate in_arg_map, arg_grad_map, and aux_state_map
+  const auto& mutable_nodes = idx.mutable_input_nodes();
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const uint32_t eid = idx.entry_id(nid, 0);
@@ -545,7 +593,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
   // initialize in_args, arg_grads, and aux_states and populate grad_store_
   data_entry_.resize(idx.num_node_entries());
   size_t arg_top = 0, aux_top = 0;
-  auto mutable_nodes = idx.mutable_input_nodes();
+  const auto& mutable_nodes = idx.mutable_input_nodes();
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const uint32_t eid = idx.entry_id(nid, 0);
@@ -744,13 +792,16 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
     }
   }
   g = nnvm::pass::InferShape(g, arg_shapes, "__shape__");
-  CHECK_EQ(g.GetAttr<size_t>("shape_num_unknown_nodes"), 0)
-    << "Shape inference failed in simple_bind. Please provide"
-       " sufficient shapes to make inference for the symbol";
+  if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
+    HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
+                          g.GetAttr<nnvm::ShapeVector>("shape"));
+  }
+
   g = nnvm::pass::InferType(g, arg_dtypes, "__dtype__");
-  CHECK_EQ(g.GetAttr<size_t>("dtype_num_unknown_nodes"), 0)
-    << "Type inference failed in simple_bind. Please provide"
-       " sufficcient types to make inference for the symbol";
+  if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
+    HandleInferTypeError(num_forward_inputs_, g.indexed_graph(),
+                         g.GetAttr<nnvm::DTypeVector>("dtype"));
+  }
 
   // Create in_args, arg_grads, and aux_states using
   // the inferred shapes and dtypes.
