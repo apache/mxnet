@@ -222,6 +222,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(
     if (type == "Concat") return false;
     if (type == "SoftmaxOutput") return false;
     if (type == "BatchNorm") return false;
+    if (type == "CuDNNBatchNorm") return false;
     return true;
   };
 
