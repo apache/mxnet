@@ -153,6 +153,19 @@ inline void SGDMomUpdate(const nnvm::NodeAttrs& attrs,
   });
 }
 
+template<int n_in, int n_out, int total_in>
+inline bool MP_SGD_InferType(const nnvm::NodeAttrs& attrs,
+                             std::vector<int> *in_attrs,
+                             std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), static_cast<size_t>(total_in)) << " in operator " << attrs.name;
+  CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
+  for (int i = n_in; i < total_in; ++i) {
+    TYPE_ASSIGN_CHECK(*in_attrs, i, mshadow::kFloat32);
+  }
+  return ElemwiseAttr<int, type_is_none, type_assign, true, type_string, n_in, n_out>(
+      attrs, in_attrs, out_attrs, -1);
+}
+
 struct MP_SGDKernel {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* weight_data,
@@ -243,6 +256,7 @@ inline void MP_SGDMomUpdate(const nnvm::NodeAttrs& attrs,
       param.lr, param.wd, param.rescale_grad, req[0]);
   });
 }
+
 struct AdamParam : public dmlc::Parameter<AdamParam> {
   float lr;
   float beta1;

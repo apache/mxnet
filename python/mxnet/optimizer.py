@@ -331,6 +331,7 @@ class SGD(Optimizer):
        ``False`` results in using the same precision as the weights (default),
        ``True`` makes internal 32-bit copy of the weights and applies gradients
                 in 32-bit precision even if actual weights used in the model have lower precision.
+                Turning this on can improve convergence and accuracy when training with float16.
     """
     def __init__(self, momentum=0.0, multi_precision=False, **kwargs):
         super(SGD, self).__init__(**kwargs)
@@ -338,17 +339,19 @@ class SGD(Optimizer):
         self.multi_precision = multi_precision
 
     def create_state(self, index, weight):
-        ret = [None, None]
+        momentum = None
+        weight_master_copy = None
         if self.momentum != 0.0:
-            ret[0] = zeros(weight.shape, weight.context, dtype=weight.dtype)
-        if (self.multi_precision and
-                (weight.dtype != numpy.float32 or weight.dtype != numpy.float64)):
-            ret[1] = array(weight, ctx=weight.context, dtype=numpy.float32)
+            momentum = zeros(weight.shape, weight.context, dtype=weight.dtype)
+        if self.multi_precision and weight.dtype == numpy.float16:
+            weight_master_copy = array(weight, ctx=weight.context, dtype=numpy.float32)
+            return (momentum, weight_master_copy)
         if weight.dtype == numpy.float16 and not self.multi_precision:
-            warnings.warn("Using 16-bit precision accumulation in the optimizer. "
+            warnings.warn("Accumulating with float16 in optimizer can lead to "
+                          "poor accuracy or slow convergence. "
                           "Consider using multi_precision=True option of the "
                           "SGD optimizer")
-        return tuple(ret)
+        return momentum
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -362,10 +365,13 @@ class SGD(Optimizer):
             kwargs['momentum'] = self.momentum
         if self.clip_gradient:
             kwargs['clip_gradient'] = self.clip_gradient
+        use_multi_precision = False
+        if self.multi_precision:
+            use_multi_precision = (state[1] is not None)
 
-        if state[1] is None:
-            if state[0] is not None:
-                sgd_mom_update(weight, grad, state[0], out=weight,
+        if not use_multi_precision:
+            if state is not None:
+                sgd_mom_update(weight, grad, state, out=weight,
                                lr=lr, wd=wd, **kwargs)
             else:
                 sgd_update(weight, grad, out=weight,

@@ -74,7 +74,7 @@ NNVM_REGISTER_OP(mp_sgd_update)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SGDParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1, 3, 1>)
+.set_attr<nnvm::FInferType>("FInferType", MP_SGD_InferType<2, 1, 3>)
 .set_attr<FCompute>("FCompute<cpu>", MP_SGDUpdate<cpu>)
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
 .add_argument("grad", "NDArray-or-Symbol", "gradient")
@@ -87,7 +87,7 @@ NNVM_REGISTER_OP(mp_sgd_mom_update)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SGDMomParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1, 4, 1>)
+.set_attr<nnvm::FInferType>("FInferType", MP_SGD_InferType<2, 1, 4>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2};
