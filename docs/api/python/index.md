@@ -33,4 +33,5 @@ imported by running:
    io
    optimization
    callback
+   metric
 ```
