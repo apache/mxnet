@@ -425,7 +425,13 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   arg_dtypes.resize(idx.input_nodes().size(), -1);
   // Infer shapes and dtypes
   g = nnvm::pass::InferShape(g, arg_shapes, "__shape__");
+  CHECK_EQ(g.GetAttr<size_t>("shape_num_unknown_nodes"), 0)
+    << "Shape inference failed in bind. Please provide"
+       " sufficient shapes to make inference for the symbol";
   g = nnvm::pass::InferType(g, arg_dtypes, "__dtype__");
+  CHECK_EQ(g.GetAttr<size_t>("dtype_num_unknown_nodes"), 0)
+    << "Type inference failed in bind. Please provide"
+       " sufficcient types to make inference for the symbol";
 
   // Initialize the rest attributes of the graph.
   // This function can be called by regular bind
@@ -738,7 +744,13 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
     }
   }
   g = nnvm::pass::InferShape(g, arg_shapes, "__shape__");
+  CHECK_EQ(g.GetAttr<size_t>("shape_num_unknown_nodes"), 0)
+    << "Shape inference failed in simple_bind. Please provide"
+       " sufficient shapes to make inference for the symbol";
   g = nnvm::pass::InferType(g, arg_dtypes, "__dtype__");
+  CHECK_EQ(g.GetAttr<size_t>("dtype_num_unknown_nodes"), 0)
+    << "Type inference failed in simple_bind. Please provide"
+       " sufficcient types to make inference for the symbol";
 
   // Create in_args, arg_grads, and aux_states using
   // the inferred shapes and dtypes.
