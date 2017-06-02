@@ -4,4 +4,4 @@ basic/module
 basic/data
 python/linear-regression
 python/mnist
-python/predict_imag
+python/predict_image
