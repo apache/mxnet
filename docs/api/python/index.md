@@ -28,6 +28,7 @@ imported by running:
    ndarray
    symbol
    module
+   nn
    rnn
    kvstore
    io
