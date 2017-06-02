@@ -106,7 +106,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
   sliceinfo <- mx.model.slice.shape(input.shape, ndevice)
   sliceinfo2 <- mx.model.slice.shape(output.shape, ndevice)
   arg_names <- arguments(symbol)
-  label_name <- arg_names[endsWith(arg_names, "label")]
+  label_name <- arg_names[mx.util.str.endswith(arg_names, "label")]
   train.execs <- lapply(1:ndevice, function(i) {
     arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write",
                     data=sliceinfo[[i]]$shape)
@@ -268,7 +268,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
 mx.model.init.params <- function(symbol, input.shape, output.shape, initializer, ctx) {
   if (!is.MXSymbol(symbol)) stop("symbol need to be MXSymbol")
   arg_names <- arguments(symbol)
-  label_name <- arg_names[endsWith(arg_names, "label")]
+  label_name <- arg_names[mx.util.str.endswith(arg_names, "label")]
   arg_lst <- list(symbol = symbol, data=input.shape)
   arg_lst[[label_name]] = output.shape
 
@@ -497,7 +497,7 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128,
   if (!X$iter.next()) stop("Cannot predict on empty iterator")
   dlist = X$value()
   arg_names <- arguments(model$symbol)
-  label_name <- arg_names[endsWith(arg_names, "label")]
+  label_name <- arg_names[mx.util.str.endswith(arg_names, "label")]
   arg_lst <- list(symbol = model$symbol, ctx = ctx, data = dim(dlist$data), grad.req="null")
   arg_lst[[label_name]] <- dim(dlist$label)
 
