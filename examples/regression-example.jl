@@ -6,11 +6,11 @@ the predictions from the trained net.
 =#
 using MXNet
 using Distributions
-using Plots
+#using Plots
 
 # data generating process
 generate_inputs(mean, var, size) = rand(MvNormal(mean, var), size)
-output(data) = sin(data[1,:]).*sin(data[2,:])./(data[1,:].*data[2,:])
+output(data) = sin.(data[1:1,:]).*sin.(data[2:2,:])./(data[1:1,:].*data[2:2,:])
 
 # create training and evaluation data sets
 mean=[0.0;0.0]
@@ -36,7 +36,7 @@ net = @mx.chain     mx.Variable(:data) =>
                     mx.FullyConnected(num_hidden=3) =>
                     mx.Activation(act_type=:tanh) =>
                     mx.FullyConnected(num_hidden=1) =>        
-                    mx.LinearRegressionOutput(label)
+                    mx.LinearRegressionOutput(mx.Variable(:label))
 
 # final model definition, don't change, except if using gpu
 model = mx.FeedForward(net, context=mx.cpu())
@@ -56,4 +56,5 @@ mx.fit(model, optimizer, eval_metric=mx.MSE(), trainprovider, eval_data=evalprov
 # obtain predictions
 plotprovider = mx.ArrayDataProvider(:data => ValidationInput, :label => ValidationOutput)
 fit = mx.predict(model, plotprovider)
-scatter(ValidationOutput,fit',w = 3, xlabel="true", ylabel="predicted", title="45º line is what we hope for", show=true)
+println("correlation between fitted values and true regression line: ", cor(vec(fit), vec(ValidationOutput)))
+#scatter(ValidationOutput,fit',w = 3, xlabel="true", ylabel="predicted", title="45º line is what we hope for", show=true)
