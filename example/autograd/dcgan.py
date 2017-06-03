@@ -82,8 +82,8 @@ netG.params.initialize(mx.init.Normal(0.02), ctx=ctx)
 netD.params.initialize(mx.init.Normal(0.02), ctx=ctx)
 
 
-optimizerG = nn.Optim(netG.params, 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
-optimizerD = nn.Optim(netD.params, 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
+trainerG = nn.Trainer(netG.params, 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
+trainerD = nn.Trainer(netD.params, 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
 
 
 real_label = mx.nd.ones((opt.batchSize,), ctx=ctx)
@@ -110,7 +110,7 @@ for epoch in range(opt.niter):
             errD = errD_real + errD_fake
             errD.backward()
 
-        optimizerD.step(opt.batchSize)
+        trainerD.step(opt.batchSize)
 
         ############################
         # (2) Update G network: maximize log(D(G(z)))
@@ -121,6 +121,6 @@ for epoch in range(opt.niter):
             errG = nn.loss.softmax_cross_entropy_loss(output, real_label)
             errG.backward()
 
-        optimizerG.step(opt.batchSize)
+        trainerG.step(opt.batchSize)
 
         print mx.nd.mean(errD).asscalar(), mx.nd.mean(errG).asscalar()

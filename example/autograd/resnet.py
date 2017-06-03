@@ -276,7 +276,7 @@ def train(epoch, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
     net.params.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-    optim = nn.Optim(net.params, 'sgd', {'learning_rate': 0.1})
+    trainer = nn.Trainer(net.params, 'sgd', {'learning_rate': 0.1})
     metric = mx.metric.Accuracy()
 
     for i in range(epoch):
@@ -293,7 +293,7 @@ def train(epoch, ctx):
                     loss = nn.loss.softmax_cross_entropy_loss(z, y)
                     ag.compute_gradient([loss])
                     outputs.append(z)
-            optim.step(batch.data[0].shape[0])
+            trainer.step(batch.data[0].shape[0])
             metric.update(label, outputs)
             print 'speed: {} samples/s'.format(train_data.label_shape[0]/(time.time()-btic))
             btic = time.time()

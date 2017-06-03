@@ -42,7 +42,7 @@ class Policy(nn.Layer):
 
 net = Policy()
 net.params.initialize(mx.init.Uniform(0.02))
-trainer = nn.Optim(net.params, 'adam', {'learning_rate': 3e-2})
+trainer = nn.Trainer(net.params, 'adam', {'learning_rate': 3e-2})
 
 
 running_reward = 10

@@ -6,7 +6,7 @@ from .parameter import *
 
 from .layer import *
 
-from .optim import *
+from .trainer import *
 
 from .conv_layers import *
 
