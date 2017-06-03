@@ -187,11 +187,11 @@ private[mxnet] class LibInfo {
                                          symHandleRef: SymbolHandleRef): Int
   @native def mxSymbolSetAttr(handle: SymbolHandle, key: String, value: String): Int
   @native def mxSymbolListAttrShallow(handle: SymbolHandle,
-                                         outSize: MXUintRef,
-                                         out: ArrayBuffer[String]): Int
+                                      outSize: MXUintRef,
+                                      out: ArrayBuffer[String]): Int
   @native def mxSymbolListAttr(handle: SymbolHandle,
-                                         outSize: MXUintRef,
-                                         out: ArrayBuffer[String]): Int
+                               outSize: MXUintRef,
+                               out: ArrayBuffer[String]): Int
   @native def mxSymbolCompose(handle: SymbolHandle,
                               name: String,
                               keys: Array[String],
