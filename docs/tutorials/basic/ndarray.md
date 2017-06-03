@@ -38,6 +38,13 @@ Each NDArray supports some important attributes that you'll often want to query:
 - **ndarray.context**: The device on which this array is stored, e.g. `cpu()` or
   `gpu(1)`.
 
+## Prerequisites
+
+To complete this tutorial, we need:
+
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- [Python](https://www.python.org/downloads/)
+
 ## Array Creation
 
 There are a few different ways to create an `NDArray`.

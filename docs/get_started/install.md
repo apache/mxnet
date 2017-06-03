@@ -108,7 +108,7 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 Install *MXNet* with OpenBLAS acceleration.
 
 ```bash
-(mxnet)$ pip install mxnet
+(mxnet)$ sudo pip install mxnet
 ```
 
 **Step 4**  Validate the installation by running simple *MXNet* code described [here](#validate-mxnet-installation).
@@ -133,7 +133,7 @@ $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 **Step 2** Install MXNet with OpenBLAS acceleration.
 
 ```bash
-$ pip install mxnet
+$ sudo pip install mxnet
 ```
 
 **Step 3**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
@@ -281,7 +281,7 @@ $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 **Step 2**  Install *MXNet* with GPU support using CUDA 8.0
 
 ```bash
-$ pip install mxnet-cu80
+$ sudo pip install mxnet-cu80
 ```
 
 **Step 3**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
@@ -330,7 +330,7 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 Install *MXNet* with GPU support using CUDA 8.0.
 
 ```bash
-(mxnet)$ pip install mxnet-cu80
+(mxnet)$ sudo pip install mxnet-cu80
 ```
 
 **Step 4**  Validate the installation by running simple *MXNet* code described [here](#validate-mxnet-installation).
@@ -510,7 +510,7 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 Install *MXNet* with OpenBLAS acceleration.
 
 ```bash
-(mxnet)$ pip install mxnet
+(mxnet)$ sudo pip install mxnet
 ```
 
 **Step 5**  Validate the installation by running simple *MXNet* code described [here](#validate-mxnet-installation).
@@ -543,7 +543,7 @@ $ pip install --upgrade setuptools
 ```
 
 ```bash
-$ pip install mxnet
+$ sudo pip install mxnet
 ```
 
 **Step 3**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).

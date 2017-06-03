@@ -4,12 +4,12 @@ In this tutorial we'll walk through how one can implement *linear regression* us
 
 The function we are trying to learn is: *y = x<sub>1</sub>  +  2x<sub>2</sub>*, where *(x<sub>1</sub>,x<sub>2</sub>)* are input features and *y* is the corresponding label.
 
-To begin, the following code imports the necessary packages we'll need for this exercise.
+## Prerequisites
 
-```python
-import mxnet as mx
-import numpy as np
-```
+To complete this tutorial, we need:
+
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- [Python](https://www.python.org/downloads/)
 
 ## Preparing the Data
 
@@ -17,6 +17,9 @@ In MXNet, data is input via **Data Iterators**. Here we will illustrate
 how to encode a dataset into an iterator that MXNet can use. The data used in the example is made up of 2D data points with corresponding integer labels. 
 
 ```python
+import mxnet as mx
+import numpy as np
+
 #Training data
 train_data = np.random.uniform(0, 1, [100, 2])
 train_label = np.array([train_data[i][0] + 2 * train_data[i][1] for i in range(100)])

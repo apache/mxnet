@@ -4,6 +4,14 @@ Most training and inference modules in MXNet accept data iterators,
 which simplifies this procedure, especially when reading large datasets.
 Here we discuss the API conventions and several provided iterators.
 
+## Prerequisites
+
+To complete this tutorial, we need:
+
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- [Python](https://www.python.org/downloads/)
+- [OpenCV](http://opencv.org/opencv-3-2.html)
+
 ## MXNet Data Iterator  
 Data Iterators in *MXNet* are similar to Python iterator objects.
 In Python the function `iter` allows fetching items sequentially by calling  `next()` on

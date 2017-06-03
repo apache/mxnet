@@ -45,6 +45,13 @@ For a visual explanation of these concepts, see
 To make things concrete, let's take a hands-on look at the Symbol API.
 There are a few different ways to compose a `Symbol`.
 
+## Prerequisites
+
+To complete this tutorial, we need:
+
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- [Python](https://www.python.org/downloads/)
+
 ## Basic Symbol Composition
 
 ### Basic Operators
@@ -314,8 +321,8 @@ executor. The executor provides `forward` method for evaluation and an attribute
 ex = c.bind(ctx=mx.cpu(), args={'a' : mx.nd.ones([2,3]),
                                 'b' : mx.nd.ones([2,3])})
 ex.forward()
-print 'number of outputs = %d\nthe first output = \n%s' % (
-           len(ex.outputs), ex.outputs[0].asnumpy())
+print('number of outputs = %d\nthe first output = \n%s' % (
+           len(ex.outputs), ex.outputs[0].asnumpy()))
 ```
 
 We can evaluate the same symbol on GPU with different data.
@@ -332,8 +339,8 @@ and `forward` methods.
 
 ```python
 ex = c.eval(ctx = mx.cpu(), a = mx.nd.ones([2,3]), b = mx.nd.ones([2,3]))
-print 'number of outputs = %d\nthe first output = \n%s' % (
-            len(ex), ex[0].asnumpy())
+print('number of outputs = %d\nthe first output = \n%s' % (
+            len(ex), ex[0].asnumpy()))
 ```
 
 For neural nets, a more commonly used pattern is ```simple_bind```, which

@@ -5,7 +5,7 @@ Training a neural network with a large number of images presents several challen
 ## Preprocessing
 
 ### Disk space
-The first step in training with large data is downloading the data and preprocessing it. For this tutorial, we will be using the full imagenet dataset. Note that, at least 2 TB of disk space is required to download and preprocess this data. It is strongly recommended to use SSD instead of HDD. SSD is much better at dealing with a large number of small image files. After the preprocessing completes and images are packed into recordIO files, HDD should be fine for training.
+The first step in training with large data is downloading the data and preprocessing it. For this tutorial, we will be using the full ImageNet dataset. Note that, at least 2 TB of disk space is required to download and preprocess this data. It is strongly recommended to use SSD instead of HDD. SSD is much better at dealing with a large number of small image files. After the preprocessing completes and images are packed into recordIO files, HDD should be fine for training.
 
 In this tutorial, we will use an AWS storage instance for data preprocessing. The storage instance `i3.4xlarge` has 3.8 TB of disk space across two NVMe SSD disks. We will use software RAID to combine them into one disk and mount it at `~/data`.
 
@@ -20,9 +20,9 @@ sudo chown ${whoami} ~/data
 
 We now have sufficient disk space to download and preprocess the data.
 
-### Download imagenet
+### Download ImageNet
 
-In this tutorial, we will be using the full imagenet dataset which can be downloaded from http://www.image-net.org/download-images. `fall11_whole.tar` contains all the images. This file is 1.2 TB in size and could take a long time to download.
+In this tutorial, we will be using the full ImageNet dataset which can be downloaded from http://www.image-net.org/download-images. `fall11_whole.tar` contains all the images. This file is 1.2 TB in size and could take a long time to download.
 
 After downloading, untar the file.
 ```
@@ -51,7 +51,7 @@ n00120010
 ```
 
 ### Remove uncommon classes for transfer learning (optional)
-A common reason to train a network on Imagenet data is to use it for transfer learning (including feature extraction or fine-tuning other models). According to [this](https://arxiv.org/pdf/1608.08614v1.pdf) study, classes with too few images don’t help in transfer learning. So, we could remove classes with fewer than a certain number of images. The following code will remove classes with less than 500 images.
+A common reason to train a network on ImageNet data is to use it for transfer learning (including feature extraction or fine-tuning other models). According to [this](https://arxiv.org/pdf/1608.08614v1.pdf) study, classes with too few images don’t help in transfer learning. So, we could remove classes with fewer than a certain number of images. The following code will remove classes with less than 500 images.
 
 ```
 BAK=${ROOT}_filtered
