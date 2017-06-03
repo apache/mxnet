@@ -184,7 +184,7 @@ def test_sample_multinomial():
     for i in range(x.shape[0]):
 
         freq = np.bincount(y[i], minlength=5)/1000.0*x[i].sum()
-        mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.1)
+        mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.25)
         rprob = x[i][y[i]]/x[i].sum()
         mx.test_utils.assert_almost_equal(np.log(rprob), prob.asnumpy()[i])
 
