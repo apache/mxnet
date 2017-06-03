@@ -142,7 +142,7 @@ class Parameter(object):
         NDArray on ctx
         """
         if ctx is None:
-            ctx = Context.current_context()
+            ctx = context.current_context()
         assert self._data is not None, \
             "Cannot get NDArray value for Parameter %s " \
             "because it hasn't been initialized!"%(self.name)
