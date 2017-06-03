@@ -2,6 +2,8 @@ import mxnet as mx
 import mxnet.ndarray as nd
 import numpy as np
 from functools import reduce
+from mxnet.module.executor_group import DataParallelExecutorGroup
+
 
 def test_module_dtype():
     dtype = np.float16
@@ -45,6 +47,7 @@ def test_module_input_grads():
     assert np.all(b_grad == 2), b_grad
     assert np.all(c_grad == 3), c_grad
 
+
 def test_module_layout():
     sym = mx.sym.Variable('data')
     sym = mx.sym.Activation(data=sym, act_type='relu', __layout__='TNC')
@@ -61,6 +64,7 @@ def test_module_layout():
     hdshape = (3, 4, 7)
     for x in mod.get_outputs(merge_multi_context=False)[0]:
         assert x.shape == hdshape
+
 
 def test_save_load():
     def dict_equ(a, b):
@@ -101,6 +105,7 @@ def test_save_load():
     dict_equ(mod.get_params()[0], mod2.get_params()[0])
     dict_equ(mod._kvstore._updater.states, mod2._updater.states)
 
+
 def test_module_reshape():
     data = mx.sym.Variable('data')
     sym = mx.sym.FullyConnected(data, num_hidden=20, name='fc')
@@ -127,6 +132,7 @@ def test_module_reshape():
     assert mod.get_outputs()[0].shape == dshape
     assert (mod.get_params()[0]['fc_bias'].asnumpy() == -3).all()
 
+
 def test_module_states():
     stack = mx.rnn.SequentialRNNCell()
     for i in range(2):
@@ -152,6 +158,7 @@ def test_module_states():
 
     for x1, x2 in zip(out1, out2):
         assert not mx.test_utils.almost_equal(x1.asnumpy(), x2.asnumpy(), rtol=1e-3)
+
 
 def test_module_switch_bucket():
     vocab_dim = 5000
@@ -207,6 +214,7 @@ def test_module_switch_bucket():
     #the default bucket is expected to reuse the bytes allocated
     assert total_bytes_after == total_bytes_before
 
+
 def test_monitor():
     # data iter
     mx.random.seed(11)
@@ -254,6 +262,119 @@ def test_monitor():
                 break
     assert(mon_result_counts == [2, 2, 1, 6, 6, 4])
 
+
+def test_executor_group():
+    def get_rnn_sym(num_layers, num_words, num_hidden, num_embed, seq_len):
+        stack = mx.rnn.SequentialRNNCell()
+        for i in range(num_layers):
+            stack.add(mx.rnn.LSTMCell(num_hidden=num_hidden, prefix='lstm_l%d_' % i))
+        data = mx.sym.Variable('data')
+        label = mx.sym.Variable('softmax_label')
+        embed = mx.sym.Embedding(data=data, input_dim=num_words,
+                                 output_dim=num_embed, name='embed')
+
+        stack.reset()
+        outputs, states = stack.unroll(seq_len, inputs=embed, merge_outputs=True)
+
+        pred = mx.sym.Reshape(outputs, shape=(-1, num_hidden))
+        pred = mx.sym.FullyConnected(data=pred, num_hidden=num_words, name='pred')
+
+        label = mx.sym.Reshape(label, shape=(-1,))
+        pred = mx.sym.SoftmaxOutput(data=pred, label=label, name='softmax')
+        return pred
+
+    def test_shared_exec_group(exec_grp_shared, exec_grp_created, shared_arg_names=None, extra_args=None):
+        # Test shared data arrays
+        for i in range(len(exec_grp_shared.execs)):
+            # test same shared_data_arrays for two exec groups
+            shared_data_array1 = exec_grp_shared.shared_data_arrays[i]
+            shared_data_array2 = exec_grp_created.shared_data_arrays[i]
+            if extra_args is not None:
+                assert len(shared_data_array1) == len(extra_args),\
+                    "exec_grp_shared.shared_data_arrays[%d] should have same number of args as extra_args"
+            assert len(shared_data_array1) == len(shared_data_array2),\
+                "length of shared_data_array of the shared executor group not equal to the created executor group"
+            for k, v in shared_data_array1.items():
+                if extra_args is not None:
+                    assert k in extra_args, "arg %s is not in extra_args" % k
+                assert k in shared_data_array2,\
+                    "arg %s of the shared executor group not in the shared_data_array of the created executor group" % k
+                assert mx.test_utils.same_array(v, shared_data_array2[k])
+
+            for data_name, array in exec_grp_shared.shared_data_arrays[i].items():
+                assert data_name in exec_grp_created.shared_data_arrays[i], \
+                    "Shared input data '%s' is not in " \
+                    "shared_data_arrays of created executor group." % (data_name)
+                assert mx.test_utils.same_array(array, exec_grp_created.shared_data_arrays[i][data_name]), \
+                    "Shared input data '%s' does not share memory." % (data_name)
+
+            # Test shared argument arrays and gradient arrays
+            exec_shared = exec_grp_shared.execs[i]
+            exec_created = exec_grp_created.execs[i]
+            if shared_arg_names is not None:
+                # test shared arguments
+                for arg_name in shared_arg_names:
+                    assert arg_name in exec_created.arg_dict, \
+                        "Shared argument '%s' is not in arg_dict of created executor group." % (arg_name)
+                    assert mx.test_utils.same_array(exec_shared.arg_dict[arg_name], exec_created.arg_dict[arg_name]), \
+                        "Shared argument '%s' does not share memory." % (arg_name)
+                # test shared argument gradients
+                for arg_name in shared_arg_names:
+                    assert arg_name in exec_created.grad_dict, \
+                        "Shared argument gradient '%s' is not in " \
+                        "grad_dict of created executor group." % (arg_name)
+                    assert mx.test_utils.same_array(exec_shared.grad_dict[arg_name], exec_created.grad_dict[arg_name]), \
+                        "Shared argument gradient '%s' does not sharing memory." % (arg_name)
+
+            for arg_name, grad in exec_grp_shared.grad_req.items():
+                assert grad == exec_grp_created.grad_req[arg_name], \
+                    "Gradient requirements for shared argument '%s' are inconsistent. " \
+                    "Shared executor group requires '%s' while created executor group requires '%s'" \
+                    %(arg_name, grad, exec_grp_created.grad_req[arg_name])
+
+    contexts = [mx.cpu(0), mx.cpu(1)]
+    workload = [1] * len(contexts)
+    batch_size = 32
+    max_bucket_size = 80
+    num_words = 1000
+    num_hidden = 100
+    num_embed = 200
+    data_shapes = [('data', (batch_size, max_bucket_size))]
+    label_shapes = [('softmax_label', (batch_size, max_bucket_size))]
+
+    # generate an rnn sym with #layers=5
+    sym = get_rnn_sym(num_layers=3, num_words=num_words, num_hidden=num_hidden,
+                      num_embed=num_embed, seq_len=max_bucket_size)
+    arg_names1 = sym.list_arguments()
+    input_names = [name[0] for name in data_shapes] + [name[0] for name in label_shapes]
+    shared_arg_names = [name for name in arg_names1 if name not in input_names]
+    exec_group1 = DataParallelExecutorGroup(symbol=sym, contexts=contexts,
+                                            workload=workload, data_shapes=data_shapes,
+                                            label_shapes=label_shapes, param_names=shared_arg_names,
+                                            for_training=True, inputs_need_grad=False)
+
+    # shared_data_arrays should only have input "data" and "softmax_label" arrays
+    for i in range(len(contexts)):
+        assert len(exec_group1.shared_data_arrays[i]) == len(input_names),\
+            "exec_group1.shared_data_arrays[%d] should have the same number of names as in input_names" % i
+        for name in input_names:
+            assert name in exec_group1.shared_data_arrays[i],\
+                "arg %s should be in exec_group1.shared_data_arrays[%d]" % (name, i)
+
+    # generate an rnn sym with #layers=5
+    sym = get_rnn_sym(num_layers=5, num_words=num_words, num_hidden=num_hidden,
+                      num_embed=num_embed, seq_len=max_bucket_size)
+    arg_names2 = sym.list_arguments()
+    exec_group2 = DataParallelExecutorGroup(symbol=sym, contexts=contexts,
+                                            workload=workload, data_shapes=data_shapes,
+                                            label_shapes=label_shapes, param_names=shared_arg_names,
+                                            for_training=True, inputs_need_grad=False,
+                                            shared_group=exec_group1)
+    extra_args = [name for name in arg_names2 if name not in shared_arg_names]
+    test_shared_exec_group(exec_grp_shared=exec_group1, exec_grp_created=exec_group2,
+                           shared_arg_names=shared_arg_names, extra_args=extra_args)
+
+
 if __name__ == '__main__':
     test_module_dtype()
     test_module_input_grads()
@@ -263,3 +384,4 @@ if __name__ == '__main__':
     test_module_layout()
     test_module_switch_bucket()
     test_monitor()
+    test_executor_group()
