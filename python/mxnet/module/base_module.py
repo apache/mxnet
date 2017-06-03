@@ -268,7 +268,7 @@ class BaseModule(object):
         if reset:
             eval_data.reset()
 
-        eval_metric = _parse_metric(self._symbol, eval_metric)
+        eval_metric = _parse_metric(self.symbol, eval_metric)
 
         eval_metric.reset()
         actual_num_batch = 0
@@ -503,7 +503,7 @@ class BaseModule(object):
 
         if validation_metric is None:
             validation_metric = eval_metric
-        eval_metric = _parse_metric(self._symbol, eval_metric)
+        eval_metric = _parse_metric(self.symbol, eval_metric)
         if eval_metric is None:
             eval_metric = metric.create('acc')
             validation_metric = 'acc'
