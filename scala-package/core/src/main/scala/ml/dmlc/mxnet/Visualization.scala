@@ -218,8 +218,7 @@ object Visualization {
     def looksLikeWeight(name: String): Boolean = {
       if (name.endsWith("_weight") || name.endsWith("_bias")
           || name.endsWith("_beta") || name.endsWith("_gamma")
-          || name.endsWith("_moving_var") || name.endsWith("_moving_mean")) true
-      else false
+          || name.endsWith("_moving_var") || name.endsWith("_moving_mean")) { true } else { false }
     }
 
     // make nodes
