@@ -5,8 +5,6 @@
 import logging
 from collections import OrderedDict
 
-import numpy as np
-
 from .. import context as ctx
 from .. import ndarray as nd
 from ..io import DataDesc
@@ -564,6 +562,7 @@ class DataParallelExecutorGroup(object):
 
     def _bind_ith_exec(self, i, data_shapes, label_shapes, shared_group):
         """Internal utility function to bind the i-th executor.
+        This function utilizes simple_bind python interface.
         """
         shared_exec = None if shared_group is None else shared_group.execs[i]
         context = self.contexts[i]
@@ -573,85 +572,14 @@ class DataParallelExecutorGroup(object):
         if label_shapes is not None:
             input_shapes.update(dict(label_shapes))
 
-        arg_shapes, _, aux_shapes = self.symbol.infer_shape(**input_shapes)
-        assert arg_shapes is not None, "shape inference failed"
-
         input_types = {x.name: x.dtype for x in data_shapes}
         if label_shapes is not None:
             input_types.update({x.name: x.dtype for x in label_shapes})
-        arg_types, _, aux_types = self.symbol.infer_type(**input_types)
-        assert arg_types is not None, "type inference failed"
 
-        arg_arrays = []
-        grad_arrays = {} if self.for_training else None
-
-        def _get_or_reshape(name, shared_data_arrays, arg_shape, arg_type, context, logger):
-            """Internal helper to get a memory block or re-use by re-shaping."""
-            if name in shared_data_arrays:
-                arg_arr = shared_data_arrays[name]
-
-                if np.prod(arg_arr.shape) >= np.prod(arg_shape):
-                    # nice, we can directly re-use this data blob
-                    assert arg_arr.dtype == arg_type
-                    arg_arr = arg_arr.reshape(arg_shape)
-                else:
-                    logger.warning(('bucketing: data "%s" has a shape %s' % (name, arg_shape)) +
-                                   (', which is larger than already allocated ') +
-                                   ('shape %s' % (arg_arr.shape,)) +
-                                   ('. Need to re-allocate. Consider putting ') +
-                                   ('default_bucket_key to') +
-                                   (' be the bucket taking the largest input for better ') +
-                                   ('memory sharing.'))
-                    arg_arr = nd.zeros(arg_shape, context, dtype=arg_type)
-
-                    # replace existing shared array because the new one is bigger
-                    shared_data_arrays[name] = arg_arr
-            else:
-                arg_arr = nd.zeros(arg_shape, context, dtype=arg_type)
-                shared_data_arrays[name] = arg_arr
-
-            return arg_arr
-
-        # create or borrow arguments and gradients
-        for j in range(len(self.arg_names)):
-            name = self.arg_names[j]
-            if name in self.param_names: # model parameters
-                if shared_exec is None:
-                    arg_arr = nd.zeros(arg_shapes[j], context, dtype=arg_types[j])
-                    if self.grad_req[name] != 'null':
-                        grad_arr = nd.zeros(arg_shapes[j], context, dtype=arg_types[j])
-                        grad_arrays[name] = grad_arr
-                else:
-                    arg_arr = shared_exec.arg_dict[name]
-                    assert arg_arr.shape == arg_shapes[j]
-                    assert arg_arr.dtype == arg_types[j]
-                    if self.grad_req[name] != 'null':
-                        grad_arrays[name] = shared_exec.grad_dict[name]
-            else: # data, label, or states
-                arg_arr = _get_or_reshape(name, shared_data_arrays, arg_shapes[j], arg_types[j],
-                                          context, self.logger)
-
-                # data might also need grad if inputs_need_grad is True
-                if self.grad_req[name] != 'null':
-                    grad_arrays[name] = _get_or_reshape('grad of ' + name, shared_data_arrays,
-                                                        arg_shapes[j], arg_types[j], context,
-                                                        self.logger)
-
-            arg_arrays.append(arg_arr)
-
-        # create or borrow aux variables
-        if shared_exec is None:
-            aux_arrays = [nd.zeros(s, context, dtype=t) for s, t in zip(aux_shapes, aux_types)]
-        else:
-            for j, arr in enumerate(shared_exec.aux_arrays):
-                assert aux_shapes[j] == arr.shape
-                assert aux_types[j] == arr.dtype
-            aux_arrays = shared_exec.aux_arrays[:]
-
-        executor = self.symbol.bind(ctx=context, args=arg_arrays,
-                                    args_grad=grad_arrays, aux_states=aux_arrays,
-                                    grad_req=self.grad_req, shared_exec=shared_exec)
-        # Get the total bytes allocated for this executor
+        executor = self.symbol.simple_bind(ctx=context, grad_req=self.grad_req,
+                                           type_dict=input_types, shared_arg_names=self.param_names,
+                                           shared_exec=shared_exec,
+                                           shared_buffer=shared_data_arrays, **input_shapes)
         self._total_exec_bytes += int(executor.debug_str().split('\n')[-3].split()[1])
         return executor
 
