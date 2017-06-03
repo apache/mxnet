@@ -216,8 +216,9 @@ object Visualization {
 
     // Internal helper to figure out if node should be hidden with hide_weights
     def looksLikeWeight(name: String): Boolean = {
-      if (name.endsWith("_weight") || name.endsWith("_bias")) true
-      else false
+      if (name.endsWith("_weight") || name.endsWith("_bias")
+          || name.endsWith("_beta") || name.endsWith("_gamma")
+          || name.endsWith("_moving_var") || name.endsWith("_moving_mean")) { true } else { false }
     }
 
     // make nodes
