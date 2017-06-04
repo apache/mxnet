@@ -22,6 +22,9 @@
 #endif
 namespace mxnet {
 
+/* Forward declaration for friend declaration in TBlob */
+class NDArray;
+
 /*!
  * \brief tensor blob class that can be used to hold tensor of any dimension,
  *  any device and any data type,
@@ -35,6 +38,7 @@ namespace mxnet {
  *  and wait for further processing
  */
 class TBlob {
+  friend class NDArray;
  public:
   /*! \brief pointer to the data */
   void *dptr_;
@@ -288,16 +292,6 @@ class TBlob {
         this->shape_.FlatTo3D(axis_begin, axis_end), stream);
   }
 
-  inline void SetDLTensor(int dev_mask, int dev_id) {
-    dltensor_.data = dptr_;
-    dltensor_.ctx = DLContext{static_cast<DLDeviceType>(dev_mask), dev_id};
-    dltensor_.ndim = shape_.ndim();
-    dltensor_.dtype = DTypeTransform(type_flag_);
-    dltensor_.shape = shape_.data();
-    dltensor_.strides = NULL;
-    dltensor_.byte_offset = 0;
-  }
-
  private:
   static DLDataType DTypeTransform(int type_flag) {
     static std::unordered_map<int, DLDataType>
@@ -310,6 +304,16 @@ class TBlob {
         {5, {0,  8, 1}}   // Int8
       };
     return MSHADOW_DTYPE_TO_DLPACK_DTYPE[type_flag];
+  }
+
+  inline void SetDLTensor(int dev_mask, int dev_id) {
+    dltensor_.data = dptr_;
+    dltensor_.ctx = DLContext{static_cast<DLDeviceType>(dev_mask), dev_id};
+    dltensor_.ndim = shape_.ndim();
+    dltensor_.dtype = DTypeTransform(type_flag_);
+    dltensor_.shape = shape_.data();
+    dltensor_.strides = NULL;
+    dltensor_.byte_offset = 0;
   }
 
  private:
