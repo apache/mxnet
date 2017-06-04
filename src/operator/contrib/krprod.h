@@ -7,7 +7,7 @@
 #ifndef MXNET_OPERATOR_CONTRIB_KRPROD_H_
 #define MXNET_OPERATOR_CONTRIB_KRPROD_H_
 #include <vector>
-#include <mshadow/tensor.h>
+#include "mshadow/tensor.h"
 
 namespace mxnet {
 namespace op {
@@ -31,22 +31,22 @@ inline void krprod
   (Tensor<cpu, 2, DType> out,
   const std::vector<Tensor<cpu, 2, DType> > &ts_arr) {
   // If no input matrix, return all-one vector
-	if (ts_arr.empty()) {
-		CHECK_EQ(1, out.size(1)) << "The output matrix must have width 1.";
-		Fill(out, 1);
-		return;
-	}
+  if (ts_arr.empty()) {
+    CHECK_EQ(1, out.size(1)) << "The output matrix must have width 1.";
+    out = 1;
+    return;
+  }
 
   // Check all input and output matrices have the same height
-	// and the output matrix has the right width
-	auto ts_height = out.size(0);
-	int krprod_length = 1;
-	for (auto & ts : ts_arr) {
-		CHECK_EQ(ts_height, ts.size(0))
-			<< "All input and output matrices must have the same height.";
-		krprod_length *= ts.size(1);
-	}
-	CHECK_EQ(krprod_length, out.size(1));
+  // and the output matrix has the right width
+  int ts_height = static_cast<int>(out.size(0));
+  int krprod_length = 1;
+  for (auto & ts : ts_arr) {
+    CHECK_EQ(ts_height, static_cast<int>(ts.size(0)))
+      << "All input and output matrices must have the same height.";
+    krprod_length *= ts.size(1);
+  }
+  CHECK_EQ(krprod_length, static_cast<int>(out.size(1)));
 
   // Create an intermediate space of the same shape as out
   //
@@ -55,22 +55,23 @@ inline void krprod
   // we then proceed to compute and store the result in storage
   // for step i+1 and so on and so forth, by alternating using
   // storage and out to store the given variable and the result variable
-	Tensor<cpu, 2, DType> storage(out.shape_);
-	AllocSpace(&storage);
+  Tensor<cpu, 2, DType> storage(out.shape_);
+  AllocSpace(&storage);
 
   // Pointers to the given variable and result variable
   // We exchange what given and result point to at every step
   Tensor<cpu, 2, DType> *given = &storage,
-		*result = &out, *tmp;
+    *result = &out, *tmp;
 
   // Compute each intermediate Khatri-Rao product
-	Fill(storage, 1);
-	krprod_length = 1;
-	for (auto & ts : ts_arr) {
-		expr::BLASEngine<cpu, DType>::SetStream
-      (result.stream_);
+  storage = 1;
+  krprod_length = 1;
+  for (auto & ts : ts_arr) {
+    expr::BLASEngine<cpu, DType>::SetStream
+      (result->stream_);
 
     // Compute the current Khatri-Rao product, row by row
+    *result = 0;
     for (int i = 0; i < ts_height; ++i) {
       // BLAS signature
       //
@@ -84,28 +85,27 @@ inline void krprod
       //   incy : 1, as each element in the row is contiguous
       //   a : (*result)[i].dptr_, current row of the result variable
       //   lda : ts.size(1), as the outer product is stored as one row
-      //         which occupies contiguous memory, lda has to be precisely
-      //         the length of y, i.e. ts.size(1)
+      //         which occupies contiguous memory, and as BLASEngine::ger()
+      //         assumes column-major matrix, lda has to be precisely
+      //         the length of x, i.e. ts[i].size(1)
       // )
-      Fill(*result, 0);
-
       expr::BLASEngine<cpu, DType>::ger
-        (result.stream_,
+        (result->stream_,
         ts.size(1), krprod_length, 1,
         ts[i].dptr_, 1,
         (*given)[i].dptr_, 1,
         (*result)[i].dptr_, ts.size(1));
     }
-    krpod_length *= ts.size(1);
+    krprod_length *= ts.size(1);
 
     tmp = given;
     given = result;
     result = tmp;
-	}
+  }
 
   // If the final result is stored in storage,
   // copy its value to out
-  if (result != &out)
+  if (given != &out)
     Copy(out, storage);
 
   FreeSpace(&storage);
