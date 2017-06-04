@@ -300,6 +300,13 @@ int MXSymbolListAttrShallow(SymbolHandle symbol,
   API_END();
 }
 
+int MXSymbolListInputs(SymbolHandle symbol,
+                        int option,
+                        mx_uint *out_size,
+                        const char ***out_str_array) {
+  return NNSymbolListInputNames(symbol, option, out_size, out_str_array);
+}
+
 int MXSymbolListOutputs(SymbolHandle symbol,
                         mx_uint *out_size,
                         const char ***out_str_array) {
