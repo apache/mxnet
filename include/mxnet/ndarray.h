@@ -104,17 +104,7 @@ class NDArray {
    */
   inline const TBlob& data() const {
     CheckAndAlloc();
-#if MKL_EXPERIMENTAL == 1
-    MSHADOW_TYPE_SWITCH(dtype_, DType, {
-      tblob_ = TBlob(static_cast<DType*>(ptr_->shandle.dptr) + offset_,
-        shape_, ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id, Mkl_mem_);
-    });
-#else
-    MSHADOW_TYPE_SWITCH(dtype_, DType, {
-      tblob_ = TBlob(static_cast<DType*>(ptr_->shandle.dptr) + offset_,
-        shape_, ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
-    });
-#endif
+    SetTBlob();
     return tblob_;
   }
   /*!
@@ -420,6 +410,18 @@ class NDArray {
       }
     }
   };
+
+  void SetTBlob() const {
+    MSHADOW_TYPE_SWITCH(dtype_, DType, {
+      tblob_.dptr_ = static_cast<DType*>(ptr_->shandle.dptr) + offset_;
+      tblob_.shape_ = shape_;
+      tblob_.type_flag_ = dtype_;
+      tblob_.SetDLTensor(ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
+#if MKL_EXPERIENTAL == 1
+      tblob_.MKL_mem_ = MKL_mem_;
+#endif
+    });
+  }
 
 #if MKL_EXPERIMENTAL == 1
   std::shared_ptr<MKLMemHolder> Mkl_mem_;

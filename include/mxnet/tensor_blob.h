@@ -72,24 +72,6 @@ class TBlob {
 #endif
     SetDLTensor(dev_mask, dev_id);
   }
-#if MKL_EXPERIMENTAL == 1
-  /*!
-   * \brief constructor that construct TBlob from contiguous memory
-   * \param dptr the pointer to the memory
-   * \param shape the shape of the data
-   * \param dev_mask the device mask, can be cpu::kDevMask or gpu::kDevMask
-   * \param dev_id the device id
-   * \param Mkl_mem the mkl memory
-   */
-  template<typename DType>
-  TBlob(DType *dptr, const TShape &shape, int dev_mask, int dev_id,
-        std::shared_ptr<MKLMemHolder> Mkl_mem)
-      : dptr_(dptr), shape_(shape),
-        type_flag_(mshadow::DataType<DType>::kFlag),
-        Mkl_mem_(Mkl_mem) {
-    SetDLTensor(dev_mask, dev_id);
-  }
-#endif
   /*!
    * \brief constructor that construct TBlob from contiguous memory
    * \param dptr the pointer to the memory
@@ -231,7 +213,7 @@ class TBlob {
    * \brief return the corresponding DLTensor
    * \return the address of internal DLTensor
    */
-  inline const DLTensor& dltensor() {
+  inline const DLTensor& dltensor() const {
     return dltensor_;
   }
 
@@ -306,6 +288,16 @@ class TBlob {
         this->shape_.FlatTo3D(axis_begin, axis_end), stream);
   }
 
+  inline void SetDLTensor(int dev_mask, int dev_id) {
+    dltensor_.data = dptr_;
+    dltensor_.ctx = DLContext{static_cast<DLDeviceType>(dev_mask), dev_id};
+    dltensor_.ndim = shape_.ndim();
+    dltensor_.dtype = DTypeTransform(type_flag_);
+    dltensor_.shape = shape_.data();
+    dltensor_.strides = NULL;
+    dltensor_.byte_offset = 0;
+  }
+
  private:
   static DLDataType DTypeTransform(int type_flag) {
     static std::unordered_map<int, DLDataType>
@@ -318,16 +310,6 @@ class TBlob {
         {5, {0,  8, 1}}   // Int8
       };
     return MSHADOW_DTYPE_TO_DLPACK_DTYPE[type_flag];
-  }
-
-  inline void SetDLTensor(int dev_mask, int dev_id) {
-    dltensor_.data = dptr_;
-    dltensor_.ctx = DLContext{static_cast<DLDeviceType>(dev_mask), dev_id};
-    dltensor_.ndim = shape_.ndim();
-    dltensor_.dtype = DTypeTransform(type_flag_);
-    dltensor_.shape = shape_.data();
-    dltensor_.strides = NULL;
-    dltensor_.byte_offset = 0;
   }
 
  private:
