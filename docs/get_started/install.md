@@ -211,9 +211,22 @@ $ sudo apt-get install -y libopencv-dev
 
 **Step 4** Download MXNet sources and build MXNet core shared library.
 
+To download a particular release:
 ```bash
-$ git clone --recursive https://github.com/dmlc/mxnet
+$ git clone https://github.com/dmlc/mxnet.git
 $ cd mxnet
+$ git checkout tags/<name-of-the-release-tag> #Example: git checkout tags/v0.10.0
+$ git submodule update --init --recursive
+```
+
+To download the latest unreleased code from master branch:
+```bash
+$ git clone --recursive https://github.com/dmlc/mxnet.git
+$ cd mxnet
+```
+
+Build MXNet shared library:
+```bash
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 ```
 
