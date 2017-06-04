@@ -399,8 +399,8 @@ class NDArray {
     tblob_.shape_ = shape_;
     tblob_.type_flag_ = dtype_;
     tblob_.SetDLTensor(ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
-#if MKL_EXPERIENTAL == 1
-    tblob_.MKL_mem_ = MKL_mem_;
+#if MKL_EXPERIMENTAL == 1
+    tblob_.Mkl_mem_ = Mkl_mem_;
 #endif
   }
 
