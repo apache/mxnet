@@ -3,8 +3,8 @@
  * \file sampling_op.h
  * \brief Function definitions of operators for sampling from multiple distributions
  */
-#ifndef MXNET_OPERATOR_TENSOR_MULTISAMPLE_OP_H_
-#define MXNET_OPERATOR_TENSOR_MULTISAMPLE_OP_H_
+#ifndef MXNET_OPERATOR_RANDOM_MULTISAMPLE_OP_H_
+#define MXNET_OPERATOR_RANDOM_MULTISAMPLE_OP_H_
 
 #include <mxnet/operator_util.h>
 #include <vector>
@@ -174,4 +174,4 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_TENSOR_MULTISAMPLE_OP_H_
+#endif  // MXNET_OPERATOR_RANDOM_MULTISAMPLE_OP_H_

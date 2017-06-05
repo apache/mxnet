@@ -20,6 +20,7 @@ package ml.dmlc.mxnet
 import java.io._
 
 import scala.collection.mutable
+import scala.util.Either
 
 object Optimizer {
   def getUpdater(optimizer: Optimizer): MXKVStoreUpdater = {
@@ -103,7 +104,10 @@ object Optimizer {
 }
 
 abstract class Optimizer extends Serializable {
-  protected var lrScale: mutable.Map[Int, Float] = mutable.HashMap.empty[Int, Float]
+  protected val lrMult: mutable.Map[Either[Int, String], Float] =
+    mutable.HashMap.empty[Either[Int, String], Float]
+  protected val wdMult: mutable.Map[Either[Int, String], Float] =
+    mutable.HashMap.empty[Either[Int, String], Float]
   protected var numUpdate: Int = 0
   protected val indexUpdateCount: mutable.Map[Int, Int] = mutable.HashMap.empty[Int, Int]
 
@@ -136,8 +140,62 @@ abstract class Optimizer extends Serializable {
   def deserializeState(bytes: Array[Byte]): AnyRef
 
   // Set individual learning rate scale for parameters
-  def setLrScale(lrScale: Map[Int, Float]) {
-    this.lrScale = mutable.Map(lrScale.toSeq: _*)
+  @deprecated("Use setLrMult instead.")
+  def setLrScale(lrScale: Map[Int, Float]): Unit = {
+    val argsLrScale: Map[Either[Int, String], Float] = lrScale.map { case (k, v) => Left(k) -> v }
+    setLrMult(argsLrScale)
+  }
+
+  /**
+   * Sets an individual learning rate multiplier for each parameter.
+   * If you specify a learning rate multiplier for a parameter, then
+   * the learning rate for the parameter will be set as the product of
+   * the global learning rate and its multiplier.
+   * note:: The default learning rate multiplier of a `Variable`
+   * can be set with `lr_mult` argument in the constructor.
+   * @param argsLrMult: Map[Either[Int, String], Float]
+   *                  For each of its key-value entries, the learning rate multipler for the
+   *                  parameter specified in the key will be set as the given value.
+   *
+   *                  You can specify the parameter with either its name or its index.
+   *                  If you use the name, you should also call the `setSymbol` method first,
+   *                  and the name you specified in the key of `argsLrMult` should match
+   *                  the name of the parameter in the `sym` you pass to `setSymbol` method.
+   *                  If you use the index, it should correspond to the index of the parameter
+   *                  used in the `update` method.
+   *
+   *                  Specifying a parameter by its index is only supported for backward
+   *                  compatibility, and we recommend to use the name instead.
+   */
+  def setLrMult(argsLrMult: Map[Either[Int, String], Float]): Unit = {
+    argsLrMult.foreach { case (k, v) => this.lrMult(k) = v }
+  }
+
+  /**
+   * Sets an individual weight decay multiplier for each parameter.
+   *
+   * By default, the weight decay multipler is set as 0 for all
+   * parameters whose name don't end with ``_weight`` or ``_gamma``, if
+   * you call the `setIdx2Name` method to set idx2name.
+   *
+   * note:: The default weight decay multiplier for a `Variable`
+   * can be set with its `wd_mult` argument in the constructor.
+   * @param argsWdMult: Map[Either[Int, String], Float]
+   *                  For each of its key-value entries, the learning rate multipler for the
+   *                  parameter specified in the key will be set as the given value.
+   *
+   *                  You can specify the parameter with either its name or its index.
+   *                  If you use the name, you should also call the `setSymbol` method first,
+   *                  and the name you specified in the key of `argsWdMult` should match
+   *                  the name of the parameter in the `sym` you pass to `setSymbol` method.
+   *                  If you use the index, it should correspond to the index of the parameter
+   *                  used in the `update` method.
+   *
+   *                  Specifying a parameter by its index is only supported for backward
+   *                  compatibility, and we recommend to use the name instead.
+   */
+  def setWdMult(argsWdMult: Map[Either[Int, String], Float]): Unit = {
+    argsWdMult.foreach { case (k, v) => this.wdMult(k) = v }
   }
 
   def setArgNames(argNames: Seq[String]): Unit = {
@@ -160,14 +218,30 @@ abstract class Optimizer extends Serializable {
     this.rescaleGrad = rescaleGrad
   }
 
-  // TODO
   def setSymbol(sym: Symbol): Unit = {
     this.symbol = sym
+    if (this.symbol != null) {
+      val attr = this.symbol.attrMap
+      for (name <- this.symbol.listArguments()) {
+        if (attr.contains(name) && attr(name).contains("__lr_mult__")) {
+          this.lrMult(Right(name)) = attr(name)("__lr_mult__").toFloat
+        }
+        if (attr.contains(name) && attr(name).contains("__wd_mult__")) {
+          this.wdMult(Right(name)) = attr(name)("__wd_mult__").toFloat
+        }
+      }
+    }
   }
 
-  // TODO: Special treat weight decay in parameters.
   def setIdx2Name(paramIdx2Name: Map[Int, String]): Unit = {
     this.idx2name = paramIdx2Name
+    if (this.idx2name != null) {
+      for (n <- this.idx2name.values) {
+        if (!(n.endsWith("_weight") || n.endsWith("_gamma"))) {
+          this.wdMult(Right(n)) = 0f
+        }
+      }
+    }
   }
 
   /**
@@ -180,8 +254,20 @@ abstract class Optimizer extends Serializable {
     numUpdate = Math.max(count, numUpdate)
   }
 
+ // Gets the learning rate given the index of the weight.
+  protected def getLr(index: Int, lr: Float): Float = {
+    var llr = lr
+    if (this.lrMult.contains(Left(index))) {
+      llr *= this.lrMult(Left(index))
+    } else if (this.idx2name != null && this.idx2name.contains(index)) {
+      llr *= this.lrMult.getOrElse(Right(this.idx2name(index)), 1.0f)
+    }
+    llr
+  }
+
+  // Gets weight decay for index.
   protected def getWd(index: Int, wd: Float): Float = {
-    if (specialized) {
+    var lwd = if (specialized) {
       if (this.weightSet.contains(index)) {
         wd
       } else {
@@ -190,6 +276,12 @@ abstract class Optimizer extends Serializable {
     } else {
       wd
     }
+    if (this.wdMult.contains(Left(index))) {
+      lwd *= this.wdMult(Left(index))
+    } else if (this.idx2name != null && this.idx2name.contains(index)) {
+      lwd *= this.wdMult.getOrElse(Right(this.idx2name(index)), 1.0f)
+    }
+    lwd
   }
 }
 

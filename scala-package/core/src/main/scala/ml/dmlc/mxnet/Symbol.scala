@@ -313,6 +313,39 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
   }
 
   /**
+   * Gets all attributes from the symbol.
+   * @return  Map[String, String], mapping attribute keys to values.
+   */
+  def listAttr(): Map[String, String] = {
+    val outSize = new MXUintRef
+    val out = ArrayBuffer[String]()
+    checkCall(_LIB.mxSymbolListAttrShallow(handle, outSize, out))
+    (0 until outSize.value).map(i => out(i * 2) -> out(i * 2 + 1)).toMap
+  }
+
+  /**
+   * Recursively gets all attributes from the symbol and its children.
+   * @return Map[Map[String, String]], There is a key in the returned
+   *        dict for every child with non-empty attribute set. For each symbol,
+   *        the name of the symbol is its key in the dict and the correspond value
+   *        is that symbol's attribute list (itself a dictionary).
+   */
+  def attrMap(): Map[String, Map[String, String]] = {
+    val outSize = new MXUintRef
+    val out = ArrayBuffer[String]()
+    checkCall(_LIB.mxSymbolListAttr(handle, outSize, out))
+    val result = {
+      val tmp = out.toArray.grouped(2).map{ strs =>
+        val nk = strs(0).split('$')
+        (nk(0), nk(1), strs(1))
+      }.toArray
+      val grouped = tmp.groupBy(_._1)
+      grouped.map { case (name, kvs) => name -> kvs.map(x => (x._2, x._3)).toMap }
+    }
+    result
+  }
+
+  /**
    * Save symbol into file.
    * You can also use pickle to do the job if you only work on python.
    * The advantage of load/save is the file is language agnostic.
