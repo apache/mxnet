@@ -1,7 +1,7 @@
 # NN API
 
 ```eval_rst
-.. currentmodule:: mxnet.nn
+.. currentmodule:: mxnet.foo.nn
 ```
 
 ```eval_rst
@@ -13,87 +13,87 @@
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
-.. autoclass:: mxnet.nn.Layer
+.. autoclass:: mxnet.foo.nn.Layer
     :members:
 
     .. automethod:: __call__
-.. autoclass:: mxnet.nn.Sequential
+.. autoclass:: mxnet.foo.nn.Sequential
     :members:
-.. autoclass:: mxnet.nn.Dense
+.. autoclass:: mxnet.foo.nn.Dense
     :members:
-.. autoclass:: mxnet.nn.Activation
+.. autoclass:: mxnet.foo.nn.Activation
     :members:
-.. autoclass:: mxnet.nn.Dropout
+.. autoclass:: mxnet.foo.nn.Dropout
     :members:
-.. autoclass:: mxnet.nn.BatchNorm
+.. autoclass:: mxnet.foo.nn.BatchNorm
     :members:
 .. autoclass:: mxnet.LeakyReLU
     :members:
 
-.. autoclass:: mxnet.nn.Conv1D
+.. autoclass:: mxnet.foo.nn.Conv1D
     :members:
-.. autoclass:: mxnet.nn.Conv2D
+.. autoclass:: mxnet.foo.nn.Conv2D
     :members:
-.. autoclass:: mxnet.nn.Conv3D
+.. autoclass:: mxnet.foo.nn.Conv3D
     :members:
-.. autoclass:: mxnet.nn.Conv1DTranspose
+.. autoclass:: mxnet.foo.nn.Conv1DTranspose
     :members:
-.. autoclass:: mxnet.nn.Conv2DTranspose
+.. autoclass:: mxnet.foo.nn.Conv2DTranspose
     :members:
-.. autoclass:: mxnet.nn.Conv3DTranspose
+.. autoclass:: mxnet.foo.nn.Conv3DTranspose
     :members:
-.. autoclass:: mxnet.nn.MaxPool1D
+.. autoclass:: mxnet.foo.nn.MaxPool1D
     :members:
-.. autoclass:: mxnet.nn.MaxPool2D
+.. autoclass:: mxnet.foo.nn.MaxPool2D
     :members:
-.. autoclass:: mxnet.nn.MaxPool3D
+.. autoclass:: mxnet.foo.nn.MaxPool3D
     :members:
-.. autoclass:: mxnet.nn.AvgPool1D
+.. autoclass:: mxnet.foo.nn.AvgPool1D
     :members:
-.. autoclass:: mxnet.nn.AvgPool2D
+.. autoclass:: mxnet.foo.nn.AvgPool2D
     :members:
-.. autoclass:: mxnet.nn.AvgPool3D
+.. autoclass:: mxnet.foo.nn.AvgPool3D
     :members:
-.. autoclass:: mxnet.nn.GlobalMaxPool1D
+.. autoclass:: mxnet.foo.nn.GlobalMaxPool1D
     :members:
-.. autoclass:: mxnet.nn.GlobalMaxPool2D
+.. autoclass:: mxnet.foo.nn.GlobalMaxPool2D
     :members:
-.. autoclass:: mxnet.nn.GlobalMaxPool3D
+.. autoclass:: mxnet.foo.nn.GlobalMaxPool3D
     :members:
-.. autoclass:: mxnet.nn.GlobalAvgPool1D
+.. autoclass:: mxnet.foo.nn.GlobalAvgPool1D
     :members:
-.. autoclass:: mxnet.nn.GlobalAvgPool2D
+.. autoclass:: mxnet.foo.nn.GlobalAvgPool2D
     :members:
-.. autoclass:: mxnet.nn.GlobalAvgPool3D
-    :members:
-
-
-.. currentmodule:: mxnet.nn.loss
-.. automethod:: mxnet.nn.loss.custom_loss
-
-.. automethod:: mxnet.nn.loss.multitask_loss
-
-.. automethod:: mxnet.nn.loss.l1_loss
-
-.. automethod:: mxnet.nn.loss.l2_loss
-
-.. automethod:: mxnet.nn.loss.softmax_cross_entropy_loss
-
-.. currentmodule:: mxnet.nn
-.. autoclass:: mxnet.nn.Optim
+.. autoclass:: mxnet.foo.nn.GlobalAvgPool3D
     :members:
 
-.. autoclass:: mxnet.nn.Parameter
+
+.. currentmodule:: mxnet.foo.nn.loss
+.. automethod:: mxnet.foo.nn.loss.custom_loss
+
+.. automethod:: mxnet.foo.nn.loss.multitask_loss
+
+.. automethod:: mxnet.foo.nn.loss.l1_loss
+
+.. automethod:: mxnet.foo.nn.loss.l2_loss
+
+.. automethod:: mxnet.foo.nn.loss.softmax_cross_entropy_loss
+
+.. currentmodule:: mxnet.foo.nn
+.. autoclass:: mxnet.foo.nn.Optim
     :members:
-.. autoclass:: mxnet.nn.ParameterDict
+
+.. autoclass:: mxnet.foo.nn.Parameter
+    :members:
+.. autoclass:: mxnet.foo.nn.ParameterDict
     :members:
 
-.. currentmodule:: mxnet.nn.utils
-.. automethod:: mxnet.nn.utils.split_data
+.. currentmodule:: mxnet.foo.nn.utils
+.. automethod:: mxnet.foo.nn.utils.split_data
 
-.. automethod:: mxnet.nn.utils.load_data
+.. automethod:: mxnet.foo.nn.utils.load_data
 
-.. currentmodule:: mxnet.nn
+.. currentmodule:: mxnet.foo.nn
 ```
 
 <script>auto_index("api-reference");</script>
