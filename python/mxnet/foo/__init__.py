@@ -4,11 +4,11 @@
 
 from .parameter import *
 
-from .layer import *
+from . import nn
 
-from .optim import *
+from . import rnn
 
-from .conv_layers import *
+from .trainer import *
 
 from . import loss
 

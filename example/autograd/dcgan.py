@@ -1,6 +1,7 @@
 import argparse
 import mxnet as mx
-from mxnet import nn
+from mxnet import foo
+from mxnet.foo import nn
 from mxnet.contrib import autograd
 from data import cifar10_iterator
 
@@ -82,8 +83,8 @@ netG.params.initialize(mx.init.Normal(0.02), ctx=ctx)
 netD.params.initialize(mx.init.Normal(0.02), ctx=ctx)
 
 
-optimizerG = nn.Optim(netG.params, 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
-optimizerD = nn.Optim(netD.params, 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
+trainerG = foo.Trainer(netG.params, 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
+trainerD = foo.Trainer(netD.params, 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
 
 
 real_label = mx.nd.ones((opt.batchSize,), ctx=ctx)
@@ -101,16 +102,16 @@ for epoch in range(opt.niter):
         with autograd.train_section():
             output = netD(data)
             output = output.reshape((opt.batchSize, 2))
-            errD_real = nn.loss.softmax_cross_entropy_loss(output, real_label)
+            errD_real = foo.loss.softmax_cross_entropy_loss(output, real_label)
 
             fake = netG(noise)
             output = netD(fake.detach())
             output = output.reshape((opt.batchSize, 2))
-            errD_fake = nn.loss.softmax_cross_entropy_loss(output, fake_label)
+            errD_fake = foo.loss.softmax_cross_entropy_loss(output, fake_label)
             errD = errD_real + errD_fake
             errD.backward()
 
-        optimizerD.step(opt.batchSize)
+        trainerD.step(opt.batchSize)
 
         ############################
         # (2) Update G network: maximize log(D(G(z)))
@@ -118,9 +119,9 @@ for epoch in range(opt.niter):
         with autograd.train_section():
             output = netD(fake)
             output = output.reshape((opt.batchSize, 2))
-            errG = nn.loss.softmax_cross_entropy_loss(output, real_label)
+            errG = foo.loss.softmax_cross_entropy_loss(output, real_label)
             errG.backward()
 
-        optimizerG.step(opt.batchSize)
+        trainerG.step(opt.batchSize)
 
         print mx.nd.mean(errD).asscalar(), mx.nd.mean(errG).asscalar()
