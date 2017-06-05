@@ -1,7 +1,12 @@
 #!/bin/bash
 
 MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
-CLASS_PATH=$MXNET_ROOT/scala-package/assembly/linux-x86_64-gpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
+OS=$(uname)
+if [ "$OS" = "Darwin" ]; then
+  CLASS_PATH=$MXNET_ROOT/scala-package/assembly/osx-x86_64-gpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
+else
+  CLASS_PATH=$MXNET_ROOT/scala-package/assembly/linux-x86_64-gpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
+fi
 
 # you can get the training data file using the following command
 # wget http://data.mxnet.io/data/char_lstm.zip

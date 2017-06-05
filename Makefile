@@ -18,6 +18,10 @@ ifndef NNVM_PATH
 	NNVM_PATH = $(ROOTDIR)/nnvm
 endif
 
+ifndef DLPACK_PATH
+  	DLPACK_PATH = $(ROOTDIR)/dlpack
+endif
+
 ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
@@ -47,9 +51,9 @@ endif
 ifeq ($(DEBUG), 1)
 	CFLAGS += -g -O0
 else
-	CFLAGS += -O3
+	CFLAGS += -O3 -DNDEBUG=1
 endif
-CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
@@ -135,7 +139,7 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
-.PHONY: clean all extra-packages test lint doc clean_all rcpplint rcppexport roxygen\
+.PHONY: clean all extra-packages test lint docs clean_all rcpplint rcppexport roxygen\
 	cython2 cython3 cython cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages
@@ -253,9 +257,9 @@ $(DMLC_CORE)/libdmlc.a: DMLCCORE
 DMLCCORE:
 	+ cd $(DMLC_CORE); $(MAKE) libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
-$(NNVM_PATH)/lib/libnnvm.a: LIBNNVM
-
-LIBNNVM:
+NNVM_INC = $(wildcard $(NNVM_PATH)/include/*/*.h)
+NNVM_SRC = $(wildcard $(NNVM_PATH)/src/*/*/*.cc $(NNVM_PATH)/src/*/*.cc $(NNVM_PATH)/src/*.cc)
+$(NNVM_PATH)/lib/libnnvm.a: $(NNVM_INC) $(NNVM_SRC)
 	+ cd $(NNVM_PATH); $(MAKE) lib/libnnvm.a DMLC_CORE_PATH=$(DMLC_CORE); cd $(ROOTDIR)
 
 bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
@@ -278,27 +282,32 @@ test: $(TEST)
 lint: cpplint rcpplint jnilint pylint
 
 cpplint:
-	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package \
+	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
 	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
-# ideally we want to check all, such as: python tools example tests
-	pylint python/mxnet --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc
+	pylint python/mxnet tools/caffe_converter/*.py --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc
 
-doc: doxygen
+doc: docs
+
+docs:
+	tests/ci_build/ci_build.sh doc make -C docs html
+
+clean_docs:
+	make -C docs clean
 
 doxygen:
 	doxygen docs/Doxyfile
 
 # Cython build
 cython:
-	cd python; python setup.py build_ext --inplace
+	cd python; python setup.py build_ext --inplace --with-cython
 
 cython2:
-	cd python; python2 setup.py build_ext --inplace
+	cd python; python2 setup.py build_ext --inplace --with-cython
 
 cython3:
-	cd python; python3 setup.py build_ext --inplace
+	cd python; python3 setup.py build_ext --inplace --with-cython
 
 cyclean:
 	rm -rf python/mxnet/*/*.so python/mxnet/*/*.cpp
@@ -320,7 +329,7 @@ rpkg:
 	R CMD INSTALL R-package
 	Rscript -e "require(mxnet); mxnet:::mxnet.export(\"R-package\")"
 	rm -rf R-package/NAMESPACE
-	Rscript -e "require(devtools); install_version(\"roxygen2\", version = \"5.0.1\", repos = \"https://cloud.r-project.org/\")"
+	Rscript -e "require(devtools); install_version(\"roxygen2\", version = \"5.0.1\", repos = \"https://cloud.r-project.org/\", quiet = TRUE)"
 	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
 	R CMD build --no-build-vignettes R-package
 	rm -rf mxnet_current_r.tar.gz
@@ -364,7 +373,7 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
-clean: cyclean $(EXTRA_PACKAGES_CLEAN)
+clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 	cd $(DMLC_CORE); $(MAKE) clean; cd -

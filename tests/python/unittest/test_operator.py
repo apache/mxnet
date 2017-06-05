@@ -835,7 +835,26 @@ def test_batchnorm_training():
         rolling_std = np.random.uniform(size=s)
 
         data = mx.symbol.Variable('data')
+
+        test = mx.symbol.BatchNorm_v1(data, fix_gamma=True)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
+        test = mx.symbol.BatchNorm(data, fix_gamma=True)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
+        test = mx.symbol.BatchNorm_v1(data, fix_gamma=True, use_global_stats=True)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
+        test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
+        test = mx.symbol.BatchNorm_v1(data, fix_gamma=False)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
         test = mx.symbol.BatchNorm(data, fix_gamma=False)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
+        test = mx.symbol.BatchNorm_v1(data, fix_gamma=False, use_global_stats=True)
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
 
         test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True)
@@ -1198,7 +1217,7 @@ def test_reshape():
     assert_allclose(exe.grad_arrays[0].asnumpy(), out_grad_npy.reshape((5, 4, 3, 7)))
 
 def test_reduce():
-    sample_num = 200
+    sample_num = 500
     def test_reduce_inner(numpy_reduce_func, numpy_reduce_grad_func, mx_reduce_sym, nan_prob = 0):
         for i in range(sample_num):
             # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
@@ -1207,6 +1226,7 @@ def test_reduce():
             shape = np.random.randint(1, 6, size=(ndim,))
             axis_num = np.random.randint(0, ndim, size=1)
             axis_flags = np.random.randint(0, 2, size=ndim)
+            exclude = np.random.randint(0, 2)
             axes = []
             for (axis, flag) in enumerate(axis_flags):
                 if flag:
@@ -1221,6 +1241,9 @@ def test_reduce():
             a = mx.symbol.Variable('a')
             if axes is None:
                 b = mx_reduce_sym(a, keepdims=keepdims)
+            elif exclude and isinstance(axes, tuple) and len(axes) < ndim:
+                naxes = [i for i in range(ndim) if i not in axes]
+                b = mx_reduce_sym(a, axis=naxes, keepdims=keepdims, exclude=True)
             else:
                 b = mx_reduce_sym(a, axis=axes, keepdims=keepdims)
             dat_npy = np.random.rand(*shape)
@@ -1248,6 +1271,7 @@ def test_reduce():
             bc_grad_groundtruth = np.broadcast_to(grad_groundtruth, grad_nd.shape)
             equal_backward = almost_equal_ignore_nan(grad_nd.asnumpy(), bc_grad_groundtruth, 1E-4, 1E-4)
             assert equal_backward
+
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.sum),
                       lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
                         outgrad.reshape(keepdim_shape),
@@ -1800,14 +1824,16 @@ def check_pad_with_shape(shape, xpu, pad_width, mode):
     check_numeric_gradient(Y, [x.asnumpy()], numeric_eps=1e-2, rtol=1e-2)
 
 def test_pad():
-    shape1 = (2, 3, 2, 3)
+    shape1 = (2, 3, 3, 5)
     pad1 = (0, 0, 0, 0, 1, 2, 3, 4)
-    shape2 = (2, 3, 2, 3, 3)
+    shape2 = (2, 3, 3, 5, 4)
     pad2 = (0, 0, 0, 0, 1, 2, 3, 4, 3, 1)
     check_pad_with_shape(shape1, default_context(), pad1, 'constant')
     check_pad_with_shape(shape1, default_context(), pad1, 'edge')
     check_pad_with_shape(shape2, default_context(), pad2, 'constant')
     check_pad_with_shape(shape2, default_context(), pad2, 'edge')
+    check_pad_with_shape(shape1, default_context(), pad1, 'reflect')
+    check_pad_with_shape(shape2, default_context(), pad2, 'reflect')
 
 def np_instance_norm(data, weight, bias, eps):
     spatial_dims = data.shape[2::]
@@ -2991,11 +3017,11 @@ def test_pick():
     test_pick_helper(np.int32)
     test_pick_helper(np.float32)
 
-    
+
 def check_ctc_loss(acts, labels, loss_truth):
     in_var = mx.sym.Variable('input')
     labels_var = mx.sym.Variable('labels')
-    ctc = mx.sym.ctc_loss(in_var, labels_var)
+    ctc = mx.contrib.sym.ctc_loss(in_var, labels_var)
     acts_nd = mx.nd.array(acts, ctx=default_context())
     labels_nd = mx.nd.array(labels, ctx=default_context())
     exe = ctc.bind(ctx=default_context(), args=[acts_nd, labels_nd])
@@ -3032,7 +3058,7 @@ def test_ctc_loss():
     true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
     check_ctc_loss(acts2, labels2, true_loss)
 
-    
+
 def test_quantization_op():
   min0 = mx.nd.array([0.0])
   max0 = mx.nd.array([1.0])
@@ -3089,71 +3115,5 @@ def test_custom_op():
 
 
 if __name__ == '__main__':
-    test_custom_op()
-    test_log_softmax()
-    test_new_softmax()
-    test_pick()
-    test_l2_normalization()
-    test_sequence_mask()
-    test_roipooling()
-    test_batchnorm_training()
-    test_order()
-    test_grid_generator()
-    test_dot()
-    test_cast()
-    test_clip()
-    test_index2d()
-    test_scalarop()
-    test_reduce()
-    test_init()
-    test_expand_dims()
-    test_slice_axis()
-    test_softmax()
-    test_broadcast_binary_op()
-    test_flip()
-    test_crop()
-    test_transpose()
-    test_convolution_grouping()
-    test_nearest_upsampling()
-    test_binary_op_duplicate_input()
-    test_elementwise_sum()
-    test_concat()
-    test_slice_channel()
-    test_regression()
-    test_python_op()
-    test_swapaxes()
-    test_scalar_pow()
-    test_symbol_pow()
-    test_pow_fn()
-    test_embedding()
-    test_rsqrt_cos_sin()
-    test_maximum_minimum()
-    test_maximum_minimum_scalar()
-    test_abs()
-    test_round_ceil_floor()
-    test_deconvolution()
-    check_softmax_with_ignore_label(default_context())
-    test_convolution_dilated_impulse_response()
-    test_reshape()
-    test_broadcast()
-    test_stn()
-    test_batch_dot()
-    test_correlation()
-    test_support_vector_machine_l1_svm()
-    test_support_vector_machine_l2_svm()
-    test_pad()
-    test_instance_normalization()
-    test_mathematical()
-    test_special_functions_using_scipy()
-    test_blockgrad()
-    test_take()
-    test_bilinear_sampler()
-    test_binary_logic()
-    test_repeat()
-    test_tile()
-    test_one_hot()
-    test_where()
-    test_ctc_loss()
-    test_quantization_op()
-    test_relu()
-    test_sigmoid()
+    import nose
+    nose.runmodule()

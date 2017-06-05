@@ -10,6 +10,7 @@
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/op_attr_types.h>
+#include <mxnet/c_api.h>
 #include <nnvm/symbolic.h>
 #include <nnvm/op.h>
 #include <nnvm/graph.h>
@@ -19,6 +20,7 @@
 
 namespace mxnet {
 namespace autograd {
+
 class AGNode {
  public:
   OpReqType grad_req;
@@ -27,9 +29,10 @@ class AGNode {
   std::vector<AGNodeEntry> inputs;
   std::vector<NDArray> outputs;
   std::vector<NDArray> out_grads;
+  bool fresh_out_grad;
 
   explicit AGNode(const nnvm::NodePtr& nn_node_) :
-    grad_req(kNullOp), nn_node(nn_node_) {}
+    grad_req(kNullOp), nn_node(nn_node_), fresh_out_grad(false) {}
 
   static AGNodePtr Create(const nnvm::NodePtr& nn_node_) {
     return std::make_shared<AGNode>(nn_node_);
@@ -65,8 +68,7 @@ class AutogradRuntime {
                      const std::vector<mx_uint>& grad_reqs,
                      const std::vector<NDArray*>& gradients);
   /*! \brief record imperative operator which is executed by fcompute. */
-  void RecordImperativeFCompute(FCompute fn,
-                                const nnvm::Op* op,
+  void RecordImperativeFCompute(const nnvm::Op* op,
                                 const nnvm::NodeAttrs& attrs,
                                 std::vector<NDArray>* p_inputs,
                                 std::vector<NDArray>* p_outputs);
@@ -77,7 +79,9 @@ class AutogradRuntime {
                                 std::vector<NDArray>* p_inputs,
                                 std::vector<NDArray>* p_outputs);
   /*! \brief compute the gradient of outputs w.r.t variables. */
-  void ComputeGradient(const std::vector<NDArray>& outputs);
+  void ComputeGradient(const std::vector<NDArray>& outputs,
+                       const std::vector<NDArray>& ograds,
+                       bool retain_graph);
   /*! \return AutogradRuntime singleton */
   static AutogradRuntime* Get();
   /*! \brief Get shared pointer reference to AutogradRuntime singleton.
@@ -106,7 +110,7 @@ class AutogradRuntime {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local bool is_train_;
 #else
-  static MX_TREAD_LOCAL bool is_train_;
+  static MX_THREAD_LOCAL bool is_train_;
 #endif
   /*! \brief node count used for naming */
   std::atomic<uint64_t> node_count_{0};

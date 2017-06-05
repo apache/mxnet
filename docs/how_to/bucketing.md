@@ -45,9 +45,10 @@ To enable bucketing, MXNet needs to know how to construct a new unrolled symboli
 
 
 ```python
-model = mx.model.FeedForward(
-        ctx     = contexts,
-        symbol  = sym_gen)
+model = mx.mod.BucketingModule(
+        sym_gen             = sym_gen,
+        default_bucket_key  = data_train.default_bucket_key,
+        context             = contexts)
 ```
 
 `sym_gen` must be a function that takes one argument, `bucket_key`, and returns a `Symbol` for this bucket. We'll use the sequence length as the bucket key. A bucket key could be anything. For example, in neural translation, because different combinations of input-output sequence lengths correspond to different unrolling, the bucket key could be a pair of lengths.
@@ -84,12 +85,12 @@ It also applies padding for sequences of different length within the mini-batch 
 
 For a full, working implementation of a `DataIter`
 that reads text sequences by as described above, see [example/rnn/lstm_ptb_bucketing.py](https://github.com/dmlc/mxnet/blob/master/example/rnn/lstm_bucketing.py).
-In this example, you can use bucketing with a static configuration (e.g., `buckets = [10, 20, 30, 40, 50, 60]`), or let MXNet generate buckets automatically according to the characteristics of the dataset (`buckets = []`). The latter approach is implemented by adding a bucket as long as the number of sequences assigned to that bucket is exceeds some minimum count. For more information, see [default_gen_buckets()](https://github.com/dmlc/mxnet/blob/master/example/rnn/bucket_io.py#L43).
+In this example, you can use bucketing with a static configuration (e.g., `buckets = [10, 20, 30, 40, 50, 60]`), or let MXNet generate buckets automatically according to the characteristics of the dataset (`buckets = []`). The latter approach is implemented by adding a bucket as long as the number of sequences assigned to that bucket is exceeds some minimum count. For more information, see [default_gen_buckets()](https://github.com/dmlc/mxnet/blob/master/example/rnn/old/bucket_io.py#L43).
 
 ## Beyond Sequence Training
 
 In this example, we briefly explained how the bucketing API works.
-However, the API is not limited to bucketing by sequence lengths. 
+However, the API is not limited to bucketing by sequence lengths.
 The bucket key can be an arbitrary object, as long
 as the architecture returned by `gen_sym`
 is compatible with (has the same set of parameters) as the object.

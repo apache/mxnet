@@ -16,7 +16,7 @@ mx.model.init.params.rnn <- function(symbol, input.shape, initializer, ctx) {
 # Initialize the data iter
 mx.model.init.iter.rnn <- function(X, y, batch.size, is.train) {
   if (is.MXDataIter(X)) return(X)
-  shape <- dim(data)
+  shape <- dim(X)
   if (is.null(shape)) {
     num.data <- length(X)
   } else {
