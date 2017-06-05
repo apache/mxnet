@@ -167,7 +167,7 @@ class Parameter(object):
             Desired context.
         """
         if ctx is None:
-            ctx = Context.current_context()
+            ctx = context.current_context()
         assert self._grad is not None, \
             "Cannot get gradient array for Parameter %s " \
             "because it hasn't been initialized or grad_req='null'"%(self.name)

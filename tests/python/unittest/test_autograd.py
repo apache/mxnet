@@ -1,3 +1,4 @@
+import functools
 import mxnet.ndarray as nd
 from mxnet.autograd import *
 from mxnet.test_utils import *
