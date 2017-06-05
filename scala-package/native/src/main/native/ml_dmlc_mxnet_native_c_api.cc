@@ -1114,6 +1114,52 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolSetAttr
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolListAttrShallow
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jobject joutSize, jobject jout) {
+  mx_uint outSize;
+  const char** out;
+
+  int ret = MXSymbolListAttrShallow(reinterpret_cast<SymbolHandle>(symbolPtr), &outSize, &out);
+
+  jclass refIntClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
+  jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");
+  env->SetIntField(joutSize, valueInt, static_cast<jint>(outSize));
+
+  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jmethodID arrayAppend = env->GetMethodID(arrayClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+  for (size_t i = 0; i < outSize * 2; ++i) {
+    jstring jtmp = env->NewStringUTF(out[i]);
+    env->CallObjectMethod(jout, arrayAppend, jtmp);
+    env->DeleteLocalRef(jtmp);
+  }
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolListAttr
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jobject joutSize, jobject jout) {
+  mx_uint outSize;
+  const char** out;
+
+  int ret = MXSymbolListAttr(reinterpret_cast<SymbolHandle>(symbolPtr), &outSize, &out);
+
+  jclass refIntClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
+  jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");
+  env->SetIntField(joutSize, valueInt, static_cast<jint>(outSize));
+
+  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jmethodID arrayAppend = env->GetMethodID(arrayClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+  for (size_t i = 0; i < outSize * 2; ++i) {
+    jstring jtmp = env->NewStringUTF(out[i]);
+    env->CallObjectMethod(jout, arrayAppend, jtmp);
+    env->DeleteLocalRef(jtmp);
+  }
+
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCompose
   (JNIEnv *env, jobject obj, jlong symbolPtr, jstring jname,
     jobjectArray jkeys, jlongArray jargs) {

@@ -79,4 +79,5 @@ if __name__ == "__main__":
         print "Test Summary End"
         print "Stats start"
         print "[Passed: %d of %d]" % (success_num, len(tutorial_list))
+        print "Stats end"
 
