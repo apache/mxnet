@@ -103,7 +103,7 @@ class PySGD(mx.optimizer.Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
-        use_multi_precision = type(state) in [list, tuple]
+        use_multi_precision = isinstance(state, list) or isinstance(state, tuple)
 
         if not use_multi_precision:
             if self.momentum == 0.0:

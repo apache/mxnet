@@ -367,7 +367,7 @@ class SGD(Optimizer):
             kwargs['momentum'] = self.momentum
         if self.clip_gradient:
             kwargs['clip_gradient'] = self.clip_gradient
-        use_multi_precision = type(state) in [list, tuple]
+        use_multi_precision = isinstance(state, list) or isinstance(state, tuple)
 
         if not use_multi_precision:
             if state is not None:
