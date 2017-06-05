@@ -2,8 +2,8 @@
 # pylint: disable= arguments-differ
 """Convolutional neural network layers."""
 from .layer import Layer
-from .. import symbol
-from ..base import numeric_types
+from ... import symbol
+from ...base import numeric_types
 
 def _infer_weight_shape(op, data_shape):
     sym = symbol.invoke(op, [symbol.var('data', shape=data_shape)])

@@ -5,12 +5,13 @@
 from .. import optimizer as opt
 from ..model import _create_kvstore
 
-class Optim(object):
-    """Optimizes a set of Parameters. Optim should be used together with autograd.
+class Trainer(object):
+    """Applies an Optimizer on a set of Parameters. Trainer should
+    be used together with autograd.
 
     Parameters
     ----------
-    param_dict : ParameterDict
+    params : ParameterDict
         The set of parameters to optimize.
     optimizer : str or Optimizer
         The optimizer to use.
@@ -20,8 +21,8 @@ class Optim(object):
     kvstore : str or KVStore
         kvstore type for multi-gpu and distributed training.
     """
-    def __init__(self, param_dict, optimizer, optimizer_params, kvstore='device'):
-        self._params = [param for param in param_dict.values() if param.grad_req != 'null']
+    def __init__(self, params, optimizer, optimizer_params, kvstore='device'):
+        self._params = [param for param in params.values() if param.grad_req != 'null']
         self._scale = optimizer_params.get('rescale_grad', 1.0)
 
         self._contexts = self._check_contexts()
@@ -106,4 +107,4 @@ class Optim(object):
             for upd, arr, grad in zip(self._updaters, param.list_data(), param.list_grad()):
                 if arr._fresh_grad:
                     upd(i, grad, arr)
-                    grad._fresh_grad = False
+                    arr._fresh_grad = False

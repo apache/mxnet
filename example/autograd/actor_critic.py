@@ -6,7 +6,8 @@ from itertools import count
 import numpy as np
 
 import mxnet as mx
-from mxnet import nn
+from mxnet import foo
+from mxnet.foo import nn
 from mxnet.contrib import autograd
 
 
@@ -42,7 +43,7 @@ class Policy(nn.Layer):
 
 net = Policy()
 net.params.initialize(mx.init.Uniform(0.02))
-trainer = nn.Optim(net.params, 'adam', {'learning_rate': 3e-2})
+trainer = foo.Trainer(net.params, 'adam', {'learning_rate': 3e-2})
 
 
 running_reward = 10
@@ -79,7 +80,7 @@ for epoch in count(1):
         rewards /= rewards.std() + np.finfo(rewards.dtype).eps
 
         # compute loss and gradient
-        loss = sum([nn.loss.l1_loss(value, mx.nd.array([r])) for r, value in zip(rewards, values)])
+        loss = sum([foo.loss.l1_loss(value, mx.nd.array([r])) for r, value in zip(rewards, values)])
         final_nodes = [loss]
         for logp, r, v in zip(heads, rewards, values):
             reward = r - v.asnumpy()[0,0]
