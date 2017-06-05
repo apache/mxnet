@@ -1,7 +1,7 @@
-# Foo API
+# Foo Loss API
 
 ```eval_rst
-.. currentmodule:: mxnet.foo
+.. currentmodule:: mxnet.foo.loss
 ```
 
 ```eval_rst
@@ -13,12 +13,11 @@
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
-.. autoclass:: mxnet.foo.Parameter
-    :members:
-.. autoclass:: mxnet.foo.ParameterDict
-    :members:
-.. autoclass:: mxnet.foo.Trainer
-    :members:
+.. automethod:: mxnet.foo.loss.custom_loss
+.. automethod:: mxnet.foo.loss.multitask_loss
+.. automethod:: mxnet.foo.loss.l1_loss
+.. automethod:: mxnet.foo.loss.l2_loss
+.. automethod:: mxnet.foo.loss.softmax_cross_entropy_loss
 ```
 
 <script>auto_index("api-reference");</script>

@@ -1,7 +1,7 @@
-# Foo API
+# Foo Utility API
 
 ```eval_rst
-.. currentmodule:: mxnet.foo
+.. currentmodule:: mxnet.foo.utils
 ```
 
 ```eval_rst
@@ -13,12 +13,8 @@
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
-.. autoclass:: mxnet.foo.Parameter
-    :members:
-.. autoclass:: mxnet.foo.ParameterDict
-    :members:
-.. autoclass:: mxnet.foo.Trainer
-    :members:
+.. automethod:: mxnet.foo.utils.split_data
+.. automethod:: mxnet.foo.utils.load_data
 ```
 
 <script>auto_index("api-reference");</script>
