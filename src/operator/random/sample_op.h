@@ -3,8 +3,8 @@
  * \file sample_op.h
  * \brief Elementary sampling operators
  */
-#ifndef MXNET_OPERATOR_TENSOR_SAMPLE_OP_H_
-#define MXNET_OPERATOR_TENSOR_SAMPLE_OP_H_
+#ifndef MXNET_OPERATOR_RANDOM_SAMPLE_OP_H_
+#define MXNET_OPERATOR_RANDOM_SAMPLE_OP_H_
 
 #include <mxnet/operator_util.h>
 #include <mshadow/base.h>
@@ -12,7 +12,7 @@
 #include <vector>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
-#include "./init_op.h"
+#include "../tensor/init_op.h"
 
 namespace mxnet {
 namespace op {
@@ -386,4 +386,4 @@ inline std::vector<ResourceRequest> SampleResource(const NodeAttrs& attrs) {
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_TENSOR_SAMPLE_OP_H_
+#endif  // MXNET_OPERATOR_RANDOM_SAMPLE_OP_H_

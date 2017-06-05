@@ -113,6 +113,10 @@ MXNET_OPERATOR_REGISTER_UNARY(make_loss)
 // identity output as first input, but attributes are constrainted to be like rhs
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_num_inputs(2)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"lhs", "rhs"};
+  })
 .set_attr<nnvm::FInplaceOption>(
     "FInplaceOption", [](const NodeAttrs& attrs) {
       return std::vector<std::pair<int, int> >{{0, 0}};
@@ -131,7 +135,9 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
                          {n->inputs[1]}, nullptr, &n);
       lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
       return lhs;
-    });
+    })
+.add_argument("lhs", "NDArray-or-Symbol", "First input.")
+.add_argument("rhs", "NDArray-or-Symbol", "Second input.");
 
 DMLC_REGISTER_PARAMETER(CastParam);
 NNVM_REGISTER_OP(Cast)

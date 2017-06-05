@@ -100,7 +100,7 @@ all_layers = sym.get_internals()
 all_layers.list_outputs()[-10:]
 ```
 
-A often used layer for feature extraction is the one before the last fully
+An often used layer for feature extraction is the one before the last fully
 connected layer. For ResNet, and also Inception, it is the flatten layer with
 name `flatten0` which reshapes the 4-D convolutional layer output into 2-D for
 the fully connected layer. The following source code extracts a new Symbol which
