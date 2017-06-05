@@ -1,5 +1,6 @@
 import functools
 import mxnet.ndarray as nd
+from mxnet.ndarray import zeros_like
 from mxnet.autograd import *
 from mxnet.test_utils import *
 
