@@ -68,16 +68,18 @@
     :members:
 
 
-.. automethod:: mxnet.nn.custom_loss
+.. currentmodule:: mxnet.nn.loss
+.. automethod:: mxnet.nn.loss.custom_loss
 
-.. automethod:: mxnet.nn.multitask_loss
+.. automethod:: mxnet.nn.loss.multitask_loss
 
-.. automethod:: mxnet.nn.l1_loss
+.. automethod:: mxnet.nn.loss.l1_loss
 
-.. automethod:: mxnet.nn.l2_loss
+.. automethod:: mxnet.nn.loss.l2_loss
 
-.. automethod:: mxnet.nn.softmax_cross_entropy_loss
+.. automethod:: mxnet.nn.loss.softmax_cross_entropy_loss
 
+.. currentmodule:: mxnet.nn
 .. autoclass:: mxnet.nn.Optim
     :members:
 
@@ -86,9 +88,12 @@
 .. autoclass:: mxnet.nn.ParameterDict
     :members:
 
-.. automethod:: mxnet.nn.split_data
+.. currentmodule:: mxnet.nn.utils
+.. automethod:: mxnet.nn.utils.split_data
 
-.. automethod:: mxnet.nn.load_data
+.. automethod:: mxnet.nn.utils.load_data
+
+.. currentmodule:: mxnet.nn
 ```
 
 <script>auto_index("api-reference");</script>
