@@ -1,8 +1,4 @@
-# NN API
-
-```eval_rst
-.. currentmodule:: mxnet.foo.nn
-```
+# Foo API
 
 ```eval_rst
 .. warning:: This package is currently experimental and may change in the near future.
@@ -13,6 +9,16 @@
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
+.. currentmodule:: mxnet.foo
+.. autoclass:: mxnet.foo.Parameter
+    :members:
+.. autoclass:: mxnet.foo.ParameterDict
+    :members:
+.. autoclass:: mxnet.foo.Trainer
+    :members:
+
+
+.. currentmodule:: mxnet.foo.nn
 .. autoclass:: mxnet.foo.nn.Layer
     :members:
 
@@ -27,7 +33,7 @@
     :members:
 .. autoclass:: mxnet.foo.nn.BatchNorm
     :members:
-.. autoclass:: mxnet.LeakyReLU
+.. autoclass:: mxnet.foo.nn.LeakyReLU
     :members:
 
 .. autoclass:: mxnet.foo.nn.Conv1D
@@ -68,32 +74,42 @@
     :members:
 
 
-.. currentmodule:: mxnet.foo.nn.loss
-.. automethod:: mxnet.foo.nn.loss.custom_loss
+.. currentmodule:: mxnet.foo.loss
+.. automethod:: mxnet.foo.loss.custom_loss
+.. automethod:: mxnet.foo.loss.multitask_loss
+.. automethod:: mxnet.foo.loss.l1_loss
+.. automethod:: mxnet.foo.loss.l2_loss
+.. automethod:: mxnet.foo.loss.softmax_cross_entropy_loss
 
-.. automethod:: mxnet.foo.nn.loss.multitask_loss
 
-.. automethod:: mxnet.foo.nn.loss.l1_loss
+.. currentmodule:: mxnet.foo.utils
+.. automethod:: mxnet.foo.utils.split_data
+.. automethod:: mxnet.foo.utils.load_data
 
-.. automethod:: mxnet.foo.nn.loss.l2_loss
 
-.. automethod:: mxnet.foo.nn.loss.softmax_cross_entropy_loss
-
-.. currentmodule:: mxnet.foo.nn
-.. autoclass:: mxnet.foo.nn.Optim
+.. currentmodule:: mxnet.foo.rnn
+.. autoclass:: mxnet.foo.rnn.RecurrentCell
     :members:
 
-.. autoclass:: mxnet.foo.nn.Parameter
+    .. automethod:: __call__
+.. autoclass:: mxnet.foo.rnn.LSTMCell
     :members:
-.. autoclass:: mxnet.foo.nn.ParameterDict
+.. autoclass:: mxnet.foo.rnn.GRUCell
     :members:
-
-.. currentmodule:: mxnet.foo.nn.utils
-.. automethod:: mxnet.foo.nn.utils.split_data
-
-.. automethod:: mxnet.foo.nn.utils.load_data
-
-.. currentmodule:: mxnet.foo.nn
+.. autoclass:: mxnet.foo.rnn.RNNCell
+    :members:
+.. autoclass:: mxnet.foo.rnn.FusedRNNCell
+    :members:
+.. autoclass:: mxnet.foo.rnn.SequentialRNNCell
+    :members:
+.. autoclass:: mxnet.foo.rnn.BidirectionalCell
+    :members:
+.. autoclass:: mxnet.foo.rnn.DropoutCell
+    :members:
+.. autoclass:: mxnet.foo.rnn.ZoneoutCell
+    :members:
+.. autoclass:: mxnet.foo.rnn.ResidualCell
+    :members:
 ```
 
 <script>auto_index("api-reference");</script>
