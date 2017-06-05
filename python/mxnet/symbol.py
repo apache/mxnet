@@ -658,7 +658,7 @@ class Symbol(SymbolBase):
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
-		def list_inputs(self, option=1):
+    def list_inputs(self, option=1):
         """Lists all the inputs in the symbol.
 
         Example usage:
@@ -685,7 +685,7 @@ class Symbol(SymbolBase):
         """
         size = ctypes.c_uint()
         sarr = ctypes.POINTER(ctypes.c_char_p)()
-        check_call(_LIB.MXSymbolListOutputs(
+        check_call(_LIB.NNSymbolListInputNames(
             self.handle, option, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
