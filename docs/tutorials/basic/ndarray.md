@@ -280,6 +280,24 @@ simply `mx.gpu()`. When we have access to two or more GPUs, the 2nd GPU is
 represented by `mx.gpu(1)`, etc.
 
 ```python
+import sys
+
+def gpu_available():
+    try:
+        with mx.Context(mx.gpu()):
+            mx.nd.ones(1)
+        return True
+    except mx.MXNetError as ex:
+        return False
+
+if(not gpu_available()):
+    print("To use NDArray's GPU features, a GPU must be present "
+          "and MXNet must be compiled with USE_CUDA=1",
+          file=sys.stderr)
+    sys.exit()
+```
+
+```python
 def f():
     a = mx.nd.ones((100,100))
     b = mx.nd.ones((100,100))
