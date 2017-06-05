@@ -685,7 +685,7 @@ class Symbol(SymbolBase):
         """
         size = ctypes.c_uint()
         sarr = ctypes.POINTER(ctypes.c_char_p)()
-        check_call(_LIB.MXSymbolListInputs(
+        check_call(_LIB.MXSymbolListOutputs(
             self.handle, option, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
