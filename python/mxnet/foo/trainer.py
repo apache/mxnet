@@ -107,4 +107,4 @@ class Trainer(object):
             for upd, arr, grad in zip(self._updaters, param.list_data(), param.list_grad()):
                 if arr._fresh_grad:
                     upd(i, grad, arr)
-                    grad._fresh_grad = False
+                    arr._fresh_grad = False
