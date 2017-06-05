@@ -1,6 +1,6 @@
 import mxnet as mx
 import numpy as np
-from mxnet import nn
+from mxnet import foo
 
 
 def test_loss_ndarray():
@@ -8,22 +8,22 @@ def test_loss_ndarray():
     label = mx.nd.array([1, 3, 5, 7])
     weighting = mx.nd.array([0.5, 1, 0.5, 1])
 
-    assert mx.nd.sum(nn.loss.l1_loss(output, label)).asscalar() == 6.
-    assert mx.nd.sum(nn.loss.l1_loss(output, label, weight=0.5)).asscalar() == 3.
-    assert mx.nd.sum(nn.loss.l1_loss(output, label, sample_weight=weighting)).asscalar() == 5.
+    assert mx.nd.sum(foo.loss.l1_loss(output, label)).asscalar() == 6.
+    assert mx.nd.sum(foo.loss.l1_loss(output, label, weight=0.5)).asscalar() == 3.
+    assert mx.nd.sum(foo.loss.l1_loss(output, label, sample_weight=weighting)).asscalar() == 5.
 
-    assert mx.nd.sum(nn.loss.l2_loss(output, label)).asscalar() == 7.
-    assert mx.nd.sum(nn.loss.l2_loss(output, label, weight=0.25)).asscalar() == 1.75
-    assert mx.nd.sum(nn.loss.l2_loss(output, label, sample_weight=weighting)).asscalar() == 6
+    assert mx.nd.sum(foo.loss.l2_loss(output, label)).asscalar() == 7.
+    assert mx.nd.sum(foo.loss.l2_loss(output, label, weight=0.25)).asscalar() == 1.75
+    assert mx.nd.sum(foo.loss.l2_loss(output, label, sample_weight=weighting)).asscalar() == 6
 
     output = mx.nd.array([[0, 2], [1, 4]])
     label = mx.nd.array([0, 1])
     weighting = mx.nd.array([[0.5], [1.0]])
 
-    loss = nn.loss.softmax_cross_entropy_loss(output, label).asnumpy()
+    loss = foo.loss.softmax_cross_entropy_loss(output, label).asnumpy()
     mx.test_utils.assert_almost_equal(loss, np.array([ 2.12692809,  0.04858733]))
 
-    loss = nn.loss.softmax_cross_entropy_loss(output, label, sample_weight=weighting).asnumpy()
+    loss = foo.loss.softmax_cross_entropy_loss(output, label, sample_weight=weighting).asnumpy()
     mx.test_utils.assert_almost_equal(loss, np.array([ 1.06346405,  0.04858733]))
 
 
@@ -49,9 +49,9 @@ def check_loss(loss):
 
 
 def test_loss_symbol():
-    check_loss(nn.loss.l1_loss)
-    check_loss(nn.loss.l2_loss)
-    check_loss(nn.loss.softmax_cross_entropy_loss)
+    check_loss(foo.loss.l1_loss)
+    check_loss(foo.loss.l2_loss)
+    check_loss(foo.loss.softmax_cross_entropy_loss)
 
 
 def get_net(num_hidden):
@@ -75,7 +75,7 @@ def test_ce_loss():
     output = get_net(nclass)
     fc2 = output.get_internals()['fc2_output']
     l = mx.symbol.Variable('label')
-    loss = nn.loss.softmax_cross_entropy_loss(output, l, extra_outputs=(fc2,))
+    loss = foo.loss.softmax_cross_entropy_loss(output, l, extra_outputs=(fc2,))
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.})
     assert mod.score(data_iter)[0][1] == 1.0
@@ -90,7 +90,7 @@ def test_l2_loss():
     data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
     output = get_net(1)
     l = mx.symbol.Variable('label')
-    loss = nn.loss.l2_loss(output, l)
+    loss = foo.loss.l2_loss(output, l)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.})
     assert mod.score(data_iter)[0][1] < 0.05
@@ -105,7 +105,7 @@ def test_l1_loss():
     data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
     output = get_net(1)
     l = mx.symbol.Variable('label')
-    loss = nn.loss.l1_loss(output, l)
+    loss = foo.loss.l1_loss(output, l)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.1},
             initializer=mx.init.Uniform(0.5))
@@ -122,7 +122,7 @@ def test_custom_loss():
     output = get_net(1)
     l = mx.symbol.Variable('label')
     loss = mx.sym.square(output - l)
-    loss = nn.loss.custom_loss(loss, output, l, weight=0.5, metrics='mse')
+    loss = foo.loss.custom_loss(loss, output, l, weight=0.5, metrics='mse')
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200,
             optimizer_params={'learning_rate': 1.})
@@ -141,7 +141,7 @@ def test_sample_weight_loss():
     output = get_net(nclass)
     l = mx.symbol.Variable('label')
     w = mx.symbol.Variable('w')
-    loss = nn.loss.softmax_cross_entropy_loss(output, l, sample_weight=w)
+    loss = foo.loss.softmax_cross_entropy_loss(output, l, sample_weight=w)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label', 'w'))
     mod.fit(data_iter, num_epoch=200,
             optimizer_params={'learning_rate': 1.})
@@ -165,9 +165,9 @@ def test_multi_loss():
     output2 = mx.symbol.FullyConnected(act3, name='output2', num_hidden=5)
     l1 = mx.symbol.Variable('label1')
     l2 = mx.symbol.Variable('label2')
-    loss1 = nn.loss.softmax_cross_entropy_loss(output1, l1)
-    loss2 = nn.loss.l2_loss(output2, l2)
-    loss = nn.loss.multitask_loss([loss1, loss2])
+    loss1 = foo.loss.softmax_cross_entropy_loss(output1, l1)
+    loss2 = foo.loss.l2_loss(output2, l2)
+    loss = foo.loss.multitask_loss([loss1, loss2])
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label1', 'label2'))
 
     mod.fit(data_iter, num_epoch=200,
@@ -194,7 +194,7 @@ def test_saveload():
     data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
     output = get_net(nclass)
     l = mx.symbol.Variable('label')
-    loss = nn.loss.softmax_cross_entropy_loss(output, l)
+    loss = foo.loss.softmax_cross_entropy_loss(output, l)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=100, optimizer_params={'learning_rate': 1.})
     mod.save_checkpoint('test', 100, save_optimizer_states=True)

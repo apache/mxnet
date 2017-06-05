@@ -1,10 +1,11 @@
 import mxnet as mx
-from mxnet import nn
+from mxnet import foo
+from mxnet.foo import nn
 import numpy as np
 
 
 def test_parameter():
-    p = nn.Parameter('weight', shape=(10, 10))
+    p = foo.Parameter('weight', shape=(10, 10))
     p.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
     assert len(p.list_data()) == 2
     assert len(p.list_grad()) == 2
@@ -14,7 +15,7 @@ def test_parameter():
 
 
 def test_paramdict():
-    params = nn.ParameterDict('net_')
+    params = foo.ParameterDict('net_')
     params.get('weight', shape=(10, 10))
     assert list(params.keys()) == ['net_weight']
     params.initialize()
