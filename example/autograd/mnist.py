@@ -1,7 +1,8 @@
 # pylint: skip-file
 from data import mnist_iterator
 import mxnet as mx
-from mxnet import nn
+from mxnet import foo
+from mxnet.foo import nn
 import numpy as np
 import logging
 from mxnet.contrib import autograd as ag
@@ -24,8 +25,8 @@ def test(ctx):
     metric = mx.metric.Accuracy()
     val_data.reset()
     for batch in val_data:
-        data = nn.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
-        label = nn.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
+        data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
+        label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
         outputs = []
         for x in data:
             outputs.append(net(x))
@@ -36,23 +37,23 @@ def train(epoch, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
     net.params.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-    optim = nn.Optim(net.params, 'sgd', {'learning_rate': 0.1})
+    trainer = foo.Trainer(net.params, 'sgd', {'learning_rate': 0.1})
     metric = mx.metric.Accuracy()
 
     for i in range(epoch):
         train_data.reset()
         for batch in train_data:
-            data = nn.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
-            label = nn.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
+            data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
+            label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
             outputs = []
             with ag.train_section():
                 for x, y in zip(data, label):
                     z = net(x)
-                    loss = nn.loss.softmax_cross_entropy_loss(z, y)
+                    loss = foo.loss.softmax_cross_entropy_loss(z, y)
                     ag.compute_gradient([loss])
                     outputs.append(z)
             metric.update(label, outputs)
-            optim.step(batch.data[0].shape[0])
+            trainer.step(batch.data[0].shape[0])
         name, acc = metric.get()
         metric.reset()
         print 'training acc at epoch %d: %s=%f'%(i, name, acc)
