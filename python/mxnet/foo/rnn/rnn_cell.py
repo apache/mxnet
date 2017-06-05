@@ -10,7 +10,7 @@ import warnings
 from ... import symbol, init, ndarray
 from ...base import string_types, numeric_types
 from ..nn import Layer
-from .. import ParameterDict, Parameter, tensor_types
+from .. import tensor_types
 
 
 def _cells_state_shape(cells):
