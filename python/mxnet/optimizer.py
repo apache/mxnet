@@ -341,16 +341,18 @@ class SGD(Optimizer):
     def create_state(self, index, weight):
         momentum = None
         weight_master_copy = None
-        if self.momentum != 0.0:
-            momentum = zeros(weight.shape, weight.context, dtype=weight.dtype)
         if self.multi_precision and weight.dtype == numpy.float16:
             weight_master_copy = array(weight, ctx=weight.context, dtype=numpy.float32)
+            if self.momentum != 0.0:
+                momentum = zeros(weight.shape, weight.context, dtype=numpy.float32)
             return (momentum, weight_master_copy)
         if weight.dtype == numpy.float16 and not self.multi_precision:
             warnings.warn("Accumulating with float16 in optimizer can lead to "
                           "poor accuracy or slow convergence. "
                           "Consider using multi_precision=True option of the "
                           "SGD optimizer")
+        if self.momentum != 0.0:
+            momentum = zeros(weight.shape, weight.context, dtype=weight.dtype)
         return momentum
 
     def update(self, index, weight, grad, state):
@@ -365,9 +367,7 @@ class SGD(Optimizer):
             kwargs['momentum'] = self.momentum
         if self.clip_gradient:
             kwargs['clip_gradient'] = self.clip_gradient
-        use_multi_precision = False
-        if self.multi_precision:
-            use_multi_precision = (state[1] is not None)
+        use_multi_precision = type(state) in [list, tuple]
 
         if not use_multi_precision:
             if state is not None:
@@ -379,10 +379,10 @@ class SGD(Optimizer):
         else:
             if state[0] is not None:
                 mp_sgd_mom_update(weight, grad, state[0], state[1], out=weight,
-                                  lr=lr, wd=wd, **self.kwargs)
+                                  lr=lr, wd=wd, **kwargs)
             else:
                 mp_sgd_update(weight, grad, state[1], out=weight,
-                              lr=lr, wd=wd, **self.kwargs)
+                              lr=lr, wd=wd, **kwargs)
 
 @register
 class DCASGD(Optimizer):
