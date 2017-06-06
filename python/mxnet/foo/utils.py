@@ -28,7 +28,7 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
         "Use a batch size that's multiple of %d or set even_split=False to enable " \
         "uneven partitioning of data."%(
             str(data.shape), num_slice, batch_axis, num_slice)
-    size = data.shape[batch_axis] / num_slice
+    size = data.shape[batch_axis] // num_slice
     if batch_axis == 0:
         slices = [data[i*size:(i+1)*size] for i in range(num_slice)]
     else:
