@@ -181,6 +181,21 @@ class Layer(object):
         # pylint: disable= invalid-name
         raise NotImplementedError
 
+    def __add__(self, other):
+        return Add(self, other)
+
+    def __sub__(self, other):
+        return Sub(self, other)
+
+    def __mul__(self, other):
+        return Mul(self, other)
+
+    def __div__(self, other):
+        return Div(self, other)
+
+    def __truediv__(self, other):
+        return TrueDiv(self, other)
+
 
 class Sequential(Layer):
     """Stack Layers sequentially.
@@ -205,6 +220,60 @@ class Sequential(Layer):
 
     def generic_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError
+
+
+class _Binary(Layer):
+    def __init__(self, lhs, rhs, operator):
+        super(Sequential, self).__init__(prefix='', params=None)
+        self._lhs = lhs
+        self._rhs = rhs
+        self._operator = operator
+
+    def forward(self, x):
+        return self._operator(self._lhs(x), self._rhs(x))
+
+    def generic_forward(self, F, x, *args, **kwargs):
+        raise NotImplementedError
+
+
+class Add(_Binary):
+    """ lhs + rhs
+    """
+    def __init__(self, lhs, rhs):
+        from operator import add
+        super(Add, self).__init__(lhs, rhs, add)
+
+
+class Sub(_Binary):
+    """ lhs - rhs
+    """
+    def __init__(self, lhs, rhs):
+        from operator import sub
+        super(Sub, self).__init__(lhs, rhs, sub)
+
+
+class Mul(_Binary):
+    """ lhs * rhs
+    """
+    def __init__(self, lhs, rhs):
+        from operator import mul
+        super(Mul, self).__init__(lhs, rhs, mul)
+
+
+class Div(_Binary):
+    """ lhs / rhs (classic division)
+    """
+    def __init__(self, lhs, rhs):
+        from operator import div
+        super(Div, self).__init__(lhs, rhs, div)
+
+
+class TrueDiv(_Binary):
+    """ lhs / rhs (true division)
+    """
+    def __init__(self, lhs, rhs):
+        from operator import truediv
+        super(TrueDiv, self).__init__(lhs, rhs, truediv)
 
 
 class Dense(Layer):
