@@ -54,12 +54,29 @@ USE_CUDA_PATH = NONE
 # whether use CuDNN R3 library
 USE_CUDNN = 0
 
-# CUDA architecture setting: going with all of them.
-# For CUDA < 6.0, comment the *_50 lines for compatibility.
-CUDA_ARCH := -gencode arch=compute_30,code=sm_30 \
-		-gencode arch=compute_35,code=sm_35 \
-		-gencode arch=compute_50,code=sm_50 \
-		-gencode arch=compute_50,code=compute_50
+# Sets 'CUDA_ARCH', which determines the GPU architectures supported
+# by the compiled kernels.  Users can edit the KNOWN_CUDA_ARCHS list below
+# to remove archs they don't wish to support to speed compilation.
+#
+# For archs in this list, nvcc will create a fat-binary that will include
+# the binaries (SASS) for all architectures supported by the installed version
+# of the cuda toolkit, plus the assembly (PTX) for the most recent such architecture.
+# If these kernels are then run on a newer-architecture GPU, then the binary will
+# be JIT-compiled by the updated driver from the included PTX.
+#
+# If CUDA is not present on the system, CUDA_ARCH will be quietly set to "".
+KNOWN_CUDA_ARCHS := 30 35 50 52 60 61
+# Run nvcc on a zero-length file to check architecture-level support.
+# Build nvcc arg list for supported levels to include SASS in the fat-binary.
+CUDA_ARCH := $(foreach arch,$(KNOWN_CUDA_ARCHS), \
+                  $(shell nvcc -arch=sm_$(arch) -E --x cu /dev/null >/dev/null 2>&1 && \
+                          echo -gencode arch=compute_$(arch),code=sm_$(arch)))
+# Convert a trailing "code=sm_NN" to "code=[sm_NN,compute_NN]" to include the PTX
+# of the most recent arch in the fat-binaries for forward compatibility with newer GPUs.
+CUDA_ARCH := $(shell echo $(CUDA_ARCH) | sed 's/sm_\([0-9]*\)$$/[sm_\1,compute_\1]/')
+# Add fat binary compression if '-compress-all' arg is accepted by the fatbinary program.
+CUDA_ARCH += $(shell fatbinary -compress-all --version >/dev/null 2>&1 && \
+                     echo --fatbin-options -compress-all)
 
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
 USE_NVRTC = 0
