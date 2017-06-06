@@ -93,9 +93,9 @@ class RecurrentCell(Layer):
         Prefix for names of layers
         (this prefix is also used for names of weights if `params` is None
         i.e. if `params` are being created and not reused)
-    params : RNNParams or None, optional
+    params : Parameter or None, optional
         Container for weight sharing between cells.
-        A new RNNParams container is created if `params` is None.
+        A new Parameter container is created if `params` is None.
     """
     def __init__(self, prefix=None, params=None):
         super(RecurrentCell, self).__init__(prefix=prefix, params=params)
@@ -345,7 +345,7 @@ class RNNCell(RecurrentCell):
     prefix : str, default 'rnn_'
         prefix for name of layers
         (and name of weight if params is None)
-    params : RNNParams or None
+    params : Parameter or None
         container for weight sharing between cells.
         created if None.
     """
@@ -395,7 +395,7 @@ class LSTMCell(RecurrentCell):
     prefix : str, default 'lstm_'
         prefix for name of layers
         (and name of weight if params is None)
-    params : RNNParams or None
+    params : Parameter or None
         container for weight sharing between cells.
         created if None.
     forget_bias : bias added to forget gate, default 1.0.
@@ -465,7 +465,7 @@ class GRUCell(RecurrentCell):
     prefix : str, default 'gru_'
         prefix for name of layers
         (and name of weight if params is None)
-    params : RNNParams or None
+    params : Parameter or None
         container for weight sharing between cells.
         created if None.
     """
