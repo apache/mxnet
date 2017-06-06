@@ -28,6 +28,11 @@ imported by running:
    ndarray
    symbol
    module
+   foo
+   foo.nn
+   foo.rnn
+   foo.loss
+   foo.utils
    rnn
    kvstore
    io
