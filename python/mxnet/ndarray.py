@@ -1004,6 +1004,8 @@ def zeros(shape, ctx=None, dtype=mx_real_t, **kwargs):
         An optional device context (default is the current default context).
     dtype : str or numpy.dtype, optional
         An optional value type (default is `float32`).
+    out : NDArray, optional
+        The output NDArray (default is `None`).
 
     Returns
     -------
@@ -1023,7 +1025,7 @@ def zeros(shape, ctx=None, dtype=mx_real_t, **kwargs):
     if ctx is None:
         ctx = Context.default_ctx
     # pylint: disable= no-member, protected-access
-    return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype)
+    return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
     # pylint: enable= no-member, protected-access
 
 def ones(shape, ctx=None, dtype=mx_real_t, **kwargs):
@@ -1038,6 +1040,8 @@ def ones(shape, ctx=None, dtype=mx_real_t, **kwargs):
         Defaults to the current default context (``mxnet.Context.default_ctx``).
     dtype : str or numpy.dtype, optional
         An optional value type (default is `float32`).
+    out : NDArray, optional
+        The output NDArray (default is `None`).
 
     Returns
     -------
@@ -1057,10 +1061,10 @@ def ones(shape, ctx=None, dtype=mx_real_t, **kwargs):
     if ctx is None:
         ctx = Context.default_ctx
     # pylint: disable= no-member, protected-access
-    return _internal._ones(shape=shape, ctx=ctx, dtype=dtype)
+    return _internal._ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
     # pylint: enable= no-member, protected-access
 
-def full(shape, val, ctx=None, dtype=mx_real_t):
+def full(shape, val, ctx=None, dtype=mx_real_t, out=None):
     """Returns a new array of given shape and type, filled with the given value `val`.
 
     Parameters
@@ -1073,6 +1077,8 @@ def full(shape, val, ctx=None, dtype=mx_real_t):
         Device context (default is the current default context).
     dtype : `str` or `numpy.dtype`, optional
         The data type of the returned `NDArray`. The default datatype is `float32`.
+    out : NDArray, optional
+        The output NDArray (default is `None`).
 
     Returns
     -------
@@ -1088,9 +1094,9 @@ def full(shape, val, ctx=None, dtype=mx_real_t):
     >>> mx.nd.full((1, 2), 2.0, dtype='float16').asnumpy()
     array([[ 2.,  2.]], dtype=float16)
     """
-    arr = empty(shape, ctx, dtype)
-    arr[:] = val
-    return arr
+    out = empty(shape, ctx, dtype) if out is None else out
+    out[:] = val
+    return out
 
 
 def array(source_array, ctx=None, dtype=None):
