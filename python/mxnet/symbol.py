@@ -327,12 +327,6 @@ class Symbol(SymbolBase):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
-    def __bool__(self, other):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
-
-    def __nonzero__(self, other):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
-
     def __getstate__(self):
         handle = self.handle
         if handle is not None:
