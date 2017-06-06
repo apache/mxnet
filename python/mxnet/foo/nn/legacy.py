@@ -1,8 +1,11 @@
+"""
+A legacy neural network package enabling user to declare layers via syntax similar to MXNet NDArray API.
+"""
+
+
 import mxnet.ndarray as _nd
 import mxnet.symbol as _sym
-
 from .layer import Layer
-from ..parameter import Parameter
 
 
 class _LegacyLayer(Layer):
@@ -12,7 +15,7 @@ class _LegacyLayer(Layer):
     }
 
     def __init__(self, operator_name, prefix=None, params=None, **kwargs):
-        """ 
+        """
         Parameters
         ----------
         prefix : Please refer to the documentation of `mxnet.contrib.nn.layer.Layer`.
@@ -70,7 +73,7 @@ class _LegacyLayer(Layer):
 
         for aux_param, shape in zip(aux_params, aux_shapes):
             if aux_param not in self._variables:
-                init = init_dict.get(aux_param) 
+                init = init_dict.get(aux_param)
                 self._reg_params[aux_param] = \
                     self.params.get(aux_param, grad_req='null', shape=shape, init=init)
 
@@ -104,6 +107,10 @@ class _LegacyLayer(Layer):
         kwargs.update(dict(zip(self._variables, args)))
         kwargs.update(self._kwargs)
         return getattr(_sym, self._operator_name)(name=self._prefix, **kwargs)
+
+    def generic_forward(self, F, x, *args, **kwargs):
+        """ Not implemented. """
+        raise NotImplementedError()
 
 
 # pylint: disable=locally-disabled, invalid-name

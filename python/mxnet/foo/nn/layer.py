@@ -224,7 +224,7 @@ class Sequential(Layer):
 
 class _Binary(Layer):
     def __init__(self, lhs, rhs, operator):
-        super(Sequential, self).__init__(prefix='', params=None)
+        super(Layer, self).__init__(prefix='', params=None)
         self._lhs = lhs
         self._rhs = rhs
         self._operator = operator
@@ -233,7 +233,7 @@ class _Binary(Layer):
         return self._operator(self._lhs(x), self._rhs(x))
 
     def generic_forward(self, F, x, *args, **kwargs):
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class Add(_Binary):
@@ -243,6 +243,10 @@ class Add(_Binary):
         from operator import add
         super(Add, self).__init__(lhs, rhs, add)
 
+    def generic_forward(self, F, x, *args, **kwargs):
+        """ Not implemented. """
+        raise NotImplementedError()
+
 
 class Sub(_Binary):
     """ lhs - rhs
@@ -250,6 +254,10 @@ class Sub(_Binary):
     def __init__(self, lhs, rhs):
         from operator import sub
         super(Sub, self).__init__(lhs, rhs, sub)
+
+    def generic_forward(self, F, x, *args, **kwargs):
+        """ Not implemented. """
+        raise NotImplementedError()
 
 
 class Mul(_Binary):
@@ -259,6 +267,10 @@ class Mul(_Binary):
         from operator import mul
         super(Mul, self).__init__(lhs, rhs, mul)
 
+    def generic_forward(self, F, x, *args, **kwargs):
+        """ Not implemented. """
+        raise NotImplementedError()
+
 
 class Div(_Binary):
     """ lhs / rhs (classic division)
@@ -267,6 +279,10 @@ class Div(_Binary):
         from operator import div
         super(Div, self).__init__(lhs, rhs, div)
 
+    def generic_forward(self, F, x, *args, **kwargs):
+        """ Not implemented. """
+        raise NotImplementedError()
+
 
 class TrueDiv(_Binary):
     """ lhs / rhs (true division)
@@ -274,6 +290,10 @@ class TrueDiv(_Binary):
     def __init__(self, lhs, rhs):
         from operator import truediv
         super(TrueDiv, self).__init__(lhs, rhs, truediv)
+
+    def generic_forward(self, F, x, *args, **kwargs):
+        """ Not implemented. """
+        raise NotImplementedError()
 
 
 class Dense(Layer):
