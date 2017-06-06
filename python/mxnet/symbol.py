@@ -94,6 +94,9 @@ class Symbol(SymbolBase):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __iadd__(self, other):
+        raise NotImplementedError('Not supported. This is available in NDArray only')
+
     def __radd__(self, other):
         return self.__add__(other)
 
@@ -108,6 +111,9 @@ class Symbol(SymbolBase):
             return _internal._MinusScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
+
+    def __isub__(self, other):
+        raise NotImplementedError('Not supported. This is available in NDArray only')
 
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y-x
@@ -138,6 +144,9 @@ class Symbol(SymbolBase):
             return _internal._MulScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
+
+    def __imul__(self, other):
+        raise NotImplementedError('Not supported. This is available in NDArray only')
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -202,11 +211,17 @@ class Symbol(SymbolBase):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __idiv__(self, other):
+        raise NotImplementedError('Not supported. This is available in NDArray only')
+
     def __truediv__(self, other):
         return self.__div__(other)
 
     def __rtruediv__(self, other):
         return self.__rdiv__(other)
+
+    def __itruediv__(self, other):
+        raise NotImplementedError('Not supported. This is available in NDArray only')
 
     def __pow__(self, other):
         """x.__pow__(y) <=> x**y
@@ -219,6 +234,9 @@ class Symbol(SymbolBase):
             return _internal._PowerScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
+
+    def __rpow__(self, other):
+        raise NotImplementedError('Not supported. This is available in NDArray only')
 
     def __neg__(self):
         """x.__neg__() <=> -x
@@ -1696,6 +1714,30 @@ class Symbol(SymbolBase):
             A reshaped symbol.
         """
         return reshape(self, shape=shape)
+
+    def wait_to_read(self):
+        raise NotImplementedError('Not supported. This is available in NDArray only')
+
+    def asnumpy(self):
+        raise NotImplementedError('Not supported. This is available in NDArray only')
+
+    def asscalar(self):
+        raise NotImplementedError('Not supported. This is available in NDArray only')
+
+    def astype(self):
+        raise NotImplementedError('Not supported. This is available in NDArray only')
+
+    def copy(self):
+        raise NotImplementedError('Not supported. This is available in NDArray only')
+
+    def as_in_context(self):
+        raise NotImplementedError('Not supported. This is available in NDArray only')
+
+    def detach(self):
+        raise NotImplementedError('Not supported. This is available in NDArray only')
+
+    def backward(self):
+        raise NotImplementedError('Not supported. This is available in NDArray only')
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None, **kwargs):
     """Creates a symbolic variable with specified name.

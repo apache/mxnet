@@ -922,7 +922,7 @@ class ZoneoutCell(ModifierCell):
         next_output, next_states = cell(inputs, states)
         mask = lambda p, like: symbol.Dropout(symbol.ones_like(like), p=p)
 
-        prev_output = self.prev_output if self.prev_output else symbol.zeros((0, 0))
+        prev_output = self.prev_output if self.prev_output is not None else symbol.zeros((0, 0))
 
         output = (symbol.where(mask(p_outputs, next_output), next_output, prev_output)
                   if p_outputs != 0. else next_output)
