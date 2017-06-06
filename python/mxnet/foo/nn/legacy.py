@@ -1,5 +1,6 @@
 """
-A legacy neural network package enabling user to declare layers via syntax similar to MXNet NDArray API.
+A legacy neural network package enabling user to
+declare layers via syntax similar to MXNet NDArray API.
 """
 
 
