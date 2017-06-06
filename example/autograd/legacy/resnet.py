@@ -214,7 +214,7 @@ def train(epoch, ctx):
                     outputs.append(z)
             optim.step(batch.data[0].shape[0])
             metric.update(label, outputs)
-#           print batch_size/(time.time()-btic)
+            print batch_size/(time.time()-btic)
             btic = time.time()
 
         name, acc = metric.get()
