@@ -224,7 +224,7 @@ class Sequential(Layer):
 
 class _Binary(Layer):
     def __init__(self, lhs, rhs, operator):
-        super(Layer, self).__init__(prefix='', params=None)
+        super(_Binary, self).__init__(prefix='', params=None)
         self._lhs = lhs
         self._rhs = rhs
         self._operator = operator
