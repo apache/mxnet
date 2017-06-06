@@ -1372,7 +1372,7 @@ class Symbol(SymbolBase):
             error_msg = "simple_bind error. Arguments:\n"
             for k, v in kwargs.items():
                 error_msg += "%s: %s\n" % (k, v)
-            error_msg += 'Exception error is: %s' % e
+            error_msg += "%s" % e
             raise RuntimeError(error_msg)
 
         # update shared_buffer
