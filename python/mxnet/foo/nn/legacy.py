@@ -4,8 +4,7 @@ declare layers via syntax similar to MXNet NDArray API.
 """
 
 
-import mxnet.ndarray as _nd
-import mxnet.symbol as _sym
+from ... import symbol, ndarray
 from .layer import Layer
 
 
@@ -125,14 +124,3 @@ FullyConnected = lambda **kwargs: _LegacyLayer('FullyConnected', **kwargs)
 LeakyReLU = lambda **kwargs: _LegacyLayer('LeakyReLU', **kwargs)
 Pooling = lambda **kwargs: _LegacyLayer('Pooling', **kwargs)
 RNN = lambda **kwargs: _LegacyLayer('RNN', **kwargs)
-
-# pylint: disable=locally-disabled, invalid-name
-ReLU = lambda: _LegacyLayer('Activation', act_type='relu')
-Sigmoid = lambda: _LegacyLayer('Activation', act_type='sigmoid')
-Tanh = lambda: _LegacyLayer('Activation', act_type='tanh')
-
-# pylint: disable=locally-disabled, invalid-name
-RNNReLU = lambda **kwargs: _LegacyLayer('RNN', mode='rnn_relu', **kwargs)
-RNNTanh = lambda **kwargs: _LegacyLayer('RNN', mode='rnn_tanh', **kwargs)
-GRU = lambda **kwargs: _LegacyLayer('RNN', mode='gru', **kwargs)
-LSTM = lambda **kwargs: _LegacyLayer('RNN', mode='lstm', **kwargs)
