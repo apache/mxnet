@@ -4,7 +4,8 @@ declare layers via syntax similar to MXNet NDArray API.
 """
 
 
-from ... import symbol, ndarray
+from ... import symbol as _sym
+from ... import ndarray as _nd
 from .layer import Layer
 
 
