@@ -129,8 +129,8 @@ class Parameter(object):
             arr[:] = data
 
     def data(self, ctx=None):
-        """Returns a copy of this parameter on one context. Must be on this context
-        before.
+        """Returns a copy of this parameter on one context. Must have been
+        intialized on this context before.
 
         Parameters
         ----------
@@ -156,7 +156,7 @@ class Parameter(object):
         as creation."""
         assert self._data is not None, \
             "Parameter %s has not been initialized"%self.name
-        return self._data.values()
+        return list(self._data.values())
 
     def grad(self, ctx=None):
         """Returns a gradient buffer for this parameter on one context.
@@ -183,13 +183,13 @@ class Parameter(object):
             "Parameter %s has not been initialized"%self.name
         assert self._data is not None, \
             "Parameter %s does not have gradients because grad_req='null'"%self.name
-        return self._grad.values()
+        return list(self._grad.values())
 
     def list_ctx(self):
         """Returns a list of contexts this parameter is initialized on"""
         assert self._data is not None, \
             "Parameter %s has not been initialized"%self.name
-        return self._data.keys()
+        return list(self._data.keys())
 
     def zero_grad(self):
         """Set gradient buffer on all contexts to 0. No action is taken if
@@ -215,10 +215,15 @@ class ParameterDict(object):
     ----------
     prefix : str, default ''
         The prefix to be prepended to all Parameters' name created by this dict.
+    shared : ParameterDict or None
+        If not None, when this dict's get method creates a new parameter, will
+        first try to retrieve it from `shared` dict. Usually used for sharing
+        parameters with another layer.
     """
-    def __init__(self, prefix=''):
+    def __init__(self, prefix='', shared=None):
         self._prefix = prefix
         self._params = {}
+        self._shared = shared
 
     def __getitem__(self, key):
         return self._params[key]
@@ -238,9 +243,18 @@ class ParameterDict(object):
         with `get`"""
         return self._prefix
 
+    def _get_impl(self, name):
+        if name in self._params:
+            return self._params[name]
+        if self._shared is not None and name in self._shared._params:
+            return self._shared._params[name]
+        return None
+
     def get(self, name, **kwargs):
-        """Create or retrieve a Parameter with name `self.prefix+name`. Key-word
-        arguments will be passed to Parameter's contructor.
+        """Retrieve a Parameter with name `self.prefix+name`. If not found,
+        `get` will first try to retrive it from `shared` dict. If still not
+        found, `get` will create a new Parameter with key-word arguments and
+        insert it to self.
 
         Parameter
         ---------
@@ -256,64 +270,31 @@ class ParameterDict(object):
             The created or retrieved Parameter.
         """
         name = self.prefix + name
-        if name not in self._params:
-            self._params[name] = Parameter(name, **kwargs)
+        param = self._get_impl(name)
+        if param is None:
+            param = Parameter(name, **kwargs)
+            self._params[name] = param
         else:
-            param = self._params[name]
             for k, v in kwargs.items():
-                if hasattr(param, k):
+                if hasattr(param, k) and getattr(param, k) is not None:
                     assert v is None or v == getattr(param, k), \
-                        "Parameter attribute %s mismatch: stored %s vs desired %s"%(
-                            k, str(getattr(param, k)), str(v))
+                        "Cannot retrieve Parameter %s because desired attribute " \
+                        "does not match with stored for attribute %s: " \
+                        "desired %s vs stored %s."%(
+                            name, k, str(v), str(getattr(param, k)))
                 else:
                     setattr(param, k, v)
-        return self._params[name]
+        return param
 
-    def subdict(self, suffix):
-        """Create a sub-dictionary that shares parameters with this dictionary.
-        The sub-dictionary's prefix is self.prefix + suffix.
-
-        Example::
-            >>> params1 = ParameterDict('net_')
-            >>> params2 = params1.subdict('conv1_')
-            >>> params2.prefix
-            'net_conv1_'
-
-        Parameters
-        ----------
-        suffix : str
-            Suffix of the created child dictionary
-
-        Returns
-        -------
-        ParameterDict with self.prefix + suffix as prefix.
-        """
-        ret = ParameterDict(self.prefix + suffix)
-        self.merge(ret)
-        return ret
-
-    def merge(self, other):
-        """Merge this dictionary with another dictionary. The two dictionaries
-        will manage the same set of Parameters but keep their individual prefix.
-
-        Example::
-            >>> params1 = ParameterDict('net1_')
-            >>> params2 = ParameterDict('net2_')
-            >>> params1.merge(params2)
-            >>> params2.get('w')
-            >>> print params1.keys()
-            ['net2_w']
-        """
-        params = self._params
-        if params is other._params:
-            return
+    def update(self, other):
+        """Copy all Parameters in `other` to self."""
         for k, v in other.items():
-            assert k not in params or params[k] is v, \
-                "Cannot merge ParameterDicts with prefix %s and %s " \
-                "because they contain different versions of the same " \
-                "Parameter named %s"%(self.prefix, other.prefix, k)
-            params[k] = v
-        other._params = params
+            if k in self._params:
+                assert self._params[k] is v, \
+                    "Cannot update self with other because they have different " \
+                    "Parameters with the same name %s"%k
+            else:
+                self._params[k] = v
 
     def initialize(self, init=initializer.Xavier(), ctx=None):
         """Intialize all Parameters manage by this dictionary to be used for `NDArray`

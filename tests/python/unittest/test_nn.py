@@ -22,6 +22,24 @@ def test_paramdict():
     params.save('test.params')
     params.load('test.params')
 
+
+def test_parameter_sharing():
+    class Net(nn.Layer):
+        def __init__(self, **kwargs):
+            super(Net, self).__init__(**kwargs)
+            with self.scope:
+                self.dense0 = nn.Dense(5, in_units=5)
+                self.dense1 = nn.Dense(5, in_units=5)
+
+        def generic_forward(self, F, x):
+            return self.dense1(self.dense0(x))
+
+    net1 = Net(prefix='net1_')
+    net2 = Net(prefix='net1_', params=net1.all_params())
+    net1.all_params().initialize()
+    net2(mx.nd.zeros((3, 5)))
+
+
 def test_basic():
     model = nn.Sequential()
     model.add(nn.Dense(128, activation='tanh', in_units=10))
@@ -36,14 +54,14 @@ def test_basic():
     assert len(y.list_arguments()) == 7
 
     # ndarray
-    model.params.initialize()
+    model.all_params().initialize()
     x = model(mx.nd.zeros((32, 10)))
     assert x.shape == (32, 32)
     x.wait_to_read()
 
 
 def check_layer_forward(layer, dshape):
-    layer.params.initialize()
+    layer.all_params().initialize()
     with mx.contrib.autograd.train_section():
         out = layer(mx.nd.ones(shape=dshape))
     out.backward()
@@ -170,7 +188,7 @@ def test_batchnorm():
 def test_reshape():
     x = mx.nd.ones((2, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_filters=4)
-    layer.params.initialize()
+    layer.all_params().initialize()
     with mx.contrib.autograd.train_section():
         x = layer(x)
         x = x.reshape((-1,))
@@ -181,7 +199,7 @@ def test_reshape():
 def test_slice():
     x = mx.nd.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_filters=4)
-    layer.params.initialize()
+    layer.all_params().initialize()
     with mx.contrib.autograd.train_section():
         x = layer(x)
         x = x[1:3]
@@ -192,7 +210,7 @@ def test_slice():
 def test_at():
     x = mx.nd.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_filters=4)
-    layer.params.initialize()
+    layer.all_params().initialize()
     with mx.contrib.autograd.train_section():
         x = layer(x)
         x = x[1]

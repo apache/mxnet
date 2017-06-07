@@ -1,4 +1,6 @@
 # pylint: skip-file
+from __future__ import print_function
+
 from data import mnist_iterator
 import mxnet as mx
 from mxnet import foo
@@ -31,13 +33,13 @@ def test(ctx):
         for x in data:
             outputs.append(net(x))
         metric.update(label, outputs)
-    print 'validation acc: %s=%f'%metric.get()
+    print('validation acc: %s=%f'%metric.get())
 
 def train(epoch, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
-    net.params.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-    trainer = foo.Trainer(net.params, 'sgd', {'learning_rate': 0.1})
+    net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+    trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.1})
     metric = mx.metric.Accuracy()
 
     for i in range(epoch):
@@ -56,10 +58,10 @@ def train(epoch, ctx):
             trainer.step(batch.data[0].shape[0])
         name, acc = metric.get()
         metric.reset()
-        print 'training acc at epoch %d: %s=%f'%(i, name, acc)
+        print('training acc at epoch %d: %s=%f'%(i, name, acc))
         test(ctx)
 
-    net.params.save('mnist.params')
+    net.all_params().save('mnist.params')
 
 
 if __name__ == '__main__':

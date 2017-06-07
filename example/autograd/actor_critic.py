@@ -42,8 +42,8 @@ class Policy(nn.Layer):
         return F.softmax(probs), values
 
 net = Policy()
-net.params.initialize(mx.init.Uniform(0.02))
-trainer = foo.Trainer(net.params, 'adam', {'learning_rate': 3e-2})
+net.all_params().initialize(mx.init.Uniform(0.02))
+trainer = foo.Trainer(net.all_params(), 'adam', {'learning_rate': 3e-2})
 
 
 running_reward = 10
