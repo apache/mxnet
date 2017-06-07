@@ -8,6 +8,13 @@ MNIST is a widely used dataset for the hand-written digit classification task. I
 
 **Figure 1:** Sample images from the MNIST dataset.
 
+## Prerequisites
+1. [MXNet](http://mxnet.io/get_started/install.html)
+2. Jupyter Notebook and Requests python packages.
+   ```
+   pip install jupyter requests
+   ```
+
 ## Loading Data
 
 Before we define the model, let's first fetch the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset.
