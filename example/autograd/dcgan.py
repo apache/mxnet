@@ -79,12 +79,12 @@ netD.add(nn.Conv2D(2, 4, 1, 0, in_filters=ndf * 8, use_bias=False))
 # netD.add(nn.Activation('sigmoid'))
 
 
-netG.params.initialize(mx.init.Normal(0.02), ctx=ctx)
-netD.params.initialize(mx.init.Normal(0.02), ctx=ctx)
+netG.all_params().initialize(mx.init.Normal(0.02), ctx=ctx)
+netD.all_params().initialize(mx.init.Normal(0.02), ctx=ctx)
 
 
-trainerG = foo.Trainer(netG.params, 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
-trainerD = foo.Trainer(netD.params, 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
+trainerG = foo.Trainer(netG.all_params(), 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
+trainerD = foo.Trainer(netD.all_params(), 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
 
 
 real_label = mx.nd.ones((opt.batchSize,), ctx=ctx)
