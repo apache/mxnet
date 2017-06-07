@@ -262,20 +262,33 @@ class OperatorProperty {
                           std::vector<int> *aux_type) const {
     CHECK_LE(in_type->size(), this->ListArguments().size());
     int n_in = this->ListArguments().size();
-    for (unsigned i = 0; i < in_type->size(); ++i) {
-      CHECK(in_type->at(i) == mshadow::default_type_flag ||
-            in_type->at(i) == -1) << "Unsupported data type " << in_type->at(i);
+    int dtype = -1;
+    // reduce dtype to a common one.
+    for (unsigned i = 0; i < n_in; ++i) {
+      if (dtype == -1) {
+        dtype = in_type->at(i);
+      } else {
+        CHECK(in_type->at(i) == -1 ||
+              in_type->at(i) == dtype) <<
+          "Non-uniform input data type. Expected " << dtype << "got " << in_type->at(i);
+      }
     }
+
+    if (dtype == -1) {
+      LOG(FATAL) << "At least one input type needs to be specified.";
+      return false;
+    }
+
     in_type->clear();
-    for (int i = 0; i < n_in; ++i ) in_type->push_back(mshadow::default_type_flag);
+    for (int i = 0; i < n_in; ++i) in_type->push_back(dtype);
 
     int n_out = this->ListOutputs().size();
     out_type->clear();
-    for (int i = 0; i < n_out; ++i ) out_type->push_back(mshadow::default_type_flag);
+    for (int i = 0; i < n_out; ++i) out_type->push_back(dtype);
 
     int n_aux = this->ListAuxiliaryStates().size();
     aux_type->clear();
-    for (int i = 0; i < n_aux; ++i ) aux_type->push_back(mshadow::default_type_flag);
+    for (int i = 0; i < n_aux; ++i) aux_type->push_back(dtype);
     return true;
   }
   /*!
