@@ -731,7 +731,7 @@ class SequentialRNNCell(RecurrentCell):
         ----------
         cell : rnn cell
         """
-        self.register_sublayer(cell)
+        self.register_child(cell)
 
     def state_info(self, batch_size=0):
         return _cells_state_info(self._children, batch_size)
@@ -951,8 +951,8 @@ class BidirectionalCell(RecurrentCell):
     """
     def __init__(self, l_cell, r_cell, output_prefix='bi_'):
         super(BidirectionalCell, self).__init__(prefix='', params=None)
-        self.register_sublayer(l_cell)
-        self.register_sublayer(r_cell)
+        self.register_child(l_cell)
+        self.register_child(r_cell)
         self._output_prefix = output_prefix
 
     def unpack_weights(self, args):
