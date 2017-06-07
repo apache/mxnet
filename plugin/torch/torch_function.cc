@@ -70,13 +70,13 @@ MXNET_REGISTER_TORCH_TENARY_FUN(_th_addbmm, addbmm);
 MXNET_REGISTER_TORCH_TENARY_FUN(_th_baddbmm, baddbmm);
 
 struct TorchMMShape {
-  static std::vector<mshadow::TShape> GetShape(NDArray **u,
+  static std::vector<TShape> GetShape(NDArray **u,
     const std::map<std::string, std::string>& param) {
     CHECK_EQ(u[0]->shape().ndim(), 2);
     CHECK_EQ(u[1]->shape().ndim(), 2);
     CHECK_EQ(u[0]->shape()[1], u[1]->shape()[0]);
     index_t shape[] = {u[0]->shape()[0], u[1]->shape()[1]};
-    mshadow::TShape tshape(shape, shape+2);
+    TShape tshape(shape, shape+2);
     return {tshape};
   }
   static constexpr const char* fname = "mm";
@@ -86,13 +86,13 @@ struct TorchMMShape {
 MXNET_REGISTER_TORCH_FUN(_th_mm, TorchMMShape);
 
 struct TorchMVShape {
-  static std::vector<mshadow::TShape> GetShape(NDArray **u,
+  static std::vector<TShape> GetShape(NDArray **u,
     const std::map<std::string, std::string>& param) {
     CHECK_EQ(u[0]->shape().ndim(), 2);
     CHECK_EQ(u[1]->shape().ndim(), 1);
     CHECK_EQ(u[0]->shape()[1], u[1]->shape()[0]);
     index_t shape[] = {u[0]->shape()[0]};
-    mshadow::TShape tshape(shape, shape+1);
+    TShape tshape(shape, shape+1);
     return {tshape};
   }
   static constexpr const char* fname = "mv";
@@ -103,14 +103,14 @@ MXNET_REGISTER_TORCH_FUN(_th_mv, TorchMVShape);
 
 
 struct TorchBMMShape {
-  static std::vector<mshadow::TShape> GetShape(NDArray **u,
+  static std::vector<TShape> GetShape(NDArray **u,
     const std::map<std::string, std::string>& param) {
     CHECK_EQ(u[0]->shape().ndim(), 3);
     CHECK_EQ(u[1]->shape().ndim(), 3);
     CHECK_EQ(u[0]->shape()[0], u[1]->shape()[0]);
     CHECK_EQ(u[0]->shape()[2], u[1]->shape()[1]);
     index_t shape[] = {u[0]->shape()[1], u[1]->shape()[2]};
-    mshadow::TShape tshape(shape, shape+2);
+    TShape tshape(shape, shape+2);
     return {tshape};
   }
   static constexpr const char* fname = "bmm";
@@ -120,12 +120,12 @@ struct TorchBMMShape {
 MXNET_REGISTER_TORCH_FUN(_th_bmm, TorchBMMShape);
 
 struct TorchGERShape {
-  static std::vector<mshadow::TShape> GetShape(NDArray **u,
+  static std::vector<TShape> GetShape(NDArray **u,
     const std::map<std::string, std::string>& param) {
     CHECK_EQ(u[0]->shape().ndim(), 1);
     CHECK_EQ(u[1]->shape().ndim(), 1);
     index_t shape[] = {u[0]->shape()[0], u[1]->shape()[0]};
-    mshadow::TShape tshape(shape, shape+2);
+    TShape tshape(shape, shape+2);
     return {tshape};
   }
   static constexpr const char* fname = "ger";
