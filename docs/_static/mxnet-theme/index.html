@@ -1,3 +1,6 @@
+<!-- Script needed for multi-OS option buttons in quick install section -->
+<script type="text/javascript" src='../../_static/js/options.js'></script>
+
 <div id="splash">
   <div class="container">
     <div class="row">
@@ -20,6 +23,54 @@
     </div>
   </div>
 </div>
+
+<!-- Start - Intro and Quick install section -->
+<div class="section-intro">
+  <div class="container">
+    <div class="row">
+      <div class="section-intro-col">
+        <h2> What is MXNet? </h2>
+        <p align="justify">
+          Deep learning denotes the modern incarnation of neural networks, and it's the technology behind recent breakthroughs in self-driving cars, machine translation, speech recognition and more. While widespread interest in deep learning took off in 2012, deep learning has already become an indispensable tool for countless industries. MXNet is an open-source deep learning framework that allows you to rapidly define, train, and deploy deep neural networks on a wide array of devices, including from GPU-powered cloud infrastructure to mobile devices. Additionally, MXNet supports a flexible programming model and multiple languages.
+
+          <a href="http://mxnet.io/get_started/index.html">Read more..</a>
+        </p>
+      </div>
+      <div class="section-intro-col">
+        <h2> Quick Install </h2>
+        <div class="btn-group opt-group" role="group">
+          <button type="button" class="btn btn-default opt active">Ubuntu</button>
+          <button type="button" class="btn btn-default opt">Mac OSX</button>
+          <button type="button" class="btn btn-default opt">Docker</button>
+        </div>
+        <div class="ubuntu">
+          <div class="highlight">
+            <pre>pip install mxnet       <span class="c1"># CPU</span>
+pip install mxnet-mkl   <span class="c1"># CPU with MKL-DNN acceleration</span>
+pip install mxnet-cu75  <span class="c1"># GPU with CUDA 7.5</span>
+pip install mxnet-cu80  <span class="c1"># GPU with CUDA 8.0</span></pre>
+          </div>
+        </div> <!-- End Ubuntu Installation Instruction -->
+        <div class="mac-osx">
+          <div class="highlight">
+            <pre>pip install mxnet       <span class="c1"># CPU</span></pre>
+          </div>
+        </div> <!-- End Mac Installation Instruction -->
+        <div class="docker">
+          <div class="highlight">
+            <pre>docker pull mxnet/python      <span class="c1"># CPU</span>
+docker pull mxnet/python:gpu  <span class="c1"># GPU</span></pre>
+          </div>
+        </div> <!-- End Docker Installation Instruction -->
+        <p>
+          <a href="http://mxnet.io/get_started/index.html#installation"> Other OS and building from source.. </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- End Intro and Quick install section -->
 
 <div class="section-tout">
   <div class="container">

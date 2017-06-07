@@ -561,6 +561,40 @@ li.dropdown-submenu ul.dropdown-menu a {
     text-decoration: none;
 }
 
+/*------------------------intro section--------------------------*/
+.section-intro {
+  padding: 3em 0 3em;
+  border-bottom: 1px solid rgba(0,0,0,.05);
+  background-color: #ffffff;
+  display: block;
+  overflow: auto;
+}
+
+.section-intro .row div {
+  height: 100%;
+}
+
+.section-intro-col {
+  width: 50%;
+  position: relative;
+  float: left;
+  padding: 0em 2em 0em;
+}
+
+.section-intro .fa{
+    margin-right: 0em
+    margin-left: 0em
+}
+
+.section-intro h3{
+    font-size:20px;
+    color: #0079b2;
+}
+
+.section-intro p {
+    margin-bottom:2em
+}
+
 /*------------------------index page section----------------------------*/
 .section-tout {
     padding:3em 0 3em;
