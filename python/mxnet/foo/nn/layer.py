@@ -19,7 +19,7 @@ class _LayerScope(object):
         self._old_scope = None
 
     @staticmethod
-    def get_prefix(prefix, hint):
+    def create_prefix(prefix, hint):
         if _LayerScope._current is None:
             if prefix is None:
                 return _name.NameManager.current.get(None, hint) + '_'
@@ -32,18 +32,12 @@ class _LayerScope(object):
             return _LayerScope._current._layer.prefix+prefix
 
     @staticmethod
-    def get_params(prefix, params):
+    def create_params(prefix, params):
         if params is not None:
-            return params
-        params = ParameterDict(prefix)
+            return ParameterDict(params.prefix, params)
         if _LayerScope._current is not None:
-            _LayerScope._current._layer.params.merge(params)
-        return params
-
-    @staticmethod
-    def register_sublayer(layer):
-        if _LayerScope._current is not None:
-            _LayerScope._current._layer.register_sublayer(layer)
+            return ParameterDict(prefix, _LayerScope._current._layer._params._shared)
+        return ParameterDict(prefix)
 
     def __enter__(self):
         self._old_scope = _LayerScope._current
@@ -66,12 +60,12 @@ class Layer(object):
             def __init__(self, **kwargs):
                 super(Net, self).__init__(**kwargs)
                 with self.scope:
-                    self.dense1 = nn.Dense(20, in_units=10, prefix='dense1_')
-                    self.dense2 = nn.Dense(20, in_units=20, prefix='dense2_')
+                    self.dense0 = nn.Dense(20, in_units=10)
+                    self.dense1 = nn.Dense(20, in_units=20)
 
             def forward(self, x):
-                x = self.dense1(x)
-                return self.dense2(x)
+                x = self.dense0(x)
+                return self.dense1(x)
 
     Sublayers assigned this way will be registered and will have their status changed
     too when you call .train() etc.
@@ -83,22 +77,16 @@ class Layer(object):
         Parameters created by this layer. Prefix should be unique within one network
         to prevent name collisions.
     params : ParameterDict or None
-        Manages Parameters of this Layer and sublayers. You can make two Layers share
-        parameter by passing the same dictionary to them. For example::
-            params = nn.ParameterDict(prefix='dense_')
-            dense1 = nn.Dense(20, in_units=10, prefix='dense1_', params=params)
-            dense2 = nn.Dense(20, in_units=10, prefix='dense2_', params=params)
+        ParameterDict for sharing weights with the new Layer. For example,
+        if you want `dense2` to share `dense1`'s weights, you can do::
+            dense1 = nn.Dense(20, in_units=10, prefix='dense1_')
+            dense2 = nn.Dense(20, in_units=10, prefix='dense2_',
+                              params=dense1.all_params())
 
-        dense1 and dense2 now have shared weights.
-
-    Layer supports forwarding with both `Symbol` and `NDArray`.
-
-    Layer is mostly used by developers or advanced users as a base class.
-    If you only want to use one of `Symbol` and `NDArray` API you should inherit
-    Layer instead."""
+    Layer supports forwarding with both `Symbol` and `NDArray`."""
     def __init__(self, prefix=None, params=None):
-        self._prefix = _LayerScope.get_prefix(prefix, self._alias())
-        self._params = _LayerScope.get_params(self._prefix, params)
+        self._prefix = _LayerScope.create_prefix(prefix, self._alias())
+        self._params = _LayerScope.create_params(self._prefix, params)
         self._scope = _LayerScope(self)
         self._children = []
         self._reg_params = {}
@@ -110,15 +98,25 @@ class Layer(object):
         if isinstance(value, Parameter):
             self._reg_params[name] = value
         if isinstance(value, Layer):
-            _LayerScope.register_sublayer(self)
+            self.register_child(value)
 
     def _alias(self):
         return self.__class__.__name__.lower()
 
     @property
     def params(self):
-        """A ParameterDict managing this Layer's Parameters."""
+        """Returns this Layer's parameter dictionary (does not include its
+        children's parameters)."""
         return self._params
+
+    def all_params(self):
+        """Returns a ParameterDict containing this Layer and all of its children's
+        Parameters."""
+        ret = ParameterDict(self._params.prefix)
+        ret.update(self.params)
+        for cld in self._children:
+            ret.update(cld.all_params())
+        return ret
 
     @property
     def prefix(self):
@@ -135,11 +133,10 @@ class Layer(object):
     def scope(self):
         return self._scope
 
-    def register_sublayer(self, layer):
+    def register_child(self, layer):
         """Register layer as sublayer of self. Layers assigned to self as attributes
         will be registered automatically."""
         self._children.append(layer)
-        self.params.merge(layer.params)
 
     def __call__(self, *args, **kwargs):
         """Call forward."""
@@ -195,7 +192,7 @@ class Sequential(Layer):
 
     def add(self, layer):
         """Add layer on top of the stack."""
-        self.register_sublayer(layer)
+        self.register_child(layer)
 
     def forward(self, x):
         #pylint: disable=arguments-differ
