@@ -90,13 +90,15 @@ class CReluOp : public Operator {
 
     m_out_grad = F<mshadow_op::relu_grad>(m_out_data) * m_out_grad;
 
-    concat_in_grad[0] = slice<1>(m_out_grad, 0, m_out_grad.size(1)/2) * F<mshadow_op::sign>(m_in_data);
-    concat_in_grad[1] = slice<1>(m_out_grad, m_out_grad.size(1)/2, m_out_grad.size(1)) * F<mshadow_op::sign>(m_in_data);
+    concat_in_grad[0] = slice<1>(m_out_grad, 0, m_out_grad.size(1)/2)
+                        * F<mshadow_op::sign>(m_in_data);
+    concat_in_grad[1] = slice<1>(m_out_grad, m_out_grad.size(1)/2, m_out_grad.size(1))
+                        * F<mshadow_op::sign>(m_in_data);
 
     Assign(m_in_grad, req[concat_relu::kData], concat_in_grad[0] + concat_in_grad[1]);
   }
 
-  private:
+ private:
     CReluParam param_;
 };  // class crelu
 
@@ -198,4 +200,4 @@ class CReluProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_CRELU_INL_H_
+#endif  // MXNET_OPERATOR_CONTRIB_CRELU_INL_H_

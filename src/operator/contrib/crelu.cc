@@ -42,5 +42,5 @@ MXNET_REGISTER_OP_PROPERTY(_contrib_CRelu, CReluProp)
 
 NNVM_REGISTER_OP(_contrib_CRelu).add_alias("_contrib_crelu");
 
-}
-}
+}  // namespace op
+}  // namespace mxnet
