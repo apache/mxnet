@@ -276,8 +276,8 @@ def test(ctx):
 def train(epoch, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
-    net.params.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-    trainer = foo.Trainer(net.params, 'sgd', {'learning_rate': 0.1})
+    net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+    trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.1})
     metric = mx.metric.Accuracy()
 
     for i in range(epoch):
@@ -305,7 +305,7 @@ def train(epoch, ctx):
         print 'time: %f'%(time.time()-tic)
         test(ctx)
 
-    net.params.save('mnist.params')
+    net.all_params().save('mnist.params')
 
 if __name__ == '__main__':
     train(200, [mx.gpu(i) for i in range(2)])
