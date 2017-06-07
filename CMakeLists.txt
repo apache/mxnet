@@ -199,6 +199,12 @@ if(USE_OPENMP)
   endif()
 endif()
 
+if(USE_BLAS)
+  if(USE_BLAS STREQUAL "open")
+    add_definitions(-DMXNET_USE_LAPACK=1)
+  endif()
+endif()
+
 if(UNIX)
   find_library(RTLIB rt)
   if(RTLIB)

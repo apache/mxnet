@@ -393,6 +393,21 @@ Composite multiple symbols into a new one by an operator.
     argmin
 ```
 
+### Linear Algebra
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    la_gemm
+    la_gemm2
+    la_potrf
+    la_potri
+    la_trmm
+    la_trsm
+    la_sumlogdiag
+```
+
 ### Miscellaneous
 
 ```eval_rst
