@@ -102,13 +102,13 @@ After activating the environment, you should see the prompt as below.
 Installing *MXNet* with pip requires a latest version of `pip`. Install the latest version of `pip` by issuing the following command.
 
 ```bash
-(mxnet)$ pip install --upgrade pip
+$ pip install --upgrade pip
 ```
 
 Install *MXNet* with OpenBLAS acceleration.
 
 ```bash
-(mxnet)$ pip install mxnet
+$ pip install mxnet
 ```
 
 **Step 4**  Install [Graphviz](http://www.graphviz.org/) for graph visualization.
