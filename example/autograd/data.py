@@ -1,6 +1,5 @@
 # pylint: skip-file
 """ data iterator for mnist """
-import copy
 import os
 import random
 import sys
@@ -100,22 +99,22 @@ class ImagePairIter(mx.io.DataIter):
             for i in range(self.batch_size):
                 fn = self.filenames[self.count]
                 self.count += 1
-                # read file
                 with open(fn, 'rb') as f:
                     binary_image = f.read()
                 image = mx.img.imdecode(binary_image, flag=self.flag)
                 target = image.copy()
-                # transform
                 for aug in self.input_aug:
                     image = aug(image)[0]
                 for aug in self.target_aug:
                     target = aug(target)[0]
                 data.append(image)
                 label.append(target)
+
             data = mx.nd.concat(*[mx.nd.expand_dims(d, axis=0) for d in data], dim=0)
             label = mx.nd.concat(*[mx.nd.expand_dims(d, axis=0) for d in label], dim=0)
             data = [mx.nd.transpose(data, axes=(0, 3, 1, 2)).astype('float32')]
             label = [mx.nd.transpose(label, axes=(0, 3, 1, 2)).astype('float32')]
+
             return mx.io.DataBatch(data=data, label=label)
         else:
             raise StopIteration

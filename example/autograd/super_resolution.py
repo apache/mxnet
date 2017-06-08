@@ -46,7 +46,7 @@ def get_dataset(prefetch=False):
         with tarfile.open(file_name) as tar:
             for item in tar:
                 tar.extract(item, dataset_path)
-        # os.remove(file_name)
+        os.remove(file_name)
 
     crop_size = 256
     crop_size -= crop_size % upscale_factor
