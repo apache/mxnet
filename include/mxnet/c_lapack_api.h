@@ -9,7 +9,12 @@
 
 // Manually maintained list of LAPACK interfaces that can be used
 // within MXNET. Conventions:
-//    - Interfaces must be compliant with lapacke.
+//    - Interfaces must be compliant with lapacke.h in terms of signature and
+//      naming conventions so wrapping a function "foo" which has the
+//      signature
+//         lapack_int LAPACKE_foo(int, char, lapack_int, float* , lapack_int)
+//      within lapacke.h should result in a wrapper with the following signature
+//         int MXNET_LAPACK_foo(int, char, int, float* , int)
 //    - It is ok to assume that matrices are stored in contiguous memory
 //      (which removes the need to do special handling for lda/ldb parameters
 //      and enables us to save additional matrix transpositions around
