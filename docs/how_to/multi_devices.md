@@ -37,13 +37,13 @@ gradients are then summed over all GPUs before updating the model.
 If a machine has one or more GPU cards installed,
 then each card is labeled by a number starting from 0.
 To use a particular GPU, one can either
-specify the context `ctx` in code
+specify the context `context` in code
 or pass `--gpus` at the command line.
 For example, to use GPU 0 and 2 in python,
 one can typically create a module with
 ```python
 import mxnet as mx
-module = mx.module.Module(ctx=[mx.gpu(0), mx.gpu(2)], ...)
+module = mx.module.Module(context=[mx.gpu(0), mx.gpu(2)], ...)
 ```
 while if the program accepts a `--gpus` flag (as seen in
 [example/image-classification](https://github.com/dmlc/mxnet/tree/master/example/image-classification)),
