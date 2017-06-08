@@ -39,6 +39,8 @@ class _LegacyLayer(Layer):
         init_dict = dict(self._default_initializers)
         init_dict.update(kwargs.pop('init', {}))
         shapes = kwargs.pop('shape', tuple())
+        if all(isinstance(d, int) for d in shapes):
+            shapes = (shapes,)
         self._variables = kwargs.pop('variables', ('data',))
 
         self._kwargs = dict(kwargs)
