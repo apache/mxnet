@@ -95,7 +95,7 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __iadd__(self, other):
-        raise OnlyImplementedInNDArray(self.__iadd__)
+        raise OnlyImplementedInNDArray(self.__iadd__, other)
 
     def __radd__(self, other):
         return self.__add__(other)
@@ -113,7 +113,7 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __isub__(self, other):
-        raise OnlyImplementedInNDArray(self.__isub__)
+        raise OnlyImplementedInNDArray(self.__isub__, other)
 
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y-x
@@ -146,7 +146,7 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __imul__(self, other):
-        raise OnlyImplementedInNDArray(self.__imul__)
+        raise OnlyImplementedInNDArray(self.__imul__, other)
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -182,7 +182,7 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __idiv__(self, other):
-        raise OnlyImplementedInNDArray(self.__idiv__)
+        raise OnlyImplementedInNDArray(self.__idiv__, other)
 
     def __truediv__(self, other):
         return self.__div__(other)
@@ -191,7 +191,7 @@ class Symbol(SymbolBase):
         return self.__rdiv__(other)
 
     def __itruediv__(self, other):
-        raise OnlyImplementedInNDArray(self.__itruediv__)
+        raise OnlyImplementedInNDArray(self.__itruediv__, other)
 
     def __pow__(self, other):
         """x.__pow__(y) <=> x**y
@@ -206,7 +206,7 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rpow__(self, other):
-        raise OnlyImplementedInNDArray(self.__rpow__)
+        raise OnlyImplementedInNDArray(self.__rpow__, other)
 
     def __neg__(self):
         """x.__neg__() <=> -x

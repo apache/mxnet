@@ -39,10 +39,11 @@ class MXNetError(Exception):
     pass
 
 class OnlyImplementedInNDArray(MXNetError):
-    def __init__(self, entity):
-        self.entity = entity
+    def __init__(self, *entities):
+        super(OnlyImplementedInNDArray, self).__init__()
+        self.entities = entities
     def __str__(self):
-        return repr(self.entity)
+        return repr(self.entities)
 
 def _load_lib():
     """Load libary by searching possible path."""
