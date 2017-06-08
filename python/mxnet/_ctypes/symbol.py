@@ -64,7 +64,7 @@ class SymbolBase(object):
 
         num_args = len(args) + len(kwargs)
         if len(kwargs) != 0:
-            keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()])
+            keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs])
             args = c_array(SymbolHandle, [s.handle for s in kwargs.values()])
         else:
             keys = None
@@ -81,7 +81,7 @@ class SymbolBase(object):
             The attributes to set
         """
         keys = c_array(ctypes.c_char_p,
-                       [c_str(key) for key in kwargs.keys()])
+                       [c_str(key) for key in kwargs])
         vals = c_array(ctypes.c_char_p,
                        [c_str(str(val)) for val in kwargs.values()])
         num_args = mx_uint(len(kwargs))
