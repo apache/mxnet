@@ -51,6 +51,12 @@ To complete this tutorial, we need:
 
 - MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
 - [Python](https://www.python.org/downloads/)
+- [Graphviz](http://www.graphviz.org/)
+    ```bash
+    pip install graphviz
+    ```
+- GPUs - This tutorial uses GPUs. If you don't have GPUs on your machine, simply
+set the variable gpuContext to mx.cpu().
 
 ## Basic Symbol Composition
 
@@ -328,8 +334,10 @@ print('number of outputs = %d\nthe first output = \n%s' % (
 We can evaluate the same symbol on GPU with different data.
 
 ```python
-ex_gpu = c.bind(ctx=mx.gpu(), args={'a' : mx.nd.ones([3,4], mx.gpu())*2,
-                                    'b' : mx.nd.ones([3,4], mx.gpu())*3})
+gpuContext=mx.gpu() # Change this to mx.cpu() in absence of GPUs.
+
+ex_gpu = c.bind(ctx=gpuContext, args={'a' : mx.nd.ones([3,4], gpuContext)*2,
+                                      'b' : mx.nd.ones([3,4], gpuContext)*3})
 ex_gpu.forward()
 ex_gpu.outputs[0].asnumpy()
 ```
