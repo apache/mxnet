@@ -832,7 +832,7 @@ dl {
 }
 
 dt:target, .highlighted {
-    background-color: rgb(135, 206, 250);
+    background-color: #e7f2fa;
     border-bottom: 3px solid #c7254e;
     margin-bottom: -3px;
 }
@@ -845,8 +845,8 @@ dt:target:before {
 }
 
 dt {
-    background: rgb(135, 206, 250);
-    border-bottom: solid;
+    background: #e7f2fa;
+    border-bottom: solid #0079b2;
 }
 
 dt em {
@@ -858,10 +858,6 @@ dt em {
 code {
     color: #337ab7;
     background-color: #f5f5f5;
-}
-
-code.descname, code.descclassname {
-    color: black;
 }
 
 dl.last.docutils dt{
