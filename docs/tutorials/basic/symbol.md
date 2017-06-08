@@ -320,11 +320,13 @@ print 'number of outputs = %d\nthe first output = \n%s' % (
 
 We can evaluate the same symbol on GPU with different data.
 
+*Note: To use the GPU functionalities, a GPU must be present and MXNet must be compiled with USE_CUDA=1*
+
 ```python
-ex_gpu = c.bind(ctx=mx.gpu(), args={'a' : mx.nd.ones([3,4], mx.gpu())*2,
-                                    'b' : mx.nd.ones([3,4], mx.gpu())*3})
-ex_gpu.forward()
-ex_gpu.outputs[0].asnumpy()
+    ex_gpu = c.bind(ctx=mx.gpu(), args={'a' : mx.nd.ones([3,4], mx.gpu())*2,
+                                        'b' : mx.nd.ones([3,4], mx.gpu())*3})
+    ex_gpu.forward()
+    ex_gpu.outputs[0].asnumpy()
 ```
 
 We can also use `eval` method to evaluate the symbol. It combines calls to `bind`

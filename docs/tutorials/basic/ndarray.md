@@ -279,6 +279,8 @@ can cause all computations to run on GPU 0 by using context `mx.gpu(0)`, or
 simply `mx.gpu()`. When we have access to two or more GPUs, the 2nd GPU is
 represented by `mx.gpu(1)`, etc.
 
+*Note: To use NDArray's GPU features, a GPU must be present and MXNet must be compiled with USE_CUDA=1*
+
 ```python
 def f():
     a = mx.nd.ones((100,100))
