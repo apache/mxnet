@@ -562,6 +562,31 @@ int MXImperativeInvoke(AtomicSymbolCreator in,
                                  int num_params,
                                  const char **keys,
                                  const char **vals);
+/*!
+ * \brief set whether to record operator for autograd
+ * \param is_train 1 when training, 0 when testing
+ * \param prev returns the previous status before this set.
+ * \return 0 when success, -1 when failure happens
+ */
+int MXAutogradSetIsTraining(int is_training, int* out);
+/*!
+ * \brief mark NDArrays as variables to compute gradient for autograd
+ * \param num_var number of variable NDArrays
+ * \param var_handles variable NDArrays
+ * \return 0 when success, -1 when failure happens
+ */
+int MXAutogradMarkVariables(mx_uint num_var,
+                                      NDArrayHandle *in,
+                                      mx_uint *in,
+                                      NDArrayHandle *in);
+/*!
+ * \brief compute the gradient of outputs w.r.t variables
+ * \param num_output number of output NDArray
+ * \param output_handles output NDArrays
+ * \return 0 when success, -1 when failure happens
+ */
+int MXAutogradComputeGradient(mx_uint num_output,
+                                        NDArrayHandle* in);
 
 //--------------------------------------------
 // Part 3: symbolic configuration generation

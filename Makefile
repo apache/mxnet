@@ -18,6 +18,10 @@ ifndef NNVM_PATH
 	NNVM_PATH = $(ROOTDIR)/nnvm
 endif
 
+ifndef DLPACK_PATH
+	DLPACK_PATH = $(ROOTDIR)/dlpack
+endif
+
 ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
@@ -47,14 +51,14 @@ endif
 ifeq ($(DEBUG), 1)
 	CFLAGS += -g -O0
 else
-	CFLAGS += -O3
+	CFLAGS += -O3 -DNDEBUG=1
 endif
-CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
-	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
 # CFLAGS for profiler
@@ -123,6 +127,35 @@ endif
 
 ifneq ($(USE_CUDA_PATH), NONE)
 	NVCC=$(USE_CUDA_PATH)/bin/nvcc
+endif
+
+# Sets 'CUDA_ARCH', which determines the GPU architectures supported
+# by the compiled kernels.  Users can edit the KNOWN_CUDA_ARCHS list below
+# to remove archs they don't wish to support to speed compilation, or they
+# can pre-set the CUDA_ARCH args in config.mk for full control.
+#
+# For archs in this list, nvcc will create a fat-binary that will include
+# the binaries (SASS) for all architectures supported by the installed version
+# of the cuda toolkit, plus the assembly (PTX) for the most recent such architecture.
+# If these kernels are then run on a newer-architecture GPU, the binary will
+# be JIT-compiled by the updated driver from the included PTX.
+ifeq ($(USE_CUDA), 1)
+ifeq ($(origin CUDA_ARCH), undefined)
+	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61
+	# Run nvcc on a zero-length file to check architecture-level support.
+	# Create args to include SASS in the fat binary for supported levels.
+	CUDA_ARCH := $(foreach arch,$(KNOWN_CUDA_ARCHS), \
+                  $(shell $(NVCC) -arch=sm_$(arch) -E --x cu /dev/null >/dev/null 2>&1 && \
+                          echo -gencode arch=compute_$(arch),code=sm_$(arch)))
+	# Convert a trailing "code=sm_NN" to "code=[sm_NN,compute_NN]" to also
+	# include the PTX of the most recent arch in the fat-binaries for
+	# forward compatibility with newer GPUs.
+	CUDA_ARCH := $(shell echo $(CUDA_ARCH) | sed 's/sm_\([0-9]*\)$$/[sm_\1,compute_\1]/')
+	# Add fat binary compression if supported by nvcc.
+	COMPRESS := --fatbin-options -compress-all
+	CUDA_ARCH += $(shell $(NVCC) -cuda $(COMPRESS) --x cu /dev/null -o /dev/null >/dev/null 2>&1 && \
+	                     echo $(COMPRESS))
+endif
 endif
 
 # ps-lite
@@ -253,9 +286,9 @@ $(DMLC_CORE)/libdmlc.a: DMLCCORE
 DMLCCORE:
 	+ cd $(DMLC_CORE); $(MAKE) libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
-$(NNVM_PATH)/lib/libnnvm.a: LIBNNVM
-
-LIBNNVM:
+NNVM_INC = $(wildcard $(NNVM_PATH)/include/*/*.h)
+NNVM_SRC = $(wildcard $(NNVM_PATH)/src/*/*/*.cc $(NNVM_PATH)/src/*/*.cc $(NNVM_PATH)/src/*.cc)
+$(NNVM_PATH)/lib/libnnvm.a: $(NNVM_INC) $(NNVM_SRC)
 	+ cd $(NNVM_PATH); $(MAKE) lib/libnnvm.a DMLC_CORE_PATH=$(DMLC_CORE); cd $(ROOTDIR)
 
 bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
@@ -278,12 +311,11 @@ test: $(TEST)
 lint: cpplint rcpplint jnilint pylint
 
 cpplint:
-	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package \
+	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
 	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
-# ideally we want to check all, such as: python tools example tests
-	pylint python/mxnet --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc
+	pylint python/mxnet tools/caffe_converter/*.py --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc
 
 doc: docs
 
@@ -298,13 +330,13 @@ doxygen:
 
 # Cython build
 cython:
-	cd python; python setup.py build_ext --inplace
+	cd python; python setup.py build_ext --inplace --with-cython
 
 cython2:
-	cd python; python2 setup.py build_ext --inplace
+	cd python; python2 setup.py build_ext --inplace --with-cython
 
 cython3:
-	cd python; python3 setup.py build_ext --inplace
+	cd python; python3 setup.py build_ext --inplace --with-cython
 
 cyclean:
 	rm -rf python/mxnet/*/*.so python/mxnet/*/*.cpp
@@ -370,7 +402,7 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
-clean: cyclean $(EXTRA_PACKAGES_CLEAN)
+clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 	cd $(DMLC_CORE); $(MAKE) clean; cd -

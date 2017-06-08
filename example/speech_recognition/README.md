@@ -118,7 +118,7 @@ Run the following line after all modification explained above.
 Train and test your own models by preparing two files.
 1) A new configuration file, i.e., custom.cfg, corresponding to the file 'default.cfg'.
 The new file should specify the items below the '[arch]' section of the original file. 
-2) A new implementation file, i.e., arch_custom.py, corresponing to the file 'arch_deepspeech.py'.
+2) A new implementation file, i.e., arch_custom.py, corresponding to the file 'arch_deepspeech.py'.
 The new file should implement two functions, prepare_data() and arch(), for building networks described in the new configuration file.
 
 Run the following line after preparing the files.   

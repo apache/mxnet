@@ -138,8 +138,8 @@ DMLC_REGISTER_PARAMETER(MultiSampleParam);
     }) \
   .set_attr<FCompute>("FCompute<cpu>", MultiSampleOpForward<cpu, sampler>) \
   .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes) \
-  .add_arguments(MultiSampleParam::__FIELDS__()) \
-  .add_argument(input_name_1, "NDArray-or-Symbol", input_desc_1)
+  .add_argument(input_name_1, "NDArray-or-Symbol", input_desc_1) \
+  .add_arguments(MultiSampleParam::__FIELDS__())
 
 #define MXNET_OPERATOR_REGISTER_SAMPLING1(distr, sampler, input_name, input_desc, \
                                           description) \
@@ -153,24 +153,26 @@ DMLC_REGISTER_PARAMETER(MultiSampleParam);
   .add_argument(input_name_2, "NDArray-or-Symbol", input_desc_2);
 
 inline std::string uniform_desc() {
-  return std::string(R"code(Concurrent sampling from multiple 
+  return std::string(R"code(Concurrent sampling from multiple
 uniform distributions on the intervals given by *[low,high)*.
+
 The parameters of the distributions are provided as input arrays.
 Let *[s]* be the shape of the input arrays, *n* be the dimension of *[s]*, *[t]*
 be the shape specified as the parameter of the operator, and *m* be the dimension
-of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*. For any
-valid *n*-dimensional index *i* with respect to the input arrays, *output[i]* will be
-an *m*-dimensional array that holds randomly drawn samples from the distribution which
-is parameterized by the input values at index *i*. If the shape parameter of the
+of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*.
+
+For any valid *n*-dimensional index *i* with respect to the input arrays, *output[i]*
+will be an *m*-dimensional array that holds randomly drawn samples from the distribution
+which is parameterized by the input values at index *i*. If the shape parameter of the
 operator is not set, then one sample will be drawn per distribution and the output array
 has the same shape as the input arrays.
 
 Examples::
 
    low = [ 0.0, 2.5 ]
-   high = [ 1.0, 3.7 ] 
+   high = [ 1.0, 3.7 ]
 
-   // Draw a single sample for each distribution 
+   // Draw a single sample for each distribution
    sample_uniform(low, high) = [ 0.40451524,  3.18687344]
 
    // Draw a vector containing two samples for each distribution
@@ -180,15 +182,17 @@ Examples::
 }
 
 inline std::string normal_desc() {
-  return std::string(R"code(Concurrent sampling from multiple 
+  return std::string(R"code(Concurrent sampling from multiple
 normal distributions with parameters *mu* (mean) and *sigma* (standard deviation).
+
 The parameters of the distributions are provided as input arrays.
 Let *[s]* be the shape of the input arrays, *n* be the dimension of *[s]*, *[t]*
 be the shape specified as the parameter of the operator, and *m* be the dimension
-of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*. For any
-valid *n*-dimensional index *i* with respect to the input arrays, *output[i]* will be
-an *m*-dimensional array that holds randomly drawn samples from the distribution which
-is parameterized by the input values at index *i*. If the shape parameter of the
+of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*.
+
+For any valid *n*-dimensional index *i* with respect to the input arrays, *output[i]*
+will be an *m*-dimensional array that holds randomly drawn samples from the distribution
+which is parameterized by the input values at index *i*. If the shape parameter of the
 operator is not set, then one sample will be drawn per distribution and the output array
 has the same shape as the input arrays.
 
@@ -207,15 +211,17 @@ Examples::
 }
 
 inline std::string gamma_desc() {
-  return std::string(R"code(Concurrent sampling from multiple 
+  return std::string(R"code(Concurrent sampling from multiple
 gamma distributions with parameters *alpha* (shape) and *beta* (scale).
+
 The parameters of the distributions are provided as input arrays.
 Let *[s]* be the shape of the input arrays, *n* be the dimension of *[s]*, *[t]*
 be the shape specified as the parameter of the operator, and *m* be the dimension
-of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*. For any
-valid *n*-dimensional index *i* with respect to the input arrays, *output[i]* will be
-an *m*-dimensional array that holds randomly drawn samples from the distribution which
-is parameterized by the input values at index *i*. If the shape parameter of the
+of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*.
+
+For any valid *n*-dimensional index *i* with respect to the input arrays, *output[i]*
+will be an *m*-dimensional array that holds randomly drawn samples from the distribution
+which is parameterized by the input values at index *i*. If the shape parameter of the
 operator is not set, then one sample will be drawn per distribution and the output array
 has the same shape as the input arrays.
 
@@ -234,15 +240,17 @@ Examples::
 }
 
 inline std::string exponential_desc() {
-  return std::string(R"code(Concurrent sampling from multiple 
+  return std::string(R"code(Concurrent sampling from multiple
 exponential distributions with parameters lambda (rate).
+
 The parameters of the distributions are provided as an input array.
 Let *[s]* be the shape of the input array, *n* be the dimension of *[s]*, *[t]*
 be the shape specified as the parameter of the operator, and *m* be the dimension
-of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*. For any
-valid *n*-dimensional index *i* with respect to the input array, *output[i]* will be
-an *m*-dimensional array that holds randomly drawn samples from the distribution which
-is parameterized by the input value at index *i*. If the shape parameter of the
+of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*.
+
+For any valid *n*-dimensional index *i* with respect to the input array, *output[i]*
+will be an *m*-dimensional array that holds randomly drawn samples from the distribution
+which is parameterized by the input value at index *i*. If the shape parameter of the
 operator is not set, then one sample will be drawn per distribution and the output array
 has the same shape as the input array.
 
@@ -260,17 +268,20 @@ Examples::
 }
 
 inline std::string poisson_desc() {
-  return std::string(R"code(Concurrent sampling from multiple 
+  return std::string(R"code(Concurrent sampling from multiple
 Poisson distributions with parameters lambda (rate).
+
 The parameters of the distributions are provided as an input array.
 Let *[s]* be the shape of the input array, *n* be the dimension of *[s]*, *[t]*
 be the shape specified as the parameter of the operator, and *m* be the dimension
-of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*. For any
-valid *n*-dimensional index *i* with respect to the input array, *output[i]* will be
-an *m*-dimensional array that holds randomly drawn samples from the distribution which
-is parameterized by the input value at index *i*. If the shape parameter of the
+of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*.
+
+For any valid *n*-dimensional index *i* with respect to the input array, *output[i]*
+will be an *m*-dimensional array that holds randomly drawn samples from the distribution
+which is parameterized by the input value at index *i*. If the shape parameter of the
 operator is not set, then one sample will be drawn per distribution and the output array
 has the same shape as the input array.
+
 Samples will always be returned as a floating point data type.
 
 Examples::
@@ -287,17 +298,20 @@ Examples::
 }
 
 inline std::string negative_binomial_desc() {
-  return std::string(R"code(Concurrent sampling from multiple 
+  return std::string(R"code(Concurrent sampling from multiple
 negative binomial distributions with parameters *k* (failure limit) and *p* (failure probability).
+
 The parameters of the distributions are provided as input arrays.
 Let *[s]* be the shape of the input arrays, *n* be the dimension of *[s]*, *[t]*
 be the shape specified as the parameter of the operator, and *m* be the dimension
-of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*. For any
-valid *n*-dimensional index *i* with respect to the input arrays, *output[i]* will be
-an *m*-dimensional array that holds randomly drawn samples from the distribution which
-is parameterized by the input values at index *i*. If the shape parameter of the
+of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*.
+
+For any valid *n*-dimensional index *i* with respect to the input arrays, *output[i]*
+will be an *m*-dimensional array that holds randomly drawn samples from the distribution
+which is parameterized by the input values at index *i*. If the shape parameter of the
 operator is not set, then one sample will be drawn per distribution and the output array
 has the same shape as the input arrays.
+
 Samples will always be returned as a floating point data type.
 
 Examples::
@@ -315,17 +329,20 @@ Examples::
 }
 
 inline std::string generalized_negative_binomial_desc() {
-  return std::string(R"code(Concurrent sampling from multiple 
+  return std::string(R"code(Concurrent sampling from multiple
 generalized negative binomial distributions with parameters *mu* (mean) and *alpha* (dispersion).
+
 The parameters of the distributions are provided as input arrays.
 Let *[s]* be the shape of the input arrays, *n* be the dimension of *[s]*, *[t]*
 be the shape specified as the parameter of the operator, and *m* be the dimension
-of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*. For any
-valid *n*-dimensional index *i* with respect to the input arrays, *output[i]* will be
-an *m*-dimensional array that holds randomly drawn samples from the distribution which
-is parameterized by the input values at index *i*. If the shape parameter of the
+of *[t]*. Then the output will be a *(n+m)*-dimensional array with shape *[s]x[t]*.
+
+For any valid *n*-dimensional index *i* with respect to the input arrays, *output[i]*
+will be an *m*-dimensional array that holds randomly drawn samples from the distribution
+which is parameterized by the input values at index *i*. If the shape parameter of the
 operator is not set, then one sample will be drawn per distribution and the output array
 has the same shape as the input arrays.
+
 Samples will always be returned as a floating point data type.
 
 Examples::

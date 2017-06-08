@@ -30,6 +30,7 @@ Convolutional neural networks are the state-of-art architecture for many image a
 * [Mini-Places2](http://6.869.csail.mit.edu/fa15/project.html): Subset of the Places2 dataset. Includes 100,000 images from 100 scene categories.
 * ImageNet 11k
 * [Places2](http://places2.csail.mit.edu/download.html): There are 1.6 million train images from 365 scene categories in the Places365-Standard, which are used to train the Places365 CNNs. There are 50 images per category in the validation set and 900 images per category in the testing set. Compared to the train set of Places365-Standard, the train set of Places365-Challenge has 6.2 million extra images, leading to totally 8 million train images for the Places365 challenge 2016. The validation set and testing set are the same as the Places365-Standard.
+* [Multimedia Commons](https://aws.amazon.com/public-datasets/multimedia-commons/): YFCC100M (99.2 million images and 0.8 million videos from Flickr) and supplemental material (pre-extracted features, additional annotations).
 
 For instructions on using these models, see [the python tutorial on using pre-trained ImageNet models](http://mxnet.io/tutorials/python/predict_imagenet.html).
 
@@ -46,6 +47,8 @@ For instructions on using these models, see [the python tutorial on using pre-tr
 | Fast-RCNN | PASCAL VOC | [Param File] | [Girshick, 2015](https://arxiv.org/pdf/1504.08083v2.pdf) | |
 | Faster-RCNN | PASCAL VOC | [Param File] | [Ren et al..,2016](https://arxiv.org/pdf/1506.01497v3.pdf) | |
 | Single Shot Detection (SSD) | PASCAL VOC | [Param File] | [Liu et al.., 2016](https://arxiv.org/pdf/1512.02325v4.pdf) | |
+| [LocationNet](https://s3.amazonaws.com/mmcommons-tutorial/models/RN101-5k500-symbol.json) | [MultimediaCommons](https://aws.amazon.com/public-datasets/multimedia-commons/) | [Param File](https://s3.amazonaws.com/mmcommons-tutorial/models/RN101-5k500-0012.params) | [Weyand et al.., 2016](https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/45488.pdf) | @jychoi84 @kevinli7 |
+
 
 
 ## Recurrent Neural Networks (RNNs) including LSTMs

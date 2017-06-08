@@ -690,7 +690,7 @@ extends 'AI::MXNet::Initializer';
     Parameters
     ----------
     init : Initializer
-        intializer applied to unpacked weights.
+        initializer applied to unpacked weights.
     All parameters below must be exactly the same as ones passed to the
     FusedRNNCell constructor.
 

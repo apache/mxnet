@@ -11,8 +11,6 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How do I work with variable-length input in MXNet (bucketing)?](http://mxnet.io/how_to/bucketing.html)
 
-* [How do I create new operators with MXNet?](new_op.md)
-
 * [How do I visualize neural networks as computation graphs?](http://mxnet.io/how_to/visualize_graph.html)
 
 
@@ -30,15 +28,17 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 ## Deployment Environments
 * [Can I run MXNet on smart or mobile devices?](http://mxnet.io/how_to/smart_device.html)
 
-* [How do I set up MXNet on the AWS Cloud using Amazon EC2 and Amazon S3?](http://mxnet.io/how_to/cloud.html)
+* [How to use data from S3 for training?](s3_integration.md)
 
-* [How do I work with MXNet within a Matlab environment?](https://github.com/dmlc/mxnet/tree/master/matlab)
+* [How to setup MXNet on AWS?](http://docs.aws.amazon.com/mxnet/latest/dg/mxnet-on-ec2-instance.html)
 
-* [Can I run MXNet in a browser using JavaScript?](https://github.com/dmlc/mxnet.js/)
+* [How to do distributed training using MXNet on AWS?](http://docs.aws.amazon.com/mxnet/latest/dg/mxnet-on-ec2-cluster.html)
 
 * [How do I run MXNet on a Raspberry Pi for computer vision?](http://mxnet.io/tutorials/embedded/wine_detector.html)
 
 ## Extend and Contribute to MXNet
+
+* [How do I join the MXNet development discussion?](http://mxnet.io/community/mxnet_channels.html)
 
 * [How do I contribute a patch to MXNet?](http://mxnet.io/community/contribute.html)
 
