@@ -18,7 +18,7 @@ this tutorial.
 To complete this tutorial, we need:
 
 - [MXNet](http://mxnet.io/get_started/install.html)
-- Jupyter Notebook and Requests python packages.
+- [Jupyter Notebook](http://jupyter.org/index.html) and [Python Requests](http://docs.python-requests.org/en/master/) packages.
 ```
 pip install jupyter requests
 ```
