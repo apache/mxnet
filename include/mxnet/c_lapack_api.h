@@ -67,7 +67,7 @@ inline char loup(char uplo, bool invert) { return invert ? (uplo == 'U' ? 'L' : 
 
   #define MXNET_LAPACK_CWRAPPER1(func, dtype) \
   inline int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype* a, int lda ) { \
-    CHECK(false) << "MXNet build without lapack. Function " << #func << " is not available."; \
+    LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
     return 1; \
   }
   MXNET_LAPACK_CWRAPPER1(spotrf, float)
