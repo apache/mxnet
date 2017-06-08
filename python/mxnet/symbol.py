@@ -15,7 +15,8 @@ import numpy as _numpy
 from .base import _LIB, numeric_types
 from .base import c_array, c_str, mx_uint, py_str, string_types
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle, OpHandle
-from .base import check_call, MXNetError, _Null  # pylint: disable=unused-import
+from .base import check_call, MXNetError, OnlyImplementedInNDArray, _Null  # pylint: disable=unused-import
+
 from .context import Context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .name import NameManager  # pylint: disable=unused-import
@@ -95,7 +96,8 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __iadd__(self, other):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
+        raise OnlyImplementedInNDArray(self.__iadd__, other)
+
 
     def __radd__(self, other):
         return self.__add__(other)
@@ -113,7 +115,8 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __isub__(self, other):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
+        raise OnlyImplementedInNDArray(self.__isub__, other)
+
 
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y-x
@@ -146,7 +149,8 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __imul__(self, other):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
+        raise OnlyImplementedInNDArray(self.__imul__, other)
+
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -182,7 +186,8 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __idiv__(self, other):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
+        raise OnlyImplementedInNDArray(self.__idiv__, other)
+
 
     def __truediv__(self, other):
         return self.__div__(other)
@@ -191,7 +196,8 @@ class Symbol(SymbolBase):
         return self.__rdiv__(other)
 
     def __itruediv__(self, other):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
+        raise OnlyImplementedInNDArray(self.__itruediv__, other)
+
 
     def __pow__(self, other):
         """x.__pow__(y) <=> x**y
@@ -206,7 +212,8 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rpow__(self, other):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
+        raise OnlyImplementedInNDArray(self.__rpow__, other)
+
 
     def __neg__(self):
         """x.__neg__() <=> -x
@@ -1659,28 +1666,29 @@ class Symbol(SymbolBase):
         return reshape(self, shape=shape)
 
     def wait_to_read(self):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
+        raise OnlyImplementedInNDArray(self.wait_to_read)
 
     def asnumpy(self):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
+        raise OnlyImplementedInNDArray(self.asnumpy)
 
     def asscalar(self):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
+        raise OnlyImplementedInNDArray(self.asscalar)
 
     def astype(self):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
+        raise OnlyImplementedInNDArray(self.astype)
 
     def copy(self):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
+        raise OnlyImplementedInNDArray(self.copy)
 
     def as_in_context(self):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
+        raise OnlyImplementedInNDArray(self.as_in_context)
 
     def detach(self):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
+        raise OnlyImplementedInNDArray(self.detach)
 
     def backward(self):
-        raise NotImplementedError('Not supported. This is available in NDArray only')
+        raise OnlyImplementedInNDArray(self.backward)
+
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None, **kwargs):
     """Creates a symbolic variable with specified name.

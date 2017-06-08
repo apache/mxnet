@@ -38,6 +38,13 @@ class MXNetError(Exception):
     """Error that will be throwed by all mxnet functions."""
     pass
 
+class OnlyImplementedInNDArray(MXNetError):
+    def __init__(self, *entities):
+        super(OnlyImplementedInNDArray, self).__init__()
+        self.entities = entities
+    def __str__(self):
+        return repr(self.entities)
+
 def _load_lib():
     """Load libary by searching possible path."""
     lib_path = libinfo.find_lib_path()
