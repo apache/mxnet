@@ -16,6 +16,7 @@ from .base import _LIB, numeric_types
 from .base import c_array, c_str, mx_uint, py_str, string_types
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle, OpHandle
 from .base import check_call, MXNetError, OnlyImplementedInNDArray, _Null  # pylint: disable=unused-import
+
 from .context import Context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .name import NameManager  # pylint: disable=unused-import
@@ -97,6 +98,7 @@ class Symbol(SymbolBase):
     def __iadd__(self, other):
         raise OnlyImplementedInNDArray(self.__iadd__, other)
 
+
     def __radd__(self, other):
         return self.__add__(other)
 
@@ -114,6 +116,7 @@ class Symbol(SymbolBase):
 
     def __isub__(self, other):
         raise OnlyImplementedInNDArray(self.__isub__, other)
+
 
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y-x
@@ -147,6 +150,7 @@ class Symbol(SymbolBase):
 
     def __imul__(self, other):
         raise OnlyImplementedInNDArray(self.__imul__, other)
+
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -184,6 +188,7 @@ class Symbol(SymbolBase):
     def __idiv__(self, other):
         raise OnlyImplementedInNDArray(self.__idiv__, other)
 
+
     def __truediv__(self, other):
         return self.__div__(other)
 
@@ -192,6 +197,7 @@ class Symbol(SymbolBase):
 
     def __itruediv__(self, other):
         raise OnlyImplementedInNDArray(self.__itruediv__, other)
+
 
     def __pow__(self, other):
         """x.__pow__(y) <=> x**y
@@ -207,6 +213,7 @@ class Symbol(SymbolBase):
 
     def __rpow__(self, other):
         raise OnlyImplementedInNDArray(self.__rpow__, other)
+
 
     def __neg__(self):
         """x.__neg__() <=> -x
@@ -1386,11 +1393,12 @@ class Symbol(SymbolBase):
                                                  ctypes.byref(aux_state_handles),
                                                  shared_exec_handle,
                                                  ctypes.byref(exe_handle)))
-        except MXNetError:
-            print("simple_bind error. Arguments:")
+        except MXNetError as e:
+            error_msg = "simple_bind error. Arguments:\n"
             for k, v in kwargs.items():
-                print("  %s: %s" % (k, v))
-            raise RuntimeError('simple_bind failed')
+                error_msg += "%s: %s\n" % (k, v)
+            error_msg += "%s" % e
+            raise RuntimeError(error_msg)
 
         # update shared_buffer
         if shared_buffer is not None:
@@ -1680,6 +1688,7 @@ class Symbol(SymbolBase):
 
     def backward(self):
         raise OnlyImplementedInNDArray(self.backward)
+
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None, **kwargs):
     """Creates a symbolic variable with specified name.

@@ -637,6 +637,17 @@ def test_cached():
     o2 = mx.nd.invoke(op, [data, weight, bias])
     assert_almost_equal(o2.asnumpy(), o1.asnumpy()+1)
 
+def test_output():
+    shape = (2,2)
+    ones = mx.nd.ones(shape)
+    zeros = mx.nd.zeros(shape)
+    out = mx.nd.zeros(shape)
+    mx.nd.ones(shape, out=out)
+    assert_almost_equal(out.asnumpy(), ones.asnumpy())
+    mx.nd.zeros(shape, out=out)
+    assert_almost_equal(out.asnumpy(), zeros.asnumpy())
+    mx.nd.full(shape, 2, out=out)
+    assert_almost_equal(out.asnumpy(), ones.asnumpy() * 2)
 
 if __name__ == '__main__':
     import nose

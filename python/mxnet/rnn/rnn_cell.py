@@ -96,7 +96,7 @@ class BaseRNNCell(object):
         Prefix for names of layers
         (this prefix is also used for names of weights if `params` is None
         i.e. if `params` are being created and not reused)
-    params : RNNParams or None, optional
+    params : RNNParams, default None.
         Container for weight sharing between cells.
         A new RNNParams container is created if `params` is None.
     """
@@ -277,7 +277,7 @@ class BaseRNNCell(object):
         Parameters
         ----------
         length : int
-            number of steps to unroll
+            Number of steps to unroll.
         inputs : Symbol, list of Symbol, or None
             If `inputs` is a single Symbol (usually the output
             of Embedding symbol), it should have shape
@@ -287,7 +287,7 @@ class BaseRNNCell(object):
             If `inputs` is a list of symbols (usually output of
             previous unroll), they should all have shape
             (batch_size, ...).
-        begin_state : nested list of Symbol, optional
+        begin_state : nested list of Symbol, default None
             Input states created by `begin_state()`
             or output state of another cell.
             Created from `begin_state()` if None.
@@ -300,7 +300,7 @@ class BaseRNNCell(object):
             and return a single symbol with shape
             (batch_size, length, ...) if layout == 'NTC',
             or (length, batch_size, ...) if layout == 'TNC'.
-            If None, output whatever is faster
+            If None, output whatever is faster.
 
         Returns
         -------
@@ -344,15 +344,13 @@ class RNNCell(BaseRNNCell):
     Parameters
     ----------
     num_hidden : int
-        number of units in output symbol
+        Number of units in output symbol.
     activation : str or Symbol, default 'tanh'
-        type of activation function
+        Type of activation function. Options are 'relu' and 'tanh'.
     prefix : str, default 'rnn_'
-        prefix for name of layers
-        (and name of weight if params is None)
-    params : RNNParams or None
-        container for weight sharing between cells.
-        created if None.
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, num_hidden, activation='tanh', prefix='rnn_', params=None):
         super(RNNCell, self).__init__(prefix=prefix, params=params)
@@ -392,13 +390,11 @@ class LSTMCell(BaseRNNCell):
     Parameters
     ----------
     num_hidden : int
-        number of units in output symbol
+        Number of units in output symbol.
     prefix : str, default 'lstm_'
-        prefix for name of layers
-        (and name of weight if params is None)
-    params : RNNParams or None
-        container for weight sharing between cells.
-        created if None.
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     forget_bias : bias added to forget gate, default 1.0.
         Jozefowicz et al. 2015 recommends setting this to 1.0
     """
@@ -457,13 +453,11 @@ class GRUCell(BaseRNNCell):
     Parameters
     ----------
     num_hidden : int
-        number of units in output symbol
+        Number of units in output symbol.
     prefix : str, default 'gru_'
-        prefix for name of layers
-        (and name of weight if params is None)
-    params : RNNParams or None
-        container for weight sharing between cells.
-        created if None.
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, num_hidden, prefix='gru_', params=None):
         super(GRUCell, self).__init__(prefix=prefix, params=params)
@@ -525,6 +519,26 @@ class FusedRNNCell(BaseRNNCell):
 
     Parameters
     ----------
+    num_hidden : int
+        Number of units in output symbol.
+    num_layers : int, default 1
+        Number of layers in the cell.
+    mode : str, default 'lstm'
+        Type of RNN. options are 'rnn_relu', 'rnn_tanh', 'lstm', 'gru'.
+    bidirectional : bool, default False
+        Whether to use bidirectional unroll. The output dimension size is doubled if bidrectional.
+    dropout : float, default 0.
+        Fraction of the input that gets dropped out during training time.
+    get_next_state : bool, default False
+        Whether to return the states that can be used as starting states next time.
+    forget_bias : bias added to forget gate, default 1.0.
+        Jozefowicz et al. 2015 recommends setting this to 1.0
+    prefix : str, default '$mode_' such as 'lstm_'
+        Prefix for names of layers
+        (this prefix is also used for names of weights if `params` is None
+        i.e. if `params` are being created and not reused)
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, num_hidden, num_layers=1, mode='lstm', bidirectional=False,
                  dropout=0., get_next_state=False, forget_bias=1.0,
@@ -711,9 +725,8 @@ class SequentialRNNCell(BaseRNNCell):
 
     Parameters
     ----------
-    params : RNNParams or None
-        container for weight sharing between cells.
-        created if None.
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, params=None):
         super(SequentialRNNCell, self).__init__(prefix='', params=params)
@@ -725,7 +738,9 @@ class SequentialRNNCell(BaseRNNCell):
 
         Parameters
         ----------
-        cell : rnn cell
+        cell : BaseRNNCell
+            The cell to be appended. During unroll, previous cell's output (or raw inputs if
+            no previous cell) is used as the input to this cell.
         """
         self._cells.append(cell)
         if self._override_cell_params:
@@ -790,8 +805,14 @@ class DropoutCell(BaseRNNCell):
     Parameters
     ----------
     dropout : float
-        percentage of elements to drop out, which
+        Percentage of elements to drop out, which
         is 1 - percentage to retain.
+    prefix : str, default 'dropout_'
+        Prefix for names of layers
+        (this prefix is also used for names of weights if `params` is None
+        i.e. if `params` are being created and not reused)
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, dropout, prefix='dropout_', params=None):
         super(DropoutCell, self).__init__(prefix, params)
@@ -861,7 +882,17 @@ class ModifierCell(BaseRNNCell):
 
 
 class ZoneoutCell(ModifierCell):
-    """Apply Zoneout on base cell."""
+    """Apply Zoneout on base cell.
+
+    Parameters
+    ----------
+    base_cell : BaseRNNCell
+        Cell on whose states to perform zoneout.
+    zoneout_outputs : float, default 0.
+        Fraction of the output that gets dropped out during training time.
+    zoneout_states : float, default 0.
+        Fraction of the states that gets dropped out during training time.
+    """
     def __init__(self, base_cell, zoneout_outputs=0., zoneout_states=0.):
         assert not isinstance(base_cell, FusedRNNCell), \
             "FusedRNNCell doesn't support zoneout. " \
@@ -899,10 +930,15 @@ class ZoneoutCell(ModifierCell):
 
 
 class ResidualCell(ModifierCell):
-    """
-    Adds residual connection as described in Wu et al, 2016
+    """Adds residual connection as described in Wu et al, 2016
     (https://arxiv.org/abs/1609.08144).
+
     Output of the cell is output of the base cell plus input.
+
+    Parameters
+    ----------
+    base_cell : BaseRNNCell
+        Cell on whose outputs to add residual connection.
     """
 
     def __init__(self, base_cell):
@@ -943,6 +979,9 @@ class BidirectionalCell(BaseRNNCell):
         cell for forward unrolling
     r_cell : BaseRNNCell
         cell for backward unrolling
+    params : RNNParams, default None.
+        Container for weight sharing between cells.
+        A new RNNParams container is created if `params` is None.
     output_prefix : str, default 'bi_'
         prefix for name of output
     """
