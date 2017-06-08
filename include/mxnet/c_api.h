@@ -1328,6 +1328,13 @@ MXNET_DLL int MXKVStoreInit(KVStoreHandle handle,
                             const int* keys,
                             NDArrayHandle* vals);
 
+// by starimpact
+MXNET_DLL int MXKVStoreReset(KVStoreHandle handle,
+                            mx_uint num,
+                            const int* keys,
+                            NDArrayHandle* vals,
+                            int priority);
+
 /*!
  * \brief Push a list of (key,value) pairs to kvstore
  * \param handle handle to the kvstore

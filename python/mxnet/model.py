@@ -96,6 +96,12 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore):
         # pull back the weights
         kvstore.pull(index, arg_list, priority=-index)
 
+def _reset_params_on_kvstore(param_arrays, kvstore):
+    # by starimpact
+    """ Perform reset of param_arrays on kvstore."""
+    for index, arg_list in enumerate(param_arrays):
+        kvstore.reset(index, arg_list, priority=-index)
+
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None):
     """Perform update of param_arrays from grad_arrays not on kvstore."""
