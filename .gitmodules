@@ -16,4 +16,3 @@
 [submodule "cub"]
 	path = cub
 	url = https://github.com/NVlabs/cub
-  shallow=true
