@@ -42,7 +42,7 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     layout : str, optional
          Data layout.
     """
-    def __new__(cls, name, shape, dtype=mx_real_t, layout='NCHW'):
+    def __new__(cls, name, shape, dtype=mx_real_t, layout='NCHW'): # pylint: disable=super-on-old-class
         ret = super(cls, DataDesc).__new__(cls, name, shape)
         ret.dtype = dtype
         ret.layout = layout
