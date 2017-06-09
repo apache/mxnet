@@ -1368,11 +1368,12 @@ class Symbol(SymbolBase):
                                                  ctypes.byref(aux_state_handles),
                                                  shared_exec_handle,
                                                  ctypes.byref(exe_handle)))
-        except MXNetError:
-            print("simple_bind error. Arguments:")
+        except MXNetError as e:
+            error_msg = "simple_bind error. Arguments:\n"
             for k, v in kwargs.items():
-                print("  %s: %s" % (k, v))
-            raise RuntimeError('simple_bind failed')
+                error_msg += "%s: %s\n" % (k, v)
+            error_msg += "%s" % e
+            raise RuntimeError(error_msg)
 
         # update shared_buffer
         if shared_buffer is not None:

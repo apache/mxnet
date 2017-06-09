@@ -378,8 +378,7 @@ void HandleInferShapeError(const size_t num_forward_inputs,
     }
   }
   LOG(FATAL) << "InferShape pass cannot decide shapes for the following arguments "
-                "(0s in shapes mean unknown dimension size). Please consider "
-                "providing them as inputs:\n"
+                "(0s means unknown dimensions). Please consider providing them as inputs:\n"
              << oss.str();
 }
 
