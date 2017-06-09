@@ -11,10 +11,14 @@ max_time = 60
 
 // initialize source codes
 def init_git() {
-  checkout scm
   retry(5) {
-    timeout(time: 2, unit: 'MINUTES') {
-      sh 'git submodule update --init'
+    try {
+      timeout(time: 2, unit: 'MINUTES') {
+        checkout scm
+        sh 'git submodule update --init'
+      }
+    } catch (exc) {
+      deleteDir()
     }
   }
 }
