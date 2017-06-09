@@ -27,7 +27,8 @@ class Trainer(object):
 
         self._contexts = self._check_contexts()
         self._init_optimizer(optimizer, optimizer_params)
-        self._init_kvstore(kvstore)
+        self._kv_initialized = False
+        self._kvstore = kvstore
 
     def _check_contexts(self):
         contexts = None
@@ -42,8 +43,6 @@ class Trainer(object):
 
     def _init_optimizer(self, optimizer, optimizer_params):
         self._optimizer = opt.create(optimizer, **optimizer_params)
-        self._updaters = [opt.get_updater(self._optimizer) \
-                            for _ in self._contexts]
 
         lr_mult = {}
         wd_mult = {}
@@ -53,9 +52,12 @@ class Trainer(object):
         self._optimizer.set_lr_mult(lr_mult)
         self._optimizer.set_wd_mult(wd_mult)
 
-    def _init_kvstore(self, kvstore):
+        self._updaters = [opt.get_updater(self._optimizer) \
+                            for _ in self._contexts]
+
+    def _init_kvstore(self):
         arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
-        kvstore, update_on_kvstore = _create_kvstore(kvstore, len(self._contexts), arg_arrays)
+        kvstore, update_on_kvstore = _create_kvstore(self._kvstore, len(self._contexts), arg_arrays)
         self._kvstore = kvstore
         self._update_on_kvstore = update_on_kvstore
         if kvstore:
@@ -80,6 +82,9 @@ class Trainer(object):
             If true, ignores Parameters with stale gradient (gradient that has not
             been updated by `backward` after last step) and skip update.
         """
+        if not self._kv_initialized:
+            self._init_kvstore()
+
         self._optimizer.rescale_grad = self._scale / batch_size
 
         for i, param in enumerate(self._params):

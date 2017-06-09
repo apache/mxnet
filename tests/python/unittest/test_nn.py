@@ -218,6 +218,13 @@ def test_at():
     mx.contrib.autograd.compute_gradient([x])
 
 
+def test_defered_init():
+    x = mx.nd.ones((5, 4, 10, 10))
+    layer = nn.Conv2D(10, 2)
+    layer.all_params().initialize()
+    layer(x)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

@@ -37,45 +37,45 @@ train_iter, val_iter = cifar10_iterator(opt.batchSize, (3, 64, 64), 64)
 
 netG = nn.Sequential()
 # input is Z, going into a convolution
-netG.add(nn.Conv2DTranspose(ngf * 8, 4, 1, 0, in_filters=nz, use_bias=False))
-netG.add(nn.BatchNorm(num_features=ngf * 8))
+netG.add(nn.Conv2DTranspose(ngf * 8, 4, 1, 0, use_bias=False))
+netG.add(nn.BatchNorm())
 netG.add(nn.Activation('relu'))
 # state size. (ngf*8) x 4 x 4
-netG.add(nn.Conv2DTranspose(ngf * 4, 4, 2, 1, in_filters=ngf * 8, use_bias=False))
-netG.add(nn.BatchNorm(num_features=ngf * 4))
+netG.add(nn.Conv2DTranspose(ngf * 4, 4, 2, 1, use_bias=False))
+netG.add(nn.BatchNorm())
 netG.add(nn.Activation('relu'))
 # state size. (ngf*8) x 8 x 8
-netG.add(nn.Conv2DTranspose(ngf * 2, 4, 2, 1, in_filters=ngf * 4, use_bias=False))
-netG.add(nn.BatchNorm(num_features=ngf * 2))
+netG.add(nn.Conv2DTranspose(ngf * 2, 4, 2, 1, use_bias=False))
+netG.add(nn.BatchNorm())
 netG.add(nn.Activation('relu'))
 # state size. (ngf*8) x 16 x 16
-netG.add(nn.Conv2DTranspose(ngf, 4, 2, 1, in_filters=ngf * 2, use_bias=False))
-netG.add(nn.BatchNorm(num_features=ngf))
+netG.add(nn.Conv2DTranspose(ngf, 4, 2, 1, use_bias=False))
+netG.add(nn.BatchNorm())
 netG.add(nn.Activation('relu'))
 # state size. (ngf*8) x 32 x 32
-netG.add(nn.Conv2DTranspose(nc, 4, 2, 1, in_filters=ngf, use_bias=False))
+netG.add(nn.Conv2DTranspose(nc, 4, 2, 1, use_bias=False))
 netG.add(nn.Activation('tanh'))
 # state size. (nc) x 64 x 64
 
 
 netD = nn.Sequential()
 # input is (nc) x 64 x 64
-netD.add(nn.Conv2D(ndf, 4, 2, 1, in_filters=nc, use_bias=False))
+netD.add(nn.Conv2D(ndf, 4, 2, 1, use_bias=False))
 netD.add(nn.LeakyReLU(0.2))
 # state size. (ndf) x 32 x 32
-netD.add(nn.Conv2D(ndf * 2, 4, 2, 1, in_filters=ndf, use_bias=False))
-netD.add(nn.BatchNorm(num_features=ndf * 2))
+netD.add(nn.Conv2D(ndf * 2, 4, 2, 1, use_bias=False))
+netD.add(nn.BatchNorm())
 netD.add(nn.LeakyReLU(0.2))
 # state size. (ndf) x 16 x 16
-netD.add(nn.Conv2D(ndf * 4, 4, 2, 1, in_filters=ndf * 2, use_bias=False))
-netD.add(nn.BatchNorm(num_features=ndf * 4))
+netD.add(nn.Conv2D(ndf * 4, 4, 2, 1, use_bias=False))
+netD.add(nn.BatchNorm())
 netD.add(nn.LeakyReLU(0.2))
 # state size. (ndf) x 8 x 8
-netD.add(nn.Conv2D(ndf * 8, 4, 2, 1, in_filters=ndf * 4, use_bias=False))
-netD.add(nn.BatchNorm(num_features=ndf * 8))
+netD.add(nn.Conv2D(ndf * 8, 4, 2, 1, use_bias=False))
+netD.add(nn.BatchNorm())
 netD.add(nn.LeakyReLU(0.2))
 # state size. (ndf) x 4 x 4
-netD.add(nn.Conv2D(2, 4, 1, 0, in_filters=ndf * 8, use_bias=False))
+netD.add(nn.Conv2D(2, 4, 1, 0, use_bias=False))
 # netD.add(nn.Activation('sigmoid'))
 
 
