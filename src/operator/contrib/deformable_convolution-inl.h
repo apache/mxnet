@@ -269,7 +269,7 @@ class DeformableConvolutionOp : public Operator {
     col_buffer_size_ = kernel_dim_ * group_ * conv_out_spatial_dim_;
     // input/output image size (#channels * height * width)
     input_dim_ = ishape.ProdShape(1, ishape.ndim());
-    input_offset_dim_ = ishape.ProdShape(1, offset_shape.ndim());
+    input_offset_dim_ = offset_shape.ProdShape(1, offset_shape.ndim());
     output_dim_ = oshape.ProdShape(1, oshape.ndim());
     num_kernels_im2col_ = conv_in_channels_ * conv_out_spatial_dim_;
     num_kernels_col2im_ = input_dim_;
