@@ -379,7 +379,6 @@ int MXSymbolSaveToJSON(SymbolHandle symbol, const char **out_json) {
   API_END();
 }
 
-
 namespace mxnet {
 
 template<typename AttrType>
