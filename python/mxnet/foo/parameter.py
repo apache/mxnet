@@ -116,6 +116,8 @@ class Parameter(object):
 
     def _finish_deferred_init(self):
         """Finish deferred initialization."""
+        if not self._defered_init:
+            return
         init, ctx, default_init = self._defered_init
         self._defered_init = ()
         assert self.shape is not None and np.prod(self.shape) > 0, \
