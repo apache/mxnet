@@ -74,7 +74,7 @@ class NDArray {
   NDArray(const TShape &shape, Context ctx,
           bool delay_alloc = false, int dtype = mshadow::default_type_flag)
       : ptr_(std::make_shared<Chunk>(shape.Size(), ctx, delay_alloc, dtype)),
-        shape_(shape), offset_(0), dtype_(dtype), entry_({nullptr, 0, 0}) {
+        shape_(shape), dtype_(dtype), entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
@@ -87,7 +87,7 @@ class NDArray {
    * \param dev_id the device id this tensor sits at
    */
   NDArray(const TBlob &data, int dev_id)
-      : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_), offset_(0),
+      : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_),
         dtype_(data.type_flag_), entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
@@ -104,35 +104,8 @@ class NDArray {
    */
   inline const TBlob& data() const {
     CheckAndAlloc();
-#if MKL_EXPERIMENTAL == 1
-    MSHADOW_TYPE_SWITCH(dtype_, DType, {
-      tblob_ = TBlob(static_cast<DType*>(ptr_->shandle.dptr) + offset_,
-        shape_, ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id, Mkl_mem_);
-    });
-#else
-    MSHADOW_TYPE_SWITCH(dtype_, DType, {
-      tblob_ = TBlob(static_cast<DType*>(ptr_->shandle.dptr) + offset_,
-        shape_, ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
-    });
-#endif
+    SetTBlob();
     return tblob_;
-  }
-  /*!
-   * \return a chunk of raw data in TBlob
-   */
-  inline TBlob raw_data(index_t offset, index_t length) const {
-    CheckAndAlloc();
-    TBlob res;
-    TShape raw_shape(1);
-    raw_shape[0] = length;
-    MSHADOW_TYPE_SWITCH(dtype_, DType, {
-      res = TBlob(static_cast<DType*>(ptr_->shandle.dptr) + offset_ + offset,
-        raw_shape, ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
-    });
-#if MKL_EXPERIMENTAL == 1
-    res.Mkl_mem_ = Mkl_mem_;
-#endif
-    return res;
   }
   /*!
    * \return the context of NDArray, this function is only valid when the NDArray is not empty
@@ -421,6 +394,16 @@ class NDArray {
     }
   };
 
+  void SetTBlob() const {
+    tblob_.dptr_ = static_cast<char*>(ptr_->shandle.dptr) + byte_offset_;
+    tblob_.shape_ = shape_;
+    tblob_.type_flag_ = dtype_;
+    tblob_.SetDLTensor(ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
+#if MKL_EXPERIMENTAL == 1
+    tblob_.Mkl_mem_ = Mkl_mem_;
+#endif
+  }
+
 #if MKL_EXPERIMENTAL == 1
   std::shared_ptr<MKLMemHolder> Mkl_mem_;
 #endif
@@ -428,8 +411,8 @@ class NDArray {
   std::shared_ptr<Chunk> ptr_;
   /*! \brief shape of current NDArray */
   TShape shape_;
-  /*! \brief offset in chunk */
-  size_t offset_;
+  /*! \brief byte offset in chunk */
+  size_t byte_offset_ = 0;
   /*! \brief type of data */
   int dtype_ = -1;
   /*! \brief node entry for autograd */
