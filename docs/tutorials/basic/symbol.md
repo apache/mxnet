@@ -332,6 +332,7 @@ print('number of outputs = %d\nthe first output = \n%s' % (
 
 We can evaluate the same symbol on GPU with different data.
 
+**Note** In order to execute the following section on a cpu set gpu_device to mx.cpu().
 ```python
 gpu_device=mx.gpu() # Change this to mx.cpu() in absence of GPUs.
 

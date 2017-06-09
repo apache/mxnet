@@ -292,6 +292,7 @@ can cause all computations to run on GPU 0 by using context `mx.gpu(0)`, or
 simply `mx.gpu()`. When we have access to two or more GPUs, the 2nd GPU is
 represented by `mx.gpu(1)`, etc.
 
+**Note** In order to execute the following section on a cpu set gpu_device to mx.cpu().
 ```python
 gpu_device=mx.gpu() # Change this to mx.cpu() in absence of GPUs.
 
