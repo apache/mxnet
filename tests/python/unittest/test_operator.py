@@ -1422,7 +1422,7 @@ def test_broadcast():
         test_broadcasting_ele(sym_bcast_to)
 
 def test_transpose():
-    for ndim in range(1, 6):
+    for ndim in range(1, 7):
         for t in range(5):
             dims = list(np.random.randint(1, 10, size=ndim))
             axes = list(range(ndim))
