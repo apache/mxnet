@@ -170,7 +170,7 @@ It can be used as follows:
 
 ```python
 score = mod.score(val_iter, ['mse', 'acc'])
-print "Accuracy score is ", score
+print("Accuracy score is %f" % (score))
 ```
 
 Some of the other metrics which can be used are `top_k_acc`(top-k-accuracy),
