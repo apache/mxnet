@@ -47,7 +47,7 @@ class NotImplementedForSymbol(MXNetError):
     def __str__(self):
         msg = 'Function {}'.format(self.function)
         if self.alias:
-            msg += ' (namely operator {})'.format(self.alias)
+            msg += ' (namely operator "{}")'.format(self.alias)
         if self.args:
             msg += ' with arguments ({})'.format(', '.join(self.args))
         msg += ' is not implemented for Symbol and only available in NDArray.'
