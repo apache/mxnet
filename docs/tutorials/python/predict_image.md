@@ -3,10 +3,22 @@
 This tutorial explains how to recognize objects in an image with a
 pre-trained model, and how to perform feature extraction.
 
+## Prerequisites
+
+To complete this tutorial, we need:
+
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+
+- [Python Requests](http://docs.python-requests.org/en/master/), [Matplotlib](https://matplotlib.org/) and [Jupyter Notebook](http://jupyter.org/index.html).
+
+```
+$ pip install requests matplotlib jupyter
+```
+
 ## Loading
 
 We first download a pre-trained ResNet 152 layer that is trained on the full
-Imagenet dataset with over 10 million images and 10 thousand classes. A
+ImageNet dataset with over 10 million images and 10 thousand classes. A
 pre-trained model contains two parts, a json file containing the model
 definition and a binary file containing the parameters. In addition there may be
 a text file for the labels.

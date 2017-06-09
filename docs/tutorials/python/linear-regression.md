@@ -13,7 +13,7 @@ To complete this tutorial, we need:
 - [Jupyter Notebook](http://jupyter.org/index.html).
 
 ```
-$ pip install opencv-python requests matplotlib jupyter
+$ pip install jupyter
 ```
 
 To begin, the following code imports the necessary packages we'll need for this exercise.
