@@ -50,13 +50,12 @@ There are a few different ways to compose a `Symbol`.
 To complete this tutorial, we need:
 
 - MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
-- [Python](https://www.python.org/downloads/)
-- [Graphviz](http://www.graphviz.org/)
-    ```bash
-    pip install graphviz
+- [Jupyter](http://jupyter.org/)
     ```
-- GPUs - This tutorial uses GPUs. If you don't have GPUs on your machine, simply
-set the variable gpuContext to mx.cpu().
+    pip install jupyter
+    ```
+- GPUs - A section of this tutorial uses GPUs. If you don't have GPUs on your machine, simply
+set the variable gpu_device to mx.cpu().
 
 ## Basic Symbol Composition
 
@@ -334,10 +333,10 @@ print('number of outputs = %d\nthe first output = \n%s' % (
 We can evaluate the same symbol on GPU with different data.
 
 ```python
-gpuContext=mx.gpu() # Change this to mx.cpu() in absence of GPUs.
+gpu_device=mx.gpu() # Change this to mx.cpu() in absence of GPUs.
 
-ex_gpu = c.bind(ctx=gpuContext, args={'a' : mx.nd.ones([3,4], gpuContext)*2,
-                                      'b' : mx.nd.ones([3,4], gpuContext)*3})
+ex_gpu = c.bind(ctx=gpu_device, args={'a' : mx.nd.ones([3,4], gpu_device)*2,
+                                      'b' : mx.nd.ones([3,4], gpu_device)*3})
 ex_gpu.forward()
 ex_gpu.outputs[0].asnumpy()
 ```

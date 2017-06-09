@@ -8,13 +8,16 @@ pre-trained model, and how to perform feature extraction.
 To complete this tutorial, we need:
 
 - MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
-- [Python](https://www.python.org/downloads/)
+- [Jupyter](http://jupyter.org/)
+    ```
+    pip install jupyter
+    ```
 - [Matplotlib](https://matplotlib.org/) 
-    ```bash
+    ```
     pip install matplotlib
     ```
 - [Requests](http://docs.python-requests.org/en/master/)  
-    ```bash
+    ```
     pip install requests
     ```
 

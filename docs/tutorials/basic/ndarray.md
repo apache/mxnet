@@ -43,9 +43,13 @@ Each NDArray supports some important attributes that you'll often want to query:
 To complete this tutorial, we need:
 
 - MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
-- [Python](https://www.python.org/downloads/)
-- GPUs - This tutorial uses GPUs. If you don't have GPUs on your machine, simply
-set the variable gpuContext to mx.cpu().
+- [Jupyter](http://jupyter.org/)
+    ```
+    pip install jupyter
+    ```
+- GPUs - A section of this tutorial uses GPUs. If you don't have GPUs on your
+machine, simply set the variable gpu_device (set in the GPUs section of this 
+tutorial) to mx.cpu().
 
 ## Array Creation
 
@@ -289,7 +293,7 @@ simply `mx.gpu()`. When we have access to two or more GPUs, the 2nd GPU is
 represented by `mx.gpu(1)`, etc.
 
 ```python
-gpuContext=mx.gpu() # Change this to mx.cpu() in absence of GPUs.
+gpu_device=mx.gpu() # Change this to mx.cpu() in absence of GPUs.
 
 
 def f():
@@ -300,14 +304,14 @@ def f():
 # in default mx.cpu() is used
 f()
 # change the default context to the first GPU
-with mx.Context(gpuContext):
+with mx.Context(gpu_device):
     f()
 ```
 
 We can also explicitly specify the context when creating an array:
 
 ```python
-a = mx.nd.ones((100, 100), gpuContext)
+a = mx.nd.ones((100, 100), gpu_device)
 a
 ```
 
@@ -316,8 +320,8 @@ computation. There are several methods for copying data between devices.
 
 ```python
 a = mx.nd.ones((100,100), mx.cpu())
-b = mx.nd.ones((100,100), gpuContext)
-c = mx.nd.ones((100,100), gpuContext)
+b = mx.nd.ones((100,100), gpu_device)
+c = mx.nd.ones((100,100), gpu_device)
 a.copyto(c)  # copy from CPU to GPU
 d = b + c
 e = b.as_in_context(c.context) + c  # same to above
@@ -444,7 +448,7 @@ first runs on CPU and then on GPU:
 ```python
 n = 10
 a = mx.nd.ones((1000,1000))
-b = mx.nd.ones((6000,6000), gpuContext)
+b = mx.nd.ones((6000,6000), gpu_device)
 tic = time.time()
 c = do(a, n)
 wait(c)
