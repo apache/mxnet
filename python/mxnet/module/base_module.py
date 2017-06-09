@@ -55,7 +55,7 @@ def _check_input_names(symbol, names, typename, throw):
 def _check_names_match(data_names, data_shapes, name, throw):
     """Check that input names matches input data descriptors."""
     actual = [x[0] for x in data_shapes]
-    if data_names != actual:
+    if sorted(data_names) != sorted(actual):
         msg = "Data provided by %s_shapes don't match names specified by %s_names (%s vs. %s)"%(
             name, name, str(data_shapes), str(data_names))
         if throw:
