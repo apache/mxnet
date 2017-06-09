@@ -237,8 +237,14 @@ void TransposeImpl(RunContext ctx,
       out = transpose(in, axes.get<5>());
       break;
      }
+     case 6: {
+      Tensor<xpu, 6, DType> in = src.get<xpu, 6, DType>(s);
+      Tensor<xpu, 6, DType> out = ret.get<xpu, 6, DType>(s);
+      out = transpose(in, axes.get<6>());
+      break;
+     }
      default:
-      LOG(FATAL) << "Transpose support at most 5 dimensions";
+      LOG(FATAL) << "Transpose support at most 6 dimensions";
       break;
     }
   });
@@ -271,7 +277,7 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   TShape& shp = (*in_attrs)[0];
-  CHECK_LE(shp.ndim(), 5U) << "Transpose support at most 5 dimensions";
+  CHECK_LE(shp.ndim(), 6U) << "Transpose support at most 6 dimensions";
   TShape ret(shp.ndim());
   if (param.axes.ndim() == 0) {
     for (index_t i = 0; i < shp.ndim(); ++i) {
