@@ -11,21 +11,31 @@ max_time = 60
 
 // initialize source codes
 def init_git() {
-  checkout scm
   retry(5) {
-    timeout(time: 2, unit: 'MINUTES') {
-      sh 'git submodule update --init'
+    try {
+      timeout(time: 2, unit: 'MINUTES') {
+        checkout scm
+        sh 'git submodule update --init'
+      }
+    } catch (exc) {
+      deleteDir()
+      error "Failed to fetch source codes"
     }
   }
 }
 
 def init_git_win() {
-    checkout scm
-    retry(5) {
-        timeout(time: 2, unit: 'MINUTES') {
-            bat 'git submodule update --init'
-        }
+  retry(5) {
+    try {
+      timeout(time: 2, unit: 'MINUTES') {
+        checkout scm
+        bat 'git submodule update --init'
+      }
+    } catch (exc) {
+      deleteDir()
+      error "Failed to fetch source codes"
     }
+  }
 }
 
 stage("Sanity Check") {
