@@ -254,6 +254,20 @@ Example::
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::floor>);
 
+// trunc
+MXNET_OPERATOR_REGISTER_UNARY(trunc)
+.describe(R"code(Return the element-wise truncated value of the input.
+
+The truncated value of the scalar x is the nearest integer i which is closer to 
+zero than x is. In short, the fractional part of the signed number x is discarded.
+
+Example::
+
+   trunc([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -1.,  1.,  1.,  2.]
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::trunc>);
+
 // fix
 MXNET_OPERATOR_REGISTER_UNARY(fix)
 .describe(R"code(Returns element-wise rounded value to the nearest integer towards zero of the input.
