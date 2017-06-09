@@ -1,6 +1,7 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
+import math
 
 from .. import ndarray
 
@@ -63,3 +64,19 @@ def load_data(data, ctx_list, batch_axis=0, even_split=True):
         slices = split_data(data, len(ctx_list), batch_axis=batch_axis,
                             even_split=even_split)
         return [i.as_in_context(ctx) for i, ctx in zip(slices, ctx_list)]
+
+
+def clip_global_norm(arrays, max_norm):
+    """Rescales NDArrays so that the sum of their 2-norm is smaller than max_norm.
+    """
+    assert len(arrays) > 0
+    total_norm = 0
+    for arr in arrays:
+        arr = arr.reshape((-1,))
+        total_norm += ndarray.dot(arr, arr)
+    total_norm = math.sqrt(total_norm.asscalar())
+    scale = max_norm / (total_norm + 1e-8)
+    if scale < 1.0:
+        for arr in arrays:
+            arr *= scale
+    return total_norm
