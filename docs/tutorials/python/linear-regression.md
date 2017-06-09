@@ -11,6 +11,13 @@ import mxnet as mx
 import numpy as np
 ```
 
+## Prerequisites
+1. [MXNet](http://mxnet.io/get_started/install.html), [Graphviz](../prerequisites/install-graphviz.html).
+2. Jupyter Notebook and Graphviz python packages.
+   ```
+   pip install jupyter graphviz
+   ```
+
 ## Preparing the Data
 
 In MXNet, data is input via **Data Iterators**. Here we will illustrate
