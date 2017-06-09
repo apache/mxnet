@@ -213,11 +213,10 @@ $ sudo apt-get install -y libopencv-dev
 
 To download a particular release:
 ```bash
-$ git clone https://github.com/dmlc/mxnet.git
-$ cd mxnet
-$ git checkout tags/<name-of-the-release-tag> #Example: git checkout tags/v0.10.0
-$ git submodule update --init --recursive
+$ git clone --recursive --branch <release-tag-name> https://github.com/dmlc/mxnet.git
+# Example: git clone --recursive --branch v0.10.0 https://github.com/dmlc/mxnet.git
 ```
+See <https://github.com/dmlc/mxnet/releases> for all releases.
 
 To download the latest unreleased code from master branch:
 ```bash
@@ -426,8 +425,20 @@ $ sudo apt-get install -y libopencv-dev
 
 **Step 4** Download MXNet sources and build MXNet core shared library.
 
+To download a particular release:
+```bash
+$ git clone --recursive --branch <release-tag-name> https://github.com/dmlc/mxnet.git
+# Example: git clone --recursive --branch v0.10.0 https://github.com/dmlc/mxnet.git
+```
+See <https://github.com/dmlc/mxnet/releases> for all releases.
+
+To download the latest unreleased code from master branch:
 ```bash
 $ git clone --recursive https://github.com/dmlc/mxnet
+```
+
+Build MXNet shared library:
+```bash
 $ cd mxnet
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
 ```
@@ -730,8 +741,20 @@ $ sudo apt-get install -y libopencv-dev
 
 **Step 4** Download MXNet sources and build MXNet core shared library.
 
+To download a particular release:
+```bash
+$ git clone --recursive --branch <release-tag-name> https://github.com/dmlc/mxnet.git
+# Example: git clone --recursive --branch v0.10.0 https://github.com/dmlc/mxnet.git
+```
+See <https://github.com/dmlc/mxnet/releases> for all releases.
+
+To download the latest unreleased code from master branch:
 ```bash
 $ git clone --recursive https://github.com/dmlc/mxnet
+```
+
+Build MXNet shared library:
+```
 $ cd mxnet
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 ```
@@ -802,8 +825,20 @@ $ sudo apt-get install -y libopencv-dev
 
 **Step 4** Download MXNet sources and build MXNet core shared library.
 
+To download a particular release:
+```bash
+$ git clone --recursive --branch <release-tag-name> https://github.com/dmlc/mxnet.git
+# Example: git clone --recursive --branch v0.10.0 https://github.com/dmlc/mxnet.git
+```
+See <https://github.com/dmlc/mxnet/releases> for all releases.
+
+To download the latest unreleased code from master branch:
 ```bash
 $ git clone --recursive https://github.com/dmlc/mxnet
+```
+
+Build MXNet shared library:
+```bash
 $ cd mxnet
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
 ```
@@ -921,20 +956,28 @@ Install these dependencies using the following commands in any directory:
 ```
 
 Clone the MXNet source code repository using the following ```git``` command in your home directory:
+
+To download a particular release:
 ```bash
-    git clone https://github.com/dmlc/mxnet.git --recursive
-    cd mxnet
+$ git clone --recursive --branch <release-tag-name> https://github.com/dmlc/mxnet.git
+# Example: git clone --recursive --branch v0.10.0 https://github.com/dmlc/mxnet.git
+```
+See <https://github.com/dmlc/mxnet/releases> for all releases.
+
+To download the latest unreleased code from master branch:
+```bash
+git clone https://github.com/dmlc/mxnet.git --recursive
 ```
 
 If you aren't processing images with MXNet on the Raspberry Pi, you can minimize the size of the compiled library by building MXNet without the Open Source Computer Vision (OpenCV) library with the following commands:
 ```bash
-    export USE_OPENCV = 0
-    make
+export USE_OPENCV = 0
+cd mxnet && make
 ```
 
 Otherwise, you can build the complete MXNet library with the following command:
 ```bash
-    make
+cd mxnet && make
 ```
 
 Executing either of these commands start the build process, which can take up to a couple hours, and creates a file called ```libmxnet.so``` in the mxnet/lib directory.
@@ -1000,17 +1043,26 @@ Install these dependencies using the following commands in any directory:
 ```
 
 Clone the MXNet source code repository using the following ```git``` command in your home directory:
+
+To download a particular release:
 ```bash
-    git clone https://github.com/dmlc/mxnet.git --recursive
-    cd mxnet
+$ git clone --recursive --branch <release-tag-name> https://github.com/dmlc/mxnet.git
+# Example: git clone --recursive --branch v0.10.0 https://github.com/dmlc/mxnet.git
+```
+See <https://github.com/dmlc/mxnet/releases> for all releases.
+
+To download the latest unreleased code from master branch:
+```bash
+git clone https://github.com/dmlc/mxnet.git --recursive
 ```
 
 Edit the Makefile to install the MXNet with CUDA bindings to leverage the GPU on the Jetson:
 ```bash
-    cp make/config.mk .
-    echo "USE_CUDA=1" >> config.mk    
-    echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
-    echo "USE_CUDNN=1" >> config.mk
+cd mxnet
+cp make/config.mk .
+echo "USE_CUDA=1" >> config.mk    
+echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
+echo "USE_CUDNN=1" >> config.mk
 ```
 
 Edit the Mshadow Makefile to ensure MXNet builds with Pascal's hardware level low precision acceleration by editing mshadow/make/mshadow.mk and adding the following after line 122:
