@@ -83,7 +83,7 @@ done
 ```
 
 ### Pack images into record files
-While MXNet can read image files directly, it is recommended to pack the image files into a recordIO file for increased performance. MXNet provides a tool (tools/im2rec.py) to do this. To use this tool, MXNet and OpenCV’s python module needs to be installed in the system. OpenCV’s python module can be installed on Ubuntu using the command `sudo apt-get install python-opencv`.
+While MXNet can read image files directly, it is recommended to pack the image files into a recordIO file for increased performance. MXNet provides a tool (tools/im2rec.py) to do this. To use this tool, MXNet and OpenCV’s python module needs to be installed in the system. [Here](#installing-opencv) are instructions to install OpenCV python module.
 
 Set the environment variable `MXNET` to point to the MXNet installation directory and `NAME` to the name of the dataset. Here, we assume MXNet is installed at `~/mxnet`
 
@@ -244,3 +244,30 @@ It is often straightforward to achieve a reasonable validation accuracy, but ach
 If the batch size is too big, it can exhaust GPU memory. If this happens, you’ll see the error message “cudaMalloc failed: out of memory” or something similar. There are a couple of ways to fix this:
 - Reduce the batch size.
 - Set the environment variable `MXNET_BACKWARD_DO_MIRROR` to 1. It reduces the memory consumption by trading off speed. For example, with batch size 64, inception-v3 uses 10G memory and trains 30 image/sec on a single K80 GPU. When mirroring is enabled, with 10G GPU memory consumption, we can run inception-v3 using batch size of 128. The cost is that, the speed reduces to 27 images/sec.
+
+## Appendix
+### Installing OpenCV
+#### On Ubuntu
+Install OpenCV:
+```
+sudo apt-get install -y libopencv-dev
+```
+Install OpenCV Python libraries:
+```
+sudo apt-get install python-opencv
+```
+#### On Amazon Linux
+Install OpenCV:
+```
+git clone https://github.com/opencv/opencv
+cd opencv
+mkdir -p build
+cd build
+cmake -D BUILD_opencv_gpu=OFF -D WITH_EIGEN=ON -D WITH_TBB=ON -D WITH_CUDA=OFF -D WITH_1394=OFF -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
+make
+sudo make PREFIX=/usr/local install
+```
+Install OpenCV Python libraries:
+```
+sudo yum install opencv-python
+```
