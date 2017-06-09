@@ -111,7 +111,7 @@ Install *MXNet* with OpenBLAS acceleration.
 $ pip install mxnet
 ```
 
-**Step 4**  Install [Graphviz](http://www.graphviz.org/) for graph visualization.
+**Step 4**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
 sudo apt-get install graphviz
 pip install graphviz
@@ -142,7 +142,7 @@ $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 $ pip install mxnet
 ```
 
-**Step 3**  Install [Graphviz](http://www.graphviz.org/) for graph visualization.
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
 sudo apt-get install graphviz
 pip install graphviz
@@ -248,7 +248,7 @@ $ cd python
 $ sudo python setup.py install
 ```
 
-**Step 3**  Install [Graphviz](http://www.graphviz.org/) for graph visualization.
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
 sudo apt-get install graphviz
 pip install graphviz
@@ -302,7 +302,7 @@ $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 $ pip install mxnet-cu80
 ```
 
-**Step 3**  Install [Graphviz](http://www.graphviz.org/) for graph visualization.
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
 sudo apt-get install graphviz
 pip install graphviz
@@ -357,7 +357,7 @@ Install *MXNet* with GPU support using CUDA 8.0.
 (mxnet)$ pip install mxnet-cu80
 ```
 
-**Step 4**  Install [Graphviz](http://www.graphviz.org/) for graph visualization.
+**Step 4**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
 sudo apt-get install graphviz
 pip install graphviz
@@ -468,7 +468,7 @@ $ cd python
 $ sudo python setup.py install
 ```
 
-**Step 3**  Install [Graphviz](http://www.graphviz.org/) for graph visualization.
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
 sudo apt-get install graphviz
 pip install graphviz
@@ -549,7 +549,7 @@ Install *MXNet* with OpenBLAS acceleration.
 (mxnet)$ pip install mxnet
 ```
 
-**Step 5**  Install [Graphviz](http://www.graphviz.org/) for graph visualization.
+**Step 5**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
 sudo apt-get install graphviz
 pip install graphviz
@@ -588,7 +588,7 @@ $ pip install --upgrade setuptools
 $ pip install mxnet
 ```
 
-**Step 3**  Install [Graphviz](http://www.graphviz.org/) for graph visualization.
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
 sudo apt-get install graphviz
 pip install graphviz
