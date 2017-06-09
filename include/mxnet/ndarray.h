@@ -47,6 +47,7 @@ class AGNodeEntry {
   }
 
   nnvm::NodeEntry nn_entry() const;
+  bool is_none() const;
 };
 
 class AutogradRuntime;
@@ -57,10 +58,10 @@ class AutogradRuntime;
  */
 class NDArray {
  public:
-  /*! \brief default cosntructor */
+  /*! \brief default constructor */
   NDArray() {
 #if MKL_EXPERIMENTAL == 1
-      Mkl_mem_ = MKLMemHolder::create();
+    Mkl_mem_ = MKLMemHolder::create();
 #endif
   }
   /*!
@@ -73,9 +74,9 @@ class NDArray {
   NDArray(const TShape &shape, Context ctx,
           bool delay_alloc = false, int dtype = mshadow::default_type_flag)
       : ptr_(std::make_shared<Chunk>(shape.Size(), ctx, delay_alloc, dtype)),
-        shape_(shape), offset_(0), dtype_(dtype), entry_({nullptr, 0, 0}) {
+        shape_(shape), dtype_(dtype), entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
-      Mkl_mem_ = std::make_shared<MKLMemHolder>();
+    Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
   }
   /*!
@@ -86,49 +87,25 @@ class NDArray {
    * \param dev_id the device id this tensor sits at
    */
   NDArray(const TBlob &data, int dev_id)
-      : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_), offset_(0),
+      : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_),
         dtype_(data.type_flag_), entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
-      Mkl_mem_ = std::make_shared<MKLMemHolder>();
+    Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
   }
   /*!
    * \return the shape of current NDArray
    */
-  inline const TShape &shape() const {
+  inline const TShape& shape() const {
     return shape_;
   }
   /*!
    * \return the data TBlob
    */
-  inline TBlob data() const {
+  inline const TBlob& data() const {
     CheckAndAlloc();
-    TBlob res;
-    MSHADOW_TYPE_SWITCH(dtype_, DType, {
-      res = TBlob(static_cast<DType*>(ptr_->shandle.dptr)
-        + offset_, shape_, ptr_->shandle.ctx.dev_mask());
-    });
-#if MKL_EXPERIMENTAL == 1
-    res.Mkl_mem_ = Mkl_mem_;
-#endif
-    return res;
-  }
-  /*!
-   * \return a chunk of raw data in TBlob
-   */
-  inline TBlob raw_data(index_t offset, index_t length) const {
-    CheckAndAlloc();
-    TBlob res;
-    TShape raw_shape(1);
-    raw_shape[0] = length;
-    MSHADOW_TYPE_SWITCH(dtype_, DType, {
-      res = TBlob(static_cast<DType*>(ptr_->shandle.dptr)
-        + offset_ + offset, raw_shape, ptr_->shandle.ctx.dev_mask());
-    });
-#if MKL_EXPERIMENTAL == 1
-    res.Mkl_mem_ = Mkl_mem_;
-#endif
-    return res;
+    SetTBlob();
+    return tblob_;
   }
   /*!
    * \return the context of NDArray, this function is only valid when the NDArray is not empty
@@ -146,6 +123,10 @@ class NDArray {
   inline bool is_none() const {
     return ptr_.get() == nullptr;
   }
+  /*! \return updated grad state in entry_ */
+  bool fresh_out_grad() const;
+  /*! \return updated grad state in entry_ */
+  void set_fresh_out_grad(bool state) const;
   /*!
    * \brief Block until all the pending write operations with respect
    *    to current NDArray are finished, and read can be performed.
@@ -319,6 +300,14 @@ class NDArray {
    */
   NDArray Reshape(const TShape &shape) const;
   /*!
+   * \brief Return a copy of this NDArray without autograd history
+   */
+  NDArray Detach() const {
+    NDArray ret(*this);
+    ret.entry_ = autograd::AGNodeEntry{nullptr, 0, 0};
+    return ret;
+  }
+  /*!
    * \brief Allocate the space if it is delayed allocated.
    * This is an internal function used by system that normal user should not use
    */
@@ -326,7 +315,7 @@ class NDArray {
     ptr_->CheckAndAlloc();
   }
   /*!
-   * \brief Save list of narray into the Stream.x
+   * \brief Save list of ndarray into the Stream.x
    * \param fo The stream of output.
    * \param data the NDArrays to be saved.
    * \param names the name of the NDArray, optional, can be zero length.
@@ -335,7 +324,7 @@ class NDArray {
                    const std::vector<NDArray>& data,
                    const std::vector<std::string>& names);
   /*!
-   * \brief Load list of narray into from the stream.
+   * \brief Load list of ndarray into from the stream.
    * \param fi The stream of the input file.
    * \param data the NDArrays to be loaded
    * \param keys the name of the NDArray, if saved in the file.
@@ -368,10 +357,10 @@ class NDArray {
         : static_data(true),
           delay_alloc(false) {
       var = Engine::Get()->NewVariable();
-      if (data.dev_mask_ == cpu::kDevMask) {
+      if (data.dev_mask() == cpu::kDevMask) {
         shandle.ctx = Context::CPU();
       } else {
-        CHECK_EQ(data.dev_mask_, gpu::kDevMask);
+        CHECK_EQ(data.dev_mask(), gpu::kDevMask);
         shandle.ctx = Context::GPU(dev_id);
       }
       shandle.dptr = data.dptr_;
@@ -405,6 +394,16 @@ class NDArray {
     }
   };
 
+  void SetTBlob() const {
+    tblob_.dptr_ = static_cast<char*>(ptr_->shandle.dptr) + byte_offset_;
+    tblob_.shape_ = shape_;
+    tblob_.type_flag_ = dtype_;
+    tblob_.SetDLTensor(ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
+#if MKL_EXPERIMENTAL == 1
+    tblob_.Mkl_mem_ = Mkl_mem_;
+#endif
+  }
+
 #if MKL_EXPERIMENTAL == 1
   std::shared_ptr<MKLMemHolder> Mkl_mem_;
 #endif
@@ -412,12 +411,20 @@ class NDArray {
   std::shared_ptr<Chunk> ptr_;
   /*! \brief shape of current NDArray */
   TShape shape_;
-  /*! \brief offset in chunk */
-  size_t offset_;
+  /*! \brief byte offset in chunk */
+  size_t byte_offset_ = 0;
   /*! \brief type of data */
   int dtype_ = -1;
   /*! \brief node entry for autograd */
   autograd::AGNodeEntry entry_;
+  /*!
+   * \brief internal TBlob
+   * \note When user access tblob_ by some const methods like
+   *     NDArray::data(), the dptr in tblob_ still need to be updated
+   *     in case that allocation happens. So we make it mutable for
+   *     this situation.
+   */
+  mutable TBlob tblob_;
 };
 
 /*!

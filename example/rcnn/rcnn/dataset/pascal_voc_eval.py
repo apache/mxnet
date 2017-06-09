@@ -2,7 +2,7 @@
 given a pascal voc imdb, compute mAP
 """
 
-from __future__ import print_function
+from ..logger import logger
 import numpy as np
 import os
 import cPickle
@@ -86,8 +86,8 @@ def voc_eval(detpath, annopath, imageset_file, classname, annocache, ovthresh=0.
         for ind, image_filename in enumerate(image_filenames):
             recs[image_filename] = parse_voc_rec(annopath.format(image_filename))
             if ind % 100 == 0:
-                print('reading annotations for {:d}/{:d}'.format(ind + 1, len(image_filenames)))
-        print('saving annotations cache to {:s}'.format(annocache))
+                logger.info('reading annotations for %d/%d' % (ind + 1, len(image_filenames)))
+        logger.info('saving annotations cache to %s' % annocache)
         with open(annocache, 'wb') as f:
             cPickle.dump(recs, f, protocol=cPickle.HIGHEST_PROTOCOL)
     else:

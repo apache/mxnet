@@ -4,6 +4,7 @@
  * \brief ndarry module of mxnet
  */
 #include <dmlc/io.h>
+#include <dmlc/memory_io.h>
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
 #include <mxnet/base.h>
@@ -25,11 +26,12 @@ namespace mxnet {
 
 NDArray NDArray::Reshape(const TShape &shape) const {
   using namespace autograd;
-  CHECK_GE(shape_.Size(), shape.Size())
-      << "NDArray.Reshape: target shape size is different from current shape";
-  NDArray ret = *this;
-  ret.shape_ = shape;
   if (AutogradRuntime::Get()->IsTraining()) {
+    CHECK_GE(shape_.Size(), shape.Size())
+      << "NDArray.Reshape: target shape must have must have the same size as "
+      << "current shape when in train_section.";
+    NDArray ret = *this;
+    ret.shape_ = shape;
     // fake a Reshape op
     ret.entry_.clear();
     const nnvm::Op* op = nnvm::Op::Get("Reshape");
@@ -46,6 +48,10 @@ NDArray NDArray::Reshape(const TShape &shape) const {
       op, attrs, &inputs, &outputs);
     return outputs[0];
   } else {
+    CHECK_GE(shape_.Size(), shape.Size())
+      << "NDArray.Reshape: target shape size is larger current shape";
+    NDArray ret = *this;
+    ret.shape_ = shape;
     return ret;
   }
 }
@@ -57,7 +63,9 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
   CHECK(!is_none()) << "NDArray is not initialized";
   CHECK_GE(shape_[0], end) << "Slice end index out of range";
   size_t length = shape_.ProdShape(1, shape_.ndim());
-  ret.offset_ += begin * length;
+  MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
+    ret.byte_offset_ += begin * length * sizeof(DType);
+  });
   ret.shape_[0] = end - begin;
   if (AutogradRuntime::Get()->IsTraining()) {
     // fake a slice_axis op
@@ -89,6 +97,20 @@ NDArray NDArray::At(index_t idx) const {
     return ret;
   }
 }
+
+
+bool NDArray::fresh_out_grad() const {
+  if (entry_.ag_node != nullptr) return entry_.ag_node->fresh_out_grad;
+  return false;
+}
+
+
+void NDArray::set_fresh_out_grad(bool state) const {
+  CHECK(entry_.ag_node != nullptr)
+    << "NDArray has not been marked as a variable and does not have gradient state";
+  entry_.ag_node->fresh_out_grad = state;
+}
+
 
 /*!
 * \brief run a ternary operation
@@ -613,8 +635,11 @@ NDArray &NDArray::operator/=(const real_t &src) {
   return ScalarOpApply<ndarray::Div>(this, src);
 }
 
+/* magic number for ndarray version 1, with int64_t TShape */
+static const uint32_t NDARRAY_V1_MAGIC = 0xF993fac8;
+
 void NDArray::Save(dmlc::Stream *strm) const {
-  // save shape
+  strm->Write(NDARRAY_V1_MAGIC);
   shape_.Save(strm);
   if (is_none()) return;
   // save context
@@ -638,10 +663,28 @@ void NDArray::Save(dmlc::Stream *strm) const {
   strm->Write(save_data.dptr_, type_size * shape_.Size());
 }
 
+bool LegacyTShapeLoad(dmlc::Stream *strm, TShape *shape) {
+  uint32_t magic;
+  if (strm->Read(&magic, sizeof(uint32_t)) != sizeof(uint32_t)) return false;
+  switch (magic) {
+    case NDARRAY_V1_MAGIC:
+      return shape->Load(strm);
+    default:
+      // meet legacy TShape, magic is ndim here
+      uint32_t ndim = magic;
+      *shape = TShape(ndim);
+      std::vector<uint32_t> buffer(ndim);
+      size_t nread = ndim * sizeof(uint32_t);
+      if (strm->Read(buffer.data(), nread) != nread) return false;
+      nnvm::ShapeTypeCast(buffer.begin(), buffer.end(), shape->begin());
+      return true;
+  }
+}
+
 bool NDArray::Load(dmlc::Stream *strm) {
   // load shape
   TShape shape;
-  if (!shape.Load(strm)) return false;
+  if (!LegacyTShapeLoad(strm, &shape)) return false;
   if (shape.ndim() == 0) {
     *this = NDArray(); return true;
   }
@@ -710,7 +753,7 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
+  TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToWrite();
@@ -739,7 +782,7 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob dst(data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
+  TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToRead();

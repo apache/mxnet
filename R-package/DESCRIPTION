@@ -1,8 +1,8 @@
 Package: mxnet
 Type: Package
 Title: MXNet
-Version: 0.10.0
-Date: 2015-12-23
+Version: 0.10.1
+Date: 2017-06-02
 Author: Tianqi Chen, Qiang Kou, Tong He
 Maintainer: Qiang Kou <qkou@umail.iu.edu>
 Repository: DMLC
@@ -27,6 +27,8 @@ Suggests:
     knitr,
     rmarkdown,
     imager
+Depends:
+    R (>= 3.2.0)
 LinkingTo: Rcpp
 VignetteBuilder: knitr
 RoxygenNote: 5.0.1
