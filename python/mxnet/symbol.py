@@ -146,7 +146,7 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __imul__(self, other):
-        raise NotImplementedForSymbol(self.__imul__, '*=' , other)
+        raise NotImplementedForSymbol(self.__imul__, '*=', other)
 
     def __rmul__(self, other):
         return self.__mul__(other)
