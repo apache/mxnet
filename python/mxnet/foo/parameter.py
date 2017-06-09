@@ -145,7 +145,11 @@ class Parameter(object):
             ctx = context.current_context()
         assert self._data is not None, \
             "Cannot get NDArray value for Parameter %s " \
-            "because it hasn't been initialized!"%(self.name)
+            "because it hasn't been initialized. Note that " \
+            "you should initialize parameters and create Trainer " \
+            "with Layer.all_params() instead of Layer.params " \
+            "because the later does not include parameters of " \
+            "nested child layers "%(self.name)
         assert ctx in self._data, \
             "Cannot get NDArray value for Parameter %s on context %s " \
             "because it was not initialized on %s"%(self.name, str(ctx), str(ctx))

@@ -406,3 +406,39 @@ class LeakyReLU(Layer):
 
     def generic_forward(self, F, x):
         return F.invoke(self._op, [x])
+
+
+class Embedding(Layer):
+    """Turns non-negative integers (indexes/tokens) into dense
+    vectors of fixed size.
+    eg. [[4], [20]] -> [[0.25, 0.1], [0.6, -0.2]]
+
+    Parameters
+    ----------
+    input_dim : int
+        Size of the vocabulary, i.e. maximum integer index + 1.
+    output_dim : int
+        Dimension of the dense embedding.
+    dtype : str or np.dtype, default 'float32'
+        Data type of output embeddings.
+    embeddings_initializer : Initializer
+        Initializer for the `embeddings` matrix
+
+    Input shape
+    -----------
+    2D tensor with shape: `(batch_size, sequence_length)`.
+
+    Output shape
+    ------------
+    3D tensor with shape: `(batch_size, sequence_length, output_dim)`.
+    """
+    def __init__(self, input_dim, output_dim, dtype='float32',
+                 embeddings_initializer=None, **kwargs):
+        super(Embedding, self).__init__(**kwargs)
+        self._op = symbol.CachedOp('Embedding', 2, input_dim=input_dim,
+                                   output_dim=output_dim, dtype=dtype)
+        self.weight = self.params.get('weight', shape=(input_dim, output_dim),
+                                      init=embeddings_initializer)
+
+    def generic_forward(self, F, x, weight):
+        return F.invoke(self._op, [x, weight])

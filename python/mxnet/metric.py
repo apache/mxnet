@@ -634,7 +634,7 @@ class Perplexity(EvalMetric):
             label = label.as_in_context(pred.context).reshape((label.size,))
             pred = ndarray.pick(pred, label.astype(dtype='int32'), axis=self.axis)
             if self.ignore_label is not None:
-                ignore = label == self.ignore_label
+                ignore = (label == self.ignore_label).astype(pred.dtype)
                 num -= ndarray.sum(ignore).asscalar()
                 pred = pred*(1-ignore) + ignore
             loss -= ndarray.sum(ndarray.log(ndarray.maximum(1e-10, pred))).asscalar()
