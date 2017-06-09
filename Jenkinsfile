@@ -25,12 +25,17 @@ def init_git() {
 }
 
 def init_git_win() {
-    checkout scm
-    retry(5) {
-        timeout(time: 2, unit: 'MINUTES') {
-            bat 'git submodule update --init'
-        }
+  retry(5) {
+    try {
+      timeout(time: 2, unit: 'MINUTES') {
+        checkout scm
+        bat 'git submodule update --init'
+      }
+    } catch (exc) {
+      deleteDir()
+      error "Failed to fetch source codes"
     }
+  }
 }
 
 stage("Sanity Check") {
