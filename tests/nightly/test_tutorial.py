@@ -48,7 +48,7 @@ def test_tutorial_nb(file_path):
     """
     tutorial_name = os.path.basename(file_path)
     notebook = nbformat.read(file_path + '_python.ipynb', as_version=4)
-    eprocessor = ExecutePreprocessor(timeout=900)
+    eprocessor = ExecutePreprocessor(timeout=1800)
     try:
         eprocessor.preprocess(notebook, {'metadata': {}})
     except Exception as err:
@@ -79,4 +79,5 @@ if __name__ == "__main__":
         print "Test Summary End"
         print "Stats start"
         print "[Passed: %d of %d]" % (success_num, len(tutorial_list))
+        print "Stats end"
 
