@@ -158,12 +158,12 @@ class Layer(object):
     def __call__(self, *args):
         """Call forward."""
         try:
-            return self.forward(*args)
+            return self.forward(*args)  # pylint: disable= no-value-for-parameter
         except DeferredInitializationError:
             self.infer_shape(*[i.shape for i in args])
             for i in self.params.values():
                 i._finish_deferred_init()
-            return self.forward(*args)
+            return self.forward(*args)  # pylint: disable= no-value-for-parameter
 
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either NDArray or Symbol."""
