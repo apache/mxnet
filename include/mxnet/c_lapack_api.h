@@ -15,6 +15,13 @@
 //         lapack_int LAPACKE_foo(int, char, lapack_int, float* , lapack_int)
 //      within lapacke.h should result in a wrapper with the following signature
 //         int MXNET_LAPACK_foo(int, char, int, float* , int)
+//      Note that function signatures in lapacke.h will always have as first
+//      argument the storage order (row/col-major). All wrappers have to support
+//      that argument. The underlying fortran functions will always assume a
+//      column-major layout. It is the responsibility of the wrapper function
+//      to handle the (usual) case that it is called with data in row-major
+//      format, either by doing appropriate transpositions explicitly or using
+//      transposition options of the underlying fortran function.
 //    - It is ok to assume that matrices are stored in contiguous memory
 //      (which removes the need to do special handling for lda/ldb parameters
 //      and enables us to save additional matrix transpositions around
