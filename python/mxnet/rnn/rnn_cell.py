@@ -754,7 +754,7 @@ class SequentialRNNCell(BaseRNNCell):
     def state_info(self):
         return _cells_state_info(self._cells)
 
-    def begin_state(self, **kwargs):
+    def begin_state(self, **kwargs): # pylint: disable=arguments-differ
         assert not self._modified, \
             "After applying modifier cells (e.g. ZoneoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
@@ -862,7 +862,7 @@ class ModifierCell(BaseRNNCell):
     def state_info(self):
         return self.base_cell.state_info
 
-    def begin_state(self, init_sym=symbol.zeros, **kwargs):
+    def begin_state(self, init_sym=symbol.zeros, **kwargs): # pylint: disable=arguments-differ
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
@@ -1013,7 +1013,7 @@ class BidirectionalCell(BaseRNNCell):
     def state_info(self):
         return _cells_state_info(self._cells)
 
-    def begin_state(self, **kwargs):
+    def begin_state(self, **kwargs): # pylint: disable=arguments-differ
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
