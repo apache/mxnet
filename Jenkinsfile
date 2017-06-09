@@ -19,6 +19,7 @@ def init_git() {
       }
     } catch (exc) {
       deleteDir()
+      error "Failed to fetch source codes"
     }
   }
 }
