@@ -36,7 +36,7 @@ end
 
 HAS_CUDA = false
 let cudalib = Libdl.find_library(["libcuda", "nvcuda.dll"], CUDAPATHS)
-  HAS_CUDA = Libdl.dlopen_e(cudalib) != C_NULL
+  HAS_CUDA = !isempty(cudalib) && Libdl.dlopen_e(cudalib) != C_NULL
 end
 
 if !HAS_CUDA && is_windows()
