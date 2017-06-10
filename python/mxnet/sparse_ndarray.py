@@ -600,7 +600,7 @@ def zeros(storage_type, shape, ctx=None, dtype=None, aux_types=None, **kwargs):
     array([[ 0.,  0.]], dtype=float16)
     """
     if storage_type == 'default':
-        return ndarray.zeros(shape, ctx, dtype, **kwargs)
+        return ndarray.zeros(shape, ctx=ctx, dtype=dtype, **kwargs)
     if ctx is None:
         ctx = Context.default_ctx
     dtype = mx_real_t if dtype is None else dtype

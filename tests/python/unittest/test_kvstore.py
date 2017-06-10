@@ -1,18 +1,18 @@
 # pylint: skip-file
 import mxnet as mx
 import numpy as np
+from mxnet.test_utils import rand_ndarray, assert_almost_equal
 
 shape = (4, 4)
 keys = [5, 7, 11]
-def init_kv():
+def init_kv(stype='default'):
     """init kv """
     kv = mx.kv.create()
     # single
-    kv.init(3, mx.nd.zeros(shape))
+    kv.init(3, mx.sparse_nd.zeros(stype, shape))
     # list
-    kv.init(keys, [mx.nd.zeros(shape)] * len(keys))
+    kv.init(keys, [mx.sparse_nd.zeros(stype, shape)] * len(keys))
     return kv
-
 
 def check_diff_to_scalar(A, x):
     """ assert A == x"""
@@ -74,6 +74,42 @@ def test_aggregator():
         for v in vv:
             check_diff_to_scalar(v, num_devs * 2.0)
 
+def test_sparse_aggregator():
+    """aggregate sparse ndarray on muliple devices"""
+
+    stype = 'row_sparse'
+    kv = init_kv(stype)
+
+    # devices
+    num_devs = 4
+    devs = [mx.Context('cpu', i) for i in range(num_devs)]
+
+    # single
+    vals = [rand_ndarray(shape, stype).copyto(devs[i]) for i in range(num_devs)]
+    expected_sum = np.zeros(shape)
+    for v in vals:
+        expected_sum += v.asnumpy()
+
+    kv.push(3, vals)
+    kv.pull(3, out = vals)
+    result_sum = np.zeros(shape)
+    for v in vals:
+        result_sum += v.asnumpy()
+    assert_almost_equal(result_sum, expected_sum * num_devs)
+
+    # list
+    vals = [[rand_ndarray(shape, stype).copyto(devs[i]) for i in range(num_devs)]] * len(keys)
+    expected_sum = np.zeros(shape)
+    for v in vals[0]:
+        expected_sum += v.asnumpy()
+
+    kv.push(keys, vals)
+    kv.pull(keys, out = vals)
+    for vv in vals:
+        result_sum = np.zeros(shape)
+        for v in vv:
+            result_sum += v.asnumpy()
+        assert_almost_equal(result_sum, expected_sum * num_devs)
 
 def updater(key, recv, local):
     """use updater: +="""
@@ -121,5 +157,6 @@ if __name__ == '__main__':
     test_get_type()
     test_single_kv_pair()
     test_list_kv_pair()
+    test_sparse_aggregator()
     test_aggregator()
     test_updater()

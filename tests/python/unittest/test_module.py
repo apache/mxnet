@@ -379,12 +379,12 @@ def test_executor_group():
 def test_module_fm():
     mx.random.seed(11)
     rnd.seed(11)
-    def fm_model(k, feature_dim, storage_type='default'):
-         initializer = mx.initializer.Normal(sigma=0.01)
-         x = mx.symbol.Variable("data", storage_type=storage_type)
-         v = mx.symbol.Variable("v", shape=(feature_dim, k), init=initializer)
+    def fm_model(k, feature_dim):
+         norm = mx.initializer.Normal(sigma=0.01)
+         x = mx.symbol.Variable("data", storage_type='csr')
+         v = mx.symbol.Variable("v", shape=(feature_dim, k), init=norm, storage_type='row_sparse')
 
-         w1_weight = mx.symbol.var('w1_weight', shape=(feature_dim, 1), init=initializer)
+         w1_weight = mx.symbol.var('w1_weight', shape=(feature_dim, 1), init=norm)
          w1 = mx.symbol.dot(x, w1_weight)
 
          v_s = mx.symbol.sum(data=mx.symbol.square(data=v), axis=1)
@@ -400,25 +400,26 @@ def test_module_fm():
          model = mx.symbol.LinearRegressionOutput(data=model, label=y, name="out")
          return model
 
+    # model
     ctx = default_context()
     k = 5
     feature_dim = 20
-    model = fm_model(k, feature_dim, 'csr')
+    model = fm_model(k, feature_dim)
 
+    # data iter
     num_batches = 8
     batch_size = 25
+    num_samples = batch_size * num_batches
     import scipy.sparse as sp
-    scipy_data = sp.rand(num_batches * batch_size, feature_dim,
-                         density=0.5, format='csr')
-    dns_label = mx.nd.ones((num_batches * batch_size,1))
-    csr_data = mx.sparse_nd.csr(scipy_data.data, scipy_data.indptr, scipy_data.indices,
-                                (num_batches * batch_size, feature_dim))
-    data = csr_data
-
-    train_iter = mx.io.NDArrayIter(data=data,
-                                   label={'out_label':dns_label},
+    # generate some random scipy csr data
+    csr_sp = sp.rand(num_samples, feature_dim, density=0.5, format='csr')
+    csr_nd = mx.sparse_nd.csr(csr_sp.data, csr_sp.indptr, csr_sp.indices,
+                              (num_samples, feature_dim))
+    label = mx.nd.ones((num_samples,1))
+    # the alternative is to use LibSVMIter
+    train_iter = mx.io.NDArrayIter(data=csr_nd,
+                                   label={'out_label':label},
                                    batch_size=batch_size)
-
     # create module
     mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['out_label'])
     # allocate memory by given the input data and lable shapes
@@ -429,9 +430,7 @@ def test_module_fm():
     mod.init_optimizer(optimizer='sgd')
     # use accuracy as the metric
     metric = mx.metric.create('MSE')
-    # train 5 epoch, i.e. going over the data iter one pass
-    storage_type_dict = {'v' : 'row_sparse'}
-
+    # train 10 epoch
     for epoch in range(10):
         train_iter.reset()
         metric.reset()
@@ -439,10 +438,9 @@ def test_module_fm():
             mod.forward(batch, is_train=True)       # compute predictions
             mod.update_metric(metric, batch.label)  # accumulate prediction accuracy
             mod.backward()                          # compute gradients
-            mod.update(storage_type_dict)           # update parameters
+            mod.update()                            # update parameters
         # print('Epoch %d, Training %s' % (epoch, metric.get()))
     assert(metric.get()[1] < 0.2)
-
 
 if __name__ == '__main__':
     test_module_dtype()

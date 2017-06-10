@@ -63,7 +63,7 @@ class KVStoreDist : public KVStoreLocal {
             const std::vector<NDArray>& values) override {
     CheckUnique(keys);
     for (size_t i = 0; i < keys.size(); ++i) {
-      comm_->Init(keys[i], values[i].shape(), values[i].dtype());
+      comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }
     if (get_rank() == 0) {
       Push_(keys, values, 0, false);
