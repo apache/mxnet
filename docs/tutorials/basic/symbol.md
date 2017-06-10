@@ -45,6 +45,18 @@ For a visual explanation of these concepts, see
 To make things concrete, let's take a hands-on look at the Symbol API.
 There are a few different ways to compose a `Symbol`.
 
+## Prerequisites
+
+To complete this tutorial, we need:
+
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- [Jupyter](http://jupyter.org/)
+    ```
+    pip install jupyter
+    ```
+- GPUs - A section of this tutorial uses GPUs. If you don't have GPUs on your machine, simply
+set the variable gpu_device to mx.cpu().
+
 ## Basic Symbol Composition
 
 ### Basic Operators
@@ -320,9 +332,12 @@ print('number of outputs = %d\nthe first output = \n%s' % (
 
 We can evaluate the same symbol on GPU with different data.
 
+**Note** In order to execute the following section on a cpu set gpu_device to mx.cpu().
 ```python
-ex_gpu = c.bind(ctx=mx.gpu(), args={'a' : mx.nd.ones([3,4], mx.gpu())*2,
-                                    'b' : mx.nd.ones([3,4], mx.gpu())*3})
+gpu_device=mx.gpu() # Change this to mx.cpu() in absence of GPUs.
+
+ex_gpu = c.bind(ctx=gpu_device, args={'a' : mx.nd.ones([3,4], gpu_device)*2,
+                                      'b' : mx.nd.ones([3,4], gpu_device)*3})
 ex_gpu.forward()
 ex_gpu.outputs[0].asnumpy()
 ```
