@@ -33,6 +33,10 @@ abstract class Initializer {
 
     if (name.startsWith("upsampling")) {
       initBilinear(name, arr)
+    } else if (name.startsWith("stn_loc") && name.endsWith("weight")) {
+      initZero(name, arr)
+    } else if (name.startsWith("stn_loc") && name.endsWith("bias")) {
+      initLocBias(name, arr)
     } else if (name.endsWith("bias")) {
       initBias(name, arr)
     } else if (name.endsWith("gamma")) {
@@ -44,6 +48,8 @@ abstract class Initializer {
     } else if (name.endsWith("moving_mean")) {
       initZero(name, arr)
     } else if (name.endsWith("moving_var")) {
+      initZero(name, arr)
+    } else if (name.endsWith("moving_inv_var")) {
       initZero(name, arr)
     } else if (name.endsWith("moving_avg")) {
       initZero(name, arr)
@@ -65,6 +71,12 @@ abstract class Initializer {
     }
 
     arr.set(NDArray.array(weight, shape))
+  }
+
+  protected def initLocBias(name: String, arr: NDArray): Unit = {
+    val shape = arr.shape
+    require(shape(0) == 6)
+    arr.set(Array(1f, 0f, 0f, 0f, 1f, 0f))
   }
 
   protected def initZero(name: String, arr: NDArray): Unit = {
@@ -111,6 +123,35 @@ class Mixed(protected val patterns: List[String],
   }
 
   override def initWeight(name: String, arr: NDArray): Unit = {}
+}
+
+/**
+ * Initializes weights to zero.
+ */
+class Zero extends Initializer {
+  override def initWeight(name: String, arr: NDArray): Unit = {
+    arr.set(0f)
+  }
+}
+
+/**
+ * Initializes weights to one.
+ */
+class One extends Initializer {
+  override def initWeight(name: String, arr: NDArray): Unit = {
+    arr.set(1f)
+  }
+}
+
+/**
+ * Initializes the weights to a scalar value.
+ *
+ * @param value The Fill value
+ */
+class Constant(protected val value: Float) extends Initializer {
+  override def initWeight(name: String, arr: NDArray): Unit = {
+    arr.set(value)
+  }
 }
 
 /**
@@ -167,5 +208,59 @@ class Xavier(protected val rndType: String = "uniform",
       case "gaussian" => Random.normal(0, scale, out = arr)
       case _ => throw new IllegalArgumentException("Unknown random type")
     }
+  }
+}
+
+/**
+ * Initialize the weight according to a MSRA paper.
+ *
+ * This initializer implements *Delving Deep into Rectifiers: Surpassing
+ * Human-Level Performance on ImageNet Classification*, available at
+ * https://arxiv.org/abs/1502.01852.
+ *
+ * This initializer is proposed for initialization related to ReLu activation,
+ * it maked some changes on top of Xavier method.
+ *
+ * @param factorType Options are: "avg", "in", "out"
+ * @param slop Initial slope of any PReLU (or similar) nonlinearities.
+ */
+class MSRAPrelu(factorType: String = "avg", slope: Float = 0.25f) extends
+  Xavier("gaussian", factorType, 2f / (1 + slope * slope)) {
+}
+
+/**
+ * Initialize weight for upsampling layers.
+ */
+class Bilinear extends Initializer {
+  override def initWeight(name: String, arr: NDArray): Unit = {
+    val weight = Array.fill[Float](arr.shape.product)(0f)
+    val shape = arr.shape
+    val f = Math.ceil(shape(3) / 2f)
+    val c = (2 * f - 1 - f % 2) / (2 * f)
+    for (i <- 0 until shape.product) {
+      val x = i % shape(3)
+      val y = (i / shape(3)) % shape(2)
+      weight(i) = ((1 - Math.abs(x / f - c)) * (1 - Math.abs(y / f - c))).toFloat
+    }
+    arr.set(weight)
+  }
+}
+
+/**
+ * Initialize all bias of an LSTMCell to 0.0 except for
+ * the forget gate whose bias is set to custom value.
+ *
+ * @param forgetBias Bias for the forget gate.
+ *                      Jozefowicz et al. 2015 recommends setting this to 1.0.
+ */
+class LSTMBias(protected val forgetBias: Float) extends Initializer {
+  override def initWeight(name: String, arr: NDArray): Unit = {
+    arr.set(0f)
+    // in the case of LSTMCell the forget gate is the second
+    // gate of the 4 LSTM gates, we modify the according values.
+    val numHidden = arr.shape(0) / 4
+    val tmp = arr.toArray
+    for (i <- numHidden until numHidden * 2) tmp(i) = this.forgetBias
+    arr.set(tmp)
   }
 }
