@@ -5,7 +5,7 @@
 from collections import OrderedDict
 import numpy as np
 
-from ..base import mx_real_t
+from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
 from ..context import Context
 from .. import autograd
@@ -13,6 +13,10 @@ from .. import autograd
 # pylint: disable= invalid-name
 tensor_types = (symbol.Symbol, ndarray.NDArray)
 # pylint: enable= invalid-name
+
+class DeferredInitializationError(MXNetError):
+    """Error for unfinished deferred initialization."""
+    pass
 
 class Parameter(object):
     """A Container holding parameters (weights) of layers.
@@ -75,8 +79,10 @@ class Parameter(object):
         self._var = None
         self._data = None
         self._grad = None
+        self._defered_init = ()
 
-    def initialize(self, init=None, ctx=None, default_init=initializer.Xavier()):
+    def initialize(self, init=None, ctx=None, default_init=initializer.Xavier(),
+                   allow_deferring=True):
         """Intialize parameter and gradient arrays. Only used for `NDArray` API.
 
         init : Initializer
@@ -86,7 +92,7 @@ class Parameter(object):
             copy will be made for each context.
 
             .. note:: Copies are independent arrays. User is responsible for keeping
-            their values consistent when updating. Normally nn.Optim does this for you.
+            their values consistent when updating. Normally nn.Trainer does this for you.
         default_init : Initializer
             Default initializer is used when both `init` and `Parameter.init` are None.
         """
@@ -95,31 +101,53 @@ class Parameter(object):
         if isinstance(ctx, Context):
             ctx = [ctx]
 
-        assert np.prod(self.shape) > 0, \
-            "Cannot initialize Parameter %s because it has invalid shape: %s. " \
-            "Please specify in_units, in_filters, etc for Layers"%(
-                self.name, str(self.shape))
-        data = ndarray.zeros(shape=self.shape, dtype=self.dtype, ctx=ctx[0])
-        if init is None:
-            init = self.init
-        initializer.create(default_init)(
-            initializer.InitDesc(self.name, {'__init__': init}),
-            data)
+        if self.shape is None or np.prod(self.shape) <= 0:
+            if allow_deferring:
+                self._defered_init = (init, ctx, default_init)
+                return
+            raise ValueError("Cannot initialize Parameter %s because it has " \
+                             "invalid shape: %s. Please specify in_units, " \
+                             "in_filters, num_features etc for Layers or " \
+                             "set allow_deferring to True to defer initialization " \
+                             "to first forward pass."%(self.name, str(self.shape)))
 
-        self._data = OrderedDict()
-        self._data[ctx[0]] = data
-        for i in ctx[1:]:
-            self._data[i] = data.copyto(i)
+        self._defered_init = (init, ctx, default_init)
+        self._finish_deferred_init()
 
-        if self.grad_req == 'null':
-            self._grad = None
+    def _finish_deferred_init(self):
+        """Finish deferred initialization."""
+        if not self._defered_init:
             return
+        init, ctx, default_init = self._defered_init
+        self._defered_init = ()
+        assert self.shape is not None and np.prod(self.shape) > 0, \
+            "Cannot initialize Parameter %s because it has " \
+            "invalid shape: %s. Please specify in_units, " \
+            "in_filters, num_features etc for Layers."%(
+                self.name, str(self.shape))
 
-        self._grad = OrderedDict()
-        for i in ctx:
-            self._grad[i] = ndarray.zeros_like(self._data[i])
+        with autograd.test_section():
+            data = ndarray.zeros(shape=self.shape, dtype=self.dtype, ctx=ctx[0])
+            if init is None:
+                init = self.init
+            initializer.create(default_init)(
+                initializer.InitDesc(self.name, {'__init__': init}),
+                data)
 
-        autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
+            self._data = OrderedDict()
+            self._data[ctx[0]] = data
+            for i in ctx[1:]:
+                self._data[i] = data.copyto(i)
+
+            if self.grad_req == 'null':
+                self._grad = None
+                return
+
+            self._grad = OrderedDict()
+            for i in ctx:
+                self._grad[i] = ndarray.zeros_like(self._data[i])
+
+            autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
 
     def set_data(self, data):
         """Set this parameter's value on all contexts to data."""
@@ -127,6 +155,23 @@ class Parameter(object):
             "Parameter %s has not been initialized"%self.name
         for arr in self.list_data():
             arr[:] = data
+
+    def _check_initialized(self, ctx=None):
+        if self._data is not None:
+            if ctx is not None and ctx not in self._data:
+                raise RuntimeError(
+                    "Parameter %s was not initialized on context %s. "
+                    "It was only initialized on %s."%(
+                        self.name, str(ctx), str(self.list_ctx())))
+            return
+        if self._defered_init:
+            raise DeferredInitializationError
+        raise RuntimeError(
+            "Parameter %s has not been initialized. Note that " \
+            "you should initialize parameters and create Trainer " \
+            "with Layer.all_params() instead of Layer.params " \
+            "because the later does not include parameters of " \
+            "nested child layers "%(self.name))
 
     def data(self, ctx=None):
         """Returns a copy of this parameter on one context. Must have been
@@ -143,23 +188,13 @@ class Parameter(object):
         """
         if ctx is None:
             ctx = context.current_context()
-        assert self._data is not None, \
-            "Cannot get NDArray value for Parameter %s " \
-            "because it hasn't been initialized. Note that " \
-            "you should initialize parameters and create Trainer " \
-            "with Layer.all_params() instead of Layer.params " \
-            "because the later does not include parameters of " \
-            "nested child layers "%(self.name)
-        assert ctx in self._data, \
-            "Cannot get NDArray value for Parameter %s on context %s " \
-            "because it was not initialized on %s"%(self.name, str(ctx), str(ctx))
+        self._check_initialized(ctx)
         return self._data[ctx]
 
     def list_data(self):
         """Returns copies of this parameter on all contexts, in the same order
         as creation."""
-        assert self._data is not None, \
-            "Parameter %s has not been initialized"%self.name
+        self._check_initialized()
         return list(self._data.values())
 
     def grad(self, ctx=None):
@@ -172,27 +207,27 @@ class Parameter(object):
         """
         if ctx is None:
             ctx = context.current_context()
-        assert self._grad is not None, \
-            "Cannot get gradient array for Parameter %s " \
-            "because it hasn't been initialized or grad_req='null'"%(self.name)
-        assert ctx in self._grad, \
-            "Cannot get gradient array for Parameter %s on context %s " \
-            "because it was not initialized on %s"%(self.name, str(ctx), str(ctx))
+        self._check_initialized(ctx)
+        if self._grad is None:
+            raise RuntimeError(
+                "Cannot get gradient array for Parameter %s " \
+                "because grad_req='null'"%(self.name))
         return self._grad[ctx]
 
     def list_grad(self):
         """Returns gradient buffers on all contexts, in the same order
         as `values`."""
-        assert self._data is not None, \
-            "Parameter %s has not been initialized"%self.name
-        assert self._data is not None, \
+        self._check_initialized()
+        assert self._grad is not None, \
             "Parameter %s does not have gradients because grad_req='null'"%self.name
         return list(self._grad.values())
 
     def list_ctx(self):
         """Returns a list of contexts this parameter is initialized on"""
-        assert self._data is not None, \
-            "Parameter %s has not been initialized"%self.name
+        if self._data is None:
+            if self._defered_init:
+                return self._defered_init[1]
+            raise RuntimeError("Parameter %s has not been initialized"%self.name)
         return list(self._data.keys())
 
     def zero_grad(self):
