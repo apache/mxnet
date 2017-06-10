@@ -101,10 +101,10 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore,
             index = index if name not in kvstore.name2idx else kvstore.name2idx[name]
             # cast storage type if stype doesn't match
             if name in stype_dict:
-                for i, grad in enumerate(grad_list):
+                for j, grad in enumerate(grad_list):
                     stype = stype_dict[name]
-                    if grad_list[i].storage_type != stype:
-                        grad_list[i] = nd.cast_storage(grad, stype)
+                    if grad_list[j].storage_type != stype:
+                        grad_list[j] = nd.cast_storage(grad, stype)
         # push gradient, priority is negative index
         kvstore.push(index, grad_list, priority=-index)
         # pull back the weights
@@ -120,10 +120,10 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
             continue
         # cast storage type if stype doesn't match
         if param_names is not None and param_names[i] in stype_dict:
-            for i, grad in enumerate(grad_list):
+            for j, grad in enumerate(grad_list):
                 stype = stype_dict[param_names[i]]
-                if grad_list[i].storage_type != stype:
-                    grad_list[i] = nd.cast_storage(grad, stype)
+                if grad_list[j].storage_type != stype:
+                    grad_list[j] = nd.cast_storage(grad, stype)
         index = i
         if kvstore:
             if param_names is not None:
