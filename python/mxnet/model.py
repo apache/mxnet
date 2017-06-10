@@ -62,7 +62,7 @@ def _create_kvstore(kvstore, num_device, arg_params, name2idx=None):
             kv = None
         else:
             kv = kvs.create(kvstore, name2idx=name2idx)
-            if kvstore is 'local':
+            if kvstore == 'local':
             # automatically select a proper local
                 max_size = max(np.prod(param.shape) for param in
                                arg_params.values())
