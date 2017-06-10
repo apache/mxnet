@@ -4,6 +4,7 @@ import pickle
 import logging
 from .ndarray import NDArray, zeros, clip, sqrt, sign
 from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
+from .sparse_ndarray import zeros as sparse_zeros
 from .random import normal
 
 
@@ -332,7 +333,8 @@ class SGD(Optimizer):
         if self.momentum == 0.0:
             return None
         else:
-            return zeros(weight.shape, weight.context, dtype=weight.dtype)
+            return sparse_zeros(weight.storage_type, weight.shape,
+                                weight.context, dtype=weight.dtype)
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))

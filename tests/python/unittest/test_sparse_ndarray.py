@@ -62,6 +62,7 @@ def test_sparse_nd_zeros():
     shape = rand_shape_2d()
     check_sparse_nd_zeros('row_sparse', shape)
     check_sparse_nd_zeros('csr', shape)
+    check_sparse_nd_zeros('default', shape)
 
 
 def test_sparse_nd_copy():

@@ -110,6 +110,19 @@ inline std::string type_string(const int& x) {
   return "unknown";
 }
 
+/*! \brief get string representation of storage_type */
+inline std::string stype_string(const int& x) {
+  switch (x) {
+    case kDefaultStorage:
+      return "default";
+    case kCSRStorage:
+      return "csr";
+    case kRowSparseStorage:
+      return "row_sparse";
+  }
+  return "unknown";
+}
+
 /*!
  * \brief Assign x to y. Checks for compatiblity when y is not empty.
  *  Allow missing dim in both x and y (as 0).
@@ -182,6 +195,24 @@ inline bool type_assign(int *y, const int& x) {
       os << "Type inconsistent, Provided="                                  \
          << type_string((type_array)[index]) << ','                         \
          << " inferred type=" << type_string(type);                         \
+      throw ::mxnet::op::InferTypeError(os.str(), index);                   \
+    }                                                                       \
+  }
+
+/*!
+ * \brief macro assign type to out if out is unknown (-1) otherwise check consistency
+ *  Use macro so we can see the error file more clearly
+ * \param type_array the storage type array to store the result
+ * \param index the index of in the array
+ * \param type the inferred storage type
+ */
+#define STORAGE_TYPE_ASSIGN_CHECK(type_array, index, type)                  \
+  {                                                                         \
+    if (!type_assign(&(type_array)[index], type)) {                         \
+      std::ostringstream os;                                                \
+      os << "Storage type inconsistent, Provided="                          \
+         << stype_string((type_array)[index]) << ','                        \
+         << " inferred storage type=" << stype_string(type);                \
       throw ::mxnet::op::InferTypeError(os.str(), index);                   \
     }                                                                       \
   }

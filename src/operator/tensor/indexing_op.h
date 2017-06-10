@@ -9,7 +9,6 @@
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
-#include <dmlc/omp.h>
 #include <mxnet/operator.h>
 #include <mxnet/operator_util.h>
 #include <map>
@@ -23,6 +22,7 @@
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 #include "./sort_op.h"
+#include "./matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -204,6 +204,82 @@ void EmbeddingOpForward(const nnvm::NodeAttrs& attrs,
   });
 }
 
+template<typename xpu>
+void SparseEmbeddingForwardRspImpl(const nnvm::NodeAttrs& attrs,
+                                   const OpContext& ctx,
+                                   const NDArray& data,
+                                   const NDArray& weight,
+                                   const OpReqType req,
+                                   NDArray *out) {
+  if (weight.storage_shape()[0] == weight.shape()[0]) {
+    TBlob out_blob = out->data();
+    // forward to dns implementation when storage_shape equals shape
+    bool transpose_a = false;
+    DotCsrRspDnsImpl<xpu>(ctx, data, weight, req, transpose_a, &out_blob);
+  } else {
+    LOG(FATAL) << "SparseEmbedding for RowSparse weights is only implemented when "
+               << "weights.values.shape == weights.shape";
+  }
+}
+
+template<typename xpu>
+void SparseEmbeddingForwardEx(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+  CHECK_EQ(req[embedding::kOut], kWriteTo);
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+
+  NDArray output = outputs[embedding::kOut];
+  auto data_stype = inputs[embedding::kData].storage_type();
+  auto weight_stype = inputs[embedding::kWeight].storage_type();
+  auto out_stype = outputs[embedding::kOut].storage_type();
+  if (data_stype == kCSRStorage && weight_stype == kRowSparseStorage &&
+    out_stype == kDefaultStorage) {
+    NDArray ret = outputs[embedding::kOut];
+    SparseEmbeddingForwardRspImpl<xpu>(attrs, ctx, inputs[embedding::kData],
+                                       inputs[embedding::kWeight],
+                                       req[embedding::kOut], &ret);
+  } else {
+    LOG(FATAL) << "Not supported SparseEmbedding operation for data.storage_type = "
+      << data_stype << ", weight.storage_type = " << weight_stype
+      << ", out.storage_type = " << out_stype;
+  }
+}
+
+inline bool SparseEmbeddingForwardStorageType(const nnvm::NodeAttrs& attrs,
+                                              std::vector<int> *in_attrs,
+                                              std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, embedding::kData, kCSRStorage);
+  STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, embedding::kOut, kDefaultStorage);
+  // override the default storage type generated in nnvm
+  in_attrs->at(embedding::kWeight) = kRowSparseStorage;
+  return true;
+}
+
+inline bool SparseEmbeddingShape(const nnvm::NodeAttrs& attrs,
+                                 std::vector<TShape> *in_attrs,
+                                 std::vector<TShape> *out_attrs) {
+  using namespace mshadow;
+  const EmbeddingParam& param = nnvm::get<EmbeddingParam>(attrs.parsed);
+  const TShape &dshape = (*in_attrs)[embedding::kData];
+  CHECK_EQ(dshape.ndim(), 2)
+           << "SparseEmbedding shape error: data is expected to be 2D.";
+  SHAPE_ASSIGN_CHECK(*in_attrs, embedding::kWeight,
+                     Shape2(param.input_dim, param.output_dim));
+  out_attrs->clear();
+  std::vector<index_t> buf(2);
+  buf[0] = dshape[0];
+  buf[1] = param.output_dim;
+  out_attrs->emplace_back(buf.begin(), buf.end());
+  return true;
+}
+
 // Returns integer log2(a) rounded up
 inline int ilog2(unsigned int a) {
   int k = 1;
@@ -316,130 +392,28 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<int req>
-struct EmbeddingBackwardRsp {
-  template<typename DType, typename IType>
-  // each thread i is responsible for target gradient row ids in [segment_start, segment_end)
-  MSHADOW_XINLINE static void Map(int i, const size_t width, IType* dst_idx, DType* dst_val,
-                                  const IType* idx, const size_t num_idx, const DType* src,
-                                  const size_t segment_len, const size_t num_rows) {
-    auto req_type = req;
-    size_t segment_start = i * segment_len;
-    size_t segment_end = (i + 1) * segment_len;
-    for (size_t y = 0; y < num_idx; y++) {
-      size_t j = idx[y];
-      if (j >= num_rows) j = num_rows - 1;
-      if (j < segment_start || j >= segment_end) continue;
-      dst_idx[j] = j;
-      for (size_t k = 0; k < width; k++) {
-        if (req_type == kWriteTo) req_type = kAddTo;
-        KERNEL_ASSIGN(dst_val[j * width + k], req_type, src[y * width + k]);
-      }
-    }
-  }
-};
-
-/*
- * for sparse embedding, the storage type for weight gradient is row_sparse.
- * we don't care about the storage type for data gradient, since it is not
- * differentiable.
- */
-inline bool SparseEmbeddingBackwardStorageType(const nnvm::NodeAttrs& attrs,
-                         std::vector<int> *in_attrs,
-                         std::vector<int> *out_attrs) {
-  CHECK_EQ((*in_attrs)[0], kDefaultStorage);
-  CHECK_EQ((*in_attrs)[1], kDefaultStorage);
-  (*out_attrs)[0] = kRowSparseStorage;
-  (*out_attrs)[1] = kRowSparseStorage;
-  return true;
-}
-
 template<typename xpu>
-void SparseEmbeddingOpBackwardDnsDnsRsp(const nnvm::NodeAttrs& attrs,
-                               const OpContext& ctx,
-                               const std::vector<NDArray>& inputs,
-                               const std::vector<OpReqType>& req,
-                               const std::vector<NDArray>& outputs) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  using namespace mshadow::expr;
+void SparseEmbeddingBackwardEx(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<NDArray>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 2U);
-  if (req[1] == kNullOp) return;
-  // check storage types
-  auto idx = inputs[1];  // idx shape (d1, d2 .. dk)
-  auto grad = inputs[0];  // grad shape (d1, d2, .. dk, out_dim)
-  auto output = outputs[1];  // weight shape (in_dim, out_dim)
-  CHECK_EQ(idx.storage_type(), kDefaultStorage);
-  CHECK_EQ(grad.storage_type(), kDefaultStorage);
-  CHECK_EQ(output.dtype(), grad.dtype());
-  CHECK_EQ(idx.dtype(), output.aux_type(rowsparse::kIdx)) << "Index type doesn't match";
+  CHECK_EQ(req.size(), 2U);
   // CHECK_EQ(req[embedding::kData], kNullOp)
-  //       << "Embedding layer doesn't support calculate data gradient" << req[embedding::kData];
+  //   << "Embedding layer doesn't support calculate data gradient" << req[0] << " " << req[1];
+  // CHECK_NE(req[1], kWriteInplace) << "DotBackwardEx does not support WriteInplace";
 
-  const TShape& ishape = idx.shape();
-  const TShape& oshape = grad.shape();
-
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  CHECK_EQ(idx.dtype(), output.aux_type(rowsparse::kIdx))
-           << "embedding input index and gradient row sparse type doesn't match!";
-  // Alloc dense output
-  unsigned int num_rows = output.shape()[0];
-  output.CheckAndAlloc({mshadow::Shape1(num_rows)});
-  MSHADOW_TYPE_SWITCH(output.dtype(), DType, {
-    MSHADOW_INT_TYPE_SWITCH(idx.dtype(), IType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[1], req_type, {
-        // input embedding indice, each idx in [0, input_dim)
-        auto idx_data = idx.data().FlatTo1D<xpu, IType>(s);
-        auto grad_data = grad.data().get_with_shape<xpu, 2, DType>(
-          Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-        auto output_idx = output.aux_data(rowsparse::kIdx).FlatTo1D<xpu, IType>(s);
-        auto output_val = output.data().FlatTo2D<xpu, DType>(s);
-        int num_threads = omp_get_num_threads();
-        size_t width = output.shape()[1];
-        size_t segment_len = (num_rows + num_threads - 1) / num_threads;
-        // fill indices with invalid row ids
-        Kernel<mxnet_op::fill, xpu>::Launch(s, num_rows, output_idx.dptr_,
-                                            static_cast<IType>(num_rows));
-        // fill zeros if needed
-        if (req_type == kWriteTo) {
-          Kernel<mxnet_op::set_zero, xpu>::Launch(s, output_val.shape_.Size(), output_val.dptr_);
-        }
-        Kernel<EmbeddingBackwardRsp<req_type>, xpu>::Launch(s, num_threads, width,
-                                                            output_idx.dptr_,
-                                                            output_val.dptr_, idx_data.dptr_,
-                                                            ishape.Size(), grad_data.dptr_,
-                                                            segment_len, num_rows);
-      });
-    });
-  });
-}
-
-// todo replace xpu with cpu
-template<typename xpu>
-void SparseEmbeddingOpBackwardEx(const nnvm::NodeAttrs& attrs,
-                               const OpContext& ctx,
-                               const std::vector<NDArray>& inputs,
-                               const std::vector<OpReqType>& req,
-                               const std::vector<NDArray>& outputs) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  using namespace mshadow::expr;
-  CHECK_EQ(inputs.size(), 2U);
-  CHECK_EQ(outputs.size(), 2U);
-  // CHECK_EQ(req[embedding::kData], kNullOp)
-  //       << "Embedding layer doesn't support calculate data gradient" << req[0] << " " << req[1];
-  // idx shape (d1, d2 .. dk)
-  auto idx_stype = inputs[1].storage_type();
-  // grad shape (d1, d2, .. dk, out_dim)
+  auto data_stype = inputs[1].storage_type();
   auto grad_stype = inputs[0].storage_type();
-  // weight shape (in_dim, out_dim)
   auto output_stype = outputs[1].storage_type();
-  if (idx_stype == kDefaultStorage && grad_stype == kDefaultStorage &&
-      output_stype == kRowSparseStorage) {
-    SparseEmbeddingOpBackwardDnsDnsRsp<xpu>(attrs, ctx, inputs, req, outputs);
+  if (data_stype == kCSRStorage && grad_stype == kDefaultStorage &&
+      output_stype == kDefaultStorage) {
+    TBlob ret = outputs[1].data();
+    DotCsrDnsDnsImpl<xpu>(ctx, inputs[1], inputs[0].data(), req[1], true, &ret);
   } else {
-    LOG(FATAL) << "Not implemented";
+    LOG(FATAL) << "Not supported dot backward for sparse input(s) with sparse gradients";
   }
 }
 

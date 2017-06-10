@@ -324,10 +324,8 @@ inline void CastStorageDnsRspImpl(mshadow::Stream<cpu>* s, const TBlob& dns, NDA
 struct CastStorageRspDnsKernel {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, const index_t width, const IType* idx, const DType *data,
-                                  DType* dns, const index_t invalid_rid) {
+                                  DType* dns) {
     auto rid = idx[i];
-    // skip invalid rows
-    if (rid == invalid_rid) return;
     auto dns_offset = rid * width;
     auto rsp_offset = i * width;
     for (size_t col = 0; col < width; col++) {
@@ -356,10 +354,9 @@ void CastStorageRspDnsImpl(mshadow::Stream<xpu>* s, const NDArray& rsp, TBlob* d
         auto out_data = dns->FlatTo2D<xpu, DType>(s).dptr_;
         auto num_rows = rsp.aux_shape(rowsparse::kIdx).Size();
         auto rsp_shape = rsp.shape();
-        auto invalid_rid = rsp_shape[0];
         auto width = rsp_shape.ProdShape(1, rsp_shape.ndim());
-        mxnet_op::Kernel<CastStorageRspDnsKernel, xpu>::Launch(s, num_rows, width, in_idx, in_data,
-                                                               out_data, invalid_rid);
+        mxnet_op::Kernel<CastStorageRspDnsKernel, xpu>::Launch(s, num_rows, width, in_idx,
+                                                               in_data, out_data);
       }
     });
   });

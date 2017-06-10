@@ -571,7 +571,7 @@ def to_dense(source):
     """
     return ndarray.cast_storage(source, storage_type='default')
 
-def zeros(storage_type, shape, ctx=None, dtype=None, aux_types=None):
+def zeros(storage_type, shape, ctx=None, dtype=None, aux_types=None, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
 
     Parameters
@@ -599,6 +599,8 @@ def zeros(storage_type, shape, ctx=None, dtype=None, aux_types=None):
     >>> mx.sparse_nd.zeros('row_sparse', (1,2), mx.gpu(0), 'float16').asnumpy()
     array([[ 0.,  0.]], dtype=float16)
     """
+    if storage_type == 'default':
+        return ndarray.zeros(shape, ctx, dtype, **kwargs)
     if ctx is None:
         ctx = Context.default_ctx
     dtype = mx_real_t if dtype is None else dtype
@@ -609,7 +611,7 @@ def zeros(storage_type, shape, ctx=None, dtype=None, aux_types=None):
             raise Exception("unknown storage type")
     assert(len(aux_types) == len(_STORAGE_AUX_TYPES[storage_type]))
     out = _ndarray_cls(_new_alloc_handle(storage_type, shape, ctx, True, dtype, aux_types))
-    return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, out=out)
+    return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, out=out, **kwargs)
 
 def _ndarray_cls(handle, writable=True):
     stype = _storage_type(handle)

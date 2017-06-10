@@ -35,8 +35,8 @@ def compare_optimizer(opt1, opt2, shape, w_stype='default', g_stype='default'):
         w2 = mx.random.uniform(shape=shape, ctx=default_context())
         w1 = w2.copyto(default_context())
     elif w_stype == 'row_sparse':
-        w2 = rand_ndarray(shape, w_stype)
-        w1 = rand_ndarray(shape, w_stype).to_dense()
+        w2 = rand_ndarray(shape, w_stype, density=1)
+        w1 = w2.copyto(default_context()).to_dense()
     else:
         raise Exception("type not supported yet")
     if g_stype == 'default':
@@ -51,14 +51,20 @@ def compare_optimizer(opt1, opt2, shape, w_stype='default', g_stype='default'):
     state1 = opt1.create_state(0, w1)
     state2 = opt2.create_state(0, w2)
     if state1 is not None and state2 is not None:
-        for s1, s2, in zip(state1, state2):
-            assert(same(s1.asnumpy(), s2.asnumpy()))
+        if isinstance(state1, tuple):
+            for s1, s2, in zip(state1, state2):
+                assert(same(s1.asnumpy(), s2.asnumpy()))
+        else:
+            assert_almost_equal(state1.asnumpy(), state2.asnumpy())
 
     opt1.update(0, w1, g1, state1)
     opt2.update(0, w2, g2, state2)
     if state1 is not None and state2 is not None:
-        for s1, s2, in zip(state1, state2):
-            assert_almost_equal(s1.asnumpy(), s2.asnumpy(), rtol=1e-4, atol=1e-5)
+        if isinstance(state1, tuple):
+            for s1, s2, in zip(state1, state2):
+                assert_almost_equal(s1.asnumpy(), s2.asnumpy(), rtol=1e-4, atol=1e-5)
+        else:
+            assert_almost_equal(state1.asnumpy(), state2.asnumpy())
     assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=1e-4, atol=1e-5)
 
 # SGD
@@ -230,7 +236,7 @@ def test_sparse_sgd():
               {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03, 'momentum': 0.9},
               {'rescale_grad': 0.8, 'wd': 0.05, 'momentum': 0.9}]
     for kwarg in kwargs:
-        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, w_stype='default', g_stype='row_sparse')
+        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, w_stype='row_sparse', g_stype='row_sparse')
 
 # ADAM
 
