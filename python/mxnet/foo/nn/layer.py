@@ -6,7 +6,7 @@ from ... import symbol, ndarray
 from ...symbol import Symbol
 from ...ndarray import NDArray
 from ... import name as _name
-from ..parameter import Parameter, ParameterDict
+from ..parameter import Parameter, ParameterDict, DeferredInitializationError
 
 
 class _LayerScope(object):
@@ -134,13 +134,36 @@ class Layer(object):
         return self._scope
 
     def register_child(self, layer):
-        """Register layer as sublayer of self. Layers assigned to self as attributes
-        will be registered automatically."""
+        """Register layer as sublayer of self. Layers assigned to
+        self as attributes will be registered automatically."""
         self._children.append(layer)
 
-    def __call__(self, *args, **kwargs):
+    def infer_shape(self, *args):
+        """Infer parameter shape given input shapes.
+
+        *args : list of tuple
+            A list of input argument shapes.
+        """
+        inputs = [symbol.var('__input%d__'%i, shape=shape)
+                  for i, shape in enumerate(args)]
+        params = {k: v.var() for k, v in self._reg_params.items()}
+        sym = self.symbol_forward(*inputs, **params)
+        arg_shapes, _, aux_shapes = sym.infer_shape()
+        sdict = {name: shape for name, shape in zip(sym.list_arguments(), arg_shapes)}
+        sdict.update(
+            {name : shape for name, shape in zip(sym.list_auxiliary_states(), aux_shapes)})
+        for i in self.params.values():
+            i.shape = sdict[i.name]
+
+    def __call__(self, *args):
         """Call forward."""
-        return self.forward(*args, **kwargs)
+        try:
+            return self.forward(*args)  # pylint: disable= no-value-for-parameter
+        except DeferredInitializationError:
+            self.infer_shape(*[i.shape for i in args])
+            for i in self.params.values():
+                i._finish_deferred_init()
+            return self.forward(*args)  # pylint: disable= no-value-for-parameter
 
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either NDArray or Symbol."""
