@@ -236,6 +236,8 @@ Example::
 MXNET_OPERATOR_REGISTER_UNARY(ceil)
 .describe(R"code(Returns element-wise ceiling of the input.
 
+The ceil of the scalar x is the smallest integer i, such that i >= x.
+
 Example::
 
    ceil([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -1.,  2.,  2.,  3.]
@@ -246,6 +248,8 @@ Example::
 // floor
 MXNET_OPERATOR_REGISTER_UNARY(floor)
 .describe(R"code(Returns element-wise floor of the input.
+
+The floor of the scalar x is the largest integer i, such that i <= x.
 
 Example::
 
