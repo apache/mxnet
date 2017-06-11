@@ -18,10 +18,13 @@ using namespace mshadow::expr;
 /*!
  * \brief Computes Khatri-Rao product
  *
- * As MXNet matrices are row-major, this implementation computes
- * Khatri-Rao product row by row, rather than column by column.
- * E.g. if the input matrices are of shape (3, 2), (3, 4), (3, 5),
- * the result matrix will be of shape (3, 2 * 4 * 5), which is (3, 40).
+ * Given the transpose of input matrices, this function computes the
+ * transpose of the Khatri-Rao product of the input matrices.
+ *
+ * Effectively, this implementation computes the Khatri-Rao product
+ * row by row, rather than column by column. E.g. if the input matrices
+ * are of shape (3, 2), (3, 4), (3, 5), the result matrix will be of
+ * shape (3, 2 * 4 * 5), which is (3, 40).
  *
  * \param out result matrix
  * \param ts_arr vector of input matrices
@@ -114,10 +117,8 @@ inline void krprod
 /*!
  * \brief Convenience function for Khatri-Rao product for two input matrices
  *
- * As MXNet matrices are row-major, this implementation computes
- * Khatri-Rao product row by row, rather than column by column.
- * E.g. if the input matrices are of shape (3, 2), (3, 4), (3, 5),
- * the result matrix will be of shape (3, 2 * 4 * 5), which is (3, 40).
+ * Given the transpose of input matrices, this function computes the
+ * transpose of the Khatri-Rao product of the input matrices.
  *
  * \param out result matrix
  * \param in1 first input matrix
