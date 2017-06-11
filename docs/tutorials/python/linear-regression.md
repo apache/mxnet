@@ -4,6 +4,18 @@ In this tutorial we'll walk through how one can implement *linear regression* us
 
 The function we are trying to learn is: *y = x<sub>1</sub>  +  2x<sub>2</sub>*, where *(x<sub>1</sub>,x<sub>2</sub>)* are input features and *y* is the corresponding label.
 
+## Prerequisites
+
+To complete this tutorial, we need:  
+
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).  
+
+- [Jupyter Notebook](http://jupyter.org/index.html).
+
+```
+$ pip install jupyter
+```
+
 To begin, the following code imports the necessary packages we'll need for this exercise.
 
 ```python
