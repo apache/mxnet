@@ -251,7 +251,7 @@ class CompositeEvalMetric(EvalMetric):
             return ValueError("Metric index {} is out of range 0 and {}".format(
                 index, len(self.metrics)))
 
-    def update_dict(self, labels, preds):
+    def update_dict(self, labels, preds): # pylint: disable=arguments-differ
         if self.label_names is not None:
             labels = OrderedDict([i for i in labels.items()
                                   if i[0] in self.label_names])

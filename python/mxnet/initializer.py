@@ -640,7 +640,7 @@ class FusedRNN(Initializer):
         self._bidirectional = bidirectional
         self._forget_bias = forget_bias
 
-    def _init_weight(self, desc, arr):
+    def _init_weight(self, desc, arr): # pylint: disable=arguments-differ
         from .rnn import rnn_cell
         cell = rnn_cell.FusedRNNCell(self._num_hidden, self._num_layers,
                                      self._mode, self._bidirectional,
