@@ -217,8 +217,10 @@ void SparseEmbeddingForwardRspImpl(const nnvm::NodeAttrs& attrs,
     bool transpose_a = false;
     DotCsrRspDnsImpl<xpu>(ctx, data, weight, req, transpose_a, &out_blob);
   } else {
-    LOG(FATAL) << "SparseEmbedding for RowSparse weights is only implemented when "
-               << "weights.values.shape == weights.shape";
+    LOG(FATAL) << "SparseEmbedding for RowSparse weights is only implemented for "
+               << "RowSparse weights with all rows containing non-zeros. "
+               << "Expects weights.values.shape[0] (" << weight.storage_shape()[0]
+               << ") == weights.shape[0] (" << weight.shape()[0] << ").";
   }
 }
 

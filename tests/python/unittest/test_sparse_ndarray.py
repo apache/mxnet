@@ -272,6 +272,13 @@ def test_sparse_nd_output_fallback():
     mx.nd.random_normal(shape=shape, out=out)
     assert(np.sum(out.asnumpy()) != 0)
 
+def test_sparse_nd_astype():
+    stypes = ['row_sparse', 'csr']
+    for stype in stypes:
+        x = mx.sparse_nd.zeros(stype, rand_shape_2d(), dtype='float32')
+        y = x.astype('int32')
+        assert(y.dtype == np.int32), y.dtype
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

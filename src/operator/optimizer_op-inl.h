@@ -163,8 +163,10 @@ inline void SGDUpdateRspRspImpl(const SGDParam& param,
     TBlob out_blob = out->data();
     SGDUpdateDnsRspImpl<xpu>(param, ctx, weight.data(), grad, out_req, &out_blob);
   } else {
-    LOG(FATAL) << "SGDUpdate for RowSparse weights is only implemented when "
-               << "weights.values.shape == weights.shape";
+    LOG(FATAL) << "SGDUpdate for RowSparse weights is only implemented for "
+               << "RowSparse weights with all rows containing non-zeros. "
+               << "Expects weights.values.shape[0] (" << weight.storage_shape()[0]
+               << ") == weights.shape[0] (" << weight.shape()[0] << ").";
   }
 }
 
@@ -360,8 +362,10 @@ inline void SGDMomUpdateRspRspRspImpl(const SGDMomParam& param,
     SGDMomUpdateDnsRspDnsImpl<xpu>(param, ctx, weight.data(), grad,
                                    mom.data(), out_req, &out_blob);
   } else {
-    LOG(FATAL) << "SGDUpdate for RowSparse weights is only implemented when "
-               << "weights.values.shape == weights.shape";
+    LOG(FATAL) << "SGDUpdate for RowSparse weights is only implemented for "
+               << "RowSparse weights with all rows containing non-zeros. "
+               << "Expects weights.values.shape[0] (" << weight.storage_shape()[0]
+               << ") == weights.shape[0] (" << weight.shape()[0] << ").";
   }
 }
 

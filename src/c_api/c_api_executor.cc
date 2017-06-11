@@ -235,7 +235,7 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
 
   // attr_dict for setting up type_dict and arg/aux ctx
   std::unordered_map<std::string, std::unordered_map<std::string, std::string>> attr_dict;
-  if (nullptr == provided_arg_dtypes || nullptr != g2c_keys) {
+  if (nullptr == provided_arg_dtypes || nullptr != g2c_keys || nullptr == provided_arg_stypes) {
     std::vector<std::tuple<std::string, std::string, std::string>> attrs =
       sym->ListAttrsRecursive();
     attr_dict.reserve(attrs.size());

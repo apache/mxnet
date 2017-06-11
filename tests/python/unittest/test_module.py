@@ -442,6 +442,31 @@ def test_module_fm():
         # print('Epoch %d, Training %s' % (epoch, metric.get()))
     assert(metric.get()[1] < 0.2)
 
+def test_module_initializer():
+    def regression_model(m):
+         x = mx.symbol.var("data", storage_type='csr')
+         v = mx.symbol.var("v", shape=(m, 1), init=mx.init.Uniform(scale=.1),
+                                storage_type='row_sparse')
+         model = mx.symbol.dot(lhs=x, rhs=v)
+         y = mx.symbol.Variable("label")
+         model = mx.symbol.LinearRegressionOutput(data=model, label=y, name="out")
+         return model
+
+    n, m = 128, 100
+    model = regression_model(m)
+
+    data = mx.sparse_nd.zeros('csr', (n, m))
+    label = mx.nd.zeros((n, 1))
+    iterator = mx.io.NDArrayIter(data=data, label={'label':label}, batch_size=n)
+
+    # create module
+    mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['label'])
+    mod.bind(data_shapes=iterator.provide_data, label_shapes=iterator.provide_label)
+    mod.init_params()
+    v = mod._arg_params['v']
+    assert(v.storage_type == 'row_sparse')
+    assert(np.sum(v.asnumpy()) != 0)
+
 if __name__ == '__main__':
     test_module_dtype()
     test_module_input_grads()
@@ -453,3 +478,4 @@ if __name__ == '__main__':
     test_monitor()
     test_executor_group()
     test_module_fm()
+    test_module_initializer()

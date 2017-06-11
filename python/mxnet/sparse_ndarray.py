@@ -329,7 +329,22 @@ for more details.
         return self.to_dense().asnumpy()
 
     def astype(self, dtype):
-        raise Exception('Not implemented for SparseND yet!')
+        """Returns a copy of the array after casting to a specified type.
+        Parameters
+        ----------
+        dtype : numpy.dtype or str
+            The type of the returned array.
+        Examples
+        --------
+        >>> x = mx.sparse_nd.zeros('row_sparse', (2,3), dtype='float32')
+        >>> y = x.astype('int32')
+        >>> y.dtype
+        <type 'numpy.int32'>
+        """
+        res = zeros(self.storage_type, self.shape, ctx=self.context, dtype=dtype)
+        self.copyto(res)
+        return res
+
 
     def copyto(self, other):
         """Copies the value of this array to another array.
