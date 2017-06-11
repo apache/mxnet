@@ -2375,14 +2375,14 @@ def %s(%s):
     keys = list(kwargs.keys())
     vals = list(kwargs.values())"""%(func_name, ', '.join(signature)))
         # NDArray args
-        for name in ndarg_names:
+        for name in ndarg_names: # pylint: disable=redefined-argument-from-local
             code.append("""
     if {name} is not None:
         assert isinstance({name}, NDArrayBase), \\
             "Argument {name} must have NDArray type, but got %s"%str({name})
         ndargs.append({name})""".format(name=name))
         # kwargs
-        for name in kwarg_names:
+        for name in kwarg_names: # pylint: disable=redefined-argument-from-local
             code.append("""
     if %s is not _Null:
         keys.append('%s')
