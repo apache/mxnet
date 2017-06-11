@@ -316,6 +316,12 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   ret[param.axis] = 1;
   for (index_t i = param.axis+1; i < ret.ndim(); ++i) ret[i] = shp[i-1];
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, ret);
+
+  TShape& oshape = (*out_attrs)[0];
+  ret = TShape(oshape.ndim() - 1);
+  for (index_t i = 0; i < param.axis; ++i) ret[i] = oshape[i];
+  for (index_t i = param.axis+1; i < oshape.ndim(); ++i) ret[i-1] = oshape[i];
+  SHAPE_ASSIGN_CHECK(*in_attrs, 0, ret);
   return true;
 }
 
