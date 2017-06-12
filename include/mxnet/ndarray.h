@@ -338,6 +338,12 @@ class NDArray {
    */
   void Save(dmlc::Stream *strm) const;
   /*!
+   * \brief load ndarrays before supporting sparse ndarrays
+   * \param strm the output stream
+   * \param magic the magic number used for version control
+   */
+  bool LegacyLoad(dmlc::Stream *strm, const uint32_t magic);
+  /*!
    * \brief load the content from binary stream
    * \param strm the output stream
    * \return whether the load is successful

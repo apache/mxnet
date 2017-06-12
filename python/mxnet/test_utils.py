@@ -103,6 +103,7 @@ def rand_sparse_ndarray(shape, storage_type, density=None):
     else:
         assert(False), "unknown storage type"
 
+
 def rand_ndarray(shape, storage_type, density=None):
     if storage_type == 'default':
         arr = mx.nd.array(random_arrays(shape))
@@ -110,8 +111,10 @@ def rand_ndarray(shape, storage_type, density=None):
         arr, _ = rand_sparse_ndarray(shape, storage_type, density=density)
     return arr
 
-def rand_shape_2d():
-    return (rnd.randint(1, 10), rnd.randint(1, 10))
+
+def rand_shape_2d(dim0=10, dim1=10):
+    return rnd.randint(1, dim0), rnd.randint(1, dim1)
+
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
     """Compatible reduce for old version of NumPy.

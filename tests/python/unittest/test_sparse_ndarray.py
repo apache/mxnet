@@ -1,18 +1,22 @@
-import os
-import mxnet as mx
-import numpy as np
 import pickle as pkl
+
+from mxnet.ndarray import NDArray
 from mxnet.test_utils import *
 from numpy.testing import assert_allclose
 import numpy.random as rnd
+
+from mxnet.sparse_ndarray import RowSparseNDArray, CSRNDArray, _ndarray_cls
+
 
 def assert_fcompex(f, *args, **kwargs):
     prev_val = mx.test_utils.set_env_var("MXNET_EXEC_STORAGE_FALLBACK", "0", "1")
     f(*args, **kwargs)
     mx.test_utils.set_env_var("MXNET_EXEC_STORAGE_FALLBACK", prev_val)
 
+
 def sparse_nd_ones(shape, stype):
     return mx.nd.cast_storage(mx.nd.ones(shape), storage_type=stype)
+
 
 def check_sparse_nd_elemwise_binary(shapes, storage_types, f, g):
     # generate inputs
@@ -29,6 +33,7 @@ def check_sparse_nd_elemwise_binary(shapes, storage_types, f, g):
     test = f(nds[0], nds[1])
     assert_almost_equal(test.asnumpy(), g(nds[0].asnumpy(), nds[1].asnumpy()))
 
+
 def test_sparse_nd_elemwise_add():
     num_repeats = 10
     g = lambda x,y: x + y
@@ -42,6 +47,7 @@ def test_sparse_nd_elemwise_add():
         assert_fcompex(check_sparse_nd_elemwise_binary,
                        shape, ['row_sparse', 'row_sparse'], op, g)
 
+
 # Test a operator which doesn't implement FComputeEx
 def test_sparse_nd_elementwise_fallback():
     num_repeats = 10
@@ -52,6 +58,7 @@ def test_sparse_nd_elementwise_fallback():
         check_sparse_nd_elemwise_binary(shape, ['default'] * 2, op, g)
         check_sparse_nd_elemwise_binary(shape, ['default', 'row_sparse'], op, g)
         check_sparse_nd_elemwise_binary(shape, ['row_sparse', 'row_sparse'], op, g)
+
 
 def test_sparse_nd_zeros():
     def check_sparse_nd_zeros(stype, shape):
@@ -82,6 +89,7 @@ def test_sparse_nd_copy():
     check_sparse_nd_copy('default', 'row_sparse')
     check_sparse_nd_copy('default', 'csr')
 
+
 def check_sparse_nd_prop_rsp():
     storage_type = 'row_sparse'
     shape = rand_shape_2d()
@@ -90,6 +98,7 @@ def check_sparse_nd_prop_rsp():
     assert(nd.indices.dtype == np.int32)
     assert(nd.storage_type == 'row_sparse')
     assert_almost_equal(nd.indices.asnumpy(), idx)
+
 
 def test_sparse_nd_basic():
     def check_rsp_creation(values, indices, shape):
@@ -123,6 +132,7 @@ def test_sparse_nd_basic():
     check_csr_creation(shape)
     check_sparse_nd_prop_rsp()
 
+
 def test_sparse_nd_setitem():
     def check_sparse_nd_setitem(storage_type, shape, dst):
         x = mx.sparse_nd.zeros(storage_type, shape)
@@ -138,6 +148,7 @@ def test_sparse_nd_setitem():
         # numpy assignment
         check_sparse_nd_setitem(stype, shape, np.ones(shape))
 
+
 def test_sparse_nd_slice():
     def check_sparse_nd_csr_slice(shape):
         storage_type = 'csr'
@@ -150,6 +161,7 @@ def test_sparse_nd_slice():
     shape = (rnd.randint(2, 10), rnd.randint(1, 10))
     check_sparse_nd_csr_slice(shape)
 
+
 def test_sparse_nd_equal():
     stype = 'csr'
     shape = rand_shape_2d()
@@ -160,6 +172,7 @@ def test_sparse_nd_equal():
     z = 0 == x
     assert (z.asnumpy() == np.ones(shape)).all()
 
+
 def test_sparse_nd_not_equal():
     stype = 'csr'
     shape = rand_shape_2d()
@@ -169,6 +182,7 @@ def test_sparse_nd_not_equal():
     assert (z.asnumpy() == np.ones(shape)).all()
     z = 0 != x
     assert (z.asnumpy() == np.zeros(shape)).all()
+
 
 def test_sparse_nd_greater():
     stype = 'csr'
@@ -181,6 +195,7 @@ def test_sparse_nd_greater():
     assert (z.asnumpy() == np.ones(shape)).all()
     z = 0 > y
     assert (z.asnumpy() == np.zeros(shape)).all()
+
 
 def test_sparse_nd_greater_equal():
     stype = 'csr'
@@ -196,6 +211,7 @@ def test_sparse_nd_greater_equal():
     z = y >= 1
     assert (z.asnumpy() == np.ones(shape)).all()
 
+
 def test_sparse_nd_lesser():
     stype = 'csr'
     shape = rand_shape_2d()
@@ -207,6 +223,7 @@ def test_sparse_nd_lesser():
     assert (z.asnumpy() == np.ones(shape)).all()
     z = y < 0
     assert (z.asnumpy() == np.zeros(shape)).all()
+
 
 def test_sparse_nd_lesser_equal():
     stype = 'csr'
@@ -221,6 +238,7 @@ def test_sparse_nd_lesser_equal():
     assert (z.asnumpy() == np.zeros(shape)).all()
     z = 1 <= y
     assert (z.asnumpy() == np.ones(shape)).all()
+
 
 def test_sparse_nd_binary():
     N = 100
@@ -255,6 +273,7 @@ def test_sparse_nd_binary():
     check_binary(lambda x, y: x <= y)
     check_binary(lambda x, y: x == y)
 
+
 def test_sparse_nd_negate():
     npy = np.random.uniform(-10, 10, rand_shape_2d())
     arr = mx.nd.array(npy).to_csr()
@@ -266,11 +285,13 @@ def test_sparse_nd_negate():
     # we compute (-arr)
     assert_almost_equal(npy, arr.asnumpy())
 
+
 def test_sparse_nd_output_fallback():
     shape = (10, 10)
     out = mx.sparse_nd.zeros('row_sparse', shape)
     mx.nd.random_normal(shape=shape, out=out)
     assert(np.sum(out.asnumpy()) != 0)
+
 
 def test_sparse_nd_astype():
     stypes = ['row_sparse', 'csr']
@@ -278,6 +299,102 @@ def test_sparse_nd_astype():
         x = mx.sparse_nd.zeros(stype, rand_shape_2d(), dtype='float32')
         y = x.astype('int32')
         assert(y.dtype == np.int32), y.dtype
+
+
+def test_sparse_ndarray_pickle():
+    np.random.seed(0)
+    repeat = 10
+    dim0 = 40
+    dim1 = 40
+    stypes = ['row_sparse', 'csr']
+    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    stype_dict = {'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
+    for _ in range(repeat):
+        shape = rand_shape_2d(dim0, dim1)
+        for stype in stypes:
+            for density in densities:
+                a, _ = rand_sparse_ndarray(shape, stype, density)
+                assert isinstance(a, stype_dict[stype])
+                data = pkl.dumps(a)
+                b = pkl.loads(data)
+                assert isinstance(b, stype_dict[stype])
+                assert same(a.asnumpy(), b.asnumpy())
+
+
+def test_sparse_ndarray_save_load():
+    # TODO(junwu): This function is a duplicate of mx.nd.load
+    # which must be modified to use _ndarray_cls to generate
+    # dense/sparse ndarrays. However, a circular import issue
+    # arises when _ndarray_cls is used in mx.nd.load since
+    # ndarray.py and sparse_ndarray.py would import each other.
+    # We propose to put _ndarray_cls and all the functions calling
+    # it in ndarray.py and sparse_ndarray.py into a util file
+    # to resolve the circular import issue. This function will be
+    # kept till then.
+    def load(fname):
+        """Loads an array from file.
+        See more details in ``save``.
+        Parameters
+        ----------
+        fname : str
+            The filename.
+        Returns
+        -------
+        list of NDArray or dict of str to NDArray
+            Loaded data.
+        """
+        from mxnet.base import string_types, mx_uint, NDArrayHandle, check_call, c_str, _LIB
+        if not isinstance(fname, string_types):
+            raise TypeError('fname required to be a string')
+        out_size = mx_uint()
+        out_name_size = mx_uint()
+        import ctypes
+        handles = ctypes.POINTER(NDArrayHandle)()
+        names = ctypes.POINTER(ctypes.c_char_p)()
+        check_call(_LIB.MXNDArrayLoad(c_str(fname),
+                                      ctypes.byref(out_size),
+                                      ctypes.byref(handles),
+                                      ctypes.byref(out_name_size),
+                                      ctypes.byref(names)))
+        if out_name_size.value == 0:
+            return [_ndarray_cls(NDArrayHandle(handles[i])) for i in range(out_size.value)]
+        else:
+            assert out_name_size.value == out_size.value
+            from mxnet.base import py_str
+            return dict(
+                (py_str(names[i]), _ndarray_cls(NDArrayHandle(handles[i]))) for i in range(out_size.value))
+
+    np.random.seed(0)
+    repeat = 1
+    stypes = ['default', 'row_sparse', 'csr']
+    stype_dict = {'default': NDArray, 'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
+    num_data = 20
+    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    fname = 'tmp_list.bin'
+    for _ in range(repeat):
+        data_list1 = []
+        for i in range(num_data):
+            stype = stypes[np.random.randint(0, len(stypes))]
+            shape = rand_shape_2d(dim0=40, dim1=40)
+            density = densities[np.random.randint(0, len(densities))]
+            data_list1.append(rand_ndarray(shape, stype, density))
+            assert isinstance(data_list1[-1], stype_dict[stype])
+        mx.nd.save(fname, data_list1)
+
+        data_list2 = load(fname)
+        assert len(data_list1) == len(data_list2)
+        for x, y in zip(data_list1, data_list2):
+            assert same(x.asnumpy(), y.asnumpy())
+
+        data_map1 = {'ndarray xx %s' % i: x for i, x in enumerate(data_list1)}
+        mx.nd.save(fname, data_map1)
+        data_map2 = load(fname)
+        assert len(data_map1) == len(data_map2)
+        for k, x in data_map1.items():
+            y = data_map2[k]
+            assert same(x.asnumpy(), y.asnumpy())
+    os.remove(fname)
+
 
 if __name__ == '__main__':
     import nose

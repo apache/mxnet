@@ -695,34 +695,76 @@ NDArray &NDArray::operator/=(const real_t &src) {
 /* magic number for ndarray version 1, with int64_t TShape */
 static const uint32_t NDARRAY_V1_MAGIC = 0xF993fac8;
 
+/* magic number for ndarray version 2, with storage type */
+static const uint32_t NDARRAY_V2_MAGIC = 0xF993fac9;
+
 void NDArray::Save(dmlc::Stream *strm) const {
-  strm->Write(NDARRAY_V1_MAGIC);
+  // write magic number to mark this version
+  // for storage type
+  strm->Write(NDARRAY_V2_MAGIC);
+
+  // save storage type
+  int32_t stype = storage_type();
+  strm->Write(&stype, sizeof(stype));
+
+  const int32_t num_aux_data = NumAuxData(storage_type());
+  // save storage shape if ndarray is sparse
+  if (num_aux_data > 0) {
+    storage_shape().Save(strm);
+  }
+
+  // save shape
   shape_.Save(strm);
   if (is_none()) return;
+
   // save context
   Context ctx = this->ctx();
   ctx.Save(strm);
   TBlob save_data;
-  NDArray temp;
+  NDArray nd_cpu;  // a copy of *this on cpu
   if (ctx.dev_mask() != cpu::kDevMask) {
-    temp = this->Copy(Context::CPU());
-    temp.WaitToRead();
-    save_data = temp.data();
+    nd_cpu = this->Copy(Context::CPU());
+    nd_cpu.WaitToRead();
+    save_data = nd_cpu.data();
   } else {
     this->WaitToRead();
     save_data = this->data();
+    nd_cpu = *this;
   }
+
   // save type flag
   int32_t type_flag = save_data.type_flag_;
   strm->Write(&type_flag, sizeof(type_flag));
+
+  // save aux_types and aux_shapes
+  if (num_aux_data > 0) {
+    for (int i = 0; i < num_aux_data; ++i) {
+      int32_t aux_type_flag = aux_type(i);
+      strm->Write(&aux_type_flag, sizeof(aux_type_flag));
+      aux_shape(i).Save(strm);
+    }
+  }
+
+  // save data
   CHECK(save_data.CheckContiguous());
   size_t type_size = mshadow::mshadow_sizeof(type_flag);
-  strm->Write(save_data.dptr_, type_size * shape_.Size());
+  // save data could be values of sparse tensors
+  // must use save_data.shape_ instead of this->shape_
+  strm->Write(save_data.dptr_, type_size * save_data.shape_.Size());
+
+  // save aux data
+  if (num_aux_data > 0) {
+    for (int i = 0; i < num_aux_data; ++i) {
+      TBlob save_data = nd_cpu.aux_data(i);
+      // save aux_data
+      CHECK(save_data.CheckContiguous());
+      size_t aux_type_size = mshadow::mshadow_sizeof(aux_type(i));
+      strm->Write(save_data.dptr_, aux_type_size * save_data.Size());
+    }
+  }
 }
 
-bool LegacyTShapeLoad(dmlc::Stream *strm, TShape *shape) {
-  uint32_t magic;
-  if (strm->Read(&magic, sizeof(uint32_t)) != sizeof(uint32_t)) return false;
+bool LegacyTShapeLoad(dmlc::Stream *strm, TShape *shape, const uint32_t magic) {
   switch (magic) {
     case NDARRAY_V1_MAGIC:
       return shape->Load(strm);
@@ -738,10 +780,10 @@ bool LegacyTShapeLoad(dmlc::Stream *strm, TShape *shape) {
   }
 }
 
-bool NDArray::Load(dmlc::Stream *strm) {
+bool NDArray::LegacyLoad(dmlc::Stream *strm, const uint32_t magic) {
   // load shape
   TShape shape;
-  if (!LegacyTShapeLoad(strm, &shape)) return false;
+  if (!LegacyTShapeLoad(strm, &shape, magic)) return false;
   if (shape.ndim() == 0) {
     *this = NDArray(); return true;
   }
@@ -769,6 +811,88 @@ bool NDArray::Load(dmlc::Stream *strm) {
   }
 }
 
+bool NDArray::Load(dmlc::Stream *strm) {
+  uint32_t magic;
+  if (strm->Read(&magic, sizeof(uint32_t)) != sizeof(uint32_t)) return false;
+  if (magic != NDARRAY_V2_MAGIC) {
+    return LegacyLoad(strm, magic);
+  }
+
+  // load storage type
+  int32_t stype;
+  if (strm->Read(&stype, sizeof(stype)) != sizeof(stype)) return false;
+  const int32_t num_aux_data = NumAuxData(static_cast<NDArrayStorageType>(stype));
+
+  // load storage shape
+  TShape sshape;
+  if (num_aux_data > 0) {
+    if (!sshape.Load(strm)) return false;
+  }
+
+  // load shape
+  TShape shape;
+  if (!shape.Load(strm)) return false;
+  if (shape.ndim() == 0) {
+    *this = NDArray(); return true;
+  }
+
+  // load context
+  Context ctx;
+  if (!ctx.Load(strm)) return false;
+
+  // load type flag
+  int32_t type_flag;
+  if (strm->Read(&type_flag, sizeof(type_flag)) != sizeof(type_flag)) return false;
+
+  // load aux_types and aux_shapes
+  std::vector<int32_t> aux_types;
+  std::vector<TShape> aux_shapes;
+  if (num_aux_data > 0) {
+    aux_types.resize(num_aux_data);
+    aux_shapes.resize(num_aux_data);
+    for (int i = 0; i < num_aux_data; ++i) {
+      // load aux_type(i)
+      if (strm->Read(&aux_types[i], sizeof(aux_types[i])) != sizeof(aux_types[i])) return false;
+      // load aux_shapes(i)
+      if (!aux_shapes[i].Load(strm)) return false;
+    }
+  }
+
+  // load data into CPU
+  NDArray temp;
+  if (0 == num_aux_data) {
+    temp = NDArray(shape, Context::CPU(), false, type_flag);
+  } else {
+    temp = NDArray(static_cast<NDArrayStorageType>(stype), shape,
+                   Context::CPU(), false, type_flag,
+                   aux_types, aux_shapes, sshape);
+  }
+  // load data
+  TBlob load_data = temp.data();
+  size_t type_size = mshadow::mshadow_sizeof(type_flag);
+  size_t nread = type_size * load_data.Size();
+  if (strm->Read(load_data.dptr_, nread) != nread) return false;
+
+  // load aux_data
+  if (num_aux_data > 0) {
+    for (int i = 0; i < num_aux_data; ++i) {
+      load_data = temp.aux_data(i);
+      type_size = mshadow::mshadow_sizeof(load_data.type_flag_);
+      nread = type_size * load_data.Size();
+      if (strm->Read(load_data.dptr_, nread) != nread) return false;
+    }
+  }
+
+  if (ctx.dev_mask() == cpu::kDevMask) {
+    *this = std::move(temp); return true;
+  } else {
+#if MXNET_USE_CUDA
+    *this = temp.Copy(ctx); return true;
+#else
+    *this = std::move(temp); return true;
+#endif
+  }
+}
 
 const uint64_t kMXAPINDArrayListMagic = 0x112;
 

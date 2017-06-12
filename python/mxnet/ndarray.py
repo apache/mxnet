@@ -128,6 +128,7 @@ fixed-size items.
     """
     __slots__ = []
     # pylint: disable= no-member, undefined-variable
+
     def __repr__(self):
         """Returns a string representation of the array."""
         shape_info = 'x'.join(['%d' % x for x in self.shape])
@@ -135,7 +136,7 @@ fixed-size items.
                                 shape_info, self.context)
 
     def __reduce__(self):
-        return (NDArray, (None,), self.__getstate__())
+        return NDArray, (None,), self.__getstate__()
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """

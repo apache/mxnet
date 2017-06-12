@@ -46,6 +46,7 @@ _STORAGE_AUX_TYPES = {
     'csr': [np.int32, np.int32]
 }
 
+
 def _new_alloc_handle(storage_type, shape, ctx, delay_alloc, dtype, aux_types, aux_shapes=None):
     """Return a new handle with specified storage type, shape, dtype and context.
 
@@ -77,17 +78,12 @@ def _new_alloc_handle(storage_type, shape, ctx, delay_alloc, dtype, aux_types, a
         ctypes.byref(hdl)))
     return hdl
 
+
 class SparseNDArray(NDArray):
     """An array object representing a multidimensional, homogeneous array of
-fixed-size items, stored in sparse format. See CSRNDArray and RowSparseNDArray
-for more details.
-
+    fixed-size items, stored in sparse format. See CSRNDArray and RowSparseNDArray
+    for more details.
     """
-
-    def __reduce__(self):
-        raise Exception('Not implemented for SparseND yet!')
-    #    return SparseNDArray, (None,), self.__getstate__()
-
     def __add__(self, other):
         raise Exception('Not implemented for SparseND yet!')
 
@@ -125,12 +121,6 @@ for more details.
         raise Exception('Not implemented for SparseND yet!')
 
     def __rpow__(self, other):
-        raise Exception('Not implemented for SparseND yet!')
-
-    def __getstate__(self):
-        raise Exception('Not implemented for SparseND yet!')
-
-    def __setstate__(self, state):
         raise Exception('Not implemented for SparseND yet!')
 
     def __setitem__(self, key, value):
@@ -398,6 +388,7 @@ for more details.
         check_call(_LIB.MXNDArrayGetDataNDArray(self.handle, ctypes.byref(hdl)))
         return NDArray(hdl, writable)
 
+
 class CSRNDArray(SparseNDArray):
     """A CSRNDArray represents a NDArray as three separate arrays: `values`,
     `indptr` and `indices`. It uses the standard CSR representation where the column indices for
@@ -405,6 +396,8 @@ class CSRNDArray(SparseNDArray):
     in values[indptr[i]:indptr[i+1]].
 
     """
+    def __reduce__(self):
+        return CSRNDArray, (None,), super(SparseNDArray, self).__getstate__()
 
     @property
     def indices(self):
@@ -431,6 +424,7 @@ class CSRNDArray(SparseNDArray):
         """
         return self._aux_data(0)
 
+
 class RowSparseNDArray(SparseNDArray):
     """A RowSparseNDArray is typically used to represent a subset of a larger
     NDArray  with `default` of shape [LARGE0, D1, .. , DN] where LARGE0 >> D0. The values
@@ -445,6 +439,8 @@ class RowSparseNDArray(SparseNDArray):
     RowSparseNDArray is used principally in the definition of gradients for operations
     that have sparse gradients (e.g. SparseEmbedding).
     """
+    def __reduce__(self):
+        return RowSparseNDArray, (None,), super(SparseNDArray, self).__getstate__()
 
     @property
     def indices(self):
