@@ -31,15 +31,19 @@ from .ndarray_doc import _build_doc
 # pylint: disable=unused-import
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from ._ctypes.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke
+        from ._ctypes.ndarray import NDArrayBase, _set_ndarray_class
+        from ._ctypes.ndarray import invoke, CachedOp, _imperative_invoke
     elif _sys.version_info >= (3, 0):
         from ._cy3.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke
+        from ._cy3.ndarray import invoke, CachedOp, _imperative_invoke
     else:
         from ._cy2.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke
+        from ._cy2.ndarray import invoke, CachedOp, _imperative_invoke
 except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from ._ctypes.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke
+    from ._ctypes.ndarray import invoke, CachedOp, _imperative_invoke
 # pylint: enable=unused-import
 
 # pylint: disable= no-member
@@ -749,6 +753,24 @@ fixed-size items.
         return transpose(self)
     # pylint: enable= invalid-name, undefined-variable
 
+    @property
+    def _fresh_grad(self):
+        """Whether this array's corresponding gradient array
+        (registered via `autograd.mark_variables`) has been
+        updated by `autograd.backward` since last reset.
+
+        `_fresh_grad` need to be manually set to False
+        after consuming gradient (usually after updating this
+        array).
+        """
+        out = ctypes.c_int()
+        check_call(_LIB.MXNDArrayGetGradState(self.handle, ctypes.byref(out)))
+        return out.value
+
+    @_fresh_grad.setter
+    def _fresh_grad(self, state):
+        check_call(_LIB.MXNDArraySetGradState(self.handle, ctypes.c_int(state)))
+
     def asnumpy(self):
         """Returns a ``numpy.ndarray`` object with value copied from this array.
 
@@ -910,7 +932,7 @@ fixed-size items.
         check_call(_LIB.MXNDArrayDetach(self.handle, ctypes.byref(hdl)))
         return NDArray(hdl)
 
-    def backward(self, out_grad=None):
+    def backward(self, out_grad=None, retain_graph=False):
         """Compute the gradients of this NDArray w.r.t variables.
 
         Parameters
@@ -924,7 +946,8 @@ fixed-size items.
 
         check_call(_LIB.MXAutogradBackward(
             1, c_array(NDArrayHandle, [self.handle]),
-            c_array(NDArrayHandle, ograd_handles)))
+            c_array(NDArrayHandle, ograd_handles),
+            ctypes.c_int(retain_graph)))
 
 
 def onehot_encode(indices, out):
@@ -981,6 +1004,8 @@ def zeros(shape, ctx=None, dtype=mx_real_t, **kwargs):
         An optional device context (default is the current default context).
     dtype : str or numpy.dtype, optional
         An optional value type (default is `float32`).
+    out : NDArray, optional
+        The output NDArray (default is `None`).
 
     Returns
     -------
@@ -1000,7 +1025,7 @@ def zeros(shape, ctx=None, dtype=mx_real_t, **kwargs):
     if ctx is None:
         ctx = Context.default_ctx
     # pylint: disable= no-member, protected-access
-    return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype)
+    return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
     # pylint: enable= no-member, protected-access
 
 def ones(shape, ctx=None, dtype=mx_real_t, **kwargs):
@@ -1015,6 +1040,8 @@ def ones(shape, ctx=None, dtype=mx_real_t, **kwargs):
         Defaults to the current default context (``mxnet.Context.default_ctx``).
     dtype : str or numpy.dtype, optional
         An optional value type (default is `float32`).
+    out : NDArray, optional
+        The output NDArray (default is `None`).
 
     Returns
     -------
@@ -1034,10 +1061,10 @@ def ones(shape, ctx=None, dtype=mx_real_t, **kwargs):
     if ctx is None:
         ctx = Context.default_ctx
     # pylint: disable= no-member, protected-access
-    return _internal._ones(shape=shape, ctx=ctx, dtype=dtype)
+    return _internal._ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
     # pylint: enable= no-member, protected-access
 
-def full(shape, val, ctx=None, dtype=mx_real_t):
+def full(shape, val, ctx=None, dtype=mx_real_t, out=None):
     """Returns a new array of given shape and type, filled with the given value `val`.
 
     Parameters
@@ -1050,6 +1077,8 @@ def full(shape, val, ctx=None, dtype=mx_real_t):
         Device context (default is the current default context).
     dtype : `str` or `numpy.dtype`, optional
         The data type of the returned `NDArray`. The default datatype is `float32`.
+    out : NDArray, optional
+        The output NDArray (default is `None`).
 
     Returns
     -------
@@ -1065,9 +1094,9 @@ def full(shape, val, ctx=None, dtype=mx_real_t):
     >>> mx.nd.full((1, 2), 2.0, dtype='float16').asnumpy()
     array([[ 2.,  2.]], dtype=float16)
     """
-    arr = empty(shape, ctx, dtype)
-    arr[:] = val
-    return arr
+    out = empty(shape, ctx, dtype) if out is None else out
+    out[:] = val
+    return out
 
 
 def array(source_array, ctx=None, dtype=None):
@@ -2327,7 +2356,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
     for i in {}:
         assert isinstance(i, NDArrayBase), \\
             "Positional arguments must have NDArray type, " \\
-            "but got %s"%str(type(i))
+            "but got %s"%str(i)
         ndargs.append(i)""".format(arr_name))
         if dtype_name is not None:
             code.append("""
@@ -2335,10 +2364,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
         kwargs['%s'] = np.dtype(kwargs['%s']).name"""%(
             dtype_name, dtype_name, dtype_name))
         code.append("""
-    try:
-        kwargs.pop('name')
-    except:
-        pass
+    _ = kwargs.pop('name', None)
     out = kwargs.pop('out', None)
     keys = list(kwargs.keys())
     vals = list(kwargs.values())""")
@@ -2349,14 +2375,14 @@ def %s(%s):
     keys = list(kwargs.keys())
     vals = list(kwargs.values())"""%(func_name, ', '.join(signature)))
         # NDArray args
-        for name in ndarg_names:
+        for name in ndarg_names: # pylint: disable=redefined-argument-from-local
             code.append("""
     if {name} is not None:
         assert isinstance({name}, NDArrayBase), \\
-            "Argument {name} must have NDArray type, but got %s"%str(type({name}))
+            "Argument {name} must have NDArray type, but got %s"%str({name})
         ndargs.append({name})""".format(name=name))
         # kwargs
-        for name in kwarg_names:
+        for name in kwarg_names: # pylint: disable=redefined-argument-from-local
             code.append("""
     if %s is not _Null:
         keys.append('%s')

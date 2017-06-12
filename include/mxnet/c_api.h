@@ -48,6 +48,8 @@ typedef void *NDArrayHandle;
 typedef const void *FunctionHandle;
 /*! \brief handle to a function that takes param and creates symbol */
 typedef void *AtomicSymbolCreator;
+/*! \brief handle to cached operator */
+typedef void *CachedOpHandle;
 /*! \brief handle to a symbol that can be bind as operator */
 typedef void *SymbolHandle;
 /*! \brief handle to a AtomicSymbol */
@@ -390,7 +392,7 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
                                 const mx_uint **out_pdata);
 /*!
  * \brief get the content of the data in NDArray
- * \param handle the handle to the narray
+ * \param handle the handle to the ndarray
  * \param out_pdata pointer holder to get pointer of data
  * \return 0 when success, -1 when failure happens
  */
@@ -414,6 +416,26 @@ MXNET_DLL int MXNDArrayGetDType(NDArrayHandle handle,
 MXNET_DLL int MXNDArrayGetContext(NDArrayHandle handle,
                                   int *out_dev_type,
                                   int *out_dev_id);
+/*!
+ * \brief detach and ndarray from computation graph by clearing entry_
+ * \param handle NDArray handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayDetach(NDArrayHandle handle, NDArrayHandle *out);
+/*!
+ * \brief set the flag for gradient array state.
+ * \param handle NDArray handle
+ * \param state the new state.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArraySetGradState(NDArrayHandle handle, int state);
+/*!
+ * \brief set the flag for gradient array state.
+ * \param handle NDArray handle
+ * \param state the new state.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayGetGradState(NDArrayHandle handle, int *out);
 //--------------------------------
 // Part 2: functions on NDArray
 //--------------------------------
@@ -548,6 +570,39 @@ MXNET_DLL int MXAutogradMarkVariables(mx_uint num_var,
  */
 MXNET_DLL int MXAutogradComputeGradient(mx_uint num_output,
                                         NDArrayHandle* output_handles);
+/*!
+ * \brief compute the gradient of outputs w.r.t variabels
+ * \param num_output number of output NDArray
+ * \param output_handles output NDArrays
+ * \param ograd_handles head gradient for NDArrays
+ * \param retain_graph whether to keep the graph after backward
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXAutogradBackward(mx_uint num_output,
+                                 NDArrayHandle* output_handles,
+                                 NDArrayHandle* ograd_handles,
+                                 int retain_graph);
+/*!
+ * \brief create cached operator
+ */
+MXNET_DLL int MXCachedCreateOp(AtomicSymbolCreator creator,
+                               int num_inputs,
+                               int num_params,
+                               const char **param_keys,
+                               const char **param_vals,
+                               CachedOpHandle *out);
+/*!
+ * \brief free cached operator
+ */
+MXNET_DLL int MXCachedFree(CachedOpHandle handle);
+/*!
+ * \brief invoke cached operator
+ */
+MXNET_DLL int MXCachedInvoke(CachedOpHandle handle,
+                             int num_inputs,
+                             NDArrayHandle *inputs,
+                             int *num_outputs,
+                             NDArrayHandle **outputs);
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
@@ -615,6 +670,19 @@ MXNET_DLL int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
                                          const char **keys,
                                          const char **vals,
                                          SymbolHandle *out);
+/*!
+ * \brief Create an AtomicSymbol from cached op.
+ * \param handle cached node attribute.
+ * \param name name of new symbol.
+ * \param num_args the number of symbol arguments
+ * \param args symbol arguments
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXCachedCreateSymbol(CachedOpHandle handle,
+                                   const char* name,
+                                   mx_uint num_args,
+                                   SymbolHandle* args,
+                                   SymbolHandle* out);
 /*!
  * \brief Create a Variable Symbol.
  * \param name name of the variable
@@ -1081,6 +1149,38 @@ MXNET_DLL int MXExecutorBindEX(SymbolHandle symbol_handle,
                                NDArrayHandle *aux_states,
                                ExecutorHandle shared_exec,
                                ExecutorHandle *out);
+
+MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
+                         int dev_type,
+                         int dev_id,
+                         const mx_uint num_g2c_keys,
+                         const char** g2c_keys,
+                         const int* g2c_dev_types,
+                         const int* g2c_dev_ids,
+                         const mx_uint provided_grad_req_list_len,
+                         const char** provided_grad_req_names,
+                         const char** provided_grad_req_types,
+                         const mx_uint num_provided_arg_shapes,
+                         const char** provided_arg_shape_names,
+                         const mx_uint* provided_arg_shape_data,
+                         const mx_uint* provided_arg_shape_idx,
+                         const mx_uint num_provided_arg_dtypes,
+                         const char** provided_arg_dtype_names,
+                         const int* provided_arg_dtypes,
+                         const mx_uint num_shared_arg_names,
+                         const char** shared_arg_name_list,
+                         int* shared_buffer_len,
+                         const char** shared_buffer_name_list,
+                         NDArrayHandle* shared_buffer_handle_list,
+                         const char*** updated_shared_buffer_name_list,
+                         NDArrayHandle** updated_shared_buffer_handle_list,
+                         mx_uint* num_in_args,
+                         NDArrayHandle** in_args,
+                         NDArrayHandle** arg_grads,
+                         mx_uint* num_aux_states,
+                         NDArrayHandle** aux_states,
+                         ExecutorHandle shared_exec_handle,
+                         ExecutorHandle* out);
 /*!
  * \brief set a call back to notify the completion of operation
  */

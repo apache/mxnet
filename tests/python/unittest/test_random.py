@@ -170,6 +170,30 @@ def test_random():
     check_with_device(mx.context.current_context(), 'float64')
 
 
+def test_sample_multinomial():
+    x = mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0
+    dx = mx.nd.ones_like(x)
+    mx.contrib.autograd.mark_variables([x], [dx])
+    with mx.contrib.autograd.train_section():
+        y, prob = mx.nd.sample_multinomial(x, shape=1000, get_prob=True)
+        r = prob * 5
+        r.backward()
+
+    y = y.asnumpy()
+    x = x.asnumpy()
+    for i in range(x.shape[0]):
+
+        freq = np.bincount(y[i], minlength=5)/1000.0*x[i].sum()
+        mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.25)
+        rprob = x[i][y[i]]/x[i].sum()
+        mx.test_utils.assert_almost_equal(np.log(rprob), prob.asnumpy()[i])
+
+        real_dx = np.zeros((5,))
+        for j in range(1000):
+            real_dx[y[i][j]] += 5.0 / rprob[j]
+        mx.test_utils.assert_almost_equal(real_dx, dx.asnumpy()[i])
+
 
 if __name__ == '__main__':
     test_random()
+    test_sample_multinomial()

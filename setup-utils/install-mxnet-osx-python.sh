@@ -66,7 +66,7 @@ download_mxnet() {
 		mv ${MXNET_HOME} ${MXNET_HOME_OLD}
 	fi
 	echo "Downloading MXNET source repositories from github"
-	git clone https://github.com/dmlc/mxnet.git ${MXNET_HOME} --recursive 
+	git clone https://github.com/dmlc/mxnet.git ${MXNET_HOME} --recursive
 }
 
 download_mxnet

@@ -8,7 +8,7 @@ After your patch has been merged, remember to add your name to [CONTRIBUTORS.md]
 
 ### Core Library
 
-- Follow the Google C++ Style Guide for C++ code.
+- Follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) for C++ code.
 - Use doxygen to document all of the interface code.
 - To reproduce the linter checks, type ```make lint```.
 

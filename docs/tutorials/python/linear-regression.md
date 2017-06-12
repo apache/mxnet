@@ -1,8 +1,20 @@
 # Linear Regression
 
-In this tutorial we'll walk though how one can implement *linear regression* using MXNet APIs.
+In this tutorial we'll walk through how one can implement *linear regression* using MXNet APIs.
 
 The function we are trying to learn is: *y = x<sub>1</sub>  +  2x<sub>2</sub>*, where *(x<sub>1</sub>,x<sub>2</sub>)* are input features and *y* is the corresponding label.
+
+## Prerequisites
+
+To complete this tutorial, we need:  
+
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).  
+
+- [Jupyter Notebook](http://jupyter.org/index.html).
+
+```
+$ pip install jupyter
+```
 
 To begin, the following code imports the necessary packages we'll need for this exercise.
 
@@ -71,7 +83,7 @@ and make up various components of the model. Symbols are used to define:
    One such example is the `FullyConnected` symbol which specifies a fully connected
    layer of a neural network.
 3. **Outputs:** Output symbols are MXNet's way of defining a loss. They are
-   suffixed with the word "Output" (eg. the `SoftmaxOutput` layer. You can also
+   suffixed with the word "Output" (eg. the `SoftmaxOutput` layer). You can also
    [create your own loss function](https://github.com/dmlc/mxnet/blob/master/docs/tutorials/r/CustomLossFunction.md#how-to-use-your-own-loss-function).
    Some examples of existing losses are: `LinearRegressionOutput`, which computes
    the l2-loss between it's input symbol and the labels provided to it;
@@ -171,7 +183,7 @@ eval_iter = mx.io.NDArrayIter(eval_data, eval_label, batch_size, shuffle=False)
 model.score(eval_iter, metric)
 ```
 
-We also can create a custom metric and use it to evaluate the model. More
-information on metrics can be found [here](http://mxnet-test.readthedocs.io/en/latest/api/metric.html).
+We can also create a custom metric and use it to evaluate a model. More
+information on metrics can be found in the [API documentation](http://mxnet.io/api/python/model.html#evaluation-metric-api-reference).
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
