@@ -310,9 +310,20 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   const ExpandDimParam& param = nnvm::get<ExpandDimParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
+  if (in_attrs->at(0).ndim() == 0U && out_attrs->at(0).ndim() == 0U) {
+    return false;
+  }
+
   TShape& ishape = (*in_attrs)[0];
+  TShape& oshape = (*out_attrs)[0];
+  int indim = ishape.ndim();
+  bool unknown_ishape = false;
+  if (0 == indim) {
+    indim = oshape.ndim() - 1;
+    unknown_ishape = true;
+  }
+
   int axis = param.axis;
-  const int indim = ishape.ndim();
   if (axis < 0) {
     axis += indim;
   }
@@ -320,13 +331,16 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
       << "axis must be in the range [" << -indim << ", " << indim << "] ("
       << param.axis << " provided)";
   TShape ret(indim + 1);
-  for (int i = 0; i < axis; ++i) ret[i] = ishape[i];
+  for (int i = 0; i < axis; ++i) {
+    ret[i] = (unknown_ishape? 0 : ishape[i]);
+  }
   ret[axis] = 1;
-  for (int i = axis+1; i < indim+1; ++i) ret[i] = ishape[i-1];
+  for (int i = axis+1; i < indim+1; ++i) {
+    ret[i] = (unknown_ishape? 0 : ishape[i-1]);
+  }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, ret);
 
-  TShape& oshape = (*out_attrs)[0];
-  ret = TShape(oshape.ndim() - 1);
+  ret = TShape(indim);
   for (int i = 0; i < axis; ++i) ret[i] = oshape[i];
   for (int i = axis+1; i < indim+1; ++i) ret[i-1] = oshape[i];
   SHAPE_ASSIGN_CHECK(*in_attrs, 0, ret);
