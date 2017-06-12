@@ -397,7 +397,7 @@ class CSRNDArray(SparseNDArray):
 
     """
     def __reduce__(self):
-        return CSRNDArray, (None,), super(SparseNDArray, self).__getstate__()
+        return CSRNDArray, (None,), super(CSRNDArray, self).__getstate__()
 
     @property
     def indices(self):
@@ -440,7 +440,7 @@ class RowSparseNDArray(SparseNDArray):
     that have sparse gradients (e.g. SparseEmbedding).
     """
     def __reduce__(self):
-        return RowSparseNDArray, (None,), super(SparseNDArray, self).__getstate__()
+        return RowSparseNDArray, (None,), super(RowSparseNDArray, self).__getstate__()
 
     @property
     def indices(self):
