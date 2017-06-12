@@ -5,8 +5,21 @@ import numpy as np
 class MultiBoxMetric(mx.metric.EvalMetric):
     """Calculate metrics for Multibox training """
     def __init__(self, eps=1e-8):
-        super(MultiBoxMetric, self).__init__(['CrossEntropy', 'SmoothL1'], 2)
+        super(MultiBoxMetric, self).__init__('MultiBox')
         self.eps = eps
+        self.num = 2
+        self.name = ['CrossEntropy', 'SmoothL1']
+
+    def reset(self):
+        """
+        override reset behavior
+        """
+        if self.num is None:
+            self.num_inst = 0
+            self.sum_metric = 0.0
+        else:
+            self.num_inst = [0] * self.num
+            self.sum_metric = [0.0] * self.num
 
     def update(self, labels, preds):
         """
