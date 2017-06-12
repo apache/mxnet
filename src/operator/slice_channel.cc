@@ -29,7 +29,7 @@ DMLC_REGISTER_PARAMETER(SliceChannelParam);
 MXNET_REGISTER_OP_PROPERTY(SliceChannel, SliceChannelProp)
 .describe(R"code(Splits an array along a particular axis into multiple sub-arrays.
 
-.. note:: ``SliceChannel`` is depreacted. Use ``split`` instead.
+.. note:: ``SliceChannel`` is deprecated. Use ``split`` instead.
 
 **Note** that `num_outputs` should evenly divide the length of the axis 
 along which to split the array.
@@ -71,6 +71,8 @@ Example::
 **Note** that setting `squeeze_axis` to ``1`` removes axis with length 1 only
 along the `axis` which it is split.
 Also `squeeze_axis` can be set to true only if ``input.shape[axis] == num_outputs``.
+
+Example::
 
    z = split(x, axis=0, num_outputs=3, squeeze_axis=1) // a list of 3 arrays with shape (2, 1)
    z = [[ 1.]

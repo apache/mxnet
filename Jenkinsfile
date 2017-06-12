@@ -11,21 +11,31 @@ max_time = 60
 
 // initialize source codes
 def init_git() {
-  checkout scm
   retry(5) {
-    timeout(time: 2, unit: 'MINUTES') {
-      sh 'git submodule update --init'
+    try {
+      timeout(time: 2, unit: 'MINUTES') {
+        checkout scm
+        sh 'git submodule update --init'
+      }
+    } catch (exc) {
+      deleteDir()
+      error "Failed to fetch source codes"
     }
   }
 }
 
 def init_git_win() {
-    checkout scm
-    retry(5) {
-        timeout(time: 2, unit: 'MINUTES') {
-            bat 'git submodule update --init'
-        }
+  retry(5) {
+    try {
+      timeout(time: 2, unit: 'MINUTES') {
+        checkout scm
+        bat 'git submodule update --init'
+      }
+    } catch (exc) {
+      deleteDir()
+      error "Failed to fetch source codes"
     }
+  }
 }
 
 stage("Sanity Check") {
@@ -107,6 +117,7 @@ USE_CPP_PACKAGE=1             \
 """
         make('gpu', flag)
         pack_lib('gpu')
+        stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
       }
     }
   },
@@ -323,6 +334,29 @@ stage('Integration Test') {
         timeout(time: max_time, unit: 'MINUTES') {
           sh "${docker_run} caffe_gpu PYTHONPATH=/caffe/python:./python python tools/caffe_converter/test_converter.py"
         }
+      }
+    }
+  },
+  'cpp-package': {
+    node('GPU' && 'linux') {
+      ws('workspace/it-cpp-package') {
+        init_git()
+        unpack_lib('gpu')
+        unstash 'cpp_test_score'
+        timeout(time: max_time, unit: 'MINUTES') {
+          sh "${docker_run} gpu cpp-package/tests/ci_test.sh"
+        }
+      }
+    }
+  }
+}
+
+stage('Deploy') {
+  node('linux') {
+    ws('workspace/docs') {
+      if (env.BRANCH_NAME == "master") {
+        init_git()
+        sh "make docs"
       }
     }
   }

@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file matrix_op-inl.h
- * \brief Function defintion of matrix related operators
+ * \brief Function definition of matrix related operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_
 #define MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_
@@ -283,8 +283,8 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
     }
   } else {
     CHECK_EQ(shp.ndim(), param.axes.ndim());
-    for (index_t i = 0; i < shp.ndim(); ++i) {
-      CHECK(param.axes[i] < shp.ndim());
+    for (size_t i = 0; i < shp.ndim(); ++i) {
+      CHECK(param.axes[i] < static_cast<int64_t>(shp.ndim()));
       ret[i] = shp[param.axes[i]];
     }
   }
@@ -294,10 +294,12 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
 
 
 struct ExpandDimParam : public dmlc::Parameter<ExpandDimParam> {
-  index_t axis;
+  int axis;
   DMLC_DECLARE_PARAMETER(ExpandDimParam) {
     DMLC_DECLARE_FIELD(axis)
-    .describe("Position (amongst axes) where new axis is to be inserted.");
+    .describe("Position where new axis is to be inserted. Suppose that "
+              "the input `NDArray`'s dimension is `ndim`, the range of "
+              "the inserted axis is `[-ndim, ndim]`");
   }
 };
 
@@ -308,14 +310,40 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   const ExpandDimParam& param = nnvm::get<ExpandDimParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  TShape& shp = (*in_attrs)[0];
-  CHECK_LE(param.axis, shp.ndim())
-      << "axis exceeds the dimension of the array";
-  TShape ret(shp.ndim() + 1);
-  for (index_t i = 0; i < param.axis; ++i) ret[i] = shp[i];
-  ret[param.axis] = 1;
-  for (index_t i = param.axis+1; i < ret.ndim(); ++i) ret[i] = shp[i-1];
+  if (in_attrs->at(0).ndim() == 0U && out_attrs->at(0).ndim() == 0U) {
+    return false;
+  }
+
+  TShape& ishape = (*in_attrs)[0];
+  TShape& oshape = (*out_attrs)[0];
+  int indim = ishape.ndim();
+  bool unknown_ishape = false;
+  if (0 == indim) {
+    indim = oshape.ndim() - 1;
+    unknown_ishape = true;
+  }
+
+  int axis = param.axis;
+  if (axis < 0) {
+    axis += indim;
+  }
+  CHECK(axis >= 0 && axis <= indim)
+      << "axis must be in the range [" << -indim << ", " << indim << "] ("
+      << param.axis << " provided)";
+  TShape ret(indim + 1);
+  for (int i = 0; i < axis; ++i) {
+    ret[i] = (unknown_ishape? 0 : ishape[i]);
+  }
+  ret[axis] = 1;
+  for (int i = axis+1; i < indim+1; ++i) {
+    ret[i] = (unknown_ishape? 0 : ishape[i-1]);
+  }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, ret);
+
+  ret = TShape(indim);
+  for (int i = 0; i < axis; ++i) ret[i] = oshape[i];
+  for (int i = axis+1; i < indim+1; ++i) ret[i-1] = oshape[i];
+  SHAPE_ASSIGN_CHECK(*in_attrs, 0, ret);
   return true;
 }
 
@@ -1387,11 +1415,13 @@ void RepeatOpForward(const nnvm::NodeAttrs& attrs,
   std::pair<TShape, TShape> rshapes = ReshapeInputOutputForRepeatOp(ishape, axisOpt, repeats);
 
   // reshaped input tblob
-  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask_, inputs[0].type_flag_);
+  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask(),
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
   // reshaped output tblob
-  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask_, outputs[0].type_flag_);
+  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask(),
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
 
   BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
@@ -1429,11 +1459,13 @@ void RepeatOpBackward(const nnvm::NodeAttrs& attrs,
     ReshapeInputOutputForRepeatOp(oshape, axisOpt, repeats);
 
   // reshaped output grad tblob
-  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask_, outputs[0].type_flag_);
+  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask(),
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
 
   // reshaped input grad tblob
-  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask_, inputs[0].type_flag_);
+  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask(),
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
@@ -1563,10 +1595,12 @@ void TileOpForward(const nnvm::NodeAttrs& attrs,
   std::pair<TShape, TShape> rshapes = ReshapeInputOutputForTileOp(ishape, reps);
 
   // reshaped input tblob
-  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask_, inputs[0].type_flag_);
+  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask(),
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
   // reshaped output tblob
-  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask_, outputs[0].type_flag_);
+  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask(),
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
 
   BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
@@ -1603,10 +1637,12 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
   std::pair<TShape, TShape> rshapes = ReshapeInputOutputForTileOp(oshape, reps);
 
   // reshaped output grad tblob
-  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask_, outputs[0].type_flag_);
+  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask(),
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
   // reshaped input grad tblob
-  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask_, inputs[0].type_flag_);
+  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask(),
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(

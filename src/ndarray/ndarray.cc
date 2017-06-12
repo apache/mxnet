@@ -4,6 +4,7 @@
  * \brief ndarry module of mxnet
  */
 #include <dmlc/io.h>
+#include <dmlc/memory_io.h>
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
 #include <mxnet/base.h>
@@ -11,6 +12,7 @@
 #include <mxnet/resource.h>
 #include <mshadow/tensor.h>
 #include "./ndarray_function.h"
+#include "./autograd.h"
 
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
@@ -21,6 +23,94 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 }  // namespace dmlc
 
 namespace mxnet {
+
+NDArray NDArray::Reshape(const TShape &shape) const {
+  using namespace autograd;
+  if (AutogradRuntime::Get()->IsTraining()) {
+    CHECK_GE(shape_.Size(), shape.Size())
+      << "NDArray.Reshape: target shape must have must have the same size as "
+      << "current shape when in train_section.";
+    NDArray ret = *this;
+    ret.shape_ = shape;
+    // fake a Reshape op
+    ret.entry_.clear();
+    const nnvm::Op* op = nnvm::Op::Get("Reshape");
+    nnvm::NodeAttrs attrs;
+    attrs.op = op;
+    std::ostringstream os;
+    os << shape;
+    attrs.dict.insert({"shape", os.str()});
+    op->attr_parser(&attrs);
+    std::vector<NDArray> inputs, outputs;
+    inputs.emplace_back(*this);
+    outputs.emplace_back(std::move(ret));
+    AutogradRuntime::Get()->RecordImperativeFCompute(
+      op, attrs, &inputs, &outputs);
+    return outputs[0];
+  } else {
+    CHECK_GE(shape_.Size(), shape.Size())
+      << "NDArray.Reshape: target shape size is larger current shape";
+    NDArray ret = *this;
+    ret.shape_ = shape;
+    return ret;
+  }
+}
+
+
+NDArray NDArray::Slice(index_t begin, index_t end) const {
+  using namespace autograd;
+  NDArray ret = *this;
+  CHECK(!is_none()) << "NDArray is not initialized";
+  CHECK_GE(shape_[0], end) << "Slice end index out of range";
+  size_t length = shape_.ProdShape(1, shape_.ndim());
+  MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
+    ret.byte_offset_ += begin * length * sizeof(DType);
+  });
+  ret.shape_[0] = end - begin;
+  if (AutogradRuntime::Get()->IsTraining()) {
+    // fake a slice_axis op
+    ret.entry_.clear();
+    const nnvm::Op* op = nnvm::Op::Get("slice_axis");
+    nnvm::NodeAttrs attrs;
+    attrs.op = op;
+    attrs.dict.insert({"axis", "0"});
+    attrs.dict.insert({"begin", std::to_string(begin)});
+    attrs.dict.insert({"end", std::to_string(end)});
+    op->attr_parser(&attrs);
+    std::vector<NDArray> inputs, outputs;
+    inputs.emplace_back(*this);
+    outputs.emplace_back(std::move(ret));
+    AutogradRuntime::Get()->RecordImperativeFCompute(
+      op, attrs, &inputs, &outputs);
+    return outputs[0];
+  } else {
+    return ret;
+  }
+}
+
+
+NDArray NDArray::At(index_t idx) const {
+  NDArray ret = this->Slice(idx, idx+1);
+  if (shape_.ndim() > 1) {
+    return ret.Reshape(TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
+  } else {
+    return ret;
+  }
+}
+
+
+bool NDArray::fresh_out_grad() const {
+  if (entry_.ag_node != nullptr) return entry_.ag_node->fresh_out_grad;
+  return false;
+}
+
+
+void NDArray::set_fresh_out_grad(bool state) const {
+  CHECK(entry_.ag_node != nullptr)
+    << "NDArray has not been marked as a variable and does not have gradient state";
+  entry_.ag_node->fresh_out_grad = state;
+}
+
 
 /*!
 * \brief run a ternary operation
@@ -545,65 +635,11 @@ NDArray &NDArray::operator/=(const real_t &src) {
   return ScalarOpApply<ndarray::Div>(this, src);
 }
 
-/*!
- * \brief Get a broadcasted NDArray
- * \param src the source ndarray
- * \param dim dimension to broadcast
- * \param size size after broadcasting
- */
-void Broadcast(const NDArray& src, int dim, int size, NDArray *out) {
-  CHECK(0 <= dim && dim < static_cast<int>(src.shape().ndim()))
-      << "Broadcast dimension out of bound.";
-  CHECK(src.shape()[dim] == 1) << "Cannot broadcast a dimension that is not 1.";
-  TShape new_shape = src.shape();
-  new_shape[dim] = size;
-  if (out->is_none()) {
-    *out = NDArray(new_shape, src.ctx(), true, src.dtype());
-  } else {
-    CHECK(out->ctx() == src.ctx()) << "target context mismatch";
-    CHECK(out->shape() == new_shape)
-      << "invalid target shape: " << out->shape() << " should be: " << new_shape;
-  }
-  std::vector<Engine::VarHandle> const_vars;
-  const_vars.push_back(src.var());
-  size_t before = src.shape().ProdShape(0, dim);
-  size_t after = src.shape().ProdShape(dim + 1, src.shape().ndim());
-
-  // important: callback must always capture by value
-  NDArray ret = *out;
-  switch (src.ctx().dev_mask()) {
-    case cpu::kDevMask: {
-      Engine::Get()->PushSync([src, ret, before, size, after](RunContext ctx) {
-          ret.CheckAndAlloc();
-          NDArray inter_in = src.Reshape(mshadow::Shape2(before, after));
-          NDArray inter_out = ret.Reshape(mshadow::Shape3(before, size, after));
-          TBlob tmp = inter_out.data();
-          ndarray::EvalBroadcast<cpu>(inter_in.data(), &tmp, size, ctx);
-      }, src.ctx(), const_vars, {ret.var()},
-      FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-      break;
-    }
-#if MXNET_USE_CUDA
-    case gpu::kDevMask: {
-      Engine::Get()->PushSync([src, ret, before, size, after](RunContext ctx) {
-          ret.CheckAndAlloc();
-          NDArray inter_in = src.Reshape(mshadow::Shape2(before, after));
-          NDArray inter_out = ret.Reshape(mshadow::Shape3(before, size, after));
-          TBlob tmp = inter_out.data();
-          ndarray::EvalBroadcast<gpu>(inter_in.data(), &tmp, size, ctx);
-          // Wait GPU kernel to complete
-          ctx.get_stream<gpu>()->Wait();
-      }, src.ctx(), const_vars, {ret.var()},
-      FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-      break;
-    }
-#endif
-    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-  }
-}
+/* magic number for ndarray version 1, with int64_t TShape */
+static const uint32_t NDARRAY_V1_MAGIC = 0xF993fac8;
 
 void NDArray::Save(dmlc::Stream *strm) const {
-  // save shape
+  strm->Write(NDARRAY_V1_MAGIC);
   shape_.Save(strm);
   if (is_none()) return;
   // save context
@@ -627,10 +663,28 @@ void NDArray::Save(dmlc::Stream *strm) const {
   strm->Write(save_data.dptr_, type_size * shape_.Size());
 }
 
+bool LegacyTShapeLoad(dmlc::Stream *strm, TShape *shape) {
+  uint32_t magic;
+  if (strm->Read(&magic, sizeof(uint32_t)) != sizeof(uint32_t)) return false;
+  switch (magic) {
+    case NDARRAY_V1_MAGIC:
+      return shape->Load(strm);
+    default:
+      // meet legacy TShape, magic is ndim here
+      uint32_t ndim = magic;
+      *shape = TShape(ndim);
+      std::vector<uint32_t> buffer(ndim);
+      size_t nread = ndim * sizeof(uint32_t);
+      if (strm->Read(buffer.data(), nread) != nread) return false;
+      nnvm::ShapeTypeCast(buffer.begin(), buffer.end(), shape->begin());
+      return true;
+  }
+}
+
 bool NDArray::Load(dmlc::Stream *strm) {
   // load shape
   TShape shape;
-  if (!shape.Load(strm)) return false;
+  if (!LegacyTShapeLoad(strm, &shape)) return false;
   if (shape.ndim() == 0) {
     *this = NDArray(); return true;
   }
@@ -699,7 +753,7 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
+  TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToWrite();
@@ -728,7 +782,7 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob dst(data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
+  TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToRead();
@@ -856,23 +910,6 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
   LOG(FATAL) << "Compile with OpenCV for image decoding.";
 #endif  // MXNET_USE_OPENCV
 }
-
-MXNET_REGISTER_NDARRAY_FUN(_broadcast)
-.set_type_mask(kAcceptEmptyMutateTarget | kNDArrayArgBeforeScalar)
-.set_body([](NDArray **u, real_t *s, NDArray **out,
-             int num_params, char **param_keys, char **param_vals) {
-      Broadcast(*u[0],
-                static_cast<int>(s[0]),
-                static_cast<int>(s[1]),
-                out[0]);
-    })
-.set_num_use_vars(1)
-.set_num_scalars(2)
-.set_num_mutate_vars(1)
-.describe("Broadcast array in the given axis to the given size")
-.add_argument("src", "NDArray-or-Symbol", "source ndarray")
-.add_argument("axis", "int", "axis to broadcast")
-.add_argument("size", "int", "size of broadcast");
 
 MXNET_REGISTER_NDARRAY_FUN(_imdecode)
 .set_type_mask(kAcceptEmptyMutateTarget | kNDArrayArgBeforeScalar)
