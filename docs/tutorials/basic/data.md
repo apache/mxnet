@@ -4,6 +4,24 @@ Most training and inference modules in MXNet accept data iterators,
 which simplifies this procedure, especially when reading large datasets.
 Here we discuss the API conventions and several provided iterators.
 
+## Prerequisites
+
+To complete this tutorial, we need:  
+
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).  
+
+- [OpenCV Python library](http://opencv.org/opencv-3-2.html),  [Python Requests](http://docs.python-requests.org/en/master/), [Matplotlib](https://matplotlib.org/) and [Jupyter Notebook](http://jupyter.org/index.html).
+
+```
+$ pip install opencv-python requests matplotlib jupyter
+```
+- Set the environment variable `MXNET_HOME` to the root of the MXNet source folder.  
+
+```
+$ git clone https://github.com/dmlc/mxnet ~/mxnet
+$ MXNET_HOME = '~/mxnet'
+```
+
 ## MXNet Data Iterator  
 Data Iterators in *MXNet* are similar to Python iterator objects.
 In Python the function `iter` allows fetching items sequentially by calling  `next()` on
@@ -283,13 +301,6 @@ There are 4 ways of loading image data in MXNet.
    4. Creating a Custom iterator inheriting `mx.io.DataIter`
 
 
-First, set the environment variable `MXNET_HOME` to the root of the MXNet source folder:
-
-```python
-# change this to your mxnet location
-MXNET_HOME = '/scratch/mxnet'
-```
-
 ### Preprocessing Images
 Images can be preprocessed in different ways. We list some of them below:
 - Using `mx.io.ImageRecordIter` which is fast but not very flexible. It is great for simple tasks like image recognition but won't work for more complex tasks like detection and segmentation.
@@ -302,20 +313,19 @@ Let's download sample images that we can work with.
 
 
 ```python
-fname = mx.test_utils.download(url='http://data.mxnet.io/data/test_images.tar.gz')
+fname = mx.test_utils.download(url='http://data.mxnet.io/data/test_images.tar.gz', dirname='data', overwrite=False)
 tar = tarfile.open(fname)
-tar.extractall()
+tar.extractall(path='./data')
 tar.close()
 ```
 
 #### Loading raw images
-`mx.image.imdecode` lets us load the images. `imdecode` provides a similar interface to ``OpenCV``.
-**Note: ** You will still need ``OpenCV``(not the CV2 Python library) installed to use `mx.image.imdecode`.
+`mx.image.imdecode` lets us load the images. `imdecode` provides a similar interface to ``OpenCV``.  
 
+**Note:** You will still need ``OpenCV``(not the CV2 Python library) installed to use `mx.image.imdecode`.
 
 ```python
-import cv2
-img = mx.image.imdecode(open('test_images/ILSVRC2012_val_00000001.JPEG').read())
+img = mx.image.imdecode(open('data/test_images/ILSVRC2012_val_00000001.JPEG').read())
 plt.imshow(img.asnumpy()); plt.show()
 ```
 
@@ -346,9 +356,8 @@ Download and unzip
 ```python
 fname = mx.test_utils.download(url='http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz', dirname='data', overwrite=False)
 tar = tarfile.open(fname)
-tar.extractall()
+tar.extractall(path='./data')
 tar.close()
-os.chdir('../')
 ```
 
 Let's take a look at the data. As you can see, under the root folder (./data/101_ObjectCategories) every category has a subfolder(./data/101_ObjectCategories/yin_yang).

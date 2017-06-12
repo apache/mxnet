@@ -63,7 +63,9 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
   CHECK(!is_none()) << "NDArray is not initialized";
   CHECK_GE(shape_[0], end) << "Slice end index out of range";
   size_t length = shape_.ProdShape(1, shape_.ndim());
-  ret.offset_ += begin * length;
+  MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
+    ret.byte_offset_ += begin * length * sizeof(DType);
+  });
   ret.shape_[0] = end - begin;
   if (AutogradRuntime::Get()->IsTraining()) {
     // fake a slice_axis op

@@ -1,6 +1,7 @@
 """Test converted models
 """
 import os
+import argparse
 import sys
 import logging
 import mxnet as mx
@@ -35,13 +36,21 @@ def test_imagenet_model(model_name, val_data, gpus, batch_size):
     logging.info('speed : %f image/sec', speed)
     for a in acc:
         logging.info(a.get())
-    assert acc[0].get()[1] > meta_info['top-1-acc'] - 0.3
-    assert acc[1].get()[1] > meta_info['top-5-acc'] - 0.3
+    assert acc[0].get()[1] > meta_info['top-1-acc'] - 0.03
+    assert acc[1].get()[1] > meta_info['top-5-acc'] - 0.03
 
 def main():
-    gpus = mx.test_utils.list_gpus()
-    assert len(gpus) > 0
-    batch_size = 32 * len(gpus)
+    """Entrypoint for test_converter"""
+    parser = argparse.ArgumentParser(description='Test Caffe converter')
+    parser.add_argument('--cpu', action='store_true', help='use cpu?')
+    args = parser.parse_args()
+    if args.cpu:
+        gpus = ''
+        batch_size = 32
+    else:
+        gpus = mx.test_utils.list_gpus()
+        assert gpus, 'At least one GPU is needed to run test_converter in GPU mode'
+        batch_size = 32 * len(gpus)
 
     models = ['bvlc_googlenet', 'vgg-16', 'resnet-50']
 
