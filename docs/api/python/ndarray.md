@@ -321,6 +321,7 @@ In the rest of this document, we first overview the methods provided by the
     fix
     floor
     ceil
+    trunc
 ```
 
 
