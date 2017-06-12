@@ -206,6 +206,25 @@ fixed-size items.
     def __itruediv__(self, other):
         return self.__idiv__(other)
 
+    def __mod__(self, other):
+        """x.__mod__(y) <=> x%y <=> mx.nd.modulo(x, y) """
+        return modulo(self, other)
+
+    def __rmod__(self, other):
+        """x.__rmod__(y) <=> y%x <=> mx.nd.modulo(y, x) """
+        return modulo(other, self)
+
+    def __imod__(self, other):
+        """x.__rmod__(y) <=> x%=y """
+        if not self.writable:
+            raise ValueError('trying to take modulo from a readonly NDArray')
+        if isinstance(other, NDArray):
+            return broadcast_mod(self, other, out=self)
+        elif isinstance(other, numeric_types):
+            return _internal._mod_scalar(self, float(other), out=self)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
     def __pow__(self, other):
         """x.__pow__(y) <=> x**y <=> mx.nd.power(x,y) """
         return power(self, other)
@@ -1514,6 +1533,62 @@ def divide(lhs, rhs):
         operator.truediv,
         _internal._div_scalar,
         _internal._rdiv_scalar)
+    # pylint: enable= no-member, protected-access
+
+def modulo(lhs, rhs):
+    """Returns element-wise modulo of the input arrays with broadcasting.
+
+    Equivalent to ``lhs % rhs`` and ``mx.nd.broadcast_mod(lhs, rhs)``.
+
+    .. note::
+
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
+
+    Parameters
+    ----------
+    lhs : scalar or array
+        First array in modulo.
+    rhs : scalar or array
+         Second array in modulo.
+        The arrays to be taken modulo. If ``lhs.shape != rhs.shape``, they must be
+        broadcastable to a common shape.
+
+    Returns
+    -------
+    NDArray
+        The element-wise modulo of the input arrays.
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((2,3))*6
+    >>> y = mx.nd.ones((2,1))*4
+    >>> x.asnumpy()
+    array([[ 6.,  6.,  6.],
+           [ 6.,  6.,  6.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 4.],
+           [ 4.]], dtype=float32)
+    >>> x%5
+    <NDArray 2x3 @cpu(0)>
+    >>> (x%5).asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> (x%y).asnumpy()
+    array([[ 2.,  2.,  2.],
+           [ 2.,  2.,  2.]], dtype=float32)
+    >>> mx.nd.modulo(x,y).asnumpy()
+    array([[ 2.,  2.,  2.],
+           [ 2.,  2.,  2.]], dtype=float32)
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        broadcast_mod,
+        operator.mod,
+        _internal._mod_scalar,
+        _internal._rmod_scalar)
     # pylint: enable= no-member, protected-access
 
 def power(base, exp):

@@ -878,6 +878,29 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
 
   def <=(other: Float): NDArray = {
     NDArray.lesserEqual(this, other)
+
+  def %(other: NDArray): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_mod", Seq(this, other))
+  }
+
+  def %(other: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_mod_scalar", Seq(this, other))
+  }
+
+  def %=(other: NDArray): NDArray = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to take modulo from a readonly NDArray")
+    }
+    NDArray.genericNDArrayFunctionInvoke("_mod", Seq(this, other), Map("out" -> this))
+    this
+  }
+
+  def %=(other: Float): NDArray = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to take modulo from a readonly NDArray")
+    }
+    NDArray.genericNDArrayFunctionInvoke("_mod_scalar", Seq(this, other), Map("out" -> this))
+    this
   }
 
   /**

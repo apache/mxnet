@@ -8,6 +8,7 @@
 #define MXNET_OPERATOR_MSHADOW_OP_H_
 
 #include <mxnet/base.h>
+#include <cmath>
 #include "special_functions-inl.h"
 
 namespace mxnet {
@@ -24,14 +25,14 @@ using std::isnan;
 struct identity {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(a);
+    return a;
   }
 };
 
 struct identity_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f));
+    return DType(1.0f);
   }
 };
 
@@ -434,15 +435,15 @@ struct abs {
 struct sign {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    if (a < 0.0f) return DType(-DType(1.0f));
-    if (a > 0.0f) return DType(DType(1.0f));
-    return DType(DType(0.0f));
+    if (a < 0.0f) return DType(-1.0f);
+    if (a > 0.0f) return DType(1.0f);
+    return DType(0.0f);
   }
 };
 struct sign_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(0.0f));
+    return DType(0.0f);
   }
 };
 /*! \brief used for generate element of power */
@@ -661,6 +662,130 @@ struct rdiv_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return DType(-b/(a*a));
+  }
+};
+
+struct mod {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (b == 0) {
+      LOG(WARNING) << "divide by zero encountered in modulo.";
+      return DType(0.0f);
+    } else if (b < 0){
+      if (a < 0){
+        return DType(-::fmod(-a, -b));
+      } else {
+        return DType(::fmod(a, -b) + (::fmod(a, -b) != DType(0) ? b : DType(0)));
+      }
+    } else {
+      if (a < 0){
+        return DType(-::fmod(-a, b) + (::fmod(-a, b) != DType(0) ? b : DType(0)));
+      } else {
+        return DType(::fmod(a, b));
+      }
+    }
+  }
+};
+
+struct mod_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (b == 0) {
+      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+    }
+    return DType(0.0f);
+  }
+
+  MSHADOW_XINLINE static float Map(float a, float b) {
+    if (b == 0) {
+      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+    }
+    return 1.0f;
+  }
+
+  MSHADOW_XINLINE static double Map(double a, double b) {
+    if (b == 0) {
+      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+    }
+    return 1.0f;
+  }
+};
+
+struct mod_rgrad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (b == 0) {
+      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+    }
+    return DType(0.0f);
+  }
+
+  MSHADOW_XINLINE static float Map(float a, float b) {
+    if (b == 0) {
+      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+    }
+#ifdef __CUDACC__
+    return ::floorf(-a/b);
+#else
+    return std::floorf(-a/b);
+#endif
+  }
+
+  MSHADOW_XINLINE static double Map(double a, double b) {
+    if (b == 0) {
+      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+    }
+#ifdef __CUDACC__
+    return ::floor(-a/b);
+#else
+    return std::floor(-a/b);
+#endif
+  }
+};
+
+struct rmod {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (a == 0) {
+      LOG(WARNING) << "divide by zero encountered in modulo.";
+      return DType(0.0f);
+    } else if (a < 0){
+      if (b < 0){
+        return DType(-::fmod(-b, -a));
+      } else {
+        return DType(::fmod(b, -a) + (::fmod(b, -a) != DType(0) ? a : DType(0)));
+      }
+    } else {
+      if (b < 0){
+        return DType(-::fmod(-b, a) + (::fmod(-b, a) != DType(0) ? a : DType(0)));
+      } else {
+        return DType(::fmod(b, a));
+      }
+    }
+  }
+};
+
+struct rmod_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (b == 0) {
+      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+    }
+    return DType(0.0f);
+  }
+
+  MSHADOW_XINLINE static float Map(float a, float b) {
+    if (b == 0) {
+      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+    }
+    return 1.0f;
+  }
+
+  MSHADOW_XINLINE static double Map(double a, double b) {
+    if (b == 0) {
+      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+    }
+    return 1.0f;
   }
 };
 

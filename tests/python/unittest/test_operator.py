@@ -993,21 +993,37 @@ def gen_broadcast_data(idx):
 
 def gen_broadcast_data_int(idx):
     d = gen_broadcast_data(idx);
-    return [np.round(d[0]*100), np.round(d[1]*100)]
+    return [np.round(d[0]*100).astype(int), np.round(d[1]*100).astype(int)]
 
 def gen_binary_data(dummy):
     ndim = np.random.randint(1, 6)
     shape = np.random.randint(1, 6, size=(ndim,))
     return [np.random.random(shape), np.random.random(shape)]
 
-def check_binary_op_forward(symbol, baseline, gen_data):
+def gen_binary_data_int(dummy):
+    d = gen_binary_data(dummy);
+    return [np.round(d[0]*100).astype(int), np.round(d[1]*100).astype(int)]
+
+def check_binary_op_forward(symbol, baseline, gen_data, rtol=1e-3, atol=1e-5):
     sample_num = 200
     for i in range(sample_num):
         d = gen_data(i)
         x = baseline(d[0], d[1])
         y = symbol.bind(default_context(), args={'a': mx.nd.array(d[0]), 'b' : mx.nd.array(d[1])})
         y.forward(is_train=True)
-        assert_allclose(x, y.outputs[0].asnumpy(), rtol=1e-3, atol=1e-5)
+        y = y.outputs[0].asnumpy()
+        idx = np.abs(x-y) > atol+rtol*np.abs(x)
+        if idx.any():
+            print('found precision problem')
+            print('a: {}'.format(d[0][idx]))
+            print('b: {}'.format(np.broadcast_to(d[1], x.shape)[idx]))
+            import struct
+            print('a hex: {}'.format(struct.pack('d', d[0][idx]).encode('hex')))
+            print('b hex: {}'.format(struct.pack('d', np.broadcast_to(d[1], x.shape)[idx]).encode('hex')))
+            print('in baseline(a, b): {}'.format(x[idx]))
+            print('in symbol(a, b): {}'.format(y[idx]))
+            print('diff: {}'.format(np.abs(x-y)[idx] - atol-rtol*np.abs(x)[idx]))
+        assert_allclose(y, x, rtol=rtol, atol=atol)
 
 def check_binary_op_backward(symbol, baseline, gen_data):
     sample_num = 200
@@ -1032,8 +1048,8 @@ def check_binary_op_backward(symbol, baseline, gen_data):
                         args_grad=[y_1, y_2])
         y.forward(is_train=True)
         y.backward([mx.nd.array(out)])
-        assert_allclose(x_1, y_1.asnumpy(), rtol=1e-3, atol=1e-5)
-        assert_allclose(x_2, y_2.asnumpy(), rtol=1e-3, atol=1e-5)
+        assert_allclose(y_1.asnumpy(), x_1, rtol=1e-3, atol=1e-5)
+        assert_allclose(y_2.asnumpy(), x_2, rtol=1e-3, atol=1e-5)
 
 def test_binary_op():
     a = mx.sym.Variable('a')
@@ -1059,6 +1075,16 @@ def test_binary_op():
         check_binary_op_forward(c, lambda a, b: a / b, gen_binary_data)
         check_binary_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)), gen_binary_data)
 
+    def test_bmod(a, b):
+        c = a % b
+        check_binary_op_forward(c, lambda a, b: a.astype(float) % b.astype(float), gen_binary_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_binary_data)
+
+    def test_bmod_int(a, b):
+        c = a % b
+        check_binary_op_forward(c, lambda a, b: a % b, gen_binary_data_int)
+        check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_binary_data_int)
+
     def test_bpow(a, b):
         c = a ** b
         check_binary_op_forward(c, lambda a, b: a ** b, gen_binary_data)
@@ -1074,6 +1100,8 @@ def test_binary_op():
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
+    test_bmod(a, b)
+    test_bmod_int(a, b)
     test_bpow(a, b)
     test_bneq(a, b)
 
@@ -1101,6 +1129,16 @@ def test_broadcast_binary_op():
         check_binary_op_forward(c, lambda a, b: a / b, gen_broadcast_data)
         check_binary_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)), gen_broadcast_data)
 
+    def test_bmod(a, b):
+        c = mx.sym.broadcast_mod(a, b)
+        check_binary_op_forward(c, lambda a, b: a % b, gen_broadcast_data, atol=0.3)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_broadcast_data)
+
+    def test_bmod_int(a, b):
+        c = mx.sym.broadcast_mod(a, b)
+        check_binary_op_forward(c, lambda a, b: a % b, gen_broadcast_data_int)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_broadcast_data)
+
     def test_bpow(a, b):
         c = mx.sym.broadcast_power(a, b)
         check_binary_op_forward(c, lambda a, b: a ** b, gen_broadcast_data)
@@ -1116,6 +1154,8 @@ def test_broadcast_binary_op():
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
+    test_bmod(a, b)
+    test_bmod_int(a, b)
     test_bpow(a, b)
     test_bequal(a, b)
 
