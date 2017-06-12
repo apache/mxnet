@@ -266,15 +266,7 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
         auto dtype = prefetch_param_.dtype
           ? prefetch_param_.dtype.value()
           : first_batch.data[i].type_flag_;
-#if MXNET_USE_CUDA
-        int gpu_num;
-        int ret = cudaGetDeviceCount(&gpu_num);
-        Context pinned_ctx = (ret == 0 && gpu_num > 0) ?
-                             Context::CPUPinned(0) : Context::CPU();
-        out->data.at(i) = NDArray(dst_shape, pinned_ctx, false, src_type_flag);
-#else
-        out->data.at(i) = NDArray(dst_shape, Context::CPU(), false, src_type_flag);
-#endif
+        out->data.at(i) = NDArray(dst_shape, Context::CPUPinned(0), false, src_type_flag);
         unit_size_[i] = src_shape.Size();
       }
     }
