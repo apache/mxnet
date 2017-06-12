@@ -82,6 +82,10 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
                 bias = bias.reshape((bias.shape[0], 1))
                 assert(bias.flags['C_CONTIGUOUS'] is True)
                 bias_name = layer_name + "_bias"
+
+                if bias_name not in arg_shape_dic:
+                    print(bias_name + ' not found in arg_shape_dic.')
+                    continue
                 bias = bias.reshape(arg_shape_dic[bias_name])
                 arg_params[bias_name] = mx.nd.zeros(bias.shape)
                 arg_params[bias_name][:] = bias
@@ -105,8 +109,8 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
 
         elif layer_type == 'Scale':
             bn_name = layer_name.replace('scale', 'bn')
-            gamma = layer_blobs[0].data
-            beta = layer_blobs[1].data
+            gamma = np.array(layer_blobs[0].data)
+            beta = np.array(layer_blobs[1].data)
             # beta = np.expand_dims(beta, 1)
             beta_name = '{}_beta'.format(bn_name)
             gamma_name = '{}_gamma'.format(bn_name)
@@ -124,9 +128,9 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
                 beta.shape, gamma.shape))
         elif layer_type == 'BatchNorm':
             bn_name = layer_name
-            mean = layer_blobs[0].data
-            var = layer_blobs[1].data
-            rescale_factor = layer_blobs[2].data
+            mean = np.array(layer_blobs[0].data)
+            var = np.array(layer_blobs[1].data)
+            rescale_factor = layer_blobs[2].data[0]
             if rescale_factor != 0:
                 rescale_factor = 1 / rescale_factor
             mean_name = '{}_moving_mean'.format(bn_name)

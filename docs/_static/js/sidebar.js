@@ -222,6 +222,8 @@ $(document).ready(function () {
             render_righttoc();
             if ($('.leftsidebar').length) render_lefttoc();
         }
+        
+        if(url.indexOf('/api/') != -1) return;
         $(window).scroll(function () {
             scroll_righttoc();
         });
