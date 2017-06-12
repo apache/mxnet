@@ -9,12 +9,13 @@ class MultiBoxMetric(mx.metric.EvalMetric):
         self.eps = eps
         self.num = 2
         self.name = ['CrossEntropy', 'SmoothL1']
+        self.reset()
 
     def reset(self):
         """
         override reset behavior
         """
-        if self.num is None:
+        if getattr(self, 'num', None) is None:
             self.num_inst = 0
             self.sum_metric = 0.0
         else:
