@@ -20,7 +20,7 @@ path='http://data.mxnet.io/models/imagenet-11k/'
 ```
 
 Next, we load the downloaded model. *Note:* If GPU is available, we can replace all
-occurances of `mx.cpu()` with `mx.gpu()` to accelerate the computation.
+occurrences of `mx.cpu()` with `mx.gpu()` to accelerate the computation.
 
 ```python
 sym, arg_params, aux_params = mx.model.load_checkpoint('resnet-152', 0)
