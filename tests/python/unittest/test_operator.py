@@ -517,6 +517,19 @@ def test_round_ceil_floor():
     npout = np.round(data_tmp) + np.ceil(data_tmp) + np.floor(data_tmp)
     assert_almost_equal(out, npout)
 
+def test_trunc():
+    data_tmp = np.random.rand(3, 4) * 10 - 5
+    arr_data = mx.nd.array(data_tmp)
+    data = mx.symbol.Variable('data')
+    test = mx.sym.trunc(data)
+
+    exe_test = test.bind(default_context(), args=[arr_data])
+    exe_test.forward(is_train=True)
+    out = exe_test.outputs[0].asnumpy()
+    npout = np.trunc(data_tmp)
+
+    assert_almost_equal(out, npout)
+
 def test_rsqrt_cos_sin():
     data = mx.symbol.Variable('data')
     shape = (3, 4)

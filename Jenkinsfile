@@ -352,12 +352,11 @@ stage('Integration Test') {
 }
 
 stage('Deploy') {
-  parallel 'Doc': {
-    node('linux') {
-      ws('workspace/docs') {
-        if (env.BRANCH_NAME == "master") {
-          sh "make docs"
-        }
+  node('linux') {
+    ws('workspace/docs') {
+      if (env.BRANCH_NAME == "master") {
+        init_git()
+        sh "make docs"
       }
     }
   }
