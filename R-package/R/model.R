@@ -106,14 +106,10 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
   sliceinfo <- mx.model.slice.shape(input.shape, ndevice)
   sliceinfo2 <- mx.model.slice.shape(output.shape, ndevice)
   arg_names <- arguments(symbol)
-  tmp <- unlist(lapply(arg_names, function(a) {
-    mxnet:::mx.util.str.endswith(a, "label")
-  }))
-  label_name <- arg_names[tmp]
   train.execs <- lapply(1:ndevice, function(i) {
-    arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write",
-                    data=sliceinfo[[i]]$shape)
-    arg_lst[[label_name]] = sliceinfo2[[i]]$shape
+    arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write")
+    arg_lst <- append(arg_lst, sliceinfo[[i]]$shape)
+    arg_lst <- append(arg_lst, sliceinfo2[[i]]$shape)
     do.call(mx.simple.bind, arg_lst)
   })
   # set the parameters into executors
@@ -152,14 +148,13 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       dlist <- train.data$value()
       slices <- lapply(1:ndevice, function(i) {
         s <- sliceinfo[[i]]
-        ret <- list(data=mx.nd.slice(dlist$data, s$begin, s$end),
-                    label=mx.nd.slice(dlist$label, s$begin, s$end))
+        ret <- sapply(names(dlist), function(n) {mx.nd.slice(dlist[[n]], s$begin, s$end)})
         return(ret)
       })
       # copy data to executor
       for (i in 1:ndevice) {
         s <- slices[[i]]
-        names(s) <- input.names
+        #names(s) <- input.names
         mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
       }
       for (texec in train.execs) {
@@ -223,13 +218,12 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
         dlist <- eval.data$value()
         slices <- lapply(1:ndevice, function(i) {
           s <- sliceinfo[[i]]
-          ret <- list(data=mx.nd.slice(dlist$data, s$begin, s$end),
-                    label=mx.nd.slice(dlist$label, s$begin, s$end))
+          ret <- sapply(names(dlist), function(n) {mx.nd.slice(dlist[[n]], s$begin, s$end)})
           return(ret)
         })
         for (i in 1:ndevice) {
           s <- slices[[i]]
-          names(s) <- input.names
+          #names(s) <- input.names
           mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
         }
         for (texec in train.execs) {
@@ -275,8 +269,9 @@ mx.model.init.params <- function(symbol, input.shape, output.shape, initializer,
     mxnet:::mx.util.str.endswith(a, "label")
   }))
   label_name <- arg_names[tmp]
-  arg_lst <- list(symbol = symbol, data=input.shape)
-  arg_lst[[label_name]] = output.shape
+  arg_lst <- list(symbol = symbol)
+  arg_lst <- append(arg_lst, input.shape)
+  arg_lst <- append(arg_lst, output.shape)
 
   slist <- do.call(mx.symbol.infer.shape, arg_lst)
   if (is.null(slist)) stop("Not enough information to get shapes")
@@ -412,9 +407,9 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
          eval.data=NULL, eval.metric=NULL,
          epoch.end.callback=NULL, batch.end.callback=NULL,
          array.batch.size=128, array.layout="auto",
-         kvstore="local",
-         verbose=TRUE,
+         kvstore="local", verbose=TRUE,
          arg.params=NULL, aux.params=NULL,
+         input.names="data", output.names = "label",
          ...) {
   if (is.array(X) || is.matrix(X)) {
     if (array.layout == "auto") {
@@ -429,8 +424,8 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
     X$reset()
     if (!X$iter.next()) stop("Empty input")
   }
-  input.shape <- dim((X$value())$data)
-  output.shape <- dim((X$value())$label)
+  input.shape <- sapply(input.names, function(n){dim(X$value()[[n]])}, simplify = FALSE)
+  output.shape <- sapply(output.names, function(n){dim(X$value()[[n]])}, simplify = FALSE)
   params <- mx.model.init.params(symbol, input.shape, output.shape, initializer, mx.cpu())
   if (!is.null(arg.params)) params$arg.params <- arg.params
   if (!is.null(aux.params)) params$aux.params <- aux.params
