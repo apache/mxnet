@@ -517,6 +517,19 @@ def test_round_ceil_floor():
     npout = np.round(data_tmp) + np.ceil(data_tmp) + np.floor(data_tmp)
     assert_almost_equal(out, npout)
 
+def test_trunc():
+    data_tmp = np.random.rand(3, 4) * 10 - 5
+    arr_data = mx.nd.array(data_tmp)
+    data = mx.symbol.Variable('data')
+    test = mx.sym.trunc(data)
+
+    exe_test = test.bind(default_context(), args=[arr_data])
+    exe_test.forward(is_train=True)
+    out = exe_test.outputs[0].asnumpy()
+    npout = np.trunc(data_tmp)
+
+    assert_almost_equal(out, npout)
+
 def test_rsqrt_cos_sin():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -859,6 +872,39 @@ def test_batchnorm_training():
 
         test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True)
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
+
+        # Test varying channel axis
+        dim = len(shape)
+        for chaxis in range(-dim, dim):
+            chaxis_true = chaxis
+            if chaxis < 0:
+                chaxis_true = dim + chaxis
+
+            shapex = shape
+
+            channel_count = shapex[chaxis_true]
+            data_tmp = np.random.normal(-0.1, 0.1, size=shapex)
+
+            gamma = np.ones(channel_count)
+            beta = np.ones(channel_count)
+            if channel_count > 1:
+                gamma[1] = 3
+            beta[0] = 3
+
+            xrolling_mean = np.random.uniform(size=channel_count)
+            xrolling_std = np.random.uniform(size=channel_count)
+
+            test = mx.symbol.BatchNorm(data, fix_gamma=True, axis=chaxis)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
+
+            test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True, axis=chaxis)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
+
+            test = mx.symbol.BatchNorm(data, fix_gamma=False, axis=chaxis)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
+
+            test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True, axis=chaxis)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
 
 def test_convolution_grouping():
     num_filter = 4

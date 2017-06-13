@@ -314,6 +314,7 @@ Composite multiple symbols into a new one by an operator.
     fix
     floor
     ceil
+    trunc
 ```
 
 

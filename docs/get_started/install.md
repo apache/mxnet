@@ -102,16 +102,22 @@ After activating the environment, you should see the prompt as below.
 Installing *MXNet* with pip requires a latest version of `pip`. Install the latest version of `pip` by issuing the following command.
 
 ```bash
-(mxnet)$ pip install --upgrade pip
+$ pip install --upgrade pip
 ```
 
 Install *MXNet* with OpenBLAS acceleration.
 
 ```bash
-(mxnet)$ pip install mxnet
+$ pip install mxnet
 ```
 
-**Step 4**  Validate the installation by running simple *MXNet* code described [here](#validate-mxnet-installation).
+**Step 4**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 5**  Validate the installation by running simple *MXNet* code described [here](#validate-mxnet-installation).
 
 **Note**  You can read more about virtualenv [here](https://virtualenv.pypa.io/en/stable/userguide/).
 
@@ -136,7 +142,13 @@ $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 $ pip install mxnet
 ```
 
-**Step 3**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 
 </div>
 
@@ -236,7 +248,13 @@ $ cd python
 $ sudo python setup.py install
 ```
 
-**Step 3** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 
 </div>
 
@@ -284,7 +302,13 @@ $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 $ pip install mxnet-cu80
 ```
 
-**Step 3**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 
 </div>
 
@@ -333,7 +357,13 @@ Install *MXNet* with GPU support using CUDA 8.0.
 (mxnet)$ pip install mxnet-cu80
 ```
 
-**Step 4**  Validate the installation by running simple *MXNet* code described [here](#validate-mxnet-installation).
+**Step 4**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 5**  Validate the installation by running simple *MXNet* code described [here](#validate-mxnet-installation).
 
 **Note**  You can read more about virtualenv [here](https://virtualenv.pypa.io/en/stable/userguide/).
 
@@ -438,7 +468,13 @@ $ cd python
 $ sudo python setup.py install
 ```
 
-**Step 3** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 </div>
 
 </div>
@@ -513,7 +549,13 @@ Install *MXNet* with OpenBLAS acceleration.
 (mxnet)$ pip install mxnet
 ```
 
-**Step 5**  Validate the installation by running simple *MXNet* code described [here](#validate-mxnet-installation).
+**Step 5**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 6**  Validate the installation by running simple *MXNet* code described [here](#validate-mxnet-installation).
 
 **Note**  You can read more about virtualenv [here](https://virtualenv.pypa.io/en/stable/userguide/).
 
@@ -546,7 +588,13 @@ $ pip install --upgrade setuptools
 $ pip install mxnet
 ```
 
-**Step 3**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 
 </div>
 
