@@ -67,8 +67,7 @@ USE_OPENMP = 1
 
 # whether use lapack during compilation
 # only effective when compiled with blas versions openblas/apple/atlas/mkl
-# you can disable it, however, you will not be able to use linalg-operators
-USE_LAPACK = 1
+USE_LAPACK = 0
 
 # MKL ML Library for Intel CPU/Xeon Phi
 # Please refer to MKL_README.md for details

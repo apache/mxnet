@@ -399,13 +399,13 @@ Composite multiple symbols into a new one by an operator.
 .. autosummary::
     :nosignatures:
 
-    la_gemm
-    la_gemm2
-    la_potrf
-    la_potri
-    la_trmm
-    la_trsm
-    la_sumlogdiag
+    linalg_gemm
+    linalg_gemm2
+    linalg_potrf
+    linalg_potri
+    linalg_trmm
+    linalg_trsm
+    linalg_sumlogdiag
 ```
 
 ### Miscellaneous
