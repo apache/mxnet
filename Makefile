@@ -107,12 +107,13 @@ endif
 endif
 
 # lapack settings.
+ifeq ($(USE_LAPACK), 1)
 ifeq ($(USE_BLAS),$(filter $(USE_BLAS),openblas apple atlas mkl))
         CFLAGS += -DMXNET_USE_LAPACK
 endif
 ifeq ($(USE_BLAS),$(filter $(USE_BLAS),openblas atlas mkl))
-        # lapack fortran library
         LDFLAGS += -llapack
+endif
 endif
 
 ifeq ($(USE_CUDNN), 1)

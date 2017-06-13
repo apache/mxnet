@@ -62,6 +62,11 @@ USE_OPENCV = 1
 # use openmp for parallelization
 USE_OPENMP = 0
 
+# whether use lapack during compilation
+# only effective when compiled with blas versions openblas/apple/atlas/mkl
+# you can disable it, however, you will not be able to use linalg-operators
+USE_LAPACK = 1
+
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 USE_BLAS = apple
