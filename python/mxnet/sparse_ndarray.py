@@ -247,6 +247,8 @@ class SparseNDArray(NDArray):
         assert(stype == 'csr'), "_slice for " + str(stype) + " not implemented yet"
         warnings.warn('slicing SparseNDArray is not efficient', RuntimeWarning)
         shape = list(self.shape)
+        stop = shape[0] if stop is None else stop
+        start = 0 if start is None else start
         shape[0] = stop - start
         handle = _new_alloc_handle(self.storage_type, tuple(shape), self.context,
                                    True, self.dtype, self.aux_types)
