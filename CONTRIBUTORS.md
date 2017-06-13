@@ -137,3 +137,4 @@ List of Contributors
 * [Roshani Nagmote](https://github.com/Roshrini)
 * [Chetan Khatri](https://github.com/chetkhatri/)
 * [James Liu](https://github.com/jamesliu/)
+* [Arik Poznanski](https://github.com/arikpoz/)
