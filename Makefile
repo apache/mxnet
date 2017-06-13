@@ -106,6 +106,16 @@ else
 endif
 endif
 
+# lapack settings.
+ifeq ($(USE_LAPACK), 1)
+ifeq ($(USE_BLAS),$(filter $(USE_BLAS),openblas apple atlas mkl))
+        CFLAGS += -DMXNET_USE_LAPACK
+endif
+ifeq ($(USE_BLAS),$(filter $(USE_BLAS),openblas atlas mkl))
+        LDFLAGS += -llapack
+endif
+endif
+
 ifeq ($(USE_CUDNN), 1)
 	CFLAGS += -DMSHADOW_USE_CUDNN=1
 	LDFLAGS += -lcudnn

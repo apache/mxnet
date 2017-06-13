@@ -65,6 +65,9 @@ USE_OPENCV = 1
 # use openmp for parallelization
 USE_OPENMP = 1
 
+# whether use lapack during compilation
+# only effective when compiled with blas versions openblas/apple/atlas/mkl
+USE_LAPACK = 0
 
 # MKL ML Library for Intel CPU/Xeon Phi
 # Please refer to MKL_README.md for details
