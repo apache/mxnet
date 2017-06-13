@@ -17,16 +17,17 @@ class MApMetric(mx.metric.EvalMetric):
         prediction index in network output list
     """
     def __init__(self, ovp_thresh=0.5, use_difficult=False, class_names=None, pred_idx=0):
+        super(MApMetric, self).__init__('mAP')
         if class_names is None:
-            super(MApMetric, self).__init__("mAP")
+            self.num = None
         else:
-            assert isinstance(class_names, list)
+            assert isinstance(class_names, (list, tuple))
             for name in class_names:
                 assert isinstance(name, str), "must provide names as str"
             num = len(class_names)
-            super(MApMetric, self).__init__(class_names + ["mAP"], num + 1)
-        self.records = dict()
-        self.counts = dict()
+            self.name = class_names + ['mAP']
+            self.num = num + 1
+        self.reset()
         self.ovp_thresh = ovp_thresh
         self.use_difficult = use_difficult
         self.class_names = class_names
@@ -34,7 +35,12 @@ class MApMetric(mx.metric.EvalMetric):
 
     def reset(self):
         """Clear the internal statistics to initial state."""
-        super(MApMetric, self).reset()
+        if getattr(self, 'num', None) is None:
+            self.num_inst = 0
+            self.sum_metric = 0.0
+        else:
+            self.num_inst = [0] * self.num
+            self.sum_metric = [0.0] * self.num
         self.records = dict()
         self.counts = dict()
 

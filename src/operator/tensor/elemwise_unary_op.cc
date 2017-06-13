@@ -236,6 +236,8 @@ Example::
 MXNET_OPERATOR_REGISTER_UNARY(ceil)
 .describe(R"code(Returns element-wise ceiling of the input.
 
+The ceil of the scalar x is the smallest integer i, such that i >= x.
+
 Example::
 
    ceil([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -1.,  2.,  2.,  3.]
@@ -247,12 +249,28 @@ Example::
 MXNET_OPERATOR_REGISTER_UNARY(floor)
 .describe(R"code(Returns element-wise floor of the input.
 
+The floor of the scalar x is the largest integer i, such that i <= x.
+
 Example::
 
    floor([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-3., -2.,  1.,  1.,  2.]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::floor>);
+
+// trunc
+MXNET_OPERATOR_REGISTER_UNARY(trunc)
+.describe(R"code(Return the element-wise truncated value of the input.
+
+The truncated value of the scalar x is the nearest integer i which is closer to 
+zero than x is. In short, the fractional part of the signed number x is discarded.
+
+Example::
+
+   trunc([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -1.,  1.,  1.,  2.]
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::trunc>);
 
 // fix
 MXNET_OPERATOR_REGISTER_UNARY(fix)
