@@ -33,7 +33,7 @@ LINE="########################################################################"
 echo $LINE
 echo " "
 echo "This script installs MXNet on MacOS in \${MXNET_HOME}"
-echo "The default value of \${MXNET_HOME} = ~/mxnet but you can set it appropriately."
+echo "If not set, the default value of \${MXNET_HOME} = ~/mxnet"
 echo "The current value of \${MXNET_HOME} = ${MXNET_HOME}"
 echo " "
 echo "If this directory is already present, it is renamed to retain earlier contents."
@@ -133,9 +133,6 @@ runme brew_pkg_install python
 runme brew_pkg_install opencv
 runme brew_pkg_install numpy
 runme brew_pkg_install homebrew/science/openblas
-#brew install homebrew/science/openblas
-#brew untap amazon/amazon
-#Use "uname -r" if you want OS-specific changes.
 
 echo "END: Install dependent brew packages for MXNet"
 echo $LINE
