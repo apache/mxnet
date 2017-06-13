@@ -9,7 +9,7 @@
 #set -ex
 
 export MXNET_GITPATH="https://github.com/dmlc/mxnet.git"
-if [ x"${MXNET_TAG}" = "x" ];
+if [ -z ${MXNET_TAG} ];
 then
 	#
 	# TODO: Change this to latest tag 
@@ -19,7 +19,7 @@ then
 fi
 
 export TARIKH=`/bin/date +%Y-%m-%d-%H:%M:%S`
-if [ x"${MXNET_HOME}" = "x" ];
+if [ -z ${MXNET_HOME} ];
 then
 	export MXNET_HOME="$HOME/mxnet"
 fi
@@ -113,7 +113,7 @@ download_mxnet() {
 echo " "
 echo "BEGIN: Check/Install/Update Homebrew"
 BREW_PATH=`/usr/bin/which brew`
-if [[ (x"${BREW_PATH}" = "x")  ||  (! -f ${BREW_PATH}) ]];
+if [[ (-z ${BREW_PATH})  ||  (! -f ${BREW_PATH}) ]];
 then
 	yes '' | /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 else
