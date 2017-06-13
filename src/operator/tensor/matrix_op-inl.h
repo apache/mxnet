@@ -707,15 +707,9 @@ void DotCsrRspDnsImpl(const OpContext& ctx,
                       const OpReqType req,
                       const bool trans_lhs,
                       TBlob* ret) {
-  if (rhs.storage_shape()[0] == rhs.shape()[0]) {
-    // reuse csr dns implementation when storage_shape == shape for rhs
-    DotCsrDnsDnsImpl<xpu>(ctx, lhs, rhs.data(), req, trans_lhs, ret);
-  } else {
-    LOG(FATAL) << "Dot for RowSparse rhs is only implemented for "
-               << "RowSparse rhs with all rows containing non-zeros. "
-               << "Expects rhs.values.shape[0] (" << rhs.storage_shape()[0]
-               << ") == rhs.shape[0] (" << rhs.shape()[0] << ").";
-  }
+  CHECK_RSP_ALL_ROWS_NON_ZERO(rhs, "Dot", "rhs");
+  // reuse csr dns implementation when storage_shape == shape for rhs
+  DotCsrDnsDnsImpl<xpu>(ctx, lhs, rhs.data(), req, trans_lhs, ret);
 }
 
 template<typename xpu>
@@ -736,17 +730,11 @@ void DotBackwardCsrRspDns(const nnvm::NodeAttrs& attrs,
                           const std::vector<OpReqType>& req,
                           const std::vector<NDArray>& outputs) {
   const auto& rhs = inputs[2];
-  if (rhs.storage_shape()[0] == rhs.shape()[0]) {
-    // reuse csr dns implementation when storage_shape == shape for rhs
-    const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-    TBlob ret = outputs[1].data();
-    DotCsrDnsDnsImpl<xpu>(ctx, inputs[1], inputs[0].data(), req[1], !param.transpose_a, &ret);
-  } else {
-    LOG(FATAL) << "Dot for RowSparse rhs is only implemented for "
-               << "RowSparse rhs with all rows containing non-zeros. "
-               << "Expects rhs.values.shape[0] (" << rhs.storage_shape()[0]
-               << ") == rhs.shape[0] (" << rhs.shape()[0] << ").";
-  }
+  CHECK_RSP_ALL_ROWS_NON_ZERO(rhs, "Dot", "rhs");
+  // reuse csr dns implementation when storage_shape == shape for rhs
+  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
+  TBlob ret = outputs[1].data();
+  DotCsrDnsDnsImpl<xpu>(ctx, inputs[1], inputs[0].data(), req[1], !param.transpose_a, &ret);
 }
 
 inline bool DotShape(const nnvm::NodeAttrs& attrs,

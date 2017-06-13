@@ -366,6 +366,15 @@ void FCompExFallback(const nnvm::NodeAttrs& attrs,
   CastNonDefaultStorage<xpu>(outputs, temp_out, ctx, true);
 }
 
+#define CHECK_RSP_ALL_ROWS_NON_ZERO(rsp, func, param)                              \
+  {                                                                                \
+    CHECK(rsp.storage_shape()[0] == rsp.shape()[0]) << func                        \
+          << " for RowSparse " << param << " is only implemented for "             \
+          << "RowSparse " << param << " with all rows containing non-zeros. "      \
+          << "Expects " << param << ".values.shape[0] (" << rsp.storage_shape()[0] \
+          << ") == " << param << ".shape[0] (" << rsp.shape()[0] << ").";          \
+  }
+
 
 }  // namespace op
 }  // namespace mxnet

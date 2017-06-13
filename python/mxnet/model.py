@@ -123,9 +123,6 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
             # state for the same index but on diff devs, TODO(mli)
             # use a better solution later
             w, g = p
-            # cast storage type if stype doesn't match
-            if g.storage_type != w.storage_type:
-                g = nd.cast_storage(g, w.storage_type)
             updater(index*num_device+k, g, w)
 
 

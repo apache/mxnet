@@ -211,17 +211,11 @@ void SparseEmbeddingForwardRspImpl(const nnvm::NodeAttrs& attrs,
                                    const NDArray& weight,
                                    const OpReqType req,
                                    NDArray *out) {
-  if (weight.storage_shape()[0] == weight.shape()[0]) {
-    TBlob out_blob = out->data();
-    // forward to dns implementation when storage_shape equals shape
-    bool transpose_a = false;
-    DotCsrRspDnsImpl<xpu>(ctx, data, weight, req, transpose_a, &out_blob);
-  } else {
-    LOG(FATAL) << "SparseEmbedding for RowSparse weights is only implemented for "
-               << "RowSparse weights with all rows containing non-zeros. "
-               << "Expects weights.values.shape[0] (" << weight.storage_shape()[0]
-               << ") == weights.shape[0] (" << weight.shape()[0] << ").";
-  }
+  CHECK_RSP_ALL_ROWS_NON_ZERO(weight, "SparseEmbedding", "weight");
+  TBlob out_blob = out->data();
+  // forward to dns implementation when storage_shape equals shape
+  bool transpose_a = false;
+  DotCsrRspDnsImpl<xpu>(ctx, data, weight, req, transpose_a, &out_blob);
 }
 
 template<typename xpu>
