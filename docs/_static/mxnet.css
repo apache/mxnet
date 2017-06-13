@@ -849,6 +849,24 @@ dt {
     border-bottom: solid #0079b2;
 }
 
+dl.method dt {
+    background: #f0f0f0;
+    border-bottom: solid #ccc;
+}
+
+dl.method dt code.descname {
+    color:#555;
+}
+
+dl.attribute dt {
+    background: #f0f0f0;
+    border-bottom: solid #ccc;
+}
+
+dl.attribute dt code.descname {
+    color:#555;
+}
+
 dt em {
     font-weight: normal;
     font-style: normal;
