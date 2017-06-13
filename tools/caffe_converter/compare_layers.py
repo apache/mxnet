@@ -6,7 +6,6 @@ import logging
 import mxnet as mx
 import cv2
 import numpy as np
-from convert_caffe_modelzoo import get_model_meta_info, _download_caffe_model
 
 logging.basicConfig(level=logging.INFO)
 
@@ -62,7 +61,8 @@ def _ch_dev(arg_params, aux_params, ctx):
     return new_args, new_auxs
 
 
-def compare_unknown_model(image_url, gpu, caffe_prototxt_path, caffe_model_path, caffe_mean):
+def convert_and_compare_caffe_to_mxnet(image_url, gpu, caffe_prototxt_path, caffe_model_path,
+                                       caffe_mean, mean_diff_allowed, max_diff_allowed):
     """
     Run the layer comparison on a caffe model, given its prototxt, weights and mean.
     The comparison is done by inferring on a given image using both caffe and mxnet model
@@ -120,24 +120,7 @@ def compare_unknown_model(image_url, gpu, caffe_prototxt_path, caffe_model_path,
     exe.forward(is_train=False)
 
     compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_to_record,
-                             top_to_layers)
-
-    return
-
-
-def compare_known_model(model_name, image_url, gpu):
-    """
-    Run the layer comparison on one of the known caffe models.
-    :param model_name: available models are listed in convert_caffe_modelzoo.py
-    :param image_url: image file or url to run inference on
-    :param gpu: gpu to use, -1 for cpu
-    """
-
-    logging.info('test %s', model_name)
-    meta_info = get_model_meta_info(model_name)
-
-    (prototxt, caffemodel, mean) = _download_caffe_model(model_name, meta_info, dst_dir='./model')
-    compare_unknown_model(image_url, gpu, prototxt, caffemodel, mean)
+                             top_to_layers, mean_diff_allowed, max_diff_allowed)
 
     return
 
@@ -170,16 +153,17 @@ def _bfs(root_node, process_node):
 
 
 def compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_to_record,
-                             top_to_layers):
+                             top_to_layers, mean_diff_allowed, max_diff_allowed):
     """
     Compare layer by layer of a caffe network with mxnet network
-    :param caffe_net:
-    :param arg_params:
-    :param aux_params:
-    :param exe:
-    :param layer_name_to_record:
-    :param top_to_layers:
-    :return:
+    :param caffe_net: loaded caffe network
+    :param arg_params: arguments
+    :param aux_params: auxiliary parameters
+    :param exe: mxnet model
+    :param layer_name_to_record: map between caffe layer and information record
+    :param top_to_layers: map between caffe blob name to layers which outputs it (including inplace)
+    :param mean_diff_allowed: mean difference allowed between caffe blob and mxnet blob
+    :param max_diff_allowed: max difference allowed between caffe blob and mxnet blob
     """
 
     import re
@@ -194,6 +178,8 @@ def compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_
         diff_max = diff.max()
         logging.info(log_format.format(caf_name, mx_name, blob_type, '%4.5f' % diff_mean,
                                        '%4.5f' % diff_max, note))
+        assert diff_mean < mean_diff_allowed
+        assert diff_max < max_diff_allowed
 
     def _process_layer_parameters(layer):
 
@@ -319,13 +305,24 @@ def main():
     parser.add_argument('--image_url', type=str,
                         default='http://writm.com/wp-content/uploads/2016/08/Cat-hd-wallpapers.jpg',
                         help='input image to test inference, can be either file path or url')
+    parser.add_argument('--caffe_prototxt_path', type=str,
+                        default='./model.prototxt',
+                        help='path to caffe prototxt')
+    parser.add_argument('--caffe_model_path', type=str,
+                        default='./model.caffemodel',
+                        help='path to caffe weights')
+    parser.add_argument('--caffe_mean', type=str,
+                        default='./model_mean.binaryproto',
+                        help='path to caffe mean file')
+    parser.add_argument('--mean_diff_allowed', type=int, default=1e-04,
+                        help='mean difference allowed between caffe blob and mxnet blob')
+    parser.add_argument('--max_diff_allowed', type=int, default=1e-02,
+                        help='max difference allowed between caffe blob and mxnet blob')
     parser.add_argument('--gpu', type=int, default=-1, help='the gpu id used for predict')
     args = parser.parse_args()
-
-    models = ['bvlc_googlenet', 'vgg-16', 'resnet-50']
-
-    for m in models:
-        compare_known_model(m, args.image_url, args.gpu)
+    convert_and_compare_caffe_to_mxnet(args.image_url, args.gpu, args.caffe_prototxt_path,
+                                       args.caffe_model_path, args.caffe_mean,
+                                       args.mean_diff_allowed, args.max_diff_allowed)
 
 if __name__ == '__main__':
     main()
