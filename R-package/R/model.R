@@ -467,8 +467,13 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
   }
   if (!is.list(ctx)) stop("ctx must be mx.context or list of mx.context")
   if (is.character(optimizer)) {
-    ndim <- length(input.shape)
-    batchsize = input.shape[[ndim]]
+    if (is.numeric(input.shape)) {
+      ndim <- length(input.shape)
+      batchsize = input.shape[[ndim]]      
+    } else {
+      ndim <- length(input.shape[[1]])
+      batchsize = input.shape[[1]][[ndim]]
+    }
     optimizer <- mx.opt.create(optimizer, rescale.grad=(1/batchsize), ...)
   }
   if (!is.null(eval.data) && !is.list(eval.data) && !is.mx.dataiter(eval.data)) {
