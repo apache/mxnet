@@ -314,9 +314,9 @@ def main():
     parser.add_argument('--caffe_mean', type=str,
                         default='./model_mean.binaryproto',
                         help='path to caffe mean file')
-    parser.add_argument('--mean_diff_allowed', type=int, default=1e-04,
+    parser.add_argument('--mean_diff_allowed', type=int, default=1e-03,
                         help='mean difference allowed between caffe blob and mxnet blob')
-    parser.add_argument('--max_diff_allowed', type=int, default=1e-02,
+    parser.add_argument('--max_diff_allowed', type=int, default=1e-01,
                         help='max difference allowed between caffe blob and mxnet blob')
     parser.add_argument('--gpu', type=int, default=-1, help='the gpu id used for predict')
     args = parser.parse_args()
