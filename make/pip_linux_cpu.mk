@@ -29,6 +29,11 @@ ADD_CFLAGS += -Ldeps/lib -Ideps/include
 # matrix computation libraries for CPU/GPU
 #---------------------------------------------
 
+# whether use lapack during compilation
+# only effective when compiled with blas versions openblas/apple/atlas/mkl
+# you can disable it, however, you will not be able to use linalg-operators
+USE_LAPACK = 0
+
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 # in default use atlas for linux while apple for osx
@@ -49,13 +54,6 @@ USE_CUDA_PATH = NONE
 
 # whether use CuDNN R3 library
 USE_CUDNN = 0
-
-# CUDA architecture setting: going with all of them.
-# For CUDA < 6.0, comment the *_50 lines for compatibility.
-CUDA_ARCH := -gencode arch=compute_30,code=sm_30 \
-		-gencode arch=compute_35,code=sm_35 \
-		-gencode arch=compute_50,code=sm_50 \
-		-gencode arch=compute_50,code=compute_50
 
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
 USE_NVRTC = 0

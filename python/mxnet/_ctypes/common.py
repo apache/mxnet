@@ -22,7 +22,7 @@ class CachedOp(object):
             op_handle,
             ctypes.c_int(num_input),
             ctypes.c_int(len(kwargs)),
-            c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()]),
+            c_array(ctypes.c_char_p, [c_str(key) for key in kwargs]),
             c_array(ctypes.c_char_p, [c_str(str(val)) for val in kwargs.values()]),
             ctypes.byref(self.handle)))
 
