@@ -671,14 +671,14 @@ struct mod {
     if (b == 0) {
       LOG(WARNING) << "divide by zero encountered in modulo.";
       return DType(0.0f);
-    } else if (b < 0){
-      if (a < 0){
+    } else if (b < 0) {
+      if (a < 0) {
         return DType(-::fmod(-a, -b));
       } else {
         return DType(::fmod(a, -b) + (::fmod(a, -b) != DType(0) ? b : DType(0)));
       }
     } else {
-      if (a < 0){
+      if (a < 0) {
         return DType(-::fmod(-a, b) + (::fmod(-a, b) != DType(0) ? b : DType(0)));
       } else {
         return DType(::fmod(a, b));
@@ -741,14 +741,14 @@ struct rmod {
     if (a == 0) {
       LOG(WARNING) << "divide by zero encountered in modulo.";
       return DType(0.0f);
-    } else if (a < 0){
-      if (b < 0){
+    } else if (a < 0) {
+      if (b < 0) {
         return DType(-::fmod(-b, -a));
       } else {
         return DType(::fmod(b, -a) + (::fmod(b, -a) != DType(0) ? a : DType(0)));
       }
     } else {
-      if (b < 0){
+      if (b < 0) {
         return DType(-::fmod(-b, a) + (::fmod(-b, a) != DType(0) ? a : DType(0)));
       } else {
         return DType(::fmod(b, a));
