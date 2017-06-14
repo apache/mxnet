@@ -8,7 +8,7 @@
 #define MXNET_OPERATOR_MSHADOW_OP_H_
 
 #include <mxnet/base.h>
-#include <cmath>
+#include <math.h>
 #include "special_functions-inl.h"
 
 namespace mxnet {
@@ -724,22 +724,14 @@ struct mod_rgrad {
     if (b == 0) {
       LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
     }
-#ifdef __CUDACC__
     return ::floorf(-a/b);
-#else
-    return std::floorf(-a/b);
-#endif
   }
 
   MSHADOW_XINLINE static double Map(double a, double b) {
     if (b == 0) {
       LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
     }
-#ifdef __CUDACC__
     return ::floor(-a/b);
-#else
-    return std::floor(-a/b);
-#endif
   }
 };
 
