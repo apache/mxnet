@@ -410,7 +410,7 @@ class Symbol(SymbolBase):
 
         num_args = len(args) + len(kwargs)
         if len(kwargs) != 0:
-            keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()])
+            keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs])
             args = c_array(SymbolHandle, [s.handle for s in kwargs.values()])
         else:
             keys = None
@@ -1368,11 +1368,12 @@ class Symbol(SymbolBase):
                                                  ctypes.byref(aux_state_handles),
                                                  shared_exec_handle,
                                                  ctypes.byref(exe_handle)))
-        except MXNetError:
-            print("simple_bind error. Arguments:")
+        except MXNetError as e:
+            error_msg = "simple_bind error. Arguments:\n"
             for k, v in kwargs.items():
-                print("  %s: %s" % (k, v))
-            raise RuntimeError('simple_bind failed')
+                error_msg += "%s: %s\n" % (k, v)
+            error_msg += "%s" % e
+            raise RuntimeError(error_msg)
 
         # update shared_buffer
         if shared_buffer is not None:
@@ -2164,14 +2165,14 @@ def %s(%s):
             keys.append(k)
             vals.append(v)""")
         # NDArray args
-        for name in ndarg_names:
+        for name in ndarg_names: # pylint: disable=redefined-argument-from-local
             code.append("""
     if {name} is not None:
         assert isinstance({name}, SymbolBase), \\
             "Argument {name} must be Symbol instances, but got %s"%str({name})
         sym_kwargs['{name}'] = {name}""".format(name=name))
         # kwargs
-        for name in kwarg_names:
+        for name in kwarg_names: # pylint: disable=redefined-argument-from-local
             code.append("""
     if %s is not _Null:
         keys.append('%s')

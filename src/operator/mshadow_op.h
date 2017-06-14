@@ -593,6 +593,14 @@ struct floor {
   }
 };
 
+/*! \brief used to round towards zero */
+struct trunc {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(truncf(a));
+  }
+};
+
 /*! \brief used to round number to nearest integer */
 struct rint {
   template<typename DType>
