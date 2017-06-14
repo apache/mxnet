@@ -270,7 +270,7 @@ def test(ctx):
         for x in data:
             outputs.append(net(x))
         metric.update(label, outputs)
-    print 'validation acc: %s=%f'%metric.get()
+    print('validation acc: %s=%f'%metric.get())
 
 
 def train(epoch, ctx):
@@ -296,13 +296,13 @@ def train(epoch, ctx):
                     outputs.append(z)
             trainer.step(batch.data[0].shape[0])
             metric.update(label, outputs)
-            print 'speed: {} samples/s'.format(batch.data[0].shape[0]/(time.time()-btic))
+            print('speed: {} samples/s'.format(batch.data[0].shape[0]/(time.time()-btic)))
             btic = time.time()
 
         name, acc = metric.get()
         metric.reset()
-        print 'training acc at epoch %d: %s=%f'%(i, name, acc)
-        print 'time: %f'%(time.time()-tic)
+        print('training acc at epoch %d: %s=%f'%(i, name, acc))
+        print('time: %f'%(time.time()-tic))
         test(ctx)
 
     net.all_params().save('mnist.params')
