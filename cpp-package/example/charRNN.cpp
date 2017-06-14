@@ -115,7 +115,7 @@ Symbol LSTMUnroll(int num_lstm_layer, int sequence_length, int input_dim,
 
   auto label = Symbol::Variable("softmax_label");
   label = transpose(label);
-  label = Reshape(label, Shape(), false, Shape(-1), false);  // -1: infer from graph
+  label = Reshape(label, Shape(), false, Shape(0), false);  // -1: infer from graph
   auto sm = SoftmaxOutput("softmax", pred, label);
   if (isTrain)
     return sm;
@@ -141,7 +141,7 @@ Symbol LSTMWithBuiltInRNNOp(int num_lstm_layer, int sequence_length, int input_d
   auto label = Symbol::Variable("softmax_label");
   label = transpose(label);
   label = Reshape(label, Shape(), false,
-                  Shape(-1), false);  // FullyConnected requires one dimension
+                  Shape(0), false);  // FullyConnected requires one dimension
   if (!TIME_MAJOR && isTrain)
     embed = SwapAxis(embed, 0, 1);  // Change to time-major as cuDNN requires
 
@@ -151,7 +151,7 @@ Symbol LSTMWithBuiltInRNNOp(int num_lstm_layer, int sequence_length, int input_d
   auto rnn_params = Symbol::Variable("LSTM_parameters");  // See explanations near RNNXavier class
   auto rnn = RNN(embed, rnn_params, rnn_h_init, rnn_c_init, num_hidden, num_lstm_layer,
       RNNMode::kLstm, false, dropout, !isTrain);
-  auto hidden = Reshape(rnn[0], Shape(), false, Shape(-1, num_hidden), false);
+  auto hidden = Reshape(rnn[0], Shape(), false, Shape(0, num_hidden), false);
 
   auto cls_weight = Symbol::Variable("cls_weight");
   auto cls_bias = Symbol::Variable("cls_bias");
