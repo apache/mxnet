@@ -291,6 +291,34 @@ class TBlob {
     return this->get_with_shape<Device, 3, DType>(
         this->shape_.FlatTo3D(axis_begin, axis_end), stream);
   }
+  /*!
+   * \brief flatten the tensor to specified number of dimensions,
+   *  collapse the highest dimensions or pad with higher dimensions
+   * \param stream the possible stream target tensor should reside on
+   * \tparam Device which device the tensor is on
+   * \tparam dim desired number of dimensions of returned tensor
+   * \tparam DType the type of elements in the tensor
+   * \return tensor after flatten
+   */
+  template<typename Device, int dim, typename DType>
+  inline mshadow::Tensor<Device, dim, DType> FlatToKD(
+     mshadow::Stream<Device> *stream = NULL) const {
+    mshadow::Shape<dim> shape;
+    shape[0] = 1;
+    // Pad higher dimensions in case dim > ndim()
+    for (int i = 0; i < dim - ndim(); ++i) {
+      shape[i] = 1;
+    }
+    // Collapse higher dimensions in case dim < ndim()
+    for (int i = 0; i < ndim() - dim + 1; ++i) {
+      shape[0] *= shape_[i];
+    }
+    // Preserve lower dimensions.
+    for (int i = std::max(0, ndim() - dim + 1); i < ndim(); ++i) {
+      shape[i - ndim() + dim] = shape_[i];
+    }
+    return this->get_with_shape<Device, dim, DType>(shape, stream);
+  }
 
  private:
   static DLDataType DTypeTransform(int type_flag) {

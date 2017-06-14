@@ -1257,6 +1257,18 @@ sub BUILD
 {
     my ($self, $original_arguments) = @_;
     $self->_override_cell_params(defined $original_arguments->{params});
+    if($self->_override_cell_params)
+    {
+        assert(
+            ($self->l_cell->_own_params and $self->r_cell->_own_params),
+            "Either specify params for BidirectionalCell ".
+            "or child cells, not both."
+        );
+        %{ $self->l_cell->params->_params } = (%{ $self->l_cell->params->_params }, %{ $self->params->_params });
+        %{ $self->r_cell->params->_params } = (%{ $self->r_cell->params->_params }, %{ $self->params->_params });
+    }
+    %{ $self->params->_params } = (%{ $self->params->_params }, %{ $self->l_cell->params->_params });
+    %{ $self->params->_params } = (%{ $self->params->_params }, %{ $self->r_cell->params->_params });
     $self->_cells([$self->l_cell, $self->r_cell]);
 }
 
@@ -1519,7 +1531,7 @@ has 'prev_output' => (is => 'rw', init_arg => undef);
 
 =head1 DESCRIPTION
 
-    Apply Zoneout on base cell
+    Apply Zoneout on base cell.
 =cut
 
 sub BUILD
@@ -1555,8 +1567,7 @@ method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
     my $mask = sub {
         my ($p, $like) = @_;
         AI::MXNet::Symbol->Dropout(
-            AI::MXNet::Symbol->_identity_with_attr_like_rhs(
-                AI::MXNet::Symbol->ones(shape => [0, 0]),
+            AI::MXNet::Symbol->ones_like(
                 $like
             ),
             p => $p
@@ -1584,6 +1595,108 @@ method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
     }
     $self->prev_output($output);
     return ($output, @states ? \@states : $next_states);
+}
+
+package AI::MXNet::RNN::ResidualCell;
+use Mouse;
+use AI::MXNet::Base;
+extends 'AI::MXNet::RNN::ModifierCell';
+
+=head1 NAME
+
+    AI::MXNet::RNN::ResidualCell
+=cut
+
+=head1 DESCRIPTION
+
+    Adds residual connection as described in Wu et al, 2016
+    (https://arxiv.org/abs/1609.08144).
+    Output of the cell is output of the base cell plus input.
+=cut
+
+method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
+{
+    my $output;
+    ($output, $states) = &{$self->base_cell}($inputs, $states);
+    $output = AI::MXNet::Symbol->elemwise_add($output, $inputs, name => $output->name.'_plus_residual');
+    return ($output, $states)
+}
+
+method unroll(
+    Int $length,
+    Maybe[AI::MXNet::Symbol|ArrayRef[AI::MXNet::Symbol]] :$inputs=,
+    Maybe[AI::MXNet::Symbol|ArrayRef[AI::MXNet::Symbol]] :$begin_state=,
+    Str                                                  :$input_prefix='',
+    Str                                                  :$layout='NTC',
+    Maybe[Bool]                                          :$merge_outputs=
+)
+{
+    $self->reset;
+    $self->base_cell->_modified(0);
+    my ($outputs, $states) = $self->base_cell->unroll($length, inputs=>$inputs, begin_state=>$begin_state,
+                                                layout=>$layout, merge_outputs=>$merge_outputs);
+    $self->base_cell->_modified(1);
+    $merge_outputs //= (blessed($outputs) and $outputs->isa('AI::MXNet::Symbol'));
+    ($inputs) = _normalize_sequence($length, $inputs, $layout, $merge_outputs);
+    if($merge_outputs)
+    {
+        $outputs = AI::MXNet::Symbol->elemwise_add($outputs, $inputs, name => $outputs->name . "_plus_residual");
+    }
+    else
+    {
+        my @temp;
+        zip(sub {
+            my ($output_sym, $input_sym) = @_;
+            push @temp, AI::MXNet::Symbol->elemwise_add($output_sym, $input_sym,
+                            name=>$output_sym->name."_plus_residual");
+        }, [@{ $outputs }], [@{ $inputs }]);
+        $outputs = \@temp;
+    }
+    return ($outputs, $states);
+}
+
+func _normalize_sequence($length, $inputs, $layout, $merge, $in_layout=)
+{
+    assert((defined $inputs),
+        "unroll(inputs=>undef) has been deprecated. ".
+        "Please create input variables outside unroll."
+    );
+
+    my $axis = index($layout, 'T');
+    my $in_axis = defined $in_layout ? index($in_layout, 'T') : $axis;
+    if(blessed($inputs))
+    {
+        if(not $merge)
+        {
+            assert(
+                (@{ $inputs->list_outputs() } == 1),
+                "unroll doesn't allow grouped symbol as input. Please "
+                ."convert to list first or let unroll handle splitting"
+            );
+            $inputs = [ @{ AI::MXNet::Symbol->split(
+                $inputs,
+                axis         => $in_axis,
+                num_outputs  => $length,
+                squeeze_axis => 1
+            ) }];
+        }
+    }
+    else
+    {
+        assert(not defined $length or @$inputs == $length);
+        if($merge)
+        {
+            $inputs = [map { AI::MXNet::Symbol->expand_dims($_, axis=>$axis) } @{ $inputs }];
+            $inputs = AI::MXNet::Symbol->Concat(@{ $inputs }, dim=>$axis);
+            $in_axis = $axis;
+        }
+    }
+
+    if(blessed($inputs) and $axis != $in_axis)
+    {
+        $inputs = AI::MXNet::Symbol->swapaxes($inputs, dim0=>$axis, dim1=>$in_axis);
+    }
+    return ($inputs, $axis);
 }
 
 1;

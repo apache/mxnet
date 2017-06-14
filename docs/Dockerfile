@@ -5,7 +5,7 @@ MAINTAINER Mu Li <muli@cs.cmu.edu>
 # First, build MXNet binaries (ref mxnet/docker/cpu/Dockerfile)
 #
 
-RUN apt-get update && apt-get install -y build-essential git libopenblas-dev libopencv-dev
+RUN apt-get update && apt-get install -y build-essential git libopenblas-dev liblapack-dev libopencv-dev
 RUN git clone --recursive https://github.com/dmlc/mxnet/ && cd mxnet && \
     cp make/config.mk . && \
     echo "USE_BLAS=openblas" >>config.mk && \

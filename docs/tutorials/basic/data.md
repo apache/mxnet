@@ -1,12 +1,30 @@
 # Iterators - Loading data
-In this tutorial we focus on how to feed data into a training or inference program.
+In this tutorial, we focus on how to feed data into a training or inference program.
 Most training and inference modules in MXNet accept data iterators,
 which simplifies this procedure, especially when reading large datasets.
 Here we discuss the API conventions and several provided iterators.
 
+## Prerequisites
+
+To complete this tutorial, we need:  
+
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).  
+
+- [OpenCV Python library](http://opencv.org/opencv-3-2.html),  [Python Requests](http://docs.python-requests.org/en/master/), [Matplotlib](https://matplotlib.org/) and [Jupyter Notebook](http://jupyter.org/index.html).
+
+```
+$ pip install opencv-python requests matplotlib jupyter
+```
+- Set the environment variable `MXNET_HOME` to the root of the MXNet source folder.  
+
+```
+$ git clone https://github.com/dmlc/mxnet ~/mxnet
+$ MXNET_HOME = '~/mxnet'
+```
+
 ## MXNet Data Iterator  
 Data Iterators in *MXNet* are similar to Python iterator objects.
-In Python the function `iter` allows fetching items sequentially by calling  `next()` on
+In Python, the function `iter` allows fetching items sequentially by calling  `next()` on
  iterable objects such as a Python `list`.
 Iterators provide an abstract interface for traversing various types of iterable collections
  without needing to expose details about the underlying data source.
@@ -144,7 +162,7 @@ The *data* variables are called free variables in MXNet's Symbol API.
 To execute a Symbol, they need to be bound with data.
 [Click here learn more about Symbol](http://mxnet.io/tutorials/basic/symbol.html).
 
-We use the data iterator to feed examples to a neural networks via MXNet's `module` API.
+We use the data iterator to feed examples to a neural network via MXNet's `module` API.
 [Click here to learn more about Module](http://mxnet.io/tutorials/basic/module.html).
 
 
@@ -224,7 +242,7 @@ record.keys
 
 ### Packing and Unpacking data
 
-Each record in a .rec file can contain arbitrary binary data. However most deep learning tasks require data to be input in label/data format.
+Each record in a .rec file can contain arbitrary binary data. However, most deep learning tasks require data to be input in label/data format.
 The `mx.recordio` package provides a few utility functions for such operations, namely: `pack`, `unpack`, `pack_img`, and `unpack_img`.
 
 #### Packing/Unpacking Binary Data
@@ -274,7 +292,7 @@ An example of how to use the script for converting to *RecordIO* format is shown
 
 ## Image IO
 
-In this section we will learn how to preprocess and load image data in MXNet.
+In this section, we will learn how to preprocess and load image data in MXNet.
 
 There are 4 ways of loading image data in MXNet.
    1. Using [__mx.image.imdecode__](http://mxnet.io/api/python/io.html#mxnet.image.imdecode) to load raw image files.
@@ -282,13 +300,6 @@ There are 4 ways of loading image data in MXNet.
    3. Using [__`mx.io.ImageRecordIter`__](http://mxnet.io/api/python/io.html#mxnet.io.ImageRecordIter) implemented on the MXNet backend in C++. This is less flexible to customization but provides various language bindings.
    4. Creating a Custom iterator inheriting `mx.io.DataIter`
 
-
-First, set the environment variable `MXNET_HOME` to the root of the MXNet source folder:
-
-```python
-# change this to your mxnet location
-MXNET_HOME = '/scratch/mxnet'
-```
 
 ### Preprocessing Images
 Images can be preprocessed in different ways. We list some of them below:
@@ -302,20 +313,19 @@ Let's download sample images that we can work with.
 
 
 ```python
-fname = mx.test_utils.download(url='http://data.mxnet.io/data/test_images.tar.gz')
+fname = mx.test_utils.download(url='http://data.mxnet.io/data/test_images.tar.gz', dirname='data', overwrite=False)
 tar = tarfile.open(fname)
-tar.extractall()
+tar.extractall(path='./data')
 tar.close()
 ```
 
 #### Loading raw images
-`mx.image.imdecode` lets us load the images. `imdecode` provides a similar interface to ``OpenCV``.
-**Note: ** You will still need ``OpenCV``(not the CV2 Python library) installed to use `mx.image.imdecode`.
+`mx.image.imdecode` lets us load the images. `imdecode` provides a similar interface to ``OpenCV``.  
 
+**Note:** You will still need ``OpenCV``(not the CV2 Python library) installed to use `mx.image.imdecode`.
 
 ```python
-import cv2
-img = mx.image.imdecode(open('test_images/ILSVRC2012_val_00000001.JPEG').read())
+img = mx.image.imdecode(open('data/test_images/ILSVRC2012_val_00000001.JPEG').read())
 plt.imshow(img.asnumpy()); plt.show()
 ```
 
@@ -346,21 +356,20 @@ Download and unzip
 ```python
 fname = mx.test_utils.download(url='http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz', dirname='data', overwrite=False)
 tar = tarfile.open(fname)
-tar.extractall()
+tar.extractall(path='./data')
 tar.close()
-os.chdir('../')
 ```
 
 Let's take a look at the data. As you can see, under the root folder (./data/101_ObjectCategories) every category has a subfolder(./data/101_ObjectCategories/yin_yang).
 
 Now let's convert them into record io format using the `im2rec.py` utility script.
-First we need to make a list that contains all the image files and their categories:
+First, we need to make a list that contains all the image files and their categories:
 
 ```python
 os.system('python %s/tools/im2rec.py --list=1 --recursive=1 --shuffle=1 --test-ratio=0.2 data/caltech data/101_ObjectCategories'%MXNET_HOME)
 ```
 
-The resulting list file (./data/caltech_train.lst) is in the format `index\t(one or more label)\tpath`. In this case there is only one label for each image but you can modify the list to add in more for multi label training.
+The resulting list file (./data/caltech_train.lst) is in the format `index\t(one or more label)\tpath`. In this case, there is only one label for each image but you can modify the list to add in more for multi-label training.
 
 Then we can use this list to create our record io file:
 

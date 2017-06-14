@@ -266,7 +266,7 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
         auto dtype = prefetch_param_.dtype
           ? prefetch_param_.dtype.value()
           : first_batch.data[i].type_flag_;
-        out->data.at(i) = NDArray(dst_shape, Context::CPU(), false, src_type_flag);
+        out->data.at(i) = NDArray(dst_shape, Context::CPUPinned(0), false, src_type_flag);
         unit_size_[i] = src_shape.Size();
       }
     }

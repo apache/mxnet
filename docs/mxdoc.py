@@ -235,8 +235,8 @@ def _get_src_download_btn(out_prefix, langs, lines):
         with open(ipynb, 'w') as f:
             json.dump(_get_jupyter_notebook(lang, lines), f)
         f = ipynb.split('/')[-1]
-        btn += '<button type="button" class="btn btn-default download" '
-        btn += 'onclick="window.location=\'%s\'"><span class="glyphicon glyphicon-download-alt"></span> %s </button>\n' % (f, f)
+        btn += '<div class="download_btn"><a href="%s" download="%s">' \
+               '<span class="glyphicon glyphicon-download-alt"></span> %s</a></div>' % (f, f, f)
     btn += '</div>\n'
     return btn
 
