@@ -318,13 +318,13 @@ class CommCPU : public Comm {
 
     uniq_row_idx->resize(total_num_rows);
     int nthreads = omp_get_max_threads();
-    size_t offset = 0;
+    int offset = 0;
     for (const auto& nd : nds) {
       if (nd.storage_initialized()) {
         const IType* nd_row_idx = nd.aux_data(kIdx).dptr<IType>();
-        const size_t num_rows = nd.aux_shape(kIdx).Size();
+        const int num_rows = nd.aux_shape(kIdx).Size();
 #pragma omp parallel for num_threads(nthreads)
-        for (size_t i = 0; i < num_rows; ++i) {
+        for (int i = 0; i < num_rows; ++i) {
           (*uniq_row_idx)[offset+i] = nd_row_idx[i];
         }
         offset += num_rows;
