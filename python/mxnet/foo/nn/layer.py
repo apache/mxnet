@@ -348,7 +348,7 @@ class Dropout(Layer):
 
     References
     ----------
-    - [Dropout: A Simple Way to Prevent Neural Networks from Overfitting](
+    [Dropout: A Simple Way to Prevent Neural Networks from Overfitting](
         http://www.cs.toronto.edu/~rsalakhu/papers/srivastava14a.pdf)
     """
     def __init__(self, rate, **kwargs):
