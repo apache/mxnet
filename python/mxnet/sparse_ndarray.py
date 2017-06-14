@@ -84,43 +84,19 @@ class SparseNDArray(NDArray):
     fixed-size items, stored in sparse format. See CSRNDArray and RowSparseNDArray
     for more details.
     """
-    def __add__(self, other):
-        raise Exception('Not implemented for SparseND yet!')
-
     def __iadd__(self, other):
-        raise Exception('Not implemented for SparseND yet!')
-
-    def __radd__(self, other):
         raise Exception('Not implemented for SparseND yet!')
 
     def __isub__(self, other):
         raise Exception('Not implemented for SparseND yet!')
 
-    def __rsub__(self, other):
-        raise Exception('Not implemented for SparseND yet!')
-
     def __imul__(self, other):
-        raise Exception('Not implemented for SparseND yet!')
-
-    def __rmul__(self, other):
-        raise Exception('Not implemented for SparseND yet!')
-
-    def __rdiv__(self, other):
         raise Exception('Not implemented for SparseND yet!')
 
     def __idiv__(self, other):
         raise Exception('Not implemented for SparseND yet!')
 
-    def __rtruediv__(self, other):
-        raise Exception('Not implemented for SparseND yet!')
-
     def __itruediv__(self, other):
-        raise Exception('Not implemented for SparseND yet!')
-
-    def __pow__(self, other):
-        raise Exception('Not implemented for SparseND yet!')
-
-    def __rpow__(self, other):
         raise Exception('Not implemented for SparseND yet!')
 
     def __setitem__(self, key, value):
