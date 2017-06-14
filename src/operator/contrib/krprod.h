@@ -16,40 +16,37 @@ using namespace mshadow;
 using namespace mshadow::expr;
 
 /*!
- * \brief Computes Khatri-Rao product
+ * \brief Computes row-wise Kronecker product
  *
- * Given the transpose of input matrices, this function computes the
- * transpose of the Khatri-Rao product of the input matrices.
- *
- * Effectively, this implementation computes the Khatri-Rao product
- * row by row, rather than column by column. E.g. if the input matrices
- * are of shape (3, 2), (3, 4), (3, 5), the result matrix will be of
- * shape (3, 2 * 4 * 5), which is (3, 40).
+ * Given input matrices, this function computes the Kronecker product
+ * row-wise. E.g. if the input matrices  are of shape (3, 2), (3, 4),
+ * (3, 5), the result matrix will be of shape (3, 2 * 4 * 5), which is
+ * (3, 40).
  *
  * \param out result matrix
  * \param ts_arr vector of input matrices
  */
 template <typename DType>
-inline void krprod
+inline void row_wise_kronecker
   (Tensor<cpu, 2, DType> out,
   const std::vector<Tensor<cpu, 2, DType> > &ts_arr) {
   // If no input matrix, return all-one vector
   if (ts_arr.empty()) {
-    CHECK_EQ(1, out.size(1)) << "The output matrix must have width 1.";
+    CHECK_EQ(1, out.size(1)) << "The output matrix must have single column.";
     out = 1;
     return;
   }
 
   // Check all input and output matrices have the same height
   // and the output matrix has the right width
-  int ts_height = static_cast<int>(out.size(0));
-  int krprod_length = 1;
+  int nrows = static_cast<int>(out.size(0));
+  int kronecker_length = 1;
   for (auto & ts : ts_arr) {
-    CHECK_EQ(ts_height, static_cast<int>(ts.size(0)))
-      << "All input and output matrices must have the same height.";
-    krprod_length *= ts.size(1);
+    CHECK_EQ(nrows, static_cast<int>(ts.size(0)))
+      << "All input and output matrices must have the same number of rows.";
+    kronecker_length *= ts.size(1);
   }
-  CHECK_EQ(krprod_length, static_cast<int>(out.size(1)));
+  CHECK_EQ(kronecker_length, static_cast<int>(out.size(1)));
 
   // Create an intermediate space of the same shape as out
   //
@@ -68,19 +65,19 @@ inline void krprod
 
   // Compute each intermediate Khatri-Rao product
   storage = 1;
-  krprod_length = 1;
+  kronecker_length = 1;
   for (auto & ts : ts_arr) {
     expr::BLASEngine<cpu, DType>::SetStream
       (result->stream_);
 
     // Compute the current Khatri-Rao product, row by row
     *result = 0;
-    for (int i = 0; i < ts_height; ++i) {
+    for (int i = 0; i < nrows; ++i) {
       // BLAS signature
       //
       // dger(
       //   m : ts.size(1), length of each row of current matrix
-      //   n : krprod_length, length of each row of previous result
+      //   n : kronecker_length, length of each row of previous result
       //   alpha : 1, scaling to the outer product of x and y
       //   x : ts[i].dptr_, current row of current matrix
       //   incx : 1, as each element in the row is contiguous
@@ -94,12 +91,12 @@ inline void krprod
       // )
       expr::BLASEngine<cpu, DType>::ger
         (result->stream_,
-        ts.size(1), krprod_length, 1,
+        ts.size(1), kronecker_length, 1,
         ts[i].dptr_, 1,
         (*given)[i].dptr_, 1,
         (*result)[i].dptr_, ts.size(1));
     }
-    krprod_length *= ts.size(1);
+    kronecker_length *= ts.size(1);
 
     tmp = given;
     given = result;
@@ -115,21 +112,18 @@ inline void krprod
 }
 
 /*!
- * \brief Convenience function for Khatri-Rao product for two input matrices
- *
- * Given the transpose of input matrices, this function computes the
- * transpose of the Khatri-Rao product of the input matrices.
+ * \brief Convenience function for row-wise Kronecker product
  *
  * \param out result matrix
  * \param in1 first input matrix
  * \param in2 second input matrix
  */
 template <typename DType>
-inline void krprod
+inline void row_wise_kronecker
   (Tensor<cpu, 2, DType> out,
   const Tensor<cpu, 2, DType> &in1,
   const Tensor<cpu, 2, DType> &in2) {
-  krprod(out, std::vector<Tensor<cpu, 2, DType> > {in1, in2});
+  row_wise_kronecker(out, std::vector<Tensor<cpu, 2, DType> > {in1, in2});
 }
 
 }  // namespace op

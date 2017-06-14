@@ -21,20 +21,20 @@ using DType = double;
       EXPECT_DOUBLE_EQ(expected[i][j], actual[i][j]); \
 } \
 
-TEST(krprod, ZeroInputMatrix) {
+TEST(row_wise_kronecker, ZeroInputMatrix) {
   Tensor<cpu, 2, DType> result(Shape2(4, 1)), expected(Shape2(4, 1));
   AllocSpace(&expected);
   AllocSpace(&result);
 
   expected = 1;
-  krprod(result, std::vector<Tensor<cpu, 2, DType> > {});
+  row_wise_kronecker(result, std::vector<Tensor<cpu, 2, DType> > {});
   EXPECT_DOUBLE_EQ_MATRIX(expected, result);
 
   FreeSpace(&expected);
   FreeSpace(&result);
 }
 
-TEST(krprod, OneInputMatrix) {
+TEST(row_wise_kronecker, OneInputMatrix) {
   // Input matrices of shape (2, 4) which is also the expected result
   DType mat[8] {1, 2, 3, 4, 5, 6, 7, 8};
 
@@ -45,7 +45,7 @@ TEST(krprod, OneInputMatrix) {
   // Compute Khatri-Rao product
   Tensor<cpu, 2, DType> result(Shape2(2, 4));
   AllocSpace(&result);
-  krprod(result, ts_arr);
+  row_wise_kronecker(result, ts_arr);
 
   // Check against expected result
   EXPECT_DOUBLE_EQ_MATRIX(ts_arr[0], result);
@@ -53,7 +53,7 @@ TEST(krprod, OneInputMatrix) {
   FreeSpace(&result);
 }
 
-TEST(krprod, TwoInputMatrices) {
+TEST(row_wise_kronecker, TwoInputMatrices) {
   // Input matrices of shape (2, 3) and (2, 4)
   DType mat1[6] {1, 2, 3, 4, 5, 6};
   DType mat2[8] {1, 2, 3, 4, 5, 6, 7, 8};
@@ -70,7 +70,7 @@ TEST(krprod, TwoInputMatrices) {
   // Compute Khatri-Rao product
   Tensor<cpu, 2, DType> result(Shape2(2, 12));
   AllocSpace(&result);
-  krprod(result, ts_arr);
+  row_wise_kronecker(result, ts_arr);
 
   // Check against expected result
   Tensor<cpu, 2, DType> ts_expected(expected, Shape2(2, 12), 12, nullptr);
@@ -79,7 +79,7 @@ TEST(krprod, TwoInputMatrices) {
   FreeSpace(&result);
 }
 
-TEST(krprod, TwoInputMatrices2) {
+TEST(row_wise_kronecker, TwoInputMatrices2) {
   // Input matrices of shape (2, 3) and (2, 1)
   DType mat1[6] {1, 2, 3, 4, 5, 6};
   DType mat2[2] {1, 2};
@@ -95,7 +95,7 @@ TEST(krprod, TwoInputMatrices2) {
   // Compute Khatri-Rao product
   Tensor<cpu, 2, DType> result(Shape2(2, 3));
   AllocSpace(&result);
-  krprod(result, ts_arr);
+  row_wise_kronecker(result, ts_arr);
 
   // Check against expected result
   Tensor<cpu, 2, DType> ts_expected(expected, Shape2(2, 3), 3, nullptr);
@@ -104,7 +104,7 @@ TEST(krprod, TwoInputMatrices2) {
   FreeSpace(&result);
 }
 
-TEST(krprod, ThreeInputMatrices) {
+TEST(row_wise_kronecker, ThreeInputMatrices) {
   std::default_random_engine generator;
   std::uniform_int_distribution<int> distribution(1, 6);
 
@@ -125,9 +125,9 @@ TEST(krprod, ThreeInputMatrices) {
         in[i][j] = distribution(generator);
   }
 
-  krprod(kr12, in1, in2);
-  krprod(kr13, kr12, in3);
-  krprod(result, ts_arr);
+  row_wise_kronecker(kr12, in1, in2);
+  row_wise_kronecker(kr13, kr12, in3);
+  row_wise_kronecker(result, ts_arr);
   EXPECT_DOUBLE_EQ_MATRIX(kr13, result);
 
   for (auto & in : ts_arr)
@@ -137,7 +137,7 @@ TEST(krprod, ThreeInputMatrices) {
   FreeSpace(&result);
 }
 
-TEST(krprod, ThreeInputMatrices2) {
+TEST(row_wise_kronecker, ThreeInputMatrices2) {
   std::default_random_engine generator;
   std::uniform_int_distribution<int> distribution(1, 6);
 
@@ -158,9 +158,9 @@ TEST(krprod, ThreeInputMatrices2) {
         in[i][j] = distribution(generator);
   }
 
-  krprod(kr12, in1, in2);
-  krprod(kr13, kr12, in3);
-  krprod(result, ts_arr);
+  row_wise_kronecker(kr12, in1, in2);
+  row_wise_kronecker(kr13, kr12, in3);
+  row_wise_kronecker(result, ts_arr);
   EXPECT_DOUBLE_EQ_MATRIX(kr13, result);
 
   for (auto & in : ts_arr)
@@ -170,7 +170,7 @@ TEST(krprod, ThreeInputMatrices2) {
   FreeSpace(&result);
 }
 
-TEST(krprod, ThreeInputMatrices3) {
+TEST(row_wise_kronecker, ThreeInputMatrices3) {
   std::default_random_engine generator;
   std::uniform_int_distribution<int> distribution(1, 6);
 
@@ -191,9 +191,9 @@ TEST(krprod, ThreeInputMatrices3) {
         in[i][j] = distribution(generator);
   }
 
-  krprod(kr12, in1, in2);
-  krprod(kr13, kr12, in3);
-  krprod(result, ts_arr);
+  row_wise_kronecker(kr12, in1, in2);
+  row_wise_kronecker(kr13, kr12, in3);
+  row_wise_kronecker(result, ts_arr);
   EXPECT_DOUBLE_EQ_MATRIX(kr13, result);
 
   for (auto & in : ts_arr)
@@ -203,7 +203,7 @@ TEST(krprod, ThreeInputMatrices3) {
   FreeSpace(&result);
 }
 
-TEST(krprod, FourInputMatrices) {
+TEST(row_wise_kronecker, FourInputMatrices) {
   std::default_random_engine generator;
   std::uniform_int_distribution<int> distribution(1, 6);
 
@@ -227,10 +227,10 @@ TEST(krprod, FourInputMatrices) {
         in[i][j] = distribution(generator);
   }
 
-  krprod(kr12, in1, in2);
-  krprod(kr13, kr12, in3);
-  krprod(kr14, kr13, in4);
-  krprod(result, ts_arr);
+  row_wise_kronecker(kr12, in1, in2);
+  row_wise_kronecker(kr13, kr12, in3);
+  row_wise_kronecker(kr14, kr13, in4);
+  row_wise_kronecker(result, ts_arr);
   EXPECT_DOUBLE_EQ_MATRIX(kr14, result);
 
   for (auto & in : ts_arr)
