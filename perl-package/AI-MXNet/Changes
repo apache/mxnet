@@ -1,5 +1,8 @@
 Revision history for Perl extension AI::MXNet
 
+1.01    Sat Jun 10 23:57:27 PDT 2017
+        - sync with python.
+
 0.9507  Thu May 11 17:04:44 PDT 2017
         - added AutoGrad, bugfixes.
 

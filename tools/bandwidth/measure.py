@@ -9,6 +9,7 @@ import time
 import numpy as np
 from importlib import import_module
 from collections import namedtuple
+from functools import reduce
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)

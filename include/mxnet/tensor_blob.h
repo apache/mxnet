@@ -22,6 +22,9 @@
 #endif
 namespace mxnet {
 
+/* Forward declaration for friend declaration in TBlob */
+class NDArray;
+
 /*!
  * \brief tensor blob class that can be used to hold tensor of any dimension,
  *  any device and any data type,
@@ -35,6 +38,7 @@ namespace mxnet {
  *  and wait for further processing
  */
 class TBlob {
+  friend class NDArray;
  public:
   /*! \brief pointer to the data */
   void *dptr_;
@@ -72,24 +76,6 @@ class TBlob {
 #endif
     SetDLTensor(dev_mask, dev_id);
   }
-#if MKL_EXPERIMENTAL == 1
-  /*!
-   * \brief constructor that construct TBlob from contiguous memory
-   * \param dptr the pointer to the memory
-   * \param shape the shape of the data
-   * \param dev_mask the device mask, can be cpu::kDevMask or gpu::kDevMask
-   * \param dev_id the device id
-   * \param Mkl_mem the mkl memory
-   */
-  template<typename DType>
-  TBlob(DType *dptr, const TShape &shape, int dev_mask, int dev_id,
-        std::shared_ptr<MKLMemHolder> Mkl_mem)
-      : dptr_(dptr), shape_(shape),
-        type_flag_(mshadow::DataType<DType>::kFlag),
-        Mkl_mem_(Mkl_mem) {
-    SetDLTensor(dev_mask, dev_id);
-  }
-#endif
   /*!
    * \brief constructor that construct TBlob from contiguous memory
    * \param dptr the pointer to the memory
@@ -231,7 +217,7 @@ class TBlob {
    * \brief return the corresponding DLTensor
    * \return the address of internal DLTensor
    */
-  inline const DLTensor& dltensor() {
+  inline const DLTensor& dltensor() const {
     return dltensor_;
   }
 
@@ -304,6 +290,34 @@ class TBlob {
       mshadow::Stream<Device> *stream = NULL) const {
     return this->get_with_shape<Device, 3, DType>(
         this->shape_.FlatTo3D(axis_begin, axis_end), stream);
+  }
+  /*!
+   * \brief flatten the tensor to specified number of dimensions,
+   *  collapse the highest dimensions or pad with higher dimensions
+   * \param stream the possible stream target tensor should reside on
+   * \tparam Device which device the tensor is on
+   * \tparam dim desired number of dimensions of returned tensor
+   * \tparam DType the type of elements in the tensor
+   * \return tensor after flatten
+   */
+  template<typename Device, int dim, typename DType>
+  inline mshadow::Tensor<Device, dim, DType> FlatToKD(
+     mshadow::Stream<Device> *stream = NULL) const {
+    mshadow::Shape<dim> shape;
+    shape[0] = 1;
+    // Pad higher dimensions in case dim > ndim()
+    for (int i = 0; i < dim - ndim(); ++i) {
+      shape[i] = 1;
+    }
+    // Collapse higher dimensions in case dim < ndim()
+    for (int i = 0; i < ndim() - dim + 1; ++i) {
+      shape[0] *= shape_[i];
+    }
+    // Preserve lower dimensions.
+    for (int i = std::max(0, ndim() - dim + 1); i < ndim(); ++i) {
+      shape[i - ndim() + dim] = shape_[i];
+    }
+    return this->get_with_shape<Device, dim, DType>(shape, stream);
   }
 
  private:

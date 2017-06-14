@@ -144,6 +144,11 @@ include_directories("nnvm/include")
 include_directories("dmlc-core/include")
 include_directories("dlpack/include")
 
+# commented out until PR goes through
+#if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/dlpack)
+#  add_subdirectory(dlpack)
+#endif()
+
 if(NOT MSVC)
   set(BEGIN_WHOLE_ARCHIVE -Wl,--whole-archive)
   set(END_WHOLE_ARCHIVE -Wl,--no-whole-archive)
@@ -193,6 +198,16 @@ if(USE_OPENMP)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
   endif()
 endif()
+
+if(USE_LAPACK)
+  add_definitions(-DMXNET_USE_LAPACK=1)
+else(USE_LAPACK)
+  # Workaround for Windows until using new Jenkinsfile. 
+  if(USE_BLAS STREQUAL "open")
+    add_definitions(-DMXNET_USE_LAPACK=1)
+  endif()
+endif()
+
 
 if(UNIX)
   find_library(RTLIB rt)
@@ -426,7 +441,6 @@ if(USE_PROFILER)
 	add_definitions(-DMXNET_USE_PROFILER)
 endif()
 
-# Do tests after chrpath so that we use the "real" cuda driver
 add_subdirectory(tests)
 
 # AUTO_INSTALL_DIR -> Optional: specify post-build install direcory

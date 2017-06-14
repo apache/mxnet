@@ -87,6 +87,7 @@ def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck
     num_unit = len(units)
     assert(num_unit == num_stages)
     data = mx.sym.Variable(name='data')
+    data = mx.sym.identity(data=data, name='id')
     data = mx.sym.BatchNorm(data=data, fix_gamma=True, eps=2e-5, momentum=bn_mom, name='bn_data')
     (nchannel, height, width) = image_shape
     if height <= 32:            # such as cifar10
