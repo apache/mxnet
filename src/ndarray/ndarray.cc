@@ -925,7 +925,16 @@ void NDArray::Load(dmlc::Stream* fi,
 }
 
 NDArray NDArray::Copy(Context ctx) const {
-  NDArray ret(shape(), ctx, true, dtype_);
+  NDArray ret;
+  if (kDefaultStorage == storage_type()) {
+    ret = NDArray(shape(), ctx, true, dtype_);
+  } else if (kUndefinedStorage != storage_type()) {
+    ret = NDArray(storage_type(), shape(), ctx, true, dtype_,
+                  ptr_->aux_types, ptr_->aux_shapes, storage_shape());
+  } else {
+    LOG(FATAL) << "NDArray::Copy cannot copy undefined storage-type ndarray to ctx.dev_type="
+               << ctx.dev_type << ", ctx.dev_id=" << ctx.dev_id;
+  }
   CopyFromTo(*this, &ret);
   return ret;
 }

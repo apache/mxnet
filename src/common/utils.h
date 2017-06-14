@@ -14,6 +14,7 @@
 #include <random>
 #include <thread>
 #include <algorithm>
+#include <functional>
 #endif  // DMLC_USE_CXX11
 
 #include <dmlc/logging.h>
@@ -166,6 +167,57 @@ inline int GetExecNumMatchColor() {
   // This is resource efficient option.
   int num_match_color = dmlc::GetEnv("MXNET_EXEC_NUM_TEMP", 1);
   return std::min(num_match_color, GetNumThreadPerGPU());
+}
+
+/*!
+ * \brief
+ * Helper function for ParallelSort.
+ * DO NOT call this function directly.
+ * Use the interface ParallelSort instead.
+ * Ref: https://github.com/dmlc/difacto/blob/master/src/common/parallel_sort.h
+ */
+template<typename RandomIt, typename Compare>
+void ParallelSortHelper(RandomIt first, size_t len,
+                        size_t grainsize, const Compare& comp) {
+  if (len < grainsize) {
+    std::sort(first, first+len, comp);
+  } else {
+    std::thread thr(ParallelSortHelper<RandomIt, Compare>, first, len/2, grainsize, comp);
+    ParallelSortHelper(first+len/2, len - len/2, grainsize, comp);
+    thr.join();
+    std::inplace_merge(first, first+len/2, first+len, comp);
+  }
+}
+
+/*!
+ * \brief
+ * Sort the elements in the range [first, last) into the ascending order defined by
+ * the comparator comp.
+ * If the length of the range [first, last) is greater than a certain threshold,
+ * the range will be recursively divided into two and assign two threads
+ * to sort each half range.
+ * Ref: https://github.com/dmlc/difacto/blob/master/src/common/parallel_sort.h
+ */
+template<typename RandomIt, typename Compare>
+void ParallelSort(RandomIt first, RandomIt last, size_t num_threads, Compare comp) {
+  const auto num = std::distance(first, last);
+  size_t grainsize = std::max(num / num_threads + 5, static_cast<size_t>(1024*16));
+  ParallelSortHelper(first, num, grainsize, comp);
+}
+
+/*!
+ * \brief
+ * Sort the elements in the range [first, last) into ascending order.
+ * The elements are compared using the default < operator.
+ * If the length of the range [first, last) is greater than a certain threshold,
+ * the range will be recursively divided into two and assign two threads
+ * to sort each half range.
+ * Ref: https://github.com/dmlc/difacto/blob/master/src/common/parallel_sort.h
+ */
+template<typename RandomIt>
+void ParallelSort(RandomIt first, RandomIt last, size_t num_threads) {
+  ParallelSort(first, last, num_threads,
+               std::less<typename std::iterator_traits<RandomIt>::value_type>());
 }
 
 /*!
