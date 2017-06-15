@@ -44,7 +44,7 @@ our $current;
         A canonical name for the symbol.
 =cut
 
-method get(Str|Undef $name, Str $hint)
+method get(Maybe[Str] $name, Str $hint)
 {
     return $name if $name;
     if(not exists $self->counter->{ $hint })
@@ -84,7 +84,7 @@ has prefix => (
     required => 1
 );
 
-method get(Str $name, Str $hint)
+method get(Maybe[Str] $name, Str $hint)
 {
     $name = $self->SUPER::get($name, $hint);
     return $self->prefix . $name;

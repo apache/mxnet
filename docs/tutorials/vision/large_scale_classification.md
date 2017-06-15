@@ -141,7 +141,7 @@ We now have all training and validation images in recordIO format in `train` and
 
 [ResNet](https://arxiv.org/abs/1512.03385) has shown its effectiveness on ImageNet competition. Our experiments also [reproduced](https://github.com/tornadomeet/ResNet) the results reported in the paper. As we increase the number of layers from 18 to 152, we see steady improvement in validation accuracy. Given this is a huge dataset, we will use Resnet with 152 layers.
 
-Due to the huge computational complexity, even the fastest GPU needs more than one day for a single pass of the data. We often need tens of epochs before the training converges to good validation accuracy. While we can use multiple GPUs in a machine, number of GPUs in a machine is often limited to 8 or 16. For faster training, in this tutorial, we will use multiple machines each containing multiple GPUs to train the model.
+Due to the huge computational complexity, even the fastest GPU needs more than one day for a single pass of the data. We often need tens of epochs before the training converges to good validation accuracy. While we can use multiple GPUs in a machine, the number of GPUs in a machine is often limited to 8 or 16. For faster training, in this tutorial, we will use multiple machines each containing multiple GPUs to train the model.
 
 ### Setup
 
@@ -160,7 +160,7 @@ If you are setting up your cluster manually, without using AWS CloudFormation, r
    deeplearning-worker2
    deeplearning-worker3
    ```
-   It should be possible to ssh into any of these machines from master by invoking `ssh` with just a hostname from the file. For example,
+   It should be possible to ssh into any of these machines from the master by invoking `ssh` with just a hostname from the file. For example,
    ```
    $ ssh deeplearning-worker2
    ===================================
@@ -169,7 +169,7 @@ If you are setting up your cluster manually, without using AWS CloudFormation, r
    ...
    ubuntu@ip-10-0-1-199:~$
    ```
-   One way to do this is to use ssh agent forwarding. Please check [this](https://aws.amazon.com/blogs/security/securely-connect-to-linux-instances-running-in-a-private-amazon-vpc/) page to learn how to set this up. In short, you’ll configure all machines to login using a particular certificate (mycert.pem) which is present on your local machine. You then login to the master using the certificate and the `-A` switch to enable agent forwarding. Now, from master, you should be able to login to any other machine in the cluster by providing just the hostname (example: `ssh deeplearning-worker2`).
+   One way to do this is to use ssh agent forwarding. Please check [this](https://aws.amazon.com/blogs/security/securely-connect-to-linux-instances-running-in-a-private-amazon-vpc/) page to learn how to set this up. In short, you’ll configure all machines to login using a particular certificate (mycert.pem) which is present on your local machine. You then login to the master using the certificate and the `-A` switch to enable agent forwarding. Now, from the master, you should be able to login to any other machine in the cluster by providing just the hostname (example: `ssh deeplearning-worker2`).
 
 ### Run Training
 After the cluster is setup, login to master and run the following command from ${MXNET}/example/image-classification
