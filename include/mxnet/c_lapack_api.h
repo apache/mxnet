@@ -31,6 +31,9 @@
 //    - Must support compilation without lapack-package but issue runtime error in this case.
 
 #include <dmlc/logging.h>
+#include "mshadow/tensor.h"
+
+using namespace mshadow;
 
 extern "C" {
   // Fortran signatures
@@ -53,6 +56,40 @@ extern "C" {
   CHECK(a == 'U' || a == 'L') << "neither L nor U specified as triangle in lapack call";
 
 inline char loup(char uplo, bool invert) { return invert ? (uplo == 'U' ? 'L' : 'U') : uplo; }
+
+
+/*!
+ * \brief Transpose matrix data in memory
+ * 
+ * Equivalently we can see it as flipping the layout of the matrix
+ * between row-major and column-major.
+ *
+ * \param m number of rows of input matrix a
+ * \param n number of columns of input matrix a
+ * \param b output matrix
+ * \param ldb leading dimension of b
+ * \param a input matrix
+ * \param lda leading dimension of a
+ */
+template <typename xpu, typename DType>
+inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda);
+
+template <>
+inline void flip<cpu, float>(int m, int n,
+  float *b, int ldb, float *a, int lda) {
+  for (int i = 0; i < m; ++i)
+    for (int j = 0; j < n; ++j)
+      b[j * ldb + i] = a[i * lda + j];
+}
+
+template <>
+inline void flip<cpu, double>(int m, int n,
+  double *b, int ldb, double *a, int lda) {
+  for (int i = 0; i < m; ++i)
+    for (int j = 0; j < n; ++j)
+      b[j * ldb + i] = a[i * lda + j];
+}
+
 
 #if MXNET_USE_LAPACK
 

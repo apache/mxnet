@@ -8,6 +8,7 @@
 #define MXNET_OPERATOR_CONTRIB_KRPROD_H_
 #include <vector>
 #include "mshadow/tensor.h"
+#include "mxnet/c_lapack_api.h"
 
 namespace mxnet {
 namespace op {
@@ -37,8 +38,8 @@ inline void row_wise_kronecker
     return;
   }
 
-  // Check all input and output matrices have the same height
-  // and the output matrix has the right width
+  // Check all input and output matrices have the same number of rows
+  // and the output matrix has the right number of columns
   int nrows = static_cast<int>(out.size(0));
   int kronecker_length = 1;
   for (auto & ts : ts_arr) {
@@ -63,14 +64,14 @@ inline void row_wise_kronecker
   Tensor<cpu, 2, DType> *given = &storage,
     *result = &out, *tmp;
 
-  // Compute each intermediate Khatri-Rao product
+  // Compute each intermediate row-wise Kronecker product
   storage = 1;
   kronecker_length = 1;
   for (auto & ts : ts_arr) {
     expr::BLASEngine<cpu, DType>::SetStream
       (result->stream_);
 
-    // Compute the current Khatri-Rao product, row by row
+    // Compute the current row-wise Kronecker product
     *result = 0;
     for (int i = 0; i < nrows; ++i) {
       // BLAS signature
@@ -112,7 +113,7 @@ inline void row_wise_kronecker
 }
 
 /*!
- * \brief Convenience function for row-wise Kronecker product
+ * \brief Convenience function for row-wise Kronecker product of two matrices
  *
  * \param out result matrix
  * \param in1 first input matrix
@@ -124,6 +125,75 @@ inline void row_wise_kronecker
   const Tensor<cpu, 2, DType> &in1,
   const Tensor<cpu, 2, DType> &in2) {
   row_wise_kronecker(out, std::vector<Tensor<cpu, 2, DType> > {in1, in2});
+}
+
+/*!
+ * \brief Khatri-Rao product
+ *
+ * \param out result matrix
+ * \param ts_arr vector of input matrices
+ */
+template <typename DType>
+inline void krprod
+  (Tensor<cpu, 2, DType> out,
+  const std::vector<Tensor<cpu, 2, DType> > &ts_arr) {
+  // If no input matrix, return all-one vector
+  if (ts_arr.empty()) {
+    CHECK_EQ(1, out.size(0)) << "The output matrix must have single row.";
+    out = 1;
+    return;
+  }
+
+  // Check all input and output matrices have the same number
+  // of columns and the output matrix has the right number of rows
+  int ncol = static_cast<int>(out.size(1));
+  int kronecker_length = 1;
+  for (auto & ts : ts_arr) {
+    CHECK_EQ(ncol, static_cast<int>(ts.size(1)))
+      << "All input and output matrices must have the same number of columns.";
+    kronecker_length *= ts.size(0);
+  }
+  CHECK_EQ(kronecker_length, static_cast<int>(out.size(0)));
+
+  // Change the layout of matrices to column-major
+  Tensor<cpu, 2, DType> out_t(Shape2(out.size(1), out.size(0)));
+  AllocSpace(&out_t);
+  flip<cpu, DType>(out.size(0), out.size(1), out_t.dptr_, out_t.stride_,
+    out.dptr_, out.stride_);
+
+  std::vector<Tensor<cpu, 2, DType> > ts_t_arr;
+  for (int i = 0; i < static_cast<int>(ts_arr.size()); ++i) {
+    ts_t_arr.emplace_back(Shape2(ts_arr[i].size(1), ts_arr[i].size(0)));
+    AllocSpace(&ts_t_arr[i]);
+    flip<cpu, DType>(ts_arr[i].size(0), ts_arr[i].size(1), ts_t_arr[i].dptr_,
+      ts_t_arr[i].stride_, ts_arr[i].dptr_, ts_arr[i].stride_);
+  }
+
+  // Perform row-wise Kronecker product
+  row_wise_kronecker(out_t, ts_t_arr);
+
+  // Change the layout of result matrix back to row-major
+  flip<cpu, DType>(out.size(1), out.size(0), out.dptr_, out.stride_,
+    out_t.dptr_, out_t.stride_);
+
+  FreeSpace(&out_t);
+  for (auto &ts_t : ts_t_arr)
+    FreeSpace(&ts_t);
+}
+
+/*!
+ * \brief Convenience function for the Khatri-Rao product of two matrices
+ *
+ * \param out result matrix
+ * \param in1 first input matrix
+ * \param in2 second input matrix
+ */
+template <typename DType>
+inline void krprod
+  (Tensor<cpu, 2, DType> out,
+  const Tensor<cpu, 2, DType> &in1,
+  const Tensor<cpu, 2, DType> &in2) {
+  krprod(out, std::vector<Tensor<cpu, 2, DType> > {in1, in2});
 }
 
 }  // namespace op

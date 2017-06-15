@@ -241,5 +241,96 @@ TEST(row_wise_kronecker, FourInputMatrices) {
   FreeSpace(&result);
 }
 
+TEST(krprod, ZeroInputMatrix) {
+  Tensor<cpu, 2, DType> result(Shape2(1, 4)), expected(Shape2(1, 4));
+  AllocSpace(&expected);
+  AllocSpace(&result);
+
+  expected = 1;
+  krprod(result, std::vector<Tensor<cpu, 2, DType> > {});
+  EXPECT_DOUBLE_EQ_MATRIX(expected, result);
+
+  FreeSpace(&expected);
+  FreeSpace(&result);
+}
+
+TEST(krprod, OneInputMatrix) {
+  // Input matrices of shape (2, 4) which is also the expected result
+  DType mat[8] {1, 2, 3, 4, 5, 6, 7, 8};
+
+  // Make input tensors
+  std::vector<Tensor<cpu, 2, DType> > ts_arr;
+  ts_arr.emplace_back(mat, Shape2(2, 4), 4, nullptr);
+
+  // Compute Khatri-Rao product
+  Tensor<cpu, 2, DType> result(Shape2(2, 4));
+  AllocSpace(&result);
+  krprod(result, ts_arr);
+
+  // Check against expected result
+  EXPECT_DOUBLE_EQ_MATRIX(ts_arr[0], result);
+
+  FreeSpace(&result);
+}
+
+TEST(krprod, TwoInputMatrices) {
+  // Input matrices of shape (3, 2) and (4, 2)
+  DType mat1[6] {1, 4, 2, 5, 3, 6};
+  DType mat2[8] {1, 5, 2, 6, 3, 7, 4, 8};
+
+  // Expect result of shape (12, 2)
+  DType expected[24] {1, 20, 2, 24, 3, 28, 4, 32, 2, 25, 4, 30,
+                      6, 35, 8, 40, 3, 30, 6, 36, 9, 42, 12, 48};
+
+  // Make input tensors
+  std::vector<Tensor<cpu, 2, DType> > ts_arr;
+  ts_arr.emplace_back(mat1, Shape2(3, 2), 2, nullptr);
+  ts_arr.emplace_back(mat2, Shape2(4, 2), 2, nullptr);
+
+  // Compute Khatri-Rao product
+  Tensor<cpu, 2, DType> result(Shape2(12, 2));
+  AllocSpace(&result);
+  krprod(result, ts_arr);
+
+  // Check against expected result
+  Tensor<cpu, 2, DType> ts_expected(expected, Shape2(12, 2), 2, nullptr);
+  EXPECT_DOUBLE_EQ_MATRIX(ts_expected, result);
+
+  FreeSpace(&result);
+}
+
+TEST(krprod, ThreeInputMatrices) {
+  std::default_random_engine generator;
+  std::uniform_int_distribution<int> distribution(1, 6);
+
+  Tensor<cpu, 2, DType> in1(Shape2(4, 3)), in2(Shape2(2, 3)),
+    in3(Shape2(3, 3)), kr12(Shape2(8, 3)), kr13(Shape2(24, 3)),
+    result(Shape2(24, 3));
+  AllocSpace(&in1);
+  AllocSpace(&in2);
+  AllocSpace(&in3);
+  AllocSpace(&kr12);
+  AllocSpace(&kr13);
+  AllocSpace(&result);
+
+  std::vector<Tensor<cpu, 2, DType> > ts_arr {in1, in2, in3};
+  for (auto & in : ts_arr) {
+    for (int i = 0; i < static_cast<int>(in.size(0)); ++i)
+      for (int j = 0; j < static_cast<int>(in.size(1)); ++j)
+        in[i][j] = distribution(generator);
+  }
+
+  krprod(kr12, in1, in2);
+  krprod(kr13, kr12, in3);
+  krprod(result, ts_arr);
+  EXPECT_DOUBLE_EQ_MATRIX(kr13, result);
+
+  for (auto & in : ts_arr)
+    FreeSpace(&in);
+  FreeSpace(&kr12);
+  FreeSpace(&kr13);
+  FreeSpace(&result);
+}
+
 }  // namespace op
 }  // namespace mxnet
