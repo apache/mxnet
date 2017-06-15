@@ -749,7 +749,7 @@ struct mod_rgrad {
     if (b == mshadow::half::half_t(0.0f)) {
       return NAN;
     }
-    return mshadow::half::half_t(::hfloor(-a/b));
+    return mshadow::half::half_t(::hfloor((-a/b).cuhalf_));
   }
 #endif
 };
