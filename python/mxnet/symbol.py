@@ -1572,7 +1572,7 @@ class Symbol(SymbolBase):
         executor.aux_arrays = aux_states
         return executor
 
-    def grad(self, wrt):
+    def gradient(self, wrt):
         """Gets the autodiff of current symbol.
 
         This function can only be used if current symbol is a loss function.

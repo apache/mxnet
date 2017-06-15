@@ -116,8 +116,9 @@ fixed-size items.
     def __repr__(self):
         """Returns a string representation of the array."""
         shape_info = 'x'.join(['%d' % x for x in self.shape])
-        return '<%s %s @%s>' % (self.__class__.__name__,
-                                shape_info, self.context)
+        return '%s\n<%s %s @%s>' % (str(self.asnumpy()),
+                                    self.__class__.__name__,
+                                    shape_info, self.context)
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """
