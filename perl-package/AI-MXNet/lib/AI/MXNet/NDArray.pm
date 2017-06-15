@@ -275,7 +275,7 @@ method asmpdl()
         Finishing index of slice.
 =cut
 
-method  _slice (
+method _slice (
     Index $start,
     Index $stop
 )
@@ -918,9 +918,14 @@ method empty(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_
         The created NDArray.
 =cut
 
-method zeros(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
+method zeros(
+    Shape $shape,
+    AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx,
+    Dtype :$dtype='float32',
+    Maybe[AI::MXNet::NDArray] :$out=
+)
 {
-    return __PACKAGE__->_zeros({ shape => $shape, ctx => "$ctx", dtype => $dtype });
+    return __PACKAGE__->_zeros({ shape => $shape, ctx => "$ctx", dtype => $dtype, ($out ? (out => $out) : ())  });
 }
 
 =head2 ones
@@ -944,9 +949,14 @@ method zeros(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_
         The created NDArray.
 =cut
 
-method ones(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
+method ones(
+    Shape $shape,
+    AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx,
+    Dtype :$dtype='float32',
+    Maybe[AI::MXNet::NDArray] :$out=
+)
 {
-    return __PACKAGE__->_ones({ shape => $shape, ctx => "$ctx", dtype => $dtype });
+    return __PACKAGE__->_ones({ shape => $shape, ctx => "$ctx", dtype => $dtype, ($out ? (out => $out) : ()) });
 }
 
 =head2 full
@@ -973,9 +983,13 @@ method ones(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_c
         The created NDArray.
 =cut
 
-method full(Shape $shape, Num $val, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
+method full(
+    Shape $shape, Num $val,
+    AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx,
+    Dtype :$dtype='float32', Maybe[AI::MXNet::NDArray] :$out=
+)
 {
-    return __PACKAGE__->_set_value({ src => $val, out => __PACKAGE__->empty($shape, ctx => $ctx, dtype => $dtype) });
+    return __PACKAGE__->_set_value({ src => $val, out => $out ? $out : __PACKAGE__->empty($shape, ctx => $ctx, dtype => $dtype) });
 }
 
 =head2 array
@@ -1306,6 +1320,59 @@ method waitall()
 {
     check_call(AI::MXNetCAPI::NDArrayWaitAll());
 }
+
+=head2 _fresh_grad
+
+        Parameters:
+        ----------
+        Maybe[Bool] $state=
+
+        Whether this array's corresponding gradient array
+        (registered via `autograd->mark_variables`) has been
+        updated by `autograd->backward` since last reset.
+
+        `_fresh_grad` need to be manually set to False
+        after consuming gradient (usually after updating this
+        array).
+=cut
+
+method _fresh_grad(Maybe[Bool] $state=)
+{
+    if(defined $state)
+    {
+        check_call(AI::MXNetCAPI::NDArraySetGradState($self->handle, $state));
+        return $state;
+    }
+    else
+    {
+        return scalar(check_call(AI::MXNetCAPI::NDArrayGetGradState($self->handle)));
+    }
+}
+
+=head2 detach
+
+    Returns a new NDArray, detached from the current graph.
+=cut
+
+method detach()
+{
+    my $handle = check_call(AI::MXNetCAPI::NDArrayDetach($self->handle));
+    return __PACKAGE__->new(handle => $handle);
+}
+
+method backward(Maybe[AI::MXNet::NDArray] $out_grad=, Bool $retain_graph=0)
+{
+    check_call(
+        AI::MXNetCAPI::AutogradBackward(
+            1,
+            [$self->handle],
+            [defined $out_grad ? $out_grad->handle : undef],
+            $retain_graph
+        )
+    )
+}
+
+method CachedOp(@args)        { AI::MXNet::CachedOp->new(@args) }
 
 my $lvalue_methods = join "\n", map {"use attributes 'AI::MXNet::NDArray', \\&AI::MXNet::NDArray::$_, 'lvalue';"}
 qw/at slice aspdl asmpdl reshape copy sever T astype as_in_context copyto empty zero ones full

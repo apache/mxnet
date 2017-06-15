@@ -1,9 +1,10 @@
 use strict;
 use warnings;
-use Test::More tests => 23;
+use Test::More tests => 247;
 use AI::MXNet qw(mx);
 use AI::MXNet::Base;
-use AI::MXNet::TestUtils qw(almost_equal enumerate);
+use AI::MXNet::TestUtils qw(almost_equal enumerate same_array);
+use Data::Dumper;
 
 sub test_module_layout
 {
@@ -332,6 +333,124 @@ sub test_module_input_grads
     ok(($c_grad == 3)->all);
 }
 
+sub test_executor_group
+{
+    my $get_rnn_sym = sub { my ($num_layers, $num_words, $num_hidden, $num_embed, $seq_len) = @_;
+        my $stack = mx->rnn->SequentialRNNCell();
+        for my $i (0..$num_layers-1)
+        {
+            $stack->add(mx->rnn->LSTMCell(num_hidden=>$num_hidden, prefix=>"lstm_l${i}_"));
+        }
+        my $data = mx->sym->Variable('data');
+        my $label = mx->sym->Variable('softmax_label');
+        my $embed = mx->sym->Embedding(data=>$data, input_dim=>$num_words,
+                                 output_dim=>$num_embed, name=>'embed');
+
+        $stack->reset();
+        my ($outputs, $states) = $stack->unroll($seq_len, inputs=>$embed, merge_outputs=>1);
+
+        my $pred = mx->sym->Reshape($outputs, shape=>[-1, $num_hidden]);
+        $pred = mx->sym->FullyConnected(data=>$pred, num_hidden=>$num_words, name=>'pred');
+
+        $label = mx->sym->Reshape($label, shape=>[-1]);
+        $pred = mx->sym->SoftmaxOutput(data=>$pred, label=>$label, name=>'softmax');
+        return $pred;
+    };
+
+    my $test_shared_exec_group = sub { my ($exec_grp_shared, $exec_grp_created, $shared_arg_names, $extra_args) = @_;
+        # Test shared data arrays
+        for my $i (0..@{ $exec_grp_shared->execs }-1)
+        {
+            # test same shared_data_arrays for two exec groups
+            my $shared_data_array1 = $exec_grp_shared->shared_data_arrays->[$i];
+            my $shared_data_array2 = $exec_grp_created->shared_data_arrays->[$i];
+            if(defined $extra_args)
+            {
+                ok(keys(%$shared_data_array1) == @$extra_args);
+            }
+            ok(keys(%$shared_data_array1) == keys(%$shared_data_array2));
+            while(my ($k, $v) = each %{ $shared_data_array1 })
+            {
+                if(defined $extra_args)
+                {
+                    ok(grep { $_ eq $k } @$extra_args);
+                }
+                ok(exists $shared_data_array2->{$k});
+                ok(same_array($v, $shared_data_array2->{$k}));
+            }
+            # Test shared argument arrays and gradient arrays
+            my $exec_shared  = $exec_grp_shared->execs->[$i];
+            my $exec_created = $exec_grp_created->execs->[$i];
+            if(defined $shared_arg_names)
+            {
+                # test shared arguments
+                for my $arg_name (@$shared_arg_names)
+                {
+                    ok(exists $exec_created->arg_dict->{$arg_name});
+                    ok(same_array($exec_shared->arg_dict->{$arg_name}, $exec_created->arg_dict->{$arg_name}));
+                }
+                # test shared argument gradients
+                for my $arg_name (@$shared_arg_names)
+                {
+                    ok(exists $exec_created->grad_dict->{$arg_name});
+                    ok(same_array($exec_shared->grad_dict->{$arg_name}, $exec_created->grad_dict->{$arg_name}));
+                }
+            }
+            my $grad_req = $exec_grp_shared->grad_req;
+            while(my ($arg_name, $grad) = each %{ $grad_req })
+            {
+                ok($grad eq $exec_grp_created->grad_req->{$arg_name});
+            }
+        }
+    };
+    my $contexts = [mx->cpu(0), mx->cpu(1)];
+    my $workload = [(1) x scalar(@$contexts)];
+    my $batch_size = 32;
+    my $max_bucket_size = 80;
+    my $num_words = 1000;
+    my $num_hidden = 100;
+    my $num_embed = 200;
+    my $data_shapes = [['data', [$batch_size, $max_bucket_size]]];
+    my $label_shapes = [['softmax_label', [$batch_size, $max_bucket_size]]];
+
+    # generate an rnn sym with #layers=5
+    my $sym = $get_rnn_sym->(3, $num_words, $num_hidden,
+                      $num_embed, $max_bucket_size);
+    my $arg_names1 = $sym->list_arguments();
+    my $input_names = ['data', 'softmax_label'];
+    my $shared_arg_names = [grep { !/^(?:data|softmax_label)$/ } @$arg_names1];
+    my $exec_group1 = AI::MXNet::DataParallelExecutorGroup->new(
+        symbol=>$sym, contexts=>$contexts,
+        workload=>$workload, data_shapes=>$data_shapes,
+        label_shapes=>$label_shapes, param_names=>$shared_arg_names,
+        for_training=>1, inputs_need_grad=>0
+    );
+    # shared_data_arrays should only have input "data" and "softmax_label" arrays
+    for my $i (0..@{$contexts}-1)
+    {
+        ok(keys(%{$exec_group1->shared_data_arrays->[$i]}) == @$input_names);
+        for my $name (@$input_names)
+        {
+            ok(exists $exec_group1->shared_data_arrays->[$i]->{$name});
+        }
+    }
+    # generate an rnn sym with #layers=5
+    $sym = $get_rnn_sym->(5, $num_words, $num_hidden,
+                      $num_embed, $max_bucket_size);
+    my $arg_names2 = $sym->list_arguments();
+    my $exec_group2 = AI::MXNet::DataParallelExecutorGroup->new(symbol=>$sym, contexts=>$contexts,
+                                            workload=>$workload, data_shapes=>$data_shapes,
+                                            label_shapes=>$label_shapes, param_names=>$shared_arg_names,
+                                            for_training=>1, inputs_need_grad=>0,
+                                            shared_group=>$exec_group1);
+    my %shared_arg_names = map { $_ => 1 } @$shared_arg_names;
+    my $extra_args = [grep { not exists $shared_arg_names{$_} } @$arg_names2];
+    $test_shared_exec_group->(
+        $exec_group1, $exec_group2,
+        $shared_arg_names, $extra_args
+    );
+}
+
 test_module_input_grads();
 test_module_dtype();
 test_monitor();
@@ -340,3 +459,4 @@ test_module_layout();
 test_module_states();
 test_module_reshape();
 test_save_load();
+test_executor_group();

@@ -1,5 +1,8 @@
+use strict;
+use warnings;
 use AI::MXNet qw(mx);
-use Test::More tests => 5;
+use AI::MXNet::TestUtils qw(almost_equal);
+use Test::More tests => 9;
 
 sub test_ndarray_reshape
 {
@@ -33,5 +36,33 @@ sub test_moveaxis
     is_deeply($X->moveaxis(2, 0)->shape, [3, 2, 2]);
 }
 
+sub test_cached
+{
+    my $op     = mx->nd->CachedOp('Convolution', 3, kernel=>[3, 3], num_filter=>10);
+    my $data   = mx->nd->ones([3, 4, 10, 10]);
+    my $weight = mx->nd->ones([10, 4, 3, 3]);
+    my $bias   = mx->nd->ones([10]);
+    my $o1     = mx->nd->invoke($op, [$data, $weight, $bias]);
+    $bias .= 2;
+    my $o2 = mx->nd->invoke($op, [$data, $weight, $bias]);
+    ok(almost_equal($o2->aspdl, $o1->aspdl + 1));
+}
+
+sub test_output
+{
+    my $shape = [2,2];
+    my $ones = mx->nd->ones($shape);
+    my $zeros = mx->nd->zeros($shape);
+    my $out = mx->nd->zeros($shape);
+    mx->nd->ones($shape, out=>$out);
+    ok(almost_equal($out->aspdl, $ones->aspdl));
+    mx->nd->zeros($shape, out=>$out);
+    ok(almost_equal($out->aspdl, $zeros->aspdl));
+    mx->nd->full($shape, 2, out=>$out);
+    ok(almost_equal($out->aspdl, $ones->aspdl * 2));
+}
+
 test_ndarray_reshape();
 test_moveaxis();
+test_cached();
+test_output();
