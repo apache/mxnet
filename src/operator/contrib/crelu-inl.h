@@ -53,12 +53,11 @@ class CReluOp : public Operator {
     Tensor<xpu, 2, DType> out = out_data[concat_relu::kOut].FlatTo2D<xpu, DType>(s);
     std::vector<Tensor<xpu, 2, DType> > concat_data(2);
 
-    concat_data[0] = NewTensor<xpu, DType>(data.shape_, DType(0));
-    concat_data[1] = NewTensor<xpu, DType>(data.shape_, DType(0));
-    Copy(concat_data[0], data);
-    Copy(concat_data[1], data);
-    concat_data[0] = F<mshadow_op::relu>(concat_data[0]);
-    concat_data[1] = F<mshadow_op::relu>(F<mshadow_op::negation>(concat_data[1]));
+    concat_data[0] = NewTensor<xpu, DType>(data.shape_, DType(0), MSHADOW_ALLOC_PAD, s);
+    concat_data[1] = NewTensor<xpu, DType>(data.shape_, DType(0), MSHADOW_ALLOC_PAD, s);
+
+    concat_data[0] = F<mshadow_op::relu>(data);
+    concat_data[1] = F<mshadow_op::relu>(F<mshadow_op::negation>(data));
 
     Concatenate(concat_data, &out, 1, req[concat_relu::kOut]);
   }
@@ -84,18 +83,12 @@ class CReluOp : public Operator {
     Tensor<xpu, 2, DType> m_out_grad = out_grad[concat_relu::kOut].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> m_out_data = out_data[concat_relu::kOut].FlatTo2D<xpu, DType>(s);
 
-    std::vector<Tensor<xpu, 2, DType> > concat_in_grad(2);
-    concat_in_grad[0] = NewTensor<xpu, DType>(m_in_grad.shape_, DType(0));
-    concat_in_grad[1] = NewTensor<xpu, DType>(m_in_grad.shape_, DType(0));
-
     m_out_grad = F<mshadow_op::relu_grad>(m_out_data) * m_out_grad;
 
-    concat_in_grad[0] = slice<1>(m_out_grad, 0, m_out_grad.size(1)/2)
-                        * F<mshadow_op::sign>(m_in_data);
-    concat_in_grad[1] = slice<1>(m_out_grad, m_out_grad.size(1)/2, m_out_grad.size(1))
-                        * F<mshadow_op::sign>(m_in_data);
-
-    Assign(m_in_grad, req[concat_relu::kData], concat_in_grad[0] + concat_in_grad[1]);
+    Assign(m_in_grad, req[concat_relu::kData], slice<1>(m_out_grad, 0, m_out_grad.size(1)/2)
+                        * F<mshadow_op::sign>(m_in_data)
+                        + slice<1>(m_out_grad, m_out_grad.size(1)/2, m_out_grad.size(1))
+                        * F<mshadow_op::sign>(m_in_data));
   }
 
  private:
@@ -165,25 +158,7 @@ class CReluProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-#if MXNET_USE_CUDNN == 1
     return {out_grad[concat_relu::kOut], out_data[concat_relu::kOut], in_data[concat_relu::kData]};
-#else
-    return {out_grad[concat_relu::kOut], out_data[concat_relu::kOut], in_data[concat_relu::kData]};
-#endif  // MXNET_USE_CUDNN
-  }
-
-  std::vector<std::pair<int, void*> > BackwardInplaceOption(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data,
-    const std::vector<void*> &in_grad) const override {
-    return {{out_grad[concat_relu::kOut], in_grad[concat_relu::kData]}};
-  }
-
-  std::vector<std::pair<int, void*> > ForwardInplaceOption(
-    const std::vector<int> &in_data,
-    const std::vector<void*> &out_data) const override {
-    return {{in_data[concat_relu::kData], out_data[concat_relu::kOut]}};
   }
 
   Operator* CreateOperator(Context ctx) const override {
