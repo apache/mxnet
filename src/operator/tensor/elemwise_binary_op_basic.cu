@@ -44,8 +44,8 @@ NNVM_REGISTER_OP(_mod)
 .set_attr<FCompute>("FCompute<gpu>", BinaryComputeWithHalf2<gpu, mshadow_op::mod>);
 
 NNVM_REGISTER_OP(_backward_mod)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBackwardUseInWithHalf2<gpu, mshadow_op::mod_grad,
-                                                                  mshadow_op::mod_rgrad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBackwardUseNoneWithHalf2<gpu, mshadow_op::mod_grad,
+                                                                    mshadow_op::mod_rgrad>);
 
 }  // namespace op
 }  // namespace mxnet

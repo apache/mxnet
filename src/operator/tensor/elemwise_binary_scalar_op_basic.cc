@@ -55,11 +55,10 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_backward_mod_scalar)
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_rmod_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarCompute<cpu, mshadow_op::rmod>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_rmod_scalar"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_rmod_scalar"})
 .add_alias("_RModScalar");
 
-MXNET_OPERATOR_REGISTER_BINARY(_backward_rmod_scalar)
-.add_argument("scalar", "float", "scalar value")
+MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_backward_rmod_scalar)
 .set_attr_parser([](NodeAttrs* attrs) {attrs->parsed = std::stod(attrs->dict["scalar"]);})
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarBackward<cpu, mshadow_op::rmod_grad>);
 

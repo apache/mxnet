@@ -81,7 +81,7 @@ NNVM_REGISTER_OP(_backward_div)
 MXNET_OPERATOR_REGISTER_BINARY(_mod)
 .add_alias("_Mod")
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, mshadow_op::mod>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_mod"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_mod"});
 
 NNVM_REGISTER_OP(_backward_mod)
 .set_num_inputs(3)
@@ -91,8 +91,8 @@ NNVM_REGISTER_OP(_backward_mod)
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 1}};
   })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBackwardUseIn<cpu, mshadow_op::mod_grad,
-                                                              mshadow_op::mod_rgrad>);
+.set_attr<FCompute>("FCompute<cpu>", BinaryBackwardUseNone<cpu, mshadow_op::mod_grad,
+                                                                mshadow_op::mod_rgrad>);
 
 }  // namespace op
 }  // namespace mxnet
