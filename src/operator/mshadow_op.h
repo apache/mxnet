@@ -712,18 +712,10 @@ struct mod_grad {
 #ifdef __CUDACC__
   MSHADOW_XINLINE static mshadow::half::half_t Map(mshadow::half::half_t a,
                                                    mshadow::half::half_t b) {
-    if (b == 0.0f) {
+    if (b == mshadow::half::half_t(0.0f)) {
       return NAN;
     }
-    return 1.0f;
-  }
-
-  MSHADOW_XINLINE static mshadow::half::half2_t Map(mshadow::half::half2_t a,
-                                                    mshadow::half::half2_t b) {
-    if (b == 0.0f) {
-      return NAN;
-    }
-    return 1.0f;
+    return mshadow::half::half_t(1.0f);
   }
 #endif
 };
@@ -754,18 +746,10 @@ struct mod_rgrad {
 #ifdef __CUDACC__
   MSHADOW_XINLINE static mshadow::half::half_t Map(mshadow::half::half_t a,
                                                    mshadow::half::half_t b) {
-    if (b == 0.0f) {
+    if (b == mshadow::half::half_t(0.0f)) {
       return NAN;
     }
-    return ::hfloor(-a/b);
-  }
-
-  MSHADOW_XINLINE static mshadow::half::half2_t Map(mshadow::half::half2_t a,
-                                                    mshadow::half::half2_t b) {
-    if (b == 0.0f) {
-      return NAN;
-    }
-    return ::h2floor(-a/b);
+    return mshadow::half::half_t(::hfloor(-a/b));
   }
 #endif
 };
@@ -817,18 +801,10 @@ struct rmod_grad {
 #ifdef __CUDACC__
   MSHADOW_XINLINE static mshadow::half::half_t Map(mshadow::half::half_t a,
                                                    mshadow::half::half_t b) {
-    if (a == 0.0f) {
+    if (a == mshadow::half::half_t(0.0f)) {
       return NAN;
     }
-    return 1.0f;
-  }
-
-  MSHADOW_XINLINE static mshadow::half::half2_t Map(mshadow::half::half2_t a,
-                                                    mshadow::half::half2_t b) {
-    if (a == 0.0f) {
-      return NAN;
-    }
-    return 1.0f;
+    return mshadow::half::half_t(1.0f);
   }
 #endif
 };
