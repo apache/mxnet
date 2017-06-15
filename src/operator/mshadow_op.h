@@ -668,16 +668,16 @@ struct rdiv_grad {
 struct mod {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    if (b == 0) {
+    if (b == DType(0)) {
       return NAN;
-    } else if (b < 0) {
-      if (a < 0) {
+    } else if (b < DType(0)) {
+      if (a < DType(0)) {
         return DType(-::fmod(-a, -b));
       } else {
         return DType(::fmod(a, -b) + (::fmod(a, -b) != DType(0) ? b : DType(0)));
       }
     } else {
-      if (a < 0) {
+      if (a < DType(0)) {
         return DType(-::fmod(-a, b) + (::fmod(-a, b) != DType(0) ? b : DType(0)));
       } else {
         return DType(::fmod(a, b));
@@ -689,7 +689,7 @@ struct mod {
 struct mod_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    if (b == 0) {
+    if (b == DType(0)) {
       return NAN;
     }
     return DType(0.0f);
@@ -708,12 +708,30 @@ struct mod_grad {
     }
     return 1.0f;
   }
+
+#ifdef __CUDACC__
+  MSHADOW_XINLINE static mshadow::half::half_t Map(mshadow::half::half_t a,
+                                                   mshadow::half::half_t b) {
+    if (b == 0.0f) {
+      return NAN;
+    }
+    return 1.0f;
+  }
+
+  MSHADOW_XINLINE static mshadow::half::half2_t Map(mshadow::half::half2_t a,
+                                                    mshadow::half::half2_t b) {
+    if (b == 0.0f) {
+      return NAN;
+    }
+    return 1.0f;
+  }
+#endif
 };
 
 struct mod_rgrad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    if (b == 0) {
+    if (b == DType(0)) {
       return NAN;
     }
     return DType(0.0f);
@@ -732,21 +750,39 @@ struct mod_rgrad {
     }
     return ::floor(-a/b);
   }
+
+#ifdef __CUDACC__
+  MSHADOW_XINLINE static mshadow::half::half_t Map(mshadow::half::half_t a,
+                                                   mshadow::half::half_t b) {
+    if (b == 0.0f) {
+      return NAN;
+    }
+    return ::hfloor(-a/b);
+  }
+
+  MSHADOW_XINLINE static mshadow::half::half2_t Map(mshadow::half::half2_t a,
+                                                    mshadow::half::half2_t b) {
+    if (b == 0.0f) {
+      return NAN;
+    }
+    return ::h2floor(-a/b);
+  }
+#endif
 };
 
 struct rmod {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    if (a == 0) {
+    if (a == DType(0)) {
       return NAN;
-    } else if (a < 0) {
-      if (b < 0) {
+    } else if (a < DType(0)) {
+      if (b < DType(0)) {
         return DType(-::fmod(-b, -a));
       } else {
         return DType(::fmod(b, -a) + (::fmod(b, -a) != DType(0) ? a : DType(0)));
       }
     } else {
-      if (b < 0) {
+      if (b < DType(0)) {
         return DType(-::fmod(-b, a) + (::fmod(-b, a) != DType(0) ? a : DType(0)));
       } else {
         return DType(::fmod(b, a));
@@ -758,7 +794,7 @@ struct rmod {
 struct rmod_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    if (a == 0) {
+    if (a == DType(0)) {
       return NAN;
     }
     return DType(0.0f);
@@ -777,6 +813,24 @@ struct rmod_grad {
     }
     return 1.0f;
   }
+
+#ifdef __CUDACC__
+  MSHADOW_XINLINE static mshadow::half::half_t Map(mshadow::half::half_t a,
+                                                   mshadow::half::half_t b) {
+    if (a == 0.0f) {
+      return NAN;
+    }
+    return 1.0f;
+  }
+
+  MSHADOW_XINLINE static mshadow::half::half2_t Map(mshadow::half::half2_t a,
+                                                    mshadow::half::half2_t b) {
+    if (a == 0.0f) {
+      return NAN;
+    }
+    return 1.0f;
+  }
+#endif
 };
 
 struct clip {
