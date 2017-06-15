@@ -669,8 +669,7 @@ struct mod {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     if (b == 0) {
-      LOG(WARNING) << "divide by zero encountered in modulo.";
-      return DType(0.0f);
+      return NAN;
     } else if (b < 0) {
       if (a < 0) {
         return DType(-::fmod(-a, -b));
@@ -691,21 +690,21 @@ struct mod_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     if (b == 0) {
-      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+      return NAN;
     }
     return DType(0.0f);
   }
 
   MSHADOW_XINLINE static float Map(float a, float b) {
     if (b == 0) {
-      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+      return NAN;
     }
     return 1.0f;
   }
 
   MSHADOW_XINLINE static double Map(double a, double b) {
     if (b == 0) {
-      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+      return NAN;
     }
     return 1.0f;
   }
@@ -715,21 +714,21 @@ struct mod_rgrad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     if (b == 0) {
-      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+      return NAN;
     }
     return DType(0.0f);
   }
 
   MSHADOW_XINLINE static float Map(float a, float b) {
     if (b == 0) {
-      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+      return NAN;
     }
     return ::floorf(-a/b);
   }
 
   MSHADOW_XINLINE static double Map(double a, double b) {
     if (b == 0) {
-      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+      return NAN;
     }
     return ::floor(-a/b);
   }
@@ -739,8 +738,7 @@ struct rmod {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     if (a == 0) {
-      LOG(WARNING) << "divide by zero encountered in modulo.";
-      return DType(0.0f);
+      return NAN;
     } else if (a < 0) {
       if (b < 0) {
         return DType(-::fmod(-b, -a));
@@ -760,22 +758,22 @@ struct rmod {
 struct rmod_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    if (b == 0) {
-      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+    if (a == 0) {
+      return NAN;
     }
     return DType(0.0f);
   }
 
   MSHADOW_XINLINE static float Map(float a, float b) {
-    if (b == 0) {
-      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+    if (a == 0) {
+      return NAN;
     }
     return 1.0f;
   }
 
   MSHADOW_XINLINE static double Map(double a, double b) {
-    if (b == 0) {
-      LOG(WARNING) << "divide by zero encountered in modulo gradient calculation.";
+    if (a == 0) {
+      return NAN;
     }
     return 1.0f;
   }
