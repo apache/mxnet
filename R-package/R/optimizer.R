@@ -36,7 +36,7 @@ mx.opt.sgd <- function(learning.rate,
         sgd[[indexKey]] <- 0
       } else {
         indexValue <- sgd[[indexKey]]
-        sgd[[indexKey]] <- indexValue
+        sgd[[indexKey]] <- indexValue + 1
         sgd$num_update <- max(sgd$num_update, sgd[[indexKey]])
       }
     }
