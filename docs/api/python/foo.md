@@ -185,6 +185,24 @@ in Python and then deploy with symbolic graph in C++ and Scala.
 
 <script>auto_index("api-reference");</script>
 
+## Loss functions
+
+```eval_rst
+.. currentmodule:: mxnet.foo.loss
+```
+
+<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+
+```eval_rst
+.. automethod:: mxnet.foo.loss.custom_loss
+.. automethod:: mxnet.foo.loss.multitask_loss
+.. automethod:: mxnet.foo.loss.l1_loss
+.. automethod:: mxnet.foo.loss.l2_loss
+.. automethod:: mxnet.foo.loss.softmax_cross_entropy_loss
+```
+
+<script>auto_index("api-reference");</script>
+
 ## Utilities
 
 ```eval_rst
