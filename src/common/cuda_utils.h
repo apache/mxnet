@@ -88,6 +88,35 @@ inline const char* CublasGetErrorString(cublasStatus_t error) {
 }
 
 /*!
+ * \brief Get string representation of cuSOLVER errors.
+ * \param error The error.
+ * \return String representation.
+ */
+inline const char* CusolverGetErrorString(cusolverStatus_t error) {
+  switch (error) {
+  case CUSOLVER_STATUS_SUCCESS:
+    return "CUSOLVER_STATUS_SUCCESS";
+  case CUSOLVER_STATUS_NOT_INITIALIZED:
+    return "CUSOLVER_STATUS_NOT_INITIALIZED";
+  case CUSOLVER_STATUS_ALLOC_FAILED:
+    return "CUSOLVER_STATUS_ALLOC_FAILED";
+  case CUSOLVER_STATUS_INVALID_VALUE:
+    return "CUSOLVER_STATUS_INVALID_VALUE";
+  case CUSOLVER_STATUS_ARCH_MISMATCH:
+    return "CUSOLVER_STATUS_ARCH_MISMATCH";
+  case CUSOLVER_STATUS_EXECUTION_FAILED:
+    return "CUSOLVER_STATUS_EXECUTION_FAILED";
+  case CUSOLVER_STATUS_INTERNAL_ERROR:
+    return "CUSOLVER_STATUS_INTERNAL_ERROR";
+  case CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED:
+    return "CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED";
+  default:
+    break;
+  }
+  return "Unknown cuSOLVER status";
+}
+
+/*!
  * \brief Get string representation of cuRAND errors.
  * \param status The status.
  * \return String representation.
@@ -162,6 +191,19 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
     cublasStatus_t e = (func);                                  \
     CHECK_EQ(e, CUBLAS_STATUS_SUCCESS)                          \
         << "cuBLAS: " << common::cuda::CublasGetErrorString(e); \
+  }
+
+/*!
+ * \brief Protected cuSolver call.
+ * \param func Expression to call.
+ *
+ * It checks for cuSolver errors after invocation of the expression.
+ */
+#define CUSOLVER_CALL(func)                                         \
+  {                                                                 \
+    cusolverStatus_t e = (func);                                    \
+    CHECK_EQ(e, CUSOLVER_STATUS_SUCCESS)                            \
+        << "cuSolver: " << common::cuda::CusolverGetErrorString(e); \
   }
 
 /*!

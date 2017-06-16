@@ -56,6 +56,13 @@
 #define MXNET_USE_CUDNN MSHADOW_USE_CUDNN
 #endif
 
+/*!
+ *\brief whether to use cusolver library
+ */
+#ifndef MXNET_USE_CUSOLVER
+#define MXNET_USE_CUSOLVER MSHADOW_USE_CUSOLVER
+#endif
+
 /*! \brief Error message for using gpu when MXNET_USE_CUDA==0 */
 #define MXNET_GPU_NOT_ENABLED_ERROR  "GPU is not enabled"
 
