@@ -536,12 +536,14 @@ class Module(BaseModule):
         self.optimizer_initialized = True
 
     def forward(self, data_batch, is_train=None):
-        """Forward computation.
-
+        """Forward computation. It supports data batches with different shapes, such as
+        different batch sizes or different image sizes.
+        If reshaping of data batch relates to modification of symbol or module, such as
+        changing image layout ordering or switching from training to predicting, module
+        rebinding is required.
         See Also
         ----------
         :meth:`BaseModule.forward`.
-
         Parameters
         ----------
         data_batch : DataBatch
@@ -551,32 +553,30 @@ class Module(BaseModule):
         """
         assert self.binded and self.params_initialized
 
-        for idx in range(len(self._data_shapes)):
-            curr_data_shape = self._data_shapes[idx].shape
-            curr_data_layout = self._data_shapes[idx].layout
-            new_data_shape = data_batch.data[idx].shape
-            #If data_batch doesn't provide datadesc then layout doesn't change.
-            new_data_layout = curr_data_layout if data_batch.provide_data is None else \
-                data_batch.provide_data[idx].layout
-            #Reorder data shape if layouts are different.
-            if curr_data_layout != new_data_layout:
-                reorder_shape = list()
-                for char in curr_data_layout:
-                    axis_idx = new_data_layout.find(char)
-                    if axis_idx < 0:
-                        raise RuntimeError("layouts are incompatible. Current data layout is %s"
-                                           "and new data layout is %s." % (curr_data_layout,
-                                                                           new_data_layout))
-                    reorder_shape.append(new_data_shape[axis_idx])
-                new_data_shape = tuple(reorder_shape)
-            if curr_data_shape != new_data_shape:
-                new_shape = data_batch.provide_data if data_batch.provide_data else \
-                    [(name, data.shape) for name, data in zip(self._data_names, data_batch.data)]
-                new_label = data_batch.provide_label if data_batch.provide_label else \
-                    [(name, label.shape) for name, label in zip(self._label_names, data_batch.label)] \
-                    if data_batch.label else None
-                self.reshape(new_shape, new_label)
-                break
+        # If start to inference, force rebind module.
+        if self._label_shapes and not data_batch.label:
+            raise RuntimeError("If you are trying to do inference, rebind module "
+                               "with 'force_rebind=True' and 'for_training=False'")
+
+        curr_data_shapes = (i.shape for i in self._data_shapes)
+        new_data_shapes = (i.shape for i in data_batch.data)
+
+        if curr_data_shapes != new_data_shapes:
+            if hasattr(data_batch, "provide_data") and data_batch.provide_data:
+                new_dshape = data_batch.provide_data
+            else:
+                new_dshape = [DataDesc(i.name, shape, i.dtype, i.layout) \
+                              for i, shape in zip(self._data_shapes, new_data_shapes)]
+
+            if hasattr(data_batch, "provide_label") and data_batch.provide_label:
+                new_lshape = data_batch.provide_label
+            elif hasattr(data_batch, "label") and data_batch.label:
+                new_lshape = [DataDesc(i.name, j.shape, i.dtype, i.layout) \
+                              for i, j in zip(self._label_shapes, data_batch.label)]
+            else:
+                new_lshape = None
+
+            self.reshape(new_dshape, new_lshape)
 
         self._exec_group.forward(data_batch, is_train)
 

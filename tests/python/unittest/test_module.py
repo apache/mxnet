@@ -4,6 +4,7 @@ import numpy as np
 from functools import reduce
 from mxnet.module.executor_group import DataParallelExecutorGroup
 from common import assertRaises
+from collections import namedtuple
 
 
 def test_module_dtype():
@@ -441,96 +442,123 @@ def test_executor_group():
 
 
 def test_forward_reshape():
-    data = mx.sym.Variable('data')
-    sym = mx.sym.FullyConnected(data, num_hidden=20, name='fc')
+    num_class=10
+    data1 = mx.sym.Variable('data1')
+    data2 = mx.sym.Variable('data2')
+    conv1 = mx.sym.Convolution(data=data1, kernel=(2, 2), num_filter=2, stride=(2, 2))
+    conv2 = mx.sym.Convolution(data=data2, kernel=(3, 3), num_filter=3, stride=(1, 1))
+    pooling1 = mx.sym.Pooling(data=conv1, kernel=(2, 2), stride=(1, 1), pool_type="avg")
+    pooling2 = mx.sym.Pooling(data=conv2, kernel=(2, 2), stride=(1, 1), pool_type="max")
+    flatten1 = mx.sym.flatten(data=pooling1)
+    flatten2 = mx.sym.flatten(data=pooling2)
+    sum = mx.sym.sum(data=flatten1, axis=1) + mx.sym.sum(data=flatten2, axis=1)
+    fc = mx.sym.FullyConnected(data=sum, num_hidden=num_class)
+    sym = mx.sym.SoftmaxOutput(data=fc, name='softmax')
 
-    dshape = (10, 20)
-    mod = mx.mod.Module(sym, ('data',), None)
-    mod.bind(data_shapes=[('data', dshape)])
+    dshape1 = (10, 3, 64, 64)
+    dshape2 = (10, 3, 32, 32)
+    lshape = (10,)
+
+    mod = mx.mod.Module(symbol=sym, data_names=['data1', 'data2'],
+                        label_names=['softmax_label'])
+    mod.bind(data_shapes=[('data1', dshape1), ('data2', dshape2)],
+             label_shapes=[('softmax_label', lshape)])
     mod.init_params()
-    mod.init_optimizer(optimizer_params={'learning_rate': 1})
+    mod.init_optimizer(optimizer_params={'learning_rate': 0.01})
 
-    # Forward for the same batch_size input
-    mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape)],
-                                label=None))
-    assert mod.get_outputs()[0].shape == dshape
+    # Train with original data shapes
+    data_batch = mx.io.DataBatch(data=[mx.nd.random_uniform(0, 9, dshape1),
+                                       mx.nd.random_uniform(5, 15, dshape2)],
+                                 label=[mx.nd.ones(lshape)])
+    mod.forward(data_batch)
+    assert mod.get_outputs()[0].shape == tuple([lshape[0], num_class])
+    mod.backward()
+    mod.update()
 
-    # Forward for smaller batch_size input
-    dshape_1 = (1, 20)
-    mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape_1)],
-                                label=None))
-    assert mod.get_outputs()[0].shape == dshape_1
+    # Train with different batch size
+    dshape1 = (3, 3, 64, 64)
+    dshape2 = (3, 3, 32, 32)
+    lshape = (3,)
+    data_batch = mx.io.DataBatch(data=[mx.nd.random_uniform(0, 9, dshape1),
+                                       mx.nd.random_uniform(5, 15, dshape2)],
+                                 label=[mx.nd.ones(lshape)])
+    mod.forward(data_batch)
+    assert mod.get_outputs()[0].shape == tuple([lshape[0], num_class])
+    mod.backward()
+    mod.update()
 
-    # Forward for larger batch_size input
-    dshape_2 = (100, 20)
-    mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape_2)],
-                                label=None))
-    assert mod.get_outputs()[0].shape == dshape_2
+    dshape1 = (20, 3, 64, 64)
+    dshape2 = (20, 3, 32, 32)
+    lshape = (20,)
+    data_batch = mx.io.DataBatch(data=[mx.nd.random_uniform(3, 5, dshape1),
+                                       mx.nd.random_uniform(10, 25, dshape2)],
+                                 label=[mx.nd.ones(lshape)])
+    mod.forward(data_batch)
+    assert mod.get_outputs()[0].shape == tuple([lshape[0], num_class])
+    mod.backward()
+    mod.update()
 
-    # Forward for multiple device
-    mod = mx.mod.Module(sym, ('data',), None, context=[mx.cpu(0), mx.cpu(1)])
-    mod.bind(data_shapes=[('data', dshape)])
-    mod.init_params()
-    mod.init_optimizer(optimizer_params={'learning_rate': 1})
+    #Train with both different batch size and data shapes
+    dshape1 = (20, 3, 120, 120)
+    dshape2 = (20, 3, 32, 64)
+    lshape = (20,)
+    data_batch = mx.io.DataBatch(data=[mx.nd.random_uniform(0, 9, dshape1),
+                                       mx.nd.random_uniform(5, 15, dshape2)],
+                                 label=[mx.nd.ones(lshape)])
+    mod.forward(data_batch)
+    assert mod.get_outputs()[0].shape == tuple([lshape[0], num_class])
+    mod.backward()
+    mod.update()
 
-    mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape)],
-                                label=None))
-    assert mod.get_outputs()[0].shape == dshape
+    dshape1 = (5, 3, 28, 40)
+    dshape2 = (5, 3, 24, 16)
+    lshape = (5,)
+    data_batch = mx.io.DataBatch(data=[mx.nd.random_uniform(0, 9, dshape1),
+                                       mx.nd.random_uniform(15, 25, dshape2)],
+                                 label=[mx.nd.ones(lshape)])
+    mod.forward(data_batch)
+    assert mod.get_outputs()[0].shape == tuple([lshape[0], num_class])
+    mod.backward()
+    mod.update()
 
-    mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape_2)],
-                                label=None))
-    assert mod.get_outputs()[0].shape == dshape_2
+    #Test score
+    dataset_shape1 = (30, 3, 30, 30)
+    dataset_shape2 = (30, 3, 20, 40)
+    labelset_shape = (30,)
 
+    eval_dataiter = mx.io.NDArrayIter(data=[mx.nd.random_uniform(0, 9, dataset_shape1),
+                                            mx.nd.random_uniform(15, 25, dataset_shape2)],
+                                      label=[mx.nd.ones(labelset_shape)],
+                                      batch_size=5)
+    assert len(mod.score(eval_data=eval_dataiter, eval_metric='acc')) == 1
 
-def test_module_predict():
+    #Test prediction
+    dshape1 = (1, 3, 30, 30)
+    dshape2 = (1, 3, 20, 40)
+    dataset_shape1 = (10, 3, 30, 30)
+    dataset_shape2 = (10, 3, 20, 40)
+
+    pred_dataiter = mx.io.NDArrayIter(data=[mx.nd.random_uniform(0, 9, dataset_shape1),
+                                            mx.nd.random_uniform(15, 25, dataset_shape2)])
+    mod.bind(data_shapes=[('data1', dshape1), ('data2', dshape2)],
+             for_training=False, force_rebind=True)
+    assert mod.predict(pred_dataiter).shape == tuple([10, num_class])
+
+    #Test forward with other data batch API
+    Batch = namedtuple('Batch', ['data'])
     data = mx.sym.Variable('data')
-    fc = mx.sym.FullyConnected(data, num_hidden=20, name='fc')
-    mlp = mx.sym.SoftmaxOutput(fc, name='softmax')
-    mod = mx.mod.Module(mlp)
-
-    dshape = (100, 15)
-    lshape = (100,)
-    batch_size = 20
-    train_data = mx.io.NDArrayIter(mx.nd.ones(dshape), mx.nd.ones(lshape),
-                                   batch_size, shuffle=True)
-
-    mod.fit(train_data=train_data,
-            num_epoch=1, optimizer='sgd',
-            optimizer_params={'learning_rate': 0.1})
-
-    # Predict single sample
-    pshape_1 = (1, 15)
-    oshape_1 = (1, 20)
-    prob = mod.predict(mx.io.NDArrayIter(mx.nd.ones(pshape_1)))
-    assert prob.shape == oshape_1
-
-    # Predict multiple samples
-    pshape_2 = (10, 15)
-    oshape_2 = (10, 20)
-    prob = mod.predict(mx.io.NDArrayIter(mx.nd.ones(pshape_2)))
-    assert prob.shape == oshape_2
-
-    pshape_3 = (100, 15)
-    oshape_3 = (100, 20)
-    prob = mod.predict(mx.io.NDArrayIter(mx.nd.ones(pshape_3)))
-    assert prob.shape == oshape_3
-
-    pshape_4 = (200, 15)
-    oshape_4 = (200, 20)
-    prob = mod.predict(mx.io.NDArrayIter(mx.nd.ones(pshape_4)))
-    assert prob.shape == oshape_4
+    out = data * 2
+    mod = mx.mod.Module(symbol=out, label_names=None)
+    mod.bind(data_shapes=[('data', (1, 10))])
+    mod.init_params()
+    data1 = [mx.nd.ones((1, 10))]
+    mod.forward(Batch(data1))
+    assert mod.get_outputs()[0].shape == (1, 10)
+    data2 = [mx.nd.ones((3, 5))]
+    mod.forward(Batch(data2))
+    assert mod.get_outputs()[0].shape == (3, 5)
 
 
 if __name__ == '__main__':
-    test_module_dtype()
-    test_module_input_grads()
-    test_module_states()
-    test_module_reshape()
-    test_module_set_params()
-    test_save_load()
-    test_module_layout()
-    test_module_switch_bucket()
-    test_monitor()
-    test_executor_group()
-    test_forward_reshape()
-    test_module_predict()
+    import nose
+    nose.runmodule()
