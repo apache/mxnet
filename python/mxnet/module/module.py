@@ -15,6 +15,7 @@ from .executor_group import DataParallelExecutorGroup
 from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
 from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
+from ..io import DataDesc
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
@@ -546,24 +547,33 @@ class Module(BaseModule):
 
         # If start to inference, force rebind module.
         if self._label_shapes and not data_batch.label:
-            raise RuntimeError("Currently module is bind with label while new data batch "
-                               "has no label. Are you trying to inference? Rebind module "
-                               "with 'force_rebind=True' and 'for_training=False'.")
+            raise RuntimeError("If you are trying to do inference, rebind module "
+                               "with 'force_rebind=True' and 'for_training=False'")
 
         for idx in range(len(self._data_shapes)):
             curr_data_shape = self._data_shapes[idx].shape
+            curr_data_dtype = self._data_shapes[idx].dtype
             new_data_shape = data_batch.data[idx].shape
-            #Reshape if data shape changes.
-            if curr_data_shape != new_data_shape:
-                new_shape = data_batch.provide_data \
-                    if hasattr(data_batch, "provide_data") and data_batch.provide_data else \
-                    [(name, data.shape) for name, data in zip(self._data_names, data_batch.data)]
-                new_label = data_batch.provide_label \
-                    if hasattr(data_batch, "provide_label") and data_batch.provide_label else \
-                    [(name, label.shape) for name, label in \
-                     zip(self._label_names, data_batch.label)] \
-                        if hasattr(data_batch, "label") and data_batch.label else None
-                self.reshape(new_shape, new_label)
+            new_data_dtype = data_batch.provide_data.dtype \
+                if hasattr(data_batch, "provide_data") and data_batch.provide_data else \
+                data_batch.data[idx].dtype
+            #Reshape if data shape or dtype changes.
+            if curr_data_shape != new_data_shape or curr_data_dtype != new_data_dtype:
+                if hasattr(data_batch, "provide_data") and data_batch.provide_data:
+                    new_dshape = data_batch.provide_data
+                else:
+                    new_dshape = [DataDesc(name, data.shape, data.dtype) \
+                                  for name, data in zip(self._data_names, data_batch.data)]
+
+                if hasattr(data_batch, "provide_label") and data_batch.provide_label:
+                    new_lshape = data_batch.provide_label
+                elif hasattr(data_batch, "label") and data_batch.label:
+                    new_lshape = [DataDesc(name, label.shape, label.dtype) \
+                                 for name, label in zip(self._label_names, data_batch.label)]
+                else:
+                    new_lshape = None
+
+                self.reshape(new_dshape, new_lshape)
                 break
 
         self._exec_group.forward(data_batch, is_train)
