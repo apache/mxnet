@@ -6,7 +6,7 @@ class RNNModel(nn.Layer):
     def __init__(self, mode, vocab_size, num_embed, num_hidden,
                  num_layers, dropout=0.5, tie_weights=False, **kwargs):
         super(RNNModel, self).__init__(**kwargs)
-        with self.scope:
+        with self.name_scope():
             self.drop = nn.Dropout(dropout)
             self.encoder = nn.Embedding(vocab_size, num_embed)
             self.rnn = rnn.FusedRNNCell(num_hidden, num_layers, mode=mode,

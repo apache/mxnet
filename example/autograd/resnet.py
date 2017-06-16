@@ -14,7 +14,7 @@ def conv3x3(filters, stride, in_filters):
 class BasicBlockV1(nn.Layer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BasicBlockV1, self).__init__(**kwargs)
-        with self.scope:
+        with self.name_scope():
             self.conv1 = conv3x3(filters, stride, in_filters)
             self.bn1 = nn.BatchNorm(num_features=in_filters)
             self.conv2 = conv3x3(filters, 1, filters)
@@ -47,7 +47,7 @@ class BasicBlockV1(nn.Layer):
 class BottleneckV1(nn.Layer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BottleneckV1, self).__init__(**kwargs)
-        with self.scope:
+        with self.name_scope():
             self.conv1 = nn.Conv2D(filters=filters//4, kernel_size=1, strides=1, in_filters=in_filters)
             self.bn1 = nn.BatchNorm(num_features=filters//4)
             self.conv2 = conv3x3(filters//4, stride, filters//4)
@@ -86,7 +86,7 @@ class BottleneckV1(nn.Layer):
 class ResnetV1(nn.Layer):
     def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
         super(ResnetV1, self).__init__(**kwargs)
-        with self.scope:
+        with self.name_scope():
              assert len(layers) == len(filters) - 1
              self._thumbnail = thumbnail
              if thumbnail:
@@ -134,7 +134,7 @@ class ResnetV1(nn.Layer):
 class BasicBlockV2(nn.Layer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BasicBlockV2, self).__init__(**kwargs)
-        with self.scope:
+        with self.name_scope():
             self.bn1 = nn.BatchNorm(num_features=in_filters)
             self.conv1 = conv3x3(filters, stride, in_filters)
             self.bn2 = nn.BatchNorm(num_features=filters)
@@ -164,7 +164,7 @@ class BasicBlockV2(nn.Layer):
 class BottleneckV2(nn.Layer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BottleneckV2, self).__init__(**kwargs)
-        with self.scope:
+        with self.name_scope():
             self.bn1 = nn.BatchNorm(num_features=in_filters)
             self.conv1 = conv3x3(filters//4, 1, in_filters)
             self.bn2 = nn.BatchNorm(num_features=filters//4)
@@ -199,7 +199,7 @@ class BottleneckV2(nn.Layer):
 class ResnetV2(nn.Layer):
     def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
         super(ResnetV2, self).__init__(**kwargs)
-        with self.scope:
+        with self.name_scope():
             assert len(layers) == len(filters) - 1
             self._thumbnail = thumbnail
             self.bn_data = nn.BatchNorm(num_features=3, scale=False, center=False)

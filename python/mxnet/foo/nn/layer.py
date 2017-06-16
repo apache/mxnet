@@ -59,7 +59,7 @@ class Layer(object):
         class Net(nn.Layer):
             def __init__(self, **kwargs):
                 super(Net, self).__init__(**kwargs)
-                with self.scope:
+                with self.name_scope():
                     self.dense0 = nn.Dense(20, in_units=10)
                     self.dense1 = nn.Dense(20, in_units=20)
 
@@ -129,8 +129,10 @@ class Layer(object):
             return self.prefix[:-1]
         return self.prefix
 
-    @property
-    def scope(self):
+    def name_scope(self):
+        """Returns a name space object managing sublayer and parameter
+        names. Should be used by `with` statement
+        """
         return self._scope
 
     def register_child(self, layer):
@@ -157,7 +159,7 @@ class Layer(object):
 
     def __call__(self, *args):
         """Call forward."""
-        return self.call(*args)
+        return self.call(*args)  # pylint: disable=no-value-for-parameter
 
     def call(self, x, *args):
         """Defines the forward computation. Arguments can be either NDArray or Symbol."""
@@ -281,7 +283,7 @@ class Dense(Layer):
                  kernel_initializer=None, bias_initializer=None,
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
-        with self.scope:
+        with self.name_scope():
             self._op = symbol.CachedOp('FullyConnected', 3 if use_bias else 2,
                                        num_hidden=units, no_bias=not use_bias)
             self.weight = self.params.get('weight', shape=(units, in_units),

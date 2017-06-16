@@ -62,7 +62,7 @@ class _Conv(Layer):
                  kernel_initializer=None, bias_initializer=None,
                  op_name='Convolution', prefix=None, params=None, **kwargs):
         super(_Conv, self).__init__(prefix=prefix, params=params)
-        with self.scope:
+        with self.name_scope():
             self._filters = filters
             self._in_filters = in_filters
             if isinstance(strides, numeric_types):

@@ -27,7 +27,7 @@ def test_parameter_sharing():
     class Net(nn.Layer):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.scope:
+            with self.name_scope():
                 self.dense0 = nn.Dense(5, in_units=5)
                 self.dense1 = nn.Dense(5, in_units=5)
 
