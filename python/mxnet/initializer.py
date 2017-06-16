@@ -38,34 +38,43 @@ class Initializer(object):
     def __init__(self, **kwargs):
         self._kwargs = kwargs
         self._verbose = False
-        self._stat_func = None
-        self._print_helper = None
+        self._print_func = None
 
-    def set_verbosity(self, verbose=False, stat_func=None):
+    def set_verbosity(self, verbose=False, print_func=None):
         """Switch on/off verbose mode
 
         Parameters
         ----------
         verbose : bool
             switch on/off verbose mode
-        stat_func : function
+        print_func : function
             A function that computes statistics of initialized arrays.
-            Takes an `NDArray` and returns an `NDArray`. Defaults to mean
-            absolute value |x|/size(x).
+            Takes an `NDArray` and returns an `str`. Defaults to mean
+            absolute value str((|x|/size(x)).asscalar()).
         """
         self._verbose = verbose
-        if stat_func is None:
+        if print_func is None:
             def asum_stat(x):
                 """returns |x|/size(x), async execution."""
-                return ndarray.norm(x)/sqrt(x.size)
-            stat_func = asum_stat
-        self._stat_func = stat_func
-        def print_helper(x):
-            """Convert array to user friendly format"""
-            res = self._stat_func(x)
-            return str(res.asscalar())
-        self._print_helper = print_helper
+                return str((ndarray.norm(x)/sqrt(x.size)).asscalar())
+            print_func = asum_stat
+        self._print_func = print_func
         return self
+
+    def _verbose_print(self, desc, init, arr):
+        """Internal verbose print function
+
+        Parameters
+        ----------
+        desc : InitDesc or str
+            name of the array
+        init : str
+            initializer pattern
+        arr : NDArray
+            initialized array
+        """
+        if self._verbose and self._print_func:
+            logging.info('Initialized %s as %s: %s', desc, init, self._print_func(arr))
 
     def dumps(self):
         """Saves the initializer to string
@@ -110,27 +119,22 @@ class Initializer(object):
         if init:
             # when calling Variable initializer
             create(init)._init_weight(desc, arr)
-            if self._verbose:
-                logging.info('Initialized %s by %s: %s', desc, init, self._print_helper(arr))
+            self._verbose_print(desc, init, arr)
         else:
             # register nnvm::FSetInputVariableAttrs in the backend for new patterns
             # don't add new cases here.
             if desc.endswith('weight'):
                 self._init_weight(desc, arr)
-                if self._verbose:
-                    logging.info('Initialized %s as weight: %s', desc, self._print_helper(arr))
+                self._verbose_print(desc, 'weight', arr)
             elif desc.endswith('bias'):
                 self._init_bias(desc, arr)
-                if self._verbose:
-                    logging.info('Initialized %s as bias: %s', desc, self._print_helper(arr))
+                self._verbose_print(desc, 'bias', arr)
             elif desc.endswith('gamma'):
                 self._init_gamma(desc, arr)
-                if self._verbose:
-                    logging.info('Initialized %s as gamma: %s', desc, self._print_helper(arr))
+                self._verbose_print(desc, 'gamma', arr)
             elif desc.endswith('beta'):
                 self._init_beta(desc, arr)
-                if self._verbose:
-                    logging.info('Initialized %s as beta: %s', desc, self._print_helper(arr))
+                self._verbose_print(desc, 'beta', arr)
             else:
                 self._init_default(desc, arr)
 
