@@ -62,6 +62,12 @@ _DTYPE_MX_TO_NP = {
     3 : np.uint8,
     4 : np.int32
 }
+
+_GRAD_REQ_MAP = {
+    'null': 0,
+    'write': 1,
+    'add': 3
+}
 # pylint: enable= no-member
 
 def _new_empty_handle():
@@ -116,8 +122,9 @@ fixed-size items.
     def __repr__(self):
         """Returns a string representation of the array."""
         shape_info = 'x'.join(['%d' % x for x in self.shape])
-        return '<%s %s @%s>' % (self.__class__.__name__,
-                                shape_info, self.context)
+        return '%s\n<%s %s @%s>' % (str(self.asnumpy()),
+                                    self.__class__.__name__,
+                                    shape_info, self.context)
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """
@@ -946,6 +953,34 @@ fixed-size items.
         if self.context == context:
             return self
         return self.copyto(context)
+
+    def set_grad(self, grad_req='write'):
+        """Attach a gradient buffer to this NDArray, so that `backward`
+        can compute gradient with respect to it.
+
+        Parameters
+        ----------
+        grad_req : {'write', 'add', 'null'}
+            How gradient will be accumulated.
+            - 'write': gradient will be overwritten on every backward.
+            - 'add': gradient will be added to existing value on every backward.
+            - 'null': do not compute gradient for this NDArray.
+        """
+        grad = zeros_like(self)  # pylint: disable=undefined-variable
+        grad_req = _GRAD_REQ_MAP[grad_req]
+        check_call(_LIB.MXAutogradMarkVariables(
+            1, ctypes.pointer(self.handle),
+            ctypes.pointer(mx_uint(grad_req)),
+            ctypes.pointer(grad.handle)))
+
+    @property
+    def grad(self):
+        """Returns gradient buffer attached to this NDArray."""
+        hdl = NDArrayHandle()
+        check_call(_LIB.MXNDArrayGetGrad(self.handle, ctypes.byref(hdl)))
+        if hdl.value is None:
+            return None
+        return NDArray(hdl)
 
     def detach(self):
         """Returns a new NDArray, detached from the current graph."""

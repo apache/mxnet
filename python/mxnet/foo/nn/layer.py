@@ -59,11 +59,11 @@ class Layer(object):
         class Net(nn.Layer):
             def __init__(self, **kwargs):
                 super(Net, self).__init__(**kwargs)
-                with self.scope:
+                with self.name_scope():
                     self.dense0 = nn.Dense(20, in_units=10)
                     self.dense1 = nn.Dense(20, in_units=20)
 
-            def forward(self, x):
+            def forward(self, F, x):
                 x = self.dense0(x)
                 return self.dense1(x)
 
@@ -129,8 +129,10 @@ class Layer(object):
             return self.prefix[:-1]
         return self.prefix
 
-    @property
-    def scope(self):
+    def name_scope(self):
+        """Returns a name space object managing sublayer and parameter
+        names. Should be used by `with` statement
+        """
         return self._scope
 
     def register_child(self, layer):
@@ -147,7 +149,7 @@ class Layer(object):
         inputs = [symbol.var('__input%d__'%i, shape=shape)
                   for i, shape in enumerate(args)]
         params = {k: v.var() for k, v in self._reg_params.items()}
-        sym = self.symbol_forward(*inputs, **params)
+        sym = self.forward(symbol, *inputs, **params)
         arg_shapes, _, aux_shapes = sym.infer_shape()
         sdict = {name: shape for name, shape in zip(sym.list_arguments(), arg_shapes)}
         sdict.update(
@@ -157,33 +159,30 @@ class Layer(object):
 
     def __call__(self, *args):
         """Call forward."""
-        try:
-            return self.forward(*args)  # pylint: disable= no-value-for-parameter
-        except DeferredInitializationError:
-            self.infer_shape(*[i.shape for i in args])
-            for i in self.params.values():
-                i._finish_deferred_init()
-            return self.forward(*args)  # pylint: disable= no-value-for-parameter
+        return self.call(*args)  # pylint: disable=no-value-for-parameter
 
-    def forward(self, x, *args):
+    def call(self, x, *args):
         """Defines the forward computation. Arguments can be either NDArray or Symbol."""
         if isinstance(x, NDArray):
             with x.context as ctx:
-                params = {k: v.data(ctx) for k, v in self._reg_params.items()}
-                return self.ndarray_forward(x, *args, **params)
+                try:
+                    params = {k: v.data(ctx) for k, v in self._reg_params.items()}
+                except DeferredInitializationError:
+                    arg_shapes = [x.shape]
+                    arg_shapes += [i.shape if isinstance(i, NDArray) else i for i in args]
+                    self.infer_shape(*arg_shapes)
+                    for i in self.params.values():
+                        i._finish_deferred_init()
+                    params = {k: v.data(ctx) for k, v in self._reg_params.items()}
+                return self.forward(ndarray, x, *args, **params)
         else:
             assert isinstance(x, Symbol), \
-                "Layer requires the first argument to forward be either Symbol or NDArray"
+                "Layer requires the first argument to forward be either " \
+                "Symbol or NDArray, but got %s"%type(x)
             params = {k: v.var() for k, v in self._reg_params.items()}
-            return self.symbol_forward(x, *args, **params)
+            return self.forward(symbol, x, *args, **params)
 
-    def ndarray_forward(self, x, *args, **kwargs):
-        return self.generic_forward(ndarray, x, *args, **kwargs)
-
-    def symbol_forward(self, x, *args, **kwargs):
-        return self.generic_forward(symbol, x, *args, **kwargs)
-
-    def generic_forward(self, F, x, *args, **kwargs):
+    def forward(self, F, x, *args, **kwargs):
         """Simple forward supports both `Symbol` and `NDArray` API.
 
         Parameters
@@ -217,13 +216,13 @@ class Sequential(Layer):
         """Add layer on top of the stack."""
         self.register_child(layer)
 
-    def forward(self, x):
+    def call(self, x):
         #pylint: disable=arguments-differ
         for layer in self._children:
             x = layer(x)
         return x
 
-    def generic_forward(self, F, x, *args, **kwargs):
+    def forward(self, F, x, *args, **kwargs):
         raise NotImplementedError
 
 
@@ -284,7 +283,7 @@ class Dense(Layer):
                  kernel_initializer=None, bias_initializer=None,
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
-        with self.scope:
+        with self.name_scope():
             self._op = symbol.CachedOp('FullyConnected', 3 if use_bias else 2,
                                        num_hidden=units, no_bias=not use_bias)
             self.weight = self.params.get('weight', shape=(units, in_units),
@@ -297,7 +296,7 @@ class Dense(Layer):
             else:
                 self.act = None
 
-    def generic_forward(self, F, x, weight, bias=None):
+    def forward(self, F, x, weight, bias=None):
         if bias is None:
             act = F.invoke(self._op, [x, weight])
         else:
@@ -331,7 +330,7 @@ class Activation(Layer):
     def _alias(self):
         return self._act_type
 
-    def generic_forward(self, F, x):
+    def forward(self, F, x):
         return F.invoke(self._op, [x])
 
 
@@ -348,14 +347,14 @@ class Dropout(Layer):
 
     References
     ----------
-    - [Dropout: A Simple Way to Prevent Neural Networks from Overfitting](
+    [Dropout: A Simple Way to Prevent Neural Networks from Overfitting](
         http://www.cs.toronto.edu/~rsalakhu/papers/srivastava14a.pdf)
     """
     def __init__(self, rate, **kwargs):
         super(Dropout, self).__init__(**kwargs)
         self._op = symbol.CachedOp('Dropout', 1, p=rate)
 
-    def generic_forward(self, F, x):
+    def forward(self, F, x):
         return F.invoke(self._op, [x])
 
 
@@ -407,7 +406,7 @@ class BatchNorm(Layer):
                                            shape=(num_features,),
                                            init=running_variance_initializer)
 
-    def generic_forward(self, F, x, gamma, beta, running_mean, running_var):
+    def forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.invoke(self._op, [x, gamma, beta, running_mean, running_var])
 
 
@@ -427,7 +426,7 @@ class LeakyReLU(Layer):
         super(LeakyReLU, self).__init__(**kwargs)
         self._op = symbol.CachedOp('LeakyReLU', 1, act_type='leaky', slope=alpha)
 
-    def generic_forward(self, F, x):
+    def forward(self, F, x):
         return F.invoke(self._op, [x])
 
 
@@ -463,5 +462,5 @@ class Embedding(Layer):
         self.weight = self.params.get('weight', shape=(input_dim, output_dim),
                                       init=embeddings_initializer)
 
-    def generic_forward(self, F, x, weight):
+    def forward(self, F, x, weight):
         return F.invoke(self._op, [x, weight])

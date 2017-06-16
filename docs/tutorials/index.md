@@ -10,6 +10,7 @@ These tutorials introduce a few fundamental concepts in deep learning and how to
 .. toctree::
    :maxdepth: 1
 
+   basic/foo
    basic/ndarray
    basic/symbol
    basic/module

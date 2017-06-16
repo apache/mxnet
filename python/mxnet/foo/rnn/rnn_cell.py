@@ -301,7 +301,7 @@ class RecurrentCell(Layer):
         else:
             return activation(inputs, **kwargs)
 
-    def forward(self, inputs, states):
+    def call(self, inputs, states):
         """Unroll the recurrent cell for one time step.
 
         Parameters
@@ -329,7 +329,7 @@ class RecurrentCell(Layer):
         """
         # pylint: disable= arguments-differ
         self._counter += 1
-        return super(RecurrentCell, self).forward(inputs, states)
+        return super(RecurrentCell, self).call(inputs, states)
 
 
 
@@ -370,8 +370,8 @@ class RNNCell(RecurrentCell):
     def _alias(self):
         return 'rnn'
 
-    def generic_forward(self, F, inputs, states, i2h_weight, i2h_bias,
-                        h2h_weight, h2h_bias):
+    def forward(self, F, inputs, states, i2h_weight, i2h_bias,
+                h2h_weight, h2h_bias):
         name = self._curr_prefix
         i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
                                num_hidden=self._num_hidden,
@@ -425,8 +425,8 @@ class LSTMCell(RecurrentCell):
     def _alias(self):
         return 'lstm'
 
-    def generic_forward(self, F, inputs, states, i2h_weight, i2h_bias,
-                        h2h_weight, h2h_bias):
+    def forward(self, F, inputs, states, i2h_weight, i2h_bias,
+                h2h_weight, h2h_bias):
         name = self._curr_prefix
         i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
                                num_hidden=self._num_hidden*4,
@@ -487,8 +487,8 @@ class GRUCell(RecurrentCell):
     def _alias(self):
         return 'gru'
 
-    def generic_forward(self, F, inputs, states, i2h_weight, i2h_bias,
-                        h2h_weight, h2h_bias):
+    def forward(self, F, inputs, states, i2h_weight, i2h_bias,
+                h2h_weight, h2h_bias):
         # pylint: disable=too-many-locals
         name = self._curr_prefix
         prev_state_h = states[0]
@@ -780,7 +780,7 @@ class SequentialRNNCell(RecurrentCell):
 
         return inputs, next_states
 
-    def generic_forward(self, *args, **kwargs):
+    def forward(self, *args, **kwargs):
         raise NotImplementedError
 
 
@@ -804,7 +804,7 @@ class DropoutCell(RecurrentCell):
     def _alias(self):
         return 'dropout'
 
-    def generic_forward(self, F, inputs, states):
+    def forward(self, F, inputs, states):
         if self.dropout > 0:
             inputs = F.Dropout(data=inputs, p=self.dropout)
         return inputs, states
@@ -814,7 +814,7 @@ class DropoutCell(RecurrentCell):
 
         inputs, _, F, _ = _format_sequence(length, inputs, layout, merge_outputs)
         if isinstance(inputs, tensor_types):
-            return self.generic_forward(F, inputs, begin_state if begin_state else [])
+            return self.forward(F, inputs, begin_state if begin_state else [])
         else:
             return super(DropoutCell, self).unroll(
                 length, inputs, begin_state=begin_state, layout=layout,
@@ -858,7 +858,7 @@ class ModifierCell(RecurrentCell):
     def pack_weights(self, args):
         return self.base_cell.pack_weights(args)
 
-    def generic_forward(self, F, inputs, states):
+    def forward(self, F, inputs, states):
         raise NotImplementedError
 
 
@@ -886,7 +886,7 @@ class ZoneoutCell(ModifierCell):
         super(ZoneoutCell, self).reset()
         self.prev_output = None
 
-    def generic_forward(self, F, inputs, states):
+    def forward(self, F, inputs, states):
         cell, p_outputs, p_states = self.base_cell, self.zoneout_outputs, self.zoneout_states
         next_output, next_states = cell(inputs, states)
         mask = (lambda p, like: F.Dropout(F.ones_like(like), p=p))
@@ -915,7 +915,7 @@ class ResidualCell(ModifierCell):
     def __init__(self, base_cell):
         super(ResidualCell, self).__init__(base_cell)
 
-    def generic_forward(self, F, inputs, states):
+    def forward(self, F, inputs, states):
         output, states = self.base_cell(inputs, states)
         output = F.elemwise_add(output, inputs, name="%s_plus_residual" % output.name)
         return output, states

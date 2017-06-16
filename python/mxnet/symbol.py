@@ -17,7 +17,7 @@ from .base import c_array, c_str, mx_uint, py_str, string_types
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle, OpHandle
 from .base import check_call, MXNetError, NotImplementedForSymbol, _Null  # pylint: disable=unused-import
 from .context import Context
-from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
+from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
 from .name import NameManager  # pylint: disable=unused-import
 from .executor import Executor
 from . import _symbol_internal as _internal
@@ -42,7 +42,6 @@ except ImportError:
     from ._ctypes.symbol import SymbolBase, _set_symbol_class
     from ._ctypes.symbol import _symbol_creator  # pylint: disable=unused-import
 
-_GRAD_REQ_MAP = {'null': 0, 'write': 1, 'add': 3}
 
 class Symbol(SymbolBase):
     """Symbol is symbolic graph of the mxnet."""
@@ -1629,7 +1628,7 @@ class Symbol(SymbolBase):
         executor.aux_arrays = aux_states
         return executor
 
-    def grad(self, wrt):
+    def gradient(self, wrt):
         """Gets the autodiff of current symbol.
 
         This function can only be used if current symbol is a loss function.
