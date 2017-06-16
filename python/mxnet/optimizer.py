@@ -151,6 +151,24 @@ class Optimizer(object):
             The state associated with the weight.
         """
 
+    def sync_state_context(self, state, context):
+        """Sync state to a given context
+
+        Syncs state with given context when you continue to train from the checkpoint
+
+        Parameters
+        ----------
+        state : any obj
+            The state which will be synced with the context.
+        context : Context
+            The target context.
+
+        Returns
+        -------
+        state : any obj
+            The state synced with the context.
+        """
+
     def update(self, index, weight, grad, state):
         """Updates the given parameter using the corresponding gradient and state.
 
@@ -334,6 +352,12 @@ class SGD(Optimizer):
         else:
             return zeros(weight.shape, weight.context, dtype=weight.dtype)
 
+    def sync_state_context(self, state, context):
+        if isinstance(state, NDArray):
+            return state.as_in_context(context)
+        else:
+            return state
+
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
@@ -386,6 +410,14 @@ class DCASGD(Optimizer):
         else:
             return (zeros(weight.shape, weight.context, dtype=weight.dtype), # momentum
                     weight.copy())  # previous weight
+
+    def sync_state_context(self, state, context):
+        momentum, previous_weight = state
+        if isinstance(momentum, NDArray):
+            momentum = momentum.as_in_context(context)
+        if isinstance(previous_weight, NDArray):
+            previous_weight = previous_weight.as_in_context(context)
+        return (momentum, previous_weight)
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -461,6 +493,9 @@ class SGLD(Optimizer):
     def create_state(self, index, weight):
         return None
 
+    def sync_state_context(self, state, context):
+        return state
+
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
@@ -513,6 +548,14 @@ class Adam(Optimizer):
         return (zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
                 zeros(weight.shape, weight.context, dtype=weight.dtype))  # variance
 
+    def sync_state_context(self, state, context):
+        mean, variance = state
+        if isinstance(mean, NDArray):
+            mean = mean.as_in_context(context)
+        if isinstance(variance, NDArray):
+            variance = variance.as_in_context(context)
+        return (mean, variance)
+
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
@@ -556,6 +599,12 @@ class AdaGrad(Optimizer):
 
     def create_state(self, index, weight):
         return zeros(weight.shape, weight.context)  # history
+
+    def sync_state_context(self, state, context):
+        if isinstance(state, NDArray):
+            return state.as_in_context(context)
+        else:
+            return state
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -622,6 +671,22 @@ class RMSProp(Optimizer):
         else:
             return (zeros(weight.shape, weight.context), )  # n
 
+    def sync_state_context(self, state, context):
+        if self.centered:
+            n, g, delta = state
+            if isinstance(n, NDArray):
+                n = n.as_in_context(context)
+            if isinstance(g, NDArray):
+                g = g.as_in_context(context)
+            if isinstance(delta, NDArray):
+                delta = delta.as_in_context(context)
+            return (n, g, delta)
+        else:
+            n, _ = state
+            if isinstance(n, NDArray):
+                n = n.as_in_context(context)
+            return (n, )
+
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
@@ -672,6 +737,14 @@ class AdaDelta(Optimizer):
     def create_state(self, index, weight):
         return (zeros(weight.shape, weight.context),  # accumulated g
                 zeros(weight.shape, weight.context))  # accumulated delta
+
+    def sync_state_context(self, state, context):
+        g, delta = state
+        if isinstance(g, NDArray):
+            g = g.as_in_context(context)
+        if isinstance(delta, NDArray):
+            delta = delta.as_in_context(context)
+        return (g, delta)
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -726,6 +799,14 @@ class Ftrl(Optimizer):
         return (zeros(weight.shape, weight.context),  # dn
                 zeros(weight.shape, weight.context))  # n
 
+    def sync_state_context(self, state, context):
+        dn, n = state
+        if isinstance(dn, NDArray):
+            dn = dn.as_in_context(context)
+        if isinstance(n, NDArray):
+            n = n.as_in_context(context)
+        return (dn, n)
+
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
@@ -751,12 +832,19 @@ class Ftrl(Optimizer):
 
 @register
 class Test(Optimizer):
+    """The Test optimizer"""
     def __init__(self, **kwargs):
         super(Test, self).__init__(**kwargs)
 
     def create_state(self, index, weight):
         """Creates a state to duplicate weight."""
         return zeros(weight.shape, weight.context)
+
+    def sync_state_context(self, state, context):
+        if isinstance(state, NDArray):
+            return state.as_in_context(context)
+        else:
+            return state
 
     def update(self, index, weight, grad, state):
         """Performs w += rescale_grad * grad."""
@@ -771,16 +859,24 @@ class Updater(object):
     def __init__(self, optimizer):
         self.optimizer = optimizer
         self.states = {}
+        self.states_synced = {}
 
     def __call__(self, index, grad, weight):
         """Updates weight given gradient and index."""
         if index not in self.states:
             self.states[index] = self.optimizer.create_state(index, weight)
+            self.states_synced[index] = True
+        elif not self.states_synced[index]:
+            self.states[index] = \
+                self.optimizer.sync_state_context(self.states[index], weight.context)
+            self.states_synced[index] = True
+
         self.optimizer.update(index, weight, grad, self.states[index])
 
     def set_states(self, states):
         """Sets updater states."""
         self.states = pickle.loads(states)
+        self.states_synced = dict.fromkeys(self.states.keys(), False)
 
     def get_states(self):
         """Gets updater states."""
