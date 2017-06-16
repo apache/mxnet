@@ -159,7 +159,7 @@ class Optimizer(object):
         Parameters
         ----------
         state : any obj
-            An unique index to identify the weight.
+            The state which will be synced with the context.
         context : Context
             The target context.
 
