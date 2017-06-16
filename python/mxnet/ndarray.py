@@ -945,7 +945,7 @@ fixed-size items.
             - 'add': gradient will be added to existing value on every backward.
             - 'null': do not compute gradient for this NDArray.
         """
-        grad = zeros_like(self)
+        grad = zeros_like(self)  # pylint: disable=undefined-variable
         grad_req = _GRAD_REQ_MAP[grad_req]
         check_call(_LIB.MXAutogradMarkVariables(
             1, ctypes.pointer(self.handle),
