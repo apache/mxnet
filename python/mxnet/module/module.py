@@ -15,6 +15,7 @@ from .executor_group import DataParallelExecutorGroup
 from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
 from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
+from ..io import DataDesc
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
