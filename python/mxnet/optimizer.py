@@ -683,7 +683,7 @@ class RMSProp(Optimizer):
             return (n, g, delta)
         else:
             n, _ = state
-            if isinstance(n,NDArray):
+            if isinstance(n, NDArray):
                 n = n.as_in_context(context)
             return (n, )
 
