@@ -684,6 +684,10 @@ struct mod {
       }
     }
   }
+  template<>
+  MSHADOW_XINLINE half2_t Map(half2_t a, half2_t b) {
+    return a%b;
+  }
 };
 
 struct mod_grad {
@@ -728,6 +732,10 @@ struct rmod {
         return DType(::fmod(b, a));
       }
     }
+  }
+  template<>
+  MSHADOW_XINLINE half2_t Map(half2_t a, half2_t b) {
+    return b%a;
   }
 };
 
