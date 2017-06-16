@@ -85,7 +85,7 @@ class BucketSentenceIter(DataIter):
     """
     def __init__(self, sentences, batch_size, buckets=None, invalid_label=-1,
                  data_name='data', label_name='softmax_label', dtype='float32',
-                 layout='NTC'):
+                 layout='NT'):
         super(BucketSentenceIter, self).__init__()
         if not buckets:
             buckets = [i for i, j in enumerate(np.bincount([len(s) for s in sentences]))
