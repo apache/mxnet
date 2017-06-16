@@ -24,6 +24,14 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 
 namespace mxnet {
 
+NDArray NDArray::grad() const {
+  if (this->entry_.ag_node && this->entry_.ag_node->out_grads.size()) {
+    CHECK_EQ(this->entry_.ag_node->out_grads.size(), 1);
+    return this->entry_.ag_node->out_grads[0];
+  }
+  return NDArray();
+}
+
 NDArray NDArray::Reshape(const TShape &shape) const {
   using namespace autograd;
   if (AutogradRuntime::Get()->IsTraining()) {

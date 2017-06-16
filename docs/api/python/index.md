@@ -29,10 +29,6 @@ imported by running:
    symbol
    module
    foo
-   foo.nn
-   foo.rnn
-   foo.loss
-   foo.utils
    rnn
    kvstore
    io

@@ -85,6 +85,8 @@ class Parameter(object):
                    allow_deferring=True):
         """Intialize parameter and gradient arrays. Only used for `NDArray` API.
 
+        Parameters
+        ----------
         init : Initializer
             The initializer to use. Overrides `Parameter.init` and default_init.
         ctx : Context or list of Context, defaults to `context.current_context()`.
@@ -295,8 +297,8 @@ class ParameterDict(object):
         found, `get` will create a new Parameter with key-word arguments and
         insert it to self.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         name : str
             name of the desired Parameter. It will be prepended with this dictionary's
             prefix.
