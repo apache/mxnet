@@ -250,6 +250,13 @@ outputs, _ = fused_lstm_cell.unroll(length=sequence_length, \
     of `FusedRNNCell` is twice the size specified by `num_hidden`.
 ```
 
+When training a deep, complex model *on multiple GPUs* it's recommended to stack
+fused RNN cells (one layer per cell) together instead of one with all layers.
+The reason is that fused RNN cells don't set gradients to be ready until the
+computation for the entire layer is completed. Breaking a multi-layer fused RNN
+cell into several one-layer ones allows gradients to be processed ealier. This
+reduces communication overhead, especially with multiple GPUs.
+
 The `unfuse()` method can be used to convert the `FusedRNNCell` into an equivalent
 and CPU-compatible `SequentialRNNCell` that mirrors the settings of the `FusedRNNCell`.
 ```python

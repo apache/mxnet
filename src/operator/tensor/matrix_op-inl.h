@@ -294,10 +294,12 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
 
 
 struct ExpandDimParam : public dmlc::Parameter<ExpandDimParam> {
-  index_t axis;
+  int axis;
   DMLC_DECLARE_PARAMETER(ExpandDimParam) {
     DMLC_DECLARE_FIELD(axis)
-    .describe("Position (amongst axes) where new axis is to be inserted.");
+    .describe("Position where new axis is to be inserted. Suppose that "
+              "the input `NDArray`'s dimension is `ndim`, the range of "
+              "the inserted axis is `[-ndim, ndim]`");
   }
 };
 
@@ -308,14 +310,40 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   const ExpandDimParam& param = nnvm::get<ExpandDimParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  TShape& shp = (*in_attrs)[0];
-  CHECK_LE(param.axis, shp.ndim())
-      << "axis exceeds the dimension of the array";
-  TShape ret(shp.ndim() + 1);
-  for (index_t i = 0; i < param.axis; ++i) ret[i] = shp[i];
-  ret[param.axis] = 1;
-  for (index_t i = param.axis+1; i < ret.ndim(); ++i) ret[i] = shp[i-1];
+  if (in_attrs->at(0).ndim() == 0U && out_attrs->at(0).ndim() == 0U) {
+    return false;
+  }
+
+  TShape& ishape = (*in_attrs)[0];
+  TShape& oshape = (*out_attrs)[0];
+  int indim = ishape.ndim();
+  bool unknown_ishape = false;
+  if (0 == indim) {
+    indim = oshape.ndim() - 1;
+    unknown_ishape = true;
+  }
+
+  int axis = param.axis;
+  if (axis < 0) {
+    axis += indim;
+  }
+  CHECK(axis >= 0 && axis <= indim)
+      << "axis must be in the range [" << -indim << ", " << indim << "] ("
+      << param.axis << " provided)";
+  TShape ret(indim + 1);
+  for (int i = 0; i < axis; ++i) {
+    ret[i] = (unknown_ishape? 0 : ishape[i]);
+  }
+  ret[axis] = 1;
+  for (int i = axis+1; i < indim+1; ++i) {
+    ret[i] = (unknown_ishape? 0 : ishape[i-1]);
+  }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, ret);
+
+  ret = TShape(indim);
+  for (int i = 0; i < axis; ++i) ret[i] = oshape[i];
+  for (int i = axis+1; i < indim+1; ++i) ret[i-1] = oshape[i];
+  SHAPE_ASSIGN_CHECK(*in_attrs, 0, ret);
   return true;
 }
 

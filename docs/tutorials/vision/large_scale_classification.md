@@ -2,10 +2,19 @@
 
 Training a neural network with a large number of images presents several challenges. Even with the latest GPUs, it is not possible to train large networks using a large number of images in a reasonable amount of time using a single GPU. This problem can be somewhat mitigated by using multiple GPUs in a single machine. But there is a limit to the number of GPUs that can be attached to one machine (typically 8 or 16). This tutorial explains how to train large networks with terabytes of data using multiple machines each containing multiple GPUs.
 
+## Prerequisites
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).  
+
+- [OpenCV Python library](http://opencv.org/opencv-3-2.html)
+
+```
+$ pip install opencv-python
+```
+
 ## Preprocessing
 
 ### Disk space
-The first step in training with large data is downloading the data and preprocessing it. For this tutorial, we will be using the full imagenet dataset. Note that, at least 2 TB of disk space is required to download and preprocess this data. It is strongly recommended to use SSD instead of HDD. SSD is much better at dealing with a large number of small image files. After the preprocessing completes and images are packed into recordIO files, HDD should be fine for training.
+The first step in training with large data is downloading the data and preprocessing it. For this tutorial, we will be using the full ImageNet dataset. Note that, at least 2 TB of disk space is required to download and preprocess this data. It is strongly recommended to use SSD instead of HDD. SSD is much better at dealing with a large number of small image files. After the preprocessing completes and images are packed into recordIO files, HDD should be fine for training.
 
 In this tutorial, we will use an AWS storage instance for data preprocessing. The storage instance `i3.4xlarge` has 3.8 TB of disk space across two NVMe SSD disks. We will use software RAID to combine them into one disk and mount it at `~/data`.
 
@@ -20,9 +29,9 @@ sudo chown ${whoami} ~/data
 
 We now have sufficient disk space to download and preprocess the data.
 
-### Download imagenet
+### Download ImageNet
 
-In this tutorial, we will be using the full imagenet dataset which can be downloaded from http://www.image-net.org/download-images. `fall11_whole.tar` contains all the images. This file is 1.2 TB in size and could take a long time to download.
+In this tutorial, we will be using the full ImageNet dataset which can be downloaded from http://www.image-net.org/download-images. `fall11_whole.tar` contains all the images. This file is 1.2 TB in size and could take a long time to download.
 
 After downloading, untar the file.
 ```
@@ -51,7 +60,7 @@ n00120010
 ```
 
 ### Remove uncommon classes for transfer learning (optional)
-A common reason to train a network on Imagenet data is to use it for transfer learning (including feature extraction or fine-tuning other models). According to [this](https://arxiv.org/pdf/1608.08614v1.pdf) study, classes with too few images don’t help in transfer learning. So, we could remove classes with fewer than a certain number of images. The following code will remove classes with less than 500 images.
+A common reason to train a network on ImageNet data is to use it for transfer learning (including feature extraction or fine-tuning other models). According to [this](https://arxiv.org/pdf/1608.08614v1.pdf) study, classes with too few images don’t help in transfer learning. So, we could remove classes with fewer than a certain number of images. The following code will remove classes with less than 500 images.
 
 ```
 BAK=${ROOT}_filtered
@@ -83,7 +92,7 @@ done
 ```
 
 ### Pack images into record files
-While MXNet can read image files directly, it is recommended to pack the image files into a recordIO file for increased performance. MXNet provides a tool (tools/im2rec.py) to do this. To use this tool, MXNet and OpenCV’s python module needs to be installed in the system. OpenCV’s python module can be installed on Ubuntu using the command `sudo apt-get install python-opencv`.
+While MXNet can read image files directly, it is recommended to pack the image files into a recordIO file for increased performance. MXNet provides a tool (tools/im2rec.py) to do this. To use this tool, MXNet and OpenCV’s python module needs to be installed in the system.
 
 Set the environment variable `MXNET` to point to the MXNet installation directory and `NAME` to the name of the dataset. Here, we assume MXNet is installed at `~/mxnet`
 
@@ -132,7 +141,7 @@ We now have all training and validation images in recordIO format in `train` and
 
 [ResNet](https://arxiv.org/abs/1512.03385) has shown its effectiveness on ImageNet competition. Our experiments also [reproduced](https://github.com/tornadomeet/ResNet) the results reported in the paper. As we increase the number of layers from 18 to 152, we see steady improvement in validation accuracy. Given this is a huge dataset, we will use Resnet with 152 layers.
 
-Due to the huge computational complexity, even the fastest GPU needs more than one day for a single pass of the data. We often need tens of epochs before the training converges to good validation accuracy. While we can use multiple GPUs in a machine, number of GPUs in a machine is often limited to 8 or 16. For faster training, in this tutorial, we will use multiple machines each containing multiple GPUs to train the model.
+Due to the huge computational complexity, even the fastest GPU needs more than one day for a single pass of the data. We often need tens of epochs before the training converges to good validation accuracy. While we can use multiple GPUs in a machine, the number of GPUs in a machine is often limited to 8 or 16. For faster training, in this tutorial, we will use multiple machines each containing multiple GPUs to train the model.
 
 ### Setup
 
@@ -151,7 +160,7 @@ If you are setting up your cluster manually, without using AWS CloudFormation, r
    deeplearning-worker2
    deeplearning-worker3
    ```
-   It should be possible to ssh into any of these machines from master by invoking `ssh` with just a hostname from the file. For example,
+   It should be possible to ssh into any of these machines from the master by invoking `ssh` with just a hostname from the file. For example,
    ```
    $ ssh deeplearning-worker2
    ===================================
@@ -160,7 +169,7 @@ If you are setting up your cluster manually, without using AWS CloudFormation, r
    ...
    ubuntu@ip-10-0-1-199:~$
    ```
-   One way to do this is to use ssh agent forwarding. Please check [this](https://aws.amazon.com/blogs/security/securely-connect-to-linux-instances-running-in-a-private-amazon-vpc/) page to learn how to set this up. In short, you’ll configure all machines to login using a particular certificate (mycert.pem) which is present on your local machine. You then login to the master using the certificate and the `-A` switch to enable agent forwarding. Now, from master, you should be able to login to any other machine in the cluster by providing just the hostname (example: `ssh deeplearning-worker2`).
+   One way to do this is to use ssh agent forwarding. Please check [this](https://aws.amazon.com/blogs/security/securely-connect-to-linux-instances-running-in-a-private-amazon-vpc/) page to learn how to set this up. In short, you’ll configure all machines to login using a particular certificate (mycert.pem) which is present on your local machine. You then login to the master using the certificate and the `-A` switch to enable agent forwarding. Now, from the master, you should be able to login to any other machine in the cluster by providing just the hostname (example: `ssh deeplearning-worker2`).
 
 ### Run Training
 After the cluster is setup, login to master and run the following command from ${MXNET}/example/image-classification

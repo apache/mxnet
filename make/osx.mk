@@ -48,13 +48,6 @@ USE_CUDA = 0
 # USE_CUDA_PATH = /usr/local/cuda
 USE_CUDA_PATH = NONE
 
-# CUDA architecture setting: going with all of them.
-# For CUDA < 6.0, comment the *_50 lines for compatibility.
-CUDA_ARCH := -gencode arch=compute_30,code=sm_30 \
-		-gencode arch=compute_35,code=sm_35 \
-		-gencode arch=compute_50,code=sm_50 \
-		-gencode arch=compute_50,code=compute_50
-
 # whether use CUDNN R3 library
 USE_CUDNN = 0
 
@@ -68,6 +61,10 @@ USE_OPENCV = 1
 
 # use openmp for parallelization
 USE_OPENMP = 0
+
+# whether use lapack during compilation
+# only effective when compiled with blas versions openblas/apple/atlas/mkl
+USE_LAPACK = 0
 
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
