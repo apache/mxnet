@@ -684,11 +684,13 @@ struct mod {
       }
     }
   }
-  template<>
-  MSHADOW_XINLINE half2_t Map(half2_t a, half2_t b) {
-    return a%b;
-  }
 };
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t mod::Map<mshadow::half::half2_t>
+                                               (mshadow::half::half2_t a,
+                                                mshadow::half::half2_t b) {
+  return a%b;
+}
 
 struct mod_grad {
   template<typename DType>
@@ -733,11 +735,13 @@ struct rmod {
       }
     }
   }
-  template<>
-  MSHADOW_XINLINE half2_t Map(half2_t a, half2_t b) {
-    return b%a;
-  }
 };
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t rmod::Map<mshadow::half::half2_t>
+                                                (mshadow::half::half2_t a,
+                                                 mshadow::half::half2_t b) {
+  return b%a;
+}
 
 struct rmod_grad {
   template<typename DType>
