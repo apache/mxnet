@@ -136,8 +136,8 @@ training one batch on a  two-layer neural network.
     # aggregate gradient and update
     fc1_wgrad[cpu]  = fc1_wgrad[gpu0] + fc1_wgrad[gpu1]
     fc2_wgrad[cpu]  = fc2_wgrad[gpu0] + fc2_wgrad[gpu1]
-    fc1_weight[cpu] -= lr *  fc1_wgrad[gpu0]
-    fc2_weight[cpu] -= lr *  fc2_wgrad[gpu0]
+    fc1_weight[cpu] -= lr *  fc1_wgrad[cpu]
+    fc2_weight[cpu] -= lr *  fc2_wgrad[cpu]
     fc1_weight[cpu].copyto(fc1_weight[gpu0] , fc1_weight[gpu1])
     fc2_weight[cpu].copyto(fc2_weight[gpu0] , fc2_weight[gpu1])
 ```
