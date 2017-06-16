@@ -175,6 +175,101 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     val arrPower3 = NDArray.power(arr, arr)
     assert(arrPower3.shape === Shape(2, 1))
     assert(arrPower3.toArray === Array(27f, 3125f))
+
+   val arrPower4 = arr ** 2f
+    assert(arrPower4.shape === Shape(2, 1))
+    assert(arrPower4.toArray === Array(9f, 25f))
+
+    val arrPower5 = arr ** arr
+    assert(arrPower5.shape === Shape(2, 1))
+    assert(arrPower5.toArray === Array(27f, 3125f))
+
+    arr **= 2f
+    assert(arr.shape === Shape(2, 1))
+    assert(arr.toArray === Array(9f, 25f))
+
+    arr.set(Array(3f, 5f))
+    arr **= arr
+    assert(arr.shape === Shape(2, 1))
+    assert(arr.toArray === Array(27f, 3125f))
+  }
+
+  test("equal") {
+    val arr1 = NDArray.array(Array(1f, 2f, 3f, 5f), shape = Shape(2, 2))
+    val arr2 = NDArray.array(Array(1f, 4f, 3f, 6f), shape = Shape(2, 2))
+
+    val arrEqual1 = NDArray.equal(arr1, arr2)
+    assert(arrEqual1.shape === Shape(2, 2))
+    assert(arrEqual1.toArray === Array(1f, 0f, 1f, 0f))
+
+    val arrEqual2 = NDArray.equal(arr1, 3f)
+    assert(arrEqual2.shape === Shape(2, 2))
+    assert(arrEqual2.toArray === Array(0f, 0f, 1f, 0f))
+  }
+
+  test("not_equal") {
+    val arr1 = NDArray.array(Array(1f, 2f, 3f, 5f), shape = Shape(2, 2))
+    val arr2 = NDArray.array(Array(1f, 4f, 3f, 6f), shape = Shape(2, 2))
+
+    val arrEqual1 = NDArray.notEqual(arr1, arr2)
+    assert(arrEqual1.shape === Shape(2, 2))
+    assert(arrEqual1.toArray === Array(0f, 1f, 0f, 1f))
+
+    val arrEqual2 = NDArray.notEqual(arr1, 3f)
+    assert(arrEqual2.shape === Shape(2, 2))
+    assert(arrEqual2.toArray === Array(1f, 1f, 0f, 1f))
+  }
+
+  test("greater") {
+    val arr1 = NDArray.array(Array(1f, 2f, 4f, 5f), shape = Shape(2, 2))
+    val arr2 = NDArray.array(Array(1f, 4f, 3f, 6f), shape = Shape(2, 2))
+
+    val arrEqual1 = arr1 > arr2
+    assert(arrEqual1.shape === Shape(2, 2))
+    assert(arrEqual1.toArray === Array(0f, 0f, 1f, 0f))
+
+    val arrEqual2 = arr1 > 2f
+    assert(arrEqual2.shape === Shape(2, 2))
+    assert(arrEqual2.toArray === Array(0f, 0f, 1f, 1f))
+  }
+
+  test("greater_equal") {
+    val arr1 = NDArray.array(Array(1f, 2f, 4f, 5f), shape = Shape(2, 2))
+    val arr2 = NDArray.array(Array(1f, 4f, 3f, 6f), shape = Shape(2, 2))
+
+    val arrEqual1 = arr1 >= arr2
+    assert(arrEqual1.shape === Shape(2, 2))
+    assert(arrEqual1.toArray === Array(1f, 0f, 1f, 0f))
+
+    val arrEqual2 = arr1 >= 2f
+    assert(arrEqual2.shape === Shape(2, 2))
+    assert(arrEqual2.toArray === Array(0f, 1f, 1f, 1f))
+  }
+
+  test("lesser") {
+    val arr1 = NDArray.array(Array(1f, 2f, 4f, 5f), shape = Shape(2, 2))
+    val arr2 = NDArray.array(Array(1f, 4f, 3f, 6f), shape = Shape(2, 2))
+
+    val arrEqual1 = arr1 < arr2
+    assert(arrEqual1.shape === Shape(2, 2))
+    assert(arrEqual1.toArray === Array(0f, 1f, 0f, 1f))
+
+    val arrEqual2 = arr1 < 2f
+    assert(arrEqual2.shape === Shape(2, 2))
+    assert(arrEqual2.toArray === Array(1f, 0f, 0f, 0f))
+  }
+
+  test("lesser_equal") {
+    val arr1 = NDArray.array(Array(1f, 2f, 4f, 5f), shape = Shape(2, 2))
+    val arr2 = NDArray.array(Array(1f, 4f, 3f, 6f), shape = Shape(2, 2))
+
+    val arrEqual1 = arr1 <= arr2
+    assert(arrEqual1.shape === Shape(2, 2))
+    assert(arrEqual1.toArray === Array(1f, 1f, 0f, 1f))
+
+    val arrEqual2 = arr1 <= 2f
+    assert(arrEqual2.shape === Shape(2, 2))
+    assert(arrEqual2.toArray === Array(1f, 1f, 0f, 0f))
   }
 
   test("choose_element_0index") {

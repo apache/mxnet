@@ -167,6 +167,21 @@ method _init_symbol_module()
     }
 }
 
+method invoke(AI::MXNet::CachedOp $cached_op, ArrayRef[AI::MXNet::Symbol] $args, Maybe[Str] $name=)
+{
+    my $hint = lc($cached_op->op);
+    $name = AI::MXNet::Symbol::NameManager->current->get($name, $hint);
+    my $handle = check_call(
+        AI::MXNetCAPI::CachedCreateSymbol(
+            $cached_op->handle,
+            $name,
+            scalar(@$args),
+            [map { $_->handle } @$args]
+        )
+    );
+    return $self->new(handle => $handle);
+}
+
 __PACKAGE__->_init_symbol_module;
 
 1;

@@ -503,14 +503,7 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128,
   X$reset()
   if (!X$iter.next()) stop("Cannot predict on empty iterator")
   dlist = X$value()
-  arg_names <- arguments(model$symbol)
-  tmp <- unlist(lapply(arg_names, function(a) {
-    mxnet:::mx.util.str.endswith(a, "label")
-  }))
-  label_name <- arg_names[tmp]
   arg_lst <- list(symbol = model$symbol, ctx = ctx, data = dim(dlist$data), grad.req="null")
-  arg_lst[[label_name]] <- dim(dlist$label)
-
 
   pexec <- do.call(mx.simple.bind, arg_lst)
   mx.exec.update.arg.arrays(pexec, model$arg.params, match.name=TRUE)

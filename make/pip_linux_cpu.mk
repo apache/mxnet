@@ -29,6 +29,11 @@ ADD_CFLAGS += -Ldeps/lib -Ideps/include
 # matrix computation libraries for CPU/GPU
 #---------------------------------------------
 
+# whether use lapack during compilation
+# only effective when compiled with blas versions openblas/apple/atlas/mkl
+# you can disable it, however, you will not be able to use linalg-operators
+USE_LAPACK = 0
+
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 # in default use atlas for linux while apple for osx
