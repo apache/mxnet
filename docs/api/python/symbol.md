@@ -250,6 +250,7 @@ Composite multiple symbols into a new one by an operator.
     broadcast_mul
     broadcast_div
     negative
+    reciprocal
     dot
     batch_dot
     add_n
