@@ -35,7 +35,7 @@ class Policy(nn.Layer):
             self.action_pred = nn.Dense(2, in_units=16)
             self.value_pred = nn.Dense(1, in_units=16)
 
-    def generic_forward(self, F, x):
+    def forward(self, F, x):
         x = self.dense(x)
         probs = self.action_pred(x)
         values = self.value_pred(x)

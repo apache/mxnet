@@ -93,7 +93,7 @@ class _Conv(Layer):
             else:
                 self.act = None
 
-    def generic_forward(self, F, x, weight, bias=None):
+    def forward(self, F, x, weight, bias=None):
         if bias is None:
             act = F.invoke(self._op, [x, weight])
         else:
@@ -520,7 +520,7 @@ class _Pooling(Layer):
             'pool_type': pool_type}
         self._op = symbol.CachedOp('Pooling', 1, **attrs)
 
-    def generic_forward(self, F, x):
+    def forward(self, F, x):
         return F.invoke(self._op, [x])
 
 

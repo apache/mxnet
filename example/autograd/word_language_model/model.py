@@ -20,7 +20,7 @@ class RNNModel(nn.Layer):
 
             self.num_hidden = num_hidden
 
-    def generic_forward(self, F, inputs, hidden):
+    def forward(self, F, inputs, hidden):
         emb = self.drop(self.encoder(inputs))
         output, hidden = self.rnn.unroll(None, emb, layout='TNC', merge_outputs=True)
         output = self.drop(output)

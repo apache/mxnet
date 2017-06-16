@@ -31,7 +31,7 @@ def test_parameter_sharing():
                 self.dense0 = nn.Dense(5, in_units=5)
                 self.dense1 = nn.Dense(5, in_units=5)
 
-        def generic_forward(self, F, x):
+        def forward(self, F, x):
             return self.dense1(self.dense0(x))
 
     net1 = Net(prefix='net1_')

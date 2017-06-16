@@ -24,7 +24,7 @@ class BasicBlockV1(nn.Layer):
                 self.bn_ds = nn.BatchNorm(num_features=filters)
             self.downsample = downsample
 
-    def generic_forward(self, domain, x):
+    def forward(self, domain, x):
         residual = x
 
         out = self.conv1(x)
@@ -59,7 +59,7 @@ class BottleneckV1(nn.Layer):
                 self.bn_ds = nn.BatchNorm(num_features=filters)
             self.downsample = downsample
 
-    def generic_forward(self, domain, x):
+    def forward(self, domain, x):
         residual = x
 
         out = self.conv1(x)
@@ -115,7 +115,7 @@ class ResnetV1(nn.Layer):
             layer.add(block(filters, 1, False, in_filters=filters))
         return layer
 
-    def generic_forward(self, domain, x):
+    def forward(self, domain, x):
         x = self.conv0(x)
         if not self._thumbnail:
             x = self.bn0(x)
@@ -145,7 +145,7 @@ class BasicBlockV2(nn.Layer):
             else:
                 self.downsample = None
 
-    def generic_forward(self, domain, x):
+    def forward(self, domain, x):
         if not self.downsample:
             residual = x
         x = self.bn1(x)
@@ -177,7 +177,7 @@ class BottleneckV2(nn.Layer):
             else:
                 self.downsample = None
 
-    def generic_forward(self, domain, x):
+    def forward(self, domain, x):
         if not self.downsample:
             residual = x
         x = self.bn1(x)
@@ -230,7 +230,7 @@ class ResnetV2(nn.Layer):
             layer.add(block(filters, 1, False, in_filters=filters))
         return layer
 
-    def generic_forward(self, domain, x):
+    def forward(self, domain, x):
         x = self.bn_data(x)
         x = self.conv0(x)
         if not self._thumbnail:
