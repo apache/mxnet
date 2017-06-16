@@ -120,17 +120,17 @@ class BucketSentenceIter(DataIter):
         self.default_bucket_key = max(buckets)
 
         if self.major_axis == 0:
-            self.provide_data=[DataDesc(
+            self.provide_data = [DataDesc(
                 name=self.data_name, shape=(batch_size, self.default_bucket_key),
                 layout=self.layout)]
-            self.provide_label=[DataDesc(
+            self.provide_label = [DataDesc(
                 name=self.label_name, shape=(batch_size, self.default_bucket_key),
                 layout=self.layout)]
         elif self.major_axis == 1:
-            self.provide_data=[DataDesc(
+            self.provide_data = [DataDesc(
                 name=self.data_name, shape=(self.default_bucket_key, batch_size),
                 layout=self.layout)]
-            self.provide_label=[DataDesc(
+            self.provide_label = [DataDesc(
                 name=self.label_name, shape=(self.default_bucket_key, batch_size),
                 layout=self.layout)]
         else:
