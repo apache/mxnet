@@ -20,12 +20,13 @@ Resources
 Installation
 ------------
 
-For Windows/Mac users, we provide a pre-built binary package using CPU.
-You can install a weekly updated package directly from the R console:
+We provide pre-built binary packages for Windows/OSX users.
+You can install the CPU package directly from the R console:
 
 ```r
-install.packages("drat", repos="https://cran.rstudio.com")
-drat:::addRepo("dmlc")
+cran <- getOption("repos")
+cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/"
+options(repos = cran)
 install.packages("mxnet")
 ```
 

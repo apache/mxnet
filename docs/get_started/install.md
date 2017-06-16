@@ -706,8 +706,9 @@ You could also run distributed deeplearning with *MXNet* on AWS using [Cloudform
 The CPU version of MXNet R package can be installed in R like other packages
 
 ```r
-install.packages("drat")
-drat::addRepo("dmlc")
+cran <- getOption("repos")
+cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/"
+options(repos = cran)
 install.packages("mxnet")
 ```
 
@@ -870,23 +871,33 @@ The CPU version of MXNet R package can be installed in R like other packages
 
 
 ```r
-install.packages("drat")
-drat::addRepo("dmlc")
+cran <- getOption("repos")
+cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/"
+options(repos = cran)
 install.packages("mxnet")
 ```
 
-
-</div>
-
-<div class="gpu">
-
-Will be available soon.
-
-</div>
-</div>
 </div>
 
 <!-- END - Windows R CPU Installation Instructions -->
+
+<div class="gpu">
+
+The GPU version of MXNet R package can be installed in R like other packages
+
+
+```r
+cran <- getOption("repos")
+cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/GPU"
+options(repos = cran)
+install.packages("mxnet")
+```
+
+</div>
+</div>
+</div>
+
+<!-- END - Windows R GPU Installation Instructions -->
 
 <div class="linux">
   <div class="scala julia perl">
