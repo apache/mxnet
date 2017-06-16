@@ -350,7 +350,6 @@ class Module(BaseModule):
             of modules.
         force_rebind : bool
             Default is ``False``. This function does nothing if the executors are already
-            Default is ``False``. This function does nothing if the executors are already
             bound. But with this ``True``, the executors will be forced to rebind.
         shared_module : Module
             Default is ``None``. This is used in bucketing. When not ``None``, the shared module
