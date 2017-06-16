@@ -4,11 +4,11 @@
 #' @param shape the shape of the array to be generated.
 #'
 mx.init.internal.default <- function(name, shape, ctx, allow.unknown=FALSE) {
-  if (mx.util.str.endswith(name, "bias")) return (mx.nd.zeros(shape, ctx))
-  if (mx.util.str.endswith(name, "gamma")) return (mx.nd.ones(shape, ctx))
-  if (mx.util.str.endswith(name, "beta")) return (mx.nd.zeros(shape, ctx))
-  if (mx.util.str.endswith(name, "moving_mean")) return (mx.nd.zeros(shape, ctx))
-  if (mx.util.str.endswith(name, "moving_var")) return (mx.nd.ones(shape, ctx))
+  if (endsWith(name, "bias")) return (mx.nd.zeros(shape, ctx))
+  if (endsWith(name, "gamma")) return (mx.nd.ones(shape, ctx))
+  if (endsWith(name, "beta")) return (mx.nd.zeros(shape, ctx))
+  if (endsWith(name, "moving_mean")) return (mx.nd.zeros(shape, ctx))
+  if (endsWith(name, "moving_var")) return (mx.nd.ones(shape, ctx))
   if (allow.unknown) return(NULL)
   stop(paste("Unkown initialization pattern for ", name))
 }
@@ -20,7 +20,7 @@ mx.init.internal.default <- function(name, shape, ctx, allow.unknown=FALSE) {
 #' @export
 mx.init.uniform <- function(scale) {
   function(name, shape, ctx, allow.unknown=FALSE) {
-    if (!mx.util.str.endswith(name, "weight")) {
+    if (!endsWith(name, "weight")) {
       return (mx.init.internal.default(name, shape, ctx, allow.unknown))
     }
     return (mx.runif(shape, -scale, scale, ctx))
@@ -34,7 +34,7 @@ mx.init.uniform <- function(scale) {
 #' @export
 mx.init.normal <- function(sd) {
   function(name, shape, ctx, allow.unknown=FALSE) {
-    if (!mx.util.str.endswith(name, "weight")) {
+    if (!endsWith(name, "weight")) {
       return (mx.init.internal.default(name, shape, ctx, allow.unknown))
     }
     return (mx.rnorm(shape, 0, sd, ctx))
@@ -55,7 +55,7 @@ mx.init.normal <- function(sd) {
 mx.init.Xavier <- function(rnd_type = "uniform", factor_type = "avg",
                            magnitude = 3){
   function(name, shape, ctx, allow.unknown = FALSE){
-    if (!mx.util.str.endswith(name, "weight")) {
+    if (!endsWith(name, "weight")) {
       return (mx.init.internal.default(name, shape, ctx, allow.unknown))
     }
 
