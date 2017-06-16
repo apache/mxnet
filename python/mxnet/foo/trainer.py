@@ -68,6 +68,7 @@ class Trainer(object):
                 kvstore.pull(i, param_arrays, priority=-i)
             if update_on_kvstore:
                 kvstore.set_optimizer(self._optimizer)
+        self._kv_initialized = True
 
     def step(self, batch_size, ignore_stale_grad=False):
         """Make one step of parameter update. Should be called after
