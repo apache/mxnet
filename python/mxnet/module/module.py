@@ -554,7 +554,7 @@ class Module(BaseModule):
             curr_data_shape = self._data_shapes[idx].shape
             curr_data_dtype = self._data_shapes[idx].dtype
             new_data_shape = data_batch.data[idx].shape
-            new_data_dtype = data_batch.provide_data.dtype \
+            new_data_dtype = data_batch.provide_data[idx].dtype \
                 if hasattr(data_batch, "provide_data") and data_batch.provide_data else \
                 data_batch.data[idx].dtype
             #Reshape if data shape or dtype changes.
