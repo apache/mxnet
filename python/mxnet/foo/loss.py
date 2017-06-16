@@ -82,14 +82,14 @@ def custom_loss(loss, output, label, weight=None, sample_weight=None, batch_axis
     loss : BaseLoss
         created loss
 
-    Example
-    -------
-    The following code defines a least square loss (same as `nn.l2_loss`)::
-        data = mx.sym.var('data')
-        output = mx.sym.FullyConnected(data, num_hidden=1)
-        label = mx.sym.var('label')
-        loss = mx.sym.square(output - label.reshape((-1, 1)))/2
-        loss = nn.custom_loss(loss, output, label, name='l2')
+    Examples
+    --------
+    >>> # To define a least square loss (same as `l2_loss`)
+    >>> data = mx.sym.var('data')
+    >>> output = mx.sym.FullyConnected(data, num_hidden=1)
+    >>> label = mx.sym.var('label')
+    >>> loss = mx.sym.square(output - label.reshape((-1, 1)))/2
+    >>> loss = nn.custom_loss(loss, output, label, name='l2')
     """
     F = _get_F(loss)
     loss = _apply_weighting(F, loss, weight, sample_weight)

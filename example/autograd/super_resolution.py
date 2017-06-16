@@ -90,14 +90,14 @@ def _rearrange(raw, F, upscale_factor):
 class SuperResolutionNet(nn.Layer):
     def __init__(self, upscale_factor):
         super(SuperResolutionNet, self).__init__()
-        with self.scope:
+        with self.name_scope():
             self.conv1 = nn.Conv2D(64, (5, 5), strides=(1, 1), padding=(2, 2), in_filters=1)
             self.conv2 = nn.Conv2D(64, (3, 3), strides=(1, 1), padding=(1, 1), in_filters=64)
             self.conv3 = nn.Conv2D(32, (3, 3), strides=(1, 1), padding=(1, 1), in_filters=64)
             self.conv4 = nn.Conv2D(upscale_factor ** 2, (3, 3), strides=(1, 1), padding=(1, 1), in_filters=32)
         self.upscale_factor = upscale_factor
 
-    def generic_forward(self, F, x):
+    def forward(self, F, x):
         x = F.Activation(self.conv1(x), act_type='relu')
         x = F.Activation(self.conv2(x), act_type='relu')
         x = F.Activation(self.conv3(x), act_type='relu')
