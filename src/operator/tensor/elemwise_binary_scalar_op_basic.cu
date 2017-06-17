@@ -33,6 +33,9 @@ NNVM_REGISTER_OP(_backward_rdiv_scalar)
 NNVM_REGISTER_OP(_mod_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarCompute<gpu, mshadow_op::mod>);
 
+NNVM_REGISTER_OP(_backward_mod_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarBackward<gpu, mshadow_op::mod_grad>);
+
 NNVM_REGISTER_OP(_rmod_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarCompute<gpu, mshadow_op::rmod>);
 
