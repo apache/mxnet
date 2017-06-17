@@ -169,7 +169,7 @@ Example::
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::mod>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_mod"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mod"});
 
 NNVM_REGISTER_OP(_backward_broadcast_mod)
 .set_num_inputs(3)
@@ -183,8 +183,8 @@ NNVM_REGISTER_OP(_backward_broadcast_mod)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseNone<cpu, mshadow_op::mod_grad,
-                                                                    mshadow_op::mod_rgrad>);
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::mod_grad,
+                                                                  mshadow_op::mod_rgrad>);
 
 }  // namespace op
 }  // namespace mxnet

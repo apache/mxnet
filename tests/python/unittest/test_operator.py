@@ -1080,7 +1080,7 @@ def test_binary_op():
     def test_bmod(a, b):
         c = a % b
         check_binary_op_forward(c, lambda a, b: a.astype(float) % b.astype(float), gen_binary_data)
-        check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_binary_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_binary_data)
 
     def test_bmod_int(a, b):
         c = a % b
@@ -1134,7 +1134,7 @@ def test_broadcast_binary_op():
     def test_bmod(a, b):
         c = mx.sym.broadcast_mod(a, b)
         check_binary_op_forward(c, lambda a, b: a % b, gen_broadcast_data, atol=1)
-        check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_broadcast_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_broadcast_data)
 
     def test_bmod_int(a, b):
         c = mx.sym.broadcast_mod(a, b)
