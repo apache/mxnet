@@ -36,21 +36,14 @@ Operator *DeformableConvolutionProp::CreateOperatorEx(Context ctx,
 }
 
 MXNET_REGISTER_OP_PROPERTY(_contrib_DeformableConvolution, DeformableConvolutionProp)
-.describe(R"code(Compute *N*-D convolution on *(N+2)*-D input.
+.describe(R"code(Compute 2-D deformable convolution on 4-D input.
 
-In the 2-D convolution, given input data with shape *(batch_size,
-channel, height, width)*, the output is computed by
+The deformable convolution operation is described in https://arxiv.org/abs/1703.06211
 
-.. math::
-
-   out[n,i,:,:] = bias[i] + \sum_{j=0}^{num\_filter} data[n,j,:,:] \star
-   weight[i,j,:,:]
-
-where :math:`\star` is the 2-D cross-correlation operator.
-
-For general 2-D convolution, the shapes are
+For 2-D deformable convolution, the shapes are
 
 - **data**: *(batch_size, channel, height, width)*
+- **offset**: *(batch_size, num_deformable_group * kernel[0] * kernel[1], height, width)*
 - **weight**: *(num_filter, channel, kernel[0], kernel[1])*
 - **bias**: *(num_filter,)*
 - **out**: *(batch_size, num_filter, out_height, out_width)*.
@@ -67,13 +60,20 @@ then we have::
 If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 
 The default data ``layout`` is *NCHW*, namely *(batch_size, channle, height,
-width)*. We can choose other layouts such as *NHWC*.
+width)*. 
 
 If ``num_group`` is larger than 1, denoted by *g*, then split the input ``data``
 evenly into *g* parts along the channel axis, and also evenly split ``weight``
 along the first dimension. Next compute the convolution on the *i*-th part of
 the data with the *i*-th weight part. The output is obtained by concating all
 the *g* results.
+
+If ``num_deformable_group`` is larger than 1, denoted by *dg*, then split the
+input ``offset`` evenly into *dg* parts along the channel axis, and also evenly
+split ``out`` evenly into *dg* parts along the channel axis. Next compute the
+deformable convolution, apply the *i*-th part of the offset part on the *i*-th
+out.
+
 
 Both ``weight`` and ``bias`` are learnable parameters.
 
