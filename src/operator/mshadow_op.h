@@ -742,18 +742,18 @@ struct mod_rgrad {
 };
 template<>
 MSHADOW_XINLINE double mod_rgrad::Map<double>(double a, double b) {
-  return ::floor(-a/b);
+  return -::floor(a/b);
 }
 template<>
 MSHADOW_XINLINE float mod_rgrad::Map<float>(float a, float b) {
-  return ::floorf(-a/b);
+  return -::floorf(a/b);
 }
 #ifdef __CUDACC__
 template<>
 MSHADOW_XINLINE mshadow::half::half_t mod_rgrad::Map<mshadow::half::half_t>
                                                     (mshadow::half::half_t a,
                                                      mshadow::half::half_t b) {
-  return mshadow::half::half_t(::floorf(float(-a/b)));
+  return mshadow::half::half_t(-::floorf(float(a/b)));
 }
 template<>
 MSHADOW_XINLINE mshadow::half::half2_t mod_rgrad::Map<mshadow::half::half2_t>
@@ -762,8 +762,8 @@ MSHADOW_XINLINE mshadow::half::half2_t mod_rgrad::Map<mshadow::half::half2_t>
 #if MSHADOW_CUDA_HALF2
   return mshadow::half::half2_t(::h2floor((-a/b).half2_));
 #else
-  return mshadow::half::half2_t(mshadow::half::half_t(::floorf(float(-a.half_t2[0]/b.half_t2[0]))),
-                                mshadow::half::half_t(::floorf(float(-a.half_t2[1]/b.half_t2[1]))));
+  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(float(a.half_t2[0]/b.half_t2[0]))),
+                                mshadow::half::half_t(-::floorf(float(a.half_t2[1]/b.half_t2[1]))));
 #endif
 }
 #endif
@@ -805,28 +805,28 @@ struct rmod_grad {
 };
 template<>
 MSHADOW_XINLINE double rmod_grad::Map<double>(double a, double b) {
-  return ::floor(-b/a);
+  return -::floor(b/a);
 }
 template<>
 MSHADOW_XINLINE float rmod_grad::Map<float>(float a, float b) {
-  return ::floorf(-b/a);
+  return -::floorf(b/a);
 }
 #ifdef __CUDACC__
 template<>
 MSHADOW_XINLINE mshadow::half::half_t rmod_grad::Map<mshadow::half::half_t>
                                                    (mshadow::half::half_t a,
                                                     mshadow::half::half_t b) {
-  return mshadow::half::half_t(::floorf(float(-b/a)));
+  return mshadow::half::half_t(-::floorf(float(b/a)));
 }
 template<>
 MSHADOW_XINLINE mshadow::half::half2_t rmod_grad::Map<mshadow::half::half2_t>
                                                      (mshadow::half::half2_t a,
                                                       mshadow::half::half2_t b) {
 #if MSHADOW_CUDA_HALF2
-  return mshadow::half::half2_t(::h2floor((-b/a).half2_));
+  return mshadow::half::half2_t(-::h2floor((b/a).half2_));
 #else
-  return mshadow::half::half2_t(mshadow::half::half_t(::floorf(float(-b.half_t2[0]/a.half_t2[0]))),
-                                mshadow::half::half_t(::floorf(float(-b.half_t2[1]/a.half_t2[1]))));
+  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(float(b.half_t2[0]/a.half_t2[0]))),
+                                mshadow::half::half_t(-::floorf(float(b.half_t2[1]/a.half_t2[1]))));
 #endif
 }
 #endif

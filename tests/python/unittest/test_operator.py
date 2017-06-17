@@ -1027,7 +1027,7 @@ def check_binary_op_forward(symbol, baseline, gen_data, rtol=1e-3, atol=1e-5):
             print('diff: {}'.format(np.abs(x-y)[idx] - atol-rtol*np.abs(x)[idx]))
         assert_allclose(y, x, rtol=rtol, atol=atol)
 
-def check_binary_op_backward(symbol, baseline, gen_data):
+def check_binary_op_backward(symbol, baseline, gen_data, rtol=1e-3, atol=1e-5):
     sample_num = 200
     for i in range(sample_num):
         d = gen_data(i)
@@ -1050,8 +1050,8 @@ def check_binary_op_backward(symbol, baseline, gen_data):
                         args_grad=[y_1, y_2])
         y.forward(is_train=True)
         y.backward([mx.nd.array(out)])
-        assert_allclose(y_1.asnumpy(), x_1, rtol=1e-3, atol=1e-5)
-        assert_allclose(y_2.asnumpy(), x_2, rtol=1e-3, atol=1e-5)
+        assert_allclose(y_1.asnumpy(), x_1, rtol=rtol, atol=atol)
+        assert_allclose(y_2.asnumpy(), x_2, rtol=rtol, atol=atol)
 
 def test_binary_op():
     a = mx.sym.Variable('a')
@@ -1079,11 +1079,11 @@ def test_binary_op():
 
     def test_bmod(a, b):
         c = a % b
-        check_binary_op_forward(c, lambda a, b: a.astype(float) % b.astype(float), gen_binary_data)
+        check_binary_op_forward(c, lambda a, b: a % b, gen_binary_data)
         check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_binary_data)
 
     def test_bmod_int(a, b):
-        c = a % b
+        c = mx.sym.cast(a, dtype='int32') % mx.sym.cast(b, dtype='int32')
         check_binary_op_forward(c, lambda a, b: a % b, gen_binary_data_int)
         check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_binary_data_int)
 
@@ -1134,10 +1134,10 @@ def test_broadcast_binary_op():
     def test_bmod(a, b):
         c = mx.sym.broadcast_mod(a, b)
         check_binary_op_forward(c, lambda a, b: a % b, gen_broadcast_data, atol=1)
-        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_broadcast_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_broadcast_data, atol=1)
 
     def test_bmod_int(a, b):
-        c = mx.sym.broadcast_mod(a, b)
+        c = mx.sym.broadcast_mod(mx.sym.cast(a, dtype='int32'), mx.sym.cast(b, dtype='int32'))
         check_binary_op_forward(c, lambda a, b: a % b, gen_broadcast_data_int)
         check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_broadcast_data_int)
 
