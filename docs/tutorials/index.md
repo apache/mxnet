@@ -4,13 +4,23 @@ These tutorials introduce a few fundamental concepts in deep learning and how to
 
 ## Python
 
-### Basics
+### Basics - High-level interface
 
 ```eval_rst
 .. toctree::
    :maxdepth: 1
 
-   basic/foo
+   foo/ndarray
+   foo/autograd
+   foo/foo
+```
+
+### Advanced -- Low-level interface
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
    basic/ndarray
    basic/symbol
    basic/module
