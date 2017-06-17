@@ -20,7 +20,7 @@ def test_paramdict():
     assert list(params.keys()) == ['net_weight']
     params.initialize()
     params.save('test.params')
-    params.load('test.params')
+    params.load('test.params', mx.cpu())
 
 
 def test_parameter_sharing():
