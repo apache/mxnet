@@ -753,7 +753,7 @@ template<>
 MSHADOW_XINLINE mshadow::half::half_t mod_rgrad::Map<mshadow::half::half_t>
                                                     (mshadow::half::half_t a,
                                                      mshadow::half::half_t b) {
-  return mshadow::half::half_t(-::floorf(float(a/b)));
+  return mshadow::half::half_t(-::floorf(static_cast<float>(a/b)));
 }
 template<>
 MSHADOW_XINLINE mshadow::half::half2_t mod_rgrad::Map<mshadow::half::half2_t>
@@ -762,8 +762,10 @@ MSHADOW_XINLINE mshadow::half::half2_t mod_rgrad::Map<mshadow::half::half2_t>
 #if MSHADOW_CUDA_HALF2
   return mshadow::half::half2_t(::h2floor((-a/b).half2_));
 #else
-  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(float(a.half_t2[0]/b.half_t2[0]))),
-                                mshadow::half::half_t(-::floorf(float(a.half_t2[1]/b.half_t2[1]))));
+  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(a.half_t2[0]/b.half_t2[0]))),
+                                mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(a.half_t2[1]/b.half_t2[1]))));
 #endif
 }
 #endif
@@ -816,7 +818,7 @@ template<>
 MSHADOW_XINLINE mshadow::half::half_t rmod_grad::Map<mshadow::half::half_t>
                                                    (mshadow::half::half_t a,
                                                     mshadow::half::half_t b) {
-  return mshadow::half::half_t(-::floorf(float(b/a)));
+  return mshadow::half::half_t(-::floorf(static_cast<float>(b/a)));
 }
 template<>
 MSHADOW_XINLINE mshadow::half::half2_t rmod_grad::Map<mshadow::half::half2_t>
@@ -825,8 +827,10 @@ MSHADOW_XINLINE mshadow::half::half2_t rmod_grad::Map<mshadow::half::half2_t>
 #if MSHADOW_CUDA_HALF2
   return mshadow::half::half2_t(-::h2floor((b/a).half2_));
 #else
-  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(float(b.half_t2[0]/a.half_t2[0]))),
-                                mshadow::half::half_t(-::floorf(float(b.half_t2[1]/a.half_t2[1]))));
+  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(b.half_t2[0]/a.half_t2[0]))),
+                                mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(b.half_t2[1]/a.half_t2[1]))));
 #endif
 }
 #endif
