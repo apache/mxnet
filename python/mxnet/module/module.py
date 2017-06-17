@@ -554,14 +554,7 @@ class Module(BaseModule):
             curr_data_shape = self._data_shapes[idx].shape
             curr_data_dtype = self._data_shapes[idx].dtype
             new_data_shape = data_batch.data[idx].shape
-            new_data_dtype = data_batch.provide_data[idx].dtype \
-                if hasattr(data_batch, "provide_data") and data_batch.provide_data else \
-                data_batch.data[idx].dtype
 
-            # check dtype consistency
-            if curr_data_dtype != new_data_dtype:
-                raise RuntimeError("Data dtype has changed: original %s vs current %s." \
-                                   % (curr_data_dtype, new_data_dtype))
             # Reshape if data shape or dtype changes.
             if curr_data_shape != new_data_shape:
                 if hasattr(data_batch, "provide_data") and data_batch.provide_data:
