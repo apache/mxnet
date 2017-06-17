@@ -91,7 +91,7 @@ inline void deformable_im2col(mshadow::Stream<cpu>* s,
   const TShape& pad, const TShape& stride, const TShape& dilation,
   const uint32_t deformable_group, DType* data_col) {
   if (2 == kernel_shape.ndim()) {
-    LOG(FATAL) << "not implemented";
+    LOG(FATAL) << "only implemented in GPU";
   } else {
     LOG(FATAL) << "not implemented";
   }
@@ -120,7 +120,7 @@ inline void deformable_col2im(mshadow::Stream<cpu>* s,
   const TShape& dilation, const uint32_t deformable_group,
   DType* grad_im, OpReqType req) {
   index_t num_spatial_axes = kernel_shape.ndim();
-  LOG(FATAL) << "not implemented";
+  LOG(FATAL) << "only implemented in GPU";
 }
 
 
@@ -146,7 +146,7 @@ inline void deformable_col2im_coord(mshadow::Stream<cpu>* s,
   const TShape& col_shape, const TShape& kernel_shape,
   const TShape& pad, const TShape& stride,
   const TShape& dilation, const uint32_t deformable_group, DType* grad_offset, OpReqType req) {
-  LOG(FATAL) << "not implemented";
+  LOG(FATAL) << "only implemented in GPU";
 }
 
 }  // namespace op
