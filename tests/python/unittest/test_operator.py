@@ -2,6 +2,7 @@
 import numpy as np
 import mxnet as mx
 import random
+import itertools
 from numpy.testing import assert_allclose
 from mxnet.test_utils import *
 
@@ -3160,6 +3161,101 @@ def test_custom_op():
     check_numeric_gradient(op, [x])
 
 
+def test_psroipooling():
+    for num_rois in [1, 2]:
+        for num_classes, num_group in itertools.product([2, 3], [2, 3]):
+            for image_height, image_width in itertools.product([168, 224], [168, 224]):
+                for grad_nodes in [['im_data']]:
+                    spatial_scale = 0.0625
+                    feat_height = np.int(image_height * spatial_scale)
+                    feat_width = np.int(image_width * spatial_scale)
+                    im_data = np.random.rand(1, num_classes*num_group*num_group, feat_height, feat_width)
+                    rois_data = np.zeros([num_rois, 5])
+                    rois_data[:, [1,3]] = np.sort(np.random.rand(num_rois, 2)*(image_width-1))
+                    rois_data[:, [2,4]] = np.sort(np.random.rand(num_rois, 2)*(image_height-1))
+
+                    im_data_var = mx.symbol.Variable(name="im_data")
+                    rois_data_var = mx.symbol.Variable(name="rois_data")
+                    op = mx.contrib.sym.PSROIPooling(data=im_data_var, rois=rois_data_var, spatial_scale=spatial_scale,
+                                                     group_size=num_group, pooled_size=num_group,
+                                                     output_dim=num_classes, name='test_op')
+                    rtol, atol = 1e-2, 1e-4
+                    # By now we only have gpu implementation
+                    if mx.Context.default_ctx.device_type == 'gpu':
+                        check_numeric_gradient(op, [im_data, rois_data], rtol=rtol, atol=atol,
+                                               grad_nodes=grad_nodes, ctx=mx.gpu(0))
+
+def test_deformable_convolution():
+    for num_batch in [1, 2]:
+        for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
+            for input_height, input_width in itertools.product([5, 6], [5, 6]):
+                for dilate in [(1, 1), (2, 2)]:
+                    for grad_nodes in [['im_data'], ['offset_data']]:
+                        output_height = input_height
+                        output_width = input_width
+                        im_data = np.random.rand(num_batch, num_channel_data, input_height, input_width)
+                        offset_data = \
+                            np.random.rand(num_batch, num_deformable_group * 3 * 3 * 2, output_height, output_width)\
+                            * 0.8 + 0.1
+
+                        weight = np.random.normal(0, 0.001, (num_channel_data, num_channel_data, 3, 3))
+                        bias = np.zeros(num_channel_data)
+
+                        im_data_var = mx.symbol.Variable(name="im_data")
+                        offset_data_var = mx.symbol.Variable(name="offset_data")
+                        weight_var = mx.symbol.Variable(name="weight")
+                        bias_var = mx.symbol.Variable(name="bias")
+                        op = mx.contrib.sym.DeformableConvolution(name='test_op', data=im_data_var,
+                                                                  offset=offset_data_var,
+                                                                  weight=weight_var, bias=bias_var,
+                                                                  num_filter=num_channel_data, pad=dilate,
+                                                                  kernel=(3, 3), stride=(1, 1), dilate=dilate,
+                                                                  num_deformable_group=num_deformable_group)
+                        if grad_nodes[0] == 'offset_data':
+                            # wider tolerance needed for coordinate differential
+                            rtol, atol = 1.0, 1e-2
+                        else:
+                            rtol, atol = 0.05, 1e-4
+                        # By now we only have gpu implementation
+                        if mx.Context.default_ctx.device_type == 'gpu':
+                            check_numeric_gradient(op, [im_data, offset_data, weight, bias], rtol=rtol, atol=atol,
+                                                   grad_nodes=grad_nodes, ctx=mx.gpu(0))
+
+
+def test_deformable_psroipooling():
+    for num_rois in [1, 2]:
+        for num_classes, num_group in itertools.product([2, 3], [2, 3]):
+            for image_height, image_width in itertools.product([168, 224], [168, 224]):
+                for grad_nodes in [['im_data'], ['offset_data']]:
+                    spatial_scale = 0.0625
+                    feat_height = np.int(image_height * spatial_scale)
+                    feat_width = np.int(image_width * spatial_scale)
+                    im_data = np.random.rand(1, num_classes*num_group*num_group, feat_height, feat_width)
+                    rois_data = np.zeros([num_rois, 5])
+                    rois_data[:, [1,3]] = np.sort(np.random.rand(num_rois, 2)*(image_width-1))
+                    rois_data[:, [2,4]] = np.sort(np.random.rand(num_rois, 2)*(image_height-1))
+                    offset_data = np.random.rand(num_rois, 2*num_classes, num_group, num_group) * 0.1
+
+                    im_data_var = mx.symbol.Variable(name="im_data")
+                    rois_data_var = mx.symbol.Variable(name="rois_data")
+                    offset_data_var = mx.symbol.Variable(name="offset_data")
+                    op = mx.contrib.sym.DeformablePSROIPooling(data=im_data_var, rois=rois_data_var, 
+                                                               trans=offset_data_var, spatial_scale=spatial_scale, 
+                                                               sample_per_part=4, group_size=num_group, 
+                                                               pooled_size=num_group, output_dim=num_classes, 
+                                                               trans_std=0.1, no_trans=False, name='test_op')
+                    if grad_nodes[0] == 'offset_data':
+                        # wider tolerance needed for coordinate differential
+                        rtol, atol = 1.0, 1e-2
+                    else:
+                        rtol, atol = 1e-2, 1e-4
+                    # By now we only have gpu implementation
+                    if mx.Context.default_ctx.device_type == 'gpu':
+                        check_numeric_gradient(op, [im_data, rois_data, offset_data], rtol=rtol, atol=atol,
+                                               grad_nodes=grad_nodes, ctx=mx.gpu(0))
+
+
+
 def test_laop():
     # Temporarily disabled until lapack is enabled by default
     return
@@ -3409,7 +3505,7 @@ def test_laop():
     if grad_check == 1:
       check_numeric_gradient(test_sumlogdiag, [a])
 
-    
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

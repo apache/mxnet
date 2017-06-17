@@ -60,7 +60,7 @@ model_meta_info = {
         'top-1-acc' : 0.753,
         'top-5-acc' : 0.922
     },
-    'resnt-101' : {
+    'resnet-101' : {
         'prototxt' : _mx_caffe_model+'ResNet-101-deploy.prototxt',
         'caffemodel' : _mx_caffe_model+'ResNet-101-model.caffemodel',
         'mean' : _mx_caffe_model+'ResNet_mean.binaryproto',
