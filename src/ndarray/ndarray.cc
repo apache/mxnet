@@ -753,9 +753,10 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
+    TBlob src(const_cast<void*>(data),
+              dshape, cpu::kDevMask, this->dtype_, 0);
     this->WaitToWrite();
     RunContext rctx;
     rctx.stream = nullptr;
@@ -763,7 +764,9 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
     ndarray::Copy<cpu, cpu>(src, &dst, Context::CPU(), Context::CPU(), rctx);
   } else {
 #if MXNET_USE_CUDA
-    Engine::Get()->PushSync([&](RunContext rctx) {
+    Engine::Get()->PushSync([this, data](RunContext rctx) {
+        TBlob src(const_cast<void*>(data),
+                  this->shape(), cpu::kDevMask, this->dtype_, 0);
         TBlob dst = this->data();
         ndarray::Copy<cpu, gpu>(src, &dst,
                                 Context::CPU(), this->ctx(), rctx);
@@ -782,9 +785,9 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
+    TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0);
     this->WaitToRead();
     RunContext rctx;
     rctx.stream = nullptr;
@@ -792,7 +795,8 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
                             Context::CPU(), Context::CPU(), rctx);
   } else {
 #if MXNET_USE_CUDA
-    Engine::Get()->PushSync([&](RunContext rctx) {
+    Engine::Get()->PushSync([this, data](RunContext rctx) {
+        TBlob dst(data, this->shape(), cpu::kDevMask, this->dtype_, 0);
         ndarray::Copy<gpu, cpu>(this->data(), &dst,
                                 this->ctx(), Context::CPU(), rctx);
         // Wait GPU kernel to complete

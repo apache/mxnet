@@ -72,7 +72,7 @@ class NaiveEngine final : public Engine {
     Profiler *profiler = Profiler::Get();
     NaiveOpr *opr = op->Cast<NaiveOpr>();
     opr->profiling = profiling && (profiler->GetMode() == Profiler::kOnlySymbolic);
-    this->PushAsync([&](RunContext ctx, CallbackOnComplete on_complete) {
+    this->PushAsync([opr, exec_ctx](RunContext ctx, CallbackOnComplete on_complete) {
 #if MXNET_USE_PROFILER
         if (opr->profiling) {
           opr->opr_stat = Profiler::Get()->AddOprStat(exec_ctx.dev_type, exec_ctx.dev_id);
