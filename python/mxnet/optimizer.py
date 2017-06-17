@@ -788,7 +788,7 @@ class Updater(object):
     def sync_state_context(self, state, context):
         if isinstance(state, NDArray):
             return state.as_in_context(context)
-        if isinstance(state, tuple):
+        elif isinstance(state, tuple):
             state_list = list(state)
             for index, elem in enumerate(state_list):
                 if isinstance(elem, NDArray):
