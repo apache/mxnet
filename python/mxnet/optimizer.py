@@ -784,7 +784,7 @@ class Updater(object):
                 self.sync_state_context(self.states[index], weight.context)
             self.states_synced[index] = True
         self.optimizer.update(index, weight, grad, self.states[index])
-    
+
     def sync_state_context(self, state, context):
         if isinstance(state, NDArray):
             return state.as_in_context(context)
