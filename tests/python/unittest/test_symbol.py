@@ -225,19 +225,6 @@ def test_zero_prop2():
     assert False
 
 
-def test_cached():
-    op = mx.sym.CachedOp('Convolution', 3, kernel=(3, 3), num_filter=10)
-    data = mx.sym.var('data')
-    weight = mx.sym.var('weight')
-    bias = mx.sym.var('bias')
-    out = mx.sym.invoke(op, [data, weight, bias], 'conv')
-    assert out.list_arguments() == ['data', 'weight', 'bias']
-    assert out.list_outputs() == ['conv_output']
-    with mx.name.Prefix('test_'):
-        assert mx.sym.invoke(op, [data, weight, bias]).name == 'test_convolution0'
-        assert mx.sym.invoke(op, [data, weight, bias]).name == 'test_convolution1'
-
-
 if __name__ == '__main__':
     import nose
     nose.runmodule()

@@ -29,18 +29,18 @@ from .symbol_doc import _build_doc
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from ._ctypes.symbol import SymbolBase, _set_symbol_class
-        from ._ctypes.symbol import CachedOp, invoke, _symbol_creator  # pylint: disable=unused-import
+        from ._ctypes.symbol import _symbol_creator  # pylint: disable=unused-import
     elif _sys.version_info >= (3, 0):
         from ._cy3.symbol import SymbolBase, _set_symbol_class
-        from ._cy3.symbol import CachedOp, invoke, _symbol_creator  # pylint: disable=unused-import
+        from ._cy3.symbol import _symbol_creator  # pylint: disable=unused-import
     else:
         from ._cy2.symbol import SymbolBase, _set_symbol_class
-        from ._cy2.symbol import CachedOp, invoke, _symbol_creator  # pylint: disable=unused-import
+        from ._cy2.symbol import _symbol_creator  # pylint: disable=unused-import
 except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from ._ctypes.symbol import SymbolBase, _set_symbol_class
-    from ._ctypes.symbol import CachedOp, invoke, _symbol_creator  # pylint: disable=unused-import
+    from ._ctypes.symbol import _symbol_creator  # pylint: disable=unused-import
 
 _GRAD_REQ_MAP = {'null': 0, 'write': 1, 'add': 3}
 
@@ -735,7 +735,7 @@ class Symbol(SymbolBase):
 
         Returns
         -------
-        aux_states : list of string
+        aux_states : list of str
             List of the auxiliary states in input symbol.
 
         Notes
@@ -749,6 +749,30 @@ class Symbol(SymbolBase):
         sarr = ctypes.POINTER(ctypes.c_char_p)()
         check_call(_LIB.MXSymbolListAuxiliaryStates(
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
+        return [py_str(sarr[i]) for i in range(size.value)]
+
+    def list_inputs(self):
+        """Lists all arguments and auxiliary states of this Symbol.
+
+        Returns
+        -------
+        inputs : list of str
+            List of all inputs.
+
+        Examples
+        --------
+        >>> bn = mx.sym.BatchNorm(name='bn')
+        >>> bn.list_arguments()
+        ['bn_data', 'bn_gamma', 'bn_beta']
+        >>> bn.list_auxiliary_states()
+        ['bn_moving_mean', 'bn_moving_var']
+        >>> bn.list_inputs()
+        ['bn_data', 'bn_gamma', 'bn_beta', 'bn_moving_mean', 'bn_moving_var']
+        """
+        size = ctypes.c_uint()
+        sarr = ctypes.POINTER(ctypes.c_char_p)()
+        check_call(_LIB.NNSymbolListInputNames(
+            self.handle, 0, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
     def infer_type(self, *args, **kwargs):

@@ -8,8 +8,6 @@ from ..base import _LIB
 from ..base import c_array, c_str, mx_uint
 from ..base import SymbolHandle
 from ..base import check_call
-from ..name import NameManager
-from .common import CachedOp  # pylint: disable=unused-import
 
 _symbol_cls = None
 
@@ -100,20 +98,6 @@ def _set_symbol_class(cls):
     """Set the symbolic class to be cls"""
     global _symbol_cls
     _symbol_cls = cls
-
-
-def invoke(cached_op, args, name=None):
-    """Call cached symbolic operator"""
-    ret = SymbolHandle()
-    hint = cached_op.op.lower()
-    name = c_str(NameManager.current.get(name, hint))
-    check_call(_LIB.MXCachedCreateSymbol(
-        cached_op.handle,
-        name,
-        mx_uint(len(args)),
-        c_array(SymbolHandle, [s.handle for s in args]),
-        ctypes.byref(ret)))
-    return _symbol_cls(ret)
 
 
 def _symbol_creator(handle, args, kwargs, keys, vals, name):

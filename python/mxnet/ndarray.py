@@ -32,18 +32,18 @@ from .ndarray_doc import _build_doc
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from ._ctypes.ndarray import NDArrayBase, _set_ndarray_class
-        from ._ctypes.ndarray import invoke, CachedOp, _imperative_invoke
+        from ._ctypes.ndarray import CachedOp, _imperative_invoke
     elif _sys.version_info >= (3, 0):
         from ._cy3.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke
-        from ._cy3.ndarray import invoke, CachedOp, _imperative_invoke
+        from ._cy3.ndarray import CachedOp, _imperative_invoke
     else:
         from ._cy2.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke
-        from ._cy2.ndarray import invoke, CachedOp, _imperative_invoke
+        from ._cy2.ndarray import CachedOp, _imperative_invoke
 except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from ._ctypes.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke
-    from ._ctypes.ndarray import invoke, CachedOp, _imperative_invoke
+    from ._ctypes.ndarray import CachedOp, _imperative_invoke
 # pylint: enable=unused-import
 
 # pylint: disable= no-member
