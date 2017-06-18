@@ -7,7 +7,8 @@ import sys
 
 parser = argparse.ArgumentParser(description='network visualization')
 parser.add_argument('--network', type=str, default='vgg16_ssd_300',
-                    choices = ['vgg16_ssd_300', 'vgg16_ssd_512'],
+                    choices = ['vgg16_ssd_300', 'vgg16_ssd_512',
+                    'inceptionv3_ssd_331', 'resnet50_ssd_300'],
                     help = 'the cnn to use')
 parser.add_argument('--num-classes', type=int, default=20,
                     help='the number of classes')

@@ -6,13 +6,7 @@ import importlib
 import sys
 from detect.detector import Detector
 
-CLASSES = ('aeroplane', 'bicycle', 'bird', 'boat',
-           'bottle', 'bus', 'car', 'cat', 'chair',
-           'cow', 'diningtable', 'dog', 'horse',
-           'motorbike', 'person', 'pottedplant',
-           'sheep', 'sofa', 'train', 'tvmonitor')
-
-def get_detector(net, prefix, epoch, data_shape, mean_pixels, ctx,
+def get_detector(net, prefix, epoch, data_shape, mean_pixels, ctx, num_class,
                  nms_thresh=0.5, force_nms=True):
     """
     wrapper for initialize a detector
@@ -31,6 +25,10 @@ def get_detector(net, prefix, epoch, data_shape, mean_pixels, ctx,
         mean pixel values (R, G, B)
     ctx : mx.ctx
         running context, mx.cpu() or mx.gpu(?)
+    num_class : int
+        number of classes
+    nms_thresh : float
+        non-maximum suppression threshold
     force_nms : bool
         force suppress different categories
     """
@@ -78,8 +76,28 @@ def parse_args():
                         help='show detection time')
     parser.add_argument('--deploy', dest='deploy_net', action='store_true', default=False,
                         help='Load network from json file, rather than from symbol')
+    parser.add_argument('--class-names', dest='class_names', type=str,
+                        default='aeroplane, bicycle, bird, boat, bottle, bus, \
+                        car, cat, chair, cow, diningtable, dog, horse, motorbike, \
+                        person, pottedplant, sheep, sofa, train, tvmonitor',
+                        help='string of comma separated names, or text filename')
     args = parser.parse_args()
     return args
+
+def parse_class_names(class_names):
+    """ parse # classes and class_names if applicable """
+    if len(class_names) > 0:
+        if os.path.isfile(class_names):
+            # try to open it to read class names
+            with open(class_names, 'r') as f:
+                class_names = [l.strip() for l in f.readlines()]
+        else:
+            class_names = [c.strip() for c in class_names.split(',')]
+        for name in class_names:
+            assert len(name) > 0
+    else:
+        raise RuntimeError("No valid class_name provided...")
+    return class_names
 
 if __name__ == '__main__':
     args = parse_args()
@@ -96,7 +114,7 @@ if __name__ == '__main__':
     detector = get_detector(network, args.prefix, args.epoch,
                             args.data_shape,
                             (args.mean_r, args.mean_g, args.mean_b),
-                            ctx, args.nms_thresh, args.force_nms)
+                            ctx, len(class_names), args.nms_thresh, args.force_nms)
     # run detection
     detector.detect_and_visualize(image_list, args.dir, args.extension,
-                                  CLASSES, args.thresh, args.show_timer)
+                                  class_names, args.thresh, args.show_timer)

@@ -5,12 +5,6 @@ import os
 import sys
 from evaluate.evaluate_net import evaluate_net
 
-CLASSES = ('aeroplane', 'bicycle', 'bird', 'boat',
-           'bottle', 'bus', 'car', 'cat', 'chair',
-           'cow', 'diningtable', 'dog', 'horse',
-           'motorbike', 'person', 'pottedplant',
-           'sheep', 'sofa', 'train', 'tvmonitor')
-
 def parse_args():
     parser = argparse.ArgumentParser(description='Evaluate a network')
     parser.add_argument('--rec-path', dest='rec_path', help='which record file to use',
@@ -23,7 +17,10 @@ def parse_args():
                         help='evaluation batch size')
     parser.add_argument('--num-class', dest='num_class', type=int, default=20,
                         help='number of classes')
-    parser.add_argument('--class-names', dest='class_names', type=str, default=",".join(CLASSES),
+    parser.add_argument('--class-names', dest='class_names', type=str,
+                        default='aeroplane, bicycle, bird, boat, bottle, bus, \
+                        car, cat, chair, cow, diningtable, dog, horse, motorbike, \
+                        person, pottedplant, sheep, sofa, train, tvmonitor',
                         help='string of comma separated names, or text filename')
     parser.add_argument('--epoch', dest='epoch', help='epoch of pretrained model',
                         default=0, type=int)
