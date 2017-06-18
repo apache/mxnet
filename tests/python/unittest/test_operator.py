@@ -3257,8 +3257,6 @@ def test_deformable_psroipooling():
 
 
 def test_laop():
-    # Temporarily disabled until lapack is enabled by default
-    return
 
     # Currently no support for GPU. Will be added soon
     # so keep these tests here in this file and activate
