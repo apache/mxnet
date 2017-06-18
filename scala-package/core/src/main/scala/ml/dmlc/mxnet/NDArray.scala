@@ -878,6 +878,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
 
   def <=(other: Float): NDArray = {
     NDArray.lesserEqual(this, other)
+  }
 
   def %(other: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_mod", Seq(this, other))

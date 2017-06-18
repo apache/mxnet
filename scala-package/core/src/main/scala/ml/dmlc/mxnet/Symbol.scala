@@ -1240,6 +1240,7 @@ class SymbolConversions[@specialized(Int, Float, Double) V](val value: V) {
 
   def <=(other: Symbol): Symbol = {
     other >= value
+  }
 
   def %(other: Symbol): Symbol = {
     Symbol.createFromListedSymbols("_RModScalar")(
