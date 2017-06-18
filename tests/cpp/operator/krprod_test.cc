@@ -6,19 +6,22 @@
  */
 #include <vector>
 #include <random>
+#include <cmath>
 #include "gtest/gtest.h"
 #include "operator/contrib/krprod.h"
 
 namespace mxnet {
 namespace op {
 
+using namespace mshadow;
+using namespace mshadow::expr;
 using DType = double;
 
 #define EXPECT_DOUBLE_EQ_MATRIX(expected, actual) \
 {                                                \
   for (int i = 0; i < static_cast<int>(actual.size(0)); ++i) \
     for (int j = 0; j < static_cast<int>(actual.size(1)); ++j) \
-      EXPECT_DOUBLE_EQ(expected[i][j], actual[i][j]); \
+      EXPECT_LE(std::abs(actual[i][j] - expected[i][j]), 1e-10); \
 } \
 
 TEST(row_wise_kronecker, ZeroInputMatrix) {
@@ -332,5 +335,121 @@ TEST(krprod, ThreeInputMatrices) {
   FreeSpace(&result);
 }
 
+TEST(inv_krprod, OneInputMatrixTransposed) {
+  DType mat[8] {1, 2, 3, 4, 5, 6, 7, 8};
+
+  // Make input tensors
+  std::vector<Tensor<cpu, 2, DType> > ts_arr;
+  ts_arr.emplace_back(mat, Shape2(2, 4), 4, nullptr);
+
+  // Compute inverse Khatri-Rao product
+  Tensor<cpu, 2, DType> inv_kr(Shape2(2, 4));
+  AllocSpace(&inv_kr);
+  inv_krprod(inv_kr, ts_arr, true);
+
+  // Check against expected result
+  Tensor<cpu, 2, DType> actual_dot(Shape2(2, 4));
+  AllocSpace(&actual_dot);
+  actual_dot = implicit_dot(implicit_dot(inv_kr, ts_arr[0].T()), inv_kr);
+  EXPECT_DOUBLE_EQ_MATRIX(inv_kr, actual_dot);
+
+  FreeSpace(&inv_kr);
+  FreeSpace(&actual_dot);
+}
+
+TEST(inv_krprod, TwoInputMatrices) {
+  // Input matrices of shape (3, 2) and (4, 2)
+  DType mat1[6] {1, 4, 2, 5, 3, 6};
+  DType mat2[8] {1, 5, 2, 6, 3, 7, 4, 8};
+
+  // Make input tensors
+  std::vector<Tensor<cpu, 2, DType> > ts_arr;
+  ts_arr.emplace_back(mat1, Shape2(3, 2), 2, nullptr);
+  ts_arr.emplace_back(mat2, Shape2(4, 2), 2, nullptr);
+
+  // Compute inverse Khatri-Rao product
+  Tensor<cpu, 2, DType> inv_kr(Shape2(2, 12)), kr(Shape2(12, 2));
+  AllocSpace(&inv_kr);
+  AllocSpace(&kr);
+  inv_krprod(inv_kr, ts_arr, false);
+  krprod(kr, ts_arr);
+
+  // Check against expected result
+  Tensor<cpu, 2, DType> actual_dot(Shape2(2, 12));
+  AllocSpace(&actual_dot);
+  actual_dot = implicit_dot(implicit_dot(inv_kr, kr), inv_kr);
+  EXPECT_DOUBLE_EQ_MATRIX(inv_kr, actual_dot);
+
+  FreeSpace(&inv_kr);
+  FreeSpace(&kr);
+  FreeSpace(&actual_dot);
+}
+
+TEST(inv_krprod, TwoInputMatricesTransposed) {
+  // Transposed input matrices of shape (2, 3) and (2, 4)
+  DType mat1[6] {1, 2, 3, 4, 5, 6};
+  DType mat2[8] {1, 2, 3, 4, 5, 6, 7, 8};
+
+  // Make input tensors
+  std::vector<Tensor<cpu, 2, DType> > ts_arr;
+  ts_arr.emplace_back(mat1, Shape2(2, 3), 3, nullptr);
+  ts_arr.emplace_back(mat2, Shape2(2, 4), 4, nullptr);
+
+  // Compute invser Khatri-Rao product
+  Tensor<cpu, 2, DType> inv_kr(Shape2(2, 12)), kr_t(Shape2(2, 12));
+  AllocSpace(&inv_kr);
+  AllocSpace(&kr_t);
+  inv_krprod(inv_kr, ts_arr, true);
+  row_wise_kronecker(kr_t, ts_arr);
+
+  // Check against expected result
+  Tensor<cpu, 2, DType> actual_dot(Shape2(2, 12));
+  AllocSpace(&actual_dot);
+  actual_dot = implicit_dot(implicit_dot(inv_kr, kr_t.T()), inv_kr);
+  EXPECT_DOUBLE_EQ_MATRIX(inv_kr, actual_dot);
+
+  FreeSpace(&inv_kr);
+  FreeSpace(&kr_t);
+  FreeSpace(&actual_dot);
+}
+
+TEST(inv_prod, ThreeInputMatricesTranposed) {
+  // Randomly initialise the transposed input matrices
+  std::default_random_engine generator;
+  std::uniform_int_distribution<int> distribution(1, 6);
+
+  Tensor<cpu, 2, DType> in1(Shape2(3, 4)), in2(Shape2(3, 2)),
+    in3(Shape2(3, 3));
+  AllocSpace(&in1);
+  AllocSpace(&in2);
+  AllocSpace(&in3);
+
+  std::vector<Tensor<cpu, 2, DType> > ts_arr {in1, in2, in3};
+  for (auto & in : ts_arr) {
+    for (int i = 0; i < static_cast<int>(in.size(0)); ++i)
+      for (int j = 0; j < static_cast<int>(in.size(1)); ++j)
+        in[i][j] = distribution(generator);
+  }
+
+  // Compute inv_kr & kr
+  Tensor<cpu, 2, DType> inv_kr(Shape2(3, 24)), kr_t(Shape2(3, 24));
+  AllocSpace(&inv_kr);
+  AllocSpace(&kr_t);
+
+  inv_krprod(inv_kr, ts_arr, true);
+  row_wise_kronecker(kr_t, ts_arr);
+
+  // Check dot result
+  Tensor<cpu, 2, DType> actual_dot(Shape2(3, 24));
+  AllocSpace(&actual_dot);
+  actual_dot = implicit_dot(implicit_dot(inv_kr, kr_t.T()), inv_kr);
+  EXPECT_DOUBLE_EQ_MATRIX(inv_kr, actual_dot);
+
+  for (auto & in : ts_arr)
+    FreeSpace(&in);
+  FreeSpace(&inv_kr);
+  FreeSpace(&kr_t);
+  FreeSpace(&actual_dot);
+}
 }  // namespace op
 }  // namespace mxnet

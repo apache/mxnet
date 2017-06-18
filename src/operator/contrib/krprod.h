@@ -196,6 +196,94 @@ inline void krprod
   krprod(out, std::vector<Tensor<cpu, 2, DType> > {in1, in2});
 }
 
+/*!
+ * \brief Moore-Penrose pseudoinverse of the Khatri-Rao product
+ *
+ * The result is always of the same shape as the transpose of
+ * the Khatri-Rao product of the input matrices. The input argument
+ * ts_arr could contain the original input matrices, or transposed ones.
+ *
+ * \param out result matrix
+ * \param ts_arr vector of input matrices
+ * \param input_transposed if every input matrices is transposed
+ */
+template <typename DType>
+inline void inv_krprod
+  (Tensor<cpu, 2, DType> out,
+  const std::vector<Tensor<cpu, 2, DType> > &ts_arr,
+  bool input_transposed = false) {
+  CHECK_GE(ts_arr.size(), 1) << "Input tensor array must be non-empty";
+
+  // Initialise the Hadamard product to eye(k)
+  // where k is the number of "factors"
+  int k = out.size(0);
+  Tensor<cpu, 2, DType> hadamard_prod(Shape2(k, k));
+  AllocSpace(&hadamard_prod);
+  hadamard_prod = 1;
+
+  // Note that out is of the same shape as the transpose of
+  // the Khatri-Rao product
+  //
+  // When input is transposed, we could first put the transpose of
+  // the Khatri-Rao product in out, then call the linear solver, which
+  // will update the out's content to the final result;
+  //
+  // If the input is not transposed, we need to create an intermediate
+  // tensor to store the Khatri-Rao product, call the linear solver with
+  // MXNET_LAPACK_COL_MAJOR as the matrix layout, and transpose
+  // the final result into out
+
+  int info;
+  if (input_transposed) {
+    row_wise_kronecker(out, ts_arr);
+    for (auto &ts : ts_arr)
+      hadamard_prod *= implicit_dot(ts, ts.T());
+
+    info = MXNET_LAPACK_posv<DType>(MXNET_LAPACK_ROW_MAJOR, 'U',
+      k, out.size(1), hadamard_prod.dptr_, hadamard_prod.stride_,
+      out.dptr_, out.stride_);
+  } else {
+    Tensor<cpu, 2, DType> kr(Shape2(out.size(1), out.size(0)));
+    AllocSpace(&kr);
+    krprod(kr, ts_arr);
+
+    for (auto &ts : ts_arr)
+      hadamard_prod *= implicit_dot(ts.T(), ts);
+
+    info = MXNET_LAPACK_posv<DType>(MXNET_LAPACK_COL_MAJOR, 'U',
+      k, out.size(1), hadamard_prod.dptr_, hadamard_prod.stride_,
+      kr.dptr_, kr.stride_);
+
+    flip<cpu, DType>(out.size(1), out.size(0), out.dptr_, out.stride_,
+      kr.dptr_, kr.stride_);
+    FreeSpace(&kr);
+  }
+
+  FreeSpace(&hadamard_prod);
+  if (info != 0)
+    LOG(FATAL) << "The linear solver in inv_prod() returns " << info;
+}
+
+/*!
+ * \brief Moore-Penrose pseudoinverse of Khatri-Rao product of two matrices
+ *
+ * This is a convenience function for the more general version.
+ *
+ * \param out result matrix
+ * \param in1 first input matrix
+ * \param in2 second input matrix
+ * \param input_transposed if every input matrices is transposed
+ */
+template <typename DType>
+inline void inv_krprod
+  (Tensor<cpu, 2, DType> out,
+  const Tensor<cpu, 2, DType> &in1,
+  const Tensor<cpu, 2, DType> &in2,
+  bool input_transposed = false) {
+  inv_krprod(out, std::vector<Tensor<cpu, 2, DType> > {in1, in2},
+      input_transposed);
+}
+
 }  // namespace op
 }  // namespace mxnet
 
