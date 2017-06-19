@@ -497,7 +497,6 @@ If not already installed, [download and install Xcode](https://developer.apple.c
 <div class="virtualenv">
 <br/>
 
-<!-- Pipe to /dev/null in case Homebrew or package was already installed to prevent failure -->
 **Step 1**  Install prerequisites - Homebrew, python development tools.
 ```bash
 # Install Homebrew
@@ -564,7 +563,6 @@ pip install graphviz
 <div class="pip">
 <br/>
 
-<!-- Pipe to /dev/null in case Homebrew or package was already installed to prevent failure -->
 **Step 1**  Install prerequisites - Homebrew, python development tools.
 ```bash
 # Install Homebrew
