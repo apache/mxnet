@@ -198,12 +198,15 @@ if(USE_OPENMP)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
   endif()
+elseif(UNIX)
+  list(APPEND mxnet_LINKER_LIBS pthread)
 endif()
 
 if(USE_LAPACK)
   add_definitions(-DMXNET_USE_LAPACK=1)
+  list(APPEND mxnet_LINKER_LIBS lapack)
 else(USE_LAPACK)
-  # Workaround for Windows until using new Jenkinsfile. 
+  # Workaround for Windows until using new Jenkinsfile.
   if(USE_BLAS STREQUAL "open")
     add_definitions(-DMXNET_USE_LAPACK=1)
   endif()
