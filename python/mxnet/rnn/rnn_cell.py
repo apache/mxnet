@@ -675,8 +675,11 @@ class FusedRNNCell(BaseRNNCell):
         if not self._get_next_state:
             outputs, states = rnn, []
         elif self._mode == 'lstm':
+            rnn[1]._set_attr(__layout__='LNC')
+            rnn[2]._set_attr(__layout__='LNC')
             outputs, states = rnn[0], [rnn[1], rnn[2]]
         else:
+            rnn[1]._set_attr(__layout__='LNC')
             outputs, states = rnn[0], [rnn[1]]
 
         if axis == 1:
