@@ -17,9 +17,6 @@
 #include "./operator.h"
 #include "./ndarray.h"
 
-#define FCOMP_EX_CPU "FComputeEx<cpu>"
-#define FCOMP_EX_GPU "FComputeEx<gpu>"
-
 namespace mxnet {
 
 using nnvm::NodeAttrs;

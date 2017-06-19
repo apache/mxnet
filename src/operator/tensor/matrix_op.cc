@@ -251,7 +251,7 @@ Example::
 .set_attr<nnvm::FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", Slice<cpu>)
-.set_attr<FComputeEx>(FCOMP_EX_CPU, SliceEx<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SliceEx<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(SliceParam::__FIELDS__());
 

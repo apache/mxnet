@@ -5,18 +5,22 @@ from mxnet.test_utils import rand_ndarray, assert_almost_equal
 
 shape = (4, 4)
 keys = [5, 7, 11]
+
+
 def init_kv(stype='default'):
     """init kv """
     kv = mx.kv.create()
     # single
-    kv.init(3, mx.sparse_nd.zeros(stype, shape))
+    kv.init(3, mx.nd.zeros(shape=shape, storage_type=stype))
     # list
-    kv.init(keys, [mx.sparse_nd.zeros(stype, shape)] * len(keys))
+    kv.init(keys, [mx.nd.zeros(shape=shape, storage_type=stype)] * len(keys))
     return kv
+
 
 def check_diff_to_scalar(A, x):
     """ assert A == x"""
     assert(np.sum(np.abs((A - x).asnumpy())) == 0)
+
 
 def test_single_kv_pair():
     """single key-value pair push & pull"""
@@ -27,6 +31,7 @@ def test_single_kv_pair():
     kv.pull(3, out = val)
     check_diff_to_scalar(val, 1)
 
+
 def test_init():
     """test init"""
     kv = mx.kv.create()
@@ -34,6 +39,7 @@ def test_init():
     a = mx.nd.zeros(shape)
     kv.pull(3, out=a)
     check_diff_to_scalar(a, 4)
+
 
 def test_list_kv_pair():
     """list key-value pair push & pull"""
@@ -74,6 +80,7 @@ def test_aggregator():
         for v in vv:
             check_diff_to_scalar(v, num_devs * 2.0)
 
+
 def test_sparse_aggregator():
     """aggregate sparse ndarray on muliple devices"""
 
@@ -111,9 +118,11 @@ def test_sparse_aggregator():
             result_sum += v.asnumpy()
         assert_almost_equal(result_sum, expected_sum * num_devs)
 
+
 def updater(key, recv, local):
     """use updater: +="""
     local += recv
+
 
 def test_updater(dev = 'cpu'):
     """updater"""
@@ -146,6 +155,7 @@ def test_updater(dev = 'cpu'):
     for vv in vals:
         for v in vv:
             check_diff_to_scalar(v, num_devs * num_push)
+
 
 def test_get_type():
     kvtype = 'local_allreduce_cpu'

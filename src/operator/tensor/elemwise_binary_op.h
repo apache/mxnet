@@ -14,6 +14,7 @@
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
+#include "../../common/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -140,12 +141,6 @@ void BinaryComputeRspRsp(const nnvm::NodeAttrs& attrs,
   bool init_r = rhs.storage_initialized();
   // both inputs are zeros
   if (!init_l && !init_r) return;
-  // one of the input is zeros
-  if (!init_l || !init_r) {
-    NDArray out(output);
-    CopyFromToRspImpl<xpu, xpu>(!init_l ? rhs : lhs, &out, ctx.run_ctx);
-    return;
-  }
   // Memory Estimation: This is (roughly) the number of result rows. We still
   // need to subtract the number of common rows
   unsigned int num_rows_l = lhs.aux_shape(rowsparse::kIdx).Size();
@@ -199,7 +194,7 @@ void BinaryComputeRspRsp(const nnvm::NodeAttrs& attrs,
       }
       auto new_shape = output.aux_shape(rowsparse::kIdx);
       new_shape[0] -= num_common_rows;
-      output.SetAuxShape(rowsparse::kIdx, new_shape);
+      output.set_aux_shape(rowsparse::kIdx, new_shape);
     });
   });
 }
@@ -218,7 +213,7 @@ void BinaryComputeEx(const nnvm::NodeAttrs& attrs,
   if (typeid(OP) == typeid(mshadow::op::plus)) {
     // If any input is dense, fallback to FCompute
     // TODO(haibin) implement dns + rsp in a separate kernel
-    if (common::ContainsDefaultStorage(inputs)) {
+    if (mxnet::common::ContainsDefaultStorage(inputs)) {
       FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
                            BinaryCompute<xpu, OP>, "BinaryCompute");
       return;

@@ -7,9 +7,9 @@ more `Executor` for data parallelization.
 import logging
 import warnings
 
+import mxnet as mx
 from .. import context as ctx
 from .. import ndarray as nd
-from .. import sparse_ndarray as sparse_nd
 from .. import optimizer as opt
 
 from .executor_group import DataParallelExecutorGroup
@@ -399,7 +399,7 @@ class Module(BaseModule):
         else:
             assert self._arg_params is None and self._aux_params is None
             param_arrays = [
-                sparse_nd.zeros(x[0].storage_type, x[0].shape, dtype=x[0].dtype)
+                mx.nd.zeros(shape=x[0].shape, dtype=x[0].dtype, storage_type=x[0].storage_type)
                 for x in self._exec_group.param_arrays
             ]
             self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}
@@ -412,7 +412,6 @@ class Module(BaseModule):
 
         if shared_module is not None and shared_module.optimizer_initialized:
             self.borrow_optimizer(shared_module)
-
 
     def reshape(self, data_shapes, label_shapes=None):
         """Reshapes the module for new input shapes.

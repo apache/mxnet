@@ -9,6 +9,7 @@ from . import base
 from . import contrib
 from . import ndarray
 from . import sparse_ndarray
+from . import ndarray_utils
 from . import name
 # use mx.sym as short for symbol
 from . import symbol as sym
@@ -20,6 +21,7 @@ from . import operator
 # use mx.nd as short for mx.ndarray
 from . import ndarray as nd
 from . import sparse_ndarray as sparse_nd
+from . import ndarray_utils as nd_utils
 # use mx.rnd as short for mx.random
 from . import random as rnd
 from . import random

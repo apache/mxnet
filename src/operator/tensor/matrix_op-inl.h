@@ -1151,7 +1151,7 @@ void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
   int indptr_len = end - begin + 1;
   out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
   if (!in.storage_initialized()) {
-    out.SetAuxShape(kIndPtr, Shape1(0));
+    out.set_aux_shape(kIndPtr, Shape1(0));
     return;
   }
   CHECK_EQ(in.aux_type(kIndPtr), in.aux_type(kIdx))

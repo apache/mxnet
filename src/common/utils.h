@@ -22,17 +22,9 @@
 #include <mxnet/ndarray.h>
 #include <mxnet/op_attr_types.h>
 #include <nnvm/graph_attr_types.h>
+#include "../operator/nn/cast_storage-inl.h"
 
 namespace mxnet {
-// forward declaration
-namespace op {
-template <typename xpu>
-void CastStorageComputeEx(const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx,
-                 const std::vector<NDArray>& inputs,
-                 const std::vector<OpReqType>& req,
-                 const std::vector<NDArray>& outputs);
-}
 
 namespace common {
 
@@ -62,7 +54,7 @@ inline bool GetDefaultBlobs(const std::vector<NDArray>& nds,
                    << "doesn't support NDArray inputs with non-default storage.";
       }
       NDArray temp(nd.shape(), nd.ctx(), false);
-      op::CastStorageComputeImpl<xpu>(ctx.get_stream<xpu>(), nd, temp);
+      mxnet::op::CastStorageComputeImpl<xpu>(ctx.get_stream<xpu>(), nd, temp);
       temps->push_back(temp);
       blobs->push_back(temp.data());
       casted = true;
@@ -106,7 +98,7 @@ inline void CastNonDefaultStorage(const std::vector<NDArray>& dst,
                    << "You are probably executing an operator which "
                    << "doesn't support NDArray inputs with non-default storage.";
       }
-      op::CastStorageComputeImpl(ctx.get_stream<xpu>(), src[src_idx++], dst[i]);
+      mxnet::op::CastStorageComputeImpl(ctx.get_stream<xpu>(), src[src_idx++], dst[i]);
     }
   }
   CHECK_EQ(src_idx, src.size()) << "Not all src NDArrays are casted";
@@ -142,8 +134,8 @@ inline FCompute GetFCompute(const Op* op, Context ctx) {
 }
 
 inline FComputeEx GetFComputeEx(const Op* op, Context ctx, int stype) {
-  static auto& fcpu = nnvm::Op::GetAttr<FComputeEx>(FCOMP_EX_CPU);
-  static auto& fgpu = nnvm::Op::GetAttr<FComputeEx>(FCOMP_EX_GPU);
+  static auto& fcpu = nnvm::Op::GetAttr<FComputeEx>("FComputeEx<cpu>");
+  static auto& fgpu = nnvm::Op::GetAttr<FComputeEx>("FComputeEx<gpu>");
   if (stype == kDefaultStorage) return nullptr;
   if (ctx.dev_mask() == cpu::kDevMask) {
     return fcpu.get(op, nullptr);

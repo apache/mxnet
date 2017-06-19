@@ -17,7 +17,6 @@
 #include <string>
 #include <utility>
 #include "./operator_common.h"
-#include "../common/utils.h"
 
 namespace mxnet {
 namespace op {

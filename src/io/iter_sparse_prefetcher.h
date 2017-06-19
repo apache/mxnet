@@ -22,6 +22,7 @@
 #include "./inst_vector.h"
 #include "./image_iter_common.h"
 #include "./iter_prefetcher.h"
+#include "./iter_sparse.h"
 
 namespace mxnet {
 namespace io {
@@ -60,7 +61,7 @@ class SparsePrefetcherIter : public PrefetcherIter {
               (*dptr)->data.at(i) = NDArray(stype, this->GetShape(is_data),
                                             Context::CPU(), false, dtype);
             }
-            data_iter += NDArray::NumAuxData(stype) + 1;
+            data_iter += num_aux_data(stype) + 1;
           }
         }
         // copy data over
@@ -87,7 +88,7 @@ class SparsePrefetcherIter : public PrefetcherIter {
           } else {
             LOG(FATAL) << "Storage type not implemented: " << stype;
           }
-          data_iter += NDArray::NumAuxData(stype) + 1;
+          data_iter += num_aux_data(stype) + 1;
           (*dptr)->num_batch_padd = batch.num_batch_padd;
         }
         if (batch.inst_index) {

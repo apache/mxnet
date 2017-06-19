@@ -357,7 +357,7 @@ void FCompExFallback(const nnvm::NodeAttrs& attrs,
                      const std::vector<NDArray>& outputs,
                      FCompute fcompute,
                      const std::string& fname) {
-  using namespace common;
+  using namespace mxnet::common;
   std::vector<TBlob> in_blobs, out_blobs;
   std::vector<NDArray> temp_in, temp_out;
   GetDefaultBlobs<xpu>(inputs, &in_blobs, &temp_in, ctx, true);

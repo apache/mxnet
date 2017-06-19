@@ -40,13 +40,15 @@ class ForwardOpExecutor : public OpExecutor {
     temp_in_.clear(); temp_out_.clear(); temp_aux_.clear();
     if (is_gpu) {
 #if MXNET_USE_CUDA
+#if __CUDACC__
       GetDefaultBlobs<gpu>(in_array_, &in_data_, &temp_in_, op_ctx);
       GetDefaultBlobs<gpu>(aux_array_, &aux_data_, &temp_aux_, op_ctx);
       GetDefaultBlobs<gpu>(out_array, &out_data_, &temp_out_, op_ctx);
       op_->Forward(op_ctx, in_data_, req, out_data_, aux_data_);
       CastNonDefaultStorage<gpu>(out_array, temp_out_, op_ctx);
-#else
-      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif  // __CUDACC__
+#elif NDEBUG == 0
+      LOG(DEBUG) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
     } else {
       GetDefaultBlobs<cpu>(in_array_, &in_data_, &temp_in_, op_ctx);
@@ -171,10 +173,12 @@ class FComputeExecutor : public OpExecutor {
       temp_in_.clear(); temp_out_.clear();
       if (is_gpu) {
 #if MXNET_USE_CUDA
+#if __CUDACC__
         GetDefaultBlobs<gpu>(in_array, &in_data_, &temp_in_, op_ctx);
         GetDefaultBlobs<gpu>(out_array, &out_data_, &temp_out_, op_ctx);
         fcompute_(attrs_, op_ctx, in_data_, req, out_data_);
         CastNonDefaultStorage<gpu>(out_array, temp_out_, op_ctx);
+#endif  // __CUDACC__
 #else
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif

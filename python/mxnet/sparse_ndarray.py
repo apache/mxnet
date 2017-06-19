@@ -15,15 +15,16 @@ import sys as _sys
 
 # import operator
 import numpy as np
+import mxnet as mx
 from .base import _LIB, numeric_types
-from .base import c_array, py_str, mx_real_t, c_str
-from .base import mx_uint, NDArrayHandle, check_call, OpHandle
+from .base import c_array, mx_real_t
+from .base import mx_uint, NDArrayHandle, check_call
 from .context import Context
 from . import _ndarray_internal as _internal
 from . import ndarray
 from .ndarray import _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .ndarray import _STORAGE_TYPE_STR_TO_ID
-from .ndarray import NDArray, _storage_type, _make_ndarray_function
+from .ndarray import NDArray, _storage_type
 
 # Use different verison of SymbolBase
 # When possible, use cython to speedup part of computation.
@@ -222,16 +223,11 @@ class SparseNDArray(NDArray):
         stype = self.storage_type
         assert(stype == 'csr'), "_slice for " + str(stype) + " not implemented yet"
         warnings.warn('slicing SparseNDArray is not efficient', RuntimeWarning)
-        shape = list(self.shape)
-        stop = shape[0] if stop is None else stop
-        start = 0 if start is None else start
-        shape[0] = stop - start
-        handle = _new_alloc_handle(self.storage_type, tuple(shape), self.context,
-                                   True, self.dtype, self.aux_types)
+        handle = NDArrayHandle()
         start = mx_uint(start) if start else mx_uint(0)
         stop = mx_uint(stop) if stop else mx_uint(self.shape[0])
-
-        check_call(_LIB.MXNDArraySliceEx(self.handle, start, stop, handle))
+        check_call(_LIB.MXNDArraySlice(
+            self.handle, start, stop, ctypes.byref(handle)))
         ret = _ndarray_cls(handle=handle, writable=False)
         return ret
 
@@ -309,10 +305,10 @@ class SparseNDArray(NDArray):
         >>> y.dtype
         <type 'numpy.int32'>
         """
-        res = zeros(self.storage_type, self.shape, ctx=self.context, dtype=dtype)
+        res = mx.nd.zeros(shape=self.shape, ctx=self.context,
+                          dtype=dtype, storage_type=self.storage_type)
         self.copyto(res)
         return res
-
 
     def copyto(self, other):
         """Copies the value of this array to another array.
@@ -432,6 +428,7 @@ class RowSparseNDArray(SparseNDArray):
         """
         return self._aux_data(0)
 
+
 def _prepare_src_array(src, dtype, default_dtype):
     if isinstance(src, NDArray):
         dtype = src.dtype if dtype is None else dtype
@@ -443,6 +440,7 @@ def _prepare_src_array(src, dtype, default_dtype):
             except:
                 raise TypeError('values must be array like object')
     return src, dtype
+
 
 def csr(values, indptr, indices, shape, ctx=None, dtype=None, indptr_type=None, indices_type=None):
     """Creates a 2D array with compressed sparse row format.
@@ -504,6 +502,7 @@ def csr(values, indptr, indices, shape, ctx=None, dtype=None, indptr_type=None, 
     indices_ref[:] = indices
     return result
 
+
 def row_sparse(values, indices, shape, ctx=None, dtype=None, indices_type=None):
     """Creates a row sparse array with a set of tensor slices at given indices.
 
@@ -550,6 +549,7 @@ def row_sparse(values, indices, shape, ctx=None, dtype=None, indices_type=None):
     indices_ref[:] = indices
     return result
 
+
 def to_dense(source):
     """ Return a dense array representation of this SparseNDArray.
 
@@ -560,47 +560,6 @@ def to_dense(source):
     """
     return ndarray.cast_storage(source, storage_type='default')
 
-def zeros(storage_type, shape, ctx=None, dtype=None, aux_types=None, **kwargs):
-    """Return a new array of given shape and type, filled with zeros.
-
-    Parameters
-    ----------
-    shape : int or tuple of int
-        The shape of the empty array
-    storage_type: string
-        The storage type of the empty array, such as 'row_sparse', 'csr', etc
-    ctx : Context, optional
-        An optional device context (default is the current default context)
-    dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`)
-    aux_types: list of numpy.dtype, optional
-        An optional type for the aux data for SparseNDArray (default values depends
-        on the storage type)
-
-    Returns
-    -------
-    SparseNDArray
-        A created array
-    Examples
-    --------
-    >>> mx.sparse_nd.zeros('csr', (1,2), mx.gpu(0))
-    <SparseNDArray 1x2 @gpu(0)>
-    >>> mx.sparse_nd.zeros('row_sparse', (1,2), mx.gpu(0), 'float16').asnumpy()
-    array([[ 0.,  0.]], dtype=float16)
-    """
-    if storage_type == 'default':
-        return ndarray.zeros(shape, ctx=ctx, dtype=dtype, **kwargs)
-    if ctx is None:
-        ctx = Context.default_ctx
-    dtype = mx_real_t if dtype is None else dtype
-    if aux_types is None:
-        if storage_type == 'row_sparse' or storage_type == 'csr':
-            aux_types = _STORAGE_AUX_TYPES[storage_type]
-        else:
-            raise Exception("unknown storage type")
-    assert(len(aux_types) == len(_STORAGE_AUX_TYPES[storage_type]))
-    out = _ndarray_cls(_new_alloc_handle(storage_type, shape, ctx, True, dtype, aux_types))
-    return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, out=out, **kwargs)
 
 def _ndarray_cls(handle, writable=True):
     stype = _storage_type(handle)
@@ -613,33 +572,5 @@ def _ndarray_cls(handle, writable=True):
     else:
         raise Exception("unknown storage type")
 
-# pylint: enable=too-many-locals, invalid-name
-def _init_ndarray_module(ndarray_class, root_namespace):
-    """List and add all the ndarray functions to current module."""
-    _set_ndarray_class(ndarray_class)
-    plist = ctypes.POINTER(ctypes.c_char_p)()
-    size = ctypes.c_uint()
 
-    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
-                                     ctypes.byref(plist)))
-    op_names = []
-    for i in range(size.value):
-        op_names.append(py_str(plist[i]))
-
-    module_obj = _sys.modules["%s.ndarray" % root_namespace]
-    module_internal = _sys.modules["%s._ndarray_internal" % root_namespace]
-    module_contrib = _sys.modules["%s.contrib.ndarray" % root_namespace]
-    for name in op_names:
-        hdl = OpHandle()
-        check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
-        function = _make_ndarray_function(hdl, name)
-        if function.__name__.startswith('_contrib_'):
-            function.__name__ = function.__name__[9:]
-            function.__module__ = 'mxnet.contrib.ndarray'
-            setattr(module_contrib, function.__name__, function)
-        elif function.__name__.startswith('_'):
-            setattr(module_internal, function.__name__, function)
-        else:
-            setattr(module_obj, function.__name__, function)
-
-_init_ndarray_module(_ndarray_cls, "mxnet")
+_set_ndarray_class(_ndarray_cls)

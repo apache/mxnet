@@ -112,7 +112,7 @@ The gradient of an embedding matrix has the form of gradient vectors that are on
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FComputeEx>(FCOMP_EX_CPU, SparseEmbeddingForwardEx<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode("_backward_SparseEmbedding", n, ograds,

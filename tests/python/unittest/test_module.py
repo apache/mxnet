@@ -1,4 +1,3 @@
-import mxnet as mx
 import mxnet.ndarray as nd
 from mxnet.test_utils import *
 import numpy as np
@@ -6,7 +5,7 @@ from functools import reduce
 from mxnet.module.executor_group import DataParallelExecutorGroup
 
 import numpy.random as rnd
-import scipy
+
 
 def test_module_dtype():
     dtype = np.float16
@@ -455,7 +454,7 @@ def test_module_initializer():
     n, m = 128, 100
     model = regression_model(m)
 
-    data = mx.sparse_nd.zeros('csr', (n, m))
+    data = mx.nd.zeros(shape=(n, m), storage_type='csr')
     label = mx.nd.zeros((n, 1))
     iterator = mx.io.NDArrayIter(data=data, label={'label':label}, batch_size=n)
 

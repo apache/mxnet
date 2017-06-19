@@ -16,6 +16,7 @@
 #include "./inst_vector.h"
 #include "./image_iter_common.h"
 #include "./iter_batchloader.h"
+#include "./iter_sparse.h"
 
 namespace mxnet {
 namespace io {
@@ -131,8 +132,8 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
 
   // check whether ith position is the indptr tensor for a CSR tensor
   inline bool IsIndPtr(size_t i) {
-    auto data_num_aux = NDArray::NumAuxData(data_stype_);
-    auto label_num_aux = NDArray::NumAuxData(label_stype_);
+    auto data_num_aux = num_aux_data(data_stype_);
+    auto label_num_aux = num_aux_data(label_stype_);
     auto label_indptr_offset = data_num_aux + 1 + label_num_aux;
     // data indptr
     if (i == data_num_aux && data_stype_ == kCSRStorage) {

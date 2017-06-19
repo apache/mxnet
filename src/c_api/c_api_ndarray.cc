@@ -289,6 +289,7 @@ void PushFCompute(const FCompute& fn,
                       requested};
       if (ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
+#if __CUDACC__
         GetDefaultBlobs<gpu>(ndinputs, &input_blobs, &temp_in, opctx);
         GetDefaultBlobs<gpu>(ndoutputs, &output_blobs, &temp_out, opctx);
         std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
@@ -296,6 +297,7 @@ void PushFCompute(const FCompute& fn,
         // cast to original storage type, if necessary
         CastNonDefaultStorage<gpu>(ndoutputs, temp_out, opctx);
         rctx.get_stream<gpu>()->Wait();
+#endif  // __CUDACC__
 #else
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif

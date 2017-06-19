@@ -14,15 +14,15 @@ import scipy.sparse as sp
 import numpy as np
 import numpy.testing as npt
 import numpy.random as rnd
-import mxnet as mx
-from .context import Context
-from .ndarray import array, _STORAGE_TYPE_STR_TO_ID
-from .symbol import Symbol
 try:
     import requests
 except ImportError:
     # in rare cases requests may be not installed
     pass
+from .context import Context
+from .ndarray import array, _STORAGE_TYPE_STR_TO_ID
+from .symbol import Symbol
+import mxnet as mx
 
 _rng = np.random.RandomState(1234)
 
@@ -89,7 +89,7 @@ def rand_sparse_ndarray(shape, storage_type, density=None):
         idx_sample = rnd.rand(shape[0])
         indices = np.argwhere(idx_sample < density).flatten()
         if indices.shape[0] == 0:
-            result = mx.sparse_nd.zeros('row_sparse', shape)
+            result = mx.nd.zeros(shape, storage_type='row_sparse')
             return result, (np.array([]), np.array([], dtype='int32'))
         # generate random values
         val = rnd.rand(indices.shape[0], num_cols)
