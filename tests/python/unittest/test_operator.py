@@ -1553,7 +1553,7 @@ def test_dot(ctx=default_context()):
                     a = mx.sym.Variable('a', dtype=data_type)
                     b = mx.sym.Variable('b', dtype=data_type)
                     c = mx.sym.dot(a, b)
-                    exe = c.simple_bind(mx.cpu(), a=a_npy.shape, b=b_npy.shape)
+                    exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
                     outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
                     assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3)
                     exe.backward(out_grads=[mx.nd.array(ograd_npy, mx.cpu())])
