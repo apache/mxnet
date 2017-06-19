@@ -137,3 +137,8 @@ List of Contributors
 * [Roshani Nagmote](https://github.com/Roshrini)
 * [Chetan Khatri](https://github.com/chetkhatri/)
 * [James Liu](https://github.com/jamesliu/)
+* [Yuwen Xiong](https://github.com/Orpine/)
+* [Haozhi Qi](https://github.com/Oh233/)
+* [Yi Li](https://github.com/liyi14/)
+* [Guodong Zhang](https://github.com/gd-zhang/)
+* [Xizhou Zhu](https://github.com/einsiedler0408/)
