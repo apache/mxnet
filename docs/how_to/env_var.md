@@ -75,8 +75,8 @@ export MXNET_GPU_WORKER_NTHREADS=3
 * MXNET_KVSTORE_BIGARRAY_BOUND
   - Values: Int ```(default=1e6)```
   - The minimum size of a "big array".
-	- When the array size is bigger than this threshold, MXNET_KVSTORE_REDUCTION_NTHREADS threads are used for reduction.
-  - This parameter is also used as a load balancer in kvstore. It controls when to partition a single weight to all the servers. If weights size of each layer is less than MXNET_KVSTORE_BIGARRAY_BOUND then, weight is sent to a single randomly picked server otherwise it is partitioned to all the servers.
+  - When the array size is bigger than this threshold, MXNET_KVSTORE_REDUCTION_NTHREADS threads are used for reduction.
+  - This parameter is also used as a load balancer in kvstore. It controls when to partition a single weight to all the servers. If the size of a single weight is less than MXNET_KVSTORE_BIGARRAY_BOUND then, it is sent to a single randomly picked server otherwise it is partitioned to all the servers.
 * MXNET_ENABLE_GPU_P2P
   - Values: 0(false) or 1(true) ```(default=1)```
   - If true, MXNet tries to use GPU peer-to-peer communication, if available on your device,
