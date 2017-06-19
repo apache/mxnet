@@ -211,7 +211,7 @@ class MKLReluOp : public Operator {
         out_data[activation::kOut], dshape, s);
       m_in_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
         in_grad[activation::kData], dshape, s);
-    } else if (out_grad[activation::kOut].ndim() == 1) {
+    } else if (out_grad[activation::kOut].ndim() == 2) {
       Shape<4> dshape = Shape4(out_grad[activation::kOut].shape_[0],
                                out_grad[activation::kOut].shape_[1], 1, 1);
       m_out_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
