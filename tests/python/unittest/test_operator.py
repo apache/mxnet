@@ -1561,32 +1561,32 @@ def test_dot(ctx=default_context()):
                     assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3)
 
     # Test dot with transpose flag using gradient checker.
+    def dot_sym(data_type):
+        x = mx.sym.Variable('x', dtype=data_type)
+        y = mx.sym.Variable('y', dtype=data_type)
+        return mx.sym.dot(x, y)
+    def dot_sym_xT(data_type):
+        x = mx.sym.Variable('x', dtype=data_type)
+        y = mx.sym.Variable('y', dtype=data_type)
+        return mx.sym.dot(x, y, transpose_a=True)
+    def dot_sym_yT(data_type):
+        x = mx.sym.Variable('x', dtype=data_type)
+        y = mx.sym.Variable('y', dtype=data_type)
+        return mx.sym.dot(x, y, transpose_b=True)
+    def dot_sym_xT_yT(data_type):
+        x = mx.sym.Variable('x', dtype=data_type)
+        y = mx.sym.Variable('y', dtype=data_type)
+        return mx.sym.dot(x, y, transpose_a=True, transpose_b=True)
     for data_type in dtypes:
-        def dot_sym():
-            x = mx.sym.Variable('x', dtype=data_type)
-            y = mx.sym.Variable('y', dtype=data_type)
-            return mx.sym.dot(x, y)
-        def dot_sym_xT():
-            x = mx.sym.Variable('x', dtype=data_type)
-            y = mx.sym.Variable('y', dtype=data_type)
-            return mx.sym.dot(x, y, transpose_a=True)
-        def dot_sym_yT():
-            x = mx.sym.Variable('x', dtype=data_type)
-            y = mx.sym.Variable('y', dtype=data_type)
-            return mx.sym.dot(x, y, transpose_b=True)
-        def dot_sym_xT_yT():
-            x = mx.sym.Variable('x', dtype=data_type)
-            y = mx.sym.Variable('y', dtype=data_type)
-            return mx.sym.dot(x, y, transpose_a=True, transpose_b=True)
         for ashape, bshape in [((3, 4), (4, 5)), ((2, 3, 4), (4, 5, 6))]:
             m1_npy = np.random.uniform(-1, 1, ashape)
             m1_npy = m1_npy.astype(data_type)
             m2_npy = np.random.uniform(-1, 1, bshape)
             m2_npy = m2_npy.astype(data_type)
-            check_numeric_gradient(dot_sym(), [m1_npy, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
-            check_numeric_gradient(dot_sym_xT(), [m1_npy.T, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
-            check_numeric_gradient(dot_sym_yT(), [m1_npy, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
-            check_numeric_gradient(dot_sym_xT_yT(), [m1_npy.T, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+            check_numeric_gradient(dot_sym(data_type), [m1_npy, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+            check_numeric_gradient(dot_sym_xT(data_type), [m1_npy.T, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+            check_numeric_gradient(dot_sym_yT(data_type), [m1_npy, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+            check_numeric_gradient(dot_sym_xT_yT(data_type), [m1_npy.T, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
 
 def test_batch_dot():
     dtypes = ['float32', 'float64']
