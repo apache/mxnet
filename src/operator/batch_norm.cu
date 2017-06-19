@@ -119,7 +119,7 @@ struct GradOp {
 
 #if CUDA_VERSION >= 9000
 #define FULLMASK 0xFFFFFFFF
-#define __shfl_xor(x) __shfl_xor_sync(FULLMASK, (x))
+#define __shfl_xor(...) __shfl_xor_sync(FULLMASK, __VA_ARGS__)
 #endif
 
 // Sum across all threads within a warp
