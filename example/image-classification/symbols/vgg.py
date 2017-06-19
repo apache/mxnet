@@ -43,7 +43,7 @@ def get_symbol(num_classes, **kwargs):
     relu5_1 = mx.symbol.Activation(data=conv5_1, act_type="relu", name="relu5_1")
     conv5_2 = mx.symbol.Convolution(
         data=relu5_1, kernel=(3, 3), pad=(1, 1), num_filter=512, name="conv5_2")
-    relu5_2 = mx.symbol.Activation(data=conv5_2, act_type="relu", name="conv1_2")
+    relu5_2 = mx.symbol.Activation(data=conv5_2, act_type="relu", name="relu5_2")
     pool5 = mx.symbol.Pooling(
         data=relu5_2, pool_type="max", kernel=(2, 2), stride=(2,2), name="pool5")
     # group 6
