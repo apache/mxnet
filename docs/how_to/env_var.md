@@ -2,6 +2,7 @@ Environment Variables
 =====================
 MXNet has several settings that you can change with environment variables.
 Typically, you wouldn't need to change these settings, but they are listed here for reference.
+
 For example, you can set these environment variables in linux or mac as follows:
 ```
 export MXNET_GPU_WORKER_NTHREADS=3
@@ -11,13 +12,13 @@ export MXNET_GPU_WORKER_NTHREADS=3
 
 * MXNET_GPU_WORKER_NTHREADS
   - Values: Int ```(default=2)```
-  - The maximum number of threads that do the computation job on each GPU. This parameter is used to parallelize the computation within a single GPU card.
+  - The maximum number of streams to use on each GPU. This parameter is used to parallelize the computation within a single GPU card.
 * MXNET_GPU_COPY_NTHREADS
   - Values: Int ```(default=1)```
   - The maximum number of concurrent threads that do the memory copy job on each GPU.
 * MXNET_CPU_WORKER_NTHREADS
   - Values: Int ```(default=1)```
-  - The maximum number of threads that do the CPU computation job. It specifies how many jobs can be run in parallel.
+  - The maximum number of scheduling threads on CPU. It specifies how many operators can be run in parallel.
 * MXNET_CPU_PRIORITY_NTHREADS
   - Values: Int ```(default=4)```
   - The number of threads given to prioritized CPU jobs.
@@ -73,9 +74,9 @@ export MXNET_GPU_WORKER_NTHREADS=3
 	- The number of CPU threads used for summing big arrays.
 * MXNET_KVSTORE_BIGARRAY_BOUND
   - Values: Int ```(default=1e6)```
-	- The minimum size of a "big array."
+  - The minimum size of a "big array".
 	- When the array size is bigger than this threshold, MXNET_KVSTORE_REDUCTION_NTHREADS threads are used for reduction.
-  - This parameter is also used as a load balancer in kvstore. It controls when to partition a layer's weights to all the servers. If weights size of each layer is less than MXNET_KVSTORE_BIGARRAY_BOUND then, weights are sent to a single randomly picked server otherwise it is partitioned to all the servers.
+  - This parameter is also used as a load balancer in kvstore. It controls when to partition a single weight to all the servers. If weights size of each layer is less than MXNET_KVSTORE_BIGARRAY_BOUND then, weight is sent to a single randomly picked server otherwise it is partitioned to all the servers.
 * MXNET_ENABLE_GPU_P2P
   - Values: 0(false) or 1(true) ```(default=1)```
   - If true, MXNet tries to use GPU peer-to-peer communication, if available on your device,
