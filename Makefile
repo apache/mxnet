@@ -106,6 +106,35 @@ else
 endif
 endif
 
+# verify existence of separate lapack library when using blas/openblas/atlas
+# switch off lapack support in case it can't be found
+# issue covered with this
+#   -  for Ubuntu 14.04 or lower, lapack is not automatically installed with openblas
+#   -  for Ubuntu, installing atlas will not automatically install the atlas provided lapack library
+# silently switching lapack off instead of letting the build fail because of backward compatibility
+ifeq ($(USE_LAPACK), 1)
+ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+ifeq (,$(wildcard /lib/liblapack.a))
+ifeq (,$(wildcard /usr/lib/liblapack.a))
+ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
+	USE_LAPACK = 0
+endif
+endif
+endif
+endif
+endif
+
+# lapack settings.
+ifeq ($(USE_LAPACK), 1)
+	ifneq ($(USE_LAPACK_PATH), )
+		LDFLAGS += -L$(USE_LAPACK_PATH)
+	endif
+	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+		LDFLAGS += -llapack
+	endif
+	CFLAGS += -DMXNET_USE_LAPACK
+endif
+
 ifeq ($(USE_CUDNN), 1)
 	CFLAGS += -DMSHADOW_USE_CUDNN=1
 	LDFLAGS += -lcudnn

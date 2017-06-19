@@ -66,6 +66,10 @@ USE_OPENMP = 0
 # can be: mkl, blas, atlas, openblas
 USE_BLAS = apple
 
+# whether use lapack during compilation
+# only effective when compiled with blas versions openblas/apple/atlas/mkl
+USE_LAPACK = 1
+
 # add path to intel library, you may need it for MKL, if you did not add the path
 # to environment variable
 USE_INTEL_PATH = NONE

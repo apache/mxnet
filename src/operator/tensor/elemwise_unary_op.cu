@@ -73,6 +73,10 @@ NNVM_REGISTER_OP(ceil)
 NNVM_REGISTER_OP(floor)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::floor>);
 
+// trunc
+NNVM_REGISTER_OP(trunc)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::trunc>);
+
 // rint
 NNVM_REGISTER_OP(rint)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::rint>);
