@@ -65,10 +65,6 @@ USE_OPENCV = 1
 # use openmp for parallelization
 USE_OPENMP = 1
 
-# whether use lapack during compilation
-# only effective when compiled with blas versions openblas/apple/atlas/mkl
-USE_LAPACK = 0
-
 # MKL ML Library for Intel CPU/Xeon Phi
 # Please refer to MKL_README.md for details
 
@@ -96,6 +92,13 @@ USE_BLAS = apple
 else
 USE_BLAS = atlas
 endif
+
+# whether use lapack during compilation
+# only effective when compiled with blas versions openblas/apple/atlas/mkl
+USE_LAPACK = 1
+
+# path to lapack library in case of a non-standard installation
+USE_LAPACK_PATH =
 
 # add path to intel library, you may need it for MKL, if you did not add the path
 # to environment variable
