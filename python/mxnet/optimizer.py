@@ -751,6 +751,7 @@ class Ftrl(Optimizer):
 
 @register
 class Test(Optimizer):
+    """The Test optimizer"""
     def __init__(self, **kwargs):
         super(Test, self).__init__(**kwargs)
 
@@ -771,16 +772,35 @@ class Updater(object):
     def __init__(self, optimizer):
         self.optimizer = optimizer
         self.states = {}
+        self.states_synced = {}
 
     def __call__(self, index, grad, weight):
         """Updates weight given gradient and index."""
         if index not in self.states:
             self.states[index] = self.optimizer.create_state(index, weight)
+            self.states_synced[index] = True
+        elif not self.states_synced[index]:
+            self.states[index] = \
+                self.sync_state_context(self.states[index], weight.context)
+            self.states_synced[index] = True
         self.optimizer.update(index, weight, grad, self.states[index])
+
+    def sync_state_context(self, state, context):
+        if isinstance(state, NDArray):
+            return state.as_in_context(context)
+        elif isinstance(state, (tuple, list)):
+            synced_state = (self.sync_state_context(i, context) for i in state)
+            if isinstance(state, tuple):
+                return tuple(synced_state)
+            else:
+                return list(synced_state)
+        else:
+            return state
 
     def set_states(self, states):
         """Sets updater states."""
         self.states = pickle.loads(states)
+        self.states_synced = dict.fromkeys(self.states.keys(), False)
 
     def get_states(self):
         """Gets updater states."""
