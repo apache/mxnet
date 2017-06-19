@@ -590,7 +590,7 @@ class BaseModule(object):
         raise NotImplementedError()
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
-                    allow_missing=False, force_init=False):
+                    allow_missing=False, force_init=False, allow_extra_params=False):
         """Initializes the parameters and auxiliary states.
 
         Parameters
@@ -607,7 +607,12 @@ class BaseModule(object):
             If ``True``, params could contain missing values, and the initializer will be
             called to fill those missing params.
         force_init : bool
-            If ``True``, `force_init` will force re-initialize even if already initialized.
+            If ``True``, `force_init` will force re-initialize even if already initialized.    
+        allow_extra_params : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
+        
 
         Examples
         --------
@@ -616,7 +621,7 @@ class BaseModule(object):
         """
         raise NotImplementedError()
 
-    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True):
+    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True, allow_extra_params=False):
         """Assigns parameter and aux state values.
 
         Parameters
@@ -630,6 +635,10 @@ class BaseModule(object):
             called to fill those missing params.
         force_init : bool
             If ``True``, will force re-initialize even if already initialized.
+        allow_extra_params : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
 
         Examples
         --------
@@ -638,7 +647,7 @@ class BaseModule(object):
         >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
         """
         self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
-                         allow_missing=allow_missing, force_init=force_init)
+                         allow_missing=allow_missing, force_init=force_init, allow_extra_params=allow_extra_params)
 
     def save_params(self, fname):
         """Saves model parameters to file.
