@@ -18,9 +18,9 @@ def test_paramdict():
     params = foo.ParameterDict('net_')
     params.get('weight', shape=(10, 10))
     assert list(params.keys()) == ['net_weight']
-    params.initialize()
+    params.initialize(ctx=mx.cpu())
     params.save('test.params')
-    params.load('test.params')
+    params.load('test.params', mx.cpu())
 
 
 def test_parameter_sharing():

@@ -234,10 +234,10 @@ def test_retain_grad():
         "differentiating the same graph twice without retain_graph should fail")
 
 
-def test_set_grad():
+def test_attach_grad():
     x = mx.nd.zeros((10,))
     assert x.grad is None
-    x.set_grad()
+    x.attach_grad()
     with train_section():
         y = x * 2
         assert y.grad is None
