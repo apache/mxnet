@@ -19,10 +19,10 @@ try:
 except ImportError:
     # in rare cases requests may be not installed
     pass
+import mxnet as mx
 from .context import Context
 from .ndarray import array, _STORAGE_TYPE_STR_TO_ID
 from .symbol import Symbol
-import mxnet as mx
 
 _rng = np.random.RandomState(1234)
 

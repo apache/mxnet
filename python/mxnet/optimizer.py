@@ -2,10 +2,10 @@
 import math
 import pickle
 import logging
+import mxnet as mx
 from .ndarray import NDArray, clip, sqrt, sign
 from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
 from .random import normal
-import mxnet as mx
 
 
 class Optimizer(object):
