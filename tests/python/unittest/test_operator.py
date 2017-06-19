@@ -1532,102 +1532,118 @@ def test_stn():
 
 def test_dot(ctx=default_context()):
     np.random.seed(1234)
+    dtypes = ['float32', 'float64']
 
     # Test normal dot.
-    for m in range(1, 5):
-        for k in range(1, 5):
-            for n in range(1, 5):
-                a_npy = np.random.normal(0, 1, (m, k))
-                b_npy = np.random.normal(0, 1, (k, n))
-                c_npy = np.empty((m, n))
-                ograd_npy = np.random.normal(0, 1, (m, n))
-                agrad_npy = np.empty((m, k))
-                bgrad_npy = np.empty((k, n))
-                c_npy[:, :] = np.dot(a_npy[:, :], b_npy[:, :])
-                bgrad_npy[:, :] = np.dot(a_npy[:, :].T, ograd_npy[:, :])
-                agrad_npy[:, :] = np.dot(ograd_npy[:, :], b_npy[:, :].T)
-                a = mx.sym.Variable('a')
-                b = mx.sym.Variable('b')
-                c = mx.sym.dot(a, b)
-                exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
-                outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3)
-                exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3)
-                assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3)
-
-    # Test dot with transpose flag using gradient checker.
-    def dot_sym():
-        x = mx.sym.Variable('x')
-        y = mx.sym.Variable('y')
-        return mx.sym.dot(x, y)
-    def dot_sym_xT():
-        x = mx.sym.Variable('x')
-        y = mx.sym.Variable('y')
-        return mx.sym.dot(x, y, transpose_a=True)
-    def dot_sym_yT():
-        x = mx.sym.Variable('x')
-        y = mx.sym.Variable('y')
-        return mx.sym.dot(x, y, transpose_b=True)
-    def dot_sym_xT_yT():
-        x = mx.sym.Variable('x')
-        y = mx.sym.Variable('y')
-        return mx.sym.dot(x, y, transpose_a=True, transpose_b=True)
-    for ashape, bshape in [((3, 4), (4, 5)), ((2,3,4), (4, 5, 6))]:
-        m1_npy = np.random.uniform(-1, 1, ashape)
-        m2_npy = np.random.uniform(-1, 1, bshape)
-        check_numeric_gradient(dot_sym(), [m1_npy, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
-        check_numeric_gradient(dot_sym_xT(), [m1_npy.T, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
-        check_numeric_gradient(dot_sym_yT(), [m1_npy, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
-        check_numeric_gradient(dot_sym_xT_yT(), [m1_npy.T, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
-
-def test_batch_dot():
-    for batch_size in range(1, 5):
+    for data_type in dtypes:
         for m in range(1, 5):
             for k in range(1, 5):
                 for n in range(1, 5):
-                    transpose_a = (np.random.rand() > 0.5)
-                    transpose_b = (np.random.rand() > 0.5)
-                    a_npy = np.random.normal(0, 1, (batch_size, m, k))
-                    b_npy = np.random.normal(0, 1, (batch_size, k, n))
-                    c_npy = np.empty((batch_size, m, n))
-                    ograd_npy = np.random.normal(0, 1, (batch_size, m, n))
-                    agrad_npy = np.empty((batch_size, m, k))
-                    bgrad_npy = np.empty((batch_size, k, n))
-                    a_init_grad_npy = np.random.normal(size=(batch_size, m, k))
-                    b_init_grad_npy = np.random.normal(size=(batch_size, k, n))
-                    for i in range(batch_size):
-                        c_npy[i, :, :] = np.dot(a_npy[i, :, :], b_npy[i, :, :])
-                        bgrad_npy[i, :, :] = np.dot(a_npy[i, :, :].T, ograd_npy[i, :, :])
-                        agrad_npy[i, :, :] = np.dot(ograd_npy[i, :, :], b_npy[i, :, :].T)
-                    a = mx.sym.Variable('a')
-                    b = mx.sym.Variable('b')
-                    c = mx.sym.batch_dot(a, b, transpose_a=transpose_a, transpose_b=transpose_b)
-                    if transpose_a:
-                        a_npy = np.transpose(a_npy, axes=(0, 2, 1))
-                        agrad_npy = np.transpose(agrad_npy, axes=(0, 2, 1))
-                        a_init_grad_npy = np.transpose(a_init_grad_npy, axes=(0, 2, 1))
-                    if transpose_b:
-                        b_npy = np.transpose(b_npy, axes=(0, 2, 1))
-                        bgrad_npy = np.transpose(bgrad_npy, axes=(0, 2, 1))
-                        b_init_grad_npy = np.transpose(b_init_grad_npy, axes=(0, 2, 1))
-                    exe = c.simple_bind(ctx=default_context(),
-                                        a=a_npy.shape, b=b_npy.shape, grad_req='write')
-                    exe_add = c.simple_bind(ctx=default_context(),
-                                            a=a_npy.shape, b=b_npy.shape, grad_req='add')
-                    exe_add.grad_dict['a'][:] = a_init_grad_npy
-                    exe_add.grad_dict['b'][:] = b_init_grad_npy
+                    a_npy = np.random.normal(0, 1, (m, k))
+                    a_npy = a_npy.astype(data_type)
+                    b_npy = np.random.normal(0, 1, (k, n))
+                    b_npy = b_npy.astype(data_type)
+                    c_npy = np.empty((m, n), dtype=data_type)
+                    ograd_npy = np.random.normal(0, 1, (m, n))
+                    ograd_npy = ograd_npy.astype(data_type)
+                    agrad_npy = np.empty((m, k), dtype=data_type)
+                    bgrad_npy = np.empty((k, n), dtype=data_type)
+                    c_npy[:, :] = np.dot(a_npy[:, :], b_npy[:, :])
+                    bgrad_npy[:, :] = np.dot(a_npy[:, :].T, ograd_npy[:, :])
+                    agrad_npy[:, :] = np.dot(ograd_npy[:, :], b_npy[:, :].T)
+                    a = mx.sym.Variable('a', dtype=data_type)
+                    b = mx.sym.Variable('b', dtype=data_type)
+                    c = mx.sym.dot(a, b)
+                    exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
                     outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                    assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3, atol=1e-4)
-                    exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                    assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3, atol=1e-4)
-                    assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3, atol=1e-4)
-                    exe_add.forward(is_train=True, a=a_npy, b=b_npy)
-                    exe_add.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                    assert_almost_equal(exe_add.grad_dict['a'].asnumpy(),
-                                   agrad_npy + a_init_grad_npy, rtol=1e-3, atol=1e-4)
-                    assert_almost_equal(exe_add.grad_dict['b'].asnumpy(),
-                                   bgrad_npy + b_init_grad_npy, rtol=1e-3, atol=1e-4)
+                    assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3)
+                    exe.backward(out_grads=[mx.nd.array(ograd_npy, mx.cpu())])
+                    assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3)
+                    assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3)
+
+    # Test dot with transpose flag using gradient checker.
+    def dot_sym(data_type):
+        x = mx.sym.Variable('x', dtype=data_type)
+        y = mx.sym.Variable('y', dtype=data_type)
+        return mx.sym.dot(x, y)
+    def dot_sym_xT(data_type):
+        x = mx.sym.Variable('x', dtype=data_type)
+        y = mx.sym.Variable('y', dtype=data_type)
+        return mx.sym.dot(x, y, transpose_a=True)
+    def dot_sym_yT(data_type):
+        x = mx.sym.Variable('x', dtype=data_type)
+        y = mx.sym.Variable('y', dtype=data_type)
+        return mx.sym.dot(x, y, transpose_b=True)
+    def dot_sym_xT_yT(data_type):
+        x = mx.sym.Variable('x', dtype=data_type)
+        y = mx.sym.Variable('y', dtype=data_type)
+        return mx.sym.dot(x, y, transpose_a=True, transpose_b=True)
+    for data_type in dtypes:
+        for ashape, bshape in [((3, 4), (4, 5)), ((2, 3, 4), (4, 5, 6))]:
+            m1_npy = np.random.uniform(-1, 1, ashape)
+            m1_npy = m1_npy.astype(data_type)
+            m2_npy = np.random.uniform(-1, 1, bshape)
+            m2_npy = m2_npy.astype(data_type)
+            check_numeric_gradient(dot_sym(data_type), [m1_npy, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+            check_numeric_gradient(dot_sym_xT(data_type), [m1_npy.T, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+            check_numeric_gradient(dot_sym_yT(data_type), [m1_npy, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+            check_numeric_gradient(dot_sym_xT_yT(data_type), [m1_npy.T, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+
+def test_batch_dot():
+    dtypes = ['float32', 'float64']
+    
+    for data_type in dtypes:
+        for batch_size in range(1, 5):
+            for m in range(1, 5):
+                for k in range(1, 5):
+                    for n in range(1, 5):
+                        transpose_a = (np.random.rand() > 0.5)
+                        transpose_b = (np.random.rand() > 0.5)
+                        a_npy = np.random.normal(0, 1, (batch_size, m, k))
+                        a_npy = a_npy.astype(data_type)
+                        b_npy = np.random.normal(0, 1, (batch_size, k, n))
+                        b_npy = b_npy.astype(data_type)
+                        c_npy = np.empty((batch_size, m, n), dtype=data_type)
+                        ograd_npy = np.random.normal(0, 1, (batch_size, m, n))
+                        ograd_npy = ograd_npy.astype(data_type)
+                        agrad_npy = np.empty((batch_size, m, k), dtype=data_type)
+                        bgrad_npy = np.empty((batch_size, k, n), dtype=data_type)
+                        a_init_grad_npy = np.random.normal(size=(batch_size, m, k))
+                        a_init_grad_npy = a_npy.astype(data_type)
+                        b_init_grad_npy = np.random.normal(size=(batch_size, k, n))
+                        b_init_grad_npy = b_npy.astype(data_type)
+                        for i in range(batch_size):
+                            c_npy[i, :, :] = np.dot(a_npy[i, :, :], b_npy[i, :, :])
+                            bgrad_npy[i, :, :] = np.dot(a_npy[i, :, :].T, ograd_npy[i, :, :])
+                            agrad_npy[i, :, :] = np.dot(ograd_npy[i, :, :], b_npy[i, :, :].T)
+                            a = mx.sym.Variable('a', dtype=data_type)
+                            b = mx.sym.Variable('b', dtype=data_type)
+                            c = mx.sym.batch_dot(a, b, transpose_a=transpose_a, transpose_b=transpose_b)
+                        if transpose_a:
+                            a_npy = np.transpose(a_npy, axes=(0, 2, 1))
+                            agrad_npy = np.transpose(agrad_npy, axes=(0, 2, 1))
+                            a_init_grad_npy = np.transpose(a_init_grad_npy, axes=(0, 2, 1))
+                        if transpose_b:
+                            b_npy = np.transpose(b_npy, axes=(0, 2, 1))
+                            bgrad_npy = np.transpose(bgrad_npy, axes=(0, 2, 1))
+                            b_init_grad_npy = np.transpose(b_init_grad_npy, axes=(0, 2, 1))
+                            exe = c.simple_bind(ctx=default_context(),
+                                a=a_npy.shape, b=b_npy.shape, grad_req='write')
+                            exe_add = c.simple_bind(ctx=default_context(),
+                                a=a_npy.shape, b=b_npy.shape, grad_req='add')
+                            exe_add.grad_dict['a'][:] = a_init_grad_npy
+                            exe_add.grad_dict['b'][:] = b_init_grad_npy
+                            outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
+                            assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3, atol=1e-4)
+                            exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                            assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3, atol=1e-4)
+                            assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3, atol=1e-4)
+                            exe_add.forward(is_train=True, a=a_npy, b=b_npy)
+                            exe_add.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                            assert_almost_equal(exe_add.grad_dict['a'].asnumpy(),
+                                agrad_npy + a_init_grad_npy, rtol=1e-3, atol=1e-4)
+                            assert_almost_equal(exe_add.grad_dict['b'].asnumpy(),
+                                bgrad_npy + b_init_grad_npy, rtol=1e-3, atol=1e-4)
 
 def get_correlation(data1,data2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
 
