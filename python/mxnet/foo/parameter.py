@@ -116,6 +116,36 @@ class Parameter(object):
         self._defered_init = (init, ctx, default_init)
         self._finish_deferred_init()
 
+    def _load_init(self, data, ctx):
+        """(Re)init by loading from data."""
+        if self.shape:
+            for i, j in zip(self.shape, data.shape):
+                assert i == 0 or i == j, \
+                    "Failed loading Parameter %s from saved params: " \
+                    "shape incompatible expacted %s vs saved %s"%(
+                        self.name, str(self.shape), str(data.shape))
+        if self.dtype:
+            assert np.dtype(self.dtype).type == data.dtype, \
+                "Failed loading Parameter %s from saved params: " \
+                "dtype incompatible expacted %s vs saved %s"%(
+                    self.name, str(self.dtype), str(data.dtype))
+        if isinstance(ctx, Context):
+            ctx = [ctx]
+        if self._data is None:
+            if self._defered_init:
+                assert set(ctx) == set(self._defered_init[1]), \
+                    "Failed to load Parameter %s on %s because it was " \
+                    "previous initialized on %s."%(
+                        self.name, str(ctx), str(self.list_ctx()))
+            self._init_impl(data, ctx)
+        else:
+            assert set(ctx) == set(self.list_ctx()), \
+                "Failed to load Parameter %s on %s because it was " \
+                "previous initialized on %s."%(
+                    self.name, str(ctx), str(self.list_ctx()))
+            self.set_data(data)
+        self._defered_init = ()
+
     def _finish_deferred_init(self):
         """Finish deferred initialization."""
         if not self._defered_init:
@@ -129,27 +159,30 @@ class Parameter(object):
                 self.name, str(self.shape))
 
         with autograd.test_section():
-            data = ndarray.zeros(shape=self.shape, dtype=self.dtype, ctx=ctx[0])
+            data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
+                                 ctx=context.cpu())
             if init is None:
                 init = self.init
             initializer.create(default_init)(
-                initializer.InitDesc(self.name, {'__init__': init}),
-                data)
+                initializer.InitDesc(self.name, {'__init__': init}), data)
 
-            self._data = OrderedDict()
-            self._data[ctx[0]] = data
-            for i in ctx[1:]:
-                self._data[i] = data.copyto(i)
+            self._init_impl(data, ctx)
 
-            if self.grad_req == 'null':
-                self._grad = None
-                return
+    def _init_impl(self, data, ctx):
+        """Set data and grad."""
+        self._data = OrderedDict()
+        for i in ctx:
+            self._data[i] = data.copyto(i)
 
-            self._grad = OrderedDict()
-            for i in ctx:
-                self._grad[i] = ndarray.zeros_like(self._data[i])
+        if self.grad_req == 'null':
+            self._grad = None
+            return
 
-            autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
+        self._grad = OrderedDict()
+        for i in ctx:
+            self._grad[i] = ndarray.zeros_like(self._data[i])
+
+        autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
 
     def set_data(self, data):
         """Set this parameter's value on all contexts to data."""
@@ -365,7 +398,7 @@ class ParameterDict(object):
             arg_dict[param.name] = weight
         ndarray.save(filename, arg_dict)
 
-    def load(self, filename, allow_missing=False, ignore_extra=False):
+    def load(self, filename, ctx, allow_missing=False, ignore_extra=False):
         arg_dict = ndarray.load(filename)
         if not allow_missing:
             for name in self.keys():
@@ -377,4 +410,4 @@ class ParameterDict(object):
                     "Parameter %s loaded from file %s is not present in ParameterDict"%(
                         name, filename)
                 continue
-            self[name].set_data(arg_dict[name])
+            self[name]._load_init(arg_dict[name], ctx)
