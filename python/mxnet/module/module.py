@@ -285,9 +285,11 @@ class Module(BaseModule):
         self._params_dirty = False
 
         # copy the initialized parameters to devices
-        self._exec_group.set_params(self._arg_params, self._aux_params, allow_extra_params=allow_extra_params)
+        self._exec_group.set_params(self._arg_params, self._aux_params,
+                                    allow_extra_params=allow_extra_params)
 
-    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True, allow_extra_params=False):
+    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True,
+                   allow_extra_params=False):
         """Assigns parameter and aux state values.
 
         Parameters
@@ -313,7 +315,8 @@ class Module(BaseModule):
         """
         if not allow_missing:
             self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
-                             allow_missing=allow_missing, force_init=force_init, allow_extra_params=allow_extra_params)
+                             allow_missing=allow_missing, force_init=force_init,
+                             allow_extra_params=allow_extra_params)
             return
 
         if self.params_initialized and not force_init:
