@@ -954,7 +954,7 @@ fixed-size items.
             return self
         return self.copyto(context)
 
-    def set_grad(self, grad_req='write'):
+    def attach_grad(self, grad_req='write'):
         """Attach a gradient buffer to this NDArray, so that `backward`
         can compute gradient with respect to it.
 
