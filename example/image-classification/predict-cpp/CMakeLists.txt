@@ -5,10 +5,14 @@ if(USE_OPENCV)
   endif()
   add_executable(image-classification-predict image-classification-predict.cc)
   include_directories(SYSTEM ${OpenCV_INCLUDE_DIRS})
-  target_link_libraries(image-classification-predict mxnet)
+  target_link_libraries(image-classification-predict
+    ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE}
+    dmlc
+    ${mxnet_LINKER_LIBS}
+    )
   target_link_libraries(image-classification-predict ${OpenCV_LIBS})
   if(UNIX)
-      target_link_libraries(image-classification-predict rt)  
+      target_link_libraries(image-classification-predict rt)
   endif()
   list(APPEND mxnet_LINKER_LIBS ${OpenCV_LIBS})
 endif()
