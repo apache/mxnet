@@ -3,7 +3,7 @@ Environment Variables
 MXNet has several settings that you can change with environment variables.
 Typically, you wouldn't need to change these settings, but they are listed here for reference.
 
-For example, you can set these environment variables in linux or mac as follows:
+For example, you can set these environment variables in Linux or macOS as follows:
 ```
 export MXNET_GPU_WORKER_NTHREADS=3
 ```
@@ -12,7 +12,7 @@ export MXNET_GPU_WORKER_NTHREADS=3
 
 * MXNET_GPU_WORKER_NTHREADS
   - Values: Int ```(default=2)```
-  - The maximum number of streams to use on each GPU. This parameter is used to parallelize the computation within a single GPU card.
+  - The maximum number of threads to use on each GPU. This parameter is used to parallelize the computation within a single GPU card.
 * MXNET_GPU_COPY_NTHREADS
   - Values: Int ```(default=1)```
   - The maximum number of concurrent threads that do the memory copy job on each GPU.
@@ -24,22 +24,24 @@ export MXNET_GPU_WORKER_NTHREADS=3
   - The number of threads given to prioritized CPU jobs.
 * MXNET_CPU_NNPACK_NTHREADS
   - Values: Int ```(default=4)```
-  - The number of threads used for NNPACK.
+  - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK](http://mxnet.io/how_to/nnpack.html) to know more about it.
 
 ## Memory Options
 
 * MXNET_EXEC_ENABLE_INPLACE
   - Values: true or false ```(default=true)```
-  - Whether to enable in-place optimization in symbolic execution.
+  - Whether to enable in-place optimization in symbolic execution. Checkout [in-place optimization](http://mxnet.io/architecture/note_memory.html#in-place-operations) to know more about it.
 * NNVM_EXEC_MATCH_RANGE
   - Values: Int ```(default=16)```
-  - The rough matching scale in the symbolic execution memory allocator.
+  - The approximate matching scale in the symbolic execution memory allocator.
   - Set this to 0 if you don't want to enable memory sharing between graph nodes(for debugging purposes).
+  - This variable has impact on the result of memory planning. So, MXNet sweep between [1, NNVM_EXEC_MATCH_RANGE], and selects the best value.
 * MXNET_EXEC_NUM_TEMP
   - Values: Int ```(default=1)```
-  - The maximum number of temp workspaces to allocate to each device.
+  - The maximum number of temporary workspaces to allocate to each device. This controls space replicas and in turn reduces the memory usage.
   - Setting this to a small number can save GPU memory. It will also likely decrease the level of parallelism, which is usually acceptable.
-  - This is used to get number of matching colors and in turn how much parallelism one can get in each GPU. Color based match usually costs more memory but also enables more parallelism.
+  - MXNet internally uses graph coloring algorithm to [optimize memory consumption](http://mxnet.io/architecture/note_memory.html).
+  - This parameter is also used to get number of matching colors in graph and in turn how much parallelism one can get in each GPU. Color based match usually costs more memory but also enables more parallelism.
 * MXNET_GPU_MEM_POOL_RESERVE
   - Values: Int ```(default=5)```
   - The percentage of GPU memory to reserve for things other than the GPU array, such as kernel launch or cudnn handle space.
@@ -73,7 +75,7 @@ export MXNET_GPU_WORKER_NTHREADS=3
   - Values: Int ```(default=4)```
 	- The number of CPU threads used for summing big arrays.
 * MXNET_KVSTORE_BIGARRAY_BOUND
-  - Values: Int ```(default=1e6)```
+  - Values: Int ```(default=1000000)```
   - The minimum size of a "big array".
   - When the array size is bigger than this threshold, MXNET_KVSTORE_REDUCTION_NTHREADS threads are used for reduction.
   - This parameter is also used as a load balancer in kvstore. It controls when to partition a single weight to all the servers. If the size of a single weight is less than MXNET_KVSTORE_BIGARRAY_BOUND then, it is sent to a single randomly picked server otherwise it is partitioned to all the servers.
