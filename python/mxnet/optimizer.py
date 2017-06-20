@@ -5,6 +5,9 @@ import logging
 from .ndarray import NDArray, zeros, clip, sqrt, sign
 from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
 from .random import normal
+import numpy as np
+from .ndarray import ones, ones_like
+from .ndarray import abs as absolute
 
 
 class Optimizer(object):
@@ -37,10 +40,29 @@ class Optimizer(object):
 
     begin_num_update : int, optional
         The initial number of updates.
+
+    weight_sparsity : list of floats, optional
+        The sparsity on the weights required on each iteration of sparse training.
+
+    bias_sparsity : list of floats, optional
+        The sparsity on the biases required on each iteration of sparse training.
+
+    switch_epoch : list of ints, optional
+        The number of iterations of each dense/sparse training required. Begins with
+        dense training.
+
+    batches_per_epoch : int. optional
+        The number of batches in each epoch.
+
+    do_pruning : boolean, optional
+        Whether pruning is required or not.
     """
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
-                 lr_scheduler=None, sym=None, begin_num_update=0):
+                 lr_scheduler=None, sym=None, begin_num_update=0,
+                 weight_sparsity = [0], bias_sparsity = [0],
+                 switch_epoch = [100000], batches_per_epoch = 100000,
+                 do_pruning = False):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -64,6 +86,16 @@ class Optimizer(object):
 
         self.set_lr_mult({})
         self.set_wd_mult({})
+
+        self.masks = []
+        self.masks_updated = False
+        self.epoch = 0
+        self.weight_sparsity = weight_sparsity
+        self.bias_sparsity = bias_sparsity
+        self.switch_epoch = switch_epoch
+        self.batches_per_epoch = batches_per_epoch
+        self.do_pruning = do_pruning
+        self.prune = False
 
     opt_registry = {}
 
@@ -301,6 +333,48 @@ class Optimizer(object):
             wd *= self.wd_mult.get(self.idx2name[index], 1.0)
         return wd
 
+    def update_masks(self, index, weight):
+        """Updates the masks for sparse training.
+
+        Parameters
+        ----------
+        index : int
+            The index for weight.
+        weight : NDArray
+            The weight matrix.
+        """
+        epoch = int((self.num_update - 1) / self.batches_per_epoch) + 1
+
+        if index == 0:
+            self.masks_updated = True
+        if self.epoch != epoch:
+            self.epoch = epoch
+            if epoch == 1:
+                self.masks_updated = False
+            if self.switch_epoch[0] == 0:
+                self.masks_updated = False
+                self.switch_epoch.pop(0)
+                if self.prune:
+                    self.bias_sparsity.pop(0)
+                    self.weight_sparsity.pop(0)
+                self.prune = not self.prune
+            self.switch_epoch[0] -= 1
+
+        if not self.masks_updated:
+            if epoch == 1:
+                self.masks.append(ones_like(weight))
+            elif not self.prune:
+                self.masks[index] = ones_like(weight)
+            elif self.prune:
+                if len(weight.shape) == 1:
+                    sparsity = self.bias_sparsity[0]
+                    threshold = np.percentile(absolute(weight).asnumpy(), sparsity)
+                else:
+                    sparsity = self.weight_sparsity[0]
+                    threshold = np.percentile(absolute(weight).asnumpy(), sparsity)
+                self.masks[index] = absolute(weight) >= threshold
+            print 'nonzeros in mask\t', (np.count_nonzero(self.masks[index].asnumpy()) / float(self.masks[index].size))
+
 # convenience wrapper for Optimizer.Register
 register = Optimizer.register   # pylint: disable=invalid-name
 
@@ -337,9 +411,12 @@ class SGD(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
+
+        if self.do_pruning:
+            self.update_masks(index, weight)
 
         kwargs = {'rescale_grad': self.rescale_grad}
         if self.momentum > 0:
@@ -353,6 +430,12 @@ class SGD(Optimizer):
         else:
             sgd_update(weight, grad, out=weight,
                        lr=lr, wd=wd, **kwargs)
+
+        if self.do_pruning:
+            weight[:] = weight * self.masks[index]
+            grad[:] = grad * self.masks[index]
+            if state is not None:
+                state[:] = state * self.masks[index]
 
 @register
 class DCASGD(Optimizer):
