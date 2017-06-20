@@ -179,7 +179,7 @@ def test_unfuse():
 
 def check_rnn_forward(layer, inputs):
     layer.all_params().initialize()
-    with mx.autograd.train_section():
+    with mx.autograd.record():
         layer.unroll(3, inputs, merge_outputs=True)[0].backward()
         mx.autograd.backward(layer.unroll(3, inputs, merge_outputs=False)[0])
     mx.nd.waitall()

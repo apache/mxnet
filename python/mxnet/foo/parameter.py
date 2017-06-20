@@ -158,7 +158,7 @@ class Parameter(object):
             "in_filters, num_features etc for Layers."%(
                 self.name, str(self.shape))
 
-        with autograd.test_section():
+        with autograd.pause():
             data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
                                  ctx=context.cpu())
             if init is None:

@@ -54,7 +54,7 @@ for epoch in count(1):
     values = []
     heads = []
     actions = []
-    with autograd.train_section():
+    with autograd.record():
         # Sample a sequence of actions
         for t in range(10000):
             state = mx.nd.array(np.expand_dims(state, 0))

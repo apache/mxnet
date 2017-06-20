@@ -101,7 +101,7 @@ for epoch in range(opt.niter):
         data = batch.data[0].copyto(ctx)
         noise = mx.nd.random_normal(0, 1, shape=(opt.batchSize, nz, 1, 1), ctx=ctx)
 
-        with autograd.train_section():
+        with autograd.record():
             output = netD(data)
             output = output.reshape((opt.batchSize, 2))
             errD_real = foo.loss.softmax_cross_entropy_loss(output, real_label)
@@ -118,7 +118,7 @@ for epoch in range(opt.niter):
         ############################
         # (2) Update G network: maximize log(D(G(z)))
         ###########################
-        with autograd.train_section():
+        with autograd.record():
             output = netD(fake)
             output = output.reshape((opt.batchSize, 2))
             errG = foo.loss.softmax_cross_entropy_loss(output, real_label)
