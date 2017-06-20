@@ -164,7 +164,6 @@ def test_sgd():
                             kwarg.update(rg_option)
                             kwarg.update(wd_option)
                             kwarg.update(mp_option)
-                            print(kwarg, dtype)
                             if (dtype == np.float16 and
                                     ('multi_precision' not in kwarg or
                                         not kwarg['multi_precision'])):
