@@ -172,6 +172,36 @@ class Symbol(SymbolBase):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __mod__(self, other):
+        """x.__mod__(y) <=> x%y
+
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_mod` instead. """
+        if isinstance(other, Symbol):
+            return _internal._Mod(self, other)
+        if isinstance(other, Number):
+            return _internal._ModScalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __rmod__(self, other):
+        """x.__rmod__(y) <=> y%x
+
+        Only `NDArray` is supported for now.
+
+        Example usage:
+        ----------
+        >>> x = mx.nd.ones((2,3))*3
+        >>> y = mx.nd.ones((2,3))
+        >>> x.__rmod__(y).asnumpy()
+        array([[ 1.,  1.,  1.,
+               [ 1.,  1.,  1., dtype=float32)
+        """
+        if isinstance(other, Number):
+            return _internal._RModScalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
     def __truediv__(self, other):
         return self.__div__(other)
 

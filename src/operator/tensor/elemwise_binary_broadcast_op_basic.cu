@@ -37,5 +37,12 @@ NNVM_REGISTER_OP(_backward_broadcast_div)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::div_grad,
                                                                 mshadow_op::div_rgrad>);
 
+NNVM_REGISTER_OP(broadcast_mod)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::mod>);
+
+NNVM_REGISTER_OP(_backward_broadcast_mod)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::mod_grad,
+                                                                  mshadow_op::mod_rgrad>);
+
 }  // namespace op
 }  // namespace mxnet
