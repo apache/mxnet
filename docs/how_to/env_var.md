@@ -53,9 +53,9 @@ export MXNET_GPU_WORKER_NTHREADS=3
   - Values: String ```(default=ThreadedEnginePerDevice)```
   - The type of underlying execution engine of MXNet.
   - Choices:
-    - NaiveEngine: A very simple engine that uses the master thread to do computation.
+    - NaiveEngine: A very simple engine that uses the master thread to do the computation synchronously. Setting this engine disables multi-threading. You can use this type for debugging in case of any error. Backtrace will give you the series of calls that lead to the error. Remember to set MXNET_ENGINE_TYPE back to empty after debugging.
     - ThreadedEngine: A threaded engine that uses a global thread pool to schedule jobs.
-    - ThreadedEnginePerDevice: A threaded engine that allocates thread per GPU.
+    - ThreadedEnginePerDevice: A threaded engine that allocates thread per GPU and executes jobs asynchronously.
 
 ## Execution Options
 
@@ -88,7 +88,8 @@ export MXNET_GPU_WORKER_NTHREADS=3
 
 * MXNET_BACKWARD_DO_MIRROR
   - Values: 0(false) or 1(true) ```(default=0)```
-  - Whether to do `mirror` during training for saving device memory. This parameter trades off the computation for memory consumption.
+  - MXNet uses mirroring concept to save memory. Normally backward pass needs some forward input and it is stored in memory but you can choose to release this saved input and recalculate it in backward pass when needed. This basically trades off the computation for memory consumption.
+  - This parameter decides whether to do `mirror` during training for saving device memory.
   - When set to `1`, during forward propagation, graph executor will `mirror` some layer's feature map and drop others, but it will re-compute this dropped feature maps when needed.
   - `MXNET_BACKWARD_DO_MIRROR=1` will save 30%~50% of device memory, but retains about 95% of running speed.
   - One extension of `mirror` in MXNet is called [memonger technology](https://arxiv.org/abs/1604.06174), it will only use O(sqrt(N)) memory at 75% running speed. Checkout the code [here](https://github.com/dmlc/mxnet-memonger).
