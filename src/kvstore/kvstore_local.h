@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <bitset>
 #include <vector>
+#include <string>
 #include <utility>
 #include <algorithm>
 #include "./comm.h"
