@@ -13,9 +13,10 @@ logging.basicConfig(level=logging.DEBUG)
 # define network
 
 net = nn.Sequential()
-net.add(nn.Dense(128, in_units=784, activation='relu'))
-net.add(nn.Dense(64, in_units=128, activation='relu'))
-net.add(nn.Dense(10, in_units=64))
+with net.name_scope():
+    net.add(nn.Dense(128, activation='relu'))
+    net.add(nn.Dense(64, activation='relu'))
+    net.add(nn.Dense(10))
 
 # data
 

@@ -31,7 +31,7 @@ def test_parameter_sharing():
                 self.dense0 = nn.Dense(5, in_units=5)
                 self.dense1 = nn.Dense(5, in_units=5)
 
-        def forward(self, F, x):
+        def forward(self, x):
             return self.dense1(self.dense0(x))
 
     net1 = Net(prefix='net1_')
@@ -62,6 +62,12 @@ def test_basic():
 
 def check_layer_forward(layer, dshape):
     layer.all_params().initialize()
+    with mx.contrib.autograd.train_section():
+        out = layer(mx.nd.ones(shape=dshape))
+    out.backward()
+
+    layer.hybridize()
+
     with mx.contrib.autograd.train_section():
         out = layer(mx.nd.ones(shape=dshape))
     out.backward()

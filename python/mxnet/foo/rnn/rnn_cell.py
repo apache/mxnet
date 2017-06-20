@@ -9,7 +9,7 @@ import warnings
 
 from ... import symbol, init, ndarray
 from ...base import string_types, numeric_types
-from ..nn import Layer
+from ..nn import Layer, HybridLayer
 from .. import tensor_types
 
 
@@ -301,7 +301,7 @@ class RecurrentCell(Layer):
         else:
             return activation(inputs, **kwargs)
 
-    def call(self, inputs, states):
+    def forward(self, inputs, states):
         """Unroll the recurrent cell for one time step.
 
         Parameters
@@ -329,11 +329,19 @@ class RecurrentCell(Layer):
         """
         # pylint: disable= arguments-differ
         self._counter += 1
-        return super(RecurrentCell, self).call(inputs, states)
+        return super(RecurrentCell, self).forward(inputs, states)
 
 
+class HRecurrentCell(RecurrentCell, HybridLayer):
+    """HRecurrentCell supports both Symbol and NDArray forwarding."""
+    def __init__(self, prefix=None, params=None):
+        super(HRecurrentCell, self).__init__(prefix=prefix, params=params)
 
-class RNNCell(RecurrentCell):
+    def hybrid_forward(self, F, x, *args, **kwargs):
+        raise NotImplementedError
+
+
+class RNNCell(HRecurrentCell):
     """Simple recurrent neural network cell.
 
     Parameters
@@ -370,8 +378,8 @@ class RNNCell(RecurrentCell):
     def _alias(self):
         return 'rnn'
 
-    def forward(self, F, inputs, states, i2h_weight, i2h_bias,
-                h2h_weight, h2h_bias):
+    def hybrid_forward(self, F, inputs, states, i2h_weight, i2h_bias,
+                       h2h_weight, h2h_bias):
         name = self._curr_prefix
         i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
                                num_hidden=self._num_hidden,
@@ -385,7 +393,7 @@ class RNNCell(RecurrentCell):
         return output, [output]
 
 
-class LSTMCell(RecurrentCell):
+class LSTMCell(HRecurrentCell):
     """Long-Short Term Memory (LSTM) network cell.
 
     Parameters
@@ -425,8 +433,8 @@ class LSTMCell(RecurrentCell):
     def _alias(self):
         return 'lstm'
 
-    def forward(self, F, inputs, states, i2h_weight, i2h_bias,
-                h2h_weight, h2h_bias):
+    def hybrid_forward(self, F, inputs, states, i2h_weight, i2h_bias,
+                       h2h_weight, h2h_bias):
         name = self._curr_prefix
         i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
                                num_hidden=self._num_hidden*4,
@@ -453,7 +461,7 @@ class LSTMCell(RecurrentCell):
         return next_h, [next_h, next_c]
 
 
-class GRUCell(RecurrentCell):
+class GRUCell(HRecurrentCell):
     """Gated Rectified Unit (GRU) network cell.
     Note: this is an implementation of the cuDNN version of GRUs
     (slight modification compared to Cho et al. 2014).
@@ -487,8 +495,8 @@ class GRUCell(RecurrentCell):
     def _alias(self):
         return 'gru'
 
-    def forward(self, F, inputs, states, i2h_weight, i2h_bias,
-                h2h_weight, h2h_bias):
+    def hybrid_forward(self, F, inputs, states, i2h_weight, i2h_bias,
+                       h2h_weight, h2h_bias):
         # pylint: disable=too-many-locals
         name = self._curr_prefix
         prev_state_h = states[0]
@@ -520,7 +528,7 @@ class GRUCell(RecurrentCell):
         return next_h, [next_h]
 
 
-class FusedRNNCell(RecurrentCell):
+class FusedRNNCell(HRecurrentCell):
     """Fusing RNN layers across time step into one kernel.
     Improves speed but is less flexible. Currently only
     supported if using cuDNN on GPU.
@@ -690,10 +698,10 @@ class FusedRNNCell(RecurrentCell):
 
         Returns
         -------
-        cell : SequentialRNNCell
+        cell : HSequentialRNNCell
             unfused cell that can be used for stepping, and can run on CPU.
         """
-        stack = SequentialRNNCell()
+        stack = HSequentialRNNCell()
         get_cell = {'rnn_relu': lambda cell_prefix: RNNCell(self._num_hidden,
                                                             activation='relu',
                                                             prefix=cell_prefix),
@@ -719,10 +727,10 @@ class FusedRNNCell(RecurrentCell):
         return stack
 
 
-class SequentialRNNCell(RecurrentCell):
+class HSequentialRNNCell(HRecurrentCell):
     """Sequantially stacking multiple RNN cells."""
     def __init__(self):
-        super(SequentialRNNCell, self).__init__(prefix='', params=None)
+        super(HSequentialRNNCell, self).__init__(prefix='', params=None)
 
     def add(self, cell):
         """Append a cell into the stack.
@@ -780,11 +788,11 @@ class SequentialRNNCell(RecurrentCell):
 
         return inputs, next_states
 
-    def forward(self, *args, **kwargs):
+    def hybrid_forward(self, *args, **kwargs):
         raise NotImplementedError
 
 
-class DropoutCell(RecurrentCell):
+class DropoutCell(HRecurrentCell):
     """Apply dropout on input.
 
     Parameters
@@ -804,7 +812,7 @@ class DropoutCell(RecurrentCell):
     def _alias(self):
         return 'dropout'
 
-    def forward(self, F, inputs, states):
+    def hybrid_forward(self, F, inputs, states):
         if self.dropout > 0:
             inputs = F.Dropout(data=inputs, p=self.dropout)
         return inputs, states
@@ -814,14 +822,14 @@ class DropoutCell(RecurrentCell):
 
         inputs, _, F, _ = _format_sequence(length, inputs, layout, merge_outputs)
         if isinstance(inputs, tensor_types):
-            return self.forward(F, inputs, begin_state if begin_state else [])
+            return self.hybrid_forward(F, inputs, begin_state if begin_state else [])
         else:
             return super(DropoutCell, self).unroll(
                 length, inputs, begin_state=begin_state, layout=layout,
                 merge_outputs=merge_outputs)
 
 
-class ModifierCell(RecurrentCell):
+class ModifierCell(HRecurrentCell):
     """Base class for modifier cells. A modifier
     cell takes a base cell, apply modifications
     on it (e.g. Zoneout), and returns a new cell.
@@ -858,7 +866,7 @@ class ModifierCell(RecurrentCell):
     def pack_weights(self, args):
         return self.base_cell.pack_weights(args)
 
-    def forward(self, F, inputs, states):
+    def hybrid_forward(self, F, inputs, states):
         raise NotImplementedError
 
 
@@ -871,8 +879,8 @@ class ZoneoutCell(ModifierCell):
         assert not isinstance(base_cell, BidirectionalCell), \
             "BidirectionalCell doesn't support zoneout since it doesn't support step. " \
             "Please add ZoneoutCell to the cells underneath instead."
-        assert not isinstance(base_cell, SequentialRNNCell) or not base_cell._bidirectional, \
-            "Bidirectional SequentialRNNCell doesn't support zoneout. " \
+        assert not isinstance(base_cell, HSequentialRNNCell) or not base_cell._bidirectional, \
+            "Bidirectional HSequentialRNNCell doesn't support zoneout. " \
             "Please add ZoneoutCell to the cells underneath instead."
         super(ZoneoutCell, self).__init__(base_cell)
         self.zoneout_outputs = zoneout_outputs
@@ -886,7 +894,7 @@ class ZoneoutCell(ModifierCell):
         super(ZoneoutCell, self).reset()
         self.prev_output = None
 
-    def forward(self, F, inputs, states):
+    def hybrid_forward(self, F, inputs, states):
         cell, p_outputs, p_states = self.base_cell, self.zoneout_outputs, self.zoneout_states
         next_output, next_states = cell(inputs, states)
         mask = (lambda p, like: F.Dropout(F.ones_like(like), p=p))
@@ -915,7 +923,7 @@ class ResidualCell(ModifierCell):
     def __init__(self, base_cell):
         super(ResidualCell, self).__init__(base_cell)
 
-    def forward(self, F, inputs, states):
+    def hybrid_forward(self, F, inputs, states):
         output, states = self.base_cell(inputs, states)
         output = F.elemwise_add(output, inputs, name="%s_plus_residual" % output.name)
         return output, states
@@ -939,7 +947,7 @@ class ResidualCell(ModifierCell):
         return outputs, states
 
 
-class BidirectionalCell(RecurrentCell):
+class BidirectionalCell(HRecurrentCell):
     """Bidirectional RNN cell.
 
     Parameters
