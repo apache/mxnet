@@ -35,6 +35,32 @@ def _ctype_key_value(keys, vals):
             c_vals += c_val_i
         return (c_array(ctypes.c_int, c_keys), c_array(NDArrayHandle, c_vals))
 
+def _ctype_str_key_value(keys, vals):
+    names = []
+    if isinstance(keys, str):
+        if isinstance(vals, NDArray):
+            names.append(c_str(keys))
+            return (c_array(ctypes.c_char_p, names),
+                    c_array(NDArrayHandle, [vals.handle]))
+        else:
+            for value in vals:
+                assert(isinstance(value, NDArray))
+            return (c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)),
+                    c_array(NDArrayHandle, [value.handle for value in vals]))
+    else:
+        assert(len(keys) == len(vals))
+        for k in keys:
+            assert(isinstance(k, str))
+        c_keys = []
+        c_vals = []
+        for key, val in zip(keys, vals):
+            c_key_i, c_val_i = _ctype_str_key_value(key, val)
+            c_keys += c_key_i
+            c_vals += c_val_i
+        return (c_array(ctypes.c_char_p, c_keys), c_array(NDArrayHandle, c_vals))
+
+def _use_str_keys(key):
+    return isinstance(key, str) or (isinstance(key, (list, tuple)) and isinstance(key[0], str))
 
 def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
@@ -95,9 +121,15 @@ class KVStore(object):
         >>> keys = [5, 7, 9]
         >>> kv.init(keys, [mx.nd.ones(shape)]*len(keys))
         """
-        ckeys, cvals = _ctype_key_value(key, value)
-        check_call(_LIB.MXKVStoreInit(
-            self.handle, mx_uint(len(ckeys)), ckeys, cvals))
+        use_str_key = _use_str_keys(key)
+        if use_str_key:
+            ckeys, cvals = _ctype_str_key_value(key, value)
+            check_call(_LIB.MXKVStoreInitEx(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals))
+        else:
+            ckeys, cvals = _ctype_key_value(key, value)
+            check_call(_LIB.MXKVStoreInit(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals))
 
     def push(self, key, value, priority=0):
         """ Pushes a single or a sequence of key-value pairs into the store.
@@ -156,10 +188,18 @@ class KVStore(object):
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
         """
-        ckeys, cvals = _ctype_key_value(key, value)
-        check_call(_LIB.MXKVStorePush(
-            self.handle, mx_uint(len(ckeys)), ckeys, cvals,
-            ctypes.c_int(priority)))
+        use_str_key = _use_str_keys(key)
+        if use_str_key:
+            ckeys, cvals = _ctype_str_key_value(key, value)
+            check_call(_LIB.MXKVStorePushEx(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals,
+                ctypes.c_int(priority)))
+        else:
+            ckeys, cvals = _ctype_key_value(key, value)
+            check_call(_LIB.MXKVStorePush(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals,
+                ctypes.c_int(priority)))
+
 
     def pull(self, key, out=None, priority=0):
         """ Pulls a single value or a sequence of values from the store.
@@ -218,10 +258,17 @@ class KVStore(object):
         [ 2.  2.  2.]]
         """
         assert(out is not None)
-        ckeys, cvals = _ctype_key_value(key, out)
-        check_call(_LIB.MXKVStorePull(
-            self.handle, mx_uint(len(ckeys)), ckeys, cvals,
-            ctypes.c_int(priority)))
+        use_str_key = _use_str_keys(key)
+        if use_str_key:
+            ckeys, cvals = _ctype_str_key_value(key, out)
+            check_call(_LIB.MXKVStorePullEx(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals,
+                ctypes.c_int(priority)))
+        else:
+            ckeys, cvals = _ctype_key_value(key, out)
+            check_call(_LIB.MXKVStorePull(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals,
+                ctypes.c_int(priority)))
 
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.
