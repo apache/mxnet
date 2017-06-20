@@ -994,23 +994,41 @@ def gen_broadcast_data(idx):
 
 def gen_broadcast_data_int(idx):
     d = gen_broadcast_data(idx);
-    return [np.round(d[0]*100), np.round(d[1]*100)]
+    return [np.round(d[0]*100).astype(int), np.round(d[1]*100).astype(int)]
 
 def gen_binary_data(dummy):
     ndim = np.random.randint(1, 6)
     shape = np.random.randint(1, 6, size=(ndim,))
     return [np.random.random(shape), np.random.random(shape)]
 
-def check_binary_op_forward(symbol, baseline, gen_data):
+def gen_binary_data_int(dummy):
+    d = gen_binary_data(dummy);
+    return [np.round(d[0]*100).astype(int), np.round(d[1]*100).astype(int)]
+
+def check_binary_op_forward(symbol, baseline, gen_data, rtol=1e-3, atol=1e-5):
     sample_num = 200
     for i in range(sample_num):
         d = gen_data(i)
         x = baseline(d[0], d[1])
         y = symbol.bind(default_context(), args={'a': mx.nd.array(d[0]), 'b' : mx.nd.array(d[1])})
         y.forward(is_train=True)
-        assert_allclose(x, y.outputs[0].asnumpy(), rtol=1e-3, atol=1e-5)
+        y = y.outputs[0].asnumpy()
+        idx = np.abs(x-y) > atol+rtol*np.abs(x)
+        if idx.any():
+            print('found precision problem')
+            d[0] = np.broadcast_to(d[0], x.shape)
+            d[1] = np.broadcast_to(d[1], x.shape)
+            print('a: {}'.format(d[0][idx]))
+            print('b: {}'.format(d[1][idx]))
+            import struct
+            print('a hex: {}'.format(struct.pack('d', d[0][idx]).encode('hex')))
+            print('b hex: {}'.format(struct.pack('d', np.broadcast_to(d[1], x.shape)[idx]).encode('hex')))
+            print('in baseline(a, b): {}'.format(x[idx]))
+            print('in symbol(a, b): {}'.format(y[idx]))
+            print('diff: {}'.format(np.abs(x-y)[idx] - atol-rtol*np.abs(x)[idx]))
+        assert_allclose(y, x, rtol=rtol, atol=atol)
 
-def check_binary_op_backward(symbol, baseline, gen_data):
+def check_binary_op_backward(symbol, baseline, gen_data, rtol=1e-3, atol=1e-5):
     sample_num = 200
     for i in range(sample_num):
         d = gen_data(i)
@@ -1033,8 +1051,8 @@ def check_binary_op_backward(symbol, baseline, gen_data):
                         args_grad=[y_1, y_2])
         y.forward(is_train=True)
         y.backward([mx.nd.array(out)])
-        assert_allclose(x_1, y_1.asnumpy(), rtol=1e-3, atol=1e-5)
-        assert_allclose(x_2, y_2.asnumpy(), rtol=1e-3, atol=1e-5)
+        assert_allclose(y_1.asnumpy(), x_1, rtol=rtol, atol=atol)
+        assert_allclose(y_2.asnumpy(), x_2, rtol=rtol, atol=atol)
 
 def test_binary_op():
     a = mx.sym.Variable('a')
@@ -1060,6 +1078,16 @@ def test_binary_op():
         check_binary_op_forward(c, lambda a, b: a / b, gen_binary_data)
         check_binary_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)), gen_binary_data)
 
+    def test_bmod(a, b):
+        c = a % b
+        check_binary_op_forward(c, lambda a, b: a % b, gen_binary_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_binary_data)
+
+    def test_bmod_int(a, b):
+        c = mx.sym.cast(a, dtype='int32') % mx.sym.cast(b, dtype='int32')
+        check_binary_op_forward(c, lambda a, b: a % b, gen_binary_data_int)
+        check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_binary_data_int)
+
     def test_bpow(a, b):
         c = a ** b
         check_binary_op_forward(c, lambda a, b: a ** b, gen_binary_data)
@@ -1075,6 +1103,8 @@ def test_binary_op():
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
+    test_bmod(a, b)
+    test_bmod_int(a, b)
     test_bpow(a, b)
     test_bneq(a, b)
 
@@ -1102,6 +1132,16 @@ def test_broadcast_binary_op():
         check_binary_op_forward(c, lambda a, b: a / b, gen_broadcast_data)
         check_binary_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)), gen_broadcast_data)
 
+    def test_bmod(a, b):
+        c = mx.sym.broadcast_mod(a, b)
+        check_binary_op_forward(c, lambda a, b: a % b, gen_broadcast_data, atol=1)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_broadcast_data, atol=1)
+
+    def test_bmod_int(a, b):
+        c = mx.sym.broadcast_mod(mx.sym.cast(a, dtype='int32'), mx.sym.cast(b, dtype='int32'))
+        check_binary_op_forward(c, lambda a, b: a % b, gen_broadcast_data_int)
+        check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_broadcast_data_int)
+
     def test_bpow(a, b):
         c = mx.sym.broadcast_power(a, b)
         check_binary_op_forward(c, lambda a, b: a ** b, gen_broadcast_data)
@@ -1117,6 +1157,8 @@ def test_broadcast_binary_op():
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
+    test_bmod(a, b)
+    test_bmod_int(a, b)
     test_bpow(a, b)
     test_bequal(a, b)
 
@@ -1532,102 +1574,118 @@ def test_stn():
 
 def test_dot(ctx=default_context()):
     np.random.seed(1234)
+    dtypes = ['float32', 'float64']
 
     # Test normal dot.
-    for m in range(1, 5):
-        for k in range(1, 5):
-            for n in range(1, 5):
-                a_npy = np.random.normal(0, 1, (m, k))
-                b_npy = np.random.normal(0, 1, (k, n))
-                c_npy = np.empty((m, n))
-                ograd_npy = np.random.normal(0, 1, (m, n))
-                agrad_npy = np.empty((m, k))
-                bgrad_npy = np.empty((k, n))
-                c_npy[:, :] = np.dot(a_npy[:, :], b_npy[:, :])
-                bgrad_npy[:, :] = np.dot(a_npy[:, :].T, ograd_npy[:, :])
-                agrad_npy[:, :] = np.dot(ograd_npy[:, :], b_npy[:, :].T)
-                a = mx.sym.Variable('a')
-                b = mx.sym.Variable('b')
-                c = mx.sym.dot(a, b)
-                exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
-                outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3)
-                exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3)
-                assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3)
-
-    # Test dot with transpose flag using gradient checker.
-    def dot_sym():
-        x = mx.sym.Variable('x')
-        y = mx.sym.Variable('y')
-        return mx.sym.dot(x, y)
-    def dot_sym_xT():
-        x = mx.sym.Variable('x')
-        y = mx.sym.Variable('y')
-        return mx.sym.dot(x, y, transpose_a=True)
-    def dot_sym_yT():
-        x = mx.sym.Variable('x')
-        y = mx.sym.Variable('y')
-        return mx.sym.dot(x, y, transpose_b=True)
-    def dot_sym_xT_yT():
-        x = mx.sym.Variable('x')
-        y = mx.sym.Variable('y')
-        return mx.sym.dot(x, y, transpose_a=True, transpose_b=True)
-    for ashape, bshape in [((3, 4), (4, 5)), ((2,3,4), (4, 5, 6))]:
-        m1_npy = np.random.uniform(-1, 1, ashape)
-        m2_npy = np.random.uniform(-1, 1, bshape)
-        check_numeric_gradient(dot_sym(), [m1_npy, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
-        check_numeric_gradient(dot_sym_xT(), [m1_npy.T, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
-        check_numeric_gradient(dot_sym_yT(), [m1_npy, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
-        check_numeric_gradient(dot_sym_xT_yT(), [m1_npy.T, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
-
-def test_batch_dot():
-    for batch_size in range(1, 5):
+    for data_type in dtypes:
         for m in range(1, 5):
             for k in range(1, 5):
                 for n in range(1, 5):
-                    transpose_a = (np.random.rand() > 0.5)
-                    transpose_b = (np.random.rand() > 0.5)
-                    a_npy = np.random.normal(0, 1, (batch_size, m, k))
-                    b_npy = np.random.normal(0, 1, (batch_size, k, n))
-                    c_npy = np.empty((batch_size, m, n))
-                    ograd_npy = np.random.normal(0, 1, (batch_size, m, n))
-                    agrad_npy = np.empty((batch_size, m, k))
-                    bgrad_npy = np.empty((batch_size, k, n))
-                    a_init_grad_npy = np.random.normal(size=(batch_size, m, k))
-                    b_init_grad_npy = np.random.normal(size=(batch_size, k, n))
-                    for i in range(batch_size):
-                        c_npy[i, :, :] = np.dot(a_npy[i, :, :], b_npy[i, :, :])
-                        bgrad_npy[i, :, :] = np.dot(a_npy[i, :, :].T, ograd_npy[i, :, :])
-                        agrad_npy[i, :, :] = np.dot(ograd_npy[i, :, :], b_npy[i, :, :].T)
-                    a = mx.sym.Variable('a')
-                    b = mx.sym.Variable('b')
-                    c = mx.sym.batch_dot(a, b, transpose_a=transpose_a, transpose_b=transpose_b)
-                    if transpose_a:
-                        a_npy = np.transpose(a_npy, axes=(0, 2, 1))
-                        agrad_npy = np.transpose(agrad_npy, axes=(0, 2, 1))
-                        a_init_grad_npy = np.transpose(a_init_grad_npy, axes=(0, 2, 1))
-                    if transpose_b:
-                        b_npy = np.transpose(b_npy, axes=(0, 2, 1))
-                        bgrad_npy = np.transpose(bgrad_npy, axes=(0, 2, 1))
-                        b_init_grad_npy = np.transpose(b_init_grad_npy, axes=(0, 2, 1))
-                    exe = c.simple_bind(ctx=default_context(),
-                                        a=a_npy.shape, b=b_npy.shape, grad_req='write')
-                    exe_add = c.simple_bind(ctx=default_context(),
-                                            a=a_npy.shape, b=b_npy.shape, grad_req='add')
-                    exe_add.grad_dict['a'][:] = a_init_grad_npy
-                    exe_add.grad_dict['b'][:] = b_init_grad_npy
+                    a_npy = np.random.normal(0, 1, (m, k))
+                    a_npy = a_npy.astype(data_type)
+                    b_npy = np.random.normal(0, 1, (k, n))
+                    b_npy = b_npy.astype(data_type)
+                    c_npy = np.empty((m, n), dtype=data_type)
+                    ograd_npy = np.random.normal(0, 1, (m, n))
+                    ograd_npy = ograd_npy.astype(data_type)
+                    agrad_npy = np.empty((m, k), dtype=data_type)
+                    bgrad_npy = np.empty((k, n), dtype=data_type)
+                    c_npy[:, :] = np.dot(a_npy[:, :], b_npy[:, :])
+                    bgrad_npy[:, :] = np.dot(a_npy[:, :].T, ograd_npy[:, :])
+                    agrad_npy[:, :] = np.dot(ograd_npy[:, :], b_npy[:, :].T)
+                    a = mx.sym.Variable('a', dtype=data_type)
+                    b = mx.sym.Variable('b', dtype=data_type)
+                    c = mx.sym.dot(a, b)
+                    exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
                     outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                    assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3, atol=1e-4)
-                    exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                    assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3, atol=1e-4)
-                    assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3, atol=1e-4)
-                    exe_add.forward(is_train=True, a=a_npy, b=b_npy)
-                    exe_add.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                    assert_almost_equal(exe_add.grad_dict['a'].asnumpy(),
-                                   agrad_npy + a_init_grad_npy, rtol=1e-3, atol=1e-4)
-                    assert_almost_equal(exe_add.grad_dict['b'].asnumpy(),
-                                   bgrad_npy + b_init_grad_npy, rtol=1e-3, atol=1e-4)
+                    assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3)
+                    exe.backward(out_grads=[mx.nd.array(ograd_npy, mx.cpu())])
+                    assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3)
+                    assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3)
+
+    # Test dot with transpose flag using gradient checker.
+    def dot_sym(data_type):
+        x = mx.sym.Variable('x', dtype=data_type)
+        y = mx.sym.Variable('y', dtype=data_type)
+        return mx.sym.dot(x, y)
+    def dot_sym_xT(data_type):
+        x = mx.sym.Variable('x', dtype=data_type)
+        y = mx.sym.Variable('y', dtype=data_type)
+        return mx.sym.dot(x, y, transpose_a=True)
+    def dot_sym_yT(data_type):
+        x = mx.sym.Variable('x', dtype=data_type)
+        y = mx.sym.Variable('y', dtype=data_type)
+        return mx.sym.dot(x, y, transpose_b=True)
+    def dot_sym_xT_yT(data_type):
+        x = mx.sym.Variable('x', dtype=data_type)
+        y = mx.sym.Variable('y', dtype=data_type)
+        return mx.sym.dot(x, y, transpose_a=True, transpose_b=True)
+    for data_type in dtypes:
+        for ashape, bshape in [((3, 4), (4, 5)), ((2, 3, 4), (4, 5, 6))]:
+            m1_npy = np.random.uniform(-1, 1, ashape)
+            m1_npy = m1_npy.astype(data_type)
+            m2_npy = np.random.uniform(-1, 1, bshape)
+            m2_npy = m2_npy.astype(data_type)
+            check_numeric_gradient(dot_sym(data_type), [m1_npy, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+            check_numeric_gradient(dot_sym_xT(data_type), [m1_npy.T, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+            check_numeric_gradient(dot_sym_yT(data_type), [m1_npy, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+            check_numeric_gradient(dot_sym_xT_yT(data_type), [m1_npy.T, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+
+def test_batch_dot():
+    dtypes = ['float32', 'float64']
+    
+    for data_type in dtypes:
+        for batch_size in range(1, 5):
+            for m in range(1, 5):
+                for k in range(1, 5):
+                    for n in range(1, 5):
+                        transpose_a = (np.random.rand() > 0.5)
+                        transpose_b = (np.random.rand() > 0.5)
+                        a_npy = np.random.normal(0, 1, (batch_size, m, k))
+                        a_npy = a_npy.astype(data_type)
+                        b_npy = np.random.normal(0, 1, (batch_size, k, n))
+                        b_npy = b_npy.astype(data_type)
+                        c_npy = np.empty((batch_size, m, n), dtype=data_type)
+                        ograd_npy = np.random.normal(0, 1, (batch_size, m, n))
+                        ograd_npy = ograd_npy.astype(data_type)
+                        agrad_npy = np.empty((batch_size, m, k), dtype=data_type)
+                        bgrad_npy = np.empty((batch_size, k, n), dtype=data_type)
+                        a_init_grad_npy = np.random.normal(size=(batch_size, m, k))
+                        a_init_grad_npy = a_npy.astype(data_type)
+                        b_init_grad_npy = np.random.normal(size=(batch_size, k, n))
+                        b_init_grad_npy = b_npy.astype(data_type)
+                        for i in range(batch_size):
+                            c_npy[i, :, :] = np.dot(a_npy[i, :, :], b_npy[i, :, :])
+                            bgrad_npy[i, :, :] = np.dot(a_npy[i, :, :].T, ograd_npy[i, :, :])
+                            agrad_npy[i, :, :] = np.dot(ograd_npy[i, :, :], b_npy[i, :, :].T)
+                            a = mx.sym.Variable('a', dtype=data_type)
+                            b = mx.sym.Variable('b', dtype=data_type)
+                            c = mx.sym.batch_dot(a, b, transpose_a=transpose_a, transpose_b=transpose_b)
+                        if transpose_a:
+                            a_npy = np.transpose(a_npy, axes=(0, 2, 1))
+                            agrad_npy = np.transpose(agrad_npy, axes=(0, 2, 1))
+                            a_init_grad_npy = np.transpose(a_init_grad_npy, axes=(0, 2, 1))
+                        if transpose_b:
+                            b_npy = np.transpose(b_npy, axes=(0, 2, 1))
+                            bgrad_npy = np.transpose(bgrad_npy, axes=(0, 2, 1))
+                            b_init_grad_npy = np.transpose(b_init_grad_npy, axes=(0, 2, 1))
+                            exe = c.simple_bind(ctx=default_context(),
+                                a=a_npy.shape, b=b_npy.shape, grad_req='write')
+                            exe_add = c.simple_bind(ctx=default_context(),
+                                a=a_npy.shape, b=b_npy.shape, grad_req='add')
+                            exe_add.grad_dict['a'][:] = a_init_grad_npy
+                            exe_add.grad_dict['b'][:] = b_init_grad_npy
+                            outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
+                            assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3, atol=1e-4)
+                            exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                            assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3, atol=1e-4)
+                            assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3, atol=1e-4)
+                            exe_add.forward(is_train=True, a=a_npy, b=b_npy)
+                            exe_add.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                            assert_almost_equal(exe_add.grad_dict['a'].asnumpy(),
+                                agrad_npy + a_init_grad_npy, rtol=1e-3, atol=1e-4)
+                            assert_almost_equal(exe_add.grad_dict['b'].asnumpy(),
+                                bgrad_npy + b_init_grad_npy, rtol=1e-3, atol=1e-4)
 
 def get_correlation(data1,data2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
 
@@ -3260,7 +3318,7 @@ def test_laop():
 
     # Currently no support for GPU. Will be added soon
     # so keep these tests here in this file and activate
-    # gpu-testing when it is ready. 
+    # gpu-testing when it is ready.
     dev = default_context()
     if dev.device_type == 'gpu':
        return
@@ -3277,37 +3335,37 @@ def test_laop():
     shape2 = (3, 2)
     shape3 = (3, 3)
     shape4 = (2, 2)
-    #Ensure that ithis tests don't get changed by other calls to random. 
+    #Ensure that ithis tests don't get changed by other calls to random.
     np.random.seed(42)
-    data_in1 = np.random.uniform(1, 10, shape1) 
-    data_in2 = np.random.uniform(1, 10, shape2) 
-    data_in3 = np.random.uniform(1, 10, shape3) 
-    data_in4 = np.random.uniform(1, 10, shape4) 
+    data_in1 = np.random.uniform(1, 10, shape1)
+    data_in2 = np.random.uniform(1, 10, shape2)
+    data_in3 = np.random.uniform(1, 10, shape3)
+    data_in4 = np.random.uniform(1, 10, shape4)
     # Check all transpositions of gemm operator.
-    data_in1_t = np.transpose(data_in1) 
-    data_in2_t = np.transpose(data_in2) 
+    data_in1_t = np.transpose(data_in1)
+    data_in2_t = np.transpose(data_in2)
     res_gemm = 4*np.dot(data_in1,data_in2)+7*data_in4
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7) 
+    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7)
     check_symbolic_forward(test_gemm, [data_in1, data_in2, data_in4], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in2, data_in4], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
     res_gemm = 4*np.dot(data_in1_t,data_in2_t)+7*data_in3
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_a = 1, transpose_b = 1) 
+    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_a = 1, transpose_b = 1)
     check_symbolic_forward(test_gemm, [data_in1, data_in2, data_in3], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in2, data_in3], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
     res_gemm = 4*np.dot(data_in1_t,data_in1)+7*data_in3
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_a = 1) 
+    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_a = 1)
     check_symbolic_forward(test_gemm, [data_in1, data_in1, data_in3], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in1, data_in3], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
     res_gemm = 4*np.dot(data_in1,data_in1_t)+7*data_in4
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_b = 1) 
+    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_b = 1)
     check_symbolic_forward(test_gemm, [data_in1, data_in1, data_in4], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in1, data_in4], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
 
-    # Check batch of gemm. 
+    # Check batch of gemm.
     a = np.tile(np.array(data_in1).flatten(),3)
     a = np.reshape(a,(3,1,2,3))
     b = np.tile(np.array(data_in2).flatten(),3)
@@ -3317,34 +3375,34 @@ def test_laop():
     r = 4*np.dot(data_in1,data_in2)+7*data_in4
     r = np.tile(r.flatten(),3)
     r = np.reshape(r,(3,1,2,2))
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7) 
+    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7)
     check_symbolic_forward(test_gemm, [a, b, c], [r])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [a, b, c], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
 
-    # Check gemm2 operator same way as gemm. 
+    # Check gemm2 operator same way as gemm.
     res_gemm = 4*np.dot(data_in1,data_in2)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4) 
+    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4)
     check_symbolic_forward(test_gemm, [data_in1, data_in2], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in2], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
     res_gemm = 4*np.dot(data_in1_t, data_in2_t)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4, transpose_a = 1, transpose_b = 1) 
+    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4, transpose_a = 1, transpose_b = 1)
     check_symbolic_forward(test_gemm, [data_in1, data_in2], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in2], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
     res_gemm = 4*np.dot(data_in1_t,data_in1)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4, transpose_a = 1) 
+    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4, transpose_a = 1)
     check_symbolic_forward(test_gemm, [data_in1, data_in1], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in1], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
     res_gemm = 4*np.dot(data_in1,data_in1_t)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4, transpose_b = 1) 
+    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4, transpose_b = 1)
     check_symbolic_forward(test_gemm, [data_in1, data_in1], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in1], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
 
-    # Check batch of gemm2. 
+    # Check batch of gemm2.
     a = np.tile(np.array(data_in1).flatten(),3)
     a = np.reshape(a,(3,1,2,3))
     b = np.tile(np.array(data_in2).flatten(),3)
@@ -3352,12 +3410,12 @@ def test_laop():
     r = 4*np.dot(data_in1,data_in2)
     r = np.tile(r.flatten(),3)
     r = np.reshape(r,(3,1,2,2))
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4) 
+    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4)
     check_symbolic_forward(test_gemm, [a, b], [r])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [a, b], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
 
-    # Now test all the other operators. 
+    # Now test all the other operators.
 
     # Tests with trivial 1x1 matrices.
     shape = (4, 4, 1, 1 )
@@ -3388,7 +3446,7 @@ def test_laop():
     if grad_check == 1:
       check_numeric_gradient(test_trmm, [trian_in,data_in], atol = 0.02, rtol = 2.0)
     # test sumlogdiag
-    res_sumlogdiag = np.reshape(np.log(data_in),(4,4))  
+    res_sumlogdiag = np.reshape(np.log(data_in),(4,4))
     test_sumlogdiag = mx.sym.linalg_sumlogdiag(data1)
     check_symbolic_forward(test_sumlogdiag, [data_in], [res_sumlogdiag])
     if grad_check == 1:
@@ -3401,9 +3459,9 @@ def test_laop():
     inv    = [ 2.98333, 0.01667, 2.65, -0.83333, 0.01667, 0.05, 0.05, 0,  2.65, 0.05, 2.5, -0.75, -0.83333, 0, -0.75, 0.25 ]
     ident  = [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ]
 
-    # Tests for numeric gradients for potrf/potri/trmm/trsm are suppressed by default 
-    # as they are very volatile and may often report false negatives which 
-    # have to be excluded by manual inspection. 
+    # Tests for numeric gradients for potrf/potri/trmm/trsm are suppressed by default
+    # as they are very volatile and may often report false negatives which
+    # have to be excluded by manual inspection.
     grad_check = 0
 
     # test potrf
@@ -3414,7 +3472,7 @@ def test_laop():
     check_symbolic_forward(test_potrf, [a], [r])
     if grad_check == 1:
       check_numeric_gradient(test_potrf, [a], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
-    
+
     #test potri
     a = np.tile(np.array(trian),3)
     a = np.reshape(a,(3,1,4,4))
@@ -3434,7 +3492,7 @@ def test_laop():
     check_symbolic_forward(test_trsm, [a,b], [r])
     if grad_check == 1:
       check_numeric_gradient(test_trsm, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
-     
+
     test_trsm2 = mx.sym.linalg_trsm(data1,data2,alpha = -2, rightside = 1, transpose = 1)
     r = -2*np.reshape(np.array(trian),(4,4))
     r = np.reshape(np.tile(np.reshape(r,(16)),3),(3,1,4,4))
