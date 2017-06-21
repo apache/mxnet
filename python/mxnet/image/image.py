@@ -7,6 +7,7 @@ from __future__ import absolute_import, print_function
 import os
 import random
 import logging
+import json
 import numpy as np
 
 try:
@@ -14,13 +15,13 @@ try:
 except ImportError:
     cv2 = None
 
-from .base import numeric_types
-from . import ndarray as nd
-from . import _ndarray_internal as _internal
-from ._ndarray_internal import _cvimresize as imresize
-from ._ndarray_internal import _cvcopyMakeBorder as copyMakeBorder
-from . import io
-from . import recordio
+from ..base import numeric_types
+from .. import ndarray as nd
+from .. import _ndarray_internal as _internal
+from .._ndarray_internal import _cvimresize as imresize
+from .._ndarray_internal import _cvcopyMakeBorder as copyMakeBorder
+from .. import io
+from .. import recordio
 
 
 def imdecode(buf, **kwargs):
@@ -112,6 +113,83 @@ def scale_down(src_size, size):
     return int(w), int(h)
 
 
+def get_interp_method(interp, sizes=None):
+    """Get the interpolation method for resize functions.
+    The major purpose of this function is to wrap a random interp method selection
+    and a auto-estimation method.
+
+    Parameters
+    ----------
+    interp : int
+        interpolation method for all resizing operations
+
+        Possible values:
+        0: Nearest Neighbors Interpolation.
+        1: Bilinear interpolation.
+        2: Area-based (resampling using pixel area relation). It may be a
+        preferred method for image decimation, as it gives moire-free
+        results. But when the image is zoomed, it is similar to the Nearest
+        Neighbors method. (used by default).
+        3: Bicubic interpolation over 4x4 pixel neighborhood.
+        4: Lanczos interpolation over 8x8 pixel neighborhood.
+        9: Cubic for enlarge, area for shrink, bilinear for others
+        10: Random select from interpolation method metioned above.
+        Note:
+        When shrinking an image, it will generally look best with AREA-based
+        interpolation, whereas, when enlarging an image, it will generally look best
+        with Bicubic (slow) or Bilinear (faster but still looks OK).
+    sizes : tuple of int
+        (old_height, old_width, new_height, new_width), if None provided, auto(9)
+        will return Area(2) anyway.
+
+    Returns
+    -------
+    int
+        interp method from 0 to 4
+    """
+    if interp == 9:
+        if sizes:
+            assert len(sizes) == 4
+            oh, ow, nh, nw = sizes
+            if nh > oh and nw > ow:
+                return 2
+            elif nh < oh and nw < ow:
+                return 3
+            else:
+                return 1
+        else:
+            return 2
+    if interp == 10:
+        return random.randint(0, 4)
+    if interp not in (0, 1, 2, 3, 4):
+        raise ValueError('Unknown interp method %d' % interp)
+    return interp
+
+
+def clip_image(src, min_val, max_val):
+    """Clip image pixel values
+
+    Parameters
+    ----------
+    src : NDArray
+        source image
+    min_val : float, default=0
+        minimum value of pixels
+    max_val : float, default=255.0
+        maximum value of pxiels
+
+    Returns
+    -------
+    NDArray
+        Image with pixel values in range (min_val, max_val)
+    """
+    if min_val > max_val:
+        raise ValueError('min_val: %f larger than max_val: %f' % (min_val, max_val))
+    min_img = nd.full(src.shape, min_val)
+    max_img = nd.full(src.shape, max_val)
+    return nd.maximum(min_img, nd.minimum(max_img, src))
+
+
 def resize_short(src, size, interp=2):
     """Resizes shorter edge to size.
 
@@ -157,14 +235,15 @@ def resize_short(src, size, interp=2):
         new_h, new_w = size * h / w, size
     else:
         new_h, new_w = size, size * w / h
-    return imresize(src, new_w, new_h, interp=interp)
+    return imresize(src, new_w, new_h, interp=get_interp_method(interp, (h, w, new_h, new_w)))
 
 
 def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
     """Crop src at fixed location, and (optionally) resize it to size."""
     out = nd.crop(src, begin=(y0, x0, 0), end=(y0 + h, x0 + w, int(src.shape[2])))
     if size is not None and (w, h) != size:
-        out = imresize(out, *size, interp=interp)
+        sizes = (h, w, size[1], size[0])
+        out = imresize(out, *size, interp=get_interp_method(interp, sizes))
     return out
 
 
@@ -278,7 +357,8 @@ def center_crop(src, size, interp=2):
 
 def color_normalize(src, mean, std=None):
     """Normalize src with mean and std."""
-    src -= mean
+    if mean is not None:
+        src -= mean
     if std is not None:
         src /= std
     return src
@@ -308,146 +388,248 @@ def random_size_crop(src, size, min_area, ratio, interp=2):
     return out, (x0, y0, new_w, new_h)
 
 
-def ResizeAug(size, interp=2):
+class Augmenter(object):
+    """Image Augmenter base class"""
+    def __init__(self, **kwargs):
+        self._kwargs = kwargs
+        for k, v in self._kwargs.items():
+            if isinstance(v, nd.NDArray):
+                v = v.asnumpy()
+            if isinstance(v, np.ndarray):
+                v = v.tolist()
+                self._kwargs[k] = v
+
+    def dumps(self):
+        """Saves the Augmenter to string
+
+        Returns
+        -------
+        str
+            JSON formatted string that describes the Augmenter.
+        """
+        return json.dumps([self.__class__.__name__.lower(), self._kwargs])
+
+    def __call__(self, src):
+        """Abstract implementation body"""
+        raise NotImplementedError("Must override implementation.")
+
+
+class ResizeAug(Augmenter):
     """Make resize shorter edge to size augmenter."""
+    def __init__(self, size, interp=2):
+        super(ResizeAug, self).__init__(size=size, interp=interp)
+        self.size = size
+        self.interp = interp
 
-    def aug(src):
+    def __call__(self, src):
         """Augmenter body"""
-        return [resize_short(src, size, interp)]
-
-    return aug
+        return [resize_short(src, self.size, self.interp)]
 
 
-def RandomCropAug(size, interp=2):
+class ForceResizeAug(Augmenter):
+    """Force resize to size regardless of aspect ratio"""
+    def __init__(self, size, interp=2):
+        super(ForceResizeAug, self).__init__(size=size, interp=interp)
+        self.size = size
+        self.interp = interp
+
+    def __call__(self, src):
+        """Augmenter body"""
+        sizes = (src.shape[0], src.shape[1], self.size[1], self.size[0])
+        return [imresize(src, *self.size, interp=get_interp_method(self.interp, sizes))]
+
+
+class RandomCropAug(Augmenter):
     """Make random crop augmenter"""
+    def __init__(self, size, interp=2):
+        super(RandomCropAug, self).__init__(size=size, interp=interp)
+        self.size = size
+        self.interp = interp
 
-    def aug(src):
+    def __call__(self, src):
         """Augmenter body"""
-        return [random_crop(src, size, interp)[0]]
-
-    return aug
+        return [random_crop(src, self.size, self.interp)[0]]
 
 
-def RandomSizedCropAug(size, min_area, ratio, interp=2):
+class RandomSizedCropAug(Augmenter):
     """Make random crop with random resizing and random aspect ratio jitter augmenter."""
+    def __init__(self, size, min_area, ratio, interp=2):
+        super(RandomSizedCropAug, self).__init__(size=size, min_area=min_area,
+                                                 ratio=ratio, interp=interp)
+        self.size = size
+        self.min_area = min_area
+        self.ratio = ratio
+        self.interp = interp
 
-    def aug(src):
+    def __call__(self, src):
         """Augmenter body"""
-        return [random_size_crop(src, size, min_area, ratio, interp)[0]]
-
-    return aug
+        return [random_size_crop(src, self.size, self.min_area, self.ratio, self.interp)[0]]
 
 
-def CenterCropAug(size, interp=2):
+class CenterCropAug(Augmenter):
     """Make center crop augmenter."""
+    def __init__(self, size, interp=2):
+        super(CenterCropAug, self).__init__(size=size, interp=interp)
+        self.size = size
+        self.interp = interp
 
-    def aug(src):
+    def __call__(self, src):
         """Augmenter body"""
-        return [center_crop(src, size, interp)[0]]
-
-    return aug
+        return [center_crop(src, self.size, self.interp)[0]]
 
 
-def RandomOrderAug(ts):
+class RandomOrderAug(Augmenter):
     """Apply list of augmenters in random order"""
+    def __init__(self, ts):
+        super(RandomOrderAug, self).__init__()
+        self.ts = ts
 
-    def aug(src):
+    def dumps(self):
+        """Override the default to avoid duplicate dump."""
+        return [self.__class__.__name__.lower(), [x.dumps() for x in self.ts]]
+
+    def __call__(self, src):
         """Augmenter body"""
         src = [src]
-        random.shuffle(ts)
-        for t in ts:
+        random.shuffle(self.ts)
+        for t in self.ts:
             src = [j for i in src for j in t(i)]
         return src
 
-    return aug
+
+class BrightnessJitterAug(Augmenter):
+    """Random brightness jitter augmentation."""
+    def __init__(self, brightness, min_val=0, max_val=255):
+        super(BrightnessJitterAug, self).__init__(brightness=brightness)
+        self.brightness = brightness
+        self.min_val = min_val
+        self.max_val = max_val
+
+    def __call__(self, src):
+        """Augmenter body"""
+        alpha = 1.0 + random.uniform(-self.brightness, self.brightness)
+        src *= alpha
+        return [clip_image(src, self.min_val, self.max_val)]
 
 
-def ColorJitterAug(brightness, contrast, saturation):
+class ContrastJitterAug(Augmenter):
+    """Random contrast jitter augmentation."""
+    def __init__(self, contrast, min_val=0, max_val=255):
+        super(ContrastJitterAug, self).__init__(contrast=contrast)
+        self.contrast = contrast
+        self.coef = nd.array([[[0.299, 0.587, 0.114]]])
+        self.min_val = min_val
+        self.max_val = max_val
+
+    def __call__(self, src):
+        """Augmenter body"""
+        alpha = 1.0 + random.uniform(-self.contrast, self.contrast)
+        gray = src * self.coef
+        gray = (3.0 * (1.0 - alpha) / gray.size) * nd.sum(gray)
+        src *= alpha
+        src += gray
+        return [clip_image(src, self.min_val, self.max_val)]
+
+
+class SaturationJitterAug(Augmenter):
+    """Random saturation jitter augmentation."""
+    def __init__(self, saturation, min_val=0, max_val=255):
+        super(SaturationJitterAug, self).__init__(saturation=saturation)
+        self.saturation = saturation
+        self.coef = nd.array([[[0.299, 0.587, 0.114]]])
+        self.min_val = min_val
+        self.max_val = max_val
+
+    def __call__(self, src):
+        """Augmenter body"""
+        alpha = 1.0 + random.uniform(-self.saturation, self.saturation)
+        gray = src * self.coef
+        gray = nd.sum(gray, axis=2, keepdims=True)
+        gray *= (1.0 - alpha)
+        src *= alpha
+        src += gray
+        return [clip_image(src, self.min_val, self.max_val)]
+
+
+class HueJitterAug(Augmenter):
+    """Random hue jitter augmentation."""
+    def __init__(self, hue, min_val=0, max_val=255):
+        super(HueJitterAug, self).__init__(hue=hue)
+        self.hue = hue
+        self.min_val = min_val
+        self.max_val = max_val
+
+    def __call__(self, src):
+        """Augmenter body"""
+        # TODO(Joshua Zhang): https://beesbuzz.biz/code/hsv_color_transforms.php
+        return [clip_image(src, self.min_val, self.max_val)]
+
+
+class ColorJitterAug(RandomOrderAug):
     """Apply random brightness, contrast and saturation jitter in random order."""
-    ts = []
-    coef = nd.array([[[0.299, 0.587, 0.114]]])
-    if brightness > 0:
-        def baug(src):
-            """Augmenter body"""
-            alpha = 1.0 + random.uniform(-brightness, brightness)
-            src *= alpha
-            return [src]
-
-        ts.append(baug)
-
-    if contrast > 0:
-        def caug(src):
-            """Augmenter body"""
-            alpha = 1.0 + random.uniform(-contrast, contrast)
-            gray = src * coef
-            gray = (3.0 * (1.0 - alpha) / gray.size) * nd.sum(gray)
-            src *= alpha
-            src += gray
-            return [src]
-
-        ts.append(caug)
-
-    if saturation > 0:
-        def saug(src):
-            """Augmenter body"""
-            alpha = 1.0 + random.uniform(-saturation, saturation)
-            gray = src * coef
-            gray = nd.sum(gray, axis=2, keepdims=True)
-            gray *= (1.0 - alpha)
-            src *= alpha
-            src += gray
-            return [src]
-
-        ts.append(saug)
-    return RandomOrderAug(ts)
+    def __init__(self, brightness, contrast, saturation):
+        ts = []
+        if brightness > 0:
+            ts.append(BrightnessJitterAug(brightness))
+        if contrast > 0:
+            ts.append(ContrastJitterAug(contrast))
+        if saturation > 0:
+            ts.append(SaturationJitterAug(saturation))
+        super(ColorJitterAug, self).__init__(ts)
 
 
-def LightingAug(alphastd, eigval, eigvec):
+class LightingAug(Augmenter):
     """Add PCA based noise."""
+    def __init__(self, alphastd, eigval, eigvec, min_val=0, max_val=255):
+        super(LightingAug, self).__init__(alphastd=alphastd, eigval=eigval, eigvec=eigvec)
+        self.alphastd = alphastd
+        self.eigval = eigval
+        self.eigvec = eigvec
+        self.min_val = min_val
+        self.max_val = max_val
 
-    def aug(src):
+    def __call__(self, src):
         """Augmenter body"""
-        alpha = np.random.normal(0, alphastd, size=(3,))
-        rgb = np.dot(eigvec * alpha, eigval)
+        alpha = np.random.normal(0, self.alphastd, size=(3,))
+        rgb = np.dot(self.eigvec * alpha, self.eigval)
         src += nd.array(rgb)
-        return [src]
-
-    return aug
+        return [clip_image(src, self.min_val, self.max_val)]
 
 
-def ColorNormalizeAug(mean, std):
+class ColorNormalizeAug(Augmenter):
     """Mean and std normalization."""
-    mean = nd.array(mean)
-    std = nd.array(std)
+    def __init__(self, mean, std):
+        super(ColorNormalizeAug, self).__init__(mean=mean, std=std)
+        self.mean = nd.array(mean) if mean is not None else None
+        self.std = nd.array(std) if std is not None else None
 
-    def aug(src):
+    def __call__(self, src):
         """Augmenter body"""
-        return [color_normalize(src, mean, std)]
-
-    return aug
+        return [color_normalize(src, self.mean, self.std)]
 
 
-def HorizontalFlipAug(p):
-    """Random horizontal flipping."""
+class HorizontalFlipAug(Augmenter):
+    """Random horizontal flip."""
+    def __init__(self, p):
+        super(HorizontalFlipAug, self).__init__(p=p)
+        self.p = p
 
-    def aug(src):
+    def __call__(self, src):
         """Augmenter body"""
         if random.random() < p:
             src = nd.flip(src, axis=1)
         return [src]
 
-    return aug
 
-
-def CastAug():
+class CastAug(Augmenter):
     """Cast to float32"""
+    def __init__(self):
+        super(CastAug, self).__init__(type='float32')
 
-    def aug(src):
+    def __call__(self, src):
         """Augmenter body"""
         src = src.astype(np.float32)
         return [src]
-
-    return aug
 
 
 def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, rand_mirror=False,
@@ -493,7 +675,7 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
     elif std is not None:
         assert isinstance(std, np.ndarray) and std.shape[0] in [1, 3]
 
-    if mean is not None and std is not None:
+    if mean is not None or std is not None:
         auglist.append(ColorNormalizeAug(mean, std))
 
     return auglist
@@ -552,8 +734,11 @@ class ImageIter(io.DataIter):
                  data_name='data', label_name='softmax_label', **kwargs):
         super(ImageIter, self).__init__()
         assert path_imgrec or path_imglist or (isinstance(imglist, list))
+        num_threads = os.environ.get('MXNET_CPU_WORKER_NTHREADS', 1)
+        class_name = self.__class__.__name__
         if path_imgrec:
-            print('loading recordio...')
+            logging.info('%s: loading recordio %s, use %s threads for decoding...',
+                         class_name, path_imgrec, str(num_threads))
             if path_imgidx:
                 self.imgrec = recordio.MXIndexedRecordIO(path_imgidx, path_imgrec, 'r')  # pylint: disable=redefined-variable-type
                 self.imgidx = list(self.imgrec.keys)
@@ -564,7 +749,7 @@ class ImageIter(io.DataIter):
             self.imgrec = None
 
         if path_imglist:
-            print('loading image list...')
+            logging.info('%s: loading image list %s...', class_name, path_imglist)
             with open(path_imglist) as fin:
                 imglist = {}
                 imgkeys = []
@@ -576,7 +761,7 @@ class ImageIter(io.DataIter):
                     imgkeys.append(key)
                 self.imglist = imglist
         elif isinstance(imglist, list):
-            print('loading image list...')
+            logging.info('%s: loading image list...', class_name)
             result = {}
             imgkeys = []
             index = 1
