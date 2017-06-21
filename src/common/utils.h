@@ -6,7 +6,12 @@
 #ifndef MXNET_COMMON_UTILS_H_
 #define MXNET_COMMON_UTILS_H_
 
-#if DMLC_USE_CXX11
+#include <dmlc/logging.h>
+#include <mxnet/engine.h>
+#include <mxnet/ndarray.h>
+#include <mxnet/op_attr_types.h>
+#include <nnvm/graph_attr_types.h>
+
 #include <memory>
 #include <vector>
 #include <type_traits>
@@ -15,20 +20,14 @@
 #include <thread>
 #include <algorithm>
 #include <functional>
-#endif  // DMLC_USE_CXX11
-
-#include <dmlc/logging.h>
-#include <mxnet/engine.h>
-#include <mxnet/ndarray.h>
-#include <mxnet/op_attr_types.h>
-#include <nnvm/graph_attr_types.h>
-#include "../operator/nn/cast_storage-inl.h"
 
 namespace mxnet {
 
 namespace common {
 
-#if DMLC_USE_CXX11
+template<typename xpu>
+void CastStorageDispatch(mshadow::Stream<xpu>* s, const NDArray& input, const NDArray& output);
+
 /*
  * \brief Get the corresponding tensor blobs from default storage NDArrays.
  *        If any NDArray is of non-default storage, it is casted to default storage and
@@ -54,7 +53,7 @@ inline bool GetDefaultBlobs(const std::vector<NDArray>& nds,
                    << "doesn't support NDArray inputs with non-default storage.";
       }
       NDArray temp(nd.shape(), nd.ctx(), false);
-      mxnet::op::CastStorageComputeImpl<xpu>(ctx.get_stream<xpu>(), nd, temp);
+      CastStorageDispatch<xpu>(ctx.get_stream<xpu>(), nd, temp);
       temps->push_back(temp);
       blobs->push_back(temp.data());
       casted = true;
@@ -63,14 +62,6 @@ inline bool GetDefaultBlobs(const std::vector<NDArray>& nds,
     }
   }
   return casted;
-}
-
-template <typename xpu>
-inline void GetOutputBlobs(const std::vector<NDArray>& nds,
-                           std::vector<TBlob> *blobs) {
-  for (auto& nd : nds) {
-    blobs->push_back(nd.data());
-  }
 }
 
 /*
@@ -98,7 +89,7 @@ inline void CastNonDefaultStorage(const std::vector<NDArray>& dst,
                    << "You are probably executing an operator which "
                    << "doesn't support NDArray inputs with non-default storage.";
       }
-      mxnet::op::CastStorageComputeImpl(ctx.get_stream<xpu>(), src[src_idx++], dst[i]);
+      CastStorageDispatch<xpu>(ctx.get_stream<xpu>(), src[src_idx++], dst[i]);
     }
   }
   CHECK_EQ(src_idx, src.size()) << "Not all src NDArrays are casted";
@@ -298,8 +289,6 @@ typename helper::UniqueIf<T>::UnknownBound MakeUnique(size_t n) {
  */
 template <class T, class... Args>
 typename helper::UniqueIf<T>::KnownBound MakeUnique(Args&&... args) = delete;
-
-#endif  // DMLC_USE_CXX11
 
 }  // namespace common
 }  // namespace mxnet

@@ -211,7 +211,6 @@ __global__ void mxnet_generic_kernel(int N, Args... args) {
   }
 }
 
-
 template<typename OP>
 struct Kernel<OP, gpu> {
   template<typename ...Args>

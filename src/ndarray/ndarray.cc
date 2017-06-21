@@ -12,6 +12,7 @@
 #include <mxnet/resource.h>
 #include <mshadow/tensor.h>
 #include "./ndarray_function.h"
+#include "../common/utils.h"
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tensor/init_op.h"
 #include "./autograd.h"
@@ -466,7 +467,7 @@ void CopyFromToImpl(const NDArray from, NDArray *to, RunContext ctx) {
     } else {
       casted_nd = NDArray(to_stype, shape, from_ctx);
     }
-    op::CastStorageComputeImpl<from_xpu>(s, from, casted_nd);
+    common::CastStorageDispatch<from_xpu>(s, from, casted_nd);
   } else {
     casted_nd = from;
   }
@@ -510,7 +511,6 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
       FnProperty::kNormal, priority, PROFILER_MESSAGE("CopyCPU2CPU"));
   } else {
 #if MXNET_USE_CUDA
-#if __CUDACC__
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
           NDArray nd(ret);
@@ -533,7 +533,6 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
     } else {
       LOG(FATAL) << "unknown device mask";
     }
-#endif  // __CUDACC__
 #else
     LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
