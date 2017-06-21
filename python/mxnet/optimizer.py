@@ -5,6 +5,7 @@ import logging
 import mxnet as mx
 from .ndarray import NDArray, clip, sqrt, sign
 from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
+from .ndarray_utils import zeros
 from .random import normal
 
 
