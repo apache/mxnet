@@ -155,7 +155,7 @@ void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs,
   for (const auto& i : outputs) {
     CHECK(!i.entry_.is_none())
       << "Cannot differentiate node because it is not in a computational graph. "
-      << "You need to set is_training to true or use a train_section to save "
+      << "You need to set is_training to true or use autograd.record() to save "
       << "computational graphs for backward. If you want to differentiate the same "
       << "graph twice, you need to pass retain_graph=True to backward.";
     heads.emplace_back(i.entry_);

@@ -4,6 +4,7 @@ import math
 import os
 
 import mxnet as mx
+import mxnet.ndarray as F
 from mxnet import foo
 from mxnet.foo import nn
 from mxnet.contrib import autograd as ag
@@ -97,7 +98,7 @@ class SuperResolutionNet(nn.Layer):
             self.conv4 = nn.Conv2D(upscale_factor ** 2, (3, 3), strides=(1, 1), padding=(1, 1), in_filters=32)
         self.upscale_factor = upscale_factor
 
-    def forward(self, F, x):
+    def forward(self, x):
         x = F.Activation(self.conv1(x), act_type='relu')
         x = F.Activation(self.conv2(x), act_type='relu')
         x = F.Activation(self.conv3(x), act_type='relu')
@@ -138,7 +139,7 @@ def train(epoch, ctx):
             data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
             label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
             outputs = []
-            with ag.train_section():
+            with ag.record():
                 for x, y in zip(data, label):
                     z = net(x)
                     loss = foo.loss.l2_loss(z, y)

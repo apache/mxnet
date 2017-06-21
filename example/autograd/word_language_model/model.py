@@ -1,4 +1,5 @@
 import mxnet as mx
+import mxnet.ndarray as F
 from mxnet import foo
 from mxnet.foo import nn, rnn
 
@@ -20,7 +21,7 @@ class RNNModel(nn.Layer):
 
             self.num_hidden = num_hidden
 
-    def forward(self, F, inputs, hidden):
+    def forward(self, inputs, hidden):
         emb = self.drop(self.encoder(inputs))
         output, hidden = self.rnn.unroll(None, emb, layout='TNC', merge_outputs=True)
         output = self.drop(output)

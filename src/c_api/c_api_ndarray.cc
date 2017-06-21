@@ -88,7 +88,8 @@ void SetNDInputsOutputs(const nnvm::Op* op,
   } else {
     CHECK(!AutogradRuntime::Get()->IsTraining())
       << "Inplace operations (+=, -=, op(..., out=x) etc.) and assignment are "
-      << "not supported when you are inside a train_section using autograd.";
+      << "not supported when recording with autograd. You can use autograd.pause "
+      << "to wrap this operation, but it may invalid gradients.";
     CHECK(*num_outputs == infered_num_outputs || *num_outputs == num_visible_outputs)
       << "Expecting " << infered_num_outputs << " (all) or "
       << num_visible_outputs << " (visible only) outputs, got "

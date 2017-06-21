@@ -23,11 +23,11 @@ x.attach_grad(dx)
 ```
 
 Now we can define the network while running forward computation by wrapping
-it inside a `train_section` (operations out of `train_section` does not define
+it inside a `record` (operations out of `record` does not define
 a graph and cannot be differentiated):
 
 ```python
-with autograd.train_section():
+with autograd.record():
   y = x * 2
   z = y * x
 ```

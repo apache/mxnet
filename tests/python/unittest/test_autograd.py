@@ -31,7 +31,7 @@ def grad_and_loss(func, argnum=None):
             assert isinstance(x, NDArray), "type of autograd input should NDArray."
         grads = [zeros_like(x) for x in variables]
         mark_variables(variables, grads)
-        with train_section():
+        with record():
             outputs = func(*args)
         backward([outputs] if isinstance(outputs, NDArray) else outputs)
         return grads, outputs
@@ -148,10 +148,10 @@ def test_argnum():
 
 def test_training():
     x = nd.ones((10, 10))
-    with train_section():
+    with record():
         y = nd.Dropout(x, p=0.5)
         assert not (y.asnumpy() == x.asnumpy()).all()
-        with test_section():
+        with pause():
             y = nd.Dropout(x, p=0.5)
             assert (y.asnumpy() == x.asnumpy()).all()
 
@@ -164,7 +164,7 @@ def test_out_grads():
     db = nd.array([1,2,3,4,5])
     dc = nd.array([5,4,3,2,1])
 
-    with train_section():
+    with record():
         a, b, c = nd.split(x, axis=0, num_outputs=3, squeeze_axis=True)
         backward([a, b, c], [da, db, dc])
 
@@ -183,7 +183,7 @@ def test_detach_updated_grad():
     assert x._fresh_grad == False
     assert y._fresh_grad == False
 
-    with train_section():
+    with record():
         x2 = x + 2
         y2  = x2 + y
         y2.backward()
@@ -196,7 +196,7 @@ def test_detach_updated_grad():
     y._fresh_grad = False
     assert x._fresh_grad == False
     assert y._fresh_grad == False
-    with train_section():
+    with record():
         x2 = x + 2
         x2 = x2.detach()
         y2  = x2 + y
@@ -210,20 +210,20 @@ def test_retain_grad():
     x = mx.nd.ones((2, 2))
     dx = mx.nd.zeros((2, 2))
     mark_variables([x], [dx], grad_reqs='add')
-    with train_section():
+    with record():
         y = x + 1
         y.backward(retain_graph=False)
     assert (dx.asnumpy() == 1).all()
 
     dx[:] = 0
-    with train_section():
+    with record():
         y = x + 1
         y.backward(retain_graph=True)
         y.backward(retain_graph=False)
     assert (dx.asnumpy() == 2).all()
 
     try:
-        with train_section():
+        with record():
             y = x + 1
             y.backward()
             y.backward()
@@ -238,7 +238,7 @@ def test_attach_grad():
     x = mx.nd.zeros((10,))
     assert x.grad is None
     x.attach_grad()
-    with train_section():
+    with record():
         y = x * 2
         assert y.grad is None
         y.backward()
