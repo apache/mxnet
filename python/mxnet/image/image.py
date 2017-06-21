@@ -14,13 +14,13 @@ try:
 except ImportError:
     cv2 = None
 
-from .base import numeric_types
-from . import ndarray as nd
-from . import _ndarray_internal as _internal
-from ._ndarray_internal import _cvimresize as imresize
-from ._ndarray_internal import _cvcopyMakeBorder as copyMakeBorder
-from . import io
-from . import recordio
+from ..base import numeric_types
+from .. import ndarray as nd
+from .. import _ndarray_internal as _internal
+from .._ndarray_internal import _cvimresize as imresize
+from .._ndarray_internal import _cvcopyMakeBorder as copyMakeBorder
+from .. import io
+from .. import recordio
 
 
 def imdecode(buf, **kwargs):
@@ -314,6 +314,16 @@ def ResizeAug(size, interp=2):
     def aug(src):
         """Augmenter body"""
         return [resize_short(src, size, interp)]
+
+    return aug
+
+
+def ForceResizeAug(size, interp=2):
+    """Force resize to size regardless of aspect ratio"""
+
+    def aug(src):
+        """Augmenter body"""
+        return [imresize(src, *size, interp=interp)]
 
     return aug
 
