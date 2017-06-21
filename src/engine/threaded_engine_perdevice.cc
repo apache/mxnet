@@ -8,6 +8,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <dmlc/concurrency.h>
+#include <unistd.h>
 #include "./threaded_engine.h"
 #include "./thread_pool.h"
 #include "../common/lazy_alloc_array.h"
@@ -33,7 +34,6 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 
   ThreadedEnginePerDevice() noexcept(false) {
     gpu_worker_nthreads_ = common::GetNumThreadPerGPU();
-    gpu_copy_nthreads_ = dmlc::GetEnv("MXNET_GPU_COPY_NTHREADS", 1);
     cpu_worker_nthreads_ = dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 1);
     // create CPU task
     int cpu_priority_nthreads = dmlc::GetEnv("MXNET_CPU_PRIORITY_NTHREADS", 4);
@@ -45,6 +45,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     // GPU tasks will be created lazily
   }
   ~ThreadedEnginePerDevice() noexcept(false) {
+    SignalQueuesForKill();
     gpu_normal_workers_.Clear();
     gpu_copy_workers_.Clear();
     cpu_normal_workers_.Clear();
@@ -70,13 +71,17 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         } else {
           int dev_id = ctx.dev_id;
           int nthread = cpu_worker_nthreads_;
+          auto ptr =
           cpu_normal_workers_.Get(dev_id, [this, dev_id, nthread]() {
               auto blk = new ThreadWorkerBlock<kWorkerQueue>();
               blk->pool.reset(new ThreadPool(nthread, [this, blk] () {
                     this->CPUWorker(blk);
                   }));
               return blk;
-            })->task_queue.Push(opr_block, opr_block->priority);
+            });
+          if (ptr) {
+            ptr->task_queue.Push(opr_block, opr_block->priority);
+          }
         }
       } else {
         CHECK_EQ(ctx.dev_mask(), gpu::kDevMask);
@@ -87,21 +92,34 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         int nthread = gpu_worker_nthreads_;
         int dev_id = ctx.dev_id;
         if (is_copy) {
+          auto ptr =
           gpu_copy_workers_.Get(dev_id, [this, dev_id, is_copy, nthread]() {
               auto blk = new ThreadWorkerBlock<kCopyQueue>();
-              blk->pool.reset(new ThreadPool(nthread, [this, dev_id, is_copy, blk] () {
-                    this->GPUWorker(dev_id, is_copy, blk);
+              blk->pool.reset(new ThreadPool(
+                nthread,
+                [this, dev_id, is_copy, blk]
+                  (std::shared_ptr<ThreadPool::SimpleEvent> ready_event) {
+                    this->GPUWorker(dev_id, is_copy, blk, ready_event);
                   }));
               return blk;
-            })->task_queue.Push(opr_block, opr_block->priority);
+            });
+          if (ptr) {
+            ptr->task_queue.Push(opr_block, opr_block->priority);
+          }
         } else {
-          gpu_normal_workers_.Get(dev_id, [this, dev_id, is_copy, nthread]() {
+          auto ptr = gpu_normal_workers_.Get(dev_id, [this, dev_id, is_copy, nthread]() {
               auto blk = new ThreadWorkerBlock<kWorkerQueue>();
-              blk->pool.reset(new ThreadPool(nthread, [this, dev_id, is_copy, blk] () {
-                    this->GPUWorker(dev_id, is_copy, blk);
+              blk->pool.reset(new ThreadPool(
+                nthread,
+                [this, dev_id, is_copy, blk]
+                  (std::shared_ptr<ThreadPool::SimpleEvent> ready_event) {
+                    this->GPUWorker(dev_id, is_copy, blk, ready_event);
                   }));
               return blk;
-            })->task_queue.Push(opr_block, opr_block->priority);
+            });
+          if (ptr) {
+            ptr->task_queue.Push(opr_block, opr_block->priority);
+          }
         }
       }
     }
@@ -115,17 +133,16 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     dmlc::ConcurrentBlockingQueue<OprBlock*, type>  task_queue;
     // thread pool that works on this task
     std::unique_ptr<ThreadPool> pool;
+    // constructor
+    ThreadWorkerBlock() = default;
     // destructor
-    ~ThreadWorkerBlock() noexcept(false) {
-      task_queue.SignalForKill();
-    }
+    ~ThreadWorkerBlock() noexcept(false) {}
   };
+
   /*! \brief number of concurrent thread cpu worker uses */
   int cpu_worker_nthreads_;
   /*! \brief number of concurrent thread each gpu worker uses */
   int gpu_worker_nthreads_;
-  /*! \brief number of concurrent thread each gpu copy worker uses */
-  int gpu_copy_nthreads_;
   // cpu worker
   common::LazyAllocArray<ThreadWorkerBlock<kWorkerQueue> > cpu_normal_workers_;
   // cpu priority worker
@@ -143,18 +160,22 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   template<dmlc::ConcurrentQueueType type>
   inline void GPUWorker(int dev_id,
                         bool is_copy_worker,
-                        ThreadWorkerBlock<type> *block) {
-    #if MXNET_USE_CUDA
-    // allocate stream
-    mshadow::SetDevice<gpu>(dev_id);
-    RunContext run_ctx;
+                        ThreadWorkerBlock<type> *block,
+                        std::shared_ptr<ThreadPool::SimpleEvent> ready_event) {
+#if MXNET_USE_CUDA
     mshadow::Stream<gpu> *stream;
-    if (is_copy_worker) {
-      stream = mshadow::NewStream<gpu>(false, false);
-    } else {
-      stream = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0);
-    }
-    run_ctx.stream = stream;
+    RunContext run_ctx;
+    do {
+      ThreadPool::SimpleEvent::SetReadyOnDestroy setReady(ready_event);
+      // allocate stream
+      mshadow::SetDevice<gpu>(dev_id);
+      if (is_copy_worker) {
+        stream = mshadow::NewStream<gpu>(false, false);
+      } else {
+        stream = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0);
+      }
+      run_ctx.stream = stream;
+    } while (false);
     // execute task
     OprBlock* opr_block;
     auto* task_queue = &(block->task_queue);
@@ -163,7 +184,9 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     }
     // Catch exception for CUDA driver shutdown
     MSHADOW_CATCH_ERROR(mshadow::DeleteStream<gpu>(stream));
-    #endif
+#else
+    ready_event->signal();
+#endif
   }
   /*!
    * \brief CPU worker that performs operations on CPU.
@@ -178,6 +201,24 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     OprBlock* opr_block;
     while (task_queue->Pop(&opr_block)) {
       this->ExecuteOprBlock(run_ctx, opr_block);
+    }
+  }
+
+/*! \brief Signal a single queue for shutdown */
+  template<typename Object>
+  static inline void SignalQueueForKill(common::LazyAllocArray<Object> *array) {
+    array->ForEach([](size_t i, Object *block) {
+      block->task_queue.SignalForKill();
+    });
+  }
+
+  /*! Signal all queues for shutdown */
+  void SignalQueuesForKill() {
+    SignalQueueForKill(&gpu_normal_workers_);
+    SignalQueueForKill(&gpu_copy_workers_);
+    SignalQueueForKill(&cpu_normal_workers_);
+    if (cpu_priority_worker_) {
+      cpu_priority_worker_->task_queue.SignalForKill();
     }
   }
 };
