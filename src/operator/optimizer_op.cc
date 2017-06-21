@@ -94,7 +94,7 @@ NNVM_REGISTER_OP(mp_sgd_mom_update)
 .set_attr<nnvm::FInferType>("FInferType", MP_SGD_InferType<2, 1, 4>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
-    return std::vector<uint32_t>{2,3};
+    return std::vector<uint32_t>{2, 3};
   })
 .set_attr<FCompute>("FCompute<cpu>", MP_SGDMomUpdate<cpu>)
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
