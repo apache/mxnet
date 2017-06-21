@@ -8,7 +8,12 @@
 #define MXNET_OPERATOR_MSHADOW_OP_H_
 
 #include <mxnet/base.h>
+#include <math.h>
 #include "special_functions-inl.h"
+
+#ifdef __CUDACC__
+#include <cuda_fp16.h>
+#endif
 
 namespace mxnet {
 namespace op {
@@ -24,14 +29,14 @@ using std::isnan;
 struct identity {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(a);
+    return a;
   }
 };
 
 struct identity_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f));
+    return DType(1.0f);
   }
 };
 
@@ -434,15 +439,15 @@ struct abs {
 struct sign {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    if (a < 0.0f) return DType(-DType(1.0f));
-    if (a > 0.0f) return DType(DType(1.0f));
-    return DType(DType(0.0f));
+    if (a < 0.0f) return DType(-1.0f);
+    if (a > 0.0f) return DType(1.0f);
+    return DType(0.0f);
   }
 };
 struct sign_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(0.0f));
+    return DType(0.0f);
   }
 };
 /*! \brief used for generate element of power */
@@ -663,6 +668,172 @@ struct rdiv_grad {
     return DType(-b/(a*a));
   }
 };
+
+struct mod {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (b == DType(0)) {
+      return DType(0);
+    } else if (b < DType(0)) {
+      if (a < DType(0)) {
+        return DType(-::fmod(-a, -b));
+      } else {
+        return DType(::fmod(a, -b) + (::fmod(a, -b) != DType(0) ? b : DType(0)));
+      }
+    } else {
+      if (a < DType(0)) {
+        return DType(-::fmod(-a, b) + (::fmod(-a, b) != DType(0) ? b : DType(0)));
+      } else {
+        return DType(::fmod(a, b));
+      }
+    }
+  }
+};
+#ifdef __CUDACC__
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t mod::Map<mshadow::half::half2_t>
+                                               (mshadow::half::half2_t a,
+                                                mshadow::half::half2_t b) {
+  return a%b;
+}
+#endif
+
+struct mod_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(0);
+  }
+};
+template<>
+MSHADOW_XINLINE double mod_grad::Map<double>(double a, double b) {
+  return 1.0f;
+}
+template<>
+MSHADOW_XINLINE float mod_grad::Map<float>(float a, float b) {
+  return 1.0f;
+}
+#ifdef __CUDACC__
+template<>
+MSHADOW_XINLINE mshadow::half::half_t mod_grad::Map<mshadow::half::half_t>
+                                                   (mshadow::half::half_t a,
+                                                    mshadow::half::half_t b) {
+  return mshadow::half::half_t(1.0f);
+}
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t mod_grad::Map<mshadow::half::half2_t>
+                                                    (mshadow::half::half2_t a,
+                                                     mshadow::half::half2_t b) {
+  mshadow::half::half2_t result = mshadow::half::half2_t();
+#if MSHADOW_CUDA_HALF2
+  result.half2_ = ::__float2half2_rn(1.0f);
+#else
+  result.half_t2[0] = mshadow::half::half_t(0.0f);
+  result.half_t2[1] = mshadow::half::half_t(1.0f);
+#endif
+  return result;
+}
+#endif
+
+struct mod_rgrad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(0);
+  }
+};
+template<>
+MSHADOW_XINLINE double mod_rgrad::Map<double>(double a, double b) {
+  return -::floor(a/b);
+}
+template<>
+MSHADOW_XINLINE float mod_rgrad::Map<float>(float a, float b) {
+  return -::floorf(a/b);
+}
+#ifdef __CUDACC__
+template<>
+MSHADOW_XINLINE mshadow::half::half_t mod_rgrad::Map<mshadow::half::half_t>
+                                                    (mshadow::half::half_t a,
+                                                     mshadow::half::half_t b) {
+  return mshadow::half::half_t(-::floorf(static_cast<float>(a/b)));
+}
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t mod_rgrad::Map<mshadow::half::half2_t>
+                                                     (mshadow::half::half2_t a,
+                                                      mshadow::half::half2_t b) {
+#if MSHADOW_CUDA_HALF2
+  return mshadow::half::half2_t(__hneg2(::h2floor((a/b).half2_)));
+#else
+  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(a.half_t2[0]/b.half_t2[0]))),
+                                mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(a.half_t2[1]/b.half_t2[1]))));
+#endif
+}
+#endif
+
+struct rmod {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (a == DType(0)) {
+      return DType(0);
+    } else if (a < DType(0)) {
+      if (b < DType(0)) {
+        return DType(-::fmod(-b, -a));
+      } else {
+        return DType(::fmod(b, -a) + (::fmod(b, -a) != DType(0) ? a : DType(0)));
+      }
+    } else {
+      if (b < DType(0)) {
+        return DType(-::fmod(-b, a) + (::fmod(-b, a) != DType(0) ? a : DType(0)));
+      } else {
+        return DType(::fmod(b, a));
+      }
+    }
+  }
+};
+#ifdef __CUDACC__
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t rmod::Map<mshadow::half::half2_t>
+                                                (mshadow::half::half2_t a,
+                                                 mshadow::half::half2_t b) {
+  return b%a;
+}
+#endif
+
+struct rmod_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(0);
+  }
+};
+template<>
+MSHADOW_XINLINE double rmod_grad::Map<double>(double a, double b) {
+  return -::floor(b/a);
+}
+template<>
+MSHADOW_XINLINE float rmod_grad::Map<float>(float a, float b) {
+  return -::floorf(b/a);
+}
+#ifdef __CUDACC__
+template<>
+MSHADOW_XINLINE mshadow::half::half_t rmod_grad::Map<mshadow::half::half_t>
+                                                   (mshadow::half::half_t a,
+                                                    mshadow::half::half_t b) {
+  return mshadow::half::half_t(-::floorf(static_cast<float>(b/a)));
+}
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t rmod_grad::Map<mshadow::half::half2_t>
+                                                     (mshadow::half::half2_t a,
+                                                      mshadow::half::half2_t b) {
+#if MSHADOW_CUDA_HALF2
+  return mshadow::half::half2_t(::__hneg2(::h2floor((b/a).half2_)));
+#else
+  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(b.half_t2[0]/a.half_t2[0]))),
+                                mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(b.half_t2[1]/a.half_t2[1]))));
+#endif
+}
+#endif
 
 struct clip {
   template<typename DType>
