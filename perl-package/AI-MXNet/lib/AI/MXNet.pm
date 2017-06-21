@@ -3,7 +3,6 @@ use v5.14.0;
 use strict;
 use warnings;
 use AI::MXNet::Base;
-use AI::MXNet::CachedOp;
 use AI::MXNet::Callback;
 use AI::MXNet::NDArray;
 use AI::MXNet::Symbol;

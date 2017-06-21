@@ -158,4 +158,16 @@ init.symbol.methods <- function() {
   setMethod("/", signature(e1 = "Rcpp_MXSymbol", e2 = "numeric"), function(e1, e2) {
     mx.varg.symbol.internal.DivScalar(list(e1, scalar = e2))
   })
+  setMethod("%%", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
+    mx.varg.symbol.internal.Mod(list(e1, e2))
+  })
+  setMethod("%%", signature(e1 = "Rcpp_MXSymbol", e2 = "numeric"), function(e1, e2) {
+    mx.varg.symbol.internal.ModScalar(list(e1, scalar = e2))
+  })
+  setMethod("%/%", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
+    mx.varg.symbol.internal.Mod(list(e1, e2))
+  })
+  setMethod("%/%", signature(e1 = "Rcpp_MXSymbol", e2 = "numeric"), function(e1, e2) {
+    mx.varg.symbol.internal.ModScalar(list(e1, scalar = e2))
+  })
 }

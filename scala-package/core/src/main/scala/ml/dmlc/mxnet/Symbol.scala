@@ -85,6 +85,11 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
   def <=(other: Symbol): Symbol = Symbol.lesserEqual(this, other)
   def <=[@specialized(Int, Float, Double) V](other: V): Symbol = Symbol.lesserEqual(this, other)
 
+  def %(other: Symbol): Symbol = Symbol.createFromListedSymbols("_Mod")(Array(this, other))
+  def %[@specialized(Int, Float, Double) V](other: V): Symbol = {
+    Symbol.createFromListedSymbols("_ModScalar")(Array(this), Map("scalar" -> other.toString))
+  }
+
   override def clone(): Symbol = {
     val clonedHandle = new SymbolHandleRef
     checkCall(_LIB.mxSymbolCopy(handle, clonedHandle))
@@ -1235,6 +1240,11 @@ class SymbolConversions[@specialized(Int, Float, Double) V](val value: V) {
 
   def <=(other: Symbol): Symbol = {
     other >= value
+  }
+
+  def %(other: Symbol): Symbol = {
+    Symbol.createFromListedSymbols("_RModScalar")(
+      Array(other), Map("scalar" -> value.toString))
   }
 }
 
