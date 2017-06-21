@@ -35,6 +35,10 @@ inline Symbol _Div(Symbol lhs, Symbol rhs) {
   return Operator("_Div")(lhs, rhs)
            .CreateSymbol();
 }
+inline Symbol _Mod(Symbol lhs, Symbol rhs) {
+  return Operator("_Mod")(lhs, rhs)
+           .CreateSymbol();
+}
 inline Symbol _Power(Symbol lhs, Symbol rhs) {
   return Operator("_Power")(lhs, rhs)
            .CreateSymbol();
@@ -74,6 +78,16 @@ inline Symbol _DivScalar(Symbol lhs, mx_float scalar) {
 }
 inline Symbol _RDivScalar(mx_float scalar, Symbol rhs) {
   return Operator("_RDivScalar")(rhs)
+           .SetParam("scalar", scalar)
+           .CreateSymbol();
+}
+inline Symbol _ModScalar(Symbol lhs, mx_float scalar) {
+  return Operator("_ModScalar")(lhs)
+           .SetParam("scalar", scalar)
+           .CreateSymbol();
+}
+inline Symbol _RModScalar(mx_float scalar, Symbol rhs) {
+  return Operator("_RModScalar")(rhs)
            .SetParam("scalar", scalar)
            .CreateSymbol();
 }

@@ -1,5 +1,8 @@
+use strict;
+use warnings;
 use AI::MXNet qw(mx);
-use Test::More tests => 5;
+use AI::MXNet::TestUtils qw(almost_equal);
+use Test::More tests => 8;
 
 sub test_ndarray_reshape
 {
@@ -33,5 +36,21 @@ sub test_moveaxis
     is_deeply($X->moveaxis(2, 0)->shape, [3, 2, 2]);
 }
 
+
+sub test_output
+{
+    my $shape = [2,2];
+    my $ones = mx->nd->ones($shape);
+    my $zeros = mx->nd->zeros($shape);
+    my $out = mx->nd->zeros($shape);
+    mx->nd->ones($shape, out=>$out);
+    ok(almost_equal($out->aspdl, $ones->aspdl));
+    mx->nd->zeros($shape, out=>$out);
+    ok(almost_equal($out->aspdl, $zeros->aspdl));
+    mx->nd->full($shape, 2, out=>$out);
+    ok(almost_equal($out->aspdl, $ones->aspdl * 2));
+}
+
 test_ndarray_reshape();
 test_moveaxis();
+test_output();

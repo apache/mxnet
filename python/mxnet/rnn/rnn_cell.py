@@ -672,11 +672,15 @@ class FusedRNNCell(BaseRNNCell):
                          mode=self._mode, name=self._prefix+'rnn',
                          **states)
 
+        attr = {'__layout__' : 'LNC'}
         if not self._get_next_state:
             outputs, states = rnn, []
         elif self._mode == 'lstm':
+            rnn[1]._set_attr(**attr)
+            rnn[2]._set_attr(**attr)
             outputs, states = rnn[0], [rnn[1], rnn[2]]
         else:
+            rnn[1]._set_attr(**attr)
             outputs, states = rnn[0], [rnn[1]]
 
         if axis == 1:
@@ -754,7 +758,7 @@ class SequentialRNNCell(BaseRNNCell):
     def state_info(self):
         return _cells_state_info(self._cells)
 
-    def begin_state(self, **kwargs):
+    def begin_state(self, **kwargs): # pylint: disable=arguments-differ
         assert not self._modified, \
             "After applying modifier cells (e.g. ZoneoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
@@ -862,7 +866,7 @@ class ModifierCell(BaseRNNCell):
     def state_info(self):
         return self.base_cell.state_info
 
-    def begin_state(self, init_sym=symbol.zeros, **kwargs):
+    def begin_state(self, init_sym=symbol.zeros, **kwargs): # pylint: disable=arguments-differ
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
@@ -1013,7 +1017,7 @@ class BidirectionalCell(BaseRNNCell):
     def state_info(self):
         return _cells_state_info(self._cells)
 
-    def begin_state(self, **kwargs):
+    def begin_state(self, **kwargs): # pylint: disable=arguments-differ
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."

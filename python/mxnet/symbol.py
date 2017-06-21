@@ -29,18 +29,18 @@ from .symbol_doc import _build_doc
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from ._ctypes.symbol import SymbolBase, _set_symbol_class
-        from ._ctypes.symbol import CachedOp, invoke, _symbol_creator  # pylint: disable=unused-import
+        from ._ctypes.symbol import _symbol_creator  # pylint: disable=unused-import
     elif _sys.version_info >= (3, 0):
         from ._cy3.symbol import SymbolBase, _set_symbol_class
-        from ._cy3.symbol import CachedOp, invoke, _symbol_creator  # pylint: disable=unused-import
+        from ._cy3.symbol import _symbol_creator  # pylint: disable=unused-import
     else:
         from ._cy2.symbol import SymbolBase, _set_symbol_class
-        from ._cy2.symbol import CachedOp, invoke, _symbol_creator  # pylint: disable=unused-import
+        from ._cy2.symbol import _symbol_creator  # pylint: disable=unused-import
 except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from ._ctypes.symbol import SymbolBase, _set_symbol_class
-    from ._ctypes.symbol import CachedOp, invoke, _symbol_creator  # pylint: disable=unused-import
+    from ._ctypes.symbol import _symbol_creator  # pylint: disable=unused-import
 
 _GRAD_REQ_MAP = {'null': 0, 'write': 1, 'add': 3}
 
@@ -169,6 +169,36 @@ class Symbol(SymbolBase):
         """
         if isinstance(other, Number):
             return _internal._RDivScalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __mod__(self, other):
+        """x.__mod__(y) <=> x%y
+
+        Scalar input is supported.
+        Broadcasting is not supported. Use `broadcast_mod` instead. """
+        if isinstance(other, Symbol):
+            return _internal._Mod(self, other)
+        if isinstance(other, Number):
+            return _internal._ModScalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __rmod__(self, other):
+        """x.__rmod__(y) <=> y%x
+
+        Only `NDArray` is supported for now.
+
+        Example usage:
+        ----------
+        >>> x = mx.nd.ones((2,3))*3
+        >>> y = mx.nd.ones((2,3))
+        >>> x.__rmod__(y).asnumpy()
+        array([[ 1.,  1.,  1.,
+               [ 1.,  1.,  1., dtype=float32)
+        """
+        if isinstance(other, Number):
+            return _internal._RModScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -410,7 +440,7 @@ class Symbol(SymbolBase):
 
         num_args = len(args) + len(kwargs)
         if len(kwargs) != 0:
-            keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()])
+            keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs])
             args = c_array(SymbolHandle, [s.handle for s in kwargs.values()])
         else:
             keys = None
@@ -705,7 +735,7 @@ class Symbol(SymbolBase):
 
         Returns
         -------
-        aux_states : list of string
+        aux_states : list of str
             List of the auxiliary states in input symbol.
 
         Notes
@@ -719,6 +749,30 @@ class Symbol(SymbolBase):
         sarr = ctypes.POINTER(ctypes.c_char_p)()
         check_call(_LIB.MXSymbolListAuxiliaryStates(
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
+        return [py_str(sarr[i]) for i in range(size.value)]
+
+    def list_inputs(self):
+        """Lists all arguments and auxiliary states of this Symbol.
+
+        Returns
+        -------
+        inputs : list of str
+            List of all inputs.
+
+        Examples
+        --------
+        >>> bn = mx.sym.BatchNorm(name='bn')
+        >>> bn.list_arguments()
+        ['bn_data', 'bn_gamma', 'bn_beta']
+        >>> bn.list_auxiliary_states()
+        ['bn_moving_mean', 'bn_moving_var']
+        >>> bn.list_inputs()
+        ['bn_data', 'bn_gamma', 'bn_beta', 'bn_moving_mean', 'bn_moving_var']
+        """
+        size = ctypes.c_uint()
+        sarr = ctypes.POINTER(ctypes.c_char_p)()
+        check_call(_LIB.NNSymbolListInputNames(
+            self.handle, 0, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
     def infer_type(self, *args, **kwargs):
@@ -1368,11 +1422,12 @@ class Symbol(SymbolBase):
                                                  ctypes.byref(aux_state_handles),
                                                  shared_exec_handle,
                                                  ctypes.byref(exe_handle)))
-        except MXNetError:
-            print("simple_bind error. Arguments:")
+        except MXNetError as e:
+            error_msg = "simple_bind error. Arguments:\n"
             for k, v in kwargs.items():
-                print("  %s: %s" % (k, v))
-            raise RuntimeError('simple_bind failed')
+                error_msg += "%s: %s\n" % (k, v)
+            error_msg += "%s" % e
+            raise RuntimeError(error_msg)
 
         # update shared_buffer
         if shared_buffer is not None:
@@ -2164,14 +2219,14 @@ def %s(%s):
             keys.append(k)
             vals.append(v)""")
         # NDArray args
-        for name in ndarg_names:
+        for name in ndarg_names: # pylint: disable=redefined-argument-from-local
             code.append("""
     if {name} is not None:
         assert isinstance({name}, SymbolBase), \\
             "Argument {name} must be Symbol instances, but got %s"%str({name})
         sym_kwargs['{name}'] = {name}""".format(name=name))
         # kwargs
-        for name in kwarg_names:
+        for name in kwarg_names: # pylint: disable=redefined-argument-from-local
             code.append("""
     if %s is not _Null:
         keys.append('%s')

@@ -541,6 +541,9 @@ NDArray::RObjectType DispatchOps(SEXP op, SEXP lhs, SEXP rhs) {
   static OpHandle div = NDArrayFunction::FindHandle("_div");
   static OpHandle div_scalar = NDArrayFunction::FindHandle("_div_scalar");
   static OpHandle rdiv_scalar = NDArrayFunction::FindHandle("_rdiv_scalar");
+  static OpHandle mod = NDArrayFunction::FindHandle("_mod");
+  static OpHandle mod_scalar = NDArrayFunction::FindHandle("_mod_scalar");
+  static OpHandle rmod_scalar = NDArrayFunction::FindHandle("_rmod_scalar");
   // parse the arguments
   std::string values[2];
   NDArrayHandle handles[2];
@@ -588,6 +591,16 @@ NDArray::RObjectType DispatchOps(SEXP op, SEXP lhs, SEXP rhs) {
         out = BinaryScalarOp(div_scalar, handles[0], values[1]);
       } else {
         out = BinaryScalarOp(rdiv_scalar, handles[1], values[0]);
+      }
+      break;
+    }
+    case '%': {
+      if (lhs_nd && rhs_nd) {
+        out = BinaryOp(mod, handles);
+      } else if (lhs_nd && !rhs_nd) {
+        out = BinaryScalarOp(mod_scalar, handles[0], values[1]);
+      } else {
+        out = BinaryScalarOp(rmod_scalar, handles[1], values[0]);
       }
       break;
     }

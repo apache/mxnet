@@ -70,6 +70,26 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
     Symbol.createFromListedSymbols("_DivScalar")(Array(this), Map("scalar" -> other.toString))
   }
 
+  def **(other: Symbol): Symbol = Symbol.pow(this, other)
+  def **[@specialized(Int, Float, Double) V](other: V): Symbol = Symbol.pow(this, other)
+
+  def >(other: Symbol): Symbol = Symbol.greater(this, other)
+  def >[@specialized(Int, Float, Double) V](other: V): Symbol = Symbol.greater(this, other)
+
+  def >=(other: Symbol): Symbol = Symbol.greaterEqual(this, other)
+  def >=[@specialized(Int, Float, Double) V](other: V): Symbol = Symbol.greaterEqual(this, other)
+
+  def <(other: Symbol): Symbol = Symbol.lesser(this, other)
+  def <[@specialized(Int, Float, Double) V](other: V): Symbol = Symbol.lesser(this, other)
+
+  def <=(other: Symbol): Symbol = Symbol.lesserEqual(this, other)
+  def <=[@specialized(Int, Float, Double) V](other: V): Symbol = Symbol.lesserEqual(this, other)
+
+  def %(other: Symbol): Symbol = Symbol.createFromListedSymbols("_Mod")(Array(this, other))
+  def %[@specialized(Int, Float, Double) V](other: V): Symbol = {
+    Symbol.createFromListedSymbols("_ModScalar")(Array(this), Map("scalar" -> other.toString))
+  }
+
   override def clone(): Symbol = {
     val clonedHandle = new SymbolHandleRef
     checkCall(_LIB.mxSymbolCopy(handle, clonedHandle))
@@ -852,6 +872,62 @@ object Symbol {
     createFromListedSymbols("_MinimumScalar")(Array(right), Map("scalar" -> left.toString))
   }
 
+  def equal(left: Symbol, right: Symbol): Symbol = {
+    createFromListedSymbols("_equal")(Array(left, right))
+  }
+
+  def equal[@specialized(Int, Float, Double) V](left: Symbol, right: V): Symbol = {
+    createFromListedSymbols("_equal_scalar")(Array(left), Map("scalar" -> right.toString))
+  }
+
+  def equal[@specialized(Int, Float, Double) V](left: V, right: Symbol): Symbol = {
+    createFromListedSymbols("_equal_scalar")(Array(right), Map("scalar" -> left.toString))
+  }
+
+  def notEqual(left: Symbol, right: Symbol): Symbol = {
+    createFromListedSymbols("_not_equal")(Array(left, right))
+  }
+
+  def notEqual[@specialized(Int, Float, Double) V](left: Symbol, right: V): Symbol = {
+    createFromListedSymbols("_not_equal_scalar")(Array(left), Map("scalar" -> right.toString))
+  }
+
+  def notEqual[@specialized(Int, Float, Double) V](left: V, right: Symbol): Symbol = {
+    createFromListedSymbols("_not_equal_scalar")(Array(right), Map("scalar" -> left.toString))
+  }
+
+  def greater(left: Symbol, right: Symbol): Symbol = {
+    createFromListedSymbols("_greater")(Array(left, right))
+  }
+
+  def greater[@specialized(Int, Float, Double) V](left: Symbol, right: V): Symbol = {
+    createFromListedSymbols("_greater_scalar")(Array(left), Map("scalar" -> right.toString))
+  }
+
+  def greaterEqual(left: Symbol, right: Symbol): Symbol = {
+    createFromListedSymbols("_greater_equal")(Array(left, right))
+  }
+
+  def greaterEqual[@specialized(Int, Float, Double) V](left: Symbol, right: V): Symbol = {
+    createFromListedSymbols("_greater_equal_scalar")(Array(left), Map("scalar" -> right.toString))
+  }
+
+  def lesser(left: Symbol, right: Symbol): Symbol = {
+    createFromListedSymbols("_lesser")(Array(left, right))
+  }
+
+  def lesser[@specialized(Int, Float, Double) V](left: Symbol, right: V): Symbol = {
+    createFromListedSymbols("_lesser_scalar")(Array(left), Map("scalar" -> right.toString))
+  }
+
+  def lesserEqual(left: Symbol, right: Symbol): Symbol = {
+    createFromListedSymbols("_lesser_equal")(Array(left, right))
+  }
+
+  def lesserEqual[@specialized(Int, Float, Double) V](left: Symbol, right: V): Symbol = {
+    createFromListedSymbols("_lesser_equal_scalar")(Array(left), Map("scalar" -> right.toString))
+  }
+
   /**
    * Create a symbolic variable with specified name.
    * @param name Name of the variable.
@@ -1143,6 +1219,31 @@ class SymbolConversions[@specialized(Int, Float, Double) V](val value: V) {
 
   def /(other: Symbol): Symbol = {
     Symbol.createFromListedSymbols("_RDivScalar")(
+      Array(other), Map("scalar" -> value.toString))
+  }
+
+  def **(other: Symbol): Symbol = {
+    Symbol.pow(value, other)
+  }
+
+  def >(other: Symbol): Symbol = {
+    other < value
+  }
+
+  def >=(other: Symbol): Symbol = {
+    other <= value
+  }
+
+  def <(other: Symbol): Symbol = {
+    other > value
+  }
+
+  def <=(other: Symbol): Symbol = {
+    other >= value
+  }
+
+  def %(other: Symbol): Symbol = {
+    Symbol.createFromListedSymbols("_RModScalar")(
       Array(other), Map("scalar" -> value.toString))
   }
 }

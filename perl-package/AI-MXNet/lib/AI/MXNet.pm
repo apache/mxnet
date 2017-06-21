@@ -28,7 +28,7 @@ use AI::MXNet::RecordIO;
 use AI::MXNet::Image;
 use AI::MXNet::Contrib;
 use AI::MXNet::Contrib::AutoGrad;
-our $VERSION = '0.9507';
+our $VERSION = '1.01';
 
 sub import
 {
@@ -64,9 +64,13 @@ sub import
             sub callback { 'AI::MXNet::Callback' }
             sub img { 'AI::MXNet::Image' }
             sub contrib { 'AI::MXNet::Contrib' }
+            sub name { '$short_name' }
             sub AttrScope { shift; AI::MXNet::Symbol::AttrScope->new(\@_) }
             *AI::MXNet::Symbol::AttrScope::current = sub { \$${short_name}::AttrScope; };
             \$${short_name}::AttrScope = AI::MXNet::Symbol::AttrScope->new;
+            sub Prefix { AI::MXNet::Symbol::Prefix->new(prefix => \$_[1]) }
+            *AI::MXNet::Symbol::NameManager::current = sub { \$${short_name}::NameManager; };
+            \$${short_name}::NameManager = AI::MXNet::Symbol::NameManager->new;
             *AI::MXNet::Context::current_ctx = sub { \$${short_name}::Context; };
             \$${short_name}::Context = AI::MXNet::Context->new(device_type => 'cpu', device_id => 0);
             1;
