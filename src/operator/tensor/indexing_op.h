@@ -247,6 +247,7 @@ void SparseEmbeddingForwardEx(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool SparseEmbeddingForwardStorageType(const nnvm::NodeAttrs& attrs,
+                                              const Context& ctx,
                                               std::vector<int> *in_attrs,
                                               std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
@@ -800,6 +801,7 @@ inline bool SparseRetainOpType(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                                const Context& ctx,
                                                 std::vector<int> *in_attrs,
                                                 std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
@@ -811,6 +813,7 @@ inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool SparseRetainBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                                 const Context& ctx,
                                                  std::vector<int> *in_attrs,
                                                  std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);

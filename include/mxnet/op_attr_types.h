@@ -71,6 +71,12 @@ using FComputeEx = std::function<void (const nnvm::NodeAttrs& attrs,
                                      const std::vector<NDArray>& inputs,
                                      const std::vector<OpReqType>& req,
                                      const std::vector<NDArray>& outputs)>;
+
+using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
+                                              const Context& ctx,
+                                              std::vector<int>* in_attrs,
+                                              std::vector<int>* out_attrs)>;
+
 }  // namespace mxnet
 
 #endif  // MXNET_OP_ATTR_TYPES_H_

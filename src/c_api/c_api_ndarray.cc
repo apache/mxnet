@@ -135,7 +135,7 @@ void SetShapeType(const nnvm::Op* op,
   std::vector<NDArray>& ndoutputs = *p_ndoutputs;
   static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
-  static auto& inferstorage = nnvm::Op::GetAttr<nnvm::FInferStorageType>("FInferStorageType");
+  static auto& inferstorage = nnvm::Op::GetAttr<FInferStorageType>("FInferStorageType");
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   // infer shape
   std::vector<TShape>& in_shapes  = ret->arg_shapes;
@@ -184,7 +184,7 @@ void SetShapeType(const nnvm::Op* op,
     out_storage_types.push_back(i.storage_type());
   }
   if (inferstorage.count(op)) {
-    CHECK(inferstorage[op](attrs, &in_storage_types, &out_storage_types));
+    CHECK(inferstorage[op](attrs, ctx, &in_storage_types, &out_storage_types));
     CHECK_EQ(out_storage_types.size(), static_cast<size_t>(infered_num_outputs));
   } else {
 #if IMPERATIVE_EXEC_DEBUG

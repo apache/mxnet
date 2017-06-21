@@ -1067,21 +1067,6 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
 
 
 
-/*!
- * \brief infer storage type of unknown input types given the known one.
- */
-MXNET_DLL int MXSymbolInferStorageType(SymbolHandle sym,
-                      mx_uint num_args,
-                      const char** keys,
-                      const int *arg_storage_type_data,
-                      mx_uint *in_storage_type_size,
-                      const int **in_storage_type_data,
-                      mx_uint *out_storage_type_size,
-                      const int **out_storage_type_data,
-                      mx_uint *aux_storage_type_size,
-                      const int **aux_storage_type_data,
-                      int *complete);
-
 //--------------------------------------------
 // Part 4: Executor interface
 //--------------------------------------------
