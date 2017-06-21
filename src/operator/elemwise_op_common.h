@@ -22,33 +22,42 @@ namespace mxnet {
 namespace op {
 template<typename AttrType, bool (*is_none)(const AttrType&),
          bool (*assign)(AttrType*, const AttrType&), bool reverse_infer,
-         std::string (*attr_string)(const AttrType&)>
+         std::string (*attr_string)(const AttrType&),
+         int n_in = -1, int n_out = -1>
 inline bool ElemwiseAttr(const nnvm::NodeAttrs& attrs,
                          std::vector<AttrType> *in_attrs,
                          std::vector<AttrType> *out_attrs,
                          const AttrType& none) {
   AttrType dattr = none;
-  auto deduce = [&](std::vector<AttrType> *vec, const char *name) {
-      for (size_t i = 0; i < vec->size(); ++i) {
+  size_t in_size = in_attrs->size();
+  size_t out_size = out_attrs->size();
+  if (n_in != -1)
+    in_size = static_cast<size_t>(n_in);
+  if (n_out != -1)
+    out_size = static_cast<size_t>(n_out);
+
+  auto deduce = [&](std::vector<AttrType> *vec, size_t size, const char *name) {
+      for (size_t i = 0; i < size; ++i) {
         CHECK(assign(&dattr, (*vec)[i]))
           << "Incompatible attr in node " << attrs.name << " at " << i << "-th "
           << name << ": " << "expected " << attr_string(dattr)
           << ", got " << attr_string((*vec)[i]);
       }
     };
-  deduce(in_attrs, "input");
-  if (reverse_infer) deduce(out_attrs, "output");
+  deduce(in_attrs, in_size, "input");
+  if (reverse_infer) deduce(out_attrs, out_size, "output");
 
-  auto write = [&](std::vector<AttrType> *vec, const char *name) {
-      for (size_t i = 0; i < vec->size(); ++i) {
+  auto write = [&](std::vector<AttrType> *vec, size_t size, const char *name) {
+      for (size_t i = 0; i < size; ++i) {
         CHECK(assign(&(*vec)[i], dattr))
           << "Incompatible attr in node " << attrs.name << " at " << i << "-th "
           << name << ": " << "expected " << attr_string(dattr)
           << ", got " << attr_string((*vec)[i]);
       }
     };
-  write(in_attrs, "input");
-  write(out_attrs, "output");
+  write(in_attrs, in_size, "input");
+  write(out_attrs, out_size, "output");
+
   if (is_none(dattr)) return false;
   return true;
 }
