@@ -35,12 +35,14 @@ def _ctype_str_key_value(keys, vals):
         return (c_array(ctypes.c_char_p, c_keys), c_array(NDArrayHandle, c_vals))
 
 def _cast_to_str_keys(keys):
+    if isinstance(keys, str):
+        return keys
     if isinstance(keys, int):
         return str(keys)
-    if isinstance(keys, (list, tuple)):
-       for i, key in keys:
-           keys[i] = str(key) if isinstance(key, int) else key
-    return keys
+    str_keys = []
+    for key in keys:
+        str_keys.append(str(key) if isinstance(key, int) else key)
+    return str_keys
 
 def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
