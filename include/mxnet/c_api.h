@@ -585,24 +585,20 @@ MXNET_DLL int MXAutogradBackward(mx_uint num_output,
 /*!
  * \brief create cached operator
  */
-MXNET_DLL int MXCachedCreateOp(AtomicSymbolCreator creator,
-                               int num_inputs,
-                               int num_params,
-                               const char **param_keys,
-                               const char **param_vals,
+MXNET_DLL int MXCreateCachedOp(SymbolHandle handle,
                                CachedOpHandle *out);
 /*!
  * \brief free cached operator
  */
-MXNET_DLL int MXCachedFree(CachedOpHandle handle);
+MXNET_DLL int MXFreeCachedOp(CachedOpHandle handle);
 /*!
  * \brief invoke cached operator
  */
-MXNET_DLL int MXCachedInvoke(CachedOpHandle handle,
-                             int num_inputs,
-                             NDArrayHandle *inputs,
-                             int *num_outputs,
-                             NDArrayHandle **outputs);
+MXNET_DLL int MXInvokeCachedOp(CachedOpHandle handle,
+                               int num_inputs,
+                               NDArrayHandle *inputs,
+                               int *num_outputs,
+                               NDArrayHandle **outputs);
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
@@ -670,19 +666,6 @@ MXNET_DLL int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
                                          const char **keys,
                                          const char **vals,
                                          SymbolHandle *out);
-/*!
- * \brief Create an AtomicSymbol from cached op.
- * \param handle cached node attribute.
- * \param name name of new symbol.
- * \param num_args the number of symbol arguments
- * \param args symbol arguments
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXCachedCreateSymbol(CachedOpHandle handle,
-                                   const char* name,
-                                   mx_uint num_args,
-                                   SymbolHandle* args,
-                                   SymbolHandle* out);
 /*!
  * \brief Create a Variable Symbol.
  * \param name name of the variable
