@@ -11,7 +11,7 @@ def conv3x3(filters, stride, in_filters):
     return nn.Conv2D(filters, kernel_size=3, strides=stride, padding=1,
                      use_bias=False, in_filters=in_filters)
 
-class BasicBlockV1(nn.Layer):
+class BasicBlockV1(nn.HybridLayer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BasicBlockV1, self).__init__(**kwargs)
         with self.name_scope():
@@ -24,12 +24,12 @@ class BasicBlockV1(nn.Layer):
                 self.bn_ds = nn.BatchNorm(num_features=filters)
             self.downsample = downsample
 
-    def forward(self, domain, x):
+    def hybrid_forward(self, F, x):
         residual = x
 
         out = self.conv1(x)
         out = self.bn1(out)
-        out = domain.Activation(x, act_type='relu')
+        out = F.Activation(x, act_type='relu')
 
         out = self.conv2(out)
         out = self.bn2(out)
@@ -39,12 +39,12 @@ class BasicBlockV1(nn.Layer):
             residual = self.bn_ds(residual)
 
         out = residual + out
-        out = domain.Activation(out, act_type='relu')
+        out = F.Activation(out, act_type='relu')
 
         return out
 
 
-class BottleneckV1(nn.Layer):
+class BottleneckV1(nn.HybridLayer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BottleneckV1, self).__init__(**kwargs)
         with self.name_scope():
@@ -59,16 +59,16 @@ class BottleneckV1(nn.Layer):
                 self.bn_ds = nn.BatchNorm(num_features=filters)
             self.downsample = downsample
 
-    def forward(self, domain, x):
+    def hybrid_forward(self, F, x):
         residual = x
 
         out = self.conv1(x)
         out = self.bn1(out)
-        out = domain.Activation(out, act_type='relu')
+        out = F.Activation(out, act_type='relu')
 
         out = self.conv2(out)
         out = self.bn2(out)
-        out = domain.Activation(out, act_type='relu')
+        out = F.Activation(out, act_type='relu')
 
         out = self.conv3(out)
         out = self.bn3(out)
@@ -79,11 +79,11 @@ class BottleneckV1(nn.Layer):
 
         out = out + residual
 
-        out = domain.Activation(out, act_type='relu')
+        out = F.Activation(out, act_type='relu')
         return out
 
 
-class ResnetV1(nn.Layer):
+class ResnetV1(nn.HybridLayer):
     def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
         super(ResnetV1, self).__init__(**kwargs)
         with self.name_scope():
@@ -97,7 +97,7 @@ class ResnetV1(nn.Layer):
                  self.bn0 = nn.BatchNorm(num_features=filters[0])
                  self.pool0 = nn.MaxPool2D(3, 2, 1)
 
-             self.body = nn.Sequential()
+             self.body = nn.HSequential()
              in_filters = filters[0]
              for i in range(len(layers)):
                  stride = 1 if i == 0 else 2
@@ -109,17 +109,17 @@ class ResnetV1(nn.Layer):
              self.dense1 = nn.Dense(classes, in_units=filters[-1])
 
     def _make_layer(self, block, layers, filters, stride, in_filters=0):
-        layer = nn.Sequential()
+        layer = nn.HSequential()
         layer.add(block(filters, stride, True, in_filters=in_filters))
         for i in range(layers-1):
             layer.add(block(filters, 1, False, in_filters=filters))
         return layer
 
-    def forward(self, domain, x):
+    def hybrid_forward(self, F, x):
         x = self.conv0(x)
         if not self._thumbnail:
             x = self.bn0(x)
-            x = domain.Activation(x, act_type='relu')
+            x = F.Activation(x, act_type='relu')
             x = self.pool0(x)
 
         x = self.body(x)
@@ -131,7 +131,7 @@ class ResnetV1(nn.Layer):
         return x
 
 
-class BasicBlockV2(nn.Layer):
+class BasicBlockV2(nn.HybridLayer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BasicBlockV2, self).__init__(**kwargs)
         with self.name_scope():
@@ -145,23 +145,23 @@ class BasicBlockV2(nn.Layer):
             else:
                 self.downsample = None
 
-    def forward(self, domain, x):
+    def hybrid_forward(self, F, x):
         if not self.downsample:
             residual = x
         x = self.bn1(x)
-        x = domain.Activation(x, act_type='relu')
+        x = F.Activation(x, act_type='relu')
         if self.downsample:
             residual = self.downsample(x)
         x = self.conv1(x)
 
         x = self.bn2(x)
-        x = domain.Activation(x, act_type='relu')
+        x = F.Activation(x, act_type='relu')
         x = self.conv2(x)
 
         return x + residual
 
 
-class BottleneckV2(nn.Layer):
+class BottleneckV2(nn.HybridLayer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BottleneckV2, self).__init__(**kwargs)
         with self.name_scope():
@@ -177,26 +177,26 @@ class BottleneckV2(nn.Layer):
             else:
                 self.downsample = None
 
-    def forward(self, domain, x):
+    def hybrid_forward(self, F, x):
         if not self.downsample:
             residual = x
         x = self.bn1(x)
-        x = domain.Activation(x, act_type='relu')
+        x = F.Activation(x, act_type='relu')
         if self.downsample:
             residual = self.downsample(x)
         x = self.conv1(x)
 
         x = self.bn2(x)
-        x = domain.Activation(x, act_type='relu')
+        x = F.Activation(x, act_type='relu')
         x = self.conv2(x)
 
         x = self.bn3(x)
-        x = domain.Activation(x, act_type='relu')
+        x = F.Activation(x, act_type='relu')
         x = self.conv3(x)
 
         return x + residual
 
-class ResnetV2(nn.Layer):
+class ResnetV2(nn.HybridLayer):
     def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
         super(ResnetV2, self).__init__(**kwargs)
         with self.name_scope():
@@ -211,7 +211,7 @@ class ResnetV2(nn.Layer):
                 self.bn0 = nn.BatchNorm(num_features=filters[0])
                 self.pool0 = nn.MaxPool2D(3, 2, 1)
 
-            self.body = nn.Sequential()
+            self.body = nn.HSequential()
             in_filters = filters[0]
             for i in range(len(layers)):
                 stride = 1 if i == 0 else 2
@@ -224,24 +224,24 @@ class ResnetV2(nn.Layer):
             self.dense1 = nn.Dense(classes, in_units=in_filters)
 
     def _make_layer(self, block, layers, filters, stride, in_filters=0):
-        layer = nn.Sequential()
+        layer = nn.HSequential()
         layer.add(block(filters, stride, True, in_filters=in_filters))
         for i in range(layers-1):
             layer.add(block(filters, 1, False, in_filters=filters))
         return layer
 
-    def forward(self, domain, x):
+    def hybrid_forward(self, F, x):
         x = self.bn_data(x)
         x = self.conv0(x)
         if not self._thumbnail:
             x = self.bn0(x)
-            x = domain.Activation(x, act_type='relu')
+            x = F.Activation(x, act_type='relu')
             x = self.pool0(x)
 
         x = self.body(x)
 
         x = self.bn1(x)
-        x = domain.Activation(x, act_type='relu')
+        x = F.Activation(x, act_type='relu')
         x = self.pool1(x)
         x = x.reshape((0, -1))
         x = self.dense1(x)
@@ -288,12 +288,15 @@ def train(epoch, ctx):
             data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
             label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
             outputs = []
-            with ag.train_section():
+            losses = []
+            with ag.record():
                 for x, y in zip(data, label):
                     z = net(x)
                     loss = foo.loss.softmax_cross_entropy_loss(z, y)
-                    ag.compute_gradient([loss])
+                    losses.append(loss)
                     outputs.append(z)
+                for loss in losses:
+                    loss.backward()
             trainer.step(batch.data[0].shape[0])
             metric.update(label, outputs)
             print('speed: {} samples/s'.format(batch.data[0].shape[0]/(time.time()-btic)))
@@ -308,6 +311,7 @@ def train(epoch, ctx):
     net.all_params().save('mnist.params')
 
 if __name__ == '__main__':
+    net.hybridize()
     train(200, [mx.gpu(i) for i in range(2)])
     import logging
     logging.basicConfig(level=logging.DEBUG)

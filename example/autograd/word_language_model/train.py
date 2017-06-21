@@ -123,7 +123,7 @@ def train():
         for ibatch, i in enumerate(range(0, train_data.shape[0] - 1, args.bptt)):
             data, target = get_batch(train_data, i)
             hidden = detach(hidden)
-            with autograd.train_section():
+            with autograd.record():
                 output, hidden = model(data, hidden)
                 loss = foo.loss.softmax_cross_entropy_loss(output, target)
                 loss.backward()

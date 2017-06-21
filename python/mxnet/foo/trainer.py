@@ -72,7 +72,7 @@ class Trainer(object):
 
     def step(self, batch_size, ignore_stale_grad=False):
         """Make one step of parameter update. Should be called after
-        autograd.compute_gradient and outside of train_section() scope.
+        autograd.compute_gradient and outside of record() scope.
 
         Parameters
         ----------
