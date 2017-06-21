@@ -58,7 +58,7 @@ def train(net, epoch, ctx):
             data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
             label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
             outputs = []
-            with ag.train_section():
+            with ag.record():
                 for x, y in zip(data, label):
                     z = net(x)
                     loss = foo.loss.softmax_cross_entropy_loss(z, y)

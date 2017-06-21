@@ -11,6 +11,7 @@ in Python and then deploy with symbolic graph in C++ and Scala.
 from __future__ import print_function
 import numpy as np
 import mxnet as mx
+import mxnet.ndarray as F
 import mxnet.foo as foo
 from mxnet.foo import nn
 ```
@@ -48,7 +49,7 @@ class Net(nn.Layer):
             self.fc2 = nn.Dense(84)
             self.fc3 = nn.Dense(10)
 
-    def forward(self, F, x):
+    def forward(self, x):
         x = self.pool1(F.relu(self.conv1(x)))
         x = self.pool2(F.relu(self.conv2(x)))
         # 0 means copy over size from corresponding dimension.
@@ -98,7 +99,7 @@ To compute loss and backprop for one iteration, we do:
 
 ```python
 label = mx.nd.arange(10)  # dummy label
-with train_section():
+with record():
     output = net(data)
     loss = foo.loss.softmax_cross_entropy_loss(output, label)
     loss.backward()
@@ -125,7 +126,7 @@ this is a commonly used functionality, foo provide a `Trainer` class for it:
 ```python
 trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.01})
 
-with train_section():
+with record():
     output = net(data)
     loss = foo.loss.softmax_cross_entropy_loss(output, label)
     loss.backward()
