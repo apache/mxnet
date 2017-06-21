@@ -31,7 +31,7 @@ def test_parameter_sharing():
                 self.dense0 = nn.Dense(5, in_units=5)
                 self.dense1 = nn.Dense(5, in_units=5)
 
-        def forward(self, F, x):
+        def forward(self, x):
             return self.dense1(self.dense0(x))
 
     net1 = Net(prefix='net1_')
@@ -62,7 +62,13 @@ def test_basic():
 
 def check_layer_forward(layer, dshape):
     layer.all_params().initialize()
-    with mx.contrib.autograd.train_section():
+    with mx.autograd.record():
+        out = layer(mx.nd.ones(shape=dshape))
+    out.backward()
+
+    layer.hybridize()
+
+    with mx.autograd.record():
         out = layer(mx.nd.ones(shape=dshape))
     out.backward()
 
@@ -189,33 +195,33 @@ def test_reshape():
     x = mx.nd.ones((2, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_filters=4)
     layer.all_params().initialize()
-    with mx.contrib.autograd.train_section():
+    with mx.autograd.record():
         x = layer(x)
         x = x.reshape((-1,))
         x = x + 10
-    mx.contrib.autograd.compute_gradient([x])
+    x.backward()
 
 
 def test_slice():
     x = mx.nd.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_filters=4)
     layer.all_params().initialize()
-    with mx.contrib.autograd.train_section():
+    with mx.autograd.record():
         x = layer(x)
         x = x[1:3]
         x = x + 10
-    mx.contrib.autograd.compute_gradient([x])
+    x.backward()
 
 
 def test_at():
     x = mx.nd.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_filters=4)
     layer.all_params().initialize()
-    with mx.contrib.autograd.train_section():
+    with mx.autograd.record():
         x = layer(x)
         x = x[1]
         x = x + 10
-    mx.contrib.autograd.compute_gradient([x])
+    x.backward()
 
 
 def test_defered_init():

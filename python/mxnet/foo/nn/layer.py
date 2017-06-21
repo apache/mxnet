@@ -48,6 +48,42 @@ class _LayerScope(object):
         _LayerScope._current = self._old_scope
 
 
+def _flatten(args):
+    if isinstance(args, NDArray):
+        return [args], int(0)
+    if isinstance(args, Symbol):
+        length = len(args.list_outputs())
+        length = length if length > 1 else 0
+        return [args], int(length)
+
+    assert isinstance(args, (list, tuple)), \
+        "HybridLayer input must be (nested) list of Symbol or NDArray, " \
+        "but got %s of type %s"%(str(args), str(type(args)))
+    flat = []
+    fmts = []
+    for i in args:
+        arg, fmt = _flatten(i)
+        flat.extend(arg)
+        fmts.append(fmt)
+    return flat, fmts
+
+
+def _regroup(args, fmt):
+    if isinstance(fmt, int):
+        if fmt == 0:
+            return args[0], args[1:]
+        return args[:fmt], args[fmt:]
+
+    assert isinstance(args, (list, tuple)), \
+        "HybridLayer output must be (nested) list of Symbol or NDArray, " \
+        "but got %s of type %s"%(str(args), str(type(args)))
+    ret = []
+    for i in fmt:
+        res, args = _regroup(args, i)
+        ret.append(res)
+    return ret, args
+
+
 class Layer(object):
     """Base class for all neural network layers and models.
 
@@ -60,10 +96,10 @@ class Layer(object):
             def __init__(self, **kwargs):
                 super(Net, self).__init__(**kwargs)
                 with self.name_scope():
-                    self.dense0 = nn.Dense(20, in_units=10)
-                    self.dense1 = nn.Dense(20, in_units=20)
+                    self.dense0 = nn.Dense(20)
+                    self.dense1 = nn.Dense(20)
 
-            def forward(self, F, x):
+            def forward(self, x):
                 x = self.dense0(x)
                 return self.dense1(x)
 
@@ -89,14 +125,10 @@ class Layer(object):
         self._params = _LayerScope.create_params(self._prefix, params)
         self._scope = _LayerScope(self)
         self._children = []
-        self._reg_params = {}
-
 
     def __setattr__(self, name, value):
         """Registers parameters."""
         super(Layer, self).__setattr__(name, value)
-        if isinstance(value, Parameter):
-            self._reg_params[name] = value
         if isinstance(value, Layer):
             self.register_child(value)
 
@@ -140,62 +172,157 @@ class Layer(object):
         self as attributes will be registered automatically."""
         self._children.append(layer)
 
-    def infer_shape(self, *args):
-        """Infer parameter shape given input shapes.
-
-        *args : list of tuple
-            A list of input argument shapes.
-        """
-        inputs = [symbol.var('__input%d__'%i, shape=shape)
-                  for i, shape in enumerate(args)]
-        params = {k: v.var() for k, v in self._reg_params.items()}
-        sym = self.forward(symbol, *inputs, **params)
-        arg_shapes, _, aux_shapes = sym.infer_shape()
-        sdict = {name: shape for name, shape in zip(sym.list_arguments(), arg_shapes)}
-        sdict.update(
-            {name : shape for name, shape in zip(sym.list_auxiliary_states(), aux_shapes)})
-        for i in self.params.values():
-            i.shape = sdict[i.name]
+    def hybridize(self, active=True):
+        """Activate HybridLayers recursively. Has no effect on
+        non-hybrid children."""
+        for cld in self._children:
+            cld.hybridize(active)
 
     def __call__(self, *args):
         """Call forward."""
-        return self.call(*args)  # pylint: disable=no-value-for-parameter
+        return self.forward(*args)
 
-    def call(self, x, *args):
-        """Defines the forward computation. Arguments can be either NDArray or Symbol."""
+    def forward(self, *args):
+        """Override to implement forward computation using NDArray.
+
+        Parameters
+        ----------
+        *args : list of NDArray
+            Input tensors.
+        """
+        # pylint: disable= invalid-name
+        raise NotImplementedError
+
+
+class HybridLayer(Layer):
+    """HybridLayer supports forwarding with both Symbol and NDArray.
+
+    Forward computation in HybridLayer must be static to work with Symbols,
+    i.e. you cannot call `.asnumpy()`, `.shape`, `.dtype`, etc on inputs.
+    When forwarding after `hybridize()` is called, HybridLayer will
+    create a graph representing the forward computation and cache it.
+    On subsequent forward the cached graph will be used instead of calling
+    `hybrid_forward`.
+    """
+    def __init__(self, prefix=None, params=None):
+        super(HybridLayer, self).__init__(prefix=prefix, params=params)
+        self._reg_params = {}
+        self._cached_graph = ()
+        self._cached_op = None
+        self._cached_params = None
+        self._out_format = None
+        self._in_format = None
+        self._active = False
+
+    def __setattr__(self, name, value):
+        """Registers parameters."""
+        super(HybridLayer, self).__setattr__(name, value)
+        if isinstance(value, Parameter):
+            assert name not in self._reg_params or \
+                not isinstance(self._reg_params[name], Parameter), \
+                "Overriding Parameter attribute %s is not allowed. " \
+                "Please pass in Parameters by specifying `params` at " \
+                "Layer construction instead."
+            self._reg_params[name] = value
+
+    def register_child(self, layer):
+        if not isinstance(layer, HybridLayer):
+            if isinstance(layer, Sequantial):
+                raise ValueError(
+                    "Children of HybridLayer must also be HybridLayer. " \
+                    "Please use HSequential instead of Sequantial.")
+            raise ValueError(
+                "Children of HybridLayer must also be HybridLayer, " \
+                "but %s has type %s."%(str(layer), str(type(layer))))
+        super(HybridLayer, self).register_child(layer)
+
+    def hybridize(self, active=True):
+        super(HybridLayer, self).hybridize(active)
+        self._active = True
+
+    def _get_graph(self, *args):
+        if self._cached_graph:
+            return self._cached_graph
+
+        args, self._in_format = _flatten(args)
+        syms = [symbol.var(str(i)) for i in range(len(args))]
+        sym_args = _regroup(syms, self._in_format)[0]
+
+        params = {i: j.var() for i, j in self._reg_params.items()}
+        out = self.hybrid_forward(symbol, *sym_args, **params)  # pylint: disable=no-value-for-parameter
+        out, self._out_format = _flatten(out)
+
+        self._cached_graph = syms, symbol.Group(out)
+        return self._cached_graph
+
+    def infer_shape(self, *args):
+        """Infer shape of Parameters from inputs."""
+        syms, out = self._get_graph(*args)
+        arg_shapes, _, aux_shapes = out.infer_shape(
+            **{i.name: j.shape for i, j in zip(syms, args)})
+        sdict = {i: j for i, j in zip(out.list_arguments(), arg_shapes)}
+        sdict.update(
+            {name : shape for name, shape in zip(out.list_auxiliary_states(), aux_shapes)})
+        for i in self.all_params().values():
+            i.shape = sdict[i.name]
+
+    def _build_cache(self, *args):
+        self.infer_shape(*args)
+        for i in self.all_params().values():
+            i._finish_deferred_init()
+
+        _, out = self._get_graph(*args)
+        self._cached_op = ndarray.CachedOp(out)
+        params = dict(self.all_params().items())
+        self._cached_params = [params.get(name, None) for name in out.list_inputs()]
+        self._in_idx = [(i, int(name)) for i, name in enumerate(out.list_inputs())
+                        if name not in params]
+
+    def _call_cached_op(self, *args):
+        args, fmt = _flatten(args)
+        assert fmt == self._in_format, "Invalid input format"
+        cargs = [i.data() if i else None for i in self._cached_params]
+        for i, j in self._in_idx:
+            cargs[i] = args[j]
+        out = self._cached_op(*cargs)
+        if isinstance(out, NDArray):
+            out = [out]
+        return _regroup(out, self._out_format)[0]
+
+    def forward(self, x, *args):
+        """Defines the forward computation. Arguments can be either
+        NDArray or Symbol."""
         if isinstance(x, NDArray):
+            if self._active and self._cached_op is None:
+                self._build_cache(x, *args)
+
             with x.context as ctx:
+                if self._active:
+                    return self._call_cached_op(x, *args)
                 try:
-                    params = {k: v.data(ctx) for k, v in self._reg_params.items()}
+                    params = {i: j.data(ctx) for i, j in self._reg_params.items()}
                 except DeferredInitializationError:
-                    arg_shapes = [x.shape]
-                    arg_shapes += [i.shape if isinstance(i, NDArray) else i for i in args]
-                    self.infer_shape(*arg_shapes)
-                    for i in self.params.values():
+                    self.infer_shape(x, *args)
+                    for i in self.all_params().values():
                         i._finish_deferred_init()
-                    params = {k: v.data(ctx) for k, v in self._reg_params.items()}
-                return self.forward(ndarray, x, *args, **params)
+                    params = {i: j.data(ctx) for i, j in self._reg_params.items()}
+                return self.hybrid_forward(ndarray, x, *args, **params)
         else:
             assert isinstance(x, Symbol), \
                 "Layer requires the first argument to forward be either " \
                 "Symbol or NDArray, but got %s"%type(x)
-            params = {k: v.var() for k, v in self._reg_params.items()}
-            return self.forward(symbol, x, *args, **params)
+            params = {i: j.var() for i, j in self._reg_params.items()}
+            return self.hybrid_forward(symbol, x, *args, **params)
 
-    def forward(self, F, x, *args, **kwargs):
-        """Simple forward supports both `Symbol` and `NDArray` API.
+    def hybrid_forward(self, F, x, *args, **kwargs):
+        """Override to construct symbolic graph for this Layer.
 
         Parameters
         ----------
-        F : {mxnet.ndarray, mxnet.symbol}
-            Name space of operators. `F` will be set to `mx.sym` when x is `Symbol`
-            instance and `mx.nd` when x is `NDArray` instance.
-        x : NDArray or Symbol
-            The first input tensor.
-        *args : list of NDArray or list of Symbol
-            Additional input tensors.
-        **kwargs : dict of str to NDArray or dict of str to Symbol
-            `Symbol` or `NDArray` value of registered Parameters.
+        x : Symbol
+            The first input Symbol.
+        *args : list of Symbol
+            Additional input Symbols.
         """
         # pylint: disable= invalid-name
         raise NotImplementedError
@@ -206,27 +333,46 @@ class Sequential(Layer):
 
     Example::
         net = nn.Sequential()
-        net.add(Dense(10, activation='relu'))
-        net.add(Dense(20))
+        with net.name_scope():
+            net.add(Dense(10, activation='relu'))
+            net.add(Dense(20))
     """
-    def __init__(self):
-        super(Sequential, self).__init__(prefix='', params=None)
+    def __init__(self, prefix=None, params=None):
+        super(Sequential, self).__init__(prefix=prefix, params=params)
 
     def add(self, layer):
         """Add layer on top of the stack."""
         self.register_child(layer)
 
-    def call(self, x):
-        #pylint: disable=arguments-differ
+    def forward(self, x):
         for layer in self._children:
             x = layer(x)
         return x
 
-    def forward(self, F, x, *args, **kwargs):
-        raise NotImplementedError
+
+class HSequential(HybridLayer):
+    """Stack HybridLayers sequentially.
+
+    Example::
+        net = nn.HSequential()
+        with net.name_scope():
+            net.add(Dense(10, activation='relu'))
+            net.add(Dense(20))
+    """
+    def __init__(self, prefix=None, params=None):
+        super(HSequential, self).__init__(prefix=prefix, params=params)
+
+    def add(self, layer):
+        """Add layer on top of the stack."""
+        self.register_child(layer)
+
+    def hybrid_forward(self, F, x):
+        for layer in self._children:
+            x = layer(x)
+        return x
 
 
-class Dense(Layer):
+class Dense(HybridLayer):
     """Just your regular densely-connected NN layer.
 
     `Dense` implements the operation:
@@ -238,18 +384,6 @@ class Dense(Layer):
 
     Note: the input must be a tensor with rank 2. Use flatten to convert it
     to rank 2 manually if necessary.
-
-    Example::
-        # as first layer in a sequential model:
-        model = Sequential()
-        model.add(Dense(32, in_uints=16))
-        # now the model will take as input arrays of shape (*, 16)
-        # and output arrays of shape (*, 32)
-
-        # No need to specify the size of the input if you only want to
-        # use the `Symbol` API:
-        model = Sequential()
-        model.add(Dense(32))
 
     Parameters
     ----------
@@ -284,29 +418,30 @@ class Dense(Layer):
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
         with self.name_scope():
-            self._op = symbol.CachedOp('FullyConnected', 3 if use_bias else 2,
-                                       num_hidden=units, no_bias=not use_bias)
+            self._units = units
             self.weight = self.params.get('weight', shape=(units, in_units),
                                           init=kernel_initializer)
             if use_bias:
                 self.bias = self.params.get('bias', shape=(units,),
                                             init=bias_initializer)
+            else:
+                self.bias = None
             if activation is not None:
                 self.act = Activation(activation)
             else:
                 self.act = None
 
-    def forward(self, F, x, weight, bias=None):
+    def hybrid_forward(self, F, x, weight, bias=None):
         if bias is None:
-            act = F.invoke(self._op, [x, weight])
+            act = F.FullyConnected(x, weight, no_bias=True, num_hidden=self._units)
         else:
-            act = F.invoke(self._op, [x, weight, bias])
+            act = F.FullyConnected(x, weight, bias, num_hidden=self._units)
         if self.act is not None:
             act = self.act(act)
         return act
 
 
-class Activation(Layer):
+class Activation(HybridLayer):
     """Applies an activation function to input.
 
     Parameters
@@ -325,16 +460,15 @@ class Activation(Layer):
     def __init__(self, activation, **kwargs):
         self._act_type = activation
         super(Activation, self).__init__(**kwargs)
-        self._op = symbol.CachedOp('Activation', 1, act_type=self._act_type)
 
     def _alias(self):
         return self._act_type
 
-    def forward(self, F, x):
-        return F.invoke(self._op, [x])
+    def hybrid_forward(self, F, x):
+        return F.Activation(x, act_type=self._act_type)
 
 
-class Dropout(Layer):
+class Dropout(HybridLayer):
     """Applies Dropout to the input.
 
     Dropout consists in randomly setting
@@ -352,13 +486,13 @@ class Dropout(Layer):
     """
     def __init__(self, rate, **kwargs):
         super(Dropout, self).__init__(**kwargs)
-        self._op = symbol.CachedOp('Dropout', 1, p=rate)
+        self._rate = rate
 
-    def forward(self, F, x):
-        return F.invoke(self._op, [x])
+    def hybrid_forward(self, F, x):
+        return F.Dropout(x, p=self._rate)
 
 
-class BatchNorm(Layer):
+class BatchNorm(HybridLayer):
     """Batch normalization layer (Ioffe and Szegedy, 2014).
     Normalize the activations of the previous layer at each batch,
     i.e. applies a transformation that maintains the mean activation
@@ -390,10 +524,8 @@ class BatchNorm(Layer):
                  running_mean_initializer='zeros', running_variance_initializer='ones',
                  **kwargs):
         super(BatchNorm, self).__init__(**kwargs)
-        assert axis == 1, \
-            "Only support NC* layout, i.e. channel must be in the second dimension"
-        attrs = {'eps': epsilon, 'momentum': momentum, 'fix_gamma': not center}
-        self._op = symbol.CachedOp('BatchNorm', 5, **attrs)
+        self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': momentum,
+                        'fix_gamma': not center}
 
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
                                      shape=(num_features,), init=gamma_initializer)
@@ -406,11 +538,11 @@ class BatchNorm(Layer):
                                            shape=(num_features,),
                                            init=running_variance_initializer)
 
-    def forward(self, F, x, gamma, beta, running_mean, running_var):
-        return F.invoke(self._op, [x, gamma, beta, running_mean, running_var])
+    def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
+        return F.BatchNorm(x, gamma, beta, running_mean, running_var, **self._kwargs)
 
 
-class LeakyReLU(Layer):
+class LeakyReLU(HybridLayer):
     """Leaky version of a Rectified Linear Unit.
 
     It allows a small gradient when the unit is not active:
@@ -424,13 +556,13 @@ class LeakyReLU(Layer):
     """
     def __init__(self, alpha, **kwargs):
         super(LeakyReLU, self).__init__(**kwargs)
-        self._op = symbol.CachedOp('LeakyReLU', 1, act_type='leaky', slope=alpha)
+        self._alpha = alpha
 
-    def forward(self, F, x):
-        return F.invoke(self._op, [x])
+    def hybrid_forward(self, F, x):
+        return F.LeakyReLU(x, act_type='leaky', slope=self._alpha)
 
 
-class Embedding(Layer):
+class Embedding(HybridLayer):
     """Turns non-negative integers (indexes/tokens) into dense
     vectors of fixed size.
     eg. [[4], [20]] -> [[0.25, 0.1], [0.6, -0.2]]
@@ -457,10 +589,10 @@ class Embedding(Layer):
     def __init__(self, input_dim, output_dim, dtype='float32',
                  embeddings_initializer=None, **kwargs):
         super(Embedding, self).__init__(**kwargs)
-        self._op = symbol.CachedOp('Embedding', 2, input_dim=input_dim,
-                                   output_dim=output_dim, dtype=dtype)
+        self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
+                        'dtype': dtype}
         self.weight = self.params.get('weight', shape=(input_dim, output_dim),
                                       init=embeddings_initializer)
 
-    def forward(self, F, x, weight):
-        return F.invoke(self._op, [x, weight])
+    def hybrid_forward(self, F, x, weight):
+        return F.Embedding(x, weight, **self._kwargs)

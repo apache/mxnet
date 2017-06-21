@@ -6,6 +6,7 @@ from itertools import count
 import numpy as np
 
 import mxnet as mx
+import mxnet.ndarray as F
 from mxnet import foo
 from mxnet.foo import nn
 from mxnet.contrib import autograd
@@ -35,7 +36,7 @@ class Policy(nn.Layer):
             self.action_pred = nn.Dense(2, in_units=16)
             self.value_pred = nn.Dense(1, in_units=16)
 
-    def forward(self, F, x):
+    def forward(self, x):
         x = self.dense(x)
         probs = self.action_pred(x)
         values = self.value_pred(x)
@@ -53,7 +54,7 @@ for epoch in count(1):
     values = []
     heads = []
     actions = []
-    with autograd.train_section():
+    with autograd.record():
         # Sample a sequence of actions
         for t in range(10000):
             state = mx.nd.array(np.expand_dims(state, 0))

@@ -13,9 +13,10 @@ logging.basicConfig(level=logging.DEBUG)
 # define network
 
 net = nn.Sequential()
-net.add(nn.Dense(128, in_units=784, activation='relu'))
-net.add(nn.Dense(64, in_units=128, activation='relu'))
-net.add(nn.Dense(10, in_units=64))
+with net.name_scope():
+    net.add(nn.Dense(128, activation='relu'))
+    net.add(nn.Dense(64, activation='relu'))
+    net.add(nn.Dense(10))
 
 # data
 
@@ -48,7 +49,7 @@ def train(epoch, ctx):
             data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
             label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
             outputs = []
-            with ag.train_section():
+            with ag.record():
                 for x, y in zip(data, label):
                     z = net(x)
                     loss = foo.loss.softmax_cross_entropy_loss(z, y)

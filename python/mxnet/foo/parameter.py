@@ -38,7 +38,7 @@ class Parameter(object):
         b = mx.nn.Parameter('fc_bias', shape(64,), init=mx.init.Zero())
         w.initialize(ctx=ctx)
         b.initialize(ctx=ctx)
-        out = mx.nd.FullyConnected(x, w.value(ctx), b.value(ctx), num_hidden=64)
+        out = mx.nd.FullyConnected(x, w.data(ctx), b.data(ctx), num_hidden=64)
 
     Parameters
     ----------
@@ -158,7 +158,7 @@ class Parameter(object):
             "in_filters, num_features etc for Layers."%(
                 self.name, str(self.shape))
 
-        with autograd.test_section():
+        with autograd.pause():
             data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
                                  ctx=context.cpu())
             if init is None:
@@ -321,6 +321,7 @@ class ParameterDict(object):
         if name in self._params:
             return self._params[name]
         if self._shared is not None and name in self._shared._params:
+            self._params[name] = self._shared._params[name]
             return self._shared._params[name]
         return None
 

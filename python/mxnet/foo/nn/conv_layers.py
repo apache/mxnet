@@ -1,16 +1,17 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Convolutional neural network layers."""
-from .layer import Layer
+from .layer import HybridLayer
 from ... import symbol
 from ...base import numeric_types
 
-def _infer_weight_shape(op, data_shape):
-    sym = symbol.invoke(op, [symbol.var('data', shape=data_shape)])
+def _infer_weight_shape(op_name, data_shape, kwargs):
+    op = getattr(symbol, op_name)
+    sym = op(symbol.var('data', shape=data_shape), **kwargs)
     return sym.infer_shape_partial()[0]
 
 
-class _Conv(Layer):
+class _Conv(HybridLayer):
     """Abstract nD convolution layer (private, used as implementation base).
 
     This layer creates a convolution kernel that is convolved
@@ -71,33 +72,35 @@ class _Conv(Layer):
                 padding = (padding,)*len(kernel_size)
             if isinstance(dilation, numeric_types):
                 dilation = (dilation,)*len(kernel_size)
-            attrs = {
+            self._op_name = op_name
+            self._kwargs = {
                 'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
                 'pad': padding, 'num_filter': filters, 'num_group': groups,
                 'no_bias': not use_bias, 'layout': layout}
-            attrs.update(kwargs)
-            self._op = symbol.CachedOp(op_name, 3 if use_bias else 2, **attrs)
+            self._kwargs.update(kwargs)
 
             dshape = [0]*(len(kernel_size) + 2)
             dshape[layout.find('N')] = 1
             dshape[layout.find('C')] = in_filters
-            wshapes = _infer_weight_shape(self._op, dshape)
+            wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)
             self.weight = self.params.get('weight', shape=wshapes[1],
                                           init=kernel_initializer)
             if use_bias:
                 self.bias = self.params.get('bias', shape=wshapes[2],
                                             init=bias_initializer)
+            else:
+                self.bias = None
 
             if activation is not None:
                 self.act = Activation(activation)
             else:
                 self.act = None
 
-    def forward(self, F, x, weight, bias=None):
+    def hybrid_forward(self, F, x, weight, bias=None):
         if bias is None:
-            act = F.invoke(self._op, [x, weight])
+            act = getattr(F, self._op_name)(x, weight, **self._kwargs)
         else:
-            act = F.invoke(self._op, [x, weight, bias])
+            act = getattr(F, self._op_name)(x, weight, bias, **self._kwargs)
         if self.act is not None:
             act = self.act(act)
         return act
@@ -503,7 +506,7 @@ class Conv3DTranspose(_Conv):
             op_name='Deconvolution', adj=output_padding, **kwargs)
 
 
-class _Pooling(Layer):
+class _Pooling(HybridLayer):
     """Abstract class for different pooling layers.
     """
     def __init__(self, pool_size, strides, padding, global_pool, pool_type, **kwargs):
@@ -514,14 +517,13 @@ class _Pooling(Layer):
             strides = (strides,)*len(pool_size)
         if isinstance(padding, numeric_types):
             padding = (padding,)*len(pool_size)
-        attrs = {
+        self._kwargs = {
             'kernel': pool_size, 'stride': strides, 'pad': padding,
             'pooling_convention': 'full', 'global_pool': global_pool,
             'pool_type': pool_type}
-        self._op = symbol.CachedOp('Pooling', 1, **attrs)
 
-    def forward(self, F, x):
-        return F.invoke(self._op, [x])
+    def hybrid_forward(self, F, x):
+        return F.Pooling(x, **self._kwargs)
 
 
 class MaxPool1D(_Pooling):

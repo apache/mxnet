@@ -30,7 +30,7 @@ def test_lstm():
 
 def test_lstm_forget_bias():
     forget_bias = 2.0
-    stack = foo.rnn.SequentialRNNCell()
+    stack = foo.rnn.HSequentialRNNCell()
     stack.add(foo.rnn.LSTMCell(100, forget_bias=forget_bias, prefix='l0_'))
     stack.add(foo.rnn.LSTMCell(100, forget_bias=forget_bias, prefix='l1_'))
 
@@ -117,7 +117,7 @@ def test_residual_bidirectional():
 
 
 def test_stack():
-    cell = foo.rnn.SequentialRNNCell()
+    cell = foo.rnn.HSequentialRNNCell()
     for i in range(5):
         if i == 1:
             cell.add(foo.rnn.ResidualCell(foo.rnn.LSTMCell(100, prefix='rnn_stack%d_' % i)))
@@ -179,11 +179,10 @@ def test_unfuse():
 
 def check_rnn_forward(layer, inputs):
     layer.all_params().initialize()
-    with mx.contrib.autograd.train_section():
-        mx.contrib.autograd.compute_gradient(
-            [layer.unroll(3, inputs, merge_outputs=True)[0]])
-        mx.contrib.autograd.compute_gradient(
-            layer.unroll(3, inputs, merge_outputs=False)[0])
+    with mx.autograd.record():
+        layer.unroll(3, inputs, merge_outputs=True)[0].backward()
+        mx.autograd.backward(layer.unroll(3, inputs, merge_outputs=False)[0])
+    mx.nd.waitall()
 
 
 def test_rnn_cells():
@@ -201,7 +200,7 @@ def test_rnn_cells():
                                          0.5, 0.2),
                       mx.nd.ones((8, 3, 200)))
 
-    net = foo.rnn.SequentialRNNCell()
+    net = foo.rnn.HSequentialRNNCell()
     net.add(foo.rnn.LSTMCell(100, num_input=200))
     net.add(foo.rnn.RNNCell(100, num_input=100))
     net.add(foo.rnn.GRUCell(100, num_input=100))

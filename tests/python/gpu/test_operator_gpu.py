@@ -1281,7 +1281,7 @@ def test_residual_fused():
 def test_foo_rnn():
     fused = foo.rnn.FusedRNNCell(100, num_layers=2, mode='rnn_relu', prefix='')
 
-    stack = foo.rnn.SequentialRNNCell()
+    stack = foo.rnn.HSequentialRNNCell()
     stack.add(foo.rnn.RNNCell(100, activation='relu', prefix='l0_'))
     stack.add(foo.rnn.RNNCell(100, activation='relu', prefix='l1_'))
 
@@ -1292,7 +1292,7 @@ def test_foo_rnn():
 def test_foo_lstm():
     fused = foo.rnn.FusedRNNCell(100, num_layers=2, mode='lstm', prefix='')
 
-    stack = foo.rnn.SequentialRNNCell()
+    stack = foo.rnn.HSequentialRNNCell()
     stack.add(foo.rnn.LSTMCell(100, prefix='l0_'))
     stack.add(foo.rnn.LSTMCell(100, prefix='l1_'))
 
@@ -1324,7 +1324,7 @@ def test_foo_lstm_forget_bias():
 def test_foo_gru():
     fused = foo.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
 
-    stack = foo.rnn.SequentialRNNCell()
+    stack = foo.rnn.HSequentialRNNCell()
     stack.add(foo.rnn.GRUCell(100, prefix='l0_'))
     stack.add(foo.rnn.GRUCell(100, prefix='l1_'))
 
@@ -1336,7 +1336,7 @@ def test_foo_bidirectional():
     fused = foo.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='',
             bidirectional=True)
 
-    stack = foo.rnn.SequentialRNNCell()
+    stack = foo.rnn.HSequentialRNNCell()
     stack.add(foo.rnn.BidirectionalCell(
                 foo.rnn.GRUCell(100, prefix='l0_'),
                 foo.rnn.GRUCell(100, prefix='r0_'),
