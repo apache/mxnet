@@ -119,7 +119,6 @@ static void ExecutorMonitor_callback(const char* name, NDArrayHandle handle, voi
     SWIG_TypeClientData(SWIGTYPE_p_MXKVStore, (void *)"KVStoreHandle");
     SWIG_TypeClientData(SWIGTYPE_p_MXRecordIO, (void *)"RecordIOHandle");
     SWIG_TypeClientData(SWIGTYPE_p_MXRtc, (void *)"RtcHandle");
-    SWIG_TypeClientData(SWIGTYPE_p_MXCachedOp, (void *)"CachedOpHandle");
 %}
 
 /*! \brief manually define unsigned int */
@@ -151,8 +150,6 @@ typedef MXKVStore *KVStoreHandle;
 typedef MXRecordIO *RecordIOHandle;
 /*! \brief handle to MXRtc*/
 typedef MXRtc *RtcHandle;
-/*! \brief handle to cached operator */
-typedef MXCachedOp *CachedOpHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
                                                        NDArrayHandle,
@@ -628,30 +625,6 @@ int MXAutogradBackward(mx_uint num_output,
                                  NDArrayHandle* in,
                                  int retain_graph);
 
-/*!
- * \brief create cached operator
- */
-int MXCachedCreateOp(AtomicSymbolCreator in,
-                               int num_inputs,
-                               int num_params,
-                               const char **keys,
-                               const char **vals,
-                               CachedOpHandle *out);
-
-/*!
- * \brief free cached operator
- */
-int MXCachedFree(CachedOpHandle handle);
-
-/*!
- * \brief invoke cached operator
- */
-int MXCachedInvoke(CachedOpHandle handle,
-                             int num_inputs,
-                             NDArrayHandle *in,
-                             int *out_size,
-                             NDArrayHandle** out_array);
-
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
@@ -719,20 +692,6 @@ int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator in,
                                          const char **keys,
                                          const char **vals,
                                          SymbolHandle *out);
-/*!
- * \brief Create an AtomicSymbol from cached op.
- * \param handle cached node attribute.
- * \param name name of new symbol.
- * \param num_args the number of symbol arguments
- * \param args symbol arguments
- * \return 0 when success, -1 when failure happens
- */
-int MXCachedCreateSymbol(CachedOpHandle handle,
-                                   const char* name,
-                                   mx_uint num_args,
-                                   SymbolHandle* in,
-                                   SymbolHandle* out);
-
 /*!
  * \brief Create a Variable Symbol.
  * \param name name of the variable

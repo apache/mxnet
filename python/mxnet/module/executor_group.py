@@ -111,8 +111,8 @@ class DataParallelExecutorGroup(object):
     shared_group : DataParallelExecutorGroup
         Defaults to ``None``. This is used in bucketing. When not ``None``, it should be a executor
         group corresponding to a different bucket. In other words, it will correspond to a different
-        symbol but with the same set of parameters (e.g. unrolled RNNs with different lengths).
-        In this case, many memory will be shared.
+        symbol with the same set of parameters (e.g. unrolled RNNs with different lengths).
+        In this case the memory regions of the parameters will be shared.
     logger : Logger
         Default is `logging`.
     fixed_param_names: list of str
