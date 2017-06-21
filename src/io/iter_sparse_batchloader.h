@@ -71,32 +71,31 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
     out_.num_batch_padd = num_overflow_;
     CHECK_EQ(inst_cache_.size(), param_.batch_size);
     this->InitDataFromBatch();
-    MSHADOW_INT_TYPE_SWITCH(CSR_IND_PTR_TYPE, IType, {
-      for (size_t j = 0; j < inst_cache_.size(); j++) {
-        const auto& d = inst_cache_[j];
-        out_.inst_index[top] = d.index;
-        size_t unit_size = 0;
-        for (size_t i = 0; i < d.data.size(); ++i) {
-          // indptr tensor
-          if (IsIndPtr(i)) {
-            auto indptr = data_[i].get<cpu, 1, IType>();
-            if (j == 0) indptr[0] = 0;
-            indptr[j + 1] = indptr[j] + (IType) unit_size;
-            offsets_[i] = j;
-          } else {
-            // indices and values tensor
-            unit_size = d.data[i].shape_.Size();
-            MSHADOW_TYPE_SWITCH(data_[i].type_flag_, DType, {
-              const auto begin = offsets_[i];
-              const auto end = offsets_[i] + unit_size;
-              mshadow::Copy(data_[i].get<cpu, 1, DType>().Slice(begin, end),
-                            d.data[i].get_with_shape<cpu, 1, DType>(mshadow::Shape1(unit_size)));
-              });
-            offsets_[i] += unit_size;
-          }
+    for (size_t j = 0; j < inst_cache_.size(); j++) {
+      const auto& d = inst_cache_[j];
+      out_.inst_index[top] = d.index;
+      // TODO(haibin) double check the type?
+      int64_t unit_size = 0;
+      for (size_t i = 0; i < d.data.size(); ++i) {
+        // indptr tensor
+        if (IsIndPtr(i)) {
+          auto indptr = data_[i].get<cpu, 1, int64_t>();
+          if (j == 0) indptr[0] = 0;
+          indptr[j + 1] = indptr[j] + unit_size;
+          offsets_[i] = j;
+        } else {
+          // indices and values tensor
+          unit_size = d.data[i].shape_.Size();
+          MSHADOW_TYPE_SWITCH(data_[i].type_flag_, DType, {
+            const auto begin = offsets_[i];
+            const auto end = offsets_[i] + unit_size;
+            mshadow::Copy(data_[i].get<cpu, 1, DType>().Slice(begin, end),
+                          d.data[i].get_with_shape<cpu, 1, DType>(mshadow::Shape1(unit_size)));
+            });
+          offsets_[i] += unit_size;
         }
       }
-    });
+    }
     return true;
   }
 

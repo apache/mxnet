@@ -43,8 +43,8 @@ except ImportError:
 
 # pylint: enable=unused-import
 _STORAGE_AUX_TYPES = {
-    'row_sparse': [np.int32],
-    'csr': [np.int32, np.int32]
+    'row_sparse': [np.int64],
+    'csr': [np.int64, np.int64]
 }
 
 
@@ -483,8 +483,8 @@ def csr(values, indptr, indices, shape, ctx=None, dtype=None, indptr_type=None, 
     indices, indices_type = _prepare_src_array(indices, indices_type,
                                                _STORAGE_AUX_TYPES[storage_type][1])
     # verify types
-    assert('int' in str(indptr_type) or 'long' in str(indptr_type))
-    assert('int' in str(indices_type) or 'long' in str(indices_type))
+    assert('int64' in str(indptr_type)), "expected int64 for indptr"
+    assert('int64' in str(indices_type)), "expected int64 for indices"
     # verify shapes
     aux_shapes = [indptr.shape, indices.shape]
     assert(values.ndim == 1)
@@ -536,7 +536,7 @@ def row_sparse(values, indices, shape, ctx=None, dtype=None, indices_type=None):
     indices, indices_type = _prepare_src_array(indices, indices_type,
                                                _STORAGE_AUX_TYPES[storage_type][0])
     # verify types
-    assert('int' in str(indices_type) or 'long' in str(indices_type))
+    assert('int64' in str(indices_type)), "expected int64 for indices"
     # verify shapes
     assert(values.ndim == len(shape))
     assert(indices.ndim == 1)

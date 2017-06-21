@@ -46,11 +46,11 @@ class LibSVMIter: public SparseIIterator<DataInst> {
   // intialize iterator loads data in
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     param_.InitAllowUnknown(kwargs);
-    data_parser_.reset(dmlc::Parser<uint32_t>::Create(param_.data_libsvm.c_str(),
-                                                      0, 1, "libsvm"));
     CHECK_EQ(param_.data_shape.ndim(), 1) << "dimension of data_shape is expected to be 1";
+    data_parser_.reset(dmlc::Parser<uint64_t>::Create(param_.data_libsvm.c_str(),
+                                                      0, 1, "libsvm"));
     if (param_.label_libsvm != "NULL") {
-      label_parser_.reset(dmlc::Parser<uint32_t>::Create(param_.label_libsvm.c_str(),
+      label_parser_.reset(dmlc::Parser<uint64_t>::Create(param_.label_libsvm.c_str(),
                                                          0, 1, "libsvm"));
       CHECK_GT(param_.label_shape.Size(), 1)
         << "label_shape is not expected to be (1,) when param_.label_libsvm is set.";
@@ -129,23 +129,23 @@ class LibSVMIter: public SparseIIterator<DataInst> {
   }
 
  private:
-  inline TBlob AsDataBlob(const dmlc::Row<uint32_t>& row) {
+  inline TBlob AsDataBlob(const dmlc::Row<uint64_t>& row) {
     const real_t* ptr = row.value;
     TShape shape(mshadow::Shape1(row.length));
     return TBlob((real_t*) ptr, shape, cpu::kDevMask);  // NOLINT(*)
   }
 
-  inline TBlob AsIdxBlob(const dmlc::Row<uint32_t>& row) {
-    const uint32_t* ptr = row.index;
+  inline TBlob AsIdxBlob(const dmlc::Row<uint64_t>& row) {
+    const uint64_t* ptr = row.index;
     TShape shape(mshadow::Shape1(row.length));
-    return TBlob((int32_t*) ptr, shape, cpu::kDevMask, CSR_IDX_DTYPE);  // NOLINT(*)
+    return TBlob((int64_t*) ptr, shape, cpu::kDevMask, mshadow::kInt64);  // NOLINT(*)
   }
 
-  inline TBlob AsIndPtrPlaceholder(const dmlc::Row<uint32_t>& row) {
-    return TBlob(nullptr, mshadow::Shape1(0), cpu::kDevMask, CSR_IND_PTR_TYPE);
+  inline TBlob AsIndPtrPlaceholder(const dmlc::Row<uint64_t>& row) {
+    return TBlob(nullptr, mshadow::Shape1(0), cpu::kDevMask, mshadow::kInt64);
   }
 
-  inline TBlob AsScalarLabelBlob(const dmlc::Row<uint32_t>& row) {
+  inline TBlob AsScalarLabelBlob(const dmlc::Row<uint64_t>& row) {
     const real_t* ptr = row.label;
     return TBlob((real_t*) ptr, mshadow::Shape1(1), cpu::kDevMask);  // NOLINT(*)
   }
@@ -160,8 +160,8 @@ class LibSVMIter: public SparseIIterator<DataInst> {
   // label parser
   size_t label_ptr_{0}, label_size_{0};
   size_t data_ptr_{0}, data_size_{0};
-  std::unique_ptr<dmlc::Parser<uint32_t> > label_parser_;
-  std::unique_ptr<dmlc::Parser<uint32_t> > data_parser_;
+  std::unique_ptr<dmlc::Parser<uint64_t> > label_parser_;
+  std::unique_ptr<dmlc::Parser<uint64_t> > data_parser_;
 };
 
 

@@ -95,7 +95,7 @@ def check_sparse_nd_prop_rsp():
     shape = rand_shape_2d()
     nd, (v, idx) = rand_sparse_ndarray(shape, storage_type)
     assert(nd._num_aux == 1)
-    assert(nd.indices.dtype == np.int32)
+    assert(nd.indices.dtype == np.int64)
     assert(nd.storage_type == 'row_sparse')
     assert_almost_equal(nd.indices.asnumpy(), idx)
 
@@ -106,9 +106,12 @@ def test_sparse_nd_basic():
         dns = mx.nd.zeros(shape)
         dns[1] = mx.nd.array(values[0])
         dns[3] = mx.nd.array(values[1])
-        assert_almost_equal(rsp.asnumpy(), dns.asnumpy())
-        indices = mx.nd.array(indices).asnumpy()
-        assert_almost_equal(rsp.indices.asnumpy(), indices)
+        #assert_almost_equal(rsp.asnumpy(), dns.asnumpy())
+        print('before', indices)
+        print('mx', mx.nd.array(indices, dtype='int64')[1].asnumpy())
+        indices_np = mx.nd.array(indices, dtype='int64').asnumpy()
+        print('after', indices_np)
+        assert_almost_equal(rsp.indices.asnumpy(), indices_np)
 
     def check_csr_creation(shape):
         csr, (indptr, indices, values) = rand_sparse_ndarray(shape, 'csr')
@@ -118,11 +121,11 @@ def test_sparse_nd_basic():
 
     shape = (4,2)
     values = np.random.rand(2,2)
-    indices = np.array([1,3])
+    indices = np.array([1,3], dtype='int64')
     check_rsp_creation(values, indices, shape)
 
     values = mx.nd.array(np.random.rand(2,2))
-    indices = mx.nd.array([1,3], dtype='int32')
+    indices = mx.nd.array([1,3], dtype='int64')
     check_rsp_creation(values, indices, shape)
 
     values = [[0.1, 0.2], [0.3, 0.4]]

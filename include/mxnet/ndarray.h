@@ -58,10 +58,6 @@ class AutogradRuntime;
 }  // namespace autograd
 
 // enum for storage types
-#define CSR_IND_PTR_TYPE mshadow::kInt32
-#define CSR_IDX_DTYPE mshadow::kInt32
-#define ROW_SPARSE_IDX_TYPE mshadow::kInt32
-// FIXME int64_t is not available mshadow
 namespace csr {
 enum CSRAuxType {kIndPtr, kIdx};
 }
@@ -114,9 +110,9 @@ class NDArray {
       // Assign default aux types if not given
       if (aux_types.size() == 0) {
         if (stype == kRowSparseStorage) {
-          aux_types = {ROW_SPARSE_IDX_TYPE};
+          aux_types = {mshadow::kInt64};
         } else if (stype == kCSRStorage) {
-          aux_types = {CSR_IND_PTR_TYPE, CSR_IDX_DTYPE};
+          aux_types = {mshadow::kInt64, mshadow::kInt64};
         } else {
           LOG(FATAL) << "Unknown storage type " << stype;
         }

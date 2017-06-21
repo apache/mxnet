@@ -53,14 +53,16 @@ _DTYPE_NP_TO_MX = {
     np.float64 : 1,
     np.float16 : 2,
     np.uint8   : 3,
-    np.int32   : 4
+    np.int32   : 4,
+    np.int64   : 6
 }
 _DTYPE_MX_TO_NP = {
     0 : np.float32,
     1 : np.float64,
     2 : np.float16,
     3 : np.uint8,
-    4 : np.int32
+    4 : np.int32,
+    6 : np.int64
 }
 _STORAGE_TYPE_ID_TO_STR = {
     -1 : 'undefined',

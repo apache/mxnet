@@ -1154,28 +1154,28 @@ void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
     out.set_aux_shape(kIndPtr, Shape1(0));
     return;
   }
-  CHECK_EQ(in.aux_type(kIndPtr), in.aux_type(kIdx))
-           << "The type for indptr and indices are different. This is not implemented yet.";
   // assume idx indptr share the same type
-  MSHADOW_INT_TYPE_SWITCH(in.aux_type(kIndPtr), IType, {
-    MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
-      auto in_indptr = in.aux_data(kIndPtr).dptr<IType>();
-      auto out_indptr = out.aux_data(kIndPtr).dptr<IType>();
-      SliceCsrIndPtrImpl<cpu, IType>(begin, end, ctx.run_ctx, in_indptr, out_indptr);
+  MSHADOW_INT_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
+    MSHADOW_INT_TYPE_SWITCH(in.aux_type(kIdx), IType, {
+      MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
+        auto in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+        auto out_indptr = out.aux_data(kIndPtr).dptr<RType>();
+        SliceCsrIndPtrImpl<cpu, RType>(begin, end, ctx.run_ctx, in_indptr, out_indptr);
 
-      // retrieve nnz (CPU implementation)
-      int nnz = out_indptr[indptr_len - 1];
-      // copy indices and values
-      out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
-      out.CheckAndAllocData(Shape1(nnz));
-      auto in_idx = in.aux_data(kIdx).dptr<IType>();
-      auto out_idx = out.aux_data(kIdx).dptr<IType>();
-      auto in_data = in.data().dptr<DType>();
-      auto out_data = out.data().dptr<DType>();
-      int offset = in_indptr[begin];
-      // this is also a CPU-only implementation
-      memcpy(out_idx, in_idx + offset, nnz * sizeof(IType));
-      memcpy(out_data, in_data + offset, nnz * sizeof(DType));
+        // retrieve nnz (CPU implementation)
+        int nnz = out_indptr[indptr_len - 1];
+        // copy indices and values
+        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
+        out.CheckAndAllocData(Shape1(nnz));
+        auto in_idx = in.aux_data(kIdx).dptr<IType>();
+        auto out_idx = out.aux_data(kIdx).dptr<IType>();
+        auto in_data = in.data().dptr<DType>();
+        auto out_data = out.data().dptr<DType>();
+        int offset = in_indptr[begin];
+        // this is also a CPU-only implementation
+        memcpy(out_idx, in_idx + offset, nnz * sizeof(IType));
+        memcpy(out_data, in_data + offset, nnz * sizeof(DType));
+      });
     });
   });
 }
