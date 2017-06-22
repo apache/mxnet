@@ -9,29 +9,10 @@ from dataset.iterator import DetRecordIter
 from train.metric import MultiBoxMetric
 from evaluate.eval_metric import MApMetric, VOC07MApMetric
 from config.config import cfg
+from symbol.symbol_factory import get_symbol_train
 
 def convert_pretrained(name, args):
-    """
-    Special operations need to be made due to name inconsistance, etc
-
-    Parameters:
-    ---------
-    name : str
-        pretrained model name
-    args : dict
-        loaded arguments
-
-    Returns:
-    ---------
-    processed arguments as dict
-    """
-    if 'vgg16_reduced' in name:
-        args['conv6_bias'] = args.pop('fc6_bias')
-        args['conv6_weight'] = args.pop('fc6_weight')
-        args['conv7_bias'] = args.pop('fc7_bias')
-        args['conv7_weight'] = args.pop('fc7_weight')
-        del args['fc8_weight']
-        del args['fc8_bias']
+    # no rules now
     return args
 
 def get_lr_scheduler(learning_rate, lr_refactor_step, lr_refactor_ratio,
@@ -165,7 +146,7 @@ def train_net(net, train_path, num_classes, batch_size,
     if isinstance(data_shape, int):
         data_shape = (3, data_shape, data_shape)
     assert len(data_shape) == 3 and data_shape[0] == 3
-    prefix += '_' + str(data_shape[1])
+    prefix += '_' + net + '_' + str(data_shape[1])
 
     if isinstance(mean_pixels, (int, float)):
         mean_pixels = [mean_pixels, mean_pixels, mean_pixels]
@@ -181,10 +162,8 @@ def train_net(net, train_path, num_classes, batch_size,
         val_iter = None
 
     # load symbol
-    sys.path.append(os.path.join(cfg.ROOT_DIR, 'symbol'))
-    symbol_module = importlib.import_module("symbol_" + net)
-    net = symbol_module.get_symbol_train(num_classes, nms_thresh=nms_thresh,
-        force_suppress=force_suppress, nms_topk=nms_topk)
+    net = get_symbol_train(net, data_shape[1], num_classes=num_classes,
+        nms_thresh=nms_thresh, force_suppress=force_suppress, nms_topk=nms_topk)
 
     # define layers with fixed weight/bias
     if freeze_layer_pattern.strip():

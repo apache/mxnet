@@ -5,9 +5,10 @@ import os
 import importlib
 import sys
 from detect.detector import Detector
+from symbol.symbol_factory import get_symbol
 
 def get_detector(net, prefix, epoch, data_shape, mean_pixels, ctx, num_class,
-                 nms_thresh=0.5, force_nms=True):
+                 nms_thresh=0.5, force_nms=True, nms_topk=400):
     """
     wrapper for initialize a detector
 
@@ -32,20 +33,18 @@ def get_detector(net, prefix, epoch, data_shape, mean_pixels, ctx, num_class,
     force_nms : bool
         force suppress different categories
     """
-    sys.path.append(os.path.join(os.getcwd(), 'symbol'))
     if net is not None:
-        net = importlib.import_module("symbol_" + net) \
-            .get_symbol(len(CLASSES), nms_thresh, force_nms)
-    detector = Detector(net, prefix + "_" + str(data_shape), epoch, \
-        data_shape, mean_pixels, ctx=ctx)
+        net = get_symbol(net, data_shape, num_classes=num_class, nms_thresh=nms_thresh,
+            force_nms=force_nms, nms_topk=nms_topk)
+    detector = Detector(net, prefix, epoch, data_shape, mean_pixels, ctx=ctx)
     return detector
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Single-shot detection network demo')
-    parser.add_argument('--network', dest='network', type=str, default='vgg16_ssd_300',
+    parser.add_argument('--network', dest='network', type=str, default='vgg16_reduced',
                         choices=['vgg16_ssd_300', 'vgg16_ssd_512'], help='which network to use')
     parser.add_argument('--images', dest='images', type=str, default='./data/demo/dog.jpg',
-                        help='run demo with images, use comma(without space) to seperate multiple images')
+                        help='run demo with images, use comma to seperate multiple images')
     parser.add_argument('--dir', dest='dir', nargs='?',
                         help='demo image directory, optional', type=str)
     parser.add_argument('--ext', dest='extension', help='image extension, optional',
@@ -53,7 +52,8 @@ def parse_args():
     parser.add_argument('--epoch', dest='epoch', help='epoch of trained model',
                         default=0, type=int)
     parser.add_argument('--prefix', dest='prefix', help='trained model prefix',
-                        default=os.path.join(os.getcwd(), 'model', 'ssd'), type=str)
+                        default=os.path.join(os.getcwd(), 'model', 'ssd_vgg16_reduced_300'),
+                        type=str)
     parser.add_argument('--cpu', dest='cpu', help='(override GPU) use CPU to detect',
                         action='store_true', default=False)
     parser.add_argument('--gpu', dest='gpu_id', type=int, default=0,

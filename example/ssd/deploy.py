@@ -5,6 +5,7 @@ import mxnet as mx
 import os
 import importlib
 import sys
+from symbol.symbol_factory import get_symbol
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Convert a trained model to deploy model')
@@ -14,20 +15,24 @@ def parse_args():
                         default=0, type=int)
     parser.add_argument('--prefix', dest='prefix', help='trained model prefix',
                         default=os.path.join(os.getcwd(), 'model', 'ssd_300'), type=str)
+    parser.add_argument('--data-shape', dest='data_shape', type=int, default=300,
+                        help='data shape')
     parser.add_argument('--num-class', dest='num_classes', help='number of classes',
                         default=20, type=int)
     parser.add_argument('--nms', dest='nms_thresh', type=float, default=0.5,
                         help='non-maximum suppression threshold, default 0.5')
     parser.add_argument('--force', dest='force_nms', type=bool, default=True,
                         help='force non-maximum suppression on different class')
+    parser.add_argument('--topk', dest='nms_topk', type=int, default=400,
+                        help='apply nms only to top k detections based on scores.')
     args = parser.parse_args()
     return args
 
 if __name__ == '__main__':
     args = parse_args()
-    sys.path.append(os.path.join(os.getcwd(), 'symbol'))
-    net = importlib.import_module("symbol_" + args.network) \
-        .get_symbol(args.num_classes, args.nms_thresh, args.force_nms)
+    net = get_symbol(args.network).get_symbol(args.network, args.data_shape,
+        num_classes=args.num_classes, nms_thresh=args.nms_thresh,
+        force_suppress=args.force_nms, nms_topk=args.nms_topk)
     _, arg_params, aux_params = mx.model.load_checkpoint(args.prefix, args.epoch)
     # new name
     tmp = args.prefix.rsplit('/', 1)

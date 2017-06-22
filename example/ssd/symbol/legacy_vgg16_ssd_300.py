@@ -2,7 +2,8 @@ import mxnet as mx
 from common import conv_act_layer
 from common import multibox_layer
 
-def get_symbol_train(num_classes=20, nms_thresh=0.5, force_suppress=False, nms_topk=400):
+def get_symbol_train(num_classes=20, nms_thresh=0.5, force_suppress=False,
+                     nms_topk=400, **kwargs):
     """
     Single-shot multi-box detection with VGG 16 layers ConvNet
     This is a modified version, with fc6/fc7 layers replaced by conv layers
@@ -154,7 +155,8 @@ def get_symbol_train(num_classes=20, nms_thresh=0.5, force_suppress=False, nms_t
     out = mx.symbol.Group([cls_prob, loc_loss, cls_label, det])
     return out
 
-def get_symbol(num_classes=20, nms_thresh=0.5, force_suppress=False, nms_topk=400):
+def get_symbol(num_classes=20, nms_thresh=0.5, force_suppress=False,
+               nms_topk=400, **kwargs):
     """
     Single-shot multi-box detection with VGG 16 layers ConvNet
     This is a modified version, with fc6/fc7 layers replaced by conv layers
