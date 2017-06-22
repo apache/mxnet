@@ -104,17 +104,19 @@ def test_NDArrayIter_h5py():
         f.create_dataset("data", data=data)
         f.create_dataset("label", data=label)
 
-        dataiter = mx.io.NDArrayIter(f["data"], f["label"], 128, last_batch_handle='pad')
+        dataiter = mx.io.NDArrayIter(f["data"], f["label"], 128, True, last_batch_handle='pad')
         batchidx = 0
-        labelcount = [0 for i in range(10)]
         for batch in dataiter:
             batchidx += 1
+        assert(batchidx == 8)
+
+        dataiter = mx.io.NDArrayIter(f["data"], f["label"], 128, False, last_batch_handle='pad')
+        labelcount = [0 for i in range(10)]
+        for batch in dataiter:
             label = batch.label[0].asnumpy().flatten()
             assert((batch.data[0].asnumpy()[:,0,0] == label).all())
             for i in range(label.shape[0]):
                 labelcount[int(label[i])] += 1
-
-        assert(batchidx == 8)
 
     for i in range(10):
         if i == 0:
