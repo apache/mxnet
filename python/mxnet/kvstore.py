@@ -13,7 +13,7 @@ from . import optimizer as opt
 def _ctype_key_value(keys, vals):
     names = []
     if isinstance(keys, int):
-       keys = str(keys)
+        keys = str(keys)
     if isinstance(keys, str):
         if isinstance(vals, NDArray):
             names.append(c_str(keys))
