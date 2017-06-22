@@ -128,6 +128,27 @@ void FillCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+// Fill in the indices and values of a RowSparse NDArray to represent a zeros NDArray,
+// instead of the usual compact representation.
+template<typename xpu>
+inline void FillDnsZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
+  using namespace rowsparse;
+  using namespace mshadow::expr;
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(dst->storage_type(), kRowSparseStorage);
+  MSHADOW_REAL_TYPE_SWITCH(dst->dtype(), DType, {
+    MSHADOW_INT_TYPE_SWITCH(dst->aux_type(kIdx), IType, {
+      auto num_rows = dst->shape()[0];
+      dst->CheckAndAlloc({Shape1(num_rows)});
+      auto idx = dst->aux_data(kIdx).FlatTo1D<xpu, IType>(s);
+      auto val = dst->data();
+      Kernel<set_zero, xpu>::Launch(s, val.Size(), val.dptr<DType>());
+      ASSIGN_DISPATCH(idx, kWriteTo, range<IType>(0, num_rows, 1, 1))
+    });
+  });
+}
+
 // Fill a rsp NDArray with zeros by updating the aux shape.
 template<typename xpu>
 void FillZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {

@@ -18,6 +18,7 @@
 #include "./mshadow_op.h"
 #include "./elemwise_op_common.h"
 #include "mxnet_op.h"
+#include "./tensor/init_op.h"
 
 namespace mxnet {
 namespace op {
@@ -415,25 +416,6 @@ struct SGDMomRspDnsKernel {
 };
 
 template<typename xpu>
-inline void InitDnsZeros(mshadow::Stream<xpu> *s, NDArray *out) {
-  using namespace rowsparse;
-  using namespace mshadow::expr;
-  using namespace mshadow;
-  using namespace mxnet_op;
-  CHECK_EQ(out->storage_type(), kRowSparseStorage);
-  MSHADOW_REAL_TYPE_SWITCH(out->dtype(), DType, {
-    MSHADOW_INT_TYPE_SWITCH(out->aux_type(kIdx), IType, {
-      auto num_rows = out->shape()[0];
-      out->CheckAndAlloc({Shape1(num_rows)});
-      auto idx = out->aux_data(kIdx).FlatTo1D<xpu, IType>(s);
-      auto val = out->data();
-      Kernel<set_zero, xpu>::Launch(s, val.Size(), val.dptr<DType>());
-      ASSIGN_DISPATCH(idx, kWriteTo, range<IType>(0, num_rows, 1, 1))
-    });
-  });
-}
-
-template<typename xpu>
 inline void SGDMomUpdateRspDnsImpl(const SGDMomParam& param,
                                    const OpContext &ctx,
                                    const NDArray& weight,
@@ -452,7 +434,7 @@ inline void SGDMomUpdateRspDnsImpl(const SGDMomParam& param,
   // fill mom with zero values if not initialized yet
   if (!mom.storage_initialized()) {
     NDArray mom_zeros = mom;
-    InitDnsZeros(s, &mom_zeros);
+    FillDnsZerosRspImpl(s, &mom_zeros);
   }
   // TODO(haibin) this is a temporary solution, due to the fact that imperative_invoke only
   // feed in kWriteTo as req for all operators.
@@ -493,7 +475,7 @@ inline void SGDMomUpdateRspRspRspImpl(const SGDMomParam& param,
   // fill mom with zero values in order to reuse the sgd mom dns impl
   if (!mom.storage_initialized()) {
     NDArray mom_zeros = mom;
-    InitDnsZeros(s, &mom_zeros);
+    FillDnsZerosRspImpl(s, &mom_zeros);
   }
   // TODO(haibin) this is a temporary solution, due to the fact that imperative_invoke only
   // feed in kWriteTo as req for all operators.
