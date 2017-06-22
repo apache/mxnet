@@ -26,6 +26,7 @@ namespace op {
 
 namespace concat_relu {
 enum CReluOpInputs {kData};
+enum CReluOpResource {kTempSpace};
 enum CReluOpOutputs {kOut};
 }
 
@@ -53,8 +54,9 @@ class CReluOp : public Operator {
     Tensor<xpu, 2, DType> out = out_data[concat_relu::kOut].FlatTo2D<xpu, DType>(s);
     std::vector<Tensor<xpu, 2, DType> > concat_data(2);
 
-    concat_data[0] = NewTensor<xpu, DType>(data.shape_, DType(0), MSHADOW_ALLOC_PAD, s);
-    concat_data[1] = NewTensor<xpu, DType>(data.shape_, DType(0), MSHADOW_ALLOC_PAD, s);
+    concat_data[0] = Tensor<xpu, 2, DType>(out.dptr_, data.shape_, s);
+    concat_data[1] = ctx.requested[concat_relu::kTempSpace]
+                    .get_space_typed<xpu, 2, DType>(data.shape_, s);
 
     concat_data[0] = F<mshadow_op::relu>(data);
     concat_data[1] = F<mshadow_op::relu>(F<mshadow_op::negation>(data));
@@ -159,6 +161,11 @@ class CReluProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
     return {out_grad[concat_relu::kOut], out_data[concat_relu::kOut], in_data[concat_relu::kData]};
+  }
+
+  std::vector<ResourceRequest> ForwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    return {ResourceRequest::kTempSpace};
   }
 
   Operator* CreateOperator(Context ctx) const override {
