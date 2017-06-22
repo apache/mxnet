@@ -69,7 +69,7 @@ class ThreadPool {
   }
   explicit ThreadPool(size_t size,
                       std::function<void(std::shared_ptr<SimpleEvent> ready)> func,
-                      const bool wait = true)
+                      const bool wait)
       : worker_threads_(size) {
     for (auto& i : worker_threads_) {
       std::shared_ptr<SimpleEvent> ptr = std::make_shared<SimpleEvent>();

@@ -38,7 +38,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     int cpu_priority_nthreads = dmlc::GetEnv("MXNET_CPU_PRIORITY_NTHREADS", 4);
     cpu_priority_worker_.reset(new ThreadWorkerBlock<kPriorityQueue>());
     cpu_priority_worker_->pool.reset(new ThreadPool(
-        cpu_priority_nthreads, [this] {
+        cpu_priority_nthreads, [this]() {
           this->CPUWorker(cpu_priority_worker_.get());
         }));
     // GPU tasks will be created lazily
@@ -99,7 +99,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
                 [this, dev_id, is_copy, blk]
                   (std::shared_ptr<ThreadPool::SimpleEvent> ready_event) {
                     this->GPUWorker(dev_id, is_copy, blk, ready_event);
-                  }));
+                  }, true));
               return blk;
             });
           if (ptr) {
@@ -113,7 +113,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
                 [this, dev_id, is_copy, blk]
                   (std::shared_ptr<ThreadPool::SimpleEvent> ready_event) {
                     this->GPUWorker(dev_id, is_copy, blk, ready_event);
-                  }));
+                  }, true));
               return blk;
             });
           if (ptr) {
