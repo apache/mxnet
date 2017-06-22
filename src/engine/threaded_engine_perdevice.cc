@@ -8,7 +8,6 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <dmlc/concurrency.h>
-#include <unistd.h>
 #include "./threaded_engine.h"
 #include "./thread_pool.h"
 #include "../common/lazy_alloc_array.h"
