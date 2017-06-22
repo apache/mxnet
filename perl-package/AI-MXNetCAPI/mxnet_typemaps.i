@@ -311,13 +311,12 @@
                          (DataIterHandle *out) (ExecutorHandle temp),
                          (KVStoreHandle *out) (KVStoreHandle temp),
                          (RecordIOHandle *out) (RecordIOHandle temp),
-                         (RtcHandle *out) (RtcHandle temp),
-                         (CachedOpHandle *out) (CachedOpHandle temp)
+                         (RtcHandle *out) (RtcHandle temp)
 {
     $1 = &temp;
 }
 %typemap(argout) (NDArrayHandle *out), (FunctionHandle* out), (SymbolHandle *out), (ExecutorHandle *out), (DataIterHandle *out), 
-                 (KVStoreHandle *out), (RecordIOHandle *out), (RtcHandle *out) (RtcHandle temp), (CachedOpHandle *out) (CachedOpHandle temp)
+                 (KVStoreHandle *out), (RecordIOHandle *out), (RtcHandle *out) (RtcHandle temp)
 {
     if(!result)
     {

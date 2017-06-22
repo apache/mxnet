@@ -154,6 +154,7 @@ def fit(args, network, data_loader, weight_sparsity = [0], bias_sparsity = [0],
             'switch_epoch': switch_epoch,
             'batches_per_epoch': batches_per_epoch,
             'do_pruning': do_pruning}
+            'multi_precision': True}
 
     monitor = mx.mon.Monitor(args.monitor, pattern=".*") if args.monitor > 0 else None
 

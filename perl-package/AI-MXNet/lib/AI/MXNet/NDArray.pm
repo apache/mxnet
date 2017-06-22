@@ -1372,7 +1372,6 @@ method backward(Maybe[AI::MXNet::NDArray] $out_grad=, Bool $retain_graph=0)
     )
 }
 
-method CachedOp(@args)        { AI::MXNet::CachedOp->new(@args) }
 
 my $lvalue_methods = join "\n", map {"use attributes 'AI::MXNet::NDArray', \\&AI::MXNet::NDArray::$_, 'lvalue';"}
 qw/at slice aspdl asmpdl reshape copy sever T astype as_in_context copyto empty zero ones full

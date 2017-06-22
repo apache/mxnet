@@ -3237,7 +3237,7 @@ def test_psroipooling():
                     op = mx.contrib.sym.PSROIPooling(data=im_data_var, rois=rois_data_var, spatial_scale=spatial_scale,
                                                      group_size=num_group, pooled_size=num_group,
                                                      output_dim=num_classes, name='test_op')
-                    rtol, atol = 1e-2, 1e-4
+                    rtol, atol = 1e-2, 1e-3
                     # By now we only have gpu implementation
                     if mx.Context.default_ctx.device_type == 'gpu':
                         check_numeric_gradient(op, [im_data, rois_data], rtol=rtol, atol=atol,
@@ -3273,7 +3273,7 @@ def test_deformable_convolution():
                             # wider tolerance needed for coordinate differential
                             rtol, atol = 1.0, 1e-2
                         else:
-                            rtol, atol = 0.05, 1e-4
+                            rtol, atol = 0.05, 1e-3
                         # By now we only have gpu implementation
                         if mx.Context.default_ctx.device_type == 'gpu':
                             check_numeric_gradient(op, [im_data, offset_data, weight, bias], rtol=rtol, atol=atol,
@@ -3306,7 +3306,7 @@ def test_deformable_psroipooling():
                         # wider tolerance needed for coordinate differential
                         rtol, atol = 1.0, 1e-2
                     else:
-                        rtol, atol = 1e-2, 1e-4
+                        rtol, atol = 1e-2, 1e-3
                     # By now we only have gpu implementation
                     if mx.Context.default_ctx.device_type == 'gpu':
                         check_numeric_gradient(op, [im_data, rois_data, offset_data], rtol=rtol, atol=atol,

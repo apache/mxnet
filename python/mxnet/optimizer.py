@@ -2,8 +2,11 @@
 import math
 import pickle
 import logging
-from .ndarray import NDArray, zeros, clip, sqrt, sign
-from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
+import warnings
+import numpy
+from .ndarray import NDArray, zeros, clip, sqrt, sign, array
+from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
+                      mp_sgd_update, mp_sgd_mom_update)
 from .random import normal
 import numpy as np
 from .ndarray import ones, ones_like
@@ -397,16 +400,34 @@ class SGD(Optimizer):
     ----------
     momentum : float, optional
        The momentum value.
+    multi_precision: bool, optional
+       Flag to control the internal precision of the optimizer.
+       ``False`` results in using the same precision as the weights (default),
+       ``True`` makes internal 32-bit copy of the weights and applies gradients
+                in 32-bit precision even if actual weights used in the model have lower precision.
+                Turning this on can improve convergence and accuracy when training with float16.
     """
-    def __init__(self, momentum=0.0, **kwargs):
+    def __init__(self, momentum=0.0, multi_precision=False, **kwargs):
         super(SGD, self).__init__(**kwargs)
         self.momentum = momentum
+        self.multi_precision = multi_precision
 
     def create_state(self, index, weight):
-        if self.momentum == 0.0:
-            return None
-        else:
-            return zeros(weight.shape, weight.context, dtype=weight.dtype)
+        momentum = None
+        weight_master_copy = None
+        if self.multi_precision and weight.dtype == numpy.float16:
+            weight_master_copy = array(weight, ctx=weight.context, dtype=numpy.float32)
+            if self.momentum != 0.0:
+                momentum = zeros(weight.shape, weight.context, dtype=numpy.float32)
+            return (momentum, weight_master_copy)
+        if weight.dtype == numpy.float16 and not self.multi_precision:
+            warnings.warn("Accumulating with float16 in optimizer can lead to "
+                          "poor accuracy or slow convergence. "
+                          "Consider using multi_precision=True option of the "
+                          "SGD optimizer")
+        if self.momentum != 0.0:
+            momentum = zeros(weight.shape, weight.context, dtype=weight.dtype)
+        return momentum
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -423,13 +444,22 @@ class SGD(Optimizer):
             kwargs['momentum'] = self.momentum
         if self.clip_gradient:
             kwargs['clip_gradient'] = self.clip_gradient
+        use_multi_precision = isinstance(state, (list, tuple))
 
-        if state is not None:
-            sgd_mom_update(weight, grad, state, out=weight,
+        if not use_multi_precision:
+            if state is not None:
+                sgd_mom_update(weight, grad, state, out=weight,
+                               lr=lr, wd=wd, **kwargs)
+            else:
+                sgd_update(weight, grad, out=weight,
                            lr=lr, wd=wd, **kwargs)
         else:
-            sgd_update(weight, grad, out=weight,
-                       lr=lr, wd=wd, **kwargs)
+            if state[0] is not None:
+                mp_sgd_mom_update(weight, grad, state[0], state[1], out=weight,
+                                  lr=lr, wd=wd, **kwargs)
+            else:
+                mp_sgd_update(weight, grad, state[1], out=weight,
+                              lr=lr, wd=wd, **kwargs)
 
         if self.do_pruning:
             weight[:] = weight * self.masks[index]
