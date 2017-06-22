@@ -551,8 +551,8 @@ Install *MXNet* with OpenBLAS acceleration.
 
 **Step 5**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
-sudo apt-get install graphviz
-pip install graphviz
+$ brew install graphviz
+(mxnet)$ pip install graphviz
 ```
 
 **Step 6**  Validate the installation by running simple *MXNet* code described [here](#validate-mxnet-installation).
@@ -590,8 +590,8 @@ $ pip install mxnet
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
-sudo apt-get install graphviz
-pip install graphviz
+$ brew install graphviz
+$ pip install graphviz
 ```
 
 **Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
