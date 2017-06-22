@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 
 import sys
+import h5py
 import ctypes
 import logging
 import threading
@@ -465,7 +466,7 @@ def _init_data(data, allow_empty, default_name):
     if data is None:
         data = []
 
-    if isinstance(data, (np.ndarray, NDArray)):
+    if isinstance(data, (np.ndarray, NDArray, h5py.Dataset)):
         data = [data]
     if isinstance(data, list):
         if not allow_empty:
@@ -476,20 +477,20 @@ def _init_data(data, allow_empty, default_name):
             data = OrderedDict( # pylint: disable=redefined-variable-type
                 [('_%d_%s' % (i, default_name), d) for i, d in enumerate(data)])
     if not isinstance(data, dict):
-        raise TypeError("Input must be NDArray, numpy.ndarray, " + \
+        raise TypeError("Input must be NDArray, numpy.ndarray, h5py.Dataset " + \
                 "a list of them or dict with them as values")
     for k, v in data.items():
-        if not isinstance(v, NDArray):
+        if not isinstance(v, (NDArray, h5py.Dataset)):
             try:
                 data[k] = array(v)
             except:
                 raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
-                    "should be NDArray or numpy.ndarray")
+                                "should be NDArray, numpy.ndarray or h5py.Dataset")
 
     return list(data.items())
 
 class NDArrayIter(DataIter):
-    """Returns an iterator for ``mx.nd.NDArray`` or ``numpy.ndarray``.
+    """Returns an iterator for ``mx.nd.NDArray``, ``numpy.ndarray`` or ``h5py.Dataset``.
 
     Example usage:
     ----------
@@ -562,6 +563,7 @@ class NDArrayIter(DataIter):
         Batch size of data.
     shuffle: bool, optional
         Whether to shuffle the data.
+        Only supported if no h5py.Dataset inputs are used.
     last_batch_handle : str, optional
         How to handle the last batch. This parameter can be 'pad', 'discard' or
         'roll_over'. 'roll_over' is intended for training and can cause problems
@@ -579,9 +581,12 @@ class NDArrayIter(DataIter):
         self.data = _init_data(data, allow_empty=False, default_name=data_name)
         self.label = _init_data(label, allow_empty=True, default_name=label_name)
 
+        idx = np.arange(self.data[0][1].shape[0])
         # shuffle data
         if shuffle:
-            idx = np.arange(self.data[0][1].shape[0])
+            assert all(not isinstance(v, h5py.Dataset) for k,v in self.data)
+            assert all(not isinstance(v, h5py.Dataset) for k,v in self.label)
+
             np.random.shuffle(idx)
             self.data = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.data]
             self.label = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.label]
@@ -589,20 +594,13 @@ class NDArrayIter(DataIter):
         # batching
         if last_batch_handle == 'discard':
             new_n = self.data[0][1].shape[0] - self.data[0][1].shape[0] % batch_size
-            data_dict = OrderedDict(self.data)
-            label_dict = OrderedDict(self.label)
-            for k, _ in self.data:
-                data_dict[k] = data_dict[k][:new_n]
-            for k, _ in self.label:
-                label_dict[k] = label_dict[k][:new_n]
-            self.data = data_dict.items()
-            self.label = label_dict.items()
+            idx = idx[:new_n]
 
         self.data_list = [x[1] for x in self.data] + [x[1] for x in self.label]
         self.num_source = len(self.data_list)
-        self.num_data = self.data_list[0].shape[0]
+        self.num_data = idx.shape[0]
         assert self.num_data >= batch_size, \
-            "batch_size need to be smaller than data size."
+            "batch_size needs to be smaller than data size."
         self.cursor = -batch_size
         self.batch_size = batch_size
         self.last_batch_handle = last_batch_handle
@@ -648,10 +646,20 @@ class NDArrayIter(DataIter):
         """Load data from underlying arrays, internal use only."""
         assert(self.cursor < self.num_data), "DataIter needs reset."
         if self.cursor + self.batch_size <= self.num_data:
-            return [x[1][self.cursor:self.cursor+self.batch_size] for x in data_source]
+            return [
+                x[1][self.cursor:self.cursor + self.batch_size]
+                if isinstance(x[1], (np.ndarray, NDArray)) else
+                array(x[1][self.cursor:self.cursor + self.batch_size])
+                for x in data_source
+            ]
         else:
             pad = self.batch_size - self.num_data + self.cursor
-            return [concatenate([x[1][self.cursor:], x[1][:pad]]) for x in data_source]
+            return [
+                concatenate([x[1][self.cursor:], x[1][:pad]])
+                if isinstance(x[1], (np.ndarray, NDArray)) else
+                concatenate([array(x[1][self.cursor:]),
+                             array(x[1][:pad])]) for x in data_source
+            ]
 
     def getdata(self):
         return self._getdata(self.data)
