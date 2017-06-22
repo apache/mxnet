@@ -11,20 +11,7 @@ from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
 
 def _ctype_key_value(keys, vals):
-    names = []
-    if isinstance(keys, int):
-        keys = str(keys)
-    if isinstance(keys, str):
-        if isinstance(vals, NDArray):
-            names.append(c_str(keys))
-            return (c_array(ctypes.c_char_p, names),
-                    c_array(NDArrayHandle, [vals.handle]))
-        else:
-            for value in vals:
-                assert(isinstance(value, NDArray))
-            return (c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)),
-                    c_array(NDArrayHandle, [value.handle for value in vals]))
-    else:
+    if isinstance(keys, (tuple, list)):
         assert(len(keys) == len(vals))
         c_keys = []
         c_vals = []
@@ -33,6 +20,17 @@ def _ctype_key_value(keys, vals):
             c_keys += c_key_i
             c_vals += c_val_i
         return (c_array(ctypes.c_char_p, c_keys), c_array(NDArrayHandle, c_vals))
+    names = []
+    keys = str(keys)
+    if isinstance(vals, NDArray):
+        names.append(c_str(keys))
+        return (c_array(ctypes.c_char_p, names),
+                c_array(NDArrayHandle, [vals.handle]))
+    else:
+        for value in vals:
+            assert(isinstance(value, NDArray))
+        return (c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)),
+                c_array(NDArrayHandle, [value.handle for value in vals]))
 
 def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
