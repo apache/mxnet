@@ -495,13 +495,5 @@ def test_forward_reshape():
 
 
 if __name__ == '__main__':
-    test_module_dtype()
-    test_module_input_grads()
-    test_module_states()
-    test_module_reshape()
-    test_save_load()
-    test_module_layout()
-    test_module_switch_bucket()
-    test_monitor()
-    test_executor_group()
-    test_forward_reshape()
+    import nose
+    nose.runmodule()

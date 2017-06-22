@@ -550,29 +550,25 @@ class Module(BaseModule):
             raise RuntimeError("If you are trying to do inference, rebind module "
                                "with 'force_rebind=True' and 'for_training=False'")
 
-        for idx in range(len(self._data_shapes)):
-            curr_data_shape = self._data_shapes[idx].shape
-            curr_data_dtype = self._data_shapes[idx].dtype
-            new_data_shape = data_batch.data[idx].shape
+        curr_data_shapes = (i.shape for i in self._data_shapes)
+        new_data_shapes = (i.shape for i in data_batch.data)
 
-            # Reshape if data shape or dtype changes.
-            if curr_data_shape != new_data_shape:
-                if hasattr(data_batch, "provide_data") and data_batch.provide_data:
-                    new_dshape = data_batch.provide_data
-                else:
-                    new_dshape = [DataDesc(name, data.shape, curr_data_dtype) \
-                                  for name, data in zip(self._data_names, data_batch.data)]
+        if curr_data_shapes != new_data_shapes:
+            if hasattr(data_batch, "provide_data") and data_batch.provide_data:
+                new_dshape = data_batch.provide_data
+            else:
+                new_dshape = [DataDesc(i.name, shape, i.dtype, i.layout) \
+                              for i, shape in zip(self._data_shapes, new_data_shapes)]
 
-                if hasattr(data_batch, "provide_label") and data_batch.provide_label:
-                    new_lshape = data_batch.provide_label
-                elif hasattr(data_batch, "label") and data_batch.label:
-                    new_lshape = [DataDesc(name, label.shape, label.dtype) \
-                                 for name, label in zip(self._label_names, data_batch.label)]
-                else:
-                    new_lshape = None
+            if hasattr(data_batch, "provide_label") and data_batch.provide_label:
+                new_lshape = data_batch.provide_label
+            elif hasattr(data_batch, "label") and data_batch.label:
+                new_lshape = [DataDesc(i.name, j.shape, i.dtype, i.layout) \
+                              for i, j in zip(self._label_shapes, data_batch.label)]
+            else:
+                new_lshape = None
 
-                self.reshape(new_dshape, new_lshape)
-                break
+            self.reshape(new_dshape, new_lshape)
 
         self._exec_group.forward(data_batch, is_train)
 
