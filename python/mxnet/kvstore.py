@@ -11,30 +11,26 @@ from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
 
 def _ctype_key_value(keys, vals):
-    """
-    Returns ctype arrays for the key-value args. For internal use.
-    """
-    if isinstance(keys, int):
-        if isinstance(vals, NDArray):
-            return (c_array(ctypes.c_int, [keys]),
-                    c_array(NDArrayHandle, [vals.handle]))
-        else:
-            for value in vals:
-                assert(isinstance(value, NDArray))
-            return (c_array(ctypes.c_int, [keys] * len(vals)),
-                    c_array(NDArrayHandle, [value.handle for value in vals]))
-    else:
+    if isinstance(keys, (tuple, list)):
         assert(len(keys) == len(vals))
-        for k in keys:
-            assert(isinstance(k, int))
         c_keys = []
         c_vals = []
         for key, val in zip(keys, vals):
             c_key_i, c_val_i = _ctype_key_value(key, val)
             c_keys += c_key_i
             c_vals += c_val_i
-        return (c_array(ctypes.c_int, c_keys), c_array(NDArrayHandle, c_vals))
-
+        return (c_array(ctypes.c_char_p, c_keys), c_array(NDArrayHandle, c_vals))
+    names = []
+    keys = str(keys)
+    if isinstance(vals, NDArray):
+        names.append(c_str(keys))
+        return (c_array(ctypes.c_char_p, names),
+                c_array(NDArrayHandle, [vals.handle]))
+    else:
+        for value in vals:
+            assert(isinstance(value, NDArray))
+        return (c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)),
+                c_array(NDArrayHandle, [value.handle for value in vals]))
 
 def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
@@ -74,7 +70,7 @@ class KVStore(object):
 
         Parameters
         ----------
-        key : int or sequence of int
+        key : str or sequence of str
             The keys.
         value : NDArray or sequence of NDArray
             Values corresponding to the keys.
@@ -84,20 +80,19 @@ class KVStore(object):
         >>> # init a single key-value pair
         >>> shape = (2,3)
         >>> kv = mx.kv.create('local')
-        >>> kv.init(3, mx.nd.ones(shape)*2)
+        >>> kv.init('3', mx.nd.ones(shape)*2)
         >>> a = mx.nd.zeros(shape)
-        >>> kv.pull(3, out=a)
+        >>> kv.pull('3', out=a)
         >>> print a.asnumpy()
         [[ 2.  2.  2.]
         [ 2.  2.  2.]]
 
         >>> # init a list of key-value pairs
-        >>> keys = [5, 7, 9]
+        >>> keys = ['5', '7', '9']
         >>> kv.init(keys, [mx.nd.ones(shape)]*len(keys))
         """
         ckeys, cvals = _ctype_key_value(key, value)
-        check_call(_LIB.MXKVStoreInit(
-            self.handle, mx_uint(len(ckeys)), ckeys, cvals))
+        check_call(_LIB.MXKVStoreInitEx(self.handle, mx_uint(len(ckeys)), ckeys, cvals))
 
     def push(self, key, value, priority=0):
         """ Pushes a single or a sequence of key-value pairs into the store.
@@ -110,7 +105,7 @@ class KVStore(object):
 
         Parameters
         ----------
-        key : int or list of int
+        key : str or list of str
             Keys.
 
         value : NDArray or list of NDArray or list of list of NDArray
@@ -124,8 +119,8 @@ class KVStore(object):
         Examples
         --------
         >>> # push a single key-value pair
-        >>> kv.push(3, mx.nd.ones(shape)*8)
-        >>> kv.pull(3, out=a) # pull out the value
+        >>> kv.push('3', mx.nd.ones(shape)*8)
+        >>> kv.pull('3', out=a) # pull out the value
         >>> print a.asnumpy()
         [[ 8.  8.  8.]
         [ 8.  8.  8.]]
@@ -133,8 +128,8 @@ class KVStore(object):
         >>> # aggregate the value and the push
         >>> gpus = [mx.gpu(i) for i in range(4)]
         >>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
-        >>> kv.push(3, b)
-        >>> kv.pull(3, out=a)
+        >>> kv.push('3', b)
+        >>> kv.pull('3', out=a)
         >>> print a.asnumpy()
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
@@ -157,9 +152,10 @@ class KVStore(object):
         [ 4.  4.  4.]]
         """
         ckeys, cvals = _ctype_key_value(key, value)
-        check_call(_LIB.MXKVStorePush(
+        check_call(_LIB.MXKVStorePushEx(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
+
 
     def pull(self, key, out=None, priority=0):
         """ Pulls a single value or a sequence of values from the store.
@@ -190,21 +186,21 @@ class KVStore(object):
         --------
         >>> # pull a single key-value pair
         >>> a = mx.nd.zeros(shape)
-        >>> kv.pull(3, out=a)
+        >>> kv.pull('3', out=a)
         >>> print a.asnumpy()
         [[ 2.  2.  2.]
         [ 2.  2.  2.]]
 
         >>> # pull into multiple devices
         >>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
-        >>> kv.pull(3, out=b)
+        >>> kv.pull('3', out=b)
         >>> print b[1].asnumpy()
         [[ 2.  2.  2.]
         [ 2.  2.  2.]]
 
         >>> # pull a list of key-value pairs.
         >>> # On single device
-        >>> keys = [5, 7, 9]
+        >>> keys = ['5', '7', '9']
         >>> b = [mx.nd.zeros(shape)]*len(keys)
         >>> kv.pull(keys, out=b)
         >>> print b[1].asnumpy()
@@ -219,7 +215,7 @@ class KVStore(object):
         """
         assert(out is not None)
         ckeys, cvals = _ctype_key_value(key, out)
-        check_call(_LIB.MXKVStorePull(
+        check_call(_LIB.MXKVStorePullEx(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
 
@@ -348,13 +344,13 @@ class KVStore(object):
         ...     print "update on key: %d" % key
         ...     stored += input * 2
         >>> kv._set_updater(update)
-        >>> kv.pull(3, out=a)
+        >>> kv.pull('3', out=a)
         >>> print a.asnumpy()
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
-        >>> kv.push(3, mx.nd.ones(shape))
+        >>> kv.push('3', mx.nd.ones(shape))
         update on key: 3
-        >>> kv.pull(3, out=a)
+        >>> kv.pull('3', out=a)
         >>> print a.asnumpy()
         [[ 6.  6.  6.]
         [ 6.  6.  6.]]
