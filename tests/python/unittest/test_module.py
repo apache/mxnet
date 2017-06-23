@@ -3,6 +3,7 @@ import mxnet.ndarray as nd
 import numpy as np
 from functools import reduce
 from mxnet.module.executor_group import DataParallelExecutorGroup
+from common import assertRaises
 
 
 def test_module_dtype():
@@ -215,6 +216,70 @@ def test_module_switch_bucket():
     assert total_bytes_after == total_bytes_before
 
 
+
+def test_module_set_params():
+    # data iter
+    mx.random.seed(11)
+    data = mx.nd.array([[0.05, .10]]);
+    label = mx.nd.array([[.01, 0.99]]);
+    train_data = mx.io.NDArrayIter(data, label, batch_size=1)
+
+    # symbols
+    x = mx.symbol.Variable('data')
+    x = mx.symbol.FullyConnected(name='fc_0', data=x, num_hidden=2)
+    x = mx.symbol.Activation(name="act_0", data=x, act_type='sigmoid')
+    x = mx.symbol.FullyConnected(name='fc_1', data=x, num_hidden=2)
+    x = mx.symbol.Activation(name="act_1", data=x, act_type='sigmoid')
+    x = mx.symbol.LinearRegressionOutput(data=x, name='softmax', grad_scale=2)
+
+    # create module
+    mod = mx.mod.Module(x, context=[mx.cpu()]);
+    mod.bind(train_data.provide_data, label_shapes=train_data.provide_label,
+             for_training=True)
+
+    arg_params_correct = {'fc_0_weight': mx.nd.array([[.15, .20], [.25, .30]]),
+                  'fc_0_bias'  : mx.nd.array([.35, .35]),
+                  'fc_1_weight': mx.nd.array([[.40, .45], [.50, .55]]),
+                  'fc_1_bias'  : mx.nd.array([.60, .60])}
+
+    arg_params_missing = {'fc_0_weight': mx.nd.array([[.15, .20], [.25, .30]]),
+                  'fc_0_bias'  : mx.nd.array([.35, .35]),
+                  'fc_1_weight': mx.nd.array([[.40, .45], [.50, .55]])}
+
+    arg_params_extra = {'fc_0_weight': mx.nd.array([[.15, .20], [.25, .30]]),
+                  'fc_0_bias'  : mx.nd.array([.35, .35]),
+                  'fc_1_weight': mx.nd.array([[.40, .45], [.50, .55]]),
+                  'fc_1_bias'  : mx.nd.array([.60, .60]),
+                  'fc_2_weight': mx.nd.array([.60, .60])}
+
+    arg_params_missing_extra = {'fc_2_weight': mx.nd.array([.60, .60])}
+
+    # test regular set_params
+    mod.set_params(force_init=True, arg_params=arg_params_correct, aux_params={})
+
+    # test allow missing
+    mod.set_params(force_init=True, arg_params=arg_params_missing, aux_params={}, allow_missing=True)
+    assertRaises(RuntimeError, mod.set_params,
+                 force_init=True, arg_params=arg_params_missing,
+                 aux_params={}, allow_missing=False)
+
+    # test allow extra
+    mod.set_params(force_init=True, arg_params=arg_params_extra, aux_params={}, allow_missing=True, allow_extra=True)
+    assertRaises(ValueError, mod.set_params,
+                 force_init=True, arg_params=arg_params_extra,
+                 aux_params={}, allow_missing=True, allow_extra=False)
+
+    # test allow missing + extra,
+    assertRaises(RuntimeError, mod.set_params,
+                 force_init=True, arg_params=arg_params_missing_extra,
+                 aux_params={}, allow_missing=False, allow_extra=False)
+
+    # test allow missing + extra, this will throw a runtime error
+    assertRaises(ValueError, mod.set_params,
+                 force_init=True, arg_params=arg_params_missing_extra,
+                 aux_params={}, allow_missing=True, allow_extra=False)
+
+
 def test_monitor():
     # data iter
     mx.random.seed(11)
@@ -380,6 +445,7 @@ if __name__ == '__main__':
     test_module_input_grads()
     test_module_states()
     test_module_reshape()
+    test_module_set_params()
     test_save_load()
     test_module_layout()
     test_module_switch_bucket()
