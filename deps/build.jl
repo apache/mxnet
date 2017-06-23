@@ -5,7 +5,7 @@ import JSON
 # First try to detect and load existing libmxnet
 ################################################################################
 libmxnet_detected = false
-libmxnet_curr_ver = "master"
+libmxnet_curr_ver = get(ENV, "MXNET_COMMIT", "master")
 curr_win = "20170502"
 
 if haskey(ENV, "MXNET_HOME")
@@ -138,14 +138,15 @@ if !libmxnet_detected
       @build_steps begin
         BinDeps.DirectoryRule(_mxdir, @build_steps begin
           ChangeDirectory(_srcdir)
-          `git clone --recursive https://github.com/dmlc/mxnet`
+          `git clone https://github.com/dmlc/mxnet`
         end)
         @build_steps begin
           ChangeDirectory(_mxdir)
-          `git -C mshadow checkout -- make/mshadow.mk`
+          `git submodule deinit --force .`
           `git fetch`
           `git checkout $libmxnet_curr_ver`
-          `git submodule update --init`
+          `git submodule update --init --recursive`
+          `git -C mshadow checkout -- make/mshadow.mk`
           `make clean`
           `sed -i -s "s/MSHADOW_CFLAGS = \(.*\)/MSHADOW_CFLAGS = \1 $ilp64/" mshadow/make/mshadow.mk`
         end
