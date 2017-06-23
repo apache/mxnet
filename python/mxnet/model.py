@@ -92,6 +92,7 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
 
 def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names,
                               sparse_pull_dict=None):
+
     """Perform update of param_arrays from grad_arrays on kvstore."""
     for index, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair

@@ -11,39 +11,27 @@ from .base import check_call, c_array, c_str, string_types, mx_uint, py_str
 from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
 
-def _ctype_str_key_value(keys, vals):
-    names = []
-    if isinstance(keys, str):
-        if isinstance(vals, NDArray):
-            names.append(c_str(keys))
-            return (c_array(ctypes.c_char_p, names),
-                    c_array(NDArrayHandle, [vals.handle]))
-        else:
-            for value in vals:
-                assert(isinstance(value, NDArray))
-            return (c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)),
-                    c_array(NDArrayHandle, [value.handle for value in vals]))
-    else:
+def _ctype_key_value(keys, vals):
+    if isinstance(keys, (tuple, list)):
         assert(len(keys) == len(vals))
-        for k in keys:
-            assert(isinstance(k, str))
         c_keys = []
         c_vals = []
         for key, val in zip(keys, vals):
-            c_key_i, c_val_i = _ctype_str_key_value(key, val)
+            c_key_i, c_val_i = _ctype_key_value(key, val)
             c_keys += c_key_i
             c_vals += c_val_i
         return (c_array(ctypes.c_char_p, c_keys), c_array(NDArrayHandle, c_vals))
-
-def _cast_to_str_keys(keys):
-    if isinstance(keys, str):
-        return keys
-    if isinstance(keys, int):
-        return str(keys)
-    str_keys = []
-    for key in keys:
-        str_keys.append(str(key) if isinstance(key, int) else key)
-    return str_keys
+    names = []
+    keys = str(keys)
+    if isinstance(vals, NDArray):
+        names.append(c_str(keys))
+        return (c_array(ctypes.c_char_p, names),
+                c_array(NDArrayHandle, [vals.handle]))
+    else:
+        for value in vals:
+            assert(isinstance(value, NDArray))
+        return (c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)),
+                c_array(NDArrayHandle, [value.handle for value in vals]))
 
 def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
@@ -104,8 +92,7 @@ class KVStore(object):
         >>> keys = ['5', '7', '9']
         >>> kv.init(keys, [mx.nd.ones(shape)]*len(keys))
         """
-        key = _cast_to_str_keys(key)
-        ckeys, cvals = _ctype_str_key_value(key, value)
+        ckeys, cvals = _ctype_key_value(key, value)
         check_call(_LIB.MXKVStoreInitEx(self.handle, mx_uint(len(ckeys)), ckeys, cvals))
 
     def push(self, key, value, priority=0):
@@ -165,8 +152,7 @@ class KVStore(object):
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
         """
-        key = _cast_to_str_keys(key)
-        ckeys, cvals = _ctype_str_key_value(key, value)
+        ckeys, cvals = _ctype_key_value(key, value)
         check_call(_LIB.MXKVStorePushEx(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
@@ -239,8 +225,7 @@ class KVStore(object):
             else:
                 for v in val:
                     assert(v.storage_type == 'default')
-        key = _cast_to_str_keys(key)
-        ckeys, cvals = _ctype_str_key_value(key, out)
+        ckeys, cvals = _ctype_key_value(key, out)
         check_call(_LIB.MXKVStorePullEx(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
@@ -306,9 +291,8 @@ class KVStore(object):
             else:
                 for v in val:
                     assert(v.storage_type == 'row_sparse')
-        key = _cast_to_str_keys(key)
-        ckeys, cvals = _ctype_str_key_value(key, out)
-        _, crow_ids = _ctype_str_key_value(key, row_ids)
+        ckeys, cvals = _ctype_key_value(key, out)
+        _, crow_ids = _ctype_key_value(key, row_ids)
         assert(len(crow_ids) == len(cvals)), (len(crow_ids), len(cvals))
         #TODO(haibin) pickup upstream changes which removed `_cast_to_str_keys`
 

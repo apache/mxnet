@@ -20,7 +20,7 @@ def init_kv_with_str(stype='default'):
     """init kv """
     kv = mx.kv.create()
     # single
-    kv.init('a', mx.nd.zeros(shape))
+    kv.init('a', mx.nd.zeros(shape, storage_type=stype))
     # list
     kv.init(str_keys, [mx.nd.zeros(shape=shape, storage_type=stype)] * len(keys))
     return kv
@@ -80,7 +80,6 @@ def test_init():
     check_init(mx.kv.create(), 3)
     check_init(mx.kv.create(), 'a')
 
-
 def test_list_kv_pair():
     """list key-value pair push & pull"""
     def check_list_kv_pair(kv, key):
@@ -128,7 +127,7 @@ def test_sparse_aggregator():
     """aggregate sparse ndarray on muliple devices"""
 
     stype = 'row_sparse'
-    kv = init_kv(stype)
+    kv = init_kv_with_str(stype)
 
     # devices
     num_devs = 4
@@ -142,8 +141,8 @@ def test_sparse_aggregator():
 
     # prepare row_ids
     all_rows = mx.nd.array(np.arange(shape[0]), dtype='int64')
-    kv.push(3, vals)
-    kv.row_sparse_pull(3, out=vals, row_ids=[all_rows] * len(vals))
+    kv.push('a', vals)
+    kv.row_sparse_pull('a', out=vals, row_ids=[all_rows] * len(vals))
     result_sum = np.zeros(shape)
     for v in vals:
         result_sum += v.asnumpy()
@@ -155,14 +154,13 @@ def test_sparse_aggregator():
     for v in vals[0]:
         expected_sum += v.asnumpy()
 
-    kv.push(keys, vals)
-    kv.row_sparse_pull(keys, out=vals, row_ids=[[all_rows] * num_devs] * len(vals))
+    kv.push(str_keys, vals)
+    kv.row_sparse_pull(str_keys, out=vals, row_ids=[[all_rows] * num_devs] * len(vals))
     for vv in vals:
         result_sum = np.zeros(shape)
         for v in vv:
             result_sum += v.asnumpy()
         assert_almost_equal(result_sum, expected_sum * num_devs)
-
 
 def updater(key, recv, local):
     """use updater: +="""
@@ -206,7 +204,6 @@ def test_updater(dev = 'cpu'):
     str_kv = init_kv_with_str()
     str_kv._set_updater(updater)
     check_updater(str_kv, 'a', str_keys)
-
 
 
 def test_get_type():
