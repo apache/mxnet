@@ -676,15 +676,19 @@ struct mod {
       return DType(0);
     } else if (b < DType(0)) {
       if (a < DType(0)) {
-        return DType(-::fmod(-a, -b));
+        return DType(-::fmod(-static_cast<double>(a), -static_cast<double>(b)));
       } else {
-        return DType(::fmod(a, -b) + (::fmod(a, -b) != DType(0) ? b : DType(0)));
+        return DType(::fmod(static_cast<double>(a), -static_cast<double>(b)) +
+                     (::fmod(static_cast<double>(a), -static_cast<double>(b)) != DType(0)
+                      ? b : DType(0)));
       }
     } else {
       if (a < DType(0)) {
-        return DType(-::fmod(-a, b) + (::fmod(-a, b) != DType(0) ? b : DType(0)));
+        return DType(-::fmod(-static_cast<double>(a), static_cast<double>(b)) +
+                     (::fmod(-static_cast<double>(a), static_cast<double>(b)) != DType(0)
+                      ? b : DType(0)));
       } else {
-        return DType(::fmod(a, b));
+        return DType(::fmod(static_cast<double>(a), static_cast<double>(b)));
       }
     }
   }
@@ -777,15 +781,19 @@ struct rmod {
       return DType(0);
     } else if (a < DType(0)) {
       if (b < DType(0)) {
-        return DType(-::fmod(-b, -a));
+        return DType(-::fmod(-static_cast<double>(b), -static_cast<double>(a)));
       } else {
-        return DType(::fmod(b, -a) + (::fmod(b, -a) != DType(0) ? a : DType(0)));
+        return DType(::fmod(static_cast<double>(b), -static_cast<double>(a)) +
+                     (::fmod(static_cast<double>(b), -static_cast<double>(a)) != DType(0)
+                      ? a : DType(0)));
       }
     } else {
       if (b < DType(0)) {
-        return DType(-::fmod(-b, a) + (::fmod(-b, a) != DType(0) ? a : DType(0)));
+        return DType(-::fmod(-static_cast<double>(b), static_cast<double>(a)) +
+                     (::fmod(-static_cast<double>(b), static_cast<double>(a)) != DType(0)
+                      ? a : DType(0)));
       } else {
-        return DType(::fmod(b, a));
+        return DType(::fmod(static_cast<double>(b), static_cast<double>(a)));
       }
     }
   }
