@@ -698,10 +698,10 @@ class FusedRNNCell(HRecurrentCell):
 
         Returns
         -------
-        cell : HSequentialRNNCell
+        cell : SequentialRNNCell
             unfused cell that can be used for stepping, and can run on CPU.
         """
-        stack = HSequentialRNNCell()
+        stack = SequentialRNNCell()
         get_cell = {'rnn_relu': lambda cell_prefix: RNNCell(self._num_hidden,
                                                             activation='relu',
                                                             prefix=cell_prefix),
@@ -727,10 +727,10 @@ class FusedRNNCell(HRecurrentCell):
         return stack
 
 
-class HSequentialRNNCell(HRecurrentCell):
+class SequentialRNNCell(RecurrentCell):
     """Sequantially stacking multiple RNN cells."""
     def __init__(self):
-        super(HSequentialRNNCell, self).__init__(prefix='', params=None)
+        super(SequentialRNNCell, self).__init__(prefix='', params=None)
 
     def add(self, cell):
         """Append a cell into the stack.
@@ -879,8 +879,8 @@ class ZoneoutCell(ModifierCell):
         assert not isinstance(base_cell, BidirectionalCell), \
             "BidirectionalCell doesn't support zoneout since it doesn't support step. " \
             "Please add ZoneoutCell to the cells underneath instead."
-        assert not isinstance(base_cell, HSequentialRNNCell) or not base_cell._bidirectional, \
-            "Bidirectional HSequentialRNNCell doesn't support zoneout. " \
+        assert not isinstance(base_cell, SequentialRNNCell) or not base_cell._bidirectional, \
+            "Bidirectional SequentialRNNCell doesn't support zoneout. " \
             "Please add ZoneoutCell to the cells underneath instead."
         super(ZoneoutCell, self).__init__(base_cell)
         self.zoneout_outputs = zoneout_outputs

@@ -1,5 +1,5 @@
 import mxnet.ndarray as nd
-from mxnet.contrib.autograd import *
+from mxnet.autograd import *
 from mxnet.test_utils import *
 
 def autograd_assert(*args, **kwargs):

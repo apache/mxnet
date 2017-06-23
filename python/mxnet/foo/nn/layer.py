@@ -227,10 +227,6 @@ class HybridLayer(Layer):
 
     def register_child(self, layer):
         if not isinstance(layer, HybridLayer):
-            if isinstance(layer, Sequantial):
-                raise ValueError(
-                    "Children of HybridLayer must also be HybridLayer. " \
-                    "Please use HSequential instead of Sequantial.")
             raise ValueError(
                 "Children of HybridLayer must also be HybridLayer, " \
                 "but %s has type %s."%(str(layer), str(type(layer))))
@@ -238,7 +234,7 @@ class HybridLayer(Layer):
 
     def hybridize(self, active=True):
         super(HybridLayer, self).hybridize(active)
-        self._active = True
+        self._active = active
 
     def _get_graph(self, *args):
         if self._cached_graph:
@@ -328,7 +324,7 @@ class HybridLayer(Layer):
         raise NotImplementedError
 
 
-class Sequential(Layer):
+class Sequential(HybridLayer):
     """Stack Layers sequentially.
 
     Example::
@@ -348,23 +344,6 @@ class Sequential(Layer):
         for layer in self._children:
             x = layer(x)
         return x
-
-
-class HSequential(HybridLayer):
-    """Stack HybridLayers sequentially.
-
-    Example::
-        net = nn.HSequential()
-        with net.name_scope():
-            net.add(Dense(10, activation='relu'))
-            net.add(Dense(20))
-    """
-    def __init__(self, prefix=None, params=None):
-        super(HSequential, self).__init__(prefix=prefix, params=params)
-
-    def add(self, layer):
-        """Add layer on top of the stack."""
-        self.register_child(layer)
 
     def hybrid_forward(self, F, x):
         for layer in self._children:
