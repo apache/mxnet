@@ -25,6 +25,7 @@ import ml.dmlc.mxnet.NDArray
 import ml.dmlc.mxnet.Initializer
 import ml.dmlc.mxnet.DataBatch
 import ml.dmlc.mxnet.Random
+import ml.dmlc.mxnet.Initializer._
 
 /**
  * @author Depeng Liang

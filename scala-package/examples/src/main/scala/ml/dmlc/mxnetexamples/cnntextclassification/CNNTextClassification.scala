@@ -30,6 +30,7 @@ import ml.dmlc.mxnet.optimizer.RMSProp
 import ml.dmlc.mxnet.Optimizer
 import ml.dmlc.mxnet.Model
 import scala.util.Random
+import ml.dmlc.mxnet.Initializer._
 
 /**
  * An Implementation of the paper

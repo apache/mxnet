@@ -930,15 +930,42 @@ object Symbol {
 
   /**
    * Create a symbolic variable with specified name.
+   *
    * @param name Name of the variable.
    * @param attr Additional attributes to set on the variable.
-   * @return The created variable symbol.
+   * @param shape
+   *          The shape of a variable. If specified, this will be used during the shape inference.
+   *          If one has specified a different shape for this variable using a keyword argument
+   *          when calling shape inference, this shape information will be ignored.
+   * @param lrMult The learning rate multiplier for input variable.
+   * @param wdMult Weight decay multiplier for input variable.
+   * @param dType The dtype for input variable. If not specified, this value will be inferred.
+   * @param init Initializer for this variable to (optionally) override the default initializer.
+   * @param kwargs Additional attributes which must start and end with double underscores.
+   * @return A symbol corresponding to an input to the computation graph.
    */
-  def Variable(name: String, attr: Map[String, String] = null): Symbol = {
+  def Variable(name: String, attr: Map[String, String] = null, shape: Shape = null,
+      lrMult: Option[Float] = None, wdMult: Option[Float] = None, dType: DType = null,
+      init: Initializer = null, kwargs: Map[String, String] = Map.empty[String, String]): Symbol = {
     val handle = new SymbolHandleRef
     checkCall(_LIB.mxSymbolCreateVariable(name, handle))
     val sym = new Symbol(handle.value)
-    sym.setAttr(AttrScope.current.get(Option(attr)))
+    val tmpAttr = scala.collection.mutable.Map[String, String]()
+    if (shape != null) tmpAttr += "__shape__" -> shape.toString
+    if (lrMult != None) tmpAttr += "__lr_mult__" -> lrMult.get.toString
+    if (wdMult != None) tmpAttr += "__wd_mult__" -> wdMult.get.toString
+    if (dType != null) tmpAttr += "__dtype__" -> dType.id.toString
+    if (init != null) tmpAttr += "__init__" -> init.dump()
+    for ((k, v) <- kwargs) {
+      require(k.startsWith("__") && k.endsWith("__"),
+        s"Attribute name=$k is not supported. " +
+        "Additional attributes must start and end with double underscores, e.g, __yourattr__")
+      tmpAttr += k -> v
+    }
+    if (attr != null) {
+      attr.foreach { case (k, v) => tmpAttr += k -> v }
+    }
+    sym.setAttr(AttrScope.current.get(Option(tmpAttr.toMap)))
     sym
   }
 

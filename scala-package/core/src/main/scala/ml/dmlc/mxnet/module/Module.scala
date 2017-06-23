@@ -129,12 +129,16 @@ class Module(symbolVar: Symbol,
       this.auxParams = this.auxNames.zip(auxArrays).toMap
     }
 
+    val attrs = this.symbol.attrMap()
+
     this.argParams.foreach { case (name, arr) =>
-      impl(name, arr, allowMissing, Option(initializer), argParams)
+      val attr = attrs.getOrElse(name, null)
+      impl(name, arr, allowMissing, Option(initializer), attr, argParams)
     }
 
     this.auxParams.foreach { case (name, arr) =>
-      impl(name, arr, allowMissing, Option(initializer), auxParams)
+      val attr = attrs.getOrElse(name, null)
+      impl(name, arr, allowMissing, Option(initializer), attr, auxParams)
     }
 
     this.paramsInitialized = true
@@ -147,6 +151,7 @@ class Module(symbolVar: Symbol,
   // Internal helper for parameter initialization
   private def impl(name: String, arr: NDArray, allowMissing: Boolean,
                    initializer: Option[Initializer] = None,
+                   attr: Map[String, String] = null,
                    cache: Map[String, NDArray] = null): Unit = {
     if (cache != null) {
       if (cache.contains(name)) {
@@ -156,10 +161,10 @@ class Module(symbolVar: Symbol,
         }
       } else {
         require(allowMissing, s"$name is not presented")
-        initializer.foreach(inst => inst(name, arr))
+        initializer.foreach(inst => inst(InitDesc(name = name, attrs = attr), arr))
       }
     } else {
-      initializer.foreach(inst => inst(name, arr))
+      initializer.foreach(inst => inst(InitDesc(name = name, attrs = attr), arr))
     }
   }
 

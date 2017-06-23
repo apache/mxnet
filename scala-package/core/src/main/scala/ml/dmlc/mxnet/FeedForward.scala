@@ -19,6 +19,7 @@ package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.io.NDArrayIter
 import ml.dmlc.mxnet.optimizer.SGD
+import ml.dmlc.mxnet.Initializer._
 import org.slf4j.{LoggerFactory, Logger}
 
 import scala.collection.mutable.ListBuffer
