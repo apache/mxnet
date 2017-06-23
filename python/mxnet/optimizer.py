@@ -4,7 +4,7 @@ import pickle
 import logging
 import warnings
 import numpy
-from .ndarray import (NDArray, zeros, clip, sqrt, sign, array, abs, maximum)
+from .ndarray import (NDArray, zeros, clip, sqrt, sign, array, maximum, abs as NDabs)
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
                       mp_sgd_update, mp_sgd_mom_update)
 from .random import normal
@@ -777,7 +777,7 @@ class Ftrl(Optimizer):
 
         # update weight
         weight[:] = (sign(dn) * self.lamda1 - dn) / \
-                    ((self.beta + sqrt(n)) / lr + wd) * (abs(dn) > self.lamda1)
+                    ((self.beta + sqrt(n)) / lr + wd) * (NDabs(dn) > self.lamda1)
 
 @register
 class Adamax(Optimizer):
@@ -823,7 +823,7 @@ class Adamax(Optimizer):
         # update m_t and u_t
         m_t, u_t = state
         m_t[:] = self.beta1 * m_t + (1. - self.beta1) * grad
-        u_t[:] = maximum(self.beta2 * u_t, abs(grad))
+        u_t[:] = maximum(self.beta2 * u_t, NDabs(grad))
 
         # update weight
         weight[:] -= lr * m_t / u_t
