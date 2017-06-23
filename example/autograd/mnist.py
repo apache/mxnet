@@ -7,7 +7,7 @@ from mxnet import foo
 from mxnet.foo import nn
 import numpy as np
 import logging
-from mxnet.contrib import autograd as ag
+from mxnet import autograd as ag
 logging.basicConfig(level=logging.DEBUG)
 
 # define network

@@ -7,7 +7,7 @@ import mxnet as mx
 import mxnet.ndarray as F
 from mxnet import foo
 from mxnet.foo import nn
-from mxnet.contrib import autograd as ag
+from mxnet import autograd as ag
 from mxnet.test_utils import download
 from mxnet.image import CenterCropAug, ResizeAug
 from mxnet.io import PrefetchingIter
