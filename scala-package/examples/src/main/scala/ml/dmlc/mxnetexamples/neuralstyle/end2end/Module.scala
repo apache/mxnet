@@ -27,6 +27,7 @@ import ml.dmlc.mxnet.Shape
 import ml.dmlc.mxnet.Uniform
 import ml.dmlc.mxnet.Initializer
 import ml.dmlc.mxnet.DataBatch
+import ml.dmlc.mxnet.Initializer._
 
 /**
  * @author Depeng Liang
