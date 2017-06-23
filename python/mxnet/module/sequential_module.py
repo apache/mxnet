@@ -154,7 +154,7 @@ class SequentialModule(BaseModule):
         return (arg_params, aux_params)
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
-                    allow_missing=False, force_init=False):
+                    allow_missing=False, force_init=False, allow_extra=False):
         """Initializes parameters.
 
         Parameters
@@ -171,6 +171,10 @@ class SequentialModule(BaseModule):
             In this case, missing values will be filled with `initializer`.
         force_init : bool
             Default ``False``.
+        allow_extra : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
         """
         if self.params_initialized and not force_init:
             return
@@ -179,7 +183,7 @@ class SequentialModule(BaseModule):
         for module in self._modules:
             module.init_params(initializer=initializer, arg_params=arg_params,
                                aux_params=aux_params, allow_missing=allow_missing,
-                               force_init=force_init)
+                               force_init=force_init, allow_extra=allow_extra)
 
         # make sure we do not have duplicated parameter names
         def _check_name(known_names, new_names, modules, i):
