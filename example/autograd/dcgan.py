@@ -2,7 +2,7 @@ import argparse
 import mxnet as mx
 from mxnet import foo
 from mxnet.foo import nn
-from mxnet.contrib import autograd
+from mxnet import autograd
 from data import cifar10_iterator
 
 

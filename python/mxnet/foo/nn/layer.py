@@ -238,7 +238,7 @@ class HybridLayer(Layer):
 
     def hybridize(self, active=True):
         super(HybridLayer, self).hybridize(active)
-        self._active = True
+        self._active = active
 
     def _get_graph(self, *args):
         if self._cached_graph:
