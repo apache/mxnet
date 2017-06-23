@@ -290,14 +290,16 @@ dataset_classes = {'mnist': 10, 'cifar10': 10, 'imagenet': 1000, 'dummy': 1000}
 
 batch_size, dataset, classes = opt.batch_size, opt.dataset, dataset_classes[opt.dataset]
 
+gpus, version = opt.gpus, opt.resnet_version-1
+
 if opt.benchmark:
     batch_size = 32
     dataset = 'dummy'
     classes = 1000
+    version = 0
 
-gpus = opt.gpus
 
-net = get_resnet(opt.resnet_version-1, opt.resnet_layers, classes, opt.thumbnail)
+net = get_resnet(version, opt.resnet_layers, classes, opt.thumbnail)
 
 batch_size *= max(1, gpus)
 
