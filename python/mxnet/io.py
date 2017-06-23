@@ -6,7 +6,10 @@ import sys
 import ctypes
 import logging
 import threading
-import h5py
+try:
+    import h5py
+except ImportError:
+    h5py = None
 import numpy as np
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
@@ -466,7 +469,8 @@ def _init_data(data, allow_empty, default_name):
     if data is None:
         data = []
 
-    if isinstance(data, (np.ndarray, NDArray, h5py.Dataset)):
+    if isinstance(data, (np.ndarray, NDArray, h5py.Dataset)
+                  if h5py else (np.ndarray, NDArray)):
         data = [data]
     if isinstance(data, list):
         if not allow_empty:
@@ -480,7 +484,7 @@ def _init_data(data, allow_empty, default_name):
         raise TypeError("Input must be NDArray, numpy.ndarray, h5py.Dataset " + \
                 "a list of them or dict with them as values")
     for k, v in data.items():
-        if not isinstance(v, (NDArray, h5py.Dataset)):
+        if not isinstance(v, (NDArray, h5py.Dataset) if h5py else NDArray):
             try:
                 data[k] = array(v)
             except:
@@ -586,10 +590,12 @@ class NDArrayIter(DataIter):
         if shuffle:
             np.random.shuffle(self.idx)
             self.data = [(k, array(v.asnumpy()[self.idx], v.context))
-                         if not isinstance(v, h5py.Dataset) else (k, v)
+                         if not (isinstance(v, h5py.Dataset)
+                                 if h5py else False) else (k, v)
                          for k, v in self.data]
             self.label = [(k, array(v.asnumpy()[self.idx], v.context))
-                          if not isinstance(v, h5py.Dataset) else (k, v)
+                          if not (isinstance(v, h5py.Dataset)
+                                  if h5py else False) else (k, v)
                           for k, v in self.label]
 
         # batching
