@@ -297,7 +297,7 @@ if opt.benchmark:
 
 gpus = opt.gpus
 
-net = get_resnet(opt.resnet_version, opt.resnet_layers, classes, opt.thumbnail)
+net = get_resnet(opt.resnet_version-1, opt.resnet_layers, classes, opt.thumbnail)
 
 batch_size *= max(1, gpus)
 
