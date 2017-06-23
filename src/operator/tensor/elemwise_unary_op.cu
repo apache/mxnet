@@ -45,10 +45,6 @@ NNVM_REGISTER_OP(Cast)
 NNVM_REGISTER_OP(_backward_cast)
 .set_attr<FCompute>("FCompute<gpu>", CastCompute<gpu>);
 
-NNVM_REGISTER_OP(cast_storage)
-.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", CastStorageComputeEx<gpu>);
-
 // negative
 NNVM_REGISTER_OP(negative)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::negation>);

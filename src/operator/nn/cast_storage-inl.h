@@ -6,8 +6,11 @@
 #ifndef MXNET_OPERATOR_NN_CAST_STORAGE_INL_H_
 #define MXNET_OPERATOR_NN_CAST_STORAGE_INL_H_
 
-#include <numeric>
+#include <dmlc/timer.h>
+#include <mxnet/ndarray.h>
+#include <vector>
 #include "../mxnet_op.h"
+#include "../operator_common.h"
 #ifdef __CUDACC__
 #include "./cast_storage-inl.cuh"
 #endif  // __CUDACC__
@@ -57,7 +60,7 @@ inline void CastStorageDnsRspImpl(mshadow::Stream<cpu>* s, const TBlob& dns, NDA
       mxnet_op::Kernel<MarkRspRowIdx, cpu>::Launch(s, num_rows, row_idx,
           dns.dptr<DType>(), num_cols);
       index_t nnr = 0;
-      nnr = std::accumulate(row_idx, row_idx+num_rows, nnr);
+      nnr = mxnet::common::ParallelAccumulate(row_idx, num_rows, nnr);
       rsp->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
       if (0 == nnr) return;
       rsp->CheckAndAllocData(mshadow::Shape2(nnr, num_cols));
@@ -285,6 +288,45 @@ void CastStorageComputeImpl(mshadow::Stream<xpu>* s,
   } else {
     LOG(FATAL) << "Not implemented";
   }
+}
+
+struct CastStorageParam : public dmlc::Parameter<CastStorageParam> {
+  int storage_type;
+  DMLC_DECLARE_PARAMETER(CastStorageParam) {
+    DMLC_DECLARE_FIELD(storage_type)
+    .add_enum("default", kDefaultStorage)
+    .add_enum("row_sparse", kRowSparseStorage)
+    .add_enum("csr", kCSRStorage)
+    .describe("Output storage type.");
+  }
+};
+
+inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
+                                        std::vector<int> *in_attrs,
+                                        std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_NE(in_attrs->at(0), kUndefinedStorage)
+    << "src ndarray's storage type must be specified";
+  const CastStorageParam& param = nnvm::get<CastStorageParam>(attrs.parsed);
+  CHECK_NE(param.storage_type, kUndefinedStorage)
+    << "dst ndarray's storage type must be specified";
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, param.storage_type);
+  return true;
+}
+
+template<typename xpu>
+void CastStorageComputeEx(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<NDArray>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<NDArray>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), 1);
+  CastStorageComputeImpl<xpu>(s, inputs[0], outputs[0]);
 }
 
 }  // namespace op

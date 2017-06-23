@@ -7,6 +7,7 @@
 #define MXNET_COMMON_UTILS_H_
 
 #include <dmlc/logging.h>
+#include <dmlc/omp.h>
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/op_attr_types.h>
@@ -150,6 +151,16 @@ inline int GetExecNumMatchColor() {
   // This is resource efficient option.
   int num_match_color = dmlc::GetEnv("MXNET_EXEC_NUM_TEMP", 1);
   return std::min(num_match_color, GetNumThreadPerGPU());
+}
+
+template<typename T, typename V>
+V ParallelAccumulate(const T* a, const int n, V start) {
+  V sum = start;
+#pragma omp parallel for reduction(+:sum)
+  for (int i = 0; i < n; ++i) {
+    sum += a[i];
+  }
+  return sum;
 }
 
 /*!

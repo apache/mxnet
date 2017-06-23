@@ -14,7 +14,6 @@
 #include "../elemwise_op_common.h"
 #include "../special_functions-inl.h"
 #include "./broadcast_reduce-inl.h"
-#include "../nn/cast_storage-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -203,45 +202,6 @@ struct relu_grad {
   }
 };
 }  // namespace kernel_launch_op
-
-struct CastStorageParam : public dmlc::Parameter<CastStorageParam> {
-  int storage_type;
-  DMLC_DECLARE_PARAMETER(CastStorageParam) {
-    DMLC_DECLARE_FIELD(storage_type)
-    .add_enum("default", kDefaultStorage)
-    .add_enum("row_sparse", kRowSparseStorage)
-    .add_enum("csr", kCSRStorage)
-    .describe("Output storage type.");
-  }
-};
-
-inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
-                                        std::vector<int> *in_attrs,
-                                        std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  CHECK_NE(in_attrs->at(0), kUndefinedStorage)
-    << "src ndarray's storage type must be specified";
-  const CastStorageParam& param = nnvm::get<CastStorageParam>(attrs.parsed);
-  CHECK_NE(param.storage_type, kUndefinedStorage)
-    << "dst ndarray's storage type must be specified";
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, param.storage_type);
-  return true;
-}
-
-template<typename xpu>
-void CastStorageComputeEx(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx,
-                          const std::vector<NDArray>& inputs,
-                          const std::vector<OpReqType>& req,
-                          const std::vector<NDArray>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  CHECK_EQ(inputs.size(), 1);
-  CHECK_EQ(outputs.size(), 1);
-  CastStorageComputeImpl<xpu>(s, inputs[0], outputs[0]);
-}
 
 #define MXNET_OPERATOR_REGISTER_UNARY(name)                         \
   NNVM_REGISTER_OP(name)                                            \
