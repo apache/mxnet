@@ -5,8 +5,8 @@ import logging
 import warnings
 import numpy
 from .ndarray import NDArray, zeros, clip, sqrt, sign, array
-from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
-                      mp_sgd_update, mp_sgd_mom_update)
+from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update)
+#                      mp_sgd_update, mp_sgd_mom_update)
 from .random import normal
 import numpy as np
 from .ndarray import ones, ones_like
@@ -65,7 +65,7 @@ class Optimizer(object):
                  lr_scheduler=None, sym=None, begin_num_update=0,
                  weight_sparsity = [0], bias_sparsity = [0],
                  switch_epoch = [100000], batches_per_epoch = 100000,
-                 do_pruning = False):
+                 do_pruning = False, start_prune = False):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -98,7 +98,7 @@ class Optimizer(object):
         self.switch_epoch = switch_epoch
         self.batches_per_epoch = batches_per_epoch
         self.do_pruning = do_pruning
-        self.prune = False
+        self.prune = start_prune
 
     opt_registry = {}
 
@@ -365,8 +365,8 @@ class Optimizer(object):
 
         if not self.masks_updated:
             if epoch == 1:
-                self.masks.append(ones_like(weight))
-            elif not self.prune:
+                self.masks.append(None)
+            if not self.prune:
                 self.masks[index] = ones_like(weight)
             elif self.prune:
                 if len(weight.shape) == 1:
@@ -453,13 +453,13 @@ class SGD(Optimizer):
             else:
                 sgd_update(weight, grad, out=weight,
                            lr=lr, wd=wd, **kwargs)
-        else:
-            if state[0] is not None:
-                mp_sgd_mom_update(weight, grad, state[0], state[1], out=weight,
-                                  lr=lr, wd=wd, **kwargs)
-            else:
-                mp_sgd_update(weight, grad, state[1], out=weight,
-                              lr=lr, wd=wd, **kwargs)
+        #else:
+        #    if state[0] is not None:
+        #        mp_sgd_mom_update(weight, grad, state[0], state[1], out=weight,
+        #                          lr=lr, wd=wd, **kwargs)
+        #    else:
+        #        mp_sgd_update(weight, grad, state[1], out=weight,
+        #                      lr=lr, wd=wd, **kwargs)
 
         if self.do_pruning:
             weight[:] = weight * self.masks[index]
