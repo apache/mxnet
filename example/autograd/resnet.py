@@ -18,7 +18,7 @@ parser.add_argument('--batch_size', type=int, default=32, help='training batch s
 parser.add_argument('--resnet_version', type=int, default=1, help='version of resnet to use. options are 1 and 2. default is 1.')
 parser.add_argument('--resnet_layers', type=int, default=50, help='layers of resnet to use. options are 18, 50. default is 50.')
 parser.add_argument('--gpus', type=int, default=0, help='number of gpus to use.')
-parser.add_argument('--epochs', type=int, default=2, help='number of training epochs.')
+parser.add_argument('--epochs', type=int, default=3, help='number of training epochs.')
 parser.add_argument('--lr', type=float, default=0.01, help='learning Rate. default is 0.01.')
 parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123.')
 parser.add_argument('--thumbnail', action='store_true', default=False, help='use thumbnail or not. default is false.')
@@ -118,7 +118,7 @@ class ResnetV1(nn.HybridLayer):
                  self.bn0 = nn.BatchNorm(num_features=filters[0])
                  self.pool0 = nn.MaxPool2D(3, 2, 1)
 
-             self.body = nn.Sequential()
+             self.body = nn.HSequential()
              in_filters = filters[0]
              for i in range(len(layers)):
                  stride = 1 if i == 0 else 2
@@ -130,7 +130,7 @@ class ResnetV1(nn.HybridLayer):
              self.dense1 = nn.Dense(classes, in_units=filters[-1])
 
     def _make_layer(self, block, layers, filters, stride, in_filters=0):
-        layer = nn.Sequential()
+        layer = nn.HSequential()
         layer.add(block(filters, stride, True, in_filters=in_filters))
         for i in range(layers-1):
             layer.add(block(filters, 1, False, in_filters=filters))
@@ -232,7 +232,7 @@ class ResnetV2(nn.HybridLayer):
                 self.bn0 = nn.BatchNorm(num_features=filters[0])
                 self.pool0 = nn.MaxPool2D(3, 2, 1)
 
-            self.body = nn.Sequential()
+            self.body = nn.HSequential()
             in_filters = filters[0]
             for i in range(len(layers)):
                 stride = 1 if i == 0 else 2
@@ -245,7 +245,7 @@ class ResnetV2(nn.HybridLayer):
             self.dense1 = nn.Dense(classes, in_units=in_filters)
 
     def _make_layer(self, block, layers, filters, stride, in_filters=0):
-        layer = nn.Sequential()
+        layer = nn.HSequential()
         layer.add(block(filters, stride, True, in_filters=in_filters))
         for i in range(layers-1):
             layer.add(block(filters, 1, False, in_filters=filters))
