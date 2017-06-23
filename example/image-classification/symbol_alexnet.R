@@ -5,13 +5,13 @@ get_symbol <- function(num_classes = 1000) {
   # stage 1
   conv1 <- mx.symbol.Convolution(data = input_data, kernel = c(11, 11), stride = c(4, 4), num_filter = 96)
   relu1 <- mx.symbol.Activation(data = conv1, act_type = "relu")
-  pool1 <- mx.symbol.Pooling(data = relu1, pool_type = "max", kernel = c(3, 3), stride = c(2, 2))
-  lrn1 <- mx.symbol.LRN(data = pool1, alpha = 0.0001, beta = 0.75, knorm = 2, nsize = 5)
+  lrn1 <- mx.symbol.LRN(data = relu1, alpha = 0.0001, beta = 0.75, knorm = 2, nsize = 5)
+  pool1 <- mx.symbol.Pooling(data = lrn1, kernel = c(3, 3), stride = c(2, 2), pool_type = "max")
   # stage 2
   conv2 <- mx.symbol.Convolution(data = lrn1, kernel = c(5, 5), pad = c(2, 2), num_filter = 256)
   relu2 <- mx.symbol.Activation(data = conv2, act_type = "relu")
-  pool2 <- mx.symbol.Pooling(data = relu2, kernel = c(3, 3), stride = c(2, 2), pool_type = "max")
-  lrn2 <- mx.symbol.LRN(data = pool2, alpha = 0.0001, beta = 0.75, knorm = 2, nsize = 5)
+  lrn2 <- mx.symbol.LRN(data = relu2, alpha = 0.0001, beta = 0.75, knorm = 2, nsize = 5)
+  pool2 <- mx.symbol.Pooling(data = lrn2, kernel = c(3, 3), stride = c(2, 2), pool_type = "max")  
   # stage 3
   conv3 <- mx.symbol.Convolution(data = lrn2, kernel = c(3, 3), pad = c(1, 1), num_filter = 384)
   relu3 <- mx.symbol.Activation(data = conv3, act_type = "relu")
