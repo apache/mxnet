@@ -2,10 +2,24 @@ from common import modelzoo
 import mxnet as mx
 import os
 import logging
+import math
+import argparse
 
-def train_imagenet():
+def train_imagenet(args):
 
-    batch_size = 128
+    # arguments to change
+    lr = args.lr
+    lr_steps = [int(i) for i in args.lr_steps.split(',')]
+    lr_factor = args.lr_factor
+    weight_sparsity = [float(i) for i in args.weight_sparsity.split(',')]
+    bias_sparsity = [float(i) for i in args.bias_sparsity.split(',')]
+    switch_epoch = [int(i) for i in args.switch_epoch.split(',')]
+    do_pruning = args.do_pruning
+    gpus = [int(i) for i in args.gpus.split(',')]
+
+    # fixed arguments
+    num_epoch = 100
+    batch_size = 512
     label_name = 'softmax_label'
 
     # create data iterators
@@ -41,24 +55,30 @@ def train_imagenet():
     sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
 
     # training
-    mod = mx.mod.Module(symbol = sym, context = [mx.gpu(i) for i in range(8)],
-        label_names = [label_name,])
+    context = [mx.gpu(i) for i in gpus]
+    mod = mx.mod.Module(symbol = sym, context = context, label_names = [label_name,])
     begin_epoch = 0
-    num_epoch = 1
     eval_metric = ['accuracy']
     kv = 'local'
     optimizer = 'sgd'
+    batches_per_epoch = math.ceil(1281167.0 / batch_size)
+    lr_steps = [batches_per_epoch * i for i in lr_steps]
+    lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(step = lr_steps,
+        factor = lr_factor)
+    start_pruning = True
     optimizer_params = {
-            'learning_rate'     : 0.1,
-            #'lr_scheduler'      : lr_scheduler,
-            'weight_sparsity'   : [0],
-            'bias_sparsity'     : [0],
-            'switch_epoch'      : [0,0],
-            'batches_per_epoch' : 100,
-            'do_pruning'        : False}
-    disp_batches = 20
+            'learning_rate'     : lr,
+            'lr_scheduler'      : lr_scheduler,
+            'weight_sparsity'   : weight_sparsity,
+            'bias_sparsity'     : bias_sparsity,
+            'switch_epoch'      : switch_epoch,
+            'batches_per_epoch' : batches_per_epoch,
+            'do_pruning'        : do_pruning,
+            'start_prune'       : start_pruning,
+    }
+    disp_batches = 50
     batch_end_callbacks = [mx.callback.Speedometer(batch_size, disp_batches)]
-    mod.fit(val,
+    mod.fit(train,
         begin_epoch                 = begin_epoch,
         num_epoch                   = num_epoch,
         eval_data                   = val,
@@ -75,14 +95,27 @@ def train_imagenet():
         #monitor                     = None,
         #eval_end_callback           = None,
         #eval_batch_end_callback     = None
-        )
+    )
 
     return
 
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser(description = 'train Imagenet')
+    parser.add_argument('--lr', type = float)
+    parser.add_argument('--lr_steps', type = str)
+    parser.add_argument('--lr_factor', type = float)
+    parser.add_argument('--weight_sparsity', type = str)
+    parser.add_argument('--bias_sparsity', type = str)
+    parser.add_argument('--switch_epoch', type = str)
+    parser.add_argument('--do_pruning', type = bool)
+    parser.add_argument('--gpus', type = str)
+    args = parser.parse_args()
+
+    print args
+
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    train_imagenet()
+    train_imagenet(args)
