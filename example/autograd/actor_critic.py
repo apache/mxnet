@@ -9,7 +9,7 @@ import mxnet as mx
 import mxnet.ndarray as F
 from mxnet import foo
 from mxnet.foo import nn
-from mxnet.contrib import autograd
+from mxnet import autograd
 
 
 parser = argparse.ArgumentParser(description='MXNet actor-critic example')
