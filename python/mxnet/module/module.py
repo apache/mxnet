@@ -545,7 +545,7 @@ class Module(BaseModule):
         See Also
         ----------
         :meth:`BaseModule.forward`.
-        
+
         Parameters
         ----------
         data_batch : DataBatch
