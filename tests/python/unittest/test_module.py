@@ -521,23 +521,6 @@ def test_forward_reshape():
     mod.backward()
     mod.update()
 
-    #Train with different dtypes
-    dshape1 = (8, 3, 18, 30)
-    dshape2 = (8, 3, 16, 14)
-    lshape = (8,)
-    dtype_list = [np.float16, np.float32, np.float64]
-    for dtype in dtype_list:
-        data_batch = mx.io.DataBatch(data=[mx.nd.random_uniform(0, 9, dshape1, dtype=dtype),
-                                           mx.nd.random_uniform(15, 25, dshape2, dtype=dtype)],
-                                     label=[mx.nd.ones(lshape, dtype=np.float64)])
-        mod.forward(data_batch)
-        for data_desc in mod.data_shapes:
-            assert data_desc.dtype == dtype
-        assert mod.get_outputs()[0].shape == tuple([lshape[0], num_class])
-        mod.backward()
-        mod.update()
-
-
     #Test score
     dataset_shape1 = (30, 3, 30, 30)
     dataset_shape2 = (30, 3, 20, 40)
