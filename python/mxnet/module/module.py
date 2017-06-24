@@ -541,9 +541,11 @@ class Module(BaseModule):
         If reshaping of data batch relates to modification of symbol or module, such as
         changing image layout ordering or switching from training to predicting, module
         rebinding is required.
+
         See Also
         ----------
         :meth:`BaseModule.forward`.
+        
         Parameters
         ----------
         data_batch : DataBatch
