@@ -18,7 +18,7 @@ def train_imagenet(args):
     gpus = [int(i) for i in args.gpus.split(',')]
 
     # fixed arguments
-    num_epoch = 100
+    num_epoch = 20
     batch_size = 512
     label_name = 'softmax_label'
 

@@ -376,7 +376,7 @@ class Optimizer(object):
                     sparsity = self.weight_sparsity[0]
                     threshold = np.percentile(absolute(weight).asnumpy(), sparsity)
                 self.masks[index] = absolute(weight) >= threshold
-            print 'nonzeros in mask\t', (np.count_nonzero(self.masks[index].asnumpy()) / float(self.masks[index].size))
+            logging.info('nonzeros in mask\t' + str(np.count_nonzero(self.masks[index].asnumpy()) / float(self.masks[index].size)))
 
 # convenience wrapper for Optimizer.Register
 register = Optimizer.register   # pylint: disable=invalid-name
