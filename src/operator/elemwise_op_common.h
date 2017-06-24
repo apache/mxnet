@@ -131,6 +131,16 @@ struct ElemwiseGradUseNone {
   }
 };
 
+struct CloneGradient {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+                                          const std::vector<nnvm::NodeEntry>& ograds) {
+    std::vector<nnvm::NodeEntry> ret;
+    for (size_t i = 0; i < n->inputs.size(); ++i)
+      ret.emplace_back(ograds[0]);
+    return ret;
+  }
+};
 }  // namespace op
 }  // namespace mxnet
 
