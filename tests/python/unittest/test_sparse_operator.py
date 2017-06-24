@@ -165,8 +165,7 @@ def test_sparse_embedding():
 def test_sparse_slice():
     def check_csr_slice(shape, slice_input):
         storage_type = 'csr'
-        A, _ = rand_sparse_ndarray(shape, storage_type)
-        B = A._slice(1, shape[0] - 1) if slice_input else A
+        B, _ = rand_sparse_ndarray(shape, storage_type)
         np = B.asnumpy()
         begin = rnd.randint(0, B.shape[0] - 1)
         end = rnd.randint(begin + 1, B.shape[0])

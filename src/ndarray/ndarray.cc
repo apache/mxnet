@@ -66,91 +66,33 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
   using namespace mshadow;
   CHECK(!is_none()) << "NDArray is not initialized";
   CHECK_GE(shape_[0], end) << "Slice end index out of range";
-  CHECK_NE(storage_type(), kUndefinedStorage);
-  if (storage_type() == kDefaultStorage) {
-    NDArray ret = *this;
-    auto stype = storage_type();
-    size_t length = shape_.ProdShape(1, shape_.ndim());
-    MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
-      ret.byte_offset_ += begin * length * sizeof(DType);
-    });
-    ret.shape_[0] = end - begin;
-    if (AutogradRuntime::Get()->IsTraining()) {
-      // fake a slice_axis op
-      ret.entry_.clear();
-      const nnvm::Op* op = nnvm::Op::Get("slice_axis");
-      nnvm::NodeAttrs attrs;
-      attrs.op = op;
-      attrs.dict.insert({"axis", "0"});
-      attrs.dict.insert({"begin", std::to_string(begin)});
-      attrs.dict.insert({"end", std::to_string(end)});
-      op->attr_parser(&attrs);
-      std::vector<NDArray> inputs, outputs;
-      inputs.emplace_back(*this);
-      outputs.emplace_back(std::move(ret));
-      AutogradRuntime::Get()->RecordImperativeFCompute(
-        op, attrs, &inputs, &outputs);
-      return outputs[0];
-    } else {
-      return ret;
-    }
-  } else if (storage_type() == kCSRStorage) {
-    // TODO(haibin) support auto_grad
-    TShape sliced_shape(Shape2(end-begin, shape()[1]));
-    using namespace csr;
-    NDArray ret(storage_type(), TShape(Shape2(end-begin, shape()[1])),
-                ctx(), true, dtype_, ptr_->aux_types,
-                {TShape(Shape1(0)), TShape(Shape1(0))});
-    NDArray src = *this;
-    // destination NDArray shares the same variable
-    ret.ptr_->var = var();
-
-    Engine::Get()->PushSync([src, ret, begin, end](RunContext ctx) {
-      NDArray dst = ret;
-      // create a new chunk for dst NDArray
-      NDArray::Chunk chunk = *src.ptr_;
-      // void indptr storage handle
-      chunk.aux_handles[kIndPtr] = Storage::Handle();
-      // shape for indptr is end - begin + 1
-      chunk.CheckAndAllocAuxData(kIndPtr, Shape1(end - begin + 1));
-      if (src.ctx().dev_mask() == cpu::kDevMask) {
-        MSHADOW_INT_TYPE_SWITCH(src.aux_type(kIndPtr), IType, {
-          MSHADOW_TYPE_SWITCH(src.dtype(), DType, {
-            // create new indptr
-            const IType* src_indptr = src.aux_data(kIndPtr).dptr<IType>();
-            IType* dst_indptr = static_cast<IType*> (chunk.aux_handles[kIndPtr].dptr);
-            op::SliceCsrIndPtrImpl<cpu, IType>(begin, end, ctx, src_indptr, dst_indptr);
-            // advance idx and values pointers (CPU implementation)
-            // TODO(haibin) refactor for GPU implementation later
-            IType offset = src_indptr[begin];
-            IType* idx = static_cast<IType*>(chunk.aux_handles[kIdx].dptr);
-            DType* values = static_cast<DType*>(chunk.shandle.dptr);
-            chunk.aux_handles[kIdx].dptr = idx + offset;
-            chunk.shandle.dptr = values + offset;
-            // update storage shape and aux shape (CPU implementation)
-            auto nnz = dst_indptr[end - begin];
-            chunk.aux_shapes[kIdx] = Shape1(nnz);
-            chunk.storage_shape = Shape1(nnz);
-            chunk.static_data = true;
-            chunk.skip_delete_var = true;
-            // update dst chunk
-            *dst.ptr_ = chunk;
-          });
-        });
-      } else {
-#if MXNET_USE_CUDA
-       LOG(FATAL) << "SliceEx CSR not implemented yet";
-#else
-       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-      }
-      }, ctx(), {}, {var()},
-      FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-    return ret;
+  CHECK_EQ(storage_type(), kDefaultStorage);
+  NDArray ret = *this;
+  auto stype = storage_type();
+  size_t length = shape_.ProdShape(1, shape_.ndim());
+  MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
+    ret.byte_offset_ += begin * length * sizeof(DType);
+  });
+  ret.shape_[0] = end - begin;
+  if (AutogradRuntime::Get()->IsTraining()) {
+    // fake a slice_axis op
+    ret.entry_.clear();
+    const nnvm::Op* op = nnvm::Op::Get("slice_axis");
+    nnvm::NodeAttrs attrs;
+    attrs.op = op;
+    attrs.dict.insert({"axis", "0"});
+    attrs.dict.insert({"begin", std::to_string(begin)});
+    attrs.dict.insert({"end", std::to_string(end)});
+    op->attr_parser(&attrs);
+    std::vector<NDArray> inputs, outputs;
+    inputs.emplace_back(*this);
+    outputs.emplace_back(std::move(ret));
+    AutogradRuntime::Get()->RecordImperativeFCompute(
+      op, attrs, &inputs, &outputs);
+    return outputs[0];
   } else {
-    LOG(FATAL) << "Slice not yet implemented for storage " << storage_type();
+    return ret;
   }
-  return NDArray();
 }
 
 NDArray NDArray::At(index_t idx) const {
