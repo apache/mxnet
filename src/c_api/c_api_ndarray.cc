@@ -501,7 +501,7 @@ int MXInvokeCachedOp(CachedOpHandle handle,
     for (const auto& i : idx.outputs()) {
       ret->ret_handles.push_back(
         reinterpret_cast<NDArrayHandle>(
-          new NDArray(std::move(buff[idx.entry_id(i)]))));
+          new NDArray(buff[idx.entry_id(i)])));
     }
     *num_outputs = idx.outputs().size();
     *outputs = dmlc::BeginPtr(ret->ret_handles);
@@ -509,7 +509,7 @@ int MXInvokeCachedOp(CachedOpHandle handle,
     CHECK_EQ(static_cast<size_t>(*num_outputs), idx.outputs().size())
         << "Specifed number of output differs from expected number of outputs";
     for (size_t i = 0; i < idx.outputs().size(); ++i) {
-      *outarray[i] = std::move(buff[idx.entry_id(idx.outputs()[i])]);
+      *outarray[i] = buff[idx.entry_id(idx.outputs()[i])];
     }
   }
   API_END();

@@ -7,7 +7,6 @@ from test_optimizer import *
 from test_random import *
 from test_nn import *
 from test_rnn import *
-from test_rnn import *
 from test_foo_rnn import *
 import mxnet as mx
 import numpy as np
@@ -1388,6 +1387,32 @@ def test_foo_fused():
                       mx.nd.ones((8, 3, 200)))
 
 
+
+def check_rnn_layer(layer):
+    layer.all_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
+    with mx.gpu(0):
+        x = mx.nd.ones((10, 16, 30))
+        h0 = mx.nd.ones((3, 16, 100))
+        h1 = mx.nd.ones((3, 16, 100))
+        go, gs = layer(x, [h0, h1])
+
+    with mx.cpu(0):
+        x = mx.nd.ones((10, 16, 30))
+        h0 = mx.nd.ones((3, 16, 100))
+        h1 = mx.nd.ones((3, 16, 100))
+        co, cs = layer(x, [h0, h1])
+
+    assert_allclose(go.asnumpy(), co.asnumpy(), rtol=1e-4)
+    for g, c in zip(gs, cs):
+        assert_allclose(g.asnumpy(), c.asnumpy(), rtol=1e-4)
+
+
+def test_rnn_layer():
+    check_rnn_layer(foo.rnn.LSTM(100, num_layers=3))
+
+
+
 if __name__ == '__main__':
+    test_rnn_layer()
     import nose
     nose.runmodule()

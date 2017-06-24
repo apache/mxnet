@@ -258,11 +258,12 @@ class HybridLayer(Layer):
     def infer_shape(self, *args):
         """Infer shape of Parameters from inputs."""
         syms, out = self._get_graph(*args)
+        args, _, = _flatten(args)
         arg_shapes, _, aux_shapes = out.infer_shape(
             **{i.name: j.shape for i, j in zip(syms, args)})
         sdict = {i: j for i, j in zip(out.list_arguments(), arg_shapes)}
-        sdict.update(
-            {name : shape for name, shape in zip(out.list_auxiliary_states(), aux_shapes)})
+        sdict.update({name : shape for name, shape in \
+                      zip(out.list_auxiliary_states(), aux_shapes)})
         for i in self.all_params().values():
             i.shape = sdict[i.name]
 
@@ -393,7 +394,7 @@ class Dense(HybridLayer):
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias: Boolean, whether the layer uses a bias vector.
-    kernel_initializer: Initializer for the `kernel` weights matrix
+    weight_initializer: Initializer for the `kernel` weights matrix
         (see mxnet.initializer).
     bias_initializer: Initializer for the bias vector
         (see mxnet.initializer).
@@ -414,13 +415,13 @@ class Dense(HybridLayer):
     the output would have shape `(batch_size, units)`.
     """
     def __init__(self, units, activation=None, use_bias=True,
-                 kernel_initializer=None, bias_initializer=None,
+                 weight_initializer=None, bias_initializer=None,
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
         with self.name_scope():
             self._units = units
             self.weight = self.params.get('weight', shape=(units, in_units),
-                                          init=kernel_initializer)
+                                          init=weight_initializer)
             if use_bias:
                 self.bias = self.params.get('bias', shape=(units,),
                                             init=bias_initializer)
@@ -520,9 +521,9 @@ class BatchNorm(HybridLayer):
     moving_variance_initializer: Initializer for the moving variance.
     """
     def __init__(self, axis=1, momentum=0.9, epsilon=1e-3, center=True, scale=True,
-                 num_features=0, beta_initializer='zeros', gamma_initializer='ones',
+                 beta_initializer='zeros', gamma_initializer='ones',
                  running_mean_initializer='zeros', running_variance_initializer='ones',
-                 **kwargs):
+                 num_features=0, **kwargs):
         super(BatchNorm, self).__init__(**kwargs)
         self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': momentum,
                         'fix_gamma': not center}
@@ -575,7 +576,7 @@ class Embedding(HybridLayer):
         Dimension of the dense embedding.
     dtype : str or np.dtype, default 'float32'
         Data type of output embeddings.
-    embeddings_initializer : Initializer
+    weight_initializer : Initializer
         Initializer for the `embeddings` matrix
 
     Input shape
@@ -587,12 +588,12 @@ class Embedding(HybridLayer):
     3D tensor with shape: `(batch_size, sequence_length, output_dim)`.
     """
     def __init__(self, input_dim, output_dim, dtype='float32',
-                 embeddings_initializer=None, **kwargs):
+                 weight_initializer=None, **kwargs):
         super(Embedding, self).__init__(**kwargs)
         self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
                         'dtype': dtype}
         self.weight = self.params.get('weight', shape=(input_dim, output_dim),
-                                      init=embeddings_initializer)
+                                      init=weight_initializer)
 
     def hybrid_forward(self, F, x, weight):
         return F.Embedding(x, weight, **self._kwargs)
