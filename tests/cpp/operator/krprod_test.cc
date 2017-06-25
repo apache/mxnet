@@ -24,19 +24,6 @@ using DType = double;
       EXPECT_LE(std::abs(actual[i][j] - expected[i][j]), 1e-10); \
 } \
 
-TEST(row_wise_kronecker, ZeroInputMatrix) {
-  Tensor<cpu, 2, DType> result(Shape2(4, 1)), expected(Shape2(4, 1));
-  AllocSpace(&expected);
-  AllocSpace(&result);
-
-  expected = 1;
-  row_wise_kronecker(result, std::vector<Tensor<cpu, 2, DType> > {});
-  EXPECT_DOUBLE_EQ_MATRIX(expected, result);
-
-  FreeSpace(&expected);
-  FreeSpace(&result);
-}
-
 TEST(row_wise_kronecker, OneInputMatrix) {
   // Input matrices of shape (2, 4) which is also the expected result
   DType mat[8] {1, 2, 3, 4, 5, 6, 7, 8};
@@ -241,19 +228,6 @@ TEST(row_wise_kronecker, FourInputMatrices) {
   FreeSpace(&kr12);
   FreeSpace(&kr13);
   FreeSpace(&kr14);
-  FreeSpace(&result);
-}
-
-TEST(krprod, ZeroInputMatrix) {
-  Tensor<cpu, 2, DType> result(Shape2(1, 4)), expected(Shape2(1, 4));
-  AllocSpace(&expected);
-  AllocSpace(&result);
-
-  expected = 1;
-  krprod(result, std::vector<Tensor<cpu, 2, DType> > {});
-  EXPECT_DOUBLE_EQ_MATRIX(expected, result);
-
-  FreeSpace(&expected);
   FreeSpace(&result);
 }
 

@@ -31,23 +31,18 @@ template <typename DType>
 inline void row_wise_kronecker
   (Tensor<cpu, 2, DType> out,
   const std::vector<Tensor<cpu, 2, DType> > &ts_arr) {
-  // If no input matrix, return all-one vector
-  if (ts_arr.empty()) {
-    CHECK_EQ(1, out.size(1)) << "The output matrix must have single column.";
-    out = 1;
-    return;
-  }
+  CHECK_GE(ts_arr.size(), 1) << "The input matrices must be non-empty.";
 
   // Check all input and output matrices have the same number of rows
   // and the output matrix has the right number of columns
   int nrows = static_cast<int>(out.size(0));
-  int kronecker_length = 1;
+  int ncols = 1;
   for (auto & ts : ts_arr) {
     CHECK_EQ(nrows, static_cast<int>(ts.size(0)))
       << "All input and output matrices must have the same number of rows.";
-    kronecker_length *= ts.size(1);
+    ncols *= ts.size(1);
   }
-  CHECK_EQ(kronecker_length, static_cast<int>(out.size(1)));
+  CHECK_EQ(ncols, static_cast<int>(out.size(1)));
 
   // Create an intermediate space of the same shape as out
   //
@@ -66,7 +61,7 @@ inline void row_wise_kronecker
 
   // Compute each intermediate row-wise Kronecker product
   storage = 1;
-  kronecker_length = 1;
+  ncols = 1;
   for (auto & ts : ts_arr) {
     expr::BLASEngine<cpu, DType>::SetStream
       (result->stream_);
@@ -78,7 +73,7 @@ inline void row_wise_kronecker
       //
       // dger(
       //   m : ts.size(1), length of each row of current matrix
-      //   n : kronecker_length, length of each row of previous result
+      //   n : ncols, length of each row of previous result
       //   alpha : 1, scaling to the outer product of x and y
       //   x : ts[i].dptr_, current row of current matrix
       //   incx : 1, as each element in the row is contiguous
@@ -92,12 +87,12 @@ inline void row_wise_kronecker
       // )
       expr::BLASEngine<cpu, DType>::ger
         (result->stream_,
-        ts.size(1), kronecker_length, 1,
+        ts.size(1), ncols, 1,
         ts[i].dptr_, 1,
         (*given)[i].dptr_, 1,
         (*result)[i].dptr_, ts.size(1));
     }
-    kronecker_length *= ts.size(1);
+    ncols *= ts.size(1);
 
     tmp = given;
     given = result;
@@ -137,23 +132,18 @@ template <typename DType>
 inline void krprod
   (Tensor<cpu, 2, DType> out,
   const std::vector<Tensor<cpu, 2, DType> > &ts_arr) {
-  // If no input matrix, return all-one vector
-  if (ts_arr.empty()) {
-    CHECK_EQ(1, out.size(0)) << "The output matrix must have single row.";
-    out = 1;
-    return;
-  }
+  CHECK_GE(ts_arr.size(), 1) << "The input matrices must be non-empty.";
 
   // Check all input and output matrices have the same number
   // of columns and the output matrix has the right number of rows
-  int ncol = static_cast<int>(out.size(1));
-  int kronecker_length = 1;
+  int ncols = static_cast<int>(out.size(1));
+  int nrows = 1;
   for (auto & ts : ts_arr) {
-    CHECK_EQ(ncol, static_cast<int>(ts.size(1)))
+    CHECK_EQ(ncols, static_cast<int>(ts.size(1)))
       << "All input and output matrices must have the same number of columns.";
-    kronecker_length *= ts.size(0);
+    nrows *= ts.size(0);
   }
-  CHECK_EQ(kronecker_length, static_cast<int>(out.size(0)));
+  CHECK_EQ(nrows, static_cast<int>(out.size(0)));
 
   // Change the layout of matrices to column-major
   Tensor<cpu, 2, DType> out_t(Shape2(out.size(1), out.size(0)));
@@ -199,9 +189,13 @@ inline void krprod
 /*!
  * \brief Moore-Penrose pseudoinverse of the Khatri-Rao product
  *
- * The result is always of the same shape as the transpose of
- * the Khatri-Rao product of the input matrices. The input argument
- * ts_arr could contain the original input matrices, or transposed ones.
+ * Given input matrices A_1, ..., A_n, of shape (l_1, k), ..., (l_n, k) respectively, the pseudoinverse of the Khatri-Rao product is
+ *
+ *   pinv(A_1 khatri-rao A_2 khatri-rao ... khatri-rao A_n) =
+ *     ((A_1^T A_1) hadamard-dot ... hadamard-dot (A_n^T A_n))
+ *     (A_1 khatri-rao ... khatri-rao A_n)^T
+ *
+ * As the first term of the r.h.s is a square matrix, the result is always of the same shape as the transpose of the Khatri-Rao product of the input matrices. The input argument ts_arr could contain the original input matrices, or transposed ones.
  *
  * \param out result matrix
  * \param ts_arr vector of input matrices
