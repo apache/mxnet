@@ -668,7 +668,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreInitEx
                           static_cast<mx_uint>(len),
                           keyArray,
                           reinterpret_cast<NDArrayHandle *>(valueArray));
-  env->ReleaseLongArrayElements(values, valueArray, 0);  
+  env->ReleaseLongArrayElements(values, valueArray, 0);
   for (int i = 0; i < len; i++) {
     jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(keys, i));
     env->ReleaseStringUTFChars(jkey, keyArray[i]);
