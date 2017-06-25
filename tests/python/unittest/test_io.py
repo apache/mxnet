@@ -4,7 +4,10 @@ import numpy as np
 import os, gzip
 import pickle as pickle
 import time
-import h5py
+try:
+    import h5py
+except ImportError:
+    h5py = None
 import sys
 from common import get_data
 
@@ -90,6 +93,9 @@ def test_NDArrayIter():
             assert(labelcount[i] == 100)
 
 def test_NDArrayIter_h5py():
+    if not h5py:
+        return
+
     data = np.ones([1000, 2, 2])
     label = np.ones([1000, 1])
     for i in range(1000):
@@ -118,6 +124,11 @@ def test_NDArrayIter_h5py():
             for i in range(label.shape[0]):
                 labelcount[int(label[i])] += 1
 
+    try:
+        os.remove("ndarraytest.h5")
+    except OSError:
+        pass
+
     for i in range(10):
         if i == 0:
             assert(labelcount[i] == 124)
@@ -127,6 +138,7 @@ def test_NDArrayIter_h5py():
 
 if __name__ == "__main__":
     test_NDArrayIter()
-    test_NDArrayIter_h5py()
+    if h5py:
+        test_NDArrayIter_h5py()
     test_MNISTIter()
     test_Cifar10Rec()
