@@ -80,27 +80,23 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
                         update_on_kvstore):
     """Initialize kvstore"""
     for idx, param_on_devs in enumerate(param_arrays):
-        kvstore.init(idx, arg_params[param_names[idx]])
+        name = param_names[idx]
+        kvstore.init(name, arg_params[name])
 
         if update_on_kvstore:
-            kvstore.pull(idx, param_on_devs, priority=-idx)
+            kvstore.pull(name, param_on_devs, priority=-idx)
 
-def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names=None):
-    """Perform update of param_arrays from grad_arrays on kvstore.
-       If `param_names` is None or kvstore doesn't have a `name2idx` dictionary,
-       the index of a param is determined by the order it appears in `param_arrays`. """
-    for i, pair in enumerate(zip(param_arrays, grad_arrays)):
+def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
+    """Perform update of param_arrays from grad_arrays on kvstore."""
+    for index, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
         if grad_list[0] is None:
             continue
-        index = i
-        if param_names is not None:
-            name = param_names[i]
-            index = index if name not in kvstore.name2idx else kvstore.name2idx[name]
+        name = param_names[index]
         # push gradient, priority is negative index
-        kvstore.push(index, grad_list, priority=-index)
+        kvstore.push(name, grad_list, priority=-index)
         # pull back the weights
-        kvstore.pull(index, arg_list, priority=-index)
+        kvstore.pull(name, arg_list, priority=-index)
 
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None, param_names=None):
@@ -111,13 +107,11 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
             continue
         index = i
         if kvstore:
-            if param_names is not None:
-                name = param_names
-                index = index if name not in kvstore.name2idx else kvstore.name2idx[name]
+            name = param_names[index]
             # push gradient, priority is negative index
-            kvstore.push(index, grad_list, priority=-index)
+            kvstore.push(name, grad_list, priority=-index)
             # pull back the sum gradients, to the same locations.
-            kvstore.pull(index, grad_list, priority=-index)
+            kvstore.pull(name, grad_list, priority=-index)
         for k, p in enumerate(zip(arg_list, grad_list)):
             # faked an index here, to make optimizer create diff
             # state for the same index but on diff devs, TODO(mli)
@@ -255,13 +249,14 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 if update_on_kvstore:
                     _update_params_on_kvstore(executor_manager.param_arrays,
                                               executor_manager.grad_arrays,
-                                              kvstore)
+                                              kvstore, executor_manager.param_names)
                 else:
                     _update_params(executor_manager.param_arrays,
                                    executor_manager.grad_arrays,
                                    updater=updater,
                                    num_device=len(ctx),
-                                   kvstore=kvstore)
+                                   kvstore=kvstore,
+                                   param_names=executor_manager.param_names)
 
                 if monitor is not None:
                     monitor.toc_print()

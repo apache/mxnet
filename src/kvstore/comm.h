@@ -84,12 +84,18 @@ class CommCPU : public Comm {
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
                         int priority) override {
+    auto& buf = merge_buf_[key];
     // avoid extra copy for single device, but it may bring problems for
     // abnormal usage of kvstore
     if (src.size() == 1) {
-      return src[0];
+      if (src[0].storage_type() == buf.merged.storage_type()) {
+        return src[0];
+      } else {
+        CopyFromTo(src[0], &buf.merged, priority);
+        return buf.merged;
+      }
     }
-    auto& buf = merge_buf_[key];
+
     if (buf.merged.storage_type() == kDefaultStorage) {
       std::vector<Engine::VarHandle> const_vars(src.size() - 1);
       std::vector<NDArray> reduce(src.size());

@@ -576,14 +576,14 @@ class Module(BaseModule):
         if self._update_on_kvstore:
             _update_params_on_kvstore(self._exec_group.param_arrays,
                                       self._exec_group.grad_arrays,
-                                      self._kvstore,
-                                      param_names=self._param_names)
+                                      self._kvstore, self._exec_group.param_names)
         else:
             _update_params(self._exec_group.param_arrays,
                            self._exec_group.grad_arrays,
                            updater=self._updater,
                            num_device=len(self._context),
-                           kvstore=self._kvstore)
+                           kvstore=self._kvstore,
+                           param_names=self._exec_group.param_names)
 
     def get_outputs(self, merge_multi_context=True):
         """Gets outputs of the previous forward computation.

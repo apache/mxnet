@@ -163,6 +163,28 @@ class NDArray {
   }
 
   /*!
+   * \brief constructing a static NDArray of non-default storage that shares data with TBlob
+   *  Use with caution: allocate ONLY ONE NDArray for each TBlob,
+   *  make sure the memory region is available through out the life of NDArray
+   * \param stype the storage type of NDArray
+   * \param shape the shape of NDArray
+   * \param data the memory content of static data
+   * \param aux_data the memory content of static aux data
+   * \param dev_id the device id this tensor sits at
+   * \param shared_var the same var handle shared with others.
+            It will not be deleted during destruction.
+   */
+  NDArray(const NDArrayStorageType stype, const TShape &shape,
+          const TBlob &data, const std::vector<TBlob> &aux_data, int dev_id)
+      : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id)), shape_(shape),
+        dtype_(data.type_flag_), entry_({nullptr, 0, 0}) {
+#if MKL_EXPERIMENTAL == 1
+    Mkl_mem_ = std::make_shared<MKLMemHolder>();
+#endif
+  }
+
+
+  /*!
    * \return the shape of current NDArray.
    */
   inline const TShape& shape() const {
@@ -621,6 +643,38 @@ class NDArray {
         CheckAndAllocData(storage_shape, dtype);
       }
     }
+
+    Chunk(const NDArrayStorageType storage_type_, const TBlob &data,
+          const std::vector<TBlob> &aux_data, int dev_id)
+        : static_data(true), delay_alloc(false), storage_type(storage_type_) {
+      using namespace mshadow;
+      CHECK_NE(storage_type, kDefaultStorage);
+      // init var
+      var = Engine::Get()->NewVariable();
+      // init ctx
+      if (data.dev_mask() == cpu::kDevMask) {
+        ctx = Context::CPU();
+      } else {
+        CHECK_EQ(data.dev_mask(), gpu::kDevMask);
+        ctx = Context::GPU(dev_id);
+      }
+      // init shandle
+      shandle.ctx = ctx;
+      shandle.dptr = data.dptr_;
+      shandle.size = data.shape_.Size() * mshadow_sizeof(data.type_flag_);
+      storage_shape = data.shape_;
+      // init aux handles
+      for (const auto &aux : aux_data) {
+        Storage::Handle aux_handle;
+        aux_handle.ctx = ctx;
+        aux_handle.dptr = aux.dptr_;
+        aux_handle.size = aux.shape_.Size() * mshadow_sizeof(aux.type_flag_);
+        aux_handles.push_back(aux_handle);
+        aux_types.emplace_back(aux.type_flag_);
+        aux_shapes.emplace_back(aux.shape_);
+      }
+    }
+
     /*! \brief check if delay alloc is on, do alloc if not yet done */
     inline void CheckAndAlloc(void) {
       if (delay_alloc) {
