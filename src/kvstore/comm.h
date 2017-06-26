@@ -3,13 +3,16 @@
  */
 #ifndef MXNET_KVSTORE_COMM_H_
 #define MXNET_KVSTORE_COMM_H_
+#include <dmlc/omp.h>
 #include <string>
 #include <algorithm>
 #include <utility>
 #include <limits>
 #include <vector>
 #include <tuple>
+#include <thread>
 #include "mxnet/ndarray.h"
+#include "../common/utils.h"
 namespace mxnet {
 namespace kvstore {
 /**
@@ -29,9 +32,10 @@ class Comm {
   }
   virtual ~Comm() { }
   /**
-   * \brief init key with the data shape
+   * \brief init key with the data shape and storage shape
    */
-  virtual void Init(int key, const TShape& shape, int dtype = mshadow::kFloat32) = 0;
+  virtual void Init(int key, const NDArrayStorageType stype,
+                    const TShape& shape, int dtype = mshadow::kFloat32) = 0;
   /**
    * \brief returns src[0] + .. + src[src.size()-1]
    */
@@ -64,43 +68,84 @@ class CommCPU : public Comm {
   CommCPU() {
     nthread_reduction_ = dmlc::GetEnv("MXNET_KVSTORE_REDUCTION_NTHREADS", 4);
     bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 1000 * 1000);
+    // TODO(junwu) delete the following data member, now for benchmark only
+    is_serial_push_ = dmlc::GetEnv("MXNET_KVSTORE_SERIAL_PUSH", 0);
   }
   virtual ~CommCPU() { }
 
-  void Init(int key, const TShape& shape, int type = mshadow::kFloat32) override {
-    merge_buf_[key].merged = NDArray(shape, pinned_ctx_, false, type);
+  void Init(int key, const NDArrayStorageType stype, const TShape& shape,
+            int type = mshadow::kFloat32) override {
+    if (stype == kDefaultStorage) {
+      merge_buf_[key].merged = NDArray(shape, pinned_ctx_, false, type);
+    } else {
+      merge_buf_[key].merged = NDArray(stype, shape, pinned_ctx_, true, type);
+    }
   }
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
                         int priority) override {
+    auto& buf = merge_buf_[key];
     // avoid extra copy for single device, but it may bring problems for
     // abnormal usage of kvstore
     if (src.size() == 1) {
-      return src[0];
-    }
-    std::vector<Engine::VarHandle> const_vars(src.size() - 1);
-    std::vector<NDArray> reduce(src.size());
-    auto& buf = merge_buf_[key];
-    CopyFromTo(src[0], &buf.merged, priority);
-    reduce[0] = buf.merged;
-
-    if (buf.copy_buf.empty()) {
-      buf.copy_buf.resize(src.size()-1);
-      for (size_t j = 0; j < src.size() - 1; ++j) {
-        buf.copy_buf[j] = NDArray(
-          src[0].shape(), pinned_ctx_, false, src[0].dtype());
+      if (src[0].storage_type() == buf.merged.storage_type()) {
+        return src[0];
+      } else {
+        CopyFromTo(src[0], &buf.merged, priority);
+        return buf.merged;
       }
     }
-    for (size_t i = 1; i < src.size(); ++i) {
-      CopyFromTo(src[i], &(buf.copy_buf[i-1]), priority);
-      reduce[i] = buf.copy_buf[i-1];
-      const_vars[i-1] = reduce[i].var();
-    }
 
-    Engine::Get()->PushSync([reduce, this](RunContext rctx) {
-        ReduceSumCPU(reduce);
-      }, Context::CPU(), const_vars, {reduce[0].var()},
-      FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
+    if (buf.merged.storage_type() == kDefaultStorage) {
+      std::vector<Engine::VarHandle> const_vars(src.size() - 1);
+      std::vector<NDArray> reduce(src.size());
+      CopyFromTo(src[0], &buf.merged, priority);
+      reduce[0] = buf.merged;
+
+      if (buf.copy_buf.empty()) {
+        buf.copy_buf.resize(src.size()-1);
+        for (size_t j = 0; j < src.size() - 1; ++j) {
+          // allocate NDArray basd on storage type
+          buf.copy_buf[j] = NDArray(
+            src[0].shape(), pinned_ctx_, false, src[0].dtype());
+        }
+      }
+      for (size_t i = 1; i < src.size(); ++i) {
+        CopyFromTo(src[i], &(buf.copy_buf[i-1]), priority);
+        reduce[i] = buf.copy_buf[i-1];
+        const_vars[i-1] = reduce[i].var();
+      }
+
+      Engine::Get()->PushSync([reduce, this](RunContext rctx) {
+          ReduceSumCPU(reduce);
+        }, Context::CPU(), const_vars, {reduce[0].var()},
+        FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
+
+    } else {
+      // buf.merged is a sparse ndarray.
+      std::vector<Engine::VarHandle> const_vars(src.size());
+      std::vector<NDArray> reduce(src.size());
+
+      if (buf.copy_buf.empty()) {
+        buf.copy_buf.resize(src.size());
+        for (size_t j = 0; j < src.size(); ++j) {
+          buf.copy_buf[j] = NDArray(
+            src[0].storage_type(), src[0].shape(), pinned_ctx_, true, src[0].dtype());
+        }
+      }
+      for (size_t i = 0; i < src.size(); ++i) {
+        CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
+        reduce[i] = buf.copy_buf[i];
+        const_vars[i] = reduce[i].var();
+      }
+      auto result = buf.merged;
+      Engine::Get()->PushSync([reduce, result, this](RunContext rctx) {
+          NDArray out = result;
+          is_serial_push_?
+            ReduceSumCPUExSerial(reduce, &out) : ReduceSumCPUExParallel(reduce, &out);
+        }, Context::CPU(), const_vars, {result.var()},
+        FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
+    }
 
     return buf.merged;
   }
@@ -130,6 +175,188 @@ class CommCPU : public Comm {
       }
       size_t total = in_data[0].shape().Size();
       ReduceSumCPUImpl(dptr, total);
+    });
+  }
+
+  // serial implementation of reduce sum for row sparse NDArray.
+  // TODO(haibin) use openmp kernel to parallelize the summation
+  inline void ReduceSumCPUExSerial(const std::vector<NDArray> &in, NDArray *out) {
+    using namespace rowsparse;
+    using namespace mshadow;
+    auto stype = out->storage_type();
+    CHECK_EQ(stype, kRowSparseStorage) << "Unexpected storage type " << stype;
+    size_t total_num_rows = 0;
+    size_t num_in = in.size();
+    // skip the ones with empty indices and values
+    std::vector<bool> skip(num_in, false);
+    // the values tensor of the inputs
+    MSHADOW_TYPE_SWITCH(out->dtype(), DType, {
+      MSHADOW_INT_TYPE_SWITCH(out->aux_type(kIdx), IType, {
+        std::vector<Tensor<cpu, 2, DType>> in_vals(num_in);
+        std::vector<Tensor<cpu, 1, IType>> in_indices(num_in);
+        // offset to the values tensor of all inputs
+        std::vector<size_t> offsets(num_in, 0);
+        std::vector<size_t> num_rows(num_in, 0);
+        for (size_t i = 0; i < num_in; i++) {
+          if (!in[i].storage_initialized()) {
+            skip[i] = true;
+            continue;
+          }
+          auto size = in[i].aux_shape(kIdx).Size();
+          num_rows[i] = size;
+          total_num_rows += size;
+          in_vals[i] = in[i].data().FlatTo2D<cpu, DType>();
+          in_indices[i] = in[i].aux_data(kIdx).FlatTo1D<cpu, IType>();
+        }
+        std::vector<IType> indices;
+        indices.reserve(total_num_rows);
+        // gather indices from all inputs
+        for (size_t i = 0; i < num_in; i++) {
+          for (size_t j = 0; j < num_rows[i]; j++) {
+            indices.emplace_back(in_indices[i][j]);
+          }
+        }
+        CHECK_EQ(indices.size(), total_num_rows);
+        // dedup indices
+        std::sort(indices.begin(), indices.end());
+        indices.resize(std::unique(indices.begin(), indices.end()) - indices.begin());
+        // the one left are unique non-zero rows
+        size_t nnr = indices.size();
+        // allocate memory for output
+        out->CheckAndAlloc({Shape1(nnr)});
+        auto idx_data = out->aux_data(kIdx).FlatTo1D<cpu, IType>();
+        auto val_data = out->data().FlatTo2D<cpu, DType>();
+
+        for (size_t i = 0; i < nnr; i++) {
+          // copy indices back
+          idx_data[i] = indices[i];
+          bool zeros = true;
+          for (size_t j = 0; j < num_in; j++) {
+            if (skip[j]) continue;
+            size_t offset = offsets[j];
+            if (offset < num_rows[j]) {
+              if (indices[i] == in_indices[j][offset]) {
+                if (zeros) {
+                  Copy(val_data[i], in_vals[j][offset], nullptr);
+                  zeros = false;
+                } else {
+                  val_data[i] += in_vals[j][offset];
+                }
+                offsets[j] += 1;
+              }
+            }
+          }
+        }
+      });
+    });
+  }
+
+  template<typename DType, typename IType>
+  void ReduceSumCPUExImpl(const std::vector<NDArray>& nds,
+                          const std::vector<IType>& uniq_row_idx,
+                          NDArray* out) {
+#pragma omp parallel num_threads(nthread_reduction_)
+    {
+      const size_t nnr = uniq_row_idx.size();
+      const int num_threads = omp_get_num_threads();
+      size_t row_block_len = (nnr + num_threads  - 1) / num_threads;
+      const size_t row_block_start = omp_get_thread_num() * row_block_len;
+      if (row_block_start < nnr) {
+        const size_t row_block_end = std::min(row_block_start+row_block_len, nnr);
+
+        auto out_values = out->data().FlatTo2D<cpu, DType>();
+        auto out_indices = out->aux_data(rowsparse::kIdx).FlatTo1D<cpu, IType>();
+        for (size_t i = row_block_start; i < row_block_end; ++i) {
+          out_indices[i] = uniq_row_idx[i];
+        }
+        for (const auto& nd : nds) {
+          if (nd.storage_initialized()) {
+            const auto nd_indices = nd.aux_data(rowsparse::kIdx).FlatTo1D<cpu, IType>();
+            const auto nd_values = nd.data().FlatTo2D<cpu, DType>();
+            const auto nd_num_rows = nd.aux_shape(rowsparse::kIdx).Size();
+            const IType* nd_indices_start = &nd_indices[0];
+            const IType* nd_indices_end = nd_indices_start + nd_num_rows;
+            const IType* row_idx_ptr = std::lower_bound(nd_indices_start, nd_indices_end,
+                                                        out_indices[row_block_start]);
+            // skip this nd if all of its row indices are smaller than out_indices[row_block_start]
+            // or current row block is not covered by [*row_idx_ptr, nd_indices_end).
+            if (nd_indices_end == row_idx_ptr || *row_idx_ptr > out_indices[row_block_end-1]) {
+              continue;
+            }
+            for (size_t irow = row_block_start;
+                 irow < row_block_end && row_idx_ptr != nd_indices_end;) {
+              if (out_indices[irow] == *row_idx_ptr) {
+                auto out_value_cur_row = out_values[irow];
+                const auto offset = row_idx_ptr - nd_indices_start;
+                auto nd_value_cur_row = nd_values[offset];
+                for (size_t j = 0; j < nd_value_cur_row.shape_[0]; ++j) {
+                  out_value_cur_row[j] += nd_value_cur_row[j];
+                }
+                ++irow;
+                ++row_idx_ptr;
+              } else if (out_indices[irow] < *row_idx_ptr) {
+                ++irow;
+              } else {
+                ++row_idx_ptr;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /*!
+   * \brief Given a vector of ndarrays, generate a index vector containing
+   * all the unique row indices of the ndarrays.
+   */
+  template<typename IType>
+  void GetUniqueRspRowIdx(const std::vector<NDArray>& nds,
+                          std::vector<IType>* uniq_row_idx) {
+    using namespace rowsparse;
+    size_t total_num_rows = 0;
+    for (const auto& nd : nds) {
+      CHECK_EQ(nd.storage_type(), kRowSparseStorage);
+      if (nd.storage_initialized()) {
+        total_num_rows += nd.aux_shape(kIdx).Size();
+      }
+    }
+
+    uniq_row_idx->resize(total_num_rows);
+    int nthreads = omp_get_max_threads();
+    int offset = 0;
+    for (const auto& nd : nds) {
+      if (nd.storage_initialized()) {
+        const IType* nd_row_idx = nd.aux_data(kIdx).dptr<IType>();
+        const int num_rows = nd.aux_shape(kIdx).Size();
+#pragma omp parallel for num_threads(nthreads)
+        for (int i = 0; i < num_rows; ++i) {
+          (*uniq_row_idx)[offset+i] = nd_row_idx[i];
+        }
+        offset += num_rows;
+      }
+    }
+
+    common::ParallelSort(uniq_row_idx->begin(), uniq_row_idx->end(), nthreads);
+    auto it = std::unique(uniq_row_idx->begin(), uniq_row_idx->end());
+    uniq_row_idx->resize(it - uniq_row_idx->begin());
+  }
+
+  void ReduceSumCPUExParallel(const std::vector<NDArray>& nds, NDArray* out) {
+    if (nds.empty()) return;
+    using namespace rowsparse;
+    CHECK_EQ(out->storage_type(), kRowSparseStorage)
+      << "Expected row sparse storage type ("
+      << out->storage_type() << " given)";
+
+    MSHADOW_TYPE_SWITCH(out->dtype(), DType, {
+      MSHADOW_INT_TYPE_SWITCH(out->aux_type(kIdx), IType, {
+        std::vector<IType> uniq_row_idx;
+        GetUniqueRspRowIdx(nds, &uniq_row_idx);
+        out->CheckAndAlloc({mshadow::Shape1(uniq_row_idx.size())});
+        out->data().FlatTo2D<cpu, DType>() = static_cast<DType>(0);
+        ReduceSumCPUExImpl<DType, IType>(nds, uniq_row_idx, out);
+      });
     });
   }
 
@@ -198,6 +425,7 @@ class CommCPU : public Comm {
   std::unordered_map<int, BufferEntry> merge_buf_;
   size_t bigarray_bound_;
   int nthread_reduction_;
+  bool is_serial_push_;
 };
 
 /**
@@ -216,8 +444,13 @@ class CommDevice : public Comm {
 
   virtual ~CommDevice() { }
 
-  void Init(int key, const TShape& shape, int dtype = mshadow::kFloat32) override {
-    sorted_key_attrs_.push_back(std::make_tuple(key, shape, dtype));
+  void Init(int key, const NDArrayStorageType stype, const TShape& shape,
+            int dtype = mshadow::kFloat32) override {
+    if (stype == kDefaultStorage) {
+      sorted_key_attrs_.push_back(std::make_tuple(key, shape, dtype));
+    } else {
+      LOG(FATAL) << "storage type " << stype << " not implemented for device yet";
+    }
   }
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,

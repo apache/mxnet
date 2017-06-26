@@ -7,7 +7,6 @@
 #ifndef MXNET_OP_ATTR_TYPES_H_
 #define MXNET_OP_ATTR_TYPES_H_
 
-
 #include <mshadow/tensor.h>
 #include <nnvm/op_attr_types.h>
 
@@ -61,6 +60,17 @@ using FCompute = std::function<void (const nnvm::NodeAttrs& attrs,
                                      const std::vector<TBlob>& inputs,
                                      const std::vector<OpReqType>& req,
                                      const std::vector<TBlob>& outputs)>;
+/*!
+ * \brief Resiger an NDArray compute function for simple stateless forward only operator
+ *
+ * \note Register under "FComputeEx<xpu, default>" and "FComputeEx<xpu, non-default>" 
+ *       Dispatched only when operators process non-default storage inputs or outputs
+ */
+using FComputeEx = std::function<void (const nnvm::NodeAttrs& attrs,
+                                     const OpContext& ctx,
+                                     const std::vector<NDArray>& inputs,
+                                     const std::vector<OpReqType>& req,
+                                     const std::vector<NDArray>& outputs)>;
 }  // namespace mxnet
 
 #endif  // MXNET_OP_ATTR_TYPES_H_

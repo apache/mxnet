@@ -40,10 +40,13 @@ NNVM_REGISTER_OP(_backward_slice_axis)
 .set_attr<FCompute>("FCompute<gpu>", SliceAxisGrad_<gpu>);
 
 NNVM_REGISTER_OP(dot)
-.set_attr<FCompute>("FCompute<gpu>", DotForward_<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", DotForward_<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", DotForwardEx<gpu>);
 
 NNVM_REGISTER_OP(_backward_dot)
-.set_attr<FCompute>("FCompute<gpu>", DotBackward_<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", DotBackward_<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", DotBackwardEx<gpu>);
+
 
 NNVM_REGISTER_OP(batch_dot)
 .set_attr<FCompute>("FCompute<gpu>", BatchDotForward_<gpu>);

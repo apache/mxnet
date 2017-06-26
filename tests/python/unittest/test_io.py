@@ -1,5 +1,6 @@
 # pylint: skip-file
 import mxnet as mx
+from mxnet.test_utils import *
 import numpy as np
 import os, gzip
 import pickle as pickle
@@ -88,7 +89,43 @@ def test_NDArrayIter():
         else:
             assert(labelcount[i] == 100)
 
+'''
+def test_libsvm():
+    #TODO(haibin) automatic the test instead of hard coded test
+    cwd = os.getcwd()
+    data_path = os.path.join(cwd, 'data.t')
+    label_path = os.path.join(cwd, 'label.t')
+    with open(data_path, 'w') as fout:
+        fout.write('1.0 0:0.5 2:1.2\n')
+        fout.write('-2.0\n')
+        fout.write('-3.0 0:0.6 1:2.4 2:1.2\n')
+        fout.write('4 2:-1.2\n')
+
+    with open(label_path, 'w') as fout:
+        fout.write('1.0\n')
+        fout.write('-2.0 0:0.125\n')
+        fout.write('-3.0 2:1.2\n')
+        fout.write('4 1:1.0 2:-1.2\n')
+
+    data_dir = os.path.join(os.getcwd(), 'data')
+    f = (data_path, label_path, (3,), (3,), 3)
+    data_train = mx.io.LibSVMIter(data_libsvm=f[0],
+                                  label_libsvm=f[1],
+                                  data_shape=f[2],
+                                  label_shape=f[3],
+                                  batch_size=f[4])
+
+    first = mx.nd.array([[ 0.5, 0., 1.2], [ 0., 0., 0.], [ 0.6, 2.4, 1.2]])
+    second = mx.nd.array([[ 0., 0., -1.2], [ 0.5, 0., 1.2], [ 0., 0., 0.]])
+    i = 0
+    for batch in iter(data_train):
+        expected = first.asnumpy() if i == 0 else second.asnumpy()
+        assert_almost_equal(data_train.getdata().asnumpy(), expected)
+        i += 1
+'''
+
 if __name__ == "__main__":
     test_NDArrayIter()
     test_MNISTIter()
     test_Cifar10Rec()
+    # test_libsvm()

@@ -13,6 +13,7 @@ from .base import DataIterHandle, NDArrayHandle
 from .base import mx_real_t
 from .base import check_call, build_param_doc as _build_param_doc
 from .ndarray import NDArray
+from .sparse_ndarray import _ndarray_cls
 from .ndarray import array
 from .ndarray import concatenate
 
@@ -752,12 +753,12 @@ class MXDataIter(DataIter):
     def getdata(self):
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
-        return NDArray(hdl, False)
+        return _ndarray_cls(hdl, False)
 
     def getlabel(self):
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
-        return NDArray(hdl, False)
+        return _ndarray_cls(hdl, False)
 
     def getindex(self):
         index_size = ctypes.c_uint64(0)

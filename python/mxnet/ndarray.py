@@ -4,6 +4,7 @@
 """NDArray API of MXNet."""
 from __future__ import absolute_import
 from __future__ import division
+
 try:
     from __builtin__ import slice as py_slice
 except ImportError:
@@ -17,9 +18,9 @@ import sys as _sys
 
 import operator
 import numpy as np
-from .base import _LIB, string_types, numeric_types
-from .base import c_array, py_str, c_str, mx_real_t, _Null  # pylint: disable=unused-import
-from .base import mx_uint, NDArrayHandle, check_call, OpHandle
+from .base import _LIB, numeric_types, OpHandle, c_str
+from .base import c_array, py_str, mx_real_t, _Null  # pylint: disable=unused-import
+from .base import mx_uint, NDArrayHandle, check_call
 from .base import ctypes2buffer
 from .context import Context
 from . import _ndarray_internal as _internal
@@ -52,17 +53,29 @@ _DTYPE_NP_TO_MX = {
     np.float64 : 1,
     np.float16 : 2,
     np.uint8   : 3,
-    np.int32   : 4
+    np.int32   : 4,
+    np.int64   : 6
 }
-
 _DTYPE_MX_TO_NP = {
     0 : np.float32,
     1 : np.float64,
     2 : np.float16,
     3 : np.uint8,
-    4 : np.int32
+    4 : np.int32,
+    6 : np.int64
 }
-# pylint: enable= no-member
+_STORAGE_TYPE_ID_TO_STR = {
+    -1 : 'undefined',
+    0  : 'default',
+    1  : 'row_sparse',
+    2  : 'csr',
+}
+_STORAGE_TYPE_STR_TO_ID = {
+    'undefined'  : -1,
+    'default'    : 0,
+    'row_sparse' : 1,
+    'csr'        : 2,
+}
 
 def _new_empty_handle():
     """Returns a new empty handle.
@@ -106,6 +119,11 @@ def waitall():
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
+def _storage_type(handle):
+    storage_type = ctypes.c_int(0)
+    check_call(_LIB.MXNDArrayGetStorageType(handle, ctypes.byref(storage_type)))
+    return _STORAGE_TYPE_ID_TO_STR[storage_type.value]
+
 class NDArray(NDArrayBase):
     """An array object representing a multidimensional, homogeneous array of
 fixed-size items.
@@ -113,11 +131,15 @@ fixed-size items.
     """
     __slots__ = []
     # pylint: disable= no-member, undefined-variable
+
     def __repr__(self):
         """Returns a string representation of the array."""
         shape_info = 'x'.join(['%d' % x for x in self.shape])
         return '<%s %s @%s>' % (self.__class__.__name__,
                                 shape_info, self.context)
+
+    def __reduce__(self):
+        return NDArray, (None,), self.__getstate__()
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """
@@ -629,7 +651,6 @@ fixed-size items.
         """
         check_call(_LIB.MXNDArrayWaitToRead(self.handle))
 
-
     @property
     def ndim(self):
         """Returns the number of dimensions of this array
@@ -663,6 +684,7 @@ fixed-size items.
         check_call(_LIB.MXNDArrayGetShape(
             self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
         return tuple(pdata[:ndim.value])
+
 
     @property
     def size(self):
@@ -724,6 +746,10 @@ fixed-size items.
         check_call(_LIB.MXNDArrayGetDType(
             self.handle, ctypes.byref(mx_dtype)))
         return _DTYPE_MX_TO_NP[mx_dtype.value]
+
+    @property
+    def storage_type(self):
+        return _storage_type(self.handle)
 
     @property
     # pylint: disable= invalid-name, undefined-variable
@@ -949,6 +975,13 @@ fixed-size items.
             c_array(NDArrayHandle, ograd_handles),
             ctypes.c_int(retain_graph)))
 
+    def _to_csr(self):
+        # pylint: disable=undefined-variable
+        return cast_storage(self, storage_type='csr')
+
+    def _to_rsp(self):
+        # pylint: disable=undefined-variable
+        return cast_storage(self, storage_type='row_sparse')
 
 def onehot_encode(indices, out):
     """One-hot encoding indices into matrix out.
@@ -993,42 +1026,8 @@ def empty(shape, ctx=None, dtype=mx_real_t):
         ctx = Context.default_ctx
     return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
 
-def zeros(shape, ctx=None, dtype=mx_real_t, **kwargs):
-    """Returns a new array filled with all zeros, with the given shape and type.
 
-    Parameters
-    ----------
-    shape : int or tuple of int
-        The shape of the empty array.
-    ctx : Context, optional
-        An optional device context (default is the current default context).
-    dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`).
-    out : NDArray, optional
-        The output NDArray (default is `None`).
-
-    Returns
-    -------
-    NDArray
-        A created array
-
-    Examples
-    --------
-    >>> mx.nd.zeros(1).asnumpy()
-    array([ 0.], dtype=float32)
-    >>> mx.nd.zeros((1,2), mx.gpu(0))
-    <NDArray 1x2 @gpu(0)>
-    >>> mx.nd.zeros((1,2), mx.gpu(0), 'float16').asnumpy()
-    array([[ 0.,  0.]], dtype=float16)
-    """
-    # pylint: disable= unused-argument
-    if ctx is None:
-        ctx = Context.default_ctx
-    # pylint: disable= no-member, protected-access
-    return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
-    # pylint: enable= no-member, protected-access
-
-def ones(shape, ctx=None, dtype=mx_real_t, **kwargs):
+def ones(shape, ctx=None, dtype=None, **kwargs):
     """Returns a new array filled with all ones, with the given shape and type.
 
     Parameters
@@ -1060,6 +1059,7 @@ def ones(shape, ctx=None, dtype=mx_real_t, **kwargs):
     # pylint: disable= unused-argument
     if ctx is None:
         ctx = Context.default_ctx
+    dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
     # pylint: enable= no-member, protected-access
@@ -2101,89 +2101,6 @@ def negative(arr):
     """
     return multiply(arr, -1.0)
 
-def load(fname):
-    """Loads an array from file.
-
-    See more details in ``save``.
-
-    Parameters
-    ----------
-    fname : str
-        The filename.
-
-    Returns
-    -------
-    list of NDArray or dict of str to NDArray
-        Loaded data.
-    """
-    if not isinstance(fname, string_types):
-        raise TypeError('fname required to be a string')
-    out_size = mx_uint()
-    out_name_size = mx_uint()
-    handles = ctypes.POINTER(NDArrayHandle)()
-    names = ctypes.POINTER(ctypes.c_char_p)()
-    check_call(_LIB.MXNDArrayLoad(c_str(fname),
-                                  ctypes.byref(out_size),
-                                  ctypes.byref(handles),
-                                  ctypes.byref(out_name_size),
-                                  ctypes.byref(names)))
-    if out_name_size.value == 0:
-        return [NDArray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
-    else:
-        assert out_name_size.value == out_size.value
-        return dict(
-            (py_str(names[i]), NDArray(NDArrayHandle(handles[i]))) for i in range(out_size.value))
-
-
-def save(fname, data):
-    """Saves a list of arrays or a dict of str->array to file.
-
-    Examples of filenames:
-
-    - ``/path/to/file``
-    - ``s3://my-bucket/path/to/file`` (if compiled with AWS S3 supports)
-    - ``hdfs://path/to/file`` (if compiled with HDFS supports)
-
-    Parameters
-    ----------
-    fname : str
-        The filename.
-    data : list of ``NDArray` or dict of str to ``NDArray``
-        The data to save.
-
-    Examples
-    --------
-    >>> x = mx.nd.zeros((2,3))
-    >>> y = mx.nd.ones((1,4))
-    >>> mx.nd.save('my_list', [x,y])
-    >>> mx.nd.save('my_dict', {'x':x, 'y':y})
-    >>> mx.nd.load('my_list')
-    [<NDArray 2x3 @cpu(0)>, <NDArray 1x4 @cpu(0)>]
-    >>> mx.nd.load('my_dict')
-    {'y': <NDArray 1x4 @cpu(0)>, 'x': <NDArray 2x3 @cpu(0)>}
-    """
-    handles = []
-    if isinstance(data, dict):
-        keys = []
-        for key, val in data.items():
-            if not isinstance(key, string_types):
-                raise TypeError('save only accept dict str->NDArray or list of NDArray')
-            if not isinstance(val, NDArray):
-                raise TypeError('save only accept dict str->NDArray or list of NDArray')
-            keys.append(c_str(key))
-            handles.append(val.handle)
-        keys = c_array(ctypes.c_char_p, keys)
-    else:
-        for val in data:
-            if not isinstance(val, NDArray):
-                raise TypeError('save only accept dict str->NDArray or list of NDArray')
-            handles.append(val.handle)
-        keys = None
-    check_call(_LIB.MXNDArraySave(c_str(fname),
-                                  mx_uint(len(handles)),
-                                  c_array(NDArrayHandle, handles),
-                                  keys))
-
 
 def concatenate(arrays, axis=0, always_copy=True):
     """DEPRECATED, use ``concat`` instead
@@ -2408,9 +2325,8 @@ def %s(%s):
 
 
 # pylint: enable=too-many-locals, invalid-name
-def _init_ndarray_module(ndarray_class, root_namespace):
+def _init_ndarray_module(root_namespace):
     """List and add all the ndarray functions to current module."""
-    _set_ndarray_class(ndarray_class)
     plist = ctypes.POINTER(ctypes.c_char_p)()
     size = ctypes.c_uint()
 
@@ -2436,7 +2352,8 @@ def _init_ndarray_module(ndarray_class, root_namespace):
         else:
             setattr(module_obj, function.__name__, function)
 
-_init_ndarray_module(NDArray, "mxnet")
+# register backend operators in mx.nd
+_init_ndarray_module("mxnet")
 
 # from .base import add_fileline_to_docstring
 # add_fileline_to_docstring(__name__)

@@ -112,6 +112,37 @@ def test_incomplete_infer_concat():
     assert arg_shapes['b'] == (2, 5)
     assert arg_shapes['d'] == (2, 15)
 
+def test_fc_infer_type():
+    mx_real_t = mx.base.mx_real_t
+    data = mx.symbol.Variable('data')
+    out = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=1000)
+
+    # infer type
+    data_type = mx_real_t
+    arg_types, out_types, aux_types = out.infer_type(data=data_type)
+    arg_type_dict = dict(zip(out.list_arguments(), arg_types))
+    assert len(out_types) == 1
+    assert out_types[0] == mx_real_t
+    true_types = {
+                   'fc1_bias' : mx_real_t,
+                   'fc1_weight' : mx_real_t }
+    for k, v in true_types.items():
+        assert arg_type_dict[k] == v
+
+def check_infer_storage(v1, v2, v1_storage, v2_storage, out_chunk):
+    out = mx.symbol.elemwise_add(v1, v2)
+    arg_storage_types, out_storage_types, aux_storage_types = out.infer_storage_type(v1=v1_storage, v2=v2_storage)
+    assert len(out_storage_types) == 1
+    assert out_storage_types[0] == out_chunk
+
+def test_elemwise_add_infer_storage_type():
+    v1 = mx.symbol.Variable('v1')
+    v2 = mx.symbol.Variable('v2')
+    check_infer_storage(v1, v2, 'default', 'default', 'default')
+    check_infer_storage(v1, v2, 'default', 'row_sparse', 'default')
+    check_infer_storage(v1, v2, 'row_sparse', 'default', 'default')
+    check_infer_storage(v1, v2, 'row_sparse', 'row_sparse', 'row_sparse')
+
 if __name__ == "__main__":
     test_mlp2_infer_shape()
     test_mlp2_infer_error()
@@ -121,3 +152,4 @@ if __name__ == "__main__":
     test_incomplete_infer_slicechannel()
     test_incomplete_infer_convolution()
     test_incomplete_infer_concat()
+    test_elemwise_add_infer_storage_type()

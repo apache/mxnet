@@ -512,6 +512,58 @@ int MXSymbolInferShapePartial(SymbolHandle sym,
                             &succ);
 }
 
+// TODO(haibin) refactor with infer_type
+int MXSymbolInferStorageType(SymbolHandle sym,
+                      mx_uint num_args,
+                      const char** keys,
+                      const int *arg_storage_type_data,
+                      mx_uint *in_storage_type_size,
+                      const int **in_storage_type_data,
+                      mx_uint *out_storage_type_size,
+                      const int **out_storage_type_data,
+                      mx_uint *aux_storage_type_size,
+                      const int **aux_storage_type_data,
+                      int *complete) {
+  nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  nnvm::Graph g = Symbol2Graph(*s);
+  nnvm::StorageTypeVector arg_storage_types(g.indexed_graph().input_nodes().size(),
+                                            kUndefinedStorage);
+  if (keys == nullptr && num_args != 0) {
+    std::vector<uint32_t> read_only_args = mxnet::ReadOnlyArgIndices(g.indexed_graph());
+    CHECK_LE(num_args, read_only_args.size());
+    for (mx_uint i = 0; i < num_args; ++i) {
+      arg_storage_types[read_only_args[i]] = arg_storage_type_data[i];
+    }
+  } else {
+    std::unordered_map<std::string, int> kwargs;
+    for (mx_uint i = 0; i < num_args; ++i) {
+      kwargs[keys[i]] = arg_storage_type_data[i];
+    }
+     mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_storage_types, "InferStorageType");
+  }
+
+  g = nnvm::pass::InferStorageType(std::move(g), arg_storage_types, "__storage_type__");
+  // copy back
+  CopyAttr(g.indexed_graph(), g.GetAttr<nnvm::StorageTypeVector>("storage_type"),
+           &(ret->arg_storage_types), &(ret->out_storage_types), &(ret->aux_storage_types));
+
+  *in_storage_type_size = static_cast<mx_uint>(ret->arg_storage_types.size());
+  *in_storage_type_data = dmlc::BeginPtr(ret->arg_storage_types);
+  *out_storage_type_size = static_cast<mx_uint>(ret->out_storage_types.size());
+  *out_storage_type_data = dmlc::BeginPtr(ret->out_storage_types);
+  *in_storage_type_size = static_cast<mx_uint>(ret->arg_storage_types.size());
+  *in_storage_type_data = dmlc::BeginPtr(ret->arg_storage_types);
+  *out_storage_type_size = static_cast<mx_uint>(ret->out_storage_types.size());
+  *out_storage_type_data = dmlc::BeginPtr(ret->out_storage_types);
+  *aux_storage_type_size = static_cast<mx_uint>(ret->aux_storage_types.size());
+  *aux_storage_type_data = dmlc::BeginPtr(ret->aux_storage_types);
+  *complete = (g.GetAttr<size_t>("storage_type_num_unknown_nodes") == 0);
+  API_END();
+}
+
+
 int MXSymbolInferType(SymbolHandle sym,
                       mx_uint num_args,
                       const char** keys,

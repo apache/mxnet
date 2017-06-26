@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <bitset>
 #include <vector>
+#include <string>
 #include <utility>
 #include <algorithm>
 #include "./comm.h"
@@ -43,8 +44,22 @@ class KVStoreLocal : public KVStore {
       CHECK(local_.find(keys[i]) == local_.end())
           << "duplicate init of key " << keys[i];
       local_[keys[i]] = values[i].Copy(pinned_ctx_);
-      comm_->Init(keys[i], values[i].shape(), values[i].dtype());
+      comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }
+  }
+
+  void Init(const std::vector<std::string>& str_keys,
+            const std::vector<NDArray>& values) override {
+    std::vector<int> keys(str_keys.size());
+    for (size_t i = 0; i < str_keys.size(); ++i) {
+      auto &str_key = str_keys[i];
+      CHECK(str_key_dict_.find(str_key) == str_key_dict_.end())
+            << "duplicate init of key " << str_key;
+      auto key = next_str_key_++;
+      str_key_dict_[str_key] = key;
+      keys[i] = key;
+    }
+    Init(keys, values);
   }
 
   void Push(const std::vector<int>& keys,
@@ -67,7 +82,11 @@ class KVStoreLocal : public KVStore {
         }
         updater_(key, merged,  &local);
       } else {
-        local = merged;
+        if (merged.storage_type() != local.storage_type()) {
+          local = merged.Copy(local.ctx());
+        } else {
+          local = merged;
+        }
       }
     }
   }
@@ -85,6 +104,22 @@ class KVStoreLocal : public KVStore {
       CHECK(!local.is_none()) << "key " << key << " has not been inited";
       comm_->Broadcast(key, local, grouped_vals[i], priority);
     }
+  }
+
+  void Push(const std::vector<std::string>& str_keys,
+            const std::vector<NDArray>& values,
+            int priority) override {
+    std::vector<int> keys(str_keys.size());
+    LookupKeys(str_keys, &keys);
+    Push(keys, values, priority);
+  }
+
+  void Pull(const std::vector<std::string>& str_keys,
+            const std::vector<NDArray*>& values,
+            int priority) override {
+    std::vector<int> keys(str_keys.size());
+    LookupKeys(str_keys, &keys);
+    Pull(keys, values, priority);
   }
 
  protected:
@@ -118,12 +153,27 @@ class KVStoreLocal : public KVStore {
       }
     }
   }
+
+  void LookupKeys(const std::vector<std::string>& str_keys,
+                  std::vector<int> *keys) {
+    for (size_t i = 0; i < str_keys.size(); ++i) {
+      auto &str_key = str_keys[i];
+      CHECK(str_key_dict_.find(str_key) != str_key_dict_.end())
+            << "key " << str_key << " doesn't exist. Did you init?";
+      keys->at(i) = str_key_dict_[str_key];
+    }
+  }
+
   /// reducer and broadcaster
   Comm* comm_;
   /// pinned context
   Context pinned_ctx_;
   /// \brief buffer for storing local values
   std::unordered_map<int, NDArray> local_;
+  /// key mapping for string -> integer
+  std::unordered_map<std::string, int> str_key_dict_;
+  /// the next available integer for string->int key mapping
+  int next_str_key_ = 0;
 };
 }  // namespace kvstore
 }  // namespace mxnet

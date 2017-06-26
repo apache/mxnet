@@ -330,6 +330,7 @@ def test_dot():
     assert_almost_equal(c, C.asnumpy())
 
 
+
 def test_reduce():
     sample_num = 200
     def test_reduce_inner(numpy_reduce_func, nd_reduce_func, multi_axes):

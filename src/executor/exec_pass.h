@@ -19,6 +19,12 @@ namespace exec {
 /*! \brief reuse graph definition */
 using nnvm::Graph;
 
+const int kBadStorageID = -1;
+const int kExternalStorageID = -2;
+const int kDynamicStorageID = -3;
+
+const int kNonDefaultStorage = -2;
+
 /*!
  * \brief executor to execute an operator
  * This is a graph executor dependent interface
@@ -26,7 +32,7 @@ using nnvm::Graph;
  */
 class OpExecutor {
  public:
-  /*! \brief input arrays */
+  /*! \brief input data arrays, which may be either input or aux */
   std::vector<NDArray> in_array;
   /*! \brief output data arrays */
   std::vector<NDArray> out_array;
@@ -47,7 +53,7 @@ class OpExecutor {
    *  This function call do not synchronize the stream.
    * \param rctx The runtime context passed in by environment.
    */
-  virtual void Run(RunContext rctx) = 0;
+  virtual void Run(RunContext rctx, bool is_gpu) = 0;
   /*! \return the execution type */
   virtual Operator::ExecType exec_type() const = 0;
 };

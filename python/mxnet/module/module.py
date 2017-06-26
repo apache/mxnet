@@ -7,6 +7,7 @@ more `Executor` for data parallelization.
 import logging
 import warnings
 
+import mxnet as mx
 from .. import context as ctx
 from .. import ndarray as nd
 from .. import optimizer as opt
@@ -398,7 +399,7 @@ class Module(BaseModule):
         else:
             assert self._arg_params is None and self._aux_params is None
             param_arrays = [
-                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                mx.nd.zeros(shape=x[0].shape, dtype=x[0].dtype, storage_type=x[0].storage_type)
                 for x in self._exec_group.param_arrays
             ]
             self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}
@@ -411,7 +412,6 @@ class Module(BaseModule):
 
         if shared_module is not None and shared_module.optimizer_initialized:
             self.borrow_optimizer(shared_module)
-
 
     def reshape(self, data_shapes, label_shapes=None):
         """Reshapes the module for new input shapes.
@@ -454,8 +454,12 @@ class Module(BaseModule):
 
         if self._params_dirty:
             self._sync_params_from_devices()
+        name2idx = {}
+        for idx, name in enumerate(self._exec_group.param_names):
+            name2idx[name] = idx
+
         (kvstore, update_on_kvstore) = \
-                _create_kvstore(kvstore, len(self._context), self._arg_params)
+                _create_kvstore(kvstore, len(self._context), self._arg_params, name2idx=name2idx)
 
         batch_size = self._exec_group.batch_size
         if kvstore and 'dist' in kvstore.type and '_sync' in kvstore.type:
@@ -572,13 +576,14 @@ class Module(BaseModule):
         if self._update_on_kvstore:
             _update_params_on_kvstore(self._exec_group.param_arrays,
                                       self._exec_group.grad_arrays,
-                                      self._kvstore)
+                                      self._kvstore, self._exec_group.param_names)
         else:
             _update_params(self._exec_group.param_arrays,
                            self._exec_group.grad_arrays,
                            updater=self._updater,
                            num_device=len(self._context),
-                           kvstore=self._kvstore)
+                           kvstore=self._kvstore,
+                           param_names=self._exec_group.param_names)
 
     def get_outputs(self, merge_multi_context=True):
         """Gets outputs of the previous forward computation.
