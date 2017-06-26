@@ -292,9 +292,8 @@ class KVStoreDist : public KVStoreLocal {
                   << " size: " << size;
       }
       auto vals = new ps::SArray<real_t>(data, size, false);
-      CHECK_NOTNULL(ps_worker_)->ZPull(pskv.keys, vals, &pskv.lens, kRowSparsePushPull, [vals, cb]() {
-        delete vals; cb();
-      });
+      CHECK_NOTNULL(ps_worker_)->ZPull(pskv.keys, vals, &pskv.lens, kRowSparsePushPull,
+        [vals, cb]() { delete vals; cb(); });
     };
     CHECK_NOTNULL(Engine::Get())->PushAsync(
         pull_from_servers,
@@ -464,7 +463,6 @@ class KVStoreDist : public KVStoreLocal {
   /// \brief send & recver buffer
   std::unordered_map<int, NDArray> comm_buf_;
   bool row_sparse_verbose_;
-
 };
 
 }  // namespace kvstore

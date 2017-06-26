@@ -382,7 +382,7 @@ class KVStoreDistServer {
   struct RequestBuf {
     std::vector<ps::KVMeta> requests;
     std::unordered_set<int> change_set;
-    };
+  };
 
   std::unordered_map<int, NDArray> merge_buf_;
   std::unordered_map<int, RequestBuf> request_buf_;
