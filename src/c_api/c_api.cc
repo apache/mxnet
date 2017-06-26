@@ -815,6 +815,24 @@ int MXKVStorePullEx(KVStoreHandle handle,
   API_END();
 }
 
+int MXKVStorePullRowSparse(KVStoreHandle handle,
+                           mx_uint num,
+                           const char** keys,
+                           NDArrayHandle* vals,
+                           const NDArrayHandle* row_ids,
+                           int priority) {
+  API_BEGIN();
+  std::vector<std::string> v_keys(num);
+  std::vector<std::pair<NDArray*, NDArray>> v_val_rowids(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_val_rowids[i] = std::make_pair(static_cast<NDArray*>(vals[i]),
+                                     *static_cast<NDArray*>(row_ids[i]));
+  }
+  static_cast<KVStore*>(handle)->PullRowSparse(v_keys, v_val_rowids, priority);
+  API_END();
+}
+
 int MXKVStoreSetUpdater(KVStoreHandle handle,
                         MXKVStoreUpdater updater,
                         void* updater_handle) {

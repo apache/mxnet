@@ -21,10 +21,10 @@ def sparse_nd_ones(shape, stype):
 def check_sparse_nd_elemwise_binary(shapes, stypes, f, g):
     # generate inputs
     nds = []
-    for i, storage_type in enumerate(stypes):
-        if storage_type == 'row_sparse':
-            nd, _ = rand_sparse_ndarray(shapes[i], storage_type)
-        elif storage_type == 'default':
+    for i, stype in enumerate(stypes):
+        if stype == 'row_sparse':
+            nd, _ = rand_sparse_ndarray(shapes[i], stype)
+        elif stype == 'default':
             nd = mx.nd.array(random_arrays(shapes[i]), dtype = np.float32)
         else:
             assert(False)
@@ -78,7 +78,7 @@ def test_sparse_nd_copy():
     check_sparse_nd_copy('default', 'row_sparse', shape)
     check_sparse_nd_copy('default', 'csr', shape)
     check_sparse_nd_copy('row_sparse', 'row_sparse', shape_3d)
-    check_sparse_nd_copy('default', 'row_sparse', shape_3d)
+
 
 def test_sparse_nd_basic():
     def check_rsp_creation(values, indices, shape):
@@ -140,8 +140,8 @@ def test_sparse_nd_setitem():
 
 def test_sparse_nd_slice():
     def check_sparse_nd_csr_slice(shape):
-        storage_type = 'csr'
-        A, _ = rand_sparse_ndarray(shape, storage_type)
+        stype = 'csr'
+        A, _ = rand_sparse_ndarray(shape, stype)
         A2 = A.asnumpy()
         start = rnd.randint(0, shape[0] - 1)
         end = rnd.randint(start + 1, shape[0])
@@ -232,7 +232,7 @@ def test_sparse_nd_lesser_equal():
 
 
 def test_sparse_nd_binary():
-    N = 100
+    N = 10
     def check_binary(fn):
         for _ in range(N):
             ndim = 2
@@ -270,7 +270,7 @@ def test_sparse_nd_binary():
 
 
 def test_sparse_nd_binary_rop():
-    N = 100
+    N = 10
     def check(fn):
         for _ in range(N):
             ndim = 2
@@ -297,6 +297,33 @@ def test_sparse_nd_binary_rop():
     check(lambda x: 0.5 <= x)
     check(lambda x: 0.5 == x)
 
+def test_sparse_nd_binary_iop():
+    N = 10
+    def check_binary(fn, stype):
+        for _ in range(N):
+            ndim = 2
+            oshape = np.random.randint(1, 6, size=(ndim,))
+            lshape = list(oshape)
+            rshape = list(oshape)
+            lhs = np.random.uniform(0, 1, size=lshape)
+            rhs = np.random.uniform(0, 1, size=rshape)
+            lhs_nd = mx.nd.cast_storage(mx.nd.array(lhs), stype=stype)
+            rhs_nd = mx.nd.cast_storage(mx.nd.array(rhs), stype=stype)
+            assert_allclose(fn(lhs, rhs),
+                            fn(lhs_nd, rhs_nd).asnumpy(),
+                            rtol=1e-4, atol=1e-4)
+
+    def inplace_add(x, y):
+        x += y
+        return x
+    def inplace_mul(x, y):
+        x *= y
+        return x
+    stypes = ['csr', 'row_sparse']
+    fns = [inplace_add, inplace_mul]
+    for stype in stypes:
+        for fn in fns:
+            check_binary(fn, stype)
 
 def test_sparse_nd_negate():
     npy = np.random.uniform(-10, 10, rand_shape_2d())

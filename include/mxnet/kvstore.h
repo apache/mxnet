@@ -7,6 +7,7 @@
 #define MXNET_KVSTORE_H_
 #include <dmlc/io.h>
 #include <vector>
+#include <utility>
 #include <unordered_map>
 #include <string>
 #include <functional>
@@ -155,6 +156,29 @@ class KVStore {
                     const std::vector<NDArray*>& values,
                     int priority = 0) = 0;
 
+  /*!
+   * \brief pull a list of key-value pairs from the store.
+   *        The NDArray pulled back will be in row_sparse storage with only the
+   *        specified row_ids present (others rows are zeros).
+   * \param keys the list of keys
+   * \param values the list of buffers - row_id pairs
+   * \param priority the priority of the action.
+   */
+  virtual void PullRowSparse(const std::vector<int>& str_keys,
+                             const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
+                             const int priority = 0) = 0;
+
+  /*!
+   * \brief pull a list of key-value pairs from the store, where each key is a string.
+   *        The NDArray pulled back will be in row_sparse storage with only the
+   *        specified row_ids present (others rows are zeros).
+   * \param keys the list of keys in string format
+   * \param values the list of buffers - row_id pairs
+   * \param priority the priority of the action.
+   */
+  virtual void PullRowSparse(const std::vector<std::string>& str_keys,
+                             const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
+                             const int priority = 0) = 0;
 
   /**
    * \brief the prototype of user-defined updater

@@ -182,12 +182,13 @@ class NDArray {
     return shape_;
   }
   /*!
-   * \return the shape of underlying chunk which stores the NDArray values. 
-   *  For default storage, it is the same as shape(). For row-sparse storage, it is the shape of
+   * \return the shape of underlying chunk which stores the NDArray data/value.
+   *  It is only intended for non-default storage. For row-sparse storage, it is the shape of
    *  the tensor which stores the non-zero values.
    */
   inline const TShape &storage_shape() const {
     CHECK(ptr_ != nullptr);
+    CHECK_NE(storage_type(), kDefaultStorage);
     return ptr_->storage_shape;
   }
 
@@ -276,7 +277,11 @@ class NDArray {
     if (is_none()) return false;
     auto stype = storage_type();
     CHECK_NE(stype, kDefaultStorage);
-    if (stype == kRowSparseStorage || stype == kCSRStorage) {
+    if (stype == kRowSparseStorage) {
+      CHECK_EQ(aux_shape(rowsparse::kIdx)[0], storage_shape()[0]);
+      return aux_shape(0).Size() != 0;
+    } else if (stype == kCSRStorage) {
+      CHECK_EQ(aux_shape(csr::kIdx)[0], storage_shape()[0]);
       return aux_shape(0).Size() != 0;
     } else {
       LOG(FATAL) << "Unknown storage type";
