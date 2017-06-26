@@ -227,7 +227,7 @@ class HybridLayer(Layer):
 
     def register_child(self, layer):
         if not isinstance(layer, HybridLayer):
-            if isinstance(layer, Sequantial):
+            if isinstance(layer, Sequential):
                 raise ValueError(
                     "Children of HybridLayer must also be HybridLayer. " \
                     "Please use HSequential instead of Sequantial.")
@@ -331,11 +331,12 @@ class HybridLayer(Layer):
 class Sequential(Layer):
     """Stack Layers sequentially.
 
-    Example::
-        net = nn.Sequential()
-        with net.name_scope():
-            net.add(Dense(10, activation='relu'))
-            net.add(Dense(20))
+    Example
+    -------
+    >>> net = nn.Sequential()
+    >>> with net.name_scope():
+    ...     net.add(Dense(10, activation='relu'))
+    ...     net.add(Dense(20))
     """
     def __init__(self, prefix=None, params=None):
         super(Sequential, self).__init__(prefix=prefix, params=params)
@@ -353,11 +354,12 @@ class Sequential(Layer):
 class HSequential(HybridLayer):
     """Stack HybridLayers sequentially.
 
-    Example::
-        net = nn.HSequential()
-        with net.name_scope():
-            net.add(Dense(10, activation='relu'))
-            net.add(Dense(20))
+    Example
+    -------
+    >>> net = nn.HSequential()
+    >>> with net.name_scope():
+    ...     net.add(Dense(10, activation='relu'))
+    ...     net.add(Dense(20))
     """
     def __init__(self, prefix=None, params=None):
         super(HSequential, self).__init__(prefix=prefix, params=params)
@@ -405,13 +407,12 @@ class Dense(HybridLayer):
     params : ParameterDict or None
         See document of Layer.
 
-    Input shape
-    -----------
-    a 2D input with shape `(batch_size, in_units)`.
 
-    Output shape
-    ------------
-    the output would have shape `(batch_size, units)`.
+    Input shape:
+        a 2D input with shape `(batch_size, in_units)`.
+
+    Output shape:
+        the output would have shape `(batch_size, units)`.
     """
     def __init__(self, units, activation=None, use_bias=True,
                  kernel_initializer=None, bias_initializer=None,
@@ -449,13 +450,12 @@ class Activation(HybridLayer):
     activation: name of activation function to use
         See: help on Activation operator
 
-    Input shape
-    -----------
-    Arbitrary.
 
-    Output shape
-    ------------
-    Same shape as input.
+    Input shape:
+        Arbitrary.
+
+    Output shape:
+        Same shape as input.
     """
     def __init__(self, activation, **kwargs):
         self._act_type = activation
@@ -578,13 +578,12 @@ class Embedding(HybridLayer):
     embeddings_initializer : Initializer
         Initializer for the `embeddings` matrix
 
-    Input shape
-    -----------
-    2D tensor with shape: `(batch_size, sequence_length)`.
 
-    Output shape
-    ------------
-    3D tensor with shape: `(batch_size, sequence_length, output_dim)`.
+    Input shape:
+        2D tensor with shape: `(batch_size, sequence_length)`.
+
+    Output shape:
+        3D tensor with shape: `(batch_size, sequence_length, output_dim)`.
     """
     def __init__(self, input_dim, output_dim, dtype='float32',
                  embeddings_initializer=None, **kwargs):

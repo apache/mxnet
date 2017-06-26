@@ -158,6 +158,20 @@ class Conv1D(_Conv):
         see Initializer.
     bias_initializer: Initializer for the bias vector
         see Initializer.
+
+
+    Input Shape:
+        3D tensor of shape (batch_size, channel, width).
+
+    Output Shape:
+        3D tensor of shape (batch_size, channel, out_width). out_width depends on other
+        input parameters as well. It is calculated as follows::
+
+            out_width = floor((w+2*p-d*(k-1)-1)/s)+1
+
+        where,
+
+        w = width, p = padding, d = dilation, k = kernel_size, s = stride
     """
     def __init__(self, filters, kernel_size, strides=1, padding=0, dilation=1,
                  groups=1, layout='NCW', in_filters=0, activation=None, use_bias=True,
@@ -221,6 +235,21 @@ class Conv2D(_Conv):
         see Initializer.
     bias_initializer: Initializer for the bias vector
         see Initializer.
+
+
+    Input Shape:
+        4D tensor of shape (batch_size, channel, height, width).
+
+    Output Shape:
+        4D tensor of shape (batch_size, channel, out_height, out_width). out_height and
+        out_width depends on other input parameters as well. They are calculated as follows::
+
+            out_width = floor((w+2*p-d*(k-1)-1)/s)+1
+            out_height = floor((h+2*p-d*(k-1)-1)/s)+1
+
+        where,
+
+        w = width, h = height, p = padding, d = dilation, k = kernel_size, s = stride
     """
     def __init__(self, filters, kernel_size, strides=(1, 1), padding=(0, 0),
                  dilation=(1, 1), groups=1, layout='NCHW', in_filters=0,
@@ -285,6 +314,23 @@ class Conv3D(_Conv):
         see Initializer.
     bias_initializer: Initializer for the bias vector
         see Initializer.
+
+
+    Input Shape:
+        5D tensor of shape (batch_size, channel, depth, height, width).
+
+    Output Shape:
+        5D tensor of shape (batch_size, channel, out_depth, out_height, out_width). out_depth,
+        out_height and out_width depends on other input parameters as well.
+        They are calculated as follows::
+
+            out_depth = floor((d+2*p-d*(k-1)-1)/s)+1
+            out_height = floor((h+2*p-d*(k-1)-1)/s)+1
+            out_width = floor((w+2*p-d*(k-1)-1)/s)+1
+
+        where,
+
+        d = depth, h = height, w = width, p = padding, d = dilation, k = kernel_size, s = stride
     """
     def __init__(self, filters, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  dilation=(1, 1, 1), groups=1, layout='NCDHW', in_filters=0,
@@ -351,6 +397,20 @@ class Conv1DTranspose(_Conv):
         see Initializer.
     bias_initializer: Initializer for the bias vector
         see Initializer.
+
+
+    Input Shape:
+        3D tensor of shape (batch_size, channel, width).
+
+    Output Shape:
+        3D tensor of shape (batch_size, channel, out_width).
+        out_width depends on other input parameters as well. It is calculated as follows::
+
+            out_width = (w-1)*s-2*p+k+op
+
+        where,
+
+        w = width, p = padding, k = kernel_size, s = stride, op = output_padding
     """
     def __init__(self, filters, kernel_size, strides=1, padding=0, output_padding=0,
                  dilation=1, groups=1, layout='NCW', in_filters=0, activation=None,
@@ -396,6 +456,8 @@ class Conv2DTranspose(_Conv):
     padding: An integer or a tuple/list of 2 integers,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
+    out_padding : An integer or a tuple/list of 2 integers,
+        Zero-padding added to one side of the output
     dilation: An integer or tuple/list of 2 integers, specifying
         the dilation rate to use for dilated convolution.
     groups: int
@@ -420,6 +482,22 @@ class Conv2DTranspose(_Conv):
         see Initializer.
     bias_initializer: Initializer for the bias vector
         see Initializer.
+
+
+    Input Shape:
+        4D tensor of shape (batch_size, channel, height, width).
+
+    Output Shape:
+        4D tensor of shape (batch_size, channel, out_height, out_width).
+        out_height and out_width depends on other input parameters as well.
+        They are calculated as follows::
+
+            out_height = (h-1)*s-2*p+k+op
+            out_width = (w-1)*s-2*p+k+op
+
+        where,
+
+        h = height, w = width, p = padding, k = kernel_size, s = stride, op = output_padding
     """
     def __init__(self, filters, kernel_size, strides=(1, 1), padding=(0, 0),
                  output_padding=(0, 0), dilation=(1, 1), groups=1, layout='NCHW',
@@ -465,6 +543,8 @@ class Conv3DTranspose(_Conv):
     padding: An integer or a tuple/list of 3 integers,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
+    out_padding : An integer or a tuple/list of 2 integers,
+        Zero-padding added to one side of the output
     dilation: An integer or tuple/list of 3 integers, specifying
         the dilation rate to use for dilated convolution.
     groups: int
@@ -489,6 +569,24 @@ class Conv3DTranspose(_Conv):
         see Initializer.
     bias_initializer: Initializer for the bias vector
         see Initializer.
+
+
+    Input Shape:
+        5D tensor of shape (batch_size, channel, depth, height, width).
+
+    Output Shape:
+        5D tensor of shape (batch_size, channel, out_depth, out_height, out_width).
+        out_depth, out_height and out_width depends on other input parameters as well.
+        They are calculated as follows::
+
+            out_depth = (d-1)*s-2*p+k+op
+            out_height = (h-1)*s-2*p+k+op
+            out_width = (w-1)*s-2*p+k+op
+
+        where,
+
+        d = depth, h = height, w = width, p = padding, k = kernel_size, s = stride,
+        op = output_padding
     """
     def __init__(self, filters, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  output_padding=(0, 0, 0), dilation=(1, 1, 1), groups=1, layout='NCDHW',
@@ -539,9 +637,23 @@ class MaxPool1D(_Pooling):
         If padding is non-zero, then the input is implicitly
         zero-padded on both sides for padding number of points
     layout: A string,
-        Can be 'NCHW', 'NHWC', etc.
-        'N', 'C', 'H', 'W' stands for batch, channel, and width (time) dimensions
+        Can be 'NCW', 'NWC', etc.
+        'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
         respectively. padding is applied on W dimension.
+
+
+    Input Shape:
+        3D tensor of shape (batch_size, channel, width).
+
+    Output Shape:
+        3D tensor of shape (batch_size, channel, out_width).
+        out_width depends on other input parameters as well. It is calculated as follows::
+
+            out_width = ceil((w+2*p-ps)/s+1)
+
+        where,
+
+        w = width, p = padding, ps = pool_size, s = stride
     """
     def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW', **kwargs):
         assert layout == 'NCW', "Only supports NCW layout for now"
@@ -570,6 +682,22 @@ class MaxPool2D(_Pooling):
         Can be 'NCHW', 'NHWC', etc.
         'N', 'C', 'H', 'W' stands for batch, channel, height, and width
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
+
+
+    Input Shape:
+        4D tensor of shape (batch_size, channel, height, width).
+
+    Output Shape:
+        4D tensor of shape (batch_size, channel, out_height, out_width).
+        out_height and out_width depends on other input parameters as well.
+        They are calculated as follows::
+
+            out_height = ceil((h+2*p-ps)/s+1)
+            out_width = ceil((w+2*p-ps)/s+1)
+
+        where,
+
+        h = height, w = width, p = padding, ps = pool_size, s = stride
     """
     def __init__(self, pool_size=(2, 2), strides=None, padding=0, layout='NCHW', **kwargs):
         assert layout == 'NCHW', "Only supports NCHW layout for now"
@@ -599,6 +727,23 @@ class MaxPool3D(_Pooling):
         'N', 'C', 'H', 'W', 'D' stands for batch, channel, height, width and
         depth dimensions respectively. padding is applied on 'D', 'H' and 'W'
         dimension.
+
+
+    Input Shape:
+        5D tensor of shape (batch_size, channel, depth, height, width).
+
+    Output Shape:
+        5D tensor of shape (batch_size, channel, out_depth, out_height, out_width).
+        out_depth, out_height and out_width depends on other input parameters as well.
+        They are calculated as follows::
+
+            out_depth = ceil((d+2*p-ps)/s+1)
+            out_height = ceil((h+2*p-ps)/s+1)
+            out_width = ceil((w+2*p-ps)/s+1)
+
+        where,
+
+        d = depth, h = height, w = width, p = padding, ps = pool_size, s = stride
     """
     def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0, layout='NCDHW', **kwargs):
         assert layout == 'NCDHW', "Only supports NCDHW layout for now"
@@ -622,9 +767,23 @@ class AvgPool1D(_Pooling):
         If padding is non-zero, then the input is implicitly
         zero-padded on both sides for padding number of points
     layout: A string,
-        Can be 'NCHW', 'NHWC', etc.
-        'N', 'C', 'H', 'W' stands for batch, channel, and width (time) dimensions
+        Can be 'NCW', 'NWC', etc.
+        'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
         respectively. padding is applied on W dimension.
+
+
+    Input Shape:
+        3D tensor of shape (batch_size, channel, width).
+
+    Output Shape:
+        3D tensor of shape (batch_size, channel, out_width).
+        out_width depends on other input parameters as well. It is calculated as follows::
+
+            out_width = ceil((w+2*p-ps)/s+1)
+
+        where,
+
+        w = width, p = padding, ps = pool_size, s = stride
     """
     def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW', **kwargs):
         assert layout == 'NCW', "Only supports NCW layout for now"
@@ -653,6 +812,22 @@ class AvgPool2D(_Pooling):
         Can be 'NCHW', 'NHWC', etc.
         'N', 'C', 'H', 'W' stands for batch, channel, height, and width
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
+
+
+    Input Shape:
+        4D tensor of shape (batch_size, channel, height, width).
+
+    Output Shape:
+        4D tensor of shape (batch_size, channel, out_height, out_width).
+        out_height and out_width depends on other input parameters as well.
+        They are calculated as follows::
+
+            out_height = ceil((h+2*p-ps)/s+1)
+            out_width = ceil((w+2*p-ps)/s+1)
+
+        where,
+
+        h = height, w = width, p = padding, ps = pool_size, s = stride
     """
     def __init__(self, pool_size=(2, 2), strides=None, padding=0, layout='NCHW', **kwargs):
         assert layout == 'NCHW', "Only supports NCHW layout for now"
@@ -682,6 +857,23 @@ class AvgPool3D(_Pooling):
         'N', 'C', 'H', 'W', 'D' stands for batch, channel, height, width and
         depth dimensions respectively. padding is applied on 'D', 'H' and 'W'
         dimension.
+
+
+    Input Shape:
+        5D tensor of shape (batch_size, channel, depth, height, width).
+
+    Output Shape:
+        5D tensor of shape (batch_size, channel, out_depth, out_height, out_width).
+        out_depth, out_height and out_width depends on other input parameters as well.
+        They are calculated as follows::
+
+            out_depth = ceil((d+2*p-ps)/s+1)
+            out_height = ceil((h+2*p-ps)/s+1)
+            out_width = ceil((w+2*p-ps)/s+1)
+
+        where,
+
+        d = depth, h = height, w = width, p = padding, ps = pool_size, s = stride
     """
     def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0, layout='NCDHW', **kwargs):
         assert layout == 'NCDHW', "Only supports NCDHW layout for now"
