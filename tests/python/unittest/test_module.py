@@ -383,7 +383,7 @@ def test_module_fm():
          x = mx.symbol.Variable("data", storage_type='csr')
          v = mx.symbol.Variable("v", shape=(feature_dim, k), init=norm, storage_type='row_sparse')
 
-         w1_weight = mx.symbol.var('w1_weight', shape=(feature_dim, 1), init=norm)
+         w1_weight = mx.symbol.var('w1_weight', shape=(feature_dim, 1), init=norm, storage_type='row_sparse')
          w1 = mx.symbol.dot(x, w1_weight)
 
          v_s = mx.symbol.sum(data=mx.symbol.square(data=v), axis=1)
