@@ -882,7 +882,7 @@ class Nadam(Optimizer):
         momentum_t_1 = self.beta1 * (1. - 0.5 * (pow(0.96, (t + 1) * self.schedule_decay)))
         self.m_schedule = self.m_schedule * momentum_t
         m_schedule_next = self.m_schedule * momentum_t_1
-            
+
         # update m_t and v_t
         m_t, v_t = state
         m_t[:] = self.beta1 * m_t + (1. - self.beta1) * grad
