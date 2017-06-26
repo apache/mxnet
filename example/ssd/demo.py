@@ -2,7 +2,6 @@ import argparse
 import tools.find_mxnet
 import mxnet as mx
 import os
-import importlib
 import sys
 from detect.detector import Detector
 from symbol.symbol_factory import get_symbol
@@ -41,8 +40,8 @@ def get_detector(net, prefix, epoch, data_shape, mean_pixels, ctx, num_class,
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Single-shot detection network demo')
-    parser.add_argument('--network', dest='network', type=str, default='vgg16_reduced',
-                        choices=['vgg16_ssd_300', 'vgg16_ssd_512'], help='which network to use')
+    parser.add_argument('--network', dest='network', type=str, default='resnet50',
+                        help='which network to use')
     parser.add_argument('--images', dest='images', type=str, default='./data/demo/dog.jpg',
                         help='run demo with images, use comma to seperate multiple images')
     parser.add_argument('--dir', dest='dir', nargs='?',
@@ -52,13 +51,13 @@ def parse_args():
     parser.add_argument('--epoch', dest='epoch', help='epoch of trained model',
                         default=0, type=int)
     parser.add_argument('--prefix', dest='prefix', help='trained model prefix',
-                        default=os.path.join(os.getcwd(), 'model', 'ssd_vgg16_reduced_300'),
+                        default=os.path.join(os.getcwd(), 'model', 'ssd_'),
                         type=str)
     parser.add_argument('--cpu', dest='cpu', help='(override GPU) use CPU to detect',
                         action='store_true', default=False)
     parser.add_argument('--gpu', dest='gpu_id', type=int, default=0,
                         help='GPU device id to detect with')
-    parser.add_argument('--data-shape', dest='data_shape', type=int, default=300,
+    parser.add_argument('--data-shape', dest='data_shape', type=int, default=512,
                         help='set image shape')
     parser.add_argument('--mean-r', dest='mean_r', type=float, default=123,
                         help='red mean value')
@@ -111,7 +110,12 @@ if __name__ == '__main__':
     assert len(image_list) > 0, "No valid image specified to detect"
 
     network = None if args.deploy_net else args.network
-    detector = get_detector(network, args.prefix, args.epoch,
+    class_names = parse_class_names(args.class_names)
+    if args.prefix.endswith('_'):
+        prefix = args.prefix + args.network + '_' + str(args.data_shape)
+    else:
+        prefix = args.prefix
+    detector = get_detector(network, prefix, args.epoch,
                             args.data_shape,
                             (args.mean_r, args.mean_g, args.mean_b),
                             ctx, len(class_names), args.nms_thresh, args.force_nms)

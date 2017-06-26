@@ -1,10 +1,9 @@
 from __future__ import print_function
 import find_mxnet
 import mxnet as mx
-import importlib
 import argparse
-import sys
-sys.path.append('../symbol')
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'symbol'))
 import symbol_factory
 
 
