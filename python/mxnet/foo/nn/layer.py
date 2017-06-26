@@ -443,7 +443,9 @@ class Dense(HybridLayer):
 
 
 class Activation(HybridLayer):
-    """Applies an activation function to input.
+    """Applies an activation function to input. Refer
+    `mxnet.ndarray.Activation <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Activation>`_
+    to learn more.
 
     Parameters
     ----------
@@ -473,7 +475,9 @@ class Dropout(HybridLayer):
 
     Dropout consists in randomly setting
     a fraction `rate` of input units to 0 at each update during training time,
-    which helps prevent overfitting.
+    which helps prevent overfitting. Refer
+    `mxnet.ndarray.Dropout <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Dropout>`_
+    to learn more.
 
     Parameters
     ----------
@@ -481,8 +485,8 @@ class Dropout(HybridLayer):
 
     References
     ----------
-    [Dropout: A Simple Way to Prevent Neural Networks from Overfitting](
-        http://www.cs.toronto.edu/~rsalakhu/papers/srivastava14a.pdf)
+        `Dropout: A Simple Way to Prevent Neural Networks from Overfitting
+        <http://www.cs.toronto.edu/~rsalakhu/papers/srivastava14a.pdf>`_
     """
     def __init__(self, rate, **kwargs):
         super(Dropout, self).__init__(**kwargs)
@@ -496,7 +500,9 @@ class BatchNorm(HybridLayer):
     """Batch normalization layer (Ioffe and Szegedy, 2014).
     Normalize the activations of the previous layer at each batch,
     i.e. applies a transformation that maintains the mean activation
-    close to 0 and the activation standard deviation close to 1.
+    close to 0 and the activation standard deviation close to 1. Refer
+    `mxnet.ndarray.BatchNorm <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.BatchNorm>`_
+    to learn more.
 
     Parameters
     ----------
@@ -545,9 +551,14 @@ class BatchNorm(HybridLayer):
 class LeakyReLU(HybridLayer):
     """Leaky version of a Rectified Linear Unit.
 
-    It allows a small gradient when the unit is not active:
-    `f(x) = alpha * x for x < 0`,
-    `f(x) = x for x >= 0`.
+    It allows a small gradient when the unit is not active::
+
+        `f(x) = alpha * x for x < 0`,
+        `f(x) = x for x >= 0`.
+
+    Refer
+    `mxnet.ndarray.LeakyReLU <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.LeakyReLU>`_
+    to learn more.
 
     Parameters
     ----------
@@ -566,6 +577,10 @@ class Embedding(HybridLayer):
     """Turns non-negative integers (indexes/tokens) into dense
     vectors of fixed size.
     eg. [[4], [20]] -> [[0.25, 0.1], [0.6, -0.2]]
+
+    Refer
+    `mxnet.ndarray.Embedding <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Embedding>`_
+    to learn more.
 
     Parameters
     ----------

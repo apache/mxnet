@@ -161,11 +161,13 @@ class Conv1D(_Conv):
 
 
     Input Shape:
-        3D tensor of shape (batch_size, channel, width).
+        This depends on the `layout` parameter. Input is 3D array of shape
+        (batch_size, channel, width) if `layout` is `NCW`.
 
     Output Shape:
-        3D tensor of shape (batch_size, channel, out_width). out_width depends on other
-        input parameters as well. It is calculated as follows::
+        This depends on the `layout` parameter. Output is 3D array of shape
+        (batch_size, channel, out_width) if `layout` is `NCW`. out_width
+        depends on other input parameters as well. It is calculated as follows::
 
             out_width = floor((w+2*p-d*(k-1)-1)/s)+1
 
@@ -238,11 +240,14 @@ class Conv2D(_Conv):
 
 
     Input Shape:
-        4D tensor of shape (batch_size, channel, height, width).
+        This depends on the `layout` parameter. Input is 4D array of shape
+        (batch_size, channel, height, width) if `layout` is `NCHW`.
 
     Output Shape:
-        4D tensor of shape (batch_size, channel, out_height, out_width). out_height and
-        out_width depends on other input parameters as well. They are calculated as follows::
+        This depends on the `layout` parameter. Output is 4D array of shape
+        (batch_size, channel, out_height, out_width) if `layout` is `NCHW`.
+        out_height and out_width depends on other input parameters as well.
+        They are calculated as follows::
 
             out_width = floor((w+2*p-d*(k-1)-1)/s)+1
             out_height = floor((h+2*p-d*(k-1)-1)/s)+1
@@ -317,11 +322,13 @@ class Conv3D(_Conv):
 
 
     Input Shape:
-        5D tensor of shape (batch_size, channel, depth, height, width).
+        This depends on the `layout` parameter. Input is 5D array of shape
+        (batch_size, channel, depth, height, width) if `layout` is `NCDHW`.
 
     Output Shape:
-        5D tensor of shape (batch_size, channel, out_depth, out_height, out_width). out_depth,
-        out_height and out_width depends on other input parameters as well.
+        This depends on the `layout` parameter. Output is 5D array of shape
+        (batch_size, channel, out_depth, out_height, out_width) if `layout` is `NCDHW`.
+        out_depth, out_height and out_width depends on other input parameters as well.
         They are calculated as follows::
 
             out_depth = floor((d+2*p-d*(k-1)-1)/s)+1
@@ -400,10 +407,12 @@ class Conv1DTranspose(_Conv):
 
 
     Input Shape:
-        3D tensor of shape (batch_size, channel, width).
+        This depends on the `layout` parameter. Input is 3D array of shape
+        (batch_size, channel, width) if `layout` is `NCW`.
 
     Output Shape:
-        3D tensor of shape (batch_size, channel, out_width).
+        This depends on the `layout` parameter. Output is 3D array of shape
+        (batch_size, channel, out_width) if `layout` is `NCW`.
         out_width depends on other input parameters as well. It is calculated as follows::
 
             out_width = (w-1)*s-2*p+k+op
@@ -485,10 +494,12 @@ class Conv2DTranspose(_Conv):
 
 
     Input Shape:
-        4D tensor of shape (batch_size, channel, height, width).
+        This depends on the `layout` parameter. Input is 4D array of shape
+        (batch_size, channel, height, width) if `layout` is `NCHW`.
 
     Output Shape:
-        4D tensor of shape (batch_size, channel, out_height, out_width).
+        This depends on the `layout` parameter. Output is 4D array of shape
+        (batch_size, channel, out_height, out_width) if `layout` is `NCHW`.
         out_height and out_width depends on other input parameters as well.
         They are calculated as follows::
 
@@ -572,10 +583,12 @@ class Conv3DTranspose(_Conv):
 
 
     Input Shape:
-        5D tensor of shape (batch_size, channel, depth, height, width).
+        This depends on the `layout` parameter. Input is 5D array of shape
+        (batch_size, channel, depth, height, width) if `layout` is `NCDHW`.
 
     Output Shape:
-        5D tensor of shape (batch_size, channel, out_depth, out_height, out_width).
+        This depends on the `layout` parameter. Output is 5D array of shape
+        (batch_size, channel, out_depth, out_height, out_width) if `layout` is `NCDHW`.
         out_depth, out_height and out_width depends on other input parameters as well.
         They are calculated as follows::
 
@@ -643,10 +656,12 @@ class MaxPool1D(_Pooling):
 
 
     Input Shape:
-        3D tensor of shape (batch_size, channel, width).
+        This depends on the `layout` parameter. Input is 3D array of shape
+        (batch_size, channel, width) if `layout` is `NCW`.
 
     Output Shape:
-        3D tensor of shape (batch_size, channel, out_width).
+        This depends on the `layout` parameter. Output is 3D array of shape
+        (batch_size, channel, out_width) if `layout` is `NCW`.
         out_width depends on other input parameters as well. It is calculated as follows::
 
             out_width = ceil((w+2*p-ps)/s+1)
@@ -685,10 +700,12 @@ class MaxPool2D(_Pooling):
 
 
     Input Shape:
-        4D tensor of shape (batch_size, channel, height, width).
+        This depends on the `layout` parameter. Input is 4D array of shape
+        (batch_size, channel, height, width) if `layout` is `NCHW`.
 
     Output Shape:
-        4D tensor of shape (batch_size, channel, out_height, out_width).
+        This depends on the `layout` parameter. Output is 4D array of shape
+        (batch_size, channel, out_height, out_width)  if `layout` is `NCHW`.
         out_height and out_width depends on other input parameters as well.
         They are calculated as follows::
 
@@ -730,10 +747,12 @@ class MaxPool3D(_Pooling):
 
 
     Input Shape:
-        5D tensor of shape (batch_size, channel, depth, height, width).
+        This depends on the `layout` parameter. Input is 5D array of shape
+        (batch_size, channel, depth, height, width) if `layout` is `NCDHW`.
 
     Output Shape:
-        5D tensor of shape (batch_size, channel, out_depth, out_height, out_width).
+        This depends on the `layout` parameter. Output is 5D array of shape
+        (batch_size, channel, out_depth, out_height, out_width) if `layout` is `NCDHW`.
         out_depth, out_height and out_width depends on other input parameters as well.
         They are calculated as follows::
 
@@ -773,10 +792,12 @@ class AvgPool1D(_Pooling):
 
 
     Input Shape:
-        3D tensor of shape (batch_size, channel, width).
+        This depends on the `layout` parameter. Input is 3D array of shape
+        (batch_size, channel, width) if `layout` is `NCW`.
 
     Output Shape:
-        3D tensor of shape (batch_size, channel, out_width).
+        This depends on the `layout` parameter. Output is 3D array of shape
+        (batch_size, channel, out_width) if `layout` is `NCW`.
         out_width depends on other input parameters as well. It is calculated as follows::
 
             out_width = ceil((w+2*p-ps)/s+1)
@@ -815,10 +836,12 @@ class AvgPool2D(_Pooling):
 
 
     Input Shape:
-        4D tensor of shape (batch_size, channel, height, width).
+        This depends on the `layout` parameter. Input is 4D array of shape
+        (batch_size, channel, height, width) if `layout` is `NCHW`.
 
     Output Shape:
-        4D tensor of shape (batch_size, channel, out_height, out_width).
+        This depends on the `layout` parameter. Output is 4D array of shape
+        (batch_size, channel, out_height, out_width) if `layout` is `NCHW`.
         out_height and out_width depends on other input parameters as well.
         They are calculated as follows::
 
@@ -860,10 +883,12 @@ class AvgPool3D(_Pooling):
 
 
     Input Shape:
-        5D tensor of shape (batch_size, channel, depth, height, width).
+        This depends on the `layout` parameter. Input is 5D array of shape
+        (batch_size, channel, depth, height, width) if `layout` is `NCDHW`.
 
     Output Shape:
-        5D tensor of shape (batch_size, channel, out_depth, out_height, out_width).
+        This depends on the `layout` parameter. Output is 5D array of shape
+        (batch_size, channel, out_depth, out_height, out_width) if `layout` is `NCDHW`.
         out_depth, out_height and out_width depends on other input parameters as well.
         They are calculated as follows::
 
