@@ -77,12 +77,12 @@ class _RNNLayer(Layer):
         stack = rnn_cell.SequentialRNNCell(prefix=self.prefix, params=self.params)
         with stack.name_scope():
             ni = self._input_size
-            kwargs = {'input_size': ni,
-                      'i2h_weight_initializer': self._i2h_weight_initializer,
-                      'h2h_weight_initializer': self._h2h_weight_initializer,
-                      'i2h_bias_initializer': self._i2h_bias_initializer,
-                      'h2h_bias_initializer': self._h2h_bias_initializer}
             for i in range(self._num_layers):
+                kwargs = {'input_size': ni,
+                          'i2h_weight_initializer': self._i2h_weight_initializer,
+                          'h2h_weight_initializer': self._h2h_weight_initializer,
+                          'i2h_bias_initializer': self._i2h_bias_initializer,
+                          'h2h_bias_initializer': self._h2h_bias_initializer}
                 if self._dir == 2:
                     stack.add(rnn_cell.BidirectionalCell(
                         get_cell(prefix='l%d_'%i, **kwargs),

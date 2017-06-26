@@ -254,7 +254,17 @@ class RNNCell(HRecurrentCell):
     hidden_size : int
         number of units in output symbol
     activation : str or Symbol, default 'tanh'
-        type of activation function
+        type of activation function.
+    i2h_weight_initializer : str or Initializer
+        Initializer for the input weights matrix, used for the linear
+        transformation of the inputs.
+    h2h_weight_initializer : str or Initializer
+        Initializer for the recurrent weights matrix, used for the linear
+        transformation of the recurrent state.
+    i2h_bias_initializer : str or Initializer
+        Initializer for the bias vector.
+    h2h_bias_initializer : str or Initializer
+        Initializer for the bias vector.
     prefix : str, default 'rnn_'
         prefix for name of layers
         (and name of weight if params is None)
@@ -306,15 +316,25 @@ class LSTMCell(HRecurrentCell):
     Parameters
     ----------
     hidden_size : int
-        number of units in output symbol
+        number of units in output symbol.
+    i2h_weight_initializer : str or Initializer
+        Initializer for the input weights matrix, used for the linear
+        transformation of the inputs.
+    h2h_weight_initializer : str or Initializer
+        Initializer for the recurrent weights matrix, used for the linear
+        transformation of the recurrent state.
+    i2h_bias_initializer : str or Initializer, default 'lstmbias'
+        Initializer for the bias vector. By default bias for the forget
+        gate is initialized to 1 while all other biases are initialized
+        to zero.
+    h2h_bias_initializer : str or Initializer
+        Initializer for the bias vector.
     prefix : str, default 'lstm_'
         prefix for name of layers
         (and name of weight if params is None)
     params : Parameter or None
         container for weight sharing between cells.
         created if None.
-    forget_bias : bias added to forget gate, default 1.0.
-        Jozefowicz et al. 2015 recommends setting this to 1.0
     """
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
@@ -376,7 +396,17 @@ class GRUCell(HRecurrentCell):
     Parameters
     ----------
     hidden_size : int
-        number of units in output symbol
+        number of units in output symbol.
+    i2h_weight_initializer : str or Initializer
+        Initializer for the input weights matrix, used for the linear
+        transformation of the inputs.
+    h2h_weight_initializer : str or Initializer
+        Initializer for the recurrent weights matrix, used for the linear
+        transformation of the recurrent state.
+    i2h_bias_initializer : str or Initializer
+        Initializer for the bias vector.
+    h2h_bias_initializer : str or Initializer
+        Initializer for the bias vector.
     prefix : str, default 'gru_'
         prefix for name of layers
         (and name of weight if params is None)
