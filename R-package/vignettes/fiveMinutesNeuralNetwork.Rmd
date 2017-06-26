@@ -29,7 +29,13 @@ test.x <- data.matrix(Sonar[-train.ind, 1:60])
 test.y <- Sonar[-train.ind, 61]
 ```
 
-Next we are going to use a multi-layer perceptron as our classifier. In `mxnet`, we have a function called `mx.mlp` so that users can build a general multi-layer neural network to do classification or regression.
+Next we are going to use a multi-layer perceptron as our classifier. In `mxnet`, we have a function called `mx.mlp` so that users can build a general multi-layer neural network to do classification (`out_activation="softmax"`) or regression (`out_activation="rmse"`).
+Note for the `softmax` activation, the output is zero-indexed not one-indexed. In our example:
+
+```{r}
+table(train.y)
+table(test.y)
+```
 
 There are several parameters we have to feed to `mx.mlp`:
 
