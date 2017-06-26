@@ -429,7 +429,8 @@ class Module(BaseModule):
         self._exec_group.reshape(self._data_shapes, self._label_shapes)
 
     def init_optimizer(self, kvstore='local', optimizer='sgd',
-                       optimizer_params=(('learning_rate', 0.01),), force_init=False):
+                       optimizer_params=(('learning_rate', 0.01),), force_init=False,
+                       sparse_pull_dict=None):
         """Installs and initializes optimizers.
 
         Parameters
@@ -444,6 +445,10 @@ class Module(BaseModule):
         force_init : bool
             Default ``False``, indicating whether we should force re-initializing the
             optimizer in the case an optimizer is already installed.
+        sparse_pull_dict : dict of str -> list of NDArray
+            Default to `None`, used for distributed training with sparse parameters.
+            When the name of a row_sparse parameter is in the dict, the initial value pulled
+            to devices will only contain the rows specified by the list of row_id NDArrays.
         """
         assert self.binded and self.params_initialized
 
@@ -453,12 +458,9 @@ class Module(BaseModule):
 
         if self._params_dirty:
             self._sync_params_from_devices()
-        name2idx = {}
-        for idx, name in enumerate(self._exec_group.param_names):
-            name2idx[name] = idx
 
         (kvstore, update_on_kvstore) = \
-                _create_kvstore(kvstore, len(self._context), self._arg_params, name2idx=name2idx)
+                _create_kvstore(kvstore, len(self._context), self._arg_params)
 
         batch_size = self._exec_group.batch_size
         if kvstore and 'dist' in kvstore.type and '_sync' in kvstore.type:
@@ -500,7 +502,8 @@ class Module(BaseModule):
                                 param_arrays=self._exec_group.param_arrays,
                                 arg_params=self._arg_params,
                                 param_names=self._param_names,
-                                update_on_kvstore=update_on_kvstore)
+                                update_on_kvstore=update_on_kvstore,
+                                sparse_pull_dict=sparse_pull_dict)
         if update_on_kvstore:
             kvstore.set_optimizer(self._optimizer)
         else:
@@ -561,7 +564,7 @@ class Module(BaseModule):
         assert self.binded and self.params_initialized
         self._exec_group.backward(out_grads=out_grads)
 
-    def update(self):
+    def update(self, sparse_pull_dict=None):
         """Updates parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch.
 
@@ -575,14 +578,16 @@ class Module(BaseModule):
         if self._update_on_kvstore:
             _update_params_on_kvstore(self._exec_group.param_arrays,
                                       self._exec_group.grad_arrays,
-                                      self._kvstore, self._exec_group.param_names)
+                                      self._kvstore, self._exec_group.param_names,
+                                      sparse_pull_dict=sparse_pull_dict)
         else:
             _update_params(self._exec_group.param_arrays,
                            self._exec_group.grad_arrays,
                            updater=self._updater,
                            num_device=len(self._context),
                            kvstore=self._kvstore,
-                           param_names=self._exec_group.param_names)
+                           param_names=self._exec_group.param_names,
+                           sparse_pull_dict=sparse_pull_dict)
 
     def get_outputs(self, merge_multi_context=True):
         """Gets outputs of the previous forward computation.

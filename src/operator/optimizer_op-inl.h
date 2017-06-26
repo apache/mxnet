@@ -238,10 +238,7 @@ inline void SGDUpdateEx(const nnvm::NodeAttrs& attrs,
   const SGDParam& param = nnvm::get<SGDParam>(attrs.parsed);
   auto weight_stype = inputs[0].storage_type();
   auto grad_stype = inputs[1].storage_type();
-  if (weight_stype == kDefaultStorage && grad_stype == kRowSparseStorage) {
-    TBlob out = outputs[0].data();
-    SGDUpdateDnsRspImpl<xpu>(param, ctx, inputs[0].data(), inputs[1], req[0], &out);
-  } else if (weight_stype == kRowSparseStorage && grad_stype == kRowSparseStorage) {
+  if (weight_stype == kRowSparseStorage && grad_stype == kRowSparseStorage) {
     NDArray out = outputs[0];
     SGDUpdateRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], req[0], &out);
   } else if (weight_stype == kRowSparseStorage && grad_stype == kDefaultStorage) {
@@ -502,12 +499,7 @@ inline void SGDMomUpdateEx(const nnvm::NodeAttrs& attrs,
   auto weight_stype = weight.storage_type();
   auto grad_stype = grad.storage_type();
   auto mom_stype = mom.storage_type();
-  if (weight_stype == kDefaultStorage && grad_stype == kRowSparseStorage &&
-      mom_stype == kDefaultStorage) {
-    TBlob out = outputs[0].data();
-    SGDMomUpdateDnsRspDnsImpl<xpu>(param, ctx, weight.data(), grad,
-                                   mom.data(), req[0], &out);
-  } else if (weight_stype == kRowSparseStorage && grad_stype == kRowSparseStorage &&
+  if (weight_stype == kRowSparseStorage && grad_stype == kRowSparseStorage &&
       mom_stype == kRowSparseStorage) {
      NDArray out = outputs[0];
      SGDMomUpdateRspRspRspImpl<xpu>(param, ctx, weight, grad, mom, req[0], &out);

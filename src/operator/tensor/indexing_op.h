@@ -23,6 +23,8 @@
 #include "../mxnet_op.h"
 #include "./sort_op.h"
 #include "./dot-inl.h"
+#include "./init_op.h"
+#include "./matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -758,6 +760,35 @@ struct SparseRetainRspForward {
 };
 
 template<typename xpu>
+void SparseRetainOpForwardRspImpl(mshadow::Stream<xpu> *s, const NDArray &input,
+                                  const TBlob &indices, OpReqType req,
+                                  NDArray *output) {
+  using namespace rowsparse;
+  if (req == kNullOp || !input.storage_initialized() || indices.Size() == 0U) {
+    FillZerosRspImpl(s, output);
+    return;
+  }
+  const TBlob input_data = input.data();
+  const TBlob input_idx = input.aux_data(rowsparse::kIdx);
+  output->CheckAndAlloc({mshadow::Shape1(indices.Size())});
+  TBlob output_data = output->data();
+  TBlob output_idx = output->aux_data(rowsparse::kIdx);
+  const index_t row_length = input_data.shape_.ProdShape(1, input_data.shape_.ndim());
+
+  using namespace mxnet_op;
+  MSHADOW_TYPE_SWITCH(output_data.type_flag_, DType, {  // output data type
+    MSHADOW_IDX_TYPE_SWITCH(output_idx.type_flag_, RType, {  // row index data type
+      MSHADOW_TYPE_SWITCH(indices.type_flag_, IType, {  // index array data type
+        Kernel<set_zero, xpu>::Launch(s, output_data.Size(), output_data.dptr<DType>());
+        Kernel<SparseRetainRspForward, xpu>::Launch(s, indices.Size(), output_data.dptr<DType>(),
+            output_idx.dptr<RType>(), input_data.dptr<DType>(), input_idx.dptr<RType>(),
+            indices.dptr<IType>(), input_data.shape_[0], row_length);
+      });
+    });
+  });
+}
+
+template<typename xpu>
 void SparseRetainOpForwardEx(const nnvm::NodeAttrs& attrs,
                              const OpContext& ctx,
                              const std::vector<NDArray>& inputs,
@@ -777,33 +808,9 @@ void SparseRetainOpForwardEx(const nnvm::NodeAttrs& attrs,
 
   const NDArray& input_nd = inputs[sr::kArr];
   const TBlob idx_data = inputs[sr::kIdx].data();
-
-  if (req[sr::kOut] == kNullOp
-      || !input_nd.storage_initialized()
-      || idx_data.Size() == 0U) return;
-
-  const TBlob input_data = input_nd.data();
-  if (input_data.shape_[0] == 0) return;
-  const TBlob input_idx = input_nd.aux_data(rowsparse::kIdx);
-
   NDArray output_nd = outputs[sr::kOut];
-  output_nd.CheckAndAlloc({mshadow::Shape1(idx_data.Size())});
-  TBlob output_data = output_nd.data();
-  TBlob output_idx = output_nd.aux_data(rowsparse::kIdx);
-  const auto row_length = input_data.shape_.ProdShape(1, input_data.shape_.ndim());
-
-  using namespace mxnet_op;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(output_data.type_flag_, DType, {  // output data type
-    MSHADOW_IDX_TYPE_SWITCH(output_idx.type_flag_, RType, {  // row index data type
-      MSHADOW_TYPE_SWITCH(idx_data.type_flag_, IType, {  // index array data type
-        Kernel<set_zero, xpu>::Launch(s, output_data.Size(), output_data.dptr<DType>());
-        Kernel<SparseRetainRspForward, xpu>::Launch(s, idx_data.Size(), output_data.dptr<DType>(),
-            output_idx.dptr<RType>(), input_data.dptr<DType>(), input_idx.dptr<RType>(),
-            idx_data.dptr<IType>(), input_data.shape_[0], row_length);
-      });
-    });
-  });
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  SparseRetainOpForwardRspImpl<xpu>(s, input_nd, idx_data, req[sr::kOut], &output_nd);
 }
 
 template<int req>
