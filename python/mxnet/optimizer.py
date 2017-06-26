@@ -342,9 +342,11 @@ class SGD(Optimizer):
         momentum = None
         weight_master_copy = None
         if self.multi_precision and weight.dtype == numpy.float16:
+            assert(weight.stype == 'default'), \
+                  "multi-precision doesn't supprot non-default weight yet"
             weight_master_copy = array(weight, ctx=weight.context, dtype=numpy.float32)
             if self.momentum != 0.0:
-                momentum = zeros(weight.shape, weight.context, dtype=numpy.float32)
+                momentum = zeros(weight.shape, weight.context, dtype=numpy.float32, stype=weight.stype)
             return (momentum, weight_master_copy)
         if weight.dtype == numpy.float16 and not self.multi_precision:
             warnings.warn("Accumulating with float16 in optimizer can lead to "
@@ -352,7 +354,7 @@ class SGD(Optimizer):
                           "Consider using multi_precision=True option of the "
                           "SGD optimizer")
         if self.momentum != 0.0:
-            momentum = zeros(weight.shape, weight.context, dtype=weight.dtype)
+            momentum = zeros(weight.shape, weight.context, dtype=weight.dtype, stype=weight.stype)
         return momentum
 
     def update(self, index, weight, grad, state):
@@ -650,7 +652,7 @@ class RMSProp(Optimizer):
                 zeros(weight.shape, weight.context),  # g
                 zeros(weight.shape, weight.context))  # delta
         else:
-            return (zeros(weight.shape, weight.context), )  # n
+            return (zeros(weight.shape, weight.context),)  # n
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))

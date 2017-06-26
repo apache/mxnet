@@ -154,6 +154,39 @@ int MXNDArrayCreateEx(const mx_uint *shape,
   API_END();
 }
 
+int MXNDArrayCreateSparseEx(int storage_type,
+                    const mx_uint *shape,
+                    mx_uint ndim,
+                    int dev_type,
+                    int dev_id,
+                    int delay_alloc,
+                    int dtype,
+                    mx_uint num_aux,
+                    int *aux_type,
+                    mx_uint *aux_ndims,
+                    const mx_uint *aux_shape,
+                    NDArrayHandle *out) {
+  API_BEGIN();
+  std::vector<int> aux_types;
+  std::vector<TShape> aux_shapes;
+  auto shape_start = aux_shape;
+  for (size_t i = 0; i < num_aux; i++) {
+    // types
+    aux_types.push_back(aux_type[i]);
+    // shapes
+    aux_shapes.emplace_back(shape_start, shape_start + aux_ndims[i]);
+    shape_start += aux_ndims[i];
+  }
+  *out = new NDArray(
+      NDArrayStorageType(storage_type),
+      TShape(shape, shape + ndim),
+      Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
+      delay_alloc != 0,
+      dtype, aux_types, aux_shapes);
+  API_END();
+}
+
+
 int MXNDArrayLoadFromRawBytes(const void *buf,
                               size_t size,
                               NDArrayHandle *out) {
@@ -333,6 +366,18 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
   API_END_HANDLE_ERROR(delete ptr);
 }
 
+int MXNDArrayGetStorageType(NDArrayHandle handle,
+                     int *out_storage_type) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  if (!arr->is_none()) {
+    *out_storage_type = arr->storage_type();
+  } else {
+    *out_storage_type = kUndefinedStorage;
+  }
+  API_END();
+}
+
 int MXNDArrayGetShape(NDArrayHandle handle,
                       mx_uint *out_dim,
                       const mx_uint **out_pdata) {
@@ -379,6 +424,32 @@ int MXNDArrayGetDType(NDArrayHandle handle,
   } else {
     *out_dtype = -1;
   }
+  API_END();
+}
+
+int MXNDArrayGetAuxType(NDArrayHandle handle,
+                        mx_uint i,
+                        int *out_type) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  *out_type = arr->aux_type(i);
+  API_END();
+}
+
+int MXNDArrayGetAuxNDArray(NDArrayHandle handle,
+                           mx_uint i,
+                           NDArrayHandle *out) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  *out = new NDArray(arr->aux_ndarray(i));
+  API_END();
+}
+
+int MXNDArrayGetDataNDArray(NDArrayHandle handle,
+                            NDArrayHandle *out) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  *out = new NDArray(arr->data_ndarray());
   API_END();
 }
 

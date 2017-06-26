@@ -13,15 +13,16 @@
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../special_functions-inl.h"
+#include "./broadcast_reduce-inl.h"
 
 namespace mxnet {
 namespace op {
 template<typename xpu, typename op>
 void UnaryLaunch(const nnvm::NodeAttrs& attrs,
-                        const OpContext& ctx,
-                        const std::vector<TBlob>& inputs,
-                        const std::vector<OpReqType>& req,
-                        const std::vector<TBlob>& outputs) {
+                 const OpContext& ctx,
+                 const std::vector<TBlob>& inputs,
+                 const std::vector<OpReqType>& req,
+                 const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -75,6 +76,54 @@ void IdentityCompute(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(out, req[0], F<mshadow_op::identity>(inputs[0].FlatTo1D<xpu, DType>(s)));
   });
+}
+
+template<typename xpu>
+void IdentityComputeRsp(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<NDArray>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<NDArray>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  auto &input = inputs[0];
+  auto &output = outputs[0];
+  CHECK_NE(req[0], kNullOp) << "kNullOp in IdentityComputeEx not supported yet";
+  CHECK_NE(req[0], kWriteInplace) << "kWriteInplace in IdentityComputeEx not supported yet";
+  if (!input.storage_initialized()) return;
+  TShape shape = input.aux_shape(rowsparse::kIdx);
+  output.CheckAndAlloc({shape});
+  MSHADOW_TYPE_SWITCH(output.dtype(), DType, {
+    MSHADOW_TYPE_SWITCH(output.aux_type(rowsparse::kIdx), AuxType, {
+      auto out_d = output.data().FlatTo1D<xpu, DType>(s);
+      auto out_aux = output.aux_data(rowsparse::kIdx).FlatTo1D<xpu, AuxType>(s);
+      auto in_aux = input.aux_data(rowsparse::kIdx).FlatTo1D<xpu, AuxType>(s);
+      ASSIGN_DISPATCH(out_d, req[0],
+                      F<mshadow_op::identity>(input.data().FlatTo1D<xpu, DType>(s)));
+      ASSIGN_DISPATCH(out_aux, req[0], F<mshadow_op::identity>(in_aux));
+    });
+  });
+}
+
+template<typename xpu>
+void IdentityLikeRhsComputeEx(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<NDArray>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<NDArray>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  CHECK_EQ(inputs.size(), 2);
+  CHECK_EQ(outputs.size(), 1);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  size_t rhs_idx = 1;
+  NDArrayStorageType stype = inputs[rhs_idx].storage_type();
+  if (stype == kRowSparseStorage) {
+    IdentityComputeRsp<xpu>(attrs, ctx, inputs, req, outputs);
+  } else {
+    LOG(FATAL) << "Not implemented yet";
+  }
 }
 
 struct CastParam : public dmlc::Parameter<CastParam> {
@@ -168,4 +217,5 @@ struct relu_grad {
 
 }  // namespace op
 }  // namespace mxnet
+
 #endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_UNARY_OP_H_

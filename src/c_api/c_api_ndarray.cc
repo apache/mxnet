@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file c_api_symbolic.cc
+ * \file c_api_ndarray.cc
  * \brief C API of mxnet
  */
 
@@ -132,14 +132,17 @@ void SetContext(Context* p_ctx,
 #endif  // MXNET_USE_CUDA
 }
 
+// Set the shape, dtype and storage type
 void SetShapeType(const nnvm::Op* op,
                   const nnvm::NodeAttrs& attrs,
                   const Context& ctx,
                   const std::vector<NDArray>& ndinputs,
-                  std::vector<NDArray>* p_ndoutputs) {
+                  std::vector<NDArray>* p_ndoutputs,
+                  int* dispatch_stype) {
   std::vector<NDArray>& ndoutputs = *p_ndoutputs;
   static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
+  static auto& inferstorage = nnvm::Op::GetAttr<FInferStorageType>("FInferStorageType");
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   // infer shape
   std::vector<TShape>& in_shapes  = ret->arg_shapes;
@@ -175,9 +178,34 @@ void SetShapeType(const nnvm::Op* op,
   CHECK(infertype[op](attrs, &in_types, &out_types));
   CHECK_EQ(out_types.size(), ndoutputs.size());
 
+  // infer storage type
+  auto& in_storage_types = ret->arg_storage_types;
+  auto& out_storage_types = ret->out_storage_types;
+  in_storage_types.clear();
+  out_storage_types.clear();
+  for (auto& i : ndinputs) {
+    in_storage_types.push_back(i.storage_type());
+  }
+  for (auto& i : ndoutputs) {
+    out_storage_types.push_back(i.storage_type());
+  }
+  if (inferstorage.count(op)) {
+    CHECK(inferstorage[op](attrs, ctx, &in_storage_types, &out_storage_types));
+    CHECK_EQ(out_storage_types.size(), ndoutputs.size());
+  }
+
+  bool contains_non_default = common::ContainsNonDefaultStorage(in_storage_types);
+  contains_non_default |= common::ContainsNonDefaultStorage(out_storage_types);
+  int kNonDefaultStorage = -2;
+  *dispatch_stype = contains_non_default ? kNonDefaultStorage : kDefaultStorage;
   for (size_t i = 0; i < ndoutputs.size(); ++i) {
     if (ndoutputs[i].is_none()) {
-      ndoutputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]);
+      // if failed to infer the storage type, assume the output storage is dense
+      if (storage_type == kDefaultStorage || out_storage_types[i] == kUndefinedStorage) {
+        ndoutputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]);
+      } else {
+        ndoutputs[i] = NDArray(storage_type, out_shapes[i], ctx, true, out_types[i]);
+      }
     } else {
       CHECK_EQ(ndoutputs[i].shape(), out_shapes[i])
         << i << "th output has invalid shape. "
@@ -250,23 +278,60 @@ void PushFCompute(const FCompute& fn,
                   const std::vector<Resource>& requested,
                   const std::vector<NDArray>& ndinputs,
                   const std::vector<NDArray>& ndoutputs) {
+  using namespace common;
   bool is_train = AutogradRuntime::Get()->IsTraining();
   Engine::Get()->PushAsync(
     [ctx, attrs, fn, ndinputs, ndoutputs, requested, is_train](
         RunContext rctx,
         engine::CallbackOnComplete on_complete) {
       std::vector<TBlob> input_blobs, output_blobs;
-      for (auto& i : ndinputs) {
-        input_blobs.push_back(i.data());
-      }
-      for (auto& i : ndoutputs) {
-        output_blobs.push_back(i.data());
-      }
+      std::vector<NDArray> temp_in, temp_out;
       OpContext opctx{is_train, rctx,
                       engine::CallbackOnComplete(),
                       requested};
-      std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
-      fn(attrs, opctx, input_blobs, req, output_blobs);
+      if (ctx.dev_mask() == gpu::kDevMask) {
+#if MXNET_USE_CUDA
+        GetDefaultBlobs<gpu>(ndinputs, &input_blobs, &temp_in, opctx);
+        GetDefaultBlobs<gpu>(ndoutputs, &output_blobs, &temp_out, opctx);
+        std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
+        fn(attrs, opctx, input_blobs, req, output_blobs);
+        // cast to original storage type, if necessary
+        CastNonDefaultStorage<gpu>(ndoutputs, temp_out, opctx);
+        rctx.get_stream<gpu>()->Wait();
+#else
+        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif
+      } else {
+        GetDefaultBlobs<cpu>(ndinputs, &input_blobs, &temp_in, opctx);
+        GetDefaultBlobs<cpu>(ndoutputs, &output_blobs, &temp_out, opctx);
+        std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
+        fn(attrs, opctx, input_blobs, req, output_blobs);
+        CastNonDefaultStorage<cpu>(ndoutputs, temp_out, opctx);
+      }
+      on_complete();
+    }, ctx, read_vars, write_vars, FnProperty::kNormal,
+    0, PROFILER_MESSAGE(op->name.c_str()));
+}
+
+void PushFComputeEx(const FComputeEx& fn,
+                    const nnvm::Op* op,
+                    const nnvm::NodeAttrs& attrs,
+                    const Context& ctx,
+                    const std::vector<engine::VarHandle>& read_vars,
+                    const std::vector<engine::VarHandle>& write_vars,
+                    const std::vector<Resource>& requested,
+                    const std::vector<NDArray>& ndinputs,
+                    const std::vector<NDArray>& ndoutputs) {
+  Engine::Get()->PushAsync(
+    [ctx, attrs, fn, ndinputs, ndoutputs, requested](
+        RunContext rctx,
+        engine::CallbackOnComplete on_complete) {
+      std::vector<TBlob> input_blobs, output_blobs;
+      OpContext opctx{false, rctx,
+                      engine::CallbackOnComplete(),
+                      requested};
+      std::vector<OpReqType> req(ndoutputs.size(), kWriteTo);
+      fn(attrs, opctx, ndinputs, req, ndoutputs);
       if (ctx.dev_mask() == gpu::kDevMask) {
         rctx.get_stream<gpu>()->Wait();
       }
@@ -301,10 +366,25 @@ void PushOperator(const OpStatePtr& state,
           engine::CallbackOnComplete on_complete) {
         OpContext opctx{is_train, rctx, on_complete, requested};
         std::vector<TBlob> input_blobs, output_blobs;
-        for (const auto& i : ndinputs) input_blobs.push_back(i.data());
-        for (const auto& i : ndoutputs) output_blobs.push_back(i.data());
-        std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
-        fcompute(state, opctx, input_blobs, req, output_blobs);
+        std::vector<NDArray> temp_in, temp_out;
+        if (ctx.dev_mask() == gpu::kDevMask) {
+#if MXNET_USE_CUDA
+          GetDefaultBlobs<gpu>(ndinputs, &input_blobs, &temp_in, opctx);
+          GetDefaultBlobs<gpu>(ndoutputs, &output_blobs, &temp_out, opctx);
+          std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
+          fcompute(state, opctx, input_blobs, req, output_blobs);
+          // cast to original storage type, if necessary
+          CastNonDefaultStorage<gpu>(ndoutputs, temp_out, opctx);
+#else
+          LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif
+        } else {
+          GetDefaultBlobs<cpu>(ndinputs, &input_blobs, &temp_in, opctx);
+          GetDefaultBlobs<cpu>(ndoutputs, &output_blobs, &temp_out, opctx);
+          std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
+          fcompute(state, opctx, input_blobs, req, output_blobs);
+          CastNonDefaultStorage<cpu>(ndoutputs, temp_out, opctx);
+        }
         if (exec_type == ExecType::kSync) {
           if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
             rctx.get_stream<gpu>()->Wait();
@@ -440,6 +520,28 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
       *outarray[i] = std::move(ndoutputs[i]);
     }
   }
+  API_END();
+}
+
+int MXImperativeInvokeEx(AtomicSymbolCreator creator,
+                         int num_inputs,
+                         NDArrayHandle *inputs,
+                         int *num_outputs,
+                         NDArrayHandle **outputs,
+                         int num_params,
+                         const char **param_keys,
+                         const char **param_vals,
+                         const int **out_stypes) {  // outputs storage types
+  API_BEGIN();
+  MXImperativeInvoke(creator, num_inputs, inputs, num_outputs, outputs,
+                     num_params, param_keys, param_vals);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  NDArray** output_nds = reinterpret_cast<NDArray**>(*outputs);
+  ret->out_types.resize(*num_outputs);
+  for (int i = 0; i < *num_outputs; ++i) {
+    ret->out_types[i] = output_nds[i]->storage_type();
+  }
+  *out_stypes = dmlc::BeginPtr(ret->out_types);
   API_END();
 }
 

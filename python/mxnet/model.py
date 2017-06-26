@@ -37,7 +37,7 @@ BatchEndParam = namedtuple('BatchEndParams',
                             'eval_metric',
                             'locals'])
 
-def _create_kvstore(kvstore, num_device, arg_params):
+def _create_kvstore(kvstore, num_device, arg_params, name2idx=None):
     """Create kvstore
     This function select and create a proper kvstore if given the kvstore type.
 
@@ -61,7 +61,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
             # no need to use kv for single device and single machine
             kv = None
         else:
-            kv = kvs.create(kvstore)
+            kv = kvs.create(kvstore, name2idx=name2idx)
             if kvstore == 'local':
             # automatically select a proper local
                 max_size = max(np.prod(param.shape) for param in
@@ -101,10 +101,11 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None, param_names=None):
     """Perform update of param_arrays from grad_arrays not on kvstore."""
-    for index, pair in enumerate(zip(param_arrays, grad_arrays)):
+    for i, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
         if grad_list[0] is None:
             continue
+        index = i
         if kvstore:
             name = param_names[index]
             # push gradient, priority is negative index
@@ -114,7 +115,7 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
         for k, p in enumerate(zip(arg_list, grad_list)):
             # faked an index here, to make optimizer create diff
             # state for the same index but on diff devs, TODO(mli)
-            # use a better solution latter
+            # use a better solution later
             w, g = p
             updater(index*num_device+k, g, w)
 

@@ -10,10 +10,12 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(sgd_update)
-.set_attr<FCompute>("FCompute<gpu>", SGDUpdate<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", SGDUpdate<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", SGDUpdateEx<gpu>);
 
 NNVM_REGISTER_OP(sgd_mom_update)
-.set_attr<FCompute>("FCompute<gpu>", SGDMomUpdate<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", SGDMomUpdate<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", SGDMomUpdateEx<gpu>);
 
 NNVM_REGISTER_OP(mp_sgd_update)
 .set_attr<FCompute>("FCompute<gpu>", MP_SGDUpdate<gpu>);

@@ -1,10 +1,12 @@
-import mxnet as mx
 import mxnet.ndarray as nd
+from mxnet.test_utils import *
 import numpy as np
 from functools import reduce
 from mxnet.module.executor_group import DataParallelExecutorGroup
 from common import assertRaises
 from collections import namedtuple
+
+import numpy.random as rnd
 
 
 def test_module_dtype():
@@ -328,7 +330,6 @@ def test_monitor():
                 break
     assert(mon_result_counts == [2, 2, 1, 6, 6, 4])
 
-
 def test_executor_group():
     def get_rnn_sym(num_layers, num_words, num_hidden, num_embed, seq_len):
         stack = mx.rnn.SequentialRNNCell()
@@ -440,6 +441,96 @@ def test_executor_group():
     test_shared_exec_group(exec_grp_shared=exec_group1, exec_grp_created=exec_group2,
                            shared_arg_names=shared_arg_names, extra_args=extra_args)
 
+def test_module_fm():
+    mx.random.seed(11)
+    rnd.seed(11)
+    def fm_model(k, feature_dim):
+         norm = mx.initializer.Normal(sigma=0.01)
+         x = mx.symbol.Variable("data", stype='csr')
+         v = mx.symbol.Variable("v", shape=(feature_dim, k), init=norm, stype='row_sparse')
+
+         w1_weight = mx.symbol.var('w1_weight', shape=(feature_dim, 1), init=norm, stype='row_sparse')
+         w1 = mx.symbol.dot(x, w1_weight)
+
+         v_s = mx.symbol.sum(data=mx.symbol.square(data=v), axis=1)
+         x_s = mx.symbol.square(data=x)
+         bd = 0.5 * mx.symbol.negative(data=mx.symbol.broadcast_mul(x_s, v_s))
+
+         w2 = mx.symbol.dot(x, v)
+         w2_squared = 0.5 * mx.symbol.square(data=w2)
+
+         w_all = mx.symbol.Concat(w1, w2_squared, bd, dim=1)
+         model = mx.symbol.sum(data=w_all, axis=1, keepdims=True)
+         y = mx.symbol.Variable("out_label")
+         model = mx.symbol.LinearRegressionOutput(data=model, label=y, name="out")
+         return model
+
+    # model
+    ctx = default_context()
+    k = 5
+    feature_dim = 20
+    model = fm_model(k, feature_dim)
+
+    # data iter
+    num_batches = 8
+    batch_size = 25
+    num_samples = batch_size * num_batches
+    import scipy.sparse as sp
+    # generate some random scipy csr data
+    csr_sp = sp.rand(num_samples, feature_dim, density=0.5, format='csr')
+    csr_nd = mx.nd.csr(csr_sp.data, csr_sp.indptr, csr_sp.indices,
+                              (num_samples, feature_dim))
+    label = mx.nd.ones((num_samples,1))
+    # the alternative is to use LibSVMIter
+    train_iter = mx.io.NDArrayIter(data=csr_nd,
+                                   label={'out_label':label},
+                                   batch_size=batch_size)
+    # create module
+    mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['out_label'])
+    # allocate memory by given the input data and lable shapes
+    mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
+    # initialize parameters by uniform random numbers
+    mod.init_params(initializer=mx.init.Uniform(scale=.1))
+    # use Sparse SGD with learning rate 0.1 to train
+    mod.init_optimizer(optimizer='sgd')
+    # use accuracy as the metric
+    metric = mx.metric.create('MSE')
+    # train 10 epoch
+    for epoch in range(10):
+        train_iter.reset()
+        metric.reset()
+        for batch in train_iter:
+            mod.forward(batch, is_train=True)       # compute predictions
+            mod.update_metric(metric, batch.label)  # accumulate prediction accuracy
+            mod.backward()                          # compute gradients
+            mod.update()                            # update parameters
+        # print('Epoch %d, Training %s' % (epoch, metric.get()))
+    assert(metric.get()[1] < 0.2)
+
+def test_module_initializer():
+    def regression_model(m):
+         x = mx.symbol.var("data", stype='csr')
+         v = mx.symbol.var("v", shape=(m, 1), init=mx.init.Uniform(scale=.1),
+                                stype='row_sparse')
+         model = mx.symbol.dot(lhs=x, rhs=v)
+         y = mx.symbol.Variable("label")
+         model = mx.symbol.LinearRegressionOutput(data=model, label=y, name="out")
+         return model
+
+    n, m = 128, 100
+    model = regression_model(m)
+
+    data = mx.nd.zeros(shape=(n, m), stype='csr')
+    label = mx.nd.zeros((n, 1))
+    iterator = mx.io.NDArrayIter(data=data, label={'label':label}, batch_size=n)
+
+    # create module
+    mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['label'])
+    mod.bind(data_shapes=iterator.provide_data, label_shapes=iterator.provide_label)
+    mod.init_params()
+    v = mod._arg_params['v']
+    assert(v.stype == 'row_sparse')
+    assert(np.sum(v.asnumpy()) != 0)
 
 def test_forward_reshape():
     num_class=10

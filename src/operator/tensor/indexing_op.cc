@@ -86,6 +86,48 @@ NNVM_REGISTER_OP(_backward_Embedding)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpBackward<cpu>);
 
+NNVM_REGISTER_OP(SparseEmbedding)
+.describe(R"doc(Represents words or other sparse inputs by dense continuous vectors.
+It assumes that the input is in one-hot form. E.g., for a vocabulary size of 10,000,
+ each input vector is expected to have dimension 10,000.
+The index of the non-zero entry is the index of the word or item it represents.
+
+The corresponding embedding vectors are stored as rows of a matrix.
+Hence, mapping an input word to its embedding is implemented as a matrix product.
+
+The gradient of an embedding matrix has the form of gradient vectors that are only
+ non-zero for words seen in a minibatch.
+)doc" ADD_FILELINE)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<EmbeddingParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "weight"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", SparseEmbeddingShape)
+.set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType)
+.set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingForwardStorageType)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingForwardEx<cpu>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    return MakeNonlossGradNode("_backward_SparseEmbedding", n, ograds,
+                               {n->inputs[0]}, n->attrs.dict);
+  })
+.add_argument("data", "NDArray-or-Symbol",
+              "The input array to the sparse embedding operator.")
+.add_argument("weight", "NDArray-or-Symbol", "The embedding weight matrix.")
+.add_arguments(EmbeddingParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_SparseEmbedding)
+.set_num_inputs(2)
+.set_num_outputs(2)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingBackwardEx<cpu>);
 
 NNVM_REGISTER_OP(take)
 .describe(R"code(Takes elements from an input array along the given axis.
@@ -229,6 +271,47 @@ Examples::
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("indices", "NDArray-or-Symbol", "array of locations where to set on_value")
 .add_arguments(OneHotParam::__FIELDS__());
+
+NNVM_REGISTER_OP(sparse_retain)
+.describe(R"code(pick rows specified by user input index array from a row sparse matrix
+and save them in the output sparse matrix.
+
+Example::
+
+  data = [[1, 2], [3, 4], [5, 6]]
+  indices = [0, 1, 3]
+  shape = (4, 2)
+  rsp_in = row_sparse(data, indices)
+  to_retain = [0, 3]
+  rsp_out = sparse_retain(rsp_in, to_retain)
+  rsp_out.values = [[1, 2], [5, 6]]
+  rsp_out.indices = [0, 3]
+
+)code" ADD_FILELINE)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "indices"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", SparseRetainOpShape)
+.set_attr<nnvm::FInferType>("FInferType", SparseRetainOpType)
+.set_attr<FInferStorageType>("FInferStorageType", SparseRetainForwardInferStorageType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SparseRetainOpForwardEx<cpu>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    return MakeNonlossGradNode("_backward_sparse_retain", n, ograds,
+                               {n->inputs[sr::kIdx]}, n->attrs.dict);
+  })
+.add_argument("data", "NDArray-or-Symbol", "The input array for sparse_retain operator.")
+.add_argument("indices", "NDArray-or-Symbol", "The index array of rows ids that will be retained.");
+
+NNVM_REGISTER_OP(_backward_sparse_retain)
+.set_num_inputs(2)
+.set_num_outputs(2)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FInferStorageType>("FInferStorageType", SparseRetainBackwardInferStorageType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SparseRetainOpBackwardEx<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -11,12 +11,15 @@
 #include <dmlc/json.h>
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
+#include <mxnet/ndarray.h>
+#include <mxnet/op_attr_types.h>
 #include <mxnet/base.h>
 #include <istream>
 #include <ostream>
 #include <string>
 #include <vector>
 #include "../common/cuda_utils.h"
+#include "../common/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -107,6 +110,19 @@ inline std::string type_string(const int& x) {
   return "unknown";
 }
 
+/*! \brief get string representation of storage_type */
+inline std::string stype_string(const int& x) {
+  switch (x) {
+    case kDefaultStorage:
+      return "default";
+    case kCSRStorage:
+      return "csr";
+    case kRowSparseStorage:
+      return "row_sparse";
+  }
+  return "unknown";
+}
+
 /*!
  * \brief Assign x to y. Checks for compatiblity when y is not empty.
  *  Allow missing dim in both x and y (as 0).
@@ -179,6 +195,24 @@ inline bool type_assign(int *y, const int& x) {
       os << "Type inconsistent, Provided="                                  \
          << type_string((type_array)[index]) << ','                         \
          << " inferred type=" << type_string(type);                         \
+      throw ::mxnet::op::InferTypeError(os.str(), index);                   \
+    }                                                                       \
+  }
+
+/*!
+ * \brief macro assign type to out if out is unknown (-1) otherwise check consistency
+ *  Use macro so we can see the error file more clearly
+ * \param type_array the storage type array to store the result
+ * \param index the index of in the array
+ * \param type the inferred storage type
+ */
+#define STORAGE_TYPE_ASSIGN_CHECK(type_array, index, type)                  \
+  {                                                                         \
+    if (!type_assign(&(type_array)[index], type)) {                         \
+      std::ostringstream os;                                                \
+      os << "Storage type inconsistent, Provided="                          \
+         << stype_string((type_array)[index]) << ','                        \
+         << " inferred storage type=" << stype_string(type);                \
       throw ::mxnet::op::InferTypeError(os.str(), index);                   \
     }                                                                       \
   }
@@ -314,6 +348,33 @@ inline void ParamParser(nnvm::NodeAttrs* attrs) {
   }
   attrs->parsed = std::move(param);
 }
+
+template <typename xpu>
+void FCompExFallback(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<NDArray>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<NDArray>& outputs,
+                     FCompute fcompute,
+                     const std::string& fname) {
+  using namespace mxnet::common;
+  std::vector<TBlob> in_blobs, out_blobs;
+  std::vector<NDArray> temp_in, temp_out;
+  GetDefaultBlobs<xpu>(inputs, &in_blobs, &temp_in, ctx, true);
+  GetDefaultBlobs<xpu>(outputs, &out_blobs, &temp_out, ctx, true);
+  fcompute(attrs, ctx, in_blobs, req, out_blobs);
+  CastNonDefaultStorage<xpu>(outputs, temp_out, ctx, true);
+}
+
+#define CHECK_RSP_ALL_ROWS_NON_ZERO(rsp, func, param)                              \
+  {                                                                                \
+    CHECK(rsp.storage_shape()[0] == rsp.shape()[0]) << func                        \
+          << " for RowSparse " << param << " is only implemented for "             \
+          << "RowSparse " << param << " with all rows containing non-zeros. "      \
+          << "Expects " << param << ".values.shape[0] (" << rsp.storage_shape()[0] \
+          << ") == " << param << ".shape[0] (" << rsp.shape()[0] << ").";          \
+  }
+
 
 }  // namespace op
 }  // namespace mxnet
