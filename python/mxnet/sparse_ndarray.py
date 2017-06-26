@@ -362,7 +362,7 @@ class SparseNDArray(NDArray):
         check_call(_LIB.MXNDArrayGetDataNDArray(self.handle, ctypes.byref(hdl)))
         return NDArray(hdl, writable)
 
-
+# pylint: disable=abstract-method
 class CSRNDArray(SparseNDArray):
     """A CSRNDArray represents a NDArray as three separate arrays: `values`,
     `indptr` and `indices`. It uses the standard CSR representation where the column indices for
@@ -398,7 +398,7 @@ class CSRNDArray(SparseNDArray):
         """
         return self._aux_data(0)
 
-
+# pylint: disable=abstract-method
 class RowSparseNDArray(SparseNDArray):
     """A RowSparseNDArray is typically used to represent a subset of a larger
     NDArray  with `default` of shape [LARGE0, D1, .. , DN] where LARGE0 >> D0. The values
