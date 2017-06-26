@@ -847,13 +847,17 @@ class Nadam(Optimizer):
         Exponential decay rate for the second moment estimates.
     epsilon : float, optional
         Small value to avoid division by 0.
+    schedule_decay : float, optional
+        Exponential decay rate for the momentum schedule
     """
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 **kwargs):
+                 schedule_decay=0.004, **kwargs):
         super(Nadam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
+        self.schedule_decay = schedule_decay
+        self.m_schedule = 1.
 
     def create_state(self, index, weight):
         return (zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
@@ -867,24 +871,30 @@ class Nadam(Optimizer):
         self._update_count(index)
 
         t = self._index_update_count[index]
-        coef1 = 1. - self.beta1**t
-        coef2 = 1. - self.beta2**t
-        lr *= math.sqrt(coef2)/coef1
 
         # preprocess grad
         grad *= self.rescale_grad + wd * weight
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
 
+        # warming momentum schedule
+        momentum_t = self.beta1 * (1. - 0.5 * (pow(0.96, t * self.schedule_decay)))
+        momentum_t_1 = self.beta1 * (1. - 0.5 * (pow(0.96, (t + 1) * self.schedule_decay)))
+        self.m_schedule = self.m_schedule * momentum_t
+        m_schedule_next = self.m_schedule * momentum_t_1
+            
         # update m_t and v_t
         m_t, v_t = state
         m_t[:] = self.beta1 * m_t + (1. - self.beta1) * grad
         v_t[:] = self.beta2 * v_t + (1. - self.beta2) * grad * grad
 
-        m_bar = self.beta1 * m_t + (1. - self.beta1) * grad
+        grad_prime = grad / (1. - self.m_schedule)
+        m_t_prime = m_t / (1. - m_schedule_next)
+        v_t_prime = v_t / (1. - pow(self.beta2, t))
+        m_t_bar = (1. - momentum_t) * grad_prime + momentum_t_1 * m_t_prime
 
         # update weight
-        weight[:] -= lr * m_bar / (sqrt(v_t) + self.epsilon)
+        weight[:] -= lr * m_t_bar / (sqrt(v_t_prime) + self.epsilon)
 
 @register
 class Test(Optimizer):
