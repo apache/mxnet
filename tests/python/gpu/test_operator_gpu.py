@@ -1,18 +1,19 @@
 import sys
 import os
+import time
+import mxnet as mx
+import numpy as np
+from mxnet.test_utils import check_consistency, set_default_context
+from numpy.testing import assert_allclose
+
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from test_operator import *
 from test_optimizer import *
 from test_random import *
 from test_nn import *
-from test_rnn import *
+#from test_rnn import *
 from test_foo_rnn import *
-import mxnet as mx
-import numpy as np
-from mxnet.test_utils import check_consistency, set_default_context
-from numpy.testing import assert_allclose
-import time
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm
@@ -1387,32 +1388,32 @@ def test_foo_fused():
                       mx.nd.ones((8, 3, 200)))
 
 
-
 def check_rnn_layer(layer):
     layer.all_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     with mx.gpu(0):
         x = mx.nd.ones((10, 16, 30))
-        h0 = mx.nd.ones((3, 16, 100))
-        h1 = mx.nd.ones((3, 16, 100))
-        go, gs = layer(x, [h0, h1])
+        states = layer.begin_state(16)
+        go, gs = layer(x, states)
 
     with mx.cpu(0):
         x = mx.nd.ones((10, 16, 30))
-        h0 = mx.nd.ones((3, 16, 100))
-        h1 = mx.nd.ones((3, 16, 100))
-        co, cs = layer(x, [h0, h1])
+        states = layer.begin_state(16)
+        co, cs = layer(x, states)
 
-    assert_allclose(go.asnumpy(), co.asnumpy(), rtol=1e-4)
+    assert_allclose(go.asnumpy(), co.asnumpy(), rtol=1e-3)
     for g, c in zip(gs, cs):
-        assert_allclose(g.asnumpy(), c.asnumpy(), rtol=1e-4)
+        assert_allclose(g.asnumpy(), c.asnumpy(), rtol=1e-3)
 
 
 def test_rnn_layer():
+    check_rnn_layer(foo.rnn.RNN(100, num_layers=3))
+    check_rnn_layer(foo.rnn.RNN(100, activation='tanh', num_layers=3))
     check_rnn_layer(foo.rnn.LSTM(100, num_layers=3))
+    check_rnn_layer(foo.rnn.GRU(100, num_layers=3))
 
+    check_rnn_layer(foo.rnn.LSTM(100, num_layers=3, bidirectional=True))
 
 
 if __name__ == '__main__':
-    test_rnn_layer()
     import nose
     nose.runmodule()

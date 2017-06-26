@@ -19,25 +19,28 @@ class _LayerScope(object):
         self._old_scope = None
 
     @staticmethod
-    def create_prefix(prefix, hint):
-        if _LayerScope._current is None:
+    def create(prefix, params, hint):
+        """Create prefix and params for new layer."""
+        current = _LayerScope._current
+        if current is None:
             if prefix is None:
-                return _name.NameManager.current.get(None, hint) + '_'
-            return prefix
-        else:
-            if prefix is None:
-                count = _LayerScope._current._counter.get(hint, 0)
-                prefix = '%s%d_'%(hint, count)
-                _LayerScope._current._counter[hint] = count + 1
-            return _LayerScope._current._layer.prefix+prefix
+                prefix = _name.NameManager.current.get(None, hint) + '_'
+            if params is None:
+                params = ParameterDict(prefix)
+            else:
+                params = ParameterDict(params.prefix, params)
+            return prefix, params
 
-    @staticmethod
-    def create_params(prefix, params):
-        if params is not None:
-            return ParameterDict(params.prefix, params)
-        if _LayerScope._current is not None:
-            return ParameterDict(prefix, _LayerScope._current._layer._params._shared)
-        return ParameterDict(prefix)
+        if prefix is None:
+            count = current._counter.get(hint, 0)
+            prefix = '%s%d_'%(hint, count)
+            current._counter[hint] = count + 1
+        if params is None:
+            parent = current._layer.params
+            params = ParameterDict(parent.prefix+prefix, parent._shared)
+        else:
+            params = ParameterDict(params.prefix, params)
+        return current._layer.prefix+prefix, params
 
     def __enter__(self):
         self._old_scope = _LayerScope._current
@@ -121,8 +124,7 @@ class Layer(object):
 
     Layer supports forwarding with both `Symbol` and `NDArray`."""
     def __init__(self, prefix=None, params=None):
-        self._prefix = _LayerScope.create_prefix(prefix, self._alias())
-        self._params = _LayerScope.create_params(self._prefix, params)
+        self._prefix, self._params = _LayerScope.create(prefix, params, self._alias())
         self._scope = _LayerScope(self)
         self._children = []
 

@@ -5,9 +5,7 @@
 """Definition of various recurrent neural network cells."""
 from __future__ import print_function
 
-import warnings
-
-from ... import symbol, init, ndarray
+from ... import symbol, ndarray
 from ...base import string_types, numeric_types
 from ..nn import Layer, HybridLayer
 from .. import tensor_types
@@ -102,7 +100,7 @@ class RecurrentCell(Layer):
     def _curr_prefix(self):
         return '%st%d_'%(self.prefix, self._counter)
 
-    def begin_state(self, func=symbol.zeros, batch_size=0, **kwargs):
+    def begin_state(self, batch_size=0, func=ndarray.zeros, **kwargs):
         """Initial state for this cell.
 
         Parameters
@@ -264,16 +262,22 @@ class RNNCell(HRecurrentCell):
         container for weight sharing between cells.
         created if None.
     """
-    def __init__(self, hidden_size, activation='tanh', input_size=0,
-                 prefix=None, params=None):
+    def __init__(self, hidden_size, activation='tanh',
+                 i2h_weight_initializer=None, h2h_weight_initializer=None,
+                 i2h_bias_initializer=None, h2h_bias_initializer=None,
+                 input_size=0, prefix=None, params=None):
         super(RNNCell, self).__init__(prefix=prefix, params=params)
         self._hidden_size = hidden_size
         self._activation = activation
         self._input_size = input_size
-        self.i2h_weight = self.params.get('i2h_weight', shape=(hidden_size, input_size))
-        self.i2h_bias = self.params.get('i2h_bias', shape=(hidden_size,))
-        self.h2h_weight = self.params.get('h2h_weight', shape=(hidden_size, hidden_size))
-        self.h2h_bias = self.params.get('h2h_bias', shape=(hidden_size,))
+        self.i2h_weight = self.params.get('i2h_weight', shape=(hidden_size, input_size),
+                                          init=i2h_weight_initializer)
+        self.h2h_weight = self.params.get('h2h_weight', shape=(hidden_size, hidden_size),
+                                          init=h2h_weight_initializer)
+        self.i2h_bias = self.params.get('i2h_bias', shape=(hidden_size,),
+                                        init=i2h_bias_initializer)
+        self.h2h_bias = self.params.get('h2h_bias', shape=(hidden_size,),
+                                        init=h2h_bias_initializer)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'}]
@@ -281,8 +285,8 @@ class RNNCell(HRecurrentCell):
     def _alias(self):
         return 'rnn'
 
-    def hybrid_forward(self, F, inputs, states, i2h_weight, i2h_bias,
-                       h2h_weight, h2h_bias):
+    def hybrid_forward(self, F, inputs, states, i2h_weight,
+                       h2h_weight, i2h_bias, h2h_bias):
         name = self._curr_prefix
         i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
                                num_hidden=self._hidden_size,
@@ -312,18 +316,22 @@ class LSTMCell(HRecurrentCell):
     forget_bias : bias added to forget gate, default 1.0.
         Jozefowicz et al. 2015 recommends setting this to 1.0
     """
-    def __init__(self, hidden_size, forget_bias=1.0, input_size=0,
-                 prefix=None, params=None):
+    def __init__(self, hidden_size,
+                 i2h_weight_initializer=None, h2h_weight_initializer=None,
+                 i2h_bias_initializer='lstmbias', h2h_bias_initializer=None,
+                 input_size=0, prefix=None, params=None):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
 
         self._hidden_size = hidden_size
         self._input_size = input_size
-        self.i2h_weight = self.params.get('i2h_weight', shape=(4*hidden_size, input_size))
-        self.h2h_weight = self.params.get('h2h_weight', shape=(4*hidden_size, hidden_size))
-        # we add the forget_bias to i2h_bias, this adds the bias to the forget gate activation
+        self.i2h_weight = self.params.get('i2h_weight', shape=(4*hidden_size, input_size),
+                                          init=i2h_weight_initializer)
+        self.h2h_weight = self.params.get('h2h_weight', shape=(4*hidden_size, hidden_size),
+                                          init=h2h_weight_initializer)
         self.i2h_bias = self.params.get('i2h_bias', shape=(4*hidden_size,),
-                                        init=init.LSTMBias(forget_bias=forget_bias))
-        self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,))
+                                        init=i2h_bias_initializer)
+        self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
+                                        init=h2h_bias_initializer)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'},
@@ -332,8 +340,8 @@ class LSTMCell(HRecurrentCell):
     def _alias(self):
         return 'lstm'
 
-    def hybrid_forward(self, F, inputs, states, i2h_weight, i2h_bias,
-                       h2h_weight, h2h_bias):
+    def hybrid_forward(self, F, inputs, states, i2h_weight,
+                       h2h_weight, i2h_bias, h2h_bias):
         name = self._curr_prefix
         i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
                                num_hidden=self._hidden_size*4,
@@ -376,13 +384,20 @@ class GRUCell(HRecurrentCell):
         container for weight sharing between cells.
         created if None.
     """
-    def __init__(self, hidden_size, input_size=0, prefix=None, params=None):
+    def __init__(self, hidden_size,
+                 i2h_weight_initializer=None, h2h_weight_initializer=None,
+                 i2h_bias_initializer=None, h2h_bias_initializer=None,
+                 input_size=0, prefix=None, params=None):
         super(GRUCell, self).__init__(prefix=prefix, params=params)
         self._hidden_size = hidden_size
-        self.i2h_weight = self.params.get('i2h_weight', shape=(3*hidden_size, input_size))
-        self.h2h_weight = self.params.get('h2h_weight', shape=(3*hidden_size, hidden_size))
-        self.i2h_bias = self.params.get('i2h_bias', shape=(3*hidden_size))
-        self.h2h_bias = self.params.get('h2h_bias', shape=(3*hidden_size))
+        self.i2h_weight = self.params.get('i2h_weight', shape=(3*hidden_size, input_size),
+                                          init=i2h_weight_initializer)
+        self.h2h_weight = self.params.get('h2h_weight', shape=(3*hidden_size, hidden_size),
+                                          init=h2h_weight_initializer)
+        self.i2h_bias = self.params.get('i2h_bias', shape=(3*hidden_size,),
+                                        init=i2h_bias_initializer)
+        self.h2h_bias = self.params.get('h2h_bias', shape=(3*hidden_size,),
+                                        init=h2h_bias_initializer)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'}]
@@ -390,8 +405,8 @@ class GRUCell(HRecurrentCell):
     def _alias(self):
         return 'gru'
 
-    def hybrid_forward(self, F, inputs, states, i2h_weight, i2h_bias,
-                       h2h_weight, h2h_bias):
+    def hybrid_forward(self, F, inputs, states, i2h_weight,
+                       h2h_weight, i2h_bias, h2h_bias):
         # pylint: disable=too-many-locals
         name = self._curr_prefix
         prev_state_h = states[0]
@@ -685,5 +700,5 @@ class BidirectionalCell(HRecurrentCell):
             outputs = [F.concat(l_o, r_o, dim=1, name='%st%d'%(self._output_prefix, i))
                        for i, (l_o, r_o) in enumerate(zip(l_outputs, reversed(r_outputs)))]
 
-        states = [l_states, r_states]
+        states = l_states + r_states
         return outputs, states

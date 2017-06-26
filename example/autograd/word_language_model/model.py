@@ -10,9 +10,22 @@ class RNNModel(nn.Layer):
         with self.name_scope():
             self.drop = nn.Dropout(dropout)
             self.encoder = nn.Embedding(vocab_size, num_embed)
-            self.rnn = rnn.FusedRNNCell(num_hidden, num_layers, mode=mode,
-                                        dropout=dropout, get_next_state=True,
-                                        num_input=num_embed)
+            if mode == 'rnn_relu':
+                self.rnn = rnn.RNN(num_hidden, 'relu', num_layers, dropout=dropout,
+                                   input_size=num_embed)
+            elif mode == 'rnn_tanh':
+                self.rnn = rnn.RNN(num_hidden, num_layers, dropout=dropout,
+                                   input_size=num_embed)
+            elif mode == 'lstm':
+                self.rnn = rnn.LSTM(num_hidden, num_layers, dropout=dropout,
+                                    input_size=num_embed)
+            elif mode == 'gru':
+                self.rnn = rnn.GRU(num_hidden, num_layers, dropout=dropout,
+                                   input_size=num_embed)
+            else:
+                raise ValueError("Invalid mode %s. Options are rnn_relu, "
+                                 "rnn_tanh, lstm, and gru"%mode)
+
             if tie_weights:
                 self.decoder = nn.Dense(vocab_size, in_units=num_hidden,
                                         params=self.encoder.params)
@@ -23,7 +36,7 @@ class RNNModel(nn.Layer):
 
     def forward(self, inputs, hidden):
         emb = self.drop(self.encoder(inputs))
-        output, hidden = self.rnn.unroll(None, emb, layout='TNC', merge_outputs=True)
+        output, hidden = self.rnn(emb, hidden)
         output = self.drop(output)
         decoded = self.decoder(output.reshape((-1, self.num_hidden)))
         return decoded, hidden
