@@ -86,19 +86,19 @@ class SparseNDArray(NDArray):
     for more details.
     """
     def __iadd__(self, other):
-        raise Exception('Not implemented for SparseND yet!')
+        raise NotImplementedError("SparseND doesn't support __iadd__")
 
     def __isub__(self, other):
-        raise Exception('Not implemented for SparseND yet!')
+        raise NotImplementedError("SparseND doesn't support __isub__")
 
     def __imul__(self, other):
-        raise Exception('Not implemented for SparseND yet!')
+        raise NotImplementedError("SparseND doesn't support __imul__")
 
     def __idiv__(self, other):
-        raise Exception('Not implemented for SparseND yet!')
+        raise NotImplementedError("SparseND doesn't support __idiv__")
 
     def __itruediv__(self, other):
-        raise Exception('Not implemented for SparseND yet!')
+        raise NotImplementedError("SparseND doesn't support __itruediv__")
 
     def __setitem__(self, key, value):
         """x.__setitem__(i, y) <=> x[i]=y
@@ -290,7 +290,7 @@ class SparseNDArray(NDArray):
         """Return a dense ``numpy.ndarray`` object with value copied from this array
 
         """
-        return self.to_dense().asnumpy()
+        return self.todense().asnumpy()
 
     def astype(self, dtype):
         """Returns a copy of the array after casting to a specified type.
@@ -343,8 +343,8 @@ class SparseNDArray(NDArray):
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
 
-    def to_dense(self):
-        return to_dense(self)
+    def todense(self):
+        return todense(self)
 
     def _aux_data(self, i, writable=False):
         """ Get an NDArray referencing the ith aux data array associated with the SparseNDArray.
@@ -550,7 +550,7 @@ def row_sparse(values, indices, shape, ctx=None, dtype=None, indices_type=None):
     return result
 
 
-def to_dense(source):
+def todense(source):
     """ Return a dense array representation of this SparseNDArray.
 
     Returns

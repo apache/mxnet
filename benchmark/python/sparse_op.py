@@ -92,7 +92,7 @@ def test_dot_real(data_dict):
         for batch in train_iter:
             data = train_iter.getdata()
             csr_data.append(data)
-            dns_data.append(data.to_dense())
+            dns_data.append(data.todense())
             num_batch += 1
         bag_of_data = [csr_data, dns_data]
         num_repeat = 5
@@ -140,7 +140,7 @@ def test_dot_synthetic():
         dns = mx.nd.random_uniform(shape=(k, n)).copyto(ctx)
         data_shape = (m, k)
         csr_data = rand_ndarray(data_shape, 'csr', density)
-        dns_data = csr_data.to_dense()
+        dns_data = csr_data.todense()
         rhs_dns_np = dns.asnumpy()
         lhs_csr_sp = sp.csr_matrix(dns_data.asnumpy())  # csr in scipy
         lhs_dns_np = lhs_csr_sp.todense()
@@ -169,7 +169,7 @@ def test_dot_synthetic():
         dns = mx.nd.random_uniform(shape=(m, n)).copyto(ctx)
         data_shape = (m, k)
         csr_data = rand_ndarray(data_shape, 'csr', density)
-        dns_data = csr_data.to_dense()
+        dns_data = csr_data.todense()
         rhs_dns_np = dns.asnumpy()
         lhs_csr_sp = sp.csr_matrix(dns_data.asnumpy())
         lhs_dns_np = lhs_csr_sp.todense()

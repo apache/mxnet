@@ -33,7 +33,7 @@ def init_kv():
 def init_kv_rsp():
     kv = mx.kv.create('dist_sync')
     # init kv
-    kv.init(rsp_keys, [mx.nd.ones(shape).to_rsp()] * len(rsp_keys))
+    kv.init(rsp_keys, [mx.nd.ones(shape)._to_rsp()] * len(rsp_keys))
     # kv.init(99, mx.nd.ones(big_shape))
     my_rank = kv.rank
     nworker = kv.num_workers
@@ -68,11 +68,11 @@ def test_sync_push_pull_row_sparse():
         v[my_row][col] = my_rank + 1
 
     for i in range(nrepeat):
-        kv.push('9', v.to_rsp())
+        kv.push('9', v._to_rsp())
         # kv.push(99, mx.nd.ones(big_shape)*(my_rank+1))
 
     # pull a subset of rows this worker is interested in
-    val = v.copyto(mx.cpu()).to_rsp()
+    val = v.copyto(mx.cpu())._to_rsp()
     kv.pull('9', out = val)
 
     expected =  mx.nd.zeros(shape)

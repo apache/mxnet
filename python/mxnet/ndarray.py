@@ -975,11 +975,11 @@ fixed-size items.
             c_array(NDArrayHandle, ograd_handles),
             ctypes.c_int(retain_graph)))
 
-    def to_csr(self):
+    def _to_csr(self):
         # pylint: disable=undefined-variable
         return cast_storage(self, storage_type='csr')
 
-    def to_rsp(self):
+    def _to_rsp(self):
         # pylint: disable=undefined-variable
         return cast_storage(self, storage_type='row_sparse')
 

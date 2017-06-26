@@ -84,7 +84,7 @@ def test_cast_storage_ex():
 
     def test_csr_to_dns(shape):
         csr, (indptr, indices, values) = rand_sparse_ndarray(shape, 'csr')
-        mx_dns = csr.to_dense()
+        mx_dns = csr.todense()
         np_dns = sp.csr_matrix((values, indices, indptr), shape).todense()
         assert_almost_equal(mx_dns.asnumpy(), np_dns)
 
@@ -105,7 +105,7 @@ def test_sparse_dot():
         lhs_dns = rand_ndarray(lhs_shape, 'default')
         lhs_nd = mx.nd.cast_storage(lhs_dns, storage_type='csr')
         rhs_nd = rand_ndarray(rhs_shape, rhs_stype, density=1)
-        rhs_dns = rhs_nd if rhs_stype == 'default' else rhs_nd.to_dense()
+        rhs_dns = rhs_nd if rhs_stype == 'default' else rhs_nd.todense()
         out = mx.nd.dot(lhs_nd, rhs_dns, transpose_a=trans_lhs)
         assert out.storage_type == 'default'
         out_expected = mx.nd.dot(lhs_dns, rhs_dns, transpose_a=trans_lhs)
@@ -148,7 +148,7 @@ def test_sparse_embedding():
     np_weight = np.random.uniform(-0.01, 0.01, arg_map["embed_weight"].shape)
     np_onehot = np.zeros((batch, in_dim))
     np_onehot[np.arange(batch), np_data] = 1.0
-    nd_onehot = mx.nd.array(np_onehot).to_csr()
+    nd_onehot = mx.nd.array(np_onehot)._to_csr()
     # forward
     arg_map["data"][:] = nd_onehot
     arg_map["embed_weight"][:] = np_weight

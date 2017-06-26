@@ -36,7 +36,7 @@ def compare_optimizer(opt1, opt2, shape, w_stype='default', g_stype='default'):
         w1 = w2.copyto(default_context())
     elif w_stype == 'row_sparse':
         w2 = rand_ndarray(shape, w_stype, density=1)
-        w1 = w2.copyto(default_context()).to_dense()
+        w1 = w2.copyto(default_context()).todense()
     else:
         raise Exception("type not supported yet")
     if g_stype == 'default':
@@ -44,7 +44,7 @@ def compare_optimizer(opt1, opt2, shape, w_stype='default', g_stype='default'):
         g1 = g2.copyto(default_context())
     elif g_stype == 'row_sparse':
         g2 = rand_ndarray(shape, g_stype)
-        g1 = g2.copyto(default_context()).to_dense()
+        g1 = g2.copyto(default_context()).todense()
     else:
         raise Exception("type not supported yet")
 
