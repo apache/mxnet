@@ -248,7 +248,7 @@ Example::
 .set_attr_parser(ParamParser<SliceParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", SliceShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<nnvm::FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", Slice<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SliceEx<cpu>)
@@ -375,7 +375,7 @@ NNVM_REGISTER_OP(dot)
   })
 .set_attr<nnvm::FInferShape>("FInferShape", DotShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-.set_attr<nnvm::FInferStorageType>("FInferStorageType", DotForwardInferStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", DotForwardInferStorageType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -392,7 +392,7 @@ NNVM_REGISTER_OP(_backward_dot)
 .set_num_outputs(2)
 .set_attr_parser(ParamParser<DotParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInferStorageType>("FInferStorageType", DotBackwardInferStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", DotBackwardInferStorageType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

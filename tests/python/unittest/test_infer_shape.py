@@ -129,19 +129,6 @@ def test_fc_infer_type():
     for k, v in true_types.items():
         assert arg_type_dict[k] == v
 
-def check_infer_storage(v1, v2, v1_storage, v2_storage, out_chunk):
-    out = mx.symbol.elemwise_add(v1, v2)
-    arg_storage_types, out_storage_types, aux_storage_types = out.infer_storage_type(v1=v1_storage, v2=v2_storage)
-    assert len(out_storage_types) == 1
-    assert out_storage_types[0] == out_chunk
-
-def test_elemwise_add_infer_storage_type():
-    v1 = mx.symbol.Variable('v1')
-    v2 = mx.symbol.Variable('v2')
-    check_infer_storage(v1, v2, 'default', 'default', 'default')
-    check_infer_storage(v1, v2, 'default', 'row_sparse', 'default')
-    check_infer_storage(v1, v2, 'row_sparse', 'default', 'default')
-    check_infer_storage(v1, v2, 'row_sparse', 'row_sparse', 'row_sparse')
 
 if __name__ == "__main__":
     test_mlp2_infer_shape()
@@ -152,4 +139,3 @@ if __name__ == "__main__":
     test_incomplete_infer_slicechannel()
     test_incomplete_infer_convolution()
     test_incomplete_infer_concat()
-    test_elemwise_add_infer_storage_type()

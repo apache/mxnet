@@ -107,7 +107,7 @@ The gradient of an embedding matrix has the form of gradient vectors that are on
   })
 .set_attr<nnvm::FInferShape>("FInferShape", SparseEmbeddingShape)
 .set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType)
-.set_attr<nnvm::FInferStorageType>("FInferStorageType", SparseEmbeddingForwardStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingForwardStorageType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -296,7 +296,7 @@ Example::
   })
 .set_attr<nnvm::FInferShape>("FInferShape", SparseRetainOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SparseRetainOpType)
-.set_attr<nnvm::FInferStorageType>("FInferStorageType", SparseRetainForwardInferStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", SparseRetainForwardInferStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseRetainOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
@@ -310,7 +310,7 @@ NNVM_REGISTER_OP(_backward_sparse_retain)
 .set_num_inputs(2)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInferStorageType>("FInferStorageType", SparseRetainBackwardInferStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", SparseRetainBackwardInferStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseRetainOpBackwardEx<cpu>);
 
 }  // namespace op

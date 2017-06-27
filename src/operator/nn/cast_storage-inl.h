@@ -302,6 +302,7 @@ struct CastStorageParam : public dmlc::Parameter<CastStorageParam> {
 };
 
 inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
+                                        const Context& ctx,
                                         std::vector<int> *in_attrs,
                                         std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);

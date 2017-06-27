@@ -10,8 +10,10 @@
 #include <mxnet/ndarray.h>
 #include <mxnet/operator.h>
 #include <nnvm/graph.h>
+#include <nnvm/graph_attr_types.h>
 #include <vector>
 #include <memory>
+#include <string>
 
 namespace mxnet {
 namespace exec {
@@ -106,6 +108,45 @@ Graph AttachOpResources(Graph g);
  *  - "skip_plus_node", std::vector<int> if set to 1, current op's execution is skiped.
  */
 Graph DetectInplaceAddTo(Graph g);
+
+/*!
+ * \brief Infer shapes in the graph given the information.
+ * \param graph The input graph.
+ * \param shape_inputs The shapes of input symbols to the graph.
+ * \param shape_attr_key The key to the node attribute that can indicate shape. This is
+ *                       the place where manual hint for shapes could be injected.
+ * \return A graph with new attribute "shape" containing inferred shape of each NodeEntry.
+ *         The index of ShapeVector is given by graph.indexed_graph().entry_id.
+ */
+Graph InferShape(Graph graph,
+                 nnvm::ShapeVector shape_inputs,
+                 const std::string& shape_attr_key = "");
+
+/*!
+ * \brief Infer types in the graph given the information.
+ * \param graph The input graph.
+ * \param dtype_inputs The types of input symbols to the graph.
+ * \param dtype_attr_key The key to the node attribute that can indicate types. This is
+ *                       the place where manual hint for types could be injected.
+ * \return A graph with new attribute "dtype" containing inferred type of each NodeEntry.
+ *         The index of ShapeVector is given by graph.indexed_graph().entry_id.
+ */
+Graph InferType(Graph graph,
+                nnvm::DTypeVector dtype_inputs,
+                const std::string& dtype_attr_key = "");
+
+/*!
+ * \brief Infer storage types in the graph given the information.
+ * \param graph The input graph.
+ * \param storage_type_inputs The storage types of input symbols to the graph.
+ * \param storage_type_attr_key The key to the node attribute that can indicate storage types.
+                                This is the place where manual hint for types could be injected.
+ * \return A graph with new attribute "storage_type" containing inferred type of each NodeEntry.
+ *         The index of StorageTypeVector is given by graph.indexed_graph().entry_id.
+ */
+Graph InferStorageType(Graph graph,
+                       nnvm::StorageTypeVector storage_type_inputs,
+                       const std::string& storage_type_attr_key = "");
 
 }  // namespace exec
 }  // namespace mxnet

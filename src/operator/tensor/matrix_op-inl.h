@@ -478,6 +478,7 @@ void DotBackward_(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                       const Context& ctx,
                                        std::vector<int> *in_attrs,
                                        std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
@@ -487,6 +488,7 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                        const Context& ctx,
                                         std::vector<int> *in_attrs,
                                         std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);

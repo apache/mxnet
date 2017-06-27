@@ -14,7 +14,7 @@ MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, mshadow::op::plus>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryComputeEx<cpu, mshadow::op::plus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_add"})
-.set_attr<nnvm::FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1>);
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1>);
 
 // specialized gradient add function to do add to optimization
 // this must differ from elemwise_add to prevent add to optimization in forward pass.
@@ -33,7 +33,7 @@ NNVM_REGISTER_OP(_backward_add)
                                                                 mshadow_op::identity>)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
                       BinaryBackwardUseNoneEx<cpu, mshadow_op::identity, mshadow_op::identity>)
-.set_attr<nnvm::FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 2>);
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 2>);
 
 MXNET_OPERATOR_REGISTER_BINARY(_sub)
 .add_alias("_minus").add_alias("_Minus")
