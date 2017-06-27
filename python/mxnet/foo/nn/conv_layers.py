@@ -162,11 +162,11 @@ class Conv1D(_Conv):
 
     Input Shape:
         This depends on the `layout` parameter. Input is 3D array of shape
-        (batch_size, channel, width) if `layout` is `NCW`.
+        (batch_size, in_channel(in_filters), width) if `layout` is `NCW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 3D array of shape
-        (batch_size, channel, out_width) if `layout` is `NCW`. out_width
+        (batch_size, out_channel(filters), out_width) if `layout` is `NCW`. out_width
         depends on other input parameters as well. It is calculated as follows::
 
             out_width = floor((w+2*p-d*(k-1)-1)/s)+1
@@ -241,11 +241,11 @@ class Conv2D(_Conv):
 
     Input Shape:
         This depends on the `layout` parameter. Input is 4D array of shape
-        (batch_size, channel, height, width) if `layout` is `NCHW`.
+        (batch_size, in_channel(in_filters), height, width) if `layout` is `NCHW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 4D array of shape
-        (batch_size, channel, out_height, out_width) if `layout` is `NCHW`.
+        (batch_size, out_channel(filters), out_height, out_width) if `layout` is `NCHW`.
         out_height and out_width depends on other input parameters as well.
         They are calculated as follows::
 
@@ -323,12 +323,12 @@ class Conv3D(_Conv):
 
     Input Shape:
         This depends on the `layout` parameter. Input is 5D array of shape
-        (batch_size, channel, depth, height, width) if `layout` is `NCDHW`.
+        (batch_size, in_channel(in_filters), depth, height, width) if `layout` is `NCDHW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 5D array of shape
-        (batch_size, channel, out_depth, out_height, out_width) if `layout` is `NCDHW`.
-        out_depth, out_height and out_width depends on other input parameters as well.
+        (batch_size, out_channel(filters), out_depth, out_height, out_width) if `layout` is
+        `NCDHW`. out_depth, out_height and out_width depends on other input parameters as well.
         They are calculated as follows::
 
             out_depth = floor((d+2*p-d*(k-1)-1)/s)+1
@@ -408,11 +408,11 @@ class Conv1DTranspose(_Conv):
 
     Input Shape:
         This depends on the `layout` parameter. Input is 3D array of shape
-        (batch_size, channel, width) if `layout` is `NCW`.
+        (batch_size, in_channel(in_filters), width) if `layout` is `NCW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 3D array of shape
-        (batch_size, channel, out_width) if `layout` is `NCW`.
+        (batch_size, out_channel(filters), out_width) if `layout` is `NCW`.
         out_width depends on other input parameters as well. It is calculated as follows::
 
             out_width = (w-1)*s-2*p+k+op
@@ -495,11 +495,11 @@ class Conv2DTranspose(_Conv):
 
     Input Shape:
         This depends on the `layout` parameter. Input is 4D array of shape
-        (batch_size, channel, height, width) if `layout` is `NCHW`.
+        (batch_size, in_channel(in_filters), height, width) if `layout` is `NCHW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 4D array of shape
-        (batch_size, channel, out_height, out_width) if `layout` is `NCHW`.
+        (batch_size, out_channel(filters), out_height, out_width) if `layout` is `NCHW`.
         out_height and out_width depends on other input parameters as well.
         They are calculated as follows::
 
@@ -584,11 +584,11 @@ class Conv3DTranspose(_Conv):
 
     Input Shape:
         This depends on the `layout` parameter. Input is 5D array of shape
-        (batch_size, channel, depth, height, width) if `layout` is `NCDHW`.
+        (batch_size, in_channel(in_filters), depth, height, width) if `layout` is `NCDHW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 5D array of shape
-        (batch_size, channel, out_depth, out_height, out_width) if `layout` is `NCDHW`.
+        (batch_size, out_channel(filters), out_depth, out_height, out_width) if `layout` is `NCDHW`.
         out_depth, out_height and out_width depends on other input parameters as well.
         They are calculated as follows::
 
