@@ -12,7 +12,7 @@ fi
 WORKSPACE=$( echo "$1" | tr '[:upper:]' '[:lower:]' )
 
 PYTHON_VERSIONS=('2.7' '3.4' '3.6' '3.5')
-DEVICES=('pip_cu75' 'pip_cu80' 'pip_cpu')
+DEVICES=('pip_cu75' 'pip_cu80' 'pip_cpu' 'pip_mkl')
 
 CI_BUILD_DIR=tests/ci_build/pip_tests
 # build Docker images and test pip installation for each device
@@ -47,7 +47,9 @@ for DEV in "${DEVICES[@]}"; do
             DOCKER_CMD="${DOCKER_CMD} pip install mxnet-cu75; python tests/python/train/test_conv.py --gpu"
         elif [[ "${DEV}" == *"cu80"* ]]; then
             DOCKER_CMD="${DOCKER_CMD} pip install mxnet-cu80; python tests/python/train/test_conv.py --gpu"
-        fi
+        elif [[ "${DEV}" == *"mkl"* ]]; then
+            DOCKER_CMD="${DOCKER_CMD} pip install mxnet-mkl; python tests/python/train/test_conv.py"
+	fi
 	
         ${DOCKER_BINARY} run --rm -v ${WORKSPACE}:${WORKSPACE} ${DOCKER_TAG} bash -c "${DOCKER_CMD}"
     done
