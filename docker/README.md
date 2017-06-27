@@ -57,6 +57,29 @@ Available tags:
 - mxnet/python
 - mxnet/python:gpu
 
+Jupyter is included in python image and it is possilbe to use browser on the host to run jupyter on the docker image.
+## Instructions
+
+bind port 9999 or any other port you would like from host to docker using -p switch. 
+```bash
+docker run -it -p 9999:8888 mxnet/python
+```
+
+
+The previous line will open an interactive session on your docker. enter below line onto the console of your docker.
+
+```bash
+jupyter notebook --no-browser --allow-root --ip='*' &
+```
+the outcome is similar to:
+
+```bash
+  Copy/paste this URL into your browser when you connect for the first time,
+    to login with a token:
+        http://localhost:8888/?token=fdded3fa0be0cf582f67a86d21fc4bcd7bd15176adf2d795
+```
+copy the link and paste it in your host machine's browser. Do not forget to change the port from 8888 to 9999 or whatever port your have used.
+
 ### R
 
 Hosted at https://hub.docker.com/r/mxnet/r-lang/
