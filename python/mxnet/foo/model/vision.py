@@ -1,37 +1,14 @@
 from __future__ import division
 
-import argparse, time
-import logging
-logging.basicConfig(level=logging.INFO)
+from .. import nn
 
-import mxnet as mx
-from mxnet import foo
-from mxnet.foo import nn
-from mxnet import autograd as ag
-
-from data import *
-
-# CLI
-parser = argparse.ArgumentParser(description='Train a resnet model for image classification.')
-parser.add_argument('--dataset', type=str, default='dummy', help='dataset to use. options are mnist, cifar10, and dummy.')
-parser.add_argument('--batch_size', type=int, default=32, help='training batch size per device (CPU/GPU).')
-parser.add_argument('--resnet_version', type=int, default=1, help='version of resnet to use. options are 1 and 2. default is 1.')
-parser.add_argument('--resnet_layers', type=int, default=50, help='layers of resnet to use. options are 18, 50. default is 50.')
-parser.add_argument('--gpus', type=int, default=0, help='number of gpus to use.')
-parser.add_argument('--epochs', type=int, default=3, help='number of training epochs.')
-parser.add_argument('--lr', type=float, default=0.01, help='learning Rate. default is 0.01.')
-parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123.')
-parser.add_argument('--thumbnail', action='store_true', default=False, help='use thumbnail or not. default is false.')
-parser.add_argument('--benchmark', action='store_true', default=True, help='whether to run benchmark.')
-parser.add_argument('--symbolic', action='store_true', default=False, help='whether to train in symbolic way with module.')
-opt = parser.parse_args()
-
-print(opt)
-
+# Helpers
 def conv3x3(filters, stride, in_filters):
     return nn.Conv2D(filters, kernel_size=3, strides=stride, padding=1,
                      use_bias=False, in_filters=in_filters)
 
+
+# Blocks
 class BasicBlockV1(nn.HybridLayer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BasicBlockV1, self).__init__(**kwargs)
@@ -104,54 +81,6 @@ class BottleneckV1(nn.HybridLayer):
         return out
 
 
-class ResnetV1(nn.HybridLayer):
-    def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
-        super(ResnetV1, self).__init__(**kwargs)
-        with self.name_scope():
-             assert len(layers) == len(filters) - 1
-             self._thumbnail = thumbnail
-             if thumbnail:
-                 self.conv0 = conv3x3(filters[0], 1, 3)
-             else:
-                 self.conv0 = nn.Conv2D(filters[0], 7, 2, 3, use_bias=False,
-                                        in_filters=3)
-                 self.bn0 = nn.BatchNorm(num_features=filters[0])
-                 self.pool0 = nn.MaxPool2D(3, 2, 1)
-
-             self.body = nn.HSequential()
-             in_filters = filters[0]
-             for i in range(len(layers)):
-                 stride = 1 if i == 0 else 2
-                 self.body.add(self._make_layer(block, layers[i], filters[i+1],
-                                                stride, in_filters=filters[i]))
-                 in_filters = filters[i+1]
-
-             self.pool1 = nn.GlobalAvgPool2D()
-             self.dense1 = nn.Dense(classes, in_units=filters[-1])
-
-    def _make_layer(self, block, layers, filters, stride, in_filters=0):
-        layer = nn.HSequential()
-        layer.add(block(filters, stride, True, in_filters=in_filters))
-        for i in range(layers-1):
-            layer.add(block(filters, 1, False, in_filters=filters))
-        return layer
-
-    def hybrid_forward(self, F, x):
-        x = self.conv0(x)
-        if not self._thumbnail:
-            x = self.bn0(x)
-            x = F.Activation(x, act_type='relu')
-            x = self.pool0(x)
-
-        x = self.body(x)
-
-        x = self.pool1(x)
-        x = x.reshape((0, -1))
-        x = self.dense1(x)
-
-        return x
-
-
 class BasicBlockV2(nn.HybridLayer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BasicBlockV2, self).__init__(**kwargs)
@@ -217,8 +146,58 @@ class BottleneckV2(nn.HybridLayer):
 
         return x + residual
 
+
+# Nets
+class ResnetV1(nn.HybridLayer):
+    def __init__(self, block, classes, layers, filters, thumbnail, **kwargs):
+        super(ResnetV1, self).__init__(**kwargs)
+        with self.name_scope():
+             assert len(layers) == len(filters) - 1
+             self._thumbnail = thumbnail
+             if thumbnail:
+                 self.conv0 = conv3x3(filters[0], 1, 3)
+             else:
+                 self.conv0 = nn.Conv2D(filters[0], 7, 2, 3, use_bias=False,
+                                        in_filters=3)
+                 self.bn0 = nn.BatchNorm(num_features=filters[0])
+                 self.pool0 = nn.MaxPool2D(3, 2, 1)
+
+             self.body = nn.HSequential()
+             in_filters = filters[0]
+             for i in range(len(layers)):
+                 stride = 1 if i == 0 else 2
+                 self.body.add(self._make_layer(block, layers[i], filters[i+1],
+                                                stride, in_filters=filters[i]))
+                 in_filters = filters[i+1]
+
+             self.pool1 = nn.GlobalAvgPool2D()
+             self.dense1 = nn.Dense(classes, in_units=filters[-1])
+
+    def _make_layer(self, block, layers, filters, stride, in_filters=0):
+        layer = nn.HSequential()
+        layer.add(block(filters, stride, True, in_filters=in_filters))
+        for i in range(layers-1):
+            layer.add(block(filters, 1, False, in_filters=filters))
+        return layer
+
+    def hybrid_forward(self, F, x):
+        x = self.conv0(x)
+        if not self._thumbnail:
+            x = self.bn0(x)
+            x = F.Activation(x, act_type='relu')
+            x = self.pool0(x)
+
+        x = self.body(x)
+
+        x = self.pool1(x)
+        x = x.reshape((0, -1))
+        x = self.dense1(x)
+
+        return x
+
+
 class ResnetV2(nn.HybridLayer):
-    def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
+    def __init__(self, block, classes, layers, filters, thumbnail, **kwargs):
         super(ResnetV2, self).__init__(**kwargs)
         with self.name_scope():
             assert len(layers) == len(filters) - 1
@@ -269,105 +248,122 @@ class ResnetV2(nn.HybridLayer):
 
         return x
 
-# construct net
+
+class VGG(nn.HybridLayer):
+    def __init__(self, classes, layers, filters, batch_norm, **kwargs):
+        super(VGG, self).__init__(**kwargs)
+        with self.name_scope():
+            assert len(layers) == len(filters)
+            self.features = self._make_features(layers, batch_norm)
+            self.classifier = nn.HSequential()
+            self.classifier.add(nn.Dense(4096, activation='relu',
+                                         kernel_initializer=mx.initializer.Normal(),
+                                         bias_initializer='zeros'))
+            self.classifier.add(nn.Dropout(rate=0.5))
+            self.classifier.add(nn.Dense(4096, activation='relu',
+                                         kernel_initializer=mx.initializer.Normal(),
+                                         bias_initializer='zeros'))
+            self.classifier.add(nn.Dropout(rate=0.5))
+            self.classifier.add(nn.Dense(classes,
+                                         kernel_initializer=mx.initializer.Normal(),
+                                         bias_initializer='zeros'))
+
+    def _make_features(self, layers, filters, batch_norm):
+        featurizer = nn.HSequential()
+        for i, num in enumerate(layers):
+            for _ in range(num):
+                featurizer.add(nn.Conv2D(filters[i], kernel_size=3, padding=1,
+                                         kernel_initializer=mx.initializer.Xavier(rnd_type='gaussian',
+                                                                                  factor_type='out',
+                                                                                  magnitude=2),
+                                         bias_initializer='zeros'))
+                if batch_norm:
+                    featurizer.add(nn.BatchNorm())
+                featurizer.add(nn.Activation('relu'))
+            featurizer.add(nn.MaxPool2D(strides=2))
+        return featurizer
+
+    def hybrid_forward(self, F, x):
+        x = self.features(x)
+        x = self.classifier(x)
+        return x
+
+
+# Specification
 resnet_spec = { 18: ('basic_block', [2, 2, 2], [16, 16, 32, 64]),
                 34: ('basic_block', [3, 4, 6, 3], [16, 16, 32, 64]),
                 50: ('bottle_neck', [3, 4, 6, 3], [64, 256, 512, 1024, 2048]),
                 101: ('bottle_neck', [3, 4, 23, 3], [64, 256, 512, 1024, 2048]),
                 152: ('bottle_neck', [3, 8, 36, 3], [64, 256, 512, 1024, 2048]) }
 
+vgg_spec = { 11: ([1, 1, 2, 2, 2], [64, 128, 256, 512, 512]),
+             13: ([2, 2, 2, 2, 2], [64, 128, 256, 512, 512]),
+             16: ([2, 2, 3, 3, 3], [64, 128, 256, 512, 512]),
+             19: ([2, 2, 4, 4, 4], [64, 128, 256, 512, 512]) }
+
 resnet_net_versions = [ResnetV1, ResnetV2]
 resnet_block_versions = [{'basic_block': BasicBlockV1, 'bottle_neck': BottleneckV1},
                   {'basic_block': BasicBlockV2, 'bottle_neck': BottleneckV2}]
 
+
+# Constructor
 def get_resnet(version, num_layers, classes, use_thumbnail):
     block_type, layers, filters = resnet_spec[num_layers]
     resnet = resnet_net_versions[version]
     block = resnet_block_versions[version][block_type]
     return resnet(block, classes, layers, filters, use_thumbnail)
 
-dataset_classes = {'mnist': 10, 'cifar10': 10, 'imagenet': 1000, 'dummy': 1000}
-
-batch_size, dataset, classes = opt.batch_size, opt.dataset, dataset_classes[opt.dataset]
-
-gpus, version = opt.gpus, opt.resnet_version-1
-
-if opt.benchmark:
-    batch_size = 32
-    dataset = 'dummy'
-    classes = 1000
-    version = 0
+def get_vgg(num_layers, classes, batch_norm):
+    layers, filters = vgg_spec[num_layers]
+    return VGG(classes, layers, filters, batch_norm)
 
 
-net = get_resnet(version, opt.resnet_layers, classes, opt.thumbnail)
+# Convenience constructors
+def resnet18_v1(classes, use_thumbnail=False):
+    return get_resnet(0, 18, classes, use_thumbnail)
+def resnet34_v1(classes, use_thumbnail=False):
+    return get_resnet(0, 34, classes, use_thumbnail)
+def resnet50_v1(classes, use_thumbnail=False):
+    return get_resnet(0, 50, classes, use_thumbnail)
+def resnet101_v1(classes, use_thumbnail=False):
+    return get_resnet(0, 101, classes, use_thumbnail)
+def resnet152_v1(classes, use_thumbnail=False):
+    return get_resnet(0, 152, classes, use_thumbnail)
 
-batch_size *= max(1, gpus)
+def resnet18_v2(classes, use_thumbnail=False):
+    return get_resnet(1, 18, classes, use_thumbnail)
+def resnet34_v2(classes, use_thumbnail=False):
+    return get_resnet(1, 34, classes, use_thumbnail)
+def resnet50_v2(classes, use_thumbnail=False):
+    return get_resnet(1, 50, classes, use_thumbnail)
+def resnet101_v2(classes, use_thumbnail=False):
+    return get_resnet(1, 101, classes, use_thumbnail)
+def resnet152_v2(classes, use_thumbnail=False):
+    return get_resnet(1, 152, classes, use_thumbnail)
 
-# get dataset iterators
-if dataset == 'mnist':
-    train_data, val_data = mnist_iterator(batch_size, (1, 32, 32))
-elif dataset == 'cifar10':
-    train_data, val_data = cifar10_iterator(batch_size, (3, 32, 32))
-elif dataset == 'dummy':
-    train_data, val_data = dummy_iterator(batch_size, (3, 224, 224))
+def vgg11(classes, batch_norm=False):
+    return get_vgg(11, classes, batch_norm)
+def vgg13(classes, batch_norm=False):
+    return get_vgg(13, classes, batch_norm)
+def vgg16(classes, batch_norm=False):
+    return get_vgg(16, classes, batch_norm)
+def vgg19(classes, batch_norm=False):
+    return get_vgg(19, classes, batch_norm)
 
-def test(ctx):
-    metric = mx.metric.Accuracy()
-    val_data.reset()
-    for batch in val_data:
-        data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
-        label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
-        outputs = []
-        for x in data:
-            outputs.append(net(x))
-        metric.update(label, outputs)
-    logging.info('validation acc: %s=%f'%metric.get())
-
-
-def train(epoch, ctx):
-    if isinstance(ctx, mx.Context):
-        ctx = [ctx]
-    net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-    trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.1})
-    metric = mx.metric.Accuracy()
-
-    for i in range(epoch):
-        tic = time.time()
-        train_data.reset()
-        btic = time.time()
-        for batch in train_data:
-            data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
-            label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
-            outputs = []
-            losses = []
-            with ag.record():
-                for x, y in zip(data, label):
-                    z = net(x)
-                    loss = foo.loss.softmax_cross_entropy_loss(z, y)
-                    losses.append(loss)
-                    outputs.append(z)
-                for loss in losses:
-                    loss.backward()
-            trainer.step(batch.data[0].shape[0])
-            metric.update(label, outputs)
-            logging.info('speed: {} samples/s'.format(batch_size/(time.time()-btic)))
-            btic = time.time()
-
-        name, acc = metric.get()
-        metric.reset()
-        logging.info('training acc at epoch %d: %s=%f'%(i, name, acc))
-        logging.info('time: %f'%(time.time()-tic))
-        test(ctx)
-
-    net.all_params().save('mnist.params')
-
-if __name__ == '__main__':
-    if opt.symbolic:
-        data = mx.sym.var('data')
-        out = net(data)
-        softmax = mx.sym.SoftmaxOutput(out, name='softmax')
-        mod = mx.mod.Module(softmax, context=[mx.gpu(i) for i in range(gpus)] if gpus > 0 else [mx.cpu()])
-        mod.fit(train_data, num_epoch=opt.epochs, batch_end_callback = mx.callback.Speedometer(batch_size, 1))
-    else:
-        net.hybridize()
-        train(opt.epochs, [mx.gpu(i) for i in range(gpus)] if gpus > 0 else [mx.cpu()])
+def get_vision_model(name, **kwargs):
+    models = {'resnet18_v1': resnet18_v1,
+              'resnet34_v1': resnet34_v1,
+              'resnet50_v1': resnet50_v1,
+              'resnet101_v1': resnet101_v1,
+              'resnet152_v1': resnet152_v1,
+              'resnet18_v1': resnet18_v1,
+              'resnet34_v1': resnet34_v1,
+              'resnet50_v1': resnet50_v1,
+              'resnet101_v1': resnet101_v1,
+              'resnet152_v1': resnet152_v1,
+              'vgg11': vgg11,
+              'vgg13': vgg13,
+              'vgg16': vgg16,
+              'vgg19': vgg19}
+    assert name in models, 'Model %s is not supported'%name
+    return models[name](**kwargs)

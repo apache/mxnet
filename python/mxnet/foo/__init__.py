@@ -13,3 +13,5 @@ from .trainer import *
 from . import loss
 
 from . import utils
+
+from . import model
