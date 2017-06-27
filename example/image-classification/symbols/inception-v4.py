@@ -141,7 +141,7 @@ def InceptionC(input, name=None):
     return concat
 
 
-def get_symbol(num_classes=1000):
+def get_symbol(num_classes=1000, **kwargs):
     data = mx.symbol.Variable(name="data")
     x = Inception_stem(data, name='in_stem')
 
