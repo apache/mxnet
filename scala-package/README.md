@@ -79,11 +79,10 @@ java -Xmx4G -cp \
   --cpus=0,1,2,3
 ```
 
-If you've compiled with `USE_DIST_KVSTORE` enabled, the python tools in `mxnet/tracker` can be used to launch distributed training.
-The following command runs the above example using 2 worker nodes (and 2 server nodes) in local. Refer to [Distributed Training](http://mxnet.io/how_to/multi_devices.html) for more details.
+If you've compiled with `USE_DIST_KVSTORE` enabled, the python tools in `tools` can be used to launch distributed training. Assuming you are in `mxnet` directory, the following command runs the above example using 2 worker nodes (and 2 server nodes) in local. Refer to [Distributed Training](http://mxnet.io/how_to/multi_devices.html) for more details.
 
 ```bash
-tracker/dmlc_local.py -n 2 -s 2 \
+tools/launch.py -n 2 --launcher local \
   java -Xmx4G -cp \
   scala-package/assembly/{your-architecture}/target/*:scala-package/examples/target/*:scala-package/examples/target/classes/lib/* \
   ml.dmlc.mxnet.examples.imclassification.TrainMnist \
