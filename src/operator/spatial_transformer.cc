@@ -17,9 +17,9 @@ inline void BilinearSamplingForward(const Tensor<cpu, 4, DType> &output,
   const DType *grid = grid_src.dptr_;
   int o_n = output.size(0), o_c = output.size(1), o_h = output.size(2), o_w = output.size(3);
   int i_c = input.size(1), i_h = input.size(2), i_w = input.size(3);
-  for (index_t n = 0; n < o_n; ++n) {
-    for (index_t c = 0; c < o_c; ++c) {
-      for (index_t h = 0; h < o_h; ++h) {
+  for (index_t n = 0; n < static_cast<index_t>(o_n); ++n) {
+    for (index_t c = 0; c < static_cast<index_t>(o_c); ++c) {
+      for (index_t h = 0; h < static_cast<index_t>(o_h); ++h) {
         for (index_t w = 0; w < o_w; ++w) {
           index_t out_index = n * o_c * o_h * o_w + c * o_h * o_w + h * o_w + w;
           index_t grid_index = n * o_h * o_w * 2 + h * o_w + w;
@@ -56,9 +56,9 @@ inline void BilinearSamplingBackward(const Tensor<cpu, 4, DType> &input_grad,
   int o_n = output_grad.size(0), o_c = output_grad.size(1),
       o_h = output_grad.size(2), o_w = output_grad.size(3);
   int i_c = input_data.size(1), i_h = input_data.size(2), i_w = input_data.size(3);
-  for (index_t n = 0; n < o_n; ++n) {
-     for (index_t h = 0; h < o_h; ++h) {
-        for (index_t w = 0; w < o_w; ++w) {
+  for (index_t n = 0; n < static_cast<index_t>(o_n); ++n) {
+     for (index_t h = 0; h < static_cast<index_t>(o_h); ++h) {
+        for (index_t w = 0; w < static_cast<index_t>(o_w); ++w) {
           DType top_left_y_gw = 0.0;
           DType top_left_x_gw = 0.0;
           index_t grid_src_index = n * o_h * o_w * 2 + h * o_w + w;
@@ -126,11 +126,13 @@ Operator *SpatialTransformerProp::CreateOperatorEx(Context ctx, std::vector<TSha
 DMLC_REGISTER_PARAMETER(SpatialTransformerParam);
 
 MXNET_REGISTER_OP_PROPERTY(SpatialTransformer, SpatialTransformerProp)
-.add_argument("data", "Symbol", "Input data to the SpatialTransformerOp.")
-.add_argument("loc", "Symbol", "localisation net, the output dim should be 6 when transform_type "
+.add_argument("data", "NDArray-or-Symbol",
+              "Input data to the SpatialTransformerOp.")
+.add_argument("loc", "NDArray-or-Symbol",
+              "localisation net, the output dim should be 6 when transform_type "
               "is affine. You shold initialize the weight and bias with identity tranform.")
 .add_arguments(SpatialTransformerParam::__FIELDS__())
-.describe("Apply spatial transformer to input feature map.");
+.describe("Applies a spatial transformer to input feature map.");
 
 }  // namespace op
 }  // namespace mxnet

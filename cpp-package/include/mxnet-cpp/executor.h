@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef MXNETCPP_EXECUTOR_H
-#define MXNETCPP_EXECUTOR_H
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_H_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_H_
 
 #include <vector>
 #include <map>
@@ -24,6 +24,7 @@ class Optimizer;
 * \brief Executor interface
 */
 class Executor {
+  friend class Monitor;
  public:
   Executor(const Symbol &symbol, Context context,
            const std::vector<NDArray> &arg_arrays,
@@ -134,4 +135,4 @@ class Executor {
 };
 }  // namespace cpp
 }  // namespace mxnet
-#endif  // MXNETCPP_EXECUTOR_H
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_H_

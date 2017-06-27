@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef MXNET_CPP_Shape_H
-#define MXNET_CPP_Shape_H
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_SHAPE_H_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_SHAPE_H_
 
 #include <istream>
 #include <ostream>
@@ -386,4 +386,4 @@ inline std::istream &operator>>(std::istream &is, Shape &shape) {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // MXNET_CPP_ShapeImpl_H
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_SHAPE_H_

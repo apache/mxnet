@@ -32,11 +32,13 @@ Operator *RNNProp::CreateOperatorEx(Context ctx,
 DMLC_REGISTER_PARAMETER(RNNParam);
 
 MXNET_REGISTER_OP_PROPERTY(RNN, RNNProp)
-.describe("Apply a recurrent layer to input.")
-.add_argument("data", "Symbol", "Input data to RNN")
-.add_argument("parameters", "Symbol", "Vector of all RNN trainable parameters concatenated")
-.add_argument("state", "Symbol", "initial hidden state of the RNN")
-.add_argument("state_cell", "Symbol", "initial cell state for LSTM networks (only for LSTM)")
+.describe("Applies a recurrent layer to input.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to RNN")
+.add_argument("parameters", "NDArray-or-Symbol",
+              "Vector of all RNN trainable parameters concatenated")
+.add_argument("state", "NDArray-or-Symbol", "initial hidden state of the RNN")
+.add_argument("state_cell", "NDArray-or-Symbol",
+              "initial cell state for LSTM networks (only for LSTM)")
 .add_arguments(RNNParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

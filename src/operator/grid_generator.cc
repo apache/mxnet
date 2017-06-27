@@ -32,11 +32,9 @@ Operator *GridGeneratorProp::CreateOperatorEx(Context ctx, std::vector<TShape> *
 DMLC_REGISTER_PARAMETER(GridGeneratorParam);
 
 MXNET_REGISTER_OP_PROPERTY(GridGenerator, GridGeneratorProp)
-.add_argument("data", "Symbol", "Input data to the GridGeneratorOp.")
-.describe("if transformation type is affine, data is affine matrix : (batch, 6)")
-.describe("if transformation type is warp, data is optical flow : (batch, 2, h, w)")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the function.")
 .add_arguments(GridGeneratorParam::__FIELDS__())
-.describe("generate sampling grid for bilinear sampling.");
+.describe("Generates 2D sampling grid for bilinear sampling.");
 
 }  // namespace op
 }  // namespace mxnet

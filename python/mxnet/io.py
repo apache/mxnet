@@ -1,4 +1,4 @@
-"""Data iterators for common data formats"""
+"""Data iterators for common data formats."""
 from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 
@@ -17,22 +17,32 @@ from .ndarray import array
 from .ndarray import concatenate
 
 class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
-    """Data description
+    """DataDesc is used to store name, shape, type and layout
+    information of the data or the label.
+
+    The `layout` describes how the axes in `shape` should be interpreted,
+    for example for image data setting `layout=NCHW` indicates
+    that the first axis is number of examples in the batch(N),
+    C is number of channels, H is the height and W is the width of the image.
+
+    For sequential data, by default `layout` is set to ``NTC``, where
+    N is number of examples in the batch, T the temporal axis representing time
+    and C is the number of channels.
 
     Parameters
     ----------
     cls : DataDesc
-         The class
+         The class.
     name : str
-         Data name
+         Data name.
     shape : tuple of int
-         Data shape
+         Data shape.
     dtype : np.dtype, optional
-         Data type
+         Data type.
     layout : str, optional
-         Data layout
+         Data layout.
     """
-    def __new__(cls, name, shape, dtype=mx_real_t, layout='NCHW'):
+    def __new__(cls, name, shape, dtype=mx_real_t, layout='NCHW'): # pylint: disable=super-on-old-class
         ret = super(cls, DataDesc).__new__(cls, name, shape)
         ret.dtype = dtype
         ret.layout = layout
@@ -46,8 +56,8 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     def get_batch_axis(layout):
         """Get the dimension that corresponds to the batch size.
 
-        When data-parallelism is used, the data will be automatically split and
-        concatenate along the batch_size dimension. Axis can be -1, which means
+        When data parallelism is used, the data will be automatically split and
+        concatenated along the batch-size dimension. Axis can be -1, which means
         the whole array will be copied for each data-parallelism device.
 
         Parameters
@@ -82,25 +92,42 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
 class DataBatch(object):
     """A data batch.
 
+    MXNet's data iterator returns a batch of data for each `next` call.
+    This data contains `batch_size` number of examples.
+
+    If the input data consists of images, then shape of these images depend on
+    the `layout` attribute of `DataDesc` object in `provide_data` parameter.
+
+    If `layout` is set to 'NCHW' then, images should be stored in a 4-D matrix
+    of shape ``(batch_size, num_channel, height, width)``.
+    If `layout` is set to 'NHWC' then, images should be stored in a 4-D matrix
+    of shape ``(batch_size, height, width, num_channel)``.
+    The channels are often in RGB order.
+
     Parameters
     ----------
-    data : list of NDArray
-          A list of input data
-    label : list of NDArray
-          A list of input labels
+    data : list of `NDArray`, each array containing `batch_size` examples.
+          A list of input data.
+    label : list of `NDArray`, each array often containing a 1-dimensional array. optional
+          A list of input labels.
     pad : int, optional
-          The number of examples padded at the batch end. It is used when the
-          examples read is less than the batch size
+          The number of examples padded at the end of a batch. It is used when the
+          total number of examples read is not divisible by the `batch_size`.
+          These extra padded examples are ignored in prediction.
     index : numpy.array, optional
-          The example indices in this batch
+          The example indices in this batch.
     bucket_key : int, optional
-          The key of the bucket, used for bucket IO.
-    provide_data : list of (name, shape), optional
-          The *i*-th elements describes the name and shape of ``data[i]``
-    provide_label : list of (name, shape), optional
-          The *i*-th elements describes the name and shape of ``label[i]``
+          The bucket key, used for bucketing module.
+    provide_data : list of `DataDesc`, optional
+          A list of `DataDesc` objects. `DataDesc` is used to store
+          name, shape, type and layout information of the data.
+          The *i*-th element describes the name and shape of ``data[i]``.
+    provide_label : list of `DataDesc`, optional
+          A list of `DataDesc` objects. `DataDesc` is used to store
+          name, shape, type and layout information of the label.
+          The *i*-th element describes the name and shape of ``label[i]``.
     """
-    def __init__(self, data, label, pad=None, index=None,
+    def __init__(self, data, label=None, pad=None, index=None,
                  bucket_key=None, provide_data=None, provide_label=None):
         if data is not None:
             assert isinstance(data, (list, tuple)), "Data must be list of NDArrays"
@@ -124,12 +151,23 @@ class DataBatch(object):
             label_shapes)
 
 class DataIter(object):
-    """The base class of a data iterator
+    """The base class for an MXNet data iterator.
+
+    All I/O in MXNet is handled by specializations of this class. Data iterators
+    in MXNet are similar to standard-iterators in Python. On each call to `next`
+    they return a `DataBatch` which represents the next batch of data. When
+    there is no more data to return, it raises a `StopIteration` exception.
 
     Parameters
     ----------
     batch_size : int, optional
-        The batch size, namely the number of examples in a batch
+        The batch size, namely the number of items in the batch.
+
+    See Also
+    --------
+    NDArrayIter : Data-iterator for MXNet NDArray or numpy-ndarray objects.
+    CSVIter : Data-iterator for csv data.
+    ImageIter : Data-iterator for images.
     """
     def __init__(self, batch_size=0):
         self.batch_size = batch_size
@@ -138,8 +176,7 @@ class DataIter(object):
         return self
 
     def reset(self):
-        """Reset the iterator to the begin of the data
-        """
+        """Reset the iterator to the begin of the data."""
         pass
 
     def next(self):
@@ -153,7 +190,7 @@ class DataIter(object):
         Raises
         ------
         StopIteration
-            If the end of the data is reached
+            If the end of the data is reached.
         """
         if self.iter_next():
             return DataBatch(data=self.getdata(), label=self.getlabel(), \
@@ -180,17 +217,17 @@ class DataIter(object):
         Returns
         -------
         list of NDArray
-            The data of current batch.
+            The data of the current batch.
         """
         pass
 
     def getlabel(self):
-        """Get label of current batch.
+        """Get label of the current batch.
 
         Returns
         -------
         list of NDArray
-            The label of current batch.
+            The label of the current batch.
         """
         pass
 
@@ -200,31 +237,31 @@ class DataIter(object):
         Returns
         -------
         index : numpy.array
-            The indices of examples in the current batch
+            The indices of examples in the current batch.
         """
         return None
 
     def getpad(self):
-        """Get the number of padding examples in current batch.
+        """Get the number of padding examples in the current batch.
 
         Returns
         -------
         int
-            Number of padding examples in current batch
+            Number of padding examples in the current batch.
         """
         pass
 
 class ResizeIter(DataIter):
-    """Resize a data iterator to given number of batches
+    """Resize a data iterator to a given number of batches.
 
     Parameters
     ----------
     data_iter : DataIter
-        The data iterator to be resized
+        The data iterator to be resized.
     size : int
         The number of batches per epoch to resize to.
     reset_internal : bool
-        Whether to reset internal iterator on ResizeIter.reset
+        Whether to reset internal iterator on ResizeIter.reset.
 
 
     Examples
@@ -280,7 +317,7 @@ class ResizeIter(DataIter):
         return self.current_batch.pad
 
 class PrefetchingIter(DataIter):
-    """Performs pre-fetch for other data iterators
+    """Performs pre-fetch for other data iterators.
 
     This iterator will create another thread to perform ``iter_next`` and then
     store the data in memory. It potentially accelerates the data read, at the
@@ -289,13 +326,13 @@ class PrefetchingIter(DataIter):
     Parameters
     ----------
     iters : DataIter or list of DataIter
-        The data iterators to be pre-fetched
+        The data iterators to be pre-fetched.
     rename_data : None or list of dict
         The *i*-th element is a renaming map for the *i*-th iter, in the form of
         {'original_name' : 'new_name'}. Should have one entry for each entry
-        in iter[i].provide_data
+        in iter[i].provide_data.
     rename_label : None or list of dict
-        Similar to rename_data
+        Similar to ``rename_data``.
 
     Examples
     --------
@@ -452,26 +489,87 @@ def _init_data(data, allow_empty, default_name):
     return list(data.items())
 
 class NDArrayIter(DataIter):
-    """Iterating on either ``mx.nd.NDArray`` or ``numpy.ndarray``.
+    """Returns an iterator for ``mx.nd.NDArray`` or ``numpy.ndarray``.
+
+    Example usage:
+    ----------
+    >>> data = np.arange(40).reshape((10,2,2))
+    >>> labels = np.ones([10, 1])
+    >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')
+    >>> for batch in dataiter:
+    ...     print batch.data[0].asnumpy()
+    ...     batch.data[0].shape
+    ...
+    [[[ 36.  37.]
+      [ 38.  39.]]
+     [[ 16.  17.]
+      [ 18.  19.]]
+     [[ 12.  13.]
+      [ 14.  15.]]]
+    (3L, 2L, 2L)
+    [[[ 32.  33.]
+      [ 34.  35.]]
+     [[  4.   5.]
+      [  6.   7.]]
+     [[ 24.  25.]
+      [ 26.  27.]]]
+    (3L, 2L, 2L)
+    [[[  8.   9.]
+      [ 10.  11.]]
+     [[ 20.  21.]
+      [ 22.  23.]]
+     [[ 28.  29.]
+      [ 30.  31.]]]
+    (3L, 2L, 2L)
+    >>> dataiter.provide_data # Returns a list of `DataDesc`
+    [DataDesc[data,(3, 2L, 2L),<type 'numpy.float32'>,NCHW]]
+    >>> dataiter.provide_label # Returns a list of `DataDesc`
+    [DataDesc[softmax_label,(3, 1L),<type 'numpy.float32'>,NCHW]]
+
+    In the above example, data is shuffled as `shuffle` parameter is set to `True`
+    and remaining examples are discarded as `last_batch_handle` parameter is set to `discard`.
+
+    Usage of `last_batch_handle` parameter:
+
+    >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='pad')
+    >>> batchidx = 0
+    >>> for batch in dataiter:
+    ...     batchidx += 1
+    ...
+    >>> batchidx  # Padding added after the examples read are over. So, 10/3+1 batches are created.
+    4
+    >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')
+    >>> batchidx = 0
+    >>> for batch in dataiter:
+    ...     batchidx += 1
+    ...
+    >>> batchidx # Remaining examples are discarded. So, 10/3 batches are created.
+    3
+
+    `NDArrayIter` also supports multiple input and labels.
+
+    >>> data = {'data1':np.zeros(shape=(10,2,2)), 'data2':np.zeros(shape=(20,2,2))}
+    >>> label = {'label1':np.zeros(shape=(10,1)), 'label2':np.zeros(shape=(20,1))}
+    >>> dataiter = mx.io.NDArrayIter(data, label, 3, True, last_batch_handle='discard')
 
     Parameters
     ----------
     data: array or list of array or dict of string to array
-        Input data
+        The input data.
     label: array or list of array or dict of string to array, optional
-        Input label
+        The input label.
     batch_size: int
-        Batch Size
+        Batch size of data.
     shuffle: bool, optional
-        Whether to shuffle the data
+        Whether to shuffle the data.
     last_batch_handle : str, optional
-        How to handle the last batch, can be 'pad', 'discard' or
+        How to handle the last batch. This parameter can be 'pad', 'discard' or
         'roll_over'. 'roll_over' is intended for training and can cause problems
         if used for prediction.
     data_name : str, optional
-        The data name
+        The data name.
     label_name : str, optional
-        The label name
+        The label name.
     """
     def __init__(self, data, label=None, batch_size=1, shuffle=False,
                  last_batch_handle='pad', data_name='data',
@@ -511,7 +609,7 @@ class NDArrayIter(DataIter):
 
     @property
     def provide_data(self):
-        """The name and shape of data provided by this iterator"""
+        """The name and shape of data provided by this iterator."""
         return [
             DataDesc(k, tuple([self.batch_size] + list(v.shape[1:])), v.dtype)
             for k, v in self.data
@@ -519,14 +617,14 @@ class NDArrayIter(DataIter):
 
     @property
     def provide_label(self):
-        """The name and shape of label provided by this iterator"""
+        """The name and shape of label provided by this iterator."""
         return [
             DataDesc(k, tuple([self.batch_size] + list(v.shape[1:])), v.dtype)
             for k, v in self.label
         ]
 
     def hard_reset(self):
-        """Ignore roll over data and set to start"""
+        """Ignore roll over data and set to start."""
         self.cursor = -self.batch_size
 
     def reset(self):
@@ -547,7 +645,7 @@ class NDArrayIter(DataIter):
             raise StopIteration
 
     def _getdata(self, data_source):
-        """Load data from underlying arrays, internal use only"""
+        """Load data from underlying arrays, internal use only."""
         assert(self.cursor < self.num_data), "DataIter needs reset."
         if self.cursor + self.batch_size <= self.num_data:
             return [x[1][self.cursor:self.cursor+self.batch_size] for x in data_source]
@@ -570,12 +668,30 @@ class NDArrayIter(DataIter):
 
 
 class MXDataIter(DataIter):
-    """A python wrapper a C++ data iterator
+    """A python wrapper a C++ data iterator.
+
+    This iterator is the Python wrapper to all native C++ data iterators, such
+    as `CSVIter, `ImageRecordIter`, `MNISTIter`, etc. When initializing
+    `CSVIter` for example, you will get an `MXDataIter` instance to use in your
+    Python code. Calls to `next`, `reset`, etc will be delegated to the
+    underlying C++ data iterators.
+
+    Usually you don't need to interact with `MXDataIter` directly unless you are
+    implementing your own data iterators in C++. To do that, please refer to
+    examples under the `src/io` folder.
 
     Parameters
     ----------
-    handle : DataIterHandle
-        the handle to the underlying C++ Data Iterator
+    handle : DataIterHandle, required
+        The handle to the underlying C++ Data Iterator.
+    data_name : str, optional
+        Data name. Default to "data".
+    label_name : str, optional
+        Label name. Default to "softmax_label".
+
+    See Also
+    --------
+    src/io : The underlying C++ data iterator implementation, e.g., `CSVIter`.
     """
     def __init__(self, handle, data_name='data', label_name='softmax_label', **_):
         super(MXDataIter, self).__init__()
@@ -593,7 +709,6 @@ class MXDataIter(DataIter):
         self.provide_data = [DataDesc(data_name, data.shape, data.dtype)]
         self.provide_label = [DataDesc(label_name, label.shape, label.dtype)]
         self.batch_size = data.shape[0]
-
 
     def __del__(self):
         check_call(_LIB.MXDataIterFree(self.handle))
@@ -703,7 +818,7 @@ def _make_io_iterator(handle):
         Returns
         -------
         dataiter: Dataiter
-            the resulting data iterator
+            The resulting data iterator.
         """
         param_keys = []
         param_vals = []

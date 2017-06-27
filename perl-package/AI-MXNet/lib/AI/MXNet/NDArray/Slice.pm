@@ -7,7 +7,7 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-AI::MXNet::NDArray::Slice - A convenience class for slicing of the AI::MXNet::NDArray objects.
+    AI::MXNet::NDArray::Slice - A convenience class for slicing of the AI::MXNet::NDArray objects.
 =cut
 
 has parent => (is => 'ro', isa => 'AI::MXNet::NDArray', required => 1);

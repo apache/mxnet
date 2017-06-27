@@ -21,7 +21,7 @@ DMLC_REGISTER_PARAMETER(IdentityAttachKLSparseRegParam);
 
 MXNET_REGISTER_OP_PROPERTY(IdentityAttachKLSparseReg, IdentityAttachKLSparseRegProp)
 .describe("Apply a sparse regularization to the output a sigmoid activation function.")
-.add_argument("data", "Symbol", "Input data.")
+.add_argument("data", "NDArray-or-Symbol", "Input data.")
 .add_arguments(IdentityAttachKLSparseRegParam::__FIELDS__());
 
 NNVM_REGISTER_OP(IdentityAttachKLSparseReg)

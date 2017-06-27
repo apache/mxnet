@@ -11,21 +11,31 @@ max_time = 60
 
 // initialize source codes
 def init_git() {
-  checkout scm
   retry(5) {
-    timeout(time: 2, unit: 'MINUTES') {
-      sh 'git submodule update --init'
+    try {
+      timeout(time: 2, unit: 'MINUTES') {
+        checkout scm
+        sh 'git submodule update --init'
+      }
+    } catch (exc) {
+      deleteDir()
+      error "Failed to fetch source codes"
     }
   }
 }
 
 def init_git_win() {
-    checkout scm
-    retry(5) {
-        timeout(time: 2, unit: 'MINUTES') {
-            bat 'git submodule update --init'
-        }
+  retry(5) {
+    try {
+      timeout(time: 2, unit: 'MINUTES') {
+        checkout scm
+        bat 'git submodule update --init'
+      }
+    } catch (exc) {
+      deleteDir()
+      error "Failed to fetch source codes"
     }
+  }
 }
 
 stage("Sanity Check") {
@@ -49,7 +59,7 @@ def make(docker_type, make_flag) {
       sh "${docker_run} ${docker_type} make ${make_flag}"
     } catch (exc) {
       echo 'Incremental compilation failed. Fall back to build from scratch'
-      sh "${docker_run} ${docker_type} make clean"
+      sh "${docker_run} ${docker_type} sudo make clean"
       sh "${docker_run} ${docker_type} make ${make_flag}"
     }
   }
@@ -80,7 +90,9 @@ stage('Build') {
       ws('workspace/build-cpu') {
         init_git()
         def flag = """ \
+DEV=1                         \
 USE_PROFILER=1                \
+USE_CPP_PACKAGE=1             \
 USE_BLAS=openblas             \
 -j\$(nproc)
 """
@@ -94,15 +106,18 @@ USE_BLAS=openblas             \
       ws('workspace/build-gpu') {
         init_git()
         def flag = """ \
+DEV=1                         \
 USE_PROFILER=1                \
 USE_BLAS=openblas             \
 USE_CUDA=1                    \
 USE_CUDA_PATH=/usr/local/cuda \
 USE_CUDNN=1                   \
+USE_CPP_PACKAGE=1             \
 -j\$(nproc)
 """
         make('gpu', flag)
         pack_lib('gpu')
+        stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
       }
     }
   },
@@ -119,6 +134,7 @@ USE_CUDNN=1                   \
       ws('workspace/build-mklml') {
         init_git()
         def flag = """ \
+DEV=1                         \
 USE_PROFILER=1                \
 USE_BLAS=openblas             \
 USE_MKL2017=1                 \
@@ -126,6 +142,7 @@ USE_MKL2017_EXPERIMENTAL=1    \
 USE_CUDA=1                    \
 USE_CUDA_PATH=/usr/local/cuda \
 USE_CUDNN=1                   \
+USE_CPP_PACKAGE=1             \
 -j\$(nproc)
 """
         make('mklml_gpu', flag)
@@ -140,12 +157,12 @@ USE_CUDNN=1                   \
           init_git_win()
           bat """mkdir build_vc14_cpu
 cd build_vc14_cpu
-cmake -G \"Visual Studio 14 2015 Win64\" -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_DIST_KVSTORE=0 ${env.WORKSPACE}"""
+cmake -G \"Visual Studio 14 2015 Win64\" -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 ${env.WORKSPACE}"""
           bat 'C:\\mxnet\\build_vc14_cpu.bat'
 
           bat '''rmdir /s/q pkg_vc14_gpu
 mkdir pkg_vc14_cpu\\lib
-mkdir pkg_vc14_cpu\\python 
+mkdir pkg_vc14_cpu\\python
 mkdir pkg_vc14_cpu\\include
 mkdir pkg_vc14_cpu\\build
 copy build_vc14_cpu\\Release\\libmxnet.lib pkg_vc14_cpu\\lib
@@ -171,11 +188,11 @@ del /Q *.7z
              bat """mkdir build_vc14_gpu
 call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
 cd build_vc14_gpu
-cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" -DCMAKE_BUILD_TYPE=Release ${env.WORKSPACE}"""
+cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" -DCMAKE_BUILD_TYPE=Release ${env.WORKSPACE}"""
              bat 'C:\\mxnet\\build_vc14_gpu.bat'
              bat '''rmdir /s/q pkg_vc14_gpu
 mkdir pkg_vc14_gpu\\lib
-mkdir pkg_vc14_gpu\\python 
+mkdir pkg_vc14_gpu\\python
 mkdir pkg_vc14_gpu\\include
 mkdir pkg_vc14_gpu\\build
 copy build_vc14_gpu\\libmxnet.lib pkg_vc14_gpu\\lib
@@ -200,6 +217,7 @@ def python_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
     sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/train"
   }
 }
 
@@ -316,6 +334,29 @@ stage('Integration Test') {
         timeout(time: max_time, unit: 'MINUTES') {
           sh "${docker_run} caffe_gpu PYTHONPATH=/caffe/python:./python python tools/caffe_converter/test_converter.py"
         }
+      }
+    }
+  },
+  'cpp-package': {
+    node('GPU' && 'linux') {
+      ws('workspace/it-cpp-package') {
+        init_git()
+        unpack_lib('gpu')
+        unstash 'cpp_test_score'
+        timeout(time: max_time, unit: 'MINUTES') {
+          sh "${docker_run} gpu cpp-package/tests/ci_test.sh"
+        }
+      }
+    }
+  }
+}
+
+stage('Deploy') {
+  node('linux') {
+    ws('workspace/docs') {
+      if (env.BRANCH_NAME == "master") {
+        init_git()
+        sh "make docs"
       }
     }
   }

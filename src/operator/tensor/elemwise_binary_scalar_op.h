@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_scalar_op.h
- * \brief Function defintion of elementwise binary scalar operators
+ * \brief Function definition of elementwise binary scalar operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_SCALAR_OP_H_
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_SCALAR_OP_H_
@@ -62,7 +62,7 @@ void BinaryScalarBackward(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs){                                     \
       return std::vector<std::pair<int, int> >{{0, 0}};             \
     })                                                              \
-  .add_argument("data", "ndarray-or-symbol", "source input")                   \
+  .add_argument("data", "NDArray-or-Symbol", "source input")                   \
   .add_argument("scalar", "float", "scalar input")
 
 }  // namespace op

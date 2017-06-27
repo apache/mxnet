@@ -85,13 +85,13 @@ mx.model.create.kvstore <- function(kvstore, arg.params, ndevice, verbose=TRUE) 
     } else {
       kvstore <- 'local_allreduce_cpu'
     }
-    if(verbose) cat(paste0("Auto-select kvstore type = ", kvstore, "\n"))
+    if(verbose) message(paste0("Auto-select kvstore type = ", kvstore))
   }
   return(mx.kv.create(kvstore))
 }
 
 # Internal function to do multiple device training.
-mx.model.train <- function(symbol, ctx, input.shape,
+mx.model.train <- function(symbol, ctx, input.shape, output.shape,
                            arg.params, aux.params,
                            begin.round, end.round, optimizer,
                            train.data, eval.data,
@@ -101,11 +101,20 @@ mx.model.train <- function(symbol, ctx, input.shape,
                            kvstore,
                            verbose=TRUE) {
   ndevice <- length(ctx)
-  if(verbose) cat(paste0("Start training with ", ndevice, " devices\n"))
+  if(verbose) message(paste0("Start training with ", ndevice, " devices"))
   # create the executors
   sliceinfo <- mx.model.slice.shape(input.shape, ndevice)
+  sliceinfo2 <- mx.model.slice.shape(output.shape, ndevice)
+  arg_names <- arguments(symbol)
+  tmp <- unlist(lapply(arg_names, function(a) {
+    mxnet:::mx.util.str.endswith(a, "label")
+  }))
+  label_name <- arg_names[tmp]
   train.execs <- lapply(1:ndevice, function(i) {
-    mx.simple.bind(symbol, ctx=ctx[[i]], data=sliceinfo[[i]]$shape, grad.req="write")
+    arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write",
+                    data=sliceinfo[[i]]$shape)
+    arg_lst[[label_name]] = sliceinfo2[[i]]$shape
+    do.call(mx.simple.bind, arg_lst)
   })
   # set the parameters into executors
   for (texec in train.execs) {
@@ -204,7 +213,7 @@ mx.model.train <- function(symbol, ctx, input.shape,
     train.data$reset()
     if (!is.null(metric)) {
       result <- metric$get(train.metric)
-      if(verbose) cat(paste0("[", iteration, "] Train-", result$name, "=", result$value, "\n"))
+      if(verbose) message(paste0("[", iteration, "] Train-", result$name, "=", result$value))
     }
     if (!is.null(eval.data)) {
       if (!is.null(metric)) {
@@ -238,7 +247,7 @@ mx.model.train <- function(symbol, ctx, input.shape,
       eval.data$reset()
       if (!is.null(metric)) {
         result <- metric$get(eval.metric)
-        if(verbose) cat(paste0("[", iteration, "] Validation-", result$name, "=", result$value, "\n"))
+        if(verbose) message(paste0("[", iteration, "] Validation-", result$name, "=", result$value))
       }
     } else {
       eval.metric <- NULL
@@ -259,9 +268,17 @@ mx.model.train <- function(symbol, ctx, input.shape,
 }
 
 # Initialize parameters
-mx.model.init.params <- function(symbol, input.shape, initializer, ctx) {
+mx.model.init.params <- function(symbol, input.shape, output.shape, initializer, ctx) {
   if (!is.MXSymbol(symbol)) stop("symbol need to be MXSymbol")
-  slist <- mx.symbol.infer.shape(symbol, data=input.shape)
+  arg_names <- arguments(symbol)
+  tmp <- unlist(lapply(arg_names, function(a) {
+    mxnet:::mx.util.str.endswith(a, "label")
+  }))
+  label_name <- arg_names[tmp]
+  arg_lst <- list(symbol = symbol, data=input.shape)
+  arg_lst[[label_name]] = output.shape
+
+  slist <- do.call(mx.symbol.infer.shape, arg_lst)
   if (is.null(slist)) stop("Not enough information to get shapes")
   arg.params <- mx.init.create(initializer, slist$arg.shapes, ctx, skip.unknown=TRUE)
   aux.params <- mx.init.create(initializer, slist$aux.shapes, ctx, skip.unknown=FALSE)
@@ -413,7 +430,8 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
     if (!X$iter.next()) stop("Empty input")
   }
   input.shape <- dim((X$value())$data)
-  params <- mx.model.init.params(symbol, input.shape, initializer, mx.cpu())
+  output.shape <- dim((X$value())$label)
+  params <- mx.model.init.params(symbol, input.shape, output.shape, initializer, mx.cpu())
   if (!is.null(arg.params)) params$arg.params <- arg.params
   if (!is.null(aux.params)) params$aux.params <- aux.params
   if (is.null(ctx)) ctx <- mx.ctx.default()
@@ -444,7 +462,7 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
     eval.data <- mx.model.init.iter(eval.data$data, eval.data$label, batch.size=array.batch.size, is.train = TRUE)
   }
   kvstore <- mx.model.create.kvstore(kvstore, params$arg.params, length(ctx), verbose=verbose)
-  model <- mx.model.train(symbol, ctx, input.shape,
+  model <- mx.model.train(symbol, ctx, input.shape, output.shape,
                           params$arg.params, params$aux.params,
                           begin.round, num.round, optimizer=optimizer,
                           train.data=X, eval.data=eval.data,
@@ -471,6 +489,7 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
 #'
 #' @export
 predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128, array.layout="auto") {
+  if (is.serialized(model)) model <- mx.unserialize(model)
   if (is.null(ctx)) ctx <- mx.ctx.default()
   if (is.array(X) || is.matrix(X)) {
     if (array.layout == "auto") {
@@ -484,7 +503,9 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128,
   X$reset()
   if (!X$iter.next()) stop("Cannot predict on empty iterator")
   dlist = X$value()
-  pexec <- mx.simple.bind(model$symbol, ctx=ctx, data=dim(dlist$data), grad.req="null")
+  arg_lst <- list(symbol = model$symbol, ctx = ctx, data = dim(dlist$data), grad.req="null")
+
+  pexec <- do.call(mx.simple.bind, arg_lst)
   mx.exec.update.arg.arrays(pexec, model$arg.params, match.name=TRUE)
   mx.exec.update.aux.arrays(pexec, model$aux.params, match.name=TRUE)
   packer <- mx.nd.arraypacker()
@@ -559,4 +580,53 @@ mx.model.save <- function(model, prefix, iteration) {
   save.dict <- append(arg.params, aux.params)
   mx.symbol.save(model$symbol, paste0(prefix, "-symbol.json"))
   mx.nd.save(save.dict, sprintf("%s-%04d.params", prefix, iteration))
+}
+
+#' Check if the model has been serialized into RData-compatiable format.
+#'
+#' @return Logical indicator
+#'
+#' @export
+is.serialized <- function(model) {
+  if (!is.null(model[['is.serialized']])) {
+    return(model[['is.serialized']])
+  } else {
+    return(FALSE)
+  }
+}
+
+#' Serialize MXNet model into RData-compatiable format.
+#'
+#' @param model The mxnet model
+#' 
+#' @export
+mx.serialize <- function(model) {
+  if (!is.serialized(model)) {
+    model_rdata <- list()
+    model_rdata[['symbol_json']] <- model$symbol$as.json()
+    model_rdata[['arg.params']] <- lapply(model$arg.params, as.array)
+    model_rdata[['aux.params']] <- lapply(model$aux.params, as.array)
+    model_rdata[['is.serialized']] <- TRUE
+    class(model_rdata) <- "MXFeedForwardModel"
+    return(model_rdata)
+  } else {
+    return(model)
+  }
+}
+
+#' Unserialize MXNet model from Robject.
+#'
+#' @param model The mxnet model loaded from RData files.
+#' 
+#' @export
+mx.unserialize <- function(model) {
+  if (!is.serialized(model)) {
+    return(model)
+  } else {
+    symbol <- mx.symbol.load.json(model$symbol_json)
+    arg.params <- lapply(model$arg.params, mx.nd.array)
+    aux.params <- lapply(model$aux.params, mx.nd.array)
+    model <- list(symbol=symbol, arg.params=arg.params, aux.params=aux.params)
+    return(structure(model, class="MXFeedForwardModel"))    
+  }
 }

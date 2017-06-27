@@ -6,7 +6,7 @@ use Scalar::Util qw/blessed/;
 
 =head1 NAME
 
-AI::MXNet::Metric - Online evaluation metric module.
+    AI::MXNet::Metric - Online evaluation metric module.
 =cut
 
 # Check to see if the two arrays are the same size.
@@ -336,29 +336,29 @@ around BUILDARGS => sub {
 
 =head1 NAME
 
-AI::MXNet::Perplexity
+    AI::MXNet::Perplexity
 =cut
 
 =head1 DESCRIPTION
 
-Calculate perplexity.
+    Calculate perplexity.
 
-Parameters
-----------
-ignore_label : int or undef
-    index of invalid label to ignore when
-    counting. usually should be -1. Include
-    all entries if undef.
-axis : int (default -1)
-    The axis from prediction that was used to
-    compute softmax. By default use the last
-    axis.
+    Parameters
+    ----------
+    ignore_label : int or undef
+        index of invalid label to ignore when
+        counting. usually should be -1. Include
+        all entries if undef.
+    axis : int (default -1)
+        The axis from prediction that was used to
+        compute softmax. By default uses the last
+        axis.
 =cut
 
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
     AI::MXNet::Metric::check_label_shapes($labels, $preds);
-    my ($loss, $num, $probs) = (0, 0, []);
+    my ($loss, $num) = (0, 0);
     zip(sub {
         my ($label, $pred) = @_;
         my $label_shape = $label->shape;
@@ -367,29 +367,24 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
             (product(@{ $label_shape }) == product(@{ $pred_shape })/$pred_shape->[-1]),
             "shape mismatch: (@$label_shape) vs. (@$pred_shape)"
         );
-        $label = $label->as_in_context($pred->context)->astype('int32')->reshape([$label->size]);
-        $pred = AI::MXNet::NDArray->pick($pred, $label, { axis => $self->axis });
-        push @{ $probs }, $pred;
-    }, $labels, $preds);
-
-    zip(sub {
-        my ($label, $prob) = @_;
-        $prob = $prob->aspdl;
+        $label = $label->as_in_context($pred->context)->reshape([$label->size]);
+        $pred = AI::MXNet::NDArray->pick($pred, $label->astype('int32'), { axis => $self->axis });
         if(defined $self->ignore_label)
         {
-            my $ignore = $label->aspdl->flat == $self->ignore_label;
-            $prob = $prob*(1-$ignore) + $ignore;
-            $num += $prob->nelem - $ignore->sum;
+            my $ignore = ($label == $self->ignore_label);
+            $num -= $ignore->sum->asscalar;
+            $pred = $pred*(1-$ignore) + $ignore;
         }
-        else
-        {
-            $num += $prob->nelem;
-        }
-        $prob->where($prob < 1e-10) .= 1e-10;
-        $loss += -$prob->log->sum;
-    }, $labels, $probs);
-    $self->sum_metric($self->sum_metric + exp($loss/$num));
-    $self->num_inst($self->num_inst + 1);
+        $loss -= $pred->maximum(1e-10)->log->sum->asscalar;
+        $num  += $pred->size;
+    }, $labels, $preds);
+    $self->sum_metric($self->sum_metric + $loss);
+    $self->num_inst($self->num_inst + $num);
+}
+
+method get()
+{
+    return ($self->name, exp($self->sum_metric / $self->num_inst));
 }
 
 ####################
@@ -500,18 +495,18 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
 
 =head1 DESCRIPTION
 
-Custom evaluation metric that takes a sub ref.
+    Custom evaluation metric that takes a sub ref.
 
-Parameters
-----------
-eval_function : subref
-    Customized evaluation function.
-name : str, optional
-    The name of the metric
-allow_extra_outputs : bool
-    If true, the prediction outputs can have extra outputs.
-    This is useful in RNN, where the states are also produced
-    in outputs for forwarding.
+    Parameters
+    ----------
+    eval_function : subref
+        Customized evaluation function.
+    name : str, optional
+        The name of the metric
+    allow_extra_outputs : bool
+        If true, the prediction outputs can have extra outputs.
+        This is useful in RNN, where the states are also produced
+        in outputs for forwarding.
 =cut
 
 
@@ -542,13 +537,13 @@ package AI::MXNet::Metric;
 
 =head2 create
 
-Create an evaluation metric.
+    Create an evaluation metric.
 
-Parameters
-----------
-metric : str or sub ref
-    The name of the metric, or a function
-    providing statistics given pred, label NDArray.
+    Parameters
+    ----------
+    metric : str or sub ref
+        The name of the metric, or a function
+        providing statistics given pred, label NDArray.
 =cut
 
 my %metrics = qw/

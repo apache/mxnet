@@ -34,17 +34,11 @@ namespace op {
 template<typename xpu, typename DType>
 class MKLFullyConnectedOp : public Operator {
  public:
-  explicit MKLFullyConnectedOp(FullyConnectedParam p):
-    init_mkldnn_(false),
-    fullyConnectedFwd(NULL),
-    fullyConnectedBwdData(NULL),
-    fullyConnectedBwdFilter(NULL),
-    fullyConnectedBwdBias(NULL) {
-    param_ = p;
-    fwd_top_data = MKLData<DType>::create();
-    fwd_bottom_data = MKLData<DType>::create();
-    bwd_bottom_diff = MKLData<DType>::create();
-    bwd_top_diff = MKLData<DType>::create();
+  explicit MKLFullyConnectedOp(const FullyConnectedParam& p,
+                               const std::vector<TShape>& in_shapes,
+                               const std::vector<TShape>& out_shapes):
+    param_(p) {
+    LayerSetUp(in_shapes, out_shapes);
   }
 
   ~MKLFullyConnectedOp() {
@@ -58,80 +52,52 @@ class MKLFullyConnectedOp : public Operator {
   }
 
  private:
-    void LayerSetUp(const mshadow::Tensor<xpu, 4, DType> &data,
-                   const mshadow::Tensor<xpu, 4, DType> &out) {
-    size_t src_sizes[4];
-    size_t dst_sizes[2];
+  void LayerSetUp(const std::vector<TShape>& in_shapes,
+                  const std::vector<TShape>& out_shapes) {
+    const TShape& ishape = in_shapes[fullc::kData];
 
-    size_t dim = 4;
-    int status;
-    const size_t input_batch_size = data.size(0);
-    const size_t input_channels = data.size(1);
-    const size_t input_height = data.size(2);
-    const size_t input_width = data.size(3);
-
-    const size_t output_batch_size = out.size(0);
-    const size_t output_channels = out.size(1);
-
-    src_sizes[0] = input_width;
-    src_sizes[1] = input_height;
-    src_sizes[2] = input_channels;
-    src_sizes[3] = input_batch_size;
-
-    dst_sizes[0] = output_channels;
-    dst_sizes[1] = output_batch_size;
-
-    // Names are for debugging only
-    fwd_bottom_data->name = "fwd_bottom_data   @ " + getName();
-    fwd_top_data->name = "fwd_top_data      @ " + getName();
-    bwd_bottom_diff->name = "bwd_bottom_diff   @ " + getName();
-    bwd_top_diff->name = "bwd_top_diff      @ " + getName();
+    const size_t dim = 4;
+    const size_t src_sizes[4] = {1, 1, ishape.ProdShape(1, ishape.ndim()), ishape[0]};
+    const size_t dst_sizes[2] = {param_.num_hidden, ishape[0]};
+    const size_t output_channels = param_.num_hidden;
 
     dnnPrimitiveAttributes_t attributes = NULL;
-    status = dnnPrimitiveAttributesCreate<DType>(&attributes);
-    CHECK_EQ(status, 0);
+    MKLDNN_CALL(dnnPrimitiveAttributesCreate<DType>(&attributes));
     if (!param_.no_bias) {
-      status = dnnInnerProductCreateForwardBias<DType>(&fullyConnectedFwd,
-                  attributes,
-                  dim,
-                  src_sizes,
-                  output_channels);
-      CHECK_EQ(status, 0)
-      << "Failed dnnInnerProductCreateForwardBias with status "
-      << status << "\n";
+      MKLDNN_CALL(dnnInnerProductCreateForwardBias<DType>(
+            &fullyConnectedFwd,
+            attributes,
+            dim,
+            src_sizes,
+            output_channels));
     } else {
-      status = dnnInnerProductCreateForward<DType>(&fullyConnectedFwd,
-                attributes,
-                dim,
-                src_sizes,
-                output_channels);
-      CHECK_EQ(status, 0)
-      << "Failed dnnInnerProductCreateForward with status "
-      << status << "\n";
+      MKLDNN_CALL(dnnInnerProductCreateForward<DType>(
+            &fullyConnectedFwd,
+            attributes,
+            dim,
+            src_sizes,
+            output_channels));
     }
-    status = dnnInnerProductCreateBackwardData<DType>(&fullyConnectedBwdData,
-            attributes,
-            dim,
-            src_sizes,
-            output_channels);
-    CHECK_EQ(status, 0)
-      << "Failed dnnInnerProductCreateBackwardData with status "
-      << status << "\n";
-    status = dnnInnerProductCreateBackwardFilter<DType>(&fullyConnectedBwdFilter,
-            attributes,
-            dim,
-            src_sizes,
-            output_channels);
-    CHECK_EQ(status, 0)
-      << "Failed dnnInnerProductCreateBackwardFilter with status "
-      << status << "\n";
+    MKLDNN_CALL(dnnInnerProductCreateBackwardData<DType>(
+          &fullyConnectedBwdData,
+          attributes,
+          dim,
+          src_sizes,
+          output_channels));
+    MKLDNN_CALL(dnnInnerProductCreateBackwardFilter<DType>(
+          &fullyConnectedBwdFilter,
+          attributes,
+          dim,
+          src_sizes,
+          output_channels));
     if (!param_.no_bias) {
-      status = dnnInnerProductCreateBackwardBias<DType>(&fullyConnectedBwdBias,
-                  attributes,
-                  2,
-                  dst_sizes);
-      CHECK_EQ(status, 0) << "Backward Bias failed with status " << status;
+      MKLDNN_CALL(dnnInnerProductCreateBackwardBias<DType>(
+            &fullyConnectedBwdBias,
+            attributes,
+            2,
+            dst_sizes));
     }
+    // TODO(minjie): Shouldn't `attributes` be destroyed?
   }
 
 
@@ -143,13 +109,13 @@ class MKLFullyConnectedOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
 
+    void* res_fullyConnected[dnnResourceNumber];
     if (req[fullc::kOut] == kNullOp) return;
     CHECK_EQ(req[fullc::kOut], kWriteTo);
-    size_t expected = param_.no_bias ? 2 : 3;
-    CHECK_EQ(in_data.size(), expected);
+    CHECK_EQ(in_data.size(), param_.no_bias ? 2 : 3);
     CHECK_EQ(out_data.size(), 1);
-    int status;
     Stream<xpu> *s = ctx.get_stream<xpu>();
+
     const TShape& ishape = in_data[fullc::kData].shape_;
     const TShape& oshape = out_data[fullc::kOut].shape_;
 
@@ -163,12 +129,6 @@ class MKLFullyConnectedOp : public Operator {
 
     data = in_data[fullc::kData].get_with_shape<xpu, 4, DType>(dshape, s);
     out = out_data[fullc::kOut].get_with_shape<xpu, 4, DType>(odshape, s);
-
-    if (!init_mkldnn_) {
-      LayerSetUp(data, out);
-      init_mkldnn_ = true;
-    }
-
     res_fullyConnected[dnnResourceSrc] =
       reinterpret_cast<void *>(in_data[fullc::kData].dptr_);
     res_fullyConnected[dnnResourceDst] =
@@ -179,8 +139,7 @@ class MKLFullyConnectedOp : public Operator {
       res_fullyConnected[dnnResourceBias] = reinterpret_cast<void *>(in_data[fullc::kBias].dptr_);
     }
 
-    status = dnnExecute<DType>(fullyConnectedFwd, res_fullyConnected);
-    CHECK_EQ(status, 0) << "Forward FC failed with status " << status;
+    MKLDNN_CALL(dnnExecute<DType>(fullyConnectedFwd, res_fullyConnected));
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -193,11 +152,11 @@ class MKLFullyConnectedOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
 
+    void* res_fullyConnected[dnnResourceNumber];
     CHECK_EQ(out_grad.size(), 1);
-    size_t expected = param_.no_bias ? 2 : 3;
+    const size_t expected = param_.no_bias ? 2 : 3;
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_EQ(req.size(), expected);
-    int status;
     res_fullyConnected[dnnResourceSrc] =
       reinterpret_cast<void *>(in_data[fullc::kData].dptr_);
     res_fullyConnected[dnnResourceFilter] =
@@ -213,26 +172,19 @@ class MKLFullyConnectedOp : public Operator {
       res_fullyConnected[dnnResourceDiffBias] =
         reinterpret_cast<void *>(in_grad[fullc::kBias].dptr_);
     }
-    status = dnnExecute<DType>(fullyConnectedBwdFilter, res_fullyConnected);
-    CHECK_EQ(status, 0) << "Backward FC Filter failed with status " << status;
+    MKLDNN_CALL(dnnExecute<DType>(fullyConnectedBwdFilter, res_fullyConnected));
     if (!param_.no_bias) {
-      status = dnnExecute<DType>(fullyConnectedBwdBias, res_fullyConnected);
-      CHECK_EQ(status, 0) << "Backward FC Bias failed with status " << status;
+      MKLDNN_CALL(dnnExecute<DType>(fullyConnectedBwdBias, res_fullyConnected));
     }
-    status = dnnExecute<DType>(fullyConnectedBwdData, res_fullyConnected);
-    CHECK_EQ(status, 0) << "Backward FC Data failed with status " << status;
+    MKLDNN_CALL(dnnExecute<DType>(fullyConnectedBwdData, res_fullyConnected));
   }
 
  private:
-  bool init_mkldnn_;
-  dnnPrimitive_t fullyConnectedFwd;
-  dnnPrimitive_t fullyConnectedBwdData;
-  dnnPrimitive_t fullyConnectedBwdFilter;
-  dnnPrimitive_t fullyConnectedBwdBias;
-  std::shared_ptr<MKLData<DType>> fwd_top_data, fwd_bottom_data;
-  std::shared_ptr<MKLData<DType>> bwd_bottom_diff, bwd_top_diff;
-  FullyConnectedParam param_;
-  void* res_fullyConnected[dnnResourceNumber];
+  dnnPrimitive_t fullyConnectedFwd{nullptr};
+  dnnPrimitive_t fullyConnectedBwdData{nullptr};
+  dnnPrimitive_t fullyConnectedBwdFilter{nullptr};
+  dnnPrimitive_t fullyConnectedBwdBias{nullptr};
+  const FullyConnectedParam param_;
 };  // class MKLFullyConnectedOp
 }  // namespace op
 }  // namespace mxnet

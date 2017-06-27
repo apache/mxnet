@@ -10,12 +10,12 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-AI::MXNet::Symbol::Base
+    AI::MXNet::Symbol::Base
 =cut
 
 =head1 DESCRIPTION
 
-A convenience class that loads all C++m symbol related functions at runtime.
+    A convenience class that loads all C++m symbol related functions at runtime.
 =cut
 
 my %function_meta;
@@ -166,6 +166,7 @@ method _init_symbol_module()
         }
     }
 }
+
 
 __PACKAGE__->_init_symbol_module;
 

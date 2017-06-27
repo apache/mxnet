@@ -152,11 +152,11 @@ Operator *BilinearSamplerProp::CreateOperatorEx(Context ctx, std::vector<TShape>
 DMLC_REGISTER_PARAMETER(BilinearSamplerParam);
 
 MXNET_REGISTER_OP_PROPERTY(BilinearSampler, BilinearSamplerProp)
-.add_argument("data", "Symbol", "Input data to the BilinearsamplerOp.")
-.add_argument("grid", "Symbol", "Input grid to the BilinearsamplerOp."
+.add_argument("data", "NDArray-or-Symbol", "Input data to the BilinearsamplerOp.")
+.add_argument("grid", "NDArray-or-Symbol", "Input grid to the BilinearsamplerOp."
                                 "grid has two channels: x_src, y_src")
 .add_arguments(BilinearSamplerParam::__FIELDS__())
-.describe("Apply bilinear sampling to input feature map,"
+.describe("Applies bilinear sampling to input feature map,"
 " which is the key of \"[NIPS2015] Spatial Transformer Networks\"\n    "
 "output[batch, channel, y_dst, x_dst] = G(data[batch, channel, y_src, x_src)\n    "
 "x_dst, y_dst enumerate all spatial locations in output\n    "
