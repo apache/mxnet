@@ -12,7 +12,7 @@ mx.callback.log.train.metric <- function(period, logger=NULL) {
     if (nbatch %% period == 0 && !is.null(env$metric)) {
       result <- env$metric$get(env$train.metric)
       if (nbatch != 0 & verbose)
-        cat(paste0("Batch [", nbatch, "] Train-", result$name, "=", result$value, "\n"))
+        message(paste0("Batch [", nbatch, "] Train-", result$name, "=", result$value))
       if (!is.null(logger)) {
         if (class(logger) != "mx.metric.logger") {
           stop("Invalid mx.metric.logger.")
@@ -21,7 +21,7 @@ mx.callback.log.train.metric <- function(period, logger=NULL) {
         if (!is.null(env$eval.metric)) {
           result <- env$metric$get(env$eval.metric)
           if (nbatch != 0 & verbose)
-            cat(paste0("Batch [", nbatch, "] Validation-", result$name, "=", result$value, "\n"))
+            message(paste0("Batch [", nbatch, "] Validation-", result$name, "=", result$value))
           logger$eval <- c(logger$eval, result$value)
         }
       }
@@ -49,8 +49,8 @@ mx.callback.log.speedometer <- function(batch.size, frequency=50){
         speed <- frequency*batch.size/time
         result <- env$metric$get(env$train.metric)
         if (nbatch != 0 & verbose)
-          cat(paste0("Batch [", nbatch, "] Speed: ", speed, " samples/sec Train-",
-                     result$name, "=", result$value, "\n"))
+          message(paste0("Batch [", nbatch, "] Speed: ", speed, " samples/sec Train-",
+                     result$name, "=", result$value))
         env$tic = Sys.time()
       }      
     } else {
@@ -69,7 +69,7 @@ mx.callback.save.checkpoint <- function(prefix, period=1) {
   function(iteration, nbatch, env, verbose=TRUE) {
     if (iteration %% period == 0) {
       mx.model.save(env$model, prefix, iteration)
-      if(verbose) cat(sprintf("Model checkpoint saved to %s-%04d.params\n", prefix, iteration))
+      if(verbose) message(sprintf("Model checkpoint saved to %s-%04d.params\n", prefix, iteration))
     }
     return(TRUE)
   }
@@ -95,7 +95,7 @@ mx.callback.early.stop <- function(train.metric = NULL, eval.metric = NULL, bad.
     if (!is.null(env$metric)) {
       if (!is.null(train.metric)) {
         result <- env$metric$get(env$train.metric)
-        if (result$value < train.metric | (maximize == TRUE & result$value > train.metric)) {
+        if ((maximize == F & result$value < train.metric) | (maximize == TRUE & result$value > train.metric)) {
           return(FALSE)
         }
       }
@@ -104,7 +104,7 @@ mx.callback.early.stop <- function(train.metric = NULL, eval.metric = NULL, bad.
       if (!is.null(eval.metric)) {
         if (!is.null(env$eval.metric)) {
           result <- env$metric$get(env$eval.metric)
-          if (result$value < eval.metric | (maximize == TRUE & result$value > eval.metric)) {
+          if ((maximize == F & result$value < eval.metric) | (maximize == TRUE & result$value > eval.metric)) {
             return(FALSE)
           }
         }
@@ -135,11 +135,11 @@ mx.callback.early.stop <- function(train.metric = NULL, eval.metric = NULL, bad.
         
         result <- env$metric$get(env$eval.metric)
         
-        if (result$value > mx.best.score | (maximize == TRUE & result$value < mx.best.score)) {
+        if ((maximize == F & result$value > mx.best.score) | (maximize == TRUE & result$value < mx.best.score)) {
           
           if (mx.best.iter == bad.steps) {
             if (verbose) {
-              cat(paste0("Best score=", mx.best.score, ", iteration [", iteration - bad.steps, "] \n"))
+              message(paste0("Best score=", mx.best.score, ", iteration [", iteration - bad.steps, "]"))
             }
             return(FALSE)
           } else {

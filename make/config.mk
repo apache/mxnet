@@ -54,13 +54,6 @@ USE_CUDA_PATH = NONE
 # whether use CuDNN R3 library
 USE_CUDNN = 0
 
-# CUDA architecture setting: going with all of them.
-# For CUDA < 6.0, comment the *_50 lines for compatibility.
-CUDA_ARCH := -gencode arch=compute_30,code=sm_30 \
-		-gencode arch=compute_35,code=sm_35 \
-		-gencode arch=compute_50,code=sm_50 \
-		-gencode arch=compute_50,code=compute_50
-
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
 USE_NVRTC = 0
 
@@ -71,7 +64,6 @@ USE_OPENCV = 1
 
 # use openmp for parallelization
 USE_OPENMP = 1
-
 
 # MKL ML Library for Intel CPU/Xeon Phi
 # Please refer to MKL_README.md for details
@@ -100,6 +92,13 @@ USE_BLAS = apple
 else
 USE_BLAS = atlas
 endif
+
+# whether use lapack during compilation
+# only effective when compiled with blas versions openblas/apple/atlas/mkl
+USE_LAPACK = 1
+
+# path to lapack library in case of a non-standard installation
+USE_LAPACK_PATH =
 
 # add path to intel library, you may need it for MKL, if you did not add the path
 # to environment variable
@@ -150,6 +149,12 @@ USE_S3 = 0
 # path to folders containing projects specific operators that you don't want to put in src/operators
 EXTRA_OPERATORS =
 
+#----------------------------
+# other features
+#----------------------------
+
+# Create C++ interface package
+USE_CPP_PACKAGE = 0
 
 #----------------------------
 # plugins

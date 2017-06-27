@@ -4,6 +4,7 @@
  * \brief ndarry module of mxnet
  */
 #include <dmlc/io.h>
+#include <dmlc/memory_io.h>
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
 #include <mxnet/base.h>
@@ -11,6 +12,7 @@
 #include <mxnet/resource.h>
 #include <mshadow/tensor.h>
 #include "./ndarray_function.h"
+#include "./autograd.h"
 
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
@@ -21,6 +23,94 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 }  // namespace dmlc
 
 namespace mxnet {
+
+NDArray NDArray::Reshape(const TShape &shape) const {
+  using namespace autograd;
+  if (AutogradRuntime::Get()->IsTraining()) {
+    CHECK_GE(shape_.Size(), shape.Size())
+      << "NDArray.Reshape: target shape must have must have the same size as "
+      << "current shape when in train_section.";
+    NDArray ret = *this;
+    ret.shape_ = shape;
+    // fake a Reshape op
+    ret.entry_.clear();
+    const nnvm::Op* op = nnvm::Op::Get("Reshape");
+    nnvm::NodeAttrs attrs;
+    attrs.op = op;
+    std::ostringstream os;
+    os << shape;
+    attrs.dict.insert({"shape", os.str()});
+    op->attr_parser(&attrs);
+    std::vector<NDArray> inputs, outputs;
+    inputs.emplace_back(*this);
+    outputs.emplace_back(std::move(ret));
+    AutogradRuntime::Get()->RecordImperativeFCompute(
+      op, attrs, &inputs, &outputs);
+    return outputs[0];
+  } else {
+    CHECK_GE(shape_.Size(), shape.Size())
+      << "NDArray.Reshape: target shape size is larger current shape";
+    NDArray ret = *this;
+    ret.shape_ = shape;
+    return ret;
+  }
+}
+
+
+NDArray NDArray::Slice(index_t begin, index_t end) const {
+  using namespace autograd;
+  NDArray ret = *this;
+  CHECK(!is_none()) << "NDArray is not initialized";
+  CHECK_GE(shape_[0], end) << "Slice end index out of range";
+  size_t length = shape_.ProdShape(1, shape_.ndim());
+  MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
+    ret.byte_offset_ += begin * length * sizeof(DType);
+  });
+  ret.shape_[0] = end - begin;
+  if (AutogradRuntime::Get()->IsTraining()) {
+    // fake a slice_axis op
+    ret.entry_.clear();
+    const nnvm::Op* op = nnvm::Op::Get("slice_axis");
+    nnvm::NodeAttrs attrs;
+    attrs.op = op;
+    attrs.dict.insert({"axis", "0"});
+    attrs.dict.insert({"begin", std::to_string(begin)});
+    attrs.dict.insert({"end", std::to_string(end)});
+    op->attr_parser(&attrs);
+    std::vector<NDArray> inputs, outputs;
+    inputs.emplace_back(*this);
+    outputs.emplace_back(std::move(ret));
+    AutogradRuntime::Get()->RecordImperativeFCompute(
+      op, attrs, &inputs, &outputs);
+    return outputs[0];
+  } else {
+    return ret;
+  }
+}
+
+
+NDArray NDArray::At(index_t idx) const {
+  NDArray ret = this->Slice(idx, idx+1);
+  if (shape_.ndim() > 1) {
+    return ret.Reshape(TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
+  } else {
+    return ret;
+  }
+}
+
+
+bool NDArray::fresh_out_grad() const {
+  if (entry_.ag_node != nullptr) return entry_.ag_node->fresh_out_grad;
+  return false;
+}
+
+
+void NDArray::set_fresh_out_grad(bool state) const {
+  CHECK(entry_.ag_node != nullptr)
+    << "NDArray has not been marked as a variable and does not have gradient state";
+  entry_.ag_node->fresh_out_grad = state;
+}
+
 
 /*!
 * \brief run a ternary operation
@@ -63,7 +153,6 @@ void TernaryOp(const NDArray &lhs,
   switch (lhs.ctx().dev_mask()) {
   case cpu::kDevMask: {
     Engine::Get()->PushSync([lhs, mhs, rhs, ret](RunContext ctx) {
-      ret.CheckAndAlloc();
       TBlob tmp = ret.data();
       ndarray::Eval<cpu, OP>(lhs.data(), mhs.data(), rhs.data(), &tmp, ctx);
     }, lhs.ctx(), const_vars, { ret.var() },
@@ -73,7 +162,6 @@ void TernaryOp(const NDArray &lhs,
 #if MXNET_USE_CUDA
   case gpu::kDevMask: {
     Engine::Get()->PushSync([lhs, mhs, rhs, ret](RunContext ctx) {
-      ret.CheckAndAlloc();
       TBlob tmp = ret.data();
       ndarray::Eval<gpu, OP>(lhs.data(), mhs.data(), rhs.data(), &tmp, ctx);
       // Wait GPU kernel to complete
@@ -125,7 +213,6 @@ void BinaryOp(const NDArray &lhs,
   switch (lhs.ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
         }, lhs.ctx(), const_vars, {ret.var()},
@@ -135,7 +222,6 @@ void BinaryOp(const NDArray &lhs,
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<gpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
           // Wait GPU kernel to complete
@@ -156,7 +242,6 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
   switch (ret.ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<cpu>(rhs, &tmp, ctx);
         }, ret.ctx(), {}, {ret.var()},
@@ -166,7 +251,6 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
       Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<gpu>(rhs, &tmp, ctx);
           // Wait GPU kernel to complete
@@ -207,7 +291,6 @@ void ScalarOp(const NDArray &lhs,
   switch (lhs.ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<cpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
         }, lhs.ctx(), const_vars, {ret.var()},
@@ -217,7 +300,6 @@ void ScalarOp(const NDArray &lhs,
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
       Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<gpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
           // Wait GPU kernel to complete
@@ -251,7 +333,6 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
 
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     Engine::Get()->PushSync([from, ret](RunContext ctx) {
-        ret.CheckAndAlloc();
         TBlob tmp = ret.data();
         ndarray::Copy<cpu, cpu>(from.data(), &tmp,
                                 from.ctx(), ret.ctx(), ctx);
@@ -261,7 +342,6 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Copy<cpu, gpu>(from.data(), &tmp,
                                   from.ctx(), ret.ctx(), ctx);
@@ -271,7 +351,6 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
         FnProperty::kCopyToGPU, priority, PROFILER_MESSAGE("CopyCPU2GPU"));
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Copy<gpu, cpu>(from.data(), &tmp,
                                   from.ctx(), ret.ctx(), ctx);
@@ -281,7 +360,6 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
         FnProperty::kCopyFromGPU, priority, PROFILER_MESSAGE("CopyGPU2CPU"));
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Copy<gpu, gpu>(from.data(), &tmp,
                                   from.ctx(), ret.ctx(), ctx);
@@ -326,7 +404,6 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
           for (size_t i = 0; i < source.size(); ++i) {
             source_tblob[i] = source[i].data();
           }
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::ElementwiseSum<cpu>(source_tblob, &tmp, ctx);
         }, out->ctx(), const_vars, {ret.var()},
@@ -340,7 +417,6 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
           for (size_t i = 0; i < source.size(); ++i) {
             source_tblob[i] = source[i].data();
           }
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::ElementwiseSum<gpu>(source_tblob, &tmp, ctx);
           // Wait GPU kernel to complete
@@ -369,7 +445,6 @@ void ClipOp(const NDArray &src,
   switch (src.ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([src, a_min, a_max, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::EvalClip<cpu>(src.data(), a_min, a_max, &tmp, ctx);
         }, src.ctx(), const_vars, {ret.var()},
@@ -379,7 +454,6 @@ void ClipOp(const NDArray &src,
     #if MXNET_USE_CUDA
     case gpu::kDevMask: {
       Engine::Get()->PushSync([src, a_min, a_max, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::EvalClip<gpu>(src.data(), a_min, a_max, &tmp, ctx);
         }, src.ctx(), const_vars, {ret.var()},
@@ -408,7 +482,6 @@ void SampleOP(const real_t &a,
   switch (out->ctx().dev_mask()) {
     case cpu::kDevMask: {
       Engine::Get()->PushSync([a, b, resource, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::EvalRandom<cpu, Distribution>(a, b, resource, &tmp, ctx);
         }, out->ctx(), {}, {ret.var(), resource.var},
@@ -418,7 +491,6 @@ void SampleOP(const real_t &a,
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
       Engine::Get()->PushSync([a, b, resource, ret](RunContext ctx) {
-          ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::EvalRandom<gpu, Distribution>(a, b, resource, &tmp, ctx);
           // Wait GPU kernel to complete
@@ -438,6 +510,36 @@ void SampleUniform(real_t begin, real_t end, NDArray *out) {
 
 void SampleGaussian(real_t mu, real_t sigma, NDArray *out) {
   SampleOP<ndarray::GaussianDistribution>(mu, sigma, out);
+}
+
+void SampleExponential(real_t lambda, NDArray *out) {
+  if ( out->ctx().dev_mask() != cpu::kDevMask ) {
+    LOG(FATAL) <<"exponential sampling only valid on cpu";
+  }
+  real_t dummy;
+  SampleOP<ndarray::ExponentialDistribution>(lambda, dummy, out);
+}
+
+void SamplePoisson(real_t lambda, NDArray *out) {
+  if ( out->ctx().dev_mask() != cpu::kDevMask ) {
+    LOG(FATAL) <<"poisson sampling only valid on cpu";
+  }
+  real_t dummy;
+  SampleOP<ndarray::PoissonDistribution>(lambda, dummy, out);
+}
+
+void SampleNegBinomial(int32_t k, real_t p, NDArray *out) {
+  if ( out->ctx().dev_mask() != cpu::kDevMask ) {
+    LOG(FATAL) <<"negative binomial sampling only valid on cpu";
+  }
+  SampleOP<ndarray::NegBinomialDistribution>(k, p, out);
+}
+
+void SampleGenNegBinomial(real_t mu, real_t alpha, NDArray *out) {
+  if ( out->ctx().dev_mask() != cpu::kDevMask ) {
+    LOG(FATAL) <<"negative binomial sampling only valid on cpu";
+  }
+  SampleOP<ndarray::GenNegBinomialDistribution>(mu, alpha, out);
 }
 
 void RandomSeed(uint32_t seed) {
@@ -533,65 +635,11 @@ NDArray &NDArray::operator/=(const real_t &src) {
   return ScalarOpApply<ndarray::Div>(this, src);
 }
 
-/*!
- * \brief Get a broadcasted NDArray
- * \param src the source ndarray
- * \param dim dimension to broadcast
- * \param size size after broadcasting
- */
-void Broadcast(const NDArray& src, int dim, int size, NDArray *out) {
-  CHECK(0 <= dim && dim < static_cast<int>(src.shape().ndim()))
-      << "Broadcast dimension out of bound.";
-  CHECK(src.shape()[dim] == 1) << "Cannot broadcast a dimension that is not 1.";
-  TShape new_shape = src.shape();
-  new_shape[dim] = size;
-  if (out->is_none()) {
-    *out = NDArray(new_shape, src.ctx(), true, src.dtype());
-  } else {
-    CHECK(out->ctx() == src.ctx()) << "target context mismatch";
-    CHECK(out->shape() == new_shape)
-      << "invalid target shape: " << out->shape() << " should be: " << new_shape;
-  }
-  std::vector<Engine::VarHandle> const_vars;
-  const_vars.push_back(src.var());
-  size_t before = src.shape().ProdShape(0, dim);
-  size_t after = src.shape().ProdShape(dim + 1, src.shape().ndim());
-
-  // important: callback must always capture by value
-  NDArray ret = *out;
-  switch (src.ctx().dev_mask()) {
-    case cpu::kDevMask: {
-      Engine::Get()->PushSync([src, ret, before, size, after](RunContext ctx) {
-          ret.CheckAndAlloc();
-          NDArray inter_in = src.Reshape(mshadow::Shape2(before, after));
-          NDArray inter_out = ret.Reshape(mshadow::Shape3(before, size, after));
-          TBlob tmp = inter_out.data();
-          ndarray::EvalBroadcast<cpu>(inter_in.data(), &tmp, size, ctx);
-      }, src.ctx(), const_vars, {ret.var()},
-      FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-      break;
-    }
-#if MXNET_USE_CUDA
-    case gpu::kDevMask: {
-      Engine::Get()->PushSync([src, ret, before, size, after](RunContext ctx) {
-          ret.CheckAndAlloc();
-          NDArray inter_in = src.Reshape(mshadow::Shape2(before, after));
-          NDArray inter_out = ret.Reshape(mshadow::Shape3(before, size, after));
-          TBlob tmp = inter_out.data();
-          ndarray::EvalBroadcast<gpu>(inter_in.data(), &tmp, size, ctx);
-          // Wait GPU kernel to complete
-          ctx.get_stream<gpu>()->Wait();
-      }, src.ctx(), const_vars, {ret.var()},
-      FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-      break;
-    }
-#endif
-    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-  }
-}
+/* magic number for ndarray version 1, with int64_t TShape */
+static const uint32_t NDARRAY_V1_MAGIC = 0xF993fac8;
 
 void NDArray::Save(dmlc::Stream *strm) const {
-  // save shape
+  strm->Write(NDARRAY_V1_MAGIC);
   shape_.Save(strm);
   if (is_none()) return;
   // save context
@@ -615,10 +663,28 @@ void NDArray::Save(dmlc::Stream *strm) const {
   strm->Write(save_data.dptr_, type_size * shape_.Size());
 }
 
+bool LegacyTShapeLoad(dmlc::Stream *strm, TShape *shape) {
+  uint32_t magic;
+  if (strm->Read(&magic, sizeof(uint32_t)) != sizeof(uint32_t)) return false;
+  switch (magic) {
+    case NDARRAY_V1_MAGIC:
+      return shape->Load(strm);
+    default:
+      // meet legacy TShape, magic is ndim here
+      uint32_t ndim = magic;
+      *shape = TShape(ndim);
+      std::vector<uint32_t> buffer(ndim);
+      size_t nread = ndim * sizeof(uint32_t);
+      if (strm->Read(buffer.data(), nread) != nread) return false;
+      nnvm::ShapeTypeCast(buffer.begin(), buffer.end(), shape->begin());
+      return true;
+  }
+}
+
 bool NDArray::Load(dmlc::Stream *strm) {
   // load shape
   TShape shape;
-  if (!shape.Load(strm)) return false;
+  if (!LegacyTShapeLoad(strm, &shape)) return false;
   if (shape.ndim() == 0) {
     *this = NDArray(); return true;
   }
@@ -687,11 +753,10 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
+  TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToWrite();
-    this->CheckAndAlloc();
     RunContext rctx;
     rctx.stream = nullptr;
     TBlob dst = this->data();
@@ -699,7 +764,6 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushSync([&](RunContext rctx) {
-        this->CheckAndAlloc();
         TBlob dst = this->data();
         ndarray::Copy<cpu, gpu>(src, &dst,
                                 Context::CPU(), this->ctx(), rctx);
@@ -718,7 +782,7 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob dst(data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
+  TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToRead();
@@ -800,7 +864,7 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
   if (ret->shape().ndim() == 3) {
     buff = ret->Reshape(mshadow::Shape4(1, ret->shape()[0], ret->shape()[1], ret->shape()[2]));
   } else {
-    CHECK_EQ(ret->shape().ndim(), 4);
+    CHECK_EQ(ret->shape().ndim(), 4U);
     buff = ret->Slice(index, index+1);
   }
   CHECK_EQ(buff.ctx().dev_mask(), cpu::kDevMask);
@@ -847,23 +911,6 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
 #endif  // MXNET_USE_OPENCV
 }
 
-MXNET_REGISTER_NDARRAY_FUN(_broadcast)
-.set_type_mask(kAcceptEmptyMutateTarget | kNDArrayArgBeforeScalar)
-.set_body([](NDArray **u, real_t *s, NDArray **out,
-             int num_params, char **param_keys, char **param_vals) {
-      Broadcast(*u[0],
-                static_cast<int>(s[0]),
-                static_cast<int>(s[1]),
-                out[0]);
-    })
-.set_num_use_vars(1)
-.set_num_scalars(2)
-.set_num_mutate_vars(1)
-.describe("Broadcast array in the given axis to the given size")
-.add_argument("src", "NDArray", "source ndarray")
-.add_argument("axis", "int", "axis to broadcast")
-.add_argument("size", "int", "size of broadcast");
-
 MXNET_REGISTER_NDARRAY_FUN(_imdecode)
 .set_type_mask(kAcceptEmptyMutateTarget | kNDArrayArgBeforeScalar)
 .set_body([](NDArray **u, real_t *s, NDArray **out,
@@ -883,7 +930,7 @@ MXNET_REGISTER_NDARRAY_FUN(_imdecode)
 .set_num_scalars(7)
 .set_num_mutate_vars(1)
 .describe("Decode an image, clip to (x0, y0, x1, y1), subtract mean, and write to buffer")
-.add_argument("mean", "NDArray", "image mean")
+.add_argument("mean", "NDArray-or-Symbol", "image mean")
 .add_argument("index", "int", "buffer position for output")
 .add_argument("x0", "int", "x0")
 .add_argument("y0", "int", "y0")

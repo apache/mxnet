@@ -279,7 +279,7 @@ class ProposalOp : public Operator{
                                    in_data[proposal::kClsProb].shape_[1] / 2,
                                    in_data[proposal::kClsProb].shape_[2],
                                    in_data[proposal::kClsProb].shape_[3]);
-    real_t* foreground_score_ptr = reinterpret_cast<real_t *>(in_data[proposal::kClsProb].dptr_)
+    real_t* foreground_score_ptr = in_data[proposal::kClsProb].dptr<real_t>()
                                     + scores_shape.Size();
     Tensor<cpu, 4> scores = Tensor<cpu, 4>(foreground_score_ptr, scores_shape);
     Tensor<cpu, 4> bbox_deltas = in_data[proposal::kBBoxPred].get<cpu, 4, real_t>(s);
@@ -449,9 +449,9 @@ DMLC_REGISTER_PARAMETER(ProposalParam);
 
 MXNET_REGISTER_OP_PROPERTY(_contrib_Proposal, ProposalProp)
 .describe("Generate region proposals via RPN")
-.add_argument("cls_score", "Symbol", "Score of how likely proposal is object.")
-.add_argument("bbox_pred", "Symbol", "BBox Predicted deltas from anchors for proposals")
-.add_argument("im_info", "Symbol", "Image size and scale.")
+.add_argument("cls_score", "NDArray-or-Symbol", "Score of how likely proposal is object.")
+.add_argument("bbox_pred", "NDArray-or-Symbol", "BBox Predicted deltas from anchors for proposals")
+.add_argument("im_info", "NDArray-or-Symbol", "Image size and scale.")
 .add_arguments(ProposalParam::__FIELDS__());
 
 }  // namespace op

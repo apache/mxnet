@@ -108,7 +108,7 @@ to classify an image with jupyter notebook.
 ### ImageNet 1K
 
 It is first used by
-[ImageNet challenge 2012](http://mxnet.io/tutorials/python/predict_imagenet.html),
+[ImageNet challenge 2012](http://www.image-net.org/challenges/LSVRC/2012/),
 which contains about 1.2M images with 1000 classes. To test these models, one
 can use
 [data/imagenet1k-val.sh](https://github.com/dmlc/mxnet/blob/master/example/image-classification/data/imagenet1k-val.sh)
@@ -118,23 +118,29 @@ to calculate the accuracy.
 
 #### Single Center Crop Accuracy
 
-| Model                     | Top-1  | Top-5  |
-| ------------------------- | ------ | ------ |
-| `imagenet1k-inception-bn` | 0.7245 | 0.9079 |
-| `imagenet1k-resnet-18`    | 0.6858 | 0.8866 |
-| `imagenet1k-resnet-34`    | 0.7244 | 0.9097 |
-| `imagenet1k-resnet-50`    | 0.7527 | 0.9258 |
-| `imagenet1k-resnet-101`   | 0.7684 | 0.9327 |
-| `imagenet1k-resnet-152`   | 0.7653 | 0.9312 |
-| `imagenet1k-resnext-50`   | 0.7689 | 0.9332 |
-| `imagenet1k-resnext-101`  | 0.7828 | 0.9408 |
+| Model                          | Top-1  | Top-5  |
+| ------------------------------ | ------ | ------ |
+| `imagenet1k-inception-bn`      | 0.7245 | 0.9079 |
+| `imagenet1k-resnet-18`         | 0.6858 | 0.8866 |
+| `imagenet1k-resnet-34`         | 0.7244 | 0.9097 |
+| `imagenet1k-resnet-50`         | 0.7527 | 0.9258 |
+| `imagenet1k-resnet-101`        | 0.7684 | 0.9327 |
+| `imagenet1k-resnet-152`        | 0.7653 | 0.9312 |
+| `imagenet1k-resnext-50`        | 0.7689 | 0.9332 |
+| `imagenet1k-resnext-101`       | 0.7828 | 0.9408 |
+| `imagenet1k-rexnext-101-64x4d` | 0.7911 | 0.9430 |
 
 Note:
-- our Resnet dose not need to specify the RGB mean due the data batch
+- our Resnet does not need to specify the RGB mean due the data batch
   normalization layer. While the inception models needs `--rgb-mean
   123.68,116.779,103.939`
 - Resnet training logs are available at
   [tornadomeet/ResNet](https://github.com/tornadomeet/ResNet/tree/master/log)
+- We warm up our Resnext-101-64x4d by training it with 1/100 and 1/10 of the
+  base learning rate for the 1st and 2nd epoch. We use 3 p2.16xlarge instances
+  with a batch size of 384 on each node with base lr set to 0.45, and decay step
+  set at 50, 80, 110 epoch. After 133 epoch, we use one node to finetune, and
+  turn off color and scale data augmentation, with lr reduced to 1.5e-04.
 
 #### Speed and Memory Footprint:
 
@@ -220,7 +226,7 @@ file named `hosts`. The outputs of `cat hosts` may be
 Now we can run the previous cifar10 training on two machines:
 
 ```bash
-../../tools/launch.py -n 2 -H hosts \
+python ../../tools/launch.py -n 2 -H hosts \
     python train_cifar10.py --network resnet --num-layers 110 --batch-size 128 --gpus 0,1 \
     --kv-store dist_device_sync
 ```

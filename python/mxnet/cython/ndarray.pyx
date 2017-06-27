@@ -4,6 +4,7 @@ import sys as _sys
 import ctypes as _ctypes
 import numpy as np
 from ..ndarray_doc import _build_doc
+from libc.stdint cimport uint32_t, int64_t
 
 include "./base.pyi"
 
@@ -47,7 +48,7 @@ cdef class NDArrayBase:
 
 _ndarray_cls = NDArrayBase
 
-cdef _set_ndarray_class(cls):
+def _set_ndarray_class(cls):
     global _ndarray_cls
     _ndarray_cls = cls
 
@@ -59,100 +60,56 @@ cdef NewArray(NDArrayHandle handle):
     (<NDArrayBase>nd).cwritable = True
     return nd
 
-cdef _make_ndarray_function(OpHandle handle, string name):
-    """Create a NDArray function from the FunctionHandle."""
-    cdef const char *real_name
-    cdef const char *desc
-    cdef nn_uint num_args
-    cdef const char** arg_names
-    cdef const char** arg_types
-    cdef const char** arg_descs
-    cdef const char* return_type
-    cdef const char* key_var_num_args
 
-    CALL(MXSymbolGetAtomicSymbolInfo(
-        handle, &real_name, &desc,
-        &num_args, &arg_names,
-        &arg_types, &arg_descs,
-        &key_var_num_args, &return_type))
-    func_name = py_str(name.c_str())
+cdef class CachedOp:
+    """Cached operator handle."""
+    cdef CachedOpHandle chandle
 
-    key_vargs = py_str(key_var_num_args)
-    num_args = int(num_args)
-    doc_str = _build_doc(func_name,
-                         py_str(desc),
-                         [py_str(arg_names[i]) for i in range(num_args)],
-                         [py_str(arg_types[i]) for i in range(num_args)],
-                         [py_str(arg_descs[i]) for i in range(num_args)],
-                         key_vargs,
-                         py_str(return_type) if return_type != NULL else '')
-    func_hint = func_name.lower()
+    cdef _set_handle(self, handle):
+        cdef unsigned long long ptr
+        if handle is None:
+            self.chandle = NULL
+        else:
+            ptr = handle.value
+            self.chandle = <SymbolHandle>(ptr)
 
-    arguments = []
-    for i in range(num_args):
-        dtype = py_str(arg_types[i])
-        if not (dtype.startswith('NDArray') or dtype.startswith('Symbol')):
-            arguments.append(py_str(arg_names[i]))
+    property handle:
+        def __get__(self):
+            if self.chandle == NULL:
+                return None
+            else:
+                return _ctypes.cast(<unsigned long long>self.chandle, _ctypes.c_void_p)
+        def __set__(self, value):
+            self._set_handle(value)
 
-    num_param_args = len(arguments)
+    def __init__(self, sym):
+        cdef unsigned long long ptr = sym.handle.value
+        CALL(MXCreateCachedOp(
+            (<SymbolHandle>ptr),
+            &self.chandle))
 
-    # Definition of internal functions.
-    def generic_ndarray_function(*args, **kwargs):
-        """Invoke this function by passing in parameters
+    def __del__(self):
+        CALL(MXFreeCachedOp(self.chandle))
 
-        Parameters
-        ----------
-        *args
-            Positional arguments of input scalars and NDArray
-        out : NDArray or tuple of NDArray, optional
-            Output NDArray, used to hold the output result.
-
-        Returns
-        -------
-        out : NDArray
-            The result NDArray(tuple) of result of computation.
-        """
-        cdef vector[string] sparam_keys
-        cdef vector[string] sparam_vals
-        cdef vector[NDArrayHandle] nd_args
+    def __call__(self, *args, out=None):
+        """ctypes implementation of imperative invoke wrapper"""
+        cdef vector[NDArrayHandle] ndvars
         cdef vector[NDArrayHandle] output_vars
         cdef NDArrayHandle* p_output_vars
         cdef NDArrayHandle ret_handle
-        cdef int pos_param_arg
         cdef int num_output
 
-        pos_param_arg = 0
-
-        for v in args:
-            if isinstance(v, NDArrayBase):
-                nd_args.push_back((<NDArrayBase>v).chandle)
-            else:
-                if pos_param_arg >= num_param_args:
-                    raise ValueError("Too many positional arguments")
-                if arguments[pos_param_arg] == 'dtype':
-                    sparam_vals.push_back(c_str(np.dtype(v).name))
-                else:
-                    sparam_vals.push_back(c_str(str(v)))
-                sparam_keys.push_back(c_str(arguments[pos_param_arg]))
-                pos_param_arg = pos_param_arg + 1
+        for i in args:
+            ndvars.push_back((<NDArrayBase>i).chandle)
 
         original_output = None
-        for k, v in kwargs.iteritems():
-            if k == "out":
-                original_output = v
-                if isinstance(v, NDArrayBase):
-                    output_vars.push_back((<NDArrayBase>v).chandle)
-                else:
-                    for item in v:
-                        if not isinstance(item, NDArrayBase):
-                            raise ValueError("out need to be of type NDArray")
-                        output_vars.push_back((<NDArrayBase>v).chandle)
-            elif k == 'dtype':
-                sparam_vals.push_back(c_str(np.dtype(v).name))
-                sparam_keys.push_back(c_str(k))
+        if out is not None:
+            original_output = out
+            if isinstance(out, NDArrayBase):
+                output_vars.push_back((<NDArrayBase>out).chandle)
             else:
-                sparam_vals.push_back(c_str(str(v)))
-                sparam_keys.push_back(c_str(k))
+                for i in out:
+                    output_vars.push_back((<NDArrayBase>i).chandle)
 
         num_output = output_vars.size()
         if output_vars.size() == 0:
@@ -161,52 +118,72 @@ cdef _make_ndarray_function(OpHandle handle, string name):
         else:
             p_output_vars = &output_vars[0]
 
-        cdef vector[const char*] param_keys = SVec2Ptr(sparam_keys)
-        cdef vector[const char*] param_vals = SVec2Ptr(sparam_vals)
-
-        CALL(MXImperativeInvoke(
-            handle,
-            <int>nd_args.size(),
-            &nd_args[0] if nd_args.size() != 0 else NULL,
+        CALL(MXInvokeCachedOp(
+            (<CachedOp>self).chandle,
+            <int>len(args),
+            &ndvars[0] if ndvars.size() != 0 else NULL,
             &num_output,
-            &p_output_vars,
-            <int>param_keys.size(),
-            CBeginPtr(param_keys),
-            CBeginPtr(param_vals)))
+            &p_output_vars))
 
         if original_output is not None:
             return original_output
-
         if num_output == 1:
             return NewArray(p_output_vars[0])
         else:
             return tuple(NewArray(p_output_vars[i]) for i in range(num_output))
 
-    # End of function declaration
-    generic_ndarray_function.__name__ = func_name
-    generic_ndarray_function.__doc__ = doc_str
-    generic_ndarray_function.__module__ = 'mxnet.ndarray'
-    return generic_ndarray_function
 
+def _imperative_invoke(handle, ndargs, keys, vals, out):
+    """cython implementation of imperative invoke wrapper"""
+    cdef unsigned long long ihandle = handle
+    cdef OpHandle chandle = <OpHandle>ihandle
+    cdef vector[string] ckeys
+    cdef vector[string] cvals
+    cdef vector[NDArrayHandle] ndvars
+    cdef vector[NDArrayHandle] output_vars
+    cdef NDArrayHandle* p_output_vars
+    cdef NDArrayHandle ret_handle
+    cdef int num_output
 
-def _init_ndarray_module(nd_class, root_namespace):
-    """List and add all the atomic symbol functions to current module."""
-    cdef const char** op_name_ptrs
-    cdef nn_uint size
-    cdef vector[string] op_names
-    cdef OpHandle handle
+    for i in ndargs:
+        ndvars.push_back((<NDArrayBase>i).chandle)
+    for i in keys:
+        ckeys.push_back(c_str(i))
+    for i in vals:
+        cvals.push_back(c_str(str(i)))
 
-    _set_ndarray_class(nd_class)
-    CALL(MXListAllOpNames(&size, &op_name_ptrs))
-    for i in range(size):
-        op_names.push_back(string(op_name_ptrs[i]))
-
-    module_obj = _sys.modules["%s.ndarray" % root_namespace]
-    module_internal = _sys.modules["%s._ndarray_internal" % root_namespace]
-    for i in range(op_names.size()):
-        CALL(NNGetOpHandle(op_names[i].c_str(), &handle))
-        function = _make_ndarray_function(handle, op_names[i])
-        if function.__name__.startswith('_'):
-            setattr(module_internal, function.__name__, function)
+    original_output = None
+    if out is not None:
+        original_output = out
+        if isinstance(out, NDArrayBase):
+            output_vars.push_back((<NDArrayBase>out).chandle)
         else:
-            setattr(module_obj, function.__name__, function)
+            for i in out:
+                output_vars.push_back((<NDArrayBase>i).chandle)
+
+    num_output = output_vars.size()
+    if output_vars.size() == 0:
+        output_vars.resize(1)
+        p_output_vars = NULL
+    else:
+        p_output_vars = &output_vars[0]
+
+    cdef vector[const char*] param_keys = SVec2Ptr(ckeys)
+    cdef vector[const char*] param_vals = SVec2Ptr(cvals)
+
+    CALL(MXImperativeInvoke(
+        chandle,
+        <int>ndvars.size(),
+        &ndvars[0] if ndvars.size() != 0 else NULL,
+        &num_output,
+        &p_output_vars,
+        <int>param_keys.size(),
+        CBeginPtr(param_keys),
+        CBeginPtr(param_vals)))
+
+    if original_output is not None:
+        return original_output
+    if num_output == 1:
+        return NewArray(p_output_vars[0])
+    else:
+        return tuple(NewArray(p_output_vars[i]) for i in range(num_output))

@@ -1,6 +1,5 @@
 import numpy as np
 import mxnet as mx
-import os
 
 
 def reldiff(a, b):
@@ -63,10 +62,8 @@ def check_bind_with_uniform(uf, gf, dim, sf=None, lshape=None, rshape=None):
 
 def test_bind(disable_bulk_exec=False):
     if disable_bulk_exec:
-        prev_fwd_var = os.environ.get("MXNET_EXEC_BULK_FWD_THRESHOLD_TRAIN", "1")
-        prev_bwd_var = os.environ.get("MXNET_EXEC_BULK_BWD_TRAIN", "1")
-        os.environ["MXNET_EXEC_BULK_FWD_THRESHOLD_TRAIN"] = "0"
-        os.environ["MXNET_EXEC_BULK_BWD_TRAIN"] = "0"
+        prev_bulk_inf_val = mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_INFERENCE", "0", "1")
+        prev_bulk_train_val = mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_TRAIN", "0", "1")
 
     np.random.seed(0)
     nrepeat = 10
@@ -95,8 +92,8 @@ def test_bind(disable_bulk_exec=False):
                                     dim,
                                     sf=mx.symbol.minimum)
     if disable_bulk_exec:
-       os.environ["MXNET_EXEC_BULK_FWD_THRESHOLD_TRAIN"] = prev_fwd_var
-       os.environ["MXNET_EXEC_BULK_BWD_TRAIN"] = prev_bwd_var
+       mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_INFERENCE", prev_bulk_inf_val)
+       mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_TRAIN", prev_bulk_train_val)
 
 def test_dot():
     np.random.seed(0)
@@ -124,7 +121,7 @@ def test_reshape():
     x = mx.sym.Variable('x')
     y = mx.sym.FullyConnected(x, num_hidden=4)
 
-    exe = y.simple_bind(mx.cpu(), x=(5,4), grad_req=[])
+    exe = y.simple_bind(mx.cpu(), x=(5,4), grad_req='null')
     exe.arg_arrays[0][:] = 1
     exe.arg_arrays[1][:] = mx.nd.ones((4,4))
     exe.arg_arrays[2][:] = 0

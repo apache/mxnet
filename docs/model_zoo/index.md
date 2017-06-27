@@ -30,6 +30,7 @@ Convolutional neural networks are the state-of-art architecture for many image a
 * [Mini-Places2](http://6.869.csail.mit.edu/fa15/project.html): Subset of the Places2 dataset. Includes 100,000 images from 100 scene categories.
 * ImageNet 11k
 * [Places2](http://places2.csail.mit.edu/download.html): There are 1.6 million train images from 365 scene categories in the Places365-Standard, which are used to train the Places365 CNNs. There are 50 images per category in the validation set and 900 images per category in the testing set. Compared to the train set of Places365-Standard, the train set of Places365-Challenge has 6.2 million extra images, leading to totally 8 million train images for the Places365 challenge 2016. The validation set and testing set are the same as the Places365-Standard.
+* [Multimedia Commons](https://aws.amazon.com/public-datasets/multimedia-commons/): YFCC100M (99.2 million images and 0.8 million videos from Flickr) and supplemental material (pre-extracted features, additional annotations).
 
 For instructions on using these models, see [the python tutorial on using pre-trained ImageNet models](http://mxnet.io/tutorials/python/predict_imagenet.html).
 
@@ -42,9 +43,12 @@ For instructions on using these models, see [the python tutorial on using pre-tr
 | [VGG19](http://data.dmlc.ml/models/imagenet/vgg/vgg19-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/vgg/vgg19-0000.params) | [Simonyan et al.., 2015](https://arxiv.org/pdf/1409.1556v6.pdf) | @jspisak |
 | [Inception v3 w/BatchNorm](http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-0126.params) | [Szegedy et al.., 2015](https://arxiv.org/pdf/1512.00567.pdf) | @jspisak |
 | [ResidualNet152](http://data.dmlc.ml/models/imagenet/resnet/152-layers/resnet-152-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/resnet/152-layers/resnet-152-0000.params) | [He et al.., 2015](https://arxiv.org/pdf/1512.03385v1.pdf) | @jspisak |
+| [ResNext101-64x4d](http://data.dmlc.ml/models/imagenet/resnext/101-layers/resnext-101-64x4d-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/resnext/101-layers/resnext-101-64x4d-0000.params) | [Xie et al.., 2016](https://arxiv.org/pdf/1611.05431.pdf) | @Jerryzcn |
 | Fast-RCNN | PASCAL VOC | [Param File] | [Girshick, 2015](https://arxiv.org/pdf/1504.08083v2.pdf) | |
 | Faster-RCNN | PASCAL VOC | [Param File] | [Ren et al..,2016](https://arxiv.org/pdf/1506.01497v3.pdf) | |
 | Single Shot Detection (SSD) | PASCAL VOC | [Param File] | [Liu et al.., 2016](https://arxiv.org/pdf/1512.02325v4.pdf) | |
+| [LocationNet](https://s3.amazonaws.com/mmcommons-tutorial/models/RN101-5k500-symbol.json) | [MultimediaCommons](https://aws.amazon.com/public-datasets/multimedia-commons/) | [Param File](https://s3.amazonaws.com/mmcommons-tutorial/models/RN101-5k500-0012.params) | [Weyand et al.., 2016](https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/45488.pdf) | @jychoi84 @kevinli7 |
+
 
 
 ## Recurrent Neural Networks (RNNs) including LSTMs
@@ -53,7 +57,7 @@ MXNet supports many types of recurrent neural networks (RNNs), including Long Sh
 and Gated Recurrent Units (GRU) networks. Some available datasets include:
 
 * [Penn Treebank (PTB)](https://www.cis.upenn.edu/~treebank/): Text corpus with ~1 million words. Vocabulary is limited to 10,000 words. The task is predicting downstream words/characters.
-* [Shakespeare](http://cs.stanford.edu/people/karpathy/char-rnn/): Complete text from Shakespeare’s works.
+* [Shakespeare](http://cs.stanford.edu/people/karpathy/char-rnn/): Complete text from Shakespeare's works.
 * [IMDB reviews](https://s3.amazonaws.com/text-datasets): 25,000 movie reviews, labeled as positive or negative
 * [Facebook bAbI](https://research.facebook.com/researchers/1543934539189348): As a set of 20 question & answer tasks, each with 1,000 training examples.
 * [Flickr8k, COCO](http://mscoco.org/): Images with associated caption (sentences). Flickr8k consists of 8,092 images captioned by AmazonTurkers with ~40,000 captions. COCO has 328,000 images, each with 5 captions. The COCO images also come with labeled objects using segmentation algorithms.

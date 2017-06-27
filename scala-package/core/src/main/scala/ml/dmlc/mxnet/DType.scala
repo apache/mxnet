@@ -17,7 +17,7 @@
 
 package ml.dmlc.mxnet
 
-private[mxnet] object DType extends Enumeration {
+object DType extends Enumeration {
   type DType = Value
   val Float32 = Value(0)
   val Float64 = Value(1)

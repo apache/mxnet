@@ -28,11 +28,29 @@ Operator *MakeLossProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_sh
 DMLC_REGISTER_PARAMETER(MakeLossParam);
 
 MXNET_REGISTER_OP_PROPERTY(MakeLoss, MakeLossProp)
-.describe("Get output from a symbol and pass 1 gradient back. "
-"This is used as a terminal loss if unary and binary operator "
-"are used to composite a loss with no declaration of backward "
-"dependency")
-.add_argument("data", "Symbol", "Input data.")
+.describe(R"code(Make your own loss function in network construction.
+
+This operator accepts a customized loss function symbol as a terminal loss and
+the symbol should be an operator with no backward dependency.
+The output of this function is the gradient of loss with respect to the input data.
+
+For example, if you are a making a cross entropy loss function. Assume ``out`` is the
+predicted output and ``label`` is the true label, then the cross entropy can be defined as::
+
+  cross_entropy = label * log(out) + (1 - label) * log(1 - out)
+  loss = MakeLoss(cross_entropy)
+
+We will need to use ``MakeLoss`` when we are creating our own loss function or we want to
+combine multiple loss functions. Also we may want to stop some variables' gradients
+from backpropagation. See more detail in ``BlockGrad`` or ``stop_gradient``.
+
+In addition, we can give a scale to the loss by setting ``grad_scale``,
+so that the gradient of the loss will be rescaled in the backpropagation.
+
+.. note:: This operator should be used as a Symbol instead of NDArray.
+
+)code" ADD_FILELINE)
+.add_argument("data", "NDArray-or-Symbol", "Input array.")
 .add_arguments(MakeLossParam::__FIELDS__());
 
 }  // namespace op

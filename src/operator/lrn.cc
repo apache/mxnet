@@ -38,9 +38,24 @@ Operator* LocalResponseNormProp::CreateOperatorEx(Context ctx, std::vector<TShap
 DMLC_REGISTER_PARAMETER(LRNParam);
 
 MXNET_REGISTER_OP_PROPERTY(LRN, LocalResponseNormProp)
-.add_argument("data", "Symbol", "Input data to the ConvolutionOp.")
+.add_argument("data", "NDArray-or-Symbol", "Input data.")
 .add_arguments(LRNParam::__FIELDS__())
-.describe("Apply convolution to input then add a bias.");
+.describe(R"code(Applies local response normalization to the input.
+
+The local response normalization layer performs "lateral inhibition" by normalizing 
+over local input regions. 
+
+If :math:`a_{x,y}^{i}` is the activity of a neuron computed by applying kernel :math:`i` at position
+:math:`(x, y)` and then applying the ReLU nonlinearity, the response-normalized 
+activity :math:`b_{x,y}^{i}` is given by the expression: 
+
+.. math::   
+   b_{x,y}^{i} = \frac{a_{x,y}^{i}}{\Bigg({k + \alpha \sum_{j=max(0, i-\frac{n}{2})}^{min(N-1, i+\frac{n}{2})} (a_{x,y}^{j})^{2}}\Bigg)^{\beta}}
+
+where the sum runs over :math:`n` "adjacent" kernel maps at the same spatial position, and :math:`N` is the total
+number of kernels in the layer.
+
+)code" ADD_FILELINE);
 
 }  // namespace op
 }  // namespace mxnet

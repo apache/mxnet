@@ -7,6 +7,7 @@ from cpython.version cimport PY_MAJOR_VERSION
 ctypedef void* SymbolHandle
 ctypedef void* NDArrayHandle
 ctypedef void* OpHandle
+ctypedef void* CachedOpHandle
 ctypedef unsigned nn_uint
 
 cdef py_str(const char* x):
@@ -14,7 +15,6 @@ cdef py_str(const char* x):
         return x
     else:
         return x.decode("utf-8")
-
 
 cdef c_str(pystr):
     """Create ctypes char * from a python string
@@ -99,3 +99,11 @@ cdef extern from "mxnet/c_api.h":
                            const char **param_keys,
                            const char **param_vals);
     int MXNDArrayFree(NDArrayHandle handle);
+    int MXCreateCachedOp(SymbolHandle handle,
+                         CachedOpHandle *out);
+    int MXFreeCachedOp(CachedOpHandle handle);
+    int MXInvokeCachedOp(CachedOpHandle handle,
+                       int num_inputs,
+                       NDArrayHandle *inputs,
+                       int *num_outputs,
+                       NDArrayHandle **outputs);

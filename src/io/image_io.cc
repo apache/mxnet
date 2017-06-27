@@ -26,7 +26,7 @@ namespace io {
 // http://www.64lines.com/jpeg-width-height
 // Gets the JPEG size from the array of data passed to the function,
 // file reference: http://www.obrador.com/essentialjpeg/headerinfo.htm
-bool get_jpeg_size(const uint8_t* data, uint32_t data_size, uint32_t *width, uint32_t *height) {
+bool get_jpeg_size(const uint8_t* data, uint32_t data_size, int64_t *width, int64_t *height) {
   // Check for valid JPEG image
   uint32_t i = 0;  // Keeps track of the position within the file
   if (data[i] == 0xFF && data[i+1] == 0xD8 && data[i+2] == 0xFF && data[i+3] == 0xE0) {
@@ -63,7 +63,7 @@ bool get_jpeg_size(const uint8_t* data, uint32_t data_size, uint32_t *width, uin
   }
 }
 
-bool get_png_size(const uint8_t* data, uint32_t data_size, uint32_t *width, uint32_t *height) {
+bool get_png_size(const uint8_t* data, uint32_t data_size, int64_t *width, int64_t *height) {
   if (data[0] == 0x89 && data[1] == 0x50 && data[2] ==0x4E && data[3] == 0x47) {
     uint8_t const* p = data + 16;
     *width = ((p[0]*256 + p[1])*256 + p[2])*256 + p[3];
@@ -123,7 +123,7 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
                 param.flag == 0 ? CV_8U : CV_8UC3,
                 ndout.data().dptr_);
     res.copyTo(dst);
-    if (param.to_rgb) {
+    if (param.to_rgb && param.flag != 0) {
       cv::cvtColor(dst, dst, CV_BGR2RGB);
     }
     (*outputs)[0] = ndout;
@@ -132,7 +132,6 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
 
   NDArray ndout(oshape, Context::CPU(), true, mshadow::kUint8);
   Engine::Get()->PushSync([ndin, ndout, param](RunContext ctx){
-      ndout.CheckAndAlloc();
       cv::Mat buf(1, ndin.shape().Size(), CV_8U, ndin.data().dptr_);
       cv::Mat dst(ndout.shape()[0], ndout.shape()[1],
                   param.flag == 0 ? CV_8U : CV_8UC3,
@@ -146,7 +145,7 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
 #endif
       CHECK(!dst.empty());
       CHECK_EQ(static_cast<void*>(dst.ptr()), ndout.data().dptr_);
-      if (param.to_rgb) {
+      if (param.to_rgb && param.flag != 0) {
         cv::cvtColor(dst, dst, CV_BGR2RGB);
       }
     }, ndout.ctx(), {ndin.var()}, {ndout.var()},

@@ -7,12 +7,15 @@ from __future__ import print_function
 
 import warnings
 
-from .. import symbol, init, ndarray, _symbol_internal
+from .. import symbol, init, ndarray
 from ..base import string_types, numeric_types
 
 
 def _cells_state_shape(cells):
     return sum([c.state_shape for c in cells], [])
+
+def _cells_state_info(cells):
+    return sum([c.state_info for c in cells], [])
 
 def _cells_begin_state(cells, **kwargs):
     return sum([c.begin_state(**kwargs) for c in cells], [])
@@ -61,15 +64,15 @@ class RNNParams(object):
     Parameters
     ----------
     prefix : str
-        All variables' name created by this container will
-        be prepended with prefix
+        Names of all variables created by this container will
+        be prepended with prefix.
     """
     def __init__(self, prefix=''):
         self._prefix = prefix
         self._params = {}
 
     def get(self, name, **kwargs):
-        """Get a variable with name or create a new one if missing.
+        """Get the variable given a name if one exists or create a new one if missing.
 
         Parameters
         ----------
@@ -89,12 +92,13 @@ class BaseRNNCell(object):
 
     Parameters
     ----------
-    prefix : str
-        prefix for name of layers
-        (and name of weight if params is None)
-    params : RNNParams or None
-        container for weight sharing between cells.
-        created if None.
+    prefix : str, optional
+        Prefix for names of layers
+        (this prefix is also used for names of weights if `params` is None
+        i.e. if `params` are being created and not reused)
+    params : RNNParams, default None.
+        Container for weight sharing between cells.
+        A new RNNParams container is created if `params` is None.
     """
     def __init__(self, prefix='', params=None):
         if params is None:
@@ -109,26 +113,35 @@ class BaseRNNCell(object):
         self.reset()
 
     def reset(self):
-        """Reset before re-using the cell for another graph"""
+        """Reset before re-using the cell for another graph."""
         self._init_counter = -1
         self._counter = -1
 
     def __call__(self, inputs, states):
-        """Construct symbol for one step of RNN.
+        """Unroll the RNN for one time step.
 
         Parameters
         ----------
         inputs : sym.Variable
             input symbol, 2D, batch * num_units
-        states : sym.Variable
-            state from previous step or begin_state().
+        states : list of sym.Variable
+            RNN state from previous step or the output of begin_state().
 
         Returns
         -------
         output : Symbol
-            output symbol
-        states : Symbol
-            state to next step of RNN.
+            Symbol corresponding to the output from the RNN when unrolling
+            for a single time step.
+        states : nested list of Symbol
+            The new state of this RNN after this unrolling.
+            The type of this symbol is same as the output of begin_state().
+            This can be used as input state to the next time step
+            of this RNN.
+
+        See Also
+        --------
+        begin_state: This function can provide the states for the first time step.
+        unroll: This function unrolls an RNN for a given number of (>=1) time steps.
         """
         raise NotImplementedError()
 
@@ -139,9 +152,14 @@ class BaseRNNCell(object):
         return self._params
 
     @property
+    def state_info(self):
+        """shape and layout information of states"""
+        raise NotImplementedError()
+
+    @property
     def state_shape(self):
         """shape(s) of states"""
-        raise NotImplementedError()
+        return [ele['shape'] for ele in self.state_info]
 
     @property
     def _gate_names(self):
@@ -165,38 +183,49 @@ class BaseRNNCell(object):
         Returns
         -------
         states : nested list of Symbol
-            starting states for first RNN step
+            Starting states for the first RNN step.
         """
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
         states = []
-        for shape in self.state_shape:
+        for info in self.state_info:
             self._init_counter += 1
-            if shape is None:
+            if info is None:
                 state = func(name='%sbegin_state_%d'%(self._prefix, self._init_counter),
                              **kwargs)
             else:
+                kwargs.update(info)
                 state = func(name='%sbegin_state_%d'%(self._prefix, self._init_counter),
-                             shape=shape, **kwargs)
+                             **kwargs)
             states.append(state)
         return states
 
     def unpack_weights(self, args):
         """Unpack fused weight matrices into separate
-        weight matrices
+        weight matrices.
+
+        For example, say you use a module object `mod` to run a network that has an lstm cell.
+        In `mod.get_params()[0]`, the lstm parameters are all represented as a single big vector.
+        `cell.unpack_weights(mod.get_params()[0])` will unpack this vector into a dictionary of
+        more readable lstm parameters - c, f, i, o gates for i2h (input to hidden) and
+        h2h (hidden to hidden) weights.
 
         Parameters
         ----------
         args : dict of str -> NDArray
-            dictionary containing packed weights.
-            usually from Module.get_output()
+            Dictionary containing packed weights.
+            usually from `Module.get_params()[0]`.
 
         Returns
         -------
         args : dict of str -> NDArray
-            dictionary with weights associated to
-            this cell unpacked.
+            Dictionary with unpacked weights associated with
+            this cell.
+
+        See Also
+        --------
+        pack_weights: Performs the reverse operation of this function.
         """
         args = args.copy()
         if not self._gate_names:
@@ -213,19 +242,19 @@ class BaseRNNCell(object):
         return args
 
     def pack_weights(self, args):
-        """Pack separate weight matrices into fused
+        """Pack separate weight matrices into a single packed
         weight.
 
         Parameters
         ----------
         args : dict of str -> NDArray
-            dictionary containing unpacked weights.
+            Dictionary containing unpacked weights.
 
         Returns
         -------
         args : dict of str -> NDArray
-            dictionary with weights associated to
-            this cell packed.
+            Dictionary with packed weights associated with
+            this cell.
         """
         args = args.copy()
         if not self._gate_names:
@@ -248,37 +277,41 @@ class BaseRNNCell(object):
         Parameters
         ----------
         length : int
-            number of steps to unroll
+            Number of steps to unroll.
         inputs : Symbol, list of Symbol, or None
-            if inputs is a single Symbol (usually the output
+            If `inputs` is a single Symbol (usually the output
             of Embedding symbol), it should have shape
             (batch_size, length, ...) if layout == 'NTC',
             or (length, batch_size, ...) if layout == 'TNC'.
 
-            If inputs is a list of symbols (usually output of
+            If `inputs` is a list of symbols (usually output of
             previous unroll), they should all have shape
             (batch_size, ...).
-        begin_state : nested list of Symbol
-            input states. Created by begin_state()
-            or output state of another cell. Created
-            from begin_state() if None.
-        layout : str
-            layout of input symbol. Only used if inputs
+        begin_state : nested list of Symbol, default None
+            Input states created by `begin_state()`
+            or output state of another cell.
+            Created from `begin_state()` if None.
+        layout : str, optional
+            `layout` of input symbol. Only used if inputs
             is a single Symbol.
-        merge_outputs : bool
+        merge_outputs : bool, optional
             If False, return outputs as a list of Symbols.
             If True, concatenate output across time steps
             and return a single symbol with shape
             (batch_size, length, ...) if layout == 'NTC',
             or (length, batch_size, ...) if layout == 'TNC'.
-            If None, output whatever is faster
+            If None, output whatever is faster.
 
         Returns
         -------
-        outputs : list of Symbol
-            output symbols.
-        states : Symbol or nested list of Symbol
-            has the same structure as begin_state()
+        outputs : list of Symbol or Symbol
+            Symbol (if `merge_outputs` is True) or list of Symbols
+            (if `merge_outputs` is False) corresponding to the output from
+            the RNN from this unrolling.
+
+        states : nested list of Symbol
+            The new state of this RNN after this unrolling.
+            The type of this symbol is same as the output of begin_state().
         """
         self.reset()
 
@@ -306,20 +339,18 @@ class BaseRNNCell(object):
 
 
 class RNNCell(BaseRNNCell):
-    """Simple recurrent neural network cell
+    """Simple recurrent neural network cell.
 
     Parameters
     ----------
     num_hidden : int
-        number of units in output symbol
+        Number of units in output symbol.
     activation : str or Symbol, default 'tanh'
-        type of activation function
+        Type of activation function. Options are 'relu' and 'tanh'.
     prefix : str, default 'rnn_'
-        prefix for name of layers
-        (and name of weight if params is None)
-    params : RNNParams or None
-        container for weight sharing between cells.
-        created if None.
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, num_hidden, activation='tanh', prefix='rnn_', params=None):
         super(RNNCell, self).__init__(prefix=prefix, params=params)
@@ -331,8 +362,8 @@ class RNNCell(BaseRNNCell):
         self._hB = self.params.get('h2h_bias')
 
     @property
-    def state_shape(self):
-        return [(0, self._num_hidden)]
+    def state_info(self):
+        return [{'shape': (0, self._num_hidden), '__layout__': 'NC'}]
 
     @property
     def _gate_names(self):
@@ -359,13 +390,11 @@ class LSTMCell(BaseRNNCell):
     Parameters
     ----------
     num_hidden : int
-        number of units in output symbol
-    prefix : str, default 'rnn_'
-        prefix for name of layers
-        (and name of weight if params is None)
-    params : RNNParams or None
-        container for weight sharing between cells.
-        created if None.
+        Number of units in output symbol.
+    prefix : str, default 'lstm_'
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     forget_bias : bias added to forget gate, default 1.0.
         Jozefowicz et al. 2015 recommends setting this to 1.0
     """
@@ -380,8 +409,9 @@ class LSTMCell(BaseRNNCell):
         self._hB = self.params.get('h2h_bias')
 
     @property
-    def state_shape(self):
-        return [(0, self._num_hidden), (0, self._num_hidden)]
+    def state_info(self):
+        return [{'shape': (0, self._num_hidden), '__layout__': 'NC'},
+                {'shape': (0, self._num_hidden), '__layout__': 'NC'}]
 
     @property
     def _gate_names(self):
@@ -423,13 +453,11 @@ class GRUCell(BaseRNNCell):
     Parameters
     ----------
     num_hidden : int
-        number of units in output symbol
+        Number of units in output symbol.
     prefix : str, default 'gru_'
-        prefix for name of layers
-        (and name of weight if params is None)
-    params : RNNParams or None
-        container for weight sharing between cells.
-        created if None.
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, num_hidden, prefix='gru_', params=None):
         super(GRUCell, self).__init__(prefix=prefix, params=params)
@@ -440,8 +468,9 @@ class GRUCell(BaseRNNCell):
         self._hB = self.params.get("h2h_bias")
 
     @property
-    def state_shape(self):
-        return [(0, self._num_hidden)]
+    def state_info(self):
+        return [{'shape': (0, self._num_hidden),
+                 '__layout__': 'NC'}]
 
     @property
     def _gate_names(self):
@@ -490,6 +519,26 @@ class FusedRNNCell(BaseRNNCell):
 
     Parameters
     ----------
+    num_hidden : int
+        Number of units in output symbol.
+    num_layers : int, default 1
+        Number of layers in the cell.
+    mode : str, default 'lstm'
+        Type of RNN. options are 'rnn_relu', 'rnn_tanh', 'lstm', 'gru'.
+    bidirectional : bool, default False
+        Whether to use bidirectional unroll. The output dimension size is doubled if bidrectional.
+    dropout : float, default 0.
+        Fraction of the input that gets dropped out during training time.
+    get_next_state : bool, default False
+        Whether to return the states that can be used as starting states next time.
+    forget_bias : bias added to forget gate, default 1.0.
+        Jozefowicz et al. 2015 recommends setting this to 1.0
+    prefix : str, default '$mode_' such as 'lstm_'
+        Prefix for names of layers
+        (this prefix is also used for names of weights if `params` is None
+        i.e. if `params` are being created and not reused)
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, num_hidden, num_layers=1, mode='lstm', bidirectional=False,
                  dropout=0., get_next_state=False, forget_bias=1.0,
@@ -510,10 +559,11 @@ class FusedRNNCell(BaseRNNCell):
         self._parameter = self.params.get('parameters', init=initializer)
 
     @property
-    def state_shape(self):
+    def state_info(self):
         b = self._bidirectional + 1
         n = (self._mode == 'lstm') + 1
-        return [(b*self._num_layers, 0, self._num_hidden)]*n
+        return [{'shape': (b*self._num_layers, 0, self._num_hidden), '__layout__': 'LNC'}
+                for _ in range(n)]
 
     @property
     def _gate_names(self):
@@ -622,11 +672,15 @@ class FusedRNNCell(BaseRNNCell):
                          mode=self._mode, name=self._prefix+'rnn',
                          **states)
 
+        attr = {'__layout__' : 'LNC'}
         if not self._get_next_state:
             outputs, states = rnn, []
         elif self._mode == 'lstm':
+            rnn[1]._set_attr(**attr)
+            rnn[2]._set_attr(**attr)
             outputs, states = rnn[0], [rnn[1], rnn[2]]
         else:
+            rnn[1]._set_attr(**attr)
             outputs, states = rnn[0], [rnn[1]]
 
         if axis == 1:
@@ -671,13 +725,12 @@ class FusedRNNCell(BaseRNNCell):
 
 
 class SequentialRNNCell(BaseRNNCell):
-    """Sequantially stacking multiple RNN cells
+    """Sequantially stacking multiple RNN cells.
 
     Parameters
     ----------
-    params : RNNParams or None
-        container for weight sharing between cells.
-        created if None.
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, params=None):
         super(SequentialRNNCell, self).__init__(prefix='', params=params)
@@ -689,7 +742,9 @@ class SequentialRNNCell(BaseRNNCell):
 
         Parameters
         ----------
-        cell : rnn cell
+        cell : BaseRNNCell
+            The cell to be appended. During unroll, previous cell's output (or raw inputs if
+            no previous cell) is used as the input to this cell.
         """
         self._cells.append(cell)
         if self._override_cell_params:
@@ -700,10 +755,10 @@ class SequentialRNNCell(BaseRNNCell):
         self.params._params.update(cell.params._params)
 
     @property
-    def state_shape(self):
-        return _cells_state_shape(self._cells)
+    def state_info(self):
+        return _cells_state_info(self._cells)
 
-    def begin_state(self, **kwargs):
+    def begin_state(self, **kwargs): # pylint: disable=arguments-differ
         assert not self._modified, \
             "After applying modifier cells (e.g. ZoneoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
@@ -721,7 +776,7 @@ class SequentialRNNCell(BaseRNNCell):
         p = 0
         for cell in self._cells:
             assert not isinstance(cell, BidirectionalCell)
-            n = len(cell.state_shape)
+            n = len(cell.state_info)
             state = states[p:p+n]
             p += n
             inputs, state = cell(inputs, state)
@@ -736,14 +791,16 @@ class SequentialRNNCell(BaseRNNCell):
             begin_state = self.begin_state()
 
         p = 0
+        next_states = []
         for i, cell in enumerate(self._cells):
-            n = len(cell.state_shape)
+            n = len(cell.state_info)
             states = begin_state[p:p+n]
             p += n
             inputs, states = cell.unroll(length, inputs=inputs, begin_state=states, layout=layout,
                                          merge_outputs=None if i < num_cells-1 else merge_outputs)
+            next_states.extend(states)
 
-        return inputs, states
+        return inputs, next_states
 
 
 class DropoutCell(BaseRNNCell):
@@ -752,8 +809,14 @@ class DropoutCell(BaseRNNCell):
     Parameters
     ----------
     dropout : float
-        percentage of elements to drop out, which
+        Percentage of elements to drop out, which
         is 1 - percentage to retain.
+    prefix : str, default 'dropout_'
+        Prefix for names of layers
+        (this prefix is also used for names of weights if `params` is None
+        i.e. if `params` are being created and not reused)
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, dropout, prefix='dropout_', params=None):
         super(DropoutCell, self).__init__(prefix, params)
@@ -761,7 +824,7 @@ class DropoutCell(BaseRNNCell):
         self.dropout = dropout
 
     @property
-    def state_shape(self):
+    def state_info(self):
         return []
 
     def __call__(self, inputs, states):
@@ -800,10 +863,10 @@ class ModifierCell(BaseRNNCell):
         return self.base_cell.params
 
     @property
-    def state_shape(self):
-        return self.base_cell.state_shape
+    def state_info(self):
+        return self.base_cell.state_info
 
-    def begin_state(self, init_sym=symbol.zeros, **kwargs):
+    def begin_state(self, init_sym=symbol.zeros, **kwargs): # pylint: disable=arguments-differ
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
@@ -823,7 +886,17 @@ class ModifierCell(BaseRNNCell):
 
 
 class ZoneoutCell(ModifierCell):
-    """Apply Zoneout on base cell"""
+    """Apply Zoneout on base cell.
+
+    Parameters
+    ----------
+    base_cell : BaseRNNCell
+        Cell on whose states to perform zoneout.
+    zoneout_outputs : float, default 0.
+        Fraction of the output that gets dropped out during training time.
+    zoneout_states : float, default 0.
+        Fraction of the states that gets dropped out during training time.
+    """
     def __init__(self, base_cell, zoneout_outputs=0., zoneout_states=0.):
         assert not isinstance(base_cell, FusedRNNCell), \
             "FusedRNNCell doesn't support zoneout. " \
@@ -846,10 +919,7 @@ class ZoneoutCell(ModifierCell):
     def __call__(self, inputs, states):
         cell, p_outputs, p_states = self.base_cell, self.zoneout_outputs, self.zoneout_states
         next_output, next_states = cell(inputs, states)
-        mask = (lambda p, like:
-                symbol.Dropout(_symbol_internal._identity_with_attr_like_rhs(symbol.ones((0, 0)),
-                                                                             like),
-                               p=p))
+        mask = lambda p, like: symbol.Dropout(symbol.ones_like(like), p=p)
 
         prev_output = self.prev_output if self.prev_output else symbol.zeros((0, 0))
 
@@ -863,9 +933,49 @@ class ZoneoutCell(ModifierCell):
         return output, states
 
 
+class ResidualCell(ModifierCell):
+    """Adds residual connection as described in Wu et al, 2016
+    (https://arxiv.org/abs/1609.08144).
+
+    Output of the cell is output of the base cell plus input.
+
+    Parameters
+    ----------
+    base_cell : BaseRNNCell
+        Cell on whose outputs to add residual connection.
+    """
+
+    def __init__(self, base_cell):
+        super(ResidualCell, self).__init__(base_cell)
+
+    def __call__(self, inputs, states):
+        output, states = self.base_cell(inputs, states)
+        output = symbol.elemwise_add(output, inputs, name="%s_plus_residual" % output.name)
+        return output, states
+
+    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
+        self.reset()
+
+        self.base_cell._modified = False
+        outputs, states = self.base_cell.unroll(length, inputs=inputs, begin_state=begin_state,
+                                                layout=layout, merge_outputs=merge_outputs)
+        self.base_cell._modified = True
+
+        merge_outputs = isinstance(outputs, symbol.Symbol) if merge_outputs is None else \
+                        merge_outputs
+        inputs, _ = _normalize_sequence(length, inputs, layout, merge_outputs)
+        if merge_outputs:
+            outputs = symbol.elemwise_add(outputs, inputs, name="%s_plus_residual" % outputs.name)
+        else:
+            outputs = [symbol.elemwise_add(output_sym, input_sym,
+                                           name="%s_plus_residual" % output_sym.name)
+                       for output_sym, input_sym in zip(outputs, inputs)]
+
+        return outputs, states
+
 
 class BidirectionalCell(BaseRNNCell):
-    """Bidirectional RNN cell
+    """Bidirectional RNN cell.
 
     Parameters
     ----------
@@ -873,14 +983,26 @@ class BidirectionalCell(BaseRNNCell):
         cell for forward unrolling
     r_cell : BaseRNNCell
         cell for backward unrolling
+    params : RNNParams, default None.
+        Container for weight sharing between cells.
+        A new RNNParams container is created if `params` is None.
     output_prefix : str, default 'bi_'
         prefix for name of output
     """
     def __init__(self, l_cell, r_cell, params=None, output_prefix='bi_'):
         super(BidirectionalCell, self).__init__('', params=params)
-        self._override_cell_params = params is not None
-        self._cells = [l_cell, r_cell]
         self._output_prefix = output_prefix
+        self._override_cell_params = params is not None
+
+        if self._override_cell_params:
+            assert l_cell._own_params and r_cell._own_params, \
+                "Either specify params for BidirectionalCell " \
+                "or child cells, not both."
+            l_cell.params._params.update(self.params._params)
+            r_cell.params._params.update(self.params._params)
+        self.params._params.update(l_cell.params._params)
+        self.params._params.update(r_cell.params._params)
+        self._cells = [l_cell, r_cell]
 
     def unpack_weights(self, args):
         return _cells_unpack_weights(self._cells, args)
@@ -892,10 +1014,10 @@ class BidirectionalCell(BaseRNNCell):
         raise NotImplementedError("Bidirectional cannot be stepped. Please use unroll")
 
     @property
-    def state_shape(self):
-        return _cells_state_shape(self._cells)
+    def state_info(self):
+        return _cells_state_info(self._cells)
 
-    def begin_state(self, **kwargs):
+    def begin_state(self, **kwargs): # pylint: disable=arguments-differ
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
@@ -911,11 +1033,11 @@ class BidirectionalCell(BaseRNNCell):
         states = begin_state
         l_cell, r_cell = self._cells
         l_outputs, l_states = l_cell.unroll(length, inputs=inputs,
-                                            begin_state=states[:len(l_cell.state_shape)],
+                                            begin_state=states[:len(l_cell.state_info)],
                                             layout=layout, merge_outputs=merge_outputs)
         r_outputs, r_states = r_cell.unroll(length,
                                             inputs=list(reversed(inputs)),
-                                            begin_state=states[len(l_cell.state_shape):],
+                                            begin_state=states[len(l_cell.state_info):],
                                             layout=layout, merge_outputs=merge_outputs)
 
         if merge_outputs is None:

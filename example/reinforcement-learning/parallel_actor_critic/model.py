@@ -62,11 +62,8 @@ class Agent(object):
         return as_
 
     def train_step(self, env_xs, env_as, env_rs, env_vs):
-        # NOTE(reed): Rebind to set the data shape.
-        self.model.bind(
-            data_shapes=[('data', (self.paralell_num, self.input_size))],
-            label_shapes=None, for_training=True,
-            force_rebind=True, grad_req="write")
+        # NOTE(reed): Reshape to set the data shape.
+        self.model.reshape([('data', (len(env_xs), self.input_size))])
 
         xs = mx.nd.array(env_xs, ctx=self.ctx)
         as_ = np.array(list(chain.from_iterable(env_as)))

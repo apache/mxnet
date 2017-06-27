@@ -21,6 +21,14 @@
 *******************************************************************************/
 #ifndef MXNET_OPERATOR_MKL_MKL_UTIL_INL_H_
 #define MXNET_OPERATOR_MKL_MKL_UTIL_INL_H_
+#include <vector>
+#define MKLDNN_CALL(func)                                                               \
+  {                                                                                     \
+    dnnError_t status = (func);                                                                \
+    CHECK_EQ(status, E_SUCCESS) << "MKL DNN call failed (status: " << status << ").";           \
+  }
+
+
 namespace mxnet {
 namespace op {
 
@@ -81,7 +89,22 @@ namespace op {
     mkl_set_priv_flag(b);
     return b.get_with_shape<xpu, dim, DType>(shape, s);
   }
-
 }  // namespace op
+#if MKL_EXPERIMENTAL == 1
+inline void mkl_tblobs_prv_to_cpu(const std::vector<TBlob> &data) {
+  for (size_t i = 0; i < data.size(); i++) {
+    std::shared_ptr<MKLMemHolder> mem_holder = data[i].Mkl_mem_;
+    if (mem_holder != nullptr && mem_holder->b_eager_mode) {
+      mem_holder->check_and_prv_to_cpu(data[i].dptr_);
+    }
+  }
+}
+inline void mkl_set_tblob_eager_mode(const TBlob &data) {
+  std::shared_ptr<MKLMemHolder> mem_holder = data.Mkl_mem_;
+  if (mem_holder != nullptr) {
+    mem_holder->set_eager_mode(true);
+  }
+}
+#endif
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_MKL_MKL_UTIL_INL_H_

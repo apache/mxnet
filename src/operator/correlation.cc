@@ -29,13 +29,13 @@ inline void CorrelationForward(const Tensor<cpu, 4, Dtype> &out,
                                int max_displacement_, int kernel_size_,
                                int neighborhood_grid_radius_, int neighborhood_grid_width_,
                                int  kernel_radius_, int stride1_, int stride2_) {
-  const int bnum = data1.size(0);
+  const index_t bnum = data1.size(0);
   const int bchannels = data1.size(1);
   const int sumelems = kernel_size_ * kernel_size_ * bchannels;
   AddPad<Dtype>(data1, tmp1, pad_size_);
   AddPad<Dtype>(data2, tmp2, pad_size_);
-  for (index_t i = 0 ; i < top_height_ ; i++)
-      for (index_t j = 0 ; j < top_width_; j++)
+  for (index_t i = 0 ; i < static_cast<index_t>(top_height_) ; i++)
+      for (index_t j = 0 ; j < static_cast<index_t>(top_width_); j++)
         for (index_t nbatch = 0 ; nbatch < bnum ; nbatch++) {
             int x1 = j*stride1_+max_displacement_;
             int y1 = i*stride1_+max_displacement_;
@@ -76,9 +76,9 @@ inline void CorrelationBackward(const Tensor<cpu, 4, Dtype> &out_grad,
                                 int channels, int height, int width
                             ) {
   const float sumelems = kernel_size_ * kernel_size_ * channels;
-  for (int i = 0 ; i < top_height_ ; i++)
-     for (int j = 0 ; j < top_width_; j++)
-        for (int nbatch = 0 ; nbatch < num ; nbatch++) {
+  for (int i = 0 ; i < static_cast<index_t>(top_height_) ; i++)
+     for (int j = 0 ; j < static_cast<index_t>(top_width_); j++)
+        for (int nbatch = 0 ; nbatch < static_cast<index_t>(num) ; nbatch++) {
             int x1 = j*stride1_+max_displacement_;
             int y1 = i*stride1_+max_displacement_;
             for (int top_channel = 0 ; top_channel < top_channels_ ; top_channel++) {
@@ -136,9 +136,9 @@ Operator* CorrelationProp::CreateOperator(Context ctx) const {
 }
 DMLC_REGISTER_PARAMETER(CorrelationParam);
 MXNET_REGISTER_OP_PROPERTY(Correlation, CorrelationProp)
-.describe("Apply correlation to inputs")
-.add_argument("data1", "Symbol", "Input data1 to the correlation.")
-.add_argument("data2", "Symbol", "Input data2 to the correlation.")
+.describe("Applies correlation to inputs.")
+.add_argument("data1", "NDArray-or-Symbol", "Input data1 to the correlation.")
+.add_argument("data2", "NDArray-or-Symbol", "Input data2 to the correlation.")
 .add_arguments(CorrelationParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

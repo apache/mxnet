@@ -27,14 +27,13 @@ Operator *CreateOp<cpu>(UpSamplingParam param, int dtype) {
       p.num_filter = param.num_filter;
       p.no_bias =  true;
       int shape[] = {1, 1};
+      p.dilate = TShape(shape, shape + 2);
       shape[0] = shape[1] = kernel;
       p.kernel = TShape(shape, shape + 2);
       shape[0] = shape[1] = stride;
       p.stride = TShape(shape, shape + 2);
       shape[0] = shape[1] = pad;
       p.pad = TShape(shape, shape + 2);
-      shape[0] = shape[1] = 0;
-      p.target_shape = TShape(shape, shape + 2);
       op = new DeconvolutionOp<cpu, DType>(p);
     } else {
       LOG(FATAL) << "Unknown sample type";
@@ -55,8 +54,8 @@ Operator* UpSamplingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_
 DMLC_REGISTER_PARAMETER(UpSamplingParam);
 
 MXNET_REGISTER_OP_PROPERTY(UpSampling, UpSamplingProp)
-.describe("Perform nearest neighboor/bilinear up sampling to inputs")
-.add_argument("data", "Symbol[]", "Array of tensors to upsample")
+.describe("Performs nearest neighbor/bilinear up sampling to inputs.")
+.add_argument("data", "NDArray-or-Symbol[]", "Array of tensors to upsample")
 .add_arguments(UpSamplingParam::__FIELDS__())
 .set_key_var_num_args("num_args");
 
