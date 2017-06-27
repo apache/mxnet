@@ -18,7 +18,12 @@ MXNet is also more than a deep learning project. It is also a collection of
 [blue prints and guidelines](http://mxnet.io/architecture/index.html#deep-learning-system-design-concepts) for building
 deep learning systems, and interesting insights of DL systems for hackers.
 
-[![Join the chat at https://gitter.im/dmlc/mxnet](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/dmlc/mxnet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+Discussion
+----------
+You can join the development discussion:
+
+* On the [MXNet Apache mailing list](https://lists.apache.org/list.html?dev@mxnet.apache.org): dev@mxnet.apache.org. To subscribe send an email to dev-subscribe@mxnet.apache.org.
+* On the [MXNet Slack channel](https://apache-mxnet.slack.com). To request an invitation to the channel please email: dominic.divakaruni@gmail.com.
 
 What's New
 ----------
