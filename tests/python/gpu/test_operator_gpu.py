@@ -4,6 +4,7 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from test_operator import *
 from test_optimizer import *
+from test_random import *
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import check_consistency, set_default_context
@@ -32,26 +33,26 @@ def check_countsketch(in_dim,out_dim,n):
     for exe in exe_list:
         exe.forward(is_train= True)
     out1 = [exe.outputs[0].asnumpy() for exe in exe_list]
-    
+
     a = np.zeros((n,out_dim))
     temp = np.multiply(x, s)
     for num_sample in np.arange(0,n):
         for idx in np.arange(0,in_dim):
             a[num_sample][h[0][idx]] += temp[num_sample][idx]
     assert_almost_equal(a,out1[0],rtol=1e-3, atol=1e-12)
-    
+
     # backward
     out_grad = mx.nd.empty((n,out_dim))
     out_grad[:] = np.random.normal(-3, 3, (n,out_dim))
     for exe in exe_list:
-        exe.backward([out_grad])  
-    
+        exe.backward([out_grad])
+
         a = np.zeros((n,in_dim))
         for j in np.arange(0,n):
             for i in np.arange(0,in_dim):
                 a[j,i] = out_grad.asnumpy()[j, h[0,i]] * s[0,i]
     assert_almost_equal(a,arr_grad[0].asnumpy(),rtol=1e-3, atol=1e-12)
-    
+
 def test_countsketch():
     np.random.seed(0)
     nrepeat = 2
@@ -87,7 +88,7 @@ def check_ifft(shape):
     arr_grad = [mx.nd.empty(shape)]
     ctx_list = [{'ctx': mx.gpu(0),'ifft_data': shape, 'type_dict': {'ifft_data': np.float32}}]
     exe_list = [sym.simple_bind(args_grad=arr_grad,**ctx) for ctx in ctx_list]
-    
+
     for exe in exe_list:
         for arr, iarr in zip(exe.arg_arrays, init):
             arr[:] = iarr.astype(arr.dtype)
@@ -95,7 +96,7 @@ def check_ifft(shape):
     for exe in exe_list:
         exe.forward(is_train= True)
         out1 = [exe.outputs[0].asnumpy() for exe in exe_list]
-    
+
     if len(shape) == 2:
         init_complex = np.zeros(shape_old,dtype = np.complex64)
         for i in range(0,shape_old[1]):
@@ -103,7 +104,7 @@ def check_ifft(shape):
             init_complex.imag[:,i] = init[0][:,2*i+1]
         a = np.fft.ifft(init_complex, n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, out1[0]/shape_old[1],rtol=1e-3, atol=1e-12)
-    
+
     if len(shape) == 4:
         init_complex = np.zeros(shape_old,dtype = np.complex64)
         for i in range(0,shape_old[3]):
@@ -121,7 +122,7 @@ def check_ifft(shape):
             temp = np.zeros(shape_old)
             for i in range(shape_old[1]):
                 temp[:,i] = exe.grad_arrays[0].asnumpy()[:,2*i]
-                
+
         a = np.fft.fft(out_grad.asnumpy(), n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-12)
     if len(shape) == 4:
@@ -133,11 +134,11 @@ def check_ifft(shape):
             temp = np.zeros(shape_old)
             for i in range(shape_old[3]):
                 temp[:,:,:,i] = exe.grad_arrays[0].asnumpy()[:,:,:,2*i]
-                
+
         a = np.fft.fft(out_grad.asnumpy(), n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-12)
-             
-    
+
+
 def test_ifft():
     np.random.seed(0)
     nrepeat = 2
@@ -165,7 +166,7 @@ def check_fft(shape):
     arr_grad = [mx.nd.empty(shape)]
     ctx_list = [{'ctx': mx.gpu(0),'fft_data': shape, 'type_dict': {'fft_data': np.float32}}]
     exe_list = [sym.simple_bind(args_grad=arr_grad,**ctx) for ctx in ctx_list]
-    
+
     for exe in exe_list:
         for arr, iarr in zip(exe.arg_arrays, init):
             arr[:] = iarr.astype(arr.dtype)
@@ -183,7 +184,7 @@ def check_fft(shape):
             a[:,p] = out2[:,i]
             a[:,p+1] = out2[:,i+out2.shape[1]//2]
             p = p+2
-   
+
     if len(shape) == 4:
         out = np.reshape(out,(out.shape[1],out.shape[2],out.shape[3],out.shape[4]))
         out2 = np.append(out.real, out.imag, axis = 1)
@@ -195,9 +196,9 @@ def check_fft(shape):
                     a[i,j,:,p] = out2[i,j,:,k]
                     a[i,j,:,p+1] = out2[i,j+out1[0].shape[1],:,k]
                     p = p+2
-    
+
     assert_almost_equal(a, out1[0],rtol=1e-3, atol=1e-6)
-    
+
     # backward
     if len(shape) == 2:
         out_grad = mx.nd.empty((shape[0],2*shape[1]))
@@ -208,10 +209,10 @@ def check_fft(shape):
             out_grad_complex.real[:,i] = out_grad.asnumpy()[:,2*i]
             out_grad_complex.imag[:,i] = out_grad.asnumpy()[:,2*i+1]
         for exe in exe_list:
-            exe.backward([out_grad])  
+            exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[1],rtol=1e-3, atol=1e-8)
-         
+
     if len(shape) == 4:
         out_grad = mx.nd.empty(out1[0].shape)
         out_grad[:] = np.random.normal(-3, 3, out1[0].shape)
@@ -221,7 +222,7 @@ def check_fft(shape):
             out_grad_complex.real[:,:,:,i] = out_grad.asnumpy()[:,:,:,2*i]
             out_grad_complex.imag[:,:,:,i] = out_grad.asnumpy()[:,:,:,2*i+1]
         for exe in exe_list:
-            exe.backward([out_grad])  
+            exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-6)
 
@@ -235,13 +236,150 @@ def test_fft():
             check_fft(shape)
 
 def test_batchnorm_with_type():
-    sym = mx.sym.BatchNorm(name='norm', fix_gamma=False)
-    ctx_list = [{'ctx': mx.gpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
-                {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}}]
-    check_consistency(sym, ctx_list)
+  ctx_list_v1_2D = [
+    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
+  ]
 
-    sym = mx.sym.BatchNorm(name='norm', fix_gamma=True)
-    check_consistency(sym, ctx_list)
+  ctx_list_v2_2D = [
+    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float16}},
+    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float64}},
+    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float16}},
+    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float64}},
+  ]
+
+  ctx_list_v2_1D = [
+    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10), 'type_dict': {'norm_data': np.float16}},
+    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10), 'type_dict': {'norm_data': np.float64}},
+    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10), 'type_dict': {'norm_data': np.float16}},
+    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10), 'type_dict': {'norm_data': np.float64}},
+  ]
+
+  ctx_list_v2_3D = [
+    {'ctx': mx.cpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float16}},
+    {'ctx': mx.cpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.cpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float64}},
+    {'ctx': mx.gpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float16}},
+    {'ctx': mx.gpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.gpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float64}}
+  ]
+
+  # V1, 2D
+  sym = mx.sym.BatchNorm_v1(name='norm', fix_gamma=False)
+  check_consistency(sym, ctx_list_v1_2D)
+  sym = mx.sym.BatchNorm_v1(name='norm', fix_gamma=True)
+  check_consistency(sym, ctx_list_v1_2D)
+
+
+  # V2, 2D
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_2D)
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_2D)
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_2D)
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_2D)
+
+  # V2, 1D
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_1D)
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_1D)
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_1D)
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_1D)
+  #
+  # # V2, 3D
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_3D)
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_3D)
+
+
+def test_batchnorm_versions():
+  def test_batchnorm_versions_helper(batchnorm_op_list, data, fix_gamma, use_global_stats):
+    ctx_list = []
+    sym_list = []
+    # BatchNormV1 cpu
+    if 'batchnorm_v1_cpu' in batchnorm_op_list:
+      ctx_list.append({'ctx': mx.cpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
+      sym_list.append(mx.sym.BatchNorm_v1(fix_gamma=fix_gamma,
+                                          use_global_stats=use_global_stats,
+                                          name='batchnorm'))
+
+    # BatchNormV1 gpu (organic)
+    if 'batchnorm_v1_gpu' in batchnorm_op_list:
+      ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
+      sym_list.append(mx.sym.BatchNorm_v1(fix_gamma=fix_gamma,
+                                          use_global_stats=use_global_stats,
+                                          name='batchnorm'))
+
+    # BatchNorm cpu
+    if 'batchnorm_cpu' in batchnorm_op_list:
+      ctx_list.append({'ctx': mx.cpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
+      sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
+                                       use_global_stats=use_global_stats,
+                                       name='batchnorm'))
+
+    # BatchNorm gpu (organic)
+    if 'batchnorm_gpu' in batchnorm_op_list:
+      ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
+      sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
+                                       use_global_stats=use_global_stats,
+                                       name='batchnorm', cudnn_off=True))
+
+    # BatchNorm gpu cudnn (if cudnn is enabled)
+    if 'batchnorm_cudnn' in batchnorm_op_list:
+      ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
+      sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
+                                       use_global_stats=use_global_stats,
+                                       name='batchnorm', cudnn_off=False))
+
+    check_consistency(sym_list, ctx_list)
+
+  def test_1d_batchnorm(fix_gamma, use_global_stats):
+    data = (2, 3, 20)
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
+                                                      'batchnorm_gpu', 'batchnorm_cudnn'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+  def test_2d_batchnorm(fix_gamma, use_global_stats):
+    data = (2, 3, 10, 10)
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_v1_cpu', 'batchnorm_v1_gpu',
+                                                      'batchnorm_cpu',
+                                                      'batchnorm_gpu', 'batchnorm_cudnn'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+  def test_3d_batchnorm(fix_gamma, use_global_stats):
+    data = (2, 3, 3, 5, 5)
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
+                                                      'batchnorm_gpu'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
+  test_1d_batchnorm(True,  False)
+  test_1d_batchnorm(False, False)
+  test_1d_batchnorm(False, True)
+  test_1d_batchnorm(True,  True)
+
+  test_2d_batchnorm(True,  False)
+  test_2d_batchnorm(False, False)
+  test_2d_batchnorm(False, True)
+  test_2d_batchnorm(True,  True)
+
+  test_3d_batchnorm(True,  False)
+  test_3d_batchnorm(False, False)
+  test_3d_batchnorm(False, True)
+  test_3d_batchnorm(True,  True)
+
 
 def test_convolution_with_type():
     np.random.seed(1234)
@@ -697,17 +835,23 @@ def test_concat_with_type():
 
 
 def test_elementwisesum_with_type():
-    sym = mx.sym.ElementWiseSum(name='ews', num_args=2)
-    ctx_list = [{'ctx': mx.gpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
-                 'type_dict': {'ews_arg0': np.float64, 'ews_arg1': np.float64}},
-                {'ctx': mx.gpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
-                 'type_dict': {'ews_arg0': np.float32, 'ews_arg1': np.float32}},
-                {'ctx': mx.gpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
-                 'type_dict': {'ews_arg0': np.float16, 'ews_arg1': np.float16}},
-                {'ctx': mx.cpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
-                 'type_dict': {'ews_arg0': np.float64, 'ews_arg1': np.float64}},
-                {'ctx': mx.cpu(0), 'ews_arg1': (2, 10), 'ews_arg0': (2, 10),
-                 'type_dict': {'ews_arg0': np.float32, 'ews_arg1': np.float32}}]
+    dev_types = [[mx.gpu(0), [np.float64, np.float32, np.float16]],
+                 [mx.cpu(0), [np.float64, np.float32]] ]
+    for num_args in range(1, 6):
+        ews_arg_shape = {}
+        for i in range(num_args):
+            ews_arg_shape['ews_arg'+str(i)] = (2, 10)
+        sym = mx.sym.ElementWiseSum(name='ews', num_args=num_args)
+        ctx_list = []
+        for dev, types in dev_types:
+            for dtype in types:
+                ews_arg_dtype = {'type_dict':{}}
+                for i in range(num_args):
+                    ews_arg_dtype['type_dict']['ews_arg'+str(i)] = dtype
+                ctx_elem = {'ctx': dev}
+                ctx_elem.update(ews_arg_shape)
+                ctx_elem.update(ews_arg_dtype)
+                ctx_list.append(ctx_elem)
     check_consistency(sym, ctx_list)
 
 
@@ -949,6 +1093,185 @@ def test_unfuse():
         check_rnn_consistency(fused, stack)
         check_rnn_consistency(stack, fused)
 
+def test_psroipooling_with_type():
+    np.random.seed(1234)
+    arg_params = {
+        'psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
+
+    # plain psroipooling
+    sym = mx.contrib.sym.PSROIPooling(spatial_scale=0.0625, output_dim=2, pooled_size=3, name='psroipool')
+    ctx_list = [{'ctx': mx.gpu(0),
+                 'psroipool_data': (1, 18, 14, 14),
+                 'psroipool_rois': (2, 5),
+                 'type_dict': {'psroipool_data': np.float64, 'psroipool_rois': np.float64}},
+                {'ctx': mx.gpu(0),
+                 'psroipool_data': (1, 18, 14, 14),
+                 'psroipool_rois': (2, 5),
+                 'type_dict': {'psroipool_data': np.float32, 'psroipool_rois': np.float32}},
+                {'ctx': mx.gpu(0),
+                 'psroipool_data': (1, 18, 14, 14),
+                 'psroipool_rois': (2, 5),
+                 'type_dict': {'psroipool_data': np.float16, 'psroipool_rois': np.float16}},
+                ]
+
+    check_consistency(sym, ctx_list, grad_req={'psroipool_data': 'write',
+                                               'psroipool_rois': 'null'}, arg_params=arg_params)
+
+def test_deformable_psroipooling_with_type():
+    np.random.seed(1234)
+    arg_params = {
+        'deformable_psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
+
+    # deformable psroipooling
+    sym = mx.contrib.sym.DeformablePSROIPooling(spatial_scale=0.0625, sample_per_part=4, group_size=3, pooled_size=3,
+                                                output_dim=2, trans_std=0.1, no_trans=False, name='deformable_psroipool')
+
+    ctx_list = [{'ctx': mx.gpu(0),
+                 'deformable_psroipool_data': (1, 18, 14, 14),
+                 'deformable_psroipool_rois': (2, 5),
+                 'deformable_psroipool_trans': (2, 4, 3, 3),
+                 'type_dict': {'deformable_psroipool_data': np.float64, 'deformable_psroipool_rois': np.float64,
+                               'deformable_psroipool_trans': np.float64}},
+                {'ctx': mx.gpu(0),
+                 'deformable_psroipool_data': (1, 18, 14, 14),
+                 'deformable_psroipool_rois': (2, 5),
+                 'deformable_psroipool_trans': (2, 4, 3, 3),
+                 'type_dict': {'deformable_psroipool_data': np.float32, 'deformable_psroipool_rois': np.float32,
+                               'deformable_psroipool_trans': np.float32}},
+                {'ctx': mx.gpu(0),
+                 'deformable_psroipool_data': (1, 18, 14, 14),
+                 'deformable_psroipool_rois': (2, 5),
+                 'deformable_psroipool_trans': (2, 4, 3, 3),
+                 'type_dict': {'deformable_psroipool_data': np.float16, 'deformable_psroipool_rois': np.float16,
+                               'deformable_psroipool_trans': np.float16}},
+                ]
+
+    check_consistency(sym, ctx_list, grad_req={'deformable_psroipool_data': 'write',
+                                               'deformable_psroipool_rois': 'null',
+                                               'deformable_psroipool_trans': 'write'}, arg_params=arg_params)
+
+def test_deformable_convolution_with_type():
+    np.random.seed(1234)
+    sym = mx.contrib.sym.DeformableConvolution(num_filter=3, kernel=(3,3), name='deformable_conv')
+    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
+    ctx_list = [{'ctx': mx.gpu(0),
+                 'deformable_conv_data': (2, 2, 10, 10),
+                 'deformable_conv_offset': (2, 18, 8, 8),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.gpu(0),
+                 'deformable_conv_data': (2, 2, 10, 10),
+                 'deformable_conv_offset': (2, 18, 8, 8),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
+                # {'ctx': mx.gpu(0),
+                #  'deformable_conv_data': (2, 2, 10, 10),
+                #  'deformable_conv_offset': (2, 18, 8, 8),
+                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_conv_offset': np.float16}},
+                ]
+    # wider tolerance needed for true-fp16 NCHW test above
+    tol = {np.dtype(np.float16): 0.5,
+               np.dtype(np.float32): 1e-3,
+               np.dtype(np.float64): 1e-5,
+               np.dtype(np.uint8): 0,
+               np.dtype(np.int32): 0}
+    check_consistency(sym, ctx_list, tol=tol)
+    # test ability to turn off training on bias
+    check_consistency(sym, ctx_list, grad_req={'deformable_conv_data': 'write',
+                                               'deformable_conv_offset': 'write',
+                                               'deformable_conv_weight': 'write',
+                                               'deformable_conv_bias': 'null'}, tol=tol)
+def test_deformable_convolution_options():
+    # 2D convolution
+
+    # Pad > 0
+    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
+    ctx_list = [{'ctx': mx.gpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 7, 7),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.gpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 7, 7),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
+                # {'ctx': mx.gpu(0),
+                #  'deformable_conv_data': (2, 2, 7, 7),
+                #  'deformable_offset': (2, 18, 7, 7),
+                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
+                ]
+    sym = mx.contrib.sym.DeformableConvolution(num_filter=3, kernel=(3,3), pad=(1,1), name='deformable_conv')
+    check_consistency(sym, ctx_list)
+
+    # Stride > 1
+    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
+    ctx_list = [{'ctx': mx.gpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 3, 3),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.gpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 3, 3),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
+                # {'ctx': mx.gpu(0),
+                #  'deformable_conv_data': (2, 2, 7, 7),
+                # 'deformable_conv_offset': (2, 18, 3, 3),
+                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
+                ]
+    sym = mx.contrib.sym.DeformableConvolution(num_filter=3, kernel=(3,3), stride=(2,2), name='deformable_conv')
+    check_consistency(sym, ctx_list)
+
+    # Dilate > 1
+    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
+    ctx_list = [{'ctx': mx.gpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 3, 3),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.gpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 3, 3),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
+                # {'ctx': mx.gpu(0),
+                #  'deformable_conv_data': (2, 2, 7, 7),
+                # 'deformable_conv_offset': (2, 18, 3, 3),
+                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
+                ]
+    sym = mx.contrib.sym.DeformableConvolution(num_filter=3, kernel=(3,3), dilate=(2,2), name='deformable_conv')
+    check_consistency(sym, ctx_list)
+
+    # Deformable group > 1
+    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
+    ctx_list = [{'ctx': mx.gpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 36, 5, 5),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.gpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 36, 5, 5),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
+                # {'ctx': mx.gpu(0),
+                #  'deformable_conv_data': (2, 2, 7, 7),
+                #  'deformable_conv_offset': (2, 36, 5, 5),
+                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
+                ]
+    sym = mx.contrib.sym.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2,
+                                               name='deformable_conv')
+def test_residual_fused():
+    cell = mx.rnn.ResidualCell(
+            mx.rnn.FusedRNNCell(50, num_layers=3, mode='lstm',
+                               prefix='rnn_', dropout=0.5))
+
+    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
+    outputs, _ = cell.unroll(2, inputs, merge_outputs=None)
+    assert sorted(cell.params._params.keys()) == \
+           ['rnn_parameters']
+
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10, 50), rnn_t1_data=(10, 50))
+    assert outs == [(10, 2, 50)]
+    outputs = outputs.eval(ctx=mx.gpu(0),
+                           rnn_t0_data=mx.nd.ones((10, 50), ctx=mx.gpu(0))+5,
+                           rnn_t1_data=mx.nd.ones((10, 50), ctx=mx.gpu(0))+5,
+                           rnn_parameters=mx.nd.zeros((61200,), ctx=mx.gpu(0)))
+    expected_outputs = np.ones((10, 2, 50))+5
+    assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
+
 if __name__ == '__main__':
     test_countsketch()
     test_ifft()
@@ -959,12 +1282,13 @@ if __name__ == '__main__':
     test_gru()
     test_rnn()
     test_unfuse()
+    test_residual_fused()
     test_convolution_options()
     test_convolution_versions()
     test_convolution_with_type()
     test_pooling_versions()
     test_batchnorm_with_type()
-    test_batchnorm_with_type()
+    test_batchnorm_versions()
     test_deconvolution_with_type()
     test_deconvolution_options()
     test_upsampling_with_type()
@@ -980,3 +1304,8 @@ if __name__ == '__main__':
     test_take_with_type()
     test_bilinear_sampler_with_type()
     test_grid_generator_with_type()
+    test_psroipooling_with_type()
+    test_deformable_psroipooling_with_type()
+    test_deformable_convolution_options()
+    test_deformable_convolution_with_type()
+

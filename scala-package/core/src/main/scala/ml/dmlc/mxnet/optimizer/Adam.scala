@@ -57,14 +57,15 @@ class Adam(val learningRate: Float = 0.002f, beta1: Float = 0.9f, beta2: Float =
    *              The auxiliary state used in optimization.
    */
   override def update(index: Int, weight: NDArray, grad: NDArray, state: AnyRef): Unit = {
-    val lr =
+    var lr =
       (if (lrScheduler != null) {
         val scheduledLr = lrScheduler(numUpdate)
         updateCount(index)
         scheduledLr
       } else {
         this.learningRate
-      }) * lrScale.getOrElse(index, 1f)
+      })
+    lr = getLr(index, lr)
 
     val (mean, variance) = state.asInstanceOf[(NDArray, NDArray)]
 

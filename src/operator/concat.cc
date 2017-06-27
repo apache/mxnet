@@ -46,12 +46,12 @@ Operator* ConcatProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shap
 DMLC_REGISTER_PARAMETER(ConcatParam);
 
 MXNET_REGISTER_OP_PROPERTY(Concat, ConcatProp)
-.describe(R"code(Join input arrays along the given axis.
+.describe(R"code(Joins input arrays along a given axis.
 
 .. note:: `Concat` is deprecated. Use `concat` instead.
 
 The dimensions of the input arrays should be the same except the axis along
- which they will concatenated.
+which they will be concatenated.
 The dimension of the output array along the concatenated axis will be equal
 to the sum of the corresponding dimensions of the input arrays.
 

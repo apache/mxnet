@@ -8,7 +8,41 @@
 
 namespace mxnet {
 namespace op {
-DMLC_REGISTER_PARAMETER(CastParam);
+// relu
+MXNET_OPERATOR_REGISTER_UNARY(relu)
+.describe(R"code(Computes rectified linear.
+
+.. math::
+   max(features, 0)
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_relu"})
+.set_attr<FCompute>("FCompute<cpu>",
+    UnaryLaunch<cpu, kernel_launch_op::relu>);
+
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_relu)
+.set_attr<FCompute>("FCompute<cpu>",
+    BinaryLaunch<cpu, kernel_launch_op::relu_grad>);
+
+
+// sigmoid
+MXNET_OPERATOR_REGISTER_UNARY(sigmoid)
+.describe(R"code(Computes sigmoid of x element-wise.
+
+.. math::
+   y = 1 / (1 + exp(-x))
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sigmoid"})
+.set_attr<FCompute>("FCompute<cpu>",
+    UnaryLaunch<cpu, kernel_launch_op::sigmoid>);
+
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_sigmoid)
+.set_attr<FCompute>("FCompute<cpu>",
+    BinaryLaunch<cpu, kernel_launch_op::sigmoid_grad>);
+
 
 // copy
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
@@ -62,6 +96,10 @@ MXNET_OPERATOR_REGISTER_UNARY(make_loss)
 .describe(R"code(Stops gradient computation.
 .. note:: ``make_loss`` is deprecated, use ``MakeLoss``.
 )code" ADD_FILELINE)
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"loss"};
+  })
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
@@ -75,6 +113,10 @@ MXNET_OPERATOR_REGISTER_UNARY(make_loss)
 // identity output as first input, but attributes are constrainted to be like rhs
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_num_inputs(2)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"lhs", "rhs"};
+  })
 .set_attr<nnvm::FInplaceOption>(
     "FInplaceOption", [](const NodeAttrs& attrs) {
       return std::vector<std::pair<int, int> >{{0, 0}};
@@ -93,11 +135,14 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
                          {n->inputs[1]}, nullptr, &n);
       lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
       return lhs;
-    });
+    })
+.add_argument("lhs", "NDArray-or-Symbol", "First input.")
+.add_argument("rhs", "NDArray-or-Symbol", "Second input.");
 
+DMLC_REGISTER_PARAMETER(CastParam);
 NNVM_REGISTER_OP(Cast)
 .add_alias("cast")
-.describe(R"code(Casts all elements of the input to the new type.
+.describe(R"code(Casts all elements of the input to a new type.
 
 .. note:: ``Cast`` is deprecated. Use ``cast`` instead.
 
@@ -191,6 +236,8 @@ Example::
 MXNET_OPERATOR_REGISTER_UNARY(ceil)
 .describe(R"code(Returns element-wise ceiling of the input.
 
+The ceil of the scalar x is the smallest integer i, such that i >= x.
+
 Example::
 
    ceil([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -1.,  2.,  2.,  3.]
@@ -202,12 +249,28 @@ Example::
 MXNET_OPERATOR_REGISTER_UNARY(floor)
 .describe(R"code(Returns element-wise floor of the input.
 
+The floor of the scalar x is the largest integer i, such that i <= x.
+
 Example::
 
    floor([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-3., -2.,  1.,  1.,  2.]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::floor>);
+
+// trunc
+MXNET_OPERATOR_REGISTER_UNARY(trunc)
+.describe(R"code(Return the element-wise truncated value of the input.
+
+The truncated value of the scalar x is the nearest integer i which is closer to 
+zero than x is. In short, the fractional part of the signed number x is discarded.
+
+Example::
+
+   trunc([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -1.,  1.,  1.,  2.]
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::trunc>);
 
 // fix
 MXNET_OPERATOR_REGISTER_UNARY(fix)
@@ -325,7 +388,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_log)
 
 // sin
 MXNET_OPERATOR_REGISTER_UNARY(sin)
-.describe(R"code(Computes the element-wise sine of the input.
+.describe(R"code(Computes the element-wise sine of the input array.
 
 The input should be in radians (:math:`2\pi` rad equals 360 degrees).
 

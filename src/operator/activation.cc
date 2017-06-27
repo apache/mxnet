@@ -65,10 +65,9 @@ Operator *ActivationProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_
 DMLC_REGISTER_PARAMETER(ActivationParam);
 
 MXNET_REGISTER_OP_PROPERTY(Activation, ActivationProp)
-.describe(R"code(Elementwise activation function.
-The activation operations are applied element-wise to each array elements.
+.describe(R"code(Applies an activation function element-wise to the input.
 
-The following types are supported:
+The following activation functions are supported:
 
 - `relu`: Rectified Linear Unit, :math:`y = max(x, 0)`
 - `sigmoid`: :math:`y = \frac{1}{1 + exp(-x)}`

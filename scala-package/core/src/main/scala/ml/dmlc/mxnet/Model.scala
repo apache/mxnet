@@ -163,9 +163,10 @@ object Model {
     require(paramArrays.length == paramNames.length)
     for (idx <- 0 until paramArrays.length) {
       val paramOnDevs = paramArrays(idx)
-      kvStore.init(idx, argParams(paramNames(idx)))
+      val name = paramNames(idx)
+      kvStore.init(name, argParams(paramNames(idx)))
       if (updateOnKVStore) {
-        kvStore.pull(idx, paramOnDevs, -idx)
+        kvStore.pull(name, paramOnDevs, -idx)
       }
     }
   }
@@ -173,13 +174,15 @@ object Model {
   // Perform update of param_arrays from grad_arrays on kvstore
   private[mxnet] def updateParamsOnKVStore(paramArrays: IndexedSeq[Array[NDArray]],
                                            gradArrays: IndexedSeq[Array[NDArray]],
-                                           kvStore: Option[KVStore]): Unit = {
+                                           kvStore: Option[KVStore],
+                                           paramNames: IndexedSeq[String]): Unit = {
     (paramArrays zip gradArrays).zipWithIndex.foreach { case ((argList, gradList), index) =>
       if (gradList != null) {
+        val name = paramNames(index)
         // push gradient, priority is negative index
-        kvStore.foreach(_.push(index, gradList, -index))
+        kvStore.foreach(_.push(name, gradList, -index))
         // pull back the weights
-        kvStore.foreach(_.pull(index, argList, -index))
+        kvStore.foreach(_.pull(name, argList, -index))
       }
     }
   }
@@ -189,14 +192,16 @@ object Model {
                                   gradArrays: IndexedSeq[Array[NDArray]],
                                   updater: MXKVStoreUpdater,
                                   numDevice: Int,
+                                  paramNames: IndexedSeq[String],
                                   kvStore: Option[KVStore] = None) {
     (paramArrays zip gradArrays).zipWithIndex.foreach { case ((argList, gradList), index) =>
       if (gradList != null) {
         kvStore.foreach(kv => {
+          val name = paramNames(index)
           // push gradient, priority is negative index
-          kv.push(index, gradList, -index)
+          kv.push(name, gradList, -index)
           // pull back the sum gradients, to the same locations.
-          kv.pull(index, gradList, -index)
+          kv.pull(name, gradList, -index)
         })
         (argList zip gradList).zipWithIndex.foreach { case ((w: NDArray, g: NDArray), k: Int) =>
           // faked an index here, to make optimizer create diff
@@ -295,11 +300,12 @@ object Model {
           if (updateOnKVStore) {
             updateParamsOnKVStore(executorManager.paramArrays,
               executorManager.gradArrays,
-              kvStore)
+              kvStore, executorManager.paramNames)
           } else {
             updateParams(executorManager.paramArrays,
               executorManager.gradArrays,
               updaterLocal, ctx.length,
+              executorManager.paramNames,
               kvStore)
           }
           monitor.foreach(_.tocPrint())

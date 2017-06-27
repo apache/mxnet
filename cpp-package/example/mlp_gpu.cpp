@@ -24,7 +24,7 @@ Symbol mlp(const vector<int> &layers) {
       weights[i],
       biases[i],
       layers[i]);
-    outputs[i] = i == layers.size()-1? fc : Activation(fc, ActivationActType::relu);
+    outputs[i] = i == layers.size()-1? fc : Activation(fc, ActivationActType::kRelu);
   }
 
   return SoftmaxOutput(outputs.back(), label);
@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
       // CopyTo is imperative, need to wait for it to complete.
       NDArray::WaitAll();
 
-      // Create executor by binding parmeters to the model
+      // Create executor by binding parameters to the model
       auto *exec = net.SimpleBind(ctx, args);
       // Compute gradients
       exec->Forward(true);

@@ -23,7 +23,7 @@ DMLC_REGISTER_PARAMETER(ReverseParam);
 
 NNVM_REGISTER_OP(Reshape)
 .add_alias("reshape")
-.describe(R"code(Reshapes the input array into a new shape.
+.describe(R"code(Reshapes the input array.
 
 .. note:: ``Reshape`` is deprecated, use ``reshape``
 
@@ -138,7 +138,7 @@ Example::
 .add_argument("data", "NDArray-or-Symbol", "Input array.");
 
 NNVM_REGISTER_OP(transpose)
-.describe(R"code(Permute the dimensions of an array.
+.describe(R"code(Permutes the dimensions of an array.
 
 Examples::
 
@@ -196,7 +196,7 @@ Examples::
 
 
 NNVM_REGISTER_OP(expand_dims)
-.describe(R"code(Insert a new axis with size 1 into the array shape
+.describe(R"code(Inserts a new axis of size 1 into the array shape
 
 For example, given ``x`` with shape ``(2,3,4)``, then ``expand_dims(x, axis=1)``
 will return a new array with shape ``(2,1,3,4)``.
@@ -218,11 +218,11 @@ will return a new array with shape ``(2,1,3,4)``.
 
 NNVM_REGISTER_OP(slice)
 .add_alias("crop")
-.describe(R"code(Slice a continuous region of the array.
+.describe(R"code(Slices a contiguous region of the array.
 
 .. note:: ``crop`` is deprecated. Use ``slice`` instead.
 
-This function returns a sliced continous region of the array between the indices given 
+This function returns a sliced continuous region of the array between the indices given
 by `begin` and `end`.
 
 For an input array of `n` dimensions, slice operation with ``begin=(b_0, b_1...b_n-1)`` indices
@@ -230,7 +230,7 @@ and ``end=(e_1, e_2, ... e_n)`` indices will result in an array with the shape
 ``(e_1-b_0, ..., e_n-b_n-1)``.
 
 The resulting array's *k*-th dimension contains elements
- from the *k*-th dimension of the input array with the open range ``[b_k, e_k)``.
+from the *k*-th dimension of the input array with the open range ``[b_k, e_k)``.
 
 Example::
 
@@ -300,10 +300,10 @@ NNVM_REGISTER_OP(_crop_assign_scalar)
 .add_arguments(SimpleCropAssignScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice_axis)
-.describe(R"code(Slice along a given axis.
+.describe(R"code(Slices along a given axis.
 
 Returns an array slice along a given `axis` starting from the `begin` index
- to the `end` index.
+to the `end` index.
 
 Examples::
 
@@ -354,6 +354,12 @@ NNVM_REGISTER_OP(dot)
 
     dot(x,y)[i,j,a,b] = sum(x[i,j,:]*y[:,a,b])
 
+  Example::
+
+    x = reshape([0,1,2,3,4,5,6,7], shape=(2,2,2))
+    y = reshape([7,6,5,4,3,2,1,0], shape=(2,2,2))
+    dot(x,y)[0,0,1,1] = 0
+    sum(x[0,0,:]*y[:,1,1]) = 0
 )doc" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
@@ -422,7 +428,7 @@ NNVM_REGISTER_OP(_backward_batch_dot)
 .set_attr<FCompute>("FCompute<cpu>", BatchDotBackward_<cpu>);
 
 NNVM_REGISTER_OP(clip)
-.describe(R"code(Clip (limit) the values in an array.
+.describe(R"code(Clips (limits) the values in an array.
 
 Given an interval, values outside the interval are clipped to the interval edges.
 Clipping ``x`` between `a_min` and `a_x` would be::
@@ -454,7 +460,7 @@ NNVM_REGISTER_OP(_backward_clip)
 .set_attr<FCompute>("FCompute<cpu>", ClipGrad_<cpu>);
 
 NNVM_REGISTER_OP(repeat)
-.describe(R"code(Repeat elements of an array.
+.describe(R"code(Repeats elements of an array.
 
 By default, ``repeat`` flattens the input array into 1-D and then repeats the
 elements::
@@ -497,10 +503,14 @@ NNVM_REGISTER_OP(_backward_repeat)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<RepeatParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", RepeatOpBackward<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", RepeatOpBackward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+[](const NodeAttrs& attrs) {
+  return std::vector<ResourceRequest> {ResourceRequest::kTempSpace};
+});
 
 NNVM_REGISTER_OP(tile)
-.describe(R"code(Repeat the whole array by multiple times.
+.describe(R"code(Repeats the whole array multiple times.
 
 If ``reps`` has length *d*, and input array has dimension of *n*. There are
 there cases:
@@ -515,7 +525,7 @@ there cases:
                            [ 1.,  2.,  1.,  2.,  1.,  2.],
                            [ 3.,  4.,  3.,  4.,  3.,  4.]]
 
-- **n>d**. ``reps`` is promoted to length *n* by pre-pending 1’s to it. Thus for
+- **n>d**. ``reps`` is promoted to length *n* by pre-pending 1's to it. Thus for
   an input shape ``(2,3)``, ``repos=(2,)`` is treated as ``(1,2)``::
 
 
@@ -554,11 +564,14 @@ NNVM_REGISTER_OP(_backward_tile)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<TileParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", TileOpBackward<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", TileOpBackward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+[](const NodeAttrs& attrs) {
+  return std::vector<ResourceRequest> {ResourceRequest::kTempSpace};
+});
 
 NNVM_REGISTER_OP(reverse)
-.describe(R"code(Reverse the order of elements in an array along given axis.
-The shape of the array is preserved.
+.describe(R"code(Reverses the order of elements along given axis while preserving array shape.
 
 Note: reverse and flip are equivalent. We use reverse in the following examples.
 

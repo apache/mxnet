@@ -11,30 +11,26 @@ from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
 
 def _ctype_key_value(keys, vals):
-    """
-    Returns ctype arrays for the key-value args. For internal use.
-    """
-    if isinstance(keys, int):
-        if isinstance(vals, NDArray):
-            return (c_array(ctypes.c_int, [keys]),
-                    c_array(NDArrayHandle, [vals.handle]))
-        else:
-            for value in vals:
-                assert(isinstance(value, NDArray))
-            return (c_array(ctypes.c_int, [keys] * len(vals)),
-                    c_array(NDArrayHandle, [value.handle for value in vals]))
-    else:
+    if isinstance(keys, (tuple, list)):
         assert(len(keys) == len(vals))
-        for k in keys:
-            assert(isinstance(k, int))
         c_keys = []
         c_vals = []
         for key, val in zip(keys, vals):
             c_key_i, c_val_i = _ctype_key_value(key, val)
             c_keys += c_key_i
             c_vals += c_val_i
-        return (c_array(ctypes.c_int, c_keys), c_array(NDArrayHandle, c_vals))
-
+        return (c_array(ctypes.c_char_p, c_keys), c_array(NDArrayHandle, c_vals))
+    names = []
+    keys = str(keys)
+    if isinstance(vals, NDArray):
+        names.append(c_str(keys))
+        return (c_array(ctypes.c_char_p, names),
+                c_array(NDArrayHandle, [vals.handle]))
+    else:
+        for value in vals:
+            assert(isinstance(value, NDArray))
+        return (c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)),
+                c_array(NDArrayHandle, [value.handle for value in vals]))
 
 def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
@@ -74,7 +70,7 @@ class KVStore(object):
 
         Parameters
         ----------
-        key : int or sequence of int
+        key : str or sequence of str
             The keys.
         value : NDArray or sequence of NDArray
             Values corresponding to the keys.
@@ -84,20 +80,19 @@ class KVStore(object):
         >>> # init a single key-value pair
         >>> shape = (2,3)
         >>> kv = mx.kv.create('local')
-        >>> kv.init(3, mx.nd.ones(shape)*2)
+        >>> kv.init('3', mx.nd.ones(shape)*2)
         >>> a = mx.nd.zeros(shape)
-        >>> kv.pull(3, out=a)
+        >>> kv.pull('3', out=a)
         >>> print a.asnumpy()
         [[ 2.  2.  2.]
         [ 2.  2.  2.]]
 
         >>> # init a list of key-value pairs
-        >>> keys = [5, 7, 9]
+        >>> keys = ['5', '7', '9']
         >>> kv.init(keys, [mx.nd.ones(shape)]*len(keys))
         """
         ckeys, cvals = _ctype_key_value(key, value)
-        check_call(_LIB.MXKVStoreInit(
-            self.handle, mx_uint(len(ckeys)), ckeys, cvals))
+        check_call(_LIB.MXKVStoreInitEx(self.handle, mx_uint(len(ckeys)), ckeys, cvals))
 
     def push(self, key, value, priority=0):
         """ Pushes a single or a sequence of key-value pairs into the store.
@@ -110,7 +105,7 @@ class KVStore(object):
 
         Parameters
         ----------
-        key : int or list of int
+        key : str or list of str
             Keys.
 
         value : NDArray or list of NDArray or list of list of NDArray
@@ -124,8 +119,8 @@ class KVStore(object):
         Examples
         --------
         >>> # push a single key-value pair
-        >>> kv.push(3, mx.nd.ones(shape)*8)
-        >>> kv.pull(3, out=a) # pull out the value
+        >>> kv.push('3', mx.nd.ones(shape)*8)
+        >>> kv.pull('3', out=a) # pull out the value
         >>> print a.asnumpy()
         [[ 8.  8.  8.]
         [ 8.  8.  8.]]
@@ -133,8 +128,8 @@ class KVStore(object):
         >>> # aggregate the value and the push
         >>> gpus = [mx.gpu(i) for i in range(4)]
         >>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
-        >>> kv.push(3, b)
-        >>> kv.pull(3, out=a)
+        >>> kv.push('3', b)
+        >>> kv.pull('3', out=a)
         >>> print a.asnumpy()
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
@@ -157,9 +152,10 @@ class KVStore(object):
         [ 4.  4.  4.]]
         """
         ckeys, cvals = _ctype_key_value(key, value)
-        check_call(_LIB.MXKVStorePush(
+        check_call(_LIB.MXKVStorePushEx(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
+
 
     def pull(self, key, out=None, priority=0):
         """ Pulls a single value or a sequence of values from the store.
@@ -190,21 +186,21 @@ class KVStore(object):
         --------
         >>> # pull a single key-value pair
         >>> a = mx.nd.zeros(shape)
-        >>> kv.pull(3, out=a)
+        >>> kv.pull('3', out=a)
         >>> print a.asnumpy()
         [[ 2.  2.  2.]
         [ 2.  2.  2.]]
 
         >>> # pull into multiple devices
         >>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
-        >>> kv.pull(3, out=b)
+        >>> kv.pull('3', out=b)
         >>> print b[1].asnumpy()
         [[ 2.  2.  2.]
         [ 2.  2.  2.]]
 
         >>> # pull a list of key-value pairs.
         >>> # On single device
-        >>> keys = [5, 7, 9]
+        >>> keys = ['5', '7', '9']
         >>> b = [mx.nd.zeros(shape)]*len(keys)
         >>> kv.pull(keys, out=b)
         >>> print b[1].asnumpy()
@@ -219,21 +215,39 @@ class KVStore(object):
         """
         assert(out is not None)
         ckeys, cvals = _ctype_key_value(key, out)
-        check_call(_LIB.MXKVStorePull(
+        check_call(_LIB.MXKVStorePullEx(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
 
     def set_optimizer(self, optimizer):
-        """ Registers an optimizer with the store.
+        """ Registers an optimizer with the kvstore.
 
-        When there are multiple machines, this operation (invoked from a worker node)
-        will pack the optimizer and send it to all servers. It returns after
-        this action is done.
+        When using a single machine, this function updates the local optimizer.
+        If using multiple machines and this operation is invoked from a worker node,
+        it will serialized the optimizer with pickle and send it to all servers.
+        The function returns after all servers have been updated.
 
         Parameters
         ----------
         optimizer : Optimizer
-            the optimizer.
+            The new optimizer for the store
+
+        Examples
+        --------
+
+        >>> kv = mx.kv.create()
+        >>> shape = (2, 2)
+        >>> weight = mx.nd.zeros(shape)
+        >>> kv.init(3, weight)
+        >>> # set the optimizer for kvstore as the default SGD optimizer
+        >>> kv.set_optimizer(mx.optimizer.SGD())
+        >>> grad = mx.nd.ones(shape)
+        >>> kv.push(3, grad)
+        >>> kv.pull(3, out = weight)
+        >>> # weight is updated via gradient descent
+        >>> weight.asnumpy()
+        array([[-0.01, -0.01],
+               [-0.01, -0.01]], dtype=float32)
         """
         is_worker = ctypes.c_int()
         check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
@@ -290,19 +304,20 @@ class KVStore(object):
         return size.value
 
     def save_optimizer_states(self, fname):
-        """Saves optimizer (updater) state to file.
+        """Saves the optimizer (updater) state to a file. This is often used when checkpointing
+        the model during training.
 
         Parameters
         ----------
         fname : str
-            Path to output states file.
+            Path to the output states file.
         """
         assert self._updater is not None, "Cannot save states for distributed training"
         with open(fname, 'wb') as fout:
             fout.write(self._updater.get_states())
 
     def load_optimizer_states(self, fname):
-        """Loads optimizer (updater) state from file.
+        """Loads the optimizer (updater) state from the file.
 
         Parameters
         ----------
@@ -329,13 +344,13 @@ class KVStore(object):
         ...     print "update on key: %d" % key
         ...     stored += input * 2
         >>> kv._set_updater(update)
-        >>> kv.pull(3, out=a)
+        >>> kv.pull('3', out=a)
         >>> print a.asnumpy()
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
-        >>> kv.push(3, mx.nd.ones(shape))
+        >>> kv.push('3', mx.nd.ones(shape))
         update on key: 3
-        >>> kv.pull(3, out=a)
+        >>> kv.pull('3', out=a)
         >>> print a.asnumpy()
         [[ 6.  6.  6.]
         [ 6.  6.  6.]]
@@ -379,12 +394,33 @@ class KVStore(object):
 def create(name='local'):
     """Creates a new KVStore.
 
+    For single machine training, there are two commonly used types:
+
+    ``local``: Copies all gradients to CPU memory and updates weights there.
+
+    ``device``: Aggregates gradients and updates weights on GPUs. With this setting,
+    the KVStore also attempts to use GPU peer-to-peer communication,
+    potentially accelerating the communication.
+
+    For distributed training, KVStore also supports a number of types:
+
+    ``dist_sync``: Behaves similarly to ``local`` but with one major difference.
+    With ``dist_sync``, batch-size now means the batch size used on each machine.
+    So if there are ``n`` machines and we use batch size ``b``,
+    then ``dist_sync`` behaves like ``local`` with batch size ``n * b``.
+
+    ``dist_device_sync``: Identical to ``dist_sync`` with the difference similar
+    to ``device`` vs ``local``.
+
+    ``dist_async``: Performs asynchronous updates.
+    The weights are updated whenever gradients are received from any machine.
+    No two updates happen on the same weight at the same time. However, the order is not
+    guaranteed.
+
     Parameters
     ----------
-    name : {'local'}
+    name : {'local', 'device', 'dist_sync', 'dist_device_sync', 'dist_async'}
         The type of KVStore.
-        - local works for multiple devices on a single machine (single process).
-        - dist works for multiple machines (multiple processes).
     Returns
     -------
     kv : KVStore

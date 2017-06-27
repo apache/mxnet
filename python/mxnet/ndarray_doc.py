@@ -17,7 +17,7 @@ class ReshapeDoc(NDArrayDoc):
     Reshapes the input array into a new shape.
 
     >>> x = mx.nd.array([1, 2, 3, 4])
-    >>> y = mx.nd.reshape(x,shape=(2, 2))
+    >>> y = mx.nd.reshape(x, shape=(2, 2))
     >>> x.shape
     (4L,)
     >>> y.shape
@@ -35,6 +35,17 @@ class ReshapeDoc(NDArrayDoc):
     >>> y = mx.nd.reshape(x, shape=(4, 0, -1))
     >>> y.shape
     (4L, 3L, 2L)
+    """
+
+class elemwise_addDoc(NDArrayDoc):
+    """
+    Example
+    -------
+
+    >>> x = mx.nd.array([1, 2, 3, 4])
+    >>> y = mx.nd.array([1.1, 2.1, 3.1, 4.1])
+    >>> mx.nd.elemwise_add(x, y).asnumpy()
+    array([ 2.0999999 ,  4.0999999 ,  6.0999999 ,  8.10000038], dtype=float32)
     """
 
 class BroadcastToDoc(NDArrayDoc):
