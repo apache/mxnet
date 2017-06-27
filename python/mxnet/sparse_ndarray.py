@@ -184,7 +184,9 @@ class SparseNDArray(NDArray):
             if key.step is not None:
                 raise ValueError('NDArray only supports continuous slicing on axis 0')
             if key.start is not None or key.stop is not None:
-                return self._slice(key.start, key.stop)
+                begin = key.start if key.start else 0
+                end = key.stop if key.stop else self.shape[0]
+                return ndarray.slice(self, begin=begin, end=end)
             else:
                 return self
         if isinstance(key, tuple):
@@ -192,44 +194,6 @@ class SparseNDArray(NDArray):
 
     def _sync_copyfrom(self, source_array):
         raise Exception('Not implemented for SparseND yet!')
-
-    def _slice(self, start, stop):
-        """Returns a read-only SparseNDArray slice that shares memory with current one.
-        To create a writable slice, please use ``mx.nd.slice`` instead. Currently only
-        `csr` storage type is supported.
-
-        Parameters
-        ----------
-        start : int
-            Starting index of slice.
-        stop : int
-            Finishing index of slice.
-
-        Example
-        ----------
-        >>> indptr = np.array([0, 2, 3, 6])
-        >>> indices = np.array([0, 2, 2, 0, 1, 2])
-        >>> data = np.array([1, 2, 3, 4, 5, 6])
-        >>> a = mx.sparse_nd.csr(data, indptr, indices, (3, 3))
-        >>> a.asnumpy()
-        array([[1, 0, 2],
-               [0, 0, 3],
-               [4, 5, 6]])
-
-        >>> a[1:2].asnumpy()
-        array([[0, 0, 3]])
-
-        """
-        stype = self.storage_type
-        assert(stype == 'csr'), "_slice for " + str(stype) + " not implemented yet"
-        warnings.warn('slicing SparseNDArray is not efficient', RuntimeWarning)
-        handle = NDArrayHandle()
-        start = mx_uint(start) if start else mx_uint(0)
-        stop = mx_uint(stop) if stop else mx_uint(self.shape[0])
-        check_call(_LIB.MXNDArraySlice(
-            self.handle, start, stop, ctypes.byref(handle)))
-        ret = _ndarray_cls(handle=handle, writable=False)
-        return ret
 
     def _at(self, idx):
         raise Exception('at operator for SparseND is not supported.')

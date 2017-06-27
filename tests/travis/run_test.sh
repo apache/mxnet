@@ -99,15 +99,15 @@ if [ ${TASK} == "python_test" ]; then
     mkdir -p ${PWD}/data
 
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
-        python -m nose tests/python/unittest || exit -1
-        python3 -m nose tests/python/unittest || exit -1
+        python -m nose -v tests/python/unittest || exit -1
+        python3 -m nose -v tests/python/unittest || exit -1
         # make cython3
         # cython tests
         # export MXNET_ENFORCE_CYTHON=1
         # python3 -m nose tests/python/unittest || exit -1
-        python3 -m nose tests/python/train || exit -1
-        python -m nose tests/python/doctest || exit -1
-        python3 -m nose tests/python/doctest || exit -1
+        python3 -m nose -v tests/python/train || exit -1
+        python -m nose -v tests/python/doctest || exit -1
+        python3 -m nose -v tests/python/doctest || exit -1
     else
         nosetests -v tests/python/unittest || exit -1
         nosetests3 -v tests/python/unittest || exit -1

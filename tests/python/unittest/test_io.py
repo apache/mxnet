@@ -89,8 +89,30 @@ def test_NDArrayIter():
         else:
             assert(labelcount[i] == 100)
 
+def test_NDArrayIter_csr():
+    import scipy.sparse as sp
+    # creating toy data
+    num_rows = rnd.randint(5, 15)
+    num_cols = rnd.randint(1, 20)
+    batch_size = rnd.randint(1, num_rows)
+    shape = (num_rows, num_cols)
+    csr, _ = rand_sparse_ndarray(shape, 'csr')
+    dns = csr.asnumpy()
+
+    # make iterators
+    csr_iter = iter(mx.io.NDArrayIter(csr, csr, batch_size))
+    begin = 0
+    for batch in csr_iter:
+        expected = np.zeros((batch_size, num_cols))
+        end = begin + batch_size
+        expected[:num_rows - begin] = dns[begin:end]
+        if end > num_rows:
+            expected[num_rows - begin:] = dns[0:end - num_rows]
+        assert_almost_equal(batch.data[0].asnumpy(), expected)
+        begin += batch_size
+
 '''
-def test_libsvm():
+def test_LibSVMIter():
     #TODO(haibin) automatic the test instead of hard coded test
     cwd = os.getcwd()
     data_path = os.path.join(cwd, 'data.t')
@@ -128,4 +150,5 @@ if __name__ == "__main__":
     test_NDArrayIter()
     test_MNISTIter()
     test_Cifar10Rec()
-    # test_libsvm()
+    # test_LibSVMIter()
+    test_NDArrayIter_csr()
