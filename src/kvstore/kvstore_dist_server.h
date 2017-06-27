@@ -198,10 +198,23 @@ class KVStoreDistServer {
         }
       } else {
         // async push
-        exec_.Exec([this, key, &recved, &stored](){
-            CHECK(updater_);
-            updater_(key, recved, &stored);
+        if (updater_) {
+          exec_.Exec([this, key, &recved, &stored](){
+              CHECK(updater_);
+              updater_(key, recved, &stored);
           });
+        } else {
+          auto& merged = merge_buf_[key];
+          if (merged.array.is_none()) {
+            merged.array = NDArray(dshape, Context());
+            CopyFromTo(recved, &merged.array, 0);
+          } else {
+            merged.array += recved;
+          }
+
+          // if no updater, just copy
+          CopyFromTo(merged.array, &stored);
+        }
         server->Response(req_meta);
         stored.WaitToRead();
       }
