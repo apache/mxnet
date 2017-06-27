@@ -175,6 +175,27 @@ def test_unfuse():
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
     assert outs == [(10, 200), (10, 200), (10, 200)]
 
+def test_convlstm():
+    cell = mx.rnn.ConvLSTMCell(input_shape = (1, 3, 16, 10), num_hidden=10, prefix='rnn_', forget_bias=1.0)
+    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
+    outputs, _ = cell.unroll(3, inputs)
+    outputs = mx.sym.Group(outputs)
+    assert sorted(cell.params._params.keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
+    assert outputs.list_outputs() == ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']
+
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(1, 3, 16, 10), rnn_t1_data=(1, 3, 16, 10), rnn_t2_data=(1, 3, 16, 10))
+    assert outs == [(1, 10, 16, 10), (1, 10, 16, 10), (1, 10, 16, 10)]
+
+def test_convgru():
+    cell = mx.rnn.ConvGRUCell(input_shape = (1, 3, 16, 10), num_hidden=10, prefix='rnn_', forget_bias=1.0)
+    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
+    outputs, _ = cell.unroll(3, inputs)
+    outputs = mx.sym.Group(outputs)
+    assert sorted(cell.params._params.keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
+    assert outputs.list_outputs() == ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']
+
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(1, 3, 16, 10), rnn_t1_data=(1, 3, 16, 10), rnn_t2_data=(1, 3, 16, 10))
+    assert outs == [(1, 10, 16, 10), (1, 10, 16, 10), (1, 10, 16, 10)]
 
 if __name__ == '__main__':
     test_rnn()
@@ -184,3 +205,5 @@ if __name__ == '__main__':
     test_stack()
     test_bidirectional()
     test_unfuse()
+    test_convlstm()
+    test_convgru()
