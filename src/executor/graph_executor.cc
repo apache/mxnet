@@ -994,7 +994,7 @@ void GraphExecutor::InitCachedOps() {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
 #if MXNET_USE_PROFILER
-    op_nodes_[nid].opr_name = inode.source->op()->name.c_str();
+    op_nodes_[nid].opr_name = inode.source->attrs.name.c_str();
 #else
     op_nodes_[nid].opr_name = nullptr;
 #endif
