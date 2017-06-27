@@ -23,7 +23,7 @@ def get_loc(data, attr={'lr_mult':'0.01'}):
 
 def get_symbol(num_classes=10, add_stn=False, **kwargs):
     data = mx.symbol.Variable('data')
-    if(add_stn):
+    if add_stn:
         data = mx.sym.SpatialTransformer(data=data, loc=get_loc(data), target_shape = (28,28),
                                          transform_type="affine", sampler_type="bilinear")
     # first conv
