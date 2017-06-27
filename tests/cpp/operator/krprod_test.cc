@@ -115,8 +115,8 @@ TEST(row_wise_kronecker, ThreeInputMatrices) {
         in[i][j] = distribution(generator);
   }
 
-  row_wise_kronecker(kr12, in1, in2);
-  row_wise_kronecker(kr13, kr12, in3);
+  row_wise_kronecker(kr12, {in1, in2});
+  row_wise_kronecker(kr13, {kr12, in3});
   row_wise_kronecker(result, ts_arr);
   EXPECT_DOUBLE_EQ_MATRIX(kr13, result);
 
@@ -148,8 +148,8 @@ TEST(row_wise_kronecker, ThreeInputMatrices2) {
         in[i][j] = distribution(generator);
   }
 
-  row_wise_kronecker(kr12, in1, in2);
-  row_wise_kronecker(kr13, kr12, in3);
+  row_wise_kronecker(kr12, {in1, in2});
+  row_wise_kronecker(kr13, {kr12, in3});
   row_wise_kronecker(result, ts_arr);
   EXPECT_DOUBLE_EQ_MATRIX(kr13, result);
 
@@ -181,8 +181,8 @@ TEST(row_wise_kronecker, ThreeInputMatrices3) {
         in[i][j] = distribution(generator);
   }
 
-  row_wise_kronecker(kr12, in1, in2);
-  row_wise_kronecker(kr13, kr12, in3);
+  row_wise_kronecker(kr12, {in1, in2});
+  row_wise_kronecker(kr13, {kr12, in3});
   row_wise_kronecker(result, ts_arr);
   EXPECT_DOUBLE_EQ_MATRIX(kr13, result);
 
@@ -217,9 +217,9 @@ TEST(row_wise_kronecker, FourInputMatrices) {
         in[i][j] = distribution(generator);
   }
 
-  row_wise_kronecker(kr12, in1, in2);
-  row_wise_kronecker(kr13, kr12, in3);
-  row_wise_kronecker(kr14, kr13, in4);
+  row_wise_kronecker(kr12, {in1, in2});
+  row_wise_kronecker(kr13, {kr12, in3});
+  row_wise_kronecker(kr14, {kr13, in4});
   row_wise_kronecker(result, ts_arr);
   EXPECT_DOUBLE_EQ_MATRIX(kr14, result);
 
@@ -231,7 +231,7 @@ TEST(row_wise_kronecker, FourInputMatrices) {
   FreeSpace(&result);
 }
 
-TEST(krprod, OneInputMatrix) {
+TEST(khatri_rao, OneInputMatrix) {
   // Input matrices of shape (2, 4) which is also the expected result
   DType mat[8] {1, 2, 3, 4, 5, 6, 7, 8};
 
@@ -242,7 +242,7 @@ TEST(krprod, OneInputMatrix) {
   // Compute Khatri-Rao product
   Tensor<cpu, 2, DType> result(Shape2(2, 4));
   AllocSpace(&result);
-  krprod(result, ts_arr);
+  khatri_rao(result, ts_arr);
 
   // Check against expected result
   EXPECT_DOUBLE_EQ_MATRIX(ts_arr[0], result);
@@ -250,7 +250,7 @@ TEST(krprod, OneInputMatrix) {
   FreeSpace(&result);
 }
 
-TEST(krprod, TwoInputMatrices) {
+TEST(khatri_rao, TwoInputMatrices) {
   // Input matrices of shape (3, 2) and (4, 2)
   DType mat1[6] {1, 4, 2, 5, 3, 6};
   DType mat2[8] {1, 5, 2, 6, 3, 7, 4, 8};
@@ -267,7 +267,7 @@ TEST(krprod, TwoInputMatrices) {
   // Compute Khatri-Rao product
   Tensor<cpu, 2, DType> result(Shape2(12, 2));
   AllocSpace(&result);
-  krprod(result, ts_arr);
+  khatri_rao(result, ts_arr);
 
   // Check against expected result
   Tensor<cpu, 2, DType> ts_expected(expected, Shape2(12, 2), 2, nullptr);
@@ -276,7 +276,7 @@ TEST(krprod, TwoInputMatrices) {
   FreeSpace(&result);
 }
 
-TEST(krprod, ThreeInputMatrices) {
+TEST(khatri_rao, ThreeInputMatrices) {
   std::default_random_engine generator;
   std::uniform_int_distribution<int> distribution(1, 6);
 
@@ -297,9 +297,9 @@ TEST(krprod, ThreeInputMatrices) {
         in[i][j] = distribution(generator);
   }
 
-  krprod(kr12, in1, in2);
-  krprod(kr13, kr12, in3);
-  krprod(result, ts_arr);
+  khatri_rao(kr12, {in1, in2});
+  khatri_rao(kr13, {kr12, in3});
+  khatri_rao(result, ts_arr);
   EXPECT_DOUBLE_EQ_MATRIX(kr13, result);
 
   for (auto & in : ts_arr)
@@ -309,7 +309,7 @@ TEST(krprod, ThreeInputMatrices) {
   FreeSpace(&result);
 }
 
-TEST(inv_krprod, OneInputMatrixTransposed) {
+TEST(inv_khatri_rao, OneInputMatrixTransposed) {
   DType mat[8] {1, 2, 3, 4, 5, 6, 7, 8};
 
   // Make input tensors
@@ -319,7 +319,7 @@ TEST(inv_krprod, OneInputMatrixTransposed) {
   // Compute inverse Khatri-Rao product
   Tensor<cpu, 2, DType> inv_kr(Shape2(2, 4));
   AllocSpace(&inv_kr);
-  inv_krprod(inv_kr, ts_arr, true);
+  inv_khatri_rao(inv_kr, ts_arr, true);
 
   // Check against expected result
   Tensor<cpu, 2, DType> actual_dot(Shape2(2, 4));
@@ -331,7 +331,7 @@ TEST(inv_krprod, OneInputMatrixTransposed) {
   FreeSpace(&actual_dot);
 }
 
-TEST(inv_krprod, TwoInputMatrices) {
+TEST(inv_khatri_rao, TwoInputMatrices) {
   // Input matrices of shape (3, 2) and (4, 2)
   DType mat1[6] {1, 4, 2, 5, 3, 6};
   DType mat2[8] {1, 5, 2, 6, 3, 7, 4, 8};
@@ -345,8 +345,8 @@ TEST(inv_krprod, TwoInputMatrices) {
   Tensor<cpu, 2, DType> inv_kr(Shape2(2, 12)), kr(Shape2(12, 2));
   AllocSpace(&inv_kr);
   AllocSpace(&kr);
-  inv_krprod(inv_kr, ts_arr, false);
-  krprod(kr, ts_arr);
+  inv_khatri_rao(inv_kr, ts_arr, false);
+  khatri_rao(kr, ts_arr);
 
   // Check against expected result
   Tensor<cpu, 2, DType> actual_dot(Shape2(2, 12));
@@ -359,7 +359,7 @@ TEST(inv_krprod, TwoInputMatrices) {
   FreeSpace(&actual_dot);
 }
 
-TEST(inv_krprod, TwoInputMatricesTransposed) {
+TEST(inv_khatri_rao, TwoInputMatricesTransposed) {
   // Transposed input matrices of shape (2, 3) and (2, 4)
   DType mat1[6] {1, 2, 3, 4, 5, 6};
   DType mat2[8] {1, 2, 3, 4, 5, 6, 7, 8};
@@ -373,7 +373,7 @@ TEST(inv_krprod, TwoInputMatricesTransposed) {
   Tensor<cpu, 2, DType> inv_kr(Shape2(2, 12)), kr_t(Shape2(2, 12));
   AllocSpace(&inv_kr);
   AllocSpace(&kr_t);
-  inv_krprod(inv_kr, ts_arr, true);
+  inv_khatri_rao(inv_kr, ts_arr, true);
   row_wise_kronecker(kr_t, ts_arr);
 
   // Check against expected result
@@ -387,7 +387,7 @@ TEST(inv_krprod, TwoInputMatricesTransposed) {
   FreeSpace(&actual_dot);
 }
 
-TEST(inv_prod, ThreeInputMatricesTranposed) {
+TEST(inv_khatri_rao, ThreeInputMatricesTranposed) {
   // Randomly initialise the transposed input matrices
   std::default_random_engine generator;
   std::uniform_int_distribution<int> distribution(1, 6);
@@ -410,7 +410,7 @@ TEST(inv_prod, ThreeInputMatricesTranposed) {
   AllocSpace(&inv_kr);
   AllocSpace(&kr_t);
 
-  inv_krprod(inv_kr, ts_arr, true);
+  inv_khatri_rao(inv_kr, ts_arr, true);
   row_wise_kronecker(kr_t, ts_arr);
 
   // Check dot result

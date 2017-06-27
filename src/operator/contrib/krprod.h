@@ -108,28 +108,13 @@ inline void row_wise_kronecker
 }
 
 /*!
- * \brief Convenience function for row-wise Kronecker product of two matrices
- *
- * \param out result matrix
- * \param in1 first input matrix
- * \param in2 second input matrix
- */
-template <typename DType>
-inline void row_wise_kronecker
-  (Tensor<cpu, 2, DType> out,
-  const Tensor<cpu, 2, DType> &in1,
-  const Tensor<cpu, 2, DType> &in2) {
-  row_wise_kronecker(out, std::vector<Tensor<cpu, 2, DType> > {in1, in2});
-}
-
-/*!
  * \brief Khatri-Rao product
  *
  * \param out result matrix
  * \param ts_arr vector of input matrices
  */
 template <typename DType>
-inline void krprod
+inline void khatri_rao
   (Tensor<cpu, 2, DType> out,
   const std::vector<Tensor<cpu, 2, DType> > &ts_arr) {
   CHECK_GE(ts_arr.size(), 1) << "The input matrices must be non-empty.";
@@ -172,21 +157,6 @@ inline void krprod
 }
 
 /*!
- * \brief Convenience function for the Khatri-Rao product of two matrices
- *
- * \param out result matrix
- * \param in1 first input matrix
- * \param in2 second input matrix
- */
-template <typename DType>
-inline void krprod
-  (Tensor<cpu, 2, DType> out,
-  const Tensor<cpu, 2, DType> &in1,
-  const Tensor<cpu, 2, DType> &in2) {
-  krprod(out, std::vector<Tensor<cpu, 2, DType> > {in1, in2});
-}
-
-/*!
  * \brief Moore-Penrose pseudoinverse of the Khatri-Rao product
  *
  * Given input matrices A_1, ..., A_n, of shape (l_1, k), ..., (l_n, k) respectively, the pseudoinverse of the Khatri-Rao product is
@@ -202,7 +172,7 @@ inline void krprod
  * \param input_transposed if every input matrices is transposed
  */
 template <typename DType>
-inline void inv_krprod
+inline void inv_khatri_rao
   (Tensor<cpu, 2, DType> out,
   const std::vector<Tensor<cpu, 2, DType> > &ts_arr,
   bool input_transposed = false) {
@@ -239,7 +209,7 @@ inline void inv_krprod
   } else {
     Tensor<cpu, 2, DType> kr(Shape2(out.size(1), out.size(0)));
     AllocSpace(&kr);
-    krprod(kr, ts_arr);
+    khatri_rao(kr, ts_arr);
 
     for (auto &ts : ts_arr)
       hadamard_prod *= implicit_dot(ts.T(), ts);
@@ -256,26 +226,6 @@ inline void inv_krprod
   FreeSpace(&hadamard_prod);
   if (info != 0)
     LOG(FATAL) << "The linear solver in inv_prod() returns " << info;
-}
-
-/*!
- * \brief Moore-Penrose pseudoinverse of Khatri-Rao product of two matrices
- *
- * This is a convenience function for the more general version.
- *
- * \param out result matrix
- * \param in1 first input matrix
- * \param in2 second input matrix
- * \param input_transposed if every input matrices is transposed
- */
-template <typename DType>
-inline void inv_krprod
-  (Tensor<cpu, 2, DType> out,
-  const Tensor<cpu, 2, DType> &in1,
-  const Tensor<cpu, 2, DType> &in2,
-  bool input_transposed = false) {
-  inv_krprod(out, std::vector<Tensor<cpu, 2, DType> > {in1, in2},
-      input_transposed);
 }
 
 }  // namespace op
