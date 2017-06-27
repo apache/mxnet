@@ -17,7 +17,7 @@ def test_rnn():
 
 
 def test_lstm():
-    cell = foo.rnn.LSTMCell(100, prefix='rnn_', forget_bias=1.0)
+    cell = foo.rnn.LSTMCell(100, prefix='rnn_')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
@@ -31,8 +31,8 @@ def test_lstm():
 def test_lstm_forget_bias():
     forget_bias = 2.0
     stack = foo.rnn.SequentialRNNCell()
-    stack.add(foo.rnn.LSTMCell(100, forget_bias=forget_bias, prefix='l0_'))
-    stack.add(foo.rnn.LSTMCell(100, forget_bias=forget_bias, prefix='l1_'))
+    stack.add(foo.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias), prefix='l0_'))
+    stack.add(foo.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias), prefix='l1_'))
 
     dshape = (32, 1, 200)
     data = mx.sym.Variable('data')
