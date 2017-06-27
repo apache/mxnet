@@ -1,19 +1,19 @@
 import sys
 import os
+import time
+import mxnet as mx
+import numpy as np
+from mxnet.test_utils import check_consistency, set_default_context
+from numpy.testing import assert_allclose
+
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from test_operator import *
 from test_optimizer import *
 from test_random import *
 from test_nn import *
-from test_rnn import *
-from test_rnn import *
+#from test_rnn import *
 from test_foo_rnn import *
-import mxnet as mx
-import numpy as np
-from mxnet.test_utils import check_consistency, set_default_context
-from numpy.testing import assert_allclose
-import time
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm
@@ -1278,114 +1278,30 @@ def test_residual_fused():
     assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
 
 
-def test_foo_rnn():
-    fused = foo.rnn.FusedRNNCell(100, num_layers=2, mode='rnn_relu', prefix='')
+def check_rnn_layer(layer):
+    layer.all_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
+    with mx.gpu(0):
+        x = mx.nd.ones((10, 16, 30))
+        states = layer.begin_state(16)
+        go, gs = layer(x, states)
 
-    stack = foo.rnn.HSequentialRNNCell()
-    stack.add(foo.rnn.RNNCell(100, activation='relu', prefix='l0_'))
-    stack.add(foo.rnn.RNNCell(100, activation='relu', prefix='l1_'))
+    with mx.cpu(0):
+        x = mx.nd.ones((10, 16, 30))
+        states = layer.begin_state(16)
+        co, cs = layer(x, states)
 
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-
-def test_foo_lstm():
-    fused = foo.rnn.FusedRNNCell(100, num_layers=2, mode='lstm', prefix='')
-
-    stack = foo.rnn.HSequentialRNNCell()
-    stack.add(foo.rnn.LSTMCell(100, prefix='l0_'))
-    stack.add(foo.rnn.LSTMCell(100, prefix='l1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
+    assert_allclose(go.asnumpy(), co.asnumpy(), rtol=1e-2)
+    for g, c in zip(gs, cs):
+        assert_allclose(g.asnumpy(), c.asnumpy(), rtol=1e-2)
 
 
-def test_foo_lstm_forget_bias():
-    forget_bias = 2.0
-    fused = foo.rnn.FusedRNNCell(10, forget_bias=forget_bias, num_layers=2, mode='lstm', prefix='')
+def test_rnn_layer():
+    check_rnn_layer(foo.rnn.RNN(100, num_layers=3))
+    check_rnn_layer(foo.rnn.RNN(100, activation='tanh', num_layers=3))
+    check_rnn_layer(foo.rnn.LSTM(100, num_layers=3))
+    check_rnn_layer(foo.rnn.GRU(100, num_layers=3))
 
-    dshape = (32, 1, 20)
-    data = mx.sym.Variable('data')
-
-    sym, _ = fused.unroll(1, data, merge_outputs=True)
-    mod = mx.mod.Module(sym, label_names=None, context=mx.gpu(0))
-    mod.bind(data_shapes=[('data', dshape)], label_shapes=None)
-
-    mod.init_params()
-
-    args, auxs = mod.get_params()
-    args = fused.unpack_weights(args)
-
-    bias_name = next(x for x in args if x.endswith('f_bias'))
-    expected_bias = forget_bias * np.ones(10, )
-    assert_allclose(args[bias_name].asnumpy(), expected_bias)
-
-
-def test_foo_gru():
-    fused = foo.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
-
-    stack = foo.rnn.HSequentialRNNCell()
-    stack.add(foo.rnn.GRUCell(100, prefix='l0_'))
-    stack.add(foo.rnn.GRUCell(100, prefix='l1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-
-def test_foo_bidirectional():
-    fused = foo.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='',
-            bidirectional=True)
-
-    stack = foo.rnn.HSequentialRNNCell()
-    stack.add(foo.rnn.BidirectionalCell(
-                foo.rnn.GRUCell(100, prefix='l0_'),
-                foo.rnn.GRUCell(100, prefix='r0_'),
-                output_prefix='bi_gru_0_'))
-    stack.add(foo.rnn.BidirectionalCell(
-                foo.rnn.GRUCell(100, prefix='l1_'),
-                foo.rnn.GRUCell(100, prefix='r1_'),
-                output_prefix='bi_gru_1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-def test_foo_unfuse():
-    for mode in ['rnn_tanh', 'rnn_relu', 'lstm', 'gru']:
-        fused = foo.rnn.FusedRNNCell(
-            100, num_layers=2, mode=mode,
-            prefix='test_%s'%mode,
-            bidirectional=True,
-            dropout=0.5)
-
-        stack = fused.unfuse()
-
-        check_rnn_consistency(fused, stack)
-        check_rnn_consistency(stack, fused)
-
-
-def test_foo_residual_fused():
-    cell = foo.rnn.ResidualCell(
-            foo.rnn.FusedRNNCell(50, num_layers=3, mode='lstm',
-                               prefix='rnn_', dropout=0.5))
-
-    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
-    outputs, _ = cell.unroll(2, inputs, merge_outputs=None)
-    assert sorted(cell.params._params.keys()) == \
-           ['rnn_parameters']
-
-    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10, 50), rnn_t1_data=(10, 50))
-    assert outs == [(10, 2, 50)]
-    outputs = outputs.eval(ctx=mx.gpu(0),
-                           rnn_t0_data=mx.nd.ones((10, 50), ctx=mx.gpu(0))+5,
-                           rnn_t1_data=mx.nd.ones((10, 50), ctx=mx.gpu(0))+5,
-                           rnn_parameters=mx.nd.zeros((61200,), ctx=mx.gpu(0)))
-    expected_outputs = np.ones((10, 2, 50))+5
-    assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
-
-
-def test_foo_fused():
-    check_rnn_forward(foo.rnn.FusedRNNCell(100, num_layers=2, num_input=200),
-                      mx.nd.ones((8, 3, 200)))
+    check_rnn_layer(foo.rnn.LSTM(100, num_layers=3, bidirectional=True))
 
 
 if __name__ == '__main__':

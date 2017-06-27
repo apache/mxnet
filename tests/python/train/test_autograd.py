@@ -7,7 +7,7 @@ from mxnet.foo import nn
 import numpy as np
 import logging
 from common import get_data
-from mxnet.contrib import autograd as ag
+from mxnet import autograd
 logging.basicConfig(level=logging.DEBUG)
 
 # define network
@@ -58,11 +58,11 @@ def train(net, epoch, ctx):
             data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
             label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
             outputs = []
-            with ag.record():
+            with autograd.record():
                 for x, y in zip(data, label):
                     z = net(x)
                     loss = foo.loss.softmax_cross_entropy_loss(z, y)
-                    ag.compute_gradient([loss])
+                    loss.backward()
                     outputs.append(z)
             metric.update(label, outputs)
             trainer.step(batch.data[0].shape[0])

@@ -17,7 +17,7 @@ def test_rnn():
 
 
 def test_lstm():
-    cell = foo.rnn.LSTMCell(100, prefix='rnn_', forget_bias=1.0)
+    cell = foo.rnn.LSTMCell(100, prefix='rnn_')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
@@ -30,9 +30,9 @@ def test_lstm():
 
 def test_lstm_forget_bias():
     forget_bias = 2.0
-    stack = foo.rnn.HSequentialRNNCell()
-    stack.add(foo.rnn.LSTMCell(100, forget_bias=forget_bias, prefix='l0_'))
-    stack.add(foo.rnn.LSTMCell(100, forget_bias=forget_bias, prefix='l1_'))
+    stack = foo.rnn.SequentialRNNCell()
+    stack.add(foo.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias), prefix='l0_'))
+    stack.add(foo.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias), prefix='l1_'))
 
     dshape = (32, 1, 200)
     data = mx.sym.Variable('data')
@@ -117,7 +117,7 @@ def test_residual_bidirectional():
 
 
 def test_stack():
-    cell = foo.rnn.HSequentialRNNCell()
+    cell = foo.rnn.SequentialRNNCell()
     for i in range(5):
         if i == 1:
             cell.add(foo.rnn.ResidualCell(foo.rnn.LSTMCell(100, prefix='rnn_stack%d_' % i)))
@@ -163,20 +163,6 @@ def test_zoneout():
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
-def test_unfuse():
-    cell = foo.rnn.FusedRNNCell(100, num_layers=3, mode='lstm',
-                               prefix='test_', bidirectional=True,
-                               dropout=0.5)
-    cell = cell.unfuse()
-    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
-    outputs, _ = cell.unroll(3, inputs)
-    outputs = mx.sym.Group(outputs)
-    assert outputs.list_outputs() == ['test_bi_l2_t0_output', 'test_bi_l2_t1_output', 'test_bi_l2_t2_output']
-
-    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
-    assert outs == [(10, 200), (10, 200), (10, 200)]
-
-
 def check_rnn_forward(layer, inputs):
     layer.all_params().initialize()
     with mx.autograd.record():
@@ -186,24 +172,24 @@ def check_rnn_forward(layer, inputs):
 
 
 def test_rnn_cells():
-    check_rnn_forward(foo.rnn.LSTMCell(100, num_input=200), mx.nd.ones((8, 3, 200)))
-    check_rnn_forward(foo.rnn.RNNCell(100, num_input=200), mx.nd.ones((8, 3, 200)))
-    check_rnn_forward(foo.rnn.GRUCell(100, num_input=200), mx.nd.ones((8, 3, 200)))
+    check_rnn_forward(foo.rnn.LSTMCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
+    check_rnn_forward(foo.rnn.RNNCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
+    check_rnn_forward(foo.rnn.GRUCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
 
-    bilayer = foo.rnn.BidirectionalCell(foo.rnn.LSTMCell(100, num_input=200),
-                                       foo.rnn.LSTMCell(100, num_input=200))
+    bilayer = foo.rnn.BidirectionalCell(foo.rnn.LSTMCell(100, input_size=200),
+                                       foo.rnn.LSTMCell(100, input_size=200))
     check_rnn_forward(bilayer, mx.nd.ones((8, 3, 200)))
 
     check_rnn_forward(foo.rnn.DropoutCell(0.5), mx.nd.ones((8, 3, 200)))
 
-    check_rnn_forward(foo.rnn.ZoneoutCell(foo.rnn.LSTMCell(100, num_input=200),
+    check_rnn_forward(foo.rnn.ZoneoutCell(foo.rnn.LSTMCell(100, input_size=200),
                                          0.5, 0.2),
                       mx.nd.ones((8, 3, 200)))
 
-    net = foo.rnn.HSequentialRNNCell()
-    net.add(foo.rnn.LSTMCell(100, num_input=200))
-    net.add(foo.rnn.RNNCell(100, num_input=100))
-    net.add(foo.rnn.GRUCell(100, num_input=100))
+    net = foo.rnn.SequentialRNNCell()
+    net.add(foo.rnn.LSTMCell(100, input_size=200))
+    net.add(foo.rnn.RNNCell(100, input_size=100))
+    net.add(foo.rnn.GRUCell(100, input_size=100))
     check_rnn_forward(net, mx.nd.ones((8, 3, 200)))
 
 
