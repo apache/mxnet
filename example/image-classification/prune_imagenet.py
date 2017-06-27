@@ -18,11 +18,12 @@ def train_imagenet(args):
     gpus = [int(i) for i in args.gpus.split(',')]
 
     # fixed arguments
-    num_epoch = 20
-    batch_size = 512
+    num_epoch = 40
+    batch_size = 128
     label_name = 'softmax_label'
 
     # create data iterators
+    """
     train = mx.io.ImageRecordIter(
         path_imgrec        = '/home/ubuntu/data/train_480_q90.rec',
         label_width        = 1,
@@ -47,9 +48,39 @@ def train_imagenet(args):
         mean_r             = 0.0,
         mean_g             = 0.0,
         mean_b             = 0.0)
+    """
+    train = mx.io.ImageRecordIter(
+        path_imgrec         = '/home/ubuntu/data/train_480_q90.rec',
+        label_width         = 1,
+        data_name           = 'data',
+        label_name          = label_name,
+        data_shape          = (3, 224, 224),
+        batch_size          = batch_size,
+        pad                 = 0,
+        fill_value          = 127, # only used when pad is valid
+        rand_crop           = True,
+        max_random_scale    = 1.0, # 480 with imagnet, 32 with cifar10
+        min_random_scale    = 0.533, # 256.0/480.0
+        max_aspect_ratio    = 0.25,
+        random_h            = 36, # 0.4*90
+        random_s            = 50, # 0.4*127
+        random_l            = 50, # 0.4*127
+        rand_mirror         = True,
+        shuffle             = True)
+    val = mx.io.ImageRecordIter(
+        path_imgrec         = '/home/ubuntu/data/val_256_q90.rec',
+        max_random_scale    = 1, #0.533, # 480 with imagnet, 32 with cifar10
+        min_random_scale    = 1, #0.533, # 256.0/480.0
+        label_width         = 1,
+        data_name           = 'data',
+        label_name          = 'softmax_label',
+        batch_size          = batch_size,
+        data_shape          = (3, 224, 224),
+        rand_crop           = False,
+        rand_mirror         = False)
 
     # download model
-    model = 'imagenet1k-resnet-18'
+    model = 'imagenet1k-resnet-101'
     dir_path = os.path.dirname(os.path.realpath(__file__))
     (prefix, epoch) = modelzoo.download_model(model, os.path.join(dir_path, 'model'))
     sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
@@ -76,7 +107,7 @@ def train_imagenet(args):
             'do_pruning'        : do_pruning,
             'start_prune'       : start_pruning,
     }
-    disp_batches = 50
+    disp_batches = 5
     batch_end_callbacks = [mx.callback.Speedometer(batch_size, disp_batches)]
     mod.fit(train,
         begin_epoch                 = begin_epoch,
