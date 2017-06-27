@@ -227,7 +227,7 @@ class HybridLayer(Layer):
 
     def register_child(self, layer):
         if not isinstance(layer, HybridLayer):
-            if isinstance(layer, Sequantial):
+            if isinstance(layer, Sequential):
                 raise ValueError(
                     "Children of HybridLayer must also be HybridLayer. " \
                     "Please use HSequential instead of Sequantial.")
@@ -331,11 +331,12 @@ class HybridLayer(Layer):
 class Sequential(Layer):
     """Stack Layers sequentially.
 
-    Example::
-        net = nn.Sequential()
-        with net.name_scope():
-            net.add(Dense(10, activation='relu'))
-            net.add(Dense(20))
+    Example
+    -------
+    >>> net = nn.Sequential()
+    >>> with net.name_scope():
+    ...     net.add(Dense(10, activation='relu'))
+    ...     net.add(Dense(20))
     """
     def __init__(self, prefix=None, params=None):
         super(Sequential, self).__init__(prefix=prefix, params=params)
@@ -353,11 +354,12 @@ class Sequential(Layer):
 class HSequential(HybridLayer):
     """Stack HybridLayers sequentially.
 
-    Example::
-        net = nn.HSequential()
-        with net.name_scope():
-            net.add(Dense(10, activation='relu'))
-            net.add(Dense(20))
+    Example
+    -------
+    >>> net = nn.HSequential()
+    >>> with net.name_scope():
+    ...     net.add(Dense(10, activation='relu'))
+    ...     net.add(Dense(20))
     """
     def __init__(self, prefix=None, params=None):
         super(HSequential, self).__init__(prefix=prefix, params=params)
@@ -405,13 +407,12 @@ class Dense(HybridLayer):
     params : ParameterDict or None
         See document of Layer.
 
-    Input shape
-    -----------
-    a 2D input with shape `(batch_size, in_units)`.
 
-    Output shape
-    ------------
-    the output would have shape `(batch_size, units)`.
+    Input shape:
+        a 2D input with shape `(batch_size, in_units)`.
+
+    Output shape:
+        the output would have shape `(batch_size, units)`.
     """
     def __init__(self, units, activation=None, use_bias=True,
                  kernel_initializer=None, bias_initializer=None,
@@ -442,20 +443,21 @@ class Dense(HybridLayer):
 
 
 class Activation(HybridLayer):
-    """Applies an activation function to input.
+    """Applies an activation function to input. Refer
+    `mxnet.ndarray.Activation <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Activation>`_
+    to learn more.
 
     Parameters
     ----------
     activation: name of activation function to use
         See: help on Activation operator
 
-    Input shape
-    -----------
-    Arbitrary.
 
-    Output shape
-    ------------
-    Same shape as input.
+    Input shape:
+        Arbitrary.
+
+    Output shape:
+        Same shape as input.
     """
     def __init__(self, activation, **kwargs):
         self._act_type = activation
@@ -473,7 +475,9 @@ class Dropout(HybridLayer):
 
     Dropout consists in randomly setting
     a fraction `rate` of input units to 0 at each update during training time,
-    which helps prevent overfitting.
+    which helps prevent overfitting. Refer
+    `mxnet.ndarray.Dropout <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Dropout>`_
+    to learn more.
 
     Parameters
     ----------
@@ -481,8 +485,8 @@ class Dropout(HybridLayer):
 
     References
     ----------
-    [Dropout: A Simple Way to Prevent Neural Networks from Overfitting](
-        http://www.cs.toronto.edu/~rsalakhu/papers/srivastava14a.pdf)
+        `Dropout: A Simple Way to Prevent Neural Networks from Overfitting
+        <http://www.cs.toronto.edu/~rsalakhu/papers/srivastava14a.pdf>`_
     """
     def __init__(self, rate, **kwargs):
         super(Dropout, self).__init__(**kwargs)
@@ -496,7 +500,9 @@ class BatchNorm(HybridLayer):
     """Batch normalization layer (Ioffe and Szegedy, 2014).
     Normalize the activations of the previous layer at each batch,
     i.e. applies a transformation that maintains the mean activation
-    close to 0 and the activation standard deviation close to 1.
+    close to 0 and the activation standard deviation close to 1. Refer
+    `mxnet.ndarray.BatchNorm <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.BatchNorm>`_
+    to learn more.
 
     Parameters
     ----------
@@ -545,9 +551,14 @@ class BatchNorm(HybridLayer):
 class LeakyReLU(HybridLayer):
     """Leaky version of a Rectified Linear Unit.
 
-    It allows a small gradient when the unit is not active:
-    `f(x) = alpha * x for x < 0`,
-    `f(x) = x for x >= 0`.
+    It allows a small gradient when the unit is not active::
+
+        `f(x) = alpha * x for x < 0`,
+        `f(x) = x for x >= 0`.
+
+    Refer
+    `mxnet.ndarray.LeakyReLU <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.LeakyReLU>`_
+    to learn more.
 
     Parameters
     ----------
@@ -567,6 +578,10 @@ class Embedding(HybridLayer):
     vectors of fixed size.
     eg. [[4], [20]] -> [[0.25, 0.1], [0.6, -0.2]]
 
+    Refer
+    `mxnet.ndarray.Embedding <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Embedding>`_
+    to learn more.
+
     Parameters
     ----------
     input_dim : int
@@ -578,13 +593,12 @@ class Embedding(HybridLayer):
     embeddings_initializer : Initializer
         Initializer for the `embeddings` matrix
 
-    Input shape
-    -----------
-    2D tensor with shape: `(batch_size, sequence_length)`.
 
-    Output shape
-    ------------
-    3D tensor with shape: `(batch_size, sequence_length, output_dim)`.
+    Input shape:
+        2D tensor with shape: `(batch_size, sequence_length)`.
+
+    Output shape:
+        3D tensor with shape: `(batch_size, sequence_length, output_dim)`.
     """
     def __init__(self, input_dim, output_dim, dtype='float32',
                  embeddings_initializer=None, **kwargs):

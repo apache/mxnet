@@ -132,7 +132,7 @@ def l2_loss(output, label, weight=1., sample_weight=None, batch_axis=0,
     """Calculate the mean squared error between output and label:
 
     .. math::
-    L = \\frac{1}{2}\\sum_i \\Vert {output}_i - {label}_i \\Vert^2.
+        L = \\frac{1}{2}\\sum_i \\Vert {output}_i - {label}_i \\Vert^2.
 
     output and label can have arbitrary shape as long as they have the same
     number of elements.
@@ -171,7 +171,7 @@ def l1_loss(output, label, weight=None, sample_weight=None, batch_axis=0,
     """Calculate the mean absolute error between output and label:
 
     .. math::
-    L = \\frac{1}{2}\\sum_i \\vert {output}_i - {label}_i \\vert.
+        L = \\frac{1}{2}\\sum_i \\vert {output}_i - {label}_i \\vert.
 
     output and label must have the same shape.
 
@@ -210,17 +210,22 @@ def softmax_cross_entropy_loss(output, label, sparse_label=True, axis=-1,
     """Compute the softmax cross entropy loss.
 
     If sparse_label is True, label should contain integer category indicators:
+
     .. math::
-    p = {softmax}({output})
-    L = -\\sum_i {log}(p_{i,{label}_i})
+        p = {softmax}({output})
+
+        L = -\\sum_i {log}(p_{i,{label}_i})
+
     label's shape should be output's shape without the `axis` dimension. i.e. for
     output.shape = (1,2,3,4) and axis = 2, label.shape should be (1,2,4)
 
     If sparse_label is False, label should cantain probability distribution
     with the same shape as output:
+
     .. math::
-    p = {softmax}({output})
-    L = -\\sum_i \\sum_j {label}_j {log}(p_{ij})
+        p = {softmax}({output})
+
+        L = -\\sum_i \\sum_j {label}_j {log}(p_{ij})
 
     Parameters
     ----------

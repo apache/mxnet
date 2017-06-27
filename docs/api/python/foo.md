@@ -49,7 +49,13 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     :members:
 
     .. automethod:: __call__
+.. autoclass:: mxnet.foo.nn.HybridLayer
+    :members:
+
+    .. automethod:: __call__
 .. autoclass:: mxnet.foo.nn.Sequential
+    :members:
+.. autoclass:: mxnet.foo.nn.HSequential
     :members:
 ```
 
