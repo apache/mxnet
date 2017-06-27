@@ -1,5 +1,5 @@
 import numpy as _np
-
+ 
 def _get_input_output_name(net, node, index = 0):
     name = node['name']
     inputs = node['inputs']
@@ -17,6 +17,78 @@ def _get_node_name(net, node_id):
 
 def _get_node_shape(net, node_id):
     return net['nodes'][node_id]['shape']
+
+
+# FYI for images in CoreML channel, H, W in CoreML for image
+# FYI CoreML docs http://pythonhosted.org/coremltools/generated/coremltools.models.neural_network.html#module-coremltools.models.neural_network
+
+# TODO HIGH PRIORITY
+# We may want to think about only supporting symbolic API for now, given the simplicity
+
+# def convert_reshape(net, node, model, builder):
+#     """Convert a reshape layer from mxnet to coreml.
+
+#     Parameters
+#     ----------
+#     network: net
+#         A mxnet network object.
+
+#     layer: node
+#         Node to convert.
+
+#     model: model
+#         An model for MXNet
+
+#     builder: NeuralNetworkBuilder
+#         A neural network builder object.
+#     """
+
+#     mxnet.symbol.reshape -> builder.add_reshape
+
+
+# def convert_deconvolution(net, node, model, builder):
+#     """Convert a reshape layer from mxnet to coreml.
+
+#     Parameters
+#     ----------
+#     network: net
+#         A mxnet network object.
+
+#     layer: node
+#         Node to convert.
+
+#     model: model
+#         An model for MXNet
+
+#     builder: NeuralNetworkBuilder
+#         A neural network builder object.
+#     """
+
+#     CoreMl supports deconv layer as a parameter param for add_convolution
+#     mxnet.symbol.Deconvolution -> builder.add_convolution
+    
+
+
+# TODO LOWER PRIORITY (BUT STILL IMPORTANT)
+
+# mxnet.symbol.repeat -> builder.add_repeat to flatten and repeat the NDArray sequence
+
+# mxnet.symbol.Crop -> builder.add_crop to crop image along spacial dimensions
+
+# mxnet.symbol.Pad -> builder.add_padding putting 0's on height and width for tensor
+
+
+# TODO EVENTUALLY 
+
+# depthwise seperable convolution support through groups in builder.add_convolution
+# add_optional -> for all RNNs defining what goes in and out (to define beam search or if input is streaming)
+# mx.symbol.Embedding -> add_embedding takes indicies, word ids from dict that is outside coreml or 
+# in pipeline only if we have text mapping to indicies
+# FusedRNNCell -> add_bidirlstm
+#  add_unilstm -> reverse_input param true as second and concat on outputs
+# Do vanilla (0.9 mxnet) lstm, gru, vanilla_rnn
+
+
 
 def convert_transpose(net, node, model, builder):
     """Convert a transpose layer from mxnet to coreml.
@@ -106,6 +178,8 @@ def convert_activation(net, node, model, builder):
     input_name, output_name = _get_input_output_name(net, node)
     name = node['name']
     mx_non_linearity = node['attr']['act_type']
+    
+    #TODO add SCALED_TANH, SOFTPLUS, SOFTSIGN, SIGMOID_HARD, LEAKYRELU, PRELU, ELU, PARAMETRICSOFTPLUS, THRESHOLDEDRELU, LINEAR
     if mx_non_linearity == 'relu':
         non_linearity = 'RELU'
     elif mx_non_linearity == 'tanh':

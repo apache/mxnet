@@ -1,4 +1,4 @@
- import _layers
+import _layers 
 import coremltools as _coremltools
 import coremltools.models.datatypes as _datatypes
 from coremltools.models import neural_network as _neural_network
@@ -78,7 +78,7 @@ def _get_layer_converter_fn(layer):
         raise TypeError("MXNet layer of type %s is not supported." % layer)
 
 def convert(model, order = None, **kwargs):
-    """Convert a keras model to the protobuf spec.
+    """Convert an MXNet model to the protobuf spec.
 
     Parameters
     ----------
@@ -95,6 +95,9 @@ def convert(model, order = None, **kwargs):
     model_spec: An object of type ModelSpec_pb.
         Protobuf representation of the model
     """
+
+    #TODO accept optional synset.txt and use builder.set_class_labels to add lables to classification output of coreml.neural_network
+
     if not kwargs:
         raise TypeError("Must provide input shape to be able to perform conversion")
 
@@ -183,6 +186,7 @@ def convert(model, order = None, **kwargs):
     layers = spec.neuralNetwork.layers
 
     # Set the right inputs and outputs
+    #TODO figure out how to use set_pre_processing_parameters for data preprocessing on networks w/ image input
     _set_input_output_layers(builder, input_names, output_names)
     builder.set_input(input_names, input_dims)
     builder.set_output(output_names, output_dims)

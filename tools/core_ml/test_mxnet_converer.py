@@ -1,10 +1,13 @@
-import unittest
+import unittest 
 import mxnet as mx
 import numpy as np
 import tempfile
 import os
 import mxnet_converter
 import coremltools
+
+#TODO add integration tests for converting sets of layers from data.mxnet.io
+#TODO add all new unit tests for layers
 
 def _mxnet_remove_batch(input_data):
     for blob in input_data:
@@ -13,6 +16,8 @@ def _mxnet_remove_batch(input_data):
 
 def _get_coreml_model(net, engine, model_path, input_shape,
             input_names = ['data'], output_names = ['output']):
+    
+    # TODO upgrade this to mxnet mod
     model = mx.model.FeedForward(net, engine, arg_params = engine.arg_dict)
     spec = mxnet_converter.convert(model, **input_shape)
     return coremltools.models.MLModel(spec)
@@ -29,7 +34,7 @@ def set_weights(net, engine, mode = 'random'):
 
 class MXNetSingleLayerTest(unittest.TestCase):
     """
-    Unit test class for testing mxnet converter.
+    Unit test class for testing mxnet converter (converts model and generates preds on same data to assert they are the same).
     """
     def _test_mxnet_model(self, net, engine, delta = 1e-3, **input_shape):
 
