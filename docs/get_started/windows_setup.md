@@ -53,7 +53,7 @@ Next, we install ```graphviz``` library that we use for visualizing network grap
 
 We have installed MXNet core library. Next, we will install MXNet interface package for programming language of your choice:
 - [Python](#install-the-mxnet-package-for-python)
-- [R](#install-the-mxnet-package-for-r)
+- [R](#install-mxnet-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
 - [Scala](#install-the-mxnet-package-for-scala)
 
@@ -108,6 +108,7 @@ Run the following commands to install the MXNet dependencies and build the MXNet
 ```r
   Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
 ```
+
 ```bash
   cd R-package
   Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
@@ -181,7 +182,7 @@ echo import(Rcpp) > R-package\NAMESPACE
 echo import(methods) >> R-package\NAMESPACE
 Rscript -e "install.packages('devtools', repos = 'https://cloud.r-project.org')"
 cd R-package
-Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
+Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org')); install_deps(dependencies = TRUE)"
 cd ..
 
 R CMD INSTALL --no-multiarch R-package
