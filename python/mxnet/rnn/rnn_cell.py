@@ -1069,8 +1069,8 @@ class BidirectionalCell(BaseRNNCell):
         states = [l_states, r_states]
         return outputs, states
 
-class BaseConvRNNCell(BaseRNNCell):
-    """Base class for Convolutional RNN cells
+class ConvRNNCell(BaseRNNCell):
+    """Convolutional RNN cells
 
     Parameters
     ----------
@@ -1080,6 +1080,8 @@ class BaseConvRNNCell(BaseRNNCell):
         Number of units in output symbol.
     h2h_kernel : tuple of int, default (3, 3)
         Kernel of Convolution operator in state-to-state transitions.
+    h2h_pad : tuple of int, default (1, 1)
+        Pad of Convolution operator in state-to-state transitions.
     h2h_dilate : tuple of int, default (1, 1)
         Dilation of Convolution operator in state-to-state transitions.
     i2h_kernel : tuple of int, default (3, 3)
@@ -1090,7 +1092,113 @@ class BaseConvRNNCell(BaseRNNCell):
         Pad of Convolution operator in input-to-state transitions.
     i2h_dilate : tuple of int, default (1, 1)
         Dilation of Convolution operator in input-to-state transitions.
-    prefix : str, default 'lstm_'
+    activation : str or Symbol, default 'tanh'
+        Type of activation function. Options are 'relu' and 'tanh'.
+    prefix : str, default 'ConvRNN_'
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
+    conv_layout : str, , default 'NCHW'
+        Layout of ConvolutionOp
+    """
+    def __init__(self, input_shape, num_hidden,
+                 h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
+                 i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
+                 activation='tanh', prefix='lstm_', params=None, conv_layout='NCHW'):
+        super(ConvRNNCell, self).__init__(prefix=prefix, params=params)
+        # Convolution setting
+        self._h2h_kernel = h2h_kernel
+        self._h2h_pad = h2h_pad
+        self._h2h_dilate = h2h_dilate
+        self._i2h_kernel = i2h_kernel
+        self._i2h_stride = i2h_stride
+        self._i2h_pad = i2h_pad
+        self._i2h_dilate = i2h_dilate
+
+        self._num_hidden = num_hidden
+        self._input_shape = input_shape
+        self._conv_layout = conv_layout
+        self._activation = activation
+
+        # Get params
+        self._iW = self.params.get('i2h_weight')
+        self._hW = self.params.get('h2h_weight')
+        self._iB = self.params.get('i2h_bias')
+        self._hB = self.params.get('h2h_bias')
+
+        # Infer state shape
+        data = symbol.Variable('data')
+        self._state_shape = symbol.Convolution(data=data,
+                                               num_filter=self._num_hidden,
+                                               kernel=self._i2h_kernel,
+                                               stride=self._i2h_stride,
+                                               pad=self._i2h_pad,
+                                               dilate=self._i2h_dilate,
+                                               layout=conv_layout)
+        self._state_shape = self._state_shape.infer_shape(data=input_shape)[1][0]
+        self._state_shape = (0, ) + self._state_shape[1:]
+
+    @property
+    def state_info(self):
+        return [{'shape': self._state_shape, '__layout__': self._conv_layout},
+                {'shape': self._state_shape, '__layout__': self._conv_layout}]
+
+    @property
+    def _gate_names(self):
+        return ('',)
+
+    def __call__(self, inputs, states):
+        self._counter += 1
+        name = '%st%d_'%(self._prefix, self._counter)
+        i2h = symbol.Convolution(name='%si2h'%name,
+                                 data=inputs,
+                                 num_filter=self._num_hidden,
+                                 kernel=self._i2h_kernel,
+                                 stride=self._i2h_stride,
+                                 pad=self._i2h_pad,
+                                 dilate=self._i2h_dilate,
+                                 weight=self._iW,
+                                 bias=self._iB,)
+        h2h = symbol.Convolution(name='%sh2h'%name,
+                                 data=states[0],
+                                 num_filter=self._num_hidden,
+                                 kernel=self._h2h_kernel,
+                                 dilate=self._h2h_dilate,
+                                 pad=self._h2h_pad,
+                                 stride=(1, 1),
+                                 weight=self._hW,
+                                 bias=self._hB)
+        output = self._get_activation(i2h + h2h, self._activation,
+                                      name='%sout'%name)
+        return output, [output]
+
+class ConvLSTMCell(BaseRNNCell):
+    """Convolutional LSTM network cell.
+
+    Reference:
+        Xingjian et al. NIPS2015
+
+    Parameters
+    ----------
+    input_shape : tuple of int
+        Shape of input in single timestep.
+    num_hidden : int
+        Number of units in output symbol.
+    h2h_kernel : tuple of int, default (3, 3)
+        Kernel of Convolution operator in state-to-state transitions.
+    h2h_pad : tuple of int, default (1, 1)
+        Pad of Convolution operator in state-to-state transitions.
+    h2h_dilate : tuple of int, default (1, 1)
+        Dilation of Convolution operator in state-to-state transitions.
+    i2h_kernel : tuple of int, default (3, 3)
+        Kernel of Convolution operator in input-to-state transitions.
+    i2h_stride : tuple of int, default (1, 1)
+        Stride of Convolution operator in input-to-state transitions.
+    i2h_pad : tuple of int, default (1, 1)
+        Pad of Convolution operator in input-to-state transitions.
+    i2h_dilate : tuple of int, default (1, 1)
+        Dilation of Convolution operator in input-to-state transitions.
+    prefix : str, default 'ConvLSTM_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
@@ -1100,13 +1208,13 @@ class BaseConvRNNCell(BaseRNNCell):
         Layout of ConvolutionOp
     """
     def __init__(self, input_shape, num_hidden,
-                 h2h_kernel=(3, 3), h2h_dilate=(1, 1),
-                 i2h_kernel=(3, 3), i2h_stride=(1, 1),
-                 i2h_pad=(1, 1), i2h_dilate=(1, 1),
+                 h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
+                 i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
                  prefix='lstm_', params=None, forget_bias=1.0, conv_layout='NCHW'):
-        super(BaseConvRNNCell, self).__init__(prefix=prefix, params=params)
+        super(ConvLSTMCell, self).__init__(prefix=prefix, params=params)
         # Convolution setting
         self._h2h_kernel = h2h_kernel
+        self._h2h_pad = h2h_pad
         self._h2h_dilate = h2h_dilate
         self._i2h_kernel = i2h_kernel
         self._i2h_stride = i2h_stride
@@ -1126,10 +1234,14 @@ class BaseConvRNNCell(BaseRNNCell):
 
         # Infer state shape
         data = symbol.Variable('data')
-        self._state_shape = symbol.Convolution(data=data, num_filter=self._num_hidden,
-                         kernel=self._i2h_kernel, stride=self._i2h_stride,
-                         pad=self._i2h_pad, dilate=self._i2h_dilate,
-                         layout=conv_layout).infer_shape(data=input_shape)[1][0]
+        self._state_shape = symbol.Convolution(data=data,
+                                               num_filter=self._num_hidden,
+                                               kernel=self._i2h_kernel,
+                                               stride=self._i2h_stride,
+                                               pad=self._i2h_pad,
+                                               dilate=self._i2h_dilate,
+                                               layout=conv_layout)
+        self._state_shape = self._state_shape.infer_shape(data=input_shape)[1][0]
         self._state_shape = (0, ) + self._state_shape[1:]
 
     @property
@@ -1137,39 +1249,6 @@ class BaseConvRNNCell(BaseRNNCell):
         return [{'shape': self._state_shape, '__layout__': self._conv_layout},
                 {'shape': self._state_shape, '__layout__': self._conv_layout}]
 
-class ConvLSTMCell(BaseConvRNNCell):
-    """Convolutional LSTM network cell.
-
-    Reference:
-        Xingjian et al. "Convolutional LSTM network: A machine learning approach for precipitation nowcasting."
-
-    Parameters
-    ----------
-    input_shape : tuple of int
-        Shape of input in single timestep.
-    num_hidden : int
-        Number of units in output symbol.
-    h2h_kernel : tuple of int, default (3, 3)
-        Kernel of Convolution operator in state-to-state transitions.
-    h2h_dilate : tuple of int, default (1, 1)
-        Dilation of Convolution operator in state-to-state transitions.
-    i2h_kernel : tuple of int, default (3, 3)
-        Kernel of Convolution operator in input-to-state transitions.
-    i2h_stride : tuple of int, default (1, 1)
-        Stride of Convolution operator in input-to-state transitions.
-    i2h_pad : tuple of int, default (1, 1)
-        Pad of Convolution operator in input-to-state transitions.
-    i2h_dilate : tuple of int, default (1, 1)
-        Dilation of Convolution operator in input-to-state transitions.
-    prefix : str, default 'lstm_'
-        Prefix for name of layers (and name of weight if params is None).
-    params : RNNParams, default None
-        Container for weight sharing between cells. Created if None.
-    forget_bias : bias added to forget gate, default 1.0.
-        Jozefowicz et al. 2015 recommends setting this to 1.0
-    conv_layout : str, , default 'NCHW'
-        Layout of ConvolutionOp
-    """
     @property
     def _gate_names(self):
         return ['_i', '_f', '_c', '_o']
@@ -1177,17 +1256,27 @@ class ConvLSTMCell(BaseConvRNNCell):
     def __call__(self, inputs, states):
         self._counter += 1
         name = '%st%d_'%(self._prefix, self._counter)
-        i2h = symbol.Convolution(name='%si2h'%name, data=inputs, num_filter=self._num_hidden*4,
-                                 kernel=self._i2h_kernel, stride=self._i2h_stride,
-                                 pad=self._i2h_pad, dilate=self._i2h_dilate,
-                                 weight=self._iW, bias=self._iB,)
-        h2h = symbol.Convolution(name='%sh2h'%name, data=states[0], num_filter=self._num_hidden*4,
-                                 kernel=self._h2h_kernel, dilate = self._h2h_dilate,
-                                 pad=(1, 1), stride=(1, 1),
-                                 weight=self._hW, bias=self._hB)
+        i2h = symbol.Convolution(name='%si2h'%name,
+                                 data=inputs,
+                                 num_filter=self._num_hidden*4,
+                                 kernel=self._i2h_kernel,
+                                 stride=self._i2h_stride,
+                                 pad=self._i2h_pad,
+                                 dilate=self._i2h_dilate,
+                                 weight=self._iW,
+                                 bias=self._iB,)
+        h2h = symbol.Convolution(name='%sh2h'%name,
+                                 data=states[0],
+                                 num_filter=self._num_hidden*4,
+                                 kernel=self._h2h_kernel,
+                                 dilate=self._h2h_dilate,
+                                 pad=self._h2h_pad,
+                                 stride=(1, 1),
+                                 weight=self._hW,
+                                 bias=self._hB)
 
         gates = i2h + h2h
-        slice_gates = symbol.SliceChannel(gates, num_outputs=4, axis= self._conv_layout.find('C'),
+        slice_gates = symbol.SliceChannel(gates, num_outputs=4, axis=self._conv_layout.find('C'),
                                           name="%sslice"%name)
         in_gate = symbol.Activation(slice_gates[0], act_type="sigmoid",
                                     name='%si'%name)
@@ -1203,7 +1292,7 @@ class ConvLSTMCell(BaseConvRNNCell):
                                        name='%sout'%name)
         return next_h, [next_h, next_c]
 
-class ConvGRUCell(BaseConvRNNCell):
+class ConvGRUCell(BaseRNNCell):
     """Convolutional Gated Rectified Unit (GRU) network cell.
 
     Parameters
@@ -1214,6 +1303,8 @@ class ConvGRUCell(BaseConvRNNCell):
         Number of units in output symbol.
     h2h_kernel : tuple of int, default (3, 3)
         Kernel of Convolution operator in state-to-state transitions.
+    h2h_pad : tuple of int, default (1, 1)
+        Pad of Convolution operator in state-to-state transitions.
     h2h_dilate : tuple of int, default (1, 1)
         Dilation of Convolution operator in state-to-state transitions.
     i2h_kernel : tuple of int, default (3, 3)
@@ -1224,15 +1315,54 @@ class ConvGRUCell(BaseConvRNNCell):
         Pad of Convolution operator in input-to-state transitions.
     i2h_dilate : tuple of int, default (1, 1)
         Dilation of Convolution operator in input-to-state transitions.
-    prefix : str, default 'lstm_'
+    prefix : str, default 'ConvGRU_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
-    forget_bias : bias added to forget gate, default 1.0.
-        Jozefowicz et al. 2015 recommends setting this to 1.0
     conv_layout : str, , default 'NCHW'
         Layout of ConvolutionOp
     """
+    def __init__(self, input_shape, num_hidden,
+                 h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
+                 i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
+                 prefix='gru_', params=None, conv_layout='NCHW'):
+        super(ConvGRUCell, self).__init__(prefix=prefix, params=params)
+        # Convolution setting
+        self._h2h_kernel = h2h_kernel
+        self._h2h_pad = h2h_pad
+        self._h2h_dilate = h2h_dilate
+        self._i2h_kernel = i2h_kernel
+        self._i2h_stride = i2h_stride
+        self._i2h_pad = i2h_pad
+        self._i2h_dilate = i2h_dilate
+
+        self._num_hidden = num_hidden
+        self._input_shape = input_shape
+        self._conv_layout = conv_layout
+
+        # Get params
+        self._iW = self.params.get('i2h_weight')
+        self._hW = self.params.get('h2h_weight')
+        self._iB = self.params.get('i2h_bias')
+        self._hB = self.params.get('h2h_bias')
+
+        # Infer state shape
+        data = symbol.Variable('data')
+        self._state_shape = symbol.Convolution(data=data,
+                                               num_filter=self._num_hidden,
+                                               kernel=self._i2h_kernel,
+                                               stride=self._i2h_stride,
+                                               pad=self._i2h_pad,
+                                               dilate=self._i2h_dilate,
+                                               layout=conv_layout)
+        self._state_shape = self._state_shape.infer_shape(data=input_shape)[1][0]
+        self._state_shape = (0, ) + self._state_shape[1:]
+
+    @property
+    def state_info(self):
+        return [{'shape': self._state_shape, '__layout__': self._conv_layout},
+                {'shape': self._state_shape, '__layout__': self._conv_layout}]
+
     @property
     def _gate_names(self):
         return ['_r', '_z', '_o']
@@ -1241,14 +1371,22 @@ class ConvGRUCell(BaseConvRNNCell):
         self._counter += 1
         seq_idx = self._counter
         name = '%st%d_' % (self._prefix, seq_idx)
-        i2h = symbol.Convolution(name='%s_i2h'%name, data=inputs, num_filter=self._num_hidden * 3,
-                                 kernel=self._i2h_kernel, stride=self._i2h_stride,
-                                 pad=self._i2h_pad, dilate=self._i2h_dilate,
-                                 weight=self._iW, bias=self._iB,)
-        h2h = symbol.Convolution(name='%s_h2h'%name, data=states[0], num_filter=self._num_hidden * 3,
-                                 kernel=self._h2h_kernel, dilate = self._h2h_dilate,
-                                 pad=(1, 1), stride=(1, 1),
-                                 weight=self._hW, bias=self._hB)
+        i2h = symbol.Convolution(name='%s_i2h'%name, data=inputs,
+                                 num_filter=self._num_hidden * 3,
+                                 kernel=self._i2h_kernel,
+                                 stride=self._i2h_stride,
+                                 pad=self._i2h_pad,
+                                 dilate=self._i2h_dilate,
+                                 weight=self._iW,
+                                 bias=self._iB,)
+        h2h = symbol.Convolution(name='%s_h2h'%name, data=states[0],
+                                 num_filter=self._num_hidden * 3,
+                                 kernel=self._h2h_kernel,
+                                 dilate=self._h2h_dilate,
+                                 pad=self._h2h_pad,
+                                 stride=(1, 1),
+                                 weight=self._hW,
+                                 bias=self._hB)
 
         i2h_r, i2h_z, i2h = symbol.SliceChannel(i2h, num_outputs=3, name="%s_i2h_slice" % name)
         h2h_r, h2h_z, h2h = symbol.SliceChannel(h2h, num_outputs=3, name="%s_h2h_slice" % name)
