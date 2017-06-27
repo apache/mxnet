@@ -751,7 +751,11 @@ class BaseModule(object):
         pass
 
     def forward(self, data_batch, is_train=None):
-        """Forward computation.
+        """Forward computation. It supports data batches with different shapes, such as
+        different batch sizes or different image sizes.
+        If reshaping of data batch relates to modification of symbol or module, such as
+        changing image layout ordering or switching from training to predicting, module
+        rebinding is required.
 
         Parameters
         ----------
@@ -762,16 +766,25 @@ class BaseModule(object):
 
         Examples
         --------
-        >>> # An example of forward computation.
+        >>> import mxnet as mx
         >>> from collections import namedtuple
         >>> Batch = namedtuple('Batch', ['data'])
-        >>> mod.bind(data_shapes=[('data', (1, 10, 10))])
+        >>> data = mx.sym.Variable('data')
+        >>> out = data * 2
+        >>> mod = mx.mod.Module(symbol=out, label_names=None)
+        >>> mod.bind(data_shapes=[('data', (1, 10))])
         >>> mod.init_params()
-        >>> data1 = [mx.nd.ones([1, 10, 10])]
+        >>> data1 = [mx.nd.ones((1, 10))]
         >>> mod.forward(Batch(data1))
         >>> print mod.get_outputs()[0].asnumpy()
-        [[ 0.09999977  0.10000153  0.10000716  0.10000195  0.09999853  0.09999743
-           0.10000272  0.10000113  0.09999088  0.09999888]]
+        [[ 2.  2.  2.  2.  2.  2.  2.  2.  2.  2.]]
+        >>> # Forward with data batch of different shape
+        >>> data2 = [mx.nd.ones((3, 5))]
+        >>> mod.forward(Batch(data2))
+        >>> print mod.get_outputs()[0].asnumpy()
+        [[ 2.  2.  2.  2.  2.]
+         [ 2.  2.  2.  2.  2.]
+         [ 2.  2.  2.  2.  2.]]
         """
         raise NotImplementedError()
 
