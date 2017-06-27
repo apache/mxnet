@@ -32,7 +32,7 @@ struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugme
   Tuple<float> min_crop_scales;
   /*! \brief max crop scales */
   Tuple<float> max_crop_scales;
-  /*! \brief min crop aspecct ratios */
+  /*! \brief min crop aspect ratios */
   Tuple<float> min_crop_aspect_ratios;
   /*! \brief max crop aspect ratios */
   Tuple<float> max_crop_aspect_ratios;
@@ -103,7 +103,7 @@ struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugme
     DMLC_DECLARE_FIELD(max_crop_scales).set_default(Tuple<float>({1.0f}))
         .describe("Augmentation Param: Max crop scales.");
     DMLC_DECLARE_FIELD(min_crop_aspect_ratios).set_default(Tuple<float>({1.0f}))
-        .describe("Augmentation Param: Min crop aspecct ratios.");
+        .describe("Augmentation Param: Min crop aspect ratios.");
     DMLC_DECLARE_FIELD(max_crop_aspect_ratios).set_default(Tuple<float>({1.0f}))
         .describe("Augmentation Param: Max crop aspect ratios.");
     DMLC_DECLARE_FIELD(min_crop_overlaps).set_default(Tuple<float>({0.0f}))
@@ -255,9 +255,9 @@ class ImageDetLabel {
       obj.right = *(it++);
       obj.bottom = *(it++);
       obj.extra.assign(it, it - 5 + object_width_);
-      objects_.push_back(obj);
-      CHECK_GT(obj.right, obj.left);
-      CHECK_GT(obj.bottom, obj.top);
+      if (obj.right > obj.left && obj.bottom > obj.top) {
+        objects_.push_back(obj);
+      }
     }
   }
 

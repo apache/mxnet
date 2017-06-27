@@ -108,7 +108,7 @@ to classify an image with jupyter notebook.
 ### ImageNet 1K
 
 It is first used by
-[ImageNet challenge 2012](http://mxnet.io/tutorials/python/predict_imagenet.html),
+[ImageNet challenge 2012](http://www.image-net.org/challenges/LSVRC/2012/),
 which contains about 1.2M images with 1000 classes. To test these models, one
 can use
 [data/imagenet1k-val.sh](https://github.com/dmlc/mxnet/blob/master/example/image-classification/data/imagenet1k-val.sh)
@@ -131,7 +131,7 @@ to calculate the accuracy.
 | `imagenet1k-rexnext-101-64x4d` | 0.7911 | 0.9430 |
 
 Note:
-- our Resnet dose not need to specify the RGB mean due the data batch
+- our Resnet does not need to specify the RGB mean due the data batch
   normalization layer. While the inception models needs `--rgb-mean
   123.68,116.779,103.939`
 - Resnet training logs are available at

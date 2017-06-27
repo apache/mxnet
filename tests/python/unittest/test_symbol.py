@@ -224,17 +224,7 @@ def test_zero_prop2():
 
     assert False
 
+
 if __name__ == '__main__':
-    test_zero_prop2()
-    test_zero_prop()
-    test_blockgrad()
-    test_symbol_children()
-    test_load_000800()
-    test_symbol_infer_shape_var()
-    test_symbol_infer_shape()
-    test_symbol_infer_type()
-    test_symbol_internal()
-    test_symbol_basic()
-    test_symbol_compose()
-    test_symbol_saveload()
-    test_symbol_pickle()
+    import nose
+    nose.runmodule()

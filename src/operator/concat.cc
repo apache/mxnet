@@ -51,7 +51,7 @@ MXNET_REGISTER_OP_PROPERTY(Concat, ConcatProp)
 .. note:: `Concat` is deprecated. Use `concat` instead.
 
 The dimensions of the input arrays should be the same except the axis along
- which they will concatenated.
+which they will be concatenated.
 The dimension of the output array along the concatenated axis will be equal
 to the sum of the corresponding dimensions of the input arrays.
 

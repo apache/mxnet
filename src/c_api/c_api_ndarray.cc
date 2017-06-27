@@ -86,6 +86,9 @@ void SetNDInputsOutputs(const nnvm::Op* op,
     *num_outputs = num_visible_outputs;
     ndoutputs.resize(infered_num_outputs);
   } else {
+    CHECK(!AutogradRuntime::Get()->IsTraining())
+      << "Inplace operations (+=, -=, op(..., out=x) etc.) and assignment are "
+      << "not supported when you are inside a train_section using autograd.";
     CHECK(*num_outputs == infered_num_outputs || *num_outputs == num_visible_outputs)
       << "Expecting " << infered_num_outputs << " (all) or "
       << num_visible_outputs << " (visible only) outputs, got "
@@ -100,31 +103,43 @@ void SetNDInputsOutputs(const nnvm::Op* op,
 
 void SetContext(Context* p_ctx,
                 const nnvm::NodeAttrs& attrs,
-                const int& num_inputs,
                 const std::vector<NDArray>& ndinputs,
-                const int& infered_num_outputs,
-                const std::vector<NDArray>& ndoutputs) {
+                const std::vector<NDArray>& ndoutputs,
+                const Context& default_ctx) {
   Context& ctx = *p_ctx;
-  if (num_inputs) {
+  if (ndinputs.size()) {
     ctx = ndinputs[0].ctx();
-  } else if (infered_num_outputs && !ndoutputs[0].is_none()) {
+    for (size_t i = 1; i < ndinputs.size(); ++i) {
+      CHECK_EQ(ndinputs[i].ctx().dev_mask(), ctx.dev_mask())
+          << "All inputs must live on the same context. "
+          << "But the first argument is on "
+          << (ctx.dev_mask() == gpu::kDevMask ? "GPU" : "CPU")
+          << " while the " << i+1 << "-th argument is on "
+          << (ndinputs[i].ctx().dev_mask() == gpu::kDevMask ? "GPU" : "CPU");
+    }
+  } else if (ndoutputs.size() && !ndoutputs[0].is_none()) {
     ctx = ndoutputs[0].ctx();
   } else if (attrs.dict.find("ctx") != attrs.dict.end()) {
     ctx = Context::FromString(attrs.dict.at("ctx"));
   } else {
-    ctx = Context::CPU();
+    ctx = default_ctx;
   }
   // Pinned context doesn't propagate
   if (ctx.dev_type == Context::kCPUPinned) {
     ctx = Context::CPU();
   }
+#if !MXNET_USE_CUDA
+  if (ctx.dev_mask() == gpu::kDevMask) {
+    LOG(INFO) << "GPU support is disabled. Compile MXNet with "
+              << "USE_CUDA=1 to enable GPU support.";
+  }
+#endif  // MXNET_USE_CUDA
 }
 
 void SetShapeType(const nnvm::Op* op,
                   const nnvm::NodeAttrs& attrs,
                   const Context& ctx,
                   const std::vector<NDArray>& ndinputs,
-                  const int& infered_num_outputs,
                   std::vector<NDArray>* p_ndoutputs) {
   std::vector<NDArray>& ndoutputs = *p_ndoutputs;
   static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
@@ -145,7 +160,7 @@ void SetShapeType(const nnvm::Op* op,
   CHECK(infershape.count(op))
     << "Operator " << op->name << " is missing FInferShape attribute";
   CHECK(infershape[op](attrs, &in_shapes, &out_shapes));
-  CHECK_EQ(out_shapes.size(), static_cast<size_t>(infered_num_outputs));
+  CHECK_EQ(out_shapes.size(), ndoutputs.size());
 
   // infer type
   std::vector<int>& in_types = ret->arg_types;
@@ -162,9 +177,9 @@ void SetShapeType(const nnvm::Op* op,
   CHECK(infertype.count(op))
     << "Operator " << op->name << " is missing FInferType attribute";
   CHECK(infertype[op](attrs, &in_types, &out_types));
-  CHECK_EQ(out_types.size(), static_cast<size_t>(infered_num_outputs));
+  CHECK_EQ(out_types.size(), ndoutputs.size());
 
-  for (int i = 0; i < infered_num_outputs; ++i) {
+  for (size_t i = 0; i < ndoutputs.size(); ++i) {
     if (ndoutputs[i].is_none()) {
       ndoutputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]);
     } else {
@@ -319,43 +334,28 @@ void PushOperator(std::shared_ptr<Operator> opr,
     0, PROFILER_MESSAGE(op->name.c_str()));
 }
 
-int MXImperativeInvoke(AtomicSymbolCreator creator,
-                       int num_inputs,
-                       NDArrayHandle *inputs,
-                       int *num_outputs,
-                       NDArrayHandle **outputs,
-                       int num_params,
-                       const char **param_keys,
-                       const char **param_vals) {
+void ImperativeInvokeImpl(const Context& default_ctx,
+                          const nnvm::NodeAttrs& attrs,
+                          std::vector<NDArray>* p_ndinputs,
+                          std::vector<NDArray>* p_ndoutputs) {
   static auto& fcpu = nnvm::Op::GetAttr<FCompute>("FCompute<cpu>");
   static auto& fgpu = nnvm::Op::GetAttr<FCompute>("FCompute<gpu>");
   static auto& ndfunc = nnvm::Op::GetAttr<FNDArrayFunction>("FNDArrayFunction");
   static auto& createop = nnvm::Op::GetAttr<FCreateLayerOp>("FCreateLayerOp");
-  const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
-  NDArray** outarray = *reinterpret_cast<NDArray***>(outputs);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
-  API_BEGIN();
-  nnvm::NodeAttrs attrs;
-  SetOpAttrs(op, &attrs,
-      num_inputs, num_params, param_keys, param_vals);
+  const nnvm::Op *op = attrs.op;
+  std::vector<NDArray>& ndinputs  = *p_ndinputs;
+  std::vector<NDArray>& ndoutputs = *p_ndoutputs;
 
-  int infered_num_outputs;
-  int num_visible_outputs;
-  SetNumOutputs(op, attrs, num_inputs,
-      &infered_num_outputs, &num_visible_outputs);
-
-  std::vector<NDArray> ndinputs, ndoutputs;
-  SetNDInputsOutputs(op, &ndinputs, &ndoutputs, num_inputs, inputs,
-      num_outputs, infered_num_outputs, num_visible_outputs, outarray);
 
   if (ndfunc.count(op)) {
     ndfunc[op](attrs, ndinputs, &ndoutputs);
   } else {
     // TODO(piiswrong): infer ctx
     Context ctx;
-    SetContext(&ctx, attrs, num_inputs, ndinputs, infered_num_outputs, ndoutputs);
-    SetShapeType(op, attrs, ctx, ndinputs, infered_num_outputs, &ndoutputs);
+    SetContext(&ctx, attrs, ndinputs, ndoutputs, default_ctx);
+    SetShapeType(op, attrs, ctx, ndinputs, &ndoutputs);
 
     std::vector<engine::VarHandle> read_vars, write_vars;
     std::vector<Resource> requested;
@@ -372,7 +372,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
 
     if (fn) {
       if (AutogradRuntime::Get()->IsTraining()) {
-        AutogradRuntime::Get()->RecordImperativeFCompute(fn, op,
+        AutogradRuntime::Get()->RecordImperativeFCompute(op,
             attrs, &ndinputs, &ndoutputs);
       }
       PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
@@ -388,12 +388,37 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
           requested, auxidx, ndinputs, ndoutputs);
     } else {
       LOG(FATAL)
-        << "Operator " << op->name
-        << " cannot be run; requires at least one of"
-        << " FCompute<xpu>, NDArrayFunction, FCreateOperator be registered";
+        << "Operator " << op->name << " is not implemented for "
+        << (ctx.dev_mask() == gpu::kDevMask ? "GPU." : "CPU.");
     }
   }
+}
 
+int MXImperativeInvoke(AtomicSymbolCreator creator,
+                       int num_inputs,
+                       NDArrayHandle *inputs,
+                       int *num_outputs,
+                       NDArrayHandle **outputs,
+                       int num_params,
+                       const char **param_keys,
+                       const char **param_vals) {
+  const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  NDArray** outarray = *reinterpret_cast<NDArray***>(outputs);
+
+  API_BEGIN();
+  nnvm::NodeAttrs attrs;
+  SetOpAttrs(op, &attrs, num_inputs, num_params, param_keys, param_vals);
+
+  int infered_num_outputs;
+  int num_visible_outputs;
+  SetNumOutputs(op, attrs, num_inputs, &infered_num_outputs, &num_visible_outputs);
+
+  std::vector<NDArray> ndinputs, ndoutputs;
+  SetNDInputsOutputs(op, &ndinputs, &ndoutputs, num_inputs, inputs,
+      num_outputs, infered_num_outputs, num_visible_outputs, outarray);
+
+  ImperativeInvokeImpl(Context::CPU(), attrs, &ndinputs, &ndoutputs);
 
   if (outarray == nullptr) {
     ret->ret_handles.clear();
@@ -405,6 +430,85 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
   } else {
     for (int i = 0; i < *num_outputs; ++i) {
       *outarray[i] = std::move(ndoutputs[i]);
+    }
+  }
+  API_END();
+}
+
+int MXCreateCachedOp(SymbolHandle handle,
+                     CachedOpHandle *out) {
+  nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
+
+  API_BEGIN();
+  nnvm::Graph *g = new nnvm::Graph;
+  g->outputs = sym->outputs;
+  auto vars = sym->ListInputs(nnvm::Symbol::kAll);
+  CHECK_GE(vars.size(), 1) << "CachedOp must have at least 1 input.";
+  g->attrs["vars"] = std::make_shared<dmlc::any>(std::move(vars));
+  *out = g;
+  API_END();
+}
+
+int MXFreeCachedOp(CachedOpHandle handle) {
+  nnvm::Graph *g = static_cast<nnvm::Graph*>(handle);
+  API_BEGIN();
+  delete g;
+  API_END();
+}
+
+int MXInvokeCachedOp(CachedOpHandle handle,
+                     int num_inputs,
+                     NDArrayHandle *inputs,
+                     int *num_outputs,
+                     NDArrayHandle **outputs) {
+  nnvm::Graph *g = static_cast<nnvm::Graph*>(handle);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  NDArray** outarray = *reinterpret_cast<NDArray***>(outputs);
+
+  API_BEGIN();
+  const std::vector<nnvm::NodePtr>& vars =
+    g->GetAttr<std::vector<nnvm::NodePtr> >("vars");
+  const nnvm::IndexedGraph& idx = g->indexed_graph();
+  CHECK_EQ(static_cast<size_t>(num_inputs), vars.size())
+      << "Actually number of inputs differs from expected number of inputs";
+  Context default_ctx = static_cast<NDArray*>(inputs[0])->ctx();
+
+  std::vector<NDArray> buff(idx.num_node_entries());
+  for (size_t i = 0; i < vars.size(); ++i) {
+    buff[idx.entry_id(idx.node_id(vars[i].get()), 0)] =
+        *static_cast<NDArray*>(inputs[i]);
+  }
+
+  for (size_t i = 0; i < idx.num_nodes(); ++i) {
+    const nnvm::IndexedGraph::Node& node = idx[i];
+    if (node.source->attrs.op == nullptr) continue;
+    std::vector<NDArray> in;
+    in.reserve(node.inputs.size());
+    for (const auto& j : node.inputs) {
+      in.emplace_back(buff[idx.entry_id(j)]);
+    }
+    std::vector<NDArray> out(node.source->num_outputs());
+    ImperativeInvokeImpl(default_ctx, node.source->attrs, &in, &out);
+
+    for (size_t j = 0; j < node.source->num_outputs(); ++j) {
+      buff[idx.entry_id(i, j)] = std::move(out[j]);
+    }
+  }
+
+  if (outarray == nullptr) {
+    ret->ret_handles.clear();
+    for (const auto& i : idx.outputs()) {
+      ret->ret_handles.push_back(
+        reinterpret_cast<NDArrayHandle>(
+          new NDArray(std::move(buff[idx.entry_id(i)]))));
+    }
+    *num_outputs = idx.outputs().size();
+    *outputs = dmlc::BeginPtr(ret->ret_handles);
+  } else {
+    CHECK_EQ(static_cast<size_t>(*num_outputs), idx.outputs().size())
+        << "Specifed number of output differs from expected number of outputs";
+    for (size_t i = 0; i < idx.outputs().size(); ++i) {
+      *outarray[i] = std::move(buff[idx.entry_id(idx.outputs()[i])]);
     }
   }
   API_END();
@@ -437,16 +541,31 @@ int MXAutogradMarkVariables(mx_uint num_var,
 
 int MXAutogradComputeGradient(mx_uint num_output,
                               NDArrayHandle *output_handles) {
+  return MXAutogradBackward(num_output, output_handles, nullptr, 0);
+}
+
+int MXAutogradBackward(mx_uint num_output,
+                       NDArrayHandle *output_handles,
+                       NDArrayHandle *ograd_handles,
+                       int retain_graph) {
   API_BEGIN();
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
-  std::vector<NDArray> outputs;
+  std::vector<NDArray> outputs, ograds;
   outputs.reserve(num_output);
   for (mx_uint i = 0; i < num_output; ++i) {
     outputs.emplace_back(*static_cast<NDArray*>(output_handles[i]));
   }
 
-  AutogradRuntime::Get()->ComputeGradient(outputs);
+  ograds.reserve(num_output);
+  for (mx_uint i = 0; i < num_output; ++i) {
+    if (ograd_handles != nullptr && ograd_handles[i] != nullptr) {
+      ograds.emplace_back(*static_cast<NDArray*>(ograd_handles[i]));
+    } else {
+      ograds.emplace_back();
+    }
+  }
 
+  AutogradRuntime::Get()->ComputeGradient(outputs, ograds, retain_graph);
   API_END();
 }

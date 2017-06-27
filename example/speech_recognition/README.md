@@ -19,6 +19,11 @@ With rich functionalities and convenience explained above, you can build your ow
 ## **Environments**
 - MXNet version: 0.9.5+
 - GPU memory size: 2.4GB+
+- Install tensorboard for logging
+<pre>
+<code>pip install tensorboard</code>
+</pre>  
+
 - [SoundFile](https://pypi.python.org/pypi/SoundFile/0.8.1) for audio preprocessing (If encounter errors about libsndfile, follow [this tutorial](http://www.linuxfromscratch.org/blfs/view/svn/multimedia/libsndfile.html).)
 <pre>
 <code>pip install soundfile</code>
@@ -39,18 +44,34 @@ You can download two wave files above from [this](https://github.com/samsungsds-
 
 
 ### **Setting the configuration file**
-**[Notice]** The configuration file "default.cfg" included describes DeepSpeech2 with slight changes. You can test the original DeepSpeech2 with a few line changes to the cfg file:  
-<pre><code>...
+**[Notice]** The configuration file "default.cfg" included describes DeepSpeech2 with slight changes. You can test the original DeepSpeech2("deepspeech.cfg") with a few line changes to the cfg file:  
+<pre><code>
+[common]
+...
+learning_rate = 0.0003
+# constant learning rate annealing by factor
+learning_rate_annealing = 1.1
+optimizer = sgd
+...
+is_bi_graphemes = True
+...
 [arch]
 ...
 num_rnn_layer = 7
 num_hidden_rnn_list = [1760, 1760, 1760, 1760, 1760, 1760, 1760]
 num_hidden_proj = 0
-
 num_rear_fc_layers = 1
 num_hidden_rear_fc_list = [1760]
 act_type_rear_fc_list = ["relu"]
-...</code></pre>
+...
+[train]
+...
+learning_rate = 0.0003
+# constant learning rate annealing by factor
+learning_rate_annealing = 1.1
+optimizer = sgd
+...
+</code></pre>
 
 
 * * *
@@ -97,7 +118,7 @@ Run the following line after all modification explained above.
 Train and test your own models by preparing two files.
 1) A new configuration file, i.e., custom.cfg, corresponding to the file 'default.cfg'.
 The new file should specify the items below the '[arch]' section of the original file. 
-2) A new implementation file, i.e., arch_custom.py, corresponing to the file 'arch_deepspeech.py'.
+2) A new implementation file, i.e., arch_custom.py, corresponding to the file 'arch_deepspeech.py'.
 The new file should implement two functions, prepare_data() and arch(), for building networks described in the new configuration file.
 
 Run the following line after preparing the files.   

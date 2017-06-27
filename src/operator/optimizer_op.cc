@@ -68,6 +68,41 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
 .add_argument("mom", "NDArray-or-Symbol", "Momentum")
 .add_arguments(SGDMomParam::__FIELDS__());
 
+NNVM_REGISTER_OP(mp_sgd_update)
+.describe("Updater function for multi-precision sgd optimizer")
+.set_num_inputs(3)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SGDParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<nnvm::FInferType>("FInferType", MP_SGD_InferType<2, 1, 3>)
+.set_attr<FCompute>("FCompute<cpu>", MP_SGDUpdate<cpu>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2};
+  })
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "gradient")
+.add_argument("weight32", "NDArray-or-Symbol", "Weight32")
+.add_arguments(SGDParam::__FIELDS__());
+
+NNVM_REGISTER_OP(mp_sgd_mom_update)
+.describe("Updater function for multi-precision sgd optimizer")
+.set_num_inputs(4)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SGDMomParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
+.set_attr<nnvm::FInferType>("FInferType", MP_SGD_InferType<2, 1, 4>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2, 3};
+  })
+.set_attr<FCompute>("FCompute<cpu>", MP_SGDMomUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("mom", "NDArray-or-Symbol", "Momentum")
+.add_argument("weight32", "NDArray-or-Symbol", "Weight32")
+.add_arguments(SGDMomParam::__FIELDS__());
+
 NNVM_REGISTER_OP(adam_update)
 .describe(R"code(Update function for Adam optimizer. Adam is seen as a generalization
 of AdaGrad.
@@ -105,9 +140,41 @@ It updates the weights using::
 .add_argument("var", "NDArray-or-Symbol", "Moving variance")
 .add_arguments(AdamParam::__FIELDS__());
 
+
 NNVM_REGISTER_OP(rmsprop_update)
-.describe(R"code(Update function for RMSProp optimizer. The RMSProp code follows the version in
-http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf Tieleman & Hinton, 2012.
+.describe(R"code(Update function for `RMSProp` optimizer.
+
+`RMSprop` is a variant of stochastic gradient descent where the gradients are
+divided by a cache which grows with the sum of squares of recent gradients?
+
+`RMSProp` is similar to `AdaGrad`, a popular variant of `SGD` which adaptively
+tunes the learning rate of each parameter. `AdaGrad` lowers the learning rate for
+each parameter monotonically over the course of training.
+While this is analytically motivated for convex optimizations, it may not be ideal
+for non-convex problems. `RMSProp` deals with this heuristically by allowing the
+learning rates to rebound as the denominator decays over time.
+
+Define the Root Mean Square (RMS) error criterion of the gradient as
+:math:`RMS[g]_t = \sqrt{E[g^2]_t + \epsilon}`, where :math:`g` represents
+gradient and :math:`E[g^2]_t` is the decaying average over past squared gradient.
+
+The :math:`E[g^2]_t` is given by:
+
+.. math::
+  E[g^2]_t = \gamma * E[g^2]_{t-1} + (1-\gamma) * g_t^2
+
+The update step is
+
+.. math::
+  \theta_{t+1} = \theta_t - \frac{\eta}{RMS[g]_t} g_t
+
+The RMSProp code follows the version in
+http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
+Tieleman & Hinton, 2012.
+
+Hinton suggests the momentum term :math:`\gamma` to be 0.9 and the learning rate
+:math:`\eta` to be 0.001.
+
 )code" ADD_FILELINE)
 .set_num_inputs(3)
 .set_num_outputs(1)
@@ -125,8 +192,28 @@ http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf Tieleman
 .add_arguments(RMSPropParam::__FIELDS__());
 
 NNVM_REGISTER_OP(rmspropalex_update)
-.describe(R"code(Update function for RMSPropAlex optimizer. The RMSPropAlex code follows the version in
+.describe(R"code(Update function for RMSPropAlex optimizer.
+
+`RMSPropAlex` is non-centered version of `RMSProp`.
+
+Define :math:`E[g^2]_t` is the decaying average over past squared gradient and
+:math:`E[g]_t` is the decaying average over past gradient.
+
+.. math::
+  E[g^2]_t = \gamma_1 * E[g^2]_{t-1} + (1 - \gamma_1) * g_t^2\\
+  E[g]_t = \gamma_1 * E[g]_{t-1} + (1 - \gamma_1) * g_t\\
+  \Delta_t = \gamma_2 * \Delta_{t-1} - \frac{\eta}{\sqrt{E[g^2]_t - E[g]_t^2 + \epsilon}} g_t\\
+
+The update step is
+
+.. math::
+  \theta_{t+1} = \theta_t + \Delta_t
+
+The RMSPropAlex code follows the version in
 http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
+
+Graves suggests the momentum term :math:`\gamma_1` to be 0.95, :math:`\gamma_2`
+to be 0.9 and the learning rate :math:`\eta` to be 0.0001.
 )code" ADD_FILELINE)
 .set_num_inputs(5)
 .set_num_outputs(1)

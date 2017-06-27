@@ -28,14 +28,12 @@
 {%- endmacro %}
 
 {%- macro sidebarglobal() %}
-<ul class="globaltoc">
-  {{ toctree(maxdepth=2|toint, collapse=False,includehidden=theme_globaltoc_includehidden|tobool) }}
-</ul>
+  {{ toctree(maxdepth=4|toint, collapse=True,includehidden=theme_globaltoc_includehidden|tobool) }}
 {%- endmacro %}
 
 {%- macro sidebar() %}
       {%- if render_sidebar %}
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar rightsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
           {%- block sidebartoc %}
           {%- include "localtoc.html" %}
@@ -108,7 +106,7 @@
 
     <title>{{ title|striptags|e }}{{ titlesuffix }}</title>
     {%- else %}
-    <title>MXNet Documents</title>
+    <title>MXNet: A Scalable Deep Learning Framework</title>
     {%- endif %}
     {%- endblock %}
     {{ css() }}
@@ -156,12 +154,16 @@
     {% if pagename != 'index' %}
     <div class="container">
       <div class="row">
-        {{ sidebar() }}
+        <div class="sphinxsidebar leftsidebar" role="navigation" aria-label="main navigation">
+          <div class="sphinxsidebarwrapper">
+            {{sidebarglobal()}}
+          </div>
+        </div>
         <div class="content">
           {% block body %} {% endblock %}
           {%- include "footer.html" %}
         </div>
-      </div>
+        {{ sidebar() }}
     </div>
     {%- else %}
     {%- include "index.html" %}
@@ -174,5 +176,10 @@
     <script type="text/javascript" src="{{ pathto('_static/js/navbar.js', 1) }}"></script>
     <script type="text/javascript" src="{{ pathto('_static/js/clipboard.min.js', 1) }}"></script>
     <script type="text/javascript" src="{{ pathto('_static/js/copycode.js', 1) }}"></script>
+    <script type="text/javascript">
+        $('body').ready(function () {
+            $('body').css('visibility', 'visible');
+        });
+    </script>
   </body>
 </html>
