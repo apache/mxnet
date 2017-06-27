@@ -585,24 +585,20 @@ MXNET_DLL int MXAutogradBackward(mx_uint num_output,
 /*!
  * \brief create cached operator
  */
-MXNET_DLL int MXCachedCreateOp(AtomicSymbolCreator creator,
-                               int num_inputs,
-                               int num_params,
-                               const char **param_keys,
-                               const char **param_vals,
+MXNET_DLL int MXCreateCachedOp(SymbolHandle handle,
                                CachedOpHandle *out);
 /*!
  * \brief free cached operator
  */
-MXNET_DLL int MXCachedFree(CachedOpHandle handle);
+MXNET_DLL int MXFreeCachedOp(CachedOpHandle handle);
 /*!
  * \brief invoke cached operator
  */
-MXNET_DLL int MXCachedInvoke(CachedOpHandle handle,
-                             int num_inputs,
-                             NDArrayHandle *inputs,
-                             int *num_outputs,
-                             NDArrayHandle **outputs);
+MXNET_DLL int MXInvokeCachedOp(CachedOpHandle handle,
+                               int num_inputs,
+                               NDArrayHandle *inputs,
+                               int *num_outputs,
+                               NDArrayHandle **outputs);
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
@@ -670,19 +666,6 @@ MXNET_DLL int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
                                          const char **keys,
                                          const char **vals,
                                          SymbolHandle *out);
-/*!
- * \brief Create an AtomicSymbol from cached op.
- * \param handle cached node attribute.
- * \param name name of new symbol.
- * \param num_args the number of symbol arguments
- * \param args symbol arguments
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXCachedCreateSymbol(CachedOpHandle handle,
-                                   const char* name,
-                                   mx_uint num_args,
-                                   SymbolHandle* args,
-                                   SymbolHandle* out);
 /*!
  * \brief Create a Variable Symbol.
  * \param name name of the variable
@@ -1329,6 +1312,19 @@ MXNET_DLL int MXKVStoreInit(KVStoreHandle handle,
                             NDArrayHandle* vals);
 
 /*!
+ * \brief Init a list of (key,value) pairs in kvstore, where each key is a string
+ * \param handle handle to the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreInitEx(KVStoreHandle handle,
+                              mx_uint num,
+                              const char** keys,
+                              NDArrayHandle* vals);
+
+/*!
  * \brief Push a list of (key,value) pairs to kvstore
  * \param handle handle to the kvstore
  * \param num the number of key-value pairs
@@ -1343,6 +1339,20 @@ MXNET_DLL int MXKVStorePush(KVStoreHandle handle,
                             NDArrayHandle* vals,
                             int priority);
 /*!
+ * \brief Push a list of (key,value) pairs to kvstore, where each key is a string
+ * \param handle handle to the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePushEx(KVStoreHandle handle,
+                              mx_uint num,
+                              const char** keys,
+                              NDArrayHandle* vals,
+                              int priority);
+/*!
  * \brief pull a list of (key, value) pairs from the kvstore
  * \param handle handle to the kvstore
  * \param num the number of key-value pairs
@@ -1356,6 +1366,20 @@ MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
                             const int* keys,
                             NDArrayHandle* vals,
                             int priority);
+/*!
+ * \brief pull a list of (key, value) pairs from the kvstore, where each key is a string
+ * \param handle handle to the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePullEx(KVStoreHandle handle,
+                              mx_uint num,
+                              const char** keys,
+                              NDArrayHandle* vals,
+                              int priority);
 /*!
  * \brief user-defined updater for the kvstore
  * It's this updater's responsibility to delete \a recv and \a local

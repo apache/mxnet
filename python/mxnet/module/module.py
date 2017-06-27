@@ -226,7 +226,7 @@ class Module(BaseModule):
         return (self._arg_params, self._aux_params)
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
-                    allow_missing=False, force_init=False):
+                    allow_missing=False, force_init=False, allow_extra=False):
         """Initializes the parameters and auxiliary states.
 
         Parameters
@@ -244,6 +244,10 @@ class Module(BaseModule):
             called to fill those missing params.
         force_init : bool
             If ``True``, will force re-initialize even if already initialized.
+        allow_extra : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
         """
         if self.params_initialized and not force_init:
             warnings.warn("Parameters already initialized and force_init=False. "
@@ -281,9 +285,11 @@ class Module(BaseModule):
         self._params_dirty = False
 
         # copy the initialized parameters to devices
-        self._exec_group.set_params(self._arg_params, self._aux_params)
+        self._exec_group.set_params(self._arg_params, self._aux_params,
+                                    allow_extra=allow_extra)
 
-    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True):
+    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True,
+                   allow_extra=False):
         """Assigns parameter and aux state values.
 
         Parameters
@@ -297,7 +303,10 @@ class Module(BaseModule):
             called to fill those missing params.
         force_init : bool
             If ``True``, will force re-initialize even if already initialized.
-
+        allow_extra : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
         Examples
         --------
         >>> # An example of setting module parameters.
@@ -306,7 +315,8 @@ class Module(BaseModule):
         """
         if not allow_missing:
             self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
-                             allow_missing=allow_missing, force_init=force_init)
+                             allow_missing=allow_missing, force_init=force_init,
+                             allow_extra=allow_extra)
             return
 
         if self.params_initialized and not force_init:
@@ -314,7 +324,7 @@ class Module(BaseModule):
                           "set_params call ignored.", stacklevel=2)
             return
 
-        self._exec_group.set_params(arg_params, aux_params)
+        self._exec_group.set_params(arg_params, aux_params, allow_extra=allow_extra)
 
         # because we didn't update self._arg_params, they are dirty now.
         self._params_dirty = True
@@ -572,13 +582,14 @@ class Module(BaseModule):
         if self._update_on_kvstore:
             _update_params_on_kvstore(self._exec_group.param_arrays,
                                       self._exec_group.grad_arrays,
-                                      self._kvstore)
+                                      self._kvstore, self._exec_group.param_names)
         else:
             _update_params(self._exec_group.param_arrays,
                            self._exec_group.grad_arrays,
                            updater=self._updater,
                            num_device=len(self._context),
-                           kvstore=self._kvstore)
+                           kvstore=self._kvstore,
+                           param_names=self._exec_group.param_names)
 
     def get_outputs(self, merge_multi_context=True):
         """Gets outputs of the previous forward computation.

@@ -551,8 +551,8 @@ Install *MXNet* with OpenBLAS acceleration.
 
 **Step 5**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
-sudo apt-get install graphviz
-pip install graphviz
+$ brew install graphviz
+(mxnet)$ pip install graphviz
 ```
 
 **Step 6**  Validate the installation by running simple *MXNet* code described [here](#validate-mxnet-installation).
@@ -590,8 +590,8 @@ $ pip install mxnet
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
-sudo apt-get install graphviz
-pip install graphviz
+$ brew install graphviz
+$ pip install graphviz
 ```
 
 **Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
@@ -1357,7 +1357,7 @@ array([[ 3.,  3.,  3.],
   <div class="r">
     <div class="cpu">
 
-Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+Run a short *MXNet* R program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
 
 ```r
 library(mxnet)
@@ -1376,7 +1376,7 @@ b
   <div class="r">
     <div class="gpu">
 
-Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
+Run a short *MXNet* R program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
 
 ```r
 library(mxnet)

@@ -14,7 +14,7 @@ class Imdb(object):
         self.name = name
         self.classes = []
         self.num_classes = 0
-        self.image_set_index = []
+        self.image_set_index = None
         self.num_images = 0
         self.labels = None
         self.padding = 0
@@ -59,9 +59,22 @@ class Imdb(object):
         fname : str
             saved filename
         """
+        def progress_bar(count, total, suffix=''):
+            import sys
+            bar_len = 24
+            filled_len = int(round(bar_len * count / float(total)))
+
+            percents = round(100.0 * count / float(total), 1)
+            bar = '=' * filled_len + '-' * (bar_len - filled_len)
+            sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', suffix))
+            sys.stdout.flush()
+
         str_list = []
         for index in range(self.num_images):
+            progress_bar(index, self.num_images)
             label = self.label_from_index(index)
+            if label.size < 1:
+                continue
             path = self.image_path_from_index(index)
             if root:
                 path = osp.relpath(path, root)
@@ -78,3 +91,20 @@ class Imdb(object):
                     f.write(line)
         else:
             raise RuntimeError("No image in imdb")
+
+    def _load_class_names(self, filename, dirname):
+        """
+        load class names from text file
+
+        Parameters:
+        ----------
+        filename: str
+            file stores class names
+        dirname: str
+            file directory
+        """
+        full_path = osp.join(dirname, filename)
+        classes = []
+        with open(full_path, 'r') as f:
+            classes = [l.strip() for l in f.readlines()]
+        return classes
