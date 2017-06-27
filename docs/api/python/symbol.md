@@ -86,6 +86,8 @@ Composite multiple symbols into a new one by an operator.
     Symbol.__mul__
     Symbol.__div__
     Symbol.__rdiv__
+    Symbol.__mod__
+    Symbol.__rmod__
     Symbol.__pow__
 ```
 
@@ -249,6 +251,7 @@ Composite multiple symbols into a new one by an operator.
     broadcast_sub
     broadcast_mul
     broadcast_div
+    broadcast_mod
     negative
     dot
     batch_dot
@@ -314,6 +317,7 @@ Composite multiple symbols into a new one by an operator.
     fix
     floor
     ceil
+    trunc
 ```
 
 
@@ -390,6 +394,21 @@ Composite multiple symbols into a new one by an operator.
     argsort
     argmax
     argmin
+```
+
+### Linear Algebra
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    linalg_gemm
+    linalg_gemm2
+    linalg_potrf
+    linalg_potri
+    linalg_trmm
+    linalg_trsm
+    linalg_sumlogdiag
 ```
 
 ### Miscellaneous

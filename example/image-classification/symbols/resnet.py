@@ -18,9 +18,9 @@ def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck=True, b
         Number of output channels
     bnf : int
         Bottle neck channels factor with regard to num_filter
-    stride : tupe
+    stride : tuple
         Stride used in convolution
-    dim_match : Boolen
+    dim_match : Boolean
         True means channel number between input and output is the same, otherwise means differ
     name : str
         Base name of the operators
@@ -87,6 +87,7 @@ def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck
     num_unit = len(units)
     assert(num_unit == num_stages)
     data = mx.sym.Variable(name='data')
+    data = mx.sym.identity(data=data, name='id')
     data = mx.sym.BatchNorm(data=data, fix_gamma=True, eps=2e-5, momentum=bn_mom, name='bn_data')
     (nchannel, height, width) = image_shape
     if height <= 32:            # such as cifar10

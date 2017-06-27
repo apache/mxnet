@@ -16,7 +16,18 @@
 #include <utility>
 #include <algorithm>
 #include <map>
+#include <string>
 #include "../common/cuda_utils.h"
+
+#ifndef NCCL_MAJOR
+#define NCCL_MAJOR 1
+#endif
+
+#if NCCL_MAJOR == 1
+#define ncclGroupStart()
+#define ncclGroupEnd()
+#define ncclNumTypes nccl_NUM_TYPES
+#endif
 
 namespace mxnet {
 namespace kvstore {
@@ -53,6 +64,20 @@ class KVStoreNCCL : public KVStore {
       e.sent_to_device = false;
       local_[keys[i]] = e;
     }
+  }
+
+  void Init(const std::vector<std::string>& str_keys,
+            const std::vector<NDArray>& values) override {
+    std::vector<int> keys(str_keys.size());
+    for (size_t i = 0; i < str_keys.size(); ++i) {
+      auto &str_key = str_keys[i];
+      CHECK(str_key_dict_.find(str_key) == str_key_dict_.end())
+            << "duplicate init of key " << str_key;
+      auto key = next_str_key_++;
+      str_key_dict_[str_key] = key;
+      keys[i] = key;
+    }
+    Init(keys, values);
   }
 
   void Push(const std::vector<int>& keys,
@@ -134,6 +159,22 @@ class KVStoreNCCL : public KVStore {
     }
   }
 
+  void Push(const std::vector<std::string>& str_keys,
+            const std::vector<NDArray>& values,
+            int priority) override {
+    std::vector<int> keys(str_keys.size());
+    LookupKeys(str_keys, &keys);
+    Push(keys, values, priority);
+  }
+
+  void Pull(const std::vector<std::string>& str_keys,
+            const std::vector<NDArray>& values,
+            int priority) override {
+    std::vector<int> keys(str_keys.size());
+    LookupKeys(str_keys, &keys);
+    Pull(keys, values, priority);
+  }
+
   void Allreduce(const std::vector<int>& keys,
                  const std::vector<NDArray>& inputs,
                  const std::vector<NDArray>& outputs,
@@ -165,18 +206,30 @@ class KVStoreNCCL : public KVStore {
       }
       Entry & e = local_[key];
       if (!e.sent_to_device) {
-        if (comms_.find(devices) == comms_.end()) {
-          e.communicators = std::vector<ncclComm_t>(devices.size());
-          ncclCommInitAll(&(e.communicators[0]), devices.size(), &(devices[0]));
-          comms_[devices] = e.communicators;
-        } else {
-          e.communicators = comms_[devices];
+        {
+          std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+          if (comms_.find(devices) == comms_.end()) {
+            e.communicators = std::vector<ncclComm_t>(devices.size());
+            ncclCommInitAll(&(e.communicators[0]), devices.size(), &(devices[0]));
+            comms_[devices] = e.communicators;
+          } else {
+            e.communicators = comms_[devices];
+          }
         }
         e.sent_to_device = true;
         e.initial_value = NDArray();
       }
       Allreduce_(e, grouped_vals[i], priority);
     }
+  }
+
+  void Allreduce(const std::vector<std::string>& str_keys,
+                 const std::vector<NDArray>& inputs,
+                 const std::vector<NDArray>& outputs,
+                 int priority) override {
+    std::vector<int> keys(str_keys.size());
+    LookupKeys(str_keys, &keys);
+    Allreduce(keys, inputs, outputs, priority);
   }
 
  protected:
@@ -208,6 +261,16 @@ class KVStoreNCCL : public KVStore {
       } else {
         grouped_vals->back().push_back(values[i.second]);
       }
+    }
+  }
+
+  void LookupKeys(const std::vector<std::string>& str_keys,
+                  std::vector<int> *keys) {
+    for (size_t i = 0; i < str_keys.size(); ++i) {
+      auto &str_key = str_keys[i];
+      CHECK(str_key_dict_.find(str_key) != str_key_dict_.end())
+            << "key " << str_key << " doesn't exist. Did you init?";
+      keys->at(i) = str_key_dict_[str_key];
     }
   }
 
@@ -274,6 +337,7 @@ class KVStoreNCCL : public KVStore {
     Engine::Get()->PushSync([e, src, stride, this](RunContext rctx) {
           {
             std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+            ncclGroupStart();
             for (size_t i = 0; i < src.size(); ++i) {
               CHECK(src[i].ctx().dev_id == e->scratch_space[i].ctx().dev_id)
                 << "Different order of devices in push and pull";
@@ -287,6 +351,7 @@ class KVStoreNCCL : public KVStore {
                                 e->communicators[i],
                                 streams_[src[i].ctx().dev_id]););
             }
+            ncclGroupEnd();
           }
           for (size_t i = 0; i < src.size(); ++i) {
             CUDA_CALL(cudaSetDevice(src[i].ctx().dev_id));
@@ -317,8 +382,10 @@ class KVStoreNCCL : public KVStore {
     Engine::Get()->PushSync([src, dst, stride, this](RunContext rctx) {
           {
             std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+            ncclGroupStart();
             for (size_t i = 0; i < dst.size(); ++i) {
               cudaSetDevice(dst[i].ctx().dev_id);
+#if NCCL_MAJOR == 1
               MSHADOW_TYPE_SWITCH(dst[i].dtype(), DType,
               ncclAllGather(src.sharded_value[i].data().dptr<DType>(),
                             stride,
@@ -326,7 +393,17 @@ class KVStoreNCCL : public KVStore {
                             dst[i].data().dptr<DType>(),
                             src.communicators[i],
                             streams_[src.sharded_value[i].ctx().dev_id]););
+#else
+              MSHADOW_TYPE_SWITCH(dst[i].dtype(), DType,
+              ncclAllGather(src.sharded_value[i].data().dptr<DType>(),
+                            dst[i].data().dptr<DType>(),
+                            stride,
+                            GetNCCLType(src.sharded_value[i].dtype()),
+                            src.communicators[i],
+                            streams_[src.sharded_value[i].ctx().dev_id]););
+#endif
             }
+            ncclGroupEnd();
           }
           for (size_t i = 0; i < dst.size(); ++i) {
             CUDA_CALL(cudaSetDevice(dst[i].ctx().dev_id));
@@ -355,6 +432,7 @@ class KVStoreNCCL : public KVStore {
     Engine::Get()->PushSync([src, values, this](RunContext rctx) {
           {
             std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+            ncclGroupStart();
             for (size_t i = 0; i < values.size(); ++i) {
               cudaSetDevice(values[i].first.ctx().dev_id);
               MSHADOW_TYPE_SWITCH(values[i].first.dtype(), DType,
@@ -366,6 +444,7 @@ class KVStoreNCCL : public KVStore {
                             src.communicators[i],
                             streams_[values[i].first.ctx().dev_id]););
             }
+            ncclGroupEnd();
           }
           for (size_t i = 0; i < values.size(); ++i) {
             CUDA_CALL(cudaSetDevice(values[i].second.ctx().dev_id));
@@ -395,11 +474,15 @@ class KVStoreNCCL : public KVStore {
       default:
         LOG(FATAL) << "Unknown type passed to NCCL KVStore";
     }
-    return nccl_NUM_TYPES;
+    return ncclNumTypes;
   }
 
   /// \brief buffer for storing local values
   std::unordered_map<int, Entry> local_;
+  /// key mapping for string -> integer
+  std::unordered_map<std::string, int> str_key_dict_;
+  /// the next available integer for string->int key mapping
+  int next_str_key_ = 0;
   /// \brief NCCL communicator storage
   std::map<std::vector<int32_t>, std::vector<ncclComm_t>> comms_;
   /// \brief CUDA streams used by NCCL

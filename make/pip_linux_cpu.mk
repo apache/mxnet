@@ -34,6 +34,13 @@ ADD_CFLAGS += -Ldeps/lib -Ideps/include
 # in default use atlas for linux while apple for osx
 USE_BLAS=openblas
 
+# whether use lapack during compilation
+# only effective when compiled with blas versions openblas/apple/atlas/mkl
+USE_LAPACK = 1
+
+# path to lapack library in case of a non-standard installation
+USE_LAPACK_PATH =
+
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
 # imbin iterator

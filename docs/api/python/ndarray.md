@@ -120,6 +120,8 @@ In the rest of this document, we first overview the methods provided by the
     NDArray.__mul__
     NDArray.__div__
     NDArray.__rdiv__
+    NDArray.__mod__
+    NDArray.__rmod__
     NDArray.__pow__
 ```
 
@@ -133,6 +135,7 @@ In the rest of this document, we first overview the methods provided by the
     NDArray.__isub__
     NDArray.__imul__
     NDArray.__idiv__
+    NDArray.__imod__
 ```
 
 ### Comparison operators
@@ -259,6 +262,7 @@ In the rest of this document, we first overview the methods provided by the
     negative
     multiply
     divide
+    modulo
     dot
     batch_dot
     add_n
@@ -321,6 +325,7 @@ In the rest of this document, we first overview the methods provided by the
     fix
     floor
     ceil
+    trunc
 ```
 
 

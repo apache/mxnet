@@ -167,6 +167,7 @@ method _init_symbol_module()
     }
 }
 
+
 __PACKAGE__->_init_symbol_module;
 
 1;

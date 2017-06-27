@@ -45,6 +45,7 @@ CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror
+	NVCCFLAGS += -Werror cross-execution-space-call
 endif
 
 # CFLAGS for debug
@@ -56,9 +57,9 @@ endif
 CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
-	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
-	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
 # CFLAGS for profiler
@@ -104,6 +105,35 @@ ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
 else
 	CFLAGS += -DMKL_EXPERIMENTAL=0
 endif
+endif
+
+# verify existence of separate lapack library when using blas/openblas/atlas
+# switch off lapack support in case it can't be found
+# issue covered with this
+#   -  for Ubuntu 14.04 or lower, lapack is not automatically installed with openblas
+#   -  for Ubuntu, installing atlas will not automatically install the atlas provided lapack library
+# silently switching lapack off instead of letting the build fail because of backward compatibility
+ifeq ($(USE_LAPACK), 1)
+ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+ifeq (,$(wildcard /lib/liblapack.a))
+ifeq (,$(wildcard /usr/lib/liblapack.a))
+ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
+	USE_LAPACK = 0
+endif
+endif
+endif
+endif
+endif
+
+# lapack settings.
+ifeq ($(USE_LAPACK), 1)
+	ifneq ($(USE_LAPACK_PATH), )
+		LDFLAGS += -L$(USE_LAPACK_PATH)
+	endif
+	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+		LDFLAGS += -llapack
+	endif
+	CFLAGS += -DMXNET_USE_LAPACK
 endif
 
 ifeq ($(USE_CUDNN), 1)
