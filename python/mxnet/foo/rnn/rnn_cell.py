@@ -5,32 +5,17 @@
 """Definition of various recurrent neural network cells."""
 from __future__ import print_function
 
-import warnings
-
-from ... import symbol, init, ndarray
+from ... import symbol, ndarray
 from ...base import string_types, numeric_types
 from ..nn import Layer, HybridLayer
 from .. import tensor_types
 
-
-def _cells_state_shape(cells):
-    return sum([c.state_shape for c in cells], [])
 
 def _cells_state_info(cells, batch_size):
     return sum([c.state_info(batch_size) for c in cells], [])
 
 def _cells_begin_state(cells, **kwargs):
     return sum([c.begin_state(**kwargs) for c in cells], [])
-
-def _cells_unpack_weights(cells, args):
-    for cell in cells:
-        args = cell.unpack_weights(args)
-    return args
-
-def _cells_pack_weights(cells, args):
-    for cell in cells:
-        args = cell.pack_weights(args)
-    return args
 
 def _get_begin_state(cell, F, begin_state, inputs, batch_size):
     if begin_state is None:
@@ -112,20 +97,10 @@ class RecurrentCell(Layer):
         raise NotImplementedError()
 
     @property
-    def state_shape(self):
-        """shape(s) of states"""
-        return [ele['shape'] for ele in self.state_info()]
-
-    @property
-    def _gate_names(self):
-        """name(s) of gates"""
-        return ()
-
-    @property
     def _curr_prefix(self):
         return '%st%d_'%(self.prefix, self._counter)
 
-    def begin_state(self, func=symbol.zeros, batch_size=0, **kwargs):
+    def begin_state(self, batch_size=0, func=ndarray.zeros, **kwargs):
         """Initial state for this cell.
 
         Parameters
@@ -165,76 +140,6 @@ class RecurrentCell(Layer):
                          **info)
             states.append(state)
         return states
-
-    def unpack_weights(self, args):
-        """Unpack fused weight matrices into separate
-        weight matrices.
-
-        For example, say you use a module object `mod` to run a network that has an lstm cell.
-        In `mod.get_params()[0]`, the lstm parameters are all represented as a single big vector.
-        `cell.unpack_weights(mod.get_params()[0])` will unpack this vector into a dictionary of
-        more readable lstm parameters - c, f, i, o gates for i2h (input to hidden) and
-        h2h (hidden to hidden) weights.
-
-        Parameters
-        ----------
-        args : dict of str -> NDArray
-            Dictionary containing packed weights.
-            usually from `Module.get_params()[0]`.
-
-        Returns
-        -------
-        args : dict of str -> NDArray
-            Dictionary with unpacked weights associated with
-            this cell.
-
-        See Also
-        --------
-        pack_weights: Performs the reverse operation of this function.
-        """
-        args = args.copy()
-        if not self._gate_names:
-            return args
-        h = self._num_hidden
-        for group_name in ['i2h', 'h2h']:
-            weight = args.pop('%s%s_weight'%(self._prefix, group_name))
-            bias = args.pop('%s%s_bias' % (self._prefix, group_name))
-            for j, gate in enumerate(self._gate_names):
-                wname = '%s%s%s_weight' % (self._prefix, group_name, gate)
-                args[wname] = weight[j*h:(j+1)*h].copy()
-                bname = '%s%s%s_bias' % (self._prefix, group_name, gate)
-                args[bname] = bias[j*h:(j+1)*h].copy()
-        return args
-
-    def pack_weights(self, args):
-        """Pack separate weight matrices into a single packed
-        weight.
-
-        Parameters
-        ----------
-        args : dict of str -> NDArray
-            Dictionary containing unpacked weights.
-
-        Returns
-        -------
-        args : dict of str -> NDArray
-            Dictionary with packed weights associated with
-            this cell.
-        """
-        args = args.copy()
-        if not self._gate_names:
-            return args
-        for group_name in ['i2h', 'h2h']:
-            weight = []
-            bias = []
-            for gate in self._gate_names:
-                wname = '%s%s%s_weight'%(self._prefix, group_name, gate)
-                weight.append(args.pop(wname))
-                bname = '%s%s%s_bias'%(self._prefix, group_name, gate)
-                bias.append(args.pop(bname))
-            args['%s%s_weight'%(self._prefix, group_name)] = ndarray.concatenate(weight)
-            args['%s%s_bias'%(self._prefix, group_name)] = ndarray.concatenate(bias)
-        return args
 
     def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
         """Unroll an RNN cell across time steps.
@@ -346,10 +251,20 @@ class RNNCell(HRecurrentCell):
 
     Parameters
     ----------
-    num_hidden : int
+    hidden_size : int
         number of units in output symbol
     activation : str or Symbol, default 'tanh'
-        type of activation function
+        type of activation function.
+    i2h_weight_initializer : str or Initializer
+        Initializer for the input weights matrix, used for the linear
+        transformation of the inputs.
+    h2h_weight_initializer : str or Initializer
+        Initializer for the recurrent weights matrix, used for the linear
+        transformation of the recurrent state.
+    i2h_bias_initializer : str or Initializer
+        Initializer for the bias vector.
+    h2h_bias_initializer : str or Initializer
+        Initializer for the bias vector.
     prefix : str, default 'rnn_'
         prefix for name of layers
         (and name of weight if params is None)
@@ -357,35 +272,37 @@ class RNNCell(HRecurrentCell):
         container for weight sharing between cells.
         created if None.
     """
-    def __init__(self, num_hidden, activation='tanh', num_input=0,
-                 prefix=None, params=None):
+    def __init__(self, hidden_size, activation='tanh',
+                 i2h_weight_initializer=None, h2h_weight_initializer=None,
+                 i2h_bias_initializer=None, h2h_bias_initializer=None,
+                 input_size=0, prefix=None, params=None):
         super(RNNCell, self).__init__(prefix=prefix, params=params)
-        self._num_hidden = num_hidden
+        self._hidden_size = hidden_size
         self._activation = activation
-        self._num_input = num_input
-        self.i2h_weight = self.params.get('i2h_weight', shape=(num_hidden, num_input))
-        self.i2h_bias = self.params.get('i2h_bias', shape=(num_hidden,))
-        self.h2h_weight = self.params.get('h2h_weight', shape=(num_hidden, num_hidden))
-        self.h2h_bias = self.params.get('h2h_bias', shape=(num_hidden,))
+        self._input_size = input_size
+        self.i2h_weight = self.params.get('i2h_weight', shape=(hidden_size, input_size),
+                                          init=i2h_weight_initializer)
+        self.h2h_weight = self.params.get('h2h_weight', shape=(hidden_size, hidden_size),
+                                          init=h2h_weight_initializer)
+        self.i2h_bias = self.params.get('i2h_bias', shape=(hidden_size,),
+                                        init=i2h_bias_initializer)
+        self.h2h_bias = self.params.get('h2h_bias', shape=(hidden_size,),
+                                        init=h2h_bias_initializer)
 
     def state_info(self, batch_size=0):
-        return [{'shape': (batch_size, self._num_hidden), '__layout__': 'NC'}]
-
-    @property
-    def _gate_names(self):
-        return ('',)
+        return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'}]
 
     def _alias(self):
         return 'rnn'
 
-    def hybrid_forward(self, F, inputs, states, i2h_weight, i2h_bias,
-                       h2h_weight, h2h_bias):
+    def hybrid_forward(self, F, inputs, states, i2h_weight,
+                       h2h_weight, i2h_bias, h2h_bias):
         name = self._curr_prefix
         i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
-                               num_hidden=self._num_hidden,
+                               num_hidden=self._hidden_size,
                                name='%si2h'%name)
         h2h = F.FullyConnected(data=states[0], weight=h2h_weight, bias=h2h_bias,
-                               num_hidden=self._num_hidden,
+                               num_hidden=self._hidden_size,
                                name='%sh2h'%name)
         output = self._get_activation(F, i2h + h2h, self._activation,
                                       name='%sout'%name)
@@ -398,49 +315,59 @@ class LSTMCell(HRecurrentCell):
 
     Parameters
     ----------
-    num_hidden : int
-        number of units in output symbol
+    hidden_size : int
+        number of units in output symbol.
+    i2h_weight_initializer : str or Initializer
+        Initializer for the input weights matrix, used for the linear
+        transformation of the inputs.
+    h2h_weight_initializer : str or Initializer
+        Initializer for the recurrent weights matrix, used for the linear
+        transformation of the recurrent state.
+    i2h_bias_initializer : str or Initializer, default 'lstmbias'
+        Initializer for the bias vector. By default bias for the forget
+        gate is initialized to 1 while all other biases are initialized
+        to zero.
+    h2h_bias_initializer : str or Initializer
+        Initializer for the bias vector.
     prefix : str, default 'lstm_'
         prefix for name of layers
         (and name of weight if params is None)
     params : Parameter or None
         container for weight sharing between cells.
         created if None.
-    forget_bias : bias added to forget gate, default 1.0.
-        Jozefowicz et al. 2015 recommends setting this to 1.0
     """
-    def __init__(self, num_hidden, forget_bias=1.0, num_input=0,
-                 prefix=None, params=None):
+    def __init__(self, hidden_size,
+                 i2h_weight_initializer=None, h2h_weight_initializer=None,
+                 i2h_bias_initializer='lstmbias', h2h_bias_initializer=None,
+                 input_size=0, prefix=None, params=None):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
 
-        self._num_hidden = num_hidden
-        self._num_input = num_input
-        self.i2h_weight = self.params.get('i2h_weight', shape=(4*num_hidden, num_input))
-        self.h2h_weight = self.params.get('h2h_weight', shape=(4*num_hidden, num_hidden))
-        # we add the forget_bias to i2h_bias, this adds the bias to the forget gate activation
-        self.i2h_bias = self.params.get('i2h_bias', shape=(4*num_hidden,),
-                                        init=init.LSTMBias(forget_bias=forget_bias))
-        self.h2h_bias = self.params.get('h2h_bias', shape=(4*num_hidden,))
+        self._hidden_size = hidden_size
+        self._input_size = input_size
+        self.i2h_weight = self.params.get('i2h_weight', shape=(4*hidden_size, input_size),
+                                          init=i2h_weight_initializer)
+        self.h2h_weight = self.params.get('h2h_weight', shape=(4*hidden_size, hidden_size),
+                                          init=h2h_weight_initializer)
+        self.i2h_bias = self.params.get('i2h_bias', shape=(4*hidden_size,),
+                                        init=i2h_bias_initializer)
+        self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
+                                        init=h2h_bias_initializer)
 
     def state_info(self, batch_size=0):
-        return [{'shape': (batch_size, self._num_hidden), '__layout__': 'NC'},
-                {'shape': (batch_size, self._num_hidden), '__layout__': 'NC'}]
-
-    @property
-    def _gate_names(self):
-        return ['_i', '_f', '_c', '_o']
+        return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'},
+                {'shape': (batch_size, self._hidden_size), '__layout__': 'NC'}]
 
     def _alias(self):
         return 'lstm'
 
-    def hybrid_forward(self, F, inputs, states, i2h_weight, i2h_bias,
-                       h2h_weight, h2h_bias):
+    def hybrid_forward(self, F, inputs, states, i2h_weight,
+                       h2h_weight, i2h_bias, h2h_bias):
         name = self._curr_prefix
         i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
-                               num_hidden=self._num_hidden*4,
+                               num_hidden=self._hidden_size*4,
                                name='%si2h'%name)
         h2h = F.FullyConnected(data=states[0], weight=h2h_weight, bias=h2h_bias,
-                               num_hidden=self._num_hidden*4,
+                               num_hidden=self._hidden_size*4,
                                name='%sh2h'%name)
         gates = i2h + h2h
         slice_gates = F.SliceChannel(gates, num_outputs=4,
@@ -468,8 +395,18 @@ class GRUCell(HRecurrentCell):
 
     Parameters
     ----------
-    num_hidden : int
-        number of units in output symbol
+    hidden_size : int
+        number of units in output symbol.
+    i2h_weight_initializer : str or Initializer
+        Initializer for the input weights matrix, used for the linear
+        transformation of the inputs.
+    h2h_weight_initializer : str or Initializer
+        Initializer for the recurrent weights matrix, used for the linear
+        transformation of the recurrent state.
+    i2h_bias_initializer : str or Initializer
+        Initializer for the bias vector.
+    h2h_bias_initializer : str or Initializer
+        Initializer for the bias vector.
     prefix : str, default 'gru_'
         prefix for name of layers
         (and name of weight if params is None)
@@ -477,38 +414,41 @@ class GRUCell(HRecurrentCell):
         container for weight sharing between cells.
         created if None.
     """
-    def __init__(self, num_hidden, num_input=0, prefix=None, params=None):
+    def __init__(self, hidden_size,
+                 i2h_weight_initializer=None, h2h_weight_initializer=None,
+                 i2h_bias_initializer=None, h2h_bias_initializer=None,
+                 input_size=0, prefix=None, params=None):
         super(GRUCell, self).__init__(prefix=prefix, params=params)
-        self._num_hidden = num_hidden
-        self.i2h_weight = self.params.get('i2h_weight', shape=(3*num_hidden, num_input))
-        self.h2h_weight = self.params.get('h2h_weight', shape=(3*num_hidden, num_hidden))
-        self.i2h_bias = self.params.get('i2h_bias', shape=(3*num_hidden))
-        self.h2h_bias = self.params.get('h2h_bias', shape=(3*num_hidden))
+        self._hidden_size = hidden_size
+        self.i2h_weight = self.params.get('i2h_weight', shape=(3*hidden_size, input_size),
+                                          init=i2h_weight_initializer)
+        self.h2h_weight = self.params.get('h2h_weight', shape=(3*hidden_size, hidden_size),
+                                          init=h2h_weight_initializer)
+        self.i2h_bias = self.params.get('i2h_bias', shape=(3*hidden_size,),
+                                        init=i2h_bias_initializer)
+        self.h2h_bias = self.params.get('h2h_bias', shape=(3*hidden_size,),
+                                        init=h2h_bias_initializer)
 
     def state_info(self, batch_size=0):
-        return [{'shape': (batch_size, self._num_hidden), '__layout__': 'NC'}]
-
-    @property
-    def _gate_names(self):
-        return ['_r', '_z', '_o']
+        return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'}]
 
     def _alias(self):
         return 'gru'
 
-    def hybrid_forward(self, F, inputs, states, i2h_weight, i2h_bias,
-                       h2h_weight, h2h_bias):
+    def hybrid_forward(self, F, inputs, states, i2h_weight,
+                       h2h_weight, i2h_bias, h2h_bias):
         # pylint: disable=too-many-locals
         name = self._curr_prefix
         prev_state_h = states[0]
         i2h = F.FullyConnected(data=inputs,
                                weight=i2h_weight,
                                bias=i2h_bias,
-                               num_hidden=self._num_hidden * 3,
+                               num_hidden=self._hidden_size * 3,
                                name="%si2h" % name)
         h2h = F.FullyConnected(data=prev_state_h,
                                weight=h2h_weight,
                                bias=h2h_bias,
-                               num_hidden=self._num_hidden * 3,
+                               num_hidden=self._hidden_size * 3,
                                name="%sh2h" % name)
 
         i2h_r, i2h_z, i2h = F.SliceChannel(i2h, num_outputs=3, name="%si2h_slice" % name)
@@ -528,209 +468,10 @@ class GRUCell(HRecurrentCell):
         return next_h, [next_h]
 
 
-class FusedRNNCell(HRecurrentCell):
-    """Fusing RNN layers across time step into one kernel.
-    Improves speed but is less flexible. Currently only
-    supported if using cuDNN on GPU.
-
-    Parameters
-    ----------
-    """
-    def __init__(self, num_hidden, num_layers=1, mode='lstm', bidirectional=False,
-                 dropout=0., get_next_state=False, forget_bias=1.0, num_input=0,
-                 prefix=None, params=None):
-        self._num_hidden = num_hidden
-        self._num_layers = num_layers
-        self._mode = mode
-        self._bidirectional = bidirectional
-        self._dropout = dropout
-        self._get_next_state = get_next_state
-        self._directions = ['l', 'r'] if bidirectional else ['l']
-        super(FusedRNNCell, self).__init__(prefix=prefix, params=params)
-
-        initializer = init.FusedRNN(None, num_hidden, num_layers, mode,
-                                    bidirectional, forget_bias)
-        self.parameters = self.params.get('parameters', init=initializer,
-                                          shape=(self._num_input_to_size(num_input),))
-
-    def state_info(self, batch_size=0):
-        b = self._bidirectional + 1
-        n = (self._mode == 'lstm') + 1
-        return [{'shape': (b*self._num_layers, batch_size, self._num_hidden),
-                 '__layout__': 'LNC'} for _ in range(n)]
-
-    @property
-    def _gate_names(self):
-        return {'rnn_relu': [''],
-                'rnn_tanh': [''],
-                'lstm': ['_i', '_f', '_c', '_o'],
-                'gru': ['_r', '_z', '_o']}[self._mode]
-
-    @property
-    def _num_gates(self):
-        return len(self._gate_names)
-
-    def _alias(self):
-        return self._mode
-
-    def _size_to_num_input(self, size):
-        b = len(self._directions)
-        m = self._num_gates
-        h = self._num_hidden
-        return size//b//h//m - (self._num_layers - 1)*(h+b*h+2) - h - 2
-
-    def _num_input_to_size(self, num_input):
-        if num_input == 0:
-            return 0
-        b = self._bidirectional + 1
-        m = self._num_gates
-        h = self._num_hidden
-        return (num_input+h+2)*h*m*b + (self._num_layers-1)*m*h*(h+b*h+2)*b
-
-    def _slice_weights(self, arr, li, lh):
-        """slice fused rnn weights"""
-        args = {}
-        gate_names = self._gate_names
-        directions = self._directions
-
-        b = len(directions)
-        p = 0
-        for layer in range(self._num_layers):
-            for direction in directions:
-                for gate in gate_names:
-                    name = '%s%s%d_i2h%s_weight'%(self._prefix, direction, layer, gate)
-                    if layer > 0:
-                        size = b*lh*lh
-                        args[name] = arr[p:p+size].reshape((lh, b*lh))
-                    else:
-                        size = li*lh
-                        args[name] = arr[p:p+size].reshape((lh, li))
-                    p += size
-                for gate in gate_names:
-                    name = '%s%s%d_h2h%s_weight'%(self._prefix, direction, layer, gate)
-                    size = lh**2
-                    args[name] = arr[p:p+size].reshape((lh, lh))
-                    p += size
-
-        for layer in range(self._num_layers):
-            for direction in directions:
-                for gate in gate_names:
-                    name = '%s%s%d_i2h%s_bias'%(self._prefix, direction, layer, gate)
-                    args[name] = arr[p:p+lh]
-                    p += lh
-                for gate in gate_names:
-                    name = '%s%s%d_h2h%s_bias'%(self._prefix, direction, layer, gate)
-                    args[name] = arr[p:p+lh]
-                    p += lh
-
-        assert p == arr.size, "Invalid parameters size for FusedRNNCell"
-        return args
-
-    def unpack_weights(self, args):
-        args = args.copy()
-        arr = args.pop(self.parameters.name)
-        num_input = self._size_to_num_input(arr.size)
-        nargs = self._slice_weights(arr, num_input, self._num_hidden)
-        args.update({name: nd.copy() for name, nd in nargs.items()})
-        return args
-
-    def pack_weights(self, args):
-        args = args.copy()
-        w0 = args['%sl0_i2h%s_weight'%(self._prefix, self._gate_names[0])]
-        num_input = w0.shape[1]
-        total = self._num_input_to_size(num_input)
-
-        arr = ndarray.zeros((total,), ctx=w0.context, dtype=w0.dtype)
-        for name, nd in self._slice_weights(arr, num_input, self._num_hidden).items():
-            nd[:] = args.pop(name)
-        args[self.parameters.name] = arr
-        return args
-
-    def __call__(self, inputs, states):
-        raise NotImplementedError("FusedRNNCell cannot be stepped. Please use unroll")
-
-    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
-        self.reset()
-
-        inputs, axis, F, batch_size = _format_sequence(length, inputs, layout, True)
-        if axis == 1:
-            warnings.warn("NTC layout detected. Consider using "
-                          "TNC for FusedRNNCell for faster speed")
-            inputs = F.swapaxes(inputs, dim1=0, dim2=1)
-        else:
-            assert axis == 0, "Unsupported layout %s"%layout
-        begin_state = _get_begin_state(self, F, begin_state, inputs, batch_size)
-
-        states = begin_state
-        if self._mode == 'lstm':
-            states = {'state': states[0], 'state_cell': states[1]} # pylint: disable=redefined-variable-type
-        else:
-            states = {'state': states[0]}
-
-        if isinstance(inputs, symbol.Symbol):
-            parameters = self.parameters.var()
-        else:
-            parameters = self.parameters.data(inputs.context)
-
-        rnn = F.RNN(data=inputs, parameters=parameters,
-                    state_size=self._num_hidden, num_layers=self._num_layers,
-                    bidirectional=self._bidirectional, p=self._dropout,
-                    state_outputs=self._get_next_state,
-                    mode=self._mode, name=self._prefix+'rnn',
-                    **states)
-
-        if not self._get_next_state:
-            outputs, states = rnn, []
-        elif self._mode == 'lstm':
-            outputs, states = rnn[0], [rnn[1], rnn[2]]
-        else:
-            outputs, states = rnn[0], [rnn[1]]
-
-        if axis == 1:
-            outputs = F.swapaxes(outputs, dim1=0, dim2=1)
-
-        outputs, _, _, _ = _format_sequence(length, outputs, layout, merge_outputs)
-
-        return outputs, states
-
-    def unfuse(self):
-        """Unfuse the fused RNN in to a stack of rnn cells.
-
-        Returns
-        -------
-        cell : HSequentialRNNCell
-            unfused cell that can be used for stepping, and can run on CPU.
-        """
-        stack = HSequentialRNNCell()
-        get_cell = {'rnn_relu': lambda cell_prefix: RNNCell(self._num_hidden,
-                                                            activation='relu',
-                                                            prefix=cell_prefix),
-                    'rnn_tanh': lambda cell_prefix: RNNCell(self._num_hidden,
-                                                            activation='tanh',
-                                                            prefix=cell_prefix),
-                    'lstm': lambda cell_prefix: LSTMCell(self._num_hidden,
-                                                         prefix=cell_prefix),
-                    'gru': lambda cell_prefix: GRUCell(self._num_hidden,
-                                                       prefix=cell_prefix)}[self._mode]
-        for i in range(self._num_layers):
-            if self._bidirectional:
-                stack.add(BidirectionalCell(
-                    get_cell('%sl%d_'%(self._prefix, i)),
-                    get_cell('%sr%d_'%(self._prefix, i)),
-                    output_prefix='%sbi_l%d_'%(self._prefix, i)))
-            else:
-                stack.add(get_cell('%sl%d_'%(self._prefix, i)))
-
-            if self._dropout > 0 and i != self._num_layers - 1:
-                stack.add(DropoutCell(self._dropout, prefix='%s_dropout%d_'%(self._prefix, i)))
-
-        return stack
-
-
-class HSequentialRNNCell(HRecurrentCell):
+class SequentialRNNCell(RecurrentCell):
     """Sequantially stacking multiple RNN cells."""
-    def __init__(self):
-        super(HSequentialRNNCell, self).__init__(prefix='', params=None)
+    def __init__(self, prefix=None, params=None):
+        super(SequentialRNNCell, self).__init__(prefix=prefix, params=params)
 
     def add(self, cell):
         """Append a cell into the stack.
@@ -749,12 +490,6 @@ class HSequentialRNNCell(HRecurrentCell):
             "After applying modifier cells (e.g. ZoneoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
         return _cells_begin_state(self._children, **kwargs)
-
-    def unpack_weights(self, args):
-        return _cells_unpack_weights(self._children, args)
-
-    def pack_weights(self, args):
-        return _cells_pack_weights(self._children, args)
 
     def __call__(self, inputs, states):
         self._counter += 1
@@ -860,12 +595,6 @@ class ModifierCell(HRecurrentCell):
         self.base_cell._modified = True
         return begin
 
-    def unpack_weights(self, args):
-        return self.base_cell.unpack_weights(args)
-
-    def pack_weights(self, args):
-        return self.base_cell.pack_weights(args)
-
     def hybrid_forward(self, F, inputs, states):
         raise NotImplementedError
 
@@ -873,14 +602,11 @@ class ModifierCell(HRecurrentCell):
 class ZoneoutCell(ModifierCell):
     """Apply Zoneout on base cell."""
     def __init__(self, base_cell, zoneout_outputs=0., zoneout_states=0.):
-        assert not isinstance(base_cell, FusedRNNCell), \
-            "FusedRNNCell doesn't support zoneout. " \
-            "Please unfuse first."
         assert not isinstance(base_cell, BidirectionalCell), \
             "BidirectionalCell doesn't support zoneout since it doesn't support step. " \
             "Please add ZoneoutCell to the cells underneath instead."
-        assert not isinstance(base_cell, HSequentialRNNCell) or not base_cell._bidirectional, \
-            "Bidirectional HSequentialRNNCell doesn't support zoneout. " \
+        assert not isinstance(base_cell, SequentialRNNCell) or not base_cell._bidirectional, \
+            "Bidirectional SequentialRNNCell doesn't support zoneout. " \
             "Please add ZoneoutCell to the cells underneath instead."
         super(ZoneoutCell, self).__init__(base_cell)
         self.zoneout_outputs = zoneout_outputs
@@ -963,12 +689,6 @@ class BidirectionalCell(HRecurrentCell):
         self.register_child(r_cell)
         self._output_prefix = output_prefix
 
-    def unpack_weights(self, args):
-        return _cells_unpack_weights(self._children, args)
-
-    def pack_weights(self, args):
-        return _cells_pack_weights(self._children, args)
-
     def __call__(self, inputs, states):
         raise NotImplementedError("Bidirectional cannot be stepped. Please use unroll")
 
@@ -1010,5 +730,5 @@ class BidirectionalCell(HRecurrentCell):
             outputs = [F.concat(l_o, r_o, dim=1, name='%st%d'%(self._output_prefix, i))
                        for i, (l_o, r_o) in enumerate(zip(l_outputs, reversed(r_outputs)))]
 
-        states = [l_states, r_states]
+        states = l_states + r_states
         return outputs, states
