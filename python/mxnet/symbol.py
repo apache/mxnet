@@ -19,7 +19,7 @@ from .base import check_call, MXNetError, _Null # pylint: disable=unused-import
 from .context import Context, cpu
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .name import NameManager  # pylint: disable=unused-import
-from .ndarray import _STORAGE_TYPE_ID_TO_STR, _STORAGE_TYPE_STR_TO_ID
+from .ndarray import _STORAGE_TYPE_STR_TO_ID
 from .sparse_ndarray import _ndarray_cls
 from .executor import Executor
 from . import _symbol_internal as _internal
