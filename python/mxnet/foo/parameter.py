@@ -371,7 +371,7 @@ class ParameterDict(object):
             else:
                 self._params[k] = v
 
-    def initialize(self, init=initializer.Xavier(), ctx=None):
+    def initialize(self, init=initializer.Xavier(), ctx=None, verbose=False):
         """Intialize all Parameters manage by this dictionary to be used for `NDArray`
         API. Has no effect when using `Symbol` API.
 
@@ -383,6 +383,8 @@ class ParameterDict(object):
         ctx : Context or list of Context
             Keep a copy of Parameters on one or many context(s).
         """
+        if verbose:
+            init.set_verbosity(verbose=verbose)
         for _, v in self.items():
             v.initialize(None, ctx, init)
 

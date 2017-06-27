@@ -154,13 +154,17 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     :members:
 
     .. automethod:: __call__
-.. autoclass:: mxnet.foo.rnn.LSTMCell
+.. autoclass:: mxnet.foo.rnn.RNN
     :members:
-.. autoclass:: mxnet.foo.rnn.GRUCell
+.. autoclass:: mxnet.foo.rnn.LSTM
+    :members:
+.. autoclass:: mxnet.foo.rnn.GRU
     :members:
 .. autoclass:: mxnet.foo.rnn.RNNCell
     :members:
-.. autoclass:: mxnet.foo.rnn.FusedRNNCell
+.. autoclass:: mxnet.foo.rnn.LSTMCell
+    :members:
+.. autoclass:: mxnet.foo.rnn.GRUCell
     :members:
 .. autoclass:: mxnet.foo.rnn.SequentialRNNCell
     :members:

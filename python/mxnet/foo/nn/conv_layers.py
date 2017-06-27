@@ -53,14 +53,14 @@ class _Conv(HybridLayer):
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias: Boolean, whether the layer uses a bias vector.
-    kernel_initializer: Initializer for the `kernel` weights matrix
+    weight_initializer: Initializer for the `kernel` weights matrix
         see Initializer.
     bias_initializer: Initializer for the bias vector
         see Initializer.
     """
     def __init__(self, filters, kernel_size, strides, padding, dilation,
                  groups, layout, in_filters=0, activation=None, use_bias=True,
-                 kernel_initializer=None, bias_initializer=None,
+                 weight_initializer=None, bias_initializer=None,
                  op_name='Convolution', prefix=None, params=None, **kwargs):
         super(_Conv, self).__init__(prefix=prefix, params=params)
         with self.name_scope():
@@ -84,7 +84,7 @@ class _Conv(HybridLayer):
             dshape[layout.find('C')] = in_filters
             wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)
             self.weight = self.params.get('weight', shape=wshapes[1],
-                                          init=kernel_initializer)
+                                          init=weight_initializer)
             if use_bias:
                 self.bias = self.params.get('bias', shape=wshapes[2],
                                             init=bias_initializer)
@@ -154,7 +154,7 @@ class Conv1D(_Conv):
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias: Boolean, whether the layer uses a bias vector.
-    kernel_initializer: Initializer for the `kernel` weights matrix
+    weight_initializer: Initializer for the `kernel` weights matrix
         see Initializer.
     bias_initializer: Initializer for the bias vector
         see Initializer.
@@ -176,14 +176,15 @@ class Conv1D(_Conv):
         w = width, p = padding, d = dilation, k = kernel_size, s = stride
     """
     def __init__(self, filters, kernel_size, strides=1, padding=0, dilation=1,
-                 groups=1, layout='NCW', in_filters=0, activation=None, use_bias=True,
-                 kernel_initializer=None, bias_initializer=None, **kwargs):
+                 groups=1, layout='NCW', activation=None, use_bias=True,
+                 weight_initializer=None, bias_initializer=None,
+                 in_filters=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
         super(Conv1D, self).__init__(
             filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, kernel_initializer, bias_initializer, **kwargs)
+            in_filters, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
 
 
 class Conv2D(_Conv):
@@ -233,7 +234,7 @@ class Conv2D(_Conv):
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias: Boolean, whether the layer uses a bias vector.
-    kernel_initializer: Initializer for the `kernel` weights matrix
+    weight_initializer: Initializer for the `kernel` weights matrix
         see Initializer.
     bias_initializer: Initializer for the bias vector
         see Initializer.
@@ -257,15 +258,15 @@ class Conv2D(_Conv):
         w = width, h = height, p = padding, d = dilation, k = kernel_size, s = stride
     """
     def __init__(self, filters, kernel_size, strides=(1, 1), padding=(0, 0),
-                 dilation=(1, 1), groups=1, layout='NCHW', in_filters=0,
-                 activation=None, use_bias=True,
-                 kernel_initializer=None, bias_initializer=None, **kwargs):
+                 dilation=(1, 1), groups=1, layout='NCHW',
+                 activation=None, use_bias=True, weight_initializer=None,
+                 bias_initializer=None, in_filters=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
         super(Conv2D, self).__init__(
             filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, kernel_initializer, bias_initializer, **kwargs)
+            in_filters, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
 
 
 class Conv3D(_Conv):
@@ -315,7 +316,7 @@ class Conv3D(_Conv):
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias: Boolean, whether the layer uses a bias vector.
-    kernel_initializer: Initializer for the `kernel` weights matrix
+    weight_initializer: Initializer for the `kernel` weights matrix
         see Initializer.
     bias_initializer: Initializer for the bias vector
         see Initializer.
@@ -340,15 +341,15 @@ class Conv3D(_Conv):
         d = depth, h = height, w = width, p = padding, d = dilation, k = kernel_size, s = stride
     """
     def __init__(self, filters, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
-                 dilation=(1, 1, 1), groups=1, layout='NCDHW', in_filters=0,
-                 activation=None, use_bias=True,
-                 kernel_initializer=None, bias_initializer=None, **kwargs):
+                 dilation=(1, 1, 1), groups=1, layout='NCDHW', activation=None,
+                 use_bias=True, weight_initializer=None, bias_initializer=None,
+                 in_filters=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
         super(Conv3D, self).__init__(
             filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, kernel_initializer, bias_initializer, **kwargs)
+            in_filters, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
 
 
 class Conv1DTranspose(_Conv):
@@ -400,7 +401,7 @@ class Conv1DTranspose(_Conv):
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias: Boolean, whether the layer uses a bias vector.
-    kernel_initializer: Initializer for the `kernel` weights matrix
+    weight_initializer: Initializer for the `kernel` weights matrix
         see Initializer.
     bias_initializer: Initializer for the bias vector
         see Initializer.
@@ -422,9 +423,9 @@ class Conv1DTranspose(_Conv):
         w = width, p = padding, k = kernel_size, s = stride, op = output_padding
     """
     def __init__(self, filters, kernel_size, strides=1, padding=0, output_padding=0,
-                 dilation=1, groups=1, layout='NCW', in_filters=0, activation=None,
-                 use_bias=True, kernel_initializer=None, bias_initializer=None,
-                 **kwargs):
+                 dilation=1, groups=1, layout='NCW', activation=None, use_bias=True,
+                 weight_initializer=None, bias_initializer=None,
+                 in_filters=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
         if isinstance(output_padding, numeric_types):
@@ -433,7 +434,7 @@ class Conv1DTranspose(_Conv):
         assert len(output_padding) == 1, "output_padding must be a number or a list of 1 ints"
         super(Conv1DTranspose, self).__init__(
             filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, kernel_initializer,
+            in_filters, activation, use_bias, weight_initializer,
             bias_initializer, op_name='Deconvolution', adj=output_padding, **kwargs)
 
 
@@ -487,7 +488,7 @@ class Conv2DTranspose(_Conv):
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias: Boolean, whether the layer uses a bias vector.
-    kernel_initializer: Initializer for the `kernel` weights matrix
+    weight_initializer: Initializer for the `kernel` weights matrix
         see Initializer.
     bias_initializer: Initializer for the bias vector
         see Initializer.
@@ -512,8 +513,8 @@ class Conv2DTranspose(_Conv):
     """
     def __init__(self, filters, kernel_size, strides=(1, 1), padding=(0, 0),
                  output_padding=(0, 0), dilation=(1, 1), groups=1, layout='NCHW',
-                 in_filters=0, activation=None, use_bias=True,
-                 kernel_initializer=None, bias_initializer=None, **kwargs):
+                 activation=None, use_bias=True, weight_initializer=None,
+                 bias_initializer=None, in_filters=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         if isinstance(output_padding, numeric_types):
@@ -522,7 +523,7 @@ class Conv2DTranspose(_Conv):
         assert len(output_padding) == 2, "output_padding must be a number or a list of 2 ints"
         super(Conv2DTranspose, self).__init__(
             filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, kernel_initializer,
+            in_filters, activation, use_bias, weight_initializer,
             bias_initializer, op_name='Deconvolution', adj=output_padding, **kwargs)
 
 
@@ -576,7 +577,7 @@ class Conv3DTranspose(_Conv):
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias: Boolean, whether the layer uses a bias vector.
-    kernel_initializer: Initializer for the `kernel` weights matrix
+    weight_initializer: Initializer for the `kernel` weights matrix
         see Initializer.
     bias_initializer: Initializer for the bias vector
         see Initializer.
@@ -603,8 +604,8 @@ class Conv3DTranspose(_Conv):
     """
     def __init__(self, filters, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  output_padding=(0, 0, 0), dilation=(1, 1, 1), groups=1, layout='NCDHW',
-                 in_filters=0, activation=None, use_bias=True,
-                 kernel_initializer=None, bias_initializer=None, **kwargs):
+                 activation=None, use_bias=True, weight_initializer=None,
+                 bias_initializer=None, in_filters=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         if isinstance(output_padding, numeric_types):
@@ -613,7 +614,7 @@ class Conv3DTranspose(_Conv):
         assert len(output_padding) == 3, "output_padding must be a number or a list of 3 ints"
         super(Conv3DTranspose, self).__init__(
             filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, kernel_initializer, bias_initializer,
+            in_filters, activation, use_bias, weight_initializer, bias_initializer,
             op_name='Deconvolution', adj=output_padding, **kwargs)
 
 
