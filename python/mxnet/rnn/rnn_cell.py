@@ -1104,7 +1104,7 @@ class ConvRNNCell(BaseRNNCell):
     def __init__(self, input_shape, num_hidden,
                  h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
                  i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
-                 activation='tanh', prefix='lstm_', params=None, conv_layout='NCHW'):
+                 activation='tanh', prefix='ConvRNN_', params=None, conv_layout='NCHW'):
         super(ConvRNNCell, self).__init__(prefix=prefix, params=params)
         # Convolution setting
         self._h2h_kernel = h2h_kernel
@@ -1210,7 +1210,7 @@ class ConvLSTMCell(BaseRNNCell):
     def __init__(self, input_shape, num_hidden,
                  h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
                  i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
-                 prefix='lstm_', params=None, forget_bias=1.0, conv_layout='NCHW'):
+                 prefix='ConvLSTM_', params=None, forget_bias=1.0, conv_layout='NCHW'):
         super(ConvLSTMCell, self).__init__(prefix=prefix, params=params)
         # Convolution setting
         self._h2h_kernel = h2h_kernel
@@ -1325,7 +1325,7 @@ class ConvGRUCell(BaseRNNCell):
     def __init__(self, input_shape, num_hidden,
                  h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
                  i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
-                 prefix='gru_', params=None, conv_layout='NCHW'):
+                 prefix='ConvGRU_', params=None, conv_layout='NCHW'):
         super(ConvGRUCell, self).__init__(prefix=prefix, params=params)
         # Convolution setting
         self._h2h_kernel = h2h_kernel
