@@ -880,7 +880,7 @@ install.packages("mxnet")
 
 <div class="gpu">
 
-Will be available soon.
+You can also follow the installation instructions [in this guide](./windows_setup.md) to build MXNet from source.
 
 </div>
 </div>
