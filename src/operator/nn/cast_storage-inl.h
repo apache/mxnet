@@ -60,18 +60,13 @@ inline void CastStorageDnsRspImpl(mshadow::Stream<cpu>* s, const TBlob& dns, NDA
       mxnet_op::Kernel<MarkRspRowIdx, cpu>::Launch(s, num_rows, row_idx,
           dns.dptr<DType>(), num_cols);
       index_t nnr = 0;
-      double start = dmlc::GetTime();
       nnr = mxnet::common::ParallelAccumulate(row_idx, num_rows, nnr);
-      double elapsed = dmlc::GetTime() - start;
-      LOG(INFO) << "CastStorageDnsRspImpl: ParallelAccumulate time cost " << elapsed * 1000 << " ms";
-      LOG(INFO) << "CastStorageDnsRspImpl: nnr = " << nnr;
       rsp->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
       if (0 == nnr) return;
       rsp->CheckAndAllocData(mshadow::Shape2(nnr, num_cols));
       mshadow::Tensor<cpu, 2, DType> dns_data = dns.FlatTo2D<cpu, DType>(s);
       mshadow::Tensor<cpu, 2, DType> rsp_data = rsp->data().FlatTo2D<cpu, DType>(s);
       size_t idx = 0;
-      start = dmlc::GetTime();
       for (index_t i = 0; i < num_rows; ++i) {
         if (row_idx[i] > 0) {
           row_idx[idx] = i;
@@ -79,8 +74,6 @@ inline void CastStorageDnsRspImpl(mshadow::Stream<cpu>* s, const TBlob& dns, NDA
           ++idx;
         }
       }
-      elapsed = dmlc::GetTime() - start;
-      LOG(INFO) << "CastStorageDnsRspImpl: copy rows time cost " << elapsed * 1000 << " ms";
     });
   });
 }
@@ -285,10 +278,7 @@ void CastStorageComputeImpl(mshadow::Stream<xpu>* s,
     CastStorageRspDnsImpl<xpu>(s, input, &ret);
   } else if (src_stype == kDefaultStorage && dst_stype == kRowSparseStorage) {
     NDArray ret = output;  // get rid of the const qualifer
-    double start = dmlc::GetTime();
     CastStorageDnsRspImpl(s, input.data(), &ret);
-    double elapsed = dmlc::GetTime() - start;
-    LOG(INFO) << "CastStorageDnsRspImpl: time cost " << elapsed * 1000 << " ms";
   } else if (src_stype == kDefaultStorage && dst_stype == kCSRStorage) {
     NDArray ret = output;  // get rid of the const qualifer
     CastStorageDnsCsrImpl(s, input.data(), &ret);

@@ -7,7 +7,6 @@
 #define MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_
 
 #include <mxnet/operator_util.h>
-#include <dmlc/timer.h>
 #include <vector>
 #include <algorithm>
 #include <utility>
@@ -324,7 +323,6 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
 struct DotParam : public dmlc::Parameter<DotParam> {
   bool transpose_a;
   bool transpose_b;
-  int _out_stype;
   DMLC_DECLARE_PARAMETER(DotParam) {
     DMLC_DECLARE_FIELD(transpose_a)
       .describe("If true then transpose the first input before dot.")
@@ -332,10 +330,6 @@ struct DotParam : public dmlc::Parameter<DotParam> {
     DMLC_DECLARE_FIELD(transpose_b)
       .describe("If true then transpose the second input before dot.")
       .set_default(false);
-    DMLC_DECLARE_FIELD(_out_stype)
-      .add_enum("dns", kDefaultStorage)
-      .add_enum("csr", kCSRStorage)
-      .add_enum("rsp", kRowSparseStorage);
   }
 };
 
@@ -490,15 +484,12 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  (*out_attrs)[0] = param._out_stype;
-#if 0
   if (param.transpose_a && kCSRStorage == (*in_attrs)[0]
       && kDefaultStorage == (*in_attrs)[1]) {
     STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
   } else {
     STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kDefaultStorage);
   }
-#endif
   return true;
 }
 
@@ -731,14 +722,10 @@ void DotCsrDnsDnsImpl(const OpContext& ctx,
           int num_threads = mxnet_op::get_num_threads<xpu>(data_out.shape_[0]);
           size_t seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
           if (trans_lhs) {
-            double start = dmlc::GetTime();
             mxnet_op::Kernel<DotCsrTransDnsDnsByRowBlocks, xpu>::Launch(s, num_threads,
                 data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
                 col_idx_l.dptr<CType>(), data_r.dptr<DType>(), seg_len,
                 lhs.shape()[0], data_out.shape_[0], data_out.shape_[1]);
-            double elapsed = dmlc::GetTime() - start;
-            LOG(INFO) << "DotCsrDnsDnsImpl: Kernel<DotCsrTransDnsDnsByRowBlocks> time cost "
-                      << elapsed * 1000 << " ms";
           } else {
             mxnet_op::Kernel<DotCsrDnsDnsByRowBlocks, xpu>::Launch(s, num_threads,
                 data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
@@ -804,37 +791,23 @@ void DotCsrDnsRspImpl(const OpContext& ctx,
             int num_threads = mxnet_op::get_num_threads<xpu>(data_out.shape_[0]);
             size_t seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
             if (trans_lhs) {
-              double start = dmlc::GetTime();
               mxnet_op::Kernel<DotCsrTransDnsRspByRowBlocks, xpu>::Launch(s, num_threads,
                   data_out.dptr<DType>(), row_idx, data_l.dptr<DType>(),
                   indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(), data_r.dptr<DType>(),
                   seg_len, lhs.shape()[0], data_out.shape_[0], data_out.shape_[1]);
-              double elapsed = dmlc::GetTime() - start;
-              LOG(INFO) << "DotCsrDnsRspImpl: Kernel<DotCsrTransDnsRspByRowBlocks, cpu> time cost "
-                        << elapsed * 1000 << " ms";
               index_t nnr = 0;
-
-              start = dmlc::GetTime();
               nnr = mxnet::common::ParallelAccumulate(row_idx, ret->shape()[0], nnr);
-              elapsed = dmlc::GetTime() - start;
-              LOG(INFO) << "DotCsrDnsRspImpl: ParallelAccumulate time cost " << elapsed * 1000 << " ms";
-              LOG(INFO) << "DotCsrDnsRspImpl: nnr = " << nnr;
               ret->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
-              ret->set_storage_shape(mshadow::Shape2(nnr, ret->shape()[1]));
               if (0 == nnr) return;
               mshadow::Tensor<xpu, 2, DType> rsp_data = data_out.FlatTo2D<xpu, DType>(s);
               size_t idx = 0;
-
-              start = dmlc::GetTime();
               for (index_t i = 0; i < ret->shape()[0]; ++i) {
-                if (row_idx[i] > 0) {
+                if (row_idx > 0) {
                   row_idx[idx] = i;
                   mshadow::Copy(rsp_data[idx], rsp_data[i], s);
                   ++idx;
                 }
               }
-              elapsed = dmlc::GetTime() - start;
-              LOG(INFO) << "DotCsrDnsRspImpl: copy rows time cost " << elapsed * 1000 << " ms";
             } else {
               LOG(FATAL) << "DotCsrDnsRspImpl has not implemented dot(csr, dns)=rsp yet."
                             " Only the cpu version of dot(csr.T, dns)=rsp is supported now";
@@ -944,10 +917,7 @@ void DotForwardEx(const nnvm::NodeAttrs& attrs,
   auto out_stype = outputs[0].storage_type();
   if (lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage && out_stype == kDefaultStorage) {
     TBlob ret = outputs[0].data();
-    double start = dmlc::GetTime();
     DotCsrDnsDnsImpl<xpu>(ctx, inputs[0], inputs[1].data(), req[0], param.transpose_a, &ret);
-    double elapsed = dmlc::GetTime() - start;
-    LOG(INFO) << "DotCsrDnsDnsImpl: time cost " << elapsed * 1000 << " ms";
   } else if (lhs_stype == kCSRStorage && rhs_stype == kRowSparseStorage &&
     out_stype == kDefaultStorage) {
     TBlob ret = outputs[0].data();
@@ -955,10 +925,7 @@ void DotForwardEx(const nnvm::NodeAttrs& attrs,
   } else if (lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage
       && out_stype == kRowSparseStorage) {
     NDArray out = outputs[0];
-    double start = dmlc::GetTime();
     DotCsrDnsRspImpl<xpu>(ctx, inputs[0], inputs[1].data(), req[0], param.transpose_a, &out);
-    double elapsed = dmlc::GetTime() - start;
-    LOG(INFO) << "DotCsrDnsRspImpl: time cost " << elapsed * 1000 << " ms";
   } else {
     FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs, DotForward_<xpu>, "DotForward_");
   }
