@@ -1,5 +1,5 @@
 import mxnet as mx
-from common import conv_act_layer
+from common import legacy_conv_act_layer
 from common import multibox_layer
 
 def get_symbol_train(num_classes=20, nms_thresh=0.5, force_suppress=False, nms_topk=400):
@@ -96,25 +96,25 @@ def get_symbol_train(num_classes=20, nms_thresh=0.5, force_suppress=False, nms_t
     # drop7 = mx.symbol.Dropout(data=relu7, p=0.5, name="drop7")
 
     ### ssd extra layers ###
-    conv8_1, relu8_1 = conv_act_layer(relu7, "8_1", 256, kernel=(1,1), pad=(0,0), \
+    conv8_1, relu8_1 = legacy_conv_act_layer(relu7, "8_1", 256, kernel=(1,1), pad=(0,0), \
         stride=(1,1), act_type="relu", use_batchnorm=False)
-    conv8_2, relu8_2 = conv_act_layer(relu8_1, "8_2", 512, kernel=(3,3), pad=(1,1), \
+    conv8_2, relu8_2 = legacy_conv_act_layer(relu8_1, "8_2", 512, kernel=(3,3), pad=(1,1), \
         stride=(2,2), act_type="relu", use_batchnorm=False)
-    conv9_1, relu9_1 = conv_act_layer(relu8_2, "9_1", 128, kernel=(1,1), pad=(0,0), \
+    conv9_1, relu9_1 = legacy_conv_act_layer(relu8_2, "9_1", 128, kernel=(1,1), pad=(0,0), \
         stride=(1,1), act_type="relu", use_batchnorm=False)
-    conv9_2, relu9_2 = conv_act_layer(relu9_1, "9_2", 256, kernel=(3,3), pad=(1,1), \
+    conv9_2, relu9_2 = legacy_conv_act_layer(relu9_1, "9_2", 256, kernel=(3,3), pad=(1,1), \
         stride=(2,2), act_type="relu", use_batchnorm=False)
-    conv10_1, relu10_1 = conv_act_layer(relu9_2, "10_1", 128, kernel=(1,1), pad=(0,0), \
+    conv10_1, relu10_1 = legacy_conv_act_layer(relu9_2, "10_1", 128, kernel=(1,1), pad=(0,0), \
         stride=(1,1), act_type="relu", use_batchnorm=False)
-    conv10_2, relu10_2 = conv_act_layer(relu10_1, "10_2", 256, kernel=(3,3), pad=(1,1), \
+    conv10_2, relu10_2 = legacy_conv_act_layer(relu10_1, "10_2", 256, kernel=(3,3), pad=(1,1), \
         stride=(2,2), act_type="relu", use_batchnorm=False)
-    conv11_1, relu11_1 = conv_act_layer(relu10_2, "11_1", 128, kernel=(1,1), pad=(0,0), \
+    conv11_1, relu11_1 = legacy_conv_act_layer(relu10_2, "11_1", 128, kernel=(1,1), pad=(0,0), \
         stride=(1,1), act_type="relu", use_batchnorm=False)
-    conv11_2, relu11_2 = conv_act_layer(relu11_1, "11_2", 256, kernel=(3,3), pad=(1,1), \
+    conv11_2, relu11_2 = legacy_conv_act_layer(relu11_1, "11_2", 256, kernel=(3,3), pad=(1,1), \
         stride=(2,2), act_type="relu", use_batchnorm=False)
-    conv12_1, relu12_1 = conv_act_layer(relu11_2, "12_1", 128, kernel=(1,1), pad=(0,0), \
+    conv12_1, relu12_1 = legacy_conv_act_layer(relu11_2, "12_1", 128, kernel=(1,1), pad=(0,0), \
         stride=(1,1), act_type="relu", use_batchnorm=False)
-    conv12_2, relu12_2 = conv_act_layer(relu12_1, "12_2", 256, kernel=(4,4), pad=(1,1), \
+    conv12_2, relu12_2 = legacy_conv_act_layer(relu12_1, "12_2", 256, kernel=(4,4), pad=(1,1), \
         stride=(1,1), act_type="relu", use_batchnorm=False)
 
     # specific parameters for VGG16 network

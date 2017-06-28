@@ -365,11 +365,11 @@ class Module(symbolVar: Symbol,
     paramsDirty = true
     if (updateOnKVStore) {
       Model.updateParamsOnKVStore(execGroup.paramArrays,
-        execGroup.gradArrays, kvstore)
+        execGroup.gradArrays, kvstore, execGroup.paramNames)
     } else {
       require(updater != None)
       Model.updateParams(execGroup.paramArrays,
-        execGroup.gradArrays, updater.orNull, contexts.length, kvstore)
+        execGroup.gradArrays, updater.orNull, contexts.length, execGroup.paramNames, kvstore)
     }
   }
 
