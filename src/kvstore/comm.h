@@ -191,7 +191,7 @@ class CommCPU : public Comm {
     std::vector<bool> skip(num_in, false);
     // the values tensor of the inputs
     MSHADOW_TYPE_SWITCH(out->dtype(), DType, {
-      MSHADOW_INT_TYPE_SWITCH(out->aux_type(kIdx), IType, {
+      MSHADOW_IDX_TYPE_SWITCH(out->aux_type(kIdx), IType, {
         std::vector<Tensor<cpu, 2, DType>> in_vals(num_in);
         std::vector<Tensor<cpu, 1, IType>> in_indices(num_in);
         // offset to the values tensor of all inputs
@@ -350,7 +350,7 @@ class CommCPU : public Comm {
       << out->storage_type() << " given)";
 
     MSHADOW_TYPE_SWITCH(out->dtype(), DType, {
-      MSHADOW_INT_TYPE_SWITCH(out->aux_type(kIdx), IType, {
+      MSHADOW_IDX_TYPE_SWITCH(out->aux_type(kIdx), IType, {
         std::vector<IType> uniq_row_idx;
         GetUniqueRspRowIdx(nds, &uniq_row_idx);
         out->CheckAndAlloc({mshadow::Shape1(uniq_row_idx.size())});

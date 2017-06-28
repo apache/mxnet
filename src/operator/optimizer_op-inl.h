@@ -129,7 +129,7 @@ inline void SGDUpdateDnsRspImpl(const SGDParam& param,
   CHECK_GT(weight.shape_.Size(), 0);
 
   MSHADOW_REAL_TYPE_SWITCH(weight.type_flag_, DType, {
-    MSHADOW_INT_TYPE_SWITCH(grad.aux_type(rowsparse::kIdx), IType, {
+    MSHADOW_IDX_TYPE_SWITCH(grad.aux_type(rowsparse::kIdx), IType, {
       MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
         auto weight_data = weight.dptr<DType>();
         auto grad_idx = grad.aux_data(rowsparse::kIdx).dptr<IType>();
@@ -364,7 +364,7 @@ inline void SGDMomUpdateDnsRspDnsImpl(const SGDMomParam& param,
   CHECK_GT(mom.shape_.Size(), 0);
 
   MSHADOW_REAL_TYPE_SWITCH(weight.type_flag_, DType, {
-    MSHADOW_INT_TYPE_SWITCH(grad.aux_type(kIdx), IType, {
+    MSHADOW_IDX_TYPE_SWITCH(grad.aux_type(kIdx), IType, {
       MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
         auto weight_data = weight.dptr<DType>();
         auto grad_idx = grad.aux_data(kIdx).dptr<IType>();

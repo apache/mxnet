@@ -661,8 +661,8 @@ void DotCsrDnsDnsImpl(const OpContext& ctx,
   const TBlob data_out = *ret;
 
   MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
-    MSHADOW_INT_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
-      MSHADOW_INT_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
+    MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
+      MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         if (std::is_same<xpu, cpu>::value) {  // cpu parallelization by row blocks
           if (kWriteTo == req) {
             mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
@@ -1157,8 +1157,8 @@ void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
     return;
   }
   // assume idx indptr share the same type
-  MSHADOW_INT_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
-    MSHADOW_INT_TYPE_SWITCH(in.aux_type(kIdx), IType, {
+  MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
+    MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
       MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
         auto in_indptr = in.aux_data(kIndPtr).dptr<RType>();
         auto out_indptr = out.aux_data(kIndPtr).dptr<RType>();
