@@ -13,6 +13,7 @@
 #include <mshadow/base.h>
 #include <nnvm/op.h>
 #include <nnvm/op_attr_types.h>
+#include <nnvm/tuple.h>
 
 #include "../operator/elemwise_op_common.h"
 
@@ -209,7 +210,7 @@ inline void Imresize(const nnvm::NodeAttrs& attrs,
 struct MakeBorderParam : public dmlc::Parameter<MakeBorderParam> {
   int top, bot, left, right;
   int type;
-  double value;
+  nnvm::Tuple<double> value;
   DMLC_DECLARE_PARAMETER(MakeBorderParam) {
     DMLC_DECLARE_FIELD(top)
     .describe("Top margin.");
@@ -223,8 +224,8 @@ struct MakeBorderParam : public dmlc::Parameter<MakeBorderParam> {
     .set_default(0)
     .describe("Filling type (default=cv2.BORDER_CONSTANT).");
     DMLC_DECLARE_FIELD(value)
-    .set_default(0.0)
-    .describe("Fill with value.");
+    .set_default({0.0, 0.0, 0.0, 0.0})
+    .describe("Fill with value(RGB[A] or gray), up to 4 channels.");
   }
 };
 DMLC_REGISTER_PARAMETER(MakeBorderParam);
@@ -255,9 +256,10 @@ inline void copyMakeBorder(const nnvm::NodeAttrs& attrs,
   const auto& param = nnvm::get<MakeBorderParam>(attrs.parsed);
   cv::Mat buf(inputs[0].shape_[0], inputs[0].shape_[1], cv_type, inputs[0].dptr_);
   cv::Mat dst(outputs[0].shape_[0], outputs[0].shape_[1], cv_type, outputs[0].dptr_);
+
   cv::copyMakeBorder(buf, dst,
                      param.top, param.bot, param.left, param.right,
-                     param.type, cv::Scalar(param.value));
+                     param.type, cv::Scalar(cv::Vec<double, 4>(param.value.begin())));
   CHECK(!dst.empty());
   CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr_);
 #else
@@ -300,5 +302,3 @@ NNVM_REGISTER_OP(_cvcopyMakeBorder)
 
 }  // namespace io
 }  // namespace mxnet
-
-
