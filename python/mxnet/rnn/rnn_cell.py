@@ -6,6 +6,7 @@
 from __future__ import print_function
 
 import warnings
+import functools
 
 from .. import symbol, init, ndarray
 from ..base import string_types, numeric_types
@@ -333,10 +334,7 @@ class BaseRNNCell(object):
     def _get_activation(self, inputs, activation, **kwargs):
         """Get activation function. Convert if is string"""
         if isinstance(activation, string_types):
-            if activation in ['relu', 'sigmoid', 'softrelu', 'tanh']:
-                return symbol.Activation(inputs, act_type=activation, **kwargs)
-            elif activation in ['leaky', 'prelu']:
-                return symbol.LeakyReLU(inputs, act_type=activation, slope=0.2)
+            return symbol.Activation(inputs, act_type=activation, **kwargs)
         else:
             return activation(inputs, **kwargs)
 
@@ -1095,8 +1093,9 @@ class ConvRNNCell(BaseRNNCell):
         Pad of Convolution operator in input-to-state transitions.
     i2h_dilate : tuple of int, default (1, 1)
         Dilation of Convolution operator in input-to-state transitions.
-    activation : str or Symbol, default 'tanh'
-        Type of activation function. Options are 'relu' and 'tanh'.
+    activation : str or Symbol,
+        default functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2)
+        Type of activation function.
     prefix : str, default 'ConvRNN_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
@@ -1107,7 +1106,8 @@ class ConvRNNCell(BaseRNNCell):
     def __init__(self, input_shape, num_hidden,
                  h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
                  i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
-                 activation='tanh', prefix='ConvRNN_', params=None, conv_layout='NCHW'):
+                 activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
+                 prefix='ConvRNN_', params=None, conv_layout='NCHW'):
         super(ConvRNNCell, self).__init__(prefix=prefix, params=params)
         # Convolution setting
         self._h2h_kernel = h2h_kernel
@@ -1175,6 +1175,7 @@ class ConvRNNCell(BaseRNNCell):
                                       name='%sout'%name)
         return output, [output]
 
+
 class ConvLSTMCell(BaseRNNCell):
     """Convolutional LSTM network cell.
 
@@ -1201,8 +1202,9 @@ class ConvLSTMCell(BaseRNNCell):
         Pad of Convolution operator in input-to-state transitions.
     i2h_dilate : tuple of int, default (1, 1)
         Dilation of Convolution operator in input-to-state transitions.
-    activation : str or Symbol, default 'leaky'
-        Type of activation function. Options are 'relu', 'tanh' and 'leaky'.
+    activation : str or Symbol
+        default functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2)
+        Type of activation function.
     prefix : str, default 'ConvLSTM_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
@@ -1215,7 +1217,8 @@ class ConvLSTMCell(BaseRNNCell):
     def __init__(self, input_shape, num_hidden,
                  h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
                  i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
-                 activation='leaky', prefix='ConvLSTM_', params=None, forget_bias=1.0,
+                 activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
+                 prefix='ConvLSTM_', params=None, forget_bias=1.0,
                  conv_layout='NCHW'):
         super(ConvLSTMCell, self).__init__(prefix=prefix, params=params)
         # Convolution setting
@@ -1323,8 +1326,9 @@ class ConvGRUCell(BaseRNNCell):
         Pad of Convolution operator in input-to-state transitions.
     i2h_dilate : tuple of int, default (1, 1)
         Dilation of Convolution operator in input-to-state transitions.
-    activation : str or Symbol, default 'leaky'
-        Type of activation function. Options are 'relu', 'tanh' and 'leaky'.
+    activation : str or Symbol,
+        default functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2)
+        Type of activation function.
     prefix : str, default 'ConvGRU_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
@@ -1335,7 +1339,8 @@ class ConvGRUCell(BaseRNNCell):
     def __init__(self, input_shape, num_hidden,
                  h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
                  i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
-                 activation='leaky', prefix='ConvGRU_', params=None, conv_layout='NCHW'):
+                 activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
+                 prefix='ConvGRU_', params=None, conv_layout='NCHW'):
         super(ConvGRUCell, self).__init__(prefix=prefix, params=params)
         # Convolution setting
         self._h2h_kernel = h2h_kernel
