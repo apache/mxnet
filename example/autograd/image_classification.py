@@ -107,7 +107,7 @@ def train(epoch, ctx):
         logging.info('time: %f'%(time.time()-tic))
         test(ctx)
 
-    net.all_params().save('mnist.params')
+    net.all_params().save('image-classifier-%s.params'%opt.model)
 
 if __name__ == '__main__':
     if opt.symbolic:
