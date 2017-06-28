@@ -121,19 +121,13 @@ def test_sparse_dot():
         # test symbolic forward
         lhs = mx.symbol.Variable('lhs', storage_type='csr')
         rhs = mx.symbol.Variable('rhs', storage_type=rhs_stype)
-        dns_zeros = mx.symbol.Variable('dns')
         test = mx.symbol.dot(lhs, rhs, transpose_a=trans_lhs)
-        # TODO(junwu): since sparse operator does not support sparse ograd as input for backward,
-        # we have to add the dot sparse output to a zero dense matrix to generate a dense matrix
-        # as the final output. In the future, we will evaluate the necessity of supporting
-        # sparse ograd as input for the backward pass.
-        test = mx.symbol.elemwise_add(test, dns_zeros)
-        location = {'lhs': lhs_nd, 'rhs': rhs_nd, 'dns': mx.nd.zeros(out.shape)}
+        location = {'lhs': lhs_nd, 'rhs': rhs_nd}
         expected = {'rhs': rhs_backward_grad}
         check_symbolic_forward(test, location, [out_np], rtol=1e-3, atol=1e-4)
         # test symbolic backward
         check_symbolic_backward(test, location, [out_np], expected,
-                                grad_req={'lhs': 'null', 'rhs': 'write', 'dns': 'null'},
+                                grad_req={'lhs': 'null', 'rhs': 'write'},
                                 rtol=1e-3, atol=1e-4)
 
     lhs_shape = rand_shape_2d()
