@@ -44,7 +44,7 @@ What's New
 
 Contents
 --------
-* [Documentation and Tutorials](http://mxnet.io/)
+* [Documentation](http://mxnet.io/) and  [Tutorials](http://mxnet.io/tutorials/)
 * [Design Notes](http://mxnet.io/architecture/index.html)
 * [Code Examples](https://github.com/dmlc/mxnet/tree/master/example)
 * [Installation](http://mxnet.io/get_started/install.html)
