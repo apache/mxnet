@@ -13,6 +13,7 @@ These tutorials introduce a few fundamental concepts in deep learning and how to
    foo/ndarray
    foo/autograd
    foo/foo
+   foo/hybrid
 ```
 
 ### Advanced -- Low-level interface
