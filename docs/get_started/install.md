@@ -241,12 +241,15 @@ $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 $ sudo apt-get install -y python-dev python-setuptools python-numpy
 ```
 
-**Step 2** Build the MXNet Python binding.
+**Step 2** Install the MXNet Python binding.
 
 ```bash
 $ cd python
-$ sudo python setup.py install
+$ pip install --upgrade pip
+$ pip install -e .
 ```
+
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
@@ -453,7 +456,7 @@ $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/
 
 <br/>
 
-**Build the MXNet Python binding**
+**Install the MXNet Python binding**
 
 **Step 1** Install prerequisites - python setup tools and numpy.
 
@@ -461,12 +464,15 @@ $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/
 $ sudo apt-get install -y python-dev python-setuptools python-numpy
 ```
 
-**Step 2** Build the MXNet Python binding.
+**Step 2** Install the MXNet Python binding.
 
 ```bash
 $ cd python
-$ sudo python setup.py install
+$ pip install --upgrade pip
+$ pip install -e .
 ```
+
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
@@ -987,8 +993,11 @@ To install python bindings run the following commands in the MXNet directory:
 
 ```bash
     cd python
-    sudo python setup.py install
+    pip install --upgrade pip
+    pip install -e .
 ```
+
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
 
 You are now ready to run MXNet on your Raspberry Pi device. You can get started by following the tutorial on [Real-time Object Detection with MXNet On The Raspberry Pi](http://mxnet.io/tutorials/embedded/wine_detector.html).
 
@@ -1066,7 +1075,15 @@ To install python bindings run the following commands in the MXNet directory:
 
 ```bash
     cd python
-    sudo python setup.py install
+    pip install --upgrade pip
+    pip install -e .
+```
+
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
+
+Add the mxnet folder to the path:
+
+```bash
     cd ..
     export MXNET_HOME=$(pwd)                       
     echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.bashrc
