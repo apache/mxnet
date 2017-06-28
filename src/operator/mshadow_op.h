@@ -136,13 +136,20 @@ struct tanh_grad {
 struct softrelu {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(log1pf(expf(a)));
+    // Avoid overflow of exp for large inputs.
+    // Thresholds 20.0 is chosen such that softrelu(a) = a
+    // for a > 20 using floating precision.
+    if (a > DType(20.0)) {
+      return a;
+    } else {
+      return DType(log1pf(expf(a)));
+    }
   }
 };
 struct softrelu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f) - expf(-a));
+    return -DType(expm1f(-a));
   }
 };
 

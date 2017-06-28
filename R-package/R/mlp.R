@@ -7,7 +7,7 @@
 #' @param dropout a number in [0,1) containing the dropout ratio from the last hidden layer to the output layer.
 #' @param activation either a single string or a vector containing the names of the activation functions.
 #' @param out_activation a single string containing the name of the output activation function.
-#' @param device whether train on cpu (default) or gpu.
+#' @param ctx whether train on cpu (default) or gpu.
 #' @param eval_metric the evaluation metric/
 #' @param ... other parameters passing to \code{mx.model.FeedForward.create}/
 #' 
@@ -28,7 +28,7 @@
 #' @export
 mx.mlp <- function(data, label, hidden_node = 1, out_node, dropout = NULL, 
                    activation = "tanh", out_activation = "softmax",
-                   device=mx.ctx.default(), ...) {
+                   ctx = mx.ctx.default(), ...) {
   
   m <- length(hidden_node)
   if (!is.null(dropout)) {
@@ -64,6 +64,6 @@ mx.mlp <- function(data, label, hidden_node = 1, out_node, dropout = NULL,
   } else {
     stop("Not supported yet.")
   }
-  model <- mx.model.FeedForward.create(out, X=data, y=label, ctx=device, ...)
+  model <- mx.model.FeedForward.create(out, X=data, y=label, ctx = ctx, ...)
   return(model)
 }
