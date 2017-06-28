@@ -79,6 +79,8 @@ def convert_and_compare_caffe_to_mxnet(image_url, gpu, caffe_prototxt_path, caff
 
     if isinstance(caffe_mean, str):
         caffe_mean = read_caffe_mean(caffe_mean)
+    elif caffe_mean is None:
+        pass
     elif len(caffe_mean) == 3:
         # swap channels from Caffe BGR to RGB
         caffe_mean = caffe_mean[::-1]
@@ -188,7 +190,8 @@ def compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_
         normalized_layer_name = re.sub('[-/]', '_', layer.name)
 
         # handle weight and bias of convolution and fully-connected layers
-        if layer.name in caffe_net.params and layer.type in ['Convolution', 'InnerProduct']:
+        if layer.name in caffe_net.params and layer.type in ['Convolution', 'InnerProduct',
+                                                             'Deconvolution']:
 
             has_bias = len(caffe_net.params[layer.name]) > 1
 
@@ -199,8 +202,10 @@ def compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_
             if layer.type == 'Convolution' and compare_layers_from_nets.is_first_convolution:
                 compare_layers_from_nets.is_first_convolution = False
 
-                # swapping BGR of caffe into RGB in mxnet
-                mx_beta = mx_beta[:, ::-1, :, :]
+                # if RGB or RGBA
+                if mx_beta.shape[1] == 3 or mx_beta.shape[1] == 4:
+                    # Swapping BGR of caffe into RGB in mxnet
+                    mx_beta[:, [0, 2], :, :] = mx_beta[:, [2, 0], :, :]
 
             caf_beta = caffe_net.params[layer.name][0].data
             _compare_blob(caf_beta, mx_beta, layer.name, mx_name_weight, 'weight', '')
@@ -213,7 +218,13 @@ def compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_
 
         elif layer.name in caffe_net.params and layer.type == 'Scale':
 
-            bn_name = normalized_layer_name.replace('scale', 'bn')
+            if 'scale' in normalized_layer_name:
+                bn_name = normalized_layer_name.replace('scale', 'bn')
+            elif 'sc' in normalized_layer_name:
+                bn_name = normalized_layer_name.replace('sc', 'bn')
+            else:
+                assert False, 'Unknown name convention for bn/scale'
+
             beta_name = '{}_beta'.format(bn_name)
             gamma_name = '{}_gamma'.format(bn_name)
 
@@ -230,17 +241,19 @@ def compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_
             mean_name = '{}_moving_mean'.format(normalized_layer_name)
             var_name = '{}_moving_var'.format(normalized_layer_name)
 
+            caf_rescale_factor = caffe_net.params[layer.name][2].data
+
             mx_mean = aux_params[mean_name].asnumpy()
-            caf_mean = caffe_net.params[layer.name][0].data
+            caf_mean = caffe_net.params[layer.name][0].data / caf_rescale_factor
             _compare_blob(caf_mean, mx_mean, layer.name, mean_name, 'mean', '')
 
             mx_var = aux_params[var_name].asnumpy()
-            caf_var = caffe_net.params[layer.name][1].data
+            caf_var = caffe_net.params[layer.name][1].data / caf_rescale_factor
             _compare_blob(caf_var, mx_var, layer.name, var_name, 'var',
                           'expect 1e-04 change due to cudnn eps')
 
         elif layer.type in ['Input', 'Pooling', 'ReLU', 'Eltwise', 'Softmax', 'LRN', 'Concat',
-                            'Dropout']:
+                            'Dropout', 'Crop']:
             # no parameters to check for these layers
             pass
 
@@ -262,8 +275,11 @@ def compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_
 
         # data should change from BGR to RGB
         if caffe_blob_name == 'data':
-            # swapping BGR of caffe into RGB in mxnet
-            caf_blob = caf_blob[:, ::-1, :, :]
+
+            # if RGB or RGBA
+            if caf_blob.shape[1] == 3 or caf_blob.shape[1] == 4:
+                # Swapping BGR of caffe into RGB in mxnet
+                caf_blob[:, [0, 2], :, :] = caf_blob[:, [2, 0], :, :]
             mx_name = 'data'
 
         else:
@@ -271,7 +287,10 @@ def compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_
             last_layer_name = top_to_layers[caffe_blob_name][-1]
             normalized_last_layer_name = re.sub('[-/]', '_', last_layer_name)
             mx_name = '{}_output'.format(normalized_last_layer_name)
-            mx_name = mx_name.replace('scale', 'bn')
+            if 'scale' in mx_name:
+                mx_name = mx_name.replace('scale', 'bn')
+            elif 'sc' in mx_name:
+                mx_name = mx_name.replace('sc', 'bn')
 
         if mx_name not in exe.output_dict:
             logging.error('mxnet blob %s is missing, time to extend the compare tool..', mx_name)
