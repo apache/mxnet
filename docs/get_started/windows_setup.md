@@ -93,11 +93,24 @@ To install MXNet on a computer with a CPU processor, choose from two options:
 * Build the library from source code
 
 #### Building MXNet with the Prebuilt Binary Package
-For Windows users, MXNet provides a prebuilt binary package for CPUs. The prebuilt package is updated weekly. You can install the package directly in the R console using the following commands:
+For Windows users, MXNet provides prebuilt binary packages.
+You can install the package directly in the R console.
+
+For CPU-only package:
 
 ```r
-  install.packages("drat", repos="https://cran.rstudio.com")
-  drat:::addRepo("dmlc")
+  cran <- getOption("repos")
+  cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/"
+  options(repos = cran)
+  install.packages("mxnet")
+```
+
+For GPU-enabled package:
+
+```r
+  cran <- getOption("repos")
+  cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/GPU"
+  options(repos = cran)
   install.packages("mxnet")
 ```
 
