@@ -802,7 +802,7 @@ void DotCsrDnsRspImpl(const OpContext& ctx,
               mshadow::Tensor<xpu, 2, DType> rsp_data = data_out.FlatTo2D<xpu, DType>(s);
               size_t idx = 0;
               for (index_t i = 0; i < ret->shape()[0]; ++i) {
-                if (row_idx > 0) {
+                if (row_idx[i] > 0) {
                   row_idx[idx] = i;
                   mshadow::Copy(rsp_data[idx], rsp_data[i], s);
                   ++idx;
