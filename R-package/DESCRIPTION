@@ -1,10 +1,10 @@
 Package: mxnet
 Type: Package
-Title: MXNet
+Title: MXNet: A Flexible and Efficient Machine Learning Library for Heterogeneous Distributed Systems
 Version: 0.10.1
-Date: 2017-06-02
+Date: 2017-06-27
 Author: Tianqi Chen, Qiang Kou, Tong He
-Maintainer: Qiang Kou <qkou@umail.iu.edu>
+Maintainer: Qiang Kou <qkou@qkou.info>
 Repository: DMLC
 Description: MXNet is a deep learning framework designed for both efficiency
     and flexibility. It allows you to mix the flavours of deep learning programs
@@ -28,7 +28,7 @@ Suggests:
     rmarkdown,
     imager
 Depends:
-    R (>= 3.2.0)
+    R (>= 3.3.0)
 LinkingTo: Rcpp
 VignetteBuilder: knitr
 RoxygenNote: 5.0.1

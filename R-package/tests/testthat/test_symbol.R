@@ -8,6 +8,7 @@ test_that("basic symbol operation", {
   net1 = mx.symbol.FullyConnected(data=net1, name='fc2', num_hidden=100)
   
   expect_equal(arguments(net1), c('data', 'fc1_weight', 'fc1_bias', 'fc2_weight', 'fc2_bias'))
+  expect_equal(outputs(net1), 'fc2_output')
   
   net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
   net2 = mx.symbol.Activation(data=net2, act_type='relu')
@@ -16,6 +17,52 @@ test_that("basic symbol operation", {
   composed = mx.apply(net2, fc3_data=net1, name='composed')
   
   expect_equal(arguments(composed), c('data', 'fc1_weight', 'fc1_bias', 'fc2_weight', 'fc2_bias', 'fc3_weight', 'fc3_bias', 'fc4_weight', 'fc4_bias'))
+  expect_equal(outputs(composed), 'composed_output')
+  
+  multi_out = mx.symbol.Group(c(composed, net1))
+  expect_equal(outputs(multi_out), c('composed_output', 'fc2_output'))
+})
+
+test_that("symbol internal", {
+  data = mx.symbol.Variable('data')
+  oldfc = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
+  net1 = mx.symbol.FullyConnected(data=oldfc, name='fc2', num_hidden=100)
+  
+  expect_equal(arguments(net1), c("data", "fc1_weight", "fc1_bias", "fc2_weight", "fc2_bias"))
+  
+  internal = net1$get.internals()
+  fc1 = internal[[match("fc1_output", internal$outputs)]]
+  
+  expect_equal(arguments(fc1), arguments(oldfc))
+})
+
+test_that("symbol infer type", {
+  num_hidden = 128
+  num_dim    = 64
+  num_sample = 10
+  
+  data = mx.symbol.Variable('data')
+  prev = mx.symbol.Variable('prevstate')
+  x2h  = mx.symbol.FullyConnected(data=data, name='x2h', num_hidden=num_hidden)
+  h2h  = mx.symbol.FullyConnected(data=prev, name='h2h', num_hidden=num_hidden)
+  
+  out  = mx.symbol.Activation(data=mx.symbol.elemwise_add(x2h, h2h), name='out', act_type='relu')
+  
+  # shape inference will fail because information is not available for h2h
+  ret = mx.symbol.infer.shape(out, data = c(num_dim, num_sample))
+  
+  expect_equal(ret, NULL)
+})
+
+test_that("symbol save/load", {
+  data <- mx.symbol.Variable("data")
+  fc1 <- mx.symbol.FullyConnected(data, num_hidden=1)
+  lro <- mx.symbol.LinearRegressionOutput(fc1)
+  mx.symbol.save(lro, "tmp_r_sym.json")
+  data2 = mx.symbol.load("tmp_r_sym.json")
+  
+  expect_equal(data2$as.json(), lro$as.json())
+  file.remove("tmp_r_sym.json")
 })
 
 test_that("symbol attributes access", {
@@ -30,5 +77,4 @@ test_that("symbol attributes access", {
   
   expect_equal(y$attributes$`__shape__`, str)
 })
-
 

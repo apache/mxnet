@@ -144,3 +144,4 @@ List of Contributors
 * [Yi Li](https://github.com/liyi14/)
 * [Guodong Zhang](https://github.com/gd-zhang/)
 * [Xizhou Zhu](https://github.com/einsiedler0408/)
+* [Jean Kossaifi](https://github.com/JeanKossaifi/)
