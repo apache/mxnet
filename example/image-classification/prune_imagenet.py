@@ -19,7 +19,7 @@ def train_imagenet(args):
 
     # fixed arguments
     num_epoch = 40
-    batch_size = 128
+    batch_size = 512
     label_name = 'softmax_label'
 
     # create data iterators
@@ -80,7 +80,7 @@ def train_imagenet(args):
         rand_mirror         = False)
 
     # download model
-    model = 'imagenet1k-resnet-101'
+    model = 'imagenet1k-resnet-50'
     dir_path = os.path.dirname(os.path.realpath(__file__))
     (prefix, epoch) = modelzoo.download_model(model, os.path.join(dir_path, 'model'))
     sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
@@ -107,7 +107,7 @@ def train_imagenet(args):
             'do_pruning'        : do_pruning,
             'start_prune'       : start_pruning,
     }
-    disp_batches = 5
+    disp_batches = 500
     batch_end_callbacks = [mx.callback.Speedometer(batch_size, disp_batches)]
     mod.fit(train,
         begin_epoch                 = begin_epoch,
