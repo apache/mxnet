@@ -15,6 +15,7 @@ from .executor_group import DataParallelExecutorGroup
 from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
 from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
+from ..io import DataDesc
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
@@ -535,7 +536,11 @@ class Module(BaseModule):
         self.optimizer_initialized = True
 
     def forward(self, data_batch, is_train=None):
-        """Forward computation.
+        """Forward computation. It supports data batches with different shapes, such as
+        different batch sizes or different image sizes.
+        If reshaping of data batch relates to modification of symbol or module, such as
+        changing image layout ordering or switching from training to predicting, module
+        rebinding is required.
 
         See Also
         ----------
@@ -549,6 +554,32 @@ class Module(BaseModule):
             Default is ``None``, which means ``is_train`` takes the value of ``self.for_training``.
         """
         assert self.binded and self.params_initialized
+
+        # If start to inference, force rebind module.
+        if self._label_shapes and not data_batch.label:
+            raise RuntimeError("If you are trying to do inference, rebind module "
+                               "with 'force_rebind=True' and 'for_training=False'")
+
+        curr_data_shapes = (i.shape for i in self._data_shapes)
+        new_data_shapes = (i.shape for i in data_batch.data)
+
+        if curr_data_shapes != new_data_shapes:
+            if hasattr(data_batch, "provide_data") and data_batch.provide_data:
+                new_dshape = data_batch.provide_data
+            else:
+                new_dshape = [DataDesc(i.name, shape, i.dtype, i.layout) \
+                              for i, shape in zip(self._data_shapes, new_data_shapes)]
+
+            if hasattr(data_batch, "provide_label") and data_batch.provide_label:
+                new_lshape = data_batch.provide_label
+            elif hasattr(data_batch, "label") and data_batch.label:
+                new_lshape = [DataDesc(i.name, j.shape, i.dtype, i.layout) \
+                              for i, j in zip(self._label_shapes, data_batch.label)]
+            else:
+                new_lshape = None
+
+            self.reshape(new_dshape, new_lshape)
+
         self._exec_group.forward(data_batch, is_train)
 
     def backward(self, out_grads=None):
