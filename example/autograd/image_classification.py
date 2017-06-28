@@ -6,8 +6,9 @@ logging.basicConfig(level=logging.INFO)
 
 import mxnet as mx
 from mxnet import foo
-from mxnet.foo import nn, model
+from mxnet.foo import nn
 from mxnet import autograd as ag
+import vision_model as model
 
 from data import *
 

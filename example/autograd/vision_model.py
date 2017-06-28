@@ -1,6 +1,7 @@
 from __future__ import division
 
-from .. import nn
+from mxnet import initializer
+from mxnet.foo import nn
 
 # Helpers
 def conv3x3(filters, stride, in_filters):
@@ -18,7 +19,8 @@ class BasicBlockV1(nn.HybridLayer):
             self.conv2 = conv3x3(filters, 1, filters)
             self.bn2 = nn.BatchNorm(num_features=filters)
             if downsample:
-                self.conv_ds = nn.Conv2D(filters, kernel_size=1, strides=stride, use_bias=False, in_filters=in_filters)
+                self.conv_ds = nn.Conv2D(filters, kernel_size=1, strides=stride,
+                                         use_bias=False, in_filters=in_filters)
                 self.bn_ds = nn.BatchNorm(num_features=filters)
             self.downsample = downsample
 
@@ -46,14 +48,16 @@ class BottleneckV1(nn.HybridLayer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BottleneckV1, self).__init__(**kwargs)
         with self.name_scope():
-            self.conv1 = nn.Conv2D(filters=filters//4, kernel_size=1, strides=1, in_filters=in_filters)
+            self.conv1 = nn.Conv2D(filters=filters//4, kernel_size=1, strides=1,
+                                   in_filters=in_filters)
             self.bn1 = nn.BatchNorm(num_features=filters//4)
             self.conv2 = conv3x3(filters//4, stride, filters//4)
             self.bn2 = nn.BatchNorm(num_features=filters//4)
             self.conv3 = nn.Conv2D(filters=filters, kernel_size=1, strides=1, in_filters=filters//4)
             self.bn3 = nn.BatchNorm(num_features=filters)
             if downsample:
-                self.conv_ds = nn.Conv2D(filters, kernel_size=1, strides=stride, use_bias=False, in_filters=in_filters)
+                self.conv_ds = nn.Conv2D(filters, kernel_size=1, strides=stride,
+                                         use_bias=False, in_filters=in_filters)
                 self.bn_ds = nn.BatchNorm(num_features=filters)
             self.downsample = downsample
 
@@ -152,31 +156,29 @@ class ResnetV1(nn.HybridLayer):
     def __init__(self, block, classes, layers, filters, thumbnail, **kwargs):
         super(ResnetV1, self).__init__(**kwargs)
         with self.name_scope():
-             assert len(layers) == len(filters) - 1
-             self._thumbnail = thumbnail
-             if thumbnail:
-                 self.conv0 = conv3x3(filters[0], 1, 3)
-             else:
-                 self.conv0 = nn.Conv2D(filters[0], 7, 2, 3, use_bias=False,
-                                        in_filters=3)
-                 self.bn0 = nn.BatchNorm(num_features=filters[0])
-                 self.pool0 = nn.MaxPool2D(3, 2, 1)
+            assert len(layers) == len(filters) - 1
+            self._thumbnail = thumbnail
+            if thumbnail:
+                self.conv0 = conv3x3(filters[0], 1, 3)
+            else:
+                self.conv0 = nn.Conv2D(filters[0], 7, 2, 3, use_bias=False,
+                                       in_filters=3)
+                self.bn0 = nn.BatchNorm(num_features=filters[0])
+                self.pool0 = nn.MaxPool2D(3, 2, 1)
 
-             self.body = nn.HSequential()
-             in_filters = filters[0]
-             for i in range(len(layers)):
-                 stride = 1 if i == 0 else 2
-                 self.body.add(self._make_layer(block, layers[i], filters[i+1],
-                                                stride, in_filters=filters[i]))
-                 in_filters = filters[i+1]
+            self.body = nn.HSequential()
+            for i, num_layer in enumerate(layers):
+                stride = 1 if i == 0 else 2
+                self.body.add(self._make_layer(block, num_layer, filters[i+1],
+                                               stride, in_filters=filters[i]))
 
-             self.pool1 = nn.GlobalAvgPool2D()
-             self.dense1 = nn.Dense(classes, in_units=filters[-1])
+            self.pool1 = nn.GlobalAvgPool2D()
+            self.dense1 = nn.Dense(classes, in_units=filters[-1])
 
     def _make_layer(self, block, layers, filters, stride, in_filters=0):
         layer = nn.HSequential()
         layer.add(block(filters, stride, True, in_filters=in_filters))
-        for i in range(layers-1):
+        for _ in range(layers-1):
             layer.add(block(filters, 1, False, in_filters=filters))
         return layer
 
@@ -213,9 +215,9 @@ class ResnetV2(nn.HybridLayer):
 
             self.body = nn.HSequential()
             in_filters = filters[0]
-            for i in range(len(layers)):
+            for i, num_layer in enumerate(layers):
                 stride = 1 if i == 0 else 2
-                self.body.add(self._make_layer(block, layers[i], filters[i+1],
+                self.body.add(self._make_layer(block, num_layer, filters[i+1],
                                                stride, in_filters=in_filters))
                 in_filters = filters[i+1]
 
@@ -226,7 +228,7 @@ class ResnetV2(nn.HybridLayer):
     def _make_layer(self, block, layers, filters, stride, in_filters=0):
         layer = nn.HSequential()
         layer.add(block(filters, stride, True, in_filters=in_filters))
-        for i in range(layers-1):
+        for _ in range(layers-1):
             layer.add(block(filters, 1, False, in_filters=filters))
         return layer
 
@@ -254,18 +256,18 @@ class VGG(nn.HybridLayer):
         super(VGG, self).__init__(**kwargs)
         with self.name_scope():
             assert len(layers) == len(filters)
-            self.features = self._make_features(layers, batch_norm)
+            self.features = self._make_features(layers, filters, batch_norm)
             self.classifier = nn.HSequential()
             self.classifier.add(nn.Dense(4096, activation='relu',
-                                         kernel_initializer=mx.initializer.Normal(),
+                                         kernel_initializer=initializer.Normal(),
                                          bias_initializer='zeros'))
             self.classifier.add(nn.Dropout(rate=0.5))
             self.classifier.add(nn.Dense(4096, activation='relu',
-                                         kernel_initializer=mx.initializer.Normal(),
+                                         kernel_initializer=initializer.Normal(),
                                          bias_initializer='zeros'))
             self.classifier.add(nn.Dropout(rate=0.5))
             self.classifier.add(nn.Dense(classes,
-                                         kernel_initializer=mx.initializer.Normal(),
+                                         kernel_initializer=initializer.Normal(),
                                          bias_initializer='zeros'))
 
     def _make_features(self, layers, filters, batch_norm):
@@ -273,9 +275,9 @@ class VGG(nn.HybridLayer):
         for i, num in enumerate(layers):
             for _ in range(num):
                 featurizer.add(nn.Conv2D(filters[i], kernel_size=3, padding=1,
-                                         kernel_initializer=mx.initializer.Xavier(rnd_type='gaussian',
-                                                                                  factor_type='out',
-                                                                                  magnitude=2),
+                                         kernel_initializer=initializer.Xavier(rnd_type='gaussian',
+                                                                               factor_type='out',
+                                                                               magnitude=2),
                                          bias_initializer='zeros'))
                 if batch_norm:
                     featurizer.add(nn.BatchNorm())
@@ -290,20 +292,20 @@ class VGG(nn.HybridLayer):
 
 
 # Specification
-resnet_spec = { 18: ('basic_block', [2, 2, 2], [16, 16, 32, 64]),
-                34: ('basic_block', [3, 4, 6, 3], [16, 16, 32, 64]),
-                50: ('bottle_neck', [3, 4, 6, 3], [64, 256, 512, 1024, 2048]),
-                101: ('bottle_neck', [3, 4, 23, 3], [64, 256, 512, 1024, 2048]),
-                152: ('bottle_neck', [3, 8, 36, 3], [64, 256, 512, 1024, 2048]) }
+resnet_spec = {18: ('basic_block', [2, 2, 2], [16, 16, 32, 64]),
+               34: ('basic_block', [3, 4, 6, 3], [16, 16, 32, 64]),
+               50: ('bottle_neck', [3, 4, 6, 3], [64, 256, 512, 1024, 2048]),
+               101: ('bottle_neck', [3, 4, 23, 3], [64, 256, 512, 1024, 2048]),
+               152: ('bottle_neck', [3, 8, 36, 3], [64, 256, 512, 1024, 2048])}
 
-vgg_spec = { 11: ([1, 1, 2, 2, 2], [64, 128, 256, 512, 512]),
-             13: ([2, 2, 2, 2, 2], [64, 128, 256, 512, 512]),
-             16: ([2, 2, 3, 3, 3], [64, 128, 256, 512, 512]),
-             19: ([2, 2, 4, 4, 4], [64, 128, 256, 512, 512]) }
+vgg_spec = {11: ([1, 1, 2, 2, 2], [64, 128, 256, 512, 512]),
+            13: ([2, 2, 2, 2, 2], [64, 128, 256, 512, 512]),
+            16: ([2, 2, 3, 3, 3], [64, 128, 256, 512, 512]),
+            19: ([2, 2, 4, 4, 4], [64, 128, 256, 512, 512])}
 
 resnet_net_versions = [ResnetV1, ResnetV2]
 resnet_block_versions = [{'basic_block': BasicBlockV1, 'bottle_neck': BottleneckV1},
-                  {'basic_block': BasicBlockV2, 'bottle_neck': BottleneckV2}]
+                         {'basic_block': BasicBlockV2, 'bottle_neck': BottleneckV2}]
 
 
 # Constructor
@@ -356,11 +358,11 @@ def get_vision_model(name, **kwargs):
               'resnet50_v1': resnet50_v1,
               'resnet101_v1': resnet101_v1,
               'resnet152_v1': resnet152_v1,
-              'resnet18_v1': resnet18_v1,
-              'resnet34_v1': resnet34_v1,
-              'resnet50_v1': resnet50_v1,
-              'resnet101_v1': resnet101_v1,
-              'resnet152_v1': resnet152_v1,
+              'resnet18_v2': resnet18_v2,
+              'resnet34_v2': resnet34_v2,
+              'resnet50_v2': resnet50_v2,
+              'resnet101_v2': resnet101_v2,
+              'resnet152_v2': resnet152_v2,
               'vgg11': vgg11,
               'vgg13': vgg13,
               'vgg16': vgg16,
