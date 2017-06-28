@@ -1198,6 +1198,8 @@ class ConvLSTMCell(BaseRNNCell):
         Pad of Convolution operator in input-to-state transitions.
     i2h_dilate : tuple of int, default (1, 1)
         Dilation of Convolution operator in input-to-state transitions.
+    activation : str or Symbol, default 'tanh'
+        Type of activation function. Options are 'relu' and 'tanh'.
     prefix : str, default 'ConvLSTM_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
@@ -1210,7 +1212,8 @@ class ConvLSTMCell(BaseRNNCell):
     def __init__(self, input_shape, num_hidden,
                  h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
                  i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
-                 prefix='ConvLSTM_', params=None, forget_bias=1.0, conv_layout='NCHW'):
+                 activation='tanh', prefix='ConvLSTM_', params=None, forget_bias=1.0,
+                 conv_layout='NCHW'):
         super(ConvLSTMCell, self).__init__(prefix=prefix, params=params)
         # Convolution setting
         self._h2h_kernel = h2h_kernel
@@ -1224,6 +1227,7 @@ class ConvLSTMCell(BaseRNNCell):
         self._num_hidden = num_hidden
         self._input_shape = input_shape
         self._conv_layout = conv_layout
+        self._activation = activation
 
         # Get params
         self._iW = self.params.get('i2h_weight')
@@ -1282,14 +1286,15 @@ class ConvLSTMCell(BaseRNNCell):
                                     name='%si'%name)
         forget_gate = symbol.Activation(slice_gates[1], act_type="sigmoid",
                                         name='%sf'%name)
-        in_transform = symbol.Activation(slice_gates[2], act_type="tanh",
-                                         name='%sc'%name)
+        in_transform = self._get_activation(slice_gates[2], self._activation,
+                                            name='%sc'%name)
         out_gate = symbol.Activation(slice_gates[3], act_type="sigmoid",
                                      name='%so'%name)
         next_c = symbol._internal._plus(forget_gate * states[1], in_gate * in_transform,
                                         name='%sstate'%name)
-        next_h = symbol._internal._mul(out_gate, symbol.Activation(next_c, act_type="tanh"),
+        next_h = symbol._internal._mul(out_gate, self._get_activation(next_c, self._activation),
                                        name='%sout'%name)
+
         return next_h, [next_h, next_c]
 
 class ConvGRUCell(BaseRNNCell):
@@ -1315,6 +1320,8 @@ class ConvGRUCell(BaseRNNCell):
         Pad of Convolution operator in input-to-state transitions.
     i2h_dilate : tuple of int, default (1, 1)
         Dilation of Convolution operator in input-to-state transitions.
+    activation : str or Symbol, default 'tanh'
+        Type of activation function. Options are 'relu' and 'tanh'.
     prefix : str, default 'ConvGRU_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
@@ -1325,7 +1332,7 @@ class ConvGRUCell(BaseRNNCell):
     def __init__(self, input_shape, num_hidden,
                  h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
                  i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
-                 prefix='ConvGRU_', params=None, conv_layout='NCHW'):
+                 activation='tanh', prefix='ConvGRU_', params=None, conv_layout='NCHW'):
         super(ConvGRUCell, self).__init__(prefix=prefix, params=params)
         # Convolution setting
         self._h2h_kernel = h2h_kernel
@@ -1339,6 +1346,7 @@ class ConvGRUCell(BaseRNNCell):
         self._num_hidden = num_hidden
         self._input_shape = input_shape
         self._conv_layout = conv_layout
+        self._activation = activation
 
         # Get params
         self._iW = self.params.get('i2h_weight')
@@ -1396,8 +1404,8 @@ class ConvGRUCell(BaseRNNCell):
         update_gate = symbol.Activation(i2h_z + h2h_z, act_type="sigmoid",
                                         name="%s_z_act" % name)
 
-        next_h_tmp = symbol.Activation(i2h + reset_gate * h2h, act_type="tanh",
-                                       name="%s_h_act" % name)
+        next_h_tmp = self._get_activation(i2h + reset_gate * h2h, self._activation,
+                                          name="%s_h_act" % name)
 
         next_h = symbol._internal._plus((1. - update_gate) * next_h_tmp, update_gate * states[0],
                                         name='%sout' % name)
