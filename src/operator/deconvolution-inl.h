@@ -92,16 +92,15 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
 
   template<size_t ndim>
   void InferPad(TShape input, index_t (&o_pad)[ndim], index_t (&o_adj)[ndim] ) const {
-    
     // Modified by Li.bs
-    // Use tag to control the calculation of pad 
+    // Use tag to control the calculation of pad
     bool bCal = false;
     if (target_shape.ndim() != 0) {
       for (int i = 0; i < target_shape.ndim(); i++) {
         if (target_shape[i] != 0) bCal = true;
       }
     }
- 
+
     if (bCal) {
       size_t input_ndim = input.ndim();
 
