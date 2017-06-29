@@ -20,6 +20,7 @@ use overload
     '/'   => \&divide,
     '/='  => \&idivide,
     '**'  => \&power,
+    '%'   => \&mod,
     '=='  => \&equal,
     '!='  => \&not_equal,
     '>'   => \&greater,
@@ -167,6 +168,16 @@ method lesser_equal(AI::MXNet::Symbol|Num $other, $reverse=)
 method true_divide(AI::MXNet::Symbol|Num $other, $reverse=)
 {
     return $self->divide($other, $reverse);
+}
+
+method mod(AI::MXNet::Symbol|Num $other, $reverse=)
+{
+    return _ufunc_helper(
+        $self,
+        $other,
+        qw/_Mod _ModScalar _RModScalar/,
+        $reverse
+    );
 }
 
 method maximum(AI::MXNet::Symbol|Num $other)
@@ -428,6 +439,25 @@ method list_auxiliary_states()
     return scalar(check_call(AI::MXNetCAPI::SymbolListAuxiliaryStates($self->handle)));
 }
 
+
+=head2 list_inputs
+
+    Lists all arguments and auxiliary states of this Symbol.
+
+    Returns
+    -------
+    inputs : array ref of str
+    List of all inputs.
+
+    Examples
+    --------
+    >>> my $bn = mx->sym->BatchNorm(name=>'bn');
+=cut
+
+method list_inputs()
+{
+    return scalar(check_call(AI::NNVMCAPI::SymbolListInputNames($self->handle, 0)));
+}
 
 =head2 infer_type
 
