@@ -39,7 +39,7 @@ class StorageImpl : public Storage {
 #if MXNET_USE_CUDA
           num_gpu_device = 0;
           cudaError_t e = cudaGetDeviceCount(&num_gpu_device);
-          if (e == cudaErrorNoDevice) {
+          if (e != cudaSuccess) {
             num_gpu_device = 0;
           }
           if (num_gpu_device > 0) {
