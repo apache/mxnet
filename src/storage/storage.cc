@@ -27,19 +27,23 @@ class StorageImpl : public Storage {
  private:
   static constexpr size_t kMaxNumberOfDevices = Context::kMaxDevType + 1;
   static constexpr size_t kMaxNumberOfDeviceIDs = Context::kMaxDevID + 1;
+  static int num_gpu_device;
 
   static void ActivateDevice(Context ctx) {
     switch (ctx.dev_type) {
       case Context::kCPU: break;
       case Context::kGPU:
       case Context::kCPUPinned: {
-          int gpu_num = 0;
+          num_gpu_device = 0;
 #if MXNET_USE_CUDA
-          CUDA_CALL(cudaGetDeviceCount(&gpu_num));
+          cudaError_t e = cudaGetDeviceCount(&num_gpu_device);
+          if (e == cudaErrorNoDevice) {
+            num_gpu_device = 0;
+          }
 #endif  // MXNET_USE_CUDA
-          if (gpu_num > 0) {
+          if (num_gpu_device > 0) {
 #if MXNET_USE_CUDA
-          CUDA_CALL(cudaSetDevice(ctx.dev_id));
+            CUDA_CALL(cudaSetDevice(ctx.dev_id));
 #endif  // MXNET_USE_CUDA
           }
           break;
@@ -52,6 +56,7 @@ class StorageImpl : public Storage {
   std::array<common::LazyAllocArray<storage::StorageManager>,
              kMaxNumberOfDevices> storage_managers_;
 };  // struct Storage::Impl
+int StorageImpl::num_gpu_device = 0;
 
 Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
   // space already recycled, ignore request
@@ -68,11 +73,11 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
             break;
           }
           case Context::kCPUPinned: {
-#if MXNET_USE_CUDA
-            ptr = new storage::NaiveStorageManager<storage::PinnedMemoryStorage>();
-#else
-            ptr = new storage::NaiveStorageManager<storage::CPUDeviceStorage>();
-#endif  // MXNET_USE_CUDA
+            if (num_gpu_device > 0) {
+              ptr = new storage::NaiveStorageManager<storage::PinnedMemoryStorage>();
+            } else {
+              ptr = new storage::NaiveStorageManager<storage::CPUDeviceStorage>();
+            }
             break;
           }
           case Context::kGPU: {
