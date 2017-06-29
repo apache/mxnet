@@ -14,6 +14,7 @@ import mxnet as mx
 import mxnet.ndarray as F
 import mxnet.foo as foo
 from mxnet.foo import nn
+from mxnet import autograd
 ```
 
 Neural networks (and other machine learning models) can be defined and trained
@@ -38,13 +39,13 @@ composing and inheriting `Layer`:
 class Net(nn.Layer):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
-        with self.name_scope:
+        with self.name_scope():
             # layers created in name_scope will inherit name space
             # from parent layer.
             self.conv1 = nn.Conv2D(6, kernel_size=5)
-            self.pool1 = nn.Pool2D(kernel_size=2)
+            self.pool1 = nn.MaxPool2D(pool_size=(2,2))
             self.conv2 = nn.Conv2D(16, kernel_size=5)
-            self.pool2 = nn.Pool2D(kernel_size=2)
+            self.pool2 = nn.MaxPool2D(pool_size=(2,2))
             self.fc1 = nn.Dense(120)
             self.fc2 = nn.Dense(84)
             self.fc3 = nn.Dense(10)
@@ -99,7 +100,7 @@ To compute loss and backprop for one iteration, we do:
 
 ```python
 label = mx.nd.arange(10)  # dummy label
-with record():
+with autograd.record():
     output = net(data)
     loss = foo.loss.softmax_cross_entropy_loss(output, label)
     loss.backward()
