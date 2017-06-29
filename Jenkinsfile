@@ -271,6 +271,34 @@ stage('Unit Test') {
       }
     }
   },
+  'R: CPU': {
+    node('linux') {
+      ws('workspace/ut-r-cpu') {
+        init_git()
+        unpack_lib('cpu')
+        timeout(time: max_time, unit: 'MINUTES') {
+          sh "${docker_run} cpu mkdir -p /workspace/ut-r-cpu/site-library"
+          sh "${docker_run} cpu make rpkg USE_BLAS=openblas R_LIBS=/workspace/ut-r-cpu/site-library"
+          sh "${docker_run} cpu R CMD INSTALL --library=/workspace/ut-r-cpu/site-library mxnet_current_r.tar.gz"
+          sh "${docker_run} cpu make rpkgtest R_LIBS=/workspace/ut-r-cpu/site-library"
+        }
+      }
+    }
+  },
+  'R: GPU': {
+    node('GPU' && 'linux') {
+      ws('workspace/ut-r-gpu') {
+        init_git()
+        unpack_lib('gpu')
+        timeout(time: max_time, unit: 'MINUTES') {
+          sh "${docker_run} gpu mkdir -p /workspace/ut-r-gpu/site-library"
+          sh "${docker_run} gpu make rpkg USE_BLAS=openblas R_LIBS=/workspace/ut-r-gpu/site-library"
+          sh "${docker_run} gpu R CMD INSTALL --library=/workspace/ut-r-gpu/site-library mxnet_current_r.tar.gz"
+          sh "${docker_run} gpu make rpkgtest R_LIBS=/workspace/ut-r-gpu/site-library"
+        }
+      }
+    }
+  },  
   'Python2/3: CPU Win':{
     node('windows') {
       ws('workspace/ut-python-cpu') {
