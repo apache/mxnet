@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import ctypes
 import pickle
 from .ndarray import NDArray
+from .sparse_ndarray import _ndarray_cls
 from .base import _LIB
 from .base import check_call, c_array, c_str, string_types, mx_uint, py_str
 from .base import NDArrayHandle, KVStoreHandle
@@ -48,8 +49,8 @@ def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
     def updater_handle(key, lhs_handle, rhs_handle, _):
         """ ctypes function """
-        lhs = NDArray(NDArrayHandle(lhs_handle))
-        rhs = NDArray(NDArrayHandle(rhs_handle))
+        lhs = _ndarray_cls(NDArrayHandle(lhs_handle))
+        rhs = _ndarray_cls(NDArrayHandle(rhs_handle))
         updater(key, lhs, rhs)
     return updater_handle
 

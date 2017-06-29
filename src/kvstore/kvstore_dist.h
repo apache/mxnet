@@ -307,7 +307,8 @@ class KVStoreDist : public KVStoreLocal {
       const auto unit_len = recv_buf->shape().ProdShape(1, recv_buf->shape().ndim());
       size_t size = num_rows * unit_len;
        // convert to ps keys in row sparse format
-      PSKV& pskv = EncodeRowSparseKey(key, size, num_rows, offsets, unit_len);
+      PSKV& pskv = EncodeRowSparseKey(key, size, num_rows, offsets,
+                                      unit_len, recv_buf->shape()[0]);
       if (this->log_verbose_) {
         LOG(INFO) << "worker " << get_rank() << " pull lens: " << pskv.lens << " keys: "
                   << pskv.keys << " size: " << size;
@@ -349,7 +350,8 @@ class KVStoreDist : public KVStoreLocal {
       const auto size = num_rows * unit_len;
 
        // convert to ps keys in row sparse format
-      PSKV& pskv = EncodeRowSparseKey(key, size, num_rows, offsets, unit_len);
+      PSKV& pskv = EncodeRowSparseKey(key, size, num_rows, offsets,
+                                      unit_len, send_buf.shape()[0]);
       if (this->log_verbose_) {
         LOG(INFO) << "worker " << get_rank() << " push lens: " << pskv.lens << " keys: "
                   << pskv.keys << " size: " << size;
@@ -441,8 +443,10 @@ class KVStoreDist : public KVStoreLocal {
     return pskv;
   }
 
-  inline PSKV& EncodeRowSparseKey(int key, size_t size, int64_t num_rows,
-                                  const int64_t *offsets, size_t unit_len) {
+  inline PSKV& EncodeRowSparseKey(const int key, const size_t size, const int64_t num_rows,
+                                  const int64_t *offsets, const size_t unit_len,
+                                  const int64_t total_num_rows) {
+    using namespace common;
     mu_.lock();
     PSKV& pskv = ps_kv_[key];
     mu_.unlock();
@@ -453,21 +457,45 @@ class KVStoreDist : public KVStoreLocal {
     int num_servers = krs.size();
     CHECK_GT(num_servers, 0);
 
-    if (size >= bigarray_bound_ && log_verbose_) {
-      LOG(INFO) << "WARNING: big row_sparse weight array sharding is not implemented";
+    if (total_num_rows * unit_len >= bigarray_bound_) {
+      pskv.size = 0;
+      int64_t start_row = 0;
+      // parition it to all servers
+      for (int i = 0; i < num_servers; ++i) {
+        // calculate partition ranges
+        int64_t part_num_rows =
+            llround(static_cast<double>(total_num_rows) / num_servers * (i + 1)) -
+            llround(static_cast<double>(total_num_rows) / num_servers * i);
+        auto end_row = start_row + part_num_rows;
+        auto lb = lower_bound(offsets, offsets + num_rows, start_row);
+        auto ub = upper_bound(offsets, offsets + num_rows, end_row - 1);
+        ps::Key master_key = krs[i].begin() + key;
+        pskv.keys.push_back(master_key);
+        pskv.lens.push_back(0);
+        for (auto offset = lb; offset < ub; offset++) {
+          ps::Key ps_key = krs[i].begin() + key + *offset - start_row;
+          CHECK_LT(ps_key, krs[i].end());
+          pskv.keys.push_back(ps_key);
+          pskv.lens.push_back(unit_len);
+          pskv.size += unit_len;
+        }
+        start_row = end_row;
+      }
+      CHECK_EQ(static_cast<size_t>(pskv.size), size);
+    } else {
+      // send it to a single random picked server
+      int server = (key * 9973) % num_servers;
+      ps::Key master_key = krs[server].begin() + key;
+      pskv.keys.push_back(master_key);
+      pskv.lens.push_back(0);
+      for (int64_t i = 0; i < num_rows; i++) {
+        ps::Key ps_key = krs[server].begin() + key + offsets[i];
+        CHECK_LT(ps_key, krs[server].end());
+        pskv.keys.push_back(ps_key);
+        pskv.lens.push_back(unit_len);
+      }
+      pskv.size = size;
     }
-    // send it to a single random picked server
-    int server = (key * 9973) % num_servers;
-    ps::Key master_key = krs[server].begin() + key;
-    pskv.keys.push_back(master_key);
-    pskv.lens.push_back(0);
-    for (int64_t i = 0; i < num_rows; i++) {
-      ps::Key ps_key = krs[server].begin() + key + offsets[i];
-      CHECK_LT(ps_key, krs[server].end());
-      pskv.keys.push_back(ps_key);
-      pskv.lens.push_back(unit_len);
-    }
-    pskv.size = size;
     return pskv;
   }
 

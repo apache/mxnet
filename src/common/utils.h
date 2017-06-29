@@ -301,6 +301,47 @@ typename helper::UniqueIf<T>::UnknownBound MakeUnique(size_t n) {
 template <class T, class... Args>
 typename helper::UniqueIf<T>::KnownBound MakeUnique(Args&&... args) = delete;
 
+// returns an iterator pointing to the first element in the range [first, last)
+// that is greater or equal to value, or last if no such element is found.
+template<typename T>
+const T* lower_bound(const T *first, const T* last, const T& value) {
+  const T* it;
+  T count, step;
+  count = last - first;
+  while (count > 0) {
+    it = first;
+    step = count / 2;
+    it += step;
+    if (*it < value) {
+      first = ++it;
+      count -= step + 1;
+    } else {
+      count = step;
+    }
+  }
+  return first;
+}
+
+// returns an iterator pointing to the first element in the range [first, last)
+// that is greater than value, or last if no such element is found.
+template<typename T>
+const T* upper_bound(const T *first, const T* last, const T& value) {
+  const T* it;
+  T count, step;
+  count = last - first;
+  while (count > 0) {
+    it = first;
+    step = count / 2;
+    it += step;
+    if (!(value < *it)) {
+      first = ++it;
+      count -= step + 1;
+    } else {
+      count = step;
+    }
+  }
+  return first;
+}
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_
