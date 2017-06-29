@@ -51,7 +51,7 @@ inline void CastStorageDnsRspImpl(mshadow::Stream<cpu>* s, const TBlob& dns, NDA
   CHECK_EQ(rsp->storage_type(), kRowSparseStorage);
   CHECK_EQ(dns.shape_, rsp->shape());
   MSHADOW_TYPE_SWITCH(dns.type_flag_, DType, {  // data type
-    MSHADOW_INT_TYPE_SWITCH(rsp->aux_type(rowsparse::kIdx), RType, {  // row idx type
+    MSHADOW_IDX_TYPE_SWITCH(rsp->aux_type(rowsparse::kIdx), RType, {  // row idx type
       const index_t num_rows = dns.shape_[0];
       const index_t num_cols = dns.shape_[1];
       rsp->CheckAndAllocAuxData(rowsparse::kIdx, mshadow::Shape1(num_rows));
@@ -102,7 +102,7 @@ void CastStorageRspDnsImpl(mshadow::Stream<xpu>* s, const NDArray& rsp, TBlob* d
   using namespace mshadow::expr;
   CHECK_EQ(rsp.storage_type(), kRowSparseStorage);
   MSHADOW_TYPE_SWITCH(dns->type_flag_, DType, {
-    MSHADOW_INT_TYPE_SWITCH(rsp.aux_type(rowsparse::kIdx), IType, {
+    MSHADOW_IDX_TYPE_SWITCH(rsp.aux_type(rowsparse::kIdx), IType, {
       // assign zeros
       mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(s, dns->Size(), dns->dptr<DType>());
       if (rsp.storage_initialized()) {
@@ -186,8 +186,8 @@ inline void CastStorageDnsCsrImpl(mshadow::Stream<cpu>* s, const TBlob& dns, NDA
   CHECK_EQ(dns.shape_.ndim(), 2);
   CHECK_EQ(dns.shape_, csr->shape());
   MSHADOW_TYPE_SWITCH(dns.type_flag_, DType, {  // data type
-    MSHADOW_INT_TYPE_SWITCH(csr->aux_type(csr::kIndPtr), IType, {  // indptr type
-      MSHADOW_INT_TYPE_SWITCH(csr->aux_type(csr::kIdx), CType, {  // col idx type
+    MSHADOW_IDX_TYPE_SWITCH(csr->aux_type(csr::kIndPtr), IType, {  // indptr type
+      MSHADOW_IDX_TYPE_SWITCH(csr->aux_type(csr::kIdx), CType, {  // col idx type
         const index_t num_rows = dns.shape_[0];
         const index_t num_cols = dns.shape_[1];
         csr->CheckAndAllocAuxData(csr::kIndPtr, mshadow::Shape1(num_rows+1));
@@ -248,8 +248,8 @@ void CastStorageCsrDnsImpl(mshadow::Stream<xpu>* s, const NDArray& csr, TBlob* d
   CHECK_EQ(dns->shape_.ndim(), 2);
   CHECK_EQ(dns->shape_, csr.shape());
   MSHADOW_TYPE_SWITCH(dns->type_flag_, DType, {  // data type
-    MSHADOW_INT_TYPE_SWITCH(csr.aux_type(csr::kIndPtr), IType, {  // indptr type
-      MSHADOW_INT_TYPE_SWITCH(csr.aux_type(csr::kIdx), CType, {  // col idx type
+    MSHADOW_IDX_TYPE_SWITCH(csr.aux_type(csr::kIndPtr), IType, {  // indptr type
+      MSHADOW_IDX_TYPE_SWITCH(csr.aux_type(csr::kIdx), CType, {  // col idx type
         const index_t num_rows = dns->shape_[0];
         const index_t num_cols = dns->shape_[1];
         DType* dns_data = dns->dptr<DType>();

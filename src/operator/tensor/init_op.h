@@ -138,7 +138,7 @@ inline void FillDnsZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
   using namespace mxnet_op;
   CHECK_EQ(dst->storage_type(), kRowSparseStorage);
   MSHADOW_REAL_TYPE_SWITCH(dst->dtype(), DType, {
-    MSHADOW_INT_TYPE_SWITCH(dst->aux_type(kIdx), IType, {
+    MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(kIdx), IType, {
       auto num_rows = dst->shape()[0];
       dst->CheckAndAlloc({Shape1(num_rows)});
       auto idx = dst->aux_data(kIdx).FlatTo1D<xpu, IType>(s);

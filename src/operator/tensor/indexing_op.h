@@ -891,7 +891,7 @@ void SparseRetainOpForwardEx(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(output_data.type_flag_, DType, {  // output data type
-    MSHADOW_INT_TYPE_SWITCH(output_idx.type_flag_, RType, {  // row index data type
+    MSHADOW_IDX_TYPE_SWITCH(output_idx.type_flag_, RType, {  // row index data type
       MSHADOW_TYPE_SWITCH(idx_data.type_flag_, IType, {  // index array data type
         Kernel<set_zero, xpu>::Launch(s, output_data.Size(), output_data.dptr<DType>());
         Kernel<SparseRetainRspForward, xpu>::Launch(s, idx_data.Size(), output_data.dptr<DType>(),
@@ -949,7 +949,7 @@ void SparseRetainOpBackwardEx(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(out_grad_data.type_flag_, DType, {  // output data type
-    MSHADOW_INT_TYPE_SWITCH(in_grad_idx.type_flag_, RType, {  // row index data type
+    MSHADOW_IDX_TYPE_SWITCH(in_grad_idx.type_flag_, RType, {  // row index data type
       MSHADOW_TYPE_SWITCH(idx_data.type_flag_, IType, {  // index array data type
         MXNET_ASSIGN_REQ_SWITCH(req[sr::kArr], req_type, {
           Kernel<SparseRetainRspBackward<req_type>, xpu>::Launch(
