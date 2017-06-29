@@ -1013,19 +1013,22 @@ class Symbol(SymbolBase):
         indptr = [0]
         if len(args) != 0:
             keys = None
-            for s in args:
+            for i, s in enumerate(args):
                 if s is not None:
                     if not isinstance(s, tuple):
-                        raise TypeError('Arguments must be shapes (tuple)')
+                        raise TypeError("Arguments need to be shapes (tuple), "
+                                        "but argument %d is %s." % (i, type(s)))
                     sdata.extend(s)
                 indptr.append(len(sdata))
         else:
             keys = []
             for k, v in kwargs.items():
-                if isinstance(v, tuple):
-                    keys.append(c_str(k))
-                    sdata.extend(v)
-                    indptr.append(len(sdata))
+                if not isinstance(v, tuple):
+                    raise TypeError("Arguments need to be shapes (tuple), "
+                                    "but '%s' is %s." % (k, type(v)))
+                keys.append(c_str(k))
+                sdata.extend(v)
+                indptr.append(len(sdata))
         arg_shape_size = mx_uint()
         arg_shape_ndim = ctypes.POINTER(mx_uint)()
         arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
