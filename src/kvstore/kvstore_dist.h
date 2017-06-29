@@ -242,7 +242,7 @@ class KVStoreDist : public KVStoreLocal {
       auto& send_buf = comm_buf_[key];
       const auto storage_type = merged.storage_type();
       if (merged.ctx().dev_mask() == cpu::kDevMask) {
-        // make sure the previous pull is completed
+        // make sure the previous push/pull is completed
         send_buf.WaitToWrite();
         send_buf = merged;  // avoid memory copy
       } else {

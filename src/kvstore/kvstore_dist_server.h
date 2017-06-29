@@ -194,19 +194,18 @@ class KVStoreDistServer {
                        ps::KVServer<real_t>* server) {
     int master_key = DecodeKey(req_data.keys[0]);
     auto num_rows = req_data.keys.size() - 1;
+    auto& stored = store_[master_key];
     if (req_meta.push) {
-      // TODO(haibin) support lazy init
       CHECK_GT(req_data.lens.size(), 0) << "req_data.lens cannot be empty";
       CHECK_EQ(req_data.lens[0], 0);
       real_t* data = req_data.vals.data();
-      // TODO move to uppper
-      auto& stored = store_[master_key];
       if (stored.is_none()) {
         if (log_verbose_) LOG(INFO) << "initial push: " << master_key;
         // initialization
-      CHECK_GT(num_rows, 0) << "empty init not supported";
-      auto unit_len = req_data.lens[1];
-      CHECK_GT(unit_len, 0);
+        // TODO(haibin) support lazy init
+        CHECK_GT(num_rows, 0) << "init with empty data is not supported";
+        auto unit_len = req_data.lens[1];
+        CHECK_GT(unit_len, 0);
         size_t ds[] = {num_rows, (size_t) unit_len};
         TShape dshape(ds, ds + 2);
         CHECK_EQ(req_data.vals.size(), num_rows * unit_len);
@@ -220,30 +219,24 @@ class KVStoreDistServer {
       }
       // synced push
       if (sync_mode_) {
-        // synced push
-        if (log_verbose_) LOG(INFO) << "sync push: " << master_key << " num_rows = " << num_rows << " " << req_data.keys;
+        if (log_verbose_) LOG(INFO) << "sync push: " << master_key << " " << req_data.keys;
         auto& merged = merge_buf_[master_key];
         if (merged.array.is_none()) {
           merged.array = NDArray(kRowSparseStorage, stored.shape(), Context());
         }
         if (num_rows == 0) {
-        if (merged.request.size() == 0) {
-          merged.array = NDArray(kRowSparseStorage, stored.shape(), Context());
-          /*
-          merged.array.WaitToWrite();
-          merged.array.set_storage_shape(mshadow::Shape1(0));
-          merged.array.set_storage_shape(mshadow::Shape(0));
-          //CopyFromTo(recved, &merged.array, 0);
-          */
-        } else {
-          // Do nothing
+          // reset to zeros
+          if (merged.request.size() == 0) {
+            merged.array = NDArray(kRowSparseStorage, stored.shape(), Context());
+          } else {
+            // nothing to aggregate
+          }
+          merged.request.push_back(req_meta);
+          ApplyUpdates(master_key, &merged,  &stored, server);
+          return;
         }
-        merged.request.push_back(req_meta);
-        ApplyUpdates(master_key, &merged,  &stored, server);
-        return;
-        }
-      auto unit_len = req_data.lens[1];
-      CHECK_GT(unit_len, 0);
+        auto unit_len = req_data.lens[1];
+        CHECK_GT(unit_len, 0);
         // indices
         std::vector<int64_t> indices(num_rows);
         DecodeRowIds(req_data.keys, indices.data(), master_key, num_rows);
@@ -281,10 +274,12 @@ class KVStoreDistServer {
       } else {
         // async push
         if (log_verbose_) LOG(INFO) << "async push: " << master_key;
-        // TODO(haibin) handle empty input:
-      auto unit_len = req_data.lens[1];
-      CHECK_GT(unit_len, 0);
-        auto& stored = store_[master_key];
+        if (num_rows == 0) {
+          server->Response(req_meta);
+          return;
+        }
+        auto unit_len = req_data.lens[1];
+        CHECK_GT(unit_len, 0);
         // indices
         std::vector<int64_t> indices(num_rows);
         DecodeRowIds(req_data.keys, indices.data(), master_key, num_rows);
@@ -302,17 +297,16 @@ class KVStoreDistServer {
       }
     } else {
       // pull
-      if (log_verbose_) LOG(INFO) << "pull: " << master_key << " num_rows = " << num_rows;
+      if (log_verbose_) LOG(INFO) << "pull: " << master_key;
       ps::KVPairs<real_t> response;
-      auto& stored = store_[master_key];
-      CHECK(!stored.is_none()) << "init " << master_key << " first";
       if (num_rows == 0) {
-std::vector<int> lens(req_data.keys.size(), 0);
-response.keys = req_data.keys;
+        std::vector<int> lens(req_data.keys.size(), 0);
+        response.keys = req_data.keys;
         response.lens.CopyFrom(lens.begin(), lens.end());
         server->Response(req_meta, response);
         return;
       }
+      CHECK(!stored.is_none()) << "init " << master_key << " first";
       auto shape = stored.shape();
       auto unit_len = shape.ProdShape(1, shape.ndim());
       const float* data = stored.data().dptr<float>();
