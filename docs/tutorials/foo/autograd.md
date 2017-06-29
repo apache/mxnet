@@ -18,7 +18,6 @@ attach gradient buffers to them:
 
 ```python
 x = mx.nd.array([[1, 2], [3, 4]])
-dx = mx.nd.zeros_like(x)
 x.attach_grad()
 ```
 
