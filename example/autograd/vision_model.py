@@ -1,6 +1,6 @@
 from __future__ import division
 
-from mxnet import initializer
+from mxnet import initializer as init
 from mxnet.foo import nn
 
 # Helpers
@@ -167,19 +167,21 @@ class ResnetV1(nn.HybridLayer):
                 self.pool0 = nn.MaxPool2D(3, 2, 1)
 
             self.body = nn.HSequential()
-            for i, num_layer in enumerate(layers):
-                stride = 1 if i == 0 else 2
-                self.body.add(self._make_layer(block, num_layer, filters[i+1],
-                                               stride, in_filters=filters[i]))
+            with self.body.name_scope():
+                for i, num_layer in enumerate(layers):
+                    stride = 1 if i == 0 else 2
+                    self.body.add(self._make_layer(block, num_layer, filters[i+1],
+                                                   stride, in_filters=filters[i]))
 
             self.pool1 = nn.GlobalAvgPool2D()
             self.dense1 = nn.Dense(classes, in_units=filters[-1])
 
     def _make_layer(self, block, layers, filters, stride, in_filters=0):
         layer = nn.HSequential()
-        layer.add(block(filters, stride, True, in_filters=in_filters))
-        for _ in range(layers-1):
-            layer.add(block(filters, 1, False, in_filters=filters))
+        with layer.name_scope():
+            layer.add(block(filters, stride, True, in_filters=in_filters))
+            for _ in range(layers-1):
+                layer.add(block(filters, 1, False, in_filters=filters))
         return layer
 
     def hybrid_forward(self, F, x):
@@ -214,12 +216,13 @@ class ResnetV2(nn.HybridLayer):
                 self.pool0 = nn.MaxPool2D(3, 2, 1)
 
             self.body = nn.HSequential()
-            in_filters = filters[0]
-            for i, num_layer in enumerate(layers):
-                stride = 1 if i == 0 else 2
-                self.body.add(self._make_layer(block, num_layer, filters[i+1],
-                                               stride, in_filters=in_filters))
-                in_filters = filters[i+1]
+            with self.body.name_scope():
+                in_filters = filters[0]
+                for i, num_layer in enumerate(layers):
+                    stride = 1 if i == 0 else 2
+                    self.body.add(self._make_layer(block, num_layer, filters[i+1],
+                                                   stride, in_filters=in_filters))
+                    in_filters = filters[i+1]
 
             self.bn1 = nn.BatchNorm(num_features=in_filters)
             self.pool1 = nn.GlobalAvgPool2D()
@@ -227,9 +230,10 @@ class ResnetV2(nn.HybridLayer):
 
     def _make_layer(self, block, layers, filters, stride, in_filters=0):
         layer = nn.HSequential()
-        layer.add(block(filters, stride, True, in_filters=in_filters))
-        for _ in range(layers-1):
-            layer.add(block(filters, 1, False, in_filters=filters))
+        with layer.name_scope():
+            layer.add(block(filters, stride, True, in_filters=in_filters))
+            for _ in range(layers-1):
+                layer.add(block(filters, 1, False, in_filters=filters))
         return layer
 
     def hybrid_forward(self, F, x):
@@ -258,31 +262,33 @@ class VGG(nn.HybridLayer):
             assert len(layers) == len(filters)
             self.features = self._make_features(layers, filters, batch_norm)
             self.classifier = nn.HSequential()
-            self.classifier.add(nn.Dense(4096, activation='relu',
-                                         kernel_initializer=initializer.Normal(),
-                                         bias_initializer='zeros'))
-            self.classifier.add(nn.Dropout(rate=0.5))
-            self.classifier.add(nn.Dense(4096, activation='relu',
-                                         kernel_initializer=initializer.Normal(),
-                                         bias_initializer='zeros'))
-            self.classifier.add(nn.Dropout(rate=0.5))
-            self.classifier.add(nn.Dense(classes,
-                                         kernel_initializer=initializer.Normal(),
-                                         bias_initializer='zeros'))
+            with self.classifier.name_scope():
+                self.classifier.add(nn.Dense(4096, activation='relu',
+                                             kernel_initializer=init.Normal(),
+                                             bias_initializer='zeros'))
+                self.classifier.add(nn.Dropout(rate=0.5))
+                self.classifier.add(nn.Dense(4096, activation='relu',
+                                             kernel_initializer=init.Normal(),
+                                             bias_initializer='zeros'))
+                self.classifier.add(nn.Dropout(rate=0.5))
+                self.classifier.add(nn.Dense(classes,
+                                             kernel_initializer=init.Normal(),
+                                             bias_initializer='zeros'))
 
     def _make_features(self, layers, filters, batch_norm):
         featurizer = nn.HSequential()
-        for i, num in enumerate(layers):
-            for _ in range(num):
-                featurizer.add(nn.Conv2D(filters[i], kernel_size=3, padding=1,
-                                         kernel_initializer=initializer.Xavier(rnd_type='gaussian',
-                                                                               factor_type='out',
-                                                                               magnitude=2),
-                                         bias_initializer='zeros'))
-                if batch_norm:
-                    featurizer.add(nn.BatchNorm())
-                featurizer.add(nn.Activation('relu'))
-            featurizer.add(nn.MaxPool2D(strides=2))
+        with featurizer.name_scope():
+            for i, num in enumerate(layers):
+                for _ in range(num):
+                    featurizer.add(nn.Conv2D(filters[i], kernel_size=3, padding=1,
+                                             kernel_initializer=init.Xavier(rnd_type='gaussian',
+                                                                            factor_type='out',
+                                                                            magnitude=2),
+                                             bias_initializer='zeros'))
+                    if batch_norm:
+                        featurizer.add(nn.BatchNorm())
+                    featurizer.add(nn.Activation('relu'))
+                featurizer.add(nn.MaxPool2D(strides=2))
         return featurizer
 
     def hybrid_forward(self, F, x):

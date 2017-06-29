@@ -43,7 +43,7 @@ if opt.benchmark:
 model_name = opt.model
 
 if model_name.startswith('resnet'):
-    net = model.get_vision_model(opt.model, classes=classes, use_thumbnail=opt.thumbnail)
+    net = model.get_vision_model(opt.model, classes=classes, use_thumbnail=opt.use_thumbnail)
 elif model_name.startswith('vgg'):
     net = model.get_vision_model(opt.model, classes=classes, batch_norm=opt.batch_norm)
 else:
