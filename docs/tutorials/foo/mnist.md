@@ -212,8 +212,8 @@ class Net(nn.Layer):
             self.fc2 = nn.Dense(10)
 
     def forward(self, x):
-        x = self.pool1(F.relu(self.conv1(x)))
-        x = self.pool2(F.relu(self.conv2(x)))
+        x = self.pool1(F.tanh(self.conv1(x)))
+        x = self.pool2(F.tanh(self.conv2(x)))
         # 0 means copy over size from corresponding dimension.
         # -1 means infer size from the rest of dimensions.
         x = x.reshape((0, -1))
