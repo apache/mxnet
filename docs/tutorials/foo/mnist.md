@@ -120,6 +120,7 @@ There are many predefined loss functions in foo.loss. Here we use
 training scope which is defined by `autograd.record()`.
 
 ```python
+epoch = 10
 # Use Accuracy as the evaluation metric.
 metric = mx.metric.Accuracy()
 
