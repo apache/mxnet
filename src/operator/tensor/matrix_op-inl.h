@@ -777,9 +777,9 @@ void DotCsrDnsRspImpl(const OpContext& ctx,
   const TBlob row_idx_out = ret->aux_data(rowsparse::kIdx);
 
   MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
-    MSHADOW_INT_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
-      MSHADOW_INT_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
-        MSHADOW_INT_TYPE_SWITCH(row_idx_out.type_flag_, RType, {  // col idx type
+    MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
+      MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
+        MSHADOW_IDX_TYPE_SWITCH(row_idx_out.type_flag_, RType, {  // col idx type
           if (std::is_same<xpu, cpu>::value) {  // cpu parallelization by row blocks
             if (kWriteTo == req) {
               mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
