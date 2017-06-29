@@ -38,7 +38,7 @@ is equivalent to `mx.nd.sum(z).backward()`:
 
 ```python
 z.backward()
-print(x.grad.asnumpy())
+print(x.grad)
 ```
 
 Now, let's see if this is the expected output.
