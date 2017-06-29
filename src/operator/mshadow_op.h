@@ -136,13 +136,20 @@ struct tanh_grad {
 struct softrelu {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(log1pf(expf(a)));
+    // Avoid overflow of exp for large inputs.
+    // Thresholds 20.0 is chosen such that softrelu(a) = a
+    // for a > 20 using floating precision.
+    if (a > DType(20.0)) {
+      return a;
+    } else {
+      return DType(log1pf(expf(a)));
+    }
   }
 };
 struct softrelu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f) - expf(-a));
+    return -DType(expm1f(-a));
   }
 };
 
@@ -676,15 +683,19 @@ struct mod {
       return DType(0);
     } else if (b < DType(0)) {
       if (a < DType(0)) {
-        return DType(-::fmod(-a, -b));
+        return DType(-::fmod(-static_cast<double>(a), -static_cast<double>(b)));
       } else {
-        return DType(::fmod(a, -b) + (::fmod(a, -b) != DType(0) ? b : DType(0)));
+        return DType(::fmod(static_cast<double>(a), -static_cast<double>(b)) +
+                     (::fmod(static_cast<double>(a), -static_cast<double>(b)) != DType(0)
+                      ? b : DType(0)));
       }
     } else {
       if (a < DType(0)) {
-        return DType(-::fmod(-a, b) + (::fmod(-a, b) != DType(0) ? b : DType(0)));
+        return DType(-::fmod(-static_cast<double>(a), static_cast<double>(b)) +
+                     (::fmod(-static_cast<double>(a), static_cast<double>(b)) != DType(0)
+                      ? b : DType(0)));
       } else {
-        return DType(::fmod(a, b));
+        return DType(::fmod(static_cast<double>(a), static_cast<double>(b)));
       }
     }
   }
@@ -777,15 +788,19 @@ struct rmod {
       return DType(0);
     } else if (a < DType(0)) {
       if (b < DType(0)) {
-        return DType(-::fmod(-b, -a));
+        return DType(-::fmod(-static_cast<double>(b), -static_cast<double>(a)));
       } else {
-        return DType(::fmod(b, -a) + (::fmod(b, -a) != DType(0) ? a : DType(0)));
+        return DType(::fmod(static_cast<double>(b), -static_cast<double>(a)) +
+                     (::fmod(static_cast<double>(b), -static_cast<double>(a)) != DType(0)
+                      ? a : DType(0)));
       }
     } else {
       if (b < DType(0)) {
-        return DType(-::fmod(-b, a) + (::fmod(-b, a) != DType(0) ? a : DType(0)));
+        return DType(-::fmod(-static_cast<double>(b), static_cast<double>(a)) +
+                     (::fmod(-static_cast<double>(b), static_cast<double>(a)) != DType(0)
+                      ? a : DType(0)));
       } else {
-        return DType(::fmod(b, a));
+        return DType(::fmod(static_cast<double>(b), static_cast<double>(a)));
       }
     }
   }

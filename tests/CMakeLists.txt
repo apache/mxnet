@@ -39,7 +39,6 @@ if(GTEST_FOUND)
       ${mxnet_LINKER_LIBS}
       )
   else()
-    message(STATUS " OpenBLAS_LIB: ${OpenBLAS_LIB}")
     target_link_libraries(${PROJECT_NAME}_unit_tests
       ${GTEST_LIBRARY}
       rt
