@@ -1112,8 +1112,8 @@ class ConvRNNCell(BaseRNNCell):
         self._h2h_kernel = h2h_kernel
         assert (self._h2h_kernel[0] % 2 == 1) and (self._h2h_kernel[1] % 2 == 1), \
             "Only support odd number, get h2h_kernel= %s" % str(h2h_kernel)
-        self._h2h_pad = ((h2h_kernel[0] + h2h_dilate[0] - 1) // 2,
-                         (h2h_kernel[1] + h2h_dilate[1] - 1) // 2)
+        self._h2h_pad = (h2h_dilate[0] * (h2h_kernel[0] - 1) // 2,
+                         h2h_dilate[1] * (h2h_kernel[1] - 1) // 2)
         self._h2h_dilate = h2h_dilate
         self._i2h_kernel = i2h_kernel
         self._i2h_stride = i2h_stride
@@ -1226,8 +1226,8 @@ class ConvLSTMCell(BaseRNNCell):
         self._h2h_kernel = h2h_kernel
         assert (self._h2h_kernel[0] % 2 == 1) and (self._h2h_kernel[1] % 2 == 1), \
             "Only support odd number, get h2h_kernel= %s" % str(h2h_kernel)
-        self._h2h_pad = ((h2h_kernel[0] + h2h_dilate[0] - 1) // 2,
-                         (h2h_kernel[1] + h2h_dilate[1] - 1) // 2)
+        self._h2h_pad = (h2h_dilate[0] * (h2h_kernel[0] - 1) // 2,
+                         h2h_dilate[1] * (h2h_kernel[1] - 1) // 2)
         self._h2h_dilate = h2h_dilate
         self._i2h_kernel = i2h_kernel
         self._i2h_stride = i2h_stride
@@ -1349,8 +1349,8 @@ class ConvGRUCell(BaseRNNCell):
         self._h2h_kernel = h2h_kernel
         assert (self._h2h_kernel[0] % 2 == 1) and (self._h2h_kernel[1] % 2 == 1), \
             "Only support odd number, get h2h_kernel= %s" % str(h2h_kernel)
-        self._h2h_pad = ((h2h_kernel[0] + h2h_dilate[0] - 1) // 2,
-                         (h2h_kernel[1] + h2h_dilate[1] - 1) // 2)
+        self._h2h_pad = (h2h_dilate[0] * (h2h_kernel[0] - 1) // 2,
+                         h2h_dilate[1] * (h2h_kernel[1] - 1) // 2)
         self._h2h_dilate = h2h_dilate
         self._i2h_kernel = i2h_kernel
         self._i2h_stride = i2h_stride
