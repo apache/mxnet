@@ -19,7 +19,7 @@ attach gradient buffers to them:
 ```python
 x = mx.nd.array([[1, 2], [3, 4]])
 dx = mx.nd.zeros_like(x)
-x.attach_grad(dx)
+x.attach_grad()
 ```
 
 Now we can define the network while running forward computation by wrapping
@@ -38,5 +38,17 @@ is equivalent to `mx.nd.sum(z).backward()`:
 
 ```python
 z.backward()
-print(x.grad)
+print(x.grad.asnumpy())
 ```
+
+Now, let's see if this is the output we wanted.
+
+Here, y = f(x), z = f(y) = f(g(x))
+which means y = 2 * x and z = 2 * x * x.
+
+After, doing backprop with `z.backward()`
+
+dy/dx = 2,
+dz/dx = 4 * x
+
+So, x.grad should be an array of [[4, 8],[12, 16]].
