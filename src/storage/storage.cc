@@ -44,8 +44,8 @@ class StorageImpl : public Storage {
           }
           if (num_gpu_device > 0) {
             CUDA_CALL(cudaSetDevice(ctx.dev_id));
-#endif  // MXNET_USE_CUDA
           }
+#endif  // MXNET_USE_CUDA
           break;
         }
       default:
