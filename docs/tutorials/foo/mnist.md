@@ -48,7 +48,8 @@ train_data = mx.io.NDArrayIter(mnist['train_data'], mnist['train_label'], batch_
 val_data = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
 ```
 
-## Training
+## Approaches
+
 We will cover a couple of approaches for performing the hand written digit recognition task. The first approach makes use of a traditional deep neural network architecture called Multilayer Percepton (MLP). We'll discuss its drawbacks and use that as a motivation to introduce a second more advanced approach called Convolution Neural Network (CNN) that has proven to work very well for image classification tasks.
 
 Now, let's import required nn modules
