@@ -177,7 +177,7 @@ def test_unfuse():
 
 def test_convrnn():
     cell = mx.rnn.ConvRNNCell(input_shape = (1, 3, 16, 10), num_hidden=10,
-                              h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
+                              h2h_kernel=(3, 3), h2h_dilate=(1, 1),
                               i2h_kernel=(3, 3), i2h_stride=(1, 1),
                               i2h_pad=(1, 1), i2h_dilate=(1, 1),
                               prefix='rnn_')
@@ -192,7 +192,7 @@ def test_convrnn():
 
 def test_convlstm():
     cell = mx.rnn.ConvLSTMCell(input_shape = (1, 3, 16, 10), num_hidden=10,
-                               h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
+                               h2h_kernel=(3, 3), h2h_dilate=(1, 1),
                                i2h_kernel=(3, 3), i2h_stride=(1, 1),
                                i2h_pad=(1, 1), i2h_dilate=(1, 1),
                                prefix='rnn_', forget_bias=1.0)
@@ -207,7 +207,7 @@ def test_convlstm():
 
 def test_convgru():
     cell = mx.rnn.ConvGRUCell(input_shape = (1, 3, 16, 10), num_hidden=10,
-                              h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
+                              h2h_kernel=(3, 3), h2h_dilate=(1, 1),
                               i2h_kernel=(3, 3), i2h_stride=(1, 1),
                               i2h_pad=(1, 1), i2h_dilate=(1, 1),
                               prefix='rnn_')

@@ -1081,8 +1081,6 @@ class ConvRNNCell(BaseRNNCell):
         Number of units in output symbol.
     h2h_kernel : tuple of int, default (3, 3)
         Kernel of Convolution operator in state-to-state transitions.
-    h2h_pad : tuple of int, default (1, 1)
-        Pad of Convolution operator in state-to-state transitions.
     h2h_dilate : tuple of int, default (1, 1)
         Dilation of Convolution operator in state-to-state transitions.
     i2h_kernel : tuple of int, default (3, 3)
@@ -1104,14 +1102,18 @@ class ConvRNNCell(BaseRNNCell):
         Layout of ConvolutionOp
     """
     def __init__(self, input_shape, num_hidden,
-                 h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
-                 i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
+                 h2h_kernel=(3, 3), h2h_dilate=(1, 1),
+                 i2h_kernel=(3, 3), i2h_stride=(1, 1),
+                 i2h_pad=(1, 1), i2h_dilate=(1, 1),
                  activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
                  prefix='ConvRNN_', params=None, conv_layout='NCHW'):
         super(ConvRNNCell, self).__init__(prefix=prefix, params=params)
         # Convolution setting
         self._h2h_kernel = h2h_kernel
-        self._h2h_pad = h2h_pad
+        assert (self._h2h_kernel[0] % 2 == 1) and (self._h2h_kernel[1] % 2 == 1), \
+            "Only support odd number, get h2h_kernel= %s" % str(h2h_kernel)
+        self._h2h_pad = ((h2h_kernel[0] + h2h_dilate[0] - 1) / 2,
+                         (h2h_kernel[1] + h2h_dilate[1] - 1) / 2)
         self._h2h_dilate = h2h_dilate
         self._i2h_kernel = i2h_kernel
         self._i2h_stride = i2h_stride
@@ -1190,8 +1192,6 @@ class ConvLSTMCell(BaseRNNCell):
         Number of units in output symbol.
     h2h_kernel : tuple of int, default (3, 3)
         Kernel of Convolution operator in state-to-state transitions.
-    h2h_pad : tuple of int, default (1, 1)
-        Pad of Convolution operator in state-to-state transitions.
     h2h_dilate : tuple of int, default (1, 1)
         Dilation of Convolution operator in state-to-state transitions.
     i2h_kernel : tuple of int, default (3, 3)
@@ -1215,15 +1215,19 @@ class ConvLSTMCell(BaseRNNCell):
         Layout of ConvolutionOp
     """
     def __init__(self, input_shape, num_hidden,
-                 h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
-                 i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
+                 h2h_kernel=(3, 3), h2h_dilate=(1, 1),
+                 i2h_kernel=(3, 3), i2h_stride=(1, 1),
+                 i2h_pad=(1, 1), i2h_dilate=(1, 1),
                  activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
                  prefix='ConvLSTM_', params=None, forget_bias=1.0,
                  conv_layout='NCHW'):
         super(ConvLSTMCell, self).__init__(prefix=prefix, params=params)
         # Convolution setting
         self._h2h_kernel = h2h_kernel
-        self._h2h_pad = h2h_pad
+        assert (self._h2h_kernel[0] % 2 == 1) and (self._h2h_kernel[1] % 2 == 1), \
+            "Only support odd number, get h2h_kernel= %s" % str(h2h_kernel)
+        self._h2h_pad = ((h2h_kernel[0] + h2h_dilate[0] - 1) / 2,
+                         (h2h_kernel[1] + h2h_dilate[1] - 1) / 2)
         self._h2h_dilate = h2h_dilate
         self._i2h_kernel = i2h_kernel
         self._i2h_stride = i2h_stride
@@ -1314,8 +1318,6 @@ class ConvGRUCell(BaseRNNCell):
         Number of units in output symbol.
     h2h_kernel : tuple of int, default (3, 3)
         Kernel of Convolution operator in state-to-state transitions.
-    h2h_pad : tuple of int, default (1, 1)
-        Pad of Convolution operator in state-to-state transitions.
     h2h_dilate : tuple of int, default (1, 1)
         Dilation of Convolution operator in state-to-state transitions.
     i2h_kernel : tuple of int, default (3, 3)
@@ -1337,14 +1339,18 @@ class ConvGRUCell(BaseRNNCell):
         Layout of ConvolutionOp
     """
     def __init__(self, input_shape, num_hidden,
-                 h2h_kernel=(3, 3), h2h_pad=(1, 1), h2h_dilate=(1, 1),
-                 i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
+                 h2h_kernel=(3, 3), h2h_dilate=(1, 1),
+                 i2h_kernel=(3, 3), i2h_stride=(1, 1),
+                 i2h_pad=(1, 1), i2h_dilate=(1, 1),
                  activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
                  prefix='ConvGRU_', params=None, conv_layout='NCHW'):
         super(ConvGRUCell, self).__init__(prefix=prefix, params=params)
         # Convolution setting
         self._h2h_kernel = h2h_kernel
-        self._h2h_pad = h2h_pad
+        assert (self._h2h_kernel[0] % 2 == 1) and (self._h2h_kernel[1] % 2 == 1), \
+            "Only support odd number, get h2h_kernel= %s" % str(h2h_kernel)
+        self._h2h_pad = ((h2h_kernel[0] + h2h_dilate[0] - 1) / 2,
+                         (h2h_kernel[1] + h2h_dilate[1] - 1) / 2)
         self._h2h_dilate = h2h_dilate
         self._i2h_kernel = i2h_kernel
         self._i2h_stride = i2h_stride
