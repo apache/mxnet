@@ -53,7 +53,7 @@ def train(epoch, ctx):
                 for x, y in zip(data, label):
                     z = net(x)
                     loss = foo.loss.softmax_cross_entropy_loss(z, y)
-                    ag.compute_gradient([loss])
+                    ag.backward([loss])
                     outputs.append(z)
             metric.update(label, outputs)
             trainer.step(batch.data[0].shape[0])

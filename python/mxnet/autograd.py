@@ -36,7 +36,7 @@ class TrainingStateScope(object):
     Example::
         with TrainingStateScope(True):
             y = model(x)
-            compute_gradient([y])
+            backward([y])
     """
     def __init__(self, enter_state):
         self._enter_state = enter_state
@@ -57,7 +57,7 @@ def record():
     Example::
         with autograd.record():
             y = model(x)
-            compute_gradient([y])
+            backward([y])
         metric.update(...)
         optim.step(...)
     """
@@ -71,7 +71,7 @@ def pause():
     Example::
         with autograd.record():
             y = model(x)
-            compute_gradient([y])
+            backward([y])
             with autograd.pause():
                 # testing, IO, gradient updates...
     """
