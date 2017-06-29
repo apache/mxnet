@@ -41,14 +41,14 @@ z.backward()
 print(x.grad.asnumpy())
 ```
 
-Now, let's see if this is the output we wanted.
+Now, let's see if this is the expected output.
 
 Here, y = f(x), z = f(y) = f(g(x))
 which means y = 2 * x and z = 2 * x * x.
 
-After, doing backprop with `z.backward()`
+After, doing backprop with `z.backward()`, we will get gradient dz/dx as follows:
 
 dy/dx = 2,
 dz/dx = 4 * x
 
-So, x.grad should be an array of [[4, 8],[12, 16]].
+So, we should get x.grad as an array of [[4, 8],[12, 16]].

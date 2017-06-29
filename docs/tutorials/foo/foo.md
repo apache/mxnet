@@ -43,9 +43,9 @@ class Net(nn.Layer):
             # layers created in name_scope will inherit name space
             # from parent layer.
             self.conv1 = nn.Conv2D(6, kernel_size=5)
-            self.pool1 = nn.MaxPool2D(kernel_size=2)
+            self.pool1 = nn.MaxPool2D(pool_size=(2,2))
             self.conv2 = nn.Conv2D(16, kernel_size=5)
-            self.pool2 = nn.MaxPool2D(kernel_size=2)
+            self.pool2 = nn.MaxPool2D(pool_size=(2,2))
             self.fc1 = nn.Dense(120)
             self.fc2 = nn.Dense(84)
             self.fc3 = nn.Dense(10)
