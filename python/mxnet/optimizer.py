@@ -8,8 +8,9 @@ from .ndarray import NDArray, zeros, clip, sqrt, sign, array
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update)
 #                      mp_sgd_update, mp_sgd_mom_update)
 from .random import normal
-import numpy as np
-from .ndarray import ones, ones_like
+from numpy import ones, count_nonzero
+from .ndarray import argsort
+from .ndarray import slice as crop
 from .ndarray import abs as absolute
 
 
@@ -65,7 +66,7 @@ class Optimizer(object):
                  lr_scheduler=None, sym=None, begin_num_update=0,
                  weight_sparsity = [0], bias_sparsity = [0],
                  switch_epoch = [100000], batches_per_epoch = 100000,
-                 do_pruning = False, start_prune = False):
+                 do_pruning = False, pruning_factor = 0.0):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -98,7 +99,7 @@ class Optimizer(object):
         self.switch_epoch = switch_epoch
         self.batches_per_epoch = batches_per_epoch
         self.do_pruning = do_pruning
-        self.prune = start_prune
+        self.pruning_factor = pruning_factor
 
     opt_registry = {}
 
@@ -354,29 +355,30 @@ class Optimizer(object):
             self.epoch = epoch
             if epoch == 1:
                 self.masks_updated = False
-            if self.switch_epoch[0] == 0:
+            if self.switch_epoch[0] + 1 == epoch:
                 self.masks_updated = False
                 self.switch_epoch.pop(0)
-                if self.prune:
-                    self.bias_sparsity.pop(0)
-                    self.weight_sparsity.pop(0)
-                self.prune = not self.prune
-            self.switch_epoch[0] -= 1
+                self.bias_sparsity.pop(0)
+                self.weight_sparsity.pop(0)
 
         if not self.masks_updated:
             if epoch == 1:
                 self.masks.append(None)
-            if not self.prune:
-                self.masks[index] = ones_like(weight)
-            elif self.prune:
-                if len(weight.shape) == 1:
-                    sparsity = self.bias_sparsity[0]
-                    threshold = np.percentile(absolute(weight).asnumpy(), sparsity)
-                else:
-                    sparsity = self.weight_sparsity[0]
-                    threshold = np.percentile(absolute(weight).asnumpy(), sparsity)
-                self.masks[index] = absolute(weight) >= threshold
-            logging.info('nonzeros in mask\t' + str(np.count_nonzero(self.masks[index].asnumpy()) / float(self.masks[index].size)))
+            if len(weight.shape) == 1:
+                sparsity = self.bias_sparsity[0]
+            else:
+                sparsity = self.weight_sparsity[0]
+            threshold = int(sparsity * weight.size / 100.0)
+            mask = ones(weight.size)
+            if threshold > 0:
+                sort = argsort(absolute(weight), axis=None)
+                sort = array(sort, dtype ='int32')
+                sort = crop(sort, begin = 0, end = threshold).asnumpy()
+                mask[sort] = 0.0
+            self.masks[index] = array(mask, weight.context).reshape(weight.shape)
+            logging.info('nonzeros in mask\t' + str(count_nonzero(self.masks[index].asnumpy()) / float(self.masks[index].size)))
+
+        return not self.masks_updated
 
 # convenience wrapper for Optimizer.Register
 register = Optimizer.register   # pylint: disable=invalid-name
@@ -437,7 +439,13 @@ class SGD(Optimizer):
         wd = self._get_wd(index)
 
         if self.do_pruning:
-            self.update_masks(index, weight)
+            if self.update_masks(index, weight):
+                logging.info('nonzeros in weight\t' + str(count_nonzero(weight.asnumpy()) / float(weight.size)))
+                weight[:] = weight * (self.pruning_factor + ((1.0 - self.pruning_factor) * self.masks[index]))
+                logging.info('nonzeros in weight\t' + str(count_nonzero(weight.asnumpy()) / float(weight.size)) + '\n')
+            grad[:] = grad * self.masks[index]
+            if state is not None:
+                state[:] = state * self.masks[index]
 
         kwargs = {'rescale_grad': self.rescale_grad}
         if self.momentum > 0:
@@ -460,12 +468,6 @@ class SGD(Optimizer):
         #    else:
         #        mp_sgd_update(weight, grad, state[1], out=weight,
         #                      lr=lr, wd=wd, **kwargs)
-
-        if self.do_pruning:
-            weight[:] = weight * self.masks[index]
-            grad[:] = grad * self.masks[index]
-            if state is not None:
-                state[:] = state * self.masks[index]
 
 @register
 class DCASGD(Optimizer):
