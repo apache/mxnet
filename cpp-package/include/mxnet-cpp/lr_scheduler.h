@@ -51,7 +51,7 @@ class FactorScheduler : public LRScheduler {
   }
 
   float GetLR(unsigned num_update) override {
-    while (num_update > count_ + step_) {
+    while (num_update > unsigned(count_ + step_)) {
       count_ += step_;
       base_lr_ *= factor_;
       if (base_lr_ < stop_factor_lr_) {
