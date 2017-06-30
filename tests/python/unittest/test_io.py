@@ -139,14 +139,9 @@ def test_LibSVMIter():
             fout.write('-3.0 2:1.2\n')
             fout.write('4 1:1.0 2:-1.2\n')
 
-        data_dir = os.path.join(os.getcwd(), 'data')
-        f = (data_path, label_path, (3,), (3,), 3)
-        # TODO refactor this
-        data_train = mx.io.LibSVMIter(data_libsvm=f[0],
-                                      label_libsvm=f[1],
-                                      data_shape=f[2],
-                                      label_shape=f[3],
-                                      batch_size=f[4])
+        data_dir = os.path.join(cwd, 'data')
+        data_train = mx.io.LibSVMIter(data_libsvm=data_path, label_libsvm=label_path,
+                                      data_shape=(3, ), label_shape=(3, ), batch_size=3)
 
         first = mx.nd.array([[ 0.5, 0., 1.2], [ 0., 0., 0.], [ 0.6, 2.4, 1.2]])
         second = mx.nd.array([[ 0., 0., -1.2], [ 0.5, 0., 1.2], [ 0., 0., 0.]])
@@ -167,7 +162,7 @@ def test_LibSVMIter():
         data_dir = os.path.join(os.getcwd(), 'data')
         get_data(data_dir, news_metadata['name'], news_metadata['url'],
                  news_metadata['origin_name'])
-        path = os.path.join(os.getcwd(), news_metadata['name'])
+        path = os.path.join(data_dir, news_metadata['name'])
         data_train = mx.io.LibSVMIter(data_libsvm=path,
                                       data_shape=(news_metadata['shape'], ),
                                       batch_size=512)
