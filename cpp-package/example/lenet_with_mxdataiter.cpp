@@ -85,7 +85,13 @@ int main(int argc, char const *argv[]) {
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
   opt->SetParam("momentum", 0.9)
      ->SetParam("rescale_grad", 1.0)
-     ->SetParam("clip_gradient", 10);
+     ->SetParam("clip_gradient", 10)
+     ->SetParam("lr", learning_rate)
+     ->SetParam("wd", weight_decay);
+
+
+  auto *exec = lenet.SimpleBind(Context::gpu(), args_map);
+  auto arg_names = lenet.ListArguments();
 
   for (int iter = 0; iter < max_epoch; ++iter) {
     LG << "Epoch: " << iter;
@@ -95,11 +101,13 @@ int main(int argc, char const *argv[]) {
       args_map["data"] = data_batch.data.Copy(Context::gpu());
       args_map["data_label"] = data_batch.label.Copy(Context::gpu());
       NDArray::WaitAll();
-      auto *exec = lenet.SimpleBind(Context::gpu(), args_map);
       exec->Forward(true);
       exec->Backward();
-      exec->UpdateAll(opt, learning_rate, weight_decay);
-      delete exec;
+      // Update parameters
+      for (size_t i = 0; i < arg_names.size(); ++i) {
+        if (arg_names[i] == "data" || arg_names[i] == "data_label") continue;
+        opt->Update(i, exec->arg_arrays[i], exec->grad_arrays[i]);
+      }
     }
 
     Accuracy acu;
@@ -109,14 +117,14 @@ int main(int argc, char const *argv[]) {
       args_map["data"] = data_batch.data.Copy(Context::gpu());
       args_map["data_label"] = data_batch.label.Copy(Context::gpu());
       NDArray::WaitAll();
-      auto *exec = lenet.SimpleBind(Context::gpu(), args_map);
       exec->Forward(false);
       NDArray::WaitAll();
       acu.Update(data_batch.label, exec->outputs[0]);
-      delete exec;
     }
     LG << "Accuracy: " << acu.Get();
   }
+
+  delete exec;
   MXNotifyShutdown();
   return 0;
 }

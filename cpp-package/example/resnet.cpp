@@ -165,11 +165,14 @@ int main(int argc, char const *argv[]) {
       .CreateDataIter();
 
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
-  opt->SetParam("momentum", 0.9)
+  opt->SetParam("lr", learning_rate)
+     ->SetParam("wd", weight_decay)
+     ->SetParam("momentum", 0.9)
      ->SetParam("rescale_grad", 1.0 / batch_size)
      ->SetParam("clip_gradient", 10);
 
   auto *exec = resnet.SimpleBind(Context::gpu(), args_map);
+  auto arg_names = resnet.ListArguments();
 
   for (int iter = 0; iter < max_epoch; ++iter) {
     LG << "Epoch: " << iter;
@@ -182,7 +185,11 @@ int main(int argc, char const *argv[]) {
 
       exec->Forward(true);
       exec->Backward();
-      exec->UpdateAll(opt, learning_rate, weight_decay);
+
+      for (size_t i = 0; i < arg_names.size(); ++i) {
+        if (arg_names[i] == "data" || arg_names[i] == "data_label") continue;
+        opt->Update(i, exec->arg_arrays[i], exec->grad_arrays[i]);
+      }
       NDArray::WaitAll();
     }
 
