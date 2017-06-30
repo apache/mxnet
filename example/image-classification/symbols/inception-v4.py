@@ -11,8 +11,6 @@ Reference:
     Inception-v4, Inception-ResNet and the Impact of Residual Connections on Learning
     Christian Szegedy, Sergey Ioffe, Vincent Vanhoucke
     arXiv.1602.07261
-
-
 '''
 import find_mxnet
 import mxnet as mx
