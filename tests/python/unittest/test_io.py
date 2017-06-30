@@ -111,7 +111,6 @@ def test_NDArrayIter_csr():
         assert_almost_equal(batch.data[0].asnumpy(), expected)
         begin += batch_size
 
-'''
 def test_LibSVMIter():
     #TODO(haibin) automatic the test instead of hard coded test
     cwd = os.getcwd()
@@ -145,10 +144,22 @@ def test_LibSVMIter():
         assert_almost_equal(data_train.getdata().asnumpy(), expected)
         i += 1
 '''
+def test_LibSVMIter():
+    kdda = os.path.join(os.getcwd(), 'news20.t')
+    data_train = mx.io.LibSVMIter(data_libsvm=kdda,
+                                  #label_libsvm=kdda,
+                                  data_shape=(62060, ),
+                                  #label_shape=f[3],
+                                  batch_size=512)
+    it = iter(data_train)
+    for batch in it:
+        print(batch.data[0])
+        #break
+'''
 
 if __name__ == "__main__":
     test_NDArrayIter()
     test_MNISTIter()
     test_Cifar10Rec()
-    # test_LibSVMIter()
+    test_LibSVMIter()
     test_NDArrayIter_csr()
