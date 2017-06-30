@@ -8,6 +8,8 @@ import argparse
 def train_imagenet(args):
 
     # arguments to change
+    num_epoch = args.num_epoch
+    batch_size = args.batch_size
     lr = args.lr
     lr_steps = [int(i) for i in args.lr_steps.split(',')]
     lr_factor = args.lr_factor
@@ -18,9 +20,13 @@ def train_imagenet(args):
     gpus = [int(i) for i in args.gpus.split(',')]
 
     # fixed arguments
-    num_epoch = 40
-    batch_size = 512
     label_name = 'softmax_label'
+    model = 'imagenet1k-resnet-50'
+    begin_epoch = 0
+    eval_metric = ['accuracy']
+    kv = 'local'
+    optimizer = 'sgd'
+    disp_batches = 500
 
     # create data iterators
     """
@@ -80,7 +86,6 @@ def train_imagenet(args):
         rand_mirror         = False)
 
     # download model
-    model = 'imagenet1k-resnet-50'
     dir_path = os.path.dirname(os.path.realpath(__file__))
     (prefix, epoch) = modelzoo.download_model(model, os.path.join(dir_path, 'model'))
     sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
@@ -88,15 +93,10 @@ def train_imagenet(args):
     # training
     context = [mx.gpu(i) for i in gpus]
     mod = mx.mod.Module(symbol = sym, context = context, label_names = [label_name,])
-    begin_epoch = 0
-    eval_metric = ['accuracy']
-    kv = 'local'
-    optimizer = 'sgd'
     batches_per_epoch = math.ceil(1281167.0 / batch_size)
     lr_steps = [batches_per_epoch * i for i in lr_steps]
     lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(step = lr_steps,
         factor = lr_factor)
-    start_pruning = True
     optimizer_params = {
             'learning_rate'     : lr,
             'lr_scheduler'      : lr_scheduler,
@@ -105,9 +105,7 @@ def train_imagenet(args):
             'switch_epoch'      : switch_epoch,
             'batches_per_epoch' : batches_per_epoch,
             'do_pruning'        : do_pruning,
-            'start_prune'       : start_pruning,
     }
-    disp_batches = 500
     batch_end_callbacks = [mx.callback.Speedometer(batch_size, disp_batches)]
     mod.fit(train,
         begin_epoch                 = begin_epoch,
@@ -134,6 +132,8 @@ def train_imagenet(args):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description = 'train Imagenet')
+    parser.add_argument('--num_epoch', type = int)
+    parser.add_argument('--batch_size', type = int)
     parser.add_argument('--lr', type = float)
     parser.add_argument('--lr_steps', type = str)
     parser.add_argument('--lr_factor', type = float)
