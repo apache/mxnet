@@ -14,6 +14,7 @@
 #include <utility>
 #include <algorithm>
 #include "./comm.h"
+#include "../engine/profiler.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -69,6 +70,13 @@ class KVStoreLocal : public KVStore {
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
 
+#if MXNET_USE_PROFILER
+    auto opr_stat = engine::Profiler::Get()->AddOprStat(comm_->pinned_ctx().dev_type, comm_->pinned_ctx().dev_id);
+    const char *name = "KVSPush";
+    strncpy(opr_stat->opr_name, name, sizeof(name) - 1);
+    SetOprStart(opr_stat);
+#endif
+
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
       const NDArray& merged = comm_->Reduce(key, grouped_vals[i], priority);
@@ -85,6 +93,9 @@ class KVStoreLocal : public KVStore {
         local = merged;
       }
     }
+#if MXNET_USE_PROFILER
+    SetOprEnd(opr_stat);
+#endif
   }
 
   void Pull(const std::vector<int>& keys,
@@ -94,12 +105,23 @@ class KVStoreLocal : public KVStore {
     std::vector<std::vector<NDArray*> > grouped_vals;
     GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
 
+#if MXNET_USE_PROFILER
+    auto opr_stat = engine::Profiler::Get()->AddOprStat(comm_->pinned_ctx().dev_type, comm_->pinned_ctx().dev_id);
+    const char *name = "KVSPull";
+    strncpy(opr_stat->opr_name, name, sizeof(name) - 1);
+    SetOprStart(opr_stat);
+#endif
+
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
       const NDArray& local = local_[key];
       CHECK(!local.is_none()) << "key " << key << " has not been inited";
       comm_->Broadcast(key, local, grouped_vals[i], priority);
     }
+
+#if MXNET_USE_PROFILER
+    SetOprEnd(opr_stat);
+#endif
   }
 
   void Push(const std::vector<std::string>& str_keys,
