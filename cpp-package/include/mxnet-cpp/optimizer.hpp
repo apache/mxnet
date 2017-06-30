@@ -113,7 +113,6 @@ inline Optimizer* OptimizerRegistry::Find(const std::string& name) {
   MXNETCPP_REGISTER_OPTIMIZER(adam, AdamOptimizer);
   MXNETCPP_REGISTER_OPTIMIZER(adagrad, AdaGradOptimizer);
   MXNETCPP_REGISTER_OPTIMIZER(adadelta, AdaDeltaOptimizer);
-  MXNETCPP_REGISTER_OPTIMIZER(ftrl, FtrlOptimizer);
   auto it = cmap().find(name);
   if (it == cmap().end())
     return nullptr;
