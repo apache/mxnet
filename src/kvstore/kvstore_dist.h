@@ -7,6 +7,7 @@
 #define MXNET_KVSTORE_KVSTORE_DIST_H_
 #include <string>
 #include <vector>
+#include <algorithm>
 #include "./kvstore_local.h"
 #include "mxnet/engine.h"
 #include "ps/ps.h"
@@ -464,8 +465,8 @@ class KVStoreDist : public KVStoreLocal {
             llround(static_cast<double>(total_num_rows) / num_servers * (i + 1)) -
             llround(static_cast<double>(total_num_rows) / num_servers * i);
         auto end_row = start_row + part_num_rows;
-        auto lb = lower_bound(offsets, offsets + num_rows, start_row);
-        auto ub = upper_bound(offsets, offsets + num_rows, end_row - 1);
+        auto lb = std::lower_bound(offsets, offsets + num_rows, start_row);
+        auto ub = std::upper_bound(offsets, offsets + num_rows, end_row - 1);
         ps::Key master_key = krs[i].begin() + key;
         pskv.keys.push_back(master_key);
         pskv.lens.push_back(0);
