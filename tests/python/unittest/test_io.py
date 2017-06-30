@@ -112,50 +112,73 @@ def test_NDArrayIter_csr():
         begin += batch_size
 
 def test_LibSVMIter():
-    #TODO(haibin) automatic the test instead of hard coded test
-    cwd = os.getcwd()
-    data_path = os.path.join(cwd, 'data.t')
-    label_path = os.path.join(cwd, 'label.t')
-    with open(data_path, 'w') as fout:
-        fout.write('1.0 0:0.5 2:1.2\n')
-        fout.write('-2.0\n')
-        fout.write('-3.0 0:0.6 1:2.4 2:1.2\n')
-        fout.write('4 2:-1.2\n')
+    def get_data(data_dir, data_name, url, data_origin_name):
+        if not os.path.isdir(data_dir):
+            os.system("mkdir " + data_dir)
+        os.chdir(data_dir)
+        if (not os.path.exists(data_name)):
+            import urllib
+            zippath = os.path.join(data_dir, data_origin_name)
+            urllib.urlretrieve(url, zippath)
+            os.system("bzip2 -d %r" % data_origin_name)
+        os.chdir("..")
 
-    with open(label_path, 'w') as fout:
-        fout.write('1.0\n')
-        fout.write('-2.0 0:0.125\n')
-        fout.write('-3.0 2:1.2\n')
-        fout.write('4 1:1.0 2:-1.2\n')
+    def check_libSVMIter_synthetic():
+        cwd = os.getcwd()
+        data_path = os.path.join(cwd, 'data.t')
+        label_path = os.path.join(cwd, 'label.t')
+        with open(data_path, 'w') as fout:
+            fout.write('1.0 0:0.5 2:1.2\n')
+            fout.write('-2.0\n')
+            fout.write('-3.0 0:0.6 1:2.4 2:1.2\n')
+            fout.write('4 2:-1.2\n')
 
-    data_dir = os.path.join(os.getcwd(), 'data')
-    f = (data_path, label_path, (3,), (3,), 3)
-    data_train = mx.io.LibSVMIter(data_libsvm=f[0],
-                                  label_libsvm=f[1],
-                                  data_shape=f[2],
-                                  label_shape=f[3],
-                                  batch_size=f[4])
+        with open(label_path, 'w') as fout:
+            fout.write('1.0\n')
+            fout.write('-2.0 0:0.125\n')
+            fout.write('-3.0 2:1.2\n')
+            fout.write('4 1:1.0 2:-1.2\n')
 
-    first = mx.nd.array([[ 0.5, 0., 1.2], [ 0., 0., 0.], [ 0.6, 2.4, 1.2]])
-    second = mx.nd.array([[ 0., 0., -1.2], [ 0.5, 0., 1.2], [ 0., 0., 0.]])
-    i = 0
-    for batch in iter(data_train):
-        expected = first.asnumpy() if i == 0 else second.asnumpy()
-        assert_almost_equal(data_train.getdata().asnumpy(), expected)
-        i += 1
-'''
-def test_LibSVMIter():
-    kdda = os.path.join(os.getcwd(), 'news20.t')
-    data_train = mx.io.LibSVMIter(data_libsvm=kdda,
-                                  #label_libsvm=kdda,
-                                  data_shape=(62060, ),
-                                  #label_shape=f[3],
-                                  batch_size=512)
-    it = iter(data_train)
-    for batch in it:
-        print(batch.data[0])
-        #break
-'''
+        data_dir = os.path.join(os.getcwd(), 'data')
+        f = (data_path, label_path, (3,), (3,), 3)
+        # TODO refactor this
+        data_train = mx.io.LibSVMIter(data_libsvm=f[0],
+                                      label_libsvm=f[1],
+                                      data_shape=f[2],
+                                      label_shape=f[3],
+                                      batch_size=f[4])
+
+        first = mx.nd.array([[ 0.5, 0., 1.2], [ 0., 0., 0.], [ 0.6, 2.4, 1.2]])
+        second = mx.nd.array([[ 0., 0., -1.2], [ 0.5, 0., 1.2], [ 0., 0., 0.]])
+        i = 0
+        for batch in iter(data_train):
+            expected = first.asnumpy() if i == 0 else second.asnumpy()
+            assert_almost_equal(data_train.getdata().asnumpy(), expected)
+            i += 1
+
+    def check_libSVMIter_news_metadata():
+        news_metadata = {
+            'name': 'news20.t',
+            'origin_name': 'news20.t.bz2',
+            'url': "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/news20.t.bz2",
+            'shape': 62060,
+            'num_classes': 20,
+        }
+        data_dir = os.path.join(os.getcwd(), 'data')
+        get_data(data_dir, news_metadata['name'], news_metadata['url'],
+                 news_metadata['origin_name'])
+        path = os.path.join(os.getcwd(), news_metadata['name'])
+        data_train = mx.io.LibSVMIter(data_libsvm=path,
+                                      data_shape=(news_metadata['shape'], ),
+                                      batch_size=512)
+        iterator = iter(data_train)
+        for batch in iterator:
+            # check the range of labels
+            assert(np.sum(batch.label[0].asnumpy() > 20) == 0)
+            assert(np.sum(batch.label[0].asnumpy() <= 0) == 0)
+
+    check_libSVMIter_synthetic()
+    check_libSVMIter_news_metadata()
 
 if __name__ == "__main__":
     test_NDArrayIter()
