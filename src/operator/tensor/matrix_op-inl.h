@@ -653,7 +653,7 @@ struct DotCsrTransDnsDnsByRowBlocks {
   }
 };
 
-/*
+/*!
  * \brief Kernel of dot(csr.T(), dns) = rsp
  * Parallelization by row blocks.
  * This kernel fills up the row_idx array
@@ -700,9 +700,9 @@ struct DotCsrRspDnsByRowBlocks {
   /*!
    * \brief
    * \param i the i-th thread
-   * \nnr_r storage_shape[0] of the rsp
-   * \num_rows dns.shape[0]
-   * \num_cols dns.shape[1]
+   * \param nnr_r storage_shape[0] of the rsp
+   * \param num_rows dns.shape[0]
+   * \param num_cols dns.shape[1]
    */
   template<typename DType, typename IType, typename CType, typename RType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* data_l,
