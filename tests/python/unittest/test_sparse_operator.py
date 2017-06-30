@@ -100,6 +100,7 @@ def test_cast_storage_ex():
     test_csr_to_dns((4, 4))
     test_dns_to_csr([[0, 1, 0], [0, 2, 0], [3, 0, 0], [0, 0, 4], [5, 6, 0], [0, 0, 7]])
 
+
 def test_sparse_dot():
     def test_dot_csr(lhs_shape, rhs_shape, rhs_stype, trans_lhs):
         lhs_dns = rand_ndarray(lhs_shape, 'default')
@@ -107,7 +108,10 @@ def test_sparse_dot():
         rhs_nd = rand_ndarray(rhs_shape, rhs_stype, density=1)
         rhs_dns = rhs_nd if rhs_stype == 'default' else rhs_nd.todense()
         out = mx.nd.dot(lhs_nd, rhs_dns, transpose_a=trans_lhs)
-        assert out.storage_type == 'default'
+        if trans_lhs:
+            assert out.storage_type == 'row_sparse'
+        else:
+            assert out.storage_type == 'default'
         out_expected = mx.nd.dot(lhs_dns, rhs_dns, transpose_a=trans_lhs)
         out_np = out_expected.asnumpy()
         backward_trans = not trans_lhs
@@ -131,6 +135,7 @@ def test_sparse_dot():
     test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'default', True)
     test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False)
     test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True)
+
 
 def test_sparse_embedding():
     in_dim = 10
