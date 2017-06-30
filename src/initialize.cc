@@ -28,7 +28,7 @@ void segfault_logger(int sig) {
   }
 #endif  // DMLC_LOG_STACK_TRACE
 
-  exit(1);
+  exit(-1);
 }
 
 class LibraryInitializer {

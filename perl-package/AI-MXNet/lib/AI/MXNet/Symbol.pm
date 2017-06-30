@@ -1347,7 +1347,6 @@ method arange(Index :$start=0, Index :$stop=, Num :$step=1.0, Index :$repeat=1, 
     });
 }
 
-method CachedOp(@args)        { AI::MXNet::CachedOp->new(@args) }
 
 sub _parse_arguments
 {

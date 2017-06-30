@@ -16,7 +16,7 @@ mx.simple.bind <- function(symbol, ctx, grad.req = "null", ...) {
     mx.nd.zeros(shape, ctx)
   }, simplify = FALSE, USE.NAMES = TRUE)
   grad.reqs <- lapply(names(slist$arg.shapes), function(nm) {
-    if (!mx.util.str.endswith(nm, "label") && !mx.util.str.endswith(nm, "data")) {
+    if (!endsWith(nm, "label") && !endsWith(nm, "data")) {
       grad.req
     } else {
       "null"

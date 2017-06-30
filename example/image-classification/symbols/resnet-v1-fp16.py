@@ -19,9 +19,9 @@ def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck=True, b
         Number of output channels
     bnf : int
         Bottle neck channels factor with regard to num_filter
-    stride : tupe
+    stride : tuple
         Stride used in convolution
-    dim_match : Boolen
+    dim_match : Boolean
         True means channel number between input and output is the same, otherwise means differ
     name : str
         Base name of the operators
@@ -29,20 +29,17 @@ def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck=True, b
         Workspace used in convolution operator
     """
     if bottle_neck:
-        weight = mx.symbol.Variable(name=name + '_conv1_weight', dtype=np.float32)
-        weight = mx.symbol.Cast(data=weight, dtype=np.float16)
+        weight = mx.symbol.Variable(name=name + '_conv1_weight', dtype=np.float16)
         conv1 = mx.sym.Convolution(data=data, weight=weight, num_filter=int(num_filter*0.25), kernel=(1,1), stride=stride, pad=(0,0),
                                    no_bias=True, workspace=workspace, name=name + '_conv1')
         bn1 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn1')
         act1 = mx.sym.Activation(data=bn1, act_type='relu', name=name + '_relu1')
-        weight = mx.symbol.Variable(name=name + '_conv2_weight', dtype=np.float32)
-        weight = mx.symbol.Cast(data=weight, dtype=np.float16)
+        weight = mx.symbol.Variable(name=name + '_conv2_weight', dtype=np.float16)
         conv2 = mx.sym.Convolution(data=act1, weight=weight, num_filter=int(num_filter*0.25), kernel=(3,3), stride=(1,1), pad=(1,1),
                                    no_bias=True, workspace=workspace, name=name + '_conv2')
         bn2 = mx.sym.BatchNorm(data=conv2, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn2')
         act2 = mx.sym.Activation(data=bn2, act_type='relu', name=name + '_relu2')
-        weight = mx.symbol.Variable(name=name + '_conv3_weight', dtype=np.float32)
-        weight = mx.symbol.Cast(data=weight, dtype=np.float16)
+        weight = mx.symbol.Variable(name=name + '_conv3_weight', dtype=np.float16)
         conv3 = mx.sym.Convolution(data=act2, weight=weight, num_filter=num_filter, kernel=(1,1), stride=(1,1), pad=(0,0), no_bias=True,
                                    workspace=workspace, name=name + '_conv3')
         bn3 = mx.sym.BatchNorm(data=conv3, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn3')
@@ -50,8 +47,7 @@ def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck=True, b
         if dim_match:
             shortcut = data
         else:
-            weight = mx.symbol.Variable(name=name + '_conv1sc_weight', dtype=np.float32)
-            weight = mx.symbol.Cast(data=weight, dtype=np.float16)
+            weight = mx.symbol.Variable(name=name + '_conv1sc_weight', dtype=np.float16)
             conv1sc = mx.sym.Convolution(data=data, weight=weight, num_filter=num_filter, kernel=(1,1), stride=stride, no_bias=True,
                                             workspace=workspace, name=name+'_conv1sc')
             shortcut = mx.sym.BatchNorm(data=conv1sc, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_sc')
@@ -59,14 +55,12 @@ def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck=True, b
             shortcut._set_attr(mirror_stage='True')
         return mx.sym.Activation(data=bn3 + shortcut, act_type='relu', name=name + '_relu3')
     else:
-        weight = mx.symbol.Variable(name=name + '_conv1_weight', dtype=np.float32)
-        weight = mx.symbol.Cast(data=weight, dtype=np.float16)
+        weight = mx.symbol.Variable(name=name + '_conv1_weight', dtype=np.float16)
         conv1 = mx.sym.Convolution(data=data, weight=weight, num_filter=num_filter, kernel=(3,3), stride=stride, pad=(1,1),
                                       no_bias=True, workspace=workspace, name=name + '_conv1')
         bn1 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, momentum=bn_mom, eps=2e-5, name=name + '_bn1')
         act1 = mx.sym.Activation(data=bn1, act_type='relu', name=name + '_relu1')
-        weight = mx.symbol.Variable(name=name + '_conv2_weight', dtype=np.float32)
-        weight = mx.symbol.Cast(data=weight, dtype=np.float16)
+        weight = mx.symbol.Variable(name=name + '_conv2_weight', dtype=np.float16)
         conv2 = mx.sym.Convolution(data=act1, weight=weight, num_filter=num_filter, kernel=(3,3), stride=(1,1), pad=(1,1),
                                       no_bias=True, workspace=workspace, name=name + '_conv2')
         bn2 = mx.sym.BatchNorm(data=conv2, fix_gamma=False, momentum=bn_mom, eps=2e-5, name=name + '_bn2')
@@ -74,8 +68,7 @@ def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck=True, b
         if dim_match:
             shortcut = data
         else:
-            weight = mx.symbol.Variable(name=name + '_conv1sc_weight', dtype=np.float32)
-            weight = mx.symbol.Cast(data=weight, dtype=np.float16)
+            weight = mx.symbol.Variable(name=name + '_conv1sc_weight', dtype=np.float16)
             conv1sc = mx.sym.Convolution(data=data, weight=weight, num_filter=num_filter, kernel=(1,1), stride=stride, no_bias=True,
                                             workspace=workspace, name=name+'_conv1sc')
             shortcut = mx.sym.BatchNorm(data=conv1sc, fix_gamma=False, momentum=bn_mom, eps=2e-5, name=name + '_sc')
@@ -105,8 +98,7 @@ def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck
     data = mx.sym.Variable(name='data')
     data = mx.symbol.Cast(data=data, dtype=np.float16)
     (nchannel, height, width) = image_shape
-    weight = mx.symbol.Variable(name='conv0_weight', dtype=np.float32)
-    weight = mx.symbol.Cast(data=weight, dtype=np.float16)
+    weight = mx.symbol.Variable(name='conv0_weight', dtype=np.float16)
     if height <= 32:            # such as cifar10
         body = mx.sym.Convolution(data=data, weight=weight, num_filter=filter_list[0], kernel=(3, 3), stride=(1,1), pad=(1, 1),
                                   no_bias=True, name="conv0", workspace=workspace)
@@ -131,10 +123,8 @@ def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck
     # Although kernel is not used here when global_pool=True, we should put one
     pool1 = mx.symbol.Pooling(data=body, global_pool=True, kernel=(7, 7), pool_type='avg', name='pool1')
     flat = mx.symbol.Flatten(data=pool1)
-    weight = mx.symbol.Variable(name='fc1_weight', dtype=np.float32)
-    bias = mx.symbol.Variable(name='fc1_bias', dtype=np.float32)
-    weight = mx.symbol.Cast(data=weight, dtype=np.float16)
-    bias = mx.symbol.Cast(data=bias, dtype=np.float16)
+    weight = mx.symbol.Variable(name='fc1_weight', dtype=np.float16)
+    bias = mx.symbol.Variable(name='fc1_bias', dtype=np.float16)
     fc1 = mx.symbol.FullyConnected(data=flat, weight=weight, bias=bias, num_hidden=num_classes, name='fc1')
     fc1 = mx.symbol.Cast(data=fc1, dtype=np.float32)
     return mx.symbol.SoftmaxOutput(data=fc1, name='softmax')

@@ -68,6 +68,40 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
 .add_argument("mom", "NDArray-or-Symbol", "Momentum")
 .add_arguments(SGDMomParam::__FIELDS__());
 
+NNVM_REGISTER_OP(mp_sgd_update)
+.describe("Updater function for multi-precision sgd optimizer")
+.set_num_inputs(3)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SGDParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<nnvm::FInferType>("FInferType", MP_SGD_InferType<2, 1, 3>)
+.set_attr<FCompute>("FCompute<cpu>", MP_SGDUpdate<cpu>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2};
+  })
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "gradient")
+.add_argument("weight32", "NDArray-or-Symbol", "Weight32")
+.add_arguments(SGDParam::__FIELDS__());
+
+NNVM_REGISTER_OP(mp_sgd_mom_update)
+.describe("Updater function for multi-precision sgd optimizer")
+.set_num_inputs(4)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SGDMomParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
+.set_attr<nnvm::FInferType>("FInferType", MP_SGD_InferType<2, 1, 4>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2, 3};
+  })
+.set_attr<FCompute>("FCompute<cpu>", MP_SGDMomUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("mom", "NDArray-or-Symbol", "Momentum")
+.add_argument("weight32", "NDArray-or-Symbol", "Weight32")
+.add_arguments(SGDMomParam::__FIELDS__());
 
 NNVM_REGISTER_OP(adam_update)
 .describe(R"code(Update function for Adam optimizer. Adam is seen as a generalization
