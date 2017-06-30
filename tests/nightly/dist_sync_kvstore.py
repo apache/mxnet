@@ -9,7 +9,7 @@ import time
 
 def check_diff_to_scalar(A, x, rank=None):
     """ assert A == x"""
-    assert(np.sum(np.abs((A - x).asnumpy())) == 0), (A.asnumpy(), x)
+    assert(np.sum(np.abs((A - x).asnumpy())) == 0), (rank, A.asnumpy(), x)
 
 # setup
 keys = ['3', '5', '7']
@@ -77,11 +77,29 @@ def test_sync_push_pull():
         # verify results
         check_diff_to_scalar(val, expected)
 
+    def check_row_sparse_keys_with_zeros(kv, my_rank, nworker):
+        nrepeat = 3
+        # prepare gradient
+        v = mx.nd.zeros(shape)
+        big_v = mx.nd.zeros(big_shape)
+        # push
+        for i in range(nrepeat):
+            kv.push('11', v._to_rsp())
+            kv.push('100', big_v._to_rsp())
+        # pull a subset of rows this worker is interested in
+        val = mx.nd.ones(shape)._to_rsp()
+        big_val = mx.nd.ones(big_shape)._to_rsp()
+        kv.pull('11', out = val)
+        kv.pull('100', out = big_val)
+        # verify results
+        check_diff_to_scalar(val, mx.nd.ones(shape))
+        check_diff_to_scalar(big_val, mx.nd.ones(big_shape))
+
     def check_big_row_sparse_keys(kv, my_rank, nworker):
         mx.random.seed(123)
         rnd.seed(123)
-        density = 0.5
-        nrepeat = 2
+        density = 0.3
+        nrepeat = 3
         # prepare gradient
         v = mx.nd.zeros(big_shape)
         idx_sample = rnd.rand(big_shape[0])
@@ -105,7 +123,6 @@ def test_sync_push_pull():
         expected = mx.nd.zeros(big_shape)
         # initial value
         i = 0
-        # TODO(haibin) use my_indices
         for i in my_indices:
             expected[i] = 1
         # apply updates from each worker
@@ -118,6 +135,7 @@ def test_sync_push_pull():
 
     check_default_keys(kv, my_rank, nworker)
     check_row_sparse_keys(kv, my_rank, nworker)
+    check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
     check_big_row_sparse_keys(kv, my_rank, nworker)
     print('worker ' + str(my_rank) + ' is done')
 

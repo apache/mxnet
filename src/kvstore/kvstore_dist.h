@@ -340,12 +340,9 @@ class KVStoreDist : public KVStoreLocal {
       mkl_set_tblob_eager_mode(send_buf.data());
 #endif
       real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
-      if (!send_buf.storage_initialized()) {
-        LOG(INFO) << "warning: operation to push all zeros is ignored";
-        return;
-      }
-      size_t num_rows = send_buf.aux_shape(kIdx).Size();
-      const auto offsets = send_buf.aux_data(kIdx).dptr<int64_t>();
+      bool init = send_buf.storage_initialized();
+      size_t num_rows = init ? send_buf.aux_shape(kIdx).Size() : 0;
+      const auto offsets = init ? send_buf.aux_data(kIdx).dptr<int64_t>() : nullptr;
       const auto unit_len = send_buf.shape().ProdShape(1, send_buf.shape().ndim());
       const auto size = num_rows * unit_len;
 
