@@ -716,8 +716,25 @@ struct DotCsrRspDnsByRowBlocks {
     for (size_t j = seg_start; j < seg_end; ++j) {
       if (indptr_l[j] == indptr_l[j+1]) continue;
       const size_t offset_out = j * num_cols;
-      const RType* row_idx_ptr = std::lower_bound(row_idx_r, row_idx_r+nnr_r,
-                                                  col_idx_l[indptr_l[j]]);
+      // Use binary search to find the lower_bound of val in row_idx array
+      const RType* first = row_idx_r;
+      const RType* last = row_idx_r + nnr_r;
+      const auto val = col_idx_l[indptr_l[j]];
+      const RType* it;
+      int count = last - first, step;
+      while (count > 0) {
+        it = first;
+        step = count / 2;
+        it += step;
+        if (*it < val) {
+          first = ++it;
+          count -= step + 1;
+        } else {
+          count = step;
+        }
+      }
+      const RType* row_idx_ptr = first;
+      // end of binary search
       if (row_idx_ptr == row_idx_r+nnr_r || *row_idx_ptr> col_idx_l[indptr_l[j+1]-1]) continue;
       for (auto k = indptr_l[j]; k < indptr_l[j+1] && row_idx_ptr != row_idx_r+nnr_r;) {
         if (col_idx_l[k] == *row_idx_ptr) {
