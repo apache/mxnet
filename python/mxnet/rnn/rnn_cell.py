@@ -1070,7 +1070,82 @@ class BidirectionalCell(BaseRNNCell):
         states = [l_states, r_states]
         return outputs, states
 
-class ConvRNNCell(BaseRNNCell):
+
+class BaseConvRNNCell(BaseRNNCell):
+    """Abstract base class for Convolutional RNN cells
+
+    Parameters
+    ----------
+    input_shape : tuple of int
+        Shape of input in single timestep.
+    num_hidden : int
+        Number of units in output symbol.
+    h2h_kernel : tuple of int
+        Kernel of Convolution operator in state-to-state transitions.
+    h2h_dilate : tuple of int
+        Dilation of Convolution operator in state-to-state transitions.
+    i2h_kernel : tuple of int
+        Kernel of Convolution operator in input-to-state transitions.
+    i2h_stride : tuple of int
+        Stride of Convolution operator in input-to-state transitions.
+    i2h_pad : tuple of int
+        Pad of Convolution operator in input-to-state transitions.
+    i2h_dilate : tuple of int
+        Dilation of Convolution operator in input-to-state transitions.
+    activation : str or Symbol,
+        Type of activation function.
+    prefix : str, default ''
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
+    conv_layout : str, , default 'NCHW'
+        Layout of ConvolutionOp
+    """
+    def __init__(self, input_shape, num_hidden,
+                 h2h_kernel, h2h_dilate,
+                 i2h_kernel, i2h_stride,
+                 i2h_pad, i2h_dilate,
+                 activation,
+                 prefix='', params=None, conv_layout='NCHW'):
+        super(BaseConvRNNCell, self).__init__(prefix=prefix, params=params)
+        # Convolution setting
+        self._h2h_kernel = h2h_kernel
+        assert (self._h2h_kernel[0] % 2 == 1) and (self._h2h_kernel[1] % 2 == 1), \
+            "Only support odd number, get h2h_kernel= %s" % str(h2h_kernel)
+        self._h2h_pad = (h2h_dilate[0] * (h2h_kernel[0] - 1) // 2,
+                         h2h_dilate[1] * (h2h_kernel[1] - 1) // 2)
+        self._h2h_dilate = h2h_dilate
+        self._i2h_kernel = i2h_kernel
+        self._i2h_stride = i2h_stride
+        self._i2h_pad = i2h_pad
+        self._i2h_dilate = i2h_dilate
+
+        self._num_hidden = num_hidden
+        self._input_shape = input_shape
+        self._conv_layout = conv_layout
+        self._activation = activation
+
+        # Infer state shape
+        data = symbol.Variable('data')
+        self._state_shape = symbol.Convolution(data=data,
+                                               num_filter=self._num_hidden,
+                                               kernel=self._i2h_kernel,
+                                               stride=self._i2h_stride,
+                                               pad=self._i2h_pad,
+                                               dilate=self._i2h_dilate,
+                                               layout=conv_layout)
+        self._state_shape = self._state_shape.infer_shape(data=input_shape)[1][0]
+        self._state_shape = (0, ) + self._state_shape[1:]
+
+    @property
+    def state_info(self):
+        return [{'shape': self._state_shape, '__layout__': self._conv_layout},
+                {'shape': self._state_shape, '__layout__': self._conv_layout}]
+
+    def __call__(self, inputs, states):
+        raise NotImplementedError("BaseConvRNNCell is abstract class for convolutional RNN")
+
+class ConvRNNCell(BaseConvRNNCell):
     """Convolutional RNN cells
 
     Parameters
@@ -1107,46 +1182,17 @@ class ConvRNNCell(BaseRNNCell):
                  i2h_pad=(1, 1), i2h_dilate=(1, 1),
                  activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
                  prefix='ConvRNN_', params=None, conv_layout='NCHW'):
-        super(ConvRNNCell, self).__init__(prefix=prefix, params=params)
-        # Convolution setting
-        self._h2h_kernel = h2h_kernel
-        assert (self._h2h_kernel[0] % 2 == 1) and (self._h2h_kernel[1] % 2 == 1), \
-            "Only support odd number, get h2h_kernel= %s" % str(h2h_kernel)
-        self._h2h_pad = (h2h_dilate[0] * (h2h_kernel[0] - 1) // 2,
-                         h2h_dilate[1] * (h2h_kernel[1] - 1) // 2)
-        self._h2h_dilate = h2h_dilate
-        self._i2h_kernel = i2h_kernel
-        self._i2h_stride = i2h_stride
-        self._i2h_pad = i2h_pad
-        self._i2h_dilate = i2h_dilate
-
-        self._num_hidden = num_hidden
-        self._input_shape = input_shape
-        self._conv_layout = conv_layout
-        self._activation = activation
-
+        super(ConvRNNCell, self).__init__(input_shape=input_shape, num_hidden=num_hidden,
+                                          h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                          i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
+                                          i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
+                                          activation=activation, prefix=prefix,
+                                          params=params, conv_layout=conv_layout)
         # Get params
         self._iW = self.params.get('i2h_weight')
         self._hW = self.params.get('h2h_weight')
         self._iB = self.params.get('i2h_bias')
         self._hB = self.params.get('h2h_bias')
-
-        # Infer state shape
-        data = symbol.Variable('data')
-        self._state_shape = symbol.Convolution(data=data,
-                                               num_filter=self._num_hidden,
-                                               kernel=self._i2h_kernel,
-                                               stride=self._i2h_stride,
-                                               pad=self._i2h_pad,
-                                               dilate=self._i2h_dilate,
-                                               layout=conv_layout)
-        self._state_shape = self._state_shape.infer_shape(data=input_shape)[1][0]
-        self._state_shape = (0, ) + self._state_shape[1:]
-
-    @property
-    def state_info(self):
-        return [{'shape': self._state_shape, '__layout__': self._conv_layout},
-                {'shape': self._state_shape, '__layout__': self._conv_layout}]
 
     @property
     def _gate_names(self):
@@ -1178,7 +1224,7 @@ class ConvRNNCell(BaseRNNCell):
         return output, [output]
 
 
-class ConvLSTMCell(BaseRNNCell):
+class ConvLSTMCell(BaseConvRNNCell):
     """Convolutional LSTM network cell.
 
     Reference:
@@ -1221,23 +1267,12 @@ class ConvLSTMCell(BaseRNNCell):
                  activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
                  prefix='ConvLSTM_', params=None, forget_bias=1.0,
                  conv_layout='NCHW'):
-        super(ConvLSTMCell, self).__init__(prefix=prefix, params=params)
-        # Convolution setting
-        self._h2h_kernel = h2h_kernel
-        assert (self._h2h_kernel[0] % 2 == 1) and (self._h2h_kernel[1] % 2 == 1), \
-            "Only support odd number, get h2h_kernel= %s" % str(h2h_kernel)
-        self._h2h_pad = (h2h_dilate[0] * (h2h_kernel[0] - 1) // 2,
-                         h2h_dilate[1] * (h2h_kernel[1] - 1) // 2)
-        self._h2h_dilate = h2h_dilate
-        self._i2h_kernel = i2h_kernel
-        self._i2h_stride = i2h_stride
-        self._i2h_pad = i2h_pad
-        self._i2h_dilate = i2h_dilate
-
-        self._num_hidden = num_hidden
-        self._input_shape = input_shape
-        self._conv_layout = conv_layout
-        self._activation = activation
+        super(ConvLSTMCell, self).__init__(input_shape=input_shape, num_hidden=num_hidden,
+                                           h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                           i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
+                                           i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
+                                           activation=activation, prefix=prefix,
+                                           params=params, conv_layout=conv_layout)
 
         # Get params
         self._iW = self.params.get('i2h_weight')
@@ -1245,23 +1280,6 @@ class ConvLSTMCell(BaseRNNCell):
         # we add the forget_bias to i2h_bias, this adds the bias to the forget gate activation
         self._iB = self.params.get('i2h_bias', init=init.LSTMBias(forget_bias=forget_bias))
         self._hB = self.params.get('h2h_bias')
-
-        # Infer state shape
-        data = symbol.Variable('data')
-        self._state_shape = symbol.Convolution(data=data,
-                                               num_filter=self._num_hidden,
-                                               kernel=self._i2h_kernel,
-                                               stride=self._i2h_stride,
-                                               pad=self._i2h_pad,
-                                               dilate=self._i2h_dilate,
-                                               layout=conv_layout)
-        self._state_shape = self._state_shape.infer_shape(data=input_shape)[1][0]
-        self._state_shape = (0, ) + self._state_shape[1:]
-
-    @property
-    def state_info(self):
-        return [{'shape': self._state_shape, '__layout__': self._conv_layout},
-                {'shape': self._state_shape, '__layout__': self._conv_layout}]
 
     @property
     def _gate_names(self):
@@ -1307,7 +1325,7 @@ class ConvLSTMCell(BaseRNNCell):
 
         return next_h, [next_h, next_c]
 
-class ConvGRUCell(BaseRNNCell):
+class ConvGRUCell(BaseConvRNNCell):
     """Convolutional Gated Rectified Unit (GRU) network cell.
 
     Parameters
@@ -1344,46 +1362,17 @@ class ConvGRUCell(BaseRNNCell):
                  i2h_pad=(1, 1), i2h_dilate=(1, 1),
                  activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
                  prefix='ConvGRU_', params=None, conv_layout='NCHW'):
-        super(ConvGRUCell, self).__init__(prefix=prefix, params=params)
-        # Convolution setting
-        self._h2h_kernel = h2h_kernel
-        assert (self._h2h_kernel[0] % 2 == 1) and (self._h2h_kernel[1] % 2 == 1), \
-            "Only support odd number, get h2h_kernel= %s" % str(h2h_kernel)
-        self._h2h_pad = (h2h_dilate[0] * (h2h_kernel[0] - 1) // 2,
-                         h2h_dilate[1] * (h2h_kernel[1] - 1) // 2)
-        self._h2h_dilate = h2h_dilate
-        self._i2h_kernel = i2h_kernel
-        self._i2h_stride = i2h_stride
-        self._i2h_pad = i2h_pad
-        self._i2h_dilate = i2h_dilate
-
-        self._num_hidden = num_hidden
-        self._input_shape = input_shape
-        self._conv_layout = conv_layout
-        self._activation = activation
-
+        super(ConvGRUCell, self).__init__(input_shape=input_shape, num_hidden=num_hidden,
+                                          h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                          i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
+                                          i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
+                                          activation=activation, prefix=prefix,
+                                          params=params, conv_layout=conv_layout)
         # Get params
         self._iW = self.params.get('i2h_weight')
         self._hW = self.params.get('h2h_weight')
         self._iB = self.params.get('i2h_bias')
         self._hB = self.params.get('h2h_bias')
-
-        # Infer state shape
-        data = symbol.Variable('data')
-        self._state_shape = symbol.Convolution(data=data,
-                                               num_filter=self._num_hidden,
-                                               kernel=self._i2h_kernel,
-                                               stride=self._i2h_stride,
-                                               pad=self._i2h_pad,
-                                               dilate=self._i2h_dilate,
-                                               layout=conv_layout)
-        self._state_shape = self._state_shape.infer_shape(data=input_shape)[1][0]
-        self._state_shape = (0, ) + self._state_shape[1:]
-
-    @property
-    def state_info(self):
-        return [{'shape': self._state_shape, '__layout__': self._conv_layout},
-                {'shape': self._state_shape, '__layout__': self._conv_layout}]
 
     @property
     def _gate_names(self):
