@@ -70,6 +70,12 @@ class Symbol {
    */
   RObjectType GetInternals() const;
   /*!
+   * \brief Gets a new grouped symbol whose output contains
+   *     inputs to output nodes of the original symbol.
+   * \return The children of the symbol.
+   */
+  RObjectType GetChildren() const;
+  /*!
    * \brief Get index-th outputs of the symbol.
    * \param symbol The symbol
    * \param index the Index of the output.

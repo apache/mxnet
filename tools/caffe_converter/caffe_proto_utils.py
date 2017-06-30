@@ -26,6 +26,9 @@ def process_network_proto(caffe_root, deploy_proto):
 
 
 class LayerRecord(object):
+    """
+    A record which describe basic layer parameters
+    """
 
     def __init__(self, layer_def):
 
@@ -35,15 +38,24 @@ class LayerRecord(object):
 
         # keep filter, stride and pad
         if layer_def.type == 'Convolution':
-            self.filter = list(layer_def.convolution_param.kernel_size)
+            if LayerRecord._is_iterable(layer_def.convolution_param.kernel_size):
+                self.filter = list(layer_def.convolution_param.kernel_size)
+            else:
+                self.filter = list([layer_def.convolution_param.kernel_size])
             if len(self.filter) == 1:
                 self.filter *= 2
-            self.pad = list(layer_def.convolution_param.pad)
+            if LayerRecord._is_iterable(layer_def.convolution_param.pad):
+                self.pad = list(layer_def.convolution_param.pad)
+            else:
+                self.pad = list([layer_def.convolution_param.pad])
             if len(self.pad) == 0:
                 self.pad = [0, 0]
             elif len(self.pad) == 1:
                 self.pad *= 2
-            self.stride = list(layer_def.convolution_param.stride)
+            if LayerRecord._is_iterable(layer_def.convolution_param.stride):
+                self.stride = list(layer_def.convolution_param.stride)
+            else:
+                self.stride = list([layer_def.convolution_param.stride])
             if len(self.stride) == 0:
                 self.stride = [1, 1]
             elif len(self.stride) == 1:
@@ -81,6 +93,9 @@ class LayerRecord(object):
         # list of child layers
         self.children = []
 
+    @staticmethod
+    def _is_iterable(obj):
+        return hasattr(obj, '__iter__')
 
 def read_network_dag(processed_deploy_prototxt):
     """
@@ -123,16 +138,17 @@ def read_network_dag(processed_deploy_prototxt):
                 top_to_layers[top].append(layer.name)
 
     # find parents and children of all layers
-    for child_layer_name in layer_name_to_record.keys():
+    for child_layer_name in layer_name_to_record.keys():  # pylint: disable=too-many-nested-blocks
         child_layer_def = layer_name_to_record[child_layer_name]
         for bottom in child_layer_def.bottoms:
-            for parent_layer_name in top_to_layers[bottom]:
-                if parent_layer_name in layer_name_to_record:
-                    parent_layer_def = layer_name_to_record[parent_layer_name]
-                    if parent_layer_def not in child_layer_def.parents:
-                        child_layer_def.parents.append(parent_layer_def)
-                    if child_layer_def not in parent_layer_def.children:
-                        parent_layer_def.children.append(child_layer_def)
+            if bottom in top_to_layers:
+                for parent_layer_name in top_to_layers[bottom]:
+                    if parent_layer_name in layer_name_to_record:
+                        parent_layer_def = layer_name_to_record[parent_layer_name]
+                        if parent_layer_def not in child_layer_def.parents:
+                            child_layer_def.parents.append(parent_layer_def)
+                        if child_layer_def not in parent_layer_def.children:
+                            parent_layer_def.children.append(child_layer_def)
 
     # update filter, strid, pad for maxout "structures"
     for layer_name in layer_name_to_record.keys():

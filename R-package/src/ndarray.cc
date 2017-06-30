@@ -398,10 +398,16 @@ SEXP NDArrayFunction::operator() (SEXP* args) {
   std::vector<const char*> param_vals;
   std::vector<NDArrayHandle> out_args;
 
-
   for (mx_uint i = 0; i < arg_names_.size() - 1; ++i) {
     if (arg_nd_array_[i]) {
-      nd_args.push_back(NDArray(args[i])->handle);
+      if (TYPEOF(args[i]) == 22) {
+        nd_args.push_back(NDArray(args[i])->handle);
+      } else if (TYPEOF(args[i]) == 19) {
+        Rcpp::List data_lst = Rcpp::as<Rcpp::List>(args[i]);
+        for (size_t k = 0; k < data_lst.size(); k++) {
+          nd_args.push_back(NDArray((SEXP)data_lst[k])->handle);
+        }
+      }
     } else {
       if (args[i] != R_NilValue) {
         param_keys.push_back(arg_names_[i].c_str());

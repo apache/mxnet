@@ -134,6 +134,12 @@ Symbol::RObjectType Symbol::GetInternals() const {
   return Symbol::RObject(out);
 }
 
+Symbol::RObjectType Symbol::GetChildren() const {
+  SymbolHandle out;
+  MX_CALL(MXSymbolGetChildren(handle_, &out));
+  return Symbol::RObject(out);
+}
+
 Symbol::RObjectType Symbol::GetOutput(mx_uint index) const {
   SymbolHandle out;
   MX_CALL(MXSymbolGetOutput(handle_, index - 1, &out));
@@ -344,6 +350,8 @@ void Symbol::InitRcppModule() {
               "List the auxiliary state names of the symbol")
       .method("get.internals", &Symbol::GetInternals,
               "Get a symbol that contains all the internals")
+      .method("get.children", &Symbol::GetChildren,
+              "Get a symbol that contains all the children")
       .method("get.output", &Symbol::GetOutput,
               "Get index-th output symbol of current one")
       .method("[[", &Symbol::GetOutput,
