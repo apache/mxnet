@@ -53,9 +53,7 @@ int main(int argc, char** argv) {
 
   auto net = mlp(layers);
 
-  // Use GPU for training
-  // change to Context::cpu() to use cpu
-  Context ctx = Context::gpu();
+  Context ctx = Context::gpu();  // Use GPU for training
 
   std::map<string, NDArray> args;
   args["X"] = NDArray(Shape(batch_size, image_size*image_size), ctx);
