@@ -211,6 +211,8 @@ struct Context {
  *  The information needed in runtime for actual execution.
  */
 struct RunContext {
+  /*! \brief base Context */
+  Context ctx;
   /*!
    * \brief the stream of the device, can be NULL or Stream<gpu>* in GPU mode
    */
@@ -223,6 +225,10 @@ struct RunContext {
   template<typename xpu>
   inline mshadow::Stream<xpu>* get_stream() const {
     return static_cast<mshadow::Stream<xpu>*>(stream);
+  }
+  /*! \brief get the base Context from RunContext */
+  inline const Context& get_ctx() const {
+    return ctx;
   }
 };
 }  // namespace mxnet

@@ -279,40 +279,31 @@ void PushFCompute(const FCompute& fn,
     0, PROFILER_MESSAGE(op->name.c_str()));
 }
 
-void PushOperator(std::shared_ptr<Operator> opr,
+void PushOperator(const std::shared_ptr<dmlc::any>& state,
                   const nnvm::Op* op,
                   const nnvm::NodeAttrs& attrs,
                   const Context& ctx,
                   const std::vector<engine::VarHandle>& read_vars,
                   const std::vector<engine::VarHandle>& write_vars,
                   const std::vector<Resource>& requested,
-                  const std::vector<uint32_t>& auxidx,
                   const std::vector<NDArray>& ndinputs,
                   const std::vector<NDArray>& ndoutputs) {
   struct Capture {
     engine::CallbackOnComplete on_complete;
-    std::shared_ptr<Operator> opr;
+    std::shared_ptr<dmlc::any> state;
   };
 
   bool is_train = AutogradRuntime::Get()->IsTraining();
   Engine::Get()->PushAsync(
-    [ctx, opr, auxidx, ndinputs, ndoutputs, requested, is_train](
+    [op, state, ndinputs, ndoutputs, requested, is_train](
         RunContext rctx,
         engine::CallbackOnComplete on_complete) {
-      std::vector<TBlob> input_blobs, aux_blobs, output_blobs;
-      auto atop = auxidx.begin();
-      for (size_t i = 0; i < ndinputs.size(); ++i) {
-        if (atop != auxidx.end() && i == *atop) {
-          aux_blobs.push_back(ndinputs[i].data());
-          ++atop;
-        } else {
-          input_blobs.push_back(ndinputs[i].data());
-        }
-      }
-      for (auto& i : ndoutputs) {
-        output_blobs.push_back(i.data());
-      }
-      Capture* capture = new Capture({on_complete, opr});
+      static auto& fcompute_cpu =
+          nnvm::Op::GetAttr<FStatefulCompute>("FStatefulCompute<cpu>");
+      static auto& fcompute_gpu =
+          nnvm::Op::GetAttr<FStatefulCompute>("FStatefulCompute<gpu>");
+
+      Capture* capture = new Capture{on_complete, state};
       OpContext opctx{is_train, rctx,
                       Engine::Get()->CreateCallback(
                         [](Engine* engine, void *cpt_handle) {
@@ -321,10 +312,19 @@ void PushOperator(std::shared_ptr<Operator> opr,
                             delete cpt;
                           }, static_cast<void*>(capture)),
                       requested};
+      std::vector<TBlob> input_blobs, output_blobs;
+      for (const auto& i : ndinputs) input_blobs.push_back(i.data());
+      for (const auto& i : ndoutputs) output_blobs.push_back(i.data());
       std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
-      opr->Forward(opctx, input_blobs, req, output_blobs, aux_blobs);
-      if (opr->exec_type() != Operator::kAsync) {
-        if (ctx.dev_mask() == gpu::kDevMask) {
+      if (rctx.get_ctx().dev_mask() == cpu::kDevMask) {
+        fcompute_cpu[op](state, opctx, input_blobs, req, output_blobs);
+      } else if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
+        fcompute_gpu[op](state, opctx, input_blobs, req, output_blobs);
+      } else {
+        LOG(FATAL) << "Unknown device mask";
+      }
+      if (true) {//opr->exec_type() != Operator::kAsync) {
+        if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
           rctx.get_stream<gpu>()->Wait();
         }
         delete capture;
@@ -341,7 +341,7 @@ void ImperativeInvokeImpl(const Context& default_ctx,
   static auto& fcpu = nnvm::Op::GetAttr<FCompute>("FCompute<cpu>");
   static auto& fgpu = nnvm::Op::GetAttr<FCompute>("FCompute<gpu>");
   static auto& ndfunc = nnvm::Op::GetAttr<FNDArrayFunction>("FNDArrayFunction");
-  static auto& createop = nnvm::Op::GetAttr<FCreateLayerOp>("FCreateLayerOp");
+  static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
   const nnvm::Op *op = attrs.op;
@@ -378,14 +378,14 @@ void ImperativeInvokeImpl(const Context& default_ctx,
       PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
           requested, ndinputs, ndoutputs);
     } else if (createop.count(op)) {
-      std::shared_ptr<Operator> opr(
-          createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types));
+      std::shared_ptr<dmlc::any> state =
+          createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
       if (AutogradRuntime::Get()->IsTraining()) {
-        AutogradRuntime::Get()->RecordImperativeOperator(opr, op,
+        AutogradRuntime::Get()->RecordImperativeOperator(state, op,
             attrs, &ndinputs, &ndoutputs);
       }
-      PushOperator(opr, op, attrs, ctx, read_vars, write_vars,
-          requested, auxidx, ndinputs, ndoutputs);
+      PushOperator(state, op, attrs, ctx, read_vars, write_vars,
+          requested, ndinputs, ndoutputs);
     } else {
       LOG(FATAL)
         << "Operator " << op->name << " is not implemented for "

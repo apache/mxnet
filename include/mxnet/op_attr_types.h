@@ -30,12 +30,23 @@ using nnvm::NodeAttrs;
  *
  *  \note Register under "FCreateLayerOp"
  */
-using FCreateLayerOp = std::function<
-  Operator* (const NodeAttrs& n,
-             Context ctx,
-             const std::vector<TShape>& in_shape,
-             const std::vector<int>& in_type)>;
+using FCreateOpState = std::function<
+  std::shared_ptr<dmlc::any> (const NodeAttrs& n,
+                              Context ctx,
+                              const std::vector<TShape>& in_shape,
+                              const std::vector<int>& in_type)>;
 
+using FStatefulCompute = std::function<void (const std::shared_ptr<dmlc::any>& state,
+                                             const OpContext& ctx,
+                                             const std::vector<TBlob>& inputs,
+                                             const std::vector<OpReqType>& req,
+                                             const std::vector<TBlob>& outputs)>;
+
+using FStatefulComputeEx = std::function<void (const std::shared_ptr<dmlc::any>& state,
+                                               const OpContext& ctx,
+                                               const std::vector<NDArray>& inputs,
+                                               const std::vector<OpReqType>& req,
+                                               const std::vector<NDArray>& outputs)>;
 /*!
  * \brief The resource request from the operator
  *
