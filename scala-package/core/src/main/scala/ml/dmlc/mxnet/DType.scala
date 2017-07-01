@@ -33,4 +33,11 @@ object DType extends Enumeration {
       case DType.Float64 => 8
     }
   }
+  private[mxnet] def getTypeStr(dtype: DType): String = dtype match {
+    case DType.Float32 => "float32"
+    case DType.Float16 => "float64"
+    case DType.Float64 => "float16"
+    case DType.Int32 => "uint8"
+    case DType.UInt8 => "int32"
+  }
 }
