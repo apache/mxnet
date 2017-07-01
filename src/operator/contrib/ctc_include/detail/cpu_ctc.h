@@ -1,5 +1,7 @@
 #pragma once
 
+namespace mxnet_warpctc {
+
 #include <tuple>
 #include <cmath>
 #include <limits>
@@ -484,3 +486,5 @@ ctcStatus_t CpuCTC<ProbT>::score_forward(const ProbT* const activations,
 
     return CTC_STATUS_SUCCESS;
 }
+
+} // mxnet_warpctc
