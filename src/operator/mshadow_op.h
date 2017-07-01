@@ -24,6 +24,8 @@ __constant__ const float PI = 3.14159265358979323846;
 const float PI = 3.14159265358979323846;
 using std::isnan;
 #endif
+using std::enable_if;
+using std::is_unsigned;
 
 /*! \brief identity Operation */
 struct identity {
@@ -136,13 +138,20 @@ struct tanh_grad {
 struct softrelu {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(log1pf(expf(a)));
+    // Avoid overflow of exp for large inputs.
+    // Thresholds 20.0 is chosen such that softrelu(a) = a
+    // for a > 20 using floating precision.
+    if (a > DType(20.0)) {
+      return a;
+    } else {
+      return DType(log1pf(expf(a)));
+    }
   }
 };
 struct softrelu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f) - expf(-a));
+    return -DType(expm1f(-a));
   }
 };
 
@@ -438,8 +447,15 @@ struct abs {
 /*! \brief used for generate element of sign */
 struct sign {
   template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    if (a < 0.0f) return DType(-1.0f);
+  MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
+  Map(DType a) {
+    if (a < 0.0f) return DType(-DType(1.0f));
+    if (a > 0.0f) return DType(1.0f);
+    return DType(0.0f);
+  }
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<is_unsigned<DType>::value, DType>::type
+  Map(DType a) {
     if (a > 0.0f) return DType(1.0f);
     return DType(0.0f);
   }
@@ -671,21 +687,35 @@ struct rdiv_grad {
 
 struct mod {
   template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+  MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
+  Map(DType a, DType b) {
     if (b == DType(0)) {
       return DType(0);
     } else if (b < DType(0)) {
       if (a < DType(0)) {
-        return DType(-::fmod(-a, -b));
+        return DType(-::fmod(-static_cast<double>(a), -static_cast<double>(b)));
       } else {
-        return DType(::fmod(a, -b) + (::fmod(a, -b) != DType(0) ? b : DType(0)));
+        return DType(::fmod(static_cast<double>(a), -static_cast<double>(b)) +
+                     (::fmod(static_cast<double>(a), -static_cast<double>(b)) != DType(0)
+                      ? b : DType(0)));
       }
     } else {
       if (a < DType(0)) {
-        return DType(-::fmod(-a, b) + (::fmod(-a, b) != DType(0) ? b : DType(0)));
+        return DType(-::fmod(-static_cast<double>(a), static_cast<double>(b)) +
+                     (::fmod(-static_cast<double>(a), static_cast<double>(b)) != DType(0)
+                      ? b : DType(0)));
       } else {
-        return DType(::fmod(a, b));
+        return DType(::fmod(static_cast<double>(a), static_cast<double>(b)));
       }
+    }
+  }
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<is_unsigned<DType>::value, DType>::type
+  Map(DType a, DType b) {
+    if (b == DType(0)) {
+      return DType(0);
+    } else {
+      return DType(::fmod(static_cast<double>(a), static_cast<double>(b)));
     }
   }
 };
@@ -772,21 +802,35 @@ MSHADOW_XINLINE mshadow::half::half2_t mod_rgrad::Map<mshadow::half::half2_t>
 
 struct rmod {
   template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+  MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
+  Map(DType a, DType b) {
     if (a == DType(0)) {
       return DType(0);
     } else if (a < DType(0)) {
       if (b < DType(0)) {
-        return DType(-::fmod(-b, -a));
+        return DType(-::fmod(-static_cast<double>(b), -static_cast<double>(a)));
       } else {
-        return DType(::fmod(b, -a) + (::fmod(b, -a) != DType(0) ? a : DType(0)));
+        return DType(::fmod(static_cast<double>(b), -static_cast<double>(a)) +
+                     (::fmod(static_cast<double>(b), -static_cast<double>(a)) != DType(0)
+                      ? a : DType(0)));
       }
     } else {
       if (b < DType(0)) {
-        return DType(-::fmod(-b, a) + (::fmod(-b, a) != DType(0) ? a : DType(0)));
+        return DType(-::fmod(-static_cast<double>(b), static_cast<double>(a)) +
+                     (::fmod(-static_cast<double>(b), static_cast<double>(a)) != DType(0)
+                      ? a : DType(0)));
       } else {
-        return DType(::fmod(b, a));
+        return DType(::fmod(static_cast<double>(b), static_cast<double>(a)));
       }
+    }
+  }
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<is_unsigned<DType>::value, DType>::type
+  Map(DType a, DType b) {
+    if (a == DType(0)) {
+      return DType(0);
+    } else {
+      return DType(::fmod(static_cast<double>(b), static_cast<double>(a)));
     }
   }
 };

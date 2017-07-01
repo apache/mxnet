@@ -2,13 +2,14 @@ FROM nvidia/cuda:7.5-cudnn5-devel
 
 COPY install/ubuntu_install_core.sh /install/
 RUN /install/ubuntu_install_core.sh
+
 COPY install/ubuntu_install_python.sh /install/
 RUN /install/ubuntu_install_python.sh
 
 RUN apt-get install -y libprotobuf-dev libleveldb-dev \
     libsnappy-dev libopencv-dev libhdf5-serial-dev protobuf-compiler \
     libatlas-base-dev python-dev libgflags-dev libgoogle-glog-dev liblmdb-dev \
-    python-numpy
+    python-numpy python-opencv
 
 RUN apt-get install -y --no-install-recommends libboost-all-dev
 
