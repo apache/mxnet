@@ -22,7 +22,7 @@
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 #include "./sort_op.h"
-#include "./matrix_op-inl.h"
+#include "../nn/matrix_dot-inl.h"
 
 namespace mxnet {
 namespace op {
