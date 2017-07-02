@@ -38,6 +38,7 @@ inline Symbol Symbol::operator+(const Symbol &rhs) const { return _Plus(*this, r
 inline Symbol Symbol::operator-(const Symbol &rhs) const { return _Minus(*this, rhs); }
 inline Symbol Symbol::operator*(const Symbol &rhs) const { return _Mul(*this, rhs); }
 inline Symbol Symbol::operator/(const Symbol &rhs) const { return _Div(*this, rhs); }
+inline Symbol Symbol::operator%(const Symbol &rhs) const { return _Mod(*this, rhs); }
 inline Symbol Symbol::operator+(mx_float scalar) const {
   return _PlusScalar(*this, scalar);
 }
@@ -49,6 +50,9 @@ inline Symbol Symbol::operator*(mx_float scalar) const {
 }
 inline Symbol Symbol::operator/(mx_float scalar) const {
   return _DivScalar(*this, scalar);
+}
+inline Symbol Symbol::operator%(mx_float scalar) const {
+  return _ModScalar(*this, scalar);
 }
 inline Symbol Symbol::operator[](int index) {
   SymbolHandle out;
@@ -336,6 +340,9 @@ inline Symbol operator-(mx_float lhs, const Symbol &rhs) {
 inline Symbol operator*(mx_float lhs, const Symbol &rhs) { return rhs * lhs; }
 inline Symbol operator/(mx_float lhs, const Symbol &rhs) {
   return mxnet::cpp::_RDivScalar(lhs, rhs);
+}
+inline Symbol operator%(mx_float lhs, const Symbol &rhs) {
+  return mxnet::cpp::_RModScalar(lhs, rhs);
 }
 }  // namespace cpp
 }  // namespace mxnet

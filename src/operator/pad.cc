@@ -701,7 +701,7 @@ Example::
             [ 20.  20.  21.  22.  22.]
             [ 20.  20.  21.  22.  22.]]]]
 
-   pad(x, mode="constant", constant_value=0, pad_width=(0,0,0,0,2,2,1,1)) =
+   pad(x, mode="constant", constant_value=0, pad_width=(0,0,0,0,1,1,1,1)) =
 
          [[[[  0.   0.   0.   0.   0.]
             [  0.   1.   2.   3.   0.]

@@ -71,9 +71,11 @@ inline char loup(char uplo, bool invert) { return invert ? (uplo == 'U' ? 'L' : 
   MXNET_LAPACK_CWRAPPER1(dpotri, double)
 
 #else
+
   // use pragma message instead of warning
-  #pragma message("Warning: lapack usage not enabled, linalg-operators will be not available." \
-                  " Build with USE_LAPACK=1 to get lapack functionalities.")
+  #pragma message("Warning: lapack usage not enabled, linalg-operators will not be available." \
+     " Ensure that lapack library is installed and build with USE_LAPACK=1 to get lapack" \
+     " functionalities.")
 
   // Define compilable stubs.
   #define MXNET_LAPACK_CWRAPPER1(func, dtype) \

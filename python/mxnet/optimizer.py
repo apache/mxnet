@@ -2,8 +2,11 @@
 import math
 import pickle
 import logging
-from .ndarray import NDArray, zeros, clip, sqrt, sign
-from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
+import warnings
+import numpy
+from .ndarray import (NDArray, zeros, clip, sqrt, sign, array, maximum, abs as NDabs)
+from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
+                      mp_sgd_update, mp_sgd_mom_update)
 from .random import normal
 
 
@@ -323,16 +326,34 @@ class SGD(Optimizer):
     ----------
     momentum : float, optional
        The momentum value.
+    multi_precision: bool, optional
+       Flag to control the internal precision of the optimizer.
+       ``False`` results in using the same precision as the weights (default),
+       ``True`` makes internal 32-bit copy of the weights and applies gradients
+                in 32-bit precision even if actual weights used in the model have lower precision.
+                Turning this on can improve convergence and accuracy when training with float16.
     """
-    def __init__(self, momentum=0.0, **kwargs):
+    def __init__(self, momentum=0.0, multi_precision=False, **kwargs):
         super(SGD, self).__init__(**kwargs)
         self.momentum = momentum
+        self.multi_precision = multi_precision
 
     def create_state(self, index, weight):
-        if self.momentum == 0.0:
-            return None
-        else:
-            return zeros(weight.shape, weight.context, dtype=weight.dtype)
+        momentum = None
+        weight_master_copy = None
+        if self.multi_precision and weight.dtype == numpy.float16:
+            weight_master_copy = array(weight, ctx=weight.context, dtype=numpy.float32)
+            if self.momentum != 0.0:
+                momentum = zeros(weight.shape, weight.context, dtype=numpy.float32)
+            return (momentum, weight_master_copy)
+        if weight.dtype == numpy.float16 and not self.multi_precision:
+            warnings.warn("Accumulating with float16 in optimizer can lead to "
+                          "poor accuracy or slow convergence. "
+                          "Consider using multi_precision=True option of the "
+                          "SGD optimizer")
+        if self.momentum != 0.0:
+            momentum = zeros(weight.shape, weight.context, dtype=weight.dtype)
+        return momentum
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -346,13 +367,22 @@ class SGD(Optimizer):
             kwargs['momentum'] = self.momentum
         if self.clip_gradient:
             kwargs['clip_gradient'] = self.clip_gradient
+        use_multi_precision = isinstance(state, (list, tuple))
 
-        if state is not None:
-            sgd_mom_update(weight, grad, state, out=weight,
+        if not use_multi_precision:
+            if state is not None:
+                sgd_mom_update(weight, grad, state, out=weight,
+                               lr=lr, wd=wd, **kwargs)
+            else:
+                sgd_update(weight, grad, out=weight,
                            lr=lr, wd=wd, **kwargs)
         else:
-            sgd_update(weight, grad, out=weight,
-                       lr=lr, wd=wd, **kwargs)
+            if state[0] is not None:
+                mp_sgd_mom_update(weight, grad, state[0], state[1], out=weight,
+                                  lr=lr, wd=wd, **kwargs)
+            else:
+                mp_sgd_update(weight, grad, state[1], out=weight,
+                              lr=lr, wd=wd, **kwargs)
 
 @register
 class DCASGD(Optimizer):
@@ -747,10 +777,128 @@ class Ftrl(Optimizer):
 
         # update weight
         weight[:] = (sign(dn) * self.lamda1 - dn) / \
-                    ((self.beta + sqrt(n)) / lr + wd) * (NDArray.abs(dn) > self.lamda1)
+                    ((self.beta + sqrt(n)) / lr + wd) * (NDabs(dn) > self.lamda1)
+
+@register
+class Adamax(Optimizer):
+    """The AdaMax optimizer.
+
+    It is a variant of Adam based on the infinity norm
+    available at http://arxiv.org/abs/1412.6980 Section 7.
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
+
+    Parameters
+    ----------
+    beta1 : float, optional
+        Exponential decay rate for the first moment estimates.
+    beta2 : float, optional
+        Exponential decay rate for the second moment estimates.
+    """
+    def __init__(self, learning_rate=0.002, beta1=0.9, beta2=0.999, **kwargs):
+        super(Adamax, self).__init__(learning_rate=learning_rate, **kwargs)
+        self.beta1 = beta1
+        self.beta2 = beta2
+
+    def create_state(self, index, weight):
+        return (zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
+                zeros(weight.shape, weight.context, dtype=weight.dtype))  # variance
+
+    def update(self, index, weight, grad, state):
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        self._update_count(index)
+
+        t = self._index_update_count[index]
+        lr /= (1. - self.beta1**t)
+
+        # preprocess grad
+        grad = grad * self.rescale_grad + wd * weight
+        if self.clip_gradient is not None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        # update m_t and u_t
+        m_t, u_t = state
+        m_t[:] = self.beta1 * m_t + (1. - self.beta1) * grad
+        u_t[:] = maximum(self.beta2 * u_t, NDabs(grad))
+
+        # update weight
+        weight[:] -= lr * m_t / u_t
+
+@register
+class Nadam(Optimizer):
+    """The Nesterov Adam optimizer.
+
+    Much like Adam is essentially RMSprop with momentum,
+    Nadam is Adam RMSprop with Nesterov momentum available
+    at http://cs229.stanford.edu/proj2015/054_report.pdf.
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
+
+    Parameters
+    ----------
+    beta1 : float, optional
+        Exponential decay rate for the first moment estimates.
+    beta2 : float, optional
+        Exponential decay rate for the second moment estimates.
+    epsilon : float, optional
+        Small value to avoid division by 0.
+    schedule_decay : float, optional
+        Exponential decay rate for the momentum schedule
+    """
+    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
+                 schedule_decay=0.004, **kwargs):
+        super(Nadam, self).__init__(learning_rate=learning_rate, **kwargs)
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+        self.schedule_decay = schedule_decay
+        self.m_schedule = 1.
+
+    def create_state(self, index, weight):
+        return (zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
+                zeros(weight.shape, weight.context, dtype=weight.dtype))  # variance
+
+    def update(self, index, weight, grad, state):
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        self._update_count(index)
+
+        t = self._index_update_count[index]
+
+        # preprocess grad
+        grad *= self.rescale_grad + wd * weight
+        if self.clip_gradient is not None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        # warming momentum schedule
+        momentum_t = self.beta1 * (1. - 0.5 * (pow(0.96, t * self.schedule_decay)))
+        momentum_t_1 = self.beta1 * (1. - 0.5 * (pow(0.96, (t + 1) * self.schedule_decay)))
+        self.m_schedule = self.m_schedule * momentum_t
+        m_schedule_next = self.m_schedule * momentum_t_1
+
+        # update m_t and v_t
+        m_t, v_t = state
+        m_t[:] = self.beta1 * m_t + (1. - self.beta1) * grad
+        v_t[:] = self.beta2 * v_t + (1. - self.beta2) * grad * grad
+
+        grad_prime = grad / (1. - self.m_schedule)
+        m_t_prime = m_t / (1. - m_schedule_next)
+        v_t_prime = v_t / (1. - pow(self.beta2, t))
+        m_t_bar = (1. - momentum_t) * grad_prime + momentum_t_1 * m_t_prime
+
+        # update weight
+        weight[:] -= lr * m_t_bar / (sqrt(v_t_prime) + self.epsilon)
 
 @register
 class Test(Optimizer):
+    """The Test optimizer"""
     def __init__(self, **kwargs):
         super(Test, self).__init__(**kwargs)
 
@@ -771,16 +919,35 @@ class Updater(object):
     def __init__(self, optimizer):
         self.optimizer = optimizer
         self.states = {}
+        self.states_synced = {}
 
     def __call__(self, index, grad, weight):
         """Updates weight given gradient and index."""
         if index not in self.states:
             self.states[index] = self.optimizer.create_state(index, weight)
+            self.states_synced[index] = True
+        elif not self.states_synced[index]:
+            self.states[index] = \
+                self.sync_state_context(self.states[index], weight.context)
+            self.states_synced[index] = True
         self.optimizer.update(index, weight, grad, self.states[index])
+
+    def sync_state_context(self, state, context):
+        if isinstance(state, NDArray):
+            return state.as_in_context(context)
+        elif isinstance(state, (tuple, list)):
+            synced_state = (self.sync_state_context(i, context) for i in state)
+            if isinstance(state, tuple):
+                return tuple(synced_state)
+            else:
+                return list(synced_state)
+        else:
+            return state
 
     def set_states(self, states):
         """Sets updater states."""
         self.states = pickle.loads(states)
+        self.states_synced = dict.fromkeys(self.states.keys(), False)
 
     def get_states(self):
         """Gets updater states."""

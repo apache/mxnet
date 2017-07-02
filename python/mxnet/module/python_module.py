@@ -88,7 +88,7 @@ class PythonModule(BaseModule):
         return (dict(), dict())
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
-                    allow_missing=False, force_init=False):
+                    allow_missing=False, force_init=False, allow_extra=False):
         """Initializes the parameters and auxiliary states. By default this function
         does nothing. Subclass should override this method if contains parameters.
 
@@ -107,6 +107,10 @@ class PythonModule(BaseModule):
             called to fill those missing params.
         force_init : bool
             If ``True``, will force re-initialize even if already initialized.
+        allow_extra : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
         """
         pass
 

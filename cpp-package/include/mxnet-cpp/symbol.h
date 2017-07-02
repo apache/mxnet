@@ -72,11 +72,13 @@ class Symbol {
   Symbol operator-(const Symbol &rhs) const;
   Symbol operator*(const Symbol &rhs) const;
   Symbol operator/(const Symbol &rhs) const;
+  Symbol operator%(const Symbol &rhs) const;
 
   Symbol operator+(mx_float scalar) const;
   Symbol operator-(mx_float scalar) const;
   Symbol operator*(mx_float scalar) const;
   Symbol operator/(mx_float scalar) const;
+  Symbol operator%(mx_float scalar) const;
   Symbol Copy() const;
   /*!
   * \brief construct a variable Symbol
@@ -252,6 +254,7 @@ Symbol operator+(mx_float lhs, const Symbol &rhs);
 Symbol operator-(mx_float lhs, const Symbol &rhs);
 Symbol operator*(mx_float lhs, const Symbol &rhs);
 Symbol operator/(mx_float lhs, const Symbol &rhs);
+Symbol operator%(mx_float lhs, const Symbol &rhs);
 }  // namespace cpp
 }  // namespace mxnet
 #endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_SYMBOL_H_

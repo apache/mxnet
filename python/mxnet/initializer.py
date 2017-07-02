@@ -5,11 +5,13 @@ import re
 import logging
 import warnings
 import json
+from math import sqrt
 import numpy as np
 from .base import string_types
 from .ndarray import NDArray, load
 from . import random
 from . import registry
+from . import ndarray
 
 # inherit str for backward compatibility
 class InitDesc(str):
@@ -35,6 +37,44 @@ class Initializer(object):
     """The base class of an initializer."""
     def __init__(self, **kwargs):
         self._kwargs = kwargs
+        self._verbose = False
+        self._print_func = None
+
+    def set_verbosity(self, verbose=False, print_func=None):
+        """Switch on/off verbose mode
+
+        Parameters
+        ----------
+        verbose : bool
+            switch on/off verbose mode
+        print_func : function
+            A function that computes statistics of initialized arrays.
+            Takes an `NDArray` and returns an `str`. Defaults to mean
+            absolute value str((|x|/size(x)).asscalar()).
+        """
+        self._verbose = verbose
+        if print_func is None:
+            def asum_stat(x):
+                """returns |x|/size(x), async execution."""
+                return str((ndarray.norm(x)/sqrt(x.size)).asscalar())
+            print_func = asum_stat
+        self._print_func = print_func
+        return self
+
+    def _verbose_print(self, desc, init, arr):
+        """Internal verbose print function
+
+        Parameters
+        ----------
+        desc : InitDesc or str
+            name of the array
+        init : str
+            initializer pattern
+        arr : NDArray
+            initialized array
+        """
+        if self._verbose and self._print_func:
+            logging.info('Initialized %s as %s: %s', desc, init, self._print_func(arr))
 
     def dumps(self):
         """Saves the initializer to string
@@ -79,17 +119,22 @@ class Initializer(object):
         if init:
             # when calling Variable initializer
             create(init)._init_weight(desc, arr)
+            self._verbose_print(desc, init, arr)
         else:
             # register nnvm::FSetInputVariableAttrs in the backend for new patterns
             # don't add new cases here.
             if desc.endswith('weight'):
                 self._init_weight(desc, arr)
+                self._verbose_print(desc, 'weight', arr)
             elif desc.endswith('bias'):
                 self._init_bias(desc, arr)
+                self._verbose_print(desc, 'bias', arr)
             elif desc.endswith('gamma'):
                 self._init_gamma(desc, arr)
+                self._verbose_print(desc, 'gamma', arr)
             elif desc.endswith('beta'):
                 self._init_beta(desc, arr)
+                self._verbose_print(desc, 'beta', arr)
             else:
                 self._init_default(desc, arr)
 

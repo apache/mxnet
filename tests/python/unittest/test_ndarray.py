@@ -628,13 +628,17 @@ def test_iter():
 
 
 def test_cached():
-    op = mx.nd.CachedOp('Convolution', 3, kernel=(3, 3), num_filter=10)
+    sym = mx.sym.Convolution(kernel=(3, 3), num_filter=10) + 2
+    op = mx.nd.CachedOp(sym)
     data = mx.nd.ones((3, 4, 10, 10))
     weight = mx.nd.ones((10, 4, 3, 3))
     bias = mx.nd.ones((10,))
-    o1 = mx.nd.invoke(op, [data, weight, bias])
+    o1 = op(data, weight, bias)
     bias[:] = 2
-    o2 = mx.nd.invoke(op, [data, weight, bias])
+    o2 = op(data, weight, bias)
+    assert_almost_equal(o2.asnumpy(), o1.asnumpy()+1)
+    o2[:] = 0
+    op(data, weight, bias, out=o2)
     assert_almost_equal(o2.asnumpy(), o1.asnumpy()+1)
 
 def test_output():

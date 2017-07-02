@@ -501,7 +501,6 @@ li.dropdown-submenu ul.dropdown-menu a {
 
 #why_mxnet_btn, #install_btn, #release_btn {
     border: 1.8px solid #FFFFFF;
-    border-radius: 2px;
     color: #FFFFFF;
     display: inline-block;
     font-size: 18px;
@@ -565,27 +564,115 @@ li.dropdown-submenu ul.dropdown-menu a {
 .section-tout {
     padding:3em 0 3em;
     border-bottom:1px solid rgba(0,0,0,.05);
-    background-color:#eaf1f1
+    background-color:#fff
+}
+
+.section-tout .container {
+    height: 200px;
+}
+
+.section-tout .row {
+    height: 100%;
 }
 
 .section-tout .row div {
-    height: 140px;
+    height: 100%;
+    padding-left: 50px;
 }
 
-.section-tout .fa{
-    margin-right:.5em
+.section-tout .row a {
+    position: absolute;
+    bottom: 20px;
 }
 
 .section-tout h3{
     font-size:20px;
-    color: #0079b2;
+    color: #444;
 }
 
 .section-tout p {
-    margin-bottom:2em
+    margin-bottom:2em;
 }
 
-.section-inst{
+@media (max-width: 1199px) {
+    .section-tout .container {
+        height: auto;
+    }
+    
+    .section-tout .row a {
+        position: inherit;
+    }
+    
+    .section-tout .row div {
+        margin-bottom: 20px;
+        padding-left: 20px;
+    }
+}
+
+.section-util {
+    background-color: #eaf1f1;
+    padding:3em 0 3em;
+    border-bottom:1px solid rgba(0,0,0,.05);
+    text-align: center;
+}
+
+.section-util p {
+    color: #999;
+    position: absolute;
+    width: 50%;
+    margin: auto;
+    left: 0;
+    right: 0;
+}
+
+.section-util .util-btn {
+    position: absolute;
+    margin: auto;
+    left: 0;
+    right: 0;
+    padding-top: 10px;
+    margin-top: 100px;
+}
+
+.util-btn a {
+    display: inline-block;
+    border: 1.8px solid #0079b2;
+    border-radius: 30px;
+    width: 200px;
+    height: 50px;
+    -webkit-transition: .2s;
+    transition: .2s;
+    padding: 10px 30px;
+}
+
+.util-btn a:hover {
+    background-color: #0079b2;
+    color: #FFFFFF;
+    opacity: 0.9;
+    text-decoration: none;
+}
+
+.section-util .container {
+    height: 230px;
+}
+
+@media (max-width: 1199px) {
+    .section-util .container {
+        height: auto
+    }
+    
+    .section-util .row div {
+        margin-bottom: 200px;
+    }
+}
+
+@media (max-width: 767px) {
+    .section-util .row div {
+        margin-bottom: 250px;
+    }
+}
+
+.section-inst {
     padding:3em 0 3em;
     border-bottom:1px solid rgba(0,0,0,.05);
 
@@ -876,6 +963,10 @@ dt em {
 code {
     color: #337ab7;
     background-color: #f5f5f5;
+}
+
+dt code {
+    color: #555;
 }
 
 dl.last.docutils dt{

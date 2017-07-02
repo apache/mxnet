@@ -69,10 +69,11 @@ def _convert_conv_param(param):
     param_string += ", stride=(%d,%d)" % (stride, stride)
 
     dilate = 1
-    if isinstance(param.dilation, int):
-        dilate = param.dilation
-    else:
-        dilate = 1 if len(param.dilation) == 0 else param.dilation[0]
+    if hasattr(param, 'dilation'):
+        if isinstance(param.dilation, int):
+            dilate = param.dilation
+        else:
+            dilate = 1 if len(param.dilation) == 0 else param.dilation[0]
 
     param_string += ", no_bias=%s" % (not param.bias_term)
 
@@ -189,8 +190,10 @@ def _parse_proto(prototxt_fname):
             epsilon = param.eps
             if (epsilon <= 1e-05):
                 epsilon = 1e-04
-            param_string = 'use_global_stats=%s, fix_gamma=False, eps=%f' % (
-                param.use_global_stats, epsilon)
+            # if next layer is scale, don't fix gamma
+            fix_gamma = layers[i+1].type != 'Scale'
+            param_string = 'use_global_stats=%s, fix_gamma=%s, eps=%f' % (
+                param.use_global_stats, fix_gamma, epsilon)
             need_flatten[name] = need_flatten[mapping[layer.bottom[0]]]
         if layer.type == 'Scale':
             assert layers[i-1].type == 'BatchNorm'
