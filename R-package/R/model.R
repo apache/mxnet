@@ -17,14 +17,14 @@ mx.model.check.arguments <- function(symbol) {
   data <- NULL
   label <- NULL
   for (nm in arguments(symbol)) {
-    if (mx.util.str.endswith(nm, "data")) {
+    if (endsWith(nm, "data")) {
       if (!is.null(data)) {
         stop("Multiple fields contains suffix data")
       } else {
         data <- nm
       }
     }
-    if (mx.util.str.endswith(nm, "label")) {
+    if (endsWith(nm, "label")) {
       if (!is.null(label)) {
         stop("Multiple fields contains suffix label")
       } else {
@@ -106,10 +106,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
   sliceinfo <- mx.model.slice.shape(input.shape, ndevice)
   sliceinfo2 <- mx.model.slice.shape(output.shape, ndevice)
   arg_names <- arguments(symbol)
-  tmp <- unlist(lapply(arg_names, function(a) {
-    mxnet:::mx.util.str.endswith(a, "label")
-  }))
-  label_name <- arg_names[tmp]
+  label_name <- arg_names[endsWith(arg_names, "label")]
   train.execs <- lapply(1:ndevice, function(i) {
     arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write",
                     data=sliceinfo[[i]]$shape)
@@ -271,10 +268,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
 mx.model.init.params <- function(symbol, input.shape, output.shape, initializer, ctx) {
   if (!is.MXSymbol(symbol)) stop("symbol need to be MXSymbol")
   arg_names <- arguments(symbol)
-  tmp <- unlist(lapply(arg_names, function(a) {
-    mxnet:::mx.util.str.endswith(a, "label")
-  }))
-  label_name <- arg_names[tmp]
+  label_name <- arg_names[endsWith(arg_names, "label")]
   arg_lst <- list(symbol = symbol, data=input.shape)
   arg_lst[[label_name]] = output.shape
 
@@ -535,10 +529,10 @@ mx.model.load <- function(prefix, iteration) {
   save.dict <- mx.nd.load(sprintf("%s-%04d.params", prefix, iteration))
   names <- names(save.dict)
   arg.index <- as.integer(mx.util.filter.null(lapply(1:length(names), function(i) {
-    if (mx.util.str.startswith(names[[i]], "arg:")) i else NULL
+    if (startsWith(names[[i]], "arg:")) i else NULL
   })))
   aux.index <- as.integer(mx.util.filter.null(lapply(1:length(names), function(i) {
-    if (mx.util.str.startswith(names[[i]], "aux:")) i else NULL
+    if (startsWith(names[[i]], "aux:")) i else NULL
   })))
 
   if (length(arg.index) != 0) {
