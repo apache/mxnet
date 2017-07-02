@@ -1037,7 +1037,7 @@ void GraphExecutor::InitCachedOps() {
     if (inode.source->is_variable()) continue;
     if (op_nodes_[nid].skip_exec_node) continue;
     auto& exec = op_nodes_[nid].exec;
-    bool is_async = op_nodes_[nid].exec->exec_type() == Operator::kAsync;
+    bool is_async = op_nodes_[nid].exec->exec_type() == ExecType::kAsync;
     bool is_gpu = op_nodes_[nid].ctx.dev_mask() == gpu::kDevMask;
 
     // the variables
@@ -1119,7 +1119,7 @@ void GraphExecutor::InitOpSegs() {
       // check if the segment relies on external input, or exceeds maxinum number of node,
       // or requires async ops
       if (node->is_variable() || nid - topo_start > num_nodes_threshold ||
-          op_node.exec->exec_type() != Operator::kSync) {
+          op_node.exec->exec_type() != ExecType::kSync) {
         // create a new segment for the previous nodes if the current one cannot be bulked
         cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
         topo_start = nid + 1;
@@ -1146,7 +1146,7 @@ void GraphExecutor::InitOpSegs() {
         continue;
       }
       if (idx[nid].source->is_variable() || nid - topo_start > num_nodes_threshold ||
-          op_node.exec->exec_type() != Operator::kSync) {
+          op_node.exec->exec_type() != ExecType::kSync) {
         cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
         topo_start = nid + 1;
       } else {
@@ -1224,7 +1224,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     OpNode& opnode = op_nodes_[nid];
     if (op_nodes_[nid].skip_exec_node) continue;
     opnode.exec->op_ctx.is_train = is_train;
-    if (opnode.exec->exec_type() == Operator::kCrossDeviceCopy) {
+    if (opnode.exec->exec_type() == ExecType::kCrossDeviceCopy) {
       CHECK_EQ(inode.inputs.size(), 1U);
       CHECK_EQ(opnode.exec->in_array.size(), 1U);
       CHECK_EQ(opnode.exec->out_array.size(), 1U);
@@ -1271,7 +1271,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     OpNode& op_node = op_nodes_[nid];
     if (op_node.skip_exec_node) continue;
     if (inode.source->is_variable()) continue;
-    if (op_node.exec->exec_type() != Operator::kSync) {
+    if (op_node.exec->exec_type() != ExecType::kSync) {
       return ret;
     }
     if (pctx == nullptr) pctx = &(op_node.ctx);

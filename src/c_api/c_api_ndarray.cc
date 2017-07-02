@@ -279,7 +279,7 @@ void PushFCompute(const FCompute& fn,
     0, PROFILER_MESSAGE(op->name.c_str()));
 }
 
-void PushOperator(const std::shared_ptr<dmlc::any>& state,
+void PushOperator(const dmlc::any& state,
                   const nnvm::Op* op,
                   const nnvm::NodeAttrs& attrs,
                   const Context& ctx,
@@ -288,14 +288,20 @@ void PushOperator(const std::shared_ptr<dmlc::any>& state,
                   const std::vector<Resource>& requested,
                   const std::vector<NDArray>& ndinputs,
                   const std::vector<NDArray>& ndoutputs) {
+  static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
+
   struct Capture {
     engine::CallbackOnComplete on_complete;
-    std::shared_ptr<dmlc::any> state;
+    dmlc::any state;
   };
 
   bool is_train = AutogradRuntime::Get()->IsTraining();
+  ExecType exec_type = ExecType::kSync;
+  if (fexec_type.count(op)) {
+    exec_type = fexec_type[op](attrs);
+  }
   Engine::Get()->PushAsync(
-    [op, state, ndinputs, ndoutputs, requested, is_train](
+    [op, state, ndinputs, ndoutputs, requested, is_train, exec_type](
         RunContext rctx,
         engine::CallbackOnComplete on_complete) {
       static auto& fcompute_cpu =
@@ -323,7 +329,7 @@ void PushOperator(const std::shared_ptr<dmlc::any>& state,
       } else {
         LOG(FATAL) << "Unknown device mask";
       }
-      if (true) {//opr->exec_type() != Operator::kAsync) {
+      if (exec_type != ExecType::kAsync) {
         if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
           rctx.get_stream<gpu>()->Wait();
         }
@@ -378,7 +384,7 @@ void ImperativeInvokeImpl(const Context& default_ctx,
       PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
           requested, ndinputs, ndoutputs);
     } else if (createop.count(op)) {
-      std::shared_ptr<dmlc::any> state =
+      dmlc::any state =
           createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
       if (AutogradRuntime::Get()->IsTraining()) {
         AutogradRuntime::Get()->RecordImperativeOperator(state, op,

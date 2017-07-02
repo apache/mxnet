@@ -56,7 +56,7 @@ class ParsedOpProp {
 
 class OperatorState {
  public:
-  OperatorState(std::shared_ptr<Operator> opr, const OperatorProperty* prop) {
+  OperatorState(Operator *opr, const OperatorProperty *prop) {
     opr_ = opr;
     fwd_init_ = bwd_init_ = false;
 
@@ -82,7 +82,7 @@ class OperatorState {
         out_grad_ptr, in_data_ptr, out_data_ptr);
   }
 
-  ~OperatorState() {}
+  ~OperatorState() { delete opr_; }
 
   void Forward(const OpContext &ctx,
                const std::vector<TBlob>& inputs,
@@ -118,28 +118,28 @@ class OperatorState {
     opr_->Backward(ctx, out_grad_, in_data_, out_data_, req, in_grad_, aux_data_);
   }
  private:
-  std::shared_ptr<Operator> opr_;
+  Operator *opr_;
   bool fwd_init_, bwd_init_;
   std::vector<TBlob> in_data_, aux_data_, out_data_, in_grad_, out_grad_;
   std::vector<TBlob*> arg_data_ptr_;
 };
 
-void LegacyOpForward(const std::shared_ptr<dmlc::any>& state,
+void LegacyOpForward(const dmlc::any& state,
                      const OpContext& ctx,
                      const std::vector<TBlob>& inputs,
                      const std::vector<OpReqType>& req,
                      const std::vector<TBlob>& outputs) {
-  OperatorState& op = nnvm::get<OperatorState>(*state);
-  op.Forward(ctx, inputs, req, outputs);
+  const auto& op = nnvm::get<std::shared_ptr<OperatorState> >(state);
+  op->Forward(ctx, inputs, req, outputs);
 }
 
-void LegacyOpBackward(const std::shared_ptr<dmlc::any>& state,
+void LegacyOpBackward(const dmlc::any& state,
                       const OpContext& ctx,
                       const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
-  OperatorState& op = nnvm::get<OperatorState>(*state);
-  op.Backward(ctx, inputs, req, outputs);
+  const auto& op = nnvm::get<std::shared_ptr<OperatorState> >(state);
+  op->Backward(ctx, inputs, req, outputs);
 }
 
 // function to use operator property to infer attr
@@ -269,17 +269,15 @@ std::vector<ResourceRequest> OpBackResourceRequest(const NodeAttrs& attrs) {
   return prop.ptr->BackwardResource(ishape);
 }
 
-std::shared_ptr<dmlc::any> OpPropCreateLayerOp(const NodeAttrs& attrs,
+dmlc::any OpPropCreateLayerOp(const NodeAttrs& attrs,
                                                Context ctx,
                                                const std::vector<TShape>& ishape,
                                                const std::vector<int>& itype) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   std::vector<TShape> is(ishape.begin(), ishape.begin() + prop.arguments.size());
   std::vector<int> it(itype.begin(), itype.begin() + prop.arguments.size());
-  std::shared_ptr<Operator> ptr(prop.ptr->CreateOperatorEx(ctx, &is, &it));
-  std::shared_ptr<dmlc::any> state = std::make_shared<dmlc::any>();
-  *state = std::move(OperatorState(ptr, prop.ptr.get()));
-  return state
+  return std::make_shared<OperatorState>(prop.ptr->CreateOperatorEx(ctx, &is, &it),
+                                         prop.ptr.get());
 }
 
 inline std::vector<NodeEntry> OpPropGradient(
@@ -390,6 +388,11 @@ std::vector<std::pair<int, int> > OpBackInplaceOption(const NodeAttrs& attrs) {
   return remap;
 }
 
+inline ExecType OpExecType(const NodeAttrs& attrs) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
+  return prop.ptr->exec_type();
+}
+
 // register the legacy operator properties under NNVM registry.
 void RegisterLegacyOpProp() {
   for (auto reg : dmlc::Registry<OperatorPropertyReg>::List()) {
@@ -418,12 +421,14 @@ void RegisterLegacyOpProp() {
     op.set_attr<nnvm::FMutateInputs>("FMutateInputs", OpPropMutateInputs);
     op.set_attr<nnvm::FInplaceOption>("FInplaceOption", OpPropInplaceOption);
     op.set_attr<FResourceRequest>("FResourceRequest", OpPropResourceRequest);
+    op.set_attr<FExecType>("FExecType", OpExecType);
     op.set_attr<FCreateOpState>("FCreateOpState", OpPropCreateLayerOp);
     op.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", LegacyOpForward);
     op.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", LegacyOpForward);
     if (reg->key_var_num_args.length() != 0) {
       op.set_attr<std::string>("key_var_num_args", reg->key_var_num_args);
     }
+
     // register BackwardOps
     std::string back_op_name = "_backward_" + reg->name;
     Op& back_op = ::dmlc::Registry<::nnvm::Op>::Get()->__REGISTER__(back_op_name);
@@ -440,6 +445,7 @@ void RegisterLegacyOpProp() {
         "FResourceRequest", OpBackResourceRequest);
     back_op.set_attr<bool>("TIsLayerOpBackward", true);
     back_op.set_attr<bool>("TIsBackward", true);
+    back_op.set_attr<FExecType>("FExecType", OpExecType);
     back_op.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", LegacyOpBackward);
     back_op.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", LegacyOpBackward);
   }

@@ -15,12 +15,74 @@
 #include <functional>
 
 #include "./base.h"
-#include "./operator.h"
 #include "./ndarray.h"
 
 namespace mxnet {
 
 using nnvm::NodeAttrs;
+
+/*! \brief operation request type to Forward and Backward */
+enum OpReqType {
+  /*! \brief no operation, do not write anything */
+  kNullOp,
+  /*! \brief write gradient to provided space */
+  kWriteTo,
+  /*!
+   * \brief perform an inplace write,
+   * Target shares memory with one of input arguments.
+   * This option only happen when
+   */
+  kWriteInplace,
+  /*! \brief add to the provided space */
+  kAddTo
+};
+
+/*!
+ * \brief All the possible information needed by Operator.Forward and Backward
+ *  This is the superset of RunContext.
+ *  We use this data structure to bookkeep everything needed by Forward and Backward.
+ * \sa Resource
+ */
+struct OpContext {
+  /*! \brief whether it is training phase */
+  int is_train;
+  /*! \brief RunContext related resources */
+  RunContext run_ctx;
+  /*! \brief the callback when operation completes, used by asynchronize ops */
+  engine::CallbackOnComplete async_on_complete;
+  /*! \brief Resources requested by the operator */
+  std::vector<Resource> requested;
+  /*!
+   * \brief get mshadow stream from Context
+   * \return the mshadow stream
+   * \tparam xpu the device type of the stream
+   */
+  template<typename xpu>
+  inline mshadow::Stream<xpu>* get_stream() const {
+    return run_ctx.get_stream<xpu>();
+  }
+};
+
+/*! \brief the execution type of the operator */
+enum class ExecType {
+  /*! \brief Forward/Backward are synchronize calls */
+  kSync,
+  /*!
+   * \brief Forward/Backward are asynchronize,
+   *  will call OpContext.async_on_complete when operation finishes.
+   */
+  kAsync,
+  /*! \brief Run this operator on the scheduling thread without pushing to engine. */
+  kLocal,
+  /*!
+   * \brief Cross device copy operation, this is a special operator
+   *  That indicates copy across devices, the input and output can sit on different device.
+   *  In current implementation, copy operator is specially handled by executor.
+   *  This flag is used for special case treatment and future extension of different copy ops.
+   */
+  kCrossDeviceCopy
+};
+
 /*!
  * \brief Create a Layer style, forward/backward operator.
  *  This is easy to write code that contains state.
@@ -30,19 +92,20 @@ using nnvm::NodeAttrs;
  *
  *  \note Register under "FCreateLayerOp"
  */
-using FCreateOpState = std::function<
-  std::shared_ptr<dmlc::any> (const NodeAttrs& n,
-                              Context ctx,
-                              const std::vector<TShape>& in_shape,
-                              const std::vector<int>& in_type)>;
+using FCreateOpState = std::function<dmlc::any (const NodeAttrs& n,
+                                                Context ctx,
+                                                const std::vector<TShape>& in_shape,
+                                                const std::vector<int>& in_type)>;
 
-using FStatefulCompute = std::function<void (const std::shared_ptr<dmlc::any>& state,
+using FExecType = std::function<ExecType (const NodeAttrs& attrs)>;
+
+using FStatefulCompute = std::function<void (const dmlc::any& state,
                                              const OpContext& ctx,
                                              const std::vector<TBlob>& inputs,
                                              const std::vector<OpReqType>& req,
                                              const std::vector<TBlob>& outputs)>;
 
-using FStatefulComputeEx = std::function<void (const std::shared_ptr<dmlc::any>& state,
+using FStatefulComputeEx = std::function<void (const dmlc::any& state,
                                                const OpContext& ctx,
                                                const std::vector<NDArray>& inputs,
                                                const std::vector<OpReqType>& req,

@@ -21,23 +21,28 @@ const OperatorProperty* OpPropGetOpProperty(const NodeAttrs& attrs);
 
 namespace exec {
 
+template<typename FCompType>
+static FCompType GetFCompute(const Op* op, const std::string& name,
+                             const Context& ctx) {
+  static auto& fcompute_cpu = nnvm::Op::GetAttr<FCompType>(name + "<cpu>");
+  static auto& fcompute_gpu = nnvm::Op::GetAttr<FCompType>(name + "<gpu>");
+
+  if (ctx.dev_mask() == cpu::kDevMask) {
+    return fcompute_cpu.get(op, nullptr);
+  } else if (ctx.dev_mask() == gpu::kDevMask) {
+    return fcompute_gpu.get(op, nullptr);
+  } else {
+    LOG(FATAL) << "Unknown device mask";
+    return nullptr;
+  }
+}
+
 // forward executor
 class StatefulComputeExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx) override {
-    static auto& fcompute_cpu =
-        nnvm::Op::GetAttr<FStatefulCompute>("FStatefulCompute<cpu>");
-    static auto& fcompute_gpu =
-        nnvm::Op::GetAttr<FStatefulCompute>("FStatefulCompute<gpu>");
-
     op_ctx.run_ctx = rctx;
-    if (rctx.get_ctx().dev_mask() == cpu::kDevMask) {
-      fcompute_cpu[op_](state_, op_ctx, in_data_, req, out_data_);
-    } else if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
-      fcompute_gpu[op_](state_, op_ctx, in_data_, req, out_data_);
-    } else {
-      LOG(FATAL) << "Unknown device mask";
-    }
+    fcompute_(state_, op_ctx, in_data_, req, out_data_);
 #if MKL_EXPERIMENTAL == 1
     mkl_tblobs_prv_to_cpu(in_data_);
     mkl_tblobs_prv_to_cpu(out_data_);
@@ -54,17 +59,21 @@ class StatefulComputeExecutor : public OpExecutor {
       out_data_.push_back(out_array[i].data());
     }
   }
-  Operator::ExecType exec_type() const override {
-    return Operator::kSync;// op_->exec_type();
+
+  ExecType exec_type() const override {
+    return exec_type_;
   }
-  explicit StatefulComputeExecutor(const nnvm::Op* op,
-                             std::shared_ptr<dmlc::any> state)
-      : op_(op), state_(state) {}
+
+  explicit StatefulComputeExecutor(const dmlc::any& state,
+                                   const FStatefulCompute& fcompute,
+                                   ExecType exec_type)
+      : state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
 
  private:
   friend Graph AttachOpExecs(Graph g);
-  const nnvm::Op *op_;
-  std::shared_ptr<dmlc::any> state_;
+  dmlc::any state_;
+  FStatefulCompute fcompute_;
+  ExecType exec_type_;
   std::vector<TBlob> in_data_, out_data_;
 };
 
@@ -80,6 +89,7 @@ class FComputeExecutor : public OpExecutor {
     mkl_tblobs_prv_to_cpu(out_data_);
 #endif
   }
+
   void Setup() override {
     in_data_.resize(in_array.size());
     out_data_.resize(out_array.size());
@@ -89,29 +99,20 @@ class FComputeExecutor : public OpExecutor {
     std::transform(in_array.begin(), in_array.end(), in_data_.begin(), get_blob);
     std::transform(out_array.begin(), out_array.end(), out_data_.begin(), get_blob);
   }
-  Operator::ExecType exec_type() const override {
-    return Operator::kSync;
-  }
-  explicit FComputeExecutor(FCompute fcompute, const NodeAttrs& attrs)
-      : fcompute_(fcompute), attrs_(attrs) {
+
+  ExecType exec_type() const override {
+    return exec_type_;
   }
 
-  static FCompute GetFCompute(const Op* op, Context ctx) {
-    static auto& fcompute_cpu = nnvm::Op::GetAttr<FCompute>("FCompute<cpu>");
-    static auto& fcompute_gpu = nnvm::Op::GetAttr<FCompute>("FCompute<gpu>");
-    if (ctx.dev_mask() == cpu::kDevMask) {
-      return fcompute_cpu.get(op, nullptr);
-    } else if (ctx.dev_mask() == gpu::kDevMask) {
-      return fcompute_gpu.get(op, nullptr);
-    } else {
-      LOG(FATAL) << "Unknown device mask";
-      return nullptr;
-    }
+  explicit FComputeExecutor(const NodeAttrs& attrs, FCompute fcompute,
+                            ExecType exec_type)
+      : attrs_(attrs), fcompute_(fcompute), exec_type_(exec_type) {
   }
 
  private:
-  FCompute fcompute_;
   NodeAttrs attrs_;
+  FCompute fcompute_;
+  ExecType exec_type_;
   std::vector<TBlob> in_data_, out_data_;
 };
 
@@ -123,13 +124,14 @@ Graph AttachOpExecs(Graph g) {
 
   auto& fcreate_op_state = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
   auto& fmutate_inputs = nnvm::Op::GetAttr<FMutateInputs>("FMutateInputs");
+  auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
   auto& is_layer_backward = nnvm::Op::GetAttr<bool>("TIsLayerOpBackward");
 
   const auto& vdtype = g.GetAttr<DTypeVector>("dtype");
   const auto& vshape = g.GetAttr<ShapeVector>("shape");
   const auto& vctx = g.GetAttr<ContextVector>("context");
   const auto& saved_states = g.GetAttr<
-    std::unordered_map<const nnvm::Node*, std::shared_ptr<dmlc::any>>>("saved_states");
+    std::unordered_map<const nnvm::Node*, dmlc::any>>("saved_states");
 
   // get the graph
   const auto& idx = g.indexed_graph();
@@ -139,39 +141,50 @@ Graph AttachOpExecs(Graph g) {
   for (size_t i = 0; i < idx.num_nodes(); ++i) {
     const auto& inode = idx[i];
     if (inode.source->is_variable()) continue;
+    const nnvm::Op *op = inode.source->op();
+    ExecType exec_type = ExecType::kSync;
     std::vector<uint32_t> mutate_index;
-    if (fmutate_inputs.count(inode.source->op())) {
-      mutate_index = fmutate_inputs[inode.source->op()](inode.source->attrs);
+    if (fmutate_inputs.count(op)) {
+      mutate_index = fmutate_inputs[op](inode.source->attrs);
     }
-    if (fcreate_op_state.count(inode.source->op())) {
+    if (fexec_type.count(op)) {
+      exec_type = fexec_type[op](inode.source->attrs);
+    }
+
+    if (fcreate_op_state.count(op)) {
       std::vector<TShape> ishape;
       std::vector<int> itype;
       for (const auto& e : inode.inputs) {
         ishape.emplace_back(vshape[idx.entry_id(e)]);
         itype.emplace_back(vdtype[idx.entry_id(e)]);
       }
-      std::shared_ptr<dmlc::any> state;
+      dmlc::any state;
       if (saved_states.count(inode.source)) {
         state = saved_states.at(inode.source);
       } else {
-        state = fcreate_op_state[inode.source->op()](
+        state = fcreate_op_state[op](
             inode.source->attrs, vctx[i], ishape, itype);
       }
-      ret[i] = std::make_shared<StatefulComputeExecutor>(inode.source->op(), state);
-    } else if (is_layer_backward.get(inode.source->op(), false)) {
+      FStatefulCompute fcompute = exec::GetFCompute<FStatefulCompute>(
+          op, "FStatefulCompute", vctx[i]);
+      ret[i] = std::make_shared<StatefulComputeExecutor>(state, fcompute, exec_type);
+    } else if (is_layer_backward.get(op, false)) {
       CHECK_GE(inode.control_deps.size(), 1);
       uint32_t fwd_id = inode.control_deps[0];
       CHECK(vctx[fwd_id] == vctx[i]);
       CHECK(ret[fwd_id] != nullptr);
+      FStatefulCompute fcompute = exec::GetFCompute<FStatefulCompute>(
+          op, "FStatefulCompute", vctx[i]);
       ret[i] = std::make_shared<StatefulComputeExecutor>(
-          inode.source->op(),
-          dynamic_cast<StatefulComputeExecutor*>(ret[fwd_id].get())->state_);
+          dynamic_cast<StatefulComputeExecutor*>(ret[fwd_id].get())->state_,
+          fcompute, exec_type);
     } else {
-      FCompute fcompute = FComputeExecutor::GetFCompute(inode.source->op(), vctx[i]);
+      FCompute fcompute = exec::GetFCompute<FCompute>(op, "FCompute", vctx[i]);
       if (fcompute != nullptr) {
-        ret[i] = std::make_shared<FComputeExecutor>(fcompute, inode.source->attrs);
+        ret[i] = std::make_shared<FComputeExecutor>(
+            inode.source->attrs, fcompute, exec_type);
       } else {
-        LOG(INFO) << "FCompute not registered " << inode.source->op()->name;
+        LOG(INFO) << "FCompute not registered " << op->name;
       }
     }
   }

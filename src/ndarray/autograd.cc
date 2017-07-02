@@ -86,7 +86,7 @@ void AutogradRuntime::RecordImperativeFCompute(const nnvm::Op* op,
   RecordOp(op, attrs, p_inputs, p_outputs, nullptr);
 }
 
-void AutogradRuntime::RecordImperativeOperator(const std::shared_ptr<dmlc::any>& state,
+void AutogradRuntime::RecordImperativeOperator(const dmlc::any& state,
                                                const nnvm::Op* op,
                                                const nnvm::NodeAttrs& attrs,
                                                std::vector<NDArray> *p_inputs,
@@ -108,7 +108,7 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
                                     const nnvm::NodeAttrs& attrs,
                                     std::vector<NDArray> *p_inputs,
                                     std::vector<NDArray> *p_outputs,
-                                    const std::shared_ptr<dmlc::any>& state) {
+                                    const dmlc::any& state) {
   std::vector<NDArray>& inputs  = *p_inputs;
   std::vector<NDArray>& outputs = *p_outputs;
 
@@ -167,12 +167,12 @@ void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs,
   std::vector<NDArray> args, args_grad;
   std::vector<NDArray> aux_states;
   std::vector<OpReqType> grad_reqs;
-  std::unordered_map<const nnvm::Node*, std::shared_ptr<dmlc::any> > saved_states;
+  std::unordered_map<const nnvm::Node*, dmlc::any > saved_states;
   AGDFSVisit(heads, [&](const AGNodePtr& n) {
       if (n->nn_node->is_variable()) {
         vlist.push_back(n);
       } else {
-        if (n->state != nullptr) {
+        if (!n->state.empty()) {
           saved_states.insert({n->nn_node.get(), n->state});
         }
         if (fmutate_inputs.count(n->nn_node->op())) {

@@ -83,10 +83,6 @@ class CustomOp : public Operator {
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args);
 
-  virtual ExecType exec_type() const {
-    return kAsync;
-  }
-
  private:
   Context get_ctx();
   std::shared_ptr<MXCallbackList> op_info_;
@@ -282,6 +278,10 @@ class CustomOpProp : public OperatorProperty {
 
   Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                              std::vector<int> *in_type) const override;
+
+  virtual ExecType exec_type() const override {
+    return ExecType::kAsync;
+  }
 
  private:
   static std::map<std::string, CustomOpPropCreator> registry_;
