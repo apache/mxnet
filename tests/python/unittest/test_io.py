@@ -158,7 +158,7 @@ def test_LibSVMIter():
         news_metadata = {
             'name': 'news20.t',
             'origin_name': 'news20.t.bz2',
-            'url': "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/news20.t.bz2",
+            'url': "http://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/news20.t.bz2",
             'shape': 62060,
             'num_classes': 20,
         }
