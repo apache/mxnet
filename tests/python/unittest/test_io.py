@@ -117,9 +117,12 @@ def test_LibSVMIter():
             os.system("mkdir " + data_dir)
         os.chdir(data_dir)
         if (not os.path.exists(data_name)):
-            import urllib
+            if sys.version_info[0] >= 3:
+                from urllib.request import urlretrieve
+            else:
+                from urllib import urlretrieve
             zippath = os.path.join(data_dir, data_origin_name)
-            urllib.urlretrieve(url, zippath)
+            urlretrieve(url, zippath)
             os.system("bzip2 -d %r" % data_origin_name)
         os.chdir("..")
 
