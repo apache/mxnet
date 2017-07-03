@@ -213,7 +213,7 @@ class KVStoreDistServer {
         // TODO(haibin) temporarily initialized as dense NDArray. We need inplace operator
         // support for rowsparse ndarrays. And after that `stored` should be initialized as
         // RowSparse NDArray
-        stored = NDArray(kRowSparseNDArray, dshape, Context());
+        stored = NDArray(kRowSparseStorage, dshape, Context());
         CopyFromTo(recved, &stored, 0);
         stored.WaitToRead();
         server->Response(req_meta);
