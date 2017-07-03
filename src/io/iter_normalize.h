@@ -102,9 +102,11 @@ class ImageNormalizeIter : public IIterator<DataInst> {
     if (!base_->Next()) return false;
     const DataInst &src = base_->Value();
     this->SetOutImg(src);
-    out_.data.resize(2);
+    out_.data.resize(src.data.size());
     out_.data[0] = outimg_;
-    out_.data[1] = src.data[1];
+    for (int i = 1; i < src.data.size(); ++i) {
+      out_.data[i] = src.data[i];
+    }
     out_.index = src.index;
     out_.extra_data = src.extra_data;
     return true;
@@ -274,9 +276,11 @@ class ImageDetNormalizeIter : public IIterator<DataInst> {
     if (!base_->Next()) return false;
     const DataInst &src = base_->Value();
     this->SetOutImg(src);
-    out_.data.resize(2);
+    out_.data.resize(src.data.size());
     out_.data[0] = outimg_;
-    out_.data[1] = src.data[1];
+    for (int i = 1; i < src.data.size(); ++i) {
+      out_.data[i] = src.data[i];
+    }
     out_.index = src.index;
     out_.extra_data = src.extra_data;
     return true;

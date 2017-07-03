@@ -1247,7 +1247,7 @@ MXNET_DLL int MXDataIterGetData(DataIterHandle handle,
  * \brief Get the image index by array.
  * \param handle the handle pointer to the data iterator
  * \param out_index output index of the array.
- * \param out_size output size of the array.
+ * \param out_size output size of the array.bk
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDataIterGetIndex(DataIterHandle handle,
@@ -1266,10 +1266,18 @@ MXNET_DLL int MXDataIterGetPadNum(DataIterHandle handle,
  * \brief Get the handle to the NDArray of underlying label
  * \param handle the handle pointer to the data iterator
  * \param out the handle to underlying label NDArray
+ * \param index the index for label NDArray
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
-                                 NDArrayHandle *out);
+                                 NDArrayHandle *out, int index);
+/*!
+ * \brief Get the number of different types of label.
+ * \param handle the handle pointer to the data iterator
+ * \param out the number of labels
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterGetLabelNum(DataIterHandle handle, int *out);
 //--------------------------------------------
 // Part 6: basic KVStore interface
 //--------------------------------------------

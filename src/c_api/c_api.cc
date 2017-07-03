@@ -557,19 +557,26 @@ int MXDataIterNext(DataIterHandle handle, int *out) {
   API_END();
 }
 
-int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
+int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out, int index) {
   API_BEGIN();
-  const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
-  NDArray* pndarray = new NDArray();
-  // temp hack to make label 1D
-  // TODO(tianjun) make label 1D when label_width=0
-  TShape shape = db.data[1].shape();
-  if (shape[1] == 1) {
-    *pndarray = db.data[1].Reshape(mshadow::Shape1(shape[0]));
-  } else {
-    *pndarray = db.data[1];
-  }
-  *out = pndarray;
+    const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
+    NDArray* pndarray = new NDArray();
+    // temp hack to make label 1D
+    // TODO(tianjun) make label 1D when label_width=0
+    TShape shape = db.data[index+1].shape();
+    if (shape[index+1] == 1) {
+      *pndarray = db.data[index+1].Reshape(mshadow::Shape1(shape[0]));
+    } else {
+      *pndarray = db.data[index+1];
+    }
+    *out = pndarray;
+  API_END();
+}
+
+int MXDataIterGetLabelNum(DataIterHandle handle, int *out) {
+  API_BEGIN();
+    const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
+    *out = int(db.data.size()) - 1;
   API_END();
 }
 
