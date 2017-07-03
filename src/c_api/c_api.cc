@@ -576,7 +576,7 @@ int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out, int index) {
 int MXDataIterGetLabelNum(DataIterHandle handle, int *out) {
   API_BEGIN();
     const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
-    *out = int(db.data.size()) - 1;
+    *out = static_cast<int>(db.data.size()) - 1;
   API_END();
 }
 
