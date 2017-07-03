@@ -16,7 +16,7 @@
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 #ifdef __CUDACC__
-#include "./matrix_dot-inl.cuh"
+#include "./dot-inl.cuh"
 #endif  // __CUDACC__
 
 namespace mxnet {
