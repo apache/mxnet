@@ -1,10 +1,10 @@
 /*!
  *  Copyright (c) 2017 by Contributors
- * \file matrix_dot-inl.cuh
+ * \file dot-inl.cuh
  * \brief implementation of matrix dot op on GPU
  */
-#ifndef MXNET_OPERATOR_NN_MATRIX_DOT_INL_CUH_
-#define MXNET_OPERATOR_NN_MATRIX_DOT_INL_CUH_
+#ifndef MXNET_OPERATOR_TENSOR_DOT_INL_CUH_
+#define MXNET_OPERATOR_TENSOR_DOT_INL_CUH_
 
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
@@ -158,4 +158,4 @@ inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NN_MATRIX_DOT_INL_CUH_
+#endif  // MXNET_OPERATOR_TENSOR_DOT_INL_CUH_

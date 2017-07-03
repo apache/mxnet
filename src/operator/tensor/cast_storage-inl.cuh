@@ -3,8 +3,8 @@
  * \file cast_storage-inl.cuh
  * \brief implementation of cast_storage op on GPU
  */
-#ifndef MXNET_OPERATOR_NN_CAST_STORAGE_INL_CUH_
-#define MXNET_OPERATOR_NN_CAST_STORAGE_INL_CUH_
+#ifndef MXNET_OPERATOR_TENSOR_CAST_STORAGE_INL_CUH_
+#define MXNET_OPERATOR_TENSOR_CAST_STORAGE_INL_CUH_
 
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
@@ -23,4 +23,4 @@ inline void CastStorageDnsCsrImpl(mshadow::Stream<gpu>* s, const TBlob& dns, NDA
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NN_CAST_STORAGE_INL_CUH_
+#endif  // MXNET_OPERATOR_TENSOR_CAST_STORAGE_INL_CUH_

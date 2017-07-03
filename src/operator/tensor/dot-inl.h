@@ -1,11 +1,11 @@
 /*!
  *  Copyright (c) 2017 by Contributors
- * \file matrix_dot-inl.h
+ * \file dot-inl.h
  * \brief Function definition of matrix dot operator
  */
 
-#ifndef MXNET_OPERATOR_NN_MATRIX_DOT_INL_H_
-#define MXNET_OPERATOR_NN_MATRIX_DOT_INL_H_
+#ifndef MXNET_OPERATOR_TENSOR_DOT_INL_H_
+#define MXNET_OPERATOR_TENSOR_DOT_INL_H_
 
 #include <mxnet/operator_util.h>
 #include <vector>
@@ -921,4 +921,4 @@ inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NN_MATRIX_DOT_INL_H_
+#endif  // MXNET_OPERATOR_TENSOR_DOT_INL_H_

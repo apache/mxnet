@@ -1,10 +1,10 @@
 /*!
  *  Copyright (c) 2017 by Contributors
- * \file matrix_dot.cc
+ * \file dot.cc
  * \brief CPU Implementation of matrix dot
  */
 
-#include "./matrix_dot-inl.h"
+#include "./dot-inl.h"
 
 namespace mxnet {
 namespace op {

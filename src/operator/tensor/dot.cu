@@ -1,10 +1,10 @@
 /*!
  *  Copyright (c) 2017 by Contributors
- * \file matrix_dot.cu
+ * \file dot.cu
  * \brief GPU Implementation of matrix dot
  */
 
-#include "./matrix_dot-inl.h"
+#include "./dot-inl.h"
 
 namespace mxnet {
 namespace op {
