@@ -72,6 +72,8 @@ applies a softmax to each vector, which then becomes a vector of probabilities
 over the alphabet. Note that the 0th element of this vector is reserved for the 
 special blank character.
 
+``out`` is a list of CTC loss values, one per example in the batch.
+
 See *Connectionist Temporal Classification: Labelling Unsegmented 
 Sequence Data with Recurrent Neural Networks*, A. Graves *et al*. for more 
 information.
