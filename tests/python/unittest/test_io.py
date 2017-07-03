@@ -123,7 +123,14 @@ def test_LibSVMIter():
                 from urllib import urlretrieve
             zippath = os.path.join(data_dir, data_origin_name)
             urlretrieve(url, zippath)
-            os.system("bzip2 -d %r" % data_origin_name)
+            import bz2
+            bz_file = bz2.BZ2File(data_origin_name, 'rb')
+            with open(data_name, 'wb') as fout:
+                try:
+                    content = bz_file.read()
+                    fout.write(content)
+                finally:
+                    bz_file.close()
         os.chdir("..")
 
     def check_libSVMIter_synthetic():
