@@ -62,27 +62,6 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void Init(const std::vector<std::string>& str_keys,
-            const std::vector<NDArray>& values) override {
-    std::vector<int> keys(str_keys.size());
-    for (size_t i = 0; i < str_keys.size(); ++i) {
-      auto &str_key = str_keys[i];
-      CHECK(str_key_dict_.find(str_key) == str_key_dict_.end())
-            << "duplicate init of key " << str_key;
-      auto key = next_str_key_;
-      str_key_dict_[str_key] = key;
-      keys[i] = key;
-      if (values[i].storage_type() == kRowSparseStorage) {
-        // reserve key space for row_sparse keys
-        next_str_key_ += values[i].shape()[0];
-      } else {
-        next_str_key_ += 1;
-      }
-    }
-    Init(keys, values);
-  }
-
-  // TODO(haibin) lazy initialization
   void Init(const std::vector<int>& keys,
             const std::vector<NDArray>& values) override {
     CheckUnique(keys);

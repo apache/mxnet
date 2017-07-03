@@ -202,7 +202,6 @@ class KVStoreDistServer {
       if (stored.is_none()) {
         if (log_verbose_) LOG(INFO) << "initial push: " << master_key;
         // initialization
-        // TODO(haibin) support lazy init
         CHECK_GT(num_rows, 0) << "init with empty data is not supported";
         auto unit_len = req_data.lens[1];
         CHECK_GT(unit_len, 0);
@@ -211,6 +210,9 @@ class KVStoreDistServer {
         CHECK_EQ(req_data.vals.size(), num_rows * unit_len);
         TBlob recv_blob(data, dshape, cpu::kDevMask);  // NOLINT(*)
         NDArray recved = NDArray(recv_blob, 0);
+        // TODO(haibin) temporarily initialized as dense NDArray. We need inplace operator
+        // support for rowsparse ndarrays. And after that `stored` should be initialized as
+        // RowSparse NDArray
         stored = NDArray(dshape, Context());
         CopyFromTo(recved, &stored, 0);
         stored.WaitToRead();
