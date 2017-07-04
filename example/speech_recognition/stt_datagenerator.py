@@ -32,7 +32,7 @@ class DataGenerator(object):
         # 1d 161 length of array filled with 1s
         self.feats_std = np.ones((self.feat_dim,))
         self.max_input_length = 0
-        self.max_length_list_in_batch =[]
+        self.max_length_list_in_batch = []
         # 1d 161 length of array filled with random value
         #[0.0, 1.0)
         self.rng = random.Random()
@@ -146,10 +146,11 @@ class DataGenerator(object):
                             "Must be train/validation/test")
         max_duration_indexes = durations.index(max(durations))
         max_seq_length = self.featurize(audio_paths[max_duration_indexes]).shape[0]
-        self.max_seq_length=max_seq_length
+        self.max_seq_length = max_seq_length
         return max_seq_length
 
-    def prepare_minibatch(self, audio_paths, texts, overwrite=False, is_bi_graphemes=False):
+    def prepare_minibatch(self, audio_paths, texts, overwrite=False,
+                          is_bi_graphemes=False, seq_length=-1):
         """ Featurize a minibatch of audio, zero pad them and return a dictionary
         Params:
             audio_paths (list(str)): List of paths to audio files
@@ -167,7 +168,10 @@ class DataGenerator(object):
         feature_dim = features[0].shape[1]
         mb_size = len(features)
         # Pad all the inputs so that they are all the same length
-        x = np.zeros((mb_size, self.max_seq_length, feature_dim))
+        if seq_length == -1:
+            x = np.zeros((mb_size, self.max_seq_length, feature_dim))
+        else:
+            x = np.zeros((mb_size, seq_length, feature_dim))
         y = np.zeros((mb_size, self.max_label_length))
         labelUtil = LabelUtil.getInstance()
         label_lengths = []
@@ -223,10 +227,13 @@ class DataGenerator(object):
             next_feat_squared = np.square(next_feat)
             feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, dim)
             feat = np.sum(feat_vertically_stacked, axis=0, keepdims=True)
-            feat_squared_vertically_stacked = np.concatenate((feat_squared, next_feat_squared)).reshape(-1, dim)
+            feat_squared_vertically_stacked = np.concatenate(
+                (feat_squared, next_feat_squared)).reshape(-1, dim)
             feat_squared = np.sum(feat_squared_vertically_stacked, axis=0, keepdims=True)
-            count = count + float(next_feat.shape[0])
+            count += float(next_feat.shape[0])
         self.feats_mean = feat / float(count)
         self.feats_std = np.sqrt(feat_squared / float(count) - np.square(self.feats_mean))
-        np.savetxt(generate_file_path(self.save_dir, self.model_name, 'feats_mean'), self.feats_mean)
-        np.savetxt(generate_file_path(self.save_dir, self.model_name, 'feats_std'), self.feats_std)
+        np.savetxt(
+            generate_file_path(self.save_dir, self.model_name, 'feats_mean'), self.feats_mean)
+        np.savetxt(
+            generate_file_path(self.save_dir, self.model_name, 'feats_std'), self.feats_std)

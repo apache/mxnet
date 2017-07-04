@@ -103,7 +103,6 @@ class STTIter(mx.io.DataIter):
 
             data_batch = SimpleBatch(data_names, data_all, label_names, label_all)
             yield data_batch
-        self.is_first_epoch = False
 
     def reset(self):
         pass
