@@ -150,6 +150,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
     CHECK(data_stype_ == kCSRStorage || label_stype_ == kCSRStorage);
     CHECK_GT(inst_cache_.size(), 0);
     out_.data.clear();
+    data_.clear();
     offsets_.clear();
 
     size_t total_size = inst_cache_[0].data.size();
