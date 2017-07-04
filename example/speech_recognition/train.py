@@ -7,7 +7,8 @@ from config_util import get_checkpoint_path, parse_contexts
 from stt_metric import STTMetric
 #tensorboard setting
 from tensorboard import SummaryWriter
-import numpy as np
+import json
+
 
 
 def get_initializer(args):
@@ -28,6 +29,7 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
     def __call__(self, num_update):
         return self.learning_rate
 
+
 def do_training(args, module, data_train, data_val, begin_epoch=0):
     from distutils.dir_util import mkpath
     from log_util import LogUtil
@@ -35,7 +37,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
     log = LogUtil().getlogger()
     mkpath(os.path.dirname(get_checkpoint_path(args)))
 
-    seq_len = args.config.get('arch', 'max_t_count')
+    #seq_len = args.config.get('arch', 'max_t_count')
     batch_size = args.config.getint('common', 'batch_size')
     save_checkpoint_every_n_epoch = args.config.getint('common', 'save_checkpoint_every_n_epoch')
     save_checkpoint_every_n_batch = args.config.getint('common', 'save_checkpoint_every_n_batch')
@@ -44,21 +46,22 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
 
     contexts = parse_contexts(args)
     num_gpu = len(contexts)
-    eval_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, seq_length=seq_len,is_logging=enable_logging_validation_metric,is_epoch_end=True)
+    eval_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, is_logging=enable_logging_validation_metric,is_epoch_end=True)
     # tensorboard setting
-    loss_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, seq_length=seq_len,is_logging=enable_logging_train_metric,is_epoch_end=False)
+    loss_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, is_logging=enable_logging_train_metric,is_epoch_end=False)
 
-    optimizer = args.config.get('train', 'optimizer')
-    momentum = args.config.getfloat('train', 'momentum')
+    optimizer = args.config.get('optimizer', 'optimizer')
     learning_rate = args.config.getfloat('train', 'learning_rate')
     learning_rate_annealing = args.config.getfloat('train', 'learning_rate_annealing')
 
     mode = args.config.get('common', 'mode')
     num_epoch = args.config.getint('train', 'num_epoch')
-    clip_gradient = args.config.getfloat('train', 'clip_gradient')
-    weight_decay = args.config.getfloat('train', 'weight_decay')
+    clip_gradient = args.config.getfloat('optimizer', 'clip_gradient')
+    weight_decay = args.config.getfloat('optimizer', 'weight_decay')
     save_optimizer_states = args.config.getboolean('train', 'save_optimizer_states')
     show_every = args.config.getint('train', 'show_every')
+    optimizer_params_dictionary = json.loads(args.config.get('optimizer', 'optimizer_params_dictionary'))
+    kvstore_option = args.config.get('common', 'kvstore_option')
     n_epoch=begin_epoch
 
     if clip_gradient == 0:
@@ -75,24 +78,14 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
     lr_scheduler = SimpleLRScheduler(learning_rate=learning_rate)
 
     def reset_optimizer(force_init=False):
-        if optimizer == "sgd":
-            module.init_optimizer(kvstore='device',
-                                  optimizer=optimizer,
-                                  optimizer_params={'lr_scheduler': lr_scheduler,
-                                                    'momentum': momentum,
-                                                    'clip_gradient': clip_gradient,
-                                                    'wd': weight_decay},
-                                  force_init=force_init)
-        elif optimizer == "adam":
-            module.init_optimizer(kvstore='device',
-                                  optimizer=optimizer,
-                                  optimizer_params={'lr_scheduler': lr_scheduler,
-                                                    #'momentum': momentum,
-                                                    'clip_gradient': clip_gradient,
-                                                    'wd': weight_decay},
-                                  force_init=force_init)
-        else:
-            raise Exception('Supported optimizers are sgd and adam. If you want to implement others define them in train.py')
+        optimizer_params = {'lr_scheduler': lr_scheduler,
+                            'clip_gradient': clip_gradient,
+                            'wd': weight_decay}
+        optimizer_params.update(optimizer_params_dictionary)
+        module.init_optimizer(kvstore=kvstore_option,
+                              optimizer=optimizer,
+                              optimizer_params=optimizer_params,
+                              force_init=force_init)
     if mode == "train":
         reset_optimizer(force_init=True)
     else:
@@ -101,15 +94,23 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
     #tensorboard setting
     tblog_dir = args.config.get('common', 'tensorboard_log_dir')
     summary_writer = SummaryWriter(tblog_dir)
+
+
+    if mode == "train":
+        sort_by_duration = True
+    else:
+        sort_by_duration = False
+
+    if not sort_by_duration:
+        data_train.reset()
+
     while True:
 
         if n_epoch >= num_epoch:
             break
-
         loss_metric.reset()
         log.info('---------train---------')
         for nbatch, data_batch in enumerate(data_train):
-
             module.forward_backward(data_batch)
             module.update()
             # tensorboard setting
@@ -136,6 +137,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
         assert curr_acc is not None, 'cannot find Acc_exclude_padding in eval metric'
 
         data_train.reset()
+        data_train.is_first_epoch = False
 
         # tensorboard setting
         train_cer, train_n_label, train_l_dist, train_ctc_loss = loss_metric.get_name_value()
