@@ -22,7 +22,7 @@
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 #include "./sort_op.h"
-#include "./matrix_op-inl.h"
+#include "./dot-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -215,7 +215,7 @@ void SparseEmbeddingForwardRspImpl(const nnvm::NodeAttrs& attrs,
   TBlob out_blob = out->data();
   // forward to dns implementation when storage_shape equals shape
   bool transpose_a = false;
-  DotCsrRspDnsImpl<xpu>(ctx, data, weight, req, transpose_a, &out_blob);
+  DotCsrRspDnsImpl<xpu>(ctx.get_stream<xpu>(), data, weight, req, transpose_a, &out_blob);
 }
 
 template<typename xpu>
@@ -408,7 +408,7 @@ void SparseEmbeddingBackwardEx(const nnvm::NodeAttrs& attrs,
   if (data_stype == kCSRStorage && grad_stype == kDefaultStorage &&
       output_stype == kDefaultStorage) {
     TBlob ret = outputs[1].data();
-    DotCsrDnsDnsImpl<xpu>(ctx, inputs[1], inputs[0].data(), req[1], true, &ret);
+    DotCsrDnsDnsImpl(ctx.get_stream<xpu>(), inputs[1], inputs[0].data(), req[1], true, &ret);
   } else {
     LOG(FATAL) << "Not supported dot backward for sparse input(s) with sparse gradients";
   }

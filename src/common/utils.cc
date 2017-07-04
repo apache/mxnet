@@ -5,7 +5,7 @@
  */
 
 #include "./utils.h"
-#include "../operator/nn/cast_storage-inl.h"
+#include "../operator/tensor/cast_storage-inl.h"
 
 namespace mxnet {
 namespace common {
