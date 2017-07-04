@@ -3248,7 +3248,7 @@ def test_deformable_convolution():
         for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
             for input_height, input_width in itertools.product([5, 6], [5, 6]):
                 for dilate in [(1, 1), (2, 2)]:
-                    for grad_nodes in [['im_data'], ['offset_data']]:
+                    for grad_nodes in [['im_data'], ['offset_data'], ['weight']]:
                         output_height = input_height
                         output_width = input_width
                         im_data = np.random.rand(num_batch, num_channel_data, input_height, input_width)
