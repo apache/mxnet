@@ -693,7 +693,7 @@ class MXDataIter(DataIter):
     --------
     src/io : The underlying C++ data iterator implementation, e.g., `CSVIter`.
     """
-    def __init__(self, handle, data_name='data', label_names=['softmax_label'], **_):
+    def __init__(self, handle, data_name='data', label_name='softmax_label', **_):
         super(MXDataIter, self).__init__()
         self.handle = handle
         # debug option, used to test the speed with io effect eliminated
@@ -703,9 +703,10 @@ class MXDataIter(DataIter):
         self.first_batch = None
         self.first_batch = self.next()
         data = self.first_batch.data[0]
-        if len(self.first_batch.label) > len(label_names):
-            label_names += ["label"+str(i+2) for i in range(len(self.first_batch.label)-len(label_names))]
-
+        label_names = [label_name]
+        if len(self.first_batch.label) > 1:
+            label_names += ["label"+str(i+2) \
+            for i in range(len(self.first_batch.label)-len(label_names))]
         label_list = []
         for ind, l in enumerate(self.first_batch.label):
             label_list.append(DataDesc(label_names[ind], l.shape, l.dtype))
