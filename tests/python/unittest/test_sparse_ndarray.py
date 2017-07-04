@@ -96,7 +96,7 @@ def check_sparse_nd_prop_rsp():
     nd, (v, idx) = rand_sparse_ndarray(shape, storage_type)
     assert(nd._num_aux == 1)
     assert(nd.indices.dtype == np.int64)
-    assert(nd.storage_type == 'row_sparse')
+    assert(nd.stype == 'row_sparse')
     assert_almost_equal(nd.indices.asnumpy(), idx)
 
 

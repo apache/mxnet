@@ -16,11 +16,20 @@ from ..ndarray_doc import _build_doc
 from .common import CachedOp
 
 
+_STORAGE_TYPE_ID_TO_STR = {
+    -1 : 'undefined',
+    0  : 'default',
+    1  : 'row_sparse',
+    2  : 'csr',
+}
+
+
 class NDArrayBase(object):
     """Base data structure for ndarray"""
-    __slots__ = ["handle", "writable"]
+    __slots__ = ["handle", "writable", "_stype"]
     # pylint: disable= no-member
-    def __init__(self, handle, writable=True):
+
+    def __init__(self, handle, writable=True, stype=None):
         """initialize a new NDArray
 
         Parameters
@@ -32,6 +41,7 @@ class NDArrayBase(object):
             assert isinstance(handle, NDArrayHandle)
         self.handle = handle
         self.writable = writable
+        self._stype = stype
 
     def __del__(self):
         check_call(_LIB.MXNDArrayFree(self.handle))
@@ -62,6 +72,10 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
         output_vars = ctypes.POINTER(NDArrayHandle)()
         num_output = ctypes.c_int(0)
 
+    # return output stypes to avoid the c_api call for checking
+    # a handle's stype in _ndarray_cls
+    out_stypes = ctypes.POINTER(ctypes.c_int)()
+
     check_call(_LIB.MXImperativeInvoke(
         ctypes.c_void_p(handle),
         ctypes.c_int(len(ndargs)),
@@ -70,14 +84,17 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
         ctypes.byref(output_vars),
         ctypes.c_int(len(keys)),
         c_array(ctypes.c_char_p, [c_str(key) for key in keys]),
-        c_array(ctypes.c_char_p, [c_str(str(val)) for val in vals])))
+        c_array(ctypes.c_char_p, [c_str(str(val)) for val in vals]),
+        ctypes.byref(out_stypes)))
 
     if original_output is not None:
         return original_output
     if num_output.value == 1:
-        return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle))
+        return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle),
+                            stype=_STORAGE_TYPE_ID_TO_STR[out_stypes[0]])
     else:
-        return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle))
+        return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle,
+                                         stype=_STORAGE_TYPE_ID_TO_STR[out_stypes[i]]))
                 for i in range(num_output.value)]
 
 

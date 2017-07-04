@@ -463,7 +463,7 @@ def test_module_initializer():
     mod.bind(data_shapes=iterator.provide_data, label_shapes=iterator.provide_label)
     mod.init_params()
     v = mod._arg_params['v']
-    assert(v.storage_type == 'row_sparse')
+    assert(v.stype == 'row_sparse')
     assert(np.sum(v.asnumpy()) != 0)
 
 if __name__ == '__main__':

@@ -175,7 +175,7 @@ class SparseNDArray(NDArray):
         >>> x[1:2].asnumpy()
         array([[ 3.,  4.,  5.]], dtype=float32)
         """
-        stype = self.storage_type
+        stype = self.stype
         if stype != 'csr':
             raise Exception("__getitem__ for " + str(stype) + " not implemented yet")
         if isinstance(key, int):
@@ -233,7 +233,7 @@ class SparseNDArray(NDArray):
     def _num_aux(self):
         ''' The number of aux data used to help store the sparse ndarray.
         '''
-        return len(_STORAGE_AUX_TYPES[self.storage_type])
+        return len(_STORAGE_AUX_TYPES[self.stype])
 
     @property
     # pylint: disable= invalid-name, undefined-variable
@@ -270,7 +270,7 @@ class SparseNDArray(NDArray):
         <type 'numpy.int32'>
         """
         res = mx.nd.zeros(shape=self.shape, ctx=self.context,
-                          dtype=dtype, storage_type=self.storage_type)
+                          dtype=dtype, storage_type=self.stype)
         self.copyto(res)
         return res
 
@@ -301,7 +301,7 @@ class SparseNDArray(NDArray):
                 return
             return _internal._copyto(self, out=other)
         elif isinstance(other, Context):
-            hret = _ndarray_cls(_new_alloc_handle(self.storage_type, self.shape, other,
+            hret = _ndarray_cls(_new_alloc_handle(self.stype, self.shape, other,
                                                   True, self.dtype, self.aux_types))
             return _internal._copyto(self, out=hret)
         else:
@@ -525,14 +525,15 @@ def todense(source):
     return ndarray.cast_storage(source, storage_type='default')
 
 
-def _ndarray_cls(handle, writable=True):
-    stype = _storage_type(handle)
+def _ndarray_cls(handle, writable=True, stype=None):
+    if stype is None:
+        stype = _storage_type(handle)
     if stype == 'default':
-        return NDArray(handle, writable=writable)
+        return NDArray(handle, writable=writable, stype=stype)
     elif stype == 'csr':
-        return CSRNDArray(handle, writable=writable)
+        return CSRNDArray(handle, writable=writable, stype=stype)
     elif stype == 'row_sparse':
-        return RowSparseNDArray(handle, writable=writable)
+        return RowSparseNDArray(handle, writable=writable, stype=stype)
     else:
         raise Exception("unknown storage type")
 

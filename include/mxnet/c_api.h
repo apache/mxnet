@@ -604,7 +604,8 @@ MXNET_DLL int MXImperativeInvoke(AtomicSymbolCreator creator,
                                  NDArrayHandle **outputs,
                                  int num_params,
                                  const char **param_keys,
-                                 const char **param_vals);
+                                 const char **param_vals,
+                                 const int** out_stypes);
 /*!
  * \brief set whether to record operator for autograd
  * \param is_train 1 when training, 0 when testing

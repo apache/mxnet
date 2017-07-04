@@ -109,9 +109,9 @@ def test_sparse_dot():
         rhs_dns = rhs_nd if rhs_stype == 'default' else rhs_nd.todense()
         out = mx.nd.dot(lhs_nd, rhs_dns, transpose_a=trans_lhs)
         if trans_lhs and default_context().device_type is 'cpu':
-            assert out.storage_type == 'row_sparse'
+            assert out.stype == 'row_sparse'
         else:
-            assert out.storage_type == 'default'
+            assert out.stype == 'default'
         out_expected = mx.nd.dot(lhs_dns, rhs_dns, transpose_a=trans_lhs)
         out_np = out_expected.asnumpy()
         backward_trans = not trans_lhs

@@ -32,18 +32,18 @@ from .ndarray_doc import _build_doc
 # pylint: disable=unused-import
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from ._ctypes.ndarray import NDArrayBase, _set_ndarray_class
+        from ._ctypes.ndarray import NDArrayBase, _set_ndarray_class, _STORAGE_TYPE_ID_TO_STR
         from ._ctypes.ndarray import invoke, CachedOp, _imperative_invoke
     elif _sys.version_info >= (3, 0):
-        from ._cy3.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke
+        from ._cy3.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
         from ._cy3.ndarray import invoke, CachedOp, _imperative_invoke
     else:
-        from ._cy2.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke
+        from ._cy2.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
         from ._cy2.ndarray import invoke, CachedOp, _imperative_invoke
 except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
-    from ._ctypes.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke
+    from ._ctypes.ndarray import NDArrayBase, _set_ndarray_class, _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
     from ._ctypes.ndarray import invoke, CachedOp, _imperative_invoke
 # pylint: enable=unused-import
 
@@ -63,12 +63,6 @@ _DTYPE_MX_TO_NP = {
     3 : np.uint8,
     4 : np.int32,
     6 : np.int64
-}
-_STORAGE_TYPE_ID_TO_STR = {
-    -1 : 'undefined',
-    0  : 'default',
-    1  : 'row_sparse',
-    2  : 'csr',
 }
 _STORAGE_TYPE_STR_TO_ID = {
     'undefined'  : -1,
@@ -748,8 +742,10 @@ fixed-size items.
         return _DTYPE_MX_TO_NP[mx_dtype.value]
 
     @property
-    def storage_type(self):
-        return _storage_type(self.handle)
+    def stype(self):
+        if self._stype is None:
+            self._stype = _storage_type(self.handle)
+        return self._stype
 
     @property
     # pylint: disable= invalid-name, undefined-variable
