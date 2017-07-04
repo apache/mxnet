@@ -92,7 +92,7 @@ To install MXNet on a computer with a CPU processor, choose from two options:
 * Use the prebuilt binary package
 * Build the library from source code
 
-#### Building MXNet with the Prebuilt Binary Package
+#### Installing MXNet with the Prebuilt Binary Package
 For Windows users, MXNet provides prebuilt binary packages.
 You can install the package directly in the R console.
 
@@ -119,12 +119,12 @@ For GPU-enabled package:
 Run the following commands to install the MXNet dependencies and build the MXNet R package.
 
 ```r
-  Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
+  Rscript -e "install.packages('devtools', repo = 'https://cloud.r-project.org/')"
 ```
 
 ```bash
   cd R-package
-  Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
+  Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(dependencies = TRUE)"
   cd ..
   make rpkg
 ```
