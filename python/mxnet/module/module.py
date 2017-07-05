@@ -560,8 +560,8 @@ class Module(BaseModule):
             raise RuntimeError("If you are trying to do inference, rebind module "
                                "with 'force_rebind=True' and 'for_training=False'")
 
-        curr_data_shapes = (i.shape for i in self._data_shapes)
-        new_data_shapes = (i.shape for i in data_batch.data)
+        curr_data_shapes = tuple(i.shape for i in self._data_shapes)
+        new_data_shapes = tuple(i.shape for i in data_batch.data)
 
         if curr_data_shapes != new_data_shapes:
             if hasattr(data_batch, "provide_data") and data_batch.provide_data:

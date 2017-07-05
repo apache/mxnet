@@ -19,7 +19,7 @@ my %WriteMakefileArgs = (
   "LICENSE" => "apache_2_0",
   "NAME" => "AI::MXNet",
   "PREREQ_PM" => {
-    "AI::MXNetCAPI" => "1.01",
+    "AI::MXNetCAPI" => "1.0101",
     "AI::NNVMCAPI" => "1.01",
     "Function::Parameters" => "1.0705",
     "Mouse" => "2.1.0",
@@ -27,7 +27,7 @@ my %WriteMakefileArgs = (
     "GraphViz" => "2.14"
   },
   "TEST_REQUIRES" => {},
-  "VERSION" => "1.01",
+  "VERSION" => "1.0101",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -35,7 +35,7 @@ my %WriteMakefileArgs = (
 
 
 my %FallbackPrereqs = (
-  "AI::MXNetCAPI" => "1.01",
+  "AI::MXNetCAPI" => "1.0101",
   "AI::NNVMCAPI" => "1.01",
   "Function::Parameters" => "1.0705",
   "Mouse" => "2.1.0",
