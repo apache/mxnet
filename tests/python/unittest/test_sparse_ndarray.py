@@ -15,13 +15,13 @@ def assert_fcompex(f, *args, **kwargs):
 
 
 def sparse_nd_ones(shape, stype):
-    return mx.nd.cast_storage(mx.nd.ones(shape), stype=stype)
+    return mx.nd.cast_storage(mx.nd.ones(shape), storage_type=stype)
 
 
-def check_sparse_nd_elemwise_binary(shapes, stypes, f, g):
+def check_sparse_nd_elemwise_binary(shapes, storage_types, f, g):
     # generate inputs
     nds = []
-    for i, storage_type in enumerate(stypes):
+    for i, storage_type in enumerate(storage_types):
         if storage_type == 'row_sparse':
             nd, _ = rand_sparse_ndarray(shapes[i], storage_type)
         elif storage_type == 'default':
@@ -63,7 +63,7 @@ def test_sparse_nd_elementwise_fallback():
 def test_sparse_nd_zeros():
     def check_sparse_nd_zeros(stype, shape):
         zero = mx.nd.zeros(shape)
-        sparse_zero = mx.nd.zeros(shape=shape, stype=stype)
+        sparse_zero = mx.nd.zeros(shape=shape, storage_type=stype)
         assert_almost_equal(sparse_zero.asnumpy(), zero.asnumpy())
 
     shape = rand_shape_2d()
@@ -137,8 +137,8 @@ def test_sparse_nd_basic():
 
 
 def test_sparse_nd_setitem():
-    def check_sparse_nd_setitem(stype, shape, dst):
-        x = mx.nd.zeros(shape=shape, stype=stype)
+    def check_sparse_nd_setitem(storage_type, shape, dst):
+        x = mx.nd.zeros(shape=shape, storage_type=storage_type)
         x[:] = dst
         dst_nd = mx.nd.array(dst) if isinstance(dst, (np.ndarray, np.generic)) else dst
         assert same(x.asnumpy(), dst_nd.asnumpy())
@@ -170,7 +170,7 @@ def test_sparse_nd_slice():
 def test_sparse_nd_equal():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
-        x = mx.nd.zeros(shape=shape, stype=stype)
+        x = mx.nd.zeros(shape=shape, storage_type=stype)
         y = sparse_nd_ones(shape, stype)
         z = x == y
         assert (z.asnumpy() == np.zeros(shape)).all()
@@ -181,7 +181,7 @@ def test_sparse_nd_equal():
 def test_sparse_nd_not_equal():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
-        x = mx.nd.zeros(shape=shape, stype=stype)
+        x = mx.nd.zeros(shape=shape, storage_type=stype)
         y = sparse_nd_ones(shape, stype)
         z = x != y
         assert (z.asnumpy() == np.ones(shape)).all()
@@ -192,7 +192,7 @@ def test_sparse_nd_not_equal():
 def test_sparse_nd_greater():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
-        x = mx.nd.zeros(shape=shape, stype=stype)
+        x = mx.nd.zeros(shape=shape, storage_type=stype)
         y = sparse_nd_ones(shape, stype)
         z = x > y
         assert (z.asnumpy() == np.zeros(shape)).all()
@@ -205,7 +205,7 @@ def test_sparse_nd_greater():
 def test_sparse_nd_greater_equal():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
-        x = mx.nd.zeros(shape=shape, stype=stype)
+        x = mx.nd.zeros(shape=shape, storage_type=stype)
         y = sparse_nd_ones(shape, stype)
         z = x >= y
         assert (z.asnumpy() == np.zeros(shape)).all()
@@ -220,7 +220,7 @@ def test_sparse_nd_greater_equal():
 def test_sparse_nd_lesser():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
-        x = mx.nd.zeros(shape=shape, stype=stype)
+        x = mx.nd.zeros(shape=shape, storage_type=stype)
         y = sparse_nd_ones(shape, stype)
         z = y < x
         assert (z.asnumpy() == np.zeros(shape)).all()
@@ -233,7 +233,7 @@ def test_sparse_nd_lesser():
 def test_sparse_nd_lesser_equal():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
-        x = mx.nd.zeros(shape=shape, stype=stype)
+        x = mx.nd.zeros(shape=shape, storage_type=stype)
         y = sparse_nd_ones(shape, stype)
         z = y <= x
         assert (z.asnumpy() == np.zeros(shape)).all()
@@ -328,7 +328,7 @@ def test_sparse_nd_negate():
 
 def test_sparse_nd_output_fallback():
     shape = (10, 10)
-    out = mx.nd.zeros(shape=shape, stype='row_sparse')
+    out = mx.nd.zeros(shape=shape, storage_type='row_sparse')
     mx.nd.random_normal(shape=shape, out=out)
     assert(np.sum(out.asnumpy()) != 0)
 
@@ -336,7 +336,7 @@ def test_sparse_nd_output_fallback():
 def test_sparse_nd_astype():
     stypes = ['row_sparse', 'csr']
     for stype in stypes:
-        x = mx.nd.zeros(shape=rand_shape_2d(), stype=stype, dtype='float32')
+        x = mx.nd.zeros(shape=rand_shape_2d(), storage_type=stype, dtype='float32')
         y = x.astype('int32')
         assert(y.dtype == np.int32), y.dtype
 

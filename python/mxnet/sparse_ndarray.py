@@ -48,7 +48,7 @@ _STORAGE_AUX_TYPES = {
 }
 
 
-def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shapes=None):
+def _new_alloc_handle(storage_type, shape, ctx, delay_alloc, dtype, aux_types, aux_shapes=None):
     """Return a new handle with specified storage type, shape, dtype and context.
 
     Empty handle is only used to hold results
@@ -65,7 +65,7 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
     aux_shapes = sum(aux_shapes, ())
     num_aux = mx_uint(len(aux_types))
     check_call(_LIB.MXNDArrayCreateSparseEx(
-        ctypes.c_int(int(_STORAGE_TYPE_STR_TO_ID[stype])),
+        ctypes.c_int(int(_STORAGE_TYPE_STR_TO_ID[storage_type])),
         c_array(mx_uint, shape),
         mx_uint(len(shape)),
         ctypes.c_int(ctx.device_typeid),
@@ -270,7 +270,7 @@ class SparseNDArray(NDArray):
         <type 'numpy.int32'>
         """
         res = mx.nd.zeros(shape=self.shape, ctx=self.context,
-                          dtype=dtype, stype=self.stype)
+                          dtype=dtype, storage_type=self.stype)
         self.copyto(res)
         return res
 
@@ -522,7 +522,7 @@ def todense(source):
     NDArray
         The dense array with default storage
     """
-    return ndarray.cast_storage(source, stype='default')
+    return ndarray.cast_storage(source, storage_type='default')
 
 
 def _ndarray_cls(handle, writable=True, stype=None):

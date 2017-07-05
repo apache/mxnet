@@ -291,9 +291,9 @@ void CastStorageComputeImpl(mshadow::Stream<xpu>* s,
 }
 
 struct CastStorageParam : public dmlc::Parameter<CastStorageParam> {
-  int stype;
+  int storage_type;
   DMLC_DECLARE_PARAMETER(CastStorageParam) {
-    DMLC_DECLARE_FIELD(stype)
+    DMLC_DECLARE_FIELD(storage_type)
     .add_enum("default", kDefaultStorage)
     .add_enum("row_sparse", kRowSparseStorage)
     .add_enum("csr", kCSRStorage)
@@ -310,9 +310,9 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_NE(in_attrs->at(0), kUndefinedStorage)
     << "src ndarray's storage type must be specified";
   const CastStorageParam& param = nnvm::get<CastStorageParam>(attrs.parsed);
-  CHECK_NE(param.stype, kUndefinedStorage)
+  CHECK_NE(param.storage_type, kUndefinedStorage)
     << "dst ndarray's storage type must be specified";
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, param.stype);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, param.storage_type);
   return true;
 }
 

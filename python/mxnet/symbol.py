@@ -1162,7 +1162,7 @@ class Symbol(SymbolBase):
             raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
 
-    def simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
+    def simple_bind(self, ctx, grad_req='write', type_dict=None, storage_type_dict=None,
                     group2ctx=None, shared_arg_names=None, shared_exec=None,
                     shared_buffer=None, **kwargs):
         """Bind current symbol to get an executor, allocate all the arguments needed.
@@ -1206,7 +1206,7 @@ class Symbol(SymbolBase):
         type_dict  : Dict of str->numpy.dtype
             Input type dictionary, name->dtype
 
-        stype_dict  : Dict of str->str
+        storage_type_dict  : Dict of str->str
             Input storage type dictionary, name->storage_type
 
         group2ctx : Dict of string to mx.Context
@@ -1255,10 +1255,10 @@ class Symbol(SymbolBase):
         # provided storage type argument names
         provided_arg_stype_names = ctypes.POINTER(ctypes.c_char_p)()
         provided_arg_stype_data = ctypes.POINTER(mx_uint)()  # provided storage types
-        if stype_dict is not None:
+        if storage_type_dict is not None:
             provided_arg_stype_names = []
             provided_arg_stype_data = []
-            for k, v in stype_dict.items():
+            for k, v in storage_type_dict.items():
                 if v in _STORAGE_TYPE_STR_TO_ID:
                     provided_arg_stype_names.append(c_str(k))
                     provided_arg_stype_data.append(ctypes.c_int(_STORAGE_TYPE_STR_TO_ID[v]))
@@ -1339,7 +1339,7 @@ class Symbol(SymbolBase):
             shared_buffer_names = []
             shared_buffer_handles = []
             for k, v in shared_buffer.items():
-                assert(v.stype == 'default'), \
+                assert(v.storage_type == 'default'), \
                     "shared_buffer is expected to only contain NDArrays with default storage"
                 shared_buffer_names.append(c_str(k))
                 shared_buffer_handles.append(v.handle)
@@ -1669,7 +1669,7 @@ class Symbol(SymbolBase):
         return reshape(self, shape=shape)
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
-        init=None, stype=None, **kwargs):
+        init=None, storage_type=None, **kwargs):
     """Creates a symbolic variable with specified name.
 
     Example usage:
@@ -1696,8 +1696,6 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         The dtype for input variable. If not specified, this value will be inferred.
     init : initializer (mxnet.init.*)
         Initializer for this variable to (optionally) override the default initializer.
-    stype : str
-        The storage type of the variable.
     kwargs : Additional attribute variables
         Additional attributes must start and end with double underscores.
 
@@ -1725,8 +1723,8 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         if not isinstance(init, string_types):
             init = init.dumps()
         attr['__init__'] = init
-    if stype is not None:
-        attr['__storage_type__'] = str(_STORAGE_TYPE_STR_TO_ID[stype])
+    if storage_type is not None:
+        attr['__storage_type__'] = str(_STORAGE_TYPE_STR_TO_ID[storage_type])
     for k, v in kwargs.items():
         if k.startswith('__') and k.endswith('__'):
             attr[k] = str(v)

@@ -48,14 +48,14 @@ def _zeros_ndarray(shape, ctx=None, dtype=None, **kwargs):
     # pylint: enable= no-member, protected-access
 
 
-def _zeros_sparse_ndarray(stype, shape, ctx=None, dtype=None, aux_types=None, **kwargs):
+def _zeros_sparse_ndarray(storage_type, shape, ctx=None, dtype=None, aux_types=None, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
 
     Parameters
     ----------
     shape : int or tuple of int
         The shape of the empty array
-    stype: string
+    storage_type: string
         The storage type of the empty array, such as 'row_sparse', 'csr', etc
     ctx : Context, optional
         An optional device context (default is the current default context)
@@ -76,26 +76,26 @@ def _zeros_sparse_ndarray(stype, shape, ctx=None, dtype=None, aux_types=None, **
     >>> mx.sparse_nd.zeros('row_sparse', (1,2), mx.gpu(0), 'float16').asnumpy()
     array([[ 0.,  0.]], dtype=float16)
     """
-    if stype == 'default':
+    if storage_type == 'default':
         return _zeros_ndarray(shape, ctx=ctx, dtype=dtype, **kwargs)
     if ctx is None:
         ctx = Context.default_ctx
     dtype = mx_real_t if dtype is None else dtype
     if aux_types is None:
-        if stype == 'row_sparse' or stype == 'csr':
-            aux_types = _STORAGE_AUX_TYPES[stype]
+        if storage_type == 'row_sparse' or storage_type == 'csr':
+            aux_types = _STORAGE_AUX_TYPES[storage_type]
         else:
             raise Exception("unknown storage type")
-    assert(len(aux_types) == len(_STORAGE_AUX_TYPES[stype]))
-    out = _ndarray_cls(_new_alloc_handle(stype, shape, ctx, True, dtype, aux_types))
+    assert(len(aux_types) == len(_STORAGE_AUX_TYPES[storage_type]))
+    out = _ndarray_cls(_new_alloc_handle(storage_type, shape, ctx, True, dtype, aux_types))
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, out=out, **kwargs)
 
 
-def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
-    if stype is None:
+def zeros(shape, ctx=None, dtype=None, storage_type=None, aux_types=None, **kwargs):
+    if storage_type is None:
         return _zeros_ndarray(shape, ctx, dtype, **kwargs)
     else:
-        return _zeros_sparse_ndarray(stype, shape, ctx, dtype, aux_types, **kwargs)
+        return _zeros_sparse_ndarray(storage_type, shape, ctx, dtype, aux_types, **kwargs)
 
 
 def load(fname):
