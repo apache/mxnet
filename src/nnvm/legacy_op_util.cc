@@ -106,10 +106,12 @@ class OperatorState {
                 const std::vector<OpReqType>& req,
                 const std::vector<TBlob>& outputs) {
     if (!bwd_init_) {
-      CHECK(fwd_init_);
       CHECK_EQ(arg_data_ptr_.size() + aux_data_.size(), inputs.size());
       for (size_t i = 0; i < arg_data_ptr_.size(); ++i) {
         *arg_data_ptr_[i] = inputs[i];
+      }
+      for (size_t i = 0; i < aux_data_.size(); ++i) {
+        aux_data_[i] = inputs[inputs.size() - aux_data_.size() + i];
       }
       CHECK_EQ(outputs.size(), in_grad_.size());
       for (size_t i = 0; i < outputs.size(); ++i) in_grad_[i] = outputs[i];
