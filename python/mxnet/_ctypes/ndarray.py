@@ -93,8 +93,8 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
         return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle),
                             stype=_STORAGE_TYPE_ID_TO_STR[out_stypes[0]])
     else:
-        return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle,
-                                         stype=_STORAGE_TYPE_ID_TO_STR[out_stypes[i]]))
+        return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle),
+                             stype=_STORAGE_TYPE_ID_TO_STR[out_stypes[i]])
                 for i in range(num_output.value)]
 
 

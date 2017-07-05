@@ -335,7 +335,7 @@ class SGD(Optimizer):
             return None
         else:
             return mx.nd.zeros(shape=weight.shape, ctx=weight.context,
-                               dtype=weight.dtype, storage_type=weight.stype)
+                               dtype=weight.dtype, stype=weight.stype)
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))

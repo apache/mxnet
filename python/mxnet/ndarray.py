@@ -973,11 +973,11 @@ fixed-size items.
 
     def _to_csr(self):
         # pylint: disable=undefined-variable
-        return cast_storage(self, storage_type='csr')
+        return cast_storage(self, stype='csr')
 
     def _to_rsp(self):
         # pylint: disable=undefined-variable
-        return cast_storage(self, storage_type='row_sparse')
+        return cast_storage(self, stype='row_sparse')
 
 def onehot_encode(indices, out):
     """One-hot encoding indices into matrix out.

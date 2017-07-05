@@ -399,7 +399,7 @@ class Module(BaseModule):
         else:
             assert self._arg_params is None and self._aux_params is None
             param_arrays = [
-                mx.nd.zeros(shape=x[0].shape, dtype=x[0].dtype, storage_type=x[0].stype)
+                mx.nd.zeros(shape=x[0].shape, dtype=x[0].dtype, stype=x[0].stype)
                 for x in self._exec_group.param_arrays
             ]
             self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}

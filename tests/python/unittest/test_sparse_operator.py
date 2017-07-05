@@ -2,8 +2,8 @@ from mxnet.test_utils import *
 
 
 def check_elemwise_add_ex(lhs_stype, rhs_stype, shape, lhs_grad_stype=None, rhs_grad_stype=None):
-    lhs = mx.symbol.Variable('lhs', storage_type=lhs_stype)
-    rhs = mx.symbol.Variable('rhs', storage_type=rhs_stype)
+    lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
+    rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
     if lhs_grad_stype is not None:
         lhs._set_attr(grad_stype_hint=str(lhs_grad_stype))
     if rhs_grad_stype is not None:
@@ -48,8 +48,8 @@ def test_elemwise_add_ex_multiple_stages():
     ds_nd = mx.nd.array(ds_np)
 
     # sparse + sparse = sparse
-    sp_data1 = mx.symbol.Variable('sp_data1', storage_type='row_sparse')
-    sp_data2 = mx.symbol.Variable('sp_data2', storage_type='row_sparse')
+    sp_data1 = mx.symbol.Variable('sp_data1', stype='row_sparse')
+    sp_data2 = mx.symbol.Variable('sp_data2', stype='row_sparse')
     ds_data = mx.symbol.Variable('ds_data')
     plus = mx.symbol.elemwise_add(sp_data1, sp_data2, name='plus')
     # sparse + dense = dense
@@ -69,7 +69,7 @@ def test_elemwise_add_ex_multiple_stages():
 def test_cast_storage_ex():
     def test_rsp_to_dns(shape):
         rsp, (data, row_idx) = rand_sparse_ndarray(shape, 'row_sparse')
-        dns_out = mx.nd.cast_storage(rsp, storage_type='default')
+        dns_out = mx.nd.cast_storage(rsp, stype='default')
         dns_expected = np.zeros(shape, dtype=default_dtype())
         if row_idx is not None:
             for k, v in enumerate(row_idx):
@@ -78,8 +78,8 @@ def test_cast_storage_ex():
 
     def test_dns_to_rsp(shape):
         dns_in = rand_ndarray(shape, 'default')
-        rsp_out = mx.nd.cast_storage(mx.nd.array(dns_in, dtype=default_dtype()), storage_type='row_sparse')
-        ret = mx.nd.cast_storage(rsp_out, storage_type='default')
+        rsp_out = mx.nd.cast_storage(mx.nd.array(dns_in, dtype=default_dtype()), stype='row_sparse')
+        ret = mx.nd.cast_storage(rsp_out, stype='default')
         assert same(ret.asnumpy(), dns_in.asnumpy())
 
     def test_csr_to_dns(shape):
@@ -90,8 +90,8 @@ def test_cast_storage_ex():
 
     def test_dns_to_csr(dns_in):
         dns_in = np.array(dns_in)
-        csr_out = mx.nd.cast_storage(mx.nd.array(dns_in, dtype=default_dtype()), storage_type='csr')
-        ret = mx.nd.cast_storage(csr_out, storage_type='default')
+        csr_out = mx.nd.cast_storage(mx.nd.array(dns_in, dtype=default_dtype()), stype='csr')
+        ret = mx.nd.cast_storage(csr_out, stype='default')
         assert same(ret.asnumpy(), dns_in)
 
     shape = rand_shape_2d()
@@ -119,8 +119,8 @@ def test_sparse_dot():
         assert_almost_equal(out.asnumpy(), out_np, rtol=1e-4, atol=1e-5)
 
         # test symbolic forward
-        lhs = mx.symbol.Variable('lhs', storage_type='csr')
-        rhs = mx.symbol.Variable('rhs', storage_type=rhs_stype)
+        lhs = mx.symbol.Variable('lhs', stype='csr')
+        rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
         test = mx.symbol.dot(lhs, rhs, transpose_a=trans_lhs)
         location = {'lhs': lhs_nd, 'rhs': rhs_nd}
         expected = {'rhs': rhs_backward_grad}
@@ -146,7 +146,7 @@ def test_sparse_embedding():
     out_dim = 4
     batch = 24
 
-    data = mx.sym.Variable("data", storage_type='csr')
+    data = mx.sym.Variable("data", stype='csr')
     embed = mx.sym.SparseEmbedding(data=data, input_dim=in_dim, output_dim=out_dim, name="embed")
     exe_test = embed.simple_bind(default_context(), grad_req={'data': 'null', 'embed_weight': 'write'},
                                  data=(batch, in_dim))
@@ -190,7 +190,7 @@ def test_sparse_retain():
     for _ in range(10):
         shape = rand_shape_2d()
         num_rows = shape[0]
-        rsp, _ = rand_sparse_ndarray(shape=shape, storage_type='row_sparse', density=0.5)
+        rsp, _ = rand_sparse_ndarray(shape=shape, stype='row_sparse', density=0.5)
         length = np.random.randint(1, num_rows + 1)
         idx = random_sample(list(range(0, num_rows)), length)
         idx.sort()
