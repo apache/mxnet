@@ -1100,16 +1100,15 @@ void GraphExecutor::InitOpSegs() {
 
   // Generate segments based on the graph structure
   bool prefer_bulk_exec_inference = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_INFERENCE", true);
-  if (prefer_bulk_exec_inference && num_forward_nodes_ == total_num_nodes) {
-    // bulk the whole graph for inference
-    cached_seg_opr_[0] = this->CreateCachedSegOpr(0, num_forward_nodes_);
-    return;
-  }
-
   // Whether to perform bulk exec for training
   bool prefer_bulk_exec = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_TRAIN", 1);
   // The maximum number of node in a segment executed in bulk
   size_t num_nodes_threshold = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15);
+  if (prefer_bulk_exec_inference && num_forward_nodes_ == total_num_nodes) {
+    // bulk the whole graph for inference
+    num_nodes_threshold = std::numeric_limits<size_t>::max();
+  }
+
   // create forward segments for training
   if (prefer_bulk_exec > 0) {
     size_t topo_start = 0;
@@ -1229,6 +1228,8 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
       CHECK_EQ(opnode.exec->in_array.size(), 1U);
       CHECK_EQ(opnode.exec->out_array.size(), 1U);
       CopyFromTo(opnode.exec->in_array[0], &(opnode.exec->out_array[0]));
+    } else if (opnode.exec->exec_type() == ExecType::kLocal) {
+      opnode.exec->Run(RunContext{opnode.ctx, nullptr});
     } else if (opnode.cached_opr != nullptr) {
 #if MXNET_USE_PROFILER
       bool profiling = engine::Profiler::Get()->GetState() == engine::Profiler::kRunning;

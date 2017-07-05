@@ -91,7 +91,7 @@ class Operator {
     LOG(FATAL) << "Backward is not implemented";
   }
   /*! \return [Deprecated] execution type of the operator */
-  virtual ExecType exec_type() const final {  // exec_type has been moved to OperatorProperty
+  ExecType exec_type() const final {  // exec_type has been moved to OperatorProperty
     return ExecType::kSync;
   }
 };

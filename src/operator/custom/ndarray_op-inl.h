@@ -165,7 +165,7 @@ class NDArrayOpProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const override;
 
-  virtual ExecType exec_type() const override {
+  ExecType exec_type() const override {
     return ExecType::kAsync;
   }
 

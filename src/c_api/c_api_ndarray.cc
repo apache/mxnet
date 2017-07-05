@@ -290,54 +290,59 @@ void PushOperator(const dmlc::any& state,
                   const std::vector<NDArray>& ndoutputs) {
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
-  struct Capture {
-    engine::CallbackOnComplete on_complete;
-    dmlc::any state;
-  };
-
   bool is_train = AutogradRuntime::Get()->IsTraining();
   ExecType exec_type = ExecType::kSync;
   if (fexec_type.count(op)) {
     exec_type = fexec_type[op](attrs);
   }
-  Engine::Get()->PushAsync(
-    [op, state, ndinputs, ndoutputs, requested, is_train, exec_type](
-        RunContext rctx,
-        engine::CallbackOnComplete on_complete) {
-      static auto& fcompute_cpu =
-          nnvm::Op::GetAttr<FStatefulCompute>("FStatefulCompute<cpu>");
-      static auto& fcompute_gpu =
-          nnvm::Op::GetAttr<FStatefulCompute>("FStatefulCompute<gpu>");
 
-      Capture* capture = new Capture{on_complete, state};
-      OpContext opctx{is_train, rctx,
-                      Engine::Get()->CreateCallback(
-                        [](Engine* engine, void *cpt_handle) {
-                            Capture* cpt = static_cast<Capture*>(cpt_handle);
-                            cpt->on_complete();
-                            delete cpt;
-                          }, static_cast<void*>(capture)),
-                      requested};
-      std::vector<TBlob> input_blobs, output_blobs;
-      for (const auto& i : ndinputs) input_blobs.push_back(i.data());
-      for (const auto& i : ndoutputs) output_blobs.push_back(i.data());
-      std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
-      if (rctx.get_ctx().dev_mask() == cpu::kDevMask) {
-        fcompute_cpu[op](state, opctx, input_blobs, req, output_blobs);
-      } else if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
-        fcompute_gpu[op](state, opctx, input_blobs, req, output_blobs);
-      } else {
-        LOG(FATAL) << "Unknown device mask";
-      }
-      if (exec_type != ExecType::kAsync) {
-        if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
-          rctx.get_stream<gpu>()->Wait();
+  auto fcompute = common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", ctx);
+  if (fcompute != nullptr) {
+    CHECK(exec_type == ExecType::kSync || exec_type == ExecType::kAsync);
+    Engine::Get()->PushAsync(
+      [state, fcompute, ndinputs, ndoutputs, requested, is_train, exec_type](
+          RunContext rctx,
+          engine::CallbackOnComplete on_complete) {
+        OpContext opctx{is_train, rctx, on_complete, requested};
+        std::vector<TBlob> input_blobs, output_blobs;
+        for (const auto& i : ndinputs) input_blobs.push_back(i.data());
+        for (const auto& i : ndoutputs) output_blobs.push_back(i.data());
+        std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
+        fcompute(state, opctx, input_blobs, req, output_blobs);
+        if (exec_type == ExecType::kSync) {
+          if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
+            rctx.get_stream<gpu>()->Wait();
+          }
+          on_complete();
         }
-        delete capture;
-        on_complete();
-      }
-    }, ctx, read_vars, write_vars, FnProperty::kNormal,
-    0, PROFILER_MESSAGE(op->name.c_str()));
+      }, ctx, read_vars, write_vars, FnProperty::kNormal,
+      0, PROFILER_MESSAGE(op->name.c_str()));
+  } else {
+    auto fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
+        op, "FStatefulComputeEx", ctx);
+    CHECK(fcompute_ex != nullptr)
+        << "One of FStatefulCompute and FStatefulComputeEx must be registered "
+        << "for stateful operator " << op->name;
+    const auto& run = [state, fcompute_ex, ndinputs, ndoutputs, requested, is_train, exec_type](
+          RunContext rctx,
+          engine::CallbackOnComplete on_complete) {
+        OpContext opctx{is_train, rctx, on_complete, requested};
+        std::vector<OpReqType> req(ndoutputs.size(), kWriteTo);
+        fcompute_ex(state, opctx, ndinputs, req, ndoutputs);
+        if (exec_type == ExecType::kSync) {
+          if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
+            rctx.get_stream<gpu>()->Wait();
+          }
+          on_complete();
+        }
+      };
+    if (exec_type == ExecType::kLocal) {
+      run(RunContext{ctx, nullptr}, engine::CallbackOnComplete());
+    } else {
+      Engine::Get()->PushAsync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
+                               0, PROFILER_MESSAGE(op->name.c_str()));
+    }
+  }
 }
 
 void ImperativeInvokeImpl(const Context& default_ctx,

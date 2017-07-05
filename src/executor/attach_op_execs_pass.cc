@@ -7,6 +7,7 @@
 #include <mxnet/operator.h>
 #include <mxnet/op_attr_types.h>
 #include <nnvm/graph_attr_types.h>
+#include "../common/utils.h"
 #include "./exec_pass.h"
 #if MXNET_USE_MKL2017 == 1
 #include <mkl_memory.h>
@@ -20,22 +21,6 @@ const OperatorProperty* OpPropGetOpProperty(const NodeAttrs& attrs);
 }  // namespace op
 
 namespace exec {
-
-template<typename FCompType>
-static FCompType GetFCompute(const Op* op, const std::string& name,
-                             const Context& ctx) {
-  static auto& fcompute_cpu = nnvm::Op::GetAttr<FCompType>(name + "<cpu>");
-  static auto& fcompute_gpu = nnvm::Op::GetAttr<FCompType>(name + "<gpu>");
-
-  if (ctx.dev_mask() == cpu::kDevMask) {
-    return fcompute_cpu.get(op, nullptr);
-  } else if (ctx.dev_mask() == gpu::kDevMask) {
-    return fcompute_gpu.get(op, nullptr);
-  } else {
-    LOG(FATAL) << "Unknown device mask";
-    return nullptr;
-  }
-}
 
 // forward executor
 class StatefulComputeExecutor : public OpExecutor {
@@ -75,6 +60,33 @@ class StatefulComputeExecutor : public OpExecutor {
   FStatefulCompute fcompute_;
   ExecType exec_type_;
   std::vector<TBlob> in_data_, out_data_;
+};
+
+
+// forward executor
+class StatefulComputeExExecutor : public OpExecutor {
+ public:
+  void Run(RunContext rctx) override {
+    op_ctx.run_ctx = rctx;
+    fcompute_(state_, op_ctx, in_array, req, out_array);
+  }
+
+  void Setup() override {}
+
+  ExecType exec_type() const override {
+    return exec_type_;
+  }
+
+  explicit StatefulComputeExExecutor(const dmlc::any& state,
+                                     const FStatefulComputeEx& fcompute,
+                                     ExecType exec_type)
+      : state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
+
+ private:
+  friend Graph AttachOpExecs(Graph g);
+  dmlc::any state_;
+  FStatefulComputeEx fcompute_;
+  ExecType exec_type_;
 };
 
 
@@ -165,21 +177,41 @@ Graph AttachOpExecs(Graph g) {
         state = fcreate_op_state[op](
             inode.source->attrs, vctx[i], ishape, itype);
       }
-      FStatefulCompute fcompute = exec::GetFCompute<FStatefulCompute>(
+      FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
           op, "FStatefulCompute", vctx[i]);
-      ret[i] = std::make_shared<StatefulComputeExecutor>(state, fcompute, exec_type);
+      if (fcompute != nullptr) {
+        ret[i] = std::make_shared<StatefulComputeExecutor>(state, fcompute, exec_type);
+      } else {
+        FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
+            op, "FStatefulComputeEx", vctx[i]);
+        CHECK(fcompute_ex != nullptr)
+            << "One of FStatefulCompute and FStatefulComputeEx must be registered "
+            << "for stateful operator " << op->name;
+        ret[i] = std::make_shared<StatefulComputeExExecutor>(state, fcompute_ex, exec_type);
+      }
     } else if (is_layer_backward.get(op, false)) {
       CHECK_GE(inode.control_deps.size(), 1);
       uint32_t fwd_id = inode.control_deps[0];
       CHECK(vctx[fwd_id] == vctx[i]);
       CHECK(ret[fwd_id] != nullptr);
-      FStatefulCompute fcompute = exec::GetFCompute<FStatefulCompute>(
+      FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
           op, "FStatefulCompute", vctx[i]);
-      ret[i] = std::make_shared<StatefulComputeExecutor>(
-          dynamic_cast<StatefulComputeExecutor*>(ret[fwd_id].get())->state_,
-          fcompute, exec_type);
+      if (fcompute != nullptr) {
+        ret[i] = std::make_shared<StatefulComputeExecutor>(
+            dynamic_cast<StatefulComputeExecutor*>(ret[fwd_id].get())->state_,
+            fcompute, exec_type);
+      } else {
+        FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
+            op, "FStatefulComputeEx", vctx[i]);
+        CHECK(fcompute_ex != nullptr)
+            << "One of FStatefulCompute and FStatefulComputeEx must be registered "
+            << "for stateful operator " << op->name;
+        ret[i] = std::make_shared<StatefulComputeExExecutor>(
+            dynamic_cast<StatefulComputeExExecutor*>(ret[fwd_id].get())->state_,
+            fcompute_ex, exec_type);
+      }
     } else {
-      FCompute fcompute = exec::GetFCompute<FCompute>(op, "FCompute", vctx[i]);
+      FCompute fcompute = common::GetFCompute<FCompute>(op, "FCompute", vctx[i]);
       if (fcompute != nullptr) {
         ret[i] = std::make_shared<FComputeExecutor>(
             inode.source->attrs, fcompute, exec_type);

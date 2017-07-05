@@ -35,7 +35,7 @@ class LibraryInitializer {
  public:
   LibraryInitializer() {
     dmlc::InitLogging("mxnet");
-    // signal(SIGSEGV, segfault_logger);
+    signal(SIGSEGV, segfault_logger);
 #if MXNET_USE_PROFILER
     // ensure profiler's constructor are called before atexit.
     engine::Profiler::Get();

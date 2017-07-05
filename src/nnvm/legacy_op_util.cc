@@ -117,6 +117,7 @@ class OperatorState {
     }
     opr_->Backward(ctx, out_grad_, in_data_, out_data_, req, in_grad_, aux_data_);
   }
+
  private:
   Operator *opr_;
   bool fwd_init_, bwd_init_;

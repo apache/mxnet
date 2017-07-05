@@ -92,19 +92,29 @@ enum class ExecType {
  *
  *  \note Register under "FCreateLayerOp"
  */
-using FCreateOpState = std::function<dmlc::any (const NodeAttrs& n,
+using FCreateOpState = std::function<dmlc::any (const NodeAttrs& attrs,
                                                 Context ctx,
                                                 const std::vector<TShape>& in_shape,
                                                 const std::vector<int>& in_type)>;
-
+/*!
+ * \brief Execution mode of this operator.
+ */
 using FExecType = std::function<ExecType (const NodeAttrs& attrs)>;
-
+/*!
+ * \brief Resiger a compute function for stateful operator.
+ *
+ * \note Register under "FStatefulCompute<cpu>" and "FStatefulCompute<gpu>"
+ */
 using FStatefulCompute = std::function<void (const dmlc::any& state,
                                              const OpContext& ctx,
                                              const std::vector<TBlob>& inputs,
                                              const std::vector<OpReqType>& req,
                                              const std::vector<TBlob>& outputs)>;
-
+/*!
+ * \brief Resiger a compute function for stateful operator using NDArray interface.
+ *
+ * \note Register under "FStatefulComputeEx<cpu>" and "FStatefulComputeEx<gpu>"
+ */
 using FStatefulComputeEx = std::function<void (const dmlc::any& state,
                                                const OpContext& ctx,
                                                const std::vector<NDArray>& inputs,
