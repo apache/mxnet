@@ -192,12 +192,31 @@ use Mouse;
 extends 'AI::MXNet::Optimizer';
 has '+learning_rate' => (default => 0.01);
 has 'momentum'       => (is => "ro", isa => "Num",  default => 0);
+has 'multi_precision' => (is => 'ro', isa => 'Bool', default => 0);
 
 # Create additional optimizer state: momentum
 method create_state(Index $index, AI::MXNet::NDArray $weight)
 {
-    return undef if $self->momentum == 0;
-    return mx->nd->zeros($weight->shape, ctx => $weight->context, dtype => $weight->dtype);
+    my $momentum;
+    my $weight_master_copy;
+    my $do_multi_precision = ($self->multi_precision and $weight->dtype eq 'float16');
+    if($do_multi_precision)
+    {
+        if($self->momentum != 0)
+        {
+            $momentum = mx->nd->zeros($weight->shape, ctx => $weight->context, dtype=>'float32');
+        }
+        $weight_master_copy = mx->nd->array($weight, ctx=>$weight->context, dtype=>'float32');
+        return [$momentum, $weight_master_copy];
+    }
+    else
+    {
+        if($self->momentum != 0)
+        {
+            $momentum = mx->nd->zeros($weight->shape, ctx => $weight->context, dtype => $weight->dtype);
+        }
+    }
+    return $momentum;
 }
 
 method update($index, $weight, $grad, $state)
@@ -205,48 +224,90 @@ method update($index, $weight, $grad, $state)
     my $lr = $self->_get_lr($index);
     my $wd = $self->_get_wd($index);
     $self->_update_count($index);
-    if($self->momentum == 0)
+    my $use_multi_precision = ref($state) eq 'ARRAY';
+
+    if(not $use_multi_precision)
     {
-        if(defined $self->clip_gradient)
+        if($self->momentum == 0)
         {
-            $weight .= ((1 - $lr*$wd)*$weight -
-                $lr * mx->nd->clip($grad*$self->rescale_grad, -$self->clip_gradient, $self->clip_gradient)
-            );
+            if(defined $self->clip_gradient)
+            {
+                $weight .= ((1 - $lr*$wd)*$weight -
+                    $lr * mx->nd->clip($grad*$self->rescale_grad, -$self->clip_gradient, $self->clip_gradient)
+                );
+            }
+            else
+            {
+                $weight .= (1 - $lr*$wd)*$weight - $lr*$self->rescale_grad*$grad;
+            }
         }
         else
         {
-            $weight .= (1 - $lr*$wd)*$weight - $lr*$self->rescale_grad*$grad;
+            my $mom = $state;
+            if(defined $self->clip_gradient)
+            {
+                $mom .= ($self->momentum*$mom - $lr*$wd*$weight -
+                    $lr * mx->nd->clip($grad*$self->rescale_grad, -$self->clip_gradient, $self->clip_gradient)
+                );
+                $weight += $mom;
+            }
+            else
+            {
+                $mom .= $self->momentum*$mom - $lr*$wd*$weight - $lr*$self->rescale_grad*$grad;
+                $weight += $mom;
+            }
         }
     }
     else
     {
-        my $mom = $state;
-        if(defined $self->clip_gradient)
+        my $grad32 = mx->nd->array($grad, ctx=>$grad->context, dtype=>'float32');
+        my $mom = $state->[0];
+        my $weight32 = $state->[1];
+        if($self->momentum == 0)
         {
-            $mom .= ($self->momentum*$mom - $lr*$wd*$weight -
-                $lr * mx->nd->clip($grad*$self->rescale_grad, -$self->clip_gradient, $self->clip_gradient)
-            );
-            $weight += $mom;
+            if(defined $self->clip_gradient)
+            {
+                $weight32 .= ((1 - $lr*$wd)*$weight32 -
+                    $lr * mx->nd->clip($grad32*$self->rescale_grad, -$self->clip_gradient, $self->clip_gradient)
+                );
+            }
+            else
+            {
+                $weight32 .= (1 - $lr*$wd)*$weight32 - $lr*$self->rescale_grad*$grad32;
+            }
         }
         else
         {
-            $mom .= $self->momentum*$mom - $lr*$wd*$weight - $lr*$self->rescale_grad*$grad;
-            $weight += $mom;
+            if(defined $self->clip_gradient)
+            {
+                $mom .= ($self->momentum*$mom - $lr*$wd*$weight32 -
+                    $lr * mx->nd->clip($grad32*$self->rescale_grad, -$self->clip_gradient, $self->clip_gradient)
+                );
+                $weight32 += $mom;
+            }
+            else
+            {
+                $mom .= $self->momentum*$mom - $lr*$wd*$weight32 - $lr*$self->rescale_grad*$grad32;
+                $weight32 += $mom;
+            }
         }
+        my $tmp = $weight32->astype($weight->dtype);
+        $tmp->copyto($weight);
     }
 }
 
+
 package main;
-use Test::More tests => 190;
+use Test::More tests => 1314;
 use AI::MXNet::Base;
 use PDL::NiceSlice;
 use AI::MXNet::TestUtils qw(same reldiff almost_equal);
 use AI::MXNet::Function::Parameters;
 
-func compare_optimizer($opt1, $opt2, $shape)
+func compare_optimizer($opt1, $opt2, $shape, $dtype)
 {
-    my $w1 = mx->random->uniform({shape => $shape});
-    my $g1 = mx->random->uniform({shape => $shape});
+    my $w1 = mx->random->uniform({shape => $shape, dtype=>$dtype});
+    my $g1 = mx->random->uniform({shape => $shape, dtype=>$dtype});
 
     my $w2 = $w1->copyto(mx->cpu());
     my $g2 = $g1->copyto(mx->cpu());
@@ -256,7 +317,7 @@ func compare_optimizer($opt1, $opt2, $shape)
     zip(
         sub {
             my ($s1, $s2) = @_;
-            ok(same($s1->aspdl, $s2->aspdl))
+            ok(same($s1->aspdl, $s2->aspdl)) if defined $s1 and defined $s2;
         },
         ref $state1 eq 'ARRAY' ? $state1 : [$state1], ref $state2 eq 'ARRAY' ? $state2 : [$state2]
     ) if defined $state1 and defined $state2;
@@ -266,7 +327,7 @@ func compare_optimizer($opt1, $opt2, $shape)
     zip(
         sub {
             my ($s1, $s2) = @_;
-            ok(reldiff($s1->aspdl, $s2->aspdl) < 1e-5)
+            ok(reldiff($s1->aspdl, $s2->aspdl) < 1e-5) if defined $s1 and defined $s2;
         },
         ref $state1 eq 'ARRAY' ? $state1 : [$state1], ref $state2 eq 'ARRAY' ? $state2 : [$state2]
     ) if defined $state1 and defined $state2;
@@ -285,7 +346,7 @@ func test_adam()
               {'rescale_grad'=> 0.1});
     for my $kwarg (@kwargs)
     {
-        compare_optimizer($opt1->new(%$kwarg), $opt2->new(wd => 0.9, %$kwarg), $shape);
+        compare_optimizer($opt1->new(%$kwarg), $opt2->new(wd => 0.9, %$kwarg), $shape, 'float32');
     }
 }
 
@@ -324,7 +385,7 @@ func test_rms()
               {rescale_grad  => 0.8, wd => 0.05, centered => 1, clip_weights => 0.01});
     for my $kwarg (@kwargs)
     {
-        compare_optimizer($opt1->new(%$kwarg), $opt2->new(%$kwarg), $shape);
+        compare_optimizer($opt1->new(%$kwarg), $opt2->new(%$kwarg), $shape, 'float32');
     }
 }
 
@@ -335,25 +396,40 @@ sub test_sgd
     my $opt1 = 'PerlSGD';
     my $opt2 = mx->optimizer->SGD;
     my $shape = [3, 4, 5];
-    my @kwargs = (
-                    {},
-                    {momentum => 0.9},
-                    {clip_gradient => 0.5},
-                    {clip_gradient => 0.4, rescale_grad => 0.14},
-                    {rescale_grad  => 0.8},
-                    {clip_gradient => 0.5, wd => 0.07},
-                    {clip_gradient => 0.4, rescale_grad => 0.14, wd => 0.03},
-                    {rescale_grad  => 0.8, wd => 0.05},
-                    {clip_gradient => 0.5, momentum => 0.9},
-                    {clip_gradient => 0.4, rescale_grad => 0.14, momentum => 0.9},
-                    {rescale_grad  => 0.8, momentum => 0.9},
-                    {clip_gradient => 0.5, wd => 0.07, momentum => 0.9},
-                    {clip_gradient => 0.4, rescale_grad => 0.14, wd => 0.03, momentum => 0.9},
-                    {rescale_grad  => 0.8, wd => 0.05, momentum => 0.9}
-    );
-    for my $kwarg (@kwargs)
+    my @mom_options = ({}, {momentum => 0.9});
+    my @cg_options = ({}, {clip_gradient => 0.4}, {clip_gradient => 0.5});
+    my @rg_options = ({}, {rescale_grad => 0.14}, {rescale_grad => 0.8});
+    my @wd_options = ({}, {wd => 0.03}, {wd => 0.05}, {wd => 0.07});
+    my @mp_options = ({}, {multi_precision => 0}, {multi_precision => 1});
+    for my $dtype(qw/float16 float32 float64/)
     {
-        compare_optimizer($opt1->new(%$kwarg), $opt2->new(%$kwarg), $shape);
+        for my $mom_option (@mom_options)
+        {
+            for my $cg_option (@cg_options)
+            {
+                for my $rg_option (@rg_options)
+                {
+                    for my $wd_option (@wd_options)
+                    {
+                        for my $mp_option (@mp_options)
+                        {
+                            my %kwarg;
+                            %kwarg = (%kwarg, %$mom_option);
+                            %kwarg = (%kwarg, %$cg_option);
+                            %kwarg = (%kwarg, %$rg_option);
+                            %kwarg = (%kwarg, %$wd_option);
+                            %kwarg = (%kwarg, %$mp_option);
+                            next if (
+                                $dtype eq 'float16'
+                                    and
+                                (not exists $kwarg{multi_precision} or not $kwarg{multi_precision})
+                            );
+                            compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -392,4 +468,3 @@ test_adam();
 test_rms();
 test_sgd();
 test_lr_wd_mult();
-

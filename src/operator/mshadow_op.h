@@ -950,7 +950,7 @@ MSHADOW_XINLINE double gammaln_grad::Map<double>(double a) {
 
 /* Smooth L1 Loss is a loss specific for R-CNN franchise training
  * Smooth L1 Loss function
- * f(x) = 0.5 * (sigma * x) ^ 2,     x < 1 / sigma^2
+ * f(x) = 0.5 * (sigma * x) ^ 2,     |x| < 1 / sigma^2
  *      = |x| - 0.5 / sigma / sigma, otherwise
  * When sigma = 1, it is equivalent to Huber Loss evaluated at
  * delta = 1.
@@ -973,7 +973,7 @@ struct smooth_l1_loss {
 };  // struct smooth_l1_loss
 
 /* The derivative of smooth l1 loss is
- * f'(x) = sigma^2 * x, x < 1 / sigma^2
+ * f'(x) = sigma^2 * x, |x| < 1 / sigma^2
  *       = sign(x),     otherwise
  */
 struct smooth_l1_gradient {

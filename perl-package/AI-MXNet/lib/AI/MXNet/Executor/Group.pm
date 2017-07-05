@@ -203,8 +203,8 @@ use List::Util qw(sum);
     shared_group : AI::MXNet::DataParallelExecutorGroup
         Default is undef. This is used in bucketing. When not undef, it should be a executor
         group corresponding to a different bucket. In other words, it will correspond to a different
-        symbol but with the same set of parameters (e.g. unrolled RNNs with different lengths).
-        In this case, many memory will be shared.
+        symbol with the same set of parameters (e.g. unrolled RNNs with different lengths).
+        In this case the memory regions of the parameters will be shared.
     logger : Logger
         Default is AI::MXNet::Logging->get_logger.
     fixed_param_names: Maybe[ArrayRef[Str]]
@@ -549,9 +549,9 @@ method reshape(
         A dictionary of name to AI::MXNet::NDArray auxiliary variable mapping.
 =cut
 
-method set_params(HashRef[AI::MXNet::NDArray] $arg_params, HashRef[AI::MXNet::NDArray] $aux_params)
+method set_params(HashRef[AI::MXNet::NDArray] $arg_params, HashRef[AI::MXNet::NDArray] $aux_params, Bool $allow_extra=0)
 {
-    $_->copy_params_from($arg_params, $aux_params) for @{ $self->_p->execs };
+    $_->copy_params_from($arg_params, $aux_params, $allow_extra) for @{ $self->_p->execs };
 }
 
 =head2 get_params
