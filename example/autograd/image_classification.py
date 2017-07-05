@@ -29,6 +29,8 @@ opt = parser.parse_args()
 
 print(opt)
 
+mx.random.seed(opt.seed)
+
 dataset_classes = {'mnist': 10, 'cifar10': 10, 'imagenet': 1000, 'dummy': 1000}
 
 batch_size, dataset, classes = opt.batch_size, opt.dataset, dataset_classes[opt.dataset]
@@ -76,7 +78,7 @@ def train(epoch, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
     net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-    trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.1})
+    trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': opt.lr})
     metric = mx.metric.Accuracy()
 
     for i in range(epoch):
