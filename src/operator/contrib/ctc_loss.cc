@@ -11,7 +11,7 @@
 namespace mshadow {
 
 template <typename DType>
-mxnet_warpctc::ctcStatus_t compute_ctc_cost(const Tensor<cpu, 3, DType> activations,
+ctcStatus_t compute_ctc_cost(const Tensor<cpu, 3, DType> activations,
                              DType *costs, DType *grads, int *labels,
                              int *label_lengths, int *input_lengths,
                              void *workspace, int train) {

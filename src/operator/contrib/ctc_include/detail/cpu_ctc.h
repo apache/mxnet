@@ -1,7 +1,5 @@
 #pragma once
 
-namespace mxnet_warpctc {
-
 #include <tuple>
 #include <cmath>
 #include <limits>
@@ -11,6 +9,8 @@ namespace mxnet_warpctc {
 #include <dmlc/omp.h>
 
 #include "ctc_helper.h"
+
+namespace mxnet_warpctc {
 
 template<typename ProbT>
 class CpuCTC {

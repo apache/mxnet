@@ -1,9 +1,10 @@
 #pragma once
 
-namespace mxnet_warpctc {
 
 #include "ctc_helper.h"
 #include "gpu_ctc_kernels.h"
+
+namespace mxnet_warpctc {
 
 template <typename ProbT>
 class GpuCTC {
