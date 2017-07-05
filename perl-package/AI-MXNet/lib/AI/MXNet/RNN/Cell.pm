@@ -981,8 +981,8 @@ method unroll(
         name          => $self->_prefix.'rnn',
         %states
     );
-
     my $outputs;
+    my %attr = (__layout__ => 'LNC');
     if(not $self->_get_next_state)
     {
         ($outputs, $states) = ($rnn, []);
@@ -990,11 +990,14 @@ method unroll(
     elsif($self->_mode eq 'lstm')
     {
         my @rnn = @{ $rnn };
+        $rnn[1]->_set_attr(%attr);
+        $rnn[2]->_set_attr(%attr);
         ($outputs, $states) = ($rnn[0], [$rnn[1], $rnn[2]]);
     }
     else
     {
         my @rnn = @{ $rnn };
+        $rnn[1]->_set_attr(%attr);
         ($outputs, $states) = ($rnn[0], [$rnn[1]]);
     }
     if(defined $merge_outputs and not $merge_outputs)

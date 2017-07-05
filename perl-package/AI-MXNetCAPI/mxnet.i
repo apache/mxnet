@@ -104,7 +104,7 @@ static void ExecutorMonitor_callback(const char* name, NDArrayHandle handle, voi
     }
 }
 
-%} 
+%}
 
 %init %{
     /* These SWIG_TypeClientData() calls might break in the future, but
@@ -119,6 +119,7 @@ static void ExecutorMonitor_callback(const char* name, NDArrayHandle handle, voi
     SWIG_TypeClientData(SWIGTYPE_p_MXKVStore, (void *)"KVStoreHandle");
     SWIG_TypeClientData(SWIGTYPE_p_MXRecordIO, (void *)"RecordIOHandle");
     SWIG_TypeClientData(SWIGTYPE_p_MXRtc, (void *)"RtcHandle");
+    SWIG_TypeClientData(SWIGTYPE_p_MXCachedOp, (void *)"CachedOpHandle");
 %}
 
 /*! \brief manually define unsigned int */
@@ -150,6 +151,8 @@ typedef MXKVStore *KVStoreHandle;
 typedef MXRecordIO *RecordIOHandle;
 /*! \brief handle to MXRtc*/
 typedef MXRtc *RtcHandle;
+/*! \brief handle to cached operator */
+typedef MXCachedOp *CachedOpHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
                                                        NDArrayHandle,
@@ -625,6 +628,23 @@ int MXAutogradBackward(mx_uint num_output,
                                  NDArrayHandle* in,
                                  int retain_graph);
 
+ /*!
+  * \brief create cached operator
+  */
+int MXCreateCachedOp(SymbolHandle handle,
+                                CachedOpHandle *out);
+ /*!
+  * \brief free cached operator
+  */
+int MXFreeCachedOp(CachedOpHandle handle);
+ /*!
+  * \brief invoke cached operator
+  */
+int MXInvokeCachedOp(CachedOpHandle handle,
+                               int num_inputs,
+                               NDArrayHandle *in,
+                               int *out_size,
+                               NDArrayHandle **out_array);
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
@@ -1331,21 +1351,21 @@ int MXKVStoreCreate(const char *type,
  * \return 0 when success, -1 when failure happens
  */
 int MXKVStoreFree(KVStoreHandle handle);
-/*!
- * \brief Init a list of (key,value) pairs in kvstore
- * \param handle handle to the kvstore
- * \param num the number of key-value pairs
- * \param keys the list of keys
- * \param vals the list of values
- * \return 0 when success, -1 when failure happens
- */
-int MXKVStoreInit(KVStoreHandle handle,
-                            mx_uint num,
-                            const int* in,
-                            NDArrayHandle* in);
 
 /*!
- * \brief Push a list of (key,value) pairs to kvstore
+ * \brief Init a list of (key,value) pairs in kvstore, where each key is a string
+ * \param handle handle to the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \return 0 when success, -1 when failure happens
+ */
+int MXKVStoreInitEx(KVStoreHandle handle,
+                              mx_uint num,
+                              const char** in,
+                              NDArrayHandle* in);
+ /*!
+ * \brief Push a list of (key,value) pairs to kvstore, where each key is a string
  * \param handle handle to the kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys
@@ -1353,13 +1373,13 @@ int MXKVStoreInit(KVStoreHandle handle,
  * \param priority the priority of the action
  * \return 0 when success, -1 when failure happens
  */
-int MXKVStorePush(KVStoreHandle handle,
-                            mx_uint num,
-                            const int* in,
-                            NDArrayHandle* in,
-                            int priority);
-/*!
- * \brief pull a list of (key, value) pairs from the kvstore
+int MXKVStorePushEx(KVStoreHandle handle,
+                              mx_uint num,
+                              const char** in,
+                              NDArrayHandle* in,
+                              int priority);
+ /*!
+ * \brief pull a list of (key, value) pairs from the kvstore, where each key is a string
  * \param handle handle to the kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys
@@ -1367,11 +1387,11 @@ int MXKVStorePush(KVStoreHandle handle,
  * \param priority the priority of the action
  * \return 0 when success, -1 when failure happens
  */
-int MXKVStorePull(KVStoreHandle handle,
-                            mx_uint num,
-                            const int* in,
-                            NDArrayHandle* in,
-                            int priority);
+int MXKVStorePullEx(KVStoreHandle handle,
+                              mx_uint num,
+                              const char** in,
+                              NDArrayHandle* in,
+                              int priority);
 /*!
  * \brief user-defined updater for the kvstore
  * It's this updater's responsibility to delete \a recv and \a local
