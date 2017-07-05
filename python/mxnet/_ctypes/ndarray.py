@@ -26,10 +26,10 @@ _STORAGE_TYPE_ID_TO_STR = {
 
 class NDArrayBase(object):
     """Base data structure for ndarray"""
-    __slots__ = ["handle", "writable", "_stype"]
+    __slots__ = ["handle", "writable"]
     # pylint: disable= no-member
 
-    def __init__(self, handle, writable=True, stype=None):
+    def __init__(self, handle, writable=True):
         """initialize a new NDArray
 
         Parameters
@@ -41,7 +41,6 @@ class NDArrayBase(object):
             assert isinstance(handle, NDArrayHandle)
         self.handle = handle
         self.writable = writable
-        self._stype = stype
 
     def __del__(self):
         check_call(_LIB.MXNDArrayFree(self.handle))
@@ -76,7 +75,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
     # a handle's stype in _ndarray_cls
     out_stypes = ctypes.POINTER(ctypes.c_int)()
 
-    check_call(_LIB.MXImperativeInvoke(
+    check_call(_LIB.MXImperativeInvokeEx(
         ctypes.c_void_p(handle),
         ctypes.c_int(len(ndargs)),
         c_array(NDArrayHandle, [arr.handle for arr in ndargs]),
@@ -93,8 +92,8 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
         return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle),
                             stype=_STORAGE_TYPE_ID_TO_STR[out_stypes[0]])
     else:
-        return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle,
-                                         stype=_STORAGE_TYPE_ID_TO_STR[out_stypes[i]]))
+        return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle),
+                             stype=_STORAGE_TYPE_ID_TO_STR[out_stypes[i]])
                 for i in range(num_output.value)]
 
 

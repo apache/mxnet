@@ -489,14 +489,28 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
                        NDArrayHandle **outputs,
                        int num_params,
                        const char **param_keys,
-                       const char **param_vals,
-                       const int** out_stypes) {  // outputs storage types
+                       const char **param_vals) {
   const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   nnvm::NodeAttrs attrs;
   SetOpAttrs(op, &attrs, num_inputs, num_params, param_keys, param_vals);
   ImperativeInvokeImpl(attrs, num_inputs, inputs, num_outputs, outputs);
+  API_END();
+}
+
+int MXImperativeInvokeEx(AtomicSymbolCreator creator,
+                         int num_inputs,
+                         NDArrayHandle *inputs,
+                         int *num_outputs,
+                         NDArrayHandle **outputs,
+                         int num_params,
+                         const char **param_keys,
+                         const char **param_vals,
+                         const int **out_stypes) {  // outputs storage types
+  API_BEGIN();
+  MXImperativeInvoke(creator, num_inputs, inputs, num_outputs, outputs,
+                     num_params, param_keys, param_vals);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   NDArray** output_nds = reinterpret_cast<NDArray**>(*outputs);
   ret->out_types.resize(*num_outputs);
   for (int i = 0; i < *num_outputs; ++i) {

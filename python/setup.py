@@ -74,7 +74,7 @@ setup(name='mxnet',
       version=__version__,
       description=open(os.path.join(CURRENT_DIR, 'README.md')).read(),
       packages=[
-          'mxnet', 'mxnet.module', 'mxnet._ctypes', 'mxnet.rnn',
+          'mxnet', 'mxnet.module', 'mxnet._ctypes', 'mxnet.rnn', 'mxnet.ndarray',
           'mxnet._cy2', 'mxnet._cy3', 'mxnet.notebook', 'mxnet.contrib'
           ],
       data_files=[('mxnet', [LIB_PATH[0]])],

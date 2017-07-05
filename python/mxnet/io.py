@@ -13,7 +13,7 @@ from .base import DataIterHandle, NDArrayHandle
 from .base import mx_real_t
 from .base import check_call, build_param_doc as _build_param_doc
 from .ndarray import NDArray
-from .sparse_ndarray import _ndarray_cls
+from .ndarray import _ndarray_cls
 from .ndarray import array
 from .ndarray import concatenate
 

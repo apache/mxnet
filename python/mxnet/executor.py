@@ -11,7 +11,7 @@ from .base import _LIB
 from .base import mx_uint, NDArrayHandle, ExecutorHandle
 from .base import check_call, c_array, py_str
 from .ndarray import NDArray
-from .sparse_ndarray import _ndarray_cls
+from .ndarray import _ndarray_cls
 from . import ndarray as nd
 
 # those functions are not used here, we just import them to keep backward compatibility

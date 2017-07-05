@@ -11,9 +11,9 @@ def init_kv(stype='default'):
     """init kv """
     kv = mx.kv.create()
     # single
-    kv.init(3, mx.nd.zeros(shape=shape, storage_type=stype))
+    kv.init(3, mx.nd.zeros(shape=shape, stype=stype))
     # list
-    kv.init(keys, [mx.nd.zeros(shape=shape, storage_type=stype)] * len(keys))
+    kv.init(keys, [mx.nd.zeros(shape=shape, stype=stype)] * len(keys))
     return kv
 
 def init_kv_with_str():
