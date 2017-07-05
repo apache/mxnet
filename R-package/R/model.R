@@ -94,12 +94,9 @@ mx.model.create.kvstore <- function(kvstore, arg.params, ndevice, verbose=TRUE) 
 mx.model.train <- function(symbol, ctx, input.shape, output.shape,
                            arg.params, aux.params,
                            begin.round, end.round, optimizer,
-                           train.data, eval.data,
-                           metric,
-                           epoch.end.callback,
-                           batch.end.callback,
-                           kvstore,
-                           verbose=TRUE) {
+                           train.data, eval.data, metric,
+                           epoch.end.callback, batch.end.callback,
+                           kvstore, fixed.param = NULL, verbose = TRUE) {
   ndevice <- length(ctx)
   if(verbose) message(paste0("Start training with ", ndevice, " devices"))
   # create the executors
@@ -109,8 +106,9 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
   label_name <- arg_names[endsWith(arg_names, "label")]
   train.execs <- lapply(1:ndevice, function(i) {
     arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write",
-                    data=sliceinfo[[i]]$shape)
+                    data = sliceinfo[[i]]$shape)
     arg_lst[[label_name]] = sliceinfo2[[i]]$shape
+    arg_lst[["fixed.param"]] = fixed.param
     do.call(mx.simple.bind, arg_lst)
   })
   # set the parameters into executors
@@ -406,9 +404,8 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
          eval.data=NULL, eval.metric=NULL,
          epoch.end.callback=NULL, batch.end.callback=NULL,
          array.batch.size=128, array.layout="auto",
-         kvstore="local",
-         verbose=TRUE,
-         arg.params=NULL, aux.params=NULL,
+         kvstore = "local", verbose = TRUE,
+         arg.params = NULL, aux.params = NULL, fixed.param = NULL,
          ...) {
   if (is.array(X) || is.matrix(X)) {
     if (array.layout == "auto") {
@@ -463,7 +460,8 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
                           metric=eval.metric,
                           epoch.end.callback=epoch.end.callback,
                           batch.end.callback=batch.end.callback,
-                          kvstore=kvstore, 
+                          kvstore=kvstore,
+                          fixed.param = fixed.param,
                           verbose=verbose)
   return (model)
 }
