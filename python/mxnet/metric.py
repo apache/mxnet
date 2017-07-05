@@ -81,12 +81,12 @@ class EvalMetric(object):
         if self.output_names is not None:
             pred = [pred[name] for name in self.output_names]
         else:
-            pred = pred.values()
+            pred = list(pred.values())
 
         if self.label_names is not None:
             label = [label[name] for name in self.label_names]
         else:
-            label = label.values()
+            label = list(label.values())
 
         self.update(label, pred)
 
