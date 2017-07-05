@@ -304,6 +304,7 @@
 %typemap(freearg) (mx_float *in) {
     Safefree($1);
 }
+
 %typemap(in,numinputs=0) (NDArrayHandle *out) (NDArrayHandle temp),
                          (FunctionHandle* out) (FunctionHandle temp), 
                          (SymbolHandle *out) (SymbolHandle temp),
@@ -311,12 +312,13 @@
                          (DataIterHandle *out) (ExecutorHandle temp),
                          (KVStoreHandle *out) (KVStoreHandle temp),
                          (RecordIOHandle *out) (RecordIOHandle temp),
-                         (RtcHandle *out) (RtcHandle temp)
+                         (RtcHandle *out) (RtcHandle temp),
+                         (CachedOpHandle *out) (CachedOpHandle temp)
 {
     $1 = &temp;
 }
-%typemap(argout) (NDArrayHandle *out), (FunctionHandle* out), (SymbolHandle *out), (ExecutorHandle *out), (DataIterHandle *out), 
-                 (KVStoreHandle *out), (RecordIOHandle *out), (RtcHandle *out) (RtcHandle temp)
+%typemap(argout) (NDArrayHandle *out), (FunctionHandle* out), (SymbolHandle *out), (ExecutorHandle *out), (DataIterHandle *out),
+                 (KVStoreHandle *out), (RecordIOHandle *out), (RtcHandle *out) (RtcHandle temp), (CachedOpHandle *out) (CachedOpHandle temp)
 {
     if(!result)
     {
