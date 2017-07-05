@@ -1,9 +1,9 @@
 use strict;
 use warnings;
-use Test::More tests => 247;
+use Test::More tests => 257;
 use AI::MXNet qw(mx);
 use AI::MXNet::Base;
-use AI::MXNet::TestUtils qw(almost_equal enumerate same_array);
+use AI::MXNet::TestUtils qw(almost_equal enumerate same_array dies_like);
 use Data::Dumper;
 
 sub test_module_layout
@@ -451,6 +451,165 @@ sub test_executor_group
     );
 }
 
+sub test_module_set_params
+{
+    # data iter
+    mx->random->seed(11);
+    my $data = mx->nd->array([[0.05, .10]]);
+    my $label = mx->nd->array([[.01, 0.99]]);
+    my $train_data = mx->io->NDArrayIter(data => $data, label => $label, batch_size => 1);
+
+    # symbols
+    my $x = mx->symbol->Variable('data');
+    $x = mx->symbol->FullyConnected(name=>'fc_0', data=>$x, num_hidden=>2);
+    $x = mx->symbol->Activation(name=>"act_0", data=>$x, act_type=>'sigmoid');
+    $x = mx->symbol->FullyConnected(name=>'fc_1', data=>$x, num_hidden=>2);
+    $x = mx->symbol->Activation(name=>"act_1", data=>$x, act_type=>'sigmoid');
+    $x = mx->symbol->LinearRegressionOutput(data=>$x, name=>'softmax', grad_scale=>2);
+
+    # create module
+    my $mod = mx->mod->Module($x, context=>[mx->cpu()]);
+    $mod->bind(data_shapes => $train_data->provide_data, label_shapes=>$train_data->provide_label,
+             for_training=>1);
+
+    my $arg_params_correct = {fc_0_weight => mx->nd->array([[.15, .20], [.25, .30]]),
+                  fc_0_bias => mx->nd->array([.35, .35]),
+                  fc_1_weight =>  mx->nd->array([[.40, .45], [.50, .55]]),
+                  fc_1_bias  => mx->nd->array([.60, .60])};
+
+    my $arg_params_missing = {fc_0_weight => mx->nd->array([[.15, .20], [.25, .30]]),
+                  fc_0_bias  => mx->nd->array([.35, .35]),
+                  fc_1_weight => mx->nd->array([[.40, .45], [.50, .55]])};
+
+    my $arg_params_extra = {fc_0_weight => mx->nd->array([[.15, .20], [.25, .30]]),
+                  fc_0_bias  => mx->nd->array([.35, .35]),
+                  fc_1_weight=> mx->nd->array([[.40, .45], [.50, .55]]),
+                  fc_1_bias => mx->nd->array([.60, .60]),
+                  fc_2_weight => mx->nd->array([.60, .60])};
+
+    my $arg_params_missing_extra = {fc_3_weight => mx->nd->array([.60, .60])};
+
+    # test regular set_params
+    $mod->set_params($arg_params_correct, {}, force_init=>1);
+
+    # test allow missing
+    $mod->set_params($arg_params_missing, {}, allow_missing=>1, force_init=>1);
+    ok(dies_like(sub { $mod->set_params($arg_params_missing, {}, force_init=>1, allow_missing=>0); }, qr/fc_/));
+
+    # test allow extra
+    $mod->set_params($arg_params_extra, {}, force_init=>1, allow_missing=>1, allow_extra=>1);
+    ok(dies_like(sub { $mod->set_params($arg_params_extra, {}, force_init=>1, allow_missing=>1, allow_extra=>0); }, qr/fc_/));
+
+    # test allow missing + extra, this will throw a runtime error
+    ok(dies_like(sub { $mod->set_params($arg_params_missing_extra, {}, force_init=>1, allow_missing=>1, allow_extra=>0); }, qr/fc_/));
+}
+
+sub test_forward_reshape
+{
+    my $num_class = 10;
+    my $data1 = mx->sym->Variable('data1');
+    my $data2 = mx->sym->Variable('data2');
+    my $conv1 = mx->sym->Convolution(data=>$data1, kernel=>[2, 2], num_filter=>2, stride=>[2, 2]);
+    my $conv2 = mx->sym->Convolution(data=>$data2, kernel=>[3, 3], num_filter=>3, stride=>[1, 1]);
+    my $pooling1 = mx->sym->Pooling(data=>$conv1, kernel=>[2, 2], stride=>[1, 1], pool_type=>"avg");
+    my $pooling2 = mx->sym->Pooling(data=>$conv2, kernel=>[2, 2], stride=>[1, 1], pool_type=>"max");
+    my $flatten1 = mx->sym->flatten(data=>$pooling1);
+    my $flatten2 = mx->sym->flatten(data=>$pooling2);
+    my $sum = mx->sym->sum(data=>$flatten1, axis=>1) + mx->sym->sum(data=>$flatten2, axis=>1);
+    my $fc = mx->sym->FullyConnected(data=>$sum, num_hidden=>$num_class);
+    my $sym = mx->sym->SoftmaxOutput(data=>$fc, name=>'softmax');
+
+    my $dshape1 = [10, 3, 64, 64];
+    my $dshape2 = [10, 3, 32, 32];
+    my $lshape = [10];
+
+    my $mod = mx->mod->Module(symbol=>$sym, data_names=>['data1', 'data2'],
+                        label_names=>['softmax_label']);
+    $mod->bind(data_shapes=>[['data1', $dshape1], ['data2', $dshape2]],
+             label_shapes=>[['softmax_label', $lshape]]);
+    $mod->init_params();
+    $mod->init_optimizer(optimizer_params=>{learning_rate => 0.01});
+
+    # Train with original data shapes
+    my $data_batch = mx->io->DataBatch(data=>[mx->nd->random_uniform(0, 9, $dshape1),
+                                       mx->nd->random_uniform(5, 15, $dshape2)],
+                                 label=>[mx->nd->ones($lshape)]);
+    $mod->forward($data_batch);
+    is_deeply($mod->get_outputs->[0]->shape, [$lshape->[0], $num_class]);
+    $mod->backward();
+    $mod->update();
+
+    # Train with different batch size
+    $dshape1 = [3, 3, 64, 64];
+    $dshape2 = [3, 3, 32, 32];
+    $lshape = [3];
+    $data_batch = mx->io->DataBatch(data=>[mx->nd->random_uniform(0, 9, $dshape1),
+                                       mx->nd->random_uniform(5, 15, $dshape2)],
+                                 label=>[mx->nd->ones($lshape)]);
+    $mod->forward($data_batch);
+    is_deeply($mod->get_outputs->[0]->shape, [$lshape->[0], $num_class]);
+    $mod->backward();
+    $mod->update();
+
+    $dshape1 = [20, 3, 64, 64];
+    $dshape2 = [20, 3, 32, 32];
+    $lshape = [20];
+    $data_batch = mx->io->DataBatch(data=>[mx->nd->random_uniform(3, 5, $dshape1),
+                                       mx->nd->random_uniform(10, 25, $dshape2)],
+                                 label=>[mx->nd->ones($lshape)]);
+    $mod->forward($data_batch);
+    is_deeply($mod->get_outputs->[0]->shape, [$lshape->[0], $num_class]);
+    $mod->backward();
+    $mod->update();
+
+    #Train with both different batch size and data shapes
+    $dshape1 = [20, 3, 120, 120];
+    $dshape2 = [20, 3, 32, 64];
+    $lshape = [20];
+    $data_batch = mx->io->DataBatch(data=>[mx->nd->random_uniform(0, 9, $dshape1),
+                                       mx->nd->random_uniform(5, 15, $dshape2)],
+                                 label=>[mx->nd->ones($lshape)]);
+    $mod->forward($data_batch);
+    is_deeply($mod->get_outputs->[0]->shape, [$lshape->[0], $num_class]);
+    $mod->backward();
+    $mod->update();
+
+    $dshape1 = [5, 3, 28, 40];
+    $dshape2 = [5, 3, 24, 16];
+    $lshape = [5];
+    $data_batch = mx->io->DataBatch(data=>[mx->nd->random_uniform(0, 9, $dshape1),
+                                       mx->nd->random_uniform(15, 25, $dshape2)],
+                                 label=>[mx->nd->ones($lshape)]);
+    $mod->forward($data_batch);
+    is_deeply($mod->get_outputs->[0]->shape, [$lshape->[0], $num_class]);
+    $mod->backward();
+    $mod->update();
+
+    #Test score
+    my $dataset_shape1 = [30, 3, 30, 30];
+    my $dataset_shape2 = [30, 3, 20, 40];
+    my $labelset_shape = [30];
+
+    my $eval_dataiter = mx->io->NDArrayIter(data=>[mx->nd->random_uniform(0, 9, $dataset_shape1),
+                                            mx->nd->random_uniform(15, 25, $dataset_shape2)],
+                                      label=>[mx->nd->ones($labelset_shape)],
+                                      batch_size=>5);
+    ok(keys %{ $mod->score($eval_dataiter, 'acc') } == 1);
+
+    #Test prediction
+    $dshape1 = [1, 3, 30, 30];
+    $dshape2 = [1, 3, 20, 40];
+    $dataset_shape1 = [10, 3, 30, 30];
+    $dataset_shape2 = [10, 3, 20, 40];
+
+    my $pred_dataiter = mx->io->NDArrayIter(data=>[mx->nd->random_uniform(0, 9, $dataset_shape1),
+                                            mx->nd->random_uniform(15, 25, $dataset_shape2)]);
+    $mod->bind(data_shapes=>[['data1', $dshape1], ['data2', $dshape2]],
+             for_training=>0, force_rebind=>1);
+    is_deeply($mod->predict($pred_dataiter)->shape, [10, $num_class]);
+
+}
+
 test_module_input_grads();
 test_module_dtype();
 test_monitor();
@@ -460,3 +619,5 @@ test_module_states();
 test_module_reshape();
 test_save_load();
 test_executor_group();
+test_module_set_params();
+test_forward_reshape();
