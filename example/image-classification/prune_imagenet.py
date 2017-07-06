@@ -126,6 +126,9 @@ def train_imagenet(args):
         #eval_batch_end_callback     = None
     )
 
+    # save model
+    mod.save_params(model + '-' + args.name)
+
     return
 
 
@@ -142,9 +145,8 @@ if __name__ == '__main__':
     parser.add_argument('--switch_epoch', type = str)
     parser.add_argument('--do_pruning', type = bool)
     parser.add_argument('--gpus', type = str)
+    parser.add_argument('--name', type = str)
     args = parser.parse_args()
-
-    print args
 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
