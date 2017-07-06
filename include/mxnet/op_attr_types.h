@@ -86,6 +86,9 @@ enum class ExecType {
 /*!
  * \brief Create a Layer style, forward/backward operator.
  *  This is easy to write code that contains state.
+ *  state is immutable, if you want mutable state, you can use a
+ *  shared_ptr as state.
+ *
  *
  *  This is not the only way to register an op execution function.
  *  More simpler or specialized operator form can be registered
@@ -102,6 +105,8 @@ using FCreateOpState = std::function<dmlc::any (const NodeAttrs& attrs,
 using FExecType = std::function<ExecType (const NodeAttrs& attrs)>;
 /*!
  * \brief Resiger a compute function for stateful operator.
+ *  state is immutable, if you want mutable state, you can use a
+ *  shared_ptr as state.
  *
  * \note Register under "FStatefulCompute<cpu>" and "FStatefulCompute<gpu>"
  */
@@ -112,6 +117,8 @@ using FStatefulCompute = std::function<void (const dmlc::any& state,
                                              const std::vector<TBlob>& outputs)>;
 /*!
  * \brief Resiger a compute function for stateful operator using NDArray interface.
+ *  state is immutable, if you want mutable state, you can use a
+ *  shared_ptr as state.
  *
  * \note Register under "FStatefulComputeEx<cpu>" and "FStatefulComputeEx<gpu>"
  */
