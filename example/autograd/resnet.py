@@ -315,8 +315,8 @@ def test(ctx):
     metric = mx.metric.Accuracy()
     val_data.reset()
     for batch in val_data:
-        data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
-        label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
+        data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
+        label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
         outputs = []
         for x in data:
             outputs.append(net(x))
@@ -336,8 +336,8 @@ def train(epoch, ctx):
         train_data.reset()
         btic = time.time()
         for batch in train_data:
-            data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
-            label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
+            data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
+            label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
             outputs = []
             losses = []
             with ag.record():

@@ -114,8 +114,8 @@ def test(ctx):
     for batch in val_data:
         batches += 1
         metric.reset()
-        data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
-        label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
+        data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
+        label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
         outputs = []
         for x in data:
             outputs.append(net(x))
@@ -136,8 +136,8 @@ def train(epoch, ctx):
     for i in range(epoch):
         train_data.reset()
         for batch in train_data:
-            data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
-            label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
+            data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
+            label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
             outputs = []
             with ag.record():
                 for x, y in zip(data, label):

@@ -223,7 +223,8 @@ in Python and then deploy with symbolic graph in C++ and Scala.
 
 ```eval_rst
 .. automethod:: mxnet.foo.utils.split_data
-.. automethod:: mxnet.foo.utils.load_data
+.. automethod:: mxnet.foo.utils.split_and_load
+.. automethod:: mxnet.foo.utils.clip_global_norm
 ```
 
 <script>auto_index("api-reference");</script>

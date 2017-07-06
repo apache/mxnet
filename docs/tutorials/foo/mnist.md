@@ -131,10 +131,10 @@ for i in range(epoch):
     for batch in train_data:
         # Splits train data into multiple slices along batch_axis
         # and copy each slice into a context.
-        data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
+        data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
         # Splits train labels into multiple slices along batch_axis
         # and copy each slice into a context.
-        label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
+        label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
         outputs = []
         # Inside training scope
         with ag.record():
@@ -170,10 +170,10 @@ val_data.reset()
 for batch in val_data:
     # Splits validation data into multiple slices along batch_axis
     # and copy each slice into a context.
-    data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
+    data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
     # Splits validation label into multiple slices along batch_axis
     # and copy each slice into a context.
-    label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
+    label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
     outputs = []
     for x in data:
         outputs.append(net(x))
@@ -264,10 +264,10 @@ for i in range(epoch):
     for batch in train_data:
         # Splits train data into multiple slices along batch_axis
         # and copy each slice into a context.
-        data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
+        data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
         # Splits train labels into multiple slices along batch_axis
         # and copy each slice into a context.
-        label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
+        label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
         outputs = []
         # Inside training scope
         with ag.record():
@@ -303,10 +303,10 @@ val_data.reset()
 for batch in val_data:
     # Splits validation data into multiple slices along batch_axis
     # and copy each slice into a context.
-    data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
+    data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
     # Splits validation label into multiple slices along batch_axis
     # and copy each slice into a context.
-    label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
+    label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
     outputs = []
     for x in data:
         outputs.append(net(x))
