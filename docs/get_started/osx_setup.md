@@ -1,6 +1,6 @@
-# Installing MXNet on OS X (Mac)
+# Installing MXNet froum source on OS X (Mac)
 
-**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/get_started/install.html).
+**NOTE:** For prebuild MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/get_started/install.html).
 
 Installing MXNet is a two-step process:
 
