@@ -65,5 +65,7 @@ def process_folder(root):
         for f in files:
             process_file(os.path.join(root, f))
 if __name__ == '__main__':
-    # process_folder('../src/operator/tensor')
-    process_file('../python/mxnet/registry.py')
+    process_folder('../src/')
+    process_folder('../include/')
+    process_folder('../plugin/')
+    # process_file('../python/mxnet/registry.py')
