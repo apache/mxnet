@@ -66,7 +66,7 @@ class Optimizer(object):
                  lr_scheduler=None, sym=None, begin_num_update=0,
                  weight_sparsity = [0], bias_sparsity = [0],
                  switch_epoch = [100000], batches_per_epoch = 100000,
-                 do_pruning = False, pruning_factor = 0.0):
+                 do_pruning = False, pruning_factor = 0.0, threshold = None):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -100,6 +100,7 @@ class Optimizer(object):
         self.batches_per_epoch = batches_per_epoch
         self.do_pruning = do_pruning
         self.pruning_factor = pruning_factor
+        self.threshold = threshold
 
     opt_registry = {}
 
@@ -368,14 +369,17 @@ class Optimizer(object):
                 sparsity = self.bias_sparsity[0]
             else:
                 sparsity = self.weight_sparsity[0]
-            threshold = int(sparsity * weight.size / 100.0)
-            mask = ones(weight.size)
-            if threshold > 0:
-                sort = argsort(absolute(weight), axis=None)
-                sort = array(sort, dtype ='int32')
-                sort = crop(sort, begin = 0, end = threshold).asnumpy()
-                mask[sort] = 0.0
-            self.masks[index] = array(mask, weight.context).reshape(weight.shape)
+            if self.threshold:
+                self.masks[index] = absolute(weight) >= self.threshold
+            else:
+                threshold = int(sparsity * weight.size / 100.0)
+                mask = ones(weight.size)
+                if threshold > 0:
+                    sort = argsort(absolute(weight), axis=None)
+                    sort = array(sort, dtype ='int32')
+                    sort = crop(sort, begin = 0, end = threshold).asnumpy()
+                    mask[sort] = 0.0
+                self.masks[index] = array(mask, weight.context).reshape(weight.shape)
             logging.info('nonzeros in mask\t' + str(count_nonzero(self.masks[index].asnumpy()) / float(self.masks[index].size)))
 
         return not self.masks_updated
