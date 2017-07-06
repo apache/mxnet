@@ -150,7 +150,8 @@ def sample_rois(rois, fg_rois_per_image, rois_per_image, num_classes,
     neg_rois = rois[neg_idx]
     # pad more to ensure a fixed minibatch size
     while keep_indexes.shape[0] < rois_per_image:
-        gap = np.minimum(len(neg_rois), rois_per_image - keep_indexes.shape[0])
+        assert len(neg_rois) >= rois_per_image - keep_indexes.shape[0], 
+        'Not enough neg samples to fill the gap, consider to generate some.'
         gap_indexes = npr.choice(range(len(neg_rois)), size=gap, replace=False)
         keep_indexes = np.append(keep_indexes, neg_idx[gap_indexes])
 
