@@ -103,12 +103,12 @@ def test_cast_storage_ex():
 
 def test_sparse_dot():
     def test_dot_csr(lhs_shape, rhs_shape, rhs_stype, trans_lhs, density=1):
-        lhs_dns = rand_ndarray(lhs_shape, 'default')
-        lhs_nd = mx.nd.cast_storage(lhs_dns, storage_type='csr')
+        lhs_nd = rand_ndarray(lhs_shape, 'csr', 1)
+        lhs_dns = lhs_nd.todense()
         rhs_nd = rand_ndarray(rhs_shape, rhs_stype, density=density)
         rhs_dns = rhs_nd if rhs_stype == 'default' else rhs_nd.todense()
         out = mx.nd.dot(lhs_nd, rhs_dns, transpose_a=trans_lhs)
-        if trans_lhs:
+        if trans_lhs and default_context().device_type is 'cpu':
             assert out.storage_type == 'row_sparse'
         else:
             assert out.storage_type == 'default'
@@ -131,6 +131,8 @@ def test_sparse_dot():
                                 rtol=1e-3, atol=1e-4)
 
     lhs_shape = rand_shape_2d(50, 200)
+    test_dot_csr(lhs_shape, (lhs_shape[1], 1), 'default', False)
+    test_dot_csr(lhs_shape, (lhs_shape[0], 1), 'default', True)
     test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'default', False)
     test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'default', True)
     test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False)
