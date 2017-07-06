@@ -36,7 +36,7 @@ specific language governing permissions and limitations
 under the License."""
 
 _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
-          '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#'}
+          '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#', '.cmake':'#'}
 _OLD_LICENSE = re.compile('.*Copyright.*by Contributors')
 
 def _get_license(comment_mark):
@@ -94,3 +94,4 @@ if __name__ == '__main__':
     process_folder('../scala-package/')
     process_folder('../tests')
     process_folder('../tools')
+    process_folder('../cmake')
