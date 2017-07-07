@@ -34,7 +34,9 @@ struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
       specified in the tuple.
 
       If `exclude` is true, reduction will be performed on the axes that are
-      NOT in axis instead.)code");
+      NOT in axis instead.
+
+      Negative values means indexing from right to left.)code");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
@@ -163,6 +165,16 @@ inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axis,
       return TShape(ishape.ndim());
     } else {
       return TShape(1);
+    }
+  }
+
+  for (index_t i = 0; i < axis.ndim(); ++i) {
+    int64_t value = axis[i];
+    if (value < 0) {
+      CHECK_LT(-value-1, ishape.ndim())
+        << "Reduction axis " << value
+        << " Exceeds input dimensions " << ishape;
+      ((TShape&)axis)[i] = value + ishape.ndim();
     }
   }
 

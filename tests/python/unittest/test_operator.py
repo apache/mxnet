@@ -1314,7 +1314,7 @@ def test_reduce():
             ndim = np.random.randint(1, 6)
             shape = np.random.randint(1, 6, size=(ndim,))
             axis_num = np.random.randint(0, ndim, size=1)
-            axis_flags = np.random.randint(0, 2, size=ndim)
+            axis_flags = np.random.randint(-5, 6, size=ndim)
             exclude = np.random.randint(0, 2)
             axes = []
             for (axis, flag) in enumerate(axis_flags):
@@ -1633,7 +1633,7 @@ def test_dot(ctx=default_context()):
 
 def test_batch_dot():
     dtypes = ['float32', 'float64']
-    
+
     for data_type in dtypes:
         for batch_size in range(1, 5):
             for m in range(1, 5):
@@ -3297,10 +3297,10 @@ def test_deformable_psroipooling():
                     im_data_var = mx.symbol.Variable(name="im_data")
                     rois_data_var = mx.symbol.Variable(name="rois_data")
                     offset_data_var = mx.symbol.Variable(name="offset_data")
-                    op = mx.contrib.sym.DeformablePSROIPooling(data=im_data_var, rois=rois_data_var, 
-                                                               trans=offset_data_var, spatial_scale=spatial_scale, 
-                                                               sample_per_part=4, group_size=num_group, 
-                                                               pooled_size=num_group, output_dim=num_classes, 
+                    op = mx.contrib.sym.DeformablePSROIPooling(data=im_data_var, rois=rois_data_var,
+                                                               trans=offset_data_var, spatial_scale=spatial_scale,
+                                                               sample_per_part=4, group_size=num_group,
+                                                               pooled_size=num_group, output_dim=num_classes,
                                                                trans_std=0.1, no_trans=False, name='test_op')
                     if grad_nodes[0] == 'offset_data':
                         # wider tolerance needed for coordinate differential
