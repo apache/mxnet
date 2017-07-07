@@ -3,7 +3,7 @@ import mxnet as mx
 import numpy as np
 import tempfile
 import os
-import mxnet_converter
+import _mxnet_converter as mxnet_converter
 import coremltools
 
 #TODO add integration tests for converting sets of layers from data.mxnet.io
@@ -463,3 +463,9 @@ class MXNetSingleLayerTest(unittest.TestCase):
 
         # test the mxnet model
         self._test_mxnet_model(net, engine, data = input_shape)
+
+
+if __name__ == '__main__':
+    suite = unittest.TestLoader().loadTestsFromTestCase(MXNetSingleLayerTest)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+

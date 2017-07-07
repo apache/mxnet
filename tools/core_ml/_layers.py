@@ -112,7 +112,7 @@ def convert_transpose(net, node, model, builder):
     param = node['attr']
     from ast import literal_eval
     axes = literal_eval(param['axes'])
-    builder.add_permute(name, input_name, output_name, axes)
+    builder.add_permute(name, axes, input_name, output_name)
 
 def convert_flatten(net, node, model, builder):
     """Convert a flatten layer from mxnet to coreml.
@@ -133,7 +133,8 @@ def convert_flatten(net, node, model, builder):
     """
     input_name, output_name = _get_input_output_name(net, node)
     name = node['name']
-    builder.add_flatten(0, name, input_name, output_name)
+    mode = 0 # CHANNEL_FIRST
+    builder.add_flatten(name, mode, input_name, output_name)
 
 def convert_softmax(net, node, model, builder):
     """Convert a softmax layer from mxnet to coreml.
@@ -250,9 +251,9 @@ def convert_dense(net, node, model, builder):
 
     builder.add_inner_product(name = name,
             W = W,
-            Wb = Wb,
-            nB = nB,
-            nC = nC,
+            b = Wb,
+            input_channels = nB,
+            output_channels = nC,
             has_bias = has_bias,
             input_name = input_name,
             output_name = output_name)
@@ -305,13 +306,13 @@ def convert_convolution(net, node, model, builder):
 
     W = W.transpose((2, 3, 1, 0))
     builder.add_convolution(name = name,
-             kernelChannels = channels,
-             outputChannels = n_filters,
+             kernel_channels = channels,
+             output_channels = n_filters,
              height = kernel_height,
              width = kernel_width,
              stride_height = stride_height,
              stride_width = stride_width,
-             borderMode = border_mode,
+             border_mode = border_mode,
              groups = 1,
              W = W,
              b = Wb,
