@@ -10,6 +10,8 @@
 
 #include "ctc_helper.h"
 
+namespace mxnet_warpctc {
+
 template<typename ProbT>
 class CpuCTC {
 public:
@@ -484,3 +486,5 @@ ctcStatus_t CpuCTC<ProbT>::score_forward(const ProbT* const activations,
 
     return CTC_STATUS_SUCCESS;
 }
+
+} // mxnet_warpctc
