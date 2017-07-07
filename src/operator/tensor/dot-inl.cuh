@@ -67,17 +67,18 @@ struct DotCsrDnsDnsVectorKernel {
     const int high = static_cast<int>(indptr_l[irow+1]);
 
     // Compute running sum per thread
-    vals[threadIdx.x] = 0;
+    DType sum = 0;
     for (int j = low+lane; j < high; j+=32) {
-      vals[threadIdx.x] += data_l[j] * data_r[col_idx_l[j]*num_cols_r + kcol];
+      sum += data_l[j] * data_r[col_idx_l[j]*num_cols_r + kcol];
     }
+    vals[threadIdx.x] = sum;
 
     // Parallel reduction in shared memory
-    if (lane < 16) vals[threadIdx.x] += vals[threadIdx.x+16];
-    if (lane <  8) vals[threadIdx.x] += vals[threadIdx.x+ 8];
-    if (lane <  4) vals[threadIdx.x] += vals[threadIdx.x+ 4];
-    if (lane <  2) vals[threadIdx.x] += vals[threadIdx.x+ 2];
-    if (lane <  1) vals[threadIdx.x] += vals[threadIdx.x+ 1];
+    if (lane < 16) {vals[threadIdx.x] += vals[threadIdx.x+16];} __syncwarp();
+    if (lane <  8) {vals[threadIdx.x] += vals[threadIdx.x+ 8];} __syncwarp();
+    if (lane <  4) {vals[threadIdx.x] += vals[threadIdx.x+ 4];} __syncwarp();
+    if (lane <  2) {vals[threadIdx.x] += vals[threadIdx.x+ 2];} __syncwarp();
+    if (lane <  1) {vals[threadIdx.x] += vals[threadIdx.x+ 1];} __syncwarp();
 
     if (lane == 0) {
       KERNEL_ASSIGN(out[irow*num_cols_r+kcol], req, vals[threadIdx.x]);
