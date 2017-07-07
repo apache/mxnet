@@ -62,6 +62,7 @@ A detailed tutorial is available at
     recordio.MXRecordIO
     recordio.MXIndexedRecordIO
     image.ImageIter
+    image.ImageDetIter
 ```
 
 ## Helper classes and functions
@@ -100,13 +101,32 @@ A list of image modification functions provided by ``mxnet.image``.
     image.RandomSizedCropAug
     image.CenterCropAug
     image.RandomOrderAug
+    image.BrightnessJitterAug
+    image.ContrastJitterAug
+    image.SaturationJitterAug
+    image.HueJitterAug
     image.ColorJitterAug
     image.LightingAug
     image.ColorNormalizeAug
+    image.RandomGrayAug
     image.HorizontalFlipAug
     image.CastAug
     image.CreateAugmenter
 ```
+
+A list of image modification functions for `Object Detection` provided by
+``mxnet.image.detection``.
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    image.DetBorrowAug
+    image.DetRandomSelectAug
+    image.DetHorizontalFlipAug
+    image.DetRandomCropAug
+    image.DetRandomPadAug
+    image.CreateDetAugmenter
+  ```
 
 Functions to read and write RecordIO files.
 

@@ -558,10 +558,26 @@ class HueJitterAug(Augmenter):
         self.hue = hue
         self.min_val = min_val
         self.max_val = max_val
+        self.tyiq = np.array([[0.299, 0.587, 0.114],
+                              [0.596, -0.274, -0.321],
+                              [0.211, -0.523, 0.311]])
+        self.ityiq = np.array([[1.0, 0.956, 0.621],
+                               [1.0, -0.272, -0.647],
+                               [1.0, -1.107, 1.705]])
 
     def __call__(self, src):
-        """Augmenter body"""
-        # TODO(Joshua Zhang): https://beesbuzz.biz/code/hsv_color_transforms.php
+        """Augmenter body.
+        Using approximate linear transfomation described in:
+        https://beesbuzz.biz/code/hsv_color_transforms.php
+        """
+        alpha = random.uniform(-self.hue, self.hue)
+        vsu = np.cos(alpha * np.pi)
+        vsw = np.sin(alpha * np.pi)
+        bt = np.array([[1.0, 0.0, 0.0],
+                       [0.0, vsu, -vsw],
+                       [0.0, vsw, vsu]])
+        t = np.dot(np.dot(self.tyiq, bt), self.ityiq).T
+        src = nd.dot(src, nd.array(t))
         return [clip_image(src, self.min_val, self.max_val)]
 
 
@@ -608,6 +624,22 @@ class ColorNormalizeAug(Augmenter):
         return [color_normalize(src, self.mean, self.std)]
 
 
+class RandomGrayAug(Augmenter):
+    """Randomly convert to gray image."""
+    def __init__(self, p):
+        super(RandomGrayAug, self).__init__(p=p)
+        self.p = p
+        self.mat = nd.array([[0.21, 0.21, 0.21],
+                             [0.72, 0.72, 0.72],
+                             [0.07, 0.07, 0.07]])
+
+    def __call__(self, src):
+        """Augmenter body"""
+        if random.random() < self.p:
+            src = nd.dot(src, self.mat)
+        return [src]
+
+
 class HorizontalFlipAug(Augmenter):
     """Random horizontal flip."""
     def __init__(self, p):
@@ -616,7 +648,7 @@ class HorizontalFlipAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        if random.random() < p:
+        if random.random() < self.p:
             src = nd.flip(src, axis=1)
         return [src]
 
@@ -633,8 +665,8 @@ class CastAug(Augmenter):
 
 
 def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, rand_mirror=False,
-                    mean=None, std=None, brightness=0, contrast=0, saturation=0,
-                    pca_noise=0, inter_method=2):
+                    mean=None, std=None, brightness=0, contrast=0, saturation=0, hue=0,
+                    pca_noise=0, rand_gray=0, inter_method=2):
     """Creates an augmenter list."""
     auglist = []
 
@@ -657,6 +689,9 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
 
     if brightness or contrast or saturation:
         auglist.append(ColorJitterAug(brightness, contrast, saturation))
+
+    if hue:
+        auglist.append(HueJitterAug(hue))
 
     if pca_noise > 0:
         eigval = np.array([55.46, 4.794, 1.148])

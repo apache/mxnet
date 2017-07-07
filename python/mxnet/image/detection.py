@@ -13,7 +13,8 @@ from .. import ndarray as nd
 from .._ndarray_internal import _cvcopyMakeBorder as copyMakeBorder
 from .. import io
 from .image import RandomOrderAug, ColorJitterAug, LightingAug, ColorNormalizeAug
-from .image import ResizeAug, ForceResizeAug, CastAug, fixed_crop, ImageIter, Augmenter
+from .image import ResizeAug, ForceResizeAug, CastAug, HueJitterAug, RandomGrayAug
+from .image import fixed_crop, ImageIter, Augmenter
 
 
 class DetAugmenter(object):
@@ -43,8 +44,8 @@ class DetAugmenter(object):
 
 
 class DetBorrowAug(DetAugmenter):
-    """Borrow standard augmenter from image classification
-    which is good if label won't be affected.
+    """Borrow standard augmenter from image classification.
+    Which is good once you know label won't be affected after this augmenter.
 
     Parameters
     ----------
@@ -461,9 +462,9 @@ def CreateMultiRandCropAugmenter(min_object_covered=0.1, aspect_ratio_range=(0.7
     return DetRandomSelectAug(augs, skip_prob=skip_prob)
 
 
-def CreateDetAugmenter(data_shape, resize=0, rand_crop=0, rand_pad=0,
+def CreateDetAugmenter(data_shape, resize=0, rand_crop=0, rand_pad=0, rand_gray=0,
                        rand_mirror=False, mean=None, std=None, brightness=0, contrast=0,
-                       saturation=0, pca_noise=0, inter_method=2, min_object_covered=0.1,
+                       saturation=0, pca_noise=0, hue=0, inter_method=2, min_object_covered=0.1,
                        aspect_ratio_range=(0.75, 1.33), area_range=(0.05, 3.0),
                        min_eject_coverage=0.3, max_attempts=50, pad_val=(128, 128, 128)):
     """Create augmenters for detection.
@@ -475,9 +476,11 @@ def CreateDetAugmenter(data_shape, resize=0, rand_crop=0, rand_pad=0,
     resize : int
         resize shorter edge if larger than 0 at the begining
     rand_crop : float
-        [0.0, 1.0], probability to apply random cropping
+        [0, 1], probability to apply random cropping
     rand_pad : float
-        [0.0, 1.0], probability to apply random padding
+        [0, 1], probability to apply random padding
+    rand_gray : float
+        [0, 1], probability to convert to grayscale for all channels
     rand_mirror : bool
         whether apply horizontal flip to image with probability 0.5
     mean : np.ndarray or None
@@ -490,6 +493,8 @@ def CreateDetAugmenter(data_shape, resize=0, rand_crop=0, rand_pad=0,
         contrast jittering range
     saturation : float
         saturation jittering range
+    hue : float
+        hue jittering range
     pca_noise : float
         pca noise level
     inter_method : int, default=2(Area-based)
@@ -571,12 +576,18 @@ def CreateDetAugmenter(data_shape, resize=0, rand_crop=0, rand_pad=0,
     if brightness or contrast or saturation:
         auglist.append(DetBorrowAug(ColorJitterAug(brightness, contrast, saturation)))
 
+    if hue:
+        auglist.append(DetBorrowAug(HueJitterAug(hue)))
+
     if pca_noise > 0:
         eigval = np.array([55.46, 4.794, 1.148])
         eigvec = np.array([[-0.5675, 0.7192, 0.4009],
                            [-0.5808, -0.0045, -0.8140],
                            [-0.5836, -0.6948, 0.4203]])
         auglist.append(DetBorrowAug(LightingAug(pca_noise, eigval, eigvec)))
+
+    if rand_gray > 0:
+        auglist.append(DetBorrowAug(RandomGrayAug(rand_gray)))
 
     if mean is True:
         mean = np.array([123.68, 116.28, 103.53])
@@ -792,6 +803,16 @@ class ImageDetIter(ImageIter):
         Returns
         -------
             image as numpy.ndarray
+
+        Examples
+        --------
+        >>> # use draw_next to get images with bounding boxes drawn
+        >>> iterator = mx.image.ImageDetIter(1, (3, 600, 600), path_imgrec='train.rec')
+        >>> for image in iterator.draw_next(waitKey=None):
+        >>>     # display image
+        >>> # or let draw_next display using cv2 module
+        >>> for image in iterator.draw_next(waitKey=0, window_name='disp'):
+        >>>     pass
         """
         try:
             import cv2
@@ -851,32 +872,45 @@ class ImageDetIter(ImageIter):
             if not count:
                 raise StopIteration
 
+    def sync_label_shape(self, it, verbose=False):
+        """Synchronize label shape with the input iterator. This is useful when
+        train/validation iterators have different label padding.
 
-def synchronize_label_shape(train_iter, val_iter, verbose=False):
-    """Synchronize label shape in train/validation iterators.
+        Parameters
+        ----------
+        it : ImageDetIter
+            The other iterator to synchronize
+        verbose : bool
+            Print verbose log if true
 
-    Parameters
-    ----------
-    train_iter : ImageDetIter
-        Training iterator
-    val_iter : ImageDetIter
-        Validation iterator
-    verbose : bool
-        Print verbose log if true
+        Returns
+        -------
+        ImageDetIter
+            The synchronized other iterator, the internal label shape is updated as well.
 
-    Returns
-    -------
-    (ImageDetIter, ImageDetIter)
-    """
-    assert isinstance(train_iter, ImageDetIter) and isinstance(val_iter, ImageDetIter)
-    train_label_shape = train_iter.label_shape
-    val_label_shape = val_iter.label_shape
-    assert train_label_shape[1] == val_label_shape[1], "object width mismatch."
-    max_count = max(train_label_shape[0], val_label_shape[0])
-    if max_count > train_label_shape[0]:
-        train_iter.reshape(None, (max_count, train_label_shape[1]))
-    if max_count > val_label_shape[0]:
-        val_iter.reshape(None, (max_count, val_label_shape[1]))
-    if verbose and max_count > min(train_label_shape[0], val_label_shape[0]):
-        logging.info('Resized label_shape to (%d, %d).', max_count, train_label_shape[1])
-    return (train_iter, val_iter)
+        Examples
+        --------
+        >>> train_iter = mx.image.ImageDetIter(32, (3, 300, 300), path_imgrec='train.rec')
+        >>> val_iter = mx.image.ImageDetIter(32, (3, 300, 300), path.imgrec='val.rec')
+        >>> train_iter.label_shape
+        (30, 6)
+        >>> val_iter.label_shape
+        (25, 6)
+        >>> val_iter = train_iter.sync_label_shape(val_iter, verbose=False)
+        >>> train_iter.label_shape
+        (30, 6)
+        >>> val_iter.label_shape
+        (30, 6)
+        """
+        assert isinstance(it, ImageDetIter), 'Synchronize with invalid iterator.'
+        train_label_shape = self.label_shape
+        val_label_shape = it.label_shape
+        assert train_label_shape[1] == val_label_shape[1], "object width mismatch."
+        max_count = max(train_label_shape[0], val_label_shape[0])
+        if max_count > train_label_shape[0]:
+            self.reshape(None, (max_count, train_label_shape[1]))
+        if max_count > val_label_shape[0]:
+            it.reshape(None, (max_count, val_label_shape[1]))
+        if verbose and max_count > min(train_label_shape[0], val_label_shape[0]):
+            logging.info('Resized label_shape to (%d, %d).', max_count, train_label_shape[1])
+        return it

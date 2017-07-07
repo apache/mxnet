@@ -7,4 +7,4 @@ from .image import *
 
 from . import detection
 from . import detection as det
-from .detection import ImageDetIter
+from .detection import *
