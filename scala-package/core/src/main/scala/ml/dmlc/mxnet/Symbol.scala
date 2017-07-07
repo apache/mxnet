@@ -932,7 +932,7 @@ object Symbol {
    * Returns a new symbol of given shape and type, filled with zeros.
    */
   def zeros(shape: Shape, dType: DType = Base.MX_REAL_TYPE, ctx: Context = null): Symbol = {
-    val params = Map("shape" -> shape.toString, "dtype" -> DType.getTypeStr(dType))
+    val params = Map("shape" -> shape.toString, "dtype" -> dType.toString())
     val fParams = if (ctx == null) params else params ++ Map("ctx" -> ctx.toString)
     createSymbolGeneral("_zeros", null, null, Array.empty[Symbol], fParams)
   }
@@ -941,7 +941,7 @@ object Symbol {
    * Returns a new symbol of given shape and type, filled with ones.
    */
   def ones(shape: Shape, dType: DType = Base.MX_REAL_TYPE, ctx: Context = null): Symbol = {
-    val params = Map("shape" -> shape.toString, "dtype" -> DType.getTypeStr(dType))
+    val params = Map("shape" -> shape.toString, "dtype" -> dType.toString())
     val fParams = if (ctx == null) params else params ++ Map("ctx" -> ctx.toString)
     createSymbolGeneral("_ones", null, null, Array.empty[Symbol], fParams)
   }
@@ -958,7 +958,7 @@ object Symbol {
   def arange(start: Float, stop: Option[Float] = None, step: Float = 1.0f,
     repeat: Int = 1, name: String = null, dType: DType = Base.MX_REAL_TYPE): Symbol = {
     val params = Map("start" -> start, "step" -> step,
-      "repeat" -> repeat, "dtype" -> DType.getTypeStr(dType))
+      "repeat" -> repeat, "dtype" -> dType.toString())
     val fParams = if (stop == None) params else params ++ Map("stop" -> stop.get)
     createSymbolGeneral("_arange", name, null, Array.empty[Symbol], fParams)
   }

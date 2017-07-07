@@ -403,7 +403,7 @@ object NDArray {
     repeat: Int = 1, ctx: Context = Context.defaultCtx,
     dType: DType = Base.MX_REAL_TYPE): NDArray = {
     val params = Map("start" -> start, "step" -> step,
-      "repeat" -> repeat, "ctx" -> ctx.toString, "dtype" -> DType.getTypeStr(dType))
+      "repeat" -> repeat, "ctx" -> ctx.toString, "dtype" -> dType.toString())
     val fParams = if (stop == None) params else params ++ Map("stop" -> stop.get)
     NDArray.genericNDArrayFunctionInvoke("_arange", Seq(), fParams)(0)
   }
