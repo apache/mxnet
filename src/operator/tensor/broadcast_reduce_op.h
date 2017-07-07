@@ -168,54 +168,59 @@ inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axis,
     }
   }
 
-  for (index_t i = 0; i < axis.ndim(); ++i) {
-    int64_t value = axis[i];
-    if (value < 0) {
-      CHECK_LT(-value-1, ishape.ndim())
-        << "Reduction axis " << value
-        << " Exceeds input dimensions " << ishape;
-      ((TShape&)axis)[i] = value + ishape.ndim();
-    }
+  if (axis[0] < 0) {
+    CHECK_LT(-axis[0]-1, ishape.ndim())
+      << "Reduction axis " << axis[0]
+      << " Exceeds input dimensions " << ishape;
   }
 
   CHECK_LT(axis[axis.ndim()-1], ishape.ndim())
     << "Reduction axis " << axis[axis.ndim()-1]
     << " Exceeds input dimensions " << ishape;
 
+  TShape buffer(axis);
+  for (index_t i = 0; i < buffer.ndim(); i++) {
+    if (buffer[i] < 0) {
+      buffer[i] += ishape.ndim();
+    }
+  }
+  std::sort(buffer.begin(), buffer.end());
+  auto new_end = std::unique(buffer.begin(), buffer.end());
+  TShape axes = TShape(buffer.begin(), new_end);
+
+  TShape oshape;
   if (keepdims) {
-    TShape oshape(ishape);
-    if (exclude) {
-      for (index_t i = 0, j = 0; i < ishape.ndim(); ++i) {
-        if (j < axis.ndim() && i == axis[j]) {
-          ++j;
-          continue;
-        }
-        oshape[i] = 1;
+    oshape = TShape(ishape);
+  } else if (exclude) {
+    oshape = TShape(axes.ndim());
+  } else {
+    oshape = TShape(std::max<index_t>(1, ishape.ndim() - axes.ndim()));
+  }
+
+  if (keepdims && exclude) {
+    for (index_t i = 0, j = 0; i < ishape.ndim(); ++i) {
+      if (j < axes.ndim() && i == axes[j]) {
+        ++j;
+        continue;
       }
-      return oshape;
+      oshape[i] = 1;
     }
-
-    for (index_t i = 0; i < axis.ndim(); ++i) {
-      oshape[axis[i]] = 1;
+  } else if (keepdims) {
+    for (index_t i = 0; i < axes.ndim(); ++i) {
+      oshape[axes[i]] = 1;
     }
-    return oshape;
-  }
-
-  if (exclude) {
-    TShape oshape = TShape(axis.ndim());
-    for (index_t i = 0; i < axis.ndim(); ++i) {
-      oshape[i] = ishape[axis[i]];
+  } else if (exclude) {
+    for (index_t i = 0; i < axes.ndim(); ++i) {
+      oshape[i] = ishape[axes[i]];
     }
-    return oshape;
-  }
-
-  TShape oshape = TShape(std::max<index_t>(1, ishape.ndim() - axis.ndim()));
-  for (index_t i = 0, j = 0, k = 0; i < ishape.ndim(); ++i) {
-    if (j < axis.ndim() && i == axis[j]) {
-      ++j;
-      continue;
+  } else {
+    for (index_t i = 0, j = 0, k = 0; i < ishape.ndim(); ++i) {
+      if (j < axes.ndim() && i == axes[j]) {
+        ++j;
+        continue;
+      }
+      oshape[k++] = ishape[i];
     }
-    oshape[k++] = ishape[i];
   }
   return oshape;
 }
