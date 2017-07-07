@@ -1,7 +1,10 @@
 #pragma once
 
+
 #include "ctc_helper.h"
 #include "gpu_ctc_kernels.h"
+
+namespace mxnet_warpctc {
 
 template <typename ProbT>
 class GpuCTC {
@@ -481,3 +484,4 @@ GpuCTC<ProbT>::score_forward(const ProbT* const activations,
                                   label_lengths, input_lengths, true, false);
 }
 
+} // mxnet_warpctc

@@ -18,7 +18,7 @@ ctcStatus_t compute_ctc_cost(const Tensor<cpu, 3, DType> activations,
   int minibatch = static_cast<int>(activations.size(1));
   int alphabet_size = static_cast<int>(activations.size(2));
   int blank_label = 0;
-  CpuCTC<DType> ctc(alphabet_size, minibatch, workspace, blank_label);
+  mxnet_warpctc::CpuCTC<DType> ctc(alphabet_size, minibatch, workspace, blank_label);
   if (train)
     return ctc.cost_and_grad(activations.dptr_, grads, costs, labels,
                              label_lengths, input_lengths);
@@ -71,6 +71,8 @@ The ``data`` tensor consists of sequences of activation vectors. The layer
 applies a softmax to each vector, which then becomes a vector of probabilities 
 over the alphabet. Note that the 0th element of this vector is reserved for the 
 special blank character.
+
+``out`` is a list of CTC loss values, one per example in the batch.
 
 See *Connectionist Temporal Classification: Labelling Unsegmented 
 Sequence Data with Recurrent Neural Networks*, A. Graves *et al*. for more 

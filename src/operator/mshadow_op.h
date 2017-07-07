@@ -24,6 +24,8 @@ __constant__ const float PI = 3.14159265358979323846;
 const float PI = 3.14159265358979323846;
 using std::isnan;
 #endif
+using std::enable_if;
+using std::is_unsigned;
 
 /*! \brief identity Operation */
 struct identity {
@@ -445,8 +447,15 @@ struct abs {
 /*! \brief used for generate element of sign */
 struct sign {
   template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    if (a < 0.0f) return DType(-1.0f);
+  MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
+  Map(DType a) {
+    if (a < 0.0f) return DType(-DType(1.0f));
+    if (a > 0.0f) return DType(1.0f);
+    return DType(0.0f);
+  }
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<is_unsigned<DType>::value, DType>::type
+  Map(DType a) {
     if (a > 0.0f) return DType(1.0f);
     return DType(0.0f);
   }
@@ -678,7 +687,8 @@ struct rdiv_grad {
 
 struct mod {
   template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+  MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
+  Map(DType a, DType b) {
     if (b == DType(0)) {
       return DType(0);
     } else if (b < DType(0)) {
@@ -697,6 +707,15 @@ struct mod {
       } else {
         return DType(::fmod(static_cast<double>(a), static_cast<double>(b)));
       }
+    }
+  }
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<is_unsigned<DType>::value, DType>::type
+  Map(DType a, DType b) {
+    if (b == DType(0)) {
+      return DType(0);
+    } else {
+      return DType(::fmod(static_cast<double>(a), static_cast<double>(b)));
     }
   }
 };
@@ -783,7 +802,8 @@ MSHADOW_XINLINE mshadow::half::half2_t mod_rgrad::Map<mshadow::half::half2_t>
 
 struct rmod {
   template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+  MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
+  Map(DType a, DType b) {
     if (a == DType(0)) {
       return DType(0);
     } else if (a < DType(0)) {
@@ -802,6 +822,15 @@ struct rmod {
       } else {
         return DType(::fmod(static_cast<double>(b), static_cast<double>(a)));
       }
+    }
+  }
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<is_unsigned<DType>::value, DType>::type
+  Map(DType a, DType b) {
+    if (a == DType(0)) {
+      return DType(0);
+    } else {
+      return DType(::fmod(static_cast<double>(b), static_cast<double>(a)));
     }
   }
 };
@@ -921,7 +950,7 @@ MSHADOW_XINLINE double gammaln_grad::Map<double>(double a) {
 
 /* Smooth L1 Loss is a loss specific for R-CNN franchise training
  * Smooth L1 Loss function
- * f(x) = 0.5 * (sigma * x) ^ 2,     x < 1 / sigma^2
+ * f(x) = 0.5 * (sigma * x) ^ 2,     |x| < 1 / sigma^2
  *      = |x| - 0.5 / sigma / sigma, otherwise
  * When sigma = 1, it is equivalent to Huber Loss evaluated at
  * delta = 1.
@@ -944,7 +973,7 @@ struct smooth_l1_loss {
 };  // struct smooth_l1_loss
 
 /* The derivative of smooth l1 loss is
- * f'(x) = sigma^2 * x, x < 1 / sigma^2
+ * f'(x) = sigma^2 * x, |x| < 1 / sigma^2
  *       = sign(x),     otherwise
  */
 struct smooth_l1_gradient {
