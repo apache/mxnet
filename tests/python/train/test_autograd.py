@@ -35,37 +35,37 @@ val_data = mx.io.MNISTIter(
         label_name='sm_label',
         batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
-def score(net, ctx):
+def score(net, ctx_list):
     metric = mx.metric.Accuracy()
     val_data.reset()
     for batch in val_data:
-        data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
-        label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
+        datas = foo.utils.split_and_load(batch.data[0], ctx_list, batch_axis=0)
+        labels = foo.utils.split_and_load(batch.label[0], ctx_list, batch_axis=0)
         outputs = []
-        for x in data:
+        for x in datas:
             outputs.append(net(x))
-        metric.update(label, outputs)
+        metric.update(labels, outputs)
     return metric.get()[1]
 
-def train(net, epoch, ctx):
-    net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+def train(net, epoch, ctx_list):
+    net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx_list)
     trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.5})
     metric = mx.metric.Accuracy()
 
     for i in range(epoch):
         train_data.reset()
         for batch in train_data:
-            data = foo.utils.load_data(batch.data[0], ctx_list=ctx, batch_axis=0)
-            label = foo.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
+            datas = foo.utils.split_and_load(batch.data[0], ctx_list, batch_axis=0)
+            labels = foo.utils.split_and_load(batch.label[0], ctx_list, batch_axis=0)
             outputs = []
             with autograd.record():
-                for x, y in zip(data, label):
+                for x, y in zip(datas, labels):
                     z = net(x)
                     loss = foo.loss.softmax_cross_entropy_loss(z, y)
                     loss.backward()
                     outputs.append(z)
-            metric.update(label, outputs)
             trainer.step(batch.data[0].shape[0])
+            metric.update(labels, outputs)
         name, acc = metric.get()
         metric.reset()
         print('training acc at epoch %d: %s=%f'%(i, name, acc))

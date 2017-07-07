@@ -119,17 +119,6 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
   AGNodePtr ag_node = AGNode::Create(nn_node);
   ag_node->state = state;
 
-  for (uint32_t i = 0; i < outputs.size(); ++i) {
-    CHECK(outputs[i].entry_.is_none())
-      << "Output NDArray is non-empty and already in another computation graph. "
-      << "Assigning to it will cause undefined behavior when evaluating gradients. "
-      << "Please call backward first to clear the graph or do this out side of "
-      << "a train section. ";
-    outputs[i].entry_.clear();
-    ag_node->outputs.push_back(outputs[i]);
-    outputs[i].entry_ = AGNodeEntry{ag_node, i, 0};
-  }
-
   for (size_t i = 0; i < inputs.size(); ++i) {
     if (inputs[i].entry_.is_none()) {
       AGNodeEntry e{AGNode::Create(Node::Create()), 0, 0};
@@ -140,6 +129,18 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
     }
     nn_node->inputs.push_back(inputs[i].entry_.nn_entry());
     ag_node->inputs.push_back(inputs[i].entry_);
+  }
+
+  for (uint32_t i = 0; i < outputs.size(); ++i) {
+    CHECK(outputs[i].entry_.is_none())
+      << "Inplace operation is not supported when recording with autograd. "
+      << "Assigning to NDArrays that are already in a computational graph "
+      << "will cause undefined behavior when evaluating gradients. "
+      << "Please call backward first to clear the graph or do this out side of "
+      << "a record section. ";
+    outputs[i].entry_.clear();
+    ag_node->outputs.push_back(outputs[i]);
+    outputs[i].entry_ = AGNodeEntry{ag_node, i, 0};
   }
 
   return ag_node;
