@@ -37,11 +37,6 @@ class StorageImpl : public Storage {
       case Context::kGPU:
       case Context::kCPUPinned: {
 #if MXNET_USE_CUDA
-          num_gpu_device = 0;
-          cudaError_t e = cudaGetDeviceCount(&num_gpu_device);
-          if (e != cudaSuccess) {
-            num_gpu_device = 0;
-          }
           if (num_gpu_device > 0) {
             CUDA_CALL(cudaSetDevice(ctx.dev_id));
           }
@@ -76,6 +71,11 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
           }
           case Context::kCPUPinned: {
 #if MXNET_USE_CUDA
+            num_gpu_device = 0;
+            cudaError_t e = cudaGetDeviceCount(&num_gpu_device);
+            if (e != cudaSuccess) {
+              num_gpu_device = 0;
+            }
             if (num_gpu_device > 0) {
               ptr = new storage::NaiveStorageManager<storage::PinnedMemoryStorage>();
             } else {
