@@ -18,7 +18,7 @@ ctcStatus_t compute_ctc_cost(const Tensor<gpu, 3, DType> activations,
   int minibatch = static_cast<int>(activations.size(1));
   int alphabet_size = static_cast<int>(activations.size(2));
   int blank_label = 0;
-  GpuCTC<DType> ctc(alphabet_size, minibatch, workspace,
+  mxnet_warpctc::GpuCTC<DType> ctc(alphabet_size, minibatch, workspace,
                     activations.stream_->stream_, blank_label);
   if (train)
     return ctc.cost_and_grad(activations.dptr_, grads, costs, labels,
