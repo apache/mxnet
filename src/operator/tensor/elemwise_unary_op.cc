@@ -324,7 +324,7 @@ MXNET_OPERATOR_REGISTER_UNARY(square)
 
 Example::
 
-   square([2, 3, 4]) = [3, 9, 16]
+   square([2, 3, 4]) = [4, 9, 16]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::square>)
