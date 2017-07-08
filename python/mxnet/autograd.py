@@ -10,15 +10,15 @@ from .ndarray import NDArray
 from .symbol import _GRAD_REQ_MAP
 
 
-def set_is_training(is_train):
-    """Set status to training/not training. When training, graph will be constructed
+def set_recording(is_recording):
+    """Set status to recording/not recording. When recording, graph will be constructed
     for gradient computation. Operators will also run with ctx.is_train=True. For example,
     Dropout will drop inputs randomly when is_train=True while simply passing through
     if is_train=False.
 
     Parameters
     ----------
-    is_train: bool
+    is_recording: bool
 
     Returns
     -------
@@ -26,7 +26,7 @@ def set_is_training(is_train):
     """
     prev = ctypes.c_int()
     check_call(_LIB.MXAutogradSetIsTraining(
-        ctypes.c_int(is_train), ctypes.byref(prev)))
+        ctypes.c_int(is_recording), ctypes.byref(prev)))
     return bool(prev.value)
 
 
@@ -43,11 +43,11 @@ class TrainingStateScope(object):
         self._prev = None
 
     def __enter__(self):
-        self._prev = set_is_training(self._enter_state)
+        self._prev = set_recording(self._enter_state)
 
     def __exit__(self, ptype, value, trace):
         if self._prev != self._enter_state:
-            set_is_training(self._prev)
+            set_recording(self._prev)
 
 
 def record():

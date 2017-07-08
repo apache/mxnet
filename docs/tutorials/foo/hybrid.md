@@ -34,7 +34,7 @@ import mxnet as mx
 from mxnet import foo
 from mxnet.foo import nn
 
-class Net(nn.HybridLayer):
+class Net(foo.HybridLayer):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
         with self.name_scope:

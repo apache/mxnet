@@ -88,7 +88,7 @@ def _rearrange(raw, F, upscale_factor):
     return F.reshape(swapped, shape=(0, 0, -3, -3))
 
 
-class SuperResolutionNet(nn.Layer):
+class SuperResolutionNet(foo.Layer):
     def __init__(self, upscale_factor):
         super(SuperResolutionNet, self).__init__()
         with self.name_scope():
@@ -128,10 +128,11 @@ def test(ctx):
 def train(epoch, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
-    net.conv4.all_params().initialize(mx.init.Orthogonal(scale=1), ctx=ctx)
     net.all_params().initialize(mx.init.Orthogonal(), ctx=ctx)
+    net.conv4.all_params().initialize(mx.init.Orthogonal(scale=1), ctx=ctx)
     trainer = foo.Trainer(net.all_params(), 'adam', {'learning_rate': opt.lr})
     metric = mx.metric.MAE()
+    loss = foo.loss.L2Loss()
 
     for i in range(epoch):
         train_data.reset()
@@ -142,8 +143,8 @@ def train(epoch, ctx):
             with ag.record():
                 for x, y in zip(data, label):
                     z = net(x)
-                    loss = foo.loss.l2_loss(z, y)
-                    ag.compute_gradient([loss])
+                    L = loss(z, y)
+                    L.backward()
                     outputs.append(z)
             trainer.step(batch.data[0].shape[0])
             metric.update(label, outputs)

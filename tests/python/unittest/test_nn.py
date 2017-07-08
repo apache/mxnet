@@ -24,7 +24,7 @@ def test_paramdict():
 
 
 def test_parameter_sharing():
-    class Net(nn.Layer):
+    class Net(foo.Layer):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():

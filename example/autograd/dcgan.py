@@ -92,6 +92,8 @@ trainerD = foo.Trainer(netD.all_params(), 'adam', {'learning_rate': opt.lr, 'bet
 real_label = mx.nd.ones((opt.batchSize,), ctx=ctx)
 fake_label = mx.nd.zeros((opt.batchSize,), ctx=ctx)
 
+loss = foo.loss.SoftmaxCrossEntropyLoss()
+
 for epoch in range(opt.niter):
     for batch in train_iter:
         ############################
@@ -104,12 +106,12 @@ for epoch in range(opt.niter):
         with autograd.record():
             output = netD(data)
             output = output.reshape((opt.batchSize, 2))
-            errD_real = foo.loss.softmax_cross_entropy_loss(output, real_label)
+            errD_real = loss(output, real_label)
 
             fake = netG(noise)
             output = netD(fake.detach())
             output = output.reshape((opt.batchSize, 2))
-            errD_fake = foo.loss.softmax_cross_entropy_loss(output, fake_label)
+            errD_fake = loss(output, fake_label)
             errD = errD_real + errD_fake
             errD.backward()
 
@@ -121,7 +123,7 @@ for epoch in range(opt.niter):
         with autograd.record():
             output = netD(fake)
             output = output.reshape((opt.batchSize, 2))
-            errG = foo.loss.softmax_cross_entropy_loss(output, real_label)
+            errG = loss(output, real_label)
             errG.backward()
 
         trainerG.step(opt.batchSize)

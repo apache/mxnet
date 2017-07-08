@@ -32,7 +32,7 @@ def conv3x3(filters, stride, in_filters):
     return nn.Conv2D(filters, kernel_size=3, strides=stride, padding=1,
                      use_bias=False, in_filters=in_filters)
 
-class BasicBlockV1(nn.HybridLayer):
+class BasicBlockV1(foo.HybridLayer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BasicBlockV1, self).__init__(**kwargs)
         with self.name_scope():
@@ -65,7 +65,7 @@ class BasicBlockV1(nn.HybridLayer):
         return out
 
 
-class BottleneckV1(nn.HybridLayer):
+class BottleneckV1(foo.HybridLayer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BottleneckV1, self).__init__(**kwargs)
         with self.name_scope():
@@ -104,7 +104,7 @@ class BottleneckV1(nn.HybridLayer):
         return out
 
 
-class ResnetV1(nn.HybridLayer):
+class ResnetV1(foo.HybridLayer):
     def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
         super(ResnetV1, self).__init__(**kwargs)
         with self.name_scope():
@@ -152,7 +152,7 @@ class ResnetV1(nn.HybridLayer):
         return x
 
 
-class BasicBlockV2(nn.HybridLayer):
+class BasicBlockV2(foo.HybridLayer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BasicBlockV2, self).__init__(**kwargs)
         with self.name_scope():
@@ -182,7 +182,7 @@ class BasicBlockV2(nn.HybridLayer):
         return x + residual
 
 
-class BottleneckV2(nn.HybridLayer):
+class BottleneckV2(foo.HybridLayer):
     def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
         super(BottleneckV2, self).__init__(**kwargs)
         with self.name_scope():
@@ -217,7 +217,7 @@ class BottleneckV2(nn.HybridLayer):
 
         return x + residual
 
-class ResnetV2(nn.HybridLayer):
+class ResnetV2(foo.HybridLayer):
     def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
         super(ResnetV2, self).__init__(**kwargs)
         with self.name_scope():
@@ -330,6 +330,7 @@ def train(epoch, ctx):
     net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
     trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.1})
     metric = mx.metric.Accuracy()
+    loss = foo.loss.SoftmaxCrossEntropyLoss()
 
     for i in range(epoch):
         tic = time.time()
@@ -339,15 +340,17 @@ def train(epoch, ctx):
             data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
             label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
             outputs = []
-            losses = []
+            Ls = []
             with ag.record():
                 for x, y in zip(data, label):
                     z = net(x)
-                    loss = foo.loss.softmax_cross_entropy_loss(z, y)
-                    losses.append(loss)
+                    L = loss(z, y)
+                    # store the loss and do backward after we have done forward
+                    # on all GPUs for better speed on multiple GPUs.
+                    Ls.append(L)
                     outputs.append(z)
-                for loss in losses:
-                    loss.backward()
+                for L in Ls:
+                    L.backward()
             trainer.step(batch.data[0].shape[0])
             metric.update(label, outputs)
             logging.info('speed: {} samples/s'.format(batch_size/(time.time()-btic)))

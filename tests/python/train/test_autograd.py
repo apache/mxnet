@@ -51,6 +51,7 @@ def train(net, epoch, ctx_list):
     net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx_list)
     trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.5})
     metric = mx.metric.Accuracy()
+    loss = foo.loss.SoftmaxCrossEntropyLoss()
 
     for i in range(epoch):
         train_data.reset()
@@ -61,8 +62,8 @@ def train(net, epoch, ctx_list):
             with autograd.record():
                 for x, y in zip(datas, labels):
                     z = net(x)
-                    loss = foo.loss.softmax_cross_entropy_loss(z, y)
-                    loss.backward()
+                    L = loss(z, y)
+                    L.backward()
                     outputs.append(z)
             trainer.step(batch.data[0].shape[0])
             metric.update(labels, outputs)

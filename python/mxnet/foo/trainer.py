@@ -101,7 +101,7 @@ class Trainer(object):
                             "model that maked it only use a subset of the Parameters (Layers) "
                             "for this iteration. If you are intentionally only using a subset, "
                             "call step with ignore_stale_grad=True to suppress this "
-                            "warning and skip updating of Parameters with state gradient" \
+                            "warning and skip updating of Parameters with stale gradient" \
                             %(param.name, str(data.context)))
             if self._kvstore:
                 self._kvstore.push(i, param.list_grad(), priority=-i)

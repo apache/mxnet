@@ -7,7 +7,7 @@ from __future__ import print_function
 
 from ... import symbol, ndarray
 from ...base import string_types, numeric_types
-from ..nn import Layer, HybridLayer
+from ..layer import Layer, HybridLayer
 from .. import tensor_types
 
 
