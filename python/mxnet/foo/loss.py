@@ -262,7 +262,7 @@ def softmax_cross_entropy_loss(output, label, sparse_label=True, axis=-1,
                        extra_outputs, metrics, name)
 
 
-def kl_divergence_loss(output, label, axis=-1,
+def kl_divergence_loss(output, label,
                        weight=None, sample_weight=None, batch_axis=0,
                        extra_outputs=(), metrics='pearsonr', name='kl'):
     """The Kullback-Leibler divergence Loss
