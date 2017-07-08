@@ -26,6 +26,11 @@ def test_loss_ndarray():
     loss = foo.loss.softmax_cross_entropy_loss(output, label, sample_weight=weighting).asnumpy()
     mx.test_utils.assert_almost_equal(loss, np.array([ 1.06346405,  0.04858733]))
 
+    output = mx.nd.log_softmax(mx.nd.array([[2, 3], [2, 4], [3, 1]]))
+    target = mx.nd.softmax(mx.nd.array([[0, 1], [0, 1], [0, 1]]))
+    loss = foo.loss.kl_divergence_loss(mx.nd.log_softmax(output), target).asnumpy()
+    mx.test_utils.assert_almost_equal(loss, np.array([0., 0.04130392, 0.50342113]))
+
 
 def check_loss(loss):
     output = mx.sym.var('data')
@@ -52,6 +57,7 @@ def test_loss_symbol():
     check_loss(foo.loss.l1_loss)
     check_loss(foo.loss.l2_loss)
     check_loss(foo.loss.softmax_cross_entropy_loss)
+    check_loss(foo.loss.kl_divergence_loss)
 
 
 def get_net(num_hidden):
@@ -79,6 +85,21 @@ def test_ce_loss():
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.})
     assert mod.score(data_iter)[0][1] == 1.0
+
+
+def test_kl_loss():
+    mx.random.seed(1234)
+    np.random.seed(1234)
+    N = 20
+    data = mx.random.uniform(-1, 1, shape=(N, 10))
+    label = mx.nd.softmax(mx.random.uniform(0, 1, shape=(N, 2)))
+    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
+    output = mx.sym.log_softmax(get_net(2))
+    l = mx.symbol.Variable('label')
+    loss = foo.loss.kl_divergence_loss(output, l)
+    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.})
+    assert mod.score(data_iter)[0][1] < 0.05
 
 
 def test_l2_loss():

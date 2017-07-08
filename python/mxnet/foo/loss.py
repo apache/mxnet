@@ -260,3 +260,51 @@ def softmax_cross_entropy_loss(output, label, sparse_label=True, axis=-1,
         loss = -F.sum(prob*label, axis=axis, keepdims=True)
     return custom_loss(loss, prob, label, weight, sample_weight, batch_axis,
                        extra_outputs, metrics, name)
+
+
+def kl_divergence_loss(output, label, axis=-1,
+                       weight=None, sample_weight=None, batch_axis=0,
+                       extra_outputs=(), metrics='pearsonr', name='kl'):
+    """The Kullback-Leibler divergence Loss
+    KL divergence is a useful distance measure for continuous distributions
+    and is often useful when performing direct regression over the space of
+    (discretely sampled) continuous output distributions.
+
+    By default, the losses are averaged for each minibatch over observations
+    **as well as** over dimensions.
+
+    .. _Kullback-Leibler divergence:
+        https://en.wikipedia.org/wiki/Kullback-Leibler_divergence
+
+    .. math::
+        L = 1/n \sum(label_i * (log(label_i) - output_i))
+
+    label's shape should be the same as output's.
+
+    Parameters
+    ----------
+    output : Symbol
+        output of the network and must be log-probability.
+    label : Symbol
+        target to compare output against and must be probability.
+    axis : int, default -1
+        The axis to sum over when computing mean
+    weight : float or None
+        global scalar weight for loss
+    sample_weight : Symbol or None
+        per sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has
+        shape (64, 10) and you want to weight each sample
+        in the batch, sample_weight should have shape (64, 1)
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+
+    Returns
+    -------
+    loss : Symbol
+        created loss
+    """
+    F = _get_F(output)
+    loss = F.where(label > 0, label * (F.log(label) - output), F.zeros_like(label))
+    return custom_loss(loss, output, label, weight, sample_weight, batch_axis,
+                       extra_outputs, metrics, name)
