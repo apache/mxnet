@@ -108,3 +108,82 @@ test_that("ndarray crop", {
   
   expect_equal(as.array(x), arr_x)
 })
+
+test_that("ndarray negate", {
+  arr <- array(runif(24, -10, 10), dim = c(2, 3, 4))
+  nd <- mx.nd.array(arr)
+  
+  expect_equal(arr, as.array(nd), tolerance = 1e-6)
+  expect_equal(-arr, as.array(-nd), tolerance = 1e-6)
+  expect_equal(arr, as.array(nd), tolerance = 1e-6)
+})
+
+test_that("ndarray equal", {
+  x <- mx.nd.zeros(c(2, 3))
+  y <- mx.nd.ones(c(2, 3))
+  z = x == y
+  expect_equal(as.array(z), array(0, c(2,3)))
+  
+  z = 0 == x
+  expect_equal(as.array(z), array(1, c(2,3)))
+})
+
+test_that("ndarray not equal", {
+  x <- mx.nd.zeros(c(2, 3))
+  y <- mx.nd.ones(c(2, 3))
+  z = x != y
+  expect_equal(as.array(z), array(1, c(2,3)))
+  
+  z = 0 != x
+  expect_equal(as.array(z), array(0, c(2,3)))
+})
+
+test_that("ndarray greater", {
+  x <- mx.nd.zeros(c(2, 3))
+  y <- mx.nd.ones(c(2, 3))
+  z = x > y
+  expect_equal(as.array(z), array(0, c(2,3)))
+  
+  z = y > 0
+  expect_equal(as.array(z), array(1, c(2,3)))
+  
+  z = 0 > y
+  expect_equal(as.array(z), array(0, c(2,3)))
+  
+  z = x >= y
+  expect_equal(as.array(z), array(0, c(2,3)))
+  
+  z = y >= 0
+  expect_equal(as.array(z), array(1, c(2,3)))
+  
+  z = 0 >= y
+  expect_equal(as.array(z), array(0, c(2,3)))
+  
+  z = y >= 1
+  expect_equal(as.array(z), array(1, c(2,3)))
+})
+
+test_that("ndarray lesser", {
+  x <- mx.nd.zeros(c(2, 3))
+  y <- mx.nd.ones(c(2, 3))
+  z = x < y
+  expect_equal(as.array(z), array(1, c(2,3)))
+  
+  z = y < 0
+  expect_equal(as.array(z), array(0, c(2,3)))
+  
+  z = 0 < y
+  expect_equal(as.array(z), array(1, c(2,3)))
+  
+  z = x <= y
+  expect_equal(as.array(z), array(1, c(2,3)))
+  
+  z = y <= 0
+  expect_equal(as.array(z), array(0, c(2,3)))
+  
+  z = 0 <= y
+  expect_equal(as.array(z), array(1, c(2,3)))
+  
+  z = y <= 1
+  expect_equal(as.array(z), array(1, c(2,3)))
+})
