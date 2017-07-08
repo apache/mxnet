@@ -138,6 +138,8 @@ def get_interp_method(interp, sizes=None):
         When shrinking an image, it will generally look best with AREA-based
         interpolation, whereas, when enlarging an image, it will generally look best
         with Bicubic (slow) or Bilinear (faster but still looks OK).
+        More details can be found in the documentation of OpenCV, please refer to
+        http://docs.opencv.org/master/da/d54/group__imgproc__transform.html.
     sizes : tuple of int
         (old_height, old_width, new_height, new_width), if None provided, auto(9)
         will return Area(2) anyway.
@@ -208,9 +210,7 @@ def resize_short(src, size, interp=2):
         The length to be set for the shorter edge.
     interp : int, optional, default=2
         Interpolation method used for resizing the image.
-        Default method is bicubic interpolation.
-        More details can be found in the documentation of OpenCV, please refer to
-        http://docs.opencv.org/master/da/d54/group__imgproc__transform.html.
+        See get_interp_method() for more details.
 
     Returns
     -------
@@ -239,7 +239,30 @@ def resize_short(src, size, interp=2):
 
 
 def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
-    """Crop src at fixed location, and (optionally) resize it to size."""
+    """Crop src at fixed location, and (optionally) resize it to size.
+
+    Parameters
+    ----------
+    src : NDArray
+        Input image
+    x0 : int
+        Left boundary of the cropping area
+    y0 : int
+        Top boundary of the cropping area
+    w : int
+        Width of the cropping area
+    h : int
+        Height of the cropping area
+    size : tuple of (w, h)
+        Optional, resize to new size after cropping
+    interp : int
+        Interpolation method
+
+    Returns
+    -------
+    NDArray
+        An `NDArray` containing the cropped image.
+    """
     out = nd.crop(src, begin=(y0, x0, 0), end=(y0 + h, x0 + w, int(src.shape[2])))
     if size is not None and (w, h) != size:
         sizes = (h, w, size[1], size[0])
@@ -256,9 +279,9 @@ def random_crop(src, size, interp=2):
     src: Source image `NDArray`
     size: Size of the crop formatted as (width, height). If the `size` is larger
            than the image, then the source image is upsampled to `size` and returned.
-    interp: Interpolation method to be used in case the size is larger (default: bicubic).
-            Uses OpenCV convention for the parameters. Nearest - 0, Bilinear - 1, Bicubic - 2,
-            Area - 3. See OpenCV imresize function for more details.
+    interp: int
+        Interpolation method to be used in case the size is larger (default: bicubic).
+        See get_interp_method for more details.
     Returns
     -------
     NDArray
@@ -300,27 +323,9 @@ def center_crop(src, size, interp=2):
         Binary source image data.
     size : list or tuple of int
         The desired output image size.
-    interp : interpolation, optional, default=Area-based
-        The type of interpolation that is done to the image.
-
-         Possible values:
-
-        0: Nearest Neighbors Interpolation.
-
-        1: Bilinear interpolation.
-
-        2: Area-based (resampling using pixel area relation). It may be a
-        preferred method for image decimation, as it gives moire-free
-        results. But when the image is zoomed, it is similar to the Nearest
-        Neighbors method. (used by default).
-
-        3: Bicubic interpolation over 4x4 pixel neighborhood.
-
-        4: Lanczos interpolation over 8x8 pixel neighborhood.
-
-        When shrinking an image, it will generally look best with AREA-based
-        interpolation, whereas, when enlarging an image, it will generally look best
-        with Bicubic (slow) or Bilinear (faster but still looks OK).
+    interp : int
+        Interpolation, optional, default=Area-based
+        See mxnet.image.get_interp_method for more details.
 
     Returns
     -------
@@ -356,7 +361,22 @@ def center_crop(src, size, interp=2):
 
 
 def color_normalize(src, mean, std=None):
-    """Normalize src with mean and std."""
+    """Normalize src with mean and std.
+
+    Parameters
+    ----------
+    src : NDArray
+        Input image
+    mean : NDArray
+        RGB mean to be subtracted
+    std : NDArray
+        RGB standard deviation to be divided
+
+    Returns
+    -------
+    NDArray
+        An `NDArray` containing the normalized image.
+    """
     if mean is not None:
         src -= mean
     if std is not None:
@@ -365,7 +385,29 @@ def color_normalize(src, mean, std=None):
 
 
 def random_size_crop(src, size, min_area, ratio, interp=2):
-    """Randomly crop src with size. Randomize area and aspect ratio."""
+    """Randomly crop src with size. Randomize area and aspect ratio.
+
+    Parameters
+    ----------
+    src : NDArray
+        Input image
+    size : tuple of (int, int)
+        Size of the crop formatted as (width, height).
+    min_area : int
+        Minimum area to be maintained after cropping
+    ratio : tuple of (float, float)
+        Aspect ratio range as (min_aspect_ratio, max_aspect_ratio)
+    interp: Interpolation method to be used in case the size is larger (default: bicubic).
+            See get_interp_method for more details.
+    Returns
+    -------
+    NDArray
+        An `NDArray` containing the cropped image.
+    Tuple
+        A tuple (x, y, width, height) where (x, y) is top-left position of the crop in the
+        original image and (width, height) are the dimensions of the cropped image.
+
+    """
     h, w, _ = src.shape
     new_ratio = random.uniform(*ratio)
     if new_ratio * h > w:
@@ -415,7 +457,16 @@ class Augmenter(object):
 
 
 class ResizeAug(Augmenter):
-    """Make resize shorter edge to size augmenter."""
+    """Make resize shorter edge to size augmenter.
+
+    Parameters
+    ----------
+    size : int
+        The length to be set for the shorter edge.
+    interp : int, optional, default=2
+        Interpolation method used for resizing the image.
+        See get_interp_method for more details.
+    """
     def __init__(self, size, interp=2):
         super(ResizeAug, self).__init__(size=size, interp=interp)
         self.size = size
@@ -427,7 +478,16 @@ class ResizeAug(Augmenter):
 
 
 class ForceResizeAug(Augmenter):
-    """Force resize to size regardless of aspect ratio"""
+    """Force resize to size regardless of aspect ratio
+
+    Parameters
+    ----------
+    size : tuple of (int, int)
+        The desired size as in (width, height)
+    interp : int, optional, default=2
+        Interpolation method used for resizing the image.
+        See get_interp_method for more details.
+    """
     def __init__(self, size, interp=2):
         super(ForceResizeAug, self).__init__(size=size, interp=interp)
         self.size = size
@@ -440,7 +500,16 @@ class ForceResizeAug(Augmenter):
 
 
 class RandomCropAug(Augmenter):
-    """Make random crop augmenter"""
+    """Make random crop augmenter
+
+    Parameters
+    ----------
+    size : int
+        The length to be set for the shorter edge.
+    interp : int, optional, default=2
+        Interpolation method used for resizing the image.
+        See get_interp_method for more details.
+    """
     def __init__(self, size, interp=2):
         super(RandomCropAug, self).__init__(size=size, interp=interp)
         self.size = size
@@ -452,7 +521,20 @@ class RandomCropAug(Augmenter):
 
 
 class RandomSizedCropAug(Augmenter):
-    """Make random crop with random resizing and random aspect ratio jitter augmenter."""
+    """Make random crop with random resizing and random aspect ratio jitter augmenter.
+
+    Parameters
+    ----------
+    size : tuple of (int, int)
+        Size of the crop formatted as (width, height).
+    min_area : int
+        Minimum area to be maintained after cropping
+    ratio : tuple of (float, float)
+        Aspect ratio range as (min_aspect_ratio, max_aspect_ratio)
+    interp: int
+        Interpolation method to be used in case the size is larger (default: bicubic).
+        See get_interp_method for more details.
+    """
     def __init__(self, size, min_area, ratio, interp=2):
         super(RandomSizedCropAug, self).__init__(size=size, min_area=min_area,
                                                  ratio=ratio, interp=interp)
@@ -467,7 +549,16 @@ class RandomSizedCropAug(Augmenter):
 
 
 class CenterCropAug(Augmenter):
-    """Make center crop augmenter."""
+    """Make center crop augmenter.
+
+    Parameters
+    ----------
+    size : list or tuple of int
+        The desired output image size.
+    interp : int
+        Inerpolation, optional, default=Area-based
+        See get_interp_method for more details.
+    """
     def __init__(self, size, interp=2):
         super(CenterCropAug, self).__init__(size=size, interp=interp)
         self.size = size
@@ -479,7 +570,13 @@ class CenterCropAug(Augmenter):
 
 
 class RandomOrderAug(Augmenter):
-    """Apply list of augmenters in random order"""
+    """Apply list of augmenters in random order
+
+    Parameters
+    ----------
+    ts : list of augmenters
+        A series of augmenters to be applied in random order
+    """
     def __init__(self, ts):
         super(RandomOrderAug, self).__init__()
         self.ts = ts
@@ -498,7 +595,17 @@ class RandomOrderAug(Augmenter):
 
 
 class BrightnessJitterAug(Augmenter):
-    """Random brightness jitter augmentation."""
+    """Random brightness jitter augmentation.
+
+    Parameters
+    ----------
+    brightness : float
+        The brightness jitter ratio range, [0, 1]
+    min_val : float, default=0
+        Minimum value after jittering
+    max_val : float ,default=255
+        Maximum value after jittering
+    """
     def __init__(self, brightness, min_val=0, max_val=255):
         super(BrightnessJitterAug, self).__init__(brightness=brightness)
         self.brightness = brightness
@@ -513,7 +620,17 @@ class BrightnessJitterAug(Augmenter):
 
 
 class ContrastJitterAug(Augmenter):
-    """Random contrast jitter augmentation."""
+    """Random contrast jitter augmentation.
+
+    Parameters
+    ----------
+    contrast : float
+        The contrast jitter ratio range, [0, 1]
+    min_val : float, default=0
+        Minimum value after jittering
+    max_val : float ,default=255
+        Maximum value after jittering
+    """
     def __init__(self, contrast, min_val=0, max_val=255):
         super(ContrastJitterAug, self).__init__(contrast=contrast)
         self.contrast = contrast
@@ -532,7 +649,17 @@ class ContrastJitterAug(Augmenter):
 
 
 class SaturationJitterAug(Augmenter):
-    """Random saturation jitter augmentation."""
+    """Random saturation jitter augmentation.
+
+    Parameters
+    ----------
+    saturation : float
+        The saturation jitter ratio range, [0, 1]
+    min_val : float, default=0
+        Minimum value after jittering
+    max_val : float ,default=255
+        Maximum value after jittering
+    """
     def __init__(self, saturation, min_val=0, max_val=255):
         super(SaturationJitterAug, self).__init__(saturation=saturation)
         self.saturation = saturation
@@ -552,7 +679,17 @@ class SaturationJitterAug(Augmenter):
 
 
 class HueJitterAug(Augmenter):
-    """Random hue jitter augmentation."""
+    """Random hue jitter augmentation.
+
+    Parameters
+    ----------
+    hue : float
+        The hue jitter ratio range, [0, 1]
+    min_val : float, default=0
+        Minimum value after jittering
+    max_val : float ,default=255
+        Maximum value after jittering
+    """
     def __init__(self, hue, min_val=0, max_val=255):
         super(HueJitterAug, self).__init__(hue=hue)
         self.hue = hue
@@ -582,7 +719,17 @@ class HueJitterAug(Augmenter):
 
 
 class ColorJitterAug(RandomOrderAug):
-    """Apply random brightness, contrast and saturation jitter in random order."""
+    """Apply random brightness, contrast and saturation jitter in random order.
+
+    Parameters
+    ----------
+    brightness : float
+        The brightness jitter ratio range, [0, 1]
+    contrast : float
+        The contrast jitter ratio range, [0, 1]
+    saturation : float
+        The saturation jitter ratio range, [0, 1]
+    """
     def __init__(self, brightness, contrast, saturation):
         ts = []
         if brightness > 0:
@@ -595,7 +742,21 @@ class ColorJitterAug(RandomOrderAug):
 
 
 class LightingAug(Augmenter):
-    """Add PCA based noise."""
+    """Add PCA based noise.
+
+    Parameters
+    ----------
+    alphastd : float
+        Noise level
+    eigval : 3x1 np.array
+        Eigen values
+    eigvec : 3x3 np.array
+        Eign vectors
+    min_val : float, default=0
+        Minimum value after jittering
+    max_val : float ,default=255
+        Maximum value after jittering
+    """
     def __init__(self, alphastd, eigval, eigvec, min_val=0, max_val=255):
         super(LightingAug, self).__init__(alphastd=alphastd, eigval=eigval, eigvec=eigvec)
         self.alphastd = alphastd
@@ -613,7 +774,15 @@ class LightingAug(Augmenter):
 
 
 class ColorNormalizeAug(Augmenter):
-    """Mean and std normalization."""
+    """Mean and std normalization.
+
+    Parameters
+    ----------
+    mean : NDArray
+        RGB mean to be subtracted
+    std : NDArray
+        RGB standard deviation to be divided
+    """
     def __init__(self, mean, std):
         super(ColorNormalizeAug, self).__init__(mean=mean, std=std)
         self.mean = nd.array(mean) if mean is not None else None
@@ -625,7 +794,13 @@ class ColorNormalizeAug(Augmenter):
 
 
 class RandomGrayAug(Augmenter):
-    """Randomly convert to gray image."""
+    """Randomly convert to gray image.
+
+    Parameters
+    ----------
+    p : float
+        Probability to convert to grayscale
+    """
     def __init__(self, p):
         super(RandomGrayAug, self).__init__(p=p)
         self.p = p
@@ -641,7 +816,13 @@ class RandomGrayAug(Augmenter):
 
 
 class HorizontalFlipAug(Augmenter):
-    """Random horizontal flip."""
+    """Random horizontal flip.
+
+    Parameters
+    ----------
+    p : float
+        Probability to flip image horizontally
+    """
     def __init__(self, p):
         super(HorizontalFlipAug, self).__init__(p=p)
         self.p = p
@@ -667,7 +848,63 @@ class CastAug(Augmenter):
 def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, rand_mirror=False,
                     mean=None, std=None, brightness=0, contrast=0, saturation=0, hue=0,
                     pca_noise=0, rand_gray=0, inter_method=2):
-    """Creates an augmenter list."""
+    """Creates an augmenter list.
+
+    Parameters
+    ----------
+    data_shape : tuple of int
+        shape for output data
+    resize : int
+        resize shorter edge if larger than 0 at the begining
+    rand_resize : float
+        [0, 1], probability to apply random resizing
+    rand_gray : float
+        [0, 1], probability to convert to grayscale for all channels
+    rand_mirror : bool
+        whether apply horizontal flip to image with probability 0.5
+    mean : np.ndarray or None
+        mean pixel values for [r, g, b]
+    std : np.ndarray or None
+        standard deviations for [r, g, b]
+    brightness : float
+        brightness jittering range (percent)
+    contrast : float
+        contrast jittering range
+    saturation : float
+        saturation jittering range
+    hue : float
+        hue jittering range
+    pca_noise : float
+        pca noise level
+    inter_method : int, default=2(Area-based)
+        interpolation method for all resizing operations
+
+        Possible values:
+        0: Nearest Neighbors Interpolation.
+        1: Bilinear interpolation.
+        2: Area-based (resampling using pixel area relation). It may be a
+        preferred method for image decimation, as it gives moire-free
+        results. But when the image is zoomed, it is similar to the Nearest
+        Neighbors method. (used by default).
+        3: Bicubic interpolation over 4x4 pixel neighborhood.
+        4: Lanczos interpolation over 8x8 pixel neighborhood.
+        9: Cubic for enlarge, area for shrink, bilinear for others
+        10: Random select from interpolation method metioned above.
+        Note:
+        When shrinking an image, it will generally look best with AREA-based
+        interpolation, whereas, when enlarging an image, it will generally look best
+        with Bicubic (slow) or Bilinear (faster but still looks OK).
+
+    Examples
+    --------
+    >>> # An example of creating multiple augmenters
+    >>> augs = mx.image.CreateAugmenter(data_shape=(3, 300, 300), rand_mirror=True,
+    ...    mean=True, brightness=0.125, contrast=0.125, rand_gray=0.05,
+    ...    saturation=0.125, pca_noise=0.05, inter_method=10)
+    >>> # dump the details
+    >>> for aug in augs:
+    ...    aug.dumps()
+    """
     auglist = []
 
     if resize > 0:
@@ -699,6 +936,9 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
                            [-0.5808, -0.0045, -0.8140],
                            [-0.5836, -0.6948, 0.4203]])
         auglist.append(LightingAug(pca_noise, eigval, eigvec))
+
+    if rand_gray > 0:
+        auglist.append(RandomGrayAug(rand_gray))
 
     if mean is True:
         mean = np.array([123.68, 116.28, 103.53])

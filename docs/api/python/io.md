@@ -89,13 +89,16 @@ A list of image modification functions provided by ``mxnet.image``.
     :nosignatures:
 
     image.imdecode
+    image.get_interp_method
     image.scale_down
+    image.clip_image
     image.resize_short
     image.fixed_crop
     image.random_crop
     image.center_crop
     image.color_normalize
     image.random_size_crop
+    image.Augmenter
     image.ResizeAug
     image.RandomCropAug
     image.RandomSizedCropAug
@@ -200,7 +203,53 @@ The backend engine will recognize the index of `N` in the `layout` as the axis f
 .. automodule:: mxnet.io
     :members:
 .. automodule:: mxnet.image
+.. autoclass:: mxnet.image.ImageIter
     :members:
+
+.. automethod:: mxnet.image.imdecode
+.. automethod:: mxnet.image.get_interp_method
+.. automethod:: mxnet.image.scale_down
+.. automethod:: mxnet.image.clip_image
+.. automethod:: mxnet.image.resize_short
+.. automethod:: mxnet.image.fixed_crop
+.. automethod:: mxnet.image.random_crop
+.. automethod:: mxnet.image.center_crop
+.. automethod:: mxnet.image.color_normalize
+.. automethod:: mxnet.image.random_size_crop
+
+.. autoclass:: mxnet.image.Augmenter
+    :members:
+.. autoclass:: mxnet.image.ResizeAug
+.. autoclass:: mxnet.image.RandomCropAug
+.. autoclass:: mxnet.image.RandomSizedCropAug
+.. autoclass:: mxnet.image.CenterCropAug
+.. autoclass:: mxnet.image.RandomOrderAug
+.. autoclass:: mxnet.image.BrightnessJitterAug
+.. autoclass:: mxnet.image.ContrastJitterAug
+.. autoclass:: mxnet.image.SaturationJitterAug
+.. autoclass:: mxnet.image.HueJitterAug
+.. autoclass:: mxnet.image.ColorJitterAug
+.. autoclass:: mxnet.image.LightingAug
+.. autoclass:: mxnet.image.ColorNormalizeAug
+.. autoclass:: mxnet.image.RandomGrayAug
+.. autoclass:: mxnet.image.HorizontalFlipAug
+.. autoclass:: mxnet.image.CastAug
+
+.. automethod:: mxnet.image.CreateAugmenter
+
+.. autoclass:: mxnet.image.ImageDetIter
+    :members:
+.. autoclass:: mxnet.image.DetAugmenter
+    :members:
+.. autoclass:: mxnet.image.DetBorrowAug
+.. autoclass:: mxnet.image.DetRandomSelectAug
+.. autoclass:: mxnet.image.DetHorizontalFlipAug
+.. autoclass:: mxnet.image.DetRandomCropAug
+.. autoclass:: mxnet.image.DetRandomPadAug
+
+.. automethod:: mxnet.image.CreateDetAugmenter
+
+
 .. automodule:: mxnet.recordio
     :members:
 ```

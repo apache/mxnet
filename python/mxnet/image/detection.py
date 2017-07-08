@@ -422,7 +422,7 @@ def CreateMultiRandCropAugmenter(min_object_covered=0.1, aspect_ratio_range=(0.7
         Number of attempts at generating a cropped/padded region of the image of the
         specified constraints. After max_attempts failures, return the original image.
 
-    Examples:
+    Examples
     --------
     >>> # An example of creating multiple random crop augmenters
     >>> min_object_covered = [0.1, 0.3, 0.5, 0.7, 0.9]  # use 5 augmenters
@@ -539,14 +539,13 @@ def CreateDetAugmenter(data_shape, resize=0, rand_crop=0, rand_pad=0, rand_gray=
     Examples
     --------
     >>> # An example of creating multiple augmenters
-    >>> augs = mx.image.det.CreateDetAugmenter(data_shape=(3, 300, 300), rand_crop=0.5,
-        rand_pad=0.5, rand_mirror=True, mean=True, brightness=0.125, contrast=0.125,
-        saturation=0.125, pca_noise=0.05, inter_method=10, min_object_covered=[0.3, 0.5, 0.9],
-        area_range=(0.3, 3.0))
+    >>> augs = mx.image.CreateDetAugmenter(data_shape=(3, 300, 300), rand_crop=0.5,
+    ...    rand_pad=0.5, rand_mirror=True, mean=True, brightness=0.125, contrast=0.125,
+    ...    saturation=0.125, pca_noise=0.05, inter_method=10, min_object_covered=[0.3, 0.5, 0.9],
+    ...    area_range=(0.3, 3.0))
     >>> # dump the details
     >>> for aug in augs:
-    >>> aug.dumps()
-
+    ...    aug.dumps()
     """
     auglist = []
 
@@ -643,7 +642,7 @@ class ImageDetIter(ImageIter):
     label_name : str
         name for detection labels
     kwargs : ...
-        More arguments for creating augmenter. See mx.image.det.CreateDetAugmenter.
+        More arguments for creating augmenter. See mx.image.CreateDetAugmenter.
     """
     def __init__(self, batch_size, data_shape,
                  path_imgrec=None, path_imglist=None, path_root=None, path_imgidx=None,
@@ -809,10 +808,10 @@ class ImageDetIter(ImageIter):
         >>> # use draw_next to get images with bounding boxes drawn
         >>> iterator = mx.image.ImageDetIter(1, (3, 600, 600), path_imgrec='train.rec')
         >>> for image in iterator.draw_next(waitKey=None):
-        >>>     # display image
+        ...     # display image
         >>> # or let draw_next display using cv2 module
         >>> for image in iterator.draw_next(waitKey=0, window_name='disp'):
-        >>>     pass
+        ...     pass
         """
         try:
             import cv2

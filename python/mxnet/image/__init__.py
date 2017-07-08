@@ -1,6 +1,6 @@
 # coding: utf-8
 # pylint: disable=wildcard-import
-"""Image Iterators and related modules"""
+"""Image Iterators and image augmentation functions"""
 
 from . import image
 from .image import *
