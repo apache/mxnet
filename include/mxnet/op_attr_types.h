@@ -112,11 +112,11 @@ class OpStatePtr {
     return dmlc::get<T>(ptr_->state_);
   }
   /* \brief clear state */
-  void reset() noexcept {
+  void reset() {
     ptr_.reset();
   }
   /* \brief whether state is empty */
-  explicit operator bool() const noexcept {
+  explicit operator bool() const {
     return ptr_ ? true : false;
   }
 
