@@ -5,8 +5,8 @@
 * \author Xin Li
 */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_MONITOR_HPP_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_MONITOR_HPP_
+#ifndef MXNET_CPP_MONITOR_HPP_
+#define MXNET_CPP_MONITOR_HPP_
 
 #include <cmath>
 #include <sstream>
@@ -103,4 +103,4 @@ inline void Monitor::executor_callback(const char *name, NDArrayHandle handle,
 
 }  // namespace cpp
 }  // namespace mxnet
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_MONITOR_HPP_
+#endif  // MXNET_CPP_MONITOR_HPP_

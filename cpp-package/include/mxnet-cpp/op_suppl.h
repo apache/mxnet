@@ -5,8 +5,8 @@
 * \author Zhang Chen, zhubuntu, Xin Li
 */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_SUPPL_H_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_SUPPL_H_
+#ifndef MXNET_CPP_OP_SUPPL_H_
+#define MXNET_CPP_OP_SUPPL_H_
 
 #include <cassert>
 #include <string>
@@ -157,5 +157,5 @@ inline Symbol Activation(const std::string& symbol_name,
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_SUPPL_H_
+#endif  // MXNET_CPP_OP_SUPPL_H_
 

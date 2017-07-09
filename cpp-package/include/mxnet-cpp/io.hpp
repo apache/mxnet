@@ -4,8 +4,8 @@
 * \brief implementation of data iter
 * \author Zhang Chen
 */
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_IO_HPP_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_IO_HPP_
+#ifndef MXNET_CPP_IO_HPP_
+#define MXNET_CPP_IO_HPP_
 
 #include <string>
 #include <vector>
@@ -86,5 +86,5 @@ inline MXDataIter MXDataIter::CreateDataIter() {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_IO_HPP_
+#endif  // MXNET_CPP_IO_HPP_
 
