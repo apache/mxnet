@@ -115,7 +115,7 @@ class OpStatePtr {
   void reset() {
     ptr_.reset();
   }
-  /* \brief whether state is empty */
+  /* \brief Whether state is empty */
   explicit operator bool() const {
     return ptr_ ? true : false;
   }
