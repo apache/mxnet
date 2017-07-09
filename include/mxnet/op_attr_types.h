@@ -16,6 +16,7 @@
 
 #include "./base.h"
 #include "./ndarray.h"
+#include "./engine.h"
 
 namespace mxnet {
 
@@ -84,10 +85,64 @@ enum class ExecType {
 };
 
 /*!
+ * \brief Operator state. This is a pointer type, its content is mutable
+ *  even if OpStatePtr is const.
+ */
+class OpStatePtr {
+ public:
+  /* \brief Create a OpStatePtr with state of type T.
+   * \param args Arguments passed to T's constructor.
+   */
+  template<typename T, typename... Args>
+  static OpStatePtr Create(Args&&... args) {
+    OpStatePtr ret;
+    ret.ptr_ = std::make_shared<OpState>();
+    ret.ptr_->var_ = Engine::Get()->NewVariable();
+    ret.ptr_->state_.construct<T>(std::forward<Args>(args)...);
+
+    return ret;
+  }
+  /* \brief Get engine variable associated with this state */
+  engine::VarHandle get_var() const {
+    return ptr_->var_;
+  }
+  /* \brief Get state of type T */
+  template<typename T>
+  T& get_state() const {
+    return dmlc::get<T>(ptr_->state_);
+  }
+  /* \brief clear state */
+  void reset() noexcept {
+    ptr_.reset();
+  }
+  /* \brief whether state is empty */
+  explicit operator bool() const noexcept {
+    return ptr_ ? true : false;
+  }
+
+ private:
+  /* \brief state structure */
+  struct OpState {
+    OpState() {}
+    OpState(const OpState& other) = delete;
+    OpState& operator=(const OpState& other) = delete;
+
+    ~OpState() {
+      Engine::Get()->DeleteVariable([](RunContext s) {}, Context::CPU(), var_);
+    }
+
+    engine::VarHandle var_;
+    dmlc::any state_;
+  };
+  /* \brief shared pointer to state */
+  std::shared_ptr<OpState> ptr_;
+};
+
+/*!
  * \brief Create a Layer style, forward/backward operator.
  *  This is easy to write code that contains state.
- *  state is immutable, if you want mutable state, you can use a
- *  shared_ptr as state.
+ *  OpStatePtr is a pointer type, it's content is mutable even if
+ *  OpStatePtr is constant.
  *
  *
  *  This is not the only way to register an op execution function.
@@ -95,34 +150,34 @@ enum class ExecType {
  *
  *  \note Register under "FCreateLayerOp"
  */
-using FCreateOpState = std::function<dmlc::any (const NodeAttrs& attrs,
-                                                Context ctx,
-                                                const std::vector<TShape>& in_shape,
-                                                const std::vector<int>& in_type)>;
+using FCreateOpState = std::function<OpStatePtr (const NodeAttrs& attrs,
+                                                 Context ctx,
+                                                 const std::vector<TShape>& in_shape,
+                                                 const std::vector<int>& in_type)>;
 /*!
  * \brief Execution mode of this operator.
  */
 using FExecType = std::function<ExecType (const NodeAttrs& attrs)>;
 /*!
  * \brief Resiger a compute function for stateful operator.
- *  state is immutable, if you want mutable state, you can use a
- *  shared_ptr as state.
+ *  OpStatePtr is a pointer type, it's content is mutable even if
+ *  OpStatePtr is constant.
  *
  * \note Register under "FStatefulCompute<cpu>" and "FStatefulCompute<gpu>"
  */
-using FStatefulCompute = std::function<void (const dmlc::any& state,
+using FStatefulCompute = std::function<void (const OpStatePtr& state,
                                              const OpContext& ctx,
                                              const std::vector<TBlob>& inputs,
                                              const std::vector<OpReqType>& req,
                                              const std::vector<TBlob>& outputs)>;
 /*!
  * \brief Resiger a compute function for stateful operator using NDArray interface.
- *  state is immutable, if you want mutable state, you can use a
- *  shared_ptr as state.
+ *  OpStatePtr is a pointer type, it's content is mutable even if
+ *  OpStatePtr is constant.
  *
  * \note Register under "FStatefulComputeEx<cpu>" and "FStatefulComputeEx<gpu>"
  */
-using FStatefulComputeEx = std::function<void (const dmlc::any& state,
+using FStatefulComputeEx = std::function<void (const OpStatePtr& state,
                                                const OpContext& ctx,
                                                const std::vector<NDArray>& inputs,
                                                const std::vector<OpReqType>& req,

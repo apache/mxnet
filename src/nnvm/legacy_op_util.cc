@@ -106,6 +106,7 @@ class OperatorState {
                 const std::vector<OpReqType>& req,
                 const std::vector<TBlob>& outputs) {
     if (!bwd_init_) {
+      CHECK(fwd_init_);
       CHECK_EQ(arg_data_ptr_.size() + aux_data_.size(), inputs.size());
       for (size_t i = 0; i < arg_data_ptr_.size(); ++i) {
         *arg_data_ptr_[i] = inputs[i];
@@ -127,22 +128,22 @@ class OperatorState {
   std::vector<TBlob*> arg_data_ptr_;
 };
 
-void LegacyOpForward(const dmlc::any& state,
+void LegacyOpForward(const OpStatePtr& state,
                      const OpContext& ctx,
                      const std::vector<TBlob>& inputs,
                      const std::vector<OpReqType>& req,
                      const std::vector<TBlob>& outputs) {
-  const auto& op = nnvm::get<std::shared_ptr<OperatorState> >(state);
-  op->Forward(ctx, inputs, req, outputs);
+  auto& op = state.get_state<OperatorState>();
+  op.Forward(ctx, inputs, req, outputs);
 }
 
-void LegacyOpBackward(const dmlc::any& state,
+void LegacyOpBackward(const OpStatePtr& state,
                       const OpContext& ctx,
                       const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
-  const auto& op = nnvm::get<std::shared_ptr<OperatorState> >(state);
-  op->Backward(ctx, inputs, req, outputs);
+  auto& op = state.get_state<OperatorState>();
+  op.Backward(ctx, inputs, req, outputs);
 }
 
 // function to use operator property to infer attr
@@ -272,15 +273,15 @@ std::vector<ResourceRequest> OpBackResourceRequest(const NodeAttrs& attrs) {
   return prop.ptr->BackwardResource(ishape);
 }
 
-dmlc::any OpPropCreateLayerOp(const NodeAttrs& attrs,
-                                               Context ctx,
-                                               const std::vector<TShape>& ishape,
-                                               const std::vector<int>& itype) {
+OpStatePtr OpPropCreateLayerOp(const NodeAttrs& attrs,
+                               Context ctx,
+                               const std::vector<TShape>& ishape,
+                               const std::vector<int>& itype) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   std::vector<TShape> is(ishape.begin(), ishape.begin() + prop.arguments.size());
   std::vector<int> it(itype.begin(), itype.begin() + prop.arguments.size());
-  return std::make_shared<OperatorState>(prop.ptr->CreateOperatorEx(ctx, &is, &it),
-                                         prop.ptr.get());
+  return OpStatePtr::Create<OperatorState>(prop.ptr->CreateOperatorEx(ctx, &is, &it),
+                                           prop.ptr.get());
 }
 
 inline std::vector<NodeEntry> OpPropGradient(

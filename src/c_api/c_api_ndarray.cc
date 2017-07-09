@@ -279,7 +279,7 @@ void PushFCompute(const FCompute& fn,
     0, PROFILER_MESSAGE(op->name.c_str()));
 }
 
-void PushOperator(const dmlc::any& state,
+void PushOperator(const OpStatePtr& state,
                   const nnvm::Op* op,
                   const nnvm::NodeAttrs& attrs,
                   const Context& ctx,
@@ -389,12 +389,13 @@ void ImperativeInvokeImpl(const Context& default_ctx,
       PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
           requested, ndinputs, ndoutputs);
     } else if (createop.count(op)) {
-      dmlc::any state =
+      auto state =
           createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
       if (AutogradRuntime::Get()->IsTraining()) {
         AutogradRuntime::Get()->RecordImperativeOperator(state, op,
             attrs, &ndinputs, &ndoutputs);
       }
+      write_vars.push_back(state.get_var());
       PushOperator(state, op, attrs, ctx, read_vars, write_vars,
           requested, ndinputs, ndoutputs);
     } else {

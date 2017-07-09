@@ -1052,6 +1052,9 @@ void GraphExecutor::InitCachedOps() {
     for (auto& nd : exec->out_array) {
       mutate_vars.push_back(nd.var());
     }
+    if (exec->var() != nullptr) {
+      mutate_vars.push_back(exec->var());
+    }
     // dedup vars
     Engine::Get()->DeduplicateVarHandle(&use_vars, &mutate_vars);
     // all vars include both mutate vars and use vars

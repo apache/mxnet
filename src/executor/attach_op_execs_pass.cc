@@ -49,14 +49,18 @@ class StatefulComputeExecutor : public OpExecutor {
     return exec_type_;
   }
 
-  explicit StatefulComputeExecutor(const dmlc::any& state,
+  virtual engine::VarHandle var() const {
+    return state_.get_var();
+  }
+
+  explicit StatefulComputeExecutor(const OpStatePtr& state,
                                    const FStatefulCompute& fcompute,
                                    ExecType exec_type)
       : state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
 
  private:
   friend Graph AttachOpExecs(Graph g);
-  dmlc::any state_;
+  OpStatePtr state_;
   FStatefulCompute fcompute_;
   ExecType exec_type_;
   std::vector<TBlob> in_data_, out_data_;
@@ -77,14 +81,18 @@ class StatefulComputeExExecutor : public OpExecutor {
     return exec_type_;
   }
 
-  explicit StatefulComputeExExecutor(const dmlc::any& state,
+  virtual engine::VarHandle var() const {
+    return state_.get_var();
+  }
+
+  explicit StatefulComputeExExecutor(const OpStatePtr& state,
                                      const FStatefulComputeEx& fcompute,
                                      ExecType exec_type)
       : state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
 
  private:
   friend Graph AttachOpExecs(Graph g);
-  dmlc::any state_;
+  OpStatePtr state_;
   FStatefulComputeEx fcompute_;
   ExecType exec_type_;
 };
@@ -143,7 +151,7 @@ Graph AttachOpExecs(Graph g) {
   const auto& vshape = g.GetAttr<ShapeVector>("shape");
   const auto& vctx = g.GetAttr<ContextVector>("context");
   const auto& saved_states = g.GetAttr<
-    std::unordered_map<const nnvm::Node*, dmlc::any>>("saved_states");
+    std::unordered_map<const nnvm::Node*, OpStatePtr> >("saved_states");
 
   // get the graph
   const auto& idx = g.indexed_graph();
@@ -170,7 +178,8 @@ Graph AttachOpExecs(Graph g) {
         ishape.emplace_back(vshape[idx.entry_id(e)]);
         itype.emplace_back(vdtype[idx.entry_id(e)]);
       }
-      dmlc::any state;
+
+      OpStatePtr state;
       if (saved_states.count(inode.source)) {
         state = saved_states.at(inode.source);
       } else {

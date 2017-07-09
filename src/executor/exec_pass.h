@@ -50,6 +50,10 @@ class OpExecutor {
   virtual void Run(RunContext rctx) = 0;
   /*! \return the execution type */
   virtual ExecType exec_type() const = 0;
+  /*! \return return engine variable for operator states */
+  virtual engine::VarHandle var() const {
+    return nullptr;
+  }
 };
 
 /*!

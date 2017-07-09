@@ -202,9 +202,9 @@ std::vector<nnvm::NodeEntry> Gradient(
 }
 
 
-dmlc::any CreateState(const NodeAttrs& attrs, Context ctx,
-                      const std::vector<TShape>& in_shape,
-                      const std::vector<int>& in_type) {
+OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
+                       const std::vector<TShape>& in_shape,
+                       const std::vector<int>& in_type) {
   const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
 
   size_t total = params.num_args + params.num_outs + params.num_auxs;
@@ -242,15 +242,15 @@ dmlc::any CreateState(const NodeAttrs& attrs, Context ctx,
     delete ptr;
   });
 
-  return state;
+  return OpStatePtr::Create<CustomParam>(state);
 }
 
-void Forward(const dmlc::any& state,
+void Forward(const OpStatePtr& state,
              const OpContext& ctx,
              const std::vector<NDArray>& inputs,
              const std::vector<OpReqType>& req,
              const std::vector<NDArray>& outputs) {
-  const CustomParam& params = nnvm::get<CustomParam>(state);
+  const CustomParam& params = state.get_state<CustomParam>();
   std::vector<void*> ptrs;
   std::vector<int> tags;
 
@@ -282,12 +282,12 @@ void Forward(const dmlc::any& state,
 }
 
 
-void Backward(const dmlc::any& state,
+void Backward(const OpStatePtr& state,
               const OpContext& ctx,
               const std::vector<NDArray>& inputs,
               const std::vector<OpReqType>& req,
               const std::vector<NDArray>& outputs) {
-  const CustomParam& params = nnvm::get<CustomParam>(state);
+  const CustomParam& params = state.get_state<CustomParam>();
 
   size_t total = 2*params.num_args + 2*params.num_outs + params.num_auxs;
   std::vector<void*> ptrs(params.num_args + 2*params.num_outs, nullptr);
