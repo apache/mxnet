@@ -464,10 +464,10 @@ class BaseModule(object):
         self.init_optimizer(kvstore=kvstore, optimizer=optimizer,
                             optimizer_params=optimizer_params)
 
-        if validation_metric is None:
-            validation_metric = eval_metric
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
+        if validation_metric is None:
+            validation_metric = eval_metric
 
         ################################################################################
         # training loop
@@ -514,20 +514,33 @@ class BaseModule(object):
             # sync aux params across devices
             arg_params, aux_params = self.get_params()
             self.set_params(arg_params, aux_params)
-
-            if epoch_end_callback is not None:
-                for callback in _as_list(epoch_end_callback):
-                    callback(epoch, self.symbol, arg_params, aux_params)
-
             #----------------------------------------
             # evaluation on validation set
             if eval_data:
                 res = self.score(eval_data, validation_metric,
                                  score_end_callback=eval_end_callback,
                                  batch_end_callback=eval_batch_end_callback, epoch=epoch)
-                #TODO: pull this into default
-                for name, val in res:
+                unpacked_result = dict(res)
+                # TODO: pull this into default
+                for name, val in unpacked_result.items():
                     self.logger.info('Epoch[%d] Validation-%s=%f', epoch, name, val)
+                if isinstance(validation_metric, metric.EvalMetric):
+                    if isinstance(validation_metric, metric.CompositeEvalMetric):
+                        measurement_for_stopping = validation_metric.metrics[0].name
+                    else:
+                        measurement_for_stopping = validation_metric.name
+                else:
+                    measurement_for_stopping = validation_metric
+                metric_for_stopping = unpacked_result[measurement_for_stopping]
+            else:
+                measurement_for_stopping = eval_metric.name
+                metric_for_stopping = dict(eval_metric.get_name_value())[measurement_for_stopping]
+
+            if epoch_end_callback is not None:
+                for callback in _as_list(epoch_end_callback):
+                    if not callback(epoch, self.symbol, arg_params, aux_params,
+                                    measurement_for_stopping, metric_for_stopping):
+                        return
 
             # end of 1 epoch, reset the data-iter for another epoch
             train_data.reset()

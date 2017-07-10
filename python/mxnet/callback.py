@@ -5,6 +5,11 @@ from __future__ import absolute_import
 import logging
 import math
 import time
+import warnings
+import numpy as np
+
+from . import metric
+
 from .model import save_checkpoint
 
 def module_checkpoint(mod, prefix, period=1, save_optimizer_states=False):
@@ -154,6 +159,121 @@ class Speedometer(object):
         else:
             self.init = True
             self.tic = time.time()
+
+
+class EarlyStopping(object):
+    """Apply the early stopping strategy to avoid over-fitting. During the training process,
+    it uses the metrics of performance on validation if the eval data is available, otherwise,
+    the metrics for training data will be used.
+
+    Parameters
+    ----------
+    min_delta: int
+        Defaults to 0. Specifies the minimum delta to be accepted between two epochs,
+        any improvement that is small than this number will be considered as non-improvement.
+        If 0, any improvement will count.
+    patience : int
+        Defaults to 1. Specifies the number of epochs to be tolerated without any improvement.
+        Once this patience was exceeded, the training process will be stopped.
+    verbose: int
+        Defaults to 0. Higher verbose will give more information
+    mode: str
+        Defaults to 'auto'. Specifies if the performance is an accuray (higher values are good) or
+        a loss (lower values are good). 'auto' mode automatically detects built in metrics.
+        Other possible options are:
+        'min', 'max'
+    save_model : bool
+        Defaults to False. Specifies whether to save the model when early stopping happens.
+    model_name: str
+        Defaults to 'dummy_model'. Specifies the model name to be saved, if not given, the name
+        'dummy_model' will be used.
+
+       Example
+       -------
+       >>> # Stop the training when there is no improvements in 5 rounds. Using
+       >>> module.fit(iterator, num_epoch=n_epoch, eval_metric='acc',
+       ... epoch_end_callback=EarlyStopping(eval_metric='acc', patience=5, verbose=1))
+        INFO:root:Epoch[21] Train-accuracy=0.640086
+        INFO:root:Epoch[21] Time cost=0.531
+        INFO:root:Epoch[22] Train-accuracy=0.640086
+        INFO:root:Epoch[22] Time cost=0.533
+        INFO:root:Epoch[23] Train-accuracy=0.640086
+        INFO:root:Epoch[23] Time cost=0.531
+        INFO:root:Epoch[24] Train-accuracy=0.640086
+        INFO:root:Epoch[24] Time cost=0.535
+        INFO:root:Epoch[25] Train-accuracy=0.640086
+        INFO:root:Epoch[25] Time cost=0.534
+        Epoch 00025: early stopping
+        INFO:root:Saved checkpoint to "dummy_model-0025.params"
+    """
+
+    def __init__(self, min_delta=0, patience=1, verbose=0, mode='auto', save_model=False,
+                 model_name='dummy_model'):
+        if mode not in ['auto', 'min', 'max']:
+            warnings.warn('EarlyStopping mode %s is unknown, '
+                          'fallback to auto mode.' % mode,
+                          RuntimeWarning)
+            mode = 'auto'
+        self.mode = mode
+        self.patience = patience
+        self.verbose = verbose
+        self.min_delta = min_delta
+        self.save_model = save_model
+        self.model_name = model_name
+
+        self.wait = 0
+        self.stopped_epoch = 0
+        self.continue_training = True
+
+        self.eval_metric = None
+        self.best = None
+        self.metric_op = None
+
+    def _set_eval(self, eval_metric):
+        """Initialise the evaluation metrics and the best performance"""
+        if isinstance(eval_metric, metric.EvalMetric):
+            eval_metric = eval_metric.name
+        self.eval_metric = eval_metric
+
+        if self.mode == 'min':
+            self.metric_op = np.less
+        elif self.mode == 'max':
+            self.metric_op = np.greater
+        else:
+            if ('acc' in self.eval_metric or
+                    'f1' in self.eval_metric or
+                    'top_k_accuracy' in self.eval_metric):
+                self.metric_op = np.greater
+            else:
+                self.metric_op = np.less
+
+        if self.metric_op == np.greater:
+            self.min_delta *= 1
+        else:
+            self.min_delta *= -1
+        self.best = np.Inf if self.metric_op == np.less else -np.Inf
+
+    def __call__(self, epoch, symbol, arg_params, aux_params, eval_metric,
+                 epoch_train_eval_metrics):
+        if self.eval_metric is None:
+            self._set_eval(eval_metric)
+        if epoch_train_eval_metrics is None:
+            warnings.warn('Early stopping requires metric available!', RuntimeWarning)
+        current = epoch_train_eval_metrics
+        if self.metric_op(current - self.min_delta, self.best):
+            self.best = current
+            self.wait = 0
+        else:
+            if self.wait >= self.patience:
+                self.stopped_epoch = epoch
+                self.continue_training = False
+                if self.stopped_epoch > 0 and self.verbose > 0:
+                    print('Epoch %05d: early stopping' % self.stopped_epoch)
+                if self.save_model:
+                    save_checkpoint(self.model_name, self.stopped_epoch, symbol, arg_params,
+                                    aux_params)
+            self.wait += 1
+        return self.continue_training
 
 
 class ProgressBar(object):
