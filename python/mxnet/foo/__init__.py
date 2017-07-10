@@ -4,6 +4,8 @@
 
 from .parameter import *
 
+from .block import *
+
 from . import nn
 
 from . import rnn

@@ -74,12 +74,12 @@ test_data = batchify(corpus.test, args.batch_size).as_in_context(context)
 
 ntokens = len(corpus.dictionary)
 model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied)
-model.all_params().initialize(mx.init.Xavier(), ctx=context)
-trainer = foo.Trainer(model.all_params(), 'sgd',
+model.collect_params().initialize(mx.init.Xavier(), ctx=context)
+trainer = foo.Trainer(model.collect_params(), 'sgd',
                       {'learning_rate': args.lr,
                        'momentum': 0,
                        'wd': 0})
-
+loss = foo.loss.SoftmaxCrossEntropyLoss()
 
 ###############################################################################
 # Training code
@@ -102,22 +102,22 @@ def detach(hidden):
 
 
 def eval(data_source):
-    total = 0.0
+    total_L = 0.0
     ntotal = 0
     hidden = model.begin_state(func=mx.nd.zeros, batch_size=args.batch_size, ctx=context)
     for ibatch, i in enumerate(range(0, data_source.shape[0] - 1, args.bptt)):
         data, target = get_batch(data_source, i)
         output, hidden = model(data, hidden)
-        loss = foo.loss.softmax_cross_entropy_loss(output, target)
-        total += mx.nd.sum(loss).asscalar()
-        ntotal += loss.size
-    return total / ntotal
+        L = loss(output, target)
+        total_L += mx.nd.sum(L).asscalar()
+        ntotal += L.size
+    return total_L / ntotal
 
 
 def train():
     best_val = None
     for epoch in range(args.epochs):
-        total = 0.0
+        total_L = 0.0
         start_time = time.time()
         hidden = model.begin_state(func=mx.nd.zeros, batch_size=args.batch_size, ctx=context)
         for ibatch, i in enumerate(range(0, train_data.shape[0] - 1, args.bptt)):
@@ -125,30 +125,30 @@ def train():
             hidden = detach(hidden)
             with autograd.record():
                 output, hidden = model(data, hidden)
-                loss = foo.loss.softmax_cross_entropy_loss(output, target)
-                loss.backward()
+                L = loss(output, target)
+                L.backward()
 
-            grads = [i.grad(context) for i in model.all_params().values()]
+            grads = [i.grad(context) for i in model.collect_params().values()]
             # Here gradient is not divided by batch_size yet.
             # So we multiply max_norm by batch_size to balance it.
             foo.utils.clip_global_norm(grads, args.clip * args.batch_size)
 
             trainer.step(args.batch_size)
-            total += mx.nd.sum(loss).asscalar()
+            total_L += mx.nd.sum(L).asscalar()
 
             if ibatch % args.log_interval == 0 and ibatch > 0:
-                cur_loss = total / args.batch_size / args.bptt / args.log_interval
+                cur_L = total_L / args.batch_size / args.bptt / args.log_interval
                 print('[Epoch %d Batch %d] loss %.2f, ppl %.2f'%(
-                    epoch, ibatch, cur_loss, math.exp(cur_loss)))
-                total = 0.0
+                    epoch, ibatch, cur_L, math.exp(cur_L)))
+                total_L = 0.0
 
-        val_loss = eval(val_data)
+        val_L = eval(val_data)
 
         print('[Epoch %d] time cost %.2fs, valid loss %.2f, valid ppl %.2f'%(
-            epoch, time.time()-start_time, val_loss, math.exp(val_loss)))
+            epoch, time.time()-start_time, val_L, math.exp(val_L)))
 
 
 if __name__ == '__main__':
     train()
-    test_loss = eval(test_data)
-    print('test loss %.2f, test ppl %.2f'%(test_loss, math.exp(test_loss)))
+    test_L = eval(test_data)
+    print('test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))

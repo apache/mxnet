@@ -24,7 +24,7 @@ def test_paramdict():
 
 
 def test_parameter_sharing():
-    class Net(nn.Layer):
+    class Net(foo.Block):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
@@ -35,8 +35,8 @@ def test_parameter_sharing():
             return self.dense1(self.dense0(x))
 
     net1 = Net(prefix='net1_')
-    net2 = Net(prefix='net2_', params=net1.all_params())
-    net1.all_params().initialize()
+    net2 = Net(prefix='net2_', params=net1.collect_params())
+    net1.collect_params().initialize()
     net2(mx.nd.zeros((3, 5)))
 
 
@@ -54,14 +54,14 @@ def test_basic():
     assert len(y.list_arguments()) == 7
 
     # ndarray
-    model.all_params().initialize()
+    model.collect_params().initialize()
     x = model(mx.nd.zeros((32, 10)))
     assert x.shape == (32, 32)
     x.wait_to_read()
 
 
 def check_layer_forward(layer, dshape):
-    layer.all_params().initialize()
+    layer.collect_params().initialize()
     with mx.autograd.record():
         out = layer(mx.nd.ones(shape=dshape))
     out.backward()
@@ -74,82 +74,82 @@ def check_layer_forward(layer, dshape):
 
 def test_conv():
     layers1d = [
-        nn.Conv1D(16, 3, in_filters=4),
-        nn.Conv1D(16, 3, groups=2, in_filters=4),
-        nn.Conv1D(16, 3, strides=3, groups=2, in_filters=4),
+        nn.Conv1D(16, 3, in_channels=4),
+        nn.Conv1D(16, 3, groups=2, in_channels=4),
+        nn.Conv1D(16, 3, strides=3, groups=2, in_channels=4),
         ]
     for layer in layers1d:
         check_layer_forward(layer, (1, 4, 10))
 
 
     layers2d = [
-        nn.Conv2D(16, (3, 4), in_filters=4),
-        nn.Conv2D(16, (5, 4), in_filters=4),
-        nn.Conv2D(16, (3, 4), groups=2, in_filters=4),
-        nn.Conv2D(16, (3, 4), strides=4, in_filters=4),
-        nn.Conv2D(16, (3, 4), dilation=4, in_filters=4),
-        nn.Conv2D(16, (3, 4), padding=4, in_filters=4),
+        nn.Conv2D(16, (3, 4), in_channels=4),
+        nn.Conv2D(16, (5, 4), in_channels=4),
+        nn.Conv2D(16, (3, 4), groups=2, in_channels=4),
+        nn.Conv2D(16, (3, 4), strides=4, in_channels=4),
+        nn.Conv2D(16, (3, 4), dilation=4, in_channels=4),
+        nn.Conv2D(16, (3, 4), padding=4, in_channels=4),
         ]
     for layer in layers2d:
         check_layer_forward(layer, (1, 4, 20, 20))
 
 
     layers3d = [
-        nn.Conv3D(16, (1, 8, 4), in_filters=4),
-        nn.Conv3D(16, (5, 4, 3), in_filters=4),
-        nn.Conv3D(16, (3, 3, 3), groups=2, in_filters=4),
-        nn.Conv3D(16, 4, strides=4, in_filters=4),
-        nn.Conv3D(16, (3, 3, 3), padding=4, in_filters=4),
+        nn.Conv3D(16, (1, 8, 4), in_channels=4),
+        nn.Conv3D(16, (5, 4, 3), in_channels=4),
+        nn.Conv3D(16, (3, 3, 3), groups=2, in_channels=4),
+        nn.Conv3D(16, 4, strides=4, in_channels=4),
+        nn.Conv3D(16, (3, 3, 3), padding=4, in_channels=4),
         ]
     for layer in layers3d:
         check_layer_forward(layer, (1, 4, 10, 10, 10))
 
 
-    layer = nn.Conv2D(16, (3, 3), layout='NHWC', in_filters=4)
+    layer = nn.Conv2D(16, (3, 3), layout='NHWC', in_channels=4)
     # check_layer_forward(layer, (1, 10, 10, 4))
 
-    layer = nn.Conv3D(16, (3, 3, 3), layout='NDHWC', in_filters=4)
+    layer = nn.Conv3D(16, (3, 3, 3), layout='NDHWC', in_channels=4)
     # check_layer_forward(layer, (1, 10, 10, 10, 4))
 
 
 def test_deconv():
     # layers1d = [
-    #     nn.Conv1DTranspose(16, 3, in_filters=4),
-    #     nn.Conv1DTranspose(16, 3, groups=2, in_filters=4),
-    #     nn.Conv1DTranspose(16, 3, strides=3, groups=2, in_filters=4),
+    #     nn.Conv1DTranspose(16, 3, in_channels=4),
+    #     nn.Conv1DTranspose(16, 3, groups=2, in_channels=4),
+    #     nn.Conv1DTranspose(16, 3, strides=3, groups=2, in_channels=4),
     #     ]
     # for layer in layers1d:
     #     check_layer_forward(layer, (1, 4, 10))
 
 
     layers2d = [
-        nn.Conv2DTranspose(16, (3, 4), in_filters=4),
-        nn.Conv2DTranspose(16, (5, 4), in_filters=4),
-        nn.Conv2DTranspose(16, (3, 4), groups=2, in_filters=4),
-        nn.Conv2DTranspose(16, (3, 4), strides=4, in_filters=4),
-        nn.Conv2DTranspose(16, (3, 4), dilation=4, in_filters=4),
-        nn.Conv2DTranspose(16, (3, 4), padding=4, in_filters=4),
-        nn.Conv2DTranspose(16, (3, 4), strides=4, output_padding=3, in_filters=4),
+        nn.Conv2DTranspose(16, (3, 4), in_channels=4),
+        nn.Conv2DTranspose(16, (5, 4), in_channels=4),
+        nn.Conv2DTranspose(16, (3, 4), groups=2, in_channels=4),
+        nn.Conv2DTranspose(16, (3, 4), strides=4, in_channels=4),
+        nn.Conv2DTranspose(16, (3, 4), dilation=4, in_channels=4),
+        nn.Conv2DTranspose(16, (3, 4), padding=4, in_channels=4),
+        nn.Conv2DTranspose(16, (3, 4), strides=4, output_padding=3, in_channels=4),
         ]
     for layer in layers2d:
         check_layer_forward(layer, (1, 4, 20, 20))
 
 
     # layers3d = [
-    #     nn.Conv3DTranspose(16, (1, 8, 4), in_filters=4),
-    #     nn.Conv3DTranspose(16, (5, 4, 3), in_filters=4),
-    #     nn.Conv3DTranspose(16, (3, 3, 3), groups=2, in_filters=4),
-    #     nn.Conv3DTranspose(16, 4, strides=4, in_filters=4),
-    #     nn.Conv3DTranspose(16, (3, 3, 3), padding=4, in_filters=4),
+    #     nn.Conv3DTranspose(16, (1, 8, 4), in_channels=4),
+    #     nn.Conv3DTranspose(16, (5, 4, 3), in_channels=4),
+    #     nn.Conv3DTranspose(16, (3, 3, 3), groups=2, in_channels=4),
+    #     nn.Conv3DTranspose(16, 4, strides=4, in_channels=4),
+    #     nn.Conv3DTranspose(16, (3, 3, 3), padding=4, in_channels=4),
     #     ]
     # for layer in layers3d:
     #     check_layer_forward(layer, (1, 4, 10, 10, 10))
     #
     #
-    # layer = nn.Conv2DTranspose(16, (3, 3), layout='NHWC', in_filters=4)
+    # layer = nn.Conv2DTranspose(16, (3, 3), layout='NHWC', in_channels=4)
     # # check_layer_forward(layer, (1, 10, 10, 4))
     #
-    # layer = nn.Conv3DTranspose(16, (3, 3, 3), layout='NDHWC', in_filters=4)
+    # layer = nn.Conv3DTranspose(16, (3, 3, 3), layout='NDHWC', in_channels=4)
     # # check_layer_forward(layer, (1, 10, 10, 10, 4))
 
 
@@ -186,15 +186,26 @@ def test_pool():
     for layer in layers3d:
         check_layer_forward(layer, (1, 2, 10, 10, 10))
 
+    # test ceil_mode
+    x = mx.nd.zeros((2, 2, 10, 10))
+
+    layer = nn.MaxPool2D(3, ceil_mode=False)
+    layer.collect_params().initialize()
+    assert (layer(x).shape==(2, 2, 3, 3))
+
+    layer = nn.MaxPool2D(3, ceil_mode=True)
+    layer.collect_params().initialize()
+    assert (layer(x).shape==(2, 2, 4, 4))
+
 def test_batchnorm():
-    layer = nn.BatchNorm(num_features=10)
+    layer = nn.BatchNorm(in_channels=10)
     check_layer_forward(layer, (2, 10, 10, 10))
 
 
 def test_reshape():
     x = mx.nd.ones((2, 4, 10, 10))
-    layer = nn.Conv2D(10, 2, in_filters=4)
-    layer.all_params().initialize()
+    layer = nn.Conv2D(10, 2, in_channels=4)
+    layer.collect_params().initialize()
     with mx.autograd.record():
         x = layer(x)
         x = x.reshape((-1,))
@@ -204,8 +215,8 @@ def test_reshape():
 
 def test_slice():
     x = mx.nd.ones((5, 4, 10, 10))
-    layer = nn.Conv2D(10, 2, in_filters=4)
-    layer.all_params().initialize()
+    layer = nn.Conv2D(10, 2, in_channels=4)
+    layer.collect_params().initialize()
     with mx.autograd.record():
         x = layer(x)
         x = x[1:3]
@@ -215,8 +226,8 @@ def test_slice():
 
 def test_at():
     x = mx.nd.ones((5, 4, 10, 10))
-    layer = nn.Conv2D(10, 2, in_filters=4)
-    layer.all_params().initialize()
+    layer = nn.Conv2D(10, 2, in_channels=4)
+    layer.collect_params().initialize()
     with mx.autograd.record():
         x = layer(x)
         x = x[1]
@@ -227,7 +238,7 @@ def test_at():
 def test_defered_init():
     x = mx.nd.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2)
-    layer.all_params().initialize()
+    layer.collect_params().initialize()
     layer(x)
 
 

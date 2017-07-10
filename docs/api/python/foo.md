@@ -9,6 +9,8 @@
 .. warning:: This package is currently experimental and may change in the near future.
 ```
 
+<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+
 ## Overview
 
 Foo package is a high-level interface for MXNet designed to be easy to use while
@@ -22,17 +24,29 @@ in Python and then deploy with symbolic graph in C++ and Scala.
 .. currentmodule:: mxnet.foo
 ```
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
+.. currentmodule:: mxnet.foo
 .. autoclass:: mxnet.foo.Parameter
     :members:
 .. autoclass:: mxnet.foo.ParameterDict
     :members:
 ```
 
-<script>auto_index("api-reference");</script>
 
+## Containers
+
+```eval_rst
+.. currentmodule:: mxnet.foo
+.. autoclass:: mxnet.foo.Block
+    :members:
+
+    .. automethod:: forward
+.. autoclass:: mxnet.foo.HybridBlock
+    :members:
+
+    .. automethod:: hybrid_forward
+```
 
 ## Neural Network Layers
 
@@ -42,16 +56,9 @@ in Python and then deploy with symbolic graph in C++ and Scala.
 
 ### Containers
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 .. currentmodule:: mxnet.foo.nn
-.. autoclass:: mxnet.foo.nn.Layer
-    :members:
-
-    .. automethod:: __call__
-.. autoclass:: mxnet.foo.nn.HybridLayer
-    :members:
 
     .. automethod:: __call__
 .. autoclass:: mxnet.foo.nn.Sequential
@@ -60,11 +67,9 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     :members:
 ```
 
-<script>auto_index("api-reference");</script>
 
 ### Basic Layers
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 .. currentmodule:: mxnet.foo.nn  
@@ -82,11 +87,9 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     :members:
 ```
 
-<script>auto_index("api-reference");</script>
 
 ### Convolutional Layers
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 .. currentmodule:: mxnet.foo.nn  
@@ -104,12 +107,10 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     :members:
 ```
 
-<script>auto_index("api-reference");</script>
 
 
 ### Pooling Layers
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 .. currentmodule:: mxnet.foo.nn
@@ -139,7 +140,6 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     :members:
 ```
 
-<script>auto_index("api-reference");</script>
 
 
 ## Recurrent Layers
@@ -148,7 +148,6 @@ in Python and then deploy with symbolic graph in C++ and Scala.
 .. currentmodule:: mxnet.foo.rnn
 ```
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 .. autoclass:: mxnet.foo.rnn.RecurrentCell
@@ -179,7 +178,6 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     :members:
 ```
 
-<script>auto_index("api-reference");</script>
 
 ## Trainer
 
@@ -187,14 +185,12 @@ in Python and then deploy with symbolic graph in C++ and Scala.
 .. currentmodule:: mxnet.foo
 ```
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 .. autoclass:: mxnet.foo.Trainer
     :members:
 ```
 
-<script>auto_index("api-reference");</script>
 
 ## Loss functions
 
@@ -202,7 +198,6 @@ in Python and then deploy with symbolic graph in C++ and Scala.
 .. currentmodule:: mxnet.foo.loss
 ```
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 .. automethod:: mxnet.foo.loss.custom_loss
@@ -212,7 +207,6 @@ in Python and then deploy with symbolic graph in C++ and Scala.
 .. automethod:: mxnet.foo.loss.softmax_cross_entropy_loss
 ```
 
-<script>auto_index("api-reference");</script>
 
 ## Utilities
 
@@ -220,7 +214,6 @@ in Python and then deploy with symbolic graph in C++ and Scala.
 .. currentmodule:: mxnet.foo.utils
 ```
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 .. automethod:: mxnet.foo.utils.split_data

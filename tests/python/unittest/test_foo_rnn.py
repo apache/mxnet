@@ -9,7 +9,7 @@ def test_rnn():
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
-    assert sorted(cell.all_params().keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
+    assert sorted(cell.collect_params().keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
     assert outputs.list_outputs() == ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
@@ -21,7 +21,7 @@ def test_lstm():
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
-    assert sorted(cell.all_params().keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
+    assert sorted(cell.collect_params().keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
     assert outputs.list_outputs() == ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
@@ -54,7 +54,7 @@ def test_gru():
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
-    assert sorted(cell.all_params().keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
+    assert sorted(cell.collect_params().keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
     assert outputs.list_outputs() == ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
@@ -66,7 +66,7 @@ def test_residual():
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
     outputs, _ = cell.unroll(2, inputs)
     outputs = mx.sym.Group(outputs)
-    assert sorted(cell.all_params().keys()) == \
+    assert sorted(cell.collect_params().keys()) == \
            ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
     # assert outputs.list_outputs() == \
     #        ['rnn_t0_out_plus_residual_output', 'rnn_t1_out_plus_residual_output']
@@ -93,7 +93,7 @@ def test_residual_bidirectional():
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
     outputs, _ = cell.unroll(2, inputs, merge_outputs=False)
     outputs = mx.sym.Group(outputs)
-    assert sorted(cell.all_params().keys()) == \
+    assert sorted(cell.collect_params().keys()) == \
            ['rnn_l_h2h_bias', 'rnn_l_h2h_weight', 'rnn_l_i2h_bias', 'rnn_l_i2h_weight',
             'rnn_r_h2h_bias', 'rnn_r_h2h_weight', 'rnn_r_i2h_bias', 'rnn_r_i2h_weight']
     # assert outputs.list_outputs() == \
@@ -126,7 +126,7 @@ def test_stack():
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
-    keys = sorted(cell.all_params().keys())
+    keys = sorted(cell.collect_params().keys())
     for i in range(5):
         assert 'rnn_stack%d_h2h_weight'%i in keys
         assert 'rnn_stack%d_h2h_bias'%i in keys
@@ -164,7 +164,7 @@ def test_zoneout():
 
 
 def check_rnn_forward(layer, inputs):
-    layer.all_params().initialize()
+    layer.collect_params().initialize()
     with mx.autograd.record():
         layer.unroll(3, inputs, merge_outputs=True)[0].backward()
         mx.autograd.backward(layer.unroll(3, inputs, merge_outputs=False)[0])

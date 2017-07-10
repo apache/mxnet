@@ -32,11 +32,11 @@ steps:
 
 ## Define Network
 
-`foo.nn.Layer` is the basic building block of models. You can define networks by
-composing and inheriting `Layer`:
+`foo.Block` is the basic building block of models. You can define networks by
+composing and inheriting `Block`:
 
 ```python
-class Net(nn.Layer):
+class Net(foo.Block):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
         with self.name_scope():
@@ -70,7 +70,7 @@ A network must be created and initialized before it can be used:
 net = Net()
 # Initialize on CPU. Replace with `mx.gpu(0)`, or `[mx.gpu(0), mx.gpu(1)]`,
 # etc to use one or more GPUs.
-net.all_params().initialize(mx.init.Xavier(), ctx=mx.cpu())
+net.collect_params().initialize(mx.init.Xavier(), ctx=mx.cpu())
 ```
 
 Note that because we didn't specify input size to layers in Net's constructor,
@@ -117,7 +117,7 @@ entire batch. For example,
 
 ```python
 lr = 0.01
-for p in net.all_params().values():
+for p in net.collect_params().values():
     p.data()[:] -= lr / data.shape[0] * p.grad()
 ```
 
@@ -125,7 +125,7 @@ But sometimes you want more fancy updating rules like momentum and Adam, and sin
 this is a commonly used functionality, foo provide a `Trainer` class for it:
 
 ```python
-trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.01})
+trainer = foo.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.01})
 
 with record():
     output = net(data)
