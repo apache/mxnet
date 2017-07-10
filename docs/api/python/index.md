@@ -32,6 +32,7 @@ imported by running:
    rnn
    kvstore
    io
+   image
    optimization
    callback
    metric

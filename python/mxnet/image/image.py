@@ -113,7 +113,7 @@ def scale_down(src_size, size):
     return int(w), int(h)
 
 
-def get_interp_method(interp, sizes=None):
+def _get_interp_method(interp, sizes=None):
     """Get the interpolation method for resize functions.
     The major purpose of this function is to wrap a random interp method selection
     and a auto-estimation method.
@@ -168,30 +168,6 @@ def get_interp_method(interp, sizes=None):
     return interp
 
 
-def clip_image(src, min_val, max_val):
-    """Clip image pixel values
-
-    Parameters
-    ----------
-    src : NDArray
-        source image
-    min_val : float, default=0
-        minimum value of pixels
-    max_val : float, default=255.0
-        maximum value of pxiels
-
-    Returns
-    -------
-    NDArray
-        Image with pixel values in range (min_val, max_val)
-    """
-    if min_val > max_val:
-        raise ValueError('min_val: %f larger than max_val: %f' % (min_val, max_val))
-    min_img = nd.full(src.shape, min_val)
-    max_img = nd.full(src.shape, max_val)
-    return nd.maximum(min_img, nd.minimum(max_img, src))
-
-
 def resize_short(src, size, interp=2):
     """Resizes shorter edge to size.
 
@@ -210,7 +186,23 @@ def resize_short(src, size, interp=2):
         The length to be set for the shorter edge.
     interp : int, optional, default=2
         Interpolation method used for resizing the image.
-        See get_interp_method() for more details.
+        Possible values:
+        0: Nearest Neighbors Interpolation.
+        1: Bilinear interpolation.
+        2: Area-based (resampling using pixel area relation). It may be a
+        preferred method for image decimation, as it gives moire-free
+        results. But when the image is zoomed, it is similar to the Nearest
+        Neighbors method. (used by default).
+        3: Bicubic interpolation over 4x4 pixel neighborhood.
+        4: Lanczos interpolation over 8x8 pixel neighborhood.
+        9: Cubic for enlarge, area for shrink, bilinear for others
+        10: Random select from interpolation method metioned above.
+        Note:
+        When shrinking an image, it will generally look best with AREA-based
+        interpolation, whereas, when enlarging an image, it will generally look best
+        with Bicubic (slow) or Bilinear (faster but still looks OK).
+        More details can be found in the documentation of OpenCV, please refer to
+        http://docs.opencv.org/master/da/d54/group__imgproc__transform.html.
 
     Returns
     -------
@@ -235,7 +227,7 @@ def resize_short(src, size, interp=2):
         new_h, new_w = size * h / w, size
     else:
         new_h, new_w = size, size * w / h
-    return imresize(src, new_w, new_h, interp=get_interp_method(interp, (h, w, new_h, new_w)))
+    return imresize(src, new_w, new_h, interp=_get_interp_method(interp, (h, w, new_h, new_w)))
 
 
 def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
@@ -255,8 +247,8 @@ def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
         Height of the cropping area
     size : tuple of (w, h)
         Optional, resize to new size after cropping
-    interp : int
-        Interpolation method
+    interp : int, optional, default=2
+        Interpolation method. See resize_short for details.
 
     Returns
     -------
@@ -266,7 +258,7 @@ def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
     out = nd.crop(src, begin=(y0, x0, 0), end=(y0 + h, x0 + w, int(src.shape[2])))
     if size is not None and (w, h) != size:
         sizes = (h, w, size[1], size[0])
-        out = imresize(out, *size, interp=get_interp_method(interp, sizes))
+        out = imresize(out, *size, interp=_get_interp_method(interp, sizes))
     return out
 
 
@@ -279,9 +271,8 @@ def random_crop(src, size, interp=2):
     src: Source image `NDArray`
     size: Size of the crop formatted as (width, height). If the `size` is larger
            than the image, then the source image is upsampled to `size` and returned.
-    interp: int
-        Interpolation method to be used in case the size is larger (default: bicubic).
-        See get_interp_method for more details.
+    interp: int, optional, default=2
+        Interpolation method. See resize_short for details.
     Returns
     -------
     NDArray
@@ -323,9 +314,8 @@ def center_crop(src, size, interp=2):
         Binary source image data.
     size : list or tuple of int
         The desired output image size.
-    interp : int
-        Interpolation, optional, default=Area-based
-        See mxnet.image.get_interp_method for more details.
+    interp : int, optional, default=2
+        Interpolation method. See resize_short for details.
 
     Returns
     -------
@@ -397,8 +387,8 @@ def random_size_crop(src, size, min_area, ratio, interp=2):
         Minimum area to be maintained after cropping
     ratio : tuple of (float, float)
         Aspect ratio range as (min_aspect_ratio, max_aspect_ratio)
-    interp: Interpolation method to be used in case the size is larger (default: bicubic).
-            See get_interp_method for more details.
+    interp: int, optional, default=2
+        Interpolation method. See resize_short for details.
     Returns
     -------
     NDArray
@@ -464,8 +454,7 @@ class ResizeAug(Augmenter):
     size : int
         The length to be set for the shorter edge.
     interp : int, optional, default=2
-        Interpolation method used for resizing the image.
-        See get_interp_method for more details.
+        Interpolation method. See resize_short for details.
     """
     def __init__(self, size, interp=2):
         super(ResizeAug, self).__init__(size=size, interp=interp)
@@ -485,8 +474,7 @@ class ForceResizeAug(Augmenter):
     size : tuple of (int, int)
         The desired size as in (width, height)
     interp : int, optional, default=2
-        Interpolation method used for resizing the image.
-        See get_interp_method for more details.
+        Interpolation method. See resize_short for details.
     """
     def __init__(self, size, interp=2):
         super(ForceResizeAug, self).__init__(size=size, interp=interp)
@@ -496,7 +484,7 @@ class ForceResizeAug(Augmenter):
     def __call__(self, src):
         """Augmenter body"""
         sizes = (src.shape[0], src.shape[1], self.size[1], self.size[0])
-        return [imresize(src, *self.size, interp=get_interp_method(self.interp, sizes))]
+        return [imresize(src, *self.size, interp=_get_interp_method(self.interp, sizes))]
 
 
 class RandomCropAug(Augmenter):
@@ -507,8 +495,7 @@ class RandomCropAug(Augmenter):
     size : int
         The length to be set for the shorter edge.
     interp : int, optional, default=2
-        Interpolation method used for resizing the image.
-        See get_interp_method for more details.
+        Interpolation method. See resize_short for details.
     """
     def __init__(self, size, interp=2):
         super(RandomCropAug, self).__init__(size=size, interp=interp)
@@ -531,9 +518,8 @@ class RandomSizedCropAug(Augmenter):
         Minimum area to be maintained after cropping
     ratio : tuple of (float, float)
         Aspect ratio range as (min_aspect_ratio, max_aspect_ratio)
-    interp: int
-        Interpolation method to be used in case the size is larger (default: bicubic).
-        See get_interp_method for more details.
+    interp: int, optional, default=2
+        Interpolation method. See resize_short for details.
     """
     def __init__(self, size, min_area, ratio, interp=2):
         super(RandomSizedCropAug, self).__init__(size=size, min_area=min_area,
@@ -555,9 +541,8 @@ class CenterCropAug(Augmenter):
     ----------
     size : list or tuple of int
         The desired output image size.
-    interp : int
-        Inerpolation, optional, default=Area-based
-        See get_interp_method for more details.
+    interp : int, optional, default=2
+        Interpolation method. See resize_short for details.
     """
     def __init__(self, size, interp=2):
         super(CenterCropAug, self).__init__(size=size, interp=interp)
@@ -605,18 +590,23 @@ class BrightnessJitterAug(Augmenter):
         Minimum value after jittering
     max_val : float ,default=255
         Maximum value after jittering
+    clip : bool
+        Clip value to (min_val, max_val) after augmentation
     """
-    def __init__(self, brightness, min_val=0, max_val=255):
+    def __init__(self, brightness, min_val=0, max_val=255, clip=True):
         super(BrightnessJitterAug, self).__init__(brightness=brightness)
         self.brightness = brightness
         self.min_val = min_val
         self.max_val = max_val
+        self.clip = clip
 
     def __call__(self, src):
         """Augmenter body"""
         alpha = 1.0 + random.uniform(-self.brightness, self.brightness)
         src *= alpha
-        return [clip_image(src, self.min_val, self.max_val)]
+        if self.clip:
+            src = nd.clip(src, self.min_val, self.max_val)
+        return [src]
 
 
 class ContrastJitterAug(Augmenter):
@@ -630,13 +620,16 @@ class ContrastJitterAug(Augmenter):
         Minimum value after jittering
     max_val : float ,default=255
         Maximum value after jittering
+    clip : bool
+        Clip value to (min_val, max_val) after augmentation
     """
-    def __init__(self, contrast, min_val=0, max_val=255):
+    def __init__(self, contrast, min_val=0, max_val=255, clip=True):
         super(ContrastJitterAug, self).__init__(contrast=contrast)
         self.contrast = contrast
         self.coef = nd.array([[[0.299, 0.587, 0.114]]])
         self.min_val = min_val
         self.max_val = max_val
+        self.clip = clip
 
     def __call__(self, src):
         """Augmenter body"""
@@ -645,7 +638,9 @@ class ContrastJitterAug(Augmenter):
         gray = (3.0 * (1.0 - alpha) / gray.size) * nd.sum(gray)
         src *= alpha
         src += gray
-        return [clip_image(src, self.min_val, self.max_val)]
+        if self.clip:
+            src = nd.clip(src, self.min_val, self.max_val)
+        return [src]
 
 
 class SaturationJitterAug(Augmenter):
@@ -659,13 +654,16 @@ class SaturationJitterAug(Augmenter):
         Minimum value after jittering
     max_val : float ,default=255
         Maximum value after jittering
+    clip : bool
+        Clip value to (min_val, max_val) after augmentation
     """
-    def __init__(self, saturation, min_val=0, max_val=255):
+    def __init__(self, saturation, min_val=0, max_val=255, clip=True):
         super(SaturationJitterAug, self).__init__(saturation=saturation)
         self.saturation = saturation
         self.coef = nd.array([[[0.299, 0.587, 0.114]]])
         self.min_val = min_val
         self.max_val = max_val
+        self.clip = clip
 
     def __call__(self, src):
         """Augmenter body"""
@@ -675,7 +673,9 @@ class SaturationJitterAug(Augmenter):
         gray *= (1.0 - alpha)
         src *= alpha
         src += gray
-        return [clip_image(src, self.min_val, self.max_val)]
+        if self.clip:
+            src = nd.clip(src, self.min_val, self.max_val)
+        return [src]
 
 
 class HueJitterAug(Augmenter):
@@ -689,12 +689,15 @@ class HueJitterAug(Augmenter):
         Minimum value after jittering
     max_val : float ,default=255
         Maximum value after jittering
+    clip : bool
+        Clip value to (min_val, max_val) after augmentation
     """
-    def __init__(self, hue, min_val=0, max_val=255):
+    def __init__(self, hue, min_val=0, max_val=255, clip=True):
         super(HueJitterAug, self).__init__(hue=hue)
         self.hue = hue
         self.min_val = min_val
         self.max_val = max_val
+        self.clip = clip
         self.tyiq = np.array([[0.299, 0.587, 0.114],
                               [0.596, -0.274, -0.321],
                               [0.211, -0.523, 0.311]])
@@ -715,7 +718,9 @@ class HueJitterAug(Augmenter):
                        [0.0, vsw, vsu]])
         t = np.dot(np.dot(self.tyiq, bt), self.ityiq).T
         src = nd.dot(src, nd.array(t))
-        return [clip_image(src, self.min_val, self.max_val)]
+        if self.clip:
+            src = nd.clip(src, self.min_val, self.max_val)
+        return [src]
 
 
 class ColorJitterAug(RandomOrderAug):
@@ -729,16 +734,31 @@ class ColorJitterAug(RandomOrderAug):
         The contrast jitter ratio range, [0, 1]
     saturation : float
         The saturation jitter ratio range, [0, 1]
+    min_val : float, default=0
+        Minimum value after jittering
+    max_val : float ,default=255
+        Maximum value after jittering
+    clip : bool
+        Clip value to (min_val, max_val) after augmentation
     """
-    def __init__(self, brightness, contrast, saturation):
+    def __init__(self, brightness, contrast, saturation, min_val=0, max_val=255, clip=True):
         ts = []
         if brightness > 0:
-            ts.append(BrightnessJitterAug(brightness))
+            ts.append(BrightnessJitterAug(brightness, clip=False))
         if contrast > 0:
-            ts.append(ContrastJitterAug(contrast))
+            ts.append(ContrastJitterAug(contrast, clip=False))
         if saturation > 0:
-            ts.append(SaturationJitterAug(saturation))
+            ts.append(SaturationJitterAug(saturation clip=False))
         super(ColorJitterAug, self).__init__(ts)
+        self.min_val = min_val
+        self.max_val = max_val
+        self.clip = clip
+
+    def __call__(self, src):
+        src = super(ColorJitterAug, self).__call__(src)[0]
+        if self.clip:
+            src = nd.clip(src, self.min_val, self.max_val)
+        return [src]
 
 
 class LightingAug(Augmenter):
@@ -756,21 +776,26 @@ class LightingAug(Augmenter):
         Minimum value after jittering
     max_val : float ,default=255
         Maximum value after jittering
+    clip : bool
+        Clip value to (min_val, max_val) after augmentation
     """
-    def __init__(self, alphastd, eigval, eigvec, min_val=0, max_val=255):
+    def __init__(self, alphastd, eigval, eigvec, min_val=0, max_val=255, clip=True):
         super(LightingAug, self).__init__(alphastd=alphastd, eigval=eigval, eigvec=eigvec)
         self.alphastd = alphastd
         self.eigval = eigval
         self.eigvec = eigvec
         self.min_val = min_val
         self.max_val = max_val
+        self.clip = clip
 
     def __call__(self, src):
         """Augmenter body"""
         alpha = np.random.normal(0, self.alphastd, size=(3,))
         rgb = np.dot(self.eigvec * alpha, self.eigval)
         src += nd.array(rgb)
-        return [clip_image(src, self.min_val, self.max_val)]
+        if self.clip:
+            src = nd.clip(src, self.min_val, self.max_val)
+        return [src]
 
 
 class ColorNormalizeAug(Augmenter):
