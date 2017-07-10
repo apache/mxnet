@@ -24,12 +24,20 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 
 namespace mxnet {
 
+NDArray NDArray::grad() const {
+  if (this->entry_.ag_node && this->entry_.ag_node->out_grads.size()) {
+    CHECK_EQ(this->entry_.ag_node->out_grads.size(), 1);
+    return this->entry_.ag_node->out_grads[0];
+  }
+  return NDArray();
+}
+
 NDArray NDArray::Reshape(const TShape &shape) const {
   using namespace autograd;
   if (AutogradRuntime::Get()->IsTraining()) {
     CHECK_GE(shape_.Size(), shape.Size())
       << "NDArray.Reshape: target shape must have must have the same size as "
-      << "current shape when in train_section.";
+      << "current shape when recording with autograd.";
     NDArray ret = *this;
     ret.shape_ = shape;
     // fake a Reshape op
