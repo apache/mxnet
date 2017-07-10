@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function
 
 import argparse, time
 import logging
@@ -13,36 +13,52 @@ from data import *
 
 # CLI
 parser = argparse.ArgumentParser(description='Train a resnet model for image classification.')
-parser.add_argument('--dataset', type=str, default='dummy', help='dataset to use. options are mnist, cifar10, and dummy.')
-parser.add_argument('--batch_size', type=int, default=32, help='training batch size per device (CPU/GPU).')
-parser.add_argument('--resnet_version', type=int, default=1, help='version of resnet to use. options are 1 and 2. default is 1.')
-parser.add_argument('--resnet_layers', type=int, default=50, help='layers of resnet to use. options are 18, 50. default is 50.')
-parser.add_argument('--gpus', type=int, default=0, help='number of gpus to use.')
-parser.add_argument('--epochs', type=int, default=3, help='number of training epochs.')
-parser.add_argument('--lr', type=float, default=0.01, help='learning Rate. default is 0.01.')
-parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123.')
-parser.add_argument('--thumbnail', action='store_true', default=False, help='use thumbnail or not. default is false.')
-parser.add_argument('--benchmark', action='store_true', default=True, help='whether to run benchmark.')
-parser.add_argument('--symbolic', action='store_true', default=False, help='whether to train in symbolic way with module.')
+parser.add_argument('--dataset', type=str, default='cifar10',
+                    help='dataset to use. options are mnist, cifar10, and dummy.')
+parser.add_argument('--batch-size', type=int, default=32,
+                    help='training batch size per device (CPU/GPU).')
+parser.add_argument('--resnet-version', type=int, default=1,
+                    help='whether to use ResnetV1 or ResnetV2. default is 1.')
+parser.add_argument('--resnet-layers', type=int, default=50,
+                    help='layers of resnet to use. options are 18, 50. default is 50.')
+parser.add_argument('--gpus', type=int, default=0,
+                    help='number of gpus to use.')
+parser.add_argument('--epochs', type=int, default=3,
+                    help='number of training epochs.')
+parser.add_argument('--lr', type=float, default=0.01,
+                    help='learning Rate. default is 0.01.')
+parser.add_argument('--seed', type=int, default=123,
+                    help='random seed to use. Default=123.')
+parser.add_argument('--thumbnail', action='store_true', default=False,
+                    help='use thumbnail or not. default is false.')
+parser.add_argument('--benchmark', action='store_true', default=False,
+                    help='whether to run benchmark.')
+parser.add_argument('--symbolic', action='store_true', default=False,
+                    help='whether to train in symbolic way with module.')
+parser.add_argument('--log-interval', type=int, default=100,
+                    help='Number of batches to wait before logging.')
 opt = parser.parse_args()
 
 print(opt)
 
-def conv3x3(filters, stride, in_filters):
-    return nn.Conv2D(filters, kernel_size=3, strides=stride, padding=1,
-                     use_bias=False, in_filters=in_filters)
 
-class BasicBlockV1(nn.HybridLayer):
-    def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
+# Define network
+
+def conv3x3(filters, stride, in_channels):
+    return nn.Conv2D(filters, kernel_size=3, strides=stride, padding=1,
+                     use_bias=False, in_channels=in_channels)
+
+class BasicBlockV1(foo.HybridBlock):
+    def __init__(self, filters, stride, downsample=False, in_channels=0, **kwargs):
         super(BasicBlockV1, self).__init__(**kwargs)
         with self.name_scope():
-            self.conv1 = conv3x3(filters, stride, in_filters)
-            self.bn1 = nn.BatchNorm(num_features=in_filters)
+            self.conv1 = conv3x3(filters, stride, in_channels)
+            self.bn1 = nn.BatchNorm(in_channels=in_channels)
             self.conv2 = conv3x3(filters, 1, filters)
-            self.bn2 = nn.BatchNorm(num_features=filters)
+            self.bn2 = nn.BatchNorm(in_channels=filters)
             if downsample:
-                self.conv_ds = nn.Conv2D(filters, kernel_size=1, strides=stride, use_bias=False, in_filters=in_filters)
-                self.bn_ds = nn.BatchNorm(num_features=filters)
+                self.conv_ds = nn.Conv2D(filters, kernel_size=1, strides=stride, use_bias=False, in_channels=in_channels)
+                self.bn_ds = nn.BatchNorm(in_channels=filters)
             self.downsample = downsample
 
     def hybrid_forward(self, F, x):
@@ -65,19 +81,19 @@ class BasicBlockV1(nn.HybridLayer):
         return out
 
 
-class BottleneckV1(nn.HybridLayer):
-    def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
+class BottleneckV1(foo.HybridBlock):
+    def __init__(self, filters, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV1, self).__init__(**kwargs)
         with self.name_scope():
-            self.conv1 = nn.Conv2D(filters=filters//4, kernel_size=1, strides=1, in_filters=in_filters)
-            self.bn1 = nn.BatchNorm(num_features=filters//4)
+            self.conv1 = nn.Conv2D(filters//4, kernel_size=1, strides=1, in_channels=in_channels)
+            self.bn1 = nn.BatchNorm(in_channels=filters//4)
             self.conv2 = conv3x3(filters//4, stride, filters//4)
-            self.bn2 = nn.BatchNorm(num_features=filters//4)
-            self.conv3 = nn.Conv2D(filters=filters, kernel_size=1, strides=1, in_filters=filters//4)
-            self.bn3 = nn.BatchNorm(num_features=filters)
+            self.bn2 = nn.BatchNorm(in_channels=filters//4)
+            self.conv3 = nn.Conv2D(filters, kernel_size=1, strides=1, in_channels=filters//4)
+            self.bn3 = nn.BatchNorm(in_channels=filters)
             if downsample:
-                self.conv_ds = nn.Conv2D(filters, kernel_size=1, strides=stride, use_bias=False, in_filters=in_filters)
-                self.bn_ds = nn.BatchNorm(num_features=filters)
+                self.conv_ds = nn.Conv2D(filters, kernel_size=1, strides=stride, use_bias=False, in_channels=in_channels)
+                self.bn_ds = nn.BatchNorm(in_channels=filters)
             self.downsample = downsample
 
     def hybrid_forward(self, F, x):
@@ -104,7 +120,7 @@ class BottleneckV1(nn.HybridLayer):
         return out
 
 
-class ResnetV1(nn.HybridLayer):
+class ResnetV1(foo.HybridBlock):
     def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
         super(ResnetV1, self).__init__(**kwargs)
         with self.name_scope():
@@ -114,26 +130,26 @@ class ResnetV1(nn.HybridLayer):
                  self.conv0 = conv3x3(filters[0], 1, 3)
              else:
                  self.conv0 = nn.Conv2D(filters[0], 7, 2, 3, use_bias=False,
-                                        in_filters=3)
-                 self.bn0 = nn.BatchNorm(num_features=filters[0])
+                                        in_channels=3)
+                 self.bn0 = nn.BatchNorm(in_channels=filters[0])
                  self.pool0 = nn.MaxPool2D(3, 2, 1)
 
              self.body = nn.HSequential()
-             in_filters = filters[0]
+             in_channels = filters[0]
              for i in range(len(layers)):
                  stride = 1 if i == 0 else 2
                  self.body.add(self._make_layer(block, layers[i], filters[i+1],
-                                                stride, in_filters=filters[i]))
-                 in_filters = filters[i+1]
+                                                stride, in_channels=filters[i]))
+                 in_channels = filters[i+1]
 
              self.pool1 = nn.GlobalAvgPool2D()
              self.dense1 = nn.Dense(classes, in_units=filters[-1])
 
-    def _make_layer(self, block, layers, filters, stride, in_filters=0):
+    def _make_layer(self, block, layers, filters, stride, in_channels=0):
         layer = nn.HSequential()
-        layer.add(block(filters, stride, True, in_filters=in_filters))
+        layer.add(block(filters, stride, True, in_channels=in_channels))
         for i in range(layers-1):
-            layer.add(block(filters, 1, False, in_filters=filters))
+            layer.add(block(filters, 1, False, in_channels=filters))
         return layer
 
     def hybrid_forward(self, F, x):
@@ -152,17 +168,17 @@ class ResnetV1(nn.HybridLayer):
         return x
 
 
-class BasicBlockV2(nn.HybridLayer):
-    def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
+class BasicBlockV2(foo.HybridBlock):
+    def __init__(self, filters, stride, downsample=False, in_channels=0, **kwargs):
         super(BasicBlockV2, self).__init__(**kwargs)
         with self.name_scope():
-            self.bn1 = nn.BatchNorm(num_features=in_filters)
-            self.conv1 = conv3x3(filters, stride, in_filters)
-            self.bn2 = nn.BatchNorm(num_features=filters)
+            self.bn1 = nn.BatchNorm(in_channels=in_channels)
+            self.conv1 = conv3x3(filters, stride, in_channels)
+            self.bn2 = nn.BatchNorm(in_channels=filters)
             self.conv2 = conv3x3(filters, 1, filters)
             if downsample:
                 self.downsample = nn.Conv2D(filters, 1, stride, use_bias=False,
-                                            in_filters=in_filters)
+                                            in_channels=in_channels)
             else:
                 self.downsample = None
 
@@ -182,19 +198,19 @@ class BasicBlockV2(nn.HybridLayer):
         return x + residual
 
 
-class BottleneckV2(nn.HybridLayer):
-    def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
+class BottleneckV2(foo.HybridBlock):
+    def __init__(self, filters, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV2, self).__init__(**kwargs)
         with self.name_scope():
-            self.bn1 = nn.BatchNorm(num_features=in_filters)
-            self.conv1 = conv3x3(filters//4, 1, in_filters)
-            self.bn2 = nn.BatchNorm(num_features=filters//4)
+            self.bn1 = nn.BatchNorm(in_channels=in_channels)
+            self.conv1 = conv3x3(filters//4, 1, in_channels)
+            self.bn2 = nn.BatchNorm(in_channels=filters//4)
             self.conv2 = conv3x3(filters//4, stride, filters//4)
-            self.bn3 = nn.BatchNorm(num_features=filters//4)
+            self.bn3 = nn.BatchNorm(in_channels=filters//4)
             self.conv3 = conv3x3(filters, 1, filters//4)
             if downsample:
                 self.downsample = nn.Conv2D(filters, 1, stride, use_bias=False,
-                                            in_filters=in_filters)
+                                            in_channels=in_channels)
             else:
                 self.downsample = None
 
@@ -217,38 +233,38 @@ class BottleneckV2(nn.HybridLayer):
 
         return x + residual
 
-class ResnetV2(nn.HybridLayer):
+class ResnetV2(foo.HybridBlock):
     def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
         super(ResnetV2, self).__init__(**kwargs)
         with self.name_scope():
             assert len(layers) == len(filters) - 1
             self._thumbnail = thumbnail
-            self.bn_data = nn.BatchNorm(num_features=3, scale=False, center=False)
+            self.bn_data = nn.BatchNorm(in_channels=3, scale=False, center=False)
             if thumbnail:
                 self.conv0 = conv3x3(filters[0], 1, 3)
             else:
                 self.conv0 = nn.Conv2D(filters[0], 7, 2, 3, use_bias=False,
-                                       in_filters=3)
-                self.bn0 = nn.BatchNorm(num_features=filters[0])
+                                       in_channels=3)
+                self.bn0 = nn.BatchNorm(in_channels=filters[0])
                 self.pool0 = nn.MaxPool2D(3, 2, 1)
 
             self.body = nn.HSequential()
-            in_filters = filters[0]
+            in_channels = filters[0]
             for i in range(len(layers)):
                 stride = 1 if i == 0 else 2
                 self.body.add(self._make_layer(block, layers[i], filters[i+1],
-                                               stride, in_filters=in_filters))
-                in_filters = filters[i+1]
+                                               stride, in_channels=in_channels))
+                in_channels = filters[i+1]
 
-            self.bn1 = nn.BatchNorm(num_features=in_filters)
+            self.bn1 = nn.BatchNorm(in_channels=in_channels)
             self.pool1 = nn.GlobalAvgPool2D()
-            self.dense1 = nn.Dense(classes, in_units=in_filters)
+            self.dense1 = nn.Dense(classes, in_units=in_channels)
 
-    def _make_layer(self, block, layers, filters, stride, in_filters=0):
+    def _make_layer(self, block, layers, filters, stride, in_channels=0):
         layer = nn.HSequential()
-        layer.add(block(filters, stride, True, in_filters=in_filters))
+        layer.add(block(filters, stride, True, in_channels=in_channels))
         for i in range(layers-1):
-            layer.add(block(filters, 1, False, in_filters=filters))
+            layer.add(block(filters, 1, False, in_channels=filters))
         return layer
 
     def hybrid_forward(self, F, x):
@@ -321,45 +337,54 @@ def test(ctx):
         for x in data:
             outputs.append(net(x))
         metric.update(label, outputs)
-    logging.info('validation acc: %s=%f'%metric.get())
+    return metric.get()
 
 
 def train(epoch, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
-    net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-    trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.1})
+    net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+    trainer = foo.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
     metric = mx.metric.Accuracy()
+    loss = foo.loss.SoftmaxCrossEntropyLoss()
 
-    for i in range(epoch):
+    for epoch in range(epoch):
         tic = time.time()
         train_data.reset()
+        metric.reset()
         btic = time.time()
-        for batch in train_data:
+        for i, batch in enumerate(train_data):
             data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
             label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
             outputs = []
-            losses = []
+            Ls = []
             with ag.record():
                 for x, y in zip(data, label):
                     z = net(x)
-                    loss = foo.loss.softmax_cross_entropy_loss(z, y)
-                    losses.append(loss)
+                    L = loss(z, y)
+                    # store the loss and do backward after we have done forward
+                    # on all GPUs for better speed on multiple GPUs.
+                    Ls.append(L)
                     outputs.append(z)
-                for loss in losses:
-                    loss.backward()
+                for L in Ls:
+                    L.backward()
             trainer.step(batch.data[0].shape[0])
             metric.update(label, outputs)
-            logging.info('speed: {} samples/s'.format(batch_size/(time.time()-btic)))
+            if opt.log_interval:
+                name, acc = metric.get()
+                print('[Epoch %d Batch %d] speed: %f samples/s, training: %s=%f'%(
+                        epoch, i, batch_size/(time.time()-btic), name, acc))
             btic = time.time()
 
         name, acc = metric.get()
-        metric.reset()
-        logging.info('training acc at epoch %d: %s=%f'%(i, name, acc))
-        logging.info('time: %f'%(time.time()-tic))
-        test(ctx)
+        print('[Epoch %d] training: %s=%f'%(epoch, name, acc))
+        print('[Epoch %d] time cost: %f'%(epoch, time.time()-tic))
 
-    net.all_params().save('mnist.params')
+        name, val_acc = test(ctx)
+        print('[Epoch %d] validation: %s=%f'%(epoch, name, val_acc))
+
+    net.collect_params().save('resnet.params')
+
 
 if __name__ == '__main__':
     if opt.symbolic:

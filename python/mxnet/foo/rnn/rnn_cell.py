@@ -7,7 +7,7 @@ from __future__ import print_function
 
 from ... import symbol, ndarray
 from ...base import string_types, numeric_types
-from ..nn import Layer, HybridLayer
+from ..block import Block, HybridBlock
 from .. import tensor_types
 
 
@@ -69,13 +69,13 @@ def _format_sequence(length, inputs, layout, merge, in_layout=None):
     return inputs, axis, F, batch_size
 
 
-class RecurrentCell(Layer):
+class RecurrentCell(Block):
     """Abstract base class for RNN cells
 
     Parameters
     ----------
     prefix : str, optional
-        Prefix for names of layers
+        Prefix for names of `Block`s
         (this prefix is also used for names of weights if `params` is None
         i.e. if `params` are being created and not reused)
     params : Parameter or None, optional
@@ -237,7 +237,7 @@ class RecurrentCell(Layer):
         return super(RecurrentCell, self).forward(inputs, states)
 
 
-class HRecurrentCell(RecurrentCell, HybridLayer):
+class HRecurrentCell(RecurrentCell, HybridBlock):
     """HRecurrentCell supports both Symbol and NDArray forwarding."""
     def __init__(self, prefix=None, params=None):
         super(HRecurrentCell, self).__init__(prefix=prefix, params=params)
@@ -266,7 +266,7 @@ class RNNCell(HRecurrentCell):
     h2h_bias_initializer : str or Initializer
         Initializer for the bias vector.
     prefix : str, default 'rnn_'
-        prefix for name of layers
+        prefix for name of `Block`s
         (and name of weight if params is None)
     params : Parameter or None
         container for weight sharing between cells.
@@ -330,7 +330,7 @@ class LSTMCell(HRecurrentCell):
     h2h_bias_initializer : str or Initializer
         Initializer for the bias vector.
     prefix : str, default 'lstm_'
-        prefix for name of layers
+        prefix for name of `Block`s
         (and name of weight if params is None)
     params : Parameter or None
         container for weight sharing between cells.
@@ -408,7 +408,7 @@ class GRUCell(HRecurrentCell):
     h2h_bias_initializer : str or Initializer
         Initializer for the bias vector.
     prefix : str, default 'gru_'
-        prefix for name of layers
+        prefix for name of `Block`s
         (and name of weight if params is None)
     params : Parameter or None
         container for weight sharing between cells.

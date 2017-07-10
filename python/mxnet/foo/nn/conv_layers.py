@@ -1,7 +1,7 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Convolutional neural network layers."""
-from .layer import HybridLayer
+from ..block import HybridBlock
 from ... import symbol
 from ...base import numeric_types
 
@@ -11,7 +11,7 @@ def _infer_weight_shape(op_name, data_shape, kwargs):
     return sym.infer_shape_partial()[0]
 
 
-class _Conv(HybridLayer):
+class _Conv(HybridBlock):
     """Abstract nD convolution layer (private, used as implementation base).
 
     This layer creates a convolution kernel that is convolved
@@ -22,50 +22,52 @@ class _Conv(HybridLayer):
 
     Parameters
     ----------
-    filters: Integer, the dimensionality of the output space
-        (i.e. the number output of filters in the convolution).
-    kernel_size: An integer or tuple/list of n integers, specifying the
-        dimensions of the convolution window.
-    strides: An integer or tuple/list of n integers,
-        specifying the strides of the convolution.
-        Specifying any stride value != 1 is incompatible with specifying
-        any `dilation_rate` value != 1.
-    padding: An integer or a tuple/list of n integers,
+    channels : int
+        The dimensionality of the output space
+        i.e. the number of output channels in the convolution.
+    kernel_size : int or tuple/list of n ints
+        Specifys the dimensions of the convolution window.
+    strides: int or tuple/list of n ints,
+        Specifys the strides of the convolution.
+    padding : int or tuple/list of n ints,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
-    dilation: An integer or tuple/list of n integers, specifying
-        the dilation rate to use for dilated convolution.
-    groups: int
+    dilation: int or tuple/list of n ints,
+        Specifys the dilation rate to use for dilated convolution.
+    groups : int
         controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two conv
         layers side by side, each seeing half the input channels, and producing
         half the output channels, and both subsequently concatenated.
-    layout: A string,
-        Can be 'NCW', 'NWC', 'NCHW', 'NHWC', 'NCDHW', 'NDHWC', etc.
-        'N', 'C', 'H', 'W', 'D' stands for batch, channel, height, width and
-        depth dimensions respectively.
-    in_filters: int, default 0
-        The number of input channels to this layer. Only required when using
-        NDArray API.
-    activation: Activation function to use
-        see mx.sym.Activation.
+    layout : str,
+        Dimension ordering of data and weight. Can be 'NCW', 'NWC', 'NCHW',
+        'NHWC', 'NCDHW', 'NDHWC', etc. 'N', 'C', 'H', 'W', 'D' stands for
+        batch, channel, height, width and depth dimensions respectively.
+        Convolution is perform over 'D', 'H', and 'W' dimensions.
+    in_channels : int, default 0
+        The number of input channels to this layer. If not specified,
+        initialization will be defered to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+    activation : str
+        Activation function to use. See :func:`~mxnet.nd.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
-    use_bias: Boolean, whether the layer uses a bias vector.
-    weight_initializer: Initializer for the `kernel` weights matrix
-        see Initializer.
-    bias_initializer: Initializer for the bias vector
-        see Initializer.
+    use_bias: bool
+        Whether the layer uses a bias vector.
+    weight_initializer : str or `Initializer`
+        Initializer for the `weight` weights matrix.
+    bias_initializer: str or `Initializer`
+        Initializer for the bias vector.
     """
-    def __init__(self, filters, kernel_size, strides, padding, dilation,
-                 groups, layout, in_filters=0, activation=None, use_bias=True,
+    def __init__(self, channels, kernel_size, strides, padding, dilation,
+                 groups, layout, in_channels=0, activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer=None,
                  op_name='Convolution', prefix=None, params=None, **kwargs):
         super(_Conv, self).__init__(prefix=prefix, params=params)
         with self.name_scope():
-            self._filters = filters
-            self._in_filters = in_filters
+            self._channels = channels
+            self._in_channels = in_channels
             if isinstance(strides, numeric_types):
                 strides = (strides,)*len(kernel_size)
             if isinstance(padding, numeric_types):
@@ -75,13 +77,13 @@ class _Conv(HybridLayer):
             self._op_name = op_name
             self._kwargs = {
                 'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
-                'pad': padding, 'num_filter': filters, 'num_group': groups,
+                'pad': padding, 'num_filter': channels, 'num_group': groups,
                 'no_bias': not use_bias, 'layout': layout}
             self._kwargs.update(kwargs)
 
             dshape = [0]*(len(kernel_size) + 2)
             dshape[layout.find('N')] = 1
-            dshape[layout.find('C')] = in_filters
+            dshape[layout.find('C')] = in_channels
             wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)
             self.weight = self.params.get('weight', shape=wshapes[1],
                                           init=weight_initializer)
@@ -116,75 +118,72 @@ class Conv1D(_Conv):
     Finally, if `activation` is not `None`,
     it is applied to the outputs as well.
 
-    When using this layer with NDArray API,
-    provide an `in_filters` argument
-    (integers, the number of input channels).
+    If `in_channels` is not specified, `Parameter` initialization will be
+    defered to the first time `forward` is called and `in_channels` will be
+    inferred from the shape of input data.
 
 
     Parameters
     ----------
-    filters: Integer, the dimensionality of the output space
-        (i.e. the number output of filters in the convolution).
-    kernel_size: An integer or tuple/list of 1 integers, specifying the
-        dimensions of the convolution window.
-    strides: An integer or tuple/list of 1 integers,
-        specifying the strides of the convolution.
-        Specifying any stride value != 1 is incompatible with specifying
-        any `dilation_rate` value != 1.
-    padding: An integer or a tuple/list of 1 integers,
+    channels : int
+        The dimensionality of the output space, i.e. the number of output
+        channels (filters) in the convolution.
+    kernel_size :int or tuple/list of 1 int
+        Specifys the dimensions of the convolution window.
+    strides : int or tuple/list of 1 int,
+        Specify the strides of the convolution.
+    padding : int or a tuple/list of 1 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
-    dilation: An integer or tuple/list of 1 integers, specifying
-        the dilation rate to use for dilated convolution.
-    groups: int
+    dilation : int or tuple/list of 1 int
+        Specifys the dilation rate to use for dilated convolution.
+    groups : int
         controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two conv
         layers side by side, each seeing half the input channels, and producing
         half the output channels, and both subsequently concatenated.
-    layout: A string,
-        Can be 'NCW', 'NWC', etc.
+    layout: str, default 'NCW'
+        Dimension ordering of data and weight. Can be 'NCW', 'NWC', etc.
         'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
-        respectively.
-    in_filters: int, default 0
-        The number of input channels to this layer. Only required when using
-        NDArray API.
-    activation: Activation function to use
-        see mx.sym.Activation.
+        respectively. Convolution is applied on the 'W' dimension.
+    in_channels : int, default 0
+        The number of input channels to this layer. If not specified,
+        initialization will be defered to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+    activation : str
+        Activation function to use. See :func:`mx.nd.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
-    use_bias: Boolean, whether the layer uses a bias vector.
-    weight_initializer: Initializer for the `kernel` weights matrix
-        see Initializer.
-    bias_initializer: Initializer for the bias vector
-        see Initializer.
+    use_bias : bool
+        Whether the layer uses a bias vector.
+    weight_initializer : str or `Initializer`
+        Initializer for the `weight` weights matrix.
+    bias_initializer : str or `Initializer`
+        Initializer for the bias vector.
 
 
     Input Shape:
         This depends on the `layout` parameter. Input is 3D array of shape
-        (batch_size, in_channel(in_filters), width) if `layout` is `NCW`.
+        (batch_size, in_channels, width) if `layout` is `NCW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 3D array of shape
-        (batch_size, out_channel(filters), out_width) if `layout` is `NCW`. out_width
-        depends on other input parameters as well. It is calculated as follows::
+        (batch_size, channels, out_width) if `layout` is `NCW`.
+        out_width is calculated as::
 
-            out_width = floor((w+2*p-d*(k-1)-1)/s)+1
-
-        where,
-
-        w = width, p = padding, d = dilation, k = kernel_size, s = stride
+            out_width = floor((width+2*padding-dilation*(kernel_size-1)-1)/stride)+1
     """
-    def __init__(self, filters, kernel_size, strides=1, padding=0, dilation=1,
+    def __init__(self, channels, kernel_size, strides=1, padding=0, dilation=1,
                  groups=1, layout='NCW', activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer=None,
-                 in_filters=0, **kwargs):
+                 in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
         super(Conv1D, self).__init__(
-            filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
+            channels, kernel_size, strides, padding, dilation, groups, layout,
+            in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
 
 
 class Conv2D(_Conv):
@@ -196,77 +195,74 @@ class Conv2D(_Conv):
     a bias vector is created and added to the outputs. Finally, if
     `activation` is not `None`, it is applied to the outputs as well.
 
-    When using this layer with NDArray API,
-    provide an `in_filters` argument
-    (integers, the number of input channels).
-
+    If `in_channels` is not specified, `Parameter` initialization will be
+    defered to the first time `forward` is called and `in_channels` will be
+    inferred from the shape of input data.
 
     Parameters
     ----------
-    filters: Integer, the dimensionality of the output space
-        (i.e. the number output of filters in the convolution).
-    kernel_size: An integer or tuple/list of 2 integers, specifying the
-        dimensions of the convolution window.
-    strides: An integer or tuple/list of 2 integers,
-        specifying the strides of the convolution.
-        Specifying any stride value != 1 is incompatible with specifying
-        any `dilation_rate` value != 1.
-    padding: An integer or a tuple/list of 2 integers,
+    channels : int
+        The dimensionality of the output space, i.e. the number of output
+        channels (filters) in the convolution.
+    kernel_size :int or tuple/list of 2 int
+        Specifys the dimensions of the convolution window.
+    strides : int or tuple/list of 2 int,
+        Specify the strides of the convolution.
+    padding : int or a tuple/list of 2 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
-    dilation: An integer or tuple/list of 2 integers, specifying
-        the dilation rate to use for dilated convolution.
-    groups: int
+    dilation : int or tuple/list of 2 int
+        Specifys the dilation rate to use for dilated convolution.
+    groups : int
         controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two conv
         layers side by side, each seeing half the input channels, and producing
         half the output channels, and both subsequently concatenated.
-    layout: A string,
-        Can be 'NCHW', 'NHWC', etc.
+    layout : str, default 'NCHW'
+        Dimension ordering of data and weight. Can be 'NCHW', 'NHWC', etc.
         'N', 'C', 'H', 'W' stands for batch, channel, height, and width
-        dimensions respectively.
-    in_filters: int, default 0
-        The number of input channels to this layer. Only required when using
-        NDArray API.
-    activation: Activation function to use
-        see mx.sym.Activation.
+        dimensions respectively. Convolution is applied on the 'H' and
+        'W' dimensions.
+    in_channels : int, default 0
+        The number of input channels to this layer. If not specified,
+        initialization will be defered to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+    activation : str
+        Activation function to use. See :func:`mx.nd.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
-    use_bias: Boolean, whether the layer uses a bias vector.
-    weight_initializer: Initializer for the `kernel` weights matrix
-        see Initializer.
-    bias_initializer: Initializer for the bias vector
-        see Initializer.
+    use_bias : bool
+        Whether the layer uses a bias vector.
+    weight_initializer : str or `Initializer`
+        Initializer for the `weight` weights matrix.
+    bias_initializer : str or `Initializer`
+        Initializer for the bias vector.
 
 
     Input Shape:
         This depends on the `layout` parameter. Input is 4D array of shape
-        (batch_size, in_channel(in_filters), height, width) if `layout` is `NCHW`.
+        (batch_size, in_channels, height, width) if `layout` is `NCHW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 4D array of shape
-        (batch_size, out_channel(filters), out_height, out_width) if `layout` is `NCHW`.
-        out_height and out_width depends on other input parameters as well.
-        They are calculated as follows::
+        (batch_size, channels, out_height, out_width) if `layout` is `NCHW`.
 
-            out_width = floor((w+2*p-d*(k-1)-1)/s)+1
-            out_height = floor((h+2*p-d*(k-1)-1)/s)+1
+        out_height and out_width are calculated as::
 
-        where,
-
-        w = width, h = height, p = padding, d = dilation, k = kernel_size, s = stride
+            out_height = floor((height+2*padding[0]-dilation[0]*(kernel_size[0]-1)-1)/stride[0])+1
+            out_width = floor((width+2*padding[1]-dilation[1]*(kernel_size[1]-1)-1)/stride[1])+1
     """
-    def __init__(self, filters, kernel_size, strides=(1, 1), padding=(0, 0),
+    def __init__(self, channels, kernel_size, strides=(1, 1), padding=(0, 0),
                  dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
-                 bias_initializer=None, in_filters=0, **kwargs):
+                 bias_initializer=None, in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
         super(Conv2D, self).__init__(
-            filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
+            channels, kernel_size, strides, padding, dilation, groups, layout,
+            in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
 
 
 class Conv3D(_Conv):
@@ -278,78 +274,76 @@ class Conv3D(_Conv):
     a bias vector is created and added to the outputs. Finally, if
     `activation` is not `None`, it is applied to the outputs as well.
 
-    When using this layer with NDArray API,
-    provide an `in_filters` argument
-    (integers, the number of input channels).
-
+    If `in_channels` is not specified, `Parameter` initialization will be
+    defered to the first time `forward` is called and `in_channels` will be
+    inferred from the shape of input data.
 
     Parameters
     ----------
-    filters: Integer, the dimensionality of the output space
-        (i.e. the number output of filters in the convolution).
-    kernel_size: An integer or tuple/list of 3 integers, specifying the
-        dimensions of the convolution window.
-    strides: An integer or tuple/list of 3 integers,
-        specifying the strides of the convolution.
-        Specifying any stride value != 1 is incompatible with specifying
-        any `dilation_rate` value != 1.
-    padding: An integer or a tuple/list of 3 integers,
+    channels : int
+        The dimensionality of the output space, i.e. the number of output
+        channels (filters) in the convolution.
+    kernel_size :int or tuple/list of 3 int
+        Specifys the dimensions of the convolution window.
+    strides : int or tuple/list of 3 int,
+        Specify the strides of the convolution.
+    padding : int or a tuple/list of 3 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
-    dilation: An integer or tuple/list of 3 integers, specifying
-        the dilation rate to use for dilated convolution.
-    groups: int
+    dilation : int or tuple/list of 3 int
+        Specifys the dilation rate to use for dilated convolution.
+    groups : int
         controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two conv
         layers side by side, each seeing half the input channels, and producing
         half the output channels, and both subsequently concatenated.
-    layout: A string,
-        Can be 'NCDHW', 'NDHWC', etc.
+    layout : str, default 'NCDHW'
+        Dimension ordering of data and weight. Can be 'NCDHW', 'NDHWC', etc.
         'N', 'C', 'H', 'W', 'D' stands for batch, channel, height, width and
-        depth dimensions respectively.
-    in_filters: int, default 0
-        The number of input channels to this layer. Only required when using
-        NDArray API.
-    activation: Activation function to use
-        see mx.sym.Activation.
+        depth dimensions respectively. Convolution is applied on the 'D',
+        'H' and 'W' dimensions.
+    in_channels : int, default 0
+        The number of input channels to this layer. If not specified,
+        initialization will be defered to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+    activation : str
+        Activation function to use. See :func:`mx.nd.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
-    use_bias: Boolean, whether the layer uses a bias vector.
-    weight_initializer: Initializer for the `kernel` weights matrix
-        see Initializer.
-    bias_initializer: Initializer for the bias vector
-        see Initializer.
+    use_bias : bool
+        Whether the layer uses a bias vector.
+    weight_initializer : str or `Initializer`
+        Initializer for the `weight` weights matrix.
+    bias_initializer : str or `Initializer`
+        Initializer for the bias vector.
 
 
     Input Shape:
         This depends on the `layout` parameter. Input is 5D array of shape
-        (batch_size, in_channel(in_filters), depth, height, width) if `layout` is `NCDHW`.
+        (batch_size, in_channels, depth, height, width) if `layout` is `NCDHW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 5D array of shape
-        (batch_size, out_channel(filters), out_depth, out_height, out_width) if `layout` is
-        `NCDHW`. out_depth, out_height and out_width depends on other input parameters as well.
-        They are calculated as follows::
+        (batch_size, channels, out_depth, out_height, out_width) if `layout` is
+        `NCDHW`.
 
-            out_depth = floor((d+2*p-d*(k-1)-1)/s)+1
-            out_height = floor((h+2*p-d*(k-1)-1)/s)+1
-            out_width = floor((w+2*p-d*(k-1)-1)/s)+1
+        out_depth, out_height and out_width are calculated as::
 
-        where,
-
-        d = depth, h = height, w = width, p = padding, d = dilation, k = kernel_size, s = stride
+            out_depth = floor((depth+2*padding[0]-dilation[0]*(kernel_size[0]-1)-1)/stride[0])+1
+            out_height = floor((height+2*padding[1]-dilation[1]*(kernel_size[1]-1)-1)/stride[1])+1
+            out_width = floor((width+2*padding[2]-dilation[2]*(kernel_size[2]-1)-1)/stride[2])+1
     """
-    def __init__(self, filters, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
+    def __init__(self, channels, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  dilation=(1, 1, 1), groups=1, layout='NCDHW', activation=None,
                  use_bias=True, weight_initializer=None, bias_initializer=None,
-                 in_filters=0, **kwargs):
+                 in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
         super(Conv3D, self).__init__(
-            filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
+            channels, kernel_size, strides, padding, dilation, groups, layout,
+            in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
 
 
 class Conv1DTranspose(_Conv):
@@ -362,70 +356,66 @@ class Conv1DTranspose(_Conv):
     while maintaining a connectivity pattern that is compatible with
     said convolution.
 
-    When using this layer with NDArray API,
-    provide an `in_filters` argument
-    (integers, the number of input channels).
+    If `in_channels` is not specified, `Parameter` initialization will be
+    defered to the first time `forward` is called and `in_channels` will be
+    inferred from the shape of input data.
 
     Parameters
     ----------
-    filters: Integer, the dimensionality of the output space
-        (i.e. the number output of filters in the convolution).
-    kernel_size: An integer or tuple/list of 1 integers, specifying the
-        dimensions of the convolution window.
-    strides: An integer or tuple/list of 1 integers,
-        specifying the strides of the convolution.
-        Specifying any stride value != 1 is incompatible with specifying
-        any `dilation_rate` value != 1.
-    padding: An integer or a tuple/list of 1 integers,
+    channels : int
+        The dimensionality of the output space, i.e. the number of output
+        channels (filters) in the convolution.
+    kernel_size :int or tuple/list of 3 int
+        Specifys the dimensions of the convolution window.
+    strides : int or tuple/list of 3 int,
+        Specify the strides of the convolution.
+    padding : int or a tuple/list of 3 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
-    output_padding: An integer or a tuple/list of 1 integers,
-        Zero-padding added to one side of the output
-    dilation: An integer or tuple/list of 1 integers, specifying
-        the dilation rate to use for dilated convolution.
-    groups: int
+    dilation : int or tuple/list of 3 int
+        Specifys the dilation rate to use for dilated convolution.
+    groups : int
         controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two conv
         layers side by side, each seeing half the input channels, and producing
         half the output channels, and both subsequently concatenated.
-    layout: A string,
-        Can be 'NCW', 'NWC', etc.
+    layout : str, default 'NCW'
+        Dimension ordering of data and weight. Can be 'NCW', 'NWC', etc.
         'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
-        respectively.
-    in_filters: int, default 0
-        The number of input channels to this layer. Only required when using
-        NDArray API.
-    activation: Activation function to use
-        see mx.sym.Activation.
+        respectively. Convolution is applied on the 'W' dimension.
+    in_channels : int, default 0
+        The number of input channels to this layer. If not specified,
+        initialization will be defered to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+    activation : str
+        Activation function to use. See :func:`mx.nd.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
-    use_bias: Boolean, whether the layer uses a bias vector.
-    weight_initializer: Initializer for the `kernel` weights matrix
-        see Initializer.
-    bias_initializer: Initializer for the bias vector
-        see Initializer.
+    use_bias : bool
+        Whether the layer uses a bias vector.
+    weight_initializer : str or `Initializer`
+        Initializer for the `weight` weights matrix.
+    bias_initializer : str or `Initializer`
+        Initializer for the bias vector.
 
 
     Input Shape:
         This depends on the `layout` parameter. Input is 3D array of shape
-        (batch_size, in_channel(in_filters), width) if `layout` is `NCW`.
+        (batch_size, in_channels, width) if `layout` is `NCW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 3D array of shape
-        (batch_size, out_channel(filters), out_width) if `layout` is `NCW`.
-        out_width depends on other input parameters as well. It is calculated as follows::
+        (batch_size, channels, out_width) if `layout` is `NCW`.
 
-            out_width = (w-1)*s-2*p+k+op
+        out_width is calculated as::
 
-        where,
-
-        w = width, p = padding, k = kernel_size, s = stride, op = output_padding
+            out_width = (width-1)*strides-2*padding+kernel_size+output_padding
     """
-    def __init__(self, filters, kernel_size, strides=1, padding=0, output_padding=0,
+    def __init__(self, channels, kernel_size, strides=1, padding=0, output_padding=0,
                  dilation=1, groups=1, layout='NCW', activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer=None,
-                 in_filters=0, **kwargs):
+                 in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
         if isinstance(output_padding, numeric_types):
@@ -433,8 +423,8 @@ class Conv1DTranspose(_Conv):
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
         assert len(output_padding) == 1, "output_padding must be a number or a list of 1 ints"
         super(Conv1DTranspose, self).__init__(
-            filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, weight_initializer,
+            channels, kernel_size, strides, padding, dilation, groups, layout,
+            in_channels, activation, use_bias, weight_initializer,
             bias_initializer, op_name='Deconvolution', adj=output_padding, **kwargs)
 
 
@@ -448,73 +438,69 @@ class Conv2DTranspose(_Conv):
     while maintaining a connectivity pattern that is compatible with
     said convolution.
 
-    When using this layer with NDArray API,
-    provide an `in_filters` argument
-    (integers, the number of input channels).
+    If `in_channels` is not specified, `Parameter` initialization will be
+    defered to the first time `forward` is called and `in_channels` will be
+    inferred from the shape of input data.
 
 
     Parameters
     ----------
-    filters: Integer, the dimensionality of the output space
-        (i.e. the number output of filters in the convolution).
-    kernel_size: An integer or tuple/list of 2 integers, specifying the
-        dimensions of the convolution window.
-    strides: An integer or tuple/list of 2 integers,
-        specifying the strides of the convolution.
-        Specifying any stride value != 1 is incompatible with specifying
-        any `dilation_rate` value != 1.
-    padding: An integer or a tuple/list of 2 integers,
+    channels : int
+        The dimensionality of the output space, i.e. the number of output
+        channels (filters) in the convolution.
+    kernel_size :int or tuple/list of 3 int
+        Specifys the dimensions of the convolution window.
+    strides : int or tuple/list of 3 int,
+        Specify the strides of the convolution.
+    padding : int or a tuple/list of 3 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
-    out_padding : An integer or a tuple/list of 2 integers,
-        Zero-padding added to one side of the output
-    dilation: An integer or tuple/list of 2 integers, specifying
-        the dilation rate to use for dilated convolution.
-    groups: int
+    dilation : int or tuple/list of 3 int
+        Specifys the dilation rate to use for dilated convolution.
+    groups : int
         controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two conv
         layers side by side, each seeing half the input channels, and producing
         half the output channels, and both subsequently concatenated.
-    layout: A string,
-        Can be 'NCHW', 'NHWC', etc.
+    layout : str, default 'NCHW'
+        Dimension ordering of data and weight. Can be 'NCHW', 'NHWC', etc.
         'N', 'C', 'H', 'W' stands for batch, channel, height, and width
-        dimensions respectively.
-    in_filters: int, default 0
-        The number of input channels to this layer. Only required when using
-        NDArray API.
-    activation: Activation function to use
-        see mx.sym.Activation.
+        dimensions respectively. Convolution is applied on the 'H' and
+        'W' dimensions.
+    in_channels : int, default 0
+        The number of input channels to this layer. If not specified,
+        initialization will be defered to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+    activation : str
+        Activation function to use. See :func:`mx.nd.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
-    use_bias: Boolean, whether the layer uses a bias vector.
-    weight_initializer: Initializer for the `kernel` weights matrix
-        see Initializer.
-    bias_initializer: Initializer for the bias vector
-        see Initializer.
+    use_bias : bool
+        Whether the layer uses a bias vector.
+    weight_initializer : str or `Initializer`
+        Initializer for the `weight` weights matrix.
+    bias_initializer : str or `Initializer`
+        Initializer for the bias vector.
 
 
     Input Shape:
         This depends on the `layout` parameter. Input is 4D array of shape
-        (batch_size, in_channel(in_filters), height, width) if `layout` is `NCHW`.
+        (batch_size, in_channels, height, width) if `layout` is `NCHW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 4D array of shape
-        (batch_size, out_channel(filters), out_height, out_width) if `layout` is `NCHW`.
-        out_height and out_width depends on other input parameters as well.
-        They are calculated as follows::
+        (batch_size, channels, out_height, out_width) if `layout` is `NCHW`.
 
-            out_height = (h-1)*s-2*p+k+op
-            out_width = (w-1)*s-2*p+k+op
+        out_height and out_width are calculated as::
 
-        where,
-
-        h = height, w = width, p = padding, k = kernel_size, s = stride, op = output_padding
+            out_height = (height-1)*strides[0]-2*padding[0]+kernel_size[0]+output_padding[0]
+            out_width = (width-1)*strides[1]-2*padding[1]+kernel_size[1]+output_padding[1]
     """
-    def __init__(self, filters, kernel_size, strides=(1, 1), padding=(0, 0),
+    def __init__(self, channels, kernel_size, strides=(1, 1), padding=(0, 0),
                  output_padding=(0, 0), dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
-                 bias_initializer=None, in_filters=0, **kwargs):
+                 bias_initializer=None, in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         if isinstance(output_padding, numeric_types):
@@ -522,8 +508,8 @@ class Conv2DTranspose(_Conv):
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
         assert len(output_padding) == 2, "output_padding must be a number or a list of 2 ints"
         super(Conv2DTranspose, self).__init__(
-            filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, weight_initializer,
+            channels, kernel_size, strides, padding, dilation, groups, layout,
+            in_channels, activation, use_bias, weight_initializer,
             bias_initializer, op_name='Deconvolution', adj=output_padding, **kwargs)
 
 
@@ -537,75 +523,69 @@ class Conv3DTranspose(_Conv):
     while maintaining a connectivity pattern that is compatible with
     said convolution.
 
-    When using this layer with NDArray API,
-    provide an `in_filters` argument
-    (integers, the number of input channels).
+    If `in_channels` is not specified, `Parameter` initialization will be
+    defered to the first time `forward` is called and `in_channels` will be
+    inferred from the shape of input data.
 
 
     Parameters
     ----------
-    filters: Integer, the dimensionality of the output space
-        (i.e. the number output of filters in the convolution).
-    kernel_size: An integer or tuple/list of 3 integers, specifying the
-        dimensions of the convolution window.
-    strides: An integer or tuple/list of 3 integers,
-        specifying the strides of the convolution.
-        Specifying any stride value != 1 is incompatible with specifying
-        any `dilation_rate` value != 1.
-    padding: An integer or a tuple/list of 3 integers,
+    channels : int
+        The dimensionality of the output space, i.e. the number of output
+        channels (filters) in the convolution.
+    kernel_size :int or tuple/list of 3 int
+        Specifys the dimensions of the convolution window.
+    strides : int or tuple/list of 3 int,
+        Specify the strides of the convolution.
+    padding : int or a tuple/list of 3 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
-    out_padding : An integer or a tuple/list of 2 integers,
-        Zero-padding added to one side of the output
-    dilation: An integer or tuple/list of 3 integers, specifying
-        the dilation rate to use for dilated convolution.
-    groups: int
+    dilation : int or tuple/list of 3 int
+        Specifys the dilation rate to use for dilated convolution.
+    groups : int
         controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two conv
         layers side by side, each seeing half the input channels, and producing
         half the output channels, and both subsequently concatenated.
-    layout: A string,
-        Can be 'NCDHW', 'NDHWC', etc.
+    layout : str, default 'NCDHW'
+        Dimension ordering of data and weight. Can be 'NCDHW', 'NDHWC', etc.
         'N', 'C', 'H', 'W', 'D' stands for batch, channel, height, width and
-        depth dimensions respectively.
-    in_filters: int, default 0
-        The number of input channels to this layer. Only required when using
-        NDArray API.
-    activation: Activation function to use
-        see mx.sym.Activation.
+        depth dimensions respectively. Convolution is applied on the 'D',
+        'H', and 'W' dimensions.
+    in_channels : int, default 0
+        The number of input channels to this layer. If not specified,
+        initialization will be defered to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+    activation : str
+        Activation function to use. See :func:`mx.nd.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
-    use_bias: Boolean, whether the layer uses a bias vector.
-    weight_initializer: Initializer for the `kernel` weights matrix
-        see Initializer.
-    bias_initializer: Initializer for the bias vector
-        see Initializer.
+    use_bias : bool
+        Whether the layer uses a bias vector.
+    weight_initializer : str or `Initializer`
+        Initializer for the `weight` weights matrix.
+    bias_initializer : str or `Initializer`
+        Initializer for the bias vector.
 
 
     Input Shape:
         This depends on the `layout` parameter. Input is 5D array of shape
-        (batch_size, in_channel(in_filters), depth, height, width) if `layout` is `NCDHW`.
+        (batch_size, in_channels, depth, height, width) if `layout` is `NCDHW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 5D array of shape
-        (batch_size, out_channel(filters), out_depth, out_height, out_width) if `layout` is `NCDHW`.
-        out_depth, out_height and out_width depends on other input parameters as well.
-        They are calculated as follows::
+        (batch_size, channels, out_depth, out_height, out_width) if `layout` is `NCDHW`.
+        out_depth, out_height and out_width are calculated as::
 
-            out_depth = (d-1)*s-2*p+k+op
-            out_height = (h-1)*s-2*p+k+op
-            out_width = (w-1)*s-2*p+k+op
-
-        where,
-
-        d = depth, h = height, w = width, p = padding, k = kernel_size, s = stride,
-        op = output_padding
+            out_depth = (depth-1)*strides[0]-2*padding[0]+kernel_size[0]+output_padding[0]
+            out_height = (height-1)*strides[1]-2*padding[1]+kernel_size[1]+output_padding[1]
+            out_width = (width-1)*strides[2]-2*padding[2]+kernel_size[2]+output_padding[2]
     """
-    def __init__(self, filters, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
+    def __init__(self, channels, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  output_padding=(0, 0, 0), dilation=(1, 1, 1), groups=1, layout='NCDHW',
                  activation=None, use_bias=True, weight_initializer=None,
-                 bias_initializer=None, in_filters=0, **kwargs):
+                 bias_initializer=None, in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         if isinstance(output_padding, numeric_types):
@@ -613,15 +593,15 @@ class Conv3DTranspose(_Conv):
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
         assert len(output_padding) == 3, "output_padding must be a number or a list of 3 ints"
         super(Conv3DTranspose, self).__init__(
-            filters, kernel_size, strides, padding, dilation, groups, layout,
-            in_filters, activation, use_bias, weight_initializer, bias_initializer,
+            channels, kernel_size, strides, padding, dilation, groups, layout,
+            in_channels, activation, use_bias, weight_initializer, bias_initializer,
             op_name='Deconvolution', adj=output_padding, **kwargs)
 
 
-class _Pooling(HybridLayer):
-    """Abstract class for different pooling layers.
-    """
-    def __init__(self, pool_size, strides, padding, global_pool, pool_type, **kwargs):
+class _Pooling(HybridBlock):
+    """Abstract class for different pooling layers."""
+    def __init__(self, pool_size, strides, padding, ceil_mode, global_pool,
+                 pool_type, **kwargs):
         super(_Pooling, self).__init__(**kwargs)
         if strides is None:
             strides = pool_size
@@ -631,147 +611,157 @@ class _Pooling(HybridLayer):
             padding = (padding,)*len(pool_size)
         self._kwargs = {
             'kernel': pool_size, 'stride': strides, 'pad': padding,
-            'pooling_convention': 'full', 'global_pool': global_pool,
-            'pool_type': pool_type}
+            'global_pool': global_pool, 'pool_type': pool_type,
+            'pooling_convention': 'full' if ceil_mode else 'valid'}
 
     def hybrid_forward(self, F, x):
         return F.Pooling(x, **self._kwargs)
 
 
 class MaxPool1D(_Pooling):
-    """Max pooling operation for temporal data.
+    """Max pooling operation for one dimensional data.
+
 
     Parameters
     ----------
-    pool_size: Integer, size of the max pooling windows.
-    strides: Integer, or None. Factor by which to downscale.
-        E.g. 2 will halve the input.
+    pool_size: int
+        Size of the max pooling windows.
+    strides: int, or None
+        Factor by which to downscale. E.g. 2 will halve the input size.
         If None, it will default to `pool_size`.
-    padding: Integer,
+    padding: int
         If padding is non-zero, then the input is implicitly
-        zero-padded on both sides for padding number of points
-    layout: A string,
-        Can be 'NCW', 'NWC', etc.
+        zero-padded on both sides for padding number of points.
+    layout : str, default 'NCW'
+        Dimension ordering of data and weight. Can be 'NCW', 'NWC', etc.
         'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
-        respectively. padding is applied on W dimension.
+        respectively. Pooling is applied on the W dimension.
+    ceil_mode : bool, default False
+        When True, will use ceil instead of floor to compute the output shape.
 
 
     Input Shape:
         This depends on the `layout` parameter. Input is 3D array of shape
-        (batch_size, channel, width) if `layout` is `NCW`.
+        (batch_size, channels, width) if `layout` is `NCW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 3D array of shape
-        (batch_size, channel, out_width) if `layout` is `NCW`.
-        out_width depends on other input parameters as well. It is calculated as follows::
+        (batch_size, channels, out_width) if `layout` is `NCW`.
 
-            out_width = ceil((w+2*p-ps)/s+1)
+        out_width is calculated as::
 
-        where,
+            out_width = floor((width+2*padding-pool_size)/strides)+1
 
-        w = width, p = padding, ps = pool_size, s = stride
+        When ceil_mode is True, ceil will be used instead of floor in this
+        equation.
     """
-    def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW', **kwargs):
+    def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW',
+                 ceil_mode=False, **kwargs):
         assert layout == 'NCW', "Only supports NCW layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)
         assert len(pool_size) == 1, "pool_size must be a number or a list of 1 ints"
         super(MaxPool1D, self).__init__(
-            pool_size, strides, padding, False, 'max', **kwargs)
+            pool_size, strides, padding, ceil_mode, False, 'max', **kwargs)
 
 
 class MaxPool2D(_Pooling):
-    """Max pooling operation for spatial data.
+    """Max pooling operation for two dimensional (spatial) data.
+
 
     Parameters
     ----------
-    pool_size: Integer or list/tuple of 2 Integers,
-        size of the max pooling windows.
-    strides: Integer, list/tuple of 2 Integers, or None.
-        Factor by which to downscale.
-        E.g. 2 will halve the input.
+    pool_size: int or list/tuple of 2 ints,
+        Size of the max pooling windows.
+    strides: int, list/tuple of 2 ints, or None.
+        Factor by which to downscale. E.g. 2 will halve the input size.
         If None, it will default to `pool_size`.
-    padding: Integer or list/tuple of 2 Integers,
+    padding: int or list/tuple of 2 ints,
         If padding is non-zero, then the input is implicitly
-        zero-padded on both sides for padding number of points
-    layout: A string,
-        Can be 'NCHW', 'NHWC', etc.
+        zero-padded on both sides for padding number of points.
+    layout : str, default 'NCHW'
+        Dimension ordering of data and weight. Can be 'NCHW', 'NHWC', etc.
         'N', 'C', 'H', 'W' stands for batch, channel, height, and width
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
+    ceil_mode : bool, default False
+        When True, will use ceil instead of floor to compute the output shape.
 
 
     Input Shape:
         This depends on the `layout` parameter. Input is 4D array of shape
-        (batch_size, channel, height, width) if `layout` is `NCHW`.
+        (batch_size, channels, height, width) if `layout` is `NCHW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 4D array of shape
-        (batch_size, channel, out_height, out_width)  if `layout` is `NCHW`.
-        out_height and out_width depends on other input parameters as well.
-        They are calculated as follows::
+        (batch_size, channels, out_height, out_width)  if `layout` is `NCHW`.
 
-            out_height = ceil((h+2*p-ps)/s+1)
-            out_width = ceil((w+2*p-ps)/s+1)
+        out_height and out_width are calculated as::
 
-        where,
+            out_height = floor((height+2*padding[0]-pool_size[0])/strides[0])+1
+            out_width = floor((width+2*padding[1]-pool_size[1])/strides[1])+1
 
-        h = height, w = width, p = padding, ps = pool_size, s = stride
+        When ceil_mode is True, ceil will be used instead of floor in this
+        equation.
     """
-    def __init__(self, pool_size=(2, 2), strides=None, padding=0, layout='NCHW', **kwargs):
+    def __init__(self, pool_size=(2, 2), strides=None, padding=0, layout='NCHW',
+                 ceil_mode=False, **kwargs):
         assert layout == 'NCHW', "Only supports NCHW layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)*2
         assert len(pool_size) == 2, "pool_size must be a number or a list of 2 ints"
         super(MaxPool2D, self).__init__(
-            pool_size, strides, padding, False, 'max', **kwargs)
+            pool_size, strides, padding, ceil_mode, False, 'max', **kwargs)
 
 
 class MaxPool3D(_Pooling):
     """Max pooling operation for 3D data (spatial or spatio-temporal).
 
+
     Parameters
     ----------
-    pool_size: Integer or list/tuple of 3 Integers,
-        size of the max pooling windows.
-    strides: Integer, list/tuple of 3 Integers, or None.
-        Factor by which to downscale.
-        E.g. 2 will halve the input.
+    pool_size: int or list/tuple of 3 ints,
+        Size of the max pooling windows.
+    strides: int, list/tuple of 3 ints, or None.
+        Factor by which to downscale. E.g. 2 will halve the input size.
         If None, it will default to `pool_size`.
-    padding: Integer or list/tuple of 3 Integers,
+    padding: int or list/tuple of 3 ints,
         If padding is non-zero, then the input is implicitly
-        zero-padded on both sides for padding number of points
-    layout: A string,
-        Can be 'NCDHW', 'NDHWC', etc.
+        zero-padded on both sides for padding number of points.
+    layout : str, default 'NCDHW'
+        Dimension ordering of data and weight. Can be 'NCDHW', 'NDHWC', etc.
         'N', 'C', 'H', 'W', 'D' stands for batch, channel, height, width and
         depth dimensions respectively. padding is applied on 'D', 'H' and 'W'
         dimension.
+    ceil_mode : bool, default False
+        When True, will use ceil instead of floor to compute the output shape.
 
 
     Input Shape:
         This depends on the `layout` parameter. Input is 5D array of shape
-        (batch_size, channel, depth, height, width) if `layout` is `NCDHW`.
+        (batch_size, channels, depth, height, width) if `layout` is `NCDHW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 5D array of shape
-        (batch_size, channel, out_depth, out_height, out_width) if `layout` is `NCDHW`.
-        out_depth, out_height and out_width depends on other input parameters as well.
-        They are calculated as follows::
+        (batch_size, channels, out_depth, out_height, out_width) if `layout`
+        is `NCDHW`.
 
-            out_depth = ceil((d+2*p-ps)/s+1)
-            out_height = ceil((h+2*p-ps)/s+1)
-            out_width = ceil((w+2*p-ps)/s+1)
+        out_depth, out_height and out_width are calculated as ::
 
-        where,
+            out_depth = floor((depth+2*padding[0]-pool_size[0])/strides[0])+1
+            out_height = floor((height+2*padding[1]-pool_size[1])/strides[1])+1
+            out_width = floor((width+2*padding[2]-pool_size[2])/strides[2])+1
 
-        d = depth, h = height, w = width, p = padding, ps = pool_size, s = stride
+        When ceil_mode is True, ceil will be used instead of floor in this
+        equation.
     """
-    def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0, layout='NCDHW', **kwargs):
+    def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0,
+                 ceil_mode=False, layout='NCDHW', **kwargs):
         assert layout == 'NCDHW', "Only supports NCDHW layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)*3
         assert len(pool_size) == 3, "pool_size must be a number or a list of 3 ints"
         super(MaxPool3D, self).__init__(
-            pool_size, strides, padding, False, 'max', **kwargs)
+            pool_size, strides, padding, ceil_mode, False, 'max', **kwargs)
 
 
 class AvgPool1D(_Pooling):
@@ -779,41 +769,45 @@ class AvgPool1D(_Pooling):
 
     Parameters
     ----------
-    pool_size: Integer, size of the max pooling windows.
-    strides: Integer, or None. Factor by which to downscale.
-        E.g. 2 will halve the input.
+    pool_size: int
+        Size of the max pooling windows.
+    strides: int, or None
+        Factor by which to downscale. E.g. 2 will halve the input size.
         If None, it will default to `pool_size`.
-    padding: Integer,
+    padding: int
         If padding is non-zero, then the input is implicitly
-        zero-padded on both sides for padding number of points
-    layout: A string,
-        Can be 'NCW', 'NWC', etc.
+        zero-padded on both sides for padding number of points.
+    layout : str, default 'NCW'
+        Dimension ordering of data and weight. Can be 'NCW', 'NWC', etc.
         'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
-        respectively. padding is applied on W dimension.
+        respectively. padding is applied on 'W' dimension.
+    ceil_mode : bool, default False
+        When True, will use ceil instead of floor to compute the output shape.
 
 
     Input Shape:
         This depends on the `layout` parameter. Input is 3D array of shape
-        (batch_size, channel, width) if `layout` is `NCW`.
+        (batch_size, channels, width) if `layout` is `NCW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 3D array of shape
-        (batch_size, channel, out_width) if `layout` is `NCW`.
-        out_width depends on other input parameters as well. It is calculated as follows::
+        (batch_size, channels, out_width) if `layout` is `NCW`.
 
-            out_width = ceil((w+2*p-ps)/s+1)
+        out_width is calculated as::
 
-        where,
+            out_width = floor((width+2*padding-pool_size)/strides)+1
 
-        w = width, p = padding, ps = pool_size, s = stride
+        When ceil_mode is True, ceil will be used instead of floor in this
+        equation.
     """
-    def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW', **kwargs):
+    def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW',
+                 ceil_mode=False, **kwargs):
         assert layout == 'NCW', "Only supports NCW layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)
         assert len(pool_size) == 1, "pool_size must be a number or a list of 1 ints"
         super(AvgPool1D, self).__init__(
-            pool_size, strides, padding, False, 'avg', **kwargs)
+            pool_size, strides, padding, ceil_mode, False, 'avg', **kwargs)
 
 
 class AvgPool2D(_Pooling):
@@ -821,45 +815,46 @@ class AvgPool2D(_Pooling):
 
     Parameters
     ----------
-    pool_size: Integer or list/tuple of 2 Integers,
-        size of the max pooling windows.
-    strides: Integer, list/tuple of 2 Integers, or None.
-        Factor by which to downscale.
-        E.g. 2 will halve the input.
+    pool_size: int or list/tuple of 2 ints,
+        Size of the max pooling windows.
+    strides: int, list/tuple of 2 ints, or None.
+        Factor by which to downscale. E.g. 2 will halve the input size.
         If None, it will default to `pool_size`.
-    padding: Integer or list/tuple of 2 Integers,
+    padding: int or list/tuple of 2 ints,
         If padding is non-zero, then the input is implicitly
-        zero-padded on both sides for padding number of points
-    layout: A string,
-        Can be 'NCHW', 'NHWC', etc.
+        zero-padded on both sides for padding number of points.
+    layout : str, default 'NCHW'
+        Dimension ordering of data and weight. Can be 'NCHW', 'NHWC', etc.
         'N', 'C', 'H', 'W' stands for batch, channel, height, and width
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
+    ceil_mode : bool, default False
+        When True, will use ceil instead of floor to compute the output shape.
 
 
     Input Shape:
         This depends on the `layout` parameter. Input is 4D array of shape
-        (batch_size, channel, height, width) if `layout` is `NCHW`.
+        (batch_size, channels, height, width) if `layout` is `NCHW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 4D array of shape
-        (batch_size, channel, out_height, out_width) if `layout` is `NCHW`.
-        out_height and out_width depends on other input parameters as well.
-        They are calculated as follows::
+        (batch_size, channels, out_height, out_width)  if `layout` is `NCHW`.
 
-            out_height = ceil((h+2*p-ps)/s+1)
-            out_width = ceil((w+2*p-ps)/s+1)
+        out_height and out_width are calculated as::
 
-        where,
+            out_height = floor((height+2*padding[0]-pool_size[0])/strides[0])+1
+            out_width = floor((width+2*padding[1]-pool_size[1])/strides[1])+1
 
-        h = height, w = width, p = padding, ps = pool_size, s = stride
+        When ceil_mode is True, ceil will be used instead of floor in this
+        equation.
     """
-    def __init__(self, pool_size=(2, 2), strides=None, padding=0, layout='NCHW', **kwargs):
+    def __init__(self, pool_size=(2, 2), strides=None, padding=0,
+                 ceil_mode=False, layout='NCHW', **kwargs):
         assert layout == 'NCHW', "Only supports NCHW layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)*2
         assert len(pool_size) == 2, "pool_size must be a number or a list of 2 ints"
         super(AvgPool2D, self).__init__(
-            pool_size, strides, padding, False, 'avg', **kwargs)
+            pool_size, strides, padding, ceil_mode, False, 'avg', **kwargs)
 
 
 class AvgPool3D(_Pooling):
@@ -867,97 +862,93 @@ class AvgPool3D(_Pooling):
 
     Parameters
     ----------
-    pool_size: Integer or list/tuple of 3 Integers,
-        size of the max pooling windows.
-    strides: Integer, list/tuple of 3 Integers, or None.
-        Factor by which to downscale.
-        E.g. 2 will halve the input.
+    pool_size: int or list/tuple of 3 ints,
+        Size of the max pooling windows.
+    strides: int, list/tuple of 3 ints, or None.
+        Factor by which to downscale. E.g. 2 will halve the input size.
         If None, it will default to `pool_size`.
-    padding: Integer or list/tuple of 3 Integers,
+    padding: int or list/tuple of 3 ints,
         If padding is non-zero, then the input is implicitly
-        zero-padded on both sides for padding number of points
-    layout: A string,
-        Can be 'NCDHW', 'NDHWC', etc.
+        zero-padded on both sides for padding number of points.
+    layout : str, default 'NCDHW'
+        Dimension ordering of data and weight. Can be 'NCDHW', 'NDHWC', etc.
         'N', 'C', 'H', 'W', 'D' stands for batch, channel, height, width and
         depth dimensions respectively. padding is applied on 'D', 'H' and 'W'
         dimension.
+    ceil_mode : bool, default False
+        When True, will use ceil instead of floor to compute the output shape.
 
 
     Input Shape:
         This depends on the `layout` parameter. Input is 5D array of shape
-        (batch_size, channel, depth, height, width) if `layout` is `NCDHW`.
+        (batch_size, channels, depth, height, width) if `layout` is `NCDHW`.
 
     Output Shape:
         This depends on the `layout` parameter. Output is 5D array of shape
-        (batch_size, channel, out_depth, out_height, out_width) if `layout` is `NCDHW`.
-        out_depth, out_height and out_width depends on other input parameters as well.
-        They are calculated as follows::
+        (batch_size, channels, out_depth, out_height, out_width) if `layout`
+        is `NCDHW`.
 
-            out_depth = ceil((d+2*p-ps)/s+1)
-            out_height = ceil((h+2*p-ps)/s+1)
-            out_width = ceil((w+2*p-ps)/s+1)
+        out_depth, out_height and out_width are calculated as ::
 
-        where,
+            out_depth = floor((depth+2*padding[0]-pool_size[0])/strides[0])+1
+            out_height = floor((height+2*padding[1]-pool_size[1])/strides[1])+1
+            out_width = floor((width+2*padding[2]-pool_size[2])/strides[2])+1
 
-        d = depth, h = height, w = width, p = padding, ps = pool_size, s = stride
+        When ceil_mode is True, ceil will be used instead of floor in this
+        equation.
     """
-    def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0, layout='NCDHW', **kwargs):
+    def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0,
+                 ceil_mode=False, layout='NCDHW', **kwargs):
         assert layout == 'NCDHW', "Only supports NCDHW layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)*3
         assert len(pool_size) == 3, "pool_size must be a number or a list of 3 ints"
         super(AvgPool3D, self).__init__(
-            pool_size, strides, padding, False, 'avg', **kwargs)
+            pool_size, strides, padding, ceil_mode, False, 'avg', **kwargs)
 
 
 class GlobalMaxPool1D(_Pooling):
-    """Global max pooling operation for temporal data.
-    """
+    """Global max pooling operation for temporal data."""
     def __init__(self, layout='NCW', **kwargs):
         assert layout == 'NCW', "Only supports NCW layout for now"
         super(GlobalMaxPool1D, self).__init__(
-            (1,), None, 0, True, 'max', **kwargs)
+            (1,), None, 0, True, True, 'max', **kwargs)
 
 
 class GlobalMaxPool2D(_Pooling):
-    """Global max pooling operation for spatial data.
-    """
+    """Global max pooling operation for spatial data."""
     def __init__(self, layout='NCHW', **kwargs):
         assert layout == 'NCHW', "Only supports NCW layout for now"
         super(GlobalMaxPool2D, self).__init__(
-            (1, 1), None, 0, True, 'max', **kwargs)
+            (1, 1), None, 0, True, True, 'max', **kwargs)
 
 class GlobalMaxPool3D(_Pooling):
-    """Global max pooling operation for 3D data.
-    """
+    """Global max pooling operation for 3D data."""
     def __init__(self, layout='NCDHW', **kwargs):
         assert layout == 'NCDHW', "Only supports NCW layout for now"
         super(GlobalMaxPool3D, self).__init__(
-            (1, 1, 1), None, 0, True, 'max', **kwargs)
+            (1, 1, 1), None, 0, True, True, 'max', **kwargs)
 
 
 class GlobalAvgPool1D(_Pooling):
-    """Global average pooling operation for temporal data.
-    """
+    """Global average pooling operation for temporal data."""
     def __init__(self, layout='NCW', **kwargs):
         assert layout == 'NCW', "Only supports NCW layout for now"
         super(GlobalAvgPool1D, self).__init__(
-            (1,), None, 0, True, 'avg', **kwargs)
+            (1,), None, 0, True, True, 'avg', **kwargs)
 
 
 class GlobalAvgPool2D(_Pooling):
-    """Global average pooling operation for spatial data.
-    """
+    """Global average pooling operation for spatial data."""
     def __init__(self, layout='NCHW', **kwargs):
         assert layout == 'NCHW', "Only supports NCW layout for now"
         super(GlobalAvgPool2D, self).__init__(
-            (1, 1), None, 0, True, 'avg', **kwargs)
+            (1, 1), None, 0, True, True, 'avg', **kwargs)
 
 
 class GlobalAvgPool3D(_Pooling):
-    """Global max pooling operation for 3D data.
-    """
+    """Global max pooling operation for 3D data."""
     def __init__(self, layout='NCDHW', **kwargs):
         assert layout == 'NCDHW', "Only supports NCW layout for now"
         super(GlobalAvgPool3D, self).__init__(
-            (1, 1, 1), None, 0, True, 'avg', **kwargs)
+            (1, 1, 1), None, 0, True, True, 'avg', **kwargs)
