@@ -5,8 +5,8 @@ import os
 
 import mxnet as mx
 import mxnet.ndarray as F
-from mxnet import foo
-from mxnet.foo import nn
+from mxnet import gluon
+from mxnet.gluon import nn
 from mxnet import autograd as ag
 from mxnet.test_utils import download
 from mxnet.image import CenterCropAug, ResizeAug
@@ -88,7 +88,7 @@ def _rearrange(raw, F, upscale_factor):
     return F.reshape(swapped, shape=(0, 0, -3, -3))
 
 
-class SuperResolutionNet(foo.Block):
+class SuperResolutionNet(gluon.Block):
     def __init__(self, upscale_factor):
         super(SuperResolutionNet, self).__init__()
         with self.name_scope():
@@ -114,8 +114,8 @@ def test(ctx):
     for batch in val_data:
         batches += 1
         metric.reset()
-        data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-        label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+        data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
+        label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
         outputs = []
         for x in data:
             outputs.append(net(x))
@@ -130,15 +130,15 @@ def train(epoch, ctx):
         ctx = [ctx]
     net.collect_params().initialize(mx.init.Orthogonal(), ctx=ctx)
     net.conv4.collect_params().initialize(mx.init.Orthogonal(scale=1), ctx=ctx)
-    trainer = foo.Trainer(net.collect_params(), 'adam', {'learning_rate': opt.lr})
+    trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': opt.lr})
     metric = mx.metric.MAE()
-    loss = foo.loss.L2Loss()
+    loss = gluon.loss.L2Loss()
 
     for i in range(epoch):
         train_data.reset()
         for batch in train_data:
-            data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-            label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+            data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
+            label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
             outputs = []
             with ag.record():
                 for x, y in zip(data, label):

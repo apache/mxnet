@@ -1,11 +1,11 @@
 import mxnet as mx
-from mxnet import foo
-from mxnet.foo import nn
+from mxnet import gluon
+from mxnet.gluon import nn
 import numpy as np
 
 
 def test_parameter():
-    p = foo.Parameter('weight', shape=(10, 10))
+    p = gluon.Parameter('weight', shape=(10, 10))
     p.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
     assert len(p.list_data()) == 2
     assert len(p.list_grad()) == 2
@@ -15,7 +15,7 @@ def test_parameter():
 
 
 def test_paramdict():
-    params = foo.ParameterDict('net_')
+    params = gluon.ParameterDict('net_')
     params.get('weight', shape=(10, 10))
     assert list(params.keys()) == ['net_weight']
     params.initialize(ctx=mx.cpu())
@@ -24,7 +24,7 @@ def test_paramdict():
 
 
 def test_parameter_sharing():
-    class Net(foo.Block):
+    class Net(gluon.Block):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
@@ -243,7 +243,7 @@ def test_defered_init():
 
 
 def check_split_data(x, num_slice, batch_axis, **kwargs):
-    res = foo.utils.split_data(x, num_slice, batch_axis, **kwargs)
+    res = gluon.utils.split_data(x, num_slice, batch_axis, **kwargs)
     assert len(res) == num_slice
     mx.test_utils.assert_almost_equal(mx.nd.concat(*res, dim=batch_axis).asnumpy(),
                                       x.asnumpy())

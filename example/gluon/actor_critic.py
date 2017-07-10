@@ -7,8 +7,8 @@ import numpy as np
 
 import mxnet as mx
 import mxnet.ndarray as F
-from mxnet import foo
-from mxnet.foo import nn
+from mxnet import gluon
+from mxnet.gluon import nn
 from mxnet import autograd
 
 
@@ -28,7 +28,7 @@ env = gym.make('CartPole-v0')
 env.seed(args.seed)
 
 
-class Policy(foo.Block):
+class Policy(gluon.Block):
     def __init__(self, **kwargs):
         super(Policy, self).__init__(**kwargs)
         with self.name_scope():
@@ -44,8 +44,8 @@ class Policy(foo.Block):
 
 net = Policy()
 net.collect_params().initialize(mx.init.Uniform(0.02))
-trainer = foo.Trainer(net.collect_params(), 'adam', {'learning_rate': 3e-2})
-loss = foo.loss.L1Loss()
+trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': 3e-2})
+loss = gluon.loss.L1Loss()
 
 running_reward = 10
 for epoch in count(1):

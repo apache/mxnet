@@ -28,7 +28,7 @@ imported by running:
    ndarray
    symbol
    module
-   foo
+   gluon
    rnn
    kvstore
    io
