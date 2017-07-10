@@ -242,8 +242,8 @@ class DetRandomCropAug(DetAugmenter):
         out[:, (2, 4)] -= ymin
         out[:, (1, 3)] /= w
         out[:, (2, 4)] /= h
-        out = np.maximum(0, out)
-        out = np.minimum(1, out)
+        out[:, 1:5] = np.maximum(0, out[:, 1:5])
+        out[:, 1:5] = np.minimum(1, out[:, 1:5])
         coverage = self._calculate_areas(out[:, 1:]) * w * h / self._calculate_areas(label[:, 1:])
         valid = np.logical_and(out[:, 3] > out[:, 1], out[:, 4] > out[:, 2])
         valid = np.logical_and(valid, coverage > self.min_eject_coverage)
