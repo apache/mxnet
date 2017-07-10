@@ -94,7 +94,7 @@ class Block(object):
     `Block`s can be nested recursively in a tree structure. You can create and
     assign child `Block`s as regular attributes::
 
-        from mxnet.foo import Block, nn
+        from mxnet.gluon import Block, nn
         from mxnet import ndarray as F
 
         class Model(Block):

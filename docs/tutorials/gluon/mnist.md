@@ -8,7 +8,7 @@ MNIST is a widely used dataset for the hand-written digit classification task. I
 
 **Figure 1:** Sample images from the MNIST dataset.
 
-This tutorial uses MXNet's new high-level interface, foo package to implement MLP using
+This tutorial uses MXNet's new high-level interface, gluon package to implement MLP using
 imperative fashion.
 
 This is based on the Mnist tutorial with symbolic approach. You can find it [here](http://mxnet.io/tutorials/python/mnist.html).
@@ -57,8 +57,8 @@ Now, let's import required nn modules
 ```python
 from __future__ import print_function
 import mxnet as mx
-from mxnet import foo
-from mxnet.foo import nn
+from mxnet import gluon
+from mxnet.gluon import nn
 from mxnet import autograd as ag
 ```
 
@@ -73,7 +73,7 @@ In an MLP, the outputs of most FC layers are fed into an activation function, wh
 The following code declares three fully connected layers with 128, 64 and 10 neurons each.
 The last fully connected layer often has its hidden size equal to the number of output classes in the dataset. Furthermore, these FC layers uses ReLU activation for performing an element-wise ReLU transformation on the FC layer output.
 
-To do this, we will use [Sequential layer](http://mxnet.io/api/python/foo.html#mxnet.foo.nn.Sequential) type. This is simply a linear stack of neural network layers. `nn.Dense` layers are nothing but the fully connected layers we discussed above.
+To do this, we will use [Sequential layer](http://mxnet.io/api/python/gluon.html#mxnet.gluon.nn.Sequential) type. This is simply a linear stack of neural network layers. `nn.Dense` layers are nothing but the fully connected layers we discussed above.
 
 ```python
 # define network
@@ -91,14 +91,14 @@ to train the MLP network we defined above.
 
 For our training, we will make use of the stochastic gradient descent (SGD) optimizer. In particular, we'll be using mini-batch SGD. Standard SGD processes train data one example at a time. In practice, this is very slow and one can speed up the process by processing examples in small batches. In this case, our batch size will be 100, which is a reasonable choice. Another parameter we select here is the learning rate, which controls the step size the optimizer takes in search of a solution. We'll pick a learning rate of 0.1, again a reasonable choice. Settings such as batch size and learning rate are what are usually referred to as hyper-parameters. What values we give them can have a great impact on training performance.
 
-We will use [Trainer](http://mxnet.io/api/python/foo.html#trainer) class to apply the
+We will use [Trainer](http://mxnet.io/api/python/gluon.html#trainer) class to apply the
 [SGD optimizer](http://mxnet.io/api/python/optimization.html#mxnet.optimizer.SGD) on the
 initialized parameters.
 
 ```python
 ctx = [mx.cpu(0), mx.cpu(1)]
 net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-trainer = foo.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
+trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
 ```
 
 #### Train the network
@@ -115,8 +115,8 @@ We will take following steps for training:
 - Update evaluation metric and parameters with gradient descent.
 
 Loss function takes (output, label) pairs and computes a scalar loss for each sample in the mini-batch. The scalars measure how far each output is from the label.
-There are many predefined loss functions in foo.loss. Here we use
-[softmax_cross_entropy_loss](http://mxnet.io/api/python/foo.html#mxnet.foo.loss.softmax_cross_entropy_loss) for digit classification. We will compute loss and do backward propagation inside
+There are many predefined loss functions in gluon.loss. Here we use
+[softmax_cross_entropy_loss](http://mxnet.io/api/python/gluon.html#mxnet.gluon.loss.softmax_cross_entropy_loss) for digit classification. We will compute loss and do backward propagation inside
 training scope which is defined by `autograd.record()`.
 
 ```python
@@ -131,17 +131,17 @@ for i in range(epoch):
     for batch in train_data:
         # Splits train data into multiple slices along batch_axis
         # and copy each slice into a context.
-        data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
+        data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
         # Splits train labels into multiple slices along batch_axis
         # and copy each slice into a context.
-        label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+        label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
         outputs = []
         # Inside training scope
         with ag.record():
             for x, y in zip(data, label):
                 z = net(x)
                 # Computes softmax cross entropy loss.
-                loss = foo.loss.softmax_cross_entropy_loss(z, y)
+                loss = gluon.loss.softmax_cross_entropy_loss(z, y)
                 # Backpropogate the error for one iteration.
                 ag.backward([loss])
                 outputs.append(z)
@@ -170,10 +170,10 @@ val_data.reset()
 for batch in val_data:
     # Splits validation data into multiple slices along batch_axis
     # and copy each slice into a context.
-    data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
+    data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
     # Splits validation label into multiple slices along batch_axis
     # and copy each slice into a context.
-    label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+    label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
     outputs = []
     for x in data:
         outputs.append(net(x))
@@ -193,13 +193,13 @@ A single convolution layer consists of one or more filters that each play the ro
 
 The following source code defines a convolutional neural network architecture called LeNet. LeNet is a popular network known to work well on digit classification tasks. We will use a slightly different version from the original LeNet implementation, replacing the sigmoid activations with tanh activations for the neurons.
 
-A typical way to write your network is creating a new class inherited from `foo.Block`
+A typical way to write your network is creating a new class inherited from `gluon.Block`
 class. We can define the network by composing and inheriting Block class as follows:
 
 ```python
 import mxnet.ndarray as F
 
-class Net(foo.Block):
+class Net(gluon.Block):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
         with self.name_scope():
@@ -248,7 +248,7 @@ We will initialize the network parameters as follows:
 ```python
 ctx = [mx.cpu(0), mx.cpu(1)]
 net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-trainer = foo.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
+trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
 ```
 
 #### Training
@@ -264,17 +264,17 @@ for i in range(epoch):
     for batch in train_data:
         # Splits train data into multiple slices along batch_axis
         # and copy each slice into a context.
-        data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
+        data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
         # Splits train labels into multiple slices along batch_axis
         # and copy each slice into a context.
-        label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+        label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
         outputs = []
         # Inside training scope
         with ag.record():
             for x, y in zip(data, label):
                 z = net(x)
                 # Computes softmax cross entropy loss.
-                loss = foo.loss.softmax_cross_entropy_loss(z, y)
+                loss = gluon.loss.softmax_cross_entropy_loss(z, y)
                 # Backpropogate the error for one iteration.
                 ag.backward([loss])
                 outputs.append(z)
@@ -303,10 +303,10 @@ val_data.reset()
 for batch in val_data:
     # Splits validation data into multiple slices along batch_axis
     # and copy each slice into a context.
-    data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
+    data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
     # Splits validation label into multiple slices along batch_axis
     # and copy each slice into a context.
-    label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+    label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
     outputs = []
     for x in data:
         outputs.append(net(x))
@@ -320,4 +320,4 @@ If all went well, we should see a higher accuracy metric for predictions made us
 
 ## Summary
 
-In this tutorial, we have learned how to use MXNet to solve a standard computer vision problem: classifying images of hand written digits. You have seen how to quickly and easily build, train and evaluate models such as MLP and CNN with MXNet Foo package.
+In this tutorial, we have learned how to use MXNet to solve a standard computer vision problem: classifying images of hand written digits. You have seen how to quickly and easily build, train and evaluate models such as MLP and CNN with MXNet Gluon package.

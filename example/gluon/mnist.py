@@ -7,15 +7,15 @@ logging.basicConfig(level=logging.DEBUG)
 
 import numpy as np
 import mxnet as mx
-from mxnet import foo, autograd
-from mxnet.foo import nn
+from mxnet import gluon, autograd
+from mxnet.gluon import nn
 
 from data import mnist_iterator
 
 
 # Parse CLI arguments
 
-parser = argparse.ArgumentParser(description='MXNet Foo MNIST Example')
+parser = argparse.ArgumentParser(description='MXNet Gluon MNIST Example')
 parser.add_argument('--batch-size', type=int, default=100,
                     help='batch size for training and testing (default: 100)')
 parser.add_argument('--epochs', type=int, default=10,
@@ -61,10 +61,10 @@ def train(epochs, ctx):
     # Collect all parameters from net and its children, then initialize them.
     net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
     # Trainer is for updating parameters with gradient.
-    trainer = foo.Trainer(net.collect_params(), 'sgd',
+    trainer = gluon.Trainer(net.collect_params(), 'sgd',
                           {'learning_rate': opt.lr, 'momentum': opt.momentum})
     metric = mx.metric.Accuracy()
-    loss = foo.loss.SoftmaxCrossEntropyLoss()
+    loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
     for epoch in range(epochs):
         # reset data iterator and metric at begining of epoch.
