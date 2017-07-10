@@ -141,7 +141,8 @@ class BucketingModule(BaseModule):
         self._params_dirty = False
         return params
 
-    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True):
+    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True,
+                   allow_extra=False):
         """Assigns parameters and aux state values.
 
         Parameters
@@ -155,6 +156,10 @@ class BucketingModule(BaseModule):
             called to fill those missing params.
         force_init : bool
             If true, will force re-initialize even if already initialized.
+        allow_extra : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
 
         Examples
         --------
@@ -173,14 +178,14 @@ class BucketingModule(BaseModule):
             return
 
         self._curr_module.set_params(arg_params, aux_params, allow_missing=allow_missing,
-                                     force_init=force_init)
+                                     force_init=force_init, allow_extra=allow_extra)
 
         # because we didn't update self._arg_params, they are dirty now.
         self._params_dirty = True
         self.params_initialized = True
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
-                    allow_missing=False, force_init=False):
+                    allow_missing=False, force_init=False, allow_extra=False):
         """Initializes parameters.
 
         Parameters
@@ -197,13 +202,17 @@ class BucketingModule(BaseModule):
             In this case, missing values will be filled with `initializer`.
         force_init : bool
             Defaults to ``False``.
+        allow_extra : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
         """
         if self.params_initialized and not force_init:
             return
         assert self.binded, 'call bind before initializing the parameters'
         self._curr_module.init_params(initializer=initializer, arg_params=arg_params,
                                       aux_params=aux_params, allow_missing=allow_missing,
-                                      force_init=force_init)
+                                      force_init=force_init, allow_extra=allow_extra)
         self._params_dirty = False
         self.params_initialized = True
 

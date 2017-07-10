@@ -124,22 +124,6 @@ int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
   API_END_HANDLE_ERROR(delete s;);
 }
 
-int MXCachedCreateSymbol(CachedOpHandle handle,
-                         const char* name,
-                         mx_uint num_args,
-                         SymbolHandle* args,
-                         SymbolHandle* out) {
-  nnvm::Symbol *s = new nnvm::Symbol();
-  const nnvm::NodeAttrs *attrs = static_cast<nnvm::NodeAttrs*>(handle);
-  API_BEGIN();
-  *s = nnvm::Symbol::CreateFunctor(*attrs);
-  nnvm::array_view<const nnvm::Symbol*> parg(
-      (nnvm::Symbol**)args, (nnvm::Symbol**)args + num_args); // NOLINT(*)
-  s->Compose(parg, std::unordered_map<std::string, const nnvm::Symbol*>(), name);
-  *out = s;
-  API_END_HANDLE_ERROR(delete s;)
-}
-
 int MXSymbolCreateVariable(const char *name, SymbolHandle *out) {
   return NNSymbolCreateVariable(name, out);
 }

@@ -10,10 +10,9 @@ import numpy as np
 
 from ..base import _LIB
 from ..base import c_array, py_str, c_str, mx_uint, _Null
-from ..base import NDArrayHandle, OpHandle
+from ..base import NDArrayHandle, OpHandle, CachedOpHandle
 from ..base import check_call
 from ..ndarray_doc import _build_doc
-from .common import CachedOp
 
 
 class NDArrayBase(object):
@@ -81,31 +80,48 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
                 for i in range(num_output.value)]
 
 
-def invoke(cached_op, args, out=None, name=None):  # pylint: disable=unused-argument
-    """ctypes implementation of imperative invoke wrapper"""
-    if out is not None:
-        original_output = out
-        if isinstance(out, NDArrayBase):
-            out = (out,)
-        num_output = ctypes.c_int(len(out))
-        output_vars = c_array(NDArrayHandle, [i.handle for i in out])
-        output_vars = ctypes.cast(output_vars, ctypes.POINTER(NDArrayHandle))
-    else:
-        original_output = None
-        output_vars = ctypes.POINTER(NDArrayHandle)()
-        num_output = ctypes.c_int(0)
+class CachedOp(object):
+    """Cached operator handle."""
+    __slots__ = ["handle"]
+    def __init__(self, sym):
+        self.handle = CachedOpHandle()
+        check_call(_LIB.MXCreateCachedOp(
+            sym.handle,
+            ctypes.byref(self.handle)))
 
-    check_call(_LIB.MXCachedInvoke(
-        cached_op.handle,
-        ctypes.c_int(len(args)),
-        c_array(NDArrayHandle, [arr.handle for arr in args]),
-        ctypes.byref(num_output),
-        ctypes.byref(output_vars)))
+    def __del__(self):
+        check_call(_LIB.MXFreeCachedOp(self.handle))
 
-    if original_output is not None:
-        return original_output
-    if num_output.value == 1:
-        return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle))
-    else:
-        return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle))
-                for i in range(num_output.value)]
+    def __call__(self, *args, **kwargs):
+        """ctypes implementation of imperative invoke wrapper"""
+        out = kwargs.pop('out', None)
+        if out is not None:
+            original_output = out
+            if isinstance(out, NDArrayBase):
+                out = (out,)
+            num_output = ctypes.c_int(len(out))
+            output_vars = c_array(NDArrayHandle, [i.handle for i in out])
+            output_vars = ctypes.cast(output_vars, ctypes.POINTER(NDArrayHandle))
+        else:
+            original_output = None
+            output_vars = ctypes.POINTER(NDArrayHandle)()
+            num_output = ctypes.c_int(0)
+        if kwargs:
+            raise TypeError(
+                "CachedOp.__call__ got unexpected keyword argument(s): " + \
+                ', '.join(kwargs.keys()))
+
+        check_call(_LIB.MXInvokeCachedOp(
+            self.handle,
+            ctypes.c_int(len(args)),
+            c_array(NDArrayHandle, [arr.handle for arr in args]),
+            ctypes.byref(num_output),
+            ctypes.byref(output_vars)))
+
+        if original_output is not None:
+            return original_output
+        if num_output.value == 1:
+            return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle))
+        else:
+            return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle))
+                    for i in range(num_output.value)]

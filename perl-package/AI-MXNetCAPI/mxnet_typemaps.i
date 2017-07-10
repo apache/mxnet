@@ -15,13 +15,13 @@
     {
         $1 = (char **) safemalloc((len)*sizeof(char *));
         for (i = 0; i < len; i++) {
-            tv = av_fetch(tempav, i, 0);    
+            tv = av_fetch(tempav, i, 0);
             $1[i] = (char *) SvPV(*tv,len2);
         }
     }
     else
     {
-       $1 = NULL;     
+       $1 = NULL;
     }
 }
 %typemap(freearg) (const char** in), (char** in)  {
@@ -47,12 +47,17 @@
     {
         $1 = (char **)safemalloc(hash_len*sizeof(char *));
         $2 = (char **)safemalloc(hash_len*sizeof(char *));
-        while ((val = hv_iternextsv(temphv, &key, &len))) 
+        while ((val = hv_iternextsv(temphv, &key, &len)))
         {
             $1[i] = key;
             $2[i] = SvPV(val, len2);
             ++i;
         }
+    }
+    else
+    {
+       $1 = NULL;
+       $2 = NULL;
     }
 }
 %typemap(freearg) (const char **keys, const char **vals), (char **keys, char **vals) 
@@ -197,6 +202,10 @@
             $1[i] = (mx_uint)SvIV(*tv);
         }
     }
+    else
+    {
+       $1 = NULL;
+    }
 }
 
 %typemap(freearg) (const mx_uint *in), (mx_uint *in) {
@@ -215,11 +224,19 @@
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
     av_len = av_top_index(tempav) + 1;
-    $1 = (int *)safemalloc(av_len*sizeof(int));
-    for (i = 0; i < av_len; i++) {
-        tv = av_fetch(tempav, i, 0);    
-        $1[i] = (int)SvIV(*tv);
+    if(av_len)
+    {
+        $1 = (int *)safemalloc(av_len*sizeof(int));
+        for (i = 0; i < av_len; i++) {
+            tv = av_fetch(tempav, i, 0);    
+            $1[i] = (int)SvIV(*tv);
+        }
     }
+    else
+    {
+       $1 = NULL;
+    }
+
 }
 
 %typemap(freearg) (const int *in), (int *in) {
@@ -250,6 +267,10 @@
             }
         }
     }
+    else
+    {
+       $1 = NULL;
+    }
 }
 %typemap(freearg) (NDArrayHandle* in), (SymbolHandle* in)  {
     Safefree($1);
@@ -270,15 +291,20 @@
     {
         $1 = (mx_float *)safemalloc(len*sizeof(mx_float));
         for (i = 0; i < len; i++) {
-            tv = av_fetch(tempav, i, 0);    
+            tv = av_fetch(tempav, i, 0);
             $1[i] = (mx_float)SvNV(*tv);
         }
+    }
+    else
+    {
+       $1 = NULL;
     }
 }
 
 %typemap(freearg) (mx_float *in) {
     Safefree($1);
 }
+
 %typemap(in,numinputs=0) (NDArrayHandle *out) (NDArrayHandle temp),
                          (FunctionHandle* out) (FunctionHandle temp), 
                          (SymbolHandle *out) (SymbolHandle temp),
@@ -286,16 +312,16 @@
                          (DataIterHandle *out) (ExecutorHandle temp),
                          (KVStoreHandle *out) (KVStoreHandle temp),
                          (RecordIOHandle *out) (RecordIOHandle temp),
-                         (RtcHandle *out) (RtcHandle temp) 
-           
+                         (RtcHandle *out) (RtcHandle temp),
+                         (CachedOpHandle *out) (CachedOpHandle temp)
 {
     $1 = &temp;
 }
-%typemap(argout) (NDArrayHandle *out), (FunctionHandle* out), (SymbolHandle *out), (ExecutorHandle *out), (DataIterHandle *out), 
-                 (KVStoreHandle *out), (RecordIOHandle *out), (RtcHandle *out) (RtcHandle temp)
+%typemap(argout) (NDArrayHandle *out), (FunctionHandle* out), (SymbolHandle *out), (ExecutorHandle *out), (DataIterHandle *out),
+                 (KVStoreHandle *out), (RecordIOHandle *out), (RtcHandle *out) (RtcHandle temp), (CachedOpHandle *out) (CachedOpHandle temp)
 {
     if(!result)
-    {    
+    {
         $result =  SWIG_NewPointerObj(SWIG_as_voidptr(*$1), $*1_descriptor, 0); argvi++;
     }
 }
@@ -520,7 +546,7 @@
                 SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "NDArray""'"); 
             }
         }
-    } 
+    }
     temp = av_len;
     $1 = &temp;
     $2 = &temp_array;
@@ -660,7 +686,7 @@
             for (i = 0; i < *$3 ; i++) {
                 av_push(names, newSVpv((*$4)[i],0));
                 av_push(types, newSVpv((*$5)[i],0));
-                av_push(descs, newSVpv((*$6)[i],0));                    
+                av_push(descs, newSVpv((*$6)[i],0));
             }
         }
         av_push(container, newRV_noinc((SV*)names));
@@ -695,9 +721,10 @@
                          (mx_uint *aux_shape_size, const mx_uint **aux_shape_ndim, const mx_uint ***aux_shape_data) 
                          (mx_uint temp1, mx_uint *temp2, mx_uint **temp3)
 {
-    $1 = &temp1; 
+    $1 = &temp1;
     $2 = &temp2;
-    $3 = &temp3; 
+    $3 = &temp3;
+    *$1 = 0;
 }
 
 %typemap(argout) (mx_uint *in_shape_size, const mx_uint **in_shape_ndim, const mx_uint ***in_shape_data),
@@ -733,13 +760,14 @@
                          (mx_uint *aux_type_size, const int **aux_type_data) 
                          (mx_uint temp1, int *temp2)
 {
-    $1 = &temp1; 
+    $1 = &temp1;
     $2 = &temp2;
+    *$1 = 0;
 }
 
 %typemap(argout)  (mx_uint *in_type_size,  const int **in_type_data),
-                  (mx_uint *out_type_size, const int **out_type_data), 
-                  (mx_uint *aux_type_size, const int **aux_type_data) 
+                  (mx_uint *out_type_size, const int **out_type_data),
+                  (mx_uint *aux_type_size, const int **aux_type_data)
 
 {
     if(!result && *arg11)
@@ -756,6 +784,155 @@
         argvi++;
     }
 }
+
+%typemap(in,numinputs=0) (mx_uint* num_in_args,
+                          NDArrayHandle** in_args,
+                          NDArrayHandle** arg_grads)
+                         (mx_uint temp1,
+                         NDArrayHandle* temp2,
+                         NDArrayHandle* temp3)
+{
+    $1 = &temp1;
+    $2 = &temp2;
+    $3 = &temp3;
+    *$1 = 0;
+}
+
+%typemap(argout) (mx_uint* num_in_args,
+                  NDArrayHandle** in_args,
+                  NDArrayHandle** arg_grads)
+{
+    if(!result)
+    {
+        AV *container1 = newAV();
+        AV *container2 = newAV();
+        for (int i = 0; i < *$1 ; i++)
+        {
+            av_push(container1, SvREFCNT_inc(SWIG_NewPointerObj(SWIG_as_voidptr((*$2)[i]), SWIGTYPE_p_MXNDArray, 0)));
+            av_push(container2, (*$3)[i] ? SvREFCNT_inc(SWIG_NewPointerObj(SWIG_as_voidptr((*$3)[i]), SWIGTYPE_p_MXNDArray, 0)) : newSV(0));
+        }
+        $result = newRV_noinc((SV*)container1);
+        sv_2mortal($result);
+        argvi++;
+        $result = newRV_noinc((SV*)container2);
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
+%typemap(in,numinputs=0) (mx_uint* num_aux_states,
+                          NDArrayHandle** aux_states)
+                         (mx_uint temp1,
+                         NDArrayHandle* temp2)
+{
+    $1 = &temp1;
+    $2 = &temp2;
+    *$1 = 0;
+}
+
+%typemap(argout) (mx_uint* num_aux_states,
+                  NDArrayHandle** aux_states)
+{
+    if(!result)
+    {
+        AV *container  = newAV();
+        for (int i = 0; i < *$1 ; i++)
+        {
+            av_push(container, SvREFCNT_inc(SWIG_NewPointerObj(SWIG_as_voidptr((*$2)[i]), SWIGTYPE_p_MXNDArray, 0)));
+        }
+        $result = newRV_noinc((SV*)container);
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
+%typemap(in) (int* shared_buffer_len,
+              const char** shared_buffer_name_list,
+              NDArrayHandle* shared_buffer_handle_list,
+              const char*** updated_shared_buffer_name_list,
+              NDArrayHandle** updated_shared_buffer_handle_list)
+              (int temp1,
+               char* temp2,
+               NDArrayHandle temp3,
+               char** temp4,
+               NDArrayHandle* temp5)
+{
+    HV *temphv;
+    char *key;
+    SV *val;
+    I32 len;
+    int res;
+    int i = 0;
+    int hash_len;
+    $1 = &temp1;
+    $2 = &temp2;
+    $3 = &temp3;
+    $4 = &temp4;
+    $5 = &temp5;
+    if (!SvROK($input))
+    {
+        *$1 = -1;
+        $2 = NULL;
+        $3 = NULL;
+    }
+    else
+    {
+        if (SvTYPE(SvRV($input)) != SVt_PVHV)
+            croak("Argument $argnum is not a hash.");
+        temphv = (HV*)SvRV($input);
+        *$1 = hv_iterinit(temphv);
+        if(*$1)
+        {
+            $2 = (char**)safemalloc((*$1)*sizeof(char*));
+            $3 = (void**)safemalloc((*$1)*sizeof(void*));
+            while ((val = hv_iternextsv(temphv, &key, &len)))
+            {
+                $2[i] = key;
+                res = SWIG_ConvertPtr(val,SWIG_as_voidptrptr(&($3[i])), 0, 0);
+                if (!SWIG_IsOK(res)) {
+                    SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "NDArray""'"); 
+                }
+                i++;
+            }
+        }
+        else
+        {
+            $2 = NULL;
+            $3 = NULL;
+        }
+    }
+}
+
+%typemap(freearg) (int* shared_buffer_len,
+                   const char** shared_buffer_name_list,
+                   NDArrayHandle* shared_buffer_handle_list,
+                   const char*** updated_shared_buffer_name_list,
+                   NDArrayHandle** updated_shared_buffer_handle_list)
+{
+    Safefree($2);
+    Safefree($3);
+}
+
+%typemap(argout)  (int* shared_buffer_len,
+                   const char** shared_buffer_name_list,
+                   NDArrayHandle* shared_buffer_handle_list,
+                   const char*** updated_shared_buffer_name_list,
+                   NDArrayHandle** updated_shared_buffer_handle_list)
+
+{
+    if(!result)
+    {
+        HV* hash = newHV();
+        for(int j = 0; j < *$1; j++)
+        {
+            hv_store(hash, (*$4)[j], strlen((*$4)[j]), SvREFCNT_inc(SWIG_NewPointerObj(SWIG_as_voidptr((*$5)[j]), SWIGTYPE_p_MXNDArray, 0)), 0);
+        }
+        $result = newRV_noinc((SV*)hash);
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
 
 %typemap(in) (uint32_t x)
 {

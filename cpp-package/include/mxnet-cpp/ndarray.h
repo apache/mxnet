@@ -145,10 +145,12 @@ class NDArray {
   NDArray operator-(mx_float scalar);
   NDArray operator*(mx_float scalar);
   NDArray operator/(mx_float scalar);
+  NDArray operator%(mx_float scalar);
   NDArray operator+(const NDArray &);
   NDArray operator-(const NDArray &);
   NDArray operator*(const NDArray &);
   NDArray operator/(const NDArray &);
+  NDArray operator%(const NDArray &);
   /*!
   * \brief set all the elements in ndarray to be scalar
   * \param scalar the scalar to set
@@ -184,6 +186,13 @@ class NDArray {
   */
   NDArray &operator/=(mx_float scalar);
   /*!
+  * \brief elementwise modulo from current ndarray
+  *  this mutate the current NDArray
+  * \param scalar the data to subtract
+  * \return reference of self
+  */
+  NDArray &operator%=(mx_float scalar);
+  /*!
   * \brief elementwise add to current space
   *  this mutate the current NDArray
   * \param src the data to add
@@ -211,6 +220,13 @@ class NDArray {
   * \return reference of self
   */
   NDArray &operator/=(const NDArray &src);
+  /*!
+  * \brief elementwise modulo from current ndarray
+  *  this mutate the current NDArray
+  * \param src the data to subtract
+  * \return reference of self
+  */
+  NDArray &operator%=(const NDArray &src);
   NDArray ArgmaxChannel();
   /*!
   * \brief Do a synchronize copy from a continugous CPU memory region.

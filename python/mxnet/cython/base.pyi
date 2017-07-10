@@ -99,75 +99,11 @@ cdef extern from "mxnet/c_api.h":
                            const char **param_keys,
                            const char **param_vals);
     int MXNDArrayFree(NDArrayHandle handle);
-    int MXCachedCreateOp(OpHandle creator,
-                         int num_inputs,
-                         int num_params,
-                         const char **param_keys,
-                         const char **param_vals,
+    int MXCreateCachedOp(SymbolHandle handle,
                          CachedOpHandle *out);
-    int MXCachedFree(CachedOpHandle handle);
-    int MXCachedInvoke(CachedOpHandle handle,
+    int MXFreeCachedOp(CachedOpHandle handle);
+    int MXInvokeCachedOp(CachedOpHandle handle,
                        int num_inputs,
                        NDArrayHandle *inputs,
                        int *num_outputs,
                        NDArrayHandle **outputs);
-    int MXCachedCreateSymbol(CachedOpHandle handle,
-                             const char* name,
-                             unsigned num_args,
-                             SymbolHandle* args,
-                             SymbolHandle* out);
-
-
-cdef class CachedOp:
-    """Cached operator handle."""
-    cdef CachedOpHandle chandle
-    cdef string cop
-
-    cdef _set_handle(self, handle):
-        cdef unsigned long long ptr
-        if handle is None:
-            self.chandle = NULL
-        else:
-            ptr = handle.value
-            self.chandle = <SymbolHandle>(ptr)
-
-    property handle:
-        def __get__(self):
-            if self.chandle == NULL:
-                return None
-            else:
-                return _ctypes.cast(<unsigned long long>self.chandle, _ctypes.c_void_p)
-        def __set__(self, value):
-            self._set_handle(value)
-
-    property op:
-        def __get__(self):
-            return py_str(self.cop.c_str())
-        def __set__(self, value):
-            self.cop = c_str(value)
-
-    def __init__(self, op, num_input, **kwargs):
-        cdef OpHandle op_handle
-        cdef vector[string] ckeys
-        cdef vector[string] cvals
-
-        self.op = op
-        CALL(NNGetOpHandle(self.cop.c_str(), &op_handle))
-
-        for k, v in kwargs.items():
-            ckeys.push_back(c_str(k))
-            cvals.push_back(c_str(str(v)))
-
-        cdef vector[const char*] param_keys = SVec2Ptr(ckeys)
-        cdef vector[const char*] param_vals = SVec2Ptr(cvals)
-
-        CALL(MXCachedCreateOp(
-            op_handle,
-            <int>num_input,
-            <int>len(kwargs),
-            CBeginPtr(param_keys),
-            CBeginPtr(param_vals),
-            &self.chandle))
-
-    def __del__(self):
-        CALL(MXCachedFree(self.chandle))

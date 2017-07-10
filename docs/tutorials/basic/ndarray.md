@@ -66,7 +66,7 @@ b = mx.nd.array([[1,2,3], [2,3,4]])
 {'a.shape':a.shape, 'b.shape':b.shape}
 ```
 
-* We can also create an MXNet NDArray from an `numpy.ndarray` object:
+* We can also create an MXNet NDArray from a `numpy.ndarray` object:
 
 ```python
 import numpy as np
@@ -370,7 +370,7 @@ c
 The `load` and `save` methods are preferable to pickle in two respects
 
 1. When using these methods, you can save data from within the Python interface
-   and then use it later from another lanuage's binding. For example, if we save
+   and then use it later from another language's binding. For example, if we save
    the data in Python:
 
 ```python

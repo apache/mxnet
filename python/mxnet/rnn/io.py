@@ -7,7 +7,7 @@ import bisect
 import random
 import numpy as np
 
-from ..io import DataIter, DataBatch
+from ..io import DataIter, DataBatch, DataDesc
 from .. import ndarray
 
 def encode_sentences(sentences, vocab=None, invalid_label=-1, invalid_key='\n', start_label=0):
@@ -85,7 +85,7 @@ class BucketSentenceIter(DataIter):
     """
     def __init__(self, sentences, batch_size, buckets=None, invalid_label=-1,
                  data_name='data', label_name='softmax_label', dtype='float32',
-                 layout='NTC'):
+                 layout='NT'):
         super(BucketSentenceIter, self).__init__()
         if not buckets:
             buckets = [i for i, j in enumerate(np.bincount([len(s) for s in sentences]))
@@ -116,14 +116,23 @@ class BucketSentenceIter(DataIter):
         self.nddata = []
         self.ndlabel = []
         self.major_axis = layout.find('N')
+        self.layout = layout
         self.default_bucket_key = max(buckets)
 
         if self.major_axis == 0:
-            self.provide_data = [(data_name, (batch_size, self.default_bucket_key))]
-            self.provide_label = [(label_name, (batch_size, self.default_bucket_key))]
+            self.provide_data = [DataDesc(
+                name=self.data_name, shape=(batch_size, self.default_bucket_key),
+                layout=self.layout)]
+            self.provide_label = [DataDesc(
+                name=self.label_name, shape=(batch_size, self.default_bucket_key),
+                layout=self.layout)]
         elif self.major_axis == 1:
-            self.provide_data = [(data_name, (self.default_bucket_key, batch_size))]
-            self.provide_label = [(label_name, (self.default_bucket_key, batch_size))]
+            self.provide_data = [DataDesc(
+                name=self.data_name, shape=(self.default_bucket_key, batch_size),
+                layout=self.layout)]
+            self.provide_label = [DataDesc(
+                name=self.label_name, shape=(self.default_bucket_key, batch_size),
+                layout=self.layout)]
         else:
             raise ValueError("Invalid layout %s: Must by NT (batch major) or TN (time major)")
 
@@ -166,5 +175,9 @@ class BucketSentenceIter(DataIter):
 
         return DataBatch([data], [label], pad=0,
                          bucket_key=self.buckets[i],
-                         provide_data=[(self.data_name, data.shape)],
-                         provide_label=[(self.label_name, label.shape)])
+                         provide_data=[DataDesc(
+                             name=self.data_name, shape=data.shape,
+                             layout=self.layout)],
+                         provide_label=[DataDesc(
+                             name=self.label_name, shape=label.shape,
+                             layout=self.layout)])

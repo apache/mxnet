@@ -9,7 +9,7 @@ use Exporter;
 use base qw(Exporter);
 @AI::MXNet::TestUtils::EXPORT_OK = qw(same reldiff almost_equal GetMNIST_ubyte
                                       GetCifar10 pdl_maximum pdl_minimum mlp2 conv
-                                      check_consistency zip assert enumerate);
+                                      check_consistency zip assert enumerate same_array dies_like);
 use constant default_numerical_threshold => 1e-6;
 =head1 NAME
 
@@ -350,6 +350,53 @@ sub assert
     local($Carp::CarpLevel) = 1;
     Carp::confess($error_str//'AssertionError')
         unless $input;
+}
+
+=head2 same_array
+
+    Check whether two NDArrays sharing the same memory block
+
+    Parameters
+    ----------
+
+    array1 : NDArray
+        First NDArray to be checked
+    array2 : NDArray
+        Second NDArray to be checked
+
+    Returns
+    -------
+    bool
+        Whether two NDArrays share the same memory
+=cut
+
+func same_array(
+    AI::MXNet::NDArray $array1,
+    AI::MXNet::NDArray $array2
+)
+{
+    $array1 += 1;
+    if(not same($array1->aspdl, $array2->aspdl))
+    {
+        $array1 -= 1;
+        return 0
+    }
+    $array1 -= 1;
+    return same($array1->aspdl, $array2->aspdl);
+}
+
+func dies_like($code, $regexp)
+{
+    eval { $code->() };
+    if($@ =~ $regexp)
+    {
+        return 1;
+    }
+    else
+    {
+        warn $@;
+        return 0;
+    }
 }
 
 1;

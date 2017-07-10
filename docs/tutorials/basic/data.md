@@ -1,5 +1,5 @@
 # Iterators - Loading data
-In this tutorial we focus on how to feed data into a training or inference program.
+In this tutorial, we focus on how to feed data into a training or inference program.
 Most training and inference modules in MXNet accept data iterators,
 which simplifies this procedure, especially when reading large datasets.
 Here we discuss the API conventions and several provided iterators.
@@ -24,7 +24,7 @@ $ MXNET_HOME = '~/mxnet'
 
 ## MXNet Data Iterator  
 Data Iterators in *MXNet* are similar to Python iterator objects.
-In Python the function `iter` allows fetching items sequentially by calling  `next()` on
+In Python, the function `iter` allows fetching items sequentially by calling  `next()` on
  iterable objects such as a Python `list`.
 Iterators provide an abstract interface for traversing various types of iterable collections
  without needing to expose details about the underlying data source.
@@ -162,7 +162,7 @@ The *data* variables are called free variables in MXNet's Symbol API.
 To execute a Symbol, they need to be bound with data.
 [Click here learn more about Symbol](http://mxnet.io/tutorials/basic/symbol.html).
 
-We use the data iterator to feed examples to a neural networks via MXNet's `module` API.
+We use the data iterator to feed examples to a neural network via MXNet's `module` API.
 [Click here to learn more about Module](http://mxnet.io/tutorials/basic/module.html).
 
 
@@ -242,7 +242,7 @@ record.keys
 
 ### Packing and Unpacking data
 
-Each record in a .rec file can contain arbitrary binary data. However most deep learning tasks require data to be input in label/data format.
+Each record in a .rec file can contain arbitrary binary data. However, most deep learning tasks require data to be input in label/data format.
 The `mx.recordio` package provides a few utility functions for such operations, namely: `pack`, `unpack`, `pack_img`, and `unpack_img`.
 
 #### Packing/Unpacking Binary Data
@@ -292,7 +292,7 @@ An example of how to use the script for converting to *RecordIO* format is shown
 
 ## Image IO
 
-In this section we will learn how to preprocess and load image data in MXNet.
+In this section, we will learn how to preprocess and load image data in MXNet.
 
 There are 4 ways of loading image data in MXNet.
    1. Using [__mx.image.imdecode__](http://mxnet.io/api/python/io.html#mxnet.image.imdecode) to load raw image files.
@@ -363,13 +363,13 @@ tar.close()
 Let's take a look at the data. As you can see, under the root folder (./data/101_ObjectCategories) every category has a subfolder(./data/101_ObjectCategories/yin_yang).
 
 Now let's convert them into record io format using the `im2rec.py` utility script.
-First we need to make a list that contains all the image files and their categories:
+First, we need to make a list that contains all the image files and their categories:
 
 ```python
 os.system('python %s/tools/im2rec.py --list=1 --recursive=1 --shuffle=1 --test-ratio=0.2 data/caltech data/101_ObjectCategories'%MXNET_HOME)
 ```
 
-The resulting list file (./data/caltech_train.lst) is in the format `index\t(one or more label)\tpath`. In this case there is only one label for each image but you can modify the list to add in more for multi label training.
+The resulting list file (./data/caltech_train.lst) is in the format `index\t(one or more label)\tpath`. In this case, there is only one label for each image but you can modify the list to add in more for multi-label training.
 
 Then we can use this list to create our record io file:
 

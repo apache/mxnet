@@ -946,7 +946,7 @@ def download(url, fname=None, dirname=None, overwrite=False):
     if fname is None:
         fname = url.split('/')[-1]
     if not overwrite and os.path.exists(fname):
-        logging.info("%s exists, skip to downloada", fname)
+        logging.info("%s exists, skipping download", fname)
         return fname
 
     if dirname is None:

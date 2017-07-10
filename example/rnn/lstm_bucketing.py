@@ -1,6 +1,7 @@
 import numpy as np
 import mxnet as mx
 import argparse
+import os
 
 parser = argparse.ArgumentParser(description="Train RNN on Penn Tree Bank",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -32,6 +33,8 @@ parser.add_argument('--disp-batches', type=int, default=50,
 
 
 def tokenize_text(fname, vocab=None, invalid_label=-1, start_label=0):
+    if not os.path.isfile(fname):
+        raise IOError("Please use get_ptb_data.sh to download requied file (data/ptb.train.txt)")
     lines = open(fname).readlines()
     lines = [filter(None, i.split(' ')) for i in lines]
     sentences, vocab = mx.rnn.encode_sentences(lines, vocab=vocab, invalid_label=invalid_label,

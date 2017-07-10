@@ -79,22 +79,6 @@ cdef NewSymbol(SymbolHandle handle):
     return sym
 
 
-def invoke(cached_op, args, name=None):
-    cdef SymbolHandle ret
-    cdef vector[SymbolHandle] sym_args
-    hint = cached_op.op.lower()
-    cdef string cname = c_str(NameManager.current.get(name, hint))
-    for i in args:
-       sym_args.push_back((<SymbolBase>i).chandle)
-    CALL(MXCachedCreateSymbol(
-        (<CachedOp>cached_op).chandle,
-        cname.c_str(),
-        <int>len(args),
-        &sym_args[0] if sym_args.size() != 0 else NULL,
-        &ret))
-    return NewSymbol(ret)
-
-
 def _symbol_creator(handle, args, kwargs, keys, vals, name):
     cdef unsigned long long ihandle = handle
     cdef OpHandle chandle = <OpHandle>ihandle
