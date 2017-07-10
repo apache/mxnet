@@ -13,7 +13,7 @@ from test_optimizer import *
 from test_random import *
 from test_nn import *
 #from test_rnn import *
-from test_foo_rnn import *
+from test_gluon_rnn import *
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm
@@ -1296,12 +1296,12 @@ def check_rnn_layer(layer):
 
 
 def test_rnn_layer():
-    check_rnn_layer(foo.rnn.RNN(100, num_layers=3))
-    check_rnn_layer(foo.rnn.RNN(100, activation='tanh', num_layers=3))
-    check_rnn_layer(foo.rnn.LSTM(100, num_layers=3))
-    check_rnn_layer(foo.rnn.GRU(100, num_layers=3))
+    check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
+    check_rnn_layer(gluon.rnn.RNN(100, activation='tanh', num_layers=3))
+    check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3))
+    check_rnn_layer(gluon.rnn.GRU(100, num_layers=3))
 
-    check_rnn_layer(foo.rnn.LSTM(100, num_layers=3, bidirectional=True))
+    check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
 
 
 if __name__ == '__main__':
