@@ -1,9 +1,9 @@
 import mxnet as mx
 import mxnet.ndarray as F
-from mxnet import foo
-from mxnet.foo import nn, rnn
+from mxnet import gluon
+from mxnet.gluon import nn, rnn
 
-class RNNModel(foo.Block):
+class RNNModel(gluon.Block):
     def __init__(self, mode, vocab_size, num_embed, num_hidden,
                  num_layers, dropout=0.5, tie_weights=False, **kwargs):
         super(RNNModel, self).__init__(**kwargs)

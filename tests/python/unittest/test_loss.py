@@ -1,6 +1,6 @@
 import mxnet as mx
 import numpy as np
-from mxnet import foo
+from mxnet import gluon
 
 
 def test_loss_ndarray():
@@ -8,25 +8,25 @@ def test_loss_ndarray():
     label = mx.nd.array([1, 3, 5, 7])
     weighting = mx.nd.array([0.5, 1, 0.5, 1])
 
-    loss = foo.loss.L1Loss()
+    loss = gluon.loss.L1Loss()
     assert mx.nd.sum(loss(output, label)).asscalar() == 6.
-    loss = foo.loss.L1Loss(weight=0.5)
+    loss = gluon.loss.L1Loss(weight=0.5)
     assert mx.nd.sum(loss(output, label)).asscalar() == 3.
-    loss = foo.loss.L1Loss()
+    loss = gluon.loss.L1Loss()
     assert mx.nd.sum(loss(output, label, weighting)).asscalar() == 5.
 
-    loss = foo.loss.L2Loss()
+    loss = gluon.loss.L2Loss()
     assert mx.nd.sum(loss(output, label)).asscalar() == 7.
-    loss = foo.loss.L2Loss(weight=0.25)
+    loss = gluon.loss.L2Loss(weight=0.25)
     assert mx.nd.sum(loss(output, label)).asscalar() == 1.75
-    loss = foo.loss.L2Loss()
+    loss = gluon.loss.L2Loss()
     assert mx.nd.sum(loss(output, label, weighting)).asscalar() == 6
 
     output = mx.nd.array([[0, 2], [1, 4]])
     label = mx.nd.array([0, 1])
     weighting = mx.nd.array([[0.5], [1.0]])
 
-    loss = foo.loss.SoftmaxCrossEntropyLoss()
+    loss = gluon.loss.SoftmaxCrossEntropyLoss()
     L = loss(output, label).asnumpy()
     mx.test_utils.assert_almost_equal(L, np.array([ 2.12692809,  0.04858733]))
 
@@ -55,7 +55,7 @@ def test_ce_loss():
     output = get_net(nclass)
     fc2 = output.get_internals()['fc2_output']
     l = mx.symbol.Variable('label')
-    Loss = foo.loss.SoftmaxCrossEntropyLoss()
+    Loss = gluon.loss.SoftmaxCrossEntropyLoss()
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
@@ -73,7 +73,7 @@ def test_l2_loss():
     data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
     output = get_net(1)
     l = mx.symbol.Variable('label')
-    Loss = foo.loss.L2Loss()
+    Loss = gluon.loss.L2Loss()
     Loss(label, label)
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
@@ -91,7 +91,7 @@ def test_l1_loss():
     data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
     output = get_net(1)
     l = mx.symbol.Variable('label')
-    Loss = foo.loss.L1Loss()
+    Loss = gluon.loss.L1Loss()
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
@@ -112,7 +112,7 @@ def test_sample_weight_loss():
     output = get_net(nclass)
     l = mx.symbol.Variable('label')
     w = mx.symbol.Variable('w')
-    Loss = foo.loss.SoftmaxCrossEntropyLoss()
+    Loss = gluon.loss.SoftmaxCrossEntropyLoss()
     loss = Loss(output, l, w)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label', 'w'))
@@ -136,7 +136,7 @@ def test_saveload():
     data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
     output = get_net(nclass)
     l = mx.symbol.Variable('label')
-    Loss = foo.loss.SoftmaxCrossEntropyLoss()
+    Loss = gluon.loss.SoftmaxCrossEntropyLoss()
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))

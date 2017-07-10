@@ -31,10 +31,10 @@ To use hybrid support, we subclass the `HybridBlock`:
 
 ```python
 import mxnet as mx
-from mxnet import foo
-from mxnet.foo import nn
+from mxnet import gluon
+from mxnet.gluon import nn
 
-class Net(foo.HybridBlock):
+class Net(gluon.HybridBlock):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
         with self.name_scope:
@@ -98,7 +98,7 @@ but after hybridize, only the first forward printed out a Symbol. On subsequent
 forward `hybrid_forward` is not called so nothing was printed.
 
 Hybridize will speed up execution and save memory. If the top level layer is
-not a `HybridBlock`, you can still call `.hybridize()` on it and Foo will try
+not a `HybridBlock`, you can still call `.hybridize()` on it and Gluon will try
 to hybridize its children layers instead.
 
 ## Serializing trained model for deployment

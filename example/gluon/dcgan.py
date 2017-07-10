@@ -1,7 +1,7 @@
 import argparse
 import mxnet as mx
-from mxnet import foo
-from mxnet.foo import nn
+from mxnet import gluon
+from mxnet.gluon import nn
 from mxnet import autograd
 from data import cifar10_iterator
 
@@ -85,14 +85,14 @@ netG.collect_params().initialize(mx.init.Normal(0.02), ctx=ctx)
 netD.collect_params().initialize(mx.init.Normal(0.02), ctx=ctx)
 
 
-trainerG = foo.Trainer(netG.collect_params(), 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
-trainerD = foo.Trainer(netD.collect_params(), 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
+trainerG = gluon.Trainer(netG.collect_params(), 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
+trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
 
 
 real_label = mx.nd.ones((opt.batchSize,), ctx=ctx)
 fake_label = mx.nd.zeros((opt.batchSize,), ctx=ctx)
 
-loss = foo.loss.SoftmaxCrossEntropyLoss()
+loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
 for epoch in range(opt.niter):
     for batch in train_iter:
