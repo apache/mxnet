@@ -88,7 +88,7 @@ class DropoutOp : public Operator {
     Tensor<xpu, 2, DType> out = out_data[dropout::kOut].FlatTo2D<xpu, DType>(s);
     if (ctx.is_train) {
       Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
-#if defined(USE_MKL) && defined(_OPENMP)
+#if !defined(__CUDACC__) && defined(USE_MKL) && defined(_OPENMP)
       DType* outptr = out.dptr_;
       DType* dataptr = data.dptr_;
       int* maskptr = reinterpret_cast<int*>(mask.dptr_);
@@ -124,7 +124,7 @@ class DropoutOp : public Operator {
     Tensor<xpu, 2, DType> grad = out_grad[dropout::kOut].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> gdata = in_grad[dropout::kData].FlatTo2D<xpu, DType>(s);
-#if defined(USE_MKL) && defined(_OPENMP)
+#if !defined(__CUDACC__) && defined(USE_MKL) && defined(_OPENMP)
       DType* ingradptr = gdata.dptr_;
       DType* outgradptr = grad.dptr_;
       int* maskptr = reinterpret_cast<int*>(mask.dptr_);

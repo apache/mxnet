@@ -398,6 +398,19 @@ int MXNDArrayGetContext(NDArrayHandle handle,
   API_END();
 }
 
+
+int MXNDArrayGetGrad(NDArrayHandle handle, NDArrayHandle *out) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  NDArray ret = arr->grad();
+  if (ret.is_none()) {
+    *out = NULL;
+  } else {
+    *out = new NDArray(ret);
+  }
+  API_END();
+}
+
 int MXNDArrayDetach(NDArrayHandle handle, NDArrayHandle *out) {
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);

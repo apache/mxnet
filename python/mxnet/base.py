@@ -38,6 +38,21 @@ class MXNetError(Exception):
     """Error that will be throwed by all mxnet functions."""
     pass
 
+class NotImplementedForSymbol(MXNetError):
+    def __init__(self, function, alias, *args):
+        super(NotImplementedForSymbol, self).__init__()
+        self.function = function.__name__
+        self.alias = alias
+        self.args = [str(type(a)) for a in args]
+    def __str__(self):
+        msg = 'Function {}'.format(self.function)
+        if self.alias:
+            msg += ' (namely operator "{}")'.format(self.alias)
+        if self.args:
+            msg += ' with arguments ({})'.format(', '.join(self.args))
+        msg += ' is not implemented for Symbol and only available in NDArray.'
+        return msg
+
 def _load_lib():
     """Load libary by searching possible path."""
     lib_path = libinfo.find_lib_path()

@@ -417,6 +417,12 @@ MXNET_DLL int MXNDArrayGetContext(NDArrayHandle handle,
                                   int *out_dev_type,
                                   int *out_dev_id);
 /*!
+ * \brief return gradient buffer attached to this NDArray
+ * \param handle NDArray handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayGetGrad(NDArrayHandle handle, NDArrayHandle *out);
+/*!
  * \brief detach and ndarray from computation graph by clearing entry_
  * \param handle NDArray handle
  * \return 0 when success, -1 when failure happens

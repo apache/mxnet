@@ -86,9 +86,6 @@ void SetNDInputsOutputs(const nnvm::Op* op,
     *num_outputs = num_visible_outputs;
     ndoutputs.resize(infered_num_outputs);
   } else {
-    CHECK(!AutogradRuntime::Get()->IsTraining())
-      << "Inplace operations (+=, -=, op(..., out=x) etc.) and assignment are "
-      << "not supported when you are inside a train_section using autograd.";
     CHECK(*num_outputs == infered_num_outputs || *num_outputs == num_visible_outputs)
       << "Expecting " << infered_num_outputs << " (all) or "
       << num_visible_outputs << " (visible only) outputs, got "
@@ -500,7 +497,7 @@ int MXInvokeCachedOp(CachedOpHandle handle,
     for (const auto& i : idx.outputs()) {
       ret->ret_handles.push_back(
         reinterpret_cast<NDArrayHandle>(
-          new NDArray(std::move(buff[idx.entry_id(i)]))));
+          new NDArray(buff[idx.entry_id(i)])));
     }
     *num_outputs = idx.outputs().size();
     *outputs = dmlc::BeginPtr(ret->ret_handles);
@@ -508,7 +505,7 @@ int MXInvokeCachedOp(CachedOpHandle handle,
     CHECK_EQ(static_cast<size_t>(*num_outputs), idx.outputs().size())
         << "Specifed number of output differs from expected number of outputs";
     for (size_t i = 0; i < idx.outputs().size(); ++i) {
-      *outarray[i] = std::move(buff[idx.entry_id(idx.outputs()[i])]);
+      *outarray[i] = buff[idx.entry_id(idx.outputs()[i])];
     }
   }
   API_END();
