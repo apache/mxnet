@@ -611,9 +611,8 @@ class _Pooling(HybridBlock):
             padding = (padding,)*len(pool_size)
         self._kwargs = {
             'kernel': pool_size, 'stride': strides, 'pad': padding,
-            'pooling_convention': 'full', 'global_pool': global_pool,
-            'pooling_convention': 'full' if ceil_mode else 'valid',
-            'pool_type': pool_type}
+            'global_pool': global_pool, 'pool_type': pool_type,
+            'pooling_convention': 'full' if ceil_mode else 'valid'}
 
     def hybrid_forward(self, F, x):
         return F.Pooling(x, **self._kwargs)
