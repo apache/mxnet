@@ -40,7 +40,7 @@ def init_git_win() {
 
 stage("Sanity Check") {
   timeout(time: max_time, unit: 'MINUTES') {
-    node('linux') {
+    node('mxnetlinux') {
       ws('workspace/sanity') {
         init_git()
         make('lint', 'cpplint rcpplint jnilint')
@@ -86,7 +86,7 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 
 stage('Build') {
   parallel 'CPU: Openblas': {
-    node('linux') {
+    node('mxnetlinux') {
       ws('workspace/build-cpu') {
         init_git()
         def flag = """ \
@@ -102,7 +102,7 @@ USE_BLAS=openblas             \
     }
   },
   'GPU: CUDA7.5+cuDNN5': {
-    node('GPU' && 'linux') {
+    node('mxnetlinux') {
       ws('workspace/build-gpu') {
         init_git()
         def flag = """ \
@@ -122,7 +122,7 @@ USE_CPP_PACKAGE=1             \
     }
   },
   'Amalgamation': {
-    node('linux') {
+    node('mxnetlinux') {
       ws('workspace/amalgamation') {
         init_git()
         make('cpu', '-C amalgamation/ USE_BLAS=openblas MIN=1')
@@ -130,7 +130,7 @@ USE_CPP_PACKAGE=1             \
     }
   },
   'GPU: MKLML': {
-    node('GPU' && 'linux') {
+    node('mxnetlinux') {
       ws('workspace/build-mklml') {
         init_git()
         def flag = """ \
@@ -151,7 +151,7 @@ USE_CPP_PACKAGE=1             \
     }
   },
   'CPU windows':{
-    node('windows') {
+    node('mxnetwindows') {
       ws('workspace/build-cpu') {
         withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
           init_git_win()
@@ -181,7 +181,7 @@ del /Q *.7z
        }
      },
      'GPU windows':{
-       node('windows') {
+       node('mxnetwindows') {
          ws('workspace/build-gpu') {
            withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
              init_git_win()
@@ -232,7 +232,7 @@ def python_gpu_ut(docker_type) {
 
 stage('Unit Test') {
   parallel 'Python2/3: CPU': {
-    node('linux') {
+    node('mxnetlinux') {
       ws('workspace/ut-python-cpu') {
         init_git()
         unpack_lib('cpu')
@@ -241,7 +241,7 @@ stage('Unit Test') {
     }
   },
   'Python2/3: GPU': {
-    node('GPU' && 'linux') {
+    node('mxnetlinux') {
       ws('workspace/ut-python-gpu') {
         init_git()
         unpack_lib('gpu', mx_lib)
@@ -250,7 +250,7 @@ stage('Unit Test') {
     }
   },
   'Python2/3: MKLML': {
-    node('GPU' && 'linux') {
+    node('mxnetlinux') {
       ws('workspace/ut-python-mklml') {
         init_git()
         unpack_lib('mklml')
@@ -260,7 +260,7 @@ stage('Unit Test') {
     }
   },
   'Scala: CPU': {
-    node('linux') {
+    node('mxnetlinux') {
       ws('workspace/ut-scala-cpu') {
         init_git()
         unpack_lib('cpu')
@@ -272,7 +272,7 @@ stage('Unit Test') {
     }
   },
   'R: CPU': {
-    node('linux') {
+    node('mxnetlinux') {
       ws('workspace/ut-r-cpu') {
         init_git()
         unpack_lib('cpu')
@@ -287,7 +287,7 @@ stage('Unit Test') {
     }
   },
   'R: GPU': {
-    node('GPU' && 'linux') {
+    node('mxnetlinux') {
       ws('workspace/ut-r-gpu') {
         init_git()
         unpack_lib('gpu')
@@ -300,9 +300,9 @@ stage('Unit Test') {
         }
       }
     }
-  },  
+  },
   'Python2/3: CPU Win':{
-    node('windows') {
+    node('mxnetwindows') {
       ws('workspace/ut-python-cpu') {
         init_git_win()
         unstash 'vc14_cpu'
@@ -322,7 +322,7 @@ C:\\mxnet\\test_cpu.bat"""
      }
    },
    'Python2/3: GPU Win':{
-     node('windows') {
+     node('mxnetwindows') {
        ws('workspace/ut-python-gpu') {
          init_git_win()
          unstash 'vc14_gpu'
@@ -346,7 +346,7 @@ C:\\mxnet\\test_gpu.bat"""
 
 stage('Integration Test') {
   parallel 'Python': {
-    node('GPU' && 'linux') {
+    node('mxnetlinux') {
       ws('workspace/it-python-gpu') {
         init_git()
         unpack_lib('gpu')
@@ -357,7 +357,7 @@ stage('Integration Test') {
     }
   },
   'Caffe': {
-    node('GPU' && 'linux') {
+    node('mxnetlinux') {
       ws('workspace/it-caffe') {
         init_git()
         unpack_lib('gpu')
@@ -368,7 +368,7 @@ stage('Integration Test') {
     }
   },
   'cpp-package': {
-    node('GPU' && 'linux') {
+    node('mxnetlinux') {
       ws('workspace/it-cpp-package') {
         init_git()
         unpack_lib('gpu')
@@ -382,7 +382,7 @@ stage('Integration Test') {
 }
 
 stage('Deploy') {
-  node('linux') {
+  node('mxnetlinux') {
     ws('workspace/docs') {
       if (env.BRANCH_NAME == "master") {
         init_git()
