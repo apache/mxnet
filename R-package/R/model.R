@@ -122,9 +122,9 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
   arg_names <- arguments(symbol)
   label_name <- arg_names[endsWith(arg_names, "label")]
   train.execs <- lapply(1:ndevice, function(i) {
-    arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write",
-                    data = sliceinfo[[i]]$shape)
-    arg_lst[[label_name]] = sliceinfo2[[i]]$shape
+    arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write")
+    arg_lst <- append(arg_lst, sliceinfo[[i]]$shape)
+    arg_lst <- append(arg_lst, sliceinfo2[[i]]$shape)
     arg_lst[["fixed.param"]] = fixed.param
     do.call(mx.simple.bind, arg_lst)
   })
@@ -282,11 +282,10 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
 # Initialize parameters
 mx.model.init.params <- function(symbol, input.shape, output.shape, initializer, ctx) {
   if (!is.MXSymbol(symbol)) stop("symbol need to be MXSymbol")
-  arg_names <- arguments(symbol)
 
-  label_name <- arg_names[endsWith(arg_names, "label")]
-  arg_lst <- list(symbol = symbol, data=input.shape)
-  arg_lst[[label_name]] = output.shape
+  arg_lst <- list(symbol = symbol)
+  arg_lst <- append(arg_lst, input.shape)
+  arg_lst <- append(arg_lst, output.shape)
 
   slist <- do.call(mx.symbol.infer.shape, arg_lst)
   if (is.null(slist)) stop("Not enough information to get shapes")
@@ -427,7 +426,9 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
          epoch.end.callback=NULL, batch.end.callback=NULL,
          array.batch.size=128, array.layout="auto",
          kvstore = "local", verbose = TRUE,
-         arg.params = NULL, aux.params = NULL, fixed.param = NULL,
+         arg.params = NULL, aux.params = NULL,
+         input.names=NULL, output.names = NULL,
+         fixed.param = NULL,
          ...) {
   if (is.array(X) || is.matrix(X)) {
     if (array.layout == "auto") {
