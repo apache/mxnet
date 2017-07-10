@@ -1,11 +1,11 @@
 import mxnet as mx
-from mxnet import foo
+from mxnet import gluon
 import numpy as np
 from numpy.testing import assert_allclose
 
 
 def test_rnn():
-    cell = foo.rnn.RNNCell(100, prefix='rnn_')
+    cell = gluon.rnn.RNNCell(100, prefix='rnn_')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
@@ -17,7 +17,7 @@ def test_rnn():
 
 
 def test_lstm():
-    cell = foo.rnn.LSTMCell(100, prefix='rnn_')
+    cell = gluon.rnn.LSTMCell(100, prefix='rnn_')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
@@ -30,9 +30,9 @@ def test_lstm():
 
 def test_lstm_forget_bias():
     forget_bias = 2.0
-    stack = foo.rnn.SequentialRNNCell()
-    stack.add(foo.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias), prefix='l0_'))
-    stack.add(foo.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias), prefix='l1_'))
+    stack = gluon.rnn.SequentialRNNCell()
+    stack.add(gluon.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias), prefix='l0_'))
+    stack.add(gluon.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias), prefix='l1_'))
 
     dshape = (32, 1, 200)
     data = mx.sym.Variable('data')
@@ -50,7 +50,7 @@ def test_lstm_forget_bias():
 
 
 def test_gru():
-    cell = foo.rnn.GRUCell(100, prefix='rnn_')
+    cell = gluon.rnn.GRUCell(100, prefix='rnn_')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
@@ -62,7 +62,7 @@ def test_gru():
 
 
 def test_residual():
-    cell = foo.rnn.ResidualCell(foo.rnn.GRUCell(50, prefix='rnn_'))
+    cell = gluon.rnn.ResidualCell(gluon.rnn.GRUCell(50, prefix='rnn_'))
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
     outputs, _ = cell.unroll(2, inputs)
     outputs = mx.sym.Group(outputs)
@@ -85,10 +85,10 @@ def test_residual():
 
 
 def test_residual_bidirectional():
-    cell = foo.rnn.ResidualCell(
-            foo.rnn.BidirectionalCell(
-                foo.rnn.GRUCell(25, prefix='rnn_l_'),
-                foo.rnn.GRUCell(25, prefix='rnn_r_')))
+    cell = gluon.rnn.ResidualCell(
+            gluon.rnn.BidirectionalCell(
+                gluon.rnn.GRUCell(25, prefix='rnn_l_'),
+                gluon.rnn.GRUCell(25, prefix='rnn_r_')))
 
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
     outputs, _ = cell.unroll(2, inputs, merge_outputs=False)
@@ -117,12 +117,12 @@ def test_residual_bidirectional():
 
 
 def test_stack():
-    cell = foo.rnn.SequentialRNNCell()
+    cell = gluon.rnn.SequentialRNNCell()
     for i in range(5):
         if i == 1:
-            cell.add(foo.rnn.ResidualCell(foo.rnn.LSTMCell(100, prefix='rnn_stack%d_' % i)))
+            cell.add(gluon.rnn.ResidualCell(gluon.rnn.LSTMCell(100, prefix='rnn_stack%d_' % i)))
         else:
-            cell.add(foo.rnn.LSTMCell(100, prefix='rnn_stack%d_'%i))
+            cell.add(gluon.rnn.LSTMCell(100, prefix='rnn_stack%d_'%i))
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
@@ -139,9 +139,9 @@ def test_stack():
 
 
 def test_bidirectional():
-    cell = foo.rnn.BidirectionalCell(
-            foo.rnn.LSTMCell(100, prefix='rnn_l0_'),
-            foo.rnn.LSTMCell(100, prefix='rnn_r0_'),
+    cell = gluon.rnn.BidirectionalCell(
+            gluon.rnn.LSTMCell(100, prefix='rnn_l0_'),
+            gluon.rnn.LSTMCell(100, prefix='rnn_r0_'),
             output_prefix='rnn_bi_')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
@@ -153,7 +153,7 @@ def test_bidirectional():
 
 
 def test_zoneout():
-    cell = foo.rnn.ZoneoutCell(foo.rnn.RNNCell(100, prefix='rnn_'), zoneout_outputs=0.5,
+    cell = gluon.rnn.ZoneoutCell(gluon.rnn.RNNCell(100, prefix='rnn_'), zoneout_outputs=0.5,
                               zoneout_states=0.5)
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
@@ -172,24 +172,24 @@ def check_rnn_forward(layer, inputs):
 
 
 def test_rnn_cells():
-    check_rnn_forward(foo.rnn.LSTMCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
-    check_rnn_forward(foo.rnn.RNNCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
-    check_rnn_forward(foo.rnn.GRUCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
+    check_rnn_forward(gluon.rnn.LSTMCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
+    check_rnn_forward(gluon.rnn.RNNCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
+    check_rnn_forward(gluon.rnn.GRUCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
 
-    bilayer = foo.rnn.BidirectionalCell(foo.rnn.LSTMCell(100, input_size=200),
-                                       foo.rnn.LSTMCell(100, input_size=200))
+    bilayer = gluon.rnn.BidirectionalCell(gluon.rnn.LSTMCell(100, input_size=200),
+                                       gluon.rnn.LSTMCell(100, input_size=200))
     check_rnn_forward(bilayer, mx.nd.ones((8, 3, 200)))
 
-    check_rnn_forward(foo.rnn.DropoutCell(0.5), mx.nd.ones((8, 3, 200)))
+    check_rnn_forward(gluon.rnn.DropoutCell(0.5), mx.nd.ones((8, 3, 200)))
 
-    check_rnn_forward(foo.rnn.ZoneoutCell(foo.rnn.LSTMCell(100, input_size=200),
+    check_rnn_forward(gluon.rnn.ZoneoutCell(gluon.rnn.LSTMCell(100, input_size=200),
                                          0.5, 0.2),
                       mx.nd.ones((8, 3, 200)))
 
-    net = foo.rnn.SequentialRNNCell()
-    net.add(foo.rnn.LSTMCell(100, input_size=200))
-    net.add(foo.rnn.RNNCell(100, input_size=100))
-    net.add(foo.rnn.GRUCell(100, input_size=100))
+    net = gluon.rnn.SequentialRNNCell()
+    net.add(gluon.rnn.LSTMCell(100, input_size=200))
+    net.add(gluon.rnn.RNNCell(100, input_size=100))
+    net.add(gluon.rnn.GRUCell(100, input_size=100))
     check_rnn_forward(net, mx.nd.ones((8, 3, 200)))
 
 

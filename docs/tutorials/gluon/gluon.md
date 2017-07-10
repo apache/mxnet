@@ -1,7 +1,7 @@
-# Foo - Neural network building blocks
+# Gluon - Neural network building blocks
 
-Foo package is a high-level interface for MXNet designed to be easy to use while
-keeping most of the flexibility of low level API. Foo supports both imperative
+Gluon package is a high-level interface for MXNet designed to be easy to use while
+keeping most of the flexibility of low level API. Gluon supports both imperative
 and symbolic programming, making it easy to train complex models imperatively
 in Python and then deploy with symbolic graph in C++ and Scala.
 
@@ -12,13 +12,13 @@ from __future__ import print_function
 import numpy as np
 import mxnet as mx
 import mxnet.ndarray as F
-import mxnet.foo as foo
-from mxnet.foo import nn
+import mxnet.gluon as gluon
+from mxnet.gluon import nn
 from mxnet import autograd
 ```
 
 Neural networks (and other machine learning models) can be defined and trained
-with `foo.nn` and `foo.rnn` package. A typical training script has the following
+with `gluon.nn` and `gluon.rnn` package. A typical training script has the following
 steps:
 
 - Define network
@@ -32,11 +32,11 @@ steps:
 
 ## Define Network
 
-`foo.Block` is the basic building block of models. You can define networks by
+`gluon.Block` is the basic building block of models. You can define networks by
 composing and inheriting `Block`:
 
 ```python
-class Net(foo.Block):
+class Net(gluon.Block):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
         with self.name_scope():
@@ -93,7 +93,7 @@ instead of `nn.Dense(84)`.
 Loss functions take (output, label) pairs and compute a scalar loss for each sample
 in the mini-batch. The scalars measure how far each output is from the label.
 
-There are many predefined loss functions in `foo.loss`. Here we use
+There are many predefined loss functions in `gluon.loss`. Here we use
 `softmax_cross_entropy_loss` for digit classification.
 
 To compute loss and backprop for one iteration, we do:
@@ -102,7 +102,7 @@ To compute loss and backprop for one iteration, we do:
 label = mx.nd.arange(10)  # dummy label
 with autograd.record():
     output = net(data)
-    loss = foo.loss.softmax_cross_entropy_loss(output, label)
+    loss = gluon.loss.softmax_cross_entropy_loss(output, label)
     loss.backward()
 print('loss:', loss)
 print('grad:', net.fc1.weight.grad())
@@ -122,14 +122,14 @@ for p in net.collect_params().values():
 ```
 
 But sometimes you want more fancy updating rules like momentum and Adam, and since
-this is a commonly used functionality, foo provide a `Trainer` class for it:
+this is a commonly used functionality, gluon provide a `Trainer` class for it:
 
 ```python
-trainer = foo.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.01})
+trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.01})
 
 with record():
     output = net(data)
-    loss = foo.loss.softmax_cross_entropy_loss(output, label)
+    loss = gluon.loss.softmax_cross_entropy_loss(output, label)
     loss.backward()
 
 # do the update. Trainer needs to know the batch size of data to normalize

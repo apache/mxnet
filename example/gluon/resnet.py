@@ -5,8 +5,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 import mxnet as mx
-from mxnet import foo
-from mxnet.foo import nn
+from mxnet import gluon
+from mxnet.gluon import nn
 from mxnet import autograd as ag
 
 from data import *
@@ -48,7 +48,7 @@ def conv3x3(filters, stride, in_channels):
     return nn.Conv2D(filters, kernel_size=3, strides=stride, padding=1,
                      use_bias=False, in_channels=in_channels)
 
-class BasicBlockV1(foo.HybridBlock):
+class BasicBlockV1(gluon.HybridBlock):
     def __init__(self, filters, stride, downsample=False, in_channels=0, **kwargs):
         super(BasicBlockV1, self).__init__(**kwargs)
         with self.name_scope():
@@ -81,7 +81,7 @@ class BasicBlockV1(foo.HybridBlock):
         return out
 
 
-class BottleneckV1(foo.HybridBlock):
+class BottleneckV1(gluon.HybridBlock):
     def __init__(self, filters, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV1, self).__init__(**kwargs)
         with self.name_scope():
@@ -120,7 +120,7 @@ class BottleneckV1(foo.HybridBlock):
         return out
 
 
-class ResnetV1(foo.HybridBlock):
+class ResnetV1(gluon.HybridBlock):
     def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
         super(ResnetV1, self).__init__(**kwargs)
         with self.name_scope():
@@ -168,7 +168,7 @@ class ResnetV1(foo.HybridBlock):
         return x
 
 
-class BasicBlockV2(foo.HybridBlock):
+class BasicBlockV2(gluon.HybridBlock):
     def __init__(self, filters, stride, downsample=False, in_channels=0, **kwargs):
         super(BasicBlockV2, self).__init__(**kwargs)
         with self.name_scope():
@@ -198,7 +198,7 @@ class BasicBlockV2(foo.HybridBlock):
         return x + residual
 
 
-class BottleneckV2(foo.HybridBlock):
+class BottleneckV2(gluon.HybridBlock):
     def __init__(self, filters, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV2, self).__init__(**kwargs)
         with self.name_scope():
@@ -233,7 +233,7 @@ class BottleneckV2(foo.HybridBlock):
 
         return x + residual
 
-class ResnetV2(foo.HybridBlock):
+class ResnetV2(gluon.HybridBlock):
     def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
         super(ResnetV2, self).__init__(**kwargs)
         with self.name_scope():
@@ -331,8 +331,8 @@ def test(ctx):
     metric = mx.metric.Accuracy()
     val_data.reset()
     for batch in val_data:
-        data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-        label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+        data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
+        label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
         outputs = []
         for x in data:
             outputs.append(net(x))
@@ -344,9 +344,9 @@ def train(epoch, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
     net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-    trainer = foo.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
+    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
     metric = mx.metric.Accuracy()
-    loss = foo.loss.SoftmaxCrossEntropyLoss()
+    loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
     for epoch in range(epoch):
         tic = time.time()
@@ -354,8 +354,8 @@ def train(epoch, ctx):
         metric.reset()
         btic = time.time()
         for i, batch in enumerate(train_data):
-            data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-            label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+            data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
+            label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
             outputs = []
             Ls = []
             with ag.record():

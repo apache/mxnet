@@ -2,8 +2,8 @@
 from __future__ import print_function
 
 import mxnet as mx
-from mxnet import foo
-from mxnet.foo import nn
+from mxnet import gluon
+from mxnet.gluon import nn
 import numpy as np
 import logging
 from common import get_data
@@ -39,8 +39,8 @@ def score(net, ctx_list):
     metric = mx.metric.Accuracy()
     val_data.reset()
     for batch in val_data:
-        datas = foo.utils.split_and_load(batch.data[0], ctx_list, batch_axis=0)
-        labels = foo.utils.split_and_load(batch.label[0], ctx_list, batch_axis=0)
+        datas = gluon.utils.split_and_load(batch.data[0], ctx_list, batch_axis=0)
+        labels = gluon.utils.split_and_load(batch.label[0], ctx_list, batch_axis=0)
         outputs = []
         for x in datas:
             outputs.append(net(x))
@@ -49,15 +49,15 @@ def score(net, ctx_list):
 
 def train(net, epoch, ctx_list):
     net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx_list)
-    trainer = foo.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.5})
+    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.5})
     metric = mx.metric.Accuracy()
-    loss = foo.loss.SoftmaxCrossEntropyLoss()
+    loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
     for i in range(epoch):
         train_data.reset()
         for batch in train_data:
-            datas = foo.utils.split_and_load(batch.data[0], ctx_list, batch_axis=0)
-            labels = foo.utils.split_and_load(batch.label[0], ctx_list, batch_axis=0)
+            datas = gluon.utils.split_and_load(batch.data[0], ctx_list, batch_axis=0)
+            labels = gluon.utils.split_and_load(batch.label[0], ctx_list, batch_axis=0)
             outputs = []
             with autograd.record():
                 for x, y in zip(datas, labels):
