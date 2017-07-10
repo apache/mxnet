@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function
 
 import argparse, time
 import logging
@@ -13,20 +13,36 @@ from data import *
 
 # CLI
 parser = argparse.ArgumentParser(description='Train a resnet model for image classification.')
-parser.add_argument('--dataset', type=str, default='dummy', help='dataset to use. options are mnist, cifar10, and dummy.')
-parser.add_argument('--batch_size', type=int, default=32, help='training batch size per device (CPU/GPU).')
-parser.add_argument('--resnet_version', type=int, default=1, help='version of resnet to use. options are 1 and 2. default is 1.')
-parser.add_argument('--resnet_layers', type=int, default=50, help='layers of resnet to use. options are 18, 50. default is 50.')
-parser.add_argument('--gpus', type=int, default=0, help='number of gpus to use.')
-parser.add_argument('--epochs', type=int, default=3, help='number of training epochs.')
-parser.add_argument('--lr', type=float, default=0.01, help='learning Rate. default is 0.01.')
-parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123.')
-parser.add_argument('--thumbnail', action='store_true', default=False, help='use thumbnail or not. default is false.')
-parser.add_argument('--benchmark', action='store_true', default=True, help='whether to run benchmark.')
-parser.add_argument('--symbolic', action='store_true', default=False, help='whether to train in symbolic way with module.')
+parser.add_argument('--dataset', type=str, default='cifar10',
+                    help='dataset to use. options are mnist, cifar10, and dummy.')
+parser.add_argument('--batch-size', type=int, default=32,
+                    help='training batch size per device (CPU/GPU).')
+parser.add_argument('--resnet-version', type=int, default=1,
+                    help='whether to use ResnetV1 or ResnetV2. default is 1.')
+parser.add_argument('--resnet-layers', type=int, default=50,
+                    help='layers of resnet to use. options are 18, 50. default is 50.')
+parser.add_argument('--gpus', type=int, default=0,
+                    help='number of gpus to use.')
+parser.add_argument('--epochs', type=int, default=3,
+                    help='number of training epochs.')
+parser.add_argument('--lr', type=float, default=0.01,
+                    help='learning Rate. default is 0.01.')
+parser.add_argument('--seed', type=int, default=123,
+                    help='random seed to use. Default=123.')
+parser.add_argument('--thumbnail', action='store_true', default=False,
+                    help='use thumbnail or not. default is false.')
+parser.add_argument('--benchmark', action='store_true', default=False,
+                    help='whether to run benchmark.')
+parser.add_argument('--symbolic', action='store_true', default=False,
+                    help='whether to train in symbolic way with module.')
+parser.add_argument('--log-interval', type=int, default=100,
+                    help='Number of batches to wait before logging.')
 opt = parser.parse_args()
 
 print(opt)
+
+
+# Define network
 
 def conv3x3(filters, stride, in_channels):
     return nn.Conv2D(filters, kernel_size=3, strides=stride, padding=1,
@@ -69,11 +85,11 @@ class BottleneckV1(foo.HybridBlock):
     def __init__(self, filters, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV1, self).__init__(**kwargs)
         with self.name_scope():
-            self.conv1 = nn.Conv2D(filters=filters//4, kernel_size=1, strides=1, in_channels=in_channels)
+            self.conv1 = nn.Conv2D(filters//4, kernel_size=1, strides=1, in_channels=in_channels)
             self.bn1 = nn.BatchNorm(in_channels=filters//4)
             self.conv2 = conv3x3(filters//4, stride, filters//4)
             self.bn2 = nn.BatchNorm(in_channels=filters//4)
-            self.conv3 = nn.Conv2D(filters=filters, kernel_size=1, strides=1, in_channels=filters//4)
+            self.conv3 = nn.Conv2D(filters, kernel_size=1, strides=1, in_channels=filters//4)
             self.bn3 = nn.BatchNorm(in_channels=filters)
             if downsample:
                 self.conv_ds = nn.Conv2D(filters, kernel_size=1, strides=stride, use_bias=False, in_channels=in_channels)
@@ -321,7 +337,7 @@ def test(ctx):
         for x in data:
             outputs.append(net(x))
         metric.update(label, outputs)
-    logging.info('validation acc: %s=%f'%metric.get())
+    return metric.get()
 
 
 def train(epoch, ctx):
@@ -332,11 +348,12 @@ def train(epoch, ctx):
     metric = mx.metric.Accuracy()
     loss = foo.loss.SoftmaxCrossEntropyLoss()
 
-    for i in range(epoch):
+    for epoch in range(epoch):
         tic = time.time()
         train_data.reset()
+        metric.reset()
         btic = time.time()
-        for batch in train_data:
+        for i, batch in enumerate(train_data):
             data = foo.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
             label = foo.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
             outputs = []
@@ -353,16 +370,21 @@ def train(epoch, ctx):
                     L.backward()
             trainer.step(batch.data[0].shape[0])
             metric.update(label, outputs)
-            logging.info('speed: {} samples/s'.format(batch_size/(time.time()-btic)))
+            if opt.log_interval:
+                name, acc = metric.get()
+                print('[Epoch %d Batch %d] speed: %f samples/s, training: %s=%f'%(
+                        epoch, i, batch_size/(time.time()-btic), name, acc))
             btic = time.time()
 
         name, acc = metric.get()
-        metric.reset()
-        logging.info('training acc at epoch %d: %s=%f'%(i, name, acc))
-        logging.info('time: %f'%(time.time()-tic))
-        test(ctx)
+        print('[Epoch %d] training: %s=%f'%(epoch, name, acc))
+        print('[Epoch %d] time cost: %f'%(epoch, time.time()-tic))
 
-    net.collect_params().save('mnist.params')
+        name, val_acc = test(ctx)
+        print('[Epoch %d] validation: %s=%f'%(epoch, name, val_acc))
+
+    net.collect_params().save('resnet.params')
+
 
 if __name__ == '__main__':
     if opt.symbolic:
