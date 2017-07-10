@@ -1,6 +1,6 @@
 # Use case with Support Vector Machine
 
-To ensure that not only the implementation is learning, but is able to outsmart the softmax, as [this article](arxiv.org/pdf/1306.0239.pdf) suggests, I ran svm_mnist.py script. It was based on the MNIST experiment description on the article and [this tutorial](https://github.com/dmlc/mxnet-gtc-tutorial/blob/master/tutorial.ipynb).
+To ensure that not only the implementation is learning, but is able to outsmart the softmax, as [this article](https://arxiv.org/pdf/1306.0239.pdf) suggests, I ran svm_mnist.py script. It was based on the MNIST experiment description on the article and [this tutorial](https://github.com/dmlc/mxnet-gtc-tutorial/blob/master/tutorial.ipynb).
 
 
 ## To this you will need
