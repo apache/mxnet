@@ -32,11 +32,11 @@ steps:
 
 ## Define Network
 
-`foo.Layer` is the basic building block of models. You can define networks by
-composing and inheriting `Layer`:
+`foo.Block` is the basic building block of models. You can define networks by
+composing and inheriting `Block`:
 
 ```python
-class Net(foo.Layer):
+class Net(foo.Block):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
         with self.name_scope():

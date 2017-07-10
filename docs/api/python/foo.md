@@ -38,11 +38,11 @@ in Python and then deploy with symbolic graph in C++ and Scala.
 
 ```eval_rst
 .. currentmodule:: mxnet.foo
-.. autoclass:: mxnet.foo.Layer
+.. autoclass:: mxnet.foo.Block
     :members:
 
     .. automethod:: forward
-.. autoclass:: mxnet.foo.HybridLayer
+.. autoclass:: mxnet.foo.HybridBlock
     :members:
 
     .. automethod:: hybrid_forward
