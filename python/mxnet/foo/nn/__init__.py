@@ -2,6 +2,6 @@
 # pylint: disable=wildcard-import
 """Neural network layers."""
 
-from .layer import *
+from .basic_layers import *
 
 from .conv_layers import *

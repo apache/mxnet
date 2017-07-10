@@ -88,14 +88,14 @@ def _rearrange(raw, F, upscale_factor):
     return F.reshape(swapped, shape=(0, 0, -3, -3))
 
 
-class SuperResolutionNet(nn.Layer):
+class SuperResolutionNet(foo.Block):
     def __init__(self, upscale_factor):
         super(SuperResolutionNet, self).__init__()
         with self.name_scope():
-            self.conv1 = nn.Conv2D(64, (5, 5), strides=(1, 1), padding=(2, 2), in_filters=1)
-            self.conv2 = nn.Conv2D(64, (3, 3), strides=(1, 1), padding=(1, 1), in_filters=64)
-            self.conv3 = nn.Conv2D(32, (3, 3), strides=(1, 1), padding=(1, 1), in_filters=64)
-            self.conv4 = nn.Conv2D(upscale_factor ** 2, (3, 3), strides=(1, 1), padding=(1, 1), in_filters=32)
+            self.conv1 = nn.Conv2D(64, (5, 5), strides=(1, 1), padding=(2, 2), in_channels=1)
+            self.conv2 = nn.Conv2D(64, (3, 3), strides=(1, 1), padding=(1, 1), in_channels=64)
+            self.conv3 = nn.Conv2D(32, (3, 3), strides=(1, 1), padding=(1, 1), in_channels=64)
+            self.conv4 = nn.Conv2D(upscale_factor ** 2, (3, 3), strides=(1, 1), padding=(1, 1), in_channels=32)
         self.upscale_factor = upscale_factor
 
     def forward(self, x):
@@ -128,10 +128,11 @@ def test(ctx):
 def train(epoch, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
-    net.conv4.all_params().initialize(mx.init.Orthogonal(scale=1), ctx=ctx)
-    net.all_params().initialize(mx.init.Orthogonal(), ctx=ctx)
-    trainer = foo.Trainer(net.all_params(), 'adam', {'learning_rate': opt.lr})
+    net.collect_params().initialize(mx.init.Orthogonal(), ctx=ctx)
+    net.conv4.collect_params().initialize(mx.init.Orthogonal(scale=1), ctx=ctx)
+    trainer = foo.Trainer(net.collect_params(), 'adam', {'learning_rate': opt.lr})
     metric = mx.metric.MAE()
+    loss = foo.loss.L2Loss()
 
     for i in range(epoch):
         train_data.reset()
@@ -142,8 +143,8 @@ def train(epoch, ctx):
             with ag.record():
                 for x, y in zip(data, label):
                     z = net(x)
-                    loss = foo.loss.l2_loss(z, y)
-                    ag.compute_gradient([loss])
+                    L = loss(z, y)
+                    L.backward()
                     outputs.append(z)
             trainer.step(batch.data[0].shape[0])
             metric.update(label, outputs)
@@ -153,12 +154,12 @@ def train(epoch, ctx):
         print('training mae at epoch %d: %s=%f'%(i, name, acc))
         test(ctx)
 
-    net.all_params().save('superres.params')
+    net.collect_params().save('superres.params')
 
 def resolve(ctx):
     if isinstance(ctx, list):
         ctx = [ctx[0]]
-    net.all_params().load('superres.params')
+    net.collect_params().load('superres.params')
     img = Image.open(opt.resolve_img).convert('YCbCr')
     y, cb, cr = img.split()
     data = mx.nd.array(y)

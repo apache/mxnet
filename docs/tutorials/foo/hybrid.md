@@ -12,29 +12,29 @@ Imperative frameworks (including PyTorch, Chainer, etc) are just the opposite:
 they execute commands one-by-one just like old fashioned Matlab and Numpy.
 This style is more flexible, easier to debug, but less efficient.
 
-`HybridLayer` seamlessly combines declarative programming and imperative programming
+`HybridBlock` seamlessly combines declarative programming and imperative programming
 to offer the benefit of both. Users can quickly develop and debug models with
 imperative programming and switch to efficient declarative execution by simply
-calling: `HybridLayer.hybridize()`.
+calling: `HybridBlock.hybridize()`.
 
-## HybridLayer
+## HybridBlock
 
-`HybridLayer` is very similar to `Layer` but has a few restrictions:
+`HybridBlock` is very similar to `Block` but has a few restrictions:
 
-- All children layers of `HybridLayer` must also be `HybridLayer`.
+- All children layers of `HybridBlock` must also be `HybridBlock`.
 - Only methods that are implemented for both `NDArray` and `Symbol` can be used.
   For example you cannot use `.asnumpy()`, `.shape`, etc.
 - Operations cannot change from run to run. For example, you cannot do `if x:`
   if `x` is different for each iteration.
 
-To use hybrid support, we subclass the `HybridLayer`:
+To use hybrid support, we subclass the `HybridBlock`:
 
 ```python
 import mxnet as mx
 from mxnet import foo
 from mxnet.foo import nn
 
-class Net(nn.HybridLayer):
+class Net(foo.HybridBlock):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
         with self.name_scope:
@@ -68,12 +68,12 @@ class Net(nn.HybridLayer):
 
 ## Hybridize
 
-By default, `HybridLayer` runs just like a standard `Layer`. Each time a layer
+By default, `HybridBlock` runs just like a standard `Block`. Each time a layer
 is called, its `hybrid_forward` will be run:
 
 ```python
 net = Net()
-net.all_params().initialize()
+net.collect_params().initialize()
 x = mx.nd.random_normal(shape=(16, 1, 28, 28))
 net(x)
 x = mx.nd.random_normal(shape=(16, 1, 28, 28))
@@ -98,12 +98,12 @@ but after hybridize, only the first forward printed out a Symbol. On subsequent
 forward `hybrid_forward` is not called so nothing was printed.
 
 Hybridize will speed up execution and save memory. If the top level layer is
-not a `HybridLayer`, you can still call `.hybridize()` on it and Foo will try
+not a `HybridBlock`, you can still call `.hybridize()` on it and Foo will try
 to hybridize its children layers instead.
 
 ## Serializing trained model for deployment
 
-Models implemented as `HybridLayer` can be easily serialized for deployment
+Models implemented as `HybridBlock` can be easily serialized for deployment
 using other language front-ends like C, C++ and Scala. To this end, we simply
 forward the model with symbolic variables instead of NDArrays and save the
 output Symbol(s):
@@ -113,7 +113,7 @@ x = mx.sym.var('data')
 y = net(x)
 print(y)
 y.save('model.json')
-net.all_params().save('model.params')
+net.collect_params().save('model.params')
 ```
 
 If your network outputs more than one value, you can use `mx.sym.Group` to

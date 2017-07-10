@@ -1,14 +1,35 @@
 # pylint: skip-file
 from __future__ import print_function
 
-from data import mnist_iterator
-import mxnet as mx
-from mxnet import foo
-from mxnet.foo import nn
-import numpy as np
+import argparse
 import logging
-from mxnet import autograd as ag
 logging.basicConfig(level=logging.DEBUG)
+
+import numpy as np
+import mxnet as mx
+from mxnet import foo, autograd
+from mxnet.foo import nn
+
+from data import mnist_iterator
+
+
+# Parse CLI arguments
+
+parser = argparse.ArgumentParser(description='MXNet Foo MNIST Example')
+parser.add_argument('--batch-size', type=int, default=100,
+                    help='batch size for training and testing (default: 100)')
+parser.add_argument('--epochs', type=int, default=10,
+                    help='number of epochs to train (default: 10)')
+parser.add_argument('--lr', type=float, default=0.1,
+                    help='learning rate (default: 0.1)')
+parser.add_argument('--momentum', type=float, default=0.9,
+                    help='SGD momentum (default: 0.9)')
+parser.add_argument('--cuda', action='store_true', default=False,
+                    help='Train on GPU with CUDA')
+parser.add_argument('--log-interval', type=int, default=100, metavar='N',
+                    help='how many batches to wait before logging training status')
+opt = parser.parse_args()
+
 
 # define network
 
@@ -20,50 +41,66 @@ with net.name_scope():
 
 # data
 
-train_data, val_data = mnist_iterator(batch_size=100, input_shape = (784,))
+train_data, val_data = mnist_iterator(batch_size=opt.batch_size, input_shape=(28*28,))
 
 # train
 
-def test(ctxs):
+def test(ctx):
     metric = mx.metric.Accuracy()
     val_data.reset()
     for batch in val_data:
-        data = foo.utils.split_and_load(batch.data[0], ctxs, batch_axis=0)
-        label = foo.utils.split_and_load(batch.label[0], ctxs, batch_axis=0)
-        outputs = []
-        for x in data:
-            outputs.append(net(x))
-        metric.update(label, outputs)
-    print('validation acc: %s=%f'%metric.get())
+        data = batch.data[0].as_in_context(ctx)
+        label = batch.label[0].as_in_context(ctx)
+        output = net(data)
+        metric.update([label], [output])
 
-def train(epoch, ctxs):
-    if isinstance(ctxs, mx.Context):
-        ctxs = [ctxs]
-    net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctxs)
-    trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.1})
+    return metric.get()
+
+
+def train(epochs, ctx):
+    # Collect all parameters from net and its children, then initialize them.
+    net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+    # Trainer is for updating parameters with gradient.
+    trainer = foo.Trainer(net.collect_params(), 'sgd',
+                          {'learning_rate': opt.lr, 'momentum': opt.momentum})
     metric = mx.metric.Accuracy()
+    loss = foo.loss.SoftmaxCrossEntropyLoss()
 
-    for i in range(epoch):
+    for epoch in range(epochs):
+        # reset data iterator and metric at begining of epoch.
         train_data.reset()
-        for batch in train_data:
-            datas = foo.utils.split_and_load(batch.data[0], ctxs, batch_axis=0)
-            labels = foo.utils.split_and_load(batch.label[0], ctxs, batch_axis=0)
-            outputs = []
-            with ag.record():
-                for x, y in zip(datas, labels):
-                    z = net(x)
-                    loss = foo.loss.softmax_cross_entropy_loss(z, y)
-                    ag.backward([loss])
-                    outputs.append(z)
-            metric.update(labels, outputs)
-            trainer.step(batch.data[0].shape[0])
-        name, acc = metric.get()
         metric.reset()
-        print('training acc at epoch %d: %s=%f'%(i, name, acc))
-        test(ctxs)
+        for i, batch in enumerate(train_data):
+            # Copy data to ctx if necessary
+            data = batch.data[0].as_in_context(ctx)
+            label = batch.label[0].as_in_context(ctx)
+            # Start recording computation graph with record() section.
+            # Recorded graphs can then be differentiated with backward.
+            with autograd.record():
+                output = net(data)
+                L = loss(output, label)
+                L.backward()
+            # take a gradient step with batch_size equal to data.shape[0]
+            trainer.step(data.shape[0])
+            # update metric at last.
+            metric.update([label], [output])
 
-    net.all_params().save('mnist.params')
+            if i % opt.log_interval == 0 and i > 0:
+                name, acc = metric.get()
+                print('[Epoch %d Batch %d] Training: %s=%f'%(epoch, i, name, acc))
+
+        name, acc = metric.get()
+        print('[Epoch %d] Training: %s=%f'%(epoch, name, acc))
+
+        name, val_acc = test(ctx)
+        print('[Epoch %d] Validation: %s=%f'%(epoch, name, val_acc))
+
+    net.collect_params().save('mnist.params')
 
 
 if __name__ == '__main__':
-    train(10, [mx.cpu(0), mx.cpu(1)])
+    if opt.cuda:
+        ctx = mx.gpu(0)
+    else:
+        ctx = mx.cpu()
+    train(opt.epochs, ctx)

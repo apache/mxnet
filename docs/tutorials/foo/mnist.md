@@ -97,8 +97,8 @@ initialized parameters.
 
 ```python
 ctx = [mx.cpu(0), mx.cpu(1)]
-net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.1})
+net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+trainer = foo.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
 ```
 
 #### Train the network
@@ -193,13 +193,13 @@ A single convolution layer consists of one or more filters that each play the ro
 
 The following source code defines a convolutional neural network architecture called LeNet. LeNet is a popular network known to work well on digit classification tasks. We will use a slightly different version from the original LeNet implementation, replacing the sigmoid activations with tanh activations for the neurons.
 
-A typical way to write your network is creating a new class inherited from `foo.nn.Layer`
-class. We can define the network by composing and inheriting Layer class as follows:
+A typical way to write your network is creating a new class inherited from `foo.Block`
+class. We can define the network by composing and inheriting Block class as follows:
 
 ```python
 import mxnet.ndarray as F
 
-class Net(nn.Layer):
+class Net(foo.Block):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
         with self.name_scope():
@@ -247,8 +247,8 @@ We will initialize the network parameters as follows:
 
 ```python
 ctx = [mx.cpu(0), mx.cpu(1)]
-net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.1})
+net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+trainer = foo.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
 ```
 
 #### Training

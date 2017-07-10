@@ -34,6 +34,8 @@ def mnist_iterator(batch_size, input_shape):
 
 
 def cifar10_iterator(batch_size, data_shape, resize=-1):
+    get_data.GetCifar10()
+
     train = mx.io.ImageRecordIter(
         path_imgrec = "data/cifar/train.rec",
         # mean_img    = "data/cifar/mean.bin",

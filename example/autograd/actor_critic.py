@@ -28,7 +28,7 @@ env = gym.make('CartPole-v0')
 env.seed(args.seed)
 
 
-class Policy(nn.Layer):
+class Policy(foo.Block):
     def __init__(self, **kwargs):
         super(Policy, self).__init__(**kwargs)
         with self.name_scope():
@@ -43,9 +43,9 @@ class Policy(nn.Layer):
         return F.softmax(probs), values
 
 net = Policy()
-net.all_params().initialize(mx.init.Uniform(0.02))
-trainer = foo.Trainer(net.all_params(), 'adam', {'learning_rate': 3e-2})
-
+net.collect_params().initialize(mx.init.Uniform(0.02))
+trainer = foo.Trainer(net.collect_params(), 'adam', {'learning_rate': 3e-2})
+loss = foo.loss.L1Loss()
 
 running_reward = 10
 for epoch in count(1):
@@ -81,8 +81,8 @@ for epoch in count(1):
         rewards /= rewards.std() + np.finfo(rewards.dtype).eps
 
         # compute loss and gradient
-        loss = sum([foo.loss.l1_loss(value, mx.nd.array([r])) for r, value in zip(rewards, values)])
-        final_nodes = [loss]
+        L = sum([loss(value, mx.nd.array([r])) for r, value in zip(rewards, values)])
+        final_nodes = [L]
         for logp, r, v in zip(heads, rewards, values):
             reward = r - v.asnumpy()[0,0]
             # Here we differentiate the stochastic graph, corresponds to the
