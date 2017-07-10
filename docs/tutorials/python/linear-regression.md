@@ -157,7 +157,7 @@ parameters of the model to fit the training data. This is accomplished using the
 model.fit(train_iter, eval_iter,
             optimizer_params={'learning_rate':0.005, 'momentum': 0.9},
             num_epoch=50,
-	    eval_metric='mse',
+            eval_metric='mse',
             batch_end_callback = mx.callback.Speedometer(batch_size, 2))
 ```
 
