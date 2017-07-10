@@ -748,7 +748,7 @@ class ColorJitterAug(RandomOrderAug):
         if contrast > 0:
             ts.append(ContrastJitterAug(contrast, clip=False))
         if saturation > 0:
-            ts.append(SaturationJitterAug(saturation clip=False))
+            ts.append(SaturationJitterAug(saturation, clip=False))
         super(ColorJitterAug, self).__init__(ts)
         self.min_val = min_val
         self.max_val = max_val
