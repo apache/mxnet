@@ -1,63 +1,65 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
-"""Neural network layers."""
+"""Basic neural network layers."""
 
-from ..layer import Layer, HybridLayer
+from ..block import Block, HybridBlock
 
 
-class Sequential(Layer):
-    """Stack Layers sequentially.
+class Sequential(Block):
+    """Stacks `Block`s sequentially.
 
-    Example
-    -------
-    >>> net = nn.Sequential()
-    >>> with net.name_scope():
-    ...     net.add(Dense(10, activation='relu'))
-    ...     net.add(Dense(20))
+    Example::
+
+        net = nn.Sequential()
+        # use net's name_scope to give child Blocks appropriate names.
+        with net.name_scope():
+            net.add(Dense(10, activation='relu'))
+            net.add(Dense(20))
     """
     def __init__(self, prefix=None, params=None):
         super(Sequential, self).__init__(prefix=prefix, params=params)
 
-    def add(self, layer):
-        """Add layer on top of the stack."""
-        self.register_child(layer)
+    def add(self, block):
+        """Add block on top of the stack."""
+        self.register_child(block)
 
     def forward(self, x):
-        for layer in self._children:
-            x = layer(x)
+        for block in self._children:
+            x = block(x)
         return x
 
 
-class HSequential(HybridLayer):
-    """Stack HybridLayers sequentially.
+class HSequential(HybridBlock):
+    """Stack `HybridBlock`s sequentially.
 
-    Example
-    -------
-    >>> net = nn.HSequential()
-    >>> with net.name_scope():
-    ...     net.add(Dense(10, activation='relu'))
-    ...     net.add(Dense(20))
+    Example::
+
+        net = nn.Sequential()
+        # use net's name_scope to give child Blocks appropriate names.
+        with net.name_scope():
+            net.add(Dense(10, activation='relu'))
+            net.add(Dense(20))
     """
     def __init__(self, prefix=None, params=None):
         super(HSequential, self).__init__(prefix=prefix, params=params)
 
-    def add(self, layer):
-        """Add layer on top of the stack."""
-        self.register_child(layer)
+    def add(self, block):
+        """Add block on top of the stack."""
+        self.register_child(block)
 
     def hybrid_forward(self, F, x):
-        for layer in self._children:
-            x = layer(x)
+        for block in self._children:
+            x = block(x)
         return x
 
 
-class Dense(HybridLayer):
+class Dense(HybridBlock):
     """Just your regular densely-connected NN layer.
 
     `Dense` implements the operation:
-    `output = activation(dot(input, kernel) + bias)`
+    `output = activation(dot(input, weight) + bias)`
     where `activation` is the element-wise activation function
-    passed as the `activation` argument, `kernel` is a weights matrix
+    passed as the `activation` argument, `weight` is a weights matrix
     created by the layer, and `bias` is a bias vector created by the layer
     (only applicable if `use_bias` is `True`).
 
@@ -66,23 +68,26 @@ class Dense(HybridLayer):
 
     Parameters
     ----------
-    units: Positive integer, dimensionality of the output space.
-    activation: Activation function to use
-        (see help on Activation operator).
+    units : int
+        Dimensionality of the output space.
+    activation : str
+        Activation function to use. See help on `Activation` layer.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
-    use_bias: Boolean, whether the layer uses a bias vector.
-    weight_initializer: Initializer for the `kernel` weights matrix
-        (see mxnet.initializer).
-    bias_initializer: Initializer for the bias vector
-        (see mxnet.initializer).
-    in_units : int
-        Size of input data. No need to specify for `Symbol` API. But must be
-        specified for every Dense layer if you want to use `NDArray` API.
+    use_bias : bool
+        Whether the layer uses a bias vector.
+    weight_initializer : str or `Initializer`
+        Initializer for the `kernel` weights matrix.
+    bias_initializer: str or `Initializer`
+        Initializer for the bias vector.
+    in_units : int, optional
+        Size of input data. If not specified, initialization will be
+        defered to the first time `forward` is called and `in_units`
+        will be inferred from the shape of input data.
     prefix : str or None
-        See document of Layer.
+        See document of `Block`.
     params : ParameterDict or None
-        See document of Layer.
+        See document of `Block`.
 
 
     Input shape:
@@ -119,16 +124,14 @@ class Dense(HybridLayer):
         return act
 
 
-class Activation(HybridLayer):
-    """Applies an activation function to input. Refer
-    `mxnet.ndarray.Activation <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Activation>`_
-    to learn more.
+class Activation(HybridBlock):
+    """Applies an activation function to input.
 
     Parameters
     ----------
-    activation: name of activation function to use
-        See: help on Activation operator
-
+    activation : str
+        name of activation function to use.
+        See :func:`~mxnet.ndarray.Activation` for available choices.
 
     Input shape:
         Arbitrary.
@@ -147,18 +150,16 @@ class Activation(HybridLayer):
         return F.Activation(x, act_type=self._act_type)
 
 
-class Dropout(HybridLayer):
+class Dropout(HybridBlock):
     """Applies Dropout to the input.
 
-    Dropout consists in randomly setting
-    a fraction `rate` of input units to 0 at each update during training time,
-    which helps prevent overfitting. Refer
-    `mxnet.ndarray.Dropout <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Dropout>`_
-    to learn more.
+    Dropout consists in randomly setting a fraction `rate` of input units
+    to 0 at each update during training time, which helps prevent overfitting.
 
     Parameters
     ----------
-    rate: float between 0 and 1. Fraction of the input units to drop.
+    rate : float
+        Fraction of the input units to drop. Must be a number between 0 and 1.
 
     References
     ----------
@@ -173,59 +174,67 @@ class Dropout(HybridLayer):
         return F.Dropout(x, p=self._rate)
 
 
-class BatchNorm(HybridLayer):
+class BatchNorm(HybridBlock):
     """Batch normalization layer (Ioffe and Szegedy, 2014).
-    Normalize the activations of the previous layer at each batch,
-    i.e. applies a transformation that maintains the mean activation
-    close to 0 and the activation standard deviation close to 1. Refer
-    `mxnet.ndarray.BatchNorm <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.BatchNorm>`_
-    to learn more.
+    Normalize the input at each batch, i.e. applies a transformation
+    that maintains the mean activation close to 0 and the activation
+    standard deviation close to 1.
 
     Parameters
     ----------
-    axis: Integer, the axis that should be normalized
-        (typically the features axis).
-        For instance, after a `Conv2D` layer with
-        `data_format="channels_first"`,
-        set `axis=1` in `BatchNormalization`.
-    momentum: Momentum for the moving average.
-    epsilon: Small float added to variance to avoid dividing by zero.
-    center: If True, add offset of `beta` to normalized tensor.
+    axis : int, default 1
+        The axis that should be normalized. This is ypically the channels
+        (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
+        set `axis=1` in `BatchNorm`. If `layout='NHWC'`, then set `axis=3`.
+    momentum: float, default 0.9
+        Momentum for the moving average.
+    epsilon: float, default 1e-3
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
         If False, `beta` is ignored.
-    scale: If True, multiply by `gamma`.
-        If False, `gamma` is not used.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
         When the next layer is linear (also e.g. `nn.relu`),
         this can be disabled since the scaling
         will be done by the next layer.
-    beta_initializer: Initializer for the beta weight.
-    gamma_initializer: Initializer for the gamma weight.
-    moving_mean_initializer: Initializer for the moving mean.
-    moving_variance_initializer: Initializer for the moving variance.
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    moving_mean_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the moving mean.
+    moving_variance_initializer: str or `Initializer`, default 'ones'
+        Initializer for the moving variance.
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be defered to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
     """
     def __init__(self, axis=1, momentum=0.9, epsilon=1e-3, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
                  running_mean_initializer='zeros', running_variance_initializer='ones',
-                 num_features=0, **kwargs):
+                 in_channels=0, **kwargs):
         super(BatchNorm, self).__init__(**kwargs)
         self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': momentum,
                         'fix_gamma': not center}
 
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(num_features,), init=gamma_initializer)
+                                     shape=(in_channels,), init=gamma_initializer)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(num_features,), init=beta_initializer)
+                                    shape=(in_channels,), init=beta_initializer)
         self.running_mean = self.params.get('running_mean', grad_req='null',
-                                            shape=(num_features,),
+                                            shape=(in_channels,),
                                             init=running_mean_initializer)
         self.running_var = self.params.get('running_var', grad_req='null',
-                                           shape=(num_features,),
+                                           shape=(in_channels,),
                                            init=running_variance_initializer)
 
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.BatchNorm(x, gamma, beta, running_mean, running_var, **self._kwargs)
 
 
-class LeakyReLU(HybridLayer):
+class LeakyReLU(HybridBlock):
     """Leaky version of a Rectified Linear Unit.
 
     It allows a small gradient when the unit is not active::
@@ -233,14 +242,10 @@ class LeakyReLU(HybridLayer):
         `f(x) = alpha * x for x < 0`,
         `f(x) = x for x >= 0`.
 
-    Refer
-    `mxnet.ndarray.LeakyReLU <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.LeakyReLU>`_
-    to learn more.
-
     Parameters
     ----------
-    alpha: float
-        Negative slope coefficient. Must be >= 0.
+    alpha : float
+        slope coefficient for the negative half axis. Must be >= 0.
     """
     def __init__(self, alpha, **kwargs):
         super(LeakyReLU, self).__init__(**kwargs)
@@ -250,14 +255,10 @@ class LeakyReLU(HybridLayer):
         return F.LeakyReLU(x, act_type='leaky', slope=self._alpha)
 
 
-class Embedding(HybridLayer):
-    """Turns non-negative integers (indexes/tokens) into dense
-    vectors of fixed size.
-    eg. [[4], [20]] -> [[0.25, 0.1], [0.6, -0.2]]
+class Embedding(HybridBlock):
+    """Turns non-negative integers (indexes/tokens) into dense vectors
+    of fixed size. eg. [[4], [20]] -> [[0.25, 0.1], [0.6, -0.2]]
 
-    Refer
-    `mxnet.ndarray.Embedding <http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Embedding>`_
-    to learn more.
 
     Parameters
     ----------
@@ -272,10 +273,10 @@ class Embedding(HybridLayer):
 
 
     Input shape:
-        2D tensor with shape: `(batch_size, sequence_length)`.
+        2D tensor with shape: `(N, M)`.
 
     Output shape:
-        3D tensor with shape: `(batch_size, sequence_length, output_dim)`.
+        3D tensor with shape: `(N, M, output_dim)`.
     """
     def __init__(self, input_dim, output_dim, dtype='float32',
                  weight_initializer=None, **kwargs):

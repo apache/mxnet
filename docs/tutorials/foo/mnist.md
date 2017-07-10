@@ -97,8 +97,8 @@ initialized parameters.
 
 ```python
 ctx = [mx.cpu(0), mx.cpu(1)]
-net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.1})
+net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+trainer = foo.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
 ```
 
 #### Train the network
@@ -247,8 +247,8 @@ We will initialize the network parameters as follows:
 
 ```python
 ctx = [mx.cpu(0), mx.cpu(1)]
-net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.1})
+net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+trainer = foo.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
 ```
 
 #### Training

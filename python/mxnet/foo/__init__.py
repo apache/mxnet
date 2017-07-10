@@ -4,7 +4,7 @@
 
 from .parameter import *
 
-from .layer import *
+from .block import *
 
 from . import nn
 

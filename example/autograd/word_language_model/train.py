@@ -74,8 +74,8 @@ test_data = batchify(corpus.test, args.batch_size).as_in_context(context)
 
 ntokens = len(corpus.dictionary)
 model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied)
-model.all_params().initialize(mx.init.Xavier(), ctx=context)
-trainer = foo.Trainer(model.all_params(), 'sgd',
+model.collect_params().initialize(mx.init.Xavier(), ctx=context)
+trainer = foo.Trainer(model.collect_params(), 'sgd',
                       {'learning_rate': args.lr,
                        'momentum': 0,
                        'wd': 0})
@@ -128,7 +128,7 @@ def train():
                 L = loss(output, target)
                 L.backward()
 
-            grads = [i.grad(context) for i in model.all_params().values()]
+            grads = [i.grad(context) for i in model.collect_params().values()]
             # Here gradient is not divided by batch_size yet.
             # So we multiply max_norm by batch_size to balance it.
             foo.utils.clip_global_norm(grads, args.clip * args.batch_size)

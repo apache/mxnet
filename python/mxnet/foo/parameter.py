@@ -19,7 +19,7 @@ class DeferredInitializationError(MXNetError):
     pass
 
 class Parameter(object):
-    """A Container holding parameters (weights) of layers.
+    """A Container holding parameters (weights) of `Block`s.
 
     `Parameter` can be used with both `Symbol` and `NDArray` API. For `Symbol` API,
     `Parameter.var()` will return a `Symbol` representing this parameter. It
@@ -109,7 +109,7 @@ class Parameter(object):
                 return
             raise ValueError("Cannot initialize Parameter %s because it has " \
                              "invalid shape: %s. Please specify in_units, " \
-                             "in_filters, num_features etc for Layers or " \
+                             "in_channels, etc for `Block`s or " \
                              "set allow_deferring to True to defer initialization " \
                              "to first forward pass."%(self.name, str(self.shape)))
 
@@ -155,7 +155,7 @@ class Parameter(object):
         assert self.shape is not None and np.prod(self.shape) > 0, \
             "Cannot initialize Parameter %s because it has " \
             "invalid shape: %s. Please specify in_units, " \
-            "in_filters, num_features etc for Layers."%(
+            "in_channels, etc for `Block`s."%(
                 self.name, str(self.shape))
 
         with autograd.pause():
@@ -204,9 +204,9 @@ class Parameter(object):
         raise RuntimeError(
             "Parameter %s has not been initialized. Note that " \
             "you should initialize parameters and create Trainer " \
-            "with Layer.all_params() instead of Layer.params " \
-            "because the later does not include parameters of " \
-            "nested child layers "%(self.name))
+            "with Block.collect_params() instead of Block.params " \
+            "because the later does not include Parameters of " \
+            "nested child Blocks"%(self.name))
 
     def data(self, ctx=None):
         """Returns a copy of this parameter on one context. Must have been
@@ -292,7 +292,7 @@ class ParameterDict(object):
     shared : ParameterDict or None
         If not None, when this dict's get method creates a new parameter, will
         first try to retrieve it from `shared` dict. Usually used for sharing
-        parameters with another layer.
+        parameters with another Block.
     """
     def __init__(self, prefix='', shared=None):
         self._prefix = prefix

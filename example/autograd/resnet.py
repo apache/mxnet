@@ -28,21 +28,21 @@ opt = parser.parse_args()
 
 print(opt)
 
-def conv3x3(filters, stride, in_filters):
+def conv3x3(filters, stride, in_channels):
     return nn.Conv2D(filters, kernel_size=3, strides=stride, padding=1,
-                     use_bias=False, in_filters=in_filters)
+                     use_bias=False, in_channels=in_channels)
 
-class BasicBlockV1(foo.HybridLayer):
-    def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
+class BasicBlockV1(foo.HybridBlock):
+    def __init__(self, filters, stride, downsample=False, in_channels=0, **kwargs):
         super(BasicBlockV1, self).__init__(**kwargs)
         with self.name_scope():
-            self.conv1 = conv3x3(filters, stride, in_filters)
-            self.bn1 = nn.BatchNorm(num_features=in_filters)
+            self.conv1 = conv3x3(filters, stride, in_channels)
+            self.bn1 = nn.BatchNorm(in_channels=in_channels)
             self.conv2 = conv3x3(filters, 1, filters)
-            self.bn2 = nn.BatchNorm(num_features=filters)
+            self.bn2 = nn.BatchNorm(in_channels=filters)
             if downsample:
-                self.conv_ds = nn.Conv2D(filters, kernel_size=1, strides=stride, use_bias=False, in_filters=in_filters)
-                self.bn_ds = nn.BatchNorm(num_features=filters)
+                self.conv_ds = nn.Conv2D(filters, kernel_size=1, strides=stride, use_bias=False, in_channels=in_channels)
+                self.bn_ds = nn.BatchNorm(in_channels=filters)
             self.downsample = downsample
 
     def hybrid_forward(self, F, x):
@@ -65,19 +65,19 @@ class BasicBlockV1(foo.HybridLayer):
         return out
 
 
-class BottleneckV1(foo.HybridLayer):
-    def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
+class BottleneckV1(foo.HybridBlock):
+    def __init__(self, filters, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV1, self).__init__(**kwargs)
         with self.name_scope():
-            self.conv1 = nn.Conv2D(filters=filters//4, kernel_size=1, strides=1, in_filters=in_filters)
-            self.bn1 = nn.BatchNorm(num_features=filters//4)
+            self.conv1 = nn.Conv2D(filters=filters//4, kernel_size=1, strides=1, in_channels=in_channels)
+            self.bn1 = nn.BatchNorm(in_channels=filters//4)
             self.conv2 = conv3x3(filters//4, stride, filters//4)
-            self.bn2 = nn.BatchNorm(num_features=filters//4)
-            self.conv3 = nn.Conv2D(filters=filters, kernel_size=1, strides=1, in_filters=filters//4)
-            self.bn3 = nn.BatchNorm(num_features=filters)
+            self.bn2 = nn.BatchNorm(in_channels=filters//4)
+            self.conv3 = nn.Conv2D(filters=filters, kernel_size=1, strides=1, in_channels=filters//4)
+            self.bn3 = nn.BatchNorm(in_channels=filters)
             if downsample:
-                self.conv_ds = nn.Conv2D(filters, kernel_size=1, strides=stride, use_bias=False, in_filters=in_filters)
-                self.bn_ds = nn.BatchNorm(num_features=filters)
+                self.conv_ds = nn.Conv2D(filters, kernel_size=1, strides=stride, use_bias=False, in_channels=in_channels)
+                self.bn_ds = nn.BatchNorm(in_channels=filters)
             self.downsample = downsample
 
     def hybrid_forward(self, F, x):
@@ -104,7 +104,7 @@ class BottleneckV1(foo.HybridLayer):
         return out
 
 
-class ResnetV1(foo.HybridLayer):
+class ResnetV1(foo.HybridBlock):
     def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
         super(ResnetV1, self).__init__(**kwargs)
         with self.name_scope():
@@ -114,26 +114,26 @@ class ResnetV1(foo.HybridLayer):
                  self.conv0 = conv3x3(filters[0], 1, 3)
              else:
                  self.conv0 = nn.Conv2D(filters[0], 7, 2, 3, use_bias=False,
-                                        in_filters=3)
-                 self.bn0 = nn.BatchNorm(num_features=filters[0])
+                                        in_channels=3)
+                 self.bn0 = nn.BatchNorm(in_channels=filters[0])
                  self.pool0 = nn.MaxPool2D(3, 2, 1)
 
              self.body = nn.HSequential()
-             in_filters = filters[0]
+             in_channels = filters[0]
              for i in range(len(layers)):
                  stride = 1 if i == 0 else 2
                  self.body.add(self._make_layer(block, layers[i], filters[i+1],
-                                                stride, in_filters=filters[i]))
-                 in_filters = filters[i+1]
+                                                stride, in_channels=filters[i]))
+                 in_channels = filters[i+1]
 
              self.pool1 = nn.GlobalAvgPool2D()
              self.dense1 = nn.Dense(classes, in_units=filters[-1])
 
-    def _make_layer(self, block, layers, filters, stride, in_filters=0):
+    def _make_layer(self, block, layers, filters, stride, in_channels=0):
         layer = nn.HSequential()
-        layer.add(block(filters, stride, True, in_filters=in_filters))
+        layer.add(block(filters, stride, True, in_channels=in_channels))
         for i in range(layers-1):
-            layer.add(block(filters, 1, False, in_filters=filters))
+            layer.add(block(filters, 1, False, in_channels=filters))
         return layer
 
     def hybrid_forward(self, F, x):
@@ -152,17 +152,17 @@ class ResnetV1(foo.HybridLayer):
         return x
 
 
-class BasicBlockV2(foo.HybridLayer):
-    def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
+class BasicBlockV2(foo.HybridBlock):
+    def __init__(self, filters, stride, downsample=False, in_channels=0, **kwargs):
         super(BasicBlockV2, self).__init__(**kwargs)
         with self.name_scope():
-            self.bn1 = nn.BatchNorm(num_features=in_filters)
-            self.conv1 = conv3x3(filters, stride, in_filters)
-            self.bn2 = nn.BatchNorm(num_features=filters)
+            self.bn1 = nn.BatchNorm(in_channels=in_channels)
+            self.conv1 = conv3x3(filters, stride, in_channels)
+            self.bn2 = nn.BatchNorm(in_channels=filters)
             self.conv2 = conv3x3(filters, 1, filters)
             if downsample:
                 self.downsample = nn.Conv2D(filters, 1, stride, use_bias=False,
-                                            in_filters=in_filters)
+                                            in_channels=in_channels)
             else:
                 self.downsample = None
 
@@ -182,19 +182,19 @@ class BasicBlockV2(foo.HybridLayer):
         return x + residual
 
 
-class BottleneckV2(foo.HybridLayer):
-    def __init__(self, filters, stride, downsample=False, in_filters=0, **kwargs):
+class BottleneckV2(foo.HybridBlock):
+    def __init__(self, filters, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV2, self).__init__(**kwargs)
         with self.name_scope():
-            self.bn1 = nn.BatchNorm(num_features=in_filters)
-            self.conv1 = conv3x3(filters//4, 1, in_filters)
-            self.bn2 = nn.BatchNorm(num_features=filters//4)
+            self.bn1 = nn.BatchNorm(in_channels=in_channels)
+            self.conv1 = conv3x3(filters//4, 1, in_channels)
+            self.bn2 = nn.BatchNorm(in_channels=filters//4)
             self.conv2 = conv3x3(filters//4, stride, filters//4)
-            self.bn3 = nn.BatchNorm(num_features=filters//4)
+            self.bn3 = nn.BatchNorm(in_channels=filters//4)
             self.conv3 = conv3x3(filters, 1, filters//4)
             if downsample:
                 self.downsample = nn.Conv2D(filters, 1, stride, use_bias=False,
-                                            in_filters=in_filters)
+                                            in_channels=in_channels)
             else:
                 self.downsample = None
 
@@ -217,38 +217,38 @@ class BottleneckV2(foo.HybridLayer):
 
         return x + residual
 
-class ResnetV2(foo.HybridLayer):
+class ResnetV2(foo.HybridBlock):
     def __init__(self, block, classes, layers, filters, thumbnail=False, **kwargs):
         super(ResnetV2, self).__init__(**kwargs)
         with self.name_scope():
             assert len(layers) == len(filters) - 1
             self._thumbnail = thumbnail
-            self.bn_data = nn.BatchNorm(num_features=3, scale=False, center=False)
+            self.bn_data = nn.BatchNorm(in_channels=3, scale=False, center=False)
             if thumbnail:
                 self.conv0 = conv3x3(filters[0], 1, 3)
             else:
                 self.conv0 = nn.Conv2D(filters[0], 7, 2, 3, use_bias=False,
-                                       in_filters=3)
-                self.bn0 = nn.BatchNorm(num_features=filters[0])
+                                       in_channels=3)
+                self.bn0 = nn.BatchNorm(in_channels=filters[0])
                 self.pool0 = nn.MaxPool2D(3, 2, 1)
 
             self.body = nn.HSequential()
-            in_filters = filters[0]
+            in_channels = filters[0]
             for i in range(len(layers)):
                 stride = 1 if i == 0 else 2
                 self.body.add(self._make_layer(block, layers[i], filters[i+1],
-                                               stride, in_filters=in_filters))
-                in_filters = filters[i+1]
+                                               stride, in_channels=in_channels))
+                in_channels = filters[i+1]
 
-            self.bn1 = nn.BatchNorm(num_features=in_filters)
+            self.bn1 = nn.BatchNorm(in_channels=in_channels)
             self.pool1 = nn.GlobalAvgPool2D()
-            self.dense1 = nn.Dense(classes, in_units=in_filters)
+            self.dense1 = nn.Dense(classes, in_units=in_channels)
 
-    def _make_layer(self, block, layers, filters, stride, in_filters=0):
+    def _make_layer(self, block, layers, filters, stride, in_channels=0):
         layer = nn.HSequential()
-        layer.add(block(filters, stride, True, in_filters=in_filters))
+        layer.add(block(filters, stride, True, in_channels=in_channels))
         for i in range(layers-1):
-            layer.add(block(filters, 1, False, in_filters=filters))
+            layer.add(block(filters, 1, False, in_channels=filters))
         return layer
 
     def hybrid_forward(self, F, x):
@@ -327,8 +327,8 @@ def test(ctx):
 def train(epoch, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
-    net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-    trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.1})
+    net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+    trainer = foo.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
     metric = mx.metric.Accuracy()
     loss = foo.loss.SoftmaxCrossEntropyLoss()
 
@@ -362,7 +362,7 @@ def train(epoch, ctx):
         logging.info('time: %f'%(time.time()-tic))
         test(ctx)
 
-    net.all_params().save('mnist.params')
+    net.collect_params().save('mnist.params')
 
 if __name__ == '__main__':
     if opt.symbolic:

@@ -5,7 +5,7 @@ Krizhevsky, Alex, Ilya Sutskever, and Geoffrey E. Hinton. "Imagenet classificati
 """
 import mxnet as mx
 
-def features(input_data, num_features):
+def features(input_data, in_channels):
     # stage 1
     conv1 = mx.symbol.Convolution(
         data=input_data, kernel=(11, 11), stride=(4, 4), num_filter=96)
@@ -40,6 +40,6 @@ def features(input_data, num_features):
     relu7 = mx.symbol.Activation(data=fc2, act_type="relu")
     dropout2 = mx.symbol.Dropout(data=relu7, p=0.5)
     # stage 6
-    fc3 = mx.symbol.FullyConnected(data=dropout2, num_hidden=num_features)
+    fc3 = mx.symbol.FullyConnected(data=dropout2, num_hidden=in_channels)
 
     return fc3

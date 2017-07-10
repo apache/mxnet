@@ -81,12 +81,12 @@ with netD.name_scope():
     # netD.add(nn.Activation('sigmoid'))
 
 
-netG.all_params().initialize(mx.init.Normal(0.02), ctx=ctx)
-netD.all_params().initialize(mx.init.Normal(0.02), ctx=ctx)
+netG.collect_params().initialize(mx.init.Normal(0.02), ctx=ctx)
+netD.collect_params().initialize(mx.init.Normal(0.02), ctx=ctx)
 
 
-trainerG = foo.Trainer(netG.all_params(), 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
-trainerD = foo.Trainer(netD.all_params(), 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
+trainerG = foo.Trainer(netG.collect_params(), 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
+trainerD = foo.Trainer(netD.collect_params(), 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
 
 
 real_label = mx.nd.ones((opt.batchSize,), ctx=ctx)

@@ -28,7 +28,7 @@ env = gym.make('CartPole-v0')
 env.seed(args.seed)
 
 
-class Policy(foo.Layer):
+class Policy(foo.Block):
     def __init__(self, **kwargs):
         super(Policy, self).__init__(**kwargs)
         with self.name_scope():
@@ -43,8 +43,8 @@ class Policy(foo.Layer):
         return F.softmax(probs), values
 
 net = Policy()
-net.all_params().initialize(mx.init.Uniform(0.02))
-trainer = foo.Trainer(net.all_params(), 'adam', {'learning_rate': 3e-2})
+net.collect_params().initialize(mx.init.Uniform(0.02))
+trainer = foo.Trainer(net.collect_params(), 'adam', {'learning_rate': 3e-2})
 loss = foo.loss.L1Loss()
 
 running_reward = 10

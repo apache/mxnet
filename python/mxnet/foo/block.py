@@ -1,6 +1,6 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
-"""Neural network layers."""
+"""Base container class for all neural network models."""
 
 from .. import symbol, ndarray
 from ..symbol import Symbol
@@ -9,19 +9,19 @@ from .. import name as _name
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
 
 
-class _LayerScope(object):
-    """Scope for collecting sub-layers."""
+class _BlockScope(object):
+    """Scope for collecting child `Block`s."""
     _current = None
 
-    def __init__(self, layer):
-        self._layer = layer
+    def __init__(self, block):
+        self._block = block
         self._counter = {}
         self._old_scope = None
 
     @staticmethod
     def create(prefix, params, hint):
-        """Create prefix and params for new layer."""
-        current = _LayerScope._current
+        """Create prefix and params for new `Block`."""
+        current = _BlockScope._current
         if current is None:
             if prefix is None:
                 prefix = _name.NameManager.current.get(None, hint) + '_'
@@ -36,19 +36,19 @@ class _LayerScope(object):
             prefix = '%s%d_'%(hint, count)
             current._counter[hint] = count + 1
         if params is None:
-            parent = current._layer.params
+            parent = current._block.params
             params = ParameterDict(parent.prefix+prefix, parent._shared)
         else:
             params = ParameterDict(params.prefix, params)
-        return current._layer.prefix+prefix, params
+        return current._block.prefix+prefix, params
 
     def __enter__(self):
-        self._old_scope = _LayerScope._current
-        _LayerScope._current = self
+        self._old_scope = _BlockScope._current
+        _BlockScope._current = self
         return self
 
     def __exit__(self, ptype, value, trace):
-        _LayerScope._current = self._old_scope
+        _BlockScope._current = self._old_scope
 
 
 def _flatten(args):
@@ -60,7 +60,7 @@ def _flatten(args):
         return [args], int(length)
 
     assert isinstance(args, (list, tuple)), \
-        "HybridLayer input must be (nested) list of Symbol or NDArray, " \
+        "HybridBlock input must be (nested) list of Symbol or NDArray, " \
         "but got %s of type %s"%(str(args), str(type(args)))
     flat = []
     fmts = []
@@ -78,7 +78,7 @@ def _regroup(args, fmt):
         return args[:fmt], args[fmt:]
 
     assert isinstance(args, (list, tuple)), \
-        "HybridLayer output must be (nested) list of Symbol or NDArray, " \
+        "HybridBlock output must be (nested) list of Symbol or NDArray, " \
         "but got %s of type %s"%(str(args), str(type(args)))
     ret = []
     for i in fmt:
@@ -87,51 +87,54 @@ def _regroup(args, fmt):
     return ret, args
 
 
-class Layer(object):
-    """Base class for all neural network layers and models.
+class Block(object):
+    """Base class for all neural network layers and models. Your models should
+    subclass this class.
 
-    Your models should subclass this class.
+    `Block`s can be nested recursively in a tree structure. You can create and
+    assign child `Block`s as regular attributes::
 
-    Layers can also contain other Layers, allowing you to nest them in a tree
-    structure. You can assign sublayers as regular attributes::
-        from mxnet import nn
-        class Net(nn.Layer):
+        from mxnet.foo import Block, nn
+        from mxnet import ndarray as F
+
+        class Model(Block):
             def __init__(self, **kwargs):
                 super(Net, self).__init__(**kwargs)
+                # use name_scope to give child Blocks appropriate names.
+                # It also allows sharing Parameters between Blocks recursively.
                 with self.name_scope():
                     self.dense0 = nn.Dense(20)
                     self.dense1 = nn.Dense(20)
 
             def forward(self, x):
-                x = self.dense0(x)
-                return self.dense1(x)
+                x = F.relu(self.dense0(x))
+                return F.relu(self.dense1(x))
 
-    Sublayers assigned this way will be registered and will have their status changed
-    too when you call .train() etc.
+    Child `Block`s assigned this way will be registered and `collect_params`
+    will collect their Parameters recursively.
 
     Parameters
     ----------
     prefix : str
-        Prefix acts like a name space. It will be prepended to the name of all Symbols and
-        Parameters created by this layer. Prefix should be unique within one network
-        to prevent name collisions.
+        Prefix acts like a name space. It will be prepended to the name of all
+        Parameters and child `Block`s in this `Block`'s `name_scope`. Prefix
+        should be unique within one model to prevent name collisions.
     params : ParameterDict or None
-        ParameterDict for sharing weights with the new Layer. For example,
-        if you want `dense2` to share `dense1`'s weights, you can do::
-            dense1 = nn.Dense(20, in_units=10, prefix='dense1_')
-            dense2 = nn.Dense(20, in_units=10, prefix='dense2_',
-                              params=dense1.all_params())
+        ParameterDict for sharing weights with the new `Block`. For example,
+        if you want `dense1` to share `dense0`'s weights, you can do::
 
-    Layer supports forwarding with both `Symbol` and `NDArray`."""
+            dense0 = nn.Dense(20)
+            dense1 = nn.Dense(20, params=dense1.collect_params())
+    """
     def __init__(self, prefix=None, params=None):
-        self._prefix, self._params = _LayerScope.create(prefix, params, self._alias())
-        self._scope = _LayerScope(self)
+        self._prefix, self._params = _BlockScope.create(prefix, params, self._alias())
+        self._scope = _BlockScope(self)
         self._children = []
 
     def __setattr__(self, name, value):
         """Registers parameters."""
-        super(Layer, self).__setattr__(name, value)
-        if isinstance(value, Layer):
+        super(Block, self).__setattr__(name, value)
+        if isinstance(value, Block):
             self.register_child(value)
 
     def _alias(self):
@@ -139,53 +142,64 @@ class Layer(object):
 
     @property
     def params(self):
-        """Returns this Layer's parameter dictionary (does not include its
+        """Returns this `Block`'s parameter dictionary (does not include its
         children's parameters)."""
         return self._params
 
-    def all_params(self):
-        """Returns a ParameterDict containing this Layer and all of its children's
-        Parameters."""
+    def collect_params(self):
+        """Returns a ParameterDict containing this `Block` and all of its
+        children's Parameters."""
         ret = ParameterDict(self._params.prefix)
         ret.update(self.params)
         for cld in self._children:
-            ret.update(cld.all_params())
+            ret.update(cld.collect_params())
         return ret
 
     @property
     def prefix(self):
-        """Prefix of this Layer."""
+        """Prefix of this Block."""
         return self._prefix
 
     @property
     def name(self):
+        """Name of this Block, without '_' in the end."""
         if self.prefix.endswith('_'):
             return self.prefix[:-1]
         return self.prefix
 
     def name_scope(self):
-        """Returns a name space object managing sublayer and parameter
-        names. Should be used by `with` statement
+        """Returns a name space object managing child `Block` and parameter
+        names. Should be used by a `with` statement::
+
+            with self.name_scope():
+                self.dense = nn.Dense(20)
         """
         return self._scope
 
-    def register_child(self, layer):
-        """Register layer as sublayer of self. Layers assigned to
-        self as attributes will be registered automatically."""
-        self._children.append(layer)
+    def register_child(self, block):
+        """Register block as a child of self. `Block`s assigned to self as
+        attributes will be registered automatically."""
+        self._children.append(block)
 
     def hybridize(self, active=True):
-        """Activate HybridLayers recursively. Has no effect on
-        non-hybrid children."""
+        """Activates or deactivates `HybridBlock`s recursively. Has no effect on
+        non-hybrid children.
+
+        Parameters
+        ----------
+        active : bool, default True
+            Whether to turn hybrid on or off.
+        """
         for cld in self._children:
             cld.hybridize(active)
 
     def __call__(self, *args):
-        """Call forward."""
+        """Calls forward. Only accepts positional arguments."""
         return self.forward(*args)
 
     def forward(self, *args):
-        """Override to implement forward computation using NDArray.
+        """Override to implement forward computation using NDArray. Only
+        accepts positional arguments.
 
         Parameters
         ----------
@@ -196,18 +210,22 @@ class Layer(object):
         raise NotImplementedError
 
 
-class HybridLayer(Layer):
-    """HybridLayer supports forwarding with both Symbol and NDArray.
+class HybridBlock(Block):
+    """`HybridBlock` supports forwarding with both Symbol and NDArray.
 
-    Forward computation in HybridLayer must be static to work with Symbols,
-    i.e. you cannot call `.asnumpy()`, `.shape`, `.dtype`, etc on inputs.
-    When forwarding after `hybridize()` is called, HybridLayer will
-    create a graph representing the forward computation and cache it.
-    On subsequent forward the cached graph will be used instead of calling
-    `hybrid_forward`.
+    Forward computation in `HybridBlock` must be static to work with `Symbol`s,
+    i.e. you cannot call `.asnumpy()`, `.shape`, `.dtype`, etc on tensors.
+    Also, you cannot use branching or loop logic that bases on non-constant
+    expressions like random numbers or intermediate results, since they change
+    the graph structure for each iteration.
+
+    Before activated with `hybridize()`, `HybridBlock` works just like normal
+    `Block`. After activation, `HybridBlock` will create a symbolic graph
+    representing the forward computation and cache it. On subsequent forwards
+    the cached graph will be used instead of `hybrid_forward`.
     """
     def __init__(self, prefix=None, params=None):
-        super(HybridLayer, self).__init__(prefix=prefix, params=params)
+        super(HybridBlock, self).__init__(prefix=prefix, params=params)
         self._reg_params = {}
         self._cached_graph = ()
         self._cached_op = None
@@ -218,29 +236,29 @@ class HybridLayer(Layer):
 
     def __setattr__(self, name, value):
         """Registers parameters."""
-        super(HybridLayer, self).__setattr__(name, value)
+        super(HybridBlock, self).__setattr__(name, value)
         if isinstance(value, Parameter):
             assert name not in self._reg_params or \
                 not isinstance(self._reg_params[name], Parameter), \
                 "Overriding Parameter attribute %s is not allowed. " \
                 "Please pass in Parameters by specifying `params` at " \
-                "Layer construction instead."
+                "Block construction instead."
             self._reg_params[name] = value
 
-    def register_child(self, layer):
-        if not isinstance(layer, HybridLayer):
-            if isinstance(layer, Sequential):
+    def register_child(self, block):
+        if not isinstance(block, HybridBlock):
+            if isinstance(block, Sequential):
                 raise ValueError(
-                    "Children of HybridLayer must also be HybridLayer. " \
-                    "Please use HSequential instead of Sequantial.")
+                    "Children of HybridBlock must also be HybridBlock. " \
+                    "Please use HSequential instead of Sequential.")
             raise ValueError(
-                "Children of HybridLayer must also be HybridLayer, " \
-                "but %s has type %s."%(str(layer), str(type(layer))))
-        super(HybridLayer, self).register_child(layer)
+                "Children of HybridBlock must also be HybridBlock, " \
+                "but %s has type %s."%(str(block), str(type(block))))
+        super(HybridBlock, self).register_child(block)
 
     def hybridize(self, active=True):
-        super(HybridLayer, self).hybridize(active)
         self._active = active
+        super(HybridBlock, self).hybridize(active)
 
     def _get_graph(self, *args):
         if self._cached_graph:
@@ -266,17 +284,17 @@ class HybridLayer(Layer):
         sdict = {i: j for i, j in zip(out.list_arguments(), arg_shapes)}
         sdict.update({name : shape for name, shape in \
                       zip(out.list_auxiliary_states(), aux_shapes)})
-        for i in self.all_params().values():
+        for i in self.collect_params().values():
             i.shape = sdict[i.name]
 
     def _build_cache(self, *args):
         self.infer_shape(*args)
-        for i in self.all_params().values():
+        for i in self.collect_params().values():
             i._finish_deferred_init()
 
         _, out = self._get_graph(*args)
         self._cached_op = ndarray.CachedOp(out)
-        params = dict(self.all_params().items())
+        params = dict(self.collect_params().items())
         self._cached_params = [params.get(name, None) for name in out.list_inputs()]
         self._in_idx = [(i, int(name)) for i, name in enumerate(out.list_inputs())
                         if name not in params]
@@ -306,26 +324,26 @@ class HybridLayer(Layer):
                     params = {i: j.data(ctx) for i, j in self._reg_params.items()}
                 except DeferredInitializationError:
                     self.infer_shape(x, *args)
-                    for i in self.all_params().values():
+                    for i in self.collect_params().values():
                         i._finish_deferred_init()
                     params = {i: j.data(ctx) for i, j in self._reg_params.items()}
                 return self.hybrid_forward(ndarray, x, *args, **params)
         else:
             assert isinstance(x, Symbol), \
-                "Layer requires the first argument to forward be either " \
+                "HybridBlock requires the first argument to forward be either " \
                 "Symbol or NDArray, but got %s"%type(x)
             params = {i: j.var() for i, j in self._reg_params.items()}
             return self.hybrid_forward(symbol, x, *args, **params)
 
     def hybrid_forward(self, F, x, *args, **kwargs):
-        """Override to construct symbolic graph for this Layer.
+        """Override to construct symbolic graph for this `Block`.
 
         Parameters
         ----------
-        x : Symbol
-            The first input Symbol.
-        *args : list of Symbol
-            Additional input Symbols.
+        x : Symbol or NDArray
+            The first input tensor.
+        *args : list of Symbol or list of NDArray
+            Additional input tensors.
         """
         # pylint: disable= invalid-name
         raise NotImplementedError

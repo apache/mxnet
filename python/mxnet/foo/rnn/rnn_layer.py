@@ -6,11 +6,11 @@
 from __future__ import print_function
 
 from ... import ndarray
-from ..nn import Layer
+from ..nn import Block
 from . import rnn_cell
 
 
-class _RNNLayer(Layer):
+class _RNNLayer(Block):
     """implementation of recurrent layers."""
     def __init__(self, hidden_size, num_layers, layout,
                  dropout, bidirectional, input_size,
@@ -222,9 +222,9 @@ class RNN(_RNNLayer):
         The number of expected features in the input x.
         If not specified, it will be inferred from input.
     prefix : str or None
-        Prefix of this layer.
+        Prefix of this `Block`.
     params : ParameterDict or None
-        Shared Parameters for this Layer.
+        Shared Parameters for this `Block`.
 
     Examples
     --------
@@ -301,9 +301,9 @@ class LSTM(_RNNLayer):
         The number of expected features in the input x.
         If not specified, it will be inferred from input.
     prefix : str or None
-        Prefix of this layer.
+        Prefix of this `Block`.
     params : ParameterDict or None
-        Shared Parameters for this Layer.
+        Shared Parameters for this `Block`.
 
     Examples
     --------
@@ -377,9 +377,9 @@ class GRU(_RNNLayer):
         The number of expected features in the input x.
         If not specified, it will be inferred from input.
     prefix : str or None
-        Prefix of this layer.
+        Prefix of this `Block`.
     params : ParameterDict or None
-        Shared Parameters for this Layer.
+        Shared Parameters for this `Block`.
 
     Examples
     --------

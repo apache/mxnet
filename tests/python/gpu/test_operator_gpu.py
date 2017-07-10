@@ -1279,7 +1279,7 @@ def test_residual_fused():
 
 
 def check_rnn_layer(layer):
-    layer.all_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
+    layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     with mx.gpu(0):
         x = mx.nd.ones((10, 16, 30))
         states = layer.begin_state(16)

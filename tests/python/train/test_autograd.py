@@ -48,8 +48,8 @@ def score(net, ctx_list):
     return metric.get()[1]
 
 def train(net, epoch, ctx_list):
-    net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx_list)
-    trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.5})
+    net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx_list)
+    trainer = foo.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.5})
     metric = mx.metric.Accuracy()
     loss = foo.loss.SoftmaxCrossEntropyLoss()
 
@@ -79,10 +79,10 @@ def test_autograd():
     acc2 = score(net1, [mx.cpu(0), mx.cpu(1)])
     assert acc1 > 0.95
     assert abs(acc1 - acc2) < 0.01
-    net1.all_params().save('mnist.params')
+    net1.collect_params().save('mnist.params')
 
     net2 = get_net()
-    net2.all_params().load('mnist.params', ctx=[mx.cpu(0)])
+    net2.collect_params().load('mnist.params', ctx=[mx.cpu(0)])
     acc3 = score(net2, [mx.cpu(0)])
     assert abs(acc3 - acc1) < 0.0001
 

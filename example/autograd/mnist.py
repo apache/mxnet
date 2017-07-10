@@ -39,8 +39,8 @@ def test(ctxs):
 def train(epoch, ctxs):
     if isinstance(ctxs, mx.Context):
         ctxs = [ctxs]
-    net.all_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctxs)
-    trainer = foo.Trainer(net.all_params(), 'sgd', {'learning_rate': 0.1})
+    net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctxs)
+    trainer = foo.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
     metric = mx.metric.Accuracy()
     loss = foo.loss.SoftmaxCrossEntropyLoss()
 
@@ -63,7 +63,7 @@ def train(epoch, ctxs):
         print('training acc at epoch %d: %s=%f'%(i, name, acc))
         test(ctxs)
 
-    net.all_params().save('mnist.params')
+    net.collect_params().save('mnist.params')
 
 
 if __name__ == '__main__':

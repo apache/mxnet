@@ -5,7 +5,7 @@ from __future__ import absolute_import
 
 from .. import symbol, ndarray
 from ..base import numeric_types
-from .layer import HybridLayer
+from .block import HybridBlock
 
 def _apply_weighting(F, loss, weight=None, sample_weight=None):
     """Apply weighting to loss.
@@ -38,7 +38,7 @@ def _apply_weighting(F, loss, weight=None, sample_weight=None):
     return loss
 
 
-class L2Loss(HybridLayer):
+class L2Loss(HybridBlock):
     """Calculate the mean squared error between output and label:
 
     .. math::
@@ -76,7 +76,7 @@ class L2Loss(HybridLayer):
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
-class L1Loss(HybridLayer):
+class L1Loss(HybridBlock):
     """Calculate the mean absolute error between output and label:
 
     .. math::
@@ -113,7 +113,7 @@ class L1Loss(HybridLayer):
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
-class SoftmaxCrossEntropyLoss(HybridLayer):
+class SoftmaxCrossEntropyLoss(HybridBlock):
     """Compute the softmax cross entropy loss.
 
     If sparse_label is True, label should contain integer category indicators:
