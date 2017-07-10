@@ -241,7 +241,7 @@ inline void im2col(mshadow::Stream<cpu>* s,
   if (2 == kernel_shape.ndim()) {
     im2col_cpu(data_im, im_shape[1], im_shape[2], im_shape[3],
                kernel_shape[0], kernel_shape[1], pad[0], pad[1],
-               stride[0], stride[1], dilation[1], dilation[1], data_col);
+               stride[0], stride[1], dilation[0], dilation[1], data_col);
   } else {
     im2col_nd_core_cpu(data_im, true, im_shape, col_shape,
                        kernel_shape, pad, stride, dilation, data_col);
