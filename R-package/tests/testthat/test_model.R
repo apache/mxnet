@@ -91,6 +91,7 @@ test_that("Regression", {
   
 })
 
+
 test_that("Classification", {
   data(Sonar, package = "mlbench")
   Sonar[, 61] <- as.numeric(Sonar[, 61]) - 1
@@ -103,10 +104,52 @@ test_that("Classification", {
   model <- mx.mlp(train.x, train.y, hidden_node = 10,
                   out_node = 2, out_activation = "softmax",
                   num.round = 20, array.batch.size = 15,
-                  learning.rate = 0.07, 
+                  learning.rate = 0.07,
                   momentum = 0.9,
                   eval.metric = mx.metric.accuracy)
 })
+
+test_that("Fine-tune", {
+  GetInception()
+  GetCatDog()
+  train_iter <- mx.io.ImageRecordIter(path.imgrec = "./data/cats_dogs/cats_dogs_train.rec",
+                                      batch.size  = 8, data.shape  = c(224, 224, 3),
+                                      rand.crop   = TRUE, rand.mirror = TRUE)
+  val_iter <- mx.io.ImageRecordIter(path.imgrec = "./data/cats_dogs/cats_dogs_val.rec",
+                                    batch.size  = 8, data.shape  = c(224, 224, 3),
+                                    rand.crop   = FALSE, rand.mirror = FALSE)
+  inception_bn <- mx.model.load("./model/Inception-BN", iteration = 126)
+  symbol <- inception_bn$symbol
+  internals <- symbol$get.internals()
+  outputs <- internals$outputs
+  
+  flatten <- internals$get.output(which(outputs == "flatten_output"))
+  
+  new_fc <- mx.symbol.FullyConnected(data = flatten, num_hidden = 2, name = "fc1")
+  new_soft <- mx.symbol.SoftmaxOutput(data = new_fc, name = "softmax")
+  arg_params_new <- mxnet:::mx.model.init.params(symbol = new_soft,
+                                                 input.shape = list("data" = c(224, 224, 3, 8)),
+                                                 output.shape = NULL,
+                                                 initializer = mx.init.uniform(0.1),
+                                                 ctx = mx.cpu())$arg.params
+  fc1_weights_new <- arg_params_new[["fc1_weight"]]
+  fc1_bias_new <- arg_params_new[["fc1_bias"]]
+  
+  arg_params_new <- inception_bn$arg.params
+  
+  arg_params_new[["fc1_weight"]] <- fc1_weights_new
+  arg_params_new[["fc1_bias"]] <- fc1_bias_new
+
+  #model <- mx.model.FeedForward.create(symbol = new_soft, X = train_iter, eval.data = val_iter,
+  #                                     ctx = mx.cpu(), eval.metric = mx.metric.accuracy,
+  #                                     num.round = 2, learning.rate = 0.05, momentum = 0.9,
+  #                                     wd = 0.00001, kvstore = "local",
+  #                                     batch.end.callback = mx.callback.log.train.metric(50),
+  #                                     initializer = mx.init.Xavier(factor_type = "in", magnitude = 2.34),
+  #                                     optimizer = "sgd",
+  #                                     arg.params = arg_params_new,
+  #                                     aux.params = inception_bn$aux.params)
+})                                       
 
 test_that("Matrix Factorization", {
   GetMovieLens()
