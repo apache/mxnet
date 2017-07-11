@@ -192,9 +192,12 @@ void BinaryComputeRspRsp(const nnvm::NodeAttrs& attrs,
         indices_out[iter_out] = indices_r[iter_r];
         mshadow::Copy(out[iter_out++], data_r[iter_r++], s);
       }
-      auto new_shape = output.aux_shape(rowsparse::kIdx);
-      new_shape[0] -= num_common_rows;
-      output.set_aux_shape(rowsparse::kIdx, new_shape);
+      auto new_ashape = output.aux_shape(rowsparse::kIdx);
+      auto new_sshape = output.storage_shape();
+      new_ashape[0] -= num_common_rows;
+      new_sshape[0] -= num_common_rows;
+      output.set_aux_shape(rowsparse::kIdx, new_ashape);
+      output.set_storage_shape(new_sshape);
     });
   });
 }

@@ -27,18 +27,27 @@ class StorageImpl : public Storage {
  private:
   static constexpr size_t kMaxNumberOfDevices = Context::kMaxDevType + 1;
   static constexpr size_t kMaxNumberOfDeviceIDs = Context::kMaxDevID + 1;
+#if MXNET_USE_CUDA
+  static int num_gpu_device;
+#endif  // MXNET_USE_CUDA
 
   static void ActivateDevice(Context ctx) {
     switch (ctx.dev_type) {
       case Context::kCPU: break;
       case Context::kGPU:
-      case Context::kCPUPinned:
+      case Context::kCPUPinned: {
 #if MXNET_USE_CUDA
-        CUDA_CALL(cudaSetDevice(ctx.dev_id));
-#else  // MXNET_USE_CUDA
-        LOG(FATAL) << "Please compile with CUDA enabled";
+          num_gpu_device = 0;
+          cudaError_t e = cudaGetDeviceCount(&num_gpu_device);
+          if (e != cudaSuccess) {
+            num_gpu_device = 0;
+          }
+          if (num_gpu_device > 0) {
+            CUDA_CALL(cudaSetDevice(ctx.dev_id));
+          }
 #endif  // MXNET_USE_CUDA
-        break;
+          break;
+        }
       default:
         LOG(FATAL) << "Unimplemented device";
     }
@@ -47,6 +56,9 @@ class StorageImpl : public Storage {
   std::array<common::LazyAllocArray<storage::StorageManager>,
              kMaxNumberOfDevices> storage_managers_;
 };  // struct Storage::Impl
+#if MXNET_USE_CUDA
+int StorageImpl::num_gpu_device = 0;
+#endif  // MXNET_USE_CUDA
 
 Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
   // space already recycled, ignore request
@@ -64,7 +76,11 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
           }
           case Context::kCPUPinned: {
 #if MXNET_USE_CUDA
-            ptr = new storage::NaiveStorageManager<storage::PinnedMemoryStorage>();
+            if (num_gpu_device > 0) {
+              ptr = new storage::NaiveStorageManager<storage::PinnedMemoryStorage>();
+            } else {
+              ptr = new storage::NaiveStorageManager<storage::CPUDeviceStorage>();
+            }
 #else
             LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";
 #endif  // MXNET_USE_CUDA

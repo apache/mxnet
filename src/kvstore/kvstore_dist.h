@@ -7,6 +7,7 @@
 #define MXNET_KVSTORE_KVSTORE_DIST_H_
 #include <string>
 #include <vector>
+#include <algorithm>
 #include "./kvstore_local.h"
 #include "mxnet/engine.h"
 #include "ps/ps.h"
@@ -43,7 +44,7 @@ class KVStoreDist : public KVStoreLocal {
       }
     }
     bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 1000 * 1000);
-    row_sparse_verbose_ = dmlc::GetEnv("MXNET_KVSTORE_DIST_ROW_SPARSE_VERBOSE", false);
+    log_verbose_ = dmlc::GetEnv("MXNET_KVSTORE_DIST_ROW_SPARSE_VERBOSE", false);
   }
 
   virtual ~KVStoreDist() {
@@ -138,8 +139,6 @@ class KVStoreDist : public KVStoreLocal {
             priority,
             PROFILER_MESSAGE("KVStoreDistDefaultPull"));
       } else if (storage_type == kRowSparseStorage) {
-        recv_buf.WaitToRead();
-        grouped_vals[i][0]->WaitToRead();
         PullRowSparse(key, &recv_buf, grouped_vals[i][0]->aux_ndarray(rowsparse::kIdx), priority);
       } else {
         LOG(FATAL) << "unknown storage type " << storage_type;
@@ -223,6 +222,8 @@ class KVStoreDist : public KVStoreLocal {
       auto& send_buf = comm_buf_[key];
       const auto storage_type = merged.storage_type();
       if (merged.ctx().dev_mask() == cpu::kDevMask) {
+        // make sure the previous push/pull is completed
+        send_buf.WaitToWrite();
         send_buf = merged;  // avoid memory copy
       } else {
         if (send_buf.is_none()) {
@@ -286,10 +287,11 @@ class KVStoreDist : public KVStoreLocal {
       const auto unit_len = recv_buf->shape().ProdShape(1, recv_buf->shape().ndim());
       size_t size = num_rows * unit_len;
        // convert to ps keys in row sparse format
-      PSKV& pskv = EncodeRowSparseKey(key, size, num_rows, offsets, unit_len);
-      if (this->row_sparse_verbose_) {
-        LOG(INFO) << "pull lens: " << pskv.lens << " keys: " << pskv.keys
-                  << " size: " << size;
+      PSKV& pskv = EncodeRowSparseKey(key, size, num_rows, offsets,
+                                      unit_len, recv_buf->shape()[0]);
+      if (this->log_verbose_) {
+        LOG(INFO) << "worker " << get_rank() << " pull lens: " << pskv.lens << " keys: "
+                  << pskv.keys << " size: " << size;
       }
       auto vals = new ps::SArray<real_t>(data, size, false);
       CHECK_NOTNULL(ps_worker_)->ZPull(pskv.keys, vals, &pskv.lens, kRowSparsePushPull,
@@ -318,17 +320,18 @@ class KVStoreDist : public KVStoreLocal {
       mkl_set_tblob_eager_mode(send_buf.data());
 #endif
       real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
-      if (!send_buf.storage_initialized()) return;
-      size_t num_rows = send_buf.aux_shape(kIdx).Size();
-      const auto offsets = send_buf.aux_data(kIdx).dptr<int64_t>();
+      bool init = send_buf.storage_initialized();
+      size_t num_rows = init ? send_buf.aux_shape(kIdx).Size() : 0;
+      const auto offsets = init ? send_buf.aux_data(kIdx).dptr<int64_t>() : nullptr;
       const auto unit_len = send_buf.shape().ProdShape(1, send_buf.shape().ndim());
       const auto size = num_rows * unit_len;
 
        // convert to ps keys in row sparse format
-      PSKV& pskv = EncodeRowSparseKey(key, size, num_rows, offsets, unit_len);
-      if (this->row_sparse_verbose_) {
-        LOG(INFO) << "push lens: " << pskv.lens << " keys: " << pskv.keys
-                  << " size: " << size;
+      PSKV& pskv = EncodeRowSparseKey(key, size, num_rows, offsets,
+                                      unit_len, send_buf.shape()[0]);
+      if (this->log_verbose_) {
+        LOG(INFO) << "worker " << get_rank() << " push lens: " << pskv.lens << " keys: "
+                  << pskv.keys << " size: " << size;
       }
       ps::SArray<real_t> vals(data, size, false);
       CHECK_NOTNULL(ps_worker_)->ZPush(pskv.keys, vals, pskv.lens, kRowSparsePushPull, [cb]() {
@@ -417,8 +420,10 @@ class KVStoreDist : public KVStoreLocal {
     return pskv;
   }
 
-  inline PSKV& EncodeRowSparseKey(int key, size_t size, int64_t num_rows,
-                                  const int64_t *offsets, size_t unit_len) {
+  inline PSKV& EncodeRowSparseKey(const int key, const size_t size, const int64_t num_rows,
+                                  const int64_t *offsets, const size_t unit_len,
+                                  const int64_t total_num_rows) {
+    using namespace common;
     mu_.lock();
     PSKV& pskv = ps_kv_[key];
     mu_.unlock();
@@ -429,21 +434,45 @@ class KVStoreDist : public KVStoreLocal {
     int num_servers = krs.size();
     CHECK_GT(num_servers, 0);
 
-    if (size >= bigarray_bound_ && row_sparse_verbose_) {
-      LOG(INFO) << "WARNING: big row_sparse weight array sharding is not implemented";
+    if (total_num_rows * unit_len >= bigarray_bound_) {
+      pskv.size = 0;
+      int64_t start_row = 0;
+      // parition it to all servers
+      for (int i = 0; i < num_servers; ++i) {
+        // calculate partition ranges
+        int64_t part_num_rows =
+            llround(static_cast<double>(total_num_rows) / num_servers * (i + 1)) -
+            llround(static_cast<double>(total_num_rows) / num_servers * i);
+        auto end_row = start_row + part_num_rows;
+        auto lb = std::lower_bound(offsets, offsets + num_rows, start_row);
+        auto ub = std::upper_bound(offsets, offsets + num_rows, end_row - 1);
+        ps::Key master_key = krs[i].begin() + key;
+        pskv.keys.push_back(master_key);
+        pskv.lens.push_back(0);
+        for (auto offset = lb; offset < ub; offset++) {
+          ps::Key ps_key = krs[i].begin() + key + *offset - start_row;
+          CHECK_LT(ps_key, krs[i].end());
+          pskv.keys.push_back(ps_key);
+          pskv.lens.push_back(unit_len);
+          pskv.size += unit_len;
+        }
+        start_row = end_row;
+      }
+      CHECK_EQ(static_cast<size_t>(pskv.size), size);
+    } else {
+      // send it to a single random picked server
+      int server = (key * 9973) % num_servers;
+      ps::Key master_key = krs[server].begin() + key;
+      pskv.keys.push_back(master_key);
+      pskv.lens.push_back(0);
+      for (int64_t i = 0; i < num_rows; i++) {
+        ps::Key ps_key = krs[server].begin() + key + offsets[i];
+        CHECK_LT(ps_key, krs[server].end());
+        pskv.keys.push_back(ps_key);
+        pskv.lens.push_back(unit_len);
+      }
+      pskv.size = size;
     }
-    // send it to a single random picked server
-    int server = (key * 9973) % num_servers;
-    ps::Key master_key = krs[server].begin() + key;
-    pskv.keys.push_back(master_key);
-    pskv.lens.push_back(0);
-    for (int64_t i = 0; i < num_rows; i++) {
-      ps::Key ps_key = krs[server].begin() + key + offsets[i];
-      CHECK_LT(ps_key, krs[server].end());
-      pskv.keys.push_back(ps_key);
-      pskv.lens.push_back(unit_len);
-    }
-    pskv.size = size;
     return pskv;
   }
 
@@ -462,7 +491,7 @@ class KVStoreDist : public KVStoreLocal {
   size_t bigarray_bound_;
   /// \brief send & recver buffer
   std::unordered_map<int, NDArray> comm_buf_;
-  bool row_sparse_verbose_;
+  bool log_verbose_;
 };
 
 }  // namespace kvstore

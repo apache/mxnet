@@ -246,7 +246,7 @@ def test_sparse_nd_lesser_equal():
 
 
 def test_sparse_nd_binary():
-    N = 100
+    N = 10
     def check_binary(fn):
         for _ in range(N):
             ndim = 2
@@ -284,7 +284,7 @@ def test_sparse_nd_binary():
 
 
 def test_sparse_nd_binary_rop():
-    N = 100
+    N = 10
     def check(fn):
         for _ in range(N):
             ndim = 2
@@ -311,6 +311,33 @@ def test_sparse_nd_binary_rop():
     check(lambda x: 0.5 <= x)
     check(lambda x: 0.5 == x)
 
+def test_sparse_nd_binary_iop():
+    N = 10
+    def check_binary(fn, stype):
+        for _ in range(N):
+            ndim = 2
+            oshape = np.random.randint(1, 6, size=(ndim,))
+            lshape = list(oshape)
+            rshape = list(oshape)
+            lhs = np.random.uniform(0, 1, size=lshape)
+            rhs = np.random.uniform(0, 1, size=rshape)
+            lhs_nd = mx.nd.cast_storage(mx.nd.array(lhs), storage_type=stype)
+            rhs_nd = mx.nd.cast_storage(mx.nd.array(rhs), storage_type=stype)
+            assert_allclose(fn(lhs, rhs),
+                            fn(lhs_nd, rhs_nd).asnumpy(),
+                            rtol=1e-4, atol=1e-4)
+
+    def inplace_add(x, y):
+        x += y
+        return x
+    def inplace_mul(x, y):
+        x *= y
+        return x
+    stypes = ['csr', 'row_sparse']
+    fns = [inplace_add, inplace_mul]
+    for stype in stypes:
+        for fn in fns:
+            check_binary(fn, stype)
 
 def test_sparse_nd_negate():
     npy = np.random.uniform(-10, 10, rand_shape_2d())
