@@ -471,7 +471,7 @@ class CustomOpProp(object):
             List of aux shapes calculated from in_shape,
             in the same order as declared in list_auxiliary_states.
         """
-        return in_shape, [in_shape[0]], []
+        return in_shape, (in_shape[0],)*len(self.list_outputs()), ()
 
     def infer_type(self, in_type):
         """infer_type interface. override to create new operators
@@ -753,9 +753,7 @@ def register(reg_name):
                                                                          NDArrayHandle),
                                                                     writable=False))
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[1]))]
-                            op.forward(is_train=is_train, req=reqs,
-                                       in_data=tensors[0], out_data=tensors[1],
-                                       aux=tensors[4])
+                            op.forward(is_train, reqs, tensors[0], tensors[1], tensors[4])
                         except Exception:
                             print('Error in CustomOp.forward: %s' % traceback.format_exc())
                             return False
@@ -776,10 +774,8 @@ def register(reg_name):
                                                                          NDArrayHandle),
                                                                     writable=False))
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[2]))]
-                            op.backward(req=reqs,
-                                        in_data=tensors[0], out_data=tensors[1],
-                                        in_grad=tensors[2], out_grad=tensors[3],
-                                        aux=tensors[4])
+                            op.backward(reqs, tensors[0], tensors[1], tensors[2],
+                                        tensors[3], tensors[4])
                         except Exception:
                             print('Error in CustomOp.backward: %s' % traceback.format_exc())
                             return False
