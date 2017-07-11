@@ -75,7 +75,8 @@ int main(int argc, char** argv) {
   opt->SetParam("rescale_grad", 1.0/batch_size)
      ->SetParam("lr", learning_rate)
      ->SetParam("wd", weight_decay);
-
+  std::unique_ptr<LRScheduler> lr_sch(new FactorScheduler(5000, 0.1));
+  opt->SetLRScheduler(std::move(lr_sch));
 
   // Create executor by binding parameters to the model
   auto *exec = net.SimpleBind(ctx, args);
