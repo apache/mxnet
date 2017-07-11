@@ -101,18 +101,12 @@ test_that("Classification", {
   test.x <- data.matrix(Sonar[-train.ind, 1:60])
   test.y <- Sonar[-train.ind, 61]
   mx.set.seed(0)
-  model <- mx.mlp(
-    train.x,
-    train.y,
-    hidden_node = 10,
-    out_node = 2,
-    out_activation = "softmax",
-    num.round = 20,
-    array.batch.size = 15,
-    learning.rate = 0.07,
-    momentum = 0.9,
-    eval.metric = mx.metric.accuracy
-  )
+  model <- mx.mlp(train.x, train.y, hidden_node = 10,
+                  out_node = 2, out_activation = "softmax",
+                  num.round = 20, array.batch.size = 15,
+                  learning.rate = 0.07,
+                  momentum = 0.9,
+                  eval.metric = mx.metric.accuracy)
 })
 
 test_that("Fine-tune", {
@@ -134,9 +128,9 @@ test_that("Fine-tune", {
   new_fc <- mx.symbol.FullyConnected(data = flatten, num_hidden = 2, name = "fc1")
   new_soft <- mx.symbol.SoftmaxOutput(data = new_fc, name = "softmax")
   arg_params_new <- mxnet:::mx.model.init.params(symbol = new_soft,
-                                                 input.shape = c(224, 224, 3, 8),
+                                                 input.shape = list("data" = c(224, 224, 3, 8)),
                                                  output.shape = NULL,
-                                                 initializer = mxnet:::mx.init.uniform(0.1),
+                                                 initializer = mx.init.uniform(0.1),
                                                  ctx = mx.cpu())$arg.params
   fc1_weights_new <- arg_params_new[["fc1_weight"]]
   fc1_bias_new <- arg_params_new[["fc1_bias"]]
@@ -145,16 +139,16 @@ test_that("Fine-tune", {
   
   arg_params_new[["fc1_weight"]] <- fc1_weights_new
   arg_params_new[["fc1_bias"]] <- fc1_bias_new
-  
-  model <- mx.model.FeedForward.create(symbol = new_soft, X = train_iter, eval.data = val_iter,
-                                       ctx = mx.cpu(), eval.metric = mx.metric.accuracy,
-                                       num.round = 2, learning.rate = 0.05, momentum = 0.9,
-                                       wd = 0.00001, kvstore = "local",
-                                       batch.end.callback = mx.callback.log.train.metric(150),
-                                       initializer = mx.init.Xavier(factor_type = "in", magnitude = 2.34),
-                                       optimizer = "sgd",
-                                       arg.params = arg_params_new,
-                                       aux.params = inception_bn$aux.params)
+
+  #model <- mx.model.FeedForward.create(symbol = new_soft, X = train_iter, eval.data = val_iter,
+  #                                     ctx = mx.cpu(), eval.metric = mx.metric.accuracy,
+  #                                     num.round = 2, learning.rate = 0.05, momentum = 0.9,
+  #                                     wd = 0.00001, kvstore = "local",
+  #                                     batch.end.callback = mx.callback.log.train.metric(50),
+  #                                     initializer = mx.init.Xavier(factor_type = "in", magnitude = 2.34),
+  #                                     optimizer = "sgd",
+  #                                     arg.params = arg_params_new,
+  #                                     aux.params = inception_bn$aux.params)
 })                                       
 
 test_that("Matrix Factorization", {

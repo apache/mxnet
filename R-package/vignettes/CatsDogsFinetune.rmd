@@ -168,11 +168,11 @@ new_soft <- mx.symbol.SoftmaxOutput(data = new_fc,
                                     name = "softmax")
 # set name to original name in symbol$arguments
 
-arg_params_new <- mxnet:::mx.model.init.params(symbol = new_soft, 
-                                               input.shape = c(224, 224, 3, 8), 
+arg_params_new <- mxnet:::mx.model.init.params(symbol = new_soft,
+                                               input.shape = list("data" = c(224, 224, 3, 8)),
                                                output.shape = NULL,
-                                               initializer = mxnet:::mx.init.uniform(0.1), 
-                                               ctx = mx.gpu(0))$arg.params
+                                               initializer = mx.init.uniform(0.1),
+                                               ctx = mx.cpu())$arg.params
 fc1_weights_new <- arg_params_new[["fc1_weight"]]
 fc1_bias_new <- arg_params_new[["fc1_bias"]]
 
