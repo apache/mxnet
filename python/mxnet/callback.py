@@ -6,7 +6,7 @@ import logging
 import math
 import time
 import warnings
-import numpy as np
+import operator
 
 from . import metric
 
@@ -188,25 +188,24 @@ class EarlyStopping(object):
         Defaults to 'dummy_model'. Specifies the model name to be saved, if not given, the name
         'dummy_model' will be used.
 
-       Example
-       -------
-       >>> # Stop the training when there is no improvements in 5 rounds. Using
-       >>> module.fit(iterator, num_epoch=n_epoch, eval_metric='acc',
-       ... epoch_end_callback=EarlyStopping(eval_metric='acc', patience=5, verbose=1))
-        INFO:root:Epoch[21] Train-accuracy=0.640086
-        INFO:root:Epoch[21] Time cost=0.531
-        INFO:root:Epoch[22] Train-accuracy=0.640086
-        INFO:root:Epoch[22] Time cost=0.533
-        INFO:root:Epoch[23] Train-accuracy=0.640086
-        INFO:root:Epoch[23] Time cost=0.531
-        INFO:root:Epoch[24] Train-accuracy=0.640086
-        INFO:root:Epoch[24] Time cost=0.535
-        INFO:root:Epoch[25] Train-accuracy=0.640086
-        INFO:root:Epoch[25] Time cost=0.534
-        Epoch 00025: early stopping
-        INFO:root:Saved checkpoint to "dummy_model-0025.params"
+    Example
+    -------
+    >>> # Stop the training when there is no improvements in 5 rounds. Using
+    >>> module.fit(iterator, num_epoch=n_epoch, eval_metric='acc',
+    ... epoch_end_callback=EarlyStopping(eval_metric='acc', patience=5, verbose=1))
+    INFO:root:Epoch[21] Train-accuracy=0.640086
+    INFO:root:Epoch[21] Time cost=0.531
+    INFO:root:Epoch[22] Train-accuracy=0.640086
+    INFO:root:Epoch[22] Time cost=0.533
+    INFO:root:Epoch[23] Train-accuracy=0.640086
+    INFO:root:Epoch[23] Time cost=0.531
+    INFO:root:Epoch[24] Train-accuracy=0.640086
+    INFO:root:Epoch[24] Time cost=0.535
+    INFO:root:Epoch[25] Train-accuracy=0.640086
+    INFO:root:Epoch[25] Time cost=0.534
+    Epoch 00025: early stopping
+    INFO:root:Saved checkpoint to "dummy_model-0025.params"
     """
-
     def __init__(self, min_delta=0, patience=1, verbose=0, mode='auto', save_model=False,
                  model_name='dummy_model'):
         if mode not in ['auto', 'min', 'max']:
@@ -236,22 +235,22 @@ class EarlyStopping(object):
         self.eval_metric = eval_metric
 
         if self.mode == 'min':
-            self.metric_op = np.less
+            self.metric_op = operator.lt
         elif self.mode == 'max':
-            self.metric_op = np.greater
+            self.metric_op = operator.gt
         else:
             if ('acc' in self.eval_metric or
                     'f1' in self.eval_metric or
                     'top_k_accuracy' in self.eval_metric):
-                self.metric_op = np.greater
+                self.metric_op = operator.gt
             else:
-                self.metric_op = np.less
+                self.metric_op = operator.lt
 
-        if self.metric_op == np.greater:
+        if self.metric_op == operator.gt:
             self.min_delta *= 1
         else:
             self.min_delta *= -1
-        self.best = np.Inf if self.metric_op == np.less else -np.Inf
+        self.best = math.inf if self.metric_op == operator.lt else -math.inf
 
     def __call__(self, epoch, symbol, arg_params, aux_params, eval_metric,
                  epoch_train_eval_metrics):

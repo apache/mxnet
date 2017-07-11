@@ -468,7 +468,6 @@ class BaseModule(object):
             eval_metric = metric.create(eval_metric)
         if validation_metric is None:
             validation_metric = eval_metric
-
         ################################################################################
         # training loop
         ################################################################################
@@ -504,17 +503,15 @@ class BaseModule(object):
                     for callback in _as_list(batch_end_callback):
                         callback(batch_end_params)
                 nbatch += 1
-
             # one epoch of training is finished
             for name, val in eval_metric.get_name_value():
                 self.logger.info('Epoch[%d] Train-%s=%f', epoch, name, val)
             toc = time.time()
             self.logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc-tic))
-
             # sync aux params across devices
             arg_params, aux_params = self.get_params()
             self.set_params(arg_params, aux_params)
-            #----------------------------------------
+            # ----------------------------------------
             # evaluation on validation set
             if eval_data:
                 res = self.score(eval_data, validation_metric,
@@ -535,13 +532,11 @@ class BaseModule(object):
             else:
                 measurement_for_stopping = eval_metric.name
                 metric_for_stopping = dict(eval_metric.get_name_value())[measurement_for_stopping]
-
             if epoch_end_callback is not None:
                 for callback in _as_list(epoch_end_callback):
                     if not callback(epoch, self.symbol, arg_params, aux_params,
                                     measurement_for_stopping, metric_for_stopping):
                         return
-
             # end of 1 epoch, reset the data-iter for another epoch
             train_data.reset()
 
