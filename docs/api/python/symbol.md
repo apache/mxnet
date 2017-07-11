@@ -253,6 +253,7 @@ Composite multiple symbols into a new one by an operator.
     broadcast_div
     broadcast_mod
     negative
+    reciprocal
     dot
     batch_dot
     add_n

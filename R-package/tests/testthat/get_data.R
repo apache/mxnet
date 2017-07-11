@@ -37,3 +37,14 @@ GetCifar10 <- function() {
     unzip('data/cifar10.zip', exdir = 'data/')
   }
 }
+
+GetMovieLens <- function() {
+  if (!dir.exists("data")) {
+    dir.create("data/")
+  }
+  if (!file.exists('data/ml-100k/u.data')) {
+    download.file('http://files.grouplens.org/datasets/movielens/ml-100k.zip',
+                  destfile = 'data/ml-100k.zip')
+    unzip('data/ml-100k.zip', exdir = 'data/')
+  }
+}

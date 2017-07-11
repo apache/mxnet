@@ -4,7 +4,7 @@ source("get_data.R")
 
 context("models")
 
-test_that("basic symbol operation", {
+test_that("MNIST", {
 #   # Network configuration
    GetMNIST_ubyte()
    batch.size <- 100
@@ -64,4 +64,122 @@ test_that("basic symbol operation", {
    
    file.remove("chkpt-0001.params")
    file.remove("chkpt-symbol.json")
+})
+
+test_that("Regression", {
+  data(BostonHousing, package = "mlbench")
+  train.ind <- seq(1, 506, 3)
+  train.x <- data.matrix(BostonHousing[train.ind,-14])
+  train.y <- BostonHousing[train.ind, 14]
+  test.x <- data.matrix(BostonHousing[-train.ind,-14])
+  test.y <- BostonHousing[-train.ind, 14]
+  data <- mx.symbol.Variable("data")
+  fc1 <- mx.symbol.FullyConnected(data, num_hidden = 1)
+  lro <- mx.symbol.LinearRegressionOutput(fc1)
+  
+  demo.metric.mae <- mx.metric.custom("mae", function(label, pred) {
+    res <- mean(abs(label - pred))
+    return(res)
+  })
+  mx.set.seed(0)
+  model <- mx.model.FeedForward.create(lro, X = train.x, y = train.y,
+                                       ctx = mx.cpu(), num.round = 50,
+                                       array.batch.size = 20,
+                                       learning.rate = 2e-6,
+                                       momentum = 0.9,
+                                       eval.metric = demo.metric.mae)
+  
+})
+
+test_that("Classification", {
+  data(Sonar, package = "mlbench")
+  Sonar[, 61] <- as.numeric(Sonar[, 61]) - 1
+  train.ind <- c(1:50, 100:150)
+  train.x <- data.matrix(Sonar[train.ind, 1:60])
+  train.y <- Sonar[train.ind, 61]
+  test.x <- data.matrix(Sonar[-train.ind, 1:60])
+  test.y <- Sonar[-train.ind, 61]
+  mx.set.seed(0)
+  model <- mx.mlp(train.x, train.y, hidden_node = 10,
+                  out_node = 2, out_activation = "softmax",
+                  num.round = 20, array.batch.size = 15,
+                  learning.rate = 0.07, 
+                  momentum = 0.9,
+                  eval.metric = mx.metric.accuracy)
+})
+
+test_that("Matrix Factorization", {
+  GetMovieLens()
+  DF <- read.table("./data/ml-100k/u.data", header = F, sep = "\t")
+  names(DF) <- c("user", "item", "score", "time")
+  max_user <- max(DF$user)
+  max_item <- max(DF$item)
+  DF_mat_x <- data.matrix(t(DF[, 1:2]))
+  DF_y <- DF[, 3]
+  k <- 64
+  user <- mx.symbol.Variable("user")
+  item <- mx.symbol.Variable("item")
+  score <- mx.symbol.Variable("label")
+  user1 <- mx.symbol.Embedding(data = mx.symbol.BlockGrad(user), input_dim = max_user,
+                               output_dim = k, name = "user1")
+  item1 <- mx.symbol.Embedding(data = mx.symbol.BlockGrad(item), input_dim = max_item,
+                               output_dim = k, name = "item1"
+    )
+  pred <- user1 * item1
+  pred1 <- mx.symbol.sum_axis(pred, axis = 1, name = "pred1")
+  pred2 <- mx.symbol.Flatten(pred1, name = "pred2")
+  pred3 <- mx.symbol.LinearRegressionOutput(data = pred2, label = score, name = "pred3")
+  devices = lapply(1:2, function(i) {
+    mx.cpu(i)
+  })
+  mx.set.seed(123)
+  
+  CustomIter <- setRefClass( "CustomIter", fields = c("iter1", "iter2"),
+                             contains = "Rcpp_MXArrayDataIter",
+      methods = list(
+        initialize = function(iter1, iter2) {
+          .self$iter1 <- iter1
+          .self$iter2 <- iter2
+          .self
+        },
+        value = function() {
+          user <- .self$iter1$value()$data
+          item <- .self$iter2$value()$data
+          label <- .self$iter1$value()$label
+          list(user = user,
+               item = item,
+               label = label)
+        },
+        iter.next = function() {
+          .self$iter1$iter.next()
+          .self$iter2$iter.next()
+        },
+        reset = function() {
+          .self$iter1$reset()
+          .self$iter2$reset()
+        },
+        num.pad = function() {
+          .self$iter1$num.pad()
+        },
+        finalize = function() {
+          .self$iter1$finalize()
+          .self$iter2$finalize()
+        }
+      )
+    )
+  
+  user_iter = mx.io.arrayiter(data = DF[, 1], label = DF[, 3], batch.size = k)
+  
+  item_iter = mx.io.arrayiter(data = DF[, 2], label = DF[, 3], batch.size = k)
+  
+  train_iter <- CustomIter$new(user_iter, item_iter)
+  
+  model <- mx.model.FeedForward.create(pred3, X = train_iter, ctx = devices,
+                                       num.round = 10, initializer = mx.init.uniform(0.07),
+                                       learning.rate = 0.07,
+                                       eval.metric = mx.metric.rmse,
+                                       momentum = 0.9,
+                                       epoch.end.callback = mx.callback.log.train.metric(1),
+                                       input.names = c("user", "item"),
+                                       output.names = "label")
 })
