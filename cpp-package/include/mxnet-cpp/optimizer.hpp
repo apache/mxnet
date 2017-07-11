@@ -95,10 +95,10 @@ inline unsigned Optimizer::UpdateCount_(int index) {
 }
 
 inline float Optimizer::GetLR_(int index) {
-  float lr = std::stof(params_["lr"]);
-  if (nullptr != lrScheduler_)
-    lr = lrScheduler_->GetLR(num_update_);
-  return lr;
+  if (nullptr != lrScheduler_) {
+    return lrScheduler_->GetLR(num_update_);
+  }
+  return std::stof(params_["lr"]);
 }
 
 inline float Optimizer::GetWD_(int index) {
