@@ -1,15 +1,31 @@
 # slice the shape on the highest dimension
 mx.model.slice.shape <- function(shape, nsplit) {
-  ndim <- length(shape)
-  batchsize <- shape[[ndim]]
-  step <- as.integer((batchsize + nsplit - 1) / nsplit)
-  lapply(0:(nsplit - 1), function(k) {
-    begin = min(k * step, batchsize)
-    end = min((k + 1) * step, batchsize)
-    s <- shape
-    s[[ndim]] = end - begin
-    return(list(begin=begin, end=end, shape=s))
-  })
+  if (is.numeric(shape)) {
+    ndim <- length(shape)
+    batchsize <- shape[[ndim]]
+    step <- as.integer((batchsize + nsplit - 1) / nsplit)
+    lapply(0:(nsplit - 1), function(k) {
+      begin = min(k * step, batchsize)
+      end = min((k + 1) * step, batchsize)
+      s <- shape
+      s[[ndim]] = end - begin
+      return(list(begin=begin, end=end, shape=s))
+    })
+  } else if (is.list(shape)) {
+    shape.names = names(shape)
+    ndim <- length(shape[[1]])
+    batchsize <- shape[[1]][[ndim]]
+    step <- as.integer((batchsize + nsplit - 1) / nsplit)
+    lapply(0:(nsplit - 1), function(k) {
+      begin = min(k * step, batchsize)
+      end = min((k + 1) * step, batchsize)
+      s <- lapply(shape, function(s) {
+        s[[ndim]] = end - begin
+        return(s)
+      })
+      return(list(begin=begin, end=end, shape=s))
+    })    
+  }
 }
 
 # get the argument name of data and label
@@ -102,12 +118,13 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
   # create the executors
   sliceinfo <- mx.model.slice.shape(input.shape, ndevice)
   sliceinfo2 <- mx.model.slice.shape(output.shape, ndevice)
+
   arg_names <- arguments(symbol)
   label_name <- arg_names[endsWith(arg_names, "label")]
   train.execs <- lapply(1:ndevice, function(i) {
-    arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write",
-                    data = sliceinfo[[i]]$shape)
-    arg_lst[[label_name]] = sliceinfo2[[i]]$shape
+    arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write")
+    arg_lst <- append(arg_lst, sliceinfo[[i]]$shape)
+    arg_lst <- append(arg_lst, sliceinfo2[[i]]$shape)
     arg_lst[["fixed.param"]] = fixed.param
     do.call(mx.simple.bind, arg_lst)
   })
@@ -135,7 +152,9 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
     kvstore$init(params.index, train.execs[[1]]$ref.arg.arrays[params.index])
   }
   # Get the input names
-  input.names <- mx.model.check.arguments(symbol)
+  # input.names <- mx.model.check.arguments(symbol)
+  arg_names <- arguments(symbol)
+  label_name <- arg_names[endsWith(arg_names, "label")]
 
   for (iteration in begin.round:end.round) {
     nbatch <- 0
@@ -147,14 +166,13 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       dlist <- train.data$value()
       slices <- lapply(1:ndevice, function(i) {
         s <- sliceinfo[[i]]
-        ret <- list(data=mx.nd.slice(dlist$data, s$begin, s$end),
-                    label=mx.nd.slice(dlist$label, s$begin, s$end))
+        ret <- sapply(names(dlist), function(n) {mx.nd.slice(dlist[[n]], s$begin, s$end)})
         return(ret)
       })
       # copy data to executor
       for (i in 1:ndevice) {
         s <- slices[[i]]
-        names(s) <- input.names
+        names(s)[endsWith(names(s), "label")] = label_name
         mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
       }
       for (texec in train.execs) {
@@ -218,13 +236,12 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
         dlist <- eval.data$value()
         slices <- lapply(1:ndevice, function(i) {
           s <- sliceinfo[[i]]
-          ret <- list(data=mx.nd.slice(dlist$data, s$begin, s$end),
-                    label=mx.nd.slice(dlist$label, s$begin, s$end))
+          ret <- sapply(names(dlist), function(n) {mx.nd.slice(dlist[[n]], s$begin, s$end)})
           return(ret)
         })
         for (i in 1:ndevice) {
           s <- slices[[i]]
-          names(s) <- input.names
+          names(s)[endsWith(names(s), "label")] = label_name
           mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
         }
         for (texec in train.execs) {
@@ -265,10 +282,10 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
 # Initialize parameters
 mx.model.init.params <- function(symbol, input.shape, output.shape, initializer, ctx) {
   if (!is.MXSymbol(symbol)) stop("symbol need to be MXSymbol")
-  arg_names <- arguments(symbol)
-  label_name <- arg_names[endsWith(arg_names, "label")]
-  arg_lst <- list(symbol = symbol, data=input.shape)
-  arg_lst[[label_name]] = output.shape
+
+  arg_lst <- list(symbol = symbol)
+  arg_lst <- append(arg_lst, input.shape)
+  arg_lst <- append(arg_lst, output.shape)
 
   slist <- do.call(mx.symbol.infer.shape, arg_lst)
   if (is.null(slist)) stop("Not enough information to get shapes")
@@ -393,6 +410,10 @@ mx.model.select.layout.predict <- function(X, model) {
 #'     Model parameter, list of name to NDArray of net's weights.
 #' @param aux.params list, optional
 #'     Model parameter, list of name to NDArray of net's auxiliary states.
+#' @param input.names optional
+#'     The names of the input symbols.
+#' @param output.names optional
+#'     The names of the output symbols.
 #' @return model A trained mxnet model.
 #'
 #' @export
@@ -405,7 +426,9 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
          epoch.end.callback=NULL, batch.end.callback=NULL,
          array.batch.size=128, array.layout="auto",
          kvstore = "local", verbose = TRUE,
-         arg.params = NULL, aux.params = NULL, fixed.param = NULL,
+         arg.params = NULL, aux.params = NULL,
+         input.names=NULL, output.names = NULL,
+         fixed.param = NULL,
          ...) {
   if (is.array(X) || is.matrix(X)) {
     if (array.layout == "auto") {
@@ -420,8 +443,18 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
     X$reset()
     if (!X$iter.next()) stop("Empty input")
   }
-  input.shape <- dim((X$value())$data)
-  output.shape <- dim((X$value())$label)
+  if (is.null(input.names)) {
+    input.names <- "data"
+  }
+  input.shape <- sapply(input.names, function(n){dim(X$value()[[n]])}, simplify = FALSE)
+  if (is.null(output.names)) {
+    arg_names <- arguments(symbol)
+    output.names <- arg_names[endsWith(arg_names, "label")]
+    output.shape <- list()
+    output.shape[[output.names]] <- dim((X$value())$label)
+  } else {
+    output.shape <- sapply(output.names, function(n){dim(X$value()[[n]])}, simplify = FALSE)  
+  }
   params <- mx.model.init.params(symbol, input.shape, output.shape, initializer, mx.cpu())
   if (!is.null(arg.params)) params$arg.params <- arg.params
   if (!is.null(aux.params)) params$aux.params <- aux.params
@@ -431,8 +464,13 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
   }
   if (!is.list(ctx)) stop("ctx must be mx.context or list of mx.context")
   if (is.character(optimizer)) {
-    ndim <- length(input.shape)
-    batchsize = input.shape[[ndim]]
+    if (is.numeric(input.shape)) {
+      ndim <- length(input.shape)
+      batchsize = input.shape[[ndim]]      
+    } else {
+      ndim <- length(input.shape[[1]])
+      batchsize = input.shape[[1]][[ndim]]
+    }
     optimizer <- mx.opt.create(optimizer, rescale.grad=(1/batchsize), ...)
   }
   if (!is.null(eval.data) && !is.list(eval.data) && !is.mx.dataiter(eval.data)) {
