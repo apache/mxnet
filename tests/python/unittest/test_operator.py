@@ -3165,18 +3165,27 @@ def test_ctc_loss():
 
 
 def test_quantization_op():
-  min0 = mx.nd.array([0.0])
-  max0 = mx.nd.array([1.0])
-  a  = mx.nd.array([[0.1392, 0.5928], [0.6027, 0.8579]])
-  qa, min1, max1 = mx.contrib.nd.quantize(a, min0, max0, out_type='uint8')
-  a_ = mx.contrib.nd.dequantize(qa, min1, max1, out_type='float32')
+    min0 = mx.nd.array([0.0])
+    max0 = mx.nd.array([1.0])
+    a  = mx.nd.array([[0.1392, 0.5928], [0.6027, 0.8579]])
+    qa, min1, max1 = mx.contrib.nd.quantize(a, min0, max0, out_type='uint8')
+    a_ = mx.contrib.nd.dequantize(qa, min1, max1, out_type='float32')
 
-  qa_real = mx.nd.array([[35, 151], [154, 219]])
-  a_real  = mx.nd.array([[0.13725491, 0.59215689], [0.60392159, 0.8588236]])
+    qa_real = mx.nd.array([[35, 151], [154, 219]])
+    a_real  = mx.nd.array([[0.13725491, 0.59215689], [0.60392159, 0.8588236]])
 
-  assert same(qa.asnumpy(), qa_real.asnumpy())
-  assert same(a_.asnumpy(),  a_real.asnumpy())
+    assert same(qa.asnumpy(), qa_real.asnumpy())
+    assert same(a_.asnumpy(),  a_real.asnumpy())
 
+def test_reciprocal_op():
+    data_tmp = np.random.rand(3, 4) * 10 - 5
+    # Avoid possible division by 0 errors
+    data_tmp[data_tmp == 0] = 1.0
+    data = mx.symbol.Variable('data')
+    test = mx.sym.reciprocal(data)
+
+    check_numeric_gradient(test, [data_tmp])
+    check_symbolic_forward(test, [data_tmp], [np.reciprocal(data_tmp)])
 
 def test_custom_op():
     class Sqr(mx.operator.CustomOp):

@@ -63,6 +63,20 @@ struct negation {
   }
 };
 
+struct reciprocal {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(1.0f/a);
+  }
+};
+
+struct reciprocal_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(-(DType(1.0f) / (a * a)));
+  }
+};
+
 /*! \brief sigmoid unit */
 struct sigmoid {
   template<typename DType>
