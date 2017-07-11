@@ -21,7 +21,7 @@ def accuracy(label, pred):
     py = np.argmax(pred, axis=1)
     return np.sum(py == label) / float(label.size)
 
-num_epoch = 9
+num_epoch = 7
 prefix = './mlp'
 
 #check data
@@ -54,9 +54,9 @@ def test_mlp():
         num_epoch=num_epoch,
         learning_rate=0.1, wd=0.0004,
         momentum=0.9,
-        weight_sparsity=[25,50,75,25,0],
-        bias_sparsity=[50,0,0,50,0],
-        switch_epoch=[2,3,4,6,9],
+        weight_sparsity=[0,25,50,75],
+        bias_sparsity=[0,0,50,50],
+        switch_epoch=[1,3,5,7],
         batches_per_epoch=600,
         do_pruning=True,
         pruning_factor = 0.0)
@@ -65,17 +65,17 @@ def test_mlp():
 
     # check pruning
     logging.info('Check pruning...')
-    weight_percent = [0.75,0.75,0.5,0.25,0.75,0.75,1,1,1]
-    bias_percent = [0.5,0.5,1,1,0.5,0.5,1,1,1]
+    weight_percent = [1,0.75,0.75,0.5,0.5,0.25,0.25]
+    bias_percent = [1,1,1,0.5,0.5,0.5,0.5]
     for i in range(1, num_epoch + 1):
         sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, i)
         weight_params = [arg_params['fc1_weight'], arg_params['fc2_weight'], arg_params['fc3_weight']]
         bias_params = [arg_params['fc1_bias'], arg_params['fc2_bias'], arg_params['fc3_bias']]
         idx = i - 1
         for param in weight_params:
-            assert nz(param.asnumpy())/float(param.size) <= weight_percent[idx]
+            assert nz(param.asnumpy())/float(param.size) == weight_percent[idx]
         for param in bias_params:
-            assert nz(param.asnumpy())/float(param.size) <= bias_percent[idx]
+            assert nz(param.asnumpy())/float(param.size) == bias_percent[idx]
 
     for i in range(num_epoch):
         os.remove('%s-%04d.params' % (prefix, i + 1))

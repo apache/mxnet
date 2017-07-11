@@ -8,9 +8,7 @@ from .ndarray import NDArray, zeros, clip, sqrt, sign, array
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update)
 #                      mp_sgd_update, mp_sgd_mom_update)
 from .random import normal
-from numpy import ones, count_nonzero
-from .ndarray import argsort
-from .ndarray import slice as crop
+from numpy import ones, argsort
 from .ndarray import abs as absolute
 
 
@@ -375,12 +373,10 @@ class Optimizer(object):
                 threshold = int(sparsity * weight.size / 100.0)
                 mask = ones(weight.size)
                 if threshold > 0:
-                    sort = argsort(absolute(weight), axis=None)
-                    sort = array(sort, dtype ='int32')
-                    sort = crop(sort, begin = 0, end = threshold).asnumpy()
+                    sort = argsort(absolute(weight).asnumpy(), axis=None)
+                    sort = sort[0 : threshold]
                     mask[sort] = 0.0
-                self.masks[index] = array(mask, weight.context).reshape(weight.shape)
-            logging.info('nonzeros in mask\t' + str(count_nonzero(self.masks[index].asnumpy()) / float(self.masks[index].size)))
+                self.masks[index] = array(mask, ctx = weight.context, dtype = weight.dtype).reshape(weight.shape)
 
         return not self.masks_updated
 
@@ -444,9 +440,7 @@ class SGD(Optimizer):
 
         if self.do_pruning:
             if self.update_masks(index, weight):
-                logging.info('nonzeros in weight\t' + str(count_nonzero(weight.asnumpy()) / float(weight.size)))
                 weight[:] = weight * (self.pruning_factor + ((1.0 - self.pruning_factor) * self.masks[index]))
-                logging.info('nonzeros in weight\t' + str(count_nonzero(weight.asnumpy()) / float(weight.size)) + '\n')
             grad[:] = grad * self.masks[index]
             if state is not None:
                 state[:] = state * self.masks[index]
