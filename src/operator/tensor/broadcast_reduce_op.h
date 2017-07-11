@@ -178,15 +178,20 @@ inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axis,
     << "Reduction axis " << axis[axis.ndim()-1]
     << " Exceeds input dimensions " << ishape;
 
-  TShape buffer(axis);
-  for (index_t i = 0; i < buffer.ndim(); i++) {
-    if (buffer[i] < 0) {
-      buffer[i] += ishape.ndim();
+  TShape axes(axis);
+  for (index_t i = 0; i < axes.ndim(); i++) {
+    if (axes[i] < 0) {
+      axes[i] += ishape.ndim();
+    } else {
+      break;
     }
   }
-  std::sort(buffer.begin(), buffer.end());
-  auto new_end = std::unique(buffer.begin(), buffer.end());
-  TShape axes = TShape(buffer.begin(), new_end);
+  std::sort(axes.begin(), axes.end());
+  for (index_t i = 1; i < axes.ndim(); i++) {
+    CHECK_LT(axes[i-1], axes[i])
+      << "Reduction axes have duplicates "
+      << axis;
+  }
 
   TShape oshape;
   if (keepdims) {
