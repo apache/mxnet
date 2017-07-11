@@ -25,25 +25,40 @@ def _get_node_shape(net, node_id):
 # TODO HIGH PRIORITY
 # We may want to think about only supporting symbolic API for now, given the simplicity
 
-# def convert_reshape(net, node, model, builder):
-#     """Convert a reshape layer from mxnet to coreml.
+def convert_reshape(net, node, model, builder):
+    """Converts a reshape layer from mxnet to coreml.
 
-#     Parameters
-#     ----------
-#     network: net
-#         A mxnet network object.
+    This doesn't currently handle the deprecated parameters for the reshape layer.
 
-#     layer: node
-#         Node to convert.
+    Parameters
+    ----------
+    network: net
+        An mxnet network object.
 
-#     model: model
-#         An model for MXNet
+    layer: node
+        Node to convert.
 
-#     builder: NeuralNetworkBuilder
-#         A neural network builder object.
-#     """
+    model: model
+        A model for MXNet
 
-#     mxnet.symbol.reshape -> builder.add_reshape
+    builder: NeuralNetworkBuilder
+        A neural network builder object.
+    """
+
+    input_name, output_name = _get_input_output_name(net, node)
+    name = node['name']
+    target_shape = node['shape']
+
+    if any(item <= 0 for item in target_shape):
+        raise NotImplementedError('Special dimensional values less than or equal to 0 are not supported yet.'
+                                  'Feel free to file an issue here: https://github.com/dmlc/mxnet/issues.')
+
+    if 'reverse' in node and node['reverse'] == 'True':
+        raise NotImplementedError('"reverse" parameter is not supported by yet.'
+                                  'Feel free to file an issue here: https://github.com/dmlc/mxnet/issues.')
+
+    mode = 0 # CHANNEL_FIRST
+    builder.add_reshape(name, input_name, output_name, target_shape, mode)
 
 
 # def convert_deconvolution(net, node, model, builder):
@@ -67,7 +82,6 @@ def _get_node_shape(net, node_id):
 #     CoreMl supports deconv layer as a parameter param for add_convolution
 #     mxnet.symbol.Deconvolution -> builder.add_convolution
     
-
 
 # TODO LOWER PRIORITY (BUT STILL IMPORTANT)
 
@@ -289,8 +303,7 @@ def convert_convolution(net, node, model, builder):
     else:
         has_bias = True
 
-    border_mode = "same" if literal_eval(param['pad']) != (0, 0) else 'valid'
-    border_mode = "valid"
+    border_mode = "same" if literal_eval(param['pad']) != (0, 0) else "valid"
     n_filters = int(param['num_filter'])
     output_shape = None  # (needed for de-conv)
 
