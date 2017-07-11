@@ -158,9 +158,9 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axes,
+inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axis,
                                   bool keepdims, bool exclude) {
-  if (axes.ndim() == 0) {
+  if (axis.ndim() == 0) {
     if (keepdims) {
       return TShape(ishape.ndim());
     } else {
@@ -168,6 +168,7 @@ inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axes,
     }
   }
 
+  TShape axes(axis);
   for (index_t i = 0; i < axes.ndim(); i++) {
     if (axes[i] < 0) {
       axes[i] += ishape.ndim();
