@@ -172,8 +172,6 @@ inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axis,
   for (index_t i = 0; i < axes.ndim(); i++) {
     if (axes[i] < 0) {
       axes[i] += ishape.ndim();
-    } else {
-      break;
     }
   }
   std::sort(axes.begin(), axes.end());
@@ -185,6 +183,9 @@ inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axis,
   }
   CHECK_LT(axes[axes.ndim()-1], ishape.ndim())
     << "Reduction axis " << axes[axes.ndim()-1]
+    << " Exceeds input dimensions " << ishape;
+  CHECK_GE(axes[0], 0)
+    << "Reduction axis " << axis
     << " Exceeds input dimensions " << ishape;
 
   TShape oshape;
