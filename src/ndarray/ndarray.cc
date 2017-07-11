@@ -398,11 +398,14 @@ void CopyFromToImpl(const NDArray from, NDArray *to, RunContext ctx) {
   // if storage type doesn't match, cast the storage first
   auto from_stype = from.storage_type();
   auto to_stype = to->storage_type();
-  CHECK(from_stype == kDefaultStorage || to_stype == kDefaultStorage)
+  CHECK(from_stype == kDefaultStorage
+      || to_stype == kDefaultStorage
+      || from_stype == to_stype)
     << "Copying ndarray of stype = " << from_stype
     << " to stype = " << to_stype << " is not supported";
   const auto from_ctx = from.ctx();
   const auto to_ctx = to->ctx();
+  auto s = ctx.get_stream<from_xpu>();
   if (from_ctx == to_ctx && from_stype != to_stype) {
     // same ctx, different stypes, use cast op directly without copying
     common::CastStorageDispatch<from_xpu>(s, from, *to);
@@ -412,7 +415,6 @@ void CopyFromToImpl(const NDArray from, NDArray *to, RunContext ctx) {
       casted_nd = from;  // same stype, no need to cast from
     } else {  // different stypes on different ctx needs an temporary casted_nd
       TShape shape = from.shape();
-      auto s = ctx.get_stream<from_xpu>();
       if (to_stype == kDefaultStorage) {
         casted_nd = NDArray(shape, from_ctx);
       } else {
