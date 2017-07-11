@@ -12,6 +12,7 @@
 #include <mxnet/base.h>
 #include <dmlc/base.h>
 #include <mshadow/tensor.h>
+#include <mshadow/tensor_blob.h>
 #include <vector>
 #include <string>
 
