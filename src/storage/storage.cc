@@ -74,7 +74,7 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
             num_gpu_device = 0;
             cudaError_t e = cudaGetDeviceCount(&num_gpu_device);
             if (e != cudaSuccess) {
-            num_gpu_device = 0;
+              num_gpu_device = 0;
             }
             if (num_gpu_device > 0) {
               ptr = new storage::NaiveStorageManager<storage::PinnedMemoryStorage>();
