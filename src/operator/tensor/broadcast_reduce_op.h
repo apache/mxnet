@@ -158,9 +158,9 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axis,
+inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axes,
                                   bool keepdims, bool exclude) {
-  if (axis.ndim() == 0) {
+  if (axes.ndim() == 0) {
     if (keepdims) {
       return TShape(ishape.ndim());
     } else {
@@ -168,17 +168,6 @@ inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axis,
     }
   }
 
-  if (axis[0] < 0) {
-    CHECK_LT(-axis[0]-1, ishape.ndim())
-      << "Reduction axis " << axis[0]
-      << " Exceeds input dimensions " << ishape;
-  }
-
-  CHECK_LT(axis[axis.ndim()-1], ishape.ndim())
-    << "Reduction axis " << axis[axis.ndim()-1]
-    << " Exceeds input dimensions " << ishape;
-
-  TShape axes(axis);
   for (index_t i = 0; i < axes.ndim(); i++) {
     if (axes[i] < 0) {
       axes[i] += ishape.ndim();
@@ -187,11 +176,15 @@ inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axis,
     }
   }
   std::sort(axes.begin(), axes.end());
+
   for (index_t i = 1; i < axes.ndim(); i++) {
     CHECK_LT(axes[i-1], axes[i])
       << "Reduction axes have duplicates "
-      << axis;
+      << axes;
   }
+  CHECK_LT(axes[axes.ndim()-1], ishape.ndim())
+    << "Reduction axis " << axes[axes.ndim()-1]
+    << " Exceeds input dimensions " << ishape;
 
   TShape oshape;
   if (keepdims) {
@@ -516,7 +509,6 @@ template<typename PType>
 inline void AxesParamParser(nnvm::NodeAttrs* attrs) {
   PType param;
   param.Init(attrs->dict);
-  std::sort(&param.axis[0], &param.axis[param.axis.ndim()]);
   attrs->parsed = std::move(param);
 }
 
