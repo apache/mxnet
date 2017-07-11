@@ -561,8 +561,8 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128,
 #'
 #' @export
 mx.model.load <- function(prefix, iteration) {
-  symbol <- mx.symbol.load(paste0(prefix, "-symbol.json"))
-  save.dict <- mx.nd.load(sprintf("%s-%04d.params", prefix, iteration))
+  symbol <- mx.symbol.load(path.expand(paste0(prefix, "-symbol.json")))
+  save.dict <- mx.nd.load(path.expand(sprintf("%s-%04d.params", prefix, iteration)))
   names <- names(save.dict)
   arg.index <- as.integer(mx.util.filter.null(lapply(1:length(names), function(i) {
     if (startsWith(names[[i]], "arg:")) i else NULL
@@ -608,8 +608,8 @@ mx.model.save <- function(model, prefix, iteration) {
     paste0("aux:", nm)
   }))
   save.dict <- append(arg.params, aux.params)
-  mx.symbol.save(model$symbol, paste0(prefix, "-symbol.json"))
-  mx.nd.save(save.dict, sprintf("%s-%04d.params", prefix, iteration))
+  mx.symbol.save(model$symbol, path.expand(paste0(prefix, "-symbol.json")))
+  mx.nd.save(save.dict, path.expand(sprintf("%s-%04d.params", prefix, iteration)))
 }
 
 #' Check if the model has been serialized into RData-compatiable format.

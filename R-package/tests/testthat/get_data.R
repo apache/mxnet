@@ -38,6 +38,32 @@ GetCifar10 <- function() {
   }
 }
 
+GetInception <- function() {
+  if (!dir.exists("model")) {
+    dir.create("model/")
+  }
+  if (!file.exists('model/Inception-BN-0126.params')) {
+    download.file('http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-0126.params',
+                  destfile = 'model/Inception-BN-0126.params')
+  }
+  if (!file.exists('model/Inception-BN-symbol.json')) {
+    download.file('http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-symbol.json',
+                  destfile = 'model/Inception-BN-symbol.json')
+  }
+}
+
+GetCatDog <- function() {
+  if (!dir.exists("data")) {
+    dir.create("data/")
+  }
+  if (!file.exists('data/cats_dogs/cats_dogs_train.rec') |
+      !file.exists('data/cats_dogs/cats_dogs_val.rec')) {
+    download.file('https://s3-us-west-2.amazonaws.com/apache-mxnet/R/data/cats_dogs.zip',
+                  destfile = 'data/cats_dogs.zip')
+    unzip('data/cats_dogs.zip', exdir = 'data/')
+  }
+}
+
 GetMovieLens <- function() {
   if (!dir.exists("data")) {
     dir.create("data/")
