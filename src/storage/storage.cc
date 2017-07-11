@@ -64,6 +64,13 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
   std::shared_ptr<storage::StorageManager> manager = device.Get(
       ctx.dev_id, [ctx]() {
         storage::StorageManager *ptr = nullptr;
+#if MXNET_USE_CUDA
+        num_gpu_device = 0;
+        cudaError_t e = cudaGetDeviceCount(&num_gpu_device);
+        if (e != cudaSuccess) {
+        num_gpu_device = 0;
+        }
+#endif
         switch (ctx.dev_type) {
           case Context::kCPU: {
             ptr = new storage::NaiveStorageManager<storage::CPUDeviceStorage>();
@@ -71,11 +78,6 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
           }
           case Context::kCPUPinned: {
 #if MXNET_USE_CUDA
-            num_gpu_device = 0;
-            cudaError_t e = cudaGetDeviceCount(&num_gpu_device);
-            if (e != cudaSuccess) {
-              num_gpu_device = 0;
-            }
             if (num_gpu_device > 0) {
               ptr = new storage::NaiveStorageManager<storage::PinnedMemoryStorage>();
             } else {
