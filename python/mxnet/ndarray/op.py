@@ -91,7 +91,7 @@ def _make_ndarray_function(handle, name):
         else:
             signature.append('%s=_Null'%name)
             kwarg_names.append(name)
-    #signature.append('is_train=False')
+    # signature.append('is_train=False')
     signature.append('out=None')
     signature.append('name=None')
     signature.append('**kwargs')
