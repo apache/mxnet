@@ -464,6 +464,21 @@ class MXNetSingleLayerTest(unittest.TestCase):
         # test the mxnet model
         self._test_mxnet_model(net, engine, data = input_shape)
 
+    def test_reshape(self):
+        np.random.seed(1988)
+        input_shape = (1, 8)
+
+        # Define a model
+        net = mx.sym.Variable('data')
+        net = mx.sym.reshape(data = net, shape = (1, 2, 2, 2))
+        engine = net.simple_bind(ctx=mx.cpu(), data=input_shape)
+
+        # Set some random weights
+        set_weights(net, engine, mode = 'random')
+
+        # Test the mxnet model
+        self._test_mxnet_model(net, engine, data = input_shape)
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(MXNetSingleLayerTest)

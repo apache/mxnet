@@ -18,6 +18,7 @@ _MXNET_LAYER_REGISTRY  = {
     'Concat'         : _layers.convert_concat,
     'BatchNorm'      : _layers.convert_batchnorm,
     'elemwise_add'   : _layers.convert_elementwise_add,
+    'Reshape'        : _layers.convert_reshape,
 }
 
 _MXNET_SKIP_LAYERS = [
@@ -138,7 +139,7 @@ def convert(model, order = None, **kwargs):
     input_features = zip(input_names, input_types)
     output_features = zip(output_names, output_types)
     builder = _neural_network.NeuralNetworkBuilder(input_features, output_features)
-
+    # TODO pre-process things here.
     # Get out the layers
     net = _json.loads(net.tojson())
     nodes = net['nodes']
