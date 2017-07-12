@@ -149,7 +149,7 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
             aux_params[var_name] = mx.nd.zeros(var.shape)
             # Get the original epsilon
             for idx, layer in enumerate(layers_proto):
-                if layer.name == bn_name or re.sub('[-/]', '_', layer.name) == bn_name :
+                if layer.name == bn_name or re.sub('[-/]', '_', layer.name) == bn_name:
                     bn_index = idx
             eps_caffe = layers_proto[bn_index].batch_norm_param.eps
             # Compensate for the epsilon shift performed in convert_symbol
