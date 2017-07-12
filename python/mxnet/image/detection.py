@@ -784,7 +784,7 @@ class ImageDetIter(ImageIter):
                 % (self.provide_label[0][1][2], label_shape[1])
             raise ValueError(msg)
 
-    def draw_next(self, color=None, thickness=2, mean=None, std=None,
+    def draw_next(self, color=None, thickness=2, mean=None, std=None, clip=True,
                   waitKey=None, window_name='draw_next'):
         """Display next image with bounding boxes drawn.
 
@@ -798,10 +798,16 @@ class ImageDetIter(ImageIter):
             Compensate for the mean to have better visual effect
         std : True or numpy.ndarray
             Revert standard deviations
+        clip : bool
+            If true, clip to [0, 255] for better visual effect
+        waitKey : None or int
+            Hold the window for waitKey milliseconds if set, skip ploting if None
+        window_name : str
+            Plot window name if waitKey is set.
 
         Returns
         -------
-            image as numpy.ndarray
+            numpy.ndarray
 
         Examples
         --------
@@ -850,6 +856,8 @@ class ImageDetIter(ImageIter):
 
                 # swap RGB
                 image[:, :, (0, 1, 2)] = image[:, :, (2, 1, 0)]
+                if clip:
+                    image = np.maximum(0, np.minimum(255, image))
                 if color:
                     color = color[::-1]
                 image = image.astype(np.uint8)

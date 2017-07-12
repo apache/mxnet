@@ -586,26 +586,15 @@ class BrightnessJitterAug(Augmenter):
     ----------
     brightness : float
         The brightness jitter ratio range, [0, 1]
-    min_val : float, default=0
-        Minimum value after jittering
-    max_val : float ,default=255
-        Maximum value after jittering
-    clip : bool
-        Clip value to (min_val, max_val) after augmentation
     """
-    def __init__(self, brightness, min_val=0, max_val=255, clip=True):
+    def __init__(self, brightness):
         super(BrightnessJitterAug, self).__init__(brightness=brightness)
         self.brightness = brightness
-        self.min_val = min_val
-        self.max_val = max_val
-        self.clip = clip
 
     def __call__(self, src):
         """Augmenter body"""
         alpha = 1.0 + random.uniform(-self.brightness, self.brightness)
         src *= alpha
-        if self.clip:
-            src = nd.clip(src, self.min_val, self.max_val)
         return [src]
 
 
@@ -616,20 +605,11 @@ class ContrastJitterAug(Augmenter):
     ----------
     contrast : float
         The contrast jitter ratio range, [0, 1]
-    min_val : float, default=0
-        Minimum value after jittering
-    max_val : float ,default=255
-        Maximum value after jittering
-    clip : bool
-        Clip value to (min_val, max_val) after augmentation
     """
-    def __init__(self, contrast, min_val=0, max_val=255, clip=True):
+    def __init__(self, contrast):
         super(ContrastJitterAug, self).__init__(contrast=contrast)
         self.contrast = contrast
         self.coef = nd.array([[[0.299, 0.587, 0.114]]])
-        self.min_val = min_val
-        self.max_val = max_val
-        self.clip = clip
 
     def __call__(self, src):
         """Augmenter body"""
@@ -638,8 +618,6 @@ class ContrastJitterAug(Augmenter):
         gray = (3.0 * (1.0 - alpha) / gray.size) * nd.sum(gray)
         src *= alpha
         src += gray
-        if self.clip:
-            src = nd.clip(src, self.min_val, self.max_val)
         return [src]
 
 
@@ -650,20 +628,11 @@ class SaturationJitterAug(Augmenter):
     ----------
     saturation : float
         The saturation jitter ratio range, [0, 1]
-    min_val : float, default=0
-        Minimum value after jittering
-    max_val : float ,default=255
-        Maximum value after jittering
-    clip : bool
-        Clip value to (min_val, max_val) after augmentation
     """
-    def __init__(self, saturation, min_val=0, max_val=255, clip=True):
+    def __init__(self, saturation):
         super(SaturationJitterAug, self).__init__(saturation=saturation)
         self.saturation = saturation
         self.coef = nd.array([[[0.299, 0.587, 0.114]]])
-        self.min_val = min_val
-        self.max_val = max_val
-        self.clip = clip
 
     def __call__(self, src):
         """Augmenter body"""
@@ -673,8 +642,6 @@ class SaturationJitterAug(Augmenter):
         gray *= (1.0 - alpha)
         src *= alpha
         src += gray
-        if self.clip:
-            src = nd.clip(src, self.min_val, self.max_val)
         return [src]
 
 
@@ -685,19 +652,10 @@ class HueJitterAug(Augmenter):
     ----------
     hue : float
         The hue jitter ratio range, [0, 1]
-    min_val : float, default=0
-        Minimum value after jittering
-    max_val : float ,default=255
-        Maximum value after jittering
-    clip : bool
-        Clip value to (min_val, max_val) after augmentation
     """
-    def __init__(self, hue, min_val=0, max_val=255, clip=True):
+    def __init__(self, hue):
         super(HueJitterAug, self).__init__(hue=hue)
         self.hue = hue
-        self.min_val = min_val
-        self.max_val = max_val
-        self.clip = clip
         self.tyiq = np.array([[0.299, 0.587, 0.114],
                               [0.596, -0.274, -0.321],
                               [0.211, -0.523, 0.311]])
@@ -734,31 +692,16 @@ class ColorJitterAug(RandomOrderAug):
         The contrast jitter ratio range, [0, 1]
     saturation : float
         The saturation jitter ratio range, [0, 1]
-    min_val : float, default=0
-        Minimum value after jittering
-    max_val : float ,default=255
-        Maximum value after jittering
-    clip : bool
-        Clip value to (min_val, max_val) after augmentation
     """
-    def __init__(self, brightness, contrast, saturation, min_val=0, max_val=255, clip=True):
+    def __init__(self, brightness, contrast, saturation):
         ts = []
         if brightness > 0:
-            ts.append(BrightnessJitterAug(brightness, clip=False))
+            ts.append(BrightnessJitterAug(brightness))
         if contrast > 0:
-            ts.append(ContrastJitterAug(contrast, clip=False))
+            ts.append(ContrastJitterAug(contrast))
         if saturation > 0:
-            ts.append(SaturationJitterAug(saturation, clip=False))
+            ts.append(SaturationJitterAug(saturation))
         super(ColorJitterAug, self).__init__(ts)
-        self.min_val = min_val
-        self.max_val = max_val
-        self.clip = clip
-
-    def __call__(self, src):
-        src = super(ColorJitterAug, self).__call__(src)[0]
-        if self.clip:
-            src = nd.clip(src, self.min_val, self.max_val)
-        return [src]
 
 
 class LightingAug(Augmenter):
@@ -771,30 +714,19 @@ class LightingAug(Augmenter):
     eigval : 3x1 np.array
         Eigen values
     eigvec : 3x3 np.array
-        Eign vectors
-    min_val : float, default=0
-        Minimum value after jittering
-    max_val : float ,default=255
-        Maximum value after jittering
-    clip : bool
-        Clip value to (min_val, max_val) after augmentation
+        Eigen vectors
     """
-    def __init__(self, alphastd, eigval, eigvec, min_val=0, max_val=255, clip=True):
+    def __init__(self, alphastd, eigval, eigvec):
         super(LightingAug, self).__init__(alphastd=alphastd, eigval=eigval, eigvec=eigvec)
         self.alphastd = alphastd
         self.eigval = eigval
         self.eigvec = eigvec
-        self.min_val = min_val
-        self.max_val = max_val
-        self.clip = clip
 
     def __call__(self, src):
         """Augmenter body"""
         alpha = np.random.normal(0, self.alphastd, size=(3,))
         rgb = np.dot(self.eigvec * alpha, self.eigval)
         src += nd.array(rgb)
-        if self.clip:
-            src = nd.clip(src, self.min_val, self.max_val)
         return [src]
 
 
