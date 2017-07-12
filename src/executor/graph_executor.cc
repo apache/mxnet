@@ -1287,7 +1287,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
               std::inserter(mutate_vars, mutate_vars.end()));
     std::copy(op_node.use_vars.begin(), op_node.use_vars.end(),
               std::inserter(use_vars, use_vars.end()));
-    ret.exec_list.push_back(exec.get());
+    ret.exec_list.push_back(exec);
 #if MXNET_USE_PROFILER
     opr_names += inode.source->op()->name + ",";
 #endif

@@ -117,7 +117,7 @@ class GraphExecutor : public Executor {
     // the cached operator
     Engine::OprHandle opr = nullptr;
     // list of op executors
-    std::vector<OpExecutor*> exec_list;
+    std::vector<std::shared_ptr<OpExecutor> > exec_list;
   };
   // Initialize in_args, arg_grads, and aux_states
   void InitArguments(const nnvm::IndexedGraph& idx,
