@@ -985,6 +985,10 @@ dl.last.docutils dt{
     border-bottom: none;
 }
 
+dl.docutils dt {
+    color: #555;
+}
+
 /*----------------Model zoo page style------------------*/
 #mxnet-model-zoo table, #mxnet-model-zoo td, #mxnet-model-zoo th {
     border: 1px solid lightgray;
