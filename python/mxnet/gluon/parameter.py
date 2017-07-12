@@ -225,9 +225,7 @@ class Parameter(object):
                 ctx = list_ctx[0]
             else:
                 ctx = context.current_context()
-                self._check_initialized(ctx)
-        else:
-            self._check_initialized(ctx)
+        self._check_initialized(ctx)
         return self._data[ctx]
 
     def list_data(self):
@@ -250,9 +248,7 @@ class Parameter(object):
                 ctx = list_ctx[0]
             else:
                 ctx = context.current_context()
-                self._check_initialized(ctx)
-        else:
-            self._check_initialized(ctx)
+        self._check_initialized(ctx)
         if self._grad is None:
             raise RuntimeError(
                 "Cannot get gradient array for Parameter %s " \
