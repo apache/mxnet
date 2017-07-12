@@ -5,8 +5,8 @@
 * \author Chris Olivier
 */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_UTIL_H_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_UTIL_H_
+#ifndef MXNET_CPP_OP_UTIL_H_
+#define MXNET_CPP_OP_UTIL_H_
 
 #include <string>
 
@@ -43,4 +43,4 @@ inline StreamType& operator << (StreamType& os, const ::caffe::LayerParameter& o
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_UTIL_H_
+#endif  // MXNET_CPP_OP_UTIL_H_

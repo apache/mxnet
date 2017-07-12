@@ -215,9 +215,11 @@ del /Q *.7z
 // Python unittest for CPU
 def python_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
+    sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
     sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest"
     sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/train"
+    sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest"
   }
 }
 
@@ -225,7 +227,9 @@ def python_ut(docker_type) {
 // both CPU and GPU
 def python_gpu_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
+    sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
     sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/gpu"
+    sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
     sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/gpu"
   }
 }
@@ -312,11 +316,13 @@ stage('Unit Test') {
 xcopy C:\\mxnet\\model model /E /I /Y
 call activate py3
 set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
+del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
 C:\\mxnet\\test_cpu.bat"""
                         bat """xcopy C:\\mxnet\\data data /E /I /Y
 xcopy C:\\mxnet\\model model /E /I /Y
 call activate py2
 set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
+del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
 C:\\mxnet\\test_cpu.bat"""
       }
      }
@@ -332,11 +338,13 @@ C:\\mxnet\\test_cpu.bat"""
 xcopy C:\\mxnet\\model model /E /I /Y
 call activate py3
 set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
+del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
 C:\\mxnet\\test_gpu.bat"""
          bat """xcopy C:\\mxnet\\data data /E /I /Y
 xcopy C:\\mxnet\\model model /E /I /Y
 call activate py2
 set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
+del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
 C:\\mxnet\\test_gpu.bat"""
        }
      }

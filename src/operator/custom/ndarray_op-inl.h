@@ -52,10 +52,6 @@ class NDArrayOp : public Operator {
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args);
 
-  virtual ExecType exec_type() const {
-    return kAsync;
-  }
-
  private:
   NDArrayOpParam param_;
   Context get_ctx();
@@ -168,6 +164,10 @@ class NDArrayOpProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const override;
+
+  ExecType exec_type() const override {
+    return ExecType::kAsync;
+  }
 
  private:
   NDArrayOpParam param_;

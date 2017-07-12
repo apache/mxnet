@@ -881,6 +881,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       NDArray.zeros(Shape(numFilter, inputShape(1), kernel._1, kernel._2)))
     val exeConv = conv.bind(Context.cpu(), args = convArgs, argsGrad = convArgsGrad)
     val convOutGrad = Random.normal(0, 2, exeConv.outputs.head.shape)
+    exeConv.forward()
     exeConv.backward(convOutGrad)
 
     val deconvData = convOutGrad
@@ -889,6 +890,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       NDArray.zeros(Shape(numFilter, inputShape(1), kernel._1, kernel._2)))
     val exeDeconv = deconv.bind(Context.cpu(), args = deconvArgs, argsGrad = deconvArgsGrad)
     val deconvOutGrad = convData
+    exeDeconv.forward()
     exeDeconv.backward(deconvOutGrad)
     assert(reldiff(convArgsGrad(1), deconvArgsGrad(1)) < 1e-5)
   }

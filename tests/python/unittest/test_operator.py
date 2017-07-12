@@ -1633,7 +1633,7 @@ def test_dot(ctx=default_context()):
 
 def test_batch_dot():
     dtypes = ['float32', 'float64']
-    
+
     for data_type in dtypes:
         for batch_size in range(1, 5):
             for m in range(1, 5):
@@ -3227,6 +3227,12 @@ def test_custom_op():
     x = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
     check_numeric_gradient(op, [x])
 
+    dx = mx.nd.zeros_like(x)
+    mx.contrib.autograd.mark_variables([x], [dx])
+    with mx.contrib.autograd.train_section():
+        y = mx.nd.Custom(x, op_type='sqr')
+        y.backward()
+
 
 def test_psroipooling():
     for num_rois in [1, 2]:
@@ -3306,10 +3312,10 @@ def test_deformable_psroipooling():
                     im_data_var = mx.symbol.Variable(name="im_data")
                     rois_data_var = mx.symbol.Variable(name="rois_data")
                     offset_data_var = mx.symbol.Variable(name="offset_data")
-                    op = mx.contrib.sym.DeformablePSROIPooling(data=im_data_var, rois=rois_data_var, 
-                                                               trans=offset_data_var, spatial_scale=spatial_scale, 
-                                                               sample_per_part=4, group_size=num_group, 
-                                                               pooled_size=num_group, output_dim=num_classes, 
+                    op = mx.contrib.sym.DeformablePSROIPooling(data=im_data_var, rois=rois_data_var,
+                                                               trans=offset_data_var, spatial_scale=spatial_scale,
+                                                               sample_per_part=4, group_size=num_group,
+                                                               pooled_size=num_group, output_dim=num_classes,
                                                                trans_std=0.1, no_trans=False, name='test_op')
                     if grad_nodes[0] == 'offset_data':
                         # wider tolerance needed for coordinate differential

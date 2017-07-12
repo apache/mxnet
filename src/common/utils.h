@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <utility>
 #include <random>
+#include <string>
 #include <thread>
 #include <algorithm>
 #endif  // DMLC_USE_CXX11
@@ -123,6 +124,22 @@ typename helper::UniqueIf<T>::UnknownBound MakeUnique(size_t n) {
  */
 template <class T, class... Args>
 typename helper::UniqueIf<T>::KnownBound MakeUnique(Args&&... args) = delete;
+
+template<typename FCompType>
+FCompType GetFCompute(const nnvm::Op* op, const std::string& name,
+                      const Context& ctx) {
+  static auto& fcompute_cpu = nnvm::Op::GetAttr<FCompType>(name + "<cpu>");
+  static auto& fcompute_gpu = nnvm::Op::GetAttr<FCompType>(name + "<gpu>");
+
+  if (ctx.dev_mask() == cpu::kDevMask) {
+    return fcompute_cpu.get(op, nullptr);
+  } else if (ctx.dev_mask() == gpu::kDevMask) {
+    return fcompute_gpu.get(op, nullptr);
+  } else {
+    LOG(FATAL) << "Unknown device mask";
+    return nullptr;
+  }
+}
 
 #endif  // DMLC_USE_CXX11
 

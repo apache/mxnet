@@ -471,7 +471,7 @@ class CustomOpProp(object):
             List of aux shapes calculated from in_shape,
             in the same order as declared in list_auxiliary_states.
         """
-        return in_shape, [in_shape[0]], []
+        return in_shape, (in_shape[0],)*len(self.list_outputs()), ()
 
     def infer_type(self, in_type):
         """infer_type interface. override to create new operators

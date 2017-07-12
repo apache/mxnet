@@ -15,27 +15,173 @@
 #include <functional>
 
 #include "./base.h"
-#include "./operator.h"
 #include "./ndarray.h"
+#include "./engine.h"
 
 namespace mxnet {
 
 using nnvm::NodeAttrs;
+
+/*! \brief operation request type to Forward and Backward */
+enum OpReqType {
+  /*! \brief no operation, do not write anything */
+  kNullOp,
+  /*! \brief write gradient to provided space */
+  kWriteTo,
+  /*!
+   * \brief perform an inplace write,
+   * Target shares memory with one of input arguments.
+   * This option only happen when
+   */
+  kWriteInplace,
+  /*! \brief add to the provided space */
+  kAddTo
+};
+
+/*!
+ * \brief All the possible information needed by Operator.Forward and Backward
+ *  This is the superset of RunContext.
+ *  We use this data structure to bookkeep everything needed by Forward and Backward.
+ * \sa Resource
+ */
+struct OpContext {
+  /*! \brief whether it is training phase */
+  int is_train;
+  /*! \brief RunContext related resources */
+  RunContext run_ctx;
+  /*! \brief the callback when operation completes, used by asynchronize ops */
+  engine::CallbackOnComplete async_on_complete;
+  /*! \brief Resources requested by the operator */
+  std::vector<Resource> requested;
+  /*!
+   * \brief get mshadow stream from Context
+   * \return the mshadow stream
+   * \tparam xpu the device type of the stream
+   */
+  template<typename xpu>
+  inline mshadow::Stream<xpu>* get_stream() const {
+    return run_ctx.get_stream<xpu>();
+  }
+};
+
+/*! \brief the execution type of the operator */
+enum class ExecType {
+  /*! \brief Forward/Backward are synchronize calls */
+  kSync,
+  /*!
+   * \brief Forward/Backward are asynchronize,
+   *  will call OpContext.async_on_complete when operation finishes.
+   */
+  kAsync,
+  /*! \brief Run this operator on the scheduling thread without pushing to engine. */
+  kLocal,
+  /*!
+   * \brief Cross device copy operation, this is a special operator
+   *  That indicates copy across devices, the input and output can sit on different device.
+   *  In current implementation, copy operator is specially handled by executor.
+   *  This flag is used for special case treatment and future extension of different copy ops.
+   */
+  kCrossDeviceCopy
+};
+
+/*!
+ * \brief Operator state. This is a pointer type, its content is mutable
+ *  even if OpStatePtr is const.
+ */
+class OpStatePtr {
+ public:
+  /* \brief Create a OpStatePtr with state of type T.
+   * \param args Arguments passed to T's constructor.
+   */
+  template<typename T, typename... Args>
+  static OpStatePtr Create(Args&&... args) {
+    OpStatePtr ret;
+    ret.ptr_ = std::make_shared<OpState>();
+    ret.ptr_->var_ = Engine::Get()->NewVariable();
+    ret.ptr_->state_.construct<T>(std::forward<Args>(args)...);
+
+    return ret;
+  }
+  /* \brief Get engine variable associated with this state */
+  engine::VarHandle get_var() const {
+    return ptr_->var_;
+  }
+  /* \brief Get state of type T */
+  template<typename T>
+  T& get_state() const {
+    return dmlc::get<T>(ptr_->state_);
+  }
+  /* \brief clear state */
+  void reset() {
+    ptr_.reset();
+  }
+  /* \brief Whether state is empty */
+  explicit operator bool() const {
+    return ptr_ ? true : false;
+  }
+
+ private:
+  /* \brief state structure */
+  struct OpState {
+    OpState() {}
+    OpState(const OpState& other) = delete;
+    OpState& operator=(const OpState& other) = delete;
+
+    ~OpState() {
+      Engine::Get()->DeleteVariable([](RunContext s) {}, Context::CPU(), var_);
+    }
+
+    engine::VarHandle var_;
+    dmlc::any state_;
+  };
+  /* \brief shared pointer to state */
+  std::shared_ptr<OpState> ptr_;
+};
+
 /*!
  * \brief Create a Layer style, forward/backward operator.
  *  This is easy to write code that contains state.
+ *  OpStatePtr is a pointer type, it's content is mutable even if
+ *  OpStatePtr is constant.
+ *
  *
  *  This is not the only way to register an op execution function.
  *  More simpler or specialized operator form can be registered
  *
  *  \note Register under "FCreateLayerOp"
  */
-using FCreateLayerOp = std::function<
-  Operator* (const NodeAttrs& n,
-             Context ctx,
-             const std::vector<TShape>& in_shape,
-             const std::vector<int>& in_type)>;
-
+using FCreateOpState = std::function<OpStatePtr (const NodeAttrs& attrs,
+                                                 Context ctx,
+                                                 const std::vector<TShape>& in_shape,
+                                                 const std::vector<int>& in_type)>;
+/*!
+ * \brief Execution mode of this operator.
+ */
+using FExecType = std::function<ExecType (const NodeAttrs& attrs)>;
+/*!
+ * \brief Resiger a compute function for stateful operator.
+ *  OpStatePtr is a pointer type, it's content is mutable even if
+ *  OpStatePtr is constant.
+ *
+ * \note Register under "FStatefulCompute<cpu>" and "FStatefulCompute<gpu>"
+ */
+using FStatefulCompute = std::function<void (const OpStatePtr& state,
+                                             const OpContext& ctx,
+                                             const std::vector<TBlob>& inputs,
+                                             const std::vector<OpReqType>& req,
+                                             const std::vector<TBlob>& outputs)>;
+/*!
+ * \brief Resiger a compute function for stateful operator using NDArray interface.
+ *  OpStatePtr is a pointer type, it's content is mutable even if
+ *  OpStatePtr is constant.
+ *
+ * \note Register under "FStatefulComputeEx<cpu>" and "FStatefulComputeEx<gpu>"
+ */
+using FStatefulComputeEx = std::function<void (const OpStatePtr& state,
+                                               const OpContext& ctx,
+                                               const std::vector<NDArray>& inputs,
+                                               const std::vector<OpReqType>& req,
+                                               const std::vector<NDArray>& outputs)>;
 /*!
  * \brief The resource request from the operator
  *
