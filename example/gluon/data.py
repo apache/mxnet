@@ -7,6 +7,7 @@ import sys
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
 import get_data
+from PIL import Image
 import mxnet as mx
 
 def mnist_iterator(batch_size, input_shape):
@@ -95,15 +96,16 @@ class ImagePairIter(mx.io.DataIter):
         random.shuffle(self.filenames)
 
     def next(self):
-        if self.count + self.batch_size < len(self.filenames):
+        if self.count + self.batch_size <= len(self.filenames):
             data = []
             label = []
             for i in range(self.batch_size):
                 fn = self.filenames[self.count]
                 self.count += 1
-                with open(fn, 'rb') as f:
-                    binary_image = f.read()
-                image = mx.img.imdecode(binary_image, flag=self.flag)
+                image = Image.open(fn).convert('YCbCr').split()[0]
+                if image.size[0] > image.size[1]:
+                    image = image.transpose(Image.TRANSPOSE)
+                image = mx.nd.expand_dims(mx.nd.array(image), axis=2)
                 target = image.copy()
                 for aug in self.input_aug:
                     image = aug(image)[0]
@@ -114,8 +116,8 @@ class ImagePairIter(mx.io.DataIter):
 
             data = mx.nd.concat(*[mx.nd.expand_dims(d, axis=0) for d in data], dim=0)
             label = mx.nd.concat(*[mx.nd.expand_dims(d, axis=0) for d in label], dim=0)
-            data = [mx.nd.transpose(data, axes=(0, 3, 1, 2)).astype('float32')]
-            label = [mx.nd.transpose(label, axes=(0, 3, 1, 2)).astype('float32')]
+            data = [mx.nd.transpose(data, axes=(0, 3, 1, 2)).astype('float32')/255]
+            label = [mx.nd.transpose(label, axes=(0, 3, 1, 2)).astype('float32')/255]
 
             return mx.io.DataBatch(data=data, label=label)
         else:
