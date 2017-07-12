@@ -263,6 +263,16 @@ def test_split_data():
     assert False, "Should have failed"
 
 
+def test_flatten():
+    flatten = nn.Flatten()
+    x = mx.nd.zeros((3,4,5,6))
+    assert flatten(x).shape == (3, 4*5*6)
+    x = mx.nd.zeros((3,6))
+    assert flatten(x).shape == (3, 6)
+    x = mx.nd.zeros((3,))
+    assert flatten(x).shape == (3, 1)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

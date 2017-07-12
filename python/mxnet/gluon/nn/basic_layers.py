@@ -310,3 +310,19 @@ class Embedding(HybridBlock):
 
     def hybrid_forward(self, F, x, weight):
         return F.Embedding(x, weight, **self._kwargs)
+
+
+class Flatten(HybridBlock):
+    """Flattens the input to two dimensional.
+
+    Input shape:
+        Arbitrary shape `(N, a, b, c, ...)`
+
+    Output shape:
+        2D tensor with shape: `(N, a*b*c...)`
+    """
+    def __init__(self, **kwargs):
+        super(Flatten, self).__init__(**kwargs)
+
+    def hybrid_forward(self, F, x):
+        return x.reshape((0, -1))

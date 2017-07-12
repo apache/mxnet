@@ -99,7 +99,7 @@ class Block(object):
 
         class Model(Block):
             def __init__(self, **kwargs):
-                super(Net, self).__init__(**kwargs)
+                super(Model, self).__init__(**kwargs)
                 # use name_scope to give child Blocks appropriate names.
                 # It also allows sharing Parameters between Blocks recursively.
                 with self.name_scope():
@@ -109,6 +109,11 @@ class Block(object):
             def forward(self, x):
                 x = F.relu(self.dense0(x))
                 return F.relu(self.dense1(x))
+
+        model = Model()
+        model.initialize(ctx=mx.cpu(0))
+        model(F.zeros((10, 10), ctx=mx.cpu(0)))
+
 
     Child `Block`s assigned this way will be registered and `collect_params`
     will collect their Parameters recursively.

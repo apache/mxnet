@@ -21,22 +21,14 @@ class DeferredInitializationError(MXNetError):
 class Parameter(object):
     """A Container holding parameters (weights) of `Block`s.
 
-    `Parameter` can be used with both `Symbol` and `NDArray` API. For `Symbol` API,
-    `Parameter.var()` will return a `Symbol` representing this parameter. It
-    can then be used for composing networks::
-        x = mx.sym.Variable('data')
-        w = mx.nn.Parameter('fc_weight', init=mx.init.Xavier())
-        b = mx.nn.Parameter('fc_bias', init=mx.init.Zero())
-        out = mx.sym.FullyConnected(x, w.var(), b.var(), num_hidden=64)
-
-    For `NDArray` API, `Parameter` must be initialized with `Parameter.init`. It
-    will then hold a copy of the the parameter on each `Context`. If `grad_req` is
+    `Parameter` holds a copy of the the parameter on each `Context` after
+    it is initialized with `Parameter.initialize(...)`. If `grad_req` is
     not `null`, it will also hold a gradient array on each `Context`::
 
         ctx = mx.gpu(0)
         x = mx.nd.zeros((16, 100), ctx=ctx)
-        w = mx.nn.Parameter('fc_weight', shape=(64, 100), init=mx.init.Xavier())
-        b = mx.nn.Parameter('fc_bias', shape(64,), init=mx.init.Zero())
+        w = mx.gluon.Parameter('fc_weight', shape=(64, 100), init=mx.init.Xavier())
+        b = mx.gluon.Parameter('fc_bias', shape=(64,), init=mx.init.Zero())
         w.initialize(ctx=ctx)
         b.initialize(ctx=ctx)
         out = mx.nd.FullyConnected(x, w.data(ctx), b.data(ctx), num_hidden=64)
@@ -99,6 +91,28 @@ class Parameter(object):
             their values consistent when updating. Normally nn.Trainer does this for you.
         default_init : Initializer
             Default initializer is used when both `init` and `Parameter.init` are None.
+
+        Examples
+        --------
+        >>> weight = mx.gluon.Parameter('weight', shape=(2, 2))
+        >>> weight.initialize(ctx=mx.cpu(0))
+        >>> weight.data()
+        [[-0.01068833  0.01729892]
+         [ 0.02042518 -0.01618656]]
+        <NDArray 2x2 @cpu(0)>
+        >>> weight.grad()
+        [[ 0.  0.]
+         [ 0.  0.]]
+        <NDArray 2x2 @cpu(0)>
+        >>> weight.initialize(ctx=[mx.gpu(0), mx.gpu(1)])
+        >>> weight.data(mx.gpu(0))
+        [[-0.00873779 -0.02834515]
+         [ 0.05484822 -0.06206018]]
+        <NDArray 2x2 @gpu(0)>
+        >>> weight.data(mx.gpu(1))
+        [[-0.00873779 -0.02834515]
+         [ 0.05484822 -0.06206018]]
+        <NDArray 2x2 @gpu(1)>
         """
         if ctx is None:
             ctx = [context.current_context()]
