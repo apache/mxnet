@@ -8,13 +8,13 @@ set(CPP_EXAMPLE_LIBS
   ${mxnet_LINKER_LIBS}
   )
 
-set(DIR ${CMAKE_CURRENT_LIST_DIR}/../include/mxnet-cpp/)
+set(CPP_PACKAGE_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/../include/mxnet-cpp/)
 
 set(CPPEX_DEPS cpp_package_op_h)
 
 file(GLOB_RECURSE CPP_PACKAGE_HEADERS
-  "${DIR}/*.h"
-  "${DIR}/*.hpp"
+  "${CPP_PACKAGE_INCLUDE_DIR}/*.h"
+  "${CPP_PACKAGE_INCLUDE_DIR}/*.hpp"
   )
 
 add_custom_target(
