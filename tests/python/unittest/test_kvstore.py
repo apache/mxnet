@@ -20,9 +20,9 @@ def init_kv_with_str(stype='default'):
     """init kv """
     kv = mx.kv.create()
     # single
-    kv.init('a', mx.nd.zeros(shape, storage_type=stype))
+    kv.init('a', mx.nd.zeros(shape, stype=stype))
     # list
-    kv.init(str_keys, [mx.nd.zeros(shape=shape, storage_type=stype)] * len(keys))
+    kv.init(str_keys, [mx.nd.zeros(shape=shape, stype=stype)] * len(keys))
     return kv
 
 def check_diff_to_scalar(A, x):

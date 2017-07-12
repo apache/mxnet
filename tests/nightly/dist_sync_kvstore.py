@@ -66,7 +66,7 @@ def test_sync_push_pull():
         row_ids_np = np.random.randint(num_rows, size=num_rows)
         row_ids = mx.nd.array(row_ids_np, dtype='int64')
         # perform pull
-        val = mx.nd.zeros(shape, storage_type='row_sparse')
+        val = mx.nd.zeros(shape, stype='row_sparse')
         kv.row_sparse_pull('9', out=val, row_ids=row_ids)
         # prepare updated values
         updated_val = mx.nd.ones(shape)
@@ -134,7 +134,7 @@ def test_sync_push_pull():
         row_ids_np = np.random.randint(num_rows, size=num_rows)
         row_ids = mx.nd.array(row_ids_np, dtype='int64')
         # perform pull
-        val = mx.nd.zeros(big_shape, storage_type='row_sparse')
+        val = mx.nd.zeros(big_shape, stype='row_sparse')
         kv.row_sparse_pull('100', out=val, row_ids=row_ids)
         # prepare expected result
         updated_val = mx.nd.ones(big_shape)

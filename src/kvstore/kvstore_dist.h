@@ -316,7 +316,7 @@ class KVStoreDist : public KVStoreLocal {
       auto indices_data = indices.data();
       const auto offsets = indices_data.dptr<int64_t>();
       const auto unit_len = recv_buf->shape().ProdShape(1, recv_buf->shape().ndim());
-      size_t size = num_rows * unit_len;
+      const int64_t size = num_rows * unit_len;
        // convert to ps keys in row sparse format
       PSKV& pskv = EncodeRowSparseKey(key, size, num_rows, offsets,
                                       unit_len, recv_buf->shape()[0]);
@@ -351,10 +351,10 @@ class KVStoreDist : public KVStoreLocal {
 #endif
       real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
       bool init = send_buf.storage_initialized();
-      size_t num_rows = init ? send_buf.aux_shape(kIdx).Size() : 0;
+      const int64_t num_rows = init ? send_buf.aux_shape(kIdx)[0] : 0;
       const auto offsets = init ? send_buf.aux_data(kIdx).dptr<int64_t>() : nullptr;
       const auto unit_len = send_buf.shape().ProdShape(1, send_buf.shape().ndim());
-      const auto size = num_rows * unit_len;
+      const int64_t size = num_rows * unit_len;
 
        // convert to ps keys in row sparse format
       PSKV& pskv = EncodeRowSparseKey(key, size, num_rows, offsets,
@@ -451,7 +451,7 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   // TODO(haibin) this encoding method for row sparse keys doesn't allow cross-layer batching
-  inline PSKV& EncodeRowSparseKey(const int key, const size_t size, const int64_t num_rows,
+  inline PSKV& EncodeRowSparseKey(const int key, const int64_t size, const int64_t num_rows,
                                   const int64_t *offsets, const size_t unit_len,
                                   const int64_t total_num_rows) {
     using namespace common;
@@ -481,7 +481,7 @@ class KVStoreDist : public KVStoreLocal {
         pskv.keys.push_back(master_key);
         pskv.lens.push_back(0);
         for (auto offset = lb; offset < ub; offset++) {
-          ps::Key ps_key = krs[i].begin() + key + *offset - start_row;
+          ps::Key ps_key = krs[i].begin() + key + (*offset - start_row);
           CHECK_LT(ps_key, krs[i].end());
           pskv.keys.push_back(ps_key);
           pskv.lens.push_back(unit_len);

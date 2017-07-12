@@ -266,7 +266,7 @@ class KVStoreDistServer {
               inputs.push_back(recved);
               inputs.push_back(merged.array);
               outputs.push_back(out);
-              op::BinaryComputeRspRsp<cpu, cpu>({}, {}, inputs, {}, outputs);
+              op::BinaryComputeRspRspImpl<cpu, cpu>({}, {}, inputs, {kWriteTo}, outputs);
             }, recved.ctx(), const_vars, {out.var()},
             FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
           CopyFromTo(out, &merged.array, 0);

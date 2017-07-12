@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import ctypes
 import pickle
 from .ndarray import NDArray
-from .sparse_ndarray import _ndarray_cls
+from .ndarray import _ndarray_cls
 from .base import _LIB
 from .base import check_call, c_array, c_str, string_types, mx_uint, py_str
 from .base import NDArrayHandle, KVStoreHandle
@@ -221,10 +221,10 @@ class KVStore(object):
             out = [out]
         for val in out:
             if not isinstance(val, (list, tuple)):
-                assert(val.storage_type == 'default')
+                assert(val.stype == 'default')
             else:
                 for v in val:
-                    assert(v.storage_type == 'default')
+                    assert(v.stype == 'default')
         ckeys, cvals = _ctype_key_value(key, out)
         check_call(_LIB.MXKVStorePullEx(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
@@ -245,7 +245,7 @@ class KVStore(object):
             Keys.
 
         out: NDArray or list of NDArray or list of list of NDArray
-            Values corresponding to the keys. The storage_type is expected to be row_sparse
+            Values corresponding to the keys. The stype is expected to be row_sparse
 
         priority : int, optional
             The priority of the pull operation.
@@ -287,14 +287,13 @@ class KVStore(object):
             out = [out]
         for val in out:
             if not isinstance(val, (list, tuple)):
-                assert(val.storage_type == 'row_sparse')
+                assert(val.stype == 'row_sparse')
             else:
                 for v in val:
-                    assert(v.storage_type == 'row_sparse')
+                    assert(v.stype == 'row_sparse')
         ckeys, cvals = _ctype_key_value(key, out)
         _, crow_ids = _ctype_key_value(key, row_ids)
-        assert(len(crow_ids) == len(cvals)), (len(crow_ids), len(cvals))
-        #TODO(haibin) pickup upstream changes which removed `_cast_to_str_keys`
+        assert(len(crow_ids) == len(cvals)), "number of row_ids doesn't match number of values"
 
         check_call(_LIB.MXKVStorePullRowSparse(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
