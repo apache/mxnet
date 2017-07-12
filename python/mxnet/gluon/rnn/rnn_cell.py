@@ -281,13 +281,17 @@ class RNNCell(HRecurrentCell):
         self._activation = activation
         self._input_size = input_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(hidden_size, input_size),
-                                          init=i2h_weight_initializer)
+                                          init=i2h_weight_initializer,
+                                          allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(hidden_size, hidden_size),
-                                          init=h2h_weight_initializer)
+                                          init=h2h_weight_initializer,
+                                          allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(hidden_size,),
-                                        init=i2h_bias_initializer)
+                                        init=i2h_bias_initializer,
+                                        allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(hidden_size,),
-                                        init=h2h_bias_initializer)
+                                        init=h2h_bias_initializer,
+                                        allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'}]
@@ -345,13 +349,17 @@ class LSTMCell(HRecurrentCell):
         self._hidden_size = hidden_size
         self._input_size = input_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(4*hidden_size, input_size),
-                                          init=i2h_weight_initializer)
+                                          init=i2h_weight_initializer,
+                                          allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(4*hidden_size, hidden_size),
-                                          init=h2h_weight_initializer)
+                                          init=h2h_weight_initializer,
+                                          allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(4*hidden_size,),
-                                        init=i2h_bias_initializer)
+                                        init=i2h_bias_initializer,
+                                        allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
-                                        init=h2h_bias_initializer)
+                                        init=h2h_bias_initializer,
+                                        allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'},
@@ -421,13 +429,17 @@ class GRUCell(HRecurrentCell):
         super(GRUCell, self).__init__(prefix=prefix, params=params)
         self._hidden_size = hidden_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(3*hidden_size, input_size),
-                                          init=i2h_weight_initializer)
+                                          init=i2h_weight_initializer,
+                                          allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(3*hidden_size, hidden_size),
-                                          init=h2h_weight_initializer)
+                                          init=h2h_weight_initializer,
+                                          allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(3*hidden_size,),
-                                        init=i2h_bias_initializer)
+                                        init=i2h_bias_initializer,
+                                        allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(3*hidden_size,),
-                                        init=h2h_bias_initializer)
+                                        init=h2h_bias_initializer,
+                                        allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'}]

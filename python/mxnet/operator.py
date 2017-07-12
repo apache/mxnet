@@ -448,7 +448,7 @@ class CustomOpProp(object):
         The default declare_backward_dependency function. Use this value
         to determine whether this operator needs gradient input.
     """
-    def __init__(self, need_top_grad=False):
+    def __init__(self, need_top_grad=True):
         self.need_top_grad_ = need_top_grad
 
     def infer_shape(self, in_shape):
@@ -753,9 +753,10 @@ def register(reg_name):
                                                                          NDArrayHandle),
                                                                     writable=False))
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[1]))]
-                            op.forward(is_train=is_train, req=reqs,
-                                       in_data=tensors[0], out_data=tensors[1],
-                                       aux=tensors[4])
+                            with ctx:
+                                op.forward(is_train=is_train, req=reqs,
+                                           in_data=tensors[0], out_data=tensors[1],
+                                           aux=tensors[4])
                         except Exception:
                             print('Error in CustomOp.forward: %s' % traceback.format_exc())
                             return False
@@ -776,10 +777,11 @@ def register(reg_name):
                                                                          NDArrayHandle),
                                                                     writable=False))
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[2]))]
-                            op.backward(req=reqs,
-                                        in_data=tensors[0], out_data=tensors[1],
-                                        in_grad=tensors[2], out_grad=tensors[3],
-                                        aux=tensors[4])
+                            with ctx:
+                                op.backward(req=reqs,
+                                            in_data=tensors[0], out_data=tensors[1],
+                                            in_grad=tensors[2], out_grad=tensors[3],
+                                            aux=tensors[4])
                         except Exception:
                             print('Error in CustomOp.backward: %s' % traceback.format_exc())
                             return False

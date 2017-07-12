@@ -2,7 +2,7 @@
 # pylint: disable= arguments-differ
 """Base container class for all neural network models."""
 
-from .. import symbol, ndarray
+from .. import symbol, ndarray, initializer
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
@@ -180,6 +180,13 @@ class Block(object):
         """Register block as a child of self. `Block`s assigned to self as
         attributes will be registered automatically."""
         self._children.append(block)
+
+    def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False):
+        """Initialize `Parameter`s of this Block and its children.
+
+        Equivalent to `block.collect_params().initialize(...)`
+        """
+        self.collect_params().initialize(init, ctx, verbose)
 
     def hybridize(self, active=True):
         """Activates or deactivates `HybridBlock`s recursively. Has no effect on

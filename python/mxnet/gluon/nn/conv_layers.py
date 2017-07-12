@@ -86,10 +86,12 @@ class _Conv(HybridBlock):
             dshape[layout.find('C')] = in_channels
             wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)
             self.weight = self.params.get('weight', shape=wshapes[1],
-                                          init=weight_initializer)
+                                          init=weight_initializer,
+                                          allow_deferred_init=True)
             if use_bias:
                 self.bias = self.params.get('bias', shape=wshapes[2],
-                                            init=bias_initializer)
+                                            init=bias_initializer,
+                                            allow_deferred_init=True)
             else:
                 self.bias = None
 
@@ -163,11 +165,11 @@ class Conv1D(_Conv):
         Initializer for the bias vector.
 
 
-    Input Shape:
+    Input shape:
         This depends on the `layout` parameter. Input is 3D array of shape
         (batch_size, in_channels, width) if `layout` is `NCW`.
 
-    Output Shape:
+    Output shape:
         This depends on the `layout` parameter. Output is 3D array of shape
         (batch_size, channels, out_width) if `layout` is `NCW`.
         out_width is calculated as::
@@ -240,11 +242,11 @@ class Conv2D(_Conv):
         Initializer for the bias vector.
 
 
-    Input Shape:
+    Input shape:
         This depends on the `layout` parameter. Input is 4D array of shape
         (batch_size, in_channels, height, width) if `layout` is `NCHW`.
 
-    Output Shape:
+    Output shape:
         This depends on the `layout` parameter. Output is 4D array of shape
         (batch_size, channels, out_height, out_width) if `layout` is `NCHW`.
 
@@ -319,11 +321,11 @@ class Conv3D(_Conv):
         Initializer for the bias vector.
 
 
-    Input Shape:
+    Input shape:
         This depends on the `layout` parameter. Input is 5D array of shape
         (batch_size, in_channels, depth, height, width) if `layout` is `NCDHW`.
 
-    Output Shape:
+    Output shape:
         This depends on the `layout` parameter. Output is 5D array of shape
         (batch_size, channels, out_depth, out_height, out_width) if `layout` is
         `NCDHW`.
@@ -400,11 +402,11 @@ class Conv1DTranspose(_Conv):
         Initializer for the bias vector.
 
 
-    Input Shape:
+    Input shape:
         This depends on the `layout` parameter. Input is 3D array of shape
         (batch_size, in_channels, width) if `layout` is `NCW`.
 
-    Output Shape:
+    Output shape:
         This depends on the `layout` parameter. Output is 3D array of shape
         (batch_size, channels, out_width) if `layout` is `NCW`.
 
@@ -484,11 +486,11 @@ class Conv2DTranspose(_Conv):
         Initializer for the bias vector.
 
 
-    Input Shape:
+    Input shape:
         This depends on the `layout` parameter. Input is 4D array of shape
         (batch_size, in_channels, height, width) if `layout` is `NCHW`.
 
-    Output Shape:
+    Output shape:
         This depends on the `layout` parameter. Output is 4D array of shape
         (batch_size, channels, out_height, out_width) if `layout` is `NCHW`.
 
@@ -569,11 +571,11 @@ class Conv3DTranspose(_Conv):
         Initializer for the bias vector.
 
 
-    Input Shape:
+    Input shape:
         This depends on the `layout` parameter. Input is 5D array of shape
         (batch_size, in_channels, depth, height, width) if `layout` is `NCDHW`.
 
-    Output Shape:
+    Output shape:
         This depends on the `layout` parameter. Output is 5D array of shape
         (batch_size, channels, out_depth, out_height, out_width) if `layout` is `NCDHW`.
         out_depth, out_height and out_width are calculated as::
@@ -640,11 +642,11 @@ class MaxPool1D(_Pooling):
         When True, will use ceil instead of floor to compute the output shape.
 
 
-    Input Shape:
+    Input shape:
         This depends on the `layout` parameter. Input is 3D array of shape
         (batch_size, channels, width) if `layout` is `NCW`.
 
-    Output Shape:
+    Output shape:
         This depends on the `layout` parameter. Output is 3D array of shape
         (batch_size, channels, out_width) if `layout` is `NCW`.
 
@@ -687,11 +689,11 @@ class MaxPool2D(_Pooling):
         When True, will use ceil instead of floor to compute the output shape.
 
 
-    Input Shape:
+    Input shape:
         This depends on the `layout` parameter. Input is 4D array of shape
         (batch_size, channels, height, width) if `layout` is `NCHW`.
 
-    Output Shape:
+    Output shape:
         This depends on the `layout` parameter. Output is 4D array of shape
         (batch_size, channels, out_height, out_width)  if `layout` is `NCHW`.
 
@@ -736,11 +738,11 @@ class MaxPool3D(_Pooling):
         When True, will use ceil instead of floor to compute the output shape.
 
 
-    Input Shape:
+    Input shape:
         This depends on the `layout` parameter. Input is 5D array of shape
         (batch_size, channels, depth, height, width) if `layout` is `NCDHW`.
 
-    Output Shape:
+    Output shape:
         This depends on the `layout` parameter. Output is 5D array of shape
         (batch_size, channels, out_depth, out_height, out_width) if `layout`
         is `NCDHW`.
@@ -785,11 +787,11 @@ class AvgPool1D(_Pooling):
         When True, will use ceil instead of floor to compute the output shape.
 
 
-    Input Shape:
+    Input shape:
         This depends on the `layout` parameter. Input is 3D array of shape
         (batch_size, channels, width) if `layout` is `NCW`.
 
-    Output Shape:
+    Output shape:
         This depends on the `layout` parameter. Output is 3D array of shape
         (batch_size, channels, out_width) if `layout` is `NCW`.
 
@@ -831,11 +833,11 @@ class AvgPool2D(_Pooling):
         When True, will use ceil instead of floor to compute the output shape.
 
 
-    Input Shape:
+    Input shape:
         This depends on the `layout` parameter. Input is 4D array of shape
         (batch_size, channels, height, width) if `layout` is `NCHW`.
 
-    Output Shape:
+    Output shape:
         This depends on the `layout` parameter. Output is 4D array of shape
         (batch_size, channels, out_height, out_width)  if `layout` is `NCHW`.
 
@@ -879,11 +881,11 @@ class AvgPool3D(_Pooling):
         When True, will use ceil instead of floor to compute the output shape.
 
 
-    Input Shape:
+    Input shape:
         This depends on the `layout` parameter. Input is 5D array of shape
         (batch_size, channels, depth, height, width) if `layout` is `NCDHW`.
 
-    Output Shape:
+    Output shape:
         This depends on the `layout` parameter. Output is 5D array of shape
         (batch_size, channels, out_depth, out_height, out_width) if `layout`
         is `NCDHW`.

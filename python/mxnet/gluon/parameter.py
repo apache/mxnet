@@ -32,6 +32,7 @@ class Parameter(object):
     For `NDArray` API, `Parameter` must be initialized with `Parameter.init`. It
     will then hold a copy of the the parameter on each `Context`. If `grad_req` is
     not `null`, it will also hold a gradient array on each `Context`::
+
         ctx = mx.gpu(0)
         x = mx.nd.zeros((16, 100), ctx=ctx)
         w = mx.nn.Parameter('fc_weight', shape=(64, 100), init=mx.init.Xavier())
@@ -66,9 +67,10 @@ class Parameter(object):
         Weight decay multiplier (L2 regulerizer coefficient). Works similarly to lr_mult.
     init : Initializer, default None
         Initializer of this parameter. Will use the global initializer by default.
+
     """
     def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
-                 lr_mult=1.0, wd_mult=1.0, init=None):
+                 lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False):
         self.name = name
         self.shape = shape
         self.dtype = dtype
@@ -76,13 +78,13 @@ class Parameter(object):
         self.wd_mult = wd_mult
         self.grad_req = grad_req
         self.init = init
+        self.allow_deferred_init = allow_deferred_init
         self._var = None
         self._data = None
         self._grad = None
         self._defered_init = ()
 
-    def initialize(self, init=None, ctx=None, default_init=initializer.Xavier(),
-                   allow_deferring=True):
+    def initialize(self, init=None, ctx=None, default_init=initializer.Uniform()):
         """Intialize parameter and gradient arrays. Only used for `NDArray` API.
 
         Parameters
@@ -102,16 +104,14 @@ class Parameter(object):
             ctx = [context.current_context()]
         if isinstance(ctx, Context):
             ctx = [ctx]
-
-        if self.shape is None or np.prod(self.shape) <= 0:
-            if allow_deferring:
+        if init is None:
+            init = default_init if self.init is None else self.init
+        if not self.shape or np.prod(self.shape) <= 0:
+            if self.allow_deferred_init:
                 self._defered_init = (init, ctx, default_init)
                 return
             raise ValueError("Cannot initialize Parameter %s because it has " \
-                             "invalid shape: %s. Please specify in_units, " \
-                             "in_channels, etc for `Block`s or " \
-                             "set allow_deferring to True to defer initialization " \
-                             "to first forward pass."%(self.name, str(self.shape)))
+                             "invalid shape: %s."%(self.name, str(self.shape)))
 
         self._defered_init = (init, ctx, default_init)
         self._finish_deferred_init()
@@ -161,8 +161,6 @@ class Parameter(object):
         with autograd.pause():
             data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
                                  ctx=context.cpu())
-            if init is None:
-                init = self.init
             initializer.create(default_init)(
                 initializer.InitDesc(self.name, {'__init__': init}), data)
 
@@ -222,8 +220,14 @@ class Parameter(object):
         NDArray on ctx
         """
         if ctx is None:
-            ctx = context.current_context()
-        self._check_initialized(ctx)
+            list_ctx = self.list_ctx()
+            if len(list_ctx) == 1:
+                ctx = list_ctx[0]
+            else:
+                ctx = context.current_context()
+                self._check_initialized(ctx)
+        else:
+            self._check_initialized(ctx)
         return self._data[ctx]
 
     def list_data(self):
@@ -241,8 +245,14 @@ class Parameter(object):
             Desired context.
         """
         if ctx is None:
-            ctx = context.current_context()
-        self._check_initialized(ctx)
+            list_ctx = self.list_ctx()
+            if len(list_ctx) == 1:
+                ctx = list_ctx[0]
+            else:
+                ctx = context.current_context()
+                self._check_initialized(ctx)
+        else:
+            self._check_initialized(ctx)
         if self._grad is None:
             raise RuntimeError(
                 "Cannot get gradient array for Parameter %s " \
@@ -371,7 +381,7 @@ class ParameterDict(object):
             else:
                 self._params[k] = v
 
-    def initialize(self, init=initializer.Xavier(), ctx=None, verbose=False):
+    def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False):
         """Intialize all Parameters manage by this dictionary to be used for `NDArray`
         API. Has no effect when using `Symbol` API.
 
