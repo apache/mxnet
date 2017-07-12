@@ -445,7 +445,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 }
 /*--------------------------banner---------------------------*/
 #splash{
-    padding:60px 0 0 0;
+    padding:60px 0 50px 0;
     background-color:#0079b2;
     /* background-image:url(../img/bg.jpg); */
     background-size:cover;
@@ -631,7 +631,18 @@ li.dropdown-submenu ul.dropdown-menu a {
     left: 0;
     right: 0;
     padding-top: 10px;
-    margin-top: 100px;
+    margin-top: 60px;
+}
+
+@media (max-width: 600px) {
+    .section-util .util-btn {
+        margin-top: 100px;
+    }
+}
+
+.section-util .glyphicon {
+    font-size: 50px;
+    color: #999;
 }
 
 .util-btn a {
@@ -653,7 +664,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 }
 
 .section-util .container {
-    height: 230px;
+    height: 250px;
 }
 
 @media (max-width: 1199px) {
