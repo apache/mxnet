@@ -3,11 +3,11 @@
 from __future__ import print_function
 import argparse
 import sys
+import re
 import caffe_parser
 import mxnet as mx
 import numpy as np
 from convert_symbol import convert_symbol
-import re
 
 def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
     """Convert caffe model
