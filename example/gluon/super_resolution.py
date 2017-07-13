@@ -3,7 +3,6 @@ import argparse, tarfile
 import math
 import os
 import numpy as np
-from PIL import Image
 
 import mxnet as mx
 import mxnet.ndarray as F
@@ -111,7 +110,6 @@ def test(ctx):
     batches = 0
     for batch in val_data:
         batches += 1
-        metric.reset()
         data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
         label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
         outputs = []
@@ -119,6 +117,7 @@ def test(ctx):
             outputs.append(net(x))
         metric.update(label, outputs)
         avg_psnr += 10 * math.log10(1/metric.get()[1])
+        metric.reset()
     avg_psnr /= batches
     print('validation avg psnr: %f'%avg_psnr)
 
@@ -129,7 +128,6 @@ def train(epoch, ctx):
     net.collect_params().initialize(mx.init.Orthogonal(), ctx=ctx)
     net.conv4.collect_params().initialize(mx.init.Orthogonal(scale=1), ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': opt.lr})
-    metric = mx.metric.MAE()
     loss = gluon.loss.L2Loss()
 
     for i in range(epoch):
@@ -155,6 +153,7 @@ def train(epoch, ctx):
     net.collect_params().save('superres.params')
 
 def resolve(ctx):
+    from PIL import Image
     if isinstance(ctx, list):
         ctx = [ctx[0]]
     net.collect_params().load('superres.params', ctx=ctx)

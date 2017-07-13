@@ -7,7 +7,6 @@ import sys
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
 import get_data
-from PIL import Image
 import mxnet as mx
 
 def mnist_iterator(batch_size, input_shape):
@@ -96,6 +95,7 @@ class ImagePairIter(mx.io.DataIter):
         random.shuffle(self.filenames)
 
     def next(self):
+        from PIL import Image
         if self.count + self.batch_size <= len(self.filenames):
             data = []
             label = []
