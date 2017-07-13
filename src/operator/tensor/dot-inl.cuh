@@ -71,7 +71,7 @@ struct DotCsrDnsDnsVectorKernel {
     for (int j = low+lane; j < high; j+=32) {
       sum += data_l[j] * data_r[col_idx_l[j]*num_cols_r + kcol];
     }
-    vals[threadIdx.x] = sum;
+    vals[threadIdx.x] = sum; __syncwarp();
 
     // Parallel reduction in shared memory
     if (lane < 16) {vals[threadIdx.x] += vals[threadIdx.x+16];} __syncwarp();
