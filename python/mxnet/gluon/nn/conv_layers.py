@@ -16,7 +16,7 @@ class _Conv(HybridBlock):
 
     This layer creates a convolution kernel that is convolved
     with the layer input to produce a tensor of outputs.
-    If `use_bias` is True, a bias vector is created and added to the outputs.
+    If `use_bias` is `True`, a bias vector is created and added to the outputs.
     Finally, if `activation` is not `None`,
     it is applied to the outputs as well.
 
@@ -26,31 +26,31 @@ class _Conv(HybridBlock):
         The dimensionality of the output space
         i.e. the number of output channels in the convolution.
     kernel_size : int or tuple/list of n ints
-        Specifys the dimensions of the convolution window.
+        Specifies the dimensions of the convolution window.
     strides: int or tuple/list of n ints,
-        Specifys the strides of the convolution.
+        Specifies the strides of the convolution.
     padding : int or tuple/list of n ints,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
     dilation: int or tuple/list of n ints,
-        Specifys the dilation rate to use for dilated convolution.
+        Specifies the dilation rate to use for dilated convolution.
     groups : int
-        controls the connections between inputs and outputs.
+        Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
-        At groups=2, the operation becomes equivalent to having two conv
+        At groups=2, the operation becomes equivalent to having two convolution
         layers side by side, each seeing half the input channels, and producing
         half the output channels, and both subsequently concatenated.
     layout : str,
         Dimension ordering of data and weight. Can be 'NCW', 'NWC', 'NCHW',
         'NHWC', 'NCDHW', 'NDHWC', etc. 'N', 'C', 'H', 'W', 'D' stands for
         batch, channel, height, width and depth dimensions respectively.
-        Convolution is perform over 'D', 'H', and 'W' dimensions.
+        Convolution is performed over 'D', 'H', and 'W' dimensions.
     in_channels : int, default 0
         The number of input channels to this layer. If not specified,
-        initialization will be defered to the first time `forward` is called
+        initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.nd.Activation`.
+        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias: bool
@@ -114,12 +114,12 @@ class Conv1D(_Conv):
     This layer creates a convolution kernel that is convolved
     with the layer input over a single spatial (or temporal) dimension
     to produce a tensor of outputs.
-    If `use_bias` is True, a bias vector is created and added to the outputs.
+    If `use_bias` is `True`, a bias vector is created and added to the outputs.
     Finally, if `activation` is not `None`,
     it is applied to the outputs as well.
 
     If `in_channels` is not specified, `Parameter` initialization will be
-    defered to the first time `forward` is called and `in_channels` will be
+    deferred to the first time `forward` is called and `in_channels` will be
     inferred from the shape of input data.
 
 
@@ -129,16 +129,16 @@ class Conv1D(_Conv):
         The dimensionality of the output space, i.e. the number of output
         channels (filters) in the convolution.
     kernel_size :int or tuple/list of 1 int
-        Specifys the dimensions of the convolution window.
+        Specifies the dimensions of the convolution window.
     strides : int or tuple/list of 1 int,
-        Specify the strides of the convolution.
+        Specifies the strides of the convolution.
     padding : int or a tuple/list of 1 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
     dilation : int or tuple/list of 1 int
-        Specifys the dilation rate to use for dilated convolution.
+        Specifies the dilation rate to use for dilated convolution.
     groups : int
-        controls the connections between inputs and outputs.
+        Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two conv
         layers side by side, each seeing half the input channels, and producing
@@ -149,10 +149,10 @@ class Conv1D(_Conv):
         respectively. Convolution is applied on the 'W' dimension.
     in_channels : int, default 0
         The number of input channels to this layer. If not specified,
-        initialization will be defered to the first time `forward` is called
+        initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`mx.nd.Activation`.
+        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -191,12 +191,12 @@ class Conv2D(_Conv):
 
     This layer creates a convolution kernel that is convolved
     with the layer input to produce a tensor of
-    outputs. If `use_bias` is True,
+    outputs. If `use_bias` is `True`,
     a bias vector is created and added to the outputs. Finally, if
     `activation` is not `None`, it is applied to the outputs as well.
 
     If `in_channels` is not specified, `Parameter` initialization will be
-    defered to the first time `forward` is called and `in_channels` will be
+    deferred to the first time `forward` is called and `in_channels` will be
     inferred from the shape of input data.
 
     Parameters
@@ -205,16 +205,16 @@ class Conv2D(_Conv):
         The dimensionality of the output space, i.e. the number of output
         channels (filters) in the convolution.
     kernel_size :int or tuple/list of 2 int
-        Specifys the dimensions of the convolution window.
+        Specifies the dimensions of the convolution window.
     strides : int or tuple/list of 2 int,
-        Specify the strides of the convolution.
+        Specifies the strides of the convolution.
     padding : int or a tuple/list of 2 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
     dilation : int or tuple/list of 2 int
-        Specifys the dilation rate to use for dilated convolution.
+        Specifies the dilation rate to use for dilated convolution.
     groups : int
-        controls the connections between inputs and outputs.
+        Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two conv
         layers side by side, each seeing half the input channels, and producing
@@ -226,10 +226,10 @@ class Conv2D(_Conv):
         'W' dimensions.
     in_channels : int, default 0
         The number of input channels to this layer. If not specified,
-        initialization will be defered to the first time `forward` is called
+        initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`mx.nd.Activation`.
+        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -270,12 +270,12 @@ class Conv3D(_Conv):
 
     This layer creates a convolution kernel that is convolved
     with the layer input to produce a tensor of
-    outputs. If `use_bias` is True,
+    outputs. If `use_bias` is `True`,
     a bias vector is created and added to the outputs. Finally, if
     `activation` is not `None`, it is applied to the outputs as well.
 
     If `in_channels` is not specified, `Parameter` initialization will be
-    defered to the first time `forward` is called and `in_channels` will be
+    deferred to the first time `forward` is called and `in_channels` will be
     inferred from the shape of input data.
 
     Parameters
@@ -284,16 +284,16 @@ class Conv3D(_Conv):
         The dimensionality of the output space, i.e. the number of output
         channels (filters) in the convolution.
     kernel_size :int or tuple/list of 3 int
-        Specifys the dimensions of the convolution window.
+        Specifies the dimensions of the convolution window.
     strides : int or tuple/list of 3 int,
-        Specify the strides of the convolution.
+        Specifies the strides of the convolution.
     padding : int or a tuple/list of 3 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
     dilation : int or tuple/list of 3 int
-        Specifys the dilation rate to use for dilated convolution.
+        Specifies the dilation rate to use for dilated convolution.
     groups : int
-        controls the connections between inputs and outputs.
+        Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two conv
         layers side by side, each seeing half the input channels, and producing
@@ -305,10 +305,10 @@ class Conv3D(_Conv):
         'H' and 'W' dimensions.
     in_channels : int, default 0
         The number of input channels to this layer. If not specified,
-        initialization will be defered to the first time `forward` is called
+        initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`mx.nd.Activation`.
+        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -357,7 +357,7 @@ class Conv1DTranspose(_Conv):
     said convolution.
 
     If `in_channels` is not specified, `Parameter` initialization will be
-    defered to the first time `forward` is called and `in_channels` will be
+    deferred to the first time `forward` is called and `in_channels` will be
     inferred from the shape of input data.
 
     Parameters
@@ -366,16 +366,16 @@ class Conv1DTranspose(_Conv):
         The dimensionality of the output space, i.e. the number of output
         channels (filters) in the convolution.
     kernel_size :int or tuple/list of 3 int
-        Specifys the dimensions of the convolution window.
+        Specifies the dimensions of the convolution window.
     strides : int or tuple/list of 3 int,
-        Specify the strides of the convolution.
+        Specifies the strides of the convolution.
     padding : int or a tuple/list of 3 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
     dilation : int or tuple/list of 3 int
-        Specifys the dilation rate to use for dilated convolution.
+        Specifies the dilation rate to use for dilated convolution.
     groups : int
-        controls the connections between inputs and outputs.
+        Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two conv
         layers side by side, each seeing half the input channels, and producing
@@ -386,10 +386,10 @@ class Conv1DTranspose(_Conv):
         respectively. Convolution is applied on the 'W' dimension.
     in_channels : int, default 0
         The number of input channels to this layer. If not specified,
-        initialization will be defered to the first time `forward` is called
+        initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`mx.nd.Activation`.
+        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -439,7 +439,7 @@ class Conv2DTranspose(_Conv):
     said convolution.
 
     If `in_channels` is not specified, `Parameter` initialization will be
-    defered to the first time `forward` is called and `in_channels` will be
+    deferred to the first time `forward` is called and `in_channels` will be
     inferred from the shape of input data.
 
 
@@ -449,16 +449,16 @@ class Conv2DTranspose(_Conv):
         The dimensionality of the output space, i.e. the number of output
         channels (filters) in the convolution.
     kernel_size :int or tuple/list of 3 int
-        Specifys the dimensions of the convolution window.
+        Specifies the dimensions of the convolution window.
     strides : int or tuple/list of 3 int,
-        Specify the strides of the convolution.
+        Specifies the strides of the convolution.
     padding : int or a tuple/list of 3 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
     dilation : int or tuple/list of 3 int
-        Specifys the dilation rate to use for dilated convolution.
+        Specifies the dilation rate to use for dilated convolution.
     groups : int
-        controls the connections between inputs and outputs.
+        Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two conv
         layers side by side, each seeing half the input channels, and producing
@@ -470,10 +470,10 @@ class Conv2DTranspose(_Conv):
         'W' dimensions.
     in_channels : int, default 0
         The number of input channels to this layer. If not specified,
-        initialization will be defered to the first time `forward` is called
+        initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`mx.nd.Activation`.
+        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -524,7 +524,7 @@ class Conv3DTranspose(_Conv):
     said convolution.
 
     If `in_channels` is not specified, `Parameter` initialization will be
-    defered to the first time `forward` is called and `in_channels` will be
+    deferred to the first time `forward` is called and `in_channels` will be
     inferred from the shape of input data.
 
 
@@ -534,16 +534,16 @@ class Conv3DTranspose(_Conv):
         The dimensionality of the output space, i.e. the number of output
         channels (filters) in the convolution.
     kernel_size :int or tuple/list of 3 int
-        Specifys the dimensions of the convolution window.
+        Specifies the dimensions of the convolution window.
     strides : int or tuple/list of 3 int,
-        Specify the strides of the convolution.
+        Specifies the strides of the convolution.
     padding : int or a tuple/list of 3 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
     dilation : int or tuple/list of 3 int
-        Specifys the dilation rate to use for dilated convolution.
+        Specifies the dilation rate to use for dilated convolution.
     groups : int
-        controls the connections between inputs and outputs.
+        Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two conv
         layers side by side, each seeing half the input channels, and producing
@@ -555,10 +555,10 @@ class Conv3DTranspose(_Conv):
         'H', and 'W' dimensions.
     in_channels : int, default 0
         The number of input channels to this layer. If not specified,
-        initialization will be defered to the first time `forward` is called
+        initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`mx.nd.Activation`.
+        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -628,7 +628,7 @@ class MaxPool1D(_Pooling):
         Size of the max pooling windows.
     strides: int, or None
         Factor by which to downscale. E.g. 2 will halve the input size.
-        If None, it will default to `pool_size`.
+        If `None`, it will default to `pool_size`.
     padding: int
         If padding is non-zero, then the input is implicitly
         zero-padded on both sides for padding number of points.
@@ -637,7 +637,7 @@ class MaxPool1D(_Pooling):
         'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
         respectively. Pooling is applied on the W dimension.
     ceil_mode : bool, default False
-        When True, will use ceil instead of floor to compute the output shape.
+        When `True`, will use ceil instead of floor to compute the output shape.
 
 
     Input Shape:
@@ -652,7 +652,7 @@ class MaxPool1D(_Pooling):
 
             out_width = floor((width+2*padding-pool_size)/strides)+1
 
-        When ceil_mode is True, ceil will be used instead of floor in this
+        When `ceil_mode` is `True`, ceil will be used instead of floor in this
         equation.
     """
     def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW',
@@ -675,7 +675,7 @@ class MaxPool2D(_Pooling):
         Size of the max pooling windows.
     strides: int, list/tuple of 2 ints, or None.
         Factor by which to downscale. E.g. 2 will halve the input size.
-        If None, it will default to `pool_size`.
+        If `None`, it will default to `pool_size`.
     padding: int or list/tuple of 2 ints,
         If padding is non-zero, then the input is implicitly
         zero-padded on both sides for padding number of points.
@@ -684,7 +684,7 @@ class MaxPool2D(_Pooling):
         'N', 'C', 'H', 'W' stands for batch, channel, height, and width
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
     ceil_mode : bool, default False
-        When True, will use ceil instead of floor to compute the output shape.
+        When `True`, will use ceil instead of floor to compute the output shape.
 
 
     Input Shape:
@@ -700,7 +700,7 @@ class MaxPool2D(_Pooling):
             out_height = floor((height+2*padding[0]-pool_size[0])/strides[0])+1
             out_width = floor((width+2*padding[1]-pool_size[1])/strides[1])+1
 
-        When ceil_mode is True, ceil will be used instead of floor in this
+        When `ceil_mode` is `True`, ceil will be used instead of floor in this
         equation.
     """
     def __init__(self, pool_size=(2, 2), strides=None, padding=0, layout='NCHW',
@@ -723,7 +723,7 @@ class MaxPool3D(_Pooling):
         Size of the max pooling windows.
     strides: int, list/tuple of 3 ints, or None.
         Factor by which to downscale. E.g. 2 will halve the input size.
-        If None, it will default to `pool_size`.
+        If `None`, it will default to `pool_size`.
     padding: int or list/tuple of 3 ints,
         If padding is non-zero, then the input is implicitly
         zero-padded on both sides for padding number of points.
@@ -733,7 +733,7 @@ class MaxPool3D(_Pooling):
         depth dimensions respectively. padding is applied on 'D', 'H' and 'W'
         dimension.
     ceil_mode : bool, default False
-        When True, will use ceil instead of floor to compute the output shape.
+        When `True`, will use ceil instead of floor to compute the output shape.
 
 
     Input Shape:
@@ -751,7 +751,7 @@ class MaxPool3D(_Pooling):
             out_height = floor((height+2*padding[1]-pool_size[1])/strides[1])+1
             out_width = floor((width+2*padding[2]-pool_size[2])/strides[2])+1
 
-        When ceil_mode is True, ceil will be used instead of floor in this
+        When `ceil_mode` is `True`, ceil will be used instead of floor in this
         equation.
     """
     def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0,
@@ -773,7 +773,7 @@ class AvgPool1D(_Pooling):
         Size of the max pooling windows.
     strides: int, or None
         Factor by which to downscale. E.g. 2 will halve the input size.
-        If None, it will default to `pool_size`.
+        If `None`, it will default to `pool_size`.
     padding: int
         If padding is non-zero, then the input is implicitly
         zero-padded on both sides for padding number of points.
@@ -782,7 +782,7 @@ class AvgPool1D(_Pooling):
         'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
         respectively. padding is applied on 'W' dimension.
     ceil_mode : bool, default False
-        When True, will use ceil instead of floor to compute the output shape.
+        When `True`, will use ceil instead of floor to compute the output shape.
 
 
     Input Shape:
@@ -797,7 +797,7 @@ class AvgPool1D(_Pooling):
 
             out_width = floor((width+2*padding-pool_size)/strides)+1
 
-        When ceil_mode is True, ceil will be used instead of floor in this
+        When `ceil_mode` is `True`, ceil will be used instead of floor in this
         equation.
     """
     def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW',
@@ -819,7 +819,7 @@ class AvgPool2D(_Pooling):
         Size of the max pooling windows.
     strides: int, list/tuple of 2 ints, or None.
         Factor by which to downscale. E.g. 2 will halve the input size.
-        If None, it will default to `pool_size`.
+        If `None`, it will default to `pool_size`.
     padding: int or list/tuple of 2 ints,
         If padding is non-zero, then the input is implicitly
         zero-padded on both sides for padding number of points.
@@ -828,7 +828,7 @@ class AvgPool2D(_Pooling):
         'N', 'C', 'H', 'W' stands for batch, channel, height, and width
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
     ceil_mode : bool, default False
-        When True, will use ceil instead of floor to compute the output shape.
+        When `True`, will use ceil instead of floor to compute the output shape.
 
 
     Input Shape:
@@ -844,7 +844,7 @@ class AvgPool2D(_Pooling):
             out_height = floor((height+2*padding[0]-pool_size[0])/strides[0])+1
             out_width = floor((width+2*padding[1]-pool_size[1])/strides[1])+1
 
-        When ceil_mode is True, ceil will be used instead of floor in this
+        When `ceil_mode` is `True`, ceil will be used instead of floor in this
         equation.
     """
     def __init__(self, pool_size=(2, 2), strides=None, padding=0,
@@ -866,7 +866,7 @@ class AvgPool3D(_Pooling):
         Size of the max pooling windows.
     strides: int, list/tuple of 3 ints, or None.
         Factor by which to downscale. E.g. 2 will halve the input size.
-        If None, it will default to `pool_size`.
+        If `None`, it will default to `pool_size`.
     padding: int or list/tuple of 3 ints,
         If padding is non-zero, then the input is implicitly
         zero-padded on both sides for padding number of points.
@@ -876,7 +876,7 @@ class AvgPool3D(_Pooling):
         depth dimensions respectively. padding is applied on 'D', 'H' and 'W'
         dimension.
     ceil_mode : bool, default False
-        When True, will use ceil instead of floor to compute the output shape.
+        When `True`, will use ceil instead of floor to compute the output shape.
 
 
     Input Shape:
@@ -894,7 +894,7 @@ class AvgPool3D(_Pooling):
             out_height = floor((height+2*padding[1]-pool_size[1])/strides[1])+1
             out_width = floor((width+2*padding[2]-pool_size[2])/strides[2])+1
 
-        When ceil_mode is True, ceil will be used instead of floor in this
+        When `ceil_mode` is `True`, ceil will be used instead of floor in this
         equation.
     """
     def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0,

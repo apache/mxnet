@@ -10,10 +10,11 @@ These tutorials introduce a few fundamental concepts in deep learning and how to
 .. toctree::
    :maxdepth: 1
 
-   foo/ndarray
-   foo/autograd
-   foo/foo
-   foo/hybrid
+   gluon/ndarray
+   gluon/autograd
+   gluon/foo
+   gluon/hybrid
+   gluon/mnist
 ```
 
 ### Advanced -- Low-level interface
