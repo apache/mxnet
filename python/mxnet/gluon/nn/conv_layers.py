@@ -64,7 +64,7 @@ class _Conv(HybridBlock):
     """
     def __init__(self, channels, kernel_size, strides, padding, dilation,
                  groups, layout, in_channels=0, activation=None, use_bias=True,
-                 weight_initializer=None, bias_initializer=None,
+                 weight_initializer=None, bias_initializer='zeros',
                  op_name='Convolution', prefix=None, params=None, **kwargs):
         super(_Conv, self).__init__(prefix=prefix, params=params)
         with self.name_scope():
@@ -180,7 +180,7 @@ class Conv1D(_Conv):
     """
     def __init__(self, channels, kernel_size, strides=1, padding=0, dilation=1,
                  groups=1, layout='NCW', activation=None, use_bias=True,
-                 weight_initializer=None, bias_initializer=None,
+                 weight_initializer=None, bias_initializer='zeros',
                  in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
@@ -260,7 +260,7 @@ class Conv2D(_Conv):
     def __init__(self, channels, kernel_size, strides=(1, 1), padding=(0, 0),
                  dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
-                 bias_initializer=None, in_channels=0, **kwargs):
+                 bias_initializer='zeros', in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
@@ -340,7 +340,7 @@ class Conv3D(_Conv):
     """
     def __init__(self, channels, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  dilation=(1, 1, 1), groups=1, layout='NCDHW', activation=None,
-                 use_bias=True, weight_initializer=None, bias_initializer=None,
+                 use_bias=True, weight_initializer=None, bias_initializer='zeros',
                  in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
@@ -418,7 +418,7 @@ class Conv1DTranspose(_Conv):
     """
     def __init__(self, channels, kernel_size, strides=1, padding=0, output_padding=0,
                  dilation=1, groups=1, layout='NCW', activation=None, use_bias=True,
-                 weight_initializer=None, bias_initializer=None,
+                 weight_initializer=None, bias_initializer='zeros',
                  in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
@@ -504,7 +504,7 @@ class Conv2DTranspose(_Conv):
     def __init__(self, channels, kernel_size, strides=(1, 1), padding=(0, 0),
                  output_padding=(0, 0), dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
-                 bias_initializer=None, in_channels=0, **kwargs):
+                 bias_initializer='zeros', in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         if isinstance(output_padding, numeric_types):
@@ -589,7 +589,7 @@ class Conv3DTranspose(_Conv):
     def __init__(self, channels, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  output_padding=(0, 0, 0), dilation=(1, 1, 1), groups=1, layout='NCDHW',
                  activation=None, use_bias=True, weight_initializer=None,
-                 bias_initializer=None, in_channels=0, **kwargs):
+                 bias_initializer='zeros', in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         if isinstance(output_padding, numeric_types):

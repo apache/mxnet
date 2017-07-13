@@ -97,7 +97,7 @@ class Dense(HybridBlock):
         the output would have shape `(batch_size, units)`.
     """
     def __init__(self, units, activation=None, use_bias=True,
-                 weight_initializer=None, bias_initializer=None,
+                 weight_initializer=None, bias_initializer='zeros',
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
         with self.name_scope():

@@ -274,7 +274,7 @@ class RNNCell(HRecurrentCell):
     """
     def __init__(self, hidden_size, activation='tanh',
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
-                 i2h_bias_initializer=None, h2h_bias_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  input_size=0, prefix=None, params=None):
         super(RNNCell, self).__init__(prefix=prefix, params=params)
         self._hidden_size = hidden_size
@@ -342,7 +342,7 @@ class LSTMCell(HRecurrentCell):
     """
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
-                 i2h_bias_initializer='lstmbias', h2h_bias_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  input_size=0, prefix=None, params=None):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
 
@@ -424,7 +424,7 @@ class GRUCell(HRecurrentCell):
     """
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
-                 i2h_bias_initializer=None, h2h_bias_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  input_size=0, prefix=None, params=None):
         super(GRUCell, self).__init__(prefix=prefix, params=params)
         self._hidden_size = hidden_size

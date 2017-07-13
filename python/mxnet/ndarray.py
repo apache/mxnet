@@ -370,13 +370,18 @@ fixed-size items.
                     assert slice_i < my_shape[i]
                     begin[i] = slice_i
                     end[i] = slice_i + 1
-                if isinstance(slice_i, py_slice):
+                elif isinstance(slice_i, py_slice):
                     # only support continuous slicing
-                    assert slice_i.step is None
+                    assert slice_i.step is None, \
+                        "NDArray only supports continuous slicing."
                     begin[i] = slice_i.start or 0
                     end[i] = slice_i.stop or my_shape[i]
                     assert begin[i] < end[i]
                     assert end[i] <= my_shape[i]
+                else:
+                    raise ValueError(
+                        "NDArray does not support slicing with %s."%(
+                            str(slice_i)))
             begin = tuple(begin)
             end = tuple(end)
             if isinstance(value, NDArray):
@@ -434,8 +439,29 @@ fixed-size items.
             else:
                 return self
         if isinstance(key, tuple):
-            raise ValueError('Multi-dimension indexing is not supported')
-
+            shape = self.shape
+            oshape = []
+            begin = []
+            end = []
+            assert len(shape) >= len(key), \
+                "Slicing dimensions exceeds array dimensions, %d vs %d"%(
+                    len(key), len(shape))
+            for i, si in enumerate(key):
+                if isinstance(si, int):
+                    begin.append(si)
+                    end.append(si+1)
+                elif isinstance(si, py_slice):
+                    if si.step is not None:
+                        raise ValueError("NDArray only supports continuous slicing.")
+                    begin.append(0 if si.start is None else si.start)
+                    end.append(shape[i] if si.stop is None else si.stop)
+                    oshape.append(end[i] - begin[i])
+                else:
+                    raise ValueError(
+                        "NDArray does not support slicing with %s."%(
+                            str(slice_i)))
+            oshape.extend(shape[i+1:])
+            return slice(self, begin, end).reshape(oshape)
 
     def _sync_copyfrom(self, source_array):
         """Performs a synchronized copy from the `source_array` to the current array.

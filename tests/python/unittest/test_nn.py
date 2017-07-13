@@ -54,7 +54,7 @@ def test_basic():
     assert len(y.list_arguments()) == 7
 
     # ndarray
-    model.collect_params().initialize()
+    model.collect_params().initialize(mx.init.Xavier(magnitude=2.24))
     x = model(mx.nd.zeros((32, 10)))
     assert x.shape == (32, 32)
     x.wait_to_read()

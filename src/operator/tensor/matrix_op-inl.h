@@ -722,9 +722,11 @@ inline TShape GetSliceShape(const SliceParam& param, const TShape& dshape) {
     << "Slicing axis exceeds data dimensions";
   CHECK_LE(param.end.ndim(), dshape.ndim())
     << "Slicing axis exceeds data dimensions";
+  CHECK_EQ(param.begin.ndim(), param.end.ndim())
+    << "begin and end must have the same length";
 
-  TShape oshape(dshape.ndim());
-  for (index_t i = 0; i < dshape.ndim(); ++i) {
+  TShape oshape = dshape;
+  for (index_t i = 0; i < param.begin.ndim(); ++i) {
     int s = 0, e = dshape[i];
     if (e != 0) {
       if (param.begin[i]) {

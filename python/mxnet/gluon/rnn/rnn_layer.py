@@ -267,7 +267,7 @@ class RNN(_RNNLayer):
     def __init__(self, hidden_size, num_layers=1, activation='relu',
                  layout='TNC', dropout=0, bidirectional=False,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
-                 i2h_bias_initializer=None, h2h_bias_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  input_size=0, **kwargs):
         super(RNN, self).__init__(hidden_size, num_layers, layout,
                                   dropout, bidirectional, input_size,
@@ -366,7 +366,7 @@ class LSTM(_RNNLayer):
     def __init__(self, hidden_size, num_layers=1, layout='TNC',
                  dropout=0, bidirectional=False, input_size=0,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
-                 i2h_bias_initializer='lstmbias', h2h_bias_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  **kwargs):
         super(LSTM, self).__init__(hidden_size, num_layers, layout,
                                    dropout, bidirectional, input_size,
@@ -459,7 +459,7 @@ class GRU(_RNNLayer):
     def __init__(self, hidden_size, num_layers=1, layout='TNC',
                  dropout=0, bidirectional=False, input_size=0,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
-                 i2h_bias_initializer=None, h2h_bias_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  **kwargs):
         super(GRU, self).__init__(hidden_size, num_layers, layout,
                                   dropout, bidirectional, input_size,
