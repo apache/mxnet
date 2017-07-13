@@ -24,7 +24,7 @@ class Trainer(object):
     """
     def __init__(self, params, optimizer, optimizer_params, kvstore='device'):
         if isinstance(params, (dict, ParameterDict)):
-            params = params.values()
+            params = list(params.values())
         if not isinstance(params, (list, tuple)):
             raise ValueError(
                 "First argument must be a list or dict of Parameters, " \

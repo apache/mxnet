@@ -446,15 +446,16 @@ fixed-size items.
             assert len(shape) >= len(key), \
                 "Slicing dimensions exceeds array dimensions, %d vs %d"%(
                     len(key), len(shape))
-            for i, si in enumerate(key):
-                if isinstance(si, int):
-                    begin.append(si)
-                    end.append(si+1)
-                elif isinstance(si, py_slice):
-                    if si.step is not None:
+            i = -1
+            for i, slice_i in enumerate(key):
+                if isinstance(slice_i, int):
+                    begin.append(slice_i)
+                    end.append(slice_i+1)
+                elif isinstance(slice_i, py_slice):
+                    if slice_i.step is not None:
                         raise ValueError("NDArray only supports continuous slicing.")
-                    begin.append(0 if si.start is None else si.start)
-                    end.append(shape[i] if si.stop is None else si.stop)
+                    begin.append(0 if slice_i.start is None else slice_i.start)
+                    end.append(shape[i] if slice_i.stop is None else slice_i.stop)
                     oshape.append(end[i] - begin[i])
                 else:
                     raise ValueError(
