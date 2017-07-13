@@ -345,6 +345,8 @@ Composite multiple symbols into a new one by an operator.
     broadcast_power
     sqrt
     rsqrt
+    cbrt
+    rcbrt
     square
 ```
 
