@@ -35,7 +35,6 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
         break;
       }
     }
-    LOG(INFO) << MKLPoolingOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
 #if MXNET_USE_NNPACK == 1
   // NNPACK only support max-pooling with kernel = 2, stride = 2, pooling_convention
