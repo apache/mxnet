@@ -25,10 +25,8 @@ def fill_buf(buf, i, img, shape):
     return None
 
 def visual(title, X, name):
-    # import ipdb; ipdb.set_trace()
     assert len(X.shape) == 4
     X = X.transpose((0, 2, 3, 1))
-    # import ipdb; ipdb.set_trace()
     X = np.clip((X - np.min(X))*(255.0/(np.max(X) - np.min(X))), 0, 255).astype(np.uint8)
     n = np.ceil(np.sqrt(X.shape[0]))
     buff = np.zeros((int(n*X.shape[1]), int(n*X.shape[2]), int(X.shape[3])), dtype=np.uint8)
@@ -122,7 +120,6 @@ if __name__ == '__main__':
         netD.add(nn.LeakyReLU(0.2))
         # state size. (ndf) x 4 x 4
         netD.add(nn.Conv2D(2, 4, 1, 0, use_bias=False))
-        # netD.add(nn.Activation('sigmoid'))
 
     # loss
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
@@ -136,10 +133,6 @@ if __name__ == '__main__':
     trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
 
     # ============printing==============
-    # def norm_stat(d):
-    #     return mx.nd.norm(d)/np.sqrt(d.size)
-    # mon = mx.mon.Monitor(10, norm_stat, pattern=".*output|d1_backward_data", sort=True)
-
     real_label = mx.nd.ones((opt.batchSize,), ctx=ctx)
     fake_label = mx.nd.zeros((opt.batchSize,), ctx=ctx)
 
@@ -158,11 +151,7 @@ if __name__ == '__main__':
             ###########################
             # train with real_t
             data = batch.data[0].copyto(ctx)
-            # label = gluon.utils.load_data(batch.label[0], ctx_list=ctx, batch_axis=0)
             noise = mx.nd.random_normal(0, 1, shape=(opt.batchSize, nz, 1, 1), ctx=ctx)
-
-            # if mon is not None:
-            #     mon.tic()
 
             with autograd.record():
                 output = netD(data)
@@ -191,17 +180,11 @@ if __name__ == '__main__':
 
             trainerG.step(opt.batchSize)
 
-            # if mon is not None:
-            #     mon.toc_print()
-
             name, acc = metric.get()
             # logging.info('speed: {} samples/s'.format(opt.batchSize / (time.time() - btic)))
             logging.info('discriminator loss = %f, generator loss = %f, binary training acc = %f at iter %d epoch %d' %(mx.nd.mean(errD).asscalar(), mx.nd.mean(errG).asscalar(), acc, iter, epoch))
             if iter % 200 == 0:
                 visual('gout', fake.asnumpy(), name=os.path.join(outf,'fake_img_iter_%d.png' %iter))
-                # diff = diffD[0].asnumpy()
-                # diff = (diff - diff.mean()) / diff.std()
-                # visual('diff', diff)
                 visual('data', batch.data[0].asnumpy(), name=os.path.join(outf,'real_img_iter_%d.png' %iter))
 
             iter = iter + 1
