@@ -213,9 +213,9 @@ if __name__ == '__main__':
         logging.info('time: %f' % (time.time() - tic))
 
         if check_point:
-            netG.all_params().save(os.path.join(outf,'generator_epoch_%d.params' %epoch))
-            netD.all_params().save(os.path.join(outf,'discriminator_epoch_%d.params' % epoch))
+            netG.collect_params().save(os.path.join(outf,'generator_epoch_%d.params' %epoch))
+            netD.collect_params().save(os.path.join(outf,'discriminator_epoch_%d.params' % epoch))
 
-    netG.all_params().save(os.path.join(outf, 'generator.params'))
-    netD.all_params().save(os.path.join(outf, 'discriminator.params'))
+    netG.collect_params().save(os.path.join(outf, 'generator.params'))
+    netD.collect_params().save(os.path.join(outf, 'discriminator.params'))
 
