@@ -302,7 +302,7 @@ class LSTM(_RNNLayer):
         If not specified, it will be inferred from input.
     prefix : str or None
         Prefix of this `Block`.
-    params : ParameterDict or None
+    params : ParameterDict or `None`
         Shared Parameters for this `Block`.
 
     Examples
