@@ -1314,7 +1314,7 @@ def test_reduce():
             ndim = np.random.randint(1, 6)
             shape = np.random.randint(1, 6, size=(ndim,))
             axis_num = np.random.randint(0, ndim, size=1)
-            axis_flags = np.random.randint(0, 2, size=ndim)
+            axis_flags = np.random.randint(-5, 6, size=ndim)
             exclude = np.random.randint(0, 2)
             axes = []
             for (axis, flag) in enumerate(axis_flags):
