@@ -29,11 +29,6 @@
 
 namespace mxnet {
 
-namespace ndarray {
-template<typename from_xpu, typename to_xpu>
-void Copy(const TBlob &from, TBlob *to, Context from_ctx, Context to_ctx, RunContext ctx);
-};
-
 namespace autograd {
 class AGNode;
 

@@ -67,10 +67,10 @@ using FCompute = std::function<void (const nnvm::NodeAttrs& attrs,
  *       Dispatched only when operators process non-default storage inputs or outputs
  */
 using FComputeEx = std::function<void (const nnvm::NodeAttrs& attrs,
-                                     const OpContext& ctx,
-                                     const std::vector<NDArray>& inputs,
-                                     const std::vector<OpReqType>& req,
-                                     const std::vector<NDArray>& outputs)>;
+                                       const OpContext& ctx,
+                                       const std::vector<NDArray>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<NDArray>& outputs)>;
 
 using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
                                               const Context& ctx,

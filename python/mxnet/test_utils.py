@@ -21,7 +21,7 @@ except ImportError:
     pass
 import mxnet as mx
 from .context import Context
-from .ndarray import array, _STORAGE_TYPE_STR_TO_ID
+from .ndarray.ndarray import array, _STORAGE_TYPE_STR_TO_ID
 from .symbol import Symbol
 
 _rng = np.random.RandomState(1234)
@@ -76,10 +76,10 @@ def random_sample(population, k):
     return population_copy[0:k]
 
 
-def rand_sparse_ndarray(shape, storage_type, density=None):
+def rand_sparse_ndarray(shape, stype, density=None):
     """Generate a random sparse ndarray. Returns the ndarray, value(np) and indices(np) """
     density = rnd.rand() if density is None else density
-    if storage_type == 'row_sparse':
+    if stype == 'row_sparse':
         # TODO(haibin) support high dim sparse ndarray
         assert(len(shape) < 3)
         prod = np.prod(shape)
@@ -88,26 +88,26 @@ def rand_sparse_ndarray(shape, storage_type, density=None):
         idx_sample = rnd.rand(shape[0])
         indices = np.argwhere(idx_sample < density).flatten()
         if indices.shape[0] == 0:
-            result = mx.nd.zeros(shape, storage_type='row_sparse')
+            result = mx.nd.zeros(shape, stype='row_sparse')
             return result, (np.array([], dtype='int64'), np.array([], dtype='int64'))
         # generate random values
         val = rnd.rand(indices.shape[0], num_cols)
-        arr = mx.sparse_nd.row_sparse(val, indices, shape, indices_type=np.int64)
+        arr = mx.nd.row_sparse(val, indices, shape, indices_type=np.int64)
         return arr, (val, indices)
-    elif storage_type == 'csr':
+    elif stype == 'csr':
         assert(len(shape) == 2)
         csr = sp.rand(shape[0], shape[1], density=density, format='csr')
-        result = mx.sparse_nd.csr(csr.data, csr.indptr, csr.indices, shape)
+        result = mx.nd.csr(csr.data, csr.indptr, csr.indices, shape)
         return result, (csr.indptr, csr.indices, csr.data)
     else:
         assert(False), "unknown storage type"
 
 
-def rand_ndarray(shape, storage_type, density=None):
-    if storage_type == 'default':
+def rand_ndarray(shape, stype, density=None):
+    if stype == 'default':
         arr = mx.nd.array(random_arrays(shape))
     else:
-        arr, _ = rand_sparse_ndarray(shape, storage_type, density=density)
+        arr, _ = rand_sparse_ndarray(shape, stype, density=density)
     return arr
 
 
@@ -554,7 +554,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         assert isinstance(grad_stype_dict, dict), "grad_stype_dict must be a dict"
         for k, v in grad_stype_dict.items():
             if k in args_grad and v in _STORAGE_TYPE_STR_TO_ID and v != 'default':
-                args_grad[k] = mx.nd.cast_storage(args_grad[k], storage_type=v)
+                args_grad[k] = mx.nd.cast_storage(args_grad[k], stype=v)
 
     executor = out.bind(ctx, grad_req=grad_req,
                         args=location, args_grad=args_grad, aux_states=aux_states)
@@ -654,7 +654,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
 
 def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=None,
-                            aux_states=None, grad_req='write', ctx=None):
+                            aux_states=None, grad_req='write', ctx=None, grad_stypes=None):
     """Compares a symbol's backward results with the expected ones.
     Prints error messages if the backward results are not the same as the expected results.
 
@@ -690,6 +690,8 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         Gradient requirements. 'write', 'add' or 'null'.
     ctx : Context, optional
         Running context.
+    grad_stypes: dict of str->str
+        dictionary of mapping argument name to stype for the gradient
 
     Example
     -------
@@ -715,16 +717,11 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     if isinstance(expected, (list, tuple)):
         expected = {k:v for k, v in zip(sym.list_arguments(), expected)}
     args_grad_npy = {k:_rng.normal(size=v.shape) for k, v in expected.items()}
-    # args_grad_data should be casted to storage type if hinted
-    # TODO(haibin) this is a temporary solution for testing. remove later
-    attrs = sym.attr_dict()
     args_grad_data = {}
     for k, v in args_grad_npy.items():
-        attr = attrs.get(k, {})
-        grad_stype = attr.get('grad_stype_hint', None)
         nd = mx.nd.array(v, ctx=ctx)
-        if grad_stype is not None:
-            out = mx.nd.cast_storage(nd, storage_type=grad_stype)
+        if grad_stypes is not None and k in grad_stypes:
+            out = mx.nd.cast_storage(nd, stype=grad_stypes[k])
             args_grad_data[k] = out
         else:
             args_grad_data[k] = nd

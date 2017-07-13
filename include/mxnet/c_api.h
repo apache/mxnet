@@ -266,17 +266,17 @@ MXNET_DLL int MXNDArrayCreateEx(const mx_uint *shape,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayCreateSparseEx(int storage_type,
-                    const mx_uint *shape,
-                    mx_uint ndim,
-                    int dev_type,
-                    int dev_id,
-                    int delay_alloc,
-                    int dtype,
-                    mx_uint num_aux,
-                    int *aux_type,
-                    mx_uint *aux_ndims,
-                    const mx_uint *aux_shape,
-                    NDArrayHandle *out);
+                                      const mx_uint *shape,
+                                      mx_uint ndim,
+                                      int dev_type,
+                                      int dev_id,
+                                      int delay_alloc,
+                                      int dtype,
+                                      mx_uint num_aux,
+                                      int *aux_type,
+                                      mx_uint *aux_ndims,
+                                      const mx_uint *aux_shape,
+                                      NDArrayHandle *out);
 
 /*!
  * \brief create a NDArray handle that is loaded from raw bytes.
@@ -406,7 +406,7 @@ MXNET_DLL int MXNDArrayAt(NDArrayHandle handle,
  * \brief get the storage type of the array
  */
 MXNET_DLL int MXNDArrayGetStorageType(NDArrayHandle handle,
-                                    int *out_storage_type);
+                                      int *out_storage_type);
 
 /*!
  * \brief Reshape the NDArray.
@@ -605,6 +605,28 @@ MXNET_DLL int MXImperativeInvoke(AtomicSymbolCreator creator,
                                  int num_params,
                                  const char **param_keys,
                                  const char **param_vals);
+/*!
+ * \brief invoke a nnvm op and imperative function
+ * \param creator the op
+ * \param num_inputs number of input NDArrays
+ * \param inputs input NDArrays
+ * \param num_outputs number of output NDArrays
+ * \param outputs output NDArrays
+ * \param num_params number of keyword parameters
+ * \param param_keys keys for keyword parameters
+ * \param param_vals values for keyword parameters
+ * \param out_stypes output ndarrays' stypes
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXImperativeInvokeEx(AtomicSymbolCreator creator,
+                                   int num_inputs,
+                                   NDArrayHandle *inputs,
+                                   int *num_outputs,
+                                   NDArrayHandle **outputs,
+                                   int num_params,
+                                   const char **param_keys,
+                                   const char **param_vals,
+                                   const int **out_stypes);
 /*!
  * \brief set whether to record operator for autograd
  * \param is_train 1 when training, 0 when testing
@@ -1019,20 +1041,20 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolInferShapePartial(SymbolHandle sym,
-                                 mx_uint num_args,
-                                 const char** keys,
-                                 const mx_uint *arg_ind_ptr,
-                                 const mx_uint *arg_shape_data,
-                                 mx_uint *in_shape_size,
-                                 const mx_uint **in_shape_ndim,
-                                 const mx_uint ***in_shape_data,
-                                 mx_uint *out_shape_size,
-                                 const mx_uint **out_shape_ndim,
-                                 const mx_uint ***out_shape_data,
-                                 mx_uint *aux_shape_size,
-                                 const mx_uint **aux_shape_ndim,
-                                 const mx_uint ***aux_shape_data,
-                                 int *complete);
+                                        mx_uint num_args,
+                                        const char** keys,
+                                        const mx_uint *arg_ind_ptr,
+                                        const mx_uint *arg_shape_data,
+                                        mx_uint *in_shape_size,
+                                        const mx_uint **in_shape_ndim,
+                                        const mx_uint ***in_shape_data,
+                                        mx_uint *out_shape_size,
+                                        const mx_uint **out_shape_ndim,
+                                        const mx_uint ***out_shape_data,
+                                        mx_uint *aux_shape_size,
+                                        const mx_uint **aux_shape_ndim,
+                                        const mx_uint ***aux_shape_data,
+                                        int *complete);
 
 /*!
  * \brief infer type of unknown input types given the known one.
@@ -1215,39 +1237,39 @@ MXNET_DLL int MXExecutorBindEX(SymbolHandle symbol_handle,
                                ExecutorHandle *out);
 
 MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
-                         int dev_type,
-                         int dev_id,
-                         const mx_uint num_g2c_keys,
-                         const char** g2c_keys,
-                         const int* g2c_dev_types,
-                         const int* g2c_dev_ids,
-                         const mx_uint provided_grad_req_list_len,
-                         const char** provided_grad_req_names,
-                         const char** provided_grad_req_types,
-                         const mx_uint num_provided_arg_shapes,
-                         const char** provided_arg_shape_names,
-                         const mx_uint* provided_arg_shape_data,
-                         const mx_uint* provided_arg_shape_idx,
-                         const mx_uint num_provided_arg_dtypes,
-                         const char** provided_arg_dtype_names,
-                         const int* provided_arg_dtypes,
-                         const mx_uint num_provided_arg_stypes,
-                         const char** provided_arg_stype_names,
-                         const int* provided_arg_stypes,
-                         const mx_uint num_shared_arg_names,
-                         const char** shared_arg_name_list,
-                         int* shared_buffer_len,
-                         const char** shared_buffer_name_list,
-                         NDArrayHandle* shared_buffer_handle_list,
-                         const char*** updated_shared_buffer_name_list,
-                         NDArrayHandle** updated_shared_buffer_handle_list,
-                         mx_uint* num_in_args,
-                         NDArrayHandle** in_args,
-                         NDArrayHandle** arg_grads,
-                         mx_uint* num_aux_states,
-                         NDArrayHandle** aux_states,
-                         ExecutorHandle shared_exec_handle,
-                         ExecutorHandle* out);
+                                   int dev_type,
+                                   int dev_id,
+                                   const mx_uint num_g2c_keys,
+                                   const char** g2c_keys,
+                                   const int* g2c_dev_types,
+                                   const int* g2c_dev_ids,
+                                   const mx_uint provided_grad_req_list_len,
+                                   const char** provided_grad_req_names,
+                                   const char** provided_grad_req_types,
+                                   const mx_uint num_provided_arg_shapes,
+                                   const char** provided_arg_shape_names,
+                                   const mx_uint* provided_arg_shape_data,
+                                   const mx_uint* provided_arg_shape_idx,
+                                   const mx_uint num_provided_arg_dtypes,
+                                   const char** provided_arg_dtype_names,
+                                   const int* provided_arg_dtypes,
+                                   const mx_uint num_provided_arg_stypes,
+                                   const char** provided_arg_stype_names,
+                                   const int* provided_arg_stypes,
+                                   const mx_uint num_shared_arg_names,
+                                   const char** shared_arg_name_list,
+                                   int* shared_buffer_len,
+                                   const char** shared_buffer_name_list,
+                                   NDArrayHandle* shared_buffer_handle_list,
+                                   const char*** updated_shared_buffer_name_list,
+                                   NDArrayHandle** updated_shared_buffer_handle_list,
+                                   mx_uint* num_in_args,
+                                   NDArrayHandle** in_args,
+                                   NDArrayHandle** arg_grads,
+                                   mx_uint* num_aux_states,
+                                   NDArrayHandle** aux_states,
+                                   ExecutorHandle shared_exec_handle,
+                                   ExecutorHandle* out);
 /*!
  * \brief set a call back to notify the completion of operation
  */

@@ -5,7 +5,7 @@ from mxnet.test_utils import *
 from numpy.testing import assert_allclose
 import numpy.random as rnd
 
-from mxnet.sparse_ndarray import RowSparseNDArray, CSRNDArray, _ndarray_cls
+from mxnet.ndarray import RowSparseNDArray, CSRNDArray
 
 
 def assert_fcompex(f, *args, **kwargs):
@@ -15,13 +15,13 @@ def assert_fcompex(f, *args, **kwargs):
 
 
 def sparse_nd_ones(shape, stype):
-    return mx.nd.cast_storage(mx.nd.ones(shape), storage_type=stype)
+    return mx.nd.cast_storage(mx.nd.ones(shape), stype=stype)
 
 
-def check_sparse_nd_elemwise_binary(shapes, storage_types, f, g):
+def check_sparse_nd_elemwise_binary(shapes, stypes, f, g):
     # generate inputs
     nds = []
-    for i, storage_type in enumerate(storage_types):
+    for i, storage_type in enumerate(stypes):
         if storage_type == 'row_sparse':
             nd, _ = rand_sparse_ndarray(shapes[i], storage_type)
         elif storage_type == 'default':
@@ -63,7 +63,7 @@ def test_sparse_nd_elementwise_fallback():
 def test_sparse_nd_zeros():
     def check_sparse_nd_zeros(stype, shape):
         zero = mx.nd.zeros(shape)
-        sparse_zero = mx.nd.zeros(shape=shape, storage_type=stype)
+        sparse_zero = mx.nd.zeros(shape=shape, stype=stype)
         assert_almost_equal(sparse_zero.asnumpy(), zero.asnumpy())
 
     shape = rand_shape_2d()
@@ -96,28 +96,24 @@ def check_sparse_nd_prop_rsp():
     nd, (v, idx) = rand_sparse_ndarray(shape, storage_type)
     assert(nd._num_aux == 1)
     assert(nd.indices.dtype == np.int64)
-    assert(nd.storage_type == 'row_sparse')
+    assert(nd.stype == 'row_sparse')
     assert_almost_equal(nd.indices.asnumpy(), idx)
 
 
 def test_sparse_nd_basic():
     def check_rsp_creation(values, indices, shape):
-        rsp = mx.sparse_nd.row_sparse(values, indices, shape)
+        rsp = mx.nd.row_sparse(values, indices, shape)
         dns = mx.nd.zeros(shape)
         dns[1] = mx.nd.array(values[0])
         dns[3] = mx.nd.array(values[1])
-        #assert_almost_equal(rsp.asnumpy(), dns.asnumpy())
-        print('before', indices)
-        print('mx', mx.nd.array(indices, dtype='int64')[1].asnumpy())
         indices_np = mx.nd.array(indices, dtype='int64').asnumpy()
-        print('after', indices_np)
         assert_almost_equal(rsp.indices.asnumpy(), indices_np)
 
     def check_csr_creation(shape):
         csr, (indptr, indices, values) = rand_sparse_ndarray(shape, 'csr')
         assert_almost_equal(csr.indptr.asnumpy(), indptr)
         assert_almost_equal(csr.indices.asnumpy(), indices)
-        assert_almost_equal(csr.values.asnumpy(), values)
+        assert_almost_equal(csr.data.asnumpy(), values)
 
     shape = (4,2)
     values = np.random.rand(2,2)
@@ -137,8 +133,8 @@ def test_sparse_nd_basic():
 
 
 def test_sparse_nd_setitem():
-    def check_sparse_nd_setitem(storage_type, shape, dst):
-        x = mx.nd.zeros(shape=shape, storage_type=storage_type)
+    def check_sparse_nd_setitem(stype, shape, dst):
+        x = mx.nd.zeros(shape=shape, stype=stype)
         x[:] = dst
         dst_nd = mx.nd.array(dst) if isinstance(dst, (np.ndarray, np.generic)) else dst
         assert same(x.asnumpy(), dst_nd.asnumpy())
@@ -170,7 +166,7 @@ def test_sparse_nd_slice():
 def test_sparse_nd_equal():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
-        x = mx.nd.zeros(shape=shape, storage_type=stype)
+        x = mx.nd.zeros(shape=shape, stype=stype)
         y = sparse_nd_ones(shape, stype)
         z = x == y
         assert (z.asnumpy() == np.zeros(shape)).all()
@@ -181,7 +177,7 @@ def test_sparse_nd_equal():
 def test_sparse_nd_not_equal():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
-        x = mx.nd.zeros(shape=shape, storage_type=stype)
+        x = mx.nd.zeros(shape=shape, stype=stype)
         y = sparse_nd_ones(shape, stype)
         z = x != y
         assert (z.asnumpy() == np.ones(shape)).all()
@@ -192,7 +188,7 @@ def test_sparse_nd_not_equal():
 def test_sparse_nd_greater():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
-        x = mx.nd.zeros(shape=shape, storage_type=stype)
+        x = mx.nd.zeros(shape=shape, stype=stype)
         y = sparse_nd_ones(shape, stype)
         z = x > y
         assert (z.asnumpy() == np.zeros(shape)).all()
@@ -205,7 +201,7 @@ def test_sparse_nd_greater():
 def test_sparse_nd_greater_equal():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
-        x = mx.nd.zeros(shape=shape, storage_type=stype)
+        x = mx.nd.zeros(shape=shape, stype=stype)
         y = sparse_nd_ones(shape, stype)
         z = x >= y
         assert (z.asnumpy() == np.zeros(shape)).all()
@@ -220,7 +216,7 @@ def test_sparse_nd_greater_equal():
 def test_sparse_nd_lesser():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
-        x = mx.nd.zeros(shape=shape, storage_type=stype)
+        x = mx.nd.zeros(shape=shape, stype=stype)
         y = sparse_nd_ones(shape, stype)
         z = y < x
         assert (z.asnumpy() == np.zeros(shape)).all()
@@ -233,7 +229,7 @@ def test_sparse_nd_lesser():
 def test_sparse_nd_lesser_equal():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
-        x = mx.nd.zeros(shape=shape, storage_type=stype)
+        x = mx.nd.zeros(shape=shape, stype=stype)
         y = sparse_nd_ones(shape, stype)
         z = y <= x
         assert (z.asnumpy() == np.zeros(shape)).all()
@@ -328,7 +324,7 @@ def test_sparse_nd_negate():
 
 def test_sparse_nd_output_fallback():
     shape = (10, 10)
-    out = mx.nd.zeros(shape=shape, storage_type='row_sparse')
+    out = mx.nd.zeros(shape=shape, stype='row_sparse')
     mx.nd.random_normal(shape=shape, out=out)
     assert(np.sum(out.asnumpy()) != 0)
 
@@ -336,7 +332,7 @@ def test_sparse_nd_output_fallback():
 def test_sparse_nd_astype():
     stypes = ['row_sparse', 'csr']
     for stype in stypes:
-        x = mx.nd.zeros(shape=rand_shape_2d(), storage_type=stype, dtype='float32')
+        x = mx.nd.zeros(shape=rand_shape_2d(), stype=stype, dtype='float32')
         y = x.astype('int32')
         assert(y.dtype == np.int32), y.dtype
 

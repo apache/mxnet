@@ -2,10 +2,8 @@
 import math
 import pickle
 import logging
-import mxnet as mx
-from .ndarray import NDArray, clip, sqrt, sign
+from .ndarray import NDArray, clip, sqrt, sign, zeros
 from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
-from .ndarray_utils import zeros
 from .random import normal
 
 
@@ -334,8 +332,8 @@ class SGD(Optimizer):
         if self.momentum == 0.0:
             return None
         else:
-            return mx.nd.zeros(shape=weight.shape, ctx=weight.context,
-                               dtype=weight.dtype, storage_type=weight.storage_type)
+            return zeros(shape=weight.shape, ctx=weight.context,
+                         dtype=weight.dtype, stype=weight.stype)
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -513,8 +511,8 @@ class Adam(Optimizer):
         self.epsilon = epsilon
 
     def create_state(self, index, weight):
-        return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
-                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype))  # variance
+        return (zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
+                zeros(weight.shape, weight.context, dtype=weight.dtype))  # variance
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -619,11 +617,11 @@ class RMSProp(Optimizer):
     def create_state(self, index, weight):
         if self.centered:
             return (
-                mx.nd.zeros(weight.shape, weight.context),  # n
-                mx.nd.zeros(weight.shape, weight.context),  # g
-                mx.nd.zeros(weight.shape, weight.context))  # delta
+                zeros(weight.shape, weight.context),  # n
+                zeros(weight.shape, weight.context),  # g
+                zeros(weight.shape, weight.context))  # delta
         else:
-            return (mx.nd.zeros(weight.shape, weight.context), )  # n
+            return (zeros(weight.shape, weight.context),)  # n
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))

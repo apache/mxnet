@@ -380,10 +380,10 @@ def test_module_fm():
     rnd.seed(11)
     def fm_model(k, feature_dim):
          norm = mx.initializer.Normal(sigma=0.01)
-         x = mx.symbol.Variable("data", storage_type='csr')
-         v = mx.symbol.Variable("v", shape=(feature_dim, k), init=norm, storage_type='row_sparse')
+         x = mx.symbol.Variable("data", stype='csr')
+         v = mx.symbol.Variable("v", shape=(feature_dim, k), init=norm, stype='row_sparse')
 
-         w1_weight = mx.symbol.var('w1_weight', shape=(feature_dim, 1), init=norm, storage_type='row_sparse')
+         w1_weight = mx.symbol.var('w1_weight', shape=(feature_dim, 1), init=norm, stype='row_sparse')
          w1 = mx.symbol.dot(x, w1_weight)
 
          v_s = mx.symbol.sum(data=mx.symbol.square(data=v), axis=1)
@@ -412,7 +412,7 @@ def test_module_fm():
     import scipy.sparse as sp
     # generate some random scipy csr data
     csr_sp = sp.rand(num_samples, feature_dim, density=0.5, format='csr')
-    csr_nd = mx.sparse_nd.csr(csr_sp.data, csr_sp.indptr, csr_sp.indices,
+    csr_nd = mx.nd.csr(csr_sp.data, csr_sp.indptr, csr_sp.indices,
                               (num_samples, feature_dim))
     label = mx.nd.ones((num_samples,1))
     # the alternative is to use LibSVMIter
@@ -443,9 +443,9 @@ def test_module_fm():
 
 def test_module_initializer():
     def regression_model(m):
-         x = mx.symbol.var("data", storage_type='csr')
+         x = mx.symbol.var("data", stype='csr')
          v = mx.symbol.var("v", shape=(m, 1), init=mx.init.Uniform(scale=.1),
-                                storage_type='row_sparse')
+                                stype='row_sparse')
          model = mx.symbol.dot(lhs=x, rhs=v)
          y = mx.symbol.Variable("label")
          model = mx.symbol.LinearRegressionOutput(data=model, label=y, name="out")
@@ -454,7 +454,7 @@ def test_module_initializer():
     n, m = 128, 100
     model = regression_model(m)
 
-    data = mx.nd.zeros(shape=(n, m), storage_type='csr')
+    data = mx.nd.zeros(shape=(n, m), stype='csr')
     label = mx.nd.zeros((n, 1))
     iterator = mx.io.NDArrayIter(data=data, label={'label':label}, batch_size=n)
 
@@ -463,7 +463,7 @@ def test_module_initializer():
     mod.bind(data_shapes=iterator.provide_data, label_shapes=iterator.provide_label)
     mod.init_params()
     v = mod._arg_params['v']
-    assert(v.storage_type == 'row_sparse')
+    assert(v.stype == 'row_sparse')
     assert(np.sum(v.asnumpy()) != 0)
 
 if __name__ == '__main__':

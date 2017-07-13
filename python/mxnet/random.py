@@ -5,13 +5,13 @@ from __future__ import absolute_import
 
 import ctypes
 from .base import _LIB, check_call
-from ._ndarray_internal import _sample_uniform as uniform
-from ._ndarray_internal import _sample_normal as normal
-from ._ndarray_internal import _sample_gamma as gamma
-from ._ndarray_internal import _sample_exponential as exponential
-from ._ndarray_internal import _sample_poisson as poisson
-from ._ndarray_internal import _sample_negbinomial as negative_binomial
-from ._ndarray_internal import _sample_gennegbinomial as generalized_negative_binomial
+from .ndarray._internal import _sample_uniform as uniform
+from .ndarray._internal import _sample_normal as normal
+from .ndarray._internal import _sample_gamma as gamma
+from .ndarray._internal import _sample_exponential as exponential
+from .ndarray._internal import _sample_poisson as poisson
+from .ndarray._internal import _sample_negbinomial as negative_binomial
+from .ndarray._internal import _sample_gennegbinomial as generalized_negative_binomial
 
 def seed(seed_state):
     """Seeds the random number generators in MXNet.

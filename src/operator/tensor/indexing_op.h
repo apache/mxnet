@@ -806,9 +806,8 @@ inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                 std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (kRowSparseStorage == in_attrs->at(sr::kArr)) {
-    out_attrs->at(sr::kOut) = kRowSparseStorage;
-  }
+  STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, sr::kArr, kRowSparseStorage);
+  STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, sr::kOut, kRowSparseStorage);
   return true;
 }
 
@@ -818,8 +817,10 @@ inline bool SparseRetainBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                  std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 2U);
-  out_attrs->at(sr::kArr) = kRowSparseStorage;
-  out_attrs->at(sr::kIdx) = kDefaultStorage;
+  STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, sr::kOut, kDefaultStorage);
+  STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, sr::kIdx, kDefaultStorage);
+  STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, sr::kArr, kRowSparseStorage);
+  STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, sr::kIdx, kDefaultStorage);
   return true;
 }
 

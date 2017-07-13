@@ -7,15 +7,14 @@ more `Executor` for data parallelization.
 import logging
 import warnings
 
-import mxnet as mx
 from .. import context as ctx
-from .. import ndarray as nd
 from .. import optimizer as opt
 
 from .executor_group import DataParallelExecutorGroup
 from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
 from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
+from ..ndarray import zeros
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
@@ -399,13 +398,13 @@ class Module(BaseModule):
         else:
             assert self._arg_params is None and self._aux_params is None
             param_arrays = [
-                mx.nd.zeros(shape=x[0].shape, dtype=x[0].dtype, storage_type=x[0].storage_type)
+                zeros(shape=x[0].shape, dtype=x[0].dtype, stype=x[0].stype)
                 for x in self._exec_group.param_arrays
             ]
             self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}
 
             aux_arrays = [
-                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                zeros(x[0].shape, dtype=x[0].dtype)
                 for x in self._exec_group.aux_arrays
             ]
             self._aux_params = {name:arr for name, arr in zip(self._aux_names, aux_arrays)}

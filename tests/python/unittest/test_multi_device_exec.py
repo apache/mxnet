@@ -35,8 +35,8 @@ def test_ctx_group():
 
 def check_ctx_group_sparse(lhs_stype, rhs_stype):
     with mx.AttrScope(ctx_group='stage1'):
-        lhs = mx.symbol.Variable('lhs', storage_type=lhs_stype)
-        rhs = mx.symbol.Variable('rhs', storage_type=rhs_stype)
+        lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
+        rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
         plus  = mx.symbol.elemwise_add(lhs, rhs, name='plus')
 
     set_stage1 = set(plus.list_arguments())
