@@ -172,6 +172,7 @@ class SoftmaxCrossEntropyLoss(HybridBlock):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
+
 class KLDivLoss(HybridBlock):
     """The Kullback-Leibler divergence loss.
 
@@ -200,14 +201,15 @@ class KLDivLoss(HybridBlock):
         shape (64, 10) and you want to weight each sample
         in the batch, sample_weight should have shape (64, 1)
     """
-    def __init__(self, from_logits=True, weight=None, **kwargs):
+    def __init__(self, from_logits=True, weight=None, batch_axis=0, **kwargs):
         super(KLDivLoss, self).__init__(**kwargs)
         self._from_logits = from_logits
         self._weight = weight
+        self._batch_axis = batch_axis
 
     def hybrid_forward(self, F, output, label, sample_weight=None):
         if not self._from_logits:
             output = F.log_softmax(output)
         loss = label * (F.log(label+1e-8) - output)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return loss
+        return F.mean(loss, axis=self._batch_axis, exclude=True)
