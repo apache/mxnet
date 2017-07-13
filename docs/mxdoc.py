@@ -343,12 +343,12 @@ def add_buttons(app, docname, source):
         # source[i] = '\n'.join(lines)
 
 def setup(app):
-    # app.connect("builder-inited", build_mxnet)
-    # app.connect("builder-inited", generate_doxygen)
-    # app.connect("builder-inited", build_scala_docs)
+    app.connect("builder-inited", build_mxnet)
+    app.connect("builder-inited", generate_doxygen)
+    app.connect("builder-inited", build_scala_docs)
     # skipped to build r, it requires to install latex, which is kinds of too heavy
     # app.connect("builder-inited", build_r_docs)
-    # app.connect('source-read', convert_table)
+    app.connect('source-read', convert_table)
     app.connect('source-read', add_buttons)
     app.add_config_value('recommonmark_config', {
         'url_resolver': lambda url: 'http://mxnet.io/' + url,
