@@ -25,17 +25,17 @@ class Parameter(object):
     `Parameter.var()` will return a `Symbol` representing this parameter. It
     can then be used for composing networks::
         x = mx.sym.Variable('data')
-        w = mx.nn.Parameter('fc_weight', init=mx.init.Xavier())
-        b = mx.nn.Parameter('fc_bias', init=mx.init.Zero())
+        w = gluon.Parameter('fc_weight', init=mx.init.Xavier())
+        b = gluon.Parameter('fc_bias', init=mx.init.Zero())
         out = mx.sym.FullyConnected(x, w.var(), b.var(), num_hidden=64)
 
-    For `NDArray` API, `Parameter` must be initialized with `Parameter.init`. It
-    will then hold a copy of the the parameter on each `Context`. If `grad_req` is
+    For `NDArray` API, `Parameter` must be initialized with `Parameter.initialize` method.
+    It will then hold a copy of the the parameter on each `Context`. If `grad_req` is
     not `null`, it will also hold a gradient array on each `Context`::
-        ctx = mx.gpu(0)
+        ctx = mx.cpu(0)
         x = mx.nd.zeros((16, 100), ctx=ctx)
-        w = mx.nn.Parameter('fc_weight', shape=(64, 100), init=mx.init.Xavier())
-        b = mx.nn.Parameter('fc_bias', shape(64,), init=mx.init.Zero())
+        w = gluon.Parameter('fc_weight', shape=(64, 100), init=mx.init.Xavier())
+        b = gluon.Parameter('fc_bias', shape=(64,), init=mx.init.Zero())
         w.initialize(ctx=ctx)
         b.initialize(ctx=ctx)
         out = mx.nd.FullyConnected(x, w.data(ctx), b.data(ctx), num_hidden=64)
@@ -43,7 +43,7 @@ class Parameter(object):
     Parameters
     ----------
     name : str
-        Name of this parameter.
+        Name of the parameter.
     grad_req : {'write', 'add', 'null'}, default 'write'
         Specifies how to update gradient to grad arrays.
 
@@ -51,19 +51,19 @@ class Parameter(object):
         - 'add' means everytime gradient is added to the grad `NDArray`. You need
           to manually call `zero_grad()` to clear the gradient buffer before each
           iteration when using this option.
-        - 'null' means gradient is not reqested for this parameter. gradient arrays
+        - 'null' means gradient is not requested for this parameter. gradient arrays
           will not be allocated.
     shape : tuple of int, default None
-        Shape of this parameter. By default shape is not specified. Parameter with
-        unknown shaped can be used for `Symbol` API, but `init` will throw an error
+        Shape of this parameter. By default, shape is not specified. Parameter with
+        unknown shape can be used for `Symbol` API, but `init` will throw an error
         when using `NDArray` API.
     dtype : numpy.dtype or str, default 'float32'
-        Data type of this parameter. For example, numpy.float32 or 'float32'.
+        Data type of the parameter. For example, numpy.float32 or 'float32'.
     lr_mult : float, default 1.0
         Learning rate multiplier. Learning rate will be multiplied by lr_mult
         when updating this parameter with optimizer.
     wd_mult : float, default 1.0
-        Weight decay multiplier (L2 regulerizer coefficient). Works similarly to lr_mult.
+        Weight decay multiplier (L2 regularizer coefficient). Works similar to lr_mult.
     init : Initializer, default None
         Initializer of this parameter. Will use the global initializer by default.
     """
@@ -83,7 +83,7 @@ class Parameter(object):
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Xavier(),
                    allow_deferring=True):
-        """Intialize parameter and gradient arrays. Only used for `NDArray` API.
+        """Initializes parameter and gradient arrays. Only used for `NDArray` API.
 
         Parameters
         ----------
@@ -94,9 +94,9 @@ class Parameter(object):
             copy will be made for each context.
 
             .. note:: Copies are independent arrays. User is responsible for keeping
-            their values consistent when updating. Normally nn.Trainer does this for you.
+            their values consistent when updating. Normally `gluon.Trainer` does this for you.
         default_init : Initializer
-            Default initializer is used when both `init` and `Parameter.init` are None.
+            Default initializer is used when both `init` and `Parameter.init` are `None`.
         """
         if ctx is None:
             ctx = [context.current_context()]
@@ -117,7 +117,7 @@ class Parameter(object):
         self._finish_deferred_init()
 
     def _load_init(self, data, ctx):
-        """(Re)init by loading from data."""
+        """(Re)initializes by loading from data."""
         if self.shape:
             for i, j in zip(self.shape, data.shape):
                 assert i == 0 or i == j, \
@@ -147,7 +147,7 @@ class Parameter(object):
         self._defered_init = ()
 
     def _finish_deferred_init(self):
-        """Finish deferred initialization."""
+        """Finishes deferred initialization."""
         if not self._defered_init:
             return
         init, ctx, default_init = self._defered_init
@@ -169,7 +169,7 @@ class Parameter(object):
             self._init_impl(data, ctx)
 
     def _init_impl(self, data, ctx):
-        """Set data and grad."""
+        """Sets data and grad."""
         self._data = OrderedDict()
         for i in ctx:
             self._data[i] = data.copyto(i)
@@ -185,7 +185,7 @@ class Parameter(object):
         autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
 
     def set_data(self, data):
-        """Set this parameter's value on all contexts to data."""
+        """Sets this parameter's value on all contexts to data."""
         assert self._data is not None, \
             "Parameter %s has not been initialized"%self.name
         for arr in self.list_data():
@@ -210,7 +210,7 @@ class Parameter(object):
 
     def data(self, ctx=None):
         """Returns a copy of this parameter on one context. Must have been
-        intialized on this context before.
+        initialized on this context before.
 
         Parameters
         ----------
@@ -258,7 +258,7 @@ class Parameter(object):
         return list(self._grad.values())
 
     def list_ctx(self):
-        """Returns a list of contexts this parameter is initialized on"""
+        """Returns a list of contexts this parameter is initialized on."""
         if self._data is None:
             if self._defered_init:
                 return self._defered_init[1]
@@ -266,7 +266,7 @@ class Parameter(object):
         return list(self._data.keys())
 
     def zero_grad(self):
-        """Set gradient buffer on all contexts to 0. No action is taken if
+        """Sets gradient buffer on all contexts to 0. No action is taken if
         parameter is uninitialized or doesn't require gradient."""
         if self._grad is None:
             return
@@ -290,9 +290,9 @@ class ParameterDict(object):
     prefix : str, default ''
         The prefix to be prepended to all Parameters' name created by this dict.
     shared : ParameterDict or None
-        If not None, when this dict's get method creates a new parameter, will
+        If not `None`, when this dict's `get` method creates a new parameter, will
         first try to retrieve it from `shared` dict. Usually used for sharing
-        parameters with another Block.
+        parameters with another `Block`.
     """
     def __init__(self, prefix='', shared=None):
         self._prefix = prefix
@@ -314,7 +314,7 @@ class ParameterDict(object):
     @property
     def prefix(self):
         """Prefix of this dict. It will be prepended to Parameters' name created
-        with `get`"""
+        with `get`."""
         return self._prefix
 
     def _get_impl(self, name):
@@ -326,23 +326,23 @@ class ParameterDict(object):
         return None
 
     def get(self, name, **kwargs):
-        """Retrieve a Parameter with name `self.prefix+name`. If not found,
-        `get` will first try to retrive it from `shared` dict. If still not
-        found, `get` will create a new Parameter with key-word arguments and
+        """Retrieves a `Parameter` with name `self.prefix+name`. If not found,
+        `get` will first try to retrieve it from `shared` dict. If still not
+        found, `get` will create a new `Parameter` with key-word arguments and
         insert it to self.
 
         Parameters
         ----------
         name : str
-            name of the desired Parameter. It will be prepended with this dictionary's
+            Name of the desired Parameter. It will be prepended with this dictionary's
             prefix.
         **kwargs : dict
-            The rest of key-word arguments for the created Parameter.
+            The rest of key-word arguments for the created `Parameter`.
 
         Returns
         -------
         Parameter
-            The created or retrieved Parameter.
+            The created or retrieved `Parameter`.
         """
         name = self.prefix + name
         param = self._get_impl(name)
@@ -362,7 +362,7 @@ class ParameterDict(object):
         return param
 
     def update(self, other):
-        """Copy all Parameters in `other` to self."""
+        """Copies all Parameters in `other` to self."""
         for k, v in other.items():
             if k in self._params:
                 assert self._params[k] is v, \
@@ -372,16 +372,16 @@ class ParameterDict(object):
                 self._params[k] = v
 
     def initialize(self, init=initializer.Xavier(), ctx=None, verbose=False):
-        """Intialize all Parameters manage by this dictionary to be used for `NDArray`
-        API. Has no effect when using `Symbol` API.
+        """Initializes all Parameters managed by this dictionary to be used for `NDArray`
+        API. It has no effect when using `Symbol` API.
 
         Parameters
         ----------
         init : Initializer
-            Global default Initializer to be used when `Parameter.init` is None.
-            Otherwise `Parameter.init` takes precedence.
+            Global default Initializer to be used when `Parameter.init` is `None`.
+            Otherwise, `Parameter.init` takes precedence.
         ctx : Context or list of Context
-            Keep a copy of Parameters on one or many context(s).
+            Keeps a copy of Parameters on one or many context(s).
         """
         if verbose:
             init.set_verbosity(verbose=verbose)
@@ -389,7 +389,7 @@ class ParameterDict(object):
             v.initialize(None, ctx, init)
 
     def zero_grad(self):
-        """Set all Parameters' gradient buffer to 0."""
+        """Sets all Parameters' gradient buffer to 0."""
         for i in self.values():
             i.zero_grad()
 

@@ -6,7 +6,7 @@ import math
 from .. import ndarray
 
 def split_data(data, num_slice, batch_axis=0, even_split=True):
-    """Split a NDArray into num_slice slices along batch_axis.
+    """Splits an NDArray into `num_slice` slices along `batch_axis`.
     Usually used for data parallelism where each slices is sent
     to one device (i.e. GPU).
 
@@ -20,13 +20,13 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
         The axis along which to slice.
     even_split : bool, default True
         Whether to force all slices to have the same number of elements.
-        If True, An error will be raised when `num_slice` does not evenly
+        If `True`, an error will be raised when `num_slice` does not evenly
         divide `data.shape[batch_axis]`.
 
     Returns
     -------
     list of NDArray
-        Return value is a list even if num_slice is 1.
+        Return value is a list even if `num_slice` is 1.
     """
     size = data.shape[batch_axis]
     if size < num_slice:
@@ -55,15 +55,15 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
 
 
 def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
-    """Split a NDArray into `len(ctx_list)` slices along `batch_axis` and load
-    each slice to one context in ctx_list.
+    """Splits an NDArray into `len(ctx_list)` slices along `batch_axis` and loads
+    each slice to one context in `ctx_list`.
 
     Parameters
     ----------
     data : NDArray
         A batch of data.
     ctx_list : list of Context
-        A list of Contexts
+        A list of Contexts.
     batch_axis : int, default 0
         The axis along which to slice.
     even_split : bool, default True
@@ -71,7 +71,8 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
 
     Returns
     -------
-    list of NDArray, each corresponds to a context in ctx_list.
+    list of NDArray
+        Each corresponds to a context in `ctx_list`.
     """
     if not isinstance(data, ndarray.NDArray):
         data = ndarray.array(data, ctx=ctx_list[0])
@@ -83,7 +84,7 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
 
 
 def clip_global_norm(arrays, max_norm):
-    """Rescales NDArrays so that the sum of their 2-norm is smaller than max_norm.
+    """Rescales NDArrays so that the sum of their 2-norm is smaller than `max_norm`.
     """
     assert len(arrays) > 0
     total_norm = 0

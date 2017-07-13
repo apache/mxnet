@@ -11,7 +11,7 @@ from . import rnn_cell
 
 
 class _RNNLayer(Block):
-    """implementation of recurrent layers."""
+    """Implementation of recurrent layers."""
     def __init__(self, hidden_size, num_layers, layout,
                  dropout, bidirectional, input_size,
                  i2h_weight_initializer, h2h_weight_initializer,
@@ -62,7 +62,7 @@ class _RNNLayer(Block):
         raise NotImplementedError
 
     def _unfuse(self):
-        """Unfuse the fused RNN in to a stack of rnn cells."""
+        """Unfuses the fused RNN in to a stack of rnn cells."""
         get_cell = {'rnn_relu': lambda **kwargs: rnn_cell.RNNCell(self._hidden_size,
                                                                   activation='relu',
                                                                   **kwargs),
@@ -103,20 +103,20 @@ class _RNNLayer(Block):
         Parameters
         ----------
         batch_size: int
-            Only required for NDArray API. Size of the batch ('N' in layout)
-            dimension of input.
-        func : callable, default symbol.zeros
+            Only required for `NDArray` API. Size of the batch ('N' in layout).
+            Dimension of the input.
+        func : callable, default `symbol.zeros`
             Function for creating initial state.
 
-            For Symbol API, func can be symbol.zeros, symbol.uniform,
-            symbol.var etc. Use symbol.var if you want to directly
+            For Symbol API, func can be `symbol.zeros`, `symbol.uniform`,
+            `symbol.var` etc. Use `symbol.var` if you want to directly
             feed input as states.
 
-            For NDArray API, func can be ndarray.zeros, ndarray.ones, etc.
+            For `NDArray` API, func can be `ndarray.zeros`, `ndarray.ones`, etc.
 
         **kwargs :
-            additional keyword arguments passed to func. For example
-            mean, std, dtype, etc.
+            Additional keyword arguments passed to func. For example,
+            `mean`, `std`, `dtype`, etc.
 
         Returns
         -------
@@ -180,7 +180,7 @@ class _RNNLayer(Block):
 
 
 class RNN(_RNNLayer):
-    r"""Applies a multi-layer Elman RNN with tanh or ReLU non-linearity to an input sequence.
+    r"""Applies a multi-layer Elman RNN with `tanh` or `ReLU` non-linearity to an input sequence.
 
     For each element in the input sequence, each layer computes the following
     function:
@@ -195,7 +195,7 @@ class RNN(_RNNLayer):
     Parameters
     ----------
     hidden_size: int
-        The number of features in the hidden state h
+        The number of features in the hidden state h.
     num_layers: int, default 1
         Number of recurrent layers.
     activation: {'relu' or 'tanh'}, default 'tanh'
@@ -205,9 +205,9 @@ class RNN(_RNNLayer):
         sequence length, batch size, and feature dimensions respectively.
     dropout: float, default 0
         If non-zero, introduces a dropout layer on the outputs of each
-        RNN layer except the last layer
+        RNN layer except the last layer.
     bidirectional: bool, default False
-        If True, becomes a bidirectional RNN.
+        If `True`, becomes a bidirectional RNN.
     i2h_weight_initializer : str or Initializer
         Initializer for the input weights matrix, used for the linear
         transformation of the inputs.
@@ -274,7 +274,7 @@ class LSTM(_RNNLayer):
     Parameters
     ----------
     hidden_size: int
-        The number of features in the hidden state h
+        The number of features in the hidden state h.
     num_layers: int, default 1
         Number of recurrent layers.
     layout : str, default 'TNC'
@@ -282,9 +282,9 @@ class LSTM(_RNNLayer):
         sequence length, batch size, and feature dimensions respectively.
     dropout: float, default 0
         If non-zero, introduces a dropout layer on the outputs of each
-        RNN layer except the last layer
+        RNN layer except the last layer.
     bidirectional: bool, default False
-        If True, becomes a bidirectional RNN.
+        If `True`, becomes a bidirectional RNN.
     i2h_weight_initializer : str or Initializer
         Initializer for the input weights matrix, used for the linear
         transformation of the inputs.
@@ -292,7 +292,7 @@ class LSTM(_RNNLayer):
         Initializer for the recurrent weights matrix, used for the linear
         transformation of the recurrent state.
     i2h_bias_initializer : str or Initializer, default 'lstmbias'
-        Initializer for the bias vector. By default bias for the forget
+        Initializer for the bias vector. By default, bias for the forget
         gate is initialized to 1 while all other biases are initialized
         to zero.
     h2h_bias_initializer : str or Initializer
@@ -352,7 +352,7 @@ class GRU(_RNNLayer):
     Parameters
     ----------
     hidden_size: int
-        The number of features in the hidden state h
+        The number of features in the hidden state h.
     num_layers: int, default 1
         Number of recurrent layers.
     layout : str, default 'TNC'
