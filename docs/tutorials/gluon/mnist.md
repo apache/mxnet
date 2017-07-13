@@ -14,9 +14,9 @@ imperative fashion.
 This is based on the Mnist tutorial with symbolic approach. You can find it [here](http://mxnet.io/tutorials/python/mnist.html).
 
 ## Prerequisites
-To complete this tutorial, we need:  
+To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).  
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).
 
 - [Python Requests](http://docs.python-requests.org/en/master/) and [Jupyter Notebook](http://jupyter.org/index.html).
 
@@ -321,3 +321,5 @@ If all went well, we should see a higher accuracy metric for predictions made us
 ## Summary
 
 In this tutorial, we have learned how to use MXNet to solve a standard computer vision problem: classifying images of hand written digits. You have seen how to quickly and easily build, train and evaluate models such as MLP and CNN with MXNet Gluon package.
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

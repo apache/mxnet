@@ -119,3 +119,5 @@ net.collect_params().save('model.params')
 If your network outputs more than one value, you can use `mx.sym.Group` to
 combine them into a grouped Symbol and then save. The saved json and params
 files can then be loaded with C, C++ and Scala interface for prediction.
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

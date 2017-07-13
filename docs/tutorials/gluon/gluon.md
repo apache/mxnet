@@ -136,3 +136,5 @@ with record():
 # the gradient by 1/batch_size.
 trainer.step(data.shape[0])
 ```
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
