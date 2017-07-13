@@ -11,7 +11,7 @@ from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
 
 from .base import _LIB, check_call
 from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
-from . import symbol
+from . import symbol, context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 
 c_int_p = POINTER(c_int)
@@ -734,6 +734,8 @@ def register(reg_name):
             def create_operator_entry(ctx, num_inputs, shapes, ndims, dtypes, ret, _):
                 """C Callback for CustomOpProp::CreateOperator"""
                 try:
+                    sep = ctx.find('(')
+                    ctx = context.Context(ctx[:sep], int(ctx[sep+1:-1]))
                     ndims = [ndims[i] for i in range(num_inputs)]
                     shapes = [[shapes[i][j] for j in range(ndims[i])] for i in range(num_inputs)]
                     dtypes = [dtypes[i] for i in range(num_inputs)]

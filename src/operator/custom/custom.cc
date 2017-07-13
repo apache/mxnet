@@ -222,17 +222,13 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
     }
   }
 
-  std::string str_ctx;
-  if (ctx.dev_mask() == cpu::kDevMask) {
-    str_ctx = "cpu";
-  } else {
-    str_ctx = "gpu";
-  }
+  std::ostringstream os;
+  os << ctx;
 
   MXCallbackList *op_info = new MXCallbackList;
   CHECK(reinterpret_cast<CustomOpCreateFunc>(
       params.info->callbacks[kCustomOpPropCreateOperator])(
-          str_ctx.c_str(), shapes.size(), shapes.data(), ndims.data(), in_type.data(),
+          os.str().c_str(), shapes.size(), shapes.data(), ndims.data(), in_type.data(),
           op_info, params.info->contexts[kCustomOpPropCreateOperator]));
 
   CustomParam state = params;
