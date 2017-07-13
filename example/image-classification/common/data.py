@@ -65,8 +65,8 @@ class SyntheticDataIter(DataIter):
         self.dtype = dtype
         label = np.random.randint(0, num_classes, [self.batch_size,])
         data = np.random.uniform(-1, 1, data_shape)
-        self.data = mx.nd.array(data, dtype=self.dtype)
-        self.label = mx.nd.array(label, dtype=self.dtype)
+        self.data = mx.nd.array(data, dtype=self.dtype, ctx=mx.Context('cpu_pinned', 0))
+        self.label = mx.nd.array(label, dtype=self.dtype, ctx=mx.Context('cpu_pinned', 0))
     def __iter__(self):
         return self
     @property
