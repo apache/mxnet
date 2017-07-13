@@ -461,6 +461,8 @@ fixed-size items.
                         "NDArray does not support slicing with %s."%(
                             str(slice_i)))
             oshape.extend(shape[i+1:])
+            if len(oshape) == 0:
+                oshape.append(1)
             return slice(self, begin, end).reshape(oshape)
 
     def _sync_copyfrom(self, source_array):

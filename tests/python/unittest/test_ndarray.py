@@ -255,6 +255,8 @@ def test_ndarray_slice():
 
     assert same(A[1,3:4,:,1:5].asnumpy(), A2[1,3:4,:,1:5])
 
+    assert A[1,2,3,4,5].asscalar() == A2[1,2,3,4,5]
+
 
 def test_ndarray_crop():
     # get crop
