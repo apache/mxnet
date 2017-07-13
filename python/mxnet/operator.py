@@ -734,6 +734,7 @@ def register(reg_name):
             def create_operator_entry(ctx, num_inputs, shapes, ndims, dtypes, ret, _):
                 """C Callback for CustomOpProp::CreateOperator"""
                 try:
+                    ctx = py_str(ctx)
                     sep = ctx.find('(')
                     ctx = context.Context(ctx[:sep], int(ctx[sep+1:-1]))
                     ndims = [ndims[i] for i in range(num_inputs)]
