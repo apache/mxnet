@@ -84,7 +84,7 @@ class ActivationOp : public Operator {
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(ActivationParam type, int dtype);
+Operator* CreateOp(ActivationParam type, int dtype, const TShape& dshape);
 
 #if DMLC_USE_CXX11
 class ActivationProp : public OperatorProperty {
