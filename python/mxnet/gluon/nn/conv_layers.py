@@ -4,6 +4,8 @@
 from ..block import HybridBlock
 from ... import symbol
 from ...base import numeric_types
+from .basic_layers import Activation
+
 
 def _infer_weight_shape(op_name, data_shape, kwargs):
     op = getattr(symbol, op_name)

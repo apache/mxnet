@@ -95,7 +95,7 @@ def test_conv():
 
 
     layers3d = [
-        nn.Conv3D(16, (1, 8, 4), in_channels=4),
+        nn.Conv3D(16, (1, 8, 4), in_channels=4, activation='relu'),
         nn.Conv3D(16, (5, 4, 3), in_channels=4),
         nn.Conv3D(16, (3, 3, 3), groups=2, in_channels=4),
         nn.Conv3D(16, 4, strides=4, in_channels=4),

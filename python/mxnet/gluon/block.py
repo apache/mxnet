@@ -129,7 +129,7 @@ class Block(object):
         if you want `dense1` to share `dense0`'s weights, you can do::
 
             dense0 = nn.Dense(20)
-            dense1 = nn.Dense(20, params=dense1.collect_params())
+            dense1 = nn.Dense(20, params=dense0.collect_params())
     """
     def __init__(self, prefix=None, params=None):
         self._prefix, self._params = _BlockScope.create(prefix, params, self._alias())
