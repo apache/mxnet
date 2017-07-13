@@ -7,7 +7,7 @@ import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet import autograd
-from data import cifar10_iterator, ImagenetIter
+from data import cifar10_iterator
 import numpy as np
 import logging
 import cv2
@@ -77,8 +77,6 @@ if __name__ == '__main__':
 
     if opt.dataset == 'cifar10':
         train_iter, val_iter = cifar10_iterator(opt.batchSize, (3, 64, 64), 64)
-    elif opt.dataset == 'imagenet':
-        train_iter = ImagenetIter(imgnet_path, opt.batchSize, (3, 64, 64))
 
     # build the generator
     netG = nn.Sequential()
