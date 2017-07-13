@@ -11,6 +11,7 @@
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/op_attr_types.h>
+#include <mxnet/graph_attr_types.h>
 #include <nnvm/graph_attr_types.h>
 
 #include <memory>
@@ -97,7 +98,7 @@ inline void CastNonDefaultStorage(const std::vector<NDArray>& dst,
 }
 
 // Check if any storage type is not default storage
-inline bool ContainsNonDefaultStorage(const nnvm::StorageTypeVector& vstorage) {
+inline bool ContainsNonDefaultStorage(const StorageTypeVector& vstorage) {
   for (auto& i : vstorage) {
     if (i != kUndefinedStorage && i != kDefaultStorage) return true;
   }

@@ -6,6 +6,7 @@
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
 #include <mxnet/op_attr_types.h>
+#include <mxnet/graph_attr_types.h>
 #include <nnvm/graph_attr_types.h>
 #include "./exec_pass.h"
 #include "../common/utils.h"
@@ -232,7 +233,6 @@ class FComputeExExecutor : public OpExecutor {
 // pass to attach operator executors
 Graph AttachOpExecs(Graph g) {
   using nnvm::DTypeVector;
-  using nnvm::StorageTypeVector;
   using nnvm::ShapeVector;
   using nnvm::FMutateInputs;
 
