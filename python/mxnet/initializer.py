@@ -564,9 +564,12 @@ class Xavier(Initializer):
         self.magnitude = float(magnitude)
 
 
-    def _init_weight(self, _, arr):
+    def _init_weight(self, name, arr):
         shape = arr.shape
         hw_scale = 1.
+        if len(shape) < 2:
+            raise ValueError('Xavier initializer cannot be applied to vector {0}. It requires at'
+                             ' least 2D.'.format(name))
         if len(shape) > 2:
             hw_scale = np.prod(shape[2:])
         fan_in, fan_out = shape[1] * hw_scale, shape[0] * hw_scale
