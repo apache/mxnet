@@ -54,7 +54,7 @@ def test_basic():
     assert len(y.list_arguments()) == 7
 
     # ndarray
-    model.collect_params().initialize()
+    model.collect_params().initialize(mx.init.Xavier(magnitude=2.24))
     x = model(mx.nd.zeros((32, 10)))
     assert x.shape == (32, 32)
     x.wait_to_read()
@@ -95,7 +95,7 @@ def test_conv():
 
 
     layers3d = [
-        nn.Conv3D(16, (1, 8, 4), in_channels=4),
+        nn.Conv3D(16, (1, 8, 4), in_channels=4, activation='relu'),
         nn.Conv3D(16, (5, 4, 3), in_channels=4),
         nn.Conv3D(16, (3, 3, 3), groups=2, in_channels=4),
         nn.Conv3D(16, 4, strides=4, in_channels=4),
@@ -261,6 +261,16 @@ def test_split_data():
     except ValueError:
         return
     assert False, "Should have failed"
+
+
+def test_flatten():
+    flatten = nn.Flatten()
+    x = mx.nd.zeros((3,4,5,6))
+    assert flatten(x).shape == (3, 4*5*6)
+    x = mx.nd.zeros((3,6))
+    assert flatten(x).shape == (3, 6)
+    x = mx.nd.zeros((3,))
+    assert flatten(x).shape == (3, 1)
 
 
 if __name__ == '__main__':

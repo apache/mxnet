@@ -4,6 +4,7 @@
 
 from .. import optimizer as opt
 from ..model import _create_kvstore
+from .parameter import ParameterDict, Parameter
 
 class Trainer(object):
     """Applies an Optimizer on a set of Parameters. Trainer should
@@ -16,15 +17,28 @@ class Trainer(object):
     optimizer : str or Optimizer
         The optimizer to use.
     optimizer_params : dict
-        key-word arguments to be passed to Optimizer.create_optimizer. For example,
-        {'learning_rate': 0.1}
+        key-word arguments to be passed to optimizer constructor. For example,
+        `{'learning_rate': 0.1}`
     kvstore : str or KVStore
         kvstore type for multi-gpu and distributed training.
     """
     def __init__(self, params, optimizer, optimizer_params, kvstore='device'):
-        self._params = [param for param in params.values() if param.grad_req != 'null']
-        self._scale = optimizer_params.get('rescale_grad', 1.0)
+        if isinstance(params, (dict, ParameterDict)):
+            params = list(params.values())
+        if not isinstance(params, (list, tuple)):
+            raise ValueError(
+                "First argument must be a list or dict of Parameters, " \
+                "got %s."%(type(params)))
+        self._params = []
+        for param in params:
+            if not isinstance(param, Parameter):
+                raise ValueError(
+                    "First argument must be a list or dict of Parameters, " \
+                    "got list of %s."%(type(param)))
+            if param.grad_req != 'null':
+                self._params.append(param)
 
+        self._scale = optimizer_params.get('rescale_grad', 1.0)
         self._contexts = self._check_contexts()
         self._init_optimizer(optimizer, optimizer_params)
         self._kv_initialized = False

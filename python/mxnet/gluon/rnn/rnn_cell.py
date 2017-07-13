@@ -237,16 +237,16 @@ class RecurrentCell(Block):
         return super(RecurrentCell, self).forward(inputs, states)
 
 
-class HRecurrentCell(RecurrentCell, HybridBlock):
-    """HRecurrentCell supports both Symbol and NDArray forwarding."""
+class HybridRecurrentCell(RecurrentCell, HybridBlock):
+    """HybridRecurrentCell supports hybridize."""
     def __init__(self, prefix=None, params=None):
-        super(HRecurrentCell, self).__init__(prefix=prefix, params=params)
+        super(HybridRecurrentCell, self).__init__(prefix=prefix, params=params)
 
     def hybrid_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError
 
 
-class RNNCell(HRecurrentCell):
+class RNNCell(HybridRecurrentCell):
     """Simple recurrent neural network cell.
 
     Parameters
@@ -274,20 +274,24 @@ class RNNCell(HRecurrentCell):
     """
     def __init__(self, hidden_size, activation='tanh',
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
-                 i2h_bias_initializer=None, h2h_bias_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  input_size=0, prefix=None, params=None):
         super(RNNCell, self).__init__(prefix=prefix, params=params)
         self._hidden_size = hidden_size
         self._activation = activation
         self._input_size = input_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(hidden_size, input_size),
-                                          init=i2h_weight_initializer)
+                                          init=i2h_weight_initializer,
+                                          allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(hidden_size, hidden_size),
-                                          init=h2h_weight_initializer)
+                                          init=h2h_weight_initializer,
+                                          allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(hidden_size,),
-                                        init=i2h_bias_initializer)
+                                        init=i2h_bias_initializer,
+                                        allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(hidden_size,),
-                                        init=h2h_bias_initializer)
+                                        init=h2h_bias_initializer,
+                                        allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'}]
@@ -310,7 +314,7 @@ class RNNCell(HRecurrentCell):
         return output, [output]
 
 
-class LSTMCell(HRecurrentCell):
+class LSTMCell(HybridRecurrentCell):
     """Long-Short Term Memory (LSTM) network cell.
 
     Parameters
@@ -338,20 +342,24 @@ class LSTMCell(HRecurrentCell):
     """
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
-                 i2h_bias_initializer='lstmbias', h2h_bias_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  input_size=0, prefix=None, params=None):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
 
         self._hidden_size = hidden_size
         self._input_size = input_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(4*hidden_size, input_size),
-                                          init=i2h_weight_initializer)
+                                          init=i2h_weight_initializer,
+                                          allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(4*hidden_size, hidden_size),
-                                          init=h2h_weight_initializer)
+                                          init=h2h_weight_initializer,
+                                          allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(4*hidden_size,),
-                                        init=i2h_bias_initializer)
+                                        init=i2h_bias_initializer,
+                                        allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
-                                        init=h2h_bias_initializer)
+                                        init=h2h_bias_initializer,
+                                        allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'},
@@ -388,7 +396,7 @@ class LSTMCell(HRecurrentCell):
         return next_h, [next_h, next_c]
 
 
-class GRUCell(HRecurrentCell):
+class GRUCell(HybridRecurrentCell):
     """Gated Rectified Unit (GRU) network cell.
     Note: this is an implementation of the cuDNN version of GRUs
     (slight modification compared to Cho et al. 2014).
@@ -416,18 +424,22 @@ class GRUCell(HRecurrentCell):
     """
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
-                 i2h_bias_initializer=None, h2h_bias_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  input_size=0, prefix=None, params=None):
         super(GRUCell, self).__init__(prefix=prefix, params=params)
         self._hidden_size = hidden_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(3*hidden_size, input_size),
-                                          init=i2h_weight_initializer)
+                                          init=i2h_weight_initializer,
+                                          allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(3*hidden_size, hidden_size),
-                                          init=h2h_weight_initializer)
+                                          init=h2h_weight_initializer,
+                                          allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(3*hidden_size,),
-                                        init=i2h_bias_initializer)
+                                        init=i2h_bias_initializer,
+                                        allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(3*hidden_size,),
-                                        init=h2h_bias_initializer)
+                                        init=h2h_bias_initializer,
+                                        allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'}]
@@ -527,7 +539,7 @@ class SequentialRNNCell(RecurrentCell):
         raise NotImplementedError
 
 
-class DropoutCell(HRecurrentCell):
+class DropoutCell(HybridRecurrentCell):
     """Apply dropout on input.
 
     Parameters
@@ -564,7 +576,7 @@ class DropoutCell(HRecurrentCell):
                 merge_outputs=merge_outputs)
 
 
-class ModifierCell(HRecurrentCell):
+class ModifierCell(HybridRecurrentCell):
     """Base class for modifier cells. A modifier
     cell takes a base cell, apply modifications
     on it (e.g. Zoneout), and returns a new cell.
@@ -673,7 +685,7 @@ class ResidualCell(ModifierCell):
         return outputs, states
 
 
-class BidirectionalCell(HRecurrentCell):
+class BidirectionalCell(HybridRecurrentCell):
     """Bidirectional RNN cell.
 
     Parameters

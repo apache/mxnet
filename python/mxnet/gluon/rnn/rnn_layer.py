@@ -44,16 +44,20 @@ class _RNNLayer(Block):
             for j in (['l', 'r'] if self._dir == 2 else ['l']):
                 self.i2h_weight.append(
                     self.params.get('%s%d_i2h_weight'%(j, i), shape=(ng*nh, ni),
-                                    init=i2h_weight_initializer))
+                                    init=i2h_weight_initializer,
+                                    allow_deferred_init=True))
                 self.h2h_weight.append(
                     self.params.get('%s%d_h2h_weight'%(j, i), shape=(ng*nh, nh),
-                                    init=h2h_weight_initializer))
+                                    init=h2h_weight_initializer,
+                                    allow_deferred_init=True))
                 self.i2h_bias.append(
                     self.params.get('%s%d_i2h_bias'%(j, i), shape=(ng*nh,),
-                                    init=i2h_bias_initializer))
+                                    init=i2h_bias_initializer,
+                                    allow_deferred_init=True))
                 self.h2h_bias.append(
                     self.params.get('%s%d_h2h_bias'%(j, i), shape=(ng*nh,),
-                                    init=h2h_bias_initializer))
+                                    init=h2h_bias_initializer,
+                                    allow_deferred_init=True))
             ni = nh * self._dir
 
         self._unfused = self._unfuse()
@@ -133,6 +137,14 @@ class _RNNLayer(Block):
         return states
 
     def forward(self, inputs, states):
+        if isinstance(states, ndarray.NDArray):
+            states = [states]
+        batch_size = states[0].shape[self._layout.find('N')]
+        for state, info in zip(states, self.state_info(batch_size)):
+            if state.shape != info['shape']:
+                raise ValueError(
+                    "Invalid recurrent state shape. Expecting %s, got %s."%(
+                        str(info['shape']), str(state.shape)))
         if self._input_size == 0:
             for i in range(self._dir):
                 self.i2h_weight[i].shape = (self._gates*self._hidden_size, inputs.shape[2])
@@ -226,17 +238,36 @@ class RNN(_RNNLayer):
     params : ParameterDict or None
         Shared Parameters for this `Block`.
 
+
+    Input shapes:
+        The input shape depends on `layout`. For `layout='TNC'`, the
+        input has shape `(sequence_length, batch_size, input_size)`
+
+
+    Output shape:
+        The output shape depends on `layout`. For `layout='TNC'`, the
+        output has shape `(sequence_length, batch_size, num_hidden)`.
+        If `bidirectional` is True, output shape will instead be
+        `(sequence_length, batch_size, 2*num_hidden)`
+
+    Recurrent state shape:
+        The recurrent state's shape is `(num_layers, batch_size, num_hidden)`.
+        If `bidirectional` is True, state shape will instead be
+        `(num_layers, batch_size, 2*num_hidden)`
+
+
     Examples
     --------
-    >>> rnn = nn.RNN(100, 3)
+    >>> layer = mx.gluon.rnn.RNN(100, 3)
+    >>> layer.initialize()
     >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
-    >>> h0 = mx.nd.random_uniform(shape=(2, 3, 100))
-    >>> output, hn = rnn(input, h0)
+    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
+    >>> output, hn = layer(input, h0)
     """
     def __init__(self, hidden_size, num_layers=1, activation='relu',
                  layout='TNC', dropout=0, bidirectional=False,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
-                 i2h_bias_initializer=None, h2h_bias_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  input_size=0, **kwargs):
         super(RNN, self).__init__(hidden_size, num_layers, layout,
                                   dropout, bidirectional, input_size,
@@ -305,18 +336,37 @@ class LSTM(_RNNLayer):
     params : ParameterDict or None
         Shared Parameters for this `Block`.
 
+
+    Input shapes:
+        The input shape depends on `layout`. For `layout='TNC'`, the
+        input has shape `(sequence_length, batch_size, input_size)`
+
+    Output shape:
+        The output shape depends on `layout`. For `layout='TNC'`, the
+        output has shape `(sequence_length, batch_size, num_hidden)`.
+        If `bidirectional` is True, output shape will instead be
+        `(sequence_length, batch_size, 2*num_hidden)`
+
+    Recurrent state shape:
+        The recurrent state is a list of two NDArrays. Both has shape
+        `(num_layers, batch_size, num_hidden)`.
+        If `bidirectional` is True, state shape will instead be
+        `(num_layers, batch_size, 2*num_hidden)`
+
+
     Examples
     --------
-    >>> rnn = nn.LSTM(100, 3)
+    >>> layer = mx.gluon.rnn.LSTM(100, 3)
+    >>> layer.initialize()
     >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
-    >>> h0 = mx.nd.random_uniform(shape=(2, 3, 100))
-    >>> c0 = mx.nd.random_uniform(shape=(2, 3, 100))
-    >>> output, hn = rnn(input, (h0, c0))
+    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
+    >>> c0 = mx.nd.random_uniform(shape=(3, 3, 100))
+    >>> output, hn = layer(input, [h0, c0])
     """
     def __init__(self, hidden_size, num_layers=1, layout='TNC',
                  dropout=0, bidirectional=False, input_size=0,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
-                 i2h_bias_initializer='lstmbias', h2h_bias_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  **kwargs):
         super(LSTM, self).__init__(hidden_size, num_layers, layout,
                                    dropout, bidirectional, input_size,
@@ -381,17 +431,35 @@ class GRU(_RNNLayer):
     params : ParameterDict or None
         Shared Parameters for this `Block`.
 
+
+    Input shapes:
+        The input shape depends on `layout`. For `layout='TNC'`, the
+        input has shape `(sequence_length, batch_size, input_size)`
+
+    Output shape:
+        The output shape depends on `layout`. For `layout='TNC'`, the
+        output has shape `(sequence_length, batch_size, num_hidden)`.
+        If `bidirectional` is True, output shape will instead be
+        `(sequence_length, batch_size, 2*num_hidden)`
+
+    Recurrent state shape:
+        The recurrent state's shape is `(num_layers, batch_size, num_hidden)`.
+        If `bidirectional` is True, state shape will instead be
+        `(num_layers, batch_size, 2*num_hidden)`
+
+
     Examples
     --------
-    >>> rnn = nn.GRU(100, 2)
+    >>> layer = mx.gluon.rnn.GRU(100, 3)
+    >>> layer.initialize()
     >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
-    >>> h0 = mx.nd.random_uniform(shape=(2, 3, 100))
-    >>> output, hn = rnn(input, h0)
+    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
+    >>> output, hn = layer(input, h0)
     """
     def __init__(self, hidden_size, num_layers=1, layout='TNC',
                  dropout=0, bidirectional=False, input_size=0,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
-                 i2h_bias_initializer=None, h2h_bias_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  **kwargs):
         super(GRU, self).__init__(hidden_size, num_layers, layout,
                                   dropout, bidirectional, input_size,

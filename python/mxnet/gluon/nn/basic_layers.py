@@ -29,7 +29,7 @@ class Sequential(Block):
         return x
 
 
-class HSequential(HybridBlock):
+class HybridSequential(HybridBlock):
     """Stack `HybridBlock`s sequentially.
 
     Example::
@@ -41,7 +41,7 @@ class HSequential(HybridBlock):
             net.add(Dense(20))
     """
     def __init__(self, prefix=None, params=None):
-        super(HSequential, self).__init__(prefix=prefix, params=params)
+        super(HybridSequential, self).__init__(prefix=prefix, params=params)
 
     def add(self, block):
         """Add block on top of the stack."""
@@ -97,16 +97,18 @@ class Dense(HybridBlock):
         the output would have shape `(batch_size, units)`.
     """
     def __init__(self, units, activation=None, use_bias=True,
-                 weight_initializer=None, bias_initializer=None,
+                 weight_initializer=None, bias_initializer='zeros',
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
         with self.name_scope():
             self._units = units
             self.weight = self.params.get('weight', shape=(units, in_units),
-                                          init=weight_initializer)
+                                          init=weight_initializer,
+                                          allow_deferred_init=True)
             if use_bias:
                 self.bias = self.params.get('bias', shape=(units,),
-                                            init=bias_initializer)
+                                            init=bias_initializer,
+                                            allow_deferred_init=True)
             else:
                 self.bias = None
             if activation is not None:
@@ -132,6 +134,7 @@ class Activation(HybridBlock):
     activation : str
         name of activation function to use.
         See :func:`~mxnet.ndarray.Activation` for available choices.
+
 
     Input shape:
         Arbitrary.
@@ -210,6 +213,13 @@ class BatchNorm(HybridBlock):
         Number of channels (feature maps) in input data. If not specified,
         initialization will be defered to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
+
+
+    Input shape:
+        Arbitrary.
+
+    Output shape:
+        Same shape as input.
     """
     def __init__(self, axis=1, momentum=0.9, epsilon=1e-3, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
@@ -220,15 +230,19 @@ class BatchNorm(HybridBlock):
                         'fix_gamma': not center}
 
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(in_channels,), init=gamma_initializer)
+                                     shape=(in_channels,), init=gamma_initializer,
+                                     allow_deferred_init=True)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(in_channels,), init=beta_initializer)
+                                    shape=(in_channels,), init=beta_initializer,
+                                    allow_deferred_init=True)
         self.running_mean = self.params.get('running_mean', grad_req='null',
                                             shape=(in_channels,),
-                                            init=running_mean_initializer)
+                                            init=running_mean_initializer,
+                                            allow_deferred_init=True)
         self.running_var = self.params.get('running_var', grad_req='null',
                                            shape=(in_channels,),
-                                           init=running_variance_initializer)
+                                           init=running_variance_initializer,
+                                           allow_deferred_init=True)
 
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.BatchNorm(x, gamma, beta, running_mean, running_var, **self._kwargs)
@@ -246,6 +260,13 @@ class LeakyReLU(HybridBlock):
     ----------
     alpha : float
         slope coefficient for the negative half axis. Must be >= 0.
+
+
+    Input shape:
+        Arbitrary.
+
+    Output shape:
+        Same shape as input.
     """
     def __init__(self, alpha, **kwargs):
         super(LeakyReLU, self).__init__(**kwargs)
@@ -284,7 +305,24 @@ class Embedding(HybridBlock):
         self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
                         'dtype': dtype}
         self.weight = self.params.get('weight', shape=(input_dim, output_dim),
-                                      init=weight_initializer)
+                                      init=weight_initializer,
+                                      allow_deferred_init=True)
 
     def hybrid_forward(self, F, x, weight):
         return F.Embedding(x, weight, **self._kwargs)
+
+
+class Flatten(HybridBlock):
+    """Flattens the input to two dimensional.
+
+    Input shape:
+        Arbitrary shape `(N, a, b, c, ...)`
+
+    Output shape:
+        2D tensor with shape: `(N, a*b*c...)`
+    """
+    def __init__(self, **kwargs):
+        super(Flatten, self).__init__(**kwargs)
+
+    def hybrid_forward(self, F, x):
+        return x.reshape((0, -1))

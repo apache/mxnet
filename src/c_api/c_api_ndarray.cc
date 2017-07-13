@@ -110,9 +110,8 @@ void SetContext(Context* p_ctx,
       CHECK_EQ(ndinputs[i].ctx().dev_mask(), ctx.dev_mask())
           << "All inputs must live on the same context. "
           << "But the first argument is on "
-          << (ctx.dev_mask() == gpu::kDevMask ? "GPU" : "CPU")
-          << " while the " << i+1 << "-th argument is on "
-          << (ndinputs[i].ctx().dev_mask() == gpu::kDevMask ? "GPU" : "CPU");
+          << ctx << " while the " << i+1 << "-th argument is on "
+          << ndinputs[i].ctx();
     }
   } else if (ndoutputs.size() && !ndoutputs[0].is_none()) {
     ctx = ndoutputs[0].ctx();

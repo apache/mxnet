@@ -2,7 +2,7 @@
 # pylint: disable= arguments-differ
 """Base container class for all neural network models."""
 
-from .. import symbol, ndarray
+from .. import symbol, ndarray, initializer
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
@@ -99,7 +99,7 @@ class Block(object):
 
         class Model(Block):
             def __init__(self, **kwargs):
-                super(Net, self).__init__(**kwargs)
+                super(Model, self).__init__(**kwargs)
                 # use name_scope to give child Blocks appropriate names.
                 # It also allows sharing Parameters between Blocks recursively.
                 with self.name_scope():
@@ -109,6 +109,11 @@ class Block(object):
             def forward(self, x):
                 x = F.relu(self.dense0(x))
                 return F.relu(self.dense1(x))
+
+        model = Model()
+        model.initialize(ctx=mx.cpu(0))
+        model(F.zeros((10, 10), ctx=mx.cpu(0)))
+
 
     Child `Block`s assigned this way will be registered and `collect_params`
     will collect their Parameters recursively.
@@ -124,7 +129,7 @@ class Block(object):
         if you want `dense1` to share `dense0`'s weights, you can do::
 
             dense0 = nn.Dense(20)
-            dense1 = nn.Dense(20, params=dense1.collect_params())
+            dense1 = nn.Dense(20, params=dense0.collect_params())
     """
     def __init__(self, prefix=None, params=None):
         self._prefix, self._params = _BlockScope.create(prefix, params, self._alias())
@@ -180,6 +185,13 @@ class Block(object):
         """Register block as a child of self. `Block`s assigned to self as
         attributes will be registered automatically."""
         self._children.append(block)
+
+    def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False):
+        """Initialize `Parameter`s of this Block and its children.
+
+        Equivalent to `block.collect_params().initialize(...)`
+        """
+        self.collect_params().initialize(init, ctx, verbose)
 
     def hybridize(self, active=True):
         """Activates or deactivates `HybridBlock`s recursively. Has no effect on
@@ -250,7 +262,7 @@ class HybridBlock(Block):
             if isinstance(block, Sequential):
                 raise ValueError(
                     "Children of HybridBlock must also be HybridBlock. " \
-                    "Please use HSequential instead of Sequential.")
+                    "Please use HybridSequential instead of Sequential.")
             raise ValueError(
                 "Children of HybridBlock must also be HybridBlock, " \
                 "but %s has type %s."%(str(block), str(type(block))))

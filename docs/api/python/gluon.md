@@ -63,7 +63,7 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     .. automethod:: __call__
 .. autoclass:: mxnet.gluon.nn.Sequential
     :members:
-.. autoclass:: mxnet.gluon.nn.HSequential
+.. autoclass:: mxnet.gluon.nn.HybridSequential
     :members:
 ```
 

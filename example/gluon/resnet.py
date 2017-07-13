@@ -134,7 +134,7 @@ class ResnetV1(gluon.HybridBlock):
                  self.bn0 = nn.BatchNorm(in_channels=filters[0])
                  self.pool0 = nn.MaxPool2D(3, 2, 1)
 
-             self.body = nn.HSequential()
+             self.body = nn.HybridSequential()
              in_channels = filters[0]
              for i in range(len(layers)):
                  stride = 1 if i == 0 else 2
@@ -146,7 +146,7 @@ class ResnetV1(gluon.HybridBlock):
              self.dense1 = nn.Dense(classes, in_units=filters[-1])
 
     def _make_layer(self, block, layers, filters, stride, in_channels=0):
-        layer = nn.HSequential()
+        layer = nn.HybridSequential()
         layer.add(block(filters, stride, True, in_channels=in_channels))
         for i in range(layers-1):
             layer.add(block(filters, 1, False, in_channels=filters))
@@ -248,7 +248,7 @@ class ResnetV2(gluon.HybridBlock):
                 self.bn0 = nn.BatchNorm(in_channels=filters[0])
                 self.pool0 = nn.MaxPool2D(3, 2, 1)
 
-            self.body = nn.HSequential()
+            self.body = nn.HybridSequential()
             in_channels = filters[0]
             for i in range(len(layers)):
                 stride = 1 if i == 0 else 2
@@ -261,7 +261,7 @@ class ResnetV2(gluon.HybridBlock):
             self.dense1 = nn.Dense(classes, in_units=in_channels)
 
     def _make_layer(self, block, layers, filters, stride, in_channels=0):
-        layer = nn.HSequential()
+        layer = nn.HybridSequential()
         layer.add(block(filters, stride, True, in_channels=in_channels))
         for i in range(layers-1):
             layer.add(block(filters, 1, False, in_channels=filters))
