@@ -262,7 +262,7 @@ class HybridBlock(Block):
             if isinstance(block, Sequential):
                 raise ValueError(
                     "Children of HybridBlock must also be HybridBlock. " \
-                    "Please use HSequential instead of Sequential.")
+                    "Please use HybridSequential instead of Sequential.")
             raise ValueError(
                 "Children of HybridBlock must also be HybridBlock, " \
                 "but %s has type %s."%(str(block), str(type(block))))

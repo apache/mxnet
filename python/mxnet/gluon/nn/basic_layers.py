@@ -29,7 +29,7 @@ class Sequential(Block):
         return x
 
 
-class HSequential(HybridBlock):
+class HybridSequential(HybridBlock):
     """Stack `HybridBlock`s sequentially.
 
     Example::
@@ -41,7 +41,7 @@ class HSequential(HybridBlock):
             net.add(Dense(20))
     """
     def __init__(self, prefix=None, params=None):
-        super(HSequential, self).__init__(prefix=prefix, params=params)
+        super(HybridSequential, self).__init__(prefix=prefix, params=params)
 
     def add(self, block):
         """Add block on top of the stack."""

@@ -237,16 +237,16 @@ class RecurrentCell(Block):
         return super(RecurrentCell, self).forward(inputs, states)
 
 
-class HRecurrentCell(RecurrentCell, HybridBlock):
-    """HRecurrentCell supports both Symbol and NDArray forwarding."""
+class HybridRecurrentCell(RecurrentCell, HybridBlock):
+    """HybridRecurrentCell supports hybridize."""
     def __init__(self, prefix=None, params=None):
-        super(HRecurrentCell, self).__init__(prefix=prefix, params=params)
+        super(HybridRecurrentCell, self).__init__(prefix=prefix, params=params)
 
     def hybrid_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError
 
 
-class RNNCell(HRecurrentCell):
+class RNNCell(HybridRecurrentCell):
     """Simple recurrent neural network cell.
 
     Parameters
@@ -314,7 +314,7 @@ class RNNCell(HRecurrentCell):
         return output, [output]
 
 
-class LSTMCell(HRecurrentCell):
+class LSTMCell(HybridRecurrentCell):
     """Long-Short Term Memory (LSTM) network cell.
 
     Parameters
@@ -396,7 +396,7 @@ class LSTMCell(HRecurrentCell):
         return next_h, [next_h, next_c]
 
 
-class GRUCell(HRecurrentCell):
+class GRUCell(HybridRecurrentCell):
     """Gated Rectified Unit (GRU) network cell.
     Note: this is an implementation of the cuDNN version of GRUs
     (slight modification compared to Cho et al. 2014).
@@ -539,7 +539,7 @@ class SequentialRNNCell(RecurrentCell):
         raise NotImplementedError
 
 
-class DropoutCell(HRecurrentCell):
+class DropoutCell(HybridRecurrentCell):
     """Apply dropout on input.
 
     Parameters
@@ -576,7 +576,7 @@ class DropoutCell(HRecurrentCell):
                 merge_outputs=merge_outputs)
 
 
-class ModifierCell(HRecurrentCell):
+class ModifierCell(HybridRecurrentCell):
     """Base class for modifier cells. A modifier
     cell takes a base cell, apply modifications
     on it (e.g. Zoneout), and returns a new cell.
@@ -685,7 +685,7 @@ class ResidualCell(ModifierCell):
         return outputs, states
 
 
-class BidirectionalCell(HRecurrentCell):
+class BidirectionalCell(HybridRecurrentCell):
     """Bidirectional RNN cell.
 
     Parameters
