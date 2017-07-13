@@ -598,11 +598,11 @@ li.dropdown-submenu ul.dropdown-menu a {
     .section-tout .container {
         height: auto;
     }
-    
+
     .section-tout .row a {
         position: inherit;
     }
-    
+
     .section-tout .row div {
         margin-bottom: 20px;
         padding-left: 20px;
@@ -671,7 +671,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     .section-util .container {
         height: auto
     }
-    
+
     .section-util .row div {
         margin-bottom: 200px;
     }
@@ -968,7 +968,7 @@ dl.attribute dt code.descname {
 dt em {
     font-weight: normal;
     font-style: normal;
-    font-size: 90%; 
+    font-size: 90%;
 }
 
 code {
@@ -1211,11 +1211,11 @@ button.download {
 
 /*----------------------Download button------------------------*/
 div.download_btn {
-    
+
     border: solid 1px lightgray;
     border-radius: 3px;
     font-size: 90%;
-    height: 30px;
+    height: 40px;
     display: table;
     float: left;
 }
@@ -1230,4 +1230,16 @@ div.download_btn a:hover {
     background-color: #0079b2;
     color: white;
     text-decoration: none;
+}
+
+/*-------------output blocks----------------*/
+
+.highlight-results .highlight pre {
+    background-color: #eeffcc;
+}
+
+.cell-results-header {
+    color: #888;
+    padding-bottom: 3px;
+    font-style: italic;
 }

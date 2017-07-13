@@ -107,15 +107,6 @@ z = mx.nd.sum(x, axis=1)
 print('axis=1:', z)
 ```
 
-By default operators create new NDArrays for return value. You can specify `out`
-to use a pre-allocated buffer:
-
-```python
-z = mx.nd.empty((2, 2))
-mx.nd.add(x, y, out=z)
-print(x)
-```
-
 ## Using GPU
 
 Each NDArray lives on a `Context`. MXNet supports `mx.cpu()` for CPU and `mx.gpu(0)`,
@@ -150,3 +141,5 @@ print(y)
 
 See the [Advanced NDArray tutorial](../basic/ndarray.md) for a more detailed
 introduction to NDArray API.
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
