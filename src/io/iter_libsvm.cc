@@ -23,6 +23,10 @@ struct LibSVMIterParam : public dmlc::Parameter<LibSVMIterParam> {
   std::string label_libsvm;
   /*! \brief label shape */
   TShape label_shape;
+  /*! \brief partition the data into multiple parts */
+  int num_parts;
+  /*! \brief the index of the part will read*/
+  int part_index;
   // declare parameters
   DMLC_DECLARE_PARAMETER(LibSVMIterParam) {
     DMLC_DECLARE_FIELD(data_libsvm)
@@ -35,6 +39,10 @@ struct LibSVMIterParam : public dmlc::Parameter<LibSVMIterParam> {
     index_t shape1[] = {1};
     DMLC_DECLARE_FIELD(label_shape).set_default(TShape(shape1, shape1 + 1))
         .describe("The shape of one label.");
+    DMLC_DECLARE_FIELD(num_parts).set_default(1)
+        .describe("partition the data into multiple parts");
+    DMLC_DECLARE_FIELD(part_index).set_default(0)
+        .describe("the index of the part will read");
   }
 };
 
@@ -47,11 +55,15 @@ class LibSVMIter: public SparseIIterator<DataInst> {
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     param_.InitAllowUnknown(kwargs);
     CHECK_EQ(param_.data_shape.ndim(), 1) << "dimension of data_shape is expected to be 1";
+    CHECK_GT(param_.num_parts, 0) << "number of parts should be positive";
+    CHECK_GE(param_.part_index, 0) << "part index should be non-negative";
     data_parser_.reset(dmlc::Parser<uint64_t>::Create(param_.data_libsvm.c_str(),
-                                                      0, 1, "libsvm"));
+                                                      param_.part_index,
+                                                      param_.num_parts, "libsvm"));
     if (param_.label_libsvm != "NULL") {
       label_parser_.reset(dmlc::Parser<uint64_t>::Create(param_.label_libsvm.c_str(),
-                                                         0, 1, "libsvm"));
+                                                         param_.part_index,
+                                                         param_.num_parts, "libsvm"));
       CHECK_GT(param_.label_shape.Size(), 1)
         << "label_shape is not expected to be (1,) when param_.label_libsvm is set.";
     } else {

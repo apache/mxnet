@@ -161,29 +161,37 @@ def test_LibSVMIter():
             assert_almost_equal(data_train.getdata().asnumpy(), expected)
             i += 1
 
-    def check_libSVMIter_news_metadata():
+    def check_libSVMIter_news_data():
         news_metadata = {
             'name': 'news20.t',
             'origin_name': 'news20.t.bz2',
             'url': "http://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/news20.t.bz2",
-            'shape': 62060,
+            'feature_dim': 62060,
             'num_classes': 20,
+            'num_examples': 3993,
         }
+        num_parts = 3
+        batch_size = 128
+        num_examples = news_metadata['num_examples']
         data_dir = os.path.join(os.getcwd(), 'data')
         get_data(data_dir, news_metadata['name'], news_metadata['url'],
                  news_metadata['origin_name'])
         path = os.path.join(data_dir, news_metadata['name'])
-        data_train = mx.io.LibSVMIter(data_libsvm=path,
-                                      data_shape=(news_metadata['shape'], ),
-                                      batch_size=512)
+        data_train = mx.io.LibSVMIter(data_libsvm=path, data_shape=(news_metadata['feature_dim'],),
+                                      batch_size=batch_size, num_parts=num_parts, part_index=0)
+        num_batches = 0
         iterator = iter(data_train)
         for batch in iterator:
             # check the range of labels
             assert(np.sum(batch.label[0].asnumpy() > 20) == 0)
             assert(np.sum(batch.label[0].asnumpy() <= 0) == 0)
+            num_batches += 1
+        import math
+        expected_num_batches = math.ceil(num_examples * 1.0 / batch_size / num_parts)
+        assert(num_batches == int(expected_num_batches)), (num_batches, expected_num_batches)
 
     check_libSVMIter_synthetic()
-    check_libSVMIter_news_metadata()
+    check_libSVMIter_news_data()
 
 if __name__ == "__main__":
     test_NDArrayIter()
