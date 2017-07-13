@@ -2,6 +2,7 @@ from __future__ import print_function
 import argparse, tarfile
 import math
 import os
+import numpy as np
 
 import mxnet as mx
 import mxnet.ndarray as F
@@ -14,17 +15,15 @@ from mxnet.io import PrefetchingIter
 
 from data import ImagePairIter
 
-from PIL import Image
-
-
 
 # CLI
 parser = argparse.ArgumentParser(description='Super-resolution using an efficient sub-pixel convolution neural network.')
-parser.add_argument('--upscale_factor', type=int, required=True, help="super resolution upscale factor")
-parser.add_argument('--batch_size', type=int, default=64, help='training batch size')
-parser.add_argument('--epochs', type=int, default=2, help='number of training epochs')
-parser.add_argument('--lr', type=float, default=0.01, help='learning Rate. default is 0.01')
-parser.add_argument('--gpus', type=int, default=0, help='number of GPUs to use')
+parser.add_argument('--upscale_factor', type=int, default=3, help="super resolution upscale factor. default is 3.")
+parser.add_argument('--batch_size', type=int, default=4, help='training batch size, per device. default is 4.')
+parser.add_argument('--test_batch_size', type=int, default=100, help='test batch size')
+parser.add_argument('--epochs', type=int, default=30, help='number of training epochs')
+parser.add_argument('--lr', type=float, default=0.001, help='learning Rate. default is 0.001.')
+parser.add_argument('--use-gpu', action='store_true', help='whether to use GPU.')
 parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123')
 parser.add_argument('--resolve_img', type=str, help='input image to use')
 opt = parser.parse_args()
@@ -32,7 +31,7 @@ opt = parser.parse_args()
 print(opt)
 
 upscale_factor = opt.upscale_factor
-batch_size = opt.batch_size
+batch_size, test_batch_size = opt.batch_size, opt.test_batch_size
 color_flag = 0
 
 # get data
@@ -63,17 +62,15 @@ def get_dataset(prefetch=False):
              ImagePairIter(os.path.join(image_path, "test"),
                            (input_crop_size, input_crop_size),
                            (crop_size, crop_size),
-                           batch_size, color_flag,
+                           test_batch_size, color_flag,
                            input_transform, target_transform))
-    if prefetch:
-        return [PrefetchingIter(i) for i in iters]
-    else:
-        return iters
+
+    return [PrefetchingIter(i) for i in iters] if prefetch else iters
 
 train_data, val_data = get_dataset()
 
 mx.random.seed(opt.seed)
-ctx = [mx.gpu(i) for i in range(opt.gpus)] if opt.gpus > 0 else [mx.cpu()]
+ctx = [mx.gpu(0)] if opt.use_gpu else [mx.cpu()]
 
 
 # define model
@@ -92,10 +89,10 @@ class SuperResolutionNet(gluon.Block):
     def __init__(self, upscale_factor):
         super(SuperResolutionNet, self).__init__()
         with self.name_scope():
-            self.conv1 = nn.Conv2D(64, (5, 5), strides=(1, 1), padding=(2, 2), in_channels=1)
-            self.conv2 = nn.Conv2D(64, (3, 3), strides=(1, 1), padding=(1, 1), in_channels=64)
-            self.conv3 = nn.Conv2D(32, (3, 3), strides=(1, 1), padding=(1, 1), in_channels=64)
-            self.conv4 = nn.Conv2D(upscale_factor ** 2, (3, 3), strides=(1, 1), padding=(1, 1), in_channels=32)
+            self.conv1 = nn.Conv2D(64, (5, 5), strides=(1, 1), padding=(2, 2))
+            self.conv2 = nn.Conv2D(64, (3, 3), strides=(1, 1), padding=(1, 1))
+            self.conv3 = nn.Conv2D(32, (3, 3), strides=(1, 1), padding=(1, 1))
+            self.conv4 = nn.Conv2D(upscale_factor ** 2, (3, 3), strides=(1, 1), padding=(1, 1))
         self.upscale_factor = upscale_factor
 
     def forward(self, x):
@@ -105,15 +102,14 @@ class SuperResolutionNet(gluon.Block):
         return _rearrange(self.conv4(x), F, self.upscale_factor)
 
 net = SuperResolutionNet(upscale_factor)
+metric = mx.metric.MSE()
 
 def test(ctx):
     val_data.reset()
     avg_psnr = 0
-    metric = mx.metric.MSE()
     batches = 0
     for batch in val_data:
         batches += 1
-        metric.reset()
         data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
         label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
         outputs = []
@@ -121,6 +117,7 @@ def test(ctx):
             outputs.append(net(x))
         metric.update(label, outputs)
         avg_psnr += 10 * math.log10(1/metric.get()[1])
+        metric.reset()
     avg_psnr /= batches
     print('validation avg psnr: %f'%avg_psnr)
 
@@ -131,7 +128,6 @@ def train(epoch, ctx):
     net.collect_params().initialize(mx.init.Orthogonal(), ctx=ctx)
     net.conv4.collect_params().initialize(mx.init.Orthogonal(scale=1), ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': opt.lr})
-    metric = mx.metric.MAE()
     loss = gluon.loss.L2Loss()
 
     for i in range(epoch):
@@ -151,21 +147,20 @@ def train(epoch, ctx):
 
         name, acc = metric.get()
         metric.reset()
-        print('training mae at epoch %d: %s=%f'%(i, name, acc))
+        print('training mse at epoch %d: %s=%f'%(i, name, acc))
         test(ctx)
 
     net.collect_params().save('superres.params')
 
 def resolve(ctx):
+    from PIL import Image
     if isinstance(ctx, list):
         ctx = [ctx[0]]
-    net.collect_params().load('superres.params')
+    net.collect_params().load('superres.params', ctx=ctx)
     img = Image.open(opt.resolve_img).convert('YCbCr')
     y, cb, cr = img.split()
-    data = mx.nd.array(y)
-    print(data)
-    out_img_y = net(data).asnumpy()
-    out_img_y *= 255.0
+    data = mx.nd.expand_dims(mx.nd.expand_dims(mx.nd.array(y), axis=0), axis=0)
+    out_img_y = mx.nd.reshape(net(data), shape=(-3, -2)).asnumpy()
     out_img_y = out_img_y.clip(0, 255)
     out_img_y = Image.fromarray(np.uint8(out_img_y[0]), mode='L')
 
@@ -173,7 +168,7 @@ def resolve(ctx):
     out_img_cr = cr.resize(out_img_y.size, Image.BICUBIC)
     out_img = Image.merge('YCbCr', [out_img_y, out_img_cb, out_img_cr]).convert('RGB')
 
-    out_img.save('resolved.jpg')
+    out_img.save('resolved.png')
 
 if opt.resolve_img:
     resolve(ctx)
