@@ -188,7 +188,7 @@ class KLDivLoss(HybridBlock):
 
     Parameters
     ----------
-    from_logits : bool, default False
+    from_logits : bool, default True
         whether input is log probability (usually from log_softmax) instead
         of unnormalized numbers.
     weight : float or None
@@ -198,6 +198,8 @@ class KLDivLoss(HybridBlock):
         the same shape as loss. For example, if loss has
         shape (64, 10) and you want to weight each sample
         in the batch, sample_weight should have shape (64, 1)
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
     """
     def __init__(self, from_logits=True, weight=None, batch_axis=0, **kwargs):
         super(KLDivLoss, self).__init__(**kwargs)
