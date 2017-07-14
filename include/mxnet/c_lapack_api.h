@@ -113,7 +113,7 @@ inline void flip<cpu, double>(int m, int n,
   MXNET_LAPACK_CWRAPPER1(spotri, float)
   MXNET_LAPACK_CWRAPPER1(dpotri, double)
 
-  inline int MXNET_LAPACK_sposv(int matrix_layout, char uplo, int n, int nrhs,
+  inline int mxnet_lapack_sposv(int matrix_layout, char uplo, int n, int nrhs,
     float *a, int lda, float *b, int ldb) {
     int info;
     if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) {
@@ -129,7 +129,7 @@ inline void flip<cpu, double>(int m, int n,
     return info;
   }
 
-  inline int MXNET_LAPACK_dposv(int matrix_layout, char uplo, int n, int nrhs,
+  inline int mxnet_lapack_dposv(int matrix_layout, char uplo, int n, int nrhs,
     double *a, int lda, double *b, int ldb) {
     int info;
     if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) {
@@ -160,7 +160,7 @@ inline void flip<cpu, double>(int m, int n,
   }
 
   #define MXNET_LAPACK_UNAVAILABLE(func) \
-  inline int MXNET_LAPACK_##func(...) { \
+  inline int mxnet_lapack_##func(...) { \
     LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
     return 1; \
   }
@@ -182,13 +182,13 @@ inline int MXNET_LAPACK_posv(int matrix_layout, char uplo, int n, int nrhs,
 template <>
 inline int MXNET_LAPACK_posv<float>(int matrix_layout, char uplo, int n,
   int nrhs, float *a, int lda, float *b, int ldb) {
-  return MXNET_LAPACK_sposv(matrix_layout, uplo, n, nrhs, a, lda, b, ldb);
+  return mxnet_lapack_sposv(matrix_layout, uplo, n, nrhs, a, lda, b, ldb);
 }
 
 template <>
 inline int MXNET_LAPACK_posv<double>(int matrix_layout, char uplo, int n,
   int nrhs, double *a, int lda, double *b, int ldb) {
-  return MXNET_LAPACK_dposv(matrix_layout, uplo, n, nrhs, a, lda, b, ldb);
+  return mxnet_lapack_dposv(matrix_layout, uplo, n, nrhs, a, lda, b, ldb);
 }
 
 #endif  // MXNET_C_LAPACK_API_H_
