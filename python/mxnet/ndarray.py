@@ -268,6 +268,9 @@ fixed-size items.
         raise ValueError("The truth value of an NDArray is ambiguous. " \
                          "Please convert to number with asscalar() first.")
 
+    def __len__(self):
+        return max(0, int(self.shape[0]))
+
     __nonzero__ = __bool__
 
     def __getstate__(self):
