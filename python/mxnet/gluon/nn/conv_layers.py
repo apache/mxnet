@@ -312,7 +312,7 @@ class Conv3D(_Conv):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`..
+        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
