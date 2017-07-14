@@ -202,6 +202,8 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     :members:
 .. autoclass:: mxnet.gluon.loss.SoftmaxCrossEntropyLoss
     :members:
+.. autoclass:: mxnet.gluon.loss.KLDivLoss
+    :members:
 ```
 
 ## Utilities
