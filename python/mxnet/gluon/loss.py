@@ -184,20 +184,21 @@ class KLDivLoss(HybridBlock):
         https://en.wikipedia.org/wiki/Kullback-Leibler_divergence
     .. math::
         L = 1/n \\sum_i (label_i * (log(label_i) - output_i))
-    label's shape should be the same as output's.
+
+    Label's shape should be the same as output's.
 
     Parameters
     ----------
-    from_logits : bool, default True
-        whether input is log probability (usually from log_softmax) instead
+    from_logits : bool, default is `True`
+        Whether the input is log probability (usually from log_softmax) instead
         of unnormalized numbers.
     weight : float or None
-        global scalar weight for loss
+        Global scalar weight for loss.
     sample_weight : Symbol or None
-        per sample weighting. Must be broadcastable to
+        Per sample weighting. Must be broadcastable to
         the same shape as loss. For example, if loss has
         shape (64, 10) and you want to weight each sample
-        in the batch, sample_weight should have shape (64, 1)
+        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
     """
