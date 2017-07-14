@@ -17,7 +17,7 @@ import sys as _sys
 
 import operator
 import numpy as np
-from .base import _LIB, string_types, numeric_types
+from .base import _LIB, string_types, numeric_types, integer_types
 from .base import c_array, py_str, c_str, mx_real_t, _Null  # pylint: disable=unused-import
 from .base import mx_uint, NDArrayHandle, check_call, OpHandle
 from .base import ctypes2buffer
@@ -336,14 +336,14 @@ fixed-size items.
         """
         # pylint: disable=too-many-branches
         if not self.writable:
-            raise ValueError('Failed to assign to a readonly NDArray')
-        if isinstance(key, int):
+            raise ValueError('Cannot assign to readonly NDArray')
+        if isinstance(key, integer_types):
             sliced_arr = self._at(key)
             sliced_arr[:] = value
             return
-        if isinstance(key, py_slice):
+        elif isinstance(key, py_slice):
             if key.step is not None:
-                raise ValueError('NDArray only supports continuous slicing on axis 0')
+                raise ValueError('NDArray only supports slicing with step size 1')
             if key.start is not None or key.stop is not None:
                 sliced_arr = self._slice(key.start, key.stop)
                 sliced_arr[:] = value
@@ -356,34 +356,35 @@ fixed-size items.
             elif isinstance(value, (np.ndarray, np.generic)):
                 self._sync_copyfrom(value)
             else:
-                raise TypeError('type %s not supported' % str(type(value)))
-        if isinstance(key, tuple):
+                raise TypeError(
+                    'NDArray does not support assignment with %s of type %s'%(
+                        str(value), str(type(value))))
+        elif isinstance(key, tuple):
             # multi-dimension indexing
             my_shape = self.shape
-            assert len(key) == len(my_shape)
-            for slice_i in key:
-                assert isinstance(slice_i, (py_slice, int))
+            assert len(key) <= len(my_shape), \
+                "Indexing dimensions exceed array dimensions, %d vs %d"%(
+                    len(key), len(my_shape))
             begin = [0 for _ in my_shape]
             end = [x for x in my_shape]
             for i, slice_i in enumerate(key):
-                if isinstance(slice_i, int):
+                if isinstance(slice_i, integer_types):
                     assert slice_i < my_shape[i]
                     begin[i] = slice_i
                     end[i] = slice_i + 1
                 elif isinstance(slice_i, py_slice):
                     # only support continuous slicing
                     assert slice_i.step is None, \
-                        "NDArray only supports continuous slicing."
+                        "NDArray only supports slicing with step size 1."
                     begin[i] = slice_i.start or 0
                     end[i] = slice_i.stop or my_shape[i]
                     assert begin[i] < end[i]
                     assert end[i] <= my_shape[i]
                 else:
                     raise ValueError(
-                        "NDArray does not support slicing with %s."%(
-                            str(slice_i)))
-            begin = tuple(begin)
-            end = tuple(end)
+                        "NDArray does not support slicing with key %s of type %s."%(
+                            str(slice_i), str(type(slice_i))))
+
             if isinstance(value, NDArray):
                 value = value.as_in_context(self.context)
                 _internal._crop_assign(self, value, out=self,
@@ -397,7 +398,13 @@ fixed-size items.
                 _internal._crop_assign(self, value, out=self,
                                        begin=begin, end=end)
             else:
-                raise TypeError('type %s not supported' % str(type(value)))
+                raise TypeError(
+                    'NDArray does not support assignment with %s of type %s'%(
+                        str(value), str(type(value))))
+        else:
+            raise ValueError(
+                "NDArray does not support slicing with key %s of type %s."%(
+                    str(key), str(type(key))))
         # pylint: enable=too-many-branches
 
     def __getitem__(self, key):
@@ -425,20 +432,20 @@ fixed-size items.
                [ 3.,  4.,  5.]], dtype=float32)
         """
         # multi-dimensional slicing is not supported yet
-        if isinstance(key, int):
+        if isinstance(key, integer_types):
             if key > self.shape[0] - 1:
                 raise IndexError(
                     'index {} is out of bounds for axis 0 with size {}'.format(
                         key, self.shape[0]))
             return self._at(key)
-        if isinstance(key, py_slice):
+        elif isinstance(key, py_slice):
             if key.step is not None:
-                raise ValueError('NDArray only supports continuous slicing on axis 0')
+                raise ValueError("NDArray only supports slicing with step size 1.")
             if key.start is not None or key.stop is not None:
                 return self._slice(key.start, key.stop)
             else:
                 return self
-        if isinstance(key, tuple):
+        elif isinstance(key, tuple):
             shape = self.shape
             oshape = []
             begin = []
@@ -448,23 +455,27 @@ fixed-size items.
                     len(key), len(shape))
             i = -1
             for i, slice_i in enumerate(key):
-                if isinstance(slice_i, int):
+                if isinstance(slice_i, integer_types):
                     begin.append(slice_i)
                     end.append(slice_i+1)
                 elif isinstance(slice_i, py_slice):
                     if slice_i.step is not None:
-                        raise ValueError("NDArray only supports continuous slicing.")
+                        raise ValueError("NDArray only supports slicing with step size 1.")
                     begin.append(0 if slice_i.start is None else slice_i.start)
                     end.append(shape[i] if slice_i.stop is None else slice_i.stop)
                     oshape.append(end[i] - begin[i])
                 else:
                     raise ValueError(
-                        "NDArray does not support slicing with %s."%(
-                            str(slice_i)))
+                        "NDArray does not support slicing with key %s of type %s."%(
+                            str(slice_i), str(type(slice_i))))
             oshape.extend(shape[i+1:])
             if len(oshape) == 0:
                 oshape.append(1)
             return slice(self, begin, end).reshape(oshape)
+        else:
+            raise ValueError(
+                "NDArray does not support slicing with key %s of type %s."%(
+                    str(key), str(type(key))))
 
     def _sync_copyfrom(self, source_array):
         """Performs a synchronized copy from the `source_array` to the current array.
@@ -1072,7 +1083,7 @@ def empty(shape, ctx=None, dtype=mx_real_t):
     >>> mx.nd.empty((1,2), mx.gpu(0), 'float16')
     <NDArray 1x2 @gpu(0)>
     """
-    if isinstance(shape, int):
+    if isinstance(shape, integer_types):
         shape = (shape, )
     if ctx is None:
         ctx = Context.default_ctx

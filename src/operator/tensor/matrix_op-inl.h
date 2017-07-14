@@ -820,7 +820,7 @@ void Slice(const nnvm::NodeAttrs& attrs,
       break;
      }
      default:
-      LOG(FATAL) << "crop supports at most 5 dimensions";
+      LOG(FATAL) << "slice supports at most 5 dimensions";
       break;
     }
   });
