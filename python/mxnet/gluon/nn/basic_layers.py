@@ -13,14 +13,14 @@ class Sequential(Block):
         net = nn.Sequential()
         # use net's name_scope to give child Blocks appropriate names.
         with net.name_scope():
-            net.add(Dense(10, activation='relu'))
-            net.add(Dense(20))
+            net.add(nn.Dense(10, activation='relu'))
+            net.add(nn.Dense(20))
     """
     def __init__(self, prefix=None, params=None):
         super(Sequential, self).__init__(prefix=prefix, params=params)
 
     def add(self, block):
-        """Add block on top of the stack."""
+        """Adds block on top of the stack."""
         self.register_child(block)
 
     def forward(self, x):
@@ -30,21 +30,21 @@ class Sequential(Block):
 
 
 class HybridSequential(HybridBlock):
-    """Stack `HybridBlock`s sequentially.
+    """Stacks `HybridBlock`s sequentially.
 
     Example::
 
         net = nn.Sequential()
         # use net's name_scope to give child Blocks appropriate names.
         with net.name_scope():
-            net.add(Dense(10, activation='relu'))
-            net.add(Dense(20))
+            net.add(nn.Dense(10, activation='relu'))
+            net.add(nn.Dense(20))
     """
     def __init__(self, prefix=None, params=None):
         super(HybridSequential, self).__init__(prefix=prefix, params=params)
 
     def add(self, block):
-        """Add block on top of the stack."""
+        """Adds block on top of the stack."""
         self.register_child(block)
 
     def hybrid_forward(self, F, x):
@@ -63,7 +63,7 @@ class Dense(HybridBlock):
     created by the layer, and `bias` is a bias vector created by the layer
     (only applicable if `use_bias` is `True`).
 
-    Note: the input must be a tensor with rank 2. Use flatten to convert it
+    Note: the input must be a tensor with rank 2. Use `flatten` to convert it
     to rank 2 manually if necessary.
 
     Parameters
@@ -81,8 +81,8 @@ class Dense(HybridBlock):
     bias_initializer: str or `Initializer`
         Initializer for the bias vector.
     in_units : int, optional
-        Size of input data. If not specified, initialization will be
-        defered to the first time `forward` is called and `in_units`
+        Size of the input data. If not specified, initialization will be
+        deferred to the first time `forward` is called and `in_units`
         will be inferred from the shape of input data.
     prefix : str or None
         See document of `Block`.
@@ -91,10 +91,10 @@ class Dense(HybridBlock):
 
 
     Input shape:
-        a 2D input with shape `(batch_size, in_units)`.
+        A 2D input with shape `(batch_size, in_units)`.
 
     Output shape:
-        the output would have shape `(batch_size, units)`.
+        The output would have shape `(batch_size, units)`.
     """
     def __init__(self, units, activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
@@ -132,7 +132,7 @@ class Activation(HybridBlock):
     Parameters
     ----------
     activation : str
-        name of activation function to use.
+        Name of activation function to use.
         See :func:`~mxnet.ndarray.Activation` for available choices.
 
 
@@ -164,6 +164,13 @@ class Dropout(HybridBlock):
     rate : float
         Fraction of the input units to drop. Must be a number between 0 and 1.
 
+
+    Input shape:
+        Arbitrary.
+
+    Output shape:
+        Same shape as input.
+
     References
     ----------
         `Dropout: A Simple Way to Prevent Neural Networks from Overfitting
@@ -179,14 +186,14 @@ class Dropout(HybridBlock):
 
 class BatchNorm(HybridBlock):
     """Batch normalization layer (Ioffe and Szegedy, 2014).
-    Normalize the input at each batch, i.e. applies a transformation
+    Normalizes the input at each batch, i.e. applies a transformation
     that maintains the mean activation close to 0 and the activation
     standard deviation close to 1.
 
     Parameters
     ----------
     axis : int, default 1
-        The axis that should be normalized. This is ypically the channels
+        The axis that should be normalized. This is typically the channels
         (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
         set `axis=1` in `BatchNorm`. If `layout='NHWC'`, then set `axis=3`.
     momentum: float, default 0.9
@@ -211,7 +218,7 @@ class BatchNorm(HybridBlock):
         Initializer for the moving variance.
     in_channels : int, default 0
         Number of channels (feature maps) in input data. If not specified,
-        initialization will be defered to the first time `forward` is called
+        initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
 
 
@@ -290,7 +297,7 @@ class Embedding(HybridBlock):
     dtype : str or np.dtype, default 'float32'
         Data type of output embeddings.
     weight_initializer : Initializer
-        Initializer for the `embeddings` matrix
+        Initializer for the `embeddings` matrix.
 
 
     Input shape:

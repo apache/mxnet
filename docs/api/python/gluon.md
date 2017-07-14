@@ -196,17 +196,15 @@ in Python and then deploy with symbolic graph in C++ and Scala.
 
 ```eval_rst
 .. currentmodule:: mxnet.gluon.loss
+.. autoclass:: mxnet.gluon.loss.L2Loss
+    :members:
+.. autoclass:: mxnet.gluon.loss.L1Loss
+    :members:
+.. autoclass:: mxnet.gluon.loss.SoftmaxCrossEntropyLoss
+    :members:
+.. autoclass:: mxnet.gluon.loss.KLDivLoss
+    :members:
 ```
-
-
-```eval_rst
-.. automethod:: mxnet.gluon.loss.custom_loss
-.. automethod:: mxnet.gluon.loss.multitask_loss
-.. automethod:: mxnet.gluon.loss.l1_loss
-.. automethod:: mxnet.gluon.loss.l2_loss
-.. automethod:: mxnet.gluon.loss.softmax_cross_entropy_loss
-```
-
 
 ## Utilities
 

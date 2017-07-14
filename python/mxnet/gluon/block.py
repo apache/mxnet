@@ -20,7 +20,7 @@ class _BlockScope(object):
 
     @staticmethod
     def create(prefix, params, hint):
-        """Create prefix and params for new `Block`."""
+        """Creates prefix and params for new `Block`."""
         current = _BlockScope._current
         if current is None:
             if prefix is None:
@@ -91,8 +91,8 @@ class Block(object):
     """Base class for all neural network layers and models. Your models should
     subclass this class.
 
-    `Block`s can be nested recursively in a tree structure. You can create and
-    assign child `Block`s as regular attributes::
+    `Block` can be nested recursively in a tree structure. You can create and
+    assign child `Block` as regular attributes::
 
         from mxnet.gluon import Block, nn
         from mxnet import ndarray as F
@@ -115,7 +115,7 @@ class Block(object):
         model(F.zeros((10, 10), ctx=mx.cpu(0)))
 
 
-    Child `Block`s assigned this way will be registered and `collect_params`
+    Child `Block` assigned this way will be registered and `collect_params`
     will collect their Parameters recursively.
 
     Parameters
@@ -125,7 +125,7 @@ class Block(object):
         Parameters and child `Block`s in this `Block`'s `name_scope`. Prefix
         should be unique within one model to prevent name collisions.
     params : ParameterDict or None
-        ParameterDict for sharing weights with the new `Block`. For example,
+        `ParameterDict` for sharing weights with the new `Block`. For example,
         if you want `dense1` to share `dense0`'s weights, you can do::
 
             dense0 = nn.Dense(20)
@@ -152,7 +152,7 @@ class Block(object):
         return self._params
 
     def collect_params(self):
-        """Returns a ParameterDict containing this `Block` and all of its
+        """Returns a `ParameterDict` containing this `Block` and all of its
         children's Parameters."""
         ret = ParameterDict(self._params.prefix)
         ret.update(self.params)
@@ -162,19 +162,19 @@ class Block(object):
 
     @property
     def prefix(self):
-        """Prefix of this Block."""
+        """Prefix of this `Block`."""
         return self._prefix
 
     @property
     def name(self):
-        """Name of this Block, without '_' in the end."""
+        """Name of this `Block`, without '_' in the end."""
         if self.prefix.endswith('_'):
             return self.prefix[:-1]
         return self.prefix
 
     def name_scope(self):
-        """Returns a name space object managing child `Block` and parameter
-        names. Should be used by a `with` statement::
+        """Returns a name space object managing a child `Block` and parameter
+        names. Should be used within a `with` statement::
 
             with self.name_scope():
                 self.dense = nn.Dense(20)
@@ -182,12 +182,12 @@ class Block(object):
         return self._scope
 
     def register_child(self, block):
-        """Register block as a child of self. `Block`s assigned to self as
+        """Registers block as a child of self. `Block`s assigned to self as
         attributes will be registered automatically."""
         self._children.append(block)
 
     def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False):
-        """Initialize `Parameter`s of this Block and its children.
+        """Initializes `Parameter`s of this `Block` and its children.
 
         Equivalent to `block.collect_params().initialize(...)`
         """
@@ -210,7 +210,7 @@ class Block(object):
         return self.forward(*args)
 
     def forward(self, *args):
-        """Override to implement forward computation using NDArray. Only
+        """Overrides to implement forward computation using `NDArray`. Only
         accepts positional arguments.
 
         Parameters
@@ -231,10 +231,13 @@ class HybridBlock(Block):
     expressions like random numbers or intermediate results, since they change
     the graph structure for each iteration.
 
-    Before activated with `hybridize()`, `HybridBlock` works just like normal
+    Before activating with `hybridize()`, `HybridBlock` works just like normal
     `Block`. After activation, `HybridBlock` will create a symbolic graph
-    representing the forward computation and cache it. On subsequent forwards
+    representing the forward computation and cache it. On subsequent forwards,
     the cached graph will be used instead of `hybrid_forward`.
+
+    Refer `Hybrid tutorial <http://mxnet.io/tutorials/gluon/hybrid.html>`_ to see
+    the end-to-end usage.
     """
     def __init__(self, prefix=None, params=None):
         super(HybridBlock, self).__init__(prefix=prefix, params=params)
@@ -288,7 +291,7 @@ class HybridBlock(Block):
         return self._cached_graph
 
     def infer_shape(self, *args):
-        """Infer shape of Parameters from inputs."""
+        """Infers shape of Parameters from inputs."""
         syms, out = self._get_graph(*args)
         args, _, = _flatten(args)
         arg_shapes, _, aux_shapes = out.infer_shape(
@@ -324,7 +327,7 @@ class HybridBlock(Block):
 
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either
-        NDArray or Symbol."""
+        `NDArray` or `Symbol`."""
         if isinstance(x, NDArray):
             if self._active and self._cached_op is None:
                 self._build_cache(x, *args)
@@ -348,7 +351,7 @@ class HybridBlock(Block):
             return self.hybrid_forward(symbol, x, *args, **params)
 
     def hybrid_forward(self, F, x, *args, **kwargs):
-        """Override to construct symbolic graph for this `Block`.
+        """Overrides to construct symbolic graph for this `Block`.
 
         Parameters
         ----------
