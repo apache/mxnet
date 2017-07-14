@@ -170,6 +170,12 @@ void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs,
   std::vector<OpReqType> grad_reqs;
   std::unordered_map<const nnvm::Node*, OpStatePtr> saved_states;
   AGDFSVisit(heads, [&](const AGNodePtr& n) {
+      CHECK(n->nn_node != nullptr)
+          << "Node is differentiated twice without retaining graph the first time. "
+          << "This usually happens when you want to differentiate a graph twice but "
+          << "forgot to set retain_graph=True the first time. If you are training "
+          << "recurrent model (like LSTMs) maybe you forgot to detach the hidden "
+          << "state from the previous iteration before feeding it to the next iteration.";
       if (n->nn_node->is_variable()) {
         vlist.push_back(n);
       } else {
@@ -187,6 +193,7 @@ void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs,
       }
     });
 
+  bool has_writeto = false;
   for (const auto& n : vlist) {
     if (mutable_set.count(n.get())) {
       aux_states.push_back(n->outputs[0]);
@@ -197,6 +204,7 @@ void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs,
       args.push_back(n->outputs[0]);
       args_grad.push_back(n->out_grads[0]);
       grad_reqs.push_back(n->grad_req);
+      has_writeto = has_writeto || n->grad_req == kWriteTo;
     }
   }
 
@@ -232,6 +240,13 @@ void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs,
     for (auto& i : heads) {
       i.ag_node->clear_history();
     }
+  } else if (has_writeto) {
+    LOG(INFO)
+        << "Warning: when calling backward with retain_graph=True, grad_req for "
+        << "Parameters should be set to 'add'. Otherwise the second backward "
+        << "will over-write gradients from the first backward. Also remember "
+        << "to manually set gradients to zero with zero_grad before starting the "
+        << "next iteration.";
   }
 }
 

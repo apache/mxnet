@@ -262,13 +262,11 @@ class HybridBlock(Block):
 
     def register_child(self, block):
         if not isinstance(block, HybridBlock):
-            if isinstance(block, Sequential):
-                raise ValueError(
-                    "Children of HybridBlock must also be HybridBlock. " \
-                    "Please use HybridSequential instead of Sequential.")
             raise ValueError(
                 "Children of HybridBlock must also be HybridBlock, " \
-                "but %s has type %s."%(str(block), str(type(block))))
+                "but %s has type %s. If you are using Sequential, " \
+                "please try HybridSequential instead"%(
+                    str(block), str(type(block))))
         super(HybridBlock, self).register_child(block)
 
     def hybridize(self, active=True):
