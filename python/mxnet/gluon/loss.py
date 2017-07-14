@@ -13,20 +13,20 @@ def _apply_weighting(F, loss, weight=None, sample_weight=None):
     Parameters
     ----------
     loss : Symbol
-        the loss to be weighted.
+        The loss to be weighted.
     weight : float or None
-        global scalar weight for loss
+        Global scalar weight for loss.
     sample_weight : Symbol or None
-        per sample weighting. Must be broadcastable to
+        Per sample weighting. Must be broadcastable to
         the same shape as loss. For example, if loss has
         shape (64, 10) and you want to weight each sample
-        in the batch separately, sample_weight should have
-        shape (64, 1)
+        in the batch separately, `sample_weight` should have
+        shape (64, 1).
 
     Returns
     -------
     loss : Symbol
-        weighted loss
+        Weighted loss
     """
     if sample_weight is not None:
         loss = F.broadcast_mul(loss, sample_weight)
@@ -39,23 +39,23 @@ def _apply_weighting(F, loss, weight=None, sample_weight=None):
 
 
 class L2Loss(HybridBlock):
-    """Calculate the mean squared error between output and label:
+    """Calculates the mean squared error between output and label:
 
     .. math::
         L = \\frac{1}{2}\\sum_i \\Vert {output}_i - {label}_i \\Vert^2.
 
-    output and label can have arbitrary shape as long as they have the same
+    Output and label can have arbitrary shape as long as they have the same
     number of elements.
 
     Parameters
     ----------
     weight : float or None
-        global scalar weight for loss
+        Global scalar weight for loss.
     sample_weight : Symbol or None
-        per sample weighting. Must be broadcastable to
+        Per sample weighting. Must be broadcastable to
         the same shape as loss. For example, if loss has
         shape (64, 10) and you want to weight each sample
-        in the batch, sample_weight should have shape (64, 1)
+        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
     """
@@ -77,22 +77,22 @@ class L2Loss(HybridBlock):
 
 
 class L1Loss(HybridBlock):
-    """Calculate the mean absolute error between output and label:
+    """Calculates the mean absolute error between output and label:
 
     .. math::
         L = \\frac{1}{2}\\sum_i \\vert {output}_i - {label}_i \\vert.
 
-    output and label must have the same shape.
+    Output and label must have the same shape.
 
     Parameters
     ----------
     weight : float or None
-        global scalar weight for loss
+        Global scalar weight for loss.
     sample_weight : Symbol or None
-        per sample weighting. Must be broadcastable to
+        Per sample weighting. Must be broadcastable to
         the same shape as loss. For example, if loss has
         shape (64, 10) and you want to weight each sample
-        in the batch, sample_weight should have shape (64, 1)
+        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
     """
@@ -114,19 +114,19 @@ class L1Loss(HybridBlock):
 
 
 class SoftmaxCrossEntropyLoss(HybridBlock):
-    """Compute the softmax cross entropy loss.
+    """Computes the softmax cross entropy loss.
 
-    If sparse_label is True, label should contain integer category indicators:
+    If `sparse_label` is `True`, label should contain integer category indicators:
 
     .. math::
         p = {softmax}({output})
 
         L = -\\sum_i {log}(p_{i,{label}_i})
 
-    label's shape should be output's shape without the `axis` dimension. i.e. for
-    output.shape = (1,2,3,4) and axis = 2, label.shape should be (1,2,4)
+    Label's shape should be output's shape without the `axis` dimension. i.e. for
+    `output.shape` = (1,2,3,4) and axis = 2, `label.shape` should be (1,2,4).
 
-    If sparse_label is False, label should cantain probability distribution
+    If `sparse_label` is `False`, label should contain probability distribution
     with the same shape as output:
 
     .. math::
@@ -137,19 +137,19 @@ class SoftmaxCrossEntropyLoss(HybridBlock):
     Parameters
     ----------
     axis : int, default -1
-        The axis to sum over when computing softmax and entropy
+        The axis to sum over when computing softmax and entropy.
     sparse_label : bool, default True
-        whether label is a integer array instead of probability distribution
+        Whether label is an integer array instead of probability distribution.
     from_logits : bool, default False
-        whether input is log probability (usually from log_softmax) instead
+        Whether input is a log probability (usually from log_softmax) instead
         of unnormalized numbers.
     weight : float or None
-        global scalar weight for loss
+        Global scalar weight for loss.
     sample_weight : Symbol or None
-        per sample weighting. Must be broadcastable to
+        Per sample weighting. Must be broadcastable to
         the same shape as loss. For example, if loss has
         shape (64, 10) and you want to weight each sample
-        in the batch, sample_weight should have shape (64, 1)
+        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
     """
@@ -184,20 +184,21 @@ class KLDivLoss(HybridBlock):
         https://en.wikipedia.org/wiki/Kullback-Leibler_divergence
     .. math::
         L = 1/n \\sum_i (label_i * (log(label_i) - output_i))
-    label's shape should be the same as output's.
+
+    Label's shape should be the same as output's.
 
     Parameters
     ----------
-    from_logits : bool, default True
-        whether input is log probability (usually from log_softmax) instead
+    from_logits : bool, default is `True`
+        Whether the input is log probability (usually from log_softmax) instead
         of unnormalized numbers.
     weight : float or None
-        global scalar weight for loss
+        Global scalar weight for loss.
     sample_weight : Symbol or None
-        per sample weighting. Must be broadcastable to
+        Per sample weighting. Must be broadcastable to
         the same shape as loss. For example, if loss has
         shape (64, 10) and you want to weight each sample
-        in the batch, sample_weight should have shape (64, 1)
+        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
     """

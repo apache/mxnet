@@ -7,8 +7,8 @@ from ..model import _create_kvstore
 from .parameter import ParameterDict, Parameter
 
 class Trainer(object):
-    """Applies an Optimizer on a set of Parameters. Trainer should
-    be used together with autograd.
+    """Applies an `Optimizer` on a set of Parameters. Trainer should
+    be used together with `autograd`.
 
     Parameters
     ----------
@@ -17,7 +17,7 @@ class Trainer(object):
     optimizer : str or Optimizer
         The optimizer to use.
     optimizer_params : dict
-        key-word arguments to be passed to optimizer constructor. For example,
+        Key-word arguments to be passed to optimizer constructor. For example,
         `{'learning_rate': 0.1}`
     kvstore : str or KVStore
         kvstore type for multi-gpu and distributed training.
@@ -85,13 +85,13 @@ class Trainer(object):
         self._kv_initialized = True
 
     def step(self, batch_size, ignore_stale_grad=False):
-        """Make one step of parameter update. Should be called after
-        autograd.compute_gradient and outside of record() scope.
+        """Makes one step of parameter update. Should be called after
+        `autograd.compute_gradient` and outside of `record()` scope.
 
         Parameters
         ----------
         batch_size : int
-            Batch size of data processed. Gradient will be normalized by 1/batch_size.
+            Batch size of data processed. Gradient will be normalized by `1/batch_size`.
             Set this to 1 if you normalized loss manually with `loss = mean(loss)`.
         ignore_stale_grad : bool, optional, default=False
             If true, ignores Parameters with stale gradient (gradient that has not
