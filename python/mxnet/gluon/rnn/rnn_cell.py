@@ -76,11 +76,11 @@ class RecurrentCell(Block):
     ----------
     prefix : str, optional
         Prefix for names of `Block`s
-        (this prefix is also used for names of weights if `params` is None
+        (this prefix is also used for names of weights if `params` is `None`
         i.e. if `params` are being created and not reused)
     params : Parameter or None, optional
         Container for weight sharing between cells.
-        A new Parameter container is created if `params` is None.
+        A new Parameter container is created if `params` is `None`.
     """
     def __init__(self, prefix=None, params=None):
         super(RecurrentCell, self).__init__(prefix=prefix, params=params)
@@ -108,18 +108,18 @@ class RecurrentCell(Block):
         func : callable, default symbol.zeros
             Function for creating initial state.
 
-            For Symbol API, func can be symbol.zeros, symbol.uniform,
-            symbol.var etc. Use symbol.var if you want to directly
+            For Symbol API, func can be `symbol.zeros`, `symbol.uniform`,
+            `symbol.var etc`. Use `symbol.var` if you want to directly
             feed input as states.
 
-            For NDArray API, func can be ndarray.zeros, ndarray.ones, etc.
+            For NDArray API, func can be `ndarray.zeros`, `ndarray.ones`, etc.
         batch_size: int, default 0
             Only required for NDArray API. Size of the batch ('N' in layout)
             dimension of input.
 
         **kwargs :
-            additional keyword arguments passed to func. For example
-            mean, std, dtype, etc.
+            Additional keyword arguments passed to func. For example
+            `mean`, `std`, `dtype`, etc.
 
         Returns
         -------
@@ -142,17 +142,17 @@ class RecurrentCell(Block):
         return states
 
     def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
-        """Unroll an RNN cell across time steps.
+        """Unrolls an RNN cell across time steps.
 
         Parameters
         ----------
         length : int
-            number of steps to unroll
+            Number of steps to unroll.
         inputs : Symbol, list of Symbol, or None
             If `inputs` is a single Symbol (usually the output
             of Embedding symbol), it should have shape
-            (batch_size, length, ...) if layout == 'NTC',
-            or (length, batch_size, ...) if layout == 'TNC'.
+            (batch_size, length, ...) if `layout` is 'NTC',
+            or (length, batch_size, ...) if `layout` is 'TNC'.
 
             If `inputs` is a list of symbols (usually output of
             previous unroll), they should all have shape
@@ -160,17 +160,17 @@ class RecurrentCell(Block):
         begin_state : nested list of Symbol, optional
             Input states created by `begin_state()`
             or output state of another cell.
-            Created from `begin_state()` if None.
+            Created from `begin_state()` if `None`.
         layout : str, optional
             `layout` of input symbol. Only used if inputs
             is a single Symbol.
         merge_outputs : bool, optional
-            If False, return outputs as a list of Symbols.
-            If True, concatenate output across time steps
-            and return a single symbol with shape
-            (batch_size, length, ...) if layout == 'NTC',
-            or (length, batch_size, ...) if layout == 'TNC'.
-            If None, output whatever is faster
+            If `False`, returns outputs as a list of Symbols.
+            If `True`, concatenates output across time steps
+            and returns a single symbol with shape
+            (batch_size, length, ...) if layout is 'NTC',
+            or (length, batch_size, ...) if layout is 'TNC'.
+            If `None`, output whatever is faster.
 
         Returns
         -------
@@ -181,7 +181,7 @@ class RecurrentCell(Block):
 
         states : list of Symbol
             The new state of this RNN after this unrolling.
-            The type of this symbol is same as the output of begin_state().
+            The type of this symbol is same as the output of `begin_state()`.
         """
         self.reset()
 
@@ -207,12 +207,12 @@ class RecurrentCell(Block):
             return activation(inputs, **kwargs)
 
     def forward(self, inputs, states):
-        """Unroll the recurrent cell for one time step.
+        """Unrolls the recurrent cell for one time step.
 
         Parameters
         ----------
         inputs : sym.Variable
-            input symbol, 2D, batch_size * num_units
+            Input symbol, 2D, of shape (batch_size * num_units).
         states : list of sym.Variable
             RNN state from previous step or the output of begin_state().
 
@@ -223,8 +223,8 @@ class RecurrentCell(Block):
             for a single time step.
         states : list of Symbol
             The new state of this RNN after this unrolling.
-            The type of this symbol is same as the output of begin_state().
-            This can be used as input state to the next time step
+            The type of this symbol is same as the output of `begin_state()`.
+            This can be used as an input state to the next time step
             of this RNN.
 
         See Also
@@ -252,9 +252,9 @@ class RNNCell(HybridRecurrentCell):
     Parameters
     ----------
     hidden_size : int
-        number of units in output symbol
+        Number of units in output symbol
     activation : str or Symbol, default 'tanh'
-        type of activation function.
+        Type of activation function.
     i2h_weight_initializer : str or Initializer
         Initializer for the input weights matrix, used for the linear
         transformation of the inputs.
@@ -266,11 +266,11 @@ class RNNCell(HybridRecurrentCell):
     h2h_bias_initializer : str or Initializer
         Initializer for the bias vector.
     prefix : str, default 'rnn_'
-        prefix for name of `Block`s
-        (and name of weight if params is None)
+        Prefix for name of `Block`s
+        (and name of weight if params is `None`).
     params : Parameter or None
-        container for weight sharing between cells.
-        created if None.
+        Container for weight sharing between cells.
+        Created if `None`.
     """
     def __init__(self, hidden_size, activation='tanh',
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
@@ -320,7 +320,7 @@ class LSTMCell(HybridRecurrentCell):
     Parameters
     ----------
     hidden_size : int
-        number of units in output symbol.
+        Number of units in output symbol.
     i2h_weight_initializer : str or Initializer
         Initializer for the input weights matrix, used for the linear
         transformation of the inputs.
@@ -328,17 +328,17 @@ class LSTMCell(HybridRecurrentCell):
         Initializer for the recurrent weights matrix, used for the linear
         transformation of the recurrent state.
     i2h_bias_initializer : str or Initializer, default 'lstmbias'
-        Initializer for the bias vector. By default bias for the forget
+        Initializer for the bias vector. By default, bias for the forget
         gate is initialized to 1 while all other biases are initialized
         to zero.
     h2h_bias_initializer : str or Initializer
         Initializer for the bias vector.
     prefix : str, default 'lstm_'
-        prefix for name of `Block`s
-        (and name of weight if params is None)
+        Prefix for name of `Block`s
+        (and name of weight if params is `None`).
     params : Parameter or None
-        container for weight sharing between cells.
-        created if None.
+        Container for weight sharing between cells.
+        Created if `None`.
     """
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
@@ -404,7 +404,7 @@ class GRUCell(HybridRecurrentCell):
     Parameters
     ----------
     hidden_size : int
-        number of units in output symbol.
+        Number of units in output symbol.
     i2h_weight_initializer : str or Initializer
         Initializer for the input weights matrix, used for the linear
         transformation of the inputs.
@@ -417,10 +417,10 @@ class GRUCell(HybridRecurrentCell):
         Initializer for the bias vector.
     prefix : str, default 'gru_'
         prefix for name of `Block`s
-        (and name of weight if params is None)
+        (and name of weight if params is `None`).
     params : Parameter or None
-        container for weight sharing between cells.
-        created if None.
+        Container for weight sharing between cells.
+        Created if `None`.
     """
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
@@ -481,12 +481,12 @@ class GRUCell(HybridRecurrentCell):
 
 
 class SequentialRNNCell(RecurrentCell):
-    """Sequantially stacking multiple RNN cells."""
+    """Sequentially stacking multiple RNN cells."""
     def __init__(self, prefix=None, params=None):
         super(SequentialRNNCell, self).__init__(prefix=prefix, params=params)
 
     def add(self, cell):
-        """Append a cell into the stack.
+        """Appends a cell into the stack.
 
         Parameters
         ----------
@@ -540,12 +540,12 @@ class SequentialRNNCell(RecurrentCell):
 
 
 class DropoutCell(HybridRecurrentCell):
-    """Apply dropout on input.
+    """Applies dropout on input.
 
     Parameters
     ----------
     dropout : float
-        percentage of elements to drop out, which
+        Percentage of elements to drop out, which
         is 1 - percentage to retain.
     """
     def __init__(self, dropout, prefix=None, params=None):
@@ -582,7 +582,7 @@ class ModifierCell(HybridRecurrentCell):
     on it (e.g. Zoneout), and returns a new cell.
 
     After applying modifiers the base cell should
-    no longer be called directly. The modifer cell
+    no longer be called directly. The modifier cell
     should be used instead.
     """
     def __init__(self, base_cell):
@@ -612,7 +612,7 @@ class ModifierCell(HybridRecurrentCell):
 
 
 class ZoneoutCell(ModifierCell):
-    """Apply Zoneout on base cell."""
+    """Applies Zoneout on base cell."""
     def __init__(self, base_cell, zoneout_outputs=0., zoneout_states=0.):
         assert not isinstance(base_cell, BidirectionalCell), \
             "BidirectionalCell doesn't support zoneout since it doesn't support step. " \
@@ -691,9 +691,9 @@ class BidirectionalCell(HybridRecurrentCell):
     Parameters
     ----------
     l_cell : RecurrentCell
-        cell for forward unrolling
+        Cell for forward unrolling
     r_cell : RecurrentCell
-        cell for backward unrolling
+        Cell for backward unrolling
     """
     def __init__(self, l_cell, r_cell, output_prefix='bi_'):
         super(BidirectionalCell, self).__init__(prefix='', params=None)
