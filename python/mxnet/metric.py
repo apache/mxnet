@@ -380,7 +380,7 @@ class Accuracy(EvalMetric):
             pred_label = pred_label.asnumpy().astype('int32')
             label = label.asnumpy().astype('int32')
 
-            _check_shapes_equal(label, pred_label)
+            _check_lengths_equal(label, pred_label)
 
             self.sum_metric += (pred_label.flat == label.flat).sum()
             self.num_inst += len(pred_label.flat)
@@ -448,7 +448,7 @@ class TopKAccuracy(EvalMetric):
             assert(len(pred_label.shape) <= 2), 'Predictions should be no more than 2 dims'
             pred_label = numpy.argsort(pred_label.asnumpy().astype('float32'), axis=1)
             label = label.asnumpy().astype('int32')
-            _check_shapes_equal(label, pred_label)
+            _check_lengths_equal(label, pred_label)
             num_samples = pred_label.shape[0]
             num_dims = len(pred_label.shape)
             if num_dims == 1:
@@ -523,7 +523,7 @@ class F1(EvalMetric):
             label = label.asnumpy().astype('int32')
             pred_label = numpy.argmax(pred, axis=1)
 
-            _check_shapes_equal(label, pred)
+            _check_lengths_equal(label, pred)
             if len(numpy.unique(label)) > 2:
                 raise ValueError("F1 currently only supports binary classification.")
 
@@ -629,7 +629,7 @@ class Perplexity(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        assert len(labels) == len(preds)
+        _check_lengths_equal(labels, preds)
         loss = 0.
         num = 0
         for label, pred in zip(labels, preds):
@@ -893,7 +893,7 @@ class CrossEntropy(EvalMetric):
         _check_lengths_equal(labels, preds)
 
         for label, pred in zip(labels, preds):
-            _check_shapes_equal(label, pred)
+            _check_lengths_equal(label, pred)
             label = label.asnumpy()
             pred = pred.asnumpy()
 
