@@ -9,6 +9,7 @@
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/operator.h>
+#include <mxnet/graph_attr_types.h>
 #include <nnvm/graph.h>
 #include <nnvm/graph_attr_types.h>
 #include <vector>
@@ -145,7 +146,7 @@ Graph InferType(Graph graph,
  *         The index of StorageTypeVector is given by graph.indexed_graph().entry_id.
  */
 Graph InferStorageType(Graph graph,
-                       nnvm::StorageTypeVector storage_type_inputs,
+                       StorageTypeVector storage_type_inputs,
                        const std::string& storage_type_attr_key = "");
 
 }  // namespace exec
