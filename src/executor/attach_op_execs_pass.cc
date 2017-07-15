@@ -6,6 +6,7 @@
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
 #include <mxnet/op_attr_types.h>
+#include <mxnet/graph_attr_types.h>
 #include <nnvm/graph_attr_types.h>
 #include "../common/utils.h"
 #include "./exec_pass.h"

@@ -5,6 +5,7 @@
  */
 
 #include <mxnet/op_attr_types.h>
+#include <mxnet/graph_attr_types.h>
 #include "./exec_pass.h"
 
 namespace mxnet {
@@ -314,7 +315,7 @@ nnvm::Graph InferType(nnvm::Graph graph,
 }
 
 nnvm::Graph InferStorageType(nnvm::Graph graph,
-                             nnvm::StorageTypeVector storage_type_inputs,
+                             StorageTypeVector storage_type_inputs,
                              const std::string& storage_type_attr_key) {
   using dmlc::any;
   if (storage_type_inputs.size() != 0) {
