@@ -76,14 +76,14 @@ class KVStore {
  private:
   explicit KVStore(KVStoreHandle handle)
       : handle_(handle), optimizer_set_(false) {}
-  // the internal callback to kvstore.
-  NDArray CreateState(int index, const NDArray& weight) const;
+  // the internal callback to kvstore. This might return NULL
+  Rcpp::List CreateState(int index, const NDArray& weight) const;
   /*! \brief internal KVStore handle */
   KVStoreHandle handle_;
   /*! \brief Whether optimizer is setted*/
   bool optimizer_set_;
   /*! \brief The internal state */
-  std::map<int, NDArray> states_;
+  std::map<int, Rcpp::List> states_;
   /*! \brief Function to create state */
   Rcpp::RObject fcreate_state_;
   /*! \brief Function to perform update */
