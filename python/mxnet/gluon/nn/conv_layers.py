@@ -111,6 +111,26 @@ class _Conv(HybridBlock):
             act = self.act(act)
         return act
 
+    def __repr__(self):
+        s = '{name}({mapping}, kernel_size={kernel}, stride={stride}'
+        len_kernel_size = len(self._kwargs['kernel'])
+        if self._kwargs['pad'] != (0,) * len_kernel_size:
+            s += ', padding={pad}'
+        if self._kwargs['dilate'] != (1,) * len_kernel_size:
+            s += ', dilation={dilate}'
+        if hasattr(self, 'out_pad') and self.out_pad != (0,) * len_kernel_size:
+            s += ', output_padding={out_pad}'.format(out_pad=self.out_pad)
+        if self._kwargs['num_group'] != 1:
+            s += ', groups={num_group}'
+        if self.bias is None:
+            s += ', bias=False'
+        s += ')'
+        return s.format(name=self.__class__.__name__,
+                        mapping=self._channels if not self._in_channels
+                        else '{0} -> {1}'.format(self._in_channels,
+                                                 self._channels),
+                        **self._kwargs)
+
 
 class Conv1D(_Conv):
     """1D convolution layer (e.g. temporal convolution).
@@ -430,6 +450,7 @@ class Conv1DTranspose(_Conv):
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
             bias_initializer, op_name='Deconvolution', adj=output_padding, **kwargs)
+        self.outpad = output_padding
 
 
 class Conv2DTranspose(_Conv):
@@ -515,6 +536,7 @@ class Conv2DTranspose(_Conv):
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
             bias_initializer, op_name='Deconvolution', adj=output_padding, **kwargs)
+        self.outpad = output_padding
 
 
 class Conv3DTranspose(_Conv):
@@ -600,6 +622,7 @@ class Conv3DTranspose(_Conv):
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
             op_name='Deconvolution', adj=output_padding, **kwargs)
+        self.outpad = output_padding
 
 
 class _Pooling(HybridBlock):
@@ -620,6 +643,12 @@ class _Pooling(HybridBlock):
 
     def hybrid_forward(self, F, x):
         return F.Pooling(x, **self._kwargs)
+
+    def __repr__(self):
+        s = '{name}(size={kernel}, stride={stride}, padding={pad}, ceil_mode={ceil_mode})'
+        return s.format(name=self.__class__.__name__,
+                        ceil_mode=self._kwargs['pooling_convention'] == 'full',
+                        **self._kwargs)
 
 
 class MaxPool1D(_Pooling):
