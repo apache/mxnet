@@ -648,7 +648,7 @@ def register(reg_name):
                     n_aux = len(op_prop.list_auxiliary_states())
                     assert num_tensor == n_in + n_out + n_aux
 
-                    types = [_DTYPE_MX_TO_NP[tensor_types[i]] for i in range(n_in)]
+                    types = [_DTYPE_MX_TO_NP[0] for i in range(n_in)]
                     ret = op_prop.infer_type(types)
                     if len(ret) == 2:
                         itype, otype = ret
