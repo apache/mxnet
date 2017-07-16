@@ -19,10 +19,8 @@ class RNNModel(gluon.Block):
                 self.rnn = rnn.RNN(num_hidden, num_layers, dropout=dropout,
                                    input_size=num_embed)
             elif mode == 'lstm':
-                lstmbias = mx.init.LSTMBias(forget_bias=0.0)
                 self.rnn = rnn.LSTM(num_hidden, num_layers, dropout=dropout,
-                                    input_size=num_embed,
-                                    i2h_bias_initializer=lstmbias)
+                                    input_size=num_embed)
             elif mode == 'gru':
                 self.rnn = rnn.GRU(num_hidden, num_layers, dropout=dropout,
                                    input_size=num_embed)
