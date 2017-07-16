@@ -142,7 +142,7 @@ if __name__ == '__main__':
         elif decoding_method == METHOD_SIMPLE:
             for (ind, utt) in enumerate(batch.utt_id):
                 if utt != "GAP_UTT":
-                    posteriors = posteriors[:batch.utt_len,1:] - np.log(data_test.label_mean[1:]).T
+                    posteriors = posteriors[:batch.utt_len[0],1:] - np.log(data_test.label_mean[1:]).T
                     kaldiWriter.write(utt, posteriors)
         else:
             outputs = module.get_outputs()
