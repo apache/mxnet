@@ -38,7 +38,40 @@ def _apply_weighting(F, loss, weight=None, sample_weight=None):
     return loss
 
 
-class L2Loss(HybridBlock):
+class Loss(HybridBlock):
+    """Base class for loss.
+
+    Parameters
+    ----------
+    weight : float or None
+        Global scalar weight for loss.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+    """
+    def __init__(self, weight, batch_axis, **kwargs):
+        super(Loss, self).__init__(**kwargs)
+        self._weight = weight
+        self._batch_axis = batch_axis
+
+    def __repr__(self):
+        s = '{name}(batch_axis={_batch_axis}, w={_weight})'
+        return s.format(name=self.__class__.__name__, **self.__dict__)
+
+    def hybrid_forward(self, F, x, *args, **kwargs):
+        """Overrides to construct symbolic graph for this `Block`.
+
+        Parameters
+        ----------
+        x : Symbol or NDArray
+            The first input tensor.
+        *args : list of Symbol or list of NDArray
+            Additional input tensors.
+        """
+        # pylint: disable= invalid-name
+        raise NotImplementedError
+
+
+class L2Loss(Loss):
     """Calculates the mean squared error between output and label:
 
     .. math::
@@ -60,9 +93,7 @@ class L2Loss(HybridBlock):
         The axis that represents mini-batch.
     """
     def __init__(self, weight=1., batch_axis=0, **kwargs):
-        super(L2Loss, self).__init__(**kwargs)
-        self._weight = weight
-        self._batch_axis = batch_axis
+        super(L2Loss, self).__init__(weight, batch_axis, **kwargs)
 
     def hybrid_forward(self, F, output, label, sample_weight=None):
         if F is ndarray:
@@ -76,7 +107,7 @@ class L2Loss(HybridBlock):
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
-class L1Loss(HybridBlock):
+class L1Loss(Loss):
     """Calculates the mean absolute error between output and label:
 
     .. math::
@@ -97,9 +128,7 @@ class L1Loss(HybridBlock):
         The axis that represents mini-batch.
     """
     def __init__(self, weight=None, batch_axis=0, **kwargs):
-        super(L1Loss, self).__init__(**kwargs)
-        self._weight = weight
-        self._batch_axis = batch_axis
+        super(L1Loss, self).__init__(weight, batch_axis, **kwargs)
 
     def hybrid_forward(self, F, output, label, sample_weight=None):
         if F is ndarray:
@@ -113,7 +142,7 @@ class L1Loss(HybridBlock):
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
-class SoftmaxCrossEntropyLoss(HybridBlock):
+class SoftmaxCrossEntropyLoss(Loss):
     """Computes the softmax cross entropy loss.
 
     If `sparse_label` is `True`, label should contain integer category indicators:
@@ -155,12 +184,10 @@ class SoftmaxCrossEntropyLoss(HybridBlock):
     """
     def __init__(self, axis=-1, sparse_label=True, from_logits=False, weight=None,
                  batch_axis=0, **kwargs):
-        super(SoftmaxCrossEntropyLoss, self).__init__(**kwargs)
+        super(SoftmaxCrossEntropyLoss, self).__init__(weight, batch_axis, **kwargs)
         self._axis = axis
         self._sparse_label = sparse_label
         self._from_logits = from_logits
-        self._weight = weight
-        self._batch_axis = batch_axis
 
     def hybrid_forward(self, F, output, label, sample_weight=None):
         if not self._from_logits:
@@ -173,7 +200,7 @@ class SoftmaxCrossEntropyLoss(HybridBlock):
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
-class KLDivLoss(HybridBlock):
+class KLDivLoss(Loss):
     """The Kullback-Leibler divergence loss.
 
     KL divergence is a useful distance measure for continuous distributions
@@ -203,10 +230,8 @@ class KLDivLoss(HybridBlock):
         The axis that represents mini-batch.
     """
     def __init__(self, from_logits=True, weight=None, batch_axis=0, **kwargs):
-        super(KLDivLoss, self).__init__(**kwargs)
+        super(KLDivLoss, self).__init__(weight, batch_axis, **kwargs)
         self._from_logits = from_logits
-        self._weight = weight
-        self._batch_axis = batch_axis
 
     def hybrid_forward(self, F, output, label, sample_weight=None):
         if not self._from_logits:

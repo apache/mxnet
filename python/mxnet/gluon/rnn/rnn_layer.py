@@ -62,6 +62,21 @@ class _RNNLayer(Block):
 
         self._unfused = self._unfuse()
 
+    def __repr__(self):
+        s = '{name}({mapping}, {_layout}'
+        if self._num_layers != 1:
+            s += ', num_layers={_num_layers}'
+        if self._dropout != 0:
+            s += ', dropout={_dropout}'
+        if self._dir == 2:
+            s += ', bidirectional'
+        s += ')'
+        mapping = ('{_input_size} -> {_hidden_size}'.format(**self.__dict__) if self._input_size
+                   else self._hidden_size)
+        return s.format(name=self.__class__.__name__,
+                        mapping=mapping,
+                        **self.__dict__)
+
     def state_info(self, batch_size=0):
         raise NotImplementedError
 
