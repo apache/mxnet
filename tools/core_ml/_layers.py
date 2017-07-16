@@ -22,8 +22,25 @@ def _get_node_shape(net, node_id):
 # FYI for images in CoreML channel, H, W in CoreML for image
 # FYI CoreML docs http://pythonhosted.org/coremltools/generated/coremltools.models.neural_network.html#module-coremltools.models.neural_network
 
-# TODO HIGH PRIORITY
-# We may want to think about only supporting symbolic API for now, given the simplicity
+# TODO LOWER PRIORITY (BUT STILL IMPORTANT)
+
+# mxnet.symbol.repeat -> builder.add_repeat to flatten and repeat the NDArray sequence
+
+# mxnet.symbol.Crop -> builder.add_crop to crop image along spacial dimensions
+
+# mxnet.symbol.Pad -> builder.add_padding putting 0's on height and width for tensor
+
+
+# TODO EVENTUALLY 
+
+# depthwise seperable convolution support through groups in builder.add_convolution
+# add_optional -> for all RNNs defining what goes in and out (to define beam search or if input is streaming)
+# mx.symbol.Embedding -> add_embedding takes indicies, word ids from dict that is outside coreml or 
+# in pipeline only if we have text mapping to indicies
+# FusedRNNCell -> add_bidirlstm
+#  add_unilstm -> reverse_input param true as second and concat on outputs
+# Do vanilla (0.9 mxnet) lstm, gru, vanilla_rnn
+
 
 def convert_reshape(net, node, model, builder):
     """Converts a reshape layer from mxnet to coreml.
@@ -59,49 +76,6 @@ def convert_reshape(net, node, model, builder):
 
     mode = 0 # CHANNEL_FIRST
     builder.add_reshape(name, input_name, output_name, target_shape, mode)
-
-
-# def convert_deconvolution(net, node, model, builder):
-#     """Convert a reshape layer from mxnet to coreml.
-
-#     Parameters
-#     ----------
-#     network: net
-#         A mxnet network object.
-
-#     layer: node
-#         Node to convert.
-
-#     model: model
-#         An model for MXNet
-
-#     builder: NeuralNetworkBuilder
-#         A neural network builder object.
-#     """
-
-#     CoreMl supports deconv layer as a parameter param for add_convolution
-#     mxnet.symbol.Deconvolution -> builder.add_convolution
-    
-
-# TODO LOWER PRIORITY (BUT STILL IMPORTANT)
-
-# mxnet.symbol.repeat -> builder.add_repeat to flatten and repeat the NDArray sequence
-
-# mxnet.symbol.Crop -> builder.add_crop to crop image along spacial dimensions
-
-# mxnet.symbol.Pad -> builder.add_padding putting 0's on height and width for tensor
-
-
-# TODO EVENTUALLY 
-
-# depthwise seperable convolution support through groups in builder.add_convolution
-# add_optional -> for all RNNs defining what goes in and out (to define beam search or if input is streaming)
-# mx.symbol.Embedding -> add_embedding takes indicies, word ids from dict that is outside coreml or 
-# in pipeline only if we have text mapping to indicies
-# FusedRNNCell -> add_bidirlstm
-#  add_unilstm -> reverse_input param true as second and concat on outputs
-# Do vanilla (0.9 mxnet) lstm, gru, vanilla_rnn
-
 
 
 def convert_transpose(net, node, model, builder):
@@ -295,7 +269,6 @@ def convert_convolution(net, node, model, builder):
     inputs = node['inputs']
     outputs = node['outputs']
     args = model.arg_params
-
     from ast import literal_eval
 
     if 'no_bias' in param.keys():
@@ -467,3 +440,77 @@ def convert_concat(net, node, model, builder):
     mode = 'CONCAT'
     builder.add_elementwise(name = name, input_names = input_names,
             output_name = output_name, mode = mode)
+
+def convert_deconvolution(net, node, model, builder):
+    """Convert a deconvolution layer from mxnet to coreml.
+
+    Parameters
+    ----------
+    network: net
+        A mxnet network object.
+
+    layer: node
+        Node to convert.
+
+    model: model
+        An model for MXNet
+
+    builder: NeuralNetworkBuilder
+        A neural network builder object.
+    """
+    input_name, output_name = _get_input_output_name(net, node)
+    name = node['name']
+    param = node['attr']
+    inputs = node['inputs']
+    outputs = node['outputs']
+    args = model.arg_params
+
+    from ast import literal_eval
+
+    if 'no_bias' in param.keys():
+        has_bias = not literal_eval(param['no_bias'])
+    else:
+        has_bias = False
+
+    border_mode = "same" if literal_eval(param['pad']) != (0, 0) else "valid"
+    n_filters = int(param['num_filter'])
+
+    # TODO output_shape is needed by CoreML. Calculate it automatically if target_shape is not provided.
+    target_shape = literal_eval(param['target_shape'])
+    output_shape = (int(target_shape[0]), int(target_shape[1]))
+
+    W = args[_get_node_name(net, inputs[1][0])].asnumpy()
+    if has_bias:
+        Wb = args[_get_node_name(net, inputs[2][0])].asnumpy()
+    else:
+        Wb = None
+
+    stride_height, stride_width = literal_eval(param['stride'])
+    kernel_height, kernel_width = literal_eval(param['kernel'])
+
+    W = W.transpose((2, 3, 0, 1))
+    builder.add_convolution(name = name,
+             kernel_channels = W.shape[2],
+             output_channels = n_filters,
+             height = kernel_height,
+             width = kernel_width,
+             stride_height = stride_height,
+             stride_width = stride_width,
+             border_mode = border_mode,
+             groups = 1,
+             W = W,
+             b = Wb,
+             has_bias = has_bias,
+             is_deconv = True,
+             output_shape = output_shape,
+             input_name = input_name,
+             output_name = output_name)
+
+    # Add padding if there is any
+    convLayer = builder.nn_spec.layers[-1].convolution
+#    TODO Can we remove this code? 
+#    if border_mode == "same":
+#         pad = literal_eval(param['pad'])
+#         for i in range(len(pad)):
+#             convLayer.valid.paddingAmounts.borderAmounts[i].startEdgeSize = pad[i]
+#             convLayer.valid.paddingAmounts.borderAmounts[i].endEdgeSize = pad[i]

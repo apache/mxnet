@@ -501,8 +501,262 @@ class MXNetSingleLayerTest(unittest.TestCase):
         prediction = model.predict(_mxnet_remove_batch(input_data));
         self.assertEqual(prediction['classLabel'], 'Category4')
 
+    def test_really_tiny_deconv_random_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 1, 10, 10)
+        num_filter = 1
+        kernel = (1 ,1)
+        stride = (1, 1)
+        pad = (0, 0)
+        target_shape = (10, 10) # TODO target_shape needed by CoreML. Do this automatically during conversion.
+
+        # Define a model
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
+                stride = stride, pad = pad, target_shape=target_shape, name = 'deconv_1')
+        engine = net.simple_bind(ctx = mx.cpu(), data = input_shape)
+
+        # Set some random weights
+        set_weights(net, engine, mode = 'random')
+
+        # Test the mxnet model
+        self._test_mxnet_model(net, engine, data = input_shape)
+
+    def test_tiny_deconv_ones_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 1, 10, 10)
+        num_filter = 1
+        kernel = (5 ,5)
+        stride = (1, 1)
+        pad = (0, 0)
+        target_shape = (14, 14) # TODO target_shape needed by CoreML. Do this automatically during conversion.
+
+        # Define a model
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
+                stride = stride, pad = pad, target_shape=target_shape, name = 'deconv_1')
+        engine = net.simple_bind(ctx = mx.cpu(), data = input_shape)
+
+        # Set some random weights
+        set_weights(net, engine, mode = 'ones')
+
+        # Test the mxnet model
+        self._test_mxnet_model(net, engine, data = input_shape)
+
+    def test_tiny_deconv_random_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 1, 10, 10)
+        num_filter = 1
+        kernel = (5 ,5)
+        stride = (1, 1)
+        pad = (0, 0)
+        target_shape = (14, 14) # TODO target_shape needed by CoreML. Do this automatically during conversion.
+
+        # define a model
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
+                stride = stride, pad = pad, target_shape=target_shape, name = 'deconv_1')
+        engine = net.simple_bind(ctx = mx.cpu(), data = input_shape)
+
+        # set some random weights
+        set_weights(net, engine, mode = 'random')
+
+        # test the mxnet model
+        self._test_mxnet_model(net, engine, data = input_shape)
+
+    def test_tiny_asym_deconv_random_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 1, 10, 10)
+        num_filter = 1
+        kernel = (5 ,3)
+        stride = (1, 1)
+        pad = (0, 0)
+        target_shape = (14, 12) # TODO target_shape needed by CoreML. Do this automatically during conversion.
+
+        # define a model
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
+                stride = stride, pad = pad, target_shape=target_shape, name = 'deconv_1')
+        engine = net.simple_bind(ctx = mx.cpu(), data = input_shape)
+
+        # set some random weights
+        set_weights(net, engine, mode = 'random')
+
+        # test the mxnet model
+        self._test_mxnet_model(net, engine, data = input_shape)
+
+    def test_tiny_asym_deconv_random_asym_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 1, 28, 18)
+        num_filter = 16
+        kernel = (5 ,3)
+        stride = (1, 1)
+        pad = (0, 0)
+        dilate = (1, 1)
+        target_shape = (32, 20) # TODO target_shape needed by CoreML. Do this automatically during conversion.
+
+        # define a model
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
+                stride = stride, pad = pad, target_shape=target_shape, name = 'deconv_1', dilate = dilate)
+        net = mx.sym.Activation(net, name = 'tanh', act_type = "tanh")
+        engine = net.simple_bind(ctx = mx.cpu(), data = input_shape)
+
+        # set some random weights
+        set_weights(net, engine, mode = 'random')
+
+        # test the mxnet model
+        self._test_mxnet_model(net, engine, data = input_shape)
+
+    def test_tiny_deconv_pooling_random_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 1, 10, 10)
+        num_filter = 1
+        kernel = (5 ,5)
+        stride = (1, 1)
+        pad = (0, 0)
+        target_shape = (14, 14) # TODO target_shape needed by CoreML. Do this automatically during conversion.
+
+        # define a model
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
+                stride = stride, pad = pad, target_shape=target_shape, name = 'deconv_1')
+        net = mx.symbol.Pooling(data = net, kernel=kernel,
+                stride = stride, pad = pad, name = 'pool_1', pool_type = 'max')
+        engine = net.simple_bind(ctx = mx.cpu(), data = input_shape)
+
+        # set some random weights
+        set_weights(net, engine, mode = 'random')
+
+        # test the mxnet model
+        self._test_mxnet_model(net, engine, data = input_shape)
+
+    def test_really_tiny_deconv_random_3d_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 3, 10, 10)
+        num_filter = 1
+        kernel = (1 ,1)
+        stride = (1, 1)
+        pad = (0, 0)
+        target_shape = (10, 10) # TODO target_shape needed by CoreML. Do this automatically during conversion.
+
+        # define a model
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
+                stride = stride, pad = pad, target_shape=target_shape, name = 'conv_1')
+        engine = net.simple_bind(ctx = mx.cpu(), data = input_shape)
+
+        # set some random weights
+        set_weights(net, engine, mode = 'random')
+
+        # test the mxnet model
+        self._test_mxnet_model(net, engine, data = input_shape)
+
+    def test_really_tiny_deconv_random_input_multi_filter(self):
+        np.random.seed(1988)
+        input_shape = (1, 1, 10, 10)
+        num_filter = 64
+        kernel = (1 ,1)
+        stride = (1, 1)
+        pad = (0, 0)
+        target_shape = (10, 10) # TODO target_shape needed by CoreML. Do this automatically during conversion.
+
+        # define a model
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
+                stride = stride, pad = pad, target_shape=target_shape, name = 'deconv_1')
+        engine = net.simple_bind(ctx = mx.cpu(), data = input_shape)
+
+        # set some random weights
+        set_weights(net, engine, mode = 'random')
+
+        # test the mxnet model
+        self._test_mxnet_model(net, engine, data = input_shape)
+
+    def test_tiny_deconv_random_3d_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 3, 10, 10)
+        num_filter = 1
+        kernel = (5 ,5)
+        stride = (1, 1)
+        pad = (0, 0)
+        target_shape = (10, 10) # TODO target_shape needed by CoreML. Do this automatically during conversion.
+
+        # define a model
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
+                stride = stride, pad = pad, target_shape=target_shape, name = 'deconv_1')
+        engine = net.simple_bind(ctx = mx.cpu(), data = input_shape)
+
+        # set some random weights
+        set_weights(net, engine, mode = 'random')
+
+        # test the mxnet model
+        self._test_mxnet_model(net, engine, data = input_shape)
+
+    def test_tiny_deconv_random_input_multi_filter(self):
+        np.random.seed(1988)
+        input_shape = (1, 1, 10, 10)
+        num_filter = 64
+        kernel = (5 ,5)
+        stride = (1, 1)
+        pad = (0, 0)
+        target_shape = (10, 10) # TODO target_shape needed by CoreML. Do this automatically during conversion.
+
+        # define a model
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
+                stride = stride, pad = pad, target_shape=target_shape, name = 'conv_1')
+        engine = net.simple_bind(ctx = mx.cpu(), data = input_shape)
+
+        # set some random weights
+        set_weights(net, engine, mode = 'random')
+
+        # test the mxnet model
+        self._test_mxnet_model(net, engine, data = input_shape)
+
+    def test_deconv_random(self):
+        np.random.seed(1988)
+        input_shape = (1, 10, 4, 4)
+        num_filter = 3
+        kernel = (2 ,2)
+        stride = (1, 1)
+        pad = (0, 0)
+        target_shape = (5, 5) # TODO target_shape needed by CoreML. Do this automatically during conversion.
+        # define a model
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
+                stride = stride, pad = pad, no_bias = False, target_shape = target_shape, name = 'deconv_1')
+        engine = net.simple_bind(ctx = mx.cpu(), data = input_shape)
+
+        # set some random weights
+        set_weights(net, engine, mode = 'random')
+        # test the mxnet model
+        self._test_mxnet_model(net, engine, data = input_shape)
+
+    def test_deconv_random_all_inputs(self):
+        np.random.seed(1988)
+        input_shape = (1, 10, 5, 5)
+        num_filter = 3
+        kernel = (3 ,3)
+        stride = (2, 2)
+        pad = (2, 2) # TODO Both padding and target_shape don't go together.
+        dilate = (1, 1)
+        target_shape = (11, 11) # TODO target_shape needed by CoreML. Do this automatically during conversion.
+
+        # define a model
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
+                stride = stride, pad = pad, no_bias = False, target_shape = target_shape,
+                dilate = dilate, name = 'deconv_1')
+        engine = net.simple_bind(ctx = mx.cpu(), data = input_shape)
+
+        # set some random weights
+        set_weights(net, engine, mode = 'random')
+        # test the mxnet model
+        self._test_mxnet_model(net, engine, data = input_shape)
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(MXNetSingleLayerTest)
     unittest.TextTestRunner(verbosity=2).run(suite)
-

@@ -19,6 +19,7 @@ _MXNET_LAYER_REGISTRY  = {
     'BatchNorm'      : _layers.convert_batchnorm,
     'elemwise_add'   : _layers.convert_elementwise_add,
     'Reshape'        : _layers.convert_reshape,
+    'Deconvolution'  : _layers.convert_deconvolution,
 }
 
 _MXNET_SKIP_LAYERS = [
