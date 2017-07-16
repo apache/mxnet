@@ -14,12 +14,12 @@ def _mxnet_remove_batch(input_data):
         input_data[blob] = np.reshape(input_data[blob], input_data[blob].shape[1:])
     return input_data
 
-def _get_coreml_model(net, engine, model_path, input_shape,
+def _get_coreml_model(net, engine, model_path, input_shape, class_labels = None, mode = None,
             input_names = ['data'], output_names = ['output']):
     
     # TODO upgrade this to mxnet mod
     model = mx.model.FeedForward(net, engine, arg_params = engine.arg_dict)
-    spec = mxnet_converter.convert(model, **input_shape)
+    spec = mxnet_converter.convert(model, class_labels=class_labels, mode=mode, **input_shape)
     return coremltools.models.MLModel(spec)
 
 def set_weights(net, engine, mode = 'random'):
@@ -36,7 +36,7 @@ class MXNetSingleLayerTest(unittest.TestCase):
     """
     Unit test class for testing mxnet converter (converts model and generates preds on same data to assert they are the same).
     """
-    def _test_mxnet_model(self, net, engine, delta = 1e-3, **input_shape):
+    def _test_mxnet_model(self, net, engine, delta = 1e-3, class_labels = None, **input_shape):
 
         # Generate some dummy data
         input_data = {}
@@ -49,7 +49,7 @@ class MXNetSingleLayerTest(unittest.TestCase):
 
         # Get predictions from coreml
         model_path = os.path.join(tempfile.mkdtemp(), 'mxnet.mlmodel')
-        model = _get_coreml_model(net, engine, model_path, input_shape, input_data.keys())
+        model = _get_coreml_model(net, engine, model_path, input_shape, class_labels=class_labels, input_names=input_data.keys())
         coreml_preds = model.predict(_mxnet_remove_batch(input_data)).values()[0].flatten()
 
         # Check prediction accuracy
@@ -478,6 +478,28 @@ class MXNetSingleLayerTest(unittest.TestCase):
 
         # Test the mxnet model
         self._test_mxnet_model(net, engine, data = input_shape)
+
+    def test_tiny_synset_random_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 10)
+
+        # Define a model
+        net = mx.sym.Variable('data')
+        net = mx.sym.FullyConnected(data = net, name = 'fc1', num_hidden = 5)
+        net = mx.sym.SoftmaxOutput(net, name = 'softmax')
+        engine = net.simple_bind(ctx = mx.cpu(), data = input_shape)
+
+        # Set some random weights
+        set_weights(net, engine, mode = 'random')
+
+        model_path = os.path.join(tempfile.mkdtemp(), 'mxnet.mlmodel')
+        model = _get_coreml_model(net, engine, model_path, input_shape={'data':input_shape}, 
+                                  class_labels = ['Category1','Category2','Category3','Category4','Category5'],
+                                  mode = 'classifier', input_names = 'data')
+        input_data = {}
+        input_data['data'] = engine.arg_dict['data'].asnumpy()
+        prediction = model.predict(_mxnet_remove_batch(input_data));
+        self.assertEqual(prediction['classLabel'], 'Category4')
 
 
 if __name__ == '__main__':
