@@ -21,8 +21,8 @@ python data.py
 Example runs and the results:
 
 ```
-python train.py --cuda --nhid 800 --emsize 800 --dropout 0.5        # Test ppl of 75.9
-python train.py --cuda --nhid 1500 --emsize 1500 --dropout 0.7      # Test ppl of 72.4
+python train.py --cuda --tied --nhid 650 --emsize 650 --dropout 0.5        # Test ppl of 75.3
+python train.py --cuda --tied --nhid 1500 --emsize 1500 --dropout 0.65      # Test ppl of 72.0
 ```
 
 <br>

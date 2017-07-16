@@ -17,13 +17,13 @@ parser.add_argument('--nhid', type=int, default=200,
                     help='number of hidden units per layer')
 parser.add_argument('--nlayers', type=int, default=2,
                     help='number of layers')
-parser.add_argument('--lr', type=float, default=20,
+parser.add_argument('--lr', type=float, default=1.0,
                     help='initial learning rate')
-parser.add_argument('--clip', type=float, default=0.25,
+parser.add_argument('--clip', type=float, default=0.2,
                     help='gradient clipping')
 parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
-parser.add_argument('--batch_size', type=int, default=20, metavar='N',
+parser.add_argument('--batch_size', type=int, default=32, metavar='N',
                     help='batch size')
 parser.add_argument('--bptt', type=int, default=35,
                     help='sequence length')
@@ -119,19 +119,19 @@ def train():
             hidden = detach(hidden)
             with autograd.record():
                 output, hidden = model(data, hidden)
-                L = mx.nd.mean(loss(output, target))
+                L = loss(output, target)
                 L.backward()
 
             grads = [i.grad(context) for i in model.collect_params().values()]
-            # Here gradient is not divided by batch_size yet.
-            # So we multiply max_norm by batch_size to balance it.
-            gluon.utils.clip_global_norm(grads, args.clip)
+            # Here gradient is for the whole batch.
+            # So we multiply max_norm by batch_size and bptt size to balance it.
+            gluon.utils.clip_global_norm(grads, args.clip * args.bptt * args.batch_size)
 
-            trainer.step(1)
+            trainer.step(args.batch_size)
             total_L += mx.nd.sum(L).asscalar()
 
             if ibatch % args.log_interval == 0 and ibatch > 0:
-                cur_L = total_L / args.log_interval
+                cur_L = total_L / args.bptt / args.batch_size / args.log_interval
                 print('[Epoch %d Batch %d] loss %.2f, ppl %.2f'%(
                     epoch, ibatch, cur_L, math.exp(cur_L)))
                 total_L = 0.0
