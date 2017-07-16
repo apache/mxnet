@@ -180,6 +180,18 @@ def test_zoneout():
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
+def test_vardrop():
+    cell = gluon.rnn.VariationalDropoutCell(gluon.rnn.RNNCell(100, prefix='rnn_'),
+                                            vardrop_outputs=0.5,
+                                            vardrop_states=0.5)
+    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
+    outputs, _ = cell.unroll(3, inputs)
+    outputs = mx.sym.Group(outputs)
+
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
+    assert outs == [(10, 100), (10, 100), (10, 100)]
+
+
 def check_rnn_forward(layer, inputs, deterministic=True):
     inputs.attach_grad()
     layer.collect_params().initialize()
@@ -203,7 +215,6 @@ def check_rnn_forward(layer, inputs, deterministic=True):
     if deterministic:
         mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3, atol=1e-5)
         mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3, atol=1e-5)
-
 
 
 def test_rnn_cells():

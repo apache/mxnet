@@ -740,6 +740,58 @@ class ResidualCell(ModifierCell):
         return outputs, states
 
 
+class VariationalDropoutCell(ModifierCell):
+    """
+    Applies Variational Dropout on base cell.
+    (https://arxiv.org/pdf/1512.05287.pdf).
+    """
+    def __init__(self, base_cell, vardrop_outputs=0., vardrop_states=0.):
+        assert not isinstance(base_cell, BidirectionalCell), \
+            "BidirectionalCell doesn't support vardrop since it doesn't support step. " \
+            "Please add VariationalDropoutCell to the cells underneath instead."
+        assert not isinstance(base_cell, SequentialRNNCell) or not base_cell._bidirectional, \
+            "Bidirectional SequentialRNNCell doesn't support vardrop. " \
+            "Please add VariationalDropoutCell to the cells underneath instead."
+        super(VariationalDropoutCell, self).__init__(base_cell)
+        self.vardrop_outputs = vardrop_outputs
+        self.vardrop_states = vardrop_states
+        self.vardrop_outputs_mask = None
+        self.vardrop_states_mask = None
+
+    def _alias(self):
+        return 'vardrop'
+
+    def reset(self):
+        super(VariationalDropoutCell, self).reset()
+        self.vardrop_outputs_mask = None
+        self.vardrop_states_mask = None
+
+    def hybrid_forward(self, F, inputs, states):
+        cell = self.base_cell
+
+        if self.vardrop_states:
+            if self.vardrop_states_mask is None:
+                self.vardrop_states_mask = F.Dropout(F.ones_like(states[0]),
+                                                     p=self.vardrop_states)
+            states = list(states)
+            states[0] = states[0] * self.vardrop_states_mask
+
+        next_output, next_states = cell(inputs, states)
+
+        if self.vardrop_outputs:
+            if self.vardrop_outputs_mask is None:
+                self.vardrop_outputs_mask = F.Dropout(F.ones_like(next_output),
+                                                      p=self.vardrop_outputs)
+            next_output = next_output * self.vardrop_outputs_mask
+
+        return next_output, next_states
+
+    def __repr__(self):
+        s = '{name}(p_out = {vardrop_outputs}, p_state = {vardrop_states})'
+        return s.format(name=self.__class__.__name__,
+                        **self.__dict__)
+
+
 class BidirectionalCell(HybridRecurrentCell):
     """Bidirectional RNN cell.
 
