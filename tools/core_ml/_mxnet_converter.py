@@ -78,7 +78,8 @@ def _get_layer_converter_fn(layer):
     else:
         raise TypeError("MXNet layer of type %s is not supported." % layer)
 
-def convert(model, order = None, **kwargs):
+
+def convert(model, order = None, class_labels = None, mode = None, **kwargs):
     """Convert an MXNet model to the protobuf spec.
 
     Parameters
@@ -87,6 +88,15 @@ def convert(model, order = None, **kwargs):
         A trained MXNet neural network model.
 
     order: Order of inputs
+
+    class_labels: A string or list of strings. 
+        As a string it represents the name of the file which contains the classification labels (one per line).
+        As a list of strings it represents a list of categories that map the index of the output of a neural network to labels in a classifier.
+
+    mode: str ('classifier', 'regressor' or None)
+        Mode of the converted coreml model.
+        When mode = 'classifier', a NeuralNetworkClassifier spec will be constructed.
+        When mode = 'regressor', a NeuralNetworkRegressor spec will be constructed.
 
     **kwargs :
         Provide keyword arguments for:
@@ -101,8 +111,6 @@ def convert(model, order = None, **kwargs):
     model_spec: An object of type ModelSpec_pb.
         Protobuf representation of the model
     """
-
-    #TODO accept optional synset.txt and use builder.set_class_labels to add lables to classification output of coreml.neural_network
 
     if not kwargs:
         raise TypeError("Must provide input shape to be able to perform conversion")
@@ -143,7 +151,7 @@ def convert(model, order = None, **kwargs):
     # Make the builder
     input_features = zip(input_names, input_types)
     output_features = zip(output_names, output_types)
-    builder = _neural_network.NeuralNetworkBuilder(input_features, output_features)
+    builder = _neural_network.NeuralNetworkBuilder(input_features, output_features, mode)
     # Get out the layers
     net = _json.loads(net.tojson())
     nodes = net['nodes']
@@ -196,6 +204,15 @@ def convert(model, order = None, **kwargs):
     builder.set_output(output_names, output_dims)
     if "preprocessor_args" in kwargs:
         builder.set_pre_processing_parameters(**kwargs['preprocessor_args'])
+
+    if class_labels is not None:
+        if type(class_labels) is str:
+            labels = [l.strip() for l in open(class_labels).readlines()]
+        elif type(class_labels) is list:
+            labels = class_labels
+        else:
+            raise TypeError("synset variable of unknown type. Type found: %s. Expected either string or list of strings." % type(class_labels))
+        builder.set_class_labels(class_labels = labels)
 
     # Return the spec
     spec = builder.spec
