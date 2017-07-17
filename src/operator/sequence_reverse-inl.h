@@ -1,8 +1,9 @@
-/*!
+/*
  * Copyright (c) 2016 by Contributors
  * \file sequence_reverse-inl.h
  * \brief
  * \author Sebastian Bodenstien
+ * \author Marek Kolodziej
 */
 
 #ifndef MXNET_OPERATOR_SEQUENCE_REVERSE_INL_H_
@@ -13,12 +14,13 @@
 #include <mxnet/operator.h>
 #include <algorithm>
 #include <map>
-#include <vector>
 #include <string>
 #include <utility>
+#include <vector>
+#include "./mshadow_op.h"
+#include "./mxnet_op.h"
 #include "./operator_common.h"
 #include "./sequence_op_common.h"
-#include "./mshadow_op.h"
 
 namespace mxnet {
 namespace op {
@@ -34,8 +36,46 @@ struct SequenceReverseParam : public dmlc::Parameter<SequenceReverseParam> {
     DMLC_DECLARE_FIELD(use_sequence_length)
         .set_default(false)
         .describe(
-            "If set to true, this layer takes in an extra input parameter `sequence_length` "
+            "If set to true, this layer takes in an extra input parameter "
+            "`sequence_length` "
             "to specify variable length sequence");
+  }
+};
+
+struct ReverseKernel {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(
+      const int i, DType *const out_data, const DType *const in_data,
+      const OpReqType req, const index_t max_seq_len, const index_t batch_size,
+      const index_t other_dim, const index_t numel, const DType *const indices
+      ) {
+    for (index_t batch = 0; batch < batch_size; ++batch) {
+      const index_t num_seq = indices
+                                  ? static_cast<index_t>(indices[batch])
+                                  : max_seq_len;
+      const index_t padded_periods = max_seq_len - num_seq;
+      // padded part
+      if (padded_periods > 0 && i < padded_periods) {
+        const int padded_in_offset =
+            (i + num_seq) * batch_size * other_dim + batch * other_dim;
+
+        for (index_t j = 0; j < other_dim; ++j) {
+          KERNEL_ASSIGN(out_data[padded_in_offset + j], req,
+                        in_data[padded_in_offset + j]);
+        }
+      }
+      // unpadded part
+      if (i < num_seq) {
+        const int in_offset = i * batch_size * other_dim + batch * other_dim;
+        const int out_offset =
+            numel - (i + 1 + padded_periods) * batch_size * other_dim +
+            batch * other_dim;
+
+        for (index_t j = 0; j < other_dim; ++j) {
+          KERNEL_ASSIGN(out_data[out_offset + j], req, in_data[in_offset + j]);
+        }
+      }
+    }
   }
 };
 
@@ -43,26 +83,21 @@ template <typename xpu, typename DType>
 class SequenceReverseOp : public Operator {
  public:
   explicit SequenceReverseOp(SequenceReverseParam p) { this->param_ = p; }
-  void sequence_reverse(const mshadow::Tensor<xpu, 3, DType> data,
+  void sequence_reverse(const mshadow::Tensor<xpu, 3, DType> &data,
                         const mshadow::Tensor<xpu, 3, DType> &out,
-                        std::vector<index_t> indices, OpReqType req) {
+                        const OpReqType req, const DType *const indices,
+                        mshadow::Stream<xpu> *const s) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    index_t seq_length;
-    index_t max_seq_len = data.size(0);
-    index_t batch_size = data.size(1);
-    for (index_t b = 0; b < batch_size; ++b) {
-      seq_length = indices[b];
-      for (index_t s = 0; s < max_seq_len; ++s) {
-        if (s < seq_length)
-          Assign(
-              out[s][b], req,
-              F<mshadow_op::identity>(
-                  data[seq_length - s - 1][b]))
-        else  // preserve padding type
-          Assign(out[s][b], req, F<mshadow_op::identity>(data[s][b]))
-      }
-    }
+
+    const index_t max_seq_len = data.size(0);
+    const index_t batch_size = data.size(1);
+    const index_t other_dim = data.size(2);
+    const index_t tensor_numel = data.shape_.Size();
+
+    mxnet_op::Kernel<ReverseKernel, xpu>::Launch(
+        s, max_seq_len, out.dptr_, data.dptr_, req, max_seq_len, batch_size,
+        other_dim, tensor_numel, indices);
   }
 
   virtual void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
@@ -73,7 +108,7 @@ class SequenceReverseOp : public Operator {
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), param_.use_sequence_length ? 2U : 1U);
     CHECK_EQ(out_data.size(), 1U);
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Stream<xpu> *const s = ctx.get_stream<xpu>();
 
     // Get any size input + output into required form
     int max_seq_len = in_data[seq_reverse::kData].size(0);
@@ -87,14 +122,12 @@ class SequenceReverseOp : public Operator {
     Tensor<xpu, 3, DType> out =
         out_data[seq_reverse::kOut].get_with_shape<xpu, 3, DType>(s3, s);
 
-    // copy indices to vector
-    std::vector<index_t> indices_vec(n, max_seq_len);
-    if (param_.use_sequence_length)
-      IndexTensorToVector(
-          in_data[seq_reverse::kSequenceLength].get<xpu, 1, DType>(s),
-          &indices_vec);
+    const DType *const indices =
+        param_.use_sequence_length
+            ? in_data[seq_reverse::kSequenceLength].dptr<DType>()
+            : nullptr;
 
-    sequence_reverse(data, out, indices_vec, req[seq_reverse::kOut]);
+    sequence_reverse(data, out, req[seq_reverse::kOut], indices, s);
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -122,15 +155,13 @@ class SequenceReverseOp : public Operator {
         in_grad[seq_reverse::kData].get_with_shape<xpu, 3, DType>(s3, s);
     Tensor<xpu, 3, DType> output_grad =
         out_grad[seq_reverse::kOut].get_with_shape<xpu, 3, DType>(s3, s);
-    // copy indices to vector
-    std::vector<index_t> indices_vec(n, max_seq_len);
-    if (param_.use_sequence_length)
-      IndexTensorToVector(
-          in_data[seq_reverse::kSequenceLength].get<xpu, 1, DType>(s),
-          &indices_vec);
 
-    sequence_reverse(output_grad, data_grad, indices_vec,
-                     req[seq_reverse::kData]);
+    const DType *const indices =
+        param_.use_sequence_length
+            ? in_data[seq_reverse::kSequenceLength].dptr<DType>()
+            : nullptr;
+
+    sequence_reverse(output_grad, data_grad, req[seq_reverse::kData], indices, s);
   }
 
  private:
