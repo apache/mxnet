@@ -89,7 +89,12 @@ def convert(model, order = None, **kwargs):
     order: Order of inputs
 
     **kwargs :
-        Provide keyword arguments of known shapes.
+        Provide keyword arguments for:
+        - input shapes.
+        - pre-processing arguments: Supplied as a json object with keyword "preprocessor_args". The json object
+            tells the converted coreml model how to pre-process any input before an inference is run on it.
+            For the list of pre-processing arguments see
+            http://pythonhosted.org/coremltools/generated/coremltools.models.neural_network.html#coremltools.models.neural_network.NeuralNetworkBuilder.set_pre_processing_parameters
 
     Returns
     -------
@@ -139,7 +144,6 @@ def convert(model, order = None, **kwargs):
     input_features = zip(input_names, input_types)
     output_features = zip(output_names, output_types)
     builder = _neural_network.NeuralNetworkBuilder(input_features, output_features)
-    # TODO pre-process things here.
     # Get out the layers
     net = _json.loads(net.tojson())
     nodes = net['nodes']
@@ -187,10 +191,11 @@ def convert(model, order = None, **kwargs):
     layers = spec.neuralNetwork.layers
 
     # Set the right inputs and outputs
-    #TODO figure out how to use set_pre_processing_parameters for data preprocessing on networks w/ image input
     _set_input_output_layers(builder, input_names, output_names)
     builder.set_input(input_names, input_dims)
     builder.set_output(output_names, output_dims)
+    if "preprocessor_args" in kwargs:
+        builder.set_pre_processing_parameters(**kwargs['preprocessor_args'])
 
     # Return the spec
     spec = builder.spec
