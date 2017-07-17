@@ -626,9 +626,15 @@ def register(reg_name):
                         ishape, oshape, ashape = ret
                     else:
                         raise AssertionError("infer_shape must return 2 or 3 lists")
-                    assert len(oshape) == n_out
-                    assert len(ishape) == n_in
-                    assert len(ashape) == n_aux
+                    assert len(oshape) == n_out, \
+                        "InferShape Error: expecting %d entries in returned output " \
+                        "shapes, got %d."%(n_out, len(oshape))
+                    assert len(ishape) == n_in, \
+                        "InferShape Error: expecting %d entries in returned input " \
+                        "shapes, got %d."%(n_in, len(ishape))
+                    assert len(ashape) == n_aux, \
+                        "InferShape Error: expecting %d entries in returned aux state " \
+                        "shapes, got %d."%(n_aux, len(ashape))
                     rshape = list(ishape) + list(oshape) + list(ashape)
                     for i in range(n_in+n_out+n_aux):
                         tensor_shapes[i] = cast(c_array(mx_uint, rshape[i]), POINTER(mx_uint))
@@ -657,9 +663,15 @@ def register(reg_name):
                         itype, otype, atype = ret
                     else:
                         raise AssertionError("infer_type must return 2 or 3 lists")
-                    assert len(otype) == n_out
-                    assert len(itype) == n_in
-                    assert len(atype) == n_aux
+                    assert len(otype) == n_out, \
+                        "InferType Error: expecting %d entries in returned output " \
+                        "shapes, got %d."%(n_out, len(otype))
+                    assert len(itype) == n_in, \
+                        "InferType Error: expecting %d entries in returned input " \
+                        "shapes, got %d."%(n_in, len(itype))
+                    assert len(atype) == n_aux, \
+                        "InferType Error: expecting %d entries in returned aux state " \
+                        "shapes, got %d."%(n_aux, len(atype))
                     rtype = list(itype) + list(otype) + list(atype)
                     for i, dtype in enumerate(rtype):
                         tensor_types[i] = _DTYPE_NP_TO_MX[dtype]
