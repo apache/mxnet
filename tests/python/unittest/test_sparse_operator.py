@@ -83,23 +83,28 @@ def test_cast_storage_ex():
         ret = mx.nd.cast_storage(rsp_out, stype='default')
         assert same(ret.asnumpy(), dns_in.asnumpy())
 
-    def test_csr_to_dns(shape):
-        csr, (indptr, indices, values) = rand_sparse_ndarray(shape, 'csr')
-        mx_dns = csr.todense()
-        np_dns = sp.csr_matrix((values, indices, indptr), shape).todense()
-        assert_almost_equal(mx_dns.asnumpy(), np_dns)
+    def test_csr_to_dns(shape, density):
+        csr_in, (indptr, indices, values) = rand_sparse_ndarray(shape, 'csr', density)
+        dns_out = csr_in.todense()
+        assert same(csr_in.asnumpy(), dns_out.asnumpy())
 
-    def test_dns_to_csr(dns_in):
-        dns_in = np.array(dns_in)
+    def test_dns_to_csr(shape, density):
+        csr_in, (indptr, colidx, data) = rand_sparse_ndarray(shape, 'csr', density)
+        dns_in = csr_in.todense()
         csr_out = mx.nd.cast_storage(mx.nd.array(dns_in, dtype=default_dtype()), stype='csr')
-        ret = mx.nd.cast_storage(csr_out, stype='default')
-        assert same(ret.asnumpy(), dns_in)
+        assert same(csr_in.asnumpy(), csr_out.asnumpy())
 
     shape = rand_shape_2d()
-    test_rsp_to_dns(shape)
-    test_dns_to_rsp(shape)
-    test_csr_to_dns((4, 4))
-    test_dns_to_csr([[0, 1, 0], [0, 2, 0], [3, 0, 0], [0, 0, 4], [5, 6, 0], [0, 0, 7]])
+    if default_context().device_type is 'cpu':
+        test_rsp_to_dns(shape)
+        test_dns_to_rsp(shape)
+
+    density = [1.00, 0.50, 0.10, 0.05, 0.01]
+    for d in density:
+        test_csr_to_dns((rnd.randint(1, 10), rnd.randint(  1,   64)), d)
+        test_dns_to_csr((rnd.randint(1, 10), rnd.randint(  1,   31)), d) # test gpu thread kernel
+        test_dns_to_csr((rnd.randint(1, 10), rnd.randint( 32,  512)), d) # test gpu warp   kernel
+        test_dns_to_csr((rnd.randint(1, 10), rnd.randint(513, 1024)), d) # test gpu block  kernel
 
 
 def test_sparse_dot():
@@ -132,14 +137,15 @@ def test_sparse_dot():
                                 rtol=1e-3, atol=1e-4)
 
     lhs_shape = rand_shape_2d(50, 200)
-    test_dot_csr(lhs_shape, (lhs_shape[1], 1), 'default', False)
-    test_dot_csr(lhs_shape, (lhs_shape[0], 1), 'default', True)
-    test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'default', False)
-    test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'default', True)
-    test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False)
-    test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True)
-    test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False, 0.05)
-    test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True, 0.05)
+    test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1,  4)), 'default', False) # test gpu
+    test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1,  4)), 'default', True ) # vector kernel
+    test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(5, 10)), 'default', False) # test gpu
+    test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(5, 10)), 'default', True ) # scalar kernel
+    if default_context().device_type is 'cpu':
+        test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False)
+        test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True )
+        test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False, 0.05)
+        test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True , 0.05)
 
 
 def test_sparse_embedding():

@@ -22,6 +22,10 @@ NNVM_REGISTER_OP(cast_storage)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", CastStorageInferStorageType)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", CastStorageComputeEx<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "The input.")
