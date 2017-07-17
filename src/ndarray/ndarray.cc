@@ -410,7 +410,7 @@ void CopyFromToImpl(const NDArray from, NDArray *to, RunContext rctx) {
   std::vector<Resource> requested;
   if (is_same<from_xpu, mshadow::gpu>::value && from_stype != to_stype) {
     requested.push_back(ResourceManager::Get()->Request(from_ctx,
-                                                        ResourceRequest(ResourceRequest::kTempSpace)));
+        ResourceRequest(ResourceRequest::kTempSpace)));
   }
   OpContext opctx{is_train,
                   rctx,

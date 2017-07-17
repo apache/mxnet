@@ -46,7 +46,10 @@ struct MarkRspRowIdx {
  * \brief
  * CPU implementation of casting a dns tensor to rsp type.
  */
-inline void CastStorageDnsRspImpl(const OpContext& ctx, const cpu& cpu_dev, const TBlob& dns, NDArray* rsp) {
+inline void CastStorageDnsRspImpl(const OpContext& ctx,
+                                  const cpu& cpu_dev,
+                                  const TBlob& dns,
+                                  NDArray* rsp) {
   CHECK(rsp != nullptr);
   CHECK_EQ(rsp->storage_type(), kRowSparseStorage);
   CHECK_EQ(dns.shape_, rsp->shape());
@@ -180,7 +183,10 @@ struct FillCsrColIdxAndVals {
  * \brief
  * CPU implementation of casting a dns tensor to csr type.
  */
-inline void CastStorageDnsCsrImpl(const OpContext& ctx, const cpu& cpu_dev, const TBlob& dns, NDArray* csr) {
+inline void CastStorageDnsCsrImpl(const OpContext& ctx,
+                                  const cpu& cpu_dev,
+                                  const TBlob& dns,
+                                  NDArray* csr) {
   CHECK(csr != nullptr);
   CHECK_EQ(csr->storage_type(), kCSRStorage);
   CHECK_EQ(dns.shape_.ndim(), 2);
