@@ -169,6 +169,6 @@ The final output is defined by the following expression:
   out[n, q, i, j] = c(x_{i, j}, x_{q})
 
 where :math:`i` and :math:`j` enumerate spatial locations in :math:`f_{1}`, and :math:`q` denotes the :math:`q^{th}` neighborhood of :math:`x_{i,j}`.
-)code"ADD_FILELINE);
+)code" ADD_FILELINE);
 }  // namespace op
 }  // namespace mxnet
