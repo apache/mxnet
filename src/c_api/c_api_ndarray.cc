@@ -199,6 +199,7 @@ void SetShapeType(const nnvm::Op* op,
   int kNonDefaultStorage = -2;
   *dispatch_stype = contains_non_default ? kNonDefaultStorage : kDefaultStorage;
   for (size_t i = 0; i < ndoutputs.size(); ++i) {
+    NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
     if (ndoutputs[i].is_none()) {
       // if failed to infer the storage type, assume the output storage is dense
       if (storage_type == kDefaultStorage || out_storage_types[i] == kUndefinedStorage) {
@@ -349,6 +350,7 @@ void PushOperator(const OpStatePtr& state,
                   const std::vector<Resource>& requested,
                   const std::vector<NDArray>& ndinputs,
                   const std::vector<NDArray>& ndoutputs) {
+  using namespace common;
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
   bool is_train = AutogradRuntime::Get()->IsTraining();
@@ -367,7 +369,7 @@ void PushOperator(const OpStatePtr& state,
         OpContext opctx{is_train, rctx, on_complete, requested};
         std::vector<TBlob> input_blobs, output_blobs;
         std::vector<NDArray> temp_in, temp_out;
-        if (ctx.dev_mask() == gpu::kDevMask) {
+        if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
           GetDefaultBlobs<gpu>(ndinputs, &input_blobs, &temp_in, opctx);
           GetDefaultBlobs<gpu>(ndoutputs, &output_blobs, &temp_out, opctx);
@@ -425,8 +427,6 @@ void ImperativeInvokeImpl(const Context& default_ctx,
                           const nnvm::NodeAttrs& attrs,
                           std::vector<NDArray>* p_ndinputs,
                           std::vector<NDArray>* p_ndoutputs) {
-  static auto& fcpu = nnvm::Op::GetAttr<FCompute>("FCompute<cpu>");
-  static auto& fgpu = nnvm::Op::GetAttr<FCompute>("FCompute<gpu>");
   static auto& ndfunc = nnvm::Op::GetAttr<FNDArrayFunction>("FNDArrayFunction");
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
@@ -441,8 +441,9 @@ void ImperativeInvokeImpl(const Context& default_ctx,
   } else {
     // TODO(piiswrong): infer ctx
     Context ctx;
+    int stype;
     SetContext(&ctx, attrs, ndinputs, ndoutputs, default_ctx);
-    SetShapeType(op, attrs, ctx, ndinputs, &ndoutputs);
+    SetShapeType(op, attrs, ctx, ndinputs, &ndoutputs, &stype);
 
     std::vector<engine::VarHandle> read_vars, write_vars;
     std::vector<Resource> requested;
@@ -450,14 +451,16 @@ void ImperativeInvokeImpl(const Context& default_ctx,
     SetDependency(&read_vars, &write_vars, &requested, &auxidx,
         op, attrs, ctx, ndinputs, ndoutputs);
 
-    FCompute fn;
-    if (ctx.dev_mask() == cpu::kDevMask && fcpu.count(op)) {
-      fn = fcpu[op];
-    } else if (ctx.dev_mask() == gpu::kDevMask && fgpu.count(op)) {
-      fn = fgpu[op];
-    }
-
-    if (fn) {
+    FCompute fn = common::GetFCompute<FCompute>(op, "FCompute", ctx);
+    FComputeEx fn_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", ctx);
+    if (fn_ex && stype != kDefaultStorage) {
+      if (AutogradRuntime::Get()->IsTraining()) {
+        AutogradRuntime::Get()->RecordImperativeFCompute(op,
+            attrs, &ndinputs, &ndoutputs);
+      }
+      PushFComputeEx(fn_ex, op, attrs, ctx, read_vars, write_vars,
+          requested, ndinputs, ndoutputs);
+    } else if (fn) {
       if (AutogradRuntime::Get()->IsTraining()) {
         AutogradRuntime::Get()->RecordImperativeFCompute(op,
             attrs, &ndinputs, &ndoutputs);

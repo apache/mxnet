@@ -51,8 +51,6 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     state1 = opt1.create_state(0, w1)
     state2 = opt2.create_state(0, w2)
     if state1 is not None and state2 is not None:
-        for s1, s2, in zip(state1, state2):
-                assert(same(s1.asnumpy(), s2.asnumpy()))
         if isinstance(state1, tuple):
             for s1, s2, in zip(state1, state2):
                 if s1 is not None or s2 is not None:
@@ -278,8 +276,8 @@ def test_sparse_sgd():
               {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03, 'momentum': 0.9},
               {'rescale_grad': 0.8, 'wd': 0.05, 'momentum': 0.9}]
     for kwarg in kwargs:
-        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, w_stype='row_sparse', g_stype='row_sparse')
-        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, w_stype='row_sparse', g_stype='default')
+        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, 'float32', w_stype='row_sparse', g_stype='row_sparse')
+        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, 'float32', w_stype='row_sparse', g_stype='default')
 
 # ADAM
 

@@ -50,7 +50,6 @@ class StatefulComputeExecutor : public OpExecutor {
       CastNonDefaultStorage<cpu>(out_array, temp_out_, op_ctx);
     }
 #if MKL_EXPERIMENTAL == 1
-    //TODO(haibin) handle MKL mem with non-default NDArray
     mkl_tblobs_prv_to_cpu(in_data_);
     mkl_tblobs_prv_to_cpu(out_data_);
 #endif
@@ -84,7 +83,7 @@ class StatefulComputeExecutor : public OpExecutor {
 // stateful compute_ex executor
 class StatefulComputeExExecutor : public OpExecutor {
  public:
-  void Run(RunContext rctx) override {
+  void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
     fcompute_(state_, op_ctx, in_array, req, out_array);
   }
@@ -115,7 +114,7 @@ class StatefulComputeExExecutor : public OpExecutor {
 // fcompute executor
 class FComputeExecutor : public OpExecutor {
  public:
-  void Run(RunContext rctx) override {
+  void Run(RunContext rctx, bool is_gpu) override {
     using namespace common;
     // TODO(haibin) avoid repeating this if all inputs are already in default-storage
     op_ctx.run_ctx = rctx;
@@ -139,7 +138,7 @@ class FComputeExecutor : public OpExecutor {
       CastNonDefaultStorage<cpu>(out_array, temp_out_, op_ctx);
     }
 #if MKL_EXPERIMENTAL == 1
-    //TODO(haibin) handle MKL mem with non-default NDArray
+    // TODO(haibin) handle MKL mem with non-default NDArray
     mkl_tblobs_prv_to_cpu(in_data_);
     mkl_tblobs_prv_to_cpu(out_data_);
 #endif
@@ -167,7 +166,7 @@ class FComputeExecutor : public OpExecutor {
 // fcompute_ex executor
 class FComputeExExecutor : public OpExecutor {
  public:
-  void Run(RunContext rctx) override {
+  void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
     fcompute_(attrs_, op_ctx, in_array, req, out_array);
   }

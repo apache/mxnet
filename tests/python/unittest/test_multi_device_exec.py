@@ -33,15 +33,15 @@ def test_ctx_group():
         else:
             assert arr.context == group2ctx['stage2']
 
-def check_ctx_group_sparse(lhs_stype, rhs_stype):
+def test_ctx_group_sparse():
     with mx.AttrScope(ctx_group='stage1'):
-        lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
-        rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
-        plus  = mx.symbol.elemwise_add(lhs, rhs, name='plus')
+        lhs = mx.symbol.Variable('lhs', stype='csr')
+        rhs = mx.symbol.Variable('rhs', stype='row_sparse')
+        dot  = mx.symbol.dot(lhs, rhs, name='dot')
 
-    set_stage1 = set(plus.list_arguments())
+    set_stage1 = set(dot.list_arguments())
     with mx.AttrScope(ctx_group='stage2'):
-        softmax  = mx.symbol.SoftmaxOutput(data = plus, name = 'softmax')
+        softmax  = mx.symbol.SoftmaxOutput(data = dot, name = 'softmax')
 
     set_stage2 = set(softmax.list_arguments()) - set_stage1
 
@@ -49,18 +49,14 @@ def check_ctx_group_sparse(lhs_stype, rhs_stype):
         'stage1' : mx.cpu(1),
         'stage2' : mx.cpu(2)
     }
-    texec = softmax.simple_bind(mx.cpu(0), group2ctx=group2ctx, lhs=(1,200), rhs=(1,200))
+    texec = softmax.simple_bind(mx.cpu(0), group2ctx=group2ctx,
+                                lhs=(32,200), rhs=(200, 5))
 
     for arr, name in zip(texec.arg_arrays, softmax.list_arguments()):
         if name in set_stage1:
             assert arr.context == group2ctx['stage1']
         else:
             assert arr.context == group2ctx['stage2']
-
-def test_ctx_group_sparse():
-    check_ctx_group_sparse('default', 'default')
-    check_ctx_group_sparse('default', 'row_sparse')
-    check_ctx_group_sparse('row_sparse', 'row_sparse')
 
 if __name__ == '__main__':
     test_ctx_group()

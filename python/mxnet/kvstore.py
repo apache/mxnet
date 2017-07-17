@@ -6,7 +6,7 @@ import ctypes
 import pickle
 from .ndarray import NDArray
 from .base import _LIB
-from .base import check_call, c_array, c_str, string_types, mx_uint, py_str
+from .base import check_call, c_array, c_str, string_types, mx_uint, py_str, integer_types
 from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
 
@@ -16,7 +16,7 @@ def _ctype_key_value(keys, vals):
         c_keys = []
         c_vals = []
         for key, val in zip(keys, vals):
-            c_key_i, c_val_i = _ctype_str_key_value(key, val)
+            c_key_i, c_val_i = _ctype_key_value(key, val)
             c_keys += c_key_i
             c_vals += c_val_i
         return (c_array(ctypes.c_char_p, c_keys), c_array(NDArrayHandle, c_vals))

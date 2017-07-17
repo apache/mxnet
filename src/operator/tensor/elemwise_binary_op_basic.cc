@@ -12,7 +12,7 @@ MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
 .add_alias("_add").add_alias("_plus").add_alias("_Plus")
 .describe("Adds arguments element-wise.")
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, mshadow::op::plus>)
-.set_attr<nnvm::FGradient>("FGradient", CloneGradient{"_backward_add"});
+.set_attr<nnvm::FGradient>("FGradient", CloneGradient{"_backward_add"})
 .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryComputeEx<cpu, mshadow::op::plus>)
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1>);
 

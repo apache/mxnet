@@ -16,6 +16,7 @@
 #include "./base.h"
 #include "./ndarray.h"
 #include "./engine.h"
+#include "./resource.h"
 
 namespace mxnet {
 
