@@ -7,6 +7,7 @@ from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
+from .utils import _indent
 
 
 class _BlockScope(object):
@@ -144,6 +145,14 @@ class Block(object):
 
     def _alias(self):
         return self.__class__.__name__.lower()
+
+    def __repr__(self):
+        s = '{name}(\n{modstr}\n)'
+        modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
+                                                        block=_indent(block.__repr__(), 2))
+                            for key, block in self.__dict__.items() if isinstance(block, Block)])
+        return s.format(name=self.__class__.__name__,
+                        modstr=modstr)
 
     @property
     def params(self):

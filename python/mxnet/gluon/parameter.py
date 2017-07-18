@@ -9,6 +9,7 @@ from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
 from ..context import Context
 from .. import autograd
+from .utils import _indent
 
 # pylint: disable= invalid-name
 tensor_types = (symbol.Symbol, ndarray.NDArray)
@@ -75,6 +76,10 @@ class Parameter(object):
         self._data = None
         self._grad = None
         self._defered_init = ()
+
+    def __repr__(self):
+        s = 'Parameter {name} (shape={shape}, dtype={dtype})'
+        return s.format(**self.__dict__)
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform()):
         """Initializes parameter and gradient arrays. Only used for `NDArray` API.
@@ -321,6 +326,13 @@ class ParameterDict(object):
 
     def __getitem__(self, key):
         return self._params[key]
+
+    def __repr__(self):
+        s = '{name}(\n{content}\n)'
+        name = self._prefix+' ' if self._prefix else ''
+        return s.format(name=name,
+                        content='\n'.join([_indent('  {0}'.format(v), 2)
+                                           for v in self.values()]))
 
     def items(self):
         return self._params.items()

@@ -3,6 +3,7 @@
 """Basic neural network layers."""
 
 from ..block import Block, HybridBlock
+from ..utils import _indent
 
 
 class Sequential(Block):
@@ -28,6 +29,15 @@ class Sequential(Block):
             x = block(x)
         return x
 
+    def __repr__(self):
+        s = '{name}(\n{modstr}\n)'
+        modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
+                                                        block=_indent(block.__repr__(), 2))
+                            for key, block in enumerate(self._children)
+                            if isinstance(block, Block)])
+        return s.format(name=self.__class__.__name__,
+                        modstr=modstr)
+
 
 class HybridSequential(HybridBlock):
     """Stacks `HybridBlock`s sequentially.
@@ -51,6 +61,15 @@ class HybridSequential(HybridBlock):
         for block in self._children:
             x = block(x)
         return x
+
+    def __repr__(self):
+        s = '{name}(\n{modstr}\n)'
+        modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
+                                                        block=_indent(block.__repr__(), 2))
+                            for key, block in enumerate(self._children)
+                            if isinstance(block, Block)])
+        return s.format(name=self.__class__.__name__,
+                        modstr=modstr)
 
 
 class Dense(HybridBlock):
@@ -102,6 +121,7 @@ class Dense(HybridBlock):
         super(Dense, self).__init__(**kwargs)
         with self.name_scope():
             self._units = units
+            self._in_units = in_units
             self.weight = self.params.get('weight', shape=(units, in_units),
                                           init=weight_initializer,
                                           allow_deferred_init=True)
@@ -124,6 +144,13 @@ class Dense(HybridBlock):
         if self.act is not None:
             act = self.act(act)
         return act
+
+    def __repr__(self):
+        s = '{name}({layout}, {act})'
+        return s.format(name=self.__class__.__name__,
+                        act=self.act if self.act else 'linear',
+                        layout='{0} -> {1}'.format(self._in_units, self._units) if self._in_units
+                        else self._units)
 
 
 class Activation(HybridBlock):
@@ -151,6 +178,11 @@ class Activation(HybridBlock):
 
     def hybrid_forward(self, F, x):
         return F.Activation(x, act_type=self._act_type)
+
+    def __repr__(self):
+        s = '{name}({_act_type})'
+        return s.format(name=self.__class__.__name__,
+                        **self.__dict__)
 
 
 class Dropout(HybridBlock):
@@ -182,6 +214,11 @@ class Dropout(HybridBlock):
 
     def hybrid_forward(self, F, x):
         return F.Dropout(x, p=self._rate)
+
+    def __repr__(self):
+        s = '{name}(p = {_rate})'
+        return s.format(name=self.__class__.__name__,
+                        **self.__dict__)
 
 
 class BatchNorm(HybridBlock):
@@ -235,6 +272,8 @@ class BatchNorm(HybridBlock):
         super(BatchNorm, self).__init__(**kwargs)
         self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': momentum,
                         'fix_gamma': not center}
+        if in_channels != 0:
+            self.in_channels = in_channels
 
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
                                      shape=(in_channels,), init=gamma_initializer,
@@ -253,6 +292,15 @@ class BatchNorm(HybridBlock):
 
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.BatchNorm(x, gamma, beta, running_mean, running_var, **self._kwargs)
+
+    def __repr__(self):
+        s = '{name}({content}'
+        if hasattr(self, 'in_channels'):
+            s += ', in_channels={0}'.format(self.in_channels)
+        s += ')'
+        return s.format(name=self.__class__.__name__,
+                        content=', '.join(['='.join([k, v.__repr__()])
+                                           for k, v in self._kwargs.items()]))
 
 
 class LeakyReLU(HybridBlock):
@@ -281,6 +329,11 @@ class LeakyReLU(HybridBlock):
 
     def hybrid_forward(self, F, x):
         return F.LeakyReLU(x, act_type='leaky', slope=self._alpha)
+
+    def __repr__(self):
+        s = '{name}({alpha})'
+        return s.format(name=self.__class__.__name__,
+                        alpha=self._alpha)
 
 
 class Embedding(HybridBlock):
@@ -318,6 +371,11 @@ class Embedding(HybridBlock):
     def hybrid_forward(self, F, x, weight):
         return F.Embedding(x, weight, **self._kwargs)
 
+    def __repr__(self):
+        s = '{name}({input_dim} -> {output_dim}, {dtype})'
+        return s.format(name=self.__class__.__name__,
+                        **self._kwargs)
+
 
 class Flatten(HybridBlock):
     """Flattens the input to two dimensional.
@@ -333,3 +391,6 @@ class Flatten(HybridBlock):
 
     def hybrid_forward(self, F, x):
         return x.reshape((0, -1))
+
+    def __repr__(self):
+        return self.__class__.__name__

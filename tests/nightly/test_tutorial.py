@@ -47,7 +47,7 @@ def test_tutorial_nb(file_path):
         path of tutorial markdown file
     """
     tutorial_name = os.path.basename(file_path)
-    notebook = nbformat.read(file_path + '_python.ipynb', as_version=4)
+    notebook = nbformat.read(file_path + '.ipynb', as_version=4)
     eprocessor = ExecutePreprocessor(timeout=1800)
     try:
         eprocessor.preprocess(notebook, {'metadata': {}})

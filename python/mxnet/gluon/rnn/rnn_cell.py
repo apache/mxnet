@@ -8,6 +8,7 @@ from __future__ import print_function
 from ... import symbol, ndarray
 from ...base import string_types, numeric_types
 from ..block import Block, HybridBlock
+from ..utils import _indent
 from .. import tensor_types
 
 
@@ -86,6 +87,17 @@ class RecurrentCell(Block):
         super(RecurrentCell, self).__init__(prefix=prefix, params=params)
         self._modified = False
         self.reset()
+
+    def __repr__(self):
+        s = '{name}({mapping}'
+        if hasattr(self, '_activation'):
+            s += ', {_activation}'
+        s += ')'
+        mapping = ('{_input_size} -> {_hidden_size}'.format(**self.__dict__) if self._input_size
+                   else self._hidden_size)
+        return s.format(name=self.__class__.__name__,
+                        mapping=mapping,
+                        **self.__dict__)
 
     def reset(self):
         """Reset before re-using the cell for another graph."""
@@ -428,6 +440,7 @@ class GRUCell(HybridRecurrentCell):
                  input_size=0, prefix=None, params=None):
         super(GRUCell, self).__init__(prefix=prefix, params=params)
         self._hidden_size = hidden_size
+        self._input_size = input_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(3*hidden_size, input_size),
                                           init=i2h_weight_initializer,
                                           allow_deferred_init=True)
@@ -484,6 +497,12 @@ class SequentialRNNCell(RecurrentCell):
     """Sequentially stacking multiple RNN cells."""
     def __init__(self, prefix=None, params=None):
         super(SequentialRNNCell, self).__init__(prefix=prefix, params=params)
+
+    def __repr__(self):
+        s = '{name}(\n{modstr}\n)'
+        return s.format(name=self.__class__.__name__,
+                        modstr='\n'.join(['({i}): {m}'.format(i=i, m=_indent(m.__repr__(), 2))
+                                          for i, m in enumerate(self._children)]))
 
     def add(self, cell):
         """Appends a cell into the stack.
@@ -553,6 +572,11 @@ class DropoutCell(HybridRecurrentCell):
         assert isinstance(dropout, numeric_types), "dropout probability must be a number"
         self.dropout = dropout
 
+    def __repr__(self):
+        s = '{name}(p = {dropout})'
+        return s.format(name=self.__class__.__name__,
+                        **self.__dict__)
+
     def state_info(self, batch_size=0):
         return []
 
@@ -610,6 +634,11 @@ class ModifierCell(HybridRecurrentCell):
     def hybrid_forward(self, F, inputs, states):
         raise NotImplementedError
 
+    def __repr__(self):
+        s = '{name}({base_cell})'
+        return s.format(name=self.__class__.__name__,
+                        **self.__dict__)
+
 
 class ZoneoutCell(ModifierCell):
     """Applies Zoneout on base cell."""
@@ -624,6 +653,11 @@ class ZoneoutCell(ModifierCell):
         self.zoneout_outputs = zoneout_outputs
         self.zoneout_states = zoneout_states
         self.prev_output = None
+
+    def __repr__(self):
+        s = '{name}(p_out={zoneout_outputs}, p_state={zoneout_states}, {base_cell})'
+        return s.format(name=self.__class__.__name__,
+                        **self.__dict__)
 
     def _alias(self):
         return 'zoneout'
@@ -703,6 +737,12 @@ class BidirectionalCell(HybridRecurrentCell):
 
     def __call__(self, inputs, states):
         raise NotImplementedError("Bidirectional cannot be stepped. Please use unroll")
+
+    def __repr__(self):
+        s = '{name}(forward={l_cell}, backward={r_cell})'
+        return s.format(name=self.__class__.__name__,
+                        l_cell=self._children[0],
+                        r_cell=self._children[1])
 
     def state_info(self, batch_size=0):
         return _cells_state_info(self._children, batch_size)

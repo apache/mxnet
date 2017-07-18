@@ -355,6 +355,21 @@ Graph AssignContext(Graph g,
       vcontext.push_back(ctx_list[assigned_device[i]]);
     }
   }
+
+  // after device planning, we should check again
+  // if the assigned device of gradient node
+  // corresponds to storage of grads
+  auto &new_idx = g.indexed_graph();
+  for (size_t i = num_forward_outputs; i < g.outputs.size(); ++i) {
+    const uint32_t nid = new_idx.outputs()[i].node_id;
+    Context ctx = arg_grad_ctxes[i - num_forward_outputs];
+    CHECK(ctx == vcontext[nid])
+      << "Trying to save gradient to " << ctx
+      << " while its source node \"" << new_idx[nid].source->attrs.name
+      << "\" computes it on " << vcontext[nid]
+      << ". Check your ctx in NDArray allocation.";
+  }
+
   g.attrs["context"] = std::make_shared<nnvm::any>(std::move(vcontext));
   return g;
 }

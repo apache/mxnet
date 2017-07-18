@@ -1277,7 +1277,6 @@ def test_residual_fused():
     expected_outputs = np.ones((10, 2, 50))+5
     assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
 
-
 def check_rnn_layer(layer):
     layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     with mx.gpu(0):
@@ -1302,6 +1301,10 @@ def test_rnn_layer():
     check_rnn_layer(gluon.rnn.GRU(100, num_layers=3))
 
     check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
+
+
+def test_sequence_reverse():
+    check_sequence_reverse(mx.gpu(0))
 
 
 if __name__ == '__main__':

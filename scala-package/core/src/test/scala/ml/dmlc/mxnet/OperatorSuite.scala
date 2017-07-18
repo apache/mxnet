@@ -214,6 +214,35 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     checkSymbolicBackward(test, Array(dataTmp), Array(NDArray.ones(shape) * 2), Array(npoutGrad))
   }
 
+  test("ones") {
+    val ones = Symbol.ones(shape = Shape(2, 2))
+    val exe = ones.simpleBind(ctx = Context.cpu(), gradReq = "write", shapeDict = Map())
+    exe.forward(isTrain = false)
+    assert(CheckUtils.reldiff(Array(1f, 1f, 1f, 1f), exe.outputs.head.toArray) <= 1e-5f)
+  }
+
+  test("zeros") {
+    val zeros = Symbol.zeros(shape = Shape(2, 2))
+    val exe = zeros.simpleBind(ctx = Context.cpu(), gradReq = "write", shapeDict = Map())
+    exe.forward(isTrain = false)
+    assert(Array(0f, 0f, 0f, 0f) === exe.outputs.head.toArray)
+  }
+
+  test("arange") {
+    for (i <- 0 until 5) {
+      val start = scala.util.Random.nextFloat() * 5
+      val stop = start + scala.util.Random.nextFloat() * 100
+      val step = scala.util.Random.nextFloat() * 4
+      val repeat = (scala.util.Random.nextFloat() * 5).toInt + 1
+      val result = (start until stop by step).flatMap(x => Array.fill[Float](repeat)(x))
+      val x = Symbol.arange(start = start, stop = Some(stop), step = step, repeat = repeat)
+      var exe = x.simpleBind(ctx = Context.cpu(), gradReq = "write", shapeDict = Map())
+      exe.forward(isTrain = false)
+      assert(exe.gradArrays.length == 0)
+      assert(CheckUtils.reldiff(result.toArray, exe.outputs.head.toArray) <= 1e-5f)
+    }
+  }
+
   test("scalar pow") {
     val data = Symbol.Variable("data")
     val shape = Shape(1, 1)

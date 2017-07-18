@@ -97,3 +97,15 @@ def clip_global_norm(arrays, max_norm):
         for arr in arrays:
             arr *= scale
     return total_norm
+
+
+def _indent(s_, numSpaces):
+    """Indent string
+    """
+    s = s_.split('\n')
+    if len(s) == 1:
+        return s_
+    first = s.pop(0)
+    s = [first] + [(numSpaces * ' ') + line for line in s]
+    s = '\n'.join(s)
+    return s

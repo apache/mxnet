@@ -1,9 +1,10 @@
 # pylint: skip-file
+from __future__ import print_function
 import numpy as np
 import mxnet as mx
 import random
 import itertools
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 
 def np_softmax(x, axis=-1):
@@ -1314,7 +1315,7 @@ def test_reduce():
             ndim = np.random.randint(1, 6)
             shape = np.random.randint(1, 6, size=(ndim,))
             axis_num = np.random.randint(0, ndim, size=1)
-            axis_flags = np.random.randint(-5, 6, size=ndim)
+            axis_flags = np.random.randint(0, 2, size=ndim)
             exclude = np.random.randint(0, 2)
             axes = []
             for (axis, flag) in enumerate(axis_flags):
@@ -1972,7 +1973,7 @@ def check_instance_norm_with_shape(shape, xpu):
     exec1 = Y.bind(xpu, args = {'X':x, 'G':gamma, 'B':beta})
     exec1.forward(is_train=False)
     out = exec1.outputs[0].asnumpy()
-    assert_almost_equal(out, np_out, rtol=1e-4, atol=1e-5)
+    assert_almost_equal(out, np_out, rtol=1e-4)
     check_numeric_gradient(Y, {'X':x.asnumpy(), 'G':gamma.asnumpy(), 'B':beta.asnumpy()},
                            numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
 
@@ -2010,7 +2011,7 @@ def check_l2_normalization(in_shape, mode, ctx=default_context(), norm_eps=1e-10
     exe = out.simple_bind(ctx=ctx, data=in_data.shape)
     output = exe.forward(is_train=True, data=in_data)
     # compare numpy + mxnet
-    assert_almost_equal(exe.outputs[0].asnumpy(), np_out, rtol=1e-4, atol=1e-5)
+    assert_almost_equal(exe.outputs[0].asnumpy(), np_out, rtol=1e-5)
     # check gradient
     check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
 
@@ -2058,6 +2059,69 @@ def test_sequence_mask():
     shape2 = (1, 2, 2, 3, 1, 1)
     check_sequence_mask(shape1, default_context(), 2.1)
     check_sequence_mask(shape2, default_context(), 0.1)
+
+def check_sequence_reverse(xpu):
+
+    # sample data
+    arr = np.array(
+        [[[  1.,   2.,   3.],
+          [  4.,   5.,   6.]],
+         [[  7.,   8.,   9.],
+          [ 10.,  11.,  12.]],
+         [[ 13.,  14.,   15.],
+          [ 16.,  17.,   18.]]])
+
+    arr1 = np.array(
+        [[[  13.,   14.,   15.],
+          [  16.,   17.,   18.]],
+         [[  7.,   8.,   9.],
+          [ 10.,  11.,  12.]],
+         [[ 1.,  2.,   3.],
+          [ 4.,  5.,   6.]]])
+
+    arr2 = np.array(
+        [[[  7.,   8.,   9.],
+          [  10.,   11.,   12.]],
+         [[  1.,   2.,   3.],
+          [ 4.,  5.,   6.]],
+         [[ 13.,  14.,   15.],
+          [ 16.,  17.,   18.]]])
+
+    arr3 = np.array(
+        [[[  7.,   8.,   9.],
+          [  16.,   17.,   18.]],
+         [[  1.,   2.,   3.],
+          [ 10.,  11.,  12.]],
+         [[ 13.,  14.,   15.],
+          [ 4.,  5.,   6.]]])
+
+    def test_wrapper(arr, xpu, sequence_length=None, use_sequence_length=False):
+        # MxNet symbol creation
+        seq = mx.sym.Variable('seq')
+        if sequence_length and use_sequence_length:
+            seq_len = mx.sym.Variable('seq_len')
+        else:
+           # ensure that both are disabled, not just one
+           seq_len=None
+           use_sequence_length=False
+        rev = mx.sym.SequenceReverse(data=seq, sequence_length=seq_len, use_sequence_length=use_sequence_length)
+        # MxNet symbol execution
+        if sequence_length:
+            bound = rev.bind(xpu, {'seq': mx.nd.array(arr), 'seq_len': mx.nd.array(sequence_length)})
+        else:
+            bound = rev.bind(xpu, {'seq': mx.nd.array(arr)})
+        fwd = bound.forward()
+        return fwd[0].asnumpy()
+
+    # test cases
+    assert_array_equal(test_wrapper(arr, xpu, use_sequence_length=False), arr1)
+    assert_array_equal(test_wrapper(arr, xpu, sequence_length=[3, 3], use_sequence_length=True), arr1)
+    assert_array_equal(test_wrapper(arr, xpu, sequence_length=[2, 2], use_sequence_length=True), arr2)
+    assert_array_equal(test_wrapper(arr, xpu, sequence_length=[2, 3], use_sequence_length=True), arr3)
+
+
+def test_sequence_reverse():
+    check_sequence_reverse(mx.cpu())
 
 def mathematical_core_binary(name,
                              forward_mxnet_call,
