@@ -83,7 +83,7 @@ test_that("Regression", {
   })
   mx.set.seed(0)
   model <- mx.model.FeedForward.create(lro, X = train.x, y = train.y,
-                                       ctx = mx.cpu(), num.round = 50,
+                                       ctx = mx.cpu(), num.round = 5,
                                        array.batch.size = 20,
                                        learning.rate = 2e-6,
                                        momentum = 0.9,
@@ -103,7 +103,7 @@ test_that("Classification", {
   mx.set.seed(0)
   model <- mx.mlp(train.x, train.y, hidden_node = 10,
                   out_node = 2, out_activation = "softmax",
-                  num.round = 20, array.batch.size = 15,
+                  num.round = 5, array.batch.size = 15,
                   learning.rate = 0.07,
                   momentum = 0.9,
                   eval.metric = mx.metric.accuracy)
@@ -218,7 +218,7 @@ test_that("Matrix Factorization", {
   train_iter <- CustomIter$new(user_iter, item_iter)
   
   model <- mx.model.FeedForward.create(pred3, X = train_iter, ctx = devices,
-                                       num.round = 10, initializer = mx.init.uniform(0.07),
+                                       num.round = 5, initializer = mx.init.uniform(0.07),
                                        learning.rate = 0.07,
                                        eval.metric = mx.metric.rmse,
                                        momentum = 0.9,
