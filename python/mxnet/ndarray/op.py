@@ -7,7 +7,7 @@ import numpy as np  # pylint: disable=unused-import
 
 from ..ndarray_doc import _build_doc
 
-# Use different verison of SymbolBase
+# Use different version of SymbolBase
 # When possible, use cython to speedup part of computation.
 # pylint: disable=unused-import
 try:

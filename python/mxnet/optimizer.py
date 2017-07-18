@@ -346,7 +346,8 @@ class SGD(Optimizer):
                   "multi-precision doesn't supprot non-default weight yet"
             weight_master_copy = array(weight, ctx=weight.context, dtype=numpy.float32)
             if self.momentum != 0.0:
-                momentum = zeros(weight.shape, weight.context, dtype=numpy.float32, stype=weight.stype)
+                momentum = zeros(weight.shape, weight.context, dtype=numpy.float32,
+                                 stype=weight.stype)
             return (momentum, weight_master_copy)
         if weight.dtype == numpy.float16 and not self.multi_precision:
             warnings.warn("Accumulating with float16 in optimizer can lead to "

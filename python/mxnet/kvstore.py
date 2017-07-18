@@ -6,7 +6,7 @@ import ctypes
 import pickle
 from .ndarray import NDArray
 from .base import _LIB
-from .base import check_call, c_array, c_str, string_types, mx_uint, py_str, integer_types
+from .base import check_call, c_array, c_str, string_types, mx_uint, py_str
 from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
 

@@ -8,7 +8,6 @@ import logging
 import warnings
 
 from .. import context as ctx
-from .. import ndarray as nd
 from .. import optimizer as opt
 
 from .executor_group import DataParallelExecutorGroup
