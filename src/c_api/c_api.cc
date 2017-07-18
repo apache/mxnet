@@ -230,6 +230,25 @@ int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
   API_END();
 }
 
+/*!
+ * \brief
+ * \param handle_dst handle of a dst ndarray whose data/aux_data has been allocated
+ * \param handle_src handle of a src ndarray which has default storage type
+ * \param i if i = -1, copy src.data() to dst.data(); if i >= 0, copy src.data() to dst.aux_data(i)
+ */
+int MXNDArraySyncCopyFromNDArray(NDArrayHandle handle_dst,
+                                 const NDArrayHandle handle_src,
+                                 const int i) {
+  API_BEGIN();
+  NDArray* dst = static_cast<NDArray*>(handle_dst);
+  NDArray* src = static_cast<NDArray*>(handle_src);
+  dst->WaitToRead();
+  NDArray ret((i >= 0? dst->aux_data(i) : dst->data()), dst->ctx().dev_id);
+  CopyFromTo(*src, &ret);
+  ret.WaitToRead();
+  API_END();
+}
+
 int MXNDArrayWaitToRead(NDArrayHandle handle) {
   API_BEGIN();
   static_cast<NDArray*>(handle)->WaitToRead();

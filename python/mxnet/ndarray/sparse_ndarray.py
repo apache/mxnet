@@ -23,7 +23,7 @@ from . import _internal
 from . import ndarray
 from .ndarray import _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .ndarray import _STORAGE_TYPE_STR_TO_ID
-from .ndarray import NDArray, _storage_type, _zeros_ndarray
+from .ndarray import NDArray, _storage_type, _zeros_ndarray, array
 from . import cast_storage
 from . import slice as nd_slice
 
@@ -220,20 +220,19 @@ class SparseNDArray(NDArray):
 
     @property
     def data(self):
-        """The values array of the SparseNDArray. This is a read-only view of the values array.
-        They reveal internal implementation details and should be used with care.
+        """Get a deep copy of the values array of the SparseNDArray.
 
         Returns
         -------
         NDArray
-            This SparseNDArray's values array.
+            A deep copy of the SparseNDArray's values array.
         """
         return self._data()
 
     @property
     def _num_aux(self):
-        ''' The number of aux data used to help store the sparse ndarray.
-        '''
+        """The number of aux data used to help store the sparse ndarray.
+        """
         return len(_STORAGE_AUX_TYPES[self.stype])
 
     @property
@@ -253,7 +252,6 @@ class SparseNDArray(NDArray):
 
     def asnumpy(self):
         """Return a dense ``numpy.ndarray`` object with value copied from this array
-
         """
         return self.todense().asnumpy()
 
@@ -311,16 +309,16 @@ class SparseNDArray(NDArray):
     def todense(self):
         return todense(self)
 
-    def _aux_data(self, i, writable=False):
-        """ Get an NDArray referencing the ith aux data array associated with the SparseNDArray.
+    def _aux_data(self, i, writable=True):
+        """ Get a deep copy NDArray of the i-th aux data array associated with the SparseNDArray.
         """
         self.wait_to_read()
         hdl = NDArrayHandle()
         check_call(_LIB.MXNDArrayGetAuxNDArray(self.handle, i, ctypes.byref(hdl)))
         return NDArray(hdl, writable)
 
-    def _data(self, writable=False):
-        """ Get an NDArray referencing the value array associated with the SparseNDArray.
+    def _data(self, writable=True):
+        """ Get a deep copy NDArray of the value array associated with the SparseNDArray.
         """
         self.wait_to_read()
         hdl = NDArrayHandle()
@@ -351,8 +349,8 @@ class CSRNDArray(SparseNDArray):
 
     @property
     def indices(self):
-        """The indices array of the SparseNDArray. This is a read-only view of the indices array.
-        They reveal internal implementation details and should be used with care.
+        """The indices array of the SparseNDArray with `csr` storage type.
+        This generates a deep copy of the column indices of the current `csr` matrix.
 
         Returns
         -------
@@ -364,8 +362,7 @@ class CSRNDArray(SparseNDArray):
     @property
     def indptr(self):
         """The indptr array of the SparseNDArray with `csr` storage type.
-        This is a read-only view of the indptr array.
-        They reveal internal implementation details and should be used with care.
+        This generates a deep copy of the `indptr` of the current `csr` matrix.
 
         Returns
         -------
@@ -405,8 +402,8 @@ class RowSparseNDArray(SparseNDArray):
 
     @property
     def indices(self):
-        """The indices array of the SparseNDArray. This is a read-only view of the indices array.
-        They reveal internal implementation details and should be used with care.
+        """The indices array of the SparseNDArray with `row_sparse` storage type.
+        This generates a deep copy of the row indices of the current row-sparse matrix.
 
         Returns
         -------
@@ -490,22 +487,27 @@ def csr(data, indptr, indices, shape, ctx=None, dtype=None, indptr_type=None, in
     assert(len(shape) == 2)
     result = CSRNDArray(_new_alloc_handle(storage_type, shape, ctx, False, dtype,
                                           [indptr_type, indices_type], aux_shapes))
-    # assign indptr, indices and data
-    data_ref = result._data(True)
-    indptr_ref = result._aux_data(0, True)
-    indices_ref = result._aux_data(1, True)
-    data_ref[:] = data
-    indptr_ref[:] = indptr
-    indices_ref[:] = indices
+    # TODO(junwu): Convert data, indptr, and indices to mxnet NDArrays
+    # if they are not for now. In the future, we should provide a c-api
+    # to accept np.ndarray types to copy from to result.data and aux_data
+    if not isinstance(data, NDArray):
+        data = array(data, ctx, dtype)
+    if not isinstance(indptr, NDArray):
+        indptr = array(indptr, ctx, indptr_type)
+    if not isinstance(indices, NDArray):
+        indices = array(indices, ctx, indices_type)
+    check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, data.handle, ctypes.c_int(-1)))
+    check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, indptr.handle, ctypes.c_int(0)))
+    check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, indices.handle, ctypes.c_int(1)))
     return result
 
 
-def row_sparse(values, indices, shape, ctx=None, dtype=None, indices_type=None):
+def row_sparse(data, indices, shape, ctx=None, dtype=None, indices_type=None):
     """Creates a row sparse array with a set of tensor slices at given indices.
 
     Parameters
     ----------
-    values: array_like
+    data: array_like
         An object exposing the array interface, with shape [D0, D1, .. Dn], where D0 is
         the number of rows with non-zeros entries.
     indices: array_like
@@ -513,8 +515,8 @@ def row_sparse(values, indices, shape, ctx=None, dtype=None, indices_type=None):
     ctx : Context, optional
         Device context (default is the current default context).
     dtype : str or numpy.dtype, optional
-        The data type of the output array. The default dtype is ``values.dtype``
-        if `values` is an `NDArray`, `float32` otherwise.
+        The data type of the output array. The default dtype is ``data.dtype``
+        if `data` is an `NDArray`, `float32` otherwise.
     indices_type: str or numpy.dtype, optional
         The data type of the indices array. The default dtype is ``indices.dtype``
         if `indicies` is an `NDArray`, `int32` otherwise.
@@ -540,21 +542,26 @@ def row_sparse(values, indices, shape, ctx=None, dtype=None, indices_type=None):
     if ctx is None:
         ctx = Context.default_ctx
     # prepare src array and types
-    values, dtype = _prepare_src_array(values, dtype, mx_real_t)
+    data, dtype = _prepare_src_array(data, dtype, mx_real_t)
     indices, indices_type = _prepare_src_array(indices, indices_type,
                                                _STORAGE_AUX_TYPES[storage_type][0])
     # verify types
     assert('int64' in str(indices_type)), "expected int64 for indices"
     # verify shapes
-    assert(values.ndim == len(shape))
+    assert(data.ndim == len(shape))
     assert(indices.ndim == 1)
     result = RowSparseNDArray(_new_alloc_handle(storage_type, shape, ctx, False, dtype,
                                                 [indices_type], [indices.shape]))
-    # assign indices and values
-    values_ref = result._data(True)
-    indices_ref = result._aux_data(0, True)
-    values_ref[:] = values
-    indices_ref[:] = indices
+
+    # TODO(junwu): Convert data, indptr, and indices to mxnet NDArrays
+    # if they are not for now. In the future, we should provide a c-api
+    # to accept np.ndarray types to copy from to result.data and aux_data
+    if not isinstance(data, NDArray):
+        data = array(data, ctx, dtype)
+    if not isinstance(indices, NDArray):
+        indices = array(indices, ctx, indices_type)
+    check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, data.handle, ctypes.c_int(-1)))
+    check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, indices.handle, ctypes.c_int(0)))
     return result
 
 

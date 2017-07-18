@@ -106,6 +106,24 @@ NDArray NDArray::At(index_t idx) const {
   }
 }
 
+NDArray NDArray::aux_ndarray(size_t i) const {
+  CHECK_NE(storage_type(), kDefaultStorage);
+  CHECK(i < ptr_->aux_shapes.size());
+  WaitToRead();
+  NDArray ret(aux_shape(i), ctx(), false, aux_type(i));
+  CopyFromTo(NDArray(aux_data(i), ctx().dev_id), &ret);
+  ret.WaitToRead();
+  return ret;
+}
+
+NDArray NDArray::data_ndarray() const {
+  CHECK_NE(storage_type(), kDefaultStorage);
+  WaitToRead();
+  NDArray ret(storage_shape(), ctx(), false, dtype_);
+  CopyFromTo(NDArray(data(), ctx().dev_id), &ret);
+  ret.WaitToRead();
+  return ret;
+}
 
 bool NDArray::fresh_out_grad() const {
   if (entry_.ag_node != nullptr) return entry_.ag_node->fresh_out_grad;
