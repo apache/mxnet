@@ -48,6 +48,7 @@ except ImportError:
 
 # pylint: disable= no-member
 _DTYPE_NP_TO_MX = {
+    None       : -1,
     np.float32 : 0,
     np.float64 : 1,
     np.float16 : 2,
@@ -56,6 +57,7 @@ _DTYPE_NP_TO_MX = {
 }
 
 _DTYPE_MX_TO_NP = {
+    -1 : None,
     0 : np.float32,
     1 : np.float64,
     2 : np.float16,
