@@ -14,6 +14,7 @@
 #include "../elemwise_op_common.h"
 #include "../special_functions-inl.h"
 #include "./broadcast_reduce-inl.h"
+#include "./init_op.h"
 
 namespace mxnet {
 namespace op {
@@ -91,7 +92,11 @@ void IdentityComputeRsp(const nnvm::NodeAttrs& attrs,
   auto &output = outputs[0];
   CHECK_NE(req[0], kNullOp) << "kNullOp in IdentityComputeEx not supported yet";
   CHECK_NE(req[0], kWriteInplace) << "kWriteInplace in IdentityComputeEx not supported yet";
-  if (!input.storage_initialized()) return;
+  if (!input.storage_initialized()) {
+    NDArray out = output;
+    FillZerosRspImpl(s, &out);
+    return;
+  }
   TShape shape = input.aux_shape(rowsparse::kIdx);
   output.CheckAndAlloc({shape});
   MSHADOW_TYPE_SWITCH(output.dtype(), DType, {
