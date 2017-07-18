@@ -134,7 +134,7 @@ def test(ctx, data_iter, best, mode='validation', num_iter=-1):
         if test_r >= best:
             best = test_r
             logging.info('New optimum found: {}. Checkpointing.'.format(best))
-            net.collect_params().save('childsum_tree_lstm_{}.params'.format(num_iter))
+            net.save_params('childsum_tree_lstm_{}.params'.format(num_iter))
             test(ctx, test_iter, -1, 'test')
         return best
 
