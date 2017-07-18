@@ -137,10 +137,10 @@ def test_sparse_dot():
                                 rtol=1e-3, atol=1e-4)
 
     lhs_shape = rand_shape_2d(50, 200)
-    test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1,  4)), 'default', False) # test gpu
-    test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1,  4)), 'default', True ) # vector kernel
-    test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(5, 10)), 'default', False) # test gpu
-    test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(5, 10)), 'default', True ) # scalar kernel
+    test_dot_csr(lhs_shape, (lhs_shape[1], 1), 'default', False) # test gpu SpMV
+    test_dot_csr(lhs_shape, (lhs_shape[0], 1), 'default', True ) # (vector kernel)
+    test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(5, 10)), 'default', False) # test gpu SpMM
+    test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(5, 10)), 'default', True ) # (scalar kernel)
     if default_context().device_type is 'cpu':
         test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False)
         test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True )
