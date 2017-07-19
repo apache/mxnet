@@ -152,7 +152,6 @@ void single_image_constant_grad(const Tensor<cpu, 3, DType> &in_grad,
   const int in_grad0 = in_grad.size(0);
   const int in_grad1 = in_grad.size(1);
   const int in_grad2 = in_grad.size(2);
-  
   int c, h, w;
 #pragma omp parallel for private(c, w, h)
   for (c = 0; c < in_grad0; ++c) {
@@ -450,12 +449,10 @@ void single_image_constant_grad(const Tensor<cpu, 4, DType> &in_grad,
   const int pad_f = pad[4];
   const int pad_t = pad[6];
   const int pad_l = pad[8];
-  
   const int in_grad0 = in_grad.size(0);
   const int in_grad1 = in_grad.size(1);
   const int in_grad2 = in_grad.size(2);
   const int in_grad3 = in_grad.size(3);
-  
   int c, d, w, h;
   #pragma omp parallel for private(c, d, w, h)
   for (c = 0; c < in_grad0; ++c) {
