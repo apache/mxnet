@@ -676,8 +676,6 @@ class HueJitterAug(Augmenter):
                        [0.0, vsw, vsu]])
         t = np.dot(np.dot(self.tyiq, bt), self.ityiq).T
         src = nd.dot(src, nd.array(t))
-        if self.clip:
-            src = nd.clip(src, self.min_val, self.max_val)
         return [src]
 
 
@@ -1000,11 +998,13 @@ class ImageIter(io.DataIter):
             for img in imglist:
                 key = str(index)  # pylint: disable=redefined-variable-type
                 index += 1
-                if isinstance(img[0], numeric_types):
+                if len(img) > 2:
+                    label = nd.array(img[:-1])
+                elif isinstance(img[0], numeric_types):
                     label = nd.array([img[0]])
                 else:
                     label = nd.array(img[0])
-                result[key] = (label, img[1])
+                result[key] = (label, img[-1])
                 imgkeys.append(str(key))
             self.imglist = result
         else:
