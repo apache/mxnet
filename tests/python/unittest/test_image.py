@@ -23,7 +23,10 @@ def test_init():
     _get_images()
 
 def test_imdecode():
-    import cv2
+    try:
+        import cv2
+    except ImportError:
+        return
     sources = _get_images()
     for img in sources:
         with open(img, 'rb') as fp:
@@ -38,7 +41,10 @@ def test_scale_down():
     assert mx.image.scale_down((300, 400), (0, 0)) == (0, 0)
 
 def test_resize_short():
-    import cv2
+    try:
+        import cv2
+    except ImportError:
+        return
     sources = _get_images()
     for img in sources:
         cv_img = cv2.imread(img)
