@@ -183,7 +183,8 @@ def test_zoneout():
 def test_vardrop():
     cell = gluon.rnn.VariationalDropoutCell(gluon.rnn.RNNCell(100, prefix='rnn_'),
                                             vardrop_outputs=0.5,
-                                            vardrop_states=0.5)
+                                            vardrop_states=0.5,
+                                            vardrop_inputs=0.5)
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)

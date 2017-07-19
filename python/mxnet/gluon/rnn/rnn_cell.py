@@ -743,9 +743,10 @@ class ResidualCell(ModifierCell):
 class VariationalDropoutCell(ModifierCell):
     """
     Applies Variational Dropout on base cell.
-    (https://arxiv.org/pdf/1512.05287.pdf).
+    (https://arxiv.org/pdf/1512.05287.pdf,
+     https://www.stat.berkeley.edu/~tsmoon/files/Conference/asru2015.pdf).
     """
-    def __init__(self, base_cell, vardrop_outputs=0., vardrop_states=0.):
+    def __init__(self, base_cell, vardrop_inputs=0., vardrop_outputs=0., vardrop_states=0.):
         assert not isinstance(base_cell, BidirectionalCell), \
             "BidirectionalCell doesn't support vardrop since it doesn't support step. " \
             "Please add VariationalDropoutCell to the cells underneath instead."
@@ -753,18 +754,21 @@ class VariationalDropoutCell(ModifierCell):
             "Bidirectional SequentialRNNCell doesn't support vardrop. " \
             "Please add VariationalDropoutCell to the cells underneath instead."
         super(VariationalDropoutCell, self).__init__(base_cell)
-        self.vardrop_outputs = vardrop_outputs
+        self.vardrop_inputs = vardrop_inputs
         self.vardrop_states = vardrop_states
-        self.vardrop_outputs_mask = None
+        self.vardrop_outputs = vardrop_outputs
+        self.vardrop_inputs_mask = None
         self.vardrop_states_mask = None
+        self.vardrop_outputs_mask = None
 
     def _alias(self):
         return 'vardrop'
 
     def reset(self):
         super(VariationalDropoutCell, self).reset()
-        self.vardrop_outputs_mask = None
+        self.vardrop_inputs_mask = None
         self.vardrop_states_mask = None
+        self.vardrop_outputs_mask = None
 
     def hybrid_forward(self, F, inputs, states):
         cell = self.base_cell
@@ -775,6 +779,12 @@ class VariationalDropoutCell(ModifierCell):
                                                      p=self.vardrop_states)
             states = list(states)
             states[0] = states[0] * self.vardrop_states_mask
+
+        if self.vardrop_inputs:
+            if self.vardrop_inputs_mask is None:
+                self.vardrop_inputs_mask = F.Dropout(F.ones_like(inputs),
+                                                     p=self.vardrop_inputs)
+            inputs = inputs * self.vardrop_inputs_mask
 
         next_output, next_states = cell(inputs, states)
 
