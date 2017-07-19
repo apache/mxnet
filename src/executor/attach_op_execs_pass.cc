@@ -49,7 +49,7 @@ class StatefulComputeExecutor : public OpExecutor {
     return exec_type_;
   }
 
-  virtual engine::VarHandle var() const {
+  engine::VarHandle var() const override {
     return state_.get_var();
   }
 
@@ -81,7 +81,7 @@ class StatefulComputeExExecutor : public OpExecutor {
     return exec_type_;
   }
 
-  virtual engine::VarHandle var() const {
+  engine::VarHandle var() const override {
     return state_.get_var();
   }
 

@@ -118,9 +118,9 @@ template <typename DType>
 void single_image_constant(const Tensor<cpu, 3, DType> &dst,
                            const Tensor<cpu, 3, DType> src, mxnet::TShape pad,
                            DType constant_value) {
-  const int pad_t = pad[4];
-  const int pad_l = pad[6];
-  int c, w, h;
+  const index_t pad_t = pad[4];
+  const index_t pad_l = pad[6];
+  index_t c, w, h;
 #pragma omp parallel for private(c, w, h)
   for (c = 0; c < dst.size(0); ++c) {
     for (h = 0; h < dst.size(1); ++h) {
@@ -142,7 +142,7 @@ void single_image_constant_grad(const Tensor<cpu, 3, DType> &in_grad,
                                 mxnet::TShape pad) {
   const int pad_t = pad[4];
   const int pad_l = pad[6];
-  int c, h, w;
+  index_t c, h, w;
 #pragma omp parallel for private(c, w, h)
   for (c = 0; c < in_grad.size(0); ++c) {
     for (h = 0; h < in_grad.size(1); ++h) {
@@ -401,10 +401,10 @@ template <typename DType>
 void single_image_constant(const Tensor<cpu, 4, DType> &dst,
                            const Tensor<cpu, 4, DType> src, mxnet::TShape pad,
                            DType constant_value) {
-  const int pad_f = pad[4];
-  const int pad_t = pad[6];
-  const int pad_l = pad[8];
-  int c, d, w, h;
+  const index_t pad_f = pad[4];
+  const index_t pad_t = pad[6];
+  const index_t pad_l = pad[8];
+  index_t c, d, w, h;
 #pragma omp parallel for private(c, d, w, h)
   for (c = 0; c < dst.size(0); ++c) {
     for (d = 0; d < dst.size(1); ++d) {
@@ -430,7 +430,7 @@ void single_image_constant_grad(const Tensor<cpu, 4, DType> &in_grad,
   const int pad_f = pad[4];
   const int pad_t = pad[6];
   const int pad_l = pad[8];
-  int c, d, w, h;
+  index_t c, d, w, h;
   #pragma omp parallel for private(c, d, w, h)
   for (c = 0; c < in_grad.size(0); ++c) {
     for (d = 0; d < in_grad.size(1); ++d) {

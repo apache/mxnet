@@ -33,22 +33,23 @@ inline void CorrelationForward(const Tensor<cpu, 4, Dtype> &out,
   const int bchannels = data1.size(1);
   const int sumelems = kernel_size_ * kernel_size_ * bchannels;
   AddPad<Dtype>(data1, tmp1, pad_size_);
+  index_t top_channels_unsigned_ = static_cast<index_t>(top_channels_);
   AddPad<Dtype>(data2, tmp2, pad_size_);
   for (index_t i = 0 ; i < static_cast<index_t>(top_height_) ; i++)
       for (index_t j = 0 ; j < static_cast<index_t>(top_width_); j++)
         for (index_t nbatch = 0 ; nbatch < bnum ; nbatch++) {
             int x1 = j*stride1_+max_displacement_;
             int y1 = i*stride1_+max_displacement_;
-            for (index_t top_channel = 0 ; top_channel < top_channels_ ; top_channel++) {
+            for (index_t top_channel = 0 ; top_channel < top_channels_unsigned_ ; top_channel++) {
               int s2o = (top_channel % neighborhood_grid_width_ -\
                          neighborhood_grid_radius_) * stride2_;
               int s2p = (top_channel / neighborhood_grid_width_ -\
                          neighborhood_grid_radius_) * stride2_;
               int x2 = x1 + s2o;
               int y2 = y1 + s2p;
-              for (index_t h = 0; h < kernel_size_; h++)
-                for (index_t w = 0; w < kernel_size_; w++)
-                  for (index_t channel = 0; channel < bchannels; channel++) {
+              for (index_t h = 0; h < static_cast<index_t>(kernel_size_); h++)
+                for (index_t w = 0; w < static_cast<index_t>(kernel_size_); w++)
+                  for (index_t channel = 0; channel < static_cast<index_t>(bchannels); channel++) {
                     if (is_multiply == true)
                         out[nbatch][top_channel][i][j] += \
                         tmp1[nbatch][y1+h][x1+w][channel]*tmp2[nbatch][y2+h][x2+w][channel];
@@ -76,9 +77,9 @@ inline void CorrelationBackward(const Tensor<cpu, 4, Dtype> &out_grad,
                                 int channels, int height, int width
                             ) {
   const float sumelems = kernel_size_ * kernel_size_ * channels;
-  for (int i = 0 ; i < static_cast<index_t>(top_height_) ; i++)
-     for (int j = 0 ; j < static_cast<index_t>(top_width_); j++)
-        for (int nbatch = 0 ; nbatch < static_cast<index_t>(num) ; nbatch++) {
+  for (index_t i = 0 ; i < static_cast<index_t>(top_height_) ; i++)
+     for (index_t j = 0 ; j < static_cast<index_t>(top_width_); j++)
+        for (index_t nbatch = 0 ; nbatch < static_cast<index_t>(num) ; nbatch++) {
             int x1 = j*stride1_+max_displacement_;
             int y1 = i*stride1_+max_displacement_;
             for (int top_channel = 0 ; top_channel < top_channels_ ; top_channel++) {
