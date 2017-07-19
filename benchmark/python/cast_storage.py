@@ -40,6 +40,12 @@ def run_cast_storage_synthetic():
     check_call(_LIB.MXSetNumOMPThreads(ctypes.c_int(args.num_omp_threads)))
 
     # params
+    # m           number of rows
+    # n           number of columns
+    # density     density of the matrix
+    # num_repeat  number of benchmark runs to average over
+    # contexts    mx.cpu(), mx.gpu()
+    #             note: benchmark different contexts separately; to benchmark cpu, compile without CUDA
     m = [  512,    512]
     n = [50000, 100000]
     density = [1.00, 0.80, 0.60, 0.40, 0.20, 0.10, 0.05, 0.02, 0.01]
