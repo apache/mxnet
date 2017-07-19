@@ -81,10 +81,11 @@ def load_data(args):
         val_json = args.config.get('data', 'val_json')
         datagen = DataGenerator(save_dir=save_dir, model_name=model_name)
         datagen.load_train_data(data_json, max_duration=max_duration)
+        datagen.load_validation_data(val_json, max_duration=max_duration)
         if is_bi_graphemes:
             if not os.path.isfile("resources/unicodemap_en_baidu_bi_graphemes.csv") or overwrite_bi_graphemes_dictionary:
-                load_labelutil(labelUtil=labelUtil, is_bi_graphemes=False, language=language) 
-                generate_bi_graphemes_dictionary(datagen.train_texts)
+                load_labelutil(labelUtil=labelUtil, is_bi_graphemes=False, language=language)
+                generate_bi_graphemes_dictionary(datagen.train_texts+datagen.val_texts)
         load_labelutil(labelUtil=labelUtil, is_bi_graphemes=is_bi_graphemes, language=language)
         args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
 
@@ -98,14 +99,12 @@ def load_data(args):
                 datagen.get_meta_from_file(
                     np.loadtxt(generate_file_path(save_dir, model_name, 'feats_mean')),
                     np.loadtxt(generate_file_path(save_dir, model_name, 'feats_std')))
-            datagen.load_validation_data(val_json, max_duration=max_duration)
-
         elif mode == "load":
             # get feat_mean and feat_std to normalize dataset
             datagen.get_meta_from_file(
                 np.loadtxt(generate_file_path(save_dir, model_name, 'feats_mean')),
                 np.loadtxt(generate_file_path(save_dir, model_name, 'feats_std')))
-            datagen.load_validation_data(val_json, max_duration=max_duration)
+
     elif mode == 'predict':
         test_json = args.config.get('data', 'test_json')
         datagen = DataGenerator(save_dir=save_dir, model_name=model_name)
