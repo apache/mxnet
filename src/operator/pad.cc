@@ -149,11 +149,15 @@ void single_image_constant_grad(const Tensor<cpu, 3, DType> &in_grad,
   const int pad_t = pad[4];
   const int pad_l = pad[6];
 
-  int c, h, w, cn, hn, wn;
+  const int in_grad0 = in_grad.size(0);
+  const int in_grad1 = in_grad.size(1);
+  const int in_grad2 = in_grad.size(2);
+  
+  int c, h, w;
 #pragma omp parallel for private(c, w, h)
-  for (c = 0, cn=static_cast<int>(in_grad.size(0)); c < cn; ++c) {
-    for (h = 0, hn=static_cast<int>(in_grad.size(1)); h < hn; ++h) {
-      for (w = 0, wn=static_cast<int>(in_grad.size(2)); w < wn; ++w) {
+  for (c = 0; c < in_grad0; ++c) {
+    for (h = 0; h < in_grad1; ++h) {
+      for (w = 0; w < in_grad2; ++w) {
         in_grad[c][h][w] += out_grad[c][h + pad_t][w + pad_l];
       }
     }
@@ -446,12 +450,18 @@ void single_image_constant_grad(const Tensor<cpu, 4, DType> &in_grad,
   const int pad_f = pad[4];
   const int pad_t = pad[6];
   const int pad_l = pad[8];
-  int c, d, w, h, cn, dn, wn, hn;
+  
+  const int in_grad0 = in_grad.size(0);
+  const int in_grad1 = in_grad.size(1);
+  const int in_grad2 = in_grad.size(2);
+  const int in_grad3 = in_grad.size(3);
+  
+  int c, d, w, h;
   #pragma omp parallel for private(c, d, w, h)
-  for (c = 0, cn=static_cast<int>(in_grad.size(0)); c < cn; ++c) {
-    for (d = 0, dn=static_cast<int>(in_grad.size(1)); d < dn; ++d) {
-      for (h = 0, hn=static_cast<int>(in_grad.size(2)); h < hn; ++h) {
-        for (w = 0, wn=static_cast<int>(in_grad.size(3)); w < wn; ++w) {
+  for (c = 0; c < in_grad0; ++c) {
+    for (d = 0; d < in_grad1; ++d) {
+      for (h = 0; h < in_grad2; ++h) {
+        for (w = 0; w < in_grad3; ++w) {
           in_grad[c][d][h][w] += out_grad[c][d + pad_f][h + pad_t][w + pad_l];
         }
       }
