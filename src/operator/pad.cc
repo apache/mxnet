@@ -120,16 +120,13 @@ void single_image_constant(const Tensor<cpu, 3, DType> &dst,
                            DType constant_value) {
   const int pad_t = pad[4];
   const int pad_l = pad[6];
-  
-  int c,w,h;
-
+  int c, w, h;
+  // using these vars to avoid casting overhead each loop iteration
   const int dst0 = dst.size(0);
   const int dst1 = dst.size(1);
   const int dst2 = dst.size(2);
   const int src1 = src.size(1);
   const int src2 = src.size(2);
-  //using these vars to avoid casting overhead each loop iteration
-
 #pragma omp parallel for private(c, w, h)
   for (c = 0; c < dst0; ++c) {
     for (h = 0; h < dst1; ++h) {
