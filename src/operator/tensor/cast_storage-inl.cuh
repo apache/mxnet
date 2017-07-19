@@ -153,7 +153,7 @@ struct FillCsrColIdxAndValsWarpKernel {
         WarpScan(temp_storage[warp_lane]).ExclusiveSum(nnz, nnz);
         if (j < num_cols) {
           if (dns[offset+j] != 0) {
-            val    [k+nnz] = dns[offset+j];
+            val[k+nnz] = dns[offset+j];
             col_idx[k+nnz] = j;
           }
         }
@@ -228,7 +228,7 @@ struct FillCsrColIdxAndValsBlockKernel {
         BlockScan(temp_storage).ExclusiveSum(nnz, nnz);
         if (j < num_cols) {
           if (dns[offset+j] != 0) {
-            val    [k+nnz] = dns[offset+j];
+            val[k+nnz] = dns[offset+j];
             col_idx[k+nnz] = j;
           }
         }
