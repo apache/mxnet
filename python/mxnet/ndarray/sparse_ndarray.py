@@ -309,21 +309,23 @@ class SparseNDArray(NDArray):
     def todense(self):
         return todense(self)
 
-    def _aux_data(self, i, writable=True):
+    def _aux_data(self, i):
         """ Get a deep copy NDArray of the i-th aux data array associated with the SparseNDArray.
+        This function blocks. Do not use it in performance critical code.
         """
         self.wait_to_read()
         hdl = NDArrayHandle()
         check_call(_LIB.MXNDArrayGetAuxNDArray(self.handle, i, ctypes.byref(hdl)))
-        return NDArray(hdl, writable)
+        return NDArray(hdl)
 
-    def _data(self, writable=True):
+    def _data(self):
         """ Get a deep copy NDArray of the value array associated with the SparseNDArray.
+        This function blocks. Do not use it in performance critical code.
         """
         self.wait_to_read()
         hdl = NDArrayHandle()
         check_call(_LIB.MXNDArrayGetDataNDArray(self.handle, ctypes.byref(hdl)))
-        return NDArray(hdl, writable)
+        return NDArray(hdl)
 
 # pylint: disable=abstract-method
 class CSRNDArray(SparseNDArray):

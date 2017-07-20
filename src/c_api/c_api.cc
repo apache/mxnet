@@ -231,10 +231,11 @@ int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
 }
 
 /*!
- * \brief
+ * \brief Copy src.data() to dst.data() if i = -1, else dst.aux_data(i) if i >= 0
+ * This function blocks. Do not use it in performance critical code.
  * \param handle_dst handle of a dst ndarray whose data/aux_data has been allocated
  * \param handle_src handle of a src ndarray which has default storage type
- * \param i if i = -1, copy src.data() to dst.data(); if i >= 0, copy src.data() to dst.aux_data(i)
+ * \param i dst data blob indicator
  */
 int MXNDArraySyncCopyFromNDArray(NDArrayHandle handle_dst,
                                  const NDArrayHandle handle_src,
@@ -242,10 +243,7 @@ int MXNDArraySyncCopyFromNDArray(NDArrayHandle handle_dst,
   API_BEGIN();
   NDArray* dst = static_cast<NDArray*>(handle_dst);
   NDArray* src = static_cast<NDArray*>(handle_src);
-  dst->WaitToRead();
-  NDArray ret((i >= 0? dst->aux_data(i) : dst->data()), dst->ctx().dev_id);
-  CopyFromTo(*src, &ret);
-  ret.WaitToRead();
+  dst->SyncCopyFromNDArray(*src, -1, i);
   API_END();
 }
 
@@ -455,6 +453,11 @@ int MXNDArrayGetAuxType(NDArrayHandle handle,
   API_END();
 }
 
+/*!
+ * \brief Get a deep copy of the ith aux data blob
+ * in the form of an NDArray of default storage type.
+ * This function blocks. Do not use it in performance critical code.
+ */
 int MXNDArrayGetAuxNDArray(NDArrayHandle handle,
                            mx_uint i,
                            NDArrayHandle *out) {
@@ -464,6 +467,11 @@ int MXNDArrayGetAuxNDArray(NDArrayHandle handle,
   API_END();
 }
 
+/*!
+ * \brief Get a deep copy of the data blob
+ * in the form of an NDArray of default storage type.
+ * This function blocks. Do not use it in performance critical code.
+ */
 int MXNDArrayGetDataNDArray(NDArrayHandle handle,
                             NDArrayHandle *out) {
   API_BEGIN();

@@ -106,22 +106,22 @@ NDArray NDArray::At(index_t idx) const {
   }
 }
 
+/*!
+ * \brief Return deep copy of the current ndarry's aux_data(i)
+ * as an NDArray of default storage type. This function blocks.
+ */
 NDArray NDArray::aux_ndarray(size_t i) const {
   CHECK_NE(storage_type(), kDefaultStorage);
   CHECK(i < ptr_->aux_shapes.size());
-  WaitToRead();
-  NDArray ret(aux_shape(i), ctx(), false, aux_type(i));
-  CopyFromTo(NDArray(aux_data(i), ctx().dev_id), &ret);
-  ret.WaitToRead();
+  // create a delay_alloc default ndarray as output
+  NDArray ret(TShape(), ctx(), true, aux_type(i));
+  ret.SyncCopyFromNDArray(*this, i);
   return ret;
 }
 
 NDArray NDArray::data_ndarray() const {
-  CHECK_NE(storage_type(), kDefaultStorage);
-  WaitToRead();
-  NDArray ret(storage_shape(), ctx(), false, dtype_);
-  CopyFromTo(NDArray(data(), ctx().dev_id), &ret);
-  ret.WaitToRead();
+  NDArray ret(TShape(), ctx(), true, dtype_);
+  ret.SyncCopyFromNDArray(*this);
   return ret;
 }
 
@@ -1043,6 +1043,93 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
     LOG(FATAL) << "GPU is not enabled";
 #endif
   }
+}
+
+/*!
+ * \brief Copy src.data()/aux_data(i) to dst->data()/aux_data(j).
+ */
+void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
+  if (i >= 0) {
+    CHECK_NE(src.storage_type(), kDefaultStorage);
+  } else {
+    CHECK(!src.is_none()) << "src dense ndarray must have been iniatilized";
+  }
+  if (j >= 0) {
+    CHECK_NE(storage_type(), kDefaultStorage);
+  } else {
+    CHECK(!this->is_none()) << "dst dense ndarray must have been initialized";
+  }
+
+  if (src.var() == var()) {
+    // skip to copy to itself
+    LOG(WARNING) << "SyncCopyFromNDArray does not support copying to self";
+    return;
+  }
+  const int src_dev_mask = src.ctx().dev_mask();
+  const int dst_dev_mask = ctx().dev_mask();
+  std::vector<Engine::VarHandle> const_vars;
+  const_vars.push_back(src.var());
+
+  // get or create a dst tblob for copying src to it
+  // if dst is a dense format and has not been allocated, allocate memory for it
+  // else if dst is not initialized, allocate corresponding data blob for it
+  auto get_dst_data = [&](const TShape& src_shape) {
+    if (this->storage_type() == kDefaultStorage) {
+      this->ReshapeAndAlloc(src_shape);
+    } else if (!this->storage_initialized()) {
+      if (j < 0) {
+        this->CheckAndAllocData(src_shape);
+      } else {
+        this->CheckAndAllocAuxData(j, src_shape);
+      }
+    }
+    TBlob dst_data = (j >= 0? this->aux_data(j) : this->data());
+    CHECK_LE(src_shape.Size(), dst_data.shape_.Size());
+    return dst_data;
+  };
+
+  if (src_dev_mask == cpu::kDevMask && dst_dev_mask == cpu::kDevMask) {
+    Engine::Get()->PushSync([&](RunContext rctx) {
+        const TBlob src_data = (i >= 0? src.aux_data(i) : src.data());
+        TBlob dst_data = get_dst_data(src_data.shape_);
+        ndarray::Copy<cpu, cpu>(src_data, &dst_data, src.ctx(), this->ctx(), rctx);
+      }, this->ctx(), const_vars, {this->var()},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("SyncCopyFromNDArrayCPU2CPU"));
+  } else {
+#if MXNET_USE_CUDA
+    if (src_dev_mask == cpu::kDevMask && dst_dev_mask == gpu::kDevMask) {
+      Engine::Get()->PushSync([&](RunContext rctx) {
+          const TBlob src_data = (i >= 0? src.aux_data(i) : src.data());
+          TBlob dst_data = get_dst_data(src_data.shape_);
+          ndarray::Copy<cpu, gpu>(src_data, &dst_data, src.ctx(), this->ctx(), rctx);
+          rctx.get_stream<gpu>()->Wait();
+        }, this->ctx(), const_vars, {this->var()},
+        FnProperty::kCopyToGPU, 0, PROFILER_MESSAGE("SyncCopyFromNDArrayCPU2GPU"));
+    } else if (src_dev_mask == gpu::kDevMask && dst_dev_mask == cpu::kDevMask) {
+      Engine::Get()->PushSync([&](RunContext rctx) {
+          const TBlob src_data = (i >= 0? src.aux_data(i) : src.data());
+          TBlob dst_data = get_dst_data(src_data.shape_);
+          ndarray::Copy<gpu, cpu>(src_data, &dst_data, src.ctx(), this->ctx(), rctx);
+          rctx.get_stream<gpu>()->Wait();
+        }, this->ctx(), const_vars, {this->var()},
+        FnProperty::kCopyFromGPU, 0, PROFILER_MESSAGE("SyncCopyFromNDArrayGPU2CPU"));
+    } else if (src_dev_mask == gpu::kDevMask && dst_dev_mask == gpu::kDevMask) {
+      Engine::Get()->PushSync([&](RunContext rctx) {
+          const TBlob src_data = (i >= 0? src.aux_data(i) : src.data());
+          TBlob dst_data = get_dst_data(src_data.shape_);
+          ndarray::Copy<gpu, gpu>(src_data, &dst_data, src.ctx(), this->ctx(), rctx);
+          rctx.get_stream<gpu>()->Wait();
+        }, this->ctx(), const_vars, {this->var()},
+        src.dtype() != this->dtype() ? FnProperty::kNormal : FnProperty::kCopyFromGPU,
+        0, PROFILER_MESSAGE("SyncCopyFromNDArrayGPU2GPU"));
+    } else {
+      LOG(FATAL) << "unknown device mask";
+    }
+#else
+    LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif
+  }
+  WaitToRead();
 }
 
 void NDArray::SyncCopyToCPU(void *data, size_t size) const {

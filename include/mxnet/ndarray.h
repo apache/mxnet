@@ -419,6 +419,12 @@ class NDArray {
    * \param size the size of the source array, in sizeof(DType) not raw btyes.
    */
   void SyncCopyFromCPU(const void *data, size_t size) const;
+
+  /*!
+   * \brief Copy from src.data()/aux_data(i) to this->data()/aux_data(j)
+   */
+  void SyncCopyFromNDArray(const NDArray &src, int i = -1, int j = -1);
+
   /*!
    * \brief Do a synchronize copy to a continugous CPU memory region.
    *
@@ -502,6 +508,23 @@ class NDArray {
     CHECK_EQ(storage_type(), kDefaultStorage);
     ptr_->CheckAndAlloc();
   }
+
+  /*!
+   * \brief Allocate the space if the allocation has been delayed
+   * or the requested size is bigger than the available one.
+   * This function can only be called by ndarray of default
+   * storage type and effectively changes the ndarray's shape_.
+   * Note: This function is named as this to avoid overload conflict
+   * with CheckAndAlloc(const std::vector<TShape> &aux_shapes), since
+   * TShape tmp = some_shape is equivalent to TShape tmp = {some_shape}.
+   */
+  void ReshapeAndAlloc(const TShape& shape) {
+    CHECK_EQ(storage_type(), kDefaultStorage);
+    CHECK(!is_none());
+    shape_ = shape;
+    ptr_->CheckAndAlloc(shape.Size() * mshadow::mshadow_sizeof(dtype_));
+  }
+
   /* !
    * \brief Alloc memory for non-default storage
    * aux_shape is only known at run time
@@ -664,6 +687,22 @@ class NDArray {
         delay_alloc = false;
       }
     }
+
+    /*! \brief Check and alloc memory for a dense ndarray */
+    // size is the number of bytes
+    void CheckAndAlloc(uint64_t dbytes) {
+      CHECK_EQ(kDefaultStorage, storage_type);
+      if (delay_alloc) {
+        shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
+        delay_alloc = false;
+      } else if (shandle.size < dbytes) {
+        // free storage if necessary and alloc again
+        if (shandle.size > 0) Storage::Get()->Free(shandle);
+        // init storage
+        shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
+      }
+    }
+
     inline void CheckAndAlloc(const TShape &shape, const std::vector<TShape> &aux_shapes,
                               int dtype) {
       // calculate size, perform allocation
