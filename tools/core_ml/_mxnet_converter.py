@@ -101,8 +101,8 @@ def convert(model, order = None, class_labels = None, mode = None, **kwargs):
     **kwargs :
         Provide keyword arguments for:
         - input shapes.
-        - pre-processing arguments: Supplied as a json object with keyword "preprocessor_args". The json object
-            tells the converted coreml model how to pre-process any input before an inference is run on it.
+        - pre-processing arguments: Supplied as a dictionary object with keyword "preprocessor_args". The parameters in the dictionary
+            tell the converted coreml model how to pre-process any input before an inference is run on it.
             For the list of pre-processing arguments see
             http://pythonhosted.org/coremltools/generated/coremltools.models.neural_network.html#coremltools.models.neural_network.NeuralNetworkBuilder.set_pre_processing_parameters
 
