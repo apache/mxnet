@@ -643,6 +643,9 @@ class NDArray {
       // aux_handles always reflect the correct number of aux data
       for (size_t i = 0; i < aux_shapes.size(); i++) {
         CheckAndAllocAuxData(i, aux_shapes[i]);
+        // this line is needed in case when aux_shapes[i].Size() = 0
+        // aux_handles[i] will not be updated and take only default value.
+        aux_handles[i].ctx = ctx;
       }
       if (!delay_alloc) {
         CheckAndAllocData(storage_shape, dtype);
