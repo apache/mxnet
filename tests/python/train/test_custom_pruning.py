@@ -76,7 +76,7 @@ def test_mlp():
         'wd'                        : 0.004,
         'momentum'                  : 0.9,
         'do_pruning'                : True,
-        'pruning_switch_epoch'      : [1,1],
+        'pruning_switch_epoch'      : [1,2],
         'weight_sparsity'           : [25,50],
         'bias_sparsity'             : [0,0],
         'batches_per_epoch'         : 600}
