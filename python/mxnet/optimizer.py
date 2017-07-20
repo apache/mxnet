@@ -4,11 +4,10 @@ import pickle
 import logging
 import warnings
 import numpy
-from .ndarray import NDArray, zeros, clip, sqrt, sign, array, topk
-from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
+from .ndarray import (NDArray, zeros, clip, sqrt, sign, array, maximum, topk, abs as NDabs)
+from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
                       mp_sgd_update, mp_sgd_mom_update)
 from .random import normal
-from .ndarray import abs as absolute
 
 
 class Optimizer(object):
@@ -404,14 +403,14 @@ class Optimizer(object):
                 else:
                     sparsity = self.weight_sparsity[0]
                 number_unpruned = int((100.0 - sparsity) * weight.size / 100.0)
-                self.masks[index] = topk(absolute(weight), axis = None, ret_typ = 'mask',
+                self.masks[index] = topk(NDabs(weight), axis = None, ret_typ = 'mask',
                                         k = number_unpruned)
             else:
                 if len(weight.shape) == 1:
                     threshold = self.bias_sparsity_threshold[0]
                 else:
                     threshold = self.weight_sparsity_threshold[0]
-                self.masks[index] = absolute(weight) >= threshold
+                self.masks[index] = NDabs(weight) >= threshold
 
         return not self.masks_updated
 
@@ -895,7 +894,124 @@ class Ftrl(Optimizer):
 
         # update weight
         weight[:] = (sign(dn) * self.lamda1 - dn) / \
-                    ((self.beta + sqrt(n)) / lr + wd) * (NDArray.abs(dn) > self.lamda1)
+                    ((self.beta + sqrt(n)) / lr + wd) * (NDabs(dn) > self.lamda1)
+
+@register
+class Adamax(Optimizer):
+    """The AdaMax optimizer.
+
+    It is a variant of Adam based on the infinity norm
+    available at http://arxiv.org/abs/1412.6980 Section 7.
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
+
+    Parameters
+    ----------
+    beta1 : float, optional
+        Exponential decay rate for the first moment estimates.
+    beta2 : float, optional
+        Exponential decay rate for the second moment estimates.
+    """
+    def __init__(self, learning_rate=0.002, beta1=0.9, beta2=0.999, **kwargs):
+        super(Adamax, self).__init__(learning_rate=learning_rate, **kwargs)
+        self.beta1 = beta1
+        self.beta2 = beta2
+
+    def create_state(self, index, weight):
+        return (zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
+                zeros(weight.shape, weight.context, dtype=weight.dtype))  # variance
+
+    def update(self, index, weight, grad, state):
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        self._update_count(index)
+
+        t = self._index_update_count[index]
+        lr /= (1. - self.beta1**t)
+
+        # preprocess grad
+        grad = grad * self.rescale_grad + wd * weight
+        if self.clip_gradient is not None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        # update m_t and u_t
+        m_t, u_t = state
+        m_t[:] = self.beta1 * m_t + (1. - self.beta1) * grad
+        u_t[:] = maximum(self.beta2 * u_t, NDabs(grad))
+
+        # update weight
+        weight[:] -= lr * m_t / u_t
+
+@register
+class Nadam(Optimizer):
+    """The Nesterov Adam optimizer.
+
+    Much like Adam is essentially RMSprop with momentum,
+    Nadam is Adam RMSprop with Nesterov momentum available
+    at http://cs229.stanford.edu/proj2015/054_report.pdf.
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
+
+    Parameters
+    ----------
+    beta1 : float, optional
+        Exponential decay rate for the first moment estimates.
+    beta2 : float, optional
+        Exponential decay rate for the second moment estimates.
+    epsilon : float, optional
+        Small value to avoid division by 0.
+    schedule_decay : float, optional
+        Exponential decay rate for the momentum schedule
+    """
+    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
+                 schedule_decay=0.004, **kwargs):
+        super(Nadam, self).__init__(learning_rate=learning_rate, **kwargs)
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+        self.schedule_decay = schedule_decay
+        self.m_schedule = 1.
+
+    def create_state(self, index, weight):
+        return (zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
+                zeros(weight.shape, weight.context, dtype=weight.dtype))  # variance
+
+    def update(self, index, weight, grad, state):
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        self._update_count(index)
+
+        t = self._index_update_count[index]
+
+        # preprocess grad
+        grad *= self.rescale_grad + wd * weight
+        if self.clip_gradient is not None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        # warming momentum schedule
+        momentum_t = self.beta1 * (1. - 0.5 * (pow(0.96, t * self.schedule_decay)))
+        momentum_t_1 = self.beta1 * (1. - 0.5 * (pow(0.96, (t + 1) * self.schedule_decay)))
+        self.m_schedule = self.m_schedule * momentum_t
+        m_schedule_next = self.m_schedule * momentum_t_1
+
+        # update m_t and v_t
+        m_t, v_t = state
+        m_t[:] = self.beta1 * m_t + (1. - self.beta1) * grad
+        v_t[:] = self.beta2 * v_t + (1. - self.beta2) * grad * grad
+
+        grad_prime = grad / (1. - self.m_schedule)
+        m_t_prime = m_t / (1. - m_schedule_next)
+        v_t_prime = v_t / (1. - pow(self.beta2, t))
+        m_t_bar = (1. - momentum_t) * grad_prime + momentum_t_1 * m_t_prime
+
+        # update weight
+        weight[:] -= lr * m_t_bar / (sqrt(v_t_prime) + self.epsilon)
 
 @register
 class Test(Optimizer):

@@ -83,7 +83,7 @@ NNVM_REGISTER_OP(add_n)
     })
 .set_attr<nnvm::FInferShape>("FInferShape", ElementWiseSumShape)
 .set_attr<nnvm::FInferType>("FInferType", ElementWiseSumType)
-.set_attr<nnvm::FGradient>("FGradient", ElementWiseSumGrad)
+.set_attr<nnvm::FGradient>("FGradient", CloneGradient{"_backward_add_n"})
 .add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments");
 
 

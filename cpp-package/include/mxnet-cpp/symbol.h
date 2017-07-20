@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_SYMBOL_H_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_SYMBOL_H_
+#ifndef MXNET_CPP_SYMBOL_H_
+#define MXNET_CPP_SYMBOL_H_
 
 #include <map>
 #include <string>
@@ -257,4 +257,4 @@ Symbol operator/(mx_float lhs, const Symbol &rhs);
 Symbol operator%(mx_float lhs, const Symbol &rhs);
 }  // namespace cpp
 }  // namespace mxnet
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_SYMBOL_H_
+#endif  // MXNET_CPP_SYMBOL_H_

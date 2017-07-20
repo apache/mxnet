@@ -20,7 +20,7 @@ inline void BilinearSamplingForward(const Tensor<cpu, 4, DType> &output,
   for (index_t n = 0; n < static_cast<index_t>(o_n); ++n) {
     for (index_t c = 0; c < static_cast<index_t>(o_c); ++c) {
       for (index_t h = 0; h < static_cast<index_t>(o_h); ++h) {
-        for (index_t w = 0; w < o_w; ++w) {
+        for (index_t w = 0; w < static_cast<index_t>(o_w); ++w) {
           index_t out_index = n * o_c * o_h * o_w + c * o_h * o_w + h * o_w + w;
           index_t grid_index = n * o_h * o_w * 2 + h * o_w + w;
           DType y_real = (*(grid + grid_index + o_h * o_w) + 1) * (i_h - 1) / 2;
@@ -68,7 +68,7 @@ inline void BilinearSamplingBackward(const Tensor<cpu, 4, DType> &input_grad,
           index_t top_left_x = std::min(i_w, std::max(0, static_cast<int>(floor(x_real))));
           DType top_left_y_w = 1.0 - (y_real - top_left_y);
           DType top_left_x_w = 1.0 - (x_real - top_left_x);
-          for (index_t c = 0; c < o_c; ++c) {
+          for (index_t c = 0; c < static_cast<index_t>(o_c); ++c) {
             index_t grad_index = n * o_c * o_h * o_w + c * o_h * o_w + h * o_w + w;
             index_t data_index = n * i_c * i_h * i_w + c * i_h * i_w + top_left_y * i_w
                                  + top_left_x;
@@ -116,10 +116,6 @@ Operator* CreateOp<cpu>(SpatialTransformerParam param, int dtype) {
 
 Operator *SpatialTransformerProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                      std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
-  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 

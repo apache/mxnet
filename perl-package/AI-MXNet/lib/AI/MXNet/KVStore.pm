@@ -36,7 +36,7 @@ sub DEMOLISH
 
     Parameters
     ----------
-    key : int or an array ref of int
+    key : str or an array ref of str
         The keys.
     value : NDArray or an array ref of NDArray objects
         The values.
@@ -59,13 +59,13 @@ sub DEMOLISH
 =cut
 
 method init(
-    Int|ArrayRef[Int] $key,
+    Str|ArrayRef[Str] $key,
     AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] $value
 )
 {
     my ($keys, $vals) = _key_value($key, $value);
     check_call(
-        AI::MXNetCAPI::KVStoreInit(
+        AI::MXNetCAPI::KVStoreInitEx(
             $self->handle, scalar(@{ $keys }), $keys, $vals
         )
     );
@@ -83,7 +83,7 @@ method init(
 
     Parameters
     ----------
-    key : int or array ref of int
+    key : str or array ref of str
     value : NDArray or array ref of NDArray or array ref of array refs of NDArray
     priority : int, optional
         The priority of the push operation.
@@ -127,14 +127,14 @@ method init(
 =cut
 
 method push(
-    Int|ArrayRef[Int] $key,
+    Str|ArrayRef[Str] $key,
     AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] $value,
     Int :$priority=0
 )
 {
     my ($keys, $vals) = _key_value($key, $value);
     check_call(
-        AI::MXNetCAPI::KVStorePush(
+        AI::MXNetCAPI::KVStorePushEx(
             $self->handle, scalar(@{ $keys }), $keys, $vals, $priority
         )
     );
@@ -154,7 +154,7 @@ method push(
 
     Parameters
     ----------
-    key : int or array ref of int
+    key : str or array ref of str
         Keys
     out: NDArray or array ref of NDArray or array ref of array refs of NDArray
         According values
@@ -197,14 +197,14 @@ method push(
 =cut
 
 method pull(
-    Int|ArrayRef[Int] $key,
+    Str|ArrayRef[Str] $key,
     AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] :$out,
     Int :$priority=0
 )
 {
     my ($keys, $vals) = _key_value($key, $out);
     check_call(
-        AI::MXNetCAPI::KVStorePull(
+        AI::MXNetCAPI::KVStorePullEx(
             $self->handle, scalar(@{ $keys }), $keys, $vals, $priority
         )
     );

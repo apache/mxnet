@@ -4,7 +4,19 @@ These tutorials introduce a few fundamental concepts in deep learning and how to
 
 ## Python
 
-### Basics
+### Basics - High-level interface
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   gluon/ndarray
+   gluon/autograd
+   gluon/gluon
+   gluon/hybrid
+```
+
+### Advanced -- Low-level interface
 
 ```eval_rst
 .. toctree::

@@ -139,12 +139,12 @@ typedef int (*CustomOpBwdDepFunc)(const int* /*out_grad*/, const int* /*in_data*
                                   const int* /*out_data*/, int* /*num_deps*/,
                                   int** /*rdeps*/, void* /*state*/);
 typedef int (*CustomOpCreateFunc)(const char* /*ctx*/, int /*num_inputs*/,
-                                  unsigned** /*shapes*/, int* /*ndims*/,
-                                  int* /*dtypes*/, struct MXCallbackList* /*ret*/,
+                                  unsigned** /*shapes*/, const int* /*ndims*/,
+                                  const int* /*dtypes*/, struct MXCallbackList* /*ret*/,
                                   void* /*state*/);
 typedef int (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
-                                     const char** /*keys*/, const char** /*values*/,
-                                     struct MXCallbackList* /*ret*/);
+                                   const char** /*keys*/, const char** /*values*/,
+                                   struct MXCallbackList* /*ret*/);
 
 /*!
  * \brief return str message of the last error
@@ -416,6 +416,12 @@ MXNET_DLL int MXNDArrayGetDType(NDArrayHandle handle,
 MXNET_DLL int MXNDArrayGetContext(NDArrayHandle handle,
                                   int *out_dev_type,
                                   int *out_dev_id);
+/*!
+ * \brief return gradient buffer attached to this NDArray
+ * \param handle NDArray handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayGetGrad(NDArrayHandle handle, NDArrayHandle *out);
 /*!
  * \brief detach and ndarray from computation graph by clearing entry_
  * \param handle NDArray handle
@@ -1312,6 +1318,19 @@ MXNET_DLL int MXKVStoreInit(KVStoreHandle handle,
                             NDArrayHandle* vals);
 
 /*!
+ * \brief Init a list of (key,value) pairs in kvstore, where each key is a string
+ * \param handle handle to the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreInitEx(KVStoreHandle handle,
+                              mx_uint num,
+                              const char** keys,
+                              NDArrayHandle* vals);
+
+/*!
  * \brief Push a list of (key,value) pairs to kvstore
  * \param handle handle to the kvstore
  * \param num the number of key-value pairs
@@ -1326,6 +1345,20 @@ MXNET_DLL int MXKVStorePush(KVStoreHandle handle,
                             NDArrayHandle* vals,
                             int priority);
 /*!
+ * \brief Push a list of (key,value) pairs to kvstore, where each key is a string
+ * \param handle handle to the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePushEx(KVStoreHandle handle,
+                              mx_uint num,
+                              const char** keys,
+                              NDArrayHandle* vals,
+                              int priority);
+/*!
  * \brief pull a list of (key, value) pairs from the kvstore
  * \param handle handle to the kvstore
  * \param num the number of key-value pairs
@@ -1339,6 +1372,20 @@ MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
                             const int* keys,
                             NDArrayHandle* vals,
                             int priority);
+/*!
+ * \brief pull a list of (key, value) pairs from the kvstore, where each key is a string
+ * \param handle handle to the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePullEx(KVStoreHandle handle,
+                              mx_uint num,
+                              const char** keys,
+                              NDArrayHandle* vals,
+                              int priority);
 /*!
  * \brief user-defined updater for the kvstore
  * It's this updater's responsibility to delete \a recv and \a local

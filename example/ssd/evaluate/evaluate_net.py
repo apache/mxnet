@@ -7,6 +7,7 @@ from dataset.iterator import DetRecordIter
 from config.config import cfg
 from evaluate.eval_metric import MApMetric, VOC07MApMetric
 import logging
+from symbol.symbol_factory import get_symbol
 
 def evaluate_net(net, path_imgrec, num_classes, mean_pixels, data_shape,
                  model_prefix, epoch, ctx=mx.cpu(), batch_size=1,
@@ -71,9 +72,8 @@ def evaluate_net(net, path_imgrec, num_classes, mean_pixels, data_shape,
     if net is None:
         net = load_net
     else:
-        sys.path.append(os.path.join(cfg.ROOT_DIR, 'symbol'))
-        net = importlib.import_module("symbol_" + net) \
-            .get_symbol(num_classes, nms_thresh, force_nms)
+        net = get_symbol(net, data_shape[1], num_classes=num_classes,
+            nms_thresh=nms_thresh, force_suppress=force_nms)
     if not 'label' in net.list_arguments():
         label = mx.sym.Variable(name='label')
         net = mx.sym.Group([net, label])

@@ -86,9 +86,6 @@ void SetNDInputsOutputs(const nnvm::Op* op,
     *num_outputs = num_visible_outputs;
     ndoutputs.resize(infered_num_outputs);
   } else {
-    CHECK(!AutogradRuntime::Get()->IsTraining())
-      << "Inplace operations (+=, -=, op(..., out=x) etc.) and assignment are "
-      << "not supported when you are inside a train_section using autograd.";
     CHECK(*num_outputs == infered_num_outputs || *num_outputs == num_visible_outputs)
       << "Expecting " << infered_num_outputs << " (all) or "
       << num_visible_outputs << " (visible only) outputs, got "
@@ -113,9 +110,8 @@ void SetContext(Context* p_ctx,
       CHECK_EQ(ndinputs[i].ctx().dev_mask(), ctx.dev_mask())
           << "All inputs must live on the same context. "
           << "But the first argument is on "
-          << (ctx.dev_mask() == gpu::kDevMask ? "GPU" : "CPU")
-          << " while the " << i+1 << "-th argument is on "
-          << (ndinputs[i].ctx().dev_mask() == gpu::kDevMask ? "GPU" : "CPU");
+          << ctx << " while the " << i+1 << "-th argument is on "
+          << ndinputs[i].ctx();
     }
   } else if (ndoutputs.size() && !ndoutputs[0].is_none()) {
     ctx = ndoutputs[0].ctx();
@@ -279,59 +275,70 @@ void PushFCompute(const FCompute& fn,
     0, PROFILER_MESSAGE(op->name.c_str()));
 }
 
-void PushOperator(std::shared_ptr<Operator> opr,
+void PushOperator(const OpStatePtr& state,
                   const nnvm::Op* op,
                   const nnvm::NodeAttrs& attrs,
                   const Context& ctx,
                   const std::vector<engine::VarHandle>& read_vars,
                   const std::vector<engine::VarHandle>& write_vars,
                   const std::vector<Resource>& requested,
-                  const std::vector<uint32_t>& auxidx,
                   const std::vector<NDArray>& ndinputs,
                   const std::vector<NDArray>& ndoutputs) {
-  struct Capture {
-    engine::CallbackOnComplete on_complete;
-    std::shared_ptr<Operator> opr;
-  };
+  static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
   bool is_train = AutogradRuntime::Get()->IsTraining();
-  Engine::Get()->PushAsync(
-    [ctx, opr, auxidx, ndinputs, ndoutputs, requested, is_train](
-        RunContext rctx,
-        engine::CallbackOnComplete on_complete) {
-      std::vector<TBlob> input_blobs, aux_blobs, output_blobs;
-      auto atop = auxidx.begin();
-      for (size_t i = 0; i < ndinputs.size(); ++i) {
-        if (atop != auxidx.end() && i == *atop) {
-          aux_blobs.push_back(ndinputs[i].data());
-          ++atop;
-        } else {
-          input_blobs.push_back(ndinputs[i].data());
+  ExecType exec_type = ExecType::kSync;
+  if (fexec_type.count(op)) {
+    exec_type = fexec_type[op](attrs);
+  }
+
+  auto fcompute = common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", ctx);
+  if (fcompute != nullptr) {
+    CHECK(exec_type == ExecType::kSync || exec_type == ExecType::kAsync);
+    Engine::Get()->PushAsync(
+      [state, fcompute, ndinputs, ndoutputs, requested, is_train, exec_type](
+          RunContext rctx,
+          engine::CallbackOnComplete on_complete) {
+        OpContext opctx{is_train, rctx, on_complete, requested};
+        std::vector<TBlob> input_blobs, output_blobs;
+        for (const auto& i : ndinputs) input_blobs.push_back(i.data());
+        for (const auto& i : ndoutputs) output_blobs.push_back(i.data());
+        std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
+        fcompute(state, opctx, input_blobs, req, output_blobs);
+        if (exec_type == ExecType::kSync) {
+          if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
+            rctx.get_stream<gpu>()->Wait();
+          }
+          on_complete();
         }
-      }
-      for (auto& i : ndoutputs) {
-        output_blobs.push_back(i.data());
-      }
-      Capture* capture = new Capture({on_complete, opr});
-      OpContext opctx{is_train, rctx,
-                      Engine::Get()->CreateCallback(
-                        [](Engine* engine, void *cpt_handle) {
-                            Capture* cpt = static_cast<Capture*>(cpt_handle);
-                            cpt->on_complete();
-                            delete cpt;
-                          }, static_cast<void*>(capture)),
-                      requested};
-      std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
-      opr->Forward(opctx, input_blobs, req, output_blobs, aux_blobs);
-      if (opr->exec_type() != Operator::kAsync) {
-        if (ctx.dev_mask() == gpu::kDevMask) {
-          rctx.get_stream<gpu>()->Wait();
+      }, ctx, read_vars, write_vars, FnProperty::kNormal,
+      0, PROFILER_MESSAGE(op->name.c_str()));
+  } else {
+    auto fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
+        op, "FStatefulComputeEx", ctx);
+    CHECK(fcompute_ex != nullptr)
+        << "One of FStatefulCompute and FStatefulComputeEx must be registered "
+        << "for stateful operator " << op->name;
+    const auto& run = [state, fcompute_ex, ndinputs, ndoutputs, requested, is_train, exec_type](
+          RunContext rctx,
+          engine::CallbackOnComplete on_complete) {
+        OpContext opctx{is_train, rctx, on_complete, requested};
+        std::vector<OpReqType> req(ndoutputs.size(), kWriteTo);
+        fcompute_ex(state, opctx, ndinputs, req, ndoutputs);
+        if (exec_type == ExecType::kSync) {
+          if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
+            rctx.get_stream<gpu>()->Wait();
+          }
+          on_complete();
         }
-        delete capture;
-        on_complete();
-      }
-    }, ctx, read_vars, write_vars, FnProperty::kNormal,
-    0, PROFILER_MESSAGE(op->name.c_str()));
+      };
+    if (exec_type == ExecType::kLocal) {
+      run(RunContext{ctx, nullptr}, engine::CallbackOnComplete());
+    } else {
+      Engine::Get()->PushAsync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
+                               0, PROFILER_MESSAGE(op->name.c_str()));
+    }
+  }
 }
 
 void ImperativeInvokeImpl(const Context& default_ctx,
@@ -341,7 +348,7 @@ void ImperativeInvokeImpl(const Context& default_ctx,
   static auto& fcpu = nnvm::Op::GetAttr<FCompute>("FCompute<cpu>");
   static auto& fgpu = nnvm::Op::GetAttr<FCompute>("FCompute<gpu>");
   static auto& ndfunc = nnvm::Op::GetAttr<FNDArrayFunction>("FNDArrayFunction");
-  static auto& createop = nnvm::Op::GetAttr<FCreateLayerOp>("FCreateLayerOp");
+  static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
   const nnvm::Op *op = attrs.op;
@@ -378,14 +385,15 @@ void ImperativeInvokeImpl(const Context& default_ctx,
       PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
           requested, ndinputs, ndoutputs);
     } else if (createop.count(op)) {
-      std::shared_ptr<Operator> opr(
-          createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types));
+      auto state =
+          createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
       if (AutogradRuntime::Get()->IsTraining()) {
-        AutogradRuntime::Get()->RecordImperativeOperator(opr, op,
+        AutogradRuntime::Get()->RecordImperativeOperator(state, op,
             attrs, &ndinputs, &ndoutputs);
       }
-      PushOperator(opr, op, attrs, ctx, read_vars, write_vars,
-          requested, auxidx, ndinputs, ndoutputs);
+      write_vars.push_back(state.get_var());
+      PushOperator(state, op, attrs, ctx, read_vars, write_vars,
+          requested, ndinputs, ndoutputs);
     } else {
       LOG(FATAL)
         << "Operator " << op->name << " is not implemented for "
@@ -500,7 +508,7 @@ int MXInvokeCachedOp(CachedOpHandle handle,
     for (const auto& i : idx.outputs()) {
       ret->ret_handles.push_back(
         reinterpret_cast<NDArrayHandle>(
-          new NDArray(std::move(buff[idx.entry_id(i)]))));
+          new NDArray(buff[idx.entry_id(i)])));
     }
     *num_outputs = idx.outputs().size();
     *outputs = dmlc::BeginPtr(ret->ret_handles);
@@ -508,7 +516,7 @@ int MXInvokeCachedOp(CachedOpHandle handle,
     CHECK_EQ(static_cast<size_t>(*num_outputs), idx.outputs().size())
         << "Specifed number of output differs from expected number of outputs";
     for (size_t i = 0; i < idx.outputs().size(); ++i) {
-      *outarray[i] = std::move(buff[idx.entry_id(idx.outputs()[i])]);
+      *outarray[i] = buff[idx.entry_id(idx.outputs()[i])];
     }
   }
   API_END();

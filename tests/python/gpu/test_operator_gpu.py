@@ -1,15 +1,19 @@
 import sys
 import os
+import time
+import mxnet as mx
+import numpy as np
+from mxnet.test_utils import check_consistency, set_default_context
+from numpy.testing import assert_allclose
+
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from test_operator import *
 from test_optimizer import *
 from test_random import *
-import mxnet as mx
-import numpy as np
-from mxnet.test_utils import check_consistency, set_default_context
-from numpy.testing import assert_allclose
-import time
+from test_nn import *
+#from test_rnn import *
+from test_gluon_rnn import *
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm
@@ -1253,6 +1257,7 @@ def test_deformable_convolution_options():
                 ]
     sym = mx.contrib.sym.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2,
                                                name='deformable_conv')
+
 def test_residual_fused():
     cell = mx.rnn.ResidualCell(
             mx.rnn.FusedRNNCell(50, num_layers=3, mode='lstm',
@@ -1272,40 +1277,36 @@ def test_residual_fused():
     expected_outputs = np.ones((10, 2, 50))+5
     assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
 
-if __name__ == '__main__':
-    test_countsketch()
-    test_ifft()
-    test_fft()
-    test_bidirectional()
-    test_lstm()
-    test_lstm_forget_bias()
-    test_gru()
-    test_rnn()
-    test_unfuse()
-    test_residual_fused()
-    test_convolution_options()
-    test_convolution_versions()
-    test_convolution_with_type()
-    test_pooling_versions()
-    test_batchnorm_with_type()
-    test_batchnorm_versions()
-    test_deconvolution_with_type()
-    test_deconvolution_options()
-    test_upsampling_with_type()
-    test_concat_with_type()
-    test_elementwisesum_with_type()
-    test_reshape_with_type()
-    test_blockgrad_with_type()
-    test_swapaxis_with_type()
-    test_fullyconnected_with_type()
-    test_activation_with_type()
-    test_embedding_with_type()
-    test_svmoutput_with_type()
-    test_take_with_type()
-    test_bilinear_sampler_with_type()
-    test_grid_generator_with_type()
-    test_psroipooling_with_type()
-    test_deformable_psroipooling_with_type()
-    test_deformable_convolution_options()
-    test_deformable_convolution_with_type()
+def check_rnn_layer(layer):
+    layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
+    with mx.gpu(0):
+        x = mx.nd.ones((10, 16, 30))
+        states = layer.begin_state(16)
+        go, gs = layer(x, states)
 
+    with mx.cpu(0):
+        x = mx.nd.ones((10, 16, 30))
+        states = layer.begin_state(16)
+        co, cs = layer(x, states)
+
+    assert_allclose(go.asnumpy(), co.asnumpy(), rtol=1e-2)
+    for g, c in zip(gs, cs):
+        assert_allclose(g.asnumpy(), c.asnumpy(), rtol=1e-2)
+
+
+def test_rnn_layer():
+    check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
+    check_rnn_layer(gluon.rnn.RNN(100, activation='tanh', num_layers=3))
+    check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3))
+    check_rnn_layer(gluon.rnn.GRU(100, num_layers=3))
+
+    check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
+
+
+def test_sequence_reverse():
+    check_sequence_reverse(mx.gpu(0))
+
+
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()

@@ -151,7 +151,7 @@ class IdentityAttachKLSparseRegProp : public OperatorProperty {
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data,
-      const std::vector<void*> &in_grad) const {
+      const std::vector<void*> &in_grad) const override {
     return { {out_grad[sparsereg::kOut], in_grad[sparsereg::kData]} };
   }
 

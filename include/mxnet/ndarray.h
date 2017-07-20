@@ -108,6 +108,10 @@ class NDArray {
     return tblob_;
   }
   /*!
+   * \return the gradient ndarray.
+   */
+  NDArray grad() const;
+  /*!
    * \return the context of NDArray, this function is only valid when the NDArray is not empty
    */
   inline Context ctx() const {

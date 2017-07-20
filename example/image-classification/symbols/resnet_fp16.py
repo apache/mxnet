@@ -19,9 +19,9 @@ def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck=True, b
         Number of output channels
     bnf : int
         Bottle neck channels factor with regard to num_filter
-    stride : tupe
+    stride : tuple
         Stride used in convolution
-    dim_match : Boolen
+    dim_match : Boolean
         True means channel number between input and output is the same, otherwise means differ
     name : str
         Base name of the operators

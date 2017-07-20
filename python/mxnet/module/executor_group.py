@@ -330,7 +330,7 @@ class DataParallelExecutorGroup(object):
             self._default_execs = [i for i in self.execs]
         self.bind_exec(data_shapes, label_shapes, reshape=True)
 
-    def set_params(self, arg_params, aux_params):
+    def set_params(self, arg_params, aux_params, allow_extra=False):
         """Assign, i.e. copy parameters to all the executors.
 
         Parameters
@@ -339,9 +339,13 @@ class DataParallelExecutorGroup(object):
             A dictionary of name to `NDArray` parameter mapping.
         aux_params : dict
             A dictionary of name to `NDArray` auxiliary variable mapping.
+        allow_extra : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
         """
         for exec_ in self.execs:
-            exec_.copy_params_from(arg_params, aux_params)
+            exec_.copy_params_from(arg_params, aux_params, allow_extra_params=allow_extra)
 
     def get_params(self, arg_params, aux_params):
         """ Copy data from each executor to `arg_params` and `aux_params`.

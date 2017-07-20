@@ -9,7 +9,7 @@ use Exporter;
 use base qw(Exporter);
 @AI::MXNet::TestUtils::EXPORT_OK = qw(same reldiff almost_equal GetMNIST_ubyte
                                       GetCifar10 pdl_maximum pdl_minimum mlp2 conv
-                                      check_consistency zip assert enumerate same_array);
+                                      check_consistency zip assert enumerate same_array dies_like);
 use constant default_numerical_threshold => 1e-6;
 =head1 NAME
 
@@ -383,6 +383,20 @@ func same_array(
     }
     $array1 -= 1;
     return same($array1->aspdl, $array2->aspdl);
+}
+
+func dies_like($code, $regexp)
+{
+    eval { $code->() };
+    if($@ =~ $regexp)
+    {
+        return 1;
+    }
+    else
+    {
+        warn $@;
+        return 0;
+    }
 }
 
 1;

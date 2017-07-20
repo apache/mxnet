@@ -20,7 +20,7 @@ void Copy<cpu, gpu>(const TBlob &from, TBlob *to,
   MSHADOW_TYPE_SWITCH(to->type_flag_, DType, {
     mshadow::Copy(to->FlatTo1D<gpu, DType>(),
                   from.FlatTo1D<cpu, DType>(),
-                  static_cast<mshadow::Stream<gpu>*>(ctx.stream));
+                  ctx.get_stream<gpu>());
   });
 }
 
@@ -33,7 +33,7 @@ void Copy<gpu, cpu>(const TBlob &from, TBlob *to,
   MSHADOW_TYPE_SWITCH(to->type_flag_, DType, {
     mshadow::Copy(to->FlatTo1D<cpu, DType>(),
                   from.FlatTo1D<gpu, DType>(),
-                  static_cast<mshadow::Stream<gpu>*>(ctx.stream));
+                  ctx.get_stream<gpu>());
   });
 }
 
@@ -42,7 +42,7 @@ void Copy<gpu, gpu>(const TBlob &from, TBlob *to,
                     Context from_ctx, Context to_ctx,
                     RunContext ctx) {
   if (from_ctx.dev_id == to_ctx.dev_id) {
-    mshadow::Stream<gpu>* s = static_cast<mshadow::Stream<gpu>*>(ctx.stream);
+    mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
     MSHADOW_TYPE_SWITCH(to->type_flag_, DType, {
       if (to->type_flag_ == from.type_flag_) {
         mshadow::Copy(to->FlatTo1D<gpu, DType>(s),
@@ -60,7 +60,7 @@ void Copy<gpu, gpu>(const TBlob &from, TBlob *to,
       << "copy across only support continugous memory";
     CHECK_EQ(to->type_flag_, from.type_flag_)
       << "Source and target must have the same data type when copying across devices.";
-    mshadow::Stream<gpu> *s = static_cast<mshadow::Stream<gpu>*>(ctx.stream);
+    mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
     CHECK(s != NULL) << "need stream in GPU context";
     cudaMemcpyPeerAsync(to->dptr_,
                         to_ctx.dev_id,

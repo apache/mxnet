@@ -4,8 +4,8 @@
  * \brief unit test performance analysis functions
  * \author Chris Olivier
 */
-#ifndef TESTS_CPP_INCLUDE_TEST_UTIL_H_
-#define TESTS_CPP_INCLUDE_TEST_UTIL_H_
+#ifndef TEST_UTIL_H_
+#define TEST_UTIL_H_
 
 #include <gtest/gtest.h>
 #include <mxnet/storage.h>
@@ -413,4 +413,4 @@ struct ScopeSet {
 }  // namespace test
 }  // namespace mxnet
 
-#endif  // TESTS_CPP_INCLUDE_TEST_UTIL_H_
+#endif  // TEST_UTIL_H_

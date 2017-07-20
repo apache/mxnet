@@ -1,6 +1,78 @@
+import functools
 import mxnet.ndarray as nd
-from mxnet.contrib.autograd import *
+from mxnet.ndarray import zeros_like
+from mxnet.autograd import *
 from mxnet.test_utils import *
+
+
+def grad_and_loss(func, argnum=None):
+    """Return function that computes both gradient of arguments and loss value.
+
+    Parameters
+    ----------
+    func: a python function
+        The forward (loss) function.
+    argnum: an int or a list of int
+        The index of argument to calculate gradient for.
+
+    Returns
+    -------
+    grad_and_loss_func: a python function
+        A function that would compute both the gradient of arguments and loss value.
+    """
+    @functools.wraps(func)
+    def wrapped(*args):
+        """Wrapped function."""
+        variables = args
+        if argnum is not None:
+            argnum_ = argnum if isinstance(argnum, list) else [argnum]
+            variables = [args[i] for i in argnum_]
+        for x in variables:
+            assert isinstance(x, NDArray), "type of autograd input should NDArray."
+        grads = [zeros_like(x) for x in variables]
+        mark_variables(variables, grads)
+        with record():
+            outputs = func(*args)
+        backward([outputs] if isinstance(outputs, NDArray) else outputs)
+        return grads, outputs
+    return wrapped
+
+def grad(func, argnum=None):
+    """Return function that computes gradient of arguments.
+
+    Parameters
+    ----------
+    func: a python function
+        The forward (loss) function.
+    argnum: an int or a list of int
+        The index of argument to calculate gradient for.
+
+    Returns
+    -------
+    grad_func: a python function
+        A function that would compute the gradient of arguments.
+
+    Examples
+    --------
+    >>> # autograd supports dynamic graph which is changed
+    >>> # every instance
+    >>> def func(x):
+    >>>     r = random.randint(0, 1)
+    >>>     if r % 2:
+    >>>         return x**2
+    >>>     else:
+    >>>         return x/3
+    >>> # use `grad(func)` to get the gradient function
+    >>> for x in range(10):
+    >>>     grad_func = grad(func)
+    >>>     inputs = nd.array([[1, 2, 3], [4, 5, 6]])
+    >>>     grad_vals = grad_func(inputs)
+    """
+    grad_with_loss_func = grad_and_loss(func, argnum)
+    @functools.wraps(grad_with_loss_func)
+    def wrapped(*args):
+        return grad_with_loss_func(*args)[0]
+    return wrapped
 
 def autograd_assert(*args, **kwargs):
     func   = kwargs["func"]
@@ -76,10 +148,10 @@ def test_argnum():
 
 def test_training():
     x = nd.ones((10, 10))
-    with train_section():
+    with record():
         y = nd.Dropout(x, p=0.5)
         assert not (y.asnumpy() == x.asnumpy()).all()
-        with test_section():
+        with pause():
             y = nd.Dropout(x, p=0.5)
             assert (y.asnumpy() == x.asnumpy()).all()
 
@@ -92,7 +164,7 @@ def test_out_grads():
     db = nd.array([1,2,3,4,5])
     dc = nd.array([5,4,3,2,1])
 
-    with train_section():
+    with record():
         a, b, c = nd.split(x, axis=0, num_outputs=3, squeeze_axis=True)
         backward([a, b, c], [da, db, dc])
 
@@ -111,7 +183,7 @@ def test_detach_updated_grad():
     assert x._fresh_grad == False
     assert y._fresh_grad == False
 
-    with train_section():
+    with record():
         x2 = x + 2
         y2  = x2 + y
         y2.backward()
@@ -124,7 +196,7 @@ def test_detach_updated_grad():
     y._fresh_grad = False
     assert x._fresh_grad == False
     assert y._fresh_grad == False
-    with train_section():
+    with record():
         x2 = x + 2
         x2 = x2.detach()
         y2  = x2 + y
@@ -138,20 +210,20 @@ def test_retain_grad():
     x = mx.nd.ones((2, 2))
     dx = mx.nd.zeros((2, 2))
     mark_variables([x], [dx], grad_reqs='add')
-    with train_section():
+    with record():
         y = x + 1
         y.backward(retain_graph=False)
     assert (dx.asnumpy() == 1).all()
 
     dx[:] = 0
-    with train_section():
+    with record():
         y = x + 1
         y.backward(retain_graph=True)
         y.backward(retain_graph=False)
     assert (dx.asnumpy() == 2).all()
 
     try:
-        with train_section():
+        with record():
             y = x + 1
             y.backward()
             y.backward()
@@ -160,6 +232,17 @@ def test_retain_grad():
 
     raise AssertionError(
         "differentiating the same graph twice without retain_graph should fail")
+
+
+def test_attach_grad():
+    x = mx.nd.zeros((10,))
+    assert x.grad is None
+    x.attach_grad()
+    with record():
+        y = x * 2
+        assert y.grad is None
+        y.backward()
+    assert (x.grad.asnumpy() == 2).all()
 
 
 if __name__ == "__main__":

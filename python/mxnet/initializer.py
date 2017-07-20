@@ -564,9 +564,12 @@ class Xavier(Initializer):
         self.magnitude = float(magnitude)
 
 
-    def _init_weight(self, _, arr):
+    def _init_weight(self, name, arr):
         shape = arr.shape
         hw_scale = 1.
+        if len(shape) < 2:
+            raise ValueError('Xavier initializer cannot be applied to vector {0}. It requires at'
+                             ' least 2D.'.format(name))
         if len(shape) > 2:
             hw_scale = np.prod(shape[2:])
         fan_in, fan_out = shape[1] * hw_scale, shape[0] * hw_scale
@@ -636,10 +639,11 @@ class LSTMBias(Initializer):
 
     Parameters
     ----------
-    forget_bias: float, bias for the forget gate.
-        Jozefowicz et al. 2015 recommends setting this to 1.0.
+    forget_bias: float, default 1.0
+        bias for the forget gate. Jozefowicz et al. 2015 recommends
+        setting this to 1.0.
     """
-    def __init__(self, forget_bias):
+    def __init__(self, forget_bias=1.0):
         super(LSTMBias, self).__init__(forget_bias=forget_bias)
         self.forget_bias = forget_bias
 

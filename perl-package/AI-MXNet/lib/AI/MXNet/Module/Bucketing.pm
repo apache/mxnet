@@ -210,14 +210,16 @@ method set_params(
     HashRef[AI::MXNet::NDArray] $arg_params,
     HashRef[AI::MXNet::NDArray] $aux_params,
     Bool                        $allow_missing=0,
-    Bool                        $force_init=1
+    Bool                        $force_init=1,
+    Bool                        $allow_extra=0
 )
 {
     if(not $allow_missing)
     {
         $self->init_params(
             arg_params    => $arg_params,    aux_params => $aux_params,
-            allow_missing => $allow_missing, force_init => $force_init
+            allow_missing => $allow_missing, force_init => $force_init,
+            allow_extra   => $allow_extra
         );
        return;
     }
@@ -232,7 +234,8 @@ method set_params(
     $self->_curr_module->set_params(
         $arg_params, $aux_params,
         allow_missing => $allow_missing,
-        force_init    => $force_init
+        force_init    => $force_init,
+        allow_extra   => $allow_extra
     );
     # because we didn't update self._arg_params, they are dirty now.
     $self->_params_dirty(1);
@@ -244,7 +247,8 @@ method init_params(
     Maybe[HashRef[AI::MXNet::NDArray]] :$arg_params=,
     Maybe[HashRef[AI::MXNet::NDArray]] :$aux_params=,
     Bool                               :$allow_missing=0,
-    Bool                               :$force_init=0
+    Bool                               :$force_init=0,
+    Bool                               :$allow_extra=0
 )
 {
     return if($self->params_initialized and not $force_init);
@@ -254,7 +258,8 @@ method init_params(
         arg_params    => $arg_params,
         aux_params    => $aux_params,
         allow_missing => $allow_missing,
-        force_init    => $force_init
+        force_init    => $force_init,
+        allow_extra   => $allow_extra
     );
     $self->_params_dirty(0);
     $self->params_initialized(1);

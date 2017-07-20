@@ -3,12 +3,31 @@ if(USE_OPENCV)
   if(NOT OpenCV_FOUND) # if not OpenCV 3.x, then imgcodecs are not found
     find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc)
   endif()
+
+  if(NOT MSVC)
+    set(UNITTEST_STATIC_LINK ON)
+  endif()
+
   add_executable(image-classification-predict image-classification-predict.cc)
   include_directories(SYSTEM ${OpenCV_INCLUDE_DIRS})
-  target_link_libraries(image-classification-predict mxnet)
+
+  if(UNITTEST_STATIC_LINK)
+    target_link_libraries(image-classification-predict
+      ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE}
+      dmlc
+      ${mxnet_LINKER_LIBS}
+      )
+  else()
+    target_link_libraries(image-classification-predict
+      dmlc
+      ${nnvm_LINKER_LIBS}
+      ${mxnet_LINKER_LIBS}
+      mxnet
+      )
+  endif()
   target_link_libraries(image-classification-predict ${OpenCV_LIBS})
   if(UNIX)
-      target_link_libraries(image-classification-predict rt)  
+      target_link_libraries(image-classification-predict rt)
   endif()
   list(APPEND mxnet_LINKER_LIBS ${OpenCV_LIBS})
 endif()
