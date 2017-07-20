@@ -117,6 +117,25 @@ class CuDNNBatchNormOp : public Operator {
         Tensor<gpu, 1, DTypeParam> save_inv_var =
           out_data[cudnnbatchnorm::kInvVar]
           .get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+#if CUDNN_VERSION >= 7000
+        CUDNN_CALL(cudnnBatchNormalizationForwardTraining(s->dnn_handle_,
+                                                          CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+                                                          &a,
+                                                          &b,
+                                                          io_desc_,
+                                                          x.dptr_,
+                                                          io_desc_,
+                                                          y.dptr_,
+                                                          mean_desc_,
+                                                          gamma.dptr_,
+                                                          beta.dptr_,
+                                                          1 - param_.momentum,
+                                                          moving_mean.dptr_,
+                                                          moving_inv_var.dptr_,
+                                                          param_.eps,
+                                                          save_mean.dptr_,
+                                                          save_inv_var.dptr_));
+#else
         CUDNN_CALL(cudnnBatchNormalizationForwardTraining(s->dnn_handle_,
                                                           CUDNN_BATCHNORM_SPATIAL,
                                                           &a,
@@ -134,6 +153,7 @@ class CuDNNBatchNormOp : public Operator {
                                                           param_.eps,
                                                           save_mean.dptr_,
                                                           save_inv_var.dptr_));
+#endif
       } else {
         CUDNN_CALL(cudnnBatchNormalizationForwardInference(s->dnn_handle_,
                                                            CUDNN_BATCHNORM_SPATIAL,
@@ -197,6 +217,28 @@ class CuDNNBatchNormOp : public Operator {
 
       if (param_.fix_gamma) gamma = 1.f;
 
+#if CUDNN_VERSION >= 7000
+      CUDNN_CALL(cudnnBatchNormalizationBackward(
+        s->dnn_handle_,
+        CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+        &a,
+        &b,
+        &a,
+        req[cudnnbatchnorm::kGamma] == kWriteTo ? &b: &b_add,
+        io_desc_,
+        x.dptr_,
+        io_desc_,
+        dy.dptr_,
+        io_desc_,
+        dx.dptr_,
+        mean_desc_,
+        gamma.dptr_,
+        dgamma.dptr_,
+        dbeta.dptr_,
+        param_.eps,
+        save_mean.dptr_,
+        save_inv_var.dptr_));
+#else
       CUDNN_CALL(cudnnBatchNormalizationBackward(
         s->dnn_handle_,
         CUDNN_BATCHNORM_SPATIAL,
@@ -217,6 +259,7 @@ class CuDNNBatchNormOp : public Operator {
         param_.eps,
         save_mean.dptr_,
         save_inv_var.dptr_));
+#endif
       if (param_.fix_gamma) dgamma = 0.f;
     })
 #else  // CUDNN_VERSION < 4007
@@ -238,6 +281,25 @@ class CuDNNBatchNormOp : public Operator {
       CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
 
       if (param_.fix_gamma) gamma = 1.f;
+#if CUDNN_VERSION >= 7000
+      CUDNN_CALL(cudnnBatchNormalizationBackward(s->dnn_handle_,
+                                                 CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
+                                                 &a,
+                                                 &b,
+                                                 io_desc_,
+                                                 x.dptr_,
+                                                 io_desc_,
+                                                 dy.dptr_,
+                                                 io_desc_,
+                                                 dx.dptr_,
+                                                 mean_desc_,
+                                                 gamma.dptr_,
+                                                 dgamma.dptr_,
+                                                 dbeta.dptr_,
+                                                 param_.eps,
+                                                 save_mean.dptr_,
+                                                 save_inv_var.dptr_));
+#else
       CUDNN_CALL(cudnnBatchNormalizationBackward(s->dnn_handle_,
                                                  CUDNN_BATCHNORM_SPATIAL,
                                                  &a,
@@ -255,6 +317,7 @@ class CuDNNBatchNormOp : public Operator {
                                                  param_.eps,
                                                  save_mean.dptr_,
                                                  save_inv_var.dptr_));
+#endif
       if (param_.fix_gamma) dgamma = 0.f;
     })
 #endif
