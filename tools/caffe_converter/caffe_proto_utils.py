@@ -112,7 +112,7 @@ def read_network_dag(processed_deploy_prototxt):
     """
 
     from caffe.proto import caffe_pb2
-    from google.protobuf import text_format
+    from google.protobuf import text_format # pylint: disable=relative-import
     from collections import OrderedDict
 
     # load prototxt file
