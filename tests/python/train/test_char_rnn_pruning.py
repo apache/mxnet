@@ -99,11 +99,11 @@ model = mx.model.FeedForward(ctx=devs,
                              momentum=momentum,
                              wd=0.0001,
                              initializer=mx.init.Xavier(factor_type="in", magnitude=2.34),
+                             do_pruning = True,
+                             pruning_switch_epoch = [1, 2],
                              weight_sparsity = [25, 50],
                              bias_sparsity = [0, 0],
-                             switch_epoch = [1, 2],
                              batches_per_epoch = 65,
-                             do_pruning = True,
                             )
 
 # fit model

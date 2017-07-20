@@ -54,12 +54,11 @@ def test_mlp():
         num_epoch=num_epoch,
         learning_rate=0.1, wd=0.0004,
         momentum=0.9,
+        do_pruning=True,
+        pruning_switch_epoch=[1,3,5,7],
         weight_sparsity=[0,25,50,75],
         bias_sparsity=[0,0,50,50],
-        switch_epoch=[1,3,5,7],
-        batches_per_epoch=600,
-        do_pruning=True,
-        pruning_factor = 0.0)
+        batches_per_epoch=600)
 
     logging.info('Finish traning...')
 

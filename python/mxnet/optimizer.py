@@ -4,11 +4,10 @@ import pickle
 import logging
 import warnings
 import numpy
-from .ndarray import NDArray, zeros, clip, sqrt, sign, array
+from .ndarray import NDArray, zeros, clip, sqrt, sign, array, topk
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update)
 #                      mp_sgd_update, mp_sgd_mom_update)
 from .random import normal
-from numpy import ones, argsort
 from .ndarray import abs as absolute
 
 
@@ -43,28 +42,38 @@ class Optimizer(object):
     begin_num_update : int, optional
         The initial number of updates.
 
+    do_pruning : boolean, optional
+        If pruning is required.
+
+    pruning_switch_epoch : list of ints, optional
+        The epochs at which there is a change in sparsity level.
+        (Should be in ascending order)
+
     weight_sparsity : list of floats, optional
         The sparsity on the weights required on each iteration of sparse training.
 
     bias_sparsity : list of floats, optional
         The sparsity on the biases required on each iteration of sparse training.
 
-    switch_epoch : list of ints, optional
-        The number of iterations of each dense/sparse training required. Begins with
-        dense training.
+    weight_sparsity_threshold : list of floats, optional
+        The absolute value threshold on the weights required on each iteration of sparse
+        training.
 
-    batches_per_epoch : int. optional
+    bias_sparsity_threshold : list of floats, optional
+        The absolute value threshold on the biases required on each iteration of sparse
+        training.
+
+    batches_per_epoch : int, optional
         The number of batches in each epoch.
-
-    do_pruning : boolean, optional
-        Whether pruning is required or not.
+        (The ceiling integer value of number_of_examples / batch_size)
     """
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
                  lr_scheduler=None, sym=None, begin_num_update=0,
-                 weight_sparsity = [0], bias_sparsity = [0],
-                 switch_epoch = [100000], batches_per_epoch = 100000,
-                 do_pruning = False, pruning_factor = 0.0, threshold = None):
+                 do_pruning = False, pruning_switch_epoch = None,
+                 weight_sparsity = None, bias_sparsity = None,
+                 weight_sparsity_threshold = None, bias_sparsity_threshold = None,
+                 batches_per_epoch = None):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -89,16 +98,32 @@ class Optimizer(object):
         self.set_lr_mult({})
         self.set_wd_mult({})
 
-        self.masks = []
-        self.masks_updated = False
-        self.epoch = 0
-        self.weight_sparsity = weight_sparsity
-        self.bias_sparsity = bias_sparsity
-        self.switch_epoch = switch_epoch
-        self.batches_per_epoch = batches_per_epoch
         self.do_pruning = do_pruning
-        self.pruning_factor = pruning_factor
-        self.threshold = threshold
+        if do_pruning:
+            self.masks = []
+            self.masks_updated = False
+            self.epoch = 0
+            self.pruning_switch_epoch = pruning_switch_epoch
+            assert pruning_switch_epoch is not None, \
+                'pruning_switch_epoch should not be None'
+            self.weight_sparsity = weight_sparsity
+            self.bias_sparsity = bias_sparsity
+            if weight_sparsity is not None:
+                assert len(weight_sparsity) == len(bias_sparsity), \
+                    'weight_sparsity and bias_sparsity should have the same length'
+                assert len(weight_sparsity) == len(pruning_switch_epoch), \
+                    'pruning_switch_epoch and weight_sprsity should have the same length'
+            self.weight_sparsity_threshold = weight_sparsity_threshold
+            self.bias_sparsity_threshold = bias_sparsity_threshold
+            if weight_sparsity_threshold is not None:
+                assert len(weight_sparsity_threshold) == len(bias_sparsity_threshold), \
+                    'weight_sparsity_threshold and bias_sparsity_threshold should have the same length'
+                assert len(weight_sparsity_threshold) == len(pruning_switch_epoch), \
+                    'pruning_switch_epoch and weight_sprsity_threshold should have the same length'
+            assert weight_sparsity is not None or weight_sparsity_threshold is not None,\
+                'weight_sparsity or weight_sprasity_threshold should be given'
+            self.batches_per_epoch = batches_per_epoch
+            assert batches_per_epoch is not None, 'batches_per_epoch should not be None'
 
     opt_registry = {}
 
@@ -345,7 +370,13 @@ class Optimizer(object):
             The index for weight.
         weight : NDArray
             The weight matrix.
+
+        Returns
+        -------
+        bool
+            If the masks were changed
         """
+
         epoch = int((self.num_update - 1) / self.batches_per_epoch) + 1
 
         if index == 0:
@@ -354,29 +385,33 @@ class Optimizer(object):
             self.epoch = epoch
             if epoch == 1:
                 self.masks_updated = False
-            if self.switch_epoch[0] + 1 == epoch:
+            if self.pruning_switch_epoch[0] + 1 == epoch:
                 self.masks_updated = False
-                self.switch_epoch.pop(0)
-                self.bias_sparsity.pop(0)
-                self.weight_sparsity.pop(0)
+                self.pruning_switch_epoch.pop(0)
+                if self.weight_sparsity is not None:
+                    self.weight_sparsity.pop(0)
+                    self.bias_sparsity.pop(0)
+                else:
+                    self.weight_sparsity_threshold.pop(0)
+                    self.bias_sparsity_threshold.pop(0)
 
         if not self.masks_updated:
             if epoch == 1:
                 self.masks.append(None)
-            if len(weight.shape) == 1:
-                sparsity = self.bias_sparsity[0]
+            if self.weight_sparsity is not None:
+                if len(weight.shape) == 1:
+                    sparsity = self.bias_sparsity[0]
+                else:
+                    sparsity = self.weight_sparsity[0]
+                number_unpruned = int((100.0 - sparsity) * weight.size / 100.0)
+                self.masks[index] = topk(absolute(weight), axis = None, ret_typ = 'mask',
+                                        k = number_unpruned)
             else:
-                sparsity = self.weight_sparsity[0]
-            if self.threshold:
-                self.masks[index] = absolute(weight) >= self.threshold
-            else:
-                threshold = int(sparsity * weight.size / 100.0)
-                mask = ones(weight.size)
-                if threshold > 0:
-                    sort = argsort(absolute(weight).asnumpy(), axis=None)
-                    sort = sort[0 : threshold]
-                    mask[sort] = 0.0
-                self.masks[index] = array(mask, ctx = weight.context, dtype = weight.dtype).reshape(weight.shape)
+                if len(weight.shape) == 1:
+                    threshold = self.bias_sparsity_threshold[0]
+                else:
+                    threshold = self.weight_sparsity_threshold[0]
+                self.masks[index] = absolute(weight) >= threshold
 
         return not self.masks_updated
 
@@ -440,7 +475,7 @@ class SGD(Optimizer):
 
         if self.do_pruning:
             if self.update_masks(index, weight):
-                weight[:] = weight * (self.pruning_factor + ((1.0 - self.pruning_factor) * self.masks[index]))
+                weight[:] = weight * self.masks[index]
             grad[:] = grad * self.masks[index]
             if state is not None:
                 state[:] = state * self.masks[index]
@@ -459,13 +494,13 @@ class SGD(Optimizer):
             else:
                 sgd_update(weight, grad, out=weight,
                            lr=lr, wd=wd, **kwargs)
-        #else:
-        #    if state[0] is not None:
-        #        mp_sgd_mom_update(weight, grad, state[0], state[1], out=weight,
-        #                          lr=lr, wd=wd, **kwargs)
-        #    else:
-        #        mp_sgd_update(weight, grad, state[1], out=weight,
-        #                      lr=lr, wd=wd, **kwargs)
+        else:
+            if state[0] is not None:
+                mp_sgd_mom_update(weight, grad, state[0], state[1], out=weight,
+                                  lr=lr, wd=wd, **kwargs)
+            else:
+                mp_sgd_update(weight, grad, state[1], out=weight,
+                              lr=lr, wd=wd, **kwargs)
 
 @register
 class DCASGD(Optimizer):
