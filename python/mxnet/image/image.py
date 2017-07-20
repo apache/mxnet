@@ -965,10 +965,13 @@ class ImageIter(io.DataIter):
         super(ImageIter, self).__init__()
         assert path_imgrec or path_imglist or (isinstance(imglist, list))
         num_threads = os.environ.get('MXNET_CPU_WORKER_NTHREADS', 1)
+        logging.info('Using %s threads for decoding...', str(num_threads))
+        logging.info('Set enviroment variable MXNET_CPU_WORKER_NTHREADS to a'
+                     ' larger number to use more threads.')
         class_name = self.__class__.__name__
         if path_imgrec:
-            logging.info('%s: loading recordio %s, use %s threads for decoding...',
-                         class_name, path_imgrec, str(num_threads))
+            logging.info('%s: loading recordio %s...',
+                         class_name, path_imgrec)
             if path_imgidx:
                 self.imgrec = recordio.MXIndexedRecordIO(path_imgidx, path_imgrec, 'r')  # pylint: disable=redefined-variable-type
                 self.imgidx = list(self.imgrec.keys)
