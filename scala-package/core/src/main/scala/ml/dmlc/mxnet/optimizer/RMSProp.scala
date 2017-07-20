@@ -46,7 +46,7 @@ class RMSProp(val learningRate: Float = 0.002f, rescaleGradient: Float = 1.0f,
    *              The auxiliary state used in optimization.
    */
   override def update(index: Int, weight: NDArray, grad: NDArray, state: AnyRef): Unit = {
-    val lr = this.learningRate * lrScale.getOrElse(index, 1f)
+    val lr = getLr(index, this.learningRate)
     val (n, g, delta) = state.asInstanceOf[(NDArray, NDArray, NDArray)]
     val wd = getWd(index, this.wd)
 

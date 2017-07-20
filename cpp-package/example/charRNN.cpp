@@ -56,14 +56,14 @@ LSTMState LSTM(int num_hidden, const Symbol& indata, const LSTMState& prev_state
       num_hidden * 4);
   auto gates = i2h + h2h;
   auto slice_gates = SliceChannel(prefix + "_slice", gates, 4);
-  auto in_gate = Activation(slice_gates[0], ActivationActType::sigmoid);
-  auto in_transform = Activation(slice_gates[1], ActivationActType::tanh);
-  auto forget_gate = Activation(slice_gates[2], ActivationActType::sigmoid);
-  auto out_gate = Activation(slice_gates[3], ActivationActType::sigmoid);
+  auto in_gate = Activation(slice_gates[0], ActivationActType::kSigmoid);
+  auto in_transform = Activation(slice_gates[1], ActivationActType::kTanh);
+  auto forget_gate = Activation(slice_gates[2], ActivationActType::kSigmoid);
+  auto out_gate = Activation(slice_gates[3], ActivationActType::kSigmoid);
 
   LSTMState state;
   state.C = (forget_gate * prev_state.C) + (in_gate * in_transform);
-  state.h = out_gate * Activation(state.C, ActivationActType::tanh);
+  state.h = out_gate * Activation(state.C, ActivationActType::kTanh);
   return state;
 }
 
@@ -115,7 +115,7 @@ Symbol LSTMUnroll(int num_lstm_layer, int sequence_length, int input_dim,
 
   auto label = Symbol::Variable("softmax_label");
   label = transpose(label);
-  label = Reshape(label, Shape(), false, false, Shape(-1));  // -1: infer from graph
+  label = Reshape(label, Shape(), false, Shape(0), false);  // -1: infer from graph
   auto sm = SoftmaxOutput("softmax", pred, label);
   if (isTrain)
     return sm;
@@ -141,7 +141,7 @@ Symbol LSTMWithBuiltInRNNOp(int num_lstm_layer, int sequence_length, int input_d
   auto label = Symbol::Variable("softmax_label");
   label = transpose(label);
   label = Reshape(label, Shape(), false,
-                  false, Shape(-1));  // FullyConnected requires one dimension
+                  Shape(0), false);  // FullyConnected requires one dimension
   if (!TIME_MAJOR && isTrain)
     embed = SwapAxis(embed, 0, 1);  // Change to time-major as cuDNN requires
 
@@ -150,8 +150,8 @@ Symbol LSTMWithBuiltInRNNOp(int num_lstm_layer, int sequence_length, int input_d
   auto rnn_c_init = Symbol::Variable("LSTM_init_c");
   auto rnn_params = Symbol::Variable("LSTM_parameters");  // See explanations near RNNXavier class
   auto rnn = RNN(embed, rnn_params, rnn_h_init, rnn_c_init, num_hidden, num_lstm_layer,
-      RNNMode::lstm, false, dropout, !isTrain);
-  auto hidden = Reshape(rnn[0], Shape(), false, false, Shape(-1, num_hidden));
+      RNNMode::kLstm, false, dropout, !isTrain);
+  auto hidden = Reshape(rnn[0], Shape(), false, Shape(0, num_hidden), false);
 
   auto cls_weight = Symbol::Variable("cls_weight");
   auto cls_bias = Symbol::Variable("cls_bias");
@@ -194,7 +194,8 @@ class Shuffler {
 
 class BucketSentenceIter : public DataIter {
   Shuffler* random;
-  int batch, current, end, sequence_length;
+  int batch, current, end;
+  unsigned int sequence_length;
   Context device;
   vector<vector<mx_float>> sequences;
   vector<wchar_t> index2chars;
@@ -582,7 +583,7 @@ void predict(wstring* ptext, int sequence_length, const string param_file,
   LoadCheckpoint(param_file, exe);
 
   mx_float index;
-  wchar_t next;
+  wchar_t next = 0;
   vector<mx_float> softmax;
   softmax.resize(input_dim);
   for (auto c : *ptext) {
@@ -642,7 +643,7 @@ void predictWithBuiltInRNNOp(wstring* ptext, int sequence_length, const string p
   LoadCheckpoint(param_file, exe);
 
   mx_float index;
-  wchar_t next;
+  wchar_t next = 0;
   vector<mx_float> softmax;
   softmax.resize(input_dim);
   for (auto c : *ptext) {

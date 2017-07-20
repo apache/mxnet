@@ -140,6 +140,7 @@ method _init_ndarray_module()
     }
 }
 
+
 __PACKAGE__->_init_ndarray_module;
 
 1;

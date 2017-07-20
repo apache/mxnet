@@ -126,6 +126,7 @@ DMLC_REGISTER_PARAMETER(NDArrayOpParam);
 
 MXNET_REGISTER_OP_PROPERTY(_NDArray, NDArrayOpProp)
 .describe("Stub for implementing an operator implemented in native frontend language with ndarray.")
+.add_argument("data", "NDArray-or-Symbol[]", "Input data for the custom operator.")
 .add_arguments(NDArrayOpParam::__FIELDS__());
 
 }  // namespace op

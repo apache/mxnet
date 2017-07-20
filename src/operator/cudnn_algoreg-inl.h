@@ -23,15 +23,23 @@ class CuDNNAlgoReg {
  public:
   template <typename Param>
   std::string GetKey(const Param &param, const std::vector<TShape> &in_shape,
-                     const std::vector<TShape> &out_shape) {
+                     const std::vector<TShape> &out_shape,
+                     cudnnDataType_t cudnn_data_type,
+                     cudnnDataType_t cudnn_forward_compute_type,
+                     cudnnDataType_t cudnn_backward_compute_type) {
     std::ostringstream oss;
+    oss << "inputs=";
     for (auto &i : in_shape)
       oss << i << ";";
+    oss << "outputs=";
     for (auto &i : out_shape)
       oss << i << ";";
     auto dict = param.__DICT__();
     for (auto &k : dict)
       oss << k.first << "=" << k.second << ";";
+    oss << "cudnn_data_type=" << cudnn_data_type << ";";
+    oss << "cudnn_forward_compute_type=" << cudnn_forward_compute_type << ";";
+    oss << "cudnn_backward_compute_type=" << cudnn_backward_compute_type << ";";
     return oss.str();
   }
 

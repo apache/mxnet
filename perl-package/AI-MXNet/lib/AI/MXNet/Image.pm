@@ -7,7 +7,7 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-    AI::MXNet:Image - Read invidual image files and perform augmentations.
+    AI::MXNet:Image - Read individual image files and perform augmentations.
 =cut
 
 =head2 imdecode

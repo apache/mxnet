@@ -137,7 +137,7 @@ has 'invalid_label' => (is => 'ro', isa => 'Int',   default => -1);
 has 'data_name'     => (is => 'ro', isa => 'Str',   default => 'data');
 has 'label_name'    => (is => 'ro', isa => 'Str',   default => 'softmax_label');
 has 'dtype'         => (is => 'ro', isa => 'Dtype', default => 'float32');
-has 'layout'        => (is => 'ro', isa => 'Str',   default => 'NTC');
+has 'layout'        => (is => 'ro', isa => 'Str',   default => 'NT');
 has 'buckets'       => (is => 'rw', isa => 'Maybe[ArrayRef[Int]]');
 has [qw/data nddata ndlabel
         major_axis default_bucket_key
@@ -204,14 +204,16 @@ sub BUILD
         AI::MXNet::DataDesc->new(
             name  => $self->data_name,
             shape => $shape,
-            dtype => $self->dtype
+            dtype => $self->dtype,
+            layout => $self->layout
         )
     ]);
     $self->provide_label([
         AI::MXNet::DataDesc->new(
             name  => $self->label_name,
             shape => $shape,
-            dtype => $self->dtype
+            dtype => $self->dtype,
+            layout => $self->layout
         )
     ]);
     $self->idx([]);
@@ -272,14 +274,16 @@ method next()
             AI::MXNet::DataDesc->new(
                 name  => $self->data_name,
                 shape => $data->shape,
-                dtype => $self->dtype
+                dtype => $self->dtype,
+                layout => $self->layout
             )
         ],
         provide_label => [
             AI::MXNet::DataDesc->new(
                 name  => $self->label_name,
                 shape => $label->shape,
-                dtype => $self->dtype
+                dtype => $self->dtype,
+                layout => $self->layout
             )
         ],
     );

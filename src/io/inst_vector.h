@@ -20,7 +20,7 @@ namespace io {
 /*!
  * \brief a vector of tensor with various shape
  *
- * data are stored in memory continously
+ * data are stored in memory continuously
  */
 template<int dim, typename DType>
 class TensorVector {

@@ -12,6 +12,3 @@ These are used to generate the indexes for search functionality.
 - [Get Started Documents](get_started/index.md)
 - [System Documents](architecture/index.md)
 - [Tutorials](tutorials/index.md)
-
-# Chinese translation of docs
-- [Chinese translation of docs](index_zh.md)

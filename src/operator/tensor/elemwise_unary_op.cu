@@ -8,6 +8,18 @@
 
 namespace mxnet {
 namespace op {
+NNVM_REGISTER_OP(relu)
+.set_attr<FCompute>("FCompute<gpu>", UnaryLaunch<gpu, kernel_launch_op::relu>);
+
+NNVM_REGISTER_OP(_backward_relu)
+.set_attr<FCompute>("FCompute<gpu>", BinaryLaunch<gpu, kernel_launch_op::relu_grad>);
+
+NNVM_REGISTER_OP(sigmoid)
+.set_attr<FCompute>("FCompute<gpu>", UnaryLaunch<gpu, kernel_launch_op::sigmoid>);
+
+NNVM_REGISTER_OP(_backward_sigmoid)
+.set_attr<FCompute>("FCompute<gpu>", BinaryLaunch<gpu, kernel_launch_op::sigmoid_grad>);
+
 // copy
 NNVM_REGISTER_OP(_copy)
 .set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
@@ -35,6 +47,14 @@ NNVM_REGISTER_OP(_backward_cast)
 NNVM_REGISTER_OP(negative)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::negation>);
 
+// reciprocal
+NNVM_REGISTER_OP(reciprocal)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::reciprocal>);
+
+NNVM_REGISTER_OP(_backward_reciprocal)
+.set_attr<FCompute>("FCompute<gpu>",
+  BinaryCompute<gpu, unary_bwd<mshadow_op::reciprocal_grad> >);
+
 // abs
 NNVM_REGISTER_OP(abs)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::abs>);
@@ -60,6 +80,10 @@ NNVM_REGISTER_OP(ceil)
 // floor
 NNVM_REGISTER_OP(floor)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::floor>);
+
+// trunc
+NNVM_REGISTER_OP(trunc)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::trunc>);
 
 // rint
 NNVM_REGISTER_OP(rint)

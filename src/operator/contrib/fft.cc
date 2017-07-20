@@ -26,7 +26,18 @@ Operator *FFTProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
 DMLC_REGISTER_PARAMETER(FFTParam);
 
 MXNET_REGISTER_OP_PROPERTY(_contrib_fft, FFTProp)
-.describe("Apply FFT to input.")
+.describe(R"code(Apply 1D FFT to input"
+
+.. note:: `fft` is only available on GPU.
+
+Currently accept 2 input data shapes: (N, d) or (N1, N2, N3, d), data can only be real numbers.
+The output data has shape: (N, 2*d) or (N1, N2, N3, 2*d). The format is: [real0, imag0, real1, imag1, ...].
+
+Example::
+   data = np.random.normal(0,1,(3,4))
+   out = mx.contrib.ndarray.fft(data = mx.nd.array(data,ctx = mx.gpu(0)))
+
+)code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input data to the FFTOp.")
 .add_arguments(FFTParam::__FIELDS__());
 }  // namespace op

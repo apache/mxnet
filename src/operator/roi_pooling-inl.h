@@ -34,7 +34,7 @@ struct ROIPoolingParam : public dmlc::Parameter<ROIPoolingParam> {
   DMLC_DECLARE_PARAMETER(ROIPoolingParam) {
     DMLC_DECLARE_FIELD(pooled_size)
     .set_expect_ndim(2).enforce_nonzero()
-    .describe("fix pooled size: (h, w)");
+    .describe("ROI pooling output shape (h,w) ");
     DMLC_DECLARE_FIELD(spatial_scale).set_range(0.0, 1.0)
     .describe("Ratio of input feature map height (or w) to raw image height (or w). "
     "Equals the reciprocal of total stride in convolutional layers");

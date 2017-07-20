@@ -16,7 +16,7 @@ mx.model.init.params.rnn <- function(symbol, input.shape, initializer, ctx) {
 # Initialize the data iter
 mx.model.init.iter.rnn <- function(X, y, batch.size, is.train) {
   if (is.MXDataIter(X)) return(X)
-  shape <- dim(data)
+  shape <- dim(X)
   if (is.null(shape)) {
     num.data <- length(X)
   } else {
@@ -102,8 +102,16 @@ get.label <- function(label, ctx) {
 train.rnn <- function (model, train.data, eval.data,
                        num.round, update.period,
                        init.states.name,
-                       optimizer='sgd', ctx=mx.ctx.default(), ...) {
+                       optimizer='sgd', ctx=mx.ctx.default(), 
+                       epoch.end.callback,
+                       batch.end.callback,
+                       verbose=TRUE,
+                       ...) {
     m <- model
+    
+    model <- list(symbol=model$symbol, arg.params=model$rnn.exec$ref.arg.arrays,
+                  aux.params=model$rnn.exec$ref.aux.arrays)
+    
     seq.len <- m$seq.len
     batch.size <- m$batch.size
     num.rnn.layer <- m$num.rnn.layer
@@ -173,19 +181,24 @@ train.rnn <- function (model, train.data, eval.data,
             train.nll <- train.nll + calc.nll(as.array(seq.label.probs), batch.size)
 
             nbatch <- nbatch + seq.len
+            
+            if (!is.null(batch.end.callback)) {
+              batch.end.callback(iteration, nbatch, environment())
+            }
+            
             if ((epoch.counter %% log.period) == 0) {
-                cat(paste0("Epoch [", epoch.counter,
+                message(paste0("Epoch [", epoch.counter,
                            "] Train: NLL=", train.nll / nbatch,
-                           ", Perp=", exp(train.nll / nbatch), "\n"))
+                           ", Perp=", exp(train.nll / nbatch)))
             }
         }
         train.data$reset()
         # end of training loop
         toc <- Sys.time()
-        cat(paste0("Iter [", iteration,
+        message(paste0("Iter [", iteration,
                    "] Train: Time: ", as.numeric(toc - tic, units="secs"),
                    " sec, NLL=", train.nll / nbatch,
-                   ", Perp=", exp(train.nll / nbatch), "\n"))
+                   ", Perp=", exp(train.nll / nbatch)))
 
         if (!is.null(eval.data)) {
             val.nll <- 0.0
@@ -216,9 +229,20 @@ train.rnn <- function (model, train.data, eval.data,
             }
             eval.data$reset()
             perp <- exp(val.nll / nbatch)
-            cat(paste0("Iter [", iteration,
+            message(paste0("Iter [", iteration,
                        "] Val: NLL=", val.nll / nbatch,
-                       ", Perp=", exp(val.nll / nbatch), "\n"))
+                       ", Perp=", exp(val.nll / nbatch)))
+        }
+        # get the model out
+
+
+        epoch_continue <- TRUE
+        if (!is.null(epoch.end.callback)) {
+          epoch_continue <- epoch.end.callback(iteration, 0, environment(), verbose = verbose)
+        }
+        
+        if (!epoch_continue) {
+          break
         }
     }
 

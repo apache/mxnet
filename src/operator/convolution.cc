@@ -44,7 +44,6 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
       break;
     }
   }
-  LOG(INFO) << MKLConvolutionOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
 #if MXNET_USE_NNPACK == 1
   const size_t batch_size = (*in_shape)[0][0];
@@ -72,8 +71,6 @@ Operator *ConvolutionProp::CreateOperatorEx(Context ctx,
                                             std::vector<TShape> *in_shape,
                                             std::vector<int> *in_type) const {
   std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], in_shape, &out_shape, ctx);
 }
@@ -109,13 +106,13 @@ then we have::
 
 If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 
-The default data ``layout`` is *NCHW*, namely *(batch_size, channle, height,
+The default data ``layout`` is *NCHW*, namely *(batch_size, channel, height,
 width)*. We can choose other layouts such as *NHWC*.
 
 If ``num_group`` is larger than 1, denoted by *g*, then split the input ``data``
 evenly into *g* parts along the channel axis, and also evenly split ``weight``
 along the first dimension. Next compute the convolution on the *i*-th part of
-the data with the *i*-th weight part. The output is obtained by concating all
+the data with the *i*-th weight part. The output is obtained by concatenating all
 the *g* results.
 
 1-D convolution does not have *height* dimension but only *width* in space.

@@ -9,7 +9,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(add_n)
-.set_attr<FCompute>("FCompute<gpu>", ElementWiseSumCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", ElementWiseSumComputeWithHalf2<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -31,7 +31,7 @@ inline void SortByKey(mshadow::Tensor<cpu, 1, KDType> keys, mshadow::Tensor<cpu,
   std::vector<size_t> idx(keys.size(0));
   std::vector<KDType> keys_vec(keys.size(0));
   std::vector<VDType> values_vec(values.size(0));
-  for (int i = 0; i < keys.size(0); i++) {
+  for (index_t i = 0; i < keys.size(0); i++) {
     idx[i] = i;
     keys_vec[i] = keys[i];
     values_vec[i] = values[i];

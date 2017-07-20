@@ -47,8 +47,8 @@ def _create_kvstore(kvstore, num_device, arg_params):
         The kvstore.
     num_device : int
         The number of devices
-    arg_params : dict of str to ``NDArray``.
-        Model parameter, dict of name to ``NDArray`` of net's weights.
+    arg_params : dict of str to `NDArray`.
+        Model parameter, dict of name to `NDArray` of net's weights.
     """
     update_on_kvstore = True
     if kvstore is None:
@@ -62,7 +62,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
             kv = None
         else:
             kv = kvs.create(kvstore)
-            if kvstore is 'local':
+            if kvstore == 'local':
             # automatically select a proper local
                 max_size = max(np.prod(param.shape) for param in
                                arg_params.values())
@@ -78,36 +78,39 @@ def _create_kvstore(kvstore, num_device, arg_params):
 
 def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
                         update_on_kvstore):
-    """ Initialize kvstore"""
+    """Initialize kvstore"""
     for idx, param_on_devs in enumerate(param_arrays):
-        kvstore.init(idx, arg_params[param_names[idx]])
+        name = param_names[idx]
+        kvstore.init(name, arg_params[name])
 
         if update_on_kvstore:
-            kvstore.pull(idx, param_on_devs, priority=-idx)
+            kvstore.pull(name, param_on_devs, priority=-idx)
 
-def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore):
-    """ Perform update of param_arrays from grad_arrays on kvstore."""
+def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
+    """Perform update of param_arrays from grad_arrays on kvstore."""
     for index, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
         if grad_list[0] is None:
             continue
+        name = param_names[index]
         # push gradient, priority is negative index
-        kvstore.push(index, grad_list, priority=-index)
+        kvstore.push(name, grad_list, priority=-index)
         # pull back the weights
-        kvstore.pull(index, arg_list, priority=-index)
+        kvstore.pull(name, arg_list, priority=-index)
 
 def _update_params(param_arrays, grad_arrays, updater, num_device,
-                   kvstore=None):
-    """ Perform update of param_arrays from grad_arrays not on kvstore."""
+                   kvstore=None, param_names=None):
+    """Perform update of param_arrays from grad_arrays not on kvstore."""
     for index, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
         if grad_list[0] is None:
             continue
         if kvstore:
+            name = param_names[index]
             # push gradient, priority is negative index
-            kvstore.push(index, grad_list, priority=-index)
+            kvstore.push(name, grad_list, priority=-index)
             # pull back the sum gradients, to the same locations.
-            kvstore.pull(index, grad_list, priority=-index)
+            kvstore.pull(name, grad_list, priority=-index)
         for k, p in enumerate(zip(arg_list, grad_list)):
             # faked an index here, to make optimizer create diff
             # state for the same index but on diff devs, TODO(mli)
@@ -192,7 +195,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         for monitoring outputs, weights, and gradients for debugging.
     Notes
     -----
-    - This function will inplace update the ``NDArrays`` in ``arg_params`` and ``aux_states``.
+    - This function will inplace update the NDArrays in `arg_params` and `aux_states`.
     """
     if logger is None:
         logger = logging
@@ -245,13 +248,14 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 if update_on_kvstore:
                     _update_params_on_kvstore(executor_manager.param_arrays,
                                               executor_manager.grad_arrays,
-                                              kvstore)
+                                              kvstore, executor_manager.param_names)
                 else:
                     _update_params(executor_manager.param_arrays,
                                    executor_manager.grad_arrays,
                                    updater=updater,
                                    num_device=len(ctx),
-                                   kvstore=kvstore)
+                                   kvstore=kvstore,
+                                   param_names=executor_manager.param_names)
 
                 if monitor is not None:
                     monitor.toc_print()
@@ -495,19 +499,29 @@ class FeedForward(BASE_ESTIMATOR):
         """Check if name is a data argument."""
         return name.endswith('data') or name.endswith('label')
 
-    def _init_params(self, input_shapes, overwrite=False):
+    def _init_params(self, inputs, overwrite=False):
         """Initialize weight parameters and auxiliary states."""
+        inputs = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in inputs]
+        input_shapes = {item.name: item.shape for item in inputs}
         arg_shapes, _, aux_shapes = self.symbol.infer_shape(**input_shapes)
-        assert(arg_shapes is not None)
+        assert arg_shapes is not None
+        input_dtypes = {item.name: item.dtype for item in inputs}
+        arg_dtypes, _, aux_dtypes = self.symbol.infer_type(**input_dtypes)
+        assert arg_dtypes is not None
 
         arg_names = self.symbol.list_arguments()
         input_names = input_shapes.keys()
         param_names = [key for key in arg_names if key not in input_names]
         aux_names = self.symbol.list_auxiliary_states()
 
-        param_name_shapes = [x for x in zip(arg_names, arg_shapes) if x[0] in param_names]
-        arg_params = {k : nd.zeros(s) for k, s in param_name_shapes}
-        aux_params = {k : nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
+        param_name_attrs = [x for x in zip(arg_names, arg_shapes, arg_dtypes)
+                            if x[0] in param_names]
+        arg_params = {k : nd.zeros(shape=s, dtype=t)
+                      for k, s, t in param_name_attrs}
+        aux_name_attrs = [x for x in zip(aux_names, aux_shapes, aux_dtypes)
+                          if x[0] in aux_names]
+        aux_params = {k : nd.zeros(shape=s, dtype=t)
+                      for k, s, t in aux_name_attrs}
 
         for k, v in arg_params.items():
             if self.arg_params and k in self.arg_params and (not overwrite):
@@ -664,7 +678,8 @@ class FeedForward(BASE_ESTIMATOR):
             return outputs
 
     def score(self, X, eval_metric='acc', num_batch=None, batch_end_callback=None, reset=True):
-        """Run the model on X and calculate the score with eval_metric.
+        """Run the model given an input and calculate the score
+        as assessed by an evaluation metric.
 
         Parameters
         ----------
@@ -672,7 +687,7 @@ class FeedForward(BASE_ESTIMATOR):
         eval_metric : metric.metric
             The metric for calculating score.
         num_batch : int or None
-            The number of batch to run. Go though all batches if ``None``.
+            The number of batches to run. Go though all batches if ``None``.
         Returns
         -------
         s : float
@@ -722,17 +737,17 @@ class FeedForward(BASE_ESTIMATOR):
         Parameters
         ----------
         X : DataIter, or numpy.ndarray/NDArray
-            Training data. If X is a DataIter, the name or (if name not available)
+            Training data. If `X` is a `DataIter`, the name or (if name not available)
             the position of its outputs should match the corresponding variable
             names defined in the symbolic graph.
         y : numpy.ndarray/NDArray, optional
             Training set label.
-            If X is numpy.ndarray/NDArray, y is required to be set.
+            If X is ``numpy.ndarray`` or `NDArray`, `y` is required to be set.
             While y can be 1D or 2D (with 2nd dimension as 1), its first dimension must be
-            the same as X, i.e. the number of data points and labels should be equal.
+            the same as `X`, i.e. the number of data points and labels should be equal.
         eval_data : DataIter or numpy.ndarray/list/NDArray pair
             If eval_data is numpy.ndarray/list/NDArray pair,
-            it should be (valid_data, valid_label).
+            it should be ``(valid_data, valid_label)``.
         eval_metric : metric.EvalMetric or str or callable
             The evaluation metric. This could be the name of evaluation metric
             or a custom evaluation function that returns statistics
@@ -749,7 +764,7 @@ class FeedForward(BASE_ESTIMATOR):
             When not specified, default logger will be used.
         work_load_list : float or int, optional
             The list of work load for different devices,
-            in the same order as ctx.
+            in the same order as `ctx`.
 
         Note
         ----
@@ -768,7 +783,7 @@ class FeedForward(BASE_ESTIMATOR):
         self.kwargs["sym"] = self.symbol
 
         arg_names, param_names, aux_names = \
-                self._init_params(dict(data.provide_data+data.provide_label))
+                self._init_params(data.provide_data+data.provide_label)
 
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):
@@ -817,10 +832,10 @@ class FeedForward(BASE_ESTIMATOR):
 
     def save(self, prefix, epoch=None):
         """Checkpoint the model checkpoint into file.
-        You can also use ``pickle`` to do the job if you only work on Python.
-        The advantage of ``load` and ``save`` (as compared to ``pickle``) is that
+        You can also use `pickle` to do the job if you only work on Python.
+        The advantage of `load` and `save` (as compared to `pickle`) is that
         the resulting file can be loaded from other MXNet language bindings.
-        One can also directly ``load``/``save` from/to cloud storage(S3, HDFS)
+        One can also directly `load`/`save` from/to cloud storage(S3, HDFS)
 
         Parameters
         ----------
@@ -850,7 +865,7 @@ class FeedForward(BASE_ESTIMATOR):
         ctx : Context or list of Context, optional
             The device context of training and prediction.
         kwargs : dict
-            Other parameters for model, including ``num_epoch``, optimizer and ``numpy_batch_size``.
+            Other parameters for model, including `num_epoch`, optimizer and `numpy_batch_size`.
 
         Returns
         -------
@@ -887,7 +902,7 @@ class FeedForward(BASE_ESTIMATOR):
         X : DataIter
             Training data.
         y : numpy.ndarray, optional
-            If X is a ``numpy.ndarray``, y must be set.
+            If `X` is a ``numpy.ndarray``, `y` must be set.
         ctx : Context or list of Context, optional
             The device context of training and prediction.
             To use multi-GPU training, pass in a list of GPU contexts.
@@ -901,8 +916,8 @@ class FeedForward(BASE_ESTIMATOR):
         initializier : initializer function, optional
             The initialization scheme used.
         eval_data : DataIter or numpy.ndarray pair
-            If ``eval_set`` is ``numpy.ndarray`` pair, it should
-            be (``valid_data``, ``valid_label``).
+            If `eval_set` is ``numpy.ndarray`` pair, it should
+            be (`valid_data`, `valid_label`).
         eval_metric : metric.EvalMetric or str or callable
             The evaluation metric. Can be the name of an evaluation metric
             or a custom evaluation function that returns statistics
@@ -919,7 +934,7 @@ class FeedForward(BASE_ESTIMATOR):
             When not specified, default logger will be used.
         work_load_list : list of float or int, optional
             The list of work load for different devices,
-            in the same order as ctx.
+            in the same order as `ctx`.
         """
         model = FeedForward(symbol, ctx=ctx, num_epoch=num_epoch,
                             epoch_size=epoch_size,

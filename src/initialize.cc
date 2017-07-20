@@ -28,14 +28,14 @@ void segfault_logger(int sig) {
   }
 #endif  // DMLC_LOG_STACK_TRACE
 
-  exit(1);
+  exit(-1);
 }
 
 class LibraryInitializer {
  public:
   LibraryInitializer() {
     dmlc::InitLogging("mxnet");
-    signal(SIGSEGV, segfault_logger);
+    // signal(SIGSEGV, segfault_logger);
 #if MXNET_USE_PROFILER
     // ensure profiler's constructor are called before atexit.
     engine::Profiler::Get();
@@ -56,4 +56,6 @@ LibraryInitializer* LibraryInitializer::Get() {
   static LibraryInitializer inst;
   return &inst;
 }
+
+static LibraryInitializer* __library_init = LibraryInitializer::Get();
 }  // namespace mxnet

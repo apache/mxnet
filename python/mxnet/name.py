@@ -5,7 +5,7 @@ from __future__ import absolute_import
 class NameManager(object):
     """NameManager to do automatic naming.
 
-    User can also inherit this object to change naming behavior.
+    Developers can also inherit from this class to change naming behavior.
     """
     current = None
 
@@ -16,17 +16,17 @@ class NameManager(object):
     def get(self, name, hint):
         """Get the canonical name for a symbol.
 
-        This is default implementation.
-        When user specified a name,
-        the user specified name will be used.
+        This is the default implementation.
+        If the user specifies a name,
+        the user-specified name will be used.
 
-        When user did not, we will automatically generate a
-        name based on hint string.
+        When user does not specify a name, we automatically generate a
+        name based on the hint string.
 
         Parameters
         ----------
         name : str or None
-            The name user specified.
+            The name specified by the user.
 
         hint : str
             A hint string, which can be used to generate name.
@@ -34,7 +34,7 @@ class NameManager(object):
         Returns
         -------
         full_name : str
-            A canonical name for the user.
+            A canonical name for the symbol.
         """
         if name:
             return name
@@ -55,7 +55,7 @@ class NameManager(object):
 
 
 class Prefix(NameManager):
-    """A name manager that always attach a prefix to all names.
+    """A name manager that attaches a prefix to all names.
 
     Examples
     --------

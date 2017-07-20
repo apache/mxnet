@@ -17,7 +17,7 @@ class PythonModule(BaseModule):
     data_names : list of str
         Names of the data expected by the module.
     label_names : list of str
-        Names of the labels expected by the module. Could be `None` if the
+        Names of the labels expected by the module. Could be ``None`` if the
         module does not need labels.
     output_names : list of str
         Names of the outputs.
@@ -63,8 +63,8 @@ class PythonModule(BaseModule):
     def label_shapes(self):
         """A list of (name, shape) pairs specifying the label inputs to this module.
         If this module does not accept labels -- either it is a module without loss
-        function, or it is not binded for training, then this should return an empty
-        list `[]`.
+        function, or it is not bound for training, then this should return an empty
+        list ``[]```.
         """
         return self._label_shapes
 
@@ -77,19 +77,19 @@ class PythonModule(BaseModule):
     # Parameters of a module
     ################################################################################
     def get_params(self):
-        """Get parameters, those are potentially copies of the the actual parameters used
-        to do computation on the device.
+        """Gets parameters, those are potentially copies of the the actual parameters used
+        to do computation on the device. Subclass should override this method if contains
+        parameters.
 
         Returns
         -------
-        `({}, {})`, a pair of empty dict. Subclass should override this method if
-        contains parameters.
+        ``({}, {})``, a pair of empty dict.
         """
         return (dict(), dict())
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
-                    allow_missing=False, force_init=False):
-        """Initialize the parameters and auxiliary states. By default this function
+                    allow_missing=False, force_init=False, allow_extra=False):
+        """Initializes the parameters and auxiliary states. By default this function
         does nothing. Subclass should override this method if contains parameters.
 
         Parameters
@@ -97,35 +97,39 @@ class PythonModule(BaseModule):
         initializer : Initializer
             Called to initialize parameters if needed.
         arg_params : dict
-            If not None, should be a dictionary of existing arg_params. Initialization
+            If not ``None``, should be a dictionary of existing `arg_params`. Initialization
             will be copied from that.
         aux_params : dict
-            If not None, should be a dictionary of existing aux_params. Initialization
+            If not ``None``, should be a dictionary of existing `aux_params`. Initialization
             will be copied from that.
         allow_missing : bool
-            If true, params could contain missing values, and the initializer will be
+            If ``True``, params could contain missing values, and the initializer will be
             called to fill those missing params.
         force_init : bool
-            If true, will force re-initialize even if already initialized.
+            If ``True``, will force re-initialize even if already initialized.
+        allow_extra : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
         """
         pass
 
     def update(self):
-        """Update parameters according to the installed optimizer and the gradients computed
+        """Updates parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch. Currently we do nothing here. Subclass should
         override this method if contains parameters.
         """
         pass
 
     def update_metric(self, eval_metric, labels):
-        """Evaluate and accumulate evaluation metric on outputs of the last forward computation.
-        ubclass should override this method if needed.
+        """Evaluates and accumulates evaluation metric on outputs of the last forward computation.
+        Subclass should override this method if needed.
 
         Parameters
         ----------
         eval_metric : EvalMetric
         labels : list of NDArray
-            Typically `data_batch.label`.
+            Typically ``data_batch.label``.
         """
         if self._label_shapes is None:
             # since we do not need labels, we are probably not a module with a loss
@@ -141,26 +145,26 @@ class PythonModule(BaseModule):
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
              grad_req='write'):
-        """Bind the symbols to construct executors. This is necessary before one
+        """Binds the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
         Parameters
         ----------
         data_shapes : list of (str, tuple)
-            Typically is `data_iter.provide_data`.
+            Typically is ``data_iter.provide_data``.
         label_shapes : list of (str, tuple)
-            Typically is `data_iter.provide_label`.
+            Typically is ``data_iter.provide_label``.
         for_training : bool
-            Default is `True`. Whether the executors should be bind for training.
+            Default is ``True``. Whether the executors should be bind for training.
         inputs_need_grad : bool
-            Default is `False`. Whether the gradients to the input data need to be computed.
+            Default is ``False``. Whether the gradients to the input data need to be computed.
             Typically this is not needed. But this might be needed when implementing composition
             of modules.
         force_rebind : bool
-            Default is `False`. This function does nothing if the executors are already
-            binded. But with this `True`, the executors will be forced to rebind.
+            Default is ``False``. This function does nothing if the executors are already
+            bound. But with this ``True``, the executors will be forced to rebind.
         shared_module : Module
-            Default is `None`. This is used in bucketing. When not `None`, the shared module
+            Default is ``None``. This is used in bucketing. When not ``None``, the shared module
             essentially corresponds to a different bucket -- a module with different symbol
             but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
         grad_req : str, list of str, dict of str to str
@@ -169,7 +173,7 @@ class PythonModule(BaseModule):
             Can be specified globally (str) or for each argument (list, dict).
         """
         if self.binded and not force_rebind:
-            self.logger.warning('Already binded, ignoring bind()')
+            self.logger.warning('Already bound, ignoring bind()')
             return
 
         assert grad_req == 'write', "Python module only support write gradient"
@@ -190,15 +194,15 @@ class PythonModule(BaseModule):
 
     def _compute_output_shapes(self):
         """The subclass should implement this method to compute the shape of
-        outputs. This method can assume that the `data_shapes` and `label_shapes`
+        outputs. This method can assume that the ``data_shapes`` and ``label_shapes``
         are already initialized.
         """
         raise NotImplementedError()
 
     def init_optimizer(self, kvstore='local', optimizer='sgd',
                        optimizer_params=(('learning_rate', 0.01),), force_init=False):
-        """Install and initialize optimizers. By default we do nothing. Subclass
-        should
+        """Installs and initializes optimizers. By default we do nothing. Subclass should
+        override this method if needed.
 
         Parameters
         ----------
@@ -225,13 +229,13 @@ class PythonLossModule(PythonModule):
     name : str
         Names of the module. The outputs will be named `[name + '_output']`.
     data_names : list of str
-        Default `['data']`. Names of the data expected by this module.
+        Defaults to ``['data']``. Names of the data expected by this module.
         Should be a list of only one name.
     label_names : list of str
-        Default `['softmax_label']`. Names of the labels expected by the module.
+        Default ``['softmax_label']``. Names of the labels expected by the module.
         Should be a list of only one name.
     grad_func : function
-        Optional. If not `None`, should be a function that takes `scores`
+        Optional. If not ``None``, should be a function that takes `scores`
         and `labels`, both of type `NDArray`, and return the gradients with
         respect to the scores according to this loss function. The return
         value could be a numpy array or an `NDArray`.
@@ -253,7 +257,7 @@ class PythonLossModule(PythonModule):
         self._grad_func = grad_func
 
     def _compute_output_shapes(self):
-        """Compute the shapes of outputs. As a loss module with outputs, we simply
+        """Computes the shapes of outputs. As a loss module with outputs, we simply
         output whatever we receive as inputs (i.e. the scores).
         """
         return [(self._name + '_output', self._data_shapes[0][1])]
@@ -267,7 +271,7 @@ class PythonLossModule(PythonModule):
         data_batch : DataBatch
             Could be anything with similar API implemented.
         is_train : bool
-            Default is `None`, which means `is_train` takes the value of `self.for_training`.
+            Default is ``None``, which means `is_train` takes the value of ``self.for_training``.
         """
         self._scores = data_batch.data[0]
 
@@ -278,13 +282,13 @@ class PythonLossModule(PythonModule):
             self._labels = data_batch.label[0]
 
     def get_outputs(self, merge_multi_context=True):
-        """Get outputs of the previous forward computation. As a output loss module,
+        """Gets outputs of the previous forward computation. As a output loss module,
         we treat the inputs to this module as scores, and simply return them.
 
         Parameters
         ----------
         merge_multi_context : bool
-            Should always be `True`, because we do not use multiple contexts for computing.
+            Should always be ``True``, because we do not use multiple contexts for computing.
         """
         assert merge_multi_context is True
         return [self._scores]
@@ -306,9 +310,9 @@ class PythonLossModule(PythonModule):
 
     def _backward_impl(self):
         """Actual implementation of the backward computation. The computation
-        should take `self._scores` and `self._labels` and then compute the
+        should take ``self._scores`` and ``self._labels`` and then compute the
         gradients with respect to the scores, store it as an `NDArray` in
-        `self._scores_grad`.
+        ``self._scores_grad``.
 
         Instead of defining a subclass and overriding this function,
         a more convenient way is to pass in a `grad_func` when constructing
@@ -323,16 +327,16 @@ class PythonLossModule(PythonModule):
             raise NotImplementedError()
 
     def get_input_grads(self, merge_multi_context=True):
-        """Get the gradients to the inputs, computed in the previous backward computation.
+        """Gets the gradients to the inputs, computed in the previous backward computation.
 
         Parameters
         ----------
         merge_multi_context : bool
-            Should always be `True` because we do not use multiple context for computation.
+            Should always be ``True`` because we do not use multiple context for computation.
         """
         assert merge_multi_context is True
         return [self._scores_grad]
 
     def install_monitor(self, mon):
-        """Install monitor on all executors"""
+        """Installs monitor on all executors."""
         raise NotImplementedError()

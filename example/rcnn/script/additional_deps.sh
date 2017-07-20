@@ -10,7 +10,6 @@ cp make/config.mk ./
 echo "USE_CUDA=1" >>config.mk
 echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
 echo "USE_CUDNN=1" >>config.mk
-echo "EXTRA_OPERATORS = example/rcnn/operator" >>config.mk
 make -j$(nproc)
 pushd python
 python setup.py install --user

@@ -36,25 +36,25 @@ class Lenet {
 
     Symbol conv1 =
         Convolution("conv1", data, conv1_w, conv1_b, Shape(5, 5), 20);
-    Symbol tanh1 = Activation("tanh1", conv1, ActivationActType::tanh);
-    Symbol pool1 = Pooling("pool1", tanh1, Shape(2, 2), PoolingPoolType::max,
-      false, false, PoolingPoolingConvention::valid, Shape(2, 2));
+    Symbol tanh1 = Activation("tanh1", conv1, ActivationActType::kTanh);
+    Symbol pool1 = Pooling("pool1", tanh1, Shape(2, 2), PoolingPoolType::kMax,
+      false, false, PoolingPoolingConvention::kValid, Shape(2, 2));
 
     Symbol conv2 = Convolution("conv2", pool1, conv2_w, conv2_b,
       Shape(5, 5), 50);
-    Symbol tanh2 = Activation("tanh2", conv2, ActivationActType::tanh);
-    Symbol pool2 = Pooling("pool2", tanh2, Shape(2, 2), PoolingPoolType::max,
-      false, false, PoolingPoolingConvention::valid, Shape(2, 2));
+    Symbol tanh2 = Activation("tanh2", conv2, ActivationActType::kTanh);
+    Symbol pool2 = Pooling("pool2", tanh2, Shape(2, 2), PoolingPoolType::kMax,
+      false, false, PoolingPoolingConvention::kValid, Shape(2, 2));
 
     Symbol conv3 = Convolution("conv3", pool2, conv3_w, conv3_b,
       Shape(2, 2), 500);
-    Symbol tanh3 = Activation("tanh3", conv3, ActivationActType::tanh);
-    Symbol pool3 = Pooling("pool3", tanh3, Shape(2, 2), PoolingPoolType::max,
-      false, false, PoolingPoolingConvention::valid, Shape(1, 1));
+    Symbol tanh3 = Activation("tanh3", conv3, ActivationActType::kTanh);
+    Symbol pool3 = Pooling("pool3", tanh3, Shape(2, 2), PoolingPoolType::kMax,
+      false, false, PoolingPoolingConvention::kValid, Shape(1, 1));
 
     Symbol flatten = Flatten("flatten", pool3);
     Symbol fc1 = FullyConnected("fc1", flatten, fc1_w, fc1_b, 500);
-    Symbol tanh4 = Activation("tanh4", fc1, ActivationActType::tanh);
+    Symbol tanh4 = Activation("tanh4", fc1, ActivationActType::kTanh);
     Symbol fc2 = FullyConnected("fc2", tanh4, fc2_w, fc2_b, 10);
 
     Symbol lenet = SoftmaxOutput("softmax", fc2, data_label);

@@ -90,6 +90,18 @@ Available tags:
 
 - mxnet/scala
 
+### Perl
+
+Hosted at https://hub.docker.com/r/mxnet/perl/
+
+Perl version: 5.18.2
+
+Available tags:
+
+- mxnet/perl
+- mxnet/perl:gpu
+
+
 ## How to build
 
 The following command build the default Python package

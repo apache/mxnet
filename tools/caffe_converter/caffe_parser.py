@@ -1,3 +1,5 @@
+"""Parse caffe's protobuf
+"""
 import re
 try:
     import caffe

@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <utility>
 #include <random>
+#include <string>
 #include <thread>
 #include <algorithm>
 #endif  // DMLC_USE_CXX11
@@ -23,27 +24,6 @@ namespace mxnet {
 namespace common {
 
 #if DMLC_USE_CXX11
-
-inline void DeduplicateVarHandle(std::vector<engine::VarHandle> *read_vars,
-                                 std::vector<engine::VarHandle> *write_vars) {
-  std::sort(write_vars->begin(), write_vars->end());
-  write_vars->resize(std::unique(write_vars->begin(), write_vars->end()) -
-                    write_vars->begin());
-  std::sort(read_vars->begin(), read_vars->end());
-  read_vars->resize(std::unique(read_vars->begin(), read_vars->end()) -
-                   read_vars->begin());
-  auto wit = write_vars->begin();
-  auto rtop = read_vars->begin();
-  for (auto rit = read_vars->begin(); rit != read_vars->end(); ++rit) {
-    while (wit != write_vars->end() && *wit < *rit) ++wit;
-    if (wit == write_vars->end() || *wit != *rit) {
-      *rtop = *rit;
-      ++rtop;
-    }
-  }
-  read_vars->resize(rtop - read_vars->begin());
-}
-
 // heuristic to dermine number of threads per GPU
 inline int GetNumThreadPerGPU() {
   // This is resource efficient option.
@@ -144,6 +124,22 @@ typename helper::UniqueIf<T>::UnknownBound MakeUnique(size_t n) {
  */
 template <class T, class... Args>
 typename helper::UniqueIf<T>::KnownBound MakeUnique(Args&&... args) = delete;
+
+template<typename FCompType>
+FCompType GetFCompute(const nnvm::Op* op, const std::string& name,
+                      const Context& ctx) {
+  static auto& fcompute_cpu = nnvm::Op::GetAttr<FCompType>(name + "<cpu>");
+  static auto& fcompute_gpu = nnvm::Op::GetAttr<FCompType>(name + "<gpu>");
+
+  if (ctx.dev_mask() == cpu::kDevMask) {
+    return fcompute_cpu.get(op, nullptr);
+  } else if (ctx.dev_mask() == gpu::kDevMask) {
+    return fcompute_gpu.get(op, nullptr);
+  } else {
+    LOG(FATAL) << "Unknown device mask";
+    return nullptr;
+  }
+}
 
 #endif  // DMLC_USE_CXX11
 

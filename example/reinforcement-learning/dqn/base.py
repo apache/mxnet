@@ -125,7 +125,7 @@ class Base(object):
         data_inputs = {k: mx.nd.empty(data_shapes[k], ctx=self.ctx)
                        for k in set(data_shapes.keys()) - set(self.learn_init_keys)}
         if len(self._buckets) > 0:
-            shared_exe = self._buckets.values()[0]['exe'].values()[0]
+            shared_exe = list(list(self._buckets.values())[0]['exe'].values())[0]
         else:
             shared_exe = None
         self._buckets[self.curr_bucket_key] = {

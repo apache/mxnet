@@ -267,7 +267,7 @@ inline void _Transform(float scale,
                        float ratio,
                        const std::vector<float>& base_anchor,
                        std::vector<float>  *out_anchors) {
-  float w = base_anchor[2] - base_anchor[1] + 1.0f;
+  float w = base_anchor[2] - base_anchor[0] + 1.0f;
   float h = base_anchor[3] - base_anchor[1] + 1.0f;
   float x_ctr = base_anchor[0] + 0.5 * (w - 1.0f);
   float y_ctr = base_anchor[1] + 0.5 * (h - 1.0f);

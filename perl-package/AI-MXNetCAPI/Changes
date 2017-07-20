@@ -1,5 +1,20 @@
 Revision history for Perl extension AI::MXNetCAPI
 
+1.0101  Sun Jul  2 17:16:01 PDT 2017
+        - refactored CachedOp, using strings to index the kvstore.
+
+1.01    Sat Jun 10 23:57:27 PDT 2017
+        - sync with python.
+
+0.9507  Thu May 11 17:04:44 PDT 2017
+        - Added Autograd.
+
+0.9506  Sat Apr 29 20:26:50 PDT 2017
+        - removed compiled swig file.
+
+0.9504  Wed Apr 19 19:07:02 PDT 2017
+        - callbacks bugfix.
+
 0.95  Sun Mar 26 17:42:02 PDT 2017
         - visible on http://mxnet.io
 

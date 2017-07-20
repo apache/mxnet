@@ -1,6 +1,6 @@
 # coding: utf-8
 """Interface for NDArray functions executed by torch backend.
-Install torch and Compile with USE_TORCH=1 to use this module."""
+Install Torch and compile with USE_TORCH=1 to use this module."""
 from __future__ import absolute_import
 
 import ctypes
@@ -79,7 +79,7 @@ def _make_torch_function(handle):
         Parameters
         ----------
         *args
-            Positional arguments of input scalars and NDArray.
+            Positional arguments of inputs (both scalar and `NDArray`).
 
         Returns
         -------

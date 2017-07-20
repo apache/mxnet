@@ -121,16 +121,16 @@ class WarpCTCOp : public Operator {
     TBlob label = in_data[warpctc_enum::kLabel];
     CHECK_EQ(data.shape_.ndim(), 2) << "input data shape should be 2 (t*n, p)";
     ctcOptions info; //please updated to latest baidu/warp-ctc NOLINT(*)
-    if (data.dev_mask_ == cpu::kDevMask) {
+    if (data.dev_mask() == cpu::kDevMask) {
       info.loc = CTC_CPU;
       info.num_threads = 1;
-    } else if (data.dev_mask_ == gpu::kDevMask) {
+    } else if (data.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       info.loc = CTC_GPU;
       info.stream = ctx.get_stream<gpu>()->stream_;
     } else {
 #endif
-      LOG(FATAL) << "Unknown device type " << data.dev_mask_;
+      LOG(FATAL) << "Unknown device type " << data.dev_mask();
     }
     info.blank_label = 0;
 
@@ -149,7 +149,7 @@ class WarpCTCOp : public Operator {
     int* flat_labels = static_cast<int*>(label.dptr_);
     int* cpu_raw_labels = flat_labels;
     float* grads = static_cast<float*>(in_grad[warpctc_enum::kData].dptr_);
-    if (data.dev_mask_ == gpu::kDevMask) {
+    if (data.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       cpu_raw_labels = reinterpret_cast<int*>(malloc(sizeof(int) * label.Size()));
       cuda_status = cudaMemcpyAsync(cpu_raw_labels, flat_labels,
@@ -193,9 +193,9 @@ class WarpCTCOp : public Operator {
                                     info),
                    "Error: compute_ctc_loss");
 
-    if (data.dev_mask_ == cpu::kDevMask) {
+    if (data.dev_mask() == cpu::kDevMask) {
       free(cpu_labels);
-    } else if (data.dev_mask_ == gpu::kDevMask) {
+    } else if (data.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       free(cpu_raw_labels);
       free(cpu_labels);

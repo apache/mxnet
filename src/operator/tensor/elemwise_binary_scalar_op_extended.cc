@@ -60,7 +60,23 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_hypot_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarBackward<cpu, mshadow_op::hypot_grad_left>);
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(smooth_l1)
-.MXNET_DESCRIBE("Calculate Smooth L1 Loss(lhs, scalar)")
+.describe(R"code(Calculate Smooth L1 Loss(lhs, scalar) by summing
+
+.. math::
+
+    f(x) =
+    \begin{cases}
+    (\sigma x)^2/2,& \text{if }x < 1/\sigma^2\\
+    |x|-0.5/\sigma^2,& \text{otherwise}
+    \end{cases}
+
+where :math:`x` is an element of the tensor *lhs* and :math:`\sigma` is the scalar.
+
+Example::
+
+  smooth_l1([1, 2, 3, 4], sigma=1) = [0.5, 1.5, 2.5, 3.5]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarCompute<cpu, mshadow_op::smooth_l1_loss>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_smooth_l1" });
 

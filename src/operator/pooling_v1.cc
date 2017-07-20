@@ -56,15 +56,15 @@ The shapes for 2-D pooling is
     out_height = f(height, kernel[0], pad[0], stride[0])
     out_width = f(width, kernel[1], pad[1], stride[1])
 
-The defintion of *f* depends on ``pooling_convention``, which has two options:
+The definition of *f* depends on ``pooling_convention``, which has two options:
 
 - **valid** (default)::
 
-    f(x, k, p, s) = floor(x+2*p-k)/s+1
+    f(x, k, p, s) = floor((x+2*p-k)/s)+1
 
 - **full**, which is compatible with Caffe::
 
-    f(x, k, p, s) = ceil(x+2*p-k)/s+1
+    f(x, k, p, s) = ceil((x+2*p-k)/s)+1
 
 But ``global_pool`` is set to be true, then do a global pooling, namely reset
 ``kernel=(height, width)``.

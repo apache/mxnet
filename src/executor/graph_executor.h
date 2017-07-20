@@ -21,9 +21,6 @@
 
 namespace mxnet {
 
-using NodeOperatorMap = std::unordered_map<const nnvm::Node*,
-    std::shared_ptr<Operator>>;
-
 // forward declaration
 namespace exec {
 class GraphExecutor;
@@ -31,12 +28,7 @@ class GraphExecutor;
 
 // forward declaration
 namespace autograd {
-exec::GraphExecutor *Bind(nnvm::Symbol symbol,
-                          const nnvm::NodeEntryMap<TShape>& shapes,
-                          const nnvm::NodeEntryMap<Context>& ctxs,
-                          const NodeOperatorMap& saved_opr);
-std::vector<NDArray> Run(exec::GraphExecutor* exec,
-                         const nnvm::NodeEntryMap<NDArray>& feed_dict);
+class AutogradRuntime;
 }
 
 namespace exec {
@@ -46,13 +38,7 @@ using nnvm::Graph;
 // graph executors
 class GraphExecutor : public Executor {
  public:
-  friend GraphExecutor *autograd::Bind(nnvm::Symbol symbol,
-                                       const nnvm::NodeEntryMap<TShape>& shapes,
-                                       const nnvm::NodeEntryMap<Context>& ctxs,
-                                       const NodeOperatorMap& saved_opr);
-  friend std::vector<NDArray> autograd::Run(GraphExecutor* exec,
-                                            const nnvm::NodeEntryMap<NDArray>& feed_dict);
-
+  friend class autograd::AutogradRuntime;
   using Executor::MonitorCallback;
 
   virtual ~GraphExecutor();
@@ -60,17 +46,47 @@ class GraphExecutor : public Executor {
   void PartialForward(bool is_train, int step, int *step_left) override;
   void Backward(const std::vector<NDArray> &head_grads) override;
   const std::vector<NDArray>& outputs() const override;
+  const std::unordered_map<std::string, NDArray>& in_arg_map() const override;
+  const std::unordered_map<std::string, NDArray>& arg_grad_map() const override;
+  const std::unordered_map<std::string, NDArray>& aux_state_map() const override;
   void Print(std::ostream &os) const override; // NOLINT(*)
   void SetMonitorCallback(const MonitorCallback& callback) override;
-  // initialized the executor
+  // Initialize the rest of attributes
+  // after setting up arguments.
+  void FinishInitGraph(nnvm::Symbol symbol, nnvm::Graph g,
+                       Executor* shared_exec = nullptr,
+                       const nnvm::NodeEntryMap<NDArray>& feed_dict
+                         = nnvm::NodeEntryMap<NDArray>());
+
+  // initialize executor for bind
   void Init(nnvm::Symbol symbol,
             const Context& default_ctx,
             const std::map<std::string, Context>& ctx_map,
             const std::vector<NDArray>& in_args,
             const std::vector<NDArray>& arg_grad_store,
-            const std::vector<OpReqType>& grad_req_type,
+            const std::vector<OpReqType>& grad_req_types,
             const std::vector<NDArray>& aux_states,
-            Executor* shared_exec = nullptr);
+            Executor* shared_exec = nullptr,
+            const nnvm::NodeEntryMap<NDArray>& feed_dict
+              = nnvm::NodeEntryMap<NDArray>());
+  // initialize executor for simple bind
+  void Init(nnvm::Symbol symbol,
+            const Context& default_ctx,
+            const std::map<std::string, Context>& ctx_map,
+            const std::vector<Context>& in_arg_ctxes,
+            const std::vector<Context>& arg_grad_ctxes,
+            const std::vector<Context>& aux_state_ctxes,
+            const std::unordered_map<std::string, TShape>& arg_shape_map,
+            const std::unordered_map<std::string, int>& arg_dtype_map,
+            const std::vector<OpReqType>& grad_req_types,
+            const std::unordered_set<std::string>& shared_arg_names,
+            std::vector<NDArray>* in_arg_vec,
+            std::vector<NDArray>* arg_grad_vec,
+            std::vector<NDArray>* aux_state_vec,
+            std::unordered_map<std::string, NDArray>* shared_buffer = nullptr,
+            Executor* shared_exec = nullptr,
+            const nnvm::NodeEntryMap<NDArray>& feed_dict
+              = nnvm::NodeEntryMap<NDArray>());
 
  protected:
   // Information about operational node
@@ -101,21 +117,45 @@ class GraphExecutor : public Executor {
     // the cached operator
     Engine::OprHandle opr = nullptr;
     // list of op executors
-    std::vector<OpExecutor*> exec_list;
+    std::vector<std::shared_ptr<OpExecutor> > exec_list;
   };
-
-  // internal initialization of the graph.
+  // Initialize in_args, arg_grads, and aux_states
+  void InitArguments(const nnvm::IndexedGraph& idx,
+                     const nnvm::ShapeVector& inferred_shapes,
+                     const nnvm::DTypeVector& inferred_dtypes,
+                     const std::vector<Context>& in_arg_ctxes,
+                     const std::vector<Context>& arg_grad_ctxes,
+                     const std::vector<Context>& aux_state_ctxes,
+                     const std::vector<OpReqType>& grad_req_types,
+                     std::vector<NDArray>* in_arg_vec,
+                     std::vector<NDArray>* arg_grad_vec,
+                     std::vector<NDArray>* aux_state_vec);
+  // Initialize in_args, arg_grads and aux_states with
+  // shared_buffer and shared_exec
+  void InitArguments(const nnvm::IndexedGraph& idx,
+                     const nnvm::ShapeVector& inferred_shapes,
+                     const nnvm::DTypeVector& inferred_dtypes,
+                     const std::vector<Context>& in_arg_ctxes,
+                     const std::vector<Context>& arg_grad_ctxes,
+                     const std::vector<Context>& aux_state_ctxes,
+                     const std::vector<OpReqType>& grad_req_types,
+                     const std::unordered_set<std::string>& shared_arg_names,
+                     const Executor* shared_exec,
+                     std::unordered_map<std::string, NDArray>* shared_buffer,
+                     std::vector<NDArray>* in_arg_vec,
+                     std::vector<NDArray>* arg_grad_vec,
+                     std::vector<NDArray>* aux_state_vec);
+  // internal initialization of the graph for simple bind
   Graph InitGraph(nnvm::Symbol symbol,
                   const Context& default_ctx,
                   const std::map<std::string, Context>& ctx_map,
-                  const std::vector<NDArray>& in_args,
-                  const std::vector<NDArray>& arg_grad_store,
-                  const std::vector<OpReqType>& grad_req_type,
-                  const std::vector<NDArray>& aux_states);
-  // initialize the full graph, including gradient.
+                  const std::vector<Context>& in_arg_ctxes,
+                  const std::vector<Context>& arg_grad_ctxes,
+                  const std::vector<Context>& aux_state_ctxes,
+                  const std::vector<OpReqType>& grad_req_types);
+  // intialize the full graph for simple bind, including gradient
   Graph InitFullGraph(nnvm::Symbol symbol,
-                      const std::vector<OpReqType>& grad_req_type,
-                      const std::vector<NDArray>& arg_grad_store);
+                      const std::vector<OpReqType>& grad_req_types);
   // initialize the cached operator
   void InitCachedOps();
   // initialize the opr segments for bulk exec
@@ -134,6 +174,8 @@ class GraphExecutor : public Executor {
    *  ret.opr Can be nullptr if creation failed.
   */
   CachedSegOpr CreateCachedSegOpr(size_t topo_start, size_t topo_end);
+  // run the monitor callback for node `nid`
+  void ExecuteMonCallback(size_t nid);
 
   // internal graph
   nnvm::Graph graph_;
@@ -145,6 +187,12 @@ class GraphExecutor : public Executor {
   std::vector<NDArray> data_pool_;
   // output arrays
   std::vector<NDArray> output_arrays_;
+  // input argument map, key is arg name, value is arg's NDArray
+  std::unordered_map<std::string, NDArray> in_arg_map_;
+  // arg grad map, key is arg name, value is arg grad NDArray
+  std::unordered_map<std::string, NDArray> arg_grad_map_;
+  // aux state map, key is aux state name, value is aux state NDArray
+  std::unordered_map<std::string, NDArray> aux_state_map_;
   // gradient store
   std::vector<std::pair<OpReqType, NDArray> > grad_store_;
   // array to hold head gradient.
@@ -160,7 +208,7 @@ class GraphExecutor : public Executor {
   // number of forward nodes
   size_t num_forward_nodes_{0};
   // saved operator for autograd
-  NodeOperatorMap saved_opr_;
+  std::unordered_map<const nnvm::Node*, OpStatePtr> saved_states_;
   // monitor call back
   std::function<void(const char*, void*)> monitor_callback_{nullptr};
   // whether to enable bulk execution

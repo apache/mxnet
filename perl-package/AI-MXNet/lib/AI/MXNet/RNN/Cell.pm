@@ -169,6 +169,16 @@ method params()
 
 method state_shape()
 {
+    return [map { $_->{shape} } @{ $self->state_info }];
+}
+
+=head2 state_info
+
+    shape and layout information of states
+=cut
+
+method state_info()
+{
     confess("Not Implemented");
 }
 
@@ -203,19 +213,27 @@ method begin_state(CodeRef :$func=AI::MXNet::Symbol->can('zeros'), @kwargs)
     );
     my @states;
     my $func_needs_named_name = $func ne AI::MXNet::Symbol->can('Variable');
-    for my $shape (@{ $self->state_shape })
+    for my $info (@{ $self->state_info })
     {
         $self->_init_counter($self->_init_counter + 1);
         my @name = (sprintf("%sbegin_state_%d", $self->_prefix, $self->_init_counter));
+        my %info = %{ $info//{} };
         if($func_needs_named_name)
         {
             unshift(@name, 'name');
         }
+        else
+        {
+            if(exists $info{__layout__})
+            {
+                $info{kwargs} = { __layout__ => delete $info{__layout__} };
+            }
+        }
+        my %kwargs = (@kwargs, %info);
         my $state = &{$func}(
             'AI::MXNet::Symbol',
             @name,
-            (defined $shape ? (shape => $shape) : ()),
-            @kwargs
+            %kwargs
         );
         push @states, $state;
     }
@@ -421,6 +439,11 @@ method _cells_state_shape($cells)
     return [map { @{ $_->state_shape } } @$cells];
 }
 
+method _cells_state_info($cells)
+{
+    return [map { @{ $_->state_info } } @$cells];
+}
+
 method _cells_begin_state($cells, @kwargs)
 {
     return [map { @{ $_->begin_state(@kwargs) } } @$cells];
@@ -501,9 +524,9 @@ sub BUILD
     $self->_hB($self->params->get('h2h_bias'));
 }
 
-method state_shape()
+method state_info()
 {
-    return [[0, $self->_num_hidden]];
+    return [{ shape => [0, $self->_num_hidden], __layout__ => 'NC' }];
 }
 
 method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
@@ -564,9 +587,9 @@ has '+_prefix'     => (default => 'lstm_');
 has '+_activation' => (init_arg => undef);
 has '+forget_bias' => (is => 'ro', isa => 'Num', default => 1);
 
-method state_shape()
+method state_info()
 {
-    return [[0, $self->_num_hidden], [0, $self->_num_hidden]];
+    return [{ shape => [0, $self->_num_hidden], __layout__ => 'NC' } , { shape => [0, $self->_num_hidden], __layout__ => 'NC' }];
 }
 
 method _gate_names()
@@ -777,11 +800,11 @@ sub BUILD
 }
 
 
-method state_shape()
+method state_info()
 {
     my $b = @{ $self->_directions };
     my $n = $self->_mode eq 'lstm' ? 2 : 1;
-    return [([$b*$self->_num_layers, 0, $self->_num_hidden])x$n];
+    return [map { +{ shape => [$b*$self->_num_layers, 0, $self->_num_hidden], __layout__ => 'LNC' } } 0..$n-1];
 }
 
 method _gate_names()
@@ -958,8 +981,8 @@ method unroll(
         name          => $self->_prefix.'rnn',
         %states
     );
-
     my $outputs;
+    my %attr = (__layout__ => 'LNC');
     if(not $self->_get_next_state)
     {
         ($outputs, $states) = ($rnn, []);
@@ -967,11 +990,14 @@ method unroll(
     elsif($self->_mode eq 'lstm')
     {
         my @rnn = @{ $rnn };
+        $rnn[1]->_set_attr(%attr);
+        $rnn[2]->_set_attr(%attr);
         ($outputs, $states) = ($rnn[0], [$rnn[1], $rnn[2]]);
     }
     else
     {
         my @rnn = @{ $rnn };
+        $rnn[1]->_set_attr(%attr);
         ($outputs, $states) = ($rnn[0], [$rnn[1]]);
     }
     if(defined $merge_outputs and not $merge_outputs)
@@ -1111,9 +1137,9 @@ method add(AI::MXNet::RNN::Cell::Base $cell)
     %{ $self->params->_params } = (%{ $self->params->_params }, %{ $cell->params->_params });
 }
 
-method state_shape()
+method state_info()
 {
-    return $self->_cells_state_shape($self->_cells);
+    return $self->_cells_state_info($self->_cells);
 }
 
 method begin_state(@kwargs)
@@ -1144,7 +1170,7 @@ method call($inputs, $states)
     for my $cell (@{ $self->_cells })
     {
         assert(not $cell->isa('AI::MXNet::BidirectionalCell'));
-        my $n = scalar(@{ $cell->state_shape });
+        my $n = scalar(@{ $cell->state_info });
         my $state = [@{ $states }[$p..$p+$n-1]];
         $p += $n;
         ($inputs, $state) = &{$cell}($inputs, $state);
@@ -1169,7 +1195,7 @@ method unroll(
     my @next_states;
     enumerate(sub {
         my ($i, $cell) = @_;
-        my $n   = @{ $cell->state_shape };
+        my $n   = @{ $cell->state_info };
         $states = [@{$begin_state}[$p..$p+$n-1]];
         $p += $n;
         ($inputs, $states) = $cell->unroll(
@@ -1234,6 +1260,18 @@ sub BUILD
 {
     my ($self, $original_arguments) = @_;
     $self->_override_cell_params(defined $original_arguments->{params});
+    if($self->_override_cell_params)
+    {
+        assert(
+            ($self->l_cell->_own_params and $self->r_cell->_own_params),
+            "Either specify params for BidirectionalCell ".
+            "or child cells, not both."
+        );
+        %{ $self->l_cell->params->_params } = (%{ $self->l_cell->params->_params }, %{ $self->params->_params });
+        %{ $self->r_cell->params->_params } = (%{ $self->r_cell->params->_params }, %{ $self->params->_params });
+    }
+    %{ $self->params->_params } = (%{ $self->params->_params }, %{ $self->l_cell->params->_params });
+    %{ $self->params->_params } = (%{ $self->params->_params }, %{ $self->r_cell->params->_params });
     $self->_cells([$self->l_cell, $self->r_cell]);
 }
 
@@ -1252,9 +1290,9 @@ method call($inputs, $states)
     confess("Bidirectional cannot be stepped. Please use unroll");
 }
 
-method state_shape()
+method state_info()
 {
-    return $self->_cells_state_shape($self->_cells);
+    return $self->_cells_state_info($self->_cells);
 }
 
 method begin_state(@kwargs)
@@ -1306,13 +1344,13 @@ method unroll(
     my ($l_cell, $r_cell) = @{ $self->_cells };
     my ($l_outputs, $l_states) = $l_cell->unroll(
         $length, inputs => $inputs,
-        begin_state     => [@{$states}[0..@{$l_cell->state_shape}-1]],
+        begin_state     => [@{$states}[0..@{$l_cell->state_info}-1]],
         layout          => $layout,
         merge_outputs   => $merge_outputs
     );
     my ($r_outputs, $r_states) = $r_cell->unroll(
         $length, inputs => [reverse @{$inputs}],
-        begin_state     => [@{$states}[@{$l_cell->state_shape}..@{$states}-1]],
+        begin_state     => [@{$states}[@{$l_cell->state_info}..@{$states}-1]],
         layout          => $layout,
         merge_outputs   => $merge_outputs
     );
@@ -1420,9 +1458,9 @@ method params()
     return $self->base_cell->params;
 }
 
-method state_shape()
+method state_info()
 {
-    return $self->base_cell->state_shape;
+    return $self->base_cell->state_info;
 }
 
 method begin_state(CodeRef :$init_sym=AI::MXNet::Symbol->can('zeros'), @kwargs)
@@ -1496,7 +1534,7 @@ has 'prev_output' => (is => 'rw', init_arg => undef);
 
 =head1 DESCRIPTION
 
-    Apply Zoneout on base cell
+    Apply Zoneout on base cell.
 =cut
 
 sub BUILD
@@ -1532,8 +1570,7 @@ method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
     my $mask = sub {
         my ($p, $like) = @_;
         AI::MXNet::Symbol->Dropout(
-            AI::MXNet::Symbol->_identity_with_attr_like_rhs(
-                AI::MXNet::Symbol->ones(shape => [0, 0]),
+            AI::MXNet::Symbol->ones_like(
                 $like
             ),
             p => $p
@@ -1561,6 +1598,108 @@ method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
     }
     $self->prev_output($output);
     return ($output, @states ? \@states : $next_states);
+}
+
+package AI::MXNet::RNN::ResidualCell;
+use Mouse;
+use AI::MXNet::Base;
+extends 'AI::MXNet::RNN::ModifierCell';
+
+=head1 NAME
+
+    AI::MXNet::RNN::ResidualCell
+=cut
+
+=head1 DESCRIPTION
+
+    Adds residual connection as described in Wu et al, 2016
+    (https://arxiv.org/abs/1609.08144).
+    Output of the cell is output of the base cell plus input.
+=cut
+
+method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
+{
+    my $output;
+    ($output, $states) = &{$self->base_cell}($inputs, $states);
+    $output = AI::MXNet::Symbol->elemwise_add($output, $inputs, name => $output->name.'_plus_residual');
+    return ($output, $states)
+}
+
+method unroll(
+    Int $length,
+    Maybe[AI::MXNet::Symbol|ArrayRef[AI::MXNet::Symbol]] :$inputs=,
+    Maybe[AI::MXNet::Symbol|ArrayRef[AI::MXNet::Symbol]] :$begin_state=,
+    Str                                                  :$input_prefix='',
+    Str                                                  :$layout='NTC',
+    Maybe[Bool]                                          :$merge_outputs=
+)
+{
+    $self->reset;
+    $self->base_cell->_modified(0);
+    my ($outputs, $states) = $self->base_cell->unroll($length, inputs=>$inputs, begin_state=>$begin_state,
+                                                layout=>$layout, merge_outputs=>$merge_outputs);
+    $self->base_cell->_modified(1);
+    $merge_outputs //= (blessed($outputs) and $outputs->isa('AI::MXNet::Symbol'));
+    ($inputs) = _normalize_sequence($length, $inputs, $layout, $merge_outputs);
+    if($merge_outputs)
+    {
+        $outputs = AI::MXNet::Symbol->elemwise_add($outputs, $inputs, name => $outputs->name . "_plus_residual");
+    }
+    else
+    {
+        my @temp;
+        zip(sub {
+            my ($output_sym, $input_sym) = @_;
+            push @temp, AI::MXNet::Symbol->elemwise_add($output_sym, $input_sym,
+                            name=>$output_sym->name."_plus_residual");
+        }, [@{ $outputs }], [@{ $inputs }]);
+        $outputs = \@temp;
+    }
+    return ($outputs, $states);
+}
+
+func _normalize_sequence($length, $inputs, $layout, $merge, $in_layout=)
+{
+    assert((defined $inputs),
+        "unroll(inputs=>undef) has been deprecated. ".
+        "Please create input variables outside unroll."
+    );
+
+    my $axis = index($layout, 'T');
+    my $in_axis = defined $in_layout ? index($in_layout, 'T') : $axis;
+    if(blessed($inputs))
+    {
+        if(not $merge)
+        {
+            assert(
+                (@{ $inputs->list_outputs() } == 1),
+                "unroll doesn't allow grouped symbol as input. Please "
+                ."convert to list first or let unroll handle splitting"
+            );
+            $inputs = [ @{ AI::MXNet::Symbol->split(
+                $inputs,
+                axis         => $in_axis,
+                num_outputs  => $length,
+                squeeze_axis => 1
+            ) }];
+        }
+    }
+    else
+    {
+        assert(not defined $length or @$inputs == $length);
+        if($merge)
+        {
+            $inputs = [map { AI::MXNet::Symbol->expand_dims($_, axis=>$axis) } @{ $inputs }];
+            $inputs = AI::MXNet::Symbol->Concat(@{ $inputs }, dim=>$axis);
+            $in_axis = $axis;
+        }
+    }
+
+    if(blessed($inputs) and $axis != $in_axis)
+    {
+        $inputs = AI::MXNet::Symbol->swapaxes($inputs, dim0=>$axis, dim1=>$in_axis);
+    }
+    return ($inputs, $axis);
 }
 
 1;

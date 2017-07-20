@@ -44,7 +44,7 @@ class MutableModule(BaseModule):
         if fixed_param_prefix is not None:
             for name in self._symbol.list_arguments():
                 for prefix in self._fixed_param_prefix:
-                    if name.startswith(prefix):
+                    if prefix in name:
                         fixed_param_names.append(name)
         self._fixed_param_names = fixed_param_names
 
@@ -80,13 +80,13 @@ class MutableModule(BaseModule):
         return self._curr_module.get_params()
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
-                    allow_missing=False, force_init=False):
+                    allow_missing=False, force_init=False, allow_extra=False):
         if self.params_initialized and not force_init:
             return
         assert self.binded, 'call bind before initializing the parameters'
         self._curr_module.init_params(initializer=initializer, arg_params=arg_params,
                                       aux_params=aux_params, allow_missing=allow_missing,
-                                      force_init=force_init)
+                                      force_init=force_init, allow_extra=allow_extra)
         self.params_initialized = True
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,

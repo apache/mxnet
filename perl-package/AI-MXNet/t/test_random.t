@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 11;
+use Test::More tests => 8;
 use AI::MXNet qw(mx);
 use AI::MXNet::TestUtils qw(same);
 
@@ -44,17 +44,6 @@ sub check_symbolic_random
     my $un2 = ($yexec->outputs->[0] - $x)->copyto($dev);
     ok(same($un1->aspdl, $un2->aspdl));
     ok(abs($un1->aspdl->avg - ($a+$b)/2) < 0.1);
-
-    $Y = mx->sym->normal(loc=>$mu, scale=>$sigma, shape=>$shape);
-    $yexec = $Y->simple_bind(ctx => $dev);
-    mx->random->seed(128);
-    $yexec->forward;
-    my $ret1 = $yexec->outputs->[0]->copyto($dev);
-    mx->random->seed(128);
-    my $ret2 = mx->random->normal($mu, $sigma, $shape);
-    ok(same($ret1->aspdl, $ret2->aspdl));
-    ok(abs($ret1->aspdl->avg - $mu) < 0.1);
-    ok(abs(($ret1->aspdl->stats)[6] - $sigma) < 0.1);
 }
 
 sub test_random

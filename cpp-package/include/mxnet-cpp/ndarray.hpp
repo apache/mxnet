@@ -5,12 +5,14 @@
  * \author Zhang Chen, Chuntao Hong
  */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_HPP_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_HPP_
+#ifndef MXNET_CPP_NDARRAY_HPP_
+#define MXNET_CPP_NDARRAY_HPP_
 
+#include <algorithm>
 #include <map>
 #include <string>
 #include <vector>
+#include <iterator>
 #include "dmlc/logging.h"
 #include "mxnet-cpp/ndarray.h"
 
@@ -91,6 +93,11 @@ inline NDArray NDArray::operator/(mx_float scalar) {
   Operator("_div_scalar")(*this, scalar).Invoke(ret);
   return ret;
 }
+inline NDArray NDArray::operator%(mx_float scalar) {
+  NDArray ret;
+  Operator("_mod_scalar")(*this, scalar).Invoke(ret);
+  return ret;
+}
 inline NDArray NDArray::operator+(const NDArray &rhs) {
   NDArray ret;
   Operator("_plus")(*this, rhs).Invoke(ret);
@@ -109,6 +116,11 @@ inline NDArray NDArray::operator*(const NDArray &rhs) {
 inline NDArray NDArray::operator/(const NDArray &rhs) {
   NDArray ret;
   Operator("_div")(*this, rhs).Invoke(ret);
+  return ret;
+}
+inline NDArray NDArray::operator%(const NDArray &rhs) {
+  NDArray ret;
+  Operator("_mod")(*this, rhs).Invoke(ret);
   return ret;
 }
 inline NDArray &NDArray::operator=(mx_float scalar) {
@@ -131,6 +143,10 @@ inline NDArray &NDArray::operator/=(mx_float scalar) {
   Operator("_div_scalar")(*this, scalar).Invoke(*this);
   return *this;
 }
+inline NDArray &NDArray::operator%=(mx_float scalar) {
+  Operator("_mod_scalar")(*this, scalar).Invoke(*this);
+  return *this;
+}
 inline NDArray &NDArray::operator+=(const NDArray &rhs) {
   Operator("_plus")(*this, rhs).Invoke(*this);
   return *this;
@@ -145,6 +161,10 @@ inline NDArray &NDArray::operator*=(const NDArray &rhs) {
 }
 inline NDArray &NDArray::operator/=(const NDArray &rhs) {
   Operator("_div")(*this, rhs).Invoke(*this);
+  return *this;
+}
+inline NDArray &NDArray::operator%=(const NDArray &rhs) {
+  Operator("_mod")(*this, rhs).Invoke(*this);
   return *this;
 }
 
@@ -335,7 +355,27 @@ inline Context NDArray::GetContext() const {
   MXNDArrayGetContext(blob_ptr_->handle_, &out_dev_type, &out_dev_id);
   return Context((DeviceType)out_dev_type, out_dev_id);
 }
+
+inline std::ostream & operator<<(std::ostream &out, const NDArray &ndarray) {
+  // TODO(lx75249): Consider DType / beautify like numpy
+  auto shape = ndarray.GetShape();
+  NDArray cpu_array(ndarray.GetShape(), Context::cpu());
+  if (ndarray.GetContext().GetDeviceType() != DeviceType::kGPU) {
+    cpu_array = ndarray;
+  } else {
+    ndarray.WaitToRead();
+    ndarray.CopyTo(&cpu_array);
+  }
+
+  out << '[';
+  cpu_array.WaitToRead();
+  std::copy(cpu_array.GetData(), cpu_array.GetData() + ndarray.Size(),
+      std::ostream_iterator<float>(out, ", "));
+  out << ']';
+  return out;
+}
+
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_HPP_
+#endif  // MXNET_CPP_NDARRAY_HPP_

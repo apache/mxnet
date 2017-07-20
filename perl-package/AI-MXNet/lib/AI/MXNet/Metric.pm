@@ -358,7 +358,7 @@ around BUILDARGS => sub {
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
     AI::MXNet::Metric::check_label_shapes($labels, $preds);
-    my ($loss, $num, $probs) = (0, 0, []);
+    my ($loss, $num) = (0, 0);
     zip(sub {
         my ($label, $pred) = @_;
         my $label_shape = $label->shape;
@@ -367,29 +367,24 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
             (product(@{ $label_shape }) == product(@{ $pred_shape })/$pred_shape->[-1]),
             "shape mismatch: (@$label_shape) vs. (@$pred_shape)"
         );
-        $label = $label->as_in_context($pred->context)->astype('int32')->reshape([$label->size]);
-        $pred = AI::MXNet::NDArray->pick($pred, $label, { axis => $self->axis });
-        push @{ $probs }, $pred;
-    }, $labels, $preds);
-
-    zip(sub {
-        my ($label, $prob) = @_;
-        $prob = $prob->aspdl;
+        $label = $label->as_in_context($pred->context)->reshape([$label->size]);
+        $pred = AI::MXNet::NDArray->pick($pred, $label->astype('int32'), { axis => $self->axis });
         if(defined $self->ignore_label)
         {
-            my $ignore = $label->aspdl->flat == $self->ignore_label;
-            $prob = $prob*(1-$ignore) + $ignore;
-            $num += $prob->nelem - $ignore->sum;
+            my $ignore = ($label == $self->ignore_label);
+            $num -= $ignore->sum->asscalar;
+            $pred = $pred*(1-$ignore) + $ignore;
         }
-        else
-        {
-            $num += $prob->nelem;
-        }
-        $prob->where($prob < 1e-10) .= 1e-10;
-        $loss += -$prob->log->sum;
-    }, $labels, $probs);
-    $self->sum_metric($self->sum_metric + exp($loss/$num));
-    $self->num_inst($self->num_inst + 1);
+        $loss -= $pred->maximum(1e-10)->log->sum->asscalar;
+        $num  += $pred->size;
+    }, $labels, $preds);
+    $self->sum_metric($self->sum_metric + $loss);
+    $self->num_inst($self->num_inst + $num);
+}
+
+method get()
+{
+    return ($self->name, exp($self->sum_metric / $self->num_inst));
 }
 
 ####################

@@ -44,7 +44,7 @@ Symbol InceptionFactory(Symbol data, int num_1x1, int num_3x3red,
                              Shape(1, 1), Shape(2, 2), name + "_5x5");
 
   Symbol pooling = Pooling(name + "_pool", data, Shape(3, 3), pool,
-                           false, false, PoolingPoolingConvention::valid,
+                           false, false, PoolingPoolingConvention::kValid,
                            Shape(1, 1), Shape(1, 1));
 
   Symbol cproj = ConvFactory(pooling, proj, Shape(1, 1),
@@ -64,29 +64,29 @@ Symbol GoogleNetSymbol(int num_classes) {
   Symbol data_label = Symbol::Variable("data_label");
 
   Symbol conv1 = ConvFactory(data, 64, Shape(7, 7), Shape(2, 2), Shape(3, 3), "conv1");
-  Symbol pool1 = Pooling("pool1", conv1, Shape(3, 3), PoolingPoolType::max,
-                         false, false, PoolingPoolingConvention::valid, Shape(2, 2));
+  Symbol pool1 = Pooling("pool1", conv1, Shape(3, 3), PoolingPoolType::kMax,
+                         false, false, PoolingPoolingConvention::kValid, Shape(2, 2));
   Symbol conv2 = ConvFactory(pool1, 64, Shape(1, 1), Shape(1, 1),
                              Shape(0, 0), "conv2");
   Symbol conv3 = ConvFactory(conv2, 192, Shape(3, 3), Shape(1, 1), Shape(1, 1), "conv3");
-  Symbol pool3 = Pooling("pool3", conv3, Shape(3, 3), PoolingPoolType::max,
-                         false, false, PoolingPoolingConvention::valid, Shape(2, 2));
+  Symbol pool3 = Pooling("pool3", conv3, Shape(3, 3), PoolingPoolType::kMax,
+                         false, false, PoolingPoolingConvention::kValid, Shape(2, 2));
 
-  Symbol in3a = InceptionFactory(pool3, 64, 96, 128, 16, 32, PoolingPoolType::max, 32, "in3a");
-  Symbol in3b = InceptionFactory(in3a, 128, 128, 192, 32, 96, PoolingPoolType::max, 64, "in3b");
-  Symbol pool4 = Pooling("pool4", in3b, Shape(3, 3), PoolingPoolType::max,
-                         false, false, PoolingPoolingConvention::valid, Shape(2, 2));
-  Symbol in4a = InceptionFactory(pool4, 192, 96, 208, 16, 48, PoolingPoolType::max, 64, "in4a");
-  Symbol in4b = InceptionFactory(in4a, 160, 112, 224, 24, 64, PoolingPoolType::max, 64, "in4b");
-  Symbol in4c = InceptionFactory(in4b, 128, 128, 256, 24, 64, PoolingPoolType::max, 64, "in4c");
-  Symbol in4d = InceptionFactory(in4c, 112, 144, 288, 32, 64, PoolingPoolType::max, 64, "in4d");
-  Symbol in4e = InceptionFactory(in4d, 256, 160, 320, 32, 128, PoolingPoolType::max, 128, "in4e");
-  Symbol pool5 = Pooling("pool5", in4e, Shape(3, 3), PoolingPoolType::max,
-                         false, false, PoolingPoolingConvention::valid, Shape(2, 2));
-  Symbol in5a = InceptionFactory(pool5, 256, 160, 320, 32, 128, PoolingPoolType::max, 128, "in5a");
-  Symbol in5b = InceptionFactory(in5a, 384, 192, 384, 48, 128, PoolingPoolType::max, 128, "in5b");
-  Symbol pool6 = Pooling("pool6", in5b, Shape(7, 7), PoolingPoolType::avg,
-                         false, false, PoolingPoolingConvention::valid, Shape(1, 1));
+  Symbol in3a = InceptionFactory(pool3, 64, 96, 128, 16, 32, PoolingPoolType::kMax, 32, "in3a");
+  Symbol in3b = InceptionFactory(in3a, 128, 128, 192, 32, 96, PoolingPoolType::kMax, 64, "in3b");
+  Symbol pool4 = Pooling("pool4", in3b, Shape(3, 3), PoolingPoolType::kMax,
+                         false, false, PoolingPoolingConvention::kValid, Shape(2, 2));
+  Symbol in4a = InceptionFactory(pool4, 192, 96, 208, 16, 48, PoolingPoolType::kMax, 64, "in4a");
+  Symbol in4b = InceptionFactory(in4a, 160, 112, 224, 24, 64, PoolingPoolType::kMax, 64, "in4b");
+  Symbol in4c = InceptionFactory(in4b, 128, 128, 256, 24, 64, PoolingPoolType::kMax, 64, "in4c");
+  Symbol in4d = InceptionFactory(in4c, 112, 144, 288, 32, 64, PoolingPoolType::kMax, 64, "in4d");
+  Symbol in4e = InceptionFactory(in4d, 256, 160, 320, 32, 128, PoolingPoolType::kMax, 128, "in4e");
+  Symbol pool5 = Pooling("pool5", in4e, Shape(3, 3), PoolingPoolType::kMax,
+                         false, false, PoolingPoolingConvention::kValid, Shape(2, 2));
+  Symbol in5a = InceptionFactory(pool5, 256, 160, 320, 32, 128, PoolingPoolType::kMax, 128, "in5a");
+  Symbol in5b = InceptionFactory(in5a, 384, 192, 384, 48, 128, PoolingPoolType::kMax, 128, "in5b");
+  Symbol pool6 = Pooling("pool6", in5b, Shape(7, 7), PoolingPoolType::kAvg,
+                         false, false, PoolingPoolingConvention::kValid, Shape(1, 1));
 
   Symbol flatten = Flatten("flatten", pool6);
 

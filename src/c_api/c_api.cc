@@ -8,6 +8,7 @@
 #include <dmlc/io.h>
 #include <dmlc/memory_io.h>
 #include <dmlc/recordio.h>
+#include <dmlc/omp.h>
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/operator.h>
@@ -108,6 +109,12 @@ int MXSetProfilerState(int state) {
 #else
   LOG(FATAL) << "Need to compile with USE_PROFILER=1 for MXNet Profiler";
 #endif
+  API_END();
+}
+
+int MXSetNumOMPThreads(int thread_num) {
+  API_BEGIN();
+  omp_set_num_threads(thread_num);
   API_END();
 }
 
@@ -296,8 +303,32 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
                                NDArrayHandle *out) {
   NDArray *ptr = new NDArray();
   API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
   TShape new_shape(dims, dims+ndim);
-  *ptr = static_cast<NDArray*>(handle)->Reshape(new_shape);
+  int size = 1;
+  int pos = -1;
+  for (int i = 0; i < ndim; ++i) {
+    int dim = dims[i];
+    if (dim == -1) {
+      CHECK_EQ(pos, -1)
+        << "Invalid new shape " << new_shape
+        << ": more than one dimensions are -1";
+      pos = i;
+    } else {
+      if (dim == 0) {
+        CHECK_LT(i, arr->shape().ndim())
+          << "Invalid new shape " << new_shape
+          << ": 0 dimension exceeds original shape " << arr->shape();
+        dim = arr->shape()[i];
+      }
+      size *= dim;
+      new_shape[i] = dim;
+    }
+  }
+  if (pos >= 0) {
+    new_shape[pos] = arr->shape().Size() / size;
+  }
+  *ptr = arr->Reshape(new_shape);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);
 }
@@ -305,12 +336,16 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
 int MXNDArrayGetShape(NDArrayHandle handle,
                       mx_uint *out_dim,
                       const mx_uint **out_pdata) {
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
     const TShape &s = arr->shape();
     *out_dim = s.ndim();
-    *out_pdata = s.data();
+    std::vector<uint32_t>& buffer = ret->arg_shape_buffer;
+    buffer.resize(s.ndim());
+    nnvm::ShapeTypeCast(s.begin(), s.end(), buffer.data());
+    *out_pdata = buffer.data();
   } else {
     *out_dim = 0;
   }
@@ -360,6 +395,40 @@ int MXNDArrayGetContext(NDArrayHandle handle,
     *out_dev_type = 0;
     *out_dev_id = 0;
   }
+  API_END();
+}
+
+
+int MXNDArrayGetGrad(NDArrayHandle handle, NDArrayHandle *out) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  NDArray ret = arr->grad();
+  if (ret.is_none()) {
+    *out = NULL;
+  } else {
+    *out = new NDArray(ret);
+  }
+  API_END();
+}
+
+int MXNDArrayDetach(NDArrayHandle handle, NDArrayHandle *out) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  *out = new NDArray(arr->Detach());
+  API_END();
+}
+
+int MXNDArraySetGradState(NDArrayHandle handle, int state) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  arr->set_fresh_out_grad(static_cast<bool>(state));
+  API_END();
+}
+
+int MXNDArrayGetGradState(NDArrayHandle handle, int *out) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  *out = arr->fresh_out_grad();
   API_END();
 }
 
@@ -569,6 +638,21 @@ int MXKVStoreInit(KVStoreHandle handle,
   API_END();
 }
 
+int MXKVStoreInitEx(KVStoreHandle handle,
+                  mx_uint num,
+                  const char** keys,
+                  NDArrayHandle* vals) {
+  API_BEGIN();
+  std::vector<std::string> v_keys(num);
+  std::vector<NDArray> v_vals(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_vals[i] = *static_cast<NDArray*>(vals[i]);
+  }
+  static_cast<KVStore*>(handle)->Init(v_keys, v_vals);
+  API_END();
+}
+
 int MXKVStorePush(KVStoreHandle handle,
                   mx_uint num,
                   const int* keys,
@@ -585,6 +669,22 @@ int MXKVStorePush(KVStoreHandle handle,
   API_END();
 }
 
+int MXKVStorePushEx(KVStoreHandle handle,
+                  mx_uint num,
+                  const char** keys,
+                  NDArrayHandle* vals,
+                  int priority) {
+  API_BEGIN();
+  std::vector<std::string> v_keys(num);
+  std::vector<NDArray> v_vals(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_vals[i] = *static_cast<NDArray*>(vals[i]);
+  }
+  static_cast<KVStore*>(handle)->Push(v_keys, v_vals, priority);
+  API_END();
+}
+
 int MXKVStorePull(KVStoreHandle handle,
                   mx_uint num,
                   const int* keys,
@@ -592,6 +692,22 @@ int MXKVStorePull(KVStoreHandle handle,
                   int priority) {
   API_BEGIN();
   std::vector<int> v_keys(num);
+  std::vector<NDArray*> v_vals(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_vals[i] = static_cast<NDArray*>(vals[i]);
+  }
+  static_cast<KVStore*>(handle)->Pull(v_keys, v_vals, priority);
+  API_END();
+}
+
+int MXKVStorePullEx(KVStoreHandle handle,
+                  mx_uint num,
+                  const char** keys,
+                  NDArrayHandle* vals,
+                  int priority) {
+  API_BEGIN();
+  std::vector<std::string> v_keys(num);
   std::vector<NDArray*> v_vals(num);
   for (mx_uint i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
@@ -871,6 +987,6 @@ int MXRtcFree(RtcHandle handle) {
 
 int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creator) {
   API_BEGIN();
-  mxnet::op::CustomOpProp::Register(op_type, creator);
+  mxnet::op::custom::Registry::Get()->Register(op_type, creator);
   API_END();
 }

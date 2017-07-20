@@ -145,7 +145,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
       shape_[i] = dst_shape;
       data_[i].resize(mshadow::Shape1(dst_shape.Size()), src_type_flag);
       unit_size_[i] = src_shape.Size();
-      out_.data.push_back(TBlob(data_[i].dptr_, dst_shape, cpu::kDevMask, src_type_flag));
+      out_.data.push_back(TBlob(data_[i].dptr_, dst_shape, cpu::kDevMask, src_type_flag, 0));
     }
   }
 };  // class BatchLoader

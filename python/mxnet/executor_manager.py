@@ -11,7 +11,6 @@ from . import ndarray as nd
 from .context import cpu
 from .io import DataDesc
 
-
 def _split_input_slice(batch_size, work_load_list):
     """Get input slice from the input shape.
 
@@ -21,7 +20,7 @@ def _split_input_slice(batch_size, work_load_list):
         The number of samples in a mini-batch.
     work_load_list : list of float or int, optional
         The list of work load for different devices,
-        in the same order as ctx.
+        in the same order as `ctx`.
 
     Returns
     -------
@@ -31,7 +30,7 @@ def _split_input_slice(batch_size, work_load_list):
     Raises
     ------
     ValueError
-        If there are two many splits such that some slice can be empty.
+        In case of too many splits, leading to some empty slices.
     """
     total_work_load = sum(work_load_list)
     batch_num_list = [round(work_load * batch_size / total_work_load)
@@ -45,7 +44,7 @@ def _split_input_slice(batch_size, work_load_list):
         begin = int(min((end, batch_size)))
         end = int(min((begin + batch_num, batch_size)))
         if begin >= end:
-            raise ValueError('Too many slices such that some splits are empty')
+            raise ValueError('Too many slices. Some splits are empty.')
         slices.append(slice(begin, end))
     return slices
 

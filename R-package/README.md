@@ -14,22 +14,23 @@ Sounds exciting? This page contains links to all the related documentation of th
 
 Resources
 ---------
-* [MXNet R Package Document](http://mxnet.io/get_started/setup.html#install-the-mxnet-package-for-r)
+* [MXNet R Package Document](http://mxnet.io/get_started/install.html)
   - Check this out for detailed documents, examples and installation guides.
 
 Installation
 ------------
 
-For Windows/Mac users, we provide a pre-built binary package using CPU.
-You can install a weekly updated package directly from the R console:
+We provide pre-built binary packages for Windows/OSX users.
+You can install the CPU package directly from the R console:
 
 ```r
-install.packages("drat", repos="https://cran.rstudio.com")
-drat:::addRepo("dmlc")
+cran <- getOption("repos")
+cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/"
+options(repos = cran)
 install.packages("mxnet")
 ```
 
-To use the GPU version or to use it on Linux, please follow [Installation Guide](http://mxnet.io/get_started/setup.html#installing-mxnet-on-a-gpu)
+To use the GPU version or to use it on Linux, please follow [Installation Guide](http://mxnet.io/get_started/install.html)
 
 License
 -------

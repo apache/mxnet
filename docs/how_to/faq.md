@@ -66,4 +66,4 @@ memory efficient than CXXNet and Purine, and more flexible than Minerva.
 
 #### What Is the Relationship Between MXNet and TensorFlow?
 Both MXNet and [TensorFlow](https://www.tensorflow.org/) use computation graph abstraction, which was initially used by Theano, then adopted by other packages, such as CGT, Caffe2, and Purine. Currently, TensorFlow adopts an optimized symbolic API. MXNet supports a [mixed approach](https://mxnet.io/architecture/program_model.html), with a dynamic dependency scheduler to combine symbolic and imperative programming.
-In short, MXNet is lightweight and “mixed,” with flexibility from imperative programming, while using a computation graph to make it very fast and memory efficient.
+In short, MXNet is lightweight and *mixed* with flexibility from imperative programming, while using a computation graph to make it very fast and memory efficient.

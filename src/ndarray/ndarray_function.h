@@ -41,6 +41,10 @@ struct Div : public BinaryBase {
   typedef mshadow::op::div mshadow_op;
 };
 
+struct Mod : public BinaryBase {
+  typedef op::mshadow_op::mod mshadow_op;
+};
+
 struct ClipMin : public BinaryBase {
   struct mshadow_op {
     template<typename DType>
@@ -99,6 +103,16 @@ struct MatFillRowElem {
 struct UniformDistribution {};
 
 struct GaussianDistribution {};
+
+struct GammaDistribution {};
+
+struct ExponentialDistribution {};
+
+struct PoissonDistribution {};
+
+struct NegBinomialDistribution {};
+
+struct GenNegBinomialDistribution {};
 
 template<typename Device>
 void EvalClip(const TBlob &src, const real_t &a_min, const real_t &a_max,

@@ -4,11 +4,6 @@
  * \brief fully connect operator
 */
 #include "./fully_connected-inl.h"
-#if MXNET_USE_MKL2017 == 1
-#include <mkl_memory.h>
-#include "./mkl/mkl_memory-inl.h"
-#include "./mkl/mkl_fully_connected-inl.h"
-#endif  // MXNET_USE_MKL2017
 #if MXNET_USE_NNPACK == 1
 #include "./nnpack/nnpack_fully_connected-inl.h"
 #endif  // MXNET_USE_NNPACK
@@ -21,17 +16,6 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype,
                         std::vector<TShape> *out_shape,
                         Context ctx) {
   Operator *op = NULL;
-#if MXNET_USE_MKL2017 == 1
-  switch (dtype) {
-  case mshadow::kFloat32:
-    return new MKLFullyConnectedOp<cpu, float>(param, *in_shape, *out_shape);
-  case mshadow::kFloat64:
-    return new MKLFullyConnectedOp<cpu, double>(param, *in_shape, *out_shape);
-  default:
-    LOG(INFO) << MKLFullyConnectedOp<cpu, float>::getName() << " Skip MKL optimization";
-    break;
-  }
-#endif
 #if MXNET_USE_NNPACK == 1
   const size_t batch_size = (*in_shape)[0][0];
   // nnp_fully_connected_inference will do optimization for batch-size = 1
@@ -65,8 +49,6 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype,
 Operator *FullyConnectedProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                      std::vector<int> *in_type) const {
   std::vector<TShape> out_shape(1, TShape()), aux_shape;
-  std::vector<int> out_type(1, -1), aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], in_shape, &out_shape, ctx);
 }
@@ -74,7 +56,7 @@ Operator *FullyConnectedProp::CreateOperatorEx(Context ctx, std::vector<TShape> 
 DMLC_REGISTER_PARAMETER(FullyConnectedParam);
 
 MXNET_REGISTER_OP_PROPERTY(FullyConnected, FullyConnectedProp)
-.describe(R"code(Apply a linear transformation: :math:`Y = XW^T + b`.
+.describe(R"code(Applies a linear transformation: :math:`Y = XW^T + b`.
 
 Shapes:
 

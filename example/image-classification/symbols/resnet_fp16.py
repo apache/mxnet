@@ -19,9 +19,9 @@ def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck=True, b
         Number of output channels
     bnf : int
         Bottle neck channels factor with regard to num_filter
-    stride : tupe
+    stride : tuple
         Stride used in convolution
-    dim_match : Boolen
+    dim_match : Boolean
         True means channel number between input and output is the same, otherwise means differ
     name : str
         Base name of the operators
@@ -134,9 +134,8 @@ def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck
     weight = mx.symbol.Cast(data=weight, dtype=np.float16)
     bias = mx.symbol.Cast(data=bias, dtype=np.float16)
     fc1 = mx.symbol.FullyConnected(data=flat, weight=weight, bias=bias, num_hidden=num_classes, name='fc1')
-    label = mx.symbol.Variable(name='softmax_label')
-    label = mx.symbol.Cast(data=label, dtype=np.float16)
-    return mx.symbol.SoftmaxOutput(data=fc1, name='softmax', label=label)
+    fc1 = mx.symbol.Cast(data=fc1, dtype=np.float32)
+    return mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
 
 def get_symbol(num_classes, num_layers, image_shape, conv_workspace=256, **kwargs):
     """
@@ -156,7 +155,7 @@ def get_symbol(num_classes, num_layers, image_shape, conv_workspace=256, **kwarg
             filter_list = [16, 16, 32, 64]
             bottle_neck = False
         else:
-            raise ValueError("no experiments done on num_layers {}, you can do it youself".format(num_layers))
+            raise ValueError("no experiments done on num_layers {}, you can do it yourself".format(num_layers))
         units = per_unit * num_stages
     else:
         if num_layers >= 50:
@@ -181,7 +180,7 @@ def get_symbol(num_classes, num_layers, image_shape, conv_workspace=256, **kwarg
         elif num_layers == 269:
             units = [3, 30, 48, 8]
         else:
-            raise ValueError("no experiments done on num_layers {}, you can do it youself".format(num_layers))
+            raise ValueError("no experiments done on num_layers {}, you can do it yourself".format(num_layers))
 
     return resnet(units       = units,
                   num_stages  = num_stages,

@@ -21,6 +21,7 @@ DMLC_REGISTER_PARAMETER(NativeOpParam);
 
 MXNET_REGISTER_OP_PROPERTY(_Native, NativeOpProp)
 .describe("Stub for implementing an operator implemented in native frontend language.")
+.add_argument("data", "NDArray-or-Symbol[]", "Input data for the custom operator.")
 .add_arguments(NativeOpParam::__FIELDS__());
 
 }  // namespace op

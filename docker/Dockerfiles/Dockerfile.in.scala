@@ -4,4 +4,4 @@
 COPY install/scala.sh install/
 RUN install/scala.sh
 
-RUN cd mxnet && make scalapkg
+RUN cd mxnet && make scalapkg $BUILD_OPTS

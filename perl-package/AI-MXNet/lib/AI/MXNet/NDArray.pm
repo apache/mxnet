@@ -12,7 +12,7 @@ use AI::MXNet::NDArray::Slice;
 use AI::MXNet::Context;
 use Mouse;
 use AI::MXNet::Function::Parameters;
-use overload 
+use overload
     '""' => \&stringify,
     '+'  => \&add,
     '+=' => \&iadd,
@@ -22,6 +22,8 @@ use overload
     '*=' => \&imultiply,
     '/'  => \&divide,
     '/=' => \&idivide,
+    '%'  => \&modulo,
+    '%=' => \&imodulo,
     '**' => \&power,
     '==' => \&equal,
     '!=' => \&not_equal,
@@ -275,7 +277,7 @@ method asmpdl()
         Finishing index of slice.
 =cut
 
-method  _slice (
+method _slice (
     Index $start,
     Index $stop
 )
@@ -864,6 +866,24 @@ method true_divide(AI::MXNet::NDArray|Num $other, $reverse=)
     return $self->divide($other, $reverse);
 }
 
+method modulo(AI::MXNet::NDArray|Num $other, $reverse=)
+{
+    return _ufunc_helper(
+        $self,
+        $other,
+        qw/broadcast_mod _mod_scalar _rmod_scalar/,
+        $reverse
+    );
+}
+
+method imodulo(AI::MXNet::NDArray|Num $other, $reverse=)
+{
+    confess('trying to modulo to a readonly NDArray') unless $self->writable;
+    return ref $other
+        ? __PACKAGE__->broadcast_mod($self, $other, { out => $self })
+        : __PACKAGE__->_mod_scalar($self, $other, { out => $self })
+}
+
 =head2 empty
 
     Creates an empty uninitialized NDArray, with the specified shape.
@@ -918,9 +938,14 @@ method empty(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_
         The created NDArray.
 =cut
 
-method zeros(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
+method zeros(
+    Shape $shape,
+    AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx,
+    Dtype :$dtype='float32',
+    Maybe[AI::MXNet::NDArray] :$out=
+)
 {
-    return __PACKAGE__->_zeros({ shape => $shape, ctx => "$ctx", dtype => $dtype });
+    return __PACKAGE__->_zeros({ shape => $shape, ctx => "$ctx", dtype => $dtype, ($out ? (out => $out) : ())  });
 }
 
 =head2 ones
@@ -944,9 +969,14 @@ method zeros(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_
         The created NDArray.
 =cut
 
-method ones(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
+method ones(
+    Shape $shape,
+    AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx,
+    Dtype :$dtype='float32',
+    Maybe[AI::MXNet::NDArray] :$out=
+)
 {
-    return __PACKAGE__->_ones({ shape => $shape, ctx => "$ctx", dtype => $dtype });
+    return __PACKAGE__->_ones({ shape => $shape, ctx => "$ctx", dtype => $dtype, ($out ? (out => $out) : ()) });
 }
 
 =head2 full
@@ -973,9 +1003,13 @@ method ones(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_c
         The created NDArray.
 =cut
 
-method full(Shape $shape, Num $val, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
+method full(
+    Shape $shape, Num $val,
+    AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx,
+    Dtype :$dtype='float32', Maybe[AI::MXNet::NDArray] :$out=
+)
 {
-    return __PACKAGE__->_set_value({ src => $val, out => __PACKAGE__->empty($shape, ctx => $ctx, dtype => $dtype) });
+    return __PACKAGE__->_set_value({ src => $val, out => $out ? $out : __PACKAGE__->empty($shape, ctx => $ctx, dtype => $dtype) });
 }
 
 =head2 array
@@ -984,7 +1018,7 @@ method full(Shape $shape, Num $val, AI::MXNet::Context :$ctx=AI::MXNet::Context-
 
     Parameters
     ----------
-    $source_array : PDL, PDL::Matrix, Array ref in PDL::pdl format
+    $source_array : AI::MXNet::NDArray PDL, PDL::Matrix, Array ref in PDL::pdl format
         Source data to create NDArray from.
 
     :$ctx : AI::MXNet::Context, optional
@@ -999,8 +1033,14 @@ method full(Shape $shape, Num $val, AI::MXNet::Context :$ctx=AI::MXNet::Context-
         The created NDArray.
 =cut
 
-method array(PDL|PDL::Matrix|ArrayRef $source_array, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
+method array(PDL|PDL::Matrix|ArrayRef|AI::MXNet::NDArray $source_array, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
 {
+    if(blessed $source_array and $source_array->isa('AI::MXNet::NDArray'))
+    {
+        my $arr = __PACKAGE__->empty($source_array->shape, ctx => $ctx, dtype => $dtype);
+        $arr .= $source_array;
+        return $arr;
+    }
     my $pdl_type = PDL::Type->new(DTYPE_MX_TO_PDL->{ $dtype });
     if(not blessed($source_array))
     {
@@ -1306,6 +1346,59 @@ method waitall()
 {
     check_call(AI::MXNetCAPI::NDArrayWaitAll());
 }
+
+=head2 _fresh_grad
+
+        Parameters:
+        ----------
+        Maybe[Bool] $state=
+
+        Whether this array's corresponding gradient array
+        (registered via `autograd->mark_variables`) has been
+        updated by `autograd->backward` since last reset.
+
+        `_fresh_grad` need to be manually set to False
+        after consuming gradient (usually after updating this
+        array).
+=cut
+
+method _fresh_grad(Maybe[Bool] $state=)
+{
+    if(defined $state)
+    {
+        check_call(AI::MXNetCAPI::NDArraySetGradState($self->handle, $state));
+        return $state;
+    }
+    else
+    {
+        return scalar(check_call(AI::MXNetCAPI::NDArrayGetGradState($self->handle)));
+    }
+}
+
+=head2 detach
+
+    Returns a new NDArray, detached from the current graph.
+=cut
+
+method detach()
+{
+    my $handle = check_call(AI::MXNetCAPI::NDArrayDetach($self->handle));
+    return __PACKAGE__->new(handle => $handle);
+}
+
+method backward(Maybe[AI::MXNet::NDArray] $out_grad=, Bool $retain_graph=0)
+{
+    check_call(
+        AI::MXNetCAPI::AutogradBackward(
+            1,
+            [$self->handle],
+            [defined $out_grad ? $out_grad->handle : undef],
+            $retain_graph
+        )
+    )
+}
+
+method CachedOp(@args) { AI::MXNet::CachedOp->new(@args) }
 
 my $lvalue_methods = join "\n", map {"use attributes 'AI::MXNet::NDArray', \\&AI::MXNet::NDArray::$_, 'lvalue';"}
 qw/at slice aspdl asmpdl reshape copy sever T astype as_in_context copyto empty zero ones full
