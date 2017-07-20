@@ -86,9 +86,7 @@ def add_fit_args(parser):
                        help='1 means test reading speed without training')
     return train
 
-def fit(args, network, data_loader, weight_sparsity = [0], bias_sparsity = [0],
-        switch_epoch = [100000], batches_per_epoch = 100000,
-        do_pruning = False, **kwargs):
+def fit(args, network, data_loader, **kwargs):
     """
     train a model
     args : argparse returns
@@ -148,13 +146,15 @@ def fit(args, network, data_loader, weight_sparsity = [0], bias_sparsity = [0],
             'learning_rate': lr,
             'momentum' : args.mom,
             'wd' : args.wd,
-            'lr_scheduler': lr_scheduler,
-            'weight_sparsity': weight_sparsity,
-            'bias_sparsity': bias_sparsity,
-            'switch_epoch': switch_epoch,
-            'batches_per_epoch': batches_per_epoch,
-            'do_pruning': do_pruning}
-            'multi_precision': True}
+            'lr_scheduler' : lr_scheduler,
+            'do_pruning' : args.do_pruning,
+            'pruning_switch_epoch' : args.pruning_switch_epoch,
+            'weight_sparsity': args.weight_sparsity,
+            'bias_sparsity': args.bias_sparsity,
+            'weight_sparsity_threshold': args.weight_sparsity_threshold,
+            'bias_sparsity_threshold': args.bias_sparsity_threshold,
+            'batches_per_epoch' : args.batches_per_epoch,
+            'multi_precision' : True}
 
     monitor = mx.mon.Monitor(args.monitor, pattern=".*") if args.monitor > 0 else None
 

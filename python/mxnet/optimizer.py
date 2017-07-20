@@ -5,8 +5,8 @@ import logging
 import warnings
 import numpy
 from .ndarray import NDArray, zeros, clip, sqrt, sign, array, topk
-from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update)
-#                      mp_sgd_update, mp_sgd_mom_update)
+from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
+                      mp_sgd_update, mp_sgd_mom_update)
 from .random import normal
 from .ndarray import abs as absolute
 
