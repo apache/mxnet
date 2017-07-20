@@ -289,7 +289,7 @@ def convert_convolution(net, node, model, builder):
     n_filters, channels = W.shape[0:2]
     stride_height, stride_width = literal_eval(param['stride'])
     kernel_height, kernel_width = literal_eval(param['kernel'])
-
+    # TODO add padding here
     W = W.transpose((2, 3, 1, 0))
     builder.add_convolution(name = name,
              kernel_channels = channels,
