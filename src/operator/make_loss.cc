@@ -37,7 +37,7 @@ The output of this function is the gradient of loss with respect to the input da
 For example, if you are a making a cross entropy loss function. Assume ``out`` is the
 predicted output and ``label`` is the true label, then the cross entropy can be defined as::
 
-  cross_entropy = label * log(out) + (1 - label) * log(1 - out)
+  cross_entropy = -mean(label * log(out) + (1 - label) * log(1 - out))
   loss = MakeLoss(cross_entropy)
 
 We will need to use ``MakeLoss`` when we are creating our own loss function or we want to
