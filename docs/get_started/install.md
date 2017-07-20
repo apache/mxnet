@@ -202,23 +202,40 @@ Building *MXNet* from source is a 2 step process.
 **Build the MXNet core shared library**
 
 **Step 1** Install build tools and git.
+Debian/Ubuntu:
 ```bash
 $ sudo apt-get update
 $ sudo apt-get install -y build-essential git
 ```
 
+Fedora:
+```bash
+$ sudo dnf install git gcc-c++
+```
 **Step 2** Install OpenBLAS.
-
 *MXNet* uses [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) and [LAPACK](https://en.wikipedia.org/wiki/LAPACK) libraries for accelerated numerical computations on CPU machine. There are several flavors of BLAS/LAPACK libraries - [OpenBLAS](http://www.openblas.net/), [ATLAS](http://math-atlas.sourceforge.net/) and [MKL](https://software.intel.com/en-us/intel-mkl). In this step we install OpenBLAS. You can choose to install ATLAS or MKL.
+Debian/Ubuntu:
 ```bash
 $ sudo apt-get install -y libopenblas-dev liblapack-dev
 ```
 
+Fedora:
+```bash
+$ sudo dnf install openblas-devel
+```
+For Fedora only, edit the make/config.mk and set the ADD_CLFLAGS = -I/usr/include/openblas at the beginning of the file.
+
 **Step 3** Install OpenCV.
 
 *MXNet* uses [OpenCV](http://opencv.org/) for efficient image loading and augmentation operations.
+Debian/Ubuntu:
 ```bash
 $ sudo apt-get install -y libopencv-dev
+```
+
+Fedora:
+```bash
+$ sudo dnf install opencv-devel
 ```
 
 **Step 4** Download MXNet sources and build MXNet core shared library.
