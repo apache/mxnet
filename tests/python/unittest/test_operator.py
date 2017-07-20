@@ -897,16 +897,16 @@ def test_batchnorm_training():
             xrolling_std = np.random.uniform(size=channel_count)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=True, axis=chaxis)
-            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2, atol=0.01)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True, axis=chaxis)
-            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2, atol=0.01)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=False, axis=chaxis)
-            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2, atol=0.01)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True, axis=chaxis)
-            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2, atol=0.01)
 
 def test_convolution_grouping():
     num_filter = 4
@@ -1973,7 +1973,7 @@ def check_instance_norm_with_shape(shape, xpu):
     exec1 = Y.bind(xpu, args = {'X':x, 'G':gamma, 'B':beta})
     exec1.forward(is_train=False)
     out = exec1.outputs[0].asnumpy()
-    assert_almost_equal(out, np_out, rtol=1e-4)
+    assert_almost_equal(out, np_out, rtol=1e-4, atol=1e-4)
     check_numeric_gradient(Y, {'X':x.asnumpy(), 'G':gamma.asnumpy(), 'B':beta.asnumpy()},
                            numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
 
