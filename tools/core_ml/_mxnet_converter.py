@@ -24,6 +24,7 @@ _MXNET_LAYER_REGISTRY  = {
 
 _MXNET_SKIP_LAYERS = [
     '_MulScalar',
+    'Dropout',
 ]
 
 def _mxnet_remove_batch(input_data):
