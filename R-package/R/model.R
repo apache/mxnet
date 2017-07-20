@@ -414,6 +414,13 @@ mx.model.select.layout.predict <- function(X, model) {
 #'     The names of the input symbols.
 #' @param output.names optional
 #'     The names of the output symbols.
+#' @param fixed.param
+#'     The parameters to be fixed during training. For these parameters, not gradients
+#'     will be calculated and thus no space will be allocated for the gradient.
+#' @param allow.extra.params
+#'     Whether allow extra parameters that are not needed by symbol.
+#'     If this is TRUE, no error will be thrown when arg_params or aux_params
+#'     contain extra parameters that is not needed by the executor.
 #' @return model A trained mxnet model.
 #'
 #' @export
@@ -428,7 +435,7 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
          kvstore = "local", verbose = TRUE,
          arg.params = NULL, aux.params = NULL,
          input.names=NULL, output.names = NULL,
-         fixed.param = NULL,
+         fixed.param = NULL, allow.extra.params = FALSE,
          ...) {
   if (is.array(X) || is.matrix(X)) {
     if (array.layout == "auto") {
@@ -458,6 +465,9 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
   params <- mx.model.init.params(symbol, input.shape, output.shape, initializer, mx.cpu())
   if (!is.null(arg.params)) params$arg.params <- arg.params
   if (!is.null(aux.params)) params$aux.params <- aux.params
+  if (allow.extra.params) {
+    params$arg.params[!names(params$arg.params) %in% arguments(symbol)] <- NULL
+  }
   if (is.null(ctx)) ctx <- mx.ctx.default()
   if (is.mx.context(ctx)) {
     ctx <- list(ctx)
@@ -516,9 +526,13 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
 #'     "colmajor" means dim(X) = c(nfeatures, nexample)
 #'     "auto" will auto detect the layout by match the feature size,
 #'      and will report error when X is a square matrix to ask user to explicitly specify layout.
-#'
+#' @param allow.extra.params
+#'     Whether allow extra parameters that are not needed by symbol.
+#'     If this is TRUE, no error will be thrown when arg_params or aux_params
+#'     contain extra parameters that is not needed by the executor.
 #' @export
-predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128, array.layout="auto") {
+predict.MXFeedForwardModel <- function(model, X, ctx = NULL, array.batch.size = 128,
+                                       array.layout = "auto", allow.extra.params = FALSE) {
   if (is.serialized(model)) model <- mx.unserialize(model)
   if (is.null(ctx)) ctx <- mx.ctx.default()
   if (is.array(X) || is.matrix(X)) {
@@ -536,6 +550,9 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128,
   arg_lst <- list(symbol = model$symbol, ctx = ctx, data = dim(dlist$data), grad.req="null")
 
   pexec <- do.call(mx.simple.bind, arg_lst)
+  if (allow.extra.params) {
+    model$arg.params[!names(model$arg.params) %in% arguments(model$symbol)] <- NULL
+  }
   mx.exec.update.arg.arrays(pexec, model$arg.params, match.name=TRUE)
   mx.exec.update.aux.arrays(pexec, model$aux.params, match.name=TRUE)
   packer <- mx.nd.arraypacker()
