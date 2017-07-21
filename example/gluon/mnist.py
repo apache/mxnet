@@ -41,16 +41,25 @@ with net.name_scope():
 
 # data
 
-train_data, val_data = mnist_iterator(batch_size=opt.batch_size, input_shape=(28*28,))
+# train_data, val_data = mnist_iterator(batch_size=opt.batch_size, input_shape=(28*28,))
+
+transform = lambda data, label: (data.astype(np.float32)/255, label)
+
+train_data = gluon.data.DataLoader(
+    gluon.data.MNIST('./data', train=True, transform=transform),
+    batch_size=opt.batch_size, shuffle=True, last_batch='discard')
+
+val_data = gluon.data.DataLoader(
+    gluon.data.MNIST('./data', train=False, transform=transform),
+    batch_size=opt.batch_size, shuffle=False)
 
 # train
 
 def test(ctx):
     metric = mx.metric.Accuracy()
-    val_data.reset()
-    for batch in val_data:
-        data = batch.data[0].as_in_context(ctx)
-        label = batch.label[0].as_in_context(ctx)
+    for data, label in val_data:
+        data = data.as_in_context(ctx)
+        label = label.as_in_context(ctx)
         output = net(data)
         metric.update([label], [output])
 
@@ -68,12 +77,11 @@ def train(epochs, ctx):
 
     for epoch in range(epochs):
         # reset data iterator and metric at begining of epoch.
-        train_data.reset()
         metric.reset()
-        for i, batch in enumerate(train_data):
+        for i, (data, label) in enumerate(train_data):
             # Copy data to ctx if necessary
-            data = batch.data[0].as_in_context(ctx)
-            label = batch.label[0].as_in_context(ctx)
+            data = data.as_in_context(ctx)
+            label = label.as_in_context(ctx)
             # Start recording computation graph with record() section.
             # Recorded graphs can then be differentiated with backward.
             with autograd.record():

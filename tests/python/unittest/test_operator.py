@@ -3642,6 +3642,23 @@ def test_laop():
       check_numeric_gradient(test_sumlogdiag, [a])
 
 
+def test_stack():
+    for _ in range(100):
+        ndim = random.randint(1, 5)
+        axis = random.randint(0, ndim)
+        if random.randint(0, 1):
+            axis = axis - ndim - 1
+        nin = random.randint(1, 3)
+        dshape = [random.randint(1, 5) for _ in range(ndim)]
+        inputs = [np.random.uniform(size=dshape) for _ in range(nin)]
+        output = np.stack(inputs, axis=axis)
+        sym_ins = [mx.sym.var('x%d'%i) for i in range(nin)]
+        out = mx.sym.stack(*sym_ins, axis=axis)
+        check_symbolic_forward(out, inputs, [output])
+        check_numeric_gradient(out, inputs)
+
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

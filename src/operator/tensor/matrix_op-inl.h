@@ -12,6 +12,7 @@
 #include <utility>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
+#include "../channel_op_common.h"
 #include "../mxnet_op.h"
 #include "broadcast_reduce_op.h"
 
@@ -1772,6 +1773,114 @@ void ReverseOpForward(const nnvm::NodeAttrs& attrs,
     stride_.data(), trailing_.data());
   });
 #endif
+}
+
+
+struct StackParam : public dmlc::Parameter<StackParam> {
+  int axis;
+  int num_args;
+  DMLC_DECLARE_PARAMETER(StackParam) {
+    DMLC_DECLARE_FIELD(axis)
+    .set_default(0)
+    .describe("The axis in the result array along which the input arrays are stacked.");
+    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
+    .describe("Number of inputs to be stacked.");
+  }
+};
+
+
+inline bool StackOpShape(const nnvm::NodeAttrs& attrs,
+                         std::vector<TShape> *in_attrs,
+                         std::vector<TShape> *out_attrs) {
+  const StackParam& param = dmlc::get<StackParam>(attrs.parsed);
+
+  TShape dshape;
+  for (const TShape& i : (*in_attrs)) {
+    shape_assign(&dshape, i);
+  }
+  if (dshape.ndim() == 0) return false;
+
+  TShape oshape(dshape.ndim() + 1);
+  int axis = CheckAxis(param.axis, oshape.ndim());
+  for (int i = 0; i < axis; ++i) {
+    oshape[i] = dshape[i];
+  }
+  oshape[axis] = param.num_args;
+  for (index_t i = axis + 1; i < oshape.ndim(); ++i) {
+    oshape[i] = dshape[i-1];
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+
+  return true;
+}
+
+
+template<typename xpu>
+void StackOpForward(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const StackParam& param = dmlc::get<StackParam>(attrs.parsed);
+  int axis = CheckAxis(param.axis, outputs[0].ndim());
+
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    std::vector<Tensor<xpu, 3, DType> > data(inputs.size());
+    Tensor<xpu, 3, DType> out;
+    size_t leading = 1, trailing = 1;
+    for (int i = 0; i < axis; ++i) {
+      leading *= outputs[0].shape_[i];
+    }
+    for (index_t i = axis + 1; i < outputs[0].ndim(); ++i) {
+      trailing *= outputs[0].shape_[i];
+    }
+    size_t mid = outputs[0].shape_[axis];
+    Shape<3> oshape = Shape3(leading, mid, trailing);
+    out = outputs[0].get_with_shape<xpu, 3, DType>(oshape, s);
+
+    for (index_t i = 0; i < inputs.size(); ++i) {
+      Shape<3> dshape = Shape3(leading, 1, trailing);
+      data[i] = inputs[i].get_with_shape<xpu, 3, DType>(dshape, s);
+    }
+    Concatenate(data, &out, 1, req[0]);
+  })
+}
+
+template<typename xpu>
+void StackOpBackward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const StackParam& param = dmlc::get<StackParam>(attrs.parsed);
+  int axis = CheckAxis(param.axis, inputs[0].ndim());
+
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    std::vector<Tensor<xpu, 3, DType> > grad_in(outputs.size());
+    Tensor<xpu, 3, DType> grad;
+    size_t leading = 1, trailing = 1;
+    for (int i = 0; i < axis; ++i) {
+      leading *= inputs[0].shape_[i];
+    }
+    for (index_t i = axis + 1; i < inputs[0].ndim(); ++i) {
+      trailing *= inputs[0].shape_[i];
+    }
+    size_t mid = inputs[0].shape_[axis];
+    Shape<3> oshape = Shape3(leading, mid, trailing);
+    grad = inputs[0].get_with_shape<xpu, 3, DType>(oshape, s);
+
+    for (index_t i = 0; i < outputs.size(); ++i) {
+      Shape<3> dshape = Shape3(leading, 1, trailing);
+      grad_in[i] = outputs[i].get_with_shape<xpu, 3, DType>(dshape, s);
+    }
+    Split(grad, &grad_in, 1, req);
+  })
 }
 
 
