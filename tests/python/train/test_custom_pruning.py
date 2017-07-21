@@ -75,7 +75,6 @@ def test_mlp():
         'learning_rate'             : 0.1,
         'wd'                        : 0.004,
         'momentum'                  : 0.9,
-        'do_pruning'                : True,
         'pruning_switch_epoch'      : [1,2],
         'weight_sparsity'           : [25,50],
         'bias_sparsity'             : [0,0],
@@ -85,6 +84,7 @@ def test_mlp():
         eval_metric=mx.metric.np(accuracy),
         epoch_end_callback=mx.callback.do_checkpoint(prefix),
         num_epoch=num_epoch,
+        optimizer='sparsesgd',
         optimizer_params=optimizer_params)
     logging.info('Finish traning...')
 

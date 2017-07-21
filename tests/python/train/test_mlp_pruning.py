@@ -54,7 +54,7 @@ def test_mlp():
         num_epoch=num_epoch,
         learning_rate=0.1, wd=0.0004,
         momentum=0.9,
-        do_pruning=True,
+        optimizer='sparsesgd',
         pruning_switch_epoch=[1,3,5,7],
         weight_sparsity=[0,25,50,75],
         bias_sparsity=[0,0,50,50],
@@ -68,6 +68,7 @@ def test_mlp():
     bias_percent = [1,1,1,0.5,0.5,0.5,0.5]
     for i in range(1, num_epoch + 1):
         sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, i)
+        weight_params = []
         weight_params = [arg_params['fc1_weight'], arg_params['fc2_weight'], arg_params['fc3_weight']]
         bias_params = [arg_params['fc1_bias'], arg_params['fc2_bias'], arg_params['fc3_bias']]
         idx = i - 1

@@ -40,39 +40,10 @@ class Optimizer(object):
 
     begin_num_update : int, optional
         The initial number of updates.
-
-    do_pruning : boolean, optional
-        If pruning is required.
-
-    pruning_switch_epoch : list of ints, optional
-        The epochs at which there is a change in sparsity level.
-        (Should be in ascending order)
-
-    weight_sparsity : list of floats, optional
-        The sparsity on the weights required on each iteration of sparse training.
-
-    bias_sparsity : list of floats, optional
-        The sparsity on the biases required on each iteration of sparse training.
-
-    weight_sparsity_threshold : list of floats, optional
-        The absolute value threshold on the weights required on each iteration of sparse
-        training.
-
-    bias_sparsity_threshold : list of floats, optional
-        The absolute value threshold on the biases required on each iteration of sparse
-        training.
-
-    batches_per_epoch : int, optional
-        The number of batches in each epoch.
-        (The ceiling integer value of number_of_examples / batch_size)
     """
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
-                 lr_scheduler=None, sym=None, begin_num_update=0,
-                 do_pruning=False, pruning_switch_epoch=None,
-                 weight_sparsity=None, bias_sparsity=None,
-                 weight_sparsity_threshold=None, bias_sparsity_threshold=None,
-                 batches_per_epoch=None):
+                 lr_scheduler=None, sym=None, begin_num_update=0):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -96,41 +67,6 @@ class Optimizer(object):
 
         self.set_lr_mult({})
         self.set_wd_mult({})
-
-        # for pruning neural network
-        self.do_pruning = do_pruning
-        if do_pruning:
-            self.masks = []
-            self.masks_updated = False
-            self.epoch = 0
-            self.pruning_switch_epoch = pruning_switch_epoch
-            assert pruning_switch_epoch is not None, \
-                'pruning_switch_epoch should not be None'
-
-            # get weight and bias sparsity percentages
-            self.weight_sparsity = weight_sparsity
-            self.bias_sparsity = bias_sparsity
-            if weight_sparsity is not None:
-                assert len(weight_sparsity) == len(bias_sparsity), \
-                    'weight_sparsity and bias_sparsity should have same length'
-                assert len(weight_sparsity) == len(pruning_switch_epoch), \
-                    'pruning_switch_epoch and weight_sprsity should have same length'
-
-            # get weight and bias sparsity thresholds
-            self.weight_sparsity_threshold = weight_sparsity_threshold
-            self.bias_sparsity_threshold = bias_sparsity_threshold
-            if weight_sparsity_threshold is not None:
-                assert len(weight_sparsity_threshold) == len(bias_sparsity_threshold), \
-                    'weight_sparsity_threshold and bias_sparsity_threshold should have same length'
-                assert len(weight_sparsity_threshold) == len(pruning_switch_epoch), \
-                    'pruning_switch_epoch and weight_sprsity_threshold should have same length'
-
-            # either percentages or thresholds must be given
-            assert weight_sparsity is not None or weight_sparsity_threshold is not None,\
-                'weight_sparsity or weight_sprasity_threshold should be given'
-
-            self.batches_per_epoch = batches_per_epoch
-            assert batches_per_epoch is not None, 'batches_per_epoch should not be None'
 
     opt_registry = {}
 
@@ -368,65 +304,6 @@ class Optimizer(object):
             wd *= self.wd_mult.get(self.idx2name[index], 1.0)
         return wd
 
-    def update_masks(self, index, weight):
-        """Updates the masks for sparse training.
-
-        Parameters
-        ----------
-        index : int
-            The index for weight.
-        weight : NDArray
-            The weight matrix.
-
-        Returns
-        -------
-        boolean
-            If the masks were changed
-        """
-
-        # calculate epoch
-        epoch = int((self.num_update - 1) / self.batches_per_epoch) + 1
-
-        # determine if masks need to be updated
-        if index == 0:
-            self.masks_updated = True
-        if self.epoch != epoch:
-            self.epoch = epoch
-            if epoch == 1:
-                self.masks_updated = False
-            if self.pruning_switch_epoch[0] + 1 == epoch:
-                self.masks_updated = False
-                self.pruning_switch_epoch.pop(0)
-                if self.weight_sparsity is not None:
-                    self.weight_sparsity.pop(0)
-                    self.bias_sparsity.pop(0)
-                else:
-                    self.weight_sparsity_threshold.pop(0)
-                    self.bias_sparsity_threshold.pop(0)
-
-        # update masks if needed
-        if not self.masks_updated:
-            if epoch == 1:
-                self.masks.append(None)
-            # if percentages are given
-            if self.weight_sparsity is not None:
-                if len(weight.shape) == 1:
-                    sparsity = self.bias_sparsity[0]
-                else:
-                    sparsity = self.weight_sparsity[0]
-                number_unpruned = int((100.0 - sparsity) * weight.size / 100.0)
-                self.masks[index] = topk(NDabs(weight), axis=None, ret_typ='mask',
-                                         k=number_unpruned)
-            # if thresholds are given
-            else:
-                if len(weight.shape) == 1:
-                    threshold = self.bias_sparsity_threshold[0]
-                else:
-                    threshold = self.weight_sparsity_threshold[0]
-                self.masks[index] = NDabs(weight) >= threshold
-
-        return not self.masks_updated
-
 # convenience wrapper for Optimizer.Register
 register = Optimizer.register   # pylint: disable=invalid-name
 
@@ -481,17 +358,9 @@ class SGD(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-
-        # if pruning
-        if self.do_pruning:
-            if self.update_masks(index, weight):
-                weight[:] = weight * self.masks[index]
-            grad[:] = grad * self.masks[index]
-            if state is not None:
-                state[:] = state * self.masks[index]
+        self._update_count(index)
 
         kwargs = {'rescale_grad': self.rescale_grad}
         if self.momentum > 0:
@@ -1026,6 +895,174 @@ class Nadam(Optimizer):
 
         # update weight
         weight[:] -= lr * m_t_bar / (sqrt(v_t_prime) + self.epsilon)
+
+@register
+class SparseSGD(SGD):
+    """The SGD optimizer with weight pruning.
+
+    The optimizer updates the weights the same way as done in SGD, but does the following before::
+
+        weight = weight * mask
+        grad = grad * mask
+        state = state * mask
+
+    Where mask is the same dimensional binary NDArray that prunes some of the weights.
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.SGD`.
+
+    Parameters
+    ----------
+    pruning_switch_epoch : list of ints, optional
+        The epochs at which there is a change in sparsity level (should be in ascending order).
+
+    weight_sparsity : list of floats, optional
+        The sparsity on the weights required on each iteration of sparse training.
+
+    bias_sparsity : list of floats, optional
+        The sparsity on the biases required on each iteration of sparse training.
+
+    weight_sparsity_threshold : list of floats, optional
+        The absolute value threshold on the weights required on each iteration of sparse training.
+
+    bias_sparsity_threshold : list of floats, optional
+        The absolute value threshold on the biases required on each iteration of sparse training.
+
+    batches_per_epoch : int, optional
+        The number of batches in each epoch.
+        (The ceiling integer value of number_of_examples / batch_size)
+    """
+    def __init__(self, pruning_switch_epoch, batches_per_epoch,
+                 weight_sparsity=None, bias_sparsity=None,
+                 weight_sparsity_threshold=None, bias_sparsity_threshold=None, **kwargs):
+        super(SparseSGD, self).__init__(**kwargs)
+
+        self.masks = []
+        self.masks_updated = False
+        self.epoch = 0
+        self.pruning_switch_epoch = pruning_switch_epoch
+        assert pruning_switch_epoch is not None, 'pruning_switch_epoch should not be None'
+
+        # get weight and bias sparsity percentages
+        self.weight_sparsity = weight_sparsity
+        self.bias_sparsity = bias_sparsity
+        if weight_sparsity is not None:
+            assert len(weight_sparsity) == len(bias_sparsity), \
+                'weight_sparsity and bias_sparsity should have same length'
+            assert len(weight_sparsity) == len(pruning_switch_epoch), \
+                'pruning_switch_epoch and weight_sprsity should have same length'
+
+        # get weight and bias sparsity thresholds
+        self.weight_sparsity_threshold = weight_sparsity_threshold
+        self.bias_sparsity_threshold = bias_sparsity_threshold
+        if weight_sparsity_threshold is not None:
+            assert len(weight_sparsity_threshold) == len(bias_sparsity_threshold), \
+                'weight_sparsity_threshold and bias_sparsity_threshold should have same length'
+            assert len(weight_sparsity_threshold) == len(pruning_switch_epoch), \
+                'pruning_switch_epoch and weight_sprsity_threshold should have same length'
+
+        # either percentages or thresholds must be given
+        assert weight_sparsity is not None or weight_sparsity_threshold is not None,\
+            'weight_sparsity or weight_sprasity_threshold should be given'
+
+        self.batches_per_epoch = batches_per_epoch
+        assert batches_per_epoch is not None, 'batches_per_epoch should not be None'
+
+    def update_masks(self, index, weight):
+        """Updates the masks for sparse training.
+
+        Parameters
+        ----------
+        index : int
+            The index for weight.
+        weight : NDArray
+            The weight matrix.
+
+        Returns
+        -------
+        boolean
+            If the masks were changed
+        """
+        # calculate epoch
+        epoch = int((self.num_update - 1) / self.batches_per_epoch) + 1
+
+        # determine if masks need to be updated, and get corresponding parameters
+        if index == 0:
+            self.masks_updated = True
+        if self.epoch != epoch:
+            self.epoch = epoch
+            if epoch == 1:
+                self.masks_updated = False
+            if self.pruning_switch_epoch[0] + 1 == epoch:
+                self.masks_updated = False
+                self.pruning_switch_epoch.pop(0)
+                if self.weight_sparsity is not None:
+                    self.weight_sparsity.pop(0)
+                    self.bias_sparsity.pop(0)
+                else:
+                    self.weight_sparsity_threshold.pop(0)
+                    self.bias_sparsity_threshold.pop(0)
+
+        # update masks if needed
+        if not self.masks_updated:
+            # initialize masks
+            if epoch == 1:
+                self.masks.append(None)
+            # if percentages are given
+            if self.weight_sparsity is not None:
+                if len(weight.shape) == 1:
+                    sparsity = self.bias_sparsity[0]
+                else:
+                    sparsity = self.weight_sparsity[0]
+                number_unpruned = int((100.0 - sparsity) * weight.size / 100.0)
+                self.masks[index] = topk(NDabs(weight), axis=None, ret_typ='mask',
+                                         k=number_unpruned)
+            # if thresholds are given
+            else:
+                if len(weight.shape) == 1:
+                    threshold = self.bias_sparsity_threshold[0]
+                else:
+                    threshold = self.weight_sparsity_threshold[0]
+                self.masks[index] = NDabs(weight) >= threshold
+
+        return not self.masks_updated
+
+    def update(self, index, weight, grad, state):
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        self._update_count(index)
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+
+        # for pruning
+        if self.update_masks(index, weight):
+            weight[:] = weight * self.masks[index]
+        grad[:] = grad * self.masks[index]
+        if state is not None:
+            state[:] = state * self.masks[index]
+
+        kwargs = {'rescale_grad': self.rescale_grad}
+        if self.momentum > 0:
+            kwargs['momentum'] = self.momentum
+        if self.clip_gradient:
+            kwargs['clip_gradient'] = self.clip_gradient
+        use_multi_precision = isinstance(state, (list, tuple))
+
+        if not use_multi_precision:
+            if state is not None:
+                sgd_mom_update(weight, grad, state, out=weight,
+                               lr=lr, wd=wd, **kwargs)
+            else:
+                sgd_update(weight, grad, out=weight,
+                           lr=lr, wd=wd, **kwargs)
+        else:
+            if state[0] is not None:
+                mp_sgd_mom_update(weight, grad, state[0], state[1], out=weight,
+                                  lr=lr, wd=wd, **kwargs)
+            else:
+                mp_sgd_update(weight, grad, state[1], out=weight,
+                              lr=lr, wd=wd, **kwargs)
+
 
 @register
 class Test(Optimizer):
