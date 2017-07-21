@@ -243,9 +243,7 @@ def _parse_proto(prototxt_fname):
                 if layer.type == 'Eltwise' and param.operation == 1 and len(param.coeff) > 0:
                     symbol_string += "%s = " % name
                     symbol_string += " + ".join(["%s * %s" % (
-                        mapping[bottom[i]], param.coeff.__getitem__(i)) 
-                        for i in range(len(param.coeff))]
-                    )
+                        mapping[bottom[i]], param.coeff[i]) for i in range(len(param.coeff))])
                     symbol_string += "\n"
                 else:
                     symbol_string += "%s = %s(name='%s', *[%s] %s)\n" % (
