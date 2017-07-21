@@ -416,7 +416,7 @@ class Optimizer(object):
                     sparsity = self.weight_sparsity[0]
                 number_unpruned = int((100.0 - sparsity) * weight.size / 100.0)
                 self.masks[index] = topk(NDabs(weight), axis=None, ret_typ='mask',
-                                        k=number_unpruned)
+                                         k=number_unpruned)
             # if thresholds are given
             else:
                 if len(weight.shape) == 1:
