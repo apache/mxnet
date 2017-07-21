@@ -146,15 +146,8 @@ def fit(args, network, data_loader, **kwargs):
             'learning_rate': lr,
             'momentum' : args.mom,
             'wd' : args.wd,
-            'lr_scheduler' : lr_scheduler,
-            'do_pruning' : args.do_pruning,
-            'pruning_switch_epoch' : args.pruning_switch_epoch,
-            'weight_sparsity': args.weight_sparsity,
-            'bias_sparsity': args.bias_sparsity,
-            'weight_sparsity_threshold': args.weight_sparsity_threshold,
-            'bias_sparsity_threshold': args.bias_sparsity_threshold,
-            'batches_per_epoch' : args.batches_per_epoch,
-            'multi_precision' : True}
+            'lr_scheduler': lr_scheduler,
+            'multi_precision': True}
 
     monitor = mx.mon.Monitor(args.monitor, pattern=".*") if args.monitor > 0 else None
 
