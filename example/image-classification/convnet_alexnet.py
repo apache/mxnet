@@ -10,14 +10,15 @@ import time
 # Basic Info
 dev = mx.cpu()
 batch_size = 256
-dshape = (batch_size, 3, 224, 224)
-lshape = (batch_size)
+image_shape = (3,224,224)
+dshape = [('data', (batch_size,)+image_shape)] #(batch_size, 3, 224, 224)
+# lshape = (batch_size)
 num_epoch = 100
 
 # Mock data iterator
-tmp_data = np.random.uniform(-1, 1, dshape).astype("float32")
+# tmp_data = np.random.uniform(-1, 1, dshape).astype("float32")
 
-train_iter = mx.io.NDArrayIter(data=tmp_data,  batch_size=batch_size, shuffle=False, last_batch_handle='pad')
+# train_iter = mx.io.NDArrayIter(data=tmp_data,  batch_size=batch_size, shuffle=False, last_batch_handle='pad')
 
 
 
@@ -100,17 +101,31 @@ def get_alexnet_symbol():
     relu7 = mx.symbol.Activation(data=fc2, act_type="relu")
     # stage 6
     fc3 = mx.symbol.FullyConnected(data=relu7, num_hidden=1000)
-    return fc3
+    softmax = mx.symbol.SoftmaxOutput(data=fc3, name='softmax')
+
+    return softmax
 
 # In[6]:
 
 # bind to get executor
 # This is what happened behind mx.model.Feedforward
-fc3 = get_alexnet_symbol()
+softmax = get_alexnet_symbol()
+
+mod_inf = mx.mod.Module(symbol=softmax, context=dev)
+mod_inf.bind(for_training     = False,
+             inputs_need_grad = False,
+             data_shapes      = dshape)
+mod_inf.init_params(initializer=mx.init.Xavier(magnitude=2.))
+mod_inf.init_optimizer(optimizer='sgd', optimizer_params=(('learning_rate', 0.1), ))
 # fc3 = get_symbol(10)
-# mod = mx.mod.Module(fc3)
-alex_exec = fc3.simple_bind(ctx=dev, grad_req="write", data=dshape)
-print("Temp space: ", alex_exec.debug_str().split('\n')[-3])
+mod = mx.mod.Module(symbol=softmax, context=dev)
+mod.bind(for_training     = True,
+             inputs_need_grad = False,
+             data_shapes      = dshape)
+mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
+mod.init_optimizer(optimizer='sgd', optimizer_params=(('learning_rate', 0.1), ))
+# alex_exec = fc3.simple_bind(ctx=dev, grad_req="write", data=dshape)
+# print("Temp space: ", alex_exec.debug_str().split('\n')[-3])
 # Find where to set data
 
 
@@ -118,14 +133,14 @@ print("Temp space: ", alex_exec.debug_str().split('\n')[-3])
 
 # some useful structure
 # data structues 
-arg_names = fc3.list_arguments()
-arg_map = dict(zip(arg_names, alex_exec.arg_arrays))
-grad_map = dict(zip(arg_names, alex_exec.grad_arrays))
+# arg_names = fc3.list_arguments()
+# arg_map = dict(zip(arg_names, alex_exec.arg_arrays))
+# grad_map = dict(zip(arg_names, alex_exec.grad_arrays))
 
 
 # param_blocks = [(i, arg_map[arg_names[i]], grad_map[arg_names[i]]) for i in range(len(arg_names)) if grad_map[arg_names[i]] != None]
 # input_ndarray = arg_map["data"]
-grad = mx.nd.zeros((batch_size, 1000), ctx=mx.cpu())
+# grad = mx.nd.zeros((batch_size, 1000), ctx=mx.cpu())
 # param_len = len(param_blocks)
 
 
@@ -146,39 +161,56 @@ grad = mx.nd.zeros((batch_size, 1000), ctx=mx.cpu())
 # In[12]:
 
 # Test forward
-def test_forward(model, epoch):
+def test_forward(mod, epoch):
+    data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=dev) for _, shape in mod.data_shapes]
+    batch = mx.io.DataBatch(data, []) # empty label
+
     # dry run
     for i in range(5):
-        model.forward(is_train=False)
+        # model.forward(is_train=False)
+        mod.forward(batch, is_train=False)
+        for output in mod.get_outputs():
+            output.wait_to_read()
     mx.nd.waitall()
 
     tic = time.time()
     for i in range(epoch):
-        model.forward(is_train=False)
+        mod.forward(batch, is_train=False)
+        for output in mod.get_outputs():
+            output.wait_to_read()
         # Note: This command will force thread engine block, which hurts performance a lot
         # Remove it will bring parallelism bias
         # model.outputs[0].wait_to_read()
-    model.outputs[0].wait_to_read()
+    # model.outputs[0].wait_to_read()
     toc = time.time()
     return (toc - tic) / epoch
 
-print("Avg forward images per sec: ", batch_size/test_forward(alex_exec, num_epoch))
+print("Avg forward images per sec: ", batch_size/test_forward(mod_inf, num_epoch))
 
 
 # In[13]:
 
 # Test full path
-def test_full(model, epoch):
+def test_full(mod, epoch):
+    data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=dev) for _, shape in mod.data_shapes]
+    batch = mx.io.DataBatch(data, []) # empty label
+
     # dry run
     for i in range(5):
-        model.forward(is_train=True)
-        model.backward([grad])
+        mod.forward(batch, is_train=True)
+        mod.backward()
+        mod.update()
+        for output in mod.get_outputs():
+            output.wait_to_read()
     mx.nd.waitall()
     
     tic = time.time()
     for i in range(epoch):
-        model.forward(is_train=True)
-        model.backward([grad])
+        mod.forward(batch, is_train=True)
+        mod.backward()
+        mod.update()
+        for output in mod.get_outputs():
+            output.wait_to_read()
         # model.update()
         #model.outputs[0].wait_to_read()
         # mx.nd.waitall()
@@ -190,7 +222,7 @@ def test_full(model, epoch):
     toc = time.time()
     return (toc - tic) / epoch
 
-print("Avg fullpath images per sec: ", batch_size/test_full(alex_exec, num_epoch))
+print("Avg fullpath images per sec: ", batch_size/test_full(mod, num_epoch))
 
 
 # In[ ]:
