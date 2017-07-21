@@ -97,6 +97,7 @@ class Optimizer(object):
         self.set_lr_mult({})
         self.set_wd_mult({})
 
+        # for pruning neural network
         self.do_pruning = do_pruning
         if do_pruning:
             self.masks = []
@@ -105,6 +106,8 @@ class Optimizer(object):
             self.pruning_switch_epoch = pruning_switch_epoch
             assert pruning_switch_epoch is not None, \
                 'pruning_switch_epoch should not be None'
+
+            # get weight and bias sparsity percentages
             self.weight_sparsity = weight_sparsity
             self.bias_sparsity = bias_sparsity
             if weight_sparsity is not None:
@@ -112,6 +115,8 @@ class Optimizer(object):
                     'weight_sparsity and bias_sparsity should have same length'
                 assert len(weight_sparsity) == len(pruning_switch_epoch), \
                     'pruning_switch_epoch and weight_sprsity should have same length'
+
+            # get weight and bias sparsity thresholds
             self.weight_sparsity_threshold = weight_sparsity_threshold
             self.bias_sparsity_threshold = bias_sparsity_threshold
             if weight_sparsity_threshold is not None:
@@ -119,8 +124,11 @@ class Optimizer(object):
                     'weight_sparsity_threshold and bias_sparsity_threshold should have same length'
                 assert len(weight_sparsity_threshold) == len(pruning_switch_epoch), \
                     'pruning_switch_epoch and weight_sprsity_threshold should have same length'
+
+            # either percentages or thresholds must be given
             assert weight_sparsity is not None or weight_sparsity_threshold is not None,\
                 'weight_sparsity or weight_sprasity_threshold should be given'
+
             self.batches_per_epoch = batches_per_epoch
             assert batches_per_epoch is not None, 'batches_per_epoch should not be None'
 
@@ -372,12 +380,14 @@ class Optimizer(object):
 
         Returns
         -------
-        bool
+        boolean
             If the masks were changed
         """
 
+        # calculate epoch
         epoch = int((self.num_update - 1) / self.batches_per_epoch) + 1
 
+        # determine if masks need to be updated
         if index == 0:
             self.masks_updated = True
         if self.epoch != epoch:
@@ -394,9 +404,11 @@ class Optimizer(object):
                     self.weight_sparsity_threshold.pop(0)
                     self.bias_sparsity_threshold.pop(0)
 
+        # update masks if needed
         if not self.masks_updated:
             if epoch == 1:
                 self.masks.append(None)
+            # if percentages are given
             if self.weight_sparsity is not None:
                 if len(weight.shape) == 1:
                     sparsity = self.bias_sparsity[0]
@@ -405,6 +417,7 @@ class Optimizer(object):
                 number_unpruned = int((100.0 - sparsity) * weight.size / 100.0)
                 self.masks[index] = topk(NDabs(weight), axis=None, ret_typ='mask',
                                         k=number_unpruned)
+            # if thresholds are given
             else:
                 if len(weight.shape) == 1:
                     threshold = self.bias_sparsity_threshold[0]
@@ -472,6 +485,7 @@ class SGD(Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
 
+        # if pruning
         if self.do_pruning:
             if self.update_masks(index, weight):
                 weight[:] = weight * self.masks[index]
