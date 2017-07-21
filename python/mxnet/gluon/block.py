@@ -122,7 +122,7 @@ class Block(object):
     Parameters
     ----------
     prefix : str
-        Prefix acts like a name space. It will be prepended to the name of all
+        Prefix acts like a name space. It will be prepended to the names of all
         Parameters and child `Block`s in this `Block`'s `name_scope`. Prefix
         should be unique within one model to prevent name collisions.
     params : ParameterDict or None
