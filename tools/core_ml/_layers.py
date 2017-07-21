@@ -276,9 +276,22 @@ def convert_convolution(net, node, model, builder):
     else:
         has_bias = True
 
-    border_mode = "same" if literal_eval(param['pad']) != (0, 0) else "valid"
+    if literal_eval(param['pad']) != (0, 0):
+        pad = literal_eval(param['pad'])
+        builder.add_padding(
+            name = name+"_pad",
+            left = pad[1],
+            right = pad[1],
+            top = pad[0],
+            bottom = pad[0],
+            value = 0,
+            input_name = input_name,
+            output_name = name+"_pad_output")
+        input_name = name+"_pad_output"
+
+    border_mode = "valid"
+
     n_filters = int(param['num_filter'])
-    output_shape = None  # (needed for de-conv)
 
     W = args[_get_node_name(net, inputs[1][0])].asnumpy()
     if has_bias:
@@ -286,7 +299,7 @@ def convert_convolution(net, node, model, builder):
     else:
         Wb = None
 
-    n_filters, channels = W.shape[0:2]
+    channels = W.shape[1]
     stride_height, stride_width = literal_eval(param['stride'])
     kernel_height, kernel_width = literal_eval(param['kernel'])
     # TODO add padding here
@@ -304,16 +317,10 @@ def convert_convolution(net, node, model, builder):
              b = Wb,
              has_bias = has_bias,
              is_deconv = False,
-             output_shape = output_shape,
+             output_shape = None,
              input_name = input_name,
              output_name = output_name)
 
-    # Add padding if there is any
-    convLayer = builder.nn_spec.layers[-1].convolution
-    pad = literal_eval(param['pad'])
-    for i in range(len(pad)):
-        convLayer.valid.paddingAmounts.borderAmounts[i].startEdgeSize = pad[i]
-        convLayer.valid.paddingAmounts.borderAmounts[i].endEdgeSize = pad[i]
 
 def convert_pooling(net, node, model, builder):
     """Convert a pooling layer from mxnet to coreml.
@@ -472,12 +479,27 @@ def convert_deconvolution(net, node, model, builder):
     else:
         has_bias = False
 
-    border_mode = "same" if literal_eval(param['pad']) != (0, 0) else "valid"
+    if literal_eval(param['pad']) != (0, 0):
+        pad = literal_eval(param['pad'])
+        builder.add_padding(
+            name = name+"_pad", 
+            left = pad[1],
+            right = pad[1],
+            top = pad[0],
+            bottom = pad[0],
+            value = 0,
+            input_name = input_name,
+            output_name = name+"_pad_output")
+        input_name = name+"_pad_output"
+
+    border_mode = "valid"
+
     n_filters = int(param['num_filter'])
 
-    # TODO output_shape is needed by CoreML. Calculate it automatically if target_shape is not provided.
-    target_shape = literal_eval(param['target_shape'])
-    output_shape = (int(target_shape[0]), int(target_shape[1]))
+    output_shape = None
+    if 'target_shape' in param:
+        target_shape = literal_eval(param['target_shape'])
+        output_shape = (int(target_shape[0]), int(target_shape[1]))
 
     W = args[_get_node_name(net, inputs[1][0])].asnumpy()
     if has_bias:
@@ -485,12 +507,13 @@ def convert_deconvolution(net, node, model, builder):
     else:
         Wb = None
 
+    channels = W.shape[0]
     stride_height, stride_width = literal_eval(param['stride'])
     kernel_height, kernel_width = literal_eval(param['kernel'])
 
     W = W.transpose((2, 3, 0, 1))
     builder.add_convolution(name = name,
-             kernel_channels = W.shape[2],
+             kernel_channels = channels,
              output_channels = n_filters,
              height = kernel_height,
              width = kernel_width,
@@ -505,12 +528,3 @@ def convert_deconvolution(net, node, model, builder):
              output_shape = output_shape,
              input_name = input_name,
              output_name = output_name)
-
-    # Add padding if there is any
-    convLayer = builder.nn_spec.layers[-1].convolution
-#    TODO Can we remove this code? 
-#    if border_mode == "same":
-#         pad = literal_eval(param['pad'])
-#         for i in range(len(pad)):
-#             convLayer.valid.paddingAmounts.borderAmounts[i].startEdgeSize = pad[i]
-#             convLayer.valid.paddingAmounts.borderAmounts[i].endEdgeSize = pad[i]
