@@ -8,7 +8,7 @@ reload(logging)
 logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG, datefmt='%I:%M:%S')
 
 import sys
-sys.path.append('char_rnn/')
+sys.path.append('../../../example/rnn/old/')
 #from char_rnn import lstm, bucket_io, rnn_model
 from lstm import lstm_unroll, lstm_inference_symbol
 from bucket_io import BucketSentenceIter
