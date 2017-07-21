@@ -39,6 +39,11 @@ def test_parameter_sharing():
     net1.collect_params().initialize()
     net2(mx.nd.zeros((3, 5)))
 
+    net1.save_params('net1.params')
+
+    net3 = Net(prefix='net3_')
+    net3.load_params('net1.params', mx.cpu())
+
 
 def test_basic():
     model = nn.Sequential()
