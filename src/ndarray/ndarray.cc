@@ -1131,6 +1131,12 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
   }
   // The copy operation was pushed to engine to execute.
   // Need to wait here for it being completed.
+  // The reason for pushing the copy operation to engine
+  // is because when copying data from a sparse tensor
+  // to the current one, that sparse ndarray's storage_shape/aux_shape
+  // may not be ready or changed and we need to ensure
+  // thread safty for reading the correct shape info to allocate
+  // memory for the current ndarray.
   WaitToRead();
 }
 
