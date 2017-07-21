@@ -69,10 +69,10 @@ class Optimizer(object):
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
                  lr_scheduler=None, sym=None, begin_num_update=0,
-                 do_pruning = False, pruning_switch_epoch = None,
-                 weight_sparsity = None, bias_sparsity = None,
-                 weight_sparsity_threshold = None, bias_sparsity_threshold = None,
-                 batches_per_epoch = None):
+                 do_pruning=False, pruning_switch_epoch=None,
+                 weight_sparsity=None, bias_sparsity=None,
+                 weight_sparsity_threshold=None, bias_sparsity_threshold=None,
+                 batches_per_epoch=None):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -109,16 +109,16 @@ class Optimizer(object):
             self.bias_sparsity = bias_sparsity
             if weight_sparsity is not None:
                 assert len(weight_sparsity) == len(bias_sparsity), \
-                    'weight_sparsity and bias_sparsity should have the same length'
+                    'weight_sparsity and bias_sparsity should have same length'
                 assert len(weight_sparsity) == len(pruning_switch_epoch), \
-                    'pruning_switch_epoch and weight_sprsity should have the same length'
+                    'pruning_switch_epoch and weight_sprsity should have same length'
             self.weight_sparsity_threshold = weight_sparsity_threshold
             self.bias_sparsity_threshold = bias_sparsity_threshold
             if weight_sparsity_threshold is not None:
                 assert len(weight_sparsity_threshold) == len(bias_sparsity_threshold), \
-                    'weight_sparsity_threshold and bias_sparsity_threshold should have the same length'
+                    'weight_sparsity_threshold and bias_sparsity_threshold should have same length'
                 assert len(weight_sparsity_threshold) == len(pruning_switch_epoch), \
-                    'pruning_switch_epoch and weight_sprsity_threshold should have the same length'
+                    'pruning_switch_epoch and weight_sprsity_threshold should have same length'
             assert weight_sparsity is not None or weight_sparsity_threshold is not None,\
                 'weight_sparsity or weight_sprasity_threshold should be given'
             self.batches_per_epoch = batches_per_epoch
@@ -403,8 +403,8 @@ class Optimizer(object):
                 else:
                     sparsity = self.weight_sparsity[0]
                 number_unpruned = int((100.0 - sparsity) * weight.size / 100.0)
-                self.masks[index] = topk(NDabs(weight), axis = None, ret_typ = 'mask',
-                                        k = number_unpruned)
+                self.masks[index] = topk(NDabs(weight), axis=None, ret_typ='mask',
+                                        k=number_unpruned)
             else:
                 if len(weight.shape) == 1:
                     threshold = self.bias_sparsity_threshold[0]
