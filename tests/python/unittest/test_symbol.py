@@ -1,31 +1,11 @@
 import copy
-import sys
 import os
 import re
 import mxnet as mx
 import numpy as np
 from common import models
+from mxnet.test_utils import discard_stderr
 import pickle as pkl
-from contextlib import contextmanager
-
-@contextmanager
-def discard_stderr():
-    """
-    Discards error output of a routine if invoked as:
-
-    with discard_stderr():
-        ...
-    """
-
-    try:
-        stderr_fileno = sys.stderr.fileno()
-        old_stderr = os.dup(stderr_fileno)
-        bit_bucket = open(os.devnull, 'w')
-        os.dup2(bit_bucket.fileno(), stderr_fileno)
-        yield
-    finally:
-        os.dup2(old_stderr, stderr_fileno)
-        bit_bucket.close()
 
 def test_symbol_basic():
     mlist = []

@@ -150,13 +150,16 @@ def test_retain_grad():
         y.backward(retain_graph=False)
     assert (dx.asnumpy() == 2).all()
 
-    try:
-        with train_section():
-            y = x + 1
-            y.backward()
-            y.backward()
-    except Exception:
-        return
+    # The following sequence should throw an exception. We discard the expected
+    # stderr stack trace output for this operation to keep the test logs clean.
+    with discard_stderr():
+        try:
+            with train_section():
+                y = x + 1
+                y.backward()
+                y.backward()
+        except Exception:
+            return
 
     raise AssertionError(
         "differentiating the same graph twice without retain_graph should fail")
