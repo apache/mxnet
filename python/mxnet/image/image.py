@@ -224,9 +224,9 @@ def resize_short(src, size, interp=2):
     """
     h, w, _ = src.shape
     if h > w:
-        new_h, new_w = int(size * h / w), int(size)
+        new_h, new_w = size * h // w, size
     else:
-        new_h, new_w = int(size), int(size * w / h)
+        new_h, new_w = size, size * w // h
     return imresize(src, new_w, new_h, interp=_get_interp_method(interp, (h, w, new_h, new_w)))
 
 
@@ -1036,7 +1036,7 @@ class ImageIter(io.DataIter):
         if num_parts > 1:
             assert part_index < num_parts
             N = len(self.seq)
-            C = N / num_parts
+            C = N // num_parts
             self.seq = self.seq[part_index * C:(part_index + 1) * C]
         if aug_list is None:
             self.auglist = CreateAugmenter(data_shape, **kwargs)
