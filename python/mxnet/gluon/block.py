@@ -137,15 +137,6 @@ class Block(object):
         self._scope = _BlockScope(self)
         self._children = []
 
-    def __setattr__(self, name, value):
-        """Registers parameters."""
-        super(Block, self).__setattr__(name, value)
-        if isinstance(value, Block):
-            self.register_child(value)
-
-    def _alias(self):
-        return self.__class__.__name__.lower()
-
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
@@ -154,20 +145,14 @@ class Block(object):
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
-    @property
-    def params(self):
-        """Returns this `Block`'s parameter dictionary (does not include its
-        children's parameters)."""
-        return self._params
+    def __setattr__(self, name, value):
+        """Registers parameters."""
+        super(Block, self).__setattr__(name, value)
+        if isinstance(value, Block):
+            self.register_child(value)
 
-    def collect_params(self):
-        """Returns a `ParameterDict` containing this `Block` and all of its
-        children's Parameters."""
-        ret = ParameterDict(self._params.prefix)
-        ret.update(self.params)
-        for cld in self._children:
-            ret.update(cld.collect_params())
-        return ret
+    def _alias(self):
+        return self.__class__.__name__.lower()
 
     @property
     def prefix(self):
@@ -189,6 +174,47 @@ class Block(object):
                 self.dense = nn.Dense(20)
         """
         return self._scope
+
+    @property
+    def params(self):
+        """Returns this `Block`'s parameter dictionary (does not include its
+        children's parameters)."""
+        return self._params
+
+    def collect_params(self):
+        """Returns a `ParameterDict` containing this `Block` and all of its
+        children's Parameters."""
+        ret = ParameterDict(self._params.prefix)
+        ret.update(self.params)
+        for cld in self._children:
+            ret.update(cld.collect_params())
+        return ret
+
+    def save_params(self, filename):
+        """Save parameters to file.
+
+        filename : str
+            Path to file.
+        """
+        self.collect_params().save(filename, strip_prefix=self.prefix)
+
+    def load_params(self, filename, ctx, allow_missing=False,
+                    ignore_extra=False):
+        """Load parameters from file.
+
+        filename : str
+            Path to parameter file.
+        ctx : Context or list of Context
+            Context(s) initialize loaded parameters on.
+        allow_missing : bool, default False
+            Whether to silently skip loading parameters not represents in the file.
+        ignore_extra : bool, default False
+            Whether to silently ignore parameters from the file that are not
+            present in this Block.
+        """
+        self.collect_params().load(filename, ctx, allow_missing, ignore_extra,
+                                   self.prefix)
+
 
     def register_child(self, block):
         """Registers block as a child of self. `Block`s assigned to self as
