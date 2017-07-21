@@ -1052,7 +1052,7 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
   if (i >= 0) {
     CHECK_NE(src.storage_type(), kDefaultStorage);
   } else {
-    CHECK(!src.is_none()) << "src dense ndarray must have been iniatilized";
+    CHECK(!src.is_none()) << "src dense ndarray must have been initialized";
   }
   if (j >= 0) {
     CHECK_NE(storage_type(), kDefaultStorage);
@@ -1129,6 +1129,8 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
     LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
   }
+  // The copy operation was pushed to engine to execute.
+  // Need to wait here for it being completed.
   WaitToRead();
 }
 
