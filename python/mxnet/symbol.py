@@ -705,6 +705,37 @@ class Symbol(SymbolBase):
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
+    def list_inputs(self, option=1):
+        """Lists all the inputs in the symbol.
+
+        Example usage:
+        ----------
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
+        >>> c = a + b
+        >>> c.list_inputs()
+        ['a', 'b']
+
+		Input 
+		-------
+		option=0 means list all arguments.
+		option=1 means list arguments that are readed only by the graph.
+		option=2 means list arguments that are mutated by the graph.
+
+        Returns
+        -------
+        list of str
+            List of all the inputs.
+            For most symbols, this list contains only the name of this symbol.
+            For symbol groups, this is a list with the names of all symbols
+            in the group.
+        """
+        size = ctypes.c_uint()
+        sarr = ctypes.POINTER(ctypes.c_char_p)()
+        check_call(_LIB.NNSymbolListInputNames(
+            self.handle, option, ctypes.byref(size), ctypes.byref(sarr)))
+        return [py_str(sarr[i]) for i in range(size.value)]
+
     def list_outputs(self):
         """Lists all the outputs in the symbol.
 
@@ -726,7 +757,7 @@ class Symbol(SymbolBase):
         """
         size = ctypes.c_uint()
         sarr = ctypes.POINTER(ctypes.c_char_p)()
-        check_call(_LIB.MXSymbolListOutputs(
+        check_call(_LIB.NNSymbolListInputNames(
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
