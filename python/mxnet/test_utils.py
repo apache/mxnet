@@ -945,9 +945,6 @@ def download(url, fname=None, dirname=None, overwrite=False):
     """
     if fname is None:
         fname = url.split('/')[-1]
-    if not overwrite and os.path.exists(fname):
-        logging.info("%s exists, skipping download", fname)
-        return fname
 
     if dirname is None:
         dirname = os.path.dirname(fname)
@@ -961,6 +958,10 @@ def download(url, fname=None, dirname=None, overwrite=False):
             except OSError as exc:
                 if exc.errno != errno.EEXIST:
                     raise OSError('failed to create ' + dirname)
+
+    if not overwrite and os.path.exists(fname):
+        logging.info("%s exists, skipping download", fname)
+        return fname
 
     r = requests.get(url, stream=True)
     assert r.status_code == 200, "failed to open %s" % url
