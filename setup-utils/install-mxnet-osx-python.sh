@@ -28,9 +28,16 @@ export MXNET_LOG=${MXNET_HOME}/buildMXNet_mac.log
 # Insert the Homebrew directory at the top of your PATH environment variable
 export PATH=/usr/local/bin:/usr/local/sbin:$PATH
 export SLEEP_TIME=2
+
+export BREW_PKGS="pkg-config python opencv numpy homebrew/science/openblas"
+export PIP_PKGS_ALL="graphviz jupyter cython" 
+export PIP_PKGS_USER="requests opencv-python"
+
 LINE="########################################################################"
 
 echo $LINE
+echo " "
+echo "MXNet is a flexible, efficient and scalable library for Deep Learning."
 echo " "
 echo "This script installs MXNet on MacOS in \${MXNET_HOME}"
 echo "If not set, the default value of \${MXNET_HOME} = ~/mxnet"
@@ -44,7 +51,7 @@ echo " "
 echo "If you face any problems with this script, please let us know at:"
 echo "    https://stackoverflow.com/questions/tagged/mxnet"
 echo " "
-echo "Typical run-time for this script is around 7 minutes."
+echo "Typical run-time for this script is around 10 minutes."
 echo "If your environment has never been setup for development (e.g. gcc), "
 echo "it could take up to 30 minutes or longer."
 echo " "
@@ -52,10 +59,22 @@ MACOS_VERSION=`/usr/bin/uname -r`
 echo "Your macOS version is: $MACOS_VERSION"
 echo " "
 echo $LINE
-sleep ${SLEEP_TIME}
+echo " "
 
-echo "You may have to enter your password for sudo access to install python for MXNet."
-sudo ls > /dev/null
+while true; do
+	echo "NOTE: This script supports Homebrew package manager only."
+	echo " "
+	echo "      It will install/update brew and following dependent packages required for MXNet."
+	echo "      Dependent brew packages: ${BREW_PKGS}"
+	echo "      Dependent pip  packages: ${PIP_PKGS_ALL} ${PIP_PKGS_USER}"
+	read -p "Do you want to continue? (yes/no): " yn
+	echo " "
+	case $yn in
+		[Yy]* ) break;;
+		[Nn]* ) exit;;
+		* ) echo "Please answer yes or no.";;
+	esac
+done
 
 brew_pkg_install () {
 	pkg=$1
@@ -92,7 +111,6 @@ download_mxnet() {
 		sleep ${SLEEP_TIME}
 	fi
 
-	echo " "
 	echo "MXNET GIT Path = ${MXNET_GITPATH}"
 	#echo "MXNET Tag = ${MXNET_TAG}"
 	#echo "You can set \$MXNET_TAG to the appropriate github repo tag"
@@ -116,6 +134,13 @@ BREW_PATH=`/usr/bin/which brew`
 if [[ (-z ${BREW_PATH})  ||  (! -f ${BREW_PATH}) ]];
 then
 	yes '' | /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+	ret=$?
+	if [[ ${ret} != 0 ]]; then
+		echo " "
+		echo "ERROR: Return value non-zero for: homebrew installation using ruby"
+		echo " "
+		exit 1
+	fi
 else
 	runme brew update
 fi
@@ -124,28 +149,30 @@ echo $LINE
 echo " "
 
 echo " "
-echo "BEGIN: Install dependent brew packages for MXNet"
+echo "BEGIN: Install dependent brew packages for MXNet: ${BREW_PKGS}"
 
 runme brew tap homebrew/science
 
-runme brew_pkg_install pkg-config
-runme brew_pkg_install python
-runme brew_pkg_install opencv
-runme brew_pkg_install numpy
-runme brew_pkg_install homebrew/science/openblas
+for pkg in ${BREW_PKGS}
+do
+	runme brew_pkg_install ${pkg}
+done
 
-echo "END: Install dependent brew packages for MXNet"
+echo "END: Install dependent brew packages for MXNet: ${BREW_PKGS}"
 echo $LINE
 echo " "
 
-echo "BEGIN: Install dependent pip packages for MXNet"
+echo "BEGIN: Install dependent pip packages for MXNet: ${PIP_PKGS_ALL} ${PIP_PKGS_USER}"
 runme pip install --upgrade pip
-runme pip install --user requests
-runme pip install graphviz
-runme pip install jupyter
-runme pip install cython
-runme pip install --user opencv-python
-echo "END: Install dependent pip packages for MXNet"
+for pkg in ${PIP_PKGS_ALL}
+do
+	runme pip install ${pkg}
+done
+for pkg in ${PIP_PKGS_USER}
+do
+	runme pip install --user ${pkg}
+done
+echo "END: Install dependent pip packages for MXNet: ${PIP_PKGS_ALL} ${PIP_PKGS_USER}"
 echo $LINE
 echo " "
 
@@ -159,11 +186,30 @@ echo " "
 # Compile MXNet: It assumes MXNet source is in ${MXNET_HOME}
 echo "BEGIN: Compile MXNet"
 cd ${MXNET_HOME}
-runme cp make/osx.mk ./config.mk
-runme echo "USE_BLAS = openblas" >> ./config.mk
-runme echo "ADD_CFLAGS += -I/usr/local/opt/openblas/include" >> ./config.mk
-runme echo "ADD_LDFLAGS += -L/usr/local/opt/openblas/lib" >> ./config.mk
-runme echo "ADD_LDFLAGS += -L/usr/local/lib/graphviz/" >> ./config.mk
+runme cp make/osx.mk ./config.mk.tmp
+
+touch ./config.mk
+# rm any old setting of USE_BLAS, if present in config file
+egrep -v "^USE_BLAS" ./config.mk.tmp                   >> ./config.mk
+# add the new setting of USE_BLAS to the config file
+echo "USE_BLAS = openblas"                             >> ./config.mk
+echo "ADD_CFLAGS += -I/usr/local/opt/openblas/include" >> ./config.mk
+echo "ADD_LDFLAGS += -L/usr/local/opt/openblas/lib"    >> ./config.mk
+echo "ADD_LDFLAGS += -L/usr/local/lib/graphviz/"       >> ./config.mk
+echo " "
+
+echo "NOTE: The following compile-time configurations are being used."
+echo "      If you want to change any of them, edit the following file"
+echo "      in another terminal window and then press enter to continue."
+echo " "
+echo "      ${MXNET_HOME}/config.mk"
+echo " "
+echo $LINE
+# remove commented and blank lines
+egrep -v "^#" ${MXNET_HOME}/config.mk   | egrep -v "^$"
+echo $LINE
+echo " "
+read -p "Press enter to continue ..."
 echo " "
 echo "Running Make"
 echo " "
@@ -181,7 +227,6 @@ sleep ${SLEEP_TIME}
 echo $LINE
 echo " "
 
-
 echo "BEGIN: Test MXNet"
 python  << END > mxnet_test.log
 import mxnet as mx
@@ -194,18 +239,24 @@ cat << END > mxnet_test.expected
 END
 diff mxnet_test.log mxnet_test.expected
 if [[ $? = 0 ]]; then
-	echo $LINE
 	echo " "
 	echo "SUCCESS: MXNet test passed"
 	echo "SUCCESS: MXNet is successfully installed and works fine!"
 	export MXNET_VERSION=`echo "import mxnet as mx; print(mx.__version__)" | python`
 	echo "SUCCESS: MXNet Version is: $MXNET_VERSION"
 	echo "END: Test MXNet"
-	echo " "
 	echo ":-)"
+	echo " "
+	echo "FYI : You can fine-tune MXNet run-time behavior using environment variables described at:"
+	echo "      http://mxnet.io/how_to/env_var.html"
+	echo " "
+	echo "NEXT: Try the MNIST tutorial at: http://mxnet.io/tutorials/python/mnist.html"
+	echo "      Try other tutorials at   : http://mxnet.io/tutorials"
+	echo " "
+	echo $LINE
+	echo " "
 	exit 0
 else
-	echo $LINE
 	echo " "
 	echo "ERROR: MXNet test failed"
 	echo "END: Test MXNet"
