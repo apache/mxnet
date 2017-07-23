@@ -275,6 +275,32 @@ stage('Unit Test') {
       }
     }
   },
+  'Perl: CPU': {
+    node('mxnetlinux') {
+      ws('workspace/ut-perl-cpu') {
+        init_git()
+        unpack_lib('cpu')
+        timeout(time: max_time, unit: 'MINUTES') {
+          sh "${docker_run} cpu cd ./perl-package/AI-MXNetCAPI/ && perl Makefile.PL && make install"
+          sh "${docker_run} cpu cd ./perl-package/AI-NNVMCAPI/ && perl Makefile.PL && make install"
+          sh "${docker_run} cpu cd ./perl-package/AI-MXNet/ && perl Makefile.PL && make test"
+        }
+      }
+    }
+  },
+  'Perl: GPU': {
+    node('mxnetlinux') {
+      ws('workspace/ut-perl-gpu') {
+        init_git()
+        unpack_lib('gpu')
+        timeout(time: max_time, unit: 'MINUTES') {
+          sh "${docker_run} gpu cd ./perl-package/AI-MXNetCAPI/ && perl Makefile.PL && make install"
+          sh "${docker_run} gpu cd ./perl-package/AI-NNVMCAPI/ && perl Makefile.PL && make install"
+          sh "${docker_run} gpu cd ./perl-package/AI-MXNet/ && perl Makefile.PL && make test"
+        }
+      }
+    }
+  },
   'R: CPU': {
     node('mxnetlinux') {
       ws('workspace/ut-r-cpu') {
