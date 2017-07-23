@@ -281,9 +281,7 @@ stage('Unit Test') {
         init_git()
         unpack_lib('cpu')
         timeout(time: max_time, unit: 'MINUTES') {
-          sh "${docker_run} cpu cd ./perl-package/AI-MXNetCAPI/ && perl Makefile.PL && make install"
-          sh "${docker_run} cpu cd ./perl-package/AI-NNVMCAPI/ && perl Makefile.PL && make install"
-          sh "${docker_run} cpu cd ./perl-package/AI-MXNet/ && perl Makefile.PL && make test"
+          sh "${docker_run} cpu ./perl-package/test.sh /workspace /workspace/ut-perl-cpu"
         }
       }
     }
@@ -294,9 +292,7 @@ stage('Unit Test') {
         init_git()
         unpack_lib('gpu')
         timeout(time: max_time, unit: 'MINUTES') {
-          sh "${docker_run} gpu cd ./perl-package/AI-MXNetCAPI/ && perl Makefile.PL && make install"
-          sh "${docker_run} gpu cd ./perl-package/AI-NNVMCAPI/ && perl Makefile.PL && make install"
-          sh "${docker_run} gpu cd ./perl-package/AI-MXNet/ && perl Makefile.PL && make test"
+          sh "${docker_run} gpu ./perl-package/test.sh /workspace /workspace/ut-perl-gpu"
         }
       }
     }
