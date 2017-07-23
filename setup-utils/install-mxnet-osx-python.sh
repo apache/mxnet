@@ -58,7 +58,7 @@ print_intro_msg() {
 	echo "If this directory is already present, it is renamed to retain earlier contents."
 	echo "You may want to check and delete this directory if not required."
 	echo " "
-	echo "This script has been tested on: MacOS El Capitan and Sierra"
+	echo "This script has been tested on: MacOS El Capitan (10.11) and Sierra (10.12)"
 	echo " "
 	echo "If you face any problems with this script, please let us know at:"
 	echo "    https://stackoverflow.com/questions/tagged/mxnet"
@@ -90,7 +90,6 @@ chkret() {
 } # chkret()
 
 chk_mac_vers() {
-	echo "NOTE: This script is supported on: MacOS El Capitan (10.11) and Sierra (10.12)"
 	export mac_vers=`sw_vers -productVersion | cut -d '.' -f 1,2`
 	if [[ $mac_vers != "10.11" && $mac_vers != "10.12" ]];
 	then
@@ -111,7 +110,7 @@ install_brew() {
 	while true; do
 		echo "This script will install/update brew and "
 		echo "following dependent packages required for MXNet."
-		echo "      Dependent port packages: ${BREW_PKGS}"
+		echo "      Dependent brew packages: ${BREW_PKGS}"
 		echo "      Dependent pip  packages: ${PIP_PKGS_ALL} ${PIP_PKGS_USER}"
 		read -p "Do you want to continue? (y/n): " response
 		echo " "
@@ -281,6 +280,8 @@ install_mac_pkg_manager() {
 
 	if [[ $MAC_PKG_ASK -eq 1 ]];
 	then
+		export MAC_BREW=0
+		export MAC_PORT=0
 		while true; do
 			echo " "
 			echo "NOTE: This script supports Homebrew OR Port package manager."
@@ -295,11 +296,11 @@ install_mac_pkg_manager() {
 		done
 	fi
 
-	if [[ $MAC_BREW -eq 1 ]];
+	if [[ $MAC_PORT -eq 1 ]];
 	then
-		install_brew
-	else
 		install_port
+	else
+		install_brew
 	fi
 } # install_mac_pkg_manager
 
@@ -308,18 +309,22 @@ install_dep_pip_for_mxnet() {
 	echo "BEGIN: Install dependent pip packages for MXNet: "
 	echo "${PIP_PKGS_ALL} ${PIP_PKGS_USER}"
 	echo " "
-	chkret sudo easy_install pip
 
-	chkret pip install --upgrade pip
+	# NOTE: sudo used here
+	chkret sudo easy_install pip
+	chkret sudo pip install --upgrade pip
 	for pkg in ${PIP_PKGS_ALL}
 	do
 		chkret sudo pip install ${pkg}
 	done
+	#chkret sudo pip install --upgrade numpy
+
+	# NOTE: no sudo used here
 	for pkg in ${PIP_PKGS_USER}
 	do
 		chkret pip install --user ${pkg}
 	done
-	chkret pip install --upgrade numpy
+
 	echo "END: Install dependent pip packages for MXNet: ${PIP_PKGS_ALL} ${PIP_PKGS_USER}"
 	echo $LINE
 	echo " "
@@ -418,7 +423,7 @@ install_mxnet_python() {
 
 test_mxnet_python() {
 	echo "BEGIN: Test MXNet"
-	python  << END > mxnet_test.log
+	python  << END >> mxnet_test.log
 import mxnet as mx
 a = mx.nd.ones((2, 3));
 print ((a*2).asnumpy());
