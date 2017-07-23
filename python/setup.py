@@ -74,7 +74,7 @@ def config_cython():
 setup(name='mxnet',
       version=__version__,
       description=open(os.path.join(CURRENT_DIR, 'README.md')).read(),
-      packages=find_packages(where=CURRENT_DIR),
+      packages=find_packages(),
       data_files=[('mxnet', [LIB_PATH[0]])],
       url='https://github.com/dmlc/mxnet',
       ext_modules=config_cython(),
