@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from test_operator import *
 from test_optimizer import *
 from test_random import *
-from test_sparse_operator import test_cast_storage_ex, test_sparse_dot
+from test_sparse_operator import test_cast_storage_ex, test_sparse_dot, test_sparse_nd_zeros
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import check_consistency, set_default_context

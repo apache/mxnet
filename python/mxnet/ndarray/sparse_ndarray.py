@@ -387,7 +387,7 @@ class RowSparseNDArray(SparseNDArray):
     ``dense[rsp.indices[i], :, :, :, ...] = rsp.values[i, :, :, :, ...]``
 
     RowSparseNDArray is used principally in the definition of gradients for operations
-    that have sparse gradients (e.g. SparseEmbedding).
+    that have sparse gradients (e.g. dot with sparse inputs).
 
     Examples
     --------

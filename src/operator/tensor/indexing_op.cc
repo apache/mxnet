@@ -86,49 +86,6 @@ NNVM_REGISTER_OP(_backward_Embedding)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpBackward<cpu>);
 
-NNVM_REGISTER_OP(SparseEmbedding)
-.describe(R"doc(Represents words or other sparse inputs by dense continuous vectors.
-It assumes that the input is in one-hot form. E.g., for a vocabulary size of 10,000,
- each input vector is expected to have dimension 10,000.
-The index of the non-zero entry is the index of the word or item it represents.
-
-The corresponding embedding vectors are stored as rows of a matrix.
-Hence, mapping an input word to its embedding is implemented as a matrix product.
-
-The gradient of an embedding matrix has the form of gradient vectors that are only
- non-zero for words seen in a minibatch.
-)doc" ADD_FILELINE)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<EmbeddingParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data", "weight"};
-  })
-.set_attr<nnvm::FInferShape>("FInferShape", SparseEmbeddingShape)
-.set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType)
-.set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingForwardStorageType)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingForwardEx<cpu>)
-.set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    return MakeNonlossGradNode("_backward_SparseEmbedding", n, ograds,
-                               {n->inputs[0]}, n->attrs.dict);
-  })
-.add_argument("data", "NDArray-or-Symbol",
-              "The input array to the sparse embedding operator.")
-.add_argument("weight", "NDArray-or-Symbol", "The embedding weight matrix.")
-.add_arguments(EmbeddingParam::__FIELDS__());
-
-NNVM_REGISTER_OP(_backward_SparseEmbedding)
-.set_num_inputs(2)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingBackwardEx<cpu>);
-
 NNVM_REGISTER_OP(take)
 .describe(R"code(Takes elements from an input array along the given axis.
 
