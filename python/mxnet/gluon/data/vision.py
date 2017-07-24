@@ -115,7 +115,7 @@ class CIFAR10(_DownloadedDataset):
 
         if self._train:
             filename = os.path.join(self._root, 'cifar-10-batches-bin/data_batch_%d.bin')
-            data, label = zip(*[self._read_batch(filename%i) for i in range(1,6)])
+            data, label = zip(*[self._read_batch(filename%i) for i in range(1, 6)])
             data = np.concatenate(data)
             label = np.concatenate(label)
         else:

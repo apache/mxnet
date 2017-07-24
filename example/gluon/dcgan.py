@@ -142,8 +142,8 @@ with netD.name_scope():
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
 # initialize the generator and the discriminator
-netG.collect_params().initialize(mx.init.Normal(0.02), ctx=ctx)
-netD.collect_params().initialize(mx.init.Normal(0.02), ctx=ctx)
+netG.initialize(mx.init.Normal(0.02), ctx=ctx)
+netD.initialize(mx.init.Normal(0.02), ctx=ctx)
 
 # trainer for the generator and the discriminator
 trainerG = gluon.Trainer(netG.collect_params(), 'adam', {'learning_rate': opt.lr, 'beta1': opt.beta1})
