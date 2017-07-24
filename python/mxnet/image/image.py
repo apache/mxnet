@@ -410,7 +410,7 @@ def random_size_crop(src, size, min_area, ratio, interp=2):
         if random.random() < 0.5:
             new_h, new_w = new_w, new_h
 
-        if new_w <= w and new_h < h:
+        if new_w <= w and new_h <= h:
             x0 = random.randint(0, w - new_w)
             y0 = random.randint(0, h - new_h)
 
