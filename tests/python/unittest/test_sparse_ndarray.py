@@ -60,18 +60,6 @@ def test_sparse_nd_elementwise_fallback():
         check_sparse_nd_elemwise_binary(shape, ['row_sparse', 'row_sparse'], op, g)
 
 
-def test_sparse_nd_zeros():
-    def check_sparse_nd_zeros(stype, shape):
-        zero = mx.nd.zeros(shape)
-        sparse_zero = mx.nd.zeros(shape=shape, stype=stype)
-        assert_almost_equal(sparse_zero.asnumpy(), zero.asnumpy())
-
-    shape = rand_shape_2d()
-    check_sparse_nd_zeros('row_sparse', shape)
-    check_sparse_nd_zeros('csr', shape)
-    check_sparse_nd_zeros('default', shape)
-
-
 def test_sparse_nd_copy():
     def check_sparse_nd_copy(from_stype, to_stype):
         shape = rand_shape_2d()
