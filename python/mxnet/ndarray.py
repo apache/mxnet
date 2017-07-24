@@ -53,7 +53,9 @@ _DTYPE_NP_TO_MX = {
     np.float64 : 1,
     np.float16 : 2,
     np.uint8   : 3,
-    np.int32   : 4
+    np.int32   : 4,
+    np.int8    : 5,
+    np.int64   : 6,
 }
 
 _DTYPE_MX_TO_NP = {
@@ -62,7 +64,9 @@ _DTYPE_MX_TO_NP = {
     1 : np.float64,
     2 : np.float16,
     3 : np.uint8,
-    4 : np.int32
+    4 : np.int32,
+    5 : np.int8,
+    6 : np.int64,
 }
 
 _GRAD_REQ_MAP = {
@@ -271,6 +275,10 @@ fixed-size items.
                          "Please convert to number with asscalar() first.")
 
     __nonzero__ = __bool__
+
+    def __len__(self):
+        """Number of element along the first axis."""
+        return self.shape[0]
 
     def __getstate__(self):
         handle = self.handle

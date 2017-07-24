@@ -10,9 +10,6 @@ import mxnet as mx
 from mxnet import gluon, autograd
 from mxnet.gluon import nn
 
-from data import mnist_iterator
-
-
 # Parse CLI arguments
 
 parser = argparse.ArgumentParser(description='MXNet Gluon MNIST Example')
@@ -41,16 +38,16 @@ with net.name_scope():
 
 # data
 
-# train_data, val_data = mnist_iterator(batch_size=opt.batch_size, input_shape=(28*28,))
-
-transform = lambda data, label: (data.astype(np.float32)/255, label)
+def transformer(data, label):
+    data = data.reshape((-1,)).astype(np.float32)/255
+    return data, label
 
 train_data = gluon.data.DataLoader(
-    gluon.data.MNIST('./data', train=True, transform=transform),
+    gluon.data.vision.MNIST('./data', train=True, transform=transformer),
     batch_size=opt.batch_size, shuffle=True, last_batch='discard')
 
 val_data = gluon.data.DataLoader(
-    gluon.data.MNIST('./data', train=False, transform=transform),
+    gluon.data.vision.MNIST('./data', train=False, transform=transformer),
     batch_size=opt.batch_size, shuffle=False)
 
 # train
@@ -68,10 +65,10 @@ def test(ctx):
 
 def train(epochs, ctx):
     # Collect all parameters from net and its children, then initialize them.
-    net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+    net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
     # Trainer is for updating parameters with gradient.
     trainer = gluon.Trainer(net.collect_params(), 'sgd',
-                          {'learning_rate': opt.lr, 'momentum': opt.momentum})
+                            {'learning_rate': opt.lr, 'momentum': opt.momentum})
     metric = mx.metric.Accuracy()
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
@@ -103,7 +100,7 @@ def train(epochs, ctx):
         name, val_acc = test(ctx)
         print('[Epoch %d] Validation: %s=%f'%(epoch, name, val_acc))
 
-    net.collect_params().save('mnist.params')
+    net.save_params('mnist.params')
 
 
 if __name__ == '__main__':
