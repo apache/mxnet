@@ -53,19 +53,22 @@ inline void CastStorageDnsRspImpl(mshadow::Stream<cpu>* s, const TBlob& dns, NDA
   MSHADOW_TYPE_SWITCH(dns.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(rsp->aux_type(rowsparse::kIdx), RType, {  // row idx type
       const index_t num_rows = dns.shape_[0];
-      const index_t num_cols = dns.shape_[1];
+      const index_t row_length = dns.shape_.ProdShape(1, dns.shape_.ndim());
       rsp->CheckAndAllocAuxData(rowsparse::kIdx, mshadow::Shape1(num_rows));
       TBlob row_idx_blob = rsp->aux_data(rowsparse::kIdx);
       RType* row_idx = row_idx_blob.dptr<RType>();
       mxnet_op::Kernel<MarkRspRowIdx, cpu>::Launch(s, num_rows, row_idx,
-          dns.dptr<DType>(), num_cols);
+          dns.dptr<DType>(), row_length);
       index_t nnr = 0;
-      nnr = mxnet::common::ParallelAccumulate(row_idx, num_rows, nnr);
+      nnr = common::ParallelAccumulate(row_idx, num_rows, nnr);
       rsp->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
       if (0 == nnr) return;
-      rsp->CheckAndAllocData(mshadow::Shape2(nnr, num_cols));
-      mshadow::Tensor<cpu, 2, DType> dns_data = dns.FlatTo2D<cpu, DType>(s);
-      mshadow::Tensor<cpu, 2, DType> rsp_data = rsp->data().FlatTo2D<cpu, DType>(s);
+      auto storage_shape = dns.shape_;
+      storage_shape[0] = nnr;
+      rsp->CheckAndAllocData(storage_shape);
+      TShape shape_2d = mshadow::Shape2(num_rows, row_length);
+      auto dns_data = dns.reshape(shape_2d).FlatTo2D<cpu, DType>(s);
+      auto rsp_data = rsp->data().reshape(shape_2d).FlatTo2D<cpu, DType>(s);
       size_t idx = 0;
       for (index_t i = 0; i < num_rows; ++i) {
         if (row_idx[i] > 0) {
@@ -111,9 +114,9 @@ void CastStorageRspDnsImpl(mshadow::Stream<xpu>* s, const NDArray& rsp, TBlob* d
         auto in_data = rsp.data().FlatTo2D<xpu, DType>(s).dptr_;
         auto out_data = dns->FlatTo2D<xpu, DType>(s).dptr_;
         auto num_rows = rsp.aux_shape(rowsparse::kIdx).Size();
-        auto rsp_shape = rsp.shape();
-        auto width = rsp_shape.ProdShape(1, rsp_shape.ndim());
-        mxnet_op::Kernel<CastStorageRspDnsKernel, xpu>::Launch(s, num_rows, width, in_idx,
+        const auto shape = rsp.shape();
+        auto row_length = shape.ProdShape(1, shape.ndim());
+        mxnet_op::Kernel<CastStorageRspDnsKernel, xpu>::Launch(s, num_rows, row_length, in_idx,
                                                                in_data, out_data);
       }
     });

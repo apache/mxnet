@@ -683,7 +683,6 @@ class NDArray {
       if (kRowSparseStorage == storage_type) {
         // For row sparse, aux_shape indicates the number of rows to allocate
         auto aux_shape = aux_shapes[rowsparse::kIdx];
-        CHECK_EQ(shape.ndim(), 2) << "High dim RowSparse not yet implemented";
         CheckAndAllocAuxData(rowsparse::kIdx, aux_shape);
         TShape storage_shape(shape);
         storage_shape[0] = aux_shape[0];

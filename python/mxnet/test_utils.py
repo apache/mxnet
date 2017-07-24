@@ -80,10 +80,6 @@ def rand_sparse_ndarray(shape, stype, density=None):
     """Generate a random sparse ndarray. Returns the ndarray, value(np) and indices(np) """
     density = rnd.rand() if density is None else density
     if stype == 'row_sparse':
-        # TODO(haibin) support high dim sparse ndarray
-        assert(len(shape) < 3)
-        prod = np.prod(shape)
-        num_cols = int(prod / shape[0])
         # sample index
         idx_sample = rnd.rand(shape[0])
         indices = np.argwhere(idx_sample < density).flatten()
@@ -91,7 +87,7 @@ def rand_sparse_ndarray(shape, stype, density=None):
             result = mx.nd.zeros(shape, stype='row_sparse')
             return result, (np.array([], dtype='int64'), np.array([], dtype='int64'))
         # generate random values
-        val = rnd.rand(indices.shape[0], num_cols)
+        val = rnd.rand(indices.shape[0], *shape[1:])
         arr = mx.nd.row_sparse(val, indices, shape, indices_type=np.int64)
         return arr, (val, indices)
     elif stype == 'csr':
@@ -114,6 +110,8 @@ def rand_ndarray(shape, stype, density=None):
 def rand_shape_2d(dim0=10, dim1=10):
     return rnd.randint(1, dim0), rnd.randint(1, dim1)
 
+def rand_shape_3d(dim0=10, dim1=10, dim2=10):
+    return rnd.randint(1, dim0), rnd.randint(1, dim1), rnd.randint(1, dim2)
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
     """Compatible reduce for old version of NumPy.
