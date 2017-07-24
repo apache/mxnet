@@ -329,7 +329,7 @@ class SparseNDArray(NDArray):
 
 # pylint: disable=abstract-method
 class CSRNDArray(SparseNDArray):
-    """A CSRNDArray represents a NDArray as three separate arrays: `values`,
+    """A CSRNDArray represents a NDArray as three separate arrays: `data`,
     `indptr` and `indices`. It uses the standard CSR representation where the column indices for
     row i are stored in indices[indptr[i]:indptr[i+1]] and their corresponding values are stored
     in values[indptr[i]:indptr[i+1]].
