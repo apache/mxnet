@@ -164,9 +164,9 @@ void BinaryComputeRspRspImpl(const nnvm::NodeAttrs& attrs,
       auto indices_r = rhs.aux_data(kIdx).dptr<IType>();
       auto indices_out = output.aux_data(kIdx).dptr<IType>();
       // Data
-      auto data_l = lhs.data().reshape(Shape2(num_rows_l, row_len)).FlatTo2D<xpu, DType>(s);
-      auto data_r = rhs.data().reshape(Shape2(num_rows_r, row_len)).FlatTo2D<xpu, DType>(s);
-      auto out = output.data().reshape(Shape2(num_rows_total, row_len)).FlatTo2D<xpu, DType>(s);
+      auto data_l = lhs.data().get_with_shape<cpu, 2, DType>(Shape2(num_rows_l, row_len), s);
+      auto data_r = rhs.data().get_with_shape<cpu, 2, DType>(Shape2(num_rows_r, row_len), s);
+      auto out = output.data().get_with_shape<cpu, 2, DType>(Shape2(num_rows_total, row_len), s);
 
       // TODO(haibin) A more appropriate way: Copy to output, then apply ops
       size_t iter_l = 0;
@@ -203,6 +203,7 @@ void BinaryComputeRspRspImpl(const nnvm::NodeAttrs& attrs,
         Copy(out[iter_out++], data_r[iter_r++], s);
       }
       auto new_ashape = output.aux_shape(rowsparse::kIdx);
+      CHECK_GT(new_ashape[0], num_common_rows);
       new_ashape[0] -= num_common_rows;
       output.set_aux_shape(rowsparse::kIdx, new_ashape);
     });

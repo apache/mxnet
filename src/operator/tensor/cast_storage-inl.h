@@ -68,8 +68,8 @@ inline void CastStorageDnsRspImpl(mshadow::Stream<cpu>* s, const TBlob& dns, NDA
       auto storage_shape = dns.shape_;
       storage_shape[0] = nnr;
       rsp->CheckAndAllocData(storage_shape);
-      auto dns_data = dns.reshape(Shape2(num_rows, row_length)).FlatTo2D<cpu, DType>(s);
-      auto rsp_data = rsp->data().reshape(Shape2(nnr, row_length)).FlatTo2D<cpu, DType>(s);
+      auto dns_data = dns.get_with_shape<cpu, 2, DType>(Shape2(num_rows, row_length), s);
+      auto rsp_data = rsp->data().get_with_shape<cpu, 2, DType>(Shape2(nnr, row_length), s);
       size_t idx = 0;
       for (index_t i = 0; i < num_rows; ++i) {
         if (row_idx[i] > 0) {
