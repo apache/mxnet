@@ -323,6 +323,7 @@ def test_sparse_nd_negate():
 
 def test_sparse_nd_broadcast():
     sample_num = 1000
+    # TODO(haibin) test with more than 2 dimensions
     def test_broadcast_to(stype):
         for i in range(sample_num):
             ndim = 2
