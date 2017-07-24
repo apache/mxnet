@@ -111,8 +111,8 @@ void CastStorageRspDnsImpl(mshadow::Stream<xpu>* s, const NDArray& rsp, TBlob* d
       if (rsp.storage_initialized()) {
         // copy over row by row
         auto in_idx = rsp.aux_data(rowsparse::kIdx).FlatTo1D<xpu, IType>(s).dptr_;
-        auto in_data = rsp.data().FlatTo2D<xpu, DType>(s).dptr_;
-        auto out_data = dns->FlatTo2D<xpu, DType>(s).dptr_;
+        auto in_data = rsp.data().dptr<DType>();
+        auto out_data = dns->dptr<DType>();
         auto num_rows = rsp.aux_shape(rowsparse::kIdx).Size();
         const auto shape = rsp.shape();
         auto row_length = shape.ProdShape(1, shape.ndim());
