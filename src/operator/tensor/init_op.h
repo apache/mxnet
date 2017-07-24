@@ -174,10 +174,10 @@ void FillZerosCsrImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
 // This operator never needs to fall back, since there's no input NDArray
 template<typename xpu>
 void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx,
-                 const std::vector<NDArray>& inputs,
-                 const std::vector<OpReqType>& req,
-                 const std::vector<NDArray>& outputs) {
+                        const OpContext& ctx,
+                        const std::vector<NDArray>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<NDArray>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
