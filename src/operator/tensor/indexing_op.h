@@ -790,6 +790,7 @@ void SparseRetainOpForwardEx(const nnvm::NodeAttrs& attrs,
   output_nd.CheckAndAlloc({mshadow::Shape1(idx_data.Size())});
   TBlob output_data = output_nd.data();
   TBlob output_idx = output_nd.aux_data(rowsparse::kIdx);
+  const auto row_length = input_data.shape_.ProdShape(1, input_data.shape_.ndim());
 
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -799,7 +800,7 @@ void SparseRetainOpForwardEx(const nnvm::NodeAttrs& attrs,
         Kernel<set_zero, xpu>::Launch(s, output_data.Size(), output_data.dptr<DType>());
         Kernel<SparseRetainRspForward, xpu>::Launch(s, idx_data.Size(), output_data.dptr<DType>(),
             output_idx.dptr<RType>(), input_data.dptr<DType>(), input_idx.dptr<RType>(),
-            idx_data.dptr<IType>(), input_data.shape_[0], input_data.shape_[1]);
+            idx_data.dptr<IType>(), input_data.shape_[0], row_length);
       });
     });
   });
@@ -848,6 +849,7 @@ void SparseRetainOpBackwardEx(const nnvm::NodeAttrs& attrs,
   in_grad_nd.CheckAndAlloc({mshadow::Shape1(idx_data.Size())});
   TBlob in_grad_data = in_grad_nd.data();
   TBlob in_grad_idx = in_grad_nd.aux_data(rowsparse::kIdx);
+  const auto row_length = out_grad_data.shape_.ProdShape(1, out_grad_data.shape_.ndim());
 
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -857,7 +859,7 @@ void SparseRetainOpBackwardEx(const nnvm::NodeAttrs& attrs,
         MXNET_ASSIGN_REQ_SWITCH(req[sr::kArr], req_type, {
           Kernel<SparseRetainRspBackward<req_type>, xpu>::Launch(
               s, in_grad_idx.Size(), in_grad_data.dptr<DType>(), in_grad_idx.dptr<RType>(),
-              out_grad_data.dptr<DType>(), idx_data.dptr<IType>(), out_grad_data.shape_[1]);
+              out_grad_data.dptr<DType>(), idx_data.dptr<IType>(), row_length);
         });
       });
     });
