@@ -139,7 +139,9 @@ def test_sparse_dot():
     test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False)
     test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True)
     test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False, 0.05)
-    test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True, 0.05)
+    # TODO(haibin/jun/stefan) test dot(csr.T, row_sparse) = dns gpu version
+    if Context.default_ctx == mx.cpu():
+        test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True, 0.05)
 
 
 def test_sparse_slice():
@@ -178,6 +180,18 @@ def test_sparse_retain():
         idx = mx.symbol.Variable('indices')
         sym = mx.sym.sparse_retain(data=data, indices=idx)
         check_numeric_gradient(sym, [rsp, indices], grad_nodes=['data'], grad_stype_dict={'data': 'row_sparse'})
+
+def test_sparse_nd_zeros():
+    def check_sparse_nd_zeros(stype, shape):
+        zero = mx.nd.zeros(shape)
+        sparse_zero = mx.nd.zeros(shape=shape, stype=stype)
+        assert_almost_equal(sparse_zero.asnumpy(), zero.asnumpy())
+
+    shape = rand_shape_2d()
+    check_sparse_nd_zeros('row_sparse', shape)
+    check_sparse_nd_zeros('csr', shape)
+    check_sparse_nd_zeros('default', shape)
+
 
 if __name__ == '__main__':
     import nose
