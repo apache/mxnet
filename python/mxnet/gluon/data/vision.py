@@ -95,7 +95,6 @@ class CIFAR10(_DownloadedDataset):
     """
     def __init__(self, root, train=True, transform=lambda data, label: (data, label)):
         super(CIFAR10, self).__init__(root, train, transform)
-        print self._data.shape, self._label.shape
 
     def _read_batch(self, filename):
         with open(filename, 'rb') as fin:
