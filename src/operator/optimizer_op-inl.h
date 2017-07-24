@@ -131,10 +131,10 @@ inline void SGDUpdateDnsRspImpl(const SGDParam& param,
   MSHADOW_REAL_TYPE_SWITCH(weight.type_flag_, DType, {
     MSHADOW_IDX_TYPE_SWITCH(grad.aux_type(rowsparse::kIdx), IType, {
       MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-        auto weight_data = weight.dptr<DType>();
-        auto grad_idx = grad.aux_data(rowsparse::kIdx).dptr<IType>();
-        auto grad_val = grad.data().dptr<DType>();
-        auto num_rows = grad.aux_shape(rowsparse::kIdx)[0];
+        DType* weight_data = weight.dptr<DType>();
+        IType* grad_idx = grad.aux_data(rowsparse::kIdx).dptr<IType>();
+        DType* grad_val = grad.data().dptr<DType>();
+        index_t num_rows = grad.aux_shape(rowsparse::kIdx)[0];
         auto row_length = weight.shape_.ProdShape(1, weight.ndim());
         Kernel<SGDDnsRspKernel<req_type>, xpu>::Launch(s, num_rows, row_length,
           out->dptr<DType>(), weight_data, grad_idx, grad_val,
@@ -195,9 +195,9 @@ inline void SGDUpdateRspDnsImpl(const SGDParam& param,
   Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(weight.dtype(), DType, {
     MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-      auto weight_data = weight.data().dptr<DType>();
-      auto grad_data = grad.dptr<DType>();
-      auto num_rows = weight.aux_shape(kIdx)[0];
+      DType* weight_data = weight.data().dptr<DType>();
+      DType* grad_data = grad.dptr<DType>();
+      index_t num_rows = weight.aux_shape(kIdx)[0];
       auto num_cols = weight.shape().ProdShape(1, weight.shape().ndim());
       Kernel<SGDRspDnsKernel<req_type>, xpu>::Launch(s, num_rows, num_cols,
         out->data().dptr<DType>(), weight_data, grad_data,
@@ -366,12 +366,12 @@ inline void SGDMomUpdateDnsRspDnsImpl(const SGDMomParam& param,
   MSHADOW_REAL_TYPE_SWITCH(weight.type_flag_, DType, {
     MSHADOW_IDX_TYPE_SWITCH(grad.aux_type(kIdx), IType, {
       MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-        auto weight_data = weight.dptr<DType>();
-        auto grad_idx = grad.aux_data(kIdx).dptr<IType>();
-        auto grad_val = grad.data().dptr<DType>();
-        auto mom_data = mom.dptr<DType>();
-        auto out_data = out->dptr<DType>();
-        auto num_rows = grad.aux_shape(kIdx)[0];
+        DType* weight_data = weight.dptr<DType>();
+        IType* grad_idx = grad.aux_data(kIdx).dptr<IType>();
+        DType* grad_val = grad.data().dptr<DType>();
+        DType* mom_data = mom.dptr<DType>();
+        DType* out_data = out->dptr<DType>();
+        index_t num_rows = grad.aux_shape(kIdx)[0];
         auto row_length = weight.shape_.ProdShape(1, weight.ndim());
         Kernel<SGDMomDnsRspDnsKernel<req_type>, xpu>::Launch(s, num_rows, row_length,
           out_data, mom_data, weight_data, grad_idx, grad_val,
@@ -443,10 +443,10 @@ inline void SGDMomUpdateRspDnsImpl(const SGDMomParam& param,
   if (out_req == kWriteTo) out_req = kWriteInplace;
   MSHADOW_REAL_TYPE_SWITCH(weight.dtype(), DType, {
     MXNET_ASSIGN_REQ_SWITCH(out_req, req_type, {
-      auto weight_data = weight.data().dptr<DType>();
-      auto grad_data = grad.dptr<DType>();
-      auto mom_data = mom.data().dptr<DType>();
-      auto num_rows = weight.aux_shape(kIdx)[0];
+      DType* weight_data = weight.data().dptr<DType>();
+      DType* grad_data = grad.dptr<DType>();
+      DType* mom_data = mom.data().dptr<DType>();
+      index_t num_rows = weight.aux_shape(kIdx)[0];
       auto num_cols = weight.shape().ProdShape(1, weight.shape().ndim());
       Kernel<SGDMomRspDnsKernel<req_type>, xpu>::Launch(s, num_rows, num_cols,
         out->data().dptr<DType>(), mom_data, weight_data, grad_data,
