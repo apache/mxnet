@@ -196,21 +196,6 @@ class NDArray {
   }
 
   /*!
-   * \brief For sparse operations, the storage shape is an estimated value
-   * in the beginning for allocating enough capacity for the final result.
-   * After the operation is done, the exact size of the shape is known
-   * and need to be reset using this function. For example, adding
-   * two CSRs with nnz1 and nnz2 as their numbers of non-zero values, respectively,
-   * would allocate the array of size nnz1+nnz2 first and get the final
-   * nnz that is smaller than nnz1+nnz2. Therefore, the storage shape's size
-   * needs to be shrunk from nnz1+nnz2 to nnz.
-   */
-  inline void set_storage_shape(const TShape& sshape) {
-    CHECK(storage_type() != kDefaultStorage);
-    ptr_->storage_shape = sshape;
-  }
-
-  /*!
    * \return the shape of aux data at ith index. If it doesn't exist, return an empty one.
    */
   inline const TShape aux_shape(size_t i) const {
@@ -226,7 +211,7 @@ class NDArray {
    * the shape is known and need to be reset using this function.
    */
   inline void set_aux_shape(size_t i, const TShape& shape) const {
-    ptr_->aux_shapes[i] = shape;
+    ptr_->set_aux_shape(i, shape);
   }
 
   /*!
@@ -670,6 +655,18 @@ class NDArray {
       }
     }
 
+    /*! \brief set the shape for ith aux data, and update storage shape if necessary */
+    inline void set_aux_shape(const size_t i, const TShape& shape) {
+      aux_shapes[i] = shape;
+      if (storage_shape.ndim() > 0) {
+        if (storage_type == kRowSparseStorage && i == rowsparse::kIdx) {
+          storage_shape[0] = shape[0];
+        } else if (storage_type == kCSRStorage && i == csr::kIdx) {
+          storage_shape[0] = shape[0];
+        }
+      }
+    }
+
     /*! \brief check if delay alloc is on, do alloc if not yet done */
     inline void CheckAndAlloc(void) {
       if (delay_alloc) {
@@ -735,7 +732,7 @@ class NDArray {
         aux_handles[i] = Storage::Get()->Alloc(aux_bytes, ctx);
       }
       // init shape
-      aux_shapes[i] = shape;
+      set_aux_shape(i, shape);
     }
     /*! \brief destructor */
     ~Chunk() {

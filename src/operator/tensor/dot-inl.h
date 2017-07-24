@@ -502,7 +502,6 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<cpu>* s,
             index_t nnr = 0;
             nnr = mxnet::common::ParallelAccumulate(row_idx, ret->shape()[0], nnr);
             ret->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
-            ret->set_storage_shape(mshadow::Shape2(nnr, ret->shape()[1]));
             if (0 == nnr) return;
             mshadow::Tensor<cpu, 2, DType> rsp_data = data_out.FlatTo2D<cpu, DType>(s);
             size_t idx = 0;
@@ -636,7 +635,6 @@ inline void DotCsrRspRspImpl(mshadow::Stream<cpu>* s,
             index_t nnr = 0;
             nnr = mxnet::common::ParallelAccumulate(row_idx, ret->shape()[0], nnr);
             ret->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
-            ret->set_storage_shape(mshadow::Shape2(nnr, ret->shape()[1]));
             if (0 == nnr) return;
             mshadow::Tensor<cpu, 2, DType> rsp_data = data_out.FlatTo2D<cpu, DType>(s);
             size_t idx = 0;

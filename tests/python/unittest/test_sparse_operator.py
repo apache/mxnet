@@ -24,12 +24,13 @@ def check_elemwise_add_ex(lhs_stype, rhs_stype, shape, lhs_grad_stype=None, rhs_
 
 
 def test_elemwise_add_ex():
-    shape = rand_shape_2d()
-    check_elemwise_add_ex('default', 'default', shape)
-    check_elemwise_add_ex('default', 'row_sparse', shape)
-    check_elemwise_add_ex('row_sparse', 'default', shape)
-    check_elemwise_add_ex('row_sparse', 'row_sparse', shape,
-                          lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
+    shapes = [rand_shape_2d(), rand_shape_3d()]
+    for shape in shapes:
+        check_elemwise_add_ex('default', 'default', shape)
+        check_elemwise_add_ex('default', 'row_sparse', shape)
+        check_elemwise_add_ex('row_sparse', 'default', shape)
+        check_elemwise_add_ex('row_sparse', 'row_sparse', shape,
+                              lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
 
 
 # TODO(haibin) randomize this test

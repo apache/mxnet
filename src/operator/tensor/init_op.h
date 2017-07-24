@@ -157,7 +157,6 @@ void FillZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
   auto storage_shape = dst->storage_shape();
   storage_shape[0] = 0;
   dst->set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
-  dst->set_storage_shape(storage_shape);
 }
 
 // Fill a CSR NDArray with zeros by updating the aux shape.
@@ -168,7 +167,6 @@ void FillZerosCsrImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
   TShape new_shape(mshadow::Shape1(0));
   dst->set_aux_shape(csr::kIndPtr, new_shape);
   dst->set_aux_shape(csr::kIdx, new_shape);
-  dst->set_storage_shape(new_shape);
 }
 
 // This operator never needs to fall back, since there's no input NDArray
