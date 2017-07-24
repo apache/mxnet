@@ -93,13 +93,13 @@ struct SGDDnsRspKernel {
   // IType is row sparse idx type
   // i is the ith row in row sparse gradient
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, size_t width, DType* out, const DType* weight,
+  MSHADOW_XINLINE static void Map(int i, size_t row_length, DType* out, const DType* weight,
                                   const IType* grad_idx, const DType *grad_val,
                                   const DType clip_gradient, const DType lr,
                                   const DType wd, const DType rescale_grad) {
-    for (size_t j = 0; j < width; j++) {
-      uint64_t data_i = grad_idx[i] * width + j;
-      uint64_t grad_i = i * width + j;
+    for (size_t j = 0; j < row_length; j++) {
+      uint64_t data_i = grad_idx[i] * row_length + j;
+      uint64_t grad_i = i * row_length + j;
       if (clip_gradient >= 0.0f) {
         KERNEL_ASSIGN(out[data_i], req, (1.f - lr * wd) * weight[data_i] -
                      (lr) * mshadow_op::clip::Map(rescale_grad * grad_val[grad_i], clip_gradient));
@@ -135,8 +135,8 @@ inline void SGDUpdateDnsRspImpl(const SGDParam& param,
         auto grad_idx = grad.aux_data(rowsparse::kIdx).dptr<IType>();
         auto grad_val = grad.data().dptr<DType>();
         auto num_rows = grad.aux_shape(rowsparse::kIdx)[0];
-        auto width = weight.shape_.ProdShape(1, weight.ndim());
-        Kernel<SGDDnsRspKernel<req_type>, xpu>::Launch(s, num_rows, width,
+        auto row_length = weight.shape_.ProdShape(1, weight.ndim());
+        Kernel<SGDDnsRspKernel<req_type>, xpu>::Launch(s, num_rows, row_length,
           out->dptr<DType>(), weight_data, grad_idx, grad_val,
           static_cast<DType>(param.clip_gradient),
           static_cast<DType>(param.lr), static_cast<DType>(param.wd),
@@ -324,14 +324,14 @@ inline void SGDMomUpdate(const nnvm::NodeAttrs& attrs,
 template<int req>
 struct SGDMomDnsRspDnsKernel {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, size_t width, DType* out_data,
+  MSHADOW_XINLINE static void Map(int i, size_t row_length, DType* out_data,
     DType* mom_data, const DType* weight_data, const IType* grad_idx,
     const DType* grad_data, const DType clip_gradient, const DType momentum,
     const DType lr, const DType wd, const DType rescale_grad) {
     const DType rate = lr * wd;
-    for (size_t j = 0; j < width; j++) {
-      uint64_t data_i = grad_idx[i] * width + j;
-      uint64_t grad_i = i * width + j;
+    for (size_t j = 0; j < row_length; j++) {
+      uint64_t data_i = grad_idx[i] * row_length + j;
+      uint64_t grad_i = i * row_length + j;
       if (clip_gradient >= 0.0f) {
         mom_data[data_i] = momentum * mom_data[data_i]
                 - rate * weight_data[data_i]
@@ -372,8 +372,8 @@ inline void SGDMomUpdateDnsRspDnsImpl(const SGDMomParam& param,
         auto mom_data = mom.dptr<DType>();
         auto out_data = out->dptr<DType>();
         auto num_rows = grad.aux_shape(kIdx)[0];
-        auto width = weight.shape_.ProdShape(1, weight.ndim());
-        Kernel<SGDMomDnsRspDnsKernel<req_type>, xpu>::Launch(s, num_rows, width,
+        auto row_length = weight.shape_.ProdShape(1, weight.ndim());
+        Kernel<SGDMomDnsRspDnsKernel<req_type>, xpu>::Launch(s, num_rows, row_length,
           out_data, mom_data, weight_data, grad_idx, grad_val,
           static_cast<DType>(param.clip_gradient), static_cast<DType>(param.momentum),
           static_cast<DType>(param.lr), static_cast<DType>(param.wd),
