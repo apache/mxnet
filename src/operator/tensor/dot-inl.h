@@ -502,7 +502,6 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<cpu>* s,
             index_t nnr = 0;
             nnr = mxnet::common::ParallelAccumulate(row_idx, ret->shape()[0], nnr);
             ret->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
-            ret->set_storage_shape(mshadow::Shape2(nnr, ret->shape()[1]));
             if (0 == nnr) return;
             mshadow::Tensor<cpu, 2, DType> rsp_data = data_out.FlatTo2D<cpu, DType>(s);
             size_t idx = 0;
@@ -636,7 +635,6 @@ inline void DotCsrRspRspImpl(mshadow::Stream<cpu>* s,
             index_t nnr = 0;
             nnr = mxnet::common::ParallelAccumulate(row_idx, ret->shape()[0], nnr);
             ret->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
-            ret->set_storage_shape(mshadow::Shape2(nnr, ret->shape()[1]));
             if (0 == nnr) return;
             mshadow::Tensor<cpu, 2, DType> rsp_data = data_out.FlatTo2D<cpu, DType>(s);
             size_t idx = 0;
@@ -709,7 +707,9 @@ void DotForwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  CHECK(!param.transpose_b) << "tranposing rhs of the op dot is not supported";
+  CHECK(!param.transpose_b) << "transposing rhs of the sparse dot op is not supported";
+  CHECK_EQ(inputs[0].shape().ndim(), 2) << "sparse dot only supports 2 dimensional lhs";
+  CHECK_EQ(inputs[1].shape().ndim(), 2) << "sparse dot only supports 2 dimensional rhs";
   auto lhs_stype = inputs[0].storage_type();
   auto rhs_stype = inputs[1].storage_type();
   auto out_stype = outputs[0].storage_type();
@@ -749,6 +749,8 @@ void DotBackwardEx(const nnvm::NodeAttrs& attrs,
 
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   CHECK(!param.transpose_b) << "sparse dot only supports dot(A, X) and dot(A.T(), X)";
+  CHECK_EQ(inputs[0].shape().ndim(), 2) << "sparse dot only supports 2 dimensional lhs";
+  CHECK_EQ(inputs[1].shape().ndim(), 2) << "sparse dot only supports 2 dimensional rhs";
   const auto ograd_stype = inputs[0].storage_type();
   const auto lhs_stype = inputs[1].storage_type();
   const auto rhs_stype = inputs[2].storage_type();

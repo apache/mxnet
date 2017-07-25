@@ -24,12 +24,13 @@ def check_elemwise_add_ex(lhs_stype, rhs_stype, shape, lhs_grad_stype=None, rhs_
 
 
 def test_elemwise_add_ex():
-    shape = rand_shape_2d()
-    check_elemwise_add_ex('default', 'default', shape)
-    check_elemwise_add_ex('default', 'row_sparse', shape)
-    check_elemwise_add_ex('row_sparse', 'default', shape)
-    check_elemwise_add_ex('row_sparse', 'row_sparse', shape,
-                          lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
+    shapes = [rand_shape_2d(), rand_shape_3d()]
+    for shape in shapes:
+        check_elemwise_add_ex('default', 'default', shape)
+        check_elemwise_add_ex('default', 'row_sparse', shape)
+        check_elemwise_add_ex('row_sparse', 'default', shape)
+        check_elemwise_add_ex('row_sparse', 'row_sparse', shape,
+                              lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
 
 
 # TODO(haibin) randomize this test
@@ -160,8 +161,7 @@ def test_sparse_slice():
 
 
 def test_sparse_retain():
-    for _ in range(10):
-        shape = rand_shape_2d()
+    def check_sparse_retain(shape):
         num_rows = shape[0]
         rsp, _ = rand_sparse_ndarray(shape=shape, stype='row_sparse', density=0.5)
         length = np.random.randint(1, num_rows + 1)
@@ -180,6 +180,10 @@ def test_sparse_retain():
         idx = mx.symbol.Variable('indices')
         sym = mx.sym.sparse_retain(data=data, indices=idx)
         check_numeric_gradient(sym, [rsp, indices], grad_nodes=['data'], grad_stype_dict={'data': 'row_sparse'})
+    shape = rand_shape_2d()
+    shape_3d = rand_shape_3d()
+    check_sparse_retain(shape)
+    check_sparse_retain(shape_3d)
 
 def test_sparse_nd_zeros():
     def check_sparse_nd_zeros(stype, shape):
