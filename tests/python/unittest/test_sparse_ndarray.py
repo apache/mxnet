@@ -61,8 +61,7 @@ def test_sparse_nd_elementwise_fallback():
 
 
 def test_sparse_nd_copy():
-    def check_sparse_nd_copy(from_stype, to_stype):
-        shape = rand_shape_2d()
+    def check_sparse_nd_copy(from_stype, to_stype, shape):
         from_nd = rand_ndarray(shape, from_stype)
         # copy to ctx
         to_ctx = from_nd.copyto(default_context())
@@ -72,21 +71,14 @@ def test_sparse_nd_copy():
         assert np.sum(np.abs(from_nd.asnumpy() != to_ctx.asnumpy())) == 0.0
         assert np.sum(np.abs(from_nd.asnumpy() != to_nd.asnumpy())) == 0.0
 
-    check_sparse_nd_copy('row_sparse', 'row_sparse')
-    check_sparse_nd_copy('row_sparse', 'default')
-    check_sparse_nd_copy('default', 'row_sparse')
-    check_sparse_nd_copy('default', 'csr')
-
-
-def check_sparse_nd_prop_rsp():
-    storage_type = 'row_sparse'
     shape = rand_shape_2d()
-    nd, (v, idx) = rand_sparse_ndarray(shape, storage_type)
-    assert(nd._num_aux == 1)
-    assert(nd.indices.dtype == np.int64)
-    assert(nd.stype == 'row_sparse')
-    assert_almost_equal(nd.indices.asnumpy(), idx)
-
+    shape_3d = rand_shape_3d()
+    check_sparse_nd_copy('row_sparse', 'row_sparse', shape)
+    check_sparse_nd_copy('row_sparse', 'default', shape)
+    check_sparse_nd_copy('default', 'row_sparse', shape)
+    check_sparse_nd_copy('default', 'csr', shape)
+    check_sparse_nd_copy('row_sparse', 'row_sparse', shape_3d)
+    check_sparse_nd_copy('default', 'row_sparse', shape_3d)
 
 def test_sparse_nd_basic():
     def check_rsp_creation(values, indices, shape):
@@ -103,6 +95,16 @@ def test_sparse_nd_basic():
         assert_almost_equal(csr.indices.asnumpy(), indices)
         assert_almost_equal(csr.data.asnumpy(), values)
 
+    def check_sparse_nd_rsp_aux():
+        storage_type = 'row_sparse'
+        shape = rand_shape_2d()
+        nd, (v, idx) = rand_sparse_ndarray(shape, storage_type)
+        assert(nd._num_aux == 1)
+        assert(nd.indices.dtype == np.int64)
+        assert(nd.stype == 'row_sparse')
+        assert_almost_equal(nd.indices.asnumpy(), idx)
+        assert_almost_equal(nd.data.asnumpy(), v)
+
     shape = (4,2)
     values = np.random.rand(2,2)
     indices = np.array([1,3], dtype='int64')
@@ -117,7 +119,7 @@ def test_sparse_nd_basic():
     check_rsp_creation(values, indices, shape)
 
     check_csr_creation(shape)
-    check_sparse_nd_prop_rsp()
+    check_sparse_nd_rsp_aux()
 
 
 def test_sparse_nd_setitem():
@@ -309,6 +311,39 @@ def test_sparse_nd_negate():
         # we compute (-arr)
         assert_almost_equal(npy, arr.asnumpy())
 
+def test_sparse_nd_broadcast():
+    sample_num = 1000
+    # TODO(haibin) test with more than 2 dimensions
+    def test_broadcast_to(stype):
+        for i in range(sample_num):
+            ndim = 2
+            target_shape = np.random.randint(1, 11, size=ndim)
+            shape = target_shape.copy()
+            axis_flags = np.random.randint(0, 2, size=ndim)
+            axes = []
+            for (axis, flag) in enumerate(axis_flags):
+                if flag:
+                    shape[axis] = 1
+            dat = np.random.rand(*shape) - 0.5
+            numpy_ret = dat
+            ndarray = mx.nd.cast_storage(mx.nd.array(dat), stype=stype)
+            ndarray_ret = ndarray.broadcast_to(shape=target_shape)
+            if type(ndarray_ret) is mx.ndarray.NDArray:
+                ndarray_ret = ndarray_ret.asnumpy()
+            assert (ndarray_ret.shape == target_shape).all()
+            err = np.square(ndarray_ret - numpy_ret).mean()
+            assert err < 1E-8
+    stypes = ['csr', 'row_sparse']
+    for stype in stypes:
+        test_broadcast_to(stype)
+
+
+def test_sparse_nd_transpose():
+    npy = np.random.uniform(-10, 10, rand_shape_2d())
+    stypes = ['csr', 'row_sparse']
+    for stype in stypes:
+        nd = mx.nd.cast_storage(mx.nd.array(npy), stype=stype)
+        assert_almost_equal(npy.T, (nd.T).asnumpy())
 
 def test_sparse_nd_output_fallback():
     shape = (10, 10)
@@ -325,7 +360,7 @@ def test_sparse_nd_astype():
         assert(y.dtype == np.int32), y.dtype
 
 
-def test_sparse_ndarray_pickle():
+def test_sparse_nd_pickle():
     np.random.seed(0)
     repeat = 10
     dim0 = 40
@@ -345,7 +380,7 @@ def test_sparse_ndarray_pickle():
                 assert same(a.asnumpy(), b.asnumpy())
 
 
-def test_sparse_ndarray_save_load():
+def test_sparse_nd_save_load():
     np.random.seed(0)
     repeat = 1
     stypes = ['default', 'row_sparse', 'csr']
@@ -377,6 +412,18 @@ def test_sparse_ndarray_save_load():
             assert same(x.asnumpy(), y.asnumpy())
     os.remove(fname)
 
+def test_sparse_nd_unsupported():
+    nd = mx.nd.zeros((2,2), stype='row_sparse')
+    fn_slice = lambda x: x._slice(None, None)
+    fn_at = lambda x: x._at(None)
+    fn_reshape = lambda x: x.reshape(None)
+    fns = [fn_slice, fn_at, fn_reshape]
+    for fn in fns:
+        try:
+            fn(nd)
+            assert(False)
+        except:
+            pass
 
 def test_create_csr():
     dim0 = 50
