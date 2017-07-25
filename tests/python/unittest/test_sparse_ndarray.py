@@ -378,6 +378,38 @@ def test_sparse_ndarray_save_load():
     os.remove(fname)
 
 
+def test_create_csr():
+    dim0 = 50
+    dim1 = 50
+    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    for density in densities:
+        shape = rand_shape_2d(dim0, dim1)
+        matrix = rand_ndarray(shape, 'csr', density)
+        data = matrix.data
+        indptr = matrix.indptr
+        indices = matrix.indices
+        csr_created = mx.nd.csr(data=data, indptr=indptr, indices=indices, shape=shape)
+        assert csr_created.stype == 'csr'
+        assert same(csr_created.data.asnumpy(), data.asnumpy())
+        assert same(csr_created.indptr.asnumpy(), indptr.asnumpy())
+        assert same(csr_created.indices.asnumpy(), indices.asnumpy())
+
+
+def test_create_row_sparse():
+    dim0 = 50
+    dim1 = 50
+    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    for density in densities:
+        shape = rand_shape_2d(dim0, dim1)
+        matrix = rand_ndarray(shape, 'row_sparse', density)
+        data = matrix.data
+        indices = matrix.indices
+        rsp_created = mx.nd.row_sparse(data=data, indices=indices, shape=shape)
+        assert rsp_created.stype == 'row_sparse'
+        assert same(rsp_created.data.asnumpy(), data.asnumpy())
+        assert same(rsp_created.indices.asnumpy(), indices.asnumpy())
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
