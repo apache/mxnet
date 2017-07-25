@@ -15,6 +15,7 @@ import sys as _sys
 
 # import operator
 import numpy as np
+from ..base import NotSupportedForSparseNDArray
 from ..base import _LIB, numeric_types
 from ..base import c_array, mx_real_t
 from ..base import mx_uint, NDArrayHandle, check_call
@@ -179,9 +180,9 @@ class SparseNDArray(NDArray):
         """
         stype = self.stype
         if stype != 'csr':
-            raise Exception("__getitem__ for " + str(stype) + " not implemented yet")
+            raise Exception("__getitem__ for " + str(stype) + " is not implemented yet")
         if isinstance(key, int):
-            raise Exception("Not implemented yet")
+            raise Exception("__getitem__ with int key is not implemented yet")
         if isinstance(key, py_slice):
             if key.step is not None:
                 raise ValueError('NDArray only supports continuous slicing on axis 0')
@@ -198,13 +199,13 @@ class SparseNDArray(NDArray):
         raise Exception('Not implemented for SparseND yet!')
 
     def _at(self, idx):
-        raise Exception('at operator for SparseND is not supported.')
+        raise NotSupportedForSparseNDArray(self._at, '[idx]', idx)
+
+    def _slice(self, start, stop):
+        raise NotSupportedForSparseNDArray(self._slice, None, start, stop)
 
     def reshape(self, shape):
-        raise Exception('Not implemented for SparseND yet!')
-
-    def broadcast_to(self, shape):
-        raise Exception('Not implemented for SparseND yet!')
+        raise NotSupportedForSparseNDArray(self.reshape, None, shape)
 
     def _aux_type(self, i):
         """Data-type of the array’s ith aux data.
@@ -234,11 +235,6 @@ class SparseNDArray(NDArray):
         """The number of aux data used to help store the sparse ndarray.
         """
         return len(_STORAGE_AUX_TYPES[self.stype])
-
-    @property
-    # pylint: disable= invalid-name, undefined-variable
-    def T(self):
-        raise Exception('Transpose is not supported for SparseNDArray.')
 
     @property
     def _aux_types(self):
