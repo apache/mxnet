@@ -68,14 +68,14 @@ def test_mlp():
     bias_percent = [1,1,1,0.5,0.5,0.5,0.5]
     for i in range(1, num_epoch + 1):
         sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, i)
-        weight_params = []
-        weight_params = [arg_params['fc1_weight'], arg_params['fc2_weight'], arg_params['fc3_weight']]
-        bias_params = [arg_params['fc1_bias'], arg_params['fc2_bias'], arg_params['fc3_bias']]
-        idx = i - 1
-        for param in weight_params:
-            assert nz(param.asnumpy())/float(param.size) == weight_percent[idx]
-        for param in bias_params:
-            assert nz(param.asnumpy())/float(param.size) == bias_percent[idx]
+        for key in arg_params.keys():
+            idx = i - 1
+            if 'weight' in key:
+                assert nz(arg_params[key].asnumpy())/float(arg_params[key].size) \
+                    == weight_percent[idx]
+            else:
+                assert nz(arg_params[key].asnumpy())/float(arg_params[key].size) \
+                    == bias_percent[idx]
 
     for i in range(num_epoch):
         os.remove('%s-%04d.params' % (prefix, i + 1))

@@ -1063,7 +1063,6 @@ class SparseSGD(SGD):
                 mp_sgd_update(weight, grad, state[1], out=weight,
                               lr=lr, wd=wd, **kwargs)
 
-
 @register
 class Test(Optimizer):
     """The Test optimizer"""

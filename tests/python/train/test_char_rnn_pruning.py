@@ -5,7 +5,8 @@ import bisect
 
 import logging
 reload(logging)
-logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG, datefmt='%I:%M:%S')
+logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG, \
+    datefmt='%I:%M:%S')
 
 import sys
 sys.path.append('../../../example/rnn/old/')
