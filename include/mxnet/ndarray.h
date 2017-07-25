@@ -146,11 +146,9 @@ class NDArray {
    *  make sure the memory region is available through out the life of NDArray
    * \param data the memory content of static data
    * \param dev_id the device id this tensor sits at
-   * \param shared_var the same var handle shared with others.
-            It will not be deleted during destruction.
    */
-  NDArray(const TBlob &data, int dev_id, Engine::VarHandle shared_var = nullptr)
-      : ptr_(std::make_shared<Chunk>(data, dev_id, shared_var)), shape_(data.shape_),
+  NDArray(const TBlob &data, int dev_id)
+      : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_),
         dtype_(data.type_flag_), entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
@@ -166,8 +164,6 @@ class NDArray {
    * \param data the memory content of static data
    * \param aux_data the memory content of static aux data
    * \param dev_id the device id this tensor sits at
-   * \param shared_var the same var handle shared with others.
-            It will not be deleted during destruction.
    */
   NDArray(const NDArrayStorageType stype, const TShape &shape,
           const TBlob &data, const std::vector<TBlob> &aux_data, int dev_id)
@@ -428,6 +424,12 @@ class NDArray {
    * \param size the size of the source array, in sizeof(DType) not raw btyes.
    */
   void SyncCopyFromCPU(const void *data, size_t size) const;
+
+  /*!
+   * \brief Copy from src.data()/aux_data(i) to this->data()/aux_data(j)
+   */
+  void SyncCopyFromNDArray(const NDArray &src, int i = -1, int j = -1);
+
   /*!
    * \brief Do a synchronize copy to a continugous CPU memory region.
    *
@@ -453,19 +455,19 @@ class NDArray {
    * \return idx-th sub array NDArray
    */
   NDArray At(index_t idx) const;
-  // Wrap the tblob of aux data into an NDArray which shares the same variable with the
-  // current one.
-  inline const NDArray aux_ndarray(size_t i) const {
-    CHECK_NE(storage_type(), kDefaultStorage);
-    CHECK(i < ptr_->aux_shapes.size());
-    return NDArray(aux_data(i), ctx().dev_id, var());
-  }
-  // Wrap the tblob of data into an NDArray which shares the same variable with the
-  // current one.
-  inline const NDArray data_ndarray() const {
-    CHECK_NE(storage_type(), kDefaultStorage);
-    return NDArray(data(), ctx().dev_id, var());
-  }
+
+  /*!
+   * \brief Generate a deep copy of aux_data(i) returned as
+   * a default storage type NDArray
+   */
+  NDArray aux_ndarray(size_t i) const;
+
+  /*!
+   * \brief Generate a deep copy of data() returned as a
+   * default storage type NDArray
+   */
+  NDArray data_ndarray() const;
+
   /*!
    * \brief Create a NDArray that shares memory with current one
    *  The new array must have smaller memory size than the current array.
@@ -511,6 +513,23 @@ class NDArray {
     CHECK_EQ(storage_type(), kDefaultStorage);
     ptr_->CheckAndAlloc();
   }
+
+  /*!
+   * \brief Allocate the space if the allocation has been delayed
+   * or the requested size is bigger than the available one.
+   * This function can only be called by ndarray of default
+   * storage type and effectively changes the ndarray's shape_.
+   * Note: This function is named as this to avoid overload conflict
+   * with CheckAndAlloc(const std::vector<TShape> &aux_shapes), since
+   * TShape tmp = some_shape is equivalent to TShape tmp = {some_shape}.
+   */
+  void ReshapeAndAlloc(const TShape& shape) {
+    CHECK_EQ(storage_type(), kDefaultStorage);
+    CHECK(!is_none());
+    shape_ = shape;
+    ptr_->CheckAndAlloc(shape.Size() * mshadow::mshadow_sizeof(dtype_));
+  }
+
   /* !
    * \brief Alloc memory for non-default storage
    * aux_shape is only known at run time
@@ -586,8 +605,6 @@ class NDArray {
     // The shape of aux data. The default value for the shape depends on the type of storage.
     // If aux_shapes[i].Size() is zero, aux data i is empty.
     std::vector<TShape> aux_shapes;
-    // \brief skip the deletion of var handle. Usually set when shared_var is present.
-    bool skip_delete_var = false;
 
     /*! \brief default cosntructor */
     Chunk() : static_data(true), delay_alloc(false) {}
@@ -603,17 +620,10 @@ class NDArray {
       if (!delay_alloc_) this->CheckAndAlloc();
     }
 
-    Chunk(const TBlob &data, int dev_id, Engine::VarHandle shared_var)
+    Chunk(const TBlob &data, int dev_id)
         : static_data(true), delay_alloc(false) {
       CHECK(storage_type == kDefaultStorage);
-      // init var
-      if (shared_var == nullptr) {
-        var = Engine::Get()->NewVariable();
-      } else {
-        skip_delete_var = true;
-        var = shared_var;
-      }
-      // init ctx
+      var = Engine::Get()->NewVariable();
       if (data.dev_mask() == cpu::kDevMask) {
         ctx = Context::CPU();
       } else {
@@ -638,6 +648,9 @@ class NDArray {
       // aux_handles always reflect the correct number of aux data
       for (size_t i = 0; i < aux_shapes.size(); i++) {
         CheckAndAllocAuxData(i, aux_shapes[i]);
+        // this line is needed in case when aux_shapes[i].Size() = 0
+        // aux_handles[i] will not be updated and take only default value.
+        aux_handles[i].ctx = ctx;
       }
       if (!delay_alloc) {
         CheckAndAllocData(storage_shape, dtype);
@@ -682,6 +695,22 @@ class NDArray {
         delay_alloc = false;
       }
     }
+
+    /*! \brief Check and alloc memory for a dense ndarray */
+    // size is the number of bytes
+    void CheckAndAlloc(uint64_t dbytes) {
+      CHECK_EQ(kDefaultStorage, storage_type);
+      if (delay_alloc) {
+        shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
+        delay_alloc = false;
+      } else if (shandle.size < dbytes) {
+        // free storage if necessary and alloc again
+        if (shandle.size > 0) Storage::Get()->Free(shandle);
+        // init storage
+        shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
+      }
+    }
+
     inline void CheckAndAlloc(const TShape &shape, const std::vector<TShape> &aux_shapes,
                               int dtype) {
       // calculate size, perform allocation
@@ -745,7 +774,6 @@ class NDArray {
     }
     /*! \brief destructor */
     ~Chunk() {
-      if (skip_delete_var) return;
       bool skip_free = static_data || delay_alloc;
       Storage::Handle h = this->shandle;
       std::vector<Storage::Handle> aux_h = this->aux_handles;
