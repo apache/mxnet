@@ -11,10 +11,10 @@ runme() {
 		exit 1
 	fi
 }
-
+sudo apt-get install time
 runme make clean >/dev/null
 runme mkdir build
 echo "Starting make"
-runme time -f "%e" make -j$(nproc) &> build/compile_output.txt
+runme /usr/bin/time -f "%e" make -j$(nproc) &> build/compile_output.txt
 echo "Finished make. Now processing output"
 python tests/nightly/compilation_warnings.py build/compile_output.txt
