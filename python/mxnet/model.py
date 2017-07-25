@@ -913,7 +913,7 @@ class FeedForward(BASE_ESTIMATOR):
             ``ceil(num_train_examples / batch_size)``.
         optimizer : str or Optimizer, optional
             The name of the chosen optimizer, or an optimizer object, used for training.
-        initializier : initializer function, optional
+        initializer : initializer function, optional
             The initialization scheme used.
         eval_data : DataIter or numpy.ndarray pair
             If `eval_set` is ``numpy.ndarray`` pair, it should
@@ -929,7 +929,7 @@ class FeedForward(BASE_ESTIMATOR):
             A callback that is invoked at end of each batch for print purposes.
         kvstore: KVStore or str, optional
            The KVStore or a string kvstore type: 'local', 'dist_sync', 'dis_async'.
-           Defaults to 'local', often no need to change for single machiine.
+           Defaults to 'local', often no need to change for single machine.
         logger : logging logger, optional
             When not specified, default logger will be used.
         work_load_list : list of float or int, optional
