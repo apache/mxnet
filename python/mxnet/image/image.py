@@ -24,7 +24,7 @@ from .. import io
 from .. import recordio
 
 
-def imdecode(buf, **kwargs):
+def imdecode(buf, *args, **kwargs):
     """Decode an image to an NDArray.
 
     Note: `imdecode` uses OpenCV (not the CV2 Python library).
@@ -75,7 +75,7 @@ def imdecode(buf, **kwargs):
     """
     if not isinstance(buf, nd.NDArray):
         buf = nd.array(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
-    return _internal._cvimdecode(buf, **kwargs)
+    return _internal._cvimdecode(buf, *args, **kwargs)
 
 
 def scale_down(src_size, size):
