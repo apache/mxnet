@@ -38,25 +38,29 @@ class MXNetModelsTest(unittest.TestCase):
         return mod
 
     def _test_model(self, model_name, epoch_num):
+
         input_shape = (1, 3, 224, 224)
+
         module = self._load_model(
             model_name=model_name,
             epoch_num=epoch_num,
-            input_shape=input_shape
-        )
+            input_shape=input_shape)
+
         # Get predictions from MXNet and coreml
-        input_data = np.random.uniform(-0.1, 0.1, input_shape)
+        input_data = {'data': np.random.uniform(-0.1, 0.1, input_shape)}
         Batch = namedtuple('Batch', ['data'])
-        module.forward(Batch([mx.nd.array(input_data)]))
+        module.forward(Batch([mx.nd.array(input_data['data'])]))
         mxnet_preds = module.get_outputs()[0].asnumpy().flatten()
 
         coreml_spec = mxnet_converter.convert(module, data=input_shape)
         coreml_model = coremltools.models.MLModel(coreml_spec)
         coreml_preds = coreml_model.predict(_mxnet_remove_batch(input_data)).values()[0].flatten()
+
         # Check prediction accuracy
         self.assertEquals(len(mxnet_preds), len(coreml_preds))
+
         for i in range(len(mxnet_preds)):
-            self.assertAlmostEquals(mxnet_preds[i], coreml_preds[i], delta = 1e-3)
+            self.assertAlmostEquals(mxnet_preds[i], coreml_preds[i], delta = 1e-7)
 
     def test_convert_inception_bn(self):
         input_shape = (1, 3, 224, 224)
@@ -70,12 +74,12 @@ class MXNetModelsTest(unittest.TestCase):
 
     def test_convert_resnet_50(self):
         input_shape = (1, 3, 224, 224)
-        module = self._load_model('resnet-50', 0)
+        module = self._load_model('resnet-50', 0, input_shape)
         mxnet_converter.convert(module, data=input_shape)
 
     def test_convert_vgg16(self):
         input_shape = (1, 3, 224, 224)
-        module = self._load_model('vgg-16', 0)
+        module = self._load_model('vgg-16', 0, input_shape)
         mxnet_converter.convert(module, data=input_shape)
 
     def test_pred_inception_bn(self):
