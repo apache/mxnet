@@ -597,7 +597,7 @@ def _zeros_sparse_ndarray(stype, shape, ctx=None, dtype=None, aux_types=None, **
     ----------
     shape : int or tuple of int
         The shape of the empty array
-    stype: string
+    stype: string, optional
         The storage type of the empty array, such as 'row_sparse', 'csr', etc
     ctx : Context, optional
         An optional device context (default is the current default context)

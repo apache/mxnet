@@ -14,7 +14,7 @@ def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
     ----------
     shape : int or tuple of int
         The shape of the empty array
-    stype: string
+    stype: string, optional
         The storage type of the empty array, such as 'row_sparse', 'csr', etc
     ctx : Context, optional
         An optional device context (default is the current default context)
