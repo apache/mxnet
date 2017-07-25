@@ -30,9 +30,9 @@ def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
         A created array
     Examples
     --------
-    >>> mx.nd.zeros((1,2), mx.gpu(0), stype='csr')
+    >>> mx.nd.zeros((1,2), mx.cpu(), stype='csr')
     <CSRNDArray 1x2 @cpu(0)>
-    >>> mx.nd.zeros((1,2), mx.gpu(0), 'float16', stype='row_sparse').asnumpy()
+    >>> mx.nd.zeros((1,2), mx.cpu(), 'float16', stype='row_sparse').asnumpy()
     array([[ 0.,  0.]], dtype=float16)
     """
 
