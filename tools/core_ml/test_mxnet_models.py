@@ -32,7 +32,7 @@ class MXNetModelsTest(unittest.TestCase):
         )
         mod.set_params(
             arg_params=arg_params,
-            aux_params=arg_params,
+            aux_params=aux_params,
             allow_missing=True
         )
         return mod
