@@ -1834,7 +1834,7 @@ void StackOpForward(const nnvm::NodeAttrs& attrs,
     for (int i = 0; i < axis; ++i) {
       leading *= outputs[0].shape_[i];
     }
-    for (index_t i = axis + 1; i < outputs[0].ndim(); ++i) {
+    for (int i = axis + 1; i < outputs[0].ndim(); ++i) {
       trailing *= outputs[0].shape_[i];
     }
     size_t mid = outputs[0].shape_[axis];
@@ -1868,7 +1868,7 @@ void StackOpBackward(const nnvm::NodeAttrs& attrs,
     for (int i = 0; i < axis; ++i) {
       leading *= inputs[0].shape_[i];
     }
-    for (index_t i = axis + 1; i < inputs[0].ndim(); ++i) {
+    for (int i = axis + 1; i < inputs[0].ndim(); ++i) {
       trailing *= inputs[0].shape_[i];
     }
     size_t mid = inputs[0].shape_[axis];
