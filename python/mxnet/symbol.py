@@ -2117,6 +2117,28 @@ def ones(shape, dtype=None, **kwargs):
     return _internal._ones(shape=shape, dtype=dtype, **kwargs)
 
 
+def full(shape, val, dtype=None, **kwargs):
+    """Returns a new array of given shape and type, filled with the given value `val`.
+
+    Parameters
+    ----------
+    shape :  int or sequence of ints
+        Shape of the new array.
+    val : scalar
+        Fill value.
+    dtype : str or numpy.dtype, optional
+        The value type of the inner value, default to ``np.float32``.
+
+    Returns
+    -------
+    out : Symbol
+        The created Symbol
+    """
+    if dtype is None:
+        dtype = _numpy.float32
+    return _internal._MulScalar(ones(shape=shape, dtype=dtype, **kwargs), scalar=val)
+
+
 def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
     """Returns evenly spaced values within a given interval.
 

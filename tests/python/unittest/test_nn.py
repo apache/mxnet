@@ -278,6 +278,31 @@ def test_flatten():
     assert flatten(x).shape == (3, 1)
 
 
+def test_concurrent():
+    model = nn.HybridConcurrent(concat_dim=1)
+    model.add(nn.Dense(128, activation='tanh', in_units=10))
+    model.add(nn.Dense(64, activation='tanh', in_units=10))
+    model.add(nn.Dense(32, in_units=10))
+
+    # symbol
+    x = mx.sym.var('data')
+    y = model(x)
+    assert len(y.list_arguments()) == 7
+
+    # ndarray
+    model.collect_params().initialize(mx.init.Xavier(magnitude=2.24))
+    x = model(mx.nd.zeros((32, 10)))
+    assert x.shape == (32, 224)
+    x.wait_to_read()
+
+
+def test_identity():
+    model = nn.Identity()
+    x = mx.nd.random_uniform(shape=(128, 33, 64))
+    mx.test_utils.assert_almost_equal(model(x).asnumpy(),
+                                      x.asnumpy())
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
