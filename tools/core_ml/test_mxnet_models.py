@@ -60,7 +60,7 @@ class MXNetModelsTest(unittest.TestCase):
         self.assertEquals(len(mxnet_preds), len(coreml_preds))
 
         for i in range(len(mxnet_preds)):
-            self.assertAlmostEquals(mxnet_preds[i], coreml_preds[i], delta = 1e-7)
+            self.assertAlmostEquals(mxnet_preds[i], coreml_preds[i], delta = 1e-3)
 
     def test_convert_inception_bn(self):
         input_shape = (1, 3, 224, 224)
