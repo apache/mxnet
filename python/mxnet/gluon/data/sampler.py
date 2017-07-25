@@ -47,7 +47,7 @@ class RandomSampler(Sampler):
         self._length = length
 
     def __iter__(self):
-        indices = range(self._length)
+        indices = list(range(self._length))
         random.shuffle(indices)
         return iter(indices)
 
