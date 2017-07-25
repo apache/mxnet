@@ -20,6 +20,16 @@ try:
 except ImportError:
     multiprocessing = None
 
+def get_int_len():
+    """ Return the amount of bits that used to represent a integer in current OS.
+    Normally this will return 64 for 64 bit OS, and return 32 for 32 bit OS.
+    """
+    # Since bin(sys.maxint) will return binary str with '0b' header, and hide the first sign bit.
+    return len(bin(sys.maxint)[2:])+1
+
+INT_BIT_LEN = get_int_len()
+IDX_MAX_LEN = 2 * INT_BIT_LEN
+
 def list_image(root, recursive, exts):
     i = 0
     if recursive:
@@ -97,13 +107,42 @@ def read_list(path_in):
                 continue
             yield item
 
+def id_decode(id):
+    try:
+        if isinstance(id, str):
+            id = int(id)
+    except Exception, e:
+        traceback.print_exc()
+        print('Fail to convert ID to number: %s, detail: %s' %(id, e))
+        return
+    assert isinstance(id, int) or isinstance(id, long), "Invalid type for ID: %s, type: %s" %(id, type(id))
+    assert id >= 0, "ID is unsigned int, it should be a positive number"
+    assert id < 2 ** IDX_MAX_LEN, "Your OS only support %s bits for ID, given number exceed: %s" % (IDX_MAX_LEN, id)
+    id_high_bit = int(id >> INT_BIT_LEN)
+    id_low_bit = int(id & (2**INT_BIT_LEN - 1))
+    return (id_low_bit, id_high_bit)
+
+def id_encode(id_low_bit, id_high_bit):
+    assert isinstance(id_high_bit, int) or isinstance(id_high_bit, long), \
+        "Invalid type for id_high_bit: %s, type: %s" %(id_high_bit, type(id_high_bit))
+    assert isinstance(id_high_bit, int) or isinstance(id_low_bit, long), \
+        "Invalid type for id_low_bit: %s, type: %s" % (id_low_bit, type(id_low_bit))
+    id = id_low_bit + (id_high_bit << INT_BIT_LEN)
+    return int(id)
+
 def image_encode(args, i, item, q_out):
     fullpath = os.path.join(args.root, item[1])
 
+    try:
+        id_low_bit, id_high_bit = id_decode(item[0])
+    except Exception, e:
+        traceback.print_exc()
+        print('Fail to convert ID into with two int: %s, detail: %s' %(item[0], e))
+        return
     if len(item) > 3 and args.pack_label:
-        header = mx.recordio.IRHeader(0, item[2:], item[0], 0)
+        header = mx.recordio.IRHeader(0, item[2:], id_low_bit, id_high_bit)
     else:
-        header = mx.recordio.IRHeader(0, item[2], item[0], 0)
+        header = mx.recordio.IRHeader(0, item[2], id_low_bit, id_high_bit)
 
     if args.pass_through:
         try:
