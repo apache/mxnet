@@ -1,4 +1,4 @@
-import _layers 
+import _layers
 import coremltools as _coremltools
 import coremltools.models.datatypes as _datatypes
 from coremltools.models import neural_network as _neural_network
@@ -91,7 +91,7 @@ def convert(model, order = None, class_labels = None, mode = None, **kwargs):
 
     order: Order of inputs
 
-    class_labels: A string or list of strings. 
+    class_labels: A string or list of strings.
         As a string it represents the name of the file which contains the classification labels (one per line).
         As a list of strings it represents a list of categories that map the index of the output of a neural network to labels in a classifier.
 
@@ -144,7 +144,6 @@ def convert(model, order = None, class_labels = None, mode = None, **kwargs):
     for idx, op in enumerate(aux_names):
         shape_dict[op] = shapes[2][idx]
 
-
     # Get the inputs and outputs
     output_dims = shapes[1]
     input_types = [_datatypes.Array(*dim) for dim in input_dims]
@@ -157,6 +156,7 @@ def convert(model, order = None, class_labels = None, mode = None, **kwargs):
     # Get out the layers
     net = _json.loads(net.tojson())
     nodes = net['nodes']
+
     for i, node in enumerate(nodes):
         node['id'] = i
 
@@ -169,6 +169,8 @@ def convert(model, order = None, class_labels = None, mode = None, **kwargs):
                 nodes[ip[0]]['outputs'].append([i, 0])
         else:
             node['inputs'] = []
+
+    # import pdb; pdb.set_trace()
 
     # Mark the head nodes
     for head in net['heads']:

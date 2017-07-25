@@ -1,4 +1,4 @@
-import unittest 
+import unittest
 import mxnet as mx
 import numpy as np
 import tempfile
@@ -16,7 +16,7 @@ def _mxnet_remove_batch(input_data):
 
 def _get_coreml_model(net, engine, model_path, input_shape, class_labels = None, mode = None,
             input_names = ['data'], output_names = ['output']):
-    
+
     # TODO upgrade this to mxnet mod
     model = mx.model.FeedForward(net, engine, arg_params = engine.arg_dict)
     spec = mxnet_converter.convert(model, class_labels=class_labels, mode=mode, **input_shape)
@@ -493,7 +493,7 @@ class MXNetSingleLayerTest(unittest.TestCase):
         set_weights(net, engine, mode = 'random')
 
         model_path = os.path.join(tempfile.mkdtemp(), 'mxnet.mlmodel')
-        model = _get_coreml_model(net, engine, model_path, input_shape={'data':input_shape}, 
+        model = _get_coreml_model(net, engine, model_path, input_shape={'data':input_shape},
                                   class_labels = ['Category1','Category2','Category3','Category4','Category5'],
                                   mode = 'classifier', input_names = 'data')
         input_data = {}

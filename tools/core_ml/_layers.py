@@ -1,6 +1,7 @@
-import numpy as _np
- 
-def _get_input_output_name(net, node, index = 0):
+import numpy as np
+
+
+def _get_input_output_name(net, node, index=0):
     name = node['name']
     inputs = node['inputs']
 
@@ -12,22 +13,20 @@ def _get_input_output_name(net, node, index = 0):
         input_name = [_get_node_name(net, inputs[id][0]) for id in index]
     return input_name, name
 
+
 def _get_node_name(net, node_id):
     return net['nodes'][node_id]['name']
+
 
 def _get_node_shape(net, node_id):
     return net['nodes'][node_id]['shape']
 
 
 # FYI for images in CoreML channel, H, W in CoreML for image
-# FYI CoreML docs http://pythonhosted.org/coremltools/generated/coremltools.models.neural_network.html#module-coremltools.models.neural_network
 
 # TODO LOWER PRIORITY (BUT STILL IMPORTANT)
-
 # mxnet.symbol.repeat -> builder.add_repeat to flatten and repeat the NDArray sequence
-
 # mxnet.symbol.Crop -> builder.add_crop to crop image along spacial dimensions
-
 # mxnet.symbol.Pad -> builder.add_padding putting 0's on height and width for tensor
 
 
@@ -42,7 +41,7 @@ def _get_node_shape(net, node_id):
 # Do vanilla (0.9 mxnet) lstm, gru, vanilla_rnn
 
 
-def convert_reshape(net, node, model, builder):
+def convert_reshape(net, node, module, builder):
     """Converts a reshape layer from mxnet to coreml.
 
     This doesn't currently handle the deprecated parameters for the reshape layer.
@@ -55,8 +54,8 @@ def convert_reshape(net, node, model, builder):
     layer: node
         Node to convert.
 
-    model: model
-        A model for MXNet
+    module: module
+        A module for MXNet
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
@@ -78,7 +77,7 @@ def convert_reshape(net, node, model, builder):
     builder.add_reshape(name, input_name, output_name, target_shape, mode)
 
 
-def convert_transpose(net, node, model, builder):
+def convert_transpose(net, node, module, builder):
     """Convert a transpose layer from mxnet to coreml.
 
     Parameters
@@ -89,8 +88,8 @@ def convert_transpose(net, node, model, builder):
     layer: node
         Node to convert.
 
-    model: model
-        An model for MXNet
+    module: module
+        An module for MXNet
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
@@ -102,7 +101,8 @@ def convert_transpose(net, node, model, builder):
     axes = literal_eval(param['axes'])
     builder.add_permute(name, axes, input_name, output_name)
 
-def convert_flatten(net, node, model, builder):
+
+def convert_flatten(net, node, module, builder):
     """Convert a flatten layer from mxnet to coreml.
 
     Parameters
@@ -113,8 +113,8 @@ def convert_flatten(net, node, model, builder):
     layer: node
         Node to convert.
 
-    model: model
-        An model for MXNet
+    module: module
+        An module for MXNet
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
@@ -124,7 +124,8 @@ def convert_flatten(net, node, model, builder):
     mode = 0 # CHANNEL_FIRST
     builder.add_flatten(name, mode, input_name, output_name)
 
-def convert_softmax(net, node, model, builder):
+
+def convert_softmax(net, node, module, builder):
     """Convert a softmax layer from mxnet to coreml.
 
     Parameters
@@ -135,19 +136,20 @@ def convert_softmax(net, node, model, builder):
     layer: node
         Node to convert.
 
-    model: model
-        An model for MXNet
+    module: module
+        An module for MXNet
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
     """
     input_name, output_name = _get_input_output_name(net, node)
     name = node['name']
-    builder.add_softmax(name = name,
-                        input_name = input_name,
-                        output_name = output_name)
+    builder.add_softmax(name=name,
+                        input_name=input_name,
+                        output_name=output_name)
 
-def convert_activation(net, node, model, builder):
+
+def convert_activation(net, node, module, builder):
     """Convert an activation layer from mxnet to coreml.
 
     Parameters
@@ -158,8 +160,8 @@ def convert_activation(net, node, model, builder):
     layer: node
         Node to convert.
 
-    model: model
-        An model for MXNet
+    module: module
+        An module for MXNet
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
@@ -167,7 +169,6 @@ def convert_activation(net, node, model, builder):
     input_name, output_name = _get_input_output_name(net, node)
     name = node['name']
     mx_non_linearity = node['attr']['act_type']
-    
     #TODO add SCALED_TANH, SOFTPLUS, SOFTSIGN, SIGMOID_HARD, LEAKYRELU, PRELU, ELU, PARAMETRICSOFTPLUS, THRESHOLDEDRELU, LINEAR
     if mx_non_linearity == 'relu':
         non_linearity = 'RELU'
@@ -182,7 +183,8 @@ def convert_activation(net, node, model, builder):
                            input_name = input_name,
                            output_name = output_name)
 
-def convert_elementwise_add(net, node, model, builder):
+
+def convert_elementwise_add(net, node, module, builder):
     """Convert an elementwise add layer from mxnet to coreml.
 
         Parameters
@@ -193,19 +195,20 @@ def convert_elementwise_add(net, node, model, builder):
         layer: node
         Node to convert.
 
-        model: model
-        An model for MXNet
+        module: module
+        An module for MXNet
 
         builder: NeuralNetworkBuilder
         A neural network builder object.
         """
 
-    input_names, output_name = _get_input_output_name(net, node,[0,1])
+    input_names, output_name = _get_input_output_name(net, node, [0, 1])
     name = node['name']
 
     builder.add_elementwise(name, input_names, output_name, 'ADD')
 
-def convert_dense(net, node, model, builder):
+
+def convert_dense(net, node, module, builder):
     """Convert a dense layer from mxnet to coreml.
 
     Parameters
@@ -216,8 +219,8 @@ def convert_dense(net, node, model, builder):
     layer: node
         Node to convert.
 
-    model: model
-        An model for MXNet
+    module: module
+        An module for MXNet
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
@@ -229,7 +232,7 @@ def convert_dense(net, node, model, builder):
 
     inputs = node['inputs']
     outputs = node['outputs']
-    args = model.arg_params
+    args, aux = module.get_params()
     W = args[_get_node_name(net, inputs[1][0])].asnumpy()
     if has_bias:
         Wb = args[_get_node_name(net, inputs[2][0])].asnumpy()
@@ -237,16 +240,19 @@ def convert_dense(net, node, model, builder):
         Wb = None
     nC, nB = W.shape
 
-    builder.add_inner_product(name = name,
-            W = W,
-            b = Wb,
-            input_channels = nB,
-            output_channels = nC,
-            has_bias = has_bias,
-            input_name = input_name,
-            output_name = output_name)
+    builder.add_inner_product(
+        name=name,
+        W=W,
+        b=Wb,
+        input_channels=nB,
+        output_channels=nC,
+        has_bias=has_bias,
+        input_name=input_name,
+        output_name=output_name
+    )
 
-def convert_convolution(net, node, model, builder):
+
+def convert_convolution(net, node, module, builder):
     """Convert a convolution layer from mxnet to coreml.
 
     Parameters
@@ -257,8 +263,8 @@ def convert_convolution(net, node, model, builder):
     layer: node
         Node to convert.
 
-    model: model
-        An model for MXNet
+    module: module
+        An module for MXNet
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
@@ -268,7 +274,7 @@ def convert_convolution(net, node, model, builder):
     param = node['attr']
     inputs = node['inputs']
     outputs = node['outputs']
-    args = model.arg_params
+    args, aux = module.get_params()
     from ast import literal_eval
 
     if 'no_bias' in param.keys():
@@ -279,14 +285,14 @@ def convert_convolution(net, node, model, builder):
     if literal_eval(param['pad']) != (0, 0):
         pad = literal_eval(param['pad'])
         builder.add_padding(
-            name = name+"_pad",
-            left = pad[1],
-            right = pad[1],
-            top = pad[0],
-            bottom = pad[0],
-            value = 0,
-            input_name = input_name,
-            output_name = name+"_pad_output")
+            name=name+"_pad",
+            left=pad[1],
+            right=pad[1],
+            top=pad[0],
+            bottom=pad[0],
+            value=0,
+            input_name=input_name,
+            output_name=name+"_pad_output")
         input_name = name+"_pad_output"
 
     border_mode = "valid"
@@ -304,25 +310,26 @@ def convert_convolution(net, node, model, builder):
     kernel_height, kernel_width = literal_eval(param['kernel'])
     # TODO add padding here
     W = W.transpose((2, 3, 1, 0))
-    builder.add_convolution(name = name,
-             kernel_channels = channels,
-             output_channels = n_filters,
-             height = kernel_height,
-             width = kernel_width,
-             stride_height = stride_height,
-             stride_width = stride_width,
-             border_mode = border_mode,
-             groups = 1,
-             W = W,
-             b = Wb,
-             has_bias = has_bias,
-             is_deconv = False,
-             output_shape = None,
-             input_name = input_name,
-             output_name = output_name)
+    builder.add_convolution(
+        name=name,
+        kernel_channels=channels,
+        output_channels=n_filters,
+        height=kernel_height,
+        width=kernel_width,
+        stride_height=stride_height,
+        stride_width=stride_width,
+        border_mode=border_mode,
+        groups=1,
+        W=W,
+        b=Wb,
+        has_bias=has_bias,
+        is_deconv=False,
+        output_shape=None,
+        input_name=input_name,
+        output_name=output_name)
 
 
-def convert_pooling(net, node, model, builder):
+def convert_pooling(net, node, module, builder):
     """Convert a pooling layer from mxnet to coreml.
 
     Parameters
@@ -333,8 +340,8 @@ def convert_pooling(net, node, model, builder):
     layer: node
         Node to convert.
 
-    model: model
-        An model for MXNet
+    module: module
+        An module for MXNet
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
@@ -344,11 +351,11 @@ def convert_pooling(net, node, model, builder):
     inputs = node['inputs']
     param = node['attr']
     outputs = node['outputs']
-    args = model.arg_params
+    args, aux = module.get_params()
 
     layer_type_mx = param['pool_type']
     if layer_type_mx == 'max':
-        layer_type= 'MAX'
+        layer_type = 'MAX'
     elif layer_type_mx == 'avg':
         layer_type = 'AVERAGE'
     else:
@@ -363,7 +370,8 @@ def convert_pooling(net, node, model, builder):
         is_global = literal_eval(param['global_pool'])
     else:
         is_global = False
-    builder.add_pooling(name = name,
+    builder.add_pooling(
+        name = name,
         height = kernel_height,
         width = kernel_width,
         stride_height = stride_height,
@@ -382,7 +390,8 @@ def convert_pooling(net, node, model, builder):
         poolingLayer.valid.paddingAmounts.borderAmounts[i].startEdgeSize = pad[i]
         poolingLayer.valid.paddingAmounts.borderAmounts[i].endEdgeSize = pad[i]
 
-def convert_batchnorm(net, node, model, builder):
+
+def convert_batchnorm(net, node, module, builder):
     """Convert a transpose layer from mxnet to coreml.
 
     Parameters
@@ -393,19 +402,20 @@ def convert_batchnorm(net, node, model, builder):
     layer: node
         Node to convert.
 
-    model: model
-        An model for MXNet
+    module: module
+        An module for MXNet
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
     """
+    # import pdb; pdb.set_trace()
     input_name, output_name = _get_input_output_name(net, node)
     name = node['name']
     param = node['attr']
     inputs = node['inputs']
+    # print "jiajie:%s" % len(inputs)
     outputs = node['outputs']
-    args = model.arg_params
-    aux = model.aux_params
+    args, aux = module.get_params()
 
     gamma = args[_get_node_name(net, inputs[1][0])].asnumpy()
     beta = args[_get_node_name(net, inputs[2][0])].asnumpy()
@@ -415,16 +425,17 @@ def convert_batchnorm(net, node, model, builder):
     nb_channels = gamma.shape[0]
 
     builder.add_batchnorm(
-        name = name,
-        channels = nb_channels,
-        gamma = gamma,
-        beta = beta,
-        mean = mean,
-        variance = variance,
-        input_name = input_name,
-        output_name = output_name)
+        name=name,
+        channels=nb_channels,
+        gamma=gamma,
+        beta=beta,
+        mean=mean,
+        variance=variance,
+        input_name=input_name,
+        output_name=output_name)
 
-def convert_concat(net, node, model, builder):
+
+def convert_concat(net, node, module, builder):
     """Convert concat layer from mxnet to coreml.
 
     Parameters
@@ -435,8 +446,8 @@ def convert_concat(net, node, model, builder):
     layer: node
     Node to convert.
 
-    model: model
-    An model for MXNet
+    module: module
+    An module for MXNet
 
     builder: NeuralNetworkBuilder
     A neural network builder object.
@@ -448,7 +459,8 @@ def convert_concat(net, node, model, builder):
     builder.add_elementwise(name = name, input_names = input_names,
             output_name = output_name, mode = mode)
 
-def convert_deconvolution(net, node, model, builder):
+
+def convert_deconvolution(net, node, module, builder):
     """Convert a deconvolution layer from mxnet to coreml.
 
     Parameters
@@ -459,8 +471,8 @@ def convert_deconvolution(net, node, model, builder):
     layer: node
         Node to convert.
 
-    model: model
-        An model for MXNet
+    module: module
+        An module for MXNet
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
@@ -470,7 +482,7 @@ def convert_deconvolution(net, node, model, builder):
     param = node['attr']
     inputs = node['inputs']
     outputs = node['outputs']
-    args = model.arg_params
+    args, aux = module.get_params()
 
     from ast import literal_eval
 
