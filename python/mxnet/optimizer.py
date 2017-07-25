@@ -941,7 +941,7 @@ class SparseSGD(SGD):
         self.masks_updated = False
         self.epoch = 0
         self.pruning_switch_epoch = pruning_switch_epoch
-        assert pruning_switch_epoch is not None, 'pruning_switch_epoch should not be None'
+        self.batches_per_epoch = batches_per_epoch
 
         # get weight and bias sparsity percentages
         self.weight_sparsity = weight_sparsity
@@ -964,9 +964,6 @@ class SparseSGD(SGD):
         # either percentages or thresholds must be given
         assert weight_sparsity is not None or weight_sparsity_threshold is not None,\
             'weight_sparsity or weight_sprasity_threshold should be given'
-
-        self.batches_per_epoch = batches_per_epoch
-        assert batches_per_epoch is not None, 'batches_per_epoch should not be None'
 
     def update_masks(self, index, weight):
         """Updates the masks for sparse training.
