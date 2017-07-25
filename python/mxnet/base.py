@@ -55,6 +55,21 @@ class NotImplementedForSymbol(MXNetError):
         msg += ' is not implemented for Symbol and only available in NDArray.'
         return msg
 
+class NotSupportedForSparseNDArray(MXNetError):
+    def __init__(self, function, alias, *args):
+        super(NotSupportedForSparseNDArray, self).__init__()
+        self.function = function.__name__
+        self.alias = alias
+        self.args = [str(type(a)) for a in args]
+    def __str__(self):
+        msg = 'Function {}'.format(self.function)
+        if self.alias:
+            msg += ' (namely operator "{}")'.format(self.alias)
+        if self.args:
+            msg += ' with arguments ({})'.format(', '.join(self.args))
+        msg += ' is not supported for SparseNDArray and only available in NDArray.'
+        return msg
+
 def _load_lib():
     """Load library by searching possible path."""
     lib_path = libinfo.find_lib_path()

@@ -91,8 +91,7 @@ void IdentityComputeRspRspImpl(const nnvm::NodeAttrs& attrs,
   CHECK_NE(req, kNullOp) << "kNullOp in IdentityComputeEx not supported yet";
   CHECK_NE(req, kWriteInplace) << "kWriteInplace in IdentityComputeEx not supported yet";
   if (!input.storage_initialized()) {
-    NDArray out = output;
-    FillZerosRspImpl(s, &out);
+    FillZerosRspImpl(s, output);
     return;
   }
   TShape shape = input.aux_shape(kIdx);
