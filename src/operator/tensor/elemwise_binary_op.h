@@ -14,6 +14,7 @@
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
+#include "./init_op.h"
 #include "../../common/utils.h"
 
 namespace mxnet {
@@ -125,38 +126,47 @@ void BinaryBackwardUseNone_(const nnvm::NodeAttrs& attrs,
 }
 
 // TODO(haibin) This is a single-thread inefficient implementation
-// Binary Compute between two row-sparse ndarray
 // This implementation only works on CPU
 template<typename xpu, typename OP>
-void BinaryComputeRspRsp(const nnvm::NodeAttrs& attrs,
-                         const OpContext& ctx,
-                         const std::vector<NDArray>& inputs,
-                         const std::vector<OpReqType>& req,
-                         const std::vector<NDArray>& outputs) {
+void BinaryComputeRspRspImpl(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<NDArray>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<NDArray>& outputs) {
+  CHECK(req[0] == kWriteTo) << "only kWriteTo is supported for rowsparse elemwise_add";
+  using namespace rowsparse;
+  using namespace mshadow;
   auto &lhs = inputs[0];
   auto &rhs = inputs[1];
   auto &output = outputs[0];
 
   bool init_l = lhs.storage_initialized();
   bool init_r = rhs.storage_initialized();
+  Stream<xpu> *s = ctx.get_stream<xpu>();
   // both inputs are zeros
-  if (!init_l && !init_r) return;
+  if (!init_l && !init_r) {
+    NDArray out = output;
+    FillZerosRspImpl(s, &out);
+    return;
+  }
   // Memory Estimation: This is (roughly) the number of result rows. We still
   // need to subtract the number of common rows
-  unsigned int num_rows_l = lhs.aux_shape(rowsparse::kIdx).Size();
-  unsigned int num_rows_r = rhs.aux_shape(rowsparse::kIdx).Size();
-  output.CheckAndAlloc({mshadow::Shape1(num_rows_l + num_rows_r)});
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  unsigned int num_rows_l = lhs.aux_shape(kIdx)[0];
+  unsigned int num_rows_r = rhs.aux_shape(kIdx)[0];
+  unsigned int num_rows_total = num_rows_l + num_rows_r;
+  auto row_len = output.shape().ProdShape(1, output.shape().ndim());
+  output.CheckAndAlloc({Shape1(num_rows_total)});
+  CHECK_GT(row_len, 0);
   MSHADOW_TYPE_SWITCH(output.dtype(), DType, {
-    MSHADOW_TYPE_SWITCH(lhs.aux_type(rowsparse::kIdx), IType, {
+    MSHADOW_TYPE_SWITCH(lhs.aux_type(kIdx), IType, {
       // Indices
-      auto indices_l = lhs.aux_data(rowsparse::kIdx).FlatTo1D<xpu, IType>(s);
-      auto indices_r = rhs.aux_data(rowsparse::kIdx).FlatTo1D<xpu, IType>(s);
-      auto indices_out = output.aux_data(rowsparse::kIdx).FlatTo1D<xpu, IType>(s);
+      auto indices_l = lhs.aux_data(kIdx).dptr<IType>();
+      auto indices_r = rhs.aux_data(kIdx).dptr<IType>();
+      auto indices_out = output.aux_data(kIdx).dptr<IType>();
       // Data
-      auto data_l = lhs.data().FlatTo2D<xpu, DType>(s);
-      auto data_r = rhs.data().FlatTo2D<xpu, DType>(s);
-      auto out = output.data().FlatTo2D<xpu, DType>(s);
+      auto data_l = lhs.data().get_with_shape<cpu, 2, DType>(Shape2(num_rows_l, row_len), s);
+      auto data_r = rhs.data().get_with_shape<cpu, 2, DType>(Shape2(num_rows_r, row_len), s);
+      auto out = output.data().get_with_shape<cpu, 2, DType>(Shape2(num_rows_total, row_len), s);
 
       // TODO(haibin) A more appropriate way: Copy to output, then apply ops
       size_t iter_l = 0;
@@ -169,32 +179,33 @@ void BinaryComputeRspRsp(const nnvm::NodeAttrs& attrs,
         if (idx_l == idx_r) {
           // Same row
           indices_out[iter_out] = idx_l;
-          mshadow::Copy(out[iter_out], data_l[iter_l++], s);
+          Copy(out[iter_out], data_l[iter_l++], s);
           out[iter_out] += data_r[iter_r++];
           num_common_rows++;
         } else if (idx_l < idx_r) {
           // Left only
           indices_out[iter_out] = idx_l;
-          mshadow::Copy(out[iter_out], data_l[iter_l++], s);
+          Copy(out[iter_out], data_l[iter_l++], s);
         } else {
           // Right only
           indices_out[iter_out] = idx_r;
-          mshadow::Copy(out[iter_out], data_r[iter_r++], s);
+          Copy(out[iter_out], data_r[iter_r++], s);
         }
         iter_out++;
       }
       // Copying over the rest of the rows
       while (iter_l < num_rows_l) {
         indices_out[iter_out] = indices_l[iter_l];
-        mshadow::Copy(out[iter_out++], data_l[iter_l++], s);
+        Copy(out[iter_out++], data_l[iter_l++], s);
       }
       while (iter_r < num_rows_r) {
         indices_out[iter_out] = indices_r[iter_r];
-        mshadow::Copy(out[iter_out++], data_r[iter_r++], s);
+        Copy(out[iter_out++], data_r[iter_r++], s);
       }
-      auto new_shape = output.aux_shape(rowsparse::kIdx);
-      new_shape[0] -= num_common_rows;
-      output.set_aux_shape(rowsparse::kIdx, new_shape);
+      auto new_ashape = output.aux_shape(rowsparse::kIdx);
+      CHECK_GT(new_ashape[0], num_common_rows);
+      new_ashape[0] -= num_common_rows;
+      output.set_aux_shape(rowsparse::kIdx, new_ashape);
     });
   });
 }
@@ -213,14 +224,14 @@ void BinaryComputeEx(const nnvm::NodeAttrs& attrs,
   if (typeid(OP) == typeid(mshadow::op::plus)) {
     // If any input is dense, fallback to FCompute
     // TODO(haibin) implement dns + rsp in a separate kernel
-    if (mxnet::common::ContainsDefaultStorage(inputs)) {
+    if (common::ContainsDefaultStorage(inputs)) {
       FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
                            BinaryCompute<xpu, OP>, "BinaryCompute");
       return;
     }
     CHECK_EQ(inputs[0].storage_type(), kRowSparseStorage) << "Sparse type not supported yet";
     CHECK_EQ(inputs[1].storage_type(), kRowSparseStorage) << "Sparse type not supported yet";
-    BinaryComputeRspRsp<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    BinaryComputeRspRspImpl<xpu, OP>(attrs, ctx, inputs, req, outputs);
     return;
   } else {
     LOG(FATAL) << "Not implemented";

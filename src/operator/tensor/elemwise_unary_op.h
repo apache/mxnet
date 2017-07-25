@@ -79,48 +79,48 @@ void IdentityCompute(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu>
-void IdentityComputeRsp(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<NDArray>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<NDArray>& outputs) {
+void IdentityComputeRspRspImpl(const nnvm::NodeAttrs& attrs,
+                               mshadow::Stream<xpu> *s,
+                               const NDArray& input,
+                               const OpReqType req,
+                               NDArray* output) {
   using namespace mshadow;
   using namespace mshadow::expr;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  auto &input = inputs[0];
-  auto &output = outputs[0];
-  CHECK_NE(req[0], kNullOp) << "kNullOp in IdentityComputeEx not supported yet";
-  CHECK_NE(req[0], kWriteInplace) << "kWriteInplace in IdentityComputeEx not supported yet";
+  using namespace rowsparse;
+  CHECK_NE(req, kNullOp) << "kNullOp in IdentityComputeEx not supported yet";
+  CHECK_NE(req, kWriteInplace) << "kWriteInplace in IdentityComputeEx not supported yet";
   if (!input.storage_initialized()) return;
-  TShape shape = input.aux_shape(rowsparse::kIdx);
-  output.CheckAndAlloc({shape});
-  MSHADOW_TYPE_SWITCH(output.dtype(), DType, {
-    MSHADOW_TYPE_SWITCH(output.aux_type(rowsparse::kIdx), AuxType, {
-      auto out_d = output.data().FlatTo1D<xpu, DType>(s);
-      auto out_aux = output.aux_data(rowsparse::kIdx).FlatTo1D<xpu, AuxType>(s);
-      auto in_aux = input.aux_data(rowsparse::kIdx).FlatTo1D<xpu, AuxType>(s);
-      ASSIGN_DISPATCH(out_d, req[0],
+  TShape shape = input.aux_shape(kIdx);
+  output->CheckAndAlloc({shape});
+  MSHADOW_TYPE_SWITCH(output->dtype(), DType, {
+    MSHADOW_TYPE_SWITCH(output->aux_type(kIdx), AuxType, {
+      auto out_d = output->data().FlatTo1D<xpu, DType>(s);
+      auto out_aux = output->aux_data(kIdx).FlatTo1D<xpu, AuxType>(s);
+      auto in_aux = input.aux_data(kIdx).FlatTo1D<xpu, AuxType>(s);
+      ASSIGN_DISPATCH(out_d, req,
                       F<mshadow_op::identity>(input.data().FlatTo1D<xpu, DType>(s)));
-      ASSIGN_DISPATCH(out_aux, req[0], F<mshadow_op::identity>(in_aux));
+      ASSIGN_DISPATCH(out_aux, req, F<mshadow_op::identity>(in_aux));
     });
   });
 }
 
 template<typename xpu>
 void IdentityLikeRhsComputeEx(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<NDArray>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<NDArray>& outputs) {
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   CHECK_EQ(inputs.size(), 2);
   CHECK_EQ(outputs.size(), 1);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  size_t rhs_idx = 1;
-  NDArrayStorageType stype = inputs[rhs_idx].storage_type();
-  if (stype == kRowSparseStorage) {
-    IdentityComputeRsp<xpu>(attrs, ctx, inputs, req, outputs);
+  const auto in_stype = inputs[0].storage_type();
+  const auto out_stype = outputs[0].storage_type();
+  // row_sparse -> row_sparse
+  if (in_stype == kRowSparseStorage && out_stype == kRowSparseStorage) {
+    NDArray out = outputs[0];
+    IdentityComputeRspRspImpl<xpu>(attrs, s, inputs[0], req[0], &out);
   } else {
     LOG(FATAL) << "Not implemented yet";
   }
