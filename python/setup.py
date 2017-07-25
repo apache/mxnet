@@ -12,6 +12,7 @@ else:
     from setuptools import setup
     from setuptools.extension import Extension
     kwargs = {'install_requires': ['numpy', 'requests', 'graphviz'], 'zip_safe': False}
+from setuptools import find_packages
 
 with_cython = False
 if '--with-cython' in sys.argv:
@@ -73,10 +74,7 @@ def config_cython():
 setup(name='mxnet',
       version=__version__,
       description=open(os.path.join(CURRENT_DIR, 'README.md')).read(),
-      packages=[
-          'mxnet', 'mxnet.module', 'mxnet._ctypes', 'mxnet.rnn',
-          'mxnet._cy2', 'mxnet._cy3', 'mxnet.notebook', 'mxnet.contrib'
-          ],
+      packages=find_packages(),
       data_files=[('mxnet', [LIB_PATH[0]])],
       url='https://github.com/dmlc/mxnet',
       ext_modules=config_cython(),

@@ -5,6 +5,7 @@
 from collections import OrderedDict
 import numpy as np
 
+
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
 from ..context import Context
@@ -425,24 +426,61 @@ class ParameterDict(object):
         for i in self.values():
             i.zero_grad()
 
-    def save(self, filename):
+    def save(self, filename, strip_prefix=''):
+        """Save parameters to file.
+
+        filename : str
+            Path to parameter file.
+        strip_prefix : str, default ''
+            Strip prefix from parameter names before saving.
+        """
         arg_dict = {}
         for param in self.values():
             block = param.list_data()
             weight = sum(w.copyto(context.cpu()) for w in block) / len(block)
-            arg_dict[param.name] = weight
+            if not param.name.startswith(strip_prefix):
+                raise ValueError(
+                    "Prefix %s is to be striped before saving, but Parameter " \
+                    "%s does not start with %s. If you are using Block.save_params, " \
+                    "This may be due to your Block shares parameters from other " \
+                    "Blocks or you forgot to use `with name_scope()`` during init. " \
+                    "Consider switching to Block.collect_params.save and " \
+                    "Block.collect_params.load instead."%(
+                        strip_prefix, param.name, strip_prefix))
+            arg_dict[param.name[len(strip_prefix):]] = weight
         ndarray.save(filename, arg_dict)
 
-    def load(self, filename, ctx, allow_missing=False, ignore_extra=False):
-        arg_dict = ndarray.load(filename)
+    def load(self, filename, ctx, allow_missing=False,
+             ignore_extra=False, restore_prefix=''):
+        """Load parameters from file.
+
+        filename : str
+            Path to parameter file.
+        ctx : Context or list of Context
+            Context(s) initialize loaded parameters on.
+        allow_missing : bool, default False
+            Whether to silently skip loading parameters not represents in the file.
+        ignore_extra : bool, default False
+            Whether to silently ignore parameters from the file that are not
+            present in this ParameterDict.
+        restore_prefix : str, default ''
+            prepend prefix to names of stored parameters before loading.
+        """
+        if restore_prefix:
+            for name in self.keys():
+                assert name.startswith(restore_prefix), \
+                    "restore_prefix is %s but Parameters name %s does not start " \
+                    "with %s"%(restore_prefix, name, restore_prefix)
+        lprefix = len(restore_prefix)
+        arg_dict = {restore_prefix+k: v for k, v in ndarray.load(filename).items()}
         if not allow_missing:
             for name in self.keys():
                 assert name in arg_dict, \
-                    "Parameter %s is missing in file %s"%(name, filename)
+                    "Parameter %s is missing in file %s"%(name[lprefix:], filename)
         for name in arg_dict:
             if name not in self._params:
                 assert ignore_extra, \
                     "Parameter %s loaded from file %s is not present in ParameterDict"%(
-                        name, filename)
+                        name[lprefix:], filename)
                 continue
             self[name]._load_init(arg_dict[name], ctx)

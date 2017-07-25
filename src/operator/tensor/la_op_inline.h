@@ -132,7 +132,7 @@ void potri::op<cpu, float>(const Tensor<cpu, 2, float>& L, const Tensor<cpu, 2, 
 template<>
 void potri::op<cpu, double>(const Tensor<cpu, 2, double>& A, const Tensor<cpu, 2, double>& L,
                             const nnvm::NodeAttrs& attrs) {
-  if ( A.dptr_ != L.dptr_ ) Copy(L, A);
+  if ( A.dptr_ != L.dptr_ ) Copy(A, L);
   FUNC_SIGNATURE_1(dpotri, A);
   CopyLowerToUpper(A.dptr_, A.size(0));
 }

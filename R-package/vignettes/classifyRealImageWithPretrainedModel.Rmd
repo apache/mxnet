@@ -125,6 +125,37 @@ print(paste0("Predicted Top-class: ", synsets[[max.idx]]))
 Actually I do not know what does the word mean when I saw it.
 So I searched on the web to check it out.. and hmm it does get the right answer :)
 
+Extract features
+------------------
+
+Besides the final classification results, we can also extract the internal features.
+We need to get feature layer symbol out of internals first. Here we use `global_pool_output`
+as an example.
+
+```{r}
+internals = model$symbol$get.internals()
+fea_symbol = internals[[match("global_pool_output", internals$outputs)]]
+```
+
+Next, we rebuild a new model using the feature symbol
+
+```{r}
+model2 <- list(symbol = fea_symbol,
+              arg.params = model$arg.params,
+              aux.params = model$aux.params)
+
+class(model2) <- "MXFeedForwardModel"
+```
+
+Then we can do the `predict` using the new model to get the internal results.
+You need to set `allow.extra.params = TRUE` since some parameters are not used this time.
+
+```{r}
+global_pooling_feature <- predict(model2, X = normed, allow.extra.params = TRUE)
+dim(global_pooling_feature)
+```
+
+
 Reference
 ---------
 [1] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating deep network training by reducing internal covariate shift." arXiv preprint arXiv:1502.03167 (2015).
