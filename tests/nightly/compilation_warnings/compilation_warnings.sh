@@ -1,4 +1,5 @@
-
+#!/bin/bash
+set -e
 runme() {
 	cmd=$*
 	echo "$cmd"
@@ -21,7 +22,6 @@ echo "Starting make"
 cp make/config.mk .
 sed -i -e 's/gcc/gcc-5/g' config.mk
 sed -i -e 's/g++/g++-5/g' config.mk
-runme /usr/bin/time -f "%e" make -j$(nproc) &> build/compile_output.txt
-cat build/compile_output.txt
+runme /usr/bin/time -f "%e" make -j$(nproc) 2>&1 | tee build/compile_output.txt
 echo "Finished make. Now processing output"
 python tests/nightly/compilation_warnings/process_output.py build/compile_output.txt
