@@ -175,7 +175,7 @@ void SquareSumRspImpl(const nnvm::NodeAttrs& attrs,
                       const OpReqType req,
                       NDArray* output) {
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  CHECK_EQ(param.axis.ndim(), 1U) << "_square_sum(row_sparse_matrix) only supports axis=0 or 1"; 
+  CHECK_EQ(param.axis.ndim(), 1U) << "_square_sum(row_sparse_matrix) only supports axis=0 or 1";
   CHECK(param.axis[0] == 0 || param.axis[0] == 1)
     << "_square_sum(row_sparse_matrix) only supports axis=0 or 1";
   CHECK_EQ(input.storage_type(), kRowSparseStorage)
@@ -256,7 +256,7 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
                           const OpReqType req,
                           NDArray* igrad) {
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  CHECK_EQ(param.axis.ndim(), 1U) << "_square_sum(row_sparse_matrix) only supports axis=0"; 
+  CHECK_EQ(param.axis.ndim(), 1U) << "_square_sum(row_sparse_matrix) only supports axis=0";
   CHECK(param.axis[0] == 0 || param.axis[0] == 1)
     << "_square_sum(row_sparse_matrix) only supports axis=0 or 1";
   CHECK_EQ(ograd.storage_type(), kDefaultStorage);
