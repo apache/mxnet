@@ -773,7 +773,10 @@ fixed-size items.
         >>> np.prod(x.shape)
         30
         """
-        return np.prod(self.shape)
+        size = 1
+        for i in self.shape:
+            size *= i
+        return size
 
     @property
     def context(self):
