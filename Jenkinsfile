@@ -183,7 +183,7 @@ try {
     cmake -G \"Visual Studio 14 2015 Win64\" -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 ${env.WORKSPACE}"""
               bat 'C:\\mxnet\\build_vc14_cpu.bat'
 
-              bat '''rmdir /s/q pkg_vc14_gpu
+              bat '''rmdir /s/q pkg_vc14_cpu
     mkdir pkg_vc14_cpu\\lib
     mkdir pkg_vc14_cpu\\python
     mkdir pkg_vc14_cpu\\include
@@ -352,7 +352,6 @@ try {
        }
     }
 
-
     stage('Integration Test') {
       parallel 'Python': {
         node('mxnetlinux') {
@@ -402,21 +401,19 @@ try {
     }
 } catch (caughtError) {
     node("mxnetlinux") {
-        sh "echo caughtError"
+        sh "echo caught error"
         err = caughtError
         currentBuild.result = "FAILURE"
     }
 } finally {
-    if (currentBuild.result == "FAILURE") {
-        node("mxnetlinux") {
-            if (params.BRANCH_NAME && ${BRANCH_NAME} == "master") {
-                sh "echo 'has BRANCH_NAME' ${BRANCH_NAME}"
-                emailext body: 'Build for MXNet branch ${BRANCH_NAME} has broken. Please view the build at ${BUILD_URL}', replyTo: 'lynguyen@amazon.com', subject: '[BUILD BROKEN] ${BRANCH_NAME} build ${BUILD_NUMBER}', to: 'lynguyen@amazon.com'
-            }
-            if (err) {
-                sh "echo throw"
-                throw err
-            }
+    node("mxnetlinux") {
+        // Only send email if master failed
+        if (currentBuild.result == "FAILURE" && env.BRANCH_NAME == "master") {
+            emailext body: 'Build for MXNet branch ${BRANCH_NAME} has broken. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[BUILD FAILED] Branch ${BRANCH_NAME} build ${BUILD_NUMBER}', to: '${EMAIL}'
+        }
+        // Remember to rethrow so the build is marked as failing
+        if (err) {
+            throw err
         }
     }
 }
