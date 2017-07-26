@@ -6,7 +6,7 @@ Krizhevsky, Alex, Ilya Sutskever, and Geoffrey E. Hinton. "Imagenet classificati
 import mxnet as mx
 import numpy as np
 
-def get_symbol(num_classes, dtype, **kwargs):
+def get_symbol(num_classes, dtype='float32', **kwargs):
     input_data = mx.sym.Variable(name="data")
     if dtype == 'float16':
         input_data = mx.sym.Cast(data=input_data, dtype=np.float16)
