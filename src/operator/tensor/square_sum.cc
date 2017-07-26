@@ -15,6 +15,11 @@ It will become deprecated once the functionality of fusing operators is finished
 in the future.
 
 Example::
+
+  dns = mx.nd.array([[0, 0], [1, 2], [0, 0], [3, 4], [0, 0]])
+  rsp = mx.nd.cast_storage(dns, stype='row_sparse')
+  sum = mx.nd._internal._square_sum(rsp, axis=1)
+  sum = [0, 5, 0, 25, 0]
 )code" ADD_FILELINE)
 .set_attr<FInferStorageType>("FInferStorageType", SquareSumForwardInferStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SquareSumOpForwardEx<cpu>)
