@@ -1289,9 +1289,9 @@ def check_rnn_layer(layer):
         states = layer.begin_state(16)
         co, cs = layer(x, states)
 
-    assert_allclose(go.asnumpy(), co.asnumpy(), rtol=1e-2)
+    assert_allclose(go.asnumpy(), co.asnumpy(), rtol=1e-1)
     for g, c in zip(gs, cs):
-        assert_allclose(g.asnumpy(), c.asnumpy(), rtol=1e-2)
+        assert_allclose(g.asnumpy(), c.asnumpy(), rtol=1e-1)
 
 
 def test_rnn_layer():
