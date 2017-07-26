@@ -14,12 +14,12 @@ def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
     ----------
     shape : int or tuple of int
         The shape of the empty array
-    stype: string, optional
-        The storage type of the empty array, such as 'row_sparse', 'csr', etc
     ctx : Context, optional
         An optional device context (default is the current default context)
     dtype : str or numpy.dtype, optional
         An optional value type (default is `float32`)
+    stype: string, optional
+        The storage type of the empty array, such as 'row_sparse', 'csr', etc
     aux_types: list of numpy.dtype, optional
         An optional type for the aux data for SparseNDArray (default values depends
         on the storage type)
