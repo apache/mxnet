@@ -15,6 +15,8 @@ def test_array_dataset():
 
 
 def prepare_record():
+    if not os.path.isdir("data"):
+        os.makedirs('data')
     if not os.path.isdir("data/test_images"):
         os.system("wget http://data.mxnet.io/data/test_images.tar.gz -O data/test_images.tar.gz")
         os.system("tar -xf data/test_images.tar.gz -C data")
