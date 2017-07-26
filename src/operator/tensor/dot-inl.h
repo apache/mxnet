@@ -646,7 +646,7 @@ inline void DotCsrRspRspImpl(mshadow::Stream<cpu>* s,
               }
             }
           } else {
-            LOG(FATAL) << "DotCsrRspRspImpl has not implemented dot(csr.T, rsp) = rsp2 yet";
+            LOG(FATAL) << "DotCsrRspRspImpl has not implemented dot(csr, rsp) = rsp2 yet";
           }
         });
       });
