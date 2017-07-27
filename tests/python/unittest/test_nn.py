@@ -12,6 +12,9 @@ def test_parameter():
     assert p.data(mx.cpu(1)).context == mx.cpu(1)
     assert p.data(mx.cpu(0)).shape == (10, 10)
     assert p.var().name == 'weight'
+    p.set_ctx(ctx=mx.cpu(0))
+    assert len(p.list_ctx()) == 1
+    assert mx.cpu(1) not in p.list_ctx()
 
 
 def test_paramdict():
