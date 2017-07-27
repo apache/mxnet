@@ -441,29 +441,34 @@ def test_executor_group():
     test_shared_exec_group(exec_grp_shared=exec_group1, exec_grp_created=exec_group2,
                            shared_arg_names=shared_arg_names, extra_args=extra_args)
 
+
 def test_module_fm():
     mx.random.seed(11)
     rnd.seed(11)
+
     def fm_model(k, feature_dim):
-         norm = mx.initializer.Normal(sigma=0.01)
-         x = mx.symbol.Variable("data", stype='csr')
-         v = mx.symbol.Variable("v", shape=(feature_dim, k), init=norm, stype='row_sparse')
+        norm = mx.initializer.Normal(sigma=0.01)
+        x = mx.symbol.Variable("data", stype='csr')
+        v = mx.symbol.Variable("v", shape=(feature_dim, k), init=norm, stype='row_sparse')
 
-         w1_weight = mx.symbol.var('w1_weight', shape=(feature_dim, 1), init=norm, stype='row_sparse')
-         w1 = mx.symbol.dot(x, w1_weight)
+        w1_weight = mx.symbol.var('w1_weight', shape=(feature_dim, 1), init=norm, stype='row_sparse')
+        w1 = mx.symbol.dot(x, w1_weight)
 
-         v_s = mx.symbol.sum(data=mx.symbol.square(data=v), axis=1)
-         x_s = mx.symbol.square(data=x)
-         bd = 0.5 * mx.symbol.negative(data=mx.symbol.broadcast_mul(x_s, v_s))
+        v_s = mx._symbol_internal._square_sum(data=v, axis=1, keepdims=True)
+        x_s = mx.symbol.square(data=x)
+        bd_sum = mx.sym.dot(x_s, v_s)
 
-         w2 = mx.symbol.dot(x, v)
-         w2_squared = 0.5 * mx.symbol.square(data=w2)
+        w2 = mx.symbol.dot(x, v)
+        w2_squared = 0.5 * mx.symbol.square(data=w2)
 
-         w_all = mx.symbol.Concat(w1, w2_squared, bd, dim=1)
-         model = mx.symbol.sum(data=w_all, axis=1, keepdims=True)
-         y = mx.symbol.Variable("out_label")
-         model = mx.symbol.LinearRegressionOutput(data=model, label=y, name="out")
-         return model
+        w_all = mx.symbol.Concat(w1, w2_squared, dim=1)
+        sum1 = mx.symbol.sum(data=w_all, axis=1, keepdims=True)
+        sum2 = 0.5 * mx.symbol.negative(bd_sum)
+        model = mx.sym.elemwise_add(sum1, sum2)
+
+        y = mx.symbol.Variable("out_label")
+        model = mx.symbol.LinearRegressionOutput(data=model, label=y, name="out")
+        return model
 
     # model
     ctx = default_context()
@@ -506,6 +511,7 @@ def test_module_fm():
             mod.update()                            # update parameters
         # print('Epoch %d, Training %s' % (epoch, metric.get()))
     assert(metric.get()[1] < 0.2)
+
 
 def test_module_initializer():
     def regression_model(m):

@@ -189,6 +189,7 @@ def test_sparse_retain():
     check_sparse_retain(shape)
     check_sparse_retain(shape_3d)
 
+
 def test_sparse_nd_zeros():
     def check_sparse_nd_zeros(stype, shape):
         zero = mx.nd.zeros(shape)
@@ -199,6 +200,34 @@ def test_sparse_nd_zeros():
     check_sparse_nd_zeros('row_sparse', shape)
     check_sparse_nd_zeros('csr', shape)
     check_sparse_nd_zeros('default', shape)
+
+
+def test_sparse_square_sum():
+    dim0 = 30
+    dim1 = 30
+    axes = [0, 1]
+    keepdims = [False, True]
+    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    for density in densities:
+        shape = rand_shape_2d(dim0, dim1)
+        rsp = rand_ndarray(shape, 'row_sparse', density)
+        dns = rsp.todense()
+        for axis in axes:
+            for keepdim in keepdims:
+                ret = mx.nd._internal._square_sum(rsp, axis=axis, keepdims=keepdim)
+                if axis == 1 and keepdim:
+                    assert ret.stype == 'row_sparse'
+                else:
+                    assert ret.stype == 'default'
+                ret_expected = mx.nd.sum(dns*dns, axis=axis, keepdims=keepdim)
+                # check forward result
+                assert same(ret.asnumpy(), ret_expected.asnumpy())
+
+                # check numeric gradient
+                data = mx.sym.Variable('data', stype='row_sparse')
+                test = mx._symbol_internal._square_sum(data, axis=axis, keepdims=keepdim)
+                check_numeric_gradient(test, [rsp], grad_stype_dict={'data': 'row_sparse'},
+                                       atol=1e-2, rtol=0.1)
 
 
 if __name__ == '__main__':

@@ -552,7 +552,10 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         assert isinstance(grad_stype_dict, dict), "grad_stype_dict must be a dict"
         for k, v in grad_stype_dict.items():
             if k in args_grad and v in _STORAGE_TYPE_STR_TO_ID and v != 'default':
-                args_grad[k] = mx.nd.cast_storage(args_grad[k], stype=v)
+                # create an uninitialized sparse ndarray for executor
+                # if the symbolic grad is expected to be zero, it should not be initialized at all
+                args_grad[k] = mx.nd.zeros(args_grad[k].shape, args_grad[k].context,
+                                           args_grad[k].dtype, v)
 
     executor = out.bind(ctx, grad_req=grad_req,
                         args=location, args_grad=args_grad, aux_states=aux_states)
