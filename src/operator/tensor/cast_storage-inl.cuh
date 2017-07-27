@@ -14,13 +14,288 @@
 namespace mxnet {
 namespace op {
 using mshadow::cuda::kBaseThreadNum;
+using mshadow::Shape1;
+using mxnet_op::Kernel;
 
-inline void CastStorageDnsRspImpl(const OpContext& ctx, const gpu& gpu_dev, const TBlob& dns, NDArray* rsp) {
-  LOG(FATAL) << "CastStorageDnsRspImpl gpu version is not implemented.";
+/*!
+ * \brief Thread kernel for marking non-zero rows of a tensor
+ * Parallelized by tensor rows: 1 thread/row
+ */
+struct MarkRspRowIdxThreadKernel {
+  /*!
+   * \brief
+   * \param tid         global thread id
+   * \param row_flg     row flag array to mark non-zero rows
+   * \param dns         dense matrix data
+   * \param num_rows    number of rows (size of first dimension of tensor)
+   * \param row_length  number of elements per row
+   */
+  template<typename DType, typename RType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             RType* row_flg,
+                                             const DType* dns,
+                                             const index_t num_rows,
+                                             const index_t row_length) {
+    if (tid < num_rows) {
+      index_t j = 0;
+      index_t offset = tid * row_length;
+      for (; j < row_length; ++j) {
+        if (dns[offset+j] != 0) {
+          break;
+        }
+      }
+      if (j < row_length) {
+        row_flg[tid] = 1;  // mark as one for non-zero row
+      } else {
+        row_flg[tid] = 0;  // mark as zero for zero row
+      }
+    }
+  }
+};
+
+/*!
+ * \brief Thread kernel for marking non-zero rows of a tensor
+ * Parallelized by tensor rows: 1 warp/row
+ */
+struct MarkRspRowIdxWarpKernel {
+  template<typename DType, typename RType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             RType* row_flg,
+                                             const DType* dns,
+                                             const index_t num_rows,
+                                             const index_t row_length) {
+    typedef cub::WarpReduce<index_t> WarpReduce;
+    const index_t warps_per_block = kBaseThreadNum / 32;
+    __shared__ typename WarpReduce::TempStorage temp_storage[warps_per_block];
+
+    const index_t warp_id   = tid / 32;          // global warp   id
+    const index_t warp_lane = threadIdx.x / 32;  // local  warp   id within thread block
+    const index_t lane      = tid & (32-1);      // local  thread id within warp
+
+    if (warp_id < num_rows) {
+      index_t flg = 0;
+      index_t offset = warp_id * row_length;
+      for (index_t j = lane; j < row_length; j+=32) {
+        if (dns[offset+j] != 0) {
+          // avoid break: causes slower performance on sparse tensors (<20% density),
+          // due to thread divergence
+          flg++;
+        }
+      }
+      index_t aggr = WarpReduce(temp_storage[warp_lane]).Sum(flg);
+      if (lane == 0) {
+        if (aggr > 0) {
+          row_flg[warp_id] = 1;  // mark as one for non-zero row
+        } else {
+          row_flg[warp_id] = 0;  // mark as zero for zero row
+        }
+      }
+    }
+  }
+};
+
+/*!
+ * \brief Thread kernel for marking non-zero rows of a tensor
+ * Parallelized by tensor rows: 1 threadBlock/row
+ */
+struct MarkRspRowIdxBlockKernel {
+  template<typename DType, typename RType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             RType* row_flg,
+                                             const DType* dns,
+                                             const index_t num_rows,
+                                             const index_t row_length) {
+    typedef cub::BlockReduce<index_t, kBaseThreadNum> BlockReduce;
+    __shared__ typename BlockReduce::TempStorage temp_storage;
+    if (blockIdx.x < num_rows) {
+      index_t flg = 0;
+      index_t offset = blockIdx.x * row_length;
+      for (index_t j = threadIdx.x; j < row_length; j+=kBaseThreadNum) {
+        if (dns[offset+j] != 0) {
+          // avoid break: causes slower performance on sparse tensors (<20% density),
+          // due to thread divergence
+          flg++;
+        }
+      }
+      index_t aggr = BlockReduce(temp_storage).Sum(flg);
+      if (threadIdx.x == 0) {
+        if (aggr > 0) {
+          row_flg[blockIdx.x] = 1;  // mark as one for non-zero row
+        } else {
+          row_flg[blockIdx.x] = 0;  // mark as zero for zero row
+        }
+      }
+    }
+  }
+};
+
+/*!
+ * \brief Kernel for filling the row index array of the rsp tensor
+ * Parallelized by tensor rows: 1 thread/row
+ */
+struct FillRspRowIdxKernel {
+  /*!
+   * \brief
+   * \param tid          global thread id
+   * \param row_idx      row index array to store indices of non-zero rows
+   * \param row_flg_sum  inclusive prefix sum array over marked row flag array
+   * \param num_rows     number of rows (size of first dimension of tensor)
+   */
+  template<typename RType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             RType* row_idx,
+                                             const RType* row_flg_sum,
+                                             const index_t num_rows) {
+    if (tid < num_rows) {
+      index_t prev = (tid == 0)? 0 : row_flg_sum[tid-1];
+      if (row_flg_sum[tid] > prev) {
+        row_idx[prev] = tid;
+      }
+    }
+  }
+};
+
+/*!
+ * \brief Kernel for filling the value array of the rsp tensor
+ * Parallelized by rsp tensor elements: 1 thread/element
+ */
+struct FillRspValsKernel {
+  /*!
+   * \brief
+   * \param tid         global thread id
+   * \param rsp_val     value array of rsp tensor to store data
+   * \param row_idx     indices of non-zero rows
+   * \param dns         dense matrix data
+   * \param nnr         number of non-zero rows
+   * \param row_length  number of elements per row
+   */
+  template<typename DType, typename RType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             DType* rsp_val,
+                                             const RType* row_idx,
+                                             const DType* dns,
+                                             const index_t nnr,
+                                             const index_t row_length) {
+    if (tid < nnr*row_length) {
+      const index_t row_id = tid / row_length;
+      const index_t row_el = tid % row_length;
+      const index_t dns_idx = row_idx[row_id] * row_length + row_el;
+      rsp_val[tid] = dns[dns_idx];
+    }
+  }
+};
+
+/*!
+ * \brief GPU implementation of casting a dns tensor to rsp type.
+ */
+inline void CastStorageDnsRspImpl(const OpContext& ctx,
+                                  const gpu& gpu_dev,
+                                  const TBlob& dns,
+                                  NDArray* rsp) {
+  CHECK(rsp != nullptr);
+  CHECK_EQ(rsp->storage_type(), kRowSparseStorage);
+  CHECK_EQ(dns.shape_, rsp->shape());
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+  MSHADOW_TYPE_SWITCH(dns.type_flag_, DType, {  // data type
+    MSHADOW_IDX_TYPE_SWITCH(rsp->aux_type(rowsparse::kIdx), RType, {  // row idx type
+      const index_t num_rows = dns.shape_[0];
+      const index_t row_length = dns.shape_.ProdShape(1, dns.shape_.ndim());
+      const index_t threads_per_warp = mxnet_op::cuda_get_device_prop().warpSize;
+      const index_t threads_per_block = kBaseThreadNum;
+      const index_t min_num_warps = 512;
+      index_t num_threads;
+      // TODO: remove kernel dependency on warpSize=32
+      if (threads_per_warp != 32) {
+        LOG(FATAL) << "CastStorageDnsRspImpl GPU kernels expect warpSize=32";
+      }
+      // Determine temporary device storage requirements
+      RType* row_flg = NULL;
+      void* d_temp_storage = NULL;
+      size_t temp_storage_bytes = 0;
+      cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                    temp_storage_bytes,
+                                    row_flg,
+                                    row_flg,
+                                    num_rows,
+                                    mshadow::Stream<gpu>::GetStream(s));
+
+      // Allocate temp storage for marking non-zero rows and for cub's prefix sum
+      mshadow::Tensor<gpu, 1, char> workspace = ctx.requested[0]
+        .get_space_typed<gpu, 1, char>(Shape1(num_rows*sizeof(RType)+temp_storage_bytes), s);
+      row_flg = reinterpret_cast<RType*>(workspace.dptr_);
+      d_temp_storage = workspace.dptr_ + num_rows*sizeof(RType);
+
+      // Mark non-zero rows as 'one' in row_flg
+      // Different kernel versions are optimized for different matrix instances
+      // (1) 'Thread kernel' (one thread       computing one row)
+      // (2) 'Warp kernel'   (one warp         computing one row)
+      // (3) 'Block kernel'  (one thread block computing one row)
+      const int kernel_version = 0;
+      switch (kernel_version) {
+        case 1:
+          num_threads = num_rows;
+          Kernel<MarkRspRowIdxThreadKernel, gpu>::Launch(s, num_threads,
+              row_flg, dns.dptr<DType>(), num_rows, row_length);
+          break;
+        case 2:
+          num_threads = num_rows * threads_per_warp;
+          Kernel<MarkRspRowIdxWarpKernel, gpu>::Launch(s, num_threads,
+              row_flg, dns.dptr<DType>(), num_rows, row_length);
+          break;
+        case 3:
+          num_threads = num_rows * threads_per_block;
+          Kernel<MarkRspRowIdxBlockKernel, gpu>::Launch(s, num_threads,
+              row_flg, dns.dptr<DType>(), num_rows, row_length);
+          break;
+        default:
+          if (row_length < threads_per_warp) {
+            num_threads = num_rows;
+            Kernel<MarkRspRowIdxThreadKernel, gpu>::Launch(s, num_threads,
+                row_flg, dns.dptr<DType>(), num_rows, row_length);
+          } else if (row_length < threads_per_block || num_rows > min_num_warps) {
+            num_threads = num_rows * threads_per_warp;
+            Kernel<MarkRspRowIdxWarpKernel, gpu>::Launch(s, num_threads,
+                row_flg, dns.dptr<DType>(), num_rows, row_length);
+          } else {
+            num_threads = num_rows * threads_per_block;
+            Kernel<MarkRspRowIdxBlockKernel, gpu>::Launch(s, num_threads,
+                row_flg, dns.dptr<DType>(), num_rows, row_length);
+          }
+          break;
+      }
+      // Compute non-zero row indices through inclusive prefix sum
+      cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                    temp_storage_bytes,
+                                    row_flg,
+                                    row_flg,
+                                    num_rows,
+                                    mshadow::Stream<gpu>::GetStream(s));
+
+      // Get total number of non-zero rows from device
+      RType nnr = 0;
+      CUDA_CALL(cudaMemcpy(&nnr, &row_flg[num_rows-1], sizeof(RType), cudaMemcpyDeviceToHost));
+
+      // Allocate rsp tensor row index array and fill
+      rsp->CheckAndAllocAuxData(rowsparse::kIdx, Shape1(static_cast<index_t>(nnr)));
+      if (0 == nnr) return;
+      RType* row_idx = rsp->aux_data(rowsparse::kIdx).dptr<RType>();
+      num_threads = num_rows;
+      Kernel<FillRspRowIdxKernel, gpu>::Launch(s, num_threads,
+          row_idx, row_flg, num_rows);
+
+      // Construct shape of rsp tensor data, allocate, and fill
+      auto storage_shape = dns.shape_;
+      storage_shape[0] = nnr;
+      rsp->CheckAndAllocData(storage_shape);
+      num_threads = nnr * row_length;
+      Kernel<FillRspValsKernel, gpu>::Launch(s, num_threads,
+          rsp->data().dptr<DType>(), row_idx, dns.dptr<DType>(), nnr, row_length);
+    });
+  });
 }
 
 /*!
- * \brief Thread kernel for initializing the indptr in a csr tensor.
+ * \brief Thread kernel for initializing the indptr in a csr tensor
  * Parallelized by matrix rows: 1 thread/row
  */
 struct FillCsrIndPtrThreadKernel {
@@ -33,15 +308,16 @@ struct FillCsrIndPtrThreadKernel {
    * \param num_cols  number of columns of the dense matrix
    */
   template<typename DType, typename IType>
-  __device__ __forceinline__ static void Map(int tid, IType* indptr, const DType* dns,
-                                  const int num_rows, const int num_cols) {
+  __device__ __forceinline__ static void Map(int tid,
+                                             IType* indptr, const DType* dns,
+                                             const index_t num_rows, const index_t num_cols) {
     if (tid == 0) {
       indptr[tid] = 0;
     }
     if (tid < num_rows) {
-      int nnz = 0;
-      const int offset = tid * num_cols;
-      for (int j = 0; j < num_cols; ++j) {
+      index_t nnz = 0;
+      const index_t offset = tid * num_cols;
+      for (index_t j = 0; j < num_cols; ++j) {
         if (dns[offset+j] != 0) {
           nnz++;
         }
@@ -67,13 +343,14 @@ struct FillCsrColIdxAndValsThreadKernel {
    * \param num_cols  number of columns of the dense matrix
    */
   template<typename DType, typename IType, typename CType>
-  __device__ __forceinline__ static void Map(int tid, DType* val, CType* col_idx,
-                                  const IType* indptr, const DType* dns,
-                                  const int num_rows, const int num_cols) {
+  __device__ __forceinline__ static void Map(int tid,
+                                             DType* val, CType* col_idx,
+                                             const IType* indptr, const DType* dns,
+                                             const index_t num_rows, const index_t num_cols) {
     if (tid < num_rows) {
-      const int offset = tid * num_cols;
-      int k = indptr[tid];
-      for (int j = 0; j < num_cols; ++j) {
+      const index_t offset = tid * num_cols;
+      index_t k = indptr[tid];
+      for (index_t j = 0; j < num_cols; ++j) {
         if (dns[offset+j] != 0) {
           val[k] = dns[offset+j];
           col_idx[k] = j;
@@ -90,27 +367,28 @@ struct FillCsrColIdxAndValsThreadKernel {
  */
 struct FillCsrIndPtrWarpKernel {
   template<typename DType, typename IType>
-  __device__ __forceinline__ static void Map(int tid, IType* indptr, const DType* dns,
-                                  const int num_rows, const int num_cols) {
-    typedef cub::WarpReduce<int> WarpReduce;
-    const int warps_per_block = kBaseThreadNum / 32;
+  __device__ __forceinline__ static void Map(int tid,
+                                             IType* indptr, const DType* dns,
+                                             const index_t num_rows, const index_t num_cols) {
+    typedef cub::WarpReduce<index_t> WarpReduce;
+    const index_t warps_per_block = kBaseThreadNum / 32;
     __shared__ typename WarpReduce::TempStorage temp_storage[warps_per_block];
 
     if (tid == 0) {
       indptr[tid] = 0;
     }
-    const int warp_id   = tid / 32;          // global warp   id
-    const int warp_lane = threadIdx.x / 32;  // local  warp   id within thread block
-    const int lane      = tid & (32-1);      // local  thread id within warp
+    const index_t warp_id   = tid / 32;          // global warp   id
+    const index_t warp_lane = threadIdx.x / 32;  // local  warp   id within thread block
+    const index_t lane      = tid & (32-1);      // local  thread id within warp
     if (warp_id < num_rows) {
-      int lane_nnz = 0;
-      const int offset = warp_id * num_cols;
-      for (int j = lane; j < num_cols; j+=32) {
+      index_t lane_nnz = 0;
+      const index_t offset = warp_id * num_cols;
+      for (index_t j = lane; j < num_cols; j+=32) {
         if (dns[offset+j] != 0) {
           lane_nnz++;
         }
       }
-      int aggr = WarpReduce(temp_storage[warp_lane]).Sum(lane_nnz);
+      index_t aggr = WarpReduce(temp_storage[warp_lane]).Sum(lane_nnz);
       if (lane == 0) {
         indptr[warp_id+1] = aggr;
       }
@@ -124,22 +402,23 @@ struct FillCsrIndPtrWarpKernel {
  */
 struct FillCsrColIdxAndValsWarpKernel {
   template<typename DType, typename IType, typename CType>
-  __device__ __forceinline__ static void Map(int tid, DType* val, CType* col_idx,
-                                  const IType* indptr, const DType* dns,
-                                  const int num_rows, const int num_cols) {
-    typedef cub::WarpScan<int> WarpScan;
-    const int warps_per_block = kBaseThreadNum / 32;
+  __device__ __forceinline__ static void Map(int tid,
+                                             DType* val, CType* col_idx,
+                                             const IType* indptr, const DType* dns,
+                                             const index_t num_rows, const index_t num_cols) {
+    typedef cub::WarpScan<index_t> WarpScan;
+    const index_t warps_per_block = kBaseThreadNum / 32;
     __shared__ typename WarpScan::TempStorage temp_storage[warps_per_block];
-    __shared__ volatile int warp_nnz[warps_per_block];
+    __shared__ volatile index_t warp_nnz[warps_per_block];
 
-    const int warp_id   = tid / 32;          // global warp   id
-    const int warp_lane = threadIdx.x / 32;  // local  warp   id within thread block
-    const int lane      = tid & (32-1);      // local  thread id within warp
+    const index_t warp_id   = tid / 32;          // global warp   id
+    const index_t warp_lane = threadIdx.x / 32;  // local  warp   id within thread block
+    const index_t lane      = tid & (32-1);      // local  thread id within warp
     if (warp_id < num_rows) {
-      const int offset = warp_id * num_cols;
-      int k = indptr[warp_id];
-      int nnz;
-      for (int j = lane; j < num_cols+lane; j+=32) {
+      const index_t offset = warp_id * num_cols;
+      index_t k = indptr[warp_id];
+      index_t nnz;
+      for (index_t j = lane; j < num_cols+lane; j+=32) {
         nnz = 0;
         if (j < num_cols) {
           if (dns[offset+j] != 0) {
@@ -168,28 +447,29 @@ struct FillCsrColIdxAndValsWarpKernel {
 };
 
 /*!
- * \brief Block kernel for initializing the indptr in a csr tensor.
+ * \brief Block kernel for initializing the indptr in a csr tensor
  * Parallelized by matrix rows: 1 threadBlock/row
  */
 struct FillCsrIndPtrBlockKernel {
   template<typename DType, typename IType>
-  __device__ __forceinline__ static void Map(int tid, IType* indptr, const DType* dns,
-                                  const int num_rows, const int num_cols) {
-    typedef cub::BlockReduce<int, kBaseThreadNum> BlockReduce;
+  __device__ __forceinline__ static void Map(int tid,
+                                             IType* indptr, const DType* dns,
+                                             const index_t num_rows, const index_t num_cols) {
+    typedef cub::BlockReduce<index_t, kBaseThreadNum> BlockReduce;
     __shared__ typename BlockReduce::TempStorage temp_storage;
 
     if (tid == 0) {
       indptr[tid] = 0;
     }
     if (blockIdx.x < num_rows) {
-      int lane_nnz = 0;
-      const int offset = blockIdx.x * num_cols;
-      for (int j = threadIdx.x; j < num_cols; j+=kBaseThreadNum) {
+      index_t lane_nnz = 0;
+      const index_t offset = blockIdx.x * num_cols;
+      for (index_t j = threadIdx.x; j < num_cols; j+=kBaseThreadNum) {
         if (dns[offset+j] != 0) {
           lane_nnz++;
         }
       }
-      int aggr = BlockReduce(temp_storage).Sum(lane_nnz);
+      index_t aggr = BlockReduce(temp_storage).Sum(lane_nnz);
       if (threadIdx.x == 0) {
         indptr[blockIdx.x+1] = aggr;
       }
@@ -203,18 +483,19 @@ struct FillCsrIndPtrBlockKernel {
  */
 struct FillCsrColIdxAndValsBlockKernel {
   template<typename DType, typename IType, typename CType>
-  __device__ __forceinline__ static void Map(int tid, DType* val, CType* col_idx,
-                                  const IType* indptr, const DType* dns,
-                                  const int num_rows, const int num_cols) {
-    typedef cub::BlockScan<int, kBaseThreadNum> BlockScan;
+  __device__ __forceinline__ static void Map(int tid,
+                                             DType* val, CType* col_idx,
+                                             const IType* indptr, const DType* dns,
+                                             const index_t num_rows, const index_t num_cols) {
+    typedef cub::BlockScan<index_t, kBaseThreadNum> BlockScan;
     __shared__ typename BlockScan::TempStorage temp_storage;
-    __shared__ volatile int block_nnz;
+    __shared__ volatile index_t block_nnz;
 
     if (blockIdx.x < num_rows) {
-      const int offset = blockIdx.x * num_cols;
-      int k = indptr[blockIdx.x];
-      int nnz;
-      for (int j = threadIdx.x; j < num_cols+threadIdx.x; j+=kBaseThreadNum) {
+      const index_t offset = blockIdx.x * num_cols;
+      index_t k = indptr[blockIdx.x];
+      index_t nnz;
+      for (index_t j = threadIdx.x; j < num_cols+threadIdx.x; j+=kBaseThreadNum) {
         nnz = 0;
         if (j < num_cols) {
           if (dns[offset+j] != 0) {
@@ -243,8 +524,7 @@ struct FillCsrColIdxAndValsBlockKernel {
 };
 
 /*!
- * \brief
- * GPU implementation of casting a dense matrix to csr type.
+ * \brief GPU implementation of casting a dense matrix to csr type
  */
 inline void CastStorageDnsCsrImpl(const OpContext& ctx,
                                   const gpu& gpu_dev,
@@ -260,12 +540,15 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
       MSHADOW_IDX_TYPE_SWITCH(csr->aux_type(csr::kIdx), CType, {   // col_idx type
         const index_t num_rows = dns.shape_[0];
         const index_t num_cols = dns.shape_[1];
-        const int threads_per_warp  = 32;
-        const int threads_per_block = kBaseThreadNum;
-        const int min_num_warps = 512;
-        int num_threads;
-
-        csr->CheckAndAllocAuxData(csr::kIndPtr, mshadow::Shape1(num_rows+1));
+        const index_t threads_per_warp  = mxnet_op::cuda_get_device_prop().warpSize;
+        const index_t threads_per_block = kBaseThreadNum;
+        const index_t min_num_warps = 512;
+        index_t num_threads;
+        // TODO: remove kernel dependency on warpSize=32
+        if (threads_per_warp != 32) {
+          LOG(FATAL) << "CastStorageDnsCsrImpl GPU kernels expect warpSize=32";
+        }
+        csr->CheckAndAllocAuxData(csr::kIndPtr, Shape1(num_rows+1));
         IType* indptr = csr->aux_data(csr::kIndPtr).dptr<IType>();
         DType* dns_data = dns.dptr<DType>();
 
@@ -277,32 +560,32 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
         switch (kernel_version) {
           case 1:
             num_threads = num_rows;
-            mxnet_op::Kernel<FillCsrIndPtrThreadKernel, gpu>::Launch(s, num_threads,
+            Kernel<FillCsrIndPtrThreadKernel, gpu>::Launch(s, num_threads,
                 indptr, dns_data, num_rows, num_cols);
             break;
           case 2:
             num_threads = num_rows * threads_per_warp;
-            mxnet_op::Kernel<FillCsrIndPtrWarpKernel, gpu>::Launch(s, num_threads,
+            Kernel<FillCsrIndPtrWarpKernel, gpu>::Launch(s, num_threads,
                 indptr, dns_data, num_rows, num_cols);
             break;
           case 3:
             num_threads = num_rows * threads_per_block;
-            mxnet_op::Kernel<FillCsrIndPtrBlockKernel, gpu>::Launch(s, num_threads,
+            Kernel<FillCsrIndPtrBlockKernel, gpu>::Launch(s, num_threads,
                 indptr, dns_data, num_rows, num_cols);
             break;
           default:
             if (num_cols < threads_per_warp) {
               num_threads = num_rows;
-              mxnet_op::Kernel<FillCsrIndPtrThreadKernel, gpu>::Launch(s, num_threads,
-                indptr, dns_data, num_rows, num_cols);
+              Kernel<FillCsrIndPtrThreadKernel, gpu>::Launch(s, num_threads,
+                  indptr, dns_data, num_rows, num_cols);
             } else if (num_cols < threads_per_block || num_rows > min_num_warps) {
               num_threads = num_rows * threads_per_warp;
-              mxnet_op::Kernel<FillCsrIndPtrWarpKernel, gpu>::Launch(s, num_threads,
-                indptr, dns_data, num_rows, num_cols);
+              Kernel<FillCsrIndPtrWarpKernel, gpu>::Launch(s, num_threads,
+                  indptr, dns_data, num_rows, num_cols);
             } else {
               num_threads = num_rows * threads_per_block;
-              mxnet_op::Kernel<FillCsrIndPtrBlockKernel, gpu>::Launch(s, num_threads,
-                indptr, dns_data, num_rows, num_cols);
+              Kernel<FillCsrIndPtrBlockKernel, gpu>::Launch(s, num_threads,
+                  indptr, dns_data, num_rows, num_cols);
             }
             break;
         }
@@ -314,12 +597,12 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
                                       temp_storage_bytes,
                                       indptr,
                                       indptr,
-                                      static_cast<int>(num_rows+1),
+                                      num_rows+1,
                                       mshadow::Stream<gpu>::GetStream(s));
 
         // Allocate temporary storage
         mshadow::Tensor<gpu, 1, char> workspace = ctx.requested[0]
-          .get_space_typed<gpu, 1, char>(mshadow::Shape1(temp_storage_bytes), s);
+          .get_space_typed<gpu, 1, char>(Shape1(temp_storage_bytes), s);
         d_temp_storage = workspace.dptr_;
 
         // Compute indptr through inclusive prefix sum
@@ -327,7 +610,7 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
                                       temp_storage_bytes,
                                       indptr,
                                       indptr,
-                                      static_cast<int>(num_rows+1),
+                                      num_rows+1,
                                       mshadow::Stream<gpu>::GetStream(s));
 
         // Receive total number of nnz values from device
@@ -335,43 +618,43 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
         CUDA_CALL(cudaMemcpy(&nnz, &(indptr[num_rows]), sizeof(IType), cudaMemcpyDeviceToHost));
 
         // Allocate column index array and data array of the csr matrix
-        csr->CheckAndAllocAuxData(csr::kIdx, mshadow::Shape1(static_cast<index_t>(nnz)));
-        csr->CheckAndAllocData(mshadow::Shape1(static_cast<index_t>(nnz)));
+        csr->CheckAndAllocAuxData(csr::kIdx, Shape1(static_cast<index_t>(nnz)));
+        csr->CheckAndAllocData(Shape1(static_cast<index_t>(nnz)));
 
         // Compute and fill column index array and data array of the csr matrix
         switch (kernel_version) {
           case 1:
             num_threads = num_rows;
-            mxnet_op::Kernel<FillCsrColIdxAndValsThreadKernel, gpu>::Launch(s, num_threads,
+            Kernel<FillCsrColIdxAndValsThreadKernel, gpu>::Launch(s, num_threads,
                 csr->data().dptr<DType>(), csr->aux_data(csr::kIdx).dptr<CType>(),
                 indptr, dns_data, num_rows, num_cols);
             break;
           case 2:
             num_threads = num_rows * threads_per_warp;
-            mxnet_op::Kernel<FillCsrColIdxAndValsWarpKernel, gpu>::Launch(s, num_threads,
+            Kernel<FillCsrColIdxAndValsWarpKernel, gpu>::Launch(s, num_threads,
                 csr->data().dptr<DType>(), csr->aux_data(csr::kIdx).dptr<CType>(),
                 indptr, dns_data, num_rows, num_cols);
             break;
           case 3:
             num_threads = num_rows * threads_per_block;
-            mxnet_op::Kernel<FillCsrColIdxAndValsBlockKernel, gpu>::Launch(s, num_threads,
+            Kernel<FillCsrColIdxAndValsBlockKernel, gpu>::Launch(s, num_threads,
                 csr->data().dptr<DType>(), csr->aux_data(csr::kIdx).dptr<CType>(),
                 indptr, dns_data, num_rows, num_cols);
             break;
           default:
             if (num_cols < threads_per_warp) {
               num_threads = num_rows;
-              mxnet_op::Kernel<FillCsrColIdxAndValsThreadKernel, gpu>::Launch(s, num_threads,
-                csr->data().dptr<DType>(), csr->aux_data(csr::kIdx).dptr<CType>(),
-                indptr, dns_data, num_rows, num_cols);
+              Kernel<FillCsrColIdxAndValsThreadKernel, gpu>::Launch(s, num_threads,
+                  csr->data().dptr<DType>(), csr->aux_data(csr::kIdx).dptr<CType>(),
+                  indptr, dns_data, num_rows, num_cols);
             } else if (num_cols < threads_per_block || num_rows > min_num_warps) {
               num_threads = num_rows * threads_per_warp;
-              mxnet_op::Kernel<FillCsrColIdxAndValsWarpKernel, gpu>::Launch(s, num_threads,
+              Kernel<FillCsrColIdxAndValsWarpKernel, gpu>::Launch(s, num_threads,
                 csr->data().dptr<DType>(), csr->aux_data(csr::kIdx).dptr<CType>(),
                 indptr, dns_data, num_rows, num_cols);
             } else {
               num_threads = num_rows * threads_per_block;
-              mxnet_op::Kernel<FillCsrColIdxAndValsBlockKernel, gpu>::Launch(s, num_threads,
+              Kernel<FillCsrColIdxAndValsBlockKernel, gpu>::Launch(s, num_threads,
                 csr->data().dptr<DType>(), csr->aux_data(csr::kIdx).dptr<CType>(),
                 indptr, dns_data, num_rows, num_cols);
             }
