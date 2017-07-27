@@ -24,7 +24,7 @@ def generate_stats(warnings):
 def print_summary(time, warnings):
     sorted_warnings, total_count = generate_stats(warnings)
     print "START - Compilation warnings count"
-    print total_count
+    print total_count, 'warnings'
     print "END - Compilation warnings count"
     print 'START - Compilation warnings summary'
     print 'Time taken to compile:', time, 's'
