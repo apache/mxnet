@@ -37,9 +37,7 @@ class MXNetModelsTest(unittest.TestCase):
         )
         return mod
 
-    def _test_model(self, model_name, epoch_num):
-
-        input_shape = (1, 3, 224, 224)
+    def _test_model(self, model_name, epoch_num, input_shape = (1, 3, 224, 224)):
 
         module = self._load_model(
             model_name=model_name,
@@ -62,26 +60,6 @@ class MXNetModelsTest(unittest.TestCase):
         for i in range(len(mxnet_preds)):
             self.assertAlmostEquals(mxnet_preds[i], coreml_preds[i], delta = 1e-3)
 
-    def test_convert_inception_bn(self):
-        input_shape = (1, 3, 224, 224)
-        module = self._load_model('Inception-BN', 126, input_shape)
-        mxnet_converter.convert(module, data=input_shape)
-
-    def test_convert_squeezenet_v11(self):
-        input_shape = (1, 3, 224, 224)
-        module = self._load_model('squeezenet_v1.1', 0, input_shape)
-        mxnet_converter.convert(module, data=input_shape)
-
-    def test_convert_resnet_50(self):
-        input_shape = (1, 3, 224, 224)
-        module = self._load_model('resnet-50', 0, input_shape)
-        mxnet_converter.convert(module, data=input_shape)
-
-    def test_convert_vgg16(self):
-        input_shape = (1, 3, 224, 224)
-        module = self._load_model('vgg-16', 0, input_shape)
-        mxnet_converter.convert(module, data=input_shape)
-
     def test_pred_inception_bn(self):
         self._test_model(model_name='Inception-BN', epoch_num=126)
 
@@ -93,6 +71,9 @@ class MXNetModelsTest(unittest.TestCase):
 
     def test_pred_vgg16(self):
         self._test_model(model_name='vgg16', epoch_num=0)
+
+    def test_pred_inception_v3(self):
+        self._test_model(model_name='Inception-7', epoch_num=1, input_shape=(1, 3, 299, 299))
 
 
 if __name__ == '__main__':
