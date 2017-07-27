@@ -6,14 +6,15 @@ logging.basicConfig(level=logging.INFO)
 
 import mxnet as mx
 from mxnet import gluon
-from mxnet.gluon import nn, models
+from mxnet.gluon import nn
+from mxnet.gluon.model_zoo import vision as models
 from mxnet import autograd as ag
 
 from data import *
 
 # CLI
 parser = argparse.ArgumentParser(description='Train a model for image classification.')
-parser.add_argument('--dataset', type=str, default='dummy',
+parser.add_argument('--dataset', type=str, default='mnist',
                     help='dataset to use. options are mnist, cifar10, and dummy.')
 parser.add_argument('--batch-size', type=int, default=32,
                     help='training batch size per device (CPU/GPU).')
@@ -39,7 +40,7 @@ parser.add_argument('--batch-norm', action='store_true',
                     help='enable batch normalization or not in vgg. default is false.')
 parser.add_argument('--use-pretrained', action='store_true',
                     help='enable using pretrained model from gluon.')
-parser.add_argument('--log-interval', type=int, default=100, help='Number of batches to wait before logging.')
+parser.add_argument('--log-interval', type=int, default=50, help='Number of batches to wait before logging.')
 opt = parser.parse_args()
 
 print(opt)

@@ -3,16 +3,17 @@
 """SqueezeNet, implemented in Gluon."""
 __all__ = ['SqueezeNet', 'squeezenet1_0', 'squeezenet1_1']
 
-from ...context import cpu
-from ..block import HybridBlock
-from .. import nn
+from ....context import cpu
+from ...block import HybridBlock
+from ... import nn
+from ..custom_layers import HybridConcurrent
 
 # Helpers
 def _make_fire(squeeze_channels, expand1x1_channels, expand3x3_channels):
     out = nn.HybridSequential()
     with out.name_scope():
         out.add(_make_fire_conv(squeeze_channels, 1))
-        paths = nn.HybridConcurrent(concat_dim=1)
+        paths = HybridConcurrent(concat_dim=1)
         out.add(paths)
         with paths.name_scope():
             paths.add(_make_fire_conv(expand1x1_channels, 1))
@@ -111,7 +112,7 @@ def get_squeezenet(version, pretrained=False, ctx=cpu(), **kwargs):
     """
     net = SqueezeNet(version, **kwargs)
     if pretrained:
-        from .model_zoo import get_model_file
+        from ..model_store import get_model_file
         net.load_params(get_model_file('squeezenet%s'%version), ctx=ctx)
     return net
 
@@ -127,6 +128,7 @@ def squeezenet1_0(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_squeezenet('1.0', **kwargs)
+
 def squeezenet1_1(**kwargs):
     r"""SqueezeNet 1.1 model from the `official SqueezeNet repo
     <https://github.com/DeepScale/SqueezeNet/tree/master/SqueezeNet_v1.1>`_.

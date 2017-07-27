@@ -8,9 +8,9 @@ __all__ = ['ResNetV1', 'ResNetV2',
            'resnet18_v2', 'resnet34_v2', 'resnet50_v2', 'resnet101_v2', 'resnet152_v2',
            'get_resnet']
 
-from ...context import cpu
-from ..block import HybridBlock
-from .. import nn
+from ....context import cpu
+from ...block import HybridBlock
+from ... import nn
 
 # Helpers
 def _conv3x3(channels, stride, in_channels):
@@ -370,7 +370,7 @@ def get_resnet(version, num_layers, pretrained=False, ctx=cpu(), **kwargs):
     block_class = resnet_block_versions[version-1][block_type]
     net = resnet_class(block_class, layers, channels, **kwargs)
     if pretrained:
-        from .model_zoo import get_model_file
+        from ..model_store import get_model_file
         net.load_params(get_model_file('resnet%d_v%d'%(num_layers, version)), ctx=ctx)
     return net
 
@@ -386,6 +386,7 @@ def resnet18_v1(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_resnet(1, 18, **kwargs)
+
 def resnet34_v1(**kwargs):
     r"""ResNet-34 V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
@@ -398,6 +399,7 @@ def resnet34_v1(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_resnet(1, 34, **kwargs)
+
 def resnet50_v1(**kwargs):
     r"""ResNet-50 V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
@@ -410,6 +412,7 @@ def resnet50_v1(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_resnet(1, 50, **kwargs)
+
 def resnet101_v1(**kwargs):
     r"""ResNet-101 V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
@@ -422,6 +425,7 @@ def resnet101_v1(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_resnet(1, 101, **kwargs)
+
 def resnet152_v1(**kwargs):
     r"""ResNet-152 V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
@@ -447,6 +451,7 @@ def resnet18_v2(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_resnet(2, 18, **kwargs)
+
 def resnet34_v2(**kwargs):
     r"""ResNet-34 V2 model from `"Identity Mappings in Deep Residual Networks"
     <https://arxiv.org/abs/1603.05027>`_ paper.
@@ -459,6 +464,7 @@ def resnet34_v2(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_resnet(2, 34, **kwargs)
+
 def resnet50_v2(**kwargs):
     r"""ResNet-50 V2 model from `"Identity Mappings in Deep Residual Networks"
     <https://arxiv.org/abs/1603.05027>`_ paper.
@@ -471,6 +477,7 @@ def resnet50_v2(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_resnet(2, 50, **kwargs)
+
 def resnet101_v2(**kwargs):
     r"""ResNet-101 V2 model from `"Identity Mappings in Deep Residual Networks"
     <https://arxiv.org/abs/1603.05027>`_ paper.
@@ -483,6 +490,7 @@ def resnet101_v2(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_resnet(2, 101, **kwargs)
+
 def resnet152_v2(**kwargs):
     r"""ResNet-152 V2 model from `"Identity Mappings in Deep Residual Networks"
     <https://arxiv.org/abs/1603.05027>`_ paper.

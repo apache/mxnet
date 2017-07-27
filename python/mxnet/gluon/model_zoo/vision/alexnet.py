@@ -3,9 +3,9 @@
 """Alexnet, implemented in Gluon."""
 __all__ = ['AlexNet', 'alexnet']
 
-from ...context import cpu
-from ..block import HybridBlock
-from .. import nn
+from ....context import cpu
+from ...block import HybridBlock
+from ... import nn
 
 # Net
 class AlexNet(HybridBlock):
@@ -62,6 +62,6 @@ def alexnet(pretrained=False, ctx=cpu(), **kwargs):
     """
     net = AlexNet(**kwargs)
     if pretrained:
-        from .model_zoo import get_model_file
+        from ..model_store import get_model_file
         net.load_params(get_model_file('alexnet'), ctx=ctx)
     return net

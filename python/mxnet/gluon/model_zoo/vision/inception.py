@@ -3,9 +3,10 @@
 """Inception, implemented in Gluon."""
 __all__ = ['Inception3', 'inception_v3']
 
-from ...context import cpu
-from ..block import HybridBlock
-from .. import nn
+from ....context import cpu
+from ...block import HybridBlock
+from ... import nn
+from ..custom_layers import HybridConcurrent
 
 # Helpers
 def _make_basic_conv(**kwargs):
@@ -33,7 +34,7 @@ def _make_branch(use_pool, *conv_settings):
     return out
 
 def _make_A(pool_features):
-    out = nn.HybridConcurrent(concat_dim=1)
+    out = HybridConcurrent(concat_dim=1)
     with out.name_scope():
         out.add(_make_branch(None,
                              (64, 1, None, None)))
@@ -49,7 +50,7 @@ def _make_A(pool_features):
     return out
 
 def _make_B():
-    out = nn.HybridConcurrent(concat_dim=1)
+    out = HybridConcurrent(concat_dim=1)
     with out.name_scope():
         out.add(_make_branch(None,
                              (384, 3, 2, None)))
@@ -61,7 +62,7 @@ def _make_B():
     return out
 
 def _make_C(channels_7x7):
-    out = nn.HybridConcurrent(concat_dim=1)
+    out = HybridConcurrent(concat_dim=1)
     with out.name_scope():
         out.add(_make_branch(None,
                              (192, 1, None, None)))
@@ -80,7 +81,7 @@ def _make_C(channels_7x7):
     return out
 
 def _make_D():
-    out = nn.HybridConcurrent(concat_dim=1)
+    out = HybridConcurrent(concat_dim=1)
     with out.name_scope():
         out.add(_make_branch(None,
                              (192, 1, None, None),
@@ -94,7 +95,7 @@ def _make_D():
     return out
 
 def _make_E():
-    out = nn.HybridConcurrent(concat_dim=1)
+    out = HybridConcurrent(concat_dim=1)
     with out.name_scope():
         out.add(_make_branch(None,
                              (320, 1, None, None)))
@@ -104,7 +105,7 @@ def _make_E():
         with branch_3x3.name_scope():
             branch_3x3.add(_make_branch(None,
                                         (384, 1, None, None)))
-            branch_3x3_split = nn.HybridConcurrent(concat_dim=1)
+            branch_3x3_split = HybridConcurrent(concat_dim=1)
             branch_3x3_split.add(_make_branch(None,
                                               (384, (1, 3), None, (0, 1))))
             branch_3x3_split.add(_make_branch(None,
@@ -117,7 +118,7 @@ def _make_E():
             branch_3x3dbl.add(_make_branch(None,
                                            (448, 1, None, None),
                                            (384, 3, None, 1)))
-            branch_3x3dbl_split = nn.HybridConcurrent(concat_dim=1)
+            branch_3x3dbl_split = HybridConcurrent(concat_dim=1)
             branch_3x3dbl.add(branch_3x3dbl_split)
             with branch_3x3dbl_split.name_scope():
                 branch_3x3dbl_split.add(_make_branch(None,
@@ -202,6 +203,6 @@ def inception_v3(pretrained=False, ctx=cpu(), **kwargs):
     """
     net = Inception3(**kwargs)
     if pretrained:
-        from .model_zoo import get_model_file
+        from ..model_store import get_model_file
         net.load_params(get_model_file('inceptionv3'), ctx=ctx)
     return net

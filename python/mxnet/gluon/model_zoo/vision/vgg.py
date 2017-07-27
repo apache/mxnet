@@ -7,10 +7,10 @@ __all__ = ['VGG',
            'vgg11_bn', 'vgg13_bn', 'vgg16_bn', 'vgg19_bn',
            'get_vgg']
 
-from ...context import cpu
-from ...initializer import Xavier
-from ..block import HybridBlock
-from .. import nn
+from ....context import cpu
+from ....initializer import Xavier
+from ...block import HybridBlock
+from ... import nn
 
 
 class VGG(HybridBlock):
@@ -93,7 +93,7 @@ def get_vgg(num_layers, pretrained=False, ctx=cpu(), **kwargs):
     layers, filters = vgg_spec[num_layers]
     net = VGG(layers, filters, **kwargs)
     if pretrained:
-        from .model_zoo import get_model_file
+        from ..model_store import get_model_file
         batch_norm_suffix = '_bn' if kwargs.get('batch_norm') else ''
         net.load_params(get_model_file('vgg%d%s'%(num_layers, batch_norm_suffix)), ctx=ctx)
     return net
@@ -110,6 +110,7 @@ def vgg11(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_vgg(11, **kwargs)
+
 def vgg13(**kwargs):
     r"""VGG-13 model from the `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
     <https://arxiv.org/abs/1409.1556>`_ paper.
@@ -122,6 +123,7 @@ def vgg13(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_vgg(13, **kwargs)
+
 def vgg16(**kwargs):
     r"""VGG-16 model from the `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
     <https://arxiv.org/abs/1409.1556>`_ paper.
@@ -134,6 +136,7 @@ def vgg16(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_vgg(16, **kwargs)
+
 def vgg19(**kwargs):
     r"""VGG-19 model from the `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
     <https://arxiv.org/abs/1409.1556>`_ paper.
@@ -146,6 +149,7 @@ def vgg19(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_vgg(19, **kwargs)
+
 def vgg11_bn(**kwargs):
     r"""VGG-11 model with batch normalization from the
     `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
@@ -160,6 +164,7 @@ def vgg11_bn(**kwargs):
     """
     kwargs['batch_norm'] = True
     return get_vgg(11, **kwargs)
+
 def vgg13_bn(**kwargs):
     r"""VGG-13 model with batch normalization from the
     `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
@@ -174,6 +179,7 @@ def vgg13_bn(**kwargs):
     """
     kwargs['batch_norm'] = True
     return get_vgg(13, **kwargs)
+
 def vgg16_bn(**kwargs):
     r"""VGG-16 model with batch normalization from the
     `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
@@ -188,6 +194,7 @@ def vgg16_bn(**kwargs):
     """
     kwargs['batch_norm'] = True
     return get_vgg(16, **kwargs)
+
 def vgg19_bn(**kwargs):
     r"""VGG-19 model with batch normalization from the
     `"Very Deep Convolutional Networks for Large-Scale Image Recognition"

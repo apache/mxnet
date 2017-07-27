@@ -3,9 +3,10 @@
 """DenseNet, implemented in Gluon."""
 __all__ = ['DenseNet', 'densenet121', 'densenet161', 'densenet169', 'densenet201']
 
-from ...context import cpu
-from ..block import HybridBlock
-from .. import nn
+from ....context import cpu
+from ...block import HybridBlock
+from ... import nn
+from ..custom_layers import HybridConcurrent, Identity
 
 # Helpers
 def _make_dense_block(num_layers, bn_size, growth_rate, dropout):
@@ -27,9 +28,9 @@ def _make_dense_layer(growth_rate, bn_size, dropout):
         if dropout:
             new_features.add(nn.Dropout(dropout))
 
-    out = nn.HybridConcurrent(concat_dim=1)
+    out = HybridConcurrent(concat_dim=1)
     with out.name_scope():
-        out.add(nn.Identity())
+        out.add(Identity())
         out.add(new_features)
 
     return out
@@ -121,7 +122,7 @@ def get_densenet(num_layers, pretrained=False, ctx=cpu(), **kwargs):
     num_init_features, growth_rate, block_config = densenet_spec[num_layers]
     net = DenseNet(num_init_features, growth_rate, block_config, **kwargs)
     if pretrained:
-        from .model_zoo import get_model_file
+        from ..model_store import get_model_file
         net.load_params(get_model_file('densenet%d'%(num_layers)), ctx=ctx)
     return net
 
@@ -137,6 +138,7 @@ def densenet121(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_densenet(121, **kwargs)
+
 def densenet161(**kwargs):
     r"""Densenet-BC 161-layer model from the
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_ paper.
@@ -149,6 +151,7 @@ def densenet161(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_densenet(161, **kwargs)
+
 def densenet169(**kwargs):
     r"""Densenet-BC 169-layer model from the
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_ paper.
@@ -161,6 +164,7 @@ def densenet169(**kwargs):
         The context in which to load the pretrained weights.
     """
     return get_densenet(169, **kwargs)
+
 def densenet201(**kwargs):
     r"""Densenet-BC 201-layer model from the
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_ paper.
