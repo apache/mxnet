@@ -358,13 +358,9 @@ class SGD(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        self._update_count(index)
-
-        self.update_weight(index, weight, grad, state)
-
-    def update_weight(self, index, weight, grad, state):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
+        self._update_count(index)
 
         kwargs = {'rescale_grad': self.rescale_grad}
         if self.momentum > 0:
@@ -984,8 +980,16 @@ class SparseSGD(SGD):
         boolean
             If the masks were changed
         """
+        # determine number of updates without actually updating the count
+        if index not in self._index_update_count:
+            num_update = self.begin_num_update
+        else:
+            num_update = self._index_update_count[index]
+        num_update += 1
+        num_update = max(num_update, self.num_update)
+
         # calculate epoch
-        epoch = int((self.num_update - 1) / self.batches_per_epoch) + 1
+        epoch = int((num_update - 1) / self.batches_per_epoch) + 1
 
         # determine if masks need to be updated, and get corresponding parameters
         if index == 0:
@@ -1031,7 +1035,6 @@ class SparseSGD(SGD):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        self._update_count(index)
 
         # for pruning
         if self.update_masks(index, weight):
@@ -1040,7 +1043,7 @@ class SparseSGD(SGD):
         if state is not None:
             state[:] = state * self.masks[index]
 
-        super(SparseSGD, self).update_weight(index, weight, grad, state)
+        super(SparseSGD, self).update(index, weight, grad, state)
 
 @register
 class Test(Optimizer):
