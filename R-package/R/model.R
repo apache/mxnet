@@ -279,7 +279,13 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
   return(model)
 }
 
-# Initialize parameters
+#' Parameter initialization
+#' @param symbol The symbolic configuration of the neural network.
+#' @param input.shape The shape of the input for the neural network.
+#' @param output.shape The shape of the output for the neural network. It can be NULL.
+#' @param initializer, initializer object. The initialization scheme for parameters.
+#' @param ctx mx.context. The devices used to perform initialization.
+#' @export
 mx.model.init.params <- function(symbol, input.shape, output.shape, initializer, ctx) {
   if (!is.MXSymbol(symbol)) stop("symbol need to be MXSymbol")
 
@@ -296,7 +302,7 @@ mx.model.init.params <- function(symbol, input.shape, output.shape, initializer,
 
 # Initialize the data iter
 mx.model.init.iter <- function(X, y, batch.size, is.train) {
-  if (is.MXDataIter(X)) return(X)
+  if (is.mx.dataiter(X)) return(X)
   if (is.null(y)) {
     if (is.train) stop("Need to provide parameter y for training with R arrays.")
     shape <- dim(X)

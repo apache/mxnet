@@ -3,19 +3,9 @@ is.param.name <- function(name) {
            grepl('gamma$', name) || grepl('beta$', name) )
 }
 
-# Initialize parameters
-mx.model.init.params.rnn <- function(symbol, input.shape, initializer, ctx) {
-  if (!is.mx.symbol(symbol)) stop("symbol need to be MXSymbol")
-  slist <- symbol$infer.shape(input.shape)
-  if (is.null(slist)) stop("Not enough information to get shapes")
-  arg.params <- mx.init.create(initializer, slist$arg.shapes, ctx, skip.unknown=TRUE)
-  aux.params <- mx.init.create(initializer, slist$aux.shapes, ctx, skip.unknown=FALSE)
-  return(list(arg.params=arg.params, aux.params=aux.params))
-}
-
 # Initialize the data iter
 mx.model.init.iter.rnn <- function(X, y, batch.size, is.train) {
-  if (is.MXDataIter(X)) return(X)
+  if (is.mx.dataiter(X)) return(X)
   shape <- dim(X)
   if (is.null(shape)) {
     num.data <- length(X)
@@ -56,11 +46,11 @@ setup.rnn.model <- function(rnn.sym, ctx,
             }
         }
     }
-    params <- mx.model.init.params.rnn(rnn.sym, input.shapes, initializer, mx.cpu())
+    params <- mx.model.init.params(rnn.sym, input.shapes, NULL, initializer, mx.cpu())
     args <- input.shapes
     args$symbol <- rnn.sym
     args$ctx <- ctx
-    args$grad.req <- "add"
+    args$grad.req <- "write"
     rnn.exec <- do.call(mx.simple.bind, args)
 
     mx.exec.update.arg.arrays(rnn.exec, params$arg.params, match.name=TRUE)
