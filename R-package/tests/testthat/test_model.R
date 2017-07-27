@@ -127,11 +127,11 @@ test_that("Fine-tune", {
   
   new_fc <- mx.symbol.FullyConnected(data = flatten, num_hidden = 2, name = "fc1")
   new_soft <- mx.symbol.SoftmaxOutput(data = new_fc, name = "softmax")
-  arg_params_new <- mxnet:::mx.model.init.params(symbol = new_soft,
-                                                 input.shape = list("data" = c(224, 224, 3, 8)),
-                                                 output.shape = NULL,
-                                                 initializer = mx.init.uniform(0.1),
-                                                 ctx = mx.cpu())$arg.params
+  arg_params_new <- mx.model.init.params(symbol = new_soft,
+                                         input.shape = list("data" = c(224, 224, 3, 8)),
+                                         output.shape = NULL,
+                                         initializer = mx.init.uniform(0.1),
+                                         ctx = mx.cpu())$arg.params
   fc1_weights_new <- arg_params_new[["fc1_weight"]]
   fc1_bias_new <- arg_params_new[["fc1_bias"]]
   
