@@ -358,9 +358,13 @@ class SGD(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
+
+        update_weight(index, weight, grad, state)
+
+    def update_weight(self, index, weight, grad, state)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         kwargs = {'rescale_grad': self.rescale_grad}
         if self.momentum > 0:
@@ -1028,8 +1032,6 @@ class SparseSGD(SGD):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         self._update_count(index)
-        lr = self._get_lr(index)
-        wd = self._get_wd(index)
 
         # for pruning
         if self.update_masks(index, weight):
@@ -1038,27 +1040,7 @@ class SparseSGD(SGD):
         if state is not None:
             state[:] = state * self.masks[index]
 
-        kwargs = {'rescale_grad': self.rescale_grad}
-        if self.momentum > 0:
-            kwargs['momentum'] = self.momentum
-        if self.clip_gradient:
-            kwargs['clip_gradient'] = self.clip_gradient
-        use_multi_precision = isinstance(state, (list, tuple))
-
-        if not use_multi_precision:
-            if state is not None:
-                sgd_mom_update(weight, grad, state, out=weight,
-                               lr=lr, wd=wd, **kwargs)
-            else:
-                sgd_update(weight, grad, out=weight,
-                           lr=lr, wd=wd, **kwargs)
-        else:
-            if state[0] is not None:
-                mp_sgd_mom_update(weight, grad, state[0], state[1], out=weight,
-                                  lr=lr, wd=wd, **kwargs)
-            else:
-                mp_sgd_update(weight, grad, state[1], out=weight,
-                              lr=lr, wd=wd, **kwargs)
+        super(SparseSGD, self).update_weight(index, weight, grad, state)
 
 @register
 class Test(Optimizer):
