@@ -362,7 +362,7 @@ class SGD(Optimizer):
 
         update_weight(index, weight, grad, state)
 
-    def update_weight(self, index, weight, grad, state)
+    def update_weight(self, index, weight, grad, state):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
 
