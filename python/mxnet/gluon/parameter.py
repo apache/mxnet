@@ -455,6 +455,16 @@ class ParameterDict(object):
         for i in self.values():
             i.zero_grad()
 
+    def reset_ctx(self, ctx):
+        """Re-assign all Parameters to other contexts.
+
+        ctx : Context or list of Context, default `context.current_context()`.
+            Assign Parameter to given context. If ctx is a list of Context, a
+            copy will be made for each context.
+        """
+        for i in self.values():
+            i.reset_ctx(ctx)
+
     def save(self, filename, strip_prefix=''):
         """Save parameters to file.
 
