@@ -10,6 +10,9 @@
 #include <dmlc/omp.h>
 #include <mxnet/base.h>
 #include <algorithm>
+#ifdef __CUDACC__
+#include "../common/cuda_utils.h"
+#endif  // __CUDACC__
 
 namespace mxnet {
 namespace op {
@@ -32,6 +35,13 @@ int get_num_threads(const int N);
       i < (n); \
       i += blockDim.x * gridDim.x)
 
+inline cudaDeviceProp cuda_get_device_prop() {
+  int device;
+  CUDA_CALL(cudaGetDevice(&device));
+  cudaDeviceProp deviceProp;
+  CUDA_CALL(cudaGetDeviceProperties(&deviceProp, device));
+  return deviceProp;
+}
 
 /*!
  * \brief Get the number of blocks for cuda kernel given N
