@@ -14,7 +14,7 @@ from test_random import *
 from test_nn import *
 #from test_rnn import *
 from test_gluon_rnn import *
-from test_sparse_operator import test_sparse_nd_zeros, test_sparse_dot
+from test_sparse_operator import test_cast_storage_ex, test_sparse_dot, test_sparse_nd_zeros
 from test_sparse_ndarray import test_create_csr, test_create_row_sparse
 
 set_default_context(mx.gpu(0))

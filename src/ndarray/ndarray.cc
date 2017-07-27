@@ -418,7 +418,7 @@ inline void CopyFromToDnsImpl(const NDArray from, NDArray *to, RunContext ctx) {
 
 // Make a copy of an NDArray based on storage type
 template<typename from_xpu, typename to_xpu>
-void CopyFromToImpl(const NDArray from, NDArray *to, RunContext ctx) {
+void CopyFromToImpl(const NDArray from, NDArray *to, RunContext rctx) {
   using namespace std;
   using namespace mshadow;
   // if storage type doesn't match, cast the storage first
@@ -431,10 +431,20 @@ void CopyFromToImpl(const NDArray from, NDArray *to, RunContext ctx) {
     << " to stype = " << to_stype << " is not supported";
   const auto from_ctx = from.ctx();
   const auto to_ctx = to->ctx();
-  auto s = ctx.get_stream<from_xpu>();
+  auto s = rctx.get_stream<from_xpu>();
+  bool is_train = mxnet::autograd::AutogradRuntime::Get()->IsTraining();
+  std::vector<Resource> requested;
+  if (is_same<from_xpu, mshadow::gpu>::value && from_stype != to_stype) {
+    requested.push_back(ResourceManager::Get()->Request(from_ctx,
+        ResourceRequest(ResourceRequest::kTempSpace)));
+  }
+  OpContext opctx{is_train,
+                  rctx,
+                  engine::CallbackOnComplete(),
+                  requested};
   if (from_ctx == to_ctx && from_stype != to_stype) {
     // same ctx, different stypes, use cast op directly without copying
-    common::CastStorageDispatch<from_xpu>(s, from, *to);
+    common::CastStorageDispatch<from_xpu>(opctx, from, *to);
   } else {
     NDArray casted_nd;  // an intermediate result before copying from to to
     if (from_stype == to_stype) {
@@ -447,22 +457,22 @@ void CopyFromToImpl(const NDArray from, NDArray *to, RunContext ctx) {
         casted_nd = NDArray(to_stype, shape, from_ctx);
       }
       // convert from_nd to the same stype as to_nd
-      common::CastStorageDispatch<from_xpu>(s, from, casted_nd);
+      common::CastStorageDispatch<from_xpu>(opctx, from, casted_nd);
     }
 
     if (to_stype == kDefaultStorage) {
-      CopyFromToDnsImpl<from_xpu, to_xpu>(casted_nd, to, ctx);
+      CopyFromToDnsImpl<from_xpu, to_xpu>(casted_nd, to, rctx);
     } else if (to_stype == kRowSparseStorage) {
-      CopyFromToRspImpl<from_xpu, to_xpu>(casted_nd, to, ctx);
+      CopyFromToRspImpl<from_xpu, to_xpu>(casted_nd, to, rctx);
     } else if (to_stype == kCSRStorage) {
-      CopyFromToCsrImpl<from_xpu, to_xpu>(casted_nd, to, ctx);
+      CopyFromToCsrImpl<from_xpu, to_xpu>(casted_nd, to, rctx);
     } else {
       LOG(FATAL) << "unknown storage type" << to_stype;
     }
   }
   if (is_same<from_xpu, mshadow::gpu>::value || is_same<to_xpu, mshadow::gpu>::value) {
     // Wait GPU kernel to complete
-    ctx.get_stream<gpu>()->Wait();
+    rctx.get_stream<gpu>()->Wait();
   }
 }
 

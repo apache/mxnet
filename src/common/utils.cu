@@ -11,10 +11,10 @@ namespace mxnet {
 namespace common {
 
 template<>
-void CastStorageDispatch<gpu>(mshadow::Stream<gpu>* s,
+void CastStorageDispatch<gpu>(const OpContext& ctx,
                               const NDArray& input,
                               const NDArray& output) {
-  mxnet::op::CastStorageComputeImpl(s, input, output);
+  mxnet::op::CastStorageComputeImpl<gpu>(ctx, input, output);
 }
 
 }  // namespace common
