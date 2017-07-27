@@ -360,7 +360,7 @@ class SGD(Optimizer):
         assert(isinstance(grad, NDArray))
         self._update_count(index)
 
-        update_weight(index, weight, grad, state)
+        self.update_weight(index, weight, grad, state)
 
     def update_weight(self, index, weight, grad, state):
         lr = self._get_lr(index)
