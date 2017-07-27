@@ -11,9 +11,6 @@
 
 using namespace mxnet::cpp;
 
-static const Symbol BN_BETA;
-static const Symbol BN_GAMMA;
-
 Symbol ConvFactoryBN(Symbol data, int num_filter,
                      Shape kernel, Shape stride, Shape pad,
                      const std::string & name,
@@ -23,7 +20,12 @@ Symbol ConvFactoryBN(Symbol data, int num_filter,
   Symbol conv = Convolution("conv_" + name + suffix, data,
                             conv_w, conv_b, kernel,
                             num_filter, stride, Shape(1, 1), pad);
-  Symbol bn = BatchNorm("bn_" + name + suffix, conv, Symbol(), Symbol(), Symbol(), Symbol());
+  std::string name_suffix = name + suffix;
+  Symbol gamma(name_suffix + "_gamma");
+  Symbol beta(name_suffix + "_beta");
+  Symbol mmean(name_suffix + "_mmean");
+  Symbol mvar(name_suffix + "_mvar");
+  Symbol bn = BatchNorm("bn_" + name + suffix, conv, gamma, beta, mmean, mvar);
   return Activation("relu_" + name + suffix, bn, "relu");
 }
 

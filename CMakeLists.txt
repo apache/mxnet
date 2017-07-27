@@ -13,6 +13,7 @@ mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
 mxnet_option(USE_CUDA             "Build with CUDA support"   ON)
 mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
+mxnet_option(USE_LAPACK           "Build with lapack support" ON IF NOT MSVC)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML_MKL        "Use MKLML variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE))
 mxnet_option(USE_MKL_EXPERIMENTAL "Use experimental MKL (if MKL enabled and found)" OFF)
@@ -142,6 +143,12 @@ include_directories("mshadow")
 include_directories("cub")
 include_directories("nnvm/include")
 include_directories("dmlc-core/include")
+include_directories("dlpack/include")
+
+# commented out until PR goes through
+#if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/dlpack)
+#  add_subdirectory(dlpack)
+#endif()
 
 if(NOT MSVC)
   set(BEGIN_WHOLE_ARCHIVE -Wl,--whole-archive)
@@ -176,7 +183,11 @@ if(USE_OPENCV)
   message(STATUS "OpenCV found (${OpenCV_CONFIG_PATH})")
   add_definitions(-DMXNET_USE_OPENCV=1)
   if(NOT MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--no-undefined")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-undefined,error")
+    else()
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--no-undefined")
+    endif()
   endif()
 else(USE_OPENCV)
   message(STATUS "OpenCV Disabled")
@@ -191,7 +202,20 @@ if(USE_OPENMP)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
   endif()
+elseif(UNIX)
+  list(APPEND mxnet_LINKER_LIBS pthread)
 endif()
+
+if(USE_LAPACK)
+  add_definitions(-DMXNET_USE_LAPACK=1)
+  list(APPEND mxnet_LINKER_LIBS lapack)
+else(USE_LAPACK)
+  # Workaround for Windows until using new Jenkinsfile.
+  if(USE_BLAS STREQUAL "open")
+    add_definitions(-DMXNET_USE_LAPACK=1)
+  endif()
+endif()
+
 
 if(UNIX)
   find_library(RTLIB rt)
@@ -425,7 +449,6 @@ if(USE_PROFILER)
 	add_definitions(-DMXNET_USE_PROFILER)
 endif()
 
-# Do tests after chrpath so that we use the "real" cuda driver
 add_subdirectory(tests)
 
 # AUTO_INSTALL_DIR -> Optional: specify post-build install direcory
@@ -458,7 +481,10 @@ if(USE_CPP_PACKAGE)
   add_subdirectory(cpp-package)
 endif()
 
-add_subdirectory(example/image-classification/predict-cpp)
+# Problems on Mac OS X: 1. librt not available 2. mxnet built as MODULE library, which can't be linked.
+if(!${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+  add_subdirectory(example/image-classification/predict-cpp)
+endif()
 
 # ---[ Linter target
 if(MSVC)

@@ -10,7 +10,7 @@ Topics:
 * [Save the Model](#save-the-model)
 * [Periodic Checkpoint](#periodic-checkpointing)
 * [Initializer API Reference](#initializer-api-reference)
-* [Evaluation Metric API Reference](#initializer-api-reference)
+* [Evaluation Metric API Reference](#evaluation-metric-api-reference)
 * [Optimizer API Reference](#optimizer-api-reference)
 * [Model API Reference](#model-api-reference)
 

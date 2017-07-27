@@ -18,50 +18,9 @@
 #include <utility>
 #include "./base.h"
 #include "./resource.h"
+#include "./op_attr_types.h"
 
 namespace mxnet {
-/*! \brief operation request type to Forward and Backward */
-enum OpReqType {
-  /*! \brief no operation, do not write anything */
-  kNullOp,
-  /*! \brief write gradient to provided space */
-  kWriteTo,
-  /*!
-   * \brief perform an inplace write,
-   * Target shares memory with one of input arguments.
-   * This option only happen when
-   */
-  kWriteInplace,
-  /*! \brief add to the provided space */
-  kAddTo
-};
-
-/*!
- * \brief All the possible information needed by Operator.Forward and Backward
- *  This is the superset of RunContext.
- *  We use this data structure to bookkeep everything needed by Forward and Backward.
- * \sa Resource
- */
-struct OpContext {
-  /*! \brief whether it is training phase */
-  int is_train;
-  /*! \brief RunContext related resources */
-  RunContext run_ctx;
-  /*! \brief the callback when operation completes, used by asynchronize ops */
-  engine::CallbackOnComplete async_on_complete;
-  /*! \brief Resources requested by the operator */
-  std::vector<Resource> requested;
-  /*!
-   * \brief get mshadow stream from Context
-   * \return the mshadow stream
-   * \tparam xpu the device type of the stream
-   */
-  template<typename xpu>
-  inline mshadow::Stream<xpu>* get_stream() const {
-    return run_ctx.get_stream<xpu>();
-  }
-};
-
 /*!
  * \brief Operator interface.
  *  Operator defines basic operation unit of optimized computation graph in mxnet.
@@ -76,23 +35,6 @@ struct OpContext {
  */
 class Operator {
  public:
-  /*! \brief the execution type of the operator */
-  enum ExecType {
-    /*! \brief Forward/Backward are synchronize calls */
-    kSync,
-    /*!
-     * \brief Forward/Backward are asynchronize,
-     *  will call OpContext.async_on_complete when operation finishes.
-     */
-    kAsync,
-    /*!
-     * \brief Cross device copy operation, this is a special operator
-     *  That indicates copy across devices, the input and output can sit on different device.
-     *  In current implementation, copy operator is specially handled by executor.
-     *  This flag is used for special case treatment and future extension of different copy ops.
-     */
-    kCrossDeviceCopy
-  };
   /*! \brief destructor */
   virtual ~Operator() {}
   /*!
@@ -148,9 +90,9 @@ class Operator {
                         const std::vector<TBlob> &aux_states) {
     LOG(FATAL) << "Backward is not implemented";
   }
-  /*! \return execution type of the operator */
-  virtual ExecType exec_type() const {
-    return kSync;
+  /*! \return [Deprecated] execution type of the operator */
+  virtual ExecType exec_type() const final {  // NOLINT(*) exec_type has been moved to OperatorProperty
+    return ExecType::kSync;
   }
 };
 
@@ -478,6 +420,10 @@ class OperatorProperty {
    * \return a new constructed OperatorProperty
    */
   static OperatorProperty *Create(const char* type_name);
+  /*! \return execution type of the operator */
+  virtual ExecType exec_type() const {
+    return ExecType::kSync;
+  }
 };
 
 /*! \brief typedef the factory function of operator property */

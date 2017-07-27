@@ -13,4 +13,4 @@ DATA_PATH=$1
 java -Xmx4G -cp $CLASS_PATH \
 	ml.dmlc.mxnetexamples.customop.ExampleCustomOpWithRtc \
 	--data-path $DATA_PATH \
-	--gpu $GPU \
+	--gpu $GPU

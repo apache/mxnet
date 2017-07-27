@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file elementwise_unary_op-inl.h
- * \brief Function defintion of elementwise unary operators
+ * \brief Function definition of elementwise unary operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_UNARY_OP_H_
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_UNARY_OP_H_

@@ -5,8 +5,8 @@
 * \author Zhang Chen, zhubuntu, Xin Li
 */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_SUPPL_H_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_SUPPL_H_
+#ifndef MXNET_CPP_OP_SUPPL_H_
+#define MXNET_CPP_OP_SUPPL_H_
 
 #include <cassert>
 #include <string>
@@ -33,6 +33,10 @@ inline Symbol _Minus(Symbol lhs, Symbol rhs) {
 }
 inline Symbol _Div(Symbol lhs, Symbol rhs) {
   return Operator("_Div")(lhs, rhs)
+           .CreateSymbol();
+}
+inline Symbol _Mod(Symbol lhs, Symbol rhs) {
+  return Operator("_Mod")(lhs, rhs)
            .CreateSymbol();
 }
 inline Symbol _Power(Symbol lhs, Symbol rhs) {
@@ -74,6 +78,16 @@ inline Symbol _DivScalar(Symbol lhs, mx_float scalar) {
 }
 inline Symbol _RDivScalar(mx_float scalar, Symbol rhs) {
   return Operator("_RDivScalar")(rhs)
+           .SetParam("scalar", scalar)
+           .CreateSymbol();
+}
+inline Symbol _ModScalar(Symbol lhs, mx_float scalar) {
+  return Operator("_ModScalar")(lhs)
+           .SetParam("scalar", scalar)
+           .CreateSymbol();
+}
+inline Symbol _RModScalar(mx_float scalar, Symbol rhs) {
+  return Operator("_RModScalar")(rhs)
            .SetParam("scalar", scalar)
            .CreateSymbol();
 }
@@ -143,5 +157,5 @@ inline Symbol Activation(const std::string& symbol_name,
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_SUPPL_H_
+#endif  // MXNET_CPP_OP_SUPPL_H_
 

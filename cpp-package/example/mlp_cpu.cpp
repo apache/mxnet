@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
       args["X"] = data_batch.data;
       args["label"] = data_batch.label;
 
-      // Create executor by binding parmeters to the model
+      // Create executor by binding parameters to the model
       auto *exec = net.SimpleBind(ctx, args);
       // Compute gradients
       exec->Forward(true);

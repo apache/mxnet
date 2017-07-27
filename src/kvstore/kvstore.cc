@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <dmlc/logging.h>
 #include "./kvstore_local.h"
-// #include "./kvstore_device.h"
 #if MXNET_USE_DIST_KVSTORE
 #include "./kvstore_dist.h"
 #endif  // MXNET_USE_DIST_KVSTORE

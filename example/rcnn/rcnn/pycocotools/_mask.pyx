@@ -10,6 +10,9 @@
 
 __author__ = 'tsungyi'
 
+import sys
+PYTHON_VERSION = sys.version_info[0]
+
 # import both Python-level and C-level symbols of Numpy
 # the API uses Numpy to interface C and Python
 import numpy as np
@@ -38,7 +41,7 @@ cdef extern from "maskApi.h":
     void rlesInit( RLE **R, siz n )
     void rleEncode( RLE *R, const byte *M, siz h, siz w, siz n )
     void rleDecode( const RLE *R, byte *mask, siz n )
-    void rleMerge( const RLE *R, RLE *M, siz n, bint intersect )
+    void rleMerge( const RLE *R, RLE *M, siz n, int intersect )
     void rleArea( const RLE *R, siz n, uint *a )
     void rleIou( RLE *dt, RLE *gt, siz m, siz n, byte *iscrowd, double *o )
     void bbIou( BB dt, BB gt, siz m, siz n, byte *iscrowd, double *o )
@@ -119,7 +122,12 @@ def _frString(rleObjs):
     cdef bytes py_string
     cdef char* c_string
     for i, obj in enumerate(rleObjs):
-        py_string = str(obj['counts'])
+        if PYTHON_VERSION == 2:
+            py_string = str(obj['counts']).encode('utf8')
+        elif PYTHON_VERSION == 3:
+            py_string = str.encode(obj['counts']) if type(obj['counts']) == str else obj['counts']
+        else:
+            raise Exception('Python version must be 2 or 3')
         c_string = py_string
         rleFrString( <RLE*> &Rs._R[i], <char*> c_string, obj['size'][0], obj['size'][1] )
     return Rs
@@ -138,10 +146,10 @@ def decode(rleObjs):
     cdef RLEs Rs = _frString(rleObjs)
     h, w, n = Rs._R[0].h, Rs._R[0].w, Rs._n
     masks = Masks(h, w, n)
-    rleDecode( <RLE*>Rs._R, masks._mask, n );
+    rleDecode(<RLE*>Rs._R, masks._mask, n);
     return np.array(masks)
 
-def merge(rleObjs, bint intersect=0):
+def merge(rleObjs, intersect=0):
     cdef RLEs Rs = _frString(rleObjs)
     cdef RLEs R = RLEs(1)
     rleMerge(<RLE*>Rs._R, <RLE*> R._R, <siz> Rs._n, intersect)
@@ -255,7 +263,7 @@ def frPoly( poly, siz h, siz w ):
     Rs = RLEs(n)
     for i, p in enumerate(poly):
         np_poly = np.array(p, dtype=np.double, order='F')
-        rleFrPoly( <RLE*>&Rs._R[i], <const double*> np_poly.data, len(np_poly)/2, h, w )
+        rleFrPoly( <RLE*>&Rs._R[i], <const double*> np_poly.data, int(len(p)/2), h, w )
     objs = _toString(Rs)
     return objs
 
@@ -277,15 +285,24 @@ def frUncompressedRLE(ucRles, siz h, siz w):
         objs.append(_toString(Rs)[0])
     return objs
 
-def frPyObjects(pyobj, siz h, w):
+def frPyObjects(pyobj, h, w):
+    # encode rle from a list of python objects
     if type(pyobj) == np.ndarray:
-        objs = frBbox(pyobj, h, w )
+        objs = frBbox(pyobj, h, w)
     elif type(pyobj) == list and len(pyobj[0]) == 4:
-        objs = frBbox(pyobj, h, w )
+        objs = frBbox(pyobj, h, w)
     elif type(pyobj) == list and len(pyobj[0]) > 4:
-        objs = frPoly(pyobj, h, w )
-    elif type(pyobj) == list and type(pyobj[0]) == dict:
+        objs = frPoly(pyobj, h, w)
+    elif type(pyobj) == list and type(pyobj[0]) == dict \
+        and 'counts' in pyobj[0] and 'size' in pyobj[0]:
         objs = frUncompressedRLE(pyobj, h, w)
+    # encode rle from single python object
+    elif type(pyobj) == list and len(pyobj) == 4:
+        objs = frBbox([pyobj], h, w)[0]
+    elif type(pyobj) == list and len(pyobj) > 4:
+        objs = frPoly([pyobj], h, w)[0]
+    elif type(pyobj) == dict and 'counts' in pyobj and 'size' in pyobj:
+        objs = frUncompressedRLE([pyobj], h, w)[0]
     else:
         raise Exception('input type is not supported.')
     return objs

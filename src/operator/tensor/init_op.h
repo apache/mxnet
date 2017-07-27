@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file init_op.h
- * \brief Function defintion of initialization op
+ * \brief Function definition of initialization op
  */
 #ifndef MXNET_OPERATOR_TENSOR_INIT_OP_H_
 #define MXNET_OPERATOR_TENSOR_INIT_OP_H_

@@ -4,6 +4,10 @@ import numpy as np
 import os, gzip
 import pickle as pickle
 import time
+try:
+    import h5py
+except ImportError:
+    h5py = None
 import sys
 from common import get_data
 
@@ -63,17 +67,17 @@ def test_Cifar10Rec():
         assert(labelcount[i] == 5000)
 
 def test_NDArrayIter():
-    datas = np.ones([1000, 2, 2])
-    labels = np.ones([1000, 1])
+    data = np.ones([1000, 2, 2])
+    label = np.ones([1000, 1])
     for i in range(1000):
-        datas[i] = i / 100
-        labels[i] = i / 100
-    dataiter = mx.io.NDArrayIter(datas, labels, 128, True, last_batch_handle='pad')
+        data[i] = i / 100
+        label[i] = i / 100
+    dataiter = mx.io.NDArrayIter(data, label, 128, True, last_batch_handle='pad')
     batchidx = 0
     for batch in dataiter:
         batchidx += 1
     assert(batchidx == 8)
-    dataiter = mx.io.NDArrayIter(datas, labels, 128, False, last_batch_handle='pad')
+    dataiter = mx.io.NDArrayIter(data, label, 128, False, last_batch_handle='pad')
     batchidx = 0
     labelcount = [0 for i in range(10)]
     for batch in dataiter:
@@ -88,7 +92,53 @@ def test_NDArrayIter():
         else:
             assert(labelcount[i] == 100)
 
+def test_NDArrayIter_h5py():
+    if not h5py:
+        return
+
+    data = np.ones([1000, 2, 2])
+    label = np.ones([1000, 1])
+    for i in range(1000):
+        data[i] = i / 100
+        label[i] = i / 100
+
+    try:
+        os.remove("ndarraytest.h5")
+    except OSError:
+        pass
+    with h5py.File("ndarraytest.h5") as f:
+        f.create_dataset("data", data=data)
+        f.create_dataset("label", data=label)
+
+        dataiter = mx.io.NDArrayIter(f["data"], f["label"], 128, True, last_batch_handle='pad')
+        batchidx = 0
+        for batch in dataiter:
+            batchidx += 1
+        assert(batchidx == 8)
+
+        dataiter = mx.io.NDArrayIter(f["data"], f["label"], 128, False, last_batch_handle='pad')
+        labelcount = [0 for i in range(10)]
+        for batch in dataiter:
+            label = batch.label[0].asnumpy().flatten()
+            assert((batch.data[0].asnumpy()[:,0,0] == label).all())
+            for i in range(label.shape[0]):
+                labelcount[int(label[i])] += 1
+
+    try:
+        os.remove("ndarraytest.h5")
+    except OSError:
+        pass
+
+    for i in range(10):
+        if i == 0:
+            assert(labelcount[i] == 124)
+        else:
+            assert(labelcount[i] == 100)
+
+
 if __name__ == "__main__":
     test_NDArrayIter()
+    if h5py:
+        test_NDArrayIter_h5py()
     test_MNISTIter()
     test_Cifar10Rec()

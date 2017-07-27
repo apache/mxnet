@@ -104,24 +104,48 @@ def mark_variables(variables, gradients, grad_reqs='write'):
         c_array(mx_uint, grad_reqs),
         c_array(NDArrayHandle, gradient_handles)))
 
-def compute_gradient(outputs):
+
+def backward(outputs, out_grads=None, retain_graph=False):
     """Compute the gradients of outputs w.r.t variables.
 
     Parameters
     ----------
     outputs: list of NDArray
-
-    Returns
-    -------
-    gradients: list of NDArray
+    out_grads: list of NDArray or None
     """
+    assert isinstance(outputs, (list, tuple)), \
+        "outputs must be a list or tuple of NDArrays"
     output_handles = []
     for arr in outputs:
         output_handles.append(arr.handle)
 
-    check_call(_LIB.MXAutogradComputeGradient(
+    if out_grads is None:
+        check_call(_LIB.MXAutogradBackward(
+            len(output_handles),
+            c_array(NDArrayHandle, output_handles),
+            ctypes.c_void_p(0),
+            ctypes.c_int(retain_graph)))
+        return
+
+    ograd_handles = []
+    for arr in out_grads:
+        if arr is not None:
+            ograd_handles.append(arr.handle)
+        else:
+            ograd_handles.append(NDArrayHandle(0))
+    assert len(ograd_handles) == len(output_handles), \
+        "outputs and out_grads must have the same length"
+
+    check_call(_LIB.MXAutogradBackward(
         len(output_handles),
-        c_array(NDArrayHandle, output_handles)))
+        c_array(NDArrayHandle, output_handles),
+        c_array(NDArrayHandle, ograd_handles),
+        ctypes.c_int(retain_graph)))
+
+
+def compute_gradient(outputs):
+    """Deprecated. Please use backward"""
+    backward(outputs)
 
 
 def grad_and_loss(func, argnum=None):

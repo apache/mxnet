@@ -5,8 +5,8 @@
  * \author Zhang Chen, Chuntao Hong
  */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_HPP_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_HPP_
+#ifndef MXNET_CPP_EXECUTOR_HPP_
+#define MXNET_CPP_EXECUTOR_HPP_
 
 #include <vector>
 #include <map>
@@ -89,4 +89,4 @@ inline void Executor::UpdateAll(Optimizer *opt, float lr, float wd,
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_HPP_
+#endif  // MXNET_CPP_EXECUTOR_HPP_

@@ -181,6 +181,10 @@ lstm.inference.symbol <- function(num.lstm.layer, input.size,
 #'      A number in [0,1) containing the dropout ratio from the last hidden layer to the output layer.
 #' @param optimizer string, default="sgd"
 #'      The optimization method.
+#' @param epoch.end.callback function, optional
+#'     The callback when iteration ends.
+#' @param batch.end.callback function, optional
+#'     The callback when one mini-batch iteration ends.
 #' @param ... other parameters passing to \code{mx.lstm}/.
 #' @return model A trained lstm unrolled model.
 #'
@@ -193,19 +197,29 @@ mx.lstm <- function(train.data, eval.data=NULL,
                     num.round=10, update.period=1,
                     initializer=mx.init.uniform(0.01),
                     dropout=0, optimizer='sgd',
+                    epoch.end.callback=NULL, batch.end.callback=NULL,
+                    model,
+                    arg.params,
                     ...) {
     # check data and change data into iterator
     train.data <- check.data(train.data, batch.size, TRUE)
     eval.data <- check.data(eval.data, batch.size, FALSE)
+    
+    
 
     # get unrolled lstm symbol
-    rnn.sym <- lstm.unroll(num.lstm.layer=num.lstm.layer,
+    if(missing(model)){
+        rnn.sym <- lstm.unroll(num.lstm.layer=num.lstm.layer,
                            num.hidden=num.hidden,
                            seq.len=seq.len,
                            input.size=input.size,
                            num.embed=num.embed,
                            num.label=num.label,
                            dropout=dropout)
+    } else {
+      rnn.sym=model$symbol
+    }
+
     init.states.c <- lapply(1:num.lstm.layer, function(i) {
         state.c <- paste0("l", i, ".init.c")
         return (state.c)
@@ -229,6 +243,17 @@ mx.lstm <- function(train.data, eval.data=NULL,
                              init.states.name=init.states.name,
                              initializer=initializer,
                              dropout=dropout)
+    # restore states
+    if (!missing(arg.params)){
+      arg.names <- names(model$rnn.exec$ref.arg.arrays)
+      for (k in names(arg.params)) {
+        if ((k %in% arg.names) && is.param.name(k) ) {
+          rnn.input <- list()
+          rnn.input[[k]] <- arg.params[[k]]
+          mx.exec.update.arg.arrays(model$rnn.exec, rnn.input, match.name=TRUE)
+        }
+      }
+    }
 
     # train lstm model
     model <- train.rnn( model, train.data, eval.data,
@@ -236,6 +261,8 @@ mx.lstm <- function(train.data, eval.data=NULL,
                         update.period=update.period,
                         ctx=ctx,
                         init.states.name=init.states.name,
+                        epoch.end.callback=epoch.end.callback, 
+                        batch.end.callback=batch.end.callback,
                         ...)
     # change model into MXFeedForwardModel
     model <- list(symbol=model$symbol, arg.params=model$rnn.exec$ref.arg.arrays, aux.params=model$rnn.exec$ref.aux.arrays)

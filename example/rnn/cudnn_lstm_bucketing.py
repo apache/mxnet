@@ -37,11 +37,12 @@ parser.add_argument('--batch-size', type=int, default=32,
                     help='the batch size.')
 parser.add_argument('--disp-batches', type=int, default=50,
                     help='show progress for every n batches')
-# When training a deep, complex model, it's recommended to stack fused RNN cells (one
-# layer per cell) together instead of one with all layers. The reason is that fused RNN
-# cells doesn't set gradients to be ready until the computation for the entire layer is
-# completed. Breaking a multi-layer fused RNN cell into several one-layer ones allows
-# gradients to be processed ealier. This reduces communication overhead, especially with
+# When training a deep, complex model *on multiple GPUs* it's recommended to
+# stack fused RNN cells (one layer per cell) together instead of one with all
+# layers. The reason is that fused RNN cells don't set gradients to be ready
+# until the computation for the entire layer is completed. Breaking a
+# multi-layer fused RNN cell into several one-layer ones allows gradients to be
+# processed ealier. This reduces communication overhead, especially with
 # multiple GPUs.
 parser.add_argument('--stack-rnn', default=False,
                     help='stack fused RNN cells to reduce communication overhead')

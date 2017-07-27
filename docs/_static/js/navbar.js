@@ -52,6 +52,7 @@ function navbar() {
 /*Show bottom border of current tab*/
 function showTab() {
     var url = window.location.href;
+    if(url.indexOf('/get_started/why_mxnet') != -1) return;
     for(var i = 0; i < TITLE.length; ++i) {
         if(url.indexOf(TITLE[i]) != -1) {
             var tab = $($('#main-nav').children().eq(i));

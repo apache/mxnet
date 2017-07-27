@@ -1,6 +1,6 @@
-# Installing MXNet on OS X (Mac)
+# Installing MXNet froum source on OS X (Mac)
 
-**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/get_started/install.html).
+**NOTE:** For prebuild MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/get_started/install.html).
 
 Installing MXNet is a two-step process:
 
@@ -117,9 +117,10 @@ You have 2 options:
 For OS X (Mac) users, MXNet provides a prebuilt binary package for CPUs. The prebuilt package is updated weekly. You can install the package directly in the R console using the following commands:
 
 ```r
-	install.packages("drat", repos="https://cran.rstudio.com")
-	drat:::addRepo("dmlc")
-	install.packages("mxnet")
+  cran <- getOption("repos")
+  cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/"
+  options(repos = cran)
+  install.packages("mxnet")
 ```
 
 ### Building MXNet from Source Code

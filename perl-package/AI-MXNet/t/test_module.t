@@ -1,9 +1,10 @@
 use strict;
 use warnings;
-use Test::More tests => 23;
+use Test::More tests => 257;
 use AI::MXNet qw(mx);
 use AI::MXNet::Base;
-use AI::MXNet::TestUtils qw(almost_equal enumerate);
+use AI::MXNet::TestUtils qw(almost_equal enumerate same_array dies_like);
+use Data::Dumper;
 
 sub test_module_layout
 {
@@ -332,6 +333,283 @@ sub test_module_input_grads
     ok(($c_grad == 3)->all);
 }
 
+sub test_executor_group
+{
+    my $get_rnn_sym = sub { my ($num_layers, $num_words, $num_hidden, $num_embed, $seq_len) = @_;
+        my $stack = mx->rnn->SequentialRNNCell();
+        for my $i (0..$num_layers-1)
+        {
+            $stack->add(mx->rnn->LSTMCell(num_hidden=>$num_hidden, prefix=>"lstm_l${i}_"));
+        }
+        my $data = mx->sym->Variable('data');
+        my $label = mx->sym->Variable('softmax_label');
+        my $embed = mx->sym->Embedding(data=>$data, input_dim=>$num_words,
+                                 output_dim=>$num_embed, name=>'embed');
+
+        $stack->reset();
+        my ($outputs, $states) = $stack->unroll($seq_len, inputs=>$embed, merge_outputs=>1);
+
+        my $pred = mx->sym->Reshape($outputs, shape=>[-1, $num_hidden]);
+        $pred = mx->sym->FullyConnected(data=>$pred, num_hidden=>$num_words, name=>'pred');
+
+        $label = mx->sym->Reshape($label, shape=>[-1]);
+        $pred = mx->sym->SoftmaxOutput(data=>$pred, label=>$label, name=>'softmax');
+        return $pred;
+    };
+
+    my $test_shared_exec_group = sub { my ($exec_grp_shared, $exec_grp_created, $shared_arg_names, $extra_args) = @_;
+        # Test shared data arrays
+        for my $i (0..@{ $exec_grp_shared->execs }-1)
+        {
+            # test same shared_data_arrays for two exec groups
+            my $shared_data_array1 = $exec_grp_shared->shared_data_arrays->[$i];
+            my $shared_data_array2 = $exec_grp_created->shared_data_arrays->[$i];
+            if(defined $extra_args)
+            {
+                ok(keys(%$shared_data_array1) == @$extra_args);
+            }
+            ok(keys(%$shared_data_array1) == keys(%$shared_data_array2));
+            while(my ($k, $v) = each %{ $shared_data_array1 })
+            {
+                if(defined $extra_args)
+                {
+                    ok(grep { $_ eq $k } @$extra_args);
+                }
+                ok(exists $shared_data_array2->{$k});
+                ok(same_array($v, $shared_data_array2->{$k}));
+            }
+            # Test shared argument arrays and gradient arrays
+            my $exec_shared  = $exec_grp_shared->execs->[$i];
+            my $exec_created = $exec_grp_created->execs->[$i];
+            if(defined $shared_arg_names)
+            {
+                # test shared arguments
+                for my $arg_name (@$shared_arg_names)
+                {
+                    ok(exists $exec_created->arg_dict->{$arg_name});
+                    ok(same_array($exec_shared->arg_dict->{$arg_name}, $exec_created->arg_dict->{$arg_name}));
+                }
+                # test shared argument gradients
+                for my $arg_name (@$shared_arg_names)
+                {
+                    ok(exists $exec_created->grad_dict->{$arg_name});
+                    ok(same_array($exec_shared->grad_dict->{$arg_name}, $exec_created->grad_dict->{$arg_name}));
+                }
+            }
+            my $grad_req = $exec_grp_shared->grad_req;
+            while(my ($arg_name, $grad) = each %{ $grad_req })
+            {
+                ok($grad eq $exec_grp_created->grad_req->{$arg_name});
+            }
+        }
+    };
+    my $contexts = [mx->cpu(0), mx->cpu(1)];
+    my $workload = [(1) x scalar(@$contexts)];
+    my $batch_size = 32;
+    my $max_bucket_size = 80;
+    my $num_words = 1000;
+    my $num_hidden = 100;
+    my $num_embed = 200;
+    my $data_shapes = [['data', [$batch_size, $max_bucket_size]]];
+    my $label_shapes = [['softmax_label', [$batch_size, $max_bucket_size]]];
+
+    # generate an rnn sym with #layers=5
+    my $sym = $get_rnn_sym->(3, $num_words, $num_hidden,
+                      $num_embed, $max_bucket_size);
+    my $arg_names1 = $sym->list_arguments();
+    my $input_names = ['data', 'softmax_label'];
+    my $shared_arg_names = [grep { !/^(?:data|softmax_label)$/ } @$arg_names1];
+    my $exec_group1 = AI::MXNet::DataParallelExecutorGroup->new(
+        symbol=>$sym, contexts=>$contexts,
+        workload=>$workload, data_shapes=>$data_shapes,
+        label_shapes=>$label_shapes, param_names=>$shared_arg_names,
+        for_training=>1, inputs_need_grad=>0
+    );
+    # shared_data_arrays should only have input "data" and "softmax_label" arrays
+    for my $i (0..@{$contexts}-1)
+    {
+        ok(keys(%{$exec_group1->shared_data_arrays->[$i]}) == @$input_names);
+        for my $name (@$input_names)
+        {
+            ok(exists $exec_group1->shared_data_arrays->[$i]->{$name});
+        }
+    }
+    # generate an rnn sym with #layers=5
+    $sym = $get_rnn_sym->(5, $num_words, $num_hidden,
+                      $num_embed, $max_bucket_size);
+    my $arg_names2 = $sym->list_arguments();
+    my $exec_group2 = AI::MXNet::DataParallelExecutorGroup->new(symbol=>$sym, contexts=>$contexts,
+                                            workload=>$workload, data_shapes=>$data_shapes,
+                                            label_shapes=>$label_shapes, param_names=>$shared_arg_names,
+                                            for_training=>1, inputs_need_grad=>0,
+                                            shared_group=>$exec_group1);
+    my %shared_arg_names = map { $_ => 1 } @$shared_arg_names;
+    my $extra_args = [grep { not exists $shared_arg_names{$_} } @$arg_names2];
+    $test_shared_exec_group->(
+        $exec_group1, $exec_group2,
+        $shared_arg_names, $extra_args
+    );
+}
+
+sub test_module_set_params
+{
+    # data iter
+    mx->random->seed(11);
+    my $data = mx->nd->array([[0.05, .10]]);
+    my $label = mx->nd->array([[.01, 0.99]]);
+    my $train_data = mx->io->NDArrayIter(data => $data, label => $label, batch_size => 1);
+
+    # symbols
+    my $x = mx->symbol->Variable('data');
+    $x = mx->symbol->FullyConnected(name=>'fc_0', data=>$x, num_hidden=>2);
+    $x = mx->symbol->Activation(name=>"act_0", data=>$x, act_type=>'sigmoid');
+    $x = mx->symbol->FullyConnected(name=>'fc_1', data=>$x, num_hidden=>2);
+    $x = mx->symbol->Activation(name=>"act_1", data=>$x, act_type=>'sigmoid');
+    $x = mx->symbol->LinearRegressionOutput(data=>$x, name=>'softmax', grad_scale=>2);
+
+    # create module
+    my $mod = mx->mod->Module($x, context=>[mx->cpu()]);
+    $mod->bind(data_shapes => $train_data->provide_data, label_shapes=>$train_data->provide_label,
+             for_training=>1);
+
+    my $arg_params_correct = {fc_0_weight => mx->nd->array([[.15, .20], [.25, .30]]),
+                  fc_0_bias => mx->nd->array([.35, .35]),
+                  fc_1_weight =>  mx->nd->array([[.40, .45], [.50, .55]]),
+                  fc_1_bias  => mx->nd->array([.60, .60])};
+
+    my $arg_params_missing = {fc_0_weight => mx->nd->array([[.15, .20], [.25, .30]]),
+                  fc_0_bias  => mx->nd->array([.35, .35]),
+                  fc_1_weight => mx->nd->array([[.40, .45], [.50, .55]])};
+
+    my $arg_params_extra = {fc_0_weight => mx->nd->array([[.15, .20], [.25, .30]]),
+                  fc_0_bias  => mx->nd->array([.35, .35]),
+                  fc_1_weight=> mx->nd->array([[.40, .45], [.50, .55]]),
+                  fc_1_bias => mx->nd->array([.60, .60]),
+                  fc_2_weight => mx->nd->array([.60, .60])};
+
+    my $arg_params_missing_extra = {fc_3_weight => mx->nd->array([.60, .60])};
+
+    # test regular set_params
+    $mod->set_params($arg_params_correct, {}, force_init=>1);
+
+    # test allow missing
+    $mod->set_params($arg_params_missing, {}, allow_missing=>1, force_init=>1);
+    ok(dies_like(sub { $mod->set_params($arg_params_missing, {}, force_init=>1, allow_missing=>0); }, qr/fc_/));
+
+    # test allow extra
+    $mod->set_params($arg_params_extra, {}, force_init=>1, allow_missing=>1, allow_extra=>1);
+    ok(dies_like(sub { $mod->set_params($arg_params_extra, {}, force_init=>1, allow_missing=>1, allow_extra=>0); }, qr/fc_/));
+
+    # test allow missing + extra, this will throw a runtime error
+    ok(dies_like(sub { $mod->set_params($arg_params_missing_extra, {}, force_init=>1, allow_missing=>1, allow_extra=>0); }, qr/fc_/));
+}
+
+sub test_forward_reshape
+{
+    my $num_class = 10;
+    my $data1 = mx->sym->Variable('data1');
+    my $data2 = mx->sym->Variable('data2');
+    my $conv1 = mx->sym->Convolution(data=>$data1, kernel=>[2, 2], num_filter=>2, stride=>[2, 2]);
+    my $conv2 = mx->sym->Convolution(data=>$data2, kernel=>[3, 3], num_filter=>3, stride=>[1, 1]);
+    my $pooling1 = mx->sym->Pooling(data=>$conv1, kernel=>[2, 2], stride=>[1, 1], pool_type=>"avg");
+    my $pooling2 = mx->sym->Pooling(data=>$conv2, kernel=>[2, 2], stride=>[1, 1], pool_type=>"max");
+    my $flatten1 = mx->sym->flatten(data=>$pooling1);
+    my $flatten2 = mx->sym->flatten(data=>$pooling2);
+    my $sum = mx->sym->sum(data=>$flatten1, axis=>1) + mx->sym->sum(data=>$flatten2, axis=>1);
+    my $fc = mx->sym->FullyConnected(data=>$sum, num_hidden=>$num_class);
+    my $sym = mx->sym->SoftmaxOutput(data=>$fc, name=>'softmax');
+
+    my $dshape1 = [10, 3, 64, 64];
+    my $dshape2 = [10, 3, 32, 32];
+    my $lshape = [10];
+
+    my $mod = mx->mod->Module(symbol=>$sym, data_names=>['data1', 'data2'],
+                        label_names=>['softmax_label']);
+    $mod->bind(data_shapes=>[['data1', $dshape1], ['data2', $dshape2]],
+             label_shapes=>[['softmax_label', $lshape]]);
+    $mod->init_params();
+    $mod->init_optimizer(optimizer_params=>{learning_rate => 0.01});
+
+    # Train with original data shapes
+    my $data_batch = mx->io->DataBatch(data=>[mx->nd->random_uniform(0, 9, $dshape1),
+                                       mx->nd->random_uniform(5, 15, $dshape2)],
+                                 label=>[mx->nd->ones($lshape)]);
+    $mod->forward($data_batch);
+    is_deeply($mod->get_outputs->[0]->shape, [$lshape->[0], $num_class]);
+    $mod->backward();
+    $mod->update();
+
+    # Train with different batch size
+    $dshape1 = [3, 3, 64, 64];
+    $dshape2 = [3, 3, 32, 32];
+    $lshape = [3];
+    $data_batch = mx->io->DataBatch(data=>[mx->nd->random_uniform(0, 9, $dshape1),
+                                       mx->nd->random_uniform(5, 15, $dshape2)],
+                                 label=>[mx->nd->ones($lshape)]);
+    $mod->forward($data_batch);
+    is_deeply($mod->get_outputs->[0]->shape, [$lshape->[0], $num_class]);
+    $mod->backward();
+    $mod->update();
+
+    $dshape1 = [20, 3, 64, 64];
+    $dshape2 = [20, 3, 32, 32];
+    $lshape = [20];
+    $data_batch = mx->io->DataBatch(data=>[mx->nd->random_uniform(3, 5, $dshape1),
+                                       mx->nd->random_uniform(10, 25, $dshape2)],
+                                 label=>[mx->nd->ones($lshape)]);
+    $mod->forward($data_batch);
+    is_deeply($mod->get_outputs->[0]->shape, [$lshape->[0], $num_class]);
+    $mod->backward();
+    $mod->update();
+
+    #Train with both different batch size and data shapes
+    $dshape1 = [20, 3, 120, 120];
+    $dshape2 = [20, 3, 32, 64];
+    $lshape = [20];
+    $data_batch = mx->io->DataBatch(data=>[mx->nd->random_uniform(0, 9, $dshape1),
+                                       mx->nd->random_uniform(5, 15, $dshape2)],
+                                 label=>[mx->nd->ones($lshape)]);
+    $mod->forward($data_batch);
+    is_deeply($mod->get_outputs->[0]->shape, [$lshape->[0], $num_class]);
+    $mod->backward();
+    $mod->update();
+
+    $dshape1 = [5, 3, 28, 40];
+    $dshape2 = [5, 3, 24, 16];
+    $lshape = [5];
+    $data_batch = mx->io->DataBatch(data=>[mx->nd->random_uniform(0, 9, $dshape1),
+                                       mx->nd->random_uniform(15, 25, $dshape2)],
+                                 label=>[mx->nd->ones($lshape)]);
+    $mod->forward($data_batch);
+    is_deeply($mod->get_outputs->[0]->shape, [$lshape->[0], $num_class]);
+    $mod->backward();
+    $mod->update();
+
+    #Test score
+    my $dataset_shape1 = [30, 3, 30, 30];
+    my $dataset_shape2 = [30, 3, 20, 40];
+    my $labelset_shape = [30];
+
+    my $eval_dataiter = mx->io->NDArrayIter(data=>[mx->nd->random_uniform(0, 9, $dataset_shape1),
+                                            mx->nd->random_uniform(15, 25, $dataset_shape2)],
+                                      label=>[mx->nd->ones($labelset_shape)],
+                                      batch_size=>5);
+    ok(keys %{ $mod->score($eval_dataiter, 'acc') } == 1);
+
+    #Test prediction
+    $dshape1 = [1, 3, 30, 30];
+    $dshape2 = [1, 3, 20, 40];
+    $dataset_shape1 = [10, 3, 30, 30];
+    $dataset_shape2 = [10, 3, 20, 40];
+
+    my $pred_dataiter = mx->io->NDArrayIter(data=>[mx->nd->random_uniform(0, 9, $dataset_shape1),
+                                            mx->nd->random_uniform(15, 25, $dataset_shape2)]);
+    $mod->bind(data_shapes=>[['data1', $dshape1], ['data2', $dshape2]],
+             for_training=>0, force_rebind=>1);
+    is_deeply($mod->predict($pred_dataiter)->shape, [10, $num_class]);
+
+}
+
 test_module_input_grads();
 test_module_dtype();
 test_monitor();
@@ -340,3 +618,6 @@ test_module_layout();
 test_module_states();
 test_module_reshape();
 test_save_load();
+test_executor_group();
+test_module_set_params();
+test_forward_reshape();

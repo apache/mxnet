@@ -41,8 +41,7 @@ X = mnist_pca[p]
 Y = mnist.target[p]
 X_show = mnist.data[p]
 
-# This is just to normalize the input to a value inside [0,1],
-# and separate train set and test set
+# This is just to normalize the input and separate train set and test set
 X = X.astype(np.float32)/255
 X_train = X[:60000]
 X_test = X[60000:]
@@ -52,28 +51,28 @@ Y_test = Y[60000:]
 
 # Article's suggestion on batch size
 batch_size = 200
-train_iter = mx.io.NDArrayIter(X_train, Y_train, batch_size=batch_size)
-test_iter = mx.io.NDArrayIter(X_test, Y_test, batch_size=batch_size)
-
-# A quick work around to prevent mxnet complaining the lack of a softmax_label
-train_iter.label =  mx.io._init_data(Y_train, allow_empty=True, default_name='svm_label')
-test_iter.label =  mx.io._init_data(Y_test, allow_empty=True, default_name='svm_label')
+train_iter = mx.io.NDArrayIter(X_train, Y_train, batch_size=batch_size, label_name='svm_label')
+test_iter = mx.io.NDArrayIter(X_test, Y_test, batch_size=batch_size, label_name='svm_label')
 
 # Here we instatiate and fit the model for our data
 # The article actually suggests using 400 epochs,
 # But I reduced to 10, for convinience
-model = mx.model.FeedForward(
-    ctx = mx.cpu(0),      # Run on CPU 0
+mod = mx.mod.Module(
+    context = mx.cpu(0),  # Run on CPU 0
     symbol = mlp,         # Use the network we just defined
-    num_epoch = 10,       # Train for 10 epochs
-    learning_rate = 0.1,  # Learning rate
-    momentum = 0.9,       # Momentum for SGD with momentum
-    wd = 0.00001,         # Weight decay for regularization
-    )
-model.fit(
-    X=train_iter,  # Training data set
+    label_names = ['svm_label'],
+)
+mod.fit(
+    train_data=train_iter,
     eval_data=test_iter,  # Testing data set. MXNet computes scores on test set every epoch
-    batch_end_callback = mx.callback.Speedometer(batch_size, 200))  # Logging module to print out progress
+    batch_end_callback = mx.callback.Speedometer(batch_size, 200),  # Logging module to print out progress
+    num_epoch = 10,       # Train for 10 epochs
+    optimizer_params = {
+        'learning_rate': 0.1,  # Learning rate
+        'momentum': 0.9,       # Momentum for SGD with momentum
+        'wd': 0.00001,         # Weight decay for regularization
+    },
+)
 
 # Uncomment to view an example
 # plt.imshow((X_show[0].reshape((28,28))*255).astype(np.uint8), cmap='Greys_r')
@@ -81,4 +80,4 @@ model.fit(
 # print 'Result:', model.predict(X_test[0:1])[0].argmax()
 
 # Now it prints how good did the network did for this configuration
-print('Accuracy:', model.score(test_iter)*100, '%')
+print('Accuracy:', mod.score(test_iter, mx.metric.Accuracy())[0][1]*100, '%')

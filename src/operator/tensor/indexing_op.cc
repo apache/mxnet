@@ -189,7 +189,7 @@ The locations represented by `indices` take value `on_value`, while all
 other locations take value `off_value`.
 
 `one_hot` operation with `indices` of shape ``(i0, i1)`` and `depth`  of ``d`` would result
- in an output array of shape ``(i0, i1, d)`` with::
+in an output array of shape ``(i0, i1, d)`` with::
 
   output[i,j,:] = off_value
   output[i,j,indices[i,j]] = on_value

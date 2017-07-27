@@ -13,6 +13,7 @@ def test_metrics():
     check_metric('acc', axis=0)
     check_metric('f1')
     check_metric('perplexity', -1)
+    check_metric('pearsonr')
     composite = mx.metric.create(['acc', 'f1'])
     check_metric(composite)
 

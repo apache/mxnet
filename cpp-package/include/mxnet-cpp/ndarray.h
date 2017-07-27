@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_H_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_H_
+#ifndef MXNET_CPP_NDARRAY_H_
+#define MXNET_CPP_NDARRAY_H_
 
 #include <map>
 #include <memory>
@@ -145,10 +145,12 @@ class NDArray {
   NDArray operator-(mx_float scalar);
   NDArray operator*(mx_float scalar);
   NDArray operator/(mx_float scalar);
+  NDArray operator%(mx_float scalar);
   NDArray operator+(const NDArray &);
   NDArray operator-(const NDArray &);
   NDArray operator*(const NDArray &);
   NDArray operator/(const NDArray &);
+  NDArray operator%(const NDArray &);
   /*!
   * \brief set all the elements in ndarray to be scalar
   * \param scalar the scalar to set
@@ -165,24 +167,31 @@ class NDArray {
   /*!
   * \brief elementwise subtract from current ndarray
   * this mutate the current NDArray
-  * \param scalar the data to substract
+  * \param scalar the data to subtract
   * \return reference of self
   */
   NDArray &operator-=(mx_float scalar);
   /*!
   * \brief elementwise multiplication to current ndarray
   *  this mutate the current NDArray
-  * \param scalar the data to substract
+  * \param scalar the data to subtract
   * \return reference of self
   */
   NDArray &operator*=(mx_float scalar);
   /*!
   * \brief elementwise division from current ndarray
   *  this mutate the current NDArray
-  * \param scalar the data to substract
+  * \param scalar the data to subtract
   * \return reference of self
   */
   NDArray &operator/=(mx_float scalar);
+  /*!
+  * \brief elementwise modulo from current ndarray
+  *  this mutate the current NDArray
+  * \param scalar the data to subtract
+  * \return reference of self
+  */
+  NDArray &operator%=(mx_float scalar);
   /*!
   * \brief elementwise add to current space
   *  this mutate the current NDArray
@@ -193,24 +202,31 @@ class NDArray {
   /*!
   * \brief elementwise subtract from current ndarray
   * this mutate the current NDArray
-  * \param src the data to substract
+  * \param src the data to subtract
   * \return reference of self
   */
   NDArray &operator-=(const NDArray &src);
   /*!
   * \brief elementwise multiplication to current ndarray
   *  this mutate the current NDArray
-  * \param src the data to substract
+  * \param src the data to subtract
   * \return reference of self
   */
   NDArray &operator*=(const NDArray &src);
   /*!
   * \brief elementwise division from current ndarray
   *  this mutate the current NDArray
-  * \param src the data to substract
+  * \param src the data to subtract
   * \return reference of self
   */
   NDArray &operator/=(const NDArray &src);
+  /*!
+  * \brief elementwise modulo from current ndarray
+  *  this mutate the current NDArray
+  * \param src the data to subtract
+  * \return reference of self
+  */
+  NDArray &operator%=(const NDArray &src);
   NDArray ArgmaxChannel();
   /*!
   * \brief Do a synchronize copy from a continugous CPU memory region.
@@ -412,4 +428,4 @@ std::ostream& operator<<(std::ostream& out, const NDArray &ndarray);
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_H_
+#endif  // MXNET_CPP_NDARRAY_H_

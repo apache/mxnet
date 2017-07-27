@@ -76,44 +76,47 @@ Installing MXNet is a two-step process:
 
 On Ubuntu versions 13.10 or later, you need the following dependencies:
 
-- Git (to pull code from GitHub)
-
-- libatlas-base-dev (for linear algebraic operations)
-
-- libopencv-dev (for computer vision operations)
-
-Install these dependencies using the following commands:
-
+**Step 1** Install build tools and git.
 ```bash
     sudo apt-get update
-    sudo apt-get install -y build-essential git libatlas-base-dev libopencv-dev
+    sudo apt-get install -y build-essential git
 ```
 
-After installing the dependencies, use the following command to pull the MXNet source code from GitHub
+**Step 2** Install OpenBLAS.
+
+*MXNet* uses [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) library for accelerated numerical computations on CPU machine. There are several flavors of BLAS libraries - [OpenBLAS](http://www.openblas.net/), [ATLAS](http://math-atlas.sourceforge.net/) and [MKL](https://software.intel.com/en-us/intel-mkl). In this step we install OpenBLAS. You can choose to install ATLAS or MKL.
 
 ```bash
-    # Get MXNet source code
-    git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
-    # Move to source code parent directory
-    cd ~/mxnet
-    cp make/config.mk .
-    echo "USE_BLAS=openblas" >>config.mk
-    echo "ADD_CFLAGS += -I/usr/include/openblas" >>config.mk
-    echo "ADD_LDFLAGS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs" >>config.mk
+    sudo apt-get install -y libopenblas-dev
 ```
-If building with ```GPU``` support, run below commands to add GPU dependency configurations to config.mk file:
+
+**Step 3** Install OpenCV.
+
+*MXNet* uses [OpenCV](http://opencv.org/) for efficient image loading and augmentation operations.
 
 ```bash
-    echo "USE_CUDA=1" >>config.mk
-    echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
-    echo "USE_CUDNN=1" >>config.mk
+    sudo apt-get install -y libopencv-dev
 ```
 
-Then build mxnet:
+**Step 4** Download MXNet sources and build MXNet core shared library.
+
+If building on CPU:
 
 ```bash
-    make -j$(nproc)
+    git clone --recursive https://github.com/dmlc/mxnet
+    cd mxnet
+    make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 ```
+
+If building on GPU:
+
+```bash
+    git clone --recursive https://github.com/dmlc/mxnet
+    cd mxnet
+    make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
+```
+
+*Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.
 
 Executing these commands creates a library called ```libmxnet.so```.
 

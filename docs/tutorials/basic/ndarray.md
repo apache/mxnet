@@ -10,7 +10,7 @@ to `numpy.ndarray`.  Like the corresponding NumPy data structure, MXNet's
 So you might wonder, why not just use NumPy?  MXNet offers two compelling
 advantages.  First, MXNet's `NDArray` supports fast execution on a wide range of
 hardware configurations, including CPU, GPU, and multi-GPU machines.  _MXNet_
-also scales to distribute systems in the cloud.  Second, MXNet's NDArray
+also scales to distributed systems in the cloud.  Second, MXNet's `NDArray`
 executes code lazily, allowing it to automatically parallelize multiple
 operations across the available hardware.
 
@@ -38,6 +38,19 @@ Each NDArray supports some important attributes that you'll often want to query:
 - **ndarray.context**: The device on which this array is stored, e.g. `cpu()` or
   `gpu(1)`.
 
+## Prerequisites
+
+To complete this tutorial, we need:
+
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- [Jupyter](http://jupyter.org/)
+    ```
+    pip install jupyter
+    ```
+- GPUs - A section of this tutorial uses GPUs. If you don't have GPUs on your
+machine, simply set the variable gpu_device (set in the GPUs section of this 
+tutorial) to mx.cpu().
+
 ## Array Creation
 
 There are a few different ways to create an `NDArray`.
@@ -53,7 +66,7 @@ b = mx.nd.array([[1,2,3], [2,3,4]])
 {'a.shape':a.shape, 'b.shape':b.shape}
 ```
 
-* We can also create an MXNet NDArray from an `numpy.ndarray` object:
+* We can also create an MXNet NDArray from a `numpy.ndarray` object:
 
 ```python
 import numpy as np
@@ -182,7 +195,7 @@ shapes must be the same along the other axes.
 ```python
 a = mx.nd.ones((2,3))
 b = mx.nd.ones((2,3))*2
-c = mx.nd.concat([a,b])
+c = mx.nd.concat(a,b)
 c.asnumpy()
 ```
 
@@ -279,7 +292,11 @@ can cause all computations to run on GPU 0 by using context `mx.gpu(0)`, or
 simply `mx.gpu()`. When we have access to two or more GPUs, the 2nd GPU is
 represented by `mx.gpu(1)`, etc.
 
+**Note** In order to execute the following section on a cpu set gpu_device to mx.cpu().
 ```python
+gpu_device=mx.gpu() # Change this to mx.cpu() in absence of GPUs.
+
+
 def f():
     a = mx.nd.ones((100,100))
     b = mx.nd.ones((100,100))
@@ -288,14 +305,14 @@ def f():
 # in default mx.cpu() is used
 f()
 # change the default context to the first GPU
-with mx.Context(mx.gpu()):
+with mx.Context(gpu_device):
     f()
 ```
 
 We can also explicitly specify the context when creating an array:
 
 ```python
-a = mx.nd.ones((100, 100), mx.gpu(0))
+a = mx.nd.ones((100, 100), gpu_device)
 a
 ```
 
@@ -304,8 +321,8 @@ computation. There are several methods for copying data between devices.
 
 ```python
 a = mx.nd.ones((100,100), mx.cpu())
-b = mx.nd.ones((100,100), mx.gpu())
-c = mx.nd.ones((100,100), mx.gpu())
+b = mx.nd.ones((100,100), gpu_device)
+c = mx.nd.ones((100,100), gpu_device)
 a.copyto(c)  # copy from CPU to GPU
 d = b + c
 e = b.as_in_context(c.context) + c  # same to above
@@ -353,12 +370,12 @@ c
 The `load` and `save` methods are preferable to pickle in two respects
 
 1. When using these methods, you can save data from within the Python interface
-   and then use it later from another lanuage's binding. For example, if we save
+   and then use it later from another language's binding. For example, if we save
    the data in Python:
 
 ```python
 a = mx.nd.ones((2, 3))
-mx.save("temp.ndarray", [a,])
+mx.nd.save("temp.ndarray", [a,])
 ```
 
 we can later load it from R:
@@ -432,7 +449,7 @@ first runs on CPU and then on GPU:
 ```python
 n = 10
 a = mx.nd.ones((1000,1000))
-b = mx.nd.ones((6000,6000), mx.gpu())
+b = mx.nd.ones((6000,6000), gpu_device)
 tic = time.time()
 c = do(a, n)
 wait(c)

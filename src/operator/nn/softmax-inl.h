@@ -43,7 +43,7 @@ inline void Softmax(Stream<cpu> *s, DType *in, DType *out,
   index_t sa = stride[axis];
 
   #pragma omp parallel for
-  for (int i = 0; i < N; ++i) {
+  for (int i = 0; i < static_cast<int>(N); ++i) {
     index_t base = unravel_dot(i, sshape, stride);
 
     DType mmax = in[base];
@@ -90,7 +90,7 @@ inline void SoftmaxGrad(Stream<cpu> *s, DType *out, DType *ograd,
   index_t sa = stride[axis];
 
   #pragma omp parallel for
-  for (int i = 0; i < N; ++i) {
+  for (int i = 0; i < static_cast<int>(N); ++i) {
     index_t base = unravel_dot(i, sshape, stride);
 
     DType sum = DType(0);

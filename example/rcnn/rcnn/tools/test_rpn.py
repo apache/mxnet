@@ -1,8 +1,8 @@
-from __future__ import print_function
 import argparse
 import pprint
 import mxnet as mx
 
+from ..logger import logger
 from ..config import config, default, generate_config
 from ..symbol import *
 from ..dataset import *
@@ -89,7 +89,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    print('Called with argument:', args)
+    logger.info('Called with argument: %s' % args)
     ctx = mx.gpu(args.gpu)
     test_rpn(args.network, args.dataset, args.image_set, args.root_path, args.dataset_path,
              ctx, args.prefix, args.epoch,

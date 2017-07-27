@@ -37,13 +37,13 @@ gradients are then summed over all GPUs before updating the model.
 If a machine has one or more GPU cards installed,
 then each card is labeled by a number starting from 0.
 To use a particular GPU, one can either
-specify the context `ctx` in code
+specify the context `context` in code
 or pass `--gpus` at the command line.
 For example, to use GPU 0 and 2 in python,
-one can typically create a model with
+one can typically create a module with
 ```python
 import mxnet as mx
-model = mx.model.FeedForward(ctx=[mx.gpu(0), mx.gpu(2)], ...)
+module = mx.module.Module(context=[mx.gpu(0), mx.gpu(2)], ...)
 ```
 while if the program accepts a `--gpus` flag (as seen in
 [example/image-classification](https://github.com/dmlc/mxnet/tree/master/example/image-classification)),
@@ -57,7 +57,7 @@ If the available GPUs are not all equally powerful,
 we can partition the workload accordingly.
 For example, if GPU 0 is 3 times faster than GPU 2,
 then we might use the workload option `work_load_list=[3, 1]`,
-see [model.fit](../api/python/model.html#mxnet.model.FeedForward.fit)
+see [Module](../api/python/module.html#mxnet.module.Module)
 for more details.
 
 Training with multiple GPUs should yield the same results
@@ -101,7 +101,7 @@ When using a large number of GPUs, e.g. >=4, we suggest using `device` for bette
 ### How to Launch a Job
 
 > To use distributed training, we need to compile with `USE_DIST_KVSTORE=1`
-> (see [MXNet installation guide](http://mxnet.io/get_started/setup.html) for more options).
+> (see [MXNet installation guide](http://mxnet.io/get_started/install.html) for more options).
 
 Launching a distributed job is a bit different from running on a single
 machine. MXNet provides

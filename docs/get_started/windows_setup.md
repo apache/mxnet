@@ -53,7 +53,7 @@ Next, we install ```graphviz``` library that we use for visualizing network grap
 
 We have installed MXNet core library. Next, we will install MXNet interface package for programming language of your choice:
 - [Python](#install-the-mxnet-package-for-python)
-- [R](#install-the-mxnet-package-for-r)
+- [R](#install-mxnet-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
 - [Scala](#install-the-mxnet-package-for-scala)
 
@@ -92,12 +92,25 @@ To install MXNet on a computer with a CPU processor, choose from two options:
 * Use the prebuilt binary package
 * Build the library from source code
 
-#### Building MXNet with the Prebuilt Binary Package
-For Windows users, MXNet provides a prebuilt binary package for CPUs. The prebuilt package is updated weekly. You can install the package directly in the R console using the following commands:
+#### Installing MXNet with the Prebuilt Binary Package
+For Windows users, MXNet provides prebuilt binary packages.
+You can install the package directly in the R console.
+
+For CPU-only package:
 
 ```r
-  install.packages("drat", repos="https://cran.rstudio.com")
-  drat:::addRepo("dmlc")
+  cran <- getOption("repos")
+  cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/"
+  options(repos = cran)
+  install.packages("mxnet")
+```
+
+For GPU-enabled package:
+
+```r
+  cran <- getOption("repos")
+  cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/GPU"
+  options(repos = cran)
   install.packages("mxnet")
 ```
 
@@ -106,11 +119,12 @@ For Windows users, MXNet provides a prebuilt binary package for CPUs. The prebui
 Run the following commands to install the MXNet dependencies and build the MXNet R package.
 
 ```r
-  Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
+  Rscript -e "install.packages('devtools', repo = 'https://cloud.r-project.org/')"
 ```
+
 ```bash
   cd R-package
-  Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
+  Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(dependencies = TRUE)"
   cd ..
   make rpkg
 ```
@@ -125,7 +139,7 @@ These commands create the MXNet R package as a tar.gz file that you can install 
 
 ### Installing MXNet on a Computer with a GPU Processor
 
-To install MXNet on a computer with a GPU processor, you need the following:
+To install MXNet R package on a computer with a GPU processor, you need the following:
 
 * Microsoft Visual Studio 2013
 
@@ -137,20 +151,62 @@ To install MXNet on a computer with a GPU processor, you need the following:
 
 To install the required dependencies and install MXNet for R:
 
-1. If [Microsoft Visual Studio 2013](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
-2. Install the [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit). The CUDA Toolkit depends on Visual Studio. To check whether your GPU is compatible with the CUDA Toolkit and for information on installing it, see NVidia's [CUDA Installation Guide](http://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/).
-3. Download the MXNet package as a .zip file from the [MXNet Github repository](https://github.com/dmlc/mxnet/) and unpack it. You will be editing the ```"/mxnet/R-package"``` folder.
-4. Download the most recent GPU-enabled MXNet package from the [Releases](https://github.com/dmlc/mxnet/releases) tab. Unzip this file and navigate to the ```/nocudnn``` folder.
-**Note:** You will copy some of these extracted files into MXNet's R-package folder. We are now working two folders, 	```R-package/``` and ```nocudnn/```.
-5. Download and install [CuDNN V3](https://developer.nvidia.com/cudnn). To get access to the download link, register as an NVIDIA community user. Unpack the .zip file. You will see three folders: ```/bin```, ```/include```, and ```/lib```. Copy these folders into ```nocudnn/3rdparty/cudnn/```, replacing the folders that are already there. You can also unpack the .zip file directly into the nocudnn/ folder.
+1. Install the [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit). The CUDA Toolkit depends on Visual Studio. To check whether your GPU is compatible with the CUDA Toolkit and for information on installing it, see NVidia's [CUDA Installation Guide](http://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/).
+3. Clone the MXNet github repo.
+
+```sh
+git clone --recursive https://github.com/dmlc/mxnet
+```
+
+The `--recursive` is to clone all the submodules used by MXNet. You will be editing the ```"/mxnet/R-package"``` folder.
+4. Download prebuilt GPU-enabled MXNet libraries for Windows from https://github.com/yajiedesign/mxnet/releases. You will need `mxnet_x64_vc14_gpu.7z` and `prebuildbase_win10_x64_vc14.7z`.
+5. Download and install [CuDNN](https://developer.nvidia.com/cudnn).
 6. Create a folder called ```R-package/inst/libs/x64```. MXNet supports only 64-bit operating systems, so you need the x64 folder.
 7. Copy the following shared libraries (.dll files) into the ```R-package/inst/libs/x64``` folder:
-    * nocudnn/lib/libmxnet.dll.
-    * The *.dll files in all four subfolders of the nocudnn/3rdparty/ directory. The cudnn and openblas .dll files are in the /bin folders.
-You should now have 11 .dll files in the R-package/inst/libs/x64 folder.
-8. Copy the ```nocudnn/include/``` folder into ```R-package/inst/```. You should now have a folder called ```R-package/inst/include/``` with three subfolders.
+```
+cublas64_80.dll
+cudart64_80.dll
+cudnn64_5.dll
+curand64_80.dll
+libgcc_s_seh-1.dll
+libgfortran-3.dll
+libmxnet.dll
+libmxnet.lib
+libopenblas.dll
+libquadmath-0.dll
+nvrtc64_80.dll
+```
+These dlls can be found in `prebuildbase_win10_x64_vc14/3rdparty/cudart`, `prebuildbase_win10_x64_vc14/3rdparty/openblas/bin`, `mxnet_x64_vc14_gpu/build`, `mxnet_x64_vc14_gpu/lib` and the `cuDNN` downloaded from NVIDIA.
+8. Copy the header files from `dmlc`, `mxnet` and `nnvm` into `./R-package/inst/include`. It should look like:
+
+```
+./R-package/inst
+└── include
+    ├── dmlc
+    ├── mxnet
+    └── nnvm
+```
 9. Make sure that R is added to your ```PATH``` in the environment variables. Running the ```where R``` command at the command prompt should return the location.
-10.	Run ```R CMD INSTALL --no-multiarch R-package```.
+10. Now open the Windows CMD and change the directory to the `mxnet` folder. Then use the following commands
+to build R package:
+
+```bat
+echo import(Rcpp) > R-package\NAMESPACE
+echo import(methods) >> R-package\NAMESPACE
+Rscript -e "install.packages('devtools', repos = 'https://cloud.r-project.org')"
+cd R-package
+Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org')); install_deps(dependencies = TRUE)"
+cd ..
+
+R CMD INSTALL --no-multiarch R-package
+
+Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package')"
+rm R-package/NAMESPACE
+Rscript -e "require(devtools); install_version('roxygen2', version = '5.0.1', repos = 'https://cloud.r-project.org/', quiet = TRUE)"
+Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package')"
+
+R CMD INSTALL --build --no-multiarch R-package
+```
 
 **Note:** To maximize its portability, the MXNet library is built with the Rcpp end. Computers running Windows need [MSVC](https://en.wikipedia.org/wiki/Visual_C%2B%2B) (Microsoft Visual C++) to handle CUDA toolchain compatibilities.
 

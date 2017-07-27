@@ -172,7 +172,7 @@ object Visualization {
    * @param shape Map of shapes, str -> shape, given input shapes
    * @param nodeAttrs Map of node's attributes
    *               for example:
-   *                      nodeAttrs = Map("shape" -> "oval", "fixedsize" -> "fasle")
+   *                      nodeAttrs = Map("shape" -> "oval", "fixedsize" -> "false")
    *                      means to plot the network in "oval"
    * @param hideWeights
    *               if true (default) then inputs with names like `*_weight`
@@ -216,8 +216,9 @@ object Visualization {
 
     // Internal helper to figure out if node should be hidden with hide_weights
     def looksLikeWeight(name: String): Boolean = {
-      if (name.endsWith("_weight") || name.endsWith("_bias")) true
-      else false
+      if (name.endsWith("_weight") || name.endsWith("_bias")
+          || name.endsWith("_beta") || name.endsWith("_gamma")
+          || name.endsWith("_moving_var") || name.endsWith("_moving_mean")) { true } else { false }
     }
 
     // make nodes

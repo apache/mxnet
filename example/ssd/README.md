@@ -17,6 +17,8 @@ remarkable traits of MXNet.
 Due to the permission issue, this example is maintained in this [repository](https://github.com/zhreshold/mxnet-ssd) separately. You can use the link regarding specific per example [issues](https://github.com/zhreshold/mxnet-ssd/issues).
 
 ### What's new
+* Added multiple trained models.
+* Added a much simpler way to compose network from mainstream classification networks (resnet, inception...) and [Guide](symbol/README.md).
 * Update to the latest version according to caffe version, with 5% mAP increase.
 * Use C++ record iterator based on back-end multi-thread engine to achieve huge speed up on multi-gpu environments.
 * Monitor validation mAP during training.
@@ -30,11 +32,12 @@ Due to the permission issue, this example is maintained in this [repository](htt
 ![demo3](https://cloud.githubusercontent.com/assets/3307514/19171086/a9346842-8be0-11e6-8011-c17716b22ad3.png)
 
 ### mAP
-|        Model          | Training data    | Test data |  mAP |
-|:-----------------:|:----------------:|:---------:|:----:|
-| [VGG16_reduced 300x300](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.5-beta/vgg16_ssd_300_voc0712_trainval.zip) | VOC07+12 trainval| VOC07 test| 77.8|
-| [VGG16_reduced 512x512](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.5-beta/vgg16_ssd_512_voc0712_trainval.zip) | VOC07+12 trainval | VOC07 test| 79.9|
-*More to be added*
+|        Model          | Training data    | Test data |  mAP | Note |
+|:-----------------:|:----------------:|:---------:|:----:|:-----|
+| [VGG16_reduced 300x300](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.5-beta/vgg16_ssd_300_voc0712_trainval.zip) | VOC07+12 trainval| VOC07 test| 77.8| fast |
+| [VGG16_reduced 512x512](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.5-beta/vgg16_ssd_512_voc0712_trainval.zip) | VOC07+12 trainval | VOC07 test| 79.9| slow |
+| [Inception-v3 512x512](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.6/inceptionv3_ssd_512_voc0712_trainval.zip) | VOC07+12 trainval| VOC07 test| 78.9 | fastest |
+| [Resnet-50 512x512](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.6/resnet50_ssd_512_voc0712_trainval.zip) | VOC07+12 trainval| VOC07 test| 78.9 | fast |
 
 ### Speed
 |         Model         |   GPU            | CUDNN | Batch-size | FPS* |
@@ -65,13 +68,14 @@ Remember to enable CUDA if you want to be able to train, since CPU training is
 insanely slow. Using CUDNN is optional, but highly recommended.
 
 ### Try the demo
-* Download the pretrained model: [`ssd_300_voc_0712.zip`](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.5-beta/vgg16_ssd_300_voc0712_trainval.zip), and extract to `model/` directory.
+* Download the pretrained model: [`ssd_resnet50_0712.zip`](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.6/resnet50_ssd_512_voc0712_trainval.zip), and extract to `model/` directory.
 * Run
 ```
-# cd /path/to/mxnet/example/ssd
-python demo.py
+# cd /path/to/mxnet-ssd
+python demo.py --gpu 0
 # play with examples:
 python demo.py --epoch 0 --images ./data/demo/dog.jpg --thresh 0.5
+python demo.py --cpu --network resnet50 --data-shape 512
 # wait for library to load for the first time
 ```
 * Check `python demo.py --help` for more options.
@@ -93,7 +97,7 @@ tar -xvf VOCtrainval_11-May-2012.tar
 tar -xvf VOCtrainval_06-Nov-2007.tar
 tar -xvf VOCtest_06-Nov-2007.tar
 ```
-* We are goint to use `trainval` set in VOC2007/2012 as a common strategy.
+* We are going to use `trainval` set in VOC2007/2012 as a common strategy.
 The suggested directory structure is to store `VOC2007` and `VOC2012` directories
 in the same `VOCdevkit` folder.
 * Then link `VOCdevkit` folder to `data/VOCdevkit` by default:
@@ -114,12 +118,12 @@ python tools/prepare_dataset.py --dataset pascal --year 2007 --set test --target
 # cd /path/to/mxnet/example/ssd
 python train.py
 ```
-* By default, this example will use `batch-size=32` and `learning_rate=0.004`.
+* By default, this example will use `batch-size=32` and `learning_rate=0.002`.
 You might need to change the parameters a bit if you have different configurations.
 Check `python train.py --help` for more training options. For example, if you have 4 GPUs, use:
 ```
 # note that a perfect training parameter set is yet to be discovered for multi-GPUs
-python train.py --gpus 0,1,2,3 --batch-size 128 --lr 0.001
+python train.py --gpus 0,1,2,3 --batch-size 32
 ```
 
 ### Evalute trained model
@@ -148,3 +152,12 @@ python convert_model.py deploy.prototxt name_of_pretrained_caffe_model.caffemode
 python demo.py --prefix ssd_converted --epoch 1 --deploy
 ```
 There is no guarantee that conversion will always work, but at least it's good for now.
+
+### Legacy models
+Since the new interface for composing network is introduced, the old models have inconsistent names for weights.
+You can still load the previous model by rename the symbol to `legacy_xxx.py`
+and call with `python train/demo.py --network legacy_xxx `
+For example:
+```
+python demo.py --network 'legacy_vgg16_ssd_300.py' --prefix model/ssd_300 --epoch 0
+```

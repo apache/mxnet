@@ -3,20 +3,10 @@ is.param.name <- function(name) {
            grepl('gamma$', name) || grepl('beta$', name) )
 }
 
-# Initialize parameters
-mx.model.init.params.rnn <- function(symbol, input.shape, initializer, ctx) {
-  if (!is.mx.symbol(symbol)) stop("symbol need to be MXSymbol")
-  slist <- symbol$infer.shape(input.shape)
-  if (is.null(slist)) stop("Not enough information to get shapes")
-  arg.params <- mx.init.create(initializer, slist$arg.shapes, ctx, skip.unknown=TRUE)
-  aux.params <- mx.init.create(initializer, slist$aux.shapes, ctx, skip.unknown=FALSE)
-  return(list(arg.params=arg.params, aux.params=aux.params))
-}
-
 # Initialize the data iter
 mx.model.init.iter.rnn <- function(X, y, batch.size, is.train) {
-  if (is.MXDataIter(X)) return(X)
-  shape <- dim(data)
+  if (is.mx.dataiter(X)) return(X)
+  shape <- dim(X)
   if (is.null(shape)) {
     num.data <- length(X)
   } else {
@@ -56,11 +46,11 @@ setup.rnn.model <- function(rnn.sym, ctx,
             }
         }
     }
-    params <- mx.model.init.params.rnn(rnn.sym, input.shapes, initializer, mx.cpu())
+    params <- mx.model.init.params(rnn.sym, input.shapes, NULL, initializer, mx.cpu())
     args <- input.shapes
     args$symbol <- rnn.sym
     args$ctx <- ctx
-    args$grad.req <- "add"
+    args$grad.req <- "write"
     rnn.exec <- do.call(mx.simple.bind, args)
 
     mx.exec.update.arg.arrays(rnn.exec, params$arg.params, match.name=TRUE)
@@ -102,8 +92,16 @@ get.label <- function(label, ctx) {
 train.rnn <- function (model, train.data, eval.data,
                        num.round, update.period,
                        init.states.name,
-                       optimizer='sgd', ctx=mx.ctx.default(), ...) {
+                       optimizer='sgd', ctx=mx.ctx.default(), 
+                       epoch.end.callback,
+                       batch.end.callback,
+                       verbose=TRUE,
+                       ...) {
     m <- model
+    
+    model <- list(symbol=model$symbol, arg.params=model$rnn.exec$ref.arg.arrays,
+                  aux.params=model$rnn.exec$ref.aux.arrays)
+    
     seq.len <- m$seq.len
     batch.size <- m$batch.size
     num.rnn.layer <- m$num.rnn.layer
@@ -173,6 +171,11 @@ train.rnn <- function (model, train.data, eval.data,
             train.nll <- train.nll + calc.nll(as.array(seq.label.probs), batch.size)
 
             nbatch <- nbatch + seq.len
+            
+            if (!is.null(batch.end.callback)) {
+              batch.end.callback(iteration, nbatch, environment())
+            }
+            
             if ((epoch.counter %% log.period) == 0) {
                 message(paste0("Epoch [", epoch.counter,
                            "] Train: NLL=", train.nll / nbatch,
@@ -219,6 +222,17 @@ train.rnn <- function (model, train.data, eval.data,
             message(paste0("Iter [", iteration,
                        "] Val: NLL=", val.nll / nbatch,
                        ", Perp=", exp(val.nll / nbatch)))
+        }
+        # get the model out
+
+
+        epoch_continue <- TRUE
+        if (!is.null(epoch.end.callback)) {
+          epoch_continue <- epoch.end.callback(iteration, 0, environment(), verbose = verbose)
+        }
+        
+        if (!epoch_continue) {
+          break
         }
     }
 

@@ -54,6 +54,97 @@ class ParsedOpProp {
   }
 };
 
+class OperatorState {
+ public:
+  OperatorState(Operator *opr, const OperatorProperty *prop) {
+    opr_ = opr;
+    fwd_init_ = bwd_init_ = false;
+
+    in_data_.resize(prop->ListArguments().size());
+    out_data_.resize(prop->NumOutputs());
+    aux_data_.resize(prop->ListAuxiliaryStates().size());
+    in_grad_.resize(in_data_.size());
+    out_grad_.resize(prop->NumVisibleOutputs());
+
+    std::vector<TBlob*> out_grad_ptr(out_grad_.size());
+    for (size_t i = 0; i < out_grad_.size(); ++i) {
+      out_grad_ptr[i] = &out_grad_[i];
+    }
+    std::vector<TBlob*> in_data_ptr(in_data_.size());
+    for (size_t i = 0; i < in_data_.size(); ++i) {
+      in_data_ptr[i] = &in_data_[i];
+    }
+    std::vector<TBlob*> out_data_ptr(out_data_.size());
+    for (size_t i = 0; i < out_data_.size(); ++i) {
+      out_data_ptr[i] = &out_data_[i];
+    }
+    arg_data_ptr_ = prop->BackwardInputs(
+        out_grad_ptr, in_data_ptr, out_data_ptr);
+  }
+
+  ~OperatorState() { delete opr_; }
+
+  void Forward(const OpContext &ctx,
+               const std::vector<TBlob>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<TBlob>& outputs) {
+    if (!fwd_init_) {
+      CHECK_EQ(inputs.size(), in_data_.size() + aux_data_.size());
+      CHECK_EQ(outputs.size(), out_data_.size());
+      for (size_t i = 0; i < in_data_.size(); ++i) in_data_[i] = inputs[i];
+      for (size_t i = 0; i < aux_data_.size(); ++i) {
+        aux_data_[i] = inputs[i + in_data_.size()];
+      }
+      for (size_t i = 0; i < out_data_.size(); ++i) out_data_[i] = outputs[i];
+      fwd_init_ = true;
+    }
+    opr_->Forward(ctx, in_data_, req, out_data_, aux_data_);
+  }
+
+  void Backward(const OpContext &ctx,
+                const std::vector<TBlob>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<TBlob>& outputs) {
+    if (!bwd_init_) {
+      CHECK(fwd_init_);
+      CHECK_EQ(arg_data_ptr_.size() + aux_data_.size(), inputs.size());
+      for (size_t i = 0; i < arg_data_ptr_.size(); ++i) {
+        *arg_data_ptr_[i] = inputs[i];
+      }
+      for (size_t i = 0; i < aux_data_.size(); ++i) {
+        aux_data_[i] = inputs[inputs.size() - aux_data_.size() + i];
+      }
+      CHECK_EQ(outputs.size(), in_grad_.size());
+      for (size_t i = 0; i < outputs.size(); ++i) in_grad_[i] = outputs[i];
+      bwd_init_ = true;
+    }
+    opr_->Backward(ctx, out_grad_, in_data_, out_data_, req, in_grad_, aux_data_);
+  }
+
+ private:
+  Operator *opr_;
+  bool fwd_init_, bwd_init_;
+  std::vector<TBlob> in_data_, aux_data_, out_data_, in_grad_, out_grad_;
+  std::vector<TBlob*> arg_data_ptr_;
+};
+
+void LegacyOpForward(const OpStatePtr& state,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  auto& op = state.get_state<OperatorState>();
+  op.Forward(ctx, inputs, req, outputs);
+}
+
+void LegacyOpBackward(const OpStatePtr& state,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  auto& op = state.get_state<OperatorState>();
+  op.Backward(ctx, inputs, req, outputs);
+}
 
 // function to use operator property to infer attr
 // get op property from the attribute
@@ -182,14 +273,15 @@ std::vector<ResourceRequest> OpBackResourceRequest(const NodeAttrs& attrs) {
   return prop.ptr->BackwardResource(ishape);
 }
 
-Operator* OpPropCreateLayerOp(const NodeAttrs& attrs,
-                              Context ctx,
-                              const std::vector<TShape>& ishape,
-                              const std::vector<int>& itype) {
+OpStatePtr OpPropCreateLayerOp(const NodeAttrs& attrs,
+                               Context ctx,
+                               const std::vector<TShape>& ishape,
+                               const std::vector<int>& itype) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   std::vector<TShape> is(ishape.begin(), ishape.begin() + prop.arguments.size());
   std::vector<int> it(itype.begin(), itype.begin() + prop.arguments.size());
-  return prop.ptr->CreateOperatorEx(ctx, &is, &it);
+  return OpStatePtr::Create<OperatorState>(prop.ptr->CreateOperatorEx(ctx, &is, &it),
+                                           prop.ptr.get());
 }
 
 inline std::vector<NodeEntry> OpPropGradient(
@@ -300,6 +392,11 @@ std::vector<std::pair<int, int> > OpBackInplaceOption(const NodeAttrs& attrs) {
   return remap;
 }
 
+inline ExecType OpExecType(const NodeAttrs& attrs) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
+  return prop.ptr->exec_type();
+}
+
 // register the legacy operator properties under NNVM registry.
 void RegisterLegacyOpProp() {
   for (auto reg : dmlc::Registry<OperatorPropertyReg>::List()) {
@@ -328,10 +425,14 @@ void RegisterLegacyOpProp() {
     op.set_attr<nnvm::FMutateInputs>("FMutateInputs", OpPropMutateInputs);
     op.set_attr<nnvm::FInplaceOption>("FInplaceOption", OpPropInplaceOption);
     op.set_attr<FResourceRequest>("FResourceRequest", OpPropResourceRequest);
-    op.set_attr<FCreateLayerOp>("FCreateLayerOp", OpPropCreateLayerOp);
+    op.set_attr<FExecType>("FExecType", OpExecType);
+    op.set_attr<FCreateOpState>("FCreateOpState", OpPropCreateLayerOp);
+    op.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", LegacyOpForward);
+    op.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", LegacyOpForward);
     if (reg->key_var_num_args.length() != 0) {
       op.set_attr<std::string>("key_var_num_args", reg->key_var_num_args);
     }
+
     // register BackwardOps
     std::string back_op_name = "_backward_" + reg->name;
     Op& back_op = ::dmlc::Registry<::nnvm::Op>::Get()->__REGISTER__(back_op_name);
@@ -348,6 +449,9 @@ void RegisterLegacyOpProp() {
         "FResourceRequest", OpBackResourceRequest);
     back_op.set_attr<bool>("TIsLayerOpBackward", true);
     back_op.set_attr<bool>("TIsBackward", true);
+    back_op.set_attr<FExecType>("FExecType", OpExecType);
+    back_op.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", LegacyOpBackward);
+    back_op.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", LegacyOpBackward);
   }
 }
 

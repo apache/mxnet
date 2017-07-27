@@ -1,9 +1,9 @@
-from __future__ import print_function
 import argparse
 import os
 import cv2
 import mxnet as mx
 import numpy as np
+from rcnn.logger import logger
 from rcnn.config import config
 from rcnn.symbol import get_vgg_test, get_vgg_rpn_test
 from rcnn.io.image import resize, transform
@@ -104,17 +104,18 @@ def demo_net(predictor, image_name, vis=False):
     boxes_this_image = [[]] + [all_boxes[j] for j in range(1, len(CLASSES))]
 
     # print results
-    print('class ---- [[x1, x2, y1, y2, confidence]]')
+    logger.info('---class---')
+    logger.info('[[x1, x2, y1, y2, confidence]]')
     for ind, boxes in enumerate(boxes_this_image):
         if len(boxes) > 0:
-            print('---------', CLASSES[ind], '---------')
-            print(boxes)
+            logger.info('---%s---' % CLASSES[ind])
+            logger.info('%s' % boxes)
 
     if vis:
         vis_all_detection(data_dict['data'].asnumpy(), boxes_this_image, CLASSES, im_scale)
     else:
         result_file = image_name.replace('.', '_result.')
-        print('results saved to %s' % result_file)
+        logger.info('results saved to %s' % result_file)
         im = draw_all_detection(data_dict['data'].asnumpy(), boxes_this_image, CLASSES, im_scale)
         cv2.imwrite(result_file, im)
 

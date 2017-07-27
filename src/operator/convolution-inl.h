@@ -59,7 +59,7 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     DMLC_DECLARE_FIELD(num_group).set_default(1)
     .describe("Number of group partitions.");
     DMLC_DECLARE_FIELD(workspace).set_default(1024).set_range(0, 8192)
-    .describe("Maximum temperal workspace allowed for convolution (MB).");
+    .describe("Maximum temporary workspace allowed for convolution (MB).");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
     DMLC_DECLARE_FIELD(cudnn_tune)

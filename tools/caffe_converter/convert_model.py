@@ -48,8 +48,9 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
     layers_proto = caffe_parser.get_layers(caffe_parser.read_prototxt(prototxt_fname))
 
     for layer_name, layer_type, layer_blobs in layer_iter:
-        if layer_type == 'Convolution' or layer_type == 'InnerProduct' \
-           or layer_type == 4 or layer_type == 14 or layer_type == 'PReLU':
+        if layer_type == 'Convolution' or layer_type == 'InnerProduct'  \
+           or layer_type == 4 or layer_type == 14 or layer_type == 'PReLU' \
+           or layer_type == 'Deconvolution' or layer_type == 39:
             if layer_type == 'PReLU':
                 assert (len(layer_blobs) == 1)
                 wmat = layer_blobs[0].data
@@ -82,6 +83,10 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
                 bias = bias.reshape((bias.shape[0], 1))
                 assert(bias.flags['C_CONTIGUOUS'] is True)
                 bias_name = layer_name + "_bias"
+
+                if bias_name not in arg_shape_dic:
+                    print(bias_name + ' not found in arg_shape_dic.')
+                    continue
                 bias = bias.reshape(arg_shape_dic[bias_name])
                 arg_params[bias_name] = mx.nd.zeros(bias.shape)
                 arg_params[bias_name][:] = bias
@@ -104,9 +109,15 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
                 first_conv = False
 
         elif layer_type == 'Scale':
-            bn_name = layer_name.replace('scale', 'bn')
-            gamma = layer_blobs[0].data
-            beta = layer_blobs[1].data
+            if 'scale' in layer_name:
+                bn_name = layer_name.replace('scale', 'bn')
+            elif 'sc' in layer_name:
+                bn_name = layer_name.replace('sc', 'bn')
+            else:
+                assert False, 'Unknown name convention for bn/scale'
+
+            gamma = np.array(layer_blobs[0].data)
+            beta = np.array(layer_blobs[1].data)
             # beta = np.expand_dims(beta, 1)
             beta_name = '{}_beta'.format(bn_name)
             gamma_name = '{}_gamma'.format(bn_name)
@@ -124,9 +135,9 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
                 beta.shape, gamma.shape))
         elif layer_type == 'BatchNorm':
             bn_name = layer_name
-            mean = layer_blobs[0].data
-            var = layer_blobs[1].data
-            rescale_factor = layer_blobs[2].data
+            mean = np.array(layer_blobs[0].data)
+            var = np.array(layer_blobs[1].data)
+            rescale_factor = layer_blobs[2].data[0]
             if rescale_factor != 0:
                 rescale_factor = 1 / rescale_factor
             mean_name = '{}_moving_mean'.format(bn_name)
@@ -150,9 +161,23 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
             assert mean.flags['C_CONTIGUOUS'] is True
             print('converting batchnorm layer, mean shape = {}, var shape = {}'.format(
                 mean.shape, var.shape))
+
+            fix_gamma = layers_proto[bn_index+1].type != 'Scale'
+            if fix_gamma:
+                gamma_name = '{}_gamma'.format(bn_name)
+                gamma = np.array(np.ones(arg_shape_dic[gamma_name]))
+                beta_name = '{}_beta'.format(bn_name)
+                beta = np.array(np.zeros(arg_shape_dic[beta_name]))
+                arg_params[beta_name] = mx.nd.zeros(beta.shape)
+                arg_params[gamma_name] = mx.nd.zeros(gamma.shape)
+                arg_params[beta_name][:] = beta
+                arg_params[gamma_name][:] = gamma
+                assert gamma.flags['C_CONTIGUOUS'] is True
+                assert beta.flags['C_CONTIGUOUS'] is True
+
         else:
-            assert len(layer_blobs) == 0
             print('\tskipping layer {} of type {}'.format(layer_name, layer_type))
+            assert len(layer_blobs) == 0
 
     if output_prefix is not None:
         model = mx.mod.Module(symbol=sym, label_names=['prob_label', ])

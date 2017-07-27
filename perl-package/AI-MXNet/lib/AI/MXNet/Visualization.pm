@@ -291,7 +291,7 @@ method plot_network(
         my $label = $name;
         if($op eq 'null')
         {
-            if($name =~ /(?:_weight|_bias)$/)
+            if($name =~ /(?:_weight|_bias|_beta|_gamma|_moving_var|_moving_mean)$/)
             {
                 if($hide_weights)
                 {

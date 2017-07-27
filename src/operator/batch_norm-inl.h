@@ -10,6 +10,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
+#include <mshadow/base.h>
 #include <map>
 #include <vector>
 #include <string>
@@ -30,6 +31,9 @@ namespace batchnorm {
 enum BatchNormOpInputs {kData, kGamma, kBeta};  // kGamma: weights, kBeta: biases
 enum BatchNormOpOutputs {kOut, kMean, kVar};  // req, out_data
 enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};  // aux_states
+
+/*! \brief Default channel axis if none specified int he params */
+constexpr int DEFAULT_AXIS = 1;
 }  // namespace batchnorm
 
 /*! \brief Parameters for BatchNoram operator */
@@ -39,6 +43,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   bool fix_gamma;
   bool use_global_stats;
   bool output_mean_var;
+  int axis;
   bool cudnn_off;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
@@ -54,6 +59,8 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
               "This will force change batch-norm into a scale shift operator.");
     DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
     .describe("Output All,normal mean and var");
+    DMLC_DECLARE_FIELD(axis).set_default(mxnet::op::batchnorm::DEFAULT_AXIS)
+      .describe("Specify which shape axis the channel is specified");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
       .describe("Do not select CUDNN operator, if available");
   }
@@ -187,7 +194,7 @@ class BatchNormOp : public Operator {
 };  // class BatchNormOp
 
 template<typename xpu>
-Operator *CreateOp(const BatchNormParam& param, const int dtype, const TShape& shape);
+Operator *CreateOp(BatchNormParam param, const int dtype, const TShape& shape);
 
 #if DMLC_USE_CXX11
 class BatchNormProp : public OperatorProperty {
@@ -207,21 +214,28 @@ class BatchNormProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 3U) << "Input:[data, gamma, beta]";
     const TShape &dshape = in_shape->at(0);
 
+    const size_t channelAxis = static_cast<size_t>(param_.axis < 0
+                            ? static_cast<int>(dshape.ndim()) + param_.axis
+                            : param_.axis);
+    CHECK_LT(channelAxis, dshape.ndim()) << "Channel axis out of range: " << param_.axis;
+
+    const int channelCount = dshape[channelAxis];
+
     if (dshape.ndim() == 0) {
       return false;
     }
 
-    in_shape->at(1) = TShape(Shape1(dshape[1]));
-    in_shape->at(2) = TShape(Shape1(dshape[1]));
+    in_shape->at(1) = TShape(Shape1(channelCount));
+    in_shape->at(2) = TShape(Shape1(channelCount));
 
     out_shape->clear();
-    out_shape->push_back(dshape);             // kOut
-    out_shape->push_back(Shape1(dshape[1]));  // kMean
-    out_shape->push_back(Shape1(dshape[1]));  // kVar
+    out_shape->push_back(dshape);                // kOut
+    out_shape->push_back(Shape1(channelCount));  // kMean
+    out_shape->push_back(Shape1(channelCount));  // kVar
 
     aux_shape->clear();
-    aux_shape->push_back(Shape1(dshape[1]));  // kMovingMean
-    aux_shape->push_back(Shape1(dshape[1]));  // kMovingVar
+    aux_shape->push_back(Shape1(channelCount));  // kMovingMean
+    aux_shape->push_back(Shape1(channelCount));  // kMovingVar
     return true;
   }
 
@@ -328,6 +342,129 @@ class BatchNormProp : public OperatorProperty {
  private:
   BatchNormParam param_;
 };  // class BatchNormProp
+
+namespace batchnorm {
+
+template<typename DType>
+class BNTensor3 {
+  enum { OUTER, CHANNEL, INNER, COUNT };
+
+ public:
+  inline BNTensor3(const TBlob& blob, const int indexOfChannel)
+    : dptr_(blob.dptr<DType>())
+      , indexOfChannel_(static_cast<size_t>(indexOfChannel < 0
+                               ? (static_cast<int>(blob.shape_.ndim()) + indexOfChannel)
+                               : indexOfChannel)) {
+    shape_[OUTER] = 1;
+    for (size_t i = 0; i < indexOfChannel_; ++i) {
+      shape_[OUTER] *= blob.shape_[i];
+    }
+    shape_[CHANNEL] = blob.shape_[indexOfChannel_];
+    shape_[INNER] = 1;
+    for (size_t i = indexOfChannel_ + 1, n = blob.shape_.ndim(); i < n; ++i) {
+      shape_[INNER] *= blob.shape_[i];
+    }
+  }
+
+  inline BNTensor3(DType *p, const TShape& shape, const int indexOfChannel)
+    : dptr_(p)
+      , indexOfChannel_(static_cast<size_t>(indexOfChannel < 0
+                               ? (static_cast<int>(shape.ndim()) + indexOfChannel)
+                               : indexOfChannel)) {
+    shape_[OUTER] = 1;
+    for (size_t i = 0; i < indexOfChannel_; ++i) {
+      shape_[OUTER] *= shape[i];
+    }
+    shape_[CHANNEL] = shape[indexOfChannel_];
+    shape_[INNER] = 1;
+    for (size_t i = indexOfChannel_ + 1, n = shape.ndim(); i < n; ++i) {
+      shape_[INNER] *= shape[i];
+    }
+  }
+
+  MSHADOW_FORCE_INLINE bool IsEmpty() const {
+    return dptr_ == nullptr;
+  }
+
+  MSHADOW_XINLINE size_t Size() const {
+    size_t n = 1;
+    for (int i = 0; i < COUNT; ++i) {
+      n *= shape_[i];
+    }
+    return n;
+  }
+
+  MSHADOW_XINLINE size_t ChannelCount() const {
+    return shape_[CHANNEL];
+  }
+
+  MSHADOW_XINLINE size_t OuterSize() const {
+    return shape_[OUTER];
+  }
+
+  MSHADOW_XINLINE size_t InnerSize() const {
+    return shape_[INNER];
+  }
+
+  /*! \brief start of a given channel's spatial data */
+  MSHADOW_XINLINE size_t StartOffset(const size_t channel) const {
+    return channel * InnerSize();
+  }
+
+  /*! \brief This is the amount to skip to next same-channel data
+   * This is the number of bytes to skip from one past the end of the current spatial data
+   * to the next start of the same channel's "spatial data"
+   * It is assume that the pointer being calculated points just beyond the
+   * end of the last blobk of spatial data
+   * i.e. RGBRGB <-- 2
+   *      RRGGBB <-- 4
+   **/
+  MSHADOW_XINLINE size_t SkipLengthToNextSameChannelData() const {
+    return (ChannelCount() - 1) * InnerSize();
+  }
+
+  MSHADOW_XINLINE size_t offset(const size_t outer,
+                                const size_t channel,
+                                const size_t i) const {
+    const size_t spatial_size = InnerSize();
+    const size_t skip_length = SkipLengthToNextSameChannelData();
+    size_t off = StartOffset(channel);
+    off += outer * shape_[CHANNEL] * shape_[INNER];
+    const size_t skips = i / spatial_size;
+    off += (1 + skip_length) * skips;
+    off += i % spatial_size;
+    return off;
+  }
+
+  MSHADOW_XINLINE DType& get_ref(const size_t batch,
+                                 const size_t channel,
+                                 const size_t i) {
+    const size_t off = offset(batch, channel, i);
+    return dptr_[off];
+  }
+
+  MSHADOW_XINLINE const DType& get_ref(const size_t batch,
+                                       const size_t channel,
+                                       const size_t i) const {
+    const size_t off = offset(batch, channel, i);
+    return dptr_[off];
+  }
+
+  DType *dptr_;
+  size_t indexOfChannel_;
+  size_t shape_[COUNT];
+};
+
+inline int GetRealAxis(const TShape& shape, int axis) {
+  if (axis < 0) {
+    axis += shape.ndim();
+  }
+  return axis;
+}
+
+extern volatile bool disable_mkl;
+
+}  // namespace batchnorm
 
 #endif  // DMLC_USE_CXX11
 }  // namespace op

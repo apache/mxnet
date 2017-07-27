@@ -5,8 +5,8 @@
  * \author Zhang Chen, Chuntao Hong
  */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_HPP_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_HPP_
+#ifndef MXNET_CPP_NDARRAY_HPP_
+#define MXNET_CPP_NDARRAY_HPP_
 
 #include <algorithm>
 #include <map>
@@ -93,6 +93,11 @@ inline NDArray NDArray::operator/(mx_float scalar) {
   Operator("_div_scalar")(*this, scalar).Invoke(ret);
   return ret;
 }
+inline NDArray NDArray::operator%(mx_float scalar) {
+  NDArray ret;
+  Operator("_mod_scalar")(*this, scalar).Invoke(ret);
+  return ret;
+}
 inline NDArray NDArray::operator+(const NDArray &rhs) {
   NDArray ret;
   Operator("_plus")(*this, rhs).Invoke(ret);
@@ -111,6 +116,11 @@ inline NDArray NDArray::operator*(const NDArray &rhs) {
 inline NDArray NDArray::operator/(const NDArray &rhs) {
   NDArray ret;
   Operator("_div")(*this, rhs).Invoke(ret);
+  return ret;
+}
+inline NDArray NDArray::operator%(const NDArray &rhs) {
+  NDArray ret;
+  Operator("_mod")(*this, rhs).Invoke(ret);
   return ret;
 }
 inline NDArray &NDArray::operator=(mx_float scalar) {
@@ -133,6 +143,10 @@ inline NDArray &NDArray::operator/=(mx_float scalar) {
   Operator("_div_scalar")(*this, scalar).Invoke(*this);
   return *this;
 }
+inline NDArray &NDArray::operator%=(mx_float scalar) {
+  Operator("_mod_scalar")(*this, scalar).Invoke(*this);
+  return *this;
+}
 inline NDArray &NDArray::operator+=(const NDArray &rhs) {
   Operator("_plus")(*this, rhs).Invoke(*this);
   return *this;
@@ -147,6 +161,10 @@ inline NDArray &NDArray::operator*=(const NDArray &rhs) {
 }
 inline NDArray &NDArray::operator/=(const NDArray &rhs) {
   Operator("_div")(*this, rhs).Invoke(*this);
+  return *this;
+}
+inline NDArray &NDArray::operator%=(const NDArray &rhs) {
+  Operator("_mod")(*this, rhs).Invoke(*this);
   return *this;
 }
 
@@ -360,4 +378,4 @@ inline std::ostream & operator<<(std::ostream &out, const NDArray &ndarray) {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_HPP_
+#endif  // MXNET_CPP_NDARRAY_HPP_
