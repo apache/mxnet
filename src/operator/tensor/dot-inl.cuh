@@ -13,6 +13,8 @@
 namespace mxnet {
 namespace op {
 using mshadow::cuda::kBaseThreadNum;
+using mxnet_op::Kernel;
+using mxnet_op::set_zero;
 
 /*!
  * \brief Scalar kernel of dot(csr, dns1) = dns2
@@ -22,27 +24,30 @@ template<int req>
 struct DotCsrDnsDnsScalarKernel {
   /*!
    * \brief This function represents performing an inner product between a row of lhs
-   * and a column of rhs and then assigning the value to out[i].
-   * \param i i-th element in out 1D view
-   * \param out output matrix
-   * \param data_l csr values of lhs
-   * \param indptr_l csr indptr of lhs
-   * \param col_idx_l csr col_idx of lhs
-   * \param data_r dense data of rhs
-   * \param num_cols number of columns of output
+   * and a column of rhs and then assigning the value to out[tid].
+   * \param tid         global thread id
+   * \param out         output matrix
+   * \param data_l      csr values of lhs
+   * \param indptr_l    csr indptr of lhs
+   * \param col_idx_l   csr col_idx of lhs
+   * \param data_r      dense data of rhs
+   * \param num_cols_r  number of columns of output matrix
    */
   template<typename DType, typename IType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* data_l, const IType* indptr_l,
-                                  const CType* col_idx_l, const DType* data_r,
-                                  const int num_cols) {
-    const int irow = i / num_cols;  // row id of the lhs
-    const int icol = i % num_cols;  // col id of the rhs
+  MSHADOW_XINLINE static void Map(int tid, DType* out,
+                                  const DType* data_l,
+                                  const IType* indptr_l,
+                                  const CType* col_idx_l,
+                                  const DType* data_r,
+                                  const index_t num_cols_r) {
+    const index_t irow = tid / num_cols_r;  // row id of the lhs
+    const index_t icol = tid % num_cols_r;  // col id of the rhs
     DType sum = 0;
     for (IType j = indptr_l[irow]; j < indptr_l[irow+1]; ++j) {
       const CType cur_col = col_idx_l[j];  // corresponding row id of the rhs
-      sum += data_l[j] * data_r[cur_col*num_cols+icol];
+      sum += data_l[j] * data_r[cur_col*num_cols_r+icol];
     }
-    KERNEL_ASSIGN(out[i], req, sum);
+    KERNEL_ASSIGN(out[tid], req, sum);
   }
 };
 
@@ -53,23 +58,25 @@ struct DotCsrDnsDnsScalarKernel {
 template<int req>
 struct DotCsrDnsDnsVectorKernel {
   template<typename DType, typename IType, typename CType>
-  __device__ __forceinline__ static void Map(int tid, DType* out, const DType* data_l, const IType* indptr_l,
-                                             const CType* col_idx_l, const DType* data_r,
-                                             const int num_cols_r) {
+  __device__ __forceinline__ static void Map(int tid, DType* out,
+                                             const DType* data_l,
+                                             const IType* indptr_l,
+                                             const CType* col_idx_l,
+                                             const DType* data_r,
+                                             const index_t num_cols_r) {
     __shared__ volatile DType vals[kBaseThreadNum];
-
-    const int warp_id = tid / 32;           // global warp id
-    const int lane = tid & (32-1);          // local thread id within warp
-    const int irow = warp_id / num_cols_r;  // lhs row that this warp computes
-    const int kcol = warp_id % num_cols_r;  // rhs column that this warp computes
+    const index_t warp_id = tid / 32;           // global warp id
+    const index_t lane = tid & (32-1);          // local thread id within warp
+    const index_t irow = warp_id / num_cols_r;  // lhs row that this warp computes
+    const index_t kcol = warp_id % num_cols_r;  // rhs column that this warp computes
 
     // Range of nnz elements in this row
-    const int low  = static_cast<int>(indptr_l[irow]);
-    const int high = static_cast<int>(indptr_l[irow+1]);
+    const index_t low  = static_cast<index_t>(indptr_l[irow]);
+    const index_t high = static_cast<index_t>(indptr_l[irow+1]);
 
     // Compute running sum per thread
     DType sum = 0;
-    for (int j = low+lane; j < high; j+=32) {
+    for (index_t j = low+lane; j < high; j+=32) {
       sum += data_l[j] * data_r[col_idx_l[j]*num_cols_r + kcol];
     }
     vals[threadIdx.x] = sum; __syncwarp();
@@ -95,32 +102,37 @@ template<int req>
 struct DotCsrTransDnsDnsScalarKernel {
   /*!
    * \brief This function represents performing an inner product between a column of lhs
-   * and a column of rhs and then assigning the value to out[i].
-   * \param i i-th element in out 1D view
-   * \param out output matrix
-   * \param data_l csr values of lhs
-   * \param indptr_l csr indptr of lhs
-   * \param col_idx_l csr col_idx of lhs
-   * \param data_r dense data of rhs
-   * \param num_rows_l number of rows of lhs
-   * \param num_cols number of columns of outputs
+   * and a column of rhs and then assigning the value to out[tid].
+   * \param tid         global thread id
+   * \param out         output matrix
+   * \param data_l      csr values of lhs
+   * \param indptr_l    csr indptr of lhs
+   * \param col_idx_l   csr col_idx of lhs
+   * \param data_r      dense data of rhs
+   * \param num_rows_l  number of rows of lhs (= number of columns of csr.T)
+   * \param num_cols_r  number of columns of output matrix
    */
   template<typename DType, typename IType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* data_l, const IType* indptr_l,
-                                  const CType* col_idx_l, const DType* data_r, const int num_rows_l,
-                                  const int num_cols) {
-    const int irow = i / num_cols;  // col id of the lhs
-    const int icol = i % num_cols;  // col id of the rhs
+  MSHADOW_XINLINE static void Map(int tid,
+                                  DType* out,
+                                  const DType* data_l,
+                                  const IType* indptr_l,
+                                  const CType* col_idx_l,
+                                  const DType* data_r,
+                                  const index_t num_rows_l,
+                                  const index_t num_cols_r) {
+    const index_t irow = tid / num_cols_r;  // col id of the lhs
+    const index_t icol = tid % num_cols_r;  // col id of the rhs
     DType sum = 0;
 
     // Each thread scans each column with binary search to find nnz elements in its row
-    for (int k = 0; k < num_rows_l; ++k) {
-      const IType low = indptr_l[k];
-      const IType high = indptr_l[k+1];
+    for (index_t k = 0; k < num_rows_l; ++k) {
+      const index_t low = static_cast<index_t>(indptr_l[k]);
+      const index_t high = static_cast<index_t>(indptr_l[k+1]);
       if (low == high || irow < col_idx_l[low] || irow > col_idx_l[high-1]) continue;
-      int j = -1, l = low, r = high - 1;
+      index_t j = -1, l = low, r = high - 1;
       while (l <= r) {
-        int m = l + (r - l) / 2;
+        index_t m = l + (r - l) / 2;
         if (col_idx_l[m] == irow) {
           j = m; break;
         }
@@ -131,10 +143,10 @@ struct DotCsrTransDnsDnsScalarKernel {
         }
       }
       if (j >= 0) {
-        sum += data_l[j] * data_r[k*num_cols+icol];
+        sum += data_l[j] * data_r[k*num_cols_r+icol];
       }
     }
-    KERNEL_ASSIGN(out[i], req, sum);
+    KERNEL_ASSIGN(out[tid], req, sum);
   }
 };
 
@@ -145,21 +157,25 @@ struct DotCsrTransDnsDnsScalarKernel {
 template<int req>
 struct DotCsrTransDnsDnsWarpKernel {
   template<typename DType, typename IType, typename CType>
-  __device__ __forceinline__ static void Map(int tid, DType* out, const DType* data_l, const IType* indptr_l,
-                                             const CType* col_idx_l, const DType* data_r,
-                                             const int num_cols_r) {
-    const int warp_id = tid / 32;           // global warp id
-    const int lane = tid & (32-1);          // local thread id within warp
-    const int icol = warp_id / num_cols_r;  // lhs column that this warp computes
-    const int kcol = warp_id % num_cols_r;  // rhs column that this warp computes
+  __device__ __forceinline__ static void Map(int tid,
+                                             DType* out,
+                                             const DType* data_l,
+                                             const IType* indptr_l,
+                                             const CType* col_idx_l,
+                                             const DType* data_r,
+                                             const index_t num_cols_r) {
+    const index_t warp_id = tid / 32;           // global warp id
+    const index_t lane = tid & (32-1);          // local thread id within warp
+    const index_t icol = warp_id / num_cols_r;  // lhs column that this warp computes
+    const index_t kcol = warp_id % num_cols_r;  // rhs column that this warp computes
 
     // Compute range of nnz elements in this column
-    const int low  = static_cast<int>(indptr_l[icol]);
-    const int high = static_cast<int>(indptr_l[icol+1]);
+    const index_t low  = static_cast<index_t>(indptr_l[icol]);
+    const index_t high = static_cast<index_t>(indptr_l[icol+1]);
 
     // Iterate through the nnz elements in this column
-    for (int j = low+lane; j < high; j+=32) {
-      const int irow = static_cast<int>(col_idx_l[j]);
+    for (index_t j = low+lane; j < high; j+=32) {
+      const index_t irow = static_cast<index_t>(col_idx_l[j]);
       const DType val = data_l[j]*data_r[icol*num_cols_r+kcol];
       atomicAdd(static_cast<DType *>(&(out[irow*num_cols_r+kcol])), val);
     }
@@ -173,25 +189,29 @@ struct DotCsrTransDnsDnsWarpKernel {
 template<int req>
 struct DotCsrTransDnsDnsThreadBlockKernel {
   template<typename DType, typename IType, typename CType>
-  __device__ __forceinline__ static void Map(int tid, DType* out, const DType* data_l, const IType* indptr_l,
-                                             const CType* col_idx_l, const DType* data_r,
-                                             const int num_cols_r) {
-    const int warps_per_block = blockDim.x / 32;  // number of warps in this thread block
-    const int warp_id = tid / 32;                 // global warp id
-    const int lane = tid & (32-1);                // local thread id within warp
-    const int icol = blockIdx.x;                  // lhs column that this thread block computes
-    const int kcol = warp_id % warps_per_block;   // rhs column where warp starts computing (offset)
+  __device__ __forceinline__ static void Map(int tid,
+                                             DType* out,
+                                             const DType* data_l,
+                                             const IType* indptr_l,
+                                             const CType* col_idx_l,
+                                             const DType* data_r,
+                                             const index_t num_cols_r) {
+    const index_t warps_per_block = blockDim.x / 32;  // number of warps in this thread block
+    const index_t warp_id = tid / 32;                 // global warp id
+    const index_t lane = tid & (32-1);                // local thread id within warp
+    const index_t icol = blockIdx.x;                  // lhs column that this thread block computes
+    const index_t kcol = warp_id % warps_per_block;   // rhs column where warp starts computing (offset)
 
     // Compute range of nnz elements in this lhs column
-    const int low  = static_cast<int>(indptr_l[icol]);
-    const int high = static_cast<int>(indptr_l[icol+1]);
+    const index_t low  = static_cast<index_t>(indptr_l[icol]);
+    const index_t high = static_cast<index_t>(indptr_l[icol+1]);
 
     // Iterate through the nnz elements in this lhs column
-    for (int j = low+lane; j < high; j+=32) {
-      const int irow = static_cast<int>(col_idx_l[j]);
+    for (index_t j = low+lane; j < high; j+=32) {
+      const index_t irow = static_cast<index_t>(col_idx_l[j]);
       const DType datum_l = data_l[j];
       // Iterate over rhs columns that this warp computes
-      for (int k = kcol; k < num_cols_r; k+=warps_per_block) {
+      for (index_t k = kcol; k < num_cols_r; k+=warps_per_block) {
         const DType val = datum_l*data_r[icol*num_cols_r+k];
         atomicAdd(static_cast<DType *>(&(out[irow*num_cols_r+k])), val);
       }
@@ -206,23 +226,27 @@ struct DotCsrTransDnsDnsThreadBlockKernel {
 template<int req>
 struct DotCsrTransDnsDnsWarpBlockKernel {
   template<typename DType, typename IType, typename CType>
-  __device__ __forceinline__ static void Map(int tid, DType* out, const DType* data_l, const IType* indptr_l,
-                                             const CType* col_idx_l, const DType* data_r,
-                                             const int num_cols_r) {
-    const int warp_id = tid / 32;   // global warp id
-    const int lane = tid & (32-1);  // local thread id within warp
-    const int icol = warp_id;       // lhs column that this warp computes
+  __device__ __forceinline__ static void Map(int tid,
+                                             DType* out,
+                                             const DType* data_l,
+                                             const IType* indptr_l,
+                                             const CType* col_idx_l,
+                                             const DType* data_r,
+                                             const index_t num_cols_r) {
+    const index_t warp_id = tid / 32;   // global warp id
+    const index_t lane = tid & (32-1);  // local thread id within warp
+    const index_t icol = warp_id;       // lhs column that this warp computes
 
     // Compute range of nnz elements in this column
-    const int low  = static_cast<int>(indptr_l[icol]);
-    const int high = static_cast<int>(indptr_l[icol+1]);
+    const index_t low  = static_cast<index_t>(indptr_l[icol]);
+    const index_t high = static_cast<index_t>(indptr_l[icol+1]);
 
     // Iterate through the nnz elements in lhs column
-    for (int j = low+lane; j < high; j+=32) {
-      const int irow = static_cast<int>(col_idx_l[j]);
+    for (index_t j = low+lane; j < high; j+=32) {
+      const index_t irow = static_cast<index_t>(col_idx_l[j]);
       const DType datum_l = data_l[j];
       // Iterate over all rhs columns
-      for (int k = 0; k < num_cols_r; k++) {
+      for (index_t k = 0; k < num_cols_r; k++) {
         const DType val = datum_l*data_r[icol*num_cols_r+k];
         atomicAdd(static_cast<DType *>(&(out[irow*num_cols_r+k])), val);
       }
@@ -253,13 +277,17 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         if (kWriteTo == req) {
-          mxnet_op::Kernel<mxnet_op::set_zero, gpu>::Launch(s, data_out.Size(), data_out.dptr<DType>());
+          Kernel<set_zero, gpu>::Launch(s, data_out.Size(), data_out.dptr<DType>());
         }
-        int num_threads;
-        const int threads_per_warp = 32;
-        const int threads_per_block = kBaseThreadNum;
-        const int num_rows_l = lhs.shape()[0];
-        const int num_cols_r = rhs.shape_[1];
+        const index_t threads_per_warp = mxnet_op::cuda_get_device_prop().warpSize;
+        const index_t threads_per_block = kBaseThreadNum;
+        const index_t num_rows_l = lhs.shape()[0];
+        const index_t num_cols_r = rhs.shape_[1];
+        index_t num_threads;
+        // TODO: remove kernel dependency on warpSize=32
+        if (threads_per_warp != 32) {
+          LOG(FATAL) << "DotCsrDnsDnsImpl GPU kernels expect warpSize=32";
+        }
         if (trans_lhs) {
           // Different kernel versions are optimized for different matrix instances
           // TODO: switch between kernel versions depending on input
@@ -272,7 +300,7 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
             case 1:
               num_threads = data_out.Size();
               MXNET_ASSIGN_REQ_SWITCH(req, ReqType, {
-                mxnet_op::Kernel<DotCsrTransDnsDnsScalarKernel<ReqType>, gpu>::Launch(s, num_threads,
+                Kernel<DotCsrTransDnsDnsScalarKernel<ReqType>, gpu>::Launch(s, num_threads,
                     data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
                     col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_rows_l, num_cols_r);
               });
@@ -280,7 +308,7 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
             case 2:
               num_threads = threads_per_warp * num_rows_l * num_cols_r;
               MXNET_ASSIGN_REQ_SWITCH(req, ReqType, {
-                mxnet_op::Kernel<DotCsrTransDnsDnsWarpKernel<ReqType>, gpu>::Launch(s, num_threads,
+                Kernel<DotCsrTransDnsDnsWarpKernel<ReqType>, gpu>::Launch(s, num_threads,
                     data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
                     col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
               });
@@ -288,7 +316,7 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
             case 3:
               num_threads = threads_per_block * num_rows_l;
               MXNET_ASSIGN_REQ_SWITCH(req, ReqType, {
-                mxnet_op::Kernel<DotCsrTransDnsDnsThreadBlockKernel<ReqType>, gpu>::Launch(s, num_threads,
+                Kernel<DotCsrTransDnsDnsThreadBlockKernel<ReqType>, gpu>::Launch(s, num_threads,
                     data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
                     col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
               });
@@ -296,7 +324,7 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
             case 4:
               num_threads = threads_per_warp * num_rows_l;
               MXNET_ASSIGN_REQ_SWITCH(req, ReqType, {
-                mxnet_op::Kernel<DotCsrTransDnsDnsWarpBlockKernel<ReqType>, gpu>::Launch(s, num_threads,
+                Kernel<DotCsrTransDnsDnsWarpBlockKernel<ReqType>, gpu>::Launch(s, num_threads,
                     data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
                     col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
               });
@@ -304,7 +332,7 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
             default:
               num_threads = threads_per_warp * num_rows_l * num_cols_r;
               MXNET_ASSIGN_REQ_SWITCH(req, ReqType, {
-                mxnet_op::Kernel<DotCsrTransDnsDnsWarpKernel<ReqType>, gpu>::Launch(s, num_threads,
+                Kernel<DotCsrTransDnsDnsWarpKernel<ReqType>, gpu>::Launch(s, num_threads,
                     data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
                     col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
               });
@@ -319,7 +347,7 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
             case 1:
               num_threads = data_out.Size();
               MXNET_ASSIGN_REQ_SWITCH(req, ReqType, {
-                mxnet_op::Kernel<DotCsrDnsDnsScalarKernel<ReqType>, gpu>::Launch(s, num_threads,
+                Kernel<DotCsrDnsDnsScalarKernel<ReqType>, gpu>::Launch(s, num_threads,
                     data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
                     col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
               });
@@ -327,7 +355,7 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
             case 2:
               num_threads = threads_per_warp * num_rows_l * num_cols_r;
               MXNET_ASSIGN_REQ_SWITCH(req, ReqType, {
-                mxnet_op::Kernel<DotCsrDnsDnsVectorKernel<ReqType>, gpu>::Launch(s, num_threads,
+                Kernel<DotCsrDnsDnsVectorKernel<ReqType>, gpu>::Launch(s, num_threads,
                     data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
                     col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
               });
@@ -336,14 +364,14 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
               if (num_cols_r > 4) {
                 num_threads = data_out.Size();
                 MXNET_ASSIGN_REQ_SWITCH(req, ReqType, {
-                  mxnet_op::Kernel<DotCsrDnsDnsScalarKernel<ReqType>, gpu>::Launch(s, num_threads,
+                  Kernel<DotCsrDnsDnsScalarKernel<ReqType>, gpu>::Launch(s, num_threads,
                       data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
                       col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
                 });
               } else {
                 num_threads = threads_per_warp * num_rows_l * num_cols_r;
                 MXNET_ASSIGN_REQ_SWITCH(req, ReqType, {
-                  mxnet_op::Kernel<DotCsrDnsDnsVectorKernel<ReqType>, gpu>::Launch(s, num_threads,
+                  Kernel<DotCsrDnsDnsVectorKernel<ReqType>, gpu>::Launch(s, num_threads,
                       data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
                       col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
                 });
