@@ -810,7 +810,8 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
     data_shape : tuple of int
         shape for output data
     resize : int or tuple of int
-        resize shorter edge if it is integer and larger than 0, resize to a fixed size if it is a tuple of int
+        resize shorter edge if it is integer and larger than 0
+        resize to a fixed size if it is a tuple of int
     rand_resize : float
         [0, 1], probability to apply random resizing
     rand_gray : float
