@@ -8,6 +8,34 @@ from .sparse_ndarray import _ndarray_cls, _zeros_sparse_ndarray
 
 
 def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
+    """Return a new array of given shape and type, filled with zeros.
+
+    Parameters
+    ----------
+    shape : int or tuple of int
+        The shape of the empty array
+    ctx : Context, optional
+        An optional device context (default is the current default context)
+    dtype : str or numpy.dtype, optional
+        An optional value type (default is `float32`)
+    stype: string, optional
+        The storage type of the empty array, such as 'row_sparse', 'csr', etc
+    aux_types: list of numpy.dtype, optional
+        An optional type for the aux data for SparseNDArray (default values depends
+        on the storage type)
+
+    Returns
+    -------
+    SparseNDArray
+        A created array
+    Examples
+    --------
+    >>> mx.nd.zeros((1,2), mx.cpu(), stype='csr')
+    <CSRNDArray 1x2 @cpu(0)>
+    >>> mx.nd.zeros((1,2), mx.cpu(), 'float16', stype='row_sparse').asnumpy()
+    array([[ 0.,  0.]], dtype=float16)
+    """
+
     if stype is None:
         return _zeros_ndarray(shape, ctx, dtype, **kwargs)
     else:

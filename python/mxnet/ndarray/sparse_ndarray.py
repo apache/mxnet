@@ -599,10 +599,10 @@ def _zeros_sparse_ndarray(stype, shape, ctx=None, dtype=None, aux_types=None, **
 
     Parameters
     ----------
-    shape : int or tuple of int
-        The shape of the empty array
     stype: string
         The storage type of the empty array, such as 'row_sparse', 'csr', etc
+    shape : int or tuple of int
+        The shape of the empty array
     ctx : Context, optional
         An optional device context (default is the current default context)
     dtype : str or numpy.dtype, optional
@@ -617,9 +617,9 @@ def _zeros_sparse_ndarray(stype, shape, ctx=None, dtype=None, aux_types=None, **
         A created array
     Examples
     --------
-    >>> mx.nd.zeros('csr', (1,2), mx.gpu(0))
-    <SparseNDArray 1x2 @gpu(0)>
-    >>> mx.nd.zeros('row_sparse', (1,2), mx.gpu(0), 'float16').asnumpy()
+    >>> mx.nd.zeros((1,2), mx.cpu(), stype='csr')
+    <CSRNDArray 1x2 @cpu(0)>
+    >>> mx.nd.zeros((1,2), mx.cpu(), 'float16', stype='row_sparse').asnumpy()
     array([[ 0.,  0.]], dtype=float16)
     """
     if stype == 'default':
