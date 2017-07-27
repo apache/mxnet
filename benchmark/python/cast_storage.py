@@ -65,7 +65,8 @@ def run_cast_storage_synthetic():
             stype = 'row_sparse'
             print(" cast_storage benchmark: dense to rsp, size m x n ")
         else:
-            print("invalid benchmark: b, continue")
+            print("invalid benchmark: %s" %b)
+            continue
         print("==================================================")
         headline = '{:>10} {:>10} {:>8} {:>8} {:>10}'.format('density(%)', 'context', 'm', 'n', 'time(ms)')
         print(headline)
