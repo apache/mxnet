@@ -862,13 +862,13 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
     """
     auglist = []
 
-    if resize > 0:
-        if isinstance(resize, int):
+    if isinstance(resize, int):
+        if resize > 0:
             auglist.append(ResizeAug(resize, inter_method))
-        elif isinstance(resize, tuple) and len(resize) == 2:
-            auglist.append(ForceResizeAug(resize, inter_method))
-        else:
-            raise ValueError('resize must be an integer or a tuple of (width, height)!')
+    elif isinstance(resize, tuple) and len(resize) == 2:
+        auglist.append(ForceResizeAug(resize, inter_method))
+    else:
+        raise ValueError('resize must be an integer or a tuple of (width, height)!')
 
     crop_size = (data_shape[2], data_shape[1])
     if rand_resize:
