@@ -46,12 +46,16 @@ struct MarkRspRowIdx {
  * \brief
  * CPU implementation of casting a dns tensor to rsp type.
  */
-inline void CastStorageDnsRspImpl(mshadow::Stream<cpu>* s, const TBlob& dns, NDArray* rsp) {
+inline void CastStorageDnsRspImpl(const OpContext& ctx,
+                                  const cpu& cpu_dev,
+                                  const TBlob& dns,
+                                  NDArray* rsp) {
   using namespace rowsparse;
   using namespace mshadow;
   CHECK(rsp != nullptr);
   CHECK_EQ(rsp->storage_type(), kRowSparseStorage);
   CHECK_EQ(dns.shape_, rsp->shape());
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   MSHADOW_TYPE_SWITCH(dns.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(rsp->aux_type(kIdx), RType, {  // row idx type
       const index_t num_rows = dns.shape_[0];
@@ -101,9 +105,8 @@ struct CastStorageRspDnsKernel {
  * since the shape is known at binding stage.
  */
 template<typename xpu>
-void CastStorageRspDnsImpl(mshadow::Stream<xpu>* s, const NDArray& rsp, TBlob* dns) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
+void CastStorageRspDnsImpl(const OpContext& ctx, const NDArray& rsp, TBlob* dns) {
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   CHECK_EQ(rsp.storage_type(), kRowSparseStorage);
   MSHADOW_TYPE_SWITCH(dns->type_flag_, DType, {
     MSHADOW_IDX_TYPE_SWITCH(rsp.aux_type(rowsparse::kIdx), IType, {
@@ -184,11 +187,15 @@ struct FillCsrColIdxAndVals {
  * \brief
  * CPU implementation of casting a dns tensor to csr type.
  */
-inline void CastStorageDnsCsrImpl(mshadow::Stream<cpu>* s, const TBlob& dns, NDArray* csr) {
+inline void CastStorageDnsCsrImpl(const OpContext& ctx,
+                                  const cpu& cpu_dev,
+                                  const TBlob& dns,
+                                  NDArray* csr) {
   CHECK(csr != nullptr);
   CHECK_EQ(csr->storage_type(), kCSRStorage);
   CHECK_EQ(dns.shape_.ndim(), 2);
   CHECK_EQ(dns.shape_, csr->shape());
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   MSHADOW_TYPE_SWITCH(dns.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(csr->aux_type(csr::kIndPtr), IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(csr->aux_type(csr::kIdx), CType, {  // col idx type
@@ -246,11 +253,12 @@ struct CopyCsrDataToDns {
  * \brief Casts a csr tensor to dns format.
  */
 template<typename xpu>
-void CastStorageCsrDnsImpl(mshadow::Stream<xpu>* s, const NDArray& csr, TBlob* dns) {
+void CastStorageCsrDnsImpl(const OpContext& ctx, const NDArray& csr, TBlob* dns) {
   CHECK(dns != nullptr);
   CHECK_EQ(csr.storage_type(), kCSRStorage);
   CHECK_EQ(dns->shape_.ndim(), 2);
   CHECK_EQ(dns->shape_, csr.shape());
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(dns->type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(csr.aux_type(csr::kIndPtr), IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(csr.aux_type(csr::kIdx), CType, {  // col idx type
@@ -270,25 +278,23 @@ void CastStorageCsrDnsImpl(mshadow::Stream<xpu>* s, const NDArray& csr, TBlob* d
 }
 
 template<typename xpu>
-void CastStorageComputeImpl(mshadow::Stream<xpu>* s,
+void CastStorageComputeImpl(const OpContext& ctx,
                             const NDArray& input,
                             const NDArray& output) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
   const auto src_stype = input.storage_type();
   const auto dst_stype = output.storage_type();
   if (src_stype == kRowSparseStorage && dst_stype == kDefaultStorage) {
     TBlob ret = output.data();
-    CastStorageRspDnsImpl<xpu>(s, input, &ret);
+    CastStorageRspDnsImpl<xpu>(ctx, input, &ret);
   } else if (src_stype == kDefaultStorage && dst_stype == kRowSparseStorage) {
     NDArray ret = output;  // get rid of the const qualifer
-    CastStorageDnsRspImpl(s, input.data(), &ret);
+    CastStorageDnsRspImpl(ctx, xpu(), input.data(), &ret);
   } else if (src_stype == kDefaultStorage && dst_stype == kCSRStorage) {
     NDArray ret = output;  // get rid of the const qualifer
-    CastStorageDnsCsrImpl(s, input.data(), &ret);
+    CastStorageDnsCsrImpl(ctx, xpu(), input.data(), &ret);
   } else if (src_stype == kCSRStorage && dst_stype == kDefaultStorage) {
     TBlob ret = output.data();
-    CastStorageCsrDnsImpl<xpu>(s, input, &ret);
+    CastStorageCsrDnsImpl<xpu>(ctx, input, &ret);
   } else {
     LOG(FATAL) << "Not implemented";
   }
@@ -326,12 +332,9 @@ void CastStorageComputeEx(const nnvm::NodeAttrs& attrs,
                           const std::vector<NDArray>& inputs,
                           const std::vector<OpReqType>& req,
                           const std::vector<NDArray>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(inputs.size(), 1);
   CHECK_EQ(outputs.size(), 1);
-  CastStorageComputeImpl<xpu>(s, inputs[0], outputs[0]);
+  CastStorageComputeImpl<xpu>(ctx, inputs[0], outputs[0]);
 }
 
 }  // namespace op

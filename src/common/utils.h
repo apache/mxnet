@@ -24,11 +24,10 @@
 #include <functional>
 
 namespace mxnet {
-
 namespace common {
 
 template<typename xpu>
-void CastStorageDispatch(mshadow::Stream<xpu>* s, const NDArray& input, const NDArray& output);
+void CastStorageDispatch(const OpContext& ctx, const NDArray& input, const NDArray& output);
 
 /*
  * \brief Get the corresponding tensor blobs from default storage NDArrays.
@@ -55,7 +54,7 @@ inline bool GetDefaultBlobs(const std::vector<NDArray>& nds,
                    << "doesn't support NDArray inputs with non-default storage.";
       }
       NDArray temp(nd.shape(), nd.ctx(), false);
-      CastStorageDispatch<xpu>(ctx.get_stream<xpu>(), nd, temp);
+      CastStorageDispatch<xpu>(ctx, nd, temp);
       temps->push_back(temp);
       blobs->push_back(temp.data());
       casted = true;
@@ -91,7 +90,7 @@ inline void CastNonDefaultStorage(const std::vector<NDArray>& dst,
                    << "You are probably executing an operator which "
                    << "doesn't support NDArray inputs with non-default storage.";
       }
-      CastStorageDispatch<xpu>(ctx.get_stream<xpu>(), src[src_idx++], dst[i]);
+      CastStorageDispatch<xpu>(ctx, src[src_idx++], dst[i]);
     }
   }
   CHECK_EQ(src_idx, src.size()) << "Not all src NDArrays are casted";
