@@ -9,6 +9,7 @@
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
 
+// TODO(stefan): change dot interface s.t. it includes OpContext
 namespace mxnet {
 namespace op {
 using mshadow::cuda::kBaseThreadNum;
@@ -87,7 +88,7 @@ struct DotCsrDnsDnsVectorKernel {
 };
 
 /*!
- * \brief Scalar kernel of dot(csr.T(), dns1) = dns2
+ * \brief Scalar kernel of dot(csr.T, dns1) = dns2
  * Parallelization by output matrix elements: 1 thread/element
  */
 template<int req>
@@ -138,7 +139,7 @@ struct DotCsrTransDnsDnsScalarKernel {
 };
 
 /*!
- * \brief Warp kernel of dot(csr.T(), dns1) = dns2
+ * \brief Warp kernel of dot(csr.T, dns1) = dns2
  * Parallelization by columns: 1 warp computes one lhs column for one rhs column
  */
 template<int req>
@@ -166,7 +167,7 @@ struct DotCsrTransDnsDnsWarpKernel {
 };
 
 /*!
- * \brief Thread block kernel of dot(csr.T(), dns1) = dns2
+ * \brief Thread block kernel of dot(csr.T, dns1) = dns2
  * Parallelization by columns: 1 thread block computes one lhs column for all rhs columns
  */
 template<int req>
@@ -199,7 +200,7 @@ struct DotCsrTransDnsDnsThreadBlockKernel {
 };
 
 /*!
- * \brief Warp block kernel of dot(csr.T(), dns1) = dns2
+ * \brief Warp block kernel of dot(csr.T, dns1) = dns2
  * Parallelization by columns: 1 warp computes one lhs column for all rhs columns
  */
 template<int req>
@@ -229,6 +230,9 @@ struct DotCsrTransDnsDnsWarpBlockKernel {
   }
 };
 
+/*!
+ * \brief GPU Impl of dot(csr, dns1) = dns2 and dot(csr.T, dns1) = dns2
+ */
 inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
                              const NDArray& lhs,
                              const TBlob& rhs,
@@ -353,7 +357,7 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
 }
 
 /*!
- * \brief Impl of dot(csr.T, dns) = rsp
+ * \brief GPU Impl of dot(csr, dns) = rsp and dot(csr.T, dns) = rsp
  */
 inline void DotCsrDnsRspImpl(mshadow::Stream<gpu>* s,
                              const NDArray& lhs,
@@ -361,11 +365,12 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<gpu>* s,
                              const OpReqType req,
                              const bool trans_lhs,
                              NDArray* ret) {
+  // TODO(stefan): Implement dot(csr.T, dns) = rsp
   LOG(FATAL) << "DotCsrDnsRspImpl gpu version is not implemented.";
 }
 
 /*!
- * \brief Impl of dot(csr.T, rsp) = rsp2
+ * \brief GPU Impl of dot(csr, rsp1) = rsp2 and dot(csr.T, rsp1) = rsp2
  */
 inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
                              const NDArray& lhs,
@@ -373,7 +378,21 @@ inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
                              const OpReqType req,
                              const bool trans_lhs,
                              NDArray* ret) {
+  // TODO(stefan): Implement dot(csr.T, rsp1) = rsp2
   LOG(FATAL) << "DotCsrRspRspImpl gpu version is not implemented.";
+}
+
+/*!
+ * \brief GPU Impl of dot(csr, rsp) = dns and dot(csr.T, rsp) = dns
+ */
+inline void DotCsrRspDnsImpl(mshadow::Stream<gpu>* s,
+                             const NDArray& lhs,
+                             const NDArray& rhs,
+                             const OpReqType req,
+                             const bool trans_lhs,
+                             TBlob* ret) {
+  // TODO(stefan): Implement dot(csr, rsp) = dns
+  LOG(FATAL) << "DotCsrRspDnsImpl gpu version is not implemented.";
 }
 
 }  // namespace op

@@ -19,6 +19,7 @@
 #include "./dot-inl.cuh"
 #endif  // __CUDACC__
 
+// TODO(stefan): change dot interface s.t. it includes OpContext
 namespace mxnet {
 namespace op {
 
@@ -187,7 +188,7 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   // csr has many zero columns, so the result of dot(csr.T, matrix) should be rsp
-  // dot(csr.T,dns)=rsp not yet implemented on gpu
+  // TODO(stefan): dot(csr.T,dns)=rsp not yet implemented on gpu
   if (param.transpose_a && kCSRStorage == (*in_attrs)[0] && ctx.dev_type != Context::kGPU) {
     STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
   } else {
@@ -416,6 +417,9 @@ struct DotCsrTransRspRspByRowBlocks {
   }
 };
 
+/*!
+ * \brief CPU Impl of dot(csr, dns1) = dns2 and dot(csr.T, dns1) = dns2
+ */
 inline void DotCsrDnsDnsImpl(mshadow::Stream<cpu>* s,
                              const NDArray& lhs,
                              const TBlob& rhs,
@@ -458,7 +462,7 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<cpu>* s,
 }
 
 /*!
- * \brief Impl of dot(csr, rsp)
+ * \brief CPU Impl of dot(csr.T, dns) = rsp
  */
 inline void DotCsrDnsRspImpl(mshadow::Stream<cpu>* s,
                              const NDArray& lhs,
@@ -522,13 +526,15 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<cpu>* s,
   });
 }
 
-template<typename xpu>
-void DotCsrRspDnsImpl(mshadow::Stream<xpu>* s,
-                      const NDArray& lhs,
-                      const NDArray& rhs,
-                      const OpReqType req,
-                      const bool trans_lhs,
-                      TBlob* ret) {
+/*!
+ * \brief CPU Impl of dot(csr, rsp) = dns
+ */
+inline void DotCsrRspDnsImpl(mshadow::Stream<xpu>* s,
+                             const NDArray& lhs,
+                             const NDArray& rhs,
+                             const OpReqType req,
+                             const bool trans_lhs,
+                             TBlob* ret) {
   // reuse csr dns implementation when storage_shape == shape for rhs
   if (rhs.storage_shape()[0] == rhs.shape()[0]) {  // if rsp is actually dense
     DotCsrDnsDnsImpl(s, lhs, rhs.data(), req, trans_lhs, ret);
@@ -541,7 +547,7 @@ void DotCsrRspDnsImpl(mshadow::Stream<xpu>* s,
   if (!lhs.storage_initialized() || !rhs.storage_initialized()) {
     if (kWriteTo == req) {
       MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {  // data type
-        mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
+        mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(
             s, ret->Size(), ret->dptr<DType>());
       });
     }
@@ -559,15 +565,15 @@ void DotCsrRspDnsImpl(mshadow::Stream<xpu>* s,
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // col idx type
           if (kWriteTo == req) {
-            mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
+            mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(
                 s, ret->Size(), ret->dptr<DType>());
           }
-          int num_threads = mxnet_op::get_num_threads<xpu>(ret->shape_[0]);
+          int num_threads = mxnet_op::get_num_threads<cpu>(ret->shape_[0]);
           size_t seg_len = (ret->shape_[0] + num_threads - 1) / num_threads;
           if (trans_lhs) {
             LOG(FATAL) << "DotCsrRspDnsImpl has not implemented dot(csr.T, rsp) = dns yet";
           } else {
-            mxnet_op::Kernel<DotCsrRspDnsByRowBlocks, xpu>::Launch(s, num_threads,
+            mxnet_op::Kernel<DotCsrRspDnsByRowBlocks, cpu>::Launch(s, num_threads,
                 ret->dptr<DType>(), data_l.dptr<DType>(),
                 indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(), data_r.dptr<DType>(),
                 row_idx_r.dptr<RType>(), rhs.storage_shape()[0],
@@ -580,7 +586,7 @@ void DotCsrRspDnsImpl(mshadow::Stream<xpu>* s,
 }
 
 /*!
- * \brief Impl of dot(csr.T, rsp) = rsp2
+ * \brief CPU Impl of dot(csr.T, rsp1) = rsp2
  */
 inline void DotCsrRspRspImpl(mshadow::Stream<cpu>* s,
                              const NDArray& lhs,
@@ -720,7 +726,7 @@ void DotForwardEx(const nnvm::NodeAttrs& attrs,
   } else if (lhs_stype == kCSRStorage && rhs_stype == kRowSparseStorage
       && out_stype == kDefaultStorage) {
     TBlob ret = outputs[0].data();
-    DotCsrRspDnsImpl<xpu>(s, inputs[0], inputs[1], req[0], param.transpose_a, &ret);
+    DotCsrRspDnsImpl(s, inputs[0], inputs[1], req[0], param.transpose_a, &ret);
   } else if (lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage
       && out_stype == kRowSparseStorage) {
     NDArray out = outputs[0];
