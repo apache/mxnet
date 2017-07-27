@@ -18,7 +18,7 @@ using mshadow::Shape1;
 using mxnet_op::Kernel;
 
 /*!
- * \brief Thread kernel for marking non-zero rows of a tensor
+ * \brief Thread kernel for marking non-zero rows of a tensor.
  * Parallelized by tensor rows: 1 thread/row
  */
 struct MarkRspRowIdxThreadKernel {
@@ -54,7 +54,7 @@ struct MarkRspRowIdxThreadKernel {
 };
 
 /*!
- * \brief Thread kernel for marking non-zero rows of a tensor
+ * \brief Thread kernel for marking non-zero rows of a tensor.
  * Parallelized by tensor rows: 1 warp/row
  */
 struct MarkRspRowIdxWarpKernel {
@@ -95,7 +95,7 @@ struct MarkRspRowIdxWarpKernel {
 };
 
 /*!
- * \brief Thread kernel for marking non-zero rows of a tensor
+ * \brief Thread kernel for marking non-zero rows of a tensor.
  * Parallelized by tensor rows: 1 threadBlock/row
  */
 struct MarkRspRowIdxBlockKernel {
@@ -130,7 +130,7 @@ struct MarkRspRowIdxBlockKernel {
 };
 
 /*!
- * \brief Kernel for filling the row index array of the rsp tensor
+ * \brief Kernel for filling the row index array of the rsp tensor.
  * Parallelized by tensor rows: 1 thread/row
  */
 struct FillRspRowIdxKernel {
@@ -156,7 +156,7 @@ struct FillRspRowIdxKernel {
 };
 
 /*!
- * \brief Kernel for filling the value array of the rsp tensor
+ * \brief Kernel for filling the value array of the rsp tensor.
  * Parallelized by rsp tensor elements: 1 thread/element
  */
 struct FillRspValsKernel {
@@ -295,7 +295,7 @@ inline void CastStorageDnsRspImpl(const OpContext& ctx,
 }
 
 /*!
- * \brief Thread kernel for initializing the indptr in a csr tensor
+ * \brief Thread kernel for initializing the indptr in a csr matrix.
  * Parallelized by matrix rows: 1 thread/row
  */
 struct FillCsrIndPtrThreadKernel {
@@ -328,7 +328,7 @@ struct FillCsrIndPtrThreadKernel {
 };
 
 /*!
- * \brief Thread kernel for initializing the col_idx and value array of the csr matrix
+ * \brief Thread kernel for initializing the col_idx and value array of the csr matrix.
  * Parallelized by matrix rows: 1 thread/row
  */
 struct FillCsrColIdxAndValsThreadKernel {
@@ -362,7 +362,7 @@ struct FillCsrColIdxAndValsThreadKernel {
 };
 
 /*!
- * \brief Warp kernel for initializing the indptr in a csr matrix
+ * \brief Warp kernel for initializing the indptr in a csr matrix.
  * Parallelized by matrix rows: 1 warp/row
  */
 struct FillCsrIndPtrWarpKernel {
@@ -397,7 +397,7 @@ struct FillCsrIndPtrWarpKernel {
 };
 
 /*!
- * \brief Warp kernel for initializing the col_idx and value array of the csr matrix
+ * \brief Warp kernel for initializing the col_idx and value array of the csr matrix.
  * Parallelized by matrix rows: 1 warp/row
  */
 struct FillCsrColIdxAndValsWarpKernel {
@@ -447,7 +447,7 @@ struct FillCsrColIdxAndValsWarpKernel {
 };
 
 /*!
- * \brief Block kernel for initializing the indptr in a csr tensor
+ * \brief Block kernel for initializing the indptr in a csr matrix.
  * Parallelized by matrix rows: 1 threadBlock/row
  */
 struct FillCsrIndPtrBlockKernel {
@@ -478,7 +478,7 @@ struct FillCsrIndPtrBlockKernel {
 };
 
 /*!
- * \brief Block kernel for initializing the col_idx and value array of the csr matrix
+ * \brief Block kernel for initializing the col_idx and value array of the csr matrix.
  * Parallelized by matrix rows: 1 threadBlock/row
  */
 struct FillCsrColIdxAndValsBlockKernel {
@@ -524,7 +524,7 @@ struct FillCsrColIdxAndValsBlockKernel {
 };
 
 /*!
- * \brief GPU implementation of casting a dense matrix to csr type
+ * \brief GPU implementation of casting a dense matrix to csr type.
  */
 inline void CastStorageDnsCsrImpl(const OpContext& ctx,
                                   const gpu& gpu_dev,
