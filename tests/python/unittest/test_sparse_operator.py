@@ -89,11 +89,6 @@ def test_cast_storage_ex():
         csr_out = mx.nd.cast_storage(mx.nd.array(csr_in.todense(), dtype=default_dtype()), stype='csr')
         assert same(csr_in.asnumpy(), csr_out.asnumpy())
 
-    shape = rand_shape_2d()
-    if default_context().device_type is 'cpu':
-        test_rsp_to_dns(shape)
-        test_dns_to_rsp(shape)
-
     density = [1.00, 0.50, 0.10, 0.05, 0.01]
     for d in density:
         shape_2d = rand_shape_2d()
