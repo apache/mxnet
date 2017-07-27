@@ -110,8 +110,14 @@ def rand_ndarray(shape, stype, density=None):
 def rand_shape_2d(dim0=10, dim1=10):
     return rnd.randint(1, dim0 + 1), rnd.randint(1, dim1 + 1)
 
+
 def rand_shape_3d(dim0=10, dim1=10, dim2=10):
     return rnd.randint(1, dim0 + 1), rnd.randint(1, dim1 + 1), rnd.randint(1, dim2 + 1)
+
+
+def rand_shape_nd(n, dim=10):
+  return rnd.randint(1, dim+1, size=n)
+
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
     """Compatible reduce for old version of NumPy.
