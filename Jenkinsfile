@@ -8,6 +8,10 @@ mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
 max_time = 60
+// assign any caught errors here
+err = null
+// set build status to success by default
+currentBuild.result = "SUCCESS"
 
 // initialize source codes
 def init_git() {
