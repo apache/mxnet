@@ -11,11 +11,17 @@ class SparseSGD(SGD):
     The optimizer updates the weights the same way as done in SGD, but does the following
     preprocessing::
 
-        weight = weight * mask
-        grad = grad * mask
-        state = state * mask
+        if threshold given, all weights below the threshold in absolute value are pruned,
+            mask    =   abs(weight) >= threshold
+        if sparsity level given, the smallest (sparsity)% weights in absolute value are pruned
+        (or the largest (100-sparsity)% weights in absolute value are used)
+            mask    =   topk(abs(weight), ret_typ='mask', k=weight.size*(100-sparsity)/100)
 
-    Where mask is the same dimensional binary NDArray that prunes some of the weights.
+        => mask[i,j]    =   {0 if weight[i,j] is pruned, 1 otherwise} (for a matrix representation)
+
+        weight  =   weight  *   mask
+        grad    =   grad    *   mask
+        state   =   state   *   mask
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.SGD`.
