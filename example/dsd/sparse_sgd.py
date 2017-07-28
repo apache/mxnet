@@ -1,5 +1,8 @@
 from mxnet.ndarray import NDArray, topk, abs as NDabs
 from mxnet.optimizer import SGD, register
+import logging
+
+log = 'Sparsity Update:\t'
 
 @register
 class SparseSGD(SGD):
@@ -37,10 +40,10 @@ class SparseSGD(SGD):
     bias_sparsity : list of floats, optional
         The sparsity on the biases required on each iteration of sparse training.
 
-    weight_sparsity_threshold : list of floats, optional
+    weight_threshold : list of floats, optional
         The absolute value threshold on the weights required on each iteration of sparse training.
 
-    bias_sparsity_threshold : list of floats, optional
+    bias_threshold : list of floats, optional
         The absolute value threshold on the biases required on each iteration of sparse training.
 
     batches_per_epoch : int, optional
@@ -49,7 +52,7 @@ class SparseSGD(SGD):
     """
     def __init__(self, pruning_switch_epoch, batches_per_epoch,
                  weight_sparsity=None, bias_sparsity=None,
-                 weight_sparsity_threshold=None, bias_sparsity_threshold=None, **kwargs):
+                 weight_threshold=None, bias_threshold=None, **kwargs):
         super(SparseSGD, self).__init__(**kwargs)
 
         self.masks = []
@@ -68,16 +71,16 @@ class SparseSGD(SGD):
                 'pruning_switch_epoch and weight_sprsity should have same length'
 
         # get weight and bias sparsity thresholds
-        self.weight_sparsity_threshold = weight_sparsity_threshold
-        self.bias_sparsity_threshold = bias_sparsity_threshold
-        if weight_sparsity_threshold is not None:
-            assert len(weight_sparsity_threshold) == len(bias_sparsity_threshold), \
-                'weight_sparsity_threshold and bias_sparsity_threshold should have same length'
-            assert len(weight_sparsity_threshold) == len(pruning_switch_epoch), \
+        self.weight_threshold = weight_threshold
+        self.bias_threshold = bias_threshold
+        if weight_threshold is not None:
+            assert len(weight_threshold) == len(bias_threshold), \
+                'weight_threshold and bias_threshold should have same length'
+            assert len(weight_threshold) == len(pruning_switch_epoch), \
                 'pruning_switch_epoch and weight_sprsity_threshold should have same length'
 
         # either percentages or thresholds must be given
-        assert weight_sparsity is not None or weight_sparsity_threshold is not None,\
+        assert weight_sparsity is not None or weight_threshold is not None,\
             'weight_sparsity or weight_sprasity_threshold should be given'
 
     def update_masks(self, index, weight):
@@ -113,15 +116,21 @@ class SparseSGD(SGD):
             self.epoch = epoch
             if epoch == 1:
                 self.masks_updated = False
+                if self.weight_sparsity is not None:
+                    logging.info(log + 'bias-sparsity={}, weight-sparsity={}'.format(self.bias_sparsity[0], self.weight_sparsity[0]))
+                else:
+                    logging.info(log + 'bias-threshold={}, weight-threshold={}'.format(self.bias_threshold[0], self.weight_threshold[0]))
             if self.pruning_switch_epoch[0] + 1 == epoch:
                 self.masks_updated = False
                 self.pruning_switch_epoch.pop(0)
                 if self.weight_sparsity is not None:
                     self.weight_sparsity.pop(0)
                     self.bias_sparsity.pop(0)
+                    logging.info(log + 'bias-sparsity={}, weight-sparsity={}'.format(self.bias_sparsity[0], self.weight_sparsity[0]))
                 else:
-                    self.weight_sparsity_threshold.pop(0)
-                    self.bias_sparsity_threshold.pop(0)
+                    self.weight_threshold.pop(0)
+                    self.bias_threshold.pop(0)
+                    logging.info(log + 'bias-threshold={}, weight-threshold={}'.format(self.bias_threshold[0], self.weight_threshold[0]))
 
         # update masks if needed
         if not self.masks_updated:
@@ -140,9 +149,9 @@ class SparseSGD(SGD):
             # if thresholds are given
             else:
                 if len(weight.shape) == 1:
-                    threshold = self.bias_sparsity_threshold[0]
+                    threshold = self.bias_threshold[0]
                 else:
-                    threshold = self.weight_sparsity_threshold[0]
+                    threshold = self.weight_threshold[0]
                 self.masks[index] = NDabs(weight) >= threshold
 
         return not self.masks_updated
