@@ -130,7 +130,7 @@ struct DotCsrTransDnsDnsScalarKernel {
       const index_t low = static_cast<index_t>(indptr_l[k]);
       const index_t high = static_cast<index_t>(indptr_l[k+1]);
       if (low == high || irow < col_idx_l[low] || irow > col_idx_l[high-1]) continue;
-      index_t j = -1, l = low, r = high - 1;
+      index_t j = high, l = low, r = high - 1;
       while (l <= r) {
         index_t m = l + (r - l) / 2;
         if (col_idx_l[m] == irow) {
@@ -142,7 +142,7 @@ struct DotCsrTransDnsDnsScalarKernel {
           r = m - 1;
         }
       }
-      if (j >= 0) {
+      if (j < high) {
         sum += data_l[j] * data_r[k*num_cols_r+icol];
       }
     }

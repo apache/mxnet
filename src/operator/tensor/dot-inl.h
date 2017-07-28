@@ -529,7 +529,7 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<cpu>* s,
 /*!
  * \brief CPU Impl of dot(csr, rsp) = dns
  */
-inline void DotCsrRspDnsImpl(mshadow::Stream<xpu>* s,
+inline void DotCsrRspDnsImpl(mshadow::Stream<cpu>* s,
                              const NDArray& lhs,
                              const NDArray& rhs,
                              const OpReqType req,
