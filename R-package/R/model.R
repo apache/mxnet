@@ -153,9 +153,6 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
     kvstore$init(params.index, train.execs[[1]]$ref.arg.arrays[params.index])
   }
   # Get the input names
-  # input.names <- mx.model.check.arguments(symbol)
-  # arg_names <- arguments(symbol)
-  # label_name <- arg_names[endsWith(arg_names, "label")]
 
   for (iteration in begin.round:end.round) {
     nbatch <- 0
@@ -173,7 +170,9 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       # copy data to executor
       for (i in 1:ndevice) {
         s <- slices[[i]]
-        #names(s)[endsWith(names(s), "label")] = label_name
+        if (endsWith(output.names, "label")) {
+          names(s)[endsWith(names(s), "label")] = output.names 
+        }
         mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
       }
       for (texec in train.execs) {
@@ -216,7 +215,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       # Update the evaluation metrics
       if (!is.null(metric)) {
         for (i in 1 : ndevice) {
-          train.metric <- metric$update(slices[[i]][[output.names]], out.preds[[i]], train.metric)
+          train.metric <- metric$update(slices[[i]][[length(slices[[i]])]], out.preds[[i]], train.metric)
         }
       }
       nbatch <- nbatch + 1
@@ -243,7 +242,9 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
         })
         for (i in 1:ndevice) {
           s <- slices[[i]]
-          names(s)[endsWith(names(s), "label")] = label_name
+          if (endsWith(output.names, "label")) {
+            names(s)[endsWith(names(s), "label")] = output.names 
+          }
           mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
         }
         for (texec in train.execs) {
@@ -254,7 +255,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
         })
         if (!is.null(metric)) {
           for (i in 1 : ndevice) {
-            eval.metric <- metric$update(slices[[i]]$label, out.preds[[i]], eval.metric)
+            eval.metric <- metric$update(slices[[i]][[length(slices[[i]])]] , out.preds[[i]], eval.metric)
           }
         }
       }
