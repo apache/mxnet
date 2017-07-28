@@ -2,31 +2,9 @@
 
 These tutorials introduce a few fundamental concepts in deep learning and how to implement them in _MXNet_. The _Basics_ section contains tutorials on manipulating arrays, building networks, loading/preprocessing data, etc. The _Training and Inference_ section talks about implementing Linear Regression, training a Handwritten digit classifier using MLP and CNN, running inferences using a pre-trained model, and lastly, efficiently training a large scale image classifier.
 
-## High-level interface `gluon`
+**Note:** We are working on a set of tutorials for the new imperative interface called Gluon. A preview version is hosted at [thestraightdope.mxnet.io](http://thestraightdope.mxnet.io).
 
-### Beginer
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   gluon/ndarray
-   gluon/autograd
-   gluon/gluon
-   gluon/hybrid
-```
-
-### Intermediate
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   gluon/word_embeddings
-   gluon/lstm_language_model
-```
-## Low-level interface
-
+## Python
 
 ### Basic
 

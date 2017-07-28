@@ -117,6 +117,11 @@ struct GradOp {
   const DeviceTensor gradOutput;
 };
 
+#if CUDA_VERSION >= 9000
+#define FULLMASK 0xFFFFFFFF
+#define __shfl_xor(...) __shfl_xor_sync(FULLMASK, __VA_ARGS__)
+#endif
+
 // Sum across all threads within a warp
 template<typename T>
 static __device__ __forceinline__ T warpSum(T val) {

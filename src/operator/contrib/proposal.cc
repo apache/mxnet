@@ -326,9 +326,9 @@ class ProposalOp : public Operator{
     std::memcpy(workspace_proposals.dptr_, &anchors[0], sizeof(float) * anchors.size());
 
     // Enumerate all shifted anchors
-    for (index_t i = 0; i < num_anchors; ++i) {
-      for (index_t j = 0; j < height; ++j) {
-        for (index_t k = 0; k < width; ++k) {
+    for (index_t i = 0; i < static_cast<index_t>(num_anchors); ++i) {
+      for (index_t j = 0; j < static_cast<index_t>(height); ++j) {
+        for (index_t k = 0; k < static_cast<index_t>(width); ++k) {
           index_t index = j * (width * num_anchors) + k * (num_anchors) + i;
           workspace_proposals[index][0] = workspace_proposals[i][0] + k * param_.feature_stride;
           workspace_proposals[index][1] = workspace_proposals[i][1] + j * param_.feature_stride;

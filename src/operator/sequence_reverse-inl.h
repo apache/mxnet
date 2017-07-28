@@ -55,7 +55,7 @@ struct ReverseKernel {
                                   : max_seq_len;
       const index_t padded_periods = max_seq_len - num_seq;
       // padded part
-      if (padded_periods > 0 && i < padded_periods) {
+      if (padded_periods > 0 && i < static_cast<int>(padded_periods)) {
         const int padded_in_offset =
             (i + num_seq) * batch_size * other_dim + batch * other_dim;
 
@@ -65,7 +65,7 @@ struct ReverseKernel {
         }
       }
       // unpadded part
-      if (i < num_seq) {
+      if (i < static_cast<int>(num_seq)) {
         const int in_offset = i * batch_size * other_dim + batch * other_dim;
         const int out_offset =
             numel - (i + 1 + padded_periods) * batch_size * other_dim +

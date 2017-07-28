@@ -56,7 +56,7 @@ class NotImplementedForSymbol(MXNetError):
         return msg
 
 def _load_lib():
-    """Load libary by searching possible path."""
+    """Load library by searching possible path."""
     lib_path = libinfo.find_lib_path()
     lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_LOCAL)
     # DMatrix functions

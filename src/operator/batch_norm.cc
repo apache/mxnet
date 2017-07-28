@@ -98,7 +98,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
   const size_t itemCountPerChannel = inputData.Size() / channelCount;
 
   #pragma omp parallel for
-  for (int channel = 0; channel < channelCount; ++channel) {
+  for (int channel = 0; channel < static_cast<int>(channelCount); ++channel) {
     if (is_train_and_not_global_stats) {
       // compute mean per input
       mean[channel] = 0;

@@ -96,7 +96,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     // Use tag to control the calculation of pad
     bool bCal = false;
     if (target_shape.ndim() != 0) {
-      for (int i = 0; i < target_shape.ndim(); i++) {
+      for (index_t i = 0; i < target_shape.ndim(); i++) {
         if (target_shape[i] != 0) bCal = true;
       }
     }
@@ -104,7 +104,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     if (bCal) {
       size_t input_ndim = input.ndim();
 
-      for (unsigned int i = 0; i < ndim; i++) {
+      for (index_t i = 0; i < ndim; i++) {
         // input.ndim() can be larger than ndim, in case that the complete input
         // shape was passed and not only the ndim last ones
         o_pad[i] = stride[i] * (input[(input_ndim - ndim) + i] - 1) + DilatedKernelSize(i);
@@ -114,7 +114,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
         o_pad[i] = (o_pad[i] + 1) / 2;
       }
     } else {
-      for (unsigned int i = 0; i < ndim; i++) {
+      for (index_t i = 0; i < ndim; i++) {
         o_pad[i] = pad[i];
         o_adj[i] = adj[i];
       }

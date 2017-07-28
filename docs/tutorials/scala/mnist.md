@@ -4,6 +4,12 @@ This Scala tutorial guides you through a classic computer vision application: id
 
 Let's train a 3-layer network (i.e multilayer perceptron network) on the MNIST dataset to classify handwritten digits.
 
+## Prerequisites
+To complete this tutorial, we need:
+
+- to compile the latest MXNet version. See the MXNet installation instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).
+- to compile the Scala API. See Scala API build instructions in [Build](https://github.com/dmlc/mxnet/tree/master/scala-package).
+
 ## Define the Network
 
 First, define the neural network's architecture using the Symbol API:
@@ -87,7 +93,7 @@ while (valDataIter.hasNext) {
 val y = NDArray.concatenate(labels)
 
 // get predicted labels
-val predictedY = NDArray.argmaxChannel(prob)
+val predictedY = NDArray.argmax_channel(prob)
 require(y.shape == predictedY.shape)
 
 // calculate accuracy

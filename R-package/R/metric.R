@@ -78,3 +78,13 @@ mx.metric.rmsle <- mx.metric.custom("rmsle", function(label, pred) {
   return(res)
 })
 
+#' Perplexity metric for language model
+#'
+#' @export
+mx.metric.Perplexity <- mx.metric.custom("Perplexity", function(label, pred) {
+  label_probs <- as.array(mx.nd.choose.element.0index(pred, label))
+  batch <- length(label_probs)
+  NLL <- -sum(log(pmax(1e-15, as.array(label_probs)))) / batch
+  Perplexity <- exp(NLL)
+  return(Perplexity)
+})

@@ -84,6 +84,8 @@ def add_fit_args(parser):
                        help='report the top-k accuracy. 0 means no report.')
     train.add_argument('--test-io', type=int, default=0,
                        help='1 means test reading speed without training')
+    train.add_argument('--dtype', type=str, default='float32',
+                       help='precision: float32 or float16')
     return train
 
 def fit(args, network, data_loader, **kwargs):
