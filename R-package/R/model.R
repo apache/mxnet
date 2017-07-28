@@ -116,15 +116,16 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
   ndevice <- length(ctx)
   if(verbose) message(paste0("Start training with ", ndevice, " devices"))
   # create the executors
-  sliceinfo <- mx.model.slice.shape(input.shape, ndevice)
-  sliceinfo2 <- mx.model.slice.shape(output.shape, ndevice)
+  input_slice <- mx.model.slice.shape(input.shape, ndevice)
+  output_slice <- mx.model.slice.shape(output.shape, ndevice)
 
   arg_names <- arguments(symbol)
-  label_name <- arg_names[endsWith(arg_names, "label")]
+  output.names <- names(output.shape)
+  #label_name <- arg_names[endsWith(arg_names, "label")]
   train.execs <- lapply(1:ndevice, function(i) {
     arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write")
-    arg_lst <- append(arg_lst, sliceinfo[[i]]$shape)
-    arg_lst <- append(arg_lst, sliceinfo2[[i]]$shape)
+    arg_lst <- append(arg_lst, input_slice[[i]]$shape)
+    arg_lst <- append(arg_lst, output_slice[[i]]$shape)
     arg_lst[["fixed.param"]] = fixed.param
     do.call(mx.simple.bind, arg_lst)
   })
@@ -152,9 +153,6 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
     kvstore$init(params.index, train.execs[[1]]$ref.arg.arrays[params.index])
   }
   # Get the input names
-  # input.names <- mx.model.check.arguments(symbol)
-  arg_names <- arguments(symbol)
-  label_name <- arg_names[endsWith(arg_names, "label")]
 
   for (iteration in begin.round:end.round) {
     nbatch <- 0
@@ -165,14 +163,16 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       # Get input data slice
       dlist <- train.data$value()
       slices <- lapply(1:ndevice, function(i) {
-        s <- sliceinfo[[i]]
+        s <- input_slice[[i]]
         ret <- sapply(names(dlist), function(n) {mx.nd.slice(dlist[[n]], s$begin, s$end)})
         return(ret)
       })
       # copy data to executor
       for (i in 1:ndevice) {
         s <- slices[[i]]
-        names(s)[endsWith(names(s), "label")] = label_name
+        if (endsWith(output.names, "label")) {
+          names(s)[endsWith(names(s), "label")] = output.names 
+        }
         mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
       }
       for (texec in train.execs) {
@@ -186,6 +186,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       for (texec in train.execs) {
         mx.exec.backward(texec)
       }
+      
       if (!is.null(kvstore)) {
         # push the gradient
         kvstore$push(params.index, lapply(train.execs, function(texec) {
@@ -214,7 +215,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       # Update the evaluation metrics
       if (!is.null(metric)) {
         for (i in 1 : ndevice) {
-          train.metric <- metric$update(slices[[i]]$label, out.preds[[i]], train.metric)
+          train.metric <- metric$update(slices[[i]][[length(slices[[i]])]], out.preds[[i]], train.metric)
         }
       }
       nbatch <- nbatch + 1
@@ -235,13 +236,15 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       while (eval.data$iter.next()) {
         dlist <- eval.data$value()
         slices <- lapply(1:ndevice, function(i) {
-          s <- sliceinfo[[i]]
+          s <- input_slice[[i]]
           ret <- sapply(names(dlist), function(n) {mx.nd.slice(dlist[[n]], s$begin, s$end)})
           return(ret)
         })
         for (i in 1:ndevice) {
           s <- slices[[i]]
-          names(s)[endsWith(names(s), "label")] = label_name
+          if (endsWith(output.names, "label")) {
+            names(s)[endsWith(names(s), "label")] = output.names 
+          }
           mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
         }
         for (texec in train.execs) {
@@ -252,7 +255,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
         })
         if (!is.null(metric)) {
           for (i in 1 : ndevice) {
-            eval.metric <- metric$update(slices[[i]]$label, out.preds[[i]], eval.metric)
+            eval.metric <- metric$update(slices[[i]][[length(slices[[i]])]] , out.preds[[i]], eval.metric)
           }
         }
       }
