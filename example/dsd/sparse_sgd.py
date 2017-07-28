@@ -68,7 +68,7 @@ class SparseSGD(SGD):
             assert len(weight_sparsity) == len(bias_sparsity), \
                 'weight_sparsity and bias_sparsity should have same length'
             assert len(weight_sparsity) == len(pruning_switch_epoch), \
-                'pruning_switch_epoch and weight_sprsity should have same length'
+                'pruning_switch_epoch and weight_sparsity should have same length'
 
         # get weight and bias sparsity thresholds
         self.weight_threshold = weight_threshold
@@ -77,11 +77,11 @@ class SparseSGD(SGD):
             assert len(weight_threshold) == len(bias_threshold), \
                 'weight_threshold and bias_threshold should have same length'
             assert len(weight_threshold) == len(pruning_switch_epoch), \
-                'pruning_switch_epoch and weight_sprsity_threshold should have same length'
+                'pruning_switch_epoch and weight_sparsity_threshold should have same length'
 
         # either percentages or thresholds must be given
         assert weight_sparsity is not None or weight_threshold is not None,\
-            'weight_sparsity or weight_sprasity_threshold should be given'
+            'weight_sparsity or weight_sparsity_threshold should be given'
 
     def update_masks(self, index, weight):
         """Updates the masks for sparse training.
