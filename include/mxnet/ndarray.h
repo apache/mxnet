@@ -199,6 +199,11 @@ class NDArray {
     return ptr_->aux_shapes[i];
   }
 
+  const std::vector<TShape>& aux_shapes() const {
+    CHECK(storage_type() != kDefaultStorage);
+    return ptr_->aux_shapes;
+  }
+
   /*!
    * \brief For a sparse operation on a csr matrix for example,
    * the size of the column index array

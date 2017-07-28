@@ -48,7 +48,9 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_sigmoid)
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
 .MXNET_DESCRIBE("Returns a copy of the input.")
 .add_alias("identity")
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", IdentityComputeEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
 
 NNVM_REGISTER_OP(_backward_copy)
@@ -59,7 +61,9 @@ NNVM_REGISTER_OP(_backward_copy)
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>);
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", IdentityComputeEx<cpu>);
 
 MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
 .add_alias("stop_gradient")

@@ -105,6 +105,38 @@ void IdentityComputeRspRspImpl(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu>
+void IdentityComputeEx(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<NDArray>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  const auto in_stype = inputs[0].storage_type();
+  const auto out_stype = outputs[0].storage_type();
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  if (in_stype == out_stype) {
+    if (in_stype == kDefaultStorage) {  // dense ndarray
+      IdentityCompute<xpu>(attrs, ctx, {inputs[0].data()}, req, {outputs[0].data()});
+    } else {  // sparse ndarray
+      if (!inputs[0].storage_initialized()) {
+        FillComputeZerosEx<xpu>(attrs, ctx, inputs, req, outputs);
+        return;
+      }
+      const size_t n = mxnet::num_aux_data(out_stype);
+      outputs[0].CheckAndAlloc(inputs[0].aux_shapes());
+      IdentityCompute<xpu>(attrs, ctx, {inputs[0].data()}, req, {outputs[0].data()});
+      for (size_t i = 0; i < n; ++i) {
+        IdentityCompute<xpu>(attrs, ctx, {inputs[0].aux_data(i)}, req, {outputs[0].aux_data(i)});
+      }
+    }
+  } else {
+    FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs, IdentityCompute<xpu>, "IdentityCompute");
+  }
+}
+
+template<typename xpu>
 void IdentityLikeRhsComputeEx(const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
                               const std::vector<NDArray>& inputs,
