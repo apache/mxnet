@@ -363,7 +363,7 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
       for (int i = 0; i < res.rows; ++i) {
         uchar* im_data = res.ptr<uchar>(i);
         for (int j = 0; j < res.cols; ++j) {
-          DType RGBA[4];
+          DType* RGBA = new DType[n_channels];
           for (int k = 0; k < n_channels; ++k) {
             RGBA[k] = im_data[swap_indices[k]];
           }
@@ -412,6 +412,7 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
             }
           }
           im_data += n_channels;
+          delete [] RGBA;
         }
       }
 
