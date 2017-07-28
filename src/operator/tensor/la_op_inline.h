@@ -24,7 +24,7 @@
 #ifndef MXNET_OPERATOR_TENSOR_LA_OP_INLINE_H_
 #define MXNET_OPERATOR_TENSOR_LA_OP_INLINE_H_
 
-#include <mxnet/linalg.h>
+#include "../linalg.h"
 
 namespace mxnet {
 namespace op {
@@ -67,7 +67,7 @@ struct gemm {
   static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B,
                  const Tensor<xpu, 3, DType>& C, const Tensor<xpu, 3, DType>& D,
                  Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
-    if ( C.dptr_ != D.dptr_ ) Copy(D, C);
+    if ( C.dptr_ != D.dptr_ ) Copy(D, C, s);
     const LaMatrixMacParam& param = nnvm::get<LaMatrixMacParam>(attrs.parsed);
     gemm::op(A, B, D, DType(param.alpha), DType(param.beta),
              param.transpose_a, param.transpose_b, s);
@@ -89,7 +89,7 @@ struct potrf {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& L,
                  Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
-    if ( A.dptr_ != L.dptr_ ) Copy(L, A);
+    if ( A.dptr_ != L.dptr_ ) Copy(L, A, s);
     linalg_batch_potrf(L, true, s);
     using namespace mxnet_op;
     Kernel<ZeroUpper, xpu>::Launch(s, L.MSize(), L.size(1)*L.stride_, L.stride_, L.dptr_);
@@ -101,7 +101,7 @@ struct potri {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& L, const Tensor<xpu, 3, DType>& A,
                  Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
-    if ( A.dptr_ != L.dptr_ ) Copy(A, L);
+    if ( A.dptr_ != L.dptr_ ) Copy(A, L, s);
     linalg_batch_potri(A, true, s);
     using namespace mxnet_op;
     Kernel<CopyLowerToUpper, xpu>::Launch(s, A.MSize(), A.size(1)*A.stride_, A.stride_, A.dptr_);
@@ -119,7 +119,7 @@ struct trsm {
   static void op(const Tensor<xpu, 3, DType>& L, const Tensor<xpu, 3, DType>& A,
                  const Tensor<xpu, 3, DType>& B,
                  Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
-    if ( A.dptr_ != B.dptr_ ) Copy(B, A);
+    if ( A.dptr_ != B.dptr_ ) Copy(B, A, s);
     const LaTriangMatrixMultParam& param = nnvm::get<LaTriangMatrixMultParam>(attrs.parsed);
     op(L, B, DType(param.alpha), param.rightside, param.transpose, s);
   }
@@ -135,7 +135,7 @@ struct trmm {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& L, const Tensor<xpu, 3, DType>& A,
                  const Tensor<xpu, 3, DType>& B, Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
-    if ( A.dptr_ != B.dptr_ ) Copy(B, A);
+    if ( A.dptr_ != B.dptr_ ) Copy(B, A, s);
     const LaTriangMatrixMultParam& param = nnvm::get<LaTriangMatrixMultParam>(attrs.parsed);
     op(L, B, DType(param.alpha), param.rightside, param.transpose, s);
   }
@@ -178,7 +178,7 @@ struct gemm_backward {
         : gemm::op(dD, B, dA, DType(param.alpha), DType(0), false, !tB, s));
     (tB ? gemm::op(dD, A, dB, DType(param.alpha), DType(0), true, tA, s)
         : gemm::op(A, dD, dB, DType(param.alpha), DType(0), !tA, false, s));
-    Copy(dC, dD);
+    Copy(dC, dD, s);
     using namespace mxnet_op;
     Kernel<Scale, xpu>::Launch(s, dC.MSize(), DType(param.beta), dC.dptr_);
   }
@@ -211,7 +211,7 @@ struct potrf_backward {
     //      symm(X) = 0.5 * (X + X**T)
     // Hadamard product and symm can be realized by a single copy from lower to upper triangle.
     if ( dL.dptr_ != dA.dptr_ ) {
-      Copy(dA, dL);
+      Copy(dA, dL, s);
     }
     trmm::op(L, dA, DType(1.0), false, true, s);
     using namespace mxnet_op;
@@ -245,7 +245,7 @@ struct trsm_backward {
     // Backward of B = trsm(L,A).
     const LaTriangMatrixMultParam& param = nnvm::get<LaTriangMatrixMultParam>(attrs.parsed);
     // Compute dA
-    if ( dA.dptr_ != dB.dptr_ ) Copy(dA, dB);
+    if ( dA.dptr_ != dB.dptr_ ) Copy(dA, dB, s);
     trsm::op(L, dA, DType(param.alpha), param.rightside, !param.transpose, s);
     // Compute dL
     const bool da_left(param.rightside == param.transpose);
@@ -273,7 +273,7 @@ struct trmm_backward {
     using namespace mxnet_op;
     Kernel<ZeroUpper, xpu>::Launch(s, dL.MSize(), dL.size(1)*dL.stride_, dL.stride_, dL.dptr_);
     // Compute dA
-    if ( dA.dptr_ != dB.dptr_ ) Copy(dA, dB);
+    if ( dA.dptr_ != dB.dptr_ ) Copy(dA, dB, s);
     trmm::op(L, dA, scale, param.rightside, !param.transpose, s);
   }
 };

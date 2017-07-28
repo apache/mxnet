@@ -22,8 +22,8 @@
  * \brief Unified interface for CPU-based LAPACK calls.
  *  Purpose is to hide the platform specific differences.
  */
-#ifndef MXNET_C_LAPACK_API_H_
-#define MXNET_C_LAPACK_API_H_
+#ifndef MXNET_OPERATOR_C_LAPACK_API_H_
+#define MXNET_OPERATOR_C_LAPACK_API_H_
 
 // Manually maintained list of LAPACK interfaces that can be used
 // within MXNET. Conventions:
@@ -224,4 +224,4 @@ inline int MXNET_LAPACK_posv<double>(int matrix_layout, char uplo, int n,
   return mxnet_lapack_dposv(matrix_layout, uplo, n, nrhs, a, lda, b, ldb);
 }
 
-#endif  // MXNET_C_LAPACK_API_H_
+#endif  // MXNET_OPERATOR_C_LAPACK_API_H_
