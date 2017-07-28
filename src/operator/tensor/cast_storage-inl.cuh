@@ -54,7 +54,7 @@ struct MarkRspRowIdxThreadKernel {
 };
 
 /*!
- * \brief Thread kernel for marking non-zero rows of a tensor.
+ * \brief Warp kernel for marking non-zero rows of a tensor.
  * Parallelized by tensor rows: 1 warp/row
  */
 struct MarkRspRowIdxWarpKernel {
@@ -95,7 +95,7 @@ struct MarkRspRowIdxWarpKernel {
 };
 
 /*!
- * \brief Thread kernel for marking non-zero rows of a tensor.
+ * \brief Block kernel for marking non-zero rows of a tensor.
  * Parallelized by tensor rows: 1 threadBlock/row
  */
 struct MarkRspRowIdxBlockKernel {
