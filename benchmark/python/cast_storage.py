@@ -23,17 +23,17 @@ def measure_cost(repeat, f, *args, **kwargs):
 
 
 def run_cast_storage_synthetic():
-    def dense_to_sparse(m, n, density, ctx, repeat, storage_type):
+    def dense_to_sparse(m, n, density, ctx, repeat, stype):
         set_default_context(ctx)
         data_shape = (m, n)
-        dns_data = rand_ndarray(data_shape, storage_type, density).todense()
+        dns_data = rand_ndarray(data_shape, stype, density).todense()
         dns_data.wait_to_read()
 
         # do one warm up run, verify correctness
-        assert same(mx.nd.cast_storage(dns_data, stype=storage_type).asnumpy(), dns_data.asnumpy())
+        assert same(mx.nd.cast_storage(dns_data, stype).asnumpy(), dns_data.asnumpy())
 
         # start benchmarking
-        cost = measure_cost(repeat, mx.nd.cast_storage, dns_data, stype=storage_type)
+        cost = measure_cost(repeat, mx.nd.cast_storage, dns_data, stype)
         results = '{:10.1f} {:>10} {:8d} {:8d} {:10.2f}'.format(density*100, str(ctx), m, n, cost*1000)
         print(results)
 
