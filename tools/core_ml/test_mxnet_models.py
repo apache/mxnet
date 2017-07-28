@@ -1,4 +1,4 @@
-import unittest 
+import unittest
 import mxnet as mx
 import numpy as np
 import _mxnet_converter as mxnet_converter
@@ -44,8 +44,8 @@ class MXNetModelsTest(unittest.TestCase):
         module = self._load_model(
             model_name=model_name,
             epoch_num=epoch_num,
-            input_shape=input_shape)
-
+            input_shape=input_shape
+        )
         # Get predictions from MXNet and coreml
         input_data = {'data': np.random.uniform(-0.1, 0.1, input_shape)}
         Batch = namedtuple('Batch', ['data'])
@@ -79,7 +79,7 @@ class MXNetModelsTest(unittest.TestCase):
 
     def test_convert_vgg16(self):
         input_shape = (1, 3, 224, 224)
-        module = self._load_model('vgg-16', 0, input_shape)
+        module = self._load_model('vgg16', 0, input_shape)
         mxnet_converter.convert(module, data=input_shape)
 
     def test_pred_inception_bn(self):
