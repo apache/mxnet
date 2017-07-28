@@ -93,13 +93,13 @@ struct SGDDnsRspKernel {
   // IType is row sparse idx type
   // i is the ith row in row sparse gradient
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, size_t row_length, DType* out, const DType* weight,
+  MSHADOW_XINLINE static void Map(int i, const index_t row_length, DType* out, const DType* weight,
                                   const IType* grad_idx, const DType *grad_val,
                                   const DType clip_gradient, const DType lr,
                                   const DType wd, const DType rescale_grad) {
-    for (size_t j = 0; j < row_length; j++) {
-      uint64_t data_i = grad_idx[i] * row_length + j;
-      uint64_t grad_i = i * row_length + j;
+    for (index_t j = 0; j < row_length; j++) {
+      index_t data_i = grad_idx[i] * row_length + j;
+      index_t grad_i = i * row_length + j;
       if (clip_gradient >= 0.0f) {
         KERNEL_ASSIGN(out[data_i], req, (1.f - lr * wd) * weight[data_i] -
                      (lr) * mshadow_op::clip::Map(rescale_grad * grad_val[grad_i], clip_gradient));
@@ -126,6 +126,7 @@ inline void SGDUpdateDnsRspImpl(const SGDParam& param,
   CHECK_EQ(grad.storage_type(), kRowSparseStorage);
   // if gradients are zeros, no weights are updated
   if (!grad.storage_initialized() || req == kNullOp) return;
+  CHECK_EQ(req, kWriteInplace) << "kWriteInplace is expected for sparse sgd_mom_update";
   CHECK_GT(weight.shape_.Size(), 0);
 
   MSHADOW_REAL_TYPE_SWITCH(weight.type_flag_, DType, {
@@ -151,7 +152,7 @@ inline void SGDUpdateDnsRspImpl(const SGDParam& param,
 template<int req>
 struct SGDRspDnsKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, size_t num_cols, DType* out, const DType* weight,
+  MSHADOW_XINLINE static void Map(int i, const index_t num_cols, DType* out, const DType* weight,
                                   const DType *grad, const DType clip_gradient, const DType lr,
                                   const DType wd, const DType rescale_grad) {
     bool contains_non_zeros = false;
@@ -191,6 +192,7 @@ inline void SGDUpdateRspDnsImpl(const SGDParam& param,
   CHECK_RSP_ALL_ROWS_NON_ZERO(weight, "SGDUpdate", "weights");
   CHECK_EQ(weight.storage_type(), kRowSparseStorage);
   if (req == kNullOp) return;
+  CHECK_EQ(req, kWriteInplace) << "kWriteInplace is expected for sparse sgd_update";
   CHECK(weight.storage_initialized());
   Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(weight.dtype(), DType, {
@@ -216,14 +218,9 @@ inline void SGDUpdateRspRspImpl(const SGDParam& param,
                                 const OpReqType& req,
                                 NDArray *out) {
   CHECK_RSP_ALL_ROWS_NON_ZERO(weight, "SGDUpdate", "weights");
-  // TODO(haibin) this is a temporary solution, due to the fact that imperative_invoke only
-  // feed in kWriteTo as req for all operators.
-  // For sgd we don't want to assign zeros to the output values when req == kWriteTo
-  auto out_req = req;
-  if (out_req == kWriteTo) out_req = kWriteInplace;
   // reuse dns rsp implementation when storage_shape == shape
   TBlob out_blob = out->data();
-  SGDUpdateDnsRspImpl<xpu>(param, ctx, weight.data(), grad, out_req, &out_blob);
+  SGDUpdateDnsRspImpl<xpu>(param, ctx, weight.data(), grad, req, &out_blob);
 }
 
 template<typename xpu>
@@ -425,14 +422,14 @@ inline void MP_SGDMomUpdate(const nnvm::NodeAttrs& attrs,
 template<int req>
 struct SGDMomDnsRspDnsKernel {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, size_t row_length, DType* out_data,
+  MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
     DType* mom_data, const DType* weight_data, const IType* grad_idx,
     const DType* grad_data, const DType clip_gradient, const DType momentum,
     const DType lr, const DType wd, const DType rescale_grad) {
     const DType rate = lr * wd;
-    for (size_t j = 0; j < row_length; j++) {
-      uint64_t data_i = grad_idx[i] * row_length + j;
-      uint64_t grad_i = i * row_length + j;
+    for (index_t j = 0; j < row_length; j++) {
+      index_t data_i = grad_idx[i] * row_length + j;
+      index_t grad_i = i * row_length + j;
       if (clip_gradient >= 0.0f) {
         mom_data[data_i] = momentum * mom_data[data_i]
                 - rate * weight_data[data_i]
@@ -461,6 +458,7 @@ inline void SGDMomUpdateDnsRspDnsImpl(const SGDMomParam& param,
   using namespace rowsparse;
   Stream<xpu>* s = ctx.get_stream<xpu>();
   if (!grad.storage_initialized() || req == kNullOp) return;
+  CHECK_EQ(req, kWriteInplace) << "kWriteInplace is expected for sparse sgd_mom_update";
   CHECK_GT(weight.shape_.Size(), 0);
   CHECK_GT(mom.shape_.Size(), 0);
 
@@ -487,7 +485,7 @@ inline void SGDMomUpdateDnsRspDnsImpl(const SGDMomParam& param,
 template<int req>
 struct SGDMomRspDnsKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, size_t num_cols, DType* out, DType* mom,
+  MSHADOW_XINLINE static void Map(int i, index_t num_cols, DType* out, DType* mom,
                                   const DType* weight, const DType *grad,
                                   const DType clip_gradient, const DType momentum,
                                   const DType lr, const DType wd, const DType rescale_grad) {
@@ -531,19 +529,15 @@ inline void SGDMomUpdateRspDnsImpl(const SGDMomParam& param,
   Stream<xpu>* s = ctx.get_stream<xpu>();
   CHECK_EQ(weight.storage_type(), kRowSparseStorage);
   if (req == kNullOp) return;
+  CHECK_EQ(req, kWriteInplace) << "kWriteInplace is expected for sparse sgd_mom_update";
   CHECK(weight.storage_initialized());
   // fill mom with zero values if not initialized yet
   if (!mom.storage_initialized()) {
     NDArray mom_zeros = mom;
     FillDnsZerosRspImpl(s, &mom_zeros);
   }
-  // TODO(haibin) this is a temporary solution, due to the fact that imperative_invoke only
-  // feed in kWriteTo as req for all operators.
-  // For sgd we don't want to assign zeros to the output values when req == kWriteTo
-  auto out_req = req;
-  if (out_req == kWriteTo) out_req = kWriteInplace;
   MSHADOW_REAL_TYPE_SWITCH(weight.dtype(), DType, {
-    MXNET_ASSIGN_REQ_SWITCH(out_req, req_type, {
+    MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
       DType* weight_data = weight.data().dptr<DType>();
       DType* grad_data = grad.dptr<DType>();
       DType* mom_data = mom.data().dptr<DType>();
@@ -578,15 +572,10 @@ inline void SGDMomUpdateRspRspRspImpl(const SGDMomParam& param,
     NDArray mom_zeros = mom;
     FillDnsZerosRspImpl(s, &mom_zeros);
   }
-  // TODO(haibin) this is a temporary solution, due to the fact that imperative_invoke only
-  // feed in kWriteTo as req for all operators.
-  // For sgd we don't want to assign zeros to the output values when req == kWriteTo
-  auto out_req = req;
-  if (out_req == kWriteTo) out_req = kWriteInplace;
   TBlob out_blob = out->data();
   // reuse dns rsp implementation when storage_shape == shape
   SGDMomUpdateDnsRspDnsImpl<xpu>(param, ctx, weight.data(), grad,
-                                 mom.data(), out_req, &out_blob);
+                                 mom.data(), req, &out_blob);
 }
 
 template<typename xpu>
