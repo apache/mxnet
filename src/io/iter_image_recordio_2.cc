@@ -360,7 +360,7 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
           (rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_illumination * 2
           - normalize_param_.max_random_illumination) * normalize_param_.scale;
       }
-      DType* RGBA = new DType[n_channels];
+      DType RGBA[4] = {}
       for (int i = 0; i < res.rows; ++i) {
         uchar* im_data = res.ptr<uchar>(i);
         for (int j = 0; j < res.cols; ++j) {
@@ -414,7 +414,6 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
           im_data += n_channels;
         }
       }
-      delete [] RGBA;
 
       mshadow::Tensor<cpu, 1> label = out.label().Back();
       if (label_map_ != nullptr) {
