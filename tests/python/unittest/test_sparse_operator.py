@@ -115,10 +115,10 @@ def test_cast_storage_ex():
 
 
 def test_sparse_dot():
-    def test_dot_csr(lhs_shape, rhs_shape, rhs_stype, trans_lhs, density=1):
-        lhs_nd = rand_ndarray(lhs_shape, 'csr', 1)
+    def test_dot_csr(lhs_shape, rhs_shape, rhs_stype, trans_lhs, lhs_density, rhs_density):
+        lhs_nd = rand_ndarray(lhs_shape, 'csr', density=lhs_density)
         lhs_dns = lhs_nd.todense()
-        rhs_nd = rand_ndarray(rhs_shape, rhs_stype, density=density)
+        rhs_nd = rand_ndarray(rhs_shape, rhs_stype, density=rhs_density)
         rhs_dns = rhs_nd if rhs_stype == 'default' else rhs_nd.todense()
         out = mx.nd.dot(lhs_nd, rhs_dns, transpose_a=trans_lhs)
         if trans_lhs and default_context().device_type is 'cpu':
@@ -143,16 +143,18 @@ def test_sparse_dot():
                                 grad_req={'lhs': 'null', 'rhs': 'write'},
                                 rtol=1e-3, atol=1e-4)
 
-    lhs_shape = rand_shape_2d(50, 200)
-    test_dot_csr(lhs_shape, (lhs_shape[1], 1), 'default', False) # test gpu SpMV
-    test_dot_csr(lhs_shape, (lhs_shape[0], 1), 'default', True ) # (vector kernel)
-    test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(5, 10)), 'default', False) # test gpu SpMM
-    test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(5, 10)), 'default', True ) # (scalar kernel)
-    test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False)
-    test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False, 0.05)
-    if default_context().device_type is 'cpu':
-        test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True )
-        test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True , 0.05)
+    density = [1.00, 0.50, 0.10, 0.05, 0.01]
+    for rhs_d in density:
+        lhs_shape = rand_shape_2d(50, 200)
+        lhs_d = 1
+        test_dot_csr(lhs_shape, (lhs_shape[1], 1), 'default', False, lhs_d, rhs_d) # test gpu SpMV
+        test_dot_csr(lhs_shape, (lhs_shape[0], 1), 'default', True , lhs_d, rhs_d) # (vector kernel)
+        test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(5, 10)), 'default', False, lhs_d, rhs_d) # test gpu SpMM
+        test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(5, 10)), 'default', True , lhs_d, rhs_d) # (scalar kernel)
+        for lhs_d in density:
+            test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False, lhs_d, rhs_d)
+            if default_context().device_type is 'cpu':
+                test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True, lhs_d, rhs_d)
 
 
 def test_sparse_slice():
