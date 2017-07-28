@@ -13,10 +13,10 @@ class AlexNet(HybridBlock):
 
     Parameters
     ----------
-    classes : int
+    classes : int, default 1000
         Number of classes for the output layer.
     """
-    def __init__(self, classes, **kwargs):
+    def __init__(self, classes=1000, **kwargs):
         super(AlexNet, self).__init__(**kwargs)
         with self.name_scope():
             self.features = nn.HybridSequential()
