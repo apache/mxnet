@@ -195,10 +195,16 @@ void SquareSumRspImpl(const nnvm::NodeAttrs& attrs,
 
   using namespace mxnet_op;
   if (!input.storage_initialized()) {
-    if (req == kWriteTo && output->storage_type() == kDefaultStorage) {
-      MSHADOW_TYPE_SWITCH(output->data().type_flag_, DType, {
-        Kernel<set_zero, xpu>::Launch(s, out_data_size, output->data().dptr<DType>());
-      })
+    if (req == kWriteTo) {
+      if (output->storage_type() == kDefaultStorage) {
+        MSHADOW_TYPE_SWITCH(output->data().type_flag_, DType, {
+          Kernel<set_zero, xpu>::Launch(s, out_data_size, output->data().dptr<DType>());
+        })
+      } else if (output->storage_type() == kRowSparseStorage) {
+        FillZerosRspImpl<xpu>(s, output);
+      } else {
+        LOG(FATAL) << "SquareSumRspImpl only supports row-sparse/dense output storage type";
+      }
     }
     return;
   }
