@@ -360,10 +360,10 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
           (rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_illumination * 2
           - normalize_param_.max_random_illumination) * normalize_param_.scale;
       }
+      DType RGBA[4] = {};
       for (int i = 0; i < res.rows; ++i) {
         uchar* im_data = res.ptr<uchar>(i);
         for (int j = 0; j < res.cols; ++j) {
-          DType RGBA[4];
           for (int k = 0; k < n_channels; ++k) {
             RGBA[k] = im_data[swap_indices[k]];
           }
