@@ -19,8 +19,6 @@ def add_data_args(parser):
                       help='number of threads for data decoding')
     data.add_argument('--benchmark', type=int, default=0,
                       help='if 1, then feed the network with synthetic data')
-    data.add_argument('--dtype', type=str, default='float32',
-                      help='data type: float32 or float16')
     return data
 
 def add_data_aug_args(parser):
@@ -93,13 +91,9 @@ class SyntheticDataIter(DataIter):
 
 def get_rec_iter(args, kv=None):
     image_shape = tuple([int(l) for l in args.image_shape.split(',')])
-    dtype = np.float32;
-    if 'dtype' in args:
-        if args.dtype == 'float16':
-            dtype = np.float16
     if 'benchmark' in args and args.benchmark:
         data_shape = (args.batch_size,) + image_shape
-        train = SyntheticDataIter(args.num_classes, data_shape, 50, dtype)
+        train = SyntheticDataIter(args.num_classes, data_shape, 500, np.float32)
         return (train, None)
     if kv:
         (rank, nworker) = (kv.rank, kv.num_workers)
