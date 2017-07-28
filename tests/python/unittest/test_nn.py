@@ -68,6 +68,27 @@ def test_basic():
     x.wait_to_read()
 
 
+def test_symbol_block():
+    model = nn.HybridSequential()
+    model.add(nn.Dense(128, activation='tanh'))
+    model.add(nn.Dropout(0.5))
+    model.add(nn.Dense(64, activation='tanh'))
+    model.add(nn.Dense(32, in_units=64))
+    model.add(nn.Activation('relu'))
+
+    model.initialize()
+
+    inputs = mx.sym.var('data')
+    outputs = model(inputs).get_internals()
+
+    smodel = gluon.SymbolBlock(outputs, inputs, params=model.collect_params())
+
+    assert len(smodel(mx.nd.zeros((16, 10)))) == 14
+
+    out = smodel(mx.sym.var('in'))
+    assert len(out.get_internals().list_outputs()) == len(outputs.list_outputs())
+
+
 def check_layer_forward(layer, dshape):
     layer.collect_params().initialize()
     with mx.autograd.record():
@@ -282,5 +303,6 @@ def test_flatten():
 
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    test_symbol_block()
+    #import nose
+    #nose.runmodule()
