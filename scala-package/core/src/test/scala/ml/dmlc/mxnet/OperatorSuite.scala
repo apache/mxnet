@@ -239,7 +239,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       var exe = x.simpleBind(ctx = Context.cpu(), gradReq = "write", shapeDict = Map())
       exe.forward(isTrain = false)
       assert(exe.gradArrays.length == 0)
-      assert(CheckUtils.reldiff(result.toArray, exe.outputs.head.toArray) <= 1e-5f)
+      assert(CheckUtils.reldiff(result.toArray, exe.outputs.head.toArray) <= 1e-4f)
     }
   }
 
