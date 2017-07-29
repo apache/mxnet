@@ -186,7 +186,8 @@ def fully_connected(input_data, num_classes, dtype='float32'):
 def get_symbol(num_classes, num_layers, dtype='float32', **kwargs):
     ## define VGG
     data = mx.sym.Variable(name="data")
-
+    import pdb
+    pdb.set_trace()
     if dtype == 'float16':
         data = mx.sym.Cast(data=data, dtype=np.float16)
 
@@ -200,4 +201,5 @@ def get_symbol(num_classes, num_layers, dtype='float32', **kwargs):
         raise ValueError("no experiments done on num_layers {}, you can do it yourself".format(num_layers))
 
     output = fully_connected(output, num_layers, dtype)
+
     return output
