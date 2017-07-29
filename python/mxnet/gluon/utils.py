@@ -1,6 +1,14 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
+import os
+try:
+    import requests
+except ImportError:
+    class requests_failed_to_import(object):
+        pass
+    requests = requests_failed_to_import
+
 import math
 
 from .. import ndarray
@@ -109,3 +117,45 @@ def _indent(s_, numSpaces):
     s = [first] + [(numSpaces * ' ') + line for line in s]
     s = '\n'.join(s)
     return s
+
+
+def download(url, path=None, overwrite=False):
+    """Download an given URL
+
+    Parameters
+    ----------
+    url : str
+        URL to download
+    path : str, optional
+        Destination path to store downloaded file. By default stores to the
+        current directory with same name as in url.
+    overwrite : bool, optional
+        Whether to overwrite destination file if already exists.
+
+    Returns
+    -------
+    str
+        The filename of the downloaded file.
+    """
+    if path is None:
+        fname = url.split('/')[-1]
+    elif os.path.isdir(path):
+        fname = os.path.join(path, url.split('/')[-1])
+    else:
+        fname = path
+
+    if overwrite or not os.path.exists(fname):
+        dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        print('Downloading %s from %s...'%(fname, url))
+        r = requests.get(url, stream=True)
+        if r.status_code != 200:
+            raise RuntimeError("Failed downloading url %s"%url)
+        with open(fname, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk: # filter out keep-alive new chunks
+                    f.write(chunk)
+
+    return fname

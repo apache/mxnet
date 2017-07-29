@@ -49,7 +49,7 @@ for DEV in "${DEVICES[@]}"; do
             DOCKER_CMD="${DOCKER_CMD} pip install mxnet-cu80; python tests/python/train/test_conv.py --gpu"
         fi
 	
-        ${DOCKER_BINARY} run --rm -v ${WORKSPACE}:${WORKSPACE} ${DOCKER_TAG} bash -c "${DOCKER_CMD}"
+        ${DOCKER_BINARY} run --rm -v ${WORKSPACE}:${WORKSPACE} -w ${WORKSPACE} ${DOCKER_TAG} bash -c "tests/jenkins/run_as_user.sh `id -u` `id -un` `id -g` `id -un` '${DOCKER_CMD}'"
     done
 
 done

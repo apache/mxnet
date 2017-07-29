@@ -43,7 +43,7 @@ class Policy(gluon.Block):
         return F.softmax(probs), values
 
 net = Policy()
-net.collect_params().initialize(mx.init.Uniform(0.02))
+net.initialize(mx.init.Uniform(0.02))
 trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': 3e-2})
 loss = gluon.loss.L1Loss()
 
