@@ -111,6 +111,9 @@ class _Conv(HybridBlock):
             act = self.act(act)
         return act
 
+    def _alias(self):
+        return 'conv'
+
     def __repr__(self):
         s = '{name}({mapping}, kernel_size={kernel}, stride={stride}'
         len_kernel_size = len(self._kwargs['kernel'])

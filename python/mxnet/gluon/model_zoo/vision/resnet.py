@@ -37,22 +37,19 @@ class BasicBlockV1(HybridBlock):
     """
     def __init__(self, channels, stride, downsample=False, in_channels=0, **kwargs):
         super(BasicBlockV1, self).__init__(**kwargs)
-        with self.name_scope():
-            self.body = nn.HybridSequential()
-            with self.body.name_scope():
-                self.body.add(_conv3x3(channels, stride, in_channels))
-                self.body.add(nn.BatchNorm())
-                self.body.add(nn.Activation('relu'))
-                self.body.add(_conv3x3(channels, 1, channels))
-                self.body.add(nn.BatchNorm())
-            if downsample:
-                self.downsample = nn.HybridSequential()
-                with self.downsample.name_scope():
-                    self.downsample.add(nn.Conv2D(channels, kernel_size=1, strides=stride,
-                                                  use_bias=False, in_channels=in_channels))
-                    self.downsample.add(nn.BatchNorm())
-            else:
-                self.downsample = None
+        self.body = nn.HybridSequential(prefix='')
+        self.body.add(_conv3x3(channels, stride, in_channels))
+        self.body.add(nn.BatchNorm())
+        self.body.add(nn.Activation('relu'))
+        self.body.add(_conv3x3(channels, 1, channels))
+        self.body.add(nn.BatchNorm())
+        if downsample:
+            self.downsample = nn.HybridSequential(prefix='')
+            self.downsample.add(nn.Conv2D(channels, kernel_size=1, strides=stride,
+                                          use_bias=False, in_channels=in_channels))
+            self.downsample.add(nn.BatchNorm())
+        else:
+            self.downsample = None
 
     def hybrid_forward(self, F, x):
         residual = x
@@ -85,25 +82,22 @@ class BottleneckV1(HybridBlock):
     """
     def __init__(self, channels, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV1, self).__init__(**kwargs)
-        with self.name_scope():
-            self.body = nn.HybridSequential()
-            with self.body.name_scope():
-                self.body.add(nn.Conv2D(channels//4, kernel_size=1, strides=1))
-                self.body.add(nn.BatchNorm())
-                self.body.add(nn.Activation('relu'))
-                self.body.add(_conv3x3(channels//4, stride, channels//4))
-                self.body.add(nn.BatchNorm())
-                self.body.add(nn.Activation('relu'))
-                self.body.add(nn.Conv2D(channels, kernel_size=1, strides=1))
-                self.body.add(nn.BatchNorm())
-            if downsample:
-                self.downsample = nn.HybridSequential()
-                with self.downsample.name_scope():
-                    self.downsample.add(nn.Conv2D(channels, kernel_size=1, strides=stride,
-                                                  use_bias=False, in_channels=in_channels))
-                    self.downsample.add(nn.BatchNorm())
-            else:
-                self.downsample = None
+        self.body = nn.HybridSequential(prefix='')
+        self.body.add(nn.Conv2D(channels//4, kernel_size=1, strides=1))
+        self.body.add(nn.BatchNorm())
+        self.body.add(nn.Activation('relu'))
+        self.body.add(_conv3x3(channels//4, stride, channels//4))
+        self.body.add(nn.BatchNorm())
+        self.body.add(nn.Activation('relu'))
+        self.body.add(nn.Conv2D(channels, kernel_size=1, strides=1))
+        self.body.add(nn.BatchNorm())
+        if downsample:
+            self.downsample = nn.HybridSequential(prefix='')
+            self.downsample.add(nn.Conv2D(channels, kernel_size=1, strides=stride,
+                                          use_bias=False, in_channels=in_channels))
+            self.downsample.add(nn.BatchNorm())
+        else:
+            self.downsample = None
 
     def hybrid_forward(self, F, x):
         residual = x
@@ -136,16 +130,15 @@ class BasicBlockV2(HybridBlock):
     """
     def __init__(self, channels, stride, downsample=False, in_channels=0, **kwargs):
         super(BasicBlockV2, self).__init__(**kwargs)
-        with self.name_scope():
-            self.bn1 = nn.BatchNorm()
-            self.conv1 = _conv3x3(channels, stride, in_channels)
-            self.bn2 = nn.BatchNorm()
-            self.conv2 = _conv3x3(channels, 1, channels)
-            if downsample:
-                self.downsample = nn.Conv2D(channels, 1, stride, use_bias=False,
-                                            in_channels=in_channels)
-            else:
-                self.downsample = None
+        self.bn1 = nn.BatchNorm()
+        self.conv1 = _conv3x3(channels, stride, in_channels)
+        self.bn2 = nn.BatchNorm()
+        self.conv2 = _conv3x3(channels, 1, channels)
+        if downsample:
+            self.downsample = nn.Conv2D(channels, 1, stride, use_bias=False,
+                                        in_channels=in_channels)
+        else:
+            self.downsample = None
 
     def hybrid_forward(self, F, x):
         residual = x
@@ -181,18 +174,17 @@ class BottleneckV2(HybridBlock):
     """
     def __init__(self, channels, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV2, self).__init__(**kwargs)
-        with self.name_scope():
-            self.bn1 = nn.BatchNorm()
-            self.conv1 = _conv3x3(channels//4, 1, in_channels)
-            self.bn2 = nn.BatchNorm()
-            self.conv2 = _conv3x3(channels//4, stride, channels//4)
-            self.bn3 = nn.BatchNorm()
-            self.conv3 = _conv3x3(channels, 1, channels//4)
-            if downsample:
-                self.downsample = nn.Conv2D(channels, 1, stride, use_bias=False,
-                                            in_channels=in_channels)
-            else:
-                self.downsample = None
+        self.bn1 = nn.BatchNorm()
+        self.conv1 = _conv3x3(channels//4, 1, in_channels)
+        self.bn2 = nn.BatchNorm()
+        self.conv2 = _conv3x3(channels//4, stride, channels//4)
+        self.bn3 = nn.BatchNorm()
+        self.conv3 = _conv3x3(channels, 1, channels//4)
+        if downsample:
+            self.downsample = nn.Conv2D(channels, 1, stride, use_bias=False,
+                                        in_channels=in_channels)
+        else:
+            self.downsample = None
 
     def hybrid_forward(self, F, x):
         residual = x
@@ -236,33 +228,33 @@ class ResNetV1(HybridBlock):
         super(ResNetV1, self).__init__(**kwargs)
         assert len(layers) == len(channels) - 1
         with self.name_scope():
-            self.features = nn.HybridSequential()
-            with self.features.name_scope():
-                if thumbnail:
-                    self.features.add(_conv3x3(channels[0], 1, 3))
-                else:
-                    self.features.add(nn.Conv2D(channels[0], 7, 2, 3, use_bias=False,
-                                                in_channels=3))
-                    self.features.add(nn.BatchNorm())
-                    self.features.add(nn.Activation('relu'))
-                    self.features.add(nn.MaxPool2D(3, 2, 1))
+            self.features = nn.HybridSequential(prefix='')
+            if thumbnail:
+                self.features.add(_conv3x3(channels[0], 1, 3))
+            else:
+                self.features.add(nn.Conv2D(channels[0], 7, 2, 3, use_bias=False,
+                                            in_channels=3))
+                self.features.add(nn.BatchNorm())
+                self.features.add(nn.Activation('relu'))
+                self.features.add(nn.MaxPool2D(3, 2, 1))
 
-                for i, num_layer in enumerate(layers):
-                    stride = 1 if i == 0 else 2
-                    self.features.add(self._make_layer(block, num_layer, channels[i+1],
-                                                       stride, in_channels=channels[i]))
+            for i, num_layer in enumerate(layers):
+                stride = 1 if i == 0 else 2
+                self.features.add(self._make_layer(block, num_layer, channels[i+1],
+                                                   stride, i+1, in_channels=channels[i]))
 
-            self.classifier = nn.HybridSequential()
-            with self.classifier.name_scope():
-                self.classifier.add(nn.GlobalAvgPool2D())
-                self.classifier.add(nn.Flatten())
-                self.classifier.add(nn.Dense(classes, in_units=channels[-1]))
+            self.classifier = nn.HybridSequential(prefix='')
+            self.classifier.add(nn.GlobalAvgPool2D())
+            self.classifier.add(nn.Flatten())
+            self.classifier.add(nn.Dense(classes, in_units=channels[-1]))
 
-    def _make_layer(self, block, layers, channels, stride, in_channels=0):
-        layer = nn.HybridSequential()
-        layer.add(block(channels, stride, channels != in_channels, in_channels=in_channels))
-        for _ in range(layers-1):
-            layer.add(block(channels, 1, False, in_channels=channels))
+    def _make_layer(self, block, layers, channels, stride, stage_index, in_channels=0):
+        layer = nn.HybridSequential(prefix='stage%d_'%stage_index)
+        with layer.name_scope():
+            layer.add(block(channels, stride, channels != in_channels, in_channels=in_channels,
+                            prefix=''))
+            for _ in range(layers-1):
+                layer.add(block(channels, 1, False, in_channels=channels, prefix=''))
         return layer
 
     def hybrid_forward(self, F, x):
@@ -294,39 +286,38 @@ class ResNetV2(HybridBlock):
         super(ResNetV2, self).__init__(**kwargs)
         assert len(layers) == len(channels) - 1
         with self.name_scope():
-            self.features = nn.HybridSequential()
-            with self.features.name_scope():
-                self.features.add(nn.BatchNorm(scale=False, center=False))
-                if thumbnail:
-                    self.features.add(_conv3x3(channels[0], 1, 3))
-                else:
-                    self.features.add(nn.Conv2D(channels[0], 7, 2, 3, use_bias=False,
-                                                in_channels=3))
-                    self.features.add(nn.BatchNorm())
-                    self.features.add(nn.Activation('relu'))
-                    self.features.add(nn.MaxPool2D(3, 2, 1))
+            self.features = nn.HybridSequential(prefix='')
+            self.features.add(nn.BatchNorm(scale=False, center=False))
+            if thumbnail:
+                self.features.add(_conv3x3(channels[0], 1, 3))
+            else:
+                self.features.add(nn.Conv2D(channels[0], 7, 2, 3, use_bias=False,
+                                            in_channels=3))
+                self.features.add(nn.BatchNorm())
+                self.features.add(nn.Activation('relu'))
+                self.features.add(nn.MaxPool2D(3, 2, 1))
 
-                in_channels = channels[0]
-                for i, num_layer in enumerate(layers):
-                    stride = 1 if i == 0 else 2
-                    self.features.add(self._make_layer(block, num_layer, channels[i+1],
-                                                       stride, in_channels=in_channels))
-                    in_channels = channels[i+1]
+            in_channels = channels[0]
+            for i, num_layer in enumerate(layers):
+                stride = 1 if i == 0 else 2
+                self.features.add(self._make_layer(block, num_layer, channels[i+1],
+                                                   stride, i+1, in_channels=in_channels))
+                in_channels = channels[i+1]
 
-            self.classifier = nn.HybridSequential()
-            with self.classifier.name_scope():
-                self.classifier.add(nn.BatchNorm())
-                self.classifier.add(nn.Activation('relu'))
-                self.classifier.add(nn.GlobalAvgPool2D())
-                self.classifier.add(nn.Flatten())
-                self.classifier.add(nn.Dense(classes, in_units=in_channels))
+            self.classifier = nn.HybridSequential(prefix='')
+            self.classifier.add(nn.BatchNorm())
+            self.classifier.add(nn.Activation('relu'))
+            self.classifier.add(nn.GlobalAvgPool2D())
+            self.classifier.add(nn.Flatten())
+            self.classifier.add(nn.Dense(classes, in_units=in_channels))
 
-    def _make_layer(self, block, layers, channels, stride, in_channels=0):
-        layer = nn.HybridSequential()
+    def _make_layer(self, block, layers, channels, stride, stage_index, in_channels=0):
+        layer = nn.HybridSequential(prefix='stage%d_'%stage_index)
         with layer.name_scope():
-            layer.add(block(channels, stride, channels != in_channels, in_channels=in_channels))
+            layer.add(block(channels, stride, channels != in_channels, in_channels=in_channels,
+                            prefix=''))
             for _ in range(layers-1):
-                layer.add(block(channels, 1, False, in_channels=channels))
+                layer.add(block(channels, 1, False, in_channels=channels, prefix=''))
         return layer
 
     def hybrid_forward(self, F, x):

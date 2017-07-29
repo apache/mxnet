@@ -9,39 +9,36 @@ from ... import nn
 from ..custom_layers import HybridConcurrent, Identity
 
 # Helpers
-def _make_dense_block(num_layers, bn_size, growth_rate, dropout):
-    out = nn.HybridSequential()
+def _make_dense_block(num_layers, bn_size, growth_rate, dropout, stage_index):
+    out = nn.HybridSequential(prefix='stage%d_'%stage_index)
     with out.name_scope():
         for _ in range(num_layers):
             out.add(_make_dense_layer(growth_rate, bn_size, dropout))
     return out
 
 def _make_dense_layer(growth_rate, bn_size, dropout):
-    new_features = nn.HybridSequential()
-    with new_features.name_scope():
-        new_features.add(nn.BatchNorm())
-        new_features.add(nn.Activation('relu'))
-        new_features.add(nn.Conv2D(bn_size * growth_rate, kernel_size=1, use_bias=False))
-        new_features.add(nn.BatchNorm())
-        new_features.add(nn.Activation('relu'))
-        new_features.add(nn.Conv2D(growth_rate, kernel_size=3, padding=1, use_bias=False))
-        if dropout:
-            new_features.add(nn.Dropout(dropout))
+    new_features = nn.HybridSequential(prefix='')
+    new_features.add(nn.BatchNorm())
+    new_features.add(nn.Activation('relu'))
+    new_features.add(nn.Conv2D(bn_size * growth_rate, kernel_size=1, use_bias=False))
+    new_features.add(nn.BatchNorm())
+    new_features.add(nn.Activation('relu'))
+    new_features.add(nn.Conv2D(growth_rate, kernel_size=3, padding=1, use_bias=False))
+    if dropout:
+        new_features.add(nn.Dropout(dropout))
 
-    out = HybridConcurrent(concat_dim=1)
-    with out.name_scope():
-        out.add(Identity())
-        out.add(new_features)
+    out = HybridConcurrent(concat_dim=1, prefix='')
+    out.add(Identity())
+    out.add(new_features)
 
     return out
 
 def _make_transition(num_output_features):
-    out = nn.HybridSequential()
-    with out.name_scope():
-        out.add(nn.BatchNorm())
-        out.add(nn.Activation('relu'))
-        out.add(nn.Conv2D(num_output_features, kernel_size=1, use_bias=False))
-        out.add(nn.AvgPool2D(pool_size=2, strides=2))
+    out = nn.HybridSequential(prefix='')
+    out.add(nn.BatchNorm())
+    out.add(nn.Activation('relu'))
+    out.add(nn.Conv2D(num_output_features, kernel_size=1, use_bias=False))
+    out.add(nn.AvgPool2D(pool_size=2, strides=2))
     return out
 
 # Net
@@ -70,25 +67,24 @@ class DenseNet(HybridBlock):
 
         super(DenseNet, self).__init__(**kwargs)
         with self.name_scope():
-            self.features = nn.HybridSequential()
-            with self.features.name_scope():
-                self.features.add(nn.Conv2D(num_init_features, kernel_size=7,
-                                            strides=2, padding=3, use_bias=False))
-                self.features.add(nn.BatchNorm())
-                self.features.add(nn.Activation('relu'))
-                self.features.add(nn.MaxPool2D(pool_size=3, strides=2, padding=1))
-                # Add dense blocks
-                num_features = num_init_features
-                for i, num_layers in enumerate(block_config):
-                    self.features.add(_make_dense_block(num_layers, bn_size, growth_rate, dropout))
-                    num_features = num_features + num_layers * growth_rate
-                    if i != len(block_config) - 1:
-                        self.features.add(_make_transition(num_features // 2))
-                        num_features = num_features // 2
-                self.features.add(nn.BatchNorm())
-                self.features.add(nn.Activation('relu'))
-                self.features.add(nn.AvgPool2D(pool_size=7))
-                self.features.add(nn.Flatten())
+            self.features = nn.HybridSequential(prefix='')
+            self.features.add(nn.Conv2D(num_init_features, kernel_size=7,
+                                        strides=2, padding=3, use_bias=False))
+            self.features.add(nn.BatchNorm())
+            self.features.add(nn.Activation('relu'))
+            self.features.add(nn.MaxPool2D(pool_size=3, strides=2, padding=1))
+            # Add dense blocks
+            num_features = num_init_features
+            for i, num_layers in enumerate(block_config):
+                self.features.add(_make_dense_block(num_layers, bn_size, growth_rate, dropout, i+1))
+                num_features = num_features + num_layers * growth_rate
+                if i != len(block_config) - 1:
+                    self.features.add(_make_transition(num_features // 2))
+                    num_features = num_features // 2
+            self.features.add(nn.BatchNorm())
+            self.features.add(nn.Activation('relu'))
+            self.features.add(nn.AvgPool2D(pool_size=7))
+            self.features.add(nn.Flatten())
 
             self.classifier = nn.Dense(classes)
 

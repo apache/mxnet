@@ -1,10 +1,10 @@
 import mxnet as mx
 from mxnet.gluon import nn
-from mxnet.gluon.model_zoo.custom_layers import _HybridConcurrent, _Identity
+from mxnet.gluon.model_zoo.custom_layers import HybridConcurrent, Identity
 
 
 def test_concurrent():
-    model = _HybridConcurrent(concat_dim=1)
+    model = HybridConcurrent(concat_dim=1)
     model.add(nn.Dense(128, activation='tanh', in_units=10))
     model.add(nn.Dense(64, activation='tanh', in_units=10))
     model.add(nn.Dense(32, in_units=10))
@@ -22,7 +22,7 @@ def test_concurrent():
 
 
 def test_identity():
-    model = _Identity()
+    model = Identity()
     x = mx.nd.random_uniform(shape=(128, 33, 64))
     mx.test_utils.assert_almost_equal(model(x).asnumpy(),
                                       x.asnumpy())

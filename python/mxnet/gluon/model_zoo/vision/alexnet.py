@@ -19,7 +19,7 @@ class AlexNet(HybridBlock):
     def __init__(self, classes=1000, **kwargs):
         super(AlexNet, self).__init__(**kwargs)
         with self.name_scope():
-            self.features = nn.HybridSequential()
+            self.features = nn.HybridSequential(prefix='')
             with self.features.name_scope():
                 self.features.add(nn.Conv2D(64, kernel_size=11, strides=4, padding=2))
                 self.features.add(nn.Activation('relu'))
@@ -36,7 +36,7 @@ class AlexNet(HybridBlock):
                 self.features.add(nn.MaxPool2D(pool_size=3, strides=2))
                 self.features.add(nn.Flatten())
 
-            self.classifier = nn.HybridSequential()
+            self.classifier = nn.HybridSequential(prefix='')
             with self.classifier.name_scope():
                 self.classifier.add(nn.Dropout(0.5))
                 self.classifier.add(nn.Dense(4096, activation='relu'))

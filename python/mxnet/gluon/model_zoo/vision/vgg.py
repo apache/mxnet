@@ -33,34 +33,32 @@ class VGG(HybridBlock):
         assert len(layers) == len(filters)
         with self.name_scope():
             self.features = self._make_features(layers, filters, batch_norm)
-            self.classifier = nn.HybridSequential()
-            with self.classifier.name_scope():
-                self.classifier.add(nn.Dense(4096, activation='relu',
-                                             weight_initializer='normal',
-                                             bias_initializer='zeros'))
-                self.classifier.add(nn.Dropout(rate=0.5))
-                self.classifier.add(nn.Dense(4096, activation='relu',
-                                             weight_initializer='normal',
-                                             bias_initializer='zeros'))
-                self.classifier.add(nn.Dropout(rate=0.5))
-                self.classifier.add(nn.Dense(classes,
-                                             weight_initializer='normal',
-                                             bias_initializer='zeros'))
+            self.classifier = nn.HybridSequential(prefix='')
+            self.classifier.add(nn.Dense(4096, activation='relu',
+                                         weight_initializer='normal',
+                                         bias_initializer='zeros'))
+            self.classifier.add(nn.Dropout(rate=0.5))
+            self.classifier.add(nn.Dense(4096, activation='relu',
+                                         weight_initializer='normal',
+                                         bias_initializer='zeros'))
+            self.classifier.add(nn.Dropout(rate=0.5))
+            self.classifier.add(nn.Dense(classes,
+                                         weight_initializer='normal',
+                                         bias_initializer='zeros'))
 
     def _make_features(self, layers, filters, batch_norm):
-        featurizer = nn.HybridSequential()
-        with featurizer.name_scope():
-            for i, num in enumerate(layers):
-                for _ in range(num):
-                    featurizer.add(nn.Conv2D(filters[i], kernel_size=3, padding=1,
-                                             weight_initializer=Xavier(rnd_type='gaussian',
-                                                                       factor_type='out',
-                                                                       magnitude=2),
-                                             bias_initializer='zeros'))
-                    if batch_norm:
-                        featurizer.add(nn.BatchNorm())
-                    featurizer.add(nn.Activation('relu'))
-                featurizer.add(nn.MaxPool2D(strides=2))
+        featurizer = nn.HybridSequential(prefix='')
+        for i, num in enumerate(layers):
+            for _ in range(num):
+                featurizer.add(nn.Conv2D(filters[i], kernel_size=3, padding=1,
+                                         weight_initializer=Xavier(rnd_type='gaussian',
+                                                                   factor_type='out',
+                                                                   magnitude=2),
+                                         bias_initializer='zeros'))
+                if batch_norm:
+                    featurizer.add(nn.BatchNorm())
+                featurizer.add(nn.Activation('relu'))
+            featurizer.add(nn.MaxPool2D(strides=2))
         return featurizer
 
     def hybrid_forward(self, F, x):
