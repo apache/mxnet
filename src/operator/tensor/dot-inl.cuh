@@ -10,6 +10,7 @@
 #include <mxnet/operator.h>
 
 // TODO(stefan): change dot interface s.t. it includes OpContext
+// TODO(stefan): use size_t instead of index_t
 namespace mxnet {
 namespace op {
 
