@@ -12,9 +12,6 @@
 // TODO(stefan): change dot interface s.t. it includes OpContext
 namespace mxnet {
 namespace op {
-using mshadow::cuda::kBaseThreadNum;
-using mxnet_op::Kernel;
-using mxnet_op::set_zero;
 
 /*!
  * \brief Scalar kernel of dot(csr, dns1) = dns2
@@ -34,7 +31,8 @@ struct DotCsrDnsDnsScalarKernel {
    * \param num_cols_r  number of columns of output matrix
    */
   template<typename DType, typename IType, typename CType>
-  MSHADOW_XINLINE static void Map(int tid, DType* out,
+  __device__ __forceinline__ static void Map(int tid,
+                                  DType* out,
                                   const DType* data_l,
                                   const IType* indptr_l,
                                   const CType* col_idx_l,
@@ -58,13 +56,14 @@ struct DotCsrDnsDnsScalarKernel {
 template<int req>
 struct DotCsrDnsDnsVectorKernel {
   template<typename DType, typename IType, typename CType>
-  __device__ __forceinline__ static void Map(int tid, DType* out,
+  __device__ __forceinline__ static void Map(int tid,
+                                             DType* out,
                                              const DType* data_l,
                                              const IType* indptr_l,
                                              const CType* col_idx_l,
                                              const DType* data_r,
                                              const index_t num_cols_r) {
-    __shared__ volatile DType vals[kBaseThreadNum];
+    __shared__ volatile DType vals[mshadow::cuda::kBaseThreadNum];
     const index_t warp_id = tid / 32;           // global warp id
     const index_t lane = tid & (32-1);          // local thread id within warp
     const index_t irow = warp_id / num_cols_r;  // lhs row that this warp computes
@@ -113,7 +112,7 @@ struct DotCsrTransDnsDnsScalarKernel {
    * \param num_cols_r  number of columns of output matrix
    */
   template<typename DType, typename IType, typename CType>
-  MSHADOW_XINLINE static void Map(int tid,
+  __device__ __forceinline__ static void Map(int tid,
                                   DType* out,
                                   const DType* data_l,
                                   const IType* indptr_l,
@@ -255,6 +254,71 @@ struct DotCsrTransDnsDnsWarpBlockKernel {
 };
 
 /*!
+ * \brief GPU auxiliary kernel to flag non-zero rows of rsp tensor with indices
+ */
+struct SetRspRowFlgKernel {
+  template<typename RType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             RType* row_flg,
+                                             const RType* row_idx,
+                                             const index_t nnr) {
+    if (tid < nnr) {
+      row_flg[row_idx[tid]] = tid+1;
+    }
+  }
+};
+
+/*!
+ * \brief GPU Kernel of dot(csr, rsp) = dns
+ * Parallelization by output elements: 1 thread/element
+ */
+struct DotCsrRspDnsScalarKernel {
+  /*!
+   * \brief
+   * \param tid        global thread id
+   * \param out        dense output matrix
+   * \param data_l     lhs csr matrix data
+   * \param indptr_l   lhs csr matrix index pointer
+   * \param col_idx_l  lhs csr matrix column indices
+   * \param data_r     rhs rsp matrix data
+   * \param row_idx_r  rhs rsp matrix nnr indices
+   * \param row_flg_r  auxiliary index array holding
+   * \param nnr_r      rhs rsp matrix number of non-zero rows
+   * \param num_rows   dense output matrix number of rows
+   * \param num_cols   dense output matrix number of columns
+   */
+  template<typename DType, typename IType, typename CType, typename RType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             DType* out,
+                                             const DType* data_l,
+                                             const IType* indptr_l,
+                                             const CType* col_idx_l,
+                                             const DType* data_r,
+                                             const RType* row_idx_r,
+                                             const RType* row_flg_r,
+                                             const index_t nnr_r,
+                                             const index_t num_rows,
+                                             const index_t num_cols) {
+    if (tid < num_rows*num_cols) {
+      const index_t i = static_cast<index_t>(tid) / num_cols;  // i = row this thread computes
+      const index_t k = static_cast<index_t>(tid) % num_cols;  // k = col this thread computes
+      // Compute inner product of i-th row and k-th col
+      DType sum = 0;
+      for (IType j = indptr_l[i]; j < indptr_l[i+1]; j++) {
+        const index_t csr_col = col_idx_l[j];
+        const index_t rsp_row_idx = row_flg_r[csr_col];
+        if (rsp_row_idx > 0) {
+          sum += data_l[j] * data_r[(rsp_row_idx-1)*num_cols+k];
+        }
+      }
+      if (sum != 0) {
+        out[i*num_cols+k] += sum;
+      }
+    }
+  }
+};
+
+/*!
  * \brief GPU Impl of dot(csr, dns1) = dns2 and dot(csr.T, dns1) = dns2
  */
 inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
@@ -266,6 +330,10 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
   if (kNullOp == req) return;
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
   if (!lhs.storage_initialized()) return;
+
+  using mshadow::cuda::kBaseThreadNum;
+  using mxnet_op::Kernel;
+  using mxnet_op::set_zero;
 
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
@@ -419,8 +487,74 @@ inline void DotCsrRspDnsImpl(mshadow::Stream<gpu>* s,
                              const OpReqType req,
                              const bool trans_lhs,
                              TBlob* ret) {
-  // TODO(stefan): Implement dot(csr, rsp) = dns
-  LOG(FATAL) << "DotCsrRspDnsImpl gpu version is not implemented.";
+  // reuse dot(csr, dns) implementation if rhs rsp matrix is in fact dense
+  if (rhs.storage_shape()[0] == rhs.shape()[0]) {
+    DotCsrDnsDnsImpl(s, lhs, rhs.data(), req, trans_lhs, ret);
+    return;
+  }
+  if (kNullOp == req) return;
+  CHECK_EQ(lhs.storage_type(), kCSRStorage);
+  CHECK_EQ(rhs.storage_type(), kRowSparseStorage);
+
+  using mxnet_op::Kernel;
+  using mxnet_op::set_zero;
+
+  if (!lhs.storage_initialized() || !rhs.storage_initialized()) {
+    if (kWriteTo == req) {
+      MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {  // data type
+        Kernel<set_zero, gpu>::Launch(s, ret->Size(), ret->dptr<DType>());
+      });
+    }
+    return;
+  }
+
+  const index_t num_rows = ret->shape_[0];
+  const index_t num_cols = ret->shape_[1];
+  const index_t nnr_r = rhs.storage_shape()[0];
+  index_t num_threads;
+
+  const TBlob data_l = lhs.data();
+  const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
+  const TBlob col_idx_l = lhs.aux_data(csr::kIdx);
+  const TBlob data_r = rhs.data();
+  const TBlob row_idx_r = rhs.aux_data(rowsparse::kIdx);
+
+  MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
+    MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
+      MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
+        MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // col idx type
+          if (kWriteTo == req) {
+            num_threads = num_rows*num_cols;
+            Kernel<set_zero, gpu>::Launch(s, num_threads, ret->dptr<DType>());
+          }
+          if (trans_lhs) {
+            LOG(FATAL) << "DotCsrRspDnsImpl has not implemented dot(csr.T, rsp) = dns yet";
+          } else {
+            // TODO: Consider implementing a vector kernel for SpMV (similar to DotCsrDnsDns)
+            // Alloc temp storage for row_flg array
+            // TODO(stefan): use temporary workspace from OpContext
+            RType* row_flg_r;
+            CUDA_CALL(cudaMalloc(&row_flg_r, rhs.shape()[0]*sizeof(RType)));
+            num_threads = rhs.shape()[0];
+            Kernel<set_zero, gpu>::Launch(s, num_threads, row_flg_r);
+            // Set row_flg index array
+            num_threads = nnr_r;
+            Kernel<SetRspRowFlgKernel, gpu>::Launch(s, num_threads,
+                row_flg_r, row_idx_r.dptr<RType>(), nnr_r);
+            // Perform sparse matrix-matrix multiply
+            num_threads = num_rows*num_cols;
+            Kernel<DotCsrRspDnsScalarKernel, gpu>::Launch(s, num_threads,
+                ret->dptr<DType>(),
+                data_l.dptr<DType>(), indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(),
+                data_r.dptr<DType>(), row_idx_r.dptr<RType>(), row_flg_r, rhs.storage_shape()[0],
+                num_rows, num_cols);
+            // Dealloc temp storage
+            CUDA_CALL(cudaFree(row_flg_r));
+          }
+        });
+      });
+    });
+  });
 }
 
 }  // namespace op
