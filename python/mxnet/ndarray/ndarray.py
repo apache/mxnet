@@ -921,7 +921,7 @@ fixed-size items.
         >>> y.dtype
         <type 'numpy.int32'>
         """
-        res = empty(self.shape, ctx=self.context, dtype=dtype)
+        res = _empty_ndarray(self.shape, ctx=self.context, dtype=dtype)
         self.copyto(res)
         return res
 
@@ -942,7 +942,7 @@ fixed-size items.
 
         Returns
         -------
-        NDArray
+        NDArray, CSRNDArray, RowSparseNDArray
             The copied array. If ``other`` is an ``NDArray``, then the return value
             and ``other`` will point to the same ``NDArray``.
 
@@ -1090,39 +1090,6 @@ def onehot_encode(indices, out):
     # pylint: enable= no-member, protected-access
 
 
-def empty(shape, ctx=None, dtype=mx_real_t):
-    """Returns a new array of given shape and type, without initializing entries.
-
-    Parameters
-    ----------
-    shape : int or tuple of int
-        The shape of the empty array.
-    ctx : Context, optional
-        An optional device context (default is the current default context).
-    dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`).
-
-    Returns
-    -------
-    NDArray
-        A created array.
-
-    Examples
-    --------
-    >>> mx.nd.empty(1)
-    <NDArray 1 @cpu(0)>
-    >>> mx.nd.empty((1,2), mx.gpu(0))
-    <NDArray 1x2 @gpu(0)>
-    >>> mx.nd.empty((1,2), mx.gpu(0), 'float16')
-    <NDArray 1x2 @gpu(0)>
-    """
-    if isinstance(shape, integer_types):
-        shape = (shape, )
-    if ctx is None:
-        ctx = Context.default_ctx
-    return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
-
-
 def ones(shape, ctx=None, dtype=None, **kwargs):
     """Returns a new array filled with all ones, with the given shape and type.
 
@@ -1190,12 +1157,11 @@ def full(shape, val, ctx=None, dtype=mx_real_t, out=None):
     >>> mx.nd.full((1, 2), 2.0, dtype='float16').asnumpy()
     array([[ 2.,  2.]], dtype=float16)
     """
-    out = empty(shape, ctx, dtype) if out is None else out
+    out = _empty_ndarray(shape, ctx, dtype) if out is None else out
     out[:] = val
     return out
 
-
-def array(source_array, ctx=None, dtype=None):
+def _array(source_array, ctx=None, dtype=None):
     """Creates an array from any object exposing the array interface.
 
     Parameters
@@ -1213,18 +1179,6 @@ def array(source_array, ctx=None, dtype=None):
     -------
     NDArray
         An `NDArray` with the same contents as the `source_array`.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> mx.nd.array([1, 2, 3])
-    <NDArray 3 @cpu(0)>
-    >>> mx.nd.array([[1, 2], [3, 4]])
-    <NDArray 2x2 @cpu(0)>
-    >>> mx.nd.array(np.zeros((3, 2)))
-    <NDArray 3x2 @cpu(0)>
-    >>> mx.nd.array(np.zeros((3, 2)), mx.gpu(0))
-    <NDArray 3x2 @gpu(0)>
     """
     if isinstance(source_array, NDArray):
         dtype = source_array.dtype if dtype is None else dtype
@@ -1235,10 +1189,9 @@ def array(source_array, ctx=None, dtype=None):
                 source_array = np.array(source_array, dtype=dtype)
             except:
                 raise TypeError('source_array must be array like object')
-    arr = empty(source_array.shape, ctx, dtype)
+    arr = _empty_ndarray(source_array.shape, ctx, dtype)
     arr[:] = source_array
     return arr
-
 
 def moveaxis(tensor, source, destination):
     """Moves the `source` axis into the `destination` position
@@ -2290,7 +2243,7 @@ def concatenate(arrays, axis=0, always_copy=True):
         assert shape_rest2 == arr.shape[axis+1:]
         assert dtype == arr.dtype
     ret_shape = shape_rest1 + (shape_axis,) + shape_rest2
-    ret = empty(ret_shape, ctx=arrays[0].context, dtype=dtype)
+    ret = _empty_ndarray(ret_shape, ctx=arrays[0].context, dtype=dtype)
 
     idx = 0
     begin = [0 for _ in ret_shape]
@@ -2387,3 +2340,29 @@ def _zeros_ndarray(shape, ctx=None, dtype=None, **kwargs):
     # pylint: disable= no-member, protected-access
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
     # pylint: enable= no-member, protected-access
+
+def _empty_ndarray(shape, ctx=None, dtype=None):
+    """Returns a new array of given shape and type, without initializing entries.
+
+    Parameters
+    ----------
+    shape : int or tuple of int
+        The shape of the empty array.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+    dtype : str or numpy.dtype, optional
+        An optional value type (default is `float32`).
+
+    Returns
+    -------
+    NDArray
+        A created array.
+
+    """
+    if isinstance(shape, int):
+        shape = (shape, )
+    if ctx is None:
+        ctx = Context.default_ctx
+    if dtype is None:
+        dtype = mx_real_t
+    return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
