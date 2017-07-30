@@ -104,9 +104,9 @@ class _Conv(HybridBlock):
 
     def hybrid_forward(self, F, x, weight, bias=None):
         if bias is None:
-            act = getattr(F, self._op_name)(x, weight, **self._kwargs)
+            act = getattr(F, self._op_name)(x, weight, name='fwd', **self._kwargs)
         else:
-            act = getattr(F, self._op_name)(x, weight, bias, **self._kwargs)
+            act = getattr(F, self._op_name)(x, weight, bias, name='fwd', **self._kwargs)
         if self.act is not None:
             act = self.act(act)
         return act
@@ -645,7 +645,7 @@ class _Pooling(HybridBlock):
             'pooling_convention': 'full' if ceil_mode else 'valid'}
 
     def hybrid_forward(self, F, x):
-        return F.Pooling(x, **self._kwargs)
+        return F.Pooling(x, name='fwd', **self._kwargs)
 
     def __repr__(self):
         s = '{name}(size={kernel}, stride={stride}, padding={pad}, ceil_mode={ceil_mode})'

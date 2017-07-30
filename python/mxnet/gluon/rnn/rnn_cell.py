@@ -108,10 +108,6 @@ class RecurrentCell(Block):
         """shape and layout information of states"""
         raise NotImplementedError()
 
-    @property
-    def _curr_prefix(self):
-        return '%st%d_'%(self.prefix, self._counter)
-
     def begin_state(self, batch_size=0, func=ndarray.zeros, **kwargs):
         """Initial state for this cell.
 
@@ -313,15 +309,15 @@ class RNNCell(HybridRecurrentCell):
 
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, i2h_bias, h2h_bias):
-        name = self._curr_prefix
+        prefix = 't%d_'%self._counter
         i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
                                num_hidden=self._hidden_size,
-                               name='%si2h'%name)
+                               name=prefix+'i2h')
         h2h = F.FullyConnected(data=states[0], weight=h2h_weight, bias=h2h_bias,
                                num_hidden=self._hidden_size,
-                               name='%sh2h'%name)
+                               name=prefix+'h2h')
         output = self._get_activation(F, i2h + h2h, self._activation,
-                                      name='%sout'%name)
+                                      name=prefix+'out')
 
         return output, [output]
 
@@ -382,28 +378,21 @@ class LSTMCell(HybridRecurrentCell):
 
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, i2h_bias, h2h_bias):
-        name = self._curr_prefix
+        prefix = 't%d_'%self._counter
         i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
-                               num_hidden=self._hidden_size*4,
-                               name='%si2h'%name)
+                               num_hidden=self._hidden_size*4, name=prefix+'i2h')
         h2h = F.FullyConnected(data=states[0], weight=h2h_weight, bias=h2h_bias,
-                               num_hidden=self._hidden_size*4,
-                               name='%sh2h'%name)
+                               num_hidden=self._hidden_size*4, name=prefix+'h2h')
         gates = i2h + h2h
-        slice_gates = F.SliceChannel(gates, num_outputs=4,
-                                     name="%sslice"%name)
-        in_gate = F.Activation(slice_gates[0], act_type="sigmoid",
-                               name='%si'%name)
-        forget_gate = F.Activation(slice_gates[1], act_type="sigmoid",
-                                   name='%sf'%name)
-        in_transform = F.Activation(slice_gates[2], act_type="tanh",
-                                    name='%sc'%name)
-        out_gate = F.Activation(slice_gates[3], act_type="sigmoid",
-                                name='%so'%name)
+        slice_gates = F.SliceChannel(gates, num_outputs=4, name=prefix+'slice')
+        in_gate = F.Activation(slice_gates[0], act_type="sigmoid", name=prefix+'i')
+        forget_gate = F.Activation(slice_gates[1], act_type="sigmoid", name=prefix+'f')
+        in_transform = F.Activation(slice_gates[2], act_type="tanh", name=prefix+'c')
+        out_gate = F.Activation(slice_gates[3], act_type="sigmoid", name=prefix+'o')
         next_c = F._internal._plus(forget_gate * states[1], in_gate * in_transform,
-                                   name='%sstate'%name)
+                                   name=prefix+'state')
         next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type="tanh"),
-                                  name='%sout'%name)
+                                  name=prefix+'out')
 
         return next_h, [next_h, next_c]
 
@@ -463,32 +452,34 @@ class GRUCell(HybridRecurrentCell):
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, i2h_bias, h2h_bias):
         # pylint: disable=too-many-locals
-        name = self._curr_prefix
+        prefix = 't%d_'%self._counter
         prev_state_h = states[0]
         i2h = F.FullyConnected(data=inputs,
                                weight=i2h_weight,
                                bias=i2h_bias,
                                num_hidden=self._hidden_size * 3,
-                               name="%si2h" % name)
+                               name=prefix+'i2h')
         h2h = F.FullyConnected(data=prev_state_h,
                                weight=h2h_weight,
                                bias=h2h_bias,
                                num_hidden=self._hidden_size * 3,
-                               name="%sh2h" % name)
+                               name=prefix+'h2h')
 
-        i2h_r, i2h_z, i2h = F.SliceChannel(i2h, num_outputs=3, name="%si2h_slice" % name)
-        h2h_r, h2h_z, h2h = F.SliceChannel(h2h, num_outputs=3, name="%sh2h_slice" % name)
+        i2h_r, i2h_z, i2h = F.SliceChannel(i2h, num_outputs=3,
+                                           name=prefix+'i2h_slice')
+        h2h_r, h2h_z, h2h = F.SliceChannel(h2h, num_outputs=3,
+                                           name=prefix+'h2h_slice')
 
         reset_gate = F.Activation(i2h_r + h2h_r, act_type="sigmoid",
-                                  name="%sr_act" % name)
+                                  name=prefix+'r_act')
         update_gate = F.Activation(i2h_z + h2h_z, act_type="sigmoid",
-                                   name="%sz_act" % name)
+                                   name=prefix+'z_act')
 
         next_h_tmp = F.Activation(i2h + reset_gate * h2h, act_type="tanh",
-                                  name="%sh_act" % name)
+                                  name=prefix+'h_act')
 
         next_h = F._internal._plus((1. - update_gate) * next_h_tmp, update_gate * prev_state_h,
-                                   name='%sout' % name)
+                                   name=prefix+'out')
 
         return next_h, [next_h]
 
@@ -563,17 +554,17 @@ class DropoutCell(HybridRecurrentCell):
 
     Parameters
     ----------
-    dropout : float
+    rate : float
         Percentage of elements to drop out, which
         is 1 - percentage to retain.
     """
-    def __init__(self, dropout, prefix=None, params=None):
+    def __init__(self, rate, prefix=None, params=None):
         super(DropoutCell, self).__init__(prefix, params)
-        assert isinstance(dropout, numeric_types), "dropout probability must be a number"
-        self.dropout = dropout
+        assert isinstance(rate, numeric_types), "rate must be a number"
+        self.rate = rate
 
     def __repr__(self):
-        s = '{name}(p = {dropout})'
+        s = '{name}(rate = {rate})'
         return s.format(name=self.__class__.__name__,
                         **self.__dict__)
 
@@ -584,8 +575,8 @@ class DropoutCell(HybridRecurrentCell):
         return 'dropout'
 
     def hybrid_forward(self, F, inputs, states):
-        if self.dropout > 0:
-            inputs = F.Dropout(data=inputs, p=self.dropout)
+        if self.rate > 0:
+            inputs = F.Dropout(data=inputs, p=self.rate, name='t%d_fwd'%self._counter)
         return inputs, states
 
     def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
@@ -610,13 +601,15 @@ class ModifierCell(HybridRecurrentCell):
     should be used instead.
     """
     def __init__(self, base_cell):
-        super(ModifierCell, self).__init__(prefix=None, params=None)
+        assert not base_cell._modified, \
+            "Cell %s is already modified. One cell cannot be modified twice"%base_cell.name
         base_cell._modified = True
+        super(ModifierCell, self).__init__(prefix=base_cell.prefix+self._alias(),
+                                           params=None)
         self.base_cell = base_cell
 
     @property
     def params(self):
-        self._own_params = False
         return self.base_cell.params
 
     def state_info(self, batch_size=0):
@@ -697,7 +690,7 @@ class ResidualCell(ModifierCell):
 
     def hybrid_forward(self, F, inputs, states):
         output, states = self.base_cell(inputs, states)
-        output = F.elemwise_add(output, inputs, name="%s_plus_residual" % output.name)
+        output = F.elemwise_add(output, inputs, name='t%d_fwd'%self._counter)
         return output, states
 
     def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):

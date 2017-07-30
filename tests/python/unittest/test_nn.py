@@ -303,6 +303,5 @@ def test_flatten():
 
 
 if __name__ == '__main__':
-    test_symbol_block()
-    #import nose
-    #nose.runmodule()
+    import nose
+    nose.runmodule()

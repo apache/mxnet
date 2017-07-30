@@ -141,6 +141,7 @@ class Block(object):
     """
     def __init__(self, prefix=None, params=None):
         self._prefix, self._params = _BlockScope.create(prefix, params, self._alias())
+        self._name = self._prefix[:-1] if self._prefix.endswith('_') else self._prefix
         self._scope = _BlockScope(self)
         self._children = []
 
@@ -169,9 +170,7 @@ class Block(object):
     @property
     def name(self):
         """Name of this `Block`, without '_' in the end."""
-        if self.prefix.endswith('_'):
-            return self.prefix[:-1]
-        return self.prefix
+        return self._name
 
     def name_scope(self):
         """Returns a name space object managing a child `Block` and parameter
