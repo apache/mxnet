@@ -43,9 +43,9 @@ void ElementwiseSumRspImpl(mshadow::Stream<cpu>* s,
     if (row_block_start < nnr) {
       const size_t row_block_end = std::min(row_block_start+row_block_len, nnr);
 
-      const size_t num_cols = out->data().shape_.ProdShape(1, out->data().shape_.ndim());
+      const size_t row_length = out->data().shape_.ProdShape(1, out->data().shape_.ndim());
       auto out_values = out->data().get_with_shape<cpu, 2, DType>(
-          mshadow::Shape2(out->storage_shape()[0], num_cols), s);
+          mshadow::Shape2(out->storage_shape()[0], row_length), s);
       auto out_indices = out->aux_data(rowsparse::kIdx).FlatTo1D<cpu, IType>();
       for (size_t i = row_block_start; i < row_block_end; ++i) {
         out_indices[i] = uniq_row_idx[i];
@@ -54,7 +54,7 @@ void ElementwiseSumRspImpl(mshadow::Stream<cpu>* s,
         if (nd.storage_initialized()) {
           const auto nd_indices = nd.aux_data(rowsparse::kIdx).FlatTo1D<cpu, IType>();
           const auto nd_values = nd.data().get_with_shape<cpu, 2, DType>(
-              mshadow::Shape2(nd.storage_shape()[0], num_cols), s);
+              mshadow::Shape2(nd.storage_shape()[0], row_length), s);
           const auto nd_num_rows = nd.aux_shape(rowsparse::kIdx).Size();
           const IType* nd_indices_start = &nd_indices[0];
           const IType* nd_indices_end = nd_indices_start + nd_num_rows;

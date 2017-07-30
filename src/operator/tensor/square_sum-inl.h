@@ -308,6 +308,8 @@ void SquareSumOpForwardEx(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   const NDArrayStorageType istype = inputs[0].storage_type();
   if (istype == kRowSparseStorage) {
+    CHECK_EQ(inputs[0].shape().ndim(), 2U) << "_square_sum op only supports"
+                                              " 2D ndarray as input";
     NDArray output = outputs[0];
     SquareSumRspImpl(attrs, s, inputs[0], req[0], &output);
   } else {
@@ -330,6 +332,8 @@ void SquareSumOpBackwardEx(const nnvm::NodeAttrs& attrs,
   const NDArrayStorageType ograd_stype = inputs[0].storage_type();
   const NDArrayStorageType input_stype = inputs[1].storage_type();
   if (input_stype == kRowSparseStorage && ograd_stype == kDefaultStorage) {
+    CHECK_EQ(inputs[1].shape().ndim(), 2U) << "_square_sum op only supports"
+                                              " 2D ndarray as input";
     NDArray output = outputs[0];
     SquareSumRspGradImpl(attrs, s, inputs[0], inputs[1], req[0], &output);
   } else {

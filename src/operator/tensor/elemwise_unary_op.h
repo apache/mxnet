@@ -119,7 +119,7 @@ void IdentityComputeEx(const nnvm::NodeAttrs& attrs,
   if (in_stype == out_stype) {
     if (in_stype == kDefaultStorage) {  // dense ndarray
       IdentityCompute<xpu>(attrs, ctx, {inputs[0].data()}, req, {outputs[0].data()});
-    } else {  // sparse ndarray
+    } else if (in_stype == kRowSparseStorage || in_stype == kCSRStorage) {  // sparse ndarray
       if (!inputs[0].storage_initialized()) {
         FillComputeZerosEx<xpu>(attrs, ctx, inputs, req, outputs);
         return;
@@ -130,6 +130,8 @@ void IdentityComputeEx(const nnvm::NodeAttrs& attrs,
       for (size_t i = 0; i < n; ++i) {
         IdentityCompute<xpu>(attrs, ctx, {inputs[0].aux_data(i)}, req, {outputs[0].aux_data(i)});
       }
+    } else {
+      LOG(FATAL) << "IdentityComputeEx does not support input stype = " << in_stype;
     }
   } else {
     FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs, IdentityCompute<xpu>, "IdentityCompute");
