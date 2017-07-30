@@ -631,3 +631,18 @@ def _zeros_sparse_ndarray(stype, shape, ctx=None, dtype=None, aux_types=None, **
     assert(len(aux_types) == len(_STORAGE_AUX_TYPES[stype]))
     out = _ndarray_cls(_new_alloc_handle(stype, shape, ctx, True, dtype, aux_types))
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, out=out, **kwargs)
+
+def _empty_sparse_ndarray(stype, shape, ctx=None, dtype=None, aux_types=None):
+    """Returns a new array of given shape and type, without initializing entries.
+    """
+    if isinstance(shape, int):
+        shape = (shape, )
+    if ctx is None:
+        ctx = Context.default_ctx
+    if dtype is None:
+        dtype = mx_real_t
+    assert(stype is not None)
+    if stype == 'csr' or stype == 'row_sparse':
+        return _zeros_sparse_ndarray(stype, shape, ctx=ctx, dtype=dtype, aux_types=aux_types)
+    else:
+        raise Exception("unknown stype : " + str(stype))

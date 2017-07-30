@@ -3,8 +3,8 @@
 import ctypes
 
 from ..base import _LIB, check_call, py_str, c_str, string_types, mx_uint, NDArrayHandle, c_array
-from .ndarray import NDArray, _zeros_ndarray
-from .sparse_ndarray import _ndarray_cls, _zeros_sparse_ndarray
+from .ndarray import NDArray, _zeros_ndarray, _empty_ndarray
+from .sparse_ndarray import _ndarray_cls, _zeros_sparse_ndarray, _empty_sparse_ndarray
 
 
 def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
@@ -36,10 +36,48 @@ def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
     array([[ 0.,  0.]], dtype=float16)
     """
 
-    if stype is None:
+    if stype is None or stype == 'default':
         return _zeros_ndarray(shape, ctx, dtype, **kwargs)
     else:
         return _zeros_sparse_ndarray(stype, shape, ctx, dtype, aux_types, **kwargs)
+
+def empty(shape, ctx=None, dtype=None, stype=None, aux_types=None):
+    """Returns a new array of given shape and type, without initializing entries.
+
+    Parameters
+    ----------
+    shape : int or tuple of int
+        The shape of the empty array.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+    dtype : str or numpy.dtype, optional
+        An optional value type (default is `float32`).
+    stype : str, optional
+        An optional storage type (default is `default`).
+    aux_types: list of numpy.dtype, optional
+        An optional type for the aux data for SparseNDArray (default values depends
+        on the storage type)
+
+    Returns
+    -------
+    NDArray
+        A created array.
+
+    Examples
+    --------
+    >>> mx.nd.empty(1)
+    <NDArray 1 @cpu(0)>
+    >>> mx.nd.empty((1,2), mx.gpu(0))
+    <NDArray 1x2 @gpu(0)>
+    >>> mx.nd.empty((1,2), mx.gpu(0), 'float16')
+    <NDArray 1x2 @gpu(0)>
+    >>> mx.nd.empty((1,2), stype='csr')
+    <CSRNDArray 1x2 @cpu(0)>
+    """
+    if stype is None or stype == 'default':
+        return _empty_ndarray(shape, ctx, dtype)
+    else:
+        return _empty_sparse_ndarray(stype, shape, ctx, dtype, aux_types)
 
 
 def load(fname):

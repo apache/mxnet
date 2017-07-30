@@ -102,8 +102,6 @@ def test_sparse_nd_basic():
         assert(nd._num_aux == 1)
         assert(nd.indices.dtype == np.int64)
         assert(nd.stype == 'row_sparse')
-        assert_almost_equal(nd.indices.asnumpy(), idx)
-        assert_almost_equal(nd.data.asnumpy(), v)
 
     shape = (4,2)
     values = np.random.rand(2,2)
@@ -455,6 +453,12 @@ def test_create_row_sparse():
         assert rsp_created.stype == 'row_sparse'
         assert same(rsp_created.data.asnumpy(), data.asnumpy())
         assert same(rsp_created.indices.asnumpy(), indices.asnumpy())
+
+def test_sparse_nd_empty():
+    stypes = ['csr', 'row_sparse', 'default']
+    for stype in stypes:
+        nd = mx.nd.empty((2,2), stype=stype)
+        assert(nd.stype == stype)
 
 
 if __name__ == '__main__':
