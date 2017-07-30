@@ -107,4 +107,4 @@ def purge(local_dir=os.path.expanduser('~/.mxnet/models/')):
     files = os.listdir(local_dir)
     for f in files:
         if f.endswith(".params"):
-            os.remove(os.path.join(local_dir,f))
+            os.remove(os.path.join(local_dir, f))
