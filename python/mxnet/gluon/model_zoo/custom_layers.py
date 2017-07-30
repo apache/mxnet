@@ -3,6 +3,7 @@
 """Custom neural network layers in model_zoo."""
 
 from ..block import Block, HybridBlock
+from ..utils import _indent
 
 class HybridConcurrent(HybridBlock):
     """Lays `HybridBlock`s concurrently.
