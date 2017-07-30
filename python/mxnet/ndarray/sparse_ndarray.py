@@ -81,26 +81,25 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
         ctypes.byref(hdl)))
     return hdl
 
+class BaseSparseNDArray(NDArray):
+    """The base class of an NDArray stored in a sparse storage format.
 
-class SparseNDArray(NDArray):
-    """An array object representing a multidimensional, homogeneous array of
-    fixed-size items, stored in sparse format. See CSRNDArray and RowSparseNDArray
-    for more details.
+    See CSRNDArray and RowSparseNDArray for more details.
     """
     def __iadd__(self, other):
-        raise NotImplementedError("SparseND doesn't support __iadd__")
+        raise NotImplementedError()
 
     def __isub__(self, other):
-        raise NotImplementedError("SparseND doesn't support __isub__")
+        raise NotImplementedError()
 
     def __imul__(self, other):
-        raise NotImplementedError("SparseND doesn't support __imul__")
+        raise NotImplementedError()
 
     def __idiv__(self, other):
-        raise NotImplementedError("SparseND doesn't support __idiv__")
+        raise NotImplementedError()
 
     def __itruediv__(self, other):
-        raise NotImplementedError("SparseND doesn't support __itruediv__")
+        raise NotImplementedError()
 
     def __setitem__(self, key, value):
         """x.__setitem__(i, y) <=> x[i]=y
@@ -121,14 +120,14 @@ class SparseNDArray(NDArray):
         array([[ 1.,  0.,  2.],
                [ 0.,  0.,  0.],
                [ 4.,  5.,  6.]], dtype=float32)
-        >>> # assign SparseNDArray with same storage type
+        >>> # assign BaseSparseNDArray with same storage type
         >>> x = mx.nd.zeros('row_sparse', (3,3))
         >>> x[:] = src
         >>> x.asnumpy()
         array([[ 1.,  0.,  2.],
                [ 0.,  0.,  0.],
                [ 4.,  5.,  6.]], dtype=float32)
-        >>> # assign NDArray to SparseNDArray
+        >>> # assign NDArray to BaseSparseNDArray
         >>> x[:] = mx.nd.ones((3,3))
         >>> x.asnumpy()
         array([[ 1.,  1.,  1.],
@@ -139,16 +138,16 @@ class SparseNDArray(NDArray):
             raise ValueError('Failed to assign to a readonly NDArray')
         if isinstance(key, py_slice):
             if key.step is not None or key.start is not None or key.stop is not None:
-                raise ValueError('Assignment with slicing not supported in SparseNDArray.')
+                raise ValueError('Assignment with slicing not supported in BaseSparseNDArray.')
             if isinstance(value, NDArray):
                 # avoid copying to itself
                 if value.handle is not self.handle:
                     value.copyto(self)
             elif isinstance(value, numeric_types):
-                raise Exception("Assigning numeric types to SparseNDArray not supported yet.")
+                raise Exception("Assigning numeric types to BaseSparseNDArray not supported yet.")
             elif isinstance(value, (np.ndarray, np.generic)):
                 # TODO(haibin) Implement _sync_copyfrom for sparse ndarray to avoid an extra copy
-                warnings.warn('Assigning non-NDArray object to SparseNDArray is not efficient',
+                warnings.warn('Assigning non-NDArray object to BaseSparseNDArray is not efficient',
                               RuntimeWarning)
                 tmp = ndarray.array(value)
                 tmp.copyto(self)
@@ -156,7 +155,7 @@ class SparseNDArray(NDArray):
                 raise TypeError('type %s not supported' % str(type(value)))
         else:
             assert(isinstance(key, (int, tuple)))
-            raise Exception('SparseNDArray only supports [:] for assignment')
+            raise Exception('BaseSparseNDArray only supports [:] for assignment')
 
     def __getitem__(self, key):
         """x.__getitem__(i) <=> x[i]
@@ -213,7 +212,7 @@ class SparseNDArray(NDArray):
         Returns
         -------
         numpy.dtype
-            This SparseNDArray's aux data type.
+            This BaseSparseNDArray's aux data type.
         """
         aux_type = ctypes.c_int()
         check_call(_LIB.MXNDArrayGetAuxType(self.handle, i, ctypes.byref(aux_type)))
@@ -221,14 +220,22 @@ class SparseNDArray(NDArray):
 
     @property
     def data(self):
-        """Get a deep copy of the values array of the SparseNDArray.
+        """Get a deep copy NDArray of the data array associated with the BaseSparseNDArray.
 
-        Returns
-        -------
-        NDArray
-            A deep copy of the SparseNDArray's values array.
+        This function blocks. Do not use it in performance critical code.
         """
-        return self._data()
+        self.wait_to_read()
+        hdl = NDArrayHandle()
+        check_call(_LIB.MXNDArrayGetDataNDArray(self.handle, ctypes.byref(hdl)))
+        return NDArray(hdl)
+
+    @property
+    def indices(self):
+        """Get a deep copy NDArray of the indices array associated with the BaseSparseNDArray.
+
+        This function blocks. Do not use it in performance critical code.
+        """
+        raise NotImplementedError()
 
     @property
     def _num_aux(self):
@@ -238,7 +245,7 @@ class SparseNDArray(NDArray):
 
     @property
     def _aux_types(self):
-        """The data types of the aux data for the SparseNDArray.
+        """The data types of the aux data for the BaseSparseNDArray.
         """
         aux_types = []
         num_aux = self._num_aux
@@ -306,7 +313,9 @@ class SparseNDArray(NDArray):
         return todense(self)
 
     def _aux_data(self, i):
-        """ Get a deep copy NDArray of the i-th aux data array associated with the SparseNDArray.
+        """ Get a deep copy NDArray of the i-th aux data array associated with the
+        BaseSparseNDArray.
+
         This function blocks. Do not use it in performance critical code.
         """
         self.wait_to_read()
@@ -314,17 +323,9 @@ class SparseNDArray(NDArray):
         check_call(_LIB.MXNDArrayGetAuxNDArray(self.handle, i, ctypes.byref(hdl)))
         return NDArray(hdl)
 
-    def _data(self):
-        """ Get a deep copy NDArray of the value array associated with the SparseNDArray.
-        This function blocks. Do not use it in performance critical code.
-        """
-        self.wait_to_read()
-        hdl = NDArrayHandle()
-        check_call(_LIB.MXNDArrayGetDataNDArray(self.handle, ctypes.byref(hdl)))
-        return NDArray(hdl)
 
 # pylint: disable=abstract-method
-class CSRNDArray(SparseNDArray):
+class CSRNDArray(BaseSparseNDArray):
     """A CSRNDArray represents a NDArray as three separate arrays: `data`,
     `indptr` and `indices`. It uses the standard CSR representation where the column indices for
     row i are stored in indices[indptr[i]:indptr[i+1]] and their corresponding values are stored
@@ -347,30 +348,30 @@ class CSRNDArray(SparseNDArray):
 
     @property
     def indices(self):
-        """The indices array of the SparseNDArray with `csr` storage type.
+        """The indices array of the CSRNDArray.
         This generates a deep copy of the column indices of the current `csr` matrix.
 
         Returns
         -------
         NDArray
-            This SparseNDArray's indices array.
+            This CSRNDArray's indices array.
         """
         return self._aux_data(1)
 
     @property
     def indptr(self):
-        """The indptr array of the SparseNDArray with `csr` storage type.
+        """The indptr array of the CSRNDArray with `csr` storage type.
         This generates a deep copy of the `indptr` of the current `csr` matrix.
 
         Returns
         -------
         NDArray
-            This SparseNDArray's indptr array.
+            This CSRNDArray's indptr array.
         """
         return self._aux_data(0)
 
 # pylint: disable=abstract-method
-class RowSparseNDArray(SparseNDArray):
+class RowSparseNDArray(BaseSparseNDArray):
     """A RowSparseNDArray is typically used to represent a subset of a larger
     NDArray  with `default` of shape [LARGE0, D1, .. , DN] where LARGE0 >> D0. The values
     in indices are the indices in the first dimension of the slices that have been extracted from
@@ -400,13 +401,13 @@ class RowSparseNDArray(SparseNDArray):
 
     @property
     def indices(self):
-        """The indices array of the SparseNDArray with `row_sparse` storage type.
+        """The indices array of the RowSparseNDArray with `row_sparse` storage type.
         This generates a deep copy of the row indices of the current row-sparse matrix.
 
         Returns
         -------
         NDArray
-            This SparseNDArray's indices array.
+            This RowSparseNDArray's indices array.
         """
         return self._aux_data(0)
 
@@ -564,7 +565,7 @@ def row_sparse(data, indices, shape, ctx=None, dtype=None, indices_type=None):
 
 
 def todense(source):
-    """ Return a dense array representation of this SparseNDArray.
+    """ Return a dense array representation of a BaseSparseNDArray.
 
     Returns
     -------
@@ -604,12 +605,12 @@ def _zeros_sparse_ndarray(stype, shape, ctx=None, dtype=None, aux_types=None, **
     dtype : str or numpy.dtype, optional
         An optional value type (default is `float32`)
     aux_types: list of numpy.dtype, optional
-        An optional type for the aux data for SparseNDArray (default values depends
+        An optional type for the aux data for BaseSparseNDArray (default values depends
         on the storage type)
 
     Returns
     -------
-    SparseNDArray
+    BaseSparseNDArray
         A created array
     Examples
     --------

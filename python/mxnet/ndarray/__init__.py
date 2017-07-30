@@ -9,4 +9,4 @@ from .ndarray import lesser, lesser_equal, maximum, minimum, moveaxis, multiply,
 from .ndarray import onehot_encode, power, subtract, true_divide, waitall, _new_empty_handle
 from .ndarray_utils import load, save, zeros, empty
 from .sparse_ndarray import _ndarray_cls
-from .sparse_ndarray import csr, row_sparse, SparseNDArray, todense, RowSparseNDArray, CSRNDArray
+from .sparse_ndarray import csr, row_sparse, BaseSparseNDArray, todense, RowSparseNDArray, CSRNDArray

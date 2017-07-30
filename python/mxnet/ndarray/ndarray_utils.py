@@ -1,5 +1,5 @@
 # coding: utf-8
-"""Utility functions for NDArray and SparseNDArray."""
+"""Utility functions for NDArray and BaseSparseNDArray."""
 import ctypes
 
 from ..base import _LIB, check_call, py_str, c_str, string_types, mx_uint, NDArrayHandle, c_array
@@ -21,12 +21,12 @@ def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
     stype: string, optional
         The storage type of the empty array, such as 'row_sparse', 'csr', etc
     aux_types: list of numpy.dtype, optional
-        An optional type for the aux data for SparseNDArray (default values depends
-        on the storage type)
+        An optional type for the aux data for the BaseSparseNDArray (default values
+        depends on the storage type)
 
     Returns
     -------
-    SparseNDArray
+    NDArray
         A created array
     Examples
     --------
@@ -55,7 +55,7 @@ def empty(shape, ctx=None, dtype=None, stype=None, aux_types=None):
     stype : str, optional
         An optional storage type (default is `default`).
     aux_types: list of numpy.dtype, optional
-        An optional type for the aux data for SparseNDArray (default values depends
+        An optional type for the aux data for the BaseSparseNDArray (default values depends
         on the storage type)
 
     Returns
