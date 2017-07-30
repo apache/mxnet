@@ -1,7 +1,7 @@
 # coding: utf-8
 """Model zoo for pre-trained models."""
 from __future__ import print_function
-__all__ = ['get_model_file']
+__all__ = ['get_model_file', 'purge']
 import hashlib
 import os
 import zipfile
@@ -9,27 +9,27 @@ import zipfile
 from ...test_utils import download
 
 _model_sha1 = {name: checksum for checksum, name in [
-    ('374727bb60dfaa27a8b6d3edd7060970cd53a1b0', 'alexnet'),
-    ('9789fb109175d8d91ac92880169b1dc33eaedcd6', 'densenet121'),
-    ('c35e8edff0ac7978b05c441adfb8c5c34d034e7b', 'densenet161'),
-    ('12c2757f26a2bc9cb9911ca13d2f87822c926a48', 'densenet169'),
-    ('e997f871a0a126efa4d252de6677c07d8f37258b', 'densenet201'),
-    ('382cd1c5c5f2153feaac77aba7bf4f44568d671a', 'inceptionv3'),
-    ('2b54423eccae747026dea3d092c4938d55d7dc6e', 'resnet101_v1'),
-    ('98b4908c1417a003453c64583029c9fa8fd189a6', 'resnet152_v1'),
-    ('de4170ddac5a3124e4ee8407e17fdac6e638bb83', 'resnet18_v1'),
-    ('137e986b2db597245954ee2f7c19399d1a74a9f4', 'resnet34_v1'),
-    ('2d2c53abbb7ffd913a6a724a45c5a1f3ca7dcf29', 'resnet50_v1'),
-    ('1d896a3420e60477a21411851446caf974560acf', 'squeezenet1.0'),
-    ('96d8b168050be3b7addab38e48cd226b04a4f69b', 'squeezenet1.1'),
-    ('a01d1ba90b230dae62b4a4abda9d3b2e6e123e0c', 'vgg11'),
-    ('5e3b0398046fa0dca90c2f9b1ea1ec34f368148b', 'vgg11_bn'),
-    ('a0f433b865847938b7ca6586deb016d779e0af7e', 'vgg13'),
-    ('97dc8506037456243d1cf1263853b100d188c033', 'vgg13_bn'),
-    ('4b664b92522d95c4b893b1351d88489bf60a9e4b', 'vgg16'),
-    ('d315c48b9ba628f7f19db5d8f69105fd280ef938', 'vgg16_bn'),
-    ('8ba5ac028ff1baad1f1f69d2d0395398c1d30f44', 'vgg19'),
-    ('497948c20de0fdfb92f9bcfa5b222a9656046f1e', 'vgg19_bn')]}
+    ('44335d1f0046b328243b32a26a4fbd62d9057b45', 'alexnet'),
+    ('f27dbf2dbd5ce9a80b102d89c7483342cd33cb31', 'densenet121'),
+    ('b6c8a95717e3e761bd88d145f4d0a214aaa515dc', 'densenet161'),
+    ('2603f878403c6aa5a71a124c4a3307143d6820e9', 'densenet169'),
+    ('1cdbc116bc3a1b65832b18cf53e1cb8e7da017eb', 'densenet201'),
+    ('ed47ec45a937b656fcc94dabde85495bbef5ba1f', 'inceptionv3'),
+    ('d2b128fa89477c2e20061607a53a8d9f66ce239d', 'resnet101_v1'),
+    ('6562166cd597a6328a32a0ce47bb651df80b3bbb', 'resnet152_v1'),
+    ('38d6d423c22828718ec3397924b8e116a03e6ac0', 'resnet18_v1'),
+    ('4dc2c2390a7c7990e0ca1e53aeebb1d1a08592d1', 'resnet34_v1'),
+    ('2a903ab21260c85673a78fe65037819a843a1f43', 'resnet50_v1'),
+    ('264ba4970a0cc87a4f15c96e25246a1307caf523', 'squeezenet1.0'),
+    ('33ba0f93753c83d86e1eb397f38a667eaf2e9376', 'squeezenet1.1'),
+    ('dd221b160977f36a53f464cb54648d227c707a05', 'vgg11'),
+    ('ee79a8098a91fbe05b7a973fed2017a6117723a8', 'vgg11_bn'),
+    ('6bc5de58a05a5e2e7f493e2d75a580d83efde38c', 'vgg13'),
+    ('7d97a06c3c7a1aecc88b6e7385c2b373a249e95e', 'vgg13_bn'),
+    ('649467530119c0f78c4859999e264e7bf14471a9', 'vgg16'),
+    ('6b9dbe6194e5bfed30fd7a7c9a71f7e5a276cb14', 'vgg16_bn'),
+    ('f713436691eee9a20d70a145ce0d53ed24bf7399', 'vgg19'),
+    ('9730961c9cea43fd7eeefb00d792e386c45847d6', 'vgg19_bn')]}
 
 _url_format = 'https://{bucket}.s3.amazonaws.com/gluon/models/{file_name}.zip'
 bucket = 'apache-mxnet'
@@ -61,6 +61,11 @@ def get_model_file(name, local_dir=os.path.expanduser('~/.mxnet/models/')):
         Name of the model.
     local_dir : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
+
+    Returns
+    -------
+    file_path
+        Path to the requested pretrained model file.
     """
     file_name = '{name}-{short_hash}'.format(name=name,
                                              short_hash=short_hash(name))
@@ -90,3 +95,16 @@ def get_model_file(name, local_dir=os.path.expanduser('~/.mxnet/models/')):
         return file_path
     else:
         raise ValueError('Downloaded file has different hash. Please try again.')
+
+def purge(local_dir=os.path.expanduser('~/.mxnet/models/')):
+    r"""Purge all pretrained model files in local file store.
+
+    Parameters
+    ----------
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
+    """
+    files = os.listdir(local_dir)
+    for f in files:
+        if f.endswith(".params"):
+            os.remove(os.path.join(local_dir,f))
