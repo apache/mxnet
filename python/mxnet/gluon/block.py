@@ -431,20 +431,23 @@ class SymbolBlock(HybridBlock):
     Examples
     --------
     >>> # To extract the feature from fc1 and fc2 layers of AlexNet:
-    >>> alexnet = gluon.model_zoo.vision.get_alexnet(pretrained=True, ctx=mx.cpu())
+    >>> alexnet = gluon.model_zoo.vision.alexnet(pretrained=True, ctx=mx.cpu(),
+                                                 prefix='model_')
     >>> inputs = mx.sym.var('data')
     >>> out = alexnet(inputs)
     >>> internals = out.get_internals()
     >>> print(internals.list_outputs())
-    <Symbol group [data, ..., alexnet0_hybridsequential1_dense0_relu0_activation0_output,
-    alexnet0_hybridsequential1_dense1_relu0_activation0_output, ...]>
-    >>> outputs = [internals['alexnet0_hybridsequential1_dense0_relu0_activation0_output'],
-                   internals['alexnet0_hybridsequential1_dense1_relu0_activation0_output']]
+    ['data', ..., 'model_dense0_relu_fwd_output', ..., 'model_dense1_relu_fwd_output', ...]
+    >>> outputs = [internals['model_dense0_relu_fwd_output'],
+                   internals['model_dense1_relu_fwd_output']]
+    >>> # Create SymbolBlock that shares parameters with alexnet
     >>> feat_model = gluon.SymbolBlock(outputs, inputs, params=alexnet.collect_params())
-    >>> print(feat_model(mx.nd.ones((16, 3, 224, 224))))
+    >>> x = mx.nd.random_normal(shape=(16, 3, 224, 224))
+    >>> print(feat_model(x))
     """
-    def __init__(self, outputs, inputs, prefix=None, params=None):
-        super(SymbolBlock, self).__init__(prefix=prefix, params=None)
+    def __init__(self, outputs, inputs, params=None):
+        super(SymbolBlock, self).__init__(prefix=None, params=None)
+        self._prefix = ''
         self._params = ParameterDict('', params)
         if isinstance(inputs, symbol.Symbol) and len(inputs.list_outputs()) == 1:
             inputs = [inputs]

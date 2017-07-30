@@ -98,7 +98,7 @@ class _Conv(HybridBlock):
                 self.bias = None
 
             if activation is not None:
-                self.act = Activation(activation)
+                self.act = Activation(activation, prefix=activation+'_')
             else:
                 self.act = None
 
@@ -643,6 +643,9 @@ class _Pooling(HybridBlock):
             'kernel': pool_size, 'stride': strides, 'pad': padding,
             'global_pool': global_pool, 'pool_type': pool_type,
             'pooling_convention': 'full' if ceil_mode else 'valid'}
+
+    def _alias(self):
+        return 'pool'
 
     def hybrid_forward(self, F, x):
         return F.Pooling(x, name='fwd', **self._kwargs)

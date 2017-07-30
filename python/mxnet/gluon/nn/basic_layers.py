@@ -132,7 +132,7 @@ class Dense(HybridBlock):
             else:
                 self.bias = None
             if activation is not None:
-                self.act = Activation(activation)
+                self.act = Activation(activation, prefix=activation+'_')
             else:
                 self.act = None
 
