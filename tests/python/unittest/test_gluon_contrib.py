@@ -1,0 +1,114 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+from __future__ import print_function
+import mxnet as mx
+from mxnet.gluon import contrib
+import numpy as np
+from numpy.testing import assert_allclose
+
+
+def check_rnn_cell(cell, prefix, in_shape=(10, 50), out_shape=(10, 100), begin_state=None):
+    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
+    outputs, _ = cell.unroll(3, inputs, begin_state=begin_state)
+    outputs = mx.sym.Group(outputs)
+    assert sorted(cell.collect_params().keys()) == [prefix+'h2h_bias', prefix+'h2h_weight',
+                                                    prefix+'i2h_bias', prefix+'i2h_weight']
+    assert outputs.list_outputs() == [prefix+'t0_out_output', prefix+'t1_out_output', prefix+'t2_out_output']
+
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=in_shape,
+                                           rnn_t1_data=in_shape,
+                                           rnn_t2_data=in_shape)
+    assert outs == [out_shape]*3
+
+
+def check_rnn_forward(layer, inputs):
+    inputs.attach_grad()
+    layer.collect_params().initialize()
+    with mx.autograd.record():
+        layer.unroll(3, inputs, merge_outputs=True)[0].backward()
+        mx.autograd.backward(layer.unroll(3, inputs, merge_outputs=False)[0])
+    mx.nd.waitall()
+
+
+def test_rnn_cells():
+    check_rnn_forward(contrib.rnn.Conv1DLSTMCell(10, input_shape=(5, 7)),
+                      mx.nd.ones((8, 3, 5, 7)))
+    check_rnn_forward(contrib.rnn.Conv1DRNNCell(10, input_shape=(5, 7)),
+                      mx.nd.ones((8, 3, 5, 7)))
+    check_rnn_forward(contrib.rnn.Conv1DGRUCell(10, input_shape=(5, 7)),
+                      mx.nd.ones((8, 3, 5, 7)))
+
+    net = mx.gluon.rnn.SequentialRNNCell()
+    net.add(contrib.rnn.Conv1DLSTMCell(10, input_shape=(5, 7)))
+    net.add(contrib.rnn.Conv1DRNNCell(11, input_shape=(10, 7)))
+    net.add(contrib.rnn.Conv1DGRUCell(12, input_shape=(11, 7)))
+    check_rnn_forward(net, mx.nd.ones((8, 3, 5, 7)))
+
+
+def test_convrnn():
+    cell = contrib.rnn.Conv1DRNNCell(hidden_channels=100, input_shape=(10, 50),
+                                   prefix='rnn_')
+    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 50))
+
+    cell = contrib.rnn.Conv2DRNNCell(hidden_channels=100, input_shape=(10, 20, 50),
+                                   prefix='rnn_')
+    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 50), out_shape=(1, 100, 20, 50))
+
+    cell = contrib.rnn.Conv3DRNNCell(hidden_channels=100, input_shape=(10, 20, 30, 50),
+                                   prefix='rnn_')
+    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 20, 30, 50))
+
+    cell = contrib.rnn.Conv3DRNNCell(hidden_channels=100, prefix='rnn_')
+    states = cell.begin_state(input_shape=(10, 20, 30, 50), func=mx.sym.zeros)
+    check_rnn_cell(cell, prefix='rnn_',
+                   in_shape=(1, 10, 20, 30, 50),
+                   out_shape=(1, 100, 20, 30, 50),
+                   begin_state=states)
+
+
+def test_convlstm():
+    cell = contrib.rnn.Conv1DLSTMCell(hidden_channels=100, input_shape=(10, 50),
+                                    prefix='rnn_')
+    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 50))
+
+    cell = contrib.rnn.Conv2DLSTMCell(hidden_channels=100, input_shape=(10, 20, 50),
+                                    prefix='rnn_')
+    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 50), out_shape=(1, 100, 20, 50))
+
+    cell = contrib.rnn.Conv3DLSTMCell(hidden_channels=100, input_shape=(10, 20, 30, 50),
+                                    prefix='rnn_')
+    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 20, 30, 50))
+
+
+def test_convgru():
+    cell = contrib.rnn.Conv1DGRUCell(hidden_channels=100, input_shape=(10, 50),
+                                   prefix='rnn_')
+    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 50))
+
+    cell = contrib.rnn.Conv2DGRUCell(hidden_channels=100, input_shape=(10, 20, 50),
+                                   prefix='rnn_')
+    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 50), out_shape=(1, 100, 20, 50))
+
+    cell = contrib.rnn.Conv3DGRUCell(hidden_channels=100, input_shape=(10, 20, 30, 50),
+                                   prefix='rnn_')
+    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 20, 30, 50))
+
+
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()
