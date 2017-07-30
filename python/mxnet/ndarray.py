@@ -53,7 +53,9 @@ _DTYPE_NP_TO_MX = {
     np.float64 : 1,
     np.float16 : 2,
     np.uint8   : 3,
-    np.int32   : 4
+    np.int32   : 4,
+    np.int8    : 5,
+    np.int64   : 6,
 }
 
 _DTYPE_MX_TO_NP = {
@@ -62,7 +64,9 @@ _DTYPE_MX_TO_NP = {
     1 : np.float64,
     2 : np.float16,
     3 : np.uint8,
-    4 : np.int32
+    4 : np.int32,
+    5 : np.int8,
+    6 : np.int64,
 }
 
 _GRAD_REQ_MAP = {
@@ -272,6 +276,10 @@ fixed-size items.
 
     __nonzero__ = __bool__
 
+    def __len__(self):
+        """Number of element along the first axis."""
+        return self.shape[0]
+
     def __getstate__(self):
         handle = self.handle
         this = {'handle' : None}
@@ -369,11 +377,13 @@ fixed-size items.
                     len(key), len(my_shape))
             begin = [0 for _ in my_shape]
             end = [x for x in my_shape]
+            expand = []
             for i, slice_i in enumerate(key):
                 if isinstance(slice_i, integer_types):
                     assert slice_i < my_shape[i]
                     begin[i] = slice_i
                     end[i] = slice_i + 1
+                    expand.append(i)
                 elif isinstance(slice_i, py_slice):
                     # only support continuous slicing
                     assert slice_i.step is None, \
@@ -389,16 +399,14 @@ fixed-size items.
 
             if isinstance(value, NDArray):
                 value = value.as_in_context(self.context)
-                _internal._crop_assign(self, value, out=self,
-                                       begin=begin, end=end)
+                self._slice_assign(value, begin, end, expand)
             elif isinstance(value, numeric_types):
                 _internal._crop_assign_scalar(self, out=self,
                                               begin=begin, end=end,
                                               scalar=value)
             elif isinstance(value, (np.ndarray, np.generic)):
-                value = array(value, ctx=self.context)
-                _internal._crop_assign(self, value, out=self,
-                                       begin=begin, end=end)
+                value = array(value, ctx=self.context, dtype=self.dtype)
+                self._slice_assign(value, begin, end, expand)
             else:
                 raise TypeError(
                     'NDArray does not support assignment with %s of type %s'%(
@@ -408,6 +416,22 @@ fixed-size items.
                 "NDArray does not support slicing with key %s of type %s."%(
                     str(key), str(type(key))))
         # pylint: enable=too-many-branches
+
+    def _slice_assign(self, value, begin, end, expand):
+        vshape = list(value.shape)
+        if expand and len(vshape) != len(begin):
+            if len(expand) + len(vshape) != len(begin):
+                sshape = [e - b for e, b in zip(end, begin)]
+                for i in reversed(expand):
+                    sshape.pop(i)
+                raise ValueError(
+                    "Cannot assign NDArray with shape %s to NDArray slice with " \
+                    "shape %s"%(str(vshape), str(sshape)))
+            for i in expand:
+                vshape.insert(i, 1)
+            value = value.reshape(vshape)
+        _internal._crop_assign(self, value, out=self,
+                               begin=begin, end=end)
 
     def __getitem__(self, key):
         """x.__getitem__(i) <=> x[i]
@@ -749,7 +773,10 @@ fixed-size items.
         >>> np.prod(x.shape)
         30
         """
-        return np.prod(self.shape)
+        size = 1
+        for i in self.shape:
+            size *= i
+        return size
 
     @property
     def context(self):

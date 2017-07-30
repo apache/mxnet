@@ -7,9 +7,11 @@ import struct
 import traceback
 import numbers
 import subprocess
+import sys
 import os
 import errno
 import logging
+from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
 import mxnet as mx
@@ -1044,3 +1046,22 @@ def same_array(array1, array2):
         return False
     array1[:] -= 1
     return same(array1.asnumpy(), array2.asnumpy())
+
+@contextmanager
+def discard_stderr():
+    """
+    Discards error output of a routine if invoked as:
+
+    with discard_stderr():
+        ...
+    """
+
+    try:
+        stderr_fileno = sys.stderr.fileno()
+        old_stderr = os.dup(stderr_fileno)
+        bit_bucket = open(os.devnull, 'w')
+        os.dup2(bit_bucket.fileno(), stderr_fileno)
+        yield
+    finally:
+        os.dup2(old_stderr, stderr_fileno)
+        bit_bucket.close()
