@@ -235,7 +235,7 @@ class BatchNorm(HybridBlock):
         set `axis=1` in `BatchNorm`. If `layout='NHWC'`, then set `axis=3`.
     momentum: float, default 0.9
         Momentum for the moving average.
-    epsilon: float, default 1e-3
+    epsilon: float, default 1e-5
         Small float added to variance to avoid dividing by zero.
     center: bool, default True
         If True, add offset of `beta` to normalized tensor.
@@ -265,7 +265,7 @@ class BatchNorm(HybridBlock):
     Output shape:
         Same shape as input.
     """
-    def __init__(self, axis=1, momentum=0.9, epsilon=1e-3, center=True, scale=True,
+    def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
                  running_mean_initializer='zeros', running_variance_initializer='ones',
                  in_channels=0, **kwargs):
