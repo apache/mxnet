@@ -268,7 +268,7 @@ class RNN(_RNNLayer):
     Recurrent state shape:
         The recurrent state's shape is `(num_layers, batch_size, num_hidden)`.
         If `bidirectional` is True, state shape will instead be
-        `(num_layers, batch_size, 2*num_hidden)`
+        `(2*num_layers, batch_size, num_hidden)`
 
 
     Examples
@@ -366,7 +366,7 @@ class LSTM(_RNNLayer):
         The recurrent state is a list of two NDArrays. Both has shape
         `(num_layers, batch_size, num_hidden)`.
         If `bidirectional` is True, state shape will instead be
-        `(num_layers, batch_size, 2*num_hidden)`.
+        `(2*num_layers, batch_size, num_hidden)`.
 
 
     Examples
@@ -460,7 +460,7 @@ class GRU(_RNNLayer):
     Recurrent state shape:
         The recurrent state's shape is `(num_layers, batch_size, num_hidden)`.
         If `bidirectional` is True, state shape will instead be
-        `(num_layers, batch_size, 2*num_hidden)`
+        `(2*num_layers, batch_size, num_hidden)`
 
 
     Examples
