@@ -38,6 +38,12 @@ class Sequential(Block):
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
+    def __getitem__(self, i):
+        return self._children[i]
+
+    def __len__(self):
+        return len(self._children)
+
 
 class HybridSequential(HybridBlock):
     """Stacks `HybridBlock`s sequentially.
@@ -70,6 +76,12 @@ class HybridSequential(HybridBlock):
                             if isinstance(block, Block)])
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
+
+    def __getitem__(self, i):
+        return self._children[i]
+
+    def __len__(self):
+        return len(self._children)
 
 
 class Dense(HybridBlock):
