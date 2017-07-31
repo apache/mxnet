@@ -335,7 +335,7 @@ class Parameter(object):
         parameter is uninitialized or doesn't require gradient."""
         if self._grad is None:
             return
-        for i in self._grad:
+        for i in self._grad.values():
             i[:] = 0
 
     def var(self):
