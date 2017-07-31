@@ -291,16 +291,8 @@ class RNN(_RNNLayer):
                                   'rnn_'+activation, **kwargs)
 
     def state_info(self, batch_size=0):
-        shape_dict = {
-            'T': self._num_layers * self._dir,
-            'N': batch_size,
-            'C': self._hidden_size
-        }
-
-        return [{
-            'shape': tuple(shape_dict[dim] for dim in self._layout),
-            '__layout__': self._layout
-        }]
+        return [{'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
+                 '__layout__': 'LNC'}]
 
 
 class LSTM(_RNNLayer):
@@ -398,19 +390,10 @@ class LSTM(_RNNLayer):
                                    'lstm', **kwargs)
 
     def state_info(self, batch_size=0):
-        shape_dict = {
-            'T': self._num_layers * self._dir,
-            'N': batch_size,
-            'C': self._hidden_size
-        }
-
-        return [{
-            'shape': tuple(shape_dict[dim] for dim in self._layout),
-            '__layout__': self._layout
-        }, {
-            'shape': tuple(shape_dict[dim] for dim in self._layout),
-            '__layout__': self._layout
-        }]
+        return [{'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
+                 '__layout__': 'LNC'},
+                {'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
+                 '__layout__': 'LNC'}]
 
 
 class GRU(_RNNLayer):
@@ -500,13 +483,5 @@ class GRU(_RNNLayer):
                                   'gru', **kwargs)
 
     def state_info(self, batch_size=0):
-        shape_dict = {
-            'T': self._num_layers * self._dir,
-            'N': batch_size,
-            'C': self._hidden_size
-        }
-
-        return [{
-            'shape': tuple(shape_dict[dim] for dim in self._layout),
-            '__layout__': self._layout
-        }]
+        return [{'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
+                 '__layout__': 'LNC'}]
