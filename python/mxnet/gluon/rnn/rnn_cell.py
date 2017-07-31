@@ -545,6 +545,9 @@ class SequentialRNNCell(RecurrentCell):
 
         return inputs, next_states
 
+    def __getitem__(self, i):
+        return self._children[i]
+
     def hybrid_forward(self, *args, **kwargs):
         raise NotImplementedError
 
