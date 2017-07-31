@@ -10,23 +10,8 @@ from ...base import string_types, numeric_types
 from ..block import Block, HybridBlock
 from ..utils import _indent
 from .. import tensor_types
+from ...module.base_module import _as_list
 
-
-def _as_list(obj):
-    """A utility function that treat the argument as a list.
-
-    Parameters
-    ----------
-    obj : object
-
-    Returns
-    -------
-    If `obj` is a list, return it. Otherwise, return `[obj]` as a single-element list.
-    """
-    if isinstance(obj, list):
-        return obj
-    else:
-        return [obj]
 
 def _cells_state_info(cells, batch_size):
     return sum([c.state_info(batch_size) for c in cells], [])
