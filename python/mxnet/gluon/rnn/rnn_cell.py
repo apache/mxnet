@@ -83,9 +83,8 @@ class RecurrentCell(Block):
         Container for weight sharing between cells.
         A new Parameter container is created if `params` is `None`.
     """
-    def __init__(self, prefix=None, params=None, grad_req='write'):
-        super(RecurrentCell, self).__init__(prefix=prefix, params=params,
-                                            grad_req=grad_req)
+    def __init__(self, prefix=None, params=None):
+        super(RecurrentCell, self).__init__(prefix=prefix, params=params)
         self._modified = False
         self.reset()
 
@@ -248,9 +247,8 @@ class RecurrentCell(Block):
 
 class HybridRecurrentCell(RecurrentCell, HybridBlock):
     """HybridRecurrentCell supports hybridize."""
-    def __init__(self, prefix=None, params=None, grad_req='write'):
-        super(HybridRecurrentCell, self).__init__(prefix=prefix, params=params,
-                                                  grad_req=grad_req)
+    def __init__(self, prefix=None, params=None):
+        super(HybridRecurrentCell, self).__init__(prefix=prefix, params=params)
 
     def hybrid_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError
@@ -285,28 +283,23 @@ class RNNCell(HybridRecurrentCell):
     def __init__(self, hidden_size, activation='tanh',
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 input_size=0, prefix=None, params=None, grad_req='write'):
-        super(RNNCell, self).__init__(prefix=prefix, params=params,
-                                      grad_req=grad_req)
+                 input_size=0, prefix=None, params=None):
+        super(RNNCell, self).__init__(prefix=prefix, params=params)
         self._hidden_size = hidden_size
         self._activation = activation
         self._input_size = input_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(hidden_size, input_size),
                                           init=i2h_weight_initializer,
-                                          allow_deferred_init=True,
-                                          grad_req=self.grad_req)
+                                          allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(hidden_size, hidden_size),
                                           init=h2h_weight_initializer,
-                                          allow_deferred_init=True,
-                                          grad_req=self.grad_req)
+                                          allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(hidden_size,),
                                         init=i2h_bias_initializer,
-                                        allow_deferred_init=True,
-                                        grad_req=self.grad_req)
+                                        allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(hidden_size,),
                                         init=h2h_bias_initializer,
-                                        allow_deferred_init=True,
-                                        grad_req=self.grad_req)
+                                        allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'}]
@@ -358,28 +351,23 @@ class LSTMCell(HybridRecurrentCell):
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 input_size=0, prefix=None, params=None, grad_req='write'):
-        super(LSTMCell, self).__init__(prefix=prefix, params=params,
-                                       grad_req=grad_req)
+                 input_size=0, prefix=None, params=None):
+        super(LSTMCell, self).__init__(prefix=prefix, params=params)
 
         self._hidden_size = hidden_size
         self._input_size = input_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(4*hidden_size, input_size),
                                           init=i2h_weight_initializer,
-                                          allow_deferred_init=True,
-                                          grad_req=self.grad_req)
+                                          allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(4*hidden_size, hidden_size),
                                           init=h2h_weight_initializer,
-                                          allow_deferred_init=True,
-                                          grad_req=self.grad_req)
+                                          allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(4*hidden_size,),
                                         init=i2h_bias_initializer,
-                                        allow_deferred_init=True,
-                                        grad_req=self.grad_req)
+                                        allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
                                         init=h2h_bias_initializer,
-                                        allow_deferred_init=True,
-                                        grad_req=self.grad_req)
+                                        allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'},
@@ -438,27 +426,22 @@ class GRUCell(HybridRecurrentCell):
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 input_size=0, prefix=None, params=None, grad_req='write'):
-        super(GRUCell, self).__init__(prefix=prefix, params=params,
-                                      grad_req=grad_req)
+                 input_size=0, prefix=None, params=None):
+        super(GRUCell, self).__init__(prefix=prefix, params=params)
         self._hidden_size = hidden_size
         self._input_size = input_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(3*hidden_size, input_size),
                                           init=i2h_weight_initializer,
-                                          allow_deferred_init=True,
-                                          grad_req=self.grad_req)
+                                          allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(3*hidden_size, hidden_size),
                                           init=h2h_weight_initializer,
-                                          allow_deferred_init=True,
-                                          grad_req=self.grad_req)
+                                          allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(3*hidden_size,),
                                         init=i2h_bias_initializer,
-                                        allow_deferred_init=True,
-                                        grad_req=self.grad_req)
+                                        allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(3*hidden_size,),
                                         init=h2h_bias_initializer,
-                                        allow_deferred_init=True,
-                                        grad_req=self.grad_req)
+                                        allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'}]
@@ -503,9 +486,8 @@ class GRUCell(HybridRecurrentCell):
 
 class SequentialRNNCell(RecurrentCell):
     """Sequentially stacking multiple RNN cells."""
-    def __init__(self, prefix=None, params=None, grad_req='write'):
-        super(SequentialRNNCell, self).__init__(prefix=prefix, params=params,
-                                                grad_req=grad_req)
+    def __init__(self, prefix=None, params=None):
+        super(SequentialRNNCell, self).__init__(prefix=prefix, params=params)
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
@@ -576,8 +558,8 @@ class DropoutCell(HybridRecurrentCell):
         Percentage of elements to drop out, which
         is 1 - percentage to retain.
     """
-    def __init__(self, rate, prefix=None, params=None, grad_req='write'):
-        super(DropoutCell, self).__init__(prefix, params, grad_req=grad_req)
+    def __init__(self, rate, prefix=None, params=None):
+        super(DropoutCell, self).__init__(prefix, params)
         assert isinstance(rate, numeric_types), "rate must be a number"
         self.rate = rate
 
@@ -740,9 +722,8 @@ class BidirectionalCell(HybridRecurrentCell):
     r_cell : RecurrentCell
         Cell for backward unrolling
     """
-    def __init__(self, l_cell, r_cell, output_prefix='bi_', grad_req='write'):
-        super(BidirectionalCell, self).__init__(prefix='', params=None,
-                                                grad_req=grad_req)
+    def __init__(self, l_cell, r_cell, output_prefix='bi_'):
+        super(BidirectionalCell, self).__init__(prefix='', params=None)
         self.register_child(l_cell)
         self.register_child(r_cell)
         self._output_prefix = output_prefix

@@ -89,13 +89,11 @@ class _Conv(HybridBlock):
             wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)
             self.weight = self.params.get('weight', shape=wshapes[1],
                                           init=weight_initializer,
-                                          allow_deferred_init=True,
-                                          grad_req=self.grad_req)
+                                          allow_deferred_init=True)
             if use_bias:
                 self.bias = self.params.get('bias', shape=wshapes[2],
                                             init=bias_initializer,
-                                            allow_deferred_init=True,
-                                            grad_req=self.grad_req)
+                                            allow_deferred_init=True)
             else:
                 self.bias = None
 
