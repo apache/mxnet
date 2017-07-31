@@ -1,4 +1,4 @@
-<img src=https://s3.amazonaws.com/mxnetdoc/Logo.png width=250/> *for Deep Learning*
+<img src=https://s3.amazonaws.com/mxnetdoc/mxnet_logo_color.png width=250/> *for Deep Learning*
 =====
 
 [![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
