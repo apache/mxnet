@@ -12,6 +12,22 @@ from ..utils import _indent
 from .. import tensor_types
 
 
+def _as_list(obj):
+    """A utility function that treat the argument as a list.
+
+    Parameters
+    ----------
+    obj : object
+
+    Returns
+    -------
+    If `obj` is a list, return it. Otherwise, return `[obj]` as a single-element list.
+    """
+    if isinstance(obj, list):
+        return obj
+    else:
+        return [obj]
+
 def _cells_state_info(cells, batch_size):
     return sum([c.state_info(batch_size) for c in cells], [])
 
@@ -50,8 +66,9 @@ def _format_sequence(length, inputs, layout, merge, in_layout=None):
         batch_size = inputs.shape[batch_axis]
         if merge is False:
             assert length is None or length == inputs.shape[in_axis]
-            inputs = ndarray.split(inputs, axis=in_axis, num_outputs=inputs.shape[in_axis],
-                                   squeeze_axis=1)
+            inputs = _as_list(ndarray.split(inputs, axis=in_axis,
+                                            num_outputs=inputs.shape[in_axis],
+                                            squeeze_axis=1))
     else:
         assert length is None or len(inputs) == length
         if isinstance(inputs[0], symbol.Symbol):
