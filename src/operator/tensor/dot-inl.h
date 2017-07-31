@@ -378,7 +378,7 @@ struct DotCsrRspDnsByRowBlocks {
 };
 
 /*!
- * \brief Kernel of dot(csr.T(), rsp) = dns with row_idx marked for non-zero rows
+ * \brief CPU Kernel of dot(csr.T(), rsp1) = rsp2, with row_idx marked for non-zero rows
  * Parallelization by row blocks
  */
 struct DotCsrTransRspRspByRowBlocks {
@@ -622,7 +622,7 @@ inline void DotCsrRspRspImpl(mshadow::Stream<cpu>* s,
   MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
-        MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // col idx type
+        MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // row idx type
           if (kWriteTo == req) {
             mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(
                 s, data_out.Size(), data_out.dptr<DType>());
