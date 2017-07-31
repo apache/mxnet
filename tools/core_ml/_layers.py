@@ -408,22 +408,29 @@ def convert_batchnorm(net, node, module, builder):
     builder: NeuralNetworkBuilder
         A neural network builder object.
     """
-    # import pdb; pdb.set_trace()
     input_name, output_name = _get_input_output_name(net, node)
     name = node['name']
-    param = node['attr']
     inputs = node['inputs']
-    # print "jiajie:%s" % len(inputs)
-    outputs = node['outputs']
-    args, aux = module.get_params()
 
+    from ast import literal_eval
+    eps = 1e-3 # Default value of eps for MXNet.
+    if 'attr' in node:
+        if 'eps' in node['attr']:
+            eps = literal_eval(node['attr']['eps'])
+        if 'use_global_stats' in node['attr']:
+            use_global_stats = literal_eval(node['attr']['use_global_stats'])
+            if use_global_stats is False:
+                raise Exception("CoreML doesn't support local batch-norm. Feel free to retrain your MXNet model "
+                "with use_global_stats set to True and convert again. You could also use -f force flag to ignore "
+                "this error; note that this may cause some differences in prediction b/w MXNet and CoreML.")
+                # TODO provide the flag.
+
+    args, aux = module.get_params()
     gamma = args[_get_node_name(net, inputs[1][0])].asnumpy()
     beta = args[_get_node_name(net, inputs[2][0])].asnumpy()
     mean = aux[_get_node_name(net, inputs[3][0])].asnumpy()
     variance = aux[_get_node_name(net, inputs[4][0])].asnumpy()
-
     nb_channels = gamma.shape[0]
-
     builder.add_batchnorm(
         name=name,
         channels=nb_channels,
@@ -432,7 +439,8 @@ def convert_batchnorm(net, node, module, builder):
         mean=mean,
         variance=variance,
         input_name=input_name,
-        output_name=output_name)
+        output_name=output_name,
+        epsilon=eps)
 
 
 def convert_concat(net, node, module, builder):
