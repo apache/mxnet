@@ -17,17 +17,18 @@ def _mxnet_remove_batch(input_data):
     return input_data
 
 
-def _get_mxnet_module(net, input_shape, mode, input_names=None):
+def _get_mxnet_module(net, input_shape, mode, label_names, input_names=None):
     """ Given a symbolic graph, input shape and the initialization mode,
-        Return a MXNet module.
+        returns an MXNet module.
     """
     mod = mx.mod.Module(
         symbol=net,
         context=mx.cpu(),
+        label_names=label_names
     )
     mod.bind(
         data_shapes=[('data', input_shape)],
-        label_shapes=input_names
+        label_shapes=input_names,
     )
     if mode == 'random':
         mod.init_params(
@@ -43,6 +44,7 @@ def _get_mxnet_module(net, input_shape, mode, input_names=None):
         )
     else:
         Exception(KeyError("%s is not a valid initialization mode" % mode))
+
     return mod
 
 
@@ -50,15 +52,18 @@ class MXNetSingleLayerTest(unittest.TestCase):
     """
     Unit test class for testing mxnet converter (converts model and generates preds on same data to assert they are the same).
     """
-    def _test_mxnet_model(self, net, input_shape, mode, delta=1e-3):
+    def _test_mxnet_model(self, net, input_shape, mode, label_names=None, delta=1e-3):
 
-        mod = _get_mxnet_module(net, input_shape, mode)
+        mod = _get_mxnet_module(net, input_shape, mode, label_names)
+
         # Generate some dummy data
         input_data = {'data': np.random.uniform(-0.1, 0.1, input_shape)}
 
         Batch = namedtuple('Batch', ['data'])
         mod.forward(Batch([mx.nd.array(input_data['data'])]))
         mxnet_preds = mod.get_outputs()[0].asnumpy().flatten()
+
+        args, aux = mod.get_params()
 
         # Get predictions from coreml
         spec = mxnet_converter.convert(
@@ -114,7 +119,7 @@ class MXNetSingleLayerTest(unittest.TestCase):
         net = mx.sym.Variable('data')
         net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5)
         net = mx.sym.SoftmaxOutput(net, name='softmax')
-        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random', label_names=['softmax_label'])
 
     def test_tiny_relu_activation_random_input(self):
         np.random.seed(1988)
@@ -378,7 +383,7 @@ class MXNetSingleLayerTest(unittest.TestCase):
         net = mx.sym.Flatten(data=net, name='flatten1')
         net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5)
         net = mx.sym.SoftmaxOutput(net, name='softmax')
-        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random', label_names=['softmax_label'])
 
     def test_transpose(self):
         np.random.seed(1988)
@@ -772,6 +777,26 @@ class MXNetSingleLayerTest(unittest.TestCase):
             name='deconv_1'
         )
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+
+    def test_batch_norm(self):
+        np.random.seed(1988)
+        input_shape = (1, 1, 2, 3)
+
+        net = mx.sym.Variable('data')
+        gamma = mx.sym.Variable('gamma')
+        beta = mx.sym.Variable('beta')
+        moving_mean = mx.sym.Variable('moving_mean')
+        moving_var = mx.sym.Variable('moving_var')
+        net = mx.symbol.BatchNorm(
+            data=net,
+            gamma=gamma,
+            beta=beta,
+            moving_mean=moving_mean,
+            moving_var=moving_var,
+            use_global_stats=True,
+            name='batch_norm_1')
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(MXNetSingleLayerTest)
