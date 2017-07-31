@@ -41,6 +41,9 @@ class Sequential(Block):
     def __getitem__(self, i):
         return self._children[i]
 
+    def __len__(self):
+        return len(self._children)
+
 
 class HybridSequential(HybridBlock):
     """Stacks `HybridBlock`s sequentially.
@@ -76,6 +79,9 @@ class HybridSequential(HybridBlock):
 
     def __getitem__(self, i):
         return self._children[i]
+
+    def __len__(self):
+        return len(self._children)
 
 
 class Dense(HybridBlock):
