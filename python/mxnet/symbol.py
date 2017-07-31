@@ -2180,7 +2180,7 @@ def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
 
 
 def _make_atomic_symbol_function(handle, name):
-    """Create an atomic symbol function by handle and funciton name."""
+    """Create an atomic symbol function by handle and function name."""
     real_name = ctypes.c_char_p()
     desc = ctypes.c_char_p()
     num_args = mx_uint()
