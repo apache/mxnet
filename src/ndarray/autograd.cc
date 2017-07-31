@@ -133,7 +133,8 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
 
   for (uint32_t i = 0; i < outputs.size(); ++i) {
     CHECK(outputs[i].entry_.is_none())
-      << "Inplace operation is not supported when recording with autograd. "
+      << "Inplace operations (+=, -=, x[:]=, etc) are not supported when "
+      << "recording with autograd. "
       << "Assigning to NDArrays that are already in a computational graph "
       << "will cause undefined behavior when evaluating gradients. "
       << "Please call backward first to clear the graph or do this out side of "

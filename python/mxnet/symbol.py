@@ -3,6 +3,10 @@
 # pylint: disable=import-error, no-name-in-module
 """Symbolic configuration API of MXNet."""
 from __future__ import absolute_import as _abs
+try:
+    from __builtin__ import slice as py_slice
+except ImportError:
+    from builtins import slice as py_slice
 
 import ctypes
 import warnings
@@ -484,9 +488,16 @@ class Symbol(SymbolBase):
             Indexing key
 
         """
+        output_names = self.list_outputs()
+        if isinstance(index, py_slice):
+            start = 0 if index.start is None else index.start
+            stop = len(output_names) if index.stop is None else index.stop
+            step = 1 if index.step is None else index.step
+            return Group([self[i] for i in range(start, stop, step)])
+
         if isinstance(index, string_types):
             idx = None
-            for i, name in enumerate(self.list_outputs()):
+            for i, name in enumerate(output_names):
                 if name == index:
                     if idx is not None:
                         raise ValueError('There are multiple outputs with name \"%s\"' % index)
@@ -494,9 +505,10 @@ class Symbol(SymbolBase):
             if idx is None:
                 raise ValueError('Cannot find output that matches name \"%s\"' % index)
             index = idx
+
         if not isinstance(index, int):
             raise TypeError('Symbol only support integer index to fetch i-th output')
-        if index >= (len(self.list_outputs())):
+        if index >= len(output_names):
             # Important, python determines the end by this exception
             raise IndexError
         handle = SymbolHandle()
