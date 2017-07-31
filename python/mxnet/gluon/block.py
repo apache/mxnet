@@ -162,6 +162,9 @@ class Block(object):
     def _alias(self):
         return self.__class__.__name__.lower()
 
+    def __len__(self):
+        return len(self._children)
+
     @property
     def prefix(self):
         """Prefix of this `Block`."""
