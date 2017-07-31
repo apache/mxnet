@@ -40,7 +40,7 @@ class _BlockScope(object):
             prefix = '%s%d_'%(hint, count)
             current._counter[hint] = count + 1
         if params is None:
-            parent = current._block.params
+            parent = current._block._params
             params = ParameterDict(parent.prefix+prefix, parent._shared)
         else:
             params = ParameterDict(params.prefix, params)
@@ -138,9 +138,13 @@ class Block(object):
 
             dense0 = nn.Dense(20)
             dense1 = nn.Dense(20, params=dense0.collect_params())
+    grad_req : {'write', 'add', 'null'}, default 'write'
+        Passed to ParameterDict when creating parameters. See
+        mxnet.gluon.Parameter
     """
-    def __init__(self, prefix=None, params=None):
+    def __init__(self, prefix=None, params=None, grad_req='write'):
         self._prefix, self._params = _BlockScope.create(prefix, params, self._alias())
+        self._grad_req = grad_req
         self._name = self._prefix[:-1] if self._prefix.endswith('_') else self._prefix
         self._scope = _BlockScope(self)
         self._children = []
@@ -186,6 +190,12 @@ class Block(object):
         """Returns this `Block`'s parameter dictionary (does not include its
         children's parameters)."""
         return self._params
+
+    @property
+    def grad_req(self):
+        """Returns this `Block`'s parameter dictionary (does not include its
+        children's parameters)."""
+        return self._grad_req
 
     def collect_params(self):
         """Returns a `ParameterDict` containing this `Block` and all of its
@@ -280,8 +290,9 @@ class HybridBlock(Block):
     Refer `Hybrid tutorial <http://mxnet.io/tutorials/gluon/hybrid.html>`_ to see
     the end-to-end usage.
     """
-    def __init__(self, prefix=None, params=None):
-        super(HybridBlock, self).__init__(prefix=prefix, params=params)
+    def __init__(self, prefix=None, params=None, grad_req='write'):
+        super(HybridBlock, self).__init__(prefix=prefix, params=params,
+                                          grad_req=grad_req)
         self._reg_params = {}
         self._cached_graph = ()
         self._cached_op = None
@@ -445,8 +456,9 @@ class SymbolBlock(HybridBlock):
     >>> x = mx.nd.random_normal(shape=(16, 3, 224, 224))
     >>> print(feat_model(x))
     """
-    def __init__(self, outputs, inputs, params=None):
-        super(SymbolBlock, self).__init__(prefix=None, params=None)
+    def __init__(self, outputs, inputs, params=None, grad_req='write'):
+        super(SymbolBlock, self).__init__(prefix=None, params=None,
+                                          grad_req=grad_req)
         self._prefix = ''
         self._params = ParameterDict('', params)
         if isinstance(inputs, symbol.Symbol) and len(inputs.list_outputs()) == 1:

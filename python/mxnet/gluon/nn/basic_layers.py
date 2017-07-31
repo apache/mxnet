@@ -124,11 +124,13 @@ class Dense(HybridBlock):
             self._in_units = in_units
             self.weight = self.params.get('weight', shape=(units, in_units),
                                           init=weight_initializer,
-                                          allow_deferred_init=True)
+                                          allow_deferred_init=True,
+                                          grad_req=self.grad_req)
             if use_bias:
                 self.bias = self.params.get('bias', shape=(units,),
                                             init=bias_initializer,
-                                            allow_deferred_init=True)
+                                            allow_deferred_init=True,
+                                            grad_req=self.grad_req)
             else:
                 self.bias = None
             if activation is not None:
@@ -228,6 +230,8 @@ class BatchNorm(HybridBlock):
     Normalizes the input at each batch, i.e. applies a transformation
     that maintains the mean activation close to 0 and the activation
     standard deviation close to 1.
+
+    Note that BatchNorm does not honor the grad_req parameter.
 
     Parameters
     ----------
@@ -369,7 +373,8 @@ class Embedding(HybridBlock):
                         'dtype': dtype}
         self.weight = self.params.get('weight', shape=(input_dim, output_dim),
                                       init=weight_initializer,
-                                      allow_deferred_init=True)
+                                      allow_deferred_init=True,
+                                      grad_req=self.grad_req)
 
     def hybrid_forward(self, F, x, weight):
         return F.Embedding(x, weight, name='fwd', **self._kwargs)

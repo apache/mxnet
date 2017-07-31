@@ -45,19 +45,23 @@ class _RNNLayer(Block):
                 self.i2h_weight.append(
                     self.params.get('%s%d_i2h_weight'%(j, i), shape=(ng*nh, ni),
                                     init=i2h_weight_initializer,
-                                    allow_deferred_init=True))
+                                    allow_deferred_init=True,
+                                    grad_req=self.grad_req))
                 self.h2h_weight.append(
                     self.params.get('%s%d_h2h_weight'%(j, i), shape=(ng*nh, nh),
                                     init=h2h_weight_initializer,
-                                    allow_deferred_init=True))
+                                    allow_deferred_init=True,
+                                    grad_req=self.grad_req))
                 self.i2h_bias.append(
                     self.params.get('%s%d_i2h_bias'%(j, i), shape=(ng*nh,),
                                     init=i2h_bias_initializer,
-                                    allow_deferred_init=True))
+                                    allow_deferred_init=True,
+                                    grad_req=self.grad_req))
                 self.h2h_bias.append(
                     self.params.get('%s%d_h2h_bias'%(j, i), shape=(ng*nh,),
                                     init=h2h_bias_initializer,
-                                    allow_deferred_init=True))
+                                    allow_deferred_init=True,
+                                    grad_req=self.grad_req))
             ni = nh * self._dir
 
         self._unfused = self._unfuse()
@@ -84,16 +88,21 @@ class _RNNLayer(Block):
         """Unfuses the fused RNN in to a stack of rnn cells."""
         get_cell = {'rnn_relu': lambda **kwargs: rnn_cell.RNNCell(self._hidden_size,
                                                                   activation='relu',
+                                                                  grad_req=self.grad_req,
                                                                   **kwargs),
                     'rnn_tanh': lambda **kwargs: rnn_cell.RNNCell(self._hidden_size,
                                                                   activation='tanh',
+                                                                  grad_req=self.grad_req,
                                                                   **kwargs),
                     'lstm': lambda **kwargs: rnn_cell.LSTMCell(self._hidden_size,
+                                                               grad_req=self.grad_req,
                                                                **kwargs),
                     'gru': lambda **kwargs: rnn_cell.GRUCell(self._hidden_size,
+                                                             grad_req=self.grad_req,
                                                              **kwargs)}[self._mode]
 
-        stack = rnn_cell.SequentialRNNCell(prefix=self.prefix, params=self.params)
+        stack = rnn_cell.SequentialRNNCell(prefix=self.prefix, params=self.params,
+                                           grad_req=self.grad_req)
         with stack.name_scope():
             ni = self._input_size
             for i in range(self._num_layers):
