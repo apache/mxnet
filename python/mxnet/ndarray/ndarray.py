@@ -847,7 +847,7 @@ fixed-size items.
 
         Returns
         -------
-        NDArray
+        NDArray, CSRNDArray, RowSparseNDArray
             The copied array. If ``other`` is an ``NDArray``, then the return value
             and ``other`` will point to the same ``NDArray``.
 
@@ -1038,8 +1038,7 @@ def full(shape, val, ctx=None, dtype=mx_real_t, out=None):
     out[:] = val
     return out
 
-
-def array(source_array, ctx=None, dtype=None):
+def _array(source_array, ctx=None, dtype=None):
     """Creates an array from any object exposing the array interface.
 
     Parameters
@@ -1057,18 +1056,6 @@ def array(source_array, ctx=None, dtype=None):
     -------
     NDArray
         An `NDArray` with the same contents as the `source_array`.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> mx.nd.array([1, 2, 3])
-    <NDArray 3 @cpu(0)>
-    >>> mx.nd.array([[1, 2], [3, 4]])
-    <NDArray 2x2 @cpu(0)>
-    >>> mx.nd.array(np.zeros((3, 2)))
-    <NDArray 3x2 @cpu(0)>
-    >>> mx.nd.array(np.zeros((3, 2)), mx.gpu(0))
-    <NDArray 3x2 @gpu(0)>
     """
     if isinstance(source_array, NDArray):
         dtype = source_array.dtype if dtype is None else dtype
@@ -1082,7 +1069,6 @@ def array(source_array, ctx=None, dtype=None):
     arr = _empty_ndarray(source_array.shape, ctx, dtype)
     arr[:] = source_array
     return arr
-
 
 def moveaxis(tensor, source, destination):
     """Moves the `source` axis into the `destination` position

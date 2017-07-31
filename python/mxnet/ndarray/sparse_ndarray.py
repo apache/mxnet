@@ -21,10 +21,9 @@ from ..base import c_array, mx_real_t
 from ..base import mx_uint, NDArrayHandle, check_call
 from ..context import Context
 from . import _internal
-from . import ndarray
 from .ndarray import _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .ndarray import _STORAGE_TYPE_STR_TO_ID
-from .ndarray import NDArray, _storage_type, _zeros_ndarray, array
+from .ndarray import NDArray, _storage_type, _zeros_ndarray, _array
 from . import cast_storage
 from . import slice as nd_slice
 
@@ -149,7 +148,7 @@ class BaseSparseNDArray(NDArray):
                 # TODO(haibin) Implement _sync_copyfrom for sparse ndarray to avoid an extra copy
                 warnings.warn('Assigning non-NDArray object to BaseSparseNDArray is not efficient',
                               RuntimeWarning)
-                tmp = ndarray.array(value)
+                tmp = _array(value)
                 tmp.copyto(self)
             else:
                 raise TypeError('type %s not supported' % str(type(value)))
@@ -490,11 +489,11 @@ def csr(data, indptr, indices, shape, ctx=None, dtype=None, indptr_type=None, in
     # if they are not for now. In the future, we should provide a c-api
     # to accept np.ndarray types to copy from to result.data and aux_data
     if not isinstance(data, NDArray):
-        data = array(data, ctx, dtype)
+        data = _array(data, ctx, dtype)
     if not isinstance(indptr, NDArray):
-        indptr = array(indptr, ctx, indptr_type)
+        indptr = _array(indptr, ctx, indptr_type)
     if not isinstance(indices, NDArray):
-        indices = array(indices, ctx, indices_type)
+        indices = _array(indices, ctx, indices_type)
     check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, data.handle, ctypes.c_int(-1)))
     check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, indptr.handle, ctypes.c_int(0)))
     check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, indices.handle, ctypes.c_int(1)))
@@ -556,9 +555,9 @@ def row_sparse(data, indices, shape, ctx=None, dtype=None, indices_type=None):
     # if they are not for now. In the future, we should provide a c-api
     # to accept np.ndarray types to copy from to result.data and aux_data
     if not isinstance(data, NDArray):
-        data = array(data, ctx, dtype)
+        data = _array(data, ctx, dtype)
     if not isinstance(indices, NDArray):
-        indices = array(indices, ctx, indices_type)
+        indices = _array(indices, ctx, indices_type)
     check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, data.handle, ctypes.c_int(-1)))
     check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, indices.handle, ctypes.c_int(0)))
     return result
@@ -570,7 +569,7 @@ def todense(source):
     Returns
     -------
     NDArray
-        The dense array with default storage
+        A copy of the array with `default` storage stype
     """
     return cast_storage(source, stype='default')
 
@@ -610,7 +609,7 @@ def _zeros_sparse_ndarray(stype, shape, ctx=None, dtype=None, aux_types=None, **
 
     Returns
     -------
-    BaseSparseNDArray
+    RowSparseNDArray or CSRNDArray
         A created array
     Examples
     --------
@@ -647,3 +646,19 @@ def _empty_sparse_ndarray(stype, shape, ctx=None, dtype=None, aux_types=None):
         return _zeros_sparse_ndarray(stype, shape, ctx=ctx, dtype=dtype, aux_types=aux_types)
     else:
         raise Exception("unknown stype : " + str(stype))
+
+def _sparse_array(source_array, ctx=None, dtype=None, aux_types=None):
+    """Creates a sparse array from any object exposing the array interface.
+    """
+    if isinstance(source_array, NDArray):
+        assert(source_array.stype != 'default'), \
+               "Please use `cast_storage` to create BaseSparseNDArray from an NDArray"
+        dtype = source_array.dtype if dtype is None else dtype
+        aux_types = source_array._aux_types if aux_types is None else aux_types
+    else:
+        # TODO(haibin/anisub) support creation from scipy object when `_sync_copy_from` is ready
+        raise NotImplementedError('creating BaseSparseNDArray from ' \
+                                  ' a non-NDArray object is not implemented.')
+    arr = _empty_sparse_ndarray(source_array.stype, source_array.shape, ctx, dtype, aux_types)
+    arr[:] = source_array
+    return arr
