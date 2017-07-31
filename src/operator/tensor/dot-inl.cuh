@@ -10,9 +10,9 @@
 #include <mxnet/operator.h>
 
 // TODO(stefan): change dot interface s.t. it includes OpContext
-// TODO(stefan): use size_t instead of index_t
 namespace mxnet {
 namespace op {
+using nnvm::dim_t;
 
 /*!
  * \brief Scalar kernel of dot(csr, dns1) = dns2
@@ -33,14 +33,14 @@ struct DotCsrDnsDnsScalarKernel {
    */
   template<typename DType, typename IType, typename CType>
   __device__ __forceinline__ static void Map(int tid,
-                                  DType* out,
-                                  const DType* data_l,
-                                  const IType* indptr_l,
-                                  const CType* col_idx_l,
-                                  const DType* data_r,
-                                  const index_t num_cols_r) {
-    const index_t irow = tid / num_cols_r;  // row id of the lhs
-    const index_t icol = tid % num_cols_r;  // col id of the rhs
+                                             DType* out,
+                                             const DType* data_l,
+                                             const IType* indptr_l,
+                                             const CType* col_idx_l,
+                                             const DType* data_r,
+                                             const dim_t num_cols_r) {
+    const dim_t irow = tid / num_cols_r;  // row id of the lhs
+    const dim_t icol = tid % num_cols_r;  // col id of the rhs
     DType sum = 0;
     for (IType j = indptr_l[irow]; j < indptr_l[irow+1]; ++j) {
       const CType cur_col = col_idx_l[j];  // corresponding row id of the rhs
@@ -63,20 +63,20 @@ struct DotCsrDnsDnsVectorKernel {
                                              const IType* indptr_l,
                                              const CType* col_idx_l,
                                              const DType* data_r,
-                                             const index_t num_cols_r) {
+                                             const dim_t num_cols_r) {
     __shared__ volatile DType vals[mshadow::cuda::kBaseThreadNum];
-    const index_t warp_id = tid / 32;           // global warp id
-    const index_t lane = tid & (32-1);          // local thread id within warp
-    const index_t irow = warp_id / num_cols_r;  // lhs row that this warp computes
-    const index_t kcol = warp_id % num_cols_r;  // rhs column that this warp computes
+    const dim_t warp_id = tid / 32;           // global warp id
+    const dim_t lane = tid & (32-1);          // local thread id within warp
+    const dim_t irow = warp_id / num_cols_r;  // lhs row that this warp computes
+    const dim_t kcol = warp_id % num_cols_r;  // rhs column that this warp computes
 
     // Range of nnz elements in this row
-    const index_t low  = static_cast<index_t>(indptr_l[irow]);
-    const index_t high = static_cast<index_t>(indptr_l[irow+1]);
+    const dim_t low  = static_cast<dim_t>(indptr_l[irow]);
+    const dim_t high = static_cast<dim_t>(indptr_l[irow+1]);
 
     // Compute running sum per thread
     DType sum = 0;
-    for (index_t j = low+lane; j < high; j+=32) {
+    for (dim_t j = low+lane; j < high; j+=32) {
       sum += data_l[j] * data_r[col_idx_l[j]*num_cols_r + kcol];
     }
     vals[threadIdx.x] = sum; __syncwarp();
@@ -114,25 +114,25 @@ struct DotCsrTransDnsDnsScalarKernel {
    */
   template<typename DType, typename IType, typename CType>
   __device__ __forceinline__ static void Map(int tid,
-                                  DType* out,
-                                  const DType* data_l,
-                                  const IType* indptr_l,
-                                  const CType* col_idx_l,
-                                  const DType* data_r,
-                                  const index_t num_rows_l,
-                                  const index_t num_cols_r) {
-    const index_t irow = tid / num_cols_r;  // col id of the lhs
-    const index_t icol = tid % num_cols_r;  // col id of the rhs
+                                             DType* out,
+                                             const DType* data_l,
+                                             const IType* indptr_l,
+                                             const CType* col_idx_l,
+                                             const DType* data_r,
+                                             const dim_t num_rows_l,
+                                             const dim_t num_cols_r) {
+    const dim_t irow = tid / num_cols_r;  // col id of the lhs
+    const dim_t icol = tid % num_cols_r;  // col id of the rhs
     DType sum = 0;
 
     // Each thread scans each column with binary search to find nnz elements in its row
-    for (index_t k = 0; k < num_rows_l; ++k) {
-      const index_t low = static_cast<index_t>(indptr_l[k]);
-      const index_t high = static_cast<index_t>(indptr_l[k+1]);
+    for (dim_t k = 0; k < num_rows_l; ++k) {
+      const dim_t low = static_cast<dim_t>(indptr_l[k]);
+      const dim_t high = static_cast<dim_t>(indptr_l[k+1]);
       if (low == high || irow < col_idx_l[low] || irow > col_idx_l[high-1]) continue;
-      index_t j = high, l = low, r = high - 1;
+      dim_t j = high, l = low, r = high - 1;
       while (l <= r) {
-        index_t m = l + (r - l) / 2;
+        dim_t m = l + (r - l) / 2;
         if (col_idx_l[m] == irow) {
           j = m; break;
         }
@@ -163,19 +163,19 @@ struct DotCsrTransDnsDnsWarpKernel {
                                              const IType* indptr_l,
                                              const CType* col_idx_l,
                                              const DType* data_r,
-                                             const index_t num_cols_r) {
-    const index_t warp_id = tid / 32;           // global warp id
-    const index_t lane = tid & (32-1);          // local thread id within warp
-    const index_t icol = warp_id / num_cols_r;  // lhs column that this warp computes
-    const index_t kcol = warp_id % num_cols_r;  // rhs column that this warp computes
+                                             const dim_t num_cols_r) {
+    const dim_t warp_id = tid / 32;           // global warp id
+    const dim_t lane = tid & (32-1);          // local thread id within warp
+    const dim_t icol = warp_id / num_cols_r;  // lhs column that this warp computes
+    const dim_t kcol = warp_id % num_cols_r;  // rhs column that this warp computes
 
     // Compute range of nnz elements in this column
-    const index_t low  = static_cast<index_t>(indptr_l[icol]);
-    const index_t high = static_cast<index_t>(indptr_l[icol+1]);
+    const dim_t low  = static_cast<dim_t>(indptr_l[icol]);
+    const dim_t high = static_cast<dim_t>(indptr_l[icol+1]);
 
     // Iterate through the nnz elements in this column
-    for (index_t j = low+lane; j < high; j+=32) {
-      const index_t irow = static_cast<index_t>(col_idx_l[j]);
+    for (dim_t j = low+lane; j < high; j+=32) {
+      const dim_t irow = static_cast<dim_t>(col_idx_l[j]);
       const DType val = data_l[j]*data_r[icol*num_cols_r+kcol];
       atomicAdd(static_cast<DType *>(&(out[irow*num_cols_r+kcol])), val);
     }
@@ -195,23 +195,23 @@ struct DotCsrTransDnsDnsThreadBlockKernel {
                                              const IType* indptr_l,
                                              const CType* col_idx_l,
                                              const DType* data_r,
-                                             const index_t num_cols_r) {
-    const index_t warps_per_block = blockDim.x / 32;  // number of warps in this thread block
-    const index_t warp_id = tid / 32;                 // global warp id
-    const index_t lane = tid & (32-1);                // local thread id within warp
-    const index_t icol = blockIdx.x;                  // lhs column that this thread block computes
-    const index_t kcol = warp_id % warps_per_block;   // rhs column where warp starts computing (offset)
+                                             const dim_t num_cols_r) {
+    const dim_t warps_per_block = blockDim.x / 32;  // number of warps in this thread block
+    const dim_t warp_id = tid / 32;                 // global warp id
+    const dim_t lane = tid & (32-1);                // local thread id within warp
+    const dim_t icol = blockIdx.x;                  // lhs column that this thread block computes
+    const dim_t kcol = warp_id % warps_per_block;   // rhs column where warp starts computing (offset)
 
     // Compute range of nnz elements in this lhs column
-    const index_t low  = static_cast<index_t>(indptr_l[icol]);
-    const index_t high = static_cast<index_t>(indptr_l[icol+1]);
+    const dim_t low  = static_cast<dim_t>(indptr_l[icol]);
+    const dim_t high = static_cast<dim_t>(indptr_l[icol+1]);
 
     // Iterate through the nnz elements in this lhs column
-    for (index_t j = low+lane; j < high; j+=32) {
-      const index_t irow = static_cast<index_t>(col_idx_l[j]);
+    for (dim_t j = low+lane; j < high; j+=32) {
+      const dim_t irow = static_cast<dim_t>(col_idx_l[j]);
       const DType datum_l = data_l[j];
       // Iterate over rhs columns that this warp computes
-      for (index_t k = kcol; k < num_cols_r; k+=warps_per_block) {
+      for (dim_t k = kcol; k < num_cols_r; k+=warps_per_block) {
         const DType val = datum_l*data_r[icol*num_cols_r+k];
         atomicAdd(static_cast<DType *>(&(out[irow*num_cols_r+k])), val);
       }
@@ -232,21 +232,21 @@ struct DotCsrTransDnsDnsWarpBlockKernel {
                                              const IType* indptr_l,
                                              const CType* col_idx_l,
                                              const DType* data_r,
-                                             const index_t num_cols_r) {
-    const index_t warp_id = tid / 32;   // global warp id
-    const index_t lane = tid & (32-1);  // local thread id within warp
-    const index_t icol = warp_id;       // lhs column that this warp computes
+                                             const dim_t num_cols_r) {
+    const dim_t warp_id = tid / 32;   // global warp id
+    const dim_t lane = tid & (32-1);  // local thread id within warp
+    const dim_t icol = warp_id;       // lhs column that this warp computes
 
     // Compute range of nnz elements in this column
-    const index_t low  = static_cast<index_t>(indptr_l[icol]);
-    const index_t high = static_cast<index_t>(indptr_l[icol+1]);
+    const dim_t low  = static_cast<dim_t>(indptr_l[icol]);
+    const dim_t high = static_cast<dim_t>(indptr_l[icol+1]);
 
     // Iterate through the nnz elements in lhs column
-    for (index_t j = low+lane; j < high; j+=32) {
-      const index_t irow = static_cast<index_t>(col_idx_l[j]);
+    for (dim_t j = low+lane; j < high; j+=32) {
+      const dim_t irow = static_cast<dim_t>(col_idx_l[j]);
       const DType datum_l = data_l[j];
       // Iterate over all rhs columns
-      for (index_t k = 0; k < num_cols_r; k++) {
+      for (dim_t k = 0; k < num_cols_r; k++) {
         const DType val = datum_l*data_r[icol*num_cols_r+k];
         atomicAdd(static_cast<DType *>(&(out[irow*num_cols_r+k])), val);
       }
@@ -262,7 +262,7 @@ struct SetRspRowFlgKernel {
   __device__ __forceinline__ static void Map(int tid,
                                              RType* row_flg,
                                              const RType* row_idx,
-                                             const index_t nnr) {
+                                             const dim_t nnr) {
     if (tid < nnr) {
       row_flg[row_idx[tid]] = tid+1;
     }
@@ -297,17 +297,17 @@ struct DotCsrRspDnsScalarKernel {
                                              const DType* data_r,
                                              const RType* row_idx_r,
                                              const RType* row_flg_r,
-                                             const index_t nnr_r,
-                                             const index_t num_rows,
-                                             const index_t num_cols) {
+                                             const dim_t nnr_r,
+                                             const dim_t num_rows,
+                                             const dim_t num_cols) {
     if (tid < num_rows*num_cols) {
-      const index_t i = static_cast<index_t>(tid) / num_cols;  // i = row this thread computes
-      const index_t k = static_cast<index_t>(tid) % num_cols;  // k = col this thread computes
+      const dim_t i = static_cast<dim_t>(tid) / num_cols;  // i = row this thread computes
+      const dim_t k = static_cast<dim_t>(tid) % num_cols;  // k = col this thread computes
       // Compute inner product of i-th row and k-th col
       DType sum = 0;
       for (IType j = indptr_l[i]; j < indptr_l[i+1]; j++) {
-        const index_t csr_col = col_idx_l[j];
-        const index_t rsp_row_idx = row_flg_r[csr_col];
+        const dim_t csr_col = col_idx_l[j];
+        const dim_t rsp_row_idx = row_flg_r[csr_col];
         if (rsp_row_idx > 0) {
           sum += data_l[j] * data_r[(rsp_row_idx-1)*num_cols+k];
         }
@@ -348,11 +348,11 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
         if (kWriteTo == req) {
           Kernel<set_zero, gpu>::Launch(s, data_out.Size(), data_out.dptr<DType>());
         }
-        const index_t threads_per_warp = mxnet_op::cuda_get_device_prop().warpSize;
-        const index_t threads_per_block = kBaseThreadNum;
-        const index_t num_rows_l = lhs.shape()[0];
-        const index_t num_cols_r = rhs.shape_[1];
-        index_t num_threads;
+        const dim_t threads_per_warp = mxnet_op::cuda_get_device_prop().warpSize;
+        const dim_t threads_per_block = kBaseThreadNum;
+        const dim_t num_rows_l = lhs.shape()[0];
+        const dim_t num_cols_r = rhs.shape_[1];
+        dim_t num_threads;
         // TODO: remove kernel dependency on warpSize=32
         if (threads_per_warp != 32) {
           LOG(FATAL) << "DotCsrDnsDnsImpl GPU kernels expect warpSize=32";
@@ -509,10 +509,10 @@ inline void DotCsrRspDnsImpl(mshadow::Stream<gpu>* s,
     return;
   }
 
-  const index_t num_rows = ret->shape_[0];
-  const index_t num_cols = ret->shape_[1];
-  const index_t nnr_r = rhs.storage_shape()[0];
-  index_t num_threads;
+  const dim_t num_rows = ret->shape_[0];
+  const dim_t num_cols = ret->shape_[1];
+  const dim_t nnr_r = rhs.storage_shape()[0];
+  dim_t num_threads;
 
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
