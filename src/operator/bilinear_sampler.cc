@@ -160,7 +160,7 @@ except that the operator has the backward pass.
 Given :math:`data` and :math:`grid`, then the output is computed by 
 
 .. math::
-  x_{src} = grid[batch, 0, y_{dst}, x_{dst}] \\ 
+  x_{src} = grid[batch, 0, y_{dst}, x_{dst}] \\
   y_{src} = grid[batch, 1, y_{dst}, x_{dst}] \\
   output[batch, channel, y_{dst}, x_{dst}] = G(data[batch, channel, y_{src}, x_{src})
 
