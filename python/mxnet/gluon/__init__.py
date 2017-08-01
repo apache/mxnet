@@ -17,3 +17,5 @@ from . import loss
 from . import utils
 
 from . import data
+
+from . import model_zoo

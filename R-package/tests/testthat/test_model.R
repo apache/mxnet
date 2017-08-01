@@ -162,12 +162,11 @@ test_that("Matrix Factorization", {
   k <- 64
   user <- mx.symbol.Variable("user")
   item <- mx.symbol.Variable("item")
-  score <- mx.symbol.Variable("label")
+  score <- mx.symbol.Variable("score")
   user1 <- mx.symbol.Embedding(data = mx.symbol.BlockGrad(user), input_dim = max_user,
                                output_dim = k, name = "user1")
   item1 <- mx.symbol.Embedding(data = mx.symbol.BlockGrad(item), input_dim = max_item,
-                               output_dim = k, name = "item1"
-    )
+                               output_dim = k, name = "item1")
   pred <- user1 * item1
   pred1 <- mx.symbol.sum_axis(pred, axis = 1, name = "pred1")
   pred2 <- mx.symbol.Flatten(pred1, name = "pred2")
@@ -188,10 +187,10 @@ test_that("Matrix Factorization", {
         value = function() {
           user <- .self$iter1$value()$data
           item <- .self$iter2$value()$data
-          label <- .self$iter1$value()$label
+          score <- .self$iter1$value()$label
           list(user = user,
                item = item,
-               label = label)
+               score = score)
         },
         iter.next = function() {
           .self$iter1$iter.next()
@@ -224,5 +223,5 @@ test_that("Matrix Factorization", {
                                        momentum = 0.9,
                                        epoch.end.callback = mx.callback.log.train.metric(1),
                                        input.names = c("user", "item"),
-                                       output.names = "label")
+                                       output.names = "score")
 })

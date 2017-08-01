@@ -399,25 +399,26 @@ def random_size_crop(src, size, min_area, ratio, interp=2):
 
     """
     h, w, _ = src.shape
-    new_ratio = random.uniform(*ratio)
-    if new_ratio * h > w:
-        max_area = w * int(w / new_ratio)
-    else:
-        max_area = h * int(h * new_ratio)
+    area = h * w
+    for _ in range(10):
+        target_area = random.uniform(min_area, 1.0) * area
+        new_ratio = random.uniform(*ratio)
 
-    min_area *= h * w
-    if max_area < min_area:
-        return random_crop(src, size, interp)
-    new_area = random.uniform(min_area, max_area)
-    new_w = int(np.sqrt(new_area * new_ratio))
-    new_h = int(np.sqrt(new_area / new_ratio))
+        new_w = int(round(np.sqrt(target_area * new_ratio)))
+        new_h = int(round(np.sqrt(target_area / new_ratio)))
 
-    assert new_w <= w and new_h <= h
-    x0 = random.randint(0, w - new_w)
-    y0 = random.randint(0, h - new_h)
+        if random.random() < 0.5:
+            new_h, new_w = new_w, new_h
 
-    out = fixed_crop(src, x0, y0, new_w, new_h, size, interp)
-    return out, (x0, y0, new_w, new_h)
+        if new_w <= w and new_h <= h:
+            x0 = random.randint(0, w - new_w)
+            y0 = random.randint(0, h - new_h)
+
+            out = fixed_crop(src, x0, y0, new_w, new_h, size, interp)
+            return out, (x0, y0, new_w, new_h)
+
+    # fall back to center_crop
+    return center_crop(src, size, interp)
 
 
 class Augmenter(object):
@@ -868,7 +869,7 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
     crop_size = (data_shape[2], data_shape[1])
     if rand_resize:
         assert rand_crop
-        auglist.append(RandomSizedCropAug(crop_size, 0.3, (3.0 / 4.0, 4.0 / 3.0), inter_method))
+        auglist.append(RandomSizedCropAug(crop_size, 0.08, (3.0 / 4.0, 4.0 / 3.0), inter_method))
     elif rand_crop:
         auglist.append(RandomCropAug(crop_size, inter_method))
     else:
