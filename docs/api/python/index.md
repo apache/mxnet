@@ -36,5 +36,4 @@ imported by running:
    optimization
    callback
    metric
-   contrib
 ```
