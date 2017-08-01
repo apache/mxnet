@@ -188,10 +188,8 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   // csr has many zero columns, so the result of dot(csr.T, matrix) should be rsp
-  // TODO(stefan): dot(csr.T,dns)=rsp not yet implemented on gpu
-  if (param.transpose_a && kCSRStorage == (*in_attrs)[0] && ctx.dev_type != Context::kGPU) {
-    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
-  } else if (param.transpose_a && kCSRStorage == (*in_attrs)[0] && kRowSparseStorage == (*in_attrs)[1]) {
+  // TODO(stefan/haibin): don't enforce kRowSparseStorage if out_attrs has already been set
+  if (param.transpose_a && kCSRStorage == (*in_attrs)[0]) {
     STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
   } else {
     STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kDefaultStorage);
@@ -519,8 +517,7 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<cpu>* s,
               }
             }
           } else {
-            LOG(FATAL) << "DotCsrDnsRspImpl has not implemented dot(csr, dns)=rsp yet."
-                          " Only the cpu version of dot(csr.T, dns)=rsp is supported now";
+            LOG(FATAL) << "DotCsrDnsRspImpl has not implemented dot(csr, dns)=rsp yet.";
           }
         });
       });

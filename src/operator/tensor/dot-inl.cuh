@@ -16,7 +16,92 @@ namespace mxnet {
 namespace op {
 
 /*!
- * \brief Scalar kernel of dot(csr, dns1) = dns2
+ * \brief GPU auxiliary kernel to flag non-zero rows of an rsp matrix with indices.
+ * Parallelized by matrix rows: 1 thread/row
+ */
+struct SetRspRowFlgKernel {
+  /*!
+   * \brief
+   * \param tid      global thread id
+   * \param row_flg  array to flag storage indices of non-zero rows
+   * \param row_idx  rsp matrix row index array storing indices of non-zero rows
+   * \param nnr      rsp matrix number of non-zero rows (storage shape)
+   */
+  template<typename RType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             RType* row_flg,
+                                             const RType* row_idx,
+                                             const nnvm::dim_t nnr) {
+    if (tid < nnr) {
+      row_flg[row_idx[tid]] = tid+1;
+    }
+  }
+};
+
+/*!
+ * \brief GPU auxiliary kernel for marking non-zero columns of a csr matrix.
+ * Parallelized by matrix rows: 1 warp/row
+ */
+struct MarkCsrZeroColsWarpKernel {
+  /*!
+   * \brief
+   * \param tid       global thread id
+   * \param col_idx   csr matrix column indices
+   * \param indptr    csr matrix row index pointer
+   * \param num_rows  csr matrix number of rows
+   * \param num_cols  csr matrix number of columns
+   */
+  template<typename CType, typename IType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             nnvm::dim_t* flg,
+                                             const CType* col_idx,
+                                             const IType* indptr,
+                                             const nnvm::dim_t num_rows,
+                                             const nnvm::dim_t num_cols) {
+    typedef unsigned long long int uint64_cu;
+    static_assert(sizeof(uint64_cu) == sizeof(nnvm::dim_t), "unexpected sizeof dim_t");
+
+    const nnvm::dim_t warp_id = tid / 32;      // global warp   id
+    const nnvm::dim_t lane    = tid & (32-1);  // local  thread id within warp
+
+    if (warp_id < num_rows) {
+      uint64_cu zero = 0;
+      uint64_cu one = 1;
+      for (IType j = indptr[warp_id]+lane; j < indptr[warp_id+1]; j+=32) {
+        atomicCAS(reinterpret_cast<uint64_cu*>(flg+col_idx[j]), zero, one);
+      }
+    }
+  }
+};
+
+/*!
+ * \brief GPU auxiliary kernel for filling the row index array of an rsp matrix.
+ * Parallelized by matrix rows: 1 thread/row
+ */
+struct FillRspRowIdxKernel {
+  /*!
+   * \brief
+   * \param tid          global thread id
+   * \param row_idx      row index array to store indices of non-zero rows
+   * \param row_flg_sum  inclusive prefix sum array over 0/1 marked row flag array
+   * \param num_rows     rsp matrix number of rows (shape)
+   */
+  template<typename RType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             RType* row_idx,
+                                             const nnvm::dim_t* row_flg_sum,
+                                             const nnvm::dim_t num_rows) {
+    if (tid < num_rows) {
+      nnvm::dim_t prev = (tid == 0)? 0 : row_flg_sum[tid-1];
+      if (row_flg_sum[tid] > prev) {
+        row_idx[prev] = static_cast<RType>(tid);
+      }
+    }
+  }
+};
+
+/*!
+ * \brief GPU scalar kernel of dot(csr, dns1) = dns2
  * Parallelization by output matrix elements: 1 thread/element
  */
 template<int req>
@@ -25,12 +110,12 @@ struct DotCsrDnsDnsScalarKernel {
    * \brief This function represents performing an inner product between a row of lhs
    * and a column of rhs and then assigning the value to out[tid].
    * \param tid         global thread id
-   * \param out         output matrix
-   * \param data_l      csr values of lhs
-   * \param indptr_l    csr indptr of lhs
-   * \param col_idx_l   csr col_idx of lhs
-   * \param data_r      dense data of rhs
-   * \param num_cols_r  number of columns of output matrix
+   * \param out         output matrix data
+   * \param data_l      csr matrix data
+   * \param indptr_l    csr matrix row index pointer
+   * \param col_idx_l   csr matrix column indices
+   * \param data_r      dns1 matrix data of rhs
+   * \param num_cols_r  dns1 matrix number of columns
    */
   template<typename DType, typename IType, typename CType>
   __device__ __forceinline__ static void Map(int tid,
@@ -52,11 +137,14 @@ struct DotCsrDnsDnsScalarKernel {
 };
 
 /*!
- * \brief Vector kernel of dot(csr, dns1) = dns2
+ * \brief GPU vector kernel of dot(csr, dns1) = dns2
  * Parallelization by output matrix elements: 1 warp/element
  */
 template<int req>
 struct DotCsrDnsDnsVectorKernel {
+  /*!
+   * \brief see DotCsrDnsDnsScalarKernel Map for documentation.
+   */
   template<typename DType, typename IType, typename CType>
   __device__ __forceinline__ static void Map(int tid,
                                              DType* out,
@@ -97,7 +185,7 @@ struct DotCsrDnsDnsVectorKernel {
 };
 
 /*!
- * \brief Scalar kernel of dot(csr.T, dns1) = dns2
+ * \brief GPU scalar kernel of dot(csr.T, dns1) = dns2
  * Parallelization by output matrix elements: 1 thread/element
  */
 template<int req>
@@ -107,12 +195,12 @@ struct DotCsrTransDnsDnsScalarKernel {
    * and a column of rhs and then assigning the value to out[tid].
    * \param tid         global thread id
    * \param out         output matrix
-   * \param data_l      csr values of lhs
-   * \param indptr_l    csr indptr of lhs
-   * \param col_idx_l   csr col_idx of lhs
-   * \param data_r      dense data of rhs
-   * \param num_rows_l  number of rows of lhs (= number of columns of csr.T)
-   * \param num_cols_r  number of columns of output matrix
+   * \param data_l      csr matrix data
+   * \param indptr_l    csr matrix row index pointer
+   * \param col_idx_l   csr matrix column indices
+   * \param data_r      dns1 matrix data of rhs
+   * \param num_rows_l  csr matrix number of rows (= number of columns of csr.T)
+   * \param num_cols_r  dns1 matrix number of columns
    */
   template<typename DType, typename IType, typename CType>
   __device__ __forceinline__ static void Map(int tid,
@@ -154,11 +242,14 @@ struct DotCsrTransDnsDnsScalarKernel {
 };
 
 /*!
- * \brief Warp kernel of dot(csr.T, dns1) = dns2
+ * \brief GPU warp kernel of dot(csr.T, dns1) = dns2
  * Parallelization by columns: 1 warp computes one lhs column for one rhs column
  */
 template<int req>
 struct DotCsrTransDnsDnsWarpKernel {
+  /*!
+   * \brief see DotCsrTransDnsDnsScalarKernel Map for documentation.
+   */
   template<typename DType, typename IType, typename CType>
   __device__ __forceinline__ static void Map(int tid,
                                              DType* out,
@@ -187,11 +278,14 @@ struct DotCsrTransDnsDnsWarpKernel {
 };
 
 /*!
- * \brief Thread block kernel of dot(csr.T, dns1) = dns2
+ * \brief GPU thread block kernel of dot(csr.T, dns1) = dns2
  * Parallelization by columns: 1 thread block computes one lhs column for all rhs columns
  */
 template<int req>
 struct DotCsrTransDnsDnsThreadBlockKernel {
+  /*!
+   * \brief see DotCsrTransDnsDnsScalarKernel Map for documentation.
+   */
   template<typename DType, typename IType, typename CType>
   __device__ __forceinline__ static void Map(int tid,
                                              DType* out,
@@ -225,11 +319,14 @@ struct DotCsrTransDnsDnsThreadBlockKernel {
 };
 
 /*!
- * \brief Warp block kernel of dot(csr.T, dns1) = dns2
+ * \brief GPU warp block kernel of dot(csr.T, dns1) = dns2
  * Parallelization by columns: 1 warp computes one lhs column for all rhs columns
  */
 template<int req>
 struct DotCsrTransDnsDnsWarpBlockKernel {
+  /*!
+   * \brief see DotCsrTransDnsDnsScalarKernel Map for documentation.
+   */
   template<typename DType, typename IType, typename CType>
   __device__ __forceinline__ static void Map(int tid,
                                              DType* out,
@@ -261,69 +358,56 @@ struct DotCsrTransDnsDnsWarpBlockKernel {
 };
 
 /*!
- * \brief GPU auxiliary kernel to flag non-zero rows of rsp tensor with indices
+ * \brief GPU Kernel of dot(csr.T, dns) = rsp
+ * Parallelization by rows: 1 thread/row
+ * TODO(stefan): write a faster kernel optimized for GPU
  */
-struct SetRspRowFlgKernel {
-  template<typename RType>
-  __device__ __forceinline__ static void Map(int tid,
-                                             RType* row_flg,
-                                             const RType* row_idx,
-                                             const nnvm::dim_t nnr) {
-    if (tid < nnr) {
-      row_flg[row_idx[tid]] = tid+1;
-    }
-  }
-};
-
-/*!
- * \brief Warp kernel for marking non-zero columns of a csr matrix.
- * Parallelized by matrix rows: 1 warp/row
- */
-struct MarkCsrZeroColsWarpKernel {
-  template<typename CType, typename IType>
-  __device__ __forceinline__ static void Map(int tid,
-                                             nnvm::dim_t* flg,
-                                             const CType* col_idx,
-                                             const IType* indptr,
-                                             const nnvm::dim_t num_rows,
-                                             const nnvm::dim_t num_cols) {
-    typedef unsigned long long int uint64_cu;
-    static_assert(sizeof(uint64_cu) == sizeof(nnvm::dim_t), "unexpected sizeof dim_t");
-
-    const nnvm::dim_t warp_id = tid / 32;      // global warp   id
-    const nnvm::dim_t lane    = tid & (32-1);  // local  thread id within warp
-
-    if (warp_id < num_rows) {
-      uint64_cu zero = 0;
-      uint64_cu one = 1;
-      for (IType j = indptr[warp_id]+lane; j < indptr[warp_id+1]; j+=32) {
-        atomicCAS(reinterpret_cast<uint64_cu*>(flg+col_idx[j]), zero, one);
-      }
-    }
-  }
-};
-
-/*!
- * \brief Kernel for filling the row index array of the rsp matrix.
- * Parallelized by matrix rows: 1 thread/row
- */
-struct FillRspRowIdxKernel {
+struct DotCsrTransDnsRspByRowsKernel {
   /*!
    * \brief
-   * \param tid          global thread id
-   * \param row_idx      row index array to store indices of non-zero rows
-   * \param row_flg_sum  inclusive prefix sum array over marked row flag array
-   * \param num_rows     number of rows
+   * \param tid           global thread id
+   * \param out           output rsp matrix data
+   * \param row_idx_out   output rsp matrix non-zero row indices
+   * \param data_l        csr matrix data
+   * \param indptr_l      csr matrix row index pointer
+   * \param col_idx_l     csr matrix column indices
+   * \param data_r        dns matrix data
+   * \param num_rows_l    csr matrix number of rows
+   * \param num_cols_r    dns matrix number of columns
+   * \param nnr_out       output rsp matrix number of non-zero rows
    */
-  template<typename RType>
+  template<typename DType, typename IType, typename CType, typename RType>
   __device__ __forceinline__ static void Map(int tid,
-                                             RType* row_idx,
-                                             const nnvm::dim_t* row_flg_sum,
-                                             const nnvm::dim_t num_rows) {
-    if (tid < num_rows) {
-      nnvm::dim_t prev = (tid == 0)? 0 : row_flg_sum[tid-1];
-      if (row_flg_sum[tid] > prev) {
-        row_idx[prev] = static_cast<RType>(tid);
+                                             DType* out,
+                                             const RType* row_idx_out,
+                                             const DType* data_l,
+                                             const IType* indptr_l,
+                                             const CType* col_idx_l,
+                                             const DType* data_r,
+                                             const nnvm::dim_t num_rows_l,
+                                             const nnvm::dim_t num_cols_r,
+                                             const nnvm::dim_t nnr_out) {
+    using nnvm::dim_t;
+    // This thread computes non-zero row 'tid' of the output matrix
+    // The actual row id corresponding to the lhs row is row_idx_out[tid]
+    if (tid < nnr_out) {
+      const dim_t offset_out = tid * num_cols_r;
+      // Iterate over rhs matrix rows (or, equivalently, lhs csr.T columns)
+      for (dim_t j = 0; j < num_rows_l; j++) {
+        if (indptr_l[j] == indptr_l[j+1]) continue;
+        const dim_t offset_r = j * num_cols_r;
+        // Iterate over lhs column j to find possible non-zero value in this row
+        // TODO: remove sequential search, this is a bottleneck
+        for (IType k = indptr_l[j]; k < indptr_l[j+1]; k++) {
+          const CType col_idx = col_idx_l[k];
+          if (col_idx == row_idx_out[tid]) {
+            for (dim_t l = 0; l < num_cols_r; l++) {
+              out[offset_out+l] += data_l[k] * data_r[offset_r+l];
+            }
+          } else if (col_idx > row_idx_out[tid]) {
+            break;
+          }
+        }
       }
     }
   }
@@ -340,13 +424,14 @@ struct DotCsrTransRspRspByRowsKernel {
    * \param tid           global thread id
    * \param out           output rsp matrix data
    * \param row_idx_out   output rsp matrix non-zero row indices
-   * \param data_l        lhs csr matrix data
-   * \param indptr_l      lhs csr matrix index pointer
-   * \param col_idx_l     lhs csr matrix column indices
-   * \param num_rows_l    number of rows of lhs csr matrix
-   * \param num_cols_r    number of cols of rhs rsp matrix
-   * \param nnr_r         number of non-zero rows of rhs rsp matrix
-   * \param nnr_out       number of non-zero rows of output rsp matrix
+   * \param data_l        csr matrix data
+   * \param indptr_l      csr matrix row index pointer
+   * \param col_idx_l     csr matrix column indices
+   * \param data_r        rsp1 matrix data
+   * \param row_idx_r     rsp1 matrix non-zero row indices
+   * \param num_cols_r    rsp1 matrix number of cols
+   * \param nnr_r         rsp1 matrix number of non-zero rows
+   * \param nnr_out       output rsp matrix number of non-zero rows
    */
   template<typename DType, typename IType, typename CType, typename RType>
   __device__ __forceinline__ static void Map(int tid,
@@ -357,7 +442,6 @@ struct DotCsrTransRspRspByRowsKernel {
                                              const CType* col_idx_l,
                                              const DType* data_r,
                                              const RType* row_idx_r,
-                                             const nnvm::dim_t num_rows_l,
                                              const nnvm::dim_t num_cols_r,
                                              const nnvm::dim_t nnr_r,
                                              const nnvm::dim_t nnr_out) {
@@ -396,16 +480,16 @@ struct DotCsrRspDnsScalarKernel {
   /*!
    * \brief
    * \param tid        global thread id
-   * \param out        dense output matrix
-   * \param data_l     lhs csr matrix data
-   * \param indptr_l   lhs csr matrix index pointer
-   * \param col_idx_l  lhs csr matrix column indices
-   * \param data_r     rhs rsp matrix data
-   * \param row_idx_r  rhs rsp matrix nnr indices
-   * \param row_flg_r  auxiliary index array holding
-   * \param nnr_r      rhs rsp matrix number of non-zero rows
-   * \param num_rows   dense output matrix number of rows
-   * \param num_cols   dense output matrix number of columns
+   * \param out        output dns matrix data
+   * \param data_l     csr matrix data
+   * \param indptr_l   csr matrix row index pointer
+   * \param col_idx_l  csr matrix column indices
+   * \param data_r     rsp matrix data
+   * \param row_idx_r  rsp matrix non-zero row indices
+   * \param row_flg_r  rsp matrix auxiliary array holding storage indices of non-zero rows
+   * \param nnr_r      rsp matrix number of non-zero rows
+   * \param num_rows   output dns matrix number of rows
+   * \param num_cols   output dns matrix number of columns
    */
   template<typename DType, typename IType, typename CType, typename RType>
   __device__ __forceinline__ static void Map(int tid,
@@ -578,6 +662,8 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
 
 /*!
  * \brief GPU Impl of dot(csr, dns) = rsp and dot(csr.T, dns) = rsp
+ * TODO: Optimize for GPU; this is a baseline implementation providing
+ *       the operator functionality, it is not yet fully optimized for GPU.
  */
 inline void DotCsrDnsRspImpl(mshadow::Stream<gpu>* s,
                              const NDArray& lhs,
@@ -585,8 +671,100 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<gpu>* s,
                              const OpReqType req,
                              const bool trans_lhs,
                              NDArray* ret) {
-  // TODO(stefan): Implement dot(csr.T, dns) = rsp
-  LOG(FATAL) << "DotCsrDnsRspImpl gpu version is not implemented.";
+  if (kNullOp == req) return;
+  CHECK_EQ(lhs.storage_type(), kCSRStorage);
+  CHECK_EQ(ret->storage_type(), kRowSparseStorage);
+  if (!lhs.storage_initialized()) return;
+
+  using mxnet_op::Kernel;
+  using mxnet_op::set_zero;
+  using nnvm::dim_t;
+
+  const TBlob data_l = lhs.data();
+  const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
+  const TBlob col_idx_l = lhs.aux_data(csr::kIdx);
+  const TBlob& data_r = rhs;
+
+  const dim_t num_rows_l = lhs.shape()[0];
+  const dim_t num_cols_l = lhs.shape()[1];
+  const dim_t num_cols_r = rhs.shape_[1];
+  const dim_t threads_per_warp = mxnet_op::cuda_get_device_prop().warpSize;
+  dim_t num_threads;
+  // TODO: remove kernel dependency on warpSize=32
+  if (threads_per_warp != 32) {
+    LOG(FATAL) << "DotCsrDnsDnsImpl GPU kernels expect warpSize=32";
+  }
+
+  MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
+    MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
+      MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
+        if (trans_lhs) {
+          // Compute number of non-zero rows (nnr) of output matrix
+          // TODO(stefan): use temporary workspace from OpContext
+          // - mark non-zero columns of csr matrix
+          // - compute inclusive prefix sum over marked array
+          // - copy last value (nnr_out) from device to host
+          dim_t* row_flg_out;
+          CUDA_CALL(cudaMalloc(&row_flg_out, num_cols_l*sizeof(dim_t)));
+          num_threads = num_cols_l;
+          Kernel<set_zero, gpu>::Launch(s, num_threads, row_flg_out);
+          num_threads = num_rows_l * threads_per_warp;
+          Kernel<MarkCsrZeroColsWarpKernel, gpu>::Launch(s, num_threads,
+              row_flg_out, col_idx_l.dptr<CType>(), indptr_l.dptr<IType>(),
+              num_rows_l, num_cols_l);
+          void* d_temp_storage = NULL;
+          size_t temp_storage_bytes = 0;
+          cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                        temp_storage_bytes,
+                                        row_flg_out,
+                                        row_flg_out,
+                                        num_cols_l,
+                                        mshadow::Stream<gpu>::GetStream(s));
+          CUDA_CALL(cudaMalloc(&d_temp_storage, temp_storage_bytes));
+          cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                        temp_storage_bytes,
+                                        row_flg_out,
+                                        row_flg_out,
+                                        num_cols_l,
+                                        mshadow::Stream<gpu>::GetStream(s));
+          CUDA_CALL(cudaFree(d_temp_storage));
+          dim_t nnr_out = 0;
+          CUDA_CALL(cudaMemcpy(&nnr_out, &row_flg_out[num_cols_l-1], sizeof(dim_t),
+                               cudaMemcpyDeviceToHost));
+          // Allocate output matrix space
+          ret->CheckAndAlloc({mshadow::Shape1(nnr_out)});
+          const TBlob data_out_blob = ret->data();
+          const TBlob row_idx_out_blob = ret->aux_data(rowsparse::kIdx);
+          MSHADOW_IDX_TYPE_SWITCH(row_idx_out_blob.type_flag_, RType, {  // row idx type
+            DType* data_out = data_out_blob.dptr<DType>();
+            RType* row_idx_out = row_idx_out_blob.dptr<RType>();
+            if (kWriteTo == req) {
+              num_threads = nnr_out * num_cols_r;
+              Kernel<set_zero, gpu>::Launch(s, num_threads, data_out);
+            }
+            num_threads = nnr_out;
+            Kernel<set_zero, gpu>::Launch(s, num_threads, row_idx_out);
+
+            // Fill row_idx array of output matrix, using the row_flg values
+            num_threads = num_cols_l;
+            Kernel<FillRspRowIdxKernel, gpu>::Launch(s, num_threads,
+                row_idx_out, row_flg_out, num_cols_l);
+            CUDA_CALL(cudaFree(row_flg_out));
+
+            // Perform matrix-matrix multiply
+            num_threads = nnr_out;
+            Kernel<DotCsrTransDnsRspByRowsKernel, gpu>::Launch(s, num_threads,
+                data_out, row_idx_out,
+                data_l.dptr<DType>(), indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(),
+                data_r.dptr<DType>(),
+                num_rows_l, num_cols_r, nnr_out);
+          });
+        } else {
+          LOG(FATAL) << "DotCsrDnsRspImpl has not implemented dot(csr, dns) = rsp yet.";
+        }
+      });
+    });
+  });
 }
 
 /*!
@@ -602,9 +780,8 @@ inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
                              NDArray* ret) {
   // Reuse dot(csr, dns) implementation if rhs rsp matrix is in fact dense
   if (rhs.storage_shape()[0] == rhs.shape()[0]) {
-    // TODO(stefan): uncomment when DotCsrDnsRspImpl is implemented
-    //DotCsrDnsRspImpl(s, lhs, rhs.data(), req, trans_lhs, ret);
-    //return;
+    DotCsrDnsRspImpl(s, lhs, rhs.data(), req, trans_lhs, ret);
+    return;
   }
   if (kNullOp == req) return;
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
@@ -668,7 +845,8 @@ inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
                                           mshadow::Stream<gpu>::GetStream(s));
             CUDA_CALL(cudaFree(d_temp_storage));
             dim_t nnr_out = 0;
-            CUDA_CALL(cudaMemcpy(&nnr_out, &row_flg_out[num_cols_l-1], sizeof(dim_t), cudaMemcpyDeviceToHost));
+            CUDA_CALL(cudaMemcpy(&nnr_out, &row_flg_out[num_cols_l-1], sizeof(dim_t),
+                                 cudaMemcpyDeviceToHost));
 
             // Allocate output matrix space
             ret->CheckAndAlloc({mshadow::Shape1(nnr_out)});
@@ -695,7 +873,7 @@ inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
                 data_out, row_idx_out,
                 data_l.dptr<DType>(), indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(),
                 data_r.dptr<DType>(), row_idx_r.dptr<RType>(),
-                num_rows_l, num_cols_r, nnr_r, nnr_out);
+                num_cols_r, nnr_r, nnr_out);
           } else {
             LOG(FATAL) << "DotCsrRspRspImpl has not implemented dot(csr, rsp1) = rsp2 yet.";
           }
