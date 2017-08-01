@@ -837,10 +837,14 @@ class RMSE(EvalMetric):
 class CrossEntropy(EvalMetric):
     """Computes Cross Entropy loss.
 
-    The cross entropy is given by
+    The cross entropy over a batch of sample size :math:`N` is given by
 
     .. math::
-        -y\\log \\hat{y} + (1-y)\\log (1-\\hat{y})
+       -\\sum_{n=1}^{N}\\sum_{c=1}^{C}t_{nk}\\log (y_{nk}),
+
+    where :math:`t_{nk}=1` iff sample :math:`n` belongs to class :math:`k`.
+    :math:`y_{nk}` denotes the probability of sample :math:`n` belonging to 
+    class :math:`k`.
 
     Parameters
     ----------
