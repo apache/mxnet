@@ -482,10 +482,18 @@ class ParameterDict(object):
         for _, v in self.items():
             v.initialize(None, ctx, init, force_reinit=force_reinit)
 
-    def zero_grad(self):
-        """Sets all Parameters' gradient buffer to 0."""
-        for i in self.values():
-            i.zero_grad()
+    def zero_grad(self, prefix=""):
+        """Sets all Parameters' gradient buffer to 0.
+
+        Parameters
+        ----------
+        prefix : str, optional
+          If set, only zeros gradients of parameters whose name starts with
+          prefix.
+        """
+        for k, v in self.items():
+            if k.startswith(prefix):
+                v.zero_grad()
 
     def reset_ctx(self, ctx):
         """Re-assign all Parameters to other contexts.
