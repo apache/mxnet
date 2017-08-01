@@ -24,7 +24,7 @@ class DeferredInitializationError(MXNetError):
 class Parameter(object):
     """A Container holding parameters (weights) of `Block`s.
 
-    `Parameter` holds a copy of the the parameter on each `Context` after
+    `Parameter` holds a copy of the parameter on each `Context` after
     it is initialized with `Parameter.initialize(...)`. If `grad_req` is
     not `null`, it will also hold a gradient array on each `Context`::
 
@@ -353,7 +353,7 @@ class ParameterDict(object):
     Parameters
     ----------
     prefix : str, default ''
-        The prefix to be prepended to all Parameters' name created by this dict.
+        The prefix to be prepended to all Parameters' names created by this dict.
     shared : ParameterDict or None
         If not `None`, when this dict's `get` method creates a new parameter, will
         first try to retrieve it from `shared` dict. Usually used for sharing
