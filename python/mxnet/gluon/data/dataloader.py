@@ -67,4 +67,4 @@ class DataLoader(object):
             yield _batchify([self._dataset[idx] for idx in batch])
 
     def __len__(self):
-        return self._batch_sampler
+        return len(self._batch_sampler)
