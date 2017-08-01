@@ -374,7 +374,7 @@ class ParameterDict(object):
                         content='\n'.join([_indent('  {0}'.format(v), 2)
                                            for v in self.values()]))
 
-    def setattr(self, attr, value, prefix=""):
+    def setattr(self, attr, value, prefix="", condition=None):
         """Calls setattr(p, attr, value) for all matching Parameters p.
 
         Can be useful to change the grad_req attribute of a set of parameters.
@@ -386,11 +386,17 @@ class ParameterDict(object):
         value : object
             The value to set the attribute to.
         prefix : str, default ''
-            If set, only set attributes of Parameters whose name starts with
-            prefix.
+            If set, only overwrite attributes of Parameters whose name starts
+            with prefix.
+        condition : object, optional
+            If set, only overwrite attributes whose current value is equal to
+            condition.
         """
         for k, v in self._params.items():
             if k.startswith(prefix):
+                if (condition is not None and
+                        condition != getattr(v, attr)):
+                    continue
                 setattr(v, attr, value)
 
     def items(self):
