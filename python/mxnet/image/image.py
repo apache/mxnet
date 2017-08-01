@@ -869,7 +869,7 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
     crop_size = (data_shape[2], data_shape[1])
     if rand_resize:
         assert rand_crop
-        auglist.append(RandomSizedCropAug(crop_size, 0.3, (3.0 / 4.0, 4.0 / 3.0), inter_method))
+        auglist.append(RandomSizedCropAug(crop_size, 0.08, (3.0 / 4.0, 4.0 / 3.0), inter_method))
     elif rand_crop:
         auglist.append(RandomCropAug(crop_size, inter_method))
     else:
