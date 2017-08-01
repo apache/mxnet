@@ -6,7 +6,7 @@
 from __future__ import print_function
 
 from ... import symbol, ndarray
-from ...base import string_types, numeric_types
+from ...base import string_types, numeric_types, _as_list
 from ..block import Block, HybridBlock
 from ..utils import _indent
 from .. import tensor_types
@@ -50,8 +50,9 @@ def _format_sequence(length, inputs, layout, merge, in_layout=None):
         batch_size = inputs.shape[batch_axis]
         if merge is False:
             assert length is None or length == inputs.shape[in_axis]
-            inputs = ndarray.split(inputs, axis=in_axis, num_outputs=inputs.shape[in_axis],
-                                   squeeze_axis=1)
+            inputs = _as_list(ndarray.split(inputs, axis=in_axis,
+                                            num_outputs=inputs.shape[in_axis],
+                                            squeeze_axis=1))
     else:
         assert length is None or len(inputs) == length
         if isinstance(inputs[0], symbol.Symbol):
