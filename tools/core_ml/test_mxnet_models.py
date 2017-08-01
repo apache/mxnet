@@ -12,10 +12,17 @@ def _mxnet_remove_batch(input_data):
     return input_data
 
 
-def _kl_divergence(output1, output2):
-    assert len(output1) == len(output2)
-    n = len(output1)
-    result = 1./n * sum(output1 * (np.log(output1) - np.log(output2)))
+def _kl_divergence(distribution1, distribution2):
+    """ Calculates Kullback-Leibler Divergence b/w two distributions.
+
+    Parameters
+    ----------
+    distribution1: list of floats
+    distribution2: list of floats
+    """
+    assert len(distribution1) == len(distribution2)
+    n = len(distribution1)
+    result = 1./n * sum(distribution1 * (np.log(distribution1) - np.log(distribution2)))
     return result
 
 
