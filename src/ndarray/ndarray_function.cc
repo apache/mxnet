@@ -29,7 +29,8 @@ void Copy<cpu, cpu>(const TBlob &from, TBlob *to,
 }
 
 template<typename DType, typename IType>
-void ElementwiseSumRspImpl(const std::vector<NDArray>& nds,
+void ElementwiseSumRspImpl(mshadow::Stream<cpu>* s,
+                           const std::vector<NDArray>& nds,
                            const std::vector<IType>& uniq_row_idx,
                            NDArray* out,
                            const int nthreads = 4) {
@@ -42,7 +43,9 @@ void ElementwiseSumRspImpl(const std::vector<NDArray>& nds,
     if (row_block_start < nnr) {
       const size_t row_block_end = std::min(row_block_start+row_block_len, nnr);
 
-      auto out_values = out->data().FlatTo2D<cpu, DType>();
+      const size_t row_length = out->data().shape_.ProdShape(1, out->data().shape_.ndim());
+      auto out_values = out->data().get_with_shape<cpu, 2, DType>(
+          mshadow::Shape2(out->storage_shape()[0], row_length), s);
       auto out_indices = out->aux_data(rowsparse::kIdx).FlatTo1D<cpu, IType>();
       for (size_t i = row_block_start; i < row_block_end; ++i) {
         out_indices[i] = uniq_row_idx[i];
@@ -50,7 +53,8 @@ void ElementwiseSumRspImpl(const std::vector<NDArray>& nds,
       for (const auto& nd : nds) {
         if (nd.storage_initialized()) {
           const auto nd_indices = nd.aux_data(rowsparse::kIdx).FlatTo1D<cpu, IType>();
-          const auto nd_values = nd.data().FlatTo2D<cpu, DType>();
+          const auto nd_values = nd.data().get_with_shape<cpu, 2, DType>(
+              mshadow::Shape2(nd.storage_shape()[0], row_length), s);
           const auto nd_num_rows = nd.aux_shape(rowsparse::kIdx).Size();
           const IType* nd_indices_start = &nd_indices[0];
           const IType* nd_indices_end = nd_indices_start + nd_num_rows;
@@ -120,7 +124,7 @@ void GetUniqueRspRowIdx(const std::vector<NDArray>& nds,
   uniq_row_idx->resize(it - uniq_row_idx->begin());
 }
 
-void ElementwiseSumRsp(const std::vector<NDArray>& nds, NDArray* out) {
+void ElementwiseSumRsp(mshadow::Stream<cpu>* s, const std::vector<NDArray>& nds, NDArray* out) {
   if (nds.empty()) return;
   using namespace rowsparse;
   CHECK_EQ(out->storage_type(), kRowSparseStorage)
@@ -133,7 +137,7 @@ void ElementwiseSumRsp(const std::vector<NDArray>& nds, NDArray* out) {
       GetUniqueRspRowIdx(nds, &uniq_row_idx);
       out->CheckAndAlloc({mshadow::Shape1(uniq_row_idx.size())});
       out->data().FlatTo2D<cpu, DType>() = static_cast<DType>(0);
-      ElementwiseSumRspImpl<DType, IType>(nds, uniq_row_idx, out, omp_get_max_threads());
+      ElementwiseSumRspImpl<DType, IType>(s, nds, uniq_row_idx, out, omp_get_max_threads());
     });
   });
 }
@@ -149,7 +153,7 @@ void ElementwiseSum<cpu>(mshadow::Stream<cpu>* s,
   if (nds.empty()) return;
 
   if (nds[0].storage_type() == kRowSparseStorage) {
-    ElementwiseSumRsp(nds, out);
+    ElementwiseSumRsp(s, nds, out);
   } else {
     LOG(FATAL) << "ElementwiseSum<cpu> has not been implemented for storage_type = << "
                << nds[0].storage_type();
