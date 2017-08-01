@@ -13,7 +13,7 @@ def get_fine_tune_model(symbol, arg_params, num_classes, layer_name):
     num_classes: the number of classes for the fine-tune datasets
     layer_name: the layer name before the last fully-connected layer
     """
-    all_layers = sym.get_internals()
+    all_layers = symbol.get_internals()
     net = all_layers[layer_name+'_output']
     net = mx.symbol.FullyConnected(data=net, num_hidden=num_classes, name='fc')
     net = mx.symbol.SoftmaxOutput(data=net, name='softmax')

@@ -445,7 +445,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 }
 /*--------------------------banner---------------------------*/
 #splash{
-    padding:60px 0 0 0;
+    padding:60px 0 50px 0;
     background-color:#0079b2;
     /* background-image:url(../img/bg.jpg); */
     background-size:cover;
@@ -598,11 +598,11 @@ li.dropdown-submenu ul.dropdown-menu a {
     .section-tout .container {
         height: auto;
     }
-    
+
     .section-tout .row a {
         position: inherit;
     }
-    
+
     .section-tout .row div {
         margin-bottom: 20px;
         padding-left: 20px;
@@ -631,7 +631,18 @@ li.dropdown-submenu ul.dropdown-menu a {
     left: 0;
     right: 0;
     padding-top: 10px;
-    margin-top: 100px;
+    margin-top: 60px;
+}
+
+@media (max-width: 600px) {
+    .section-util .util-btn {
+        margin-top: 100px;
+    }
+}
+
+.section-util .glyphicon {
+    font-size: 50px;
+    color: #999;
 }
 
 .util-btn a {
@@ -653,14 +664,14 @@ li.dropdown-submenu ul.dropdown-menu a {
 }
 
 .section-util .container {
-    height: 230px;
+    height: 250px;
 }
 
 @media (max-width: 1199px) {
     .section-util .container {
         height: auto
     }
-    
+
     .section-util .row div {
         margin-bottom: 200px;
     }
@@ -957,7 +968,7 @@ dl.attribute dt code.descname {
 dt em {
     font-weight: normal;
     font-style: normal;
-    font-size: 90%; 
+    font-size: 90%;
 }
 
 code {
@@ -972,6 +983,10 @@ dt code {
 dl.last.docutils dt{
     background-color: transparent;
     border-bottom: none;
+}
+
+dl.docutils dt {
+    color: #555;
 }
 
 /*----------------Model zoo page style------------------*/
@@ -1196,11 +1211,11 @@ button.download {
 
 /*----------------------Download button------------------------*/
 div.download_btn {
-    
+
     border: solid 1px lightgray;
     border-radius: 3px;
     font-size: 90%;
-    height: 30px;
+    height: 40px;
     display: table;
     float: left;
 }
@@ -1215,4 +1230,16 @@ div.download_btn a:hover {
     background-color: #0079b2;
     color: white;
     text-decoration: none;
+}
+
+/*-------------output blocks----------------*/
+
+.highlight-results .highlight pre {
+    background-color: #eeffcc;
+}
+
+.cell-results-header {
+    color: #888;
+    padding-bottom: 3px;
+    font-style: italic;
 }

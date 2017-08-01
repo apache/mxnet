@@ -98,7 +98,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
   const size_t itemCountPerChannel = inputData.Size() / channelCount;
 
   #pragma omp parallel for
-  for (int channel = 0; channel < channelCount; ++channel) {
+  for (int channel = 0; channel < static_cast<int>(channelCount); ++channel) {
     if (is_train_and_not_global_stats) {
       // compute mean per input
       mean[channel] = 0;
@@ -315,21 +315,11 @@ Operator *CreateOp<cpu>(BatchNormParam param, const int dtype, const TShape& sha
         break;
     }
   }
-#define BATCHNORM_LOG_MKL_INFO() \
-  do { \
-    if (!mxnet::op::batchnorm::disable_mkl) { \
-      LOG(INFO) << MKLBatchNormOp<cpu, float>::getName() \
-        << " Skipping MKL optimization (unsupported dimension, axis or type)"; \
-    } \
-  } while (0)
-#else
-#define BATCHNORM_LOG_MKL_INFO() ((void)0)
 #endif
   if (!op) {
     MSHADOW_REAL_TYPE_SWITCH_EX(dtype,
                                 DType,
                                 AccReal, {
-                                  BATCHNORM_LOG_MKL_INFO();
                                   op = new BatchNormOp<cpu, DType, AccReal>(param); });
   }
   return op;
@@ -338,11 +328,6 @@ Operator *CreateOp<cpu>(BatchNormParam param, const int dtype, const TShape& sha
 // DO_BIND_DISPATCH comes from operator_common.h
 Operator *BatchNormProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                           std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
-  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-  CHECK_GE(in_shape->size(), 1U);
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_shape)[0]);
 }
 
@@ -415,4 +400,3 @@ NNVM_REGISTER_OP(BatchNorm)
 
 }  // namespace op
 }  // namespace mxnet
-

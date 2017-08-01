@@ -12,23 +12,7 @@ from ..context import cpu
 from ..model import BatchEndParam
 from ..initializer import Uniform
 from ..io import DataDesc
-
-
-def _as_list(obj):
-    """A utility function that treat the argument as a list.
-
-    Parameters
-    ----------
-    obj : object
-
-    Returns
-    -------
-    If `obj` is a list, return it. Otherwise, return `[obj]` as a single-element list.
-    """
-    if isinstance(obj, list):
-        return obj
-    else:
-        return [obj]
+from ..base import _as_list
 
 
 def _check_input_names(symbol, names, typename, throw):

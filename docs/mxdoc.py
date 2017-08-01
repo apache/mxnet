@@ -3,8 +3,14 @@ import subprocess
 import re
 import os
 import json
+import sys
 from recommonmark import transform
 import pypandoc
+import StringIO
+import contextlib
+
+# white list to evaluate the code block output, such as ['tutorials/gluon']
+_EVAL_WHILTELIST = []
 
 # start or end of a code block
 _CODE_MARK = re.compile('^([ ]*)```([\w]*)')
@@ -17,7 +23,6 @@ _LANGS = {'python' : ('py', '#'),
           'perl' : ('pl', '#'),
           'cpp' : ('cc', '//'),
           'bash' : ('sh', '#')}
-
 _LANG_SELECTION_MARK = 'INSERT SELECTION BUTTONS'
 _SRC_DOWNLOAD_MARK = 'INSERT SOURCE DOWNLOAD BUTTONS'
 
@@ -157,12 +162,20 @@ def _get_lang_selection_btn(langs):
         btngroup += '</div>\n</div> <script type="text/javascript" src="../../_static/js/options.js"></script>'
     return btngroup
 
-def _get_blocks(lang, lines):
+def _get_blocks(lines):
+    """split lines into code and non-code blocks
+
+    Returns
+    -------
+    iterator of (bool, str, list of str)
+      - if it is a code block
+      - source language
+      - lines of source
+    """
     cur_block = []
+    pre_lang = None
     pre_in_code = None
     for (l, in_code, cur_lang, _) in _parse_code_lines(lines):
-        if in_code and cur_lang != lang:
-            in_code = False
         if in_code != pre_in_code:
             if pre_in_code and len(cur_block) >= 2:
                 cur_block = cur_block[1:-1] # remove ```
@@ -179,20 +192,67 @@ def _get_blocks(lang, lines):
                 else:
                     break
             if len(cur_block):
-                yield (pre_in_code, cur_block)
+                yield (pre_in_code, pre_lang, cur_block)
             cur_block = []
         cur_block.append(l)
+        pre_lang = cur_lang
         pre_in_code = in_code
     if len(cur_block):
-        yield (pre_in_code, cur_block)
+        yield (pre_in_code, pre_lang, cur_block)
+
+def _get_mk_code_block(src, lang):
+    """Return a markdown code block
+
+    E.g.
+    ```python
+    import mxnet
+    ````
+    """
+    if lang is None:
+        lang = ''
+    return '```'+lang+'\n'+src.rstrip()+'\n'+'```\n'
+
+@contextlib.contextmanager
+def _string_io():
+    oldout = sys.stdout
+    olderr = sys.stderr
+    strio = StringIO.StringIO()
+    sys.stdout = strio
+    sys.stderr = strio
+    yield strio
+    sys.stdout = oldout
+    sys.stderr = olderr
+
+def _get_python_block_output(src, global_dict, local_dict):
+    """Evaluate python source codes
+
+    Returns
+    (bool, str):
+      - True if success
+      - output
+    """
+    src = '\n'.join([l for l in src.split('\n')
+                     if not l.startswith('%') and not 'plt.show()' in l])
+    ret_status = True
+    err = ''
+    with _string_io() as s:
+        try:
+            exec(src, global_dict, global_dict)
+        except Exception as e:
+            err = str(e)
+            ret_status = False
+    return (ret_status, s.getvalue()+err)
 
 def _get_jupyter_notebook(lang, lines):
     cells = []
-    for in_code, lines in _get_blocks(lang, lines):
+    for in_code, blk_lang, lines in _get_blocks(lines):
+        if blk_lang != lang:
+            in_code = False
+        src = '\n'.join(lines)
         cell = {
             "cell_type": "code" if in_code else "markdown",
             "metadata": {},
-            "source":  '\n'.join(lines)
+            "source":  src
         }
         if in_code:
              cell.update({
@@ -231,7 +291,11 @@ def _get_source(lang, lines):
 def _get_src_download_btn(out_prefix, langs, lines):
     btn = '<div class="btn-group" role="group">\n'
     for lang in langs:
-        ipynb = out_prefix + '_' + lang + '.ipynb'
+        ipynb = out_prefix
+        if lang == 'python':
+            ipynb += '.ipynb'
+        else:
+            ipynb += '_' + lang + '.ipynb'
         with open(ipynb, 'w') as f:
             json.dump(_get_jupyter_notebook(lang, lines), f)
         f = ipynb.split('/')[-1]
@@ -247,6 +311,8 @@ def add_buttons(app, docname, source):
         os.makedirs(dirname)
 
     for i,j in enumerate(source):
+        local_dict = {}
+        global_dict = {}
         lines = j.split('\n')
         langs = set([l for (_, _, l, _) in _parse_code_lines(lines)
                      if l is not None and l in _LANGS])
@@ -255,11 +321,26 @@ def add_buttons(app, docname, source):
             if _SRC_DOWNLOAD_MARK in l:
                 lines[k] = _get_src_download_btn(
                     out_prefix, langs, lines)
-        # then add lang buttons
-        for k,l in enumerate(lines):
-            if _LANG_SELECTION_MARK in l:
-                lines[k] = _get_lang_selection_btn(langs)
-        source[i] = '\n'.join(lines)
+        # # then add lang buttons
+        # for k,l in enumerate(lines):
+        #     if _LANG_SELECTION_MARK in l:
+        #         lines[k] = _get_lang_selection_btn(langs)
+
+        output = ''
+        for in_code, lang, lines in _get_blocks(lines):
+            src = '\n'.join(lines)+'\n'
+            if in_code:
+                output += _get_mk_code_block(src, lang)
+                if lang == 'python' and any([w in docname for w in _EVAL_WHILTELIST]):
+                    status, blk_out = _get_python_block_output(src, global_dict, local_dict)
+                    if len(blk_out):
+                        output += '<div class=\"cell-results-header\">Output:</div>\n\n'
+                        output += _get_mk_code_block(blk_out, 'results')
+            else:
+                output += src
+        source[i] = output
+
+        # source[i] = '\n'.join(lines)
 
 def setup(app):
     app.connect("builder-inited", build_mxnet)

@@ -12,7 +12,7 @@ except ImportError:
         raise ImportError('You used to compile with protoc --python_out=./ ./caffe.proto')
     use_caffe = False
 
-from google.protobuf import text_format
+from google.protobuf import text_format # pylint: disable=relative-import
 
 def read_prototxt(fname):
     """Return a caffe_pb2.NetParameter object that defined in a prototxt file

@@ -139,12 +139,12 @@ typedef int (*CustomOpBwdDepFunc)(const int* /*out_grad*/, const int* /*in_data*
                                   const int* /*out_data*/, int* /*num_deps*/,
                                   int** /*rdeps*/, void* /*state*/);
 typedef int (*CustomOpCreateFunc)(const char* /*ctx*/, int /*num_inputs*/,
-                                  unsigned** /*shapes*/, int* /*ndims*/,
-                                  int* /*dtypes*/, struct MXCallbackList* /*ret*/,
+                                  unsigned** /*shapes*/, const int* /*ndims*/,
+                                  const int* /*dtypes*/, struct MXCallbackList* /*ret*/,
                                   void* /*state*/);
 typedef int (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
-                                     const char** /*keys*/, const char** /*values*/,
-                                     struct MXCallbackList* /*ret*/);
+                                   const char** /*keys*/, const char** /*values*/,
+                                   struct MXCallbackList* /*ret*/);
 
 /*!
  * \brief return str message of the last error
@@ -416,6 +416,12 @@ MXNET_DLL int MXNDArrayGetDType(NDArrayHandle handle,
 MXNET_DLL int MXNDArrayGetContext(NDArrayHandle handle,
                                   int *out_dev_type,
                                   int *out_dev_id);
+/*!
+ * \brief return gradient buffer attached to this NDArray
+ * \param handle NDArray handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayGetGrad(NDArrayHandle handle, NDArrayHandle *out);
 /*!
  * \brief detach and ndarray from computation graph by clearing entry_
  * \param handle NDArray handle
