@@ -2282,6 +2282,7 @@ def negative(arr):
     """
     return multiply(arr, -1.0)
 
+
 def load(fname):
     """Loads an array from file.
 
@@ -2329,7 +2330,7 @@ def save(fname, data):
     ----------
     fname : str
         The filename.
-    data : list of ``NDArray` or dict of str to ``NDArray``
+    data : ``NDArray``, list of ``NDArray` or dict of str to ``NDArray``
         The data to save.
 
     Examples
@@ -2343,6 +2344,8 @@ def save(fname, data):
     >>> mx.nd.load('my_dict')
     {'y': <NDArray 1x4 @cpu(0)>, 'x': <NDArray 2x3 @cpu(0)>}
     """
+    if isinstance(data, NDArray):
+        data = [data]
     handles = []
     if isinstance(data, dict):
         keys = []
@@ -2354,12 +2357,15 @@ def save(fname, data):
             keys.append(c_str(key))
             handles.append(val.handle)
         keys = c_array(ctypes.c_char_p, keys)
-    else:
+    elif isinstance(data, list):
         for val in data:
             if not isinstance(val, NDArray):
                 raise TypeError('save only accept dict str->NDArray or list of NDArray')
             handles.append(val.handle)
         keys = None
+    else:
+        raise ValueError("data needs to either be a NDArray, dict of str, NDArray pairs "
+                         "or a list of NDarrays.")
     check_call(_LIB.MXNDArraySave(c_str(fname),
                                   mx_uint(len(handles)),
                                   c_array(NDArrayHandle, handles),
