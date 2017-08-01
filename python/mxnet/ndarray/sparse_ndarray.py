@@ -88,19 +88,24 @@ class SparseNDArray(NDArray):
     for more details.
     """
     def __iadd__(self, other):
-        raise NotImplementedError("SparseND doesn't support __iadd__")
+        (self + other).copyto(self)
+        return self
 
     def __isub__(self, other):
-        raise NotImplementedError("SparseND doesn't support __isub__")
+        (self - other).copyto(self)
+        return self
 
     def __imul__(self, other):
-        raise NotImplementedError("SparseND doesn't support __imul__")
+        (self * other).copyto(self)
+        return self
 
     def __idiv__(self, other):
-        raise NotImplementedError("SparseND doesn't support __idiv__")
+        (self / other).copyto(self)
+        return self
 
     def __itruediv__(self, other):
-        raise NotImplementedError("SparseND doesn't support __itruediv__")
+        (self / other).copyto(self)
+        return self
 
     def __setitem__(self, key, value):
         """x.__setitem__(i, y) <=> x[i]=y
@@ -179,14 +184,13 @@ class SparseNDArray(NDArray):
         array([[ 3.,  4.,  5.]], dtype=float32)
         """
         stype = self.stype
-        if stype != 'csr':
-            raise Exception("__getitem__ for " + str(stype) + " is not implemented yet")
         if isinstance(key, int):
             raise Exception("__getitem__ with int key is not implemented yet")
         if isinstance(key, py_slice):
             if key.step is not None:
                 raise ValueError('NDArray only supports continuous slicing on axis 0')
             if key.start is not None or key.stop is not None:
+                assert(stype == 'csr'), "__getitem__ with slice is only implemented for CSRNDArray"
                 begin = key.start if key.start else 0
                 end = key.stop if key.stop else self.shape[0]
                 return nd_slice(self, begin=begin, end=end)

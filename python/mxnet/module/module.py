@@ -453,12 +453,9 @@ class Module(BaseModule):
 
         if self._params_dirty:
             self._sync_params_from_devices()
-        name2idx = {}
-        for idx, name in enumerate(self._exec_group.param_names):
-            name2idx[name] = idx
 
         (kvstore, update_on_kvstore) = \
-                _create_kvstore(kvstore, len(self._context), self._arg_params, name2idx=name2idx)
+                _create_kvstore(kvstore, len(self._context), self._arg_params)
 
         batch_size = self._exec_group.batch_size
         if kvstore and 'dist' in kvstore.type and '_sync' in kvstore.type:

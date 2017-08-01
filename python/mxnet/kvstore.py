@@ -5,58 +5,47 @@ from __future__ import absolute_import
 import ctypes
 import pickle
 from .ndarray import NDArray
+from .ndarray import _ndarray_cls
 from .base import _LIB
 from .base import check_call, c_array, c_str, string_types, mx_uint, py_str
 from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
 
-def _ctype_str_key_value(keys, vals):
-    names = []
-    if isinstance(keys, str):
-        if isinstance(vals, NDArray):
-            names.append(c_str(keys))
-            return (c_array(ctypes.c_char_p, names),
-                    c_array(NDArrayHandle, [vals.handle]))
-        else:
-            for value in vals:
-                assert(isinstance(value, NDArray))
-            return (c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)),
-                    c_array(NDArrayHandle, [value.handle for value in vals]))
-    else:
+def _ctype_key_value(keys, vals):
+    if isinstance(keys, (tuple, list)):
         assert(len(keys) == len(vals))
-        for k in keys:
-            assert(isinstance(k, str))
         c_keys = []
         c_vals = []
         for key, val in zip(keys, vals):
-            c_key_i, c_val_i = _ctype_str_key_value(key, val)
+            c_key_i, c_val_i = _ctype_key_value(key, val)
             c_keys += c_key_i
             c_vals += c_val_i
         return (c_array(ctypes.c_char_p, c_keys), c_array(NDArrayHandle, c_vals))
-
-def _cast_to_str_keys(keys):
-    if isinstance(keys, str):
-        return keys
-    if isinstance(keys, int):
-        return str(keys)
-    str_keys = []
-    for key in keys:
-        str_keys.append(str(key) if isinstance(key, int) else key)
-    return str_keys
+    names = []
+    keys = str(keys)
+    if isinstance(vals, NDArray):
+        names.append(c_str(keys))
+        return (c_array(ctypes.c_char_p, names),
+                c_array(NDArrayHandle, [vals.handle]))
+    else:
+        for value in vals:
+            assert(isinstance(value, NDArray))
+        return (c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)),
+                c_array(NDArrayHandle, [value.handle for value in vals]))
 
 def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
     def updater_handle(key, lhs_handle, rhs_handle, _):
         """ ctypes function """
-        lhs = NDArray(NDArrayHandle(lhs_handle))
-        rhs = NDArray(NDArrayHandle(rhs_handle))
+        lhs = _ndarray_cls(NDArrayHandle(lhs_handle))
+        rhs = _ndarray_cls(NDArrayHandle(rhs_handle))
         updater(key, lhs, rhs)
     return updater_handle
 
 
 class KVStore(object):
     """A key-value store for synchronization of values, over multiple devices."""
-    def __init__(self, handle, name2idx=None):
+    def __init__(self, handle):
         """Initializes a new KVStore.
 
         Parameters
@@ -66,7 +55,6 @@ class KVStore(object):
         """
         assert isinstance(handle, KVStoreHandle)
         self.handle = handle
-        self.name2idx = name2idx if name2idx is not None else {}
         self._updater = None
         self._updater_func = None
 
@@ -104,8 +92,7 @@ class KVStore(object):
         >>> keys = ['5', '7', '9']
         >>> kv.init(keys, [mx.nd.ones(shape)]*len(keys))
         """
-        key = _cast_to_str_keys(key)
-        ckeys, cvals = _ctype_str_key_value(key, value)
+        ckeys, cvals = _ctype_key_value(key, value)
         check_call(_LIB.MXKVStoreInitEx(self.handle, mx_uint(len(ckeys)), ckeys, cvals))
 
     def push(self, key, value, priority=0):
@@ -165,8 +152,7 @@ class KVStore(object):
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
         """
-        key = _cast_to_str_keys(key)
-        ckeys, cvals = _ctype_str_key_value(key, value)
+        ckeys, cvals = _ctype_key_value(key, value)
         check_call(_LIB.MXKVStorePushEx(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
@@ -183,6 +169,8 @@ class KVStore(object):
         for the same input key(s) are finished.
 
         The returned values are gauranteed to be the latest values in the store.
+
+        For row_sparse values, please use `row_sparse_pull` instead.
 
         Parameters
         ----------
@@ -229,11 +217,87 @@ class KVStore(object):
         [ 2.  2.  2.]]
         """
         assert(out is not None)
-        key = _cast_to_str_keys(key)
-        ckeys, cvals = _ctype_str_key_value(key, out)
+        if not isinstance(out, (list, tuple)):
+            out = [out]
+        for val in out:
+            if not isinstance(val, (list, tuple)):
+                assert(val.stype == 'default')
+            else:
+                for v in val:
+                    assert(v.stype == 'default')
+        ckeys, cvals = _ctype_key_value(key, out)
         check_call(_LIB.MXKVStorePullEx(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
+
+    def row_sparse_pull(self, key, out=None, priority=0, row_ids=None):
+        """ Pulls a single row_sparse value or a sequence of row_sparse values from the store
+         with specified row_ids.
+
+        `row_sparse_pull` is executed asynchronously after all previous
+        `push`/`pull`/`row_sparse_pull` calls for the same input key(s) are finished.
+
+        The returned values are guaranteed to be the latest values in the store.
+
+        Parameters
+        ----------
+        key : str or list of str
+            Keys.
+
+        out: NDArray or list of NDArray or list of list of NDArray
+            Values corresponding to the keys. The stype is expected to be row_sparse
+
+        priority : int, optional
+            The priority of the pull operation.
+            Higher priority pull operations are likely to be executed before
+            other pull actions.
+
+        row_ids : NDArray or list of NDArray
+            The row_ids for which to pull for each value. The row_ids doesn't have to be unique
+            or sorted.
+        Examples
+        --------
+        >>> shape = (3, 3)
+        >>> kv.init('3', mx.nd.ones(shape)._to_rsp())
+        >>> a = mx.nd.zeros(shape)
+        >>> row_ids = mx.nd.array([0, 2], dtype='int64')
+        >>> kv.row_sparse_pull('3', out=a, row_ids=row_ids)
+        >>> print a.asnumpy()
+        [[ 1.  1.  1.]
+        [ 0.  0.  0.]
+        [ 1.  1.  1.]]
+        >>> duplicate_row_ids = mx.nd.array([2, 2], dtype='int64')
+        >>> kv.row_sparse_pull('3', out=a, row_ids=duplicate_row_ids)
+        >>> print a.asnumpy()
+        [[ 0.  0.  0.]
+        [ 0.  0.  0.]
+        [ 1.  1.  1.]]
+        >>> unsorted_row_ids = mx.nd.array([1, 0], dtype='int64')
+        >>> kv.row_sparse_pull('3', out=a, row_ids=unsorted_row_ids)
+        >>> print a.asnumpy()
+        [[ 1.  1.  1.]
+        [ 1.  1.  1.]
+        [ 0.  0.  0.]]
+        """
+        assert(out is not None)
+        assert(row_ids is not None)
+        if isinstance(row_ids, NDArray):
+            row_ids = [row_ids]
+        if not isinstance(out, (list, tuple)):
+            out = [out]
+        for val in out:
+            if not isinstance(val, (list, tuple)):
+                assert(val.stype == 'row_sparse')
+            else:
+                for v in val:
+                    assert(v.stype == 'row_sparse')
+        ckeys, cvals = _ctype_key_value(key, out)
+        _, crow_ids = _ctype_key_value(key, row_ids)
+        assert(len(crow_ids) == len(cvals)), "number of row_ids doesn't match number of values"
+
+        check_call(_LIB.MXKVStorePullRowSparse(
+            self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
+
 
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.
@@ -407,7 +471,7 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreSendCommmandToServers(
             self.handle, mx_uint(head), c_str(body)))
 
-def create(name='local', name2idx=None):
+def create(name='local'):
     """Creates a new KVStore.
 
     For single machine training, there are two commonly used types:
@@ -447,4 +511,4 @@ def create(name='local', name2idx=None):
     handle = KVStoreHandle()
     check_call(_LIB.MXKVStoreCreate(c_str(name),
                                     ctypes.byref(handle)))
-    return KVStore(handle, name2idx=name2idx)
+    return KVStore(handle)

@@ -37,7 +37,7 @@ BatchEndParam = namedtuple('BatchEndParams',
                             'eval_metric',
                             'locals'])
 
-def _create_kvstore(kvstore, num_device, arg_params, name2idx=None):
+def _create_kvstore(kvstore, num_device, arg_params):
     """Create kvstore
     This function select and create a proper kvstore if given the kvstore type.
 
@@ -61,7 +61,7 @@ def _create_kvstore(kvstore, num_device, arg_params, name2idx=None):
             # no need to use kv for single device and single machine
             kv = None
         else:
-            kv = kvs.create(kvstore, name2idx=name2idx)
+            kv = kvs.create(kvstore)
             if kvstore == 'local':
             # automatically select a proper local
                 max_size = max(np.prod(param.shape) for param in
@@ -76,15 +76,29 @@ def _create_kvstore(kvstore, num_device, arg_params, name2idx=None):
 
     return (kv, update_on_kvstore)
 
-def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
-                        update_on_kvstore):
+def _contains_non_default_storage(params):
+    if isinstance(params, (list, tuple)):
+        for param in params:
+            if param.stype != 'default':
+                return True
+    elif isinstance(params, NDArray):
+        return param.stype != 'default'
+    else:
+        return False
+
+def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_on_kvstore):
     """Initialize kvstore"""
     for idx, param_on_devs in enumerate(param_arrays):
         name = param_names[idx]
         kvstore.init(name, arg_params[name])
 
         if update_on_kvstore:
-            kvstore.pull(name, param_on_devs, priority=-idx)
+            if _contains_non_default_storage(param_on_devs):
+                # skip pulling row_sparse weights
+                warnings.warn('Detected non-default weight in kvstore to pull. Please make ' \
+                              'sure to pull it with row_ids explicitly', RuntimeWarning)
+            else:
+                kvstore.pull(name, param_on_devs, priority=-idx)
 
 def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
     """Perform update of param_arrays from grad_arrays on kvstore."""
@@ -96,7 +110,12 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
         # push gradient, priority is negative index
         kvstore.push(name, grad_list, priority=-index)
         # pull back the weights
-        kvstore.pull(name, arg_list, priority=-index)
+        if _contains_non_default_storage(arg_list):
+            # skip pulling row_sparse weights
+            warnings.warn('Detected non-default weight in kvstore to pull. Please make ' \
+                          'sure to pull it with row_ids', RuntimeWarning)
+        else:
+            kvstore.pull(name, arg_list, priority=-index)
 
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None, param_names=None):
@@ -111,7 +130,12 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
             # push gradient, priority is negative index
             kvstore.push(name, grad_list, priority=-index)
             # pull back the sum gradients, to the same locations.
-            kvstore.pull(name, grad_list, priority=-index)
+            if _contains_non_default_storage(grad_list):
+                # skip pulling row_sparse weights
+                warnings.warn('Detected non-default weight in kvstore to pull. Please make ' \
+                              'sure to pull it with row_ids', RuntimeWarning)
+            else:
+                kvstore.pull(name, grad_list, priority=-index)
         for k, p in enumerate(zip(arg_list, grad_list)):
             # faked an index here, to make optimizer create diff
             # state for the same index but on diff devs, TODO(mli)

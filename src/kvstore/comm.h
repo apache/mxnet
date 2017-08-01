@@ -13,6 +13,7 @@
 #include <thread>
 #include "mxnet/ndarray.h"
 #include "../ndarray/ndarray_function.h"
+#include "../operator/tensor/indexing_op.h"
 namespace mxnet {
 namespace kvstore {
 /**
@@ -47,6 +48,18 @@ class Comm {
   virtual void Broadcast(
       int key, const NDArray& src,
       const std::vector<NDArray*> dst, int priority) = 0;
+
+  /**
+   * \brief broadcast src to dst[i] with target row_ids for every i
+   * \param dst a list of destination row_sparse NDArray and its target row_ids to broadcast,
+            where the row_ids are expected to be unique and sorted
+   * \param use_copy if set to true, directly copy src to dst[i] without looking up the
+            provided row_ids
+   */
+  virtual void BroadcastRowSparse(int key, const NDArray& src,
+                                  const std::vector<std::pair<NDArray*, NDArray>>& dst,
+                                  const bool use_copy,
+                                  const int priority) = 0;
 
   /**
    * \brief return a pinned contex
@@ -164,6 +177,38 @@ class CommCPU : public Comm {
     }
   }
 
+  // TODO(haibin) support broadcast row_sparse on GPU
+  void BroadcastRowSparse(int key, const NDArray& src,
+                          const std::vector<std::pair<NDArray*, NDArray>>& dst,
+                          const bool use_copy,
+                          const int priority) override {
+    using namespace mshadow;
+    auto size = dst.size();
+    for (size_t i = 0; i < size; i++) {
+      auto out = dst[i].first;
+      auto row_id = dst[i].second;
+      if (use_copy) {
+        CopyFromTo(src, out, priority);
+      } else {
+        CHECK_EQ(out->storage_type(), kRowSparseStorage)
+                 << "BroadcastRowSparse expects row_sparse dst NDArray";
+        CHECK_EQ(out->ctx().dev_mask(), Context::kCPU)
+                 << "BroadcastRowSparse with dst on gpu context not supported";
+        CHECK_EQ(row_id.ctx().dev_mask(), Context::kCPU)
+                 << "BroadcastRowSparse with src on gpu context not supported";
+        // retain according to unique indices
+        Engine::Get()->PushSync([src, out, row_id](RunContext rctx) {
+            NDArray *output = out;
+            const auto indices = row_id.data();
+            op::SparseRetainOpForwardRspImpl<cpu>(rctx.get_stream<cpu>(),
+                                                  src, indices, kWriteTo,
+                                                  output);
+          }, Context::CPU(), {src.var(), row_id.var()}, {out->var()},
+          FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreSparseRetain"));
+      }
+    }
+  }
+
  private:
   // reduce sum into val[0]
   inline void ReduceSumCPU(const std::vector<NDArray> &in_data) {
@@ -180,7 +225,6 @@ class CommCPU : public Comm {
   }
 
   // serial implementation of reduce sum for row sparse NDArray.
-  // TODO(haibin) use openmp kernel to parallelize the summation
   inline void ReduceSumCPUExSerial(const std::vector<NDArray> &in, NDArray *out) {
     using namespace rowsparse;
     using namespace mshadow;
@@ -408,6 +452,13 @@ class CommDevice : public Comm {
         CopyFromTo(buf.merged, d, priority);
       }
     }
+  }
+
+  void BroadcastRowSparse(int key, const NDArray& src,
+                          const std::vector<std::pair<NDArray*, NDArray>>& dst,
+                          const bool use_copy,
+                          const int priority) override {
+    LOG(FATAL) << "Not implemented yet";
   }
 
  private:

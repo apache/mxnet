@@ -16,13 +16,13 @@ def init_kv(stype='default'):
     kv.init(keys, [mx.nd.zeros(shape=shape, stype=stype)] * len(keys))
     return kv
 
-def init_kv_with_str():
+def init_kv_with_str(stype='default'):
     """init kv """
     kv = mx.kv.create()
     # single
-    kv.init('a', mx.nd.zeros(shape))
+    kv.init('a', mx.nd.zeros(shape, stype=stype))
     # list
-    kv.init(str_keys, [mx.nd.zeros(shape)] * len(keys))
+    kv.init(str_keys, [mx.nd.zeros(shape=shape, stype=stype)] * len(keys))
     return kv
 
 def check_diff_to_scalar(A, x):
@@ -41,6 +41,33 @@ def test_single_kv_pair():
     check_single_kv_pair(init_kv(), 3)
     check_single_kv_pair(init_kv_with_str(), 'a')
 
+def test_row_sparse_pull():
+    kv = init_kv_with_str('row_sparse')
+    kv.init('e', mx.nd.ones(shape)._to_rsp())
+
+    def check_row_sparse_pull(kv, count):
+        num_rows = shape[0]
+        vals = []
+        row_ids = []
+        all_row_ids = np.arange(num_rows)
+        for i in range(count):
+            vals.append(mx.nd.zeros(shape)._to_rsp())
+            row_id = np.random.randint(num_rows, size=num_rows)
+            row_ids.append(mx.nd.array(row_id, dtype='int64'))
+        row_ids_to_pull = row_ids[0] if len(row_ids) == 1 else row_ids
+        vals_to_pull = vals[0] if len(vals) == 1 else vals
+
+        kv.row_sparse_pull('e', out=vals_to_pull, row_ids=row_ids_to_pull)
+        for val, row_id in zip(vals, row_ids):
+            retained = val.asnumpy()
+            excluded_row_ids = np.setdiff1d(all_row_ids, row_id.asnumpy())
+            for row in range(num_rows):
+                expected_val = np.zeros_like(retained[row])
+                expected_val += 0 if row in excluded_row_ids else 1
+                assert_almost_equal(retained[row], expected_val)
+
+    check_row_sparse_pull(kv, 1)
+    check_row_sparse_pull(kv, 4)
 
 def test_init():
     """test init"""
@@ -52,7 +79,6 @@ def test_init():
 
     check_init(mx.kv.create(), 3)
     check_init(mx.kv.create(), 'a')
-
 
 def test_list_kv_pair():
     """list key-value pair push & pull"""
@@ -101,7 +127,7 @@ def test_sparse_aggregator():
     """aggregate sparse ndarray on muliple devices"""
 
     stype = 'row_sparse'
-    kv = init_kv(stype)
+    kv = init_kv_with_str(stype)
 
     # devices
     num_devs = 4
@@ -113,8 +139,10 @@ def test_sparse_aggregator():
     for v in vals:
         expected_sum += v.asnumpy()
 
-    kv.push(3, vals)
-    kv.pull(3, out = vals)
+    # prepare row_ids
+    all_rows = mx.nd.array(np.arange(shape[0]), dtype='int64')
+    kv.push('a', vals)
+    kv.row_sparse_pull('a', out=vals, row_ids=[all_rows] * len(vals))
     result_sum = np.zeros(shape)
     for v in vals:
         result_sum += v.asnumpy()
@@ -126,14 +154,13 @@ def test_sparse_aggregator():
     for v in vals[0]:
         expected_sum += v.asnumpy()
 
-    kv.push(keys, vals)
-    kv.pull(keys, out = vals)
+    kv.push(str_keys, vals)
+    kv.row_sparse_pull(str_keys, out=vals, row_ids=[[all_rows] * num_devs] * len(vals))
     for vv in vals:
         result_sum = np.zeros(shape)
         for v in vv:
             result_sum += v.asnumpy()
         assert_almost_equal(result_sum, expected_sum * num_devs)
-
 
 def updater(key, recv, local):
     """use updater: +="""
@@ -179,7 +206,6 @@ def test_updater(dev = 'cpu'):
     check_updater(str_kv, 'a', str_keys)
 
 
-
 def test_get_type():
     kvtype = 'local_allreduce_cpu'
     kv = mx.kv.create(kvtype)
@@ -193,3 +219,4 @@ if __name__ == '__main__':
     test_sparse_aggregator()
     test_aggregator()
     test_updater()
+    test_row_sparse_pull()
