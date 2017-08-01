@@ -52,7 +52,7 @@ class MXNetSingleLayerTest(unittest.TestCase):
     """
     Unit test class for testing mxnet converter (converts model and generates preds on same data to assert they are the same).
     """
-    def _test_mxnet_model(self, net, input_shape, mode, label_names=None, delta=1e-3):
+    def _test_mxnet_model(self, net, input_shape, mode, label_names=None, force=False, delta=1e-3):
 
         mod = _get_mxnet_module(net, input_shape, mode, label_names)
 
@@ -68,7 +68,8 @@ class MXNetSingleLayerTest(unittest.TestCase):
         # Get predictions from coreml
         spec = mxnet_converter.convert(
             model=mod,
-            data=input_shape
+            data=input_shape,
+            force=force
         )
         coreml_model = coremltools.models.MLModel(spec)
         coreml_preds = coreml_model.predict(_mxnet_remove_batch(input_data)).values()[0].flatten()
@@ -796,6 +797,61 @@ class MXNetSingleLayerTest(unittest.TestCase):
             use_global_stats=True,
             name='batch_norm_1')
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+
+    @unittest.expectedFailure
+    def test_batch_norm_no_global_stats(self):
+        """ This test should throw an exception since converter doesn't support
+            conversion of MXNet models that use local batch stats (i.e.
+            use_global_stats=False). The reason for this is CoreML doesn't support
+            local batch stats.
+        """
+        np.random.seed(1988)
+        input_shape = (1, 1, 2, 3)
+
+        net = mx.sym.Variable('data')
+        gamma = mx.sym.Variable('gamma')
+        beta = mx.sym.Variable('beta')
+        moving_mean = mx.sym.Variable('moving_mean')
+        moving_var = mx.sym.Variable('moving_var')
+        net = mx.symbol.BatchNorm(
+            data=net,
+            gamma=gamma,
+            beta=beta,
+            moving_mean=moving_mean,
+            moving_var=moving_var,
+            use_global_stats=False,
+            name='batch_norm_1')
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+
+    def test_batch_norm_no_global_stats_force(self):
+        """ This test shouldn't throw an exception since we are "force" converting the
+            MXNet model with local batch stats even though CoreML doesn't support it. This
+            means that the converted model's predictions will be off from MXNet models
+            that use local batch stats (i.e. when use_global_stats=False)
+        """
+        np.random.seed(1988)
+        input_shape = (1, 1, 2, 3)
+
+        net = mx.sym.Variable('data')
+        gamma = mx.sym.Variable('gamma')
+        beta = mx.sym.Variable('beta')
+        moving_mean = mx.sym.Variable('moving_mean')
+        moving_var = mx.sym.Variable('moving_var')
+        net = mx.symbol.BatchNorm(
+            data=net,
+            gamma=gamma,
+            beta=beta,
+            moving_mean=moving_mean,
+            moving_var=moving_var,
+            use_global_stats=False,
+            name='batch_norm_1')
+        net = mx.sym.SoftmaxOutput(net, name='softmax')
+        self._test_mxnet_model(net,
+                               input_shape=input_shape,
+                               mode='random',
+                               label_names=['softmax_label'],
+                               force=True,
+                               delta=1) # Note: delta is 1 since predictions can be off.
 
 
 if __name__ == '__main__':

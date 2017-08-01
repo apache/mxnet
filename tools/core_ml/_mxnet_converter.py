@@ -81,7 +81,7 @@ def _get_layer_converter_fn(layer):
         raise TypeError("MXNet layer of type %s is not supported." % layer)
 
 
-def convert(model, order = None, class_labels = None, mode = None, **kwargs):
+def convert(model, order = None, class_labels = None, mode = None, force = False, **kwargs):
     """Convert an MXNet model to the protobuf spec.
 
     Parameters
@@ -99,6 +99,11 @@ def convert(model, order = None, class_labels = None, mode = None, **kwargs):
         Mode of the converted coreml model.
         When mode = 'classifier', a NeuralNetworkClassifier spec will be constructed.
         When mode = 'regressor', a NeuralNetworkRegressor spec will be constructed.
+
+    force: (True|False).
+        Causes forced conversion of MXNet model. As a default, this converter doesn't
+        convert models that are not supported by CoreML one-to-one. This flag allows
+        you to override that.
 
     **kwargs :
         Provide keyword arguments for:
@@ -197,7 +202,7 @@ def convert(model, order = None, class_labels = None, mode = None, **kwargs):
         name = node['name']
         print("%d : %s, %s" % (iter, name, op))
         converter_func = _get_layer_converter_fn(op)
-        converter_func(net, node, model, builder)
+        converter_func(net, node, model, force, builder)
 
     spec = builder.spec
     layers = spec.neuralNetwork.layers
