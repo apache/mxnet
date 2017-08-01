@@ -20,21 +20,21 @@ namespace mxnet {
 namespace op {
 
 /*!
- * \brief Kernel for marking row_idx of a RSP matrix per row
+ * \brief CPU Kernel for marking row_idx of a RSP tensor per row.
  */
 struct MarkRspRowIdx {
-  // i represents the row index of the matrix data
+  // i represents the row index of the tensor data
   template<typename DType, typename RType>
   MSHADOW_XINLINE static void Map(int i, RType* row_idx, const DType* data,
-                                  const index_t num_cols) {
+                                  const index_t row_length) {
     index_t j = 0;
-    index_t offset = i * num_cols;
-    for (; j < num_cols; ++j) {
+    index_t offset = i * row_length;
+    for (; j < row_length; ++j) {
       if (data[offset+j] != 0) {
         break;
       }
     }
-    if (num_cols == j) {
+    if (row_length == j) {
       row_idx[i] = 0;  // mark as zero for zero row
     } else {
       row_idx[i] = 1;  // mark as one for non-zero row
@@ -43,8 +43,7 @@ struct MarkRspRowIdx {
 };
 
 /*!
- * \brief
- * CPU implementation of casting a dns tensor to rsp type.
+ * \brief CPU implementation of casting a dns tensor to rsp type.
  */
 inline void CastStorageDnsRspImpl(const OpContext& ctx,
                                   const cpu& cpu_dev,
@@ -89,19 +88,19 @@ inline void CastStorageDnsRspImpl(const OpContext& ctx,
 // TODO(haibin) Use memcopy instead will be much faster than assigning each individual element
 struct CastStorageRspDnsKernel {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, const index_t width, const IType* idx, const DType *data,
-                                  DType* dns) {
+  MSHADOW_XINLINE static void Map(int i, const index_t row_length, const IType* idx,
+                                  const DType *data, DType* dns) {
     auto rid = idx[i];
-    auto dns_offset = rid * width;
-    auto rsp_offset = i * width;
-    for (size_t col = 0; col < width; col++) {
+    auto dns_offset = rid * row_length;
+    auto rsp_offset = i * row_length;
+    for (size_t col = 0; col < row_length; col++) {
       dns[dns_offset + col] = data[rsp_offset + col];
     }
   }
 };
 
 /*!
- * \brief This function assumes that the meomry for dns has been allocated already
+ * \brief This function assumes that the memory for dns has been allocated already
  * since the shape is known at binding stage.
  */
 template<typename xpu>
@@ -128,7 +127,7 @@ void CastStorageRspDnsImpl(const OpContext& ctx, const NDArray& rsp, TBlob* dns)
 }
 
 /*!
- * \brief This is the kernel for initializing the indptr in a csr tensor.
+ * \brief CPU kernel for initializing the indptr in a csr matrix.
  */
 struct FillCsrIndPtr {
   /*!
@@ -153,8 +152,7 @@ struct FillCsrIndPtr {
 };
 
 /*!
- * \brief This is the kernel for initializing the col_idx and value array
- * of the csr tensor
+ * \brief CPU kernel for initializing the col_idx and value array of the csr matrix.
  */
 struct FillCsrColIdxAndVals {
   /*!
@@ -170,10 +168,10 @@ struct FillCsrColIdxAndVals {
   template<typename DType, typename IType, typename CType>
   MSHADOW_XINLINE static void Map(int i, DType* val, CType* col_idx,
                                   const IType* indptr, const DType* dns,
-                                  const int num_rows, const int num_cols) {
-    const int offset = i * num_cols;
-    int k = indptr[i];
-    for (int j = 0; j < num_cols; ++j) {
+                                  const index_t num_rows, const index_t num_cols) {
+    const index_t offset = i * num_cols;
+    IType k = indptr[i];
+    for (index_t j = 0; j < num_cols; ++j) {
       if (dns[offset+j] != 0) {
         val[k] = dns[offset+j];
         col_idx[k] = j;
@@ -184,8 +182,7 @@ struct FillCsrColIdxAndVals {
 };
 
 /*!
- * \brief
- * CPU implementation of casting a dns tensor to csr type.
+ * \brief CPU implementation of casting a dns matrix to csr type.
  */
 inline void CastStorageDnsCsrImpl(const OpContext& ctx,
                                   const cpu& cpu_dev,
@@ -226,7 +223,7 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
 }
 
 /*!
- * \brief This is the kernel for copying csr.data to its corresponding dns tensor.
+ * \brief This is the kernel for copying csr.data to its corresponding dns matrix.
  */
 struct CopyCsrDataToDns {
   /*!
@@ -250,7 +247,7 @@ struct CopyCsrDataToDns {
 };
 
 /*!
- * \brief Casts a csr tensor to dns format.
+ * \brief Casts a csr matrix to dns format.
  */
 template<typename xpu>
 void CastStorageCsrDnsImpl(const OpContext& ctx, const NDArray& csr, TBlob* dns) {

@@ -69,43 +69,49 @@ def test_elemwise_add_ex_multiple_stages():
 
 # TODO(haibin) also add test for backward pass.
 def test_cast_storage_ex():
-    def test_rsp_to_dns(shape):
-        rsp, (data, row_idx) = rand_sparse_ndarray(shape, 'row_sparse')
-        dns_out = mx.nd.cast_storage(rsp, stype='default')
-        dns_expected = np.zeros(shape, dtype=default_dtype())
-        if row_idx is not None:
-            for k, v in enumerate(row_idx):
-                dns_expected[v, :] = data[k]
-        assert same(dns_out.asnumpy(), dns_expected)
+    def test_rsp_to_dns(shape, density):
+        rsp_in, (data, row_idx) = rand_sparse_ndarray(shape, 'row_sparse', density)
+        dns_out = mx.nd.cast_storage(rsp_in, stype='default')
+        assert same(rsp_in.asnumpy(), dns_out.asnumpy())
 
-    def test_dns_to_rsp(shape):
-        dns_in = rand_ndarray(shape, 'default')
-        rsp_out = mx.nd.cast_storage(mx.nd.array(dns_in, dtype=default_dtype()), stype='row_sparse')
-        ret = mx.nd.cast_storage(rsp_out, stype='default')
-        assert same(ret.asnumpy(), dns_in.asnumpy())
+    def test_dns_to_rsp(shape, density):
+        rsp_in, (data, row_idx) = rand_sparse_ndarray(shape, 'row_sparse', density)
+        rsp_out = mx.nd.cast_storage(mx.nd.array(rsp_in.todense(), dtype=default_dtype()), stype='row_sparse')
+        assert same(rsp_in.asnumpy(), rsp_out.asnumpy())
 
     def test_csr_to_dns(shape, density):
         csr_in, (indptr, indices, values) = rand_sparse_ndarray(shape, 'csr', density)
-        dns_out = csr_in.todense()
+        dns_out = mx.nd.cast_storage(csr_in, stype='default')
         assert same(csr_in.asnumpy(), dns_out.asnumpy())
 
     def test_dns_to_csr(shape, density):
         csr_in, (indptr, colidx, data) = rand_sparse_ndarray(shape, 'csr', density)
-        dns_in = csr_in.todense()
-        csr_out = mx.nd.cast_storage(mx.nd.array(dns_in, dtype=default_dtype()), stype='csr')
+        csr_out = mx.nd.cast_storage(mx.nd.array(csr_in.todense(), dtype=default_dtype()), stype='csr')
         assert same(csr_in.asnumpy(), csr_out.asnumpy())
-
-    shape = rand_shape_2d()
-    if default_context().device_type is 'cpu':
-        test_rsp_to_dns(shape)
-        test_dns_to_rsp(shape)
 
     density = [1.00, 0.50, 0.10, 0.05, 0.01]
     for d in density:
-        test_csr_to_dns((rnd.randint(1, 10), rnd.randint(  1,   64)), d)
-        test_dns_to_csr((rnd.randint(1, 10), rnd.randint(  1,   31)), d) # test gpu thread kernel
-        test_dns_to_csr((rnd.randint(1, 10), rnd.randint( 32,  512)), d) # test gpu warp   kernel
-        test_dns_to_csr((rnd.randint(1, 10), rnd.randint(513, 1024)), d) # test gpu block  kernel
+        shape_2d = rand_shape_2d()
+        shape_3d = rand_shape_3d()
+        test_csr_to_dns(shape_2d, d)
+        test_dns_to_csr(shape_2d, d)
+        test_rsp_to_dns(shape_2d, d)
+        test_dns_to_rsp(shape_2d, d)
+        test_rsp_to_dns(shape_3d, d)
+        test_dns_to_rsp(shape_3d, d)
+        for i in range(4, 6):
+            shape = rand_shape_nd(i, 5)
+            test_dns_to_rsp(shape, d)
+            test_rsp_to_dns(shape, d)
+        # Test specific gpu kernels
+        if default_context().device_type is 'gpu':
+            test_dns_to_csr((rnd.randint(1, 10), rnd.randint(  1,   32)), d) # test gpu thread kernel
+            test_dns_to_csr((rnd.randint(1, 10), rnd.randint( 32,  512)), d) # test gpu warp   kernel
+            test_dns_to_csr((rnd.randint(1, 10), rnd.randint(512, 1024)), d) # test gpu block  kernel
+            test_dns_to_rsp((rnd.randint(1, 10), rnd.randint(  1,   32)), d) # test gpu thread kernel
+            test_dns_to_rsp((rnd.randint(1, 10), rnd.randint( 32,  512)), d) # test gpu warp   kernel
+            test_dns_to_rsp((rnd.randint(1, 10), rnd.randint(512, 1024)), d) # test gpu block  kernel
+
 
 
 def test_sparse_dot():
