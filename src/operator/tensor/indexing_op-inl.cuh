@@ -9,6 +9,12 @@
 #include <cub/device/device_run_length_encode.cuh>
 #include <cub/device/device_scan.cuh>
 
+#if CUDA_VERSION >= 9000
+#define FULLMASK 0xFFFFFFFF
+#define __ballot(x) __ballot_sync(FULLMASK, (x))
+#define __all(x) __all_sync(FULLMASK, (x))
+#endif
+
 namespace mxnet {
 namespace op {
 const int kWarpSize = 32;

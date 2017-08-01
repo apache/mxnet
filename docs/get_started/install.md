@@ -235,18 +235,21 @@ $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 
 **Build the MXNet Python binding**
 
-**Step 1** Install prerequisites - python setup tools and numpy.
+**Step 1** Install prerequisites - python, setup-tools, python-pip and numpy.
 
 ```bash
-$ sudo apt-get install -y python-dev python-setuptools python-numpy
+$ sudo apt-get install -y python-dev python-setuptools python-numpy python-pip
 ```
 
-**Step 2** Build the MXNet Python binding.
+**Step 2** Install the MXNet Python binding.
 
 ```bash
 $ cd python
-$ sudo python setup.py install
+$ pip install --upgrade pip
+$ pip install -e .
 ```
+
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
@@ -453,20 +456,23 @@ $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/
 
 <br/>
 
-**Build the MXNet Python binding**
+**Install the MXNet Python binding**
 
-**Step 1** Install prerequisites - python setup tools and numpy.
+**Step 1** Install prerequisites - python, setup-tools, python-pip and numpy.
 
 ```bash
-$ sudo apt-get install -y python-dev python-setuptools python-numpy
+$ sudo apt-get install -y python-dev python-setuptools python-numpy python-pip
 ```
 
-**Step 2** Build the MXNet Python binding.
+**Step 2** Install the MXNet Python binding.
 
 ```bash
 $ cd python
-$ sudo python setup.py install
+$ pip install --upgrade pip
+$ pip install -e .
 ```
+
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
@@ -492,7 +498,7 @@ The following installation instructions have been tested on OSX Sierra and El Ca
 
 **Prerequisites**
 
-If not already installed, [download and install Xcode](https://developer.apple.com/xcode/) for macOS. [Xcode](https://en.wikipedia.org/wiki/Xcode) is an integrated development environment for macOS containing a suite of software development tools like C/C++ compilers, BLAS library and more.
+If not already installed, [download and install Xcode](https://developer.apple.com/xcode/) (or [insall it from the App Store](https://itunes.apple.com/us/app/xcode/id497799835)) for macOS. [Xcode](https://en.wikipedia.org/wiki/Xcode) is an integrated development environment for macOS containing a suite of software development tools like C/C++ compilers, BLAS library and more.
 
 <div class="virtualenv">
 <br/>
@@ -706,8 +712,9 @@ You could also run distributed deeplearning with *MXNet* on AWS using [Cloudform
 The CPU version of MXNet R package can be installed in R like other packages
 
 ```r
-install.packages("drat")
-drat::addRepo("dmlc")
+cran <- getOption("repos")
+cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/"
+options(repos = cran)
 install.packages("mxnet")
 ```
 
@@ -870,23 +877,35 @@ The CPU version of MXNet R package can be installed in R like other packages
 
 
 ```r
-install.packages("drat")
-drat::addRepo("dmlc")
+cran <- getOption("repos")
+cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/"
+options(repos = cran)
 install.packages("mxnet")
 ```
 
-
-</div>
-
-<div class="gpu">
-
-Will be available soon.
-
-</div>
-</div>
 </div>
 
 <!-- END - Windows R CPU Installation Instructions -->
+
+<div class="gpu">
+
+The GPU version of MXNet R package can be installed in R like other packages
+
+
+```r
+cran <- getOption("repos")
+cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/GPU"
+options(repos = cran)
+install.packages("mxnet")
+```
+
+Alternatively, You can also follow the installation instructions [in this guide](./windows_setup.md) to build MXNet from source.
+
+</div>
+</div>
+</div>
+
+<!-- END - Windows R GPU Installation Instructions -->
 
 <div class="linux">
   <div class="scala julia perl">
@@ -987,8 +1006,11 @@ To install python bindings run the following commands in the MXNet directory:
 
 ```bash
     cd python
-    sudo python setup.py install
+    pip install --upgrade pip
+    pip install -e .
 ```
+
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
 
 You are now ready to run MXNet on your Raspberry Pi device. You can get started by following the tutorial on [Real-time Object Detection with MXNet On The Raspberry Pi](http://mxnet.io/tutorials/embedded/wine_detector.html).
 
@@ -1066,7 +1088,15 @@ To install python bindings run the following commands in the MXNet directory:
 
 ```bash
     cd python
-    sudo python setup.py install
+    pip install --upgrade pip
+    pip install -e .
+```
+
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
+
+Add the mxnet folder to the path:
+
+```bash
     cd ..
     export MXNET_HOME=$(pwd)                       
     echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.bashrc

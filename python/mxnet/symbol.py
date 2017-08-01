@@ -3,6 +3,10 @@
 # pylint: disable=import-error, no-name-in-module
 """Symbolic configuration API of MXNet."""
 from __future__ import absolute_import as _abs
+try:
+    from __builtin__ import slice as py_slice
+except ImportError:
+    from builtins import slice as py_slice
 
 import ctypes
 import warnings
@@ -15,9 +19,9 @@ import numpy as _numpy
 from .base import _LIB, numeric_types
 from .base import c_array, c_str, mx_uint, py_str, string_types
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle, OpHandle
-from .base import check_call, MXNetError, _Null # pylint: disable=unused-import
-from .context import Context, cpu
-from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
+from .base import check_call, MXNetError, NotImplementedForSymbol, _Null  # pylint: disable=unused-import
+from .context import Context
+from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
 from .name import NameManager  # pylint: disable=unused-import
 from .executor import Executor
 from . import _symbol_internal as _internal
@@ -42,7 +46,6 @@ except ImportError:
     from ._ctypes.symbol import SymbolBase, _set_symbol_class
     from ._ctypes.symbol import _symbol_creator  # pylint: disable=unused-import
 
-_GRAD_REQ_MAP = {'null': 0, 'write': 1, 'add': 3}
 
 class Symbol(SymbolBase):
     """Symbol is symbolic graph of the mxnet."""
@@ -94,6 +97,9 @@ class Symbol(SymbolBase):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __iadd__(self, other):
+        raise NotImplementedForSymbol(self.__iadd__, '+=', other, 1)
+
     def __radd__(self, other):
         return self.__add__(other)
 
@@ -108,6 +114,9 @@ class Symbol(SymbolBase):
             return _internal._MinusScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
+
+    def __isub__(self, other):
+        raise NotImplementedForSymbol(self.__isub__, '-=', other)
 
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y-x
@@ -138,6 +147,9 @@ class Symbol(SymbolBase):
             return _internal._MulScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
+
+    def __imul__(self, other):
+        raise NotImplementedForSymbol(self.__imul__, '*=', other)
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -202,11 +214,17 @@ class Symbol(SymbolBase):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __idiv__(self, other):
+        raise NotImplementedForSymbol(self.__idiv__, '/=', other)
+
     def __truediv__(self, other):
         return self.__div__(other)
 
     def __rtruediv__(self, other):
         return self.__rdiv__(other)
+
+    def __itruediv__(self, other):
+        raise NotImplementedForSymbol(self.__itruediv__, '/=', other)
 
     def __pow__(self, other):
         """x.__pow__(y) <=> x**y
@@ -219,6 +237,9 @@ class Symbol(SymbolBase):
             return _internal._PowerScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
+
+    def __rpow__(self, other):
+        raise NotImplementedForSymbol(self.__rpow__, 'y**x', other)
 
     def __neg__(self):
         """x.__neg__() <=> -x
@@ -467,9 +488,16 @@ class Symbol(SymbolBase):
             Indexing key
 
         """
+        output_names = self.list_outputs()
+        if isinstance(index, py_slice):
+            start = 0 if index.start is None else index.start
+            stop = len(output_names) if index.stop is None else index.stop
+            step = 1 if index.step is None else index.step
+            return Group([self[i] for i in range(start, stop, step)])
+
         if isinstance(index, string_types):
             idx = None
-            for i, name in enumerate(self.list_outputs()):
+            for i, name in enumerate(output_names):
                 if name == index:
                     if idx is not None:
                         raise ValueError('There are multiple outputs with name \"%s\"' % index)
@@ -477,9 +505,10 @@ class Symbol(SymbolBase):
             if idx is None:
                 raise ValueError('Cannot find output that matches name \"%s\"' % index)
             index = idx
+
         if not isinstance(index, int):
             raise TypeError('Symbol only support integer index to fetch i-th output')
-        if index >= (len(self.list_outputs())):
+        if index >= len(output_names):
             # Important, python determines the end by this exception
             raise IndexError
         handle = SymbolHandle()
@@ -1013,19 +1042,22 @@ class Symbol(SymbolBase):
         indptr = [0]
         if len(args) != 0:
             keys = None
-            for s in args:
+            for i, s in enumerate(args):
                 if s is not None:
                     if not isinstance(s, tuple):
-                        raise TypeError('Arguments must be shapes (tuple)')
+                        raise TypeError("Arguments need to be shapes (tuple), "
+                                        "but argument %d is %s." % (i, type(s)))
                     sdata.extend(s)
                 indptr.append(len(sdata))
         else:
             keys = []
             for k, v in kwargs.items():
-                if isinstance(v, tuple):
-                    keys.append(c_str(k))
-                    sdata.extend(v)
-                    indptr.append(len(sdata))
+                if not isinstance(v, tuple):
+                    raise TypeError("Arguments need to be shapes (tuple), "
+                                    "but '%s' is %s." % (k, type(v)))
+                keys.append(c_str(k))
+                sdata.extend(v)
+                indptr.append(len(sdata))
         arg_shape_size = mx_uint()
         arg_shape_ndim = ctypes.POINTER(mx_uint)()
         arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
@@ -1608,7 +1640,7 @@ class Symbol(SymbolBase):
         executor.aux_arrays = aux_states
         return executor
 
-    def grad(self, wrt):
+    def gradient(self, wrt):
         """Gets the autodiff of current symbol.
 
         This function can only be used if current symbol is a loss function.
@@ -1635,7 +1667,7 @@ class Symbol(SymbolBase):
 
     # pylint: enable= no-member
 
-    def eval(self, ctx=cpu(), **kwargs):
+    def eval(self, ctx=None, **kwargs):
         """Evaluates a symbol given arguments.
 
         The `eval` method combines a call to `bind` (which returns an executor)
@@ -1671,6 +1703,8 @@ class Symbol(SymbolBase):
         evaluated on given args. When called on a single symbol (not a group),
         the result will be a list with one element.
         """
+        if ctx is None:
+            ctx = Context.default_ctx
         return self.bind(ctx, kwargs).forward()
 
     def reshape(self, shape):
@@ -1691,6 +1725,30 @@ class Symbol(SymbolBase):
             A reshaped symbol.
         """
         return reshape(self, shape=shape)
+
+    def wait_to_read(self):
+        raise NotImplementedForSymbol(self.wait_to_read, None)
+
+    def asnumpy(self):
+        raise NotImplementedForSymbol(self.asnumpy, None)
+
+    def asscalar(self):
+        raise NotImplementedForSymbol(self.asscalar, None)
+
+    def astype(self):
+        raise NotImplementedForSymbol(self.astype, None)
+
+    def copy(self):
+        raise NotImplementedForSymbol(self.copy, None)
+
+    def as_in_context(self):
+        raise NotImplementedForSymbol(self.as_in_context, None)
+
+    def detach(self):
+        raise NotImplementedForSymbol(self.detach, None)
+
+    def backward(self):
+        raise NotImplementedForSymbol(self.backward, None)
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None, **kwargs):
     """Creates a symbolic variable with specified name.
@@ -2071,6 +2129,28 @@ def ones(shape, dtype=None, **kwargs):
     return _internal._ones(shape=shape, dtype=dtype, **kwargs)
 
 
+def full(shape, val, dtype=None, **kwargs):
+    """Returns a new array of given shape and type, filled with the given value `val`.
+
+    Parameters
+    ----------
+    shape :  int or sequence of ints
+        Shape of the new array.
+    val : scalar
+        Fill value.
+    dtype : str or numpy.dtype, optional
+        The value type of the inner value, default to ``np.float32``.
+
+    Returns
+    -------
+    out : Symbol
+        The created Symbol
+    """
+    if dtype is None:
+        dtype = _numpy.float32
+    return _internal._MulScalar(ones(shape=shape, dtype=dtype, **kwargs), scalar=val)
+
+
 def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
     """Returns evenly spaced values within a given interval.
 
@@ -2100,7 +2180,7 @@ def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
 
 
 def _make_atomic_symbol_function(handle, name):
-    """Create an atomic symbol function by handle and funciton name."""
+    """Create an atomic symbol function by handle and function name."""
     real_name = ctypes.c_char_p()
     desc = ctypes.c_char_p()
     num_args = mx_uint()

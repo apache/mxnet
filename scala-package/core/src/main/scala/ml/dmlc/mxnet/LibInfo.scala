@@ -117,16 +117,30 @@ private[mxnet] class LibInfo {
                             len: MXUint,
                             keys: Array[Int],
                             values: Array[NDArrayHandle]): Int
+  @native def mxKVStoreInitEx(handle: KVStoreHandle,
+                              len: MXUint,
+                              keys: Array[String],
+                              values: Array[NDArrayHandle]): Int
   @native def mxKVStorePush(handle: KVStoreHandle,
                             len: MXUint,
                             keys: Array[Int],
                             values: Array[NDArrayHandle],
                             priority: Int): Int
+  @native def mxKVStorePushEx(handle: KVStoreHandle,
+                              len: MXUint,
+                              keys: Array[String],
+                              values: Array[NDArrayHandle],
+                              priority: Int): Int
   @native def mxKVStorePull(handle: KVStoreHandle,
                             len: MXUint,
                             keys: Array[Int],
                             outs: Array[NDArrayHandle],
                             priority: Int): Int
+  @native def mxKVStorePullEx(handle: KVStoreHandle,
+                              len: MXUint,
+                              keys: Array[String],
+                              outs: Array[NDArrayHandle],
+                              priority: Int): Int
   @native def mxKVStoreSetUpdater(handle: KVStoreHandle, updaterFunc: MXKVStoreUpdater): Int
   @native def mxKVStoreIsWorkerNode(isWorker: RefInt): Int
   @native def mxKVStoreGetType(handle: KVStoreHandle, kvType: RefString): Int

@@ -1,5 +1,8 @@
 Revision history for Perl extension AI::MXNet
 
+1.0101  Sun Jul  2 17:16:01 PDT 2017
+        - reworked CachedOp, two new optimizers, auto module reshape, using strings to index the kvstore.
+
 1.01    Sat Jun 10 23:57:27 PDT 2017
         - sync with python.
 

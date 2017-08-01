@@ -5,8 +5,8 @@
  * \author Chuntao Hong, Zhang Chen
  */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_MXNETCPP_H_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_MXNETCPP_H_
+#ifndef MXNET_CPP_MXNETCPP_H_
+#define MXNET_CPP_MXNETCPP_H_
 
 #include "mxnet-cpp/executor.hpp"
 #include "mxnet-cpp/symbol.hpp"
@@ -21,4 +21,4 @@
 #include "mxnet-cpp/metric.h"
 #include "mxnet-cpp/initializer.h"
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_MXNETCPP_H_
+#endif  // MXNET_CPP_MXNETCPP_H_

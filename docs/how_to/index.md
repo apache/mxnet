@@ -36,6 +36,8 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How do I run MXNet on a Raspberry Pi for computer vision?](http://mxnet.io/tutorials/embedded/wine_detector.html)
 
+* [How do I run Keras 1.2.2 with mxnet backend?](https://github.com/dmlc/keras/wiki/Installation)
+
 ## Extend and Contribute to MXNet
 
 * [How do I join the MXNet development discussion?](http://mxnet.io/community/mxnet_channels.html)
@@ -47,3 +49,12 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 * [How do I set MXNet's environmental variables?](http://mxnet.io/how_to/env_var.html)
 
 * [How do I use MXNet as a front end for Torch?](http://mxnet.io/how_to/torch.html)
+
+## Questions about Using MXNet
+If you are not sure of how to use MXNet for something, or have questions about applying it to a particular kind of problem, please post a question at [Stackoverflow](http://stackoverflow.com/) with tag - ```mxnet```. You can view StackOverflow questions about mxnet [here](http://stackoverflow.com/questions/tagged/mxnet).
+
+## Issue Tracker
+We track bugs and new feature requests in the MXNet Github repo in the issues folder: [mxnet/issues](https://github.com/dmlc/mxnet/issues).
+
+## Roadmap
+MXNet is evolving fast. To see what's next and what we are working on internally, go to the [MXNet Roadmap](https://github.com/dmlc/mxnet/labels/Roadmap).

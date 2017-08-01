@@ -35,7 +35,6 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
         break;
       }
     }
-    LOG(INFO) << MKLPoolingOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
 #if MXNET_USE_NNPACK == 1
   // NNPACK only support max-pooling with kernel = 2, stride = 2, pooling_convention
@@ -70,10 +69,6 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
 // DO_BIND_DISPATCH comes from operator_common.h
 Operator* PoolingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                      std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
-  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 

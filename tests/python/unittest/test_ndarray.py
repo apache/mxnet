@@ -76,6 +76,14 @@ def test_ndarray_setitem():
     x_np[:, 1:3, 1:2] = val.asnumpy()
     assert same(x.asnumpy(), x_np)
 
+    # short all-dim indexing
+    x = mx.nd.zeros(shape)
+    val = mx.nd.ones((3, 2))
+    x[:, 1:3, 1] = val
+    x_np = np.zeros(shape, dtype=x.dtype)
+    x_np[:, 1:3, 1] = val.asnumpy()
+    assert same(x.asnumpy(), x_np)
+
     x = mx.nd.zeros(shape)
     x[:, 1:3, 1] = 1
     x_np = np.zeros(shape, dtype=x.dtype)
@@ -248,6 +256,15 @@ def test_ndarray_slice():
     A2[3:8] *= 10;
     A[3:8] = A2[3:8]
     assert same(A[3:8].asnumpy(), A2[3:8])
+
+    shape = (3,4,5,6,7)
+    A = mx.nd.random_uniform(shape=shape)
+    A2 = A.asnumpy()
+
+    assert same(A[1,3:4,:,1:5].asnumpy(), A2[1,3:4,:,1:5])
+
+    assert A[1,2,3,4,5].asscalar() == A2[1,2,3,4,5]
+
 
 
 def test_ndarray_crop():
@@ -652,6 +669,7 @@ def test_output():
     assert_almost_equal(out.asnumpy(), zeros.asnumpy())
     mx.nd.full(shape, 2, out=out)
     assert_almost_equal(out.asnumpy(), ones.asnumpy() * 2)
+
 
 if __name__ == '__main__':
     import nose

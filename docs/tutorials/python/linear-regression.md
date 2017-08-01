@@ -21,6 +21,9 @@ To begin, the following code imports the necessary packages we'll need for this 
 ```python
 import mxnet as mx
 import numpy as np
+
+import logging
+logging.getLogger().setLevel(logging.DEBUG)
 ```
 
 ## Preparing the Data
@@ -153,7 +156,8 @@ parameters of the model to fit the training data. This is accomplished using the
 ```python
 model.fit(train_iter, eval_iter,
             optimizer_params={'learning_rate':0.005, 'momentum': 0.9},
-            num_epoch=1000,
+            num_epoch=50,
+            eval_metric='mse',
             batch_end_callback = mx.callback.Speedometer(batch_size, 2))
 ```
 

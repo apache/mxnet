@@ -12,7 +12,7 @@ use AI::MXNet::NDArray::Slice;
 use AI::MXNet::Context;
 use Mouse;
 use AI::MXNet::Function::Parameters;
-use overload 
+use overload
     '""' => \&stringify,
     '+'  => \&add,
     '+=' => \&iadd,
@@ -22,6 +22,8 @@ use overload
     '*=' => \&imultiply,
     '/'  => \&divide,
     '/=' => \&idivide,
+    '%'  => \&modulo,
+    '%=' => \&imodulo,
     '**' => \&power,
     '==' => \&equal,
     '!=' => \&not_equal,
@@ -864,6 +866,24 @@ method true_divide(AI::MXNet::NDArray|Num $other, $reverse=)
     return $self->divide($other, $reverse);
 }
 
+method modulo(AI::MXNet::NDArray|Num $other, $reverse=)
+{
+    return _ufunc_helper(
+        $self,
+        $other,
+        qw/broadcast_mod _mod_scalar _rmod_scalar/,
+        $reverse
+    );
+}
+
+method imodulo(AI::MXNet::NDArray|Num $other, $reverse=)
+{
+    confess('trying to modulo to a readonly NDArray') unless $self->writable;
+    return ref $other
+        ? __PACKAGE__->broadcast_mod($self, $other, { out => $self })
+        : __PACKAGE__->_mod_scalar($self, $other, { out => $self })
+}
+
 =head2 empty
 
     Creates an empty uninitialized NDArray, with the specified shape.
@@ -998,7 +1018,7 @@ method full(
 
     Parameters
     ----------
-    $source_array : PDL, PDL::Matrix, Array ref in PDL::pdl format
+    $source_array : AI::MXNet::NDArray PDL, PDL::Matrix, Array ref in PDL::pdl format
         Source data to create NDArray from.
 
     :$ctx : AI::MXNet::Context, optional
@@ -1013,8 +1033,14 @@ method full(
         The created NDArray.
 =cut
 
-method array(PDL|PDL::Matrix|ArrayRef $source_array, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
+method array(PDL|PDL::Matrix|ArrayRef|AI::MXNet::NDArray $source_array, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
 {
+    if(blessed $source_array and $source_array->isa('AI::MXNet::NDArray'))
+    {
+        my $arr = __PACKAGE__->empty($source_array->shape, ctx => $ctx, dtype => $dtype);
+        $arr .= $source_array;
+        return $arr;
+    }
     my $pdl_type = PDL::Type->new(DTYPE_MX_TO_PDL->{ $dtype });
     if(not blessed($source_array))
     {
@@ -1372,6 +1398,7 @@ method backward(Maybe[AI::MXNet::NDArray] $out_grad=, Bool $retain_graph=0)
     )
 }
 
+method CachedOp(@args) { AI::MXNet::CachedOp->new(@args) }
 
 my $lvalue_methods = join "\n", map {"use attributes 'AI::MXNet::NDArray', \\&AI::MXNet::NDArray::$_, 'lvalue';"}
 qw/at slice aspdl asmpdl reshape copy sever T astype as_in_context copyto empty zero ones full

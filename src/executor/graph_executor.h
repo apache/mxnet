@@ -21,9 +21,6 @@
 
 namespace mxnet {
 
-using NodeOperatorMap = std::unordered_map<const nnvm::Node*,
-    std::shared_ptr<Operator>>;
-
 // forward declaration
 namespace exec {
 class GraphExecutor;
@@ -120,7 +117,7 @@ class GraphExecutor : public Executor {
     // the cached operator
     Engine::OprHandle opr = nullptr;
     // list of op executors
-    std::vector<OpExecutor*> exec_list;
+    std::vector<std::shared_ptr<OpExecutor> > exec_list;
   };
   // Initialize in_args, arg_grads, and aux_states
   void InitArguments(const nnvm::IndexedGraph& idx,
@@ -211,7 +208,7 @@ class GraphExecutor : public Executor {
   // number of forward nodes
   size_t num_forward_nodes_{0};
   // saved operator for autograd
-  NodeOperatorMap saved_opr_;
+  std::unordered_map<const nnvm::Node*, OpStatePtr> saved_states_;
   // monitor call back
   std::function<void(const char*, void*)> monitor_callback_{nullptr};
   // whether to enable bulk execution

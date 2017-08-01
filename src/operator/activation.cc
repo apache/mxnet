@@ -15,10 +15,10 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<cpu>(ActivationParam param, int dtype) {
+Operator *CreateOp<cpu>(ActivationParam param, int dtype, const TShape& dshape) {
   Operator *op = NULL;
 #if MXNET_USE_MKL2017 == 1
-  if (param.act_type == activation::kReLU) {
+  if (param.act_type == activation::kReLU && dshape.ndim() <= 4) {
       switch (dtype) {
       case mshadow::kFloat32:
           return new MKLReluOp<cpu, float>();
@@ -54,12 +54,8 @@ Operator *CreateOp<cpu>(ActivationParam param, int dtype) {
 
 // DO_BIND_DISPATCH comes from operator_common.h
 Operator *ActivationProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-                                     std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
-  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
+                                           std::vector<int> *in_type) const {
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_shape)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(ActivationParam);

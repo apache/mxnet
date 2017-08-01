@@ -27,21 +27,20 @@ class StorageImpl : public Storage {
  private:
   static constexpr size_t kMaxNumberOfDevices = Context::kMaxDevType + 1;
   static constexpr size_t kMaxNumberOfDeviceIDs = Context::kMaxDevID + 1;
+#if MXNET_USE_CUDA
+  static int num_gpu_device;
+#endif  // MXNET_USE_CUDA
 
   static void ActivateDevice(Context ctx) {
     switch (ctx.dev_type) {
       case Context::kCPU: break;
       case Context::kGPU:
       case Context::kCPUPinned: {
-          int gpu_num = 0;
 #if MXNET_USE_CUDA
-          CUDA_CALL(cudaGetDeviceCount(&gpu_num));
-#endif  // MXNET_USE_CUDA
-          if (gpu_num > 0) {
-#if MXNET_USE_CUDA
-          CUDA_CALL(cudaSetDevice(ctx.dev_id));
-#endif  // MXNET_USE_CUDA
+          if (num_gpu_device > 0) {
+            CUDA_CALL(cudaSetDevice(ctx.dev_id));
           }
+#endif  // MXNET_USE_CUDA
           break;
         }
       default:
@@ -52,6 +51,9 @@ class StorageImpl : public Storage {
   std::array<common::LazyAllocArray<storage::StorageManager>,
              kMaxNumberOfDevices> storage_managers_;
 };  // struct Storage::Impl
+#if MXNET_USE_CUDA
+int StorageImpl::num_gpu_device = 0;
+#endif  // MXNET_USE_CUDA
 
 Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
   // space already recycled, ignore request
@@ -69,7 +71,16 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
           }
           case Context::kCPUPinned: {
 #if MXNET_USE_CUDA
-            ptr = new storage::NaiveStorageManager<storage::PinnedMemoryStorage>();
+            num_gpu_device = 0;
+            cudaError_t e = cudaGetDeviceCount(&num_gpu_device);
+            if (e != cudaSuccess) {
+              num_gpu_device = 0;
+            }
+            if (num_gpu_device > 0) {
+              ptr = new storage::NaiveStorageManager<storage::PinnedMemoryStorage>();
+            } else {
+              ptr = new storage::NaiveStorageManager<storage::CPUDeviceStorage>();
+            }
 #else
             ptr = new storage::NaiveStorageManager<storage::CPUDeviceStorage>();
 #endif  // MXNET_USE_CUDA
@@ -77,6 +88,8 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
           }
           case Context::kGPU: {
 #if MXNET_USE_CUDA
+            CUDA_CALL(cudaGetDeviceCount(&num_gpu_device));
+            CHECK_GT(num_gpu_device, 0) << "GPU usage requires at least 1 GPU";
             ptr = new storage::GPUPooledStorageManager();
 #else
             LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";

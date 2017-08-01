@@ -66,8 +66,12 @@ template<int n_in, int n_out>
 inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_in)) << " in operator " << attrs.name;
-  CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
+  if (n_in != -1) {
+    CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_in)) << " in operator " << attrs.name;
+  }
+  if (n_out != -1) {
+    CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
+  }
   return ElemwiseAttr<TShape, shape_is_none, shape_assign, true, shape_string>(
     attrs, in_attrs, out_attrs, TShape());
 }
@@ -76,8 +80,12 @@ template<int n_in, int n_out>
 inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_attrs,
                          std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_in)) << " in operator " << attrs.name;
-  CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
+  if (n_in != -1) {
+    CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_in)) << " in operator " << attrs.name;
+  }
+  if (n_out != -1) {
+    CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
+  }
   return ElemwiseAttr<int, type_is_none, type_assign, true, type_string>(
     attrs, in_attrs, out_attrs, -1);
 }
@@ -131,6 +139,16 @@ struct ElemwiseGradUseNone {
   }
 };
 
+struct CloneGradient {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+                                          const std::vector<nnvm::NodeEntry>& ograds) {
+    std::vector<nnvm::NodeEntry> ret;
+    for (size_t i = 0; i < n->inputs.size(); ++i)
+      ret.emplace_back(ograds[0]);
+    return ret;
+  }
+};
 }  // namespace op
 }  // namespace mxnet
 

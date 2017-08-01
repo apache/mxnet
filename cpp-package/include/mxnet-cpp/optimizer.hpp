@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_HPP_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_HPP_
+#ifndef MXNET_CPP_OPTIMIZER_HPP_
+#define MXNET_CPP_OPTIMIZER_HPP_
 
 #include <algorithm>
 #include <utility>
@@ -387,4 +387,4 @@ inline void AdaDeltaOptimizer::CreateState_(int index, NDArray weight) {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_HPP_
+#endif  // MXNET_CPP_OPTIMIZER_HPP_

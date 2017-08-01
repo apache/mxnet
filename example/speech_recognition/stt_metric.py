@@ -19,12 +19,11 @@ def check_label_shapes(labels, preds, shape=0):
 
 
 class STTMetric(mx.metric.EvalMetric):
-    def __init__(self, batch_size, num_gpu, seq_length, is_epoch_end=False, is_logging=True):
+    def __init__(self, batch_size, num_gpu, is_epoch_end=False, is_logging=True):
         super(STTMetric, self).__init__('STTMetric')
 
         self.batch_size = batch_size
         self.num_gpu = num_gpu
-        self.seq_length = seq_length
         self.total_n_label = 0
         self.total_l_dist = 0
         self.is_epoch_end = is_epoch_end
@@ -37,15 +36,17 @@ class STTMetric(mx.metric.EvalMetric):
             log = LogUtil().getlogger()
             labelUtil = LabelUtil.getInstance()
         self.batch_loss = 0.
+
         for label, pred in zip(labels, preds):
             label = label.asnumpy()
             pred = pred.asnumpy()
 
-            for i in range(int(int(self.batch_size) / int(self.num_gpu))):
+            seq_length = len(pred) / int(int(self.batch_size) / int(self.num_gpu))
 
+            for i in range(int(int(self.batch_size) / int(self.num_gpu))):
                 l = remove_blank(label[i])
                 p = []
-                for k in range(int(self.seq_length)):
+                for k in range(int(seq_length)):
                     p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
                 p = pred_best(p)
 
@@ -60,7 +61,7 @@ class STTMetric(mx.metric.EvalMetric):
                 self.num_inst += 1
                 self.sum_metric += this_cer
                 if self.is_epoch_end:
-                    loss = ctc_loss(l, pred, i, int(self.seq_length), int(self.batch_size), int(self.num_gpu))
+                    loss = ctc_loss(l, pred, i, int(seq_length), int(self.batch_size), int(self.num_gpu))
                     self.batch_loss += loss
                     if self.is_logging:
                         log.info("loss: %f " % loss)

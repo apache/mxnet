@@ -1,15 +1,31 @@
 # slice the shape on the highest dimension
 mx.model.slice.shape <- function(shape, nsplit) {
-  ndim <- length(shape)
-  batchsize <- shape[[ndim]]
-  step <- as.integer((batchsize + nsplit - 1) / nsplit)
-  lapply(0:(nsplit - 1), function(k) {
-    begin = min(k * step, batchsize)
-    end = min((k + 1) * step, batchsize)
-    s <- shape
-    s[[ndim]] = end - begin
-    return(list(begin=begin, end=end, shape=s))
-  })
+  if (is.numeric(shape)) {
+    ndim <- length(shape)
+    batchsize <- shape[[ndim]]
+    step <- as.integer((batchsize + nsplit - 1) / nsplit)
+    lapply(0:(nsplit - 1), function(k) {
+      begin = min(k * step, batchsize)
+      end = min((k + 1) * step, batchsize)
+      s <- shape
+      s[[ndim]] = end - begin
+      return(list(begin=begin, end=end, shape=s))
+    })
+  } else if (is.list(shape)) {
+    shape.names = names(shape)
+    ndim <- length(shape[[1]])
+    batchsize <- shape[[1]][[ndim]]
+    step <- as.integer((batchsize + nsplit - 1) / nsplit)
+    lapply(0:(nsplit - 1), function(k) {
+      begin = min(k * step, batchsize)
+      end = min((k + 1) * step, batchsize)
+      s <- lapply(shape, function(s) {
+        s[[ndim]] = end - begin
+        return(s)
+      })
+      return(list(begin=begin, end=end, shape=s))
+    })    
+  }
 }
 
 # get the argument name of data and label
@@ -17,14 +33,14 @@ mx.model.check.arguments <- function(symbol) {
   data <- NULL
   label <- NULL
   for (nm in arguments(symbol)) {
-    if (mx.util.str.endswith(nm, "data")) {
+    if (endsWith(nm, "data")) {
       if (!is.null(data)) {
         stop("Multiple fields contains suffix data")
       } else {
         data <- nm
       }
     }
-    if (mx.util.str.endswith(nm, "label")) {
+    if (endsWith(nm, "label")) {
       if (!is.null(label)) {
         stop("Multiple fields contains suffix label")
       } else {
@@ -94,26 +110,23 @@ mx.model.create.kvstore <- function(kvstore, arg.params, ndevice, verbose=TRUE) 
 mx.model.train <- function(symbol, ctx, input.shape, output.shape,
                            arg.params, aux.params,
                            begin.round, end.round, optimizer,
-                           train.data, eval.data,
-                           metric,
-                           epoch.end.callback,
-                           batch.end.callback,
-                           kvstore,
-                           verbose=TRUE) {
+                           train.data, eval.data, metric,
+                           epoch.end.callback, batch.end.callback,
+                           kvstore, fixed.param = NULL, verbose = TRUE) {
   ndevice <- length(ctx)
   if(verbose) message(paste0("Start training with ", ndevice, " devices"))
   # create the executors
-  sliceinfo <- mx.model.slice.shape(input.shape, ndevice)
-  sliceinfo2 <- mx.model.slice.shape(output.shape, ndevice)
+  input_slice <- mx.model.slice.shape(input.shape, ndevice)
+  output_slice <- mx.model.slice.shape(output.shape, ndevice)
+
   arg_names <- arguments(symbol)
-  tmp <- unlist(lapply(arg_names, function(a) {
-    mxnet:::mx.util.str.endswith(a, "label")
-  }))
-  label_name <- arg_names[tmp]
+  output.names <- names(output.shape)
+  #label_name <- arg_names[endsWith(arg_names, "label")]
   train.execs <- lapply(1:ndevice, function(i) {
-    arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write",
-                    data=sliceinfo[[i]]$shape)
-    arg_lst[[label_name]] = sliceinfo2[[i]]$shape
+    arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write")
+    arg_lst <- append(arg_lst, input_slice[[i]]$shape)
+    arg_lst <- append(arg_lst, output_slice[[i]]$shape)
+    arg_lst[["fixed.param"]] = fixed.param
     do.call(mx.simple.bind, arg_lst)
   })
   # set the parameters into executors
@@ -140,7 +153,6 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
     kvstore$init(params.index, train.execs[[1]]$ref.arg.arrays[params.index])
   }
   # Get the input names
-  input.names <- mx.model.check.arguments(symbol)
 
   for (iteration in begin.round:end.round) {
     nbatch <- 0
@@ -151,15 +163,16 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       # Get input data slice
       dlist <- train.data$value()
       slices <- lapply(1:ndevice, function(i) {
-        s <- sliceinfo[[i]]
-        ret <- list(data=mx.nd.slice(dlist$data, s$begin, s$end),
-                    label=mx.nd.slice(dlist$label, s$begin, s$end))
+        s <- input_slice[[i]]
+        ret <- sapply(names(dlist), function(n) {mx.nd.slice(dlist[[n]], s$begin, s$end)})
         return(ret)
       })
       # copy data to executor
       for (i in 1:ndevice) {
         s <- slices[[i]]
-        names(s) <- input.names
+        if (endsWith(output.names, "label")) {
+          names(s)[endsWith(names(s), "label")] = output.names 
+        }
         mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
       }
       for (texec in train.execs) {
@@ -173,6 +186,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       for (texec in train.execs) {
         mx.exec.backward(texec)
       }
+      
       if (!is.null(kvstore)) {
         # push the gradient
         kvstore$push(params.index, lapply(train.execs, function(texec) {
@@ -201,7 +215,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       # Update the evaluation metrics
       if (!is.null(metric)) {
         for (i in 1 : ndevice) {
-          train.metric <- metric$update(slices[[i]]$label, out.preds[[i]], train.metric)
+          train.metric <- metric$update(slices[[i]][[length(slices[[i]])]], out.preds[[i]], train.metric)
         }
       }
       nbatch <- nbatch + 1
@@ -222,14 +236,15 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       while (eval.data$iter.next()) {
         dlist <- eval.data$value()
         slices <- lapply(1:ndevice, function(i) {
-          s <- sliceinfo[[i]]
-          ret <- list(data=mx.nd.slice(dlist$data, s$begin, s$end),
-                    label=mx.nd.slice(dlist$label, s$begin, s$end))
+          s <- input_slice[[i]]
+          ret <- sapply(names(dlist), function(n) {mx.nd.slice(dlist[[n]], s$begin, s$end)})
           return(ret)
         })
         for (i in 1:ndevice) {
           s <- slices[[i]]
-          names(s) <- input.names
+          if (endsWith(output.names, "label")) {
+            names(s)[endsWith(names(s), "label")] = output.names 
+          }
           mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
         }
         for (texec in train.execs) {
@@ -240,7 +255,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
         })
         if (!is.null(metric)) {
           for (i in 1 : ndevice) {
-            eval.metric <- metric$update(slices[[i]]$label, out.preds[[i]], eval.metric)
+            eval.metric <- metric$update(slices[[i]][[length(slices[[i]])]] , out.preds[[i]], eval.metric)
           }
         }
       }
@@ -267,16 +282,19 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
   return(model)
 }
 
-# Initialize parameters
+#' Parameter initialization
+#' @param symbol The symbolic configuration of the neural network.
+#' @param input.shape The shape of the input for the neural network.
+#' @param output.shape The shape of the output for the neural network. It can be NULL.
+#' @param initializer, initializer object. The initialization scheme for parameters.
+#' @param ctx mx.context. The devices used to perform initialization.
+#' @export
 mx.model.init.params <- function(symbol, input.shape, output.shape, initializer, ctx) {
   if (!is.MXSymbol(symbol)) stop("symbol need to be MXSymbol")
-  arg_names <- arguments(symbol)
-  tmp <- unlist(lapply(arg_names, function(a) {
-    mxnet:::mx.util.str.endswith(a, "label")
-  }))
-  label_name <- arg_names[tmp]
-  arg_lst <- list(symbol = symbol, data=input.shape)
-  arg_lst[[label_name]] = output.shape
+
+  arg_lst <- list(symbol = symbol)
+  arg_lst <- append(arg_lst, input.shape)
+  arg_lst <- append(arg_lst, output.shape)
 
   slist <- do.call(mx.symbol.infer.shape, arg_lst)
   if (is.null(slist)) stop("Not enough information to get shapes")
@@ -287,7 +305,7 @@ mx.model.init.params <- function(symbol, input.shape, output.shape, initializer,
 
 # Initialize the data iter
 mx.model.init.iter <- function(X, y, batch.size, is.train) {
-  if (is.MXDataIter(X)) return(X)
+  if (is.mx.dataiter(X)) return(X)
   if (is.null(y)) {
     if (is.train) stop("Need to provide parameter y for training with R arrays.")
     shape <- dim(X)
@@ -401,6 +419,17 @@ mx.model.select.layout.predict <- function(X, model) {
 #'     Model parameter, list of name to NDArray of net's weights.
 #' @param aux.params list, optional
 #'     Model parameter, list of name to NDArray of net's auxiliary states.
+#' @param input.names optional
+#'     The names of the input symbols.
+#' @param output.names optional
+#'     The names of the output symbols.
+#' @param fixed.param
+#'     The parameters to be fixed during training. For these parameters, not gradients
+#'     will be calculated and thus no space will be allocated for the gradient.
+#' @param allow.extra.params
+#'     Whether allow extra parameters that are not needed by symbol.
+#'     If this is TRUE, no error will be thrown when arg_params or aux_params
+#'     contain extra parameters that is not needed by the executor.
 #' @return model A trained mxnet model.
 #'
 #' @export
@@ -412,9 +441,10 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
          eval.data=NULL, eval.metric=NULL,
          epoch.end.callback=NULL, batch.end.callback=NULL,
          array.batch.size=128, array.layout="auto",
-         kvstore="local",
-         verbose=TRUE,
-         arg.params=NULL, aux.params=NULL,
+         kvstore = "local", verbose = TRUE,
+         arg.params = NULL, aux.params = NULL,
+         input.names=NULL, output.names = NULL,
+         fixed.param = NULL, allow.extra.params = FALSE,
          ...) {
   if (is.array(X) || is.matrix(X)) {
     if (array.layout == "auto") {
@@ -429,19 +459,37 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
     X$reset()
     if (!X$iter.next()) stop("Empty input")
   }
-  input.shape <- dim((X$value())$data)
-  output.shape <- dim((X$value())$label)
+  if (is.null(input.names)) {
+    input.names <- "data"
+  }
+  input.shape <- sapply(input.names, function(n){dim(X$value()[[n]])}, simplify = FALSE)
+  if (is.null(output.names)) {
+    arg_names <- arguments(symbol)
+    output.names <- arg_names[endsWith(arg_names, "label")]
+    output.shape <- list()
+    output.shape[[output.names]] <- dim((X$value())$label)
+  } else {
+    output.shape <- sapply(output.names, function(n){dim(X$value()[[n]])}, simplify = FALSE)  
+  }
   params <- mx.model.init.params(symbol, input.shape, output.shape, initializer, mx.cpu())
   if (!is.null(arg.params)) params$arg.params <- arg.params
   if (!is.null(aux.params)) params$aux.params <- aux.params
+  if (allow.extra.params) {
+    params$arg.params[!names(params$arg.params) %in% arguments(symbol)] <- NULL
+  }
   if (is.null(ctx)) ctx <- mx.ctx.default()
   if (is.mx.context(ctx)) {
     ctx <- list(ctx)
   }
   if (!is.list(ctx)) stop("ctx must be mx.context or list of mx.context")
   if (is.character(optimizer)) {
-    ndim <- length(input.shape)
-    batchsize = input.shape[[ndim]]
+    if (is.numeric(input.shape)) {
+      ndim <- length(input.shape)
+      batchsize = input.shape[[ndim]]      
+    } else {
+      ndim <- length(input.shape[[1]])
+      batchsize = input.shape[[1]][[ndim]]
+    }
     optimizer <- mx.opt.create(optimizer, rescale.grad=(1/batchsize), ...)
   }
   if (!is.null(eval.data) && !is.list(eval.data) && !is.mx.dataiter(eval.data)) {
@@ -469,7 +517,8 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
                           metric=eval.metric,
                           epoch.end.callback=epoch.end.callback,
                           batch.end.callback=batch.end.callback,
-                          kvstore=kvstore, 
+                          kvstore=kvstore,
+                          fixed.param = fixed.param,
                           verbose=verbose)
   return (model)
 }
@@ -486,9 +535,13 @@ function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
 #'     "colmajor" means dim(X) = c(nfeatures, nexample)
 #'     "auto" will auto detect the layout by match the feature size,
 #'      and will report error when X is a square matrix to ask user to explicitly specify layout.
-#'
+#' @param allow.extra.params
+#'     Whether allow extra parameters that are not needed by symbol.
+#'     If this is TRUE, no error will be thrown when arg_params or aux_params
+#'     contain extra parameters that is not needed by the executor.
 #' @export
-predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128, array.layout="auto") {
+predict.MXFeedForwardModel <- function(model, X, ctx = NULL, array.batch.size = 128,
+                                       array.layout = "auto", allow.extra.params = FALSE) {
   if (is.serialized(model)) model <- mx.unserialize(model)
   if (is.null(ctx)) ctx <- mx.ctx.default()
   if (is.array(X) || is.matrix(X)) {
@@ -506,6 +559,9 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128,
   arg_lst <- list(symbol = model$symbol, ctx = ctx, data = dim(dlist$data), grad.req="null")
 
   pexec <- do.call(mx.simple.bind, arg_lst)
+  if (allow.extra.params) {
+    model$arg.params[!names(model$arg.params) %in% arguments(model$symbol)] <- NULL
+  }
   mx.exec.update.arg.arrays(pexec, model$arg.params, match.name=TRUE)
   mx.exec.update.aux.arrays(pexec, model$aux.params, match.name=TRUE)
   packer <- mx.nd.arraypacker()
@@ -531,14 +587,14 @@ predict.MXFeedForwardModel <- function(model, X, ctx=NULL, array.batch.size=128,
 #'
 #' @export
 mx.model.load <- function(prefix, iteration) {
-  symbol <- mx.symbol.load(paste0(prefix, "-symbol.json"))
-  save.dict <- mx.nd.load(sprintf("%s-%04d.params", prefix, iteration))
+  symbol <- mx.symbol.load(path.expand(paste0(prefix, "-symbol.json")))
+  save.dict <- mx.nd.load(path.expand(sprintf("%s-%04d.params", prefix, iteration)))
   names <- names(save.dict)
   arg.index <- as.integer(mx.util.filter.null(lapply(1:length(names), function(i) {
-    if (mx.util.str.startswith(names[[i]], "arg:")) i else NULL
+    if (startsWith(names[[i]], "arg:")) i else NULL
   })))
   aux.index <- as.integer(mx.util.filter.null(lapply(1:length(names), function(i) {
-    if (mx.util.str.startswith(names[[i]], "aux:")) i else NULL
+    if (startsWith(names[[i]], "aux:")) i else NULL
   })))
 
   if (length(arg.index) != 0) {
@@ -578,8 +634,8 @@ mx.model.save <- function(model, prefix, iteration) {
     paste0("aux:", nm)
   }))
   save.dict <- append(arg.params, aux.params)
-  mx.symbol.save(model$symbol, paste0(prefix, "-symbol.json"))
-  mx.nd.save(save.dict, sprintf("%s-%04d.params", prefix, iteration))
+  mx.symbol.save(model$symbol, path.expand(paste0(prefix, "-symbol.json")))
+  mx.nd.save(save.dict, path.expand(sprintf("%s-%04d.params", prefix, iteration)))
 }
 
 #' Check if the model has been serialized into RData-compatiable format.

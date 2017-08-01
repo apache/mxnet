@@ -81,12 +81,12 @@ class EvalMetric(object):
         if self.output_names is not None:
             pred = [pred[name] for name in self.output_names]
         else:
-            pred = pred.values()
+            pred = list(pred.values())
 
         if self.label_names is not None:
             label = [label[name] for name in self.label_names]
         else:
-            label = label.values()
+            label = list(label.values())
 
         self.update(label, pred)
 
@@ -634,7 +634,7 @@ class Perplexity(EvalMetric):
             label = label.as_in_context(pred.context).reshape((label.size,))
             pred = ndarray.pick(pred, label.astype(dtype='int32'), axis=self.axis)
             if self.ignore_label is not None:
-                ignore = label == self.ignore_label
+                ignore = (label == self.ignore_label).astype(pred.dtype)
                 num -= ndarray.sum(ignore).asscalar()
                 pred = pred*(1-ignore) + ignore
             loss -= ndarray.sum(ndarray.log(ndarray.maximum(1e-10, pred))).asscalar()
@@ -895,6 +895,60 @@ class CrossEntropy(EvalMetric):
             prob = pred[numpy.arange(label.shape[0]), numpy.int64(label)]
             self.sum_metric += (-numpy.log(prob + self.eps)).sum()
             self.num_inst += label.shape[0]
+
+
+@register
+@alias('pearsonr')
+class PearsonCorrelation(EvalMetric):
+    """Computes Pearson correlation.
+
+    The pearson correlation is given by
+
+    .. math::
+        \\frac{cov(y, \\hat{y})}{\\sigma{y}\\sigma{\\hat{y}}}
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+
+    Examples
+    --------
+    >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
+    >>> labels   = [mx.nd.array([[1, 0], [0, 1], [0, 1]])]
+    >>> pr = mx.metric.PearsonCorrelation()
+    >>> pr.update(labels, predicts)
+    >>> print pr.get()
+    ('pearson-correlation', 0.42163704544016178)
+    """
+    def __init__(self, name='pearsonr',
+                 output_names=None, label_names=None):
+        super(PearsonCorrelation, self).__init__(
+            name, output_names=output_names, label_names=label_names)
+
+    def update(self, labels, preds):
+        """Updates the internal evaluation result.
+
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data.
+        preds : list of `NDArray`
+            Predicted values.
+        """
+        check_label_shapes(labels, preds)
+        for label, pred in zip(labels, preds):
+            check_label_shapes(label, pred, 1)
+            label = label.asnumpy()
+            pred = pred.asnumpy()
+            self.sum_metric += numpy.corrcoef(pred.ravel(), label.ravel())[0, 1]
+            self.num_inst += 1
 
 
 @register

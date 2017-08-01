@@ -5,8 +5,8 @@
  * \author Zhang Chen, Chuntao Hong
  */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_HPP_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_HPP_
+#ifndef MXNET_CPP_NDARRAY_HPP_
+#define MXNET_CPP_NDARRAY_HPP_
 
 #include <algorithm>
 #include <map>
@@ -378,4 +378,4 @@ inline std::ostream & operator<<(std::ostream &out, const NDArray &ndarray) {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_HPP_
+#endif  // MXNET_CPP_NDARRAY_HPP_
