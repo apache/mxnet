@@ -23,17 +23,17 @@ def measure_cost(repeat, f, *args, **kwargs):
 
 
 def run_cast_storage_synthetic():
-    def dns_to_csr(m, n, density, ctx, repeat):
+    def dense_to_sparse(m, n, density, ctx, repeat, stype):
         set_default_context(ctx)
         data_shape = (m, n)
-        dns_data = rand_ndarray(data_shape, 'csr', density).todense()
+        dns_data = rand_ndarray(data_shape, stype, density).todense()
         dns_data.wait_to_read()
 
         # do one warm up run, verify correctness
-        assert same(mx.nd.cast_storage(dns_data, stype='csr').asnumpy(), dns_data.asnumpy())
+        assert same(mx.nd.cast_storage(dns_data, stype).asnumpy(), dns_data.asnumpy())
 
         # start benchmarking
-        cost = measure_cost(repeat, mx.nd.cast_storage, dns_data, stype='csr')
+        cost = measure_cost(repeat, mx.nd.cast_storage, dns_data, stype)
         results = '{:10.1f} {:>10} {:8d} {:8d} {:10.2f}'.format(density*100, str(ctx), m, n, cost*1000)
         print(results)
 
@@ -46,24 +46,36 @@ def run_cast_storage_synthetic():
     # num_repeat  number of benchmark runs to average over
     # contexts    mx.cpu(), mx.gpu()
     #             note: benchmark different contexts separately; to benchmark cpu, compile without CUDA
+    # benchmarks  dns_to_csr, dns_to_rsp
     m = [  512,    512]
     n = [50000, 100000]
     density = [1.00, 0.80, 0.60, 0.40, 0.20, 0.10, 0.05, 0.02, 0.01]
     num_repeat = 10
     contexts = [mx.gpu()]
+    benchmarks = ["dns_to_csr", "dns_to_rsp"]
 
     # run benchmark
-    print("==================================================")
-    print(" cast_storage benchmark: dense to csr, size m x n ")
-    print("==================================================")
-    headline = '{:>10} {:>10} {:>8} {:>8} {:>10}'.format('density(%)', 'context', 'm', 'n', 'time(ms)')
-    print(headline)
-    for i in range(len(n)):
-        for ctx in contexts:
-            for den in density:
-                dns_to_csr(m[i], n[i], den, ctx, num_repeat)
+    for b in benchmarks:
+        stype = ''
+        print("==================================================")
+        if b is "dns_to_csr":
+            stype = 'csr'
+            print(" cast_storage benchmark: dense to csr, size m x n ")
+        elif b is "dns_to_rsp":
+            stype = 'row_sparse'
+            print(" cast_storage benchmark: dense to rsp, size m x n ")
+        else:
+            print("invalid benchmark: %s" %b)
+            continue
+        print("==================================================")
+        headline = '{:>10} {:>10} {:>8} {:>8} {:>10}'.format('density(%)', 'context', 'm', 'n', 'time(ms)')
+        print(headline)
+        for i in range(len(n)):
+            for ctx in contexts:
+                for den in density:
+                    dense_to_sparse(m[i], n[i], den, ctx, num_repeat, stype)
+            print("")
         print("")
-    print("==================================================")
 
 
 if __name__ == "__main__":
