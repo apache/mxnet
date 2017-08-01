@@ -1,4 +1,3 @@
-import numpy as np
 
 
 def _get_input_output_name(net, node, index=0):
@@ -6,11 +5,11 @@ def _get_input_output_name(net, node, index=0):
     inputs = node['inputs']
 
     if index == 'all':
-        input_name = [_get_node_name(net, inputs[id][0]) for id in range(len(inputs))]
+        input_name = [_get_node_name(net, inputs[idx][0]) for idx in range(len(inputs))]
     elif type(index) == int:
         input_name = _get_node_name(net, inputs[0][0])
     else:
-        input_name = [_get_node_name(net, inputs[id][0]) for id in index]
+        input_name = [_get_node_name(net, inputs[idx][0]) for idx in index]
     return input_name, name
 
 
@@ -22,16 +21,12 @@ def _get_node_shape(net, node_id):
     return net['nodes'][node_id]['shape']
 
 
-# FYI for images in CoreML channel, H, W in CoreML for image
-
-# TODO LOWER PRIORITY (BUT STILL IMPORTANT)
+# TODO These operators still need to be converted (listing in order of priority):
+# High priority:
 # mxnet.symbol.repeat -> builder.add_repeat to flatten and repeat the NDArray sequence
 # mxnet.symbol.Crop -> builder.add_crop to crop image along spacial dimensions
 # mxnet.symbol.Pad -> builder.add_padding putting 0's on height and width for tensor
-
-
-# TODO EVENTUALLY
-
+# Low Priority:
 # depthwise seperable convolution support through groups in builder.add_convolution
 # add_optional -> for all RNNs defining what goes in and out (to define beam search or if input is streaming)
 # mx.symbol.Embedding -> add_embedding takes indicies, word ids from dict that is outside coreml or
@@ -348,7 +343,7 @@ def convert_convolution(net, node, module, force, builder):
     channels = W.shape[1]
     stride_height, stride_width = literal_eval(param['stride'])
     kernel_height, kernel_width = literal_eval(param['kernel'])
-    # TODO add padding here
+
     W = W.transpose((2, 3, 1, 0))
     builder.add_convolution(
         name=name,
