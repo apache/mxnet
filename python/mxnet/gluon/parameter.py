@@ -375,9 +375,19 @@ class ParameterDict(object):
                                            for v in self.values()]))
 
     def setattr(self, attr, value, prefix=""):
-        """Sets p.attr = value for all params p if their name starts with prefix.
+        """Calls setattr(p, attr, value) for all matching Parameters p.
 
         Can be useful to change the grad_req attribute of a set of parameters.
+
+        Parameters
+        ----------
+        attr : str
+            The name of the attribute to be changed.
+        value : object
+            The value to set the attribute to.
+        prefix : str, default ''
+            If set, only set attributes of Parameters whose name starts with
+            prefix.
         """
         for k, v in self._params.items():
             if k.startswith(prefix):
