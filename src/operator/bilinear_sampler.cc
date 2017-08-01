@@ -226,4 +226,3 @@ Example 2::
 )code" ADD_FILELINE);
 }  // namespace op
 }  // namespace mxnet
-
