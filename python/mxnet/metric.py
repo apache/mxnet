@@ -840,7 +840,7 @@ class CrossEntropy(EvalMetric):
     The cross entropy over a batch of sample size :math:`N` is given by
 
     .. math::
-       -\\sum_{n=1}^{N}\\sum_{c=1}^{C}t_{nk}\\log (y_{nk}),
+       -\\sum_{n=1}^{N}\\sum_{k=1}^{K}t_{nk}\\log (y_{nk}),
 
     where :math:`t_{nk}=1` iff sample :math:`n` belongs to class :math:`k`.
     :math:`y_{nk}` denotes the probability of sample :math:`n` belonging to 
