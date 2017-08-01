@@ -1,15 +1,9 @@
 import unittest
 import mxnet as mx
 import numpy as np
-import tempfile
-import os
 import _mxnet_converter as mxnet_converter
 import coremltools
 from collections import namedtuple
-
-#TODO add integration tests for converting sets of layers from data.mxnet.io
-#TODO add all new unit tests for layers
-
 
 def _mxnet_remove_batch(input_data):
     for blob in input_data:
