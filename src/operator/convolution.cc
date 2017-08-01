@@ -44,7 +44,6 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
       break;
     }
   }
-  LOG(INFO) << MKLConvolutionOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
 #if MXNET_USE_NNPACK == 1
   const size_t batch_size = (*in_shape)[0][0];
@@ -72,8 +71,6 @@ Operator *ConvolutionProp::CreateOperatorEx(Context ctx,
                                             std::vector<TShape> *in_shape,
                                             std::vector<int> *in_type) const {
   std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], in_shape, &out_shape, ctx);
 }

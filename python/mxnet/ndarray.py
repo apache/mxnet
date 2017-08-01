@@ -17,7 +17,7 @@ import sys as _sys
 
 import operator
 import numpy as np
-from .base import _LIB, string_types, numeric_types
+from .base import _LIB, string_types, numeric_types, integer_types
 from .base import c_array, py_str, c_str, mx_real_t, _Null  # pylint: disable=unused-import
 from .base import mx_uint, NDArrayHandle, check_call, OpHandle
 from .base import ctypes2buffer
@@ -26,7 +26,7 @@ from . import _ndarray_internal as _internal
 from .ndarray_doc import _build_doc
 
 
-# Use different verison of SymbolBase
+# Use different version of SymbolBase
 # When possible, use cython to speedup part of computation.
 # pylint: disable=unused-import
 try:
@@ -48,19 +48,31 @@ except ImportError:
 
 # pylint: disable= no-member
 _DTYPE_NP_TO_MX = {
+    None       : -1,
     np.float32 : 0,
     np.float64 : 1,
     np.float16 : 2,
     np.uint8   : 3,
-    np.int32   : 4
+    np.int32   : 4,
+    np.int8    : 5,
+    np.int64   : 6,
 }
 
 _DTYPE_MX_TO_NP = {
+    -1 : None,
     0 : np.float32,
     1 : np.float64,
     2 : np.float16,
     3 : np.uint8,
-    4 : np.int32
+    4 : np.int32,
+    5 : np.int8,
+    6 : np.int64,
+}
+
+_GRAD_REQ_MAP = {
+    'null': 0,
+    'write': 1,
+    'add': 3
 }
 # pylint: enable= no-member
 
@@ -116,8 +128,9 @@ fixed-size items.
     def __repr__(self):
         """Returns a string representation of the array."""
         shape_info = 'x'.join(['%d' % x for x in self.shape])
-        return '<%s %s @%s>' % (self.__class__.__name__,
-                                shape_info, self.context)
+        return '\n%s\n<%s %s @%s>' % (str(self.asnumpy()),
+                                      self.__class__.__name__,
+                                      shape_info, self.context)
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """
@@ -258,8 +271,14 @@ fixed-size items.
         return lesser_equal(self, other)
 
     def __bool__(self):
-        raise ValueError("The truth value of an NDArray with more than one element is ambiguous.")
+        raise ValueError("The truth value of an NDArray is ambiguous. " \
+                         "Please convert to number with asscalar() first.")
+
     __nonzero__ = __bool__
+
+    def __len__(self):
+        """Number of element along the first axis."""
+        return self.shape[0]
 
     def __getstate__(self):
         handle = self.handle
@@ -327,14 +346,14 @@ fixed-size items.
         """
         # pylint: disable=too-many-branches
         if not self.writable:
-            raise ValueError('Failed to assign to a readonly NDArray')
-        if isinstance(key, int):
+            raise ValueError('Cannot assign to readonly NDArray')
+        if isinstance(key, integer_types):
             sliced_arr = self._at(key)
             sliced_arr[:] = value
             return
-        if isinstance(key, py_slice):
+        elif isinstance(key, py_slice):
             if key.step is not None:
-                raise ValueError('NDArray only supports continuous slicing on axis 0')
+                raise ValueError('NDArray only supports slicing with step size 1')
             if key.start is not None or key.stop is not None:
                 sliced_arr = self._slice(key.start, key.stop)
                 sliced_arr[:] = value
@@ -347,44 +366,72 @@ fixed-size items.
             elif isinstance(value, (np.ndarray, np.generic)):
                 self._sync_copyfrom(value)
             else:
-                raise TypeError('type %s not supported' % str(type(value)))
-        if isinstance(key, tuple):
+                raise TypeError(
+                    'NDArray does not support assignment with %s of type %s'%(
+                        str(value), str(type(value))))
+        elif isinstance(key, tuple):
             # multi-dimension indexing
             my_shape = self.shape
-            assert len(key) == len(my_shape)
-            for slice_i in key:
-                assert isinstance(slice_i, (py_slice, int))
+            assert len(key) <= len(my_shape), \
+                "Indexing dimensions exceed array dimensions, %d vs %d"%(
+                    len(key), len(my_shape))
             begin = [0 for _ in my_shape]
             end = [x for x in my_shape]
+            expand = []
             for i, slice_i in enumerate(key):
-                if isinstance(slice_i, int):
+                if isinstance(slice_i, integer_types):
                     assert slice_i < my_shape[i]
                     begin[i] = slice_i
                     end[i] = slice_i + 1
-                if isinstance(slice_i, py_slice):
+                    expand.append(i)
+                elif isinstance(slice_i, py_slice):
                     # only support continuous slicing
-                    assert slice_i.step is None
+                    assert slice_i.step is None, \
+                        "NDArray only supports slicing with step size 1."
                     begin[i] = slice_i.start or 0
                     end[i] = slice_i.stop or my_shape[i]
                     assert begin[i] < end[i]
                     assert end[i] <= my_shape[i]
-            begin = tuple(begin)
-            end = tuple(end)
+                else:
+                    raise ValueError(
+                        "NDArray does not support slicing with key %s of type %s."%(
+                            str(slice_i), str(type(slice_i))))
+
             if isinstance(value, NDArray):
                 value = value.as_in_context(self.context)
-                _internal._crop_assign(self, value, out=self,
-                                       begin=begin, end=end)
+                self._slice_assign(value, begin, end, expand)
             elif isinstance(value, numeric_types):
                 _internal._crop_assign_scalar(self, out=self,
                                               begin=begin, end=end,
                                               scalar=value)
             elif isinstance(value, (np.ndarray, np.generic)):
-                value = array(value, ctx=self.context)
-                _internal._crop_assign(self, value, out=self,
-                                       begin=begin, end=end)
+                value = array(value, ctx=self.context, dtype=self.dtype)
+                self._slice_assign(value, begin, end, expand)
             else:
-                raise TypeError('type %s not supported' % str(type(value)))
+                raise TypeError(
+                    'NDArray does not support assignment with %s of type %s'%(
+                        str(value), str(type(value))))
+        else:
+            raise ValueError(
+                "NDArray does not support slicing with key %s of type %s."%(
+                    str(key), str(type(key))))
         # pylint: enable=too-many-branches
+
+    def _slice_assign(self, value, begin, end, expand):
+        vshape = list(value.shape)
+        if expand and len(vshape) != len(begin):
+            if len(expand) + len(vshape) != len(begin):
+                sshape = [e - b for e, b in zip(end, begin)]
+                for i in reversed(expand):
+                    sshape.pop(i)
+                raise ValueError(
+                    "Cannot assign NDArray with shape %s to NDArray slice with " \
+                    "shape %s"%(str(vshape), str(sshape)))
+            for i in expand:
+                vshape.insert(i, 1)
+            value = value.reshape(vshape)
+        _internal._crop_assign(self, value, out=self,
+                               begin=begin, end=end)
 
     def __getitem__(self, key):
         """x.__getitem__(i) <=> x[i]
@@ -411,22 +458,50 @@ fixed-size items.
                [ 3.,  4.,  5.]], dtype=float32)
         """
         # multi-dimensional slicing is not supported yet
-        if isinstance(key, int):
+        if isinstance(key, integer_types):
             if key > self.shape[0] - 1:
                 raise IndexError(
                     'index {} is out of bounds for axis 0 with size {}'.format(
                         key, self.shape[0]))
             return self._at(key)
-        if isinstance(key, py_slice):
+        elif isinstance(key, py_slice):
             if key.step is not None:
-                raise ValueError('NDArray only supports continuous slicing on axis 0')
+                raise ValueError("NDArray only supports slicing with step size 1.")
             if key.start is not None or key.stop is not None:
                 return self._slice(key.start, key.stop)
             else:
                 return self
-        if isinstance(key, tuple):
-            raise ValueError('Multi-dimension indexing is not supported')
-
+        elif isinstance(key, tuple):
+            shape = self.shape
+            oshape = []
+            begin = []
+            end = []
+            assert len(shape) >= len(key), \
+                "Slicing dimensions exceeds array dimensions, %d vs %d"%(
+                    len(key), len(shape))
+            i = -1
+            for i, slice_i in enumerate(key):
+                if isinstance(slice_i, integer_types):
+                    begin.append(slice_i)
+                    end.append(slice_i+1)
+                elif isinstance(slice_i, py_slice):
+                    if slice_i.step is not None:
+                        raise ValueError("NDArray only supports slicing with step size 1.")
+                    begin.append(0 if slice_i.start is None else slice_i.start)
+                    end.append(shape[i] if slice_i.stop is None else slice_i.stop)
+                    oshape.append(end[i] - begin[i])
+                else:
+                    raise ValueError(
+                        "NDArray does not support slicing with key %s of type %s."%(
+                            str(slice_i), str(type(slice_i))))
+            oshape.extend(shape[i+1:])
+            if len(oshape) == 0:
+                oshape.append(1)
+            return slice(self, begin, end).reshape(oshape)
+        else:
+            raise ValueError(
+                "NDArray does not support slicing with key %s of type %s."%(
+                    str(key), str(type(key))))
 
     def _sync_copyfrom(self, source_array):
         """Performs a synchronized copy from the `source_array` to the current array.
@@ -698,7 +773,10 @@ fixed-size items.
         >>> np.prod(x.shape)
         30
         """
-        return np.prod(self.shape)
+        size = 1
+        for i in self.shape:
+            size *= i
+        return size
 
     @property
     def context(self):
@@ -945,6 +1023,34 @@ fixed-size items.
             return self
         return self.copyto(context)
 
+    def attach_grad(self, grad_req='write'):
+        """Attach a gradient buffer to this NDArray, so that `backward`
+        can compute gradient with respect to it.
+
+        Parameters
+        ----------
+        grad_req : {'write', 'add', 'null'}
+            How gradient will be accumulated.
+            - 'write': gradient will be overwritten on every backward.
+            - 'add': gradient will be added to existing value on every backward.
+            - 'null': do not compute gradient for this NDArray.
+        """
+        grad = zeros_like(self)  # pylint: disable=undefined-variable
+        grad_req = _GRAD_REQ_MAP[grad_req]
+        check_call(_LIB.MXAutogradMarkVariables(
+            1, ctypes.pointer(self.handle),
+            ctypes.pointer(mx_uint(grad_req)),
+            ctypes.pointer(grad.handle)))
+
+    @property
+    def grad(self):
+        """Returns gradient buffer attached to this NDArray."""
+        hdl = NDArrayHandle()
+        check_call(_LIB.MXNDArrayGetGrad(self.handle, ctypes.byref(hdl)))
+        if hdl.value is None:
+            return None
+        return NDArray(hdl)
+
     def detach(self):
         """Returns a new NDArray, detached from the current graph."""
         hdl = NDArrayHandle()
@@ -1006,7 +1112,7 @@ def empty(shape, ctx=None, dtype=mx_real_t):
     >>> mx.nd.empty((1,2), mx.gpu(0), 'float16')
     <NDArray 1x2 @gpu(0)>
     """
-    if isinstance(shape, int):
+    if isinstance(shape, integer_types):
         shape = (shape, )
     if ctx is None:
         ctx = Context.default_ctx
@@ -2176,6 +2282,7 @@ def negative(arr):
     """
     return multiply(arr, -1.0)
 
+
 def load(fname):
     """Loads an array from file.
 
@@ -2223,7 +2330,7 @@ def save(fname, data):
     ----------
     fname : str
         The filename.
-    data : list of ``NDArray` or dict of str to ``NDArray``
+    data : ``NDArray``, list of ``NDArray` or dict of str to ``NDArray``
         The data to save.
 
     Examples
@@ -2237,6 +2344,8 @@ def save(fname, data):
     >>> mx.nd.load('my_dict')
     {'y': <NDArray 1x4 @cpu(0)>, 'x': <NDArray 2x3 @cpu(0)>}
     """
+    if isinstance(data, NDArray):
+        data = [data]
     handles = []
     if isinstance(data, dict):
         keys = []
@@ -2248,12 +2357,15 @@ def save(fname, data):
             keys.append(c_str(key))
             handles.append(val.handle)
         keys = c_array(ctypes.c_char_p, keys)
-    else:
+    elif isinstance(data, list):
         for val in data:
             if not isinstance(val, NDArray):
                 raise TypeError('save only accept dict str->NDArray or list of NDArray')
             handles.append(val.handle)
         keys = None
+    else:
+        raise ValueError("data needs to either be a NDArray, dict of str, NDArray pairs "
+                         "or a list of NDarrays.")
     check_call(_LIB.MXNDArraySave(c_str(fname),
                                   mx_uint(len(handles)),
                                   c_array(NDArrayHandle, handles),

@@ -25,7 +25,7 @@ class AGNode {
  public:
   OpReqType grad_req;
   nnvm::NodePtr nn_node;
-  std::shared_ptr<Operator> opr;
+  OpStatePtr state;
   std::vector<AGNodeEntry> inputs;
   std::vector<NDArray> outputs;
   std::vector<NDArray> out_grads;
@@ -40,7 +40,7 @@ class AGNode {
 
   void clear_history() {
     if (out_grads.size()) return;
-    opr.reset();
+    state.reset();
     outputs.clear();
     nn_node.reset();
     for (auto& i : inputs) i.ag_node->clear_history();
@@ -73,7 +73,7 @@ class AutogradRuntime {
                                 std::vector<NDArray>* p_inputs,
                                 std::vector<NDArray>* p_outputs);
   /*! \brief record imperative operator which is executed by operator. */
-  void RecordImperativeOperator(const std::shared_ptr<Operator>& opr,
+  void RecordImperativeOperator(const OpStatePtr& state,
                                 const nnvm::Op* op,
                                 const nnvm::NodeAttrs& attrs,
                                 std::vector<NDArray>* p_inputs,
@@ -103,7 +103,7 @@ class AutogradRuntime {
                      const nnvm::NodeAttrs& attrs,
                      std::vector<NDArray>* p_inputs,
                      std::vector<NDArray>* p_outputs,
-                     const std::shared_ptr<Operator>& opr);
+                     const OpStatePtr& state);
   /*! \brief AutogradRuntime singleton. */
   static AutogradRuntime* instance_;
   /*! \brief indicate whether is training. */

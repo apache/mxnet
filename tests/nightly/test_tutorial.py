@@ -47,15 +47,23 @@ def test_tutorial_nb(file_path):
         path of tutorial markdown file
     """
     tutorial_name = os.path.basename(file_path)
-    notebook = nbformat.read(file_path + '_python.ipynb', as_version=4)
+    notebook = nbformat.read(file_path + '.ipynb', as_version=4)
     eprocessor = ExecutePreprocessor(timeout=1800)
     try:
         eprocessor.preprocess(notebook, {'metadata': {}})
     except Exception as err:
-        err_msg = "Python script successfully run without error or warning " \
-                  "but notebook returned error:\n%s\nSomething weird happened." \
-                  % (str(err))
+        err_msg = str(err)
         fail_dict[tutorial_name] = err_msg
+    finally:
+        output_nb = open("output.txt", mode='w')
+        nbformat.write(notebook, output_nb)
+        output_nb.close()
+        output_nb = open("output.txt", mode='r')
+        for line in output_nb:
+            if "Warning:" in line:
+                fail_dict[tutorial_name] = "%s has warning." % (tutorial_name)
+                return
+
 
 if __name__ == "__main__":
     tutorial_dir = '../../docs/_build/html/tutorials/'
@@ -64,7 +72,7 @@ if __name__ == "__main__":
         for line in config_file:
             tutorial_list.append(line.lstrip().rstrip())
             file_dir = tutorial_dir + line.lstrip().rstrip()
-            test_tutorial(file_dir)
+            test_tutorial_nb(file_dir)
 
         fail_num = len(fail_dict)
         success_num = len(tutorial_list) - fail_num

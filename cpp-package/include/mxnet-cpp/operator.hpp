@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OPERATOR_HPP_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OPERATOR_HPP_
+#ifndef MXNET_CPP_OPERATOR_HPP_
+#define MXNET_CPP_OPERATOR_HPP_
 
 #include <algorithm>
 #include <string>
@@ -155,4 +155,4 @@ inline Operator &Operator::SetInput(const std::string &name, NDArray ndarray) {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OPERATOR_HPP_
+#endif  // MXNET_CPP_OPERATOR_HPP_

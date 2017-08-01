@@ -555,11 +555,6 @@ class Module(BaseModule):
         """
         assert self.binded and self.params_initialized
 
-        # If start to inference, force rebind module.
-        if self._label_shapes and not data_batch.label:
-            raise RuntimeError("If you are trying to do inference, rebind module "
-                               "with 'force_rebind=True' and 'for_training=False'")
-
         curr_data_shapes = tuple(i.shape for i in self._data_shapes)
         new_data_shapes = tuple(i.shape for i in data_batch.data)
 

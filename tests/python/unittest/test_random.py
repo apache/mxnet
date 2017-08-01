@@ -174,7 +174,7 @@ def test_sample_multinomial():
     x = mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0
     dx = mx.nd.ones_like(x)
     mx.contrib.autograd.mark_variables([x], [dx])
-    with mx.contrib.autograd.train_section():
+    with mx.autograd.record():
         y, prob = mx.nd.sample_multinomial(x, shape=1000, get_prob=True)
         r = prob * 5
         r.backward()

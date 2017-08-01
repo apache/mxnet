@@ -21,7 +21,7 @@ class LRScheduler(object):
         The ``num_update`` is the upper bound of the number of updates applied to
         every weight.
 
-        Assume the optimizer has udpated *i*-th weight by *k_i* times, namely
+        Assume the optimizer has updated *i*-th weight by *k_i* times, namely
         ``optimizer.update(i, weight_i)`` is called by *k_i* times. Then::
 
             num_update = max([k_i for all i])

@@ -26,6 +26,7 @@
 
 
 #include "src/ndarray/ndarray_function.cc"
+#include "src/ndarray/autograd.cc"
 #include "src/ndarray/ndarray.cc"
 
 #include "src/engine/engine.cc"

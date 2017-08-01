@@ -28,8 +28,8 @@ class LogMetricsCallback(object):
     >>> evaluation_log = 'logs/eval'
     >>> # in this case, each training and evaluation metric pairs has same name,
     >>> # you can add a prefix to make it separate.
-    >>> batch_end_callbacks = [mx.tensorboard.LogMetricsCallback(training_log)]
-    >>> eval_end_callbacks = [mx.tensorboard.LogMetricsCallback(evaluation_log)]
+    >>> batch_end_callbacks = [mx.contrib.tensorboard.LogMetricsCallback(training_log)]
+    >>> eval_end_callbacks = [mx.contrib.tensorboard.LogMetricsCallback(evaluation_log)]
     >>> # run
     >>> model.fit(train,
     >>>     ...
