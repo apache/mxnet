@@ -191,6 +191,8 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   // TODO(stefan): dot(csr.T,dns)=rsp not yet implemented on gpu
   if (param.transpose_a && kCSRStorage == (*in_attrs)[0] && ctx.dev_type != Context::kGPU) {
     STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
+  } else if (param.transpose_a && kCSRStorage == (*in_attrs)[0] && kRowSparseStorage == (*in_attrs)[1]) {
+    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
   } else {
     STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kDefaultStorage);
   }
