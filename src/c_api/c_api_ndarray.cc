@@ -562,7 +562,7 @@ int MXAutogradBackward(mx_uint num_output,
                        NDArrayHandle *output_handles,
                        NDArrayHandle *ograd_handles,
                        int retain_graph) {
-  MXAutogradBackwardEx(num_output, output_handles, ograd_handles, retain_graph, true);
+  return MXAutogradBackwardEx(num_output, output_handles, ograd_handles, retain_graph, true);
 }
 
 int MXAutogradBackwardEx(mx_uint num_output,

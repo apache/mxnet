@@ -35,7 +35,7 @@ int MXExecutorForward(ExecutorHandle handle, int is_train) {
 int MXExecutorBackward(ExecutorHandle handle,
                        mx_uint len,
                        NDArrayHandle *head_grads) {
-  MXExecutorBackwardEx(handle, len, head_grads, true);
+  return MXExecutorBackwardEx(handle, len, head_grads, true);
 }
 
 int MXExecutorBackwardEx(ExecutorHandle handle,

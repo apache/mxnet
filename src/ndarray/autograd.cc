@@ -23,11 +23,11 @@ using nnvm::NodeEntryMap;
 using exec::GraphExecutor;
 
 #if DMLC_CXX11_THREAD_LOCAL
-thread_local bool AutogradRuntime::is_train_;
-thread_local bool AutogradRuntime::is_recording_;
+thread_local bool AutogradRuntime::is_train_ = false;
+thread_local bool AutogradRuntime::is_recording_ = false;
 #else
-MX_THREAD_LOCAL bool AutogradRuntime::is_train_;
-MX_THREAD_LOCAL bool AutogradRuntime::is_recording_;
+MX_THREAD_LOCAL bool AutogradRuntime::is_train_ = false;
+MX_THREAD_LOCAL bool AutogradRuntime::is_recording_ = false;
 #endif
 
 template<typename FVisit>
