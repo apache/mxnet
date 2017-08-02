@@ -264,7 +264,7 @@ def test_at():
     x.backward()
 
 
-def test_defered_init():
+def test_deferred_init():
     x = mx.nd.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2)
     layer.collect_params().initialize()
