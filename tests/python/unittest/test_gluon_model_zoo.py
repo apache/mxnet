@@ -48,6 +48,7 @@ def test_models():
         model = get_model(model_name, pretrained=test_pretrain)
         data_shape = (2, 3, 224, 224) if 'inception' not in model_name else (2, 3, 299, 299)
         eprint('testing forward for %s'%model_name)
+        print(model)
         if not test_pretrain:
             model.collect_params().initialize()
         model(mx.nd.random_uniform(shape=data_shape)).wait_to_read()
