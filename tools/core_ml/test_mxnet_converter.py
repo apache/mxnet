@@ -81,12 +81,11 @@ class SingleLayerTest(unittest.TestCase):
         mxnet_preds = mod.get_outputs()[0].asnumpy().flatten()
 
         # Get predictions from coreml
-        spec = mxnet_converter.convert(
+        coreml_model = mxnet_converter.convert(
             model=mod,
             data=input_shape,
             force=force
         )
-        coreml_model = coremltools.models.MLModel(spec)
         coreml_preds = coreml_model.predict(_mxnet_remove_batch(input_data)).values()[0].flatten()
 
         # Check prediction accuracy
