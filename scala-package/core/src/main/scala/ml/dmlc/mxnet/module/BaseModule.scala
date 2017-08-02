@@ -312,8 +312,8 @@ abstract class BaseModule {
                 allowMissing: Boolean = false,
                 forceInit: Boolean = true,
                 allowExtra: Boolean = false): Unit = {
-    initParams(initializer = null, argParams = argParams, auxParams = auxParams,
-      allowMissing = allowMissing, forceInit = forceInit, allowExtra = allowExtra)
+    initParams(initializer = null, argParams, auxParams,
+      allowMissing, forceInit, allowExtra)
   }
 
   /**
