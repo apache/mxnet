@@ -60,7 +60,7 @@ def is_correct_top_one(predict, label):
 def is_correct_top_five(predict, label):
     assert isinstance(predict, np.ndarray)
     assert isinstance(label, np.float32)
-    top_five_preds = set(predict.argsort()[-4:][::-1])
+    top_five_preds = set(predict.argsort()[-5:])
     return label in top_five_preds
 
 
