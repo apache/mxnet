@@ -13,6 +13,9 @@ def test_parameter():
     assert p.data(mx.cpu(0)).shape == (10, 10)
     assert p.var().name == 'weight'
 
+    p.reset_ctx(ctx=[mx.cpu(1), mx.cpu(2)])
+    assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
+
 
 def test_paramdict():
     params = gluon.ParameterDict('net_')
@@ -63,6 +66,27 @@ def test_basic():
     x = model(mx.nd.zeros((32, 10)))
     assert x.shape == (32, 32)
     x.wait_to_read()
+
+
+def test_symbol_block():
+    model = nn.HybridSequential()
+    model.add(nn.Dense(128, activation='tanh'))
+    model.add(nn.Dropout(0.5))
+    model.add(nn.Dense(64, activation='tanh'))
+    model.add(nn.Dense(32, in_units=64))
+    model.add(nn.Activation('relu'))
+
+    model.initialize()
+
+    inputs = mx.sym.var('data')
+    outputs = model(inputs).get_internals()
+
+    smodel = gluon.SymbolBlock(outputs, inputs, params=model.collect_params())
+
+    assert len(smodel(mx.nd.zeros((16, 10)))) == 14
+
+    out = smodel(mx.sym.var('in'))
+    assert len(out.get_internals().list_outputs()) == len(outputs.list_outputs())
 
 
 def check_layer_forward(layer, dshape):

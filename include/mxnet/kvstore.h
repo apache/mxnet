@@ -49,7 +49,7 @@ class KVStore {
   /*!
    * \brief Initialize a list of key-value pair to the store.
    *
-   * One must initalize the key before \ref Push and \ref Pull, and a key
+   * One must initialize the key before \ref Push and \ref Pull, and a key
    * should be only initialized once
    *
    * It returns after data have been initialized successfully.

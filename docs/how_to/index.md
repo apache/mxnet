@@ -36,6 +36,8 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How do I run MXNet on a Raspberry Pi for computer vision?](http://mxnet.io/tutorials/embedded/wine_detector.html)
 
+* [How do I run Keras 1.2.2 with mxnet backend?](https://github.com/dmlc/keras/wiki/Installation)
+
 ## Extend and Contribute to MXNet
 
 * [How do I join the MXNet development discussion?](http://mxnet.io/community/mxnet_channels.html)

@@ -28,8 +28,8 @@ class CuDNNBatchNormOp : public Operator {
  public:
   explicit CuDNNBatchNormOp(BatchNormParam param) {
     using namespace mshadow;
-    CHECK_GT(param.eps, CUDNN_BN_MIN_EPSILON)
-     << "CuDNN requires eps to be greater than " << CUDNN_BN_MIN_EPSILON;
+    CHECK_GE(param.eps, CUDNN_BN_MIN_EPSILON)
+     << "CuDNN requires eps to be no less than " << CUDNN_BN_MIN_EPSILON;
     this->param_ = param;
     init_cudnn_ = false;
     dtype_ = DataType<DType>::kCudnnFlag;

@@ -2253,7 +2253,6 @@ def negative(arr):
     """
     return multiply(arr, -1.0)
 
-
 def concatenate(arrays, axis=0, always_copy=True):
     """DEPRECATED, use ``concat`` instead
 

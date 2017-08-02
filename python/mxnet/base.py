@@ -315,3 +315,21 @@ def add_fileline_to_docstring(module, incursive=True):
             _add_fileline(obj.__func__)
         if inspect.isclass(obj) and incursive:
             add_fileline_to_docstring(obj, False)
+
+def _as_list(obj):
+    """A utility function that converts the argument to a list if it is not already.
+
+    Parameters
+    ----------
+    obj : object
+
+    Returns
+    -------
+    If `obj` is a list or tuple, return it. Otherwise, return `[obj]` as a
+    single-element list.
+
+    """
+    if isinstance(obj, (list, tuple)):
+        return obj
+    else:
+        return [obj]

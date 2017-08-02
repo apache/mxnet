@@ -4,6 +4,7 @@ import re
 import mxnet as mx
 import numpy as np
 from common import models
+from mxnet.test_utils import discard_stderr
 import pickle as pkl
 
 def test_symbol_basic():
@@ -216,11 +217,14 @@ def test_zero_prop2():
     exe.forward()
     exe.backward()
 
-    try:
-        y.simple_bind(ctx=mx.cpu(), x=(10, 10), idx=(10,),
-                      type_dict={'x': np.float32, 'idx': np.int32})
-    except:
-        return
+    # The following bind() should throw an exception. We discard the expected stderr
+    # output for this operation only in order to keep the test logs clean.
+    with discard_stderr():
+        try:
+            y.simple_bind(ctx=mx.cpu(), x=(10, 10), idx=(10,),
+                          type_dict={'x': np.float32, 'idx': np.int32})
+        except:
+            return
 
     assert False
 
