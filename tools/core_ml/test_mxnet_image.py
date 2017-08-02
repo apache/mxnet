@@ -18,7 +18,7 @@ def read_image(data_val, label_name):
         label_width=1,
         preprocess_threads=4,
         batch_size=32,
-        data_shape=(3,244,244),
+        data_shape=(3,224,224),
         label_name=label_name,
         rand_corp=False,
         rand_mirror=False
@@ -79,7 +79,7 @@ class ImageNetTest(unittest.TestCase):
             label_names=[label_name,]
         )
 
-        input_shape = (1, 3, 244, 244)
+        input_shape = (1, 3, 224, 224)
         coreml_model = mxnet_converter.convert(mod, data=input_shape, force=force)
 
         mxnet_acc = []
@@ -117,14 +117,21 @@ class ImageNetTest(unittest.TestCase):
         print "Testing Image Classification with Squeezenet"
         self._test_image_prediction(model_name='squeezenet_v1.1', epoch=0, label_name='prob_label')
 
-#    TODO
-#     def test_inception_with_batch_normalization(self):
-#         print "Testing Image Classification with Inception/BatchNorm"
-#         self._test_image_prediction(model_name='Inception-BN', epoch=126, label_name='softmax_label', force=True)
+    def test_inception_with_batch_normalization(self):
+        print "Testing Image Classification with Inception/BatchNorm"
+        self._test_image_prediction(model_name='Inception-BN', epoch=126, label_name='softmax_label', force=True)
 
     def test_resnet18(self):
         print "Testing Image Classification with ResNet18"
         self._test_image_prediction(model_name='resnet-18', epoch=0, label_name='softmax_label', force=True)
+
+    def test_nin(self):
+        print "Testing Image Classification with nin"
+        self._test_image_prediction(model_name='nin', epoch=0, label_name='prob_label', force=True)
+
+    def test_vgg16(self):
+        print "Testing Image Classification with vgg16"
+        self._test_image_prediction(model_name='vgg16', epoch=0, label_name='softmax_label', force=True)
 
 
 if __name__ == '__main__':
