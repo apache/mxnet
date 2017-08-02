@@ -58,7 +58,7 @@ class Executor {
    *
    * \param head_grads the gradient of head nodes to be backproped.
    */
-  virtual void Backward(const std::vector<NDArray> &head_grads) = 0;
+  virtual void Backward(const std::vector<NDArray> &head_grads, bool is_train = true) = 0;
   /*!
    * \brief print the execution plan info to output stream.
    * \param os the output stream we like to print to.

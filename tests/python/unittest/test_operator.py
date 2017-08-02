@@ -3658,6 +3658,42 @@ def test_stack():
         check_numeric_gradient(out, inputs)
 
 
+def test_dropout():
+    # test dropout
+    x = mx.sym.var('data')
+    y = mx.sym.Dropout(x, p=0.5)
+    exe = y.simple_bind(ctx=default_context(), data=(10, 10))
+
+    exe.arg_arrays[0][:] = 1
+    exe.forward(is_train=True)
+    assert exe.outputs[0].asnumpy().max() == 2
+    assert exe.outputs[0].asnumpy().min() == 0
+    exe.backward([mx.nd.ones((10, 10))])
+    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
+    exe.forward(is_train=False)
+    assert (exe.outputs[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
+    exe.backward([mx.nd.ones((10, 10))], is_train=False)
+    assert (exe.grad_arrays[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
+
+    # test permanent dropout
+    x = mx.sym.var('data')
+    y = mx.sym.Dropout(x, p=0.5, mode='always')
+    exe = y.simple_bind(ctx=default_context(), data=(10, 10))
+
+    exe.arg_arrays[0][:] = 1
+    exe.forward(is_train=True)
+    assert exe.outputs[0].asnumpy().max() == 2
+    assert exe.outputs[0].asnumpy().min() == 0
+    exe.backward([mx.nd.ones((10, 10))])
+    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
+    exe.forward(is_train=False)
+    assert exe.outputs[0].asnumpy().max() == 2
+    assert exe.outputs[0].asnumpy().min() == 0
+    exe.backward([mx.nd.ones((10, 10))], is_train=False)
+    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
 
 if __name__ == '__main__':
     import nose
