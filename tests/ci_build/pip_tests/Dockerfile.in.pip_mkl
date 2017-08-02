@@ -1,0 +1,4 @@
+# -*- mode: dockerfile -*-
+# dockerfile to test pip installation using mkl 
+
+FROM ubuntu:14.04
