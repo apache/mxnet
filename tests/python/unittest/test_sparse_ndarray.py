@@ -48,18 +48,6 @@ def test_sparse_nd_elemwise_add():
                        shape, ['row_sparse', 'row_sparse'], op, g)
 
 
-# Test a operator which doesn't implement FComputeEx
-def test_sparse_nd_elementwise_fallback():
-    num_repeats = 10
-    g = lambda x,y: x + y
-    op = mx.nd.add_n
-    for i in range(num_repeats):
-        shape = [rand_shape_2d()] * 2
-        check_sparse_nd_elemwise_binary(shape, ['default'] * 2, op, g)
-        check_sparse_nd_elemwise_binary(shape, ['default', 'row_sparse'], op, g)
-        check_sparse_nd_elemwise_binary(shape, ['row_sparse', 'row_sparse'], op, g)
-
-
 def test_sparse_nd_copy():
     def check_sparse_nd_copy(from_stype, to_stype, shape):
         from_nd = rand_ndarray(shape, from_stype)

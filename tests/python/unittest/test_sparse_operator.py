@@ -235,6 +235,67 @@ def test_sparse_square_sum():
                 check_numeric_gradient(test, [rsp], grad_stype_dict={'data': 'row_sparse'},
                                        atol=1e-2, rtol=0.1)
 
+def test_sparse_storage_fallback():
+    """ test operators which don't implement FComputeEx or FStatefulComputeEx """
+    def check_broadcast_add(shape, lhs_stype, rhs_stype):
+        lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
+        rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
+        lhs_nd = rand_ndarray(shape, lhs_stype)
+        rhs_nd = rand_ndarray(shape, rhs_stype)
+        lhs_dns = mx.nd.cast_storage(lhs_nd, stype='default')
+        rhs_dns = mx.nd.cast_storage(rhs_nd, stype='default')
+
+        out_dns = (lhs_dns + rhs_dns).asnumpy()
+        test = mx.symbol.broadcast_add(lhs, rhs)
+        location = {'lhs': lhs_nd, 'rhs': rhs_nd}
+        check_symbolic_forward(test, location, [out_dns])
+        check_numeric_gradient(test, location)
+        check_symbolic_backward(test, location, [out_dns], [out_dns, out_dns])
+
+    def np_softmax(x, axis=-1):
+        # fix for old numpy on Travis not supporting keepdims
+        # x = x - np.max(x, axis=-1, keepdims=True)
+        x = x - np.max(x, axis=axis, keepdims=True)
+        x = np.exp(x)
+        # x /= np.sum(x, axis=-1, keepdims=True)
+        x /= np.sum(x, axis=axis, keepdims=True)
+        return x
+
+    def check_softmax_with_shape(lhs_stype, rhs_stype, shape, preserve_shape=False):
+        # bind with label
+        ctx = default_context()
+        X = mx.symbol.Variable('X', stype=lhs_stype)
+        L = mx.symbol.Variable('L', stype=rhs_stype)
+        Y = mx.symbol.SoftmaxOutput(data=X, label=L, preserve_shape=preserve_shape)
+        x = rand_ndarray(shape, lhs_stype)
+        l = rand_ndarray(shape, rhs_stype)
+        l[:] = np_softmax(l.asnumpy())
+        grad = mx.nd.empty(shape, ctx=ctx)
+        exec1 = Y.bind(ctx, args = [x, l], args_grad = {'X': grad})
+        exec1.forward(is_train=True)
+        out = exec1.outputs[0].asnumpy()
+        assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=1e-4)
+        exec1.backward()
+        assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=1e-4)
+
+    def check_concat(shape, lhs_stype, rhs_stype):
+        x = mx.symbol.Variable('x', stype=lhs_stype)
+        w = mx.symbol.Variable('w', stype=rhs_stype)
+        test = mx.sym.Concat(x, w)
+        x_nd = rand_ndarray(shape, lhs_stype)
+        w_nd = rand_ndarray(shape, rhs_stype)
+        location = {'x': x_nd, 'w': w_nd}
+        check_numeric_gradient(test, location)
+
+    shape = rand_shape_2d()
+    stypes = ['default', 'csr', 'row_sparse']
+    for lhs in stypes:
+        for rhs in stypes:
+            check_broadcast_add(shape, lhs, rhs)
+            check_concat(shape, lhs, rhs)
+            check_softmax_with_shape(lhs, rhs, shape, preserve_shape=False)
+            check_softmax_with_shape(rhs, rhs, shape, preserve_shape=True)
+
 
 def test_sparse_elementwise_sum():
     def check_sparse_elementwise_sum_with_shape(stype, shape, n):

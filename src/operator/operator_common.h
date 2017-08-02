@@ -359,11 +359,12 @@ void FCompExFallback(const nnvm::NodeAttrs& attrs,
                      const std::string& fname) {
   using namespace mxnet::common;
   std::vector<TBlob> in_blobs, out_blobs;
-  std::vector<NDArray> temp_in, temp_out;
-  GetDefaultBlobs<xpu>(inputs, &in_blobs, &temp_in, ctx, true);
-  GetDefaultBlobs<xpu>(outputs, &out_blobs, &temp_out, ctx, true);
+  std::vector<NDArray> temp_in_src, temp_in_dst, temp_out_src, temp_out_dst;
+  GetDefaultBlobs(inputs, &in_blobs, &temp_in_src, &temp_in_dst);
+  GetDefaultBlobs(outputs, &out_blobs, &temp_out_src, &temp_out_dst);
+  CastNonDefaultStorage<xpu>(temp_in_src, temp_in_dst, ctx, true);
   fcompute(attrs, ctx, in_blobs, req, out_blobs);
-  CastNonDefaultStorage<xpu>(outputs, temp_out, ctx, true);
+  CastNonDefaultStorage<xpu>(temp_out_dst, temp_out_src, ctx, true);
 }
 
 #define CHECK_RSP_ALL_ROWS_NON_ZERO(rsp, func, param)                              \

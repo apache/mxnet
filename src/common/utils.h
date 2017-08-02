@@ -31,50 +31,39 @@ template<typename xpu>
 void CastStorageDispatch(const OpContext& ctx, const NDArray& input, const NDArray& output);
 
 /*
- * \brief Get the corresponding tensor blobs from default storage NDArrays.
- *        If any NDArray is of non-default storage, it is casted to default storage and
- *        the temporary NDArrays are stored in `temps`. When storage_fallback is false,
- *        and `MXNET_EXEC_STORAGE_FALLBACK` == 0, storage fallback is disallowed.
- * \return true if any input is casted
+ * \brief get the corresponding tensor blobs from default storage NDArrays.
+ *        If any NDArray is of non-default storage, it will be added to `temp_src`
+ * \return true if any input storage needs to be casted
  */
-template <typename xpu>
-inline bool GetDefaultBlobs(const std::vector<NDArray>& nds,
+inline bool GetDefaultBlobs(const std::vector<NDArray>& src,
                             std::vector<TBlob> *blobs,
-                            std::vector<NDArray> *temps,
-                            const OpContext& ctx,
-                            bool storage_fallback = false) {
-  bool casted = false;
-  if (storage_fallback == false) {
-    storage_fallback = dmlc::GetEnv("MXNET_EXEC_STORAGE_FALLBACK", true);
-  }
-  for (auto& nd : nds) {
+                            std::vector<NDArray> *temp_src,
+                            std::vector<NDArray> *temp_dst) {
+  bool require_cast = false;
+  for (size_t i = 0; i < src.size(); i++) {
+    auto& nd = src[i];
     if (nd.storage_type() != kDefaultStorage) {
-      if (storage_fallback == false) {
-        LOG(FATAL) << "Storage type conversion detected during execution. "
-                   << "You are probably executing an operator which "
-                   << "doesn't support NDArray inputs with non-default storage.";
-      }
       NDArray temp(nd.shape(), nd.ctx(), false);
-      CastStorageDispatch<xpu>(ctx, nd, temp);
-      temps->push_back(temp);
-      blobs->push_back(temp.data());
-      casted = true;
+      temp_src->emplace_back(nd);
+      temp_dst->emplace_back(temp);
+      blobs->emplace_back(temp.data());
+      require_cast = true;
     } else {
       blobs->push_back(nd.data());
     }
   }
-  return casted;
+  return require_cast;
 }
 
 /*
- * \brief Cast the NDArrays in `src` according to the storage types of the NDArrays
- *        in `dst`. The ones with default storage in `dst` are ignored.
+ * \brief cast the NDArrays in `src` to NDArrays in `dst`. This is only used
+ *        for storage fallback mechanism in executor.
  *        When storage_fallback is false, and `MXNET_EXEC_STORAGE_FALLBACK` == 0,
  *        storage fallback is disallowed.
  */
 template <typename xpu>
-inline void CastNonDefaultStorage(const std::vector<NDArray>& dst,
-                                  const std::vector<NDArray>& src,
+inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
+                                  const std::vector<NDArray>& dst,
                                   const OpContext& ctx,
                                   bool storage_fallback = false) {
   CHECK_GE(dst.size(), src.size());
@@ -82,31 +71,26 @@ inline void CastNonDefaultStorage(const std::vector<NDArray>& dst,
   if (storage_fallback == false) {
     storage_fallback = dmlc::GetEnv("MXNET_EXEC_STORAGE_FALLBACK", true);
   }
-  size_t src_idx = 0;
-  for (size_t i = 0; i < dst.size(); i++) {
-    auto stype = dst[i].storage_type();
-    if (stype != kDefaultStorage) {
-      if (storage_fallback == false) {
-        LOG(FATAL) << "Storage type conversion detected during execution. "
-                   << "You are probably executing an operator which "
-                   << "doesn't support NDArray inputs with non-default storage.";
-      }
-      CastStorageDispatch<xpu>(ctx, src[src_idx++], dst[i]);
-    }
+  if (storage_fallback == false) {
+    LOG(FATAL) << "Storage type conversion detected during execution. "
+               << "You are probably executing an operator which "
+               << "doesn't support NDArray inputs with non-default storage.";
   }
-  CHECK_EQ(src_idx, src.size()) << "Not all src NDArrays are casted";
+  for (size_t i = 0; i < src.size(); i++) {
+    CastStorageDispatch<xpu>(ctx, src[i], dst[i]);
+  }
 }
 
 // Check if any storage type is not default storage
 inline bool ContainsNonDefaultStorage(const StorageTypeVector& vstorage) {
-  for (auto& i : vstorage) {
+  for (const auto& i : vstorage) {
     if (i != kUndefinedStorage && i != kDefaultStorage) return true;
   }
   return false;
 }
 
 inline bool ContainsDefaultStorage(const std::vector<NDArray>& ndarrays) {
-  for (auto &nd : ndarrays) {
+  for (const auto &nd : ndarrays) {
     if (nd.storage_type() == kDefaultStorage) {
       return true;
     }

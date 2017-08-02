@@ -301,28 +301,28 @@ void PushFCompute(const FCompute& fn,
         RunContext rctx,
         engine::CallbackOnComplete on_complete) {
       std::vector<TBlob> input_blobs, output_blobs;
-      std::vector<NDArray> temp_in, temp_out;
+      std::vector<NDArray> temp_in_src, temp_in_dst, temp_out_src, temp_out_dst;
       OpContext opctx{is_train, rctx,
                       engine::CallbackOnComplete(),
                       requested};
+      GetDefaultBlobs(ndinputs, &input_blobs, &temp_in_src, &temp_in_dst);
+      GetDefaultBlobs(ndoutputs, &output_blobs, &temp_out_src, &temp_out_dst);
+      std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
       if (ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
-        GetDefaultBlobs<gpu>(ndinputs, &input_blobs, &temp_in, opctx);
-        GetDefaultBlobs<gpu>(ndoutputs, &output_blobs, &temp_out, opctx);
-        std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
+        CastNonDefaultStorage<gpu>(temp_in_src, temp_in_dst, opctx);
         fn(attrs, opctx, input_blobs, req, output_blobs);
         // cast to original storage type, if necessary
-        CastNonDefaultStorage<gpu>(ndoutputs, temp_out, opctx);
+        CastNonDefaultStorage<gpu>(temp_out_dst, temp_out_src, opctx);
         rctx.get_stream<gpu>()->Wait();
 #else
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
       } else {
-        GetDefaultBlobs<cpu>(ndinputs, &input_blobs, &temp_in, opctx);
-        GetDefaultBlobs<cpu>(ndoutputs, &output_blobs, &temp_out, opctx);
-        std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
+        CastNonDefaultStorage<cpu>(temp_in_src, temp_in_dst, opctx);
         fn(attrs, opctx, input_blobs, req, output_blobs);
-        CastNonDefaultStorage<cpu>(ndoutputs, temp_out, opctx);
+        // cast to original storage type, if necessary
+        CastNonDefaultStorage<cpu>(temp_out_dst, temp_out_src, opctx);
       }
       on_complete();
     }, ctx, read_vars, write_vars, FnProperty::kNormal,
@@ -383,25 +383,24 @@ void PushOperator(const OpStatePtr& state,
           RunContext rctx,
           engine::CallbackOnComplete on_complete) {
         OpContext opctx{is_train, rctx, on_complete, requested};
+
         std::vector<TBlob> input_blobs, output_blobs;
-        std::vector<NDArray> temp_in, temp_out;
+        std::vector<NDArray> temp_in_src, temp_in_dst, temp_out_src, temp_out_dst;
+        GetDefaultBlobs(ndinputs, &input_blobs, &temp_in_src, &temp_in_dst);
+        GetDefaultBlobs(ndoutputs, &output_blobs, &temp_out_src, &temp_out_dst);
+        std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
         if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
-          GetDefaultBlobs<gpu>(ndinputs, &input_blobs, &temp_in, opctx);
-          GetDefaultBlobs<gpu>(ndoutputs, &output_blobs, &temp_out, opctx);
-          std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
+          CastNonDefaultStorage<gpu>(temp_in_src, temp_in_dst, opctx);
           fcompute(state, opctx, input_blobs, req, output_blobs);
-          // cast to original storage type, if necessary
-          CastNonDefaultStorage<gpu>(ndoutputs, temp_out, opctx);
+          CastNonDefaultStorage<gpu>(temp_our_dst, temp_out_src, opctx);
 #else
           LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
         } else {
-          GetDefaultBlobs<cpu>(ndinputs, &input_blobs, &temp_in, opctx);
-          GetDefaultBlobs<cpu>(ndoutputs, &output_blobs, &temp_out, opctx);
-          std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
+          CastNonDefaultStorage<cpu>(temp_in_src, temp_in_dst, opctx);
           fcompute(state, opctx, input_blobs, req, output_blobs);
-          CastNonDefaultStorage<cpu>(ndoutputs, temp_out, opctx);
+          CastNonDefaultStorage<cpu>(temp_out_dst, temp_out_src, opctx);
         }
         if (exec_type == ExecType::kSync) {
           if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {

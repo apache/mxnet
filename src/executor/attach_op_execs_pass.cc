@@ -28,26 +28,21 @@ class StatefulComputeExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     using namespace common;
-    // TODO(haibin) avoid repeating this if all inputs are already in default-storage
     op_ctx.run_ctx = rctx;
-    in_data_.clear();
-    out_data_.clear();
-    temp_in_.clear();
-    temp_out_.clear();
     if (is_gpu) {
 #if MXNET_USE_CUDA
-      GetDefaultBlobs<gpu>(in_array, &in_data_, &temp_in_, op_ctx);
-      GetDefaultBlobs<gpu>(out_array, &out_data_, &temp_out_, op_ctx);
+      CastNonDefaultStorage<gpu>(temp_in_src_, temp_in_dst_, op_ctx);
+      CastNonDefaultStorage<gpu>(temp_out_src_, temp_out_dst_, op_ctx);
       fcompute_(state_, op_ctx, in_data_, req, out_data_);
-      CastNonDefaultStorage<gpu>(out_array, temp_out_, op_ctx);
+      CastNonDefaultStorage<gpu>(temp_out_dst_, temp_out_src_, op_ctx);
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
     } else {
-      GetDefaultBlobs<cpu>(in_array, &in_data_, &temp_in_, op_ctx);
-      GetDefaultBlobs<cpu>(out_array, &out_data_, &temp_out_, op_ctx);
+      CastNonDefaultStorage<cpu>(temp_in_src_, temp_in_dst_, op_ctx);
+      CastNonDefaultStorage<cpu>(temp_out_src_, temp_out_dst_, op_ctx);
       fcompute_(state_, op_ctx, in_data_, req, out_data_);
-      CastNonDefaultStorage<cpu>(out_array, temp_out_, op_ctx);
+      CastNonDefaultStorage<cpu>(temp_out_dst_, temp_out_src_, op_ctx);
     }
 #if MKL_EXPERIMENTAL == 1
     mkl_tblobs_prv_to_cpu(in_data_);
@@ -55,7 +50,14 @@ class StatefulComputeExecutor : public OpExecutor {
 #endif
   }
 
-  void Setup() override {}
+  void Setup() override {
+    using namespace common;
+    in_data_.clear(); out_data_.clear();
+    temp_in_src_.clear(); temp_in_dst_.clear();
+    temp_out_src_.clear(); temp_out_dst_.clear();
+    GetDefaultBlobs(in_array, &in_data_, &temp_in_src_, &temp_in_dst_);
+    GetDefaultBlobs(out_array, &out_data_, &temp_out_src_, &temp_out_dst_);
+  }
 
   ExecType exec_type() const override {
     return exec_type_;
@@ -76,7 +78,7 @@ class StatefulComputeExecutor : public OpExecutor {
   FStatefulCompute fcompute_;
   ExecType exec_type_;
   std::vector<TBlob> in_data_, out_data_;
-  std::vector<NDArray> temp_in_, temp_out_;
+  std::vector<NDArray> temp_in_src_, temp_in_dst_, temp_out_src_, temp_out_dst_;
 };
 
 
@@ -118,33 +120,35 @@ class FComputeExecutor : public OpExecutor {
     using namespace common;
     // TODO(haibin) avoid repeating this if all inputs are already in default-storage
     op_ctx.run_ctx = rctx;
-    in_data_.clear();
-    out_data_.clear();
-    temp_in_.clear();
-    temp_out_.clear();
     if (is_gpu) {
 #if MXNET_USE_CUDA
-      GetDefaultBlobs<gpu>(in_array, &in_data_, &temp_in_, op_ctx);
-      GetDefaultBlobs<gpu>(out_array, &out_data_, &temp_out_, op_ctx);
+      CastNonDefaultStorage<gpu>(temp_in_src_, temp_in_dst_, op_ctx);
+      CastNonDefaultStorage<gpu>(temp_out_src_, temp_out_dst_, op_ctx);
       fcompute_(attrs_, op_ctx, in_data_, req, out_data_);
-      CastNonDefaultStorage<gpu>(out_array, temp_out_, op_ctx);
+      CastNonDefaultStorage<gpu>(temp_out_dst_, temp_out_src_, op_ctx);
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
     } else {
-      GetDefaultBlobs<cpu>(in_array, &in_data_, &temp_in_, op_ctx);
-      GetDefaultBlobs<cpu>(out_array, &out_data_, &temp_out_, op_ctx);
+      CastNonDefaultStorage<cpu>(temp_in_src_, temp_in_dst_, op_ctx);
+      CastNonDefaultStorage<cpu>(temp_out_src_, temp_out_dst_, op_ctx);
       fcompute_(attrs_, op_ctx, in_data_, req, out_data_);
-      CastNonDefaultStorage<cpu>(out_array, temp_out_, op_ctx);
+      CastNonDefaultStorage<cpu>(temp_out_dst_, temp_out_src_, op_ctx);
     }
 #if MKL_EXPERIMENTAL == 1
-    // TODO(haibin) handle MKL mem with non-default NDArray
     mkl_tblobs_prv_to_cpu(in_data_);
     mkl_tblobs_prv_to_cpu(out_data_);
 #endif
   }
 
-  void Setup() override {}
+  void Setup() override {
+    using namespace common;
+    in_data_.clear(); out_data_.clear();
+    temp_in_src_.clear(); temp_in_dst_.clear();
+    temp_out_src_.clear(); temp_out_dst_.clear();
+    GetDefaultBlobs(in_array, &in_data_, &temp_in_src_, &temp_in_dst_);
+    GetDefaultBlobs(out_array, &out_data_, &temp_out_src_, &temp_out_dst_);
+  }
 
   ExecType exec_type() const override {
     return exec_type_;
@@ -160,7 +164,7 @@ class FComputeExecutor : public OpExecutor {
   FCompute fcompute_;
   ExecType exec_type_;
   std::vector<TBlob> in_data_, out_data_;
-  std::vector<NDArray> temp_in_, temp_out_;
+  std::vector<NDArray> temp_in_src_, temp_in_dst_, temp_out_src_, temp_out_dst_;
 };
 
 // fcompute_ex executor
