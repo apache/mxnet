@@ -60,7 +60,7 @@ def make_list(args):
         random.shuffle(image_list)
     N = len(image_list)
     chunk_size = (N + args.chunks - 1) // args.chunks
-    for i in xrange(args.chunks):
+    for i in range(args.chunks):
         chunk = image_list[i * chunk_size:(i + 1) * chunk_size]
         if args.chunks > 1:
             str_chunk = '_%d' % i
