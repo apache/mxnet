@@ -48,7 +48,29 @@ class MXNetSingleLayerTest(unittest.TestCase):
     In order to do so, it converts model and generates preds on both CoreML and MXNet and check they are the same.
     """
     def _test_mxnet_model(self, net, input_shape, mode, label_names=None, force=False, delta=1e-3):
+        """ Helper method that convert the CoreML model into CoreML and compares the predictions over random data.
 
+        Parameters
+        ----------
+        net: MXNet Symbol Graph
+            The graph that we'll be converting into CoreML.
+
+        input_shape: tuple of ints
+            The shape of input data. Generally of the format (batch-size, channels, height, width)
+
+        mode: (random|zeros|ones)
+            The mode to use in order to set the parameters (weights and biases).
+
+        label_names: list of strings
+            The names of the output labels. Default: None
+
+        force: bool
+            Causes forced conversion. As a default, this converter doesn't convert models that
+            are not supported by CoreML one-to-one. This flag allows you to override that. Default: False
+
+        delta: float
+            The maximum difference b/w predictions of MXNet and CoreML that is tolerable.
+        """
         mod = _get_mxnet_module(net, input_shape, mode, label_names)
 
         # Generate some dummy data
