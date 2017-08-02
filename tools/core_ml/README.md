@@ -1,6 +1,6 @@
 # Convert MXNet models into Apple CoreML format.
 
-This tool helps convert MXNet models into Apple CoreML format which can then be run on Apple devices.
+This tool helps convert MXNet models into [Apple CoreML](https://developer.apple.com/documentation/coreml) format which can then be run on Apple devices.
 
 ## Installation
 In order to use this tool you need to have these installed:
@@ -9,7 +9,7 @@ In order to use this tool you need to have these installed:
 * coremltools 0.4.0 (pip install coremltools)
 
 ## How to use
-Let's say you want to build an iPhone App using the existing MXNet model - squeezenet-v1.1.
+Let's say you want to use your MXNet model in an iPhone App. For the purpose of this example, let's say you want to use squeezenet-v1.1.
 
 1. Download the model into the directory where this converter resides. Squeezenet can be downloaded from [here](http://data.mxnet.io/models/imagenet/squeezenet/).
 2. Run this command:
