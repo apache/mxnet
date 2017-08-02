@@ -265,7 +265,6 @@ def test_sparse_elementwise_sum():
     maxdim = 5
     for dim in range(2, maxdim):
         shape = tuple(np.random.randint(5, 10, size=dim))
-        print shape
         check_sparse_elementwise_sum_with_shape('row_sparse', shape, np.random.randint(1, 9))
 
 
