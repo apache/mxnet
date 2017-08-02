@@ -44,7 +44,8 @@ def _get_mxnet_module(net, input_shape, mode, label_names, input_names=None):
 
 class MXNetSingleLayerTest(unittest.TestCase):
     """
-    Unit test class for testing mxnet converter (converts model and generates preds on same data to assert they are the same).
+    Unit test class for testing where converter is able to convert individual layers or not.
+    In order to do so, it converts model and generates preds on both CoreML and MXNet and check they are the same.
     """
     def _test_mxnet_model(self, net, input_shape, mode, label_names=None, force=False, delta=1e-3):
 
@@ -56,8 +57,6 @@ class MXNetSingleLayerTest(unittest.TestCase):
         Batch = namedtuple('Batch', ['data'])
         mod.forward(Batch([mx.nd.array(input_data['data'])]))
         mxnet_preds = mod.get_outputs()[0].asnumpy().flatten()
-
-        args, aux = mod.get_params()
 
         # Get predictions from coreml
         spec = mxnet_converter.convert(
@@ -387,6 +386,7 @@ class MXNetSingleLayerTest(unittest.TestCase):
         kernel = (5, 5)
         stride = (1, 1)
         pad = (0, 0)
+
         net = mx.sym.Variable('data')
         net = mx.sym.transpose(data=net, name='transpose', axes=(0, 1, 2, 3))
         net = mx.symbol.Convolution(
@@ -521,6 +521,7 @@ class MXNetSingleLayerTest(unittest.TestCase):
             kernel=kernel,
             stride=stride,
             pad=pad,
+            dilate=dilate,
             name='deconv_1'
         )
         net = mx.sym.Activation(net, name = 'tanh', act_type = "tanh")

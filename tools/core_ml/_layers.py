@@ -256,13 +256,11 @@ def convert_dense(net, node, module, force, builder):
         A neural network builder object.
     """
     input_name, output_name = _get_input_output_name(net, node)
-    param = node['attr']
     has_bias = True
     name = node['name']
 
     inputs = node['inputs']
-    outputs = node['outputs']
-    args, aux = module.get_params()
+    args, _ = module.get_params()
     W = args[_get_node_name(net, inputs[1][0])].asnumpy()
     if has_bias:
         Wb = args[_get_node_name(net, inputs[2][0])].asnumpy()
@@ -308,8 +306,7 @@ def convert_convolution(net, node, module, force, builder):
     name = node['name']
     param = node['attr']
     inputs = node['inputs']
-    outputs = node['outputs']
-    args, aux = module.get_params()
+    args, _ = module.get_params()
     from ast import literal_eval
 
     if 'no_bias' in param.keys():
@@ -388,10 +385,7 @@ def convert_pooling(net, node, module, force, builder):
     """
     input_name, output_name = _get_input_output_name(net, node)
     name = node['name']
-    inputs = node['inputs']
     param = node['attr']
-    outputs = node['outputs']
-    args, aux = module.get_params()
 
     layer_type_mx = param['pool_type']
     if layer_type_mx == 'max':
@@ -543,8 +537,7 @@ def convert_deconvolution(net, node, module, force, builder):
     name = node['name']
     param = node['attr']
     inputs = node['inputs']
-    outputs = node['outputs']
-    args, aux = module.get_params()
+    args, _ = module.get_params()
 
     from ast import literal_eval
 

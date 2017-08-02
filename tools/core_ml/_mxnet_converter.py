@@ -59,7 +59,6 @@ def check_error(model, path, shapes, output = 'softmax_output', verbose = True):
 def _set_input_output_layers(builder, input_names, output_names):
     input_layers_indices = []
     output_layers_indices = []
-    spec = builder.spec
     layers = builder.spec.neuralNetwork.layers
     for idx, l in enumerate(layers):
         if set(input_names).intersection(l.input):
@@ -69,8 +68,8 @@ def _set_input_output_layers(builder, input_names, output_names):
 
     builder.input_layers_indices = input_layers_indices
     builder.output_layers_indices = output_layers_indices
-    builder.input_layers_is1d = [False for i in input_names]
-    builder.output_layers_is1d = [False for i in output_names]
+    builder.input_layers_is1d = [False for _ in input_names]
+    builder.output_layers_is1d = [False for _ in output_names]
 
 def _get_layer_converter_fn(layer):
     """Get the right converter function for MXNet
@@ -186,7 +185,7 @@ def convert(model, order = None, class_labels = None, mode = None, force = False
         head_node['shape'] = shape_dict[head_node['name']]
 
     # For skipped layers, make sure nodes are modified
-    for iter, node in enumerate(nodes):
+    for node in nodes:
         op = node['op']
         inputs = node['inputs']
         outputs = node['outputs']
@@ -195,17 +194,14 @@ def convert(model, order = None, class_labels = None, mode = None, force = False
             nodes[outputs[0][0]]['inputs'][0] = inputs[0]
 
     # Find the input and output names for this node
-    for iter, node in enumerate(nodes):
+    for idx, node in enumerate(nodes):
         op = node['op']
         if op == 'null' or op in _MXNET_SKIP_LAYERS:
             continue
         name = node['name']
-        print("%d : %s, %s" % (iter, name, op))
+        print("%d : %s, %s" % (idx, name, op))
         converter_func = _get_layer_converter_fn(op)
         converter_func(net, node, model, force, builder)
-
-    spec = builder.spec
-    layers = spec.neuralNetwork.layers
 
     # Set the right inputs and outputs
     _set_input_output_layers(builder, input_names, output_names)
@@ -224,6 +220,4 @@ def convert(model, order = None, class_labels = None, mode = None, force = False
         builder.set_class_labels(class_labels = labels)
 
     # Return the spec
-    spec = builder.spec
-    layers = spec.neuralNetwork.layers
-    return spec
+    return builder.spec
