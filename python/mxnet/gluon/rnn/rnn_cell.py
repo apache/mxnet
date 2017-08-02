@@ -745,8 +745,27 @@ class VariationalDropoutCell(ModifierCell):
     Applies Variational Dropout on base cell.
     (https://arxiv.org/pdf/1512.05287.pdf,
      https://www.stat.berkeley.edu/~tsmoon/files/Conference/asru2015.pdf).
+
+    Variational dropout uses the same dropout mask across time-steps. It can be applied to RNN
+    inputs, outputs, and states. The masks for them are not shared.
+
+    The dropout mask is initialized when stepping forward for the first time and will remain
+    the same until .reset() is called. Thus, if using the cell and stepping manually without calling
+    .unroll(), the .reset() should be called after each sequence.
+
+    Parameters
+    ----------
+    base_cell : RecurrentCell
+        The cell on which to perform variational dropout.
+    drop_inputs : float, default 0.
+        The dropout rate for inputs. Won't apply dropout if it equals 0.
+    drop_states : float, default 0.
+        The dropout rate for state inputs on the first state channel.
+        Won't apply dropout if it equals 0.
+    drop_outputs : float, default 0.
+        The dropout rate for outputs. Won't apply dropout if it equals 0.
     """
-    def __init__(self, base_cell, vardrop_inputs=0., vardrop_outputs=0., vardrop_states=0.):
+    def __init__(self, base_cell, drop_inputs=0., drop_states=0., drop_outputs=0.):
         assert not isinstance(base_cell, BidirectionalCell), \
             "BidirectionalCell doesn't support vardrop since it doesn't support step. " \
             "Please add VariationalDropoutCell to the cells underneath instead."
@@ -754,50 +773,50 @@ class VariationalDropoutCell(ModifierCell):
             "Bidirectional SequentialRNNCell doesn't support vardrop. " \
             "Please add VariationalDropoutCell to the cells underneath instead."
         super(VariationalDropoutCell, self).__init__(base_cell)
-        self.vardrop_inputs = vardrop_inputs
-        self.vardrop_states = vardrop_states
-        self.vardrop_outputs = vardrop_outputs
-        self.vardrop_inputs_mask = None
-        self.vardrop_states_mask = None
-        self.vardrop_outputs_mask = None
+        self.drop_inputs = drop_inputs
+        self.drop_states = drop_states
+        self.drop_outputs = drop_outputs
+        self.drop_inputs_mask = None
+        self.drop_states_mask = None
+        self.drop_outputs_mask = None
 
     def _alias(self):
         return 'vardrop'
 
     def reset(self):
         super(VariationalDropoutCell, self).reset()
-        self.vardrop_inputs_mask = None
-        self.vardrop_states_mask = None
-        self.vardrop_outputs_mask = None
+        self.drop_inputs_mask = None
+        self.drop_states_mask = None
+        self.drop_outputs_mask = None
 
     def hybrid_forward(self, F, inputs, states):
         cell = self.base_cell
 
-        if self.vardrop_states:
-            if self.vardrop_states_mask is None:
-                self.vardrop_states_mask = F.Dropout(F.ones_like(states[0]),
-                                                     p=self.vardrop_states)
+        if self.drop_states:
+            if self.drop_states_mask is None:
+                self.drop_states_mask = F.Dropout(F.ones_like(states[0]),
+                                                  p=self.drop_states)
             states = list(states)
-            states[0] = states[0] * self.vardrop_states_mask
+            states[0] = states[0] * self.drop_states_mask
 
-        if self.vardrop_inputs:
-            if self.vardrop_inputs_mask is None:
-                self.vardrop_inputs_mask = F.Dropout(F.ones_like(inputs),
-                                                     p=self.vardrop_inputs)
-            inputs = inputs * self.vardrop_inputs_mask
+        if self.drop_inputs:
+            if self.drop_inputs_mask is None:
+                self.drop_inputs_mask = F.Dropout(F.ones_like(inputs),
+                                                  p=self.drop_inputs)
+            inputs = inputs * self.drop_inputs_mask
 
         next_output, next_states = cell(inputs, states)
 
-        if self.vardrop_outputs:
-            if self.vardrop_outputs_mask is None:
-                self.vardrop_outputs_mask = F.Dropout(F.ones_like(next_output),
-                                                      p=self.vardrop_outputs)
-            next_output = next_output * self.vardrop_outputs_mask
+        if self.drop_outputs:
+            if self.drop_outputs_mask is None:
+                self.drop_outputs_mask = F.Dropout(F.ones_like(next_output),
+                                                   p=self.drop_outputs)
+            next_output = next_output * self.drop_outputs_mask
 
         return next_output, next_states
 
     def __repr__(self):
-        s = '{name}(p_out = {vardrop_outputs}, p_state = {vardrop_states})'
+        s = '{name}(p_out = {drop_outputs}, p_state = {drop_states})'
         return s.format(name=self.__class__.__name__,
                         **self.__dict__)
 

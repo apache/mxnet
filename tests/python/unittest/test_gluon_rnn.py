@@ -19,6 +19,7 @@ import mxnet as mx
 from mxnet import gluon
 import numpy as np
 from numpy.testing import assert_allclose
+from mxnet.test_utils import almost_equal
 
 
 def test_rnn():
@@ -182,15 +183,30 @@ def test_zoneout():
 
 def test_vardrop():
     cell = gluon.rnn.VariationalDropoutCell(gluon.rnn.RNNCell(100, prefix='rnn_'),
-                                            vardrop_outputs=0.5,
-                                            vardrop_states=0.5,
-                                            vardrop_inputs=0.5)
+                                            drop_outputs=0.5,
+                                            drop_states=0.5,
+                                            drop_inputs=0.5)
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
+
+    cell.collect_params().initialize(init='xavier')
+    input_data = mx.nd.random_uniform(shape=(10, 3, 50), ctx=mx.context.current_context())
+    with mx.autograd.record():
+        cell.unroll(3, input_data, merge_outputs=True)
+        mask1 = cell.drop_outputs_mask.asnumpy()
+        cell.unroll(3, input_data, merge_outputs=True)
+        mask2 = cell.drop_outputs_mask.asnumpy()
+    assert not almost_equal(mask1, mask2)
+
+    cell.hybridize()
+    with mx.autograd.record():
+        outputs1, _ = cell.unroll(3, input_data, merge_outputs=True)
+        outputs2, _ = cell.unroll(3, input_data, merge_outputs=True)
+    assert not almost_equal(outputs1.asnumpy(), outputs2.asnumpy())
 
 
 def check_rnn_forward(layer, inputs, deterministic=True):
