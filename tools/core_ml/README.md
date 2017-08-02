@@ -4,9 +4,9 @@ This tool helps convert MXNet models into Apple CoreML format which can then be 
 
 ## Installation
 In order to use this tool you need to have these installed:
-mxnet 0.10.0
-python 2.7
-coremltools 0.4.0
+* mxnet 0.10.0. [Installation instructions](http://mxnet.io/get_started/install.html).
+* python 2.7
+* coremltools 0.4.0 (pip install coremltools)
 
 ## How to use
 Let's say you want to build an iPhone App using the existing MXNet model - squeezenet-v1.1.
@@ -26,6 +26,10 @@ For some models there may not be a one-to-one correspondence with CoreML and the
 ```bash
 python mxnet_coreml_converter.py model-prefix=resnet-50 epoch=0 input_shape=(1, 3, 224, 224) force=True outputFile="resnet-50.mlmodel"
 ```
+
+TODO:
+E.g. on providing synsets.
+E.g. on providing pre-processing arguments.
 
 ## Currently supported
 ### Models
