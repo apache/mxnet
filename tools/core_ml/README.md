@@ -17,6 +17,7 @@ Let's say you want to use your MXNet model in an iPhone App. For the purpose of 
 python mxnet_coreml_converter.py model-prefix=squeezenet-v1.1 epoch=0 input_shape=(1, 3, 224, 224) outputFile="squeezenet-v11.mlmodel"
 ```
 The above command will save the converted model into squeezenet-v11.mlmodel in CoreML format.
+
 3. This generated ".mlmodel" file can directly be integrated into your app. For more instructions on how to do this, please see [Apple CoreML's tutorial](https://developer.apple.com/documentation/coreml/integrating_a_core_ml_model_into_your_app).
 
 
