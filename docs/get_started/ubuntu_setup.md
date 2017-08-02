@@ -14,12 +14,10 @@ First, download and install [CUDA 8 toolkit](https://developer.nvidia.com/cuda-t
 
 Then download [cudnn 6](https://developer.nvidia.com/cudnn).
 
-Unzip the file and change to the cudnn root directory. Move the header and libraries to your local CUDA Toolkit folder:
+Extract the cudnn file to your local CUDA Toolkit folder:
 
 ```bash
-    tar xvzf cudnn-8.0-linux-x64-v6.0.tgz
-    sudo cp -P cuda/include/cudnn.h /usr/local/cuda/include
-    sudo cp -P cuda/lib64/libcudnn* /usr/local/cuda/lib64
+    sudo tar -xvf cudnn-*.tgz -C /usr/local
     sudo chmod a+r /usr/local/cuda/include/cudnn.h /usr/local/cuda/lib64/libcudnn*
     sudo ldconfig
 ```
