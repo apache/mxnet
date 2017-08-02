@@ -21,7 +21,7 @@ The above command will save the converted model into squeezenet-v11.mlmodel in C
 3. This generated ".mlmodel" file can directly be integrated into your app. For more instructions on how to do this, please see [Apple CoreML's tutorial](https://developer.apple.com/documentation/coreml/integrating_a_core_ml_model_into_your_app).
 
 
-### Force flag
+### Forced conversion
 For some models there may not be a one-to-one correspondence with CoreML and the converter will fail if you are converting such models. If you understand the risks with the model conversion, you can provide a "force" flag to force the converter to convert. For instance for resnet models:
 
 ```bash
@@ -38,11 +38,12 @@ E.g. on providing pre-processing arguments.
 ## Currently supported
 ### Models
 This is a (growing) list of standard MXNet models that can be successfully converted using the converter. This means that any other model that uses the similar operators as these models can also be successfully converted.
-1. [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz).
-2. [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/) (use force=True)
-3. [Squeezenet-V1.1](http://data.mxnet.io/models/imagenet/squeezenet/)
-4. [Resnet](http://data.mxnet.io/models/imagenet/resnet/)
-5. [Vgg](http://data.mxnet.io/models/imagenet/vgg/)
+1. [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/) (use force=True)
+2. [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz).
+3. [Network-In-Network](http://data.mxnet.io/models/imagenet/nin/)
+4. [Squeezenet-V1.1](http://data.mxnet.io/models/imagenet/squeezenet/)
+5. [Resnet](http://data.mxnet.io/models/imagenet/resnet/) (use force=True)
+6. [Vgg](http://data.mxnet.io/models/imagenet/vgg/)
 
 ### Layers
 1. Activation
@@ -60,7 +61,7 @@ This is a (growing) list of standard MXNet models that can be successfully conve
 
 ## Known issues
 These are list of known issues:
-1. Deconvolution layer with padding.
+1. Deconvolution layer with padding results in incorrect CoreML predictions.
 
 ## This tool has been tested on environment with:
 * MacOS - High Sierra 10.13 Beta
