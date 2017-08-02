@@ -45,6 +45,7 @@ def load_model(model_name, epoch_num, data, label_names, gpus=''):
     mod.set_params(
         arg_params=arg_params,
         aux_params=aux_params,
+        allow_missing=True
     )
     return mod
 
@@ -64,7 +65,7 @@ def is_correct_top_five(predict, label):
 
 
 class MXNetModelsTest(unittest.TestCase):
-    def _test_image_prediction(self, model_name, epoch, label_name):
+    def _test_image_prediction(self, model_name, epoch, label_name, force=False):
         try:
             data = read_image(VAL_DATA, label_name=label_name)
         except:
@@ -79,7 +80,7 @@ class MXNetModelsTest(unittest.TestCase):
         )
 
         input_shape = (1, 3, 244, 244)
-        coreml_spec = mxnet_converter.convert(mod, data=input_shape)
+        coreml_spec = mxnet_converter.convert(mod, data=input_shape, force=force)
         coreml_model = coremltools.models.MLModel(coreml_spec)
 
         mxnet_acc = []
@@ -117,13 +118,14 @@ class MXNetModelsTest(unittest.TestCase):
         print "Testing Image Classification with Squeezenet"
         self._test_image_prediction(model_name='squeezenet_v1.1', epoch=0, label_name='prob_label')
 
-    # def test_inception_with_batch_normalization(self):
-    #     print "Testing Image Classification with Inception/BatchNorm"
-    #     self._test_image_prediction(model_name='Inception-BN', epoch=126, label_name='softmax_label')
+#    TODO
+#     def test_inception_with_batch_normalization(self):
+#         print "Testing Image Classification with Inception/BatchNorm"
+#         self._test_image_prediction(model_name='Inception-BN', epoch=126, label_name='softmax_label', force=True)
 
     def test_resnet18(self):
         print "Testing Image Classification with ResNet18"
-        self._test_image_prediction(model_name='resnet-18', epoch=0, label_name='softmax_label')
+        self._test_image_prediction(model_name='resnet-18', epoch=0, label_name='softmax_label', force=True)
 
 
 if __name__ == '__main__':
