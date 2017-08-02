@@ -26,7 +26,7 @@ def _kl_divergence(distribution1, distribution2):
     return result
 
 
-class MXNetModelsTest(unittest.TestCase):
+class ModelsTest(unittest.TestCase):
     """
     Unit test class that tests converter on entire MXNet models .
     In order to test each unit test converts MXNet model into CoreML model using the converter, generate predictions
@@ -90,7 +90,7 @@ class MXNetModelsTest(unittest.TestCase):
 
         # Get predictions from MXNet and coreml
         div=[] # For storing KL divergence for each input.
-        for _ in xrange(10):
+        for _ in xrange(1000):
             input_data = {'data': np.random.uniform(0, 1, input_shape).astype(np.float32)}
             Batch = namedtuple('Batch', ['data'])
             module.forward(Batch([mx.nd.array(input_data['data'])]))
@@ -103,7 +103,7 @@ class MXNetModelsTest(unittest.TestCase):
             div.append(_kl_divergence(mxnet_pred, coreml_pred))
 
         print "Average KL divergence is % s" % np.mean(div)
-        # TODO assert on certain KL divergence scores?
+        self.assertTrue(np.mean(div) < 1e-4)
 
 
     def test_pred_inception_bn(self):
@@ -133,5 +133,5 @@ class MXNetModelsTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(MXNetModelsTest)
+    suite = unittest.TestLoader().loadTestsFromTestCase(ModelsTest)
     unittest.TextTestRunner(verbosity=2).run(suite)

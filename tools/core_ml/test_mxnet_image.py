@@ -64,7 +64,7 @@ def is_correct_top_five(predict, label):
     return label in top_five_preds
 
 
-class MXNetModelsTest(unittest.TestCase):
+class ImageNetTest(unittest.TestCase):
     def _test_image_prediction(self, model_name, epoch, label_name, force=False):
         try:
             data = read_image(VAL_DATA, label_name=label_name)
@@ -84,9 +84,9 @@ class MXNetModelsTest(unittest.TestCase):
         coreml_model = coremltools.models.MLModel(coreml_spec)
 
         mxnet_acc = []
-        mxnet_top_k_acc = []
+        mxnet_top_5_acc = []
         coreml_acc = []
-        coreml_top_k_acc = []
+        coreml_top_5_acc = []
 
         num_batch = 0
 
@@ -101,18 +101,18 @@ class MXNetModelsTest(unittest.TestCase):
                 mxnet_predict = mxnet_preds[i]
                 label = label_numpy[i]
                 mxnet_acc.append(is_correct_top_one(mxnet_predict, label))
-                mxnet_top_k_acc.append(is_correct_top_five(mxnet_predict, label))
+                mxnet_top_5_acc.append(is_correct_top_five(mxnet_predict, label))
                 coreml_acc.append(is_correct_top_one(coreml_predict, label))
-                coreml_top_k_acc.append(is_correct_top_five(coreml_predict, label))
+                coreml_top_5_acc.append(is_correct_top_five(coreml_predict, label))
                 num_batch += 1
             if (num_batch == 5): break # we only use a subset of the batches.
 
         print "MXNet acc %s" % np.mean(mxnet_acc)
         print "Coreml acc %s" % np.mean(coreml_acc)
-        print "MXNet top 5 acc %s" % np.mean(mxnet_top_k_acc)
-        print "Coreml top 5 acc %s" % np.mean(coreml_top_k_acc)
+        print "MXNet top 5 acc %s" % np.mean(mxnet_top_5_acc)
+        print "Coreml top 5 acc %s" % np.mean(coreml_top_5_acc)
         self.assertAlmostEqual(np.mean(mxnet_acc), np.mean(coreml_acc), delta=1e-1)
-        self.assertAlmostEqual(np.mean(mxnet_top_k_acc), np.mean(coreml_top_k_acc), delta=1e-2)
+        self.assertAlmostEqual(np.mean(mxnet_top_5_acc), np.mean(coreml_top_5_acc), delta=1e-2)
 
     def test_squeezenet(self):
         print "Testing Image Classification with Squeezenet"
@@ -129,5 +129,5 @@ class MXNetModelsTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(MXNetModelsTest)
+    suite = unittest.TestLoader().loadTestsFromTestCase(ImageNetTest)
     unittest.TextTestRunner(verbosity=2).run(suite)

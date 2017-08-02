@@ -42,7 +42,7 @@ def _get_mxnet_module(net, input_shape, mode, label_names, input_names=None):
     return mod
 
 
-class MXNetSingleLayerTest(unittest.TestCase):
+class SingleLayerTest(unittest.TestCase):
     """
     Unit test class for testing where converter is able to convert individual layers or not.
     In order to do so, it converts model and generates preds on both CoreML and MXNet and check they are the same.
@@ -872,5 +872,5 @@ class MXNetSingleLayerTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(MXNetSingleLayerTest)
+    suite = unittest.TestLoader().loadTestsFromTestCase(SingleLayerTest)
     unittest.TextTestRunner(verbosity=2).run(suite)
