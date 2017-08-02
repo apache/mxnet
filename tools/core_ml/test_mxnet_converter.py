@@ -710,24 +710,21 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
 #     # TODO Unable to get padding working for deconv layer
-# #     def test_deconv_random_padding(self):
-# #         np.random.seed(1988)
-# #         input_shape = (1, 10, 6, 6)
-# #         num_filter = 3
-# #         kernel = (3, 3)
-# #         stride = (1, 1)
-# #         pad = (2, 2)
-# #
-# #         # define a model
-# #         net = mx.sym.Variable('data')
-# #         net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
-# #                 stride = stride, pad = pad, no_bias = False, name = 'deconv_1')
-# #         engine = net.simple_bind(ctx = mx.cpu(), data = input_shape)
-# #
-# #         # set some random weights
-# #         set_weights(net, engine, mode = 'random')
-# #         # test the mxnet model
-# #         self._test_mxnet_model(net, engine, data = input_shape)
+#     def test_deconv_random_padding(self):
+#         np.random.seed(1988)
+#         input_shape = (1, 10, 6, 6)
+#         num_filter = 3
+#         kernel = (3, 3)
+#         stride = (1, 1)
+#         pad = (2, 2)
+#
+#         # define a model
+#         net = mx.sym.Variable('data')
+#         net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
+#                 stride = stride, pad = pad, no_bias = False, name = 'deconv_1')
+#
+#         # test the mxnet model
+#         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_conv_random_padding_odd(self):
         np.random.seed(1988)
