@@ -85,8 +85,7 @@ class ModelsTest(unittest.TestCase):
             input_shape=input_shape
         )
 
-        coreml_spec = mxnet_converter.convert(module, data=input_shape, force=force)
-        coreml_model = coremltools.models.MLModel(coreml_spec)
+        coreml_model = mxnet_converter.convert(module, data=input_shape, force=force)
 
         # Get predictions from MXNet and coreml
         div=[] # For storing KL divergence for each input.

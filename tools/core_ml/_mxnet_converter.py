@@ -114,8 +114,7 @@ def convert(model, order = None, class_labels = None, mode = None, force = False
 
     Returns
     -------
-    model_spec: An object of type ModelSpec_pb.
-        Protobuf representation of the model
+    model: A coreml model.
     """
 
     if not kwargs:
@@ -174,8 +173,6 @@ def convert(model, order = None, class_labels = None, mode = None, force = False
         else:
             node['inputs'] = []
 
-    # import pdb; pdb.set_trace()
-
     # Mark the head nodes
     for head in net['heads']:
         head_id = head[0]
@@ -219,5 +216,5 @@ def convert(model, order = None, class_labels = None, mode = None, force = False
             raise TypeError("synset variable of unknown type. Type found: %s. Expected either string or list of strings." % type(class_labels))
         builder.set_class_labels(class_labels = labels)
 
-    # Return the spec
-    return builder.spec
+    # Return the model
+    return _coremltools.models.MLModel(builder.spec)

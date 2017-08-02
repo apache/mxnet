@@ -80,8 +80,7 @@ class ImageNetTest(unittest.TestCase):
         )
 
         input_shape = (1, 3, 244, 244)
-        coreml_spec = mxnet_converter.convert(mod, data=input_shape, force=force)
-        coreml_model = coremltools.models.MLModel(coreml_spec)
+        coreml_model = mxnet_converter.convert(mod, data=input_shape, force=force)
 
         mxnet_acc = []
         mxnet_top_5_acc = []
