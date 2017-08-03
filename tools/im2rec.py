@@ -11,9 +11,7 @@ import argparse
 import cv2
 import time
 import traceback
-
-if sys.version_info[0] == 3:
-    xrange = range
+from builtins import range
 
 try:
     import multiprocessing
@@ -61,8 +59,8 @@ def make_list(args):
         random.seed(100)
         random.shuffle(image_list)
     N = len(image_list)
-    chunk_size = (N + args.chunks - 1) / args.chunks
-    for i in xrange(args.chunks):
+    chunk_size = (N + args.chunks - 1) // args.chunks
+    for i in range(args.chunks):
         chunk = image_list[i * chunk_size:(i + 1) * chunk_size]
         if args.chunks > 1:
             str_chunk = '_%d' % i
@@ -130,16 +128,16 @@ def image_encode(args, i, item, q_out):
         return
     if args.center_crop:
         if img.shape[0] > img.shape[1]:
-            margin = (img.shape[0] - img.shape[1]) / 2;
+            margin = (img.shape[0] - img.shape[1]) // 2;
             img = img[margin:margin + img.shape[1], :]
         else:
-            margin = (img.shape[1] - img.shape[0]) / 2;
+            margin = (img.shape[1] - img.shape[0]) // 2;
             img = img[:, margin:margin + img.shape[0]]
     if args.resize:
         if img.shape[0] > img.shape[1]:
-            newsize = (args.resize, img.shape[0] * args.resize / img.shape[1])
+            newsize = (args.resize, img.shape[0] * args.resize // img.shape[1])
         else:
-            newsize = (img.shape[1] * args.resize / img.shape[0], args.resize)
+            newsize = (img.shape[1] * args.resize // img.shape[0], args.resize)
         img = cv2.resize(img, newsize)
 
     try:
