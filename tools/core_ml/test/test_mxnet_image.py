@@ -1,8 +1,13 @@
 import mxnet as mx
 import numpy as np
 import unittest
+import sys
+import os
+current_working_directory = os.getcwd()
+sys.path.append(current_working_directory + "/..")
 import _mxnet_converter as mxnet_converter
-import coremltools
+from utils import load_model
+
 
 VAL_DATA = 'data/val-5k-256.rec'
 URL = 'http://data.mxnet.io/data/val-5k-256.rec'
@@ -21,33 +26,10 @@ def read_image(data_val, label_name):
         data_shape=(3,224,224),
         label_name=label_name,
         rand_corp=False,
-        rand_mirror=False
+        rand_mirror=False,
+        shuffle=True
     )
     return data
-
-
-def load_model(model_name, epoch_num, data, label_names, gpus=''):
-    sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, epoch_num)
-    if gpus == '':
-        devices = mx.cpu()
-    else:
-        devices = [mx.gpu(int(i)) for i in gpus.split(',')]
-    mod = mx.mod.Module(
-        symbol=sym,
-        context=devices,
-        label_names=label_names
-    )
-    mod.bind(
-        for_training=False,
-        data_shapes=data.provide_data,
-        label_shapes=data.provide_label
-    )
-    mod.set_params(
-        arg_params=arg_params,
-        aux_params=aux_params,
-        allow_missing=True
-    )
-    return mod
 
 
 def is_correct_top_one(predict, label):
@@ -75,7 +57,8 @@ class ImageNetTest(unittest.TestCase):
         mod = load_model(
             model_name=model_name,
             epoch_num=epoch,
-            data=data,
+            data_shapes=data.provide_data,
+            label_shapes=data.provide_label,
             label_names=[label_name,]
         )
 
@@ -110,8 +93,8 @@ class ImageNetTest(unittest.TestCase):
         print "Coreml acc %s" % np.mean(coreml_acc)
         print "MXNet top 5 acc %s" % np.mean(mxnet_top_5_acc)
         print "Coreml top 5 acc %s" % np.mean(coreml_top_5_acc)
-        self.assertAlmostEqual(np.mean(mxnet_acc), np.mean(coreml_acc), delta=1e-1)
-        self.assertAlmostEqual(np.mean(mxnet_top_5_acc), np.mean(coreml_top_5_acc), delta=1e-2)
+        self.assertAlmostEqual(np.mean(mxnet_acc), np.mean(coreml_acc), delta=1e-4)
+        self.assertAlmostEqual(np.mean(mxnet_top_5_acc), np.mean(coreml_top_5_acc), delta=1e-4)
 
     def test_squeezenet(self):
         print "Testing Image Classification with Squeezenet"

@@ -1,8 +1,11 @@
 import unittest
 import mxnet as mx
 import numpy as np
+import sys
+import os
+current_working_directory = os.getcwd()
+sys.path.append(current_working_directory + "/..")
 import _mxnet_converter as mxnet_converter
-import coremltools
 from collections import namedtuple
 
 
