@@ -142,6 +142,48 @@ class L1Loss(Loss):
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
+class SmoothL1Loss(Loss):
+    """
+
+    .. math::
+        L = \\sum_i
+        \\begin{cases}
+        (\\sigma ({output}_i - {label}_i))^2/2,&
+        \\text{if }({output}_i - {label}_i) < 1/\\sigma^2\\
+        |({output}_i - {label}_i)|-0.5/\\sigma^2,& \\text{otherwise}
+        \\end{cases}
+
+    Output and label must have the same shape.
+
+    Parameters
+    ----------
+    sigma : float, default=1.0
+        Sigma controls how SmoothL1 transits between L1/L2 norm.
+    weight : float or None
+        Global scalar weight for loss.
+    sample_weight : Symbol or None
+        Per sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has
+        shape (64, 10) and you want to weight each sample
+        in the batch, `sample_weight` should have shape (64, 1).
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+    """
+    def __init__(self, sigma=1.0, weight=None, batch_axis=0, **kwargs):
+        super(SmoothL1Loss, self).__init__(weight, batch_axis, **kwargs)
+        self.sigma = sigma
+
+    def hybrid_forward(self, F, output, label, sample_weight=None):
+        if F is ndarray:
+            loss = ndarray.smooth_l1(output - label.reshape(output.shape),
+                                     scalar=self.sigma)
+        else:
+            loss = symbol.smooth_l1(output - label.reshape(output.shape),
+                                    scalar=self.sigma)
+        loss = _apply_weighting(F, loss, self._weight, sample_weight)
+        return F.mean(loss, axis=self._batch_axis, exclude=True)
+
+
 class SoftmaxCrossEntropyLoss(Loss):
     """Computes the softmax cross entropy loss.
 
