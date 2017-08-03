@@ -2,6 +2,16 @@ import mxnet as mx
 
 
 def load_model(model_name, epoch_num, data_shapes, label_shapes, label_names, gpus=''):
+    """
+
+    :param model_name:
+    :param epoch_num:
+    :param data_shapes:
+    :param label_shapes:
+    :param label_names:
+    :param gpus:
+    :return:
+    """
     sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, epoch_num)
     if gpus == '':
         devices = mx.cpu()

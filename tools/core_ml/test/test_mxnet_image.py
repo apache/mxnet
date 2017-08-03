@@ -5,6 +5,7 @@ import sys
 import os
 current_working_directory = os.getcwd()
 sys.path.append(current_working_directory + "/..")
+sys.path.append(current_working_directory + "/../converter/")
 import _mxnet_converter as mxnet_converter
 from utils import load_model
 

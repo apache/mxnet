@@ -1,6 +1,7 @@
+from __future__ import print_function
 import argparse
 import mxnet as mx
-from _mxnet_converter import convert
+from converter._mxnet_converter import convert
 from utils import load_model
 import yaml
 from ast import literal_eval
@@ -88,3 +89,4 @@ if __name__ == '__main__':
 
     coreml_model = convert(model=mod, force=force, mode=mode, class_labels=class_labels, **input_shape)
     coreml_model.save(output_file)
+    print("\nSUCCESS\nModel %s has been converted and saved at %s\n" % (model_name, output_file))
