@@ -173,8 +173,8 @@ dataset and evaluates the performance according to the given input metric.
 It can be used as follows:
 
 ```python
-score = mod.score(val_iter, ['mse', 'acc'])
-print("Accuracy score is %f" % (score))
+score = mod.score(val_iter, ['acc'])
+print("Accuracy score is %f" % (score[0][1]))
 ```
 
 Some of the other metrics which can be used are `top_k_acc`(top-k-accuracy),
