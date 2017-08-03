@@ -108,13 +108,9 @@ class ImageNetTest(unittest.TestCase):
         print "Testing Image Classification with ResNet18"
         self._test_image_prediction(model_name='resnet-18', epoch=0, label_name='softmax_label', force=True)
 
-    def test_nin(self):
-        print "Testing Image Classification with nin"
-        self._test_image_prediction(model_name='nin', epoch=0, label_name='prob_label', force=True)
-
     def test_vgg16(self):
         print "Testing Image Classification with vgg16"
-        self._test_image_prediction(model_name='vgg16', epoch=0, label_name='softmax_label', force=True)
+        self._test_image_prediction(model_name='vgg16', epoch=0, label_name='prob_label', force=True)
 
 
 if __name__ == '__main__':

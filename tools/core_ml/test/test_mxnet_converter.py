@@ -733,16 +733,22 @@ class SingleLayerTest(unittest.TestCase):
 #     # TODO Unable to get padding working for deconv layer
 #     def test_deconv_random_padding(self):
 #         np.random.seed(1988)
-#         input_shape = (1, 10, 6, 6)
+#         input_shape = (1, 10, 9, 9)
 #         num_filter = 3
 #         kernel = (3, 3)
-#         stride = (1, 1)
+#         stride = (3, 3)
 #         pad = (2, 2)
 #
 #         # define a model
 #         net = mx.sym.Variable('data')
-#         net = mx.symbol.Deconvolution(data = net, num_filter = num_filter, kernel=kernel,
-#                 stride = stride, pad = pad, no_bias = False, name = 'deconv_1')
+#         net = mx.symbol.Deconvolution(
+#                 data=net,
+#                 num_filter=num_filter,
+#                 kernel=kernel,
+#                 stride=stride,
+#                 pad=pad,
+#                 no_bias=False,
+#                 name = 'deconv_1')
 #
 #         # test the mxnet model
 #         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
@@ -887,6 +893,8 @@ class SingleLayerTest(unittest.TestCase):
                                label_names=['softmax_label'],
                                force=True,
                                delta=1) # Note: delta is 1 since predictions can be off.
+
+    # TODO test_concat
 
 
 if __name__ == '__main__':

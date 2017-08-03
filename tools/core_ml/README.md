@@ -41,10 +41,9 @@ E.g. on providing pre-processing arguments.
 This is a (growing) list of standard MXNet models that can be successfully converted using the converter. This means that any other model that uses the similar operators as these models can also be successfully converted.
 1. [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/) (use force=True)
 2. [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz).
-3. [Network-In-Network](http://data.mxnet.io/models/imagenet/nin/)
-4. [Squeezenet-V1.1](http://data.mxnet.io/models/imagenet/squeezenet/)
-5. [Resnet](http://data.mxnet.io/models/imagenet/resnet/) (use force=True)
-6. [Vgg](http://data.mxnet.io/models/imagenet/vgg/)
+3. [Squeezenet](http://data.mxnet.io/models/imagenet/squeezenet/)
+4. [Resnet](http://data.mxnet.io/models/imagenet/resnet/) (use force=True)
+5. [Vgg](http://data.mxnet.io/models/imagenet/vgg/)
 
 ### Layers
 1. Activation
@@ -62,7 +61,7 @@ This is a (growing) list of standard MXNet models that can be successfully conve
 
 ## Known issues
 These are list of known issues:
-1. Deconvolution layer with padding results in incorrect CoreML predictions.
+1. Converting a deconvolution layer which has padding results in incorrect CoreML predictions.
 
 ## This tool has been tested on environment with:
 * MacOS - High Sierra 10.13 Beta
