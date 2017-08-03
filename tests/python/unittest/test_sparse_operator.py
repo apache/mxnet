@@ -67,6 +67,7 @@ def test_elemwise_add_ex_multiple_stages():
     exec_test.backward(out_grads=exec_test.outputs)
     assert_almost_equal(arr_grads[0].asnumpy(), arr_grads[1].asnumpy())
 
+
 # TODO(haibin) also add test for backward pass.
 def test_cast_storage_ex():
     def test_rsp_to_dns(shape, density):
@@ -113,48 +114,44 @@ def test_cast_storage_ex():
             test_dns_to_rsp((rnd.randint(1, 10), rnd.randint(512, 1024)), d) # test gpu block  kernel
 
 
-
 def test_sparse_dot():
     def test_dot_csr(lhs_shape, rhs_shape, rhs_stype, trans_lhs, lhs_density, rhs_density):
         lhs_nd = rand_ndarray(lhs_shape, 'csr', density=lhs_density)
         lhs_dns = lhs_nd.todense()
         rhs_nd = rand_ndarray(rhs_shape, rhs_stype, density=rhs_density)
         rhs_dns = rhs_nd if rhs_stype == 'default' else rhs_nd.todense()
-        out = mx.nd.dot(lhs_nd, rhs_dns, transpose_a=trans_lhs)
-        if trans_lhs and default_context().device_type is 'cpu':
-            assert out.stype == 'row_sparse'
-        else:
-            assert out.stype == 'default'
-        out_expected = mx.nd.dot(lhs_dns, rhs_dns, transpose_a=trans_lhs)
-        out_np = out_expected.asnumpy()
-        backward_trans = not trans_lhs
-        rhs_backward_grad = mx.nd.dot(lhs_dns, out_expected, transpose_a=backward_trans).asnumpy()
+
+        out = mx.nd.dot(lhs_nd, rhs_nd, transpose_a=trans_lhs)
+        out_dns = mx.nd.dot(lhs_dns, rhs_dns, transpose_a=trans_lhs)
+        out_np = out_dns.asnumpy()
         assert_almost_equal(out.asnumpy(), out_np, rtol=1e-4, atol=1e-5)
 
         # test symbolic forward
         lhs = mx.symbol.Variable('lhs', stype='csr')
         rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
-        test = mx.symbol.dot(lhs, rhs, transpose_a=trans_lhs)
+        out = mx.symbol.dot(lhs, rhs, transpose_a=trans_lhs)
         location = {'lhs': lhs_nd, 'rhs': rhs_nd}
-        expected = {'rhs': rhs_backward_grad}
-        check_symbolic_forward(test, location, [out_np], rtol=1e-3, atol=1e-4)
+        check_symbolic_forward(out, location, [out_np], rtol=1e-3, atol=1e-4)
+
         # test symbolic backward
-        check_symbolic_backward(test, location, [out_np], expected,
+        backward_trans = not trans_lhs
+        rhs_backward_grad = mx.nd.dot(lhs_dns, out_dns, transpose_a=backward_trans).asnumpy()
+        expected = {'rhs': rhs_backward_grad}
+        check_symbolic_backward(out, location, [out_np], expected,
                                 grad_req={'lhs': 'null', 'rhs': 'write'},
                                 rtol=1e-3, atol=1e-4)
 
     density = [1.00, 0.50, 0.10, 0.05, 0.01]
-    for rhs_d in density:
+    for lhs_d in density:
         lhs_shape = rand_shape_2d(50, 200)
-        lhs_d = 1
+        rhs_d = 1
         test_dot_csr(lhs_shape, (lhs_shape[1], 1), 'default', False, lhs_d, rhs_d) # test gpu SpMV
         test_dot_csr(lhs_shape, (lhs_shape[0], 1), 'default', True , lhs_d, rhs_d) # (vector kernel)
         test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(5, 10)), 'default', False, lhs_d, rhs_d) # test gpu SpMM
         test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(5, 10)), 'default', True , lhs_d, rhs_d) # (scalar kernel)
-        for lhs_d in density:
+        for rhs_d in density:
             test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False, lhs_d, rhs_d)
-            if default_context().device_type is 'cpu':
-                test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True, lhs_d, rhs_d)
+            test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True, lhs_d, rhs_d)
 
 
 def test_sparse_slice():
@@ -267,7 +264,6 @@ def test_sparse_elementwise_sum():
     maxdim = 5
     for dim in range(2, maxdim):
         shape = tuple(np.random.randint(5, 10, size=dim))
-        print shape
         check_sparse_elementwise_sum_with_shape('row_sparse', shape, np.random.randint(1, 9))
 
 
