@@ -43,30 +43,30 @@ TODO
 ## Currently supported
 ### Models
 This is a (growing) list of standard MXNet models that can be successfully converted using the converter. This means that any other model that uses the similar operators as these models can also be successfully converted.
-1. [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/) (use force=True)
-2. [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz).
-3. [Squeezenet](http://data.mxnet.io/models/imagenet/squeezenet/)
-4. [Resnet](http://data.mxnet.io/models/imagenet/resnet/) (use force=True)
-5. [Vgg](http://data.mxnet.io/models/imagenet/vgg/)
+1. [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/) (use force=True).
+2. [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz) (use force=True).
+3. [Squeezenet](http://data.mxnet.io/models/imagenet/squeezenet/).
+4. [Resnet](http://data.mxnet.io/models/imagenet/resnet/) (use force=True).
+5. [Vgg](http://data.mxnet.io/models/imagenet/vgg/).
 
 ### Layers
-1. Activation
-2. Batchnorm
-3. Concat
-4. Convolution
-5. Deconvolution
-6. Dense
-7. Elementwise
-8. Flatten
-9. Pooling
-10. Reshape
-11. Softmax
-12. Transpose
+1. Activation.
+2. Batchnorm.
+3. Concat.
+4. Convolution.
+5. Deconvolution.
+6. Dense.
+7. Elementwise.
+8. Flatten.
+9. Pooling.
+10. Reshape.
+11. Softmax.
+12. Transpose.
 
 ## Known issues
 These are list of known issues:
 1. Converting a deconvolution layer which has padding results in incorrect CoreML predictions.
 
 ## This tool has been tested on environment with:
-* MacOS - High Sierra 10.13 Beta
-* Xcode 9 beta 2
+* MacOS - High Sierra 10.13 Beta.
+* Xcode 9 beta 2.
