@@ -5,6 +5,22 @@ then
   exit 0
 fi
 
+if [[ ${TASK} == *"installation"* ]]; then
+    git remote add main https://github.com/dmlc/mxnet.git
+    git fetch main master
+    echo "File changes compared to origin/master:"
+    echo "**********************************"
+    git diff --name-only remotes/main/master
+    echo "**********************************"
+
+    if [[ ! $(git diff --name-only remotes/main/master | grep install.md) ]]; then
+        echo "No changes to install.md. Skipping installation tasks..."
+        exit 0
+    fi
+    ./tests/jenkins/run_test_installation_docs.sh docs/get_started/install.md ${TASK}
+    exit $?
+fi
+
 if [ ${TASK} == "lint" ]; then
     make lint || exit -1
     echo "Check documentations of c++ code..."
@@ -93,6 +109,7 @@ if [ ${TASK} == "r_test" ]; then
 fi
 
 if [ ${TASK} == "python_test" ]; then
+    export PYTHONPATH=${PYTHONPATH}:${PWD}/python
     make all || exit -1
     # use cached dir for storing data
     rm -rf ${PWD}/data
