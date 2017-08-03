@@ -72,7 +72,15 @@ int main(int argc, char** argv) {
 
   // Create sgd optimizer
   Optimizer* opt = OptimizerRegistry::Find("sgd");
-  opt->SetParam("rescale_grad", 1.0/batch_size);
+  opt->SetParam("rescale_grad", 1.0/batch_size)
+     ->SetParam("lr", learning_rate)
+     ->SetParam("wd", weight_decay);
+  std::unique_ptr<LRScheduler> lr_sch(new FactorScheduler(5000, 0.1));
+  opt->SetLRScheduler(std::move(lr_sch));
+
+  // Create executor by binding parameters to the model
+  auto *exec = net.SimpleBind(ctx, args);
+  auto arg_names = net.ListArguments();
 
   float score = 0;
   // Start training
@@ -90,15 +98,14 @@ int main(int argc, char** argv) {
       // CopyTo is imperative, need to wait for it to complete.
       NDArray::WaitAll();
 
-      // Create executor by binding parameters to the model
-      auto *exec = net.SimpleBind(ctx, args);
       // Compute gradients
       exec->Forward(true);
       exec->Backward();
       // Update parameters
-      exec->UpdateAll(opt, learning_rate, weight_decay);
-      // Remember to free the memory
-      delete exec;
+      for (size_t i = 0; i < arg_names.size(); ++i) {
+        if (arg_names[i] == "X" || arg_names[i] == "label") continue;
+        opt->Update(i, exec->arg_arrays[i], exec->grad_arrays[i]);
+      }
     }
     auto toc = chrono::system_clock::now();
 
@@ -109,17 +116,16 @@ int main(int argc, char** argv) {
       data_batch.data.CopyTo(&args["X"]);
       data_batch.label.CopyTo(&args["label"]);
       NDArray::WaitAll();
-      auto *exec = net.SimpleBind(ctx, args);
       // Only forward pass is enough as no gradient is needed when evaluating
       exec->Forward(false);
       acc.Update(data_batch.label, exec->outputs[0]);
-      delete exec;
     }
     float duration = chrono::duration_cast<chrono::milliseconds>(toc - tic).count() / 1000.0;
     LG << "Epoch: " << iter << " " << samples/duration << " samples/sec Accuracy: " << acc.Get();
     score = acc.Get();
   }
 
+  delete exec;
   MXNotifyShutdown();
   return score >= MIN_SCORE ? 0 : 1;
 }

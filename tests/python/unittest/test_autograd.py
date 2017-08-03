@@ -248,6 +248,22 @@ def test_attach_grad():
     assert (x.grad.asnumpy() == 2).all()
 
 
+def test_is_train():
+    x = mx.nd.ones((10, 10))
+    x.attach_grad()
+    with record(True):
+        y = mx.nd.Dropout(x, p=0.5)
+        assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
+        y.backward()
+        assert (x.grad.asnumpy() == y.asnumpy()).all()
+
+    with record(False):
+        y = mx.nd.Dropout(x, p=0.5)
+        assert (y.asnumpy() == x.asnumpy()).all()
+        y.backward(is_train=False)
+        assert (x.grad.asnumpy() == x.asnumpy()).all()
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule()
