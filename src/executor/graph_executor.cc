@@ -42,7 +42,7 @@ void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
   *step_left = static_cast<int>(num_forward_nodes_ - sstep - 1);
 }
 
-void GraphExecutor::Backward(const std::vector<NDArray>& head_grads) {
+void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_train) {
   const auto& idx = graph_.indexed_graph();
   if (num_forward_inputs_ != idx.input_nodes().size()) {
     for (size_t i = 0; i < head_grad_array_.size(); ++i) {
@@ -57,7 +57,7 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads) {
       }
     }
   }
-  RunOps(true, num_forward_nodes_, idx.num_nodes());
+  RunOps(is_train, num_forward_nodes_, idx.num_nodes());
 }
 
 void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
