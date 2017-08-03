@@ -64,16 +64,14 @@ BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "b
   # to appropriate sequence length)
   idx <- (.self$bucketID - 1) * (.self$batch.size) + (1:batch.size)
   data <- .self$buckets[[names(.self$bucketID)]]$data[, idx, drop = F]
-  data_mask <- as.integer(names(.self$bucketID)) - apply(data == .self$data.mask.element, 
-    2, sum)
   data_mask_array <- (!data == 0)
   if (length(dim(.self$buckets[[names(.self$bucketID)]]$label)) == 0) {
     label <- .self$buckets[[names(.self$bucketID)]]$label[idx]
   } else {
     label <- .self$buckets[[names(.self$bucketID)]]$label[, idx, drop = F]
   }
-  return(list(data = mx.nd.array(data), label = mx.nd.array(label), data.mask = mx.nd.array(data_mask), 
-    data.mask.array = mx.nd.array(data_mask_array)))
+  return(list(data = mx.nd.array(data), data.mask.array = mx.nd.array(data_mask_array), 
+    label = mx.nd.array(label)))
 }, finalize = function() {
 }))
 

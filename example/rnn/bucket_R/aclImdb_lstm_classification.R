@@ -11,51 +11,30 @@ vocab <- length(corpus_bucketed_test$dic)
 ### Create iterators
 batch.size <- 64
 
-train.data <- mx.io.bucket.iter(buckets = corpus_bucketed_train$buckets,
-                                batch.size = batch.size,
-                                data.mask.element = 0,
-                                shuffle = TRUE)
+num.round <- 16
 
-eval.data <- mx.io.bucket.iter(buckets = corpus_bucketed_test$buckets,
-                               batch.size = batch.size,
-                               data.mask.element = 0,
-                               shuffle = FALSE)
+train.data <- mx.io.bucket.iter(buckets = corpus_bucketed_train$buckets, batch.size = batch.size, 
+  data.mask.element = 0, shuffle = TRUE)
+
+eval.data <- mx.io.bucket.iter(buckets = corpus_bucketed_test$buckets, batch.size = batch.size, 
+  data.mask.element = 0, shuffle = FALSE)
 
 mx.set.seed(0)
+optimizer <- mx.opt.create("adadelta", rho = 0.92, epsilon = 1e-06, wd = 2e-04, clip_gradient = NULL, 
+  rescale.grad = 1/batch.size)
 
-end.round <- 16
+model_sentiment_lstm <- mx.rnn.buckets(train.data = train.data, begin.round = 1, 
+  num.round = num.round, ctx = mx.cpu(), metric = mx.metric.accuracy, optimizer = optimizer, 
+  num.rnn.layer = 2, num.embed = 16, num.hidden = 24, num.label = 2, input.size = vocab, 
+  initializer = mx.init.Xavier(rnd_type = "gaussian", factor_type = "in", magnitude = 2), 
+  dropout = 0.25, config = "seq-to-one", batch.end.callback = mx.callback.log.train.metric(period = 50), 
+  verbose = TRUE)
 
-optimizer <- mx.opt.create("adadelta",
-                           rho = 0.92,
-                           epsilon = 1e-06,
-                           wd = 2e-04,
-                           clip_gradient = NULL,
-                           rescale.grad = 1/batch.size)
-
-model_sentiment_lstm <- mx.rnn.buckets(train.data = train.data,
-                                       begin.round = 1,
-                                       end.round = end.round,
-                                       ctx = mx.cpu(),
-                                       metric = mx.metric.accuracy,
-                                       optimizer = optimizer,
-                                       num.rnn.layer = 2,
-                                       num.embed = 16,
-                                       num.hidden = 24,
-                                       num.label = 2,
-                                       input.size = vocab,
-                                       initializer = mx.init.Xavier(rnd_type = "gaussian",
-                                                                    factor_type = "in",
-                                                                    magnitude = 2),
-                                       dropout = 0.25,
-                                       config = "seq-to-one",
-                                       batch.end.callback = mx.callback.log.train.metric(period = 50),
-                                       verbose = TRUE)
-
-mx.model.save(model_sentiment_lstm, prefix = "model_sentiment_lstm", iteration = end.round)
+mx.model.save(model_sentiment_lstm, prefix = "model_sentiment_lstm", iteration = num.round)
 
 source("rnn.infer.R")
 
-model <- mx.model.load("model_sentiment_lstm", iteration = end.round)
+model <- mx.model.load("model_sentiment_lstm", iteration = num.round)
 
 pred <- mx.rnn.infer.buckets(infer_iter = eval.data, model, "seq-to-one", ctx = mx.cpu())
 

@@ -113,6 +113,7 @@ fixed-size items.
 
     """
     __slots__ = []
+    __array_priority__ = 1000.0
     # pylint: disable= no-member, undefined-variable
 
     def __repr__(self):
