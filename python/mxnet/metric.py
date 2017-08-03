@@ -973,7 +973,6 @@ class HingeLoss(EvalMetric):
     >>> hinge_loss_l1.update(labels = labels, preds = predicts)
     >>> print hinge_loss_l1.get()
     ('hinge_loss', 0.1600000262260437)
-
     >>> hinge_loss_l2 = mx.metric.HingeLoss()
     >>> hinge_loss_l2.update(labels = labels, preds = predicts)
     >>> print hinge_loss_l2.get()
