@@ -19,6 +19,8 @@ def _get_mxnet_module(net, input_shape, mode, label_names, input_names=None):
     """ Given a symbolic graph, input shape and the initialization mode,
         returns an MXNet module.
     """
+    mx.random.seed(1993)
+
     mod = mx.mod.Module(
         symbol=net,
         context=mx.cpu(),
@@ -459,7 +461,7 @@ class SingleLayerTest(unittest.TestCase):
         )
 
         prediction = coreml_model.predict(_mxnet_remove_batch({'data': input_data}))
-        self.assertEqual(prediction['classLabel'], 'Category4')
+        self.assertEqual(prediction['classLabel'], 'Category3')
 
     def test_really_tiny_deconv_random_input(self):
         np.random.seed(1988)
