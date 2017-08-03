@@ -453,13 +453,15 @@ def convert_batchnorm(net, node, module, force, builder):
 
     from ast import literal_eval
     eps = 1e-3 # Default value of eps for MXNet.
+    use_global_stats = False # Default value of use_global_stats for MXNet.
     if 'attr' in node:
         if 'eps' in node['attr']:
             eps = literal_eval(node['attr']['eps'])
         if 'use_global_stats' in node['attr']:
             use_global_stats = literal_eval(node['attr']['use_global_stats'])
-            if use_global_stats is False and force is False:
-                raise Exception("CoreML doesn't support local batch-norm. Feel free to retrain your MXNet model "
+
+    if use_global_stats is False and force is False:
+        raise Exception("CoreML doesn't support local batch-norm. Feel free to retrain your MXNet model "
                 "with use_global_stats set to True and convert again. You could also use force flag while converting "
                 "to ignore this error; note that this may cause some differences in prediction b/w MXNet and CoreML.")
 
