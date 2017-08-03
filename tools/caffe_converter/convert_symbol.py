@@ -207,6 +207,7 @@ def _parse_proto(prototxt_fname):
             need_flatten[name] = need_flatten[mapping[layer.bottom[0]]]
         if layer.type == 'Eltwise':
             type_string = 'mx.symbol.broadcast_add'
+            param = layer.eltwise_param
             param_string = ""
             need_flatten[name] = False
         if layer.type == 'Reshape':
@@ -239,8 +240,15 @@ def _parse_proto(prototxt_fname):
                 symbol_string += "%s = %s(name='%s', data=%s %s)\n" % (
                     name, type_string, name, mapping[bottom[0]], param_string)
             else:
-                symbol_string += "%s = %s(name='%s', *[%s] %s)\n" % (
-                    name, type_string, name, ','.join([mapping[x] for x in bottom]), param_string)
+                if layer.type == 'Eltwise' and param.operation == 1 and len(param.coeff) > 0:
+                    symbol_string += "%s = " % name
+                    symbol_string += " + ".join(["%s * %s" % (
+                        mapping[bottom[i]], param.coeff[i]) for i in range(len(param.coeff))])
+                    symbol_string += "\n"
+                else:
+                    symbol_string += "%s = %s(name='%s', *[%s] %s)\n" % (
+                        name, type_string, name, ','.join(
+                            [mapping[x] for x in bottom]), param_string)
         for j in range(len(layer.top)):
             mapping[layer.top[j]] = name
         output_name = name
