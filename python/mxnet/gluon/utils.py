@@ -191,7 +191,7 @@ def download(url, path=None, overwrite=False, sha1hex=None):
     else:
         fname = path
 
-    if overwrite or not os.path.exists(fname) or not sha1hex or not verified_sha1(fname, sha1hex):
+    if overwrite or not os.path.exists(fname) or (sha1hex and not verified_sha1(fname, sha1hex)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
             os.makedirs(dirname)
