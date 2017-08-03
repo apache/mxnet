@@ -13,6 +13,7 @@ endif
 ifndef DMLC_CORE
 	DMLC_CORE = $(ROOTDIR)/dmlc-core
 endif
+CORE_INC = $(wildcard $(DMLC_CORE)/include/*/*.h)
 
 ifndef NNVM_PATH
 	NNVM_PATH = $(ROOTDIR)/nnvm
@@ -291,7 +292,7 @@ build/plugin/%.o: plugin/%.cc
 	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" -M -MT $*_gpu.o $< >$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" $<
 
-%.o: %.cc
+%.o: %.cc $(CORE_INC)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
 

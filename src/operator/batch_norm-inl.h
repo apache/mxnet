@@ -38,7 +38,7 @@ constexpr int DEFAULT_AXIS = 1;
 
 /*! \brief Parameters for BatchNoram operator */
 struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
-  float eps;
+  double eps;
   float momentum;
   bool fix_gamma;
   bool use_global_stats;
@@ -48,7 +48,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
     .describe("Epsilon to prevent div 0. "
-              "Must be bigger than CUDNN_BN_MIN_EPSILON "
+              "Must be no less than CUDNN_BN_MIN_EPSILON "
               "defined in cudnn.h when using cudnn (usually 1e-5)");
     DMLC_DECLARE_FIELD(momentum).set_default(0.9f)
     .describe("Momentum for moving average");

@@ -2,7 +2,7 @@
 
 This fold contains examples for image classification. The goal of image
 classifcation is to identify the objects contained in images. The following
-[example](http://mxnet.io/tutorials/python/predict_imagenet.html) shows
+[example](http://mxnet.io/tutorials/python/predict_image.html) shows
 recognized object classes with corresponding probabilities using a pre-traind
 model.
 
@@ -102,7 +102,7 @@ We provide multiple pre-trained models on various datasets. Use
 [common/modelzone.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/common/modelzoo.py)
 to download these models. These models can be used in any front-end language
 MXNet supports. For example,
-[the tutorial](http://mxnet.io/tutorials/python/predict_imagenet.html) shows how
+[the tutorial](http://mxnet.io/tutorials/python/predict_image.html) shows how
 to classify an image with jupyter notebook.
 
 ### ImageNet 1K

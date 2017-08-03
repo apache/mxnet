@@ -1,14 +1,10 @@
-MXNet R Tutorial on Callback Function
+MXNet R Tutorial for Callback Function
 ======================================
 
 This vignette gives users a guideline for using and writing callback functions,
-which can very useful in model training. 
+which can be very useful in model training. 
 
-This tutorial is written in Rmarkdown.
-
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.io/en/latest/packages/r/CallbackFunctionTutorial.html)
-
-- You can find the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/CallbackFunctionTutorial.Rmd)
+This tutorial is written in Rmarkdown. You can find the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/CallbackFunctionTutorial.Rmd)
 
 Model training example
 ----------
@@ -50,11 +46,12 @@ model <- mx.model.FeedForward.create(
   ctx=mx.cpu(), num.round=10, array.batch.size=20,
   learning.rate=2e-6, momentum=0.9, eval.metric=mx.metric.rmse,
   epoch.end.callback = mx.callback.save.checkpoint("boston"))
+list.files(pattern = "^boston")
 ```
 
 
-- `mx.callback.log.train.metric` is used to log training metric each period. You can use it either as a `batch.end.callback` or a
-`epoch.end.callback`.
+- `mx.callback.log.train.metric` is used to log training metric each period.
+You can use it either as a `batch.end.callback` or a `epoch.end.callback`.
 
 ```{r}
 model <- mx.model.FeedForward.create(
@@ -97,26 +94,25 @@ The `mx.callback.save.checkpoint` function below is stateless. It just get the m
 
 ```{r, eval=FALSE}
 mx.callback.save.checkpoint <- function(prefix, period=1) {
-  function(iteration, nbatch, env, verbose) {
+  function(iteration, nbatch, env, verbose=TRUE) {
     if (iteration %% period == 0) {
       mx.model.save(env$model, prefix, iteration)
-      if(verbose) cat(sprintf("Model checkpoint saved to %s-%04d.params\n", prefix, iteration))
+      if(verbose) message(sprintf("Model checkpoint saved to %s-%04d.params\n", prefix, iteration))
     }
     return(TRUE)
   }
 }
 ```
 
-The `mx.callback.log.train.metric` is a little more complex. It will hold a reference class and update it during the training
-process.
+The `mx.callback.log.train.metric` is a little more complex. It holds a reference class and update it during the training process.
 
 ```{r, eval=FALSE}
 mx.callback.log.train.metric <- function(period, logger=NULL) {
-  function(iteration, nbatch, env, verbose) {
+  function(iteration, nbatch, env, verbose=TRUE) {
     if (nbatch %% period == 0 && !is.null(env$metric)) {
       result <- env$metric$get(env$train.metric)
-      if (nbatch != 0)
-        if(verbose) cat(paste0("Batch [", nbatch, "] Train-", result$name, "=", result$value, "\n"))
+      if (nbatch != 0 & verbose)
+        message(paste0("Batch [", nbatch, "] Train-", result$name, "=", result$value))
       if (!is.null(logger)) {
         if (class(logger) != "mx.metric.logger") {
           stop("Invalid mx.metric.logger.")
@@ -124,8 +120,8 @@ mx.callback.log.train.metric <- function(period, logger=NULL) {
         logger$train <- c(logger$train, result$value)
         if (!is.null(env$eval.metric)) {
           result <- env$metric$get(env$eval.metric)
-          if (nbatch != 0)
-            cat(paste0("Batch [", nbatch, "] Validation-", result$name, "=", result$value, "\n"))
+          if (nbatch != 0 & verbose)
+            message(paste0("Batch [", nbatch, "] Validation-", result$name, "=", result$value))
           logger$eval <- c(logger$eval, result$value)
         }
       }

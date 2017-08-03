@@ -1,5 +1,7 @@
 # Hybrid - Faster training and easy deployment
 
+*Note: a newer version is available [here](http://gluon.mxnet.io/P14-C05-hybridize.html).*
+
 Deep learning frameworks can be roughly divided into two categories: declarative
 and imperative. With declarative frameworks (including Tensorflow, Theano, etc)
 users first declare a fixed computation graph and then execute it end-to-end.
