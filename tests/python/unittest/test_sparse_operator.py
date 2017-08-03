@@ -229,9 +229,25 @@ def test_sparse_square_sum():
                 # check forward result
                 assert same(ret.asnumpy(), ret_expected.asnumpy())
 
+                rsp_data = mx.sym.Variable('data', stype='row_sparse')
+                test = mx._symbol_internal._square_sum(rsp_data, axis=axis, keepdims=keepdim)
+
+                # check symbolic backward since ograd can be a rsp
+                # and cannot be checked through check_numeric_gradient
+                # because it will add a loss layer as the output layer
+                # which makes ograd of the square_sum dense
+                if axis == 1 and keepdims:
+                    dns_data = mx.sym.Variable('data')
+                    baseline = mx.sym.sum(mx.sym.square(dns_data), axis=axis, keepdims=keepdim)
+                    igrad_expected = mx.nd.empty(dns.shape)
+                    baseline_exec = baseline.bind(default_context(), args=[dns],
+                                                  args_grad=[igrad_expected])
+                    baseline_exec.forward(is_train=True)
+                    baseline_exec.backward([ret_expected])
+                    check_symbolic_backward(test, [rsp], [ret], [igrad_expected.asnumpy()],
+                                            grad_stypes={'data': 'row_sparse'})
+
                 # check numeric gradient
-                data = mx.sym.Variable('data', stype='row_sparse')
-                test = mx._symbol_internal._square_sum(data, axis=axis, keepdims=keepdim)
                 check_numeric_gradient(test, [rsp], grad_stype_dict={'data': 'row_sparse'},
                                        atol=1e-2, rtol=0.1)
 
