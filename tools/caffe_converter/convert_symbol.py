@@ -120,6 +120,7 @@ def _parse_proto(prototxt_fname):
     flatten_count = 0
     output_name = ""
     prev_name = None
+    _output_name = {}
 
     # convert reset layers one by one
     for i, layer in enumerate(layers):
@@ -252,6 +253,22 @@ def _parse_proto(prototxt_fname):
         for j in range(len(layer.top)):
             mapping[layer.top[j]] = name
         output_name = name
+        for k in range(len(layer.bottom)):
+            if layer.bottom[k] in _output_name:
+                _output_name[layer.bottom[k]]['count'] = _output_name[layer.bottom[k]]['count']+1
+            else:
+                _output_name[layer.bottom[k]] = {'count':0}
+        for k in range(len(layer.top)):
+            if layer.top[k] in _output_name:
+                _output_name[layer.top[k]]['count'] = _output_name[layer.top[k]]['count']+1
+            else:
+                _output_name[layer.top[k]] = {'count':0, 'name':name}
+
+    output_name = []
+    for i in _output_name:
+        if 'name' in _output_name[i] and _output_name[i]['count'] == 0:
+            output_name.append(_output_name[i]['name'])
+
     return symbol_string, output_name, input_dim
 
 def convert_symbol(prototxt_fname):
@@ -272,8 +289,11 @@ def convert_symbol(prototxt_fname):
     sym, output_name, input_dim = _parse_proto(prototxt_fname)
     exec(sym)                   # pylint: disable=exec-used
     _locals = locals()
-    exec("ret = " + output_name, globals(), _locals)  # pylint: disable=exec-used
-    ret = _locals['ret']
+    ret = []
+    for i in  output_name:
+        exec("ret = " + i, globals(), _locals)  # pylint: disable=exec-used
+        ret.append(_locals['ret'])
+    ret = mx.sym.Group(ret)
     return ret, input_dim
 
 def main():
