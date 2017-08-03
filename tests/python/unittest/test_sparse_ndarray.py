@@ -61,12 +61,13 @@ def test_sparse_nd_copy():
 
     shape = rand_shape_2d()
     shape_3d = rand_shape_3d()
-    check_sparse_nd_copy('row_sparse', 'row_sparse', shape)
-    check_sparse_nd_copy('row_sparse', 'default', shape)
-    check_sparse_nd_copy('default', 'row_sparse', shape)
-    check_sparse_nd_copy('default', 'csr', shape)
+    stypes = ['row_sparse', 'csr']
+    for stype in stypes:
+        check_sparse_nd_copy(stype, 'default', shape)
+        check_sparse_nd_copy('default', stype, shape)
     check_sparse_nd_copy('row_sparse', 'row_sparse', shape_3d)
-
+    check_sparse_nd_copy('row_sparse', 'default', shape_3d)
+    check_sparse_nd_copy('default', 'row_sparse', shape_3d)
 
 def test_sparse_nd_basic():
     def check_sparse_nd_basic_rsp():
@@ -76,6 +77,7 @@ def test_sparse_nd_basic():
         assert(nd._num_aux == 1)
         assert(nd.indices.dtype == np.int64)
         assert(nd.stype == 'row_sparse')
+
     check_sparse_nd_basic_rsp()
 
 
@@ -424,6 +426,8 @@ def test_create_csr():
         assert same(csr_created.data.asnumpy(), data.asnumpy())
         assert same(csr_created.indptr.asnumpy(), indptr.asnumpy())
         assert same(csr_created.indices.asnumpy(), indices.asnumpy())
+        csr_copy = mx.nd.array(csr_created)
+        assert(same(csr_copy.asnumpy(), csr_created.asnumpy()))
 
 
 def test_create_row_sparse():
@@ -439,6 +443,14 @@ def test_create_row_sparse():
         assert rsp_created.stype == 'row_sparse'
         assert same(rsp_created.data.asnumpy(), data.asnumpy())
         assert same(rsp_created.indices.asnumpy(), indices.asnumpy())
+        rsp_copy = mx.nd.array(rsp_created)
+        assert(same(rsp_copy.asnumpy(), rsp_created.asnumpy()))
+
+def test_sparse_nd_empty():
+    stypes = ['csr', 'row_sparse', 'default']
+    for stype in stypes:
+        nd = mx.nd.empty((2,2), stype=stype)
+        assert(nd.stype == stype)
 
 
 if __name__ == '__main__':

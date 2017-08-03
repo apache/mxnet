@@ -1,10 +1,11 @@
 # coding: utf-8
-"""Utility functions for NDArray and SparseNDArray."""
+"""Utility functions for NDArray and BaseSparseNDArray."""
 import ctypes
 
 from ..base import _LIB, check_call, py_str, c_str, string_types, mx_uint, NDArrayHandle, c_array
-from .ndarray import NDArray, _zeros_ndarray
-from .sparse_ndarray import _ndarray_cls, _zeros_sparse_ndarray
+from .ndarray import NDArray, _zeros_ndarray, _empty_ndarray, _array
+from .sparse_ndarray import _zeros_sparse_ndarray, _empty_sparse_ndarray, _sparse_array
+from .sparse_ndarray import _ndarray_cls
 
 
 def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
@@ -21,12 +22,12 @@ def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
     stype: string, optional
         The storage type of the empty array, such as 'row_sparse', 'csr', etc
     aux_types: list of numpy.dtype, optional
-        An optional type for the aux data for SparseNDArray (default values depends
-        on the storage type)
+        An optional type for the aux data for the BaseSparseNDArray (default values
+        depends on the storage type)
 
     Returns
     -------
-    SparseNDArray
+    NDArray, CSRNDArray or RowSparseNDArray
         A created array
     Examples
     --------
@@ -36,11 +37,90 @@ def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
     array([[ 0.,  0.]], dtype=float16)
     """
 
-    if stype is None:
+    if stype is None or stype == 'default':
         return _zeros_ndarray(shape, ctx, dtype, **kwargs)
     else:
         return _zeros_sparse_ndarray(stype, shape, ctx, dtype, aux_types, **kwargs)
 
+def empty(shape, ctx=None, dtype=None, stype=None, aux_types=None):
+    """Returns a new array of given shape and type, without initializing entries.
+
+    Parameters
+    ----------
+    shape : int or tuple of int
+        The shape of the empty array.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+    dtype : str or numpy.dtype, optional
+        An optional value type (default is `float32`).
+    stype : str, optional
+        An optional storage type (default is `default`).
+    aux_types: list of numpy.dtype, optional
+        An optional type for the aux data for the BaseSparseNDArray (default values depends
+        on the storage type)
+
+    Returns
+    -------
+    NDArray, CSRNDArray or RowSparseNDArray
+        A created array.
+
+    Examples
+    --------
+    >>> mx.nd.empty(1)
+    <NDArray 1 @cpu(0)>
+    >>> mx.nd.empty((1,2), mx.gpu(0))
+    <NDArray 1x2 @gpu(0)>
+    >>> mx.nd.empty((1,2), mx.gpu(0), 'float16')
+    <NDArray 1x2 @gpu(0)>
+    >>> mx.nd.empty((1,2), stype='csr')
+    <CSRNDArray 1x2 @cpu(0)>
+    """
+    if stype is None or stype == 'default':
+        return _empty_ndarray(shape, ctx, dtype)
+    else:
+        return _empty_sparse_ndarray(stype, shape, ctx, dtype, aux_types)
+
+def array(source_array, ctx=None, dtype=None, aux_types=None):
+    """Creates an array from any object exposing the array interface.
+
+    Parameters
+    ----------
+    source_array : array_like
+        An object exposing the array interface, an object whose `__array__`
+        method returns an array, or any (nested) sequence.
+    ctx : Context, optional
+        Device context (default is the current default context).
+    dtype : str or numpy.dtype, optional
+        The data type of the output array. The default dtype is ``source_array.dtype``
+        if `source_array` is an `NDArray`, `float32` otherwise.
+    aux_types: list of numpy.dtype, optional
+        An optional type for the aux data for the BaseSparseNDArray (default values
+        depends on the storage type)
+
+    Returns
+    -------
+    NDArray, RowSparseNDArray or CSRNDArray
+        An array with the same contents as the `source_array`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> mx.nd.array([1, 2, 3])
+    <NDArray 3 @cpu(0)>
+    >>> mx.nd.array([[1, 2], [3, 4]])
+    <NDArray 2x2 @cpu(0)>
+    >>> mx.nd.array(np.zeros((3, 2)))
+    <NDArray 3x2 @cpu(0)>
+    >>> mx.nd.array(np.zeros((3, 2)), mx.gpu(0))
+    <NDArray 3x2 @gpu(0)>
+    >>> mx.nd.array(mx.nd.zeros((3, 2), stype='row_sparse'))
+    <RowSparseNDArray 3x2 @cpu(0)>
+    """
+    # TODO(haibin/anisub) Check if input is scipy.sparse object with `scipy.sparse.issparse`
+    if isinstance(source_array, NDArray) and source_array.stype != 'default':
+        return _sparse_array(source_array, ctx=ctx, dtype=dtype, aux_types=aux_types)
+    else:
+        return _array(source_array, ctx=ctx, dtype=dtype)
 
 def load(fname):
     """Loads an array from file.
@@ -54,7 +134,8 @@ def load(fname):
 
     Returns
     -------
-    list of NDArray or dict of str to NDArray
+    list of NDArray, RowSparseNDArray or CSRNDArray, or \
+    dict of str to NDArray, RowSparseNDArray or CSRNDArray
         Loaded data.
     """
     if not isinstance(fname, string_types):
@@ -90,7 +171,9 @@ def save(fname, data):
     ----------
     fname : str
         The filename.
-    data : ``NDArray``, list of ``NDArray` or dict of str to ``NDArray``
+    data : NDArray, RowSparseNDArray or CSRNDArray, \
+           or list of NDArray, RowSparseNDArray or CSRNDArray, \
+           or dict of str to NDArray, RowSparseNDArray or CSRNDArray
         The data to save.
 
     Examples

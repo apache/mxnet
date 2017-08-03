@@ -23,7 +23,8 @@ except ImportError:
     pass
 import mxnet as mx
 from .context import Context
-from .ndarray.ndarray import array, _STORAGE_TYPE_STR_TO_ID
+from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
+from .ndarray import array
 from .symbol import Symbol
 
 _rng = np.random.RandomState(1234)
