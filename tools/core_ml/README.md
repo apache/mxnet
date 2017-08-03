@@ -31,7 +31,12 @@ python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --in
 
 
 ### Adding a pre-processing to CoreML model.
-TODO
+You could ask CoreML to pre-process the images before passing them through the model.
+
+```bash
+python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,224,224"}' --pre-processing-arguments='{"red_bias":127,"blue_bias":117,"green_bias":103}' --output-file="squeezenet_v11.mlmodel"
+```
+
 
 ## Currently supported
 ### Models
