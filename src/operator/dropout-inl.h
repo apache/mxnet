@@ -104,7 +104,7 @@ class DropoutOp : public Operator {
       bernoulli_generate(count, this->pkeep_, maskptr);
   #pragma omp parallel for
       for (int i = 0; i < count; ++i) {
-        outptr[i] = dataptr[i] * maskptr[i];
+        outptr[i] = dataptr[i] * maskptr[i] * (1.0f / pkeep_);
       }
 #else
       Random<xpu> *prnd = ctx.requested[dropout::kRandom].get_random<xpu, real_t>(s);
@@ -142,7 +142,7 @@ class DropoutOp : public Operator {
 
       #pragma omp parallel for
       for (int i = 0; i < count; ++i) {
-        ingradptr[i] = outgradptr[i] * maskptr[i];
+        ingradptr[i] = outgradptr[i] * maskptr[i] * (1.0f / pkeep_);
       }
 #else  // USE_MKL && _OPENMP
       Assign(gdata, req[dropout::kData], grad * mask);
