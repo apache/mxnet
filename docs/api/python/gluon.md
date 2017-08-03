@@ -151,6 +151,27 @@ in Python and then deploy with symbolic graph in C++ and Scala.
 ```
 
 
+
+## Autograd
+
+```eval_rst
+.. currentmodule:: mxnet.autograd
+```
+
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    record
+    pause
+    mark_variables
+    backward
+    set_training
+    set_recording
+```
+
+
 ## Loss functions
 
 ```eval_rst
