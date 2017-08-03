@@ -41,14 +41,14 @@ if __name__ == '__main__':
              "When mode=None (default), a CoreML NeuralNetwork will be constructed."
     )
     parser.add_argument(
-        '--force', required=False, type=bool, default=False,
-        help="Causes forced conversion of MXNet model.  As a default, this converter doesn't"
-             "convert models that are not supported by CoreML one-to-one. This flag allows"
-             "you to override that."
-    )
-    parser.add_argument(
         '--class-labels', required=False, type=str, default=None,
         help="As a string it represents the name of the file which contains the classification labels (synset file)."
+    )
+    parser.add_argument(
+        '--pre-processing-arguments', required=False, type=str, default=None,
+        help="The parameters in the dictionary tell the converted coreml model how to pre-process any input "
+             "before an inference is run on it. For the list of pre-processing arguments see https://goo.gl/GzFe86"
+             "e.g. --pre-processing-arguments='{\"red_bias\": 127, \"blue_bias\":117, \"green_bias\": 103}'"
     )
 
     # TODO
@@ -64,7 +64,6 @@ if __name__ == '__main__':
     epoch_num = args.epoch
     output_file = args.output_file
     mode = args.mode
-    force = args.force
     class_labels=args.class_labels
 
     # parse the input data name/shape and label name/shape
@@ -79,6 +78,8 @@ if __name__ == '__main__':
     # if label name is not in input then do not use the label
     label_names = [args.label_names,] if args.label_names in input_shape else None
 
+    pre_processing_arguments = args.pre_processing_arguments
+
     mod = load_model(
         model_name=model_name,
         epoch_num=epoch_num,
@@ -87,6 +88,10 @@ if __name__ == '__main__':
         label_names=label_names
     )
 
-    coreml_model = convert(model=mod, force=force, mode=mode, class_labels=class_labels, **input_shape)
+    kwargs = {'input_shape': input_shape}
+    if pre_processing_arguments is not None:
+        kwargs['preprocessor_args'] = yaml.safe_load(pre_processing_arguments)
+
+    coreml_model = convert(model=mod, mode=mode, class_labels=class_labels, **kwargs)
     coreml_model.save(output_file)
     print("\nSUCCESS\nModel %s has been converted and saved at %s\n" % (model_name, output_file))

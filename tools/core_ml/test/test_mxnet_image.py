@@ -48,7 +48,7 @@ def is_correct_top_five(predict, label):
 
 
 class ImageNetTest(unittest.TestCase):
-    def _test_image_prediction(self, model_name, epoch, label_name, force=False):
+    def _test_image_prediction(self, model_name, epoch, label_name):
         try:
             data = read_image(VAL_DATA, label_name=label_name)
         except:
@@ -64,7 +64,7 @@ class ImageNetTest(unittest.TestCase):
         )
 
         input_shape = (1, 3, 224, 224)
-        coreml_model = mxnet_converter.convert(mod, data=input_shape, force=force)
+        coreml_model = mxnet_converter.convert(mod, input_shape={'data': input_shape})
 
         mxnet_acc = []
         mxnet_top_5_acc = []
@@ -103,15 +103,15 @@ class ImageNetTest(unittest.TestCase):
 
     def test_inception_with_batch_normalization(self):
         print "Testing Image Classification with Inception/BatchNorm"
-        self._test_image_prediction(model_name='Inception-BN', epoch=126, label_name='softmax_label', force=True)
+        self._test_image_prediction(model_name='Inception-BN', epoch=126, label_name='softmax_label')
 
     def test_resnet18(self):
         print "Testing Image Classification with ResNet18"
-        self._test_image_prediction(model_name='resnet-18', epoch=0, label_name='softmax_label', force=True)
+        self._test_image_prediction(model_name='resnet-18', epoch=0, label_name='softmax_label')
 
     def test_vgg16(self):
         print "Testing Image Classification with vgg16"
-        self._test_image_prediction(model_name='vgg16', epoch=0, label_name='prob_label', force=True)
+        self._test_image_prediction(model_name='vgg16', epoch=0, label_name='prob_label')
 
 
 if __name__ == '__main__':

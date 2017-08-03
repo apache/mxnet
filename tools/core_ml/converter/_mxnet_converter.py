@@ -80,7 +80,7 @@ def _get_layer_converter_fn(layer):
         raise TypeError("MXNet layer of type %s is not supported." % layer)
 
 
-def convert(model, order = None, class_labels = None, mode = None, force = False, **kwargs):
+def convert(model, input_shape, order = None, class_labels = None, mode = None, preprocessor_args = None):
     """Convert an MXNet model to the protobuf spec.
 
     Parameters
@@ -99,14 +99,9 @@ def convert(model, order = None, class_labels = None, mode = None, force = False
         When mode = 'classifier', a NeuralNetworkClassifier spec will be constructed.
         When mode = 'regressor', a NeuralNetworkRegressor spec will be constructed.
 
-    force: (True|False).
-        Causes forced conversion of MXNet model. As a default, this converter doesn't
-        convert models that are not supported by CoreML one-to-one. This flag allows
-        you to override that.
-
     **kwargs :
         Provide keyword arguments for:
-        - input shapes.
+        - input shapes. Supplied as a dictionary object with keyword "input_shape".
         - pre-processing arguments: Supplied as a dictionary object with keyword "preprocessor_args". The parameters in the dictionary
             tell the converted coreml model how to pre-process any input before an inference is run on it.
             For the list of pre-processing arguments see
@@ -116,26 +111,25 @@ def convert(model, order = None, class_labels = None, mode = None, force = False
     -------
     model: A coreml model.
     """
-
-    if not kwargs:
-        raise TypeError("Must provide input shape to be able to perform conversion")
+    if not isinstance(input_shape, dict):
+         raise TypeError("Must provide a dictionary for input shape. e.g input_shape={'data':(3,224,224)}")
 
     def remove_batch(dim):
         return dim[1:]
 
     if order is None:
-        input_names = kwargs.keys()
-        input_dims  = map(remove_batch, kwargs.values())
+        input_names = input_shape.keys()
+        input_dims  = map(remove_batch, input_shape.values())
     else:
-        names = kwargs.keys()
-        shapes = map(remove_batch, kwargs.values())
+        names = input_shape.keys()
+        shapes = map(remove_batch, input_shape.values())
         input_names = [names[i] for i in order]
         input_dims = [shapes[i] for i in order]
 
     net = model.symbol
 
     # Infer shapes and store in a dictionary
-    shapes = net.infer_shape(**kwargs)
+    shapes = net.infer_shape(**input_shape)
     arg_names = net.list_arguments()
     output_names = net.list_outputs()
     aux_names = net.list_auxiliary_states()
@@ -198,14 +192,14 @@ def convert(model, order = None, class_labels = None, mode = None, force = False
         name = node['name']
         print("%d : %s, %s" % (idx, name, op))
         converter_func = _get_layer_converter_fn(op)
-        converter_func(net, node, model, force, builder)
+        converter_func(net, node, model, builder)
 
     # Set the right inputs and outputs
     _set_input_output_layers(builder, input_names, output_names)
     builder.set_input(input_names, input_dims)
     builder.set_output(output_names, output_dims)
-    if "preprocessor_args" in kwargs:
-        builder.set_pre_processing_parameters(**kwargs['preprocessor_args'])
+    if preprocessor_args is not None:
+        builder.set_pre_processing_parameters(**preprocessor_args)
 
     if class_labels is not None:
         if type(class_labels) is str:

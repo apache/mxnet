@@ -36,7 +36,7 @@ def _get_node_shape(net, node_id):
 # Do vanilla (0.9 mxnet) lstm, gru, vanilla_rnn
 
 
-def convert_reshape(net, node, module, force, builder):
+def convert_reshape(net, node, module, builder):
     """Converts a reshape layer from mxnet to coreml.
 
     This doesn't currently handle the deprecated parameters for the reshape layer.
@@ -51,11 +51,6 @@ def convert_reshape(net, node, module, force, builder):
 
     module: module
         A module for MXNet
-
-    force: boolean
-        Force convert the layer if there is no one-to-one correspondence to the CoreML layer.
-        This may cause differences in the way CoreML layers behave compared to those of MXNet
-        and therefore the predictions may be (slightly?) different.
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
@@ -77,7 +72,7 @@ def convert_reshape(net, node, module, force, builder):
     builder.add_reshape(name, input_name, output_name, target_shape, mode)
 
 
-def convert_transpose(net, node, module, force, builder):
+def convert_transpose(net, node, module, builder):
     """Convert a transpose layer from mxnet to coreml.
 
     Parameters
@@ -91,11 +86,6 @@ def convert_transpose(net, node, module, force, builder):
     module: module
         An module for MXNet
 
-    force: boolean
-        Force convert the layer if there is no one-to-one correspondence to the CoreML layer.
-        This may cause differences in the way CoreML layers behave compared to those of MXNet
-        and therefore the predictions may be (slightly?) different.
-
     builder: NeuralNetworkBuilder
         A neural network builder object.
     """
@@ -107,7 +97,7 @@ def convert_transpose(net, node, module, force, builder):
     builder.add_permute(name, axes, input_name, output_name)
 
 
-def convert_flatten(net, node, module, force, builder):
+def convert_flatten(net, node, module, builder):
     """Convert a flatten layer from mxnet to coreml.
 
     Parameters
@@ -121,11 +111,6 @@ def convert_flatten(net, node, module, force, builder):
     module: module
         An module for MXNet
 
-    force: boolean
-        Force convert the layer if there is no one-to-one correspondence to the CoreML layer.
-        This may cause differences in the way CoreML layers behave compared to those of MXNet
-        and therefore the predictions may be (slightly?) different.
-
     builder: NeuralNetworkBuilder
         A neural network builder object.
     """
@@ -135,7 +120,7 @@ def convert_flatten(net, node, module, force, builder):
     builder.add_flatten(name, mode, input_name, output_name)
 
 
-def convert_softmax(net, node, module, force, builder):
+def convert_softmax(net, node, module, builder):
     """Convert a softmax layer from mxnet to coreml.
 
     Parameters
@@ -149,11 +134,6 @@ def convert_softmax(net, node, module, force, builder):
     module: module
         An module for MXNet
 
-    force: boolean
-        Force convert the layer if there is no one-to-one correspondence to the CoreML layer.
-        This may cause differences in the way CoreML layers behave compared to those of MXNet
-        and therefore the predictions may be (slightly?) different.
-
     builder: NeuralNetworkBuilder
         A neural network builder object.
     """
@@ -164,7 +144,7 @@ def convert_softmax(net, node, module, force, builder):
                         output_name=output_name)
 
 
-def convert_activation(net, node, module, force, builder):
+def convert_activation(net, node, module, builder):
     """Convert an activation layer from mxnet to coreml.
 
     Parameters
@@ -177,11 +157,6 @@ def convert_activation(net, node, module, force, builder):
 
     module: module
         An module for MXNet
-
-    force: boolean
-        Force convert the layer if there is no one-to-one correspondence to the CoreML layer.
-        This may cause differences in the way CoreML layers behave compared to those of MXNet
-        and therefore the predictions may be (slightly?) different.
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
@@ -204,7 +179,7 @@ def convert_activation(net, node, module, force, builder):
                            output_name = output_name)
 
 
-def convert_elementwise_add(net, node, module, force, builder):
+def convert_elementwise_add(net, node, module, builder):
     """Convert an elementwise add layer from mxnet to coreml.
 
     Parameters
@@ -218,11 +193,6 @@ def convert_elementwise_add(net, node, module, force, builder):
     module: module
         An module for MXNet
 
-    force: boolean
-        Force convert the layer if there is no one-to-one correspondence to the CoreML layer.
-        This may cause differences in the way CoreML layers behave compared to those of MXNet
-        and therefore the predictions may be (slightly?) different.
-
     builder: NeuralNetworkBuilder
         A neural network builder object.
     """
@@ -233,7 +203,7 @@ def convert_elementwise_add(net, node, module, force, builder):
     builder.add_elementwise(name, input_names, output_name, 'ADD')
 
 
-def convert_dense(net, node, module, force, builder):
+def convert_dense(net, node, module, builder):
     """Convert a dense layer from mxnet to coreml.
 
     Parameters
@@ -246,11 +216,6 @@ def convert_dense(net, node, module, force, builder):
 
     module: module
         An module for MXNet
-
-    force: boolean
-        Force convert the layer if there is no one-to-one correspondence to the CoreML layer.
-        This may cause differences in the way CoreML layers behave compared to those of MXNet
-        and therefore the predictions may be (slightly?) different.
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
@@ -280,7 +245,7 @@ def convert_dense(net, node, module, force, builder):
     )
 
 
-def convert_convolution(net, node, module, force, builder):
+def convert_convolution(net, node, module, builder):
     """Convert a convolution layer from mxnet to coreml.
 
     Parameters
@@ -293,11 +258,6 @@ def convert_convolution(net, node, module, force, builder):
 
     module: module
         An module for MXNet
-
-    force: boolean
-        Force convert the layer if there is no one-to-one correspondence to the CoreML layer.
-        This may cause differences in the way CoreML layers behave compared to those of MXNet
-        and therefore the predictions may be (slightly?) different.
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
@@ -361,7 +321,7 @@ def convert_convolution(net, node, module, force, builder):
         output_name=output_name)
 
 
-def convert_pooling(net, node, module, force, builder):
+def convert_pooling(net, node, module, builder):
     """Convert a pooling layer from mxnet to coreml.
 
     Parameters
@@ -374,11 +334,6 @@ def convert_pooling(net, node, module, force, builder):
 
     module: module
         An module for MXNet
-
-    force: boolean
-        Force convert the layer if there is no one-to-one correspondence to the CoreML layer.
-        This may cause differences in the way CoreML layers behave compared to those of MXNet
-        and therefore the predictions may be (slightly?) different.
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
@@ -425,7 +380,7 @@ def convert_pooling(net, node, module, force, builder):
         poolingLayer.valid.paddingAmounts.borderAmounts[i].endEdgeSize = pad[i]
 
 
-def convert_batchnorm(net, node, module, force, builder):
+def convert_batchnorm(net, node, module, builder):
     """Convert a transpose layer from mxnet to coreml.
 
     Parameters
@@ -438,11 +393,6 @@ def convert_batchnorm(net, node, module, force, builder):
 
     module: module
         An module for MXNet
-
-    force: boolean
-        Force convert the layer if there is no one-to-one correspondence to the CoreML layer.
-        This may cause differences in the way CoreML layers behave compared to those of MXNet
-        and therefore the predictions may be (slightly?) different.
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
@@ -459,11 +409,6 @@ def convert_batchnorm(net, node, module, force, builder):
             eps = literal_eval(node['attr']['eps'])
         if 'use_global_stats' in node['attr']:
             use_global_stats = literal_eval(node['attr']['use_global_stats'])
-
-    if use_global_stats is False and force is False:
-        raise Exception("CoreML doesn't support local batch-norm. Feel free to retrain your MXNet model "
-                "with use_global_stats set to True and convert again. You could also use force flag while converting "
-                "to ignore this error; note that this may cause some differences in prediction b/w MXNet and CoreML.")
 
     args, aux = module.get_params()
     gamma = args[_get_node_name(net, inputs[1][0])].asnumpy()
@@ -483,7 +428,7 @@ def convert_batchnorm(net, node, module, force, builder):
         epsilon=eps)
 
 
-def convert_concat(net, node, module, force, builder):
+def convert_concat(net, node, module, builder):
     """Convert concat layer from mxnet to coreml.
 
     Parameters
@@ -497,11 +442,6 @@ def convert_concat(net, node, module, force, builder):
     module: module
         An module for MXNet
 
-    force: boolean
-        Force convert the layer if there is no one-to-one correspondence to the CoreML layer.
-        This may cause differences in the way CoreML layers behave compared to those of MXNet
-        and therefore the predictions may be (slightly?) different.
-
     builder: NeuralNetworkBuilder
         A neural network builder object.
     """
@@ -513,7 +453,7 @@ def convert_concat(net, node, module, force, builder):
             output_name = output_name, mode = mode)
 
 
-def convert_deconvolution(net, node, module, force, builder):
+def convert_deconvolution(net, node, module, builder):
     """Convert a deconvolution layer from mxnet to coreml.
 
     Parameters
@@ -526,11 +466,6 @@ def convert_deconvolution(net, node, module, force, builder):
 
     module: module
         An module for MXNet
-
-    force: boolean
-        Force convert the layer if there is no one-to-one correspondence to the CoreML layer.
-        This may cause differences in the way CoreML layers behave compared to those of MXNet
-        and therefore the predictions may be (slightly?) different.
 
     builder: NeuralNetworkBuilder
         A neural network builder object.
