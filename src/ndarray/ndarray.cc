@@ -69,6 +69,7 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
   using namespace autograd;
   NDArray ret = *this;
   CHECK(!is_none()) << "NDArray is not initialized";
+  CHECK_LT(begin, end) << "Invalid slicing range [" << begin << ", " << end << ")";
   CHECK_GE(shape_[0], end) << "Slice end index out of range";
   size_t length = shape_.ProdShape(1, shape_.ndim());
   MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {

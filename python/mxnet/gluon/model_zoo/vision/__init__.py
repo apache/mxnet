@@ -102,5 +102,8 @@ def get_model(name, **kwargs):
               'inceptionv3': inception_v3,
              }
     name = name.lower()
-    assert name in models, 'Model %s is not supported'%name
+    if name not in models:
+        raise ValueError(
+            'Model %s is not supported. Available options are\n\t%s'%(
+                name, '\n\t'.join(sorted(models.keys()))))
     return models[name](**kwargs)

@@ -79,18 +79,6 @@ class Executor {
   */
   std::string DebugStr();
   /*!
-  * \brief update the arguments with given learning rate and optimizer
-  * \param opt the pointer to the optimizer
-  * \param lr learning rate
-  * \param wd weight decay
-  * \param arg_update_begin begin index of the arguments to be updated, it
-  * starts after the input data by default
-  * \param arg_update_end end index of the arguments to be updated, it ends
-  * before the label data by default
-  */
-  void UpdateAll(Optimizer *opt, float lr, float wd, int arg_update_begin = 1,
-                 int arg_update_end = -1);
-  /*!
   * \brief destructor, free the handle
   */
   ~Executor() { MXExecutorFree(handle_); }

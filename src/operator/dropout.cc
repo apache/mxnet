@@ -33,7 +33,8 @@ MXNET_REGISTER_OP_PROPERTY(Dropout, DropoutProp)
   The whole array is rescaled by :math:`1/(1-p)` to keep the expected
   sum of the input unchanged.
 
-- During testing, this operator does not change the input.
+- During testing, this operator does not change the input if mode is 'training'.
+  If mode is 'always', the same computaion as during training will be applied.
 
 Example::
 
