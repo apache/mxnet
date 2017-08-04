@@ -22,7 +22,7 @@ __all__ = ['get_model_file', 'purge']
 import os
 import zipfile
 
-from ..utils import download, verified_sha1
+from ..utils import download, check_sha1
 
 _model_sha1 = {name: checksum for checksum, name in [
     ('44335d1f0046b328243b32a26a4fbd62d9057b45', 'alexnet'),
@@ -76,9 +76,9 @@ def get_model_file(name, local_dir=os.path.expanduser('~/.mxnet/models/')):
     file_name = '{name}-{short_hash}'.format(name=name,
                                              short_hash=short_hash(name))
     file_path = os.path.join(local_dir, file_name+'.params')
-    sha1hex = _model_sha1[name]
+    sha1_hash = _model_sha1[name]
     if os.path.exists(file_path):
-        if verified_sha1(file_path, sha1hex):
+        if check_sha1(file_path, sha1_hash):
             return file_path
         else:
             print('Mismatch in the content of model file detected. Downloading again.')
@@ -97,7 +97,7 @@ def get_model_file(name, local_dir=os.path.expanduser('~/.mxnet/models/')):
         zf.extractall(local_dir)
     os.remove(zip_file_path)
 
-    if verified_sha1(file_path, sha1hex):
+    if check_sha1(file_path, sha1_hash):
         return file_path
     else:
         raise ValueError('Downloaded file has different hash. Please try again.')

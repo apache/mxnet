@@ -26,7 +26,7 @@ import struct
 import numpy as np
 
 from . import dataset
-from ..utils import download, verified_sha1
+from ..utils import download, check_sha1
 from ... import nd
 
 
@@ -77,14 +77,14 @@ class MNIST(_DownloadedDataset):
         url = 'http://data.mxnet.io/data/mnist/'
         if self._train:
             data_file = download(url+'train-images-idx3-ubyte.gz', self._root,
-                                 sha1hex='6c95f4b05d2bf285e1bfb0e7960c31bd3b3f8a7d')
+                                 sha1_hash='6c95f4b05d2bf285e1bfb0e7960c31bd3b3f8a7d')
             label_file = download(url+'train-labels-idx1-ubyte.gz', self._root,
-                                  sha1hex='2a80914081dc54586dbdf242f9805a6b8d2a15fc')
+                                  sha1_hash='2a80914081dc54586dbdf242f9805a6b8d2a15fc')
         else:
             data_file = download(url+'t10k-images-idx3-ubyte.gz', self._root,
-                                 sha1hex='c3a25af1f52dad7f726cce8cacb138654b760d48')
+                                 sha1_hash='c3a25af1f52dad7f726cce8cacb138654b760d48')
             label_file = download(url+'t10k-labels-idx1-ubyte.gz', self._root,
-                                  sha1hex='763e7fa3757d93b0cdec073cef058b2004252c17')
+                                  sha1_hash='763e7fa3757d93b0cdec073cef058b2004252c17')
 
         with gzip.open(label_file, 'rb') as fin:
             struct.unpack(">II", fin.read(8))
@@ -138,10 +138,11 @@ class CIFAR10(_DownloadedDataset):
 
         file_paths = [(name, os.path.join(self._root, 'cifar-10-batches-bin/', name))
                       for name in self._file_hashes]
-        if any(not os.path.exists(path) or not verified_sha1(path, self._file_hashes[name])
+        if any(not os.path.exists(path) or not check_sha1(path, self._file_hashes[name])
                for name, path in file_paths):
             url = 'https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz'
-            filename = download(url, self._root, sha1hex='e8aa088b9774a44ad217101d2e2569f823d2d491')
+            filename = download(url, self._root,
+                                sha1_hash='e8aa088b9774a44ad217101d2e2569f823d2d491')
 
             with tarfile.open(filename) as tar:
                 tar.extractall(self._root)

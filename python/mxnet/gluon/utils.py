@@ -137,14 +137,14 @@ def _indent(s_, numSpaces):
     return s
 
 
-def verified_sha1(file_path, sha1hex):
+def check_sha1(filename, sha1_hash):
     """Check whether the sha1 hash of the file content matches the expected hash.
 
     Parameters
     ----------
-    file_path : str
+    filename : str
         Path to the file.
-    sha1hex : str
+    sha1_hash : str
         Expected sha1 hash in hexadecimal digits.
 
     Returns
@@ -153,17 +153,17 @@ def verified_sha1(file_path, sha1hex):
         Whether the file content matches the expected hash.
     """
     sha1 = hashlib.sha1()
-    with open(file_path, 'rb') as f:
+    with open(filename, 'rb') as f:
         while True:
             data = f.read(1048576)
             if not data:
                 break
             sha1.update(data)
 
-    return sha1.hexdigest() == sha1hex
+    return sha1.hexdigest() == sha1_hash
 
 
-def download(url, path=None, overwrite=False, sha1hex=None):
+def download(url, path=None, overwrite=False, sha1_hash=None):
     """Download an given URL
 
     Parameters
@@ -175,7 +175,7 @@ def download(url, path=None, overwrite=False, sha1hex=None):
         current directory with same name as in url.
     overwrite : bool, optional
         Whether to overwrite destination file if already exists.
-    sha1hex : str, optional
+    sha1_hash : str, optional
         Expected sha1 hash in hexadecimal digits. Will ignore existing file when hash is specified
         but doesn't match.
 
@@ -191,7 +191,7 @@ def download(url, path=None, overwrite=False, sha1hex=None):
     else:
         fname = path
 
-    if overwrite or not os.path.exists(fname) or (sha1hex and not verified_sha1(fname, sha1hex)):
+    if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
             os.makedirs(dirname)
