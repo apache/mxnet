@@ -95,9 +95,8 @@ class CuDNNConvolutionOp : public Operator {
     CHECK_EQ(out_data.size(), 1U);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     GetTempSize(ctx);
-    Tensor<gpu, 1, DType> workspace =
-        ctx.requested[conv::kTempSpace].get_space_typed<gpu, 1, DType>(
-            mshadow::Shape1(forward_workspace_), s);
+    Tensor<gpu, 1, DType> workspace = AllocateTempWorkspace(ctx, forward_workspace_byte_);
+    size_t workspace_size = TensorSizeBytes(workspace);
 
     if (param_.kernel.ndim() == 2) {
       Tensor<gpu, 4, DType> data = in_data[conv::kData].get<gpu, 4, DType>(s);
@@ -133,7 +132,7 @@ class CuDNNConvolutionOp : public Operator {
                                        forward_conv_desc_,
                                        algo_,
                                        workspace.dptr_,
-                                       forward_workspace_byte_,
+                                       workspace_size,
                                        req[conv::kOut] == kAddTo? &beta_add : &beta,
                                        out_desc_,
                                        out_ptr + out_offset_ * g));
@@ -203,9 +202,8 @@ class CuDNNConvolutionOp : public Operator {
       data_ptr = data.dptr_;
       gdata_ptr = gdata.dptr_;
     }
-    Tensor<gpu, 1, DType> workspace =
-      ctx.requested[conv::kTempSpace].get_space_typed<gpu, 1, DType>(
-      mshadow::Shape1(backward_workspace_), s);
+    Tensor<gpu, 1, DType> workspace = AllocateTempWorkspace(ctx, backward_workspace_byte_);
+    size_t workspace_size = TensorSizeBytes(workspace);
     for (uint32_t g = 0; g < param_.num_group; ++g) {
       typename DataType<DType>::ScaleType alpha = 1.0f;
       typename DataType<DType>::ScaleType beta = 0.0f;
@@ -231,7 +229,7 @@ class CuDNNConvolutionOp : public Operator {
                backward_conv_desc_,
                back_algo_w_,
                workspace.dptr_,
-               backward_workspace_byte_,
+               workspace_size,
                req[conv::kWeight] == kAddTo? &beta_add : &beta,
                filter_desc_,
                gwmat_ptr + weight_offset_ * g));
@@ -245,7 +243,7 @@ class CuDNNConvolutionOp : public Operator {
                backward_conv_desc_,
                back_algo_w_,
                workspace.dptr_,
-               backward_workspace_byte_,
+               workspace_size,
                req[conv::kWeight] == kAddTo? &beta_add : &beta,
                filter_desc_,
                gwmat_ptr + weight_offset_ * g));
@@ -262,7 +260,7 @@ class CuDNNConvolutionOp : public Operator {
                backward_conv_desc_,
                back_algo_,
                workspace.dptr_,
-               backward_workspace_byte_,
+               workspace_size,
                req[conv::kData] == kAddTo? &beta_add : &beta,
                in_desc_,
                gdata_ptr + data_offset_ * g));
@@ -276,7 +274,7 @@ class CuDNNConvolutionOp : public Operator {
                backward_conv_desc_,
                back_algo_,
                workspace.dptr_,
-               backward_workspace_byte_,
+               workspace_size,
                req[conv::kData] == kAddTo? &beta_add : &beta,
                in_desc_,
                gdata_ptr + data_offset_ * g));
@@ -667,8 +665,6 @@ class CuDNNConvolutionOp : public Operator {
                algo_,
                &forward_workspace_byte_));
 
-    forward_workspace_ = forward_workspace_byte_ / sizeof(DType) + 1;
-    backward_workspace_ = backward_workspace_byte_ / sizeof(DType) + 1;
     init_temp_size_ = true;
   }
 
@@ -684,15 +680,29 @@ class CuDNNConvolutionOp : public Operator {
     CastTShapeToIntPtr(param_.pad, &param_pad_);
   }
 
+  // Allocates a 1D Tensor of words with size in bytes >= `size_bytes`.
+  // Always allocates at least one word.
+  mshadow::Tensor<gpu, 1, DType> AllocateTempWorkspace(const OpContext &ctx, size_t size_bytes) {
+    mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+    size_t size_words = size_bytes / sizeof(DType) + 1;
+    return ctx.requested[conv::kTempSpace].get_space_typed<gpu, 1, DType>(
+        mshadow::Shape1(size_words), s);
+  }
+
+  // Returns the size in bytes of the 1D Tensor of words.
+  size_t TensorSizeBytes(const mshadow::Tensor<gpu, 1, DType> &tensor) {
+    return tensor.MSize() * sizeof(DType);
+  }
+
   std::vector<int> param_stride_;
   std::vector<int> param_dilate_;
   std::vector<int> param_pad_;
 
   bool init_cudnn_;
   bool init_temp_size_;
-  size_t forward_workspace_;
-  size_t backward_workspace_;
+  // Temp workspace size in bytes needed for Forward() operation.
   size_t forward_workspace_byte_;
+  // Temp workspace size in bytes needed for Backward() operation.
   size_t backward_workspace_byte_;
   size_t data_offset_;
   size_t out_offset_;
