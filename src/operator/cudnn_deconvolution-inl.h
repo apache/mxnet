@@ -39,7 +39,7 @@ class CuDNNDeconvolutionOp : public Operator {
     init_temp_size_ = false;
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
     // TensorCore algos only allowed on fp16-I/O deconvolutions if permitted by the global policy.
-    cudnn_tensor_core = DataType<DType>::kFlag == kFloat16 && GetEnvAllowTensorCore();
+    cudnn_tensor_core_ = DataType<DType>::kFlag == kFloat16 && GetEnvAllowTensorCore();
 
 #if CUDNN_MAJOR >= 5
     MSHADOW_LAYOUT_SWITCH(param_.layout.value(), Layout, {
@@ -527,7 +527,7 @@ class CuDNNDeconvolutionOp : public Operator {
     }
     // Set "allow tensor core" flag in convolution descriptors, if available.
 #if CUDNN_MAJOR >= 7
-    cudnnMathType_t math_type = cudnn_tensor_core ? CUDNN_TENSOR_OP_MATH
+    cudnnMathType_t math_type = cudnn_tensor_core_ ? CUDNN_TENSOR_OP_MATH
                                                   : CUDNN_DEFAULT_MATH;
     CUDNN_CALL(cudnnSetConvolutionMathType(forward_conv_desc_, math_type));
     CUDNN_CALL(cudnnSetConvolutionMathType(back_conv_desc_, math_type));
@@ -921,7 +921,7 @@ class CuDNNDeconvolutionOp : public Operator {
   CuDNNAlgo<cudnnConvolutionBwdFilterAlgo_t> back_algo_w_;
   cudnnTensorFormat_t format_;
   // Allow TensorCore algo policy
-  bool cudnn_tensor_core;
+  bool cudnn_tensor_core_;
   DeconvolutionParam param_;
 };
 #endif  // CUDNN
