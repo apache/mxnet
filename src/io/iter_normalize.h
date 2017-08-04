@@ -137,25 +137,32 @@ class ImageNormalizeIter : public IIterator<DataInst> {
       if (data.shape_[0] == 4) {
         data[3] -= param_.mean_a;
       }
-      if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
-        outimg_ = mirror(data * contrast + illumination) * param_.scale;
-      } else {
-        outimg_ = (data * contrast + illumination) * param_.scale;
-      }
     } else if (!meanfile_ready_ || param_.mean_img.length() == 0) {
       // do not subtract anything
-      if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
-        outimg_ = mirror(data) * param_.scale;
-      } else {
-        outimg_ = F<mshadow::op::identity>(data) * param_.scale;
-      }
     } else {
       CHECK(meanfile_ready_);
-      if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
-        outimg_ = mirror((data - meanimg_) * contrast + illumination) * param_.scale;
-      } else {
-        outimg_ = ((data - meanimg_) * contrast + illumination) * param_.scale;
-      }
+      data -= meanimg_;
+    }
+    // apply contrast and illumination jitter
+    data = data * contrast + illumination;
+    // apply std
+    if (param_.std_r > 0.0f) {
+      data[0] /= param_.std_r;
+    }
+    if (data.shape_[0] >= 3 && param_.std_g > 0.0f) {
+      data[1] /= param_.std_g;
+    }
+    if (data.shape_[0] >= 3 && param_.std_b > 0.0f) {
+      data[2] /= param_.std_b;
+    }
+    if (data.shape_[0] == 4 && param_.std_a > 0.0f) {
+      data[3] /= param_.std_a;
+    }
+    data *= param_.scale;
+    if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
+      outimg_ = mirror(data);
+    } else {
+      outimg_ = F<mshadow::op::identity>(data);
     }
   }
   // creat mean image.
