@@ -27,7 +27,7 @@ class CuDNNRNNOp : public Operator {
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
     // TensorCore algos only allowed on fp16-I/O convolutions if permitted by the global policy.
     // No tests in place for fp16 RNNs, so leave TensorCore disabled for now.
-    cudnn_tensor_core = false;
+    cudnn_tensor_core_ = false;
     // When fp16 RNN tests are introduced, we can enable TensorCore as follows:
 //    cudnn_tensor_core =
 //        mshadow::DataType<DType>::kFlag == mshadow::kFloat16 && GetEnvAllowTensorCore();
@@ -463,7 +463,7 @@ class CuDNNRNNOp : public Operator {
       #endif
       #if CUDNN_MAJOR >= 7
         cudnnMathType_t math_type = CUDNN_DEFAULT_MATH;
-        if (cudnn_tensor_core && rnn_algo == CUDNN_RNN_ALGO_STANDARD) {
+        if (cudnn_tensor_core_ && rnn_algo == CUDNN_RNN_ALGO_STANDARD) {
           math_type = CUDNN_TENSOR_OP_MATH;
         }
         CUDNN_CALL(cudnnSetRNNMatrixMathType(rnn_desc_, math_type));
@@ -565,7 +565,7 @@ class CuDNNRNNOp : public Operator {
 
   cudnnFilterDescriptor_t w_desc_, dw_desc_;
   // Allow TensorCore algo policy
-  bool cudnn_tensor_core;
+  bool cudnn_tensor_core_;
 
   #if CUDNN_MAJOR >= 5
   cudnnTensorFormat_t format_;
