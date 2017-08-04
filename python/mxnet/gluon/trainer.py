@@ -100,6 +100,8 @@ class Trainer(object):
             if 'dist' in kvstore.type:
                 update_on_kvstore = False
             for i, param in enumerate(self._params):
+                if param.grad_req == 'null':
+                    continue
                 param_arrays = param.list_data()
                 kvstore.init(i, param_arrays[0])
                 kvstore.pull(i, param_arrays, priority=-i)
