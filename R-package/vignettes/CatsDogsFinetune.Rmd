@@ -30,7 +30,7 @@ library(abind)
 ### Renaming train files
 
 ```{r}
-files <- list.files("./train")
+files <- list.files("./train/")
 old_names <- sapply(files, strsplit, split = ".", fixed = TRUE)
 max_length <- max(sapply(old_names, function(x) nchar(x[[2]])))
 zeros <- max_length - sapply(old_names, function(x) nchar(x[[2]]))
@@ -51,7 +51,7 @@ Map(function(x, y) file.rename(from = x, to = y), files, new_names)
 ### Training images: 224x224, padded with empty space
 
 ```{r}
-files <- list.files("./train", recursive = TRUE)
+files <- list.files("./train/", recursive = TRUE)
 new_names <- paste0("./train_pad_224x224/", files)
 files <- paste0("./train/", files)
 dir.create("./train_pad_224x224/")
@@ -77,7 +77,7 @@ Map(function(x, y) {
 ### Renaming test files
 
 ```{r}
-files <- list.files("./test")
+files <- list.files("./test/")
 max_length <- max(sapply(files, nchar))
 zeros <- max_length - sapply(files, nchar)
 zeros <- sapply(zeros, function(x) paste(rep(0, x), collapse = ""))
@@ -92,7 +92,7 @@ Map(function(x, y) file.rename(from = x, to = y), files, newnames)
 ### Test images: 224x224, padded with empty space
 
 ```{r}
-files <- list.files("./test")
+files <- list.files("./test/")
 new_names <- paste0("./test_pad_224x224/", files)
 files <- paste0("./test/", files)
 dir.create("./test_pad_224x224/")
@@ -168,11 +168,11 @@ new_soft <- mx.symbol.SoftmaxOutput(data = new_fc,
                                     name = "softmax")
 # set name to original name in symbol$arguments
 
-arg_params_new <- mxnet:::mx.model.init.params(symbol = new_soft,
-                                               input.shape = list("data" = c(224, 224, 3, 8)),
-                                               output.shape = NULL,
-                                               initializer = mx.init.uniform(0.1),
-                                               ctx = mx.cpu())$arg.params
+arg_params_new <- mx.model.init.params(symbol = new_soft,
+                                       input.shape = list("data" = c(224, 224, 3, 8)),
+                                       output.shape = NULL,
+                                       initializer = mx.init.uniform(0.1),
+                                       ctx = mx.cpu())$arg.params
 fc1_weights_new <- arg_params_new[["fc1_weight"]]
 fc1_bias_new <- arg_params_new[["fc1_bias"]]
 

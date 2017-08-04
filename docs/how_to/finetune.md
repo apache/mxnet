@@ -45,6 +45,8 @@ training set, and the rest for the validation set. We resize images into 256x256
 size and pack them into the rec file. The scripts to prepare the data is as
 following.
 
+> In order to successfully run the following bash script on Windows please use https://cygwin.com/install.html .
+
 ```sh
 wget http://www.vision.caltech.edu/Image_Datasets/Caltech256/256_ObjectCategories.tar
 tar -xf 256_ObjectCategories.tar

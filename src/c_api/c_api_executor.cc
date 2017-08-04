@@ -35,6 +35,13 @@ int MXExecutorForward(ExecutorHandle handle, int is_train) {
 int MXExecutorBackward(ExecutorHandle handle,
                        mx_uint len,
                        NDArrayHandle *head_grads) {
+  return MXExecutorBackwardEx(handle, len, head_grads, true);
+}
+
+int MXExecutorBackwardEx(ExecutorHandle handle,
+                         mx_uint len,
+                         NDArrayHandle *head_grads,
+                         int is_train) {
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
   std::vector<NDArray> ndarrays;
@@ -42,7 +49,7 @@ int MXExecutorBackward(ExecutorHandle handle,
   for (mx_uint i = 0; i < len; ++i) {
     ndarrays.push_back(*args_ptr[i]);
   }
-  exec->Backward(ndarrays);
+  exec->Backward(ndarrays, is_train);
   API_END();
 }
 

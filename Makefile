@@ -13,6 +13,7 @@ endif
 ifndef DMLC_CORE
 	DMLC_CORE = $(ROOTDIR)/dmlc-core
 endif
+CORE_INC = $(wildcard $(DMLC_CORE)/include/*/*.h)
 
 ifndef NNVM_PATH
 	NNVM_PATH = $(ROOTDIR)/nnvm
@@ -171,7 +172,7 @@ endif
 # be JIT-compiled by the updated driver from the included PTX.
 ifeq ($(USE_CUDA), 1)
 ifeq ($(origin CUDA_ARCH), undefined)
-	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61
+	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61 70
 	# Run nvcc on a zero-length file to check architecture-level support.
 	# Create args to include SASS in the fat binary for supported levels.
 	CUDA_ARCH := $(foreach arch,$(KNOWN_CUDA_ARCHS), \
@@ -291,7 +292,7 @@ build/plugin/%.o: plugin/%.cc
 	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" -M -MT $*_gpu.o $< >$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" $<
 
-%.o: %.cc
+%.o: %.cc $(CORE_INC)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
 

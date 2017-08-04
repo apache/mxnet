@@ -378,7 +378,7 @@ void ImperativeInvokeImpl(const Context& default_ctx,
     }
 
     if (fn) {
-      if (AutogradRuntime::Get()->IsTraining()) {
+      if (AutogradRuntime::Get()->IsRecording()) {
         AutogradRuntime::Get()->RecordImperativeFCompute(op,
             attrs, &ndinputs, &ndoutputs);
       }
@@ -387,7 +387,7 @@ void ImperativeInvokeImpl(const Context& default_ctx,
     } else if (createop.count(op)) {
       auto state =
           createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
-      if (AutogradRuntime::Get()->IsTraining()) {
+      if (AutogradRuntime::Get()->IsRecording()) {
         AutogradRuntime::Get()->RecordImperativeOperator(state, op,
             attrs, &ndinputs, &ndoutputs);
       }
@@ -528,6 +528,12 @@ int MXAutogradSetIsTraining(int is_training, int* prev) {
   API_END();
 }
 
+int MXAutogradSetIsRecording(int is_recording, int* prev) {
+  API_BEGIN();
+  *prev = AutogradRuntime::Get()->SetIsRecording(static_cast<bool>(is_recording));
+  API_END();
+}
+
 int MXAutogradMarkVariables(mx_uint num_var,
                             NDArrayHandle *var_handles,
                             mx_uint *reqs_array,
@@ -556,6 +562,14 @@ int MXAutogradBackward(mx_uint num_output,
                        NDArrayHandle *output_handles,
                        NDArrayHandle *ograd_handles,
                        int retain_graph) {
+  return MXAutogradBackwardEx(num_output, output_handles, ograd_handles, retain_graph, true);
+}
+
+int MXAutogradBackwardEx(mx_uint num_output,
+                         NDArrayHandle *output_handles,
+                         NDArrayHandle *ograd_handles,
+                         int retain_graph,
+                         int is_train) {
   API_BEGIN();
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
@@ -574,6 +588,6 @@ int MXAutogradBackward(mx_uint num_output,
     }
   }
 
-  AutogradRuntime::Get()->ComputeGradient(outputs, ograds, retain_graph);
+  AutogradRuntime::Get()->ComputeGradient(outputs, ograds, retain_graph, is_train);
   API_END();
 }

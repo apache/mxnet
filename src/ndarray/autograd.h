@@ -63,6 +63,16 @@ class AutogradRuntime {
   bool IsTraining() const {
     return is_train_;
   }
+  /*! \brief turn on or turn off operator recording for autograd. */
+  bool SetIsRecording(bool is_recording) {
+      bool old = is_recording_;
+      is_recording_ = is_recording;
+      return old;
+  }
+  /*! \brief whether operator recording is on. */
+  bool IsRecording() const {
+    return is_recording_;
+  }
   /*! \brief mark variables for computing gradients. */
   void MarkVariables(const std::vector<NDArray*>& variables,
                      const std::vector<mx_uint>& grad_reqs,
@@ -81,7 +91,7 @@ class AutogradRuntime {
   /*! \brief compute the gradient of outputs w.r.t variables. */
   void ComputeGradient(const std::vector<NDArray>& outputs,
                        const std::vector<NDArray>& ograds,
-                       bool retain_graph);
+                       bool retain_graph, bool is_train);
   /*! \return AutogradRuntime singleton */
   static AutogradRuntime* Get();
   /*! \brief Get shared pointer reference to AutogradRuntime singleton.
@@ -109,8 +119,10 @@ class AutogradRuntime {
   /*! \brief indicate whether is training. */
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local bool is_train_;
+  static thread_local bool is_recording_;
 #else
   static MX_THREAD_LOCAL bool is_train_;
+  static MX_THREAD_LOCAL bool is_recording_;
 #endif
   /*! \brief node count used for naming */
   std::atomic<uint64_t> node_count_{0};

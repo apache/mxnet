@@ -22,7 +22,7 @@ my %WriteMakefileArgs = (
     "AI::MXNetCAPI" => "1.0101",
     "AI::NNVMCAPI" => "1.01",
     "Function::Parameters" => "1.0705",
-    "Mouse" => "2.1.0",
+    "Mouse" => "v2.1.0",
     "PDL" => "2.007",
     "GraphViz" => "2.14"
   },
@@ -38,7 +38,7 @@ my %FallbackPrereqs = (
   "AI::MXNetCAPI" => "1.0101",
   "AI::NNVMCAPI" => "1.01",
   "Function::Parameters" => "1.0705",
-  "Mouse" => "2.1.0",
+  "Mouse" => "v2.1.0",
   "PDL" => "2.007",
   "GraphViz" => "2.14"
 );

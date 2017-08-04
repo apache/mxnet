@@ -118,7 +118,12 @@ class Lenet {
     Optimizer* opt = OptimizerRegistry::Find("ccsgd");
     opt->SetParam("momentum", 0.9)
        ->SetParam("rescale_grad", 1.0)
-       ->SetParam("clip_gradient", 10);
+       ->SetParam("clip_gradient", 10)
+       ->SetParam("lr", learning_rate)
+       ->SetParam("wd", weight_decay);
+
+    Executor *exe = lenet.SimpleBind(ctx_dev, args_map);
+    auto arg_names = lenet.ListArguments();
 
     for (int ITER = 0; ITER < max_epoch; ++ITER) {
       size_t start_index = 0;
@@ -135,17 +140,19 @@ class Lenet {
         start_index += batch_size;
         NDArray::WaitAll();
 
-        Executor *exe = lenet.SimpleBind(ctx_dev, args_map);
         exe->Forward(true);
         exe->Backward();
-        exe->UpdateAll(opt, learning_rate, weight_decay);
-
-        delete exe;
+        // Update parameters
+        for (size_t i = 0; i < arg_names.size(); ++i) {
+          if (arg_names[i] == "data" || arg_names[i] == "data_label") continue;
+          opt->Update(i, exe->arg_arrays[i], exe->grad_arrays[i]);
+        }
       }
 
       LG << "Iter " << ITER
          << ", accuracy: " << ValAccuracy(batch_size * 10, lenet);
     }
+    delete exe;
   }
 
  private:

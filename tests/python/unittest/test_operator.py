@@ -897,16 +897,16 @@ def test_batchnorm_training():
             xrolling_std = np.random.uniform(size=channel_count)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=True, axis=chaxis)
-            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2, atol=0.01)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True, axis=chaxis)
-            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2, atol=0.01)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=False, axis=chaxis)
-            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2, atol=0.01)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True, axis=chaxis)
-            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2)
+            check_numeric_gradient(test, [data_tmp, gamma, beta], [xrolling_mean, xrolling_std], numeric_eps=1e-2, rtol=0.2, atol=0.01)
 
 def test_convolution_grouping():
     num_filter = 4
@@ -1973,7 +1973,7 @@ def check_instance_norm_with_shape(shape, xpu):
     exec1 = Y.bind(xpu, args = {'X':x, 'G':gamma, 'B':beta})
     exec1.forward(is_train=False)
     out = exec1.outputs[0].asnumpy()
-    assert_almost_equal(out, np_out, rtol=1e-4)
+    assert_almost_equal(out, np_out, rtol=1e-4, atol=1e-4)
     check_numeric_gradient(Y, {'X':x.asnumpy(), 'G':gamma.asnumpy(), 'B':beta.asnumpy()},
                            numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
 
@@ -3640,6 +3640,59 @@ def test_laop():
     check_symbolic_forward(test_sumlogdiag, [a], [r])
     if grad_check == 1:
       check_numeric_gradient(test_sumlogdiag, [a])
+
+
+def test_stack():
+    for _ in range(100):
+        ndim = random.randint(1, 5)
+        axis = random.randint(0, ndim)
+        if random.randint(0, 1):
+            axis = axis - ndim - 1
+        nin = random.randint(1, 3)
+        dshape = [random.randint(1, 5) for _ in range(ndim)]
+        inputs = [np.random.uniform(size=dshape) for _ in range(nin)]
+        output = np.stack(inputs, axis=axis)
+        sym_ins = [mx.sym.var('x%d'%i) for i in range(nin)]
+        out = mx.sym.stack(*sym_ins, axis=axis)
+        check_symbolic_forward(out, inputs, [output])
+        check_numeric_gradient(out, inputs)
+
+
+def test_dropout():
+    # test dropout
+    x = mx.sym.var('data')
+    y = mx.sym.Dropout(x, p=0.5)
+    exe = y.simple_bind(ctx=default_context(), data=(10, 10))
+
+    exe.arg_arrays[0][:] = 1
+    exe.forward(is_train=True)
+    assert exe.outputs[0].asnumpy().max() == 2
+    assert exe.outputs[0].asnumpy().min() == 0
+    exe.backward([mx.nd.ones((10, 10))])
+    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
+    exe.forward(is_train=False)
+    assert (exe.outputs[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
+    exe.backward([mx.nd.ones((10, 10))], is_train=False)
+    assert (exe.grad_arrays[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
+
+    # test permanent dropout
+    x = mx.sym.var('data')
+    y = mx.sym.Dropout(x, p=0.5, mode='always')
+    exe = y.simple_bind(ctx=default_context(), data=(10, 10))
+
+    exe.arg_arrays[0][:] = 1
+    exe.forward(is_train=True)
+    assert exe.outputs[0].asnumpy().max() == 2
+    assert exe.outputs[0].asnumpy().min() == 0
+    exe.backward([mx.nd.ones((10, 10))])
+    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
+    exe.forward(is_train=False)
+    assert exe.outputs[0].asnumpy().max() == 2
+    assert exe.outputs[0].asnumpy().min() == 0
+    exe.backward([mx.nd.ones((10, 10))], is_train=False)
+    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
 
 
 if __name__ == '__main__':

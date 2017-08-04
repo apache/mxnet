@@ -62,6 +62,7 @@ A detailed tutorial is available at
     recordio.MXRecordIO
     recordio.MXIndexedRecordIO
     image.ImageIter
+    image.ImageDetIter
 ```
 
 ## Helper classes and functions
@@ -79,33 +80,6 @@ Data structures and other iterators provided in the ``mxnet.io`` packages.
     io.ResizeIter
     io.PrefetchingIter
     io.MXDataIter
-```
-
-A list of image modification functions provided by ``mxnet.image``.
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    image.imdecode
-    image.scale_down
-    image.resize_short
-    image.fixed_crop
-    image.random_crop
-    image.center_crop
-    image.color_normalize
-    image.random_size_crop
-    image.ResizeAug
-    image.RandomCropAug
-    image.RandomSizedCropAug
-    image.CenterCropAug
-    image.RandomOrderAug
-    image.ColorJitterAug
-    image.LightingAug
-    image.ColorNormalizeAug
-    image.HorizontalFlipAug
-    image.CastAug
-    image.CreateAugmenter
 ```
 
 Functions to read and write RecordIO files.
@@ -178,8 +152,6 @@ The backend engine will recognize the index of `N` in the `layout` as the axis f
 
 ```eval_rst
 .. automodule:: mxnet.io
-    :members:
-.. automodule:: mxnet.image
     :members:
 .. automodule:: mxnet.recordio
     :members:
