@@ -178,7 +178,7 @@ This solution isn't the only possible design for a dependency engine.
 It's an example that we think is useful in most cases.
 
 Our goal is to create a dependency engine that is *generic* and *lightweight*.
-Ideally, we'd like the engine that easily plugs into existing deep learning code,
+Ideally, we'd an engine that easily plugs into existing deep learning code 
 and that can scale up to multiple machines with minor modifications.
 To do that, we need to focus only on dependency tracking,
 not on assumptions about what users can or can't do.
@@ -191,7 +191,7 @@ Here's a summary of goals for the engine:
 	- We should be able to track dependencies on the random number generator, etc.
 - The engine should not allocate resources. It should only track dependencies. Users can allocate their own memory, PRNG, etc.
 
-The following Python snippet provides an engine interface that might help us reach our goal. Note that a real implementation will be closer to the metal, typically in C++.
+The following Python snippet provides an engine interface that might help us reach our goal. Note that a real implementation will be closer to the metal, and typically be written in C++.
 
 ```python
     class DepEngine(object):
@@ -262,7 +262,7 @@ Upon building this queue, the engine sees that the first two green blocks at the
 ![Dependency Parallelism](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_parallel.png)
 
 One cool thing about all this scheduling is that it's not confined to numerical calculations.
-Because everything that is scheduled is only a tag, the engine could schedule everything!
+Because everything that is scheduled is only a tag, the engine could schedule anything!
 
 The following figure gives a complete push sequence of the programs we mentioned in previous sections.
 
@@ -348,8 +348,8 @@ and facilitates better fault tolerance in a distributed setting (by way of re-co
 
 However, immutability presents several challenges:
 
-- It's harder to schedule resource contention problems, as arise when dealing with random numbers and deletion.
-- The engine usually needs to manage resources (memory, random number) to avoid conflicts. It's harder to plug in user-allocated space, etc.
+- It's harder to schedule resource contention problems, such as those that arise when dealing with random numbers and deletion.
+- The engine usually needs to manage resources (memory, random number generation) to avoid conflicts. It's harder to plug in user-allocated space, etc..
 - Preallocated static memory isn't available, again because the usual pattern is to write to a preallocated layer space, which is not supported if data is immutable.
 
 Allowing mutation mitigates these issues.
