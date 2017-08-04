@@ -245,7 +245,6 @@ struct DotCsrTransDnsDnsScalarKernel {
  * \brief GPU warp kernel of dot(csr.T, dns1) = dns2
  * Parallelization by columns: 1 warp computes one lhs column for one rhs column
  */
-template<int req>
 struct DotCsrTransDnsDnsWarpKernel {
   /*!
    * \brief see DotCsrTransDnsDnsScalarKernel Map for documentation.
@@ -281,7 +280,6 @@ struct DotCsrTransDnsDnsWarpKernel {
  * \brief GPU thread block kernel of dot(csr.T, dns1) = dns2
  * Parallelization by columns: 1 thread block computes one lhs column for all rhs columns
  */
-template<int req>
 struct DotCsrTransDnsDnsThreadBlockKernel {
   /*!
    * \brief see DotCsrTransDnsDnsScalarKernel Map for documentation.
@@ -322,7 +320,6 @@ struct DotCsrTransDnsDnsThreadBlockKernel {
  * \brief GPU warp block kernel of dot(csr.T, dns1) = dns2
  * Parallelization by columns: 1 warp computes one lhs column for all rhs columns
  */
-template<int req>
 struct DotCsrTransDnsDnsWarpBlockKernel {
   /*!
    * \brief see DotCsrTransDnsDnsScalarKernel Map for documentation.
@@ -358,57 +355,46 @@ struct DotCsrTransDnsDnsWarpBlockKernel {
 };
 
 /*!
- * \brief GPU Kernel of dot(csr.T, dns) = rsp
- * Parallelization by rows: 1 thread/row
- * TODO(stefan): write a faster kernel optimized for GPU
+ * \brief GPU warp kernel of dot(csr.T, dns) = rsp
+ * Parallelization by columns: 1 warp computes one lhs column for one rhs column
  */
-struct DotCsrTransDnsRspByRowsKernel {
+struct DotCsrTransDnsRspWarpKernel {
   /*!
    * \brief
-   * \param tid           global thread id
-   * \param out           output rsp matrix data
-   * \param row_idx_out   output rsp matrix non-zero row indices
-   * \param data_l        csr matrix data
-   * \param indptr_l      csr matrix row index pointer
-   * \param col_idx_l     csr matrix column indices
-   * \param data_r        dns matrix data
-   * \param num_rows_l    csr matrix number of rows
-   * \param num_cols_r    dns matrix number of columns
-   * \param nnr_out       output rsp matrix number of non-zero rows
+   * \param tid              global thread id
+   * \param out              output rsp matrix data
+   * \param row_flg_sum_out  inclusive prefix sum array over 0/1 marked row flag array
+   * \param data_l           csr matrix data
+   * \param indptr_l         csr matrix row index pointer
+   * \param col_idx_l        csr matrix column indices
+   * \param data_r           dns matrix data
+   * \param num_cols_r       dns matrix number of columns
    */
-  template<typename DType, typename IType, typename CType, typename RType>
+  template<typename DType, typename IType, typename CType>
   __device__ __forceinline__ static void Map(int tid,
                                              DType* out,
-                                             const RType* row_idx_out,
+                                             const nnvm::dim_t* row_flg_sum_out,
                                              const DType* data_l,
                                              const IType* indptr_l,
                                              const CType* col_idx_l,
                                              const DType* data_r,
-                                             const nnvm::dim_t num_rows_l,
-                                             const nnvm::dim_t num_cols_r,
-                                             const nnvm::dim_t nnr_out) {
+                                             const nnvm::dim_t num_cols_r) {
     using nnvm::dim_t;
-    // This thread computes non-zero row 'tid' of the output matrix
-    // The actual row id corresponding to the lhs row is row_idx_out[tid]
-    if (tid < nnr_out) {
-      const dim_t offset_out = tid * num_cols_r;
-      // Iterate over rhs matrix rows (or, equivalently, lhs csr.T columns)
-      for (dim_t j = 0; j < num_rows_l; j++) {
-        if (indptr_l[j] == indptr_l[j+1]) continue;
-        const dim_t offset_r = j * num_cols_r;
-        // Iterate over lhs column j to find possible non-zero value in this row
-        // TODO: remove sequential search, this is a bottleneck
-        for (IType k = indptr_l[j]; k < indptr_l[j+1]; k++) {
-          const CType col_idx = col_idx_l[k];
-          if (col_idx == row_idx_out[tid]) {
-            for (dim_t l = 0; l < num_cols_r; l++) {
-              out[offset_out+l] += data_l[k] * data_r[offset_r+l];
-            }
-          } else if (col_idx > row_idx_out[tid]) {
-            break;
-          }
-        }
-      }
+    const dim_t warp_id = tid / 32;           // global warp id
+    const dim_t lane = tid & (32-1);          // local thread id within warp
+    const dim_t icol = warp_id / num_cols_r;  // lhs column that this warp computes
+    const dim_t kcol = warp_id % num_cols_r;  // rhs column that this warp computes
+
+    // Compute range of nnz elements in this column
+    const dim_t low  = static_cast<dim_t>(indptr_l[icol]);
+    const dim_t high = static_cast<dim_t>(indptr_l[icol+1]);
+
+    // Iterate through the nnz elements in this column
+    for (dim_t j = low+lane; j < high; j+=32) {
+      const dim_t irow = static_cast<dim_t>(col_idx_l[j]);
+      const dim_t rsp_row = row_flg_sum_out[irow]-1;
+      const DType val = data_l[j]*data_r[icol*num_cols_r+kcol];
+      atomicAdd(static_cast<DType *>(&(out[rsp_row*num_cols_r+kcol])), val);
     }
   }
 };
@@ -583,35 +569,27 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
               break;
             case 2:
               num_threads = threads_per_warp * num_rows_l * num_cols_r;
-              MXNET_ASSIGN_REQ_SWITCH(req, ReqType, {
-                Kernel<DotCsrTransDnsDnsWarpKernel<ReqType>, gpu>::Launch(s, num_threads,
-                    data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
-                    col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
-              });
+              Kernel<DotCsrTransDnsDnsWarpKernel, gpu>::Launch(s, num_threads,
+                  data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
+                  col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
               break;
             case 3:
               num_threads = threads_per_block * num_rows_l;
-              MXNET_ASSIGN_REQ_SWITCH(req, ReqType, {
-                Kernel<DotCsrTransDnsDnsThreadBlockKernel<ReqType>, gpu>::Launch(s, num_threads,
-                    data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
-                    col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
-              });
+              Kernel<DotCsrTransDnsDnsThreadBlockKernel, gpu>::Launch(s, num_threads,
+                  data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
+                  col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
               break;
             case 4:
               num_threads = threads_per_warp * num_rows_l;
-              MXNET_ASSIGN_REQ_SWITCH(req, ReqType, {
-                Kernel<DotCsrTransDnsDnsWarpBlockKernel<ReqType>, gpu>::Launch(s, num_threads,
-                    data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
-                    col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
-              });
+              Kernel<DotCsrTransDnsDnsWarpBlockKernel, gpu>::Launch(s, num_threads,
+                  data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
+                  col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
               break;
             default:
               num_threads = threads_per_warp * num_rows_l * num_cols_r;
-              MXNET_ASSIGN_REQ_SWITCH(req, ReqType, {
-                Kernel<DotCsrTransDnsDnsWarpKernel<ReqType>, gpu>::Launch(s, num_threads,
-                    data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
-                    col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
-              });
+              Kernel<DotCsrTransDnsDnsWarpKernel, gpu>::Launch(s, num_threads,
+                  data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
+                  col_idx_l.dptr<CType>(), data_r.dptr<DType>(), num_cols_r);
               break;
           }
         } else {
@@ -695,7 +673,7 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<gpu>* s,
     LOG(FATAL) << "DotCsrDnsDnsImpl GPU kernels expect warpSize=32";
   }
 
-  MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
+  MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         if (trans_lhs) {
@@ -731,6 +709,7 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<gpu>* s,
           dim_t nnr_out = 0;
           CUDA_CALL(cudaMemcpy(&nnr_out, &row_flg_out[num_cols_l-1], sizeof(dim_t),
                                cudaMemcpyDeviceToHost));
+
           // Allocate output matrix space
           ret->CheckAndAlloc({mshadow::Shape1(nnr_out)});
           const TBlob data_out_blob = ret->data();
@@ -749,15 +728,14 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<gpu>* s,
             num_threads = num_cols_l;
             Kernel<FillRspRowIdxKernel, gpu>::Launch(s, num_threads,
                 row_idx_out, row_flg_out, num_cols_l);
-            CUDA_CALL(cudaFree(row_flg_out));
 
             // Perform matrix-matrix multiply
-            num_threads = nnr_out;
-            Kernel<DotCsrTransDnsRspByRowsKernel, gpu>::Launch(s, num_threads,
-                data_out, row_idx_out,
+            num_threads = threads_per_warp * num_rows_l * num_cols_r;
+            Kernel<DotCsrTransDnsRspWarpKernel, gpu>::Launch(s, num_threads,
+                data_out, row_flg_out,
                 data_l.dptr<DType>(), indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(),
-                data_r.dptr<DType>(),
-                num_rows_l, num_cols_r, nnr_out);
+                data_r.dptr<DType>(), num_cols_r);
+            CUDA_CALL(cudaFree(row_flg_out));
           });
         } else {
           LOG(FATAL) << "DotCsrDnsRspImpl has not implemented dot(csr, dns) = rsp yet.";
@@ -810,7 +788,7 @@ inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
     LOG(FATAL) << "DotCsrDnsDnsImpl GPU kernels expect warpSize=32";
   }
 
-  MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
+  MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // row idx type
@@ -925,10 +903,10 @@ inline void DotCsrRspDnsImpl(mshadow::Stream<gpu>* s,
   const TBlob data_r = rhs.data();
   const TBlob row_idx_r = rhs.aux_data(rowsparse::kIdx);
 
-  MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
+  MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
-        MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // col idx type
+        MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // row idx type
           if (kWriteTo == req) {
             num_threads = num_rows*num_cols;
             Kernel<set_zero, gpu>::Launch(s, num_threads, ret->dptr<DType>());
