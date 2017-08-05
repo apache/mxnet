@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
+from __future__ import print_function, division
 import os
 import sys
 
@@ -11,7 +11,6 @@ import argparse
 import cv2
 import time
 import traceback
-from builtins import range
 
 try:
     import multiprocessing
@@ -159,7 +158,8 @@ def read_worker(args, q_in, q_out):
 
 def write_worker(q_out, fname, working_dir):
     pre_time = time.time()
-    count = 0
+    cnt = 0
+    print_interval = 1000
     fname = os.path.basename(fname)
     fname_rec = os.path.splitext(fname)[0] + '.rec'
     fname_idx = os.path.splitext(fname)[0] + '.idx'
@@ -174,17 +174,19 @@ def write_worker(q_out, fname, working_dir):
             buf[i] = (s, item)
         else:
             more = False
-        while count in buf:
-            s, item = buf[count]
-            del buf[count]
+        while cnt in buf:
+            s, item = buf[cnt]
+            del buf[cnt]
             if s is not None:
                 record.write_idx(item[0], s)
 
-            if count % 1000 == 0:
+            if cnt > 0 and cnt % print_interval == 0:
                 cur_time = time.time()
-                print('time:', cur_time - pre_time, ' count:', count)
+                interval_time = cur_time - pre_time
+                print('count: {0}\ttime: {1:.3f} ({2:.1f}/sec)'.format(
+                    cnt, interval_time, print_interval / interval_time))
                 pre_time = cur_time
-            count += 1
+            cnt += 1
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -292,15 +294,18 @@ if __name__ == '__main__':
                                                            os.path.join(working_dir, fname_rec), 'w')
                     cnt = 0
                     pre_time = time.time()
+                    print_interval = 1000
                     for i, item in enumerate(image_list):
                         image_encode(args, i, item, q_out)
                         if q_out.empty():
                             continue
                         _, s, _ = q_out.get()
                         record.write_idx(item[0], s)
-                        if cnt % 1000 == 0:
+                        if cnt > 0 and cnt % print_interval == 0:
                             cur_time = time.time()
-                            print('time:', cur_time - pre_time, ' count:', cnt)
+                            interval_time = cur_time - pre_time
+                            print('count: {0}\ttime: {1:.3f} ({2:.1f}/sec)'.format(
+                                cnt, interval_time, print_interval / interval_time))
                             pre_time = cur_time
                         cnt += 1
         if not count:
