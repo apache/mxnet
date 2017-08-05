@@ -4,7 +4,7 @@ This tool helps convert MXNet models into [Apple CoreML](https://developer.apple
 
 ## Installation
 In order to use this tool you need to have these installed:
-* mxnet 0.10.0. [Installation instructions](http://mxnet.io/get_started/install.html).
+* mxnet 0.10.0 or greater. [Installation instructions](http://mxnet.io/get_started/install.html).
 * python 2.7
 * coremltools 0.4.0 (pip install coremltools)
 * yaml (pip install pyyaml)
@@ -40,12 +40,12 @@ python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --in
 
 ## Currently supported
 ### Models
-This is a (growing) list of standard MXNet models that can be successfully converted using the converter. This means that any other model that uses the similar operators as these models can also be successfully converted.
-1. [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/) (use force=True).
-2. [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz) (use force=True).
-3. [Squeezenet](http://data.mxnet.io/models/imagenet/squeezenet/).
-4. [Resnet](http://data.mxnet.io/models/imagenet/resnet/) (use force=True).
-5. [Vgg](http://data.mxnet.io/models/imagenet/vgg/).
+This is a (growing) list of standard MXNet models that can be successfully converted using the converter. This means that any other model that uses similar operators as these models can also be successfully converted.
+1. Inception: [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/), [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz)
+2. [NiN](http://data.dmlc.ml/models/imagenet/nin/)
+2. [Resnet](http://data.mxnet.io/models/imagenet/resnet/)
+3. [Squeezenet](http://data.mxnet.io/models/imagenet/squeezenet/)
+4. [Vgg](http://data.mxnet.io/models/imagenet/vgg/)
 
 ### Layers
 1. Activation.
@@ -62,8 +62,7 @@ This is a (growing) list of standard MXNet models that can be successfully conve
 12. Transpose.
 
 ## Known issues
-These are list of known issues:
-1. Converting a deconvolution layer which has padding results in incorrect CoreML predictions.
+Currently there are no known issues.
 
 ## This tool has been tested on environment with:
 * MacOS - High Sierra 10.13 Beta.

@@ -79,7 +79,7 @@ class SingleLayerTest(unittest.TestCase):
         mod = _get_mxnet_module(net, input_shape, mode, label_names)
 
         # Generate some dummy data
-        input_data = {'data': np.random.uniform(-0.1, 0.1, input_shape)}
+        input_data = {'data': np.random.uniform(-10., 10., input_shape)}
         Batch = namedtuple('Batch', ['data'])
         mod.forward(Batch([mx.nd.array(input_data['data'])]))
         mxnet_preds = mod.get_outputs()[0].asnumpy().flatten()
@@ -267,12 +267,12 @@ class SingleLayerTest(unittest.TestCase):
         net = mx.sym.Activation(net, name='tanh', act_type="tanh")
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
-    def test_tiny_conv_pooling_random_input(self):
+    def test_tiny_conv_valid_pooling_random_input(self):
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 1
-        kernel = (5, 5)
-        stride = (1, 1)
+        kernel = (2, 2)
+        stride = (2, 2)
         pad = (0, 0)
         net = mx.sym.Variable('data')
         net = mx.symbol.Convolution(
@@ -289,7 +289,62 @@ class SingleLayerTest(unittest.TestCase):
             stride=stride,
             pad=pad,
             name='pool_1',
-            pool_type='max'
+            pool_type='avg',
+            pooling_convention='valid'
+        )
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+
+    def test_tiny_conv_pooling_full_random_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 1, 10, 10)
+        num_filter = 1
+        kernel = (2, 2)
+        stride = (2, 2)
+        pad = (0, 0)
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Convolution(
+            data=net,
+            num_filter=num_filter,
+            kernel=kernel,
+            stride=stride,
+            pad=pad,
+            name='conv_1'
+        )
+        net = mx.symbol.Pooling(
+            data=net,
+            kernel=kernel,
+            stride=stride,
+            pad=pad,
+            name='pool_1',
+            pool_type='avg',
+            pooling_convention='full'
+        )
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+
+    def test_tiny_conv_pooling_full_random_input_with_padding(self):
+        np.random.seed(1988)
+        input_shape = (1, 3, 10, 10)
+        num_filter = 2
+        kernel = (2, 2)
+        stride = (2, 2)
+        pad = (1, 1)
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Convolution(
+            data=net,
+            num_filter=num_filter,
+            kernel=kernel,
+            stride=stride,
+            pad=pad,
+            name='conv_1'
+        )
+        net = mx.symbol.Pooling(
+            data=net,
+            kernel=kernel,
+            stride=stride,
+            pad=pad,
+            name='pool_1',
+            pool_type='avg',
+            pooling_convention='full'
         )
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
@@ -729,8 +784,6 @@ class SingleLayerTest(unittest.TestCase):
         # test the mxnet model
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
-    # TODO Unable to get padding working for deconv layer
-    @unittest.skip("Currently deconv with padding gives incorrect predictions.")
     def test_deconv_random_padding(self):
         np.random.seed(1988)
         input_shape = (1, 10, 9, 9)
@@ -748,8 +801,7 @@ class SingleLayerTest(unittest.TestCase):
                 stride=stride,
                 pad=pad,
                 no_bias=False,
-                name = 'deconv_1')
-
+                name='deconv_1')
         # test the mxnet model
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
