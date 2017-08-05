@@ -60,6 +60,17 @@ mx.symbol.Concat <- function(data, num.args, dim = NULL, name = NULL) {
   mx.symbol.concat(data, num.args, dim, name)
 }
 
+#' @export
+mx.symbol.min <- function(e1, e2) {
+  if (is.mx.symbol(e1) && is.mx.symbol(e2)) {
+    mx.varg.symbol.internal.minimum(list(e1, e2))
+  } else if (is.mx.symbol(e1)) {
+    mx.varg.symbol.internal.minimum_scalar(list(e1, scalar = e2))
+  } else if (is.mx.symbol(e2)) {
+    mx.varg.symbol.internal.minimum_scalar(list(e2, scalar = e1))
+  }
+}
+
 #' Save an mx.symbol object
 #'
 #' @param symbol the \code{mx.symbol} object
