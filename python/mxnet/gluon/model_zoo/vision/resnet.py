@@ -177,11 +177,11 @@ class BottleneckV2(HybridBlock):
     def __init__(self, channels, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV2, self).__init__(**kwargs)
         self.bn1 = nn.BatchNorm()
-        self.conv1 = _conv3x3(channels//4, 1, in_channels)
+        self.conv1 = nn.Conv2D(channels//4, kernel_size=1, strides=1, use_bias=False)
         self.bn2 = nn.BatchNorm()
         self.conv2 = _conv3x3(channels//4, stride, channels//4)
         self.bn3 = nn.BatchNorm()
-        self.conv3 = _conv3x3(channels, 1, channels//4)
+        self.conv3 = nn.Conv2D(channels, kernel_size=1, strides=1, use_bias=False)
         if downsample:
             self.downsample = nn.Conv2D(channels, 1, stride, use_bias=False,
                                         in_channels=in_channels)
