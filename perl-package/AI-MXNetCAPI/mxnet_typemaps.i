@@ -820,6 +820,17 @@
     }
 }
 
+%typemap(in,numinputs=0) (const mx_uint num_provided_arg_stypes, const char** provided_arg_stype_names,
+                          const int* provided_arg_stypes)
+                         (mx_uint temp1, char* temp2, int temp3)
+{
+    $2 = &temp2;
+    $3 = &temp3;
+    $1 = 0;
+    *$2 = NULL;
+    *$3 = 0;
+}
+
 %typemap(in,numinputs=0) (mx_uint* num_aux_states,
                           NDArrayHandle** aux_states)
                          (mx_uint temp1,
