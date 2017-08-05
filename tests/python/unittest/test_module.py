@@ -442,17 +442,20 @@ def test_executor_group():
                            shared_arg_names=shared_arg_names, extra_args=extra_args)
 
 
-def test_module_fm():
+def test_factorization_machine_module():
+    """ Test factorization machine model with sparse operators """
     mx.random.seed(11)
     rnd.seed(11)
 
-    def fm_model(k, feature_dim):
-        norm = mx.initializer.Normal(sigma=0.01)
+    def fm(factor_size, feature_dim, init):
         x = mx.symbol.Variable("data", stype='csr')
-        v = mx.symbol.Variable("v", shape=(feature_dim, k), init=norm, stype='row_sparse')
+        v = mx.symbol.Variable("v", shape=(feature_dim, factor_size),
+                               init=init, stype='row_sparse')
 
-        w1_weight = mx.symbol.var('w1_weight', shape=(feature_dim, 1), init=norm, stype='row_sparse')
-        w1 = mx.symbol.dot(x, w1_weight)
+        w1_weight = mx.symbol.var('w1_weight', shape=(feature_dim, 1),
+                                  init=init, stype='row_sparse')
+        w1_bias = mx.symbol.var('w1_bias', shape=(1))
+        w1 = mx.symbol.broadcast_add(mx.symbol.dot(x, w1_weight), w1_bias)
 
         v_s = mx._symbol_internal._square_sum(data=v, axis=1, keepdims=True)
         x_s = mx.symbol.square(data=x)
@@ -466,38 +469,41 @@ def test_module_fm():
         sum2 = 0.5 * mx.symbol.negative(bd_sum)
         model = mx.sym.elemwise_add(sum1, sum2)
 
-        y = mx.symbol.Variable("out_label")
-        model = mx.symbol.LinearRegressionOutput(data=model, label=y, name="out")
+        y = mx.symbol.Variable("label")
+        model = mx.symbol.LinearRegressionOutput(data=model, label=y)
         return model
 
     # model
     ctx = default_context()
-    k = 5
-    feature_dim = 20
-    model = fm_model(k, feature_dim)
+    init = mx.initializer.Normal(sigma=0.01)
+    factor_size = 4
+    feature_dim = 10000
+    model = fm(factor_size, feature_dim, init)
 
     # data iter
-    num_batches = 8
-    batch_size = 25
+    num_batches = 5
+    batch_size = 64
     num_samples = batch_size * num_batches
     import scipy.sparse as sp
     # generate some random scipy csr data
-    csr_sp = sp.rand(num_samples, feature_dim, density=0.5, format='csr')
+    csr_sp = sp.rand(num_samples, feature_dim, density=0.1, format='csr')
     csr_nd = mx.nd.csr(csr_sp.data, csr_sp.indptr, csr_sp.indices,
-                              (num_samples, feature_dim))
+                       (num_samples, feature_dim))
     label = mx.nd.ones((num_samples,1))
     # the alternative is to use LibSVMIter
     train_iter = mx.io.NDArrayIter(data=csr_nd,
-                                   label={'out_label':label},
+                                   label={'label':label},
                                    batch_size=batch_size)
     # create module
-    mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['out_label'])
+    mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['label'])
     # allocate memory by given the input data and lable shapes
     mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
     # initialize parameters by uniform random numbers
-    mod.init_params(initializer=mx.init.Uniform(scale=.1))
+    mod.init_params(initializer=init)
     # use Sparse SGD with learning rate 0.1 to train
-    mod.init_optimizer(optimizer='sgd')
+    sgd = mx.optimizer.SGD(momentum=0.1, clip_gradient=5.0, learning_rate=0.01,
+                           rescale_grad=1.0/batch_size)
+    mod.init_optimizer(optimizer=sgd)
     # use accuracy as the metric
     metric = mx.metric.create('MSE')
     # train 10 epoch
@@ -510,7 +516,7 @@ def test_module_fm():
             mod.backward()                          # compute gradients
             mod.update()                            # update parameters
         # print('Epoch %d, Training %s' % (epoch, metric.get()))
-    assert(metric.get()[1] < 0.2)
+    assert(metric.get()[1] < 0.02)
 
 
 def test_module_initializer():
