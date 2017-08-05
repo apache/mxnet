@@ -46,7 +46,7 @@ class GraphExecutor : public Executor {
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
   void PartialForward(bool is_train, int step, int *step_left) override;
-  void Backward(const std::vector<NDArray> &head_grads) override;
+  void Backward(const std::vector<NDArray> &head_grads, bool is_train = true) override;
   const std::vector<NDArray>& outputs() const override;
   const std::unordered_map<std::string, NDArray>& in_arg_map() const override;
   const std::unordered_map<std::string, NDArray>& arg_grad_map() const override;

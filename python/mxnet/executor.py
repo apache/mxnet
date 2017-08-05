@@ -5,7 +5,6 @@ from __future__ import absolute_import
 
 import ctypes
 import copy
-import warnings
 import numpy as np
 from .base import _LIB
 from .base import mx_uint, NDArrayHandle, ExecutorHandle
@@ -62,7 +61,6 @@ class Executor(object):
         self._aux_dict = None
         self._output_dict = None
         self._monitor_callback = None
-        self._output_dirty = False
         self._ctx = copy.deepcopy(ctx)
         self._grad_req = copy.deepcopy(grad_req)
         self._group2ctx = copy.deepcopy(group2ctx)
@@ -102,8 +100,7 @@ class Executor(object):
         ----------
         is_train: bool, optional
             Whether this forward is for evaluation purpose. If True,
-            a backward call is expected to follow. Otherwise following
-            backward is invalid.
+            a backward call is expected to follow.
 
         **kwargs
             Additional specification of input arguments.
@@ -135,15 +132,9 @@ class Executor(object):
             self.handle,
             ctypes.c_int(int(is_train))))
 
-        if self._output_dirty:
-            warnings.warn(
-                "Calling forward the second time after forward(is_train=True) "
-                "without calling backward first. Is this intended?", stacklevel=2)
-        self._output_dirty = is_train
-
         return self.outputs
 
-    def backward(self, out_grads=None):
+    def backward(self, out_grads=None, is_train=True):
         """Do backward pass to get the gradient of arguments.
 
         Parameters
@@ -152,6 +143,11 @@ class Executor(object):
             Gradient on the outputs to be propagated back.
             This parameter is only needed when bind is called
             on outputs that are not a loss function.
+        is_train : bool, default True
+            Whether this backward is for training or inference. Note that in rare
+            cases you want to call backward with is_train=False to get gradient
+            during inference.
+
 
         Examples
         --------
@@ -214,16 +210,11 @@ class Executor(object):
             if not isinstance(obj, NDArray):
                 raise TypeError("inputs must be NDArray")
         ndarray = c_array(NDArrayHandle, [item.handle for item in out_grads])
-        check_call(_LIB.MXExecutorBackward(
+        check_call(_LIB.MXExecutorBackwardEx(
             self.handle,
             mx_uint(len(out_grads)),
-            ndarray))
-
-        if not self._output_dirty:
-            warnings.warn(
-                "Calling backward without calling forward(is_train=True) "
-                "first. Behavior is undefined.", stacklevel=2)
-        self._output_dirty = False
+            ndarray,
+            ctypes.c_int(is_train)))
 
     def set_monitor_callback(self, callback):
         """Install callback for monitor.

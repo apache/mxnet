@@ -254,7 +254,7 @@ def test_convlstm():
                                h2h_kernel=(3, 3), h2h_dilate=(1, 1),
                                i2h_kernel=(3, 3), i2h_stride=(1, 1),
                                i2h_pad=(1, 1), i2h_dilate=(1, 1),
-                               prefix='rnn_', forget_bias=1.0)
+                               prefix='rnn_')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)

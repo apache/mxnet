@@ -17,6 +17,7 @@
 #include "dmlc/logging.h"
 #include "mxnet-cpp/ndarray.h"
 #include "mxnet-cpp/op_map.h"
+#include "mxnet-cpp/lr_scheduler.h"
 
 namespace mxnet {
 namespace cpp {
@@ -57,15 +58,16 @@ class Optimizer {
     return this;
   }
   /*!
-  *  \brief Update a weight with gradient.
-  *  \param index the unique index for the weight.
-  *  \param weight the weight to update.
-  *  \param grad gradient for the weight.
-  *  \param lr learning rate.
-  *  \param wd weight decay.
+  * \bried set the lr scheduler
+  * \param lrScheduler lr scheduler used for this optimizer
+  * \return reference if self
   */
-  void Update(int index, NDArray weight, NDArray grad, mx_float lr,
-              mx_float wd);
+  Optimizer *SetLRScheduler(std::unique_ptr<LRScheduler> lrScheduler) {
+    CHECK(lrScheduler);
+    lrScheduler_ = std::move(lrScheduler);
+    lrScheduler_->SetLR(std::stof(params_["lr"]));
+    return this;
+  }
   /*!
   *  \brief Update a weight with gradient.
   *  \param index the unique index for the weight.
@@ -92,7 +94,10 @@ class Optimizer {
   std::map<int, unsigned> count_;
   unsigned begin_num_update_, num_update_;
   unsigned UpdateCount_(int index);
+  float GetLR_(int index);
+  float GetWD_(int index);
   virtual void CreateState_(int index, NDArray weight);
+  std::unique_ptr<LRScheduler> lrScheduler_ = nullptr;
 };
 
 typedef std::function<Optimizer*()> OptimizerCreator;
@@ -171,7 +176,6 @@ class AdaDeltaOptimizer : public Optimizer {
   void CreateState_(int index, NDArray weight) override;
   std::map<int, NDArray*> acc_g_, acc_delta_;
 };
-
 
 }  // namespace cpp
 }  // namespace mxnet

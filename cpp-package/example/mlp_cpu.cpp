@@ -70,7 +70,13 @@ int main(int argc, char** argv) {
 
   // Create sgd optimizer
   Optimizer* opt = OptimizerRegistry::Find("sgd");
-  opt->SetParam("rescale_grad", 1.0/batch_size);
+  opt->SetParam("rescale_grad", 1.0/batch_size)
+     ->SetParam("lr", learning_rate)
+     ->SetParam("wd", weight_decay);
+
+  // Create executor by binding parameters to the model
+  auto *exec = net.SimpleBind(ctx, args);
+  auto arg_names = net.ListArguments();
 
   // Start training
   for (int iter = 0; iter < max_epoch; ++iter) {
@@ -85,15 +91,14 @@ int main(int argc, char** argv) {
       args["X"] = data_batch.data;
       args["label"] = data_batch.label;
 
-      // Create executor by binding parameters to the model
-      auto *exec = net.SimpleBind(ctx, args);
       // Compute gradients
       exec->Forward(true);
       exec->Backward();
       // Update parameters
-      exec->UpdateAll(opt, learning_rate, weight_decay);
-      // Remember to free the memory
-      delete exec;
+      for (size_t i = 0; i < arg_names.size(); ++i) {
+        if (arg_names[i] == "X" || arg_names[i] == "label") continue;
+        opt->Update(i, exec->arg_arrays[i], exec->grad_arrays[i]);
+      }
     }
     auto toc = chrono::system_clock::now();
 
@@ -103,16 +108,15 @@ int main(int argc, char** argv) {
       auto data_batch = val_iter.GetDataBatch();
       args["X"] = data_batch.data;
       args["label"] = data_batch.label;
-      auto *exec = net.SimpleBind(ctx, args);
       // Forward pass is enough as no gradient is needed when evaluating
       exec->Forward(false);
       acc.Update(data_batch.label, exec->outputs[0]);
-      delete exec;
     }
     float duration = chrono::duration_cast<chrono::milliseconds>(toc - tic).count() / 1000.0;
     LG << "Epoch: " << iter << " " << samples/duration << " samples/sec Accuracy: " << acc.Get();
   }
 
+  delete exec;
   MXNotifyShutdown();
   return 0;
 }

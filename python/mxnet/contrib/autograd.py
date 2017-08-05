@@ -29,6 +29,8 @@ def set_is_training(is_train):
     prev = ctypes.c_int()
     check_call(_LIB.MXAutogradSetIsTraining(
         ctypes.c_int(is_train), ctypes.byref(prev)))
+    check_call(_LIB.MXAutogradSetIsRecording(
+        ctypes.c_int(is_train), ctypes.byref(prev)))
     return bool(prev.value)
 
 

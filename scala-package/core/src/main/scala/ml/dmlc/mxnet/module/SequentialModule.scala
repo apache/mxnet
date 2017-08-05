@@ -144,11 +144,16 @@ class SequentialModule extends BaseModule {
    * @param allowMissing If true, params could contain missing values,
    *                     and the initializer will be called to fill those missing params.
    * @param forceInit If true, will force re-initialize even if already initialized.
+   * @param allowExtra Whether allow extra parameters that are not needed by symbol.
+   *         If this is True, no error will be thrown when argParams or auxParams
+   *         contain extra parameters that is not needed by the executor.
    */
   override def initParams(initializer: Initializer = new Uniform(0.01f),
                           argParams: Map[String, NDArray] = null,
                           auxParams: Map[String, NDArray] = null,
-                          allowMissing: Boolean = false, forceInit: Boolean = false): Unit = {
+                          allowMissing: Boolean = false,
+                          forceInit: Boolean = false,
+                          allowExtra: Boolean = false): Unit = {
     if (this.paramsInitialized && !forceInit) {
       return
     }
@@ -156,7 +161,8 @@ class SequentialModule extends BaseModule {
 
     for (module <- this.modules) {
       module.initParams(initializer = initializer, argParams = argParams,
-          auxParams = auxParams, allowMissing = allowMissing, forceInit = forceInit)
+          auxParams = auxParams, allowMissing = allowMissing,
+          forceInit = forceInit, allowExtra = allowExtra)
     }
 
     // Internal function to help checking duplicated names,

@@ -42,13 +42,12 @@ for DEV in "${DEVICES[@]}"; do
         echo "Testing ${PYTHON}"
         DOCKER_CMD="virtualenv -p \"/usr/bin/${PYTHON}\" ${PYTHON}; source \"${PYTHON}/bin/activate\"; cd ${WORKSPACE};"
         if [[ "${DEV}" == *"cpu"* ]]; then
-            DOCKER_CMD="${DOCKER_CMD} pip install mxnet; python tests/python/train/test_conv.py"
+            DOCKER_CMD="${DOCKER_CMD} pip install mxnet --pre; python tests/python/train/test_conv.py"
         elif [[ "${DEV}" == *"cu75"* ]]; then
-            DOCKER_CMD="${DOCKER_CMD} pip install mxnet-cu75; python tests/python/train/test_conv.py --gpu"
+            DOCKER_CMD="${DOCKER_CMD} pip install mxnet-cu75 --pre; python tests/python/train/test_conv.py --gpu"
         elif [[ "${DEV}" == *"cu80"* ]]; then
-            DOCKER_CMD="${DOCKER_CMD} pip install mxnet-cu80; python tests/python/train/test_conv.py --gpu"
+            DOCKER_CMD="${DOCKER_CMD} pip install mxnet-cu80 --pre; python tests/python/train/test_conv.py --gpu"
         fi
-	
         ${DOCKER_BINARY} run --rm -v ${WORKSPACE}:${WORKSPACE} -w ${WORKSPACE} ${DOCKER_TAG} bash -c "tests/jenkins/run_as_user.sh `id -u` `id -un` `id -g` `id -un` '${DOCKER_CMD}'"
     done
 

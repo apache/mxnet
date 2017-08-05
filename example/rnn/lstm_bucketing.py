@@ -107,4 +107,4 @@ if __name__ == '__main__':
                                 'wd': args.wd },
         initializer         = mx.init.Xavier(factor_type="in", magnitude=2.34),
         num_epoch           = args.num_epochs,
-        batch_end_callback  = mx.callback.Speedometer(args.batch_size, args.disp_batches))
+        batch_end_callback  = mx.callback.Speedometer(args.batch_size, args.disp_batches, auto_reset=False))
