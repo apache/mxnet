@@ -13,7 +13,7 @@
 #include <thread>
 #include "mxnet/ndarray.h"
 #include "../ndarray/ndarray_function.h"
-#include "../operator/tensor/indexing_op.h"
+#include "../operator/tensor/sparse_retain-inl.h"
 namespace mxnet {
 namespace kvstore {
 /**
