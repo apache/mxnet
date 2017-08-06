@@ -10,7 +10,6 @@ examples/cudnn_lstm_bucketing.pl
 Makefile.PL
 Changes
 META.json
-t/test_autograd.t
 t/test_recordio.t
 t/test_random.t
 t/test_init.t
