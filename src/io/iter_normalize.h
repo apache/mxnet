@@ -130,17 +130,17 @@ class ImageNormalizeIter : public IIterator<DataInst> {
         param_.mean_b > 0.0f || param_.mean_a > 0.0f) {
       // subtract mean per channel
       switch (data.shape_[0]) {
-        case 1: {
-          data[0] -= param_.mean_r;
-        }
-        case 2: {
-          data[0] -= param_.mean_g;
+        case 4: {
+          data[3] -= param_.mean_a;
         }
         case 3: {
-          data[0] -= param_.mean_b;
+          data[2] -= param_.mean_b;
         }
-        case 4: {
-          data[0] -= param_.mean_a;
+        case 2: {
+          data[1] -= param_.mean_g;
+        }
+        case 1: {
+          data[0] -= param_.mean_r;
           break;
         }
         default: {
@@ -157,17 +157,17 @@ class ImageNormalizeIter : public IIterator<DataInst> {
     data = data * contrast + illumination;
     // apply std per channel
     switch (data.shape_[0]) {
-      case 1: {
-        if (param_.std_r > 0.0f) data[0] /= param_.std_r;
-      }
-      case 2: {
-        if (param_.std_g > 0.0f) data[1] /= param_.std_g;
+      case 4: {
+        if (param_.std_a > 0.0f) data[3] /= param_.std_a;
       }
       case 3: {
         if (param_.std_b > 0.0f) data[2] /= param_.std_b;
       }
-      case 4: {
-        if (param_.std_a > 0.0f) data[3] /= param_.std_a;
+      case 2: {
+        if (param_.std_g > 0.0f) data[1] /= param_.std_g;
+      }
+      case 1: {
+        if (param_.std_r > 0.0f) data[0] /= param_.std_r;
         break;
       }
       default: {
