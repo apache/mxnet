@@ -23,40 +23,85 @@ const OperatorProperty* OpPropGetOpProperty(const NodeAttrs& attrs);
 
 namespace exec {
 
-// stateful compute executor
-class StatefulComputeExecutor : public OpExecutor {
+// abstract OpExecutor which provides storage fallback procedure on
+// non-default inputs and outputs
+// FComputeExecutor and FStatefulComputeExecutor inherit from this class
+class StorageFallbackOpExecutor : public OpExecutor {
  public:
-  void Run(RunContext rctx, bool is_gpu) override {
-    using namespace common;
-    op_ctx.run_ctx = rctx;
-    if (is_gpu) {
-#if MXNET_USE_CUDA
-      CastNonDefaultStorage<gpu>(temp_in_src_, temp_in_dst_, op_ctx);
-      CastNonDefaultStorage<gpu>(temp_out_src_, temp_out_dst_, op_ctx);
-      fcompute_(state_, op_ctx, in_data_, req, out_data_);
-      CastNonDefaultStorage<gpu>(temp_out_dst_, temp_out_src_, op_ctx);
-#else
-      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-    } else {
-      CastNonDefaultStorage<cpu>(temp_in_src_, temp_in_dst_, op_ctx);
-      CastNonDefaultStorage<cpu>(temp_out_src_, temp_out_dst_, op_ctx);
-      fcompute_(state_, op_ctx, in_data_, req, out_data_);
-      CastNonDefaultStorage<cpu>(temp_out_dst_, temp_out_src_, op_ctx);
-    }
-#if MKL_EXPERIMENTAL == 1
-    mkl_tblobs_prv_to_cpu(in_data_);
-    mkl_tblobs_prv_to_cpu(out_data_);
-#endif
-  }
+  explicit StorageFallbackOpExecutor(const std::vector<uint32_t> &mutate_idx)
+      : mutate_idx_(mutate_idx) {}
 
   void Setup() override {
     using namespace common;
     in_data_.clear(); out_data_.clear();
-    temp_in_src_.clear(); temp_in_dst_.clear();
-    temp_out_src_.clear(); temp_out_dst_.clear();
-    GetDefaultBlobs(in_array, &in_data_, &temp_in_src_, &temp_in_dst_);
-    GetDefaultBlobs(out_array, &out_data_, &temp_out_src_, &temp_out_dst_);
+    pre_temp_src_.clear(); pre_temp_dst_.clear();
+    post_temp_src_.clear(); post_temp_dst_.clear();
+    in_temp_idx_map_.clear();
+    SetupDefaultBlobs(in_array, &in_data_, &pre_temp_src_, &pre_temp_dst_, &in_temp_idx_map_);
+    SetupDefaultBlobs(out_array, &out_data_, &post_temp_dst_, &post_temp_src_);
+    for (const auto idx : mutate_idx_) {
+      auto map_iter = in_temp_idx_map_.find(idx);
+      if (map_iter != in_temp_idx_map_.end()) {
+        post_temp_src_.push_back(pre_temp_dst_[map_iter->second]);
+        post_temp_dst_.push_back(in_array[idx]);
+      }
+    }
+  }
+
+ protected:
+  // storage fallback before fcompute is launched
+  void PreFCompute(bool is_gpu) {
+    using namespace common;
+    if (is_gpu) {
+#if MXNET_USE_CUDA
+      CastNonDefaultStorage<gpu>(pre_temp_src_, pre_temp_dst_, op_ctx);
+#else
+      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif
+    } else {
+      CastNonDefaultStorage<cpu>(pre_temp_src_, pre_temp_dst_, op_ctx);
+    }
+  }
+
+  // storage fallback after fcompute is completed
+  void PostFCompute(bool is_gpu) {
+    using namespace common;
+    if (is_gpu) {
+#if MXNET_USE_CUDA
+      CastNonDefaultStorage<gpu>(post_temp_src_, post_temp_dst_, op_ctx);
+#else
+      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif
+    } else {
+      CastNonDefaultStorage<cpu>(post_temp_src_, post_temp_dst_, op_ctx);
+    }
+  }
+
+  // default storage tensor blobs for fcompute
+  std::vector<TBlob> in_data_, out_data_;
+  // source NDArray for cast storage
+  std::vector<NDArray> pre_temp_src_, post_temp_src_;
+  // destination NDArray for cast storage
+  std::vector<NDArray> pre_temp_dst_, post_temp_dst_;
+  // mapping from index in input_blobs to index in pre_temp_dst
+  std::unordered_map<uint32_t, uint32_t> in_temp_idx_map_;
+  // indices of mutatable inputs
+  std::vector<uint32_t> mutate_idx_;
+};
+
+
+// stateful compute executor
+class StatefulComputeExecutor : public StorageFallbackOpExecutor {
+ public:
+  void Run(RunContext rctx, bool is_gpu) override {
+    op_ctx.run_ctx = rctx;
+    PreFCompute(is_gpu);
+    fcompute_(state_, op_ctx, in_data_, req, out_data_);
+    PostFCompute(is_gpu);
+#if MKL_EXPERIMENTAL == 1
+    mkl_tblobs_prv_to_cpu(in_data_);
+    mkl_tblobs_prv_to_cpu(out_data_);
+#endif
   }
 
   ExecType exec_type() const override {
@@ -69,16 +114,16 @@ class StatefulComputeExecutor : public OpExecutor {
 
   explicit StatefulComputeExecutor(const OpStatePtr& state,
                                    const FStatefulCompute& fcompute,
-                                   ExecType exec_type)
-      : state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
+                                   ExecType exec_type,
+                                   const std::vector<uint32_t> &mutate_idx)
+      : StorageFallbackOpExecutor(mutate_idx),
+        state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
 
  private:
   friend Graph AttachOpExecs(Graph g);
   OpStatePtr state_;
   FStatefulCompute fcompute_;
   ExecType exec_type_;
-  std::vector<TBlob> in_data_, out_data_;
-  std::vector<NDArray> temp_in_src_, temp_in_dst_, temp_out_src_, temp_out_dst_;
 };
 
 
@@ -114,40 +159,18 @@ class StatefulComputeExExecutor : public OpExecutor {
 
 
 // fcompute executor
-class FComputeExecutor : public OpExecutor {
+class FComputeExecutor : public StorageFallbackOpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     using namespace common;
-    // TODO(haibin) avoid repeating this if all inputs are already in default-storage
     op_ctx.run_ctx = rctx;
-    if (is_gpu) {
-#if MXNET_USE_CUDA
-      CastNonDefaultStorage<gpu>(temp_in_src_, temp_in_dst_, op_ctx);
-      CastNonDefaultStorage<gpu>(temp_out_src_, temp_out_dst_, op_ctx);
-      fcompute_(attrs_, op_ctx, in_data_, req, out_data_);
-      CastNonDefaultStorage<gpu>(temp_out_dst_, temp_out_src_, op_ctx);
-#else
-      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-    } else {
-      CastNonDefaultStorage<cpu>(temp_in_src_, temp_in_dst_, op_ctx);
-      CastNonDefaultStorage<cpu>(temp_out_src_, temp_out_dst_, op_ctx);
-      fcompute_(attrs_, op_ctx, in_data_, req, out_data_);
-      CastNonDefaultStorage<cpu>(temp_out_dst_, temp_out_src_, op_ctx);
-    }
+    PreFCompute(is_gpu);
+    fcompute_(attrs_, op_ctx, in_data_, req, out_data_);
+    PostFCompute(is_gpu);
 #if MKL_EXPERIMENTAL == 1
     mkl_tblobs_prv_to_cpu(in_data_);
     mkl_tblobs_prv_to_cpu(out_data_);
 #endif
-  }
-
-  void Setup() override {
-    using namespace common;
-    in_data_.clear(); out_data_.clear();
-    temp_in_src_.clear(); temp_in_dst_.clear();
-    temp_out_src_.clear(); temp_out_dst_.clear();
-    GetDefaultBlobs(in_array, &in_data_, &temp_in_src_, &temp_in_dst_);
-    GetDefaultBlobs(out_array, &out_data_, &temp_out_src_, &temp_out_dst_);
   }
 
   ExecType exec_type() const override {
@@ -155,16 +178,15 @@ class FComputeExecutor : public OpExecutor {
   }
 
   explicit FComputeExecutor(const NodeAttrs& attrs, FCompute fcompute,
-                            ExecType exec_type)
-      : attrs_(attrs), fcompute_(fcompute), exec_type_(exec_type) {
+                            ExecType exec_type, const std::vector<uint32_t> &mutate_idx)
+      : StorageFallbackOpExecutor(mutate_idx),
+        attrs_(attrs), fcompute_(fcompute), exec_type_(exec_type) {
   }
 
  private:
   NodeAttrs attrs_;
   FCompute fcompute_;
   ExecType exec_type_;
-  std::vector<TBlob> in_data_, out_data_;
-  std::vector<NDArray> temp_in_src_, temp_in_dst_, temp_out_src_, temp_out_dst_;
 };
 
 // fcompute_ex executor
@@ -247,7 +269,8 @@ Graph AttachOpExecs(Graph g) {
       FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
           op, "FStatefulCompute", vctx[i]);
       if (fcompute != nullptr) {
-        ret[i] = std::make_shared<StatefulComputeExecutor>(state, fcompute, exec_type);
+        ret[i] = std::make_shared<StatefulComputeExecutor>(state, fcompute,
+                                                           exec_type, mutate_index);
       } else {
         FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
             op, "FStatefulComputeEx", vctx[i]);
@@ -266,7 +289,7 @@ Graph AttachOpExecs(Graph g) {
       if (fcompute != nullptr) {
         ret[i] = std::make_shared<StatefulComputeExecutor>(
             dynamic_cast<StatefulComputeExecutor*>(ret[fwd_id].get())->state_,
-            fcompute, exec_type);
+            fcompute, exec_type, mutate_index);
       } else {
         FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
             op, "FStatefulComputeEx", vctx[i]);
@@ -285,7 +308,7 @@ Graph AttachOpExecs(Graph g) {
             inode.source->attrs, fcomp_ex, exec_type);
       } else if (fcompute != nullptr) {
         ret[i] = std::make_shared<FComputeExecutor>(
-            inode.source->attrs, fcompute, exec_type);
+            inode.source->attrs, fcompute, exec_type, mutate_index);
       } else {
         LOG(INFO) << "Neither FCompute nor FComputeEx registered " << op->name;
       }

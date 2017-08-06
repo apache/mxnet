@@ -64,9 +64,21 @@ A detailed tutorial is available at
 ```
 
 In the rest of this document, we first overview the methods provided by the
-`ndarray.NDArray` class, and then list other routines provided by the
-`ndarray` package.
+`ndarray.NDArray` class and its subclasses, and then list other routines
+provided by the `ndarray` package.
 
+The `ndarray` package provides several classes:
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray
+    CSRNDArray
+    RowSparseNDArray
+```
+
+We summarize the interface for each class in the following sections.
 
 ## The `NDArray` class
 
@@ -80,6 +92,7 @@ In the rest of this document, we first overview the methods provided by the
     NDArray.size
     NDArray.context
     NDArray.dtype
+    NDArray.stype
 ```
 
 ### Array conversion
@@ -169,6 +182,33 @@ In the rest of this document, we first overview the methods provided by the
     :nosignatures:
 
     NDArray.wait_to_read
+```
+
+## The `RowSparseNDArray` Class
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.copyto
+    RowSparseNDArray.__setitem__
+    RowSparseNDArray.__getitem__
+    RowSparseNDArray.data
+    RowSparseNDArray.indices
+```
+
+## The `CSRNDArray` Class
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    CSRNDArray.copyto
+    CSRNDArray.__setitem__
+    CSRNDArray.__getitem__
+    CSRNDArray.data
+    CSRNDArray.indices
+    CSRNDArray.indptr
 ```
 
 ## Array creation routines
@@ -499,8 +539,29 @@ The `contrib.ndarray` module contains many useful experimental APIs for new feat
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
+
+.. autoclass:: mxnet.ndarray.NDArray
+    :members:
+    :special-members:
+
+.. autoclass:: mxnet.ndarray.BaseSparseNDArray
+    :members:
+    :special-members:
+    :exclude-members: __weakref__
+
+.. autoclass:: mxnet.ndarray.CSRNDArray
+    :members:
+    :special-members:
+
+.. autoclass:: mxnet.ndarray.RowSparseNDArray
+    :members:
+    :special-members:
+
 .. automodule:: mxnet.ndarray
     :members:
+    :imported-members:
+    :special-members:
+    :exclude-members: CachedOp, BaseSparseNDArray, NDArray, CSRNDArray, RowSparseNDArray
 
 .. automodule:: mxnet.random
     :members:

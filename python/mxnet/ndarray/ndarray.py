@@ -26,6 +26,12 @@ from . import broadcast_sub, broadcast_div, broadcast_to, broadcast_equal, cast_
 from . import broadcast_greater, broadcast_greater_equal, broadcast_lesser, broadcast_lesser_equal
 from . import zeros_like, slice
 
+__all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP",                   \
+           "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",   \
+           "imdecode", "lesser", "lesser_equal", "maximum", "minimum", "moveaxis",           \
+           "multiply", "negative", "not_equal", "onehot_encode", "power", "subtract",        \
+           "true_divide", "waitall", "_new_empty_handle"]
+
 # pylint: disable= no-member
 _DTYPE_NP_TO_MX = {
     None       : -1,
@@ -819,6 +825,8 @@ fixed-size items.
 
     @property
     def stype(self):
+        """Storage-type of the array.
+        """
         return _storage_type(self.handle)
 
     @property
