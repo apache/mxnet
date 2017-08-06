@@ -6,5 +6,5 @@ from .op import CachedOp
 # pylint: disable=wildcard-import
 from .ndarray import *
 from .ndarray_utils import load, save, zeros, empty, array
-from .sparse_ndarray import _ndarray_cls
-from .sparse_ndarray import csr, row_sparse, BaseSparseNDArray, todense, RowSparseNDArray, CSRNDArray
+from .sparse_ndarray import _ndarray_cls, todense
+from .sparse_ndarray import csr, row_sparse, BaseSparseNDArray, RowSparseNDArray, CSRNDArray

@@ -360,8 +360,8 @@ void FCompExFallback(const nnvm::NodeAttrs& attrs,
   using namespace mxnet::common;
   std::vector<TBlob> in_blobs, out_blobs;
   std::vector<NDArray> temp_in_src, temp_in_dst, temp_out_src, temp_out_dst;
-  GetDefaultBlobs(inputs, &in_blobs, &temp_in_src, &temp_in_dst);
-  GetDefaultBlobs(outputs, &out_blobs, &temp_out_src, &temp_out_dst);
+  SetupDefaultBlobs(inputs, &in_blobs, &temp_in_src, &temp_in_dst);
+  SetupDefaultBlobs(outputs, &out_blobs, &temp_out_src, &temp_out_dst);
   CastNonDefaultStorage<xpu>(temp_in_src, temp_in_dst, ctx, true);
   fcompute(attrs, ctx, in_blobs, req, out_blobs);
   CastNonDefaultStorage<xpu>(temp_out_dst, temp_out_src, ctx, true);

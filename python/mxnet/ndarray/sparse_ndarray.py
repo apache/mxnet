@@ -408,11 +408,11 @@ class CSRNDArray(BaseSparseNDArray):
             value and ``other`` will point to the same ``NDArray`` or ``CSRNDArray``.
         """
         if isinstance(other, Context):
-            super(CSRNDArray, self).copyto(other)
+            return super(CSRNDArray, self).copyto(other)
         elif isinstance(other, NDArray):
             stype = other.stype
             if stype == 'default' or stype == 'csr':
-                super(CSRNDArray, self).copyto(other)
+                return super(CSRNDArray, self).copyto(other)
             else:
                 raise TypeError('copyto does not support destination NDArray stype ' + str(stype))
         else:
@@ -597,11 +597,11 @@ class RowSparseNDArray(BaseSparseNDArray):
             return value and ``other`` will point to the same ``NDArray`` or ``RowSparseNDArray``.
         """
         if isinstance(other, Context):
-            super(RowSparseNDArray, self).copyto(other)
+            return super(RowSparseNDArray, self).copyto(other)
         elif isinstance(other, NDArray):
             stype = other.stype
             if stype == 'default' or stype == 'row_sparse':
-                super(RowSparseNDArray, self).copyto(other)
+                return super(RowSparseNDArray, self).copyto(other)
             else:
                 raise TypeError('copyto does not support destination NDArray stype ' + str(stype))
         else:

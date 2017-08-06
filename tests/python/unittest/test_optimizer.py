@@ -358,6 +358,7 @@ def test_adam():
               {'rescale_grad': 0.8, 'wd': 0.05}]
     for kwarg in kwargs:
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32)
+        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32, g_stype='row_sparse')
 
 # RMSProp
 class PyRMSProp(mx.optimizer.Optimizer):
@@ -498,6 +499,7 @@ def test_rms():
               {'rescale_grad': 0.8, 'wd': 0.05, 'centered': True, 'clip_weights': 0.01}]
     for kwarg in kwargs:
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32)
+        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32, g_stype='row_sparse')
 
 if __name__ == '__main__':
     test_adam()
