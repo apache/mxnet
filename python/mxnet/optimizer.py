@@ -43,7 +43,8 @@ class Optimizer(object):
     """
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
-                 lr_scheduler=None, sym=None, begin_num_update=0):
+                 lr_scheduler=None, sym=None, begin_num_update=0,
+                 param_dict=None):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -64,6 +65,7 @@ class Optimizer(object):
             'param_idx2name should be a dict of param indexes to names.'
         self.idx2name = param_idx2name.copy()
         self.sym = sym
+        self.param_dict = param_dict if param_dict else {}
 
         self.set_lr_mult({})
         self.set_wd_mult({})
@@ -277,7 +279,9 @@ class Optimizer(object):
         else:
             lr = self.lr
 
-        if index in self.lr_mult:
+        if index in self.param_dict:
+            lr *= self.param_dict[index].lr_mult
+        elif index in self.lr_mult:
             lr *= self.lr_mult[index]
         elif index in self.idx2name:
             lr *= self.lr_mult.get(self.idx2name[index], 1.0)
@@ -298,7 +302,9 @@ class Optimizer(object):
             Weight decay for this index.
         """
         wd = self.wd
-        if index in self.wd_mult:
+        if index in self.param_dict:
+            wd *= self.param_dict[index].wd_mult
+        elif index in self.wd_mult:
             wd *= self.wd_mult[index]
         elif index in self.idx2name:
             wd *= self.wd_mult.get(self.idx2name[index], 1.0)
