@@ -842,8 +842,8 @@ class CrossEntropy(EvalMetric):
     .. math::
        -\\sum_{n=1}^{N}\\sum_{k=1}^{K}t_{nk}\\log (y_{nk}),
 
-    where :math:`t_{nk}=1` iff sample :math:`n` belongs to class :math:`k`.
-    :math:`y_{nk}` denotes the probability of sample :math:`n` belonging to 
+    where :math:`t_{nk}=1` if and only if sample :math:`n` belongs to class :math:`k`.
+    :math:`y_{nk}` denotes the probability of sample :math:`n` belonging to
     class :math:`k`.
 
     Parameters
