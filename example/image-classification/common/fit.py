@@ -165,9 +165,15 @@ def fit(args, network, data_loader, **kwargs):
 
     # callbacks that run after each batch
     batch_end_callbacks = [mx.callback.Speedometer(args.batch_size, args.disp_batches)]
+    eval_end_callbacks = []
     if 'batch_end_callback' in kwargs:
         cbs = kwargs['batch_end_callback']
         batch_end_callbacks += cbs if isinstance(cbs, list) else [cbs]
+
+    # tensorboard logs
+    if "eval_end_callback" in kwargs:
+	cbs = kwargs['eval_end_callback']
+        eval_end_callbacks += cbs if isinstance(cbs, list) else [cbs]
 
     # run
     model.fit(train,
@@ -182,6 +188,8 @@ def fit(args, network, data_loader, **kwargs):
         arg_params         = arg_params,
         aux_params         = aux_params,
         batch_end_callback = batch_end_callbacks,
+        eval_end_callback  = eval_end_callbacks,
         epoch_end_callback = checkpoint,
         allow_missing      = True,
         monitor            = monitor)
+
