@@ -6,7 +6,7 @@ local_build="latest"
 web_branch="$2"
 git clone $web_url $web_folder
 cd $web_folder
-git checkout -b $web_branch "origin/$web_branch"
+git checkout $web_branch 
 cd ..
 mkdir "$local_build"
 
@@ -51,7 +51,7 @@ then
 fi
 
 # Build latest master
-git checkout VersionedDoc
+git checkout master
 git checkout -- .
 git submodule update
 echo "Building master"
