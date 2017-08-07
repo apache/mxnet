@@ -19,7 +19,7 @@ $ pip install opencv-python requests matplotlib jupyter
 
 ```
 $ git clone https://github.com/dmlc/mxnet ~/mxnet
-$ MXNET_HOME = '~/mxnet'
+$ export MXNET_HOME='~/mxnet'
 ```
 
 ## MXNet Data Iterator  
@@ -366,7 +366,7 @@ Now let's convert them into record io format using the `im2rec.py` utility scrip
 First, we need to make a list that contains all the image files and their categories:
 
 ```python
-os.system('python %s/tools/im2rec.py --list=1 --recursive=1 --shuffle=1 --test-ratio=0.2 data/caltech data/101_ObjectCategories'%MXNET_HOME)
+os.system('python %s/tools/im2rec.py --list=1 --recursive=1 --shuffle=1 --test-ratio=0.2 data/caltech data/101_ObjectCategories'%os.environ['MXNET_HOME'])
 ```
 
 The resulting list file (./data/caltech_train.lst) is in the format `index\t(one or more label)\tpath`. In this case, there is only one label for each image but you can modify the list to add in more for multi-label training.
@@ -375,7 +375,7 @@ Then we can use this list to create our record io file:
 
 
 ```python
-os.system("python %s/tools/im2rec.py --num-thread=4 --pass-through=1 data/caltech data/101_ObjectCategories"%MXNET_HOME)
+os.system("python %s/tools/im2rec.py --num-thread=4 --pass-through=1 data/caltech data/101_ObjectCategories"%os.environ['MXNET_HOME'])
 ```
 
 The record io files are now saved at here (./data)
