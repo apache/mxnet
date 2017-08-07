@@ -287,7 +287,7 @@ try {
                     init_git()
                     unpack_lib('cpu')
                     timeout(time: max_time, unit: 'MINUTES') {
-                        sh "${docker_run} cpu ./perl-package/test.sh /workspace/ut-perl-cpu /workspace/ut-perl-cpu"
+                        sh "${docker_run} cpu ./perl-package/test.sh"
                     }
                 }
             }
@@ -298,7 +298,7 @@ try {
                     init_git()
                     unpack_lib('gpu')
                     timeout(time: max_time, unit: 'MINUTES') {
-                        sh "${docker_run} gpu ./perl-package/test.sh /workspace/ut-perl-gpu /workspace/ut-perl-gpu"
+                        sh "${docker_run} gpu ./perl-package/test.sh"
                     }
                 }
             }
