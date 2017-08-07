@@ -19,7 +19,6 @@
 #include "./dot-inl.cuh"
 #endif  // __CUDACC__
 
-// TODO(stefan): change dot interface s.t. it includes OpContext
 namespace mxnet {
 namespace op {
 
@@ -420,7 +419,8 @@ struct DotCsrTransRspRspByRowBlocks {
 /*!
  * \brief CPU Impl of dot(csr, dns1) = dns2 and dot(csr.T, dns1) = dns2
  */
-inline void DotCsrDnsDnsImpl(mshadow::Stream<cpu>* s,
+inline void DotCsrDnsDnsImpl(const OpContext& ctx,
+                             const cpu& cpu_dev,
                              const NDArray& lhs,
                              const TBlob& rhs,
                              const OpReqType req,
@@ -430,6 +430,7 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<cpu>* s,
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
   if (!lhs.storage_initialized()) return;
 
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
   const TBlob col_idx_l = lhs.aux_data(csr::kIdx);
@@ -464,7 +465,8 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<cpu>* s,
 /*!
  * \brief CPU Impl of dot(csr.T, dns) = rsp
  */
-inline void DotCsrDnsRspImpl(mshadow::Stream<cpu>* s,
+inline void DotCsrDnsRspImpl(const OpContext& ctx,
+                             const cpu& cpu_dev,
                              const NDArray& lhs,
                              const TBlob& rhs,
                              const OpReqType req,
@@ -475,6 +477,7 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<cpu>* s,
   CHECK_EQ(ret->storage_type(), kRowSparseStorage);
   if (!lhs.storage_initialized()) return;
 
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
   const TBlob col_idx_l = lhs.aux_data(csr::kIdx);
@@ -528,7 +531,8 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<cpu>* s,
 /*!
  * \brief CPU Impl of dot(csr, rsp) = dns
  */
-inline void DotCsrRspDnsImpl(mshadow::Stream<cpu>* s,
+inline void DotCsrRspDnsImpl(const OpContext& ctx,
+                             const cpu& cpu_dev,
                              const NDArray& lhs,
                              const NDArray& rhs,
                              const OpReqType req,
@@ -536,13 +540,14 @@ inline void DotCsrRspDnsImpl(mshadow::Stream<cpu>* s,
                              TBlob* ret) {
   // reuse csr dns implementation when storage_shape == shape for rhs
   if (rhs.storage_shape()[0] == rhs.shape()[0]) {  // if rsp is actually dense
-    DotCsrDnsDnsImpl(s, lhs, rhs.data(), req, trans_lhs, ret);
+    DotCsrDnsDnsImpl(ctx, cpu_dev, lhs, rhs.data(), req, trans_lhs, ret);
     return;
   }
 
   if (kNullOp == req) return;
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
   CHECK_EQ(rhs.storage_type(), kRowSparseStorage);
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   if (!lhs.storage_initialized() || !rhs.storage_initialized()) {
     if (kWriteTo == req) {
       MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {  // data type
@@ -587,7 +592,8 @@ inline void DotCsrRspDnsImpl(mshadow::Stream<cpu>* s,
 /*!
  * \brief CPU Impl of dot(csr.T, rsp1) = rsp2
  */
-inline void DotCsrRspRspImpl(mshadow::Stream<cpu>* s,
+inline void DotCsrRspRspImpl(const OpContext& ctx,
+                             const cpu& cpu_dev,
                              const NDArray& lhs,
                              const NDArray& rhs,
                              const OpReqType req,
@@ -595,7 +601,7 @@ inline void DotCsrRspRspImpl(mshadow::Stream<cpu>* s,
                              NDArray* ret) {
   // reuse csr dns implementation when storage_shape == shape for rhs
   if (rhs.storage_shape()[0] == rhs.shape()[0]) {  // if rsp is actually dense
-    DotCsrDnsRspImpl(s, lhs, rhs.data(), req, trans_lhs, ret);
+    DotCsrDnsRspImpl(ctx, cpu_dev, lhs, rhs.data(), req, trans_lhs, ret);
     return;
   }
 
@@ -605,6 +611,7 @@ inline void DotCsrRspRspImpl(mshadow::Stream<cpu>* s,
   CHECK_EQ(ret->storage_type(), kRowSparseStorage);
   if (!lhs.storage_initialized() || !rhs.storage_initialized()) return;
 
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
   const TBlob col_idx_l = lhs.aux_data(csr::kIdx);
@@ -718,22 +725,21 @@ void DotForwardEx(const nnvm::NodeAttrs& attrs,
   auto lhs_stype = inputs[0].storage_type();
   auto rhs_stype = inputs[1].storage_type();
   auto out_stype = outputs[0].storage_type();
-  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   if (lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage && out_stype == kDefaultStorage) {
     TBlob ret = outputs[0].data();
-    DotCsrDnsDnsImpl(s, inputs[0], inputs[1].data(), req[0], param.transpose_a, &ret);
+    DotCsrDnsDnsImpl(ctx, xpu(), inputs[0], inputs[1].data(), req[0], param.transpose_a, &ret);
   } else if (lhs_stype == kCSRStorage && rhs_stype == kRowSparseStorage
       && out_stype == kDefaultStorage) {
     TBlob ret = outputs[0].data();
-    DotCsrRspDnsImpl(s, inputs[0], inputs[1], req[0], param.transpose_a, &ret);
+    DotCsrRspDnsImpl(ctx, xpu(), inputs[0], inputs[1], req[0], param.transpose_a, &ret);
   } else if (lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage
       && out_stype == kRowSparseStorage) {
     NDArray out = outputs[0];
-    DotCsrDnsRspImpl(s, inputs[0], inputs[1].data(), req[0], param.transpose_a, &out);
+    DotCsrDnsRspImpl(ctx, xpu(), inputs[0], inputs[1].data(), req[0], param.transpose_a, &out);
   } else if (lhs_stype == kCSRStorage && rhs_stype == kRowSparseStorage
       && out_stype == kRowSparseStorage) {
     NDArray ret = outputs[0];
-    DotCsrRspRspImpl(s, inputs[0], inputs[1], req[0], param.transpose_a, &ret);
+    DotCsrRspRspImpl(ctx, xpu(), inputs[0], inputs[1], req[0], param.transpose_a, &ret);
   } else {
     FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs, DotForward_<xpu>, "DotForward_");
   }
@@ -760,17 +766,16 @@ void DotBackwardEx(const nnvm::NodeAttrs& attrs,
   const auto lhs_stype = inputs[1].storage_type();
   const auto rhs_stype = inputs[2].storage_type();
   const auto grad_rhs_stype = outputs[1].storage_type();
-  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   if (ograd_stype == kDefaultStorage  // ograd dns format
       && lhs_stype == kCSRStorage  // csr input lhs of the op
       && grad_rhs_stype == kDefaultStorage) {  // grad(rhs) dns format
     TBlob ret = outputs[1].data();
-    DotCsrDnsDnsImpl(s, inputs[1], inputs[0].data(), req[1], !param.transpose_a, &ret);
+    DotCsrDnsDnsImpl(ctx, xpu(), inputs[1], inputs[0].data(), req[1], !param.transpose_a, &ret);
   } else if (ograd_stype == kDefaultStorage
       && lhs_stype == kCSRStorage
       && grad_rhs_stype == kRowSparseStorage) {
     NDArray ret = outputs[1];
-    DotCsrDnsRspImpl(s, inputs[1], inputs[0].data(), req[1], !param.transpose_a, &ret);
+    DotCsrDnsRspImpl(ctx, xpu(), inputs[1], inputs[0].data(), req[1], !param.transpose_a, &ret);
   } else {
     FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs, DotBackward_<xpu>, "DotBackward_");
   }

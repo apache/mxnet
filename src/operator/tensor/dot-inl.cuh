@@ -11,7 +11,6 @@
 
 #include <cub/cub.cuh>
 
-// TODO(stefan): change dot interface s.t. it includes OpContext
 namespace mxnet {
 namespace op {
 
@@ -512,7 +511,8 @@ struct DotCsrRspDnsScalarKernel {
 /*!
  * \brief GPU Impl of dot(csr, dns1) = dns2 and dot(csr.T, dns1) = dns2
  */
-inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
+inline void DotCsrDnsDnsImpl(const OpContext& ctx,
+                             const gpu& gpu_dev,
                              const NDArray& lhs,
                              const TBlob& rhs,
                              const OpReqType req,
@@ -526,6 +526,7 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
   using mxnet_op::Kernel;
   using mxnet_op::set_zero;
   using nnvm::dim_t;
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
 
   const dim_t num_rows_l = lhs.shape()[0];
   const dim_t num_cols_r = rhs.shape_[1];
@@ -640,10 +641,9 @@ inline void DotCsrDnsDnsImpl(mshadow::Stream<gpu>* s,
 
 /*!
  * \brief GPU Impl of dot(csr, dns) = rsp and dot(csr.T, dns) = rsp
- * TODO: Optimize for GPU; this is a baseline implementation providing
- *       the operator functionality, it is not yet fully optimized for GPU.
  */
-inline void DotCsrDnsRspImpl(mshadow::Stream<gpu>* s,
+inline void DotCsrDnsRspImpl(const OpContext& ctx,
+                             const gpu& gpu_dev,
                              const NDArray& lhs,
                              const TBlob& rhs,
                              const OpReqType req,
@@ -654,9 +654,11 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<gpu>* s,
   CHECK_EQ(ret->storage_type(), kRowSparseStorage);
   if (!lhs.storage_initialized()) return;
 
+  using mshadow::Shape1;
   using mxnet_op::Kernel;
   using mxnet_op::set_zero;
   using nnvm::dim_t;
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
 
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
@@ -670,7 +672,7 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<gpu>* s,
   dim_t num_threads;
   // TODO: remove kernel dependency on warpSize=32
   if (threads_per_warp != 32) {
-    LOG(FATAL) << "DotCsrDnsDnsImpl GPU kernels expect warpSize=32";
+    LOG(FATAL) << "DotCsrDnsRspImpl GPU kernels expect warpSize=32";
   }
 
   MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
@@ -678,18 +680,11 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<gpu>* s,
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         if (trans_lhs) {
           // Compute number of non-zero rows (nnr) of output matrix
-          // TODO(stefan): use temporary workspace from OpContext
-          // - mark non-zero columns of csr matrix
+          // - alloc temp storage for row_flg array and for cub's prefix sum
+          // - mark non-zero columns of csr matrix in row_flg
           // - compute inclusive prefix sum over marked array
           // - copy last value (nnr_out) from device to host
-          dim_t* row_flg_out;
-          CUDA_CALL(cudaMalloc(&row_flg_out, num_cols_l*sizeof(dim_t)));
-          num_threads = num_cols_l;
-          Kernel<set_zero, gpu>::Launch(s, num_threads, row_flg_out);
-          num_threads = num_rows_l * threads_per_warp;
-          Kernel<MarkCsrZeroColsWarpKernel, gpu>::Launch(s, num_threads,
-              row_flg_out, col_idx_l.dptr<CType>(), indptr_l.dptr<IType>(),
-              num_rows_l, num_cols_l);
+          dim_t* row_flg_out = NULL;
           void* d_temp_storage = NULL;
           size_t temp_storage_bytes = 0;
           cub::DeviceScan::InclusiveSum(d_temp_storage,
@@ -698,20 +693,28 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<gpu>* s,
                                         row_flg_out,
                                         num_cols_l,
                                         mshadow::Stream<gpu>::GetStream(s));
-          CUDA_CALL(cudaMalloc(&d_temp_storage, temp_storage_bytes));
+          mshadow::Tensor<gpu, 1, char> workspace = ctx.requested[0]
+              .get_space_typed<gpu, 1, char>(Shape1(num_cols_l*sizeof(dim_t)+temp_storage_bytes), s);
+          row_flg_out = reinterpret_cast<dim_t*>(workspace.dptr_);
+          d_temp_storage = workspace.dptr_ + num_cols_l*sizeof(dim_t);
+          num_threads = num_cols_l;
+          Kernel<set_zero, gpu>::Launch(s, num_threads, row_flg_out);
+          num_threads = num_rows_l * threads_per_warp;
+          Kernel<MarkCsrZeroColsWarpKernel, gpu>::Launch(s, num_threads,
+              row_flg_out, col_idx_l.dptr<CType>(), indptr_l.dptr<IType>(),
+              num_rows_l, num_cols_l);
           cub::DeviceScan::InclusiveSum(d_temp_storage,
                                         temp_storage_bytes,
                                         row_flg_out,
                                         row_flg_out,
                                         num_cols_l,
                                         mshadow::Stream<gpu>::GetStream(s));
-          CUDA_CALL(cudaFree(d_temp_storage));
           dim_t nnr_out = 0;
           CUDA_CALL(cudaMemcpy(&nnr_out, &row_flg_out[num_cols_l-1], sizeof(dim_t),
                                cudaMemcpyDeviceToHost));
 
           // Allocate output matrix space
-          ret->CheckAndAlloc({mshadow::Shape1(nnr_out)});
+          ret->CheckAndAlloc({Shape1(nnr_out)});
           const TBlob data_out_blob = ret->data();
           const TBlob row_idx_out_blob = ret->aux_data(rowsparse::kIdx);
           MSHADOW_IDX_TYPE_SWITCH(row_idx_out_blob.type_flag_, RType, {  // row idx type
@@ -735,7 +738,6 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<gpu>* s,
                 data_out, row_flg_out,
                 data_l.dptr<DType>(), indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(),
                 data_r.dptr<DType>(), num_cols_r);
-            CUDA_CALL(cudaFree(row_flg_out));
           });
         } else {
           LOG(FATAL) << "DotCsrDnsRspImpl has not implemented dot(csr, dns) = rsp yet.";
@@ -750,7 +752,8 @@ inline void DotCsrDnsRspImpl(mshadow::Stream<gpu>* s,
  * TODO: Optimize for GPU; this is a baseline implementation providing
  *       the operator functionality, it is not yet fully optimized for GPU.
  */
-inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
+inline void DotCsrRspRspImpl(const OpContext& ctx,
+                             const gpu& gpu_dev,
                              const NDArray& lhs,
                              const NDArray& rhs,
                              const OpReqType req,
@@ -758,7 +761,7 @@ inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
                              NDArray* ret) {
   // Reuse dot(csr, dns) implementation if rhs rsp matrix is in fact dense
   if (rhs.storage_shape()[0] == rhs.shape()[0]) {
-    DotCsrDnsRspImpl(s, lhs, rhs.data(), req, trans_lhs, ret);
+    DotCsrDnsRspImpl(ctx, gpu_dev, lhs, rhs.data(), req, trans_lhs, ret);
     return;
   }
   if (kNullOp == req) return;
@@ -767,9 +770,11 @@ inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
   CHECK_EQ(ret->storage_type(), kRowSparseStorage);
   if (!lhs.storage_initialized() || !rhs.storage_initialized()) return;
 
+  using mshadow::Shape1;
   using mxnet_op::Kernel;
   using mxnet_op::set_zero;
   using nnvm::dim_t;
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
 
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
@@ -785,7 +790,7 @@ inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
   dim_t num_threads;
   // TODO: remove kernel dependency on warpSize=32
   if (threads_per_warp != 32) {
-    LOG(FATAL) << "DotCsrDnsDnsImpl GPU kernels expect warpSize=32";
+    LOG(FATAL) << "DotCsrRspRspImpl GPU kernels expect warpSize=32";
   }
 
   MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
@@ -794,18 +799,11 @@ inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
         MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // row idx type
           if (trans_lhs) {
             // Compute number of non-zero rows (nnr) of output matrix
-            // TODO(stefan): use temporary workspace from OpContext
-            // - mark non-zero columns of csr matrix
+            // - alloc temp storage for row_flg array and for cub's prefix sum
+            // - mark non-zero columns of csr matrix in row_flg
             // - compute inclusive prefix sum over marked array
             // - copy last value (nnr_out) from device to host
-            dim_t* row_flg_out;
-            CUDA_CALL(cudaMalloc(&row_flg_out, num_cols_l*sizeof(dim_t)));
-            num_threads = num_cols_l;
-            Kernel<set_zero, gpu>::Launch(s, num_threads, row_flg_out);
-            num_threads = num_rows_l * threads_per_warp;
-            Kernel<MarkCsrZeroColsWarpKernel, gpu>::Launch(s, num_threads,
-                row_flg_out, col_idx_l.dptr<CType>(), indptr_l.dptr<IType>(),
-                num_rows_l, num_cols_l);
+            dim_t* row_flg_out = NULL;
             void* d_temp_storage = NULL;
             size_t temp_storage_bytes = 0;
             cub::DeviceScan::InclusiveSum(d_temp_storage,
@@ -814,14 +812,22 @@ inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
                                           row_flg_out,
                                           num_cols_l,
                                           mshadow::Stream<gpu>::GetStream(s));
-            CUDA_CALL(cudaMalloc(&d_temp_storage, temp_storage_bytes));
+            mshadow::Tensor<gpu, 1, char> workspace = ctx.requested[0]
+            .get_space_typed<gpu, 1, char>(Shape1(num_cols_l*sizeof(dim_t)+temp_storage_bytes), s);
+            row_flg_out = reinterpret_cast<dim_t*>(workspace.dptr_);
+            d_temp_storage = workspace.dptr_ + num_cols_l*sizeof(dim_t);
+            num_threads = num_cols_l;
+            Kernel<set_zero, gpu>::Launch(s, num_threads, row_flg_out);
+            num_threads = num_rows_l * threads_per_warp;
+            Kernel<MarkCsrZeroColsWarpKernel, gpu>::Launch(s, num_threads,
+                                                           row_flg_out, col_idx_l.dptr<CType>(), indptr_l.dptr<IType>(),
+                                                           num_rows_l, num_cols_l);
             cub::DeviceScan::InclusiveSum(d_temp_storage,
                                           temp_storage_bytes,
                                           row_flg_out,
                                           row_flg_out,
                                           num_cols_l,
                                           mshadow::Stream<gpu>::GetStream(s));
-            CUDA_CALL(cudaFree(d_temp_storage));
             dim_t nnr_out = 0;
             CUDA_CALL(cudaMemcpy(&nnr_out, &row_flg_out[num_cols_l-1], sizeof(dim_t),
                                  cudaMemcpyDeviceToHost));
@@ -843,7 +849,6 @@ inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
             num_threads = num_cols_l;
             Kernel<FillRspRowIdxKernel, gpu>::Launch(s, num_threads,
                 row_idx_out, row_flg_out, num_cols_l);
-            CUDA_CALL(cudaFree(row_flg_out));
 
             // Perform matrix-matrix multiply
             num_threads = nnr_out;
@@ -864,7 +869,8 @@ inline void DotCsrRspRspImpl(mshadow::Stream<gpu>* s,
 /*!
  * \brief GPU Impl of dot(csr, rsp) = dns and dot(csr.T, rsp) = dns
  */
-inline void DotCsrRspDnsImpl(mshadow::Stream<gpu>* s,
+inline void DotCsrRspDnsImpl(const OpContext& ctx,
+                             const gpu& gpu_dev,
                              const NDArray& lhs,
                              const NDArray& rhs,
                              const OpReqType req,
@@ -872,7 +878,7 @@ inline void DotCsrRspDnsImpl(mshadow::Stream<gpu>* s,
                              TBlob* ret) {
   // Reuse dot(csr, dns) implementation if rhs rsp matrix is in fact dense
   if (rhs.storage_shape()[0] == rhs.shape()[0]) {
-    DotCsrDnsDnsImpl(s, lhs, rhs.data(), req, trans_lhs, ret);
+    DotCsrDnsDnsImpl(ctx, gpu_dev, lhs, rhs.data(), req, trans_lhs, ret);
     return;
   }
   if (kNullOp == req) return;
@@ -881,7 +887,7 @@ inline void DotCsrRspDnsImpl(mshadow::Stream<gpu>* s,
 
   using mxnet_op::Kernel;
   using mxnet_op::set_zero;
-
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
   if (!lhs.storage_initialized() || !rhs.storage_initialized()) {
     if (kWriteTo == req) {
       MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {  // data type
@@ -916,9 +922,8 @@ inline void DotCsrRspDnsImpl(mshadow::Stream<gpu>* s,
           } else {
             // TODO: Consider implementing a vector kernel for SpMV (similar to DotCsrDnsDns)
             // Alloc temp storage for row_flg array
-            // TODO(stefan): use temporary workspace from OpContext
-            RType* row_flg_r;
-            CUDA_CALL(cudaMalloc(&row_flg_r, rhs.shape()[0]*sizeof(RType)));
+            RType* row_flg_r = ctx.requested[0]
+                .get_space_typed<gpu, 1, RType>(mshadow::Shape1(rhs.shape()[0]), s).dptr_;
             num_threads = rhs.shape()[0];
             Kernel<set_zero, gpu>::Launch(s, num_threads, row_flg_r);
             // Set row_flg index array
@@ -932,8 +937,6 @@ inline void DotCsrRspDnsImpl(mshadow::Stream<gpu>* s,
                 data_l.dptr<DType>(), indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(),
                 data_r.dptr<DType>(), row_idx_r.dptr<RType>(), row_flg_r, rhs.storage_shape()[0],
                 num_rows, num_cols);
-            // Dealloc temp storage
-            CUDA_CALL(cudaFree(row_flg_r));
           }
         });
       });
