@@ -78,8 +78,12 @@ if __name__ == '__main__':
     # tensorboard logs
     train_log = 'logs/mnist/train'
     eval_log = 'logs/mnist/eval'
-    batch_end_callbacks = [mx.contrib.tensorboard.LogMetricsCallback(train_log)]
-    eval_end_callbacks = [mx.contrib.tensorboard.LogMetricsCallback(eval_log)]
+    try:
+        import tensorboard
+        batch_end_callbacks = [mx.contrib.tensorboard.LogMetricsCallback(train_log)]
+        eval_end_callbacks = [mx.contrib.tensorboard.LogMetricsCallback(eval_log)]
+    except:
+        print("warning: can't generate event files of tensorboard. You can install tensorboard using 'pip install tensorboard'.")
 
     # train
     fit.fit(args, sym, get_mnist_iter,\
