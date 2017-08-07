@@ -7,6 +7,8 @@
 #define MXNET_COMMON_CUDA_UTILS_H_
 
 #include <dmlc/logging.h>
+#include <dmlc/parameter.h>
+#include <dmlc/optional.h>
 #include <mshadow/base.h>
 
 /*! \brief Macros/inlines to assist CLion to parse Cuda files (*.cu, *.cuh) */
