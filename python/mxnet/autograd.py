@@ -10,13 +10,13 @@ from .ndarray import NDArray
 from .symbol import _GRAD_REQ_MAP
 
 
-def set_recording(is_record):
+def set_recording(is_recording): #pylint: disable=redefined-outer-name
     """Set status to recording/not recording. When recording, graph will be constructed
     for gradient computation.
 
     Parameters
     ----------
-    is_record: bool
+    is_recording: bool
 
     Returns
     -------
@@ -24,11 +24,11 @@ def set_recording(is_record):
     """
     prev = ctypes.c_int()
     check_call(_LIB.MXAutogradSetIsRecording(
-        ctypes.c_int(is_record), ctypes.byref(prev)))
+        ctypes.c_int(is_recording), ctypes.byref(prev)))
     return bool(prev.value)
 
 def set_training(is_train):
-    """Set status to training/not training. This affects ctx.is_train in operator
+    """Set status to training/predicting. This affects ctx.is_train in operator
     running context. For example, Dropout will drop inputs randomly when
     is_train=True while simply passing through if is_train=False.
 
@@ -57,22 +57,22 @@ def is_recording():
     return curr.value
 
 def is_training():
-    """Get status on training/not training.
+    """Get status on training/predicting.
 
     Returns
     -------
-    Current state of training/inference.
+    Current state of training/predicting.
     """
     curr = ctypes.c_bool()
     check_call(_LIB.MXAutogradIsTraining(ctypes.byref(curr)))
     return curr.value
 
 
-class RecordingStateScope(object):
+class _RecordingStateScope(object):
     """Scope for managing training state.
 
     Example::
-        with RecordingStateScope(True, True):
+        with _RecordingStateScope(True, True):
             y = model(x)
             backward([y])
     """
@@ -83,21 +83,19 @@ class RecordingStateScope(object):
         self._prev_is_train = None
 
     def __enter__(self):
-        if self._enter_is_record is not None:
-            self._prev_is_record = set_recording(self._enter_is_record)
-        if self._enter_is_train is not None:
-            self._prev_is_train = set_training(self._enter_is_train)
+        self._prev_is_record = set_recording(self._enter_is_record)
+        self._prev_is_train = set_training(self._enter_is_train)
 
     def __exit__(self, ptype, value, trace):
-        if self._enter_is_record is not None and self._prev_is_record != self._enter_is_record:
+        if self._prev_is_record != self._enter_is_record:
             set_recording(self._prev_is_record)
-        if self._enter_is_train is not None and self._prev_is_train != self._enter_is_train:
+        if self._prev_is_train != self._enter_is_train:
             set_training(self._prev_is_train)
 
 
 def record(is_train=True):
     """Returns an autograd recording scope context to be used in 'with' statement
-    and captures codes that need gradients to be calculated.
+    and captures code that needs gradients to be calculated.
 
     .. note:: When forwarding with is_train=False, the corresponding backward
               should also use is_train=False, otherwise gradient is undefined.
@@ -112,10 +110,10 @@ def record(is_train=True):
     Parameters
     ----------
     is_train: bool, default True
-        Whether the forward pass is in training or inference mode. This controls the behavior
+        Whether the forward pass is in training or predicting mode. This controls the behavior
         of some layers such as Dropout, BatchNorm.
     """
-    return RecordingStateScope(True, is_train)
+    return _RecordingStateScope(True, is_train)
 
 
 def pause(is_train=False):
@@ -132,37 +130,9 @@ def pause(is_train=False):
     Parameters
     ----------
     is_train: bool, default False
-        Whether to do forward for training or inference.
+        Whether to do forward for training or predicting.
     """
-    return RecordingStateScope(False, is_train)
-
-
-def override_train():
-    """Returns a scope context to be used in 'with' statement
-    in which forward pass behavior is set to training mode,
-    without changing the recording states.
-
-    Example::
-        y = model(x)
-        with autograd.train():
-            y = dropout(y)
-    """
-    return RecordingStateScope(None, True)
-
-
-def override_test():
-    """Returns a scope context to be used in 'with' statement
-    in which forward pass behavior is set to inference mode,
-    without changing the recording states.
-
-    Example::
-        with autograd.record():
-            y = model(x)
-            with autograd.test():
-                y = sampling(y)
-            backward([y])
-    """
-    return RecordingStateScope(None, False)
+    return _RecordingStateScope(False, is_train)
 
 
 def mark_variables(variables, gradients, grad_reqs='write'):
@@ -206,7 +176,7 @@ def backward(heads, head_grads=None, retain_graph=False, is_train=True):
     head_grads: NDArray or list of NDArray or None
         Gradients with respect to heads.
     is_train: bool, optional
-        Whether to do backward for training or inference.
+        Whether to do backward for training or predicting.
     """
     if isinstance(heads, NDArray):
         assert head_grads is None or isinstance(head_grads, NDArray)
