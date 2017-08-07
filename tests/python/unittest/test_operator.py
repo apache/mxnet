@@ -677,7 +677,7 @@ def check_deconvolution_forward_backward(input_shape, num_filter, kernel, stride
     exe.forward(is_train=True)
     out = exe.outputs[0].asnumpy()
     exe.backward(out_grad)
-    assert_almost_equal(out, args_grad[0].asnumpy(), rtol=1E-3, atol=1e-4)
+    assert_almost_equal(out, args_grad[0].asnumpy(), rtol=1E-3, atol=1e-3)
 
     args_grad_addto_npy = [np.random.normal(size=s) for s in arg_shapes]
     args_grad_addto = [mx.nd.array(ele) for ele in args_grad_addto_npy]
@@ -685,7 +685,7 @@ def check_deconvolution_forward_backward(input_shape, num_filter, kernel, stride
     exe.forward(is_train=True)
     out = exe.outputs[0].asnumpy()
     exe.backward(out_grad)
-    assert_almost_equal(out + args_grad_addto_npy[0], args_grad_addto[0].asnumpy(), rtol=1e-4, atol=1e-4)
+    assert_almost_equal(out + args_grad_addto_npy[0], args_grad_addto[0].asnumpy(), rtol=1e-4, atol=1e-3)
 
 
 def check_deconvolution_gradient(input_shape, num_filter, pad):
@@ -3657,6 +3657,42 @@ def test_stack():
         check_symbolic_forward(out, inputs, [output])
         check_numeric_gradient(out, inputs)
 
+
+def test_dropout():
+    # test dropout
+    x = mx.sym.var('data')
+    y = mx.sym.Dropout(x, p=0.5)
+    exe = y.simple_bind(ctx=default_context(), data=(10, 10))
+
+    exe.arg_arrays[0][:] = 1
+    exe.forward(is_train=True)
+    assert exe.outputs[0].asnumpy().max() == 2
+    assert exe.outputs[0].asnumpy().min() == 0
+    exe.backward([mx.nd.ones((10, 10))])
+    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
+    exe.forward(is_train=False)
+    assert (exe.outputs[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
+    exe.backward([mx.nd.ones((10, 10))], is_train=False)
+    assert (exe.grad_arrays[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
+
+    # test permanent dropout
+    x = mx.sym.var('data')
+    y = mx.sym.Dropout(x, p=0.5, mode='always')
+    exe = y.simple_bind(ctx=default_context(), data=(10, 10))
+
+    exe.arg_arrays[0][:] = 1
+    exe.forward(is_train=True)
+    assert exe.outputs[0].asnumpy().max() == 2
+    assert exe.outputs[0].asnumpy().min() == 0
+    exe.backward([mx.nd.ones((10, 10))])
+    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
+    exe.forward(is_train=False)
+    assert exe.outputs[0].asnumpy().max() == 2
+    assert exe.outputs[0].asnumpy().min() == 0
+    exe.backward([mx.nd.ones((10, 10))], is_train=False)
+    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
 
 
 if __name__ == '__main__':

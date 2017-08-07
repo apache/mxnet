@@ -42,6 +42,8 @@ namespace cpp {
 inline Optimizer::Optimizer(unsigned begin_num_update)
   : begin_num_update_(begin_num_update),
     num_update_(begin_num_update_) {
+  params_["lr"] = "0.01f";
+  params_["wd"] = "0.f";
 }
 
 inline std::map<std::string, OptimizerCreator>& OptimizerRegistry::cmap() {
@@ -55,14 +57,6 @@ inline OpMap*& Optimizer::op_map() {
 }
 
 inline Optimizer::~Optimizer() {}
-
-inline void Optimizer::Update(int index, NDArray weight, NDArray grad, mx_float lr,
-                       mx_float wd) {
-  params_["lr"] = std::to_string(lr);
-  params_["wd"] = std::to_string(wd);
-  UpdateCount_(index);
-  Update(index, weight, grad);
-}
 
 inline void Optimizer::CreateState_(int index, NDArray weight) {
 }
@@ -98,6 +92,18 @@ inline unsigned Optimizer::UpdateCount_(int index) {
   unsigned new_count = ++count_[index];
   num_update_ = std::max(num_update_, new_count);
   return new_count;
+}
+
+inline float Optimizer::GetLR_(int index) {
+  if (nullptr != lrScheduler_) {
+    return lrScheduler_->GetLR(num_update_);
+  }
+  return std::stof(params_["lr"]);
+}
+
+inline float Optimizer::GetWD_(int index) {
+  float wd = std::stof(params_["wd"]);
+  return wd;
 }
 
 inline Optimizer* OptimizerRegistry::Find(const std::string& name) {
@@ -140,6 +146,9 @@ inline void SGDOptimizer::Update(int index, NDArray weight, NDArray grad) {
     CreateState_(index, weight);
   }
 
+  params_["lr"] = std::to_string(GetLR_(index));
+  params_["wd"] = std::to_string(GetWD_(index));
+  UpdateCount_(index);
   auto keys = GetParamKeys_();
   auto values = GetParamValues_();
   CHECK_EQ(keys.size(), values.size());
@@ -203,6 +212,9 @@ inline void RMSPropOptimizer::Update(int index, NDArray weight, NDArray grad) {
     CreateState_(index, weight);
   }
 
+  params_["lr"] = std::to_string(GetLR_(index));
+  params_["wd"] = std::to_string(GetWD_(index));
+  UpdateCount_(index);
   auto keys = GetParamKeys_();
   auto values = GetParamValues_();
   CHECK_EQ(keys.size(), values.size());
@@ -257,6 +269,10 @@ inline void AdamOptimizer::Update(int index, NDArray weight, NDArray grad) {
   if (mean_.count(index) == 0) {
     CreateState_(index, weight);
   }
+
+  params_["lr"] = std::to_string(GetLR_(index));
+  params_["wd"] = std::to_string(GetWD_(index));
+  UpdateCount_(index);
   auto keys = GetParamKeys_();
   auto values = GetParamValues_();
   CHECK_EQ(keys.size(), values.size());
@@ -306,9 +322,11 @@ inline void AdaGradOptimizer::Update(int index, NDArray weight, NDArray grad) {
   if (history_.count(index) == 0) {
     CreateState_(index, weight);
   }
-  float lr = std::stof(params_["lr"]);
-  float wd = std::stof(params_["wd"]);
+
   float eps = std::stof(params_["eps"]);
+  float lr = GetLR_(index);
+  float wd = GetWD_(index);
+  UpdateCount_(index);
   if (params_.count("rescale_grad") > 0) {
     grad *= std::stof(params_["rescale_grad"]);
   }
@@ -345,9 +363,11 @@ inline void AdaDeltaOptimizer::Update(int index, NDArray weight, NDArray grad) {
   if (acc_g_.count(index) == 0) {
     CreateState_(index, weight);
   }
-  float wd = std::stof(params_["wd"]);
+
   float rho = std::stof(params_["rho"]);
   float epsilon = std::stof(params_["epsilon"]);
+  float wd = GetWD_(index);
+  UpdateCount_(index);
 
   if (params_.count("rescale_grad") > 0) {
     grad *= std::stof(params_["rescale_grad"]);

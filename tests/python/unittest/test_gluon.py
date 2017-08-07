@@ -302,6 +302,29 @@ def test_flatten():
     assert flatten(x).shape == (3, 1)
 
 
+def test_trainer():
+    x = gluon.Parameter('x', shape=(10,))
+    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0})
+    with mx.autograd.record():
+        for w in x.list_data():
+            y = w + 1
+            y.backward()
+    trainer.step(1)
+
+    assert (x.data(mx.cpu(1)).asnumpy() == -2).all()
+
+    x.lr_mult = 0.5
+
+    with mx.autograd.record():
+        for w in x.list_data():
+            y = w + 1
+            y.backward()
+    trainer.step(1)
+
+    assert (x.data(mx.cpu(1)).asnumpy() == -3).all()
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

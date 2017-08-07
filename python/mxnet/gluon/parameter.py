@@ -361,7 +361,7 @@ class ParameterDict(object):
     """
     def __init__(self, prefix='', shared=None):
         self._prefix = prefix
-        self._params = {}
+        self._params = OrderedDict()
         self._shared = shared
 
     def __getitem__(self, key):

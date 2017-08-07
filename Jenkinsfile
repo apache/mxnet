@@ -281,6 +281,28 @@ try {
           }
         }
       },
+      'Perl: CPU': {
+            node('mxnetlinux') {
+                ws('workspace/ut-perl-cpu') {
+                    init_git()
+                    unpack_lib('cpu')
+                    timeout(time: max_time, unit: 'MINUTES') {
+                        sh "${docker_run} cpu ./perl-package/test.sh"
+                    }
+                }
+            }
+      },
+      'Perl: GPU': {
+            node('mxnetlinux') {
+                ws('workspace/ut-perl-gpu') {
+                    init_git()
+                    unpack_lib('gpu')
+                    timeout(time: max_time, unit: 'MINUTES') {
+                        sh "${docker_run} gpu ./perl-package/test.sh"
+                    }
+                }
+            }
+      },
       'R: CPU': {
         node('mxnetlinux') {
           ws('workspace/ut-r-cpu') {
