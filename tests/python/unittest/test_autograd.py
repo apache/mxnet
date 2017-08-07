@@ -222,13 +222,16 @@ def test_retain_grad():
         y.backward(retain_graph=False)
     assert (dx.asnumpy() == 2).all()
 
-    try:
-        with record():
-            y = x + 1
-            y.backward()
-            y.backward()
-    except Exception:
-        return
+    # The following sequence should throw an exception. We discard the expected
+    # stderr stack trace output for this operation to keep the test logs clean.
+    with discard_stderr():
+        try:
+            with record():
+                y = x + 1
+                y.backward()
+                y.backward()
+        except Exception:
+            return
 
     raise AssertionError(
         "differentiating the same graph twice without retain_graph should fail")
@@ -243,6 +246,22 @@ def test_attach_grad():
         assert y.grad is None
         y.backward()
     assert (x.grad.asnumpy() == 2).all()
+
+
+def test_is_train():
+    x = mx.nd.ones((10, 10))
+    x.attach_grad()
+    with record(True):
+        y = mx.nd.Dropout(x, p=0.5)
+        assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
+        y.backward()
+        assert (x.grad.asnumpy() == y.asnumpy()).all()
+
+    with record(False):
+        y = mx.nd.Dropout(x, p=0.5)
+        assert (y.asnumpy() == x.asnumpy()).all()
+        y.backward(is_train=False)
+        assert (x.grad.asnumpy() == x.asnumpy()).all()
 
 
 if __name__ == "__main__":

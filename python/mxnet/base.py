@@ -18,14 +18,14 @@ __all__ = ['MXNetError']
 #----------------------------
 if sys.version_info[0] == 3:
     string_types = str,
-    numeric_types = (float, int, np.float32, np.int32)
+    numeric_types = (float, int, np.generic)
     integer_types = int
     # this function is needed for python3
     # to convert ctypes.char_p .value back to python str
     py_str = lambda x: x.decode('utf-8')
 else:
     string_types = basestring,
-    numeric_types = (float, int, long, np.float32, np.int32)
+    numeric_types = (float, int, long, np.generic)
     integer_types = (int, long)
     py_str = lambda x: x
 
@@ -300,3 +300,21 @@ def add_fileline_to_docstring(module, incursive=True):
             _add_fileline(obj.__func__)
         if inspect.isclass(obj) and incursive:
             add_fileline_to_docstring(obj, False)
+
+def _as_list(obj):
+    """A utility function that converts the argument to a list if it is not already.
+
+    Parameters
+    ----------
+    obj : object
+
+    Returns
+    -------
+    If `obj` is a list or tuple, return it. Otherwise, return `[obj]` as a
+    single-element list.
+
+    """
+    if isinstance(obj, (list, tuple)):
+        return obj
+    else:
+        return [obj]

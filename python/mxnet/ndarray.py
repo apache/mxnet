@@ -124,6 +124,8 @@ fixed-size items.
 
     """
     __slots__ = []
+    # make numpy functions return NDArray instead of numpy object array
+    __array_priority__ = 1000.0
     # pylint: disable= no-member, undefined-variable
     def __repr__(self):
         """Returns a string representation of the array."""
@@ -1057,22 +1059,30 @@ fixed-size items.
         check_call(_LIB.MXNDArrayDetach(self.handle, ctypes.byref(hdl)))
         return NDArray(hdl)
 
-    def backward(self, out_grad=None, retain_graph=False):
+    def backward(self, out_grad=None, retain_graph=False, is_train=True):
         """Compute the gradients of this NDArray w.r.t variables.
 
         Parameters
         ----------
-        out_grad: list of NDArray or None
+        out_grad : NDArray, optional
+            Gradient with respect to head.
+        retain_graph : bool, optional
+            Whether to retain the computaion graph for another backward
+            pass on the same graph. By default the computaion history
+            is cleared.
+        is_train : bool, optional
+            Whether to compute gradient for training or inference.
         """
         if out_grad is None:
             ograd_handles = [NDArrayHandle(0)]
         else:
             ograd_handles = [out_grad.handle]
 
-        check_call(_LIB.MXAutogradBackward(
+        check_call(_LIB.MXAutogradBackwardEx(
             1, c_array(NDArrayHandle, [self.handle]),
             c_array(NDArrayHandle, ograd_handles),
-            ctypes.c_int(retain_graph)))
+            ctypes.c_int(retain_graph),
+            ctypes.c_int(is_train)))
 
 
 def onehot_encode(indices, out):
@@ -2282,6 +2292,7 @@ def negative(arr):
     """
     return multiply(arr, -1.0)
 
+
 def load(fname):
     """Loads an array from file.
 
@@ -2329,7 +2340,7 @@ def save(fname, data):
     ----------
     fname : str
         The filename.
-    data : list of ``NDArray` or dict of str to ``NDArray``
+    data : ``NDArray``, list of ``NDArray` or dict of str to ``NDArray``
         The data to save.
 
     Examples
@@ -2343,6 +2354,8 @@ def save(fname, data):
     >>> mx.nd.load('my_dict')
     {'y': <NDArray 1x4 @cpu(0)>, 'x': <NDArray 2x3 @cpu(0)>}
     """
+    if isinstance(data, NDArray):
+        data = [data]
     handles = []
     if isinstance(data, dict):
         keys = []
@@ -2354,12 +2367,15 @@ def save(fname, data):
             keys.append(c_str(key))
             handles.append(val.handle)
         keys = c_array(ctypes.c_char_p, keys)
-    else:
+    elif isinstance(data, list):
         for val in data:
             if not isinstance(val, NDArray):
                 raise TypeError('save only accept dict str->NDArray or list of NDArray')
             handles.append(val.handle)
         keys = None
+    else:
+        raise ValueError("data needs to either be a NDArray, dict of str, NDArray pairs "
+                         "or a list of NDarrays.")
     check_call(_LIB.MXNDArraySave(c_str(fname),
                                   mx_uint(len(handles)),
                                   c_array(NDArrayHandle, handles),

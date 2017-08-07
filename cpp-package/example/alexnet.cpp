@@ -199,6 +199,7 @@ int main(int argc, char const *argv[]) {
 
   /*with data and label, executor can be generated automatically*/
   auto *exec = Net.SimpleBind(ctx, args_map);
+  auto arg_names = Net.ListArguments();
   aux_map = exec->aux_dict();
   args_map = exec->arg_dict();
 
@@ -240,7 +241,9 @@ int main(int argc, char const *argv[]) {
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
   opt->SetParam("momentum", 0.9)
      ->SetParam("rescale_grad", 1.0 / batch_size)
-     ->SetParam("clip_gradient", 10);
+     ->SetParam("clip_gradient", 10)
+     ->SetParam("lr", learning_rate)
+     ->SetParam("wd", weight_decay);
 
   Accuracy acu_train, acu_val;
   LogLoss logloss_val;
@@ -258,7 +261,11 @@ int main(int argc, char const *argv[]) {
       batch.label.CopyTo(&args_map["label"]);
       exec->Forward(true);
       exec->Backward();
-      exec->UpdateAll(opt, learning_rate, weight_decay);
+      for (size_t i = 0; i < arg_names.size(); ++i) {
+        if (arg_names[i] == "data" || arg_names[i] == "label") continue;
+        opt->Update(i, exec->arg_arrays[i], exec->grad_arrays[i]);
+      }
+
       NDArray::WaitAll();
       acu_train.Update(batch.label, exec->outputs[0]);
     }

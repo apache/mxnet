@@ -52,6 +52,7 @@ def make(docker_type, make_flag) {
     } catch (exc) {
       echo 'Incremental compilation failed. Fall back to build from scratch'
       sh "${docker_run} ${docker_type} sudo make clean"
+      sh "${docker_run} ${docker_type} sudo make -C amalgamation/ clean"
       sh "${docker_run} ${docker_type} make ${make_flag}"
     }
   }
@@ -279,6 +280,28 @@ try {
             }
           }
         }
+      },
+      'Perl: CPU': {
+            node('mxnetlinux') {
+                ws('workspace/ut-perl-cpu') {
+                    init_git()
+                    unpack_lib('cpu')
+                    timeout(time: max_time, unit: 'MINUTES') {
+                        sh "${docker_run} cpu ./perl-package/test.sh"
+                    }
+                }
+            }
+      },
+      'Perl: GPU': {
+            node('mxnetlinux') {
+                ws('workspace/ut-perl-gpu') {
+                    init_git()
+                    unpack_lib('gpu')
+                    timeout(time: max_time, unit: 'MINUTES') {
+                        sh "${docker_run} gpu ./perl-package/test.sh"
+                    }
+                }
+            }
       },
       'R: CPU': {
         node('mxnetlinux') {

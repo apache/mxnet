@@ -189,7 +189,9 @@ img {
     text-decoration: none;
 }
 
-#dropdown-menu-position-anchor {
+#dropdown-menu-position-anchor, 
+#dropdown-menu-position-anchor-version, 
+#dropdown-menu-position-anchor-version-mobile {
     position: relative;
 }
 
@@ -358,7 +360,6 @@ div .burgerIcon a {
 
 li.dropdown-submenu ul.dropdown-menu {
     min-width: 75px;
-    width: 75px
 }
 
 li.dropdown-submenu ul.dropdown-menu li {

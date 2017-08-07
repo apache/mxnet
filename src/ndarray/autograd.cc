@@ -23,9 +23,11 @@ using nnvm::NodeEntryMap;
 using exec::GraphExecutor;
 
 #if DMLC_CXX11_THREAD_LOCAL
-thread_local bool AutogradRuntime::is_train_;
+thread_local bool AutogradRuntime::is_train_ = false;
+thread_local bool AutogradRuntime::is_recording_ = false;
 #else
-MX_THREAD_LOCAL bool AutogradRuntime::is_train_;
+MX_THREAD_LOCAL bool AutogradRuntime::is_train_ = false;
+MX_THREAD_LOCAL bool AutogradRuntime::is_recording_ = false;
 #endif
 
 template<typename FVisit>
@@ -133,7 +135,8 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
 
   for (uint32_t i = 0; i < outputs.size(); ++i) {
     CHECK(outputs[i].entry_.is_none())
-      << "Inplace operation is not supported when recording with autograd. "
+      << "Inplace operations (+=, -=, x[:]=, etc) are not supported when "
+      << "recording with autograd. "
       << "Assigning to NDArrays that are already in a computational graph "
       << "will cause undefined behavior when evaluating gradients. "
       << "Please call backward first to clear the graph or do this out side of "
@@ -148,7 +151,7 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
 
 void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs,
                                       const std::vector<NDArray>& ograds,
-                                      bool retain_graph) {
+                                      bool retain_graph, bool is_train) {
   static auto& fmutate_inputs = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
   std::vector<AGNodeEntry> heads;
   Symbol sym;
@@ -232,7 +235,7 @@ void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs,
       }
     }
 
-    exec->Backward(head_grads);
+    exec->Backward(head_grads, is_train);
     delete exec;
   }
 

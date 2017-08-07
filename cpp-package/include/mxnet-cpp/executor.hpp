@@ -79,13 +79,6 @@ inline std::string Executor::DebugStr() {
   return std::string(output);
 }
 
-inline void Executor::UpdateAll(Optimizer *opt, float lr, float wd,
-                                int arg_update_begin, int arg_update_end) {
-  arg_update_end = arg_update_end < 0 ? arg_arrays.size() - 1 : arg_update_end;
-  for (int i = arg_update_begin; i < arg_update_end; ++i) {
-    opt->Update(i, arg_arrays[i], grad_arrays[i], lr, wd);
-  }
-}
 }  // namespace cpp
 }  // namespace mxnet
 

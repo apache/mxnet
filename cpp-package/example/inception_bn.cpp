@@ -156,9 +156,12 @@ int main(int argc, char const *argv[]) {
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
   opt->SetParam("momentum", 0.9)
      ->SetParam("rescale_grad", 1.0 / batch_size)
-     ->SetParam("clip_gradient", 10);
+     ->SetParam("clip_gradient", 10)
+     ->SetParam("lr", learning_rate)
+     ->SetParam("wd", weight_decay);
 
   auto *exec = inception_bn_net.SimpleBind(Context::gpu(), args_map);
+  auto arg_names = inception_bn_net.ListArguments();
 
   for (int iter = 0; iter < max_epoch; ++iter) {
     LG << "Epoch: " << iter;
@@ -171,7 +174,12 @@ int main(int argc, char const *argv[]) {
 
       exec->Forward(true);
       exec->Backward();
-      exec->UpdateAll(opt, learning_rate, weight_decay);
+      // Update parameters
+      for (size_t i = 0; i < arg_names.size(); ++i) {
+        if (arg_names[i] == "data" || arg_names[i] == "data_label") continue;
+        opt->Update(i, exec->arg_arrays[i], exec->grad_arrays[i]);
+      }
+
       NDArray::WaitAll();
     }
 

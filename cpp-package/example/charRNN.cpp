@@ -451,6 +451,8 @@ void train(const string file, int batch_size, int max_epoch, int start_epoch) {
   mx_float learning_rate = 0.0002;
   mx_float weight_decay = 0.000002;
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
+  opt->SetParam("lr", learning_rate)
+     ->SetParam("wd", weight_decay);
 //  opt->SetParam("momentum", 0.9)->SetParam("rescale_grad", 1.0 / batch_size)
 //  ->SetParam("clip_gradient", 10);
 
@@ -470,7 +472,10 @@ void train(const string file, int batch_size, int max_epoch, int start_epoch) {
 
       exe->Forward(true);
       exe->Backward();
-      exe->UpdateAll(opt, learning_rate, weight_decay);
+      for (size_t i = 0; i < exe->arg_arrays.size(); ++i) {
+        opt->Update(i, exe->arg_arrays[i], exe->grad_arrays[i]);
+      }
+
       NDArray::WaitAll();
     }
     auto toc = chrono::system_clock::now();
@@ -547,7 +552,9 @@ void trainWithBuiltInRNNOp(const string file, int batch_size, int max_epoch, int
 
       exe->Forward(true);
       exe->Backward();
-      exe->UpdateAll(opt, learning_rate, weight_decay);
+      for (size_t i = 0; i < exe->arg_arrays.size(); ++i) {
+        opt->Update(i, exe->arg_arrays[i], exe->grad_arrays[i]);
+      }
       NDArray::WaitAll();
     }
     auto toc = chrono::system_clock::now();

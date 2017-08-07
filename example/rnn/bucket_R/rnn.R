@@ -33,7 +33,6 @@ rnn.unroll <- function(num.rnn.layer, seq.len, input.size, num.embed, num.hidden
   # embeding layer
   label <- mx.symbol.Variable("label")
   data <- mx.symbol.Variable("data")
-  data_mask <- mx.symbol.Variable("data.mask")
   data_mask_array <- mx.symbol.Variable("data.mask.array")
   data_mask_array <- mx.symbol.stop_gradient(data_mask_array, name = "data.mask.array")
   
@@ -112,8 +111,8 @@ rnn.unroll <- function(num.rnn.layer, seq.len, input.size, num.embed, num.hidden
 mx.rnn.buckets <- function(train.data, eval.data = NULL, num.rnn.layer, num.hidden, 
   num.embed, num.label, input.size, ctx = NULL, num.round = 1, initializer = mx.init.uniform(0.01), 
   dropout = 0, config = "one-to-one", optimizer = "sgd", batch.end.callback = NULL, 
-  epoch.end.callback = NULL, begin.round = 1, end.round = 1, metric = mx.metric.rmse, 
-  cell.type = "lstm", verbose = FALSE) {
+  epoch.end.callback = NULL, begin.round = 1, metric = mx.metric.rmse, cell.type = "lstm", 
+  kvstore = "local", verbose = FALSE) {
   
   if (!train.data$iter.next()) {
     train.data$reset()
@@ -131,8 +130,11 @@ mx.rnn.buckets <- function(train.data, eval.data = NULL, num.rnn.layer, num.hidd
   
   if (is.null(ctx)) 
     ctx <- mx.ctx.default()
-  if (!is.mx.context(ctx)) 
-    stop("ctx must be mx.context")
+  if (is.mx.context(ctx)) {
+    ctx <- list(ctx)
+  }
+  if (!is.list(ctx)) 
+    stop("ctx must be mx.context or list of mx.context")
   if (is.character(optimizer)) {
     if (is.numeric(input.shape)) {
       ndim <- length(input.shape)
@@ -155,17 +157,28 @@ mx.rnn.buckets <- function(train.data, eval.data = NULL, num.rnn.layer, num.hidd
   symbol <- sym_list[[names(train.data$bucketID)]]
   
   arg.names <- symbol$arguments
-  input.shape <- lapply(train.data$value(), dim)
-  input.shape <- input.shape[names(input.shape) %in% arg.names]
+  input.names <- c("data", "data.mask.array")
+  input.shape <- sapply(input.names, function(n) {
+    dim(train.data$value()[[n]])
+  }, simplify = FALSE)
+  output.names <- "label"
+  output.shape <- sapply(output.names, function(n) {
+    dim(train.data$value()[[n]])
+  }, simplify = FALSE)
   
-  params <- mx.model.init.params(symbol, input.shape, NULL, initializer, mx.cpu())
+  params <- mx.model.init.params(symbol, input.shape, output.shape, initializer, 
+    mx.cpu())
+  
+  kvstore <- mxnet:::mx.model.create.kvstore(kvstore, params$arg.params, length(ctx), 
+    verbose = verbose)
   
   ### Execute training - rnn.model.R
   model <- mx.model.train.rnn.buckets(sym_list = sym_list, input.shape = input.shape, 
-    arg.params = params$arg.params, aux.params = params$aux.params, optimizer = optimizer, 
-    train.data = train.data, eval.data = eval.data, verbose = verbose, begin.round = begin.round, 
-    end.round = end.round, metric = metric, ctx = ctx, batch.end.callback = batch.end.callback, 
-    epoch.end.callback = epoch.end.callback)
+    output.shape = output.shape, arg.params = params$arg.params, aux.params = params$aux.params, 
+    optimizer = optimizer, train.data = train.data, eval.data = eval.data, verbose = verbose, 
+    begin.round = begin.round, end.round = num.round, metric = metric, ctx = ctx, 
+    batch.end.callback = batch.end.callback, epoch.end.callback = epoch.end.callback, 
+    kvstore = kvstore)
   
   return(model)
 }
@@ -193,10 +206,3 @@ mx.model.check.arguments <- function(symbol) {
   }
   return(c(data, label))
 }
-
-# filter out null, keep the names
-mx.util.filter.null <- function(lst) {
-  lst[!sapply(lst, is.null)]
-}
-
-

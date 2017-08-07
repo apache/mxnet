@@ -756,8 +756,9 @@ class ImageDetIter(ImageIter):
                     assert i < batch_size, 'Batch size must be multiples of augmenter output length'
                     batch_data[i][:] = self.postprocess_data(datum)
                     num_object = label.shape[0]
-                    batch_label[i][0:num_object][:] = nd.array(label)
-                    batch_label[i][num_object:][:] = -1
+                    batch_label[i][0:num_object] = nd.array(label)
+                    if num_object < batch_label[i].shape[0]:
+                        batch_label[i][num_object:] = -1
                     i += 1
         except StopIteration:
             if not i:

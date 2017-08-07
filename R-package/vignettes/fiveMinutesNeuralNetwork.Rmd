@@ -177,4 +177,3 @@ dim(test.y)
 ```
 Congratulations! Now you have learnt the basic for using `mxnet`. Please check the other tutorials for advanced features.
 
-
