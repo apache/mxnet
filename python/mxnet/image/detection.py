@@ -81,7 +81,7 @@ class DetBorrowAug(DetAugmenter):
 
     def __call__(self, src, label):
         """Augmenter implementation body"""
-        src = self.augmenter(src)[0]
+        src = self.augmenter(src)
         return (src, label)
 
 
@@ -771,7 +771,7 @@ class ImageDetIter(ImageIter):
                     continue
                 for datum in [data]:
                     assert i < batch_size, 'Batch size must be multiples of augmenter output length'
-                    batch_data[i][:] = self.postprocess_data(datum)
+                    batch_data[i] = self.postprocess_data(datum)
                     num_object = label.shape[0]
                     batch_label[i][0:num_object] = nd.array(label)
                     if num_object < batch_label[i].shape[0]:

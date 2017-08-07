@@ -42,7 +42,9 @@ class _DownloadedDataset(dataset.Dataset):
         self._get_data()
 
     def __getitem__(self, idx):
-        return self._transform(self._data[idx], self._label[idx])
+        if self._transform is not None:
+            return self._transform(self._data[idx], self._label[idx])
+        return self._data[idx], self._label[idx]
 
     def __len__(self):
         return len(self._label)
@@ -68,7 +70,7 @@ class MNIST(_DownloadedDataset):
             transform=lambda data, label: (data.astype(np.float32)/255, label)
     """
     def __init__(self, root='~/.mxnet/datasets/', train=True,
-                 transform=lambda data, label: (data, label)):
+                 transform=None):
         super(MNIST, self).__init__(root, train, transform)
 
     def _get_data(self):
@@ -116,7 +118,7 @@ class CIFAR10(_DownloadedDataset):
             transform=lambda data, label: (data.astype(np.float32)/255, label)
     """
     def __init__(self, root='~/.mxnet/datasets/', train=True,
-                 transform=lambda data, label: (data, label)):
+                 transform=None):
         self._file_hashes = {'data_batch_1.bin': 'aadd24acce27caa71bf4b10992e9e7b2d74c2540',
                              'data_batch_2.bin': 'c0ba65cce70568cd57b4e03e9ac8d2a5367c1795',
                              'data_batch_3.bin': '1dd00a74ab1d17a6e7d73e185b69dbf31242f295',
