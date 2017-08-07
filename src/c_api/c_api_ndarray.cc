@@ -522,9 +522,21 @@ int MXInvokeCachedOp(CachedOpHandle handle,
   API_END();
 }
 
+int MXAutogradIsTraining(bool* curr) {
+  API_BEGIN();
+  *curr = AutogradRuntime::Get()->IsTraining();
+  API_END();
+}
+
 int MXAutogradSetIsTraining(int is_training, int* prev) {
   API_BEGIN();
   *prev = AutogradRuntime::Get()->SetIsTraining(static_cast<bool>(is_training));
+  API_END();
+}
+
+int MXAutogradIsRecording(bool* curr) {
+  API_BEGIN();
+  *curr = AutogradRuntime::Get()->IsRecording();
   API_END();
 }
 

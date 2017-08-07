@@ -252,16 +252,47 @@ def test_is_train():
     x = mx.nd.ones((10, 10))
     x.attach_grad()
     with record(True):
+        assert is_recording()
+        assert is_training()
         y = mx.nd.Dropout(x, p=0.5)
         assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
         y.backward()
         assert (x.grad.asnumpy() == y.asnumpy()).all()
 
+        with override_test():
+            assert is_recording()
+            assert not is_training()
+            y = mx.nd.Dropout(x, p=0.5)
+            assert (y.asnumpy() == x.asnumpy()).all()
+            y.backward(is_train=False)
+            assert (x.grad.asnumpy() == x.asnumpy()).all()
+
     with record(False):
+        assert is_recording()
+        assert not is_training()
         y = mx.nd.Dropout(x, p=0.5)
         assert (y.asnumpy() == x.asnumpy()).all()
         y.backward(is_train=False)
         assert (x.grad.asnumpy() == x.asnumpy()).all()
+
+        with override_train():
+            assert is_recording()
+            assert is_training()
+            y = mx.nd.Dropout(x, p=0.5)
+            assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
+            y.backward()
+            assert (x.grad.asnumpy() == y.asnumpy()).all()
+
+    assert not is_recording()
+    assert not is_training()
+    y = mx.nd.Dropout(x, p=0.5)
+    assert (y.asnumpy() == x.asnumpy()).all()
+
+    with override_train():
+        assert not is_recording()
+        assert is_training()
+        y = mx.nd.Dropout(x, p=0.5)
+        assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
 
 
 if __name__ == "__main__":
