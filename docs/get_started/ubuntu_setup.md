@@ -1,5 +1,8 @@
 # Installing MXNet on Ubuntu
-MXNet currently supports Python, R, Julia, and Scala. For users of Python and R on Ubuntu operating systems, MXNet provides a set of Git Bash scripts that installs all of the required MXNet dependencies and the MXNet library.
+
+**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/get_started/install.html).
+
+MXNet currently supports Python, R, Julia, Scala, and Perl. For users of R on Ubuntu operating systems, MXNet provides a set of Git Bash scripts that installs all of the required MXNet dependencies and the MXNet library.
 
 The simple installation scripts set up MXNet for Python and R on computers running Ubuntu 12 or later. The scripts install MXNet in your home folder ```~/mxnet```.
 
@@ -9,12 +12,12 @@ If you plan to build with GPU, you need to set up the environment for CUDA and C
 
 First, download and install [CUDA 8 toolkit](https://developer.nvidia.com/cuda-toolkit).
 
-Then download [cudnn 5](https://developer.nvidia.com/cudnn).
+Then download [cudnn 6](https://developer.nvidia.com/cudnn).
 
 Unzip the file and change to the cudnn root directory. Move the header and libraries to your local CUDA Toolkit folder:
 
 ```bash
-    tar xvzf cudnn-8.0-linux-x64-v5.1-ga.tgz
+    tar xvzf cudnn-8.0-linux-x64-v6.0.tgz
     sudo cp -P cuda/include/cudnn.h /usr/local/cuda/include
     sudo cp -P cuda/lib64/libcudnn* /usr/local/cuda/lib64
     sudo chmod a+r /usr/local/cuda/include/cudnn.h /usr/local/cuda/lib64/libcudnn*
@@ -28,39 +31,6 @@ Finally, add configurations to config.mk file:
 ```
 
 ## Quick Installation
-### Install MXNet for Python
-
-To clone the MXNet source code repository to your computer, use ```git```.
-```bash
-    # Install git if not already installed.
-    sudo apt-get update
-    sudo apt-get -y install git
-```
-
-Clone the MXNet source code repository to your computer, run the installation script, and refresh the environment variables. In addition to installing MXNet, the script installs all MXNet dependencies: ```Numpy```, ```LibBLAS``` and ```OpenCV```.
-It takes around 5 minutes to complete the installation.
-
-```bash
-    # Clone mxnet repository. In terminal, run the commands WITHOUT "sudo"
-    git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
-
-    # If building with GPU, add configurations to config.mk file:
-    cd ~/mxnet
-    cp make/config.mk .
-    echo "USE_CUDA=1" >>config.mk
-    echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
-    echo "USE_CUDNN=1" >>config.mk
-
-    # Install MXNet for Python with all required dependencies
-    cd ~/mxnet/setup-utils
-    bash install-mxnet-ubuntu-python.sh
-
-    # We have added MXNet Python package path in your ~/.bashrc.
-    # Run the following command to refresh environment variables.
-    $ source ~/.bashrc
-```
-
-You can view the installation script we just used to install MXNet for Python [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-ubuntu-python.sh).
 
 ### Install MXNet for R
 
@@ -78,6 +48,16 @@ MXNet requires R-version to be 3.2.0 and above. If you are running an earlier ve
 To install MXNet for R:
 
 ```bash
+    # Clone mxnet repository. In terminal, run the commands WITHOUT "sudo"
+    git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
+
+    cd ~/mxnet
+    cp make/config.mk .
+    # If building with GPU, add configurations to config.mk file:
+    echo "USE_CUDA=1" >>config.mk
+    echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
+    echo "USE_CUDNN=1" >>config.mk
+
     cd ~/mxnet/setup-utils
     bash install-mxnet-ubuntu-r.sh
 ```
@@ -96,44 +76,47 @@ Installing MXNet is a two-step process:
 
 On Ubuntu versions 13.10 or later, you need the following dependencies:
 
-- Git (to pull code from GitHub)
-
-- libatlas-base-dev (for linear algebraic operations)
-
-- libopencv-dev (for computer vision operations)
-
-Install these dependencies using the following commands:
-
+**Step 1** Install build tools and git.
 ```bash
     sudo apt-get update
-    sudo apt-get install -y build-essential git libatlas-base-dev libopencv-dev
+    sudo apt-get install -y build-essential git
 ```
 
-After installing the dependencies, use the following command to pull the MXNet source code from GitHub
+**Step 2** Install OpenBLAS.
+
+*MXNet* uses [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) library for accelerated numerical computations on CPU machine. There are several flavors of BLAS libraries - [OpenBLAS](http://www.openblas.net/), [ATLAS](http://math-atlas.sourceforge.net/) and [MKL](https://software.intel.com/en-us/intel-mkl). In this step we install OpenBLAS. You can choose to install ATLAS or MKL.
 
 ```bash
-    # Get MXNet source code
-    git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
-    # Move to source code parent directory
-    cd ~/mxnet
-    cp make/config.mk .
-    echo "USE_BLAS=openblas" >>config.mk
-    echo "ADD_CFLAGS += -I/usr/include/openblas" >>config.mk
-    echo "ADD_LDFLAGS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs" >>config.mk
+    sudo apt-get install -y libopenblas-dev
 ```
-If building with ```GPU``` support, run below commands to add GPU dependency configurations to config.mk file:
+
+**Step 3** Install OpenCV.
+
+*MXNet* uses [OpenCV](http://opencv.org/) for efficient image loading and augmentation operations.
 
 ```bash
-    echo "USE_CUDA=1" >>config.mk
-    echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
-    echo "USE_CUDNN=1" >>config.mk
+    sudo apt-get install -y libopencv-dev
 ```
 
-Then build mxnet:
+**Step 4** Download MXNet sources and build MXNet core shared library.
+
+If building on CPU:
 
 ```bash
-    make -j$(nproc)
+    git clone --recursive https://github.com/dmlc/mxnet
+    cd mxnet
+    make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 ```
+
+If building on GPU:
+
+```bash
+    git clone --recursive https://github.com/dmlc/mxnet
+    cd mxnet
+    make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
+```
+
+*Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.
 
 Executing these commands creates a library called ```libmxnet.so```.
 
@@ -148,34 +131,10 @@ Next, we install ```graphviz``` library that we use for visualizing network grap
 &nbsp;
 
 We have installed MXNet core library. Next, we will install MXNet interface package for programming language of your choice:
-- [Python](#install-the-mxnet-package-for-python)
 - [R](#install-the-mxnet-package-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
 - [Scala](#install-the-mxnet-package-for-scala)
-
-### Install the MXNet Package for Python
-Next, we install Python interface for MXNet. Assuming you are in `~/mxnet` directory, run below commands.
-
-```bash
-	# Install MXNet Python package
-	cd python
-	sudo python setup.py install
-```
-
-Check if MXNet is properly installed.
-
-```bash
-	# You can change mx.cpu to mx.gpu
-	python
-	>>> import mxnet as mx
-	>>> a = mx.nd.ones((2, 3), mx.cpu())
-	>>> print ((a * 2).asnumpy())
-	[[ 2.  2.  2.]
-	 [ 2.  2.  2.]]
-```
-If you don't get an import error, then MXNet is ready for python.
-
-Note: You can update mxnet for python by repeating this step after re-building `libmxnet.so`.
+- [Perl](#install-the-mxnet-package-for-perl)
 
 ### Install the MXNet Package for R
 
@@ -272,6 +231,30 @@ To install the MXNet Scala package into your local Maven repository, run the fol
 
 ```bash
     make scalainstall
+```
+### Install the MXNet Package for Perl
+
+Before you build MXNet for Perl from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Perl package:
+
+```bash
+    sudo apt-get install libmouse-perl pdl cpanminus swig libgraphviz-perl
+    cpanm -q -L "${HOME}/perl5" Function::Parameters
+
+    MXNET_HOME=${PWD}
+    export LD_LIBRARY_PATH=${MXNET_HOME}/lib
+    export PERL5LIB=${HOME}/perl5/lib/perl5
+
+    cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make install
+
+    cd ${MXNET_HOME}/perl-package/AI-NNVMCAPI/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make install
+
+    cd ${MXNET_HOME}/perl-package/AI-MXNet/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make install
 ```
 
 **Note - ** You are more than welcome to contribute easy installation scripts for other operating systems and programming languages, see [community page](http://mxnet.io/community/index.html) for contributors guidelines.

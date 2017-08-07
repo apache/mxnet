@@ -1,5 +1,5 @@
-from __future__ import print_function
 import numpy as np
+from ..logger import logger
 from ..config import config
 from ..dataset import *
 
@@ -47,6 +47,6 @@ def filter_roidb(roidb):
     num = len(roidb)
     filtered_roidb = [entry for entry in roidb if is_valid(entry)]
     num_after = len(filtered_roidb)
-    print('filtered %d roidb entries: %d -> %d' % (num - num_after, num, num_after))
+    logger.info('load data: filtered %d roidb entries: %d -> %d' % (num - num_after, num, num_after))
 
     return filtered_roidb

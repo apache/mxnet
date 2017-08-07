@@ -21,6 +21,7 @@ import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import ml.dmlc.mxnet.Symbol
+import ml.dmlc.mxnet.DType.DType
 import ml.dmlc.mxnet.DataIter
 import ml.dmlc.mxnet.DataBatch
 import ml.dmlc.mxnet.NDArray
@@ -114,6 +115,11 @@ object ExampleCustomOpWithRtc {
       (Array(dataShape, labelShape), Array(outputShape), null)
     }
 
+    override def inferType(inType: Array[DType]):
+      (Array[DType], Array[DType], Array[DType]) = {
+      (inType, inType.take(1), null)
+    }
+
     override def createOperator(ctx: String, inShapes: Array[Array[Int]],
       inDtypes: Array[Int]): CustomOp = new Softmax(this.kwargs)
   }
@@ -197,7 +203,10 @@ object ExampleCustomOpWithRtc {
           }
           epochDone = true
         }
-        logger.info(s"Epoch[$epoch] Train-accuracy=${evalMetric.get}")
+        val (name, value) = evalMetric.get
+        name.zip(value).foreach { case (n, v) =>
+          logger.info(s"Epoch[$epoch] Train-accuracy=$v")
+        }
         val toc = System.currentTimeMillis
         logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
 
@@ -211,7 +220,10 @@ object ExampleCustomOpWithRtc {
           evalMetric.update(evalBatch.label, executor.outputs)
           evalBatch.dispose()
         }
-        logger.info(s"Epoch[$epoch] Validation-accuracy=${evalMetric.get}")
+        val (names, values) = evalMetric.get
+        names.zip(values).foreach { case (n, v) =>
+          logger.info(s"Epoch[$epoch] Validation-accuracy=$v")
+        }
       }
       executor.dispose()
     } catch {

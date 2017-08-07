@@ -240,7 +240,7 @@ class SpatialTransformerProp : public OperatorProperty {
     return {ResourceRequest::kTempSpace};
   }
 
-  #if CUDNN_MAJOR == 5
+  #if CUDNN_MAJOR >= 5
   std::vector<ResourceRequest> BackwardResource(
       const std::vector<TShape> &in_shape) const override {
     return {ResourceRequest::kTempSpace};

@@ -3,6 +3,10 @@ use Mouse;
 use AI::MXNet::Function::Parameters;
 use AI::MXNet::Base;
 
+=head1 NAME
+
+    AI::MXNet::Monitor - Monitor outputs, weights, and gradients for debugging.
+
 =head1 DESCRIPTION
 
     Monitor outputs, weights, and gradients for debugging.
@@ -68,13 +72,13 @@ has 'stat_helper'          => (
 
 =head2 install
 
-        install callback to executor.
-        Supports installing to multiple exes
+    install callback to executor.
+    Supports installing to multiple exes.
 
-        Parameters
-        ----------
-        exe : AI::MXNet::Executor
-            the Executor (returned by $symbol->bind) to install to.
+    Parameters
+    ----------
+    exe : AI::MXNet::Executor
+        the Executor (returned by $symbol->bind) to install to.
 =cut
 
 method install(AI::MXNet::Executor $exe)
@@ -85,8 +89,8 @@ method install(AI::MXNet::Executor $exe)
 
 =head2 tic
 
-        start collecting stats for current batch.
-        Call before forward
+    start collecting stats for current batch.
+    Call before forward
 =cut
 
 method tic()
@@ -106,12 +110,12 @@ method tic()
 
 =head2 toc
 
-        End collecting for current batch and return results.
-        Call after computation of current batch.
+    End collecting for current batch and return results.
+    Call after computation of current batch.
 
-        Returns
-        -------
-        res : array ref of array refs with debug info
+    Returns
+    -------
+    res : array ref of array refs with debug info
 =cut
 
 method toc()
@@ -168,7 +172,7 @@ method toc()
 
 =head2 toc_print
 
-End collecting and print results
+    End collecting and print results
 =cut
 
 method toc_print()
@@ -178,6 +182,11 @@ method toc_print()
     {
         AI::MXNet::Logging->info('Batch: %7d %30s %s', @{ $r });
     }
+}
+
+method Monitor(@args)
+{
+    __PACKAGE__->new(@args % 2 ? ('interval', @args) : @args);
 }
 
 1;

@@ -76,6 +76,14 @@ def test_ndarray_setitem():
     x_np[:, 1:3, 1:2] = val.asnumpy()
     assert same(x.asnumpy(), x_np)
 
+    # short all-dim indexing
+    x = mx.nd.zeros(shape)
+    val = mx.nd.ones((3, 2))
+    x[:, 1:3, 1] = val
+    x_np = np.zeros(shape, dtype=x.dtype)
+    x_np[:, 1:3, 1] = val.asnumpy()
+    assert same(x.asnumpy(), x_np)
+
     x = mx.nd.zeros(shape)
     x[:, 1:3, 1] = 1
     x_np = np.zeros(shape, dtype=x.dtype)
@@ -115,6 +123,21 @@ def test_ndarray_negate():
     # as inplace operation, so the contents of arr does not change after
     # we compute (-arr)
     assert_almost_equal(npy, arr.asnumpy())
+
+def test_ndarray_reshape():
+    tensor  = mx.nd.array([[[1, 2], [3, 4]],
+                           [[5, 6], [7, 8]]])
+    true_res = mx.nd.arange(8) + 1
+    assert same(tensor.reshape((-1, )).asnumpy(), true_res.asnumpy())
+    true_res  = mx.nd.array([[1, 2, 3, 4],
+                             [5, 6, 7, 8]])
+    assert same(tensor.reshape((2, -1)).asnumpy(), true_res.asnumpy())
+    assert same(tensor.reshape((0, -1)).asnumpy(), true_res.asnumpy())
+    true_res  = mx.nd.array([[1, 2],
+                             [3, 4],
+                             [5, 6],
+                             [7, 8]])
+    assert same(tensor.reshape((-1, 2)).asnumpy(), true_res.asnumpy())
 
 
 def test_ndarray_choose():
@@ -194,11 +217,11 @@ def test_ndarray_pickle():
 
 def test_ndarray_saveload():
     np.random.seed(0)
-    maxdim = 5
     nrepeat = 10
     fname = 'tmp_list.bin'
     for repeat in range(nrepeat):
         data = []
+        # test save/load as list
         for i in range(10):
             data.append(random_ndarray(np.random.randint(1, 5)))
         mx.nd.save(fname, data)
@@ -206,6 +229,7 @@ def test_ndarray_saveload():
         assert len(data) == len(data2)
         for x, y in zip(data, data2):
             assert np.sum(x.asnumpy() != y.asnumpy()) == 0
+        # test save/load as dict
         dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
         mx.nd.save(fname, dmap)
         dmap2 = mx.nd.load(fname)
@@ -213,8 +237,25 @@ def test_ndarray_saveload():
         for k, x in dmap.items():
             y = dmap2[k]
             assert np.sum(x.asnumpy() != y.asnumpy()) == 0
+        # test save/load as ndarray
+        # we expect the single ndarray to be converted into a list containing the ndarray
+        single_ndarray = data[0]
+        mx.nd.save(fname, single_ndarray)
+        single_ndarray_loaded = mx.nd.load(fname)
+        assert len(single_ndarray_loaded) == 1
+        single_ndarray_loaded = single_ndarray_loaded[0]
+        assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded.asnumpy()) == 0
     os.remove(fname)
 
+def test_ndarray_legacy_load():
+    data = []
+    for i in range(6):
+        data.append(mx.nd.arange(128))
+    path = os.path.dirname(os.path.realpath(__file__))
+    legacy_data = mx.nd.load(os.path.join(path, 'legacy_ndarray.v0'))
+    assert len(data) == len(legacy_data)
+    for i in range(len(data)):
+        assert same(data[i].asnumpy(), legacy_data[i].asnumpy())
 
 def test_ndarray_slice():
     shape = (10,)
@@ -224,6 +265,15 @@ def test_ndarray_slice():
     A2[3:8] *= 10;
     A[3:8] = A2[3:8]
     assert same(A[3:8].asnumpy(), A2[3:8])
+
+    shape = (3,4,5,6,7)
+    A = mx.nd.random_uniform(shape=shape)
+    A2 = A.asnumpy()
+
+    assert same(A[1,3:4,:,1:5].asnumpy(), A2[1,3:4,:,1:5])
+
+    assert A[1,2,3,4,5].asscalar() == A2[1,2,3,4,5]
+
 
 
 def test_ndarray_crop():
@@ -399,6 +449,19 @@ def test_broadcast_binary():
     check_broadcast_binary(lambda x, y: x >= y)
     check_broadcast_binary(lambda x, y: x <= y)
     check_broadcast_binary(lambda x, y: x == y)
+
+def test_moveaxis():
+    X = mx.nd.array([[[1, 2, 3], [4, 5, 6]],
+                     [[7, 8, 9], [10, 11, 12]]])
+    res = mx.nd.moveaxis(X, 0, 3).asnumpy()
+    true_res = mx.nd.array([[[  1.,   7.],
+                             [  2.,   8.],
+                             [  3.,   9.]],
+                            [[  4.,  10.],
+                             [  5.,  11.],
+                             [  6.,  12.]]])
+    assert same(res, true_res.asnumpy())
+    assert mx.nd.moveaxis(X, 2, 0).shape == (3, 2, 2)
 
 def test_arange():
     for i in range(5):
@@ -586,31 +649,37 @@ def test_iter():
     for a in x:
         y.append(a)
 
-    assert np.all(np.array(y) == x.asnumpy())
+    for i in range(x.size):
+        assert same(y[i].asnumpy(), x[i].asnumpy())
+
+
+def test_cached():
+    sym = mx.sym.Convolution(kernel=(3, 3), num_filter=10) + 2
+    op = mx.nd.CachedOp(sym)
+    data = mx.nd.ones((3, 4, 10, 10))
+    weight = mx.nd.ones((10, 4, 3, 3))
+    bias = mx.nd.ones((10,))
+    o1 = op(data, weight, bias)
+    bias[:] = 2
+    o2 = op(data, weight, bias)
+    assert_almost_equal(o2.asnumpy(), o1.asnumpy()+1)
+    o2[:] = 0
+    op(data, weight, bias, out=o2)
+    assert_almost_equal(o2.asnumpy(), o1.asnumpy()+1)
+
+def test_output():
+    shape = (2,2)
+    ones = mx.nd.ones(shape)
+    zeros = mx.nd.zeros(shape)
+    out = mx.nd.zeros(shape)
+    mx.nd.ones(shape, out=out)
+    assert_almost_equal(out.asnumpy(), ones.asnumpy())
+    mx.nd.zeros(shape, out=out)
+    assert_almost_equal(out.asnumpy(), zeros.asnumpy())
+    mx.nd.full(shape, 2, out=out)
+    assert_almost_equal(out.asnumpy(), ones.asnumpy() * 2)
 
 
 if __name__ == '__main__':
-    test_broadcast_binary()
-    test_ndarray_setitem()
-    test_ndarray_crop()
-    test_ndarray_concatenate()
-    test_broadcast()
-    test_ndarray_elementwise()
-    test_ndarray_elementwisesum()
-    test_ndarray_slice()
-    test_ndarray_pickle()
-    test_ndarray_saveload()
-    test_ndarray_copy()
-    test_ndarray_negate()
-    test_ndarray_scalar()
-    test_clip()
-    test_dot()
-    test_ndarray_choose()
-    test_ndarray_onehot()
-    test_ndarray_fill()
-    test_reduce()
-    test_arange()
-    test_order()
-    test_ndarray_equal()
-    test_take()
-    test_iter()
+    import nose
+    nose.runmodule()

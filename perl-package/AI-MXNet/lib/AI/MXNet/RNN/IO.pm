@@ -1,4 +1,6 @@
 package AI::MXNet::RNN::IO;
+use strict;
+use warnings;
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
 
@@ -9,15 +11,12 @@ use AI::MXNet::Function::Parameters;
     AI::MXNet::RNN::IO - Functions for constructing recurrent neural networks.
 =cut
 
-=head1 SYNOPSIS
-
-
 =head1 DESCRIPTION
 
     Functions for constructing recurrent neural networks.
 =cut
 
-=head2
+=head2 encode_sentences
 
     Encode sentences and (optionally) build a mapping
     from string tokens to integer indices. Unknown keys
@@ -25,34 +24,34 @@ use AI::MXNet::Function::Parameters;
 
     Parameters
     ----------
-    sentences : array ref of array refs of str
+    $sentences : array ref of array refs of str
         A array ref of sentences to encode. Each sentence
         should be a array ref of string tokens.
-    vocab : undef or hash ref of str -> int
+    :$vocab : undef or hash ref of str -> int
         Optional input Vocabulary
-    invalid_label : int, default -1
+    :$invalid_label : int, default -1
         Index for invalid token, like <end-of-sentence>
-    invalid_key : str, default '\n'
-        Key for invalid token. Use '\n' for end
+    :$invalid_key : str, default '\n'
+        Key for invalid token. Uses '\n' for end
         of sentence by default.
-    start_label : int
+    :$start_label=0 : int
         lowest index.
 
     Returns
     -------
-    result : array ref of array refs of int
+    $result : array ref of array refs of int
         encoded sentences
-    vocab : hash ref of str -> int
+    $vocab : hash ref of str -> int
         result vocabulary
 =cut
 
 
 method encode_sentences(
-    ArrayRef[ArrayRef] $sentences,
-    Maybe[HashRef]     $vocab=,
-    Int                $invalid_label=-1,
-    Str                $invalid_key="\n",
-    Int                $start_label=0
+    ArrayRef[ArrayRef]  $sentences,
+    Maybe[HashRef]     :$vocab=,
+    Int                :$invalid_label=-1,
+    Str                :$invalid_key="\n",
+    Int                :$start_label=0
 )
 {
     my $idx = $start_label;
@@ -72,7 +71,7 @@ method encode_sentences(
         my @coded;
         for my $word (@{ $sent })
         {
-            if(not exists $vocab{ $word })
+            if(not exists $vocab->{ $word })
             {
                 assert($new_vocab, "Unknown token: $word");
                 if($idx == $invalid_label)
@@ -82,7 +81,7 @@ method encode_sentences(
                 $vocab->{$word} = $idx;
                 $idx += 1;
             }
-            push @coded, $vocab{ $word };
+            push @coded, $vocab->{ $word };
         }
         push @res, \@coded;
     }
@@ -98,15 +97,11 @@ package AI::MXNet::BucketSentenceIter;
     AI::MXNet::BucketSentenceIter
 =cut
 
-=head1 SYNOPSIS
-
-
 =head1 DESCRIPTION
 
     Simple bucketing iterator for language model.
     Label for each step is constructed from data of
     next step.
-
 =cut
 
 =head2 new
@@ -134,7 +129,7 @@ package AI::MXNet::BucketSentenceIter;
 
 use Mouse;
 use AI::MXNet::Base;
-use List::Util qw(shuffle);
+use List::Util qw(shuffle max);
 extends 'AI::MXNet::DataIter';
 has 'sentences'     => (is => 'ro', isa => 'ArrayRef[ArrayRef]', required => 1);
 has '+batch_size'   => (is => 'ro', isa => 'Int',                required => 1);
@@ -142,7 +137,7 @@ has 'invalid_label' => (is => 'ro', isa => 'Int',   default => -1);
 has 'data_name'     => (is => 'ro', isa => 'Str',   default => 'data');
 has 'label_name'    => (is => 'ro', isa => 'Str',   default => 'softmax_label');
 has 'dtype'         => (is => 'ro', isa => 'Dtype', default => 'float32');
-has 'layout'        => (is => 'ro', isa => 'Str',   default => 'NTC');
+has 'layout'        => (is => 'ro', isa => 'Str',   default => 'NT');
 has 'buckets'       => (is => 'rw', isa => 'Maybe[ArrayRef[Int]]');
 has [qw/data nddata ndlabel
         major_axis default_bucket_key
@@ -159,7 +154,7 @@ sub BUILD
         my $p = pdl([map { scalar(@$_) } @{ $self->sentences }]);
         enumerate(sub {
             my ($i, $j) = @_;
-            if($j >= $self->bucket_size)
+            if($j >= $self->batch_size)
             {
                 push @buckets, $i;
             }
@@ -209,14 +204,16 @@ sub BUILD
         AI::MXNet::DataDesc->new(
             name  => $self->data_name,
             shape => $shape,
-            dtype => $self->dtype
+            dtype => $self->dtype,
+            layout => $self->layout
         )
     ]);
     $self->provide_label([
         AI::MXNet::DataDesc->new(
             name  => $self->label_name,
             shape => $shape,
-            dtype => $self->dtype
+            dtype => $self->dtype,
+            layout => $self->layout
         )
     ]);
     $self->idx([]);
@@ -243,7 +240,7 @@ method reset()
     $self->ndlabel([]);
     for my $buck (@{ $self->data })
     {
-        $buck = cat(shuffle(dog($buck)));
+        $buck = pdl_shuffle($buck);
         my $label = $buck->zeros;
         $label->slice([0, -2], 'X')  .= $buck->slice([1, -1], 'X');
         $label->slice([-1, -1], 'X') .= $self->invalid_label;
@@ -272,18 +269,21 @@ method next()
         data          => [$data],
         label         => [$label],
         bucket_key    => $self->buckets->[$i],
+        pad           => 0,
         provide_data  => [
             AI::MXNet::DataDesc->new(
                 name  => $self->data_name,
                 shape => $data->shape,
-                dtype => $self->dtype
+                dtype => $self->dtype,
+                layout => $self->layout
             )
         ],
         provide_label => [
             AI::MXNet::DataDesc->new(
                 name  => $self->label_name,
                 shape => $label->shape,
-                dtype => $self->dtype
+                dtype => $self->dtype,
+                layout => $self->layout
             )
         ],
     );

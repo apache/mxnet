@@ -29,6 +29,7 @@ namespace dropout {
 enum DropoutOpInputs {kData};
 enum DropoutOpOutputs {kOut, kMask};
 enum DropoutOpForwardResource {kRandom};
+enum DropoutOpMode {kTraining, kAlways};
 }  // namespace dropout
 
 namespace mxnet {
@@ -58,10 +59,16 @@ static void bernoulli_generate(int n, double p, int* r) {
 
 struct DropoutParam : public dmlc::Parameter<DropoutParam> {
   float p;
+  int mode;
   DMLC_DECLARE_PARAMETER(DropoutParam) {
     DMLC_DECLARE_FIELD(p).set_default(0.5)
     .set_range(0, 1)
-    .describe("Fraction of the input that gets dropped out at training time");
+    .describe("Fraction of the input that gets dropped out during training time.");
+    DMLC_DECLARE_FIELD(mode)
+    .add_enum("training", dropout::kTraining)
+    .add_enum("always", dropout::kAlways)
+    .set_default(dropout::kTraining)
+    .describe("Whether to only turn on dropout during training or to also turn on for inference.");
   }
 };  // struct DropoutParam
 
@@ -70,6 +77,7 @@ class DropoutOp : public Operator {
  public:
   explicit DropoutOp(DropoutParam param) {
     this->pkeep_ = 1.0f - param.p;
+    this->mode_ = param.mode;
   }
 
   virtual void Forward(const OpContext &ctx,
@@ -86,9 +94,9 @@ class DropoutOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2, DType> data = in_data[dropout::kData].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = out_data[dropout::kOut].FlatTo2D<xpu, DType>(s);
-    if (ctx.is_train) {
+    if (ctx.is_train || mode_ == dropout::kAlways) {
       Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
-#if defined(USE_MKL) && defined(_OPENMP)
+#if !defined(__CUDACC__) && defined(USE_MKL) && defined(_OPENMP)
       DType* outptr = out.dptr_;
       DType* dataptr = data.dptr_;
       int* maskptr = reinterpret_cast<int*>(mask.dptr_);
@@ -96,7 +104,7 @@ class DropoutOp : public Operator {
       bernoulli_generate(count, this->pkeep_, maskptr);
   #pragma omp parallel for
       for (int i = 0; i < count; ++i) {
-        outptr[i] = dataptr[i] * maskptr[i];
+        outptr[i] = dataptr[i] * maskptr[i] * (1.0f / pkeep_);
       }
 #else
       Random<xpu> *prnd = ctx.requested[dropout::kRandom].get_random<xpu, real_t>(s);
@@ -124,24 +132,29 @@ class DropoutOp : public Operator {
     Tensor<xpu, 2, DType> grad = out_grad[dropout::kOut].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> gdata = in_grad[dropout::kData].FlatTo2D<xpu, DType>(s);
-#if defined(USE_MKL) && defined(_OPENMP)
+    if (ctx.is_train || mode_ == dropout::kAlways) {
+#if !defined(__CUDACC__) && defined(USE_MKL) && defined(_OPENMP)
       DType* ingradptr = gdata.dptr_;
       DType* outgradptr = grad.dptr_;
       int* maskptr = reinterpret_cast<int*>(mask.dptr_);
 
       int count = mask.shape_[0]*mask.shape_[1];
 
-  #pragma omp parallel for
+      #pragma omp parallel for
       for (int i = 0; i < count; ++i) {
-        ingradptr[i] = outgradptr[i] * maskptr[i];
+        ingradptr[i] = outgradptr[i] * maskptr[i] * (1.0f / pkeep_);
       }
 #else  // USE_MKL && _OPENMP
       Assign(gdata, req[dropout::kData], grad * mask);
 #endif  // USE_MKL && _OPENMP
+    } else {
+      Assign(gdata, req[dropout::kData], F<mshadow_op::identity>(grad));
+    }
   }
 
  private:
   real_t pkeep_;
+  int mode_;
 };  // class DropoutOp
 
 
@@ -252,4 +265,3 @@ class DropoutProp : public OperatorProperty {
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_DROPOUT_INL_H_
-

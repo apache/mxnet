@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef MXNETCPP_OPERATOR_HPP
-#define MXNETCPP_OPERATOR_HPP
+#ifndef MXNET_CPP_OPERATOR_HPP_
+#define MXNET_CPP_OPERATOR_HPP_
 
 #include <algorithm>
 #include <string>
@@ -24,20 +24,23 @@ namespace cpp {
  * like PushInput<NDArray, Args..., N>, which is not allowed in C++
  */
 template <>
-Operator& Operator::SetParam<NDArray>(int pos, const NDArray &value) {
-  input_ndarrays.push_back(value.GetHandle());
+inline Operator& Operator::SetParam<NDArray>(int pos, const NDArray &value) {
+  input_ndarrays_.push_back(value.GetHandle());
   return *this;
 }
 template <>
-Operator& Operator::SetParam<Symbol>(int pos, const Symbol &value) {
-  input_symbols.push_back(value.GetHandle());
+inline Operator& Operator::SetParam<Symbol>(int pos, const Symbol &value) {
+  input_symbols_.push_back(value.GetHandle());
   return *this;
 }
 
-OpMap *Operator::op_map_ = new OpMap();
+inline OpMap*& Operator::op_map() {
+  static OpMap *op_map_ = new OpMap();
+  return op_map_;
+}
 
-Operator::Operator(const std::string &operator_name) {
-  handle_ = op_map_->GetSymbolCreator(operator_name);
+inline Operator::Operator(const std::string &operator_name) {
+  handle_ = op_map()->GetSymbolCreator(operator_name);
   const char *name;
   const char *description;
   mx_uint num_args;
@@ -58,9 +61,9 @@ Operator::Operator(const std::string &operator_name) {
   }
 }
 
-Symbol Operator::CreateSymbol(const std::string &name) {
-  if (input_keys.size() > 0) {
-    CHECK_EQ(input_keys.size(), input_symbols.size());
+inline Symbol Operator::CreateSymbol(const std::string &name) {
+  if (input_keys_.size() > 0) {
+    CHECK_EQ(input_keys_.size(), input_symbols_.size());
   }
   const char *pname = name == "" ? nullptr : name.c_str();
 
@@ -73,7 +76,7 @@ Symbol Operator::CreateSymbol(const std::string &name) {
     param_keys.push_back(data.first.c_str());
     param_values.push_back(data.second.c_str());
   }
-  for (auto &data : this->input_keys) {
+  for (auto &data : this->input_keys_) {
     input_keys.push_back(data.c_str());
   }
   const char **input_keys_p =
@@ -81,14 +84,14 @@ Symbol Operator::CreateSymbol(const std::string &name) {
 
   MXSymbolCreateAtomicSymbol(handle_, param_keys.size(), param_keys.data(),
                              param_values.data(), &symbol_handle);
-  MXSymbolCompose(symbol_handle, pname, input_symbols.size(), input_keys_p,
-                  input_symbols.data());
+  MXSymbolCompose(symbol_handle, pname, input_symbols_.size(), input_keys_p,
+                  input_symbols_.data());
   return Symbol(symbol_handle);
 }
 
-void Operator::Invoke(std::vector<NDArray> &outputs) {
-  if (input_keys.size() > 0) {
-    CHECK_EQ(input_keys.size(), input_ndarrays.size());
+inline void Operator::Invoke(std::vector<NDArray> &outputs) {
+  if (input_keys_.size() > 0) {
+    CHECK_EQ(input_keys_.size(), input_ndarrays_.size());
   }
 
   std::vector<const char *> input_keys;
@@ -100,7 +103,7 @@ void Operator::Invoke(std::vector<NDArray> &outputs) {
     param_values.push_back(data.second.c_str());
   }
 
-  int num_inputs = input_ndarrays.size();
+  int num_inputs = input_ndarrays_.size();
   int num_outputs = outputs.size();
   std::vector<NDArrayHandle> output_handles;
   std::transform(outputs.begin(), outputs.end(),
@@ -113,7 +116,7 @@ void Operator::Invoke(std::vector<NDArray> &outputs) {
     outputs_receiver = output_handles.data();
   }
 
-  MXImperativeInvoke(handle_, num_inputs, input_ndarrays.data(),
+  MXImperativeInvoke(handle_, num_inputs, input_ndarrays_.data(),
       &num_outputs, &outputs_receiver,
       param_keys.size(), param_keys.data(), param_values.data());
 
@@ -126,30 +129,30 @@ void Operator::Invoke(std::vector<NDArray> &outputs) {
       });
 }
 
-std::vector<NDArray> Operator::Invoke() {
+inline std::vector<NDArray> Operator::Invoke() {
   std::vector<NDArray> outputs;
   Invoke(outputs);
   return outputs;
 }
 
-void Operator::Invoke(NDArray &output) {
+inline void Operator::Invoke(NDArray &output) {
   std::vector<NDArray> outputs{output};
   Invoke(outputs);
 }
 
-Operator &Operator::SetInput(const std::string &name, Symbol symbol) {
-  input_keys.push_back(name.c_str());
-  input_symbols.push_back(symbol.GetHandle());
+inline Operator &Operator::SetInput(const std::string &name, Symbol symbol) {
+  input_keys_.push_back(name.c_str());
+  input_symbols_.push_back(symbol.GetHandle());
   return *this;
 }
 
-Operator &Operator::SetInput(const std::string &name, NDArray ndarray) {
-  input_keys.push_back(name.c_str());
-  input_ndarrays.push_back(ndarray.GetHandle());
+inline Operator &Operator::SetInput(const std::string &name, NDArray ndarray) {
+  input_keys_.push_back(name.c_str());
+  input_ndarrays_.push_back(ndarray.GetHandle());
   return *this;
 }
 
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // MXNETCPP_OPERATOR_HPP
+#endif  // MXNET_CPP_OPERATOR_HPP_

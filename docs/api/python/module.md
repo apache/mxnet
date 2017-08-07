@@ -11,50 +11,40 @@ intermediate and high-level interface for performing computation with a
 `Symbol`. One can roughly think a module is a machine which can execute a
 program defined by a `Symbol`.
 
-The class `module.Module` is a commonly used module, which accepts a `Symbol` as
-the input:
-
+The `module.Module` accepts a `Symbol` as the input.
 ```python
-data = mx.symbol.Variable('data')
-fc1  = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
-act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
-fc2  = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=10)
-out  = mx.symbol.SoftmaxOutput(fc2, name = 'softmax')
-mod = mx.mod.Module(out)  # create a module by given a Symbol
+>>> data = mx.sym.Variable('data')
+>>> fc1  = mx.sym.FullyConnected(data, name='fc1', num_hidden=128)
+>>> act1 = mx.sym.Activation(fc1, name='relu1', act_type="relu")
+>>> fc2  = mx.sym.FullyConnected(act1, name='fc2', num_hidden=10)
+>>> out  = mx.sym.SoftmaxOutput(fc2, name = 'softmax')
+>>> mod = mx.mod.Module(out)  # create a module by given a Symbol
 ```
 
-Assume there is a valid MXNet data iterator `data`. We can initialize the
+Assume there is a valid MXNet data iterator `nd_iter`. We can initialize the
 module:
-
 ```python
-mod.bind(data_shapes=data.provide_data,
-         label_shapes=data.provide_label)  # create memory by given input shapes
-mod.init_params()  # initial parameters with the default random initializer
+>>> mod.bind(data_shapes=nd_iter.provide_data,
+>>>          label_shapes=nd_iter.provide_label) # create memory by given input shapes
+>>> mod.init_params()  # initial parameters with the default random initializer
 ```
 
 Now the module is able to compute. We can call high-level API to train and
 predict:
-
 ```python
-mod.fit(data, num_epoch=10, ...)  # train
-mod.predict(new_data)  # predict on new data
+>>> mod.fit(nd_iter, num_epoch=10, ...)  # train
+>>> mod.predict(new_nd_iter)  # predict on new data
 ```
 
 or use intermediate APIs to perform step-by-step computations
-
 ```python
-mod.forward(data_batch)  # forward on the provided data batch
-mod.backward()  # backward to calculate the gradients
-mod.update()  # update parameters using the default optimizer
+>>> mod.forward(data_batch)  # forward on the provided data batch
+>>> mod.backward()  # backward to calculate the gradients
+>>> mod.update()  # update parameters using the default optimizer
 ```
 
-A detailed tutorial is available at [http://mxnet.io/tutorials/python/module.html](http://mxnet.io/tutorials/python/module.html).
-
-
-```eval_rst
-
-.. note:: ``module`` is used to replace ``model``, which has been deprecated.
-```
+A detailed tutorial is available at
+[Module - Neural network training and inference](http://mxnet.io/tutorials/basic/module.html).
 
 The `module` package provides several modules:
 

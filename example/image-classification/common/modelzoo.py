@@ -19,6 +19,8 @@ _default_model_info = {
                              'params':_base_model_url+'imagenet/resnext/50-layers/resnext-50-0000.params'},
     'imagenet1k-resnext-101': {'symbol':_base_model_url+'imagenet/resnext/101-layers/resnext-101-symbol.json',
                              'params':_base_model_url+'imagenet/resnext/101-layers/resnext-101-0000.params'},
+    'imagenet1k-resnext-101-64x4d': {'symbol':_base_model_url+'imagenet/resnext/101-layers/resnext-101-64x4d-symbol.json',
+                                     'params':_base_model_url+'imagenet/resnext/101-layers/resnext-101-64x4d-0000.params'},
     'imagenet11k-resnet-152': {'symbol':_base_model_url+'imagenet-11k/resnet-152/resnet-152-symbol.json',
                              'params':_base_model_url+'imagenet-11k/resnet-152/resnet-152-0000.params'},
     'imagenet11k-place365ch-resnet-152': {'symbol':_base_model_url+'imagenet-11k-place365-ch/resnet-152-symbol.json',

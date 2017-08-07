@@ -48,7 +48,7 @@ class KVStore {
   /*!
    * \brief Initialize a list of key-value pair to the store.
    *
-   * One must initalize the key before \ref Push and \ref Pull, and a key
+   * One must initialize the key before \ref Push and \ref Pull, and a key
    * should be only initialized once
    *
    * It returns after data have been initialized successfully.
@@ -62,6 +62,13 @@ class KVStore {
    * \param values a list of values
    */
   virtual void Init(const std::vector<int>& keys,
+                    const std::vector<NDArray>& values) = 0;
+  /*!
+   * \brief Initialize a list of key-value pair to the store.
+   * \param keys a list of unique keys in string format
+   * \param values a list of values
+   */
+  virtual void Init(const std::vector<std::string>& str_keys,
                     const std::vector<NDArray>& values) = 0;
   /*!
    * \brief push a list of key-value pairs into the store
@@ -102,6 +109,16 @@ class KVStore {
   virtual void Push(const std::vector<int>& keys,
                     const std::vector<NDArray>& values,
                     int priority = 0)  = 0;
+
+  /*!
+   * \brief push a list of key-value pairs into the store
+   * \param keys the list of keys in string format
+   * \param values the list of values
+   * \param priority Priority of the action.
+   */
+  virtual void Push(const std::vector<std::string>& str_keys,
+                    const std::vector<NDArray>& values,
+                    int priority = 0)  = 0;
   /*!
    * \brief pull a list of key-value pairs from the store
    *
@@ -128,6 +145,16 @@ class KVStore {
   virtual void Pull(const std::vector<int>& keys,
                     const std::vector<NDArray*>& values,
                     int priority = 0) = 0;
+  /*!
+   * \brief pull a list of key-value pairs from the store
+   * \param keys the list of keys in string format
+   * \param values the list of buffers for the pulled data, they should be preallocated
+   * \param priority Priority of the action.
+   */
+  virtual void Pull(const std::vector<std::string>& str_keys,
+                    const std::vector<NDArray*>& values,
+                    int priority = 0) = 0;
+
 
   /**
    * \brief the prototype of user-defined updater

@@ -14,7 +14,7 @@ NNVM_REGISTER_OP(where)
                 " from condition are true or false. x and y must have the same"
                 " shape. If condition has the same shape as x, each element"
                 " in the output array is from x if the corresponding element"
-                " in the condition is true, and from y if false. If condtion"
+                " in the condition is true, and from y if false. If condition"
                 " does not have the same shape as x, it must be a 1D array"
                 " whose size is the same as x's first dimension size. Each"
                 " row of the output array is from x's row if the corresponding"
@@ -35,13 +35,8 @@ NNVM_REGISTER_OP(where)
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     std::vector<nnvm::NodeEntry> ret;
     // make zero grad node for grad[condition]
-    nnvm::NodePtr p = nnvm::Node::Create();
-    p->attrs.op = nnvm::Op::Get("_zeros");
-    std::ostringstream os;
-    os << n->attrs.name << "_in" << 0 << "_backward";
-    p->attrs.name = os.str();
-    p->attrs.dict = std::unordered_map<std::string, std::string>();
-    p->control_deps.emplace_back(n);
+    auto p = MakeNode("zeros_like", n->attrs.name + "_cond_backward",
+                      {n->inputs[0]}, nullptr, &n);
     ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
 
     // make grad nodes for grad[x] and grad[y]
@@ -61,9 +56,9 @@ NNVM_REGISTER_OP(where)
 
     return ret;
   })
-.add_argument("condition", "NDArray", "condition array")
-.add_argument("x", "NDArray", "")
-.add_argument("y", "NDArray", "");
+.add_argument("condition", "NDArray-or-Symbol", "condition array")
+.add_argument("x", "NDArray-or-Symbol", "")
+.add_argument("y", "NDArray-or-Symbol", "");
 
 NNVM_REGISTER_OP(_backward_where)
 .set_num_inputs(2)

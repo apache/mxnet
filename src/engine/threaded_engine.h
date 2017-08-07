@@ -268,13 +268,6 @@ class ThreadedEngine : public Engine {
     objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
   }
   ~ThreadedEngine() {
-#if MXNET_USE_PROFILER
-    // dump trace file if profiler is enabled when engine is destructed.
-    Profiler* profiler = Profiler::Get();
-    if (profiler->IsEnableOutput()) {
-      profiler->DumpProfile();
-    }
-#endif
     {
       std::unique_lock<std::mutex> lock{finished_m_};
       kill_.store(true);

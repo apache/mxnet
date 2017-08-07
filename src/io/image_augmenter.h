@@ -38,7 +38,7 @@ class ImageAugmenter {
    * \param prnd pointer to random number generator.
    * \return The processed image.
    */
-  virtual cv::Mat Process(const cv::Mat &src,
+  virtual cv::Mat Process(const cv::Mat &src, std::vector<float> *label,
                           common::RANDOM_ENGINE *prnd) = 0;
   // virtual destructor
   virtual ~ImageAugmenter() {}
@@ -84,6 +84,7 @@ namespace mxnet {
 namespace io {
 /*! \return the parameter of default augmenter */
 std::vector<dmlc::ParamFieldInfo> ListDefaultAugParams();
+std::vector<dmlc::ParamFieldInfo> ListDefaultDetAugParams();
 }  // namespace io
 }  // namespace mxnet
 #endif  // MXNET_IO_IMAGE_AUGMENTER_H_

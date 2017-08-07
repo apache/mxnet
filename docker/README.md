@@ -1,58 +1,125 @@
 # Docker images for MXNET
 
-Pre-built docker images are available at https://hub.docker.com/r/dmlc/mxnet/
-
 ## How to use
 
-1. First pull the pre-built image
+First make sure [docker](https://docs.docker.com/engine/installation/) is
+installed. The docker plugin
+[nvidia-docker](https://github.com/NVIDIA/nvidia-docker) is required to run on
+Nvidia GPUs.
 
-   ```bash
-   docker pull dmlc/mxnet
-   ```
-2. Then we can run the python shell in the docker
+Pre-built docker containers are available at https://hub.docker.com/r/mxnet/
 
-   ```bash
-   docker run -ti dmlc/mxnet python
-   ```
-   For example
-   ```bash
-   $ docker run -ti dmlc/mxnet python
-   Python 2.7.6 (default, Jun 22 2015, 17:58:13)
-   [GCC 4.8.2] on linux2
-   Type "help", "copyright", "credits" or "license" for more information.
-   >>> import mxnet as mx
-   import mxnet as mx
-   >>> quit()
-   quit()
-   ```
+For example, the following command launches a container with the Python package
+installed. It will pull the docker images from docker hub if it does not exist
+locally.
 
-   Note: One may get the error message `libdc1394 error: Failed to initialize
-   libdc1394`, which is due to opencv and can be ignored.
+```bash
+docker run -ti --rm mxnet/python
+```
 
-3. Train a model on MNIST to check everything works
+Then you can run MXNet in python, e.g.:
 
-   ```
-   docker run dmlc/mxnet python /mxnet/example/image-classification/train_mnist.py
-   ```
+```bash
+# python -c 'import mxnet as mx; a = mx.nd.ones((2,3)); print((a*2).asnumpy())'
+[[ 2.  2.  2.]
+ [ 2.  2.  2.]]
+```
 
-If the host machine has Nvidia GPUs, we can use `dmlc/mxnet:cuda`, which has both CUDA and CUDNN installed.
-To launch the docker, we need to install [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) first.
+If the host machine has at least one GPU installed and `nvidia-docker` is installed, namely
+`nvidia-docker run --rm nvidia/cuda nvidia-smi` runs successfully, then you can
+run a container with GPU supports
 
-1. Pull the image
+```bash
+nvidia-docker run -ti --rm mxnet/python:gpu
+```
 
-   ```bash
-   docker pull dmlc/mxnet:cuda
-   ```
+Now you can run the above example in `GPU 0`:
 
-2. Train MNIST on GPU 0
+```bash
+# python -c 'import mxnet as mx; a = mx.nd.ones((2,3), mx.gpu(0)); print((a*2).asnumpy())'
+[[ 2.  2.  2.]
+ [ 2.  2.  2.]]
+```
 
-   ```bash
-   nvidia-docker run dmlc/mxnet:cuda python /mxnet/example/image-classification/train_mnist.py --gpus 0
-   ```
+## Hosted containers
+
+All images are based on Ubuntu 14.04. The `gpu` tag is built with CUDA 8.0 and
+cuDNN 5.
+
+### Python
+
+Hosted at https://hub.docker.com/r/mxnet/python/
+
+Python versions: 2.7.12 and 3.5.2.
+
+Available tags:
+
+- mxnet/python
+- mxnet/python:gpu
+
+### R
+
+Hosted at https://hub.docker.com/r/mxnet/r-lang/
+
+R version: 3.3.3
+
+Available tags:
+
+- mxnet/r-lang
+- mxnet/r-lang:gpu
+
+
+### Julia
+
+Hosted at https://hub.docker.com/r/mxnet/julia/
+
+Julia version: 0.5.1
+
+Available tags:
+
+- mxnet/julia
+- mxnet/julia:gpu
+
+#### Scala
+
+Hosted at https://hub.docker.com/r/mxnet/scala/
+
+Scala version: 2.11.8
+
+Available tags:
+
+- mxnet/scala
+
+### Perl
+
+Hosted at https://hub.docker.com/r/mxnet/perl/
+
+Perl version: 5.18.2
+
+Available tags:
+
+- mxnet/perl
+- mxnet/perl:gpu
+
 
 ## How to build
 
+The following command build the default Python package
+
 ```bash
-docker build -t dmlc/mxnet:cpu cpu
-docker build -t dmlc/mxnet:cuda cuda
+./tool.sh build python cpu
+```
+
+Run `./tool.sh` for more details. Use
+
+
+Tips: The following commands stop all docker containers and delete all docker images.
+
+```bash
+docker stop $(docker ps -a -q)
+docker rm $(docker ps -a -q)
+```
+
+```bash
+docker rmi $(docker images -a -q)
 ```

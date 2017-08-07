@@ -479,7 +479,6 @@ void SimpleOpRegEntryImpl::RegisterSourceImperative() {
     OpReqType req = kWriteTo;
 
     Engine::Get()->PushSync([ret, fun, dev_mask, req, env](RunContext ctx) {
-        ret.CheckAndAlloc();
         TBlob tmp = ret.data();
         (*fun)(env, &tmp, req, ctx);
 #if MXNET_USE_CUDA
@@ -664,7 +663,6 @@ void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
     }
 
     Engine::Get()->PushSync([src, ret, fun, dev_mask, req, env](RunContext ctx) {
-        ret.CheckAndAlloc();
         TBlob tmp = ret.data();
         (*fun)(src.data(), env, &tmp, req, ctx);
 #if MXNET_USE_CUDA
@@ -685,19 +683,19 @@ void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
       NDArrayReg()
           .set_num_scalars(1)
           .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
-          .add_argument("src", "NDArray", "Source input to the function")
+          .add_argument("src", "NDArray-or-Symbol", "Source input to the function")
           .add_argument("scalar", "float", "scalar input to the function");
     } else {
       NDArrayReg()
           .set_num_scalars(1)
           .set_type_mask(kScalarArgBeforeNDArray | kAcceptEmptyMutateTarget)
           .add_argument("scalar", "float", "scalar input to the function")
-          .add_argument("src", "NDArray", "Source input to the function");
+          .add_argument("src", "NDArray-or-Symbol", "Source input to the function");
     }
   } else {
     NDArrayReg()
       .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
-      .add_argument("src", "NDArray", "Source input to the function");
+      .add_argument("src", "NDArray-or-Symbol", "Source input to the function");
   }
 }
 
@@ -843,7 +841,7 @@ void SimpleOpRegEntryImpl::RegisterUnarySymbolic() {
   };
   OpReg()
       .set_body(op_factory)
-      .add_argument("src", "Symbol", "Left symbolic input to the function");
+      .add_argument("src", "NDArray-or-Symbol", "Left symbolic input to the function");
 }
 
 //-------------------------------------
@@ -939,7 +937,6 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
     }
 
     Engine::Get()->PushSync([lhs, rhs, ret, fun, dev_mask, req, env](RunContext ctx) {
-        ret.CheckAndAlloc();
         TBlob tmp = ret.data();
         (*fun)(lhs.data(), rhs.data(), env, &tmp, req, ctx);
         #if MXNET_USE_CUDA
@@ -960,23 +957,23 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
       NDArrayReg()
           .set_num_scalars(1)
           .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
-          .add_argument("lhs", "NDArray", "Left operand  to the function")
-          .add_argument("rhs", "NDArray", "Right operand to the function")
+          .add_argument("lhs", "NDArray-or-Symbol", "Left operand  to the function")
+          .add_argument("rhs", "NDArray-or-Symbol", "Right operand to the function")
           .add_argument("scalar", "float", "scalar input to the function");
     } else {
       NDArrayReg()
           .set_num_scalars(1)
           .set_type_mask(kScalarArgBeforeNDArray | kAcceptEmptyMutateTarget)
           .add_argument("scalar", "float", "scalar input to the function")
-          .add_argument("src", "NDArray", "Source input to the function")
-          .add_argument("lhs", "NDArray", "Left operand  to the function")
-          .add_argument("rhs", "NDArray", "Right operand to the function");
+          .add_argument("src", "NDArray-or-Symbol", "Source input to the function")
+          .add_argument("lhs", "NDArray-or-Symbol", "Left operand  to the function")
+          .add_argument("rhs", "NDArray-or-Symbol", "Right operand to the function");
     }
   } else {
     NDArrayReg()
         .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
-        .add_argument("lhs", "NDArray", "Left operand  to the function")
-        .add_argument("rhs", "NDArray", "Right operand to the function");
+        .add_argument("lhs", "NDArray-or-Symbol", "Left operand  to the function")
+        .add_argument("rhs", "NDArray-or-Symbol", "Right operand to the function");
   }
 }
 
@@ -1130,8 +1127,8 @@ void SimpleOpRegEntryImpl::RegisterBinarySymbolic() {
   };
   OpReg()
       .set_body(op_factory)
-      .add_argument("lhs", "Symbol", "Left symbolic input to the function")
-      .add_argument("rhs", "Symbol", "Right symbolic input to the function");
+      .add_argument("lhs", "NDArray-or-Symbol", "Left symbolic input to the function")
+      .add_argument("rhs", "NDArray-or-Symbol", "Right symbolic input to the function");
 }
 
 }  // namespace op

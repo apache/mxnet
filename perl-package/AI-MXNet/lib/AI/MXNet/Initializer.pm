@@ -4,12 +4,7 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-    AI::MXNet::InitDesc
-
-=head1 DESCRIPTION
-
-     Descriptor for initialization pattern.
-=cut
+    AI::MXNet::InitDesc - A container for the initialization pattern serialization.
 
 =head2 new
 
@@ -20,8 +15,8 @@ use AI::MXNet::Function::Parameters;
     attrs : hash ref of str to str
         attributes of this variable taken from AI::MXNet::Symbol->attr_dict
 =cut
-has 'name'   => (is => 'ro', isa => 'Str', required => 1);
-has 'attrs'  => (is => 'rw', isa => 'HashRef[Str]', lazy => 1, default => sub { +{} });
+has 'name'        => (is => 'ro', isa => 'Str', required => 1);
+has 'attrs'       => (is => 'rw', isa => 'HashRef[Str]', lazy => 1, default => sub { +{} });
 use overload '""' => sub { shift->name };
 around BUILDARGS => sub {
     my $orig  = shift;
@@ -47,20 +42,52 @@ use overload "&{}" => sub { my $self = shift; sub { $self->call(@_) } },
              },
              fallback => 1;
 has 'kwargs' => (is => 'rw', init_arg => undef, isa => 'HashRef');
+has '_verbose'    => (is => 'rw', isa => 'Bool', lazy => 1, default => 0);
+has '_print_func' => (is => 'rw', isa => 'CodeRef', lazy => 1,
+    default => sub {
+        return sub {
+            my $x = shift;
+            return ($x->norm/sqrt($x->size))->asscalar;
+        };
+    }
+);
 
 =head1 NAME
 
-    AI::MXNet::Initializer
-
-=head1 DESCRIPTION
-
-     Base class for all Initializers
-=cut
+    AI::MXNet::Initializer - Base class for all Initializers
 
 =head2 register
 
-    Register initializer class to the initializer factory
+    Register an initializer class to the AI::MXNet::Initializer factory.
 =cut
+
+=head2 set_verbosity
+
+    Switch on/off verbose mode
+
+    Parameters
+    ----------
+    $verbose : bool
+        switch on/off verbose mode
+    $print_func : CodeRef
+        A function that computes statistics of initialized arrays.
+        Takes an AI::MXNet::NDArray and returns a scalar. Defaults to mean
+        absolute value |x|/size(x)
+=cut
+
+method set_verbosity(Bool $verbose=0, CodeRef $print_func=)
+{
+    $self->_verbose($verbose);
+    $self->_print_func($print_func) if defined $print_func;
+}
+
+method _verbose_print($desc, $init, $arr)
+{
+    if($self->_verbose and defined $self->_print_func)
+    {
+        AI::MXNet::Logging->info('Initialized %s as %s: %s', $desc, $init, $self->_print_func->($arr));
+    }
+}
 
 my %init_registry;
 method get_init_registry()
@@ -92,16 +119,15 @@ method register()
 
 =head2 init
 
-        Parameters
-        ----------
-        desc : AI::MXNet::InitDesc|str
-            name of corresponding ndarray
-            object that describes the initializer
+    Parameters
+    ----------
+    $desc : AI::MXNet::InitDesc|str
+        a name of corresponding ndarray
+        or the object that describes the initializer.
 
-        arr : NDArray
-            ndarray to be Initialized
+    $arr : AI::MXNet::NDArray
+        an ndarray to be initialized.
 =cut
-use Data::Dumper;
 method call(Str|AI::MXNet::InitDesc $desc, AI::MXNet::NDArray $arr)
 {
     return $self->_legacy_init($desc, $arr) unless blessed $desc;
@@ -110,6 +136,7 @@ method call(Str|AI::MXNet::InitDesc $desc, AI::MXNet::NDArray $arr)
     {
       my ($klass, $kwargs) = @{ decode_json($init) };
       $self->get_init_registry->{ lc $klass }->new(%{ $kwargs })->_init_weight("$desc", $arr);
+      $self->_verbose_print($desc, $init, $arr);
     }
     else
     {
@@ -118,6 +145,7 @@ method call(Str|AI::MXNet::InitDesc $desc, AI::MXNet::NDArray $arr)
         {
             my $method = "_init_$1";
             $self->$method($desc, $arr);
+            $self->_verbose_print($desc, $1, $arr);
         }
         else
         {
@@ -253,18 +281,20 @@ method _init_default($name, $arr)
     );
 }
 
-=head2
+=head1 NAME
 
-    Initialize by loading pretrained param from file or dict
+    AI::MXNet::Load  - Initialize by loading a pretrained param from a hash ref.
+=cut
+
+=head2 new
 
     Parameters
     ----------
-    param: str or dict of str->NDArray
-        param file or dict mapping name to NDArray.
+    param: HashRef[AI::MXNet::NDArray]
     default_init: Initializer
-        default initializer when name is not found in param.
+        default initializer when a name is not found in the param hash ref.
     verbose: bool
-        log source when initializing.
+    log the names when initializing.
 =cut
 
 package AI::MXNet::Load;
@@ -314,15 +344,17 @@ method call(Str $name, AI::MXNet::NDArray $arr)
 
 *slice = *call;
 
-=begin
-    Initialize with mixed Initializer
+=head1 NAME
 
-    Parameters
-    ----------
-    patterns: list of str
-        list of regular expression patterns to match parameter names.
-    initializers: list of Initializer
-        list of Initializer corrosponding to patterns
+    AI::MXNet::Mixed - A container for multiple initializer patterns.
+=cut
+
+=head2 new
+
+    patterns: array ref of str
+        array ref of regular expression patterns to match parameter names.
+    initializers: array ref of AI::MXNet::Initializer objects.
+        array ref of Initializers corresponding to the patterns.
 =cut
 
 package AI::MXNet::Mixed;
@@ -397,14 +429,19 @@ method _init_weight(Str $name, AI::MXNet::NDArray $arr)
 
 __PACKAGE__->register;
 
-=begin
+=head1 NAME
 
-    Initialize the weight with uniform [-scale, scale]
+    AI::MXNet::Uniform - Initialize the weight with uniform random values.
+=cut
+
+=head1 DESCRIPTION
+
+    Initialize the weight with uniform random values contained within of [-scale, scale]
 
     Parameters
     ----------
     scale : float, optional
-        The scale of uniform distribution
+        The scale of the uniform distribution.
 =cut
 
 package AI::MXNet::Uniform;
@@ -424,14 +461,20 @@ method _init_weight(Str $name, AI::MXNet::NDArray $arr)
 }
 
 __PACKAGE__->register;
-=begin
 
-    Initialize the weight with normal(0, sigma)
+=head1 NAME
+
+    AI::MXNet::Normal - Initialize the weight with gaussian random values.
+=cut
+
+=head1 DESCRIPTION
+
+    Initialize the weight with gaussian random values contained within of [0, sigma]
 
     Parameters
     ----------
     sigma : float, optional
-        Standard deviation for gaussian distribution.
+        Standard deviation for the gaussian distribution.
 =cut
 
 package AI::MXNet::Normal;
@@ -452,12 +495,18 @@ method _init_weight(Str $name, AI::MXNet::NDArray $arr)
 
 __PACKAGE__->register;
 
-=begin
+=head1 NAME
+
+    AI::MXNet::Orthogonal - Intialize the weight as an Orthogonal matrix.
+=cut
+
+=head1 DESCRIPTION
+
     Intialize weight as Orthogonal matrix
 
     Parameters
     ----------
-    scale : float optional
+    scale : float, optional
         scaling factor of weight
 
     rand_type: string optional
@@ -509,20 +558,21 @@ method _init_weight(Str $name, AI::MXNet::NDArray $arr)
 *slice = *call;
 __PACKAGE__->register;
 
-=begin
+=head1 NAME
 
-    Initialize the weight with Xavier or similar initialization scheme.
+    AI::MXNet::Xavier - Initialize the weight with Xavier or similar initialization scheme.
+=cut
+
+=head1 DESCRIPTION
 
     Parameters
     ----------
     rnd_type: str, optional
-        Use ```gaussian``` or ```uniform``` to init
-
+        Use gaussian or uniform.
     factor_type: str, optional
-        Use ```avg```, ```in```, or ```out``` to init
-
+        Use avg, in, or out.
     magnitude: float, optional
-        scale of random number range
+        The scale of the random number range.
 =cut
 
 package AI::MXNet::Xavier;
@@ -567,16 +617,20 @@ method _init_weight(Str $name, AI::MXNet::NDArray $arr)
 }
 __PACKAGE__->register;
 
-=begin
+=head1 NAME
+
+    AI::MXNet::MSRAPrelu - Custom initialization scheme.
+=cut
+
+=head1 DESCRIPTION
 
     Initialize the weight with initialization scheme from
-        Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification.
+    Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification.
 
     Parameters
     ----------
     factor_type: str, optional
-        Use ```avg```, ```in```, or ```out``` to init
-
+        Use avg, in, or out.
     slope: float, optional
         initial slope of any PReLU (or similar) nonlinearities.
 =cut
@@ -625,6 +679,39 @@ method _init_weight($name, $arr)
 
 __PACKAGE__->register;
 
+package AI::MXNet::LSTMBias;
+
+=head1 NAME
+
+    AI::MXNet::LSTMBias - Custom initializer for LSTM cells.
+=cut
+
+=head1 DESCRIPTION
+
+    Initializes all biases of an LSTMCell to 0.0 except for
+    the forget gate's bias that is set to a custom value.
+
+    Parameters
+    ----------
+    forget_bias: float,a bias for the forget gate.
+    Jozefowicz et al. 2015 recommends setting this to 1.0.
+=cut
+
+use Mouse;
+extends 'AI::MXNet::Initializer';
+has 'forget_bias' => (is => 'ro', isa => 'Num', required => 1);
+
+method _init_weight(Str $name, AI::MXNet::NDArray $arr)
+{
+    $arr .= 0;
+    # in the case of LSTMCell the forget gate is the second
+    # gate of the 4 LSTM gates, we modify the according values.
+    my $num_hidden = int($arr->shape->[0] / 4);
+    $arr->slice([$num_hidden, 2*$num_hidden-1]) .= $self->forget_bias;
+}
+
+__PACKAGE__->register;
+
 package AI::MXNet::FusedRNN;
 use Mouse;
 use JSON::PP;
@@ -632,27 +719,29 @@ extends 'AI::MXNet::Initializer';
 
 =head1 NAME
 
-AI::MXNet::FusedRNN
+    AI::MXNet::FusedRNN - Custom initializer for fused RNN cells.
+=cut
 
 =head1 DESCRIPTION
 
-    Initialze parameters for fused rnn layer
+    Initializes parameters for fused rnn layer.
 
     Parameters
     ----------
     init : Initializer
-        intializer applied to unpacked weights.
+        initializer applied to unpacked weights.
+    All parameters below must be exactly the same as ones passed to the
+    FusedRNNCell constructor.
+
     num_hidden : int
-        should be the same with arguments passed to FusedRNNCell.
     num_layers : int
-        should be the same with arguments passed to FusedRNNCell.
     mode : str
-        should be the same with arguments passed to FusedRNNCell.
     bidirectional : bool
-        should be the same with arguments passed to FusedRNNCell.
+    forget_bias : float
 =cut
 
 has 'init'          => (is => 'rw', isa => 'Str|AI::MXNet::Initializer', required => 1);
+has 'forget_bias'   => (is => 'ro', isa => 'Num', default => 1);
 has [qw/num_hidden
        num_layers/] => (is => 'ro', isa => 'Int', required => 1);
 has 'mode'          => (is => 'ro', isa => 'Str', required => 1);
@@ -679,17 +768,29 @@ method _init_weight($name, $arr)
         num_layers    => $self->num_layers,
         mode          => $self->mode,
         bidirectional => $self->bidirectional,
+        forget_bias   => $self->forget_bias,
         prefix        => ''
     );
 
     my $args = $cell->unpack_weights({ parameters => $arr });
     for my $name (keys %{ $args })
     {
-       my $desc = AI::MXNet::InitDesc->new(name => $name);
-       &{$self->init}($desc, $args->{name});
+        my $desc = AI::MXNet::InitDesc->new(name => $name);
+        # for lstm bias, we use a custom initializer
+        # which adds a bias to the forget gate
+        if($self->mode eq 'lstm' and $name =~ /f_bias$/)
+        {
+            $args->{$name} .= $self->forget_bias;
+        }
+        else
+        {
+            &{$self->init}($desc, $args->{$name});
+        }
     }
 
     $arr .= $cell->pack_weights($args)->{parameters};
 }
+
+__PACKAGE__->register;
 
 1;

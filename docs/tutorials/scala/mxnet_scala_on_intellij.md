@@ -7,7 +7,7 @@ To use this tutorial, you need:
 
 - [Maven 3](https://maven.apache.org/install.html).
 - [Scala 2.11.8](https://www.scala-lang.org/download/2.11.8.html).
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/setup.html#overview).
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).
 - The MXNet package for Scala. For installation instructions, see [this procedure](http://mxnet.io/get_started/osx_setup.html#install-the-mxnet-package-for-scala).
 - [IntelliJ IDE](https://www.jetbrains.com/idea/).
 
@@ -58,5 +58,5 @@ Be sure to change the system path of MXNet-Scala-jar, which is in the `native/<y
 For more information about MXNet Scala resources, see the following:
 
 * [Scala API](http://mxnet.io/api/scala/)
-* [More Scala Examples](https://github.com/dmlc/mxnet/tree/master/scala-package/examples/src/main/scala/ml/dmlc/mxnet/examples)
+* [More Scala Examples](https://github.com/dmlc/mxnet/tree/master/scala-package/examples/)
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)

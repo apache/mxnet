@@ -1,8 +1,6 @@
 import os
 import numpy as np
 import mxnet as mx
-# MXNET_CPU_WORKER_NTHREADS must be greater than 1 for custom op to work on CPU
-os.environ["MXNET_CPU_WORKER_NTHREADS"] = "2"
 
 class WeightedLogisticRegression(mx.operator.CustomOp):
     def __init__(self, pos_grad_scale, neg_grad_scale):

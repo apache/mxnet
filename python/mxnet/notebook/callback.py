@@ -90,14 +90,14 @@ class PandasLogger(object):
         """The dataframe with evaluation data.
         This has validation scores calculated at the end of each epoch.
         """
-        return self._dataframes['train']
+        return self._dataframes['eval']
 
     @property
     def epoch_df(self):
         """The dataframe with epoch data.
         This has timing information.
         """
-        return self._dataframes['train']
+        return self._dataframes['epoch']
 
     @property
     def all_dataframes(self):
@@ -377,6 +377,6 @@ def args_wrapper(*args):
     out = defaultdict(list)
     for callback in args:
         callback_args = callback.callback_args()
-        for k, v in callback_args.iteritems():
+        for k, v in callback_args.items():
             out[k].append(v)
     return dict(out)

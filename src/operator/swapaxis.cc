@@ -21,10 +21,6 @@ Operator* CreateOp<cpu>(SwapAxisParam param, int dtype) {
 
 Operator* SwapAxisProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                          std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-  CHECK(InferType(in_type, &out_type, &aux_type));
   DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
 }
 
@@ -32,9 +28,9 @@ Operator* SwapAxisProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_sh
 DMLC_REGISTER_PARAMETER(SwapAxisParam);
 
 MXNET_REGISTER_OP_PROPERTY(SwapAxis, SwapAxisProp)
-.add_argument("data", "ndarray-or-symbol", "Input array.")
+.add_argument("data", "NDArray-or-Symbol", "Input array.")
 .add_arguments(SwapAxisParam::__FIELDS__())
-.describe(R"code(Interchange two axes of an array.
+.describe(R"code(Interchanges two axes of an array.
 
 Examples::
 

@@ -75,7 +75,7 @@ class Solver(object):
         exe = sym.bind(xpu, args=args, args_grad=args_grad, aux_states=auxs)
 
         assert len(sym.list_arguments()) == len(exe.grad_arrays)
-        update_dict = {name: nd for name, nd in zip(sym.list_arguments(), exe.grad_arrays) if nd}
+        update_dict = {name: nd for name, nd in zip(sym.list_arguments(), exe.grad_arrays) if nd is not None}
         batch_size = input_buffs[0].shape[0]
         self.optimizer.rescale_grad = 1.0/batch_size
         self.optimizer.set_lr_mult(args_lrmult)

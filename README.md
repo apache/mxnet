@@ -22,6 +22,8 @@ deep learning systems, and interesting insights of DL systems for hackers.
 
 What's New
 ----------
+* [Apache Incubator](http://incubator.apache.org/projects/mxnet.html) - We are now an Apache Incubator project.
+* [Version 0.10.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.10.0) - MXNet 0.10.0 Release.
 * [Version 0.9.3 Release](./docs/architecture/release_note_0_9.md) - First 0.9 official release.
 * [Version 0.9.1 Release (NNVM refactor)](./docs/architecture/release_note_0_9.md) - NNVM branch is merged into master now. An official release will be made soon.
 * [Version 0.8.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.8.0)
@@ -43,10 +45,10 @@ What's New
 
 Contents
 --------
-* [Documentation and Tutorials](http://mxnet.io/)
+* [Documentation](http://mxnet.io/) and  [Tutorials](http://mxnet.io/tutorials/)
 * [Design Notes](http://mxnet.io/architecture/index.html)
-* [Code Examples](example)
-* [Installation](http://mxnet.io/get_started/setup.html)
+* [Code Examples](https://github.com/dmlc/mxnet/tree/master/example)
+* [Installation](http://mxnet.io/get_started/install.html)
 * [Pretrained Models](https://github.com/dmlc/mxnet-model-gallery)
 * [Contribute to MXNet](http://mxnet.io/community/contribute.html)
 * [Frequent Asked Questions](http://mxnet.io/how_to/faq.html)
@@ -58,7 +60,7 @@ Features
 * Mix and match imperative and symbolic programming to maximize flexibility and efficiency
 * Lightweight, memory efficient and portable to smart devices
 * Scales up to multi GPUs and distributed setting with auto parallelism
-* Support for Python, R, C++ and Julia
+* Support for Python, R, Scala, C++ and Julia
 * Cloud-friendly and directly compatible with S3, HDFS, and Azure
 
 Ask Questions

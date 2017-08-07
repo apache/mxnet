@@ -6,29 +6,34 @@ use AI::MXNet::Function::Parameters;
 use Mouse;
 use overload "&{}" => sub { my $self = shift; sub { $self->call(@_) } };
 
+=head1 NAME
+
+    AI::MXNet::Callback - A collection of predefined callback functions
+=cut
+
 =head2 module_checkpoint
 
-    Callback to checkpoint Module to prefix every epoch.
+    Callback to save the module setup in the checkpoint files.
 
     Parameters
     ----------
-    mod : subclass of AI::MXNet::BaseModule
+    $mod : subclass of AI::MXNet::Module::Base
         The module to checkpoint.
-    prefix : str
+    $prefix : str
         The file prefix to checkpoint to
-    period : int
+    $period=1 : int
         How many epochs to wait before checkpointing. Default is 1.
-    save_optimizer_states : bool
-        Whether to save optimizer states for continue training
+    $save_optimizer_states=0 : Bool
+        Whether to save optimizer states for later training.
 
     Returns
     -------
-    callback : function
+    $callback : sub ref
         The callback function that can be passed as iter_end_callback to fit.
 =cut
 
 method module_checkpoint(
-    AI::MXNet::BaseModule $mod,
+    AI::MXNet::Module::Base $mod,
     Str $prefix,
     Int $period=1,
     Int $save_optimizer_states=0
@@ -50,14 +55,14 @@ method module_checkpoint(
 
     Parameters
     ----------
-    period : int
-        The number of batch to log the training evaluation metric.
-    auto_reset : bool
-        Reset the metric after each log
+    $period : Int
+        The number of batches after which to log the training evaluation metric.
+    $auto_reset : Bool
+        Whether to reset the metric after the logging.
 
     Returns
     -------
-    callback : function
+    $callback : sub ref
         The callback function that can be passed as iter_epoch_callback to fit.
 =cut
 
@@ -85,6 +90,11 @@ use Mouse;
 use Time::HiRes qw/time/;
 extends 'AI::MXNet::Callback';
 
+=head1 NAME
+
+    AI::MXNet::Speedometer - A callback that logs training speed 
+=cut
+
 =head1 DESCRIPTION
 
     Calculate and log training speed periodically.
@@ -96,6 +106,8 @@ extends 'AI::MXNet::Callback';
     frequent: int
         How many batches between calculations.
         Defaults to calculating & logging every 50 batches.
+    auto_reset: Bool
+        Reset the metric after each log, defaults to true.
 =cut
 
 has 'batch_size' => (is => 'ro', isa => 'Int', required => 1);
@@ -103,6 +115,7 @@ has 'frequent'   => (is => 'ro', isa => 'Int', default  => 50);
 has 'init'       => (is => 'rw', isa => 'Int', default  => 0);
 has 'tic'        => (is => 'rw', isa => 'Num', default  => 0);
 has 'last_count' => (is => 'rw', isa => 'Int', default  => 0);
+has 'auto_reset' => (is => 'ro', isa => 'Bool', default  => 1);
 
 method call(AI::MXNet::BatchEndParam $param)
 {
@@ -121,7 +134,7 @@ method call(AI::MXNet::BatchEndParam $param)
             if(defined $param->eval_metric)
             {
                 my $name_value = $param->eval_metric->get_name_value;
-                $param->eval_metric->reset;
+                $param->eval_metric->reset if $self->auto_reset;
                 while(my ($name, $value) = each %{ $name_value })
                 {
                     AI::MXNet::Logging->info(
@@ -153,16 +166,20 @@ package AI::MXNet::ProgressBar;
 use Mouse;
 extends 'AI::MXNet::Callback';
 
+=head1 NAME
+
+    AI::MXNet::ProgressBar - A callback to show a progress bar.
+
 =head1 DESCRIPTION
 
-    Show a progress bar.
+    Shows a progress bar.
 
     Parameters
     ----------
-    total: int
-        total batch size
-    length: int
-        length or progress bar
+    total: Int
+        batch size, default is 1
+    length: Int
+        the length of the progress bar, default is 80 chars
 =cut
 
 has 'length'  => (is => 'ro', isa => 'Int', default => 80);
@@ -184,6 +201,11 @@ package AI::MXNet::LogValidationMetricsCallback;
 use Mouse;
 extends 'AI::MXNet::Callback';
 
+=head1 NAME
+
+    AI::MXNet::LogValidationMetricsCallback - A callback to log the eval metrics at the end of an epoch.
+=cut
+
 method call(AI::MXNet::BatchEndParam $param)
 {
     return unless defined $param->eval_metric;
@@ -195,6 +217,31 @@ method call(AI::MXNet::BatchEndParam $param)
             $param->epoch, $name, $value
         );
     }
+}
+
+package AI::MXNet::Callback;
+
+method Speedometer(@args)
+{
+    AI::MXNet::Speedometer->new(
+        @args == 3 ?
+            (batch_size => $args[0], frequent => $args[1], auto_reset => $args[2])
+            : @args == 2 ?
+                (batch_size => $args[0], frequent => $args[1])
+                    : (batch_size => $args[0])
+    )
+}
+
+method ProgressBar(@args)
+{
+    AI::MXNet::ProgressBar->new(
+        @args == 2 ? (total => $args[0], 'length' => $args[1]) : (total => $args[0])
+    )
+}
+
+method LogValidationMetricsCallback()
+{
+    AI::MXNet::LogValidationMetricsCallback->new
 }
 
 1;

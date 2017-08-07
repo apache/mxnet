@@ -8,6 +8,7 @@
 #include <utility>
 #include <limits>
 #include <vector>
+#include <tuple>
 #include "mxnet/ndarray.h"
 namespace mxnet {
 namespace kvstore {
@@ -17,20 +18,13 @@ namespace kvstore {
 class Comm {
  public:
   Comm() {
-#if MXNET_USE_CUDA
-    int gpu_num;
-    int ret = cudaGetDeviceCount(&gpu_num);
-    pinned_ctx_ = (ret == 0 && gpu_num > 0) ?
-                  Context::CPUPinned(0) : Context::CPU();
-#else
-    pinned_ctx_ = Context::CPU();
-#endif
+    pinned_ctx_ = Context::CPUPinned(0);
   }
   virtual ~Comm() { }
   /**
    * \brief init key with the data shape
    */
-  virtual void Init(int key, const TShape &shape) = 0;
+  virtual void Init(int key, const TShape& shape, int dtype = mshadow::kFloat32) = 0;
   /**
    * \brief returns src[0] + .. + src[src.size()-1]
    */
@@ -66,8 +60,8 @@ class CommCPU : public Comm {
   }
   virtual ~CommCPU() { }
 
-  void Init(int key, const TShape &shape) override {
-    merge_buf_[key].merged = NDArray(shape, pinned_ctx_);
+  void Init(int key, const TShape& shape, int type = mshadow::kFloat32) override {
+    merge_buf_[key].merged = NDArray(shape, pinned_ctx_, false, type);
   }
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
@@ -86,7 +80,8 @@ class CommCPU : public Comm {
     if (buf.copy_buf.empty()) {
       buf.copy_buf.resize(src.size()-1);
       for (size_t j = 0; j < src.size() - 1; ++j) {
-        buf.copy_buf[j] = NDArray(src[0].shape(), pinned_ctx_);
+        buf.copy_buf[j] = NDArray(
+          src[0].shape(), pinned_ctx_, false, src[0].dtype());
       }
     }
     for (size_t i = 1; i < src.size(); ++i) {
@@ -117,52 +112,60 @@ class CommCPU : public Comm {
   }
 
  private:
+  // reduce sum into val[0]
+  inline void ReduceSumCPU(const std::vector<NDArray> &in_data) {
+    MSHADOW_TYPE_SWITCH(in_data[0].dtype(), DType, {
+      std::vector<DType*> dptr(in_data.size());
+      for (size_t i = 0; i < in_data.size(); ++i) {
+        TBlob data = in_data[i].data();
+        CHECK(data.CheckContiguous());
+        dptr[i] = data.FlatTo2D<cpu, DType>().dptr_;
+      }
+      size_t total = in_data[0].shape().Size();
+      ReduceSumCPUImpl(dptr, total);
+    });
+  }
+
+  template<typename DType>
   inline static void ReduceSumCPU(
-      const std::vector<real_t*> &dptr, size_t offset, index_t size) {
+      const std::vector<DType*> &dptr, size_t offset, index_t size) {
     using namespace mshadow;  // NOLINT(*)
-    Tensor<cpu, 1> in_0(dptr[0] + offset, Shape1(size));
+    Tensor<cpu, 1, DType> in_0(dptr[0] + offset, Shape1(size));
     for (size_t i = 1; i < dptr.size(); i+=4) {
       switch (dptr.size() - i) {
         case 1: {
-          Tensor<cpu, 1> in_1(dptr[i] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_1(dptr[i] + offset, Shape1(size));
           in_0 += in_1;
           break;
         }
         case 2: {
-          Tensor<cpu, 1> in_1(dptr[i] + offset, Shape1(size));
-          Tensor<cpu, 1> in_2(dptr[i+1] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_1(dptr[i] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_2(dptr[i+1] + offset, Shape1(size));
           in_0 += in_1 + in_2;
           break;
         }
         case 3: {
-          Tensor<cpu, 1> in_1(dptr[i] + offset, Shape1(size));
-          Tensor<cpu, 1> in_2(dptr[i+1] + offset, Shape1(size));
-          Tensor<cpu, 1> in_3(dptr[i+2] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_1(dptr[i] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_2(dptr[i+1] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_3(dptr[i+2] + offset, Shape1(size));
           in_0 += in_1 + in_2 + in_3;
           break;
         }
         default: {
-          Tensor<cpu, 1> in_1(dptr[i] + offset, Shape1(size));
-          Tensor<cpu, 1> in_2(dptr[i+1] + offset, Shape1(size));
-          Tensor<cpu, 1> in_3(dptr[i+2] + offset, Shape1(size));
-          Tensor<cpu, 1> in_4(dptr[i+3] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_1(dptr[i] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_2(dptr[i+1] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_3(dptr[i+2] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_4(dptr[i+3] + offset, Shape1(size));
           in_0 += in_1 + in_2 + in_3 + in_4;
           break;
         }
       }
     }
   }
-  // reduce sum into val[0]
-  inline void ReduceSumCPU(const std::vector<NDArray> &in_data) {
+
+  template<typename DType>
+  inline void ReduceSumCPUImpl(std::vector<DType*> dptr, size_t total) {
     const size_t step = std::min(bigarray_bound_, static_cast<size_t>(4 << 10));
-    // ge ptr out
-    std::vector<real_t*> dptr(in_data.size());
-    for (size_t i = 0; i < in_data.size(); ++i) {
-      TBlob data = in_data[i].data();
-      CHECK(data.CheckContiguous());
-      dptr[i] = data.FlatTo2D<cpu, real_t>().dptr_;
-    }
-    size_t total = in_data[0].shape().Size();
     long ntask = (total + step - 1) / step; // NOLINT(*)
     if (total < bigarray_bound_ || nthread_reduction_ <= 1) {
       ReduceSumCPU(dptr, 0, total);
@@ -177,6 +180,7 @@ class CommCPU : public Comm {
       }
     }
   }
+
   /// \brief temporal space for pushing and pulling
   struct BufferEntry {
     /// \brief the merged value
@@ -205,8 +209,8 @@ class CommDevice : public Comm {
 
   virtual ~CommDevice() { }
 
-  void Init(int key, const TShape &shape) override {
-    sorted_key_shape_.push_back(std::make_pair(key, shape));
+  void Init(int key, const TShape& shape, int dtype = mshadow::kFloat32) override {
+    sorted_key_attrs_.push_back(std::make_tuple(key, shape, dtype));
   }
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
@@ -240,7 +244,8 @@ class CommDevice : public Comm {
       // remove some ctx check, and also it reduces 20% perf
       buf.copy_buf.resize(src.size()-1);
       for (size_t i = 0; i < src.size()-1; ++i) {
-        buf.copy_buf[i] = NDArray(buf.merged.shape(), buf.merged.ctx());
+        buf.copy_buf[i] = NDArray(
+          buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
       }
     }
     for (size_t i = 0; i < src.size()-1; ++i) {
@@ -316,22 +321,23 @@ class CommDevice : public Comm {
 #endif
   }
 
-  using KeyShape = std::pair<int, TShape>;
+  using KeyAttrs = std::tuple<int, TShape, int>;
   // try to allocate buff on device evenly
   void InitMergeBuffer(const std::vector<Context>& devs) {
-    std::sort(sorted_key_shape_.begin(), sorted_key_shape_.end(), [](
-              const KeyShape& a, const KeyShape& b) {
-      return a.second.Size() > b.second.Size();
+    std::sort(sorted_key_attrs_.begin(), sorted_key_attrs_.end(), [](
+              const KeyAttrs& a, const KeyAttrs& b) {
+      return std::get<1>(a).Size() > std::get<1>(b).Size();
     });
 
     std::unordered_map<int, std::pair<Context, size_t>> ctx_info;
     for (auto d : devs) {
       ctx_info[d.dev_id] = std::make_pair(d, 0);
     }
-    for (size_t i = 0; i < sorted_key_shape_.size(); ++i) {
-      int k = sorted_key_shape_[i].first;
-      TShape s = sorted_key_shape_[i].second;
-      auto& buf = merge_buf_[k];
+    for (size_t i = 0; i < sorted_key_attrs_.size(); ++i) {
+      int key  = std::get<0>(sorted_key_attrs_[i]);
+      TShape s = std::get<1>(sorted_key_attrs_[i]);
+      int type = std::get<2>(sorted_key_attrs_[i]);
+      auto& buf = merge_buf_[key];
       Context ctx;
       size_t min_size = std::numeric_limits<size_t>::max();
       for (auto it = ctx_info.begin(); it != ctx_info.end(); ++it) {
@@ -341,13 +347,13 @@ class CommDevice : public Comm {
           min_size = size;
         }
       }
-      buf.merged = NDArray(s, ctx);
+      buf.merged = NDArray(s, ctx, false, type);
       ctx_info[ctx.dev_id].second += s.Size();
     }
     inited_ = true;
   }
 
-  std::vector<KeyShape> sorted_key_shape_;
+  std::vector<KeyAttrs> sorted_key_attrs_;
   /// \brief temporal space for pushing and pulling
   struct BufferEntry {
     /// \brief the merged value

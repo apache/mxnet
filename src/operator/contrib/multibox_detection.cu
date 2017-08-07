@@ -39,7 +39,7 @@ __global__ void DetectionForwardKernel(DType *out, const DType *cls_prob,
                                        const bool clip, const float vx,
                                        const float vy, const float vw,
                                        const float vh, const float nms_threshold,
-                                       const bool force_suppress) {
+                                       const bool force_suppress, const int nms_topk) {
   const int nbatch = blockIdx.x;  // each block for each batch
   int index = threadIdx.x;
   __shared__ int valid_count;
@@ -153,12 +153,22 @@ __global__ void DetectionForwardKernel(DType *out, const DType *cls_prob,
     __syncthreads();
   }
 
+  // keep top k detections
+  int ntop = size;
+  if (nms_topk > 0 && nms_topk < ntop) {
+    ntop = nms_topk;
+    for (int i = ntop + index; i < size; i += blockDim.x) {
+      out[i * 6] = -1;
+    }
+    __syncthreads();
+  }
+
   // apply NMS
-  for (int compare_pos = 0; compare_pos < size; ++compare_pos) {
+  for (int compare_pos = 0; compare_pos < ntop; ++compare_pos) {
     DType compare_id = out[compare_pos * 6];
     if (compare_id < 0) continue;  // not a valid positive detection, skip
     DType *compare_loc_ptr = out + compare_pos * 6 + 2;
-    for (int i = compare_pos + index + 1; i < size; i += blockDim.x) {
+    for (int i = compare_pos + index + 1; i < ntop; i += blockDim.x) {
       DType class_id = out[i * 6];
       if (class_id < 0) continue;
       if (force_suppress || (class_id == compare_id)) {
@@ -180,10 +190,13 @@ inline void MultiBoxDetectionForward(const Tensor<gpu, 3, DType> &out,
                                      const Tensor<gpu, 2, DType> &loc_pred,
                                      const Tensor<gpu, 2, DType> &anchors,
                                      const Tensor<gpu, 3, DType> &temp_space,
-                                     float threshold, bool clip,
-                                     const std::vector<float> &variances,
-                                     float nms_threshold, bool force_suppress) {
-  CHECK_EQ(variances.size(), 4) << "Variance size must be 4";
+                                     const float threshold,
+                                     const bool clip,
+                                     const nnvm::Tuple<float> &variances,
+                                     const float nms_threshold,
+                                     const bool force_suppress,
+                                     const int nms_topk) {
+  CHECK_EQ(variances.ndim(), 4) << "Variance size must be 4";
   const int num_classes = cls_prob.size(1);
   const int num_anchors = cls_prob.size(2);
   const int num_batches = cls_prob.size(0);
@@ -195,7 +208,7 @@ inline void MultiBoxDetectionForward(const Tensor<gpu, 3, DType> &out,
     cls_prob.dptr_, loc_pred.dptr_, anchors.dptr_, temp_space.dptr_,
     num_classes, num_anchors, threshold, clip,
     variances[0], variances[1], variances[2], variances[3],
-    nms_threshold, force_suppress);
+    nms_threshold, force_suppress, nms_topk);
   MULTIBOX_DETECTION_CUDA_CHECK(cudaPeekAtLastError());
 }
 }  // namespace mshadow

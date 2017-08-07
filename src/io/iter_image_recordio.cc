@@ -16,6 +16,7 @@
 #include <unordered_map>
 #include <vector>
 #include <cstdlib>
+#include "./image_iter_common.h"
 #include "./inst_vector.h"
 #include "./image_recordio.h"
 #include "./image_augmenter.h"
@@ -25,125 +26,6 @@
 
 namespace mxnet {
 namespace io {
-/*! \brief data structure to hold labels for images */
-class ImageLabelMap {
- public:
-  /*!
-   * \brief initialize the label list into memory
-   * \param path_imglist path to the image list
-   * \param label_width predefined label_width
-   */
-  explicit ImageLabelMap(const char *path_imglist,
-                         mshadow::index_t label_width,
-                         bool silent) {
-    this->label_width = label_width;
-    image_index_.clear();
-    label_.clear();
-    idx2label_.clear();
-    dmlc::InputSplit *fi = dmlc::InputSplit::Create
-        (path_imglist, 0, 1, "text");
-    dmlc::InputSplit::Blob rec;
-    while (fi->NextRecord(&rec)) {
-      // quick manual parsing
-      char *p = reinterpret_cast<char*>(rec.dptr);
-      char *end = p + rec.size;
-      // skip space
-      while (isspace(*p) && p != end) ++p;
-      image_index_.push_back(static_cast<size_t>(atol(p)));
-      for (size_t i = 0; i < label_width; ++i) {
-        // skip till space
-        while (!isspace(*p) && p != end) ++p;
-        // skip space
-        while (isspace(*p) && p != end) ++p;
-        CHECK(p != end) << "Bad ImageList format";
-        label_.push_back(static_cast<real_t>(atof(p)));
-      }
-    }
-    delete fi;
-    // be careful not to resize label_ afterwards
-    idx2label_.reserve(image_index_.size());
-    for (size_t i = 0; i < image_index_.size(); ++i) {
-      idx2label_[image_index_[i]] = dmlc::BeginPtr(label_) + i * label_width;
-    }
-    if (!silent) {
-      LOG(INFO) << "Loaded ImageList from " << path_imglist << ' '
-                << image_index_.size() << " Image records";
-    }
-  }
-  /*! \brief find a label for corresponding index */
-  inline mshadow::Tensor<cpu, 1> Find(size_t imid) const {
-    std::unordered_map<size_t, real_t*>::const_iterator it
-        = idx2label_.find(imid);
-    CHECK(it != idx2label_.end()) << "fail to find imagelabel for id " << imid;
-    return mshadow::Tensor<cpu, 1>(it->second, mshadow::Shape1(label_width));
-  }
-
- private:
-  // label with_
-  mshadow::index_t label_width;
-  // image index of each record
-  std::vector<size_t> image_index_;
-  // real label content
-  std::vector<real_t> label_;
-  // map index to label
-  std::unordered_map<size_t, real_t*> idx2label_;
-};
-
-// Define image record parser parameters
-struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
-  /*! \brief path to image list */
-  std::string path_imglist;
-  /*! \brief path to image recordio */
-  std::string path_imgrec;
-  /*! \brief a sequence of names of image augmenters, seperated by , */
-  std::string aug_seq;
-  /*! \brief label-width */
-  int label_width;
-  /*! \brief input shape */
-  TShape data_shape;
-  /*! \brief number of threads */
-  int preprocess_threads;
-  /*! \brief whether to remain silent */
-  bool verbose;
-  /*! \brief partition the data into multiple parts */
-  int num_parts;
-  /*! \brief the index of the part will read*/
-  int part_index;
-  /*! \brief the size of a shuffle chunk*/
-  size_t shuffle_chunk_size;
-  /*! \brief the seed for chunk shuffling*/
-  int shuffle_chunk_seed;
-
-  // declare parameters
-  DMLC_DECLARE_PARAMETER(ImageRecParserParam) {
-    DMLC_DECLARE_FIELD(path_imglist).set_default("")
-        .describe("Path to the image list file");
-    DMLC_DECLARE_FIELD(path_imgrec).set_default("")
-        .describe("Filename of the image RecordIO file or a directory path.");
-    DMLC_DECLARE_FIELD(aug_seq).set_default("aug_default")
-        .describe("The augmenter names to represent"\
-                  " sequence of augmenters to be applied, seperated by comma." \
-                  " Additional keyword parameters will be seen by these augmenters.");
-    DMLC_DECLARE_FIELD(label_width).set_lower_bound(1).set_default(1)
-        .describe("The number of labels per image.");
-    DMLC_DECLARE_FIELD(data_shape)
-        .set_expect_ndim(3).enforce_nonzero()
-        .describe("The shape of one output image.");
-    DMLC_DECLARE_FIELD(preprocess_threads).set_lower_bound(1).set_default(4)
-        .describe("The number of threads.");
-    DMLC_DECLARE_FIELD(verbose).set_default(true)
-        .describe("If or not output verbose information.");
-    DMLC_DECLARE_FIELD(num_parts).set_default(1)
-        .describe("Virtual partition data into *n* parts");
-    DMLC_DECLARE_FIELD(part_index).set_default(0)
-        .describe("The *i*-th virtual partition will read");
-    DMLC_DECLARE_FIELD(shuffle_chunk_size).set_default(0)
-        .describe("The data shuffle buffer size in MB. Only valid if shuffle is true");
-    DMLC_DECLARE_FIELD(shuffle_chunk_seed).set_default(0)
-        .describe("The random seed for shuffling");
-  }
-};
-
 // parser to parse image recordio
 template<typename DType>
 class ImageRecordIOParser {
@@ -297,7 +179,7 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
       }
       const int n_channels = res.channels();
       for (auto& aug : augmenters_[tid]) {
-        res = aug->Process(res, prnds_[tid].get());
+        res = aug->Process(res, nullptr, prnds_[tid].get());
       }
       out.Push(static_cast<unsigned>(rec.image_index()),
                mshadow::Shape3(n_channels, res.rows, res.cols),
@@ -345,25 +227,6 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
 #endif  // MXNET_USE_OPENCV
   return true;
 }
-
-// Define image record parameters
-struct ImageRecordParam: public dmlc::Parameter<ImageRecordParam> {
-  /*! \brief whether to do shuffle */
-  bool shuffle;
-  /*! \brief random seed */
-  int seed;
-  /*! \brief whether to remain silent */
-  bool verbose;
-  // declare parameters
-  DMLC_DECLARE_PARAMETER(ImageRecordParam) {
-    DMLC_DECLARE_FIELD(shuffle).set_default(false)
-        .describe("If or not randomly shuffle data.");
-    DMLC_DECLARE_FIELD(seed).set_default(0)
-        .describe("The random seed.");
-    DMLC_DECLARE_FIELD(verbose).set_default(true)
-        .describe("If or not output verbose information.");
-  }
-};
 
 // iterator on image recordio
 template<typename DType = real_t>
@@ -452,10 +315,8 @@ class ImageRecordIter : public IIterator<DataInst> {
   common::RANDOM_ENGINE rnd_;
 };
 
-DMLC_REGISTER_PARAMETER(ImageRecParserParam);
-DMLC_REGISTER_PARAMETER(ImageRecordParam);
-
-MXNET_REGISTER_IO_ITER(ImageRecordIter)
+// OLD VERSION - DEPRECATED
+MXNET_REGISTER_IO_ITER(ImageRecordIter_v1)
 .describe(R"code(Iterating on image RecordIO files
 
 Read images batches from RecordIO files with a rich of data augmentation
@@ -478,14 +339,14 @@ files.
                 new ImageRecordIter<real_t>())));
   });
 
-MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter)
+// OLD VERSION - DEPRECATED
+MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter_v1)
 .describe(R"code(Iterating on image RecordIO files
 
 This iterator is identical to ``ImageRecordIter`` except for using ``uint8`` as
 the data type instead of ``float``.
 
 )code" ADD_FILELINE)
-.describe("Create iterator for dataset packed in recordio.")
 .add_arguments(ImageRecParserParam::__FIELDS__())
 .add_arguments(ImageRecordParam::__FIELDS__())
 .add_arguments(BatchParam::__FIELDS__())

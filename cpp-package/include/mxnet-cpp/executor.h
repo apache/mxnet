@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef MXNETCPP_EXECUTOR_H
-#define MXNETCPP_EXECUTOR_H
+#ifndef MXNET_CPP_EXECUTOR_H_
+#define MXNET_CPP_EXECUTOR_H_
 
 #include <vector>
 #include <map>
@@ -24,6 +24,7 @@ class Optimizer;
 * \brief Executor interface
 */
 class Executor {
+  friend class Monitor;
  public:
   Executor(const Symbol &symbol, Context context,
            const std::vector<NDArray> &arg_arrays,
@@ -78,18 +79,6 @@ class Executor {
   */
   std::string DebugStr();
   /*!
-  * \brief update the arguments with given learning rate and optimizer
-  * \param opt the pointer to the optimizer
-  * \param lr learning rate
-  * \param wd weight decay
-  * \param arg_update_begin begin index of the arguments to be updated, it
-  * starts after the input data by default
-  * \param arg_update_end end index of the arguments to be updated, it ends
-  * before the label data by default
-  */
-  void UpdateAll(Optimizer *opt, float lr, float wd, int arg_update_begin = 1,
-                 int arg_update_end = -1);
-  /*!
   * \brief destructor, free the handle
   */
   ~Executor() { MXExecutorFree(handle_); }
@@ -134,4 +123,4 @@ class Executor {
 };
 }  // namespace cpp
 }  // namespace mxnet
-#endif  // MXNETCPP_EXECUTOR_H
+#endif  // MXNET_CPP_EXECUTOR_H_

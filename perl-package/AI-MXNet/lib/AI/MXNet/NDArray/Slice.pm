@@ -5,6 +5,11 @@ use Mouse;
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
 
+=head1 NAME
+
+    AI::MXNet::NDArray::Slice - A convenience class for slicing of the AI::MXNet::NDArray objects.
+=cut
+
 has parent => (is => 'ro', isa => 'AI::MXNet::NDArray', required => 1);
 has begin  => (is => 'ro', isa => 'Shape', required => 1);
 has end    => (is => 'ro', isa => 'Shape', required => 1);
@@ -12,7 +17,7 @@ use overload
     '.=' => \&set,
     '='  => sub { $_[0] },
     '""' => \&notsupported,
-    '+'  => \&notsupported, 
+    '+'  => \&notsupported,
     '+=' => \&notsupported,
     '-'  => \&notsupported,
     '-=' => \&notsupported,

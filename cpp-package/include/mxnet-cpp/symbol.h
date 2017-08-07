@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef MXNETCPP_SYMBOL_H
-#define MXNETCPP_SYMBOL_H
+#ifndef MXNET_CPP_SYMBOL_H_
+#define MXNET_CPP_SYMBOL_H_
 
 #include <map>
 #include <string>
@@ -72,11 +72,13 @@ class Symbol {
   Symbol operator-(const Symbol &rhs) const;
   Symbol operator*(const Symbol &rhs) const;
   Symbol operator/(const Symbol &rhs) const;
+  Symbol operator%(const Symbol &rhs) const;
 
   Symbol operator+(mx_float scalar) const;
   Symbol operator-(mx_float scalar) const;
   Symbol operator*(mx_float scalar) const;
   Symbol operator/(mx_float scalar) const;
+  Symbol operator%(mx_float scalar) const;
   Symbol Copy() const;
   /*!
   * \brief construct a variable Symbol
@@ -246,12 +248,13 @@ class Symbol {
 
  private:
   std::shared_ptr<SymBlob> blob_ptr_;
-  static OpMap *op_map_;
+  static OpMap*& op_map();
 };
 Symbol operator+(mx_float lhs, const Symbol &rhs);
 Symbol operator-(mx_float lhs, const Symbol &rhs);
 Symbol operator*(mx_float lhs, const Symbol &rhs);
 Symbol operator/(mx_float lhs, const Symbol &rhs);
+Symbol operator%(mx_float lhs, const Symbol &rhs);
 }  // namespace cpp
 }  // namespace mxnet
-#endif  // MXNETCPP_SYMBOL_H
+#endif  // MXNET_CPP_SYMBOL_H_

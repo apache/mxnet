@@ -37,11 +37,12 @@ parser.add_argument('--batch-size', type=int, default=32,
                     help='the batch size.')
 parser.add_argument('--disp-batches', type=int, default=50,
                     help='show progress for every n batches')
-# When training a deep, complex model, it's recommended to stack fused RNN cells (one
-# layer per cell) together instead of one with all layers. The reason is that fused RNN
-# cells doesn't set gradients to be ready until the computation for the entire layer is
-# completed. Breaking a multi-layer fused RNN cell into several one-layer ones allows
-# gradients to be processed ealier. This reduces communication overhead, especially with
+# When training a deep, complex model *on multiple GPUs* it's recommended to
+# stack fused RNN cells (one layer per cell) together instead of one with all
+# layers. The reason is that fused RNN cells don't set gradients to be ready
+# until the computation for the entire layer is completed. Breaking a
+# multi-layer fused RNN cell into several one-layer ones allows gradients to be
+# processed ealier. This reduces communication overhead, especially with
 # multiple GPUs.
 parser.add_argument('--stack-rnn', default=False,
                     help='stack fused RNN cells to reduce communication overhead')
@@ -134,13 +135,13 @@ def train(args):
         eval_metric         = mx.metric.Perplexity(invalid_label),
         kvstore             = args.kv_store,
         optimizer           = args.optimizer,
-        optimizer_params    = opt_params, 
+        optimizer_params    = opt_params,
         initializer         = mx.init.Xavier(factor_type="in", magnitude=2.34),
         arg_params          = arg_params,
         aux_params          = aux_params,
         begin_epoch         = args.load_epoch,
         num_epoch           = args.num_epochs,
-        batch_end_callback  = mx.callback.Speedometer(args.batch_size, args.disp_batches),
+        batch_end_callback  = mx.callback.Speedometer(args.batch_size, args.disp_batches, auto_reset=False),
         epoch_end_callback  = mx.rnn.do_rnn_checkpoint(cell, args.model_prefix, 1)
                               if args.model_prefix else None)
 

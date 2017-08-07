@@ -1,1 +1,1 @@
-"""NDArray namespace used to register internal functions"""
+"""NDArray namespace used to register internal functions."""

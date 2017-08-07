@@ -1,9 +1,9 @@
-from __future__ import print_function
 import argparse
 import cPickle
 import os
 import mxnet as mx
 
+from ..logger import logger
 from ..config import config, default, generate_config
 from ..dataset import *
 
@@ -39,7 +39,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    print('Called with argument:', args)
+    logger.info('Called with argument: %s' % args)
     reeval(args)
 
 

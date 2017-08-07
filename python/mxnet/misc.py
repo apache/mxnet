@@ -1,35 +1,35 @@
 # pylint: disable=invalid-name
-"""learning rate scheduler"""
+"""Learning rate scheduler."""
 
 import math
 import logging
 
 class LearningRateScheduler(object):
-    """Base class of learning rate scheduler"""
+    """Base class of learning rate scheduler."""
     def __init__(self):
         self.base_lr = 0.01
 
     def __call__(self, iteration):
         """
-        Call to schedule current learning rate
+        Call to schedule current learning rate.
 
         Parameters
         ----------
         iteration: int
-            Current iteration count
+            Current iteration count.
         """
         raise NotImplementedError("must override this")
 
 
 class FactorScheduler(LearningRateScheduler):
-    """Reduce learning rate in factor
+    """Reduce learning rate in factor.
 
     Parameters
     ----------
     step: int
-        schedule learning rate after every round
+        Schedule learning rate after every round.
     factor: float
-        reduce learning rate factor
+        Reduce learning rate factor.
     """
     def __init__(self, step, factor=0.1):
         super(FactorScheduler, self).__init__()
@@ -44,12 +44,12 @@ class FactorScheduler(LearningRateScheduler):
 
     def __call__(self, iteration):
         """
-        Call to schedule current learning rate
+        Call to schedule current learning rate.
 
         Parameters
         ----------
         iteration: int
-            Current iteration count
+            Current iteration count.
         """
 
         if not self.init:

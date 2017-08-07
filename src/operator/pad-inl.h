@@ -24,7 +24,7 @@ namespace op {
 
 namespace pad_enum {
 enum PadOpInputs { kData };
-enum PadOpType { kConstant, kEdge };
+enum PadOpType { kConstant, kEdge, kReflect };
 enum PadOpOutputs { kOut };
 }
 
@@ -36,22 +36,21 @@ struct PadParam : public dmlc::Parameter<PadParam> {
     DMLC_DECLARE_FIELD(mode)
         .add_enum("constant", pad_enum::kConstant)
         .add_enum("edge", pad_enum::kEdge)
+        .add_enum("reflect", pad_enum::kReflect)
         .describe(
-            "Padding type to use. \"constant\" pads all values with a constant "
-            "value, the value of which can be specified with the "
-            "constant_value option. \"edge\" uses the boundary values of the "
-            "array as padding.");
+            "Padding type to use."
+            " \"constant\" pads with `constant_value`"
+            " \"edge\" pads using the edge values of the input array"
+            " \"reflect\" pads by reflecting values with respect to the edges.");
 
     DMLC_DECLARE_FIELD(pad_width).describe(
-        "A tuple of padding widths of length 2*r, where r is the rank of the "
-        "input tensor, specifying number of values padded to the edges of each "
-        "axis. (before_1, after_1, ... , before_N, after_N) unique pad widths "
-        "for each axis. Equivalent to pad_width in numpy.pad, but flattened.");
+        "Widths of the padding regions applied to the edges of each axis. "
+        "It is a tuple of integer padding widths for each axis of the format "
+        "``(before_1, after_1, ... , before_N, after_N)``. "
+        "It should be of length ``2*N`` where ``N`` is the number of dimensions of the array."
+        "This is equivalent to pad_width in numpy.pad, but flattened.");
     DMLC_DECLARE_FIELD(constant_value)
-        .describe(
-            "This option is only used when mode is \"constant\". This "
-            "value will be used as the padding value. Defaults to 0 if not "
-            "specified.")
+        .describe("The value used for padding when `mode` is \"constant\".")
         .set_default(0.0);
   }
 };
@@ -74,24 +73,31 @@ class PadOp : public Operator {
     int rank = in_data[pad_enum::kData].ndim();
     auto pad = param_.pad_width;
     DType constant_value = param_.constant_value;
-
-    if ((rank == 4) && !pad[0] && !pad[1] && !pad[2] && !pad[3]) {
-      Tensor<xpu, 4, DType> data =
-          in_data[pad_enum::kData].get<xpu, 4, DType>(s);
-      Tensor<xpu, 4, DType> out =
-          out_data[pad_enum::kOut].get<xpu, 4, DType>(s);
-      pad_image(out, data, param_.pad_width, param_.mode, constant_value);
-    } else if ((rank == 5) && !pad[0] && !pad[1] && !pad[2] && !pad[3]) {
-      Tensor<xpu, 5, DType> data =
-          in_data[pad_enum::kData].get<xpu, 5, DType>(s);
-      Tensor<xpu, 5, DType> out =
-          out_data[pad_enum::kOut].get<xpu, 5, DType>(s);
-      pad_image(out, data, param_.pad_width, param_.mode, constant_value);
-    } else {
-      LOG(FATAL) << "Only 4d or 5d input tensors with padding applied to "
-                    "dimensions > 1 is currently implemented.";
+    // TODO(nswamy@): update the documentation and log below when support is added for more than
+    // 4D/5D arrays and not requiring higher dimensions to be zero.
+    switch (rank) {
+      case 4:
+        {
+          Tensor<xpu, 4, DType> data =
+            in_data[pad_enum::kData].get<xpu, 4, DType>(s);
+          Tensor<xpu, 4, DType> out =
+            out_data[pad_enum::kOut].get<xpu, 4, DType>(s);
+          pad_image(out, data, param_.pad_width, param_.mode, constant_value);
+          break;
+        }
+      case 5:
+        {
+          Tensor<xpu, 5, DType> data =
+            in_data[pad_enum::kData].get<xpu, 5, DType>(s);
+          Tensor<xpu, 5, DType> out =
+            out_data[pad_enum::kOut].get<xpu, 5, DType>(s);
+          pad_image(out, data, param_.pad_width, param_.mode, constant_value);
+          break;
+        }
+      default:
+        LOG(FATAL) << "Attempted to run forward pass "
+                        "with input dimensions other than 4 or 5.";
     }
-
     // Assign(out, req[pad_enum::kOut], F<mshadow_op::identity>(data));
   }
 
@@ -110,21 +116,30 @@ class PadOp : public Operator {
     // Get any size input + output into required form
     auto pad = param_.pad_width;
     int rank = in_grad[pad_enum::kData].ndim();
-    if ((rank == 4) && !pad[0] && !pad[1] && !pad[2] && !pad[3]) {
-      Tensor<xpu, 4, DType> in = in_grad[pad_enum::kData].get<xpu, 4, DType>(s);
-      Tensor<xpu, 4, DType> out =
-          out_grad[pad_enum::kOut].get<xpu, 4, DType>(s);
-      if (req[pad_enum::kData] == kWriteTo) in = 0.0f;
-      pad_image_grad(in, out, param_.pad_width, param_.mode);
-    } else if ((rank == 5) && !pad[0] && !pad[1] && !pad[2] && !pad[3]) {
-      Tensor<xpu, 5, DType> in = in_grad[pad_enum::kData].get<xpu, 5, DType>(s);
-      Tensor<xpu, 5, DType> out =
-          out_grad[pad_enum::kOut].get<xpu, 5, DType>(s);
-      if (req[pad_enum::kData] == kWriteTo) in = 0.0f;
-      pad_image_grad(in, out, param_.pad_width, param_.mode);
-    } else {
-      LOG(FATAL) << "Only 4d and 5d input tensors with padding applied to "
-                    "dimensions > 1 is currently implemented. ";
+    switch (rank) {
+      case 4:
+        {
+          Tensor<xpu, 4, DType> in =
+            in_grad[pad_enum::kData].get<xpu, 4, DType>(s);
+          Tensor<xpu, 4, DType> out =
+            out_grad[pad_enum::kOut].get<xpu, 4, DType>(s);
+          if (req[pad_enum::kData] == kWriteTo) in = 0.0f;
+          pad_image_grad(in, out, param_.pad_width, param_.mode);
+          break;
+        }
+      case 5:
+        {
+          Tensor<xpu, 5, DType> in =
+            in_grad[pad_enum::kData].get<xpu, 5, DType>(s);
+          Tensor<xpu, 5, DType> out =
+            out_grad[pad_enum::kOut].get<xpu, 5, DType>(s);
+          if (req[pad_enum::kData] == kWriteTo) in = 0.0f;
+          pad_image_grad(in, out, param_.pad_width, param_.mode);
+          break;
+        }
+      default:
+        LOG(FATAL) << "Attempted to run backward pass "
+                        "with input dimensions other than 4 or 5.";
     }
   }
 
@@ -161,7 +176,29 @@ class PadProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 1U) << "Can only be one input to symbol.";
 
     const TShape &dshape = (*in_shape)[pad_enum::kData];
-    if (dshape.ndim() == 0) return false;
+
+    auto rank = dshape.ndim();
+    auto pad = param_.pad_width;
+    auto pad_spec_len = param_.pad_width.ndim();
+
+    if (rank == 0) return false;
+    if ((rank != 4) && (rank != 5)) {
+      LOG(FATAL) << "Current implementation only supports 4-D or 5-D input.";
+    }
+    if ((pad[0] != 0) || (pad[1] != 0) || (pad[2] != 0) || (pad[3] != 0)) {
+      LOG(FATAL) << "Current implementation expects padding on the first two axes to be zero.";
+    }
+    if ((2*rank) != pad_spec_len) {
+      LOG(FATAL) << "Input shape vs padding spec mismatch.";
+    }
+    if (param_.mode == pad_enum::kReflect) {
+      auto size = dshape.data();
+      if ((pad[4] >= size[2]) || (pad[5] >= size[2]) ||
+            (pad[6] >= size[3]) || (pad[7] >= size[3])) {
+        LOG(FATAL) << "Current implementation of reflection padding "
+                        "only supports padding sizes smaller than the input size.";
+      }
+    }
     TShape oshape = dshape;
     for (size_t i = 0; i < dshape.ndim(); ++i) {
       oshape[i] =

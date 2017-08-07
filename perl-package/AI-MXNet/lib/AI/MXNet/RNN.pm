@@ -48,17 +48,18 @@ use List::Util qw(max);
 =cut
 
 method save_rnn_checkpoint(
-    AI::MXNet::RNN::Cell|ArrayRef[AI::MXNet::RNN::Cell] $cells,
-    Str                                                 $prefix,
-    Int                                                 $epoch,
-    AI::MXNet::Symbol                                   $symbol,
-    HashRef[AI::MXNet::NDArray]                         $arg_params,
-    HashRef[AI::MXNet::NDArray]                         $aux_params
+    AI::MXNet::RNN::Cell::Base|ArrayRef[AI::MXNet::RNN::Cell::Base] $cells,
+    Str                                                             $prefix,
+    Int                                                             $epoch,
+    AI::MXNet::Symbol                                               $symbol,
+    HashRef[AI::MXNet::NDArray]                                     $arg_params,
+    HashRef[AI::MXNet::NDArray]                                     $aux_params
 )
 {
     $cells = [$cells] unless ref $cells eq 'ARRAY';
-    $arg_params = $_->unpack_weights($arg_params) for @{ $cells };
-    AI::MXNet::Module->model_save_checkpoint($prefix, $epoch, $symbol, $arg_params, $aux_params);
+    my %arg_params = %{ $arg_params };
+    %arg_params = %{ $_->unpack_weights(\%arg_params) } for @{ $cells };
+    AI::MXNet::Module->model_save_checkpoint($prefix, $epoch, $symbol, \%arg_params, $aux_params);
 }
 
 
@@ -92,14 +93,14 @@ method save_rnn_checkpoint(
 =cut
 
 method load_rnn_checkpoint(
-    AI::MXNet::RNN::Cell|ArrayRef[AI::MXNet::RNN::Cell] $cells,
-    Str                                                 $prefix,
-    Int                                                 $epoch
+    AI::MXNet::RNN::Cell::Base|ArrayRef[AI::MXNet::RNN::Cell::Base] $cells,
+    Str                                                             $prefix,
+    Int                                                             $epoch
 )
 {
     my ($sym, $arg, $aux) = AI::MXNet::Module->load_checkpoint($prefix, $epoch);
     $cells = [$cells] unless ref $cells eq 'ARRAY';
-    $arg = $_->unpack_weights($arg) for @{ $cells };
+    $arg = $_->pack_weights($arg) for @{ $cells };
     return ($sym, $arg, $aux);
 }
 
@@ -124,9 +125,9 @@ method load_rnn_checkpoint(
 =cut
 
 method do_rnn_checkpoint(
-    AI::MXNet::RNN::Cell|ArrayRef[AI::MXNet::RNN::Cell]  $cells,
-    Str                                                  $prefix,
-    Int                                                  $period
+    AI::MXNet::RNN::Cell::Base|ArrayRef[AI::MXNet::RNN::Cell::Base]  $cells,
+    Str                                                              $prefix,
+    Int                                                              $period
 )
 {
     $period = max(1, $period);
@@ -140,8 +141,21 @@ method do_rnn_checkpoint(
 }
 
 ## In order to closely resemble the Python's usage
-method RNNCell(@args)           { AI::MXNet::RNN::Cell->new(@args % 2 ? ('num_hidden', @args) : @args) }
-method LSTMCell(@args)          { AI::MXNet::RNN::LSTMCell->new(@args % 2 ? ('num_hidden', @args) : @args) }
-method SequentialRNNCell(@args) { AI::MXNet::RNN::SequentialCell->new(@args) }
+method RNNCell(@args)            { AI::MXNet::RNN::Cell->new(@args % 2 ? ('num_hidden', @args) : @args) }
+method LSTMCell(@args)           { AI::MXNet::RNN::LSTMCell->new(@args % 2 ? ('num_hidden', @args) : @args) }
+method GRUCell(@args)            { AI::MXNet::RNN::GRUCell->new(@args % 2 ? ('num_hidden', @args) : @args) }
+method FusedRNNCell(@args)       { AI::MXNet::RNN::FusedCell->new(@args % 2 ? ('num_hidden', @args) : @args) }
+method SequentialRNNCell(@args)  { AI::MXNet::RNN::SequentialCell->new(@args) }
+method BidirectionalCell(@args)  { AI::MXNet::RNN::BidirectionalCell->new(@args) }
+method DropoutCell(@args)        { AI::MXNet::RNN::DropoutCell->new(@args) }
+method ZoneoutCell(@args)        { AI::MXNet::RNN::ZoneoutCell->new(@args) }
+method ResidualCell(@args)       { AI::MXNet::RNN::ResidualCell->new(@args) }
+method encode_sentences(@args)   { AI::MXNet::RNN::IO->encode_sentences(@args) }
+method BucketSentenceIter(@args)
+{
+    my $sentences  = shift(@args);
+    my $batch_size = shift(@args);
+    AI::MXNet::BucketSentenceIter->new(sentences => $sentences, batch_size => $batch_size, @args);
+}
 
 1;

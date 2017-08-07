@@ -4,9 +4,9 @@ use warnings;
 use AI::MXNet::Function::Parameters;
 use Scalar::Util qw/blessed/;
 
-=head1 DESCRIPTION
+=head1 NAME
 
-Online evaluation metric module.
+    AI::MXNet::Metric - Online evaluation metric module.
 =cut
 
 # Check to see if the two arrays are the same size.
@@ -50,7 +50,12 @@ func check_label_shapes(
 
 package AI::MXNet::EvalMetric;
 use Mouse;
-
+use overload '""' => sub {
+    return "EvalMetric: "
+            .Data::Dumper->new(
+                [shift->get_name_value()]
+            )->Purity(1)->Deepcopy(1)->Terse(1)->Dump
+},  fallback => 1;
 has 'name'       => (is => 'rw', isa => 'Str');
 has 'num'        => (is => 'rw', isa => 'Int');
 has 'num_inst'   => (is => 'rw', isa => 'Maybe[Int|ArrayRef[Int]]');
@@ -61,28 +66,10 @@ sub BUILD
     shift->reset;
 }
 
-=head2 update
-
-        Update the internal evaluation.
-
-        Parameters
-        ----------
-        labels : list of NDArray
-            The labels of the data.
-
-        preds : list of NDArray
-            Predicted values.
-=cut
-
 method update($label, $pred)
 {
     confess('NotImplemented');
 }
-
-=head2 reset
-
-        Clear the internal statistics to initial state.
-=cut
 
 method reset()
 {
@@ -97,18 +84,6 @@ method reset()
         $self->sum_metric([(0) x $self->num]);
     }
 }
-
-=head2 get
-
-        Get the current evaluation result.
-
-        Returns
-        -------
-        name : str
-           Name of the metric.
-        value : float
-           Value of the evaluation.
-=cut
 
 method get()
 {
@@ -152,11 +127,6 @@ method get_name_value()
     @ret{ @$name } = @$value;
     return \%ret;
 }
-
-=head1 DESCRIPTION
-
-    Manage multiple evaluation metrics.
-=cut
 
 package AI::MXNet::CompositeEvalMetric;
 use Mouse;
@@ -356,15 +326,22 @@ use AI::MXNet::Base;
 extends 'AI::MXNet::EvalMetric';
 has '+name'        => (default => 'Perplexity');
 has 'ignore_label' => (is => 'ro', isa => 'Maybe[Int]');
+has 'axis'         => (is => 'ro', isa => 'Int', default => -1);
+around BUILDARGS => sub {
+    my $orig  = shift;
+    my $class = shift;
+    return $class->$orig(ignore_label => $_[0]) if @_ == 1;
+    return $class->$orig(@_);
+};
 
 =head1 NAME
 
-AI::MXNet::Perplexity
+    AI::MXNet::Perplexity
 =cut
 
 =head1 DESCRIPTION
 
-    Calculate perplexity
+    Calculate perplexity.
 
     Parameters
     ----------
@@ -372,43 +349,42 @@ AI::MXNet::Perplexity
         index of invalid label to ignore when
         counting. usually should be -1. Include
         all entries if undef.
+    axis : int (default -1)
+        The axis from prediction that was used to
+        compute softmax. By default uses the last
+        axis.
 =cut
 
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
     AI::MXNet::Metric::check_label_shapes($labels, $preds);
-    my ($loss, $num, $probs) = (0, 0, []);
+    my ($loss, $num) = (0, 0);
     zip(sub {
         my ($label, $pred) = @_;
         my $label_shape = $label->shape;
         my $pred_shape  = $pred->shape;
         assert(
             (product(@{ $label_shape }) == product(@{ $pred_shape })/$pred_shape->[-1]),
-            "shape mismatch: (@$label_shape) vs. ($pred_shape)"
+            "shape mismatch: (@$label_shape) vs. (@$pred_shape)"
         );
-        $label = $label->as_in_context($pred->context)->astype(dtype=>'int32')->reshape([$label->size]);
-        $pred = AI::MXNet::NDArray->batch_take($pred, $label);
-        push @{ $probs }, $pred;
-    }, $labels, $preds);
-
-    zip(sub {
-        my ($label, $prob) = @_;
-        $prob = $prob->aspdl;
+        $label = $label->as_in_context($pred->context)->reshape([$label->size]);
+        $pred = AI::MXNet::NDArray->pick($pred, $label->astype('int32'), { axis => $self->axis });
         if(defined $self->ignore_label)
         {
-            my $ignore = $label->aspdl->flat == $self->ignore_label;
-            $prob = $prob*(1-$ignore) + $ignore;
-            $num += $prob->nelem - $ignore->sum;
+            my $ignore = ($label == $self->ignore_label);
+            $num -= $ignore->sum->asscalar;
+            $pred = $pred*(1-$ignore) + $ignore;
         }
-        else
-        {
-            $num += $prob->nelem;
-        }
-        $prob->where($prob < 1e-10) .= 1e-10;
-        $loss += -$prob->log->sum;
-    }, $labels, $probs);
-    $self->sum_metric($self->sum_metric + exp($loss/$num));
-    $self->num_inst($self->num_inst + 1);
+        $loss -= $pred->maximum(1e-10)->log->sum->asscalar;
+        $num  += $pred->size;
+    }, $labels, $preds);
+    $self->sum_metric($self->sum_metric + $loss);
+    $self->num_inst($self->num_inst + $num);
+}
+
+method get()
+{
+    return ($self->name, exp($self->sum_metric / $self->num_inst));
 }
 
 ####################
@@ -491,6 +467,12 @@ use AI::MXNet::Base;
 extends 'AI::MXNet::EvalMetric';
 has '+name'   => (default => 'cross-entropy');
 has 'eps'     => (is => 'ro', isa => 'Num', default => 1e-8);
+around BUILDARGS => sub {
+    my $orig  = shift;
+    my $class = shift;
+    return $class->$orig(eps => $_[0]) if @_ == 1;
+    return $class->$orig(@_);
+};
 
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
@@ -513,7 +495,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
 
 =head1 DESCRIPTION
 
-    Custom evaluation metric that takes a NDArray function.
+    Custom evaluation metric that takes a sub ref.
 
     Parameters
     ----------
@@ -532,7 +514,7 @@ package AI::MXNet::CustomMetric;
 use Mouse;
 use AI::MXNet::Base;
 extends 'AI::MXNet::EvalMetric';
-has 'eval_function' => (is => 'ro', isa => 'CodeRef');
+has 'eval_function'       => (is => 'ro', isa => 'CodeRef');
 has 'allow_extra_outputs' => (is => 'ro', isa => 'Int', default => 0);
 
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
@@ -559,7 +541,7 @@ package AI::MXNet::Metric;
 
     Parameters
     ----------
-    metric : str or callable
+    metric : str or sub ref
         The name of the metric, or a function
         providing statistics given pred, label NDArray.
 =cut
@@ -604,6 +586,16 @@ method create(Metric|ArrayRef[Metric] $metric, %kwargs)
             Carp::confess("Metric must be either subref or one of [@metrics]");
         }
         return $metrics{ lc($metric) }->new(%kwargs);
+    }
+}
+
+{
+    no strict 'refs';
+    no warnings 'redefine';
+    for my $metric (values %metrics)
+    {
+        my ($name) = $metric =~ /(\w+)$/;
+        *{__PACKAGE__."::$name"} = sub { shift; $metric->new(@_); };
     }
 }
 

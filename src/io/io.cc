@@ -3,9 +3,7 @@
 #include <mxnet/io.h>
 #include <dmlc/registry.h>
 #include "./image_augmenter.h"
-#include "./iter_normalize.h"
-#include "./iter_batchloader.h"
-#include "./iter_prefetcher.h"
+#include "./image_iter_common.h"
 
 // Registers
 namespace dmlc {
@@ -18,5 +16,8 @@ namespace io {
 DMLC_REGISTER_PARAMETER(BatchParam);
 DMLC_REGISTER_PARAMETER(PrefetcherParam);
 DMLC_REGISTER_PARAMETER(ImageNormalizeParam);
+DMLC_REGISTER_PARAMETER(ImageRecParserParam);
+DMLC_REGISTER_PARAMETER(ImageRecordParam);
+DMLC_REGISTER_PARAMETER(ImageDetNormalizeParam);
 }  // namespace io
 }  // namespace mxnet

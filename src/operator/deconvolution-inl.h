@@ -25,11 +25,13 @@ namespace deconv {
   enum DeconvolutionOpInputs {kData, kWeight, kBias};
   enum DeconvolutionOpOutputs {kOut};
   enum DeconvolutionOpResource {kTempSpace};
+  enum DeconvolutionOpCudnnTune {kOff, kLimited, kFastest};
 }
 
 struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   TShape kernel;
   TShape stride;
+  TShape dilate;
   TShape pad;
   TShape adj;
   TShape target_shape;
@@ -37,55 +39,91 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   uint32_t num_group;
   uint64_t workspace;
   bool no_bias;
+  dmlc::optional<int> cudnn_tune;
+  bool cudnn_off;
+  dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(DeconvolutionParam) {
-    int shape[] = {1, 1};
-    DMLC_DECLARE_FIELD(kernel).describe("deconvolution kernel size: (y, x)");
-    DMLC_DECLARE_FIELD(stride).set_default(TShape(shape, shape + 2))
-        .describe("deconvolution stride: (y, x)");
-    shape[0] = shape[1] = 0;
-    DMLC_DECLARE_FIELD(pad).set_default(TShape(shape, shape + 2))
-        .describe("pad for deconvolution: (y, x), a good number is : (kernel-1)/2, "
-                  "if target_shape set, pad will be ignored and will be computed "
-                  "automatically");
-    DMLC_DECLARE_FIELD(adj).set_default(TShape(shape, shape + 2))
-        .describe("adjustment for output shape: (y, x), if target_shape set, adj "
-                  "will be ignored and will be computed automatically");
-    DMLC_DECLARE_FIELD(target_shape).set_default(TShape(shape, shape + 2))
-        .describe("output shape with targe shape : (y, x)");
+    DMLC_DECLARE_FIELD(kernel).describe("Deconvolution kernel size: (h, w) or (d, h, w). "
+                  "This is same as the kernel size used for the corresponding convolution");
+    DMLC_DECLARE_FIELD(stride).set_default(TShape())
+        .describe("The stride used for the corresponding convolution: (h, w) or (d, h, w).");
+    DMLC_DECLARE_FIELD(dilate).set_default(TShape())
+        .describe("Dilation factor for each dimension of the input: (h, w) or (d, h, w).");
+    DMLC_DECLARE_FIELD(pad).set_default(TShape())
+        .describe("The amount of implicit zero padding added during convolution for each "
+                  "dimension of the input: "
+                  "(h, w) or (d, h, w). "
+                  "``(kernel-1)/2`` is usually a good choice. "
+                  "If `target_shape` is set, "
+                  "`pad` will be ignored and a padding that will generate the target shape "
+                  "will be used.");
+    DMLC_DECLARE_FIELD(adj).set_default(TShape())
+        .describe("Adjustment for output shape: (h, w) or (d, h, w). "
+                  "If `target_shape` is set, "
+                  "`adj` will be ignored and computed accordingly.");
+    DMLC_DECLARE_FIELD(target_shape).set_default(TShape())
+        .describe("Shape of the output tensor: (h, w) or (d, h, w).");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
-        .describe("deconvolution filter(channel) number");
+        .describe("Number of output filters.");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
-        .describe("number of groups partition");
+        .describe("Number of groups partition.");
     DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
-        .describe("Tmp workspace for deconvolution (MB)");
+      .describe("Maximum temporal workspace allowed for deconvolution (MB).");
     DMLC_DECLARE_FIELD(no_bias).set_default(true)
         .describe("Whether to disable bias parameter.");
+    DMLC_DECLARE_FIELD(cudnn_tune)
+      .add_enum("off", deconv::kOff)
+      .add_enum("limited_workspace", deconv::kLimited)
+      .add_enum("fastest", deconv::kFastest)
+      .set_default(dmlc::optional<int>())
+      .describe("Whether to pick convolution algorithm by running performance test.");
+    DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
+    .describe("Turn off cudnn for this layer.");
+    DMLC_DECLARE_FIELD(layout)
+      .add_enum("NCW", mshadow::kNCW)
+      .add_enum("NCHW", mshadow::kNCHW)
+      .add_enum("NCDHW", mshadow::kNCDHW)
+      .add_enum("NHWC", mshadow::kNHWC)
+      .add_enum("NDHWC", mshadow::kNDHWC)
+      .set_default(dmlc::optional<int>())
+      .describe("Set layout for input, output and weight. Empty for "
+                "default layout, NCW for 1d, NCHW for 2d and NCDHW for 3d.");
   }
 
-  inline void InferPad(index_t input_y, index_t input_x,
-                       index_t* o_pad_y, index_t* o_pad_x,
-                       index_t* o_adj_y, index_t* o_adj_x) const {
-    index_t& pad_y = *o_pad_y;
-    index_t& pad_x = *o_pad_x;
-    index_t& adj_y = *o_adj_y;
-    index_t& adj_x = *o_adj_x;
-    if (target_shape[0] != 0 || target_shape[1] != 0) {
-      pad_y = stride[0] * (input_y - 1) + kernel[0];
-      pad_x = stride[1] * (input_x - 1) + kernel[1];
-      CHECK_GE(pad_y, target_shape[0])
-          << "too big target shape";
-      CHECK_GE(pad_x, target_shape[1])
-          << "too big target shape";
-      pad_y -= target_shape[0];
-      pad_x -= target_shape[1];
-      adj_y = pad_y % 2; pad_y = (pad_y + 1) / 2;
-      adj_x = pad_x % 2; pad_x = (pad_x + 1) / 2;
-    } else {
-      pad_y = pad[0];
-      pad_x = pad[1];
-      adj_y = adj[0];
-      adj_x = adj[1];
+  template<size_t ndim>
+  void InferPad(TShape input, index_t (&o_pad)[ndim], index_t (&o_adj)[ndim] ) const {
+    // Modified by Li.bs
+    // Use tag to control the calculation of pad
+    bool bCal = false;
+    if (target_shape.ndim() != 0) {
+      for (index_t i = 0; i < target_shape.ndim(); i++) {
+        if (target_shape[i] != 0) bCal = true;
+      }
     }
+
+    if (bCal) {
+      size_t input_ndim = input.ndim();
+
+      for (index_t i = 0; i < ndim; i++) {
+        // input.ndim() can be larger than ndim, in case that the complete input
+        // shape was passed and not only the ndim last ones
+        o_pad[i] = stride[i] * (input[(input_ndim - ndim) + i] - 1) + DilatedKernelSize(i);
+        CHECK_GE(o_pad[i], target_shape[i]) << "too big target shape";
+        o_pad[i] -= target_shape[i];
+        o_adj[i] = o_pad[i] % 2;
+        o_pad[i] = (o_pad[i] + 1) / 2;
+      }
+    } else {
+      for (index_t i = 0; i < ndim; i++) {
+        o_pad[i] = pad[i];
+        o_adj[i] = adj[i];
+      }
+    }
+  }
+
+  // Adjusts kernel size for effects of dilation in the dimension `dim`.
+  index_t DilatedKernelSize(int dim) const {
+    return 1 + (kernel[dim] - 1) * dilate[dim];
   }
 };
 
@@ -105,6 +143,11 @@ class DeconvolutionOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
+
+    if (param_.kernel.ndim() != 2) {
+      LOG(FATAL) << "If not using CUDNN only 2D-Deconvolution is supported";
+    }
+
     CHECK_EQ(req[deconv::kOut], kWriteTo);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
@@ -113,8 +156,10 @@ class DeconvolutionOp : public Operator {
     Tensor<xpu, 4, DType> data = in_data[deconv::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> out = out_data[deconv::kOut].get<xpu, 4, DType>(s);
 
-    index_t pad_y, pad_x, adj_y, adj_x;
-    param_.InferPad(data.size(2), data.size(3), &pad_y, &pad_x, &adj_y, &adj_x);
+    index_t o_pad[2], o_adj[2];
+    TShape dshape = {static_cast<nnvm::dim_t>(data.size(2)),
+                     static_cast<nnvm::dim_t>(data.size(3))};
+    param_.InferPad(dshape, o_pad, o_adj);
 
     Shape<3> wmat_shape =
         Shape3(param_.num_group,
@@ -142,21 +187,23 @@ class DeconvolutionOp : public Operator {
                                            shape_dstunit_[1],
                                            shape_dstunit_[2] * step), s);
       temp_dst = reshape(swapaxis<1, 0>(data.Slice(i, i + step)), temp_dst.shape_);
-      if (pad_y == 0 && pad_x == 0) {
+      if (o_pad[0] == 0 && o_pad[1] == 0) {
         temp_col = unpack_patch2col(out.Slice(i, i + step),
                                     param_.kernel[0],
                                     param_.kernel[1],
                                     param_.stride[0],
                                     param_.stride[1],
-                                    1, 1);  // Deconvolution only support dilate equals 1
+                                    param_.dilate[0],
+                                    param_.dilate[1]);
       } else {
         temp_col = unpack_patch2col(pad(out.Slice(i, i + step),
-                                        pad_y, pad_x),
+                                        o_pad[0], o_pad[1]),
                                     param_.kernel[0],
                                     param_.kernel[1],
                                     param_.stride[0],
                                     param_.stride[1],
-                                    1, 1);  // Deconvolution only support dilate equals 1
+                                    param_.dilate[0],
+                                    param_.dilate[1]);
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -164,27 +211,27 @@ class DeconvolutionOp : public Operator {
                                               gstride * (gid + 1));
         tmpc = dot(wmat[gid].T(), temp_dst[gid]);
       }
-      if (pad_y == 0 && pad_x == 0) {
+      if (o_pad[0] == 0 && o_pad[1] == 0) {
         out.Slice(i, i + step) = pack_col2patch(temp_col,
                                    out.Slice(i, i + step).shape_,
                                    param_.kernel[0],
                                    param_.kernel[1],
                                    param_.stride[0],
                                    param_.stride[1],
-                                   1,
-                                   1);  // Deconvolution only support dilate equals 1
+                                   param_.dilate[0],
+                                   param_.dilate[1]);
       } else {
         Shape<4> pshape = out.Slice(i, i + step).shape_;
-        pshape[2] += 2 * pad_y;
-        pshape[3] += 2 * pad_x;
+        pshape[2] += 2 * o_pad[0];
+        pshape[3] += 2 * o_pad[1];
         out.Slice(i, i + step) = crop(pack_col2patch(temp_col,
                                         pshape,
                                         param_.kernel[0],
                                         param_.kernel[1],
                                         param_.stride[0],
                                         param_.stride[1],
-                                        1,
-                                        1),  // Deconvolution only support dilate equals 1
+                                        param_.dilate[0],
+                                        param_.dilate[1]),
                                         out[i][0].shape_);
       }
     }
@@ -227,8 +274,10 @@ class DeconvolutionOp : public Operator {
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif
-    index_t pad_y, pad_x, adj_y, adj_x;
-    param_.InferPad(data.size(2), data.size(3), &pad_y, &pad_x, &adj_y, &adj_x);
+    index_t o_pad[2], o_adj[2];
+    TShape dshape = {static_cast<nnvm::dim_t>(data.size(2)),
+                     static_cast<nnvm::dim_t>(data.size(3))};
+    param_.InferPad(dshape, o_pad, o_adj);
 
     const index_t nbatch = data.size(0);
     Tensor<xpu, 1, DType> workspace =
@@ -246,20 +295,22 @@ class DeconvolutionOp : public Operator {
                                            shape_dstunit_[1],
                                            shape_dstunit_[2] * step), s);
       temp_dst = reshape(swapaxis<1, 0>(data.Slice(i, i + step)), temp_dst.shape_);
-      if (pad_y == 0 && pad_x == 0) {
+      if (o_pad[0] == 0 && o_pad[1] == 0) {
         temp_col = unpack_patch2col(grad.Slice(i, i + step),
                                      param_.kernel[0],
                                      param_.kernel[1],
                                      param_.stride[0],
                                      param_.stride[1],
-                                     1, 1);  // Deconvolution only support dilate equals 1
+                                     param_.dilate[0],
+                                     param_.dilate[1]);
       } else {
-        temp_col = unpack_patch2col(pad(grad.Slice(i, i + step), pad_y, pad_x),
+        temp_col = unpack_patch2col(pad(grad.Slice(i, i + step), o_pad[0], o_pad[1]),
                                      param_.kernel[0],
                                      param_.kernel[1],
                                      param_.stride[0],
                                      param_.stride[1],
-                                     1, 1);  // Deconvolution only support dilate equals 1
+                                     param_.dilate[0],
+                                     param_.dilate[1]);
       }
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -329,7 +380,10 @@ class DeconvolutionOp : public Operator {
 };  // class DeconvolutionOp
 
 template<typename xpu>
-Operator* CreateOp(DeconvolutionParam param, int dtype);
+Operator* CreateOp(DeconvolutionParam param, int dtype,
+                   std::vector<TShape> *in_shape,
+                   std::vector<TShape> *out_shape,
+                   Context ctx);
 
 #if DMLC_USE_CXX11
 class DeconvolutionProp : public OperatorProperty {
@@ -343,7 +397,28 @@ class DeconvolutionProp : public OperatorProperty {
   }
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
+    using namespace mshadow;
     param_.Init(kwargs);
+    if (param_.kernel.ndim() == 1) {
+      param_.layout = param_.layout? param_.layout.value() : mshadow::kNCW;
+      if (param_.stride.ndim() == 0) param_.stride = Shape1(1);
+      if (param_.dilate.ndim() == 0) param_.dilate = Shape1(1);
+      if (param_.pad.ndim() == 0) param_.pad = Shape1(0);
+      if (param_.adj.ndim() == 0) param_.adj = Shape1(0);
+    } else if (param_.kernel.ndim() == 2) {
+      param_.layout = param_.layout ? param_.layout.value() : mshadow::kNCHW;
+      if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
+      if (param_.dilate.ndim() == 0) param_.dilate = Shape2(1, 1);
+      if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
+      if (param_.adj.ndim() == 0) param_.adj = Shape2(0, 0);
+    } else {
+      CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim() << "D deconvolution not supported";
+      param_.layout = param_.layout ? param_.layout.value(): mshadow::kNCDHW;
+      if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
+      if (param_.dilate.ndim() == 0) param_.dilate = Shape3(1, 1, 1);
+      if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
+      if (param_.adj.ndim() == 0) param_.adj = Shape3(0, 0, 0);
+    }
   }
 
   std::map<std::string, std::string> GetParams() const override {
@@ -353,54 +428,193 @@ class DeconvolutionProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
+#if MXNET_USE_CUDNN == 0
+    if (param_.kernel.ndim() != 2) {
+      LOG(FATAL) << "If not using CUDNN only 2D-Deconvolution is supported";
+      return false;
+    }
+#endif  // CUDNN
+
     using namespace mshadow;
     if (!param_.no_bias) {
       CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
     } else {
       CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
     }
+    out_shape->resize(1, TShape());
     const TShape &dshape = (*in_shape)[deconv::kData];
     if (dshape.ndim() ==  0) return false;
-    CHECK_EQ(dshape.ndim(), 4U) \
-        << "Input data should be 4D in batch-num_filter-y-x";
-    SHAPE_ASSIGN_CHECK(*in_shape,
-                       deconv::kWeight,
-                       Shape4(dshape[1], param_.num_filter / param_.num_group,
-                              param_.kernel[0], param_.kernel[1]));
-    if (!param_.no_bias) {
-      SHAPE_ASSIGN_CHECK(*in_shape, deconv::kBias, Shape1(param_.num_filter));
-    }
-    out_shape->clear();
-    out_shape->push_back(dshape);
-    // osize = stride * (isize - 1) + ksize - 2 * pad + adj
-    const index_t ksize_y = static_cast<index_t>(param_.kernel[0]);
-    const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
-    index_t pad_y, pad_x, adj_y, adj_x;
-    param_.InferPad(dshape[2], dshape[3], &pad_y, &pad_x, &adj_y, &adj_x);
-    CHECK_EQ(dshape[1] % param_.num_group, 0U) \
+
+    if (param_.kernel.ndim() == 1) {
+      // 1d conv
+      CHECK_EQ(dshape.ndim(), 3U) << "Input data should be 3D in batch-num_filter-x";
+      Shape<3> dshape_ncw = ConvertLayout(dshape.get<3>(), param_.layout.value(), kNCW);
+      Shape<3> wshape = Shape3(dshape_ncw[1], param_.num_filter / param_.num_group,
+                               param_.kernel[0]);
+      wshape = ConvertLayout(wshape, kNCW, param_.layout.value());
+      SHAPE_ASSIGN_CHECK(*in_shape, deconv::kWeight, wshape);
+      if (!param_.no_bias) {
+        SHAPE_ASSIGN_CHECK(*in_shape, deconv::kBias, Shape1(param_.num_filter));
+      }
+
+      const index_t dilated_ksize_x = param_.DilatedKernelSize(0);
+
+      index_t o_pad[1];
+      index_t o_adj[1];
+      param_.InferPad(dshape_ncw, o_pad, o_adj);
+
+      CHECK_EQ(dshape_ncw[1] % param_.num_group, 0U) \
         << "input num_filter must divide group size";
-    CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
+      CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
         << "output num_filter must divide group size";
-    CHECK_GT(param_.kernel.Size(), 0U) \
+      CHECK_GT(param_.kernel.Size(), 0U) \
         << "incorrect kernel size: " << param_.kernel;
-    CHECK_GT(param_.stride.Size(), 0U) \
+      CHECK_GT(param_.stride.Size(), 0U) \
         << "incorrect stride size: " << param_.stride;
-    CHECK_GE(ksize_y-1, adj_y) << "adj(y) must be samller than kernel(h)";
-    CHECK_GE(ksize_x-1, adj_x) << "adj(x) must be samller than kernel(w)";
-    (*out_shape)[deconv::kOut][1] = param_.num_filter;
-    (*out_shape)[deconv::kOut][2] = param_.stride[0] * (dshape[2] - 1) +
-        ksize_y - 2 * pad_y + adj_y;
-    (*out_shape)[deconv::kOut][3] = param_.stride[1] * (dshape[3] - 1) +
-        ksize_x - 2 * pad_x + adj_x;
-    if (param_.target_shape[0] > 0) {
-      CHECK_EQ(param_.target_shape[0], (*out_shape)[deconv::kOut][2]) \
-          << "param_.target_shape[0] was not reasonable, pelase set it carefully";
+      CHECK_GT(param_.dilate.Size(), 0U) \
+        << "incorrect dilate size: " << param_.dilate;
+
+      CHECK_GE(param_.stride[0]-1, o_adj[0]) << "adj(x) must be samller than stride[0]";
+
+      Shape<3> oshape;
+      oshape[0] = dshape_ncw[0];
+      oshape[1] = param_.num_filter;
+      oshape[2] = param_.stride[0] * (dshape_ncw[2] - 1) +
+        dilated_ksize_x - 2 * o_pad[0] + o_adj[0];
+
+      if (param_.target_shape[0] > 0) {
+        CHECK_EQ(param_.target_shape[0], oshape[2]) \
+          << "param_.target_shape[0] was not reasonable, please set it carefully";
+      }
+
+      SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCW, param_.layout.value()));
+
+      return true;
+    } else if (param_.kernel.ndim() == 2) {
+      // 2d conv
+      CHECK_EQ(dshape.ndim(), 4U) \
+        << "Input data should be 4D in batch-num_filter-y-x";
+      Shape<4> dshape_nchw = ConvertLayout(dshape.get<4>(), param_.layout.value(), kNCHW);
+      Shape<4> wshape = Shape4(dshape_nchw[1],
+                               param_.num_filter / param_.num_group,
+                               param_.kernel[0], param_.kernel[1]);
+      wshape = ConvertLayout(wshape, kNCHW, param_.layout.value());
+      SHAPE_ASSIGN_CHECK(*in_shape, deconv::kWeight, wshape);
+      if (!param_.no_bias) {
+        SHAPE_ASSIGN_CHECK(*in_shape, deconv::kBias, Shape1(param_.num_filter));
+      }
+
+      const index_t dilated_ksize_y = param_.DilatedKernelSize(0);
+      const index_t dilated_ksize_x = param_.DilatedKernelSize(1);
+
+      index_t o_pad[2];
+      index_t o_adj[2];
+      param_.InferPad(dshape_nchw, o_pad, o_adj);
+
+      CHECK_EQ(dshape_nchw[1] % param_.num_group, 0U) \
+        << "input num_filter must divide group size";
+      CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
+        << "output num_filter must divide group size";
+      CHECK_GT(param_.kernel.Size(), 0U) \
+        << "incorrect kernel size: " << param_.kernel;
+      CHECK_GT(param_.stride.Size(), 0U) \
+        << "incorrect stride size: " << param_.stride;
+      CHECK_GT(param_.dilate.Size(), 0U) \
+          << "incorrect dilate size: " << param_.dilate;
+
+      CHECK_GE(param_.stride[0]-1, o_adj[0]) << "adj(y) must be samller than stride[0]";
+      CHECK_GE(param_.stride[1]-1, o_adj[1]) << "adj(x) must be samller than stride[1]";
+
+      Shape<4> oshape;
+      oshape[0] = dshape_nchw[0];
+      oshape[1] = param_.num_filter;
+      oshape[2] = param_.stride[0] * (dshape_nchw[2] - 1) +
+        dilated_ksize_y - 2 * o_pad[0] + o_adj[0];
+      oshape[3] = param_.stride[1] * (dshape_nchw[3] - 1) +
+        dilated_ksize_x - 2 * o_pad[1] + o_adj[1];
+
+      if (param_.target_shape[0] > 0) {
+        CHECK_EQ(param_.target_shape[0], oshape[2]) \
+          << "param_.target_shape[0] was not reasonable, please set it carefully";
+      }
+      if (param_.target_shape[1] > 0) {
+        CHECK_EQ(param_.target_shape[1], oshape[3]) \
+          << "param_.target_shape[1] was not reasonable, please set it carefully";
+      }
+
+      SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCHW, param_.layout.value()));
+
+      return true;
+    } else if (param_.kernel.ndim() == 3) {
+      // 3d conv
+      CHECK_EQ(dshape.ndim(), 5U) \
+        << "Input data should be 5D in batch-num_filter-depth-y-x";
+      Shape<5> dshape_ncdhw = ConvertLayout(dshape.get<5>(), param_.layout.value(), kNCDHW);
+      Shape<5> wshape = Shape5(dshape_ncdhw[1], param_.num_filter / param_.num_group,
+                               param_.kernel[0], param_.kernel[1], param_.kernel[2]);
+      wshape = ConvertLayout(wshape, kNCDHW, param_.layout.value());
+      SHAPE_ASSIGN_CHECK(*in_shape, deconv::kWeight, wshape);
+      if (!param_.no_bias) {
+        SHAPE_ASSIGN_CHECK(*in_shape, deconv::kBias, Shape1(param_.num_filter));
+      }
+
+      // Note: 3D dilation currently not supported.
+      // Calculations below done to preserve symmetry with 1D/2D code.
+      const index_t dilated_ksize_d = param_.DilatedKernelSize(0);
+      const index_t dilated_ksize_y = param_.DilatedKernelSize(1);
+      const index_t dilated_ksize_x = param_.DilatedKernelSize(2);
+
+      index_t o_pad[3];
+      index_t o_adj[3];
+      param_.InferPad(dshape_ncdhw, o_pad, o_adj);
+
+      CHECK_EQ(dshape_ncdhw[1] % param_.num_group, 0U) \
+        << "input num_filter must divide group size";
+      CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
+        << "output num_filter must divide group size";
+      CHECK_GT(param_.kernel.Size(), 0U) \
+        << "incorrect kernel size: " << param_.kernel;
+      CHECK_GT(param_.stride.Size(), 0U) \
+        << "incorrect stride size: " << param_.stride;
+      CHECK_GT(param_.dilate.Size(), 0U) \
+        << "incorrect dilate size: " << param_.dilate;
+      CHECK_EQ(param_.dilate.Size(), 1U)
+        << "Dilate is not supported in 3d deconvolution";
+
+      CHECK_GE(param_.stride[0]-1, o_adj[0]) << "adj(d) must be samller than stride[0]";
+      CHECK_GE(param_.stride[1]-1, o_adj[1]) << "adj(y) must be samller than stride[1]";
+      CHECK_GE(param_.stride[2]-1, o_adj[2]) << "adj(x) must be samller than stride[2]";
+
+      Shape<5> oshape;
+      oshape[0] = dshape_ncdhw[0];
+      oshape[1] = param_.num_filter;
+      oshape[2] = param_.stride[0] * (dshape_ncdhw[2] - 1) +
+        dilated_ksize_d - 2 * o_pad[0] + o_adj[0];
+      oshape[3] = param_.stride[1] * (dshape_ncdhw[3] - 1) +
+        dilated_ksize_y - 2 * o_pad[1] + o_adj[1];
+      oshape[4] = param_.stride[2] * (dshape_ncdhw[4] - 1) +
+        dilated_ksize_x - 2 * o_pad[2] + o_adj[2];
+
+      if (param_.target_shape[0] > 0) {
+        CHECK_EQ(param_.target_shape[0], oshape[2]) \
+          << "param_.target_shape[0] was not reasonable, please it carefully";
+      }
+      if (param_.target_shape[1] > 0) {
+        CHECK_EQ(param_.target_shape[1], oshape[3]) \
+          << "param_.target_shape[1] was not reasonable, please set it carefully";
+      }
+      if (param_.target_shape[2] > 0) {
+        CHECK_EQ(param_.target_shape[2], oshape[4]) \
+          << "param_.target_shape[2] was not reasonable, please set it carefully";
+      }
+
+      SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCDHW, param_.layout.value()));
+
+      return true;
+    } else {
+      LOG(FATAL) << "Unknown convolution type";
+      return false;
     }
-    if (param_.target_shape[1] > 0) {
-      CHECK_EQ(param_.target_shape[1], (*out_shape)[deconv::kOut][3]) \
-          << "param_.target_shape[1] was not reasonable, pelase set it carefully";
-    }
-    return true;
   }
 
   bool InferType(std::vector<int> *in_type,
@@ -457,7 +671,6 @@ class DeconvolutionProp : public OperatorProperty {
 
   Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                              std::vector<int> *in_type) const override;
-
 
  private:
   DeconvolutionParam param_;

@@ -5,6 +5,7 @@
  */
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
+#include <mxnet/base.h>
 #include <set>
 #include <map>
 #include <mutex>
@@ -19,11 +20,6 @@
 
 namespace mxnet {
 namespace engine {
-#if MXNET_USE_PROFILER
-Profiler* Profiler::instance_ = new Profiler();
-#else
-Profiler* Profiler::instance_ = nullptr;
-#endif
 const int INITIAL_SIZE = 1024;
 
 Profiler::Profiler()
@@ -58,7 +54,12 @@ Profiler::Profiler()
 }
 
 Profiler* Profiler::Get() {
-  return instance_;
+#if MXNET_USE_PROFILER
+  static Profiler inst;
+  return &inst;
+#else
+  return nullptr;
+#endif
 }
 
 void Profiler::SetState(ProfilerState state) {

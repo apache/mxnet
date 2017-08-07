@@ -1,4 +1,6 @@
 package AI::MXNet::Function::Parameters;
+use strict;
+use warnings;
 use Function::Parameters ();
 use AI::MXNet::Types ();
 sub import {

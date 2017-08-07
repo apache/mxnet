@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef MXNETCPP_BASE_H
-#define MXNETCPP_BASE_H
+#ifndef MXNET_CPP_BASE_H_
+#define MXNET_CPP_BASE_H_
 
 #include <cstdlib>
 #include "mxnet/c_api.h"
@@ -35,4 +35,4 @@ enum OpReqType {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // MXNETCPP_BASE_H
+#endif  // MXNET_CPP_BASE_H_

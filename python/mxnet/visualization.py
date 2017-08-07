@@ -13,35 +13,36 @@ import json
 from .symbol import Symbol
 
 def _str2tuple(string):
-    """convert shape string to list, internal use only
+    """Convert shape string to list, internal use only.
 
     Parameters
     ----------
     string: str
-        shape string
+        Shape string.
 
     Returns
     -------
-    list of str to represent shape
+    list of str
+        Represents shape.
     """
     return re.findall(r"\d+", string)
 
 def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74, 1.]):
-    """convert symbol for detail information
+    """Convert symbol for detail information.
 
     Parameters
     ----------
     symbol: Symbol
-        symbol to be visualized
+        Symbol to be visualized.
     shape: dict
-        dict of shapes, str->shape (tuple), given input shapes
+        A dict of shapes, str->shape (tuple), given input shapes.
     line_length: int
-        total length of printed lines
+        Rotal length of printed lines
     positions: list
-        relative or absolute positions of log elements in each line
+        Relative or absolute positions of log elements in each line.
     Returns
     ------
-        void
+    None
     """
     if not isinstance(symbol, Symbol):
         raise TypeError("symbol must be Symbol")
@@ -61,17 +62,17 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     # header names for the different log elements
     to_display = ['Layer (type)', 'Output Shape', 'Param #', 'Previous Layer']
     def print_row(fields, positions):
-        """print format row
+        """Print format row.
 
         Parameters
         ----------
         fields: list
-            information field
+            Information field.
         positions: list
-            field length ratio
+            Field length ratio.
         Returns
         ------
-            void
+        None
         """
         line = ''
         for i, field in enumerate(fields):
@@ -88,12 +89,12 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         Parameters
         ----------
         node: dict
-            node information
+            Node information.
         out_shape: dict
-            node shape information
+            Node shape information.
         Returns
         ------
-            node total parameters
+            Node total parameters.
         """
         op = node["op"]
         pre_node = []
@@ -116,11 +117,10 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                             pre_filter = pre_filter + int(shape[0])
         cur_param = 0
         if op == 'Convolution':
-            cur_param = pre_filter \
-                * int(_str2tuple(node["attr"]["kernel"])[0]) \
-                * int(_str2tuple(node["attr"]["kernel"])[1]) \
-                * int(node["attr"]["num_filter"]) \
-                + int(node["attr"]["num_filter"])
+            cur_param = pre_filter * int(node["attr"]["num_filter"])
+            for k in _str2tuple(node["attr"]["kernel"]):
+                cur_param *= int(k)
+            cur_param += int(node["attr"]["num_filter"])
         elif op == 'FullyConnected':
             cur_param = pre_filter * (int(node["attr"]["num_hidden"]) + 1)
         elif op == 'BatchNorm':
@@ -166,31 +166,45 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
 
 def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs={},
                  hide_weights=True):
-    """convert symbol to dot object for visualization
+    """Creates a visualization (Graphviz digraph object) of the given computation graph.
+    Graphviz must be installed for this function to work.
 
     Parameters
     ----------
-    title: str
-        title of the dot graph
+    title: str, optional
+        Title of the generated visualization.
     symbol: Symbol
-        symbol to be visualized
-    shape: dict
-        If supplied, the visualization will include the shape
-        of each tensor on the edges between nodes.
-        This is a dict of shapes, str->shape (tuple), given input shapes
-    node_attrs: dict
-        dict of node's attributes
-        for example:
-            node_attrs={"shape":"oval","fixedsize":"fasle"}
-            means to plot the network in "oval"
-    hide_weights: bool
-        if True (default) then inputs with names like `*_weight`
-        or `*_bias` will be hidden
+        A symbol from the computation graph. The generated digraph will visualize the part
+        of the computation graph required to compute `symbol`.
+    shape: dict, optional
+        Specifies the shape of the input tensors. If specified, the visualization will include
+        the shape of the tensors between the nodes. `shape` is a dictionary mapping
+        input symbol names (str) to the corresponding tensor shape (tuple).
+    node_attrs: dict, optional
+        Specifies the attributes for nodes in the generated visualization. `node_attrs` is
+        a dictionary of Graphviz attribute names and values. For example,
+            ``node_attrs={"shape":"oval","fixedsize":"false"}``
+            will use oval shape for nodes and allow variable sized nodes in the visualization.
+    hide_weights: bool, optional
+        If True (default), then inputs with names of form *_weight (corresponding to weight
+        tensors) or *_bias (corresponding to bias vectors) will be hidden for a cleaner
+        visualization.
 
     Returns
-    ------
-    dot: Diagraph
-        dot object of symbol
+    -------
+    dot: Digraph
+        A Graphviz digraph object visualizing the computation graph to compute `symbol`.
+
+    Example
+    -------
+    >>> net = mx.sym.Variable('data')
+    >>> net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=128)
+    >>> net = mx.sym.Activation(data=net, name='relu1', act_type="relu")
+    >>> net = mx.sym.FullyConnected(data=net, name='fc2', num_hidden=10)
+    >>> net = mx.sym.SoftmaxOutput(data=net, name='out')
+    >>> digraph = mx.viz.plot_network(net, shape={'data':(100,200)},
+    ... node_attrs={"fixedsize":"false"})
+    >>> digraph.view()
     """
     # todo add shape support
     try:
@@ -198,7 +212,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
     except:
         raise ImportError("Draw network requires graphviz library")
     if not isinstance(symbol, Symbol):
-        raise TypeError("symbol must be Symbol")
+        raise TypeError("symbol must be a Symbol")
     draw_shape = False
     if shape is not None:
         draw_shape = True
@@ -220,11 +234,14 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
           "#fdb462", "#b3de69", "#fccde5")
 
     def looks_like_weight(name):
-        """Internal helper to figure out if node should be hidden with hide_weights
+        """Internal helper to figure out if node should be hidden with `hide_weights`.
         """
         if name.endswith("_weight"):
             return True
         if name.endswith("_bias"):
+            return True
+        if name.endswith("_beta") or name.endswith("_gamma") or \
+	   name.endswith("_moving_var") or name.endswith("_moving_mean"):
             return True
         return False
 
@@ -249,11 +266,10 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             label = node["name"]
             attr["fillcolor"] = cm[0]
         elif op == "Convolution":
-            label = r"Convolution\n%sx%s/%s, %s" % (_str2tuple(node["attr"]["kernel"])[0],
-                                                    _str2tuple(node["attr"]["kernel"])[1],
-                                                    _str2tuple(node["attr"]["stride"])[0]
-                                                    if "stride" in node["attr"] else '1',
-                                                    node["attr"]["num_filter"])
+            label = r"Convolution\n%s/%s, %s" % ("x".join(_str2tuple(node["attr"]["kernel"])),
+                                                 "x".join(_str2tuple(node["attr"]["stride"]))
+                                                 if "stride" in node["attr"] else "1",
+                                                 node["attr"]["num_filter"])
             attr["fillcolor"] = cm[1]
         elif op == "FullyConnected":
             label = r"FullyConnected\n%s" % node["attr"]["num_hidden"]
@@ -264,11 +280,10 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             label = r"%s\n%s" % (op, node["attr"]["act_type"])
             attr["fillcolor"] = cm[2]
         elif op == "Pooling":
-            label = r"Pooling\n%s, %sx%s/%s" % (node["attr"]["pool_type"],
-                                                _str2tuple(node["attr"]["kernel"])[0],
-                                                _str2tuple(node["attr"]["kernel"])[1],
-                                                _str2tuple(node["attr"]["stride"])[0]
-                                                if "stride" in node["attr"] else '1')
+            label = r"Pooling\n%s, %s/%s" % (node["attr"]["pool_type"],
+                                             "x".join(_str2tuple(node["attr"]["kernel"])),
+                                             "x".join(_str2tuple(node["attr"]["stride"]))
+                                             if "stride" in node["attr"] else "1")
             attr["fillcolor"] = cm[4]
         elif op == "Concat" or op == "Flatten" or op == "Reshape":
             attr["fillcolor"] = cm[5]
@@ -302,7 +317,6 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                                 params = input_node["attr"]
                                 if "num_outputs" in params:
                                     key += str(int(params["num_outputs"]) - 1)
-                                    params["num_outputs"] = int(params["num_outputs"]) - 1
                             shape = shape_dict[key][1:]
                             label = "x".join([str(x) for x in shape])
                             attr["label"] = label

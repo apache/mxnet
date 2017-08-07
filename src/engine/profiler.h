@@ -6,10 +6,10 @@
 #ifndef MXNET_ENGINE_PROFILER_H_
 #define MXNET_ENGINE_PROFILER_H_
 
-#include <mxnet/engine.h>
 #include <vector>
 #include <string>
 #include <mutex>
+#include <memory>
 
 namespace mxnet {
 namespace engine {
@@ -68,8 +68,6 @@ class Profiler {
       kNotRunning = 0,
       kRunning = 1
   };
-  /*! \return Profiler singleton */
-  static Profiler* Get();
   /*! \brief set state of profiler */
   void SetState(ProfilerState state);
   /*! \return state of profiler */
@@ -95,6 +93,8 @@ class Profiler {
   /*! \brief add one operation execution record in
    *   corresponding device statistics */
   OprExecStat* AddOprStat(int dev_type, uint32_t dev_id);
+  /*! \return Profiler singleton */
+  static Profiler* Get();
 
  protected:
   /*! \brief make constructor protected. */

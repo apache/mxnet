@@ -20,13 +20,10 @@ namespace op {
 template<>
 Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
   Operator *op = NULL;
-  // TODO(junwu): Since MKL has a bug when pad and stride > 0,
-  // we disable MKL in those cases and will re-enable it after
-  // it is fixed by deleting lines 28 and 29.
+  // TODO(lingyan): kFull use exclude padding algorithm now
 #if MXNET_USE_MKL2017 == 1
     if (param.kernel.ndim() == 2
-      && 0 == param.pad[0] && 0 == param.pad[1]
-      && 0 == param.stride[0] && 0 == param.stride[1]
+      && (param.pooling_convention == pool_enum::kValid)
       && ((param.pool_type == pool_enum::kMaxPooling)
       || (param.pool_type == pool_enum::kAvgPooling))) {
       switch (dtype) {
@@ -38,7 +35,6 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
         break;
       }
     }
-    LOG(INFO) << MKLPoolingOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
 #if MXNET_USE_NNPACK == 1
   // NNPACK only support max-pooling with kernel = 2, stride = 2, pooling_convention
@@ -50,7 +46,7 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
     && (param.stride[0] == 2) && (param.stride[1] == 2)) {
     switch (dtype) {
     case mshadow::kFloat32:
-      return new NNPACKPoolingOp<cpu, mshadow::red::maximum, float>(param);
+      return new NNPACKPoolingOp<cpu, float>(param);
     default:
       break;
     }
@@ -73,23 +69,20 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
 // DO_BIND_DISPATCH comes from operator_common.h
 Operator* PoolingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                      std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
-  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(PoolingParam);
 
 MXNET_REGISTER_OP_PROPERTY(Pooling, PoolingProp)
-.describe(R"code(Perform pooling on the input.
+.describe(R"code(Performs pooling on the input.
 
 The shapes for 1-D pooling are
+
 - **data**: *(batch_size, channel, width)*,
 - **out**: *(batch_size, num_filter, out_width)*.
 
-The shapes for 2-D pooling is
+The shapes for 2-D pooling are
 
 - **data**: *(batch_size, channel, height, width)*
 - **out**: *(batch_size, num_filter, out_height, out_width)*, with::
@@ -97,15 +90,15 @@ The shapes for 2-D pooling is
     out_height = f(height, kernel[0], pad[0], stride[0])
     out_width = f(width, kernel[1], pad[1], stride[1])
 
-The defintion of *f* depends on ``pooling_convention``, which has two options:
+The definition of *f* depends on ``pooling_convention``, which has two options:
 
 - **valid** (default)::
 
-    f(x, k, p, s) = floor(x+2*p-k)/s+1
+    f(x, k, p, s) = floor((x+2*p-k)/s)+1
 
 - **full**, which is compatible with Caffe::
 
-    f(x, k, p, s) = ceil(x+2*p-k)/s+1
+    f(x, k, p, s) = ceil((x+2*p-k)/s)+1
 
 But ``global_pool`` is set to be true, then do a global pooling, namely reset
 ``kernel=(height, width)``.
@@ -116,15 +109,12 @@ Three pooling options are supported by ``pool_type``:
 - **max**: max pooling
 - **sum**: sum pooling
 
-1-D pooling is special case of 2-D pooling with *width=1* and
-*kernel[1]=1*.
-
 For 3-D pooling, an additional *depth* dimension is added before
 *height*. Namely the input data will have shape *(batch_size, channel, depth,
 height, width)*.
 
 )code" ADD_FILELINE)
-.add_argument("data", "ndarray-or-symbol", "Input data to the pooling operator.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the pooling operator.")
 .add_arguments(PoolingParam::__FIELDS__());
 
 }  // namespace op

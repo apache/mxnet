@@ -84,7 +84,7 @@ class ActivationOp : public Operator {
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(ActivationParam type, int dtype);
+Operator* CreateOp(ActivationParam type, int dtype, const TShape& dshape);
 
 #if DMLC_USE_CXX11
 class ActivationProp : public OperatorProperty {
@@ -146,8 +146,6 @@ class ActivationProp : public OperatorProperty {
     const std::vector<int> &out_data) const override {
 #if MXNET_USE_CUDNN == 1
     return {out_grad[activation::kOut], out_data[activation::kOut], in_data[activation::kData]};
-#elif MXNET_USE_MKL2017 == 1
-    return{ out_grad[activation::kOut], out_data[activation::kOut], in_data[activation::kData] };
 #else
     return {out_grad[activation::kOut], out_data[activation::kOut]};
 #endif  // MXNET_USE_CUDNN

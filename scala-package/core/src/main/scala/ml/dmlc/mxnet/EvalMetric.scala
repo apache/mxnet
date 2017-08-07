@@ -17,6 +17,8 @@
 
 package ml.dmlc.mxnet
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
  * Base class of all evaluation metrics
  * @param name Metric name
@@ -47,11 +49,52 @@ abstract class EvalMetric(protected val name: String) {
    * @return name, Name of the metric
    *         value, Value of the evaluation
    */
-  def get: (String, Float) = {
-    (this.name, this.sumMetric / this.numInst)
+  def get: (Array[String], Array[Float]) = {
+    (Array(this.name), Array(this.sumMetric / this.numInst))
   }
 }
 
+/**
+ * Manage multiple evaluation metrics.
+ */
+class CompositeEvalMetric extends EvalMetric("composite") {
+  private val metrics = ArrayBuffer[EvalMetric]()
+
+  // Add a child metric.
+  def add(metric: EvalMetric): Unit = {
+    this.metrics += metric
+  }
+
+  // Get a child metric.
+  def getMetric(index: Int): EvalMetric = {
+    require(index < this.metrics.length,
+        s"Metric index $index is out of range 0 and ${this.metrics.length}")
+    this.metrics(index)
+  }
+
+  override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
+    for (metric <- this.metrics) {
+      metric.update(labels, preds)
+    }
+  }
+
+  override def reset(): Unit = {
+    for (metric <- this.metrics) {
+      metric.reset()
+    }
+  }
+
+  override def get(): (Array[String], Array[Float]) = {
+    val names = ArrayBuffer[String]()
+    val results = ArrayBuffer[Float]()
+    for (metric <- this.metrics) {
+      val (name, result) = metric.get
+      names += name(0)
+      results += result(0)
+    }
+    (names.toArray, results.toArray)
+  }
+}
 
 // Classification metrics
 
@@ -160,6 +203,51 @@ class F1 extends EvalMetric("f1") {
       this.sumMetric += f1Score
       this.numInst += 1
     }
+  }
+}
+
+/**
+ * Calculate perplexity.
+ *
+ * @param ignoreLabel
+ *          Index of invalid label to ignore when
+ *          counting. Usually should be -1. Include
+ *          all entries if None.
+ * @param axis
+ *            The axis from prediction that was used to
+ *          compute softmax. Default is -1 which means use the last axis.
+ */
+class Perplexity(ignoreLabel: Option[Int] = None, axis: Int = -1) extends EvalMetric("Perplexity") {
+  override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
+    require(labels.length == preds.length,
+      "labels and predictions should have the same length.")
+    var loss = 0d
+    var num = 0
+    val probs = ArrayBuffer[NDArray]()
+
+    for ((label, pred) <- labels.zip(preds)) {
+      require(label.size == pred.size / pred.shape.toArray.reverse.head,
+        s"shape mismatch: ${label.shape} vs. ${pred.shape}")
+      val l = label.asInContext(pred.context).asType(DType.Int32).reshape(Shape(label.size))
+      val p = NDArray.pick(Map("axis" -> this.axis))(pred, label)
+      probs += p.head
+    }
+
+    for ((label, prob) <- labels.zip(probs)) {
+      val probArr = prob.toArray
+      if (this.ignoreLabel != None) {
+        val ignore = label.toArray.map(l => if (l == this.ignoreLabel.get) 1 else 0)
+        val p = prob.toArray.zip(ignore).map { case (p, i) => p * (1 - i) + i }
+        prob.set(p)
+        num += p.length - ignore.sum
+      } else {
+        num += prob.size
+      }
+      loss += prob.toArray.map(p => -Math.log(Math.max(1e-10f, p))).sum
+    }
+
+    this.sumMetric += Math.exp(loss / num).toFloat
+    this.numInst += 1
   }
 }
 

@@ -1,0 +1,62 @@
+name: mxnet
+version: '0.10.1'
+summary: MXNet is a deep learning framework designed for efficiency and flexibility.
+description: |
+  MXNet is a deep learning framework designed for both efficiency and 
+  flexibility. It allows you to mix the flavours of symbolic programming and 
+  imperative programming to maximize efficiency and productivity. In its core, 
+  a dynamic dependency scheduler that automatically parallelizes both symbolic 
+  and imperative operations on the fly. A graph optimization layer on top of 
+  that makes symbolic execution fast and memory efficient. The library is 
+  portable and lightweight, and it scales to multiple GPUs and multiple machines.
+
+grade: stable
+confinement: strict
+
+apps:
+  python:
+    command: snap.python
+
+parts:
+  mxnet:
+    source: .
+    plugin: make
+    build-packages:
+      - build-essential
+      - libatlas-base-dev
+      - libopencv-dev
+    stage-packages:
+      - libatlas3-base
+      - libopencv-calib3d2.4v5
+      - libopencv-core2.4v5
+      - libopencv-highgui2.4v5
+      - libopencv-imgproc2.4v5
+      - libopencv-ml2.4v5
+      - libopencv-objdetect2.4v5
+    prepare: |
+      cp make/config.mk .
+    build: |
+      make
+    install: |
+      cp -r bin $SNAPCRAFT_PART_INSTALL/
+      cp -r lib $SNAPCRAFT_PART_INSTALL/
+    
+  mxnet-ubuntu-python:
+    plugin: python
+    python-version: python2
+    source: ./python
+    stage-packages:
+      - python-numpy
+    python-packages:
+      - graphviz
+      - Jupyter
+    after: [mxnet]
+    
+  python-wrapper:
+    plugin: dump
+    source: .
+    stage:
+      - snap.python
+    prime:
+      - snap.python
+

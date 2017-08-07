@@ -41,14 +41,15 @@ class SGD(val learningRate: Float = 0.01f, momentum: Float = 0.0f,
    */
   override def update(index: Int, weight: NDArray, grad: NDArray, state: AnyRef): Unit = {
     // TODO(bing) implement wd_bias, wd_gamma, wd_beta (copy from python package)
-    val lr =
+    var lr =
       (if (lrScheduler != null) {
         val scheduledLr = lrScheduler(numUpdate)
         updateCount(index)
         scheduledLr
       } else {
         this.learningRate
-      }) * lrScale.getOrElse(index, 1f)
+      })
+    lr = getLr(index, lr)
 
     val wd = getWd(index, this.wd)
     var resdGrad = grad * this.rescaleGrad

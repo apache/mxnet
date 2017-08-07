@@ -24,7 +24,12 @@ use AI::MXNet::Module;
 use AI::MXNet::Module::Bucketing;
 use AI::MXNet::RNN;
 use AI::MXNet::Visualization;
-our $VERSION = '0.03';
+use AI::MXNet::RecordIO;
+use AI::MXNet::Image;
+use AI::MXNet::Contrib;
+use AI::MXNet::Contrib::AutoGrad;
+use AI::MXNet::CachedOp;
+our $VERSION = '1.0101';
 
 sub import
 {
@@ -36,6 +41,7 @@ sub import
         {
             my $short_name_package =<<"EOP";
             package $short_name;
+            no warnings 'redefine';
             sub nd { 'AI::MXNet::NDArray' }
             sub sym { 'AI::MXNet::Symbol' }
             sub symbol { 'AI::MXNet::Symbol' }
@@ -45,14 +51,29 @@ sub import
             sub opt { 'AI::MXNet::Optimizer' }
             sub rnd { 'AI::MXNet::Random' }
             sub random { 'AI::MXNet::Random' }
+            sub Context { shift; AI::MXNet::Context->new(\@_) }
             sub cpu { AI::MXNet::Context->cpu(\$_[1]//0) }
             sub gpu { AI::MXNet::Context->gpu(\$_[1]//0) }
             sub kv { 'AI::MXNet::KVStore' }
+            sub recordio { 'AI::MXNet::RecordIO' }
             sub io { 'AI::MXNet::IO' }
             sub metric { 'AI::MXNet::Metric' }
             sub mod { 'AI::MXNet::Module' }
+            sub mon { 'AI::MXNet::Monitor' }
             sub viz { 'AI::MXNet::Visualization' }
             sub rnn { 'AI::MXNet::RNN' }
+            sub callback { 'AI::MXNet::Callback' }
+            sub img { 'AI::MXNet::Image' }
+            sub contrib { 'AI::MXNet::Contrib' }
+            sub name { '$short_name' }
+            sub AttrScope { shift; AI::MXNet::Symbol::AttrScope->new(\@_) }
+            *AI::MXNet::Symbol::AttrScope::current = sub { \$${short_name}::AttrScope; };
+            \$${short_name}::AttrScope = AI::MXNet::Symbol::AttrScope->new;
+            sub Prefix { AI::MXNet::Symbol::Prefix->new(prefix => \$_[1]) }
+            *AI::MXNet::Symbol::NameManager::current = sub { \$${short_name}::NameManager; };
+            \$${short_name}::NameManager = AI::MXNet::Symbol::NameManager->new;
+            *AI::MXNet::Context::current_ctx = sub { \$${short_name}::Context; };
+            \$${short_name}::Context = AI::MXNet::Context->new(device_type => 'cpu', device_id => 0);
             1;
 EOP
             eval $short_name_package;
@@ -134,23 +155,23 @@ AI::MXNet - Perl interface to MXNet machine learning library
 
 =head1 BUGS AND INCOMPATIBILITIES
 
-Parity with Python inteface is not yet achieved.
-Pod mostly contains Python documentation taken as is.
-This is WIP.
+    Parity with Python inteface is mostly achieved, few deprecated
+    and not often used features left unported for now.
 
 =head1 SEE ALSO
 
-http://mxnet.io/
-https://github.com/dmlc/mxnet/tree/master/perl-package
+    http://mxnet.io/
+    https://github.com/dmlc/mxnet/tree/master/perl-package
+    Function::Parameters, Mouse
 
 =head1 AUTHOR
 
-Sergey Kolychev, <sergeykolychev.github@gmail.com>
+    Sergey Kolychev, <sergeykolychev.github@gmail.com>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (C) 2017 by Sergey Kolychev <sergeykolychev.github@gmail.com>
+    Copyright (C) 2017 by Sergey Kolychev <sergeykolychev.github@gmail.com>
 
-This library is licensed under Apache 2.0 license https://www.apache.org/licenses/LICENSE-2.0
+    This library is licensed under Apache 2.0 license https://www.apache.org/licenses/LICENSE-2.0
 
 =cut

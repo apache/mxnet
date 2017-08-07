@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file elementwise_unary_op-inl.h
- * \brief Function defintion of elementwise unary operators
+ * \brief Function definition of elementwise unary operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_OP_H_
 #define MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_OP_H_
@@ -13,30 +13,65 @@
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "./elemwise_binary_broadcast_op.h"
+#include "../mxnet_op.h"
 
 namespace mxnet {
 namespace op {
 struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
   TShape axis;
   bool keepdims;
+  bool exclude;
   DMLC_DECLARE_PARAMETER(ReduceAxesParam) {
     DMLC_DECLARE_FIELD(axis).set_default(TShape())
-        .describe("The axes to perform the reduction.");
+      .describe(R"code(The axis or axes along which to perform the reduction.
+
+      The default, `axis=()`, will compute over all elements into a
+      scalar array with shape `(1,)`.
+
+      If `axis` is int, a reduction is performed on a particular axis.
+
+      If `axis` is a tuple of ints, a reduction is performed on all the axes
+      specified in the tuple.
+
+      If `exclude` is true, reduction will be performed on the axes that are
+      NOT in axis instead.
+
+      Negative values means indexing from right to left.)code");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
-      .describe("If true, the axes which are reduced are left "
+      .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
+    DMLC_DECLARE_FIELD(exclude).set_default(false)
+      .describe("Whether to perform reduction on axis that are NOT in axis instead.");
   }
 };
 
 struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
-  int axis;
+  dmlc::optional<int> axis;
   bool keepdims;
   DMLC_DECLARE_PARAMETER(ReduceAxisParam) {
-    DMLC_DECLARE_FIELD(axis).set_default(-1)
-      .describe("Empty or unsigned. The axis to perform the reduction."
-                "If left empty, a global reduction will be performed.");
+    DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<int>())
+      .describe("The axis along which to perform the reduction. "
+                "Negative values means indexing from right to left. "
+                "``Requires axis to be set as int, because global reduction "
+                "is not supported yet.``");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
-      .describe("If true, the axis which is reduced is left "
+      .describe("If this is set to `True`, the reduced axis is left "
+                "in the result as dimension with size one.");
+  }
+};
+
+struct PickParam : public dmlc::Parameter<PickParam> {
+  dmlc::optional<int> axis;
+  int mode;
+  bool keepdims;
+  DMLC_DECLARE_PARAMETER(PickParam) {
+    DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<int>(-1))
+      .describe("int or None. The axis to picking the elements. "
+                "Negative values means indexing from right to left. "
+                "If is `None`, the elements in the index w.r.t the "
+                "flattened input will be picked.");
+    DMLC_DECLARE_FIELD(keepdims).set_default(false)
+      .describe("If true, the axis where we pick the elements is left "
                 "in the result as dimension with size one.");
   }
 };
@@ -63,6 +98,53 @@ struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
   }
 };
 
+inline int CheckAxis(int axis, int ndim) {
+  CHECK(axis < ndim && axis >= -ndim)
+    << "axis " << axis << " exceeds the input dimension of " << ndim;
+  return (axis + ndim)%ndim;
+}
+
+inline TShape AxisShapeCompact(TShape shape, int *axis, bool allow_2d) {
+  int ndim = static_cast<int>(shape.ndim());
+  index_t leading = 1, trailing = 1, M = shape[*axis];
+  for (int i = 0; i < *axis; ++i) leading *= shape[i];
+  for (int i = *axis + 1; i < ndim; ++i) trailing *= shape[i];
+  if (allow_2d && trailing == 1) {
+    *axis = 1;
+    return mshadow::Shape2(leading, M);
+  }
+  if (allow_2d && leading == 1) {
+    *axis = 0;
+    return mshadow::Shape2(M, trailing);
+  }
+  *axis = 1;
+  return mshadow::Shape3(leading, M, trailing);
+}
+
+inline TShape ReduceAxisShapeImpl(const TShape& ishape, const dmlc::optional<int>& axis,
+                                  bool keepdims) {
+  if (!axis || ishape.ndim() == 1) {
+    if (keepdims) {
+      return TShape(ishape.ndim());
+    }
+    return mshadow::Shape1(1);
+  }
+
+  int new_axis = CheckAxis(axis.value(), ishape.ndim());
+  if (keepdims) {
+    TShape oshape = ishape;
+    oshape[new_axis] = 1;
+    return oshape;
+  }
+
+  TShape oshape(ishape.ndim() - 1);
+  for (int i = 0; i < new_axis; ++i) oshape[i] = ishape[i];
+  for (int i = new_axis+1; i < static_cast<int>(ishape.ndim()); ++i) {
+    oshape[i-1] = ishape[i];
+  }
+  return oshape;
+}
+
 inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
                             std::vector<TShape> *in_attrs,
                             std::vector<TShape> *out_attrs) {
@@ -70,31 +152,78 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   TShape& ishape = (*in_attrs)[0];
   if (ishape.ndim() == 0) return false;
+
   const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
-  if (param.axis == -1 || ishape.ndim() == 1) {
-    if (param.keepdims) {
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(ishape.ndim()));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+                     ReduceAxisShapeImpl(ishape, param.axis, param.keepdims));
+  return true;
+}
+
+inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axis,
+                                  bool keepdims, bool exclude) {
+  if (axis.ndim() == 0) {
+    if (keepdims) {
+      return TShape(ishape.ndim());
     } else {
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(1));
-    }
-  } else {
-    CHECK_LT(param.axis, static_cast<int>(ishape.ndim()))
-        << "Reduction axis " << param.axis
-        << " Exceeds input dimensions " << ishape;
-    if (param.keepdims) {
-      TShape oshape = ishape;
-      oshape[param.axis] = 1;
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-    } else {
-      TShape oshape(ishape.ndim() - 1);
-      for (int i = 0; i < param.axis; ++i) oshape[i] = ishape[i];
-      for (int i = param.axis+1; i < static_cast<int>(ishape.ndim()); ++i) {
-        oshape[i-1] = ishape[i];
-      }
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+      return TShape(1);
     }
   }
-  return true;
+
+  TShape axes(axis);
+  for (index_t i = 0; i < axes.ndim(); i++) {
+    if (axes[i] < 0) {
+      axes[i] += ishape.ndim();
+    }
+  }
+  std::sort(axes.begin(), axes.end());
+
+  for (index_t i = 1; i < axes.ndim(); i++) {
+    CHECK_LT(axes[i-1], axes[i])
+      << "Reduction axes have duplicates "
+      << axes;
+  }
+  CHECK_LT(axes[axes.ndim()-1], ishape.ndim())
+    << "Reduction axis " << axes[axes.ndim()-1]
+    << " Exceeds input dimensions " << ishape;
+  CHECK_GE(axes[0], 0)
+    << "Reduction axis " << axis
+    << " Exceeds input dimensions " << ishape;
+
+  TShape oshape;
+  if (keepdims) {
+    oshape = TShape(ishape);
+  } else if (exclude) {
+    oshape = TShape(axes.ndim());
+  } else {
+    oshape = TShape(std::max<index_t>(1, ishape.ndim() - axes.ndim()));
+  }
+
+  if (keepdims && exclude) {
+    for (index_t i = 0, j = 0; i < ishape.ndim(); ++i) {
+      if (j < axes.ndim() && i == axes[j]) {
+        ++j;
+        continue;
+      }
+      oshape[i] = 1;
+    }
+  } else if (keepdims) {
+    for (index_t i = 0; i < axes.ndim(); ++i) {
+      oshape[axes[i]] = 1;
+    }
+  } else if (exclude) {
+    for (index_t i = 0; i < axes.ndim(); ++i) {
+      oshape[i] = ishape[axes[i]];
+    }
+  } else {
+    for (index_t i = 0, j = 0, k = 0; i < ishape.ndim(); ++i) {
+      if (j < axes.ndim() && i == axes[j]) {
+        ++j;
+        continue;
+      }
+      oshape[k++] = ishape[i];
+    }
+  }
+  return oshape;
 }
 
 inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
@@ -104,35 +233,9 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   if ((*in_attrs)[0].ndim() == 0) return false;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  TShape &ishape = (*in_attrs)[0];
-  TShape oshape;
-  if (param.axis.ndim() == 0) {
-    if (param.keepdims) {
-      oshape = TShape(ishape.ndim());
-    } else {
-      oshape = TShape(1);
-    }
-  } else {
-    if (param.keepdims) {
-      oshape = ishape;
-      for (index_t i = 0; i < param.axis.ndim(); ++i) {
-        oshape[param.axis[i]] = 1;
-      }
-    } else {
-      CHECK_LT(param.axis[param.axis.ndim()-1], ishape.ndim())
-        << "Reduction axis " << param.axis[param.axis.ndim()-1]
-        << " Exceeds input dimensions " << ishape;
-      oshape = TShape(std::max<index_t>(1, ishape.ndim() - param.axis.ndim()));
-      for (index_t i = 0, j = 0, k = 0; i < ishape.ndim(); ++i) {
-        if (j < param.axis.ndim() && i == param.axis[j]) {
-          ++j;
-          continue;
-        }
-        oshape[k++] = ishape[i];
-      }
-    }
-  }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+                     ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
+                                         param.keepdims, param.exclude));
   return true;
 }
 
@@ -228,23 +331,18 @@ void SearchAxisCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  if (param.axis == -1) {
-    LOG(FATAL) << "Global reduction not supported yet";
-  } else {
-    index_t leading = 1, trailing = 1;
-    for (int i = 0; i < param.axis; ++i)
-      leading *= inputs[0].shape_[i];
-    for (int i = param.axis+1; i < inputs[0].ndim(); ++i)
-      trailing *= inputs[0].shape_[i];
-    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Tensor<xpu, 2, DType> out = outputs[0].get_with_shape<xpu, 2, DType>(
-        Shape2(leading, trailing), s);
-      Tensor<xpu, 3, DType> in = inputs[0].get_with_shape<xpu, 3, DType>(
-        Shape3(leading, inputs[0].shape_[param.axis], trailing), s);
-      CHECK(req[0] != kAddTo) << "AddTo is not supported";
-      ASSIGN_DISPATCH(out, req[0], (reduce_with_axis<reducer, true>(in, 1)));
-    });
-  }
+  if (!param.axis) LOG(FATAL) << "Global reduction not supported yet";
+
+  int axis = CheckAxis(param.axis.value(), inputs[0].shape_.ndim());
+  TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, false);
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Tensor<xpu, 2, DType> out = outputs[0].get_with_shape<xpu, 2, DType>(
+      Shape2(shape[0], shape[2]), s);
+    Tensor<xpu, 3, DType> in = inputs[0].get_with_shape<xpu, 3, DType>(
+      shape.get<3>(), s);
+    CHECK(req[0] != kAddTo) << "AddTo is not supported";
+    ASSIGN_DISPATCH(out, req[0], (reduce_with_axis<reducer, true>(in, 1)));
+  });
 }
 
 template<typename xpu, typename reducer, bool normalize = false>
@@ -261,22 +359,20 @@ void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
   BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    if (dst_shape.ndim() == 2) {
-      Tensor<xpu, 2, DType> out =
-        outputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
-      Tensor<xpu, 2, DType> data =
-        inputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
-      ReduceToAssign<reducer>(out, req[0], data);
-      if (normalize) out /= scalar<DType>(src_shape.Size()/dst_shape.Size());
-    } else {
-      const int ndim = MXNET_SPECIAL_MAX_NDIM;
-      Tensor<xpu, ndim, DType> out =
-        outputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
-      Tensor<xpu, ndim, DType> data =
-        inputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
-      ReduceToAssign<reducer>(out, req[0], data);
-      if (normalize) out /= scalar<DType>(src_shape.Size()/dst_shape.Size());
-    }
+    const TBlob in_data = inputs[0].reshape(src_shape);
+    const TBlob out_data = outputs[0].reshape(dst_shape);
+    BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
+      size_t workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
+          s, out_data, req[0], in_data);
+      Tensor<xpu, 1, char> workspace =
+          ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+      broadcast::Reduce<reducer, NDim, DType, mshadow::op::identity>(
+          s, out_data, req[0], workspace, in_data);
+      if (normalize) {
+        auto out = out_data.FlatTo2D<xpu, DType>(s);
+        out /= scalar<DType>(src_shape.Size()/dst_shape.Size());
+      }
+    });
   });
 }
 
@@ -286,20 +382,12 @@ void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,
                        const std::vector<TBlob>& outputs) {
-  // using namespace mshadow;
-  // using namespace mshadow::expr;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   TShape small;
-  if (!param.keepdims) {
-    if (param.axis.ndim() == 0) {
-      small = TShape(inputs[0].shape_.ndim());
-    } else {
-      small = inputs[0].shape_;
-      for (index_t i = 0; i < param.axis.ndim(); ++i)
-        small[param.axis[i]] = 1;
-    }
-  } else {
+  if (param.keepdims) {
     small = outputs[0].shape_;
+  } else {
+    small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, param.exclude);
   }
 
   ReduceAxesComputeImpl<xpu, reducer, normalize>(attrs, ctx, inputs, req, outputs, small);
@@ -316,12 +404,10 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   TShape small;
-  if (param.axis.ndim() == 0) {
-    small = TShape(outputs[0].shape_.ndim());
+  if (param.keepdims) {
+    small = inputs[0].shape_;
   } else {
-    small = outputs[0].shape_;
-    for (index_t i = 0; i < param.axis.ndim(); ++i)
-      small[param.axis[i]] = 1;
+    small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, param.exclude);
   }
 
   TShape src_shape, dst_shape;
@@ -406,13 +492,12 @@ inline void ReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   TShape small;
-  if (param.axis.ndim() == 0) {
-    small = TShape(outputs[0].shape_.ndim());
+  if (param.keepdims) {
+    small = inputs[0].shape_;
   } else {
-    small = outputs[0].shape_;
-    for (index_t i = 0; i < param.axis.ndim(); ++i)
-      small[param.axis[i]] = 1;
+    small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, param.exclude);
   }
+
   BroadcastComputeImpl<xpu>(attrs, ctx, inputs, req, outputs, small);
   if (normalize)  {
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -427,7 +512,6 @@ template<typename PType>
 inline void AxesParamParser(nnvm::NodeAttrs* attrs) {
   PType param;
   param.Init(attrs->dict);
-  std::sort(&param.axis[0], &param.axis[param.axis.ndim()]);
   attrs->parsed = std::move(param);
 }
 
@@ -435,9 +519,9 @@ struct ReduceGrad {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) {
-    return MakeGradNode(
+    return MakeNonlossGradNode(
         op_name, n,
-        {ograds[0], n->inputs[0], nnvm::NodeEntry{n, 0, 0}},
+        ograds, {n->inputs[0], nnvm::NodeEntry{n, 0, 0}},
         n->attrs.dict);
   }
 };
@@ -458,6 +542,143 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+/*! \brief index element from array along axes */
+template<int ndim>
+struct pick {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
+                                  const IType *idx, int M, int stride,
+                                  mshadow::Shape<ndim> bshape,
+                                  mshadow::Shape<ndim> sshape) {
+    using namespace broadcast;
+    int j = static_cast<int>(idx[i]);
+    if (j < 0) j = 0;
+    else if (j >= M) j = M-1;
+    j = ravel(unravel(i, sshape), bshape) + j*stride;
+    out[i] = a[j];
+  }
+};
+
+/*! \brief index element from array along axes */
+template<int ndim>
+struct pick_grad {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* igrad, const DType* ograd,
+                                  const IType *idx, int M, int stride,
+                                  mshadow::Shape<ndim> bshape,
+                                  mshadow::Shape<ndim> sshape) {
+    using namespace broadcast;
+    int j = static_cast<int>(idx[i]);
+    if (j < 0) j = 0;
+    else if (j >= M) j = M-1;
+    j = ravel(unravel(i, sshape), bshape) + j*stride;
+    igrad[j] += ograd[i];
+  }
+};
+
+inline bool PickOpShape(const nnvm::NodeAttrs& attrs,
+                        std::vector<TShape> *in_attrs,
+                        std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2);
+  CHECK_EQ(out_attrs->size(), 1);
+  const TShape& ishape = (*in_attrs)[0];
+  if (ishape.ndim() == 0) return false;
+  const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
+  if (!param.axis) LOG(FATAL)
+    << "axis=None is not supported by pick yet. Must specify an axis.";
+  TShape oshape = ReduceAxisShapeImpl(ishape, param.axis, param.keepdims);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  if (!(*in_attrs)[1].ndim()) return false;
+  if ((*in_attrs)[1].ndim() == ishape.ndim()) {
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1,
+                       ReduceAxisShapeImpl(ishape, param.axis, true));
+  } else {
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1,
+                       ReduceAxisShapeImpl(ishape, param.axis, false));
+  }
+  return true;
+}
+
+inline bool PickOpType(const nnvm::NodeAttrs& attrs,
+                       std::vector<int> *in_attrs,
+                       std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_NE((*in_attrs)[1], -1) << "Index type must be set for pick operator";
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  return (*out_attrs)[0] != -1;
+}
+
+template<typename xpu>
+void PickOpForward(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(req[0], kWriteTo);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
+
+  const TShape& ishape = inputs[0].shape_;
+  index_t axis = CheckAxis(param.axis.value(), ishape.ndim());
+  int leading = 1, trailing = 1, M = ishape[axis];
+  for (index_t i = 0; i < axis; ++i) leading *= ishape[i];
+  for (index_t i = axis+1; i < ishape.ndim(); ++i) trailing *= ishape[i];
+
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output type
+    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index type
+      if (trailing == 1) {
+        Kernel<pick<2>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                     inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                     M, 1, Shape2(leading, M), Shape2(leading, 1));
+      } else {
+        Kernel<pick<3>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                     inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                     M, trailing, Shape3(leading, M, trailing),
+                                     Shape3(leading, 1, trailing));
+      }
+    });
+  });
+}
+
+template<typename xpu>
+void PickOpBackward(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  if (req[0] == kNullOp) return;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
+
+  const TShape& ishape = outputs[0].shape_;
+  const index_t axis = CheckAxis(param.axis.value(), ishape.ndim());
+  int leading = 1, trailing = 1, M = ishape[axis];
+  for (index_t i = 0; i < axis; ++i) leading *= ishape[i];
+  for (index_t i = axis+1; i < ishape.ndim(); ++i) trailing *= ishape[i];
+
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output type
+    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index type
+      if (req[0] != kAddTo) outputs[0].FlatTo1D<xpu, DType>(s) = 0;
+      if (trailing == 1) {
+        Kernel<pick_grad<2>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                     inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                     M, 1, Shape2(leading, M), Shape2(leading, 1));
+      } else {
+        Kernel<pick_grad<3>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                     inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                     M, trailing, Shape3(leading, M, trailing),
+                                     Shape3(leading, 1, trailing));
+      }
+    });
+  });
+}
+
 #define MXNET_OPERATOR_REGISTER_REDUCE_AXIS(name)               \
   NNVM_REGISTER_OP(name)                                        \
   .set_num_inputs(1)                                            \
@@ -465,7 +686,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   .set_attr_parser(ParamParser<ReduceAxisParam>)                \
   .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxisShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
-  .add_argument("data", "ndarray-or-symbol", "The input")       \
+  .add_argument("data", "NDArray-or-Symbol", "The input")       \
   .add_arguments(ReduceAxisParam::__FIELDS__())
 
 #define MXNET_OPERATOR_REGISTER_REDUCE(name)                    \
@@ -475,7 +696,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
   .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxesShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
-  .add_argument("data", "ndarray-or-symbol", "The input")       \
+  .add_argument("data", "NDArray-or-Symbol", "The input")       \
   .add_arguments(ReduceAxesParam::__FIELDS__())
 
 #define MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(name)               \
@@ -492,10 +713,10 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   .set_attr<nnvm::FGradient>("FGradient",                       \
     [](const nnvm::NodePtr& n,                                  \
        const std::vector<nnvm::NodeEntry>& ograds) {            \
-      return MakeGradNode("_broadcast_backward", n, ograds,     \
-                          {{"keepdims", "true"}});              \
+      return MakeNonlossGradNode("_broadcast_backward", n, ograds, {},    \
+                                 {{"keepdims", "true"}});              \
     })                                                          \
-  .add_argument("data", "ndarray-or-symbol", "The input")
+  .add_argument("data", "NDArray-or-Symbol", "The input")
 
 }  // namespace op
 }  // namespace mxnet

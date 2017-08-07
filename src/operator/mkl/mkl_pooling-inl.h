@@ -276,12 +276,8 @@ class MKLPoolingOp : public Operator {
     pooling_res[dnnResourceSrc] = bottom_data;
     pooling_res[dnnResourceWorkspace] = max_idx_data;
 
-    std::shared_ptr<MKLMemHolder> top_mem = NULL;
-#if MKL_EXPERIMENTAL == 1
-    top_mem = out_data[pool_enum::kOut].Mkl_mem_;
-#endif
     pooling_res[dnnResourceDst] = fwd_top_data->get_output_ptr(
-      out.dptr_, fwd_top_data, top_mem);
+      out.dptr_, fwd_top_data, out_data[pool_enum::kOut]);
     status = dnnExecute<DType>(poolingFwd, pooling_res);
     CHECK_EQ(status, E_SUCCESS);
 #if MKL_EXPERIMENTAL == 0
@@ -322,12 +318,8 @@ class MKLPoolingOp : public Operator {
     pooling_res[dnnResourceDiffDst] =
       bwd_top_diff->get_converted_prv(grad.dptr_, true, out_grad[pool_enum::kOut]);
 
-    std::shared_ptr<MKLMemHolder> bottom_diff_mem = NULL;
-#if MKL_EXPERIMENTAL == 1
-    bottom_diff_mem = in_grad[pool_enum::kData].Mkl_mem_;
-#endif
     pooling_res[dnnResourceDiffSrc] = bwd_bottom_diff->get_output_ptr(
-      input_grad.dptr_, bwd_bottom_diff, bottom_diff_mem);
+      input_grad.dptr_, bwd_bottom_diff, in_grad[pool_enum::kData]);
     e = dnnExecute<DType>(poolingBwd, pooling_res);
     CHECK_EQ(e, E_SUCCESS);
 #if MKL_EXPERIMENTAL == 0

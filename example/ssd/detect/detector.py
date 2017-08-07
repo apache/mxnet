@@ -31,8 +31,10 @@ class Detector(object):
         self.ctx = ctx
         if self.ctx is None:
             self.ctx = mx.cpu()
-        _, args, auxs = mx.model.load_checkpoint(model_prefix, epoch)
-        self.mod = mx.mod.Module(symbol, context=ctx)
+        load_symbol, args, auxs = mx.model.load_checkpoint(model_prefix, epoch)
+        if symbol is None:
+            symbol = load_symbol
+        self.mod = mx.mod.Module(symbol, label_names=None, context=ctx)
         self.data_shape = data_shape
         self.mod.bind(data_shapes=[('data', (batch_size, 3, data_shape, data_shape))])
         self.mod.set_params(args, auxs)

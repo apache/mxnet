@@ -14,9 +14,10 @@
 {%- endif %}
 
 {%- macro searchform(classes, button) %}
-<form class="{{classes}}" role="search" action="{{ pathto('search') }}" method="get">
-  <div class="form-group">
-    <input type="text" name="q" class="form-control" {{ 'placeholder="Search"' if not button }} >
+<form class="{{classes}}" role="search" action="{{ pathto('search') }}" method="get" autocomplete="off">
+  <div class="form-group inner-addon left-addon">
+    <i class="glyphicon glyphicon-search"></i>
+    <input type="text" name="q" class="form-control" placeholder="Search">
   </div>
   <input type="hidden" name="check_keywords" value="yes" />
   <input type="hidden" name="area" value="default" />
@@ -27,14 +28,12 @@
 {%- endmacro %}
 
 {%- macro sidebarglobal() %}
-<ul class="globaltoc">
-  {{ toctree(maxdepth=2|toint, collapse=False,includehidden=theme_globaltoc_includehidden|tobool) }}
-</ul>
+  {{ toctree(maxdepth=4|toint, collapse=True,includehidden=theme_globaltoc_includehidden|tobool) }}
 {%- endmacro %}
 
 {%- macro sidebar() %}
       {%- if render_sidebar %}
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar rightsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
           {%- block sidebartoc %}
           {%- include "localtoc.html" %}
@@ -58,13 +57,25 @@
     </script>
 
     <script type="text/javascript" src="{{ pathto('_static/jquery-1.11.1.js', 1) }}"></script>
-
-    {% for name in ['underscore.js', 'searchtools.js', 'doctools.js', 'selectlang.js'] %}
+    {% for name in ['underscore.js', 'searchtools_custom.js', 'doctools.js', 'selectlang.js'] %}
     <script type="text/javascript" src="{{ pathto('_static/' + name, 1) }}"></script>
     {% endfor %}
 
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <script type="text/javascript"> jQuery(function() { Search.loadIndex("searchindex.js"); Search.init();}); </script>
+    <script type="text/javascript"> jQuery(function() { Search.loadIndex("{{ pathto('/searchindex.js', 1) }}"); Search.init();}); </script>
+
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new
+      Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-96378503-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
     <!-- {%- for scriptfile in script_files %} -->
     <!-- <script type="text/javascript" src="{{ pathto(scriptfile, 1) }}"></script> -->
     <!-- {%- endfor %} -->
@@ -92,10 +103,10 @@
     {{ metatags }}
     {%- block htmltitle %}
     {%- if pagename != 'index' %}
-	
+
     <title>{{ title|striptags|e }}{{ titlesuffix }}</title>
     {%- else %}
-    <title>MXNet Documents</title>
+    <title>MXNet: A Scalable Deep Learning Framework</title>
     {%- endif %}
     {%- endblock %}
     {{ css() }}
@@ -143,12 +154,16 @@
     {% if pagename != 'index' %}
     <div class="container">
       <div class="row">
-        {{ sidebar() }}
+        <div class="sphinxsidebar leftsidebar" role="navigation" aria-label="main navigation">
+          <div class="sphinxsidebarwrapper">
+            {{sidebarglobal()}}
+          </div>
+        </div>
         <div class="content">
           {% block body %} {% endblock %}
           {%- include "footer.html" %}
         </div>
-      </div>
+        {{ sidebar() }}
     </div>
     {%- else %}
     {%- include "index.html" %}
@@ -159,5 +174,12 @@
     <script type="text/javascript" src="{{ pathto('_static/js/sidebar.js', 1) }}"></script>
     <script type="text/javascript" src="{{ pathto('_static/js/search.js', 1) }}"></script>
     <script type="text/javascript" src="{{ pathto('_static/js/navbar.js', 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto('_static/js/clipboard.min.js', 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto('_static/js/copycode.js', 1) }}"></script>
+    <script type="text/javascript">
+        $('body').ready(function () {
+            $('body').css('visibility', 'visible');
+        });
+    </script>
   </body>
 </html>

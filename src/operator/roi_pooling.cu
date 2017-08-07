@@ -103,7 +103,7 @@ inline void ROIPoolForward(const Tensor<gpu, 4, Dtype> &out,
   const int pooled_height = out.size(2);
   const int pooled_width = out.size(3);
   const int gridSize = (count + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
-  dim3 dimGrid(kMaxGridNum, (gridSize + kMaxGridNum - 1) / kMaxGridNum);
+  dim3 dimGrid(kMaxGridDim, (gridSize + kMaxGridDim - 1) / kMaxGridDim);
   dim3 dimBlock(kMaxThreadsPerBlock);
   CheckLaunchParam(dimGrid, dimBlock, "ROIPooling Forward");
   cudaStream_t stream = Stream<gpu>::GetStream(out.stream_);
@@ -206,7 +206,7 @@ inline void ROIPoolBackwardAcc(const Tensor<gpu, 4, Dtype> &in_grad,
   const int pooled_height = out_grad.size(2);
   const int pooled_width = out_grad.size(3);
   const int gridSize = (count + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
-  dim3 dimGrid(kMaxGridNum, (gridSize + kMaxGridNum - 1) / kMaxGridNum);
+  dim3 dimGrid(kMaxGridDim, (gridSize + kMaxGridDim - 1) / kMaxGridDim);
   dim3 dimBlock(kMaxThreadsPerBlock);
   CheckLaunchParam(dimGrid, dimBlock, "ROIPooling Backward");
   cudaStream_t stream = Stream<gpu>::GetStream(in_grad.stream_);

@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document lists the routines of the *n*-dimensional array package
+This document lists the routines of the *n*-dimensional array package:
 
 ```eval_rst
 .. autosummary::
@@ -15,8 +15,9 @@ This document lists the routines of the *n*-dimensional array package
     mxnet.ndarray
 ```
 
-A `NDArray` is a multidimensional container of items of the same type and
-size. Various methods for data manipulation and computation are provided.
+The `NDArray` API, defined in the `ndarray` (or simply `nd`) package, provides
+imperative tensor operations on CPU/GPU.
+An `NDArray` represents a multi-dimensional, fixed-size homogenous array.
 
 ```python
 >>> x = mx.nd.array([[1, 2, 3], [4, 5, 6]])
@@ -34,33 +35,32 @@ size. Various methods for data manipulation and computation are provided.
 ```
 
 A detailed tutorial is available at
-[http://mxnet.io/tutorials/python/ndarray.html](http://mxnet.io/tutorials/python/ndarray.html)..
+[NDArray - Imperative tensor operations on CPU/GPU](http://mxnet.io/tutorials/basic/ndarray.html).
+<br><br>
 
 ```eval_rst
 
-.. note:: ``mxnet.ndarray`` is similar to ``numpy.ndarray`` in some aspects. But the difference is not negligible. For example
+.. note:: ``mxnet.ndarray`` is similar to ``numpy.ndarray`` in some aspects. But the differences are not negligible. For instance:
 
-   - ``NDArray.T`` does real data transpose to return new a copied array, instead
-     of returning a view of the input array.
-   - ``ndarray.dot`` performs dot between the last axis of the first input array
-     and the first axis of the second input, while `numpy.dot` uses the second
-     last axis of the input array.
+   - ``mxnet.ndarray.NDArray.T`` does real data transpose to return new a copied 
+     array, instead of returning a view of the input array.
+   - ``mxnet.ndarray.dot`` performs dot product between the last axis of the
+     first input array and the first axis of the second input, while `numpy.dot`
+     uses the second last axis of the input array.
 
-   In additional, ``NDArray`` supports GPU computation and various neural
+   In addition, ``mxnet.ndarray.NDArray`` supports GPU computation and various neural
    network layers.
-```
 
-```eval_rst
+.. note:: ``ndarray`` provides almost the same routines as ``symbol``. Most
+  routines between these two packages share the source code. But ``ndarray``
+  differs from ``symbol`` in few aspects:
 
-.. note:: ``ndarray`` also provides almost same routines to ``symbol``. Most
-   routines between these two packages share the same C++ operator source
-   codes. But ``ndarray`` differs to ``symbol`` in several aspects:
+  - ``ndarray`` adopts imperative programming, namely sentences are executed
+    step-by-step so that the results can be obtained immediately whereas 
+    ``symbol`` adopts declarative programming.
 
-   - ``ndarray`` adopts imperative programming, namely sentences are executed
-     step-by-step so that the results can be obtained immediately.
-
-   - Most binary operators such as ``+`` and ``>`` are enabled broadcasting in
-     default.
+  - Most binary operators in ``ndarray`` such as ``+`` and ``>`` have
+    broadcasting enabled by default.
 ```
 
 In the rest of this document, we first overview the methods provided by the
@@ -120,6 +120,8 @@ In the rest of this document, we first overview the methods provided by the
     NDArray.__mul__
     NDArray.__div__
     NDArray.__rdiv__
+    NDArray.__mod__
+    NDArray.__rmod__
     NDArray.__pow__
 ```
 
@@ -133,6 +135,7 @@ In the rest of this document, we first overview the methods provided by the
     NDArray.__isub__
     NDArray.__imul__
     NDArray.__idiv__
+    NDArray.__imod__
 ```
 
 ### Comparison operators
@@ -243,6 +246,7 @@ In the rest of this document, we first overview the methods provided by the
     take
     batch_take
     one_hot
+    pick
 ```
 
 ## Mathematical functions
@@ -258,6 +262,7 @@ In the rest of this document, we first overview the methods provided by the
     negative
     multiply
     divide
+    modulo
     dot
     batch_dot
     add_n
@@ -320,6 +325,7 @@ In the rest of this document, we first overview the methods provided by the
     fix
     floor
     ceil
+    trunc
 ```
 
 
@@ -368,8 +374,13 @@ In the rest of this document, we first overview the methods provided by the
 .. autosummary::
     :nosignatures:
 
-    uniform
-    normal
+    random_uniform
+    random_normal
+    random_gamma
+    random_exponential
+    random_poisson
+    random_negative_binomial
+    random_generalized_negative_binomial
     mxnet.random.seed
 ```
 
@@ -452,6 +463,37 @@ In the rest of this document, we first overview the methods provided by the
     Custom
 ```
 
+## Contrib
+
+```eval_rst
+.. warning:: This package contains experimental APIs and may change in the near future.
+```
+
+The `contrib.ndarray` module contains many useful experimental APIs for new features. This is a place for the community to try out the new features, so that feature contributors can receive feedback.
+
+```eval_rst
+.. currentmodule:: mxnet.contrib.ndarray
+
+.. autosummary::
+    :nosignatures:
+
+    CTCLoss
+    DeformableConvolution
+    DeformablePSROIPooling
+    MultiBoxDetection
+    MultiBoxPrior
+    MultiBoxTarget
+    MultiProposal
+    PSROIPooling
+    Proposal
+    count_sketch
+    ctc_loss
+    dequantize
+    fft
+    ifft
+    quantize
+```
+
 ## API Reference
 
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
@@ -461,6 +503,9 @@ In the rest of this document, we first overview the methods provided by the
     :members:
 
 .. automodule:: mxnet.random
+    :members:
+
+.. automodule:: mxnet.contrib.ndarray
     :members:
 
 ```

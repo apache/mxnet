@@ -6,9 +6,10 @@
 #include <string>
 #include <vector>
 #include "mxnet-cpp/MxNetCpp.h"
+// Allow IDE to parse the types
+#include "../include/mxnet-cpp/op.h"
 
 using namespace mxnet::cpp;
-
 
 Symbol ConvFactoryBN(Symbol data, int num_filter,
                      Shape kernel, Shape stride, Shape pad,
@@ -19,7 +20,12 @@ Symbol ConvFactoryBN(Symbol data, int num_filter,
   Symbol conv = Convolution("conv_" + name + suffix, data,
                             conv_w, conv_b, kernel,
                             num_filter, stride, Shape(1, 1), pad);
-  Symbol bn = BatchNorm("bn_" + name + suffix, conv);
+  std::string name_suffix = name + suffix;
+  Symbol gamma(name_suffix + "_gamma");
+  Symbol beta(name_suffix + "_beta");
+  Symbol mmean(name_suffix + "_mmean");
+  Symbol mvar(name_suffix + "_mvar");
+  Symbol bn = BatchNorm("bn_" + name + suffix, conv, gamma, beta, mmean, mvar);
   return Activation("relu_" + name + suffix, bn, "relu");
 }
 
@@ -40,8 +46,8 @@ Symbol InceptionFactoryA(Symbol data, int num_1x1, int num_3x3red,
   cd3x3 = ConvFactoryBN(data = cd3x3, num_d3x3, Shape(3, 3), Shape(1, 1),
                         Shape(1, 1), name + "_double_3x3_1");
   Symbol pooling = Pooling(name + "_pool", data,
-                           Shape(3, 3), pool, false,
-                           PoolingPoolingConvention::valid,
+                           Shape(3, 3), pool, false, false,
+                           PoolingPoolingConvention::kValid,
                            Shape(1, 1), Shape(1, 1));
   Symbol cproj = ConvFactoryBN(pooling, proj, Shape(1, 1), Shape(1, 1),
                                Shape(0, 0), name + "_proj");
@@ -67,8 +73,8 @@ Symbol InceptionFactoryB(Symbol data, int num_3x3red, int num_3x3,
   cd3x3 = ConvFactoryBN(cd3x3, num_d3x3, Shape(3, 3), Shape(2, 2),
                         Shape(1, 1), name + "_double_3x3_1");
   Symbol pooling = Pooling("max_pool_" + name + "_pool", data,
-                           Shape(3, 3), PoolingPoolType::max,
-                           false, PoolingPoolingConvention::valid, Shape(2, 2));
+                           Shape(3, 3), PoolingPoolType::kMax,
+                           false, false, PoolingPoolingConvention::kValid, Shape(2, 2));
   std::vector<Symbol> lst;
   lst.push_back(c3x3);
   lst.push_back(cd3x3);
@@ -83,33 +89,33 @@ Symbol InceptionSymbol(int num_classes) {
 
   // stage 1
   Symbol conv1 = ConvFactoryBN(data, 64, Shape(7, 7), Shape(2, 2), Shape(3, 3), "conv1");
-  Symbol pool1 = Pooling("pool1", conv1, Shape(3, 3), PoolingPoolType::max,
-      false, PoolingPoolingConvention::valid, Shape(2, 2));
+  Symbol pool1 = Pooling("pool1", conv1, Shape(3, 3), PoolingPoolType::kMax,
+      false, false, PoolingPoolingConvention::kValid, Shape(2, 2));
 
   // stage 2
   Symbol conv2red = ConvFactoryBN(pool1, 64, Shape(1, 1), Shape(1, 1),  Shape(0, 0), "conv2red");
   Symbol conv2 = ConvFactoryBN(conv2red, 192, Shape(3, 3), Shape(1, 1), Shape(1, 1), "conv2");
-  Symbol pool2 = Pooling("pool2", conv2, Shape(3, 3), PoolingPoolType::max,
-      false, PoolingPoolingConvention::valid, Shape(2, 2));
+  Symbol pool2 = Pooling("pool2", conv2, Shape(3, 3), PoolingPoolType::kMax,
+      false, false, PoolingPoolingConvention::kValid, Shape(2, 2));
 
   // stage 3
-  Symbol in3a = InceptionFactoryA(pool2, 64, 64, 64, 64, 96, PoolingPoolType::avg, 32, "3a");
-  Symbol in3b = InceptionFactoryA(in3a, 64, 64, 96, 64, 96, PoolingPoolType::avg, 64, "3b");
+  Symbol in3a = InceptionFactoryA(pool2, 64, 64, 64, 64, 96, PoolingPoolType::kAvg, 32, "3a");
+  Symbol in3b = InceptionFactoryA(in3a, 64, 64, 96, 64, 96, PoolingPoolType::kAvg, 64, "3b");
   Symbol in3c = InceptionFactoryB(in3b, 128, 160, 64, 96, "3c");
 
   // stage 4
-  Symbol in4a = InceptionFactoryA(in3c, 224, 64, 96, 96, 128, PoolingPoolType::avg, 128, "4a");
-  Symbol in4b = InceptionFactoryA(in4a, 192, 96, 128, 96, 128,  PoolingPoolType::avg, 128, "4b");
-  Symbol in4c = InceptionFactoryA(in4b, 160, 128, 160, 128, 160, PoolingPoolType::avg, 128, "4c");
-  Symbol in4d = InceptionFactoryA(in4c, 96, 128, 192, 160, 192,  PoolingPoolType::avg, 128, "4d");
+  Symbol in4a = InceptionFactoryA(in3c, 224, 64, 96, 96, 128, PoolingPoolType::kAvg, 128, "4a");
+  Symbol in4b = InceptionFactoryA(in4a, 192, 96, 128, 96, 128,  PoolingPoolType::kAvg, 128, "4b");
+  Symbol in4c = InceptionFactoryA(in4b, 160, 128, 160, 128, 160, PoolingPoolType::kAvg, 128, "4c");
+  Symbol in4d = InceptionFactoryA(in4c, 96, 128, 192, 160, 192,  PoolingPoolType::kAvg, 128, "4d");
   Symbol in4e = InceptionFactoryB(in4d, 128, 192, 192, 256, "4e");
 
   // stage 5
-  Symbol in5a = InceptionFactoryA(in4e, 352, 192, 320, 160, 224, PoolingPoolType::avg, 128, "5a");
-  Symbol in5b = InceptionFactoryA(in5a, 352, 192, 320, 192, 224, PoolingPoolType::max, 128, "5b");
+  Symbol in5a = InceptionFactoryA(in4e, 352, 192, 320, 160, 224, PoolingPoolType::kAvg, 128, "5a");
+  Symbol in5b = InceptionFactoryA(in5a, 352, 192, 320, 192, 224, PoolingPoolType::kMax, 128, "5b");
 
   // average pooling
-  Symbol avg = Pooling("global_pool", in5b, Shape(7, 7), PoolingPoolType::avg);
+  Symbol avg = Pooling("global_pool", in5b, Shape(7, 7), PoolingPoolType::kAvg);
 
   // classifier
   Symbol flatten = Flatten("flatten", avg);
@@ -150,9 +156,12 @@ int main(int argc, char const *argv[]) {
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
   opt->SetParam("momentum", 0.9)
      ->SetParam("rescale_grad", 1.0 / batch_size)
-     ->SetParam("clip_gradient", 10);
+     ->SetParam("clip_gradient", 10)
+     ->SetParam("lr", learning_rate)
+     ->SetParam("wd", weight_decay);
 
   auto *exec = inception_bn_net.SimpleBind(Context::gpu(), args_map);
+  auto arg_names = inception_bn_net.ListArguments();
 
   for (int iter = 0; iter < max_epoch; ++iter) {
     LG << "Epoch: " << iter;
@@ -165,7 +174,12 @@ int main(int argc, char const *argv[]) {
 
       exec->Forward(true);
       exec->Backward();
-      exec->UpdateAll(opt, learning_rate, weight_decay);
+      // Update parameters
+      for (size_t i = 0; i < arg_names.size(); ++i) {
+        if (arg_names[i] == "data" || arg_names[i] == "data_label") continue;
+        opt->Update(i, exec->arg_arrays[i], exec->grad_arrays[i]);
+      }
+
       NDArray::WaitAll();
     }
 

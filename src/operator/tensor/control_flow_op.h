@@ -108,7 +108,7 @@ inline bool WhereOpShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*in_attrs, 0, tshape);
     return true;
   } else if ((*in_attrs)[0].ndim() == 1) {
-    return (*in_attrs)[0].Size() == tshape[0];
+    return (*in_attrs)[0].Size() == static_cast<size_t>(tshape[0]);
   }
   return false;
 }

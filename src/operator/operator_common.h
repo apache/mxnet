@@ -16,6 +16,7 @@
 #include <ostream>
 #include <string>
 #include <vector>
+#include "../common/cuda_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -77,6 +78,35 @@ inline bool type_is_none(const int& x) {
   return x == -1;
 }
 
+/*! \brief check if shape is scalar({1}). */
+inline bool shape_is_scalar(const TShape& x) {
+  return x.ndim() == 1 && x.Size() == 1;
+}
+
+/*! \brief get string representation of shape */
+inline std::string shape_string(const TShape& x) {
+  std::ostringstream os;
+  os << x;
+  return os.str();
+}
+
+/*! \brief get string representation of shape */
+inline std::string type_string(const int& x) {
+  switch (x) {
+    case mshadow::kFloat32:
+      return "float32";
+    case mshadow::kFloat64:
+      return "float64";
+    case mshadow::kFloat16:
+      return "float16";
+    case mshadow::kUint8:
+      return "uint8";
+    case mshadow::kInt32:
+      return "int32";
+  }
+  return "unknown";
+}
+
 /*!
  * \brief Assign x to y. Checks for compatiblity when y is not empty.
  *  Allow missing dim in both x and y (as 0).
@@ -127,9 +157,9 @@ inline bool type_assign(int *y, const int& x) {
  */
 #define SHAPE_ASSIGN_CHECK(shape_array, index, shape)                       \
   {                                                                         \
-    if (!shape_assign(&(shape_array)[index], TShape(shape))) {             \
+    if (!shape_assign(&(shape_array)[index], TShape(shape))) {              \
       std::ostringstream os;                                                \
-      os << "Shape inconsistent, Provided=" << (shape_array)[index]<< ','  \
+      os << "Shape inconsistent, Provided=" << (shape_array)[index] << ','  \
          << " inferred shape=" << shape;                                    \
       throw ::mxnet::op::InferShapeError(os.str(), index);                  \
     }                                                                       \
@@ -144,10 +174,11 @@ inline bool type_assign(int *y, const int& x) {
  */
 #define TYPE_ASSIGN_CHECK(type_array, index, type)                          \
   {                                                                         \
-    if (!type_assign(&(type_array)[index], type)) {                        \
+    if (!type_assign(&(type_array)[index], type)) {                         \
       std::ostringstream os;                                                \
-      os << "Type inconsistent, Provided=" << (type_array)[index] << ','   \
-         << " inferred type=" << type;                                      \
+      os << "Type inconsistent, Provided="                                  \
+         << type_string((type_array)[index]) << ','                         \
+         << " inferred type=" << type_string(type);                         \
       throw ::mxnet::op::InferTypeError(os.str(), index);                   \
     }                                                                       \
   }
@@ -171,21 +202,42 @@ inline bool type_assign(int *y, const int& x) {
 #endif
 
 
-// quick helper to make node
-inline std::vector<nnvm::NodeEntry> MakeGradNode(
-    const char* op_name,
-    const nnvm::NodePtr& n,
-    std::vector<nnvm::NodeEntry> inputs,
-    std::unordered_map<std::string, std::string> dict) {
-  nnvm::NodePtr p = nnvm::Node::Create();
+// make a new node with operator op_name. Inputs are not filled.
+inline nnvm::NodePtr MakeNode(
+    const char* op_name, const std::string& name,
+    std::vector<nnvm::NodeEntry> const * inputs,
+    std::unordered_map<std::string, std::string> const * dict,
+    nnvm::NodePtr const * fwd_node) {
+  auto p = nnvm::Node::Create();
   p->attrs.op = nnvm::Op::Get(op_name);
-  p->attrs.name = n->attrs.name + "_backward";
-  p->attrs.dict = std::move(dict);
+  p->attrs.name = name;
+  if (dict != nullptr) p->attrs.dict = *dict;
+  if (inputs != nullptr) p->inputs = *inputs;
+  if (fwd_node != nullptr) {
+    p->control_deps.emplace_back(*fwd_node);
+  }
   if (p->op()->attr_parser != nullptr) {
     p->op()->attr_parser(&(p->attrs));
   }
-  p->control_deps.emplace_back(n);
-  p->inputs = std::move(inputs);
+  return p;
+}
+
+inline nnvm::NodePtr MakeNode(
+    const char* op_name, const std::string& name,
+    const std::vector<nnvm::NodeEntry>& inputs,
+    std::unordered_map<std::string, std::string> const * dict,
+    nnvm::NodePtr const * fwd_node) {
+  return MakeNode(op_name, name, &inputs, dict, fwd_node);
+}
+
+
+// quick helper to make node
+inline std::vector<nnvm::NodeEntry> MakeGradNode(
+    const char* op_name, const nnvm::NodePtr& n,
+    const std::vector<nnvm::NodeEntry>& inputs,
+    const std::unordered_map<std::string, std::string>& dict) {
+  auto p = MakeNode(op_name, n->attrs.name + "_backward",
+                    &inputs, &dict, &n);
   std::vector<nnvm::NodeEntry> ret;
   for (index_t i = 0; i < p->num_outputs(); ++i) {
     ret.emplace_back(nnvm::NodeEntry{p, i, 0});
@@ -199,18 +251,46 @@ inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
     const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> ret;
   for (index_t i = 0; i < n->num_inputs(); ++i) {
-    nnvm::NodePtr p = nnvm::Node::Create();
-    p->attrs.op = nnvm::Op::Get("_zeros");
     std::ostringstream os;
     if (1 == n->num_inputs()) {
       os << n->attrs.name << "_backward";
     } else {
       os << n->attrs.name << "_in" << i << "_backward";
     }
-    p->attrs.name = os.str();
-    p->attrs.dict = std::unordered_map<std::string, std::string>();
-    p->control_deps.emplace_back(n);
+    auto p = MakeNode("zeros_like", os.str(), {n->inputs[i]}, nullptr, &n);
     ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+  }
+  return ret;
+}
+
+
+// check whether all output grads are zero.
+inline bool CheckGradAllZero(const std::vector<nnvm::NodeEntry>& ograds) {
+  const auto zero_op = nnvm::Op::Get("_zeros");
+  const auto zero_like_op = nnvm::Op::Get("zeros_like");
+  if (!ograds.size()) return false;
+  for (const auto& grad : ograds) {
+    if (!grad.node) return false;
+    if (grad.node->op() != zero_op && grad.node->op() != zero_like_op ) return false;
+  }
+  return true;
+}
+
+// make gradient node that doesn't add to objective.
+// i.e. igrads are always zero when ograds are zero.
+inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
+    const char* op_name, const nnvm::NodePtr& n,
+    const std::vector<nnvm::NodeEntry>& ograds,
+    const std::vector<nnvm::NodeEntry>& inputs,
+    const std::unordered_map<std::string, std::string> dict) {
+  if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+  auto p = MakeNode(op_name, n->attrs.name + "_backward",
+                    nullptr, &dict, &n);
+  p->inputs.insert(p->inputs.end(), ograds.begin(), ograds.end());
+  p->inputs.insert(p->inputs.end(), inputs.begin(), inputs.end());
+  std::vector<nnvm::NodeEntry> ret;
+  for (index_t i = 0; i < p->num_outputs(); ++i) {
+    ret.emplace_back(nnvm::NodeEntry{p, i, 0});
   }
   return ret;
 }

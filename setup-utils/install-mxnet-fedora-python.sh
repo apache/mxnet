@@ -15,6 +15,7 @@ sudo yum install -y atlas atlas-devel opencv opencv-devel graphviz graphviz-deve
 
 echo "Building MXNet core. This can take few minutes..."
 cd "$MXNET_HOME"
+cp make/config.mk .
 make -j$(nproc)
 
 echo "Installing Numpy..."

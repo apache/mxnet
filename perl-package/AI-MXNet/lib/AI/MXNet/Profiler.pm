@@ -4,6 +4,16 @@ use warnings;
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
 
+=head1 NAME
+
+    AI::MXNet::Profiler - Optional profiler feature.
+=cut
+
+=head1 DESCRIPTION
+
+    Optional profirer.
+=cut
+
 =head2 profiler_set_config
 
     Set up the configure of profiler.

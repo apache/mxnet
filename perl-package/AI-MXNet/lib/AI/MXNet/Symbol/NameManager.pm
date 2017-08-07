@@ -6,9 +6,9 @@ use AI::MXNet::Function::Parameters;
 
 =head1
 
-    NameManager to do automatic naming.
+    NameManager that does an automatic naming.
 
-    User can also inherit this object to change naming behavior.
+    A user can also inherit this object to change the naming behavior.
 =cut
 
 has 'counter' => (
@@ -21,30 +21,30 @@ our $current;
 
 =head2 get
 
-        Get the canonical name for a symbol.
+    Get the canonical name for a symbol.
 
-        This is default implementation.
-        When user specified a name,
-        the user specified name will be used.
+    This is default implementation.
+    When user specified a name,
+    the user specified name will be used.
 
-        When user did not, we will automatically generate a
-        name based on hint string.
+    When user did not, we will automatically generate a
+    name based on hint string.
 
-        Parameters
-        ----------
-        name : str or None
-            The name user specified.
+    Parameters
+    ----------
+    name : str or undef
+        The name the user has specified.
 
-        hint : str
-            A hint string, which can be used to generate name.
+    hint : str
+        A hint string, which can be used to generate name.
 
-        Returns
-        -------
-        full_name : str
-            A canonical name for the user.
+    Returns
+    -------
+    full_name : str
+        A canonical name for the symbol.
 =cut
 
-method get(Str|Undef $name, Str $hint)
+method get(Maybe[Str] $name, Str $hint)
 {
     return $name if $name;
     if(not exists $self->counter->{ $hint })
@@ -66,20 +66,16 @@ $AI::MXNet::current_nm_ldr = __PACKAGE__->new;
 package AI::MXNet::Symbol::Prefix;
 use Mouse;
 
+=head1 NAME
+
+    AI::MXNet::Symbol::Prefix
+=cut
+
 extends 'AI::MXNet::Symbol::NameManager';
 
-=head1
+=head1 DESCRIPTION
 
-    A name manager that always attach a prefix to all names.
-
-    Examples
-    --------
-    >>> import mxnet as mx
-    >>> data = mx.symbol.Variable('data')
-    >>> with mx.name.Prefix('mynet_'):
-            net = mx.symbol.FullyConnected(data, num_hidden=10, name='fc1')
-    >>> net.list_arguments()
-    ['data', 'mynet_fc1_weight', 'mynet_fc1_bias']
+    A name manager that always attaches a prefix to all names.
 =cut
 
 has prefix => (
@@ -88,7 +84,7 @@ has prefix => (
     required => 1
 );
 
-method get(Str $name, Str $hint)
+method get(Maybe[Str] $name, Str $hint)
 {
     $name = $self->SUPER::get($name, $hint);
     return $self->prefix . $name;

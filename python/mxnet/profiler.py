@@ -1,7 +1,7 @@
 # coding: utf-8
 # pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, too-many-lines
 # pylint: disable=too-many-branches, too-many-statements
-"""profiler setting methods."""
+"""Profiler setting methods."""
 from __future__ import absolute_import
 
 import ctypes
@@ -13,11 +13,10 @@ def profiler_set_config(mode='symbolic', filename='profile.json'):
     Parameters
     ----------
     mode : string, optional
-        Indicting whether to enable the profiler, can
-        be 'symbolic' or 'all'. Default is `symbolic`.
+        Indicates whether to enable the profiler, can
+        be 'symbolic', or 'all'. Defaults to `symbolic`.
     filename : string, optional
-        The name of output trace file. Default is
-        'profile.json'.
+        The name of output trace file. Defaults to 'profile.json'.
     """
     mode2int = {'symbolic': 0, 'all': 1}
     check_call(_LIB.MXSetProfilerConfig(
@@ -30,7 +29,7 @@ def profiler_set_state(state='stop'):
     Parameters
     ----------
     state : string, optional
-        Indicting whether to run the profiler, can
+        Indicates whether to run the profiler, can
         be 'stop' or 'run'. Default is `stop`.
     """
     state2int = {'stop': 0, 'run': 1}
@@ -38,5 +37,5 @@ def profiler_set_state(state='stop'):
 
 def dump_profile():
     """Dump profile and stop profiler. Use this to save profile
-    in advance in case your program cannot exit normally"""
+    in advance in case your program cannot exit normally."""
     check_call(_LIB.MXDumpProfile())

@@ -1,6 +1,6 @@
 # coding: utf-8
 # pylint: disable=invalid-name, no-member
-""" ctypes library of mxnet and helper functions """
+"""ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
 import sys
@@ -18,24 +18,47 @@ __all__ = ['MXNetError']
 #----------------------------
 if sys.version_info[0] == 3:
     string_types = str,
-    numeric_types = (float, int, np.float32, np.int32)
+    numeric_types = (float, int, np.generic)
+    integer_types = int
     # this function is needed for python3
     # to convert ctypes.char_p .value back to python str
     py_str = lambda x: x.decode('utf-8')
 else:
     string_types = basestring,
-    numeric_types = (float, int, long, np.float32, np.int32)
+    numeric_types = (float, int, long, np.generic)
+    integer_types = (int, long)
     py_str = lambda x: x
 
+class _NullType(object):
+    """Placeholder for arguments"""
+    def __repr__(self):
+        return '_Null'
+
+_Null = _NullType()
 
 class MXNetError(Exception):
-    """Error that will be throwed by all mxnet functions"""
+    """Error that will be throwed by all mxnet functions."""
     pass
 
+class NotImplementedForSymbol(MXNetError):
+    def __init__(self, function, alias, *args):
+        super(NotImplementedForSymbol, self).__init__()
+        self.function = function.__name__
+        self.alias = alias
+        self.args = [str(type(a)) for a in args]
+    def __str__(self):
+        msg = 'Function {}'.format(self.function)
+        if self.alias:
+            msg += ' (namely operator "{}")'.format(self.alias)
+        if self.args:
+            msg += ' with arguments ({})'.format(', '.join(self.args))
+        msg += ' is not implemented for Symbol and only available in NDArray.'
+        return msg
+
 def _load_lib():
-    """Load libary by searching possible path."""
+    """Load library by searching possible path."""
     lib_path = libinfo.find_lib_path()
-    lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_GLOBAL)
+    lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_LOCAL)
     # DMatrix functions
     lib.MXGetLastError.restype = ctypes.c_char_p
     return lib
@@ -53,6 +76,7 @@ mx_real_t = np.float32
 NDArrayHandle = ctypes.c_void_p
 FunctionHandle = ctypes.c_void_p
 OpHandle = ctypes.c_void_p
+CachedOpHandle = ctypes.c_void_p
 SymbolHandle = ctypes.c_void_p
 ExecutorHandle = ctypes.c_void_p
 DataIterCreatorHandle = ctypes.c_void_p
@@ -64,66 +88,86 @@ RtcHandle = ctypes.c_void_p
 # helper function definition
 #----------------------------
 def check_call(ret):
-    """Check the return value of C API call
+    """Check the return value of C API call.
 
-    This function will raise exception when error occurs.
-    Wrap every API call with this function
+    This function will raise an exception when an error occurs.
+    Wrap every API call with this function.
 
     Parameters
     ----------
     ret : int
-        return value from API calls
+        return value from API calls.
     """
     if ret != 0:
         raise MXNetError(py_str(_LIB.MXGetLastError()))
 
 if sys.version_info[0] < 3:
     def c_str(string):
-        """Create ctypes char * from a python string
+        """Create ctypes char * from a Python string.
 
         Parameters
         ----------
         string : string type
-            python string
+            Python string.
 
         Returns
         -------
         str : c_char_p
-            A char pointer that can be passed to C API
+            A char pointer that can be passed to C API.
+
+        Examples
+        --------
+        >>> x = mx.base.c_str("Hello, World")
+        >>> print x.value
+        Hello, World
         """
         return ctypes.c_char_p(string)
 else:
     def c_str(string):
-        """Create ctypes char * from a python string
+        """Create ctypes char * from a Python string.
 
         Parameters
         ----------
         string : string type
-            python string
+            Python string.
 
         Returns
         -------
         str : c_char_p
-            A char pointer that can be passed to C API
+            A char pointer that can be passed to C API.
+
+        Examples
+        --------
+        >>> x = mx.base.c_str("Hello, World")
+        >>> print x.value
+        Hello, World
         """
         return ctypes.c_char_p(string.encode('utf-8'))
 
 
 def c_array(ctype, values):
-    """Create ctypes array from a python array
+    """Create ctypes array from a Python array.
 
     Parameters
     ----------
     ctype : ctypes data type
-        data type of the array we want to convert to
+        Data type of the array we want to convert to, such as mx_float.
 
     values : tuple or list
-        data content
+        Data content.
 
     Returns
     -------
     out : ctypes array
-        Created ctypes array
+        Created ctypes array.
+
+    Examples
+    --------
+    >>> x = mx.base.c_array(mx.base.mx_float, [1, 2, 3])
+    >>> print len(x)
+    3
+    >>> x[1]
+    2.0
     """
     return (ctype * len(values))(*values)
 
@@ -133,14 +177,14 @@ def ctypes2buffer(cptr, length):
     Parameters
     ----------
     cptr : ctypes.POINTER(ctypes.c_char)
-        pointer to the raw memory region
+        Pointer to the raw memory region.
     length : int
-        the length of the buffer
+        The length of the buffer.
 
     Returns
     -------
     buffer : bytearray
-        The raw byte memory buffer
+        The raw byte memory buffer.
     """
     if not isinstance(cptr, ctypes.POINTER(ctypes.c_char)):
         raise TypeError('expected char pointer')
@@ -151,9 +195,9 @@ def ctypes2buffer(cptr, length):
     return res
 
 def ctypes2numpy_shared(cptr, shape):
-    """Convert a ctypes pointer to a numpy array
+    """Convert a ctypes pointer to a numpy array.
 
-    The result numpy array shares the memory with the pointer
+    The resulting NumPy array shares the memory with the pointer.
 
     Parameters
     ----------
@@ -161,12 +205,12 @@ def ctypes2numpy_shared(cptr, shape):
         pointer to the memory region
 
     shape : tuple
-        shape of target ndarray
+        Shape of target `NDArray`.
 
     Returns
     -------
     out : numpy_array
-        A numpy array : numpy array
+        A numpy array : numpy array.
     """
     if not isinstance(cptr, ctypes.POINTER(mx_float)):
         raise RuntimeError('expected float pointer')
@@ -223,7 +267,7 @@ def _notify_shutdown():
 atexit.register(_notify_shutdown)
 
 def add_fileline_to_docstring(module, incursive=True):
-    """Append the definition position to each function contained in module
+    """Append the definition position to each function contained in module.
 
     Examples
     --------
@@ -232,7 +276,7 @@ def add_fileline_to_docstring(module, incursive=True):
     """
 
     def _add_fileline(obj):
-        """add fileinto to a object
+        """Add fileinto to a object.
         """
         if obj.__doc__ is None or 'From:' in obj.__doc__:
             return
@@ -256,3 +300,21 @@ def add_fileline_to_docstring(module, incursive=True):
             _add_fileline(obj.__func__)
         if inspect.isclass(obj) and incursive:
             add_fileline_to_docstring(obj, False)
+
+def _as_list(obj):
+    """A utility function that converts the argument to a list if it is not already.
+
+    Parameters
+    ----------
+    obj : object
+
+    Returns
+    -------
+    If `obj` is a list or tuple, return it. Otherwise, return `[obj]` as a
+    single-element list.
+
+    """
+    if isinstance(obj, (list, tuple)):
+        return obj
+    else:
+        return [obj]

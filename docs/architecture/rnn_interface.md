@@ -1,14 +1,23 @@
 # Survey of Existing Interfaces and Implementations
 
-Commonly used deep learning libraries with good RNN /LSTM support include [Theano](http://deeplearning.net/software/theano/library/scan.html) and its wrappers [Lasagne](http://lasagne.readthedocs.org/en/latest/modules/layers/recurrent.html) and [Keras](http://keras.io/layers/recurrent/); [CNTK](https://cntk.codeplex.com/); [TensorFlow](https://www.tensorflow.org/versions/master/tutorials/recurrent/index.html); and various implementations in Torch, like [char-rnn](https://github.com/karpathy/char-rnn), [this](https://github.com/Element-Research/rnn), and [this](https://github.com/wojzaremba/lstm).
+Commonly used deep learning libraries with good RNN/LSTM support include [Theano](http://deeplearning.net/software/theano/library/scan.html) and its wrappers [Lasagne](http://lasagne.readthedocs.org/en/latest/modules/layers/recurrent.html) and [Keras](http://keras.io/layers/recurrent/); [CNTK](https://cntk.codeplex.com/); [TensorFlow](https://www.tensorflow.org/versions/master/tutorials/recurrent/index.html); and various implementations in Torch, such as [this well-known character-level language model tutorial](https://github.com/karpathy/char-rnn), [this](https://github.com/Element-Research/rnn).
+
+In this document, we present a comparative analysis of the approaches taken by these libraries.
 
 ## Theano
 
-RNN support in Theano is provided by its [scan operator](http://deeplearning.net/software/theano/library/scan.html), which allows construction of a loop where the number of iterations is specified as a runtime value of a symbolic variable. You can find an official example of an LSTM implementation with scan [here](http://deeplearning.net/tutorial/lstm.html).
+In Theano, RNN support comes via its [scan operator](http://deeplearning.net/software/theano/library/scan.html),
+which allows construction of a loop where the number of iterations is specified
+as a runtime value of a symbolic variable.
+You can find an official example of an LSTM implementation with scan
+[here](http://deeplearning.net/tutorial/lstm.html).
 
 ### Implementation
 
-I'm not very familiar with the Theano internals, but it seems from [theano/scan_module/scan_op.py#execute](https://github.com/Theano/Theano/blob/master/theano/scan_module/scan_op.py#L1225) that the scan operator is implemented with a loop in Python that performs one iteration at a time:
+I'm not very familiar with the Theano internals,
+but it seems from [theano/scan_module/scan_op.py#execute](https://github.com/Theano/Theano/blob/master/theano/scan_module/scan_op.py#L1225)
+that the scan operator is implemented with a loop in Python
+that performs one iteration at a time:
 
 ```python
     fn = self.fn.fn

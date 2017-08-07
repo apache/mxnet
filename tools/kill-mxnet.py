@@ -25,12 +25,12 @@ with open(host_file, "r") as f:
   for host in f:
     if ':' in host:
       host = host[:host.index(':')]
-      print host
-      subprocess.Popen(["ssh", "%s" % host, kill_cmd],
-              shell=False,
-              stdout=subprocess.PIPE,
-              stderr=subprocess.PIPE)
-      print "Done killing"
+    print host
+    subprocess.Popen(["ssh", "-oStrictHostKeyChecking=no", "%s" % host, kill_cmd],
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+    print "Done killing"
 
 # Kill program on local machine
 os.system(kill_cmd)

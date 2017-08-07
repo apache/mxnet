@@ -18,7 +18,7 @@ class QFunc(object):
 
 class ContinuousMLPQ(QFunc):
     """
-    Continous Multi-Layer Perceptron Q-Value Network
+    Continuous Multi-Layer Perceptron Q-Value Network
     for determnistic policy training.
     """
 

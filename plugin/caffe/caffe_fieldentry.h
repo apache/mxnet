@@ -2,7 +2,7 @@
  * Copyright (c) 2016 by Contributors
  * \file caffe_fieldentry.h
  * \brief Implement FieldEntry<caffe::LayerParameter>
- * \author Haoran Wang 
+ * \author Haoran Wang
  */
 #ifndef PLUGIN_CAFFE_CAFFE_FIELDENTRY_H_
 #define PLUGIN_CAFFE_CAFFE_FIELDENTRY_H_
@@ -65,7 +65,13 @@ class FieldEntry<caffe::LayerParameter>
   }
 
   virtual void PrintDefaultValueString(std::ostream &os) const {  // NOLINT(*)
-    os << '\'' << default_value_.name().c_str() << '\'';
+    std::string s;
+    caffe::NetParameter np;
+    // Avoid wasting time making a copy -- just push in out default object's pointer
+    np.mutable_layer()->AddAllocated(const_cast<::caffe::LayerParameter *>(&default_value_));
+    google::protobuf::TextFormat::PrintToString(np, &s);
+    np.mutable_layer()->ReleaseLast();
+    os << '\'' << s << '\'';
   }
 
   // override set_default

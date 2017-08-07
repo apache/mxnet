@@ -6,29 +6,35 @@ This figure shows the major modules and components of the MXNet system and their
 
 - Runtime Dependency Engine: Schedules and executes the
   operations according to their read/write dependency.
-- Storage Allocator: Efficiently allocates and recycles memory blocks for GPU and
-  CPU processors.
-- Resource Manager: Manages global resources, such as the random number generator and temporal space.
-- NDArray: Dynamic asynchronous n-dimensional arrays, which provide flexible
-  imperative programs for MXNet.
-- Symbolic Execution: Static symbolic graph executor, which provides efficient symbolic
-  graph execution and optimization.
+- Storage Allocator: Efficiently allocates and recycles memory blocks
+  on host (CPU) and devices (GPUs).
+- Resource Manager: Manages global resources, such as the random number generator
+  and temporal space.
+- NDArray: Dynamic, asynchronous n-dimensional arrays,
+  which provide flexible imperative programs for MXNet.
+- Symbolic Execution: Static symbolic graph executor,
+  which provides efficient symbolic graph execution and optimization.
 - Operator: Operators that define static forward and gradient
   calculation (backprop).
-- SimpleOp: Operators that extend to NDArray operators and symbolic operators
+- SimpleOp: Operators that extend NDArray operators and symbolic operators
   in a unified fashion.
 - Symbol Construction: Symbolic construction, which provides a way to construct
   a computation graph (net configuration).
-- KVStore: Key-value store interface for easy parameter synchronization.
+- KVStore: Key-value store interface for efficient parameter synchronization.
 - Data Loading(IO): Efficient distributed data loading and augmentation.
 
 # MXNet System Components
 
 ## Execution Engine
 
-You can use MXNet's engine not only for deep learning, but for any domain-specific problem. It's designed to solve a general problem: execute a bunch of functions following their dependencies. Execution of any two functions with dependencies should be serialized.
+You can use MXNet's engine not only for deep learning,
+but for any domain-specific problem.
+It's designed to solve a general problem:
+execute a bunch of functions following their dependencies.
+Execution of any two functions with dependencies should be serialized.
 To boost performance, functions with no dependencies *can* be executed in parallel.
-For a general discussion of this topic, see the [Note on Dependency Engine](note_engine.md).
+For a general discussion of this topic,
+see our [notes on the dependency engine](note_engine.md).
 
 ### Interface
 
@@ -39,9 +45,16 @@ The following API is the core interface for the execution engine:
                           std::vector<VarHandle> const& const_vars,
                           std::vector<VarHandle> const& mutate_vars) = 0;
 ```
-This API allows you to push a function (`exec_fun`), along with its context information and dependencies, to the engine. `exec_ctx` is the context information in which the `exec_fun` should be executed. `const_vars` denotes the variables that the function reads from,  and `mutate_vars` are the variables to be modified. Regardless of the details that we'll explain later, the engine guarantees following order:
+This API allows you to push a function (`exec_fun`),
+along with its context information and dependencies, to the engine.
+`exec_ctx` is the context information in which the `exec_fun` should be executed,
+`const_vars` denotes the variables that the function reads from,  
+and `mutate_vars` are the variables to be modified.
+The engine provides the following guarantee:
 
->*The execution of any two functions when one of them modifies at least one common variable is serialized in their push order.*
+>*The execution of any two functions
+that modify a common variable
+is serialized in their push order.*
 
 ### Function
 
@@ -59,45 +72,90 @@ The function type of the engine is:
 	    void *stream;
     };
 ```
-Alternatively, you could use `mxnet::engine::DAGEngine::Fn`, which is the same type definition.
+Alternatively, you could use `mxnet::engine::DAGEngine::Fn`, which has the same type definition.
 
-All of the functions are executed by the engine's internal threads. In such a model, it's usually not a good idea to push *blocking* functions to the engine (usually for dealing with I/O tasks like disk, web service, UI, etc.) because it will occupy the execution thread and reduce total throughput. In that case, we provide another *asynchronous* function type:
+All of the functions are executed by the engine's internal threads.
+In such a model, it's usually not a good idea to push *blocking* functions
+to the engine (usually for dealing with I/O tasks like disk, web service, UI, etc.)
+because it will occupy the execution thread and reduce total throughput.
+In that case, we provide another *asynchronous* function type:
 
 ```c++
     using Callback = std::function<void()>;
     using AsyncFn = std::function<void(RunContext, Callback)>;
 ```
-In the `AsyncFn` function, you can pass the heavy part to your own threads and safely exit the body of the function. The engine doesn't consider the function finished until the `Callback` function is called.
+In the `AsyncFn` function, you can pass the heavy part to your own threads
+and safely exit the body of the function.
+The engine doesn't consider the function finished
+until the `Callback` function is called.
 
 ### Context
 
-You can specify the `Context` of the function to be executed within. This usually includes whether the function should be run on a CPU or a GPU, and if you specify a GPU, which GPU to use. `Context` is different from `RunContext`. `Context` contains device type (GPU/CPU) and device id, while `RunContext` contains information that can be decided only during runtime, for example, on which stream the function should be executed.
+You can specify the `Context` of the function to be executed within.
+This usually includes whether the function should be run on a CPU or a GPU,
+and if you specify a GPU, which GPU to use.
+`Context` is different from `RunContext`.
+`Context` contains device type (GPU/CPU) and device id,
+ while `RunContext` contains information that can be decided only during runtime,
+ for example, on which stream the function should be executed.
 
 ### VarHandle
 
-`VarHandle` is used to specify the dependencies of functions. The MXNet engine is designed to be decoupled from other MXNet modules. So `VarHandle` is like an engine-provided token you use to represent the external resources the functions can use or modify. It's designed to be lightweight, so creating, deleting, or copying a variable incurs little overhead. Upon pushing the functions, you need to specify the variables that will be used (immutable) in the `const_vars` vector, and the variables that will be modified (mutable) in the `mutate_vars` vector. The engine uses one rule for resolving the dependencies among functions:
+`VarHandle` is used to specify the dependencies of functions.
+The MXNet engine is designed to be decoupled from other MXNet modules.
+So `VarHandle` is like an engine-provided token you use
+to represent the external resources the functions can use or modify.
+It's designed to be lightweight, so creating,
+deleting, or copying a variable incurs little overhead.
+Upon pushing the functions, you need to specify the variables
+that will be used (immutable) in the `const_vars` vector,
+and the variables that will be modified (mutable) in the `mutate_vars` vector.
+The engine uses one rule for resolving the dependencies among functions:
 
 >*The execution of any two functions when one of them modifies at least one common variable is serialized in their push order.*
 
-For example, if `Fn1` and `Fn2` both mutate, `V2`, `Fn2` is guaranteed to be executed after `Fn1` if `Fn2` is pushed after `Fn1`. On the other hand, if `Fn1` and `Fn2` both use `V2`, their actual execution order could be random.
+For example, if `Fn1` and `Fn2` both mutate `V2` then `Fn2`
+is guaranteed to be executed after `Fn1`
+if `Fn2` is pushed after `Fn1`.
+On the other hand, if `Fn1` and `Fn2` both use `V2`,
+their actual execution order could be random.
 
-This design allows the engine to schedule *state-mutating* operations. For example, the weight update function in DNN can now use the `+=` operator to update the weights in place, rather than generating a new weight array each time.
+This design allows the engine to schedule *state-mutating* operations in a manner
+that minimizes calls to allocate new memory.
+For example, the weight update function in DNN
+can now use the `+=` operator
+to update the weights in place,
+rather than generating a new weight array each time.
 
-To create a variable, use the `NewVar()` API. To delete a variable, use the `PushDelete` API.
+To create a variable, use the `NewVar()` API.
+To delete a variable, use the `PushDelete` API.
 
 ### Push and Wait
 
-*All `Push` APIs are asynchronous.* The API call returns immediately regardless of whether the pushed `Fn` is finished. This allows the engine to start computing at the same time the user thread is pushing functions. All `Push` APIs are not thread-safe. To be specific, only one thread should make engine API calls at a time.
+*All `Push` APIs are asynchronous.* The API call returns immediately
+regardless of whether the pushed `Fn` is finished or not.
+This allows the engine to start computing at the same time
+as the user thread is pushing functions.
+`Push` APIs are not thread-safe.
+To be specific, only one thread should make engine API calls at a time.
 
-If you want to wait for a specific `Fn` to be finished, include a callback function in the closure, and call the function at the end of your `Fn`.
+If you want to wait for a specific `Fn` to finish,
+include a callback function in the closure,
+and call the function at the end of your `Fn`.
 
-If you want to wait for all `Fn`s that involve (use or mutate) a certain variable to finish, use the `WaitForVar(var)` API.
+If you want to wait for all `Fn`s
+that involve (use or mutate) a certain variable to finish,
+use the `WaitForVar(var)` API.
 
-If you want to wait for all pushed `Fn`s to finish, use the `WaitForAll()` API.
+If you want to wait for all pushed `Fn`s to finish,
+use the `WaitForAll()` API.
 
 ### Save Object Creation Cost
 
-In some cases, you need to push several functions to the engine for a long period of time. If the computation of these functions is light, the overhead of copying lambdas and creating use/mutate variable lists becomes relatively high. We provide an API to create an `OprHandle` beforehand:
+In some cases, you need to push several functions to the engine for a long period of time.
+If the computation of these functions is light,
+the overhead of copying lambdas and creating use/mutate variable lists becomes relatively high.
+We provide an API to create an `OprHandle` beforehand:
 
 ```c++
     virtual OprHandle NewOperator(AsyncFn fn,
@@ -109,7 +167,8 @@ You can keep pushing the `OprHandle` without repeatedly creating them:
 ```c++
     virtual void Push(OprHandle op, Context exec_ctx) = 0;
 ```
-To delete it, call the `DeleteOperator(OprHandle op)` API. Ensure that the operator has finished computing before calling this API.
+To delete it, call the `DeleteOperator(OprHandle op)` API.
+Ensure that the operator has finished computing before calling this API.
 
 
 ### API Reference
@@ -121,14 +180,22 @@ To delete it, call the `DeleteOperator(OprHandle op)` API. Ensure that the opera
 
 ## Operators in MXNet
 
-In MXNet, an operator is a class that contains both actual computation logic and auxiliary information that can aid the system in performing optimizations, like in-place updates and auto-derivatives. Before you continue with this document, we strongly recommend that you understand the `mshadow` library, because all operators compute on the tensor-like structure `mshadow::TBlob` provided by the system during runtime.
+In MXNet, an operator is a class that contains both actual computation logic
+and auxiliary information that can aid the system in performing optimizations,
+like in-place updates and auto-derivatives.
+To understand the remainder of the document,
+we recommend that you familiarize yourself with the `mshadow` library,
+because all operators compute on the tensor-like structure `mshadow::TBlob`
+provided by the system during runtime.
 
 MXNet's operator interface allows you to:
 
-* Save memory allocation cost by specifying in-place updates.
+* Reduce memory allocation cost by specifying in-place updates.
 * Hide some internal arguments from Python to make it cleaner.
-* Define the relationships among input tensors and output tensors, which allows the system to perform shape checking for you.
-* Acquire additional temporary spaces from the system to perform computation (e.g., calling `cudnn` routines).
+* Define the relationships among input tensors and output tensors,
+which allows the system to perform shape checking for you.
+* Acquire additional temporary spaces from the system
+to perform computation (e.g., calling `cudnn` routines).
 
 ### Operator Interface
 
@@ -150,12 +217,15 @@ The `OpContext` structure is:
              std::vector<Resource> requested;
            }
 ```
-It describes whether the operator is in the train or test phase, which device the operator should be run on (in `run_ctx`), and requested resources (covered in the following sections).
+It describes whether the operator is in the train or test phase,
+which device the operator should be run on (in `run_ctx`),
+and requested resources (covered in the following sections).
 
-
-- `in_data` and `out_data` represent the input and output tensors, respectively. All of the tensor spaces have been allocated by the system.
-- `req` denotes how the computation results are written into the `out_data`. In other words, `req.size() == out_data.size()` and `req[i]` correspond to the write type of `out_data[i]`.
-
+- `in_data` and `out_data` represent the input and output tensors, respectively.
+All of the tensor spaces have been allocated by the system.
+- `req` denotes how the computation results are written into the `out_data`.
+In other words, `req.size() == out_data.size()` and `req[i]`
+correspond to the write type of `out_data[i]`.
 
 - The `OpReqType` is defined as:
 
@@ -167,8 +237,15 @@ It describes whether the operator is in the train or test phase, which device th
              kAddTo
            };
 ```
-  Normally, the types of all `out_data` should be `kWriteTo`, meaning that the provided `out_data` tensor is a *raw* memory block, so the operator should write results directly into it. In some cases, for example when calculating the `gradient` tensor, it would be great if we could accumulate the result, rather than directly overwrite the tensor contents so that  no extra space needs to be created each time. In such a case, the corresponding `req` type is set as `kAddTo`, indicating that a `+=` should be called.
-
+  Normally, the types of all `out_data` should be `kWriteTo`,
+  meaning that the provided `out_data` tensor is a *raw* memory block,
+  so the operator should write results directly into it.
+  In some cases, for example when calculating the `gradient` tensor,
+  it would be great if we could accumulate the result,
+  rather than directly overwrite the tensor contents
+  so that  no extra space needs to be created each time.
+  In such a case, the corresponding `req` type is set as `kAddTo`,
+  indicating that a `+=` should be called.
 
 - `aux_states` is intentionally designed for auxiliary tensors used to help computation. Currently, it is useless.
 
@@ -183,15 +260,26 @@ Aside from the `Forward` operator, you could optionally implement the `Backward`
                           const std::vector<TBlob> &in_grad,
                           const std::vector<TBlob> &aux_states);
 ```
-This interface follows the same design principle as the `Forward` interface, except that `out_grad`, `in_data`, and `out_data` are given, and the operator computes `in_grad` as the results. The naming strategy is similar to Torch's convention, and can be summarized in following figure:
+This interface follows the same design principle as the `Forward` interface,
+except that `out_grad`, `in_data`, and `out_data` are given,
+and the operator computes `in_grad` as the results.
+ The naming strategy is similar to Torch's convention,
+ and can be summarized in following figure:
 
 [input/output semantics figure]
 
-Some operators might not need all of the following: `out_grad`, `in_data` and `out_data`. Specified this with the `DeclareBackwardDependency` interface in `OperatorProperty`.
+Some operators might not require all of the following:
+`out_grad`, `in_data` and `out_data`.
+You can specify these dependencies with the `DeclareBackwardDependency` interface in `OperatorProperty`.
 
 ### Operator Property
 
-One convolution might have several implementations, and you might want to switch among them to achieve the best performance. Therefore, we separate the operator *semantic* interfaces from the implementation interface (`Operator` class) into the `OperatorProperty` class. The `OperatorProperty` interface consists of:
+One convolution might have several implementations,
+and you might want to switch among them to achieve the best performance.
+Therefore, we separate the operator *semantic* interfaces
+from the implementation interface (`Operator` class)
+into the `OperatorProperty` class.
+The `OperatorProperty` interface consists of:
 
 * **InferShape:**
 
@@ -200,9 +288,20 @@ One convolution might have several implementations, and you might want to switch
                                    std::vector<TShape> *out_shape,
                                    std::vector<TShape> *aux_shape) const = 0;
 ```
-  This interface has two purposes: 1. Tell the system the size of each input and output tensor, so it can allocate space for them before the `Forward` and `Backward` call; 2. Perform a size check to make sure that there isn't an obvious error before running. The shape in `in_shape` is set by the system (from the `out_shape` of the previous operators). It returns `false` when there is not enough information to infer shapes or throws an error when the shape is inconsistent.
 
-* **Request Resources:** Operations like `cudnnConvolutionForward` need a work space for computation. If the system can manage that, it could then perform optimizations, like reuse the space, and so on. MXNet defines two interfaces to achieve this:
+This interface has two purposes:
+* Tell the system the size of each input and output tensor,
+  so it can allocate space for them before the `Forward` and `Backward` call.
+* Perform a size check to make sure that there isn't an obvious error before running.
+  The shape in `in_shape` is set by the system
+  (from the `out_shape` of the previous operators).
+  It returns `false` when there is not enough information
+  to infer shapes or throws an error when the shape is inconsistent.
+
+* **Request Resources:** Operations like `cudnnConvolutionForward` need a work space for computation.
+If the system can manage that, it could then perform optimizations,
+like reuse the space, and so on.
+MXNet defines two interfaces to achieve this:
 
 ```c++
            virtual std::vector<ResourceRequest> ForwardResource(
@@ -221,7 +320,10 @@ One convolution might have several implementations, and you might want to switch
              Type type;
            };
 ```
-  If `ForwardResource` and `BackwardResource` return non-empty arrays, the system offers the corresponding resources through the `ctx` parameter in the `Forward` and `Backward` interface of `Operator`. Basically, to access those resources, simply write:
+  If `ForwardResource` and `BackwardResource` return non-empty arrays,
+  the system offers the corresponding resources through the `ctx` parameter
+  in the `Forward` and `Backward` interface of `Operator`.
+  Basically, to access those resources, simply write:
 
 ```c++
            auto tmp_space_res = ctx.requested[kTempSpace].get_space(some_shape, some_stream);
@@ -229,7 +331,8 @@ One convolution might have several implementations, and you might want to switch
 ```
   For an example, see `src/operator/cudnn_convolution-inl.h`.
 
-* **Backward dependency:** Let's look at two different operator signatures (we name all of the arguments for demonstration purposes):
+* **Backward dependency:** Let's look at two different operator signatures
+(we name all of the arguments for demonstration purposes):
 
 ```c++
            void FullyConnectedForward(TBlob weight, TBlob in_data, TBlob out_data);
@@ -238,7 +341,15 @@ One convolution might have several implementations, and you might want to switch
            void PoolingForward(TBlob in_data, TBlob out_data);
            void PoolingBackward(TBlob in_data, TBlob out_data, TBlob out_grad, TBlob in_grad);
 ```
-  Note that `out_data` in `FullyConnectedForward` is not used by `FullyConnectedBackward`, while `PoolingBackward` requires all of the arguments of `PoolingForward`. Therefore, for `FullyConnectedForward`, the `out_data` tensor once consumed could be safely freed because the backward function will not need it. This provides a chance for the system to collect some tensors as garbage as soon as possible. To specify this situation, we provide an interface:
+  Note that `out_data` in `FullyConnectedForward`
+  is not used by `FullyConnectedBackward`,
+  while `PoolingBackward` requires all of the arguments of `PoolingForward`.
+  Therefore, for `FullyConnectedForward`,
+  the `out_data` tensor once consumed could be safely freed
+  because the backward function will not need it.
+  This provides a chance for the system to collect some tensors
+  as garbage as soon as possible.
+  To specify this situation, we provide an interface:
 
 ```c++
           virtual std::vector<int> DeclareBackwardDependency(
@@ -246,7 +357,10 @@ One convolution might have several implementations, and you might want to switch
                const std::vector<int> &in_data,
                const std::vector<int> &out_data) const;
 ```
-  The `int` element of the argument vector is an ID to distinguish different arrays. Let's see how this interface specifies different dependencies for `FullyConnected` and `Pooling`:
+  The `int` element of the argument vector is an ID
+  to distinguish different arrays.
+  Let's see how this interface specifies different dependencies
+  for `FullyConnected` and `Pooling`:
 
  ```c++
            std::vector<int> FullyConnectedProperty::DeclareBackwardDependency(
@@ -263,7 +377,11 @@ One convolution might have several implementations, and you might want to switch
            }
 ```
 
-* **In place Option:** To further save the cost of memory allocation, you can use in-place updates. They are appropriate for element-wise operations when the input tensor and output tensor have the same shape. You specify and in-place update with the following interface:
+* **In place Option:** To further save the cost of memory allocation,
+you can use in-place updates.
+They are appropriate for element-wise operations
+when the input tensor and output tensor have the same shape.
+You specify and in-place update with the following interface:
 
 ```c++
            virtual std::vector<std::pair<int, void*>>    ElewiseOpProperty::ForwardInplaceOption(
@@ -329,7 +447,11 @@ For example:
 ```
 
 #### Parametrize Operator
-When implementing a convolution operator, you need to know the kernel size, the stride size, padding size, and so on. These parameters should be passed to the operator before any `Forward` or `Backward` interface is called. To do so, you could define a `ConvolutionParam` structure, as follows:
+When implementing a convolution operator, you need to know the kernel size,
+the stride size, padding size, and so on.
+These parameters should be passed to the operator
+before any `Forward` or `Backward` interface is called.
+To do so, you could define a `ConvolutionParam` structure, as follows:
 
 ```c++
     #include <dmlc/parameter.h>
@@ -364,7 +486,7 @@ Put it in `ConvolutionOpProperty`, and pass it to the operator class during cons
 ```
 
 #### Register the Operator Property Class and the Parameter Class to MXNet
-Use following macros to register the parameter structure and the operator property class to MXNet:
+Use the following macros to register the parameter structure and the operator property class to MXNet:
 
 ```c++
     DMLC_REGISTER_PARAMETER(ConvolutionParam);
@@ -388,41 +510,58 @@ We've almost covered the entire interface required to define a new operator. Let
 * Register the `OperatorProperty` class and the parameter class.
 
 ## Unifying the NDArray Operator and Symbolic Operator
-NDArray operations are similar to symbolic operations, except that sometimes you
-can't write in place to the operands without a complete dependency graph. However, the
-logic underlying NDArray and symbolic operations are almost identical. *SimpleOp*, a new unified operator API, unifies different
-invoking processes and returns to the fundamental elements of operators. Because most mathematical operators attend to one or two
-operands, and more operands make dependency-related optimization useful, the unified operator
-is specifically designed for unary and binary operations.
+NDArray operations are similar to symbolic operations,
+except that sometimes you can't write in place to the operands
+without a complete dependency graph.
+However, the logic underlying NDArray and symbolic operations are almost identical.
+*SimpleOp*, a new unified operator API,
+unifies different invoking processes
+and returns to the fundamental elements of operators.
+Because most mathematical operators attend to one or two operands,
+and more operands make dependency-related optimization useful,
+the unified operator is specifically designed for unary and binary operations.
 
-Consider the elements of an operation. Ideally, you need only functions and derivatives to  
-describe an operation. Let's restrict that to the space of unary and binary operations. How
-do we classify all operations to maximize the possibility of in-place write optimization? Note
-that you can separate functions by the number of operands. Derivatives are a bit more
-complex. To construct a dependency graph, you need to know whether output value, input data, or neither are needed alongside head gradient. Gradient functions in the unified API are  
-differentiated by the types of operands it takes for calculation.
+Consider the elements of an operation.
+Ideally, you need only functions and derivatives
+to describe an operation.
+Let's restrict that to the space of unary and binary operations.
+How do we classify all operations to maximize the possibility
+of in-place write optimization?
+Note that you can separate functions by the number of operands.
+Derivatives are a bit more complex.
+To construct a dependency graph, you need to know whether output value,
+input data, or neither are needed alongside head gradient.
+Gradient functions in the unified API are differentiated
+by the types of operands it takes for calculation.
 
-Before you learn more about the SimpleOp interface, we recommend that you review the [mshadow
-library guide](https://github.com/dmlc/mshadow/tree/master/guide) because  calculations
-will be done in the `mshadow::TBlob` structure.
+Before you learn more about the SimpleOp interface,
+ we recommend that you review the
+ [mshadow library guide](https://github.com/dmlc/mshadow/tree/master/guide)
+ because  calculations will be done in the `mshadow::TBlob` structure.
 
-In the following example, we'll create an operator functioning as a smooth l1 loss, which is a mixture
-of l1 loss and l2 loss. The loss itself can be written as:
+In the following example, we'll create an operator
+functioning as a smooth l1 loss,
+which is a mixture of l1 loss and l2 loss. The loss itself can be written as:
 
 ```
     loss = outside_weight .* f(inside_weight .* (data - label))
-    grad = outside_weight .* inside_weight .* f'(inside_weight .* (data -    label))
+    grad = outside_weight .* inside_weight .* f'(inside_weight .* (data - label))
 ```
  `.*` stands for element-wise multiplication, and `f`, `f'` is the smooth l1 loss function,
-which we are assuming is in `mshadow` for now. At first glance, it's impossible to implement
-this particular loss as a unary or binary operator. But we have automatic differentiation in symbolic execution. That simplifies the loss to `f` and `f'` directly. This
-loss is no more complex than a `sin` or an `abs` function, and can certainly be implemented as a
-unary operator.
+which we are assuming is in `mshadow` for now.
+At first glance, it's impossible to implement
+this particular loss as a unary or binary operator.
+But we have automatic differentiation in symbolic execution.
+That simplifies the loss to `f` and `f'` directly.
+This loss is no more complex than a `sin` or an `abs` function,
+and can certainly be implemented as a unary operator.
 
 ## SimpleOp: The Unified Operator API
 ### Define Shapes
-The `mshadow` library requires explicit memory allocation. As a consequence, all data shapes
-must be provided before any calculation occurs. Before we proceed with defining functions and gradient,
+The `mshadow` library requires explicit memory allocation.
+As a consequence, all data shapes
+must be provided before any calculation occurs.
+ Before we proceed with defining functions and gradient,
 let's check input data shape consistency and provide output shape.
 
 ```cpp
@@ -564,9 +703,11 @@ are doubled.
       }
   ```
 
-In our smooth l1 loss example, note that it's an `f'(x)`, which utilizes input for the gradient calculation,
-so the `UnaryGradFunctionT2` is suitable. To enable the chain rule of the gradient, we also need to multiply
-`out_grad` from the top to the result of `in_grad`.
+In our smooth l1 loss example, note that it's an `f'(x)`,
+which utilizes input for the gradient calculation,
+so the `UnaryGradFunctionT2` is suitable.
+To enable the chain rule of the gradient,
+we also need to multiply `out_grad` from the top to the result of `in_grad`.
 
 ```cpp
     template<typename xpu>
@@ -682,7 +823,7 @@ in the registration process, we use `set_enable_scalar(true)`, and use `env.scal
 declarations.
 
 ### Crafting a Tensor Operation
-Because computation utilizes the `mshadow` library and we sometimes don't have functions readily available, we 
+Because computation utilizes the `mshadow` library and we sometimes don't have functions readily available, we
 can craft tensor operations in operator implementations. If you define such functions as element-wise, you
 can implement them as a `mxnet::op::mshadow_op`. `src/operator/mshadow_op.h` that contains a lot of `mshadow_op`,
 for example. `mshadow_op` are expression mappers. They deal with the scalar case of desired functions. For details, see
@@ -714,102 +855,3 @@ The gradient, which can be found in `src/operator/smooth_l1_unary-inl.h`, is sim
 ### Beyond Two Operands
 The new unified API is designed to fulfill the fundamentals of an operation. For operators with more than two inputs,
 more than one output, or that need more features, see the original [Operator API](http://mxnet.io/architecture/overview.html#operators-in-mxnet).
-
-## KVStore: Multiple Devices and Multiple Computers
-
-MXNet uses a two-level *parameter server* for data synchronization.
-
-<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/multi-node/ps_arch.png width=400/>
-
-- On the first layer, data are synchronized over multiple devices within a
-  single worker machine. A device could be a GPU card, CPU card, or other computational
-  unit. We often use the sequential consistency model, also known as BSP, on this
-  level.
-
-- On the second layer, data are synchronized over multiple workers by way of servers. We can use either a sequential consistency model for guaranteed
-  convergence or a (partial)-asynchronous model for better system performance.
-
-### KVStore
-
-MXNet implemented the two-level parameter server in class *KVStore*. We
-currently provide the following three types. Given the batch size *b*.
-
-```eval_rst
-    ============  ======== ======== ============== ============== =========
-    kvstore type  #devices #workers #ex per device #ex per update max delayN
-    `dist_sync`   *k*       *n*       *b / k*       *b × n*       *0*
-    `dist_async`  *k*       *n*       *b / k*       *b*           inf
-    ============  ======== ======== ============== ============== =========
-```
-
-The number of devices *k* used on a worker could vary for different
-workers.
-
-- **Number examples per update**: For each update, the number of examples used to
-  calculate the averaged gradients. Often, the larger, the slower the convergence.
-- **Number examples per device**: The number of examples batched to one device
-  each time. Often, the larger, the better the performance.
-- **Max delay** : The maximum delay of the weight for a worker. Given a worker,
-  a delay *d* for weight *w* means that when this worker uses *w* (to calculate the
-  gradient), *w* has been already updated by *d* times  in some other places. A
-  larger delay often improves the performance, but can slow
-  convergence.
-
-### Multiple Devices on a Single Computer
-
-KV store `local` synchronizes data over multiple devices on a single computer.
-It produces the same results (e.g., model accuracy) as when running a single device. But
-compared to the latter, assume there are *k* devices, and that each device
-processes only *1 / k* examples each time (and consumes *1 / k* of device memory). We
-often increase the batch size *b* for better system performance.
-
-When you use `local`, the system automatically chooses one of the following
-three types. They differ on where to average
-the gradients over all devices, and where to update the weight.
-
-```eval_rst
-    =======================  ================   ==============
-     kvstore type            average gradient   perform update
-    =======================  ================   ==============
-    `local_update_cpu`       CPU                 CPU
-    `local_allreduce_cpu`    CPU                 all devices
-    `local_allreduce_device` a device            all devices
-    =======================  ================   ==============
-```
-
-They produce (almost) the same results, but can vary on speed.
-
-- `local_update_cpu`, gradients are first copied to main memory, averaged on the CPU,
-  and then they update the weight on the CPU. This is suitable when the average size of
-  weights isn't large and there are a large number of weights. Example: the
-  Google Inception network.
-
-- `local_allreduce_cpu` is similar to `local_update_cpu`, except that the
-  averaged gradients are copied back to the devices, and then weights are
-  updated on devices. When weight size is large, it's faster than the first option; you
-  can use the device to accelerate computation (but you increase the workload
-  by *k* times). Example: AlexNet on ImageNet.
-
-- `local_allreduce_device` is similar to `local_allreduce_cpu` except that the
-  gradients are averaged on a chosen device. It might take advantage of device-to-device communication, and might accelerate averaging. When the gradients are huge, it's faster than the second option, but it requires more
-  device memory.
-
-### Multiple Computers
-
-Both `dist_async` and `dist_sync` can handle using  multiple computers. But they differ in both semantics and performance.
-
-- `dist_sync`: The gradients are first averaged on the servers, and then sent back to workers for updating weight. If you treat a computer as a device, it's similar to `local` and
-  `update_on_kvstore=false`.  If you reduce the batch size to *b / n*, it guarantees
-  almost identical convergence as the single computer, single device scenario. However, it requires synchronization
-  between all workers, and, therefore, might affect system performance.
-
-- `dist_async`: The gradient is sent to the servers, and the weight is updated
-  there. The weights that a worker has might be stale. This loose data consistency
-  model reduces computer synchronization cost and, therefore, could improve
-  system performance. However, it might affect convergence speed.
-
-## Next Steps
-
-* [Analogy to other DL systems](http://mxnet.io/architecture/analogy.html)
-* [How to read MXNet code](http://mxnet.io/architecture/read_code.html)
-* [Develop and hack MXNet](http://mxnet.io/how_to/develop_and_hack.html)

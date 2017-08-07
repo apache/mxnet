@@ -6,6 +6,19 @@ use AI::MXNet::Types;
 use AI::MXNet::Function::Parameters;
 use constant devtype2str => { 1 => 'cpu', 2 => 'gpu', 3 => 'cpu_pinned' };
 use constant devstr2type => { cpu => 1, gpu => 2, cpu_pinned => 3 };
+around BUILDARGS => sub {
+    my $orig  = shift;
+    my $class = shift;
+    return $class->$orig(device_type => $_[0])
+        if @_ == 1 and $_[0] =~ /^(?:cpu|gpu|cpu_pinned)$/;
+    return $class->$orig(
+        device_type => $_[0]->device_type,
+        device_id   => $_[0]->device_id
+    ) if @_ == 1 and blessed $_[0];
+    return $class->$orig(device_type => $_[0], device_id => $_[0])
+        if @_ == 2 and $_[0] =~ /^(?:cpu|gpu|cpu_pinned)$/;
+    return $class->$orig(@_);
+};
 
 has 'device_type' => (
     is => 'rw',
@@ -13,7 +26,7 @@ has 'device_type' => (
     default => 'cpu'
 );
 
-has 'device_type_id' => (  
+has 'device_type_id' => (
     is => 'rw',
     isa => enum([1, 2, 3]),
     default => sub { devstr2type->{ shift->device_type } },
@@ -27,15 +40,24 @@ has 'device_id' => (
 );
 
 use overload
-    '==' => sub { 
+    '==' => sub {
         my ($self, $other) = @_;
         return 0 unless blessed($other) and $other->isa(__PACKAGE__);
         return "$self" eq "$other";
     },
     '""' => sub {
         my ($self) = @_;
-        return sprintf("%s(%s)", $self->device_type, $self->device_id); 
+        return sprintf("%s(%s)", $self->device_type, $self->device_id);
     };
+=head1 NAME
+
+    AI::MXNet::Context - A device context.
+=cut
+
+=head1 DESCRIPTION
+
+    This class governs the device context of AI::MXNet::NDArray objects.
+=cut
 
 =head2
 
@@ -48,16 +70,11 @@ use overload
 
     device_id : int (default=0)
         The device id of the device, needed for GPU
-
-    Note
-    ----
-    Context can also be used a way to change default context.
-
 =cut
 
 =head2 cpu
 
-    Return a CPU context.
+    Returns a CPU context.
 
     Parameters
     ----------
@@ -67,7 +84,7 @@ use overload
 
     Returns
     -------
-    context : Context
+    context : AI::MXNet::Context
         The corresponding CPU context.
 =cut
 
@@ -78,17 +95,15 @@ method cpu(Int $device_id=0)
 
 =head2 gpu
 
-    Return a GPU context.
+    Returns a GPU context.
 
     Parameters
     ----------
     device_id : int, optional
-        The device id of the device. device_id is not needed for CPU.
-        This is included to make interface compatible with GPU.
 
     Returns
     -------
-    context : Context
+    context : AI::MXNet::Context
         The corresponding GPU context.
 =cut
 
@@ -99,11 +114,11 @@ method gpu(Int $device_id=0)
 
 =head2 current_context
 
-    Return the current context.
+    Returns the current context.
 
     Returns
     -------
-    default_ctx : Context
+    $default_ctx : AI::MXNet::Context
 =cut
 
 method current_ctx()

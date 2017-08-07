@@ -5,8 +5,8 @@
  * \author Zhang Chen, Chuntao Hong
  */
 
-#ifndef MXNETCPP_EXECUTOR_HPP
-#define MXNETCPP_EXECUTOR_HPP
+#ifndef MXNET_CPP_EXECUTOR_HPP_
+#define MXNET_CPP_EXECUTOR_HPP_
 
 #include <vector>
 #include <map>
@@ -16,13 +16,13 @@
 
 namespace mxnet {
 namespace cpp {
-Executor::Executor(const Symbol &symbol, Context context,
-                   const std::vector<NDArray> &arg_arrays,
-                   const std::vector<NDArray> &grad_arrays,
-                   const std::vector<OpReqType> &grad_reqs,
-                   const std::vector<NDArray> &aux_arrays,
-                   const std::map<std::string, Context> &group_to_ctx,
-                   Executor *shared_exec) {
+inline Executor::Executor(const Symbol &symbol, Context context,
+                          const std::vector<NDArray> &arg_arrays,
+                          const std::vector<NDArray> &grad_arrays,
+                          const std::vector<OpReqType> &grad_reqs,
+                          const std::vector<NDArray> &aux_arrays,
+                          const std::map<std::string, Context> &group_to_ctx,
+                          Executor *shared_exec) {
   this->arg_arrays = arg_arrays;
   this->grad_arrays = grad_arrays;
   this->aux_arrays = aux_arrays;
@@ -73,20 +73,13 @@ Executor::Executor(const Symbol &symbol, Context context,
   }
 }
 
-std::string Executor::DebugStr() {
+inline std::string Executor::DebugStr() {
   const char *output;
   MXExecutorPrint(handle_, &output);
   return std::string(output);
 }
 
-void Executor::UpdateAll(Optimizer *opt, float lr, float wd,
-                         int arg_update_begin, int arg_update_end) {
-  arg_update_end = arg_update_end < 0 ? arg_arrays.size() - 1 : arg_update_end;
-  for (int i = arg_update_begin; i < arg_update_end; ++i) {
-    opt->Update(i, arg_arrays[i], grad_arrays[i], lr, wd);
-  }
-}
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // MXNETCPP_EXECUTOR_HPP
+#endif  // MXNET_CPP_EXECUTOR_HPP_

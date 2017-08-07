@@ -1,6 +1,6 @@
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments, too-many-statements
-"""Executor manager"""
+"""Executor manager."""
 from __future__ import absolute_import
 
 import logging
@@ -11,7 +11,6 @@ from . import ndarray as nd
 from .context import cpu
 from .io import DataDesc
 
-
 def _split_input_slice(batch_size, work_load_list):
     """Get input slice from the input shape.
 
@@ -21,7 +20,7 @@ def _split_input_slice(batch_size, work_load_list):
         The number of samples in a mini-batch.
     work_load_list : list of float or int, optional
         The list of work load for different devices,
-        in the same order as ctx
+        in the same order as `ctx`.
 
     Returns
     -------
@@ -31,7 +30,7 @@ def _split_input_slice(batch_size, work_load_list):
     Raises
     ------
     ValueError
-        If there are two many splits such that some slice can be empty.
+        In case of too many splits, leading to some empty slices.
     """
     total_work_load = sum(work_load_list)
     batch_num_list = [round(work_load * batch_size / total_work_load)
@@ -45,7 +44,7 @@ def _split_input_slice(batch_size, work_load_list):
         begin = int(min((end, batch_size)))
         end = int(min((begin + batch_num, batch_size)))
         if begin >= end:
-            raise ValueError('Too many slices such that some splits are empty')
+            raise ValueError('Too many slices. Some splits are empty.')
         slices.append(slice(begin, end))
     return slices
 
@@ -57,7 +56,7 @@ def _check_arguments(symbol):
     Parameters
     ----------
     symbol : Symbol
-        The network configuration
+        The network configuration.
     """
     arg_set = set()
     arg_names = symbol.list_arguments()
@@ -80,7 +79,7 @@ def _check_arguments(symbol):
         aux_set.add(name)
 
 def _load_general(data, targets):
-    """Load a list of arrays into a list of arrays specified by slices"""
+    """Load a list of arrays into a list of arrays specified by slices."""
     for d_src, d_targets in zip(data, targets):
         if isinstance(d_targets, nd.NDArray):
             d_src.copyto(d_targets)
@@ -92,11 +91,11 @@ def _load_general(data, targets):
                 d_src[slice_idx].copyto(d_dst)
 
 def _load_data(batch, targets):
-    """Load data into sliced arrays"""
+    """Load data into sliced arrays."""
     _load_general(batch.data, targets)
 
 def _load_label(batch, targets):
-    """Load label into sliced arrays"""
+    """Load label into sliced arrays."""
     _load_general(batch.label, targets)
 
 # pylint: disable=too-many-branches
@@ -197,7 +196,7 @@ class DataParallelExecutorGroup(object):
     param_names: list of str
         List of names of all trainable parameters.
     ctx: list of Context
-        List of devices for training (data parallelization)
+        List of devices for training (data parallelization).
     slices: list of int
         Describes how the data parallelization splits data into different devices.
     train_data: DataIter (or DataBatch)
@@ -256,22 +255,22 @@ class DataParallelExecutorGroup(object):
         self.slices = slices
 
     def load_data_batch(self, data_batch):
-        """ load data and labels into arrays """
+        """Load data and labels into arrays."""
         _load_data(data_batch, self.data_arrays)
         _load_label(data_batch, self.label_arrays)
 
     def forward(self, is_train=False):
-        """ Perform a forward pass on each executor """
+        """Perform a forward pass on each executor."""
         for texec in self.train_execs:
             texec.forward(is_train=is_train)
 
     def backward(self):
-        """ Perform a backward pass on each executor """
+        """Perform a backward pass on each executor."""
         for texec in self.train_execs:
             texec.backward()
 
     def update_metric(self, metric, labels):
-        """ Update evaluation metric with label and current outputs """
+        """Update evaluation metric with label and current outputs."""
         for texec, islice in zip(self.train_execs, self.slices):
             labels_slice = [label[islice] for label in labels]
             metric.update(labels_slice, texec.outputs)
@@ -282,9 +281,9 @@ class DataParallelExecutorManager(object):
     Parameters
     ----------
     symbol : Symbol
-        output symbol
+        Output symbol.
     ctx : list of Context
-        devices to run on
+        Devices to run on.
     param_names: list of str
         Name of all trainable parameters of the network.
     arg_names: list of str
@@ -295,10 +294,10 @@ class DataParallelExecutorManager(object):
         Training data iterator.
     work_load_list : list of float or int, optional
         The list of work load for different devices,
-        in the same order as ctx
+        in the same order as ctx.
     logger : logging logger
         When not specified, default logger will be used.
-    sym_gen : a function that generate new Symbols depending on different
+    sym_gen : A function that generate new Symbols depending on different
         input shapes. Used only for bucketing.
     """
     def __init__(self, symbol, ctx, train_data,
@@ -334,7 +333,7 @@ class DataParallelExecutorManager(object):
 
 
     def install_monitor(self, monitor):
-        """ Install monitor on all executors """
+        """Install monitor on all executors."""
         if self.sym_gen is not None:
             raise NotImplementedError("Monitoring is not implemented for bucketing")
 
@@ -342,28 +341,28 @@ class DataParallelExecutorManager(object):
             monitor.install(train_exec)
 
     def set_params(self, arg_params, aux_params):
-        """ set parameter and aux values
+        """Set parameter and aux values.
 
         Parameters
         ----------
         arg_params : list of NDArray
-            source parameter arrays
+            Source parameter arrays
         aux_params : list of NDArray
-            source aux arrays
+            Source aux arrays.
         """
 
         for texec in self.execgrp.train_execs:
             texec.copy_params_from(arg_params, aux_params)
 
     def copy_to(self, arg_params, aux_params):
-        """ Copy data from each executor to `arg_params` and `aux_params`
+        """ Copy data from each executor to ```arg_params`` and ``aux_params``.
 
         Parameters
         ----------
         arg_params : list of NDArray
-            target parameter arrays
+            Target parameter arrays.
         aux_params : list of NDArray
-            target aux arrays
+            Target aux arrays.
 
         Notes
         -----
@@ -378,23 +377,23 @@ class DataParallelExecutorManager(object):
 
     @property
     def param_arrays(self):
-        """shared parameter arrays"""
+        """Shared parameter arrays."""
         # param arrays should be shared by all executor groups
         return self.execgrp.param_arrays
     @property
     def grad_arrays(self):
-        """shared gradient arrays"""
+        """Shared gradient arrays."""
         # grad arrays should be shared by all executor groups
         return self.execgrp.grad_arrays
 
     @property
     def aux_arrays(self):
-        """shared aux states"""
+        """Shared aux states."""
         # aux arrays are also shared by all executor groups
         return self.execgrp.aux_arrays
 
     def load_data_batch(self, data_batch):
-        """ load data and labels into arrays """
+        """Load data and labels into arrays."""
         if self.sym_gen is not None:
             key = data_batch.bucket_key
             if key not in self.execgrp_bucket:
@@ -413,13 +412,13 @@ class DataParallelExecutorManager(object):
         self.curr_execgrp.load_data_batch(data_batch)
 
     def forward(self, is_train=False):
-        """run forward on the current executor"""
+        """Run forward on the current executor."""
         self.curr_execgrp.forward(is_train=is_train)
 
     def backward(self):
-        """run backward on the current executor"""
+        """Run backward on the current executor."""
         self.curr_execgrp.backward()
 
     def update_metric(self, metric, labels):
-        """update metric with the current executor"""
+        """Update metric with the current executor."""
         self.curr_execgrp.update_metric(metric, labels)

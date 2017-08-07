@@ -1,18 +1,21 @@
-# coding: utf-8
 """Tools for testing."""
-# pylint: disable=invalid-name, no-member, too-many-arguments, too-many-locals, too-many-branches, too-many-statements, broad-except, line-too-long, unused-import
+# pylint: disable=too-many-lines
 from __future__ import absolute_import, print_function, division
 import time
+import gzip
+import struct
 import traceback
 import numbers
 import subprocess
+import sys
 import os
 import errno
 import logging
+from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
 import mxnet as mx
-from .context import cpu, gpu, Context
+from .context import Context
 from .ndarray import array
 from .symbol import Symbol
 try:
@@ -32,7 +35,7 @@ def default_context():
 
 
 def set_default_context(ctx):
-    """Set default ctx"""
+    """Set default context."""
     Context.default_ctx = ctx
 
 
@@ -66,21 +69,21 @@ def random_arrays(*shapes):
 
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
-    """Compatible reduce for old version numpy
+    """Compatible reduce for old version of NumPy.
 
     Parameters
     ----------
     dat : np.ndarray
-        Same as Numpy
+        Same as NumPy.
 
     axis : None or int or list-like
-        Same as Numpy
+        Same as NumPy.
 
     keepdims : bool
-        Same as Numpy
+        Same as NumPy.
 
     numpy_reduce_func : function
-        Numpy reducing function like `np.sum` or `np.max`
+        A NumPy reducing function like ``np.sum`` or ``np.max``.
     """
     if isinstance(axis, int):
         axis = [axis]
@@ -98,7 +101,7 @@ def np_reduce(dat, axis, keepdims, numpy_reduce_func):
 
 
 def find_max_violation(a, b, rtol=None, atol=None):
-    """find location of maximum violation"""
+    """Finds and returns the location of maximum violation."""
     rtol = get_rtol(rtol)
     atol = get_atol(atol)
     diff = np.abs(a-b)
@@ -110,7 +113,7 @@ def find_max_violation(a, b, rtol=None, atol=None):
 
 
 def same(a, b):
-    """Test if two numpy arrays are the same
+    """Test if two NumPy arrays are the same.
 
     Parameters
     ----------
@@ -133,7 +136,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b')):
     a : np.ndarray
     b : np.ndarray
     threshold : None or float
-        The checking threshold. Default threshold will be used if set to None
+        The checking threshold. Default threshold will be used if set to ``None``.
     """
     rtol = get_rtol(rtol)
     atol = get_atol(atol)
@@ -152,7 +155,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b')):
 
 
 def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
-    """Test that two numpy arrays are almost equal (ignoring NaN in either array).
+    """Test that two NumPy arrays are almost equal (ignoring NaN in either array).
     Combines a relative and absolute measure of approximate eqality.
     If either the relative or absolute check passes, the arrays are considered equal.
     Including an absolute check resolves issues with the relative check where all
@@ -163,9 +166,9 @@ def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
     a : np.ndarray
     b : np.ndarray
     rtol : None or float
-        The relative threshold. Default threshold will be used if set to None
+        The relative threshold. Default threshold will be used if set to ``None``.
     atol : None or float
-        The absolute threshold. Default threshold will be used if set to None
+        The absolute threshold. Default threshold will be used if set to ``None``.
     """
     a = np.copy(a)
     b = np.copy(b)
@@ -176,7 +179,7 @@ def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
     return almost_equal(a, b, rtol, atol)
 
 def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b')):
-    """Test that two numpy arrays are almost equal (ignoring NaN in either array).
+    """Test that two NumPy arrays are almost equal (ignoring NaN in either array).
     Combines a relative and absolute measure of approximate eqality.
     If either the relative or absolute check passes, the arrays are considered equal.
     Including an absolute check resolves issues with the relative check where all
@@ -187,9 +190,9 @@ def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b'))
     a : np.ndarray
     b : np.ndarray
     rtol : None or float
-        The relative threshold. Default threshold will be used if set to None
+        The relative threshold. Default threshold will be used if set to ``None``.
     atol : None or float
-        The absolute threshold. Default threshold will be used if set to None
+        The absolute threshold. Default threshold will be used if set to ``None``.
     """
     a = np.copy(a)
     b = np.copy(b)
@@ -201,12 +204,12 @@ def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b'))
 
 
 def retry(n):
-    """Retry n times before failing for stochastic test cases"""
+    """Retry n times before failing for stochastic test cases."""
     assert n > 0
     def decorate(f):
-        """Decorate a test case"""
+        """Decorate a test case."""
         def wrapper(*args, **kwargs):
-            """Wrapper for tests function"""
+            """Wrapper for tests function."""
             for _ in range(n):
                 try:
                     f(*args, **kwargs)
@@ -222,24 +225,23 @@ def retry(n):
 def simple_forward(sym, ctx=None, is_train=False, **inputs):
     """A simple forward function for a symbol.
 
-    Primarily used in doctest to conveniently test the function
-    of a symbol. Takes numpy array as inputs and outputs are
-    also converted to numpy arrays.
+    Primarily used in doctest to test the functionality of a symbol.
+    Takes NumPy arrays as inputs and outputs are also converted to NumPy arrays.
 
     Parameters
     ----------
     ctx : Context
-        If None, will take the default context.
+        If ``None``, will take the default context.
     inputs : keyword arguments
-        Mapping each input name to a numpy array.
+        Mapping each input name to a NumPy array.
 
     Returns
     -------
     The result as a numpy array. Multiple results will
-    be returned as a list of numpy arrays.
+    be returned as a list of NumPy arrays.
     """
     ctx = ctx or default_context()
-    inputs = {k: array(v) for k, v in inputs.iteritems()}
+    inputs = {k: array(v) for k, v in inputs.items()}
     exe = sym.bind(ctx, args=inputs)
     exe.forward(is_train=is_train)
     outputs = [x.asnumpy() for x in exe.outputs]
@@ -249,16 +251,45 @@ def simple_forward(sym, ctx=None, is_train=False, **inputs):
 
 
 def _parse_location(sym, location, ctx):
-    """Parse the given location to a dictionary
+    """Parses the given location to a dictionary.
+
+    Arguments of the provided op `sym` are used as dictionary keys
+    and elements of `location` are used as values.
 
     Parameters
     ----------
     sym : Symbol
-    location : None or list of np.ndarray or dict of str to np.ndarray
+        Symbol containing op
+    location : list or tuple or dict
+        Argument values location
+
+        - if type is list or tuple of `np.ndarray`
+            inner elements are arrays correspoding to
+            ``sym.list_arguments()``.
+        - if type is dict of str -> `np.ndarray`
+            maps the name of arguments to the corresponding `np.ndarray`.
+        *In either case, value of all the arguments must be provided.*
+    ctx : Context
+        Device context.
 
     Returns
     -------
-    dict of str to np.ndarray
+    dict
+        Dictionary with `sym` arguments as keys and `location` elements as
+        values.
+
+    Examples
+    -------
+    >>> a = mx.symbol.Variable('a')
+    >>> b = mx.symbol.Variable('b')
+    >>> l1 = np.ndarray([2,3])
+    >>> l2 = np.ndarray([3,4])
+    >>> _parse_location(a * b, [l1, l2], None)
+    {'a': <NDArray 2x3 @cpu(0)>, 'b': <NDArray 3x4 @cpu(0)>}
+    >>> _parse_location(a * b, {'a': l1, 'b': l2}, None)
+    {'a': <NDArray 2x3 @cpu(0)>, 'b': <NDArray 3x4 @cpu(0)>}
+    >>> _parse_location(a * b, {'a': l1}, None)
+    ValueError: Symbol arguments and keys of the given location do not match.
     """
     assert isinstance(location, (dict, list, tuple))
     if isinstance(location, dict):
@@ -273,16 +304,46 @@ def _parse_location(sym, location, ctx):
 
 
 def _parse_aux_states(sym, aux_states, ctx):
-    """
+    """Parses the given auxiliary states to a dictionary.
+
+    Auxiliary states of the provided op `sym` are used as dictionary
+    keys and elements of `aux_states` are used as values.
 
     Parameters
     ----------
     sym : Symbol
-    aux_states : None or list of np.ndarray or dict of str to np.ndarray
+        Symbol containing op
+    aux_states : None or list or dict
+        Aux states
+
+        - if type is list or tuple of `np.ndarray`
+            inner elements are arrays correspoding to
+            ``sym.list_auxiliary_states()``.
+        - if type is dict of str -> `np.ndarray`
+            maps the name of arguments to the corresponding `np.ndarray`.
+        *In either case, all aux states of `sym` must be provided.*
 
     Returns
     -------
-    dict of str to np.ndarray
+    dict
+        Dictionary with `sym` aux states as keys and `aux_states` elements
+        as values.
+
+    Examples
+    -------
+    >>> data = mx.symbol.Variable('data')
+    >>> weight = mx.sym.Variable(name='fc1_weight')
+    >>> fc1 = mx.symbol.FullyConnected(data = data, weight=weight, name='fc1', num_hidden=128)
+    >>> fc2 = mx.symbol.BatchNorm(fc1, name='batchnorm0')
+    >>> mean_states = np.ones(3)
+    >>> var_states = np.ones(3)
+    >>> _parse_aux_states(fc2, [mean_states, var_states], None)
+    {'batchnorm0_moving_var': <NDArray 3 @cpu(0)>, 'batchnorm0_moving_mean': <NDArray 3 @cpu(0)>}
+    >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states,
+    ...                         'batchnorm0_moving_mean': var_states}, None)
+    {'batchnorm0_moving_var': <NDArray 3 @cpu(0)>, 'batchnorm0_moving_mean': <NDArray 3 @cpu(0)>}
+    >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
+    ValueError: Symbol aux_states names and given aux_states do not match.
     """
     if aux_states is not None:
         if isinstance(aux_states, dict):
@@ -306,7 +367,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
     Parameters
     ----------
     executor : Executor
-        exectutor that computes the forward pass
+        Executor that computes the forward pass.
     location : list of numpy.ndarray or dict of str to numpy.ndarray
         Argument values used as location to compute gradient
         Maps the name of arguments to the corresponding numpy.ndarray.
@@ -316,7 +377,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
         Maps the name of aux_states to the corresponding numpy.ndarray.
         Value of all the auxiliary arguments must be provided.
     eps : float, optional
-        epsilon for the finite-difference method
+        Epsilon for the finite-difference method.
     use_forward_train : bool, optional
         Whether to use `is_train=True` in testing.
     References
@@ -330,6 +391,8 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
     for k in location:
         location[k] = np.ascontiguousarray(location[k])
     for k, v in location.items():
+        if v.dtype.kind != 'f':
+            continue
         old_value = v.copy()
         for i in range(np.prod(v.shape)):
             # inplace update
@@ -370,22 +433,22 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         Argument values used as location to compute gradient
 
         - if type is list of numpy.ndarray
-            inner elements should have the same the same order as mxnet.sym.list_arguments().
+            inner elements should have the same order as mxnet.sym.list_arguments().
         - if type is dict of str -> numpy.ndarray
             maps the name of arguments to the corresponding numpy.ndarray.
         *In either case, value of all the arguments must be provided.*
     aux_states : ist or tuple or dict, optional
-        The auxiliary states required when generating the executor for the symbol
+        The auxiliary states required when generating the executor for the symbol.
     numeric_eps : float, optional
-        Delta for the finite difference method that approximates the gradient
+        Delta for the finite difference method that approximates the gradient.
     check_eps : float, optional
-        relative error eps used when comparing numeric grad to symbolic grad
+        relative error eps used when comparing numeric grad to symbolic grad.
     grad_nodes : None or list or tuple or dict, optional
         Names of the nodes to check gradient on
     use_forward_train : bool
-        Whether to use is_train=True when computing the finite-difference
+        Whether to use is_train=True when computing the finite-difference.
     ctx : Context, optional
-        Check the gradient computation on the specified device
+        Check the gradient computation on the specified device.
     References
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
@@ -471,7 +534,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
 
 def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
                            aux_states=None, ctx=None):
-    """Compare foward call to expected value.
+    """Compares a symbol's forward results with the expected ones.
+    Prints error messages if the forward results are not the same as the expected ones.
 
     Parameters
     ---------
@@ -481,25 +545,36 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
         The evaluation point
 
         - if type is list of np.ndarray
-            contain all the numpy arrays corresponding to `sym.list_arguments()`
+            Contains all the numpy arrays corresponding to `sym.list_arguments()`.
         - if type is dict of str to np.ndarray
-            contain the mapping between argument names and their values
+            Contains the mapping between argument names and their values.
     expected : list of np.ndarray or dict of str to np.ndarray
         The expected output value
 
         - if type is list of np.ndarray
-            contain arrays corresponding to exe.outputs
+            Contains arrays corresponding to exe.outputs.
         - if type is dict of str to np.ndarray
-            contain mapping between sym.list_output() and exe.outputs
+            Contains mapping between sym.list_output() and exe.outputs.
     check_eps : float, optional
-        relative error to check to
+        Relative error to check to.
     aux_states : list of np.ndarray of dict, optional
         - if type is list of np.ndarray
-            contain all the numpy arrays corresponding to sym.list_auxiliary_states
+            Contains all the NumPy arrays corresponding to sym.list_auxiliary_states
         - if type is dict of str to np.ndarray
-            contain the mapping between names of auxiliary states and their values
+            Contains the mapping between names of auxiliary states and their values.
     ctx : Context, optional
         running context
+
+    Example
+    -------
+    >>> shape = (2, 2)
+    >>> lhs = mx.symbol.Variable('lhs')
+    >>> rhs = mx.symbol.Variable('rhs')
+    >>> sym_dot = mx.symbol.dot(lhs, rhs)
+    >>> mat1 = np.array([[1, 2], [3, 4]])
+    >>> mat2 = np.array([[5, 6], [7, 8]])
+    >>> ret_expected = np.array([[19, 22], [43, 50]])
+    >>> check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
     """
     if ctx is None:
         ctx = default_context()
@@ -512,8 +587,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
-        if g:
-            g[:] = 0
+        g[:] = 0
 
     executor.forward(is_train=False)
     outputs = [x.asnumpy() for x in executor.outputs]
@@ -525,7 +599,8 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
 def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=None,
                             aux_states=None, grad_req='write', ctx=None):
-    """Compare backward call to expected value.
+    """Compares a symbol's backward results with the expected ones.
+    Prints error messages if the backward results are not the same as the expected results.
 
     Parameters
     ---------
@@ -535,30 +610,46 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         The evaluation point
 
         - if type is list of np.ndarray
-            contain all the numpy arrays corresponding to mxnet.sym.list_arguments
+            Contains all the NumPy arrays corresponding to ``mx.sym.list_arguments``.
         - if type is dict of str to np.ndarray
-            contain the mapping between argument names and their values
+            Contains the mapping between argument names and their values.
     out_grads : None or list of np.ndarray or dict of str to np.ndarray
-        numpy arrays corresponding to sym.outputs for incomming gradient
+        NumPys arrays corresponding to sym.outputs for incomming gradient.
 
         - if type is list of np.ndarray
-            contains arrays corresponding to exe.outputs
+            Contains arrays corresponding to ``exe.outputs``.
         - if type is dict of str to np.ndarray
             contains mapping between mxnet.sym.list_output() and Executor.outputs
     expected : list of np.ndarray or dict of str to np.ndarray
         expected gradient values
 
         - if type is list of np.ndarray
-            contains arrays corresponding to exe.grad_arrays
+            Contains arrays corresponding to exe.grad_arrays
         - if type is dict of str to np.ndarray
-            contains mapping between sym.list_arguments() and exe.outputs
+            Contains mapping between ``sym.list_arguments()`` and exe.outputs.
     check_eps: float, optional
-        relative error to check to
+        Relative error to check to.
     aux_states : list of np.ndarray or dict of str to np.ndarray
     grad_req : str or list of str or dict of str to str, optional
-        gradient requirements. 'write', 'add' or 'null'
+        Gradient requirements. 'write', 'add' or 'null'.
     ctx : Context, optional
-        running context
+        Running context.
+
+    Example
+    -------
+    >>> lhs = mx.symbol.Variable('lhs')
+    >>> rhs = mx.symbol.Variable('rhs')
+    >>> sym_add = mx.symbol.elemwise_add(lhs, rhs)
+    >>> mat1 = np.array([[1, 2], [3, 4]])
+    >>> mat2 = np.array([[5, 6], [7, 8]])
+    >>> grad1 = mx.nd.zeros(shape)
+    >>> grad2 = mx.nd.zeros(shape)
+    >>> exec_add = sym_add.bind(default_context(), args={'lhs': mat1, 'rhs': mat2},
+    ... args_grad={'lhs': grad1, 'rhs': grad2}, grad_req={'lhs': 'write', 'rhs': 'write'})
+    >>> exec_add.forward(is_train=True)
+    >>> ograd = mx.nd.ones(shape)
+    >>> grad_expected = ograd.copy().asnumpy()
+    >>> check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
     """
     if ctx is None:
         ctx = default_context()
@@ -601,27 +692,27 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
 
 def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
                 **kwargs):
-    """Check the running speed of a symbol
+    """Check the running speed of a symbol.
 
     Parameters
     ----------
     sym : Symbol
-        symbol to run the speed test
+        Symbol to run the speed test.
     location : none or dict of str to np.ndarray
-        location to evaluate the inner executor
+        Location to evaluate the inner executor.
     ctx : Context
-        running context
+        Running context.
     N : int, optional
-        repeat times
+        Repeat times.
     grad_req : None or str or list of str or dict of str to str, optional
-        gradient requirements
+        Gradient requirements.
     typ : str, optional
         "whole" or "forward"
 
         - "whole"
-            test the forward_backward speed
+            Test the forward_backward speed.
         - "forward"
-            only test the forward speed
+            Only test the forward speed.
     """
     if ctx is None:
         ctx = default_context()
@@ -681,13 +772,13 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
     Parameters
     ----------
     sym : Symbol or list of Symbols
-        symbol(s) to run the consistency test
+        Symbol(s) to run the consistency test.
     ctx_list : list
-        running context. See example for more detail.
+        Running context. See example for more detail.
     scale : float, optional
-        standard deviation of the inner normal distribution. Used in initialization
+        Standard deviation of the inner normal distribution. Used in initialization.
     grad_req : str or list of str or dict of str to str
-        gradient requirement.
+        Gradient requirement.
 
     Examples
     --------
@@ -776,7 +867,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             arr = arr.asnumpy()
             try:
                 assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-            except Exception as e:
+            except AssertionError as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
                 if raise_on_err:
@@ -802,7 +893,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 arr = arr.asnumpy()
                 try:
                     assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-                except Exception as e:
+                except AssertionError as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
                     if raise_on_err:
@@ -856,9 +947,6 @@ def download(url, fname=None, dirname=None, overwrite=False):
     """
     if fname is None:
         fname = url.split('/')[-1]
-    if not overwrite and os.path.exists(fname):
-        logging.info("%s exists, skip to downloada", fname)
-        return fname
 
     if dirname is None:
         dirname = os.path.dirname(fname)
@@ -873,6 +961,10 @@ def download(url, fname=None, dirname=None, overwrite=False):
                 if exc.errno != errno.EEXIST:
                     raise OSError('failed to create ' + dirname)
 
+    if not overwrite and os.path.exists(fname):
+        logging.info("%s exists, skipping download", fname)
+        return fname
+
     r = requests.get(url, stream=True)
     assert r.status_code == 200, "failed to open %s" % url
     with open(fname, 'wb') as f:
@@ -881,3 +973,95 @@ def download(url, fname=None, dirname=None, overwrite=False):
                 f.write(chunk)
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
+
+def get_mnist():
+    """Download and load the MNIST dataset
+
+    Returns
+    -------
+    dict
+        A dict containing the data
+    """
+    def read_data(label_url, image_url):
+        with gzip.open(mx.test_utils.download(label_url)) as flbl:
+            struct.unpack(">II", flbl.read(8))
+            label = np.fromstring(flbl.read(), dtype=np.int8)
+        with gzip.open(mx.test_utils.download(image_url), 'rb') as fimg:
+            _, _, rows, cols = struct.unpack(">IIII", fimg.read(16))
+            image = np.fromstring(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
+            image = image.reshape(image.shape[0], 1, 28, 28).astype(np.float32)/255
+        return (label, image)
+
+    # changed to mxnet.io for more stable hosting
+    # path = 'http://yann.lecun.com/exdb/mnist/'
+    path = 'http://data.mxnet.io/data/mnist/'
+    (train_lbl, train_img) = read_data(
+        path+'train-labels-idx1-ubyte.gz', path+'train-images-idx3-ubyte.gz')
+    (test_lbl, test_img) = read_data(
+        path+'t10k-labels-idx1-ubyte.gz', path+'t10k-images-idx3-ubyte.gz')
+    return {'train_data':train_img, 'train_label':train_lbl,
+            'test_data':test_img, 'test_label':test_lbl}
+
+def set_env_var(key, val, default_val=""):
+    """Set environment variable
+
+    Parameters
+    ----------
+
+    key : str
+        Env var to set
+    val : str
+        New value assigned to the env var
+    default_val : str, optional
+        Default value returned if the env var doesn't exist
+
+    Returns
+    -------
+    str
+        The value of env var before it is set to the new value
+    """
+    prev_val = os.environ.get(key, default_val)
+    os.environ[key] = val
+    return prev_val
+
+def same_array(array1, array2):
+    """Check whether two NDArrays sharing the same memory block
+
+    Parameters
+    ----------
+
+    array1 : NDArray
+        First NDArray to be checked
+    array2 : NDArray
+        Second NDArray to be checked
+
+    Returns
+    -------
+    bool
+        Whether two NDArrays share the same memory
+    """
+    array1[:] += 1
+    if not same(array1.asnumpy(), array2.asnumpy()):
+        array1[:] -= 1
+        return False
+    array1[:] -= 1
+    return same(array1.asnumpy(), array2.asnumpy())
+
+@contextmanager
+def discard_stderr():
+    """
+    Discards error output of a routine if invoked as:
+
+    with discard_stderr():
+        ...
+    """
+
+    try:
+        stderr_fileno = sys.stderr.fileno()
+        old_stderr = os.dup(stderr_fileno)
+        bit_bucket = open(os.devnull, 'w')
+        os.dup2(bit_bucket.fileno(), stderr_fileno)
+        yield
+    finally:
+        os.dup2(old_stderr, stderr_fileno)
+        bit_bucket.close()

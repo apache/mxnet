@@ -62,21 +62,23 @@ inline void MultiBoxTargetForward(const Tensor<cpu, 2, DType> &loc_target,
                            const float negative_mining_ratio,
                            const float negative_mining_thresh,
                            const int minimum_negative_samples,
-                           const std::vector<float> &variances) {
+                           const nnvm::Tuple<float> &variances) {
   const DType *p_anchor = anchors.dptr_;
   const int num_batches = labels.size(0);
   const int num_labels = labels.size(1);
+  const int label_width = labels.size(2);
   const int num_anchors = anchors.size(0);
+  CHECK_EQ(variances.ndim(), 4);
   for (int nbatch = 0; nbatch < num_batches; ++nbatch) {
-    const DType *p_label = labels.dptr_ + nbatch * num_labels * 5;
+    const DType *p_label = labels.dptr_ + nbatch * num_labels * label_width;
     const DType *p_overlaps = temp_space.dptr_ + nbatch * num_anchors * num_labels;
     int num_valid_gt = 0;
     for (int i = 0; i < num_labels; ++i) {
-      if (static_cast<float>(*(p_label + i * 5)) == -1.0f) {
-        CHECK_EQ(static_cast<float>(*(p_label + i * 5 + 1)), -1.0f);
-        CHECK_EQ(static_cast<float>(*(p_label + i * 5 + 2)), -1.0f);
-        CHECK_EQ(static_cast<float>(*(p_label + i * 5 + 3)), -1.0f);
-        CHECK_EQ(static_cast<float>(*(p_label + i * 5 + 4)), -1.0f);
+      if (static_cast<float>(*(p_label + i * label_width)) == -1.0f) {
+        CHECK_EQ(static_cast<float>(*(p_label + i * label_width + 1)), -1.0f);
+        CHECK_EQ(static_cast<float>(*(p_label + i * label_width + 2)), -1.0f);
+        CHECK_EQ(static_cast<float>(*(p_label + i * label_width + 3)), -1.0f);
+        CHECK_EQ(static_cast<float>(*(p_label + i * label_width + 4)), -1.0f);
         break;
       }
       ++num_valid_gt;
@@ -134,7 +136,7 @@ inline void MultiBoxTargetForward(const Tensor<cpu, 2, DType> &loc_target,
           }
           const DType *pp_overlaps = p_overlaps + j * num_labels;
           int best_gt = -1;
-          int max_iou = -1.0f;
+          float max_iou = -1.0f;
           for (int k = 0; k < num_valid_gt; ++k) {
             float iou = static_cast<float>(*(pp_overlaps + k));
             if (iou > max_iou) {
@@ -177,7 +179,7 @@ inline void MultiBoxTargetForward(const Tensor<cpu, 2, DType> &loc_target,
               // not yet calculated
               const DType *pp_overlaps = p_overlaps + j * num_labels;
               int best_gt = -1;
-              int max_iou = -1.0f;
+              float max_iou = -1.0f;
               for (int k = 0; k < num_valid_gt; ++k) {
                 float iou = static_cast<float>(*(pp_overlaps + k));
                 if (iou > max_iou) {
@@ -191,24 +193,23 @@ inline void MultiBoxTargetForward(const Tensor<cpu, 2, DType> &loc_target,
                 max_matches[j].first = max_iou;
                 max_matches[j].second = best_gt;
               }
-              if (max_matches[j].first < negative_mining_thresh &&
-                  max_matches[j].first >= 0) {
+            }
+            if (max_matches[j].first < negative_mining_thresh &&
+                anchor_flags[j] == -1) {
                 // calcuate class predictions
-                DType max_val = p_cls_preds[j];
-                DType max_val_pos = p_cls_preds[j + num_anchors];
-                for (int k = 2; k < num_classes; ++k) {
-                  DType tmp = p_cls_preds[j + num_anchors * k];
-                  if (tmp > max_val_pos) max_val_pos = tmp;
-                }
-                if (max_val_pos > max_val) max_val = max_val_pos;
-                DType sum = 0.f;
-                for (int k = 0; k < num_classes; ++k) {
-                  DType tmp = p_cls_preds[j + num_anchors * k];
-                  sum += std::exp(tmp - max_val);
-                }
-                max_val_pos = std::exp(max_val_pos - max_val) / sum;
-                temp.push_back(SortElemDescend(max_val_pos, j));
+              DType max_val = p_cls_preds[j];
+              for (int k = 1; k < num_classes; ++k) {
+                DType tmp = p_cls_preds[j + num_anchors * k];
+                if (tmp > max_val) max_val = tmp;
               }
+              DType sum = 0.f;
+              for (int k = 0; k < num_classes; ++k) {
+                DType tmp = p_cls_preds[j + num_anchors * k];
+                sum += std::exp(tmp - max_val);
+              }
+              DType prob = std::exp(p_cls_preds[j] - max_val) / sum;
+              // loss should be -log(x), but value does not matter, skip log
+              temp.push_back(SortElemDescend(-prob, j));
             }
           }  // end iterate anchors
 
@@ -236,14 +237,14 @@ inline void MultiBoxTargetForward(const Tensor<cpu, 2, DType> &loc_target,
           // positive sample
           CHECK_GE(max_matches[i].second, 0);
           // 0 reserved for background
-          *(p_cls_target + i) = *(p_label + 5 * max_matches[i].second) + 1;
+          *(p_cls_target + i) = *(p_label + label_width * max_matches[i].second) + 1;
           int offset = i * 4;
           *(p_loc_mask + offset) = 1;
           *(p_loc_mask + offset + 1) = 1;
           *(p_loc_mask + offset + 2) = 1;
           *(p_loc_mask + offset + 3) = 1;
           AssignLocTargets(p_anchor + i * 4,
-            p_label + 5 * max_matches[i].second + 1, p_loc_target + offset,
+            p_label + label_width * max_matches[i].second + 1, p_loc_target + offset,
             variances[0], variances[1], variances[2], variances[3]);
         } else if (anchor_flags[i] == 0) {
           // negative sample
@@ -283,9 +284,9 @@ Operator* MultiBoxTargetProp::CreateOperatorEx(Context ctx, std::vector<TShape> 
 DMLC_REGISTER_PARAMETER(MultiBoxTargetParam);
 MXNET_REGISTER_OP_PROPERTY(_contrib_MultiBoxTarget, MultiBoxTargetProp)
 .describe("Compute Multibox training targets")
-.add_argument("anchor", "Symbol", "Generated anchor boxes.")
-.add_argument("label", "Symbol", "Object detection labels.")
-.add_argument("cls_pred", "Symbol", "Class predictions.")
+.add_argument("anchor", "NDArray-or-Symbol", "Generated anchor boxes.")
+.add_argument("label", "NDArray-or-Symbol", "Object detection labels.")
+.add_argument("cls_pred", "NDArray-or-Symbol", "Class predictions.")
 .add_arguments(MultiBoxTargetParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

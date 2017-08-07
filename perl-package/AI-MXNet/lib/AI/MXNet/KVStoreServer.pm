@@ -8,9 +8,9 @@ use MIME::Base64;
 use Mouse;
 use AI::MXNet::Function::Parameters;
 
-=head1 DESCRIPTION
+=head1 NAME
 
-    The key-value store server
+    AI::MXNet::KVStoreServer - The key-value store server
 =cut
 
 =head2 new
@@ -52,15 +52,13 @@ method _controller()
 
 =head2 run
 
-        run the server, whose behavior is like
-
-
-        >>> while receive(x):
-        ...     if is_command x: controller(x)
-        ...     else if is_key_value x: updater(x)
+    run the server, whose behavior is like
+    >>> while receive(x):
+    ...     if is_command x: controller(x)
+    ...     else if is_key_value x: updater(x)
 =cut
 
-method run
+method run()
 {
     check_call(AI::MXNetCAPI::KVStoreRunServer($self->handle, $self->_controller));
 }

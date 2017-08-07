@@ -1,36 +1,82 @@
-### Descriptions
+### NNPACK for Multi-Core CPU Support in MXNet
+[NNPACK](https://github.com/Maratyszcza/NNPACK) is an acceleration package
+for neural network computations, which can run on x86-64, ARMv7, or ARM64 architecture CPUs.
+Using NNPACK, higher-level libraries like _MXNet_ can speed up
+the execution on multi-core CPU computers, including laptops and mobile devices.
 
-[NNPACK](https://github.com/Maratyszcza/NNPACK) is an acceleration package for neural network computations, which can run on x86-64, ARMv7, or ARM64 architecture cpus. it's very useful for us using NNPACK to speed up running speed when deploy the trained model on mobile device.
-
-MXNet(nnvm branch) has integrated NNPACK for forward propagation(only inference) in convolution/max-pooling/fully-connected, so you may consider using NNPACK now.
+_MXNet_ supports NNPACK for forward propagation (inference only) in convolution, max-pooling, and fully-connected layers.
+In this document, we give a high level overview of how to use NNPACK with _MXNet_.
 
 
 ### Conditions
-The underlying implementation of NNPACK utilize some other acceleration methods, such as [fft](https://arxiv.org/abs/1312.5851), [winograd](https://arxiv.org/abs/1509.09308), but these algorithms work better on some special `batch size`, `kernel size`, `stride` etc., so not all convolution/max-pooling/fully-connected can be powered by NNPACK. If some conditions are not met, it will change to the default implementation with MXNet automatically.  
+The underlying implementation of NNPACK utilizes several acceleration methods,
+including [fft](https://arxiv.org/abs/1312.5851) and [winograd](https://arxiv.org/abs/1509.09308).
+These algorithms work better on some special `batch size`, `kernel size`, and `stride` settings than on other,
+so depending on the context, not all convolution, max-pooling, or fully-connected layers can be powered by NNPACK.
+When favorable conditions for running NNPACKS are not met,
+_MXNet_ will fall back to the default implementation automatically.  
 
-nnpack only support Linux or OS X host system, that is to say, Windows is not supported at present.
-The following table will tell you which satisfaction will NNPACK work.
+NNPACK only supports Linux and OS X systems. Windows is not supported at present.
+The following table explains under which conditions NNPACK will work.
 
 | operation      | conditions |
 |:---------      |:---------- |
 |convolution     |2d convolution `and` no-bias=False `and` dilate=(1,1) `and` num_group=1 `and` batch-size = 1 or batch-size > 1 && stride = (1,1);|
 |pooling         | max-pooling `and` kernel=(2,2) `and` stride=(2,2) `and` pooling_convention=full    |
-|fully-connected| batch-size = 2^n |
+|fully-connected| without any restrictions |
 
 ### Build/Install NNPACK with MXNet
 
-Now, if the trained model meets some conditions of using NNPACK, you can build MXNet with NNPACK support. here is the steps for you:  
-* install NNPACK based on this [tutorials](https://github.com/Maratyszcza/NNPACK#building), that's to say you need ninja to build NNPACK. make sure add `--enable-shared` when running configure.py(i.e. `python configure.py --enable-shared`), because MXNet will link NNPACK dynamically.  
-* set lib path of NNPACK as the environment variable, such as `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$YOUR_NNPACK_INSTALL_PATH/lib`
-* add the include file of NNPACK and its third-party to  `ADD_CFLAGS` in config.mk, such as `ADD_CFLAGS = -I$(YOUR_NNPACK_INSTALL_PATH)/include -I$(YOUR_NNPACK_INSTALL_PATH)/pthreadpool/include`
-* set `USE_NNPACK = 1` in config.mk.
-* [build MXNet](http://mxnet.io/get_started/setup.html#overview).
+If the trained model meets some conditions of using NNPACK,
+you can build MXNet with NNPACK support.
+Follow these simple steps:  
+* Build NNPACK shared library with the following commands. _MXNet_ will link NNPACK dynamically.
+
+Note: The following NNPACK installation instructions have been tested on Ubuntu 14.04 and 16.04.
+
+```bash
+
+# Install Pip
+$ sudo apt-get update
+$ sudo apt-get install -y python-pip
+$ sudo pip install --upgrade pip
+
+# Install Peach
+$ git clone https://github.com/Maratyszcza/PeachPy.git
+$ cd PeachPy
+$ sudo pip install --upgrade -r requirements.txt
+$ python setup.py generate
+$ sudo pip install --upgrade .
+
+# Install Ninja Build System
+$ sudo apt-get install ninja-build
+$ pip install ninja-syntax
+
+# Build NNPack shared library
+$ cd ~
+$ git clone --recursive https://github.com/Maratyszcza/NNPACK.git
+$ cd NNPACK
+# Latest NNPACK do not support building NNPACK as shared library using --enable-shared flag
+# Reset to commit that supports it.
+$ git reset --hard 9c6747d7b80051b40e6f92d6828e2ed997529cd2
+$ git submodule init && git submodule update --recursive
+$ python ./configure.py --enable-shared
+$ ninja
+$ cd ~
+
+```
+
+* Set lib path of NNPACK as the environment variable, e.g. `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$YOUR_NNPACK_INSTALL_PATH/lib`
+* Add the include file of NNPACK and its third-party to  `ADD_CFLAGS` in config.mk, e.g. `ADD_CFLAGS = -I$(YOUR_NNPACK_INSTALL_PATH)/include/ -I$(YOUR_NNPACK_INSTALL_PATH)/third-party/pthreadpool/include/`
+* Set `USE_NNPACK = 1` in config.mk.
+* Build MXNet from source following the [install guide](http://mxnet.io/get_started/install.html).
 
 ### NNPACK Performance
 
-Though not all conv/pool/fc layer can make full use of NNPACK, it indeed can speed up some popular deep learning models such as Alexnet, VGG, Inception-bn.
+Though not all convolutional, pooling, and fully-connected layers can make full use of NNPACK,
+for some popular models it provides significant speedups. These include the most popular image recognition networks: Alexnet, VGG, and Inception-bn.
 
-here we use `example/image-classification/benchmark_score.py`(changed with  more range of batch-size) to benchmark it, cpu is e5-2670, MXNET_CPU_NNPACK_NTHREADS=4.
+To benchmark NNPACK, we use `example/image-classification/benchmark_score.py`(changed with  more range of batch-size). We use CPU e5-2670, MXNET_CPU_NNPACK_NTHREADS=4.
 
 build MXNet without NNPACK, the log is:
 ```
@@ -85,8 +131,8 @@ INFO:root:batch size 128, image/sec: 9.193653
 INFO:root:batch size 256, image/sec: 9.991472
 ```
 
-It shows that NNPACK will speed up about 2X~7X against the original MXNet cpu.
+The results show that NNPACK can confer a speedup of about 2X~7X as compared to the original _MXNet_ CPU implementation.
 
 ### Tips
 
-NNPACK aims to provide high-performance implementations of some layers for multi-core CPUs, so you can easily set the thread number by change environment value of `MXNET_CPU_NNPACK_NTHREADS`. but we found that the performance is not proportional to the number of threads, suggest use 4~8 threads when using NNPACK.
+NNPACK aims to provide high-performance implementations of some layers for multi-core CPUs, so you can easily set the thread number by changing the environmental variable `MXNET_CPU_NNPACK_NTHREADS`. However, we found that the performance is not proportional to the number of threads, and suggest using 4~8 threads when using NNPACK.

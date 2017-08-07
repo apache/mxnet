@@ -19,8 +19,11 @@ make -j$(nproc)
 echo "Installing Numpy..."
 sudo apt-get install python-numpy
 
-echo "Installing Python setuptools..."
+echo "Installing Python setuptools pip..."
 sudo apt-get install -y python-setuptools python-pip
+
+echo "Updating pip..."
+sudo pip install -U pip
 
 echo "Installing Python package for MXNet..."
 cd python; sudo python setup.py install

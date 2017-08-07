@@ -1,1 +1,1 @@
-"""Symbol namespace used to register internal functions"""
+"""Symbol namespace used to register internal functions."""

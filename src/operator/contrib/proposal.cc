@@ -279,7 +279,7 @@ class ProposalOp : public Operator{
                                    in_data[proposal::kClsProb].shape_[1] / 2,
                                    in_data[proposal::kClsProb].shape_[2],
                                    in_data[proposal::kClsProb].shape_[3]);
-    real_t* foreground_score_ptr = reinterpret_cast<real_t *>(in_data[proposal::kClsProb].dptr_)
+    real_t* foreground_score_ptr = in_data[proposal::kClsProb].dptr<real_t>()
                                     + scores_shape.Size();
     Tensor<cpu, 4> scores = Tensor<cpu, 4>(foreground_score_ptr, scores_shape);
     Tensor<cpu, 4> bbox_deltas = in_data[proposal::kBBoxPred].get<cpu, 4, real_t>(s);
@@ -326,9 +326,9 @@ class ProposalOp : public Operator{
     std::memcpy(workspace_proposals.dptr_, &anchors[0], sizeof(float) * anchors.size());
 
     // Enumerate all shifted anchors
-    for (index_t i = 0; i < num_anchors; ++i) {
-      for (index_t j = 0; j < height; ++j) {
-        for (index_t k = 0; k < width; ++k) {
+    for (index_t i = 0; i < static_cast<index_t>(num_anchors); ++i) {
+      for (index_t j = 0; j < static_cast<index_t>(height); ++j) {
+        for (index_t k = 0; k < static_cast<index_t>(width); ++k) {
           index_t index = j * (width * num_anchors) + k * (num_anchors) + i;
           workspace_proposals[index][0] = workspace_proposals[i][0] + k * param_.feature_stride;
           workspace_proposals[index][1] = workspace_proposals[i][1] + j * param_.feature_stride;
@@ -449,9 +449,9 @@ DMLC_REGISTER_PARAMETER(ProposalParam);
 
 MXNET_REGISTER_OP_PROPERTY(_contrib_Proposal, ProposalProp)
 .describe("Generate region proposals via RPN")
-.add_argument("cls_score", "Symbol", "Score of how likely proposal is object.")
-.add_argument("bbox_pred", "Symbol", "BBox Predicted deltas from anchors for proposals")
-.add_argument("im_info", "Symbol", "Image size and scale.")
+.add_argument("cls_score", "NDArray-or-Symbol", "Score of how likely proposal is object.")
+.add_argument("bbox_pred", "NDArray-or-Symbol", "BBox Predicted deltas from anchors for proposals")
+.add_argument("im_info", "NDArray-or-Symbol", "Image size and scale.")
 .add_arguments(ProposalParam::__FIELDS__());
 
 }  // namespace op

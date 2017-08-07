@@ -2,49 +2,21 @@
 
 A built version of document is available at http://mxnet.io
 
-## To build the docs with Docker
+To build the documents locally, we need to first install [docker](docker.com).
+Then use the following commands to clone and
+build the documents.
 
-The `Dockerfile` in this directory encapsulates all the dependencies needed
-to build the docs.  The default entry-point builds the docs and serves them
-through a simple HTTP server for previewing.
-
-```
-docker build -t mxnet/docs .
-docker run -it -p 8008:8008 mxnet/docs
-open http://localhost:8008/
+```bash
+git clone --recursive https://github.com/dmlc/mxnet
+cd mxnet && make docs
 ```
 
-### Faster iterative development
+The results will be available at `docs/_build/html/`.
 
-If you are working on the docs and want to rebuild them without creating a new
-docker image each time, you can do this with
+Note:
 
-```
-docker run -it -p 8008:8008 -v `pwd`:/opt/mxnet/docs mxnet/docs
-```
-
-which maps your current directory into the docker image to get any local
-changes.
-
-**NOTE:** Any changes to the API reference will not get rebuilt this way.
-The API reference docs are introspected from the built binaries, which
-in this Dockerfile are pulled from github/dmlc/master.  To work-around
-this, map a volume with your code changes into the container, and rebuild
-MXNet in the container before doing the doc build.  Or use the local
-build described below.
-
-## Local build
-
-To build the documentation without docker on your local machine, first
-install the required packages for Ubuntu 14.04.  These are approximately:
-
-```
-sudo apt-get install doxygen python-pip
-sudo pip install sphinx==1.3.5 CommonMark==0.5.4 breathe mock==1.0.1 recommonmark
-```
-
-(Refer to the Dockerfile for a more reliable description of the dependencies.)
-Once the MXNet binaries are built, and you have the dependencies installed,
-you can build the docs with:
-
-```make html```
+- If C++ codes have been changed, we suggest to remove the previous results to
+  trigger the rebuild for all pages, namely run `make clean_docs`.
+- If C++ codes are failed to build, run `make clean`
+- If CSS or javascript are changed, we often need to do a *force refresh* in the
+  browser to clear the cache.

@@ -62,8 +62,8 @@ class FileIter(DataIter):
             max_hw = max(img.shape[0], img.shape[1])
             min_hw = min(img.shape[0], img.shape[1])
             if min_hw > self.cut_off_size:
-                rand_start_max = round(np.random.uniform(0, max_hw - self.cut_off_size - 1))
-                rand_start_min = round(np.random.uniform(0, min_hw - self.cut_off_size - 1))
+                rand_start_max = int(np.random.uniform(0, max_hw - self.cut_off_size - 1))
+                rand_start_min = int(np.random.uniform(0, min_hw - self.cut_off_size - 1))
                 if img.shape[0] == max_hw :
                     img = img[rand_start_max : rand_start_max + self.cut_off_size, rand_start_min : rand_start_min + self.cut_off_size]
                     label = label[rand_start_max : rand_start_max + self.cut_off_size, rand_start_min : rand_start_min + self.cut_off_size]
@@ -71,7 +71,7 @@ class FileIter(DataIter):
                     img = img[rand_start_min : rand_start_min + self.cut_off_size, rand_start_max : rand_start_max + self.cut_off_size]
                     label = label[rand_start_min : rand_start_min + self.cut_off_size, rand_start_max : rand_start_max + self.cut_off_size]
             elif max_hw > self.cut_off_size:
-                rand_start = round(np.random.uniform(0, max_hw - min_hw - 1))
+                rand_start = int(np.random.uniform(0, max_hw - min_hw - 1))
                 if img.shape[0] == max_hw :
                     img = img[rand_start : rand_start + min_hw, :]
                     label = label[rand_start : rand_start + min_hw, :]

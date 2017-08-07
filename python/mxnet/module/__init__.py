@@ -1,5 +1,5 @@
-"""A module is like a FeedForward model. but we would like to make it
-easier to be composed. So it is more like the Torch modules.
+"""A module is like a FeedForward model. But we would like to make it
+easier to compose, similar to Torch modules.
 """
 
 from .base_module import BaseModule

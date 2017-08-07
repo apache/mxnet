@@ -2,7 +2,7 @@
  * Copyright (c) 2016 by Contributors
  * \file caffe_blob.cc
  * \brief Implementations of SetDataGradToBlob given various device/dimension
- * \author Haoran Wang 
+ * \author Haoran Wang
 */
 #include "caffe_blob.h"
 namespace mxnet {
@@ -17,7 +17,7 @@ void SetDataGradToBlob<mshadow::cpu, float>(caffeMemoryTypes memType,
   if (memType == Data)
     (*blob)->set_cpu_data(data_ptr);
   else
-    (*blob)->set_cpu_diff(data_ptr);
+    MXCAFFEBLOB(*blob, float)->set_cpu_diff(data_ptr);
 }
 
 template<>
@@ -28,7 +28,7 @@ void SetDataGradToBlob<mshadow::cpu, double>(caffeMemoryTypes memType,
   if (memType == Data)
     (*blob)->set_cpu_data(data_ptr);
   else
-    (*blob)->set_cpu_diff(data_ptr);
+    MXCAFFEBLOB(*blob, double)->set_cpu_diff(data_ptr);
 }
 
 template<>
@@ -39,7 +39,7 @@ void SetDataGradToBlob<mshadow::gpu, float>(caffeMemoryTypes memType,
   if (memType == Data)
     (*blob)->set_gpu_data(data_ptr);
   else
-    (*blob)->set_gpu_diff(data_ptr);
+    MXCAFFEBLOB(*blob, float)->set_gpu_diff(data_ptr);
 }
 
 template<>
@@ -50,7 +50,7 @@ void SetDataGradToBlob<mshadow::gpu, double>(caffeMemoryTypes memType,
   if (memType == Data)
     (*blob)->set_gpu_data(data_ptr);
   else
-    (*blob)->set_gpu_diff(data_ptr);
+    MXCAFFEBLOB(*blob, double)->set_gpu_diff(data_ptr);
 }
 
 TShape Vector2TShape(const std::vector<int> &vec_int) {

@@ -17,5 +17,12 @@ NNVM_REGISTER_OP(argmin)
 NNVM_REGISTER_OP(argmax_channel)
 .set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::maximum>);
 
+NNVM_REGISTER_OP(pick)
+.set_attr<FCompute>("FCompute<gpu>", PickOpForward<gpu>);
+
+
+NNVM_REGISTER_OP(_backward_pick)
+.set_attr<FCompute>("FCompute<gpu>", PickOpBackward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

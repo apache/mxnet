@@ -1,4 +1,4 @@
-CFLAGS += -I$(CAFFE_PATH)/include -I$(CAFFE_PATH)/build/src
+CFLAGS += -I$(CAFFE_PATH)/include -I$(CAFFE_PATH)/build/src -I$(CAFFE_PATH)/build/include
 LDFLAGS += -lprotobuf -lboost_system -lboost_thread -lboost_filesystem -lgflags -lglog -L$(CAFFE_PATH)/build/lib -lcaffe
 
 ifeq ($(USE_CUDNN), 1)
