@@ -213,7 +213,7 @@ inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 /*!
- * \brief Kernel of dot(csr, dns1) = dns2
+ * \brief CPU Kernel of dot(csr, dns1) = dns2
  * Parallelization by row blocks
  */
 struct DotCsrDnsDnsByRowBlocks {
@@ -222,12 +222,12 @@ struct DotCsrDnsDnsByRowBlocks {
    * \param i the i-th thread
    */
   template<typename DType, typename IType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* data_l, const IType* indptr_l,
+  MSHADOW_CINLINE static void Map(int i, DType* out, const DType* data_l, const IType* indptr_l,
                                   const CType* col_idx_l, const DType* data_r, const size_t seg_len,
                                   const size_t num_rows, const size_t num_cols) {
     const size_t seg_start = i * seg_len;
     if (seg_start >= num_rows) return;
-    const size_t seg_end = (seg_start+seg_len < num_rows? seg_start+seg_len : num_rows);
+    const size_t seg_end = std::min(seg_start + seg_len, num_rows);
     for (size_t j = seg_start; j < seg_end; ++j) {
       if (indptr_l[j] == indptr_l[j+1]) continue;
       const size_t offset_out = j * num_cols;
@@ -243,7 +243,7 @@ struct DotCsrDnsDnsByRowBlocks {
 };
 
 /*!
- * \brief Kernel of dot(csr.T(), dns1) = dns2
+ * \brief CPU Kernel of dot(csr.T(), dns1) = dns2
  * Parallelization by row blocks
  */
 struct DotCsrTransDnsDnsByRowBlocks {
@@ -252,7 +252,7 @@ struct DotCsrTransDnsDnsByRowBlocks {
    * \param i the i-th thread
    */
   template<typename DType, typename IType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* data_l, const IType* indptr_l,
+  MSHADOW_CINLINE static void Map(int i, DType* out, const DType* data_l, const IType* indptr_l,
                                   const CType* col_idx_l, const DType* data_r, const size_t seg_len,
                                   const size_t num_rows_l, const size_t num_rows,
                                   const size_t num_cols) {
@@ -276,11 +276,10 @@ struct DotCsrTransDnsDnsByRowBlocks {
 };
 
 /*!
- * \brief Kernel of dot(csr.T(), dns) = rsp
+ * \brief CPU Kernel of dot(csr.T(), dns) = rsp
  * Parallelization by row blocks.
- * This kernel fills up the row_idx array
- * of the rsp with 1 for nonzero rows and 0
- * for zero rows.
+ * This kernel fills up the row_idx array of the rsp 
+ * with 1 for nonzero rows and 0 for zero rows.
  * The matrix will be compacted after this kernel call.
  */
 struct DotCsrTransDnsRspByRowBlocks {
@@ -289,7 +288,7 @@ struct DotCsrTransDnsRspByRowBlocks {
    * \param i the i-th thread
    */
   template<typename DType, typename RType, typename IType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, RType* row_idx, const DType* data_l,
+  MSHADOW_CINLINE static void Map(int i, DType* out, RType* row_idx, const DType* data_l,
                                   const IType* indptr_l, const CType* col_idx_l,
                                   const DType* data_r, const size_t seg_len,
                                   const size_t num_rows_l, const size_t num_rows,
@@ -315,26 +314,26 @@ struct DotCsrTransDnsRspByRowBlocks {
 };
 
 /*!
- * \brief Kernel of dot(csr, rsp) = dns
+ * \brief CPU Kernel of dot(csr, rsp) = dns
  * Parallelization by row blocks
  */
 struct DotCsrRspDnsByRowBlocks {
   /*!
    * \brief
-   * \param i the i-th thread
-   * \param nnr_r storage_shape[0] of the rsp
-   * \param num_rows dns.shape[0]
-   * \param num_cols dns.shape[1]
+   * \param i         the i-th thread
+   * \param nnr_r     storage_shape[0] of the rsp
+   * \param num_rows  dns.shape[0]
+   * \param num_cols  dns.shape[1]
    */
   template<typename DType, typename IType, typename CType, typename RType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* data_l,
+  MSHADOW_CINLINE static void Map(int i, DType* out, const DType* data_l,
                                   const IType* indptr_l, const CType* col_idx_l,
                                   const DType* data_r, const RType* row_idx_r,
                                   const size_t nnr_r, const size_t num_rows,
                                   const size_t num_cols, const size_t seg_len) {
     const size_t seg_start = i * seg_len;
     if (seg_start >= num_rows) return;
-    const size_t seg_end = (seg_start+seg_len < num_rows? seg_start+seg_len : num_rows);
+    const size_t seg_end = std::min(seg_start + seg_len, num_rows);
     for (size_t j = seg_start; j < seg_end; ++j) {
       if (indptr_l[j] == indptr_l[j+1]) continue;
       const size_t offset_out = j * num_cols;
@@ -390,7 +389,7 @@ struct DotCsrTransRspRspByRowBlocks {
    * \param num_cols number of cols of out matrix
    */
   template<typename DType, typename IType, typename CType, typename RType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, RType* row_idx_out,
+  MSHADOW_CINLINE static void Map(int i, DType* out, RType* row_idx_out,
                                   const DType* data_l, const IType* indptr_l,
                                   const CType* col_idx_l, const DType* data_r,
                                   const RType* row_idx_r, const size_t num_rows_l,
