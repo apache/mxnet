@@ -26,7 +26,7 @@ from . import broadcast_sub, broadcast_div, broadcast_to, broadcast_equal, cast_
 from . import broadcast_greater, broadcast_greater_equal, broadcast_lesser, broadcast_lesser_equal
 from . import zeros_like, slice
 
-__all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP",                   \
+__all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",  \
            "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",   \
            "imdecode", "lesser", "lesser_equal", "maximum", "minimum", "moveaxis",           \
            "multiply", "negative", "not_equal", "onehot_encode", "power", "subtract",        \
