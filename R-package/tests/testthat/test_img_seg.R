@@ -116,7 +116,7 @@ test_that("UNET", {
   train.y.array = train.y
   dim(train.y.array) = c(IMG_SIZE, IMG_SIZE, 1, 30)
   
-  devices <- mx.cpu()
+  devices <- mx.ctx.default()
   mx.set.seed(0)
   
   net <- get_unet()
