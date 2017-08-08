@@ -102,8 +102,7 @@ def test_unary_func():
     uniform = nd.uniform(shape=(4, 5))
     stypes = ['row_sparse', 'csr', 'default']
     for stype in stypes:
-        x = mx.nd.cast_storage(uniform, stype=stype)
-        check_unary_func(x)
+        check_unary_func(uniform.tostype(stype))
 
 def test_binary_func():
     def check_binary_func(x, y):
@@ -121,8 +120,8 @@ def test_binary_func():
     stypes = ['row_sparse', 'csr', 'default']
     for stype_x in stypes:
         for stype_y in stypes:
-            x = mx.nd.cast_storage(uniform_x, stype=stype_x)
-            y = mx.nd.cast_storage(uniform_y, stype=stype_y)
+            x = uniform_x.tostype(stype_x)
+            y = uniform_y.tostype(stype_y)
             check_binary_func(x, y)
 
 
@@ -262,7 +261,7 @@ def test_attach_grad():
     zeros = mx.nd.zeros((10, 10))
     stypes = ['default', 'row_sparse', 'csr']
     for stype in stypes:
-        x = mx.nd.cast_storage(zeros, stype=stype)
+        x = zeros.tostype(stype)
         check_attach_grad(x)
 
 

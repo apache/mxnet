@@ -1089,13 +1089,15 @@ fixed-size items.
             ctypes.c_int(retain_graph),
             ctypes.c_int(is_train)))
 
-    def _to_csr(self):
-        # pylint: disable=undefined-variable
-        return cast_storage(self, stype='csr')
+    def tostype(self, stype):
+        """Return a copy of the array with chosen storage type.
 
-    def _to_rsp(self):
-        # pylint: disable=undefined-variable
-        return cast_storage(self, stype='row_sparse')
+        Returns
+        -------
+        NDArray, CSRNDArray or RowSparseNDArray
+            A copy of the array with the chosen storage stype
+        """
+        return cast_storage(self, stype=stype)
 
 def onehot_encode(indices, out):
     """One-hot encoding indices into matrix out.

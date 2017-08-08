@@ -322,8 +322,8 @@ class SGD(Optimizer):
         state = momentum * state + lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
         weight = weight - state
 
-    For details of the update algorithm see :class:`~mxnet.ndarray.sgd_update` and
-    :class:`~mxnet.ndarray.sgd_mom_update`.
+    Sparse updating is supported. For details of the update algorithm see
+    :class:`~mxnet.ndarray.sgd_update` and :class:`~mxnet.ndarray.sgd_mom_update`.
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
@@ -348,8 +348,6 @@ class SGD(Optimizer):
         momentum = None
         weight_master_copy = None
         if self.multi_precision and weight.dtype == numpy.float16:
-            assert(weight.stype == 'default'), \
-                  "multi-precision doesn't supprot non-default weight yet"
             weight_master_copy = array(weight, ctx=weight.context, dtype=numpy.float32)
             if self.momentum != 0.0:
                 momentum = zeros(weight.shape, weight.context, dtype=numpy.float32,

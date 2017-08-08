@@ -138,21 +138,6 @@ inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
     attrs, in_attrs, out_attrs);
 }
 
-inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
-                                           const Context& ctx,
-                                           std::vector<int> *in_attrs,
-                                           std::vector<int> *out_attrs) {
-  // TODO(junwu): add ctx info into storage inference logic
-  CHECK_EQ(in_attrs->size(), static_cast<size_t>(2)) << " in operator " << attrs.name;
-  CHECK_EQ(out_attrs->size(), static_cast<size_t>(1)) << " in operator " << attrs.name;
-  auto &in = *in_attrs;
-  auto &out = *out_attrs;
-  CHECK_NE(in[1], kUndefinedStorage) << "rhs storage type must be known";
-  if (in[0] == kUndefinedStorage) in[0] = in[1];
-  if (out[0] == kUndefinedStorage) out[0] = in[1];
-  return true;
-}
-
 // Transfer gradient and input to FGradient function
 struct ElemwiseGradUseIn {
   const char *op_name;

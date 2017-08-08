@@ -26,7 +26,7 @@ def run_cast_storage_synthetic():
     def dense_to_sparse(m, n, density, ctx, repeat, stype):
         set_default_context(ctx)
         data_shape = (m, n)
-        dns_data = rand_ndarray(data_shape, stype, density).todense()
+        dns_data = rand_ndarray(data_shape, stype, density).tostype('default')
         dns_data.wait_to_read()
 
         # do one warm up run, verify correctness

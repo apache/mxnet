@@ -22,7 +22,8 @@ NNVM_REGISTER_OP(_backward_sigmoid)
 
 // copy
 NNVM_REGISTER_OP(_copy)
-.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", IdentityComputeEx<gpu>);
 
 NNVM_REGISTER_OP(_backward_copy)
 .set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);

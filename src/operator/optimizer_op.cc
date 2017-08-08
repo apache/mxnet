@@ -22,8 +22,8 @@ It updates the weights using::
 
  weight = weight - learning_rate * gradient
 
-If weights are stored with `row_sparse` storage,
-update is applied only to rows whose gradient has non-zero entries.
+If weight is stored with `row_sparse` storage type,
+only the row slices whose indices appear in grad.indices are updated.
 
 )code" ADD_FILELINE)
 .set_num_inputs(2)
@@ -56,8 +56,8 @@ It updates the weights using::
 
 Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
 
-If weights are stored with `row_sparse` storage,
-only rows whose gradients contain non-zero entries are updated (for both weight and momentum).
+If weights are stored with `row_sparse` storage type,
+only the row slices whose indices appear in grad.indices are updated (for both weight and momentum).
 
 )code" ADD_FILELINE)
 .set_num_inputs(3)

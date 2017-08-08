@@ -127,17 +127,24 @@ class CachedOp(object):
                 "CachedOp.__call__ got unexpected keyword argument(s): " + \
                 ', '.join(kwargs.keys()))
 
-        check_call(_LIB.MXInvokeCachedOp(
+        # return output stypes to avoid the c_api call for checking
+        # a handle's stype in _ndarray_cls
+        out_stypes = ctypes.POINTER(ctypes.c_int)()
+
+        check_call(_LIB.MXInvokeCachedOpEx(
             self.handle,
             ctypes.c_int(len(args)),
             c_array(NDArrayHandle, [arr.handle for arr in args]),
             ctypes.byref(num_output),
-            ctypes.byref(output_vars)))
+            ctypes.byref(output_vars),
+            ctypes.byref(out_stypes)))
 
         if original_output is not None:
             return original_output
         if num_output.value == 1:
-            return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle))
+            return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle),
+                                stype=_STORAGE_TYPE_ID_TO_STR[out_stypes[0]])
         else:
-            return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle))
+            return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle),
+                                 stype=_STORAGE_TYPE_ID_TO_STR[out_stypes[i]])
                     for i in range(num_output.value)]

@@ -487,8 +487,8 @@ def test_factorization_machine_module():
     import scipy.sparse as sp
     # generate some random scipy csr data
     csr_sp = sp.rand(num_samples, feature_dim, density=0.1, format='csr')
-    csr_nd = mx.nd.csr(csr_sp.data, csr_sp.indptr, csr_sp.indices,
-                       (num_samples, feature_dim))
+    csr_nd = mx.nd.csr_matrix(csr_sp.data, csr_sp.indptr, csr_sp.indices,
+                              (num_samples, feature_dim))
     label = mx.nd.ones((num_samples,1))
     # the alternative is to use LibSVMIter
     train_iter = mx.io.NDArrayIter(data=csr_nd,

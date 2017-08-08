@@ -43,6 +43,7 @@ class GraphExecutor : public Executor {
   friend class autograd::AutogradRuntime;
   using Executor::MonitorCallback;
 
+  GraphExecutor();
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
   void PartialForward(bool is_train, int step, int *step_left) override;
@@ -221,6 +222,8 @@ class GraphExecutor : public Executor {
   bool prefer_bulk_execution_;
   // cached segment operator
   std::vector<CachedSegOpr> cached_seg_opr_;
+  // verbose logging
+  bool log_verbose_ = false;
 };
 
 }  // namespace exec

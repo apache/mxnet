@@ -133,6 +133,7 @@ void BinaryComputeRspRspImpl(const nnvm::NodeAttrs& attrs,
                              const std::vector<NDArray>& inputs,
                              const std::vector<OpReqType>& req,
                              const std::vector<NDArray>& outputs) {
+  if (req[0] == kNullOp) return;
   CHECK(req[0] == kWriteTo) << "only kWriteTo is supported for rowsparse elemwise_add";
   using namespace rowsparse;
   using namespace mshadow;
@@ -202,10 +203,10 @@ void BinaryComputeRspRspImpl(const nnvm::NodeAttrs& attrs,
         indices_out[iter_out] = indices_r[iter_r];
         Copy(out[iter_out++], data_r[iter_r++], s);
       }
-      auto new_ashape = output.aux_shape(rowsparse::kIdx);
-      CHECK_GT(new_ashape[0], num_common_rows);
-      new_ashape[0] -= num_common_rows;
-      output.set_aux_shape(rowsparse::kIdx, new_ashape);
+      auto new_sshape = TShape(output.aux_shape(rowsparse::kIdx));
+      CHECK_GT(new_sshape[0], num_common_rows);
+      new_sshape[0] -= num_common_rows;
+      output.set_aux_shape(rowsparse::kIdx, new_sshape);
     });
   });
 }

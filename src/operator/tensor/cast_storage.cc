@@ -11,7 +11,6 @@
 namespace mxnet {
 namespace op {
 
-// TODO(haibin) declare backward op for cast storage
 DMLC_REGISTER_PARAMETER(CastStorageParam);
 NNVM_REGISTER_OP(cast_storage)
 .describe(R"code(Casts tensor storage type to the new type.
@@ -28,6 +27,7 @@ NNVM_REGISTER_OP(cast_storage)
   })
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", CastStorageComputeEx<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"})
 .add_argument("data", "NDArray-or-Symbol", "The input.")
 .add_arguments(CastStorageParam::__FIELDS__());
 

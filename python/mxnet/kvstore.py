@@ -255,11 +255,12 @@ class KVStore(object):
         row_ids : NDArray or list of NDArray
             The row_ids for which to pull for each value. The row_ids doesn't have to be unique
             or sorted.
+
         Examples
         --------
         >>> shape = (3, 3)
-        >>> kv.init('3', mx.nd.ones(shape)._to_rsp())
-        >>> a = mx.nd.zeros(shape)
+        >>> kv.init('3', mx.nd.ones(shape).tostype('row_sparse'))
+        >>> a = mx.nd.zeros(shape, stype='row_sparse')
         >>> row_ids = mx.nd.array([0, 2], dtype='int64')
         >>> kv.row_sparse_pull('3', out=a, row_ids=row_ids)
         >>> print a.asnumpy()

@@ -34,17 +34,17 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     if w_stype == 'default':
         w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
         w1 = w2.copyto(default_context())
-    elif w_stype == 'row_sparse':
-        w2 = rand_ndarray(shape, w_stype, density=1)
-        w1 = w2.copyto(default_context()).todense()
+    elif w_stype == 'row_sparse' or w_stype == 'csr':
+        w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
+        w1 = w2.copyto(default_context()).tostype('default')
     else:
         raise Exception("type not supported yet")
     if g_stype == 'default':
         g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
         g1 = g2.copyto(default_context())
-    elif g_stype == 'row_sparse':
-        g2 = rand_ndarray(shape, g_stype)
-        g1 = g2.copyto(default_context()).todense()
+    elif g_stype == 'row_sparse' or g_stype == 'csr':
+        g2 = rand_ndarray(shape, g_stype, dtype=dtype)
+        g1 = g2.copyto(default_context()).tostype('default')
     else:
         raise Exception("type not supported yet")
 
@@ -186,6 +186,13 @@ def test_sgd():
                                         not kwarg['multi_precision'])):
                                 continue
                             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                            # test operator fallback on cpu
+                            if (default_context() == mx.cpu()):
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
+                                                  g_stype='row_sparse')
+                                if dtype != np.float16:
+                                    compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape[:2],
+                                                      dtype, w_stype='csr', g_stype='csr')
 
 class PySparseSGD(mx.optimizer.Optimizer):
     """python reference implemenation of sgd"""
@@ -260,24 +267,28 @@ def test_sparse_sgd():
     mx.random.seed(0)
     opt1 = PySparseSGD
     opt2 = mx.optimizer.SGD
-    shape = (3, 4)
-    kwargs = [{},
-              {'momentum': 0.9},
-              {'clip_gradient': 0.5},
-              {'clip_gradient': 0.4, 'rescale_grad': 0.14},
-              {'rescale_grad': 0.8},
-              {'clip_gradient': 0.5, 'wd': 0.07},
-              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03},
-              {'rescale_grad': 0.8, 'wd': 0.05},
-              {'clip_gradient': 0.5, 'momentum': 0.9},
-              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'momentum': 0.9},
-              {'rescale_grad': 0.8, 'momentum': 0.9},
-              {'clip_gradient': 0.5, 'wd': 0.07, 'momentum': 0.9},
-              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03, 'momentum': 0.9},
-              {'rescale_grad': 0.8, 'wd': 0.05, 'momentum': 0.9}]
-    for kwarg in kwargs:
-        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, 'float32', w_stype='row_sparse', g_stype='row_sparse')
-        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, 'float32', w_stype='row_sparse', g_stype='default')
+    shape = (3, 4, 5)
+    mom_options = [{}, {'momentum': 0.9}]
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    mp_options = [{}]
+    for dtype in [np.float32]:
+        for mom_option in mom_options:
+            for cg_option in cg_options:
+                for rg_option in rg_options:
+                    for wd_option in wd_options:
+                        for mp_option in mp_options:
+                            kwarg = {}
+                            kwarg.update(mom_option)
+                            kwarg.update(cg_option)
+                            kwarg.update(rg_option)
+                            kwarg.update(wd_option)
+                            kwarg.update(mp_option)
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
+                                              w_stype='row_sparse', g_stype='row_sparse')
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
+                                              w_stype='row_sparse', g_stype='default')
 
 # ADAM
 
@@ -358,7 +369,10 @@ def test_adam():
               {'rescale_grad': 0.8, 'wd': 0.05}]
     for kwarg in kwargs:
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32)
-        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32, g_stype='row_sparse')
+        # test operator fallback on cpu
+        if (default_context() == mx.cpu()):
+            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape,
+                              np.float32, g_stype='row_sparse')
 
 # RMSProp
 class PyRMSProp(mx.optimizer.Optimizer):

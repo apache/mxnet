@@ -144,7 +144,7 @@ class BaseSparseNDArray(NDArray):
     def asnumpy(self):
         """Return a dense ``numpy.ndarray`` object with value copied from this array
         """
-        return self.todense().asnumpy()
+        return self.tostype('default').asnumpy()
 
     def astype(self, dtype):
         """Returns a copy of the array after casting to a specified type.
@@ -189,9 +189,6 @@ class BaseSparseNDArray(NDArray):
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
 
-    def todense(self):
-        return todense(self)
-
     def _data(self):
         """A deep copy NDArray of the data array associated with the BaseSparseNDArray.
 
@@ -217,7 +214,9 @@ class BaseSparseNDArray(NDArray):
 
 # pylint: disable=abstract-method
 class CSRNDArray(BaseSparseNDArray):
-    """A CSRNDArray represents a NDArray as three separate arrays: `data`,
+    """A sparse representation of 2D NDArray in the standard CSR format.
+
+    A CSRNDArray represents an NDArray as three separate arrays: `data`,
     `indptr` and `indices`. It uses the standard CSR representation where the column indices for
     row i are stored in indices[indptr[i]:indptr[i+1]] and their corresponding values are stored
     in values[indptr[i]:indptr[i+1]].
@@ -225,7 +224,7 @@ class CSRNDArray(BaseSparseNDArray):
     Example
     -------
     >>> a = mx.nd.array([[0, 1, 0], [2, 0, 0], [0, 0, 0], [0, 0, 3]])
-    >>> a = a._to_csr()
+    >>> a = a.tostype('csr')
     >>> a.indices.asnumpy()
     array([1, 0, 2])
     >>> a.indptr.asnumpy()
@@ -269,13 +268,16 @@ class CSRNDArray(BaseSparseNDArray):
 
         Examples
         --------
-        >>> x = mx.nd.zeros((2, 3), stype='csr')
-        >>> x[:] = mx.nd.arange(0,6).reshape((2,3))
-        >>> x.asnumpy()
-        array([[ 0.,  1.,  2.],
-               [ 3.,  4.,  5.]], dtype=float32)
-        >>> x[1:2].asnumpy()
-        array([[ 3.,  4.,  5.]], dtype=float32)
+        >>> indptr = np.array([0, 2, 3, 6])
+        >>> indices = np.array([0, 2, 2, 0, 1, 2])
+        >>> data = np.array([1, 2, 3, 4, 5, 6])
+        >>> a = mx.nd.csr_matrix(data, indptr, indices, (3, 3))
+        >>> a.asnumpy()
+        array([[1, 0, 2],
+               [0, 0, 3],
+               [4, 5, 6]])
+        >>> a[1:2].asnumpy()
+        array([[0, 0, 3]], dtype=float32)
         """
         if isinstance(key, int):
             raise ValueError("__getitem__ with int key is not implemented for CSRNDArray")
@@ -311,7 +313,7 @@ class CSRNDArray(BaseSparseNDArray):
                [ 0.,  0.,  0.],
                [ 0.,  0.,  0.]], dtype=float32)
         >>> # assign CSRNDArray with same storage type
-        >>> x = mx.nd.ones('row_sparse', (3,3))._to_csr()
+        >>> x = mx.nd.ones('row_sparse', (3,3)).tostype('csr')
         >>> x[:] = src
         >>> x.asnumpy()
         array([[ 1.,  1.,  1.],
@@ -386,6 +388,18 @@ class CSRNDArray(BaseSparseNDArray):
         """
         return self._data()
 
+    def tostype(self, stype):
+        """Return a copy of the array with chosen storage type.
+
+        Returns
+        -------
+        NDArray or CSRNDArray
+            A copy of the array with the chosen storage stype
+        """
+        if stype == 'row_sparse':
+            raise ValueError("cast_storage from csr to row_sparse is not supported")
+        return cast_storage(self, stype=stype)
+
     def copyto(self, other):
         """Copies the value of this array to another array.
 
@@ -420,29 +434,40 @@ class CSRNDArray(BaseSparseNDArray):
 
 # pylint: disable=abstract-method
 class RowSparseNDArray(BaseSparseNDArray):
-    """A RowSparseNDArray is typically used to represent a subset of a larger
-    NDArray  with `default` of shape [LARGE0, D1, .. , DN] where LARGE0 >> D0. The values
-    in indices are the indices in the first dimension of the slices that have been extracted from
-    the larger NDArray. The indices are expected to be sorted in ascending order.
+    """A sparse representation of a set of NDArray row slices at given indices.
 
-    The corresponding NDArray ``dense`` with `default` storage represented by a ``rsp``
-    RowSparseNDArray
+    A RowSparseNDArray represents a multidimensional NDArray using two separate arrays: `data` and
+    `indices`.
 
-    ``dense[rsp.indices[i], :, :, :, ...] = rsp.values[i, :, :, :, ...]``
+    - data: an NDArray of any dtype with shape [D0, D1, ..., Dn].
+    - indices: a 1-D int64 NDArray with shape [D0].
+
+    The `indices` stores the indices of the row slices with non-zeros,
+    while the values are stored in `data`. The corresponding NDArray ``dense``
+    represented by RowSparseNDArray ``rsp`` has
+
+    ``dense[rsp.indices[i], :, :, :, ...] = rsp.data[i, :, :, :, ...]``
+
+        >>> dense.asnumpy()
+        array([[ 1.,  2., 3.],
+               [ 0.,  0., 0.],
+               [ 4.,  0., 5.],
+               [ 0.,  0., 0.],
+               [ 0.,  0., 0.]], dtype=float32)
+        >>> rsp = dense.tostype('row_sparse')
+        >>> rsp.indices.asnumpy()
+        array([0, 2], dtype=int64)
+        >>> rsp.data.asnumpy()
+        array([[ 1.,  2., 3.],
+               [ 4.,  0., 5.]], dtype=float32)
+
+    A RowSparseNDArray is typically used to represent non-zero row-slices of a large NDArray
+    of shape [LARGE0, D1, .. , Dn] where LARGE0 >> D0 and most row slices are zeros.
+
+    The indices are expected to be sorted in ascending order.
 
     RowSparseNDArray is used principally in the definition of gradients for operations
-    that have sparse gradients (e.g. dot with sparse inputs).
-
-    Examples
-    --------
-    >>> import mxnet as mx
-    >>> dense = mx.nd.array([[1,2],[0,0],[3,0],[0,0]])
-    >>> rsp = dense._to_rsp()
-    >>> rsp.indices.asnumpy()
-    array([0, 2], dtype=int32)
-    >>> rsp.data.asnumpy()
-    array([[ 1.,  2.],
-           [ 3.,  0.]], dtype=float32)
+    that have sparse gradients (e.g. sparse dot and sparse embedding).
     """
     def __reduce__(self):
         return RowSparseNDArray, (None,), super(RowSparseNDArray, self).__getstate__()
@@ -549,7 +574,7 @@ class RowSparseNDArray(BaseSparseNDArray):
                 raise TypeError('type %s not supported' % str(type(value)))
         else:
             assert(isinstance(key, (int, tuple)))
-            raise Exception('RowSparseNDArray only supports [:] for assignment')
+            raise TypeError('RowSparseNDArray only supports [:] for assignment')
 
     @property
     def indices(self):
@@ -574,6 +599,18 @@ class RowSparseNDArray(BaseSparseNDArray):
             This RowSparseNDArray's data array.
         """
         return self._data()
+
+    def tostype(self, stype):
+        """Return a copy of the array with chosen storage type.
+
+        Returns
+        -------
+        NDArray or RowSparseNDArray
+            A copy of the array with the chosen storage stype
+        """
+        if stype == 'csr':
+            raise ValueError("cast_storage from row_sparse to csr is not supported")
+        return cast_storage(self, stype=stype)
 
     def copyto(self, other):
         """Copies the value of this array to another array.
@@ -608,6 +645,9 @@ class RowSparseNDArray(BaseSparseNDArray):
             raise TypeError('copyto does not support type ' + str(type(other)))
 
 def _prepare_src_array(src, dtype, default_dtype):
+    """Prepare `src` and its dtype so that they can be used to construct NDArray.
+    `src` is converted to a `np.ndarray` if it's neither an `NDArray` nor an `np.ndarray`.
+    """
     if isinstance(src, NDArray):
         dtype = src.dtype if dtype is None else dtype
     else:
@@ -620,8 +660,9 @@ def _prepare_src_array(src, dtype, default_dtype):
     return src, dtype
 
 
-def csr(data, indptr, indices, shape, ctx=None, dtype=None, indptr_type=None, indices_type=None):
-    """Creates a 2D array with compressed sparse row format.
+def csr_matrix(data, indptr, indices, shape, ctx=None, dtype=None, indptr_type=None,
+               indices_type=None):
+    """Creates a 2D array with compressed sparse row(CSR) format.
 
     Parameters
     ----------
@@ -640,10 +681,10 @@ def csr(data, indptr, indices, shape, ctx=None, dtype=None, indptr_type=None, in
         if `values` is an `NDArray`, `float32` otherwise.
     indptr_type: str or numpy.dtype, optional
         The data type of the indices array. The default dtype is ``indptr.dtype``
-        if `indptr` is an `NDArray`, `int32` otherwise.
+        if `indptr` is an `NDArray`, `int64` otherwise.
     indices_type: str or numpy.dtype, optional
         The data type of the indices array. The default dtype is ``indices.dtype``
-        if `indicies` is an `NDArray`, `int32` otherwise.
+        if `indicies` is an `NDArray`, `int64` otherwise.
 
     Returns
     -------
@@ -653,7 +694,7 @@ def csr(data, indptr, indices, shape, ctx=None, dtype=None, indptr_type=None, in
     Example
     -------
     >>> import mxnet as mx
-    >>> a = mx.nd.csr([1, 2, 3], [0, 1, 2, 2, 3], [1, 0, 2], (4, 3))
+    >>> a = mx.nd.csr_matrix([1, 2, 3], [0, 1, 2, 2, 3], [1, 0, 2], (4, 3))
     >>> a.asnumpy()
     array([[ 0.,  1.,  0.],
            [ 2.,  0.,  0.],
@@ -696,13 +737,13 @@ def csr(data, indptr, indices, shape, ctx=None, dtype=None, indptr_type=None, in
     return result
 
 
-def row_sparse(data, indices, shape, ctx=None, dtype=None, indices_type=None):
-    """Creates a row sparse array with a set of tensor slices at given indices.
+def row_sparse_array(data, indices, shape, ctx=None, dtype=None, indices_type=None):
+    """Creates a multidimensional row sparse array with a set of tensor slices at given indices.
 
     Parameters
     ----------
     data: array_like
-        An object exposing the array interface, with shape [D0, D1, .. Dn], where D0 is
+        An object exposing the array interface, with shape [D0, D1, .. DK], where D0 is
         the number of rows with non-zeros entries.
     indices: array_like
         An object exposing the array interface, with shape [D0].
@@ -713,7 +754,7 @@ def row_sparse(data, indices, shape, ctx=None, dtype=None, indices_type=None):
         if `data` is an `NDArray`, `float32` otherwise.
     indices_type: str or numpy.dtype, optional
         The data type of the indices array. The default dtype is ``indices.dtype``
-        if `indicies` is an `NDArray`, `int32` otherwise.
+        if `indicies` is an `NDArray`, `int64` otherwise.
 
     Returns
     -------
@@ -722,7 +763,7 @@ def row_sparse(data, indices, shape, ctx=None, dtype=None, indices_type=None):
 
     Example
     -------
-    >>> a = mx.nd.row_sparse([[1, 2], [3, 4]], [1, 4], (6, 2))
+    >>> a = mx.nd.row_sparse_array([[1, 2], [3, 4]], [1, 4], (6, 2))
     >>> a.asnumpy()
     array([[ 0.,  0.],
            [ 1.,  2.],
@@ -757,18 +798,6 @@ def row_sparse(data, indices, shape, ctx=None, dtype=None, indices_type=None):
     check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, data.handle, ctypes.c_int(-1)))
     check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, indices.handle, ctypes.c_int(0)))
     return result
-
-
-def todense(source):
-    """ Return a dense array representation of a BaseSparseNDArray.
-
-    Returns
-    -------
-    NDArray
-        A copy of the array with `default` storage stype
-    """
-    return cast_storage(source, stype='default')
-
 
 def _ndarray_cls(handle, writable=True, stype=None):
     if stype is None:

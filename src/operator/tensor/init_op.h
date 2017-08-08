@@ -169,7 +169,6 @@ void FillZerosCsrImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
   dst->set_aux_shape(csr::kIdx, new_shape);
 }
 
-// This operator never needs to fall back, since there's no input NDArray
 template<typename xpu>
 void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
@@ -180,8 +179,9 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(outputs.size(), 1);
-  CHECK_EQ(inputs.size(), 0);
   auto stype = outputs[0].storage_type();
+  if (req[0] == kNullOp) return;
+  CHECK_EQ(req[0], kWriteTo) << "kWriteTo is expected for FillComputeZerosEx";
   if (stype == kRowSparseStorage) {
     NDArray nd(outputs[0]);
     FillZerosRspImpl<xpu>(s, &nd);
@@ -189,7 +189,8 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
     NDArray nd(outputs[0]);
     FillZerosCsrImpl<xpu>(s, &nd);
   } else {
-    LOG(FATAL) << "storage type not implemented.";
+    // no fallback is required since the output doesn't depend on input
+    LOG(FATAL) << "storage type " << stype << " not implemented.";
   }
 }
 

@@ -331,6 +331,8 @@ void CastStorageComputeEx(const nnvm::NodeAttrs& attrs,
                           const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1);
   CHECK_EQ(outputs.size(), 1);
+  if (req[0] == kNullOp) return;
+  CHECK_EQ(req[0], kWriteTo) << "CastStorageComputeEx expects req[0] == kWriteTo";
   CastStorageComputeImpl<xpu>(ctx, inputs[0], outputs[0]);
 }
 

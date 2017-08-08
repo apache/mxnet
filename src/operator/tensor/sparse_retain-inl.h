@@ -238,6 +238,7 @@ void SparseRetainOpForwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
+  if (req[sr::kOut] == kNullOp) return;
   CHECK_EQ(req[sr::kOut], kWriteTo) << "sparse_retain only supports req=\'write\'";
   CHECK_EQ(inputs[sr::kIdx].storage_type(), kDefaultStorage)
     << "sparse_retain operator only takes default NDArray as its index array";

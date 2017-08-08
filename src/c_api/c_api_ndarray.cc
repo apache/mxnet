@@ -668,6 +668,24 @@ int MXInvokeCachedOp(CachedOpHandle handle,
   API_END();
 }
 
+int MXInvokeCachedOpEx(CachedOpHandle handle,
+                       int num_inputs,
+                       NDArrayHandle *inputs,
+                       int *num_outputs,
+                       NDArrayHandle **outputs,
+                       const int **out_stypes) {  // outputs storage types
+  API_BEGIN();
+  MXInvokeCachedOp(handle, num_inputs, inputs, num_outputs, outputs);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  NDArray** output_nds = reinterpret_cast<NDArray**>(*outputs);
+  ret->out_types.resize(*num_outputs);
+  for (int i = 0; i < *num_outputs; ++i) {
+    ret->out_types[i] = output_nds[i]->storage_type();
+  }
+  *out_stypes = dmlc::BeginPtr(ret->out_types);
+  API_END();
+}
+
 int MXAutogradSetIsTraining(int is_training, int* prev) {
   API_BEGIN();
   *prev = AutogradRuntime::Get()->SetIsTraining(static_cast<bool>(is_training));

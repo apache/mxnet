@@ -10,7 +10,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(cast_storage)
-.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<cpu>)
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", CastStorageComputeEx<gpu>);
 
 }  // namespace op

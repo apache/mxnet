@@ -15,7 +15,7 @@ def assert_fcompex(f, *args, **kwargs):
 
 
 def sparse_nd_ones(shape, stype):
-    return mx.nd.cast_storage(mx.nd.ones(shape), stype=stype)
+    return mx.nd.ones(shape).tostype(stype)
 
 
 def check_sparse_nd_elemwise_binary(shapes, stypes, f, g):
@@ -192,7 +192,7 @@ def test_sparse_nd_lesser_equal():
 
 def test_sparse_nd_binary():
     N = 10
-    def check_binary(fn):
+    def check_binary(fn, stype):
         for _ in range(N):
             ndim = 2
             oshape = np.random.randint(1, 6, size=(ndim,))
@@ -207,54 +207,47 @@ def test_sparse_nd_binary():
                     rshape[bdim-i-1] = 1
             lhs = np.random.uniform(0, 1, size=lshape)
             rhs = np.random.uniform(0, 1, size=rshape)
-            lhs_nd_csr = mx.nd.array(lhs)._to_csr()
-            rhs_nd_csr = mx.nd.array(rhs)._to_csr()
-            lhs_nd_rsp = mx.nd.array(lhs)._to_rsp()
-            rhs_nd_rsp = mx.nd.array(rhs)._to_rsp()
-            for lhs_nd, rhs_nd in [(lhs_nd_csr, rhs_nd_csr), (lhs_nd_rsp, rhs_nd_rsp)]:
-                assert_allclose(fn(lhs, rhs),
-                                fn(lhs_nd, rhs_nd).asnumpy(),
-                                rtol=1e-4, atol=1e-4)
+            lhs_nd = mx.nd.array(lhs).tostype(stype)
+            rhs_nd = mx.nd.array(rhs).tostype(stype)
+            assert_allclose(fn(lhs, rhs), fn(lhs_nd, rhs_nd).asnumpy(), rtol=1e-4, atol=1e-4)
 
-    check_binary(lambda x, y: x + y)
-    check_binary(lambda x, y: x - y)
-    check_binary(lambda x, y: x * y)
-    check_binary(lambda x, y: x / y)
-    check_binary(lambda x, y: x ** y)
-    check_binary(lambda x, y: x > y)
-    check_binary(lambda x, y: x < y)
-    check_binary(lambda x, y: x >= y)
-    check_binary(lambda x, y: x <= y)
-    check_binary(lambda x, y: x == y)
+    stypes = ['row_sparse', 'csr']
+    for stype in stypes:
+        check_binary(lambda x, y: x + y, stype)
+        check_binary(lambda x, y: x - y, stype)
+        check_binary(lambda x, y: x * y, stype)
+        check_binary(lambda x, y: x / y, stype)
+        check_binary(lambda x, y: x ** y, stype)
+        check_binary(lambda x, y: x > y, stype)
+        check_binary(lambda x, y: x < y, stype)
+        check_binary(lambda x, y: x >= y, stype)
+        check_binary(lambda x, y: x <= y, stype)
+        check_binary(lambda x, y: x == y, stype)
 
 
 def test_sparse_nd_binary_rop():
     N = 10
-    def check(fn):
+    def check(fn, stype):
         for _ in range(N):
             ndim = 2
             shape = np.random.randint(1, 6, size=(ndim,))
-            npy_nd = np.random.normal(0, 1, size=shape)
-            csr_nd = mx.nd.array(npy_nd)._to_csr()
-            rsp_nd = mx.nd.array(npy_nd)._to_rsp()
-            for sparse_nd in [csr_nd, rsp_nd]:
-                assert_allclose(
-                    fn(npy_nd),
-                    fn(sparse_nd).asnumpy(),
-                    rtol=1e-4,
-                    atol=1e-4
-                )
-    check(lambda x: 1 + x)
-    check(lambda x: 1 - x)
-    check(lambda x: 1 * x)
-    check(lambda x: 1 / x)
-    check(lambda x: 2 ** x)
-    check(lambda x: 1 > x)
-    check(lambda x: 0.5 > x)
-    check(lambda x: 0.5 < x)
-    check(lambda x: 0.5 >= x)
-    check(lambda x: 0.5 <= x)
-    check(lambda x: 0.5 == x)
+            npy = np.random.normal(0, 1, size=shape)
+            nd = mx.nd.array(npy).tostype(stype)
+            assert_allclose(fn(npy), fn(nd).asnumpy(), rtol=1e-4, atol=1e-4)
+
+    stypes = ['row_sparse', 'csr']
+    for stype in stypes:
+        check(lambda x: 1 + x, stype)
+        check(lambda x: 1 - x, stype)
+        check(lambda x: 1 * x, stype)
+        check(lambda x: 1 / x, stype)
+        check(lambda x: 2 ** x, stype)
+        check(lambda x: 1 > x, stype)
+        check(lambda x: 0.5 > x, stype)
+        check(lambda x: 0.5 < x, stype)
+        check(lambda x: 0.5 >= x, stype)
+        check(lambda x: 0.5 <= x, stype)
+        check(lambda x: 0.5 == x, stype)
 
 def test_sparse_nd_binary_iop():
     N = 10
@@ -266,8 +259,8 @@ def test_sparse_nd_binary_iop():
             rshape = list(oshape)
             lhs = np.random.uniform(0, 1, size=lshape)
             rhs = np.random.uniform(0, 1, size=rshape)
-            lhs_nd = mx.nd.cast_storage(mx.nd.array(lhs), stype=stype)
-            rhs_nd = mx.nd.cast_storage(mx.nd.array(rhs), stype=stype)
+            lhs_nd = mx.nd.array(lhs).tostype(stype)
+            rhs_nd = mx.nd.array(rhs).tostype(stype)
             assert_allclose(fn(lhs, rhs),
                             fn(lhs_nd, rhs_nd).asnumpy(),
                             rtol=1e-4, atol=1e-4)
@@ -285,10 +278,9 @@ def test_sparse_nd_binary_iop():
             check_binary(fn, stype)
 
 def test_sparse_nd_negate():
-    npy = np.random.uniform(-10, 10, rand_shape_2d())
-    arr_csr = mx.nd.array(npy)._to_csr()
-    arr_rsp = mx.nd.array(npy)._to_rsp()
-    for arr in [arr_csr, arr_rsp]:
+    def check_sparse_nd_negate(shape, stype):
+        npy = np.random.uniform(-10, 10, rand_shape_2d())
+        arr = mx.nd.array(npy).tostype(stype)
         assert_almost_equal(npy, arr.asnumpy())
         assert_almost_equal(-npy, (-arr).asnumpy())
 
@@ -296,6 +288,11 @@ def test_sparse_nd_negate():
         # as inplace operation, so the contents of arr does not change after
         # we compute (-arr)
         assert_almost_equal(npy, arr.asnumpy())
+
+    shape = rand_shape_2d()
+    stypes = ['csr', 'row_sparse']
+    for stype in stypes:
+        check_sparse_nd_negate(shape, stype)
 
 def test_sparse_nd_broadcast():
     sample_num = 1000
@@ -312,7 +309,7 @@ def test_sparse_nd_broadcast():
                     shape[axis] = 1
             dat = np.random.rand(*shape) - 0.5
             numpy_ret = dat
-            ndarray = mx.nd.cast_storage(mx.nd.array(dat), stype=stype)
+            ndarray = mx.nd.array(dat).tostype(stype)
             ndarray_ret = ndarray.broadcast_to(shape=target_shape)
             if type(ndarray_ret) is mx.ndarray.NDArray:
                 ndarray_ret = ndarray_ret.asnumpy()
@@ -328,7 +325,7 @@ def test_sparse_nd_transpose():
     npy = np.random.uniform(-10, 10, rand_shape_2d())
     stypes = ['csr', 'row_sparse']
     for stype in stypes:
-        nd = mx.nd.cast_storage(mx.nd.array(npy), stype=stype)
+        nd = mx.nd.array(npy).tostype(stype)
         assert_almost_equal(npy.T, (nd.T).asnumpy())
 
 def test_sparse_nd_output_fallback():
@@ -421,7 +418,7 @@ def test_create_csr():
         data = matrix.data
         indptr = matrix.indptr
         indices = matrix.indices
-        csr_created = mx.nd.csr(data=data, indptr=indptr, indices=indices, shape=shape)
+        csr_created = mx.nd.csr_matrix(data=data, indptr=indptr, indices=indices, shape=shape)
         assert csr_created.stype == 'csr'
         assert same(csr_created.data.asnumpy(), data.asnumpy())
         assert same(csr_created.indptr.asnumpy(), indptr.asnumpy())
@@ -439,7 +436,7 @@ def test_create_row_sparse():
         matrix = rand_ndarray(shape, 'row_sparse', density)
         data = matrix.data
         indices = matrix.indices
-        rsp_created = mx.nd.row_sparse(data=data, indices=indices, shape=shape)
+        rsp_created = mx.nd.row_sparse_array(data=data, indices=indices, shape=shape)
         assert rsp_created.stype == 'row_sparse'
         assert same(rsp_created.data.asnumpy(), data.asnumpy())
         assert same(rsp_created.indices.asnumpy(), indices.asnumpy())

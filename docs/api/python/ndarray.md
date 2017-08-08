@@ -107,6 +107,7 @@ We summarize the interface for each class in the following sections.
     NDArray.asnumpy
     NDArray.asscalar
     NDArray.astype
+    NDArray.tostype
 ```
 
 ### Array change shape
@@ -191,6 +192,7 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     RowSparseNDArray.copyto
+    RowSparseNDArray.tostype
     RowSparseNDArray.__setitem__
     RowSparseNDArray.__getitem__
     RowSparseNDArray.data
@@ -204,6 +206,7 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     CSRNDArray.copyto
+    CSRNDArray.tostype
     CSRNDArray.__setitem__
     CSRNDArray.__getitem__
     CSRNDArray.data
