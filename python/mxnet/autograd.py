@@ -72,9 +72,11 @@ class _RecordingStateScope(object):
     """Scope for managing training state.
 
     Example::
+
         with _RecordingStateScope(True, True):
             y = model(x)
             backward([y])
+
     """
     def __init__(self, is_record, train_mode): #pylint: disable=redefined-outer-name
         self._enter_is_record = is_record
@@ -103,6 +105,7 @@ def record(train_mode=True): #pylint: disable=redefined-outer-name
               should also use train_mode=False, otherwise gradient is undefined.
 
     Example::
+
         with autograd.record():
             y = model(x)
             backward([y])
@@ -123,6 +126,7 @@ def pause(train_mode=False): #pylint: disable=redefined-outer-name
     gradients to be calculated.
 
     Example::
+
         with autograd.record():
             y = model(x)
             backward([y])
@@ -143,9 +147,11 @@ def train_mode():
     without changing the recording states.
 
     Example::
+
         y = model(x)
         with autograd.train():
             y = dropout(y)
+
     """
     return _RecordingStateScope(None, True)
 
@@ -156,6 +162,7 @@ def predict_mode():
     without changing the recording states.
 
     Example::
+
         with autograd.record():
             y = model(x)
             with autograd.test():
