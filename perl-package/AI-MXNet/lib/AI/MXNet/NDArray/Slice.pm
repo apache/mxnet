@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::NDArray::Slice;
 use strict;
 use warnings;
@@ -13,7 +30,7 @@ use AI::MXNet::Function::Parameters;
 has parent => (is => 'ro', isa => 'AI::MXNet::NDArray', required => 1);
 has begin  => (is => 'ro', isa => 'Shape', required => 1);
 has end    => (is => 'ro', isa => 'Shape', required => 1);
-use overload 
+use overload
     '.=' => \&set,
     '='  => sub { $_[0] },
     '""' => \&notsupported,
@@ -37,10 +54,10 @@ method set(AcceptableInput $value, $reverse=)
 {
     confess("set value must be defined") unless defined $value;
     confess("${\ $self->parent } is not writable") unless $self->parent->writable;
-    my $shape = []; 
+    my $shape = [];
     zip(
         sub { my ($begin, $end) = @_; push @$shape, ($end-$begin); },
-        $self->begin, 
+        $self->begin,
         $self->end
     );
     if(ref $value)
@@ -58,12 +75,12 @@ method set(AcceptableInput $value, $reverse=)
             $value = AI::MXNet::NDArray->array($value, ctx => $self->parent->context);
         }
         confess("value $value does not match slice dim sizes [@$shape]")
-            if @{$value->shape} != @$shape;    
+            if @{$value->shape} != @$shape;
         zip(
-            sub { 
-                my ($dsize, $vdsize) = @_; 
-                confess("Slice [@$shape]  != $value given as value") 
-                    if $dsize != $vdsize; 
+            sub {
+                my ($dsize, $vdsize) = @_;
+                confess("Slice [@$shape]  != $value given as value")
+                    if $dsize != $vdsize;
             },
             $shape,
             $value->shape

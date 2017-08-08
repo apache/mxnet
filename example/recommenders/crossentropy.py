@@ -1,4 +1,22 @@
 #!/usr/bin/env python
+
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Cross-entropy loss layer for MXNet.
 """
 import os
@@ -12,13 +30,13 @@ class CrossEntropyLoss(mx.operator.CustomOp):
     """An output layer that calculates gradient for cross-entropy loss
     y * log(p) + (1-y) * log(p)
     for label "y" and prediction "p".
-    However, the output of this layer is the original prediction -- same as 
+    However, the output of this layer is the original prediction -- same as
     the "data" input, making it useful for tasks like "predict".
     If you actually want to use the calculated loss, see CrossEntropyLoss op.
 
     This is useful for multi-label prediction where each possible output
     label is considered independently.
-    Cross-entropy loss provides a very large penalty for guessing 
+    Cross-entropy loss provides a very large penalty for guessing
     the wrong answer (0 or 1) confidently.
     The gradient calculation is optimized for y only being 0 or 1.
     """
@@ -93,7 +111,7 @@ if __name__ == "__main__":
     print("Simple test of cross-entropy")
     data = mx.symbol.Variable('data')
     labs = mx.symbol.Variable('labs')
-    net = mx.symbol.Custom(data=data, label=labs, name='ce', 
+    net = mx.symbol.Custom(data=data, label=labs, name='ce',
             op_type='CrossEntropyLoss')
     rand = np.random.RandomState(seed=123)
     for i in range(20):

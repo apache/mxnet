@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file sample_op.cc
  * \brief CPU Implementation of sample op
  */
@@ -106,7 +124,7 @@ MXNET_OPERATOR_REGISTER_SAMPLE(random_negative_binomial, SampleNegBinomialParam)
 .add_alias("_sample_negbinomial")
 .describe(R"code(Draw random samples from a negative binomial distribution.
 
-Samples are distributed according to a negative binomial distribution parametrized by 
+Samples are distributed according to a negative binomial distribution parametrized by
 *k* (limit of unsuccessful experiments) and *p* (failure probability in each experiment).
 Samples will always be returned as a floating point data type.
 
@@ -121,8 +139,8 @@ MXNET_OPERATOR_REGISTER_SAMPLE(random_generalized_negative_binomial, SampleGenNe
 .add_alias("_sample_gennegbinomial")
 .describe(R"code(Draw random samples from a generalized negative binomial distribution.
 
-Samples are distributed according to a generalized negative binomial distribution parametrized by 
-*mu* (mean) and *alpha* (dispersion). *alpha* is defined as *1/k* where *k* is the failure limit of the 
+Samples are distributed according to a generalized negative binomial distribution parametrized by
+*mu* (mean) and *alpha* (dispersion). *alpha* is defined as *1/k* where *k* is the failure limit of the
 number of unsuccessful experiments (generalized to real numbers).
 Samples will always be returned as a floating point data type.
 
