@@ -1,7 +1,6 @@
-# Deep Convolutional Generative Adversarial Network
-## Generative Adversarial Networks
+# Generative Adversarial Networks
 
- GANs are an application of unsupervised learning - you don't need labels for your dataset in order to train a GAN.
+GANs are an application of unsupervised learning - you don't need labels for your dataset in order to train a GAN.
  
 The GAN framework composes of two neural networks: a generator network and a discriminator network.
 
@@ -13,14 +12,14 @@ During training, the two networks play a game against each other. The generator 
 
 Since the two networks are fighting in this game, they can be seen as as adversaries, which is where the term "Generative Adverserial Network" comes from.
 
-Deep Convolutional Generative Adversarial Networks
+## Deep Convolutional Generative Adversarial Networks
 
-This notebook takes a look at Deep Convolutional Generative Adversarial Networks (DCGAN), which combines Convolutional Neural Networks (CNNs) and GANs.
+This tutorial takes a look at Deep Convolutional Generative Adversarial Networks (DCGAN), which combines Convolutional Neural Networks (CNNs) and GANs.
 
 We will create a DCGAN that is able to create images of handwritten digits from random numbers.The tutorial uses the neural net architecture and guidelines outlined in [this paper](https://arxiv.org/abs/1511.06434), and the MNIST dataset.
 
 ##How to Use This Tutorial
-You can use this tutorial by executing each snippet of python code in order as it appears in the notebook.
+You can use this tutorial by executing each snippet of python code in order as it appears in the tutorial.
 
 
 1. The first net is the "generator" and creates images of handwritten digits from random numbers.
@@ -37,8 +36,8 @@ Apart from creating a DCGAN, you'll also learn:
 - How to visualize images as they are going through the training process
 
 ## Prerequisites
-This notebook assumes you're familiar with the concept of CNN's and have implemented one in MXNet. If you haven't, check out this tutorial, which walks you through implementing a CNN in MXNet. You should also be familiar with the concept of logistic regression. 
-Having a basic understanding for MXNet data iterators helps, since we'll create a custom Data Iterator to iterate though random numbers as inputs to our generator network. Take a look at this tutorial for a better understanding of how MXNet DataIter works.
+
+This tutorial assumes you're familiar with the concept of CNN's and have implemented one in MXNet. You should also be familiar with the concept of logistic regression. Having a basic understanding for MXNet data iterators helps, since we'll create a custom Data Iterator to iterate though random numbers as inputs to our generator network. 
 
 This example is designed to be trained on a single GPU. Training this network on CPU can be slow, so it's recommended that you use a GPU for training.
 
@@ -105,7 +104,7 @@ image_iter = mx.io.NDArrayIter(X, batch_size=batch_size)
 ```
 ### 2. Preparing Random Numbers
 
-We need to input random numbers from a normal distribution to our generator network, so we'll create an MXNet DataIter that produces random numbers for each training batch. The DataIter is the base class of MXNet's Data Loading API. Below, we create a class called RandIter which is a subclass of DataIter. If you want to know more about how MXNet data loading works in python, please look at this notebook. We use MXNet's built in mx.random.normal function in order to return the normally distributed random numbers every time we iterate.
+We need to input random numbers from a normal distribution to our generator network, so we'll create an MXNet DataIter that produces random numbers for each training batch. The DataIter is the base class of MXNet's Data Loading API. Below, we create a class called RandIter which is a subclass of DataIter. We use MXNet's built in mx.random.normal function in order to return the normally distributed random numbers every time we iterate.
 ```python
 class RandIter(mx.io.DataIter):
     def __init__(self, batch_size, ndim):
