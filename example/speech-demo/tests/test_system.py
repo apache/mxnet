@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 from __future__ import print_function
 from pdnn.run_DNN import run_DNN
 from pdnn.run_RBM import run_RBM
@@ -37,7 +54,7 @@ def test_rbm_dnn():
         "with_final": 1
     }
     mnist_conf["train_rbm"]["max_iters"] = 0
-    run_RBM(mnist_conf)    
+    run_RBM(mnist_conf)
 
 def test_sda_dnn():
     banner("sda dnn")
@@ -60,7 +77,7 @@ def test_sda_dnn():
         "with_final": 1
     }
     mnist_conf["train_sda"]["max_iters"] = 1
-    run_SDA(mnist_conf)    
+    run_SDA(mnist_conf)
 
 def test_dnn_eval():
     banner("dnn cv")
@@ -82,7 +99,7 @@ def test_dnn_eval():
     eval_DNN(mnist_conf)
 
     mnist_conf["eval_dnn"] = {"mode": "per-feat", "batch_size": 1024}
-    eval_DNN(mnist_conf)    
+    eval_DNN(mnist_conf)
 
 def test_dropout():
     banner("dropout")
