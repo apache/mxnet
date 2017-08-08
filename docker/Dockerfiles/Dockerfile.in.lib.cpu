@@ -5,6 +5,8 @@ FROM ubuntu:14.04
 COPY install/cpp.sh install/
 RUN install/cpp.sh
 
+# Use Docker cache only if commits from master have not changed
+ADD https://api.github.com/repos/dmlc/mxnet/git/refs/heads/master /tmp/mxnet_version.json
 RUN git clone --recursive https://github.com/dmlc/mxnet && cd mxnet && \
     make -j$(nproc) && \
     rm -r build
