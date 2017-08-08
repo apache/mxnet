@@ -63,7 +63,9 @@ We are going to use the python library, scikit-learn, to get the MNIST dataset. 
 The MNIST dataset contains 70,000 images of handwritten digits. Each image is 28x28 pixels in size. To create random numbers, we're going to create a custom MXNet data iterator, which will returns random numbers from a normal distribution as we need then.
 
 ## Prepare the Data
-###1. Preparing the MNSIT dataset
+
+### 1. Preparing the MNSIT dataset
+
 Let's start by preparing our handwritten digits from the MNIST dataset. We import the fetch_mldata function from scikit-learn, and use it to get the MNSIT dataset. Notice that it's shape is 70000x784. This contains the 70000 images on every row and 784 pixels of each image in the columns of each row. Each image is 28x28 pixels, but has been flattened so that all 784 images are represented in a single list.
 ```python
 from sklearn.datasets import fetch_mldata
@@ -101,7 +103,8 @@ import mxnet as mx
 batch_size = 64
 image_iter = mx.io.NDArrayIter(X, batch_size=batch_size)
 ```
-###2. Preparing Random Numbers
+### 2. Preparing Random Numbers
+
 We need to input random numbers from a normal distribution to our generator network, so we'll create an MXNet DataIter that produces random numbers for each training batch. The DataIter is the base class of MXNet's Data Loading API. Below, we create a class called RandIter which is a subclass of DataIter. If you want to know more about how MXNet data loading works in python, please look at this notebook. We use MXNet's built in mx.random.normal function in order to return the normally distributed random numbers every time we iterate.
 ```python
 class RandIter(mx.io.DataIter):
