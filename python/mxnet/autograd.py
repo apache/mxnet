@@ -27,14 +27,14 @@ def set_recording(is_recording): #pylint: disable=redefined-outer-name
         ctypes.c_int(is_recording), ctypes.byref(prev)))
     return bool(prev.value)
 
-def set_training(is_train):
+def set_training(train_mode): #pylint: disable=redefined-outer-name
     """Set status to training/predicting. This affects ctx.is_train in operator
     running context. For example, Dropout will drop inputs randomly when
-    is_train=True while simply passing through if is_train=False.
+    train_mode=True while simply passing through if train_mode=False.
 
     Parameters
     ----------
-    is_train: bool
+    train_mode: bool
 
     Returns
     -------
@@ -42,7 +42,7 @@ def set_training(is_train):
     """
     prev = ctypes.c_int()
     check_call(_LIB.MXAutogradSetIsTraining(
-        ctypes.c_int(is_train), ctypes.byref(prev)))
+        ctypes.c_int(train_mode), ctypes.byref(prev)))
     return bool(prev.value)
 
 def is_recording():
@@ -76,29 +76,31 @@ class _RecordingStateScope(object):
             y = model(x)
             backward([y])
     """
-    def __init__(self, is_record, is_train):
+    def __init__(self, is_record, train_mode): #pylint: disable=redefined-outer-name
         self._enter_is_record = is_record
-        self._enter_is_train = is_train
+        self._enter_train_mode = train_mode
         self._prev_is_record = None
-        self._prev_is_train = None
+        self._prev_train_mode = None
 
     def __enter__(self):
-        self._prev_is_record = set_recording(self._enter_is_record)
-        self._prev_is_train = set_training(self._enter_is_train)
+        if self._enter_is_record is not None:
+            self._prev_is_record = set_recording(self._enter_is_record)
+        if self._enter_train_mode is not None:
+            self._prev_train_mode = set_training(self._enter_train_mode)
 
     def __exit__(self, ptype, value, trace):
-        if self._prev_is_record != self._enter_is_record:
+        if self._enter_is_record is not None and self._prev_is_record != self._enter_is_record:
             set_recording(self._prev_is_record)
-        if self._prev_is_train != self._enter_is_train:
-            set_training(self._prev_is_train)
+        if self._enter_train_mode is not None and self._prev_train_mode != self._enter_train_mode:
+            set_training(self._prev_train_mode)
 
 
-def record(is_train=True):
+def record(train_mode=True): #pylint: disable=redefined-outer-name
     """Returns an autograd recording scope context to be used in 'with' statement
     and captures code that needs gradients to be calculated.
 
-    .. note:: When forwarding with is_train=False, the corresponding backward
-              should also use is_train=False, otherwise gradient is undefined.
+    .. note:: When forwarding with train_mode=False, the corresponding backward
+              should also use train_mode=False, otherwise gradient is undefined.
 
     Example::
         with autograd.record():
@@ -109,14 +111,14 @@ def record(is_train=True):
 
     Parameters
     ----------
-    is_train: bool, default True
+    train_mode: bool, default True
         Whether the forward pass is in training or predicting mode. This controls the behavior
         of some layers such as Dropout, BatchNorm.
     """
-    return _RecordingStateScope(True, is_train)
+    return _RecordingStateScope(True, train_mode)
 
 
-def pause(is_train=False):
+def pause(train_mode=False): #pylint: disable=redefined-outer-name
     """Returns a scope context to be used in 'with' statement for codes that do not need
     gradients to be calculated.
 
@@ -129,10 +131,38 @@ def pause(is_train=False):
 
     Parameters
     ----------
-    is_train: bool, default False
+    train_mode: bool, default False
         Whether to do forward for training or predicting.
     """
-    return _RecordingStateScope(False, is_train)
+    return _RecordingStateScope(False, train_mode)
+
+
+def train_mode():
+    """Returns a scope context to be used in 'with' statement
+    in which forward pass behavior is set to training mode,
+    without changing the recording states.
+
+    Example::
+        y = model(x)
+        with autograd.train():
+            y = dropout(y)
+    """
+    return _RecordingStateScope(None, True)
+
+
+def predict_mode():
+    """Returns a scope context to be used in 'with' statement
+    in which forward pass behavior is set to inference mode,
+    without changing the recording states.
+
+    Example::
+        with autograd.record():
+            y = model(x)
+            with autograd.test():
+                y = sampling(y)
+            backward([y])
+    """
+    return _RecordingStateScope(None, False)
 
 
 def mark_variables(variables, gradients, grad_reqs='write'):
@@ -166,7 +196,7 @@ def mark_variables(variables, gradients, grad_reqs='write'):
         c_array(NDArrayHandle, gradient_handles)))
 
 
-def backward(heads, head_grads=None, retain_graph=False, is_train=True):
+def backward(heads, head_grads=None, retain_graph=False, train_mode=True): #pylint: disable=redefined-outer-name
     """Compute the gradients of heads w.r.t previously marked variables.
 
     Parameters
@@ -175,7 +205,7 @@ def backward(heads, head_grads=None, retain_graph=False, is_train=True):
         Output NDArray(s)
     head_grads: NDArray or list of NDArray or None
         Gradients with respect to heads.
-    is_train: bool, optional
+    train_mode: bool, optional
         Whether to do backward for training or predicting.
     """
     if isinstance(heads, NDArray):
@@ -193,7 +223,7 @@ def backward(heads, head_grads=None, retain_graph=False, is_train=True):
             c_array(NDArrayHandle, output_handles),
             ctypes.c_void_p(0),
             ctypes.c_int(retain_graph),
-            ctypes.c_int(is_train)))
+            ctypes.c_int(train_mode)))
         return
 
     ograd_handles = []
@@ -210,4 +240,4 @@ def backward(heads, head_grads=None, retain_graph=False, is_train=True):
         c_array(NDArrayHandle, output_handles),
         c_array(NDArrayHandle, ograd_handles),
         ctypes.c_int(retain_graph),
-        ctypes.c_int(is_train)))
+        ctypes.c_int(train_mode)))
