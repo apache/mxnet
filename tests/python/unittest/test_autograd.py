@@ -264,7 +264,7 @@ def test_is_train():
             assert not is_training()
             y = mx.nd.Dropout(x, p=0.5)
             assert (y.asnumpy() == x.asnumpy()).all()
-            y.backward(is_train=False)
+            y.backward(train_mode=False)
             assert (x.grad.asnumpy() == x.asnumpy()).all()
 
     with record(train_mode=False):
@@ -272,7 +272,7 @@ def test_is_train():
         assert not is_training()
         y = mx.nd.Dropout(x, p=0.5)
         assert (y.asnumpy() == x.asnumpy()).all()
-        y.backward(is_train=False)
+        y.backward(train_mode=False)
         assert (x.grad.asnumpy() == x.asnumpy()).all()
 
         with train_mode():

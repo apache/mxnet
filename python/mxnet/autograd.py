@@ -149,7 +149,7 @@ def train_mode():
     Example::
 
         y = model(x)
-        with autograd.train():
+        with autograd.train_mode():
             y = dropout(y)
 
     """
@@ -165,7 +165,7 @@ def predict_mode():
 
         with autograd.record():
             y = model(x)
-            with autograd.test():
+            with autograd.predict_mode():
                 y = sampling(y)
             backward([y])
     """
