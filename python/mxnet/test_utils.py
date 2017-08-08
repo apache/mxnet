@@ -11,8 +11,8 @@ import sys
 import os
 import errno
 import logging
-import scipy.sparse as sp
 from contextlib import contextmanager
+import scipy.sparse as sp
 import numpy as np
 import numpy.testing as npt
 import numpy.random as rnd
