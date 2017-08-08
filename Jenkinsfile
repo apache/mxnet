@@ -105,7 +105,8 @@ try {
         node('mxnetlinux') {
           ws('workspace/sanity') {
             init_git()
-            make('lint', 'cpplint rcpplint jnilint')
+            sh "${docker_run} license tools/license_header.sh"
+	    make('lint', 'cpplint rcpplint jnilint')
             make('lint', 'pylint')
           }
         }
