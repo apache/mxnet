@@ -105,7 +105,7 @@ try {
         node('mxnetlinux') {
           ws('workspace/sanity') {
             init_git()
-            sh "${docker_run} license tools/license_header.sh ${PWD}"
+            sh "${docker_run} license tools/license_header.sh /home/ec2-user/workspace/test-pipeline"
 	    make('lint', 'cpplint rcpplint jnilint')
             make('lint', 'pylint')
           }
