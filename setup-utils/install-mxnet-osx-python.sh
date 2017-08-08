@@ -1,4 +1,22 @@
 #!/bin/bash
+
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 #
 # This scripts installs the dependencies and compiles
 # MXNet source.
@@ -12,7 +30,7 @@ export MXNET_GITPATH="https://github.com/dmlc/mxnet.git"
 if [ -z ${MXNET_TAG} ];
 then
 	#
-	# TODO: Change this to latest tag 
+	# TODO: Change this to latest tag
 	#       to avoid updating this value for every release
 	#
 	export MXNET_TAG="v0.10.0"
@@ -138,17 +156,17 @@ install_brew() {
 	echo "END: Check/Install/Update Homebrew"
 	echo $LINE
 	echo " "
-	
+
 	echo "BEGIN: Install dependent brew packages for MXNet: ${BREW_PKGS}"
-	
+
 	chkret brew tap homebrew/science
-	
+
 	# install each individually to see progress for each
 	for pkg in ${BREW_PKGS}
 	do
 		chkret brew_pkg_install ${pkg}
 	done
-	
+
 	echo "END: Install dependent brew packages for MXNet: ${BREW_PKGS}"
 	echo $LINE
 	echo " "
@@ -223,7 +241,7 @@ install_port () {
 	#	sudo mkdir -p /usr/local/opt/openblas/lib
 	#	sudo ln -s /opt/local/lib/libopenblas.a /usr/local/opt/openblas/lib/libopenblas.a
 	#fi
-	
+
 	echo " "
 	echo "END: Install dependent port packages for MXNet: ${PORT_PKGS}"
 	echo $LINE
@@ -265,9 +283,9 @@ install_mac_pkg_manager() {
 		export PKG_MGR=""
 	else
 		export MAC_PKG_ASK=0
-	
+
 		while true; do
-			echo "NOTE: Using the already installed package manager: $PKG_MGR" 
+			echo "NOTE: Using the already installed package manager: $PKG_MGR"
 			read -p "Do you want to continue? (y/n): " response
 			echo " "
 			case $response in
@@ -368,7 +386,7 @@ compile_mxnet() {
 	echo "BEGIN: Compile MXNet"
 	cd ${MXNET_HOME}
 	chkret cp make/osx.mk ./config.mk.tmp
-	
+
 	touch ./config.mk
 	# rm any old setting of USE_BLAS, if present in config file
 	egrep -v "^USE_BLAS" ./config.mk.tmp                   >> ./config.mk
@@ -386,7 +404,7 @@ compile_mxnet() {
 		echo "ADD_LDFLAGS += -L/usr/local/lib/graphviz/"        >> ./config.mk
 	fi
 	echo " "
-	
+
 	echo "NOTE: The following compile-time configurations will be used."
 	echo "      If you want to change any of them, edit the following file"
 	echo "      in another terminal window and then press enter to continue."
@@ -452,7 +470,7 @@ END
 		echo " "
 		echo $LINE
 		echo " "
-		rm -f mxnet_test.log mxnet_test.expected 
+		rm -f mxnet_test.log mxnet_test.expected
 		exit 0
 	else
 		echo " "

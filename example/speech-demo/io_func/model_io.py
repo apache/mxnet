@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 from __future__ import print_function
 import numpy as np
 import os
@@ -59,7 +76,7 @@ def _nnet2file(layers, set_layer_num = -1, filename='nnet.out', activation='sigm
         nnet_dict[dict_a] = array_2_string(layers[i].delta_params[0].get_value())
         dict_a = str(i) + ' ' + activation + ' db'
         nnet_dict[dict_a] = array_2_string(layers[i].delta_params[1].get_value())
-    
+
         if layers[i].kahan:
             logger.info("Loading hidden kahan")
             dict_a = str(i) + ' ' + activation + ' W_carry'
@@ -71,9 +88,9 @@ def _nnet2file(layers, set_layer_num = -1, filename='nnet.out', activation='sigm
             #dict_a = str(i) + ' ' + activation + ' db_carry'
             #nnet_dict[dict_a] = array_2_string(layers[i].delta_params_carry[1].get_value())
 
-    if withfinal: 
+    if withfinal:
         logger.info("Saving final layer ")
-        
+
         dict_a = 'logreg W'
         nnet_dict[dict_a] = array_2_string((1.0 - factor[-1]) * layers[-1].params[0].get_value())
         dict_a = 'logreg b'
@@ -96,7 +113,7 @@ def _nnet2file(layers, set_layer_num = -1, filename='nnet.out', activation='sigm
             #dict_a = 'logreg db_carry'
             #nnet_dict[dict_a] = array_2_string(layers[-1].delta_params_carry[1].get_value())
 
-    utils.pickle_save(nnet_dict, filename)   
+    utils.pickle_save(nnet_dict, filename)
 
 def zero(x):
     x.set_value(np.zeros_like(x.get_value(borrow=True), dtype=theano.config.floatX))
@@ -147,14 +164,14 @@ def _file2nnet(layers, set_layer_num = -1, filename='nnet.in', activation='sigmo
 
         dict_key = str(i) + ' ' + activation + ' W'
         layers[i].params[0].set_value(factors[i] * factor * np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))
-        dict_key = str(i) + ' ' + activation + ' b' 
+        dict_key = str(i) + ' ' + activation + ' b'
         layers[i].params[1].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))
 
         if gradients:
             dict_key = str(i) + ' ' + activation + ' dW'
             layers[i].delta_params[0].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))
-            dict_key = str(i) + ' ' + activation + ' db' 
-            layers[i].delta_params[1].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))            
+            dict_key = str(i) + ' ' + activation + ' db'
+            layers[i].delta_params[1].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))
         else:
             zero(layers[i].delta_params[0])
             zero(layers[i].delta_params[1])
@@ -164,12 +181,12 @@ def _file2nnet(layers, set_layer_num = -1, filename='nnet.in', activation='sigmo
             logger.info("Loading hidden kahan")
             dict_key = str(i) + ' ' + activation + ' W_carry'
             layers[i].params_carry[0].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))
-            dict_key = str(i) + ' ' + activation + ' b_carry' 
-            layers[i].params_carry[1].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))            
+            dict_key = str(i) + ' ' + activation + ' b_carry'
+            layers[i].params_carry[1].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))
             #dict_key = str(i) + ' ' + activation + ' dW_carry'
             #layers[i].delta_params_carry[0].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))
-            #dict_key = str(i) + ' ' + activation + ' db_carry' 
-            #layers[i].delta_params_carry[1].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))            
+            #dict_key = str(i) + ' ' + activation + ' db_carry'
+            #layers[i].delta_params_carry[1].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))
 
         if layers[i].sync:
             layers[i].params_sync[0].set_value(layers[i].params[0].get_value().astype('float32'))
@@ -197,12 +214,12 @@ def _file2nnet(layers, set_layer_num = -1, filename='nnet.in', activation='sigmo
             logger.info("Loading softmax kahan")
             dict_key = 'logreg W_carry'
             layers[-1].params_carry[0].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))
-            dict_key = 'logreg b_carry' 
-            layers[-1].params_carry[1].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))            
+            dict_key = 'logreg b_carry'
+            layers[-1].params_carry[1].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))
             #dict_key = 'logreg dW_carry'
             #layers[-1].delta_params_carry[0].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))
-            #dict_key = 'logreg db_carry' 
-            #layers[-1].delta_params_carry[1].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))            
+            #dict_key = 'logreg db_carry'
+            #layers[-1].delta_params_carry[1].set_value(np.asarray(string_2_array(nnet_dict[dict_key]), dtype=theano.config.floatX))
 
         if layers[-1].sync:
             layers[-1].params_sync[0].set_value(layers[-1].params[0].get_value().astype('float32'))
@@ -220,10 +237,10 @@ def _cnn2file(conv_layers, filename='nnet.out', activation='sigmoid', withfinal=
     for i in xrange(n_layers):
        conv_layer = conv_layers[i]
        filter_shape = conv_layer.filter_shape
-       
+
        for next_X in xrange(filter_shape[0]):
            for this_X in xrange(filter_shape[1]):
-               dict_a = 'W ' + str(i) + ' ' + str(next_X) + ' ' + str(this_X) 
+               dict_a = 'W ' + str(i) + ' ' + str(next_X) + ' ' + str(this_X)
                if i == 0:
                    nnet_dict[dict_a] = array_2_string(input_factor * (conv_layer.W.get_value())[next_X, this_X])
                else:
@@ -231,7 +248,7 @@ def _cnn2file(conv_layers, filename='nnet.out', activation='sigmoid', withfinal=
 
        dict_a = 'b ' + str(i)
        nnet_dict[dict_a] = array_2_string(conv_layer.b.get_value())
-    
+
     with open(filename, 'wb') as fp:
         json.dump(nnet_dict, fp, indent=2, sort_keys = True)
         fp.flush()
@@ -252,7 +269,7 @@ def _file2cnn(conv_layers, filename='nnet.in', activation='sigmoid', withfinal=T
                 dict_a = 'W ' + str(i) + ' ' + str(next_X) + ' ' + str(this_X)
                 W_array[next_X, this_X, :, :] = factor * np.asarray(string_2_array(nnet_dict[dict_a]))
 
-        conv_layer.W.set_value(W_array) 
+        conv_layer.W.set_value(W_array)
 
         dict_a = 'b ' + str(i)
-        conv_layer.b.set_value(np.asarray(string_2_array(nnet_dict[dict_a]), dtype=theano.config.floatX)) 
+        conv_layer.b.set_value(np.asarray(string_2_array(nnet_dict[dict_a]), dtype=theano.config.floatX))

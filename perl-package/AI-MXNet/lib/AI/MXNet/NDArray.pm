@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::NDArray;
 
 =head1 NAME
@@ -68,7 +85,7 @@ method at(Index @indices)
     my $isize = @indices;
     confess("Dimensions size $dsize < indexes size $isize")
         if $dsize < $isize;
-    confess("Dimensions size $dsize = indexes size $isize, 
+    confess("Dimensions size $dsize = indexes size $isize,
                    ndarray only supports either ->at on dimension 0
                    or full crop")
         if $isize > 1 and $dsize != $isize;
@@ -78,7 +95,7 @@ method at(Index @indices)
         confess("Dimension $i mismatch Idx: $idx >= Dim Size: $dim_size")
             if $idx >= $dim_size or ($idx + $dim_size) < 0;
         ++$i;
-    }, \@indices, $shape);  
+    }, \@indices, $shape);
     $i = 0;
     for my $v (@indices)
     {
@@ -181,7 +198,7 @@ method _sync_copyfrom(ArrayRef|PDL|PDL::Matrix $source_array)
         my $convert_func = $pdl_type->convertfunc;
         $source_array = $source_array->$convert_func;
     }
-    $source_array = pdl($pdl_type, [@{ $source_array->unpdl } ? $source_array->unpdl->[0] : 0 ]) 
+    $source_array = pdl($pdl_type, [@{ $source_array->unpdl } ? $source_array->unpdl->[0] : 0 ])
         unless @{ $source_array->shape->unpdl };
     my $pdl_shape = $source_array->shape->unpdl;
     my $pdl_shape_str = join(',', ref($source_array) eq 'PDL' ? reverse @{ $pdl_shape } : @{ $pdl_shape });
@@ -222,7 +239,7 @@ method aspdl()
     my $pdl = PDL->new_from_specification($pdl_type, reverse @{ $self->shape });
     my $perl_pack_type = DTYPE_MX_TO_PERL->{$dtype};
     my $buf = pack("$perl_pack_type*", (0)x$self->size);
-    check_call(AI::MXNetCAPI::NDArraySyncCopyToCPU($self->handle, $buf, $self->size)); 
+    check_call(AI::MXNetCAPI::NDArraySyncCopyToCPU($self->handle, $buf, $self->size));
     ## special handling for float16
     if($perl_pack_type eq 'S')
     {
@@ -253,7 +270,7 @@ method asmpdl()
     my $pdl = PDL::Matrix->new_from_specification($pdl_type, @{ $self->shape });
     my $perl_pack_type = DTYPE_MX_TO_PERL->{$dtype};
     my $buf = pack("$perl_pack_type*", (0)x$self->size);
-    check_call(AI::MXNetCAPI::NDArraySyncCopyToCPU($self->handle, $buf, $self->size)); 
+    check_call(AI::MXNetCAPI::NDArraySyncCopyToCPU($self->handle, $buf, $self->size));
     ## special handling for float16
     if($perl_pack_type eq 'S')
     {
@@ -394,7 +411,7 @@ method moveaxis(Int $source, Int $dest)
 
 =head2 broadcast_to
 
-    Broadcasting the current NDArray into the given shape. 
+    Broadcasting the current NDArray into the given shape.
 
     Parameters
     ---------
@@ -404,7 +421,7 @@ method moveaxis(Int $source, Int $dest)
 method broadcast_to(Shape $shape)
 {
     my $cur_shape = $self->shape;
-    my $err_str = "operands could not be broadcast together with remapped shapes" 
+    my $err_str = "operands could not be broadcast together with remapped shapes"
                   ."[original->remapped]: [@$cur_shape] and requested shape [@$shape]";
     if(@$shape < @$cur_shape)
     {
@@ -494,7 +511,7 @@ method context()
 
     Returns
     -------
-    a data type string ('float32', 'float64', 'float16', 'uint8', 'int32') 
+    a data type string ('float32', 'float64', 'float16', 'uint8', 'int32')
     representing the data type of the ndarray.
     'float32' is the default dtype for the ndarray class.
 =cut
@@ -707,7 +724,7 @@ method stringify($other=, $reverse=)
 method iadd(AI::MXNet::NDArray|Num $other, $reverse=)
 {
     confess('trying to add to a readonly NDArray') unless $self->writable;
-    return ref $other 
+    return ref $other
         ? __PACKAGE__->broadcast_add($self, $other, { out => $self })
         : __PACKAGE__->_plus_scalar($self, $other, { out => $self })
 }
@@ -752,9 +769,9 @@ method multiply(AI::MXNet::NDArray|Num $other, $reverse=)
 method imultiply(AI::MXNet::NDArray|Num $other, $reverse=)
 {
     confess('trying to add to a readonly NDArray') unless $self->writable;
-    return ref $other 
-        ? __PACKAGE__->broadcast_mul($self, $other, { out => $self }) 
-        : __PACKAGE__->_mul_scalar($self, $other, { out => $self }) 
+    return ref $other
+        ? __PACKAGE__->broadcast_mul($self, $other, { out => $self })
+        : __PACKAGE__->_mul_scalar($self, $other, { out => $self })
 }
 
 method divide(AI::MXNet::NDArray|Num $other, $reverse=)
@@ -770,9 +787,9 @@ method divide(AI::MXNet::NDArray|Num $other, $reverse=)
 method idivide(AI::MXNet::NDArray|Num $other, $reverse=)
 {
     confess('trying to add to a readonly NDArray') unless $self->writable;
-    return ref $other 
-        ? __PACKAGE__->broadcast_div($self, $other, { out => $self }) 
-        : __PACKAGE__->_div_scalar($self, $other, { out => $self }) 
+    return ref $other
+        ? __PACKAGE__->broadcast_div($self, $other, { out => $self })
+        : __PACKAGE__->_div_scalar($self, $other, { out => $self })
 }
 
 method power(AI::MXNet::NDArray|Num $other, $reverse=)
@@ -1094,11 +1111,11 @@ method concatenate(ArrayRef[AI::MXNet::NDArray] $arrays, Index :$axis=0, :$alway
         $shape_axis += $arr->shape->[$axis];
         my $arr_shape_rest1 = [@{ $arr->shape }[0..($axis-1)]];
         my $arr_shape_rest2 = [@{ $arr->shape }[($axis+1)..(@{ $arr->shape }-1)]];
-        confess("first array $arrays->[0] and $i array $arr do not match") 
+        confess("first array $arrays->[0] and $i array $arr do not match")
             unless  join(',',@$arr_shape_rest1) eq join(',',@$shape_rest1);
-        confess("first array $arrays->[0] and $i array $arr do not match") 
+        confess("first array $arrays->[0] and $i array $arr do not match")
             unless  join(',',@$arr_shape_rest2) eq join(',',@$shape_rest2);
-        confess("first array $arrays->[0] and $i array $arr dtypes do not match") 
+        confess("first array $arrays->[0] and $i array $arr dtypes do not match")
             unless  join(',',@$arr_shape_rest2) eq join(',',@$shape_rest2);
         $i++;
     }
@@ -1118,8 +1135,8 @@ method concatenate(ArrayRef[AI::MXNet::NDArray] $arrays, Index :$axis=0, :$alway
             $begin->[$axis] = $idx;
             $end->[$axis] = $idx+$arr->shape->[$axis];
             __PACKAGE__->_crop_assign(
-                $ret, $arr, 
-                { 
+                $ret, $arr,
+                {
                     out => $ret,
                     begin => $begin,
                     end => $end
