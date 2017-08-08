@@ -106,7 +106,8 @@ try {
           ws('workspace/sanity') {
             init_git()
             sh "python tools/license_header.py check"
-            make('lint', 'cpplint rcpplint jnilint')
+            sh "${docker_run} license tools/license_header.sh"
+	    make('lint', 'cpplint rcpplint jnilint')
             make('lint', 'pylint')
           }
         }
