@@ -127,10 +127,12 @@ When we initalize our RandIter, we need to provide two numbers: the batch size a
 Z = 100
 rand_iter = RandIter(batch_size, Z)
 ```
-##Create the Model
+## Create the Model
+
 Our model has two networks that we will train together - the generator network and the disciminator network.
 
-###The Generator
+### The Generator
+
 Let's start off by defining the generator network, which uses deconvolutional layers (also callled fractionally strided layers) to generate an image form random numbers :
 ```python
 no_bias = True
@@ -158,6 +160,7 @@ gact4 = mx.sym.Activation(gbn4, name='gact4', act_type='relu')
 g5 = mx.sym.Deconvolution(gact4, name='g5', kernel=(4,4), stride=(2,2), pad=(1,1), num_filter=3, no_bias=no_bias)
 generatorSymbol = mx.sym.Activation(g5, name='gact5', act_type='tanh')
 ```
+
 Our generator image starts with random numbers that will be obtained from the RandIter we created earlier, so we created the rand variable for this input.
 We then start creating the model starting with a Deconvolution layer (sometimes called 'fractionally strided layer'). We apply batch normalization and ReLU activation after the Deconvolution layer.
 
@@ -165,7 +168,8 @@ We repeat this process 4 times, applying a (2,2) stride and (1,1) pad at each De
 
 Notice we used 3 parameters to help us create our model: no_bias, fixed_gamma, and epsilon. Neurons in our network won't have a bias added to them, this seems to work better in practice for the DCGAN. In our batch norm layer, we set fixed_gamma=True, which means gamma=1 for all of our batch norm layers. epsilon is a small number that gets added to our batch norm so that we don't end up dividing by zero. By default, CuDNN requires that this number is greater than 1e-5, so we add a small number to this value, ensuring this values stays small.
 
-###The Discriminator
+### The Discriminator
+
 Let's now create our discriminator network, which will take in images of handwritten digits from the MNIST dataset and images created by the generator network:
 ```python
 data = mx.sym.Variable('data')
@@ -201,7 +205,6 @@ Prepare the models using the Module API
 
 So far we have defined a MXNet Symbol for both the generator and the discriminator network. Before we can train our model, we need to bind these symbols using the Module API, which creates the computation graph for our models. It also allows us to decide how we want to initialize our model and what type of optimizer we want to use. Let's set up Module for both of our networks:
 ```python
-In [11]:
 #Hyperperameters
 sigma = 0.02
 lr = 0.0002
@@ -368,7 +371,8 @@ The plot on our left will represent what our generator created (the fake image) 
 
 As training goes on the generator becomes better at generating realistic images. You can see this happening since images on the left become closer to the original dataset with each iteration.
 
-##Summary
+## Summary
+
 We've now sucessfully used Apache MXNet to train a Deep Convolutional GAN using the MNIST dataset.
 
 As a result, we've created two neural nets: a generator, which is able to create images of handwritten digits from random numbers, and a discriminator, which is able to take an image and determine if it is an image of handwritten digits.
