@@ -18,14 +18,14 @@ try:
 except ImportError:
     multiprocessing = None
 
-def list_image(root, recursive, exts):
+def list_image(root, recursive, exts, num):
     i = 0
     if recursive:
         cat = {}
         for path, dirs, files in os.walk(root, followlinks=True):
             dirs.sort()
             files.sort()
-            for fname in files:
+            for fname in files[:num]:
                 fpath = os.path.join(path, fname)
                 suffix = os.path.splitext(fname)[1].lower()
                 if os.path.isfile(fpath) and (suffix in exts):
@@ -53,7 +53,7 @@ def write_list(path_out, image_list):
             fout.write(line)
 
 def make_list(args):
-    image_list = list_image(args.root, args.recursive, args.exts)
+    image_list = list_image(args.root, args.recursive, args.exts, args.num_perclass)
     image_list = list(image_list)
     if args.shuffle is True:
         random.seed(100)
@@ -206,6 +206,8 @@ def parse_args():
                         help='Ratio of images to use for training.')
     cgroup.add_argument('--test-ratio', type=float, default=0,
                         help='Ratio of images to use for testing.')
+    cgroup.add_argument('--num-perclass', type=int, default=int(1e23),
+                        help='The maxium number of per class ')
     cgroup.add_argument('--recursive', type=bool, default=False,
                         help='If true recursively walk through subdirs and assign an unique label\
         to images in each folder. Otherwise only include images in the root folder\
