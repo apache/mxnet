@@ -18,22 +18,28 @@
 # under the License.
 
 CURR_DIR=$(cd `dirname $0`; pwd)
-MODULE_DIR=$(cd $CURR_DIR/../; pwd)
-ROOT_DIR=$(cd $CURR_DIR/../../; pwd)
+SPARK_MODULE_DIR=$(cd $CURR_DIR/../; pwd)
+SCALA_PKG_DIR=$(cd $CURR_DIR/../../; pwd)
 
+OS=""
 
-LIB_DIR=${MODULE_DIR}/target/classes/lib
-JAR=${MODULE_DIR}/target/mxnet-spark_2.10-0.1.2-SNAPSHOT.jar
+if [ "$(uname)" == "Darwin" ]; then
+	# Do something under Mac OS X platform
+	OS='osx-x86_64-cpu'	
+elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+	OS='linux-x86_64-cpu'	
+fi
 
-LIBS=${ROOT_DIR}/assembly/linux-x86_64-cpu/target/mxnet-full_2.10-linux-x86_64-cpu-0.1.2-SNAPSHOT.jar
-LIBS="${LIBS},${LIB_DIR}/args4j-2.0.29.jar,${LIB_DIR}/scala-library-2.10.4.jar,${JAR}"
+LIB_DIR=${SPARK_MODULE_DIR}/target/classes/lib
+SPARK_JAR=`find ${SPARK_MODULE_DIR}/target -name "*.jar" -type f -exec ls "{}" + | grep -v -E '(javadoc|sources)'`
+SCALA_JAR=`find ${SCALA_PKG_DIR}/assembly/$OS/target -maxdepth 1 -name "*.jar" -type f -exec ls "{}" + | grep -v -E '(javadoc|sources)'`
 
-SPARK_OPTS+=" --name mxnet"
+SPARK_OPTS+=" --name mxnet-spark-mnist"
 SPARK_OPTS+=" --driver-memory 1g"
 SPARK_OPTS+=" --executor-memory 1g"
 SPARK_OPTS+=" --num-executors 2"
 SPARK_OPTS+=" --executor-cores 1"
-SPARK_OPTS+=" --jars ${LIBS}"
+SPARK_OPTS+=" --jars ${SCALA_JAR}"
 
 # You can download these two files as training & validation set.
 # They were converted from the MNIST dataset,
@@ -42,23 +48,21 @@ SPARK_OPTS+=" --jars ${LIBS}"
 # https://s3-us-west-2.amazonaws.com/mxnet.liuyz/data/mnist/val.txt
 
 # running opts
-RUN_OPTS+=" --input ${INPUT_TRAIN}"
-RUN_OPTS+=" --input-val ${INPUT_VAL}"
-RUN_OPTS+=" --output ${OUTPUT}"
+RUN_OPTS+=" --input $1"
+RUN_OPTS+=" --input-val $2"
+RUN_OPTS+=" --output $3"
 # These jars are required by the KVStores at runtime.
 # They will be uploaded and distributed to each node automatically.
-RUN_OPTS+=" --jars ${LIBS}"
+RUN_OPTS+=" --jars $SCALA_JAR"
 RUN_OPTS+=" --num-server 1"
 RUN_OPTS+=" --num-worker 2"
-RUN_OPTS+=" --java /usr/local/jdk1.8.0_60/bin/java"
+RUN_OPTS+=" --java $JAVA_HOME/java"
 RUN_OPTS+=" --model mlp"
 RUN_OPTS+=" --cpus 0,1"
 RUN_OPTS+=" --num-epoch 5"
 
-${SPARK_HOME}/bin/spark-submit --master spark://localhost:7077 \
-  --conf spark.dynamicAllocation.enabled=false \
-  --conf spark.speculation=false \
+spark-submit --master local[*] \
   --class ml.dmlc.mxnet.spark.example.ClassificationExample \
   ${SPARK_OPTS} \
-  ${JAR} \
+  ${SPARK_JAR} \
   ${RUN_OPTS}
