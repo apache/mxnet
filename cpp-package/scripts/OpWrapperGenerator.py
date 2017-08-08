@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # This is a python script that generates operator wrappers such as FullyConnected,
 # based on current libmxnet.dll. This script is written so that we don't need to
 # write new operator wrappers when new ones are added to the library.
