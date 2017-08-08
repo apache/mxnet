@@ -9,6 +9,7 @@ GetMNIST_ubyte <- function() {
       !file.exists('data/t10k-labels-idx1-ubyte')) {
     download.file('http://data.mxnet.io/mxnet/data/mnist.zip', destfile = 'data/mnist.zip')
     unzip('data/mnist.zip', exdir = 'data/')
+    file.remove('data/mnist.zip')
   }
 }
 
@@ -21,6 +22,7 @@ GetMNIST_csv <- function() {
     download.file('https://s3-us-west-2.amazonaws.com/apache-mxnet/R/data/mnist_csv.zip',
                   destfile = 'data/mnist_csv.zip')
     unzip('data/mnist_csv.zip', exdir = 'data/')
+    file.remove('data/mnist_csv.zip')
   }
 }
 
@@ -35,5 +37,58 @@ GetCifar10 <- function() {
     download.file('http://data.mxnet.io/mxnet/data/cifar10.zip',
                   destfile = 'data/cifar10.zip')
     unzip('data/cifar10.zip', exdir = 'data/')
+    file.remove('data/cifar10.zip')
+  }
+}
+
+GetInception <- function() {
+  if (!dir.exists("model")) {
+    dir.create("model/")
+  }
+  if (!file.exists('model/Inception-BN-0126.params')) {
+    download.file('http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-0126.params',
+                  destfile = 'model/Inception-BN-0126.params')
+  }
+  if (!file.exists('model/Inception-BN-symbol.json')) {
+    download.file('http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-symbol.json',
+                  destfile = 'model/Inception-BN-symbol.json')
+  }
+}
+
+GetCatDog <- function() {
+  if (!dir.exists("data")) {
+    dir.create("data/")
+  }
+  if (!file.exists('data/cats_dogs/cats_dogs_train.rec') |
+      !file.exists('data/cats_dogs/cats_dogs_val.rec')) {
+    download.file('https://s3-us-west-2.amazonaws.com/apache-mxnet/R/data/cats_dogs.zip',
+                  destfile = 'data/cats_dogs.zip')
+    unzip('data/cats_dogs.zip', exdir = 'data/')
+    file.remove('data/cats_dogs.zip')
+  }
+}
+
+GetMovieLens <- function() {
+  if (!dir.exists("data")) {
+    dir.create("data/")
+  }
+  if (!file.exists('data/ml-100k/u.data')) {
+    download.file('http://files.grouplens.org/datasets/movielens/ml-100k.zip',
+                  destfile = 'data/ml-100k.zip')
+    unzip('data/ml-100k.zip', exdir = 'data/')
+    file.remove('data/ml-100k.zip')
+  }
+}
+
+GetISBI_data <- function() {
+  if (!dir.exists("data")) {
+    dir.create("data/")
+  }
+  if (!file.exists('data/ISBI/train-volume.tif') |
+      !file.exists('data/ISBI/train-labels.tif')) {
+    download.file('https://s3-us-west-2.amazonaws.com/apache-mxnet/R/data/ISBI.zip',
+                  destfile = 'data/ISBI.zip')
+    unzip('data/ISBI.zip', exdir = 'data/')
+    file.remove('data/ISBI.zip')
   }
 }

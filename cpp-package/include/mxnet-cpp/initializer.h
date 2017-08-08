@@ -5,8 +5,8 @@
  * \author Zhang Chen
  */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_INITIALIZER_H_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_INITIALIZER_H_
+#ifndef MXNET_CPP_INITIALIZER_H_
+#define MXNET_CPP_INITIALIZER_H_
 
 #include <cmath>
 #include <string>
@@ -179,4 +179,4 @@ class Xavier : public Initializer {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_INITIALIZER_H_
+#endif  // MXNET_CPP_INITIALIZER_H_

@@ -386,6 +386,7 @@ class Module(BaseModule):
             assert isinstance(shared_module, Module) and \
                     shared_module.binded and shared_module.params_initialized
             shared_group = shared_module._exec_group
+            assert len(shared_group.execs) == len(self._context)
         else:
             shared_group = None
 
@@ -554,11 +555,6 @@ class Module(BaseModule):
             Default is ``None``, which means ``is_train`` takes the value of ``self.for_training``.
         """
         assert self.binded and self.params_initialized
-
-        # If start to inference, force rebind module.
-        if self._label_shapes and not data_batch.label:
-            raise RuntimeError("If you are trying to do inference, rebind module "
-                               "with 'force_rebind=True' and 'for_training=False'")
 
         curr_data_shapes = tuple(i.shape for i in self._data_shapes)
         new_data_shapes = tuple(i.shape for i in data_batch.data)

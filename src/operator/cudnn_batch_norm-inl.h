@@ -28,8 +28,8 @@ class CuDNNBatchNormOp : public Operator {
  public:
   explicit CuDNNBatchNormOp(BatchNormParam param) {
     using namespace mshadow;
-    CHECK_GT(param.eps, CUDNN_BN_MIN_EPSILON)
-     << "CuDNN requires eps to be greater than " << CUDNN_BN_MIN_EPSILON;
+    CHECK_GE(param.eps, CUDNN_BN_MIN_EPSILON)
+     << "CuDNN requires eps to be no less than " << CUDNN_BN_MIN_EPSILON;
     this->param_ = param;
     init_cudnn_ = false;
     dtype_ = DataType<DType>::kCudnnFlag;
@@ -94,6 +94,11 @@ class CuDNNBatchNormOp : public Operator {
 
     Tensor<gpu, 4, DType> y =
       out_data[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, DType>(shape_, s);
+#if CUDNN_VERSION >= 7000
+    auto mode = CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
+#else
+    auto mode = CUDNN_BATCHNORM_SPATIAL;
+#endif
 
     MSHADOW_REAL_TYPE_SWITCH(dtype_param_, DTypeParam, {
       Tensor<gpu, 1, DTypeParam> gamma =
@@ -118,7 +123,7 @@ class CuDNNBatchNormOp : public Operator {
           out_data[cudnnbatchnorm::kInvVar]
           .get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
         CUDNN_CALL(cudnnBatchNormalizationForwardTraining(s->dnn_handle_,
-                                                          CUDNN_BATCHNORM_SPATIAL,
+                                                          mode,
                                                           &a,
                                                           &b,
                                                           io_desc_,
@@ -178,6 +183,11 @@ class CuDNNBatchNormOp : public Operator {
       out_grad[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, DType>(shape_, s);
 
 #if CUDNN_VERSION >= 4007
+#if CUDNN_VERSION >= 7000
+    auto mode = CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
+#else
+    auto mode = CUDNN_BATCHNORM_SPATIAL;
+#endif
     MSHADOW_REAL_TYPE_SWITCH(dtype_param_, DTypeParam, {
       Tensor<gpu, 1, DTypeParam> gamma =
         in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
@@ -199,7 +209,7 @@ class CuDNNBatchNormOp : public Operator {
 
       CUDNN_CALL(cudnnBatchNormalizationBackward(
         s->dnn_handle_,
-        CUDNN_BATCHNORM_SPATIAL,
+        mode,
         &a,
         &b,
         &a,

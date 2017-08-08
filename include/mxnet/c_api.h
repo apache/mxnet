@@ -139,12 +139,12 @@ typedef int (*CustomOpBwdDepFunc)(const int* /*out_grad*/, const int* /*in_data*
                                   const int* /*out_data*/, int* /*num_deps*/,
                                   int** /*rdeps*/, void* /*state*/);
 typedef int (*CustomOpCreateFunc)(const char* /*ctx*/, int /*num_inputs*/,
-                                  unsigned** /*shapes*/, int* /*ndims*/,
-                                  int* /*dtypes*/, struct MXCallbackList* /*ret*/,
+                                  unsigned** /*shapes*/, const int* /*ndims*/,
+                                  const int* /*dtypes*/, struct MXCallbackList* /*ret*/,
                                   void* /*state*/);
 typedef int (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
-                                     const char** /*keys*/, const char** /*values*/,
-                                     struct MXCallbackList* /*ret*/);
+                                   const char** /*keys*/, const char** /*values*/,
+                                   struct MXCallbackList* /*ret*/);
 
 /*!
  * \brief return str message of the last error
@@ -417,6 +417,12 @@ MXNET_DLL int MXNDArrayGetContext(NDArrayHandle handle,
                                   int *out_dev_type,
                                   int *out_dev_id);
 /*!
+ * \brief return gradient buffer attached to this NDArray
+ * \param handle NDArray handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayGetGrad(NDArrayHandle handle, NDArrayHandle *out);
+/*!
  * \brief detach and ndarray from computation graph by clearing entry_
  * \param handle NDArray handle
  * \return 0 when success, -1 when failure happens
@@ -547,6 +553,13 @@ MXNET_DLL int MXImperativeInvoke(AtomicSymbolCreator creator,
                                  const char **param_vals);
 /*!
  * \brief set whether to record operator for autograd
+ * \param is_recording 1 when recording, 0 when not recording.
+ * \param prev returns the previous status before this set.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXAutogradSetIsRecording(int is_recording, int* prev);
+/*!
+ * \brief set whether to record operator for autograd
  * \param is_train 1 when training, 0 when testing
  * \param prev returns the previous status before this set.
  * \return 0 when success, -1 when failure happens
@@ -582,6 +595,20 @@ MXNET_DLL int MXAutogradBackward(mx_uint num_output,
                                  NDArrayHandle* output_handles,
                                  NDArrayHandle* ograd_handles,
                                  int retain_graph);
+/*!
+* \brief compute the gradient of outputs w.r.t variabels
+* \param num_output number of output NDArray
+* \param output_handles output NDArrays
+* \param ograd_handles head gradient for NDArrays
+* \param retain_graph whether to keep the graph after backward
+* \param is_train whether to do backward for training or inference
+* \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXAutogradBackwardEx(mx_uint num_output,
+                                   NDArrayHandle* output_handles,
+                                   NDArrayHandle* ograd_handles,
+                                   int retain_graph,
+                                   int is_train);
 /*!
  * \brief create cached operator
  */
@@ -1022,7 +1049,20 @@ MXNET_DLL int MXExecutorForward(ExecutorHandle handle, int is_train);
 MXNET_DLL int MXExecutorBackward(ExecutorHandle handle,
                                  mx_uint len,
                                  NDArrayHandle *head_grads);
-
+/*!
+ * \brief Excecutor run backward
+ *
+ * \param handle execute handle
+ * \param len lenth
+ * \param head_grads NDArray handle for heads' gradient
+ * \param is_train int value to indicate whether the backward pass is for evaluation
+ *
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXExecutorBackwardEx(ExecutorHandle handle,
+                                   mx_uint len,
+                                   NDArrayHandle *head_grads,
+                                   int is_train);
 /*!
  * \brief Get executor's head NDArray
  *

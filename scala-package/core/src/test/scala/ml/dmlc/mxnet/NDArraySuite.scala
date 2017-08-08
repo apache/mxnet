@@ -161,6 +161,19 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     assert(res.toArray === Array(11f))
   }
 
+  test("arange") {
+    for (i <- 0 until 5) {
+      val start = scala.util.Random.nextFloat() * 5
+      val stop = start + scala.util.Random.nextFloat() * 100
+      val step = scala.util.Random.nextFloat() * 4
+      val repeat = (scala.util.Random.nextFloat() * 5).toInt + 1
+      val result = (start until stop by step).flatMap(x => Array.fill[Float](repeat)(x))
+      val range = NDArray.arange(start = start, stop = Some(stop), step = step,
+        repeat = repeat, ctx = Context.cpu(), dType = DType.Float32)
+      assert(CheckUtils.reldiff(result.toArray, range.toArray) <= 1e-5f)
+    }
+  }
+
   test("power") {
     val arr = NDArray.array(Array(3f, 5f), shape = Shape(2, 1))
 

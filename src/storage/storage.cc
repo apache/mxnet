@@ -88,6 +88,8 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
           }
           case Context::kGPU: {
 #if MXNET_USE_CUDA
+            CUDA_CALL(cudaGetDeviceCount(&num_gpu_device));
+            CHECK_GT(num_gpu_device, 0) << "GPU usage requires at least 1 GPU";
             ptr = new storage::GPUPooledStorageManager();
 #else
             LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";

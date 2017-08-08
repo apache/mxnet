@@ -13,7 +13,7 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<gpu>(ActivationParam param, int dtype) {
+Operator *CreateOp<gpu>(ActivationParam param, int dtype, const TShape& dshape) {
   Operator *op = NULL;
   // SoftReLU not supported by CUDNN yet
   if (param.act_type == activation::kSoftReLU) {
@@ -48,4 +48,3 @@ Operator *CreateOp<gpu>(ActivationParam param, int dtype) {
 }
 }  // namespace op
 }  // namespace mxnet
-

@@ -1,5 +1,4 @@
 import os, sys
-os.environ["MXNET_CUDNN_AUTOTUNE_DEFAULT"] = "1"
 try:
     import mxnet as mx
 except ImportError:

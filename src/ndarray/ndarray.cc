@@ -24,12 +24,20 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 
 namespace mxnet {
 
+NDArray NDArray::grad() const {
+  if (this->entry_.ag_node && this->entry_.ag_node->out_grads.size()) {
+    CHECK_EQ(this->entry_.ag_node->out_grads.size(), 1);
+    return this->entry_.ag_node->out_grads[0];
+  }
+  return NDArray();
+}
+
 NDArray NDArray::Reshape(const TShape &shape) const {
   using namespace autograd;
   if (AutogradRuntime::Get()->IsTraining()) {
     CHECK_GE(shape_.Size(), shape.Size())
       << "NDArray.Reshape: target shape must have must have the same size as "
-      << "current shape when in train_section.";
+      << "current shape when recording with autograd.";
     NDArray ret = *this;
     ret.shape_ = shape;
     // fake a Reshape op
@@ -61,6 +69,7 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
   using namespace autograd;
   NDArray ret = *this;
   CHECK(!is_none()) << "NDArray is not initialized";
+  CHECK_LT(begin, end) << "Invalid slicing range [" << begin << ", " << end << ")";
   CHECK_GE(shape_[0], end) << "Slice end index out of range";
   size_t length = shape_.ProdShape(1, shape_.ndim());
   MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
@@ -757,8 +766,7 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToWrite();
-    RunContext rctx;
-    rctx.stream = nullptr;
+    RunContext rctx{this->ctx(), nullptr};
     TBlob dst = this->data();
     ndarray::Copy<cpu, cpu>(src, &dst, Context::CPU(), Context::CPU(), rctx);
   } else {
@@ -786,8 +794,7 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToRead();
-    RunContext rctx;
-    rctx.stream = nullptr;
+    RunContext rctx{this->ctx(), nullptr};
     ndarray::Copy<cpu, cpu>(this->data(), &dst,
                             Context::CPU(), Context::CPU(), rctx);
   } else {

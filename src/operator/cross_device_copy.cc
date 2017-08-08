@@ -20,12 +20,6 @@ class CrossDeviceCopyOp : public Operator {
     // We still re-use things such as InferShape in OperatorProperty
     LOG(FATAL) << "Not Reached";
   }
-
-  ExecType exec_type() const override {
-    // TODO(tianqi) Think of other way to blend cross device op into operator interface.
-    // declare the op as cross device,
-    return kCrossDeviceCopy;
-  }
 };
 
 class CrossDeviceCopyProp : public OperatorProperty {
@@ -57,6 +51,12 @@ class CrossDeviceCopyProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const override {
     return new CrossDeviceCopyOp();
+  }
+
+  ExecType exec_type() const override {
+    // TODO(tianqi) Think of other way to blend cross device op into operator interface.
+    // declare the op as cross device,
+    return ExecType::kCrossDeviceCopy;
   }
 };
 

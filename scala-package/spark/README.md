@@ -71,7 +71,7 @@ val res = valData.mapPartitions { data =>
   val probArrays = brModel.value.predict(points.toIterator)
   require(probArrays.length == 1)
   val prob = probArrays(0)
-  val py = NDArray.argmaxChannel(prob.get)
+  val py = NDArray.argmax_channel(prob.get)
   val labels = py.toArray.mkString(",")
   py.dispose()
   prob.get.dispose()

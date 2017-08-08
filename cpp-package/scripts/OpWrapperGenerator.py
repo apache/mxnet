@@ -372,8 +372,8 @@ if __name__ == "__main__":
                       "* \\author Chuntao Hong, Xin Li\n"
                       "*/\n"
                       "\n"
-                      "#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n"
-                      "#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n"
+                      "#ifndef MXNET_CPP_OP_H_\n"
+                      "#define MXNET_CPP_OP_H_\n"
                       "\n"
                       "#include <string>\n"
                       "#include <vector>\n"
@@ -389,7 +389,7 @@ if __name__ == "__main__":
                       "%s"
                       "} //namespace cpp\n"
                       "} //namespace mxnet\n"
-                      "#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n")
+                      "#endif  // MXNET_CPP_OP_H_\n")
 
         # Generate a temporary file name
         tf = tempfile.NamedTemporaryFile()

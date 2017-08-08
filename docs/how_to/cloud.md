@@ -102,13 +102,13 @@ make -j$(nproc)
 To test whether everything is installed properly, we can try training a convolutional neural network (CNN) on the MNIST dataset using a GPU:
 
 ```bash
-python tests/python/gpu/test_conv.py
+python example/image-classification/train_mnist.py
 ```
 
 If you've placed the MNIST data on `s3://dmlc/mnist`, you can read the data stored on Amazon S3 directly with the following command:
 
 ```bash
-sed -i.bak "s!data_dir = 'data'!data_dir = 's3://dmlc/mnist'!" tests/python/gpu/test_conv.py
+sed -i.bak "s!data_dir = 'data'!data_dir = 's3://dmlc/mnist'!" example/image-classification/train_mnist.py
 ```
 
 ***Note:*** You can use `sudo ln /dev/null /dev/raw1394` to fix the opencv error `libdc1394 error: Failed to initialize libdc1394`.

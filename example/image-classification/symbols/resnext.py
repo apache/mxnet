@@ -6,6 +6,7 @@ Implemented the following paper:
 Saining Xie, Ross Girshick, Piotr Dollar, Zhuowen Tu, Kaiming He. "Aggregated Residual Transformations for Deep Neural Network"
 '''
 import mxnet as mx
+import numpy as np
 
 def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck=True, num_group=32, bn_mom=0.9, workspace=256, memonger=False):
     """Return ResNet Unit symbol for building ResNet
@@ -80,7 +81,7 @@ def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck=True, n
         eltwise = bn2 + shortcut
         return mx.sym.Activation(data=eltwise, act_type='relu', name=name + '_relu')
 
-def resnext(units, num_stages, filter_list, num_classes, num_group, image_shape, bottle_neck=True, bn_mom=0.9, workspace=256, memonger=False):
+def resnext(units, num_stages, filter_list, num_classes, num_group, image_shape, bottle_neck=True, bn_mom=0.9, workspace=256, dtype='float32', memonger=False):
     """Return ResNeXt symbol of
     Parameters
     ----------
@@ -98,10 +99,17 @@ def resnext(units, num_stages, filter_list, num_classes, num_group, image_shape,
         Dataset type, only cifar10 and imagenet supports
     workspace : int
         Workspace used in convolution operator
+    dtype : str
+        Precision (float32 or float16)
     """
     num_unit = len(units)
     assert(num_unit == num_stages)
     data = mx.sym.Variable(name='data')
+    if dtype == 'float32':
+        data = mx.sym.identity(data=data, name='id')
+    else:
+        if dtype == 'float16':
+            data = mx.sym.Cast(data=data, dtype=np.float16)
     data = mx.sym.BatchNorm(data=data, fix_gamma=True, eps=2e-5, momentum=bn_mom, name='bn_data')
     (nchannel, height, width) = image_shape
     if height <= 32:            # such as cifar10
@@ -112,7 +120,7 @@ def resnext(units, num_stages, filter_list, num_classes, num_group, image_shape,
                                   no_bias=True, name="conv0", workspace=workspace)
         body = mx.sym.BatchNorm(data=body, fix_gamma=False, eps=2e-5, momentum=bn_mom, name='bn0')
         body = mx.sym.Activation(data=body, act_type='relu', name='relu0')
-        body = mx.symbol.Pooling(data=body, kernel=(3, 3), stride=(2,2), pad=(1,1), pool_type='max')
+        body = mx.sym.Pooling(data=body, kernel=(3, 3), stride=(2,2), pad=(1,1), pool_type='max')
 
     for i in range(num_stages):
         body = residual_unit(body, filter_list[i+1], (1 if i==0 else 2, 1 if i==0 else 2), False,
@@ -122,12 +130,14 @@ def resnext(units, num_stages, filter_list, num_classes, num_group, image_shape,
             body = residual_unit(body, filter_list[i+1], (1,1), True, name='stage%d_unit%d' % (i + 1, j + 2),
                                  bottle_neck=bottle_neck, num_group=num_group, bn_mom=bn_mom, workspace=workspace, memonger=memonger)
             
-    pool1 = mx.symbol.Pooling(data=body, global_pool=True, kernel=(7, 7), pool_type='avg', name='pool1')
-    flat = mx.symbol.Flatten(data=pool1)
-    fc1 = mx.symbol.FullyConnected(data=flat, num_hidden=num_classes, name='fc1')
-    return mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
+    pool1 = mx.sym.Pooling(data=body, global_pool=True, kernel=(7, 7), pool_type='avg', name='pool1')
+    flat = mx.sym.Flatten(data=pool1)
+    fc1 = mx.sym.FullyConnected(data=flat, num_hidden=num_classes, name='fc1')
+    if dtype == 'float16':
+        fc1 = mx.sym.Cast(data=fc1, dtype=np.float32)
+    return mx.sym.SoftmaxOutput(data=fc1, name='softmax')
 
-def get_symbol(num_classes, num_layers, image_shape, num_group=32, conv_workspace=256, **kwargs):
+def get_symbol(num_classes, num_layers, image_shape, num_group=32, conv_workspace=256, dtype='float32', **kwargs):
     """
     Adapted from https://github.com/tornadomeet/ResNet/blob/master/train_resnet.py
     Original author Wei Wu
@@ -179,4 +189,5 @@ def get_symbol(num_classes, num_layers, image_shape, num_group=32, conv_workspac
                   num_group   = num_group, 
                   image_shape = image_shape,
                   bottle_neck = bottle_neck,
-                  workspace   = conv_workspace)
+                  workspace   = conv_workspace,
+                  dtype       = dtype)
