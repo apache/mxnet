@@ -55,6 +55,8 @@ def _create_kvstore(kvstore, num_device, arg_params):
         kv = None
     elif isinstance(kvstore, kvs.KVStore):
         kv = kvstore
+        if 'allreduce' in kv.type:
+            update_on_kvstore = False
     elif isinstance(kvstore, str):
         # create kvstore using the string type
         if num_device is 1 and 'dist' not in kvstore:
@@ -68,6 +70,8 @@ def _create_kvstore(kvstore, num_device, arg_params):
                                arg_params.values())
                 if max_size > 1024 * 1024 * 16:
                     update_on_kvstore = False
+            if 'allreduce' in kvstore:
+                update_on_kvstore = False
     else:
         raise TypeError('kvstore must be KVStore, str or None')
 
@@ -108,9 +112,8 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
         if kvstore:
             name = param_names[index]
             # push gradient, priority is negative index
-            kvstore.push(name, grad_list, priority=-index)
-            # pull back the sum gradients, to the same locations.
-            kvstore.pull(name, grad_list, priority=-index)
+            # and pull back the sum gradients, to the same locations.
+            kvstore.allreduce(name, grad_list, grad_list, priority=-index)
         for k, p in enumerate(zip(arg_list, grad_list)):
             # faked an index here, to make optimizer create diff
             # state for the same index but on diff devs, TODO(mli)

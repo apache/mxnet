@@ -219,6 +219,42 @@ class KVStore(object):
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
 
+    def allreduce(self, key, value, out=None, priority=0):
+        """ Allreduce a single value or a sequence of values from the store.
+
+        Data consistency:
+
+        1. This function returns after adding an operator to the engine. But any
+        further read on out will be blocked until it is finished.
+
+        2. ``allreduce`` is always called after all previous push and pull on the same
+        key are finished.
+
+        Parameters
+        ----------
+        key : str or list of str
+            Keys.
+
+        value : NDArray or list of NDArray or list of list of NDArray
+
+        out: NDArray or list of NDArray or list of lists of NDArrays
+            According values.
+
+        priority : int, optional
+            The priority of the push operation.
+            The higher the priority, the faster this action is likely
+            to be executed before other push actions.
+
+        Examples
+        --------
+        """
+        assert(out is not None)
+        ckeys, cinputs = _ctype_key_value(key, value)
+        ckeys, coutputs = _ctype_key_value(key, out)
+        check_call(_LIB.MXKVStoreAllreduceEx(
+            self.handle, mx_uint(len(ckeys)), ckeys, cinputs, coutputs,
+            ctypes.c_int(priority)))
+
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.
 

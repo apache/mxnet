@@ -35,7 +35,7 @@ class Comm {
    */
   virtual void Broadcast(
       int key, const NDArray& src,
-      const std::vector<NDArray*> dst, int priority) = 0;
+      const std::vector<NDArray> dst, int priority) = 0;
 
   /**
    * \brief return a pinned contex
@@ -99,15 +99,15 @@ class CommCPU : public Comm {
   }
 
   void Broadcast(int key, const NDArray& src,
-                 const std::vector<NDArray*> dst, int priority) override {
+                 const std::vector<NDArray> dst, int priority) override {
     int mask = src.ctx().dev_mask();
     if (mask == Context::kCPU) {
-      for (auto d : dst) CopyFromTo(src, d, priority);
+      for (auto d : dst) CopyFromTo(src, &d, priority);
     } else {
       // first copy data to cpu, then broadcast
       auto& buf = merge_buf_[key];
       CopyFromTo(src, &buf.merged, priority);
-      for (auto d : dst) CopyFromTo(buf.merged, d, priority);
+      for (auto d : dst) CopyFromTo(buf.merged, &d, priority);
     }
   }
 
@@ -259,21 +259,21 @@ class CommDevice : public Comm {
   }
 
   void Broadcast(int key, const NDArray& src,
-                 const std::vector<NDArray*> dst, int priority) override {
+                 const std::vector<NDArray> dst, int priority) override {
     if (!inited_) {
       // copy to a random device first
       int dev_id = key % dst.size();
-      CopyFromTo(src, dst[dev_id], priority);
+      CopyFromTo(src, &(dst[dev_id]), priority);
       for (size_t i = 0; i < dst.size(); ++i) {
         if (i != static_cast<size_t>(dev_id)) {
-          CopyFromTo(*dst[dev_id], dst[i], priority);
+          CopyFromTo(dst[dev_id], &(dst[i]), priority);
         }
       }
     } else {
       auto& buf = merge_buf_[key];
       CopyFromTo(src, &buf.merged, priority);
       for (auto d : dst) {
-        CopyFromTo(buf.merged, d, priority);
+        CopyFromTo(buf.merged, &d, priority);
       }
     }
   }

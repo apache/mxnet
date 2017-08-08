@@ -442,7 +442,7 @@ class NDArray {
  * \note The function name explicitly marks the order of from and to
  *     due to different possible convention carried by copy function.
  */
-void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
+void CopyFromTo(const NDArray &from, const NDArray *to, int priority = 0);
 
 
 /*!

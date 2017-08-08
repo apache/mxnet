@@ -86,10 +86,10 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   void Pull(const std::vector<int>& keys,
-            const std::vector<NDArray*>& values,
+            const std::vector<NDArray>& values,
             int priority) override {
     std::vector<int> uniq_keys;
-    std::vector<std::vector<NDArray*> > grouped_vals;
+    std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
@@ -100,7 +100,7 @@ class KVStoreDist : public KVStoreLocal {
       if (recv_buf.is_none()) {
         // it may happen for the first time a no-rank-0 worker pull the weight.
         recv_buf = NDArray(
-          grouped_vals[i][0]->shape(), pinned_ctx_, false, grouped_vals[i][0]->dtype());
+          grouped_vals[i][0].shape(), pinned_ctx_, false, grouped_vals[i][0].dtype());
       }
 #if MKL_EXPERIMENTAL == 1
       mkl_set_tblob_eager_mode(recv_buf.data());

@@ -143,7 +143,7 @@ class KVStore {
    * \param priority Priority of the action.
    */
   virtual void Pull(const std::vector<int>& keys,
-                    const std::vector<NDArray*>& values,
+                    const std::vector<NDArray>& values,
                     int priority = 0) = 0;
   /*!
    * \brief pull a list of key-value pairs from the store
@@ -152,10 +152,49 @@ class KVStore {
    * \param priority Priority of the action.
    */
   virtual void Pull(const std::vector<std::string>& str_keys,
-                    const std::vector<NDArray*>& values,
+                    const std::vector<NDArray>& values,
                     int priority = 0) = 0;
 
 
+  /*!
+   * \brief allreduce a list of key-value pairs from the store
+   *
+   * One must call Init() on \a key before. And \a output should be pre-allocated
+   *
+   * This function returns after adding an allreduce operator to the engine. Any
+   * following operator requiring reading value will be blocked until the
+   * actual pull is finished. One can wait the pull is finished by
+   *
+   * - when type == "local"
+   * \code
+   * for (auto& v : values) v.WaitToRead()
+   * \endcode
+   *
+   * - when type == "dist"
+   * \code
+   * Wait(keys);
+   * \endcode
+   *
+   * \param keys the list of keys
+   * \param inputs the list of values to be allreduced
+   * \param outputs the list of buffers for the pulled data, they should be preallocated
+   * \param priority Priority of the action.
+   */
+  virtual void Allreduce(const std::vector<int>& keys,
+                    const std::vector<NDArray>& inputs,
+                    const std::vector<NDArray>& outputs,
+                    int priority = 0) {
+    Push(keys, inputs, priority);
+    Pull(keys, outputs, priority);
+  }
+
+  virtual void Allreduce(const std::vector<std::string>& keys,
+                    const std::vector<NDArray>& inputs,
+                    const std::vector<NDArray>& outputs,
+                    int priority = 0) {
+    Push(keys, inputs, priority);
+    Pull(keys, outputs, priority);
+  }
   /**
    * \brief the prototype of user-defined updater
    */

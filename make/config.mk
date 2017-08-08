@@ -54,6 +54,11 @@ USE_CUDA_PATH = NONE
 # whether use CuDNN R3 library
 USE_CUDNN = 0
 
+#whether to use NCCL library
+USE_NCCL = 0
+#add the path to NCCL library
+USE_NCCL_PATH = NONE
+
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
 USE_NVRTC = 0
 

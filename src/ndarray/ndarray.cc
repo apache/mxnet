@@ -322,7 +322,7 @@ void ScalarOp(const NDArray &lhs,
   }
 }
 
-void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
+void CopyFromTo(const NDArray &from, const NDArray *to, int priority) {
   if (from.var() == to->var()) {
     // skip to copy to itself
     return;

@@ -1421,6 +1421,38 @@ MXNET_DLL int MXKVStorePullEx(KVStoreHandle handle,
                               NDArrayHandle* vals,
                               int priority);
 /*!
+ * \brief allreduce a list of (key, inputs) pairs from the kvstore and store them in outputs
+ * \param handle handle to the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param inputs the list of inputs
+ * \param outputs the list of outputs
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreAllreduce(KVStoreHandle handle,
+                                 mx_uint num,
+                                 const int * keys,
+                                 NDArrayHandle* inputs,
+                                 NDArrayHandle* outputs,
+                                 int priority);
+/*!
+ * \brief allreduce a list of (key, inputs) pairs from the kvstore and store them in outputs
+ * \param handle handle to the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys, each key is a string
+ * \param inputs the list of inputs
+ * \param outputs the list of outputs
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreAllreduceEx(KVStoreHandle handle,
+                                   mx_uint num,
+                                   const char ** keys,
+                                   NDArrayHandle* inputs,
+                                   NDArrayHandle* outputs,
+                                   int priority);
+/*!
  * \brief user-defined updater for the kvstore
  * It's this updater's responsibility to delete \a recv and \a local
  * \param the key
