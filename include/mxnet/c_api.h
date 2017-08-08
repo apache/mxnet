@@ -566,6 +566,18 @@ MXNET_DLL int MXAutogradSetIsRecording(int is_recording, int* prev);
  */
 MXNET_DLL int MXAutogradSetIsTraining(int is_training, int* prev);
 /*!
+ * \brief get whether autograd recording is on
+ * \param curr returns the current status.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXAutogradIsRecording(bool* curr);
+/*!
+ * \brief get whether training mode is on
+ * \param curr returns the current status.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXAutogradIsTraining(bool* curr);
+/*!
  * \brief mark NDArrays as variables to compute gradient for autograd
  * \param num_var number of variable NDArrays
  * \param var_handles variable NDArrays

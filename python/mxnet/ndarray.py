@@ -1059,7 +1059,7 @@ fixed-size items.
         check_call(_LIB.MXNDArrayDetach(self.handle, ctypes.byref(hdl)))
         return NDArray(hdl)
 
-    def backward(self, out_grad=None, retain_graph=False, is_train=True):
+    def backward(self, out_grad=None, retain_graph=False, train_mode=True):
         """Compute the gradients of this NDArray w.r.t variables.
 
         Parameters
@@ -1070,7 +1070,7 @@ fixed-size items.
             Whether to retain the computaion graph for another backward
             pass on the same graph. By default the computaion history
             is cleared.
-        is_train : bool, optional
+        train_mode : bool, optional
             Whether to compute gradient for training or inference.
         """
         if out_grad is None:
@@ -1082,7 +1082,7 @@ fixed-size items.
             1, c_array(NDArrayHandle, [self.handle]),
             c_array(NDArrayHandle, ograd_handles),
             ctypes.c_int(retain_graph),
-            ctypes.c_int(is_train)))
+            ctypes.c_int(train_mode)))
 
 
 def onehot_encode(indices, out):
@@ -2538,7 +2538,6 @@ def _make_ndarray_function(handle, name):
         else:
             signature.append('%s=_Null'%name)
             kwarg_names.append(name)
-    #signature.append('is_train=False')
     signature.append('out=None')
     signature.append('name=None')
     signature.append('**kwargs')
