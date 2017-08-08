@@ -781,7 +781,7 @@ fixed-size items.
     def size(self):
         """Number of elements in the array.
 
-        Equivalent to the product of the array’s dimensions.
+        Equivalent to the product of the array's dimensions.
 
         Examples
         --------
@@ -820,7 +820,7 @@ fixed-size items.
 
     @property
     def dtype(self):
-        """Data-type of the array’s elements.
+        """Data-type of the array's elements.
 
         Returns
         -------

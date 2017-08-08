@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable= arguments-differ
+# pylint: disable= arguments-differ, too-many-lines
 """Convolutional neural network layers."""
 from ..block import HybridBlock
 from ... import symbol
