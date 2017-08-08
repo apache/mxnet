@@ -652,6 +652,7 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
   if (kNullOp == req) return;
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
   CHECK_EQ(ret->storage_type(), kRowSparseStorage);
+  CHECK_EQ(req, kWriteTo);
   if (!lhs.storage_initialized()) return;
 
   using mshadow::Shape1;
@@ -694,7 +695,8 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
                                         num_cols_l,
                                         mshadow::Stream<gpu>::GetStream(s));
           mshadow::Tensor<gpu, 1, char> workspace = ctx.requested[0]
-              .get_space_typed<gpu, 1, char>(Shape1(num_cols_l*sizeof(dim_t)+temp_storage_bytes), s);
+              .get_space_typed<gpu, 1, char>(Shape1(num_cols_l * sizeof(dim_t) +
+                                                    temp_storage_bytes), s);
           row_flg_out = reinterpret_cast<dim_t*>(workspace.dptr_);
           d_temp_storage = workspace.dptr_ + num_cols_l*sizeof(dim_t);
           num_threads = num_cols_l;
@@ -720,10 +722,8 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
           MSHADOW_IDX_TYPE_SWITCH(row_idx_out_blob.type_flag_, RType, {  // row idx type
             DType* data_out = data_out_blob.dptr<DType>();
             RType* row_idx_out = row_idx_out_blob.dptr<RType>();
-            if (kWriteTo == req) {
-              num_threads = nnr_out * num_cols_r;
-              Kernel<set_zero, gpu>::Launch(s, num_threads, data_out);
-            }
+            num_threads = nnr_out * num_cols_r;
+            Kernel<set_zero, gpu>::Launch(s, num_threads, data_out);
             num_threads = nnr_out;
             Kernel<set_zero, gpu>::Launch(s, num_threads, row_idx_out);
 
@@ -759,16 +759,17 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
                              const OpReqType req,
                              const bool trans_lhs,
                              NDArray* ret) {
+  if (kNullOp == req) return;
   // Reuse dot(csr, dns) implementation if rhs rsp matrix is in fact dense
   if (rhs.storage_shape()[0] == rhs.shape()[0]) {
     DotCsrDnsRspImpl(ctx, gpu_dev, lhs, rhs.data(), req, trans_lhs, ret);
     return;
   }
-  if (kNullOp == req) return;
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
   CHECK_EQ(rhs.storage_type(), kRowSparseStorage);
   CHECK_EQ(ret->storage_type(), kRowSparseStorage);
   if (!lhs.storage_initialized() || !rhs.storage_initialized()) return;
+  CHECK_EQ(req, kWriteTo);
 
   using mshadow::Shape1;
   using mxnet_op::Kernel;
@@ -813,15 +814,16 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
                                           num_cols_l,
                                           mshadow::Stream<gpu>::GetStream(s));
             mshadow::Tensor<gpu, 1, char> workspace = ctx.requested[0]
-            .get_space_typed<gpu, 1, char>(Shape1(num_cols_l*sizeof(dim_t)+temp_storage_bytes), s);
+                .get_space_typed<gpu, 1, char>(Shape1(num_cols_l * sizeof(dim_t) +
+                                                      temp_storage_bytes), s);
             row_flg_out = reinterpret_cast<dim_t*>(workspace.dptr_);
             d_temp_storage = workspace.dptr_ + num_cols_l*sizeof(dim_t);
             num_threads = num_cols_l;
             Kernel<set_zero, gpu>::Launch(s, num_threads, row_flg_out);
             num_threads = num_rows_l * threads_per_warp;
             Kernel<MarkCsrZeroColsWarpKernel, gpu>::Launch(s, num_threads,
-                                                           row_flg_out, col_idx_l.dptr<CType>(), indptr_l.dptr<IType>(),
-                                                           num_rows_l, num_cols_l);
+                row_flg_out, col_idx_l.dptr<CType>(), indptr_l.dptr<IType>(),
+                num_rows_l, num_cols_l);
             cub::DeviceScan::InclusiveSum(d_temp_storage,
                                           temp_storage_bytes,
                                           row_flg_out,
@@ -838,10 +840,8 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
             const TBlob row_idx_out_blob = ret->aux_data(rowsparse::kIdx);
             DType* data_out = data_out_blob.dptr<DType>();
             RType* row_idx_out = row_idx_out_blob.dptr<RType>();
-            if (kWriteTo == req) {
-              num_threads = nnr_out * num_cols_r;
-              Kernel<set_zero, gpu>::Launch(s, num_threads, data_out);
-            }
+            num_threads = nnr_out * num_cols_r;
+            Kernel<set_zero, gpu>::Launch(s, num_threads, data_out);
             num_threads = nnr_out;
             Kernel<set_zero, gpu>::Launch(s, num_threads, row_idx_out);
 

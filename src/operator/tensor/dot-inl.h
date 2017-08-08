@@ -222,19 +222,26 @@ struct DotCsrDnsDnsByRowBlocks {
    * \param i the i-th thread
    */
   template<typename DType, typename IType, typename CType>
-  MSHADOW_CINLINE static void Map(int i, DType* out, const DType* data_l, const IType* indptr_l,
-                                  const CType* col_idx_l, const DType* data_r, const size_t seg_len,
-                                  const size_t num_rows, const size_t num_cols) {
-    const size_t seg_start = i * seg_len;
+  MSHADOW_CINLINE static void Map(int i,
+                                  DType* out,
+                                  const DType* data_l,
+                                  const IType* indptr_l,
+                                  const CType* col_idx_l,
+                                  const DType* data_r,
+                                  const nnvm::dim_t seg_len,
+                                  const nnvm::dim_t num_rows,
+                                  const nnvm::dim_t num_cols) {
+    using nnvm::dim_t;
+    const dim_t seg_start = i * seg_len;
     if (seg_start >= num_rows) return;
-    const size_t seg_end = std::min(seg_start + seg_len, num_rows);
-    for (size_t j = seg_start; j < seg_end; ++j) {
+    const dim_t seg_end = std::min(seg_start + seg_len, num_rows);
+    for (dim_t j = seg_start; j < seg_end; ++j) {
       if (indptr_l[j] == indptr_l[j+1]) continue;
-      const size_t offset_out = j * num_cols;
-      for (auto k = indptr_l[j]; k < indptr_l[j+1]; ++k) {
-        const auto val = data_l[k];
-        const size_t offset_r = col_idx_l[k] * num_cols;
-        for (size_t l = 0; l < num_cols; ++l) {
+      const dim_t offset_out = j * num_cols;
+      for (IType k = indptr_l[j]; k < indptr_l[j+1]; ++k) {
+        const DType val = data_l[k];
+        const dim_t offset_r = col_idx_l[k] * num_cols;
+        for (dim_t l = 0; l < num_cols; ++l) {
           out[offset_out+l] += data_r[offset_r+l] * val;
         }
       }
@@ -252,22 +259,29 @@ struct DotCsrTransDnsDnsByRowBlocks {
    * \param i the i-th thread
    */
   template<typename DType, typename IType, typename CType>
-  MSHADOW_CINLINE static void Map(int i, DType* out, const DType* data_l, const IType* indptr_l,
-                                  const CType* col_idx_l, const DType* data_r, const size_t seg_len,
-                                  const size_t num_rows_l, const size_t num_rows,
-                                  const size_t num_cols) {
-    const size_t seg_start = i * seg_len;
+  MSHADOW_CINLINE static void Map(int i,
+                                  DType* out,
+                                  const DType* data_l,
+                                  const IType* indptr_l,
+                                  const CType* col_idx_l,
+                                  const DType* data_r,
+                                  const nnvm::dim_t seg_len,
+                                  const nnvm::dim_t num_rows_l,
+                                  const nnvm::dim_t num_rows,
+                                  const nnvm::dim_t num_cols) {
+    using nnvm::dim_t;
+    const dim_t seg_start = i * seg_len;
     if (seg_start >= num_rows) return;
-    const size_t seg_end = (i + 1) * seg_len;
-    for (size_t j = 0; j < num_rows_l; ++j) {
+    const dim_t seg_end = (i + 1) * seg_len;
+    for (dim_t j = 0; j < num_rows_l; ++j) {
       if (indptr_l[j] == indptr_l[j+1]) continue;
-      const size_t offset_r = j * num_cols;
-      for (auto k = indptr_l[j]; k < indptr_l[j+1]; ++k) {
-        const auto col_idx = col_idx_l[k];
+      const dim_t offset_r = j * num_cols;
+      for (IType k = indptr_l[j]; k < indptr_l[j+1]; ++k) {
+        const CType col_idx = col_idx_l[k];
         if (col_idx < seg_start || col_idx >= seg_end) continue;
-        const size_t offset_out = col_idx * num_cols;
-        const auto val = data_l[k];
-        for (size_t l = 0; l < num_cols; ++l) {
+        const dim_t offset_out = col_idx * num_cols;
+        const DType val = data_l[k];
+        for (dim_t l = 0; l < num_cols; ++l) {
           out[offset_out+l] += data_r[offset_r+l] * val;
         }
       }
@@ -288,24 +302,31 @@ struct DotCsrTransDnsRspByRowBlocks {
    * \param i the i-th thread
    */
   template<typename DType, typename RType, typename IType, typename CType>
-  MSHADOW_CINLINE static void Map(int i, DType* out, RType* row_idx, const DType* data_l,
-                                  const IType* indptr_l, const CType* col_idx_l,
-                                  const DType* data_r, const size_t seg_len,
-                                  const size_t num_rows_l, const size_t num_rows,
-                                  const size_t num_cols) {
-    const size_t seg_start = i * seg_len;
+  MSHADOW_CINLINE static void Map(int i,
+                                  DType* out,
+                                  RType* row_idx,
+                                  const DType* data_l,
+                                  const IType* indptr_l,
+                                  const CType* col_idx_l,
+                                  const DType* data_r,
+                                  const nnvm::dim_t seg_len,
+                                  const nnvm::dim_t num_rows_l,
+                                  const nnvm::dim_t num_rows,
+                                  const nnvm::dim_t num_cols) {
+    using nnvm::dim_t;
+    const dim_t seg_start = i * seg_len;
     if (seg_start >= num_rows) return;
-    const size_t seg_end = (i + 1) * seg_len;
-    for (size_t j = 0; j < num_rows_l; ++j) {
+    const dim_t seg_end = (i + 1) * seg_len;
+    for (dim_t j = 0; j < num_rows_l; ++j) {
       if (indptr_l[j] == indptr_l[j+1]) continue;
-      const size_t offset_r = j * num_cols;
-      for (auto k = indptr_l[j]; k < indptr_l[j+1]; ++k) {
-        const auto col_idx = col_idx_l[k];
+      const dim_t offset_r = j * num_cols;
+      for (IType k = indptr_l[j]; k < indptr_l[j+1]; ++k) {
+        const CType col_idx = col_idx_l[k];
         if (col_idx < seg_start || col_idx >= seg_end) continue;
-        const size_t offset_out = col_idx * num_cols;
+        const dim_t offset_out = col_idx * num_cols;
         row_idx[col_idx] = 1;
-        const auto val = data_l[k];
-        for (size_t l = 0; l < num_cols; ++l) {
+        const DType val = data_l[k];
+        for (dim_t l = 0; l < num_cols; ++l) {
           out[offset_out+l] += data_r[offset_r+l] * val;
         }
       }
@@ -326,21 +347,28 @@ struct DotCsrRspDnsByRowBlocks {
    * \param num_cols  dns.shape[1]
    */
   template<typename DType, typename IType, typename CType, typename RType>
-  MSHADOW_CINLINE static void Map(int i, DType* out, const DType* data_l,
-                                  const IType* indptr_l, const CType* col_idx_l,
-                                  const DType* data_r, const RType* row_idx_r,
-                                  const size_t nnr_r, const size_t num_rows,
-                                  const size_t num_cols, const size_t seg_len) {
-    const size_t seg_start = i * seg_len;
+  MSHADOW_CINLINE static void Map(int i,
+                                  DType* out,
+                                  const DType* data_l,
+                                  const IType* indptr_l,
+                                  const CType* col_idx_l,
+                                  const DType* data_r,
+                                  const RType* row_idx_r,
+                                  const nnvm::dim_t nnr_r,
+                                  const nnvm::dim_t num_rows,
+                                  const nnvm::dim_t num_cols,
+                                  const nnvm::dim_t seg_len) {
+    using nnvm::dim_t;
+    const dim_t seg_start = i * seg_len;
     if (seg_start >= num_rows) return;
-    const size_t seg_end = std::min(seg_start + seg_len, num_rows);
-    for (size_t j = seg_start; j < seg_end; ++j) {
+    const dim_t seg_end = std::min(seg_start + seg_len, num_rows);
+    for (dim_t j = seg_start; j < seg_end; ++j) {
       if (indptr_l[j] == indptr_l[j+1]) continue;
-      const size_t offset_out = j * num_cols;
+      const dim_t offset_out = j * num_cols;
       // Use binary search to find the lower_bound of val in row_idx array
       const RType* first = row_idx_r;
       const RType* last = row_idx_r + nnr_r;
-      const auto val = col_idx_l[indptr_l[j]];
+      const CType val = col_idx_l[indptr_l[j]];
       const RType* it;
       int count = last - first, step;
       while (count > 0) {
@@ -357,10 +385,10 @@ struct DotCsrRspDnsByRowBlocks {
       const RType* row_idx_ptr = first;
       // end of binary search
       if (row_idx_ptr == row_idx_r+nnr_r || *row_idx_ptr> col_idx_l[indptr_l[j+1]-1]) continue;
-      for (auto k = indptr_l[j]; k < indptr_l[j+1] && row_idx_ptr != row_idx_r+nnr_r;) {
+      for (IType k = indptr_l[j]; k < indptr_l[j+1] && row_idx_ptr != row_idx_r+nnr_r;) {
         if (col_idx_l[k] == *row_idx_ptr) {
-          const size_t offset_r = (row_idx_ptr - row_idx_r) * num_cols;
-          for (size_t l = 0; l < num_cols; ++l) {
+          const dim_t offset_r = (row_idx_ptr - row_idx_r) * num_cols;
+          for (dim_t l = 0; l < num_cols; ++l) {
             out[offset_out+l] += data_l[k] * data_r[offset_r+l];
           }
           ++k;
@@ -389,25 +417,33 @@ struct DotCsrTransRspRspByRowBlocks {
    * \param num_cols number of cols of out matrix
    */
   template<typename DType, typename IType, typename CType, typename RType>
-  MSHADOW_CINLINE static void Map(int i, DType* out, RType* row_idx_out,
-                                  const DType* data_l, const IType* indptr_l,
-                                  const CType* col_idx_l, const DType* data_r,
-                                  const RType* row_idx_r, const size_t num_rows_l,
-                                  const size_t nnr_r, const size_t num_rows,
-                                  const size_t num_cols, const size_t seg_len) {
-    const size_t seg_start = i * seg_len;
+  MSHADOW_CINLINE static void Map(int i,
+                                  DType* out,
+                                  RType* row_idx_out,
+                                  const DType* data_l,
+                                  const IType* indptr_l,
+                                  const CType* col_idx_l,
+                                  const DType* data_r,
+                                  const RType* row_idx_r,
+                                  const nnvm::dim_t num_rows_l,
+                                  const nnvm::dim_t nnr_r,
+                                  const nnvm::dim_t num_rows,
+                                  const nnvm::dim_t num_cols,
+                                  const nnvm::dim_t seg_len) {
+    using nnvm::dim_t;
+    const dim_t seg_start = i * seg_len;
     if (seg_start >= num_rows) return;
-    const size_t seg_end = (i + 1) * seg_len;
-    for (size_t rid = 0; rid < nnr_r; ++rid) {
-      const auto j = row_idx_r[rid];
+    const dim_t seg_end = (i + 1) * seg_len;
+    for (dim_t rid = 0; rid < nnr_r; ++rid) {
+      const RType j = row_idx_r[rid];
       if (indptr_l[j] == indptr_l[j+1]) continue;
-      const size_t offset_r = rid * num_cols;
-      for (auto k = indptr_l[j]; k < indptr_l[j+1]; ++k) {
-        const auto col_idx = col_idx_l[k];
+      const dim_t offset_r = rid * num_cols;
+      for (IType k = indptr_l[j]; k < indptr_l[j+1]; ++k) {
+        const CType col_idx = col_idx_l[k];
         if (col_idx < seg_start || col_idx >= seg_end) continue;
         row_idx_out[col_idx] = 1;  // mark nonzero row as 1
-        const size_t offset_out = col_idx * num_cols;
-        for (size_t l = 0; l < num_cols; ++l) {
+        const dim_t offset_out = col_idx * num_cols;
+        for (dim_t l = 0; l < num_cols; ++l) {
           out[offset_out+l] += data_r[offset_r+l] * data_l[k];
         }
       }
@@ -429,6 +465,8 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
   if (!lhs.storage_initialized()) return;
 
+  using nnvm::dim_t;
+
   mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
@@ -439,12 +477,14 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
   MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
+        dim_t num_threads, seg_len;
         if (kWriteTo == req) {
+          num_threads = data_out.Size();
           mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(
-              s, data_out.Size(), data_out.dptr<DType>());
+              s, num_threads, data_out.dptr<DType>());
         }
-        int num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
-        size_t seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
+        num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
+        seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
         if (trans_lhs) {
           mxnet_op::Kernel<DotCsrTransDnsDnsByRowBlocks, cpu>::Launch(s, num_threads,
               data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
@@ -475,6 +515,10 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
   CHECK_EQ(ret->storage_type(), kRowSparseStorage);
   if (!lhs.storage_initialized()) return;
+  CHECK_EQ(req, kWriteTo);
+
+  using mxnet_op::set_zero;
+  using nnvm::dim_t;
 
   mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   const TBlob data_l = lhs.data();
@@ -490,27 +534,26 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
   MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
-        MSHADOW_IDX_TYPE_SWITCH(row_idx_out.type_flag_, RType, {  // col idx type
-          if (kWriteTo == req) {
-            mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(
-                s, data_out.Size(), data_out.dptr<DType>());
-          }
+        MSHADOW_IDX_TYPE_SWITCH(row_idx_out.type_flag_, RType, {  // row idx type
+          dim_t num_threads, seg_len;
+          num_threads = data_out.Size();
+          mxnet_op::Kernel<set_zero, cpu>::Launch(s, num_threads, data_out.dptr<DType>());
           RType* row_idx = row_idx_out.dptr<RType>();
-          mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(
-              s, row_idx_out.Size(), row_idx);
-          int num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
-          size_t seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
+          num_threads = row_idx_out.Size();
+          mxnet_op::Kernel<set_zero, cpu>::Launch(s, num_threads, row_idx);
+          num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
+          seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
           if (trans_lhs) {
             mxnet_op::Kernel<DotCsrTransDnsRspByRowBlocks, cpu>::Launch(s, num_threads,
                 data_out.dptr<DType>(), row_idx, data_l.dptr<DType>(),
                 indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(), data_r.dptr<DType>(),
                 seg_len, lhs.shape()[0], data_out.shape_[0], data_out.shape_[1]);
-            index_t nnr = 0;
+            dim_t nnr = 0;
             nnr = mxnet::common::ParallelAccumulate(row_idx, ret->shape()[0], nnr);
             ret->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
             if (0 == nnr) return;
             mshadow::Tensor<cpu, 2, DType> rsp_data = data_out.FlatTo2D<cpu, DType>(s);
-            size_t idx = 0;
+            dim_t idx = 0;
             for (index_t i = 0; i < ret->shape()[0]; ++i) {
               if (row_idx[i] > 0) {
                 row_idx[idx] = i;
@@ -537,13 +580,13 @@ inline void DotCsrRspDnsImpl(const OpContext& ctx,
                              const OpReqType req,
                              const bool trans_lhs,
                              TBlob* ret) {
+  if (kNullOp == req) return;
   // reuse csr dns implementation when storage_shape == shape for rhs
   if (rhs.storage_shape()[0] == rhs.shape()[0]) {  // if rsp is actually dense
     DotCsrDnsDnsImpl(ctx, cpu_dev, lhs, rhs.data(), req, trans_lhs, ret);
     return;
   }
 
-  if (kNullOp == req) return;
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
   CHECK_EQ(rhs.storage_type(), kRowSparseStorage);
   mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
@@ -556,6 +599,7 @@ inline void DotCsrRspDnsImpl(const OpContext& ctx,
     }
     return;
   }
+  using nnvm::dim_t;
 
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
@@ -566,13 +610,15 @@ inline void DotCsrRspDnsImpl(const OpContext& ctx,
   MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
-        MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // col idx type
+        MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // row idx type
+          dim_t num_threads, seg_len;
           if (kWriteTo == req) {
-            mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(
-                s, ret->Size(), ret->dptr<DType>());
+            num_threads = ret->Size();
+            mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(s, num_threads,
+                                                              ret->dptr<DType>());
           }
-          int num_threads = mxnet_op::get_num_threads<cpu>(ret->shape_[0]);
-          size_t seg_len = (ret->shape_[0] + num_threads - 1) / num_threads;
+          num_threads = mxnet_op::get_num_threads<cpu>(ret->shape_[0]);
+          seg_len = (ret->shape_[0] + num_threads - 1) / num_threads;
           if (trans_lhs) {
             LOG(FATAL) << "DotCsrRspDnsImpl has not implemented dot(csr.T, rsp) = dns yet";
           } else {
@@ -598,17 +644,21 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
                              const OpReqType req,
                              const bool trans_lhs,
                              NDArray* ret) {
+  if (kNullOp == req) return;
   // reuse csr dns implementation when storage_shape == shape for rhs
   if (rhs.storage_shape()[0] == rhs.shape()[0]) {  // if rsp is actually dense
     DotCsrDnsRspImpl(ctx, cpu_dev, lhs, rhs.data(), req, trans_lhs, ret);
     return;
   }
 
-  if (kNullOp == req) return;
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
   CHECK_EQ(rhs.storage_type(), kRowSparseStorage);
   CHECK_EQ(ret->storage_type(), kRowSparseStorage);
   if (!lhs.storage_initialized() || !rhs.storage_initialized()) return;
+  CHECK_EQ(req, kWriteTo);
+
+  using mxnet_op::set_zero;
+  using nnvm::dim_t;
 
   mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   const TBlob data_l = lhs.data();
@@ -628,27 +678,26 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // row idx type
-          if (kWriteTo == req) {
-            mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(
-                s, data_out.Size(), data_out.dptr<DType>());
-          }
-          int num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
-          size_t seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
+          dim_t num_threads, seg_len;
+          num_threads = data_out.Size();
+          mxnet_op::Kernel<set_zero, cpu>::Launch(s, num_threads, data_out.dptr<DType>());
+          num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
+          seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
           if (trans_lhs) {
             RType* row_idx = row_idx_out.dptr<RType>();
-            mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(
-                s, row_idx_out.Size(), row_idx);
+            num_threads = row_idx_out.Size();
+            mxnet_op::Kernel<set_zero, cpu>::Launch(s, num_threads, row_idx);
             mxnet_op::Kernel<DotCsrTransRspRspByRowBlocks, cpu>::Launch(s, num_threads,
                 data_out.dptr<DType>(), row_idx, data_l.dptr<DType>(),
                 indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(), data_r.dptr<DType>(),
                 row_idx_r.dptr<RType>(), lhs.shape()[0], rhs.storage_shape()[0],
                 ret->shape()[0], ret->shape()[1], seg_len);
-            index_t nnr = 0;
+            dim_t nnr = 0;
             nnr = mxnet::common::ParallelAccumulate(row_idx, ret->shape()[0], nnr);
             ret->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
             if (0 == nnr) return;
             mshadow::Tensor<cpu, 2, DType> rsp_data = data_out.FlatTo2D<cpu, DType>(s);
-            size_t idx = 0;
+            dim_t idx = 0;
             for (index_t i = 0; i < ret->shape()[0]; ++i) {
               if (row_idx[i] > 0) {
                 row_idx[idx] = i;
