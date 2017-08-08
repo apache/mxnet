@@ -268,13 +268,13 @@ void Forward(const OpStatePtr& state,
     tags.push_back(4);
   }
 
-  bool old = autograd::AutogradRuntime::Get()->SetIsTraining(false);
+  bool old = autograd::AutogradRuntime::Get()->SetIsRecording(false);
 
   CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpForward])(
     ptrs.size(), ptrs.data(), tags.data(), reinterpret_cast<const int*>(req.data()),
     static_cast<int>(ctx.is_train), params.info->contexts[kCustomOpForward]));
 
-  autograd::AutogradRuntime::Get()->SetIsTraining(old);
+  autograd::AutogradRuntime::Get()->SetIsRecording(old);
 }
 
 
@@ -312,13 +312,13 @@ void Backward(const OpStatePtr& state,
     tags.push_back(4);
   }
 
-  bool old = autograd::AutogradRuntime::Get()->SetIsTraining(false);
+  bool old = autograd::AutogradRuntime::Get()->SetIsRecording(false);
 
   CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpBackward])(
-    ptrs.size(), ptrs.data(), tags.data(), reinterpret_cast<const int*>(req.data()), 1,
-    params.info->contexts[kCustomOpBackward]));
+    ptrs.size(), ptrs.data(), tags.data(), reinterpret_cast<const int*>(req.data()),
+    static_cast<int>(ctx.is_train), params.info->contexts[kCustomOpBackward]));
 
-  autograd::AutogradRuntime::Get()->SetIsTraining(old);
+  autograd::AutogradRuntime::Get()->SetIsRecording(old);
 }
 
 

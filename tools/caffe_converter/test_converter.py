@@ -78,7 +78,7 @@ def main():
         assert gpus, 'At least one GPU is needed to run test_converter in GPU mode'
         batch_size = 32 * len(gpus)
 
-    models = ['bvlc_googlenet', 'vgg-16', 'resnet-50']
+    models = ['bvlc_googlenet']
 
     val = download_data()
     for m in models:

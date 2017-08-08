@@ -154,7 +154,7 @@ class _RNNLayer(Block):
     def forward(self, inputs, states):
         if isinstance(states, ndarray.NDArray):
             states = [states]
-        batch_size = states[0].shape[self._layout.find('N')]
+        batch_size = inputs.shape[self._layout.find('N')]
         for state, info in zip(states, self.state_info(batch_size)):
             if state.shape != info['shape']:
                 raise ValueError(
