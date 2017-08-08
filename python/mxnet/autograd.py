@@ -20,9 +20,11 @@
 from __future__ import absolute_import
 from __future__ import division
 
+from threading import Lock
 import ctypes
+from ctypes import c_int, c_void_p, CFUNCTYPE, POINTER, cast
 from .base import _LIB, check_call, string_types
-from .base import mx_uint, NDArrayHandle, c_array
+from .base import mx_uint, NDArrayHandle, c_array, MXCallbackList
 from .ndarray import NDArray
 from .symbol import _GRAD_REQ_MAP
 
@@ -265,3 +267,110 @@ def backward(heads, head_grads=None, retain_graph=False, train_mode=True): #pyli
         c_array(NDArrayHandle, ograd_handles),
         ctypes.c_int(retain_graph),
         ctypes.c_int(train_mode)))
+
+
+class Function(object):
+    _bwd_functype = CFUNCTYPE(c_int, c_int, c_int, POINTER(c_void_p),
+                              POINTER(c_int), c_int, c_void_p)
+    _del_functype = CFUNCTYPE(c_int, c_void_p)
+    class _Registry(object):
+        """CustomOp registry."""
+        def __init__(self):
+            self.ref_holder = {}
+            self.counter = 0
+            self.lock = Lock()
+
+        def inc(self):
+            """Get index for new entry."""
+            self.lock.acquire()
+            cur = self.counter
+            self.counter += 1
+            self.lock.release()
+            return cur
+
+    _registry = _Registry()
+
+    def __init__(self):
+        self._used = False
+        self.saved_tensors = ()
+
+    def save_for_backward(self, *args):
+        self.saved_tensors = args
+
+    def __call__(self, *inputs):
+        assert not self._used, \
+            "Each Function instance can only be called once. "\
+            "Please create another instance."
+        self._used = True
+
+        prev_recording = set_recording(False)
+        outputs = self.forward(inputs)
+        set_recording(prev_recording)
+
+        if not prev_recording:
+            return outputs
+
+        ret_outputs = outputs
+        if isinstance(outputs, NDArray):
+            outputs = (outputs,)
+
+        key = Function._registry.inc()
+
+        def backward_entry(num_ograds, num_igrads, ptrs, reqs, is_train, _):
+            # pylint: disable=W0613
+            try:
+                output_grads = [NDArray(ctypes.cast(i, NDArrayHandle), writable=False) \
+                                for i in ptrs[:num_ograds]]
+                input_grads = [NDArray(ctypes.cast(i, NDArrayHandle), writable=True) \
+                               for i in ptrs[num_ograds:num_ograds+num_igrads]]
+                reqs = [reqs[i] for i in range(num_igrads)]
+                rets = self.backward(output_grads)
+                assert len(rets) == len(input_grads), \
+                    "Wrong number of return values from autograd.Function.backward. "\
+                    "Expecting %d got %d"%(len(input_grads), len(rets))
+                for igrad, ret, req in zip(input_grads, rets, reqs):
+                    if req == 0:  # null
+                        return
+                    elif req == 1 or req == 2:  # write or inplace
+                        igrad[:] = ret
+                    elif req == 'add':
+                        igrad[:] += ret
+            except Exception:
+                print('Error in Function.backward: %s' % traceback.format_exc())
+                return False
+            return True
+
+        def delete_entry(_):
+            """C Callback for CustomFunction::delete"""
+            try:
+                del Function._registry.ref_holder[key]
+            except Exception:
+                print('Error in autograd.Function.delete: %s' % traceback.format_exc())
+                return False
+            return True
+
+        input_handles = [x.handle for x in inputs]
+        output_handles = [x.handle for x in outputs]
+        callbacks = [Function._bwd_functype(backward_entry),
+                     Function._del_functype(delete_entry)]
+        callbacks = [cast(i, CFUNCTYPE(c_int)) for i in callbacks]
+        context = MXCallbackList(c_int(len(callbacks)),
+                                 cast(c_array(CFUNCTYPE(c_int), callbacks),
+                                      POINTER(CFUNCTYPE(c_int))),
+                                 cast(c_array(c_void_p, [None]*len(callbacks)),
+                                      POINTER(c_void_p)))
+        check_call(_LIB.MXCustomFunctionRecord(
+            c_int(len(inputs)),
+            c_array(NDArrayHandle, input_handles),
+            c_int(len(outputs)),
+            c_array(NDArrayHandle, output_handles),
+            ctypes.byref(context)))
+
+        return ret_outputs
+
+
+    def forward(self, *inputs):
+        raise NotImplementedError
+
+    def backward(self, *output_grads):
+        raise NotImplementedError
