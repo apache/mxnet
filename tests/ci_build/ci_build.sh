@@ -149,5 +149,7 @@ ${DOCKER_BINARY} run --rm --pid=host \
     -e "CI_BUILD_GID=$(id -g)" \
     ${CI_DOCKER_EXTRA_PARAMS[@]} \
     ${DOCKER_IMG_NAME} \
-    ${PRE_COMMAND} \
-    ${COMMAND[@]}
+    ${PRE_COMMAND} #\
+    
+
+#${COMMAND[@]}
