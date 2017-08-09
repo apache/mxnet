@@ -477,14 +477,14 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
   MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
-        dim_t num_threads, seg_len;
+        dim_t num_threads;
         if (kWriteTo == req) {
           num_threads = data_out.Size();
           mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(
               s, num_threads, data_out.dptr<DType>());
         }
         num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
-        seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
+        dim_t seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
         if (trans_lhs) {
           mxnet_op::Kernel<DotCsrTransDnsDnsByRowBlocks, cpu>::Launch(s, num_threads,
               data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
@@ -535,14 +535,13 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         MSHADOW_IDX_TYPE_SWITCH(row_idx_out.type_flag_, RType, {  // row idx type
-          dim_t num_threads, seg_len;
-          num_threads = data_out.Size();
+          dim_t num_threads = data_out.Size();
           mxnet_op::Kernel<set_zero, cpu>::Launch(s, num_threads, data_out.dptr<DType>());
           RType* row_idx = row_idx_out.dptr<RType>();
           num_threads = row_idx_out.Size();
           mxnet_op::Kernel<set_zero, cpu>::Launch(s, num_threads, row_idx);
           num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
-          seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
+          dim_t seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
           if (trans_lhs) {
             mxnet_op::Kernel<DotCsrTransDnsRspByRowBlocks, cpu>::Launch(s, num_threads,
                 data_out.dptr<DType>(), row_idx, data_l.dptr<DType>(),
@@ -611,14 +610,14 @@ inline void DotCsrRspDnsImpl(const OpContext& ctx,
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // row idx type
-          dim_t num_threads, seg_len;
+          dim_t num_threads;
           if (kWriteTo == req) {
             num_threads = ret->Size();
             mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(s, num_threads,
                                                               ret->dptr<DType>());
           }
           num_threads = mxnet_op::get_num_threads<cpu>(ret->shape_[0]);
-          seg_len = (ret->shape_[0] + num_threads - 1) / num_threads;
+          dim_t seg_len = (ret->shape_[0] + num_threads - 1) / num_threads;
           if (trans_lhs) {
             LOG(FATAL) << "DotCsrRspDnsImpl has not implemented dot(csr.T, rsp) = dns yet";
           } else {
@@ -678,11 +677,10 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // row idx type
-          dim_t num_threads, seg_len;
-          num_threads = data_out.Size();
+          dim_t num_threads = data_out.Size();
           mxnet_op::Kernel<set_zero, cpu>::Launch(s, num_threads, data_out.dptr<DType>());
           num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
-          seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
+          dim_t seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
           if (trans_lhs) {
             RType* row_idx = row_idx_out.dptr<RType>();
             num_threads = row_idx_out.Size();

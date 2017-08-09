@@ -36,14 +36,12 @@ avazu = {
 }
 
 
-def measure_cost(wait, repeat, f, *args, **kwargs):
+def measure_cost(repeat, f, *args, **kwargs):
+    mx.nd.waitall()
     start = time.time()
-    if wait:
-        for i in range(repeat):
-            (f(*args, **kwargs)).wait_to_read()
-    else:
-        for i in range(repeat):
-            f(*args, **kwargs)
+    for i in range(repeat):
+        f(*args, **kwargs)
+    mx.nd.waitall()
     end = time.time()
     diff = end - start
     return diff / repeat
@@ -134,8 +132,8 @@ def test_dot_synthetic():
         # Start benchmarking
         lhs_nd.wait_to_read()
         rhs_nd.wait_to_read()
-        sparse_cost = measure_cost(True, repeat, mx.nd.dot, lhs_nd, rhs_nd, trans_lhs)
-        dense_cost = measure_cost(True, repeat, mx.nd.dot, lhs_dns, rhs_dns, trans_lhs)
+        sparse_cost = measure_cost(repeat, mx.nd.dot, lhs_nd, rhs_nd, trans_lhs)
+        dense_cost = measure_cost(repeat, mx.nd.dot, lhs_dns, rhs_dns, trans_lhs)
         speedup = dense_cost / sparse_cost
         # Print results
         m = lhs_shape[0]
@@ -161,8 +159,8 @@ def test_dot_synthetic():
         # One warm up run
         out = sp.spmatrix.dot(lhs_csr_sp, rhs_dns_np)
         # Start benchmarking
-        sparse_cost = measure_cost(False, repeat, sp.spmatrix.dot, lhs_csr_sp, rhs_dns_np)
-        dense_cost = measure_cost(False, repeat, np.dot, lhs_dns_np, rhs_dns_np)
+        sparse_cost = measure_cost(repeat, sp.spmatrix.dot, lhs_csr_sp, rhs_dns_np)
+        dense_cost = measure_cost(repeat, np.dot, lhs_dns_np, rhs_dns_np)
         speedup = dense_cost / sparse_cost
         # Print results
         m = lhs_shape[0]
@@ -191,7 +189,7 @@ def test_dot_synthetic():
     density_lhs = [0.64, 0.32, 0.16, 0.08, 0.04, 0.02, 0.01]
     density_rhs = [0.64, 0.32, 0.16, 0.08, 0.04, 0.02, 0.01]
     num_repeat = 10
-    context = mx.cpu()
+    context = mx.gpu()
     mx_benchmarks = ["csr_dns", "csr.T_dns", "csr_rsp"]
     sp_benchmarks = ["csr_dns", "csr.T_dns"]
 
