@@ -17,10 +17,10 @@ no_index:
     - t
     - inc
 requires:
-  AI::MXNetCAPI: '1.0101'
+  AI::MXNetCAPI: '1.0102'
   AI::NNVMCAPI: '1.01'
   Function::Parameters: '1.0705'
   GraphViz: '2.14'
   Mouse: v2.1.0
   PDL: '2.007'
-version: '1.0101'
+version: '1.0102'

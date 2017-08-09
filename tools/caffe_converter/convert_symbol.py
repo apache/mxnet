@@ -145,6 +145,16 @@ def _parse_proto(prototxt_fname):
         param_string = ''
         skip_layer = False
         name = re.sub('[-/]', '_', layer.name)
+        for k in range(len(layer.bottom)):
+            if layer.bottom[k] in _output_name:
+                _output_name[layer.bottom[k]]['count'] = _output_name[layer.bottom[k]]['count']+1
+            else:
+                _output_name[layer.bottom[k]] = {'count':0}
+        for k in range(len(layer.top)):
+            if layer.top[k] in _output_name:
+                _output_name[layer.top[k]]['count'] = _output_name[layer.top[k]]['count']+1
+            else:
+                _output_name[layer.top[k]] = {'count':0, 'name':name}
         if layer.type == 'Convolution' or layer.type == 4:
             type_string = 'mx.symbol.Convolution'
             param_string = _convert_conv_param(layer.convolution_param)
@@ -270,17 +280,6 @@ def _parse_proto(prototxt_fname):
         for j in range(len(layer.top)):
             mapping[layer.top[j]] = name
         output_name = name
-        for k in range(len(layer.bottom)):
-            if layer.bottom[k] in _output_name:
-                _output_name[layer.bottom[k]]['count'] = _output_name[layer.bottom[k]]['count']+1
-            else:
-                _output_name[layer.bottom[k]] = {'count':0}
-        for k in range(len(layer.top)):
-            if layer.top[k] in _output_name:
-                _output_name[layer.top[k]]['count'] = _output_name[layer.top[k]]['count']+1
-            else:
-                _output_name[layer.top[k]] = {'count':0, 'name':name}
-
     output_name = []
     for i in _output_name:
         if 'name' in _output_name[i] and _output_name[i]['count'] == 0:

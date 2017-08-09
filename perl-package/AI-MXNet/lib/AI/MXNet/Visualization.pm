@@ -371,6 +371,7 @@ method plot_network(
         }
         $dot->graph->add_node($name, label => $label, %attr);
     };
+
     # add edges
     for my $node (@{ $nodes })
     {
@@ -395,6 +396,13 @@ method plot_network(
                     {
                         my $key = $input_name;
                         $key   .= '_output' if $input_node->{op} ne 'null';
+                        if($input_node->{op} ne 'null' and exists $input_node->{attr})
+                        {
+                            if(ref $input_node->{attr} eq 'HASH' and exists $input_node->{attr}{num_outputs})
+                            {
+                                $key .= ($input_node->{attr}{num_outputs} - 1);
+                            }
+                        }
                         my $end = @{ $shape_dict{$key} };
                         $attr{label} = join('x', @{ $shape_dict{$key} }[1..$end-1]);
                     }

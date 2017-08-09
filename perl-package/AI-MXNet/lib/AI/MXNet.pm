@@ -46,7 +46,7 @@ use AI::MXNet::Image;
 use AI::MXNet::Contrib;
 use AI::MXNet::Contrib::AutoGrad;
 use AI::MXNet::CachedOp;
-our $VERSION = '1.0101';
+our $VERSION = '1.0102';
 
 sub import
 {

@@ -764,7 +764,7 @@ sub BUILD
         {
             chomp($line);
             my @line = split(/\t/, $line);
-            my $label = AI::MXNet::NDArray->array([@line[1..@line-1]]);
+            my $label = AI::MXNet::NDArray->array([@line[1..@line-2]]);
             my $key   = $line[0];
             $imglist{$key} = [$label, $line[-1]];
             push @imgkeys, $key;
@@ -838,6 +838,10 @@ sub BUILD
     {
         $self->aug_list(AI::MXNet::Image->CreateAugmenter(data_shape => $self->data_shape, %{ $self->kwargs//{} }));
     }
+    else
+    {
+        $self->aug_list([]);
+    }
     $self->cur(0);
     $self->reset();
 }
@@ -877,7 +881,7 @@ method next_sample()
         }
         else
         {
-            my ($label, $fname) = $self->imglist->{$idx};
+            my ($label, $fname) = @{ $self->imglist->{$idx} };
             if(not defined $self->imgrec)
             {
                 open(F, $self->path_root . "/$fname") or confess("can't open $fname $!");
