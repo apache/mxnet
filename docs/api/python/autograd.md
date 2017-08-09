@@ -69,7 +69,7 @@ in a ``with aurograd.train_mode():`` or ``with aurograd.predict_mode():``
 block, respectively.
 
 
-A detailed tutorials is available in Part 1 of
+Detailed tutorials are available in Part 1 of
 [the MXNet gluon book](http://gluon.mxnet.io/).
 
 
