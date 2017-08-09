@@ -16,7 +16,7 @@
 
 namespace mxnet {
 namespace cpp {
-inline Executor::Executor(const Symbol &symbol, Context context,
+Executor::Executor(const Symbol &symbol, Context context,
                           const std::vector<NDArray> &arg_arrays,
                           const std::vector<NDArray> &grad_arrays,
                           const std::vector<OpReqType> &grad_reqs,
@@ -73,7 +73,7 @@ inline Executor::Executor(const Symbol &symbol, Context context,
   }
 }
 
-inline std::string Executor::DebugStr() {
+std::string Executor::DebugStr() {
   const char *output;
   MXExecutorPrint(handle_, &output);
   return std::string(output);

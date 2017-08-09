@@ -17,29 +17,29 @@
 
 namespace mxnet {
 namespace cpp {
-inline NDArray _default_monitor_func(const NDArray &x) {
+NDArray _default_monitor_func(const NDArray &x) {
   return Operator("norm").PushInput(x).Invoke()[0] / std::sqrt(x.Size());
 }
 
-inline Monitor::Monitor(int interval, std::regex pattern, StatFunc stat_func)
+Monitor::Monitor(int interval, std::regex pattern, StatFunc stat_func)
   : interval(interval), pattern(pattern), stat_func(stat_func), step(0) {
 }
 
-inline void Monitor::install(Executor *exe) {
+void Monitor::install(Executor *exe) {
   MXExecutorSetMonitorCallback(exe->handle_,
       static_cast<ExecutorMonitorCallback>(&Monitor::executor_callback),
       this);
   exes.push_back(exe);
 }
 
-inline void Monitor::tic() {
+void Monitor::tic() {
   if (step % interval == 0) {
     activated = true;
     stats.clear();
   }
 }
 
-inline std::vector<Monitor::Stat> Monitor::toc() {
+std::vector<Monitor::Stat> Monitor::toc() {
   std::vector<Monitor::Stat> results;
   if (activated) {
     activated = false;
@@ -69,7 +69,7 @@ inline std::vector<Monitor::Stat> Monitor::toc() {
   return results;
 }
 
-inline void Monitor::toc_print() {
+void Monitor::toc_print() {
   auto results = toc();
   std::vector<float> data(1);
   for (auto& stat : results) {
@@ -93,7 +93,7 @@ inline void Monitor::toc_print() {
   }
 }
 
-inline void Monitor::executor_callback(const char *name, NDArrayHandle handle,
+void Monitor::executor_callback(const char *name, NDArrayHandle handle,
     void *monitor_ptr) {
   Monitor *monitor = static_cast<Monitor*>(monitor_ptr);
   if (monitor->activated && std::regex_match(name, monitor->pattern)) {

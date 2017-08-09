@@ -20,46 +20,46 @@
 
 namespace mxnet {
 namespace cpp {
-inline OpMap*& Symbol::op_map() {
+OpMap*& Symbol::op_map() {
   static OpMap* op_map_ = new OpMap();
   return op_map_;
 }
-inline Symbol::Symbol(SymbolHandle handle) {
+Symbol::Symbol(SymbolHandle handle) {
   blob_ptr_ = std::make_shared<SymBlob>(handle);
 }
-inline Symbol::Symbol(const char *name) {
+Symbol::Symbol(const char *name) {
   SymbolHandle handle;
   CHECK_EQ(MXSymbolCreateVariable(name, &(handle)), 0);
   blob_ptr_ = std::make_shared<SymBlob>(handle);
 }
-inline Symbol::Symbol(const std::string &name) : Symbol(name.c_str()) {}
-inline Symbol Symbol::Variable(const std::string &name) { return Symbol(name); }
-inline Symbol Symbol::operator+(const Symbol &rhs) const { return _Plus(*this, rhs); }
-inline Symbol Symbol::operator-(const Symbol &rhs) const { return _Minus(*this, rhs); }
-inline Symbol Symbol::operator*(const Symbol &rhs) const { return _Mul(*this, rhs); }
-inline Symbol Symbol::operator/(const Symbol &rhs) const { return _Div(*this, rhs); }
-inline Symbol Symbol::operator%(const Symbol &rhs) const { return _Mod(*this, rhs); }
-inline Symbol Symbol::operator+(mx_float scalar) const {
+Symbol::Symbol(const std::string &name) : Symbol(name.c_str()) {}
+Symbol Symbol::Variable(const std::string &name) { return Symbol(name); }
+Symbol Symbol::operator+(const Symbol &rhs) const { return _Plus(*this, rhs); }
+Symbol Symbol::operator-(const Symbol &rhs) const { return _Minus(*this, rhs); }
+Symbol Symbol::operator*(const Symbol &rhs) const { return _Mul(*this, rhs); }
+Symbol Symbol::operator/(const Symbol &rhs) const { return _Div(*this, rhs); }
+Symbol Symbol::operator%(const Symbol &rhs) const { return _Mod(*this, rhs); }
+Symbol Symbol::operator+(mx_float scalar) const {
   return _PlusScalar(*this, scalar);
 }
-inline Symbol Symbol::operator-(mx_float scalar) const {
+Symbol Symbol::operator-(mx_float scalar) const {
   return _MinusScalar(*this, scalar);
 }
-inline Symbol Symbol::operator*(mx_float scalar) const {
+Symbol Symbol::operator*(mx_float scalar) const {
   return _MulScalar(*this, scalar);
 }
-inline Symbol Symbol::operator/(mx_float scalar) const {
+Symbol Symbol::operator/(mx_float scalar) const {
   return _DivScalar(*this, scalar);
 }
-inline Symbol Symbol::operator%(mx_float scalar) const {
+Symbol Symbol::operator%(mx_float scalar) const {
   return _ModScalar(*this, scalar);
 }
-inline Symbol Symbol::operator[](int index) {
+Symbol Symbol::operator[](int index) {
   SymbolHandle out;
   MXSymbolGetOutput(GetHandle(), index, &out);
   return Symbol(out);
 }
-inline Symbol Symbol::operator[](const std::string &index) {
+Symbol Symbol::operator[](const std::string &index) {
   auto outputs = ListOutputs();
   for (mx_uint i = 0; i < outputs.size(); ++i) {
     if (outputs[i] == index) {
@@ -69,7 +69,7 @@ inline Symbol Symbol::operator[](const std::string &index) {
   LOG(FATAL) << "Cannot find output that matches name " << index;
   return (*this)[0];
 }
-inline Symbol Symbol::Group(const std::vector<Symbol> &symbols) {
+Symbol Symbol::Group(const std::vector<Symbol> &symbols) {
   SymbolHandle out;
   std::vector<SymbolHandle> handle_list;
   for (const auto &t : symbols) {
@@ -78,31 +78,31 @@ inline Symbol Symbol::Group(const std::vector<Symbol> &symbols) {
   MXSymbolCreateGroup(handle_list.size(), handle_list.data(), &out);
   return Symbol(out);
 }
-inline Symbol Symbol::Load(const std::string &file_name) {
+Symbol Symbol::Load(const std::string &file_name) {
   op_map();
   SymbolHandle handle;
   CHECK_EQ(MXSymbolCreateFromFile(file_name.c_str(), &(handle)), 0);
   return Symbol(handle);
 }
-inline Symbol Symbol::LoadJSON(const std::string &json_str) {
+Symbol Symbol::LoadJSON(const std::string &json_str) {
   SymbolHandle handle;
   CHECK_EQ(MXSymbolCreateFromJSON(json_str.c_str(), &(handle)), 0);
   return Symbol(handle);
 }
-inline void Symbol::Save(const std::string &file_name) const {
+void Symbol::Save(const std::string &file_name) const {
   CHECK_EQ(MXSymbolSaveToFile(GetHandle(), file_name.c_str()), 0);
 }
-inline std::string Symbol::ToJSON() const {
+std::string Symbol::ToJSON() const {
   const char *out_json;
   CHECK_EQ(MXSymbolSaveToJSON(GetHandle(), &out_json), 0);
   return std::string(out_json);
 }
-inline Symbol Symbol::GetInternals() const {
+Symbol Symbol::GetInternals() const {
   SymbolHandle handle;
   CHECK_EQ(MXSymbolGetInternals(GetHandle(), &handle), 0);
   return Symbol(handle);
 }
-inline Symbol::Symbol(const std::string &operator_name, const std::string &name,
+Symbol::Symbol(const std::string &operator_name, const std::string &name,
                std::vector<const char *> input_keys,
                std::vector<SymbolHandle> input_values,
                std::vector<const char *> config_keys,
@@ -116,13 +116,13 @@ inline Symbol::Symbol(const std::string &operator_name, const std::string &name,
   blob_ptr_ = std::make_shared<SymBlob>(handle);
 }
 
-inline Symbol Symbol::Copy() const {
+Symbol Symbol::Copy() const {
   SymbolHandle handle;
   CHECK_EQ(MXSymbolCopy(GetHandle(), &handle), 0);
   return Symbol(handle);
 }
 
-inline std::vector<std::string> Symbol::ListArguments() const {
+std::vector<std::string> Symbol::ListArguments() const {
   std::vector<std::string> ret;
   mx_uint size;
   const char **sarr;
@@ -132,7 +132,7 @@ inline std::vector<std::string> Symbol::ListArguments() const {
   }
   return ret;
 }
-inline std::vector<std::string> Symbol::ListOutputs() const {
+std::vector<std::string> Symbol::ListOutputs() const {
   std::vector<std::string> ret;
   mx_uint size;
   const char **sarr;
@@ -142,7 +142,7 @@ inline std::vector<std::string> Symbol::ListOutputs() const {
   }
   return ret;
 }
-inline std::vector<std::string> Symbol::ListAuxiliaryStates() const {
+std::vector<std::string> Symbol::ListAuxiliaryStates() const {
   std::vector<std::string> ret;
   mx_uint size;
   const char **sarr;
@@ -153,7 +153,7 @@ inline std::vector<std::string> Symbol::ListAuxiliaryStates() const {
   return ret;
 }
 
-inline void Symbol::InferShape(
+void Symbol::InferShape(
     const std::map<std::string, std::vector<mx_uint> > &arg_shapes,
     std::vector<std::vector<mx_uint> > *in_shape,
     std::vector<std::vector<mx_uint> > *aux_shape,
@@ -213,7 +213,7 @@ inline void Symbol::InferShape(
   }
 }
 
-inline void Symbol::InferExecutorArrays(
+void Symbol::InferExecutorArrays(
     const Context &context, std::vector<NDArray> *arg_arrays,
     std::vector<NDArray> *grad_arrays, std::vector<OpReqType> *grad_reqs,
     std::vector<NDArray> *aux_arrays,
@@ -275,7 +275,7 @@ inline void Symbol::InferExecutorArrays(
     }
   }
 }
-inline void Symbol::InferArgsMap(
+void Symbol::InferArgsMap(
     const Context &context, std::map<std::string, NDArray> *args_map,
     const std::map<std::string, NDArray> &known_args) const {
 
@@ -305,7 +305,7 @@ inline void Symbol::InferArgsMap(
   }
 }
 
-inline Executor *Symbol::SimpleBind(
+Executor *Symbol::SimpleBind(
     const Context &context, const std::map<std::string, NDArray> &args_map,
     const std::map<std::string, NDArray> &arg_grad_store,
     const std::map<std::string, OpReqType> &grad_req_type,
@@ -323,7 +323,7 @@ inline Executor *Symbol::SimpleBind(
                       aux_arrays);
 }
 
-inline Executor *Symbol::Bind(const Context &context,
+Executor *Symbol::Bind(const Context &context,
                        const std::vector<NDArray> &arg_arrays,
                        const std::vector<NDArray> &grad_arrays,
                        const std::vector<OpReqType> &grad_reqs,
@@ -333,15 +333,15 @@ inline Executor *Symbol::Bind(const Context &context,
   return new Executor(*this, context, arg_arrays, grad_arrays, grad_reqs,
                       aux_arrays, group_to_ctx, shared_exec);
 }
-inline Symbol operator+(mx_float lhs, const Symbol &rhs) { return rhs + lhs; }
-inline Symbol operator-(mx_float lhs, const Symbol &rhs) {
+Symbol operator+(mx_float lhs, const Symbol &rhs) { return rhs + lhs; }
+Symbol operator-(mx_float lhs, const Symbol &rhs) {
   return mxnet::cpp::_RMinusScalar(lhs, rhs);
 }
-inline Symbol operator*(mx_float lhs, const Symbol &rhs) { return rhs * lhs; }
-inline Symbol operator/(mx_float lhs, const Symbol &rhs) {
+Symbol operator*(mx_float lhs, const Symbol &rhs) { return rhs * lhs; }
+Symbol operator/(mx_float lhs, const Symbol &rhs) {
   return mxnet::cpp::_RDivScalar(lhs, rhs);
 }
-inline Symbol operator%(mx_float lhs, const Symbol &rhs) {
+Symbol operator%(mx_float lhs, const Symbol &rhs) {
   return mxnet::cpp::_RModScalar(lhs, rhs);
 }
 }  // namespace cpp
