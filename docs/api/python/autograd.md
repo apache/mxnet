@@ -25,9 +25,9 @@ This is only enabled inside a `with autograd.record():` block.
 A `with auto_grad.pause()` block can be used inside a `record()` block
 to temporarily disable recording.
 
-To compute gradient with respect to `NDArray` `x`, first call `x.attach_grad()`
+To compute gradient with respect to an `NDArray` `x`, first call `x.attach_grad()`
 to allocate space for the gradient. Then, start a `with autograd.record()` block,
-do some computation, and call `backward()` on the result:
+and do some computation. Finally, call `backward()` on the result:
 
 ```python
 >>> x = mx.nd.array([1,2,3,4])
@@ -42,19 +42,19 @@ do some computation, and call `backward()` on the result:
 
 ## Train mode and Predict Mode
 
-Some operators (Dropout, BatchNorm, etc) behaves differently in
-training and prediction phase.
+Some operators (Dropout, BatchNorm, etc) behave differently in
+when training and when making predictions.
 This can be controled with `train_mode` and `predict_mode` scope.
 
 By default, MXNet is in `predict_mode`.
 A `with autograd.record()` block by default turns on `train_mode`
 (equivalent to ``with autograd.record(train_mode=True)``).
-To compute gradient in prediction mode (as when generating adversarial examples),
+To compute a gradient in prediction mode (as when generating adversarial examples),
 call record with `train_mode=False` and then call `backward(train_mode=False)`
 
 Although training usually coincides with recording,
 this isn't always the case.
-To constrol *training* vs *predict_mode* without changing
+To control *training* vs *predict_mode* without changing
 *recording* vs *not recording*,
 Use a `with autograd.train_mode():`
 or `with autograd.predict_mode():` block.
