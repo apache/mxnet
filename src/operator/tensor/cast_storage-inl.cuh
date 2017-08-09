@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  *  Copyright (c) 2017 by Contributors
  * \file cast_storage-inl.cuh
@@ -188,6 +207,15 @@ struct FillRspValsKernel {
   }
 };
 
+template<typename xpu, int ndim, typename DType>
+inline mshadow::Tensor<xpu, ndim, DType> AllocateTempDataForCast(const OpContext& op_ctx,
+                                                                 const mshadow::Shape<ndim>& shape) {
+  Resource rsc = ResourceManager::Get()->Request(op_ctx.run_ctx.ctx,
+                                                 ResourceRequest(ResourceRequest::kTempSpace));
+  mshadow::Stream<xpu> *stream = op_ctx.run_ctx.get_stream<xpu>();
+  return rsc.get_space_typed<xpu, ndim, DType>(shape, stream);
+};
+
 /*!
  * \brief GPU implementation of casting a dns tensor to rsp type.
  */
@@ -226,8 +254,8 @@ inline void CastStorageDnsRspImpl(const OpContext& ctx,
                                     mshadow::Stream<gpu>::GetStream(s));
 
       // Allocate temp storage for marking non-zero rows and for cub's prefix sum
-      mshadow::Tensor<gpu, 1, char> workspace = ctx.requested[0]
-        .get_space_typed<gpu, 1, char>(Shape1(num_rows*sizeof(RType)+temp_storage_bytes), s);
+      auto workspace = AllocateTempDataForCast<gpu, 1, char>(ctx, Shape1(num_rows*sizeof(RType)
+                                                                          + temp_storage_bytes));
       row_flg = reinterpret_cast<RType*>(workspace.dptr_);
       d_temp_storage = workspace.dptr_ + num_rows*sizeof(RType);
 
@@ -633,8 +661,8 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
                                       mshadow::Stream<gpu>::GetStream(s));
 
         // Allocate temporary storage
-        mshadow::Tensor<gpu, 1, char> workspace = ctx.requested[0]
-          .get_space_typed<gpu, 1, char>(Shape1(temp_storage_bytes), s);
+        auto workspace = AllocateTempDataForCast<gpu, 1, char>(ctx, Shape1(temp_storage_bytes));
+
         d_temp_storage = workspace.dptr_;
 
         // Compute indptr through inclusive prefix sum
