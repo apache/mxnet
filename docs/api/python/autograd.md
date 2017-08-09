@@ -40,12 +40,13 @@ Then once we calculate the value of a function ``y``
 inside a ``with autograd.record()`` block, we can call ``y.backward()``.
 
 ```python
-x = mx.nd.array([1,2,3,4])
-x.attach_grad()
-with mx.autograd.record():
+>>> x = mx.nd.array([1,2,3,4])
+>>> x.attach_grad()
+>>> with mx.autograd.record():
     y = x * x
-y.backward()
-print(x.grad)
+>>>
+>>>[ 2.  4.  6.  8.]
+<NDArray 4 @cpu(0)>
 ```
 
 ### ``Train_mode`` and ``predict_mode``
