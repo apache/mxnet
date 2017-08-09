@@ -13,31 +13,21 @@
 
 The ``autograd`` package consists of functions that enable automatic
 differentiation of scalar values with respect to NDArrays.
-For example, in machine learning applications,
+In machine learning applications,
 ``autograd`` is often used to calculate the gradients
 of loss functions with respect to parameters.
 
-While automatic differentiation was previously available
-through the symbolic API, ``autograd`` works in the fully imperative context.
-In other words, we can just work with NDArrays
-and do not need to specify a computational graph a priori
-in order to take gradients.
-Of course, in order to differentiate a value ``y`` with respect
-to an NDArray ``x``, we need to know how
-the value of ``y`` depends on ``x``.
-You might wonder, how does ``autograd`` do this
-without a pre-specified computation graph?
 
 
-The trick here is that ``autograd`` builds a computation graph on the fly.
-When we calculate ``y = f(x)``, MXNet can remember
-how the value of ``y`` relates to ``x``.
-It's as if MXNet turned on a tape recorder to keep track of
-how each value was generated.
-To indicate to MXNet that we want to turn on the metaphorical tape recorder,
-all we have to do is place the code in a ``with autograd.record():`` block.
-For any variable ``x`` where we might later want to access its gradient,
-we can call ``x.attach_grad`` to allocate its space.
+### Recording
+
+The enable differentiation without first declaring a computation graph,
+``autograd`` builds the graph on the fly.
+Building the graph incurs some overhead,
+so it only takes place inside an ``with autograd.record():`` block.
+
+For any variable ``x`` with respect to which we want a gradient,
+we must first call ``x.attach_grad`` to allocate space for the gradient.
 Then once we calculate the value of a function ``y``
 inside a ``with autograd.record()`` block, we can call ``y.backward()``.
 
@@ -51,27 +41,29 @@ inside a ``with autograd.record()`` block, we can call ``y.backward()``.
 <NDArray 4 @cpu(0)>
 ```
 
-### ``Train_mode`` and ``predict_mode``
 
-Often, we want to define functions that behave differently
-when we are training models vs making predictions.
-By default, MXNet assumes we are in predict mode.
-However, usually when we take gradients, we are in the process of training.
-MXNet let's us decouple *training* vs *predict_mode* from
-*recording* vs *not recording*.
+## ``Train_mode`` and ``predict_mode``
 
+Some functions are intended to behave differently
+during model training models vs. making predictions.
+We can dictate this behavior by setting the ``train_mode`` or ``predict_mode`` scope.
+By default, MXNet assumes we are in ``predict_mode``.
 When we turn on autograd, this by default turns on train_mode
-(``with autograd.record(train_mode=True):``).
-To change this default behavior (as when generating adversarial examples),
-we can optionally call record by (``with autograd.record(train_mode=False):``).
+(``with autograd.record()`` is equivalent to
+``with autograd.record(train_mode=True):``).
+To change this default behavior
+(as when generating adversarial examples),
+we can optionally call record via
+(``with autograd.record(train_mode=False):``).
 
-Additionally we can override the current score and elicit train or predict
-behaviors for some lines of code by placing them
-in a ``with autograd.train_mode():`` or ``with autograd.predict_mode():``
-block, respectively.
-This is especially for turning dropout layers on and off
-at prediction, as is popular for generating uncertainty estimates.
-
+Although training usually coincides with recording,
+this isn't always the case.
+So MXNet lets us decouple *training* vs *predict_mode* from
+*recording* vs *not recording*.
+At any point, we can override the current scope
+for some lines of code by placing them
+in a ``with autograd.train_mode():``
+or ``with autograd.predict_mode():`` block, respectively.
 
 Detailed tutorials are available in Part 1 of
 [the MXNet gluon book](http://gluon.mxnet.io/).
