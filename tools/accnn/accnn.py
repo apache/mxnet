@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 import argparse
 import utils
@@ -30,9 +47,9 @@ else:
 new_model = model
 Args = collections.namedtuple('ConvArgs', 'layer K')
 for layer, K in args.config['conv_params'].items():
-  arg = Args(layer=layer, K=K)  
+  arg = Args(layer=layer, K=K)
   new_model = acc_conv.conv_vh_decomposition(new_model, arg)
 for layer, K in args.config['fc_params'].items():
-  arg = Args(layer=layer, K=K)  
+  arg = Args(layer=layer, K=K)
   new_model = acc_fc.fc_decomposition(new_model, arg)
 new_model.save(args.save_model, 1)

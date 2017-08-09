@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import functools
 import mxnet.ndarray as nd
 from mxnet.ndarray import zeros_like
@@ -251,17 +268,48 @@ def test_attach_grad():
 def test_is_train():
     x = mx.nd.ones((10, 10))
     x.attach_grad()
-    with record(True):
+    with record(train_mode=True):
+        assert is_recording()
+        assert is_training()
         y = mx.nd.Dropout(x, p=0.5)
         assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
         y.backward()
         assert (x.grad.asnumpy() == y.asnumpy()).all()
 
-    with record(False):
+        with predict_mode():
+            assert is_recording()
+            assert not is_training()
+            y = mx.nd.Dropout(x, p=0.5)
+            assert (y.asnumpy() == x.asnumpy()).all()
+            y.backward(train_mode=False)
+            assert (x.grad.asnumpy() == x.asnumpy()).all()
+
+    with record(train_mode=False):
+        assert is_recording()
+        assert not is_training()
         y = mx.nd.Dropout(x, p=0.5)
         assert (y.asnumpy() == x.asnumpy()).all()
-        y.backward(is_train=False)
+        y.backward(train_mode=False)
         assert (x.grad.asnumpy() == x.asnumpy()).all()
+
+        with train_mode():
+            assert is_recording()
+            assert is_training()
+            y = mx.nd.Dropout(x, p=0.5)
+            assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
+            y.backward()
+            assert (x.grad.asnumpy() == y.asnumpy()).all()
+
+    assert not is_recording()
+    assert not is_training()
+    y = mx.nd.Dropout(x, p=0.5)
+    assert (y.asnumpy() == x.asnumpy()).all()
+
+    with train_mode():
+        assert not is_recording()
+        assert is_training()
+        y = mx.nd.Dropout(x, p=0.5)
+        assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
 
 
 if __name__ == "__main__":

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import numpy as np
 from scipy import linalg as LA
 import mxnet as mx
@@ -9,10 +26,10 @@ def fc_decomposition(model, args):
   W = model.arg_params[args.layer+'_weight'].asnumpy()
   b = model.arg_params[args.layer+'_bias'].asnumpy()
   W = W.reshape((W.shape[0],-1))
-  b = b.reshape((b.shape[0],-1))  
+  b = b.reshape((b.shape[0],-1))
   u, s, v = LA.svd(W, full_matrices=False)
   s = np.diag(s)
-  t = u.dot(s.dot(v))    
+  t = u.dot(s.dot(v))
   rk = args.K
   P = u[:,:rk]
   Q = s[:rk,:rk].dot(v[:rk,:])
@@ -25,10 +42,10 @@ def fc_decomposition(model, args):
     sym2 = mx.symbol.FullyConnected(data=sym1, num_hidden=W2.shape[0], no_bias=False, name=name2)
     return sym2
 
-  def arg_handle(arg_shape_dic, arg_params):    
+  def arg_handle(arg_shape_dic, arg_params):
     W1, W2 = Q, P
     W1 = W1.reshape(arg_shape_dic[name1+'_weight'])
-    weight1 = mx.ndarray.array(W1)      
+    weight1 = mx.ndarray.array(W1)
     W2 = W2.reshape(arg_shape_dic[name2+'_weight'])
     b2 = b.reshape(arg_shape_dic[name2+'_bias'])
     weight2 = mx.ndarray.array(W2)
@@ -41,7 +58,7 @@ def fc_decomposition(model, args):
   return new_model
 
 def main():
-  model = utils.load_model(args)  
+  model = utils.load_model(args)
   new_model = fc_decomposition(model, args)
   new_model.save(args.save_model)
 
