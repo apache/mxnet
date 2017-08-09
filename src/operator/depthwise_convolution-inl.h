@@ -310,7 +310,7 @@ void DepthwiseConvolutionOp<DType>::Backward(const OpContext &ctx,
   auto stream = ctx.get_stream<gpu>();
   // backward data
   if (req[conv::kData] != kNullOp) {
-    CHECK_NE(req[conv::kOut], kAddTo);
+    CHECK_NE(req[conv::kData], kAddTo);
     depthwise_conv::DepthwiseConv2dBackwardDataGpu<DType>(stream,
                                                           args_,
                                                           out_grad,
