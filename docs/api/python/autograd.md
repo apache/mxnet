@@ -25,6 +25,8 @@ The enable differentiation without first declaring a computation graph,
 ``autograd`` builds the graph on the fly.
 Building the graph incurs some overhead,
 so it only takes place inside an ``with autograd.record():`` block.
+We can return at any point to the default scope (not recording)
+using a ``with auto_grad.pause()`` block.
 
 For any variable ``x`` with respect to which we want a gradient,
 we must first call ``x.attach_grad`` to allocate space for the gradient.
