@@ -22,14 +22,14 @@
 namespace {
 
 // TODO(lx75249): Add imperative operators to op.h under ndarray namespace
-inline void _clip(mxnet::cpp::NDArray &data, float limit) {
+void _clip(mxnet::cpp::NDArray &data, float limit) {
   data = mxnet::cpp::Operator("clip")
     .SetParam("a_min", -limit)
     .SetParam("a_max", limit)
     .SetInput("data", data)
     .Invoke()[0];
 }
-inline mxnet::cpp::NDArray _sqrt(mxnet::cpp::NDArray data) {
+mxnet::cpp::NDArray _sqrt(mxnet::cpp::NDArray data) {
   return mxnet::cpp::Operator("sqrt")
     .SetInput("data", data)
     .Invoke()[0];
@@ -39,29 +39,29 @@ inline mxnet::cpp::NDArray _sqrt(mxnet::cpp::NDArray data) {
 
 namespace mxnet {
 namespace cpp {
-inline Optimizer::Optimizer(unsigned begin_num_update)
+Optimizer::Optimizer(unsigned begin_num_update)
   : begin_num_update_(begin_num_update),
     num_update_(begin_num_update_) {
   params_["lr"] = "0.01f";
   params_["wd"] = "0.f";
 }
 
-inline std::map<std::string, OptimizerCreator>& OptimizerRegistry::cmap() {
+std::map<std::string, OptimizerCreator>& OptimizerRegistry::cmap() {
   static std::map<std::string, OptimizerCreator> cmap_;
   return cmap_;
 }
 
-inline OpMap*& Optimizer::op_map() {
+OpMap*& Optimizer::op_map() {
   static OpMap *op_map_ = new OpMap();
   return op_map_;
 }
 
-inline Optimizer::~Optimizer() {}
+Optimizer::~Optimizer() {}
 
-inline void Optimizer::CreateState_(int index, NDArray weight) {
+void Optimizer::CreateState_(int index, NDArray weight) {
 }
 
-inline std::string Optimizer::Serialize() const {
+std::string Optimizer::Serialize() const {
   using ValueType = std::map<std::string, std::string>::value_type;
   auto params = params_;
   params.emplace("opt_type", GetType());
@@ -71,21 +71,21 @@ inline std::string Optimizer::Serialize() const {
     }).substr(1);
 }
 
-inline const std::vector<const char*> Optimizer::GetParamKeys_() const {
+const std::vector<const char*> Optimizer::GetParamKeys_() const {
   std::vector<const char*> keys;
   for (auto& iter : params_)
     keys.push_back(iter.first.c_str());
   return keys;
 }
 
-inline const std::vector<const char*> Optimizer::GetParamValues_() const {
+const std::vector<const char*> Optimizer::GetParamValues_() const {
   std::vector<const char*> values;
   for (auto& iter : params_)
     values.push_back(iter.second.c_str());
   return values;
 }
 
-inline unsigned Optimizer::UpdateCount_(int index) {
+unsigned Optimizer::UpdateCount_(int index) {
   if (count_.count(index) == 0) {
     count_.emplace(index, begin_num_update_);
   }
@@ -94,19 +94,19 @@ inline unsigned Optimizer::UpdateCount_(int index) {
   return new_count;
 }
 
-inline float Optimizer::GetLR_(int index) {
+float Optimizer::GetLR_(int index) {
   if (nullptr != lrScheduler_) {
     return lrScheduler_->GetLR(num_update_);
   }
   return std::stof(params_["lr"]);
 }
 
-inline float Optimizer::GetWD_(int index) {
+float Optimizer::GetWD_(int index) {
   float wd = std::stof(params_["wd"]);
   return wd;
 }
 
-inline Optimizer* OptimizerRegistry::Find(const std::string& name) {
+Optimizer* OptimizerRegistry::Find(const std::string& name) {
   MXNETCPP_REGISTER_OPTIMIZER(sgd, SGDOptimizer);
   MXNETCPP_REGISTER_OPTIMIZER(ccsgd, SGDOptimizer);  // For backward compatibility
   MXNETCPP_REGISTER_OPTIMIZER(rmsprop, RMSPropOptimizer);
@@ -119,29 +119,29 @@ inline Optimizer* OptimizerRegistry::Find(const std::string& name) {
   return it->second();
 }
 
-inline int OptimizerRegistry::__REGISTER__(const std::string& name, OptimizerCreator creator) {
+int OptimizerRegistry::__REGISTER__(const std::string& name, OptimizerCreator creator) {
   CHECK_EQ(cmap().count(name), 0) << name << " already registered";
   cmap().emplace(name, std::move(creator));
   return 0;
 }
 
-inline SGDOptimizer::SGDOptimizer(unsigned begin_num_update)
+SGDOptimizer::SGDOptimizer(unsigned begin_num_update)
   : Optimizer(begin_num_update) {
   update_handle_ = op_map()->GetSymbolCreator("sgd_update");
   mom_update_handle_ = op_map()->GetSymbolCreator("sgd_mom_update");
 }
 
-inline std::string SGDOptimizer::GetType() const {
+std::string SGDOptimizer::GetType() const {
   return "sgd";
 }
 
-inline SGDOptimizer::~SGDOptimizer() {
+SGDOptimizer::~SGDOptimizer() {
   for (auto &it : states_) {
     delete it.second;
   }
 }
 
-inline void SGDOptimizer::Update(int index, NDArray weight, NDArray grad) {
+void SGDOptimizer::Update(int index, NDArray weight, NDArray grad) {
   if (states_.count(index) == 0) {
     CreateState_(index, weight);
   }
@@ -173,7 +173,7 @@ inline void SGDOptimizer::Update(int index, NDArray weight, NDArray grad) {
   }
 }
 
-inline void SGDOptimizer::CreateState_(int index, NDArray weight) {
+void SGDOptimizer::CreateState_(int index, NDArray weight) {
   if (params_.count("momentum") == 0) {
     states_[index] = nullptr;
   } else {
@@ -182,7 +182,7 @@ inline void SGDOptimizer::CreateState_(int index, NDArray weight) {
   }
 }
 
-inline RMSPropOptimizer::RMSPropOptimizer(unsigned begin_num_update)
+RMSPropOptimizer::RMSPropOptimizer(unsigned begin_num_update)
   : Optimizer(begin_num_update) {
   update_handle_ = op_map()->GetSymbolCreator("rmsprop_update");
   alex_update_handle_ = op_map()->GetSymbolCreator("rmspropalex_update");
@@ -191,11 +191,11 @@ inline RMSPropOptimizer::RMSPropOptimizer(unsigned begin_num_update)
   SetParam("epsilon", 1e-8);
 }
 
-inline std::string RMSPropOptimizer::GetType() const {
+std::string RMSPropOptimizer::GetType() const {
   return "rmsprop";
 }
 
-inline RMSPropOptimizer::~RMSPropOptimizer() {
+RMSPropOptimizer::~RMSPropOptimizer() {
   for (auto &it : n_) {
     delete it.second;
   }
@@ -207,7 +207,7 @@ inline RMSPropOptimizer::~RMSPropOptimizer() {
   }
 }
 
-inline void RMSPropOptimizer::Update(int index, NDArray weight, NDArray grad) {
+void RMSPropOptimizer::Update(int index, NDArray weight, NDArray grad) {
   if (n_.count(index) == 0) {
     CreateState_(index, weight);
   }
@@ -235,7 +235,7 @@ inline void RMSPropOptimizer::Update(int index, NDArray weight, NDArray grad) {
       keys.size(), keys.data(), values.data());
 }
 
-inline void RMSPropOptimizer::CreateState_(int index, NDArray weight) {
+void RMSPropOptimizer::CreateState_(int index, NDArray weight) {
   n_[index] = new NDArray(weight.GetShape(), weight.GetContext());
   *n_[index] = 0;
   g_[index] = new NDArray(weight.GetShape(), weight.GetContext());
@@ -244,7 +244,7 @@ inline void RMSPropOptimizer::CreateState_(int index, NDArray weight) {
   *delta_[index] = 0;
 }
 
-inline AdamOptimizer::AdamOptimizer(unsigned begin_num_update)
+AdamOptimizer::AdamOptimizer(unsigned begin_num_update)
   : Optimizer(begin_num_update) {
   update_handle_ = op_map()->GetSymbolCreator("adam_update");
   SetParam("beta1", 0.9f);
@@ -252,11 +252,11 @@ inline AdamOptimizer::AdamOptimizer(unsigned begin_num_update)
   SetParam("epsilon", 1e-8);
 }
 
-inline std::string AdamOptimizer::GetType() const {
+std::string AdamOptimizer::GetType() const {
   return "adam";
 }
 
-inline AdamOptimizer::~AdamOptimizer() {
+AdamOptimizer::~AdamOptimizer() {
   for (auto &it : mean_) {
     delete it.second;
   }
@@ -265,7 +265,7 @@ inline AdamOptimizer::~AdamOptimizer() {
   }
 }
 
-inline void AdamOptimizer::Update(int index, NDArray weight, NDArray grad) {
+void AdamOptimizer::Update(int index, NDArray weight, NDArray grad) {
   if (mean_.count(index) == 0) {
     CreateState_(index, weight);
   }
@@ -302,23 +302,23 @@ inline void AdamOptimizer::Update(int index, NDArray weight, NDArray grad) {
     keys.size(), keys.data(), values.data());
 }
 
-inline void AdamOptimizer::CreateState_(int index, NDArray weight) {
+void AdamOptimizer::CreateState_(int index, NDArray weight) {
   mean_[index] = new NDArray(weight.GetShape(), weight.GetContext());
   *mean_[index] = 0;
   var_[index] = new NDArray(weight.GetShape(), weight.GetContext());
   *var_[index] = 0;
 }
 
-inline AdaGradOptimizer::AdaGradOptimizer(unsigned begin_num_update)
+AdaGradOptimizer::AdaGradOptimizer(unsigned begin_num_update)
   : Optimizer(begin_num_update) {
   SetParam("eps", 1e-7);
 }
 
-inline std::string AdaGradOptimizer::GetType() const {
+std::string AdaGradOptimizer::GetType() const {
   return "adagrad";
 }
 
-inline void AdaGradOptimizer::Update(int index, NDArray weight, NDArray grad) {
+void AdaGradOptimizer::Update(int index, NDArray weight, NDArray grad) {
   if (history_.count(index) == 0) {
     CreateState_(index, weight);
   }
@@ -338,28 +338,28 @@ inline void AdaGradOptimizer::Update(int index, NDArray weight, NDArray grad) {
   weight -= (grad / _sqrt(history + eps) + weight * wd) * lr;
 }
 
-inline AdaGradOptimizer::~AdaGradOptimizer() {
+AdaGradOptimizer::~AdaGradOptimizer() {
   for (auto& it : history_) {
     delete it.second;
   }
 }
 
-inline void AdaGradOptimizer::CreateState_(int index, NDArray weight) {
+void AdaGradOptimizer::CreateState_(int index, NDArray weight) {
   history_[index] = new NDArray(weight.GetShape(), weight.GetContext());
   *history_[index] = 0;
 }
 
-inline AdaDeltaOptimizer::AdaDeltaOptimizer(unsigned begin_num_update)
+AdaDeltaOptimizer::AdaDeltaOptimizer(unsigned begin_num_update)
   : Optimizer(begin_num_update) {
   SetParam("rho", 0.90f);
   SetParam("epsilon", 1e-5);
 }
 
-inline std::string AdaDeltaOptimizer::GetType() const {
+std::string AdaDeltaOptimizer::GetType() const {
   return "adadelta";
 }
 
-inline void AdaDeltaOptimizer::Update(int index, NDArray weight, NDArray grad) {
+void AdaDeltaOptimizer::Update(int index, NDArray weight, NDArray grad) {
   if (acc_g_.count(index) == 0) {
     CreateState_(index, weight);
   }
@@ -388,7 +388,7 @@ inline void AdaDeltaOptimizer::Update(int index, NDArray weight, NDArray grad) {
   weight -= delta;
 }
 
-inline AdaDeltaOptimizer::~AdaDeltaOptimizer() {
+AdaDeltaOptimizer::~AdaDeltaOptimizer() {
   for (auto& it : acc_g_) {
     delete it.second;
   }
@@ -397,7 +397,7 @@ inline AdaDeltaOptimizer::~AdaDeltaOptimizer() {
   }
 }
 
-inline void AdaDeltaOptimizer::CreateState_(int index, NDArray weight) {
+void AdaDeltaOptimizer::CreateState_(int index, NDArray weight) {
   acc_g_[index] = new NDArray(weight.GetShape(), weight.GetContext());
   *acc_g_[index] = 0;
   acc_delta_[index] = new NDArray(weight.GetShape(), weight.GetContext());
