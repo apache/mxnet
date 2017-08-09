@@ -114,7 +114,7 @@ class BaseSparseNDArray(NDArray):
         raise NotSupportedForSparseNDArray(self.reshape, None, shape)
 
     def _aux_type(self, i):
-        """Data-type of the array’s ith aux data.
+        """Data-type of the array's ith aux data.
 
         Returns
         -------
