@@ -70,14 +70,14 @@ Operator* CreateOp<gpu>(DeconvolutionParam param, int dtype,
       int backward_compute_type = desired_backward_compute_type;
       bool deconvolutionIsSupported = CuDNNDeconvolutionOp<DType>::Supports(param,
                                           forward_compute_type,
-                                          backward_compute_type);
+                                          backward_compute_type, ctx);
 
       // If cuDNN can't handle this case with fp16 backprop kernels, try fp32 backprop.
       if (!deconvolutionIsSupported && backward_compute_type == mshadow::kFloat16) {
         backward_compute_type = mshadow::kFloat32;
         deconvolutionIsSupported = CuDNNDeconvolutionOp<DType>::Supports(param,
                                           forward_compute_type,
-                                          backward_compute_type);
+                                          backward_compute_type, ctx);
       }
 
       // If cuDNN can't handle this case with fp16 forward kernels, try fp32
@@ -85,7 +85,7 @@ Operator* CreateOp<gpu>(DeconvolutionParam param, int dtype,
         forward_compute_type = mshadow::kFloat32;
         deconvolutionIsSupported = CuDNNDeconvolutionOp<DType>::Supports(param,
                                           forward_compute_type,
-                                          backward_compute_type);
+                                          backward_compute_type, ctx);
       }
       if (!deconvolutionIsSupported) {
         LOG(WARNING) <<

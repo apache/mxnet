@@ -71,14 +71,14 @@ Operator* CreateOp<gpu>(ConvolutionParam param, int dtype,
       int backward_compute_type = desired_backward_compute_type;
       bool convolutionIsSupported = CuDNNConvolutionOp<DType>::Supports(param,
                                           forward_compute_type,
-                                          backward_compute_type);
+                                          backward_compute_type, ctx);
 
       // If cuDNN can't handle this case with fp16 backprop kernels, try fp32 backprop.
       if (!convolutionIsSupported && backward_compute_type == mshadow::kFloat16) {
         backward_compute_type = mshadow::kFloat32;
         convolutionIsSupported = CuDNNConvolutionOp<DType>::Supports(param,
                                           forward_compute_type,
-                                          backward_compute_type);
+                                          backward_compute_type, ctx);
       }
 
       // If cuDNN can't handle this case with fp16 forward kernels, try fp32
@@ -86,16 +86,16 @@ Operator* CreateOp<gpu>(ConvolutionParam param, int dtype,
         forward_compute_type = mshadow::kFloat32;
         convolutionIsSupported = CuDNNConvolutionOp<DType>::Supports(param,
                                           forward_compute_type,
-                                          backward_compute_type);
+                                          backward_compute_type, ctx);
       }
       if (!convolutionIsSupported) {
         LOG(WARNING) << "This convolution is not supported by cudnn, MXNET convolution is applied.";
         op = new ConvolutionOp<gpu, DType>(param);
       } else {
-        if ((forward_compute_type != desired_forward_compute_type) ||
-            (backward_compute_type != desired_backward_compute_type))
-          LOG(WARNING) << "True fp16 convolution by cudnn not supported in this configuration.  " <<
-                       "Falling back to pseudo fp16.";
+        if (forward_compute_type != desired_forward_compute_type)
+          LOG(WARNING) << "Requested forward compute precision not supported, using fp32.";
+        if (backward_compute_type != desired_backward_compute_type)
+          LOG(WARNING) << "Requested backward compute precision not supported, using fp32.";
         op = new CuDNNConvolutionOp<DType>(param,
                                          forward_compute_type,
                                          backward_compute_type,
