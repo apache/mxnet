@@ -26,6 +26,17 @@ import mxnet as mx
 import numpy as np
 from convert_symbol import convert_symbol
 
+def prob_label(arg_names):
+    candidates = [arg for arg in arg_names if
+                  not arg.endswith('data') and
+                  not arg.endswith('_weight') and
+                  not arg.endswith('_bias') and
+                  not arg.endswith('_gamma') and
+                  not arg.endswith('_beta')]
+    if len(candidates) == 0:
+        return 'prob_label'
+    return candidates[-1]
+
 def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
     """Convert caffe model
 
@@ -198,7 +209,7 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
             assert len(layer_blobs) == 0
 
     if output_prefix is not None:
-        model = mx.mod.Module(symbol=sym, label_names=[arg_names[-1], ])
+        model = mx.mod.Module(symbol=sym, label_names=[prob_label(arg_names), ])
         model.bind(data_shapes=[('data', tuple(input_dim))])
         model.init_params(arg_params=arg_params, aux_params=aux_params)
         model.save_checkpoint(output_prefix, 0)
