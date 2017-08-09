@@ -19,7 +19,7 @@ of loss functions with respect to parameters.
 
 
 
-### Recording
+### Record vs Pause
 
 The enable differentiation without first declaring a computation graph,
 ``autograd`` builds the graph on the fly.
