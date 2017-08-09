@@ -145,3 +145,4 @@ List of Contributors
 * [Guodong Zhang](https://github.com/gd-zhang/)
 * [Xizhou Zhu](https://github.com/einsiedler0408/)
 * [Jean Kossaifi](https://github.com/JeanKossaifi/)
+* [Kenta Kubo](https://github.com/kkk669/)
