@@ -71,7 +71,7 @@ function upsearch () {
 
 # Set up WORKSPACE. Jenkins will set them for you or we pick
 # reasonable defaults if you run it outside of Jenkins.
-WORKSPACE="${WORKSPACE:-${SCRIPT_DIR}/../../}"
+WORKSPACE="/home/ec2-user/workspace/sanity" #"${WORKSPACE:-${SCRIPT_DIR}/../../}"
 
 # Determine the docker image name
 DOCKER_IMG_NAME="mx-ci.${CONTAINER_TYPE}"
@@ -86,7 +86,7 @@ DOCKER_IMG_NAME=$(echo "${DOCKER_IMG_NAME}" | tr '[:upper:]' '[:lower:]')
 # skip with_the_same_user for non-linux
 uname=`uname`
 if [[ "$uname" == "Linux" ]]; then
-    PRE_COMMAND="ls" #"tests/ci_build/with_the_same_user"
+    PRE_COMMAND="tests/ci_build/with_the_same_user"
 else
     PRE_COMMAND=""
 fi
@@ -131,7 +131,5 @@ ${DOCKER_BINARY} run --rm --pid=host \
     -e "CI_BUILD_GID=$(id -g)" \
     ${CI_DOCKER_EXTRA_PARAMS[@]} \
     ${DOCKER_IMG_NAME} \
-    ${PRE_COMMAND} #\
-    
-
-#${COMMAND[@]}
+    ${PRE_COMMAND} \
+    ${COMMAND[@]}
