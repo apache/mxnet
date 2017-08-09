@@ -44,7 +44,7 @@ inside a ``with autograd.record()`` block, we can call ``y.backward()``.
 ```
 
 
-## ``Train_mode`` and ``predict_mode``
+## Train mode and Predict Mode
 
 Some functions are intended to behave differently
 during model training models vs. making predictions.
