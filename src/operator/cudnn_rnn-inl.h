@@ -69,6 +69,11 @@ class CuDNNRNNOp : public Operator {
       param_.lstm_q_ = true;
     else
       param_.lstm_q_ = false;
+
+#if CUDNN_MAJOR >= 6
+    CUDNN_CALL(cudnnCreate(&cudnn_handle_));
+    algo_ = CUDNN_RNN_ALGO_STANDARD;
+#endif
   }
 
   ~CuDNNRNNOp() {
@@ -91,6 +96,9 @@ class CuDNNRNNOp : public Operator {
       CUDNN_CALL(cudnnDestroyFilterDescriptor(w_desc_));
       CUDNN_CALL(cudnnDestroyRNNDescriptor(rnn_desc_));
       CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
+#if CUDNN_MAJOR >= 6
+      CUDNN_CALL(cudnnDestroy(cudnn_handle_));
+#endif
       Storage::Get()->Free(dropout_states_);
       Storage::Get()->Free(reserve_space_);
     }
@@ -450,6 +458,18 @@ class CuDNNRNNOp : public Operator {
                                            seed_));
       // RNN descriptors
       CUDNN_CALL(cudnnCreateRNNDescriptor(&rnn_desc_));
+#if CUDNN_MAJOR >= 6
+      CUDNN_CALL(cudnnSetRNNDescriptor(cudnn_handle_,
+                                       rnn_desc_,
+                                       param_.state_size,
+                                       param_.num_layers,
+                                       dropout_desc_,
+                                       input_mode_,
+                                       direction_,
+                                       mode_,
+                                       algo_,
+                                       dtype_));
+#else
       CUDNN_CALL(cudnnSetRNNDescriptor(rnn_desc_,
                                        param_.state_size,
                                        param_.num_layers,
@@ -458,6 +478,7 @@ class CuDNNRNNOp : public Operator {
                                        direction_,
                                        mode_,
                                        dtype_));
+#endif  // CUDNN_MAJOR
       // Get temp space sizes
       CUDNN_CALL(cudnnGetRNNWorkspaceSize(s->dnn_handle_,
                                           rnn_desc_,
@@ -557,6 +578,10 @@ class CuDNNRNNOp : public Operator {
 
   #if CUDNN_MAJOR >= 5
   cudnnTensorFormat_t format_;
+  #endif
+  #if CUDNN_MAJOR >= 6
+  cudnnHandle_t cudnn_handle_;
+  cudnnRNNAlgo_t algo_;
   #endif
   RNNParam param_;
 };
