@@ -41,7 +41,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # grep for files with bad licenses
-ERRORS="$(cat rat_report.txt | grep -e "??")"
+ERRORS="$(cat rat_report.txt | grep -e "!?????")"
 rm rat_report.txt
 
 if test ! -z "$ERRORS"; then
