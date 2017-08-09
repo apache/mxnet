@@ -379,6 +379,7 @@ rcpplint:
 rpkg:
 	mkdir -p R-package/inst
 	mkdir -p R-package/inst/libs
+	cp src/io/image_recordio.h R-package/src
 	cp -rf lib/libmxnet.so R-package/inst/libs
 	mkdir -p R-package/inst/include
 	cp -rf include/* R-package/inst/include
@@ -442,7 +443,7 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 else
 clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
+		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
