@@ -459,6 +459,13 @@ int MXNDArrayGetContext(NDArrayHandle handle,
                                   int *out,
                                   int *out);
 /*!
+ * \brief return gradient buffer attached to this NDArray
+ * \param handle NDArray handle
+ * \return 0 when success, -1 when failure happens
+ */
+int MXNDArrayGetGrad(NDArrayHandle handle, NDArrayHandle *out);
+
+/*!
  * \brief detach and ndarray from computation graph by clearing entry_
  * \param handle NDArray handle
  * \return 0 when success, -1 when failure happens

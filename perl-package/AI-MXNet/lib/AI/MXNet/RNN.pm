@@ -166,6 +166,9 @@ method SequentialRNNCell(@args)  { AI::MXNet::RNN::SequentialCell->new(@args) }
 method BidirectionalCell(@args)  { AI::MXNet::RNN::BidirectionalCell->new(@args) }
 method DropoutCell(@args)        { AI::MXNet::RNN::DropoutCell->new(@args) }
 method ZoneoutCell(@args)        { AI::MXNet::RNN::ZoneoutCell->new(@args) }
+method ConvRNNCell(@args)        { AI::MXNet::RNN::ConvCell->new(@args) }
+method ConvLSTMCell(@args)       { AI::MXNet::RNN::ConvLSTMCell->new(@args) }
+method ConvGRUCell(@args)        { AI::MXNet::RNN::ConvGRUCell->new(@args) }
 method ResidualCell(@args)       { AI::MXNet::RNN::ResidualCell->new(@args) }
 method encode_sentences(@args)   { AI::MXNet::RNN::IO->encode_sentences(@args) }
 method BucketSentenceIter(@args)

@@ -510,6 +510,55 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
     }, $labels, $preds);
 }
 
+package AI::MXNet::PearsonCorrelation;
+use Mouse;
+use AI::MXNet::Base;
+extends 'AI::MXNet::EvalMetric';
+has '+name'   => (default => 'pearson-correlation');
+
+=head1 NAME
+
+    AI::MXNet::PearsonCorrelation
+=cut
+
+=head1 DESCRIPTION
+
+    Computes Pearson correlation.
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+
+    Examples
+    --------
+    >>> $predicts = [mx->nd->array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
+    >>> $labels   = [mx->nd->array([[1, 0], [0, 1], [0, 1]])]
+    >>> $pr = mx->metric->PearsonCorrelation()
+    >>> $pr->update($labels, $predicts)
+    >>> print pr->get()
+    ('pearson-correlation', '0.421637061887229')
+=cut
+
+method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
+{
+    AI::MXNet::Metric::check_label_shapes($labels, $preds);
+    zip(sub {
+        my ($label, $pred) = @_;
+        AI::MXNet::Metric::check_label_shapes($label, $pred);
+        $label = $label->aspdl->flat;
+        $pred  = $pred->aspdl->flat;
+        my ($label_mean, $label_stdv) = ($label->stats)[0, 6];
+        my ($pred_mean, $pred_stdv) = ($pred->stats)[0, 6];
+        $self->sum_metric(
+            $self->sum_metric
+                +
+            ((($label-$label_mean)*($pred-$pred_mean))->sum/$label->nelem)/(($label_stdv*$pred_stdv)->at(0))
+        );
+        $self->num_inst($self->num_inst + 1);
+    }, $labels, $preds);
+}
+
 =head1 DESCRIPTION
 
     Custom evaluation metric that takes a sub ref.
@@ -574,6 +623,7 @@ my %metrics = qw/
     top_k_accuracy AI::MXNet::TopKAccuracy
     Perplexity     AI::MXNet::Perplexity
     perplexity     AI::MXNet::Perplexity
+    pearsonr       AI::MXNet::PearsonCorrelation
 /;
 
 method create(Metric|ArrayRef[Metric] $metric, %kwargs)

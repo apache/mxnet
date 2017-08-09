@@ -20,7 +20,7 @@ use strict;
 use warnings;
 use PDL;
 use PDL::Types qw();
-use AI::MXNetCAPI 1.0101;
+use AI::MXNetCAPI 1.0102;
 use AI::NNVMCAPI 1.01;
 use AI::MXNet::Types;
 use Time::HiRes;

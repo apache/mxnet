@@ -796,14 +796,6 @@ method forward(
 )
 {
     assert($self->binded and $self->params_initialized);
-    # If starting to do the inference, force rebind the module.
-    if($self->label_shapes and not $data_batch->label)
-    {
-        confess(
-            "If you are trying to do inference, rebind module ".
-            "with 'force_rebind=True' and 'for_training=False'"
-        );
-    }
 
     my @curr_data_shapes = map { $_->shape } @{ $self->data_shapes };
     my @new_data_shapes  = map { $_->shape } @{ $data_batch->data };
