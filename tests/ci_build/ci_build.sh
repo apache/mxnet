@@ -89,7 +89,7 @@ function upsearch () {
 
 # Set up WORKSPACE. Jenkins will set them for you or we pick
 # reasonable defaults if you run it outside of Jenkins.
-WORKSPACE="/home/ec2-user/workspace/sanity" #"${WORKSPACE:-${SCRIPT_DIR}/../../}"
+WORKSPACE="${WORKSPACE:-${SCRIPT_DIR}/../../}"
 
 # Determine the docker image name
 DOCKER_IMG_NAME="mx-ci.${CONTAINER_TYPE}"
