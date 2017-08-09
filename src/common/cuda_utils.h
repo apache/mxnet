@@ -184,6 +184,17 @@ inline int ComputeCapabilityMinor(int device_id) {
 }
 
 /*!
+ * \brief Return the integer SM architecture (e.g. Volta = 70).
+ * \param device_id The device index of the cuda-capable gpu of interest.
+ * \return the gpu's cuda compute architecture as an int.
+ */
+inline int SMArch(int device_id) {
+  auto major = ComputeCapabilityMajor(device_id);
+  auto minor = ComputeCapabilityMinor(device_id);
+  return 10 * major + minor;
+}
+
+/*!
  * \brief Determine whether a cuda-capable gpu's architecture supports float16 math.
  * \param device_id The device index of the cuda-capable gpu of interest.
  * \return whether the gpu's architecture supports float16 math.

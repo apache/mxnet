@@ -565,7 +565,7 @@ class CuDNNConvolutionOp : public Operator {
     std::string key = CuDNNAlgoReg::Get()->GetKey(param_, in_shape, out_shape, dtype_,
                                                   cudnn_forward_compute_type,
                                                   cudnn_backward_compute_type,
-                                                  ctx.dev_id);
+                                                  SMArch(ctx.dev_id));
     if (!CuDNNAlgoReg::Get()->Find(key, &forward_algo_, &back_algo_, &back_algo_w_)) {
       // Not in algo registry, must determine via *Get*() or *Find*()
       Engine::VarHandle var = Engine::Get()->NewVariable();

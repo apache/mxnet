@@ -51,7 +51,7 @@ class CuDNNAlgoReg {
                      cudnnDataType_t cudnn_data_type,
                      cudnnDataType_t cudnn_forward_compute_type,
                      cudnnDataType_t cudnn_backward_compute_type,
-                     int device_id) {
+                     int sm_arch) {
     std::ostringstream oss;
     oss << "inputs=";
     for (auto &i : in_shape)
@@ -65,10 +65,8 @@ class CuDNNAlgoReg {
     oss << "cudnn_data_type=" << cudnn_data_type << ";";
     oss << "cudnn_forward_compute_type=" << cudnn_forward_compute_type << ";";
     oss << "cudnn_backward_compute_type=" << cudnn_backward_compute_type << ";";
-    // A system could be heterogeneous and thus have different algo choices for different
-    // device ids.  'device_id' could possibly be replaced with gpu compute capability,
-    // but identical GPUs could technically have different clock settings.
-    oss << "device_id=" << device_id << ";";
+    // All GPUs of the same compute capability (SM arch) share an algo selection.
+    oss << "sm_arch=" << sm_arch << ";";
     return oss.str();
   }
 
