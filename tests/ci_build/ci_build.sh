@@ -85,6 +85,9 @@ DOCKER_IMG_NAME=$(echo "${DOCKER_IMG_NAME}" | tr '[:upper:]' '[:lower:]')
 
 # skip with_the_same_user for non-linux
 uname=`uname`
+echo "current"
+echo $PWD
+ls
 if [[ "$uname" == "Linux" ]]; then
     PRE_COMMAND="tests/ci_build/with_the_same_user"
 else
