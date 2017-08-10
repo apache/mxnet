@@ -19,13 +19,6 @@
 
 set -e
 
-if (( $# < 1 )); then
-    echo ""
-    echo "Usage: $(basename $0) SOURCE"
-    echo ""
-    exit 1
-fi
-
 SOURCE=$1
 
 # get Apache Rat jar
@@ -52,4 +45,5 @@ if test ! -z "$ERRORS"; then
 else
     echo -e "RAT checks passed."
 fi
+
 
