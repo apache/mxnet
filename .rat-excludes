@@ -48,4 +48,5 @@ Makefile
 .*pyi
 .*R
 .*PL
+with_the_same_user
 Dockerfile.*
