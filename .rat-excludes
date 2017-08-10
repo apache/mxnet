@@ -47,4 +47,5 @@ Makefile
 .*pyx
 .*pyi
 .*R
+.*m
 .*PL
