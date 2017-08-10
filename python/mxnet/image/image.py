@@ -826,31 +826,34 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
     Parameters
     ----------
     data_shape : tuple of int
-        shape for output data
+        Shape for output data
     resize : int
-        resize shorter edge if larger than 0 at the begining
-    rand_resize : float
-        [0, 1], probability to apply random resizing
+        Resize shorter edge if larger than 0 at the begining
+    rand_crop : bool
+        Whether to enable random cropping other than center crop
+    rand_resize : bool
+        Whether to enable random sized cropping, require rand_crop to be enabled
     rand_gray : float
-        [0, 1], probability to convert to grayscale for all channels
+        [0, 1], probability to convert to grayscale for all channels, the number
+        of channels will not be reduced to 1
     rand_mirror : bool
-        whether apply horizontal flip to image with probability 0.5
+        Whether to apply horizontal flip to image with probability 0.5
     mean : np.ndarray or None
-        mean pixel values for [r, g, b]
+        Mean pixel values for [r, g, b]
     std : np.ndarray or None
-        standard deviations for [r, g, b]
+        Standard deviations for [r, g, b]
     brightness : float
-        brightness jittering range (percent)
+        Brightness jittering range (percent)
     contrast : float
-        contrast jittering range
+        Contrast jittering range (percent)
     saturation : float
-        saturation jittering range
+        Saturation jittering range (percent)
     hue : float
-        hue jittering range
+        Hue jittering range (percent)
     pca_noise : float
-        pca noise level
+        Pca noise level (percent)
     inter_method : int, default=2(Area-based)
-        interpolation method for all resizing operations
+        Interpolation method for all resizing operations
 
         Possible values:
         0: Nearest Neighbors Interpolation.
