@@ -1,0 +1,5 @@
+FROM ubuntu:14.04
+
+RUN apt-get update && apt-get install -y software-properties-common git wget
+RUN add-apt-repository -y ppa:openjdk-r/ppa && apt-get update
+RUN apt-get install -y openjdk-8-jdk
