@@ -92,3 +92,16 @@ GetISBI_data <- function() {
     file.remove('data/ISBI.zip')
   }
 }
+
+GetCaptcha_data <- function() {
+  if (!dir.exists("data")) {
+    dir.create("data/")
+  }
+  if (!file.exists('data/captcha_example/captcha_train.rec') |
+      !file.exists('data/captcha_example/captcha_test.rec')) {
+    download.file('https://s3-us-west-2.amazonaws.com/apache-mxnet/R/data/captcha_example.zip',
+                  destfile = 'data/captcha_example.zip')
+    unzip('data/captcha_example.zip', exdir = 'data/')
+    file.remove('data/captcha_example.zip')
+  }
+}
