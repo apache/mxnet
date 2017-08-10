@@ -723,7 +723,7 @@ class ImageDetIter(ImageIter):
         obj_width = int(raw[1])
         if (raw.size - header_width) % obj_width != 0:
             msg = "Label shape %s inconsistent with annotation width %d." \
-                %(str(raw.shape, obj_width))
+                %(str(raw.shape), obj_width)
             raise RuntimeError(msg)
         out = np.reshape(raw[header_width:], (-1, obj_width))
         # remove bad ground-truths

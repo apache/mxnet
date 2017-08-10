@@ -829,10 +829,13 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
         shape for output data
     resize : int
         resize shorter edge if larger than 0 at the begining
-    rand_resize : float
-        [0, 1], probability to apply random resizing
+    rand_crop : bool
+        whether enable random cropping other than center crop
+    rand_resize : bool
+        whether enable random sized cropping, require rand_crop to be enabled
     rand_gray : float
-        [0, 1], probability to convert to grayscale for all channels
+        [0, 1], probability to convert to grayscale for all channels, the number
+        of channels will not be reduced to 1
     rand_mirror : bool
         whether apply horizontal flip to image with probability 0.5
     mean : np.ndarray or None
