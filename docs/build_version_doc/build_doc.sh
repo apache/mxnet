@@ -57,6 +57,8 @@ then
     cat $tag_list_file
     tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "docs/_build/html/" \
                                           --current_version "$latest_tag" --root_url "http://mxnet.incubator.apache.org/"
+    tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddPackageLink.py \
+                                          --file_path "docs/_build/html/get_started/install.html" --current_version "$latest_tag"
     cp -a "docs/_build/html/." "$local_build"
     cp $tag_list_file "$local_build/tag.txt"
     rm -rf "$web_folder/.git"
