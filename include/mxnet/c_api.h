@@ -168,7 +168,7 @@ typedef int (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwar
 
 enum CustomFunctionCallbacks {
   kCustomFunctionBackward,
-  kCustomFunctionDelete,
+  kCustomFunctionDelete
 };
 
 typedef int (*CustomFunctionBwdFunc)(int /*num_ograds*/, int /*num_igrads*/, void** /*ptrs*/,
