@@ -42,8 +42,9 @@ if test ! -z "$ERRORS"; then
     COUNT=`echo "${ERRORS}" | wc -l`
     exit 1 
 else
-    echo -e "RAT checks passed."
+    echo "RAT checks passed."
 fi
 
 exit 0
+
 
