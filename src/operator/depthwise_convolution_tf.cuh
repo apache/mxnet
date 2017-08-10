@@ -27,6 +27,7 @@
 #ifndef MXNET_OPERATOR_DEPTHWISE_CONVOLUTION_TF_CUH_
 #define MXNET_OPERATOR_DEPTHWISE_CONVOLUTION_TF_CUH_
 #include "../common/cuda_utils.h"
+#include "./mxnet_op.h"
 
 namespace tf {
 namespace depthwise_conv {
@@ -70,7 +71,7 @@ DepthwiseConv2dForwardKernel(const DType* input,
   const int out_height = args.out_height;
   const int out_width = args.out_width;
 
-  CUDA_1D_KERNEL_LOOP(thread_id, num_outputs) {
+  CUDA_KERNEL_LOOP(thread_id, num_outputs) {
     // Compute the indexes of this thread in the output.
     //
     // We want coalesced reads so we make sure that each warp reads
@@ -317,7 +318,7 @@ DepthwiseConv2dBackwardDataKernel(const DepthwiseArgs args,
   const int in_pixels = in_height * in_width;
   const int out_pixels = out_height * out_width;
 
-  CUDA_1D_KERNEL_LOOP(thread_id, num_in_grad) {
+  CUDA_KERNEL_LOOP(thread_id, num_in_grad) {
     // Compute the indexes of this thread in the input.
     const int in_w = thread_id % in_width;
     const int in_h = (thread_id / in_width) % in_height;
