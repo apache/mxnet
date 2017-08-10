@@ -26,7 +26,7 @@ import struct
 import numpy as np
 
 from . import dataset
-from ..utils import download
+from ..utils import download, check_sha1
 from ... import nd
 
 
@@ -67,7 +67,8 @@ class MNIST(_DownloadedDataset):
 
             transform=lambda data, label: (data.astype(np.float32)/255, label)
     """
-    def __init__(self, root, train=True, transform=lambda data, label: (data, label)):
+    def __init__(self, root='~/.mxnet/datasets/', train=True,
+                 transform=lambda data, label: (data, label)):
         super(MNIST, self).__init__(root, train, transform)
 
     def _get_data(self):
@@ -75,11 +76,15 @@ class MNIST(_DownloadedDataset):
             os.makedirs(self._root)
         url = 'http://data.mxnet.io/data/mnist/'
         if self._train:
-            data_file = download(url+'train-images-idx3-ubyte.gz', self._root)
-            label_file = download(url+'train-labels-idx1-ubyte.gz', self._root)
+            data_file = download(url+'train-images-idx3-ubyte.gz', self._root,
+                                 sha1_hash='6c95f4b05d2bf285e1bfb0e7960c31bd3b3f8a7d')
+            label_file = download(url+'train-labels-idx1-ubyte.gz', self._root,
+                                  sha1_hash='2a80914081dc54586dbdf242f9805a6b8d2a15fc')
         else:
-            data_file = download(url+'t10k-images-idx3-ubyte.gz', self._root)
-            label_file = download(url+'t10k-labels-idx1-ubyte.gz', self._root)
+            data_file = download(url+'t10k-images-idx3-ubyte.gz', self._root,
+                                 sha1_hash='c3a25af1f52dad7f726cce8cacb138654b760d48')
+            label_file = download(url+'t10k-labels-idx1-ubyte.gz', self._root,
+                                  sha1_hash='763e7fa3757d93b0cdec073cef058b2004252c17')
 
         with gzip.open(label_file, 'rb') as fin:
             struct.unpack(">II", fin.read(8))
@@ -110,7 +115,14 @@ class CIFAR10(_DownloadedDataset):
 
             transform=lambda data, label: (data.astype(np.float32)/255, label)
     """
-    def __init__(self, root, train=True, transform=lambda data, label: (data, label)):
+    def __init__(self, root='~/.mxnet/datasets/', train=True,
+                 transform=lambda data, label: (data, label)):
+        self._file_hashes = {'data_batch_1.bin': 'aadd24acce27caa71bf4b10992e9e7b2d74c2540',
+                             'data_batch_2.bin': 'c0ba65cce70568cd57b4e03e9ac8d2a5367c1795',
+                             'data_batch_3.bin': '1dd00a74ab1d17a6e7d73e185b69dbf31242f295',
+                             'data_batch_4.bin': 'aab85764eb3584312d3c7f65fd2fd016e36a258e',
+                             'data_batch_5.bin': '26e2849e66a845b7f1e4614ae70f4889ae604628',
+                             'test_batch.bin': '67eb016db431130d61cd03c7ad570b013799c88c'}
         super(CIFAR10, self).__init__(root, train, transform)
 
     def _read_batch(self, filename):
@@ -123,11 +135,17 @@ class CIFAR10(_DownloadedDataset):
     def _get_data(self):
         if not os.path.isdir(self._root):
             os.makedirs(self._root)
-        url = 'https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz'
-        filename = download(url, self._root)
 
-        with tarfile.open(filename) as tar:
-            tar.extractall(self._root)
+        file_paths = [(name, os.path.join(self._root, 'cifar-10-batches-bin/', name))
+                      for name in self._file_hashes]
+        if any(not os.path.exists(path) or not check_sha1(path, self._file_hashes[name])
+               for name, path in file_paths):
+            url = 'https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz'
+            filename = download(url, self._root,
+                                sha1_hash='e8aa088b9774a44ad217101d2e2569f823d2d491')
+
+            with tarfile.open(filename) as tar:
+                tar.extractall(self._root)
 
         if self._train:
             filename = os.path.join(self._root, 'cifar-10-batches-bin/data_batch_%d.bin')

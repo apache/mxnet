@@ -43,6 +43,12 @@ class CuDNNRNNOp : public Operator {
     this->param_ = param;
     init_cudnn_ = false;
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
+    // TensorCore algos only allowed on fp16-I/O convolutions if permitted by the global policy.
+    // No tests in place for fp16 RNNs, so leave TensorCore disabled for now.
+    cudnn_tensor_core_ = false;
+    // When fp16 RNN tests are introduced, we can enable TensorCore as follows:
+//    cudnn_tensor_core =
+//        mshadow::DataType<DType>::kFlag == mshadow::kFloat16 && GetEnvAllowTensorCore();
     // Defaults
     input_mode_ = CUDNN_LINEAR_INPUT;  // Don't support this yet
     // RNN Mode
@@ -450,14 +456,36 @@ class CuDNNRNNOp : public Operator {
                                            seed_));
       // RNN descriptors
       CUDNN_CALL(cudnnCreateRNNDescriptor(&rnn_desc_));
-      CUDNN_CALL(cudnnSetRNNDescriptor(rnn_desc_,
-                                       param_.state_size,
-                                       param_.num_layers,
-                                       dropout_desc_,
-                                       input_mode_,
-                                       direction_,
-                                       mode_,
-                                       dtype_));
+
+      #if CUDNN_MAJOR >= 6
+        cudnnRNNAlgo_t rnn_algo = CUDNN_RNN_ALGO_STANDARD;
+        CUDNN_CALL(cudnnSetRNNDescriptor_v6(s->dnn_handle_,
+                                            rnn_desc_,
+                                            param_.state_size,
+                                            param_.num_layers,
+                                            dropout_desc_,
+                                            input_mode_,
+                                            direction_,
+                                            mode_,
+                                            rnn_algo,
+                                            dtype_));
+      #else
+        CUDNN_CALL(cudnnSetRNNDescriptor(rnn_desc_,
+                                         param_.state_size,
+                                         param_.num_layers,
+                                         dropout_desc_,
+                                         input_mode_,
+                                         direction_,
+                                         mode_,
+                                         dtype_));
+      #endif
+      #if CUDNN_MAJOR >= 7
+        cudnnMathType_t math_type = CUDNN_DEFAULT_MATH;
+        if (cudnn_tensor_core_ && rnn_algo == CUDNN_RNN_ALGO_STANDARD) {
+          math_type = CUDNN_TENSOR_OP_MATH;
+        }
+        CUDNN_CALL(cudnnSetRNNMatrixMathType(rnn_desc_, math_type));
+      #endif
       // Get temp space sizes
       CUDNN_CALL(cudnnGetRNNWorkspaceSize(s->dnn_handle_,
                                           rnn_desc_,
@@ -554,6 +582,8 @@ class CuDNNRNNOp : public Operator {
   cudnnTensorDescriptor_t dhy_desc_, dcy_desc_;
 
   cudnnFilterDescriptor_t w_desc_, dw_desc_;
+  // Allow TensorCore algo policy
+  bool cudnn_tensor_core_;
 
   #if CUDNN_MAJOR >= 5
   cudnnTensorFormat_t format_;

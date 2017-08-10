@@ -19,11 +19,10 @@
 """Model zoo for pre-trained models."""
 from __future__ import print_function
 __all__ = ['get_model_file', 'purge']
-import hashlib
 import os
 import zipfile
 
-from ...test_utils import download
+from ..utils import download, check_sha1
 
 _model_sha1 = {name: checksum for checksum, name in [
     ('44335d1f0046b328243b32a26a4fbd62d9057b45', 'alexnet'),
@@ -56,21 +55,11 @@ def short_hash(name):
         raise ValueError('Pretrained model for {name} is not available.'.format(name=name))
     return _model_sha1[name][:8]
 
-def verified(file_path, name):
-    sha1 = hashlib.sha1()
-    with open(file_path, 'rb') as f:
-        while True:
-            data = f.read(1048576)
-            if not data:
-                break
-            sha1.update(data)
-
-    return sha1.hexdigest() == _model_sha1[name]
-
 def get_model_file(name, local_dir=os.path.expanduser('~/.mxnet/models/')):
     r"""Return location for the pretrained on local file system.
 
     This function will download from online model zoo when model cannot be found or has mismatch.
+    The local_dir directory will be created if it doesn't exist.
 
     Parameters
     ----------
@@ -87,8 +76,9 @@ def get_model_file(name, local_dir=os.path.expanduser('~/.mxnet/models/')):
     file_name = '{name}-{short_hash}'.format(name=name,
                                              short_hash=short_hash(name))
     file_path = os.path.join(local_dir, file_name+'.params')
+    sha1_hash = _model_sha1[name]
     if os.path.exists(file_path):
-        if verified(file_path, name):
+        if check_sha1(file_path, sha1_hash):
             return file_path
         else:
             print('Mismatch in the content of model file detected. Downloading again.')
@@ -98,17 +88,16 @@ def get_model_file(name, local_dir=os.path.expanduser('~/.mxnet/models/')):
     if not os.path.exists(local_dir):
         os.makedirs(local_dir)
 
+    zip_file_path = os.path.join(local_dir, file_name+'.zip')
     download(_url_format.format(bucket=bucket,
                                 file_name=file_name),
-             fname=file_name+'.zip',
-             dirname=local_dir,
+             path=zip_file_path,
              overwrite=True)
-    zip_file_path = os.path.join(local_dir, file_name+'.zip')
     with zipfile.ZipFile(zip_file_path) as zf:
         zf.extractall(local_dir)
     os.remove(zip_file_path)
 
-    if verified(file_path, name):
+    if check_sha1(file_path, sha1_hash):
         return file_path
     else:
         raise ValueError('Downloaded file has different hash. Please try again.')

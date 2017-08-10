@@ -398,6 +398,7 @@ rpkg:
 	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package')"
 	R CMD build --no-build-vignettes R-package
 	rm -rf mxnet_current_r.tar.gz
+	rm -rf R-package/src/image_recordio.h
 	mv mxnet_*.tar.gz mxnet_current_r.tar.gz
 
 rpkgtest:

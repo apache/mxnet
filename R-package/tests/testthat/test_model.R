@@ -4,6 +4,11 @@ source("get_data.R")
 
 context("models")
 
+if (Sys.getenv("R_GPU_ENABLE") != "" & as.integer(Sys.getenv("R_GPU_ENABLE")) == 1) {
+  mx.ctx.default(new = mx.gpu())
+  message("Using GPU for testing.")
+}
+
 test_that("MNIST", {
 #   # Network configuration
    GetMNIST_ubyte()
@@ -36,13 +41,10 @@ test_that("MNIST", {
      silent=0)
    
    mx.set.seed(0)
-   devices = lapply(1:2, function(i) {
-     mx.cpu(i)
-   })
-   
+
    # create the model
    model <- mx.model.FeedForward.create(softmax, X=dtrain, eval.data=dtest,
-                                        ctx=devices, num.round=1,
+                                        ctx = mx.ctx.default(), num.round=1,
                                         learning.rate=0.1, momentum=0.9,
                                         initializer=mx.init.uniform(0.07),
                                         epoch.end.callback=mx.callback.save.checkpoint("chkpt"),
@@ -83,12 +85,30 @@ test_that("Regression", {
   })
   mx.set.seed(0)
   model <- mx.model.FeedForward.create(lro, X = train.x, y = train.y,
-                                       ctx = mx.cpu(), num.round = 5,
+                                       ctx = mx.ctx.default(), num.round = 5,
                                        array.batch.size = 20,
                                        learning.rate = 2e-6,
                                        momentum = 0.9,
                                        eval.metric = demo.metric.mae)
   
+  train.x <- data.matrix(BostonHousing[train.ind, -(13:14)])
+  train.y <- BostonHousing[train.ind, c(13:14)]
+  test.x <- data.matrix(BostonHousing[-train.ind, -(13:14)])
+  test.y <- BostonHousing[-train.ind, c(13:14)]
+  
+  data <- mx.symbol.Variable("data")
+  fc2 <- mx.symbol.FullyConnected(data, num_hidden=2)
+  lro2 <- mx.symbol.LinearRegressionOutput(fc2)
+  
+  mx.set.seed(0)
+  train_iter = mx.io.arrayiter(data = t(train.x), label = t(train.y))
+  
+  model <- mx.model.FeedForward.create(lro2, X = train_iter,
+                                       ctx = mx.ctx.default(),
+                                       num.round = 50,
+                                       array.batch.size = 20,
+                                       learning.rate = 2e-6,
+                                       momentum = 0.9)
 })
 
 
@@ -141,7 +161,7 @@ test_that("Fine-tune", {
   arg_params_new[["fc1_bias"]] <- fc1_bias_new
 
   #model <- mx.model.FeedForward.create(symbol = new_soft, X = train_iter, eval.data = val_iter,
-  #                                     ctx = mx.cpu(), eval.metric = mx.metric.accuracy,
+  #                                     ctx = mx.ctx.default(), eval.metric = mx.metric.accuracy,
   #                                     num.round = 2, learning.rate = 0.05, momentum = 0.9,
   #                                     wd = 0.00001, kvstore = "local",
   #                                     batch.end.callback = mx.callback.log.train.metric(50),
@@ -171,9 +191,7 @@ test_that("Matrix Factorization", {
   pred1 <- mx.symbol.sum_axis(pred, axis = 1, name = "pred1")
   pred2 <- mx.symbol.Flatten(pred1, name = "pred2")
   pred3 <- mx.symbol.LinearRegressionOutput(data = pred2, label = score, name = "pred3")
-  devices = lapply(1:2, function(i) {
-    mx.cpu(i)
-  })
+
   mx.set.seed(123)
   
   CustomIter <- setRefClass( "CustomIter", fields = c("iter1", "iter2"),
@@ -216,7 +234,7 @@ test_that("Matrix Factorization", {
   
   train_iter <- CustomIter$new(user_iter, item_iter)
   
-  model <- mx.model.FeedForward.create(pred3, X = train_iter, ctx = devices,
+  model <- mx.model.FeedForward.create(pred3, X = train_iter, ctx = mx.ctx.default(),
                                        num.round = 5, initializer = mx.init.uniform(0.07),
                                        learning.rate = 0.07,
                                        eval.metric = mx.metric.rmse,
@@ -224,4 +242,81 @@ test_that("Matrix Factorization", {
                                        epoch.end.callback = mx.callback.log.train.metric(1),
                                        input.names = c("user", "item"),
                                        output.names = "score")
+})
+
+test_that("Captcha", {
+  GetCaptcha_data()
+  data.shape <- c(80, 30, 3)
+  batch_size <- 40
+  train <- mx.io.ImageRecordIter(
+    path.imgrec   = "./data/captcha_example/captcha_train.rec",
+    path.imglist  = "./data/captcha_example/captcha_train.lst",
+    batch.size    = batch_size,
+    label.width   = 4,
+    data.shape    = data.shape,
+    mean.img      = "mean.bin")
+  
+  val <- mx.io.ImageRecordIter(
+    path.imgrec   = "./data/captcha_example/captcha_test.rec",
+    path.imglist  = "./data/captcha_example/captcha_test.lst",
+    batch.size    = batch_size,
+    label.width   = 4,
+    data.shape    = data.shape,
+    mean.img      = "mean.bin")
+  
+  data <- mx.symbol.Variable("data")
+  label <- mx.symbol.Variable("label")
+  conv1 <- mx.symbol.Convolution(data = data, kernel = c(5, 5), num_filter = 32)
+  pool1 <- mx.symbol.Pooling(data = conv1, pool_type = "max", kernel = c(2, 2), stride = c(1, 1))
+  relu1 <- mx.symbol.Activation(data = pool1, act_type = "relu")
+  
+  conv2 <- mx.symbol.Convolution(data = relu1, kernel = c(5, 5), num_filter = 32)
+  pool2 <- mx.symbol.Pooling(data = conv2, pool_type = "avg", kernel = c(2, 2), stride = c(1, 1))
+  relu2 <- mx.symbol.Activation(data = pool2, act_type = "relu")
+  
+  flatten <- mx.symbol.Flatten(data = relu2)
+  fc1 <- mx.symbol.FullyConnected(data = flatten, num_hidden = 120)
+  fc21 <- mx.symbol.FullyConnected(data = fc1, num_hidden = 10)
+  fc22 <- mx.symbol.FullyConnected(data = fc1, num_hidden = 10)
+  fc23 <- mx.symbol.FullyConnected(data = fc1, num_hidden = 10)
+  fc24 <- mx.symbol.FullyConnected(data = fc1, num_hidden = 10)
+  fc2 <- mx.symbol.Concat(c(fc21, fc22, fc23, fc24), dim = 0, num.args = 4)
+  label <- mx.symbol.transpose(data = label)
+  label <- mx.symbol.Reshape(data = label, target_shape = c(0))
+  captcha_net <- mx.symbol.SoftmaxOutput(data = fc2, label = label, name = "softmax")
+  
+  mx.metric.acc2 <- mx.metric.custom("accuracy", function(label, pred) {
+    ypred <- max.col(t(pred)) - 1
+    ypred <- matrix(ypred, nrow = nrow(label), ncol = ncol(label), byrow = TRUE)
+    return(sum(colSums(label == ypred) == 4)/ncol(label))
+  })
+  
+  mx.set.seed(42)
+  
+  train$reset()
+  train$iter.next()
+  
+  input.names <- "data"
+  input.shape <- sapply(input.names, function(n){dim(train$value()[[n]])}, simplify = FALSE)
+  arg_names <- arguments(captcha_net)
+  output.names <- "label"
+  output.shape <- sapply(output.names, function(n){dim(train$value()[[n]])}, simplify = FALSE)
+  params <- mx.model.init.params(captcha_net, input.shape, output.shape, 
+                                 mx.init.Xavier(factor_type = "in", magnitude = 2.34),
+                                 mx.cpu())
+
+  #model <- mx.model.FeedForward.create(
+  #  X                  = train,
+  #  eval.data          = val,
+  #  ctx                = mx.ctx.default(),
+  #  symbol             = captcha_net,
+  #  eval.metric        = mx.metric.acc2,
+  #  num.round          = 1,
+  #  learning.rate      = 1e-04,
+  #  momentum           = 0.9,
+  #  wd                 = 1e-05,
+  #  batch.end.callback = mx.callback.log.train.metric(50),
+  #  initializer        = mx.init.Xavier(factor_type = "in", magnitude = 2.34),
+  #  optimizer          = "sgd",
+  #  clip_gradient      = 10)
 })

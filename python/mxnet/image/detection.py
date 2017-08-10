@@ -483,15 +483,15 @@ def CreateDetAugmenter(data_shape, resize=0, rand_crop=0, rand_pad=0, rand_gray=
                        rand_mirror=False, mean=None, std=None, brightness=0, contrast=0,
                        saturation=0, pca_noise=0, hue=0, inter_method=2, min_object_covered=0.1,
                        aspect_ratio_range=(0.75, 1.33), area_range=(0.05, 3.0),
-                       min_eject_coverage=0.3, max_attempts=50, pad_val=(128, 128, 128)):
+                       min_eject_coverage=0.3, max_attempts=50, pad_val=(127, 127, 127)):
     """Create augmenters for detection.
 
     Parameters
     ----------
     data_shape : tuple of int
-        shape for output data
+        Shape for output data
     resize : int
-        resize shorter edge if larger than 0 at the begining
+        Resize shorter edge if larger than 0 at the begining
     rand_crop : float
         [0, 1], probability to apply random cropping
     rand_pad : float
@@ -499,23 +499,23 @@ def CreateDetAugmenter(data_shape, resize=0, rand_crop=0, rand_pad=0, rand_gray=
     rand_gray : float
         [0, 1], probability to convert to grayscale for all channels
     rand_mirror : bool
-        whether apply horizontal flip to image with probability 0.5
+        Whether to apply horizontal flip to image with probability 0.5
     mean : np.ndarray or None
-        mean pixel values for [r, g, b]
+        Mean pixel values for [r, g, b]
     std : np.ndarray or None
-        standard deviations for [r, g, b]
+        Standard deviations for [r, g, b]
     brightness : float
-        brightness jittering range (percent)
+        Brightness jittering range (percent)
     contrast : float
-        contrast jittering range
+        Contrast jittering range (percent)
     saturation : float
-        saturation jittering range
+        Saturation jittering range (percent)
     hue : float
-        hue jittering range
+        Hue jittering range (percent)
     pca_noise : float
-        pca noise level
+        Pca noise level (percent)
     inter_method : int, default=2(Area-based)
-        interpolation method for all resizing operations
+        Interpolation method for all resizing operations
 
         Possible values:
         0: Nearest Neighbors Interpolation.
@@ -550,7 +550,7 @@ def CreateDetAugmenter(data_shape, resize=0, rand_crop=0, rand_pad=0, rand_gray=
         Number of attempts at generating a cropped/padded region of the image of the
         specified constraints. After max_attempts failures, return the original image.
     pad_val: float
-        pixel value to be filled when padding is enabled. pad_val will automatically
+        Pixel value to be filled when padding is enabled. pad_val will automatically
         be subtracted by mean and divided by std if applicable.
 
     Examples
@@ -627,7 +627,7 @@ class ImageDetIter(ImageIter):
     Parameters
     ----------
     aug_list : list or None
-        augmenter list for generating distorted images
+        Augmenter list for generating distorted images
     batch_size : int
         Number of examples per batch.
     data_shape : tuple
@@ -657,7 +657,7 @@ class ImageDetIter(ImageIter):
     data_name : str
         Data name for provided symbols.
     label_name : str
-        name for detection labels
+        Name for detection labels
     kwargs : ...
         More arguments for creating augmenter. See mx.image.CreateDetAugmenter.
     """
@@ -723,7 +723,7 @@ class ImageDetIter(ImageIter):
         obj_width = int(raw[1])
         if (raw.size - header_width) % obj_width != 0:
             msg = "Label shape %s inconsistent with annotation width %d." \
-                %(str(raw.shape, obj_width))
+                %(str(raw.shape), obj_width)
             raise RuntimeError(msg)
         out = np.reshape(raw[header_width:], (-1, obj_width))
         # remove bad ground-truths
@@ -738,9 +738,9 @@ class ImageDetIter(ImageIter):
         Parameters
         ----------
         data_shape : tuple or None
-            reshape the data_shape to the new shape if not None
+            Reshape the data_shape to the new shape if not None
         label_shape : tuple or None
-            reshape label shape to new shape if not None
+            Reshape label shape to new shape if not None
         """
         if data_shape is not None:
             self.check_data_shape(data_shape)
