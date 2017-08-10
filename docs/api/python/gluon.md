@@ -239,6 +239,7 @@ Model zoo provides pre-defined and pre-trained models to help bootstrap machine 
 
 ```eval_rst
 .. currentmodule:: mxnet.gluon.model_zoo.vision
+.. automodule:: mxnet.gluon.model_zoo.vision
 ```
 
 ```eval_rst
@@ -508,8 +509,7 @@ Model zoo provides pre-defined and pre-trained models to help bootstrap machine 
 .. automodule:: mxnet.gluon.data.vision
     :members:
 
-.. automodule:: mxnet.gluon.model_zoo.vision
-    :members:
+.. automethod:: mxnet.gluon.model_zoo.vision.get_model
 .. automethod:: mxnet.gluon.model_zoo.vision.resnet18_v1
 .. automethod:: mxnet.gluon.model_zoo.vision.resnet34_v1
 .. automethod:: mxnet.gluon.model_zoo.vision.resnet50_v1
