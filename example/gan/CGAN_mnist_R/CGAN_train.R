@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 #####################################################
 ### Training module for GAN
 #####################################################
@@ -48,19 +65,19 @@ input_names_D <- mxnet:::mx.model.check.arguments(D_sym)
 ###################################################
 #initialize optimizers
 optimizer_G<-mx.opt.create(name = "adadelta",
-                           rho=0.92, 
-                           epsilon = 1e-6, 
-                           wd=0, 
-                           rescale.grad=1/batch_size, 
+                           rho=0.92,
+                           epsilon = 1e-6,
+                           wd=0,
+                           rescale.grad=1/batch_size,
                            clip_gradient=1)
 
 updater_G<- mx.opt.get.updater(optimizer = optimizer_G, weights = exec_G$ref.arg.arrays)
 
 optimizer_D<-mx.opt.create(name = "adadelta",
-                           rho=0.92, 
-                           epsilon = 1e-6, 
-                           wd=0, 
-                           rescale.grad=1/batch_size, 
+                           rho=0.92,
+                           epsilon = 1e-6,
+                           wd=0,
+                           rescale.grad=1/batch_size,
                            clip_gradient=1)
 updater_D<- mx.opt.get.updater(optimizer = optimizer_D, weights = exec_D$ref.arg.arrays)
 
@@ -78,43 +95,43 @@ iter_D$reset()
 
 
 for (iteration in 1:2400) {
-  
+
   iter_G$iter.next()
   iter_D$iter.next()
-  
+
   ### Random input to Generator to produce fake sample
   G_values <- iter_G$value()
   G_data <- G_values[input_names_G]
   mx.exec.update.arg.arrays(exec_G, arg.arrays = G_data, match.name=TRUE)
   mx.exec.forward(exec_G, is.train=T)
-  
+
   ### Feed Discriminator with Concatenated Generator images and real images
   ### Random input to Generator
   D_data_fake <- exec_G$ref.outputs$G_sym_output
   D_digit_fake <- G_values$data %>% mx.nd.Reshape(shape=c(-1, batch_size))
-  
+
   D_values <- iter_D$value()
   D_data_real <- D_values$data
   D_digit_real <- D_values$digit
-  
+
   ### Train loop on fake
   mx.exec.update.arg.arrays(exec_D, arg.arrays = list(data=D_data_fake, digit=D_digit_fake, label=mx.nd.array(rep(0, batch_size))), match.name=TRUE)
   mx.exec.forward(exec_D, is.train=T)
   mx.exec.backward(exec_D)
   update_args_D<- updater_D(weight = exec_D$ref.arg.arrays, grad = exec_D$ref.grad.arrays)
   mx.exec.update.arg.arrays(exec_D, update_args_D, skip.null=TRUE)
-  
+
   metric_D_value <- metric_D$update(label = mx.nd.array(rep(0, batch_size)), exec_D$ref.outputs[["D_sym_output"]], metric_D_value)
-  
+
   ### Train loop on real
   mx.exec.update.arg.arrays(exec_D, arg.arrays = list(data=D_data_real, digit=D_digit_real, label=mx.nd.array(rep(1, batch_size))), match.name=TRUE)
   mx.exec.forward(exec_D, is.train=T)
   mx.exec.backward(exec_D)
   update_args_D<- updater_D(weight = exec_D$ref.arg.arrays, grad = exec_D$ref.grad.arrays)
   mx.exec.update.arg.arrays(exec_D, update_args_D, skip.null=TRUE)
-  
+
   metric_D_value <- metric_D$update(mx.nd.array(rep(1, batch_size)), exec_D$ref.outputs[["D_sym_output"]], metric_D_value)
-  
+
   ### Update Generator weights - use a seperate executor for writing data gradients
   exec_D_back<- mxnet:::mx.symbol.bind(symbol = D_sym, arg.arrays = exec_D$arg.arrays, aux.arrays = exec_D$aux.arrays, grad.reqs = rep("write", length(exec_D$arg.arrays)), ctx = devices)
   mx.exec.update.arg.arrays(exec_D_back, arg.arrays = list(data=D_data_fake, digit=D_digit_fake, label=mx.nd.array(rep(1, batch_size))), match.name=TRUE)
@@ -122,22 +139,22 @@ for (iteration in 1:2400) {
   mx.exec.backward(exec_D_back)
   D_grads<- exec_D_back$ref.grad.arrays$data
   mx.exec.backward(exec_G, out_grads=D_grads)
-  
+
   update_args_G<- updater_G(weight = exec_G$ref.arg.arrays, grad = exec_G$ref.grad.arrays)
   mx.exec.update.arg.arrays(exec_G, update_args_G, skip.null=TRUE)
-  
+
   ### Update metrics
   #metric_G_value <- metric_G$update(values[[label_name]], exec_G$ref.outputs[[output_name]], metric_G_value)
-  
+
   if (iteration %% 25==0){
     D_metric_result <- metric_D$get(metric_D_value)
     cat(paste0("[", iteration, "] ", D_metric_result$name, ": ", D_metric_result$value, "\n"))
   }
-  
+
   if (iteration==1 | iteration %% 100==0){
-    
+
     metric_D_value<- metric_D$init()
-    
+
     par(mfrow=c(3,3), mar=c(0.1,0.1,0.1,0.1))
     for (i in 1:9) {
       img <- as.array(exec_G$ref.outputs$G_sym_output)[,,,i]
@@ -146,7 +163,7 @@ for (iteration in 1:2400) {
 
     print(as.numeric(as.array(G_values$digit)))
     print(as.numeric(as.array(D_values$label)))
-    
+
   }
 }
 

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 library(mxnet)
 
 conv_factory <- function(data, num_filter, kernel, stride,
@@ -21,7 +38,7 @@ residual_factory <- function(data, num_filter, dim_match) {
     identity_data = data
     conv1 = conv_factory(data = data, num_filter = num_filter, kernel = c(3, 3),
                          stride = c(1, 1), pad = c(1, 1), act_type = 'relu', conv_type = 0)
-    
+
     conv2 = conv_factory(data = conv1, num_filter = num_filter, kernel = c(3, 3),
                          stride = c(1, 1), pad = c(1, 1), conv_type = 1)
     new_data = identity_data + conv2
@@ -32,7 +49,7 @@ residual_factory <- function(data, num_filter, dim_match) {
                          stride = c(2, 2), pad = c(1, 1), act_type = 'relu', conv_type = 0)
     conv2 = conv_factory(data = conv1, num_filter = num_filter, kernel = c(3, 3),
                          stride = c(1, 1), pad = c(1, 1), conv_type = 1)
-    
+
     # adopt project method in the paper when dimension increased
     project_data = conv_factory(data = data, num_filter = num_filter, kernel = c(1, 1),
                                 stride = c(2, 2), pad = c(0, 0), conv_type = 1)
@@ -47,8 +64,8 @@ residual_net <- function(data, n) {
   for (i in 1:n) {
     data = residual_factory(data = data, num_filter = 16, dim_match = TRUE)
   }
-  
-  
+
+
   #second 2n layers
   for (i in 1:n) {
     if (i == 1) {

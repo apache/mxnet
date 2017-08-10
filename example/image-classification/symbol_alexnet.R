@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 library(mxnet)
 
 get_symbol <- function(num_classes = 1000) {
@@ -11,7 +28,7 @@ get_symbol <- function(num_classes = 1000) {
   conv2 <- mx.symbol.Convolution(data = lrn1, kernel = c(5, 5), pad = c(2, 2), num_filter = 256)
   relu2 <- mx.symbol.Activation(data = conv2, act_type = "relu")
   lrn2 <- mx.symbol.LRN(data = relu2, alpha = 0.0001, beta = 0.75, knorm = 2, nsize = 5)
-  pool2 <- mx.symbol.Pooling(data = lrn2, kernel = c(3, 3), stride = c(2, 2), pool_type = "max")  
+  pool2 <- mx.symbol.Pooling(data = lrn2, kernel = c(3, 3), stride = c(2, 2), pool_type = "max")
   # stage 3
   conv3 <- mx.symbol.Convolution(data = lrn2, kernel = c(3, 3), pad = c(1, 1), num_filter = 384)
   relu3 <- mx.symbol.Activation(data = conv3, act_type = "relu")

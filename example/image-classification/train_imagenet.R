@@ -1,4 +1,21 @@
-# 
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+#
 # This file shows how to train ImageNet dataset with several Convolutional Neural Network architectures in R.
 # More information: https://blogs.technet.microsoft.com/machinelearning/2016/11/15/imagenet-deep-neural-network-training-using-microsoft-r-server-and-azure-gpu-vms/
 #
@@ -25,7 +42,7 @@ get_iterator <- function(args) {
     rand.crop       = TRUE,
     rand.mirror     = TRUE
   )
-  
+
   val = mx.io.ImageRecordIter(
     path.imgrec     = file.path(args$data_dir, args$val_dataset),
     batch.size      = args$batch_size,
@@ -57,7 +74,7 @@ parse_args <- function() {
                       help='times the lr with a factor for every lr-factor-epoch epoch')
   parser$add_argument('--lr-factor-epoch', type='double', default=1,
                       help='the number of epoch to factor the lr, could be .5')
-  parser$add_argument('--lr-multifactor', type='character', 
+  parser$add_argument('--lr-multifactor', type='character',
                       help='the epoch at which the lr is changed, e.g "15,30,45"')
   parser$add_argument('--mom', type='double', default=.9,
                       help='momentum for sgd')
@@ -77,7 +94,7 @@ parse_args <- function() {
                       help='the number of training examples')
   parser$add_argument('--num-classes', type='integer', default=1000,
                       help='the number of classes')
-  parser$add_argument('--log-file', type='character', 
+  parser$add_argument('--log-file', type='character',
                       help='the name of log file')
   parser$add_argument('--log-dir', type='character', default="/tmp/",
                       help='directory of the log file')

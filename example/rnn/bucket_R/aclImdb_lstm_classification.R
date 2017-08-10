@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 require("mxnet")
 
 source("mx.io.bucket.iter.R")
@@ -13,21 +30,21 @@ batch.size <- 64
 
 num.round <- 16
 
-train.data <- mx.io.bucket.iter(buckets = corpus_bucketed_train$buckets, batch.size = batch.size, 
+train.data <- mx.io.bucket.iter(buckets = corpus_bucketed_train$buckets, batch.size = batch.size,
   data.mask.element = 0, shuffle = TRUE)
 
-eval.data <- mx.io.bucket.iter(buckets = corpus_bucketed_test$buckets, batch.size = batch.size, 
+eval.data <- mx.io.bucket.iter(buckets = corpus_bucketed_test$buckets, batch.size = batch.size,
   data.mask.element = 0, shuffle = FALSE)
 
 mx.set.seed(0)
-optimizer <- mx.opt.create("adadelta", rho = 0.92, epsilon = 1e-06, wd = 2e-04, clip_gradient = NULL, 
+optimizer <- mx.opt.create("adadelta", rho = 0.92, epsilon = 1e-06, wd = 2e-04, clip_gradient = NULL,
   rescale.grad = 1/batch.size)
 
-model_sentiment_lstm <- mx.rnn.buckets(train.data = train.data, begin.round = 1, 
-  num.round = num.round, ctx = mx.cpu(), metric = mx.metric.accuracy, optimizer = optimizer, 
-  num.rnn.layer = 2, num.embed = 16, num.hidden = 24, num.label = 2, input.size = vocab, 
-  initializer = mx.init.Xavier(rnd_type = "gaussian", factor_type = "in", magnitude = 2), 
-  dropout = 0.25, config = "seq-to-one", batch.end.callback = mx.callback.log.train.metric(period = 50), 
+model_sentiment_lstm <- mx.rnn.buckets(train.data = train.data, begin.round = 1,
+  num.round = num.round, ctx = mx.cpu(), metric = mx.metric.accuracy, optimizer = optimizer,
+  num.rnn.layer = 2, num.embed = 16, num.hidden = 24, num.label = 2, input.size = vocab,
+  initializer = mx.init.Xavier(rnd_type = "gaussian", factor_type = "in", magnitude = 2),
+  dropout = 0.25, config = "seq-to-one", batch.end.callback = mx.callback.log.train.metric(period = 50),
   verbose = TRUE)
 
 mx.model.save(model_sentiment_lstm, prefix = "model_sentiment_lstm", iteration = num.round)
