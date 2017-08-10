@@ -2,6 +2,11 @@ require(mxnet)
 
 source("get_data.R")
 
+if (Sys.getenv("R_GPU_ENABLE") != "" & as.integer(Sys.getenv("R_GPU_ENABLE")) == 1) {
+  mx.ctx.default(new = mx.gpu())
+  message("Using GPU for testing.")
+}
+
 print_inferred_shape <- function(net) {
   slist <- mx.symbol.infer.shape(symbol = net, data = c(168, 168, 1, 2))
   print(slist$out.shapes)

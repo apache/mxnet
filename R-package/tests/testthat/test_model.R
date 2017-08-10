@@ -4,6 +4,11 @@ source("get_data.R")
 
 context("models")
 
+if (Sys.getenv("R_GPU_ENABLE") != "" & as.integer(Sys.getenv("R_GPU_ENABLE")) == 1) {
+  mx.ctx.default(new = mx.gpu())
+  message("Using GPU for testing.")
+}
+
 test_that("MNIST", {
 #   # Network configuration
    GetMNIST_ubyte()
@@ -98,9 +103,12 @@ test_that("Regression", {
   mx.set.seed(0)
   train_iter = mx.io.arrayiter(data = t(train.x), label = t(train.y))
   
-  model <- mx.model.FeedForward.create(lro2, X=train_iter,
-                                       ctx=mx.ctx.default(), num.round=50, array.batch.size=20,
-                                       learning.rate=2e-6, momentum=0.9)
+  model <- mx.model.FeedForward.create(lro2, X = train_iter,
+                                       ctx = mx.ctx.default(),
+                                       num.round = 50,
+                                       array.batch.size = 20,
+                                       learning.rate = 2e-6,
+                                       momentum = 0.9)
 })
 
 
