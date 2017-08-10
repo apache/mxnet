@@ -18,6 +18,7 @@
 import mxnet as mx
 import numpy as np
 from mxnet import gluon
+from mxnet.test_utils import assert_almost_equal
 
 
 def test_loss_ndarray():
@@ -81,6 +82,34 @@ def test_ce_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
 
 
+def test_bce_loss():
+    mx.random.seed(1234)
+    np.random.seed(1234)
+    N = 20
+    data = mx.random.uniform(-1, 1, shape=(N, 20))
+    label = mx.nd.array(np.random.randint(2, size=(N,)), dtype='float32')
+    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
+    output = get_net(1)
+    fc2 = output.get_internals()['fc2_output']
+    l = mx.symbol.Variable('label')
+    Loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
+    loss = Loss(output, l)
+    loss = mx.sym.make_loss(loss)
+    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.},
+            eval_metric=mx.metric.Loss())
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
+
+def test_bce_equal_ce2():
+    N = 100
+    loss1 = gluon.loss.SigmoidBCELoss(from_sigmoid=True)
+    loss2 = gluon.loss.SoftmaxCELoss(from_logits=True)
+    out1 = mx.random.uniform(0, 1, shape=(N, 1))
+    out2 = mx.nd.log(mx.nd.concat(1-out1, out1, dim=1) + 1e-8)
+    label = mx.nd.round(mx.random.uniform(0, 1, shape=(N, 1)))
+    assert_almost_equal(loss1(out1, label).asnumpy(), loss2(out2, label).asnumpy())
+
+
 def test_kl_loss():
     mx.random.seed(1234)
     np.random.seed(1234)
@@ -116,6 +145,7 @@ def test_l2_loss():
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.},
             eval_metric=mx.metric.Loss())
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+
 
 def test_l1_loss():
     mx.random.seed(1234)
