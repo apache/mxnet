@@ -17,6 +17,8 @@ namespace custom_function {
 struct CustomFunctionParam {
   size_t num_args, num_outs;
   std::shared_ptr<MXCallbackList> info;
+  std::vector<TShape> out_shapes;
+  std::vector<int> out_dtypes;
 };
 
 std::vector<nnvm::NodeEntry> Gradient(
@@ -40,6 +42,22 @@ std::vector<nnvm::NodeEntry> Gradient(
   return ret;
 }
 
+OpStatePtr CreateState(const nnvm::NodeAttrs& attrs,
+                               Context ctx,
+                               const std::vector<TShape>& ishape,
+                               const std::vector<int>& itype) {
+  LOG(FATAL) << "Not reached";
+  return OpStatePtr::Create<void*>(nullptr);
+}
+
+void Forward(const OpStatePtr& state,
+             const OpContext& ctx,
+             const std::vector<NDArray>& inputs,
+             const std::vector<OpReqType>& req,
+             const std::vector<NDArray>& outputs) {
+  LOG(FATAL) << "Not reached";
+}
+
 void Backward(const OpStatePtr& state,
               const OpContext& ctx,
               const std::vector<NDArray>& inputs,
@@ -47,17 +65,16 @@ void Backward(const OpStatePtr& state,
               const std::vector<NDArray>& outputs) {
   const CustomFunctionParam& params = state.get_state<CustomFunctionParam>();
 
-  std::vector<NDArrayHandle> ptrs(params.num_outs + params.num_args);
+  std::vector<NDArrayHandle> ptrs;
 
   for (const auto& i : inputs) {
     NDArray* nd = new NDArray(i.Detach());
-    ptrs.push_back(reinterpret_cast<void*>(nd));
+    ptrs.push_back(reinterpret_cast<NDArrayHandle>(nd));
   }
   for (const auto& i : outputs) {
     NDArray* nd = new NDArray(i.Detach());
-    ptrs.push_back(reinterpret_cast<void*>(nd));
+    ptrs.push_back(reinterpret_cast<NDArrayHandle>(nd));
   }
-
 
   bool prev_recording = autograd::AutogradRuntime::Get()->SetIsRecording(false);
   bool prev_training = autograd::AutogradRuntime::Get()->SetIsTraining(ctx.is_train);
@@ -85,14 +102,21 @@ NNVM_REGISTER_OP(_CustomFunction)
 .set_attr<nnvm::FInferShape>("FInferShape",
   [](const NodeAttrs& attrs, std::vector<TShape> *in_shape,
      std::vector<TShape> *out_shape) {
+    const CustomFunctionParam& params = nnvm::get<CustomFunctionParam>(attrs.parsed);
+    *out_shape = params.out_shapes;
     return true;
   })
 .set_attr<nnvm::FInferType>("FInferType",
   [](const NodeAttrs& attrs, std::vector<int> *in_type,
      std::vector<int> *out_type) {
+    const CustomFunctionParam& params = nnvm::get<CustomFunctionParam>(attrs.parsed);
+    *out_type = params.out_dtypes;
     return true;
   })
-.set_attr<nnvm::FGradient>("FGradient", Gradient);
+.set_attr<FCreateOpState>("FCreateOpState", CreateState)
+.set_attr<nnvm::FGradient>("FGradient", Gradient)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Forward)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward);
 
 
 NNVM_REGISTER_OP(_backward_CustomFunction)
@@ -105,6 +129,7 @@ NNVM_REGISTER_OP(_backward_CustomFunction)
     return params.num_args;
   })
 .set_attr<bool>("TIsBackward", true)
+.set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
     return ExecType::kLocal;
   })
@@ -136,12 +161,21 @@ int MXCustomFunctionRecord(int num_inputs, NDArrayHandle *inputs,
       reinterpret_cast<CustomFunctionDelFunc>(ptr->callbacks[kCustomFunctionDelete])(
         ptr->contexts[kCustomFunctionDelete]);
     });
+  for (const auto& i : ndoutputs) {
+    params.out_shapes.emplace_back(i.shape());
+    params.out_dtypes.emplace_back(i.dtype());
+  }
   nnvm::NodeAttrs attrs;
+  attrs.op = nnvm::Op::Get("_CustomFunction");
   attrs.parsed = params;
+  // TODO(piiswrong): remove state by using FComputeEx
   auto state = OpStatePtr::Create<CustomFunctionParam>(params);
-  auto op = nnvm::Op::Get("_CustomFunction");
   AutogradRuntime::Get()->RecordImperativeOperator(
-      state, op, attrs, &ndinputs, &ndoutputs);
+      state, attrs.op, attrs, &ndinputs, &ndoutputs);
+
+  for (size_t i = 0; i < ndoutputs.size(); ++i) {
+    *reinterpret_cast<NDArray*>(outputs[i]) = ndoutputs[i];
+  }
 
   API_END();
 }

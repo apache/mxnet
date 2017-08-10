@@ -22,7 +22,6 @@
  * \brief Optimizer operators
  * \author Junyuan Xie
  */
-#include <fstream>
 #include <dmlc/parameter.h>
 #include <dmlc/logging.h>
 #include <mxnet/ndarray.h>
@@ -33,6 +32,8 @@
 #include <nnvm/op.h>
 #include <nnvm/op_attr_types.h>
 #include <nnvm/tuple.h>
+
+#include <fstream>
 
 #include "../operator/elemwise_op_common.h"
 

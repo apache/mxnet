@@ -171,7 +171,7 @@ def scale_down(src_size, size):
     return int(w), int(h)
 
 
-def _get_interp_method(interp, sizes=None):
+def _get_interp_method(interp, sizes=()):
     """Get the interpolation method for resize functions.
     The major purpose of this function is to wrap a random interp method selection
     and a auto-estimation method.

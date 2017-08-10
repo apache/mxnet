@@ -651,6 +651,12 @@ MXNET_DLL int MXAutogradBackwardEx(mx_uint num_output,
                                    NDArrayHandle* ograd_handles,
                                    int retain_graph,
                                    int is_train);
+/*
+ * \brief get the graph constructed by autograd.
+ * \param handle ndarray handle
+ * \param out output symbol handle
+ */
+MXNET_DLL int MXAutogradGetSymbol(NDArrayHandle handle, SymbolHandle *out);
 /*!
  * \brief create cached operator
  */

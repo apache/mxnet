@@ -19,9 +19,8 @@
 # pylint: disable=
 """Dataset container."""
 import os
-import warnings
 
-from ... import recordio, image
+from ... import recordio
 
 class Dataset(object):
     """Abstract dataset class. All datasets should have this interface.
@@ -81,74 +80,3 @@ class RecordFileDataset(Dataset):
 
     def __len__(self):
         return len(self._record.keys)
-
-
-class ImageRecordDataset(RecordFileDataset):
-    """A dataset wrapping over a RecordIO file containing images.
-
-    Each sample is an image and its corresponding label.
-
-    Parameters
-    ----------
-    filename : str
-        Path to rec file.
-    flag : {0, 1}, default 1
-        If 0, always convert images to greyscale.
-
-        If 1, always convert images to colored (RGB).
-    transform : function
-        A user defined callback that transforms each instance. For example::
-
-            transform=lambda data, label: (data.astype(np.float32)/255, label)
-    """
-    def __init__(self, filename, flag=1, transform=None):
-        super(ImageRecordDataset, self).__init__(filename)
-        self._flag = flag
-        self._transform = transform
-
-    def __getitem__(self, idx):
-        record = super(ImageRecordDataset, self).__getitem__(idx)
-        header, img = recordio.unpack(record)
-        if self._transform is not None:
-            return self._transform(image.imdecode(img, self._flag), header.label)
-        return image.imdecode(img, self._flag), header.label
-
-
-class ImageFolderDataset(Dataset):
-    def __init__(self, root, flag=1, transform=None):
-        self._root = os.path.expanduser(root)
-        self._flag = flag
-        self._transform = transform
-        self._exts = ['.jpg', '.jpeg', '.png']
-        self._list_iamges(self._root)
-        self._xx = open(self.items[0][0]).read()
-
-    def _list_iamges(self, root):
-        self.synsets = []
-        self.items = []
-
-        for folder in sorted(os.listdir(root)):
-            path = os.path.join(root, folder)
-            if not os.path.isdir(path):
-                warnings.warn('Ignoring %s, which is not a directory.'%path, stacklevel=3)
-                continue
-            label = len(self.synsets)
-            self.synsets.append(path)
-            for filename in sorted(os.listdir(path)):
-                filename = os.path.join(path, filename)
-                ext = os.path.splitext(filename)[1]
-                if ext.lower() not in self._exts:
-                    warnings.warn('Ignoring %s of type %s. Only support %s'%(
-                        filename, ext, ', '.join(self._exts)))
-                    continue
-                self.items.append((filename, label))
-
-    def __getitem__(self, idx):
-        img = image.imread(self.items[idx][0], self._flag)
-        label = self.items[idx][1]
-        if self._transform is not None:
-            return self._transform(img, label)
-        return img, label
-
-    def __len__(self):
-        return len(self.items)
