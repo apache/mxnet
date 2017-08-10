@@ -33,7 +33,7 @@ wget http://apache.mirrors.lucidnetworks.net/creadur/apache-rat-0.12/apache-rat-
 tar -xvzf apache-rat-0.12-bin.tar.gz && rm apache-rat-0.12-bin.tar.gz
 
 # run verification on given directory
-java -jar apache-rat-0.12/apache-rat-0.12.jar ${SOURCE} > rat_report.txt
+java -jar apache-rat-0.12/apache-rat-0.12.jar -E ${SOURCE}/.rat-excludes -d ${SOURCE} > rat_report.txt
 
 if [ $? -ne 0 ]; then
    echo "RAT exited abnormally"
