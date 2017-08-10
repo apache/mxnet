@@ -168,10 +168,13 @@ class _RNNLayer(Block):
             states.append(func(name='%sh0_%d'%(self.prefix, i), **info))
         return states
 
-    def forward(self, inputs, states):
+    def forward(self, inputs, states=None):
+        batch_size = inputs.shape[self._layout.find('N')]
+        skip_states = states is None
+        if skip_states:
+            states = self.begin_state(batch_size)
         if isinstance(states, ndarray.NDArray):
             states = [states]
-        batch_size = inputs.shape[self._layout.find('N')]
         for state, info in zip(states, self.state_info(batch_size)):
             if state.shape != info['shape']:
                 raise ValueError(
@@ -182,8 +185,12 @@ class _RNNLayer(Block):
                 self.i2h_weight[i].shape = (self._gates*self._hidden_size, inputs.shape[2])
                 self.i2h_weight[i]._finish_deferred_init()
         if inputs.context.device_type == 'gpu':
-            return self._forward_gpu(inputs, states)
-        return self._forward_cpu(inputs, states)
+            out = self._forward_gpu(inputs, states)
+        else:
+            out = self._forward_cpu(inputs, states)
+
+        # out is (output, state)
+        return out[0] if skip_states else out
 
     def _forward_cpu(self, inputs, states):
         ns = len(states)
@@ -282,10 +289,12 @@ class RNN(_RNNLayer):
         If `bidirectional` is True, output shape will instead be
         `(sequence_length, batch_size, 2*num_hidden)`
 
-    Recurrent state shape:
-        The recurrent state's shape is `(num_layers, batch_size, num_hidden)`.
-        If `bidirectional` is True, state shape will instead be
+    Recurrent state:
+        The recurrent state is an NDArray with shape `(num_layers, batch_size, num_hidden)`.
+        If `bidirectional` is True, the recurrent state shape will instead be
         `(2*num_layers, batch_size, num_hidden)`
+        If input recurrent state is None, zeros are used as default begin states,
+        and the output recurrent state is omitted.
 
 
     Examples
@@ -293,6 +302,9 @@ class RNN(_RNNLayer):
     >>> layer = mx.gluon.rnn.RNN(100, 3)
     >>> layer.initialize()
     >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
+    >>> # by default zeros are used as begin state
+    >>> output = layer(input)
+    >>> # manually specify begin state.
     >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, h0)
     """
@@ -379,11 +391,13 @@ class LSTM(_RNNLayer):
         If `bidirectional` is True, output shape will instead be
         `(sequence_length, batch_size, 2*num_hidden)`
 
-    Recurrent state shape:
+    Recurrent state:
         The recurrent state is a list of two NDArrays. Both has shape
         `(num_layers, batch_size, num_hidden)`.
-        If `bidirectional` is True, state shape will instead be
+        If `bidirectional` is True, each recurrent state will instead have shape
         `(2*num_layers, batch_size, num_hidden)`.
+        If input recurrent state is None, zeros are used as default begin states,
+        and the output recurrent state is omitted.
 
 
     Examples
@@ -391,6 +405,9 @@ class LSTM(_RNNLayer):
     >>> layer = mx.gluon.rnn.LSTM(100, 3)
     >>> layer.initialize()
     >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
+    >>> # by default zeros are used as begin state
+    >>> output = layer(input)
+    >>> # manually specify begin state.
     >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
     >>> c0 = mx.nd.random_uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, [h0, c0])
@@ -474,10 +491,12 @@ class GRU(_RNNLayer):
         If `bidirectional` is True, output shape will instead be
         `(sequence_length, batch_size, 2*num_hidden)`
 
-    Recurrent state shape:
-        The recurrent state's shape is `(num_layers, batch_size, num_hidden)`.
-        If `bidirectional` is True, state shape will instead be
+    Recurrent state:
+        The recurrent state is an NDArray with shape `(num_layers, batch_size, num_hidden)`.
+        If `bidirectional` is True, the recurrent state shape will instead be
         `(2*num_layers, batch_size, num_hidden)`
+        If input recurrent state is None, zeros are used as default begin states,
+        and the output recurrent state is omitted.
 
 
     Examples
@@ -485,6 +504,9 @@ class GRU(_RNNLayer):
     >>> layer = mx.gluon.rnn.GRU(100, 3)
     >>> layer.initialize()
     >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
+    >>> # by default zeros are used as begin state
+    >>> output = layer(input)
+    >>> # manually specify begin state.
     >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, h0)
     """
