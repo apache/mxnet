@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import os
 import mxnet as mx
 import numpy as np
@@ -170,6 +187,30 @@ def test_random():
     check_with_device(mx.context.current_context(), 'float64')
 
 
+def test_sample_multinomial():
+    x = mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0
+    dx = mx.nd.ones_like(x)
+    mx.contrib.autograd.mark_variables([x], [dx])
+    with mx.autograd.record():
+        y, prob = mx.nd.sample_multinomial(x, shape=1000, get_prob=True)
+        r = prob * 5
+        r.backward()
+
+    y = y.asnumpy()
+    x = x.asnumpy()
+    for i in range(x.shape[0]):
+
+        freq = np.bincount(y[i], minlength=5)/1000.0*x[i].sum()
+        mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.25)
+        rprob = x[i][y[i]]/x[i].sum()
+        mx.test_utils.assert_almost_equal(np.log(rprob), prob.asnumpy()[i])
+
+        real_dx = np.zeros((5,))
+        for j in range(1000):
+            real_dx[y[i][j]] += 5.0 / rprob[j]
+        mx.test_utils.assert_almost_equal(real_dx, dx.asnumpy()[i])
+
 
 if __name__ == '__main__':
     test_random()
+    test_sample_multinomial()

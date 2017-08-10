@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file mshadow_op.h
  * \brief
  * \author Bing Xu
@@ -8,7 +26,12 @@
 #define MXNET_OPERATOR_MSHADOW_OP_H_
 
 #include <mxnet/base.h>
+#include <math.h>
 #include "special_functions-inl.h"
+
+#ifdef __CUDACC__
+#include <cuda_fp16.h>
+#endif
 
 namespace mxnet {
 namespace op {
@@ -19,19 +42,21 @@ __constant__ const float PI = 3.14159265358979323846;
 const float PI = 3.14159265358979323846;
 using std::isnan;
 #endif
+using std::enable_if;
+using std::is_unsigned;
 
 /*! \brief identity Operation */
 struct identity {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(a);
+    return a;
   }
 };
 
 struct identity_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f));
+    return DType(1.0f);
   }
 };
 
@@ -53,6 +78,20 @@ struct negation {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     return DType(-a);
+  }
+};
+
+struct reciprocal {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(1.0f/a);
+  }
+};
+
+struct reciprocal_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(-(DType(1.0f) / (a * a)));
   }
 };
 
@@ -131,13 +170,20 @@ struct tanh_grad {
 struct softrelu {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(log1pf(expf(a)));
+    // Avoid overflow of exp for large inputs.
+    // Thresholds 20.0 is chosen such that softrelu(a) = a
+    // for a > 20 using floating precision.
+    if (a > DType(20.0)) {
+      return a;
+    } else {
+      return DType(log1pf(expf(a)));
+    }
   }
 };
 struct softrelu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f) - expf(-a));
+    return -DType(expm1f(-a));
   }
 };
 
@@ -433,16 +479,23 @@ struct abs {
 /*! \brief used for generate element of sign */
 struct sign {
   template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
+  MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
+  Map(DType a) {
     if (a < 0.0f) return DType(-DType(1.0f));
-    if (a > 0.0f) return DType(DType(1.0f));
-    return DType(DType(0.0f));
+    if (a > 0.0f) return DType(1.0f);
+    return DType(0.0f);
+  }
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<is_unsigned<DType>::value, DType>::type
+  Map(DType a) {
+    if (a > 0.0f) return DType(1.0f);
+    return DType(0.0f);
   }
 };
 struct sign_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(0.0f));
+    return DType(0.0f);
   }
 };
 /*! \brief used for generate element of power */
@@ -593,6 +646,14 @@ struct floor {
   }
 };
 
+/*! \brief used to round towards zero */
+struct trunc {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(truncf(a));
+  }
+};
+
 /*! \brief used to round number to nearest integer */
 struct rint {
   template<typename DType>
@@ -655,6 +716,200 @@ struct rdiv_grad {
     return DType(-b/(a*a));
   }
 };
+
+struct mod {
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
+  Map(DType a, DType b) {
+    if (b == DType(0)) {
+      return DType(0);
+    } else if (b < DType(0)) {
+      if (a < DType(0)) {
+        return DType(-::fmod(-static_cast<double>(a), -static_cast<double>(b)));
+      } else {
+        return DType(::fmod(static_cast<double>(a), -static_cast<double>(b)) +
+                     (::fmod(static_cast<double>(a), -static_cast<double>(b)) != DType(0)
+                      ? b : DType(0)));
+      }
+    } else {
+      if (a < DType(0)) {
+        return DType(-::fmod(-static_cast<double>(a), static_cast<double>(b)) +
+                     (::fmod(-static_cast<double>(a), static_cast<double>(b)) != DType(0)
+                      ? b : DType(0)));
+      } else {
+        return DType(::fmod(static_cast<double>(a), static_cast<double>(b)));
+      }
+    }
+  }
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<is_unsigned<DType>::value, DType>::type
+  Map(DType a, DType b) {
+    if (b == DType(0)) {
+      return DType(0);
+    } else {
+      return DType(::fmod(static_cast<double>(a), static_cast<double>(b)));
+    }
+  }
+};
+#ifdef __CUDACC__
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t mod::Map<mshadow::half::half2_t>
+                                               (mshadow::half::half2_t a,
+                                                mshadow::half::half2_t b) {
+  return a%b;
+}
+#endif
+
+struct mod_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(0);
+  }
+};
+template<>
+MSHADOW_XINLINE double mod_grad::Map<double>(double a, double b) {
+  return 1.0f;
+}
+template<>
+MSHADOW_XINLINE float mod_grad::Map<float>(float a, float b) {
+  return 1.0f;
+}
+#ifdef __CUDACC__
+template<>
+MSHADOW_XINLINE mshadow::half::half_t mod_grad::Map<mshadow::half::half_t>
+                                                   (mshadow::half::half_t a,
+                                                    mshadow::half::half_t b) {
+  return mshadow::half::half_t(1.0f);
+}
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t mod_grad::Map<mshadow::half::half2_t>
+                                                    (mshadow::half::half2_t a,
+                                                     mshadow::half::half2_t b) {
+  mshadow::half::half2_t result = mshadow::half::half2_t();
+#if MSHADOW_CUDA_HALF2
+  result.half2_ = ::__float2half2_rn(1.0f);
+#else
+  result.half_t2[0] = mshadow::half::half_t(0.0f);
+  result.half_t2[1] = mshadow::half::half_t(1.0f);
+#endif
+  return result;
+}
+#endif
+
+struct mod_rgrad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(0);
+  }
+};
+template<>
+MSHADOW_XINLINE double mod_rgrad::Map<double>(double a, double b) {
+  return -::floor(a/b);
+}
+template<>
+MSHADOW_XINLINE float mod_rgrad::Map<float>(float a, float b) {
+  return -::floorf(a/b);
+}
+#ifdef __CUDACC__
+template<>
+MSHADOW_XINLINE mshadow::half::half_t mod_rgrad::Map<mshadow::half::half_t>
+                                                    (mshadow::half::half_t a,
+                                                     mshadow::half::half_t b) {
+  return mshadow::half::half_t(-::floorf(static_cast<float>(a/b)));
+}
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t mod_rgrad::Map<mshadow::half::half2_t>
+                                                     (mshadow::half::half2_t a,
+                                                      mshadow::half::half2_t b) {
+#if MSHADOW_CUDA_HALF2
+  return mshadow::half::half2_t(__hneg2(::h2floor((a/b).half2_)));
+#else
+  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(a.half_t2[0]/b.half_t2[0]))),
+                                mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(a.half_t2[1]/b.half_t2[1]))));
+#endif
+}
+#endif
+
+struct rmod {
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
+  Map(DType a, DType b) {
+    if (a == DType(0)) {
+      return DType(0);
+    } else if (a < DType(0)) {
+      if (b < DType(0)) {
+        return DType(-::fmod(-static_cast<double>(b), -static_cast<double>(a)));
+      } else {
+        return DType(::fmod(static_cast<double>(b), -static_cast<double>(a)) +
+                     (::fmod(static_cast<double>(b), -static_cast<double>(a)) != DType(0)
+                      ? a : DType(0)));
+      }
+    } else {
+      if (b < DType(0)) {
+        return DType(-::fmod(-static_cast<double>(b), static_cast<double>(a)) +
+                     (::fmod(-static_cast<double>(b), static_cast<double>(a)) != DType(0)
+                      ? a : DType(0)));
+      } else {
+        return DType(::fmod(static_cast<double>(b), static_cast<double>(a)));
+      }
+    }
+  }
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<is_unsigned<DType>::value, DType>::type
+  Map(DType a, DType b) {
+    if (a == DType(0)) {
+      return DType(0);
+    } else {
+      return DType(::fmod(static_cast<double>(b), static_cast<double>(a)));
+    }
+  }
+};
+#ifdef __CUDACC__
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t rmod::Map<mshadow::half::half2_t>
+                                                (mshadow::half::half2_t a,
+                                                 mshadow::half::half2_t b) {
+  return b%a;
+}
+#endif
+
+struct rmod_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(0);
+  }
+};
+template<>
+MSHADOW_XINLINE double rmod_grad::Map<double>(double a, double b) {
+  return -::floor(b/a);
+}
+template<>
+MSHADOW_XINLINE float rmod_grad::Map<float>(float a, float b) {
+  return -::floorf(b/a);
+}
+#ifdef __CUDACC__
+template<>
+MSHADOW_XINLINE mshadow::half::half_t rmod_grad::Map<mshadow::half::half_t>
+                                                   (mshadow::half::half_t a,
+                                                    mshadow::half::half_t b) {
+  return mshadow::half::half_t(-::floorf(static_cast<float>(b/a)));
+}
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t rmod_grad::Map<mshadow::half::half2_t>
+                                                     (mshadow::half::half2_t a,
+                                                      mshadow::half::half2_t b) {
+#if MSHADOW_CUDA_HALF2
+  return mshadow::half::half2_t(::__hneg2(::h2floor((b/a).half2_)));
+#else
+  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(b.half_t2[0]/a.half_t2[0]))),
+                                mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(b.half_t2[1]/a.half_t2[1]))));
+#endif
+}
+#endif
 
 struct clip {
   template<typename DType>
@@ -727,7 +982,7 @@ MSHADOW_XINLINE double gammaln_grad::Map<double>(double a) {
 
 /* Smooth L1 Loss is a loss specific for R-CNN franchise training
  * Smooth L1 Loss function
- * f(x) = 0.5 * (sigma * x) ^ 2,     x < 1 / sigma^2
+ * f(x) = 0.5 * (sigma * x) ^ 2,     |x| < 1 / sigma^2
  *      = |x| - 0.5 / sigma / sigma, otherwise
  * When sigma = 1, it is equivalent to Huber Loss evaluated at
  * delta = 1.
@@ -750,7 +1005,7 @@ struct smooth_l1_loss {
 };  // struct smooth_l1_loss
 
 /* The derivative of smooth l1 loss is
- * f'(x) = sigma^2 * x, x < 1 / sigma^2
+ * f'(x) = sigma^2 * x, |x| < 1 / sigma^2
  *       = sign(x),     otherwise
  */
 struct smooth_l1_gradient {

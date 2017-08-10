@@ -39,7 +39,6 @@ if(GTEST_FOUND)
       ${mxnet_LINKER_LIBS}
       )
   else()
-    message(STATUS " OpenBLAS_LIB: ${OpenBLAS_LIB}")
     target_link_libraries(${PROJECT_NAME}_unit_tests
       ${GTEST_LIBRARY}
       rt
@@ -51,6 +50,7 @@ if(GTEST_FOUND)
   endif()
 
   add_test(AllTestsIn${PROJECT_NAME}UnitTests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME}_unit_tests)
-
+else()
+  message(WARNING "Google Test not found")
 endif()
 

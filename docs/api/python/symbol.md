@@ -40,19 +40,20 @@ array([ 4.,  7.], dtype=float32)
 ```
 
 A detailed tutorial is available at [Symbol - Neural network graphs and auto-differentiation](http://mxnet.io/tutorials/basic/symbol.html).
+<br><br>
 
 ```eval_rst
 
-.. note:: most operators provided in ``symbol`` are similar to ``ndarray``. But
-   also note that ``symbol`` differs to ``ndarray`` in several aspects:
+.. note:: most operators provided in ``symbol`` are similar to those in ``ndarray``
+   although there are few differences:
 
-   - ``symbol`` adopts declare programming. In other words, we need to first
-     composite the computations, and then feed with data to execute.
+   - ``symbol`` adopts declarative programming. In other words, we need to first
+     compose the computations, and then feed it with data for execution whereas
+     ndarray adopts imperative programming.
 
-   - Most binary operators such as ``+`` and ``>`` are not enabled broadcasting.
-     We need to call the broadcasted version such as ``broadcast_plus``
+   - Most binary operators in ``symbol`` such as ``+`` and ``>`` don't broadcast.
+     We need to call the broadcast version of the operator such as ``broadcast_plus``
      explicitly.
-
 ```
 
 In the rest of this document, we first overview the methods provided by the
@@ -85,6 +86,8 @@ Composite multiple symbols into a new one by an operator.
     Symbol.__mul__
     Symbol.__div__
     Symbol.__rdiv__
+    Symbol.__mod__
+    Symbol.__rmod__
     Symbol.__pow__
 ```
 
@@ -248,7 +251,9 @@ Composite multiple symbols into a new one by an operator.
     broadcast_sub
     broadcast_mul
     broadcast_div
+    broadcast_mod
     negative
+    reciprocal
     dot
     batch_dot
     add_n
@@ -313,6 +318,7 @@ Composite multiple symbols into a new one by an operator.
     fix
     floor
     ceil
+    trunc
 ```
 
 
@@ -391,6 +397,21 @@ Composite multiple symbols into a new one by an operator.
     argmin
 ```
 
+### Linear Algebra
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    linalg_gemm
+    linalg_gemm2
+    linalg_potrf
+    linalg_potri
+    linalg_trmm
+    linalg_trsm
+    linalg_sumlogdiag
+```
+
 ### Miscellaneous
 
 ```eval_rst
@@ -459,12 +480,46 @@ Composite multiple symbols into a new one by an operator.
     Custom
 ```
 
+## Contrib
+
+```eval_rst
+.. warning:: This package contains experimental APIs and may change in the near future.
+```
+
+The `contrib.symbol` module contains many useful experimental APIs for new features. This is a place for the community to try out the new features, so that feature contributors can receive feedback.
+
+```eval_rst
+.. currentmodule:: mxnet.contrib.symbol
+
+.. autosummary::
+    :nosignatures:
+
+    CTCLoss
+    DeformableConvolution
+    DeformablePSROIPooling
+    MultiBoxDetection
+    MultiBoxPrior
+    MultiBoxTarget
+    MultiProposal
+    PSROIPooling
+    Proposal
+    count_sketch
+    ctc_loss
+    dequantize
+    fft
+    ifft
+    quantize
+```
+
 ## API Reference
 
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 .. automodule:: mxnet.symbol
+    :members:
+
+.. automodule:: mxnet.contrib.symbol
     :members:
 
 ```

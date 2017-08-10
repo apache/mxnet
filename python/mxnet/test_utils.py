@@ -1,18 +1,38 @@
-# coding: utf-8
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Tools for testing."""
-# pylint: disable=invalid-name, no-member, too-many-arguments, too-many-locals, too-many-branches, too-many-statements, broad-except, line-too-long, unused-import
+# pylint: disable=too-many-lines
 from __future__ import absolute_import, print_function, division
 import time
+import gzip
+import struct
 import traceback
 import numbers
 import subprocess
+import sys
 import os
 import errno
 import logging
+from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
 import mxnet as mx
-from .context import cpu, gpu, Context
+from .context import Context
 from .ndarray import array
 from .symbol import Symbol
 try:
@@ -336,7 +356,8 @@ def _parse_aux_states(sym, aux_states, ctx):
     >>> var_states = np.ones(3)
     >>> _parse_aux_states(fc2, [mean_states, var_states], None)
     {'batchnorm0_moving_var': <NDArray 3 @cpu(0)>, 'batchnorm0_moving_mean': <NDArray 3 @cpu(0)>}
-    >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states, 'batchnorm0_moving_mean': var_states}, None)
+    >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states,
+    ...                         'batchnorm0_moving_mean': var_states}, None)
     {'batchnorm0_moving_var': <NDArray 3 @cpu(0)>, 'batchnorm0_moving_mean': <NDArray 3 @cpu(0)>}
     >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
     ValueError: Symbol aux_states names and given aux_states do not match.
@@ -863,7 +884,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             arr = arr.asnumpy()
             try:
                 assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-            except Exception as e:
+            except AssertionError as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
                 if raise_on_err:
@@ -889,7 +910,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 arr = arr.asnumpy()
                 try:
                     assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-                except Exception as e:
+                except AssertionError as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
                     if raise_on_err:
@@ -943,9 +964,6 @@ def download(url, fname=None, dirname=None, overwrite=False):
     """
     if fname is None:
         fname = url.split('/')[-1]
-    if not overwrite and os.path.exists(fname):
-        logging.info("%s exists, skip to downloada", fname)
-        return fname
 
     if dirname is None:
         dirname = os.path.dirname(fname)
@@ -960,6 +978,10 @@ def download(url, fname=None, dirname=None, overwrite=False):
                 if exc.errno != errno.EEXIST:
                     raise OSError('failed to create ' + dirname)
 
+    if not overwrite and os.path.exists(fname):
+        logging.info("%s exists, skipping download", fname)
+        return fname
+
     r = requests.get(url, stream=True)
     assert r.status_code == 200, "failed to open %s" % url
     with open(fname, 'wb') as f:
@@ -968,6 +990,34 @@ def download(url, fname=None, dirname=None, overwrite=False):
                 f.write(chunk)
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
+
+def get_mnist():
+    """Download and load the MNIST dataset
+
+    Returns
+    -------
+    dict
+        A dict containing the data
+    """
+    def read_data(label_url, image_url):
+        with gzip.open(mx.test_utils.download(label_url)) as flbl:
+            struct.unpack(">II", flbl.read(8))
+            label = np.fromstring(flbl.read(), dtype=np.int8)
+        with gzip.open(mx.test_utils.download(image_url), 'rb') as fimg:
+            _, _, rows, cols = struct.unpack(">IIII", fimg.read(16))
+            image = np.fromstring(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
+            image = image.reshape(image.shape[0], 1, 28, 28).astype(np.float32)/255
+        return (label, image)
+
+    # changed to mxnet.io for more stable hosting
+    # path = 'http://yann.lecun.com/exdb/mnist/'
+    path = 'http://data.mxnet.io/data/mnist/'
+    (train_lbl, train_img) = read_data(
+        path+'train-labels-idx1-ubyte.gz', path+'train-images-idx3-ubyte.gz')
+    (test_lbl, test_img) = read_data(
+        path+'t10k-labels-idx1-ubyte.gz', path+'t10k-images-idx3-ubyte.gz')
+    return {'train_data':train_img, 'train_label':train_lbl,
+            'test_data':test_img, 'test_label':test_lbl}
 
 def set_env_var(key, val, default_val=""):
     """Set environment variable
@@ -990,3 +1040,45 @@ def set_env_var(key, val, default_val=""):
     prev_val = os.environ.get(key, default_val)
     os.environ[key] = val
     return prev_val
+
+def same_array(array1, array2):
+    """Check whether two NDArrays sharing the same memory block
+
+    Parameters
+    ----------
+
+    array1 : NDArray
+        First NDArray to be checked
+    array2 : NDArray
+        Second NDArray to be checked
+
+    Returns
+    -------
+    bool
+        Whether two NDArrays share the same memory
+    """
+    array1[:] += 1
+    if not same(array1.asnumpy(), array2.asnumpy()):
+        array1[:] -= 1
+        return False
+    array1[:] -= 1
+    return same(array1.asnumpy(), array2.asnumpy())
+
+@contextmanager
+def discard_stderr():
+    """
+    Discards error output of a routine if invoked as:
+
+    with discard_stderr():
+        ...
+    """
+
+    try:
+        stderr_fileno = sys.stderr.fileno()
+        old_stderr = os.dup(stderr_fileno)
+        bit_bucket = open(os.devnull, 'w')
+        os.dup2(bit_bucket.fileno(), stderr_fileno)
+        yield
+    finally:
+        os.dup2(old_stderr, stderr_fileno)
+        bit_bucket.close()

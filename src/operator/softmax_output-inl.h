@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file softmax_output-inl.h
  * \brief
  * \author Bing Xu
@@ -43,13 +61,14 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
               "during backward, if `use_ignore` is set to ``true``).");
     DMLC_DECLARE_FIELD(multi_output).set_default(false)
     .describe("If set to ``true``, the softmax function will be computed along "
-              "the second axis.");
+              "axis ``1``. This is applied when the shape "
+              "of input array differs from the shape of label array.");
     DMLC_DECLARE_FIELD(use_ignore).set_default(false)
     .describe("If set to ``true``, the `ignore_label` value will not contribute "
               "to the backward gradient.");
     DMLC_DECLARE_FIELD(preserve_shape).set_default(false)
     .describe("If set to ``true``, the softmax function will be computed along "
-              "the last axis.");
+              "the last axis (``-1``).");
     DMLC_DECLARE_FIELD(normalization)
     .add_enum("null", softmaxout_enum::kNull)
     .add_enum("batch", softmaxout_enum::kBatch)

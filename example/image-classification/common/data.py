@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 import random
 from mxnet.io import DataBatch, DataIter
@@ -19,8 +36,6 @@ def add_data_args(parser):
                       help='number of threads for data decoding')
     data.add_argument('--benchmark', type=int, default=0,
                       help='if 1, then feed the network with synthetic data')
-    data.add_argument('--dtype', type=str, default='float32',
-                      help='data type: float32 or float16')
     return data
 
 def add_data_aug_args(parser):
@@ -65,8 +80,8 @@ class SyntheticDataIter(DataIter):
         self.dtype = dtype
         label = np.random.randint(0, num_classes, [self.batch_size,])
         data = np.random.uniform(-1, 1, data_shape)
-        self.data = mx.nd.array(data, dtype=self.dtype)
-        self.label = mx.nd.array(label, dtype=self.dtype)
+        self.data = mx.nd.array(data, dtype=self.dtype, ctx=mx.Context('cpu_pinned', 0))
+        self.label = mx.nd.array(label, dtype=self.dtype, ctx=mx.Context('cpu_pinned', 0))
     def __iter__(self):
         return self
     @property
@@ -93,13 +108,9 @@ class SyntheticDataIter(DataIter):
 
 def get_rec_iter(args, kv=None):
     image_shape = tuple([int(l) for l in args.image_shape.split(',')])
-    dtype = np.float32;
-    if 'dtype' in args:
-        if args.dtype == 'float16':
-            dtype = np.float16
     if 'benchmark' in args and args.benchmark:
         data_shape = (args.batch_size,) + image_shape
-        train = SyntheticDataIter(args.num_classes, data_shape, 50, dtype)
+        train = SyntheticDataIter(args.num_classes, data_shape, 500, np.float32)
         return (train, None)
     if kv:
         (rank, nworker) = (kv.rank, kv.num_workers)

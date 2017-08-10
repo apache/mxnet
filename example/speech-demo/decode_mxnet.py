@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import re
 import sys
 sys.path.insert(0, "../../python")
@@ -80,7 +97,7 @@ if __name__ == '__main__':
     num_epoch = args.config.getint('train', 'num_epoch')
     model_name = get_checkpoint_path(args)
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s %(message)s')
-    
+
     # load the model
     sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, num_epoch)
 
@@ -89,7 +106,7 @@ if __name__ == '__main__':
         buckets = list(map(int, re.split(r'\W+', buckets)))
         data_test   = BucketSentenceIter(test_sets, buckets, batch_size, init_states, feat_dim=feat_dim, has_label=False)
         def sym_gen(seq_len):
-            sym = lstm_unroll(num_lstm_layer, seq_len, feat_dim, num_hidden=num_hidden, 
+            sym = lstm_unroll(num_lstm_layer, seq_len, feat_dim, num_hidden=num_hidden,
                               num_label=label_dim, take_softmax=True, num_hidden_proj=num_hidden_proj)
             data_names = ['data'] + state_names
             label_names = ['softmax_label']
@@ -102,7 +119,7 @@ if __name__ == '__main__':
         data_test = SimpleIter(test_sets, batch_size, init_states, feat_dim=feat_dim, label_dim=label_dim,
                 label_mean_sets=label_mean_sets, has_label=False)
         def sym_gen(seq_len):
-            sym = lstm_unroll(num_lstm_layer, seq_len, feat_dim, num_hidden=num_hidden, 
+            sym = lstm_unroll(num_lstm_layer, seq_len, feat_dim, num_hidden=num_hidden,
                               num_label=label_dim, take_softmax=False, num_hidden_proj=num_hidden_proj)
             data_names = ['data'] + state_names
             label_names = []
@@ -127,7 +144,7 @@ if __name__ == '__main__':
     # set the parameters
     module.bind(data_shapes=data_test.provide_data, label_shapes=None, for_training=False)
     module.set_params(arg_params=arg_params, aux_params=aux_params)
-    
+
     kaldiWriter = KaldiWriteOut(None, out_file)
     kaldiWriter.open_or_fd()
     for preds, i_batch, batch in module.iter_predict(data_test):
@@ -142,7 +159,7 @@ if __name__ == '__main__':
         elif decoding_method == METHOD_SIMPLE:
             for (ind, utt) in enumerate(batch.utt_id):
                 if utt != "GAP_UTT":
-                    posteriors = posteriors[:batch.utt_len,1:] - np.log(data_test.label_mean[1:]).T
+                    posteriors = posteriors[:batch.utt_len[0],1:] - np.log(data_test.label_mean[1:]).T
                     kaldiWriter.write(utt, posteriors)
         else:
             outputs = module.get_outputs()

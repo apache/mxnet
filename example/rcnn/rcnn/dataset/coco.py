@@ -1,10 +1,27 @@
-from __future__ import print_function
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import cPickle
 import cv2
 import os
 import json
 import numpy as np
 
+from ..logger import logger
 from imdb import IMDB
 
 # coco api
@@ -38,7 +55,7 @@ class coco(IMDB):
         # load image file names
         self.image_set_index = self._load_image_set_index()
         self.num_images = len(self.image_set_index)
-        print('num_images', self.num_images)
+        logger.info('%s num_images %d' % (self.name, self.num_images))
 
         # deal with data name
         view_map = {'minival2014': 'val2014',
@@ -68,13 +85,13 @@ class coco(IMDB):
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
-            print('{} gt roidb loaded from {}'.format(self.name, cache_file))
+            logger.info('%s gt roidb loaded from %s' % (self.name, cache_file))
             return roidb
 
         gt_roidb = [self._load_coco_annotation(index) for index in self.image_set_index]
         with open(cache_file, 'wb') as fid:
             cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print('wrote gt roidb to {}'.format(cache_file))
+        logger.info('%s wrote gt roidb to %s' % (self.name, cache_file))
 
         return gt_roidb
 
@@ -155,10 +172,10 @@ class coco(IMDB):
         for cls_ind, cls in enumerate(self.classes):
             if cls == '__background__':
                 continue
-            print('Collecting %s results (%d/%d)' % (cls, cls_ind, self.num_classes - 1))
+            logger.info('collecting %s results (%d/%d)' % (cls, cls_ind, self.num_classes - 1))
             coco_cat_id = self._class_to_coco_ind[cls]
             results.extend(self._coco_results_one_category(detections[cls_ind], coco_cat_id))
-        print('Writing results json to %s' % res_file)
+        logger.info('writing results json to %s' % res_file)
         with open(res_file, 'w') as f:
             json.dump(results, f, sort_keys=True, indent=4)
 
@@ -192,7 +209,7 @@ class coco(IMDB):
         eval_file = os.path.join(res_folder, 'detections_%s_results.pkl' % self.image_set)
         with open(eval_file, 'wb') as f:
             cPickle.dump(coco_eval, f, cPickle.HIGHEST_PROTOCOL)
-        print('coco eval results saved to %s' % eval_file)
+        logger.info('eval results saved to %s' % eval_file)
 
     def _print_detection_metrics(self, coco_eval):
         IoU_lo_thresh = 0.5
@@ -214,15 +231,15 @@ class coco(IMDB):
         precision = \
             coco_eval.eval['precision'][ind_lo:(ind_hi + 1), :, :, 0, 2]
         ap_default = np.mean(precision[precision > -1])
-        print('~~~~ Mean and per-category AP @ IoU=%.2f,%.2f] ~~~~' % (IoU_lo_thresh, IoU_hi_thresh))
-        print('%-15s %5.1f' % ('all', 100 * ap_default))
+        logger.info('~~~~ Mean and per-category AP @ IoU=%.2f,%.2f] ~~~~' % (IoU_lo_thresh, IoU_hi_thresh))
+        logger.info('%-15s %5.1f' % ('all', 100 * ap_default))
         for cls_ind, cls in enumerate(self.classes):
             if cls == '__background__':
                 continue
             # minus 1 because of __background__
             precision = coco_eval.eval['precision'][ind_lo:(ind_hi + 1), :, cls_ind - 1, 0, 2]
             ap = np.mean(precision[precision > -1])
-            print('%-15s %5.1f' % (cls, 100 * ap))
+            logger.info('%-15s %5.1f' % (cls, 100 * ap))
 
-        print('~~~~ Summary metrics ~~~~')
+        logger.info('~~~~ Summary metrics ~~~~')
         coco_eval.summarize()

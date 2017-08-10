@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file pad.cc
  * \brief
  * \author Sebastian Bodenstein
@@ -121,12 +139,18 @@ void single_image_constant(const Tensor<cpu, 3, DType> &dst,
   const int pad_t = pad[4];
   const int pad_l = pad[6];
   int c, w, h;
+  // using these vars to avoid casting overhead each loop iteration
+  const int dst0 = dst.size(0);
+  const int dst1 = dst.size(1);
+  const int dst2 = dst.size(2);
+  const int src1 = src.size(1);
+  const int src2 = src.size(2);
 #pragma omp parallel for private(c, w, h)
-  for (c = 0; c < dst.size(0); ++c) {
-    for (h = 0; h < dst.size(1); ++h) {
-      for (w = 0; w < dst.size(2); ++w) {
-        if ((w < pad_l) || (h < pad_t) || (h >= (src.size(1) + pad_t)) ||
-            (w >= (src.size(2) + pad_l))) {
+  for (c = 0; c < dst0; ++c) {
+    for (h = 0; h < dst1; ++h) {
+      for (w = 0; w < dst2; ++w) {
+        if ((w < pad_l) || (h < pad_t) || (h >= (src1 + pad_t)) ||
+            (w >= (src2 + pad_l))) {
           dst[c][h][w] = constant_value;
         } else {
           dst[c][h][w] = src[c][h - pad_t][w - pad_l];
@@ -142,11 +166,15 @@ void single_image_constant_grad(const Tensor<cpu, 3, DType> &in_grad,
                                 mxnet::TShape pad) {
   const int pad_t = pad[4];
   const int pad_l = pad[6];
+
+  const int in_grad0 = in_grad.size(0);
+  const int in_grad1 = in_grad.size(1);
+  const int in_grad2 = in_grad.size(2);
   int c, h, w;
 #pragma omp parallel for private(c, w, h)
-  for (c = 0; c < in_grad.size(0); ++c) {
-    for (h = 0; h < in_grad.size(1); ++h) {
-      for (w = 0; w < in_grad.size(2); ++w) {
+  for (c = 0; c < in_grad0; ++c) {
+    for (h = 0; h < in_grad1; ++h) {
+      for (w = 0; w < in_grad2; ++w) {
         in_grad[c][h][w] += out_grad[c][h + pad_t][w + pad_l];
       }
     }
@@ -404,15 +432,24 @@ void single_image_constant(const Tensor<cpu, 4, DType> &dst,
   const int pad_f = pad[4];
   const int pad_t = pad[6];
   const int pad_l = pad[8];
+
+  const int dst0 = dst.size(0);
+  const int dst1 = dst.size(1);
+  const int dst2 = dst.size(2);
+  const int dst3 = dst.size(3);
+  const int src1 = src.size(1);
+  const int src2 = src.size(2);
+  const int src3 = src.size(3);
+
   int c, d, w, h;
 #pragma omp parallel for private(c, d, w, h)
-  for (c = 0; c < dst.size(0); ++c) {
-    for (d = 0; d < dst.size(1); ++d) {
-      for (h = 0; h < dst.size(2); ++h) {
-        for (w = 0; w < dst.size(3); ++w) {
+  for (c = 0; c < dst0; ++c) {
+    for (d = 0; d < dst1; ++d) {
+      for (h = 0; h < dst2; ++h) {
+        for (w = 0; w < dst3; ++w) {
           if ((w < pad_l) || (h < pad_t) || (d < pad_f) ||
-              (d >= (src.size(1) + pad_f)) || (h >= (src.size(2) + pad_t)) ||
-              (w >= (src.size(3) + pad_l))) {
+              (d >= (src1 + pad_f)) || (h >= (src2 + pad_t)) ||
+              (w >= (src3 + pad_l))) {
             dst[c][d][h][w] = constant_value;
           } else {
             dst[c][d][h][w] = src[c][d - pad_f][h - pad_t][w - pad_l];
@@ -430,12 +467,16 @@ void single_image_constant_grad(const Tensor<cpu, 4, DType> &in_grad,
   const int pad_f = pad[4];
   const int pad_t = pad[6];
   const int pad_l = pad[8];
+  const int in_grad0 = in_grad.size(0);
+  const int in_grad1 = in_grad.size(1);
+  const int in_grad2 = in_grad.size(2);
+  const int in_grad3 = in_grad.size(3);
   int c, d, w, h;
   #pragma omp parallel for private(c, d, w, h)
-  for (c = 0; c < in_grad.size(0); ++c) {
-    for (d = 0; d < in_grad.size(1); ++d) {
-      for (h = 0; h < in_grad.size(2); ++h) {
-        for (w = 0; w < in_grad.size(3); ++w) {
+  for (c = 0; c < in_grad0; ++c) {
+    for (d = 0; d < in_grad1; ++d) {
+      for (h = 0; h < in_grad2; ++h) {
+        for (w = 0; w < in_grad3; ++w) {
           in_grad[c][d][h][w] += out_grad[c][d + pad_f][h + pad_t][w + pad_l];
         }
       }
@@ -634,10 +675,6 @@ Operator *CreateOp<cpu>(PadParam param, int dtype) {
 // DO_BIND_DISPATCH comes from operator_common.h
 Operator *PadProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                     std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
-  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
@@ -701,7 +738,7 @@ Example::
             [ 20.  20.  21.  22.  22.]
             [ 20.  20.  21.  22.  22.]]]]
 
-   pad(x, mode="constant", constant_value=0, pad_width=(0,0,0,0,2,2,1,1)) =
+   pad(x, mode="constant", constant_value=0, pad_width=(0,0,0,0,1,1,1,1)) =
 
          [[[[  0.   0.   0.   0.   0.]
             [  0.   1.   2.   3.   0.]

@@ -13,9 +13,14 @@ endif
 ifndef DMLC_CORE
 	DMLC_CORE = $(ROOTDIR)/dmlc-core
 endif
+CORE_INC = $(wildcard $(DMLC_CORE)/include/*/*.h)
 
 ifndef NNVM_PATH
 	NNVM_PATH = $(ROOTDIR)/nnvm
+endif
+
+ifndef DLPACK_PATH
+	DLPACK_PATH = $(ROOTDIR)/dlpack
 endif
 
 ifneq ($(USE_OPENMP), 1)
@@ -41,6 +46,7 @@ CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror
+	NVCCFLAGS += -Werror cross-execution-space-call
 endif
 
 # CFLAGS for debug
@@ -49,12 +55,12 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
-CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
-	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
-	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
 # CFLAGS for profiler
@@ -102,6 +108,35 @@ else
 endif
 endif
 
+# verify existence of separate lapack library when using blas/openblas/atlas
+# switch off lapack support in case it can't be found
+# issue covered with this
+#   -  for Ubuntu 14.04 or lower, lapack is not automatically installed with openblas
+#   -  for Ubuntu, installing atlas will not automatically install the atlas provided lapack library
+# silently switching lapack off instead of letting the build fail because of backward compatibility
+ifeq ($(USE_LAPACK), 1)
+ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+ifeq (,$(wildcard /lib/liblapack.a))
+ifeq (,$(wildcard /usr/lib/liblapack.a))
+ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
+	USE_LAPACK = 0
+endif
+endif
+endif
+endif
+endif
+
+# lapack settings.
+ifeq ($(USE_LAPACK), 1)
+	ifneq ($(USE_LAPACK_PATH), )
+		LDFLAGS += -L$(USE_LAPACK_PATH)
+	endif
+	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+		LDFLAGS += -llapack
+	endif
+	CFLAGS += -DMXNET_USE_LAPACK
+endif
+
 ifeq ($(USE_CUDNN), 1)
 	CFLAGS += -DMSHADOW_USE_CUDNN=1
 	LDFLAGS += -lcudnn
@@ -123,6 +158,35 @@ endif
 
 ifneq ($(USE_CUDA_PATH), NONE)
 	NVCC=$(USE_CUDA_PATH)/bin/nvcc
+endif
+
+# Sets 'CUDA_ARCH', which determines the GPU architectures supported
+# by the compiled kernels.  Users can edit the KNOWN_CUDA_ARCHS list below
+# to remove archs they don't wish to support to speed compilation, or they
+# can pre-set the CUDA_ARCH args in config.mk for full control.
+#
+# For archs in this list, nvcc will create a fat-binary that will include
+# the binaries (SASS) for all architectures supported by the installed version
+# of the cuda toolkit, plus the assembly (PTX) for the most recent such architecture.
+# If these kernels are then run on a newer-architecture GPU, the binary will
+# be JIT-compiled by the updated driver from the included PTX.
+ifeq ($(USE_CUDA), 1)
+ifeq ($(origin CUDA_ARCH), undefined)
+	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61 70
+	# Run nvcc on a zero-length file to check architecture-level support.
+	# Create args to include SASS in the fat binary for supported levels.
+	CUDA_ARCH := $(foreach arch,$(KNOWN_CUDA_ARCHS), \
+                  $(shell $(NVCC) -arch=sm_$(arch) -E --x cu /dev/null >/dev/null 2>&1 && \
+                          echo -gencode arch=compute_$(arch),code=sm_$(arch)))
+	# Convert a trailing "code=sm_NN" to "code=[sm_NN,compute_NN]" to also
+	# include the PTX of the most recent arch in the fat-binaries for
+	# forward compatibility with newer GPUs.
+	CUDA_ARCH := $(shell echo $(CUDA_ARCH) | sed 's/sm_\([0-9]*\)$$/[sm_\1,compute_\1]/')
+	# Add fat binary compression if supported by nvcc.
+	COMPRESS := --fatbin-options -compress-all
+	CUDA_ARCH += $(shell $(NVCC) -cuda $(COMPRESS) --x cu /dev/null -o /dev/null >/dev/null 2>&1 && \
+	                     echo $(COMPRESS))
+endif
 endif
 
 # ps-lite
@@ -228,7 +292,7 @@ build/plugin/%.o: plugin/%.cc
 	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" -M -MT $*_gpu.o $< >$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" $<
 
-%.o: %.cc
+%.o: %.cc $(CORE_INC)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
 
@@ -253,9 +317,9 @@ $(DMLC_CORE)/libdmlc.a: DMLCCORE
 DMLCCORE:
 	+ cd $(DMLC_CORE); $(MAKE) libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
-$(NNVM_PATH)/lib/libnnvm.a: LIBNNVM
-
-LIBNNVM:
+NNVM_INC = $(wildcard $(NNVM_PATH)/include/*/*.h)
+NNVM_SRC = $(wildcard $(NNVM_PATH)/src/*/*/*.cc $(NNVM_PATH)/src/*/*.cc $(NNVM_PATH)/src/*.cc)
+$(NNVM_PATH)/lib/libnnvm.a: $(NNVM_INC) $(NNVM_SRC)
 	+ cd $(NNVM_PATH); $(MAKE) lib/libnnvm.a DMLC_CORE_PATH=$(DMLC_CORE); cd $(ROOTDIR)
 
 bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
@@ -297,13 +361,13 @@ doxygen:
 
 # Cython build
 cython:
-	cd python; python setup.py build_ext --inplace
+	cd python; python setup.py build_ext --inplace --with-cython
 
 cython2:
-	cd python; python2 setup.py build_ext --inplace
+	cd python; python2 setup.py build_ext --inplace --with-cython
 
 cython3:
-	cd python; python3 setup.py build_ext --inplace
+	cd python; python3 setup.py build_ext --inplace --with-cython
 
 cyclean:
 	rm -rf python/mxnet/*/*.so python/mxnet/*/*.cpp
@@ -315,21 +379,30 @@ rcpplint:
 rpkg:
 	mkdir -p R-package/inst
 	mkdir -p R-package/inst/libs
+	cp src/io/image_recordio.h R-package/src
 	cp -rf lib/libmxnet.so R-package/inst/libs
 	mkdir -p R-package/inst/include
 	cp -rf include/* R-package/inst/include
 	cp -rf dmlc-core/include/* R-package/inst/include/
 	cp -rf nnvm/include/* R-package/inst/include
+	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
+	Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(pkg='R-package', dependencies = TRUE)"
 	echo "import(Rcpp)" > R-package/NAMESPACE
 	echo "import(methods)" >> R-package/NAMESPACE
 	R CMD INSTALL R-package
-	Rscript -e "require(mxnet); mxnet:::mxnet.export(\"R-package\")"
+	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package')"
 	rm -rf R-package/NAMESPACE
-	Rscript -e "require(devtools); install_version(\"roxygen2\", version = \"5.0.1\", repos = \"https://cloud.r-project.org/\", quiet = TRUE)"
-	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
+	Rscript -e "if (!require('roxygen2')||packageVersion('roxygen2')!= '5.0.1'){\
+	devtools::install_version('roxygen2',version='5.0.1',\
+	repo='https://cloud.r-project.org/',quiet=TRUE)}"
+	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package')"
 	R CMD build --no-build-vignettes R-package
 	rm -rf mxnet_current_r.tar.gz
+	rm -rf R-package/src/image_recordio.h
 	mv mxnet_*.tar.gz mxnet_current_r.tar.gz
+
+rpkgtest:
+	Rscript -e "require(testthat);res<-test_dir('R-package/tests/testthat');if(!testthat:::all_passed(res)){stop('Test failures', call. = FALSE)}"
 
 scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
@@ -371,7 +444,7 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 else
 clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
+		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -

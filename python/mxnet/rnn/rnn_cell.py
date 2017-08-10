@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=no-member, invalid-name, protected-access, no-self-use
 # pylint: disable=too-many-branches, too-many-arguments, no-self-use
@@ -6,6 +23,7 @@
 from __future__ import print_function
 
 import warnings
+import functools
 
 from .. import symbol, init, ndarray
 from ..base import string_types, numeric_types
@@ -96,7 +114,7 @@ class BaseRNNCell(object):
         Prefix for names of layers
         (this prefix is also used for names of weights if `params` is None
         i.e. if `params` are being created and not reused)
-    params : RNNParams or None, optional
+    params : RNNParams, default None.
         Container for weight sharing between cells.
         A new RNNParams container is created if `params` is None.
     """
@@ -113,7 +131,7 @@ class BaseRNNCell(object):
         self.reset()
 
     def reset(self):
-        """Reset before re-using the cell for another graph"""
+        """Reset before re-using the cell for another graph."""
         self._init_counter = -1
         self._counter = -1
 
@@ -277,7 +295,7 @@ class BaseRNNCell(object):
         Parameters
         ----------
         length : int
-            number of steps to unroll
+            Number of steps to unroll.
         inputs : Symbol, list of Symbol, or None
             If `inputs` is a single Symbol (usually the output
             of Embedding symbol), it should have shape
@@ -287,7 +305,7 @@ class BaseRNNCell(object):
             If `inputs` is a list of symbols (usually output of
             previous unroll), they should all have shape
             (batch_size, ...).
-        begin_state : nested list of Symbol, optional
+        begin_state : nested list of Symbol, default None
             Input states created by `begin_state()`
             or output state of another cell.
             Created from `begin_state()` if None.
@@ -300,7 +318,7 @@ class BaseRNNCell(object):
             and return a single symbol with shape
             (batch_size, length, ...) if layout == 'NTC',
             or (length, batch_size, ...) if layout == 'TNC'.
-            If None, output whatever is faster
+            If None, output whatever is faster.
 
         Returns
         -------
@@ -339,20 +357,18 @@ class BaseRNNCell(object):
 
 
 class RNNCell(BaseRNNCell):
-    """Simple recurrent neural network cell
+    """Simple recurrent neural network cell.
 
     Parameters
     ----------
     num_hidden : int
-        number of units in output symbol
+        Number of units in output symbol.
     activation : str or Symbol, default 'tanh'
-        type of activation function
+        Type of activation function. Options are 'relu' and 'tanh'.
     prefix : str, default 'rnn_'
-        prefix for name of layers
-        (and name of weight if params is None)
-    params : RNNParams or None
-        container for weight sharing between cells.
-        created if None.
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, num_hidden, activation='tanh', prefix='rnn_', params=None):
         super(RNNCell, self).__init__(prefix=prefix, params=params)
@@ -392,13 +408,11 @@ class LSTMCell(BaseRNNCell):
     Parameters
     ----------
     num_hidden : int
-        number of units in output symbol
+        Number of units in output symbol.
     prefix : str, default 'lstm_'
-        prefix for name of layers
-        (and name of weight if params is None)
-    params : RNNParams or None
-        container for weight sharing between cells.
-        created if None.
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     forget_bias : bias added to forget gate, default 1.0.
         Jozefowicz et al. 2015 recommends setting this to 1.0
     """
@@ -457,13 +471,11 @@ class GRUCell(BaseRNNCell):
     Parameters
     ----------
     num_hidden : int
-        number of units in output symbol
+        Number of units in output symbol.
     prefix : str, default 'gru_'
-        prefix for name of layers
-        (and name of weight if params is None)
-    params : RNNParams or None
-        container for weight sharing between cells.
-        created if None.
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, num_hidden, prefix='gru_', params=None):
         super(GRUCell, self).__init__(prefix=prefix, params=params)
@@ -525,6 +537,26 @@ class FusedRNNCell(BaseRNNCell):
 
     Parameters
     ----------
+    num_hidden : int
+        Number of units in output symbol.
+    num_layers : int, default 1
+        Number of layers in the cell.
+    mode : str, default 'lstm'
+        Type of RNN. options are 'rnn_relu', 'rnn_tanh', 'lstm', 'gru'.
+    bidirectional : bool, default False
+        Whether to use bidirectional unroll. The output dimension size is doubled if bidrectional.
+    dropout : float, default 0.
+        Fraction of the input that gets dropped out during training time.
+    get_next_state : bool, default False
+        Whether to return the states that can be used as starting states next time.
+    forget_bias : bias added to forget gate, default 1.0.
+        Jozefowicz et al. 2015 recommends setting this to 1.0
+    prefix : str, default '$mode_' such as 'lstm_'
+        Prefix for names of layers
+        (this prefix is also used for names of weights if `params` is None
+        i.e. if `params` are being created and not reused)
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, num_hidden, num_layers=1, mode='lstm', bidirectional=False,
                  dropout=0., get_next_state=False, forget_bias=1.0,
@@ -658,11 +690,15 @@ class FusedRNNCell(BaseRNNCell):
                          mode=self._mode, name=self._prefix+'rnn',
                          **states)
 
+        attr = {'__layout__' : 'LNC'}
         if not self._get_next_state:
             outputs, states = rnn, []
         elif self._mode == 'lstm':
+            rnn[1]._set_attr(**attr)
+            rnn[2]._set_attr(**attr)
             outputs, states = rnn[0], [rnn[1], rnn[2]]
         else:
+            rnn[1]._set_attr(**attr)
             outputs, states = rnn[0], [rnn[1]]
 
         if axis == 1:
@@ -707,13 +743,12 @@ class FusedRNNCell(BaseRNNCell):
 
 
 class SequentialRNNCell(BaseRNNCell):
-    """Sequantially stacking multiple RNN cells
+    """Sequantially stacking multiple RNN cells.
 
     Parameters
     ----------
-    params : RNNParams or None
-        container for weight sharing between cells.
-        created if None.
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, params=None):
         super(SequentialRNNCell, self).__init__(prefix='', params=params)
@@ -725,7 +760,9 @@ class SequentialRNNCell(BaseRNNCell):
 
         Parameters
         ----------
-        cell : rnn cell
+        cell : BaseRNNCell
+            The cell to be appended. During unroll, previous cell's output (or raw inputs if
+            no previous cell) is used as the input to this cell.
         """
         self._cells.append(cell)
         if self._override_cell_params:
@@ -739,7 +776,7 @@ class SequentialRNNCell(BaseRNNCell):
     def state_info(self):
         return _cells_state_info(self._cells)
 
-    def begin_state(self, **kwargs):
+    def begin_state(self, **kwargs): # pylint: disable=arguments-differ
         assert not self._modified, \
             "After applying modifier cells (e.g. ZoneoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
@@ -790,8 +827,14 @@ class DropoutCell(BaseRNNCell):
     Parameters
     ----------
     dropout : float
-        percentage of elements to drop out, which
+        Percentage of elements to drop out, which
         is 1 - percentage to retain.
+    prefix : str, default 'dropout_'
+        Prefix for names of layers
+        (this prefix is also used for names of weights if `params` is None
+        i.e. if `params` are being created and not reused)
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, dropout, prefix='dropout_', params=None):
         super(DropoutCell, self).__init__(prefix, params)
@@ -841,7 +884,7 @@ class ModifierCell(BaseRNNCell):
     def state_info(self):
         return self.base_cell.state_info
 
-    def begin_state(self, init_sym=symbol.zeros, **kwargs):
+    def begin_state(self, init_sym=symbol.zeros, **kwargs): # pylint: disable=arguments-differ
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
@@ -861,7 +904,17 @@ class ModifierCell(BaseRNNCell):
 
 
 class ZoneoutCell(ModifierCell):
-    """Apply Zoneout on base cell"""
+    """Apply Zoneout on base cell.
+
+    Parameters
+    ----------
+    base_cell : BaseRNNCell
+        Cell on whose states to perform zoneout.
+    zoneout_outputs : float, default 0.
+        Fraction of the output that gets dropped out during training time.
+    zoneout_states : float, default 0.
+        Fraction of the states that gets dropped out during training time.
+    """
     def __init__(self, base_cell, zoneout_outputs=0., zoneout_states=0.):
         assert not isinstance(base_cell, FusedRNNCell), \
             "FusedRNNCell doesn't support zoneout. " \
@@ -886,7 +939,7 @@ class ZoneoutCell(ModifierCell):
         next_output, next_states = cell(inputs, states)
         mask = lambda p, like: symbol.Dropout(symbol.ones_like(like), p=p)
 
-        prev_output = self.prev_output if self.prev_output else symbol.zeros((0, 0))
+        prev_output = self.prev_output if self.prev_output is not None else symbol.zeros((0, 0))
 
         output = (symbol.where(mask(p_outputs, next_output), next_output, prev_output)
                   if p_outputs != 0. else next_output)
@@ -899,10 +952,15 @@ class ZoneoutCell(ModifierCell):
 
 
 class ResidualCell(ModifierCell):
-    """
-    Adds residual connection as described in Wu et al, 2016
+    """Adds residual connection as described in Wu et al, 2016
     (https://arxiv.org/abs/1609.08144).
+
     Output of the cell is output of the base cell plus input.
+
+    Parameters
+    ----------
+    base_cell : BaseRNNCell
+        Cell on whose outputs to add residual connection.
     """
 
     def __init__(self, base_cell):
@@ -913,9 +971,29 @@ class ResidualCell(ModifierCell):
         output = symbol.elemwise_add(output, inputs, name="%s_plus_residual" % output.name)
         return output, states
 
+    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
+        self.reset()
+
+        self.base_cell._modified = False
+        outputs, states = self.base_cell.unroll(length, inputs=inputs, begin_state=begin_state,
+                                                layout=layout, merge_outputs=merge_outputs)
+        self.base_cell._modified = True
+
+        merge_outputs = isinstance(outputs, symbol.Symbol) if merge_outputs is None else \
+                        merge_outputs
+        inputs, _ = _normalize_sequence(length, inputs, layout, merge_outputs)
+        if merge_outputs:
+            outputs = symbol.elemwise_add(outputs, inputs, name="%s_plus_residual" % outputs.name)
+        else:
+            outputs = [symbol.elemwise_add(output_sym, input_sym,
+                                           name="%s_plus_residual" % output_sym.name)
+                       for output_sym, input_sym in zip(outputs, inputs)]
+
+        return outputs, states
+
 
 class BidirectionalCell(BaseRNNCell):
-    """Bidirectional RNN cell
+    """Bidirectional RNN cell.
 
     Parameters
     ----------
@@ -923,14 +1001,26 @@ class BidirectionalCell(BaseRNNCell):
         cell for forward unrolling
     r_cell : BaseRNNCell
         cell for backward unrolling
+    params : RNNParams, default None.
+        Container for weight sharing between cells.
+        A new RNNParams container is created if `params` is None.
     output_prefix : str, default 'bi_'
         prefix for name of output
     """
     def __init__(self, l_cell, r_cell, params=None, output_prefix='bi_'):
         super(BidirectionalCell, self).__init__('', params=params)
-        self._override_cell_params = params is not None
-        self._cells = [l_cell, r_cell]
         self._output_prefix = output_prefix
+        self._override_cell_params = params is not None
+
+        if self._override_cell_params:
+            assert l_cell._own_params and r_cell._own_params, \
+                "Either specify params for BidirectionalCell " \
+                "or child cells, not both."
+            l_cell.params._params.update(self.params._params)
+            r_cell.params._params.update(self.params._params)
+        self.params._params.update(l_cell.params._params)
+        self.params._params.update(r_cell.params._params)
+        self._cells = [l_cell, r_cell]
 
     def unpack_weights(self, args):
         return _cells_unpack_weights(self._cells, args)
@@ -945,7 +1035,7 @@ class BidirectionalCell(BaseRNNCell):
     def state_info(self):
         return _cells_state_info(self._cells)
 
-    def begin_state(self, **kwargs):
+    def begin_state(self, **kwargs): # pylint: disable=arguments-differ
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
@@ -996,3 +1086,335 @@ class BidirectionalCell(BaseRNNCell):
 
         states = [l_states, r_states]
         return outputs, states
+
+
+class BaseConvRNNCell(BaseRNNCell):
+    """Abstract base class for Convolutional RNN cells"""
+    def __init__(self, input_shape, num_hidden,
+                 h2h_kernel, h2h_dilate,
+                 i2h_kernel, i2h_stride,
+                 i2h_pad, i2h_dilate,
+                 i2h_weight_initializer, h2h_weight_initializer,
+                 i2h_bias_initializer, h2h_bias_initializer,
+                 activation, prefix='', params=None, conv_layout='NCHW'):
+        super(BaseConvRNNCell, self).__init__(prefix=prefix, params=params)
+        # Convolution setting
+        self._h2h_kernel = h2h_kernel
+        assert (self._h2h_kernel[0] % 2 == 1) and (self._h2h_kernel[1] % 2 == 1), \
+            "Only support odd number, get h2h_kernel= %s" % str(h2h_kernel)
+        self._h2h_pad = (h2h_dilate[0] * (h2h_kernel[0] - 1) // 2,
+                         h2h_dilate[1] * (h2h_kernel[1] - 1) // 2)
+        self._h2h_dilate = h2h_dilate
+        self._i2h_kernel = i2h_kernel
+        self._i2h_stride = i2h_stride
+        self._i2h_pad = i2h_pad
+        self._i2h_dilate = i2h_dilate
+
+        self._num_hidden = num_hidden
+        self._input_shape = input_shape
+        self._conv_layout = conv_layout
+        self._activation = activation
+
+        # Infer state shape
+        data = symbol.Variable('data')
+        self._state_shape = symbol.Convolution(data=data,
+                                               num_filter=self._num_hidden,
+                                               kernel=self._i2h_kernel,
+                                               stride=self._i2h_stride,
+                                               pad=self._i2h_pad,
+                                               dilate=self._i2h_dilate,
+                                               layout=conv_layout)
+        self._state_shape = self._state_shape.infer_shape(data=input_shape)[1][0]
+        self._state_shape = (0, ) + self._state_shape[1:]
+
+        # Get params
+        self._iW = self.params.get('i2h_weight', init=i2h_weight_initializer)
+        self._hW = self.params.get('h2h_weight', init=h2h_weight_initializer)
+        self._iB = self.params.get('i2h_bias', init=i2h_bias_initializer)
+        self._hB = self.params.get('h2h_bias', init=h2h_bias_initializer)
+
+    @property
+    def _num_gates(self):
+        return len(self._gate_names)
+
+    @property
+    def state_info(self):
+        return [{'shape': self._state_shape, '__layout__': self._conv_layout},
+                {'shape': self._state_shape, '__layout__': self._conv_layout}]
+
+    def _conv_forward(self, inputs, states, name):
+
+        i2h = symbol.Convolution(name='%si2h'%name,
+                                 data=inputs,
+                                 num_filter=self._num_hidden*self._num_gates,
+                                 kernel=self._i2h_kernel,
+                                 stride=self._i2h_stride,
+                                 pad=self._i2h_pad,
+                                 dilate=self._i2h_dilate,
+                                 weight=self._iW,
+                                 bias=self._iB,
+                                 layout=self._conv_layout)
+
+        h2h = symbol.Convolution(name='%sh2h'%name,
+                                 data=states[0],
+                                 num_filter=self._num_hidden*self._num_gates,
+                                 kernel=self._h2h_kernel,
+                                 dilate=self._h2h_dilate,
+                                 pad=self._h2h_pad,
+                                 stride=(1, 1),
+                                 weight=self._hW,
+                                 bias=self._hB,
+                                 layout=self._conv_layout)
+        return i2h, h2h
+
+    def __call__(self, inputs, states):
+        raise NotImplementedError("BaseConvRNNCell is abstract class for convolutional RNN")
+
+class ConvRNNCell(BaseConvRNNCell):
+    """Convolutional RNN cells
+
+    Parameters
+    ----------
+    input_shape : tuple of int
+        Shape of input in single timestep.
+    num_hidden : int
+        Number of units in output symbol.
+    h2h_kernel : tuple of int, default (3, 3)
+        Kernel of Convolution operator in state-to-state transitions.
+    h2h_dilate : tuple of int, default (1, 1)
+        Dilation of Convolution operator in state-to-state transitions.
+    i2h_kernel : tuple of int, default (3, 3)
+        Kernel of Convolution operator in input-to-state transitions.
+    i2h_stride : tuple of int, default (1, 1)
+        Stride of Convolution operator in input-to-state transitions.
+    i2h_pad : tuple of int, default (1, 1)
+        Pad of Convolution operator in input-to-state transitions.
+    i2h_dilate : tuple of int, default (1, 1)
+        Dilation of Convolution operator in input-to-state transitions.
+    i2h_weight_initializer : str or Initializer
+        Initializer for the input weights matrix, used for the convolution
+        transformation of the inputs.
+    h2h_weight_initializer : str or Initializer
+        Initializer for the recurrent weights matrix, used for the convolution
+        transformation of the recurrent state.
+    i2h_bias_initializer : str or Initializer, default zeros
+        Initializer for the bias vector.
+    h2h_bias_initializer : str or Initializer, default zeros
+        Initializer for the bias vector.
+    activation : str or Symbol,
+        default functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2)
+        Type of activation function.
+    prefix : str, default 'ConvRNN_'
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
+    conv_layout : str, , default 'NCHW'
+        Layout of ConvolutionOp
+    """
+    def __init__(self, input_shape, num_hidden,
+                 h2h_kernel=(3, 3), h2h_dilate=(1, 1),
+                 i2h_kernel=(3, 3), i2h_stride=(1, 1),
+                 i2h_pad=(1, 1), i2h_dilate=(1, 1),
+                 i2h_weight_initializer=None, h2h_weight_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
+                 activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
+                 prefix='ConvRNN_', params=None, conv_layout='NCHW'):
+        super(ConvRNNCell, self).__init__(input_shape=input_shape, num_hidden=num_hidden,
+                                          h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                          i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
+                                          i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
+                                          i2h_weight_initializer=i2h_weight_initializer,
+                                          h2h_weight_initializer=h2h_weight_initializer,
+                                          i2h_bias_initializer=i2h_bias_initializer,
+                                          h2h_bias_initializer=h2h_bias_initializer,
+                                          activation=activation, prefix=prefix,
+                                          params=params, conv_layout=conv_layout)
+
+    @property
+    def _gate_names(self):
+        return ('',)
+
+    def __call__(self, inputs, states):
+        self._counter += 1
+        name = '%st%d_'%(self._prefix, self._counter)
+        i2h, h2h = self._conv_forward(inputs, states, name)
+        output = self._get_activation(i2h + h2h, self._activation,
+                                      name='%sout'%name)
+        return output, [output]
+
+
+class ConvLSTMCell(BaseConvRNNCell):
+    """Convolutional LSTM network cell.
+
+    Reference:
+        Xingjian et al. NIPS2015
+
+    Parameters
+    ----------
+    input_shape : tuple of int
+        Shape of input in single timestep.
+    num_hidden : int
+        Number of units in output symbol.
+    h2h_kernel : tuple of int, default (3, 3)
+        Kernel of Convolution operator in state-to-state transitions.
+    h2h_dilate : tuple of int, default (1, 1)
+        Dilation of Convolution operator in state-to-state transitions.
+    i2h_kernel : tuple of int, default (3, 3)
+        Kernel of Convolution operator in input-to-state transitions.
+    i2h_stride : tuple of int, default (1, 1)
+        Stride of Convolution operator in input-to-state transitions.
+    i2h_pad : tuple of int, default (1, 1)
+        Pad of Convolution operator in input-to-state transitions.
+    i2h_dilate : tuple of int, default (1, 1)
+        Dilation of Convolution operator in input-to-state transitions.
+    i2h_weight_initializer : str or Initializer
+        Initializer for the input weights matrix, used for the convolution
+        transformation of the inputs.
+    h2h_weight_initializer : str or Initializer
+        Initializer for the recurrent weights matrix, used for the convolution
+        transformation of the recurrent state.
+    i2h_bias_initializer : str or Initializer, default zeros
+        Initializer for the bias vector.
+    h2h_bias_initializer : str or Initializer, default zeros
+        Initializer for the bias vector.
+    activation : str or Symbol
+        default functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2)
+        Type of activation function.
+    prefix : str, default 'ConvLSTM_'
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
+    conv_layout : str, , default 'NCHW'
+        Layout of ConvolutionOp
+    """
+    def __init__(self, input_shape, num_hidden,
+                 h2h_kernel=(3, 3), h2h_dilate=(1, 1),
+                 i2h_kernel=(3, 3), i2h_stride=(1, 1),
+                 i2h_pad=(1, 1), i2h_dilate=(1, 1),
+                 i2h_weight_initializer=None, h2h_weight_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
+                 activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
+                 prefix='ConvLSTM_', params=None,
+                 conv_layout='NCHW'):
+        super(ConvLSTMCell, self).__init__(input_shape=input_shape, num_hidden=num_hidden,
+                                           h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                           i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
+                                           i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
+                                           i2h_weight_initializer=i2h_weight_initializer,
+                                           h2h_weight_initializer=h2h_weight_initializer,
+                                           i2h_bias_initializer=i2h_bias_initializer,
+                                           h2h_bias_initializer=h2h_bias_initializer,
+                                           activation=activation, prefix=prefix,
+                                           params=params, conv_layout=conv_layout)
+
+    @property
+    def _gate_names(self):
+        return ['_i', '_f', '_c', '_o']
+
+    def __call__(self, inputs, states):
+        self._counter += 1
+        name = '%st%d_'%(self._prefix, self._counter)
+        i2h, h2h = self._conv_forward(inputs, states, name)
+        gates = i2h + h2h
+        slice_gates = symbol.SliceChannel(gates, num_outputs=4, axis=self._conv_layout.find('C'),
+                                          name="%sslice"%name)
+        in_gate = symbol.Activation(slice_gates[0], act_type="sigmoid",
+                                    name='%si'%name)
+        forget_gate = symbol.Activation(slice_gates[1], act_type="sigmoid",
+                                        name='%sf'%name)
+        in_transform = self._get_activation(slice_gates[2], self._activation,
+                                            name='%sc'%name)
+        out_gate = symbol.Activation(slice_gates[3], act_type="sigmoid",
+                                     name='%so'%name)
+        next_c = symbol._internal._plus(forget_gate * states[1], in_gate * in_transform,
+                                        name='%sstate'%name)
+        next_h = symbol._internal._mul(out_gate, self._get_activation(next_c, self._activation),
+                                       name='%sout'%name)
+
+        return next_h, [next_h, next_c]
+
+class ConvGRUCell(BaseConvRNNCell):
+    """Convolutional Gated Rectified Unit (GRU) network cell.
+
+    Parameters
+    ----------
+    input_shape : tuple of int
+        Shape of input in single timestep.
+    num_hidden : int
+        Number of units in output symbol.
+    h2h_kernel : tuple of int, default (3, 3)
+        Kernel of Convolution operator in state-to-state transitions.
+    h2h_dilate : tuple of int, default (1, 1)
+        Dilation of Convolution operator in state-to-state transitions.
+    i2h_kernel : tuple of int, default (3, 3)
+        Kernel of Convolution operator in input-to-state transitions.
+    i2h_stride : tuple of int, default (1, 1)
+        Stride of Convolution operator in input-to-state transitions.
+    i2h_pad : tuple of int, default (1, 1)
+        Pad of Convolution operator in input-to-state transitions.
+    i2h_dilate : tuple of int, default (1, 1)
+        Dilation of Convolution operator in input-to-state transitions.
+    i2h_weight_initializer : str or Initializer
+        Initializer for the input weights matrix, used for the convolution
+        transformation of the inputs.
+    h2h_weight_initializer : str or Initializer
+        Initializer for the recurrent weights matrix, used for the convolution
+        transformation of the recurrent state.
+    i2h_bias_initializer : str or Initializer, default zeros
+        Initializer for the bias vector.
+    h2h_bias_initializer : str or Initializer, default zeros
+        Initializer for the bias vector.
+    activation : str or Symbol,
+        default functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2)
+        Type of activation function.
+    prefix : str, default 'ConvGRU_'
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
+    conv_layout : str, , default 'NCHW'
+        Layout of ConvolutionOp
+    """
+    def __init__(self, input_shape, num_hidden,
+                 h2h_kernel=(3, 3), h2h_dilate=(1, 1),
+                 i2h_kernel=(3, 3), i2h_stride=(1, 1),
+                 i2h_pad=(1, 1), i2h_dilate=(1, 1),
+                 i2h_weight_initializer=None, h2h_weight_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
+                 activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
+                 prefix='ConvGRU_', params=None, conv_layout='NCHW'):
+        super(ConvGRUCell, self).__init__(input_shape=input_shape, num_hidden=num_hidden,
+                                          h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                          i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
+                                          i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
+                                          i2h_weight_initializer=i2h_weight_initializer,
+                                          h2h_weight_initializer=h2h_weight_initializer,
+                                          i2h_bias_initializer=i2h_bias_initializer,
+                                          h2h_bias_initializer=h2h_bias_initializer,
+                                          activation=activation, prefix=prefix,
+                                          params=params, conv_layout=conv_layout)
+
+    @property
+    def _gate_names(self):
+        return ['_r', '_z', '_o']
+
+    def __call__(self, inputs, states):
+        self._counter += 1
+        seq_idx = self._counter
+        name = '%st%d_' % (self._prefix, seq_idx)
+        i2h, h2h = self._conv_forward(inputs, states, name)
+
+        i2h_r, i2h_z, i2h = symbol.SliceChannel(i2h, num_outputs=3, name="%s_i2h_slice" % name)
+        h2h_r, h2h_z, h2h = symbol.SliceChannel(h2h, num_outputs=3, name="%s_h2h_slice" % name)
+
+        reset_gate = symbol.Activation(i2h_r + h2h_r, act_type="sigmoid",
+                                       name="%s_r_act" % name)
+        update_gate = symbol.Activation(i2h_z + h2h_z, act_type="sigmoid",
+                                        name="%s_z_act" % name)
+
+        next_h_tmp = self._get_activation(i2h + reset_gate * h2h, self._activation,
+                                          name="%s_h_act" % name)
+
+        next_h = symbol._internal._plus((1. - update_gate) * next_h_tmp, update_gate * states[0],
+                                        name='%sout' % name)
+
+        return next_h, [next_h]

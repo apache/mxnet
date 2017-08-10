@@ -35,9 +35,6 @@ Symbol ConvolutionNoBias(const std::string& symbol_name,
       .CreateSymbol(symbol_name);
 }
 
-static const Symbol BN_BETA;
-static const Symbol BN_GAMMA;
-
 Symbol getConv(const std::string & name, Symbol data,
                int  num_filter,
                Shape kernel, Shape stride, Shape pad,
@@ -48,8 +45,13 @@ Symbol getConv(const std::string & name, Symbol data,
                                   kernel, num_filter, stride, Shape(1, 1),
                                   pad, 1, 512);
 
-  Symbol bn = BatchNorm(name + "_bn", conv, Symbol(), Symbol(), Symbol(),
-                        Symbol(), 2e-5, bn_momentum, false);
+  Symbol gamma(name + "_gamma");
+  Symbol beta(name + "_beta");
+  Symbol mmean(name + "_mmean");
+  Symbol mvar(name + "_mvar");
+
+  Symbol bn = BatchNorm(name + "_bn", conv, gamma,
+                        beta, mmean, mvar, 2e-5, bn_momentum, false);
 
   if (with_relu) {
     return Activation(name + "_relu", bn, "relu");
@@ -109,8 +111,13 @@ Symbol ResNetSymbol(int num_class, int num_level = 3, int num_block = 9,
   Symbol data = Symbol::Variable("data");
   Symbol data_label = Symbol::Variable("data_label");
 
-  Symbol zscore = BatchNorm("zscore", data, Symbol(), Symbol(), Symbol(),
-                            Symbol(), 0.001, bn_momentum);
+  Symbol gamma("gamma");
+  Symbol beta("beta");
+  Symbol mmean("mmean");
+  Symbol mvar("mvar");
+
+  Symbol zscore = BatchNorm("zscore", data, gamma,
+                            beta, mmean, mvar, 0.001, bn_momentum);
 
   Symbol conv = getConv("conv0", zscore, num_filter,
                         Shape(3, 3), Shape(1, 1), Shape(1, 1),
@@ -158,11 +165,14 @@ int main(int argc, char const *argv[]) {
       .CreateDataIter();
 
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
-  opt->SetParam("momentum", 0.9)
+  opt->SetParam("lr", learning_rate)
+     ->SetParam("wd", weight_decay)
+     ->SetParam("momentum", 0.9)
      ->SetParam("rescale_grad", 1.0 / batch_size)
      ->SetParam("clip_gradient", 10);
 
   auto *exec = resnet.SimpleBind(Context::gpu(), args_map);
+  auto arg_names = resnet.ListArguments();
 
   for (int iter = 0; iter < max_epoch; ++iter) {
     LG << "Epoch: " << iter;
@@ -175,7 +185,11 @@ int main(int argc, char const *argv[]) {
 
       exec->Forward(true);
       exec->Backward();
-      exec->UpdateAll(opt, learning_rate, weight_decay);
+
+      for (size_t i = 0; i < arg_names.size(); ++i) {
+        if (arg_names[i] == "data" || arg_names[i] == "data_label") continue;
+        opt->Update(i, exec->arg_arrays[i], exec->grad_arrays[i]);
+      }
       NDArray::WaitAll();
     }
 

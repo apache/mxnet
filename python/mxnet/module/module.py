@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=too-many-instance-attributes, too-many-arguments, protected-access, too-many-branches
 # pylint: disable=too-many-public-methods
 """A `Module` implement the `BaseModule` API by wrapping a `Symbol` and one or
@@ -15,6 +32,7 @@ from .executor_group import DataParallelExecutorGroup
 from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
 from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
+from ..io import DataDesc
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
@@ -40,7 +58,7 @@ class Module(BaseModule):
         Default ``None``, indicating no network parameters are fixed.
     state_names : list of str
         states are similar to data and label, but not provided by data iterator.
-        Instead they are initialized to 0 and can be set by set_states()
+        Instead they are initialized to 0 and can be set by `set_states()`.
     """
     def __init__(self, symbol, data_names=('data',), label_names=('softmax_label',),
                  logger=logging, context=ctx.cpu(), work_load_list=None,
@@ -94,7 +112,7 @@ class Module(BaseModule):
 
     @staticmethod
     def load(prefix, epoch, load_optimizer_states=False, **kwargs):
-        """Create a model from previously saved checkpoint.
+        """Creates a model from previously saved checkpoint.
 
         Parameters
         ----------
@@ -132,17 +150,17 @@ class Module(BaseModule):
         return mod
 
     def save_checkpoint(self, prefix, epoch, save_optimizer_states=False):
-        """Save current progress to checkpoint.
-        Use mx.callback.module_checkpoint as epoch_end_callback to save during training.
+        """Saves current progress to checkpoint.
+        Use `mx.callback.module_checkpoint` as `epoch_end_callback` to save during training.
 
         Parameters
         ----------
         prefix : str
-            The file prefix to checkpoint to
+            The file prefix to checkpoint to.
         epoch : int
-            The current epoch number
+            The current epoch number.
         save_optimizer_states : bool
-            Whether to save optimizer states for continue training
+            Whether to save optimizer states to continue training.
         """
         self._symbol.save('%s-symbol.json'%prefix)
         param_name = '%s-%04d.params' % (prefix, epoch)
@@ -177,7 +195,7 @@ class Module(BaseModule):
 
     @property
     def data_shapes(self):
-        """Get data shapes.
+        """Gets data shapes.
 
         Returns
         -------
@@ -188,11 +206,12 @@ class Module(BaseModule):
 
     @property
     def label_shapes(self):
-        """Get label shapes.
+        """Gets label shapes.
 
         Returns
         -------
-            A list of `(name, shape)` pairs. The return value could be ``None`` if
+        A list of `(name, shape)` pairs.
+            The return value could be ``None`` if
             the module does not need labels, or if the module is not bound for
             training (in this case, label information is not available).
         """
@@ -201,7 +220,7 @@ class Module(BaseModule):
 
     @property
     def output_shapes(self):
-        """Get output shapes.
+        """Gets output shapes.
 
         Returns
         -------
@@ -211,11 +230,12 @@ class Module(BaseModule):
         return self._exec_group.get_output_shapes()
 
     def get_params(self):
-        """Get current parameters.
+        """Gets current parameters.
+
         Returns
         -------
-        `(arg_params, aux_params)`, each a dictionary of name to parameters (in
-        `NDArray`) mapping.
+        `(arg_params, aux_params)`
+            A pair of dictionaries each mapping parameter names to NDArray values.
         """
         assert self.binded and self.params_initialized
 
@@ -224,15 +244,15 @@ class Module(BaseModule):
         return (self._arg_params, self._aux_params)
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
-                    allow_missing=False, force_init=False):
-        """Initialize the parameters and auxiliary states.
+                    allow_missing=False, force_init=False, allow_extra=False):
+        """Initializes the parameters and auxiliary states.
 
         Parameters
         ----------
         initializer : Initializer
             Called to initialize parameters if needed.
         arg_params : dict
-            If not None, should be a dictionary of existing arg_params. Initialization
+            If not ``None``, should be a dictionary of existing arg_params. Initialization
             will be copied from that.
         aux_params : dict
             If not ``None``, should be a dictionary of existing aux_params. Initialization
@@ -242,6 +262,10 @@ class Module(BaseModule):
             called to fill those missing params.
         force_init : bool
             If ``True``, will force re-initialize even if already initialized.
+        allow_extra : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
         """
         if self.params_initialized and not force_init:
             warnings.warn("Parameters already initialized and force_init=False. "
@@ -279,10 +303,12 @@ class Module(BaseModule):
         self._params_dirty = False
 
         # copy the initialized parameters to devices
-        self._exec_group.set_params(self._arg_params, self._aux_params)
+        self._exec_group.set_params(self._arg_params, self._aux_params,
+                                    allow_extra=allow_extra)
 
-    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True):
-        """Assign parameter and aux state values.
+    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True,
+                   allow_extra=False):
+        """Assigns parameter and aux state values.
 
         Parameters
         ----------
@@ -295,17 +321,20 @@ class Module(BaseModule):
             called to fill those missing params.
         force_init : bool
             If ``True``, will force re-initialize even if already initialized.
-
+        allow_extra : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
         Examples
         --------
-        An example of setting module parameters::
-            >>> sym, arg_params, aux_params = \
-            mx.model.load_checkpoint(model_prefix, n_epoch_load)
-            >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
+        >>> # An example of setting module parameters.
+        >>> sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, n_epoch_load)
+        >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
         """
         if not allow_missing:
             self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
-                             allow_missing=allow_missing, force_init=force_init)
+                             allow_missing=allow_missing, force_init=force_init,
+                             allow_extra=allow_extra)
             return
 
         if self.params_initialized and not force_init:
@@ -313,7 +342,7 @@ class Module(BaseModule):
                           "set_params call ignored.", stacklevel=2)
             return
 
-        self._exec_group.set_params(arg_params, aux_params)
+        self._exec_group.set_params(arg_params, aux_params, allow_extra=allow_extra)
 
         # because we didn't update self._arg_params, they are dirty now.
         self._params_dirty = True
@@ -322,7 +351,7 @@ class Module(BaseModule):
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
              grad_req='write'):
-        """Bind the symbols to construct executors. This is necessary before one
+        """Binds the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
         Parameters
@@ -374,6 +403,7 @@ class Module(BaseModule):
             assert isinstance(shared_module, Module) and \
                     shared_module.binded and shared_module.params_initialized
             shared_group = shared_module._exec_group
+            assert len(shared_group.execs) == len(self._context)
         else:
             shared_group = None
 
@@ -413,7 +443,7 @@ class Module(BaseModule):
 
 
     def reshape(self, data_shapes, label_shapes=None):
-        """Reshape the module for new input shapes.
+        """Reshapes the module for new input shapes.
 
         Parameters
         ----------
@@ -524,7 +554,11 @@ class Module(BaseModule):
         self.optimizer_initialized = True
 
     def forward(self, data_batch, is_train=None):
-        """Forward computation.
+        """Forward computation. It supports data batches with different shapes, such as
+        different batch sizes or different image sizes.
+        If reshaping of data batch relates to modification of symbol or module, such as
+        changing image layout ordering or switching from training to predicting, module
+        rebinding is required.
 
         See Also
         ----------
@@ -538,6 +572,27 @@ class Module(BaseModule):
             Default is ``None``, which means ``is_train`` takes the value of ``self.for_training``.
         """
         assert self.binded and self.params_initialized
+
+        curr_data_shapes = tuple(i.shape for i in self._data_shapes)
+        new_data_shapes = tuple(i.shape for i in data_batch.data)
+
+        if curr_data_shapes != new_data_shapes:
+            if hasattr(data_batch, "provide_data") and data_batch.provide_data:
+                new_dshape = data_batch.provide_data
+            else:
+                new_dshape = [DataDesc(i.name, shape, i.dtype, i.layout) \
+                              for i, shape in zip(self._data_shapes, new_data_shapes)]
+
+            if hasattr(data_batch, "provide_label") and data_batch.provide_label:
+                new_lshape = data_batch.provide_label
+            elif hasattr(data_batch, "label") and data_batch.label:
+                new_lshape = [DataDesc(i.name, j.shape, i.dtype, i.layout) \
+                              for i, j in zip(self._label_shapes, data_batch.label)]
+            else:
+                new_lshape = None
+
+            self.reshape(new_dshape, new_lshape)
+
         self._exec_group.forward(data_batch, is_train)
 
     def backward(self, out_grads=None):
@@ -571,13 +626,14 @@ class Module(BaseModule):
         if self._update_on_kvstore:
             _update_params_on_kvstore(self._exec_group.param_arrays,
                                       self._exec_group.grad_arrays,
-                                      self._kvstore)
+                                      self._kvstore, self._exec_group.param_names)
         else:
             _update_params(self._exec_group.param_arrays,
                            self._exec_group.grad_arrays,
                            updater=self._updater,
                            num_device=len(self._context),
-                           kvstore=self._kvstore)
+                           kvstore=self._kvstore,
+                           param_names=self._exec_group.param_names)
 
     def get_outputs(self, merge_multi_context=True):
         """Gets outputs of the previous forward computation.
@@ -718,6 +774,6 @@ class Module(BaseModule):
             self._updater.set_states(open(fname, 'rb').read())
 
     def install_monitor(self, mon):
-        """ Installs monitor on all executors. """
+        """Installs monitor on all executors. """
         assert self.binded
         self._exec_group.install_monitor(mon)

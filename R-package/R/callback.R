@@ -95,7 +95,7 @@ mx.callback.early.stop <- function(train.metric = NULL, eval.metric = NULL, bad.
     if (!is.null(env$metric)) {
       if (!is.null(train.metric)) {
         result <- env$metric$get(env$train.metric)
-        if (result$value < train.metric | (maximize == TRUE & result$value > train.metric)) {
+        if ((maximize == F & result$value < train.metric) | (maximize == TRUE & result$value > train.metric)) {
           return(FALSE)
         }
       }
@@ -104,7 +104,7 @@ mx.callback.early.stop <- function(train.metric = NULL, eval.metric = NULL, bad.
       if (!is.null(eval.metric)) {
         if (!is.null(env$eval.metric)) {
           result <- env$metric$get(env$eval.metric)
-          if (result$value < eval.metric | (maximize == TRUE & result$value > eval.metric)) {
+          if ((maximize == F & result$value < eval.metric) | (maximize == TRUE & result$value > eval.metric)) {
             return(FALSE)
           }
         }
@@ -135,7 +135,7 @@ mx.callback.early.stop <- function(train.metric = NULL, eval.metric = NULL, bad.
         
         result <- env$metric$get(env$eval.metric)
         
-        if (result$value > mx.best.score | (maximize == TRUE & result$value < mx.best.score)) {
+        if ((maximize == F & result$value > mx.best.score) | (maximize == TRUE & result$value < mx.best.score)) {
           
           if (mx.best.iter == bad.steps) {
             if (verbose) {

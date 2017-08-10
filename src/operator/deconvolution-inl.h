@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file deconvolution-inl.h
  * \brief
  * \author Wei Wu
@@ -43,26 +61,30 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   bool cudnn_off;
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(DeconvolutionParam) {
-    DMLC_DECLARE_FIELD(kernel).describe("deconvolution kernel size: (h, w) or (d, h, w)");
+    DMLC_DECLARE_FIELD(kernel).describe("Deconvolution kernel size: (h, w) or (d, h, w). "
+                  "This is same as the kernel size used for the corresponding convolution");
     DMLC_DECLARE_FIELD(stride).set_default(TShape())
-        .describe("deconvolution stride: (h, w) or (d, h, w)");
+        .describe("The stride used for the corresponding convolution: (h, w) or (d, h, w).");
     DMLC_DECLARE_FIELD(dilate).set_default(TShape())
-    .describe("deconvolution dilate: (h, w) or (d, h, w)");
+        .describe("Dilation factor for each dimension of the input: (h, w) or (d, h, w).");
     DMLC_DECLARE_FIELD(pad).set_default(TShape())
-        .describe("pad for deconvolution: (h, w) or (d, h, w). "
-                  "A good number is : (kernel-1)/2. "
-                  "If target_shape is set, "
-                  "pad will be ignored and computed accordingly");
+        .describe("The amount of implicit zero padding added during convolution for each "
+                  "dimension of the input: "
+                  "(h, w) or (d, h, w). "
+                  "``(kernel-1)/2`` is usually a good choice. "
+                  "If `target_shape` is set, "
+                  "`pad` will be ignored and a padding that will generate the target shape "
+                  "will be used.");
     DMLC_DECLARE_FIELD(adj).set_default(TShape())
-        .describe("adjustment for output shape: (h, w) or (d, h, w). "
-                  "If target_shape is set, "
-                  "ad will be ignored and computed accordingly");
+        .describe("Adjustment for output shape: (h, w) or (d, h, w). "
+                  "If `target_shape` is set, "
+                  "`adj` will be ignored and computed accordingly.");
     DMLC_DECLARE_FIELD(target_shape).set_default(TShape())
-        .describe("output shape with target shape : (h, w) or (d, h, w)");
+        .describe("Shape of the output tensor: (h, w) or (d, h, w).");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
-        .describe("deconvolution filter(channel) number");
+        .describe("Number of output filters.");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
-        .describe("number of groups partition");
+        .describe("Number of groups partition.");
     DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
       .describe("Maximum temporal workspace allowed for deconvolution (MB).");
     DMLC_DECLARE_FIELD(no_bias).set_default(true)
@@ -72,7 +94,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
       .add_enum("limited_workspace", deconv::kLimited)
       .add_enum("fastest", deconv::kFastest)
       .set_default(dmlc::optional<int>())
-      .describe("Whether to pick convolution algo by running performance test.");
+      .describe("Whether to pick convolution algorithm by running performance test.");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
     .describe("Turn off cudnn for this layer.");
     DMLC_DECLARE_FIELD(layout)
@@ -82,29 +104,35 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
       .add_enum("NHWC", mshadow::kNHWC)
       .add_enum("NDHWC", mshadow::kNDHWC)
       .set_default(dmlc::optional<int>())
-      .describe("Set layout for input, output and weight. Empty for\n    "
-                "default layout: NCW for 1d, NCHW for 2d and NCDHW for 3d.");
+      .describe("Set layout for input, output and weight. Empty for "
+                "default layout, NCW for 1d, NCHW for 2d and NCDHW for 3d.");
   }
 
   template<size_t ndim>
   void InferPad(TShape input, index_t (&o_pad)[ndim], index_t (&o_adj)[ndim] ) const {
+    // Modified by Li.bs
+    // Use tag to control the calculation of pad
+    bool bCal = false;
     if (target_shape.ndim() != 0) {
+      for (index_t i = 0; i < target_shape.ndim(); i++) {
+        if (target_shape[i] != 0) bCal = true;
+      }
+    }
+
+    if (bCal) {
       size_t input_ndim = input.ndim();
 
-      for (unsigned int i = 0; i < ndim; i++) {
+      for (index_t i = 0; i < ndim; i++) {
         // input.ndim() can be larger than ndim, in case that the complete input
         // shape was passed and not only the ndim last ones
         o_pad[i] = stride[i] * (input[(input_ndim - ndim) + i] - 1) + DilatedKernelSize(i);
-
-        CHECK_GE(o_pad[i], target_shape[i])
-          << "too big target shape";
-
+        CHECK_GE(o_pad[i], target_shape[i]) << "too big target shape";
         o_pad[i] -= target_shape[i];
         o_adj[i] = o_pad[i] % 2;
         o_pad[i] = (o_pad[i] + 1) / 2;
       }
     } else {
-      for (unsigned int i = 0; i < ndim; i++) {
+      for (index_t i = 0; i < ndim; i++) {
         o_pad[i] = pad[i];
         o_adj[i] = adj[i];
       }
@@ -147,7 +175,8 @@ class DeconvolutionOp : public Operator {
     Tensor<xpu, 4, DType> out = out_data[deconv::kOut].get<xpu, 4, DType>(s);
 
     index_t o_pad[2], o_adj[2];
-    TShape dshape = {data.size(2), data.size(3)};
+    TShape dshape = {static_cast<nnvm::dim_t>(data.size(2)),
+                     static_cast<nnvm::dim_t>(data.size(3))};
     param_.InferPad(dshape, o_pad, o_adj);
 
     Shape<3> wmat_shape =
@@ -264,7 +293,8 @@ class DeconvolutionOp : public Operator {
         << "Must init CuBLAS handle in stream";
 #endif
     index_t o_pad[2], o_adj[2];
-    TShape dshape = {data.size(2), data.size(3)};
+    TShape dshape = {static_cast<nnvm::dim_t>(data.size(2)),
+                     static_cast<nnvm::dim_t>(data.size(3))};
     param_.InferPad(dshape, o_pad, o_adj);
 
     const index_t nbatch = data.size(0);

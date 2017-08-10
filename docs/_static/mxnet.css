@@ -189,7 +189,9 @@ img {
     text-decoration: none;
 }
 
-#dropdown-menu-position-anchor {
+#dropdown-menu-position-anchor, 
+#dropdown-menu-position-anchor-version, 
+#dropdown-menu-position-anchor-version-mobile {
     position: relative;
 }
 
@@ -358,7 +360,6 @@ div .burgerIcon a {
 
 li.dropdown-submenu ul.dropdown-menu {
     min-width: 75px;
-    width: 75px
 }
 
 li.dropdown-submenu ul.dropdown-menu li {
@@ -445,7 +446,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 }
 /*--------------------------banner---------------------------*/
 #splash{
-    padding:60px 0 0 0;
+    padding:60px 0 50px 0;
     background-color:#0079b2;
     /* background-image:url(../img/bg.jpg); */
     background-size:cover;
@@ -499,9 +500,8 @@ li.dropdown-submenu ul.dropdown-menu a {
     margin:2em 0
 }
 
-#why_mxnet_btn, #install_btn {
+#why_mxnet_btn, #install_btn, #release_btn {
     border: 1.8px solid #FFFFFF;
-    border-radius: 2px;
     color: #FFFFFF;
     display: inline-block;
     font-size: 18px;
@@ -511,6 +511,11 @@ li.dropdown-submenu ul.dropdown-menu a {
     transition: .2s;
     width: 160px;
     border-radius: 30px;
+}
+
+#release_btn {
+    width: auto;
+    border: none;
 }
 
 @media (min-width: 768px) {
@@ -560,27 +565,126 @@ li.dropdown-submenu ul.dropdown-menu a {
 .section-tout {
     padding:3em 0 3em;
     border-bottom:1px solid rgba(0,0,0,.05);
-    background-color:#eaf1f1
+    background-color:#fff
+}
+
+.section-tout .container {
+    height: 200px;
+}
+
+.section-tout .row {
+    height: 100%;
 }
 
 .section-tout .row div {
-    height: 140px;
+    height: 100%;
+    padding-left: 50px;
 }
 
-.section-tout .fa{
-    margin-right:.5em
+.section-tout .row a {
+    position: absolute;
+    bottom: 20px;
 }
 
 .section-tout h3{
     font-size:20px;
-    color: #0079b2;
+    color: #444;
 }
 
 .section-tout p {
-    margin-bottom:2em
+    margin-bottom:2em;
 }
 
-.section-inst{
+@media (max-width: 1199px) {
+    .section-tout .container {
+        height: auto;
+    }
+
+    .section-tout .row a {
+        position: inherit;
+    }
+
+    .section-tout .row div {
+        margin-bottom: 20px;
+        padding-left: 20px;
+    }
+}
+
+.section-util {
+    background-color: #eaf1f1;
+    padding:3em 0 3em;
+    border-bottom:1px solid rgba(0,0,0,.05);
+    text-align: center;
+}
+
+.section-util p {
+    color: #999;
+    position: absolute;
+    width: 50%;
+    margin: auto;
+    left: 0;
+    right: 0;
+}
+
+.section-util .util-btn {
+    position: absolute;
+    margin: auto;
+    left: 0;
+    right: 0;
+    padding-top: 10px;
+    margin-top: 60px;
+}
+
+@media (max-width: 600px) {
+    .section-util .util-btn {
+        margin-top: 100px;
+    }
+}
+
+.section-util .glyphicon {
+    font-size: 50px;
+    color: #999;
+}
+
+.util-btn a {
+    display: inline-block;
+    border: 1.8px solid #0079b2;
+    border-radius: 30px;
+    width: 200px;
+    height: 50px;
+    -webkit-transition: .2s;
+    transition: .2s;
+    padding: 10px 30px;
+}
+
+.util-btn a:hover {
+    background-color: #0079b2;
+    color: #FFFFFF;
+    opacity: 0.9;
+    text-decoration: none;
+}
+
+.section-util .container {
+    height: 250px;
+}
+
+@media (max-width: 1199px) {
+    .section-util .container {
+        height: auto
+    }
+
+    .section-util .row div {
+        margin-bottom: 200px;
+    }
+}
+
+@media (max-width: 767px) {
+    .section-util .row div {
+        margin-bottom: 250px;
+    }
+}
+
+.section-inst {
     padding:3em 0 3em;
     border-bottom:1px solid rgba(0,0,0,.05);
 
@@ -639,6 +743,7 @@ div.content {
     right: 200px;
     margin-right: 5%;
     padding: 40px 0 0 0;
+    overflow-x: hidden;
     z-index: -1;
 }
 
@@ -817,33 +922,72 @@ div.informaltable {
   text-align: left; }
 
 /*----------------API class and function formatting---------------------*/
-dl > dt:before {
-    content: " ";
-    display: block;
-    height: 70px; /* fixed header height*/
-    margin-top: -50px; /* negative fixed header height */
-}
-
 p.rubric {
     margin-top: 10px;
 }
 
+dl {
+    padding-top: 20px;
+}
+
 dt:target, .highlighted {
-    background-color: #fff;
-    background: transparent;
+    background-color: #e7f2fa;
     border-bottom: 3px solid #c7254e;
     margin-bottom: -3px;
+}
+
+dt:target:before {
+    background-color: white;
+    content: '';
+    display: block;
+    height: 60px;
+}
+
+dt {
+    background: #e7f2fa;
+    border-bottom: solid #0079b2;
+}
+
+dl.method dt {
+    background: #f0f0f0;
+    border-bottom: solid #ccc;
+}
+
+dl.method dt code.descname {
+    color:#555;
+}
+
+dl.attribute dt {
+    background: #f0f0f0;
+    border-bottom: solid #ccc;
+}
+
+dl.attribute dt code.descname {
+    color:#555;
 }
 
 dt em {
     font-weight: normal;
     font-style: normal;
-    font-size: 90%; 
+    font-size: 90%;
 }
 
 code {
     color: #337ab7;
     background-color: #f5f5f5;
+}
+
+dt code {
+    color: #555;
+}
+
+dl.last.docutils dt{
+    background-color: transparent;
+    border-bottom: none;
+}
+
+dl.docutils dt {
+    color: #555;
 }
 
 /*----------------Model zoo page style------------------*/
@@ -1062,3 +1206,41 @@ table.docutils tr:nth-child(even) {
     transform: translate(-50%);
 }
 
+button.download {
+    color: #0079b2;
+}
+
+/*----------------------Download button------------------------*/
+div.download_btn {
+
+    border: solid 1px lightgray;
+    border-radius: 3px;
+    font-size: 90%;
+    height: 40px;
+    display: table;
+    float: left;
+}
+
+div.download_btn a {
+    padding: 0 10px;
+    display: table-cell;
+    vertical-align: middle;
+}
+
+div.download_btn a:hover {
+    background-color: #0079b2;
+    color: white;
+    text-decoration: none;
+}
+
+/*-------------output blocks----------------*/
+
+.highlight-results .highlight pre {
+    background-color: #eeffcc;
+}
+
+.cell-results-header {
+    color: #888;
+    padding-bottom: 3px;
+    font-style: italic;
+}

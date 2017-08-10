@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::RNN;
 use strict;
 use warnings;
@@ -149,6 +166,10 @@ method SequentialRNNCell(@args)  { AI::MXNet::RNN::SequentialCell->new(@args) }
 method BidirectionalCell(@args)  { AI::MXNet::RNN::BidirectionalCell->new(@args) }
 method DropoutCell(@args)        { AI::MXNet::RNN::DropoutCell->new(@args) }
 method ZoneoutCell(@args)        { AI::MXNet::RNN::ZoneoutCell->new(@args) }
+method ConvRNNCell(@args)        { AI::MXNet::RNN::ConvCell->new(@args) }
+method ConvLSTMCell(@args)       { AI::MXNet::RNN::ConvLSTMCell->new(@args) }
+method ConvGRUCell(@args)        { AI::MXNet::RNN::ConvGRUCell->new(@args) }
+method ResidualCell(@args)       { AI::MXNet::RNN::ResidualCell->new(@args) }
 method encode_sentences(@args)   { AI::MXNet::RNN::IO->encode_sentences(@args) }
 method BucketSentenceIter(@args)
 {

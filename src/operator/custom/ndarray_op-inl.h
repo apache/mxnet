@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file native_op-inl.h
  * \brief
  * \author Junyuan Xie
@@ -51,10 +69,6 @@ class NDArrayOp : public Operator {
                         const std::vector<OpReqType> &req,
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args);
-
-  virtual ExecType exec_type() const {
-    return kAsync;
-  }
 
  private:
   NDArrayOpParam param_;
@@ -110,11 +124,16 @@ class NDArrayOpProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
-    std::vector<unsigned*> shapes;
+    std::vector<uint32_t*> shapes;
     std::vector<int> ndims;
+    size_t size = 0;
+    for (const auto& s : *in_shape) size += s.ndim();
+    std::vector<uint32_t> shapes_buffer(size);
+    uint32_t *ptr = shapes_buffer.data();
     for (auto iter = in_shape->begin(); iter != in_shape->end(); ++iter) {
-      shapes.push_back(iter->data());
+      shapes.push_back(ptr);
       ndims.push_back(iter->ndim());
+      ptr = nnvm::ShapeTypeCast(iter->begin(), iter->end(), ptr);
     }
     shapes.resize(param_.num_inputs_+param_.num_outputs_);
     ndims.resize(param_.num_inputs_+param_.num_outputs_);
@@ -163,6 +182,10 @@ class NDArrayOpProp : public OperatorProperty {
   }
 
   Operator* CreateOperator(Context ctx) const override;
+
+  ExecType exec_type() const override {
+    return ExecType::kAsync;
+  }
 
  private:
   NDArrayOpParam param_;

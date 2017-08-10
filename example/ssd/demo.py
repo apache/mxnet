@@ -1,19 +1,30 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import argparse
 import tools.find_mxnet
 import mxnet as mx
 import os
-import importlib
 import sys
 from detect.detector import Detector
+from symbol.symbol_factory import get_symbol
 
-CLASSES = ('aeroplane', 'bicycle', 'bird', 'boat',
-           'bottle', 'bus', 'car', 'cat', 'chair',
-           'cow', 'diningtable', 'dog', 'horse',
-           'motorbike', 'person', 'pottedplant',
-           'sheep', 'sofa', 'train', 'tvmonitor')
-
-def get_detector(net, prefix, epoch, data_shape, mean_pixels, ctx,
-                 nms_thresh=0.5, force_nms=True):
+def get_detector(net, prefix, epoch, data_shape, mean_pixels, ctx, num_class,
+                 nms_thresh=0.5, force_nms=True, nms_topk=400):
     """
     wrapper for initialize a detector
 
@@ -31,23 +42,25 @@ def get_detector(net, prefix, epoch, data_shape, mean_pixels, ctx,
         mean pixel values (R, G, B)
     ctx : mx.ctx
         running context, mx.cpu() or mx.gpu(?)
+    num_class : int
+        number of classes
+    nms_thresh : float
+        non-maximum suppression threshold
     force_nms : bool
         force suppress different categories
     """
-    sys.path.append(os.path.join(os.getcwd(), 'symbol'))
     if net is not None:
-        net = importlib.import_module("symbol_" + net) \
-            .get_symbol(len(CLASSES), nms_thresh, force_nms)
-    detector = Detector(net, prefix + "_" + str(data_shape), epoch, \
-        data_shape, mean_pixels, ctx=ctx)
+        net = get_symbol(net, data_shape, num_classes=num_class, nms_thresh=nms_thresh,
+            force_nms=force_nms, nms_topk=nms_topk)
+    detector = Detector(net, prefix, epoch, data_shape, mean_pixels, ctx=ctx)
     return detector
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Single-shot detection network demo')
-    parser.add_argument('--network', dest='network', type=str, default='vgg16_ssd_300',
-                        choices=['vgg16_ssd_300', 'vgg16_ssd_512'], help='which network to use')
+    parser.add_argument('--network', dest='network', type=str, default='resnet50',
+                        help='which network to use')
     parser.add_argument('--images', dest='images', type=str, default='./data/demo/dog.jpg',
-                        help='run demo with images, use comma(without space) to seperate multiple images')
+                        help='run demo with images, use comma to seperate multiple images')
     parser.add_argument('--dir', dest='dir', nargs='?',
                         help='demo image directory, optional', type=str)
     parser.add_argument('--ext', dest='extension', help='image extension, optional',
@@ -55,12 +68,13 @@ def parse_args():
     parser.add_argument('--epoch', dest='epoch', help='epoch of trained model',
                         default=0, type=int)
     parser.add_argument('--prefix', dest='prefix', help='trained model prefix',
-                        default=os.path.join(os.getcwd(), 'model', 'ssd'), type=str)
+                        default=os.path.join(os.getcwd(), 'model', 'ssd_'),
+                        type=str)
     parser.add_argument('--cpu', dest='cpu', help='(override GPU) use CPU to detect',
                         action='store_true', default=False)
     parser.add_argument('--gpu', dest='gpu_id', type=int, default=0,
                         help='GPU device id to detect with')
-    parser.add_argument('--data-shape', dest='data_shape', type=int, default=300,
+    parser.add_argument('--data-shape', dest='data_shape', type=int, default=512,
                         help='set image shape')
     parser.add_argument('--mean-r', dest='mean_r', type=float, default=123,
                         help='red mean value')
@@ -78,8 +92,28 @@ def parse_args():
                         help='show detection time')
     parser.add_argument('--deploy', dest='deploy_net', action='store_true', default=False,
                         help='Load network from json file, rather than from symbol')
+    parser.add_argument('--class-names', dest='class_names', type=str,
+                        default='aeroplane, bicycle, bird, boat, bottle, bus, \
+                        car, cat, chair, cow, diningtable, dog, horse, motorbike, \
+                        person, pottedplant, sheep, sofa, train, tvmonitor',
+                        help='string of comma separated names, or text filename')
     args = parser.parse_args()
     return args
+
+def parse_class_names(class_names):
+    """ parse # classes and class_names if applicable """
+    if len(class_names) > 0:
+        if os.path.isfile(class_names):
+            # try to open it to read class names
+            with open(class_names, 'r') as f:
+                class_names = [l.strip() for l in f.readlines()]
+        else:
+            class_names = [c.strip() for c in class_names.split(',')]
+        for name in class_names:
+            assert len(name) > 0
+    else:
+        raise RuntimeError("No valid class_name provided...")
+    return class_names
 
 if __name__ == '__main__':
     args = parse_args()
@@ -93,10 +127,15 @@ if __name__ == '__main__':
     assert len(image_list) > 0, "No valid image specified to detect"
 
     network = None if args.deploy_net else args.network
-    detector = get_detector(network, args.prefix, args.epoch,
+    class_names = parse_class_names(args.class_names)
+    if args.prefix.endswith('_'):
+        prefix = args.prefix + args.network + '_' + str(args.data_shape)
+    else:
+        prefix = args.prefix
+    detector = get_detector(network, prefix, args.epoch,
                             args.data_shape,
                             (args.mean_r, args.mean_g, args.mean_b),
-                            ctx, args.nms_thresh, args.force_nms)
+                            ctx, len(class_names), args.nms_thresh, args.force_nms)
     # run detection
     detector.detect_and_visualize(image_list, args.dir, args.extension,
-                                  CLASSES, args.thresh, args.show_timer)
+                                  class_names, args.thresh, args.show_timer)

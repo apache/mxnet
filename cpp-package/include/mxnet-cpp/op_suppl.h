@@ -1,12 +1,30 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
-*  Copyright (c) 2016 by Contributors
 * \file op_suppl.h
 * \brief A supplement and amendment of the operators from op.h
 * \author Zhang Chen, zhubuntu, Xin Li
 */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_SUPPL_H_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_SUPPL_H_
+#ifndef MXNET_CPP_OP_SUPPL_H_
+#define MXNET_CPP_OP_SUPPL_H_
 
 #include <cassert>
 #include <string>
@@ -33,6 +51,10 @@ inline Symbol _Minus(Symbol lhs, Symbol rhs) {
 }
 inline Symbol _Div(Symbol lhs, Symbol rhs) {
   return Operator("_Div")(lhs, rhs)
+           .CreateSymbol();
+}
+inline Symbol _Mod(Symbol lhs, Symbol rhs) {
+  return Operator("_Mod")(lhs, rhs)
            .CreateSymbol();
 }
 inline Symbol _Power(Symbol lhs, Symbol rhs) {
@@ -74,6 +96,16 @@ inline Symbol _DivScalar(Symbol lhs, mx_float scalar) {
 }
 inline Symbol _RDivScalar(mx_float scalar, Symbol rhs) {
   return Operator("_RDivScalar")(rhs)
+           .SetParam("scalar", scalar)
+           .CreateSymbol();
+}
+inline Symbol _ModScalar(Symbol lhs, mx_float scalar) {
+  return Operator("_ModScalar")(lhs)
+           .SetParam("scalar", scalar)
+           .CreateSymbol();
+}
+inline Symbol _RModScalar(mx_float scalar, Symbol rhs) {
+  return Operator("_RModScalar")(rhs)
            .SetParam("scalar", scalar)
            .CreateSymbol();
 }
@@ -143,5 +175,5 @@ inline Symbol Activation(const std::string& symbol_name,
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_SUPPL_H_
+#endif  // MXNET_CPP_OP_SUPPL_H_
 

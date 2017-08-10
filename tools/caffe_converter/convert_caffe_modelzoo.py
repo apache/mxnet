@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Convert Caffe's modelzoo
 """
 import os
@@ -60,7 +77,7 @@ model_meta_info = {
         'top-1-acc' : 0.753,
         'top-5-acc' : 0.922
     },
-    'resnt-101' : {
+    'resnet-101' : {
         'prototxt' : _mx_caffe_model+'ResNet-101-deploy.prototxt',
         'caffemodel' : _mx_caffe_model+'ResNet-101-model.caffemodel',
         'mean' : _mx_caffe_model+'ResNet_mean.binaryproto',
@@ -80,7 +97,7 @@ def get_model_meta_info(model_name):
     """returns a dict with model information"""
     return dict(dict(model_meta_info)[model_name])
 
-def _download_caffe_model(model_name, meta_info, dst_dir='./model'):
+def download_caffe_model(model_name, meta_info, dst_dir='./model'):
     """Download caffe model into disk by the given meta info """
     if not os.path.isdir(dst_dir):
         os.mkdir(dst_dir)
@@ -98,7 +115,7 @@ def _download_caffe_model(model_name, meta_info, dst_dir='./model'):
 def convert_caffe_model(model_name, meta_info, dst_dir='./model'):
     """Download, convert and save a caffe model"""
 
-    (prototxt, caffemodel, mean) = _download_caffe_model(model_name, meta_info, dst_dir)
+    (prototxt, caffemodel, mean) = download_caffe_model(model_name, meta_info, dst_dir)
     model_name = os.path.join(dst_dir, model_name)
     convert_model(prototxt, caffemodel, model_name)
     if isinstance(mean, str):

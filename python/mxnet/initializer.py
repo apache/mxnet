@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Weight initializer."""
 from __future__ import absolute_import, print_function
 
@@ -5,11 +22,13 @@ import re
 import logging
 import warnings
 import json
+from math import sqrt
 import numpy as np
 from .base import string_types
 from .ndarray import NDArray, load
 from . import random
 from . import registry
+from . import ndarray
 
 # inherit str for backward compatibility
 class InitDesc(str):
@@ -35,6 +54,44 @@ class Initializer(object):
     """The base class of an initializer."""
     def __init__(self, **kwargs):
         self._kwargs = kwargs
+        self._verbose = False
+        self._print_func = None
+
+    def set_verbosity(self, verbose=False, print_func=None):
+        """Switch on/off verbose mode
+
+        Parameters
+        ----------
+        verbose : bool
+            switch on/off verbose mode
+        print_func : function
+            A function that computes statistics of initialized arrays.
+            Takes an `NDArray` and returns an `str`. Defaults to mean
+            absolute value str((|x|/size(x)).asscalar()).
+        """
+        self._verbose = verbose
+        if print_func is None:
+            def asum_stat(x):
+                """returns |x|/size(x), async execution."""
+                return str((ndarray.norm(x)/sqrt(x.size)).asscalar())
+            print_func = asum_stat
+        self._print_func = print_func
+        return self
+
+    def _verbose_print(self, desc, init, arr):
+        """Internal verbose print function
+
+        Parameters
+        ----------
+        desc : InitDesc or str
+            name of the array
+        init : str
+            initializer pattern
+        arr : NDArray
+            initialized array
+        """
+        if self._verbose and self._print_func:
+            logging.info('Initialized %s as %s: %s', desc, init, self._print_func(arr))
 
     def dumps(self):
         """Saves the initializer to string
@@ -79,17 +136,22 @@ class Initializer(object):
         if init:
             # when calling Variable initializer
             create(init)._init_weight(desc, arr)
+            self._verbose_print(desc, init, arr)
         else:
             # register nnvm::FSetInputVariableAttrs in the backend for new patterns
             # don't add new cases here.
             if desc.endswith('weight'):
                 self._init_weight(desc, arr)
+                self._verbose_print(desc, 'weight', arr)
             elif desc.endswith('bias'):
                 self._init_bias(desc, arr)
+                self._verbose_print(desc, 'bias', arr)
             elif desc.endswith('gamma'):
                 self._init_gamma(desc, arr)
+                self._verbose_print(desc, 'gamma', arr)
             elif desc.endswith('beta'):
                 self._init_beta(desc, arr)
+                self._verbose_print(desc, 'beta', arr)
             else:
                 self._init_default(desc, arr)
 
@@ -519,9 +581,12 @@ class Xavier(Initializer):
         self.magnitude = float(magnitude)
 
 
-    def _init_weight(self, _, arr):
+    def _init_weight(self, name, arr):
         shape = arr.shape
         hw_scale = 1.
+        if len(shape) < 2:
+            raise ValueError('Xavier initializer cannot be applied to vector {0}. It requires at'
+                             ' least 2D.'.format(name))
         if len(shape) > 2:
             hw_scale = np.prod(shape[2:])
         fan_in, fan_out = shape[1] * hw_scale, shape[0] * hw_scale
@@ -591,10 +656,11 @@ class LSTMBias(Initializer):
 
     Parameters
     ----------
-    forget_bias: float, bias for the forget gate.
-        Jozefowicz et al. 2015 recommends setting this to 1.0.
+    forget_bias: float, default 1.0
+        bias for the forget gate. Jozefowicz et al. 2015 recommends
+        setting this to 1.0.
     """
-    def __init__(self, forget_bias):
+    def __init__(self, forget_bias=1.0):
         super(LSTMBias, self).__init__(forget_bias=forget_bias)
         self.forget_bias = forget_bias
 
@@ -613,7 +679,7 @@ class FusedRNN(Initializer):
     Parameters
     ----------
     init : Initializer
-        intializer applied to unpacked weights. Fall back to global
+        initializer applied to unpacked weights. Fall back to global
         initializer if None.
     num_hidden : int
         should be the same with arguments passed to FusedRNNCell.
@@ -640,7 +706,7 @@ class FusedRNN(Initializer):
         self._bidirectional = bidirectional
         self._forget_bias = forget_bias
 
-    def _init_weight(self, desc, arr):
+    def _init_weight(self, desc, arr): # pylint: disable=arguments-differ
         from .rnn import rnn_cell
         cell = rnn_cell.FusedRNNCell(self._num_hidden, self._num_layers,
                                      self._mode, self._bidirectional,

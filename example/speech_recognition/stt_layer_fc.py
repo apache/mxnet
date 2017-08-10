@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 
 from stt_layer_batchnorm import batchnorm
@@ -8,29 +25,30 @@ def fc(net,
        act_type,
        weight=None,
        bias=None,
-       no_bias=False
+       no_bias=False,
+       name=None
        ):
     # when weight and bias doesn't have specific name
     if weight is None and bias is None:
-        net = mx.sym.FullyConnected(data=net, num_hidden=num_hidden, no_bias=no_bias)
+        net = mx.sym.FullyConnected(data=net, num_hidden=num_hidden, no_bias=no_bias, name=name)
     # when weight doesn't have specific name but bias has
     elif weight is None and bias is not None:
         if no_bias:
-            net = mx.sym.FullyConnected(data=net, num_hidden=num_hidden, no_bias=no_bias)
+            net = mx.sym.FullyConnected(data=net, num_hidden=num_hidden, no_bias=no_bias, name=name)
         else:
-            net = mx.sym.FullyConnected(data=net, num_hidden=num_hidden, bias=bias, no_bias=no_bias)
+            net = mx.sym.FullyConnected(data=net, num_hidden=num_hidden, bias=bias, no_bias=no_bias, name=name)
     # when bias doesn't have specific name but weight has
     elif weight is not None and bias is None:
-        net = mx.sym.FullyConnected(data=net, num_hidden=num_hidden, weight=weight, no_bias=no_bias)
+        net = mx.sym.FullyConnected(data=net, num_hidden=num_hidden, weight=weight, no_bias=no_bias, name=name)
     # when weight and bias specific name
     else:
         if no_bias:
-            net = mx.sym.FullyConnected(data=net, num_hidden=num_hidden, weight=weight, no_bias=no_bias)
+            net = mx.sym.FullyConnected(data=net, num_hidden=num_hidden, weight=weight, no_bias=no_bias, name=name)
         else:
-            net = mx.sym.FullyConnected(data=net, num_hidden=num_hidden, weight=weight, bias=bias, no_bias=no_bias)
+            net = mx.sym.FullyConnected(data=net, num_hidden=num_hidden, weight=weight, bias=bias, no_bias=no_bias, name=name)
     # activation
     if act_type is not None:
-        net = mx.sym.Activation(data=net, act_type=act_type)
+        net = mx.sym.Activation(data=net, act_type=act_type, name="%s_activation" % name)
     return net
 
 
@@ -41,7 +59,7 @@ def sequence_fc(net,
                 num_hidden_list=[],
                 act_type_list=[],
                 is_batchnorm=False,
-                dropout_rate=0
+                dropout_rate=0,
                 ):
     if num_layer == len(num_hidden_list) == len(act_type_list):
         if num_layer > 0:
@@ -81,13 +99,16 @@ def sequence_fc(net,
                                     num_hidden=num_hidden_list[layer_index],
                                     act_type=None,
                                     weight=weight_list[layer_index],
-                                    no_bias=is_batchnorm
+                                    no_bias=is_batchnorm,
+                                    name="%s_t%d_l%d_fc" % (prefix, seq_index, layer_index)
                                     )
                         # last layer doesn't have batchnorm
                         hidden = batchnorm(net=hidden,
                                            gamma=gamma_list[layer_index],
-                                           beta=beta_list[layer_index])
-                        hidden = mx.sym.Activation(data=hidden, act_type=act_type_list[layer_index])
+                                           beta=beta_list[layer_index],
+                                           name="%s_t%d_l%d_batchnorm" % (prefix, seq_index, layer_index))
+                        hidden = mx.sym.Activation(data=hidden, act_type=act_type_list[layer_index],
+                                                   name="%s_t%d_l%d_activation" % (prefix, seq_index, layer_index))
                     else:
                         hidden = fc(net=hidden,
                                     num_hidden=num_hidden_list[layer_index],

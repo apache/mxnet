@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Read and write for the RecordIO data format."""
 from __future__ import absolute_import
 from collections import namedtuple
@@ -296,9 +313,23 @@ def pack(header, s):
     ----------
     header : IRHeader
         Header of the image record.
-        ``header.label`` can be a number or an array.
+        ``header.label`` can be a number or an array. See more detail in ``IRHeader``.
     s : str
-        string to pack
+        Raw image string to be packed.
+
+    Returns
+    -------
+    s : str
+        The packed string.
+
+    Examples
+    --------
+    >>> label = 4 # label can also be a 1-D array, for example: label = [1,2,3]
+    >>> id = 2574
+    >>> header = mx.recordio.IRHeader(0, label, id, 0)
+    >>> with open(path, 'r') as file:
+    ...     s = file.read()
+    >>> packed_s = mx.recordio.pack(header, s)
     """
     header = IRHeader(*header)
     if isinstance(header.label, numbers.Number):
@@ -324,6 +355,14 @@ def unpack(s):
         Header of the image record.
     s : str
         Unpacked string.
+
+    Examples
+    --------
+    >>> record = mx.recordio.MXRecordIO('test.rec', 'r')
+    >>> item = record.read()
+    >>> header, s = mx.recordio.unpack(item)
+    >>> header
+    HEADER(flag=0, label=14.0, id=20129312, id2=0)
     """
     header = IRHeader(*struct.unpack(_IR_FORMAT, s[:_IR_SIZE]))
     s = s[_IR_SIZE:]
@@ -340,7 +379,7 @@ def unpack_img(s, iscolor=-1):
     s : str
         String buffer from ``MXRecordIO.read``.
     iscolor : int
-        image format option for ``cv2.imdecode``.
+        Image format option for ``cv2.imdecode``.
 
     Returns
     -------
@@ -348,6 +387,26 @@ def unpack_img(s, iscolor=-1):
         Header of the image record.
     img : numpy.ndarray
         Unpacked image.
+
+    Examples
+    --------
+    >>> record = mx.recordio.MXRecordIO('test.rec', 'r')
+    >>> item = record.read()
+    >>> header, img = mx.recordio.unpack_img(item)
+    >>> header
+    HEADER(flag=0, label=14.0, id=20129312, id2=0)
+    >>> img
+    array([[[ 23,  27,  45],
+            [ 28,  32,  50],
+            ...,
+            [ 36,  40,  59],
+            [ 35,  39,  58]],
+           ...,
+           [[ 91,  92, 113],
+            [ 97,  98, 119],
+            ...,
+            [168, 169, 167],
+            [166, 167, 165]]], dtype=uint8)
     """
     header, s = unpack(s)
     img = np.fromstring(s, dtype=np.uint8)
@@ -362,9 +421,9 @@ def pack_img(header, img, quality=95, img_fmt='.jpg'):
     ----------
     header : IRHeader
         Header of the image record.
-        ``header.label`` can be a number or an array.
+        ``header.label`` can be a number or an array. See more detail in ``IRHeader``.
     img : numpy.ndarray
-        image to pack
+        Image to be packed.
     quality : int
         Quality for JPEG encoding in range 1-100, or compression for PNG encoding in range 1-9.
     img_fmt : str
@@ -374,6 +433,14 @@ def pack_img(header, img, quality=95, img_fmt='.jpg'):
     -------
     s : str
         The packed string.
+
+    Examples
+    --------
+    >>> label = 4 # label can also be a 1-D array, for example: label = [1,2,3]
+    >>> id = 2574
+    >>> header = mx.recordio.IRHeader(0, label, id, 0)
+    >>> img = cv2.imread('test.jpg')
+    >>> packed_s = mx.recordio.pack_img(header, img)
     """
     assert cv2 is not None
     jpg_formats = ['.JPG', '.JPEG']

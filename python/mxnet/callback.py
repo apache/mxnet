@@ -1,10 +1,26 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 """Callback functions that can be used to track various status during epoch."""
 from __future__ import absolute_import
 
 import logging
 import math
-import sys
 import time
 from .model import save_checkpoint
 
@@ -158,14 +174,21 @@ class Speedometer(object):
 
 
 class ProgressBar(object):
-    """Show a progress bar.
+    """Displays a progress bar, indicating the percentage of batches processed within each epoch.
 
     Parameters
     ----------
     total: int
-        total batch size
+        total number of batches per epoch
     length: int
-        length or progress bar
+        number of chars to define maximum length of progress bar
+
+    Examples
+    --------
+    >>> progress_bar = mx.callback.ProgressBar(total=2)
+    >>> mod.fit(data, num_epoch=5, batch_end_callback=progress_bar)
+    [========--------] 50.0%
+    [================] 100.0%
     """
     def __init__(self, total, length=80):
         self.bar_len = length
@@ -177,7 +200,7 @@ class ProgressBar(object):
         filled_len = int(round(self.bar_len * count / float(self.total)))
         percents = math.ceil(100.0 * count / float(self.total))
         prog_bar = '=' * filled_len + '-' * (self.bar_len - filled_len)
-        sys.stdout.write('[%s] %s%s\r' % (prog_bar, percents, '%'))
+        logging.info('[%s] %s%s\r', prog_bar, percents, '%')
 
 
 class LogValidationMetricsCallback(object):

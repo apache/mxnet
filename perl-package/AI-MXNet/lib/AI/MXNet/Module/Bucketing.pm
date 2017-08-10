@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Module::Bucketing;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -210,14 +227,16 @@ method set_params(
     HashRef[AI::MXNet::NDArray] $arg_params,
     HashRef[AI::MXNet::NDArray] $aux_params,
     Bool                        $allow_missing=0,
-    Bool                        $force_init=1
+    Bool                        $force_init=1,
+    Bool                        $allow_extra=0
 )
 {
     if(not $allow_missing)
     {
         $self->init_params(
             arg_params    => $arg_params,    aux_params => $aux_params,
-            allow_missing => $allow_missing, force_init => $force_init
+            allow_missing => $allow_missing, force_init => $force_init,
+            allow_extra   => $allow_extra
         );
        return;
     }
@@ -232,7 +251,8 @@ method set_params(
     $self->_curr_module->set_params(
         $arg_params, $aux_params,
         allow_missing => $allow_missing,
-        force_init    => $force_init
+        force_init    => $force_init,
+        allow_extra   => $allow_extra
     );
     # because we didn't update self._arg_params, they are dirty now.
     $self->_params_dirty(1);
@@ -244,7 +264,8 @@ method init_params(
     Maybe[HashRef[AI::MXNet::NDArray]] :$arg_params=,
     Maybe[HashRef[AI::MXNet::NDArray]] :$aux_params=,
     Bool                               :$allow_missing=0,
-    Bool                               :$force_init=0
+    Bool                               :$force_init=0,
+    Bool                               :$allow_extra=0
 )
 {
     return if($self->params_initialized and not $force_init);
@@ -254,7 +275,8 @@ method init_params(
         arg_params    => $arg_params,
         aux_params    => $aux_params,
         allow_missing => $allow_missing,
-        force_init    => $force_init
+        force_init    => $force_init,
+        allow_extra   => $allow_extra
     );
     $self->_params_dirty(0);
     $self->params_initialized(1);

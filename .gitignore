@@ -129,7 +129,7 @@ lib
 .DS_Store
 
 #Notebook Automated Test
-!tests/nightly/test_config.txt
+!tests/nightly/test_tutorial_config.txt
 !tests/nightly/TestNotebook
 
 # pip building tools

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments, too-many-statements
 """Executor manager."""
@@ -30,7 +47,7 @@ def _split_input_slice(batch_size, work_load_list):
     Raises
     ------
     ValueError
-        If there are two many splits such that some slice can be empty.
+        In case of too many splits, leading to some empty slices.
     """
     total_work_load = sum(work_load_list)
     batch_num_list = [round(work_load * batch_size / total_work_load)
@@ -44,7 +61,7 @@ def _split_input_slice(batch_size, work_load_list):
         begin = int(min((end, batch_size)))
         end = int(min((begin + batch_num, batch_size)))
         if begin >= end:
-            raise ValueError('Too many slices such that some splits are empty')
+            raise ValueError('Too many slices. Some splits are empty.')
         slices.append(slice(begin, end))
     return slices
 

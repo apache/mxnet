@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=no-member, too-many-lines
 
@@ -81,12 +98,12 @@ class EvalMetric(object):
         if self.output_names is not None:
             pred = [pred[name] for name in self.output_names]
         else:
-            pred = pred.values()
+            pred = list(pred.values())
 
         if self.label_names is not None:
             label = [label[name] for name in self.label_names]
         else:
-            label = label.values()
+            label = list(label.values())
 
         self.update(label, pred)
 
@@ -251,7 +268,7 @@ class CompositeEvalMetric(EvalMetric):
             return ValueError("Metric index {} is out of range 0 and {}".format(
                 index, len(self.metrics)))
 
-    def update_dict(self, labels, preds):
+    def update_dict(self, labels, preds): # pylint: disable=arguments-differ
         if self.label_names is not None:
             labels = OrderedDict([i for i in labels.items()
                                   if i[0] in self.label_names])
@@ -461,7 +478,7 @@ class TopKAccuracy(EvalMetric):
 class F1(EvalMetric):
     """Computes the F1 score of a binary classification problem.
 
-    The F1 score is equvalent to weighted average of the precision and recall,
+    The F1 score is equivalent to weighted average of the precision and recall,
     where the best value is 1.0 and the worst value is 0.0. The formula for F1 score is::
 
         F1 = 2 * (precision * recall) / (precision + recall)
@@ -634,7 +651,7 @@ class Perplexity(EvalMetric):
             label = label.as_in_context(pred.context).reshape((label.size,))
             pred = ndarray.pick(pred, label.astype(dtype='int32'), axis=self.axis)
             if self.ignore_label is not None:
-                ignore = label == self.ignore_label
+                ignore = (label == self.ignore_label).astype(pred.dtype)
                 num -= ndarray.sum(ignore).asscalar()
                 pred = pred*(1-ignore) + ignore
             loss -= ndarray.sum(ndarray.log(ndarray.maximum(1e-10, pred))).asscalar()
@@ -837,10 +854,14 @@ class RMSE(EvalMetric):
 class CrossEntropy(EvalMetric):
     """Computes Cross Entropy loss.
 
-    The cross entropy is given by
+    The cross entropy over a batch of sample size :math:`N` is given by
 
     .. math::
-        -y\\log \\hat{y} + (1-y)\\log (1-\\hat{y})
+       -\\sum_{n=1}^{N}\\sum_{k=1}^{K}t_{nk}\\log (y_{nk}),
+
+    where :math:`t_{nk}=1` if and only if sample :math:`n` belongs to class :math:`k`.
+    :math:`y_{nk}` denotes the probability of sample :math:`n` belonging to
+    class :math:`k`.
 
     Parameters
     ----------
@@ -895,6 +916,60 @@ class CrossEntropy(EvalMetric):
             prob = pred[numpy.arange(label.shape[0]), numpy.int64(label)]
             self.sum_metric += (-numpy.log(prob + self.eps)).sum()
             self.num_inst += label.shape[0]
+
+
+@register
+@alias('pearsonr')
+class PearsonCorrelation(EvalMetric):
+    """Computes Pearson correlation.
+
+    The pearson correlation is given by
+
+    .. math::
+        \\frac{cov(y, \\hat{y})}{\\sigma{y}\\sigma{\\hat{y}}}
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+
+    Examples
+    --------
+    >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
+    >>> labels   = [mx.nd.array([[1, 0], [0, 1], [0, 1]])]
+    >>> pr = mx.metric.PearsonCorrelation()
+    >>> pr.update(labels, predicts)
+    >>> print pr.get()
+    ('pearson-correlation', 0.42163704544016178)
+    """
+    def __init__(self, name='pearsonr',
+                 output_names=None, label_names=None):
+        super(PearsonCorrelation, self).__init__(
+            name, output_names=output_names, label_names=label_names)
+
+    def update(self, labels, preds):
+        """Updates the internal evaluation result.
+
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data.
+        preds : list of `NDArray`
+            Predicted values.
+        """
+        check_label_shapes(labels, preds)
+        for label, pred in zip(labels, preds):
+            check_label_shapes(label, pred, 1)
+            label = label.asnumpy()
+            pred = pred.asnumpy()
+            self.sum_metric += numpy.corrcoef(pred.ravel(), label.ravel())[0, 1]
+            self.num_inst += 1
 
 
 @register

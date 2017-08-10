@@ -37,7 +37,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     exec.forward()
     val forwardOutput = exec.outputs(0)
     val forwardOutputExpected = arr.reduce(_ + _)
-    assert(reldiff(forwardOutput, forwardOutputExpected) < 1e-6)
+    assert(reldiff(forwardOutput, forwardOutputExpected) < 2e-6)
 
     // backward
     val outGrad = Random.uniform(-10, 10, shape)
@@ -214,12 +214,41 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     checkSymbolicBackward(test, Array(dataTmp), Array(NDArray.ones(shape) * 2), Array(npoutGrad))
   }
 
+  test("ones") {
+    val ones = Symbol.ones(shape = Shape(2, 2))
+    val exe = ones.simpleBind(ctx = Context.cpu(), gradReq = "write", shapeDict = Map())
+    exe.forward(isTrain = false)
+    assert(CheckUtils.reldiff(Array(1f, 1f, 1f, 1f), exe.outputs.head.toArray) <= 1e-5f)
+  }
+
+  test("zeros") {
+    val zeros = Symbol.zeros(shape = Shape(2, 2))
+    val exe = zeros.simpleBind(ctx = Context.cpu(), gradReq = "write", shapeDict = Map())
+    exe.forward(isTrain = false)
+    assert(Array(0f, 0f, 0f, 0f) === exe.outputs.head.toArray)
+  }
+
+  test("arange") {
+    for (i <- 0 until 5) {
+      val start = scala.util.Random.nextFloat() * 5
+      val stop = start + scala.util.Random.nextFloat() * 100
+      val step = scala.util.Random.nextFloat() * 4
+      val repeat = (scala.util.Random.nextFloat() * 5).toInt + 1
+      val result = (start until stop by step).flatMap(x => Array.fill[Float](repeat)(x))
+      val x = Symbol.arange(start = start, stop = Some(stop), step = step, repeat = repeat)
+      var exe = x.simpleBind(ctx = Context.cpu(), gradReq = "write", shapeDict = Map())
+      exe.forward(isTrain = false)
+      assert(exe.gradArrays.length == 0)
+      assert(CheckUtils.reldiff(result.toArray, exe.outputs.head.toArray) <= 1e-4f)
+    }
+  }
+
   test("scalar pow") {
     val data = Symbol.Variable("data")
     val shape = Shape(1, 1)
     val dataTmp = NDArray.ones(shape) * 3
     val dataTmpPowered = NDArray.ones(shape) * 9
-    val test = Symbol.pow(data, 2)
+    val test = data ** 2
     // TODO: check numeric gradient
     checkSymbolicForward(test, Array(dataTmp), Array(dataTmpPowered))
     checkSymbolicBackward(test, Array(dataTmp), Array(NDArray.ones(shape)), Array(dataTmp * 2))
@@ -234,7 +263,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     val exp = Symbol.Variable("exp")
     val expTmp = NDArray.ones(shape) * 3
 
-    val test = Symbol.pow(data, exp)
+    val test = data ** exp
 
     // TODO: check numeric gradient
     checkSymbolicForward(test, Seq(dataTmp, expTmp), Seq(NDArray.ones(shape) * 8))
@@ -249,13 +278,330 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   test("pow fn") {
     val shape = Shape(3, 4)
     val exp = Symbol.Variable("exp")
-    val y = Symbol.pow(2, exp)
+    import SymbolConversions._
+    val y = 2 ** exp
     val x = NDArray.ones(shape) * 3
     // TODO: check numeric gradient
     checkSymbolicForward(y, Seq(x), Seq(NDArray.ones(shape) * 8)) // 2**x
     checkSymbolicBackward(y, Seq(x), Seq(NDArray.ones(shape)),
       // log(2) * 2**x
       Seq(NDArray.ones(shape) * 8 * Math.log(2).toFloat))
+  }
+
+  test("scalar equal") {
+    val data = Symbol.Variable("datas")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(0f, 1f, 0f, 0f), shape)
+    val test = Symbol.equal(data, 2f)
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write", shapeDict = Map("datas" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("symbol equal") {
+    val data = Symbol.Variable("datas")
+    val data2 = Symbol.Variable("datas2")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(1f, 0f, 0f, 0f), shape)
+    val test = Symbol.equal(data, data2)
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write",
+      shapeDict = Map("datas" -> shape, "datas2" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+    exec.argDict("datas2").set(Array(1f, 3f, 2f, 6f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+    assert(exec.gradDict("datas2").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("scalar equal 2") {
+    val data = Symbol.Variable("datas")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(0f, 1f, 0f, 0f), shape)
+    val test = Symbol.equal(2f, data)
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write", shapeDict = Map("datas" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("scalar not_equal") {
+    val data = Symbol.Variable("datas")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(1f, 0f, 1f, 1f), shape)
+    val test = Symbol.notEqual(data, 2f)
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write", shapeDict = Map("datas" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("symbol not_equal") {
+    val data = Symbol.Variable("datas")
+    val data2 = Symbol.Variable("datas2")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(0f, 1f, 1f, 1f), shape)
+    val test = Symbol.notEqual(data, data2)
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write",
+      shapeDict = Map("datas" -> shape, "datas2" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+    exec.argDict("datas2").set(Array(1f, 3f, 2f, 6f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+    assert(exec.gradDict("datas2").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("scalar not_equal 2") {
+    val data = Symbol.Variable("datas")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(1f, 0f, 1f, 1f), shape)
+    val test = Symbol.notEqual(2f, data)
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write", shapeDict = Map("datas" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("scalar greater") {
+    val data = Symbol.Variable("datas")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(0f, 0f, 1f, 1f), shape)
+    val test = data > 2f
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write", shapeDict = Map("datas" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("symbol greater") {
+    val data = Symbol.Variable("datas")
+    val data2 = Symbol.Variable("datas2")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(0f, 0f, 1f, 0f), shape)
+    val test = data > data2
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write",
+      shapeDict = Map("datas" -> shape, "datas2" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+    exec.argDict("datas2").set(Array(1f, 3f, 2f, 6f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+    assert(exec.gradDict("datas2").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("scalar greater 2") {
+    val data = Symbol.Variable("datas")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(1f, 0f, 0f, 0f), shape)
+    import SymbolConversions._
+    val test = 2f > data
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write", shapeDict = Map("datas" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("scalar greater_equal") {
+    val data = Symbol.Variable("datas")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(0f, 1f, 1f, 1f), shape)
+    val test = data >= 2f
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write", shapeDict = Map("datas" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("symbol greater_equal") {
+    val data = Symbol.Variable("datas")
+    val data2 = Symbol.Variable("datas2")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(1f, 0f, 1f, 0f), shape)
+    val test = data >= data2
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write",
+      shapeDict = Map("datas" -> shape, "datas2" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+    exec.argDict("datas2").set(Array(1f, 3f, 2f, 6f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+    assert(exec.gradDict("datas2").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("scalar greater_equal 2") {
+    val data = Symbol.Variable("datas")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(1f, 1f, 0f, 0f), shape)
+    import SymbolConversions._
+    val test = 2f >= data
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write", shapeDict = Map("datas" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("scalar lesser") {
+    val data = Symbol.Variable("datas")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(1f, 0f, 0f, 0f), shape)
+    val test = data < 2f
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write", shapeDict = Map("datas" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("symbol lesser") {
+    val data = Symbol.Variable("datas")
+    val data2 = Symbol.Variable("datas2")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(0f, 1f, 0f, 1f), shape)
+    val test = data < data2
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write",
+      shapeDict = Map("datas" -> shape, "datas2" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+    exec.argDict("datas2").set(Array(1f, 3f, 2f, 6f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+    assert(exec.gradDict("datas2").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("scalar lesser 2") {
+    val data = Symbol.Variable("datas")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(0f, 0f, 1f, 1f), shape)
+    import SymbolConversions._
+    val test = 2f < data
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write", shapeDict = Map("datas" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("scalar lesser_equal") {
+    val data = Symbol.Variable("datas")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(1f, 1f, 0f, 0f), shape)
+    val test = data <= 2f
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write", shapeDict = Map("datas" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("symbol lesser_equal") {
+    val data = Symbol.Variable("datas")
+    val data2 = Symbol.Variable("datas2")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(1f, 1f, 0f, 1f), shape)
+    val test = data <= data2
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write",
+      shapeDict = Map("datas" -> shape, "datas2" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+    exec.argDict("datas2").set(Array(1f, 3f, 2f, 6f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
+    assert(exec.gradDict("datas2").toArray === Array.fill[Float](shape.product)(0f))
+  }
+
+  test("scalar lesser_equal 2") {
+    val data = Symbol.Variable("datas")
+    val shape = Shape(2, 2)
+    val dataTmpExpected = NDArray.array(Array(0f, 1f, 1f, 1f), shape)
+    import SymbolConversions._
+    val test = 2f <= data
+
+    val exec = test.simpleBind(Context.cpu(), gradReq = "write", shapeDict = Map("datas" -> shape))
+    exec.argDict("datas").set(Array(1f, 2f, 3f, 4f))
+
+    exec.forward()
+    assert(reldiff(exec.outputs.head, dataTmpExpected) <= 1e-5f)
+
+    exec.backward(NDArray.ones(shape))
+    assert(exec.gradDict("datas").toArray === Array.fill[Float](shape.product)(0f))
   }
 
   test("embedding") {
@@ -564,6 +910,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       NDArray.zeros(Shape(numFilter, inputShape(1), kernel._1, kernel._2)))
     val exeConv = conv.bind(Context.cpu(), args = convArgs, argsGrad = convArgsGrad)
     val convOutGrad = Random.normal(0, 2, exeConv.outputs.head.shape)
+    exeConv.forward()
     exeConv.backward(convOutGrad)
 
     val deconvData = convOutGrad
@@ -572,6 +919,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       NDArray.zeros(Shape(numFilter, inputShape(1), kernel._1, kernel._2)))
     val exeDeconv = deconv.bind(Context.cpu(), args = deconvArgs, argsGrad = deconvArgsGrad)
     val deconvOutGrad = convData
+    exeDeconv.forward()
     exeDeconv.backward(deconvOutGrad)
     assert(reldiff(convArgsGrad(1), deconvArgsGrad(1)) < 1e-5)
   }

@@ -2,7 +2,7 @@
 
 This fold contains examples for image classification. The goal of image
 classifcation is to identify the objects contained in images. The following
-[example](http://mxnet.io/tutorials/python/predict_imagenet.html) shows
+[example](http://mxnet.io/tutorials/python/predict_image.html) shows
 recognized object classes with corresponding probabilities using a pre-traind
 model.
 
@@ -39,7 +39,7 @@ commonly used options are listed as following:
 
 | Argument                      | Comments                                 |
 | ----------------------------- | ---------------------------------------- |
-| `network`                     | The network to train, which is defined in [symbol/](https://github.com/dmlc/mxnet/tree/master/example/image-classification/symbol). Some networks may accept additional arguments, such as `--num-layers` is used to specify the number of layers in ResNet. |
+| `network`                     | The network to train, which is defined in [symbol/](https://github.com/dmlc/mxnet/tree/master/example/image-classification/symbols). Some networks may accept additional arguments, such as `--num-layers` is used to specify the number of layers in ResNet. |
 | `data-train`, `data-val`      | The data for training and validation. It can be either a filename or a directory. For the latter, all files in the directory will be used. But if `--benchmark 1` is used, then there two arguments will be ignored. |
 | `gpus`                        | The list of GPUs to use, such as `0` or `0,3,4,7`. If an empty string `''` is given, then we will use CPU. |
 | `batch-size`                  | The batch size for SGD training. It specifies the number of examples used for each SGD iteration. If we use *k* GPUs, then each GPU will compute *batch_size/k* examples in each time. |
@@ -102,13 +102,13 @@ We provide multiple pre-trained models on various datasets. Use
 [common/modelzone.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/common/modelzoo.py)
 to download these models. These models can be used in any front-end language
 MXNet supports. For example,
-[the tutorial](http://mxnet.io/tutorials/python/predict_imagenet.html) shows how
+[the tutorial](http://mxnet.io/tutorials/python/predict_image.html) shows how
 to classify an image with jupyter notebook.
 
 ### ImageNet 1K
 
 It is first used by
-[ImageNet challenge 2012](http://mxnet.io/tutorials/python/predict_imagenet.html),
+[ImageNet challenge 2012](http://www.image-net.org/challenges/LSVRC/2012/),
 which contains about 1.2M images with 1000 classes. To test these models, one
 can use
 [data/imagenet1k-val.sh](https://github.com/dmlc/mxnet/blob/master/example/image-classification/data/imagenet1k-val.sh)

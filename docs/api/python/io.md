@@ -62,6 +62,7 @@ A detailed tutorial is available at
     recordio.MXRecordIO
     recordio.MXIndexedRecordIO
     image.ImageIter
+    image.ImageDetIter
 ```
 
 ## Helper classes and functions
@@ -81,33 +82,6 @@ Data structures and other iterators provided in the ``mxnet.io`` packages.
     io.MXDataIter
 ```
 
-A list of image modification functions provided by ``mxnet.image``.
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    image.imdecode
-    image.scale_down
-    image.resize_short
-    image.fixed_crop
-    image.random_crop
-    image.center_crop
-    image.color_normalize
-    image.random_size_crop
-    image.ResizeAug
-    image.RandomCropAug
-    image.RandomSizedCropAug
-    image.CenterCropAug
-    image.RandomOrderAug
-    image.ColorJitterAug
-    image.LightingAug
-    image.ColorNormalizeAug
-    image.HorizontalFlipAug
-    image.CastAug
-    image.CreateAugmenter
-```
-
 Functions to read and write RecordIO files.
 
 ```eval_rst
@@ -123,7 +97,7 @@ Functions to read and write RecordIO files.
 ## Develop a new iterator
 
 Writing a new data iterator in Python is straightforward. Most MXNet
-training/inference programs accept an iteratable object with ``provide_data``
+training/inference programs accept an iterable object with ``provide_data``
 and ``provide_label`` properties.
 This [tutorial](http://mxnet.io/tutorials/basic/data.html) explains how to
 write an iterator from scratch.
@@ -158,14 +132,26 @@ Parsing and performing another pre-processing such as augmentation may be expens
 If performance is critical, we can implement a data iterator in C++. Refer to
 [src/io](https://github.com/dmlc/mxnet/tree/master/src/io) for examples.
 
+### Change batch layout
+
+By default, the backend engine treats the first dimension of each data and label variable in data
+iterators as the batch size (i.e. `NCHW` or `NT` layout). In order to override the axis for batch size,
+the `provide_data` (and `provide_label` if there is label) properties should include the layouts. This
+is especially useful in RNN since `TNC` layouts are often more efficient. For example:
+
+```python
+@property
+def provide_data(self):
+    return [DataDesc(name='seq_var', shape=(seq_length, batch_size), layout='TN')]
+```
+The backend engine will recognize the index of `N` in the `layout` as the axis for batch size.
+
 ## API Reference
 
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 .. automodule:: mxnet.io
-    :members:
-.. automodule:: mxnet.image
     :members:
 .. automodule:: mxnet.recordio
     :members:

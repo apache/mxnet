@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Metric;
 use strict;
 use warnings;
@@ -484,12 +501,61 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
         my $label_shape = $label->shape->at(0);
         my $pred_shape  = $pred->shape->at(-1);
         confess(
-            "Size of label  $label_shape and 
+            "Size of label  $label_shape and
             .first dimension of pred $pred_shape do not match"
         ) unless $label_shape == $pred_shape;
         my $prob = $pred->index($label);
         $self->sum_metric($self->sum_metric + (-($prob + $self->eps)->log)->sum);
         $self->num_inst($self->num_inst + $label_shape);
+    }, $labels, $preds);
+}
+
+package AI::MXNet::PearsonCorrelation;
+use Mouse;
+use AI::MXNet::Base;
+extends 'AI::MXNet::EvalMetric';
+has '+name'   => (default => 'pearson-correlation');
+
+=head1 NAME
+
+    AI::MXNet::PearsonCorrelation
+=cut
+
+=head1 DESCRIPTION
+
+    Computes Pearson correlation.
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+
+    Examples
+    --------
+    >>> $predicts = [mx->nd->array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
+    >>> $labels   = [mx->nd->array([[1, 0], [0, 1], [0, 1]])]
+    >>> $pr = mx->metric->PearsonCorrelation()
+    >>> $pr->update($labels, $predicts)
+    >>> print pr->get()
+    ('pearson-correlation', '0.421637061887229')
+=cut
+
+method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
+{
+    AI::MXNet::Metric::check_label_shapes($labels, $preds);
+    zip(sub {
+        my ($label, $pred) = @_;
+        AI::MXNet::Metric::check_label_shapes($label, $pred);
+        $label = $label->aspdl->flat;
+        $pred  = $pred->aspdl->flat;
+        my ($label_mean, $label_stdv) = ($label->stats)[0, 6];
+        my ($pred_mean, $pred_stdv) = ($pred->stats)[0, 6];
+        $self->sum_metric(
+            $self->sum_metric
+                +
+            ((($label-$label_mean)*($pred-$pred_mean))->sum/$label->nelem)/(($label_stdv*$pred_stdv)->at(0))
+        );
+        $self->num_inst($self->num_inst + 1);
     }, $labels, $preds);
 }
 
@@ -557,6 +623,7 @@ my %metrics = qw/
     top_k_accuracy AI::MXNet::TopKAccuracy
     Perplexity     AI::MXNet::Perplexity
     perplexity     AI::MXNet::Perplexity
+    pearsonr       AI::MXNet::PearsonCorrelation
 /;
 
 method create(Metric|ArrayRef[Metric] $metric, %kwargs)

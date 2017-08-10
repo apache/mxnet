@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint:skip-file
 import sys
 sys.path.insert(0, "../../python")
@@ -152,7 +169,7 @@ def setup_rnn_model(default_ctx,
     models = {}
     buckets.reverse()
     for bucket_key in buckets:
-        # bind max_len first 
+        # bind max_len first
         rnn_sym = lstm_unroll(num_lstm_layer=num_lstm_layer,
                           num_hidden=num_hidden,
                           seq_len=seq_len,
@@ -190,7 +207,7 @@ def setup_rnn_model(default_ctx,
                 args_grad[name] = mx.nd.zeros(shape, ctx)
             if not name.startswith("t"):
                 print("%s group=%s, ctx=%s" % (name, group, str(ctx)))
-        
+
         #bind with shared executor
         rnn_exec = None
         if max_len == bucket_key:
@@ -220,7 +237,7 @@ def setup_rnn_model(default_ctx,
                              h=arg_dict["l%d_init_h" % i]) for i in range(num_lstm_layer)]
 
         seq_data = [rnn_exec.arg_dict["t%d_data" % i] for i in range(seq_len)]
-        # we don't need to store the last state 
+        # we don't need to store the last state
         last_states = None
 
         if concat_decode:
@@ -235,7 +252,7 @@ def setup_rnn_model(default_ctx,
                      seq_data=seq_data, seq_labels=seq_labels, seq_outputs=seq_outputs,
                      param_blocks=param_blocks)
         models[bucket_key] = model
-    buckets.reverse()    
+    buckets.reverse()
     return models
 
 
@@ -256,7 +273,7 @@ def set_rnn_inputs(m, X, begin):
 def set_rnn_inputs_from_batch(m, batch, batch_seq_length, batch_size):
   X = batch.data
   for seqidx in range(batch_seq_length):
-    idx = seqidx 
+    idx = seqidx
     next_idx = (seqidx + 1) % batch_seq_length
     x = X[idx, :]
     y = X[next_idx, :]
@@ -295,20 +312,20 @@ def train_lstm(model, X_train_batch, X_val_batch,
         nbatch = 0
         train_nll = 0
         tic = time.time()
-        for data_batch in X_train_batch:  
+        for data_batch in X_train_batch:
             batch_seq_length = data_batch.bucket_key
             m = model[batch_seq_length]
             # reset init state
             for state in m.init_states:
               state.c[:] = 0.0
               state.h[:] = 0.0
-              
+
             head_grad = []
             if use_loss:
               ctx = m.seq_outputs[0].context
               head_grad = [mx.nd.ones((1,), ctx) for x in m.seq_outputs]
 
-            set_rnn_inputs_from_batch(m, data_batch, batch_seq_length, batch_size)  
+            set_rnn_inputs_from_batch(m, data_batch, batch_seq_length, batch_size)
 
             m.rnn_exec.forward(is_train=True)
             # probability of each label class, used to evaluate nll
@@ -390,7 +407,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
             else:
                 val_nll += sum([x.asscalar() for x in seq_loss]) / batch_size
             nbatch += batch_size
-            
+
         perp = np.exp(val_nll / nbatch)
         print("Iter [%d] Val: NLL=%.3f, Perp=%.3f" % (
             iteration, val_nll / nbatch, np.exp(val_nll / nbatch)))
@@ -401,7 +418,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
         X_val_batch.reset()
         X_train_batch.reset()
 
-# is this function being used? 
+# is this function being used?
 def setup_rnn_sample_model(ctx,
                            params,
                            num_lstm_layer,

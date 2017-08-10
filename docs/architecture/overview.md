@@ -184,7 +184,7 @@ In MXNet, an operator is a class that contains both actual computation logic
 and auxiliary information that can aid the system in performing optimizations,
 like in-place updates and auto-derivatives.
 To understand the remainder of the document,
-we recommend that you familiarize youself with the `mshadow` library,
+we recommend that you familiarize yourself with the `mshadow` library,
 because all operators compute on the tensor-like structure `mshadow::TBlob`
 provided by the system during runtime.
 

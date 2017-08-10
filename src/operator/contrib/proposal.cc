@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file proposal.cc
  * \brief
  * \author Piotr Teterwak, Bing Xu, Jian Guo
@@ -326,9 +344,9 @@ class ProposalOp : public Operator{
     std::memcpy(workspace_proposals.dptr_, &anchors[0], sizeof(float) * anchors.size());
 
     // Enumerate all shifted anchors
-    for (index_t i = 0; i < num_anchors; ++i) {
-      for (index_t j = 0; j < height; ++j) {
-        for (index_t k = 0; k < width; ++k) {
+    for (index_t i = 0; i < static_cast<index_t>(num_anchors); ++i) {
+      for (index_t j = 0; j < static_cast<index_t>(height); ++j) {
+        for (index_t k = 0; k < static_cast<index_t>(width); ++k) {
           index_t index = j * (width * num_anchors) + k * (num_anchors) + i;
           workspace_proposals[index][0] = workspace_proposals[i][0] + k * param_.feature_stride;
           workspace_proposals[index][1] = workspace_proposals[i][1] + j * param_.feature_stride;

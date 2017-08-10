@@ -1,5 +1,14 @@
 Revision history for Perl extension AI::MXNet
 
+1.0102 Sun Aug  6 16:55:08 PDT 2017
+        - bugfixes in Image.pm, updated tests, added PearsonCorrelation metric, added Convolutional RNN modules.
+
+1.0101  Sun Jul  2 17:16:01 PDT 2017
+        - reworked CachedOp, two new optimizers, auto module reshape, using strings to index the kvstore.
+
+1.01    Sat Jun 10 23:57:27 PDT 2017
+        - sync with python.
+
 0.9507  Thu May 11 17:04:44 PDT 2017
         - added AutoGrad, bugfixes.
 

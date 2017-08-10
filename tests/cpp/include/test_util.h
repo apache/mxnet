@@ -1,11 +1,29 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2017 by Contributors
  * \file test_util.h
  * \brief unit test performance analysis functions
  * \author Chris Olivier
 */
-#ifndef TESTS_CPP_INCLUDE_TEST_UTIL_H_
-#define TESTS_CPP_INCLUDE_TEST_UTIL_H_
+#ifndef TEST_UTIL_H_
+#define TEST_UTIL_H_
 
 #include <gtest/gtest.h>
 #include <mxnet/storage.h>
@@ -160,14 +178,14 @@ inline StreamType& print_blob(StreamType *_os, const TBlob &blob,
 
   if (dim == 1) {
     // probably a tensor (mshadow::Tensor is deprecated)
-    TBlob changed(blob.dptr<DType>(), TShape(3), blob.dev_mask_);
+    TBlob changed(blob.dptr<DType>(), TShape(3), blob.dev_mask(), blob.dev_id());
     changed.shape_[0] = 1;
     changed.shape_[1] = 1;
     changed.shape_[2] = blob.shape_[0];
     return print_blob<DType>(&os, changed, false, false);
   } else if (dim == 2) {
     // probably a tensor (mshadow::Tensor is deprecated)
-    TBlob changed(blob.dptr<DType>(), TShape(4), blob.dev_mask_);
+    TBlob changed(blob.dptr<DType>(), TShape(4), blob.dev_mask(), blob.dev_id());
     changed.shape_[0] = 1;
     changed.shape_[1] = 1;
     changed.shape_[2] = blob.shape_[0];
@@ -413,4 +431,4 @@ struct ScopeSet {
 }  // namespace test
 }  // namespace mxnet
 
-#endif  // TESTS_CPP_INCLUDE_TEST_UTIL_H_
+#endif  // TEST_UTIL_H_

@@ -1,23 +1,20 @@
 Char RNN Example
 =============================================
 
-This example aims to show how to use lstm model to build a char level language model, and generate text from it. We use a tiny shakespeare text for demo purpose.
-
-Data can be found at [here](https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare)
-
-Preface
--------
-This tutorial is written in Rmarkdown.
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.io/en/latest/packages/r/CharRnnModel.html)
-- You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/CharRnnModel.Rmd)
+This example aims to show how to use the LSTM model to build a char-level language model, and generate text from it. We use a tiny shakespeare text for demo purpose. Data can be found at [here](https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare).
+This tutorial is written in Rmarkdown. You can find the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/CharRnnModel.Rmd).
 
 Load Data 
 ---------
+
 First of all, load in the data and preprocess it.
+
 ```{r}
 require(mxnet)
 ```
+
 Set basic network parameters.
+
 ```{r}
 batch.size = 32
 seq.len = 32
@@ -30,7 +27,9 @@ wd=0.00001
 clip_gradient=1
 update.period = 1
 ```
-download the data.
+
+Download the data.
+
 ```{r}
 download.data <- function(data_dir) {
     dir.create(data_dir, showWarnings = FALSE)
@@ -40,7 +39,9 @@ download.data <- function(data_dir) {
     }
 }
 ```
+
 Make dictionary from text.
+
 ```{r}
 make.dict <- function(text, max.vocab=10000) {
     text <- strsplit(text, '')
@@ -58,7 +59,9 @@ make.dict <- function(text, max.vocab=10000) {
     return (dic)
 }
 ```
+
 Transfer text into data feature.
+
 ```{r}
 make.data <- function(file.path, seq.len=32, max.vocab=10000, dic=NULL) {
     fi <- file(file.path, "r")
@@ -91,7 +94,9 @@ make.data <- function(file.path, seq.len=32, max.vocab=10000, dic=NULL) {
     return (list(data=data, dic=dic, lookup.table=lookup.table))
 }
 ```
+
 Move tail text.
+
 ```{r}
 drop.tail <- function(X, batch.size) {
     shape <- dim(X)
@@ -99,7 +104,9 @@ drop.tail <- function(X, batch.size) {
     return (X[, 1:(nstep * batch.size)])
 }
 ```
-get the label of X
+
+Get the label of X
+
 ```{r}
 get.label <- function(X) {
     label <- array(0, dim=dim(X))
@@ -113,7 +120,9 @@ get.label <- function(X) {
     return (label)
 }
 ```
-get training data and eval data
+
+Get training data and eval data
+
 ```{r}
 download.data("./data/")
 ret <- make.data("./data/input.txt", seq.len=seq.len)
@@ -141,6 +150,7 @@ X.val <- list(data=X.val.data, label=X.val.label)
 
 Training Model
 --------------
+
 In `mxnet`, we have a function called `mx.lstm` so that users can build a general lstm model. 
 
 ```{r}
@@ -164,7 +174,9 @@ model <- mx.lstm(X.train, X.val,
 
 Inference from model
 --------------------
-helper function for random sample.
+
+Some helper functions for random sample.
+
 ```{r}
 cdf <- function(weights) {
     total <- sum(weights)
@@ -190,6 +202,7 @@ search.val <- function(cdf, x) {
     }
     return (l)
 }
+
 choice <- function(weights) {
     cdf.vals <- cdf(as.array(weights))
     x <- runif(1)
@@ -197,7 +210,9 @@ choice <- function(weights) {
     return (idx)
 }
 ```
-we can use random output or fixed output by choosing largest probability.
+
+We can use random output or fixed output by choosing largest probability.
+
 ```{r}
 make.output <- function(prob, sample=FALSE) {
     if (!sample) {
@@ -212,7 +227,7 @@ make.output <- function(prob, sample=FALSE) {
 ```
 
 In `mxnet`, we have a function called `mx.lstm.inference` so that users can build a inference from lstm model and then use function `mx.lstm.forward` to get forward output from the inference.
-Build inference from model.
+
 ```{r}
 infer.model <- mx.lstm.inference(num.lstm.layer=num.lstm.layer,
                                  input.size=vocab,
@@ -222,7 +237,9 @@ infer.model <- mx.lstm.inference(num.lstm.layer=num.lstm.layer,
                                  arg.params=model$arg.params,
                                  ctx=mx.cpu())
 ```
-generate a sequence of 75 chars using function `mx.lstm.forward`.
+
+Generate a sequence of 75 chars using function `mx.lstm.forward`.
+
 ```{r}
 start <- 'a'
 seq.len <- 75
@@ -238,7 +255,7 @@ for (i in (1:(seq.len-1))) {
     last.id <- make.output(prob, random.sample)
     out <- paste0(out, lookup.table[[last.id]])
 }
-cat (paste0(out, "\n"))
+message(out)
 ```
 The result:
 ```
@@ -250,4 +267,5 @@ Other RNN models
 ----------------
 In `mxnet`, other RNN models like custom RNN and gru is also provided.
 - For **custom RNN model**, you can replace `mx.lstm` with `mx.rnn` to train rnn model. Also, you can replace `mx.lstm.inference` and `mx.lstm.forward` with `mx.rnn.inference` and `mx.rnn.forward` to inference from rnn model and get forward result from the inference model.
+
 - For **GRU model**, you can replace `mx.lstm` with `mx.gru` to train gru model. Also, you can replace `mx.lstm.inference` and `mx.lstm.forward` with `mx.gru.inference` and `mx.gru.forward` to inference from gru model and get forward result from the inference model.

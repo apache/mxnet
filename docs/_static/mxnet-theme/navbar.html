@@ -74,7 +74,7 @@ Previous Navbar Layout End -->
       <script> function getRootPath(){ return "{{url_root}}" } </script>
       <div class="burgerIcon dropdown">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">☰</a>
-          <ul id="burgerMenu" class="dropdown-menu">
+          <ul id="burgerMenu" class="dropdown-menu dropdown-menu-right">
               <li><a href="{{url_root}}get_started/install.html">Install</a></li>
               {% for name in ['Tutorials', 'How To'] %}
               <li><a href="{{url_root}}{{name.lower()|replace(" ", "_")}}/index.html">{{name}}</a></li>
@@ -91,12 +91,12 @@ Previous Navbar Layout End -->
               </li>
               {% endfor %}
               <li><a href="{{url_root}}architecture/index.html">Architecture</a></li>
-		      <li><a href="{{url_root}}community/index.html">Community</a></li>
+		      <li><a class="main-nav-link" href="https://github.com/dmlc/mxnet">Github</a></li>
           </ul>
       </div>
       <div class="plusIcon dropdown">
         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></a>
-        <ul id="plusMenu" class="dropdown-menu"></ul>
+        <ul id="plusMenu" class="dropdown-menu dropdown-menu-right"></ul>
       </div>
       <div id="search-input-wrap">
           {{searchform('', False)}}

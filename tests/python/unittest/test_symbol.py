@@ -1,9 +1,27 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import copy
 import os
 import re
 import mxnet as mx
 import numpy as np
 from common import models
+from mxnet.test_utils import discard_stderr
 import pickle as pkl
 
 def test_symbol_basic():
@@ -216,25 +234,18 @@ def test_zero_prop2():
     exe.forward()
     exe.backward()
 
-    try:
-        y.simple_bind(ctx=mx.cpu(), x=(10, 10), idx=(10,),
-                      type_dict={'x': np.float32, 'idx': np.int32})
-    except:
-        return
+    # The following bind() should throw an exception. We discard the expected stderr
+    # output for this operation only in order to keep the test logs clean.
+    with discard_stderr():
+        try:
+            y.simple_bind(ctx=mx.cpu(), x=(10, 10), idx=(10,),
+                          type_dict={'x': np.float32, 'idx': np.int32})
+        except:
+            return
 
     assert False
 
+
 if __name__ == '__main__':
-    test_zero_prop2()
-    test_zero_prop()
-    test_blockgrad()
-    test_symbol_children()
-    test_load_000800()
-    test_symbol_infer_shape_var()
-    test_symbol_infer_shape()
-    test_symbol_infer_type()
-    test_symbol_internal()
-    test_symbol_basic()
-    test_symbol_compose()
-    test_symbol_saveload()
-    test_symbol_pickle()
+    import nose
+    nose.runmodule()

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import os
@@ -11,6 +28,7 @@ import argparse
 import cv2
 import time
 import traceback
+from builtins import range
 
 try:
     import multiprocessing
@@ -58,8 +76,8 @@ def make_list(args):
         random.seed(100)
         random.shuffle(image_list)
     N = len(image_list)
-    chunk_size = (N + args.chunks - 1) / args.chunks
-    for i in xrange(args.chunks):
+    chunk_size = (N + args.chunks - 1) // args.chunks
+    for i in range(args.chunks):
         chunk = image_list[i * chunk_size:(i + 1) * chunk_size]
         if args.chunks > 1:
             str_chunk = '_%d' % i
@@ -89,7 +107,7 @@ def read_list(path_in):
                 continue
             try:
                 item = [int(line[0])] + [line[-1]] + [float(i) for i in line[1:-1]]
-            except Exception, e:
+            except Exception as e:
                 print('Parsing lst met error for %s, detail: %s' %(line, e))
                 continue
             yield item
@@ -104,11 +122,11 @@ def image_encode(args, i, item, q_out):
 
     if args.pass_through:
         try:
-            with open(fullpath) as fin:
+            with open(fullpath, 'rb') as fin:
                 img = fin.read()
             s = mx.recordio.pack(header, img)
             q_out.put((i, s, item))
-        except Exception, e:
+        except Exception as e:
             traceback.print_exc()
             print('pack_img error:', item[1], e)
             q_out.put((i, None, item))
@@ -127,22 +145,22 @@ def image_encode(args, i, item, q_out):
         return
     if args.center_crop:
         if img.shape[0] > img.shape[1]:
-            margin = (img.shape[0] - img.shape[1]) / 2;
+            margin = (img.shape[0] - img.shape[1]) // 2;
             img = img[margin:margin + img.shape[1], :]
         else:
-            margin = (img.shape[1] - img.shape[0]) / 2;
+            margin = (img.shape[1] - img.shape[0]) // 2;
             img = img[:, margin:margin + img.shape[0]]
     if args.resize:
         if img.shape[0] > img.shape[1]:
-            newsize = (args.resize, img.shape[0] * args.resize / img.shape[1])
+            newsize = (args.resize, img.shape[0] * args.resize // img.shape[1])
         else:
-            newsize = (img.shape[1] * args.resize / img.shape[0], args.resize)
+            newsize = (img.shape[1] * args.resize // img.shape[0], args.resize)
         img = cv2.resize(img, newsize)
 
     try:
         s = mx.recordio.pack_img(header, img, quality=args.quality, img_fmt=args.encoding)
         q_out.put((i, s, item))
-    except Exception, e:
+    except Exception as e:
         traceback.print_exc()
         print('pack_img error on file: %s' % fullpath, e)
         q_out.put((i, None, item))
@@ -279,8 +297,11 @@ if __name__ == '__main__':
                     write_process.join()
                 else:
                     print('multiprocessing not available, fall back to single threaded encoding')
-                    import Queue
-                    q_out = Queue.Queue()
+                    try:
+                        import Queue as queue
+                    except ImportError:
+                        import queue
+                    q_out = queue.Queue()
                     fname = os.path.basename(fname)
                     fname_rec = os.path.splitext(fname)[0] + '.rec'
                     fname_idx = os.path.splitext(fname)[0] + '.idx'

@@ -11,9 +11,6 @@
 
 using namespace mxnet::cpp;
 
-static const Symbol BN_BETA;
-static const Symbol BN_GAMMA;
-
 Symbol ConvFactoryBN(Symbol data, int num_filter,
                      Shape kernel, Shape stride, Shape pad,
                      const std::string & name,
@@ -23,7 +20,12 @@ Symbol ConvFactoryBN(Symbol data, int num_filter,
   Symbol conv = Convolution("conv_" + name + suffix, data,
                             conv_w, conv_b, kernel,
                             num_filter, stride, Shape(1, 1), pad);
-  Symbol bn = BatchNorm("bn_" + name + suffix, conv, Symbol(), Symbol(), Symbol(), Symbol());
+  std::string name_suffix = name + suffix;
+  Symbol gamma(name_suffix + "_gamma");
+  Symbol beta(name_suffix + "_beta");
+  Symbol mmean(name_suffix + "_mmean");
+  Symbol mvar(name_suffix + "_mvar");
+  Symbol bn = BatchNorm("bn_" + name + suffix, conv, gamma, beta, mmean, mvar);
   return Activation("relu_" + name + suffix, bn, "relu");
 }
 
@@ -154,9 +156,12 @@ int main(int argc, char const *argv[]) {
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
   opt->SetParam("momentum", 0.9)
      ->SetParam("rescale_grad", 1.0 / batch_size)
-     ->SetParam("clip_gradient", 10);
+     ->SetParam("clip_gradient", 10)
+     ->SetParam("lr", learning_rate)
+     ->SetParam("wd", weight_decay);
 
   auto *exec = inception_bn_net.SimpleBind(Context::gpu(), args_map);
+  auto arg_names = inception_bn_net.ListArguments();
 
   for (int iter = 0; iter < max_epoch; ++iter) {
     LG << "Epoch: " << iter;
@@ -169,7 +174,12 @@ int main(int argc, char const *argv[]) {
 
       exec->Forward(true);
       exec->Backward();
-      exec->UpdateAll(opt, learning_rate, weight_decay);
+      // Update parameters
+      for (size_t i = 0; i < arg_names.size(); ++i) {
+        if (arg_names[i] == "data" || arg_names[i] == "data_label") continue;
+        opt->Update(i, exec->arg_arrays[i], exec->grad_arrays[i]);
+      }
+
       NDArray::WaitAll();
     }
 

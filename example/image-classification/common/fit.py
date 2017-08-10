@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 import logging
 import os
@@ -84,6 +101,8 @@ def add_fit_args(parser):
                        help='report the top-k accuracy. 0 means no report.')
     train.add_argument('--test-io', type=int, default=0,
                        help='1 means test reading speed without training')
+    train.add_argument('--dtype', type=str, default='float32',
+                       help='precision: float32 or float16')
     return train
 
 def fit(args, network, data_loader, **kwargs):
@@ -146,7 +165,8 @@ def fit(args, network, data_loader, **kwargs):
             'learning_rate': lr,
             'momentum' : args.mom,
             'wd' : args.wd,
-            'lr_scheduler': lr_scheduler}
+            'lr_scheduler': lr_scheduler,
+            'multi_precision': True}
 
     monitor = mx.mon.Monitor(args.monitor, pattern=".*") if args.monitor > 0 else None
 

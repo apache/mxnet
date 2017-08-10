@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file softmax_output.cc
  * \brief
  * \author Bing Xu
@@ -20,10 +38,6 @@ Operator *CreateOp<cpu>(SoftmaxOutputParam param, int dtype) {
 // DO_BIND_DISPATCH comes from operator_common.h
 Operator *SoftmaxOutputProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                      std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
-  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
@@ -32,13 +46,13 @@ DMLC_REGISTER_PARAMETER(SoftmaxOutputParam);
 MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
 .describe(R"code(Computes the gradient of cross entropy loss with respect to softmax output.
 
-- This operator computes the graident in two steps.
+- This operator computes the gradient in two steps.
   The cross entropy loss does not actually need to be computed.
 
   - Applies softmax function on the input array.
   - Computes and returns the gradient of cross entropy loss w.r.t. the softmax output.
 
-- The softmax function, cross entropy loss and graident is given by:
+- The softmax function, cross entropy loss and gradient is given by:
 
   - Softmax Function:
 
@@ -71,7 +85,28 @@ MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
   The provided label can be a one-hot label array or a probability label array.
 
   - If the parameter `use_ignore` is ``true``, `ignore_label` can specify input instances
-    with a particular label to be ignored during backward propagation.
+    with a particular label to be ignored during backward propagation. **This has no effect when
+    softmax `output` has same shape as `label`**.
+
+    Example::
+
+      data = [[1,2,3,4],[2,2,2,2],[3,3,3,3],[4,4,4,4]]
+      label = [1,0,2,3]
+      ignore_label = 1
+      SoftmaxOutput(data=data, label = label,\
+                    multi_output=true, use_ignore=true,\
+                    ignore_label=ignore_label)
+      ## forward softmax output
+      [[ 0.0320586   0.08714432  0.23688284  0.64391428]
+       [ 0.25        0.25        0.25        0.25      ]
+       [ 0.25        0.25        0.25        0.25      ]
+       [ 0.25        0.25        0.25        0.25      ]]
+      ## backward gradient output
+      [[ 0.    0.    0.    0.  ]
+       [-0.75  0.25  0.25  0.25]
+       [ 0.25  0.25 -0.75  0.25]
+       [ 0.25  0.25  0.25 -0.75]]
+      ## notice that the first row is all 0 because label[0] is 1, which is equal to ignore_label.
 
   - The parameter `grad_scale` can be used to rescale the gradient, which is often used to
     give each loss function different weights.

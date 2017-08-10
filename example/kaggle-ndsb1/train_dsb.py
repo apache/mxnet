@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import find_mxnet
 import mxnet as mx
 import logging
@@ -23,7 +40,7 @@ parser.add_argument('--clip-gradient', type=float, default=5.,
                     help='clip min/max gradient to prevent extreme value')
 parser.add_argument('--num-epochs', type=int, default=100,
                     help='the number of training epochs')
-parser.add_argument('--load-epoch', type=int, 
+parser.add_argument('--load-epoch', type=int,
                     help="load the model on an epoch using the model-prefix")
 parser.add_argument('--batch-size', type=int, default=64,
                     help='the batch size')
@@ -35,7 +52,7 @@ parser.add_argument('--num-examples', type=int, default=20000,
                     help='the number of training examples')
 parser.add_argument('--num-classes', type=int, default=121,
                     help='the number of classes')
-parser.add_argument('--log-file', type=str, 
+parser.add_argument('--log-file', type=str,
 		    help='the name of log file')
 parser.add_argument('--log-dir', type=str, default="/tmp/",
                     help='directory of the log file')
@@ -63,7 +80,7 @@ def get_iterator(args, kv):
         rand_crop   = True,
         rand_mirror = True,
     )
-    
+
     # validate data iterator
     val = mx.io.ImageRecordIter(
         path_imgrec = args.data_dir + "va.rec",

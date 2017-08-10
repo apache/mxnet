@@ -292,6 +292,89 @@ object NDArray {
   }
 
   /**
+   * Returns the result of element-wise **equal to** (==) comparison operation with broadcasting.
+   * For each element in input arrays, return 1(true) if corresponding elements are same,
+   * otherwise return 0(false).
+   */
+  def equal(lhs: NDArray, rhs: NDArray): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("broadcast_equal", Seq(lhs, rhs))
+  }
+
+  def equal(lhs: NDArray, rhs: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_equal_scalar", Seq(lhs, rhs))
+  }
+
+  /**
+   * Returns the result of element-wise **not equal to** (!=) comparison operation
+   * with broadcasting.
+   * For each element in input arrays, return 1(true) if corresponding elements are different,
+   * otherwise return 0(false).
+   */
+  def notEqual(lhs: NDArray, rhs: NDArray): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("broadcast_not_equal", Seq(lhs, rhs))
+  }
+
+  def notEqual(lhs: NDArray, rhs: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_not_equal_scalar", Seq(lhs, rhs))
+  }
+
+  /**
+   * Returns the result of element-wise **greater than** (>) comparison operation
+   * with broadcasting.
+   * For each element in input arrays, return 1(true) if lhs elements are greater than rhs,
+   * otherwise return 0(false).
+   */
+  def greater(lhs: NDArray, rhs: NDArray): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("broadcast_greater", Seq(lhs, rhs))
+  }
+
+  def greater(lhs: NDArray, rhs: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_greater_scalar", Seq(lhs, rhs))
+  }
+
+  /**
+   * Returns the result of element-wise **greater than or equal to** (>=) comparison
+   * operation with broadcasting.
+   * For each element in input arrays, return 1(true) if lhs elements are greater than equal to rhs,
+   * otherwise return 0(false).
+   */
+  def greaterEqual(lhs: NDArray, rhs: NDArray): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("broadcast_greater_equal", Seq(lhs, rhs))
+  }
+
+  def greaterEqual(lhs: NDArray, rhs: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_greater_equal_scalar", Seq(lhs, rhs))
+  }
+
+  /**
+   * Returns the result of element-wise **lesser than** (<) comparison operation
+   * with broadcasting.
+   * For each element in input arrays, return 1(true) if lhs elements are less than rhs,
+   * otherwise return 0(false).
+   */
+  def lesser(lhs: NDArray, rhs: NDArray): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("broadcast_lesser", Seq(lhs, rhs))
+  }
+
+  def lesser(lhs: NDArray, rhs: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_lesser_scalar", Seq(lhs, rhs))
+  }
+
+  /**
+   * Returns the result of element-wise **lesser than or equal to** (<=) comparison
+   * operation with broadcasting.
+   * For each element in input arrays, return 1(true) if lhs elements are
+   * lesser than equal to rhs, otherwise return 0(false).
+   */
+  def lesserEqual(lhs: NDArray, rhs: NDArray): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("broadcast_lesser_equal", Seq(lhs, rhs))
+  }
+
+  def lesserEqual(lhs: NDArray, rhs: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_lesser_equal_scalar", Seq(lhs, rhs))
+  }
+
+  /**
    * Create a new NDArray that copies content from source_array.
    * @param sourceArr Source data to create NDArray from.
    * @param shape shape of the NDArray
@@ -302,6 +385,27 @@ object NDArray {
     val arr = empty(shape, ctx)
     arr.set(sourceArr)
     arr
+  }
+
+  /**
+   * Returns evenly spaced values within a given interval.
+   * Values are generated within the half-open interval [`start`, `stop`). In other
+   * words, the interval includes `start` but excludes `stop`.
+   * @param start Start of interval. The default start value is 0.
+   * @param stop End of interval.
+   * @param step Spacing between values. The default step size is 1.
+   * @param repeat Number of times to repeat each element. The default repeat count is 1.
+   * @param ctx Device context. Default context is the current default context.
+   * @param dType The data type of the `NDArray`. The default datatype is `DType.Float32`.
+   * @return NDArray of evenly spaced values in the specified range.
+   */
+  def arange(start: Float, stop: Option[Float] = None, step: Float = 1.0f,
+    repeat: Int = 1, ctx: Context = Context.defaultCtx,
+    dType: DType = Base.MX_REAL_TYPE): NDArray = {
+    val params = Map("start" -> start, "step" -> step,
+      "repeat" -> repeat, "ctx" -> ctx.toString, "dtype" -> dType.toString())
+    val fParams = if (stop == None) params else params ++ Map("stop" -> stop.get)
+    NDArray.genericNDArrayFunctionInvoke("_arange", Seq(), fParams)(0)
   }
 
   /**
@@ -749,6 +853,78 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
+  def **(other: NDArray): NDArray = {
+    NDArray.power(this, other)
+  }
+
+  def **(other: Float): NDArray = {
+    NDArray.power(this, other)
+  }
+
+  def **=(other: NDArray): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_power", Seq(this, other), Map("out" -> this))
+  }
+
+  def **=(other: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_power_scalar", Seq(this, other), Map("out" -> this))
+  }
+
+  def >(other: NDArray): NDArray = {
+    NDArray.greater(this, other)
+  }
+
+  def >(other: Float): NDArray = {
+    NDArray.greater(this, other)
+  }
+
+  def >=(other: NDArray): NDArray = {
+    NDArray.greaterEqual(this, other)
+  }
+
+  def >=(other: Float): NDArray = {
+    NDArray.greaterEqual(this, other)
+  }
+
+  def <(other: NDArray): NDArray = {
+    NDArray.lesser(this, other)
+  }
+
+  def <(other: Float): NDArray = {
+    NDArray.lesser(this, other)
+  }
+
+  def <=(other: NDArray): NDArray = {
+    NDArray.lesserEqual(this, other)
+  }
+
+  def <=(other: Float): NDArray = {
+    NDArray.lesserEqual(this, other)
+  }
+
+  def %(other: NDArray): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_mod", Seq(this, other))
+  }
+
+  def %(other: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_mod_scalar", Seq(this, other))
+  }
+
+  def %=(other: NDArray): NDArray = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to take modulo from a readonly NDArray")
+    }
+    NDArray.genericNDArrayFunctionInvoke("_mod", Seq(this, other), Map("out" -> this))
+    this
+  }
+
+  def %=(other: Float): NDArray = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to take modulo from a readonly NDArray")
+    }
+    NDArray.genericNDArrayFunctionInvoke("_mod_scalar", Seq(this, other), Map("out" -> this))
+    this
+  }
+
   /**
    * Return a copied flat java array of current array (row-major).
    * @return  A copy of array content.
@@ -880,6 +1056,41 @@ private[mxnet] class NDArrayConversions(val value: Float) {
   def /(other: NDArrayFuncReturn): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_rdiv_scalar", Seq(other.head, value))
   }
+
+  def **(other: NDArray): NDArray = {
+    NDArray.power(value, other)
+  }
+  def **(other: NDArrayFuncReturn): NDArray = {
+    NDArray.power(value, other.head)
+  }
+
+  def >(other: NDArray): NDArray = {
+    NDArray.lesser(other, value)
+  }
+  def >(other: NDArrayFuncReturn): NDArray = {
+    NDArray.lesser(other.head, value)
+  }
+
+  def >=(other: NDArray): NDArray = {
+    NDArray.lesserEqual(other, value)
+  }
+  def >=(other: NDArrayFuncReturn): NDArray = {
+    NDArray.lesserEqual(other.head, value)
+  }
+
+  def <(other: NDArray): NDArray = {
+    NDArray.greater(other, value)
+  }
+  def <(other: NDArrayFuncReturn): NDArray = {
+    NDArray.greater(other.head, value)
+  }
+
+  def <=(other: NDArray): NDArray = {
+    NDArray.greaterEqual(other, value)
+  }
+  def <=(other: NDArrayFuncReturn): NDArray = {
+    NDArray.greaterEqual(other.head, value)
+  }
 }
 
 private case class NDArrayFunction(handle: NDArrayHandle, arguments: List[String])
@@ -927,6 +1138,16 @@ private[mxnet] class NDArrayFuncReturn(private[mxnet] val arr: Array[NDArray]) {
   def *=(other: NDArray): NDArray = head *= other
   def *=(other: Float): NDArray = head *= other
   def /(other: NDArray): NDArray = head / other
+  def **(other: NDArray): NDArray = head ** other
+  def **(other: Float): NDArray = head ** other
+  def >(other: NDArray): NDArray = head > other
+  def >(other: Float): NDArray = head > other
+  def >=(other: NDArray): NDArray = head >= other
+  def >=(other: Float): NDArray = head >= other
+  def <(other: NDArray): NDArray = head < other
+  def <(other: Float): NDArray = head < other
+  def <=(other: NDArray): NDArray = head <= other
+  def <=(other: Float): NDArray = head <= other
   def toArray: Array[Float] = head.toArray
   def toScalar: Float = head.toScalar
   def copyTo(other: NDArray): NDArray = head.copyTo(other)

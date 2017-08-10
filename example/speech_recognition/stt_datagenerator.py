@@ -1,8 +1,24 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 from __future__ import absolute_import, division, print_function
 
 import json
 import random
-
 import numpy as np
 from stt_utils import calc_feat_dim, spectrogram_from_file
 
@@ -10,6 +26,7 @@ from config_util import generate_file_path
 from log_util import LogUtil
 from label_util import LabelUtil
 from stt_bi_graphemes_util import generate_bi_graphemes_label
+from multiprocessing import cpu_count, Process, Manager
 
 class DataGenerator(object):
     def __init__(self, save_dir, model_name, step=10, window=20, max_freq=8000, desc_file=None):
@@ -32,7 +49,7 @@ class DataGenerator(object):
         # 1d 161 length of array filled with 1s
         self.feats_std = np.ones((self.feat_dim,))
         self.max_input_length = 0
-        self.max_length_list_in_batch =[]
+        self.max_length_list_in_batch = []
         # 1d 161 length of array filled with random value
         #[0.0, 1.0)
         self.rng = random.Random()
@@ -48,14 +65,15 @@ class DataGenerator(object):
         self.feats_mean = feats_mean
         self.feats_std = feats_std
 
-    def featurize(self, audio_clip, overwrite=False):
+    def featurize(self, audio_clip, overwrite=False, save_feature_as_csvfile=False):
         """ For a given audio clip, calculate the log of its Fourier Transform
         Params:
             audio_clip(str): Path to the audio clip
         """
         return spectrogram_from_file(
             audio_clip, step=self.step, window=self.window,
-            max_freq=self.max_freq, overwrite=overwrite)
+            max_freq=self.max_freq, overwrite=overwrite,
+            save_feature_as_csvfile=save_feature_as_csvfile)
 
     def load_metadata_from_desc_file(self, desc_file, partition='train',
                                      max_duration=16.0,):
@@ -107,11 +125,11 @@ class DataGenerator(object):
             raise Exception("Invalid partition to load metadata. "
                             "Must be train/validation/test")
 
-    def load_train_data(self, desc_file):
-        self.load_metadata_from_desc_file(desc_file, 'train')
+    def load_train_data(self, desc_file, max_duration):
+        self.load_metadata_from_desc_file(desc_file, 'train', max_duration=max_duration)
 
-    def load_validation_data(self, desc_file):
-        self.load_metadata_from_desc_file(desc_file, 'validation')
+    def load_validation_data(self, desc_file, max_duration):
+        self.load_metadata_from_desc_file(desc_file, 'validation', max_duration=max_duration)
 
     @staticmethod
     def sort_by_duration(durations, audio_paths, texts):
@@ -146,10 +164,11 @@ class DataGenerator(object):
                             "Must be train/validation/test")
         max_duration_indexes = durations.index(max(durations))
         max_seq_length = self.featurize(audio_paths[max_duration_indexes]).shape[0]
-        self.max_seq_length=max_seq_length
+        self.max_seq_length = max_seq_length
         return max_seq_length
 
-    def prepare_minibatch(self, audio_paths, texts, overwrite=False, is_bi_graphemes=False):
+    def prepare_minibatch(self, audio_paths, texts, overwrite=False,
+                          is_bi_graphemes=False, seq_length=-1, save_feature_as_csvfile=False):
         """ Featurize a minibatch of audio, zero pad them and return a dictionary
         Params:
             audio_paths (list(str)): List of paths to audio files
@@ -162,12 +181,15 @@ class DataGenerator(object):
         # Features is a list of (timesteps, feature_dim) arrays
         # Calculate the features for each audio clip, as the log of the
         # Fourier Transform of the audio
-        features = [self.featurize(a, overwrite=overwrite) for a in audio_paths]
+        features = [self.featurize(a, overwrite=overwrite, save_feature_as_csvfile=save_feature_as_csvfile) for a in audio_paths]
         input_lengths = [f.shape[0] for f in features]
         feature_dim = features[0].shape[1]
         mb_size = len(features)
         # Pad all the inputs so that they are all the same length
-        x = np.zeros((mb_size, self.max_seq_length, feature_dim))
+        if seq_length == -1:
+            x = np.zeros((mb_size, self.max_seq_length, feature_dim))
+        else:
+            x = np.zeros((mb_size, seq_length, feature_dim))
         y = np.zeros((mb_size, self.max_label_length))
         labelUtil = LabelUtil.getInstance()
         label_lengths = []
@@ -199,34 +221,59 @@ class DataGenerator(object):
         return self.iterate(self.val_audio_paths, self.val_texts,
                             minibatch_size)
 
+    def preprocess_sample_normalize(self, threadIndex, audio_paths, overwrite, return_dict):
+        if len(audio_paths) > 0:
+            audio_clip = audio_paths[0]
+            feat = self.featurize(audio_clip=audio_clip, overwrite=overwrite)
+            feat_squared = np.square(feat)
+            count = float(feat.shape[0])
+            dim = feat.shape[1]
+            if len(audio_paths) > 1:
+                for audio_path in audio_paths[1:]:
+                    next_feat = self.featurize(audio_clip=audio_path, overwrite=overwrite)
+                    next_feat_squared = np.square(next_feat)
+                    feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, dim)
+                    feat = np.sum(feat_vertically_stacked, axis=0, keepdims=True)
+                    feat_squared_vertically_stacked = np.concatenate(
+                        (feat_squared, next_feat_squared)).reshape(-1, dim)
+                    feat_squared = np.sum(feat_squared_vertically_stacked, axis=0, keepdims=True)
+                    count += float(next_feat.shape[0])
+            return_dict[threadIndex] = {'feat': feat, 'feat_squared': feat_squared, 'count': count}
+
     def sample_normalize(self, k_samples=1000, overwrite=False):
         """ Estimate the mean and std of the features from the training set
         Params:
             k_samples (int): Use this number of samples for estimation
         """
+        log = LogUtil().getlogger()
+        log.info("Calculating mean and std from samples")
         # if k_samples is negative then it goes through total dataset
         if k_samples < 0:
-            audio_paths_iter = iter(self.audio_paths)
+            audio_paths = self.audio_paths
+
         # using sample
         else:
             k_samples = min(k_samples, len(self.train_audio_paths))
             samples = self.rng.sample(self.train_audio_paths, k_samples)
-            audio_paths_iter = iter(samples)
-        audio_clip = audio_paths_iter.next()
-        feat = self.featurize(audio_clip=audio_clip, overwrite=overwrite)
-        feat_squared = np.square(feat)
-        count = float(feat.shape[0])
-        dim = feat.shape[1]
+            audio_paths = samples
+        manager = Manager()
+        return_dict = manager.dict()
+        jobs = []
+        for threadIndex in range(cpu_count()):
+            proc = Process(target=self.preprocess_sample_normalize, args=(threadIndex, audio_paths, overwrite, return_dict))
+            jobs.append(proc)
+            proc.start()
+        for proc in jobs:
+            proc.join()
 
-        for iter_index in range(len(samples) - 1):
-            next_feat = self.featurize(audio_clip=audio_paths_iter.next(), overwrite=overwrite)
-            next_feat_squared = np.square(next_feat)
-            feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, dim)
-            feat = np.sum(feat_vertically_stacked, axis=0, keepdims=True)
-            feat_squared_vertically_stacked = np.concatenate((feat_squared, next_feat_squared)).reshape(-1, dim)
-            feat_squared = np.sum(feat_squared_vertically_stacked, axis=0, keepdims=True)
-            count = count + float(next_feat.shape[0])
+        feat = np.sum(np.vstack([item['feat'] for item in return_dict.values()]), axis=0)
+        count = sum([item['count'] for item in return_dict.values()])
+        feat_squared = np.sum(np.vstack([item['feat_squared'] for item in return_dict.values()]), axis=0)
+
         self.feats_mean = feat / float(count)
         self.feats_std = np.sqrt(feat_squared / float(count) - np.square(self.feats_mean))
-        np.savetxt(generate_file_path(self.save_dir, self.model_name, 'feats_mean'), self.feats_mean)
-        np.savetxt(generate_file_path(self.save_dir, self.model_name, 'feats_std'), self.feats_std)
+        np.savetxt(
+            generate_file_path(self.save_dir, self.model_name, 'feats_mean'), self.feats_mean)
+        np.savetxt(
+            generate_file_path(self.save_dir, self.model_name, 'feats_std'), self.feats_std)
+        log.info("End calculating mean and std from samples")

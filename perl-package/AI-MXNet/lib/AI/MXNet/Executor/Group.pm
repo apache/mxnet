@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Executor::Group;
 use strict;
 use warnings;
@@ -36,6 +53,7 @@ func _split_input_slice($batch_size, $work_load_list)
     }
     return \@slices;
 }
+
 # Load a array ref of arrays into a array ref of arrays specified by slices
 func _load_general($data, $targets, $major_axis)
 {
@@ -59,20 +77,45 @@ func _load_general($data, $targets, $major_axis)
                 my ($slice_idx, $d_dst) = @{ $d };
                 if($axis >= 0)
                 {
-                    # copy slice
-                    my $end   = $d_src->shape;
-                    my $begin = [(0) x @{ $end }];
-                    $begin->[$axis] = $slice_idx->[0];
-                    $end->[$axis]   = $slice_idx->[1];
-                    if($d_src->context == $d_dst->context)
+                    my $shape = $d_src->shape;
+                    my $do_crop = ($slice_idx->[0] != 0 or $shape->[$axis] != $slice_idx->[1]);
+                    if($do_crop)
                     {
-                        $d_src->crop({ begin => $begin, end => $end, out => $d_dst });
+                        if($axis == 0)
+                        {
+                            $d_src->slice([$slice_idx->[0], $slice_idx->[1] - 1])->copyto($d_dst);
+                        }
+                        else
+                        {
+                            if($d_src->context == $d_dst->context)
+                            {
+                                AI::MXNet::NDArray->slice_axis(
+                                    $d_src,
+                                    {
+                                        axis  => $axis,
+                                        begin => $slice_idx->[0],
+                                        end   => $slice_idx->[1],
+                                        out   => $d_dst
+                                    }
+                                );
+                            }
+                            else
+                            {
+                                my $d_dst_copy = AI::MXNet::NDArray->slice_axis(
+                                    $d_src,
+                                    {
+                                        axis  => $axis,
+                                        begin => $slice_idx->[0],
+                                        end   => $slice_idx->[1]
+                                    }
+                                );
+                                $d_dst_copy->copyto($d_dst);
+                            }
+                        }
                     }
                     else
                     {
-                        # on different device, crop and then do cross device copy
-                        my $d_dst_copy = $d_src->crop({ begin => $begin, end => $end });
-                        $d_dst_copy->copyto($d_dst);
+                        $d_src->copyto($d_dst);
                     }
                 }
                 else
@@ -177,8 +220,8 @@ use List::Util qw(sum);
     shared_group : AI::MXNet::DataParallelExecutorGroup
         Default is undef. This is used in bucketing. When not undef, it should be a executor
         group corresponding to a different bucket. In other words, it will correspond to a different
-        symbol but with the same set of parameters (e.g. unrolled RNNs with different lengths).
-        In this case, many memory will be shared.
+        symbol with the same set of parameters (e.g. unrolled RNNs with different lengths).
+        In this case the memory regions of the parameters will be shared.
     logger : Logger
         Default is AI::MXNet::Logging->get_logger.
     fixed_param_names: Maybe[ArrayRef[Str]]
@@ -523,9 +566,9 @@ method reshape(
         A dictionary of name to AI::MXNet::NDArray auxiliary variable mapping.
 =cut
 
-method set_params(HashRef[AI::MXNet::NDArray] $arg_params, HashRef[AI::MXNet::NDArray] $aux_params)
+method set_params(HashRef[AI::MXNet::NDArray] $arg_params, HashRef[AI::MXNet::NDArray] $aux_params, Bool $allow_extra=0)
 {
-    $_->copy_params_from($arg_params, $aux_params) for @{ $self->_p->execs };
+    $_->copy_params_from($arg_params, $aux_params, $allow_extra) for @{ $self->_p->execs };
 }
 
 =head2 get_params
@@ -787,8 +830,6 @@ method update_metric(AI::MXNet::EvalMetric $eval_metric, ArrayRef[AI::MXNet::NDA
     }, $self->_p->execs, $self->_p->slices);
 }
 
-# Internal utility function to bind the i-th executor.
-
 method _bind_ith_exec(
     Int                                         $i,
     ArrayRef[AI::MXNet::DataDesc]               $data_shapes,
@@ -804,151 +845,15 @@ method _bind_ith_exec(
     {
         %input_shapes = (%input_shapes, map { $_->name => $_->shape } @{ $label_shapes });
     }
-    my ($arg_shapes, undef, $aux_shapes) = $self->symbol->infer_shape(%input_shapes);
-    confess("shape inference failed") unless defined $arg_shapes;
-
     my %input_types = map { $_->name => $_->dtype } @{ $data_shapes };
-    my ($arg_types, undef, $aux_types) = $self->symbol->infer_type(%input_types);
-    confess("type inference failed") unless defined $arg_types;
-    my $arg_arrays = [];
-    my $grad_arrays = $self->for_training ? {} : undef;
-
-    #Internal helper to get a memory block or re-use by re-shaping
-    my $_get_or_reshape = sub {
-            my ($name, $shared_data_arrays, $arg_shape, $arg_type, $context, $logger) = @_;
-            my $arg_arr;
-            if(exists $shared_data_arrays->{$name})
-            {
-                $arg_arr = $shared_data_arrays->{$name};
-                if(product(@{ $arg_arr->shape }) >= product(@{ $arg_shape }))
-                {
-                    # nice, we can directly re-use this data blob
-                    confess("dtypes do not match") 
-                        unless $arg_arr->dtype eq $arg_type;
-                    $arg_arr = $arg_arr->reshape($arg_shape);
-                }
-                else
-                {
-                    $logger->warning(
-                        'bucketing: data "%s" has a shape (%s)'
-                        .', which is larger than already allocated '
-                        .'shape (%s)'
-                        .'. Need to re-allocate. Consider putting '
-                        .'default_bucket_key to'
-                        .' be the bucket taking the largest input for better '
-                        .'memory sharing.',
-                        $name, join(',', $arg_shape), join(',', $arg_arr->shape)
-                    );
-                    $arg_arr = AI::MXNet::NDArray->zeros(
-                        $arg_shape,
-                        ctx => $context,
-                        dtype => $arg_type
-                    );
-                    # replace existing shared array because the new one is bigger
-                    $shared_data_arrays->{ $name } = $arg_arr;
-                }
-            }
-            else
-            {
-                $arg_arr = AI::MXNet::NDArray->zeros(
-                    $arg_shape,
-                    ctx => $context,
-                    dtype => $arg_type
-                );
-                $shared_data_arrays->{ $name } = $arg_arr;
-            }
-            return $arg_arr;
-    };
-    my %param_names = map { $_ => 1 } @{ $self->param_names };
-    # create or borrow arguments and gradients
-    for my $j (0..@{ $self->_p->arg_names }-1)
-    {
-        my $name = $self->_p->arg_names->[$j];
-        my $arg_arr;
-        if(exists $param_names{ $name }) # model parameter
-        {
-            if(not defined $shared_exec)
-            {
-                $arg_arr = AI::MXNet::NDArray->zeros(
-                    $arg_shapes->[$j],
-                    ctx   => $context,
-                    dtype => $arg_types->[$j]
-                );
-
-                if($self->grad_req->{$name} ne 'null')
-                {
-                    my $grad_arr = AI::MXNet::NDArray->zeros(
-                        $arg_shapes->[$j],
-                        ctx   => $context,
-                        dtype => $arg_types->[$j]
-                    );
-                    $grad_arrays->{ $name } = $grad_arr;
-                }
-            }
-            else
-            {
-                $arg_arr = $shared_exec->arg_dict->{ $name };
-                my $arg_arr_shape = $arg_arr->shape;
-                my $arg_shape = $arg_shapes->[$j];
-                confess "shapes do not match (@$arg_arr_shape) != (@$arg_shape)"
-                    unless "@$arg_arr_shape" eq "@$arg_shape";
-                my $arg_arr_type = $arg_arr->dtype;
-                my $arg_type = $arg_types->[$j];
-                confess "types do not match $arg_arr_type) != $arg_type"
-                    unless $arg_arr_type eq $arg_type;
-                if($self->grad_req->{ $name } ne 'null')
-                {
-                    $grad_arrays->{ $name } = $shared_exec->grad_dict->{ $name };
-                }
-            }
-        }
-        else # data or label
-        {
-            $arg_arr = $_get_or_reshape->(
-                $name, $shared_data_arrays, $arg_shapes->[$j],
-                $arg_types->[$j], $context, $self->logger
-            );
-            if($self->grad_req->{ $name } ne 'null')
-            {
-                $grad_arrays->{ $name } = $_get_or_reshape->(
-                    "grad of $name", $shared_data_arrays,
-                    $arg_shapes->[$j], $arg_types->[$j],
-                    $context, $self->logger
-                );
-            }
-        }
-        # data might also need grad if inputs_need_grad is True
-        push @{ $arg_arrays }, $arg_arr;
-    }
-    # create or borrow aux variables
-    my $aux_arrays = [];
-    if(not defined $shared_exec)
-    {
-        zip(sub{
-            my ($s, $t) = @_;
-            push @{ $aux_arrays }, AI::MXNet::NDArray->zeros($s, ctx => $context, dtype => $t);
-        }, $aux_shapes, $aux_types);
-    }
-    else
-    {
-        for my $j (0..@{ $shared_exec->aux_arrays }-1)
-        {
-            my $arr = $shared_exec->aux_arrays->[$j];
-            my $aux_shape = $aux_shapes->[$j];
-            my $arr_shape = $arr->shape;
-            confess("aux shape (@$aux_shape) != array shape (@$arr_shape)")
-                unless "@$aux_shape" eq "@$arr_shape";
-            my $aux_type = $aux_types->[$j];
-            my $arr_type = $arr->dtype;
-            confess("aux_type $aux_type != array type $arr_type")
-                unless $aux_type ne $arr_type;
-        }
-        @{ $aux_arrays } = @{ $shared_exec->aux_arrays };
-    }
-    my $executor = $self->symbol->bind(
-        ctx => $context, args => $arg_arrays,
-        args_grad => $grad_arrays, aux_states => $aux_arrays,
-        grad_req => $self->grad_req, shared_exec => $shared_exec
+    my $executor = $self->symbol->simple_bind(
+        ctx              => $context,
+        grad_req         => $self->grad_req,
+        type_dict        => \%input_types,
+        shared_arg_names => $self->param_names,
+        shared_exec      => $shared_exec,
+        shared_buffer    => $shared_data_arrays,
+        shapes           => \%input_shapes
     );
     return $executor;
 }
@@ -997,6 +902,16 @@ method _sliced_shape(ArrayRef[AI::MXNet::DataDesc] $shapes, Int $i, ArrayRef[Int
 method install_monitor(AI::MXNet::Monitor $mon)
 {
     $mon->install($_) for @{ $self->_p->execs };
+}
+
+method shared_data_arrays()
+{
+    $self->_p->shared_data_arrays;
+}
+
+method execs()
+{
+    $self->_p->execs;
 }
 
 1;

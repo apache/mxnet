@@ -1,8 +1,9 @@
 use strict;
 use warnings;
 use AI::MXNet qw(mx);
+use AI::MXNet::TestUtils qw(same);
 use PDL;
-use Test::More tests => 37;
+use Test::More tests => 54;
 
 sub test_rnn
 {
@@ -60,12 +61,89 @@ sub test_gru
     is_deeply($outs, [[10, 100], [10, 100], [10, 100]]);
 }
 
+sub test_residual
+{
+    my $cell = mx->rnn->ResidualCell(mx->rnn->GRUCell(50, prefix=>'rnn_'));
+    my $inputs = [map { mx->sym->Variable("rnn_t${_}_data") } 0..1];
+    my ($outputs)= $cell->unroll(2, inputs => $inputs);
+    $outputs = mx->sym->Group($outputs);
+    is_deeply(
+        [sort keys %{ $cell->params->_params }],
+        ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
+    );
+    is_deeply(
+        $outputs->list_outputs,
+        ['rnn_t0_out_plus_residual_output', 'rnn_t1_out_plus_residual_output']
+    );
+
+    my (undef, $outs) = $outputs->infer_shape(rnn_t0_data=>[10, 50], rnn_t1_data=>[10, 50]);
+    is_deeply($outs, [[10, 50], [10, 50]]);
+    $outputs = $outputs->eval(args => {
+        rnn_t0_data=>mx->nd->ones([10, 50]),
+        rnn_t1_data=>mx->nd->ones([10, 50]),
+        rnn_i2h_weight=>mx->nd->zeros([150, 50]),
+        rnn_i2h_bias=>mx->nd->zeros([150]),
+        rnn_h2h_weight=>mx->nd->zeros([150, 50]),
+        rnn_h2h_bias=>mx->nd->zeros([150])
+    });
+    my $expected_outputs = mx->nd->ones([10, 50])->aspdl;
+    same(@{$outputs}[0]->aspdl, $expected_outputs);
+    same(@{$outputs}[1]->aspdl, $expected_outputs);
+}
+
+sub test_residual_bidirectional
+{
+    my $cell = mx->rnn->ResidualCell(
+        mx->rnn->BidirectionalCell(
+            mx->rnn->GRUCell(25, prefix=>'rnn_l_'),
+            mx->rnn->GRUCell(25, prefix=>'rnn_r_')
+        )
+    );
+    my $inputs = [map { mx->sym->Variable("rnn_t${_}_data") } 0..1];
+    my ($outputs) = $cell->unroll(2, inputs => $inputs, merge_outputs=>0);
+    $outputs = mx->sym->Group($outputs);
+    is_deeply(
+        [sort keys %{ $cell->params->_params }],
+        ['rnn_l_h2h_bias', 'rnn_l_h2h_weight', 'rnn_l_i2h_bias', 'rnn_l_i2h_weight',
+        'rnn_r_h2h_bias', 'rnn_r_h2h_weight', 'rnn_r_i2h_bias', 'rnn_r_i2h_weight']
+    );
+    is_deeply(
+        $outputs->list_outputs,
+        ['bi_t0_plus_residual_output', 'bi_t1_plus_residual_output']
+    );
+
+    my (undef, $outs) = $outputs->infer_shape(rnn_t0_data=>[10, 50], rnn_t1_data=>[10, 50]);
+    is_deeply($outs, [[10, 50], [10, 50]]);
+    $outputs = $outputs->eval(args => {
+        rnn_t0_data=>mx->nd->ones([10, 50])+5,
+        rnn_t1_data=>mx->nd->ones([10, 50])+5,
+        rnn_l_i2h_weight=>mx->nd->zeros([75, 50]),
+        rnn_l_i2h_bias=>mx->nd->zeros([75]),
+        rnn_l_h2h_weight=>mx->nd->zeros([75, 25]),
+        rnn_l_h2h_bias=>mx->nd->zeros([75]),
+        rnn_r_i2h_weight=>mx->nd->zeros([75, 50]),
+        rnn_r_i2h_bias=>mx->nd->zeros([75]),
+        rnn_r_h2h_weight=>mx->nd->zeros([75, 25]),
+        rnn_r_h2h_bias=>mx->nd->zeros([75])
+    });
+    my $expected_outputs = (mx->nd->ones([10, 50])+5)->aspdl;
+    ok(same(@{$outputs}[0]->aspdl, $expected_outputs));
+    ok(same(@{$outputs}[1]->aspdl, $expected_outputs));
+}
+
 sub test_stack
 {
     my $cell = mx->rnn->SequentialRNNCell();
     for my $i (0..4)
     {
-        $cell->add(mx->rnn->LSTMCell(100, prefix=>"rnn_stack${i}_"));
+        if($i == 1)
+        {
+            $cell->add(mx->rnn->ResidualCell(mx->rnn->LSTMCell(100, prefix=>"rnn_stack${i}_")));
+        }
+        else
+        {
+            $cell->add(mx->rnn->LSTMCell(100, prefix=>"rnn_stack${i}_"));
+        }
     }
     my ($outputs) = $cell->unroll(3, input_prefix=>'rnn_');
     $outputs = mx->sym->Group($outputs);
@@ -123,11 +201,73 @@ sub test_zoneout
     is_deeply($outs, [[10, 100], [10, 100], [10, 100]]);
 }
 
+sub test_convrnn
+{
+    my $cell = mx->rnn->ConvRNNCell(input_shape => [1, 3, 16, 10], num_hidden=>10,
+                              h2h_kernel=>[3, 3], h2h_dilate=>[1, 1],
+                              i2h_kernel=>[3, 3], i2h_stride=>[1, 1],
+                              i2h_pad=>[1, 1], i2h_dilate=>[1, 1],
+                              prefix=>'rnn_');
+    my $inputs = [map { mx->sym->Variable("rnn_t${_}_data") } 0..2];
+    my ($outputs) = $cell->unroll(3, inputs => $inputs);
+    $outputs = mx->sym->Group($outputs);
+    is_deeply(
+        [sort keys %{ $cell->params->_params }],
+        ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
+    );
+    is_deeply($outputs->list_outputs(), ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']);
+    my (undef, $outs) = $outputs->infer_shape(rnn_t0_data=>[1, 3, 16, 10], rnn_t1_data=>[1, 3, 16, 10], rnn_t2_data=>[1, 3, 16, 10]);
+    is_deeply($outs, [[1, 10, 16, 10], [1, 10, 16, 10], [1, 10, 16, 10]]);
+}
+
+sub test_convlstm
+{
+    my $cell = mx->rnn->ConvLSTMCell(input_shape => [1, 3, 16, 10], num_hidden=>10,
+                              h2h_kernel=>[3, 3], h2h_dilate=>[1, 1],
+                              i2h_kernel=>[3, 3], i2h_stride=>[1, 1],
+                              i2h_pad=>[1, 1], i2h_dilate=>[1, 1],
+                              prefix=>'rnn_', forget_bias => 1);
+    my $inputs = [map { mx->sym->Variable("rnn_t${_}_data") } 0..2];
+    my ($outputs) = $cell->unroll(3, inputs => $inputs);
+    $outputs = mx->sym->Group($outputs);
+    is_deeply(
+        [sort keys %{ $cell->params->_params }],
+        ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
+    );
+    is_deeply($outputs->list_outputs(), ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']);
+    my (undef, $outs) = $outputs->infer_shape(rnn_t0_data=>[1, 3, 16, 10], rnn_t1_data=>[1, 3, 16, 10], rnn_t2_data=>[1, 3, 16, 10]);
+    is_deeply($outs, [[1, 10, 16, 10], [1, 10, 16, 10], [1, 10, 16, 10]]);
+}
+
+sub test_convgru
+{
+    my $cell = mx->rnn->ConvGRUCell(input_shape => [1, 3, 16, 10], num_hidden=>10,
+                              h2h_kernel=>[3, 3], h2h_dilate=>[1, 1],
+                              i2h_kernel=>[3, 3], i2h_stride=>[1, 1],
+                              i2h_pad=>[1, 1], i2h_dilate=>[1, 1],
+                              prefix=>'rnn_', forget_bias => 1);
+    my $inputs = [map { mx->sym->Variable("rnn_t${_}_data") } 0..2];
+    my ($outputs) = $cell->unroll(3, inputs => $inputs);
+    $outputs = mx->sym->Group($outputs);
+    is_deeply(
+        [sort keys %{ $cell->params->_params }],
+        ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
+    );
+    is_deeply($outputs->list_outputs(), ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']);
+    my (undef, $outs) = $outputs->infer_shape(rnn_t0_data=>[1, 3, 16, 10], rnn_t1_data=>[1, 3, 16, 10], rnn_t2_data=>[1, 3, 16, 10]);
+    is_deeply($outs, [[1, 10, 16, 10], [1, 10, 16, 10], [1, 10, 16, 10]]);
+}
+
 test_rnn();
 test_lstm();
 test_lstm_forget_bias();
 test_gru();
+test_residual();
+test_residual_bidirectional();
 test_stack();
 test_bidirectional();
 test_unfuse();
 test_zoneout();
+test_convrnn();
+test_convlstm();
+test_convgru();

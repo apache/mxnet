@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet;
 use v5.14.0;
 use strict;
@@ -28,7 +45,8 @@ use AI::MXNet::RecordIO;
 use AI::MXNet::Image;
 use AI::MXNet::Contrib;
 use AI::MXNet::Contrib::AutoGrad;
-our $VERSION = '0.9507';
+use AI::MXNet::CachedOp;
+our $VERSION = '1.0102';
 
 sub import
 {
@@ -64,9 +82,13 @@ sub import
             sub callback { 'AI::MXNet::Callback' }
             sub img { 'AI::MXNet::Image' }
             sub contrib { 'AI::MXNet::Contrib' }
+            sub name { '$short_name' }
             sub AttrScope { shift; AI::MXNet::Symbol::AttrScope->new(\@_) }
             *AI::MXNet::Symbol::AttrScope::current = sub { \$${short_name}::AttrScope; };
             \$${short_name}::AttrScope = AI::MXNet::Symbol::AttrScope->new;
+            sub Prefix { AI::MXNet::Symbol::Prefix->new(prefix => \$_[1]) }
+            *AI::MXNet::Symbol::NameManager::current = sub { \$${short_name}::NameManager; };
+            \$${short_name}::NameManager = AI::MXNet::Symbol::NameManager->new;
             *AI::MXNet::Context::current_ctx = sub { \$${short_name}::Context; };
             \$${short_name}::Context = AI::MXNet::Context->new(device_type => 'cpu', device_id => 0);
             1;

@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file c_api_error.h
  * \brief Error handling for C API.
  */
@@ -62,16 +80,24 @@ struct MXAPIThreadLocalEntry {
   std::vector<mx_uint> arg_shape_ndim, out_shape_ndim, aux_shape_ndim;
   /*! \brief result holder for returning shape pointer */
   std::vector<const mx_uint*> arg_shape_data, out_shape_data, aux_shape_data;
+  /*! \brief uint32_t buffer for returning shape pointer */
+  std::vector<uint32_t> arg_shape_buffer, out_shape_buffer, aux_shape_buffer;
   // helper function to setup return value of shape array
-  inline static void SetupShapeArrayReturn(
+  inline static void SetupShapeArrayReturnWithBuffer(
       const std::vector<TShape> &shapes,
       std::vector<mx_uint> *ndim,
-      std::vector<const mx_uint*> *data) {
+      std::vector<const mx_uint*> *data,
+      std::vector<uint32_t> *buffer) {
     ndim->resize(shapes.size());
     data->resize(shapes.size());
+    size_t size = 0;
+    for (const auto& s : shapes) size += s.ndim();
+    buffer->resize(size);
+    uint32_t *ptr = buffer->data();
     for (size_t i = 0; i < shapes.size(); ++i) {
       ndim->at(i) = shapes[i].ndim();
-      data->at(i) = shapes[i].data();
+      data->at(i) = ptr;
+      ptr = nnvm::ShapeTypeCast(shapes[i].begin(), shapes[i].end(), ptr);
     }
   }
 };

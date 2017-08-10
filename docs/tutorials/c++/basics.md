@@ -14,7 +14,7 @@ and decompress them into `mnist_data` folder.
 
 Except linking the MXNet shared library, the C++ package itself is a header-only package,
 which means all you need to do is to include the header files. Among the header files,
-`op.h` is special since it is genereated dynamically. The generation should be done when
+`op.h` is special since it is generated dynamically. The generation should be done when
 [building the C++ package](http://mxnet.io/get_started/build_from_source.html#build-the-c++-package).
 After that, you also need to copy the shared library (`libmxnet.so` in linux,
 `libmxnet.dll` in windows) from `/path/to/mxnet/lib` to the working directory.
@@ -126,7 +126,7 @@ for (int iter = 0; iter < max_epoch; ++iter) {
     args["X"] = data_batch.data;
     args["label"] = data_batch.label;
 
-    // Create executor by binding parmeters to the model
+    // Create executor by binding parameters to the model
     auto *exec = net.SimpleBind(ctx, args);
     // Compute gradients
     exec->Forward(true);

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Visualization;
 use strict;
 use warnings;
@@ -37,7 +54,7 @@ use JSON::PP;
     my $softmax = mx->symbol->SoftmaxOutput(data => $fc2, name => 'softmax');
 
     ## creates the image file working directory
-    mx->viz->plot_network($softmax, save_format => 'png')->render("network.png"); 
+    mx->viz->plot_network($softmax, save_format => 'png')->render("network.png");
 
 =head1 DESCRIPTION
 
@@ -291,7 +308,7 @@ method plot_network(
         my $label = $name;
         if($op eq 'null')
         {
-            if($name =~ /(?:_weight|_bias)$/)
+            if($name =~ /(?:_weight|_bias|_beta|_gamma|_moving_var|_moving_mean)$/)
             {
                 if($hide_weights)
                 {
@@ -354,6 +371,7 @@ method plot_network(
         }
         $dot->graph->add_node($name, label => $label, %attr);
     };
+
     # add edges
     for my $node (@{ $nodes })
     {
@@ -378,6 +396,13 @@ method plot_network(
                     {
                         my $key = $input_name;
                         $key   .= '_output' if $input_node->{op} ne 'null';
+                        if($input_node->{op} ne 'null' and exists $input_node->{attr})
+                        {
+                            if(ref $input_node->{attr} eq 'HASH' and exists $input_node->{attr}{num_outputs})
+                            {
+                                $key .= ($input_node->{attr}{num_outputs} - 1);
+                            }
+                        }
                         my $end = @{ $shape_dict{$key} };
                         $attr{label} = join('x', @{ $shape_dict{$key} }[1..$end-1]);
                     }

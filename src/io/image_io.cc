@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file optimizer_op-inl.h
  * \brief Optimizer operators
  * \author Junyuan Xie
@@ -13,6 +31,7 @@
 #include <mshadow/base.h>
 #include <nnvm/op.h>
 #include <nnvm/op_attr_types.h>
+#include <nnvm/tuple.h>
 
 #include "../operator/elemwise_op_common.h"
 
@@ -26,7 +45,7 @@ namespace io {
 // http://www.64lines.com/jpeg-width-height
 // Gets the JPEG size from the array of data passed to the function,
 // file reference: http://www.obrador.com/essentialjpeg/headerinfo.htm
-bool get_jpeg_size(const uint8_t* data, uint32_t data_size, uint32_t *width, uint32_t *height) {
+bool get_jpeg_size(const uint8_t* data, uint32_t data_size, int64_t *width, int64_t *height) {
   // Check for valid JPEG image
   uint32_t i = 0;  // Keeps track of the position within the file
   if (data[i] == 0xFF && data[i+1] == 0xD8 && data[i+2] == 0xFF && data[i+3] == 0xE0) {
@@ -63,7 +82,7 @@ bool get_jpeg_size(const uint8_t* data, uint32_t data_size, uint32_t *width, uin
   }
 }
 
-bool get_png_size(const uint8_t* data, uint32_t data_size, uint32_t *width, uint32_t *height) {
+bool get_png_size(const uint8_t* data, uint32_t data_size, int64_t *width, int64_t *height) {
   if (data[0] == 0x89 && data[1] == 0x50 && data[2] ==0x4E && data[3] == 0x47) {
     uint8_t const* p = data + 16;
     *width = ((p[0]*256 + p[1])*256 + p[2])*256 + p[3];
@@ -210,6 +229,7 @@ struct MakeBorderParam : public dmlc::Parameter<MakeBorderParam> {
   int top, bot, left, right;
   int type;
   double value;
+  nnvm::Tuple<double> values;
   DMLC_DECLARE_PARAMETER(MakeBorderParam) {
     DMLC_DECLARE_FIELD(top)
     .describe("Top margin.");
@@ -224,7 +244,10 @@ struct MakeBorderParam : public dmlc::Parameter<MakeBorderParam> {
     .describe("Filling type (default=cv2.BORDER_CONSTANT).");
     DMLC_DECLARE_FIELD(value)
     .set_default(0.0)
-    .describe("Fill with value.");
+    .describe("(Deprecated! Use ``values`` instead.) Fill with single value.");
+    DMLC_DECLARE_FIELD(values)
+    .set_default({})
+    .describe("Fill with value(RGB[A] or gray), up to 4 channels.");
   }
 };
 DMLC_REGISTER_PARAMETER(MakeBorderParam);
@@ -255,9 +278,11 @@ inline void copyMakeBorder(const nnvm::NodeAttrs& attrs,
   const auto& param = nnvm::get<MakeBorderParam>(attrs.parsed);
   cv::Mat buf(inputs[0].shape_[0], inputs[0].shape_[1], cv_type, inputs[0].dptr_);
   cv::Mat dst(outputs[0].shape_[0], outputs[0].shape_[1], cv_type, outputs[0].dptr_);
-  cv::copyMakeBorder(buf, dst,
-                     param.top, param.bot, param.left, param.right,
-                     param.type, cv::Scalar(param.value));
+  cv::Scalar color(param.value, param.value, param.value);
+  if (param.values.ndim() > 0) {
+    color = cv::Scalar(cv::Vec<double, 4>(param.values.begin()));
+  }
+  cv::copyMakeBorder(buf, dst, param.top, param.bot, param.left, param.right, param.type, color);
   CHECK(!dst.empty());
   CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr_);
 #else
@@ -300,5 +325,3 @@ NNVM_REGISTER_OP(_cvcopyMakeBorder)
 
 }  // namespace io
 }  // namespace mxnet
-
-

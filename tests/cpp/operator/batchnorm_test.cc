@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2017 by Contributors
  * \file batchnorm_test.cc
  * \brief operator unit test utility functions
  * \author Chris Olivier
@@ -243,7 +261,7 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
     CHECK_EQ(info_2.prop_->getParam().use_global_stats,
              info_1.prop_->getParam().use_global_stats);
 
-#if MXNET_USE_CUDNN != 1 /* CUDNN takes a slightly different approach here on first pass */
+#if MXNET_USE_CUDNN != 1 /* CUDNN takes a different approach here on first pass */
     // Aux
     EXPECT_TRUE(compare(*info_1.data_, *info_2.data_,
                         test::op::BasicOperatorData<DType, AccReal>::kAux,
@@ -533,6 +551,8 @@ static test::op::OpInfo<OperatorProp, DType, AccReal> runOperatorBackward(
   return *info;
 }
 
+static constexpr size_t CYCLE_COUNT = 3;
+
 template<typename OperatorProp1, typename OperatorProp2, typename DType, typename AccReal>
 static test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType, AccReal> testForwardAndBackward(
   const bool isGPU1,
@@ -541,7 +561,7 @@ static test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType, AccReal> testFo
   const test::op::kwargs_t& kwargs,
   const bool dumpC,
   const size_t count = 1,
-  const size_t cycleCount = 5) {
+  const size_t cycleCount = CYCLE_COUNT) {
   test::op::OpInfo<OperatorProp1, DType, AccReal> info_1 =
     TestBatchNormOperatorForward<OperatorProp1, DType, AccReal>(isGPU1, inputShape,
                                                                 kwargs, count);
@@ -603,13 +623,18 @@ static test::op::OpInfoPair<OperatorProp1, OperatorProp2, DType, AccReal>
 testForwardAndBackward(const bool isGPU,
                        const TShape &inputShape,
                        const test::op::kwargs_t kwargs,
-                       const bool dumpC = false) {
+                       const bool dumpC = false,
+                       const size_t count = 1,
+                       const size_t cycleCount = CYCLE_COUNT
+) {
   return testForwardAndBackward<OperatorProp1, OperatorProp2, DType, AccReal>(
     isGPU,
     isGPU,
     inputShape,
     kwargs,
-    dumpC);
+    dumpC,
+    count,
+    cycleCount);
 }
 
 template<typename DType, typename AccReal>
@@ -638,7 +663,6 @@ TEST(BATCH_NORM, Test2DForwardV1V2) {
     {
       auto infoA = testBNForwardAndBackward2D<DType, AccReal>(
         false, {BATCH_SIZE, CHANNELS, DH, DW}, blank_kwargs);
-      dumpF(&std::cout, infoA);
     });
 }
 
@@ -794,15 +818,18 @@ TEST(BATCH_NORM, TestTiming_2D) {
   MSHADOW_REAL_TYPE_SWITCH_EX(
     mshadow::kFloat32, DType, AccReal,
     {
-      std::string prefix;
-#if MXNET_USE_MKL2017 == 1
-      prefix = "MKL ";
-#endif
       timingTest<op::BatchNormV1Prop, DType, AccReal>("BatchNormV1Prop<cpu> 2D",
                                                       false, false,
                                                       blank_kwargs,
                                                       2, THISCOUNT);
-      timingTest<op::BatchNormProp, DType, AccReal>(prefix + "BatchNormProp<cpu> 2D",
+#if MXNET_USE_MKL2017 == 1
+      timingTest<op::BatchNormProp, DType, AccReal>("MKL BatchNormProp<cpu> 2D",
+                                                    false, false,
+                                                    blank_kwargs_nocudnn,
+                                                    2, THISCOUNT);
+#endif
+      test::ScopeSet<volatile bool> disableMKL(&mxnet::op::batchnorm::disable_mkl, true);
+      timingTest<op::BatchNormProp, DType, AccReal>("BatchNormProp<cpu> 2D",
                                                     false, false,
                                                     blank_kwargs_nocudnn,
                                                     2, THISCOUNT);
@@ -999,7 +1026,7 @@ struct Test2DBackward2DPlusLoadAndCompareLogicUtil {
     const TShape inputShape({1, 1, 2, 1});
     test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType, AccReal> bi =
       testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType, AccReal>(
-        false, inputShape, blank_kwargs);
+        false, inputShape, blank_kwargs, false, 1, 5);
 
 #if MXNET_DUMP_C
     bi.info_1_.data_->dumpC(&std::cerr, "Test2DBackward2DPlusLoadAndCompareLogic");
@@ -1045,6 +1072,7 @@ struct Test2DBackward2DPlusLoadAndCompareLogicUtil {
 
 
 TEST(BATCH_NORM, Test2DBackward2DPlusLoadAndCompareLogic) {
+  test::ScopeSet<volatile bool> disableMKL(&mxnet::op::batchnorm::disable_mkl, true);
   MSHADOW_REAL_TYPE_SWITCH_EX(
     mshadow::kFloat32, DType, AccReal,
     {
@@ -1154,6 +1182,385 @@ TEST(BATCH_NORM, Test2DBackwardMixed_cpu_cpu_ugs) {
       dumpF(&std::cout, bi);
       dumpB(&std::cout, bi);
     });
+}
+
+template<typename DType>
+class ChannelAxisTestData {
+ protected:
+  enum Mode { LOAD, SAVE };
+
+  void loadOrSave(const TBlob& blob, int channel_axis, const Mode mode) {
+    mxnet::op::batchnorm::BNTensor3<DType> tensor3(blob, channel_axis);
+    const TShape &shape = blob.shape_;
+    CHECK_GT(shape.ndim(), 0);
+    if (channel_axis < 0) {
+      channel_axis = shape.ndim() + channel_axis;
+    }
+    CHECK_LT(channel_axis, shape.ndim());
+    const size_t channel_count = shape[channel_axis];
+    std::vector<size_t> indexes(channel_count, 0);
+    for (size_t outer = 0, outerCount = tensor3.OuterSize(); outer < outerCount; ++outer) {
+      for (size_t channel = 0, channelCount = tensor3.ChannelCount();
+          channel < channelCount; ++channel) {
+        CHECK_LT(channel, channel_data_.size());
+        for (size_t inner = 0, innerCount = tensor3.InnerSize(); inner < innerCount; ++inner) {
+          CHECK_LT(indexes[channel], channel_data_[channel].size());
+          if (mode == SAVE) {
+            tensor3.get_ref(outer, channel, inner) = channel_data_[channel][indexes[channel]++];
+          } else {  // mode == LOAD
+            channel_data_[channel][indexes[channel]++] = tensor3.get_ref(outer, channel, inner);
+          }
+        }
+      }
+    }
+  }
+
+ public:
+  std::vector<std::vector<DType>>   channel_data_;
+
+  static void print(const std::string& label, const std::vector<std::vector<DType>>& m) {
+    if (test::debugOutput) {
+      if (!label.empty()) {
+        std::cout << label << ": ";
+      }
+      for (size_t i = 0, n = m.size(); i < n; ++i) {
+        const std::vector<DType> &vec = m[i];
+        for (size_t j = 0, jn = vec.size(); j < jn; ++j) {
+          if (j) {
+            std::cout << ", ";
+          }
+          const DType val = vec[j];
+          std::cout << std::fixed << std::setw(7)
+                    << std::setprecision(mxnet::test::MPRINT_PRECISION)
+                    << std::right << val;
+        }
+        std::cout << std::endl;
+      }
+      std::cout << "-----" << std::endl << std::flush;
+    }
+  }
+
+  static void print(const std::string& label, const TBlob& blob) {
+    if (test::debugOutput) {
+      if (!label.empty()) {
+        std::cout << label << ": ";
+      }
+      const size_t totalSize = blob.Size();
+      for (size_t i = 0; i < totalSize; ++i) {
+        const float val = blob.dptr<DType>()[i];
+        if (i) {
+          std::cout << ", ";
+        }
+        std::cout << std::fixed << std::setw(7) << std::setprecision(mxnet::test::MPRINT_PRECISION)
+                  << std::right << val;
+      }
+      std::cout << std::endl << std::flush;
+    }
+  }
+
+  void save(const TBlob& blob, const int channel_axis) {
+      loadOrSave(blob, channel_axis, SAVE);
+  }
+
+  void load(const TBlob& blob, const int channel_axis) {
+    loadOrSave(blob, channel_axis, LOAD);
+  }
+};
+
+template<typename DType, typename AccReal>
+static void compare(const TBlob& blob, const std::vector<DType>& vals) {
+  CHECK_EQ(blob.Size(), vals.size());
+  const DType *v = blob.dptr<DType>();
+  for (size_t i = 0, n = vals.size(); i < n; ++i) {
+    const DType vBlob = v[i];
+    const DType vVect = vals[i];
+    const bool near = test::op::Validator<DType, AccReal>::isNear(
+      vBlob, vVect, test::op::Validator<DType, AccReal>::ErrorBound(&blob));
+    EXPECT_TRUE(near);
+    if (!near) {
+      LOG(WARNING) << vBlob << " is not near enough to " << vVect << std::endl;
+    }
+  }
+}
+
+template<typename DType, typename AccReal>
+static void compare(const std::vector<std::vector<float>>& d1,
+                    const std::vector<std::vector<float>>& d2) {
+  CHECK_EQ(d1.size(), d2.size());
+  for (size_t x = 0, xn = d1.size(); x < xn; ++x) {
+    const std::vector<float> &vec1 = d1[x];
+    const std::vector<float> &vec2 = d2[x];
+    CHECK_EQ(vec1.size(), vec2.size());
+    for (size_t i = 0, n = vec1.size(); i < n; ++i) {
+      const DType v1 = vec1[i];
+      const DType v2 = vec2[i];
+      const bool near = test::op::Validator<DType, AccReal>::isNear(
+        v1, v2, test::op::Validator<DType, AccReal>::ERROR_BOUND());
+      EXPECT_TRUE(near);
+      if (!near) {
+        LOG(WARNING) << v1 << " is not near enough to " << v2 << std::endl;
+      }
+    }
+  }
+}
+
+template<typename DType, typename AccReal>
+static void testSaveAndLoad(const std::vector<size_t>& dims,
+                            const int channelAxis,
+                            const std::vector<std::vector<DType>>& inputChannelData,
+                            const std::vector<DType>& expectedBlobData) {
+  ChannelAxisTestData<DType> data;
+  data.channel_data_ = inputChannelData;
+
+  TShape shape(dims.size());
+  for (size_t i = 0, n = dims.size(); i < n; ++i) {
+    shape[i] = index_t(dims[i]);
+  }
+
+  std::unique_ptr<test::StandaloneBlob> blob(new test::StandaloneBlob(
+    shape, false, mshadow::DataType<DType>::kFlag));
+
+  data.save(*blob, channelAxis);
+  ChannelAxisTestData<DType>::print("saved to blob", *blob);
+  compare<DType, AccReal>(*blob, expectedBlobData);
+  data.load(*blob, channelAxis);
+  compare<DType, AccReal>(data.channel_data_, inputChannelData);
+}
+
+/*! \brief Check normalization/denormalization of various channel positions */
+TEST(BATCH_NORM, TestChannelAxisSaveAndLoad) {
+  std::cout << std::endl << std::flush;
+
+  typedef float DType;
+  typedef float AccReal;
+
+  const std::vector<std::vector<DType>> myData =
+    { { 1.0f, 1.0f, 1.0, 1.0 },
+      { 2.0f, 2.0f, 2.0f, 2.0f },
+      { 3.0f, 3.0f, 3.0f, 3.0f } };
+
+  testSaveAndLoad<DType, AccReal>({ 1, 3, 2, 2 }, 1, myData,
+                                  { 1.0f, 1.0f, 1.0f, 1.0f,
+                                    2.0f, 2.0f, 2.0f, 2.0f,
+                                    3.0f, 3.0f, 3.0f, 3.0f});
+
+  testSaveAndLoad<DType, AccReal>({ 1, 2, 2, 3 }, 3, myData,
+                                  { 1.0f, 2.0f, 3.0f,
+                                    1.0f, 2.0f, 3.0f,
+                                    1.0f, 2.0f, 3.0f,
+                                    1.0f, 2.0f, 3.0f});
+
+  testSaveAndLoad<DType, AccReal>({ 1, 2, 3, 2 }, 2, myData,
+                                  { 1.0f, 1.0f, 2.0f, 2.0f, 3.0f, 3.0f,
+                                    1.0f, 1.0f, 2.0f, 2.0f, 3.0f, 3.0f});
+}
+
+/*! \brief Insert the channel field `channelCount` into the shape at `channelAxis` position */
+static TShape MakeShape(const std::vector<index_t>& shape,
+                        signed int channelAxis,
+                        const size_t channelCount) {
+  if (channelAxis < 0) {
+    channelAxis += shape.size() + 1;
+  }
+  CHECK_LT(channelAxis, shape.size() + 1);
+  const index_t dim = index_t(shape.size()) + 1;
+  TShape newShape(dim);
+  for (size_t x = 0; x < channelAxis; ++x) {
+    newShape[x] = index_t(shape[x]);
+  }
+  newShape[channelAxis] = index_t(channelCount);
+  for (int x = channelAxis + 1; x < dim; ++x) {
+    newShape[x] = shape[x - 1];
+  }
+  return newShape;
+}
+
+/*! \brief Create and arrange equivalent data with different channel axes, then compare
+ * normalized results */
+static void runChannelAxisTest(
+  const bool isGPU1,
+  const bool isGPU2,
+  const test::op::kwargs_t& base_kwargs,
+  const std::vector<index_t> shape,
+  const signed int channelAxis1,
+  const signed int channelAxis2,
+  const size_t channelCount,
+  const bool simpleData,
+  const size_t numberOfPasses = 5
+
+) {
+  typedef float DType;
+  typedef float AccReal;
+
+  size_t spatialSize = 1;
+  for (size_t x = 1, n = shape.size(); x < n; ++x) {
+    spatialSize *= shape[x];
+  }
+
+  const size_t batchSize = shape[0];
+
+  // Create normalized input and output-grad data (inputs to forward and backward pass)
+  std::vector<std::vector<DType>> myData, myGradOut;
+  DType ival = 1.0f, gval = 0.1f;
+  myData.resize(batchSize);
+  myData.resize(channelCount);
+  myGradOut.resize(channelCount);
+  for (size_t c = 0; c < channelCount; ++c) {
+    for (size_t i = 0; i < spatialSize; ++i) {
+      if (!simpleData) {
+        myData[c].push_back(ival += 1.0f);
+        myGradOut[c].push_back(gval += 0.1f);
+      } else {
+        myData[c].push_back(c + 1);
+        myGradOut[c].push_back(DType(c + 1) / 10.0f);
+      }
+    }
+  }
+
+  ChannelAxisTestData<DType>::print("myData", myData);
+  ChannelAxisTestData<DType>::print("myGradOut", myGradOut);
+  ChannelAxisTestData<DType> data_c1, data_c2, grad_c1, grad_c2;
+
+  // For forward pass
+  data_c1.channel_data_ = data_c2.channel_data_ = myData;
+
+  // For backward pass
+  grad_c1.channel_data_ = grad_c2.channel_data_ = myGradOut;
+
+  test::op::kwargs_t kwargs = base_kwargs;
+
+  // Insert the channel field into the shape at channelAxis position
+  const TShape shape_c1 = MakeShape(shape, channelAxis1, channelCount);
+  const TShape shape_c2 = MakeShape(shape, channelAxis2, channelCount);
+
+  // Create operator 1 with ChannelAxis2 (normally the experimental one)
+  kwargs.push_back({"axis", std::to_string(channelAxis1)});
+  test::op::OpInfo<op::BatchNormProp, DType, AccReal> info_c1 = test::op::createOpAndInfoF<
+    op::BatchNormProp, BNOperatorData<DType, AccReal>, DType, AccReal>(
+    isGPU1, shape_c1, kwargs);
+
+  // Create operator 2 with ChannelAxis2 (normally the control one)
+  kwargs.pop_back();
+  kwargs.push_back({"axis", std::to_string(channelAxis2)});
+  test::op::OpInfo<op::BatchNormProp, DType, AccReal> info_c2 = test::op::createOpAndInfoF<
+    op::BatchNormProp, BNOperatorData<DType, AccReal>, DType, AccReal>(
+    isGPU2, shape_c2, kwargs);
+  kwargs.pop_back();
+
+  // Init operators
+  info_c1.data_->initForward(*info_c1.prop_, &info_c1.in_type_);
+  info_c1.data_->initBackward(*info_c1.prop_, &info_c1.in_type_);
+  info_c2.data_->initForward(*info_c2.prop_, &info_c2.in_type_);
+  info_c2.data_->initBackward(*info_c2.prop_, &info_c2.in_type_);
+
+  // Save input data to blob with new shape 1
+  data_c1.save(info_c1.data_->c_.blob_input_vec_[0], channelAxis1);
+  ChannelAxisTestData<DType>::print("blob 1 input", info_c1.data_->c_.blob_input_vec_[0]);
+
+  // Save input data to blob with new shape 2
+  data_c2.save(info_c2.data_->c_.blob_input_vec_[0], channelAxis2);
+  ChannelAxisTestData<DType>::print("blob 2 input", info_c2.data_->c_.blob_input_vec_[0]);
+
+  // Save output grad to blob with new shape 1
+  grad_c1.save(info_c1.data_->c_.blob_out_grad_[0], channelAxis1);
+  ChannelAxisTestData<DType>::print("blob 1 output grad", info_c1.data_->c_.blob_out_grad_[0]);
+
+  // Save output grad to blob with new shape 2
+  grad_c2.save(info_c2.data_->c_.blob_out_grad_[0], channelAxis2);
+  ChannelAxisTestData<DType>::print("blob 2 output grad", info_c2.data_->c_.blob_out_grad_[0]);
+
+  // Run both operators forward and backwards several times
+  for (int x = 0; x < numberOfPasses; ++x) {
+    info_c1.data_->forward();
+    info_c2.data_->forward();
+
+    info_c1.data_->backward();
+    info_c2.data_->backward();
+  }
+
+  // Transform operator 1's blob output to a normalized shape
+  data_c1.load(info_c1.data_->c_.blob_output_vec_[0], channelAxis1);
+  ChannelAxisTestData<DType>::print("channel data 1", data_c1.channel_data_);
+
+  // Transform operator 2's blob output to a normalized shape
+  data_c2.load(info_c2.data_->c_.blob_output_vec_[0], channelAxis2);
+  ChannelAxisTestData<DType>::print("channel data 2", data_c2.channel_data_);
+
+  // Compare the operators' output data while they're in a normalized shape
+  compare<DType, AccReal>(data_c1.channel_data_, data_c2.channel_data_);
+
+  // Transform operator 1's input-grad blob to a normalized shape
+  grad_c1.load(info_c1.data_->c_.blob_in_grad_[0], channelAxis1);
+  ChannelAxisTestData<DType>::print("input grad 1", grad_c1.channel_data_);
+
+  // Transform operator 2's input-grad blob to a normalized shape
+  grad_c2.load(info_c2.data_->c_.blob_in_grad_[0], channelAxis2);
+  ChannelAxisTestData<DType>::print("input grad 2", grad_c2.channel_data_);
+
+  // Compare the operators' input grad data while they're in a normalized shape
+  compare<DType, AccReal>(grad_c1.channel_data_, grad_c2.channel_data_);
+}
+
+TEST(BATCH_NORM, TestChannelAxisSimple) {
+  std::cout << std::endl << std::flush;
+  const size_t CHANNEL_COUNT = 4;
+  const int DEFAULT_AXIS = 1;
+  const int NEW_AXIS = -2;
+  const bool useSimpleData = true;  // change to true sometimes for troubleshooting
+  const std::vector<index_t> shape = {1, 2, 3};
+  // Check against base-case of channel axis position 1
+  runChannelAxisTest(false, false,
+                     useglobalstats_kwargs_nocudnn,
+                     shape,
+                     DEFAULT_AXIS,
+                     NEW_AXIS,
+                     CHANNEL_COUNT,
+                     useSimpleData);
+}
+
+/*! \brief Test varying channel axis shapes
+ *  For several channel counts (1-3), test that result data (after reshape) is
+ *  equivalent for the default (channel position 1) and all other channel positions
+ *  in the shape vector
+ *  Channel position 1 (default) is checked everywhere else, so for and
+ *  backward result equivalence here implies correctness for other channel positions
+ */
+TEST(BATCH_NORM, TestChannelAxis) {
+  test::ScopeSet<bool> noDebugOutput(&test::debugOutput, false);
+
+  test::op::kwargs_t kwargs;
+  const std::vector<std::vector<index_t>> shapes =
+    { {1, 2}, {1, 2, 1}, {1, 2, 3}, {1, 2, 3, 4} };
+  const char *tof[2] = { "False", "True" };
+
+  for (size_t x1 = 0; x1 < 2U; ++x1) {
+    kwargs.push_back({"fix_gamma", tof[x1]});
+    for (size_t x2 = 0; x2 < 2U; ++x2) {
+      kwargs.push_back({"use_global_stats", tof[x2]});
+      for (size_t x3 = 0; x3 < 2U; ++x3) {
+        kwargs.push_back({"cudnn_off", tof[x3]});
+        for (int g1 = 0; g1 < 2U; ++g1) {
+          for (int g2 = 0; g2 < 2U; ++g2) {
+            for (const std::vector<index_t> &simpleShape : shapes) {
+              const int dim = static_cast<int>(simpleShape.size());
+              for (signed int channelAxis = -dim, shapeDim = dim;
+                   channelAxis <= shapeDim;
+                   ++channelAxis) {
+                for (size_t channelCount = 1; channelCount <= 3; ++channelCount) {
+                  // Check against base-case of channel axis position 1
+                  runChannelAxisTest(g1 != 0, g2 != 0, kwargs, simpleShape,
+                                     1, channelAxis, channelCount, false);
+                }
+              }
+            }
+          }
+        }
+        kwargs.pop_back();
+      }
+      kwargs.pop_back();
+    }
+    kwargs.pop_back();
+  }
 }
 
 #if MXNET_USE_CUDA

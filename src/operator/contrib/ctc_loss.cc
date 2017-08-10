@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file ctc_loss.cc
  * \brief
  * \author Sebastian Bodenstein
@@ -18,7 +36,7 @@ ctcStatus_t compute_ctc_cost(const Tensor<cpu, 3, DType> activations,
   int minibatch = static_cast<int>(activations.size(1));
   int alphabet_size = static_cast<int>(activations.size(2));
   int blank_label = 0;
-  CpuCTC<DType> ctc(alphabet_size, minibatch, workspace, blank_label);
+  mxnet_warpctc::CpuCTC<DType> ctc(alphabet_size, minibatch, workspace, blank_label);
   if (train)
     return ctc.cost_and_grad(activations.dptr_, grads, costs, labels,
                              label_lengths, input_lengths);
@@ -58,22 +76,24 @@ The shapes of the inputs and outputs:
 - **label**: *(batch_size, label_sequence_length)*
 - **out**: *(batch_size)*.
 
-``label`` is a tensor of integers between 1 and *alphabet_size*. If a 
-sequence of labels is shorter than *label_sequence_length*, use the special 
-padding character 0 at the end of the sequence to conform it to the correct 
-length. For example, if *label_sequence_length* = 4, and one has two sequences 
-of labels [2, 1] and [3, 2, 2], the resulting ```label``` tensor should be 
+``label`` is a tensor of integers between 1 and *alphabet_size*. If a
+sequence of labels is shorter than *label_sequence_length*, use the special
+padding character 0 at the end of the sequence to conform it to the correct
+length. For example, if *label_sequence_length* = 4, and one has two sequences
+of labels [2, 1] and [3, 2, 2], the resulting ```label``` tensor should be
 padded to be::
 
   [[2, 1, 0, 0], [3, 2, 2, 0]]
 
-The ``data`` tensor consists of sequences of activation vectors. The layer 
-applies a softmax to each vector, which then becomes a vector of probabilities 
-over the alphabet. Note that the 0th element of this vector is reserved for the 
+The ``data`` tensor consists of sequences of activation vectors. The layer
+applies a softmax to each vector, which then becomes a vector of probabilities
+over the alphabet. Note that the 0th element of this vector is reserved for the
 special blank character.
 
-See *Connectionist Temporal Classification: Labelling Unsegmented 
-Sequence Data with Recurrent Neural Networks*, A. Graves *et al*. for more 
+``out`` is a list of CTC loss values, one per example in the batch.
+
+See *Connectionist Temporal Classification: Labelling Unsegmented
+Sequence Data with Recurrent Neural Networks*, A. Graves *et al*. for more
 information.
 
 )code" ADD_FILELINE)

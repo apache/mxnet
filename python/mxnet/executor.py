@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments
 """Symbolic Executor component of MXNet."""
@@ -5,7 +22,6 @@ from __future__ import absolute_import
 
 import ctypes
 import copy
-import warnings
 import numpy as np
 from .base import _LIB
 from .base import mx_uint, NDArrayHandle, ExecutorHandle
@@ -61,7 +77,6 @@ class Executor(object):
         self._aux_dict = None
         self._output_dict = None
         self._monitor_callback = None
-        self._output_dirty = False
         self._ctx = copy.deepcopy(ctx)
         self._grad_req = copy.deepcopy(grad_req)
         self._group2ctx = copy.deepcopy(group2ctx)
@@ -99,8 +114,7 @@ class Executor(object):
         ----------
         is_train: bool, optional
             Whether this forward is for evaluation purpose. If True,
-            a backward call is expected to follow. Otherwise following
-            backward is invalid.
+            a backward call is expected to follow.
 
         **kwargs
             Additional specification of input arguments.
@@ -132,15 +146,9 @@ class Executor(object):
             self.handle,
             ctypes.c_int(int(is_train))))
 
-        if self._output_dirty:
-            warnings.warn(
-                "Calling forward the second time after forward(is_train=True) "
-                "without calling backward first. Is this intended?", stacklevel=2)
-        self._output_dirty = is_train
-
         return self.outputs
 
-    def backward(self, out_grads=None):
+    def backward(self, out_grads=None, is_train=True):
         """Do backward pass to get the gradient of arguments.
 
         Parameters
@@ -149,6 +157,11 @@ class Executor(object):
             Gradient on the outputs to be propagated back.
             This parameter is only needed when bind is called
             on outputs that are not a loss function.
+        is_train : bool, default True
+            Whether this backward is for training or inference. Note that in rare
+            cases you want to call backward with is_train=False to get gradient
+            during inference.
+
 
         Examples
         --------
@@ -211,16 +224,11 @@ class Executor(object):
             if not isinstance(obj, NDArray):
                 raise TypeError("inputs must be NDArray")
         ndarray = c_array(NDArrayHandle, [item.handle for item in out_grads])
-        check_call(_LIB.MXExecutorBackward(
+        check_call(_LIB.MXExecutorBackwardEx(
             self.handle,
             mx_uint(len(out_grads)),
-            ndarray))
-
-        if not self._output_dirty:
-            warnings.warn(
-                "Calling backward without calling forward(is_train=True) "
-                "first. Behavior is undefined.", stacklevel=2)
-        self._output_dirty = False
+            ndarray,
+            ctypes.c_int(is_train)))
 
     def set_monitor_callback(self, callback):
         """Install callback for monitor.

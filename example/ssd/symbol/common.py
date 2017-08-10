@@ -1,7 +1,60 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 import numpy as np
 
 def conv_act_layer(from_layer, name, num_filter, kernel=(1,1), pad=(0,0), \
+    stride=(1,1), act_type="relu", use_batchnorm=False):
+    """
+    wrapper for a small Convolution group
+
+    Parameters:
+    ----------
+    from_layer : mx.symbol
+        continue on which layer
+    name : str
+        base name of the new layers
+    num_filter : int
+        how many filters to use in Convolution layer
+    kernel : tuple (int, int)
+        kernel size (h, w)
+    pad : tuple (int, int)
+        padding size (h, w)
+    stride : tuple (int, int)
+        stride size (h, w)
+    act_type : str
+        activation type, can be relu...
+    use_batchnorm : bool
+        whether to use batch normalization
+
+    Returns:
+    ----------
+    (conv, relu) mx.Symbols
+    """
+    conv = mx.symbol.Convolution(data=from_layer, kernel=kernel, pad=pad, \
+        stride=stride, num_filter=num_filter, name="{}_conv".format(name))
+    if use_batchnorm:
+        conv = mx.symbol.BatchNorm(data=conv, name="{}_bn".format(name))
+    relu = mx.symbol.Activation(data=conv, act_type=act_type, \
+        name="{}_{}".format(name, act_type))
+    return relu
+
+def legacy_conv_act_layer(from_layer, name, num_filter, kernel=(1,1), pad=(0,0), \
     stride=(1,1), act_type="relu", use_batchnorm=False):
     """
     wrapper for a small Convolution group
@@ -40,9 +93,66 @@ def conv_act_layer(from_layer, name, num_filter, kernel=(1,1), pad=(0,0), \
         relu = mx.symbol.BatchNorm(data=relu, name="bn{}".format(name))
     return conv, relu
 
+def multi_layer_feature(body, from_layers, num_filters, strides, pads, min_filter=128):
+    """Wrapper function to extract features from base network, attaching extra
+    layers and SSD specific layers
+
+    Parameters
+    ----------
+    from_layers : list of str
+        feature extraction layers, use '' for add extra layers
+        For example:
+        from_layers = ['relu4_3', 'fc7', '', '', '', '']
+        which means extract feature from relu4_3 and fc7, adding 4 extra layers
+        on top of fc7
+    num_filters : list of int
+        number of filters for extra layers, you can use -1 for extracted features,
+        however, if normalization and scale is applied, the number of filter for
+        that layer must be provided.
+        For example:
+        num_filters = [512, -1, 512, 256, 256, 256]
+    strides : list of int
+        strides for the 3x3 convolution appended, -1 can be used for extracted
+        feature layers
+    pads : list of int
+        paddings for the 3x3 convolution, -1 can be used for extracted layers
+    min_filter : int
+        minimum number of filters used in 1x1 convolution
+
+    Returns
+    -------
+    list of mx.Symbols
+
+    """
+    # arguments check
+    assert len(from_layers) > 0
+    assert isinstance(from_layers[0], str) and len(from_layers[0].strip()) > 0
+    assert len(from_layers) == len(num_filters) == len(strides) == len(pads)
+
+    internals = body.get_internals()
+    layers = []
+    for k, params in enumerate(zip(from_layers, num_filters, strides, pads)):
+        from_layer, num_filter, s, p = params
+        if from_layer.strip():
+            # extract from base network
+            layer = internals[from_layer.strip() + '_output']
+            layers.append(layer)
+        else:
+            # attach from last feature layer
+            assert len(layers) > 0
+            assert num_filter > 0
+            layer = layers[-1]
+            num_1x1 = max(min_filter, num_filter // 2)
+            conv_1x1 = conv_act_layer(layer, 'multi_feat_%d_conv_1x1' % (k),
+                num_1x1, kernel=(1, 1), pad=(0, 0), stride=(1, 1), act_type='relu')
+            conv_3x3 = conv_act_layer(conv_1x1, 'multi_feat_%d_conv_3x3' % (k),
+                num_filter, kernel=(3, 3), pad=(p, p), stride=(s, s), act_type='relu')
+            layers.append(conv_3x3)
+    return layers
+
 def multibox_layer(from_layers, num_classes, sizes=[.2, .95],
                     ratios=[1], normalization=-1, num_channels=[],
-                    clip=True, interm_layer=0, steps=[]):
+                    clip=False, interm_layer=0, steps=[]):
     """
     the basic aggregation module for SSD detection. Takes in multiple layers,
     generate multiple object detection targets by customized layers
@@ -106,7 +216,7 @@ def multibox_layer(from_layers, num_classes, sizes=[.2, .95],
         normalization = [normalization] * len(from_layers)
     assert len(normalization) == len(from_layers)
 
-    assert sum(x > 0 for x in normalization) == len(num_channels), \
+    assert sum(x > 0 for x in normalization) <= len(num_channels), \
         "must provide number of channels for each normalized layer"
 
     if steps:
@@ -125,7 +235,8 @@ def multibox_layer(from_layers, num_classes, sizes=[.2, .95],
                 mode="channel", name="{}_norm".format(from_name))
             scale = mx.symbol.Variable(name="{}_scale".format(from_name),
                 shape=(1, num_channels.pop(0), 1, 1),
-                init=mx.init.Constant(normalization[k]))
+                init=mx.init.Constant(normalization[k]),
+                attr={'__wd_mult__': '0.1'})
             from_layer = mx.symbol.broadcast_mul(lhs=scale, rhs=from_layer)
         if interm_layer > 0:
             from_layer = mx.symbol.Convolution(data=from_layer, kernel=(3,3), \

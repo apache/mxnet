@@ -1,11 +1,26 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=too-many-instance-attributes,too-many-locals
 # pylint: disable=too-many-branches,too-many-statements,too-many-arguments
 """Executor group is a convenient tool for managing a group of executors."""
 
 import logging
 from collections import OrderedDict
-
-import numpy as np
 
 from .. import context as ctx
 from .. import ndarray as nd
@@ -15,7 +30,7 @@ from ..executor_manager import _split_input_slice
 
 def _load_general(data, targets, major_axis):
     """Load a list of arrays into a list of arrays specified by slices."""
-    for d_src, d_targets, axis in zip(data, targets, major_axis):
+    for d_src, d_targets, axis in zip(data, targets, major_axis): # pylint: disable=too-many-nested-blocks
         if isinstance(d_targets, nd.NDArray):
             d_src.copyto(d_targets)
         elif isinstance(d_src, (list, tuple)):
@@ -26,17 +41,22 @@ def _load_general(data, targets, major_axis):
                 if axis >= 0:
                     # copy slice
                     shape = d_src.shape
-                    begin = np.zeros(len(shape), dtype=int)
-                    end = np.array(shape)
-                    begin[axis] = slice_idx.start
-                    end[axis] = slice_idx.stop
+                    do_crop = (slice_idx.start != 0 or shape[axis] != slice_idx.stop)
                     # pylint: disable=no-member,protected-access
-                    if d_src.context == d_dst.context:
-                        nd.crop(d_src, begin=tuple(begin), end=tuple(end), out=d_dst)
+                    if do_crop:
+                        if axis == 0:
+                            d_src[slice_idx.start:slice_idx.stop].copyto(d_dst)
+                        else:
+                            if d_src.context == d_dst.context:
+                                nd.slice_axis(d_src, axis=axis, begin=slice_idx.start,
+                                              end=slice_idx.stop, out=d_dst)
+                            else:
+                                # on different device, crop and then do cross device copy
+                                d_dst_copy = nd.slice_axis(d_src, axis=axis, begin=slice_idx.start,
+                                                           end=slice_idx.stop)
+                                d_dst_copy.copyto(d_dst)
                     else:
-                        # on different device, crop and then do cross device copy
-                        d_dst_copy = nd.crop(d_src, begin=tuple(begin), end=tuple(end))
-                        d_dst_copy.copyto(d_dst)
+                        d_src.copyto(d_dst)
                     # pylint: enable=no-member,protected-access
                 else:
                     d_src.copyto(d_dst)
@@ -108,8 +128,8 @@ class DataParallelExecutorGroup(object):
     shared_group : DataParallelExecutorGroup
         Defaults to ``None``. This is used in bucketing. When not ``None``, it should be a executor
         group corresponding to a different bucket. In other words, it will correspond to a different
-        symbol but with the same set of parameters (e.g. unrolled RNNs with different lengths).
-        In this case, many memory will be shared.
+        symbol with the same set of parameters (e.g. unrolled RNNs with different lengths).
+        In this case the memory regions of the parameters will be shared.
     logger : Logger
         Default is `logging`.
     fixed_param_names: list of str
@@ -327,7 +347,7 @@ class DataParallelExecutorGroup(object):
             self._default_execs = [i for i in self.execs]
         self.bind_exec(data_shapes, label_shapes, reshape=True)
 
-    def set_params(self, arg_params, aux_params):
+    def set_params(self, arg_params, aux_params, allow_extra=False):
         """Assign, i.e. copy parameters to all the executors.
 
         Parameters
@@ -336,9 +356,13 @@ class DataParallelExecutorGroup(object):
             A dictionary of name to `NDArray` parameter mapping.
         aux_params : dict
             A dictionary of name to `NDArray` auxiliary variable mapping.
+        allow_extra : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
         """
         for exec_ in self.execs:
-            exec_.copy_params_from(arg_params, aux_params)
+            exec_.copy_params_from(arg_params, aux_params, allow_extra_params=allow_extra)
 
     def get_params(self, arg_params, aux_params):
         """ Copy data from each executor to `arg_params` and `aux_params`.
@@ -559,6 +583,7 @@ class DataParallelExecutorGroup(object):
 
     def _bind_ith_exec(self, i, data_shapes, label_shapes, shared_group):
         """Internal utility function to bind the i-th executor.
+        This function utilizes simple_bind python interface.
         """
         shared_exec = None if shared_group is None else shared_group.execs[i]
         context = self.contexts[i]
@@ -568,85 +593,14 @@ class DataParallelExecutorGroup(object):
         if label_shapes is not None:
             input_shapes.update(dict(label_shapes))
 
-        arg_shapes, _, aux_shapes = self.symbol.infer_shape(**input_shapes)
-        assert arg_shapes is not None, "shape inference failed"
-
         input_types = {x.name: x.dtype for x in data_shapes}
         if label_shapes is not None:
             input_types.update({x.name: x.dtype for x in label_shapes})
-        arg_types, _, aux_types = self.symbol.infer_type(**input_types)
-        assert arg_types is not None, "type inference failed"
 
-        arg_arrays = []
-        grad_arrays = {} if self.for_training else None
-
-        def _get_or_reshape(name, shared_data_arrays, arg_shape, arg_type, context, logger):
-            """Internal helper to get a memory block or re-use by re-shaping."""
-            if name in shared_data_arrays:
-                arg_arr = shared_data_arrays[name]
-
-                if np.prod(arg_arr.shape) >= np.prod(arg_shape):
-                    # nice, we can directly re-use this data blob
-                    assert arg_arr.dtype == arg_type
-                    arg_arr = arg_arr.reshape(arg_shape)
-                else:
-                    logger.warning(('bucketing: data "%s" has a shape %s' % (name, arg_shape)) +
-                                   (', which is larger than already allocated ') +
-                                   ('shape %s' % (arg_arr.shape,)) +
-                                   ('. Need to re-allocate. Consider putting ') +
-                                   ('default_bucket_key to') +
-                                   (' be the bucket taking the largest input for better ') +
-                                   ('memory sharing.'))
-                    arg_arr = nd.zeros(arg_shape, context, dtype=arg_type)
-
-                    # replace existing shared array because the new one is bigger
-                    shared_data_arrays[name] = arg_arr
-            else:
-                arg_arr = nd.zeros(arg_shape, context, dtype=arg_type)
-                shared_data_arrays[name] = arg_arr
-
-            return arg_arr
-
-        # create or borrow arguments and gradients
-        for j in range(len(self.arg_names)):
-            name = self.arg_names[j]
-            if name in self.param_names: # model parameters
-                if shared_exec is None:
-                    arg_arr = nd.zeros(arg_shapes[j], context, dtype=arg_types[j])
-                    if self.grad_req[name] != 'null':
-                        grad_arr = nd.zeros(arg_shapes[j], context, dtype=arg_types[j])
-                        grad_arrays[name] = grad_arr
-                else:
-                    arg_arr = shared_exec.arg_dict[name]
-                    assert arg_arr.shape == arg_shapes[j]
-                    assert arg_arr.dtype == arg_types[j]
-                    if self.grad_req[name] != 'null':
-                        grad_arrays[name] = shared_exec.grad_dict[name]
-            else: # data, label, or states
-                arg_arr = _get_or_reshape(name, shared_data_arrays, arg_shapes[j], arg_types[j],
-                                          context, self.logger)
-
-                # data might also need grad if inputs_need_grad is True
-                if self.grad_req[name] != 'null':
-                    grad_arrays[name] = _get_or_reshape('grad of ' + name, shared_data_arrays,
-                                                        arg_shapes[j], arg_types[j], context,
-                                                        self.logger)
-
-            arg_arrays.append(arg_arr)
-
-        # create or borrow aux variables
-        if shared_exec is None:
-            aux_arrays = [nd.zeros(s, context, dtype=t) for s, t in zip(aux_shapes, aux_types)]
-        else:
-            for j, arr in enumerate(shared_exec.aux_arrays):
-                assert aux_shapes[j] == arr.shape
-                assert aux_types[j] == arr.dtype
-            aux_arrays = shared_exec.aux_arrays[:]
-
-        executor = self.symbol.bind(ctx=context, args=arg_arrays,
-                                    args_grad=grad_arrays, aux_states=aux_arrays,
-                                    grad_req=self.grad_req, shared_exec=shared_exec)
-        # Get the total bytes allocated for this executor
+        executor = self.symbol.simple_bind(ctx=context, grad_req=self.grad_req,
+                                           type_dict=input_types, shared_arg_names=self.param_names,
+                                           shared_exec=shared_exec,
+                                           shared_buffer=shared_data_arrays, **input_shapes)
         self._total_exec_bytes += int(executor.debug_str().split('\n')[-3].split()[1])
         return executor
 

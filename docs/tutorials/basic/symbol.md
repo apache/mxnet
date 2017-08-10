@@ -9,7 +9,7 @@ in an imperative fashion, making full use of the native control of any front-end
 So you might wonder, why don't we just use `NDArray` for all computation?
 
 MXNet provides the Symbol API, an interface for symbolic programming.
-With symbolic programing, rather than executing operations step by step,
+With symbolic programming, rather than executing operations step by step,
 we first define a *computation graph*.
 This graph contains placeholders for inputs and designated outputs.
 We can then compile the graph, yielding a function
@@ -44,6 +44,18 @@ For a visual explanation of these concepts, see
 
 To make things concrete, let's take a hands-on look at the Symbol API.
 There are a few different ways to compose a `Symbol`.
+
+## Prerequisites
+
+To complete this tutorial, we need:
+
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- [Jupyter](http://jupyter.org/)
+    ```
+    pip install jupyter
+    ```
+- GPUs - A section of this tutorial uses GPUs. If you don't have GPUs on your machine, simply
+set the variable gpu_device to mx.cpu().
 
 ## Basic Symbol Composition
 
@@ -103,7 +115,7 @@ Each symbol takes a (unique) string name. NDArray and Symbol both represent
 a single tensor. *Operators* represent the computation between tensors.
 Operators take symbol (or NDArray) as inputs and might also additionally accept
 other hyperparameters such as the number of hidden neurons (*num_hidden*) or the
-activation type (*act_type*) and produces the output.
+activation type (*act_type*) and produce the output.
 
 We can view a symbol simply as a function taking several arguments.
 And we can retrieve those arguments with the following method call:
@@ -160,7 +172,7 @@ composed.list_arguments()
 ```
 
 In this example, *net2* is used as a function to apply to an existing symbol *net1*,
-and the resulting *composed_net* will have all the attributes of *net1* and *net2*.
+and the resulting *composed* symbol will have all the attributes of *net1* and *net2*.
 
 Once you start building some bigger networks, you might want to name some
 symbols with a common prefix to outline the structure of your network.
@@ -173,8 +185,8 @@ data = mx.sym.Variable("data")
 net = data
 n_layer = 2
 for i in range(n_layer):
-   with mx.name.Prefix("layer%d_" % (i + 1)):
-   net = mx.sym.FullyConnected(data=net, name="fc", num_hidden=100)
+    with mx.name.Prefix("layer%d_" % (i + 1)):
+        net = mx.sym.FullyConnected(data=net, name="fc", num_hidden=100)
 net.list_arguments()
 ```
 
@@ -283,7 +295,7 @@ note that, most of them are wrapped by the `module` package.
 
 ### Shape and Type Inference
 
-For each symbol, we can query it's arguments, auxiliary states and outputs.
+For each symbol, we can query its arguments, auxiliary states and outputs.
 We can also infer the output shape and type of the symbol given the known input
 shape or type of some arguments, which facilitates memory allocation.
 
@@ -314,15 +326,18 @@ executor. The executor provides `forward` method for evaluation and an attribute
 ex = c.bind(ctx=mx.cpu(), args={'a' : mx.nd.ones([2,3]),
                                 'b' : mx.nd.ones([2,3])})
 ex.forward()
-print 'number of outputs = %d\nthe first output = \n%s' % (
-           len(ex.outputs), ex.outputs[0].asnumpy())
+print('number of outputs = %d\nthe first output = \n%s' % (
+           len(ex.outputs), ex.outputs[0].asnumpy()))
 ```
 
 We can evaluate the same symbol on GPU with different data.
 
+**Note** In order to execute the following section on a cpu set gpu_device to mx.cpu().
 ```python
-ex_gpu = c.bind(ctx=mx.gpu(), args={'a' : mx.nd.ones([3,4], mx.gpu())*2,
-                                    'b' : mx.nd.ones([3,4], mx.gpu())*3})
+gpu_device=mx.gpu() # Change this to mx.cpu() in absence of GPUs.
+
+ex_gpu = c.bind(ctx=gpu_device, args={'a' : mx.nd.ones([3,4], gpu_device)*2,
+                                      'b' : mx.nd.ones([3,4], gpu_device)*3})
 ex_gpu.forward()
 ex_gpu.outputs[0].asnumpy()
 ```
@@ -332,8 +347,8 @@ and `forward` methods.
 
 ```python
 ex = c.eval(ctx = mx.cpu(), a = mx.nd.ones([2,3]), b = mx.nd.ones([2,3]))
-print 'number of outputs = %d\nthe first output = \n%s' % (
-            len(ex), ex[0].asnumpy())
+print('number of outputs = %d\nthe first output = \n%s' % (
+            len(ex), ex[0].asnumpy()))
 ```
 
 For neural nets, a more commonly used pattern is ```simple_bind```, which

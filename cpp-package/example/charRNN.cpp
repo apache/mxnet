@@ -115,7 +115,7 @@ Symbol LSTMUnroll(int num_lstm_layer, int sequence_length, int input_dim,
 
   auto label = Symbol::Variable("softmax_label");
   label = transpose(label);
-  label = Reshape(label, Shape(), false, Shape(-1), false);  // -1: infer from graph
+  label = Reshape(label, Shape(), false, Shape(0), false);  // -1: infer from graph
   auto sm = SoftmaxOutput("softmax", pred, label);
   if (isTrain)
     return sm;
@@ -141,7 +141,7 @@ Symbol LSTMWithBuiltInRNNOp(int num_lstm_layer, int sequence_length, int input_d
   auto label = Symbol::Variable("softmax_label");
   label = transpose(label);
   label = Reshape(label, Shape(), false,
-                  Shape(-1), false);  // FullyConnected requires one dimension
+                  Shape(0), false);  // FullyConnected requires one dimension
   if (!TIME_MAJOR && isTrain)
     embed = SwapAxis(embed, 0, 1);  // Change to time-major as cuDNN requires
 
@@ -151,7 +151,7 @@ Symbol LSTMWithBuiltInRNNOp(int num_lstm_layer, int sequence_length, int input_d
   auto rnn_params = Symbol::Variable("LSTM_parameters");  // See explanations near RNNXavier class
   auto rnn = RNN(embed, rnn_params, rnn_h_init, rnn_c_init, num_hidden, num_lstm_layer,
       RNNMode::kLstm, false, dropout, !isTrain);
-  auto hidden = Reshape(rnn[0], Shape(), false, Shape(-1, num_hidden), false);
+  auto hidden = Reshape(rnn[0], Shape(), false, Shape(0, num_hidden), false);
 
   auto cls_weight = Symbol::Variable("cls_weight");
   auto cls_bias = Symbol::Variable("cls_bias");
@@ -451,6 +451,8 @@ void train(const string file, int batch_size, int max_epoch, int start_epoch) {
   mx_float learning_rate = 0.0002;
   mx_float weight_decay = 0.000002;
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
+  opt->SetParam("lr", learning_rate)
+     ->SetParam("wd", weight_decay);
 //  opt->SetParam("momentum", 0.9)->SetParam("rescale_grad", 1.0 / batch_size)
 //  ->SetParam("clip_gradient", 10);
 
@@ -470,7 +472,10 @@ void train(const string file, int batch_size, int max_epoch, int start_epoch) {
 
       exe->Forward(true);
       exe->Backward();
-      exe->UpdateAll(opt, learning_rate, weight_decay);
+      for (size_t i = 0; i < exe->arg_arrays.size(); ++i) {
+        opt->Update(i, exe->arg_arrays[i], exe->grad_arrays[i]);
+      }
+
       NDArray::WaitAll();
     }
     auto toc = chrono::system_clock::now();
@@ -547,7 +552,9 @@ void trainWithBuiltInRNNOp(const string file, int batch_size, int max_epoch, int
 
       exe->Forward(true);
       exe->Backward();
-      exe->UpdateAll(opt, learning_rate, weight_decay);
+      for (size_t i = 0; i < exe->arg_arrays.size(); ++i) {
+        opt->Update(i, exe->arg_arrays[i], exe->grad_arrays[i]);
+      }
       NDArray::WaitAll();
     }
     auto toc = chrono::system_clock::now();

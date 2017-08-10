@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file native_op-inl.h
  * \brief
  * \author Junyuan Xie
@@ -108,7 +126,8 @@ class NativeOp : public Operator {
   NativeOpParam param_;
   std::vector<real_t*> ptrs;
   std::vector<int> ndims;
-  std::vector<unsigned*> shapes;
+  std::vector<uint32_t*> shapes;
+  std::vector<uint32_t> shapes_buffer_;
   std::vector<int> tags;
   std::map<std::string, std::pair<TShape, mshadow::Tensor<cpu, 2> > > buffer_map;
 
@@ -137,13 +156,18 @@ class NativeOp : public Operator {
                        const std::string &prefix,
                        mshadow::Stream<xpu> *stream,
                        int tag) {
+    size_t size = 0;
+    for (const auto& tblob : vec) size += tblob.shape_.ndim();
+    shapes_buffer_.resize(size);
+    uint32_t *ptr = shapes_buffer_.data();
     for (size_t i = 0; i < vec.size(); ++i) {
       std::stringstream name;
       name << prefix << i;
       SyncBuffer(vec[i], name.str(), stream);
       ptrs.push_back(buffer_map[name.str()].second.dptr_);
       ndims.push_back(vec[i].ndim());
-      shapes.push_back(const_cast<index_t*>(vec[i].shape_.data()));
+      shapes.push_back(ptr);
+      ptr = nnvm::ShapeTypeCast(vec[i].shape_.begin(), vec[i].shape_.end(), ptr);
       tags.push_back(tag);
     }
   }
@@ -198,11 +222,16 @@ class NativeOpProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
-    std::vector<unsigned*> shapes;
+    std::vector<uint32_t*> shapes;
     std::vector<int> ndims;
+    size_t size = 0;
+    for (const auto& s : *in_shape) size += s.ndim();
+    std::vector<uint32_t> shapes_buffer(size);
+    uint32_t *ptr = shapes_buffer.data();
     for (auto iter = in_shape->begin(); iter != in_shape->end(); ++iter) {
-      shapes.push_back(iter->data());
+      shapes.push_back(ptr);
       ndims.push_back(iter->ndim());
+      ptr = nnvm::ShapeTypeCast(iter->begin(), iter->end(), ptr);
     }
     shapes.resize(param_.num_inputs_+param_.num_outputs_);
     ndims.resize(param_.num_inputs_+param_.num_outputs_);

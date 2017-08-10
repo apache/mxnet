@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file iter_csv.cc
  * \brief define a CSV Reader to read in arrays
  */
@@ -107,7 +125,7 @@ class CSVIter: public IIterator<DataInst> {
         << "The data size in CSV do not match size of shape: "
         << "specified shape=" << shape << ", the csv row-length=" << row.length;
     const real_t* ptr = row.value;
-    return TBlob((real_t*)ptr, shape, cpu::kDevMask);  // NOLINT(*)
+    return TBlob((real_t*)ptr, shape, cpu::kDevMask, 0);  // NOLINT(*)
   }
 
   CSVIterParam param_;
@@ -164,7 +182,7 @@ Examples::
   [[ 3.  4.  5.]
   [ 4.  5.  6.]]
 
-  // Creates a `CSVIter` with `round_batch` set to False.
+  // Creates a `CSVIter` with default `round_batch` set to True.
   CSVIter = mx.io.CSVIter(data_csv = 'data/data.csv', data_shape = (3,),
   batch_size = 3)
 
@@ -174,8 +192,8 @@ Examples::
   [3.  4.  5.]]
 
   [[4.  5.  6.]
-  [2.  3.  4.]
-  [3.  4.  5.]]
+  [1.  2.  3.]
+  [2.  3.  4.]]
 
   // Now, `reset` method is called.
   CSVIter.reset()
@@ -187,10 +205,10 @@ Examples::
 
   // Creates a `CSVIter` with `round_batch`=False.
   CSVIter = mx.io.CSVIter(data_csv = 'data/data.csv', data_shape = (3,),
-  batch_size = 3, round_batch=True)
+  batch_size = 3, round_batch=False)
 
-  // Contents of two batches read from the above iterator in both passes after calling
-  // `reset` method before second pass is as follows:
+  // Contents of two batches read from the above iterator in both passes, after calling
+  // `reset` method before second pass, is as follows:
   [[1.  2.  3.]
   [2.  3.  4.]
   [3.  4.  5.]]

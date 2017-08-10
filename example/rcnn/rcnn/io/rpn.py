@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """
 RPN:
 data =
@@ -10,10 +27,11 @@ label =
      'bbox_weight': [batch_size, num_anchors, feat_height, feat_width]}
 """
 
-from __future__ import print_function
+import logging
 import numpy as np
 import numpy.random as npr
 
+from ..logger import logger
 from ..config import config
 from .image import get_image, tensor_vstack
 from ..processing.generate_anchor import generate_anchors
@@ -94,23 +112,19 @@ def assign_anchor(feat_shape, gt_boxes, im_info, feat_stride=16,
             ret[inds, :] = data
         return ret
 
-    DEBUG = False
     im_info = im_info[0]
     scales = np.array(scales, dtype=np.float32)
     base_anchors = generate_anchors(base_size=feat_stride, ratios=list(ratios), scales=scales)
     num_anchors = base_anchors.shape[0]
     feat_height, feat_width = feat_shape[-2:]
 
-    if DEBUG:
-        print('anchors:')
-        print(base_anchors)
-        print('anchor shapes:')
-        print(np.hstack((base_anchors[:, 2::4] - base_anchors[:, 0::4],
-                         base_anchors[:, 3::4] - base_anchors[:, 1::4])))
-        print('im_info', im_info)
-        print('height', feat_height, 'width', feat_width)
-        print('gt_boxes shape', gt_boxes.shape)
-        print('gt_boxes', gt_boxes)
+    logger.debug('anchors: %s' % base_anchors)
+    logger.debug('anchor shapes: %s' % np.hstack((base_anchors[:, 2::4] - base_anchors[:, 0::4],
+                                                 base_anchors[:, 3::4] - base_anchors[:, 1::4])))
+    logger.debug('im_info %s' % im_info)
+    logger.debug('height %d width %d' % (feat_height, feat_width))
+    logger.debug('gt_boxes shape %s' % np.array(gt_boxes.shape))
+    logger.debug('gt_boxes %s' % gt_boxes)
 
     # 1. generate proposals from bbox deltas and shifted anchors
     shift_x = np.arange(0, feat_width) * feat_stride
@@ -132,14 +146,12 @@ def assign_anchor(feat_shape, gt_boxes, im_info, feat_stride=16,
                            (all_anchors[:, 1] >= -allowed_border) &
                            (all_anchors[:, 2] < im_info[1] + allowed_border) &
                            (all_anchors[:, 3] < im_info[0] + allowed_border))[0]
-    if DEBUG:
-        print('total_anchors', total_anchors)
-        print('inds_inside', len(inds_inside))
+    logger.debug('total_anchors %d' % total_anchors)
+    logger.debug('inds_inside %d' % len(inds_inside))
 
     # keep only inside anchors
     anchors = all_anchors[inds_inside, :]
-    if DEBUG:
-        print('anchors shape', anchors.shape)
+    logger.debug('anchors shape %s' % np.array(anchors.shape))
 
     # label: 1 is positive, 0 is negative, -1 is dont care
     labels = np.empty((len(inds_inside),), dtype=np.float32)
@@ -176,7 +188,7 @@ def assign_anchor(feat_shape, gt_boxes, im_info, feat_stride=16,
     fg_inds = np.where(labels == 1)[0]
     if len(fg_inds) > num_fg:
         disable_inds = npr.choice(fg_inds, size=(len(fg_inds) - num_fg), replace=False)
-        if DEBUG:
+        if logger.level == logging.INFO:
             disable_inds = fg_inds[:(len(fg_inds) - num_fg)]
         labels[disable_inds] = -1
 
@@ -185,7 +197,7 @@ def assign_anchor(feat_shape, gt_boxes, im_info, feat_stride=16,
     bg_inds = np.where(labels == 0)[0]
     if len(bg_inds) > num_bg:
         disable_inds = npr.choice(bg_inds, size=(len(bg_inds) - num_bg), replace=False)
-        if DEBUG:
+        if logger.level == logging.INFO:
             disable_inds = bg_inds[:(len(bg_inds) - num_bg)]
         labels[disable_inds] = -1
 
@@ -196,29 +208,30 @@ def assign_anchor(feat_shape, gt_boxes, im_info, feat_stride=16,
     bbox_weights = np.zeros((len(inds_inside), 4), dtype=np.float32)
     bbox_weights[labels == 1, :] = np.array(config.TRAIN.RPN_BBOX_WEIGHTS)
 
-    if DEBUG:
+    if logger.level == logging.DEBUG:
         _sums = bbox_targets[labels == 1, :].sum(axis=0)
         _squared_sums = (bbox_targets[labels == 1, :] ** 2).sum(axis=0)
         _counts = np.sum(labels == 1)
         means = _sums / (_counts + 1e-14)
         stds = np.sqrt(_squared_sums / _counts - means ** 2)
-        print('means', means)
-        print('stdevs', stds)
+        logger.debug('means %s' % means)
+        logger.debug('stdevs %s' % stds)
 
     # map up to original set of anchors
     labels = _unmap(labels, total_anchors, inds_inside, fill=-1)
     bbox_targets = _unmap(bbox_targets, total_anchors, inds_inside, fill=0)
     bbox_weights = _unmap(bbox_weights, total_anchors, inds_inside, fill=0)
 
-    if DEBUG:
-        print('rpn: max max_overlaps', np.max(max_overlaps))
-        print('rpn: num_positives', np.sum(labels == 1))
-        print('rpn: num_negatives', np.sum(labels == 0))
+    if logger.level == logging.DEBUG:
+        if gt_boxes.size > 0:
+            logger.debug('rpn: max max_overlaps %f' % np.max(max_overlaps))
+        logger.debug('rpn: num_positives %f' % np.sum(labels == 1))
+        logger.debug('rpn: num_negatives %f' % np.sum(labels == 0))
         _fg_sum = np.sum(labels == 1)
         _bg_sum = np.sum(labels == 0)
         _count = 1
-        print('rpn: num_positive avg', _fg_sum / _count)
-        print('rpn: num_negative avg', _bg_sum / _count)
+        logger.debug('rpn: num_positive avg %f' % (_fg_sum / _count))
+        logger.debug('rpn: num_negative avg %f' % (_bg_sum / _count))
 
     labels = labels.reshape((1, feat_height, feat_width, A)).transpose(0, 3, 1, 2)
     labels = labels.reshape((1, A * feat_height * feat_width))

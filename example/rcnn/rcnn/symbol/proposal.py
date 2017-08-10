@@ -1,19 +1,34 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """
 Proposal Operator transform anchor coordinates into ROI coordinates with prediction results on
 classification probability and bounding box prediction results, and image size and scale information.
 """
 
-from __future__ import print_function
 import mxnet as mx
 import numpy as np
 import numpy.random as npr
 from distutils.util import strtobool
 
+from rcnn.logger import logger
 from rcnn.processing.bbox_transform import bbox_pred, clip_boxes
 from rcnn.processing.generate_anchor import generate_anchors
 from rcnn.processing.nms import py_nms_wrapper, cpu_nms_wrapper, gpu_nms_wrapper
-
-DEBUG = False
 
 
 class ProposalOperator(mx.operator.CustomOp):
@@ -31,10 +46,8 @@ class ProposalOperator(mx.operator.CustomOp):
         self._threshold = threshold
         self._rpn_min_size = rpn_min_size
 
-        if DEBUG:
-            print('feat_stride: {}'.format(self._feat_stride))
-            print('anchors:')
-            print(self._anchors)
+        logger.debug('feat_stride: %s' % self._feat_stride)
+        logger.debug('anchors:\n%s' % self._anchors)
 
     def forward(self, is_train, req, in_data, out_data, aux):
         nms = gpu_nms_wrapper(self._threshold, in_data[0].context.device_id)
@@ -64,17 +77,14 @@ class ProposalOperator(mx.operator.CustomOp):
         bbox_deltas = in_data[1].asnumpy()
         im_info = in_data[2].asnumpy()[0, :]
 
-        if DEBUG:
-            print('im_size: ({}, {})'.format(im_info[0], im_info[1]))
-            print('scale: {}'.format(im_info[2]))
+        logger.debug('im_info: %s' % im_info)
 
         # 1. Generate proposals from bbox_deltas and shifted anchors
         # use real image size instead of padded feature map sizes
         height, width = int(im_info[0] / self._feat_stride), int(im_info[1] / self._feat_stride)
 
-        if DEBUG:
-            print('score map size: {}'.format(scores.shape))
-            print("resudial: {}".format((scores.shape[2] - height, scores.shape[3] - width)))
+        logger.debug('score map size: (%d, %d)' % (scores.shape[2], scores.shape[3]))
+        logger.debug('resudial: (%d, %d)' % (scores.shape[2] - height, scores.shape[3] - width))
 
         # Enumerate all shifts
         shift_x = np.arange(0, width) * self._feat_stride

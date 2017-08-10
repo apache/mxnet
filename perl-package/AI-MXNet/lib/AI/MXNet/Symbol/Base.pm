@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Symbol::Base;
 use strict;
 use warnings;
@@ -68,7 +85,7 @@ sub _compose
 # Create an atomic symbol function by handle and funciton name
 func _make_atomic_symbol_function($handle, $name)
 {
-    my ($real_name, $desc, $arg_names, 
+    my ($real_name, $desc, $arg_names,
         $arg_types, $arg_descs, $key_var_num_args,
         $ret_type) = @{ check_call(AI::MXNetCAPI::SymbolGetAtomicSymbolInfo($handle)) };
     $ret_type //= '';
@@ -76,7 +93,7 @@ func _make_atomic_symbol_function($handle, $name)
     my $doc_str = build_doc($func_name,
                             $desc,
                             $arg_names,
-                            $arg_types, 
+                            $arg_types,
                             $arg_descs,
                             $key_var_num_args,
                             $ret_type
@@ -162,10 +179,11 @@ method _init_symbol_module()
             no strict 'refs';
             {
                 *{__PACKAGE__."::$name"} = $function;
-            } 
+            }
         }
     }
 }
+
 
 __PACKAGE__->_init_symbol_module;
 

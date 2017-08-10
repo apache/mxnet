@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file image_det_aug_default.cc
  * \brief Default augmenter.
  */
@@ -32,7 +50,7 @@ struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugme
   Tuple<float> min_crop_scales;
   /*! \brief max crop scales */
   Tuple<float> max_crop_scales;
-  /*! \brief min crop aspecct ratios */
+  /*! \brief min crop aspect ratios */
   Tuple<float> min_crop_aspect_ratios;
   /*! \brief max crop aspect ratios */
   Tuple<float> max_crop_aspect_ratios;
@@ -103,7 +121,7 @@ struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugme
     DMLC_DECLARE_FIELD(max_crop_scales).set_default(Tuple<float>({1.0f}))
         .describe("Augmentation Param: Max crop scales.");
     DMLC_DECLARE_FIELD(min_crop_aspect_ratios).set_default(Tuple<float>({1.0f}))
-        .describe("Augmentation Param: Min crop aspecct ratios.");
+        .describe("Augmentation Param: Min crop aspect ratios.");
     DMLC_DECLARE_FIELD(max_crop_aspect_ratios).set_default(Tuple<float>({1.0f}))
         .describe("Augmentation Param: Max crop aspect ratios.");
     DMLC_DECLARE_FIELD(min_crop_overlaps).set_default(Tuple<float>({0.0f}))
@@ -255,9 +273,9 @@ class ImageDetLabel {
       obj.right = *(it++);
       obj.bottom = *(it++);
       obj.extra.assign(it, it - 5 + object_width_);
-      objects_.push_back(obj);
-      CHECK_GT(obj.right, obj.left);
-      CHECK_GT(obj.bottom, obj.top);
+      if (obj.right > obj.left && obj.bottom > obj.top) {
+        objects_.push_back(obj);
+      }
     }
   }
 

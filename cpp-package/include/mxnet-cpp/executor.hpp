@@ -5,8 +5,8 @@
  * \author Zhang Chen, Chuntao Hong
  */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_HPP_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_HPP_
+#ifndef MXNET_CPP_EXECUTOR_HPP_
+#define MXNET_CPP_EXECUTOR_HPP_
 
 #include <vector>
 #include <map>
@@ -79,14 +79,7 @@ inline std::string Executor::DebugStr() {
   return std::string(output);
 }
 
-inline void Executor::UpdateAll(Optimizer *opt, float lr, float wd,
-                                int arg_update_begin, int arg_update_end) {
-  arg_update_end = arg_update_end < 0 ? arg_arrays.size() - 1 : arg_update_end;
-  for (int i = arg_update_begin; i < arg_update_end; ++i) {
-    opt->Update(i, arg_arrays[i], grad_arrays[i], lr, wd);
-  }
-}
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_HPP_
+#endif  // MXNET_CPP_EXECUTOR_HPP_

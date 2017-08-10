@@ -1,4 +1,22 @@
 #!/usr/bin/env bash
+
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 #
 # Execute command within a docker container
 #
@@ -69,13 +87,12 @@ function upsearch () {
         cd .. && upsearch "$1"
 }
 
-# Set up WORKSPACE and BUILD_TAG. Jenkins will set them for you or we pick
+# Set up WORKSPACE. Jenkins will set them for you or we pick
 # reasonable defaults if you run it outside of Jenkins.
 WORKSPACE="${WORKSPACE:-${SCRIPT_DIR}/../../}"
-BUILD_TAG="${BUILD_TAG:-mx-ci}"
 
 # Determine the docker image name
-DOCKER_IMG_NAME="${BUILD_TAG}.${CONTAINER_TYPE}"
+DOCKER_IMG_NAME="mx-ci.${CONTAINER_TYPE}"
 
 # Under Jenkins matrix build, the build tag may contain characters such as
 # commas (,) and equal signs (=), which are not valid inside docker image names.
@@ -98,6 +115,7 @@ echo "CI_DOCKER_EXTRA_PARAMS: ${CI_DOCKER_EXTRA_PARAMS[@]}"
 echo "COMMAND: ${COMMAND[@]}"
 echo "CONTAINER_TYPE: ${CONTAINER_TYPE}"
 echo "BUILD_TAG: ${BUILD_TAG}"
+echo "NODE_NAME: ${NODE_NAME}"
 echo "DOCKER CONTAINER NAME: ${DOCKER_IMG_NAME}"
 echo "PRE_COMMAND: ${PRE_COMMAND}"
 echo ""

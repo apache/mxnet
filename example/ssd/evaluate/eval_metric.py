@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 import numpy as np
 
@@ -17,16 +34,17 @@ class MApMetric(mx.metric.EvalMetric):
         prediction index in network output list
     """
     def __init__(self, ovp_thresh=0.5, use_difficult=False, class_names=None, pred_idx=0):
+        super(MApMetric, self).__init__('mAP')
         if class_names is None:
-            super(MApMetric, self).__init__("mAP")
+            self.num = None
         else:
-            assert isinstance(class_names, list)
+            assert isinstance(class_names, (list, tuple))
             for name in class_names:
                 assert isinstance(name, str), "must provide names as str"
             num = len(class_names)
-            super(MApMetric, self).__init__(class_names + ["mAP"], num + 1)
-        self.records = dict()
-        self.counts = dict()
+            self.name = class_names + ['mAP']
+            self.num = num + 1
+        self.reset()
         self.ovp_thresh = ovp_thresh
         self.use_difficult = use_difficult
         self.class_names = class_names
@@ -34,7 +52,12 @@ class MApMetric(mx.metric.EvalMetric):
 
     def reset(self):
         """Clear the internal statistics to initial state."""
-        super(MApMetric, self).reset()
+        if getattr(self, 'num', None) is None:
+            self.num_inst = 0
+            self.sum_metric = 0.0
+        else:
+            self.num_inst = [0] * self.num
+            self.sum_metric = [0.0] * self.num
         self.records = dict()
         self.counts = dict()
 
@@ -104,6 +127,8 @@ class MApMetric(mx.metric.EvalMetric):
         for i in range(labels[0].shape[0]):
             # get as numpy arrays
             label = labels[0][i].asnumpy()
+            if np.sum(label[:, 0] >= 0) < 1:
+                continue
             pred = preds[self.pred_idx][i].asnumpy()
             # calculate for each class
             while (pred.shape[0] > 0):
@@ -118,7 +143,9 @@ class MApMetric(mx.metric.EvalMetric):
                 dets[dets[:,1].argsort()[::-1]]
                 records = np.hstack((dets[:, 1][:, np.newaxis], np.zeros((dets.shape[0], 1))))
                 # ground-truths
-                gts = label[np.where(label[:, 0].astype(int) == cid)[0], :]
+                label_indices = np.where(label[:, 0].astype(int) == cid)[0]
+                gts = label[label_indices, :]
+                label = np.delete(label, label_indices, axis=0)
                 if gts.size > 0:
                     found = [False] * gts.shape[0]
                     for j in range(dets.shape[0]):
@@ -157,6 +184,16 @@ class MApMetric(mx.metric.EvalMetric):
                 if records.size > 0:
                     self._insert(cid, records, gt_count)
 
+            # add missing class if not present in prediction
+            while (label.shape[0] > 0):
+                cid = int(label[0, 0])
+                label_indices = np.where(label[:, 0].astype(int) == cid)[0]
+                label = np.delete(label, label_indices, axis=0)
+                if cid < 0:
+                    continue
+                gt_count = label_indices.size
+                self._insert(cid, np.array([[0, 0]]), gt_count)
+
     def _update(self):
         """ update num_inst and sum_metric """
         aps = []
@@ -176,6 +213,7 @@ class MApMetric(mx.metric.EvalMetric):
 
     def _recall_prec(self, record, count):
         """ get recall and precision from internal records """
+        record = np.delete(record, np.where(record[:, 1].astype(int) == 0)[0], axis=0)
         sorted_records = record[record[:,0].argsort()[::-1]]
         tp = np.cumsum(sorted_records[:, 1].astype(int) == 1)
         fp = np.cumsum(sorted_records[:, 1].astype(int) == 2)

@@ -1,5 +1,14 @@
 MXNet Change Log
 ================
+## 0.10.0
+- Overhauled documentation for commonly used Python APIs, Installation instructions, Tutorials, HowTos and MXNet Architecture.  
+- Updated mxnet.io for improved readability.  
+- Pad operator now support reflection padding.  
+- Fixed a memory corruption error in threadedengine.  
+- Added CTC loss layer to contrib package. See mx.contrib.sym.ctc_loss.  
+- Added new sampling operators for several distributions (normal,uniform,gamma,exponential,negative binomial).  
+- Added documentation for experimental RNN APIs.
+ 
 ## 0.9.3
 - Move symbolic API to NNVM @tqchen
   - Most front-end C API are backward  compatible

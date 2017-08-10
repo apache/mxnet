@@ -1,7 +1,25 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file elementwise_binary_broadcast_op.h
- * \brief Function defintion of elementwise unary operators
+ * \brief Function definition of elementwise unary operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_H_
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_H_
@@ -138,54 +156,6 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   }
 }
 
-template<typename Reducer, typename xpu, typename SrcExp, int ndim, typename DType>
-void ReduceToAssign(mshadow::Tensor<xpu, ndim, DType> out,
-                    const OpReqType req, const SrcExp &src_) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  Shape<ndim> src_shape = ShapeCheck<ndim, SrcExp>::Check(src_);
-  Shape<ndim> axes;
-  index_t reducing_size = 1, remaining_size = 1;
-  int i = 0;
-  for (int k = 0; k < ndim; ++k)
-    if (src_shape[k] != out.shape_[k])
-      ++i;
-  for (int j = ndim-1, k = ndim-1; k >= 0; --k) {
-    if (src_shape[k] == out.shape_[k]) {
-      axes[j--] = k;
-      remaining_size *= src_shape[k];
-    } else {
-      axes[--i] = k;
-      reducing_size *= src_shape[k];
-    }
-  }
-  if (reducing_size == 1) {
-    ASSIGN_DISPATCH(out, req, F<mshadow_op::identity>(src_));
-  } else {
-    ASSIGN_DISPATCH(out.FlatTo1D(), req,
-      (reduce_except_dim<1, Reducer>(reshape(transpose(src_, axes),
-      Shape2(reducing_size, remaining_size)))));
-  }
-}
-
-template<typename Reducer, typename xpu, typename SrcExp, typename DType>
-void ReduceToAssign(mshadow::Tensor<xpu, 2, DType> out, const OpReqType req, const SrcExp &src_) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  Shape<2> src_shape = ShapeCheck<2, SrcExp>::Check(src_);
-  if (src_shape == out.shape_) {
-    ASSIGN_DISPATCH(out, req, F<mshadow_op::identity>(src_));
-  } else if (src_shape[0] == out.shape_[0]) {
-    ASSIGN_DISPATCH(out.FlatTo1D(), req, (reduce_except_dim<0, Reducer>(src_)));
-  } else if (src_shape[1] == out.shape_[1]) {
-    ASSIGN_DISPATCH(out.FlatTo1D(), req, (reduce_except_dim<1, Reducer>(src_)));
-  } else {
-    ASSIGN_DISPATCH(out.FlatTo1D(), req,
-      (reduce_except_dim<1, Reducer>(reshape(src_,
-      Shape2(src_shape.Size(), 1)))));
-  }
-}
-
 template<typename xpu, typename LOP, typename ROP>
 void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
                                     const OpContext& ctx,
@@ -195,7 +165,7 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
   using namespace broadcast;
   TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
-                                             &new_lshape, &new_rshape, &new_oshape);
+                                         &new_lshape, &new_rshape, &new_oshape);
   if (!ndim) {
     BinaryBackwardUseNone<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
@@ -266,8 +236,6 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
     });
   }
 }
-
-#undef BROADCAST_NDIM_SWITCH
 
 #define MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(name)                \
   NNVM_REGISTER_OP(name)                                              \

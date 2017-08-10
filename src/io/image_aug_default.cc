@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file image_aug_default.cc
  * \brief Default augmenter.
  */
@@ -84,10 +102,10 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
         .describe("Crop both width and height into a random size in "
                   "``[min_crop_size, max_crop_size]``");
     DMLC_DECLARE_FIELD(max_random_scale).set_default(1.0f)
-        .describe("Resize into ``[width*s, height*s]`` with ``s`` randsomly"
+        .describe("Resize into ``[width*s, height*s]`` with ``s`` randomly"
                   " chosen from ``[min_random_scale, max_random_scale]``");
     DMLC_DECLARE_FIELD(min_random_scale).set_default(1.0f)
-        .describe("Resize into ``[width*s, height*s]`` with ``s`` randsomly"
+        .describe("Resize into ``[width*s, height*s]`` with ``s`` randomly"
                   " chosen from ``[min_random_scale, max_random_scale]``");
     DMLC_DECLARE_FIELD(max_img_size).set_default(1e10f)
         .describe("Set the maximal width and height after all resize and"
@@ -105,7 +123,7 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
         .describe("Add a random value in ``[-random_l, random_l]`` to "
                   "the L channel in HSL color space.");
     DMLC_DECLARE_FIELD(rotate).set_default(-1.0f)
-        .describe("Rotate by an angle. If set, it overrites the ``max_rotate_angle`` option.");
+        .describe("Rotate by an angle. If set, it overwrites the ``max_rotate_angle`` option.");
     DMLC_DECLARE_FIELD(fill_value).set_default(255)
         .describe("Set the padding pixes value into ``fill_value``.");
     DMLC_DECLARE_FIELD(data_shape)

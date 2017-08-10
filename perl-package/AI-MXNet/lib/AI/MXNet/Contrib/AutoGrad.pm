@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Contrib::AutoGrad;
 use strict;
 use warnings;
@@ -71,6 +88,58 @@ method mark_variables(
     );
 }
 
+=head2 backward
+
+     Compute the gradients of outputs w.r.t variables.
+
+     Parameters
+     ----------
+     outputs: array ref of NDArray
+     out_grads: array ref of NDArray or undef
+     retain_graph: bool, defaults to false
+=cut
+
+
+method backward(
+    ArrayRef[AI::MXNet::NDArray] $outputs,
+    Maybe[ArrayRef[AI::MXNet::NDArray|Undef]] $out_grads=,
+    Bool $retain_graph=0
+)
+{
+    my @output_handles = map { $_->handle } @{ $outputs };
+    if(not defined $out_grads)
+    {
+        check_call(
+            AI::MXNetCAPI::AutogradBackward(
+                scalar(@output_handles),
+                \@output_handles,
+                [],
+                $retain_graph
+            )
+        );
+        return;
+    }
+
+    my @ograd_handles;
+    for my $arr (@$out_grads)
+    {
+        push @ograd_handles, (defined $arr ? $arr->handle : undef);
+    }
+    assert(
+        (@ograd_handles == @output_handles),
+        "outputs and out_grads must have the same length"
+    );
+
+    check_call(
+        AI::MXNetCAPI::AutogradBackward(
+            scalar(@output_handles),
+            \@output_handles,
+            \@ograd_handles,
+            $retain_graph
+        )
+    );
+}
+
 =head2 compute_gradient
 
     Compute the gradients of outputs w.r.t variables.
@@ -87,13 +156,7 @@ method mark_variables(
 
 method compute_gradient(ArrayRef[AI::MXNet::NDArray] $outputs)
 {
-    my @output_handles = map { $_->handle } @{ $outputs };
-    check_call(
-        AI::MXNetCAPI::AutogradComputeGradient(
-            scalar(@output_handles),
-            \@output_handles
-        )
-    );
+    __PACKAGE__->backward($outputs);
 }
 
 =head2 grad_and_loss
@@ -162,6 +225,20 @@ method grad(CodeRef $func, Maybe[Int|ArrayRef[Int]] $argnum=)
     return sub {
         return ($grad_with_loss_func->(@_))[0];
     };
+}
+
+method train_section(CodeRef $sub)
+{
+    my $prev = __PACKAGE__->set_is_training(1);
+    $sub->();
+    __PACKAGE__->set_is_training(0) unless $prev;
+}
+
+method test_section(CodeRef $sub)
+{
+    my $prev = __PACKAGE__->set_is_training(0);
+    $sub->();
+    __PACKAGE__->set_is_training(1) if $prev;
 }
 
 1;

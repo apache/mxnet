@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file ml_dmlc_mxnet_native_c_api.cc
  * \brief JNI function implementations
  */
@@ -654,6 +672,30 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreInit
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreInitEx
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jint len, jobjectArray keys, jlongArray values) {
+  const char **keyArray = new const char *[len];
+  for (int i = 0; i < len; i++) {
+    jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(keys, i));
+    const char *key = env->GetStringUTFChars(jkey, 0);
+    keyArray[i] = key;
+    env->DeleteLocalRef(jkey);
+  }
+  jlong *valueArray = env->GetLongArrayElements(values, NULL);
+  int ret = MXKVStoreInitEx(reinterpret_cast<KVStoreHandle>(kvStorePtr),
+                          static_cast<mx_uint>(len),
+                          keyArray,
+                          reinterpret_cast<NDArrayHandle *>(valueArray));
+  env->ReleaseLongArrayElements(values, valueArray, 0);
+  for (int i = 0; i < len; i++) {
+    jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(keys, i));
+    env->ReleaseStringUTFChars(jkey, keyArray[i]);
+    env->DeleteLocalRef(jkey);
+  }
+  delete[] keyArray;
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStorePush
   (JNIEnv *env, jobject obj, jlong kvStorePtr, jint len, jintArray keys,
     jlongArray values, jint priority) {
@@ -664,8 +706,33 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStorePush
                           static_cast<const int *>(keyArray),
                           reinterpret_cast<NDArrayHandle *>(valueArray),
                           priority);
-  env->ReleaseIntArrayElements(keys, keyArray, 0);
   env->ReleaseLongArrayElements(values, valueArray, 0);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStorePushEx
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jint len, jobjectArray keys,
+    jlongArray values, jint priority) {
+  const char **keyArray = new const char *[len];
+  for (int i = 0; i < len; i++) {
+    jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(keys, i));
+    const char *key = env->GetStringUTFChars(jkey, 0);
+    keyArray[i] = key;
+    env->DeleteLocalRef(jkey);
+  }
+  jlong *valueArray = env->GetLongArrayElements(values, NULL);
+  int ret = MXKVStorePushEx(reinterpret_cast<KVStoreHandle>(kvStorePtr),
+                          static_cast<mx_uint>(len),
+                          keyArray,
+                          reinterpret_cast<NDArrayHandle *>(valueArray),
+                          priority);
+  env->ReleaseLongArrayElements(values, valueArray, 0);
+  for (int i = 0; i < len; i++) {
+    jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(keys, i));
+    env->ReleaseStringUTFChars(jkey, keyArray[i]);
+    env->DeleteLocalRef(jkey);
+  }
+  delete[] keyArray;
   return ret;
 }
 
@@ -681,6 +748,32 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStorePull
                           priority);
   env->ReleaseIntArrayElements(keys, keyArray, 0);
   env->ReleaseLongArrayElements(outs, outArray, 0);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStorePullEx
+  (JNIEnv *env, jobject obj, jlong kvStorePtr, jint len, jobjectArray keys,
+    jlongArray outs, jint priority) {
+  const char **keyArray = new const char *[len];
+  for (int i = 0; i < len; i++) {
+    jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(keys, i));
+    const char *key = env->GetStringUTFChars(jkey, 0);
+    keyArray[i] = key;
+    env->DeleteLocalRef(jkey);
+  }
+  jlong *outArray = env->GetLongArrayElements(outs, NULL);
+  int ret = MXKVStorePullEx(reinterpret_cast<KVStoreHandle>(kvStorePtr),
+                          static_cast<mx_uint>(len),
+                          keyArray,
+                          reinterpret_cast<NDArrayHandle *>(outArray),
+                          priority);
+  env->ReleaseLongArrayElements(outs, outArray, 0);
+  for (int i = 0; i < len; i++) {
+    jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(keys, i));
+    env->ReleaseStringUTFChars(jkey, keyArray[i]);
+    env->DeleteLocalRef(jkey);
+  }
+  delete[] keyArray;
   return ret;
 }
 
@@ -1111,6 +1204,52 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolSetAttr
   int ret = MXSymbolSetAttr(reinterpret_cast<SymbolHandle>(symbolPtr), ckey, cvalue);
   env->ReleaseStringUTFChars(jkey, ckey);
   env->ReleaseStringUTFChars(jvalue, cvalue);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolListAttrShallow
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jobject joutSize, jobject jout) {
+  mx_uint outSize;
+  const char** out;
+
+  int ret = MXSymbolListAttrShallow(reinterpret_cast<SymbolHandle>(symbolPtr), &outSize, &out);
+
+  jclass refIntClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
+  jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");
+  env->SetIntField(joutSize, valueInt, static_cast<jint>(outSize));
+
+  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jmethodID arrayAppend = env->GetMethodID(arrayClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+  for (size_t i = 0; i < outSize * 2; ++i) {
+    jstring jtmp = env->NewStringUTF(out[i]);
+    env->CallObjectMethod(jout, arrayAppend, jtmp);
+    env->DeleteLocalRef(jtmp);
+  }
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolListAttr
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jobject joutSize, jobject jout) {
+  mx_uint outSize;
+  const char** out;
+
+  int ret = MXSymbolListAttr(reinterpret_cast<SymbolHandle>(symbolPtr), &outSize, &out);
+
+  jclass refIntClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
+  jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");
+  env->SetIntField(joutSize, valueInt, static_cast<jint>(outSize));
+
+  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jmethodID arrayAppend = env->GetMethodID(arrayClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+  for (size_t i = 0; i < outSize * 2; ++i) {
+    jstring jtmp = env->NewStringUTF(out[i]);
+    env->CallObjectMethod(jout, arrayAppend, jtmp);
+    env->DeleteLocalRef(jtmp);
+  }
+
   return ret;
 }
 

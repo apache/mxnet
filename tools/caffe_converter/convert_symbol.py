@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Convert caffe prototxt to symbol
 """
 from __future__ import print_function
@@ -25,35 +42,66 @@ def _get_input(proto):
     return input_name, input_dim, layer
 
 def _convert_conv_param(param):
-    """Convert convolution layer parameter from Caffe to MXNet
     """
-    pad = 0
+    Convert convolution layer parameter from Caffe to MXNet
+    """
+    param_string = "num_filter=%d" % param.num_output
+
+    pad_w = 0
+    pad_h = 0
     if isinstance(param.pad, int):
         pad = param.pad
+        param_string += ", pad=(%d, %d)" % (pad, pad)
     else:
-        pad = 0 if len(param.pad) == 0 else param.pad[0]
+        if len(param.pad) > 0:
+            pad = param.pad[0]
+            param_string += ", pad=(%d, %d)" % (pad, pad)
+        else:
+            if isinstance(param.pad_w, int):
+                pad_w = param.pad_w
+            if isinstance(param.pad_h, int):
+                pad_h = param.pad_h
+            param_string += ", pad=(%d, %d)" % (pad_h, pad_w)
+
+    if isinstance(param.kernel_size, int):
+        kernel_size = param.kernel_size
+        param_string += ", kernel=(%d,%d)" % (kernel_size, kernel_size)
+    else:
+        if len(param.kernel_size) > 0:
+            kernel_size = param.kernel_size[0]
+            param_string += ", kernel=(%d,%d)" % (kernel_size, kernel_size)
+        else:
+            assert isinstance(param.kernel_w, int)
+            kernel_w = param.kernel_w
+            assert isinstance(param.kernel_h, int)
+            kernel_h = param.kernel_h
+            param_string += ", kernel=(%d,%d)" % (kernel_h, kernel_w)
+
     stride = 1
     if isinstance(param.stride, int):
         stride = param.stride
     else:
         stride = 1 if len(param.stride) == 0 else param.stride[0]
-    kernel_size = ''
-    if isinstance(param.kernel_size, int):
-        kernel_size = param.kernel_size
-    else:
-        kernel_size = param.kernel_size[0]
+
+    param_string += ", stride=(%d,%d)" % (stride, stride)
+
     dilate = 1
-    if isinstance(param.dilation, int):
-        dilate = param.dilation
-    else:
-        dilate = 1 if len(param.dilation) == 0 else param.dilation[0]
-    # convert to string except for dilation
-    param_string = "num_filter=%d, pad=(%d,%d), kernel=(%d,%d), stride=(%d,%d), no_bias=%s" % \
-                   (param.num_output, pad, pad, kernel_size, kernel_size,
-                    stride, stride, not param.bias_term)
+    if hasattr(param, 'dilation'):
+        if isinstance(param.dilation, int):
+            dilate = param.dilation
+        else:
+            dilate = 1 if len(param.dilation) == 0 else param.dilation[0]
+
+    param_string += ", no_bias=%s" % (not param.bias_term)
+
     # deal with dilation. Won't be in deconvolution
     if dilate > 1:
         param_string += ", dilate=(%d, %d)" % (dilate, dilate)
+
+    if isinstance(param.group, int):
+        if param.group != 1:
+            param_string += ", num_group=%d" % param.group
+
     return param_string
 
 def _convert_pooling_param(param):
@@ -89,6 +137,7 @@ def _parse_proto(prototxt_fname):
     flatten_count = 0
     output_name = ""
     prev_name = None
+    _output_name = {}
 
     # convert reset layers one by one
     for i, layer in enumerate(layers):
@@ -96,6 +145,16 @@ def _parse_proto(prototxt_fname):
         param_string = ''
         skip_layer = False
         name = re.sub('[-/]', '_', layer.name)
+        for k in range(len(layer.bottom)):
+            if layer.bottom[k] in _output_name:
+                _output_name[layer.bottom[k]]['count'] = _output_name[layer.bottom[k]]['count']+1
+            else:
+                _output_name[layer.bottom[k]] = {'count':0}
+        for k in range(len(layer.top)):
+            if layer.top[k] in _output_name:
+                _output_name[layer.top[k]]['count'] = _output_name[layer.top[k]]['count']+1
+            else:
+                _output_name[layer.top[k]] = {'count':0, 'name':name}
         if layer.type == 'Convolution' or layer.type == 4:
             type_string = 'mx.symbol.Convolution'
             param_string = _convert_conv_param(layer.convolution_param)
@@ -159,8 +218,10 @@ def _parse_proto(prototxt_fname):
             epsilon = param.eps
             if (epsilon <= 1e-05):
                 epsilon = 1e-04
-            param_string = 'use_global_stats=%s, fix_gamma=False, eps=%f' % (
-                param.use_global_stats, epsilon)
+            # if next layer is scale, don't fix gamma
+            fix_gamma = layers[i+1].type != 'Scale'
+            param_string = 'use_global_stats=%s, fix_gamma=%s, eps=%f' % (
+                param.use_global_stats, fix_gamma, epsilon)
             need_flatten[name] = need_flatten[mapping[layer.bottom[0]]]
         if layer.type == 'Scale':
             assert layers[i-1].type == 'BatchNorm'
@@ -174,6 +235,7 @@ def _parse_proto(prototxt_fname):
             need_flatten[name] = need_flatten[mapping[layer.bottom[0]]]
         if layer.type == 'Eltwise':
             type_string = 'mx.symbol.broadcast_add'
+            param = layer.eltwise_param
             param_string = ""
             need_flatten[name] = False
         if layer.type == 'Reshape':
@@ -206,11 +268,23 @@ def _parse_proto(prototxt_fname):
                 symbol_string += "%s = %s(name='%s', data=%s %s)\n" % (
                     name, type_string, name, mapping[bottom[0]], param_string)
             else:
-                symbol_string += "%s = %s(name='%s', *[%s] %s)\n" % (
-                    name, type_string, name, ','.join([mapping[x] for x in bottom]), param_string)
+                if layer.type == 'Eltwise' and param.operation == 1 and len(param.coeff) > 0:
+                    symbol_string += "%s = " % name
+                    symbol_string += " + ".join(["%s * %s" % (
+                        mapping[bottom[i]], param.coeff[i]) for i in range(len(param.coeff))])
+                    symbol_string += "\n"
+                else:
+                    symbol_string += "%s = %s(name='%s', *[%s] %s)\n" % (
+                        name, type_string, name, ','.join(
+                            [mapping[x] for x in bottom]), param_string)
         for j in range(len(layer.top)):
             mapping[layer.top[j]] = name
         output_name = name
+    output_name = []
+    for i in _output_name:
+        if 'name' in _output_name[i] and _output_name[i]['count'] == 0:
+            output_name.append(_output_name[i]['name'])
+
     return symbol_string, output_name, input_dim
 
 def convert_symbol(prototxt_fname):
@@ -231,8 +305,11 @@ def convert_symbol(prototxt_fname):
     sym, output_name, input_dim = _parse_proto(prototxt_fname)
     exec(sym)                   # pylint: disable=exec-used
     _locals = locals()
-    exec("ret = " + output_name, globals(), _locals)  # pylint: disable=exec-used
-    ret = _locals['ret']
+    ret = []
+    for i in  output_name:
+        exec("ret = " + i, globals(), _locals)  # pylint: disable=exec-used
+        ret.append(_locals['ret'])
+    ret = mx.sym.Group(ret)
     return ret, input_dim
 
 def main():

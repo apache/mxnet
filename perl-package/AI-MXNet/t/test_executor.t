@@ -151,12 +151,10 @@ sub test_reshape
 {
     my $x = mx->sym->Variable('x');
     my $y = mx->sym->FullyConnected($x, num_hidden=>4);
-
-    my $exe = $y->simple_bind(ctx => mx->cpu(), shapes => { x=>[5,4] });
+    my $exe = $y->simple_bind(ctx => mx->cpu(), shapes => { x=>[5,4] }, grad_req=>'null');
     $exe->arg_arrays->[0] .= 1;
     $exe->arg_arrays->[1] .= mx->nd->ones([4,4]);
     $exe->arg_arrays->[2] .= 0;
-
     my $new_exe = $exe->reshape({ x=>[3,4] });
     $new_exe->forward(0);
     # test sub exec forward

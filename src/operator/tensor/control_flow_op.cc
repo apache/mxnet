@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2017 by Contributors
  * \file control_flow_op.cc
  * \brief CPU Implementation of flow control
  */
@@ -14,7 +32,7 @@ NNVM_REGISTER_OP(where)
                 " from condition are true or false. x and y must have the same"
                 " shape. If condition has the same shape as x, each element"
                 " in the output array is from x if the corresponding element"
-                " in the condition is true, and from y if false. If condtion"
+                " in the condition is true, and from y if false. If condition"
                 " does not have the same shape as x, it must be a 1D array"
                 " whose size is the same as x's first dimension size. Each"
                 " row of the output array is from x's row if the corresponding"

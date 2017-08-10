@@ -1,7 +1,7 @@
 # MXNet - Python API
 
 MXNet provides a rich Python API to serve a broad community of Python developers.
-In this section, we provide a in-depth discussion of the functionality provided by
+In this section, we provide an in-depth discussion of the functionality provided by
 various MXNet Python packages. We have included code samples for most of the APIs
 for improved clarity. These code samples will run as-is as long as MXNet is first
 imported by running:
@@ -28,8 +28,13 @@ imported by running:
    ndarray
    symbol
    module
+   autograd
+   gluon
+   rnn
    kvstore
    io
+   image
    optimization
    callback
+   metric
 ```

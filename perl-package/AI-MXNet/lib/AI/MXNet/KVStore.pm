@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::KVStore;
 use strict;
 use warnings;
@@ -13,7 +30,7 @@ use AI::MXNet::Function::Parameters;
 
     AI::MXNet::KVStore - Key value store interface of MXNet.
 
-=head1 DESCRIPTION 
+=head1 DESCRIPTION
 
     Key value store interface of MXNet for parameter synchronization, over multiple devices.
 =cut
@@ -36,7 +53,7 @@ sub DEMOLISH
 
     Parameters
     ----------
-    key : int or an array ref of int
+    key : str or an array ref of str
         The keys.
     value : NDArray or an array ref of NDArray objects
         The values.
@@ -59,13 +76,13 @@ sub DEMOLISH
 =cut
 
 method init(
-    Int|ArrayRef[Int] $key,
+    Str|ArrayRef[Str] $key,
     AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] $value
 )
 {
     my ($keys, $vals) = _key_value($key, $value);
     check_call(
-        AI::MXNetCAPI::KVStoreInit(
+        AI::MXNetCAPI::KVStoreInitEx(
             $self->handle, scalar(@{ $keys }), $keys, $vals
         )
     );
@@ -83,7 +100,7 @@ method init(
 
     Parameters
     ----------
-    key : int or array ref of int
+    key : str or array ref of str
     value : NDArray or array ref of NDArray or array ref of array refs of NDArray
     priority : int, optional
         The priority of the push operation.
@@ -127,14 +144,14 @@ method init(
 =cut
 
 method push(
-    Int|ArrayRef[Int] $key,
+    Str|ArrayRef[Str] $key,
     AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] $value,
     Int :$priority=0
 )
 {
     my ($keys, $vals) = _key_value($key, $value);
     check_call(
-        AI::MXNetCAPI::KVStorePush(
+        AI::MXNetCAPI::KVStorePushEx(
             $self->handle, scalar(@{ $keys }), $keys, $vals, $priority
         )
     );
@@ -154,7 +171,7 @@ method push(
 
     Parameters
     ----------
-    key : int or array ref of int
+    key : str or array ref of str
         Keys
     out: NDArray or array ref of NDArray or array ref of array refs of NDArray
         According values
@@ -197,14 +214,14 @@ method push(
 =cut
 
 method pull(
-    Int|ArrayRef[Int] $key,
+    Str|ArrayRef[Str] $key,
     AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] :$out,
     Int :$priority=0
 )
 {
     my ($keys, $vals) = _key_value($key, $out);
     check_call(
-        AI::MXNetCAPI::KVStorePull(
+        AI::MXNetCAPI::KVStorePullEx(
             $self->handle, scalar(@{ $keys }), $keys, $vals, $priority
         )
     );

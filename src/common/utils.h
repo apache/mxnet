@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file utils.h
  * \brief Basic utilility functions.
  */
@@ -12,6 +30,7 @@
 #include <type_traits>
 #include <utility>
 #include <random>
+#include <string>
 #include <thread>
 #include <algorithm>
 #endif  // DMLC_USE_CXX11
@@ -123,6 +142,22 @@ typename helper::UniqueIf<T>::UnknownBound MakeUnique(size_t n) {
  */
 template <class T, class... Args>
 typename helper::UniqueIf<T>::KnownBound MakeUnique(Args&&... args) = delete;
+
+template<typename FCompType>
+FCompType GetFCompute(const nnvm::Op* op, const std::string& name,
+                      const Context& ctx) {
+  static auto& fcompute_cpu = nnvm::Op::GetAttr<FCompType>(name + "<cpu>");
+  static auto& fcompute_gpu = nnvm::Op::GetAttr<FCompType>(name + "<gpu>");
+
+  if (ctx.dev_mask() == cpu::kDevMask) {
+    return fcompute_cpu.get(op, nullptr);
+  } else if (ctx.dev_mask() == gpu::kDevMask) {
+    return fcompute_gpu.get(op, nullptr);
+  } else {
+    LOG(FATAL) << "Unknown device mask";
+    return nullptr;
+  }
+}
 
 #endif  // DMLC_USE_CXX11
 

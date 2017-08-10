@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file count_sketch.cc
  * \brief count_sketch op
  * \author Chen Zhu
@@ -30,7 +48,7 @@ MXNET_REGISTER_OP_PROPERTY(_contrib_count_sketch, CountSketchProp)
 
 Assume input data has shape (N, d), sign hash table s has shape (N, d),
 index hash table h has shape (N, d) and mapping dimension out_dim = k,
-each element in s is either +1 or -1, each element in h is random integer from 0 to k-1. 
+each element in s is either +1 or -1, each element in h is random integer from 0 to k-1.
 Then the operator computs:
 
 .. math::

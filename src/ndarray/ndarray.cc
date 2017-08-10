@@ -1,9 +1,28 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file ndarray.cc
  * \brief ndarry module of mxnet
  */
 #include <dmlc/io.h>
+#include <dmlc/memory_io.h>
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
 #include <mxnet/base.h>
@@ -23,13 +42,22 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 
 namespace mxnet {
 
+NDArray NDArray::grad() const {
+  if (this->entry_.ag_node && this->entry_.ag_node->out_grads.size()) {
+    CHECK_EQ(this->entry_.ag_node->out_grads.size(), 1);
+    return this->entry_.ag_node->out_grads[0];
+  }
+  return NDArray();
+}
+
 NDArray NDArray::Reshape(const TShape &shape) const {
   using namespace autograd;
-  CHECK_GE(shape_.Size(), shape.Size())
-      << "NDArray.Reshape: target shape size is different from current shape";
-  NDArray ret = *this;
-  ret.shape_ = shape;
   if (AutogradRuntime::Get()->IsTraining()) {
+    CHECK_GE(shape_.Size(), shape.Size())
+      << "NDArray.Reshape: target shape must have must have the same size as "
+      << "current shape when recording with autograd.";
+    NDArray ret = *this;
+    ret.shape_ = shape;
     // fake a Reshape op
     ret.entry_.clear();
     const nnvm::Op* op = nnvm::Op::Get("Reshape");
@@ -46,6 +74,10 @@ NDArray NDArray::Reshape(const TShape &shape) const {
       op, attrs, &inputs, &outputs);
     return outputs[0];
   } else {
+    CHECK_GE(shape_.Size(), shape.Size())
+      << "NDArray.Reshape: target shape size is larger current shape";
+    NDArray ret = *this;
+    ret.shape_ = shape;
     return ret;
   }
 }
@@ -55,9 +87,12 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
   using namespace autograd;
   NDArray ret = *this;
   CHECK(!is_none()) << "NDArray is not initialized";
+  CHECK_LT(begin, end) << "Invalid slicing range [" << begin << ", " << end << ")";
   CHECK_GE(shape_[0], end) << "Slice end index out of range";
   size_t length = shape_.ProdShape(1, shape_.ndim());
-  ret.offset_ += begin * length;
+  MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
+    ret.byte_offset_ += begin * length * sizeof(DType);
+  });
   ret.shape_[0] = end - begin;
   if (AutogradRuntime::Get()->IsTraining()) {
     // fake a slice_axis op
@@ -89,6 +124,20 @@ NDArray NDArray::At(index_t idx) const {
     return ret;
   }
 }
+
+
+bool NDArray::fresh_out_grad() const {
+  if (entry_.ag_node != nullptr) return entry_.ag_node->fresh_out_grad;
+  return false;
+}
+
+
+void NDArray::set_fresh_out_grad(bool state) const {
+  CHECK(entry_.ag_node != nullptr)
+    << "NDArray has not been marked as a variable and does not have gradient state";
+  entry_.ag_node->fresh_out_grad = state;
+}
+
 
 /*!
 * \brief run a ternary operation
@@ -613,8 +662,11 @@ NDArray &NDArray::operator/=(const real_t &src) {
   return ScalarOpApply<ndarray::Div>(this, src);
 }
 
+/* magic number for ndarray version 1, with int64_t TShape */
+static const uint32_t NDARRAY_V1_MAGIC = 0xF993fac8;
+
 void NDArray::Save(dmlc::Stream *strm) const {
-  // save shape
+  strm->Write(NDARRAY_V1_MAGIC);
   shape_.Save(strm);
   if (is_none()) return;
   // save context
@@ -638,10 +690,28 @@ void NDArray::Save(dmlc::Stream *strm) const {
   strm->Write(save_data.dptr_, type_size * shape_.Size());
 }
 
+bool LegacyTShapeLoad(dmlc::Stream *strm, TShape *shape) {
+  uint32_t magic;
+  if (strm->Read(&magic, sizeof(uint32_t)) != sizeof(uint32_t)) return false;
+  switch (magic) {
+    case NDARRAY_V1_MAGIC:
+      return shape->Load(strm);
+    default:
+      // meet legacy TShape, magic is ndim here
+      uint32_t ndim = magic;
+      *shape = TShape(ndim);
+      std::vector<uint32_t> buffer(ndim);
+      size_t nread = ndim * sizeof(uint32_t);
+      if (strm->Read(buffer.data(), nread) != nread) return false;
+      nnvm::ShapeTypeCast(buffer.begin(), buffer.end(), shape->begin());
+      return true;
+  }
+}
+
 bool NDArray::Load(dmlc::Stream *strm) {
   // load shape
   TShape shape;
-  if (!shape.Load(strm)) return false;
+  if (!LegacyTShapeLoad(strm, &shape)) return false;
   if (shape.ndim() == 0) {
     *this = NDArray(); return true;
   }
@@ -710,12 +780,11 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
+  TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToWrite();
-    RunContext rctx;
-    rctx.stream = nullptr;
+    RunContext rctx{this->ctx(), nullptr};
     TBlob dst = this->data();
     ndarray::Copy<cpu, cpu>(src, &dst, Context::CPU(), Context::CPU(), rctx);
   } else {
@@ -739,12 +808,11 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob dst(data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
+  TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToRead();
-    RunContext rctx;
-    rctx.stream = nullptr;
+    RunContext rctx{this->ctx(), nullptr};
     ndarray::Copy<cpu, cpu>(this->data(), &dst,
                             Context::CPU(), Context::CPU(), rctx);
   } else {

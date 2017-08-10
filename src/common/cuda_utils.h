@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file cuda_utils.h
  * \brief CUDA debugging utilities.
  */
@@ -7,9 +25,9 @@
 #define MXNET_COMMON_CUDA_UTILS_H_
 
 #include <dmlc/logging.h>
+#include <dmlc/parameter.h>
+#include <dmlc/optional.h>
 #include <mshadow/base.h>
-
-#if MXNET_USE_CUDA
 
 /*! \brief Macros/inlines to assist CLion to parse Cuda files (*.cu, *.cuh) */
 #ifdef __JETBRAINS_IDE__
@@ -22,11 +40,13 @@
 inline void __syncthreads() {}
 inline void __threadfence_block() {}
 template<class T> inline T __clz(const T val) { return val; }
-struct __cuda_fake_struct { int x; int y; };
+struct __cuda_fake_struct { int x; int y; int z; };
 extern __cuda_fake_struct blockDim;
 extern __cuda_fake_struct threadIdx;
 extern __cuda_fake_struct blockIdx;
 #endif
+
+#if MXNET_USE_CUDA
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -157,6 +177,79 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
         << "cuRAND: " << common::cuda::CurandGetErrorString(e); \
   }
 
+/*!
+ * \brief Determine major version number of the gpu's cuda compute architecture.
+ * \param device_id The device index of the cuda-capable gpu of interest.
+ * \return the major version number of the gpu's cuda compute architecture.
+ */
+inline int ComputeCapabilityMajor(int device_id) {
+  int major = 0;
+  CUDA_CALL(cudaDeviceGetAttribute(&major,
+                                   cudaDevAttrComputeCapabilityMajor, device_id));
+  return major;
+}
+
+/*!
+ * \brief Determine minor version number of the gpu's cuda compute architecture.
+ * \param device_id The device index of the cuda-capable gpu of interest.
+ * \return the minor version number of the gpu's cuda compute architecture.
+ */
+inline int ComputeCapabilityMinor(int device_id) {
+  int minor = 0;
+  CUDA_CALL(cudaDeviceGetAttribute(&minor,
+                                   cudaDevAttrComputeCapabilityMinor, device_id));
+  return minor;
+}
+
+/*!
+ * \brief Return the integer SM architecture (e.g. Volta = 70).
+ * \param device_id The device index of the cuda-capable gpu of interest.
+ * \return the gpu's cuda compute architecture as an int.
+ */
+inline int SMArch(int device_id) {
+  auto major = ComputeCapabilityMajor(device_id);
+  auto minor = ComputeCapabilityMinor(device_id);
+  return 10 * major + minor;
+}
+
+/*!
+ * \brief Determine whether a cuda-capable gpu's architecture supports float16 math.
+ * \param device_id The device index of the cuda-capable gpu of interest.
+ * \return whether the gpu's architecture supports float16 math.
+ */
+inline bool SupportsFloat16Compute(int device_id) {
+  // Kepler and most Maxwell GPUs do not support fp16 compute
+  int computeCapabilityMajor = ComputeCapabilityMajor(device_id);
+  int computeCapabilityMinor = ComputeCapabilityMinor(device_id);
+  return (computeCapabilityMajor > 5) ||
+      (computeCapabilityMajor == 5 && computeCapabilityMinor >= 3);
+}
+
+/*!
+ * \brief Determine whether a cuda-capable gpu's architecture supports Tensor Core math.
+ * \param device_id The device index of the cuda-capable gpu of interest.
+ * \return whether the gpu's architecture supports Tensor Core math.
+ */
+inline bool SupportsTensorCore(int device_id) {
+  // Volta (sm_70) supports TensorCore algos
+  int computeCapabilityMajor = ComputeCapabilityMajor(device_id);
+  return (computeCapabilityMajor >= 7);
+}
+
+// The policy if the user hasn't set the environment variable MXNET_CUDA_ALLOW_TENSOR_CORE
+#define MXNET_CUDA_ALLOW_TENSOR_CORE_DEFAULT true
+
+/*!
+ * \brief Returns global policy for TensorCore algo use.
+ * \return whether to allow TensorCore algo (if not specified by the Operator locally).
+ */
+inline bool GetEnvAllowTensorCore() {
+  // Use of optional<bool> here permits: "0", "1", "true" and "false" to all be legal.
+  bool default_value = MXNET_CUDA_ALLOW_TENSOR_CORE_DEFAULT;
+  return dmlc::GetEnv("MXNET_CUDA_ALLOW_TENSOR_CORE",
+                      dmlc::optional<bool>(default_value)).value();
+}
+
 #endif  // MXNET_USE_CUDA
 
 #if MXNET_USE_CUDNN
@@ -168,6 +261,57 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
     cudnnStatus_t e = (func);                                                 \
     CHECK_EQ(e, CUDNN_STATUS_SUCCESS) << "cuDNN: " << cudnnGetErrorString(e); \
   }
+
+/*!
+ * \brief Return max number of perf structs cudnnFindConvolutionForwardAlgorithm()
+ *        may want to populate.
+ * \param cudnn_handle cudnn handle needed to perform the inquiry.
+ * \return max number of perf structs cudnnFindConvolutionForwardAlgorithm() may
+ *         want to populate.
+ */
+inline int MaxForwardAlgos(cudnnHandle_t cudnn_handle) {
+#if CUDNN_MAJOR >= 7
+  int max_algos = 0;
+  CUDNN_CALL(cudnnGetConvolutionForwardAlgorithmMaxCount(cudnn_handle, &max_algos));
+  return max_algos;
+#else
+  return 10;
+#endif
+}
+
+/*!
+ * \brief Return max number of perf structs cudnnFindConvolutionBackwardFilterAlgorithm()
+ *        may want to populate.
+ * \param cudnn_handle cudnn handle needed to perform the inquiry.
+ * \return max number of perf structs cudnnFindConvolutionBackwardFilterAlgorithm() may
+ *         want to populate.
+ */
+inline int MaxBackwardFilterAlgos(cudnnHandle_t cudnn_handle) {
+#if CUDNN_MAJOR >= 7
+  int max_algos = 0;
+  CUDNN_CALL(cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(cudnn_handle, &max_algos));
+  return max_algos;
+#else
+  return 10;
+#endif
+}
+
+/*!
+ * \brief Return max number of perf structs cudnnFindConvolutionBackwardDataAlgorithm()
+ *        may want to populate.
+ * \param cudnn_handle cudnn handle needed to perform the inquiry.
+ * \return max number of perf structs cudnnFindConvolutionBackwardDataAlgorithm() may
+ *         want to populate.
+ */
+inline int MaxBackwardDataAlgos(cudnnHandle_t cudnn_handle) {
+#if CUDNN_MAJOR >= 7
+  int max_algos = 0;
+  CUDNN_CALL(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(cudnn_handle, &max_algos));
+  return max_algos;
+#else
+  return 10;
+#endif
+}
 
 #endif  // MXNET_USE_CUDNN
 
