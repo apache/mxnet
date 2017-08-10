@@ -1,5 +1,3 @@
-package org.dmlc.mxnet;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,7 +16,7 @@ package org.dmlc.mxnet;
  * specific language governing permissions and limitations
  * under the License.
  */
-
+package org.dmlc.mxnet;
 
 import android.graphics.Bitmap;
 import android.graphics.Color;

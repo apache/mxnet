@@ -1,5 +1,3 @@
-package org.dmlc.mxnet;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,6 +17,7 @@ package org.dmlc.mxnet;
  * under the License.
  */
 
+package org.dmlc.mxnet;
 
 public class MxnetException extends Exception {
   public MxnetException(){}
