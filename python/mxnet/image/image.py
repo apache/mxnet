@@ -845,13 +845,13 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
     brightness : float
         Brightness jittering range (percent)
     contrast : float
-        Contrast jittering range
+        Contrast jittering range (percent)
     saturation : float
-        Saturation jittering range
+        Saturation jittering range (percent)
     hue : float
-        Hue jittering range
+        Hue jittering range (percent)
     pca_noise : float
-        Pca noise level
+        Pca noise level (percent)
     inter_method : int, default=2(Area-based)
         Interpolation method for all resizing operations
 
