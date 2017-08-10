@@ -34,6 +34,7 @@ and do some computation. Finally, call `backward()` on the result:
 >>> x.attach_grad()
 >>> with mx.autograd.record():
 ...     y = x * x + 1
+>>> y.backward()
 >>> print(x.grad)
 [ 2.  4.  6.  8.]
 <NDArray 4 @cpu(0)>
@@ -44,7 +45,7 @@ and do some computation. Finally, call `backward()` on the result:
 
 Some operators (Dropout, BatchNorm, etc) behave differently in
 when training and when making predictions.
-This can be controled with `train_mode` and `predict_mode` scope.
+This can be controlled with `train_mode` and `predict_mode` scope.
 
 By default, MXNet is in `predict_mode`.
 A `with autograd.record()` block by default turns on `train_mode`
