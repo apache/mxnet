@@ -52,3 +52,4 @@ if test ! -z "$ERRORS"; then
 else
     echo -e "RAT checks passed."
 fi
+
