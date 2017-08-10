@@ -41,27 +41,38 @@ SPARK_OPTS+=" --num-executors 2"
 SPARK_OPTS+=" --executor-cores 1"
 SPARK_OPTS+=" --jars ${SCALA_JAR}"
 
-# You can download these two files as training & validation set.
-# They were converted from the MNIST dataset,
-# in which each sample was simply flatterned to an array of floats.
-# https://s3-us-west-2.amazonaws.com/mxnet.liuyz/data/mnist/train.txt
-# https://s3-us-west-2.amazonaws.com/mxnet.liuyz/data/mnist/val.txt
+# Download training and test set
+if [ ! -f ./train.txt ]; then
+	wget https://s3-us-west-2.amazonaws.com/mxnet.liuyz/data/mnist/train.txt
+fi
+
+if [ ! -f ./val.txt ]; then
+	wget https://s3-us-west-2.amazonaws.com/mxnet.liuyz/data/mnist/val.txt
+fi
 
 # running opts
-RUN_OPTS+=" --input $1"
-RUN_OPTS+=" --input-val $2"
-RUN_OPTS+=" --output $3"
+RUN_OPTS+=" --input train.txt"
+RUN_OPTS+=" --input-val val.txt"
+RUN_OPTS+=" --output ./"
 # These jars are required by the KVStores at runtime.
 # They will be uploaded and distributed to each node automatically.
-RUN_OPTS+=" --jars $SCALA_JAR"
+RUN_OPTS+=" --jars $SCALA_JAR,$SPARK_JAR"
 RUN_OPTS+=" --num-server 1"
 RUN_OPTS+=" --num-worker 2"
-RUN_OPTS+=" --java $JAVA_HOME/java"
+RUN_OPTS+=" --java $JAVA_HOME/bin/java"
 RUN_OPTS+=" --model mlp"
 RUN_OPTS+=" --cpus 0,1"
 RUN_OPTS+=" --num-epoch 5"
 
-/Users/nanzhu/code/spark-1.6.3/bin/spark-submit --master local[*] \
+# check if SPARK_HOME is set
+if [ -z "$SPARK_HOME" ]; then
+ 	echo "SPARK_HOME is unset";
+	exit 1	
+fi
+
+HOST=`hostname`
+
+$SPARK_HOME/bin/spark-submit --master spark://$HOST:7077 \
   --class ml.dmlc.mxnet.spark.example.ClassificationExample \
   ${SPARK_OPTS} \
   ${SPARK_JAR} \
