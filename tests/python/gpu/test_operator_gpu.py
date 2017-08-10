@@ -645,7 +645,7 @@ def test_spatial_transformer_with_type():
     loc = mx.sym.FullyConnected(data=loc, num_hidden=6)
     sym = mx.sym.SpatialTransformer(data=data, loc=loc, target_shape=(10, 10),
                                     transform_type="affine", sampler_type="bilinear")
-                {'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float32}},
+    ctx_list = [{'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float32}},
                 {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float32}}]
     check_consistency(sym, ctx_list)
     check_consistency(sym, ctx_list, grad_req="add")
