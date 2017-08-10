@@ -22,6 +22,7 @@ format
 pylintrc
 __init__.py
 UPSTREAM_REV
+Jenkinsfile
 
 # exclude these whole folders - may be problematic if there are multiple
 # folders or files with the same name
@@ -36,10 +37,9 @@ mkl
 ctc_include
 
 # Not sure about these
-src/operator/mkl
-src/operator/contrib/ctc_include
 snap.python
 .*t
+.*m
 .*i
 .*ipynb
 Makefile
@@ -48,3 +48,4 @@ Makefile
 .*pyi
 .*R
 .*PL
+Dockerfile*
