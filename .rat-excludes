@@ -48,4 +48,4 @@ Makefile
 .*pyi
 .*R
 .*PL
-Dockerfile.*
+Dockerfile*
