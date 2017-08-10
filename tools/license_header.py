@@ -67,8 +67,7 @@ _WHITE_LIST = ['R-package/',
 
 # language extensions and the according commment mark
 _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
-          '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#', '.cmake':'#',
-	  '.PL':'#', '.R':'#', '.m':'%'}
+          '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#', '.cmake':'#'}
 
 # Previous license header, which will be removed
 _OLD_LICENSE = re.compile('.*Copyright.*by Contributors')
