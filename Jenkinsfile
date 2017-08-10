@@ -106,10 +106,11 @@ try {
           ws('workspace/sanity') {
             init_git()
             sh "python tools/license_header.py check"
-            sh "${docker_run} license sh tools/license_header.sh /workspace"
 	    make('lint', 'cpplint rcpplint jnilint')
             make('lint', 'pylint')
-          }
+            sh "rm -rf R-package/ cub/ dlpack/ dmlc-core/ mshadow/ nnvm/ ps-lite/ src/operator/mkl/ src/operator/contrib/ctc_include/"
+	    sh "${docker_run} license sh tools/license_header.sh /workspace"
+	  }
         }
       }
     }
