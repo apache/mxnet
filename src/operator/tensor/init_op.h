@@ -167,6 +167,26 @@ inline void FillDnsZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
   });
 }
 
+struct PopulateFullIdxRspKernel {
+  template<typename IType>
+  MSHADOW_XINLINE static void Map(int i, IType* out) {
+    KERNEL_ASSIGN(out[i], kWriteTo, i);
+  }
+};
+
+// Fill full indices NDArray with zeros by updating the aux shape.
+template<typename xpu>
+void PopulateFullIdxRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
+  using namespace rowsparse;
+  CHECK_EQ(dst->storage_type(), kRowSparseStorage);
+  nnvm::dim_t nnr = dst->shape()[0];
+  dst->CheckAndAllocAuxData(kIdx, mshadow::Shape1(nnr));
+  MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(kIdx), IType, {
+    IType* idx = dst->aux_data(kIdx).dptr<IType>();
+    mxnet_op::Kernel<PopulateFullIdxRspKernel, xpu>::Launch(s, nnr, idx);
+  });
+}
+
 // Fill a rsp NDArray with zeros by updating the aux shape.
 template<typename xpu>
 void FillZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {

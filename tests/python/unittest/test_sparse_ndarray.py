@@ -351,6 +351,20 @@ def test_sparse_nd_output_fallback():
     mx.nd.random_normal(shape=shape, out=out)
     assert(np.sum(out.asnumpy()) != 0)
 
+def test_sparse_nd_random():
+    shape = (100, 100)
+    fns = [mx.nd.random_uniform, mx.nd.random_normal, mx.nd.random_gamma]
+    for fn in fns:
+        rsp_out = mx.nd.zeros(shape=shape, stype='row_sparse')
+        dns_out = mx.nd.zeros(shape=shape, stype='default')
+        mx.random.seed(0)
+        np.random.seed(0)
+        fn(shape=shape, out=dns_out)
+        mx.random.seed(0)
+        np.random.seed(0)
+        fn(shape=shape, out=rsp_out)
+        assert_almost_equal(dns_out.asnumpy(), rsp_out.asnumpy())
+
 
 def test_sparse_nd_astype():
     stypes = ['row_sparse', 'csr']
