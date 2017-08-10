@@ -61,7 +61,7 @@ RUN_OPTS+=" --model mlp"
 RUN_OPTS+=" --cpus 0,1"
 RUN_OPTS+=" --num-epoch 5"
 
-spark-submit --master local[*] \
+/Users/nanzhu/code/spark-1.6.3/bin/spark-submit --master local[*] \
   --class ml.dmlc.mxnet.spark.example.ClassificationExample \
   ${SPARK_OPTS} \
   ${SPARK_JAR} \
