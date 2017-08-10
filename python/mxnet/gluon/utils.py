@@ -19,6 +19,7 @@
 # pylint: disable=
 """Parallelization utility optimizer."""
 import os
+import hashlib
 try:
     import requests
 except ImportError:
@@ -136,7 +137,33 @@ def _indent(s_, numSpaces):
     return s
 
 
-def download(url, path=None, overwrite=False):
+def check_sha1(filename, sha1_hash):
+    """Check whether the sha1 hash of the file content matches the expected hash.
+
+    Parameters
+    ----------
+    filename : str
+        Path to the file.
+    sha1_hash : str
+        Expected sha1 hash in hexadecimal digits.
+
+    Returns
+    -------
+    bool
+        Whether the file content matches the expected hash.
+    """
+    sha1 = hashlib.sha1()
+    with open(filename, 'rb') as f:
+        while True:
+            data = f.read(1048576)
+            if not data:
+                break
+            sha1.update(data)
+
+    return sha1.hexdigest() == sha1_hash
+
+
+def download(url, path=None, overwrite=False, sha1_hash=None):
     """Download an given URL
 
     Parameters
@@ -148,11 +175,14 @@ def download(url, path=None, overwrite=False):
         current directory with same name as in url.
     overwrite : bool, optional
         Whether to overwrite destination file if already exists.
+    sha1_hash : str, optional
+        Expected sha1 hash in hexadecimal digits. Will ignore existing file when hash is specified
+        but doesn't match.
 
     Returns
     -------
     str
-        The filename of the downloaded file.
+        The file path of the downloaded file.
     """
     if path is None:
         fname = url.split('/')[-1]
@@ -161,7 +191,7 @@ def download(url, path=None, overwrite=False):
     else:
         fname = path
 
-    if overwrite or not os.path.exists(fname):
+    if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
             os.makedirs(dirname)

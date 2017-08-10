@@ -67,6 +67,10 @@ def test_sampler():
     rand_batch_keep = gluon.data.BatchSampler(rand_sampler, 3, 'keep')
     assert sorted(sum(list(rand_batch_keep), [])) == list(range(10))
 
+def test_datasets():
+    assert len(gluon.data.vision.MNIST(root='data')) == 60000
+    assert len(gluon.data.vision.CIFAR10(root='data', train=False)) == 10000
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
