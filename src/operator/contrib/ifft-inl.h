@@ -198,7 +198,8 @@ class IFFTOp : public Operator {
 
  private:
   IFFTParam param_;
-  int dim_, stride_, num_compute, n_iffts;
+  int dim_, stride_, n_iffts;
+  size_t num_compute;
   bool init_cufft_;
 };  // class IFFTOp
 
