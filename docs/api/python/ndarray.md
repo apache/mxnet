@@ -547,11 +547,6 @@ The `contrib.ndarray` module contains many useful experimental APIs for new feat
     :members:
     :special-members:
 
-.. autoclass:: mxnet.ndarray.BaseSparseNDArray
-    :members:
-    :special-members:
-    :exclude-members: __weakref__
-
 .. autoclass:: mxnet.ndarray.CSRNDArray
     :members:
     :special-members:

@@ -28,7 +28,14 @@ namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
 .add_alias("_add").add_alias("_plus").add_alias("_Plus")
-.describe("Adds arguments element-wise.")
+.describe(R"code(Adds arguments element-wise.
+
+The storage type of ``elemwise_add`` output depends on storage types of inputs
+
+- elemwise_add(row_sparse, row_sparse) = row_sparse
+- otherwise, ``elemwise_add`` generates output with default storage
+
+)code")
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, mshadow::op::plus>)
 .set_attr<nnvm::FGradient>("FGradient", CloneGradient{"_backward_add"})
 .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryComputeEx<cpu, mshadow::op::plus>)

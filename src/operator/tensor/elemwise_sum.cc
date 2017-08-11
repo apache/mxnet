@@ -110,6 +110,12 @@ NNVM_REGISTER_OP(add_n)
    add\_n(a_1, a_2, ..., a_n) = a_1 + a_2 + ... + a_n
 
 ``add_n`` is potentially more efficient than calling ``add`` by `n` times.
+
+The storage type of ``add_n`` output depends on storage types of inputs
+
+- add_n(row_sparse, row_sparse, ..) = row_sparse
+- otherwise, ``add_n`` generates output with default storage
+
 )doc" ADD_FILELINE)
 .set_attr_parser(ParamParser<ElementWiseSumParam>)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {

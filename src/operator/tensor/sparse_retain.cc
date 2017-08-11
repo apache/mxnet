@@ -41,6 +41,11 @@ Example::
   rsp_out.values = [[1, 2], [5, 6]]
   rsp_out.indices = [0, 3]
 
+The storage type of ``sparse_retain`` output depends on storage types of inputs
+
+- sparse_retain(row_sparse, default) = row_sparse
+- otherwise, ``sparse_retain`` is not supported
+
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)

@@ -49,6 +49,14 @@ NNVM_REGISTER_OP(dot)
     y = reshape([7,6,5,4,3,2,1,0], shape=(2,2,2))
     dot(x,y)[0,0,1,1] = 0
     sum(x[0,0,:]*y[:,1,1]) = 0
+
+The storage type of ``dot`` output depends on storage types of inputs and transpose options:
+
+- dot(csr, default) = default
+- dot(csr.T, default) = row_sparse
+- dot(csr, row_sparse) = default
+- otherwise, ``dot`` generates output with default storage
+
 )doc" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
