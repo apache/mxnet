@@ -243,7 +243,7 @@ Graph AttachOpExecs(Graph g) {
         ret[i] = std::make_shared<FComputeExecutor>(
             inode.source->attrs, fcompute, exec_type);
       } else {
-        LOG(INFO) << "FCompute not registered " << op->name;
+        LOG(FATAL) << "FCompute not registered " << op->name;
       }
     }
   }

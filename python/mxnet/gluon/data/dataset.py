@@ -20,7 +20,7 @@
 """Dataset container."""
 import os
 
-from ... import recordio, image
+from ... import recordio
 
 class Dataset(object):
     """Abstract dataset class. All datasets should have this interface.
@@ -80,27 +80,3 @@ class RecordFileDataset(Dataset):
 
     def __len__(self):
         return len(self._record.keys)
-
-
-class ImageRecordDataset(RecordFileDataset):
-    """A dataset wrapping over a RecordIO file containing images.
-
-    Each sample is an image and its corresponding label.
-
-    Parameters
-    ----------
-    filename : str
-        Path to rec file.
-    flag : {0, 1}, default 1
-        If 0, always convert images to greyscale.
-
-        If 1, always convert images to colored (RGB).
-    """
-    def __init__(self, filename, flag=1):
-        super(ImageRecordDataset, self).__init__(filename)
-        self._flag = flag
-
-    def __getitem__(self, idx):
-        record = super(ImageRecordDataset, self).__getitem__(idx)
-        header, img = recordio.unpack(record)
-        return image.imdecode(img, self._flag), header.label
