@@ -57,6 +57,58 @@ namespace common {
 /*! \brief common utils for cuda */
 namespace cuda {
 /*!
+ * \brief Converts between C++ datatypes and constants needed by cuBLAS.
+ */
+template<typename DType>
+struct CublasType;
+
+template<>
+struct CublasType<float> {
+  static const float one;
+  static const float zero;
+};
+template<>
+struct CublasType<double> {
+  static const double one;
+  static const double zero;
+};
+template<>
+struct CublasType<mshadow::half::half_t> {
+  static const mshadow::half::half_t one;
+  static const mshadow::half::half_t zero;
+};
+template<>
+struct CublasType<uint8_t> {
+  static const uint8_t one = 1;
+  static const uint8_t zero = 0;
+};
+template<>
+struct CublasType<int32_t> {
+  static const int32_t one = 1;
+  static const int32_t zero = 0;
+};
+
+// Return a pointer to the value '1' in the format required by `algo_precision`.
+// Used typically for the 'alpha' parameter to the GEMM kernel.
+inline const void *one(int algo_precision) {
+  const void *answer = nullptr;
+  MSHADOW_REAL_TYPE_SWITCH(algo_precision, CType, {
+    answer = &CublasType<CType>::one;
+  })
+  return answer;
+}
+
+// Return a pointer to the value '0' in the format required by `algo_precision`.
+// Used typically for the 'beta' parameter to the GEMM kernel.
+inline const void *zero(int algo_precision) {
+  const void *answer = nullptr;
+  MSHADOW_REAL_TYPE_SWITCH(algo_precision, CType, {
+    answer = &CublasType<CType>::zero;
+  })
+  return answer;
+}
+
+/*!
  * \brief Get string representation of cuBLAS errors.
  * \param error The error.
  * \return String representation.
@@ -86,6 +138,17 @@ inline const char* CublasGetErrorString(cublasStatus_t error) {
   }
   return "Unknown cuBLAS status";
 }
+
+#if CUDA_VERSION >= 8000
+/*!
+ * \brief Create the proper constant for indicating cuBLAS transposition, if desired.
+ * \param transpose Whether transposition should be performed.
+ * \return the yes/no transposition-indicating constant.
+ */
+inline cublasOperation_t CublasTransposeOp(bool transpose) {
+  return transpose ? CUBLAS_OP_T : CUBLAS_OP_N;
+}
+#endif
 
 /*!
  * \brief Get string representation of cuRAND errors.
