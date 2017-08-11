@@ -973,13 +973,13 @@ def test_depthwise_convolution():
                     wslice = mx.sym.SliceChannel(data=w, num_outputs=num_group, axis=0)
                     bslice = mx.sym.SliceChannel(data=b, num_outputs=num_group, axis=0)
                     y2 = mx.sym.Concat(*[mx.sym.Convolution(data=xslice[i], weight=wslice[i], bias=bslice[i],
-                                                            num_filter=num_filter/num_group, kernel=kernel,
-                                                            stride=stride, pad=pad)
+                                                            num_filter=num_filter//num_group, kernel=kernel,
+                                                            stride=stride, pad=pad, depthwise_conv_off=True)
                                        for i in range(num_group)])
 
                     dev = default_context()
                     exe1 = y1.simple_bind(dev, x=shape)
-                    exe2 = y2.simple_bind(dev, x=shape, w=(num_filter, shape[1]/num_group, kernel[0], kernel[1]),
+                    exe2 = y2.simple_bind(dev, x=shape, w=(num_filter, shape[1]//num_group, kernel[0], kernel[1]),
                             b=(num_filter,))
                     for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
                         arr1[:] = np.random.normal(size=arr1.shape)

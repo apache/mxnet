@@ -286,9 +286,16 @@ __global__ __launch_bounds__(1024, 2) void DepthwiseConv2dKernelSmall(
         shared_offset += in_increment;
       }
       DType* const out_ptr = inout_offset + output;
-      out_ptr[0] = sum1;
-      if (!skip_second) {
-        out_ptr[block_pixels] = sum2;
+      if (kDirection == DIRECTION_FORWARD) {
+        out_ptr[0] = sum1;
+        if (!skip_second) {
+          out_ptr[block_pixels] = sum2;
+        }
+      } else {
+        out_ptr[0] += sum1;
+        if (!skip_second) {
+          out_ptr[block_pixels] += sum2;
+        }
       }
     }
 
@@ -352,7 +359,7 @@ DepthwiseConv2dBackwardDataKernel(const DepthwiseArgs args,
     }
     const int in_grad_offset = (batch_idx * channel * in_pixels) +
         (channel_idx * in_pixels) + (in_h * in_width) + (in_w);
-    in_grad[in_grad_offset] = sum;
+    in_grad[in_grad_offset] += sum;
   }
 }
 
