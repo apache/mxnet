@@ -1,4 +1,5 @@
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file cuda_utils.cc
  * \brief CUDA debugging utilities and common functions.
  */

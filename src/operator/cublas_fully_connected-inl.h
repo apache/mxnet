@@ -1,4 +1,5 @@
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file cublas_fully_connected-inl.h
  * \brief fully connect operator and symbol with direct use of cuBLAS
  */
