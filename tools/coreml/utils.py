@@ -19,15 +19,38 @@ import mxnet as mx
 
 
 def load_model(model_name, epoch_num, data_shapes, label_shapes, label_names, gpus=''):
-    """
+    """Loads and returns a given MXNet model.
 
-    :param model_name:
-    :param epoch_num:
-    :param data_shapes:
-    :param label_shapes:
-    :param label_names:
-    :param gpus:
-    :return:
+    Parameters
+    ----------
+    model_name: str
+        Prefix of the MXNet model name as stored on the local directory.
+
+    epoch_num : int
+        Epoch number of model we would like to load.
+
+    input_shape: tuple
+        The shape of the input data in the form of (batch_size, channels, height, width)
+
+    files: list of strings
+        List of URLs pertaining to files that need to be downloaded in order to use the model.
+
+    data_shapes: list of tuples.
+        List of tuples where each tuple is a pair of input variable name and its shape.
+
+    label_shapes: list of (str, tuple)
+        Typically is ``data_iter.provide_label``.
+
+    label_names: list of str
+        Name of the output labels in the MXNet symbolic graph.
+
+    gpus: str
+        Comma separated string of gpu ids on which inferences are executed. E.g. 3,5,6 would refer to GPUs 3, 5 and 6.
+        If empty, we use CPU.
+
+    Returns
+    -------
+    MXNet module
     """
     sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, epoch_num)
     if gpus == '':

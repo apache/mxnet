@@ -17,7 +17,6 @@
 
 from __future__ import print_function
 import argparse
-import mxnet as mx
 from converter._mxnet_converter import convert
 from utils import load_model
 import yaml
