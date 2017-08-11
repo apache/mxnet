@@ -118,7 +118,7 @@ def train_rcnn(network, dataset, image_set, root_path, dataset_path,
     for child_metric in [eval_metric, cls_metric, bbox_metric]:
         eval_metrics.add(child_metric)
     # callback
-    batch_end_callback = callback.Speedometer(train_data.batch_size, frequent=frequent)
+    batch_end_callback = mx.callback.Speedometer(train_data.batch_size, frequent=frequent, auto_reset=false)
     epoch_end_callback = callback.do_checkpoint(prefix, means, stds)
     # decide learning rate
     base_lr = lr
