@@ -55,8 +55,7 @@ then
     make docs || exit 1
     echo -e "$latest_tag\n$(cat $tag_list_file)" > "$tag_list_file"
     cat $tag_list_file
-    tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "docs/_build/html/" \
-                                          --current_version "$latest_tag" --root_url "http://mxnet.incubator.apache.org/"
+    tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "docs/_build/html/" --current_version "$latest_tag"
     tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddPackageLink.py \
                                           --file_path "docs/_build/html/get_started/install.html" --current_version "$latest_tag"
     cp -a "docs/_build/html/." "$local_build"
@@ -79,8 +78,7 @@ make docs || exit 1
 
 rm -rfv "$web_folder/versions/master/*"
 cp -a "docs/_build/html/." "$web_folder/versions/master"
-tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "$web_folder/versions/master" \
-                                      --root_url "http://mxnet.incubator.apache.org/"
+tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "$web_folder/versions/master"
 
 # Update version list for all previous version website
 if [ $latest_tag != ${tag_list[0]} ]
@@ -89,6 +87,6 @@ then
     for (( i=0; i<=$(( $total -1 )); i++ ))
     do
         tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "$web_folder/versions/${tag_list[$i]}" \
-                                              --current_version "${tag_list[$i]}" --root_url "http://mxnet.incubator.apache.org/"
+                                              --current_version "${tag_list[$i]}"
     done
 fi
