@@ -61,7 +61,7 @@ if __name__ == '__main__':
                 content = bs(html_file, 'html.parser')
             if os.path.join(path, name) == args.file_path + 'index.html':
                 content.find(id='example-link')['href'] = \
-                    'https://github.com/dmlc/mxnet/tree/%s/example' % (args.current_version)
+                    'https://github.com/apache/incubator-mxnet/tree/%s/example' % (args.current_version)
             navbar = content.find(id="main-nav")
             navbar_mobile = content.find(id="burgerMenu")
             if navbar and navbar_mobile:
