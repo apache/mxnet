@@ -44,6 +44,17 @@ namespace exec {
 class StatefulComputeExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx) override {
+    if (!init_) {
+      in_data_.clear();
+      for (size_t i = 0; i < in_array.size(); ++i) {
+        in_data_.push_back(in_array[i].data());
+      }
+      out_data_.clear();
+      for (size_t i = 0; i < out_array.size(); ++i) {
+        out_data_.push_back(out_array[i].data());
+      }
+      init_ = true;
+    }
     op_ctx.run_ctx = rctx;
     fcompute_(state_, op_ctx, in_data_, req, out_data_);
 #if MKL_EXPERIMENTAL == 1
@@ -53,14 +64,7 @@ class StatefulComputeExecutor : public OpExecutor {
   }
 
   void Setup() override {
-    in_data_.clear();
-    for (size_t i = 0; i < in_array.size(); ++i) {
-      in_data_.push_back(in_array[i].data());
-    }
-    out_data_.clear();
-    for (size_t i = 0; i < out_array.size(); ++i) {
-      out_data_.push_back(out_array[i].data());
-    }
+    init_ = false;
   }
 
   ExecType exec_type() const override {
@@ -81,6 +85,7 @@ class StatefulComputeExecutor : public OpExecutor {
   OpStatePtr state_;
   FStatefulCompute fcompute_;
   ExecType exec_type_;
+  bool init_;
   std::vector<TBlob> in_data_, out_data_;
 };
 
@@ -120,6 +125,16 @@ class StatefulComputeExExecutor : public OpExecutor {
 class FComputeExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx) override {
+    if (!init_) {
+      in_data_.resize(in_array.size());
+      out_data_.resize(out_array.size());
+      auto get_blob =  [](const NDArray& nd) {
+        return nd.data();
+      };
+      std::transform(in_array.begin(), in_array.end(), in_data_.begin(), get_blob);
+      std::transform(out_array.begin(), out_array.end(), out_data_.begin(), get_blob);
+      init_ = true;
+    }
     op_ctx.run_ctx = rctx;
     fcompute_(attrs_, op_ctx, in_data_, req, out_data_);
 #if MKL_EXPERIMENTAL == 1
@@ -129,13 +144,7 @@ class FComputeExecutor : public OpExecutor {
   }
 
   void Setup() override {
-    in_data_.resize(in_array.size());
-    out_data_.resize(out_array.size());
-    auto get_blob =  [](const NDArray& nd) {
-      return nd.data();
-    };
-    std::transform(in_array.begin(), in_array.end(), in_data_.begin(), get_blob);
-    std::transform(out_array.begin(), out_array.end(), out_data_.begin(), get_blob);
+    init_ = false;
   }
 
   ExecType exec_type() const override {
@@ -151,6 +160,7 @@ class FComputeExecutor : public OpExecutor {
   NodeAttrs attrs_;
   FCompute fcompute_;
   ExecType exec_type_;
+  bool init_;
   std::vector<TBlob> in_data_, out_data_;
 };
 
