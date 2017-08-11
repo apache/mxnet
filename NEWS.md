@@ -1,9 +1,10 @@
 MXNet Change Log
 ================
-## 0.11.0
+## 0.11.0-rc0
 ### - Major Features
   - Apple Core ML model converter
   - Support for Keras v1.2.2
+  - For more information see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/v0.11.0+Release+Notes)
 ### - API Changes
   - Added `CachedOp`. You can now cache the operators that’s called frequently with the same set of arguments to reduce overhead.
   - Added sample_multinomial for sampling from multinomial distributions.
@@ -29,6 +30,7 @@ MXNet Change Log
   - Fixed a few race conditions that causes crashes on shutdown.
 ### - Refactors
   - Refactored TShape/TBlob to use int64 dimensions and DLTensor as internal storage. Getting ready for migration to DLPack. As a result TBlob::dev_mask_ and TBlob::stride_ are removed.
+
 
 ## 0.10.0
 - Overhauled documentation for commonly used Python APIs, Installation instructions, Tutorials, HowTos and MXNet Architecture.  
