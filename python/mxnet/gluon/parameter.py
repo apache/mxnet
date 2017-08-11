@@ -82,7 +82,14 @@ class Parameter(object):
 
     """
     def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
-                 lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False):
+                 lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
+                 differentiable=True):
+        self._var = None
+        self._data = None
+        self._grad = None
+        self._deferred_init = ()
+        self._differentiable = differentiable
+        self._grad_req = None
         self.name = name
         self.shape = shape
         self.dtype = dtype
@@ -91,14 +98,30 @@ class Parameter(object):
         self.grad_req = grad_req
         self.init = init
         self.allow_deferred_init = allow_deferred_init
-        self._var = None
-        self._data = None
-        self._grad = None
-        self._deferred_init = ()
 
     def __repr__(self):
         s = 'Parameter {name} (shape={shape}, dtype={dtype})'
         return s.format(**self.__dict__)
+
+    @property
+    def grad_req(self):
+        return self._grad_req
+
+    @grad_req.setter
+    def grad_req(self, req):
+        assert req in ['write', 'add', 'null'], \
+            "grad_req must be one of write, add, or null, but got %s"%req
+        if not self._differentiable:
+            req = 'null'
+        if self._grad_req == req:
+            return
+        self._grad_req = req
+        if req == 'null' and self._grad is not None:
+            self._grad = None
+            for ctx in self._data:
+                self._data[ctx] = self._data[ctx].detach()
+        elif self._data is not None:
+            self._init_grads()
 
     def _check_initialized(self, ctx=None):
         if self._data is not None:
@@ -172,13 +195,16 @@ class Parameter(object):
         self._data = OrderedDict()
         for i in ctx:
             self._data[i] = data.copyto(i)
+        self._init_grad()
 
+    def _init_grad(self):
+        """Initialize grad buffers."""
         if self.grad_req == 'null':
             self._grad = None
             return
 
         self._grad = OrderedDict()
-        for i in ctx:
+        for i in self._data:
             self._grad[i] = ndarray.zeros_like(self._data[i])
 
         autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)

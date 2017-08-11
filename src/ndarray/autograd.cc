@@ -126,7 +126,7 @@ AutogradRuntime* AutogradRuntime::Get() {
   return ptr;
 }
 
-AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
+void AutogradRuntime::RecordOp(const nnvm::Op* op,
                                     const nnvm::NodeAttrs& attrs,
                                     std::vector<NDArray> *p_inputs,
                                     std::vector<NDArray> *p_outputs,
@@ -135,39 +135,56 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
   std::vector<NDArray>& inputs  = *p_inputs;
   std::vector<NDArray>& outputs = *p_outputs;
 
+  for (uint32_t i = 0; i < outputs.size(); ++i) {
+    CHECK(outputs[i].entry_.is_none())
+      << "Inplace operations (+=, -=, x[:]=, etc) are not supported when "
+      << "recording with autograd. "
+      << "Assigning to NDArrays that are already in a computational graph "
+      << "will cause undefined behavior when evaluating gradients. "
+      << "Please call backward first to clear the graph or do this out side of "
+      << "a record section. ";
+  }
+  if (!fgradient.count(attrs.op)) return;
+  bool need_grad = false;
+  for (const auto& i : inputs) {
+    if (!i.entry_.is_none()) {
+      need_grad = true;
+      break;
+    }
+  }
+  if (!need_grad) return;
+
   NodePtr nn_node = Node::Create();
   nn_node->attrs = attrs;
   nn_node->attrs.name = "node_" + std::to_string(node_count_++);
 
   // Get backward dependency
   std::vector<bool> save_inputs(inputs.size()), save_outputs(outputs.size());
-  if (fgradient.count(nn_node->op())) {
-    for (uint32_t i = 0; i < inputs.size(); ++i) {
-      nn_node->inputs.emplace_back(NodeEntry{nullptr, i, 0});
-    }
-    std::vector<NodeEntry> ograd_entries;
-    for (uint32_t i = 0; i < outputs.size(); ++i) {
-      ograd_entries.emplace_back(NodeEntry{nullptr, i, 1});
-    }
-    auto igrad_entries = fgradient[nn_node->op()](nn_node, ograd_entries);
-    for (const auto& i : igrad_entries) {
-      if (i.node == nullptr && i.version == 0) {
-        save_inputs[i.index] = true;
-      } else if (i.node == nn_node) {
-        save_outputs[i.index] = true;
-      }
-    }
-    DFSVisit(igrad_entries, [&](const NodePtr& node) {
-        if (!node || node == nn_node) return;
-        for (const auto& i : node->inputs) {
-          if (i.node == nullptr && i.version == 0) {
-            save_inputs[i.index] = true;
-          } else if (i.node == nn_node) {
-            save_outputs[i.index] = true;
-          }
-        }
-      });
+  for (uint32_t i = 0; i < inputs.size(); ++i) {
+    nn_node->inputs.emplace_back(NodeEntry{nullptr, i, 0});
   }
+  std::vector<NodeEntry> ograd_entries;
+  for (uint32_t i = 0; i < outputs.size(); ++i) {
+    ograd_entries.emplace_back(NodeEntry{nullptr, i, 1});
+  }
+  auto igrad_entries = fgradient[nn_node->op()](nn_node, ograd_entries);
+  for (const auto& i : igrad_entries) {
+    if (i.node == nullptr && i.version == 0) {
+      save_inputs[i.index] = true;
+    } else if (i.node == nn_node) {
+      save_outputs[i.index] = true;
+    }
+  }
+  DFSVisit(igrad_entries, [&](const NodePtr& node) {
+      if (!node || node == nn_node) return;
+      for (const auto& i : node->inputs) {
+        if (i.node == nullptr && i.version == 0) {
+          save_inputs[i.index] = true;
+        } else if (i.node == nn_node) {
+          save_outputs[i.index] = true;
+        }
+      }
+    });
 
   AGNodePtr ag_node = AGNode::Create(nn_node);
   ag_node->state = state;
@@ -196,13 +213,6 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
   }
 
   for (uint32_t i = 0; i < outputs.size(); ++i) {
-    CHECK(outputs[i].entry_.is_none())
-      << "Inplace operations (+=, -=, x[:]=, etc) are not supported when "
-      << "recording with autograd. "
-      << "Assigning to NDArrays that are already in a computational graph "
-      << "will cause undefined behavior when evaluating gradients. "
-      << "Please call backward first to clear the graph or do this out side of "
-      << "a record section. ";
     if (save_outputs[i]) {
       ag_node->outputs.emplace_back(outputs[i].Detach());
     } else {
@@ -212,8 +222,6 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
     }
     outputs[i].entry_ = AGNodeEntry{ag_node, i, 0};
   }
-
-  return ag_node;
 }
 
 void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs,
