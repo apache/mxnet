@@ -1,0 +1,69 @@
+# Convert MXNet models into Apple CoreML format.
+
+This tool helps convert MXNet models into [Apple CoreML](https://developer.apple.com/documentation/coreml) format which can then be run on Apple devices.
+
+## Installation
+In order to use this tool you need to have these installed:
+* mxnet 0.10.0 or greater. [Installation instructions](http://mxnet.io/get_started/install.html).
+* python 2.7
+* coremltools 0.4.0 (pip install coremltools)
+* yaml (pip install pyyaml)
+
+## How to use
+Let's say you want to use your MXNet model in an iPhone App. For the purpose of this example, let's say you want to use squeezenet-v1.1.
+
+1. Download the model into the directory where this converter resides. Squeezenet can be downloaded from [here](http://data.mxnet.io/models/imagenet/squeezenet/).
+2. Run this command:
+```bash
+python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,224,224"}' --output-file="squeezenet_v11.mlmodel"
+```
+The above command will save the converted model into squeezenet-v11.mlmodel in CoreML format.
+
+3. This generated ".mlmodel" file can directly be integrated into your app. For more instructions on how to do this, please see [Apple CoreML's tutorial](https://developer.apple.com/documentation/coreml/integrating_a_core_ml_model_into_your_app).
+
+
+### Providing class labels
+You could also provide the file containing class labels (aka synset file) so that CoreML will return the predicted category the image belongs to.
+
+```bash
+python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,224,224"}' --class-labels synset.txt --output-file="squeezenet_v11.mlmodel"
+```
+
+
+### Adding a pre-processing to CoreML model.
+You could ask CoreML to pre-process the images before passing them through the model.
+
+```bash
+python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,224,224"}' --pre-processing-arguments='{"red_bias":127,"blue_bias":117,"green_bias":103}' --output-file="squeezenet_v11.mlmodel"
+```
+
+
+## Currently supported
+### Models
+This is a (growing) list of standard MXNet models that can be successfully converted using the converter. This means that any other model that uses similar operators as these models can also be successfully converted.
+1. Inception: [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/), [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz)
+2. [NiN](http://data.dmlc.ml/models/imagenet/nin/)
+2. [Resnet](http://data.mxnet.io/models/imagenet/resnet/)
+3. [Squeezenet](http://data.mxnet.io/models/imagenet/squeezenet/)
+4. [Vgg](http://data.mxnet.io/models/imagenet/vgg/)
+
+### Layers
+1. Activation.
+2. Batchnorm.
+3. Concat.
+4. Convolution.
+5. Deconvolution.
+6. Dense.
+7. Elementwise.
+8. Flatten.
+9. Pooling.
+10. Reshape.
+11. Softmax.
+12. Transpose.
+
+## Known issues
+Currently there are no known issues.
+
+## This tool has been tested on environment with:
+* MacOS - High Sierra 10.13 Beta.
+* Xcode 9 beta 2.
