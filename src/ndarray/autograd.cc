@@ -131,12 +131,43 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
                                     std::vector<NDArray> *p_inputs,
                                     std::vector<NDArray> *p_outputs,
                                     const OpStatePtr& state) {
+  static auto& fgradient = nnvm::Op::GetAttr<nnvm::FGradient>("FGradient");
   std::vector<NDArray>& inputs  = *p_inputs;
   std::vector<NDArray>& outputs = *p_outputs;
 
   NodePtr nn_node = Node::Create();
   nn_node->attrs = attrs;
   nn_node->attrs.name = "node_" + std::to_string(node_count_++);
+
+  // Get backward dependency
+  std::vector<bool> save_inputs(inputs.size()), save_outputs(outputs.size());
+  if (fgradient.count(nn_node->op())) {
+    for (uint32_t i = 0; i < inputs.size(); ++i) {
+      nn_node->inputs.emplace_back(NodeEntry{nullptr, i, 0});
+    }
+    std::vector<NodeEntry> ograd_entries;
+    for (uint32_t i = 0; i < outputs.size(); ++i) {
+      ograd_entries.emplace_back(NodeEntry{nullptr, i, 1});
+    }
+    auto igrad_entries = fgradient[nn_node->op()](nn_node, ograd_entries);
+    for (const auto& i : igrad_entries) {
+      if (i.node == nullptr && i.version == 0) {
+        save_inputs[i.index] = true;
+      } else if (i.node == nn_node) {
+        save_outputs[i.index] = true;
+      }
+    }
+    DFSVisit(igrad_entries, [&](const NodePtr& node) {
+        if (!node || node == nn_node) return;
+        for (const auto& i : node->inputs) {
+          if (i.node == nullptr && i.version == 0) {
+            save_inputs[i.index] = true;
+          } else if (i.node == nn_node) {
+            save_outputs[i.index] = true;
+          }
+        }
+      });
+  }
 
   AGNodePtr ag_node = AGNode::Create(nn_node);
   ag_node->state = state;
@@ -147,12 +178,21 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
         AGNode::Create(
           nnvm::Symbol::CreateVariable(
             "null" + std::to_string(variable_count_++)).outputs[0].node), 0, 0};
-      e.ag_node->outputs.emplace_back(inputs[i]);
+      if (save_inputs[i]) {
+        e.ag_node->outputs.emplace_back(inputs[i]);
+      } else {
+        // Put a dummy array here since it will not be used.
+        e.ag_node->outputs.emplace_back(
+            inputs[i].shape(), inputs[i].ctx(), true, inputs[i].dtype());
+      }
       e.ag_node->out_grads.emplace_back();
       inputs[i].entry_ = std::move(e);  // assign last to prevent cyclic reference
     }
-    nn_node->inputs.push_back(inputs[i].entry_.nn_entry());
+    nn_node->inputs[i] = inputs[i].entry_.nn_entry();
     ag_node->inputs.push_back(inputs[i].entry_);
+    if (save_inputs[i]) {
+      inputs[i].entry_.ag_node->outputs[inputs[i].entry_.index] = inputs[i].Detach();
+    }
   }
 
   for (uint32_t i = 0; i < outputs.size(); ++i) {
@@ -163,8 +203,13 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
       << "will cause undefined behavior when evaluating gradients. "
       << "Please call backward first to clear the graph or do this out side of "
       << "a record section. ";
-    outputs[i].entry_.clear();
-    ag_node->outputs.push_back(outputs[i]);
+    if (save_outputs[i]) {
+      ag_node->outputs.emplace_back(outputs[i].Detach());
+    } else {
+      // Put a dummy array here since it will not be used.
+      ag_node->outputs.emplace_back(
+          outputs[i].shape(), outputs[i].ctx(), true, outputs[i].dtype());
+    }
     outputs[i].entry_ = AGNodeEntry{ag_node, i, 0};
   }
 
