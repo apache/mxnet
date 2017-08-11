@@ -906,7 +906,7 @@ class SingleLayerTest(unittest.TestCase):
             moving_var=moving_var,
             use_global_stats=True,
             name='batch_norm_1')
-        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random', delta=1e-2)
 
     def test_batch_norm_no_global_stats(self):
         """ This test should throw an exception since converter doesn't support
@@ -930,7 +930,7 @@ class SingleLayerTest(unittest.TestCase):
             moving_var=moving_var,
             use_global_stats=False,
             name='batch_norm_1')
-        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random', delta=1e-2)
 
     def test_pre_processing_args(self):
         np.random.seed(1988)
