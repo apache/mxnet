@@ -418,15 +418,15 @@ static inline __device__ void atomicAdd(mshadow::half::half_t *address,
     old = atomicCAS(address_as_ui, assumed, old);
   } while (assumed != old);
 }
-#endif
 
 template <typename DType>
-__device__ __host__ inline DType ldg(const DType* address) {
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 350
+__device__ inline DType ldg(const DType* address) {
+#if __CUDA_ARCH__ >= 350
     return __ldg(address);
 #else
     return *address;
 #endif
 }
+#endif
 
 #endif  // MXNET_COMMON_CUDA_UTILS_H_
