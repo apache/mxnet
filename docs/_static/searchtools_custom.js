@@ -1,23 +1,4 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-
-/*
  * searchtools.js_t
  * ~~~~~~~~~~~~~~~~
  *
@@ -29,7 +10,7 @@
  */
 
 
-/* Non-minified version JS is _stemmer.js if file is provided */
+/* Non-minified version JS is _stemmer.js if file is provided */ 
 /**
  * Porter Stemmer
  */
@@ -425,7 +406,7 @@ var Search = {
         return (left > right) ? -1 : ((left < right) ? 1 : 0);
       }
     });
-
+    
     //Render result for preview
     if(isPreview) {
         var prevNum = 0;
@@ -738,7 +719,7 @@ var Search = {
         scoreDict[filenames[file]][titles[file]] += score;
       }
     }
-
+    
     for(var file in scoreDict) {
       for(var title in scoreDict[file]) {
         results.push([file, title, '', null, scoreDict[file][title]]);
@@ -777,14 +758,14 @@ var Search = {
 $(document).ready(function() {
   var searchBoxWidth = 140;
   var searchBoxWidthModifier = 200;
-
+    
   var focusInputColor = "white";
   var focusIconColor = "dimgray";
   var focusPlaceColor = "searchBoxExp";
   var normalInputColor = "#87CEFA";
   var normalIconColor = "white";
   var normalPlaceColor = "searchBoxNorm";
-
+    
   function focusOut() {
     $("#search-input-wrap").width(searchBoxWidth);
     $(".searchBox").width(searchBoxWidth);
@@ -812,14 +793,14 @@ $(document).ready(function() {
       isPreview = false;
     }
   });
-
+    
   //Click to focus out
   $('body').click(function (e) {
     if(e.target.id == 'search-preview' || e.target.name == 'q' || $(e.target).parents("#search-preview").size()) return;
 
     focusOut();
   });
-
+    
   //Press esc to focus out
   $(document).keyup(function(e) {
      if (e.keyCode == 27) { // escape key maps to keycode `27`
@@ -827,7 +808,7 @@ $(document).ready(function() {
        focusOut();
      }
   });
-
+    
   //Add search result preview
   $('#search-input-wrap input').on('input', function () {
       if($(this).val().length == 0) {
