@@ -41,11 +41,52 @@ from .. import io
 from .. import recordio
 
 
+def imread(filename, *args, **kwargs):
+    """Read and decode an image to an NDArray.
+
+    Note: `imread` uses OpenCV (not the CV2 Python library).
+    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
+
+    Parameters
+    ----------
+    filename : str
+        Name of the image file to be loaded.
+    flag : {0, 1}, default 1
+        1 for three channel color output. 0 for grayscale output.
+    to_rgb : bool, default True
+        True for RGB formatted output (MXNet default).
+        False for BGR formatted output (OpenCV default).
+    out : NDArray, optional
+        Output buffer. Use `None` for automatic allocation.
+
+    Returns
+    -------
+    NDArray
+        An `NDArray` containing the image.
+
+    Example
+    -------
+    >>> mx.img.imread("flower.jpg")
+    <NDArray 224x224x3 @cpu(0)>
+
+    Set `flag` parameter to 0 to get grayscale output
+
+    >>> mx.img.imdecode("flower.jpg", flag=0)
+    <NDArray 224x224x1 @cpu(0)>
+
+    Set `to_rgb` parameter to 0 to get output in OpenCV format (BGR)
+
+    >>> mx.img.imdecode(str_image, to_rgb=0)
+    <NDArray 224x224x3 @cpu(0)>
+    """
+    return _internal._cvimread(filename, *args, **kwargs)
+
+
 def imdecode(buf, *args, **kwargs):
     """Decode an image to an NDArray.
 
     Note: `imdecode` uses OpenCV (not the CV2 Python library).
-    MXNet must have been built with OpenCV for `imdecode` to work.
+    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
 
     Parameters
     ----------
@@ -130,7 +171,7 @@ def scale_down(src_size, size):
     return int(w), int(h)
 
 
-def _get_interp_method(interp, sizes=None):
+def _get_interp_method(interp, sizes=()):
     """Get the interpolation method for resize functions.
     The major purpose of this function is to wrap a random interp method selection
     and a auto-estimation method.
@@ -481,7 +522,7 @@ class ResizeAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        return [resize_short(src, self.size, self.interp)]
+        return resize_short(src, self.size, self.interp)
 
 
 class ForceResizeAug(Augmenter):
@@ -502,7 +543,7 @@ class ForceResizeAug(Augmenter):
     def __call__(self, src):
         """Augmenter body"""
         sizes = (src.shape[0], src.shape[1], self.size[1], self.size[0])
-        return [imresize(src, *self.size, interp=_get_interp_method(self.interp, sizes))]
+        return imresize(src, *self.size, interp=_get_interp_method(self.interp, sizes))
 
 
 class RandomCropAug(Augmenter):
@@ -522,7 +563,7 @@ class RandomCropAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        return [random_crop(src, self.size, self.interp)[0]]
+        return random_crop(src, self.size, self.interp)[0]
 
 
 class RandomSizedCropAug(Augmenter):
@@ -549,7 +590,7 @@ class RandomSizedCropAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        return [random_size_crop(src, self.size, self.min_area, self.ratio, self.interp)[0]]
+        return random_size_crop(src, self.size, self.min_area, self.ratio, self.interp)[0]
 
 
 class CenterCropAug(Augmenter):
@@ -569,7 +610,7 @@ class CenterCropAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        return [center_crop(src, self.size, self.interp)[0]]
+        return center_crop(src, self.size, self.interp)[0]
 
 
 class RandomOrderAug(Augmenter):
@@ -590,10 +631,9 @@ class RandomOrderAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        src = [src]
         random.shuffle(self.ts)
         for t in self.ts:
-            src = [j for i in src for j in t(i)]
+            src = t(src)
         return src
 
 
@@ -613,7 +653,7 @@ class BrightnessJitterAug(Augmenter):
         """Augmenter body"""
         alpha = 1.0 + random.uniform(-self.brightness, self.brightness)
         src *= alpha
-        return [src]
+        return src
 
 
 class ContrastJitterAug(Augmenter):
@@ -636,7 +676,7 @@ class ContrastJitterAug(Augmenter):
         gray = (3.0 * (1.0 - alpha) / gray.size) * nd.sum(gray)
         src *= alpha
         src += gray
-        return [src]
+        return src
 
 
 class SaturationJitterAug(Augmenter):
@@ -660,7 +700,7 @@ class SaturationJitterAug(Augmenter):
         gray *= (1.0 - alpha)
         src *= alpha
         src += gray
-        return [src]
+        return src
 
 
 class HueJitterAug(Augmenter):
@@ -694,7 +734,7 @@ class HueJitterAug(Augmenter):
                        [0.0, vsw, vsu]])
         t = np.dot(np.dot(self.tyiq, bt), self.ityiq).T
         src = nd.dot(src, nd.array(t))
-        return [src]
+        return src
 
 
 class ColorJitterAug(RandomOrderAug):
@@ -743,7 +783,7 @@ class LightingAug(Augmenter):
         alpha = np.random.normal(0, self.alphastd, size=(3,))
         rgb = np.dot(self.eigvec * alpha, self.eigval)
         src += nd.array(rgb)
-        return [src]
+        return src
 
 
 class ColorNormalizeAug(Augmenter):
@@ -763,7 +803,7 @@ class ColorNormalizeAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        return [color_normalize(src, self.mean, self.std)]
+        return color_normalize(src, self.mean, self.std)
 
 
 class RandomGrayAug(Augmenter):
@@ -785,7 +825,7 @@ class RandomGrayAug(Augmenter):
         """Augmenter body"""
         if random.random() < self.p:
             src = nd.dot(src, self.mat)
-        return [src]
+        return src
 
 
 class HorizontalFlipAug(Augmenter):
@@ -804,7 +844,7 @@ class HorizontalFlipAug(Augmenter):
         """Augmenter body"""
         if random.random() < self.p:
             src = nd.flip(src, axis=1)
-        return [src]
+        return src
 
 
 class CastAug(Augmenter):
@@ -815,7 +855,7 @@ class CastAug(Augmenter):
     def __call__(self, src):
         """Augmenter body"""
         src = src.astype(np.float32)
-        return [src]
+        return src
 
 
 def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, rand_mirror=False,
@@ -1108,18 +1148,17 @@ class ImageIter(io.DataIter):
         try:
             while i < batch_size:
                 label, s = self.next_sample()
-                data = [self.imdecode(s)]
+                data = self.imdecode(s)
                 try:
                     self.check_valid_image(data)
                 except RuntimeError as e:
                     logging.debug('Invalid image, skipping:  %s', str(e))
                     continue
                 data = self.augmentation_transform(data)
-                for datum in data:
-                    assert i < batch_size, 'Batch size must be multiples of augmenter output length'
-                    batch_data[i][:] = self.postprocess_data(datum)
-                    batch_label[i][:] = label
-                    i += 1
+                assert i < batch_size, 'Batch size must be multiples of augmenter output length'
+                batch_data[i] = self.postprocess_data(data)
+                batch_label[i] = label
+                i += 1
         except StopIteration:
             if not i:
                 raise StopIteration
@@ -1157,7 +1196,7 @@ class ImageIter(io.DataIter):
     def augmentation_transform(self, data):
         """Transforms input data with specified augmentation."""
         for aug in self.auglist:
-            data = [ret for src in data for ret in aug(src)]
+            data = aug(data)
         return data
 
     def postprocess_data(self, datum):

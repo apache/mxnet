@@ -16,6 +16,7 @@
 # under the License.
 
 import os
+import tarfile
 import mxnet as mx
 import numpy as np
 from mxnet import gluon
@@ -32,23 +33,24 @@ def test_array_dataset():
 
 
 def prepare_record():
-    if not os.path.isdir("data"):
-        os.makedirs('data')
     if not os.path.isdir("data/test_images"):
-        os.system("wget http://data.mxnet.io/data/test_images.tar.gz -O data/test_images.tar.gz")
-        os.system("tar -xf data/test_images.tar.gz -C data")
-    imgs = os.listdir('data/test_images')
-    record = mx.recordio.MXIndexedRecordIO('data/test.idx', 'data/test.rec', 'w')
-    for i, img in enumerate(imgs):
-        str_img = open('data/test_images/'+img, 'rb').read()
-        s = mx.recordio.pack((0, i, i, 0), str_img)
-        record.write_idx(i, s)
+        os.makedirs('data/test_images')
+    if not os.path.isdir("data/test_images/test_images"):
+        gluon.utils.download("http://data.mxnet.io/data/test_images.tar.gz", "data/test_images.tar.gz")
+        tarfile.open('data/test_images.tar.gz').extractall('data/test_images/')
+    if not os.path.exists('data/test.rec'):
+        imgs = os.listdir('data/test_images/test_images')
+        record = mx.recordio.MXIndexedRecordIO('data/test.idx', 'data/test.rec', 'w')
+        for i, img in enumerate(imgs):
+            str_img = open('data/test_images/test_images/'+img, 'rb').read()
+            s = mx.recordio.pack((0, i, i, 0), str_img)
+            record.write_idx(i, s)
     return 'data/test.rec'
 
 
 def test_recordimage_dataset():
     recfile = prepare_record()
-    dataset = gluon.data.ImageRecordDataset(recfile)
+    dataset = gluon.data.vision.ImageRecordDataset(recfile)
     loader = gluon.data.DataLoader(dataset, 1)
 
     for i, (x, y) in enumerate(loader):
@@ -70,6 +72,13 @@ def test_sampler():
 def test_datasets():
     assert len(gluon.data.vision.MNIST(root='data')) == 60000
     assert len(gluon.data.vision.CIFAR10(root='data', train=False)) == 10000
+
+def test_image_folder_dataset():
+    prepare_record()
+    dataset = gluon.data.vision.ImageFolderDataset('data/test_images')
+    assert dataset.synsets == ['test_images']
+    assert len(dataset.items) == 16
+
 
 if __name__ == '__main__':
     import nose

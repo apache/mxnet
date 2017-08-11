@@ -81,7 +81,7 @@ class DetBorrowAug(DetAugmenter):
 
     def __call__(self, src, label):
         """Augmenter implementation body"""
-        src = self.augmenter(src)[0]
+        src = self.augmenter(src)
         return (src, label)
 
 
@@ -275,7 +275,7 @@ class DetRandomCropAug(DetAugmenter):
         from math import sqrt
 
         if not self.enabled or height <= 0 or width <= 0:
-            return None
+            return ()
         min_area = self.area_range[0] * height * width
         max_area = self.area_range[1] * height * width
         for _ in range(self.max_attempts):
@@ -317,7 +317,7 @@ class DetRandomCropAug(DetAugmenter):
                 new_label = self._update_labels(label, (x, y, w, h), height, width)
                 if new_label is not None:
                     return (x, y, w, h, new_label)
-        return None
+        return ()
 
 
 class DetRandomPadAug(DetAugmenter):
@@ -386,7 +386,7 @@ class DetRandomPadAug(DetAugmenter):
         """Generate random padding region"""
         from math import sqrt
         if not self.enabled or height <= 0 or width <= 0:
-            return None
+            return ()
         min_area = self.area_range[0] * height * width
         max_area = self.area_range[1] * height * width
         for _ in range(self.max_attempts):
@@ -411,7 +411,7 @@ class DetRandomPadAug(DetAugmenter):
             x = random.randint(0, max(0, w - width))
             new_label = self._update_labels(label, (x, y, w, h), height, width)
             return (x, y, w, h, new_label)
-        return None
+        return ()
 
 
 def CreateMultiRandCropAugmenter(min_object_covered=0.1, aspect_ratio_range=(0.75, 1.33),
@@ -771,7 +771,7 @@ class ImageDetIter(ImageIter):
                     continue
                 for datum in [data]:
                     assert i < batch_size, 'Batch size must be multiples of augmenter output length'
-                    batch_data[i][:] = self.postprocess_data(datum)
+                    batch_data[i] = self.postprocess_data(datum)
                     num_object = label.shape[0]
                     batch_label[i][0:num_object] = nd.array(label)
                     if num_object < batch_label[i].shape[0]:

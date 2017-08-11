@@ -86,6 +86,7 @@ Detailed tutorials are available in Part 1 of
     set_recording
     is_recording
     mark_variables
+    Function
 ```
 
 ## API Reference
