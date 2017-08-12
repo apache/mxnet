@@ -29,7 +29,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--model-prefix', required=True, type=str,
         help="Prefix of the existing model. The model is expected to be stored in the same directory from where "
-             "this tool is being run. E.g. --model-prefix=squeezenet_v1.1"
+             "this tool is being run. E.g. --model-prefix=squeezenet_v1.1. Note that this can include entire "
+             "directory name too. E.g. --model-prefix=~/Downloads/squeezenet_v1.1."
     )
     parser.add_argument(
         '--epoch', required=True, type=int,
@@ -47,7 +48,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--label-names', required=False, type=str, default='softmax_label',
-        help="label-names of the MXNet model's output variable. E.g. --label-names=softmax_label. "
+        help="label-names of the MXNet model's output variables. E.g. --label-names=softmax_label. "
              "(Usually this is the name of the last layer followed by suffix _label.)"
     )
     parser.add_argument(
