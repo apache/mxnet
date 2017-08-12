@@ -19,14 +19,24 @@
 
 /*!
  * \file c_lapack_api.h
- * \brief Unified interface for LAPACK calls from within mxnet.
+ * \brief Unified interface for CPU-based LAPACK calls.
  *  Purpose is to hide the platform specific differences.
  */
-#ifndef MXNET_C_LAPACK_API_H_
-#define MXNET_C_LAPACK_API_H_
+#ifndef MXNET_OPERATOR_C_LAPACK_API_H_
+#define MXNET_OPERATOR_C_LAPACK_API_H_
 
 // Manually maintained list of LAPACK interfaces that can be used
 // within MXNET. Conventions:
+//    - We should only import LAPACK-functions that are useful and
+//      ensure that we support them most efficiently on CPU/GPU. As an
+//      example take "potrs": It can be emulated by two calls to
+//      "trsm" (from BLAS3) so not really needed from functionality point
+//      of view. In addition, trsm on GPU supports batch-mode processing
+//      which is much more efficient for a bunch of smaller matrices while
+//      there is no such batch support for potrs. As a result, we may
+//      not support "potrs" internally and if we want to expose it to the user as
+//      a convenience operator at some time, then we may implement it internally
+//      as a sequence of trsm.
 //    - Interfaces must be compliant with lapacke.h in terms of signature and
 //      naming conventions so wrapping a function "foo" which has the
 //      signature
@@ -36,14 +46,21 @@
 //      Note that function signatures in lapacke.h will always have as first
 //      argument the storage order (row/col-major). All wrappers have to support
 //      that argument. The underlying fortran functions will always assume a
-//      column-major layout. It is the responsibility of the wrapper function
-//      to handle the (usual) case that it is called with data in row-major
-//      format, either by doing appropriate transpositions explicitly or using
-//      transposition options of the underlying fortran function.
-//    - It is ok to assume that matrices are stored in contiguous memory
-//      (which removes the need to do special handling for lda/ldb parameters
-//      and enables us to save additional matrix transpositions around
-//      the fortran calls).
+//      column-major layout.
+//    - In the (usual) case that a wrapper is called specifying row-major storage
+//      order of input/output data, there are two ways to handle this:
+//        1) The wrapper may support this without allocating any additional memory
+//           for example by exploiting the fact that a matrix is symmetric and switching
+//           certain flags (upper/lower triangular) when calling the fortran code.
+//        2) The wrapper may cause a runtime error. In that case it should be clearly
+//           documented that these functions do only support col-major layout.
+//      Rationale: This is a low level interface that is not expected to be called
+//      directly from many upstream functions. Usually all calls should go through
+//      the tensor-based interfaces in linalg.h which simplify calls to lapack further
+//      and are better suited to handle additional transpositions that may be necessary.
+//      Also we want to push allocation of temporary storage higher up in order to
+//      allow more efficient re-use of temporal storage. And don't want to plaster
+//      these interfaces here with additional requirements of providing buffers.
 //    - It is desired to add some basic checking in the C++-wrappers in order
 //      to catch simple mistakes when calling these wrappers.
 //    - Must support compilation without lapack-package but issue runtime error in this case.
@@ -54,9 +71,10 @@
 using namespace mshadow;
 
 extern "C" {
+
   // Fortran signatures
   #define MXNET_LAPACK_FSIGNATURE1(func, dtype) \
-    void func##_(char* uplo, int* n, dtype* a, int* lda, int *info);
+    void func##_(char *uplo, int *n, dtype *a, int *lda, int *info);
 
   MXNET_LAPACK_FSIGNATURE1(spotrf, float)
   MXNET_LAPACK_FSIGNATURE1(dpotrf, double)
@@ -72,9 +90,6 @@ extern "C" {
 
 #define MXNET_LAPACK_ROW_MAJOR 101
 #define MXNET_LAPACK_COL_MAJOR 102
-
-#define CHECK_LAPACK_CONTIGUOUS(a, b) \
-  CHECK_EQ(a, b) << "non contiguous memory for array in lapack call";
 
 #define CHECK_LAPACK_UPLO(a) \
   CHECK(a == 'U' || a == 'L') << "neither L nor U specified as triangle in lapack call";
@@ -117,9 +132,9 @@ inline void flip<cpu, double>(int m, int n,
 
 #if MXNET_USE_LAPACK
 
+  // These functions can be called with either row- or col-major format.
   #define MXNET_LAPACK_CWRAPPER1(func, dtype) \
-  inline int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype* a, int lda ) { \
-    CHECK_LAPACK_CONTIGUOUS(n, lda); \
+  inline int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype *a, int lda) { \
     CHECK_LAPACK_UPLO(uplo); \
     char o(loup(uplo, (matrix_layout == MXNET_LAPACK_ROW_MAJOR))); \
     int ret(0); \
@@ -172,7 +187,7 @@ inline void flip<cpu, double>(int m, int n,
 
   // Define compilable stubs.
   #define MXNET_LAPACK_CWRAPPER1(func, dtype) \
-  inline int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype* a, int lda ) { \
+  inline int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype* a, int lda) { \
     LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
     return 1; \
   }
@@ -209,4 +224,4 @@ inline int MXNET_LAPACK_posv<double>(int matrix_layout, char uplo, int n,
   return mxnet_lapack_dposv(matrix_layout, uplo, n, nrhs, a, lda, b, ldb);
 }
 
-#endif  // MXNET_C_LAPACK_API_H_
+#endif  // MXNET_OPERATOR_C_LAPACK_API_H_

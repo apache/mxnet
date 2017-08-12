@@ -401,7 +401,7 @@ Examples::
   { return std::vector<std::string>{"A"}; } )
 .set_attr<nnvm::FInferShape>("FInferShape", LaReduceShape<2>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", LaReduceForward<cpu, 2, sumlogdiag>)
+.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 0, 1, 1, sumlogdiag>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_sumlogdiag"})
 .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrices");
 
@@ -411,7 +411,7 @@ NNVM_REGISTER_OP(_backward_linalg_sumlogdiag)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaReduceBackward<cpu, 2, sumlogdiag_backward>);
+.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 2, 1, sumlogdiag_backward>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -26,7 +26,7 @@
 #define MXNET_OPERATOR_CONTRIB_KRPROD_H_
 #include <vector>
 #include "mshadow/tensor.h"
-#include "mxnet/c_lapack_api.h"
+#include "../c_lapack_api.h"
 
 namespace mxnet {
 namespace op {

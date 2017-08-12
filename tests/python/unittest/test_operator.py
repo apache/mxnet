@@ -3412,15 +3412,8 @@ def test_deformable_psroipooling():
 
 
 def test_laop():
-    return
 
-    # Currently no support for GPU. Will be added soon
-    # so keep these tests here in this file and activate
-    # gpu-testing when it is ready.
-    dev = default_context()
-    if dev.device_type == 'gpu':
-       return
-
+    # enable numerical checking of gradients
     grad_check = 1
 
     data1 = mx.symbol.Variable('data1')

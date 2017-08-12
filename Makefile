@@ -23,6 +23,10 @@ ifndef DLPACK_PATH
 	DLPACK_PATH = $(ROOTDIR)/dlpack
 endif
 
+ifndef AMALGAMATION_PATH
+	AMALGAMATION_PATH = $(ROOTDIR)/amalgamation
+endif
+
 ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
@@ -439,6 +443,7 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
+	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
@@ -448,6 +453,7 @@ clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
+	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 endif
 
 clean_all: clean

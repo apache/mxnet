@@ -91,9 +91,9 @@ struct LaTriangMatrixMultParam : public dmlc::Parameter<LaTriangMatrixMultParam>
 };
 
 // Common function for shape inference for matrix mult and matrix mac.
-bool LaMatrixMultMacOpShape(const nnvm::NodeAttrs& attrs,
-                            std::vector<TShape>* in_attrs,
-                            std::vector<TShape>* out_attrs) {
+inline bool LaMatrixMultMacOpShape(const nnvm::NodeAttrs& attrs,
+                                   std::vector<TShape>* in_attrs,
+                                   std::vector<TShape>* out_attrs) {
   CHECK_GE(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
   bool transpose_a(false), transpose_b(false);
@@ -132,9 +132,9 @@ bool LaMatrixMultMacOpShape(const nnvm::NodeAttrs& attrs,
   return false;
 }
 
-bool LaTriangMatrixMultOpShape(const nnvm::NodeAttrs& attrs,
-                               std::vector<TShape>* in_attrs,
-                               std::vector<TShape>* out_attrs) {
+inline bool LaTriangMatrixMultOpShape(const nnvm::NodeAttrs& attrs,
+                                      std::vector<TShape>* in_attrs,
+                                      std::vector<TShape>* out_attrs) {
   const LaTriangMatrixMultParam& param = nnvm::get<LaTriangMatrixMultParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
@@ -192,9 +192,9 @@ bool LaTriangMatrixMultOpShape(const nnvm::NodeAttrs& attrs,
 }
 
 template<int dim>
-bool LaReduceShape(const nnvm::NodeAttrs& attrs,
-                   std::vector<TShape>* in_attrs,
-                   std::vector<TShape>* out_attrs) {
+inline bool LaReduceShape(const nnvm::NodeAttrs& attrs,
+                          std::vector<TShape>* in_attrs,
+                          std::vector<TShape>* out_attrs) {
   // Shape for reduction of the dim lowest dimensions to a scalar.
   // Can only deduct in forward direction.
   CHECK_EQ(in_attrs->size(), 1);
@@ -203,7 +203,8 @@ bool LaReduceShape(const nnvm::NodeAttrs& attrs,
   if ( ndim < dim ) {
      return false;
   }
-  std::vector<int> oshape(std::max(1, ndim-dim), 1);
+  std::vector<int> oshape(std::max(1, ndim-dim));
+  oshape[0] = 1;
   for ( int i = 0; i < ndim - dim; ++i ) {
     oshape[i] = (*in_attrs)[0][i];
   }
@@ -218,7 +219,6 @@ template<typename xpu, typename DType, int idim, int odim, int inum, int onum, t
 struct LaOpCaller {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
-                 const int index,
                  const nnvm::NodeAttrs& attrs,
                        mshadow::Stream<xpu> *s) {
     CHECK(false) << "no specialized LaOpCaller defined for template parameters";
@@ -228,86 +228,75 @@ template<typename xpu, typename DType, int idim, int odim, typename laop>
 struct LaOpCaller<xpu, DType, idim, odim, 1, 1, laop> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
-                 const int index,
                  const nnvm::NodeAttrs& attrs,
                        mshadow::Stream<xpu> *s) {
-    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s)[index],
-             outputs[0].FlatToKD<xpu, odim+1, DType>(s)[index], attrs);
+    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s),
+             outputs[0].FlatToKD<xpu, odim+1, DType>(s), s, attrs);
   }
 };
 template<typename xpu, typename DType, int idim, int odim, typename laop>
 struct LaOpCaller<xpu, DType, idim, odim, 2, 1, laop> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
-                 const int index,
                  const nnvm::NodeAttrs& attrs,
                        mshadow::Stream<xpu> *s) {
-    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s)[index],
-             inputs[1].FlatToKD<xpu, idim+1, DType>(s)[index],
-             outputs[0].FlatToKD<xpu, odim+1, DType>(s)[index],
-             attrs);
+    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s),
+             inputs[1].FlatToKD<xpu, idim+1, DType>(s),
+             outputs[0].FlatToKD<xpu, odim+1, DType>(s), s, attrs);
   }
 };
 template<typename xpu, typename DType, int idim, int odim, typename laop>
 struct LaOpCaller<xpu, DType, idim, odim, 3, 1, laop> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
-                 const int index,
                  const nnvm::NodeAttrs& attrs,
                        mshadow::Stream<xpu> *s) {
-    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s)[index],
-             inputs[1].FlatToKD<xpu, idim+1, DType>(s)[index],
-             inputs[2].FlatToKD<xpu, idim+1, DType>(s)[index],
-             outputs[0].FlatToKD<xpu, odim+1, DType>(s)[index],
-             attrs);
+    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s),
+             inputs[1].FlatToKD<xpu, idim+1, DType>(s),
+             inputs[2].FlatToKD<xpu, idim+1, DType>(s),
+             outputs[0].FlatToKD<xpu, odim+1, DType>(s), s, attrs);
   }
 };
 template<typename xpu, typename DType, int idim, int odim, typename laop>
 struct LaOpCaller<xpu, DType, idim, odim, 3, 2, laop> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
-                 const int index,
                  const nnvm::NodeAttrs& attrs,
                        mshadow::Stream<xpu> *s) {
-    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s)[index],
-             inputs[1].FlatToKD<xpu, idim+1, DType>(s)[index],
-             inputs[2].FlatToKD<xpu, idim+1, DType>(s)[index],
-             outputs[0].FlatToKD<xpu, odim+1, DType>(s)[index],
-             outputs[1].FlatToKD<xpu, odim+1, DType>(s)[index],
-             attrs);
+    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s),
+             inputs[1].FlatToKD<xpu, idim+1, DType>(s),
+             inputs[2].FlatToKD<xpu, idim+1, DType>(s),
+             outputs[0].FlatToKD<xpu, odim+1, DType>(s),
+             outputs[1].FlatToKD<xpu, odim+1, DType>(s), s, attrs);
   }
 };
 template<typename xpu, typename DType, int idim, int odim, typename laop>
 struct LaOpCaller<xpu, DType, idim, odim, 4, 2, laop> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
-                 const int index,
                  const nnvm::NodeAttrs& attrs,
                        mshadow::Stream<xpu> *s) {
-    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s)[index],
-             inputs[1].FlatToKD<xpu, idim+1, DType>(s)[index],
-             inputs[2].FlatToKD<xpu, idim+1, DType>(s)[index],
-             inputs[3].FlatToKD<xpu, idim+1, DType>(s)[index],
-             outputs[0].FlatToKD<xpu, odim+1, DType>(s)[index],
-             outputs[1].FlatToKD<xpu, odim+1, DType>(s)[index],
-             attrs);
+    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s),
+             inputs[1].FlatToKD<xpu, idim+1, DType>(s),
+             inputs[2].FlatToKD<xpu, idim+1, DType>(s),
+             inputs[3].FlatToKD<xpu, idim+1, DType>(s),
+             outputs[0].FlatToKD<xpu, odim+1, DType>(s),
+             outputs[1].FlatToKD<xpu, odim+1, DType>(s), s, attrs);
   }
 };
 template<typename xpu, typename DType, int idim, int odim, typename laop>
 struct LaOpCaller<xpu, DType, idim, odim, 4, 3, laop> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
-                 const int index,
                  const nnvm::NodeAttrs& attrs,
                        mshadow::Stream<xpu> *s) {
-    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s)[index],
-             inputs[1].FlatToKD<xpu, idim+1, DType>(s)[index],
-             inputs[2].FlatToKD<xpu, idim+1, DType>(s)[index],
-             inputs[3].FlatToKD<xpu, idim+1, DType>(s)[index],
-             outputs[0].FlatToKD<xpu, odim+1, DType>(s)[index],
-             outputs[1].FlatToKD<xpu, odim+1, DType>(s)[index],
-             outputs[2].FlatToKD<xpu, odim+1, DType>(s)[index],
-             attrs);
+    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s),
+             inputs[1].FlatToKD<xpu, idim+1, DType>(s),
+             inputs[2].FlatToKD<xpu, idim+1, DType>(s),
+             inputs[3].FlatToKD<xpu, idim+1, DType>(s),
+             outputs[0].FlatToKD<xpu, odim+1, DType>(s),
+             outputs[1].FlatToKD<xpu, odim+1, DType>(s),
+             outputs[2].FlatToKD<xpu, odim+1, DType>(s), s, attrs);
   }
 };
 
@@ -322,24 +311,8 @@ void LaOpForward(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(inputs.size(), inum);
   CHECK_EQ(outputs.size(), onum);
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-    int N(-1);
-    for ( int i = 0; i < inum; ++i ) {
-      CHECK_EQ(inputs[i].CheckContiguous(), true);
-      const int M(inputs[i].FlatToKD<xpu, idim+1, OType>(s).size(0));
-      CHECK_EQ((N == -1 || N == M), true);
-      N = M;
-    }
-    for ( int i = 0; i < onum; ++i ) {
-      CHECK_EQ(outputs[i].CheckContiguous(), true);
-      CHECK_EQ((req[i] == kWriteTo || req[i] == kWriteInplace), true);
-      const int M(outputs[i].FlatToKD<xpu, odim+1, OType>(s).size(0));
-      CHECK_EQ((N == -1 || N == M), true);
-      N = M;
-    }
-    for ( int i = 0; i < N; ++i ) {
-      LaOpCaller<xpu, OType, idim, odim, inum, onum, laop>::op(inputs, outputs, i, attrs, s);
-    }
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+    LaOpCaller<xpu, OType, idim, odim, inum, onum, laop>::op(inputs, outputs, attrs, s);
   });
 }
 
@@ -354,80 +327,20 @@ void LaOpBackward(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(inputs.size(), inum);
   CHECK_EQ(outputs.size(), onum);
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-    int N(-1);
-    for ( int i = 0; i < inum; ++i ) {
-      CHECK_EQ(inputs[i].CheckContiguous(), true);
-      const int M(inputs[i].FlatToKD<xpu, idim+1, OType>(s).size(0));
-      CHECK_EQ((N == -1 || N == M), true);
-      N = M;
-    }
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
     std::vector<TBlob> tspace(outputs);
     for ( int i = 0; i < onum; ++i ) {
-      CHECK_EQ(outputs[i].CheckContiguous(), true);
-      const int M(outputs[i].FlatToKD<xpu, odim+1, OType>(s).size(0));
-      CHECK_EQ((N == -1 || N == M), true);
-      N = M;
       if ( req[i] == kAddTo ) {
         tspace[i].dptr_ = ctx.requested[ResourceRequest::kTempSpace]
                              .get_space_typed<xpu, 1, OType>(Shape1(outputs[i].Size()), s).dptr_;
       }
     }
-    for ( int i = 0; i < N; ++i ) {
-      LaOpCaller<xpu, OType, idim, odim, inum, onum, laop>::op(inputs, tspace, i, attrs, s);
-    }
+    LaOpCaller<xpu, OType, idim, odim, inum, onum, laop>::op(inputs, tspace, attrs, s);
     for ( int i = 0; i < onum; ++i ) {
       if ( req[i] == kAddTo ) {
         Tensor<xpu, 1, OType> out = outputs[i].FlatTo1D<xpu, OType>(s);
         out += tspace[i].FlatTo1D<xpu, OType>(s);
       }
-    }
-  });
-}
-
-template<typename xpu, int idim, typename laop>
-void LaReduceForward(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  CHECK_EQ(inputs.size(), 1);
-  CHECK_EQ(outputs.size(), 1);
-  CHECK_EQ(inputs[0].CheckContiguous(), true);
-  CHECK_EQ(outputs[0].CheckContiguous(), true);
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-    Tensor<xpu, idim+1, OType> in(inputs[0].FlatToKD<xpu, idim+1, OType>(s));
-    Tensor<xpu, 1, OType> out(outputs[0].FlatTo1D<xpu, OType>(s));
-    const int N(outputs[0].Size());
-    CHECK_EQ(in.size(0), N);
-    for ( int i = 0; i < N; ++i ) {
-      laop::op(in[i], out[i], attrs);
-    }
-  });
-}
-
-template<typename xpu, int idim, typename laop>
-void LaReduceBackward(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const std::vector<TBlob>& inputs,
-                      const std::vector<OpReqType>& req,
-                      const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  CHECK_EQ(inputs.size(), 2);
-  CHECK_EQ(outputs.size(), 1);
-  CHECK_EQ(inputs[0].CheckContiguous(), true);
-  CHECK_EQ(inputs[1].CheckContiguous(), true);
-  CHECK_EQ(outputs[0].CheckContiguous(), true);
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-    const int N(inputs[0].Size());
-    Tensor<xpu, 1, OType> in0(inputs[0].FlatTo1D<xpu, OType>(s));
-    Tensor<xpu, idim+1, OType> in1(inputs[1].FlatToKD<xpu, idim+1, OType>(s));
-    Tensor<xpu, idim+1, OType> out(outputs[0].FlatToKD<xpu, idim+1, OType>(s));
-    for ( int i = 0; i < N; ++i ) {
-      laop::op(in0[i], in1[i], out[i], attrs, (req[i] == kAddTo));
     }
   });
 }
