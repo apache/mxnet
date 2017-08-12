@@ -22,6 +22,7 @@ deep learning systems, and interesting insights of DL systems for hackers.
 
 What's New
 ----------
+* [Version 0.11.0-rc0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.11.0-rc0) - MXNet 0.11.0-rc0 Release.
 * [Apache Incubator](http://incubator.apache.org/projects/mxnet.html) - We are now an Apache Incubator project.
 * [Version 0.10.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.10.0) - MXNet 0.10.0 Release.
 * [Version 0.9.3 Release](./docs/architecture/release_note_0_9.md) - First 0.9 official release.
