@@ -100,6 +100,12 @@ information.
     .add_argument("data", "NDArray-or-Symbol", "Input data to the ctc_loss op.")
     .add_argument("label", "NDArray-or-Symbol",
                   "Ground-truth labels for the loss.")
+    .add_argument("input_lengths", "NDArray-or-Symbol",
+                  "Lengths of input for each of the samples. Only required "
+                  "when use_input_lengths is true.")
+    .add_argument("label_lengths", "NDArray-or-Symbol",
+                  "Lengths of labels for each of the samples. Only required "
+                  "when use_label_lengths is true.")
     .add_arguments(CTCLossParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_contrib_CTCLoss).add_alias("_contrib_ctc_loss");

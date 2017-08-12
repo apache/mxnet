@@ -129,24 +129,60 @@ inline void get_workspace_size(std::vector<int> *label_lengths,
 // characters. The sequence lengths are also inferred from the padding chars
 template <typename DType, typename xpu>
 inline void LabelTensorToPackedVector(mshadow::Tensor<xpu, 2, DType> labels,
+                                      int padding_mask,
                                       std::vector<int> *packed_labels,
                                       std::vector<int> *label_lengths) {
   int batch = labels.size(0);
   int max_num_labels = labels.size(1);
-  std::vector<index_t> cpu_labels(max_num_labels);
+  std::vector<int> cpu_labels(max_num_labels);
 
   for (int b = 0; b < batch; ++b) {
     IndexTensorToVector(labels[b], &cpu_labels);
-    auto res = std::find(cpu_labels.begin(), cpu_labels.end(), 0);
+    auto res = std::find(cpu_labels.begin(), cpu_labels.end(), padding_mask);
     int len = std::distance(cpu_labels.begin(), res);
     std::copy(cpu_labels.begin(), cpu_labels.begin() + len,
               std::back_inserter(*packed_labels));
-    label_lengths->emplace_back(len);
+    label_lengths->at(b) = len;
+  }
+}
+
+template <typename DType, typename xpu>
+inline void PackLabelByLength(mshadow::Tensor<xpu, 2, DType> labels,
+                              mshadow::Tensor<xpu, 1, DType> in_label_lengths,
+                              std::vector<int> *packed_labels,
+                              std::vector<int> *label_lengths) {
+  int batch = labels.size(0);
+  int max_num_labels = labels.size(1);
+  std::vector<int> cpu_labels(max_num_labels);
+  IndexTensorToVector(in_label_lengths, label_lengths);
+
+  for (int b = 0; b < batch; ++b) {
+    IndexTensorToVector(labels[b], &cpu_labels);
+    int len = label_lengths->at(b);
+    std::copy(cpu_labels.begin(), cpu_labels.begin() + len,
+              std::back_inserter(*packed_labels));
   }
 }
 
 struct CTCLossParam : public dmlc::Parameter<CTCLossParam> {
-  DMLC_DECLARE_PARAMETER(CTCLossParam) {}
+  bool use_input_lengths;
+  bool use_label_lengths;
+  dmlc::optional<int> padding_mask;
+  DMLC_DECLARE_PARAMETER(CTCLossParam) {
+    DMLC_DECLARE_FIELD(use_input_lengths).set_default(false)
+      .describe("Whether the input lenghts are decided by `input_lengths`. "
+                "If false, the lengths are equal to the max sequence length.");
+    DMLC_DECLARE_FIELD(use_label_lengths).set_default(false)
+      .describe("Whether the label lenghts are decided by "
+                "`label_lengths`, or derived from `padding_mask`. "
+                "If false, the lengths are derived from the "
+                "first occurrence of the value of `padding_mask`.");
+    DMLC_DECLARE_FIELD(padding_mask).set_default(dmlc::optional<int>(0))
+      .describe("int or None. This is the label value to be considered padding. "
+                "Only required when `use_label_lengths` is false. "
+                "Labels before the first occurrence of `padding_mask` are included "
+                "in calculation.");
+  }
 };
 
 template <typename xpu>
@@ -160,7 +196,7 @@ class CTCLossOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(in_data.size(), 2U+param_.use_input_lengths+param_.use_label_lengths);
     CHECK_EQ(out_data.size(), 2U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
@@ -178,13 +214,26 @@ class CTCLossOp : public Operator {
     int batch_size = data.size(1);
     int alphabet_size = data.size(2);
 
+    // input_lengths
+    std::vector<int> input_lengths(batch_size, max_seq_len);
+    if (param_.use_input_lengths) {
+      int kInputLength = 2;
+      IndexTensorToVector(in_data[kInputLength].get<xpu, 1, real_t>(s), &input_lengths);
+    }
+
     // label_lengths
     std::vector<int> packed_labels;
-    std::vector<int> label_lengths;
-    LabelTensorToPackedVector(labels, &packed_labels, &label_lengths);
+    std::vector<int> label_lengths(batch_size);
+    if (param_.use_label_lengths) {
+      int kLabelLength = 2+param_.use_input_lengths;
+      PackLabelByLength(labels, in_data[kLabelLength].get<xpu, 1, real_t>(s),
+                        &packed_labels, &label_lengths);
+    } else {
+      LabelTensorToPackedVector(labels, param_.padding_mask.value(),
+                                &packed_labels, &label_lengths);
+    }
 
     // allocate temporary workspace
-    std::vector<int> input_lengths(batch_size, max_seq_len);
     size_t size_bytes;
     bool gpu = data.kDevCPU ? false : true;
     get_workspace_size<real_t>(&label_lengths, &input_lengths, alphabet_size,
@@ -240,7 +289,15 @@ class CTCLossProp : public OperatorProperty {
   int NumOutputs() const override { return 2; }
 
   std::vector<std::string> ListArguments() const override {
-    return {"data", "label"};
+    if (param_.use_input_lengths && param_.use_label_lengths) {
+      return {"data", "label", "input_lengths", "label_lengths"};
+    } else if (param_.use_input_lengths) {
+      return {"data", "label", "input_lengths"};
+    } else if (param_.use_label_lengths) {
+      return {"data", "label", "label_lengths"};
+    } else {
+      return {"data", "label"};
+    }
   }
 
   std::vector<std::string> ListOutputs() const override {
@@ -259,7 +316,9 @@ class CTCLossProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 2U) << "Expect two inputs to the symbol.";
+    index_t expected_inputs = 2+param_.use_input_lengths+param_.use_label_lengths;
+    CHECK_EQ(in_shape->size(), expected_inputs)
+        << "Expect " << expected_inputs << " inputs to the symbol.";
 
     const TShape &dshape = (*in_shape)[ctc_loss::kData];
     const TShape &lshape = (*in_shape)[ctc_loss::kLabel];
@@ -267,6 +326,20 @@ class CTCLossProp : public OperatorProperty {
     CHECK_EQ(lshape.ndim(), 2U) << "The labels array must be of rank 2.";
     CHECK_EQ(dshape[1], lshape[0])
         << "The batch size for the labels and data arrays must be the same.";
+    if (param_.use_input_lengths) {
+      int kInputLength = 2;
+      const TShape &dlshape = (*in_shape)[kInputLength];
+      CHECK_EQ(dlshape.ndim(), 1U) << "Input length array must be a vector.";
+      CHECK_EQ(dlshape[0], dshape[1])
+          << "The batch size for the inputs and input lengths must be the same.";
+    }
+    if (param_.use_label_lengths) {
+      int kLabelLength = 2+param_.use_input_lengths;
+      const TShape &llshape = (*in_shape)[kLabelLength];
+      CHECK_EQ(llshape.ndim(), 1U) << "Label length array must be a vector.";
+      CHECK_EQ(llshape[0], lshape[0])
+          << "The batch size for the labels and label lengths must be the same.";
+    }
 
     CHECK_GE(dshape[0], lshape[1]) << "The max number of labels cannot exceed "
                                       "the maximum sequence length of the "

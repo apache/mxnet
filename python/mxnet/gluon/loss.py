@@ -21,6 +21,8 @@
 from __future__ import absolute_import
 
 from .. import ndarray
+from ..contrib import symbol as symbol_contrib
+from ..contrib import ndarray as ndarray_contrib
 from ..base import numeric_types
 from .block import HybridBlock
 
@@ -295,3 +297,102 @@ class KLDivLoss(Loss):
         loss = label * (F.log(label+1e-8) - output)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
+
+
+class CTCLoss(Loss):
+    r"""Connectionist Temporal Classification Loss.
+
+    See `"Connectionist Temporal Classification: Labelling Unsegmented
+    Sequence Data with Recurrent Neural Networks"
+    <http://www.cs.toronto.edu/~graves/icml_2006.pdf>`_ paper for more information.
+
+    The prediction output should be an activation vector without softmax, with shape
+    according to the output_layout:
+    **TNC**: *(sequence_length, batch_size, alphabet_size + 1)*
+    **NTC**: *(batch_size, sequence_length, alphabet_size + 1)*
+
+    The loss output has the shape:
+    **loss**: *(batch_size,)*.
+
+    ``label`` is a tensor of integers between 1 and *alphabet_size*, with shape according
+    to the label_layout:
+    **NT**: *(batch_size, label_sequence_length)*
+    **TN**: *(label_sequence_length, batch_size)*
+
+    If a sequence of labels is shorter than *label_sequence_length*, use the special
+    padding character 0 at the end of the sequence to conform it to the correct
+    length. For example, if *label_sequence_length* = 4, and one has two sequences
+    of labels [2, 1] and [3, 2, 2], the resulting ```label``` tensor should be
+    padded to be::
+
+      [[2, 1, 0, 0], [3, 2, 2, 0]]
+
+
+    Parameters
+    ----------
+    output_layout : str, default 'NTC'
+        Layout of the output sequence activation vector.
+    label_layout : str, default 'NT'
+        Layout of the labels.
+    use_input_lengths : bool, default False
+        Whether to use `input_lengths` to decide lengths of inputs.
+        If false, the input lengths are treated as being equal to the max sequence length.
+    use_label_lengths : bool, default False
+        Whether to use `label_lengths` to decide lengths of labels.
+        If false, the label lengths are derived from the first occurrence of
+        the value specified by `padding_mask`.
+    padding_mask : int or None, default -1
+        This is the label value to be considered padding, which is used to derive the actual
+        lengths of labels. Only required when `use_label_lengths` is false.
+    weight : float or None
+        Global scalar weight for loss.
+    input_lengths : NDArray or None,
+        Actual lengths of inputs. Only required when `use_input_lengths` is true.
+        This should be used as the third argument when calling this loss.
+        The shape should be (N,).
+    label_lengths : NDArray or None,
+        Lengths of labels. Only required when `use_label_lengths` is true.
+        This should be used as the fourth argument when calling this loss.
+        The shape should be (N,).
+    sample_weight : Symbol or None
+        Per sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has
+        shape (64, 10) and you want to weight each sample
+        in the batch, `sample_weight` should have shape (64, 1).
+        This should be used as the fifth argument when calling this loss.
+    """
+    def __init__(self, output_layout='NTC', label_layout='NT',
+                 use_input_lengths=False, use_label_lengths=False, padding_mask=-1,
+                 weight=None, **kwargs):
+        assert output_layout in ['NTC', 'TNC'],\
+               "Only 'NTC' and 'TNC' layouts for output are supported. Got: %s"%output_layout
+        assert label_layout in ['NT', 'TN'],\
+               "Only 'NT' and 'TN' layouts for label are supported. Got: %s"%label_layout
+        self._output_layout = output_layout
+        self._label_layout = label_layout
+        self._use_input_lengths = use_input_lengths
+        self._use_label_lengths = use_label_lengths
+        self._padding_mask = padding_mask
+        batch_axis = label_layout.find('N')
+        super(CTCLoss, self).__init__(weight, batch_axis, **kwargs)
+
+    def hybrid_forward(self, F, output, label,
+                       input_lengths=None, label_lengths=None, sample_weight=None):
+        assert not self._use_input_lengths or input_lengths is not None, \
+               "Must specify input_lengths."
+        assert not self._use_label_lengths or label_lengths is not None, \
+               "Must specify label_lengths."
+        if self._output_layout == 'NTC':
+            output = F.swapaxes(output, 0, 1)
+        if self._batch_axis == 1:
+            label = F.swapaxes(label, 0, 1)
+        if F is ndarray:
+            F_contrib = ndarray_contrib
+        else:
+            F_contrib = symbol_contrib
+        loss = F_contrib.CTCLoss(output, label,
+                                 use_input_lengths=self._use_input_lengths,
+                                 use_label_lengths=self._use_label_lengths,
+                                 input_lengths=input_lengths, label_lengths=label_lengths,
+                                 padding_mask=self._padding_mask)
+        return _apply_weighting(F, loss, self._weight, sample_weight)
