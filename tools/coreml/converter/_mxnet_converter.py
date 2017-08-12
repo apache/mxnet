@@ -35,10 +35,13 @@ _MXNET_LAYER_REGISTRY  = {
     'Concat'         : _layers.convert_concat,
     'BatchNorm'      : _layers.convert_batchnorm,
     'elemwise_add'   : _layers.convert_elementwise_add,
+    'Reshape'        : _layers.convert_reshape,
+    'Deconvolution'  : _layers.convert_deconvolution,
 }
 
 _MXNET_SKIP_LAYERS = [
     '_MulScalar',
+    'Dropout',
 ]
 
 def _mxnet_remove_batch(input_data):
@@ -73,7 +76,6 @@ def check_error(model, path, shapes, output = 'softmax_output', verbose = True):
 def _set_input_output_layers(builder, input_names, output_names):
     input_layers_indices = []
     output_layers_indices = []
-    spec = builder.spec
     layers = builder.spec.neuralNetwork.layers
     for idx, l in enumerate(layers):
         if set(input_names).intersection(l.input):
@@ -83,8 +85,8 @@ def _set_input_output_layers(builder, input_names, output_names):
 
     builder.input_layers_indices = input_layers_indices
     builder.output_layers_indices = output_layers_indices
-    builder.input_layers_is1d = [False for i in input_names]
-    builder.output_layers_is1d = [False for i in output_names]
+    builder.input_layers_is1d = [False for _ in input_names]
+    builder.output_layers_is1d = [False for _ in output_names]
 
 def _get_layer_converter_fn(layer):
     """Get the right converter function for MXNet
@@ -94,8 +96,9 @@ def _get_layer_converter_fn(layer):
     else:
         raise TypeError("MXNet layer of type %s is not supported." % layer)
 
-def convert(model, order = None, **kwargs):
-    """Convert a keras model to the protobuf spec.
+
+def convert(model, input_shape, order = None, class_labels = None, mode = None, preprocessor_args = None):
+    """Convert an MXNet model to the protobuf spec.
 
     Parameters
     ----------
@@ -104,33 +107,46 @@ def convert(model, order = None, **kwargs):
 
     order: Order of inputs
 
+    class_labels: A string or list of strings.
+        As a string it represents the name of the file which contains the classification labels (one per line).
+        As a list of strings it represents a list of categories that map the index of the output of a neural network to labels in a classifier.
+
+    mode: str ('classifier', 'regressor' or None)
+        Mode of the converted coreml model.
+        When mode = 'classifier', a NeuralNetworkClassifier spec will be constructed.
+        When mode = 'regressor', a NeuralNetworkRegressor spec will be constructed.
+
     **kwargs :
-        Provide keyword arguments of known shapes.
+        Provide keyword arguments for:
+        - input shapes. Supplied as a dictionary object with keyword "input_shape".
+        - pre-processing arguments: Supplied as a dictionary object with keyword "preprocessor_args". The parameters in the dictionary
+            tell the converted coreml model how to pre-process any input before an inference is run on it.
+            For the list of pre-processing arguments see
+            http://pythonhosted.org/coremltools/generated/coremltools.models.neural_network.html#coremltools.models.neural_network.NeuralNetworkBuilder.set_pre_processing_parameters
 
     Returns
     -------
-    model_spec: An object of type ModelSpec_pb.
-        Protobuf representation of the model
+    model: A coreml model.
     """
-    if not kwargs:
-        raise TypeError("Must provide input shape to be able to perform conversion")
+    if not isinstance(input_shape, dict):
+         raise TypeError("Must provide a dictionary for input shape. e.g input_shape={'data':(3,224,224)}")
 
     def remove_batch(dim):
         return dim[1:]
 
     if order is None:
-        input_names = kwargs.keys()
-        input_dims  = map(remove_batch, kwargs.values())
+        input_names = input_shape.keys()
+        input_dims  = map(remove_batch, input_shape.values())
     else:
-        names = kwargs.keys()
-        shapes = map(remove_batch, kwargs.values())
+        names = input_shape.keys()
+        shapes = map(remove_batch, input_shape.values())
         input_names = [names[i] for i in order]
         input_dims = [shapes[i] for i in order]
 
     net = model.symbol
 
     # Infer shapes and store in a dictionary
-    shapes = net.infer_shape(**kwargs)
+    shapes = net.infer_shape(**input_shape)
     arg_names = net.list_arguments()
     output_names = net.list_outputs()
     aux_names = net.list_auxiliary_states()
@@ -142,7 +158,6 @@ def convert(model, order = None, **kwargs):
     for idx, op in enumerate(aux_names):
         shape_dict[op] = shapes[2][idx]
 
-
     # Get the inputs and outputs
     output_dims = shapes[1]
     input_types = [_datatypes.Array(*dim) for dim in input_dims]
@@ -151,11 +166,11 @@ def convert(model, order = None, **kwargs):
     # Make the builder
     input_features = zip(input_names, input_types)
     output_features = zip(output_names, output_types)
-    builder = _neural_network.NeuralNetworkBuilder(input_features, output_features)
-
+    builder = _neural_network.NeuralNetworkBuilder(input_features, output_features, mode)
     # Get out the layers
     net = _json.loads(net.tojson())
     nodes = net['nodes']
+
     for i, node in enumerate(nodes):
         node['id'] = i
 
@@ -178,7 +193,7 @@ def convert(model, order = None, **kwargs):
         head_node['shape'] = shape_dict[head_node['name']]
 
     # For skipped layers, make sure nodes are modified
-    for iter, node in enumerate(nodes):
+    for node in nodes:
         op = node['op']
         inputs = node['inputs']
         outputs = node['outputs']
@@ -187,24 +202,30 @@ def convert(model, order = None, **kwargs):
             nodes[outputs[0][0]]['inputs'][0] = inputs[0]
 
     # Find the input and output names for this node
-    for iter, node in enumerate(nodes):
+    for idx, node in enumerate(nodes):
         op = node['op']
         if op == 'null' or op in _MXNET_SKIP_LAYERS:
             continue
         name = node['name']
-        print("%d : %s, %s" % (iter, name, op))
+        print("%d : %s, %s" % (idx, name, op))
         converter_func = _get_layer_converter_fn(op)
         converter_func(net, node, model, builder)
-
-    spec = builder.spec
-    layers = spec.neuralNetwork.layers
 
     # Set the right inputs and outputs
     _set_input_output_layers(builder, input_names, output_names)
     builder.set_input(input_names, input_dims)
     builder.set_output(output_names, output_dims)
+    if preprocessor_args is not None:
+        builder.set_pre_processing_parameters(**preprocessor_args)
 
-    # Return the spec
-    spec = builder.spec
-    layers = spec.neuralNetwork.layers
-    return spec
+    if class_labels is not None:
+        if type(class_labels) is str:
+            labels = [l.strip() for l in open(class_labels).readlines()]
+        elif type(class_labels) is list:
+            labels = class_labels
+        else:
+            raise TypeError("synset variable of unknown type. Type found: %s. Expected either string or list of strings." % type(class_labels))
+        builder.set_class_labels(class_labels = labels)
+
+    # Return the model
+    return _coremltools.models.MLModel(builder.spec)
