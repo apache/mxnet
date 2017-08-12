@@ -49,8 +49,7 @@ Operator* CreateOp<gpu>(ConvolutionParam param, int dtype,
   }
 
   // depth wise conv
-  if (!param.depthwise_conv_off &&
-      param.num_filter == param.num_group &&
+  if (param.num_filter == param.num_group &&
       param.layout.value() == mshadow::kNCHW &&
       param.num_filter == (*in_shape)[conv::kData][1] &&
       param.kernel.ndim() == 2 &&
