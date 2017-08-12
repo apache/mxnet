@@ -30,7 +30,7 @@ Iterators provide an abstract interface for traversing various types of iterable
  without needing to expose details about the underlying data source.
 
 In MXNet, data iterators return a batch of data as `DataBatch` on each call to `next`.
-A `DataBatch` often contains *n* training examples and their corresponding labels. Here *n* is the `batch_size` of the iterator. At the end of the data stream when there is no more data to read, the iterator raises ``StopIteration`` exception like Python `iter`.  
+A `DataBatch` often contains *n* training examples and their corresponding labels. Here *n* is the `batch_size` of the iterator. At the end of the data stream when there is no more data to read, the iterator raises ``StopIteration`` exception like Python `iter`. 
 The structure of `DataBatch` is defined [here](http://mxnet.io/api/python/io.html#mxnet.io.DataBatch).
 
 Information such as name, shape, type and layout on each training example and their corresponding label can be provided as `DataDesc` data descriptor objects via the `provide_data` and `provide_label` properties in `DataBatch`.
