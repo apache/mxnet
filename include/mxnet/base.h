@@ -56,6 +56,13 @@
 #define MXNET_USE_CUDNN MSHADOW_USE_CUDNN
 #endif
 
+/*!
+ *\brief whether to use cusolver library
+ */
+#ifndef MXNET_USE_CUSOLVER
+#define MXNET_USE_CUSOLVER MSHADOW_USE_CUSOLVER
+#endif
+
 /*! \brief Error message for using gpu when MXNET_USE_CUDA==0 */
 #define MXNET_GPU_NOT_ENABLED_ERROR  "GPU is not enabled"
 
@@ -103,9 +110,9 @@
 /*! \brief major version */
 #define MXNET_MAJOR 0
 /*! \brief minor version */
-#define MXNET_MINOR 10
+#define MXNET_MINOR 11
 /*! \brief patch version */
-#define MXNET_PATCH 1
+#define MXNET_PATCH 0
 /*! \brief mxnet version */
 #define MXNET_VERSION (MXNET_MAJOR*10000 + MXNET_MINOR*100 + MXNET_PATCH)
 /*! \brief helper for making version number */

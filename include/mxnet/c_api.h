@@ -145,6 +145,7 @@ enum CustomOpPropCallbacks {
   kCustomOpPropInferType
 };
 
+
 typedef int (*CustomOpFBFunc)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
                               const int* /*reqs*/, const int /*is_train*/,
                               void* /*state*/);
@@ -163,6 +164,17 @@ typedef int (*CustomOpCreateFunc)(const char* /*ctx*/, int /*num_inputs*/,
 typedef int (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
                                    const char** /*keys*/, const char** /*values*/,
                                    struct MXCallbackList* /*ret*/);
+
+
+enum CustomFunctionCallbacks {
+  kCustomFunctionBackward,
+  kCustomFunctionDelete
+};
+
+typedef int (*CustomFunctionBwdFunc)(int /*num_ograds*/, int /*num_igrads*/, void** /*ptrs*/,
+                                     const int* /*reqs*/, const int /*is_train*/,
+                                     void* /*state*/);
+typedef int (*CustomFunctionDelFunc)(void* /*state*/);
 
 /*!
  * \brief return str message of the last error
@@ -740,6 +752,12 @@ MXNET_DLL int MXAutogradBackwardEx(mx_uint num_output,
                                    NDArrayHandle* ograd_handles,
                                    int retain_graph,
                                    int is_train);
+/*
+ * \brief get the graph constructed by autograd.
+ * \param handle ndarray handle
+ * \param out output symbol handle
+ */
+MXNET_DLL int MXAutogradGetSymbol(NDArrayHandle handle, SymbolHandle *out);
 /*!
  * \brief create cached operator
  */
@@ -1838,8 +1856,23 @@ MXNET_DLL int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
  * \brief Delete a MXRtc object
 */
 MXNET_DLL int MXRtcFree(RtcHandle handle);
-
+/*
+ * \brief register custom operators from frontend.
+ * \param op_type name of custom op
+ * \param creator
+ */
 MXNET_DLL int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creator);
+/*
+ * \brief record custom function for backward later.
+ * \param num_inputs number of input NDArrays.
+ * \param inputs handle to input NDArrays.
+ * \param num_outputs number of output NDArrays.
+ * \param outputs handle to output NDArrays.
+ * \param callbacks callbacks for backward function.
+ */
+MXNET_DLL int MXCustomFunctionRecord(int num_inputs, NDArrayHandle *inputs,
+                                     int num_outputs, NDArrayHandle *outputs,
+                                     MXCallbackList *callbacks);
 
 #ifdef __cplusplus
 }

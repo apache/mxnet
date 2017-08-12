@@ -329,6 +329,53 @@ def test_is_train():
         assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
 
 
+def test_function():
+    class func(Function):
+        def forward(self, x, y):
+            m = x / y
+            n = x * y
+            self.save_for_backward(x, y)
+            return m, n
+
+        def backward(self, dm, dn):
+            x, y = self.saved_tensors
+            dx = dm/y + dn*y
+            dy = dn*x - dm * x / y / y
+            return dx, dy
+
+    f = func()
+    x = mx.nd.random_uniform(shape=(10,))
+    x.attach_grad()
+    y = mx.nd.random_uniform(shape=(10,))
+    y.attach_grad()
+    with record():
+        m, n = f(x, y)
+        backward([m, n])
+
+    dx1 = x.grad.asnumpy()
+    dy1 = y.grad.asnumpy()
+
+    with record():
+        backward([x/y, x*y])
+
+    assert_almost_equal(x.grad.asnumpy(), dx1)
+    assert_almost_equal(y.grad.asnumpy(), dy1)
+
+
+def test_get_symbol():
+    x = mx.nd.ones((1,))
+    x.attach_grad()
+    with record():
+        y = x*x + 2*x - 1
+    assert len(get_symbol(y).list_arguments()) == 1
+
+    z = mx.nd.ones((1,))
+    z.attach_grad()
+    with record():
+        y = x*x + 2*z - 1
+    assert len(get_symbol(y).list_arguments()) == 2
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule()

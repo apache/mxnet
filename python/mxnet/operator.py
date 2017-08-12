@@ -26,7 +26,7 @@ from threading import Lock
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
 from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
 
-from .base import _LIB, check_call
+from .base import _LIB, check_call, MXCallbackList
 from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol, context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
@@ -594,15 +594,6 @@ def register(reg_name):
     """Register a subclass of CustomOpProp to the registry with name reg_name."""
     def do_register(prop_cls):
         """Register a subclass of CustomOpProp to the registry."""
-
-        class MXCallbackList(Structure):
-            """Structure that holds Callback information. Passed to CustomOpProp."""
-            _fields_ = [
-                ('num_callbacks', c_int),
-                ('callbacks', POINTER(CFUNCTYPE(c_int))),
-                ('contexts', POINTER(c_void_p))
-                ]
-
         fb_functype = CFUNCTYPE(c_int, c_int, POINTER(c_void_p), POINTER(c_int),
                                 POINTER(c_int), c_int, c_void_p)
         del_functype = CFUNCTYPE(c_int, c_void_p)

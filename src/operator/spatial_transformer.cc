@@ -27,6 +27,10 @@
 
 namespace mshadow {
 template<typename DType>
+bool between(DType value, int lowerBound, int upperBound) {
+  return (value >= lowerBound && value <= upperBound);
+}
+template<typename DType>
 inline void BilinearSamplingForward(const Tensor<cpu, 4, DType> &output,
                                     const Tensor<cpu, 4, DType> &input,
                                     const Tensor<cpu, 3, DType> grid_src) {
@@ -43,19 +47,28 @@ inline void BilinearSamplingForward(const Tensor<cpu, 4, DType> &output,
           index_t grid_index = n * o_h * o_w * 2 + h * o_w + w;
           DType y_real = (*(grid + grid_index + o_h * o_w) + 1) * (i_h - 1) / 2;
           DType x_real = (*(grid + grid_index) + 1) * (i_w - 1) / 2;
-          index_t top_left_y = std::min(i_h, std::max(0, static_cast<int>(floor(y_real))));
-          index_t top_left_x = std::min(i_w, std::max(0, static_cast<int>(floor(x_real))));
+          int top_left_y = static_cast<int>(floor(y_real));
+          int top_left_x = static_cast<int>(floor(x_real));
           DType top_left_y_w = 1.0 - (y_real - top_left_y);
           DType top_left_x_w = 1.0 - (x_real - top_left_x);
-          index_t data_index = n * i_c * i_h * i_w + c * i_h * i_w + top_left_y * i_w + top_left_x;
-          DType top_left_v = *(data + data_index);
-          DType top_right_v = *(data + data_index + 1);
-          DType bottom_left_v = *(data + data_index + i_w);
-          DType bottom_right_v = *(data + data_index + i_w + 1);
+          int data_index = n * i_c * i_h * i_w + c * i_h * i_w +
+                           top_left_y * i_w + top_left_x;
+          DType top_left_v = 0;
+          DType top_right_v = 0;
+          DType bottom_left_v = 0;
+          DType bottom_right_v = 0;
+          if (between(top_left_x, 0, i_w-1) && between(top_left_y, 0, i_h-1))
+            top_left_v = *(data + data_index);
+          if (between(top_left_x + 1, 0, i_w-1) && between(top_left_y, 0, i_h-1))
+            top_right_v = *(data + data_index + 1);
+          if (between(top_left_x, 0, i_w-1) && between(top_left_y + 1, 0, i_h-1))
+            bottom_left_v = *(data + data_index + i_w);
+          if (between(top_left_x+1, 0, i_w-1) && between(top_left_y + 1, 0, i_h-1))
+            bottom_right_v = *(data + data_index + i_w + 1);
           *(out+out_index) = top_left_v * top_left_y_w * top_left_x_w +
-                             top_right_v * top_left_y_w * (1.0 - top_left_x_w) +
-                             bottom_left_v * (1.0 - top_left_y_w) * top_left_x_w +
-                             bottom_right_v * (1.0 - top_left_y_w) * (1.0 - top_left_x_w);
+                              top_right_v * top_left_y_w * (1.0 - top_left_x_w) +
+                              bottom_left_v * (1.0 - top_left_y_w) * top_left_x_w +
+                              bottom_right_v * (1.0 - top_left_y_w) * (1.0 - top_left_x_w);
         }
       }
     }
@@ -82,8 +95,8 @@ inline void BilinearSamplingBackward(const Tensor<cpu, 4, DType> &input_grad,
           index_t grid_src_index = n * o_h * o_w * 2 + h * o_w + w;
           DType y_real = (*(grid_src + grid_src_index + o_h * o_w) + 1) * (i_h - 1) / 2;
           DType x_real = (*(grid_src + grid_src_index) + 1) * (i_w - 1) / 2;
-          index_t top_left_y = std::min(i_h, std::max(0, static_cast<int>(floor(y_real))));
-          index_t top_left_x = std::min(i_w, std::max(0, static_cast<int>(floor(x_real))));
+          index_t top_left_y = static_cast<int>(floor(y_real));
+          index_t top_left_x = static_cast<int>(floor(x_real));
           DType top_left_y_w = 1.0 - (y_real - top_left_y);
           DType top_left_x_w = 1.0 - (x_real - top_left_x);
           for (index_t c = 0; c < static_cast<index_t>(o_c); ++c) {
@@ -91,18 +104,29 @@ inline void BilinearSamplingBackward(const Tensor<cpu, 4, DType> &input_grad,
             index_t data_index = n * i_c * i_h * i_w + c * i_h * i_w + top_left_y * i_w
                                  + top_left_x;
             // calc 4 vertex value in input data
-            DType top_left_v = *(data + data_index);
-            DType top_right_v = *(data + data_index + 1);
-            DType bottom_left_v = *(data + data_index + i_w);
-            DType bottom_right_v = *(data + data_index + i_w + 1);
-            // calc input grad
-            *(g_input + data_index) += *(grad + grad_index) * top_left_y_w * top_left_x_w;
-            *(g_input + data_index + 1) += *(grad + grad_index) * top_left_y_w
-                                           * (1.0 - top_left_x_w);
-            *(g_input + data_index+ i_w) += *(grad + grad_index) * (1.0 - top_left_y_w)
-                                            * top_left_x_w;
-            *(g_input + data_index+ i_w + 1) += *(grad + grad_index) * (1.0 - top_left_y_w)
-                                                * (1.0 - top_left_x_w);
+            DType top_left_v = 0;
+            DType top_right_v = 0;
+            DType bottom_left_v = 0;
+            DType bottom_right_v = 0;
+            if (between(top_left_x, 0, i_w-1) && between(top_left_y, 0, i_h-1)) {
+              *(g_input + data_index) += *(grad + grad_index) * top_left_y_w * top_left_x_w;
+              top_left_v = *(data + data_index);
+            }
+            if (between(top_left_x+1, 0, i_w-1) && between(top_left_y, 0, i_h-1)) {
+              *(g_input + data_index + 1) += *(grad + grad_index) * top_left_y_w
+                                             * (1.0 - top_left_x_w);
+              top_right_v = *(data + data_index + 1);
+            }
+            if (between(top_left_x, 0, i_w-1) && between(top_left_y+1, 0, i_h-1)) {
+              *(g_input + data_index+ i_w) += *(grad + grad_index) * (1.0 - top_left_y_w)
+                                              * top_left_x_w;
+              bottom_left_v = *(data + data_index + i_w);
+            }
+            if (between(top_left_x+1, 0, i_w-1) && between(top_left_y+1, 0, i_h-1)) {
+              *(g_input + data_index+ i_w + 1) += *(grad + grad_index) * (1.0 - top_left_y_w)
+                                                  * (1.0 - top_left_x_w);
+              bottom_right_v = *(data + data_index + i_w + 1);
+            }
             // calc weight grad of top_left_w, then multiple -1 is the grad of grid_src
             top_left_y_gw -= *(grad + grad_index) * (top_right_v - bottom_right_v +
                              (top_left_v - top_right_v - bottom_left_v + bottom_right_v)

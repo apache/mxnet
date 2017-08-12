@@ -521,6 +521,14 @@ class NDArray {
     ret.entry_ = autograd::AGNodeEntry{nullptr, 0, 0};
     return ret;
   }
+
+  nnvm::Symbol get_autograd_symbol() {
+    CHECK(!entry_.is_none())
+      << "NDArray is not part of a computation graph. Did you forget to turn on recording?";
+    nnvm::Symbol ret;
+    ret.outputs.emplace_back(entry_.nn_entry());
+    return ret;
+  }
   /*!
    * \brief Allocate the space if it is delayed allocated.
    * This is an internal function used by system that normal user should not use

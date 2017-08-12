@@ -25,7 +25,7 @@ parser.add_argument('--file_path', type=str, default='mxnet/docs/_build/html/',
                         help='file to be modified')
 parser.add_argument('--current_version', type=str, default='master',
                         help='Current version')
-parser.add_argument('--root_url', type=str, default='https://mxnet.io',
+parser.add_argument('--root_url', type=str, default='https://mxnet.incubator.apache.org/',
                         help='Root URL')
 
 if __name__ == '__main__':
@@ -59,6 +59,9 @@ if __name__ == '__main__':
                 continue
             with open(os.path.join(path, name), 'r') as html_file:
                 content = bs(html_file, 'html.parser')
+            if os.path.join(path, name) == args.file_path + 'index.html':
+                content.find(id='example-link')['href'] = \
+                    'https://github.com/apache/incubator-mxnet/tree/%s/example' % (args.current_version)
             navbar = content.find(id="main-nav")
             navbar_mobile = content.find(id="burgerMenu")
             if navbar and navbar_mobile:

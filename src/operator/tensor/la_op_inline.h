@@ -24,244 +24,186 @@
 #ifndef MXNET_OPERATOR_TENSOR_LA_OP_INLINE_H_
 #define MXNET_OPERATOR_TENSOR_LA_OP_INLINE_H_
 
-#include <mxnet/c_lapack_api.h>
+#include "../linalg.h"
 
 namespace mxnet {
 namespace op {
 
 using namespace mshadow;
 
-#define LA_OP_NOT_AVAIL " operator can only be called with float/double data type."
-
-// Signature for single matrix operations (decomposition/inversion).
-#define FUNC_SIGNATURE_1(fname, arg1) {CHECK_EQ(MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, 'L', \
-  arg1.size(0), arg1.dptr_, arg1.size(0)), 0) << "fname failed in lapack";}
-
-// Signature for matrix-matrix multiplications involving one diagonal matrix.
-#define FUNC_SIGNATURE_2(fname, arg1, arg2) \
-  { cblas_##fname(CblasRowMajor, (rightside ? CblasRight : CblasLeft), \
-                  CblasLower, (transpose ? CblasTrans : CblasNoTrans), \
-                  CblasNonUnit, arg2.size(0), arg2.size(1), alpha, arg1.dptr_, \
-                  (rightside ? arg2.size(1) : arg2.size(0)), arg2.dptr_, arg2.size(1)); }
-
-
 // Helper functions.
-template<typename DType>
-void CopyLowerToUpper(DType *dptr, int N)
-  { for (int i = 1; i < N; ++i ) for ( int j = 0; j < i; ++j ) dptr[j*N+i] = dptr[i*N+j]; }
-template<typename DType>
-void ZeroUpper(DType *dptr, int N)
-  { for (int i = 0; i < N; ++i ) for ( int j = i+1; j < N; ++j ) dptr[i*N+j] = 0; }
+struct CopyLowerToUpper {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, int matrix_size, int stride, DType* data) {
+    // Below computation works even when we are dealing with a batch of matrices.
+    const int row((i % matrix_size) / stride), col(i % stride);
+    if ( row > col ) data[i + (col - row) * (stride - 1)] = data[i];
+  }
+};
+struct ZeroUpper {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, int matrix_size, int stride, DType* data) {
+    const int row((i % matrix_size) / stride), col(i % stride);
+    if ( row < col ) data[i] = 0;
+  }
+};
+struct Scale {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType scale, DType* data) {
+    data[i] *= scale;
+  }
+};
 
-// Forward operators
+// Forward computations (always using batched processing)
 
 // D = gemm(A,B,C)
 struct gemm {
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
-                 const Tensor<xpu, 2, DType>& C, DType alpha, DType beta, bool tA, bool tB)
-    { CHECK(false) << "gemm" << LA_OP_NOT_AVAIL; }
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B,
+    const Tensor<xpu, 3, DType>& C, DType alpha, DType beta, bool tA, bool tB, Stream<xpu> *s) {
+    linalg_batch_gemm(A, B, C, alpha, beta, tA, tB, s);
+  }
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
-                 const Tensor<xpu, 2, DType>& C, const Tensor<xpu, 2, DType>& D,
-                 const nnvm::NodeAttrs& attrs) {
-    if ( C.dptr_ != D.dptr_ ) Copy(D, C);
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B,
+                 const Tensor<xpu, 3, DType>& C, const Tensor<xpu, 3, DType>& D,
+                 Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
+    if ( C.dptr_ != D.dptr_ ) Copy(D, C, s);
     const LaMatrixMacParam& param = nnvm::get<LaMatrixMacParam>(attrs.parsed);
-    gemm::op(A, B, D, DType(param.alpha), DType(param.beta), param.transpose_a, param.transpose_b);
+    gemm::op(A, B, D, DType(param.alpha), DType(param.beta),
+             param.transpose_a, param.transpose_b, s);
   }
 };
-template<>
-void gemm::op<cpu, float>(const Tensor<cpu, 2, float>& A, const Tensor<cpu, 2, float>& B,
-                          const Tensor<cpu, 2, float>& C,
-                          float alpha, float beta, bool tA, bool tB ) {
-  CHECK_EQ((tA ? A.size(1) : A.size(0)), C.size(0))
-    << "Non compatible matrix dimensions between inputs A and C for gemm operator";
-  CHECK_EQ((tB ? B.size(0) : B.size(1)), C.size(1))
-    << "Non compatible matrix dimensions between inputs B and C for gemm operator";
-  CHECK_EQ((tA ? A.size(0) : A.size(1)), (tB ? B.size(1) : B.size(0)))
-    << "Non compatible matrix dimensions between inputs A and B for gemm operator";
-  cblas_sgemm(CblasRowMajor, (tA ? CblasTrans : CblasNoTrans), (tB ? CblasTrans : CblasNoTrans),
-              (tA ? A.size(1):A.size(0)), (tB ? B.size(0): B.size(1)),
-              (tA ? A.size(0):A.size(1)), alpha, A.dptr_, A.size(1), B.dptr_, B.size(1),
-              beta, C.dptr_, (tB ? B.size(0): B.size(1)));
-}
-template<>
-void gemm::op<cpu, double>(const Tensor<cpu, 2, double>& A, const Tensor<cpu, 2, double>& B,
-                           const Tensor<cpu, 2, double>& C,
-                           double alpha, double beta, bool tA, bool tB) {
-  CHECK_EQ((tA ? A.size(1) : A.size(0)), C.size(0))
-    << "Non compatible matrix dimensions between inputs A and C for gemm operator";
-  CHECK_EQ((tB ? B.size(0) : B.size(1)), C.size(1))
-    << "Non compatible matrix dimensions between inputs B and C for gemm operator";
-  CHECK_EQ((tA ? A.size(0) : A.size(1)), (tB ? B.size(1) : B.size(0)))
-    << "Non compatible matrix dimensions between inputs A and B for gemm operator";
-  cblas_dgemm(CblasRowMajor, (tA ? CblasTrans : CblasNoTrans), (tB ? CblasTrans : CblasNoTrans),
-              (tA ? A.size(1):A.size(0)), (tB ? B.size(0): B.size(1)),
-              (tA ? A.size(0):A.size(1)), alpha, A.dptr_, A.size(1), B.dptr_, B.size(1),
-              beta, C.dptr_, (tB ? B.size(0): B.size(1)));
-}
 
 // C = gemm2(A,B)
 struct gemm2 {
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
-                 const Tensor<xpu, 2, DType>& C, const nnvm::NodeAttrs& attrs) {
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B,
+                 const Tensor<xpu, 3, DType>& C, Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
     const LaMatrixMultParam& param = nnvm::get<LaMatrixMultParam>(attrs.parsed);
-    gemm::op(A, B, C, DType(param.alpha), DType(0), param.transpose_a, param.transpose_b);
+    gemm::op(A, B, C, DType(param.alpha), DType(0), param.transpose_a, param.transpose_b, s);
   }
 };
 
 // L = potrf(A).
 struct potrf {
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& L,
-                 const nnvm::NodeAttrs& attrs)
-    { CHECK(false) << "potrf" << LA_OP_NOT_AVAIL; }
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& L,
+                 Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
+    if ( A.dptr_ != L.dptr_ ) Copy(L, A, s);
+    linalg_batch_potrf(L, true, s);
+    using namespace mxnet_op;
+    Kernel<ZeroUpper, xpu>::Launch(s, L.MSize(), L.size(1)*L.stride_, L.stride_, L.dptr_);
+  }
 };
-template<>
-void potrf::op<cpu, float>(const Tensor<cpu, 2, float>& A, const Tensor<cpu, 2, float>& L,
-                           const nnvm::NodeAttrs& attrs) {
-  if ( A.dptr_ != L.dptr_ ) Copy(L, A);
-  FUNC_SIGNATURE_1(spotrf, L);
-  ZeroUpper(L.dptr_, L.size(0));
-}
-template<>
-void potrf::op<cpu, double>(const Tensor<cpu, 2, double>& A, const Tensor<cpu, 2, double>& L,
-                            const nnvm::NodeAttrs& attrs) {
-  if ( A.dptr_ != L.dptr_ ) Copy(L, A);
-  FUNC_SIGNATURE_1(dpotrf, L);
-  ZeroUpper(L.dptr_, L.size(0));
-}
 
 // A = potri(L).
 struct potri {
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& L, const Tensor<xpu, 2, DType>& A,
-                 const nnvm::NodeAttrs& attrs)
-    { CHECK(false) << "potri" << LA_OP_NOT_AVAIL; }
+  static void op(const Tensor<xpu, 3, DType>& L, const Tensor<xpu, 3, DType>& A,
+                 Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
+    if ( A.dptr_ != L.dptr_ ) Copy(A, L, s);
+    linalg_batch_potri(A, true, s);
+    using namespace mxnet_op;
+    Kernel<CopyLowerToUpper, xpu>::Launch(s, A.MSize(), A.size(1)*A.stride_, A.stride_, A.dptr_);
+  }
 };
-template<>
-void potri::op<cpu, float>(const Tensor<cpu, 2, float>& L, const Tensor<cpu, 2, float>& A,
-                           const nnvm::NodeAttrs& attrs) {
-  if ( A.dptr_ != L.dptr_ ) Copy(A, L);
-  FUNC_SIGNATURE_1(spotri, A);
-  CopyLowerToUpper(A.dptr_, A.size(0));
-}
-template<>
-void potri::op<cpu, double>(const Tensor<cpu, 2, double>& A, const Tensor<cpu, 2, double>& L,
-                            const nnvm::NodeAttrs& attrs) {
-  if ( A.dptr_ != L.dptr_ ) Copy(A, L);
-  FUNC_SIGNATURE_1(dpotri, A);
-  CopyLowerToUpper(A.dptr_, A.size(0));
-}
 
 // B = trsm(L,A)
 struct trsm {
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& L, const Tensor<xpu, 2, DType>& B,
-                 DType alpha, bool rightside, bool transpose)
-    { CHECK(false) << "trsm" << LA_OP_NOT_AVAIL; }
+  static void op(const Tensor<xpu, 3, DType>& L, const Tensor<xpu, 3, DType>& B,
+                 DType alpha, bool rightside, bool transpose, Stream<xpu> *s) {
+    linalg_batch_trsm(L, B, alpha, rightside, true, transpose, s);
+  }
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& L, const Tensor<xpu, 2, DType>& A,
-                 const Tensor<xpu, 2, DType>& B, const nnvm::NodeAttrs& attrs) {
-    if ( A.dptr_ != B.dptr_ ) Copy(B, A);
+  static void op(const Tensor<xpu, 3, DType>& L, const Tensor<xpu, 3, DType>& A,
+                 const Tensor<xpu, 3, DType>& B,
+                 Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
+    if ( A.dptr_ != B.dptr_ ) Copy(B, A, s);
     const LaTriangMatrixMultParam& param = nnvm::get<LaTriangMatrixMultParam>(attrs.parsed);
-    op(L, B, DType(param.alpha), param.rightside, param.transpose);
+    op(L, B, DType(param.alpha), param.rightside, param.transpose, s);
   }
 };
-template<>
-void trsm::op<cpu, float>(const Tensor<cpu, 2, float>& L, const Tensor<cpu, 2, float>& B,
-                          float alpha, bool rightside, bool transpose) {
-  FUNC_SIGNATURE_2(strsm, L, B);
-}
-template<>
-void trsm::op<cpu, double>(const Tensor<cpu, 2, double>& L, const Tensor<cpu, 2, double>& B,
-                           double alpha, bool rightside, bool transpose) {
-  FUNC_SIGNATURE_2(dtrsm, L, B);
-}
 
 // B = trmm(L,A)
 struct trmm {
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& L, const Tensor<xpu, 2, DType>& B,
-                 DType alpha, bool rightside, bool transpose)
-    { CHECK(false) << "trmm" << LA_OP_NOT_AVAIL; }
+  static void op(const Tensor<xpu, 3, DType>& L, const Tensor<xpu, 3, DType>& B,
+                 DType alpha, bool rightside, bool transpose, Stream<xpu> *s) {
+    linalg_batch_trmm(L, B, alpha, rightside, true, transpose, s);
+  }
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& L, const Tensor<xpu, 2, DType>& A,
-                 const Tensor<xpu, 2, DType>& B, const nnvm::NodeAttrs& attrs) {
-    if ( A.dptr_ != B.dptr_ ) Copy(B, A);
+  static void op(const Tensor<xpu, 3, DType>& L, const Tensor<xpu, 3, DType>& A,
+                 const Tensor<xpu, 3, DType>& B, Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
+    if ( A.dptr_ != B.dptr_ ) Copy(B, A, s);
     const LaTriangMatrixMultParam& param = nnvm::get<LaTriangMatrixMultParam>(attrs.parsed);
-    op(L, B, DType(param.alpha), param.rightside, param.transpose);
+    op(L, B, DType(param.alpha), param.rightside, param.transpose, s);
   }
 };
-template<>
-void trmm::op<cpu, float>(const Tensor<cpu, 2, float>& L, const Tensor<cpu, 2, float>& B,
-                          float alpha, bool rightside, bool transpose) {
-  FUNC_SIGNATURE_2(strmm, L, B);
-}
-template<>
-void trmm::op<cpu, double>(const Tensor<cpu, 2, double>& L, const Tensor<cpu, 2, double>& B,
-                           double alpha, bool rightside, bool transpose) {
-  FUNC_SIGNATURE_2(dtrmm, L, B);
-}
 
 // Useful operator that is not part of BLAS/LAPACK.
-struct sumlogdiag {
-  template<typename xpu, typename DType,
-           typename std::enable_if<!std::is_floating_point<DType>::value, int>::type = 0>
-  static void op(const Tensor<xpu, 2, DType>& A, DType& L, const nnvm::NodeAttrs& attrs)
-    { CHECK(false) << "sumlogdiag operator can only be called with float/double data type."; }
-  template<typename xpu, typename DType,
-           typename std::enable_if<std::is_floating_point<DType>::value, int>::type = 0>
-  static void op(const Tensor<xpu, 2, DType>& A, DType& B, const nnvm::NodeAttrs& attrs) {
-    CHECK_EQ(A.size(0), A.size(1)) << "sumlogdiag operator requires a NxN matrix as input.";
-    const int N(A.size(0));
+struct ForwardSumLogDiag {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, int N, int stride, DType* A, DType* B) {
     DType sum(0);
-    DType *p(A.dptr_);
-    for ( int i = 0; i < N; ++i, p += N+1 ) {
-      sum += log(*p);
+    const int offset(i * N * stride);
+    for ( int j = 0; j < N; ++j ) {
+      sum += log(A[offset+j*(stride+1)]);
     }
-    B = sum;
+    B[i] = sum;
+  }
+};
+struct sumlogdiag {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& B,
+                 Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
+    CHECK_EQ(A.size(1), A.size(2)) << "sumlogdiag operator requires square matrices as input.";
+    using namespace mxnet_op;
+    Kernel<ForwardSumLogDiag, xpu>::Launch(s, A.size(0), A.size(1), A.stride_, A.dptr_, B.dptr_);
   }
 };
 
-// Backward operators
+// Backward operators (always using batch processing)
 
 struct gemm_backward {
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& dD, const Tensor<xpu, 2, DType>& A,
-                 const Tensor<xpu, 2, DType>& B, const Tensor<xpu, 2, DType>& C,
-                 const Tensor<xpu, 2, DType>& dA, const Tensor<xpu, 2, DType>& dB,
-                 const Tensor<xpu, 2, DType>& dC, const nnvm::NodeAttrs& attrs) {
+  static void op(const Tensor<xpu, 3, DType>& dD, const Tensor<xpu, 3, DType>& A,
+                 const Tensor<xpu, 3, DType>& B, const Tensor<xpu, 3, DType>& C,
+                 const Tensor<xpu, 3, DType>& dA, const Tensor<xpu, 3, DType>& dB,
+                 const Tensor<xpu, 3, DType>& dC,
+                 Stream<xpu>* s, const nnvm::NodeAttrs& attrs) {
     const LaMatrixMacParam& param = nnvm::get<LaMatrixMacParam>(attrs.parsed);
-    (param.transpose_a ? gemm::op(B, dD, dA, DType(param.alpha), DType(0), param.transpose_b, true)
-                  : gemm::op(dD, B, dA, DType(param.alpha), DType(0), false, !param.transpose_b));
-    (param.transpose_b ? gemm::op(dD, A, dB, DType(param.alpha), DType(0), true, param.transpose_a)
-                  : gemm::op(A, dD, dB, DType(param.alpha), DType(0), !param.transpose_a, false));
-    const int N(dC.size(0)*dC.size(1));
-    for ( int i = 0; i < N; ++i ) {
-      dC.dptr_[i] = param.beta * dD.dptr_[i];
-    }
+    bool tA(param.transpose_a), tB(param.transpose_b);
+    (tA ? gemm::op(B, dD, dA, DType(param.alpha), DType(0), tB, true, s)
+        : gemm::op(dD, B, dA, DType(param.alpha), DType(0), false, !tB, s));
+    (tB ? gemm::op(dD, A, dB, DType(param.alpha), DType(0), true, tA, s)
+        : gemm::op(A, dD, dB, DType(param.alpha), DType(0), !tA, false, s));
+    Copy(dC, dD, s);
+    using namespace mxnet_op;
+    Kernel<Scale, xpu>::Launch(s, dC.MSize(), DType(param.beta), dC.dptr_);
   }
 };
 
 struct gemm2_backward {
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& dC, const Tensor<xpu, 2, DType>& A,
-                 const Tensor<xpu, 2, DType>& B, const Tensor<xpu, 2, DType>& dA,
-                 const Tensor<xpu, 2, DType>& dB, const nnvm::NodeAttrs& attrs) {
+  static void op(const Tensor<xpu, 3, DType>& dC, const Tensor<xpu, 3, DType>& A,
+                 const Tensor<xpu, 3, DType>& B, const Tensor<xpu, 3, DType>& dA,
+                 const Tensor<xpu, 3, DType>& dB,
+                 Stream<xpu>* s, const nnvm::NodeAttrs& attrs) {
     const LaMatrixMultParam& param = nnvm::get<LaMatrixMultParam>(attrs.parsed);
-    (param.transpose_a ? gemm::op(B, dC, dA, DType(param.alpha), DType(0), param.transpose_b, true)
-                   : gemm::op(dC, B, dA, DType(param.alpha), DType(0), false, !param.transpose_b));
-    (param.transpose_b ? gemm::op(dC, A, dB, DType(param.alpha), DType(0), true, param.transpose_a)
-                   : gemm::op(A, dC, dB, DType(param.alpha), DType(0), !param.transpose_a, false));
+    bool tA(param.transpose_a), tB(param.transpose_b);
+    (tA ? gemm::op(B, dC, dA, DType(param.alpha), DType(0), tB, true, s)
+        : gemm::op(dC, B, dA, DType(param.alpha), DType(0), false, !tB, s));
+    (tB ? gemm::op(dC, A, dB, DType(param.alpha), DType(0), true, tA, s)
+        : gemm::op(A, dC, dB, DType(param.alpha), DType(0), !tA, false, s));
   }
 };
 
 struct potrf_backward {
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& dL, const Tensor<xpu, 2, DType>& L,
-                 const Tensor<xpu, 2, DType>& dA, const nnvm::NodeAttrs& attrs) {
+  static void op(const Tensor<xpu, 3, DType>& dL, const Tensor<xpu, 3, DType>& L,
+                 const Tensor<xpu, 3, DType>& dA,
+                 Stream<xpu>* s, const nnvm::NodeAttrs& attrs) {
     // Backward of L = potrf(A).
     // dA = 0.5 * L**T * symm(L**T * dL # E) * L**(-1) where
     //     '#' denotes Hadamard product
@@ -269,81 +211,96 @@ struct potrf_backward {
     //      symm(X) = 0.5 * (X + X**T)
     // Hadamard product and symm can be realized by a single copy from lower to upper triangle.
     if ( dL.dptr_ != dA.dptr_ ) {
-      Copy(dA, dL);
+      Copy(dA, dL, s);
     }
-    trmm::op(L, dA, DType(1.0), false, true);
-    CopyLowerToUpper(dA.dptr_, dA.size(0));
-    trsm::op(L, dA, DType(1.0), false, true);
-    trsm::op(L, dA, DType(0.5), true, false);
+    trmm::op(L, dA, DType(1.0), false, true, s);
+    using namespace mxnet_op;
+    Kernel<CopyLowerToUpper, xpu>::Launch
+           (s, dA.MSize(), dA.size(1)*dA.stride_, dA.stride_, dA.dptr_);
+    trsm::op(L, dA, DType(1.0), false, true, s);
+    trsm::op(L, dA, DType(0.5), true, false, s);
   }
 };
 
 struct potri_backward {
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& dA, const Tensor<xpu, 2, DType>& L,
-                 const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& dL,
-                 const nnvm::NodeAttrs& attrs) {
+  static void op(const Tensor<xpu, 3, DType>& dA, const Tensor<xpu, 3, DType>& L,
+                 const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& dL,
+                 Stream<xpu>* s, const nnvm::NodeAttrs& attrs) {
     // Backward of A = potri(L).
     // dL = -2 * tril(A * dA * L**(-T)), where tril() extracts lower triangle and diagonal.
-    gemm::op(A, dA, dL, DType(1.0), DType(0), false, false);
-    trsm::op(L, dL, DType(-2.0), true, true);
-    ZeroUpper(dL.dptr_, dL.size(0));
+    gemm::op(A, dA, dL, DType(1.0), DType(0), false, false, s);
+    trsm::op(L, dL, DType(-2.0), true, true, s);
+    using namespace mxnet_op;
+    Kernel<ZeroUpper, xpu>::Launch(s, dL.MSize(), dL.size(1)*dL.stride_, dL.stride_, dL.dptr_);
   }
 };
 
 struct trsm_backward {
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& dB, const Tensor<xpu, 2, DType>& L,
-                 const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
-                 const Tensor<xpu, 2, DType>& dL, const Tensor<xpu, 2, DType>& dA,
-                 const nnvm::NodeAttrs& attrs) {
+  static void op(const Tensor<xpu, 3, DType>& dB, const Tensor<xpu, 3, DType>& L,
+                 const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B,
+                 const Tensor<xpu, 3, DType>& dL, const Tensor<xpu, 3, DType>& dA,
+                 Stream<xpu>* s, const nnvm::NodeAttrs& attrs) {
     // Backward of B = trsm(L,A).
     const LaTriangMatrixMultParam& param = nnvm::get<LaTriangMatrixMultParam>(attrs.parsed);
     // Compute dA
-    if ( dA.dptr_ != dB.dptr_ ) Copy(dA, dB);
-    trsm::op(L, dA, DType(param.alpha), param.rightside, !param.transpose);
+    if ( dA.dptr_ != dB.dptr_ ) Copy(dA, dB, s);
+    trsm::op(L, dA, DType(param.alpha), param.rightside, !param.transpose, s);
     // Compute dL
     const bool da_left(param.rightside == param.transpose);
-    (da_left ?
-        gemm::op(dA, B, dL, DType(-1.0/param.alpha), DType(0), param.transpose, !param.transpose)
-      : gemm::op(B, dA, dL, DType(-1.0/param.alpha), DType(0), !param.transpose, param.transpose));
-    ZeroUpper(dL.dptr_, dL.size(0));
+    DType scale(-1.0/param.alpha);
+    (da_left ? gemm::op(dA, B, dL, scale, DType(0), param.transpose, !param.transpose, s)
+             : gemm::op(B, dA, dL, scale, DType(0), !param.transpose, param.transpose, s));
+    using namespace mxnet_op;
+    Kernel<ZeroUpper, xpu>::Launch(s, dL.MSize(), dL.size(1)*dL.stride_, dL.stride_, dL.dptr_);
   }
 };
 
 struct trmm_backward {
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 2, DType>& dB, const Tensor<xpu, 2, DType>& L,
-                 const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
-                 const Tensor<xpu, 2, DType>& dL, const Tensor<xpu, 2, DType>& dA,
-                 const nnvm::NodeAttrs& attrs) {
+  static void op(const Tensor<xpu, 3, DType>& dB, const Tensor<xpu, 3, DType>& L,
+                 const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B,
+                 const Tensor<xpu, 3, DType>& dL, const Tensor<xpu, 3, DType>& dA,
+                 Stream<xpu>* s, const nnvm::NodeAttrs& attrs) {
     // Backward of B = trmm(L,A).
     const LaTriangMatrixMultParam& param = nnvm::get<LaTriangMatrixMultParam>(attrs.parsed);
     // Compute dL
     const bool db_left(param.rightside == param.transpose);
-    (db_left ? gemm::op(dB, A, dL, DType(param.alpha), DType(0), param.transpose, !param.transpose)
-           : gemm::op(A, dB, dL, DType(param.alpha), DType(0), !param.transpose, param.transpose));
-    ZeroUpper(dL.dptr_, dL.size(0));
+    DType scale(param.alpha);
+    (db_left ? gemm::op(dB, A, dL, scale, DType(0), param.transpose, !param.transpose, s)
+             : gemm::op(A, dB, dL, scale, DType(0), !param.transpose, param.transpose, s));
+    using namespace mxnet_op;
+    Kernel<ZeroUpper, xpu>::Launch(s, dL.MSize(), dL.size(1)*dL.stride_, dL.stride_, dL.dptr_);
     // Compute dA
-    if ( dA.dptr_ != dB.dptr_ ) Copy(dA, dB);
-    trmm::op(L, dA, DType(param.alpha), param.rightside, !param.transpose);
+    if ( dA.dptr_ != dB.dptr_ ) Copy(dA, dB, s);
+    trmm::op(L, dA, scale, param.rightside, !param.transpose, s);
   }
 };
 
+struct BackwardSumLogDiag {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, int N, int stride, DType* dB, DType* A, DType* dA) {
+    const int offset(i * N * stride);
+    for ( int j = 0; j < N; ++j ) {
+      dA[offset+j*(stride+1)] = dB[i]/A[offset+j*(stride+1)];
+    }
+  }
+};
 struct sumlogdiag_backward {
   template<typename xpu, typename DType>
-  static void op(const DType& dB, const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& dA,
-                 const nnvm::NodeAttrs& attrs, bool add) {
+  static void op(const Tensor<xpu, 3, DType>& dB, const Tensor<xpu, 3, DType>& A,
+                 const Tensor<xpu, 3, DType>& dA,
+                 Stream<xpu>* s, const nnvm::NodeAttrs& attrs) {
     // Backward of B = sumlogdiag(A).
-    const int N(A.size(0));
-    if ( !add ) {
-      for ( int i = 0; i < N*N; ++i ) {
-        dA.dptr_[i] = 0;
-      }
-    }
-    for ( int i = 0; i < N; ++i ) {
-      dA.dptr_[i*(N+1)] += dB / A.dptr_[i*N+i];
-    }
+    // dB is actually a 1-d tensor but we convert it to a 3-D one before calling
+    // this function as the LaOpCaller-adapters can only deal with a uniform
+    // dimension for all tensor inputs. This doesn't matter as we will interpret
+    // it correctly internally in this function.
+    using namespace mxnet_op;
+    Kernel<Scale, xpu>::Launch(s, dA.MSize(), DType(0), dA.dptr_);
+    Kernel<BackwardSumLogDiag, xpu>::Launch
+         (s, A.size(0), A.size(1), A.stride_, dB.dptr_, A.dptr_, dA.dptr_);
   }
 };
 

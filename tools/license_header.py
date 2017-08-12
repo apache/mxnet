@@ -67,7 +67,9 @@ _WHITE_LIST = ['R-package/',
 
 # language extensions and the according commment mark
 _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
-          '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#', '.cmake':'#'}
+          '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#', '.cmake':'#',
+          '.java':'*', '.sh':'#', '.cpp':'*', '.hpp':'*', '.c':'*',
+          '.bat':'rem', '.pl':'#'}
 
 # Previous license header, which will be removed
 _OLD_LICENSE = re.compile('.*Copyright.*by Contributors')
@@ -105,7 +107,7 @@ def _valid_file(fname, verbose=False):
         return False
     return True
 
-def process_file(fname, action, verbose=False):
+def process_file(fname, action, verbose=True):
     if not _valid_file(fname, verbose):
         return True
     with open(fname, 'rb') as f:
@@ -118,7 +120,8 @@ def process_file(fname, action, verbose=False):
         return False
     _, ext = os.path.splitext(fname)
     # remove old license
-    if ext == '.h' or ext == '.cc' or ext == '.cu':
+    if ext == '.h' or ext == '.cc' or ext == '.cu' or ext == '.cpp' \
+        or ext == '.hpp':
         for i, l in enumerate(lines):
             if _OLD_LICENSE.match(l.decode('utf-8')):
                 del lines[i]

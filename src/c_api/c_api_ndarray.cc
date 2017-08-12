@@ -786,3 +786,11 @@ int MXAutogradBackwardEx(mx_uint num_output,
   AutogradRuntime::Get()->ComputeGradient(outputs, ograds, retain_graph, is_train);
   API_END();
 }
+
+int MXAutogradGetSymbol(NDArrayHandle handle, SymbolHandle *out) {
+  API_BEGIN();
+  NDArray *head = reinterpret_cast<NDArray*>(handle);
+  auto sym = new nnvm::Symbol(head->get_autograd_symbol());
+  *out = reinterpret_cast<SymbolHandle>(sym);
+  API_END();
+}

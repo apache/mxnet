@@ -82,19 +82,21 @@ void AutogradRuntime::MarkVariables(
   for (uint32_t i = 0; i < variables.size(); ++i) {
     std::string str_c(std::to_string(variable_count_++));
 
-    AGNodeEntry e{AGNode::Create(Node::Create()), 0, 0};
+    AGNodeEntry e{
+      AGNode::Create(
+        nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node), 0, 0};
     variables[i]->entry_.clear();
     e.ag_node->outputs.emplace_back(*variables[i]);
 
-    AGNodeEntry ge{AGNode::Create(Node::Create()), 0, 0};
+    AGNodeEntry ge{
+      AGNode::Create(
+        nnvm::Symbol::CreateVariable("grad" + str_c).outputs[0].node), 0, 0};
     gradients[i]->entry_.clear();
     ge.ag_node->outputs.emplace_back(*gradients[i]);
-    ge.ag_node->nn_node->attrs.name = "grad" + str_c;
     gradients[i]->entry_ = std::move(ge);
     e.ag_node->out_grads.emplace_back(*gradients[i]);
 
     e.ag_node->grad_req = static_cast<OpReqType>(grad_reqs[i]);
-    e.ag_node->nn_node->attrs.name = "var" + str_c;
     variables[i]->entry_ = std::move(e);  // assign last to prevent cyclic reference
   }
 }
@@ -141,10 +143,12 @@ AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
 
   for (size_t i = 0; i < inputs.size(); ++i) {
     if (inputs[i].entry_.is_none()) {
-      AGNodeEntry e{AGNode::Create(Node::Create()), 0, 0};
+      AGNodeEntry e{
+        AGNode::Create(
+          nnvm::Symbol::CreateVariable(
+            "null" + std::to_string(variable_count_++)).outputs[0].node), 0, 0};
       e.ag_node->outputs.emplace_back(inputs[i]);
       e.ag_node->out_grads.emplace_back();
-      e.ag_node->nn_node->attrs.name = "var_" + std::to_string(variable_count_++);
       inputs[i].entry_ = std::move(e);  // assign last to prevent cyclic reference
     }
     nn_node->inputs.push_back(inputs[i].entry_.nn_entry());
@@ -177,7 +181,7 @@ void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs,
   for (const auto& i : outputs) {
     CHECK(!i.entry_.is_none())
       << "Cannot differentiate node because it is not in a computational graph. "
-      << "You need to set is_training to true or use autograd.record() to save "
+      << "You need to set is_recording to true or use autograd.record() to save "
       << "computational graphs for backward. If you want to differentiate the same "
       << "graph twice, you need to pass retain_graph=True to backward.";
     heads.emplace_back(i.entry_);

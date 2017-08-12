@@ -87,6 +87,15 @@ class NotSupportedForSparseNDArray(MXNetError):
         msg += ' is not supported for SparseNDArray and only available in NDArray.'
         return msg
 
+class MXCallbackList(ctypes.Structure):
+    """Structure that holds Callback information. Passed to CustomOpProp."""
+    _fields_ = [
+        ('num_callbacks', ctypes.c_int),
+        ('callbacks', ctypes.POINTER(ctypes.CFUNCTYPE(ctypes.c_int))),
+        ('contexts', ctypes.POINTER(ctypes.c_void_p))
+        ]
+
+
 def _load_lib():
     """Load library by searching possible path."""
     lib_path = libinfo.find_lib_path()
