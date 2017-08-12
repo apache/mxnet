@@ -37,10 +37,10 @@ def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
     dtype : str or numpy.dtype, optional
         An optional value type (default is `float32`)
     stype: string, optional
-        The storage type of the empty array, such as 'row_sparse', 'csr', etc
+        The storage type of the empty array, such as 'row_sparse', 'csr', etc.
     aux_types: list of numpy.dtype, optional
-        An optional type for the aux data for the BaseSparseNDArray (default values
-        depends on the storage type)
+        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray
+        (default values depend on the storage type)
 
     Returns
     -------
@@ -73,8 +73,8 @@ def empty(shape, ctx=None, dtype=None, stype=None, aux_types=None):
     stype : str, optional
         An optional storage type (default is `default`).
     aux_types: list of numpy.dtype, optional
-        An optional type for the aux data for the BaseSparseNDArray (default values depends
-        on the storage type)
+        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray
+        (default values depend on the storage type)
 
     Returns
     -------
@@ -111,8 +111,8 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
         The data type of the output array. The default dtype is ``source_array.dtype``
         if `source_array` is an `NDArray`, `float32` otherwise.
     aux_types: list of numpy.dtype, optional
-        An optional type for the aux data for the BaseSparseNDArray (default values
-        depends on the storage type)
+        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray
+        (default values depend on the storage type)
 
     Returns
     -------

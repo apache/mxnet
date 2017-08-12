@@ -32,6 +32,39 @@ namespace op {
 DMLC_REGISTER_PARAMETER(CastStorageParam);
 NNVM_REGISTER_OP(cast_storage)
 .describe(R"code(Casts tensor storage type to the new type.
+
+When an NDArray with default storage type is cast to csr or row_sparse storage,
+the result is compact, which means:
+
+- for csr, zero values will not be retained
+- for row_sparse, row slices of all zeros will not be retained
+
+The storage type of ``cast_storage`` output depends on stype parameter:
+
+- cast_storage(csr, 'default') = default
+- cast_storage(row_sparse, 'default') = default
+- cast_storage(default, 'csr') = csr
+- cast_storage(default, 'row_sparse') = row_sparse
+
+Example::
+
+    dense = [[ 0.,  1.,  0.],
+             [ 2.,  0.,  3.],
+             [ 0.,  0.,  0.],
+             [ 0.,  0.,  0.]]
+
+    # cast to row_sparse storage type
+    rsp = cast_storage(default, 'default')
+    rsp.indices = [0, 1]
+    rsp.values = [[ 0.,  1.,  0.],
+                  [ 2.,  0.,  3.]]
+
+    # cast to row_sparse storage type
+    csr = cast_storage(default, 'default')
+    csr.indices = [1, 0, 2]
+    csr.values = [ 1.,  2.,  3.]
+    csr.indptr = [0, 1, 3, 3, 3]
+
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
