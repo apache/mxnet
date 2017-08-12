@@ -1,5 +1,4 @@
-Dogs vs. Cats classification with mxnet and R
-=============================================
+# Dogs vs. Cats classification with mxnet and R
 
 ## Packages and prerequisites
 
@@ -13,10 +12,10 @@ It is an end-to-end R solution for the dogs vs cats Kaggle competition (https://
 and it can be used as an example for fine-tuning.
 All the code has been test on Ubuntu 16.04.
 
-
 ```{r, echo=FALSE}
 knitr::opts_chunk$set(eval = FALSE)
 ```
+
 
 ```{r}
 library(imager)
@@ -106,7 +105,7 @@ Map(function(x, y) {
 
 ### Creating .rec files
 
-```{r, eval = FALSE}
+```{r}
 cat_files <- list.files("train_pad_224x224/cat/", recursive=TRUE)
 cat_files <- paste0("cat/", cat_files)
 
@@ -169,6 +168,8 @@ and we need to replace the last fully connected layer with a new layer for 2 cla
 
 
 ```{r}
+download.file('http://data.dmlc.ml/data/Inception.zip', destfile = 'Inception.zip')
+unzip("Inception.zip")
 inception_bn <- mx.model.load("./Inception-BN", iteration = 126)
 
 symbol <- inception_bn$symbol
@@ -266,3 +267,6 @@ probs <- t(do.call(cbind, probs))
 preds <- data.frame(id = 1:12500, label = probs[, 2])
 write.csv(preds, "subm.csv", row.names = FALSE, quote = FALSE)
 ```
+
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
