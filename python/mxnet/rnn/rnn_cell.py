@@ -788,6 +788,11 @@ class SequentialRNNCell(BaseRNNCell):
     def pack_weights(self, args):
         return _cells_pack_weights(self._cells, args)
 
+    def reset(self):
+        super(SequentialRNNCell, self).reset()
+        for cell in self._cells:
+            cell.reset()        
+
     def __call__(self, inputs, states):
         self._counter += 1
         next_states = []
