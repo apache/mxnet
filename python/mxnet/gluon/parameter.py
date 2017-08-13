@@ -80,6 +80,12 @@ class Parameter(object):
     init : Initializer, default None
         Initializer of this parameter. Will use the global initializer by default.
 
+    Attributes
+    ----------
+    grad_req : {'write', 'add', 'null'}
+        This can be set before or after initialization. Setting grad_req to null
+        with `x.grad_req = 'null'` saves memory and computation when you don't
+        need gradient w.r.t x.
     """
     def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
@@ -121,7 +127,7 @@ class Parameter(object):
             for ctx in self._data:
                 self._data[ctx] = self._data[ctx].detach()
         elif self._data is not None:
-            self._init_grads()
+            self._init_grad()
 
     def _check_initialized(self, ctx=None):
         if self._data is not None:
@@ -407,15 +413,18 @@ class ParameterDict(object):
         self._params = OrderedDict()
         self._shared = shared
 
-    def __getitem__(self, key):
-        return self._params[key]
-
     def __repr__(self):
         s = '{name}(\n{content}\n)'
         name = self._prefix+' ' if self._prefix else ''
         return s.format(name=name,
                         content='\n'.join([_indent('  {0}'.format(v), 2)
                                            for v in self.values()]))
+
+    def __getitem__(self, key):
+        return self._params[key]
+
+    def __iter__(self):
+        return iter(self._params)
 
     def items(self):
         return self._params.items()
@@ -520,6 +529,28 @@ class ParameterDict(object):
         """
         for i in self.values():
             i.reset_ctx(ctx)
+
+    def setattr(self, name, value):
+        """Set an attribute to a new value for all Parameters.
+
+        For example, set grad_req to null if you don't need gradient w.r.t a
+        model's Parameters::
+
+            model.collect_params().setattr('grad_req', 'null')
+
+        or change the learning rate multiplier::
+
+            model.collect_params().setattr('lr_mult', 0.5)
+
+        Parameters
+        ----------
+        name : str
+            Name of the attribute.
+        value : valid type for attribute name
+            The new value for the attribute.
+        """
+        for i in self.values():
+            setattr(i, name, value)
 
     def save(self, filename, strip_prefix=''):
         """Save parameters to file.
