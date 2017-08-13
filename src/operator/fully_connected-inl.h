@@ -66,6 +66,10 @@ class FullyConnectedOp : public Operator {
  public:
   explicit FullyConnectedOp(FullyConnectedParam p) {
     this->param_ = p;
+#if defined(__CUDACC__) && CUDA_VERSION >= 9000
+    cublas_math_mode_ = (mshadow::DataType<DType>::kFlag == mshadow::kFloat16 &&
+                          GetEnvAllowTensorCore()) ? CUBLAS_TENSOR_OP_MATH : CUBLAS_DEFAULT_MATH;
+#endif
   }
 
   virtual void Forward(const OpContext &ctx,
@@ -96,7 +100,13 @@ class FullyConnectedOp : public Operator {
     Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
     Tensor<xpu, 2, DType> out = out_data[fullc::kOut].get_with_shape<xpu, 2, DType>(
         Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())), s);
+#if defined(__CUDACC__) && CUDA_VERSION >= 9000
+    auto previous_math_mode = SetMathMode(ctx, cublas_math_mode_);
+#endif
     out = dot(data, wmat.T());
+#if defined(__CUDACC__) && CUDA_VERSION >= 9000
+    SetMathMode(ctx, previous_math_mode);
+#endif
     if (!param_.no_bias) {
       Tensor<xpu, 1, DType> bias = in_data[fullc::kBias].get<xpu, 1, DType>(s);
       out += repmat(bias, data.size(0));
@@ -136,6 +146,9 @@ class FullyConnectedOp : public Operator {
     CHECK_NE(req[fullc::kWeight], kWriteInplace) << "cannot write weight inplace";
     // gradient of weight
     Tensor<xpu, 2, DType> gwmat = in_grad[fullc::kWeight].get<xpu, 2, DType>(s);
+#if defined(__CUDACC__) && CUDA_VERSION >= 9000
+    auto previous_math_mode = SetMathMode(ctx, cublas_math_mode_);
+#endif
     Assign(gwmat, req[fullc::kWeight], dot(grad.T(), data));
     // gradient of bias
     if (!param_.no_bias) {
@@ -146,10 +159,28 @@ class FullyConnectedOp : public Operator {
     Tensor<xpu, 2, DType> gdata = in_grad[fullc::kData].get_with_shape<xpu, 2, DType>(
         Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);
     Assign(gdata, req[fullc::kData], dot(grad, wmat));
+#if defined(__CUDACC__) && CUDA_VERSION >= 9000
+    SetMathMode(ctx, previous_math_mode);
+#endif
   }
 
  private:
   FullyConnectedParam param_;
+
+#if defined(__CUDACC__) && CUDA_VERSION >= 9000
+  // Sets the cuBLAS math mode that determines the 'allow TensorCore' policy.  Returns previous.
+  inline cublasMath_t SetMathMode(const OpContext &ctx, cublasMath_t new_math_type) {
+    mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+    auto blas_handle = mshadow::Stream<gpu>::GetBlasHandle(s);
+    auto handle_math_mode = CUBLAS_DEFAULT_MATH;
+    CUBLAS_CALL(cublasGetMathMode(blas_handle, &handle_math_mode));
+    if (handle_math_mode != new_math_type)
+      CUBLAS_CALL(cublasSetMathMode(blas_handle, new_math_type));
+    return handle_math_mode;
+  }
+  // What TensorCore math mode is desired
+  cublasMath_t cublas_math_mode_;
+#endif
 };  // class FullyConnectedOp
 
 // Decalre Factory function, used for dispatch specialization
