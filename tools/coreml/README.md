@@ -107,7 +107,11 @@ python mxnet_coreml_converter.py --model-prefix='vgg16' --epoch=0 --input-shape=
 ```
 
 ## Known issues
+<<<<<<< HEAD
 * [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz) model can be converted into CoreML format but is unable to run on Xcode.
+=======
+There are no known issues currently.
+>>>>>>> Fixing CoreML converter's README: typos/grammar/etc.
 
 ## This tool has been tested with:
 * MacOS - High Sierra 10.13 Beta.
