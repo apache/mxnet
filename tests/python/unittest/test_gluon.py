@@ -85,9 +85,9 @@ def test_basic():
     x.wait_to_read()
 
     model.collect_params().setattr('grad_req', 'null')
-    assert model.collect_params().values()[0]._grad is None
+    assert list(model.collect_params().values())[0]._grad is None
     model.collect_params().setattr('grad_req', 'write')
-    assert model.collect_params().values()[0]._grad is not None
+    assert list(model.collect_params().values())[0]._grad is not None
 
 
 def test_symbol_block():
