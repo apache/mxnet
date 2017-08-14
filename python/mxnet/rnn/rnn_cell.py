@@ -134,6 +134,9 @@ class BaseRNNCell(object):
         """Reset before re-using the cell for another graph."""
         self._init_counter = -1
         self._counter = -1
+        if hasattr(self, '_cells'):
+            for cell in self._cells:
+                cell.reset()
 
     def __call__(self, inputs, states):
         """Unroll the RNN for one time step.
@@ -787,12 +790,6 @@ class SequentialRNNCell(BaseRNNCell):
 
     def pack_weights(self, args):
         return _cells_pack_weights(self._cells, args)
-
-    def reset(self):
-        super(SequentialRNNCell, self).reset()
-        if hasattr(self, '_cells'):
-            for cell in self._cells:
-                cell.reset()
 
     def __call__(self, inputs, states):
         self._counter += 1
