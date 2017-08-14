@@ -69,7 +69,7 @@ void DotForward_(const nnvm::NodeAttrs& attrs,
       << "Binary function only support input/output with the same type";
   CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64)
       << "dot only supports float32 and float64";
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     if (inputs[0].ndim() == 1 && inputs[1].ndim() == 1) {
       CHECK_NE(req[0], kAddTo) << "AddTo not yet suported";
       Tensor<xpu, 1, DType> out = outputs[0].get<xpu, 1, DType>(s);
@@ -127,7 +127,7 @@ void DotBackward_(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_NE(req[0], kWriteInplace);
   CHECK_NE(req[1], kWriteInplace);
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     if (inputs[1].ndim() == 1 && inputs[2].ndim() == 1) {
       Tensor<xpu, 1, DType> mout_grad = inputs[0].get<xpu, 1, DType>(s);
       Tensor<xpu, 1, DType> mlhs_data = inputs[1].get<xpu, 1, DType>(s);
@@ -205,11 +205,11 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   // csr has many zero columns, so the result of dot(csr.T, matrix) should be rsp
-  // TODO(stefan/haibin): don't enforce kRowSparseStorage if out_attrs has already been set
+  // TODO(stefan/haibin/jun): check type_assign return value
   if (param.transpose_a && kCSRStorage == (*in_attrs)[0]) {
-    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
+    type_assign(&((*out_attrs)[0]), kRowSparseStorage);
   } else {
-    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kDefaultStorage);
+    type_assign(&((*out_attrs)[0]), kDefaultStorage);
   }
   return true;
 }
@@ -221,11 +221,11 @@ inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 2U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kDefaultStorage);
+  type_assign(&((*out_attrs)[0]), kDefaultStorage);
   if (!param.transpose_a && kCSRStorage == (*in_attrs)[1]) {
-    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 1, kRowSparseStorage);
+    type_assign(&((*out_attrs)[1]), kRowSparseStorage);
   } else {
-    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 1, kDefaultStorage);
+    type_assign(&((*out_attrs)[1]), kDefaultStorage);
   }
   return true;
 }
@@ -492,7 +492,7 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
   const TBlob& data_r = rhs;
   const TBlob data_out = *ret;
 
-  MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
+  MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         dim_t num_threads;
@@ -549,7 +549,7 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
   const TBlob data_out = ret->data();
   const TBlob row_idx_out = ret->aux_data(rowsparse::kIdx);
 
-  MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
+  MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         MSHADOW_IDX_TYPE_SWITCH(row_idx_out.type_flag_, RType, {  // row idx type
@@ -609,7 +609,7 @@ inline void DotCsrRspDnsImpl(const OpContext& ctx,
   mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   if (!lhs.storage_initialized() || !rhs.storage_initialized()) {
     if (kWriteTo == req) {
-      MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {  // data type
+      MSHADOW_SGL_DBL_TYPE_SWITCH(ret->type_flag_, DType, {  // data type
         mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(
             s, ret->Size(), ret->dptr<DType>());
       });
@@ -624,7 +624,7 @@ inline void DotCsrRspDnsImpl(const OpContext& ctx,
   const TBlob data_r = rhs.data();
   const TBlob row_idx_r = rhs.aux_data(rowsparse::kIdx);
 
-  MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
+  MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // row idx type
@@ -691,7 +691,7 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
   const TBlob data_out = ret->data();
   const TBlob row_idx_out = ret->aux_data(rowsparse::kIdx);
 
-  MSHADOW_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
+  MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         MSHADOW_IDX_TYPE_SWITCH(row_idx_r.type_flag_, RType, {  // row idx type
@@ -861,7 +861,7 @@ void BatchDotForward_(const nnvm::NodeAttrs& attrs,
       << "Binary function only support input/output with the same type";
   CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64)
       << "dot only supports float32 and float64";
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mshadow::Tensor<xpu, 3, DType> out = outputs[0].get<xpu, 3, DType>(s);
     mshadow::Tensor<xpu, 3, DType> mlhs = inputs[0].get<xpu, 3, DType>(s);
     mshadow::Tensor<xpu, 3, DType> mrhs = inputs[1].get<xpu, 3, DType>(s);
@@ -903,7 +903,7 @@ void BatchDotBackward_(const nnvm::NodeAttrs& attrs,
   CHECK_NE(req[0], kWriteInplace);
   CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64)
       << "dot only supports float32 and float64";
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mshadow::Tensor<xpu, 3, DType> mout_grad = inputs[0].get<xpu, 3, DType>(s);
     mshadow::Tensor<xpu, 3, DType> mlhs_data = inputs[1].get<xpu, 3, DType>(s);
     mshadow::Tensor<xpu, 3, DType> mrhs_data = inputs[2].get<xpu, 3, DType>(s);

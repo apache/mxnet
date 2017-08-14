@@ -43,10 +43,13 @@ namespace op {
 struct MarkRspRowIdx {
   // i represents the row index of the tensor data
   template<typename DType, typename RType>
-  MSHADOW_XINLINE static void Map(int i, RType* row_idx, const DType* data,
-                                  const index_t row_length) {
-    index_t j = 0;
-    index_t offset = i * row_length;
+  MSHADOW_CINLINE static void Map(int i,
+                                  RType* row_idx,
+                                  const DType* data,
+                                  const nnvm::dim_t row_length) {
+    using nnvm::dim_t;
+    dim_t j = 0;
+    dim_t offset = i * row_length;
     for (; j < row_length; ++j) {
       if (data[offset+j] != 0) {
         break;
@@ -69,20 +72,22 @@ inline void CastStorageDnsRspImpl(const OpContext& ctx,
                                   NDArray* rsp) {
   using namespace rowsparse;
   using namespace mshadow;
+  using nnvm::dim_t;
   CHECK(rsp != nullptr);
   CHECK_EQ(rsp->storage_type(), kRowSparseStorage);
   CHECK_EQ(dns.shape_, rsp->shape());
   mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   MSHADOW_TYPE_SWITCH(dns.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(rsp->aux_type(kIdx), RType, {  // row idx type
-      const index_t num_rows = dns.shape_[0];
-      const index_t row_length = dns.shape_.ProdShape(1, dns.shape_.ndim());
+      const dim_t num_rows = dns.shape_[0];
+      const dim_t row_length = dns.shape_.ProdShape(1, dns.shape_.ndim());
       rsp->CheckAndAllocAuxData(kIdx, Shape1(num_rows));
       TBlob row_idx_blob = rsp->aux_data(kIdx);
       RType* row_idx = row_idx_blob.dptr<RType>();
-      mxnet_op::Kernel<MarkRspRowIdx, cpu>::Launch(s, num_rows, row_idx,
-          dns.dptr<DType>(), row_length);
-      index_t nnr = 0;
+      dim_t num_threads = num_rows;
+      mxnet_op::Kernel<MarkRspRowIdx, cpu>::Launch(s, num_threads,
+          row_idx, dns.dptr<DType>(), row_length);
+      dim_t nnr = 0;
       nnr = common::ParallelAccumulate(row_idx, num_rows, nnr);
       rsp->set_aux_shape(kIdx, Shape1(nnr));
       if (0 == nnr) return;
@@ -91,8 +96,8 @@ inline void CastStorageDnsRspImpl(const OpContext& ctx,
       rsp->CheckAndAllocData(storage_shape);
       auto dns_data = dns.get_with_shape<cpu, 2, DType>(Shape2(num_rows, row_length), s);
       auto rsp_data = rsp->data().get_with_shape<cpu, 2, DType>(Shape2(nnr, row_length), s);
-      size_t idx = 0;
-      for (index_t i = 0; i < num_rows; ++i) {
+      dim_t idx = 0;
+      for (dim_t i = 0; i < num_rows; ++i) {
         if (row_idx[i] > 0) {
           row_idx[idx] = i;
           Copy(rsp_data[idx], dns_data[i], s);
@@ -106,12 +111,16 @@ inline void CastStorageDnsRspImpl(const OpContext& ctx,
 // TODO(haibin) Use memcopy instead will be much faster than assigning each individual element
 struct CastStorageRspDnsKernel {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, const index_t row_length, const IType* idx,
-                                  const DType *data, DType* dns) {
-    auto rid = idx[i];
-    auto dns_offset = rid * row_length;
-    auto rsp_offset = i * row_length;
-    for (size_t col = 0; col < row_length; col++) {
+  MSHADOW_XINLINE static void Map(int i,
+                                  const nnvm::dim_t row_length,
+                                  const IType* idx,
+                                  const DType *data,
+                                  DType* dns) {
+    using nnvm::dim_t;
+    IType rid = idx[i];
+    dim_t dns_offset = rid * row_length;
+    dim_t rsp_offset = i * row_length;
+    for (dim_t col = 0; col < row_length; col++) {
       dns[dns_offset + col] = data[rsp_offset + col];
     }
   }
@@ -122,9 +131,12 @@ struct CastStorageRspDnsKernel {
  * since the shape is known at binding stage.
  */
 template<typename xpu>
-void CastStorageRspDnsImpl(const OpContext& ctx, const NDArray& rsp, TBlob* dns) {
+void CastStorageRspDnsImpl(const OpContext& ctx,
+                           const NDArray& rsp,
+                           TBlob* dns) {
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   CHECK_EQ(rsp.storage_type(), kRowSparseStorage);
+  using nnvm::dim_t;
   MSHADOW_TYPE_SWITCH(dns->type_flag_, DType, {
     MSHADOW_IDX_TYPE_SWITCH(rsp.aux_type(rowsparse::kIdx), IType, {
       // assign zeros
@@ -134,11 +146,12 @@ void CastStorageRspDnsImpl(const OpContext& ctx, const NDArray& rsp, TBlob* dns)
         auto in_idx = rsp.aux_data(rowsparse::kIdx).FlatTo1D<xpu, IType>(s).dptr_;
         auto in_data = rsp.data().dptr<DType>();
         auto out_data = dns->dptr<DType>();
-        auto num_rows = rsp.aux_shape(rowsparse::kIdx).Size();
-        const auto shape = rsp.shape();
-        auto row_length = shape.ProdShape(1, shape.ndim());
-        mxnet_op::Kernel<CastStorageRspDnsKernel, xpu>::Launch(s, num_rows, row_length, in_idx,
-                                                               in_data, out_data);
+        auto shape = rsp.shape();
+        const dim_t num_rows = rsp.aux_shape(rowsparse::kIdx).Size();
+        const dim_t row_length = shape.ProdShape(1, shape.ndim());
+        const dim_t num_threads = num_rows;
+        mxnet_op::Kernel<CastStorageRspDnsKernel, xpu>::Launch(s, num_threads,
+            row_length, in_idx, in_data, out_data);
       }
     });
   });
@@ -150,18 +163,22 @@ void CastStorageRspDnsImpl(const OpContext& ctx, const NDArray& rsp, TBlob* dns)
 struct FillCsrIndPtr {
   /*!
    * \brief
-   * \param i the i-th row of the dns tensor
-   * \param indptr indptr of the csr tensor
-   * \param dns the dns tensor
-   * \param num_rows
-   * \param num_cols
+   * \param i         the i-th row of the dns tensor
+   * \param indptr    the indptr of the csr tensor
+   * \param dns       the dns tensor
+   * \param num_rows  number of rows of the dns tensor
+   * \param num_cols  number of columns of the dns tensor
    */
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, IType* indptr, const DType* dns,
-                                  const int num_rows, const int num_cols) {
+  MSHADOW_CINLINE static void Map(int i,
+                                  IType* indptr,
+                                  const DType* dns,
+                                  const nnvm::dim_t num_rows,
+                                  const nnvm::dim_t num_cols) {
+    using nnvm::dim_t;
     indptr[i+1] = 0;
-    const int offset = i * num_cols;
-    for (int j = 0; j < num_cols; ++j) {
+    const dim_t offset = i * num_cols;
+    for (dim_t j = 0; j < num_cols; ++j) {
       if (dns[offset+j] != 0) {
         ++indptr[i+1];
       }
@@ -175,21 +192,26 @@ struct FillCsrIndPtr {
 struct FillCsrColIdxAndVals {
   /*!
    * \brief
-   * \param i the i-th row of the dns tensor
-   * \param val value array of the csr
-   * \param col_idx column idx array of the csr
-   * \param indptr indptr array of the csr
-   * \param dns the dns tensor
-   * \param num_rows number of rows of the dns
-   * \param num_cols number of columns of the dns
+   * \param i         the i-th row of the dns tensor
+   * \param val       value array of the csr tensor
+   * \param col_idx   column idx array of the csr tensor
+   * \param indptr    indptr array of the csr tensor
+   * \param dns       dns tensor
+   * \param num_rows  number of rows of the dns tensor
+   * \param num_cols  number of columns of the dns tensor
    */
   template<typename DType, typename IType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* val, CType* col_idx,
-                                  const IType* indptr, const DType* dns,
-                                  const index_t num_rows, const index_t num_cols) {
-    const index_t offset = i * num_cols;
+  MSHADOW_CINLINE static void Map(int i,
+                                  DType* val,
+                                  CType* col_idx,
+                                  const IType* indptr,
+                                  const DType* dns,
+                                  const nnvm::dim_t num_rows,
+                                  const nnvm::dim_t num_cols) {
+    using nnvm::dim_t;
+    const dim_t offset = i * num_cols;
     IType k = indptr[i];
-    for (index_t j = 0; j < num_cols; ++j) {
+    for (dim_t j = 0; j < num_cols; ++j) {
       if (dns[offset+j] != 0) {
         val[k] = dns[offset+j];
         col_idx[k] = j;
@@ -210,29 +232,31 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
   CHECK_EQ(csr->storage_type(), kCSRStorage);
   CHECK_EQ(dns.shape_.ndim(), 2);
   CHECK_EQ(dns.shape_, csr->shape());
+  using mshadow::Shape1;
+  using nnvm::dim_t;
   mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   MSHADOW_TYPE_SWITCH(dns.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(csr->aux_type(csr::kIndPtr), IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(csr->aux_type(csr::kIdx), CType, {  // col idx type
-        const index_t num_rows = dns.shape_[0];
-        const index_t num_cols = dns.shape_[1];
+        const dim_t num_rows = dns.shape_[0];
+        const dim_t num_cols = dns.shape_[1];
         csr->CheckAndAllocAuxData(csr::kIndPtr, mshadow::Shape1(num_rows+1));
         IType* indptr = csr->aux_data(csr::kIndPtr).dptr<IType>();
         DType* dns_data = dns.dptr<DType>();
-        mxnet_op::Kernel<FillCsrIndPtr, cpu>::Launch(s, num_rows, indptr,
-            dns_data, num_rows, num_cols);
+        dim_t num_threads = num_rows;
+        mxnet_op::Kernel<FillCsrIndPtr, cpu>::Launch(s, num_threads,
+            indptr, dns_data, num_rows, num_cols);
         // single thread to accumulate indptr
         // indptr[num_rows] indicates the number of non-zero elements
         indptr[0] = 0;
-        for (index_t i = 0; i < num_rows; ++i) {
+        for (dim_t i = 0; i < num_rows; ++i) {
           indptr[i+1] += indptr[i];
         }
         // allocate column idx array and value array
-        csr->CheckAndAllocAuxData(csr::kIdx,
-                                  mshadow::Shape1(static_cast<index_t>(indptr[num_rows])));
-        csr->CheckAndAllocData(mshadow::Shape1(static_cast<index_t>(indptr[num_rows])));
+        csr->CheckAndAllocAuxData(csr::kIdx, Shape1(static_cast<index_t>(indptr[num_rows])));
+        csr->CheckAndAllocData(Shape1(static_cast<index_t>(indptr[num_rows])));
         // fill col_idx and value arrays of the csr
-        mxnet_op::Kernel<FillCsrColIdxAndVals, cpu>::Launch(s, num_rows,
+        mxnet_op::Kernel<FillCsrColIdxAndVals, cpu>::Launch(s, num_threads,
             csr->data().dptr<DType>(), csr->aux_data(csr::kIdx).dptr<CType>(),
             indptr, dns_data, num_rows, num_cols);
       });
@@ -246,19 +270,22 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
 struct CopyCsrDataToDns {
   /*!
    * \brief
-   * \param i the i-th row of the dns tensor
-   * \param dns_data data blob of the dns tensor
-   * \param col_idx column idx array of the csr
-   * \param indptr indptr array of the csr
-   * \param csr_data data blob of the csr tensor
-   * \param num_cols number of columns of the dns
+   * \param i         the i-th row of the dns tensor
+   * \param dns_data  data blob of the dns tensor
+   * \param col_idx   column idx array of the csr tensor
+   * \param indptr    indptr array of the csr tensor
+   * \param csr_data  data blob of the csr tensor
+   * \param num_cols  number of columns of the dns tensor
    */
   template<typename DType, typename IType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* dns_data, const CType* col_idx,
-                                  const IType* indptr, const DType* csr_data,
-                                  const int num_cols) {
-    const int offset = i * num_cols;
-    for (auto j = indptr[i]; j < indptr[i+1]; ++j) {
+  MSHADOW_XINLINE static void Map(int i,
+                                  DType* dns_data,
+                                  const CType* col_idx,
+                                  const IType* indptr,
+                                  const DType* csr_data,
+                                  const nnvm::dim_t num_cols) {
+    const nnvm::dim_t offset = i * num_cols;
+    for (IType j = indptr[i]; j < indptr[i+1]; ++j) {
       dns_data[offset+col_idx[j]] = csr_data[j];
     }
   }
@@ -268,25 +295,30 @@ struct CopyCsrDataToDns {
  * \brief Casts a csr matrix to dns format.
  */
 template<typename xpu>
-void CastStorageCsrDnsImpl(const OpContext& ctx, const NDArray& csr, TBlob* dns) {
+void CastStorageCsrDnsImpl(const OpContext& ctx,
+                           const NDArray& csr,
+                           TBlob* dns) {
   CHECK(dns != nullptr);
   CHECK_EQ(csr.storage_type(), kCSRStorage);
   CHECK_EQ(dns->shape_.ndim(), 2);
   CHECK_EQ(dns->shape_, csr.shape());
+  using nnvm::dim_t;
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(dns->type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(csr.aux_type(csr::kIndPtr), IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(csr.aux_type(csr::kIdx), CType, {  // col idx type
-        const index_t num_rows = dns->shape_[0];
-        const index_t num_cols = dns->shape_[1];
+        const dim_t num_rows = dns->shape_[0];
+        const dim_t num_cols = dns->shape_[1];
         DType* dns_data = dns->dptr<DType>();
-        mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(s, dns->shape_.Size(), dns_data);
+        dim_t num_threads = dns->shape_.Size();
+        mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(s, num_threads, dns_data);
         if (!csr.storage_initialized()) return;
         const IType* indptr = csr.aux_data(csr::kIndPtr).dptr<IType>();
         const CType* col_idx = csr.aux_data(csr::kIdx).dptr<CType>();
         const DType* csr_data = csr.data().dptr<DType>();
-        mxnet_op::Kernel<CopyCsrDataToDns, xpu>::Launch(s, num_rows, dns_data,
-            col_idx, indptr, csr_data, num_cols);
+        num_threads = num_rows;
+        mxnet_op::Kernel<CopyCsrDataToDns, xpu>::Launch(s, num_threads,
+            dns_data, col_idx, indptr, csr_data, num_cols);
       });
     });
   });

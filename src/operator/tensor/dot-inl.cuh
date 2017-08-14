@@ -27,96 +27,10 @@
 
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
-
-#include <cub/cub.cuh>
+#include "./util/tensor_util-inl.cuh"
 
 namespace mxnet {
 namespace op {
-
-/*!
- * \brief GPU auxiliary kernel to flag non-zero rows of an rsp matrix with indices.
- * Parallelized by matrix rows: 1 thread/row
- */
-struct SetRspRowFlgKernel {
-  /*!
-   * \brief
-   * \param tid      global thread id
-   * \param row_flg  array to flag storage indices of non-zero rows
-   * \param row_idx  rsp matrix row index array storing indices of non-zero rows
-   * \param nnr      rsp matrix number of non-zero rows (storage shape)
-   */
-  template<typename RType>
-  __device__ __forceinline__ static void Map(int tid,
-                                             RType* row_flg,
-                                             const RType* row_idx,
-                                             const nnvm::dim_t nnr) {
-    if (tid < nnr) {
-      row_flg[row_idx[tid]] = tid+1;
-    }
-  }
-};
-
-/*!
- * \brief GPU auxiliary kernel for marking non-zero columns of a csr matrix.
- * Parallelized by matrix rows: 1 warp/row
- */
-struct MarkCsrZeroColsWarpKernel {
-  /*!
-   * \brief
-   * \param tid       global thread id
-   * \param col_idx   csr matrix column indices
-   * \param indptr    csr matrix row index pointer
-   * \param num_rows  csr matrix number of rows
-   * \param num_cols  csr matrix number of columns
-   */
-  template<typename CType, typename IType>
-  __device__ __forceinline__ static void Map(int tid,
-                                             nnvm::dim_t* flg,
-                                             const CType* col_idx,
-                                             const IType* indptr,
-                                             const nnvm::dim_t num_rows,
-                                             const nnvm::dim_t num_cols) {
-    typedef unsigned long long int uint64_cu;
-    static_assert(sizeof(uint64_cu) == sizeof(nnvm::dim_t), "unexpected sizeof dim_t");
-
-    const nnvm::dim_t warp_id = tid / 32;      // global warp   id
-    const nnvm::dim_t lane    = tid & (32-1);  // local  thread id within warp
-
-    if (warp_id < num_rows) {
-      uint64_cu zero = 0;
-      uint64_cu one = 1;
-      for (IType j = indptr[warp_id]+lane; j < indptr[warp_id+1]; j+=32) {
-        atomicCAS(reinterpret_cast<uint64_cu*>(flg+col_idx[j]), zero, one);
-      }
-    }
-  }
-};
-
-/*!
- * \brief GPU auxiliary kernel for filling the row index array of an rsp matrix.
- * Parallelized by matrix rows: 1 thread/row
- */
-struct FillRspRowIdxKernel {
-  /*!
-   * \brief
-   * \param tid          global thread id
-   * \param row_idx      row index array to store indices of non-zero rows
-   * \param row_flg_sum  inclusive prefix sum array over 0/1 marked row flag array
-   * \param num_rows     rsp matrix number of rows (shape)
-   */
-  template<typename RType>
-  __device__ __forceinline__ static void Map(int tid,
-                                             RType* row_idx,
-                                             const nnvm::dim_t* row_flg_sum,
-                                             const nnvm::dim_t num_rows) {
-    if (tid < num_rows) {
-      nnvm::dim_t prev = (tid == 0)? 0 : row_flg_sum[tid-1];
-      if (row_flg_sum[tid] > prev) {
-        row_idx[prev] = static_cast<RType>(tid);
-      }
-    }
-  }
-};
 
 /*!
  * \brief GPU scalar kernel of dot(csr, dns1) = dns2
@@ -721,7 +635,7 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
           num_threads = num_cols_l;
           Kernel<set_zero, gpu>::Launch(s, num_threads, row_flg_out);
           num_threads = num_rows_l * threads_per_warp;
-          Kernel<MarkCsrZeroColsWarpKernel, gpu>::Launch(s, num_threads,
+          Kernel<MarkCsrColWarpKernel, gpu>::Launch(s, num_threads,
               row_flg_out, col_idx_l.dptr<CType>(), indptr_l.dptr<IType>(),
               num_rows_l, num_cols_l);
           cub::DeviceScan::InclusiveSum(d_temp_storage,
@@ -840,7 +754,7 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
             num_threads = num_cols_l;
             Kernel<set_zero, gpu>::Launch(s, num_threads, row_flg_out);
             num_threads = num_rows_l * threads_per_warp;
-            Kernel<MarkCsrZeroColsWarpKernel, gpu>::Launch(s, num_threads,
+            Kernel<MarkCsrColWarpKernel, gpu>::Launch(s, num_threads,
                 row_flg_out, col_idx_l.dptr<CType>(), indptr_l.dptr<IType>(),
                 num_rows_l, num_cols_l);
             cub::DeviceScan::InclusiveSum(d_temp_storage,
