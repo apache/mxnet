@@ -76,6 +76,7 @@ List of MXNet layers that can be converted into their CoreML equivalent:
 ### Models
 Any MXNet model that uses the above operators can be converted easily. For instance, the following standard models can be converted:
 
+<<<<<<< HEAD
 1. [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/)
 
 ```bash
@@ -105,6 +106,13 @@ python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --in
 ```bash
 python mxnet_coreml_converter.py --model-prefix='vgg16' --epoch=0 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="vgg16.mlmodel"
 ```
+=======
+1. Inception: [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/), [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz)
+2. [NiN](http://data.dmlc.ml/models/imagenet/nin/)
+2. [Resnet](http://data.mxnet.io/models/imagenet/resnet/)
+3. [Squeezenet](http://data.mxnet.io/models/imagenet/squeezenet/)
+4. [Vgg](http://data.mxnet.io/models/imagenet/vgg/)
+>>>>>>> CoreML converter README update: Talk about layers first and then about models.
 
 ## Known issues
 <<<<<<< HEAD
