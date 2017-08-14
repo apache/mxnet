@@ -64,16 +64,9 @@ python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --in
 ```
 
 ## Currently supported
-### Models
-This is a (growing) list of standard MXNet models that can be successfully converted using the converter. This means that any other model that uses similar operators as these models can also be successfully converted.
-
-1. Inception: [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/), [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz)
-2. [NiN](http://data.dmlc.ml/models/imagenet/nin/)
-2. [Resnet](http://data.mxnet.io/models/imagenet/resnet/)
-3. [Squeezenet](http://data.mxnet.io/models/imagenet/squeezenet/)
-4. [Vgg](http://data.mxnet.io/models/imagenet/vgg/)
-
 ### Layers
+List of layers that can be converted:
+
 1. Activation
 2. Batchnorm
 3. Concat
@@ -86,6 +79,15 @@ This is a (growing) list of standard MXNet models that can be successfully conve
 10. Reshape
 11. Softmax
 12. Transpose
+
+### Models
+Any MXNet model that uses the above operators can be converted easily. For instance, the following standard models can be converted:
+
+1. Inception: [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/), [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz)
+2. [NiN](http://data.dmlc.ml/models/imagenet/nin/)
+2. [Resnet](http://data.mxnet.io/models/imagenet/resnet/)
+3. [Squeezenet](http://data.mxnet.io/models/imagenet/squeezenet/)
+4. [Vgg](http://data.mxnet.io/models/imagenet/vgg/)
 
 ## Known issues
 There are no known issues currently.
