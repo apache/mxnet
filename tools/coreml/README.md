@@ -21,23 +21,23 @@ Let's say you want to use your MXNet model in an iPhone App. For the purpose of 
 python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,227,227"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="squeezenetv11.mlmodel"
 ```
 
-  The above command will save the converted model into squeezenet-v11.mlmodel in CoreML format. Internally MXNet first loads the model and then we walk through the entire symbolic graph converting each operator into its CoreML equivalent. Some of the parameters are used by MXNet in order to load and generate the symbolic graph in memory while others are used by CoreML either to pre-process the input before the going through the neural network or to process the output in a particular way. 
+  The above command will save the converted model in CoreML format to file squeezenet-v11.mlmodel. Internally, the model is first loaded by MXNet recreating the entire symbolic graph in memory. The converter walks through this symbolic graph converting each operator into its CoreML equivalent. Some of the supplied arguments to the converter are used by MXNet to generate the graph while others are used by CoreML either to pre-process the input (before passing it to the neural network) or to process the output of the neural network in a particular way.
 
   In the command above:
 
-  * _model-prefix_: refers to the MXNet model prefix (may include the directory path).
-  * _epoch_: refers to the suffix of the MXNet model file.
-  * _input-shape_: refers to the input shape information in a JSON string format where the key is the name of the input variable (="data") and the value is the shape of that variable. If the model takes multiple inputs, input-shape for all of them need to be provided.
+  * _model-prefix_: refers to the prefix of the file containing the MXNet model that needs to be converted (may include the directory path). E.g. for squeezenet model above the model files are squeezenet_v1.1-symbol.json and squeezenet_v1.1-0000.params and, therefore, model-prefix is "squeezenet_v1.1" (or "<directory-where-model-exists>/squeezenet_v1.1")
+  * _epoch_: refers to the suffix of the MXNet model filename. For squeezenet model above, it'll be 0.
+  * _input-shape_: refers to the input shape information in a JSON string format where the key is the name of the input variable (i.e. "data") and the value is the shape of that variable. If the model takes multiple inputs, input-shape for all of them need to be provided.
   * _mode_: refers to the coreml model mode. Can either be 'classifier', 'regressor' or None. In this case, we use 'classifier' since we want the resulting CoreML model to classify images into various categories.
-  * _pre-processing-arguments_: In the Apple world images have to be of type Image. By providing image_input_names as "data", we are saying that the input variable "data" is of type Image.
+  * _pre-processing-arguments_: In the Apple world, images have to be of type "Image". By providing image_input_names as "data", the converter will assume that the input variable "data" is of type "Image".
   * _class-labels_: refers to the name of the file which contains the classification labels (a.k.a. synset file).
-output-file: the file where the CoreML model will be dumped.
+  * _output-file_: the file where resulting CoreML model will be stored.
 
 3. The generated ".mlmodel" file can directly be integrated into your app. For more instructions on how to do this, please see [Apple CoreML's tutorial](https://developer.apple.com/documentation/coreml/integrating_a_core_ml_model_into_your_app).
 
 
 ### Providing class labels
-You could provide a file containing class labels (as above) so that CoreML will return the predicted category the image belongs to. The file should have a label per line and labels can have any special characters. The line number of the label in the file should correspond with the index of softmax output. E.g.
+You could provide a file containing class labels (as above) so that CoreML will return the category a given image belongs to. The file should have a label per line and labels can have any special characters. The line number of the label in the file should correspond with the index of softmax output. E.g.
 
 ```bash
 python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,227,227"}' --mode=classifier --class-labels classLabels.txt --output-file="squeezenetv11.mlmodel"
@@ -49,16 +49,16 @@ You may have to provide the label names of the MXNet model's outputs. For exampl
 ```bash
 python mxnet_coreml_converter.py --model-prefix='vgg16' --epoch=0 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="vgg16.mlmodel" --label-names="prob_label"
 ```
- 
-### Adding a pre-processing to CoreML model.
-You could ask CoreML to pre-process the images before passing them through the model.
+
+### Adding a pre-processing layer to CoreML model.
+You could ask CoreML to pre-process the images before passing them through the model. The following command provides image re-centering parameters for red, blue and green channel.
 
 ```bash
 python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,224,224"}' --pre-processing-arguments='{"red_bias":127,"blue_bias":117,"green_bias":103}' --output-file="squeezenet_v11.mlmodel"
 ```
 
-If you are building an app for a model that takes image as an input, you will have to provide image_input_names as pre-processing arguments. This tells CoreML that a particular input variable is of type Image. E.g.:
- 
+If you are building an app for a model that takes "Image" as an input, you will have to provide image_input_names as pre-processing arguments. This tells CoreML that a particular input variable is of type Image. E.g.:
+
 ```bash
 python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,224,224"}' --pre-processing-arguments='{"red_bias":127,"blue_bias":117,"green_bias":103,"image_input_names":"data"}' --output-file="squeezenet_v11.mlmodel"
 ```
@@ -88,8 +88,8 @@ This is a (growing) list of standard MXNet models that can be successfully conve
 12. Transpose
 
 ## Known issues
-Currently there are no known issues.
+There are no known issues currently.
 
-## This tool has been tested on environment with:
+## This tool has been tested with:
 * MacOS - High Sierra 10.13 Beta.
 * Xcode 9 beta 5.
