@@ -312,12 +312,13 @@ def test_sparse_sgd():
 class PyAdam(mx.optimizer.Optimizer):
     """python reference implemenation of adam"""
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 decay_factor=(1 - 1e-8), **kwargs):
+                 decay_factor=(1 - 1e-8), sparse_update=False, **kwargs):
         super(PyAdam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
         self.decay_factor = decay_factor
+        self.sparse_update = sparse_update
 
     def create_state(self, index, weight):
         """Create additional optimizer state: mean, variance
@@ -355,21 +356,28 @@ class PyAdam(mx.optimizer.Optimizer):
         mean, variance = state
 
         wd = self._get_wd(index)
-        grad = grad * self.rescale_grad + wd * weight
-        if self.clip_gradient is not None:
-            mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient, out=grad)
-
-        mean *= self.beta1
-        mean += grad * (1. - self.beta1)
-
-        variance *= self.beta2
-        variance += (1 - self.beta2) * mx.nd.square(grad, out=grad)
-
+        num_rows = weight.shape[0]
         coef1 = 1. - self.beta1**t
         coef2 = 1. - self.beta2**t
         lr *= math.sqrt(coef2)/coef1
-
-        weight -= lr*mean/(mx.nd.sqrt(variance) + self.epsilon)
+        for row in range(num_rows):
+            # check row slices of all zeros
+            all_zeros = mx.test_utils.almost_equal(grad[row].asnumpy(), np.zeros_like(grad[row].asnumpy()))
+            # skip zeros during sparse update
+            if all_zeros and self.sparse_update:
+                continue
+            grad[row] = grad[row] * self.rescale_grad + wd * weight[row]
+            # clip gradients
+            if self.clip_gradient is not None:
+                mx.nd.clip(grad[row], -self.clip_gradient, self.clip_gradient, out=grad[row])
+            # update mean
+            mean[row] *= self.beta1
+            mean[row] += grad[row] * (1. - self.beta1)
+            # update variance
+            variance[row] *= self.beta2
+            variance[row] += (1 - self.beta2) * mx.nd.square(grad[row], out=grad[row])
+            # update weight
+            weight[row] -= lr*mean[row]/(mx.nd.sqrt(variance[row]) + self.epsilon)
 
 
 def test_adam():
@@ -386,10 +394,8 @@ def test_adam():
               {'rescale_grad': 0.8, 'wd': 0.05}]
     for kwarg in kwargs:
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32)
-        # test operator fallback on cpu
-        if (default_context() == mx.cpu()):
-            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape,
-                              np.float32, g_stype='row_sparse')
+        compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
+                          np.float32, w_stype='row_sparse', g_stype='row_sparse')
 
 # RMSProp
 class PyRMSProp(mx.optimizer.Optimizer):
