@@ -58,6 +58,7 @@ Operator* CreateOp<gpu>(ConvolutionParam param, int dtype,
     op = new DepthwiseConvolutionOp<float>(param, *in_shape, *out_shape);
     return op;
   }
+
 #if MXNET_USE_CUDNN == 1
   // The NVIDIA Pascal architecture was the first to include 16-bit ALUs.
   // Thus, when the framework is compiled with MSHADOW_USE_PASCAL == 1, we
