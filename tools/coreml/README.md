@@ -43,13 +43,6 @@ You could provide a file containing class labels (as above) so that CoreML will 
 python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,227,227"}' --mode=classifier --class-labels classLabels.txt --output-file="squeezenetv11.mlmodel"
 ```
 
-### Providing label names
-You may have to provide the label names of the MXNet model's outputs. For example, if you try to convert [vgg16](http://data.mxnet.io/models/imagenet/vgg/), you may have to provide label-name as "prob_label". By default "softmax_label" is assumed.
-
-```bash
-python mxnet_coreml_converter.py --model-prefix='vgg16' --epoch=0 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="vgg16.mlmodel" --label-names="prob_label"
-```
-
 ### Adding a pre-processing layer to CoreML model.
 You could ask CoreML to pre-process the images before passing them through the model. The following command provides image re-centering parameters for red, blue and green channel.
 
@@ -65,7 +58,7 @@ python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --in
 
 ## Currently supported
 ### Layers
-List of layers that can be converted:
+List of MXNet layers that can be converted into their CoreML equivalent:
 
 1. Activation
 2. Batchnorm
@@ -83,14 +76,38 @@ List of layers that can be converted:
 ### Models
 Any MXNet model that uses the above operators can be converted easily. For instance, the following standard models can be converted:
 
-1. Inception: [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/), [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz)
+1. [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/)
+
+```bash
+python mxnet_coreml_converter.py --model-prefix='Inception-BN' --epoch=126 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="InceptionBN.mlmodel"
+```
+
 2. [NiN](http://data.dmlc.ml/models/imagenet/nin/)
-2. [Resnet](http://data.mxnet.io/models/imagenet/resnet/)
-3. [Squeezenet](http://data.mxnet.io/models/imagenet/squeezenet/)
-4. [Vgg](http://data.mxnet.io/models/imagenet/vgg/)
+
+```bash
+python mxnet_coreml_converter.py --model-prefix='nin' --epoch=0 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="nin.mlmodel"
+```
+
+3. [Resnet](http://data.mxnet.io/models/imagenet/resnet/)
+
+```bash
+python mxnet_coreml_converter.py --model-prefix='resnet-50' --epoch=0 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="resnet50.mlmodel"
+```
+
+4. [Squeezenet](http://data.mxnet.io/models/imagenet/squeezenet/)
+
+```bash
+python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,227,227"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="squeezenetv11.mlmodel"
+```
+
+5. [Vgg](http://data.mxnet.io/models/imagenet/vgg/)
+
+```bash
+python mxnet_coreml_converter.py --model-prefix='vgg16' --epoch=0 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="vgg16.mlmodel"
+```
 
 ## Known issues
-There are no known issues currently.
+* [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz) model can be converted into CoreML format but is unable to run on Xcode.
 
 ## This tool has been tested with:
 * MacOS - High Sierra 10.13 Beta.
