@@ -422,6 +422,7 @@ try {
         ws('workspace/docs') {
           if (env.BRANCH_NAME == "master") {
             init_git()
+            sh "make clean"
             sh "make docs"
           }
         }
