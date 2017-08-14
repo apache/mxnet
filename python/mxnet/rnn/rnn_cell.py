@@ -791,7 +791,7 @@ class SequentialRNNCell(BaseRNNCell):
     def reset(self):
         super(SequentialRNNCell, self).reset()
         for cell in self._cells:
-            cell.reset()        
+            cell.reset()
 
     def __call__(self, inputs, states):
         self._counter += 1
