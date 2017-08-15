@@ -733,7 +733,7 @@ struct AdamDnsRspDnsKernel {
                            (1.f - beta2) * grad_rescaled * grad_rescaled;
       }
       KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] - lr * mean_data[data_i] /
-                    square_root::Map(var_data[data_i]) + epsilon);
+                    (square_root::Map(var_data[data_i]) + epsilon));
     }
   }
 };
