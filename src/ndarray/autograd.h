@@ -127,7 +127,7 @@ class AutogradRuntime {
 
  private:
   /*! \brief to record operator, return corresponding node. */
-  AGNodePtr RecordOp(const nnvm::Op* op,
+  void RecordOp(const nnvm::Op* op,
                      const nnvm::NodeAttrs& attrs,
                      std::vector<NDArray>* p_inputs,
                      std::vector<NDArray>* p_outputs,
