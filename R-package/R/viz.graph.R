@@ -145,9 +145,6 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
   } else {
     graph_render<- render_graph(graph = graph, output = "graph", width = graph.width.px, height = graph.height.px)
   }
-
-  # graph <-visNetwork(nodes = nodes_df, edges = edges_df, main = graph.title) %>%
-  #   visHierarchicalLayout(direction = "UD", sortMethod = "directed")
   
   return(graph_render)
 }
