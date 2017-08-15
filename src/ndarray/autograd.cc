@@ -200,7 +200,8 @@ void AutogradRuntime::RecordOp(const nnvm::Op* op,
       } else {
         // Put a dummy array here since it will not be used.
         e.ag_node->outputs.emplace_back(
-            inputs[i].shape(), inputs[i].ctx(), true, inputs[i].dtype());
+            TBlob(nullptr, inputs[i].shape(), inputs[i].ctx().dev_mask(),
+                  inputs[i].dtype()), inputs[i].ctx().dev_id);
       }
       e.ag_node->out_grads.emplace_back();
       inputs[i].entry_ = std::move(e);  // assign last to prevent cyclic reference
@@ -218,7 +219,8 @@ void AutogradRuntime::RecordOp(const nnvm::Op* op,
     } else {
       // Put a dummy array here since it will not be used.
       ag_node->outputs.emplace_back(
-          outputs[i].shape(), outputs[i].ctx(), true, outputs[i].dtype());
+          TBlob(nullptr, outputs[i].shape(), outputs[i].ctx().dev_mask(),
+                outputs[i].dtype()), outputs[i].ctx().dev_id);
     }
     outputs[i].entry_ = AGNodeEntry{ag_node, i, 0};
   }
@@ -309,6 +311,10 @@ void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs,
         head_grads.emplace_back(ograds[i]);
       }
     }
+
+    // std::stringstream os;
+    // exec->Print(os);
+    // LOG(INFO) << os.str();
 
     exec->Backward(head_grads, is_train);
     delete exec;
