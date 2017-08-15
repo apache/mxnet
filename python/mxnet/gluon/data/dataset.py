@@ -20,7 +20,7 @@
 """Dataset container."""
 import os
 
-from ... import recordio
+from ... import recordio, ndarray
 
 class Dataset(object):
     """Abstract dataset class. All datasets should have this interface.
@@ -52,7 +52,10 @@ class ArrayDataset(Dataset):
     def __init__(self, data, label):
         assert len(data) == len(label)
         self._data = data
-        self._label = label
+        if isinstance(label, ndarray.NDArray) and len(label.shape) == 1:
+            self._label = label.asnumpy()
+        else:
+            self._label = label
 
     def __getitem__(self, idx):
         return self._data[idx], self._label[idx]

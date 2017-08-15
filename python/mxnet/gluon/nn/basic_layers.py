@@ -308,18 +308,22 @@ class BatchNorm(HybridBlock):
 
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
                                      shape=(in_channels,), init=gamma_initializer,
-                                     allow_deferred_init=True)
+                                     allow_deferred_init=True,
+                                     differentiable=scale)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
                                     shape=(in_channels,), init=beta_initializer,
-                                    allow_deferred_init=True)
+                                    allow_deferred_init=True,
+                                    differentiable=center)
         self.running_mean = self.params.get('running_mean', grad_req='null',
                                             shape=(in_channels,),
                                             init=running_mean_initializer,
-                                            allow_deferred_init=True)
+                                            allow_deferred_init=True,
+                                            differentiable=False)
         self.running_var = self.params.get('running_var', grad_req='null',
                                            shape=(in_channels,),
                                            init=running_variance_initializer,
-                                           allow_deferred_init=True)
+                                           allow_deferred_init=True,
+                                           differentiable=False)
 
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.BatchNorm(x, gamma, beta, running_mean, running_var,
