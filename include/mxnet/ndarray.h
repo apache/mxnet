@@ -226,6 +226,12 @@ class NDArray {
     return ptr_->aux_shapes;
   }
 
+  /*! returns the dtypes of all aux data */
+  const std::vector<int>& aux_types() const {
+    CHECK(storage_type() != kDefaultStorage);
+    return ptr_->aux_types;
+  }
+
   /*!
    * \brief For a sparse operation on a csr matrix for example,
    * the size of the column index array

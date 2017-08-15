@@ -126,7 +126,7 @@ class KVStoreLocal : public KVStore {
 
   void PullRowSparse(const std::vector<int>& keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
-                     int priority = 0) {
+                     int priority = 0) override {
     std::vector<int> uniq_keys;
     std::vector<std::vector<std::pair<NDArray*, NDArray>>> grouped_val_rowids;
     GroupKVPairs(keys, val_rowids, &uniq_keys, &grouped_val_rowids);

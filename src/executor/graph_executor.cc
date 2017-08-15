@@ -1151,7 +1151,9 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
       CHECK_LE(nword, std::numeric_limits<nnvm::dim_t>::max());
       // allocate float arrays
       TShape shape{static_cast<nnvm::dim_t>(nword)};
-      NDArray nd(shape, ctx);
+      // TODO(junwu): adding delay_alloc=true to create nd
+      // is a temporary solution.
+      NDArray nd(shape, ctx, true);
       data_pool_[i] = nd;
       // put the new allocated arrays to shared pool
       if (shared_pool != nullptr)  {

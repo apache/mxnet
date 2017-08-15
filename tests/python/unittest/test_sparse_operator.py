@@ -187,7 +187,7 @@ def test_sparse_slice():
 
 
 def test_sparse_retain():
-    def check_sparse_retain(shape, density):
+    def check_sparse_retain(shape, density, index_type=np.int64):
         num_rows = shape[0]
         rsp, _ = rand_sparse_ndarray(shape=shape, stype='row_sparse', density=density)
         length = np.random.randint(1, num_rows + 1)
@@ -197,7 +197,7 @@ def test_sparse_retain():
         tensor_retained_expected = np.zeros(shape)
         for i in idx:
             tensor_retained_expected[i][:] = dns[i]
-        indices = mx.nd.array(idx)
+        indices = mx.nd.array(idx, dtype=index_type)
         rsp_retained = mx.nd.sparse_retain(rsp, indices=indices)
         assert same(tensor_retained_expected, rsp_retained.asnumpy())
 
@@ -211,9 +211,11 @@ def test_sparse_retain():
     shape = rand_shape_2d()
     shape_3d = rand_shape_3d()
     densities = [0.01, 0.1, 0.2, 0.5, 0.8, 1.0]
+    index_types = [np.float32, np.int32, np.int64]
     for density in densities:
-        check_sparse_retain(shape, density)
-        check_sparse_retain(shape_3d, density)
+        for itype in index_types:
+            check_sparse_retain(shape, density, itype)
+            check_sparse_retain(shape_3d, density, itype)
 
 
 def test_sparse_nd_zeros():
