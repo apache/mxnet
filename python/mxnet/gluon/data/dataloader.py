@@ -51,6 +51,13 @@ class DataLoader(object):
         Whether to shuffle the samples.
     sampler : Sampler
         The sampler to use. Either specify sampler or shuffle, not both.
+    last_batch : {'keep', 'discard', 'rollover'}
+        How to handle the last batch if batch_size does not evenly divide
+        `len(dataset)`.
+
+        keep - A batch with less samples than previous batches is returned.
+        discard - The last batch is discarded if its incomplete.
+        rollover - The remaining samples are rolled over to the next epoch.
     batch_sampler : Sampler
         A sampler that returns mini-batches. Do not specify batch_size,
         shuffle, sampler, and last_batch if batch_sampler is specified.
@@ -71,7 +78,8 @@ class DataLoader(object):
             elif shuffle:
                 raise ValueError("shuffle must not be specified if sampler is specified")
 
-            batch_sampler = _sampler.BatchSampler(sampler, batch_size, last_batch)
+            batch_sampler = _sampler.BatchSampler(
+                sampler, batch_size, last_batch if last_batch else 'keep')
         elif batch_size is not None or shuffle or sampler is not None or \
                 last_batch is not None:
             raise ValueError("batch_size, shuffle, sampler and last_batch must " \
