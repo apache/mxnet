@@ -1,5 +1,5 @@
-Classify Real-world Images with Pre-trained Model
-=================================================
+# Classify Real-world Images with Pre-trained Model
+
 
 MXNet is a flexible and efficient deep learning framework. One of the cool things that a deep learning
 algorithm can do is to classify real world images.
@@ -10,12 +10,7 @@ real world image. The network architecture is described in [1].
 The pre-trained Inception-BatchNorm network can be downloaded from [this link](http://data.mxnet.io/mxnet/data/Inception.zip).
 This model gives the recent state-of-art prediction accuracy on the image net dataset.
 
-Preface
--------
-This tutorial is written in Rmarkdown. You can find the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/classifyRealImageWithPretrainedModel.Rmd)
-
-Package Loading
----------------
+## Package Loading
 
 To get started, we load the `mxnet` package first.
 
@@ -29,13 +24,15 @@ In this example, we also need the imager package to load and preprocess the imag
 require(imager)
 ```
 
-Load the Pretrained Model
--------------------------
+## Load the Pretrained Model
+
 
 Make sure you unzip the pre-trained model in current folder. And we can use the model
 loading function to load the model into R.
 
 ```{r}
+download.file('http://data.dmlc.ml/data/Inception.zip', destfile = 'Inception.zip')
+unzip("Inception.zip")
 model <- mx.model.load("Inception/Inception_BN", iteration = 39)
 ```
 
@@ -45,8 +42,8 @@ We also need to load in the mean image, which is used for preprocessing using ``
 mean.img <- as.array(mx.nd.load("Inception/mean_224.nd")[["mean_img"]])
 ```
 
-Load and Preprocess the Image
------------------------------
+## Load and Preprocess the Image
+
 Now we are ready to classify a real image. In this example, we simply take the parrots image
 from imager package. But you can always change it to other images.
 
@@ -91,8 +88,8 @@ We use the defined preprocessing function to get the normalized image.
 normed <- preproc.image(im, mean.img)
 ```
 
-Classify the Image
-------------------
+## Classify the Image
+
 Now we are ready to classify the image! We can use the predict function
 to get the probability over classes.
 
@@ -105,6 +102,7 @@ As you can see ```prob``` is a 1 times 1000 array, which gives the probability
 over the 1000 image classes of the input.
 
 We can use the ```max.col``` on the transpose of prob. get the class index.
+
 ```{r}
 max.idx <- max.col(t(prob))
 max.idx
@@ -126,8 +124,8 @@ print(paste0("Predicted Top-class: ", synsets[[max.idx]]))
 Actually I do not know what does the word mean when I saw it.
 So I searched on the web to check it out.. and hmm it does get the right answer :)
 
-Extract features
-------------------
+## Extract features
+
 
 Besides the final classification results, we can also extract the internal features.
 We need to get feature layer symbol out of internals first. Here we use `global_pool_output`
@@ -157,6 +155,10 @@ dim(global_pooling_feature)
 ```
 
 
-Reference
----------
+## Reference
+
+
 [1] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating deep network training by reducing internal covariate shift." arXiv preprint arXiv:1502.03167 (2015).
+
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

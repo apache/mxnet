@@ -126,20 +126,20 @@ class KVStoreDist : public KVStoreLocal {
         recv_buf = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_,
                            true, grouped_vals[i][0]->dtype());
       }
-#if MKL_EXPERIMENTAL == 1
-      mkl_set_tblob_eager_mode(recv_buf.data());
-#endif
-      real_t* data = static_cast<real_t*>(recv_buf.data().dptr_);
-      size_t size = recv_buf.shape().Size();
-      auto pull_from_servers = [this, key, data, size](
+      auto pull_from_servers = [this, key, recv_buf](
           RunContext rctx, Engine::CallbackOnComplete cb) {
         // convert to ps keys
+        size_t size = recv_buf.shape().Size();
         PSKV& pskv = EncodeKey(key, size);
-
-        // issue pull, false means no delete
+#if MKL_EXPERIMENTAL == 1
+        mkl_set_tblob_eager_mode(recv_buf.data());
+#endif
+        real_t* data = static_cast<real_t*>(recv_buf.data().dptr_);
+        // false means not to delete data when SArray is deleted
         auto vals = new ps::SArray<real_t>(data, size, false);
+        // issue pull
         CHECK_NOTNULL(ps_worker_)->ZPull(
-        pskv.keys, vals, &pskv.lens, kDefaultPushPull, [vals, cb](){ delete vals; cb(); });
+          pskv.keys, vals, &pskv.lens, kDefaultPushPull, [vals, cb](){ delete vals; cb(); });
       };
 
       CHECK_NOTNULL(Engine::Get())->PushAsync(
@@ -278,7 +278,7 @@ class KVStoreDist : public KVStoreLocal {
       } else {
         if (send_buf.is_none()) {
           if (storage_type == kDefaultStorage) {
-            send_buf = NDArray(merged.shape(), pinned_ctx_, false, merged.dtype());
+            send_buf = NDArray(merged.shape(), pinned_ctx_, true, merged.dtype());
           } else {
             send_buf = NDArray(storage_type, merged.shape(), pinned_ctx_, true, merged.dtype());
           }
@@ -288,20 +288,20 @@ class KVStoreDist : public KVStoreLocal {
 
       // push to servers
       if (storage_type == kDefaultStorage) {
-        send_buf.WaitToRead();
-        size_t size = send_buf.shape().Size();
-#if MKL_EXPERIMENTAL == 1
-        mkl_set_tblob_eager_mode(send_buf.data());
-#endif
-        real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
-        auto push_to_servers =
-            [this, key, data, size](RunContext rctx, Engine::CallbackOnComplete cb) {
-           // convert to ps keys
+      auto push_to_servers =
+          [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
+          // convert to ps keys
+          size_t size = send_buf.shape().Size();
           PSKV& pskv = EncodeKey(key, size);
+
+#if MKL_EXPERIMENTAL == 1
+          mkl_set_tblob_eager_mode(send_buf.data());
+#endif
+          real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
           // do push. false means no delete
           ps::SArray<real_t> vals(data, size, false);
           CHECK_NOTNULL(ps_worker_)->ZPush(
-          pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
+              pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
         };
         Engine::Get()->PushAsync(
             push_to_servers,

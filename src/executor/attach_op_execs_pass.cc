@@ -50,26 +50,35 @@ class StorageFallbackOpExecutor : public OpExecutor {
       : mutate_idx_(mutate_idx) {}
 
   void Setup() override {
-    using namespace common;
-    in_data_.clear(); out_data_.clear();
-    pre_temp_src_.clear(); pre_temp_dst_.clear();
-    post_temp_src_.clear(); post_temp_dst_.clear();
-    in_temp_idx_map_.clear();
-    SetupDefaultBlobs(in_array, &in_data_, &pre_temp_src_, &pre_temp_dst_, &in_temp_idx_map_);
-    SetupDefaultBlobs(out_array, &out_data_, &post_temp_dst_, &post_temp_src_);
-    for (const auto idx : mutate_idx_) {
-      auto map_iter = in_temp_idx_map_.find(idx);
-      if (map_iter != in_temp_idx_map_.end()) {
-        post_temp_src_.push_back(pre_temp_dst_[map_iter->second]);
-        post_temp_dst_.push_back(in_array[idx]);
-      }
-    }
+    init_ = false;
   }
 
  protected:
+  // initialize the data blobs
+  void InitBlobs() {
+    using namespace common;
+    if (!init_) {
+      in_data_.clear(); out_data_.clear();
+      pre_temp_src_.clear(); pre_temp_dst_.clear();
+      post_temp_src_.clear(); post_temp_dst_.clear();
+      in_temp_idx_map_.clear();
+      SetupDefaultBlobs(in_array, &in_data_, &pre_temp_src_, &pre_temp_dst_, &in_temp_idx_map_);
+      SetupDefaultBlobs(out_array, &out_data_, &post_temp_dst_, &post_temp_src_);
+      for (const auto idx : mutate_idx_) {
+        auto map_iter = in_temp_idx_map_.find(idx);
+        if (map_iter != in_temp_idx_map_.end()) {
+          post_temp_src_.push_back(pre_temp_dst_[map_iter->second]);
+          post_temp_dst_.push_back(in_array[idx]);
+        }
+      }
+      init_ = true;
+    }
+  }
+
   // storage fallback before fcompute is launched
   void PreFCompute(bool is_gpu) {
     using namespace common;
+    InitBlobs();
     if (is_gpu) {
 #if MXNET_USE_CUDA
       CastNonDefaultStorage<gpu>(pre_temp_src_, pre_temp_dst_, op_ctx);
@@ -105,6 +114,8 @@ class StorageFallbackOpExecutor : public OpExecutor {
   std::unordered_map<uint32_t, uint32_t> in_temp_idx_map_;
   // indices of mutatable inputs
   std::vector<uint32_t> mutate_idx_;
+  // whether blobs are initialized
+  bool init_;
 };
 
 

@@ -20,7 +20,7 @@
 """ losses for training neural networks """
 from __future__ import absolute_import
 
-from .. import symbol, ndarray
+from .. import ndarray
 from ..base import numeric_types
 from .block import HybridBlock
 
@@ -54,6 +54,11 @@ def _apply_weighting(F, loss, weight=None, sample_weight=None):
 
     return loss
 
+def _reshape_label_as_output(F, output, label):
+    # for symbolic output.shape is not available so we reshape
+    # to empty shape and let it be inferred from output's shape
+    # via the '-' operator later.
+    return label.reshape(output.shape) if F is ndarray else label.reshape(())
 
 class Loss(HybridBlock):
     """Base class for loss.
@@ -113,13 +118,8 @@ class L2Loss(Loss):
         super(L2Loss, self).__init__(weight, batch_axis, **kwargs)
 
     def hybrid_forward(self, F, output, label, sample_weight=None):
-        if F is ndarray:
-            loss = ndarray.square(output - label.reshape(output.shape))
-        else:
-            # for symbolic output.shape is not available so we reshape
-            # to empty shape and let it be inferred from output's shape
-            # via the '-' operator later.
-            loss = symbol.square(output - label.reshape(()))
+        label = _reshape_label_as_output(F, output, label)
+        loss = F.square(output - label)
         loss = _apply_weighting(F, loss, self._weight/2, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
@@ -148,19 +148,56 @@ class L1Loss(Loss):
         super(L1Loss, self).__init__(weight, batch_axis, **kwargs)
 
     def hybrid_forward(self, F, output, label, sample_weight=None):
-        if F is ndarray:
-            loss = ndarray.abs(output - label.reshape(output.shape))
-        else:
-            # for symbolic output.shape is not available so we reshape
-            # to empty shape and let it be inferred from output's shape
-            # via the '-' operator later.
-            loss = symbol.abs(output - label.reshape(()))
+        label = _reshape_label_as_output(F, output, label)
+        loss = F.abs(output - label)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
+class SigmoidBinaryCrossEntropyLoss(Loss):
+    r"""The cross-entropy loss for binary classification. (alias: SigmoidBCELoss)
+
+    BCE loss is useful when training logistic regression.
+
+    .. math::
+        loss(o, t) = - 1/n \sum_i (t[i] * log(o[i]) + (1 - t[i]) * log(1 - o[i]))
+
+
+    Parameters
+    ----------
+    from_sigmoid : bool, default is `False`
+        Whether the input is from the output of sigmoid. Set this to false will make
+        the loss calculate sigmoid and then BCE, which is more numerically stable through
+        log-sum-exp trick.
+    weight : float or None
+        Global scalar weight for loss.
+    sample_weight : Symbol or None
+        Per sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has
+        shape (64, 10) and you want to weight each sample
+        in the batch, `sample_weight` should have shape (64, 1).
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+    """
+    def __init__(self, from_sigmoid=False, weight=None, batch_axis=0, **kwargs):
+        super(SigmoidBinaryCrossEntropyLoss, self).__init__(weight, batch_axis, **kwargs)
+        self._from_sigmoid = from_sigmoid
+
+    def hybrid_forward(self, F, output, label, sample_weight=None):
+        label = _reshape_label_as_output(F, output, label)
+        if not self._from_sigmoid:
+            max_val = F.maximum(-output, 0)
+            loss = output - output*label + max_val + F.log(F.exp(-max_val)+F.exp(-output-max_val))
+        else:
+            loss = -(F.log(output+1e-8)*label + F.log(1.-output+1e-8)*(1.-label))
+        loss = _apply_weighting(F, loss, self._weight, sample_weight)
+        return F.mean(loss, axis=self._batch_axis, exclude=True)
+
+SigmoidBCELoss = SigmoidBinaryCrossEntropyLoss
+
+
 class SoftmaxCrossEntropyLoss(Loss):
-    """Computes the softmax cross entropy loss.
+    """Computes the softmax cross entropy loss. (alias: SoftmaxCELoss)
 
     If `sparse_label` is `True`, label should contain integer category indicators:
 
@@ -215,6 +252,8 @@ class SoftmaxCrossEntropyLoss(Loss):
             loss = -F.sum(output*label, axis=self._axis, keepdims=True)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
+
+SoftmaxCELoss = SoftmaxCrossEntropyLoss
 
 
 class KLDivLoss(Loss):

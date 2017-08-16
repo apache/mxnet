@@ -1,13 +1,9 @@
-MXNet R Tutorial for Callback Function
-======================================
+# Customized callback function
 
 This vignette gives users a guideline for using and writing callback functions,
 which can be very useful in model training. 
 
-This tutorial is written in Rmarkdown. You can find the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/CallbackFunctionTutorial.Rmd)
-
-Model training example
-----------
+## Model training example
 
 Let's begin from a small example. We can build and train a model using the following code:
 
@@ -32,8 +28,8 @@ model <- mx.model.FeedForward.create(
 
 Besides, we provide two optional parameters, `batch.end.callback` and `epoch.end.callback`, which can provide great flexibility in model training.
 
-How to use callback functions
----------
+## How to use callback functions
+
 
 Two callback functions are provided in this package:
 
@@ -76,8 +72,8 @@ head(logger$train)
 head(logger$eval)
 ```
 
-How to write your own callback functions
-----------
+## How to write your own callback functions
+
 
 You can find the source code for two callback functions from [here](https://github.com/dmlc/mxnet/blob/master/R-package/R/callback.R) and they can be used as your template:
 
@@ -159,3 +155,6 @@ model <- mx.model.FeedForward.create(
 ```
 
 You can see once the validation metric goes below the threshold we set, the training process will stop early.
+
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

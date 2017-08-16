@@ -84,6 +84,11 @@ def test_basic():
     assert x.shape == (32, 32)
     x.wait_to_read()
 
+    model.collect_params().setattr('grad_req', 'null')
+    assert list(model.collect_params().values())[0]._grad is None
+    model.collect_params().setattr('grad_req', 'write')
+    assert list(model.collect_params().values())[0]._grad is not None
+
 
 def test_symbol_block():
     model = nn.HybridSequential()
@@ -108,14 +113,18 @@ def test_symbol_block():
 
 def check_layer_forward(layer, dshape):
     layer.collect_params().initialize()
+    x = mx.nd.ones(shape=dshape)
+    x.attach_grad()
     with mx.autograd.record():
-        out = layer(mx.nd.ones(shape=dshape))
+        out = layer(x)
     out.backward()
 
     layer.hybridize()
 
+    x = mx.nd.ones(shape=dshape)
+    x.attach_grad()
     with mx.autograd.record():
-        out = layer(mx.nd.ones(shape=dshape))
+        out = layer(x)
     out.backward()
 
 def test_conv():
