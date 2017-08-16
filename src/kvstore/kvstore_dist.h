@@ -232,17 +232,15 @@ class KVStoreDist : public KVStoreLocal {
       }
 
       // push to servers
-      send_buf.WaitToRead();
-      size_t size = send_buf.shape().Size();
-#if MKL_EXPERIMENTAL == 1
-      mkl_set_tblob_eager_mode(send_buf.data());
-#endif
-      real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
       auto push_to_servers =
-          [this, key, data, size](RunContext rctx, Engine::CallbackOnComplete cb) {
+          [this, key, &send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
+        size_t size = send_buf.shape().Size();
+#if MKL_EXPERIMENTAL == 1
+        mkl_set_tblob_eager_mode(send_buf.data());
+#endif
+        real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
          // convert to ps keys
         PSKV& pskv = EncodeKey(key, size);
-
         // do push. false means no delete
         ps::SArray<real_t> vals(data, size, false);
         CHECK_NOTNULL(ps_worker_)->ZPush(
