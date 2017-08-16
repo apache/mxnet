@@ -129,8 +129,9 @@ class KVStoreDist : public KVStoreLocal {
         mkl_set_tblob_eager_mode(recv_buf.data());
 #endif
         real_t* data = static_cast<real_t*>(recv_buf.data().dptr_);
+        // false means not to delete data when SArray is deleted
         auto vals = new ps::SArray<real_t>(data, size, false);
-        // issue pull, false means no delete
+        // issue pull
         CHECK_NOTNULL(ps_worker_)->ZPull(
             pskv.keys, vals, &pskv.lens, 0, [vals, cb](){ delete vals; cb(); });
       };
