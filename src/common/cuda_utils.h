@@ -153,6 +153,16 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
   return "Unknown cuRAND status";
 }
 
+template <typename DType>
+inline DType __device__ CudaMax(DType a, DType b) {
+    return a > b ? a : b;
+}
+
+template <typename DType>
+inline DType __device__ CudaMin(DType a, DType b) {
+    return a < b ? a : b;
+}
+
 }  // namespace cuda
 }  // namespace common
 }  // namespace mxnet
@@ -218,6 +228,14 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
     CHECK_EQ(e, CURAND_STATUS_SUCCESS)                          \
         << "cuRAND: " << common::cuda::CurandGetErrorString(e); \
   }
+
+#if !defined(_MSC_VER)
+#define CUDA_UNROLL _Pragma("unroll")
+#define CUDA_NOUNROLL _Pragma("nounroll")
+#else
+#define CUDA_UNROLL
+#define CUDA_NOUNROLL
+#endif
 
 /*!
  * \brief Determine major version number of the gpu's cuda compute architecture.
@@ -291,7 +309,6 @@ inline bool GetEnvAllowTensorCore() {
   return dmlc::GetEnv("MXNET_CUDA_ALLOW_TENSOR_CORE",
                       dmlc::optional<bool>(default_value)).value();
 }
-
 #endif  // MXNET_USE_CUDA
 
 #if MXNET_USE_CUDNN
@@ -400,6 +417,15 @@ static inline __device__ void atomicAdd(mshadow::half::half_t *address,
               : (old & 0xffff0000) | hsum.half_;
     old = atomicCAS(address_as_ui, assumed, old);
   } while (assumed != old);
+}
+
+template <typename DType>
+__device__ inline DType ldg(const DType* address) {
+#if __CUDA_ARCH__ >= 350
+    return __ldg(address);
+#else
+    return *address;
+#endif
 }
 #endif
 
