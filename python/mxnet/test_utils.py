@@ -175,7 +175,6 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
         col_max = col_max * 2
 
     if unused_nnz > 0:
-        #return mx.nd.array(sp.random(num_rows, num_cols, density).toarray()).tostype("csr")
         raise ValueError("not supported for this density: %s"
                          " for this shape (%s,%s)" % (density, num_rows, num_cols))
     else:
@@ -244,11 +243,12 @@ def rand_sparse_ndarray(shape, stype, density=None, distribution="uniform", dtyp
         assert(False), "unknown storage type"
 
 
-def rand_ndarray(shape, stype, density=None, dtype=None):
+def rand_ndarray(shape, stype, density=None, dtype=None, distribution=None):
     if stype == 'default':
         arr = mx.nd.array(random_arrays(shape), dtype=dtype)
     else:
-        arr, _ = rand_sparse_ndarray(shape, stype, density=density, dtype=dtype)
+        arr, _ = rand_sparse_ndarray(shape, stype, density=density, dtype=dtype,
+                                     distribution=distribution)
     return arr
 
 
