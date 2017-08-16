@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 from mxnet.test_utils import *
 import time
 import argparse
@@ -27,6 +44,8 @@ parser.add_argument('--num-gpu', type=int, default=0,
                          'otherwise, use gpu(0),...,gpu(num_gpu-1)')
 parser.add_argument('--output-dim', type=int, default=4,
                     help='number of columns of the forward output')
+parser.add_argument('--dummy-metric', type=int, default=0,
+                    help='whether to call update_metric')
 
 
 def get_libsvm_data(data_dir, data_name, url, data_origin_name):
@@ -176,6 +195,7 @@ if __name__ == '__main__':
     # weight_array bound to executors of the contexts
     weight_array = mod._exec_group.param_arrays[index]
 
+    mx.nd.waitall()  # sync point for initialization
     # start profiler
     if profiler:
         device = 'cpu'
@@ -215,7 +235,10 @@ if __name__ == '__main__':
             except StopIteration:
                 end_of_batch = True
             # accumulate prediction accuracy
-            mod.update_metric(metric, batch.label)
+            if args.dummy_metric == 0:
+                mod.update_metric(metric, batch.label)
+            else:  # call waitall to replace update_metric as sync point
+                mx.nd.waitall()  # sync point for the current minibatch
         logging.info('epoch %d, %s' % (epoch, metric.get()))
         if epoch == 0:
             print "num_batches = ", nbatch
