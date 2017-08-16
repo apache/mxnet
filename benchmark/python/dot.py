@@ -296,7 +296,7 @@ def test_dot_synthetic(data_dict):
             lhs_nd = sp.csr_matrix(lhs_nd.asnumpy())
             rhs_nd = rhs_nd.asnumpy()
             # One warm up run, verify correctness
-            lhs_nd_copy = sp.spmatrix.transpose(lhs_nd)
+            lhs_nd_copy = sp.spmatrix.transpose(lhs_nd) if trans_lhs else lhs_nd
             out = dot_func_sparse(lhs_nd_copy, rhs_dns)
             sparse_cost = measure_cost(num_repeat, trans_lhs, False, dot_func_sparse, lhs_nd, rhs_nd)
             dense_cost = measure_cost(num_repeat, trans_lhs, True, dot_func_dense, lhs_dns, rhs_dns)
