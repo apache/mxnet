@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 #include "mxnet-cpp/optimizer.h"
-#include "mxnet-cpp/op.h"
+#include "mxnet-cpp/operator.h"
 #include "mxnet-cpp/op_map.h"
 
 namespace {
