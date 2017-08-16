@@ -39,7 +39,7 @@ from ..base import mx_uint, NDArrayHandle, check_call
 from ..context import Context
 from . import _internal
 from .ndarray import _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
-from .ndarray import _STORAGE_TYPE_STR_TO_ID
+from .ndarray import _STORAGE_TYPE_STR_TO_ID, NDArrayBase
 from .ndarray import NDArray, _storage_type, _zeros_ndarray, _array
 from . import cast_storage
 from . import slice as nd_slice
@@ -49,15 +49,15 @@ from . import slice as nd_slice
 # pylint: disable=unused-import
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from .._ctypes.ndarray import NDArrayBase, _set_ndarray_class
+        from .._ctypes.ndarray import _set_ndarray_class
     elif _sys.version_info >= (3, 0):
-        from .._cy3.ndarray import NDArrayBase, _set_ndarray_class
+        from .._cy3.ndarray import _set_ndarray_class
     else:
-        from .._cy2.ndarray import NDArrayBase, _set_ndarray_class
+        from .._cy2.ndarray import _set_ndarray_class
 except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
-    from .._ctypes.ndarray import NDArrayBase, _set_ndarray_class
+    from .._ctypes.ndarray import _set_ndarray_class
 
 # pylint: enable=unused-import
 _STORAGE_AUX_TYPES = {

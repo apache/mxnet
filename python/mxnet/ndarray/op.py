@@ -29,21 +29,18 @@ from ..ndarray_doc import _build_doc
 # pylint: disable=unused-import
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from .._ctypes.ndarray import NDArrayBase, _set_ndarray_class, _STORAGE_TYPE_ID_TO_STR
+        from .._ctypes.ndarray import NDArrayBase, _STORAGE_TYPE_ID_TO_STR
         from .._ctypes.ndarray import CachedOp, _imperative_invoke
     elif _sys.version_info >= (3, 0):
-        from .._cy3.ndarray import NDArrayBase, _set_ndarray_class,\
-            _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
+        from .._cy3.ndarray import NDArrayBase, _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
         from .._cy3.ndarray import CachedOp, _imperative_invoke
     else:
-        from .._cy2.ndarray import NDArrayBase, _set_ndarray_class,\
-            _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
+        from .._cy2.ndarray import NDArrayBase, _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
         from .._cy2.ndarray import CachedOp, _imperative_invoke
 except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
-    from .._ctypes.ndarray import NDArrayBase, _set_ndarray_class,\
-        _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
+    from .._ctypes.ndarray import NDArrayBase, _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
     from .._ctypes.ndarray import CachedOp, _imperative_invoke
 
 from ..base import mx_uint, check_call, _LIB, py_str, OpHandle, c_str, _Null
