@@ -1,18 +1,8 @@
----
-title: "Customized loss function"
-output:
-  md_document:
-    variant: markdown_github
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+# Customized loss function
 
 This tutorial provides guidelines for using customized loss function in network construction.
 
-Model Training Example
-----------
+## Model Training Example
 
 Let's begin with a small regression example. We can build and train a regression model with the following code:
 
@@ -56,8 +46,7 @@ Besides the `LinearRegressionOutput`, we also provide `LogisticRegressionOutput`
 However, this might not be enough for real-world models. You can provide your own loss function
 by using `mx.symbol.MakeLoss` when constructing the network.
 
-How to Use Your Own Loss Function
----------
+## How to Use Your Own Loss Function
 
 We still use our previous example, but this time we use `mx.symbol.MakeLoss` to minimize the `(pred-label)^2`
 
@@ -157,3 +146,6 @@ pred6 <- predict(model6, test.x)
 sum(abs(test.y - pred6[1,])) / length(test.y)
 ```
 
+We got the same result as expected.
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

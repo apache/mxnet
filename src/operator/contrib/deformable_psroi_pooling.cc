@@ -102,7 +102,7 @@ namespace op {
 
   MXNET_REGISTER_OP_PROPERTY(_contrib_DeformablePSROIPooling, DeformablePSROIPoolingProp)
     .describe("Performs deformable position-sensitive region-of-interest pooling on inputs."
-      "The DeformablePSROIPooling operation is described in https://arxiv.org/abs/1703.06211."
+      "The DeformablePSROIPooling operation is described in https://arxiv.org/abs/1703.06211 ."
       "batch_size will change to the number of region bounding boxes after DeformablePSROIPooling")
     .add_argument("data", "Symbol", "Input data to the pooling operator, a 4D Feature maps")
     .add_argument("rois", "Symbol", "Bounding box coordinates, a 2D array of "

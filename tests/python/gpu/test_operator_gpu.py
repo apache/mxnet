@@ -1336,6 +1336,17 @@ def test_sequence_reverse():
     check_sequence_reverse(mx.gpu(0))
 
 
+def test_autograd_save_memory():
+    x = mx.nd.zeros((128, 1024, 1024), ctx=mx.gpu(0))
+    x.attach_grad()
+
+    with mx.autograd.record():
+        for i in range(50):
+            x = x + 1
+            x.wait_to_read()
+    x.backward()
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
