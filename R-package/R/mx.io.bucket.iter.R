@@ -1,4 +1,3 @@
-library(mxnet)
 
 BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "batch.size", 
                                                    "data.mask.element", "shuffle", "bucket.plan", "bucketID", "epoch", "batch", "batch.per.bucket", 

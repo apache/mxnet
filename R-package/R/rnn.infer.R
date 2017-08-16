@@ -1,14 +1,17 @@
-library(mxnet)
-
-source("rnn.R")
-
-mx.rnn.infer.buckets <- function(infer_iter, model, ctx = mx.cpu(), 
-                                 verbose=T) {
+# 
+#' Inference of RNN model
+#'
+#' @param infer.data Data iterator created by mx.io.bucket.iter
+#' @param model Model used for inference
+#' @param ctx The element to mask
+#'
+#' @export
+mx.rnn.infer.buckets <- function(infer.data, model, ctx = mx.cpu()) {
   
   ### Initialise the iterator
-  infer_iter$reset()
-  infer_iter$iter.next()
-  batch_size <- infer_iter$batch.size
+  infer.data$reset()
+  infer.data$iter.next()
+  batch_size <- infer.data$batch.size
   
   if (is.null(ctx)) 
     ctx <- mx.ctx.default()
@@ -23,12 +26,12 @@ mx.rnn.infer.buckets <- function(infer_iter, model, ctx = mx.cpu(),
   
   input.names <- c("data", "seq.mask")
   input.shape <- sapply(input.names, function(n) {
-    dim(infer_iter$value()[[n]])
+    dim(infer.data$value()[[n]])
   }, simplify = FALSE)
   
   output.names <- "label"
   output.shape <- sapply(output.names, function(n) {
-    dim(infer_iter$value()[[n]])
+    dim(infer.data$value()[[n]])
   }, simplify = FALSE)
   
   arg.params <- model$arg.params
@@ -54,11 +57,11 @@ mx.rnn.infer.buckets <- function(infer_iter, model, ctx = mx.cpu(),
   # dimension by device nb
   
   packer <- mxnet:::mx.nd.arraypacker()
-  infer_iter$reset()
-  while (infer_iter$iter.next()) {
+  infer.data$reset()
+  while (infer.data$iter.next()) {
     
     # Get input data slice
-    dlist <- infer_iter$value()  #[input.names]
+    dlist <- infer.data$value()  #[input.names]
     
     execs <- mxnet:::mx.symbol.bind(symbol = symbol, arg.arrays = c(dlist, execs$arg.arrays[arg.names])[arg_update_idx], 
                                     aux.arrays = execs$aux.arrays, ctx = ctx[[1]], grad.req = grad_req)
@@ -66,12 +69,12 @@ mx.rnn.infer.buckets <- function(infer_iter, model, ctx = mx.cpu(),
     mx.exec.forward(execs, is.train = FALSE)
     
     out.pred <- mx.nd.copyto(execs$ref.outputs[[1]], mx.cpu())
-    padded <- infer_iter$num.pad()
+    padded <- infer.data$num.pad()
     oshape <- dim(out.pred)
     ndim <- length(oshape)
     packer$push(mx.nd.slice.axis(data = out.pred, axis = 0, begin = 0, end = oshape[[ndim]] - padded))
     
   }
-  infer_iter$reset()
+  infer.data$reset()
   return(packer$get())
 }

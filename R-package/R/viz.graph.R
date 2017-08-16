@@ -45,6 +45,7 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
       "MAERegressionOutput"=,
       "SVMOutput"=,
       "LogisticRegressionOutput"=,
+      "MakeLoss"=,
       "SoftmaxOutput" = "#b3de69",
       "#fccde5" # default value
     )

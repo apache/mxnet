@@ -1,6 +1,7 @@
-library(mxnet)
-
-# RNN graph design
+# 
+#' Generate a RNN symbolic model
+#'
+#' @export
 rnn.graph <- function(num.rnn.layer, 
                       input.size,
                       num.embed, 
@@ -10,7 +11,7 @@ rnn.graph <- function(num.rnn.layer,
                       ignore_label = 0,
                       init.state = NULL,
                       config,
-                      cell.type="gru",
+                      cell.type,
                       masking = T,
                       output_last_state = F) {
   
@@ -71,53 +72,10 @@ rnn.graph <- function(num.rnn.layer,
   }
   
   if (output_last_state){
-    # group <- mx.symbol.Group(c(unlist(last.states), loss))
+    # WIP for one-to-one
+    # group <- mx.symbol.Group(loss, c(unlist(last.states)))
     # return(group)
     return(loss)
   } else return(loss)
 }
 
-
-
-# data <- mx.symbol.Variable("data")
-# reshape <- mx.symbol.reshape(data, shape=c(10, -1))
-# fc <- mx.symbol.FullyConnected(reshape, num.hidden = 2)
-# loss <- mx.symbol.SoftmaxOutput(fc)
-# 
-# graph.viz(loss, shape=c(10, 12, 64))
-# 
-# loss$infer.shape(list(data=c(10,12,64)))
-
-# RNN test
-# data <- mx.symbol.Variable("data")
-# embed.weight <- mx.symbol.Variable("embed.weight")
-# rnn.state.weight <- mx.symbol.Variable("rnn.state.weight")
-# rnn.params.weight <- mx.symbol.Variable("rnn.params.weight")
-# 
-# batch.size <- 32
-# seq.len <- 5
-# input.size <- 50
-# num.embed <- 8
-# num.hidden <- 10
-# seqidx <- 1
-# num.rnn.layer <- 2
-# 
-# data <- mx.symbol.transpose(data=data)
-# embed <- mx.symbol.Embedding(data=data, input_dim=input.size, weight=embed.weight, output_dim=num.embed, name="embed")
-# rnn <- mx.symbol.RNN(data=embed, state=rnn.state.weight, parameters=rnn.params.weight, state.size=num.hidden, num.layers=num.rnn.layer, bidirectional=F, mode=cell.type, state.outputs=T, p=dropout, name=paste(cell.type, num.rnn.layer, "layer", seqidx, sep="_"))
-# last.state <- mx.symbol.SequenceLast(rnn[[1]])
-# 
-# rnn$infer.shape(list(data=c(5, 32)))
-# rnn$infer.shape(list(data=c(32, 5)))
-# 
-# last.state$infer.shape(list(data=c(5, 32)))
-# last.state$infer.shape(list(data=c(32, 5)))
-# 
-# embed$infer.shape(list(data=c(5, 32)))
-# embed$infer.shape(list(data=c(32, 5)))
-# 
-# embed <- mx.symbol.Embedding(data=data, input_dim=input.size, weight=embed.weight, output_dim=num.embed, name="embed")
-# wordvec <- mx.symbol.split(data=embed, axis=1, num.outputs=seq.len, squeeze_axis=F)
-# rnn <- mx.symbol.RNN(data=wordvec[[1]], state=rnn.state.weight, parameters=rnn.params.weight, state.size=num.hidden, num.layers=num.rnn.layer, bidirectional=F, mode=cell.type, state.outputs=T, p=dropout, name=paste(cell.type, num.rnn.layer, "layer", seqidx, sep="_"))
-# last.state <- mx.symbol.SequenceLast(rnn[[1]])
-# rnn$infer.shape(list(data=c(5, 32)))
