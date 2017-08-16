@@ -375,8 +375,6 @@ int MXNDArrayGetData(NDArrayHandle handle,
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
-    CHECK(arr->ctx().dev_mask() == cpu::kDevMask)
-        << "MXNDArrayGetData can only be called for NDArray on CPU";
     const TBlob &b = arr->data();
     CHECK(b.CheckContiguous());
     MSHADOW_REAL_TYPE_SWITCH(arr->dtype(), DType, {
