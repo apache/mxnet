@@ -324,8 +324,7 @@ inline bool GetEnvAllowTensorCore() {
 inline cublasMath_t SetCublasMathMode(cublasHandle_t blas_handle, cublasMath_t new_math_type) {
   auto handle_math_mode = CUBLAS_DEFAULT_MATH;
   CUBLAS_CALL(cublasGetMathMode(blas_handle, &handle_math_mode));
-  if (handle_math_mode != new_math_type)
-    CUBLAS_CALL(cublasSetMathMode(blas_handle, new_math_type));
+  CUBLAS_CALL(cublasSetMathMode(blas_handle, new_math_type));
   return handle_math_mode;
 }
 #endif

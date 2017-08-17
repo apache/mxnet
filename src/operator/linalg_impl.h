@@ -125,39 +125,39 @@ void linalg_gemm<gpu, mshadow::half::half_t>(const Tensor<gpu, 2, mshadow::half:
   CHECK_NOTNULL(s);
   check_gemm(A, B, C, alpha, beta, tA, tB);
 
-  #if CUDA_VERSION >= 7050
-    auto blas_handle = Stream<gpu>::GetBlasHandle(s);
-    #if CUDA_VERSION >= 9000
-      auto cublas_math_mode = GetEnvAllowTensorCore() ? CUBLAS_TENSOR_OP_MATH
-                                                      : CUBLAS_DEFAULT_MATH;
-      auto previous_math_mode = SetCublasMathMode(blas_handle, cublas_math_mode);
-    #endif
+#if CUDA_VERSION >= 7050
+  auto blas_handle = Stream<gpu>::GetBlasHandle(s);
+#if CUDA_VERSION >= 9000
+  auto cublas_math_mode = GetEnvAllowTensorCore() ? CUBLAS_TENSOR_OP_MATH
+                                                  : CUBLAS_DEFAULT_MATH;
+  auto previous_math_mode = SetCublasMathMode(blas_handle, cublas_math_mode);
+#endif
 
-    // pseudo-fp16 (fp32 math with fp16 I/O)
-    float alpha_f = float(alpha);  // NOLINT(*)
-    float beta_f = float(beta);  // NOLINT(*)
+  // pseudo-fp16 (fp32 math with fp16 I/O)
+  float alpha_f = float(alpha);  // NOLINT(*)
+  float beta_f = float(beta);  // NOLINT(*)
 
-    // As of cuda8, cublas adopted the cuda datatype, rather than maintaining its own datatype.
-    #if CUDA_VERSION >= 8000
-      cudaDataType_t half_datatype = CUDA_R_16F;
-    #else
-      cublasDataType_t half_datatype = CUBLAS_DATA_HALF;
-    #endif
-    CUBLAS_CALL(cublasSgemmEx(blas_handle,
-                              (tB ? CUBLAS_OP_T : CUBLAS_OP_N),
-                              (tA ? CUBLAS_OP_T : CUBLAS_OP_N),
-                              C.size(1), C.size(0), (tB ? B.size(1) : B.size(0)),
-                              &alpha_f,
-                              B.dptr_, half_datatype, B.stride_,
-                              A.dptr_, half_datatype, A.stride_,
-                              &beta_f,
-                              C.dptr_, half_datatype, C.stride_));
-    #if CUDA_VERSION >= 9000
-      SetCublasMathMode(blas_handle, previous_math_mode);
-    #endif
-  #else
-    LOG(FATAL) << "FP16 gemm requires CUDA version >= 7.5!";
-  #endif  // CUDA_VERSION >= 7050
+  // As of cuda8, cublas adopted the cuda datatype, rather than maintaining its own datatype.
+#if CUDA_VERSION >= 8000
+  cudaDataType_t half_datatype = CUDA_R_16F;
+#else
+  cublasDataType_t half_datatype = CUBLAS_DATA_HALF;
+#endif
+  CUBLAS_CALL(cublasSgemmEx(blas_handle,
+                            (tB ? CUBLAS_OP_T : CUBLAS_OP_N),
+                            (tA ? CUBLAS_OP_T : CUBLAS_OP_N),
+                            C.size(1), C.size(0), (tB ? B.size(1) : B.size(0)),
+                            &alpha_f,
+                            B.dptr_, half_datatype, B.stride_,
+                            A.dptr_, half_datatype, A.stride_,
+                            &beta_f,
+                            C.dptr_, half_datatype, C.stride_));
+#if CUDA_VERSION >= 9000
+  SetCublasMathMode(blas_handle, previous_math_mode);
+#endif
+#else
+  LOG(FATAL) << "FP16 gemm requires CUDA version >= 7.5!";
+#endif  // CUDA_VERSION >= 7050
 }
 
 
