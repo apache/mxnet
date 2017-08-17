@@ -29,6 +29,8 @@
 #include "./cudnn_convolution-inl.h"
 #endif  // MXNET_USE_CUDNN
 
+#include "./depthwise_convolution-inl.h"
+
 namespace mxnet {
 namespace op {
 
@@ -45,6 +47,18 @@ Operator* CreateOp<gpu>(ConvolutionParam param, int dtype,
     })
     return op;
   }
+
+  // depth wise conv
+  if (param.num_filter == param.num_group &&
+      param.layout.value() == mshadow::kNCHW &&
+      param.num_filter == (*in_shape)[conv::kData][1] &&
+      param.kernel.ndim() == 2 &&
+      param.dilate == mshadow::Shape2(1, 1) &&
+      dtype == mshadow::kFloat32) {
+    op = new DepthwiseConvolutionOp<float>(param, *in_shape, *out_shape);
+    return op;
+  }
+
 #if MXNET_USE_CUDNN == 1
   // The NVIDIA Pascal architecture was the first to include 16-bit ALUs.
   // Thus, when the framework is compiled with MSHADOW_USE_PASCAL == 1, we
