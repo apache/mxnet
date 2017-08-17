@@ -25,7 +25,7 @@ import mxnet as mx
 
 if __name__ == '__main__':
     # parse args
-    parser = argparse.ArgumentParser(description="train cifar10",
+    parser = argparse.ArgumentParser(description="train imagenet-1k",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     fit.add_fit_args(parser)
     data.add_data_args(parser)
