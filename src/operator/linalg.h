@@ -64,50 +64,11 @@ void linalg_batch_gemm(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DTyp
                        const Tensor<xpu, 3, DType>& C, DType alpha, DType beta,
                        bool tA, bool tB, Stream<xpu> *s = 0);
 
-// Class designed to wrap Tensor objects to mark whether they should be transposed.
-// Generally, users should create these objects by calling Transpose() functions below.
-template <typename T>
-class TransposeTensor {
- public:
-  explicit TransposeTensor(const T &self) : self_(self) {}
-  const T &tensor() const { return self_; }
- private:
-  const T &self_;
-};
-
-// Signatures for Transpose() for the two anticipated Tensor argument types.
-template<typename xpu, typename DType>
-inline TransposeTensor<Tensor<xpu, 2, DType>> Transpose(const Tensor<xpu, 2, DType> &self) {
-  return TransposeTensor<Tensor<xpu, 2, DType>>(self);
-}
-template<typename xpu, typename DType>
-inline TransposeTensor<Tensor<xpu, 3, DType>> Transpose(const Tensor<xpu, 3, DType> &self) {
-  return TransposeTensor<Tensor<xpu, 3, DType>>(self);
-}
-
-// 4 flavors of the linalg_gemm interface based on desire to transpose A and/or B.
 template<typename xpu, typename DType>
 inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
                         const Tensor<xpu, 2, DType>& B,
                         const Tensor<xpu, 2, DType>& C,
-                        Stream<xpu> *s = 0,
-                        mxnet::OpReqType req = mxnet::kWriteTo);
-template<typename xpu, typename DType>
-inline void linalg_gemm(const TransposeTensor<Tensor<xpu, 2, DType>>& A,
-                        const Tensor<xpu, 2, DType>& B,
-                        const Tensor<xpu, 2, DType>& C,
-                        Stream<xpu> *s = 0,
-                        mxnet::OpReqType req = mxnet::kWriteTo);
-template<typename xpu, typename DType>
-inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
-                        const TransposeTensor<Tensor<xpu, 2, DType>>& B,
-                        const Tensor<xpu, 2, DType>& C,
-                        Stream<xpu> *s = 0,
-                        mxnet::OpReqType req = mxnet::kWriteTo);
-template<typename xpu, typename DType>
-inline void linalg_gemm(const TransposeTensor<Tensor<xpu, 2, DType>>& A,
-                        const TransposeTensor<Tensor<xpu, 2, DType>>& B,
-                        const Tensor<xpu, 2, DType>& C,
+                        bool tA, bool tB,
                         Stream<xpu> *s = 0,
                         mxnet::OpReqType req = mxnet::kWriteTo);
 

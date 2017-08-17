@@ -332,40 +332,6 @@ inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
   }
 }
 
-// 4 flavors of the linalg_gemm interface based on desire to transpose A and/or B.
-template<typename xpu, typename DType>
-inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
-                        const Tensor<xpu, 2, DType>& B,
-                        const Tensor<xpu, 2, DType>& C,
-                        Stream<xpu> *s,
-                        mxnet::OpReqType req) {
-  linalg_gemm(A, B, C, false, false, s, req);
-}
-template<typename xpu, typename DType>
-inline void linalg_gemm(const TransposeTensor<Tensor<xpu, 2, DType>>& A,
-                        const Tensor<xpu, 2, DType>& B,
-                        const Tensor<xpu, 2, DType>& C,
-                        Stream<xpu> *s,
-                        mxnet::OpReqType req) {
-  linalg_gemm(A.tensor(), B, C, true, false, s, req);
-}
-template<typename xpu, typename DType>
-inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
-                        const TransposeTensor<Tensor<xpu, 2, DType>>& B,
-                        const Tensor<xpu, 2, DType>& C,
-                        Stream<xpu> *s,
-                        mxnet::OpReqType req) {
-  linalg_gemm(A, B.tensor(), C, false, true, s, req);
-}
-template<typename xpu, typename DType>
-inline void linalg_gemm(const TransposeTensor<Tensor<xpu, 2, DType>>& A,
-                        const TransposeTensor<Tensor<xpu, 2, DType>>& B,
-                        const Tensor<xpu, 2, DType>& C,
-                        Stream<xpu> *s,
-                        mxnet::OpReqType req) {
-  linalg_gemm(A.tensor(), B.tensor(), C, true, true, s, req);
-}
-
 //////////////////////////////// TRMM ////////////////////////////////////////////
 
 // CPU/GPU-versions of BLAS3 function "trmm". Please refer to the BLAS3-documentation
