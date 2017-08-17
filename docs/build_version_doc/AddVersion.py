@@ -86,6 +86,15 @@ if __name__ == '__main__':
                 outstr = outstr.replace('http://mxnet.io', 'https://mxnet.incubator.apache.org/'
                                                                'versions/%s' % (args.current_version))
 
+            # Fix git clone to specific tag
+            if args.current_version == 'master':
+                outstr = outstr.replace('git clone --recursive https://github.com/dmlc/mxnet',
+                                        'git clone --recursive https://github.com/apache/incubator-mxnet.git')
+            else:
+                outstr = outstr.replace('git clone --recursive https://github.com/dmlc/mxnet',
+                                        'git clone --recursive https://github.com/apache/incubator-mxnet.git '
+                                        '--branch %s' % (args.current_version))
+
             with open(os.path.join(path, name), "w") as outf:
                 outf.write(outstr)
 
