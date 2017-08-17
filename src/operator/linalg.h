@@ -26,6 +26,8 @@
 #define MXNET_OPERATOR_LINALG_H_
 
 #include <mshadow/tensor.h>
+#include <mxnet/op_attr_types.h>
+
 #include "./c_lapack_api.h"
 using namespace mshadow;
 
@@ -62,13 +64,53 @@ void linalg_batch_gemm(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DTyp
                        const Tensor<xpu, 3, DType>& C, DType alpha, DType beta,
                        bool tA, bool tB, Stream<xpu> *s = 0);
 
-// Useful interface for converting legacy 'dot()' and 'Assign()' usages.
+// Class designed to wrap Tensor objects to mark whether they should be transposed.
+// Generally, users should create these objects by calling Transpose() functions below.
+template <typename T>
+class TransposeTensor {
+ public:
+  explicit TransposeTensor(const T &self) : self_(self) {}
+  const T &tensor() const { return self_; }
+ private:
+  const T &self_;
+};
+
+// Signatures for Transpose() for the two anticipated Tensor argument types.
 template<typename xpu, typename DType>
-inline void assign_linalg_gemm(const Tensor<xpu, 2, DType>& C,
-                               mxnet::OpReqType req,
-                               const Tensor<xpu, 2, DType>& A,
-                               const Tensor<xpu, 2, DType>& B,
-                               bool transA, bool transB, Stream<xpu> *s = 0);
+inline TransposeTensor<Tensor<xpu, 2, DType>> Transpose(const Tensor<xpu, 2, DType> &self) {
+  return TransposeTensor<Tensor<xpu, 2, DType>>(self);
+}
+template<typename xpu, typename DType>
+inline TransposeTensor<Tensor<xpu, 3, DType>> Transpose(const Tensor<xpu, 3, DType> &self) {
+  return TransposeTensor<Tensor<xpu, 3, DType>>(self);
+}
+
+// 4 flavors of the linalg_gemm interface based on desire to transpose A and/or B.
+template<typename xpu, typename DType>
+inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
+                        const Tensor<xpu, 2, DType>& B,
+                        const Tensor<xpu, 2, DType>& C,
+                        Stream<xpu> *s = 0,
+                        mxnet::OpReqType req = mxnet::kWriteTo);
+template<typename xpu, typename DType>
+inline void linalg_gemm(const TransposeTensor<Tensor<xpu, 2, DType>>& A,
+                        const Tensor<xpu, 2, DType>& B,
+                        const Tensor<xpu, 2, DType>& C,
+                        Stream<xpu> *s = 0,
+                        mxnet::OpReqType req = mxnet::kWriteTo);
+template<typename xpu, typename DType>
+inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
+                        const TransposeTensor<Tensor<xpu, 2, DType>>& B,
+                        const Tensor<xpu, 2, DType>& C,
+                        Stream<xpu> *s = 0,
+                        mxnet::OpReqType req = mxnet::kWriteTo);
+template<typename xpu, typename DType>
+inline void linalg_gemm(const TransposeTensor<Tensor<xpu, 2, DType>>& A,
+                        const TransposeTensor<Tensor<xpu, 2, DType>>& B,
+                        const Tensor<xpu, 2, DType>& C,
+                        Stream<xpu> *s = 0,
+                        mxnet::OpReqType req = mxnet::kWriteTo);
+
 //////////////////////////////// TRSM ////////////////////////////////////////////
 
 // CPU/GPU-versions of BLAS3 function "trsm". Please refer to the BLAS3-documentation

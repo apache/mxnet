@@ -300,36 +300,70 @@ LINALG_GPU_BATCH_TRSM(DtrsmBatched, double)
 #endif
 
 /*!
- * \brief assign the gemm expression to `C` according to request
+ * \brief Performs gemm, setting alpha and beta as appropriate for `req`.
  *
- * \param C the data to be assigned
- * \param req the assignment request
  * \param A the first operand of the gemm
  * \param B the second operand of the gemm
- * \tparam transA whether the `A` operand should be transposed first.
- * \tparam transB whether the `B` operand should be transposed first.
+ * \param C the data to be assigned
+ * \tparam tA whether the `A` operand should be transposed first.
+ * \tparam tB whether the `B` operand should be transposed first.
  * \tparam s the stream to perform the operation
+ * \param req the assignment request
  */
 template<typename xpu, typename DType>
-inline void assign_linalg_gemm(const Tensor<xpu, 2, DType>& C,
-                               mxnet::OpReqType req,
-                               const Tensor<xpu, 2, DType>& A,
-                               const Tensor<xpu, 2, DType>& B,
-                               bool transA, bool transB, Stream<xpu> *s) {
+inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
+                        const Tensor<xpu, 2, DType>& B,
+                        const Tensor<xpu, 2, DType>& C,
+                        bool tA, bool tB, Stream<xpu> *s,
+                        mxnet::OpReqType req) {
   using namespace mxnet;
   switch (req) {
     case kNullOp:
       break;
     case kWriteTo:
     case kWriteInplace:
-      linalg_gemm(A, B, C, DType(1.0), DType(0.0), transA, transB, s);
+      linalg_gemm(A, B, C, DType(1.0), DType(0.0), tA, tB, s);
       break;
     case kAddTo:
-      linalg_gemm(A, B, C, DType(1.0), DType(1.0), transA, transB, s);
+      linalg_gemm(A, B, C, DType(1.0), DType(1.0), tA, tB, s);
       break;
     default:
       LOG(FATAL) << "not reached";
   }
+}
+
+// 4 flavors of the linalg_gemm interface based on desire to transpose A and/or B.
+template<typename xpu, typename DType>
+inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
+                        const Tensor<xpu, 2, DType>& B,
+                        const Tensor<xpu, 2, DType>& C,
+                        Stream<xpu> *s,
+                        mxnet::OpReqType req) {
+  linalg_gemm(A, B, C, false, false, s, req);
+}
+template<typename xpu, typename DType>
+inline void linalg_gemm(const TransposeTensor<Tensor<xpu, 2, DType>>& A,
+                        const Tensor<xpu, 2, DType>& B,
+                        const Tensor<xpu, 2, DType>& C,
+                        Stream<xpu> *s,
+                        mxnet::OpReqType req) {
+  linalg_gemm(A.tensor(), B, C, true, false, s, req);
+}
+template<typename xpu, typename DType>
+inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
+                        const TransposeTensor<Tensor<xpu, 2, DType>>& B,
+                        const Tensor<xpu, 2, DType>& C,
+                        Stream<xpu> *s,
+                        mxnet::OpReqType req) {
+  linalg_gemm(A, B.tensor(), C, false, true, s, req);
+}
+template<typename xpu, typename DType>
+inline void linalg_gemm(const TransposeTensor<Tensor<xpu, 2, DType>>& A,
+                        const TransposeTensor<Tensor<xpu, 2, DType>>& B,
+                        const Tensor<xpu, 2, DType>& C,
+                        Stream<xpu> *s,
+                        mxnet::OpReqType req) {
+  linalg_gemm(A.tensor(), B.tensor(), C, true, true, s, req);
 }
 
 //////////////////////////////// TRMM ////////////////////////////////////////////
