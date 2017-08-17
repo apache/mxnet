@@ -62,6 +62,13 @@ void linalg_batch_gemm(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DTyp
                        const Tensor<xpu, 3, DType>& C, DType alpha, DType beta,
                        bool tA, bool tB, Stream<xpu> *s = 0);
 
+// Useful interface for converting legacy 'dot()' and 'Assign()' usages.
+template<typename xpu, typename DType>
+inline void assign_linalg_gemm(const Tensor<xpu, 2, DType>& C,
+                               mxnet::OpReqType req,
+                               const Tensor<xpu, 2, DType>& A,
+                               const Tensor<xpu, 2, DType>& B,
+                               bool transA, bool transB, Stream<xpu> *s = 0);
 //////////////////////////////// TRSM ////////////////////////////////////////////
 
 // CPU/GPU-versions of BLAS3 function "trsm". Please refer to the BLAS3-documentation
