@@ -1,13 +1,13 @@
 # Internal function to do multiple device training on RNN
-mx.model.train.rnn.buckets <- function(ctx, sym_list, arg.params, aux.params, input.shape, 
+mx.model.train.rnn.buckets <- function(ctx, symbol, arg.params, aux.params, input.shape, 
                                        output.shape, begin.round, end.round, optimizer, train.data, eval.data, metric, 
                                        epoch.end.callback, batch.end.callback, kvstore, verbose = TRUE) {
   
-  symbol <- sym_list[[names(train.data$bucketID)]]
+  # symbol <- sym_list[[names(train.data$bucketID)]]
   
   input.names <- names(input.shape)
   output.names <- names(output.shape)
-  arg.names <- names(arg.params)
+  arg.params.names <- names(arg.params)
   
   ndevice <- length(ctx)
   if (verbose) 
@@ -19,7 +19,7 @@ mx.model.train.rnn.buckets <- function(ctx, sym_list, arg.params, aux.params, in
   grad_req[grad_null_idx] <- "null"
   
   # Arg array order
-  update_names <- c(input.names, output.names, arg.names)
+  update_names <- c(input.names, output.names, arg.params.names)
   arg_update_idx <- match(symbol$arguments, update_names)
   
   # Initial binding
@@ -66,8 +66,8 @@ mx.model.train.rnn.buckets <- function(ctx, sym_list, arg.params, aux.params, in
     }
     train.data$reset()
     while (train.data$iter.next()) {
-      dlist <- train.data$value()  #[input.names]
-      symbol <- sym_list[[names(train.data$bucketID)]]
+      dlist <- train.data$value()
+      # symbol <- sym_list[[names(train.data$bucketID)]]
       
       # Slice inputs for multi-devices
       slices <- lapply(1:ndevice, function(i) {
@@ -76,7 +76,7 @@ mx.model.train.rnn.buckets <- function(ctx, sym_list, arg.params, aux.params, in
       
       train.execs <- lapply(1:ndevice, function(i) {
         s <- slices[[i]]
-        mxnet:::mx.symbol.bind(symbol = symbol, arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.names])[arg_update_idx], 
+        mxnet:::mx.symbol.bind(symbol = symbol, arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.names])[arg_update_idx], 
                                aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad_req)
       })
       
@@ -120,7 +120,6 @@ mx.model.train.rnn.buckets <- function(ctx, sym_list, arg.params, aux.params, in
       
       # Update the evaluation metrics
       if (!is.null(metric)) {
-        # train.metric <- metric$update(dlist$label, out.preds, train.metric)
         for (i in 1:ndevice) {
           train.metric <- metric$update(slices[[i]][[length(slices[[i]])]], 
                                         out.preds[[i]], train.metric)
@@ -147,15 +146,16 @@ mx.model.train.rnn.buckets <- function(ctx, sym_list, arg.params, aux.params, in
       eval.data$reset()
       while (eval.data$iter.next()) {
         # Get input data slice
-        dlist <- eval.data$value()  #[input.names]
-        symbol <- sym_list[[names(eval.data$bucketID)]]
+        dlist <- eval.data$value()
+        # symbol <- sym_list[[names(eval.data$bucketID)]]
+        
         slices <- lapply(1:ndevice, function(i) {
           sapply(names(dlist), function(n) mx.nd.split(data=dlist[[n]], num_outputs = ndevice, axis = 0, squeeze_axis = F))
         })
         
         train.execs <- lapply(1:ndevice, function(i) {
           s <- slices[[i]]
-          mxnet:::mx.symbol.bind(symbol = symbol, arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.names])[arg_update_idx], 
+          mxnet:::mx.symbol.bind(symbol = symbol, arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.names])[arg_update_idx], 
                                  aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad_req)
         })
         
@@ -205,32 +205,25 @@ mx.model.train.rnn.buckets <- function(ctx, sym_list, arg.params, aux.params, in
 # 
 #' Train RNN with bucket support
 #'
+#' @param symbol Symbolic representation of the model
 #' @param train.data Training data created by mx.io.bucket.iter
 #' @param eval.data Evaluation data created by mx.io.bucket.iter
-#' @param num.rnn.layer int, number of stacked layers
-#' @param num.hidden int, size of the state in each RNN layer
-#' @param num.embed  int, dimension of the embedding vectors
-#' @param num.label int, number of categories in labels
-#' @param input.size int, number of levels in the data
 #' @param num.round int, number of epoch
 #' @param initializer
-#' @param dropout
-#' @param config Either seq-to-one or one-to-one
 #' @param optimizer
 #' @param batch.end.callback
 #' @param epoch.end.callback
 #' @param begin.round
 #' @param metric
-#' @param cell.type Type of RNN cell: either gru or lstm
 #' @param ctx
 #' @param kvstore
 #' @param verbose
 #'
 #' @export
-mx.rnn.buckets <- function(train.data, eval.data = NULL, num.rnn.layer, num.hidden, 
-                           num.embed, num.label, input.size, ctx = NULL, num.round = 1, initializer = mx.init.uniform(0.01), 
-                           dropout = 0, config, optimizer = "sgd", batch.end.callback = NULL, 
-                           epoch.end.callback = NULL, begin.round = 1, metric = mx.metric.rmse, cell.type, 
+mx.rnn.buckets <- function(symbol, train.data, eval.data = NULL, 
+                           ctx = NULL, num.round = 1, begin.round = 1, 
+                           initializer = mx.init.uniform(0.01), optimizer = "sgd", metric = mx.metric.rmse, 
+                           batch.end.callback = NULL, epoch.end.callback = NULL, 
                            kvstore = "local", verbose = TRUE) {
   
   if (!train.data$iter.next()) {
@@ -265,18 +258,15 @@ mx.rnn.buckets <- function(train.data, eval.data = NULL, num.rnn.layer, num.hidd
     optimizer <- mx.opt.create(optimizer, rescale.grad = (1/batchsize), ...)
   }
   
-  # get unrolled lstm symbol
-  sym_list <- sapply(train.data$bucket.names, function(x) {
-    rnn.graph(num.rnn.layer = num.rnn.layer, num.hidden = num.hidden, 
-              input.size = input.size, num.embed = num.embed, num.label = num.label, 
-              dropout = dropout, cell.type = cell.type, config = config)
-  }, simplify = F, USE.NAMES = T)
+  # get list of bucketed symbol - no longer needed with mx.symbol.RNN
+  # sym_list <- sapply(train.data$bucket.names, function(x) {
+  #   rnn.graph(num.rnn.layer = num.rnn.layer, num.hidden = num.hidden, 
+  #             input.size = input.size, num.embed = num.embed, num.label = num.label, 
+  #             dropout = dropout, cell.type = cell.type, config = config)
+  # }, simplify = F, USE.NAMES = T)
+  # symbol <- sym_list[[names(train.data$bucketID)]]
   
-  # setup lstm model
-  symbol <- sym_list[[names(train.data$bucketID)]]
-  
-  arg.names <- symbol$arguments
-  input.names <- if (cudnn) c("data", "seq.mask") else c("data", "data.mask.array")
+  input.names <- c("data", "seq.mask")
   input.shape <- sapply(input.names, function(n) {
     dim(train.data$value()[[n]])
   }, simplify = FALSE)
@@ -292,8 +282,8 @@ mx.rnn.buckets <- function(train.data, eval.data = NULL, num.rnn.layer, num.hidd
                                              verbose = verbose)
   
   ### Execute training
-  model <- mx.model.train.rnn.buckets(sym_list = sym_list, input.shape = input.shape, 
-                                      output.shape = output.shape, arg.params = params$arg.params, aux.params = params$aux.params, 
+  model <- mx.model.train.rnn.buckets(symbol = symbol, input.shape = input.shape, output.shape = output.shape, 
+                                      arg.params = params$arg.params, aux.params = params$aux.params, 
                                       optimizer = optimizer, train.data = train.data, eval.data = eval.data, verbose = verbose, 
                                       begin.round = begin.round, end.round = num.round, metric = metric, ctx = ctx, 
                                       batch.end.callback = batch.end.callback, epoch.end.callback = epoch.end.callback, 

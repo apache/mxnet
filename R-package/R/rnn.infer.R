@@ -35,14 +35,14 @@ mx.rnn.infer.buckets <- function(infer.data, model, ctx = mx.cpu()) {
   }, simplify = FALSE)
   
   arg.params <- model$arg.params
-  arg.names <- names(arg.params)
+  arg.params.names <- names(arg.params)
   aux.params <- model$aux.params
   
   # Grad request
   grad_req <- rep("null", length(symbol$arguments))
   
   # Arg array order
-  update_names <- c(input.names, output.names, arg.names)
+  update_names <- c(input.names, output.names, arg.params.names)
   arg_update_idx <- match(symbol$arguments, update_names)
   
   # Initial binding
@@ -63,7 +63,7 @@ mx.rnn.infer.buckets <- function(infer.data, model, ctx = mx.cpu()) {
     # Get input data slice
     dlist <- infer.data$value()  #[input.names]
     
-    execs <- mxnet:::mx.symbol.bind(symbol = symbol, arg.arrays = c(dlist, execs$arg.arrays[arg.names])[arg_update_idx], 
+    execs <- mxnet:::mx.symbol.bind(symbol = symbol, arg.arrays = c(dlist, execs$arg.arrays[arg.params.names])[arg_update_idx], 
                                     aux.arrays = execs$aux.arrays, ctx = ctx[[1]], grad.req = grad_req)
     
     mx.exec.forward(execs, is.train = FALSE)

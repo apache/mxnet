@@ -25,7 +25,8 @@ BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "b
                                 dim(x$data)[length(dim(x$data))]
                               })
                               .self$batch.per.bucket <- ceiling(buckets_size/.self$batch.size)
-                              .self$last.batch.pad <- buckets_size %% .self$batch.size
+                              .self$last.batch.pad <- .self$batch.size - buckets_size %% .self$batch.size
+                              .self$last.batch.pad[.self$last.batch.pad == .self$batch.size] <- 0
                               
                               .self$batch.per.epoch <- sum(.self$batch.per.bucket)
                               # Number of batches per epoch given the batch.size
@@ -73,7 +74,7 @@ BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "b
                               
                               ### reuse first idx for padding
                               if (bucketID == .self$batch.per.bucket[names(.self$bucketID)] & !.self$last.batch.pad[names(.self$bucketID)] == 0) {
-                                idx <- c(idx[1:.self$last.batch.pad[names(.self$bucketID)]], 1:(.self$batch.size - .self$last.batch.pad[names(.self$bucketID)]))
+                                idx <- c(idx[1:(.self$batch.size - .self$last.batch.pad[names(.self$bucketID)])], 1:(.self$last.batch.pad[names(.self$bucketID)]))
                               }
                               
                               data <- .self$buckets[[names(.self$bucketID)]]$data[, idx, drop = F]
@@ -87,7 +88,7 @@ BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "b
                                           label = mx.nd.array(label)))
                             }, num.pad = function() {
                               if (bucketID == .self$batch.per.bucket[names(.self$bucketID)] & !.self$last.batch.pad[names(.self$bucketID)] == 0){
-                                return(.self$batch.size - .self$last.batch.pad[names(.self$bucketID)])
+                                return(.self$last.batch.pad[names(.self$bucketID)])
                               } else return(0)
                             }, finalize = function() {
                             }))
