@@ -25,9 +25,9 @@ OS=""
 
 if [ "$(uname)" == "Darwin" ]; then
 	# Do something under Mac OS X platform
-	OS='osx-x86_64-cpu'	
+  OS='osx-x86_64-cpu'
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-	OS='linux-x86_64-cpu'	
+  OS='linux-x86_64-cpu'
 fi
 
 LIB_DIR=${SPARK_MODULE_DIR}/target/classes/lib
@@ -43,11 +43,11 @@ SPARK_OPTS+=" --jars ${SCALA_JAR}"
 
 # Download training and test set
 if [ ! -f ./train.txt ]; then
-	wget https://s3-us-west-2.amazonaws.com/mxnet.liuyz/data/mnist/train.txt
+  wget https://s3-us-west-2.amazonaws.com/mxnet.liuyz/data/mnist/train.txt
 fi
 
 if [ ! -f ./val.txt ]; then
-	wget https://s3-us-west-2.amazonaws.com/mxnet.liuyz/data/mnist/val.txt
+  wget https://s3-us-west-2.amazonaws.com/mxnet.liuyz/data/mnist/val.txt
 fi
 
 # running opts
@@ -66,8 +66,8 @@ RUN_OPTS+=" --num-epoch 5"
 
 # check if SPARK_HOME is set
 if [ -z "$SPARK_HOME" ]; then
- 	echo "SPARK_HOME is unset";
-	exit 1	
+  echo "SPARK_HOME is unset";
+  exit 1
 fi
 
 HOST=`hostname`
