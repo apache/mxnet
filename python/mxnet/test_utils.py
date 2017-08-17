@@ -181,7 +181,7 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
         return mx.nd.array(output_arr).tostype("csr")
 
 
-def rand_sparse_ndarray(shape, stype, density=None, distribution="uniform", dtype=None):
+def rand_sparse_ndarray(shape, stype, density=None, distribution=None, dtype=None):
     """Generate a random sparse ndarray. Returns the ndarray, value(np) and indices(np)
     Parameters
     ----------
@@ -216,6 +216,7 @@ def rand_sparse_ndarray(shape, stype, density=None, distribution="uniform", dtyp
     """
     density = rnd.rand() if density is None else density
     dtype = default_dtype() if dtype is None else dtype
+    distribution = "uniform" if distribution is None else distribution
     if stype == 'row_sparse':
         assert (distribution == "uniform"), \
                "Distribution %s not supported for row_sparse" % (distribution)
