@@ -39,7 +39,7 @@ from ..base import mx_uint, NDArrayHandle, check_call
 from ..context import Context
 from . import _internal
 from .ndarray import _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
-from .ndarray import _STORAGE_TYPE_STR_TO_ID, NDArrayBase
+from .ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import NDArray, _storage_type, _zeros_ndarray, _array
 from . import cast_storage
 from . import slice as nd_slice
