@@ -98,8 +98,8 @@ if __name__ == '__main__':
                                             'pip install mxnet%s --pre\n<' % (trail))
             else:
                 outstr = outstr.replace('git clone --recursive https://github.com/dmlc/mxnet',
-                                        'git clone --recursive https://github.com/apache/incubator-mxnet.git --branch %s'
-                                        % (args.current_version))
+                                        'git clone --recursive https://github.com/apache/incubator-mxnet.git '
+                                        '--branch %s' % (args.current_version))
                 for trail in pip_pattern:
                     outstr = outstr.replace('pip install mxnet%s<' % (trail),
                                             'pip install mxnet%s==%s<' % (trail, args.current_version))
