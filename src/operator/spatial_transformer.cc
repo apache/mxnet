@@ -28,7 +28,7 @@
 namespace mshadow {
 template<typename DType>
 bool between(DType value, int lowerBound, int upperBound) {
-  return (value >= lowerBound && value <= upperBound);
+  return (static_cast<int>(value) >= lowerBound && static_cast<int>(value) <= upperBound);
 }
 template<typename DType>
 inline void BilinearSamplingForward(const Tensor<cpu, 4, DType> &output,
