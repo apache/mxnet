@@ -166,8 +166,8 @@ endif
 
 # Sets 'CUDA_ARCH', which determines the GPU architectures supported
 # by the compiled kernels.  Users can edit the KNOWN_CUDA_ARCHS list below
-# to remove archs they don't wish to support to speed compilation, or they
-# can pre-set the CUDA_ARCH args in config.mk for full control.
+# to remove archs they don't wish to support to speed compilation, or they can
+# pre-set the CUDA_ARCH args in config.mk to a non-null value for full control.
 #
 # For archs in this list, nvcc will create a fat-binary that will include
 # the binaries (SASS) for all architectures supported by the installed version
@@ -175,7 +175,7 @@ endif
 # If these kernels are then run on a newer-architecture GPU, the binary will
 # be JIT-compiled by the updated driver from the included PTX.
 ifeq ($(USE_CUDA), 1)
-ifeq ($(origin CUDA_ARCH), undefined)
+ifeq ($(CUDA_ARCH),)
 	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61 70
 	# Run nvcc on a zero-length file to check architecture-level support.
 	# Create args to include SASS in the fat binary for supported levels.
