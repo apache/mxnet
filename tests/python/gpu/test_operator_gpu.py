@@ -926,6 +926,11 @@ def test_fullyconnected_with_type():
                 {'ctx': mx.cpu(0), 'inner_data': (2, 10), 'type_dict': {'inner_data': np.float64}},
                 {'ctx': mx.cpu(0), 'inner_data': (2, 10), 'type_dict': {'inner_data': np.float32}}]
     check_consistency(sym, ctx_list)
+    # Sizes are divisible by 8 to test TensorCore on Volta GPU.
+    sym = mx.sym.FullyConnected(num_hidden=8, name='inner')
+    ctx_list = [{'ctx': mx.gpu(0), 'inner_data': (16, 24), 'type_dict': {'inner_data': np.float16}},
+                {'ctx': mx.cpu(0), 'inner_data': (16, 24), 'type_dict': {'inner_data': np.float32}}]
+    check_consistency(sym, ctx_list)
 
 
 def test_activation_with_type():

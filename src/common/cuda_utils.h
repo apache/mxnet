@@ -200,7 +200,7 @@ inline DType __device__ CudaMin(DType a, DType b) {
   {                                                             \
     cublasStatus_t e = (func);                                  \
     CHECK_EQ(e, CUBLAS_STATUS_SUCCESS)                          \
-        << "cuBLAS: " << common::cuda::CublasGetErrorString(e); \
+        << "cuBLAS: " << mxnet::common::cuda::CublasGetErrorString(e); \
   }
 
 /*!
@@ -213,7 +213,7 @@ inline DType __device__ CudaMin(DType a, DType b) {
   {                                                                 \
     cusolverStatus_t e = (func);                                    \
     CHECK_EQ(e, CUSOLVER_STATUS_SUCCESS)                            \
-        << "cuSolver: " << common::cuda::CusolverGetErrorString(e); \
+        << "cuSolver: " << mxnet::common::cuda::CusolverGetErrorString(e); \
   }
 
 /*!
@@ -226,7 +226,7 @@ inline DType __device__ CudaMin(DType a, DType b) {
   {                                                             \
     curandStatus_t e = (func);                                  \
     CHECK_EQ(e, CURAND_STATUS_SUCCESS)                          \
-        << "cuRAND: " << common::cuda::CurandGetErrorString(e); \
+        << "cuRAND: " << mxnet::common::cuda::CurandGetErrorString(e); \
   }
 
 #if !defined(_MSC_VER)
@@ -304,11 +304,31 @@ inline bool SupportsTensorCore(int device_id) {
  * \return whether to allow TensorCore algo (if not specified by the Operator locally).
  */
 inline bool GetEnvAllowTensorCore() {
-  // Use of optional<bool> here permits: "0", "1", "true" and "false" to all be legal.
-  bool default_value = MXNET_CUDA_ALLOW_TENSOR_CORE_DEFAULT;
-  return dmlc::GetEnv("MXNET_CUDA_ALLOW_TENSOR_CORE",
-                      dmlc::optional<bool>(default_value)).value();
+  // Since these statics are in the '.h' file, they will exist and will be set
+  // separately in each compilation unit.  Not ideal, but cleaner than creating a
+  // cuda_utils.cc solely to have a single instance and initialization.
+  static bool allow_tensor_core = false;
+  static bool is_set = false;
+  if (!is_set) {
+    // Use of optional<bool> here permits: "0", "1", "true" and "false" to all be legal.
+    bool default_value = MXNET_CUDA_ALLOW_TENSOR_CORE_DEFAULT;
+    allow_tensor_core = dmlc::GetEnv("MXNET_CUDA_ALLOW_TENSOR_CORE",
+                                     dmlc::optional<bool>(default_value)).value();
+    is_set = true;
+  }
+  return allow_tensor_core;
 }
+
+#if CUDA_VERSION >= 9000
+// Sets the cuBLAS math mode that determines the 'allow TensorCore' policy.  Returns previous.
+inline cublasMath_t SetCublasMathMode(cublasHandle_t blas_handle, cublasMath_t new_math_type) {
+  auto handle_math_mode = CUBLAS_DEFAULT_MATH;
+  CUBLAS_CALL(cublasGetMathMode(blas_handle, &handle_math_mode));
+  CUBLAS_CALL(cublasSetMathMode(blas_handle, new_math_type));
+  return handle_math_mode;
+}
+#endif
+
 #endif  // MXNET_USE_CUDA
 
 #if MXNET_USE_CUDNN
