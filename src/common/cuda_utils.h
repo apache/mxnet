@@ -281,8 +281,7 @@ inline int SMArch(int device_id) {
 inline bool SupportsFloat16Compute(int device_id) {
   if (device_id < 0) {
     return false;
-  }
-  else {
+  } else {
     // Kepler and most Maxwell GPUs do not support fp16 compute
     int computeCapabilityMajor = ComputeCapabilityMajor(device_id);
     return (computeCapabilityMajor > 5) ||
