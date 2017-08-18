@@ -34,6 +34,7 @@
 #include "ps/ps.h"
 #include "mxnet/kvstore.h"
 #include "../operator/tensor/elemwise_binary_op.h"
+#include "../operator/tensor/init_op.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -228,11 +229,16 @@ class KVStoreDistServer {
         CHECK_EQ(req_data.vals.size(), num_rows * unit_len);
         TBlob recv_blob(data, dshape, cpu::kDevMask);  // NOLINT(*)
         NDArray recved = NDArray(recv_blob, 0);
-        // TODO(haibin) temporarily initialized as dense NDArray. We need inplace operator
-        // support for rowsparse ndarrays. And after that `stored` should be initialized as
-        // RowSparse NDArray
         stored = NDArray(kRowSparseStorage, dshape, Context());
-        CopyFromTo(recved, &stored, 0);
+        Engine::Get()->PushSync([recved, stored](RunContext ctx) {
+            NDArray rsp = stored;
+            stored.CheckAndAlloc({mshadow::Shape1(recved.shape()[0])});
+            mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+            op::PopulateFullIdxRspImpl(s, &rsp);
+            mshadow::Copy(rsp.data().FlatTo1D<cpu, float>(),
+                          recved.data().FlatTo1D<cpu, float>(), s);
+          }, recved.ctx(), {recved.var()}, {stored.var()},
+          FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
         stored.WaitToRead();
         server->Response(req_meta);
         return;
