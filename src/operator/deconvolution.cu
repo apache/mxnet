@@ -51,7 +51,7 @@ Operator* CreateOp<gpu>(DeconvolutionParam param, int dtype,
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     if (param.cudnn_off) {
       op = new DeconvolutionOp<gpu, DType>(param);
-    } else if (!CuDNNDeconvolutionOp<DType>::Supports(param, compute_type, compute_type, ctx)){
+    } else if (!CuDNNDeconvolutionOp<DType>::Supports(param, compute_type, compute_type, ctx)) {
       LOG(WARNING) <<
         "This deconvolution is not supported by cudnn, MXNET deconvolution is applied.";
       op = new DeconvolutionOp<gpu, DType>(param);
