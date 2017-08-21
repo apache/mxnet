@@ -955,7 +955,6 @@ def test_convolution_grouping():
     for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
         np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
 
-        
 def test_depthwise_convolution():
     for num_base in [32, 64]:
         for kernel in [(3,3), (5,5)]:
@@ -3465,14 +3464,6 @@ def test_deformable_psroipooling():
 
 
 def test_laop():
-    return
-
-    # Currently no support for GPU. Will be added soon
-    # so keep these tests here in this file and activate
-    # gpu-testing when it is ready.
-    dev = default_context()
-    if dev.device_type == 'gpu':
-       return
 
     # enable numerical checking of gradients
     grad_check = 1
