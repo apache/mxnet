@@ -20,7 +20,7 @@
 import sys as _sys
 import os as _os
 import ctypes
-import numpy as np
+import numpy as np  # pylint: disable=unused-import
 
 from ..ndarray_doc import _build_doc
 

@@ -20,32 +20,34 @@
 import sys as _sys
 import os as _os
 import ctypes
-import numpy as _numpy
+import numpy as _numpy  # pylint: disable=unused-import
 
 from mxnet.base import mx_uint, check_call, _LIB, py_str, OpHandle, c_str
 from mxnet.symbol_doc import _build_doc
 
 # Use different version of SymbolBase
 # When possible, use cython to speedup part of computation.
+# pylint: disable=unused-import
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from .._ctypes.symbol import SymbolBase, _set_symbol_class
-        from .._ctypes.symbol import _symbol_creator  # pylint: disable=unused-import
+        from .._ctypes.symbol import _symbol_creator
     elif _sys.version_info >= (3, 0):
         from .._cy3.symbol import SymbolBase, _set_symbol_class
-        from .._cy3.symbol import _symbol_creator  # pylint: disable=unused-import
+        from .._cy3.symbol import _symbol_creator
     else:
         from .._cy2.symbol import SymbolBase, _set_symbol_class
-        from .._cy2.symbol import _symbol_creator  # pylint: disable=unused-import
+        from .._cy2.symbol import _symbol_creator
 except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from .._ctypes.symbol import SymbolBase, _set_symbol_class
-    from .._ctypes.symbol import _symbol_creator  # pylint: disable=unused-import
+    from .._ctypes.symbol import _symbol_creator
 
-from ..base import _Null  # pylint: disable=unused-import
-from ..name import NameManager  # pylint: disable=unused-import
-from ..attribute import AttrScope  # pylint: disable=unused-import
+from ..base import _Null
+from ..name import NameManager
+from ..attribute import AttrScope
+# pylint: enable=unused-import
 
 
 def _make_atomic_symbol_function(handle, name):
