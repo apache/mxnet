@@ -212,7 +212,6 @@ void TopKImpl(RunContext ctx,
   } else {
     sorted_dat = reshape(dat, Shape1(src.Size()));
   }
-  CHECK_LT(long long(batch_size) * long long(element_num), INT_MAX);
   indices = range<int>(0, batch_size * element_num);
   CHECK_EQ(sorted_dat.CheckContiguous(), true);
   CHECK_EQ(indices.CheckContiguous(), true);
