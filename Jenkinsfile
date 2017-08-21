@@ -154,7 +154,8 @@ try {
         node('mxnetlinux') {
           ws('workspace/amalgamation') {
             init_git()
-            make('cpu', '-C amalgamation/ USE_BLAS=openblas MIN=1')
+            make('cpu', '-C amalgamation/ clean')
+            make('cpu', '-C amalgamation/ USE_BLAS=openblas')
           }
         }
       },

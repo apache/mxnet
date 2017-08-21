@@ -272,9 +272,10 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
       << "(" << param.start << "," << param.stop.value() << "," << param.step << ")";
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
-                     mshadow::Shape1(param.repeat *
-                                     ceil((param.stop.value() -
-                                           param.start) / param.step)));
+                     mshadow::Shape1(mshadow::expr::RangeOutSize(param.start,
+                                                                 param.stop.value(),
+                                                                 param.step,
+                                                                 param.repeat)));
   return true;
 }
 
