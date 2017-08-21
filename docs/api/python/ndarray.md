@@ -74,8 +74,8 @@ The `ndarray` package provides several classes:
     :nosignatures:
 
     NDArray
-    CSRNDArray
-    RowSparseNDArray
+    sparse.CSRNDArray
+    sparse.RowSparseNDArray
 ```
 
 We summarize the interface for each class in the following sections.
@@ -185,33 +185,33 @@ We summarize the interface for each class in the following sections.
     NDArray.wait_to_read
 ```
 
-## The `RowSparseNDArray` Class
+## The `sparse.RowSparseNDArray` Class
 
 ```eval_rst
 .. autosummary::
     :nosignatures:
 
-    RowSparseNDArray.copyto
-    RowSparseNDArray.tostype
-    RowSparseNDArray.__setitem__
-    RowSparseNDArray.__getitem__
-    RowSparseNDArray.data
-    RowSparseNDArray.indices
+    sparse.RowSparseNDArray.copyto
+    sparse.RowSparseNDArray.tostype
+    sparse.RowSparseNDArray.__setitem__
+    sparse.RowSparseNDArray.__getitem__
+    sparse.RowSparseNDArray.data
+    sparse.RowSparseNDArray.indices
 ```
 
-## The `CSRNDArray` Class
+## The `sparse.CSRNDArray` Class
 
 ```eval_rst
 .. autosummary::
     :nosignatures:
 
-    CSRNDArray.copyto
-    CSRNDArray.tostype
-    CSRNDArray.__setitem__
-    CSRNDArray.__getitem__
-    CSRNDArray.data
-    CSRNDArray.indices
-    CSRNDArray.indptr
+    sparse.CSRNDArray.copyto
+    sparse.CSRNDArray.tostype
+    sparse.CSRNDArray.__setitem__
+    sparse.CSRNDArray.__getitem__
+    sparse.CSRNDArray.data
+    sparse.CSRNDArray.indices
+    sparse.CSRNDArray.indptr
 ```
 
 ## Array creation routines
@@ -547,11 +547,11 @@ The `contrib.ndarray` module contains many useful experimental APIs for new feat
     :members:
     :special-members:
 
-.. autoclass:: mxnet.ndarray.CSRNDArray
+.. autoclass:: mxnet.ndarray.sparse.CSRNDArray
     :members:
     :special-members:
 
-.. autoclass:: mxnet.ndarray.RowSparseNDArray
+.. autoclass:: mxnet.ndarray.sparse.RowSparseNDArray
     :members:
     :special-members:
 
