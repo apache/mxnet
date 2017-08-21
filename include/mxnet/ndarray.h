@@ -206,7 +206,8 @@ class NDArray {
    */
   inline const TShape &storage_shape() const {
     CHECK(ptr_ != nullptr);
-    CHECK_NE(storage_type(), kDefaultStorage);
+    CHECK_NE(storage_type(), kDefaultStorage)
+             << "storage_shape() is not intended for kDefaultStorage.";
     return ptr_->storage_shape;
   }
 
@@ -216,19 +217,22 @@ class NDArray {
    * \return the shape of aux data at given index
    */
   inline const TShape& aux_shape(size_t index) const {
-    CHECK(storage_type() != kDefaultStorage);
+    CHECK_NE(storage_type(), kDefaultStorage)
+             << "aux_shape() is not intended for kDefaultStorage.";
     return ptr_->aux_shapes[index];
   }
 
   /* \return the shapes of all aux data */
   const std::vector<TShape>& aux_shapes() const {
-    CHECK(storage_type() != kDefaultStorage);
+    CHECK_NE(storage_type(), kDefaultStorage)
+             << "aux_shapes() is not intended for kDefaultStorage.";
     return ptr_->aux_shapes;
   }
 
   /*! returns the dtypes of all aux data */
   const std::vector<int>& aux_types() const {
-    CHECK(storage_type() != kDefaultStorage);
+    CHECK_NE(storage_type(), kDefaultStorage)
+             << "aux_types() is not intended for kDefaultStorage.";
     return ptr_->aux_types;
   }
 
@@ -308,12 +312,17 @@ class NDArray {
   inline bool storage_initialized() const {
     if (is_none()) return false;
     auto stype = storage_type();
-    CHECK_NE(stype, kDefaultStorage);
+    CHECK_NE(stype, kDefaultStorage)
+             << "storage_initialized() is not intended for kDefaultStorage.";
     if (stype == kRowSparseStorage) {
-      CHECK_EQ(aux_shape(rowsparse::kIdx)[0], storage_shape()[0]);
+      CHECK_EQ(aux_shape(rowsparse::kIdx)[0], storage_shape()[0])
+               << "inconsistent storage shape " << storage_shape()
+               << " vs. aux shape " << aux_shape(rowsparse::kIdx);
       return aux_shape(0).Size() != 0;
     } else if (stype == kCSRStorage) {
-      CHECK_EQ(aux_shape(csr::kIdx)[0], storage_shape()[0]);
+      CHECK_EQ(aux_shape(csr::kIdx)[0], storage_shape()[0])
+               << "inconsistent storage shape " << storage_shape()
+               << " vs. aux shape " << aux_shape(csr::kIdx);
       return aux_shape(0).Size() != 0;
     } else {
       LOG(FATAL) << "Unknown storage type";
@@ -498,7 +507,8 @@ class NDArray {
    * \return NDArray in new shape and type.
    */
   inline NDArray AsArray(const TShape &shape, int dtype) const {
-    CHECK_EQ(storage_type(), kDefaultStorage) << "Not implemented yet";
+    CHECK_EQ(storage_type(), kDefaultStorage)
+             << "AsArray is intended only for kDefaultStorage.";
     CHECK_GE(shape_.Size() * mshadow::mshadow_sizeof(dtype_),
              shape.Size() * mshadow::mshadow_sizeof(dtype))
         << "NDArray.AsArray: target memory size is bigger";
@@ -565,15 +575,18 @@ class NDArray {
    * aux_shape is only known at run time
    */
   inline void CheckAndAlloc(const std::vector<TShape> &aux_shapes) const {
-    CHECK_NE(storage_type(), kDefaultStorage);
+    CHECK_NE(storage_type(), kDefaultStorage)
+             << "CheckAndAlloc(aux_shapes) is not intended for kDefaultStorage";
     ptr_->CheckAndAlloc(shape_, aux_shapes, dtype_);
   }
   inline void CheckAndAllocData(const TShape &storage_shape) const {
-    CHECK_NE(storage_type(), kDefaultStorage);
+    CHECK_NE(storage_type(), kDefaultStorage)
+             << "CheckAndAllocData is not intended for kDefaultStorage";
     ptr_->CheckAndAllocData(storage_shape, dtype_);
   }
   inline void CheckAndAllocAuxData(size_t i, const TShape &aux_shape) const {
-    CHECK_NE(storage_type(), kDefaultStorage);
+    CHECK_NE(storage_type(), kDefaultStorage)
+             << "CheckAndAllocAuxData is not intended for kDefaultStorage";
     ptr_->CheckAndAllocAuxData(i, aux_shape);
   }
   /*!
@@ -741,7 +754,8 @@ class NDArray {
     /*! \brief Check and alloc memory for a dense ndarray */
     // size is the number of bytes
     void CheckAndAlloc(uint64_t dbytes) {
-      CHECK_EQ(kDefaultStorage, storage_type);
+      CHECK_EQ(kDefaultStorage, storage_type)
+              << "CheckAndAlloc(dbytes) is not intended for kDefaultStorage";
       if (delay_alloc) {
         shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
         delay_alloc = false;

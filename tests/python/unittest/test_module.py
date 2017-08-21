@@ -533,7 +533,7 @@ def test_factorization_machine_module():
             mod.backward()                          # compute gradients
             mod.update()                            # update parameters
         # print('Epoch %d, Training %s' % (epoch, metric.get()))
-    assert(metric.get()[1] < 0.02)
+    assert(metric.get()[1] < 0.05), metric.get()[1]
 
 
 def test_module_initializer():

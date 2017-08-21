@@ -870,14 +870,8 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     if isinstance(expected, (list, tuple)):
         expected = {k:v for k, v in zip(sym.list_arguments(), expected)}
     args_grad_npy = {k:_rng.normal(size=v.shape) for k, v in expected.items()}
-    args_grad_data = {}
-    for k, v in args_grad_npy.items():
-        nd = mx.nd.array(v, ctx=ctx)
-        if grad_stypes is not None and k in grad_stypes:
-            out = nd.tostype(grad_stypes[k])
-            args_grad_data[k] = out
-        else:
-            args_grad_data[k] = nd
+    args_grad_data = {k: mx.nd.array(v, ctx=ctx) if grad_stypes is None or k not in grad_stypes \
+                      else mx.nd.array(v, ctx=ctx).tostype(grad_stypes[k])}
 
     if isinstance(grad_req, str):
         grad_req = {k:grad_req for k in sym.list_arguments()}
