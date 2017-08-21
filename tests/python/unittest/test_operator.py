@@ -955,6 +955,7 @@ def test_convolution_grouping():
     for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
         np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
 
+
 def test_depthwise_convolution():
     for num_base in [32, 64]:
         for kernel in [(3,3), (5,5)]:
@@ -3301,10 +3302,7 @@ def test_quantization_2bit_op():
     residual = mx.nd.array([-3, 1, -1, 5, -2, 2, 3, -7, -2, -100])
     neg_threshold = mx.nd.array([-4.0])
     pos_threshold = mx.nd.array([4.0])
-    out = mx.contrib.nd.quantize_2bit(array,
-                                      residual,
-                                      neg_threshold,
-                                      pos_threshold)
+    out = mx.contrib.nd.quantize_2bit(array, residual, neg_threshold, pos_threshold)
     mx.contrib.nd.dequantize_2bit(out, array)
     array_real = mx.nd.array([-4, 0, 0, 4, 4, 4, 0, -4, -4, -4])
     res_real = mx.nd.array([-5, -1, 2, 2, 4, 3, 0, -1, -6, -96])
