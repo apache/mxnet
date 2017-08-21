@@ -111,7 +111,7 @@ class KVStoreDist : public KVStoreLocal {
             int priority) override {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
-    GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
+    GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
@@ -160,7 +160,7 @@ class KVStoreDist : public KVStoreLocal {
                      const int priority = 0) {
     std::vector<int> uniq_keys;
     std::vector<std::vector<std::pair<NDArray*, NDArray>>> grouped_val_rowids;
-    GroupKVPairs(keys, val_rowids, &uniq_keys, &grouped_val_rowids);
+    GroupKVPairsPullRsp(keys, val_rowids, &uniq_keys, &grouped_val_rowids);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
@@ -261,7 +261,7 @@ class KVStoreDist : public KVStoreLocal {
     // first aggregate the values over keys
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
-    GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
+    GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       // merge over devcies

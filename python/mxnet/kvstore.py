@@ -234,14 +234,6 @@ class KVStore(object):
         [ 2.  2.  2.]]
         """
         assert(out is not None)
-        if not isinstance(out, (list, tuple)):
-            out = [out]
-        for val in out:
-            if not isinstance(val, (list, tuple)):
-                assert(val.stype == 'default')
-            else:
-                for v in val:
-                    assert(v.stype == 'default')
         ckeys, cvals = _ctype_key_value(key, out)
         check_call(_LIB.MXKVStorePullEx(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
@@ -270,8 +262,8 @@ class KVStore(object):
             other pull actions.
 
         row_ids : NDArray or list of NDArray
-            The row_ids for which to pull for each value. The row_ids doesn't have to be unique
-            or sorted.
+            The row_ids for which to pull for each value. Each row_id is an 1D-NDArray \
+            whose values don't have to be unique nor sorted.
 
         Examples
         --------
@@ -299,16 +291,6 @@ class KVStore(object):
         """
         assert(out is not None)
         assert(row_ids is not None)
-        if isinstance(row_ids, NDArray):
-            row_ids = [row_ids]
-        if not isinstance(out, (list, tuple)):
-            out = [out]
-        for val in out:
-            if not isinstance(val, (list, tuple)):
-                assert(val.stype == 'row_sparse')
-            else:
-                for v in val:
-                    assert(v.stype == 'row_sparse')
         ckeys, cvals = _ctype_key_value(key, out)
         _, crow_ids = _ctype_key_value(key, row_ids)
         assert(len(crow_ids) == len(cvals)), "number of row_ids doesn't match number of values"

@@ -519,9 +519,8 @@ def test_factorization_machine_module():
     # initialize parameters by uniform random numbers
     mod.init_params(initializer=init)
     # use Sparse SGD with learning rate 0.1 to train
-    sgd = mx.optimizer.SGD(momentum=0.1, clip_gradient=5.0, learning_rate=0.01,
-                           rescale_grad=1.0/batch_size)
-    mod.init_optimizer(optimizer=sgd)
+    adam = mx.optimizer.Adam(clip_gradient=5.0, learning_rate=0.001, rescale_grad=1.0/batch_size)
+    mod.init_optimizer(optimizer=adam)
     # use accuracy as the metric
     metric = mx.metric.create('MSE')
     # train 10 epoch

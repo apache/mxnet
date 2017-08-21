@@ -52,7 +52,7 @@ def test_single_kv_pair():
     def check_single_kv_pair(kv, key):
         kv.push(key, mx.nd.ones(shape))
         val = mx.nd.empty(shape)
-        kv.pull(key, out = val)
+        kv.pull(key, out=val)
         check_diff_to_scalar(val, 1)
 
     check_single_kv_pair(init_kv(), 3)
@@ -102,7 +102,7 @@ def test_list_kv_pair():
     def check_list_kv_pair(kv, key):
         kv.push(key, [mx.nd.ones(shape)*4] * len(key))
         val = [mx.nd.empty(shape)] * len(key)
-        kv.pull(key, out = val)
+        kv.pull(key, out=val)
         for v in val:
             check_diff_to_scalar(v, 4)
 
@@ -122,7 +122,7 @@ def test_aggregator():
         vals = [mx.nd.ones(shape, d) for d in devs]
 
         kv.push(key, vals)
-        kv.pull(key, out = vals)
+        kv.pull(key, out=vals)
 
         for v in vals:
             check_diff_to_scalar(v, num_devs)
@@ -130,7 +130,7 @@ def test_aggregator():
         # list
         vals = [[mx.nd.ones(shape, d)*2.0 for d in devs]] * len(key_list)
         kv.push(key_list, vals)
-        kv.pull(key_list, out = vals)
+        kv.pull(key_list, out=vals)
 
         for vv in vals:
             for v in vv:
@@ -196,7 +196,7 @@ def test_updater(dev = 'cpu'):
         vals = [mx.nd.ones(shape, d) for d in devs]
 
         kv.push(key, vals)
-        kv.pull(key, out = vals)
+        kv.pull(key, out=vals)
 
         for v in vals:
             check_diff_to_scalar(v, num_devs)
@@ -208,7 +208,7 @@ def test_updater(dev = 'cpu'):
         for i in range(num_push):
             kv.push(key_list, vals)
 
-        kv.pull(key_list, out = vals)
+        kv.pull(key_list, out=vals)
 
         for vv in vals:
             for v in vv:
@@ -226,6 +226,43 @@ def test_get_type():
     kvtype = 'local_allreduce_cpu'
     kv = mx.kv.create(kvtype)
     assert kv.type == kvtype
+
+def test_invalid_pull():
+    def check_invalid_single_kv_pair(kv, key):
+        dns_val = mx.nd.ones(shape) * 2
+        rsp_val = dns_val.tostype('row_sparse')
+        kv.pull(key, out=rsp_val)
+        # pull should be ignored with no values updated
+        check_diff_to_scalar(rsp_val, 2)
+        try:
+            # row_sparse_pull should be aborted when vals.stype != row_sparse
+            kv.row_sparse_pull(key, out=dns_val, rowids=mx.nd.array([1]))
+            assert(False)
+        except:
+            pass
+
+    def check_invalid_list_kv_pair(kv, key):
+        dns_val = [mx.nd.ones(shape) * 2] * len(key)
+        rsp_val = [val.tostype('row_sparse') for val in dns_val]
+        kv.pull(key, out=rsp_val)
+        for v in rsp_val:
+            # pull should be ignored with no values updated
+            check_diff_to_scalar(v, 2)
+        try:
+            # row_sparse_pull should be aborted when vals.stype != row_sparse
+            kv.row_sparse_pull(key, out=dns_val, rowids=[mx.nd.array([1])] * len(key))
+            assert(False)
+        except:
+            pass
+
+    int_kv = init_kv()
+    str_kv = init_kv_with_str()
+
+    check_invalid_single_kv_pair(int_kv, 3)
+    check_invalid_single_kv_pair(str_kv, 'a')
+
+    check_invalid_list_kv_pair(int_kv, keys)
+    check_invalid_list_kv_pair(str_kv, str_keys)
 
 if __name__ == '__main__':
     test_init()
