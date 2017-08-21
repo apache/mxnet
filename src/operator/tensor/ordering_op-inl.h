@@ -27,6 +27,7 @@
 #include <mxnet/operator_util.h>
 #include <dmlc/optional.h>
 #include <mshadow/tensor.h>
+#include <algorithm>
 #include <vector>
 #include <type_traits>
 #include "../mshadow_op.h"
@@ -273,7 +274,8 @@ void TopKImpl(RunContext ctx,
     } else {
       Tensor<xpu, 2, real_t> ret_indices =
         ret[0].get_with_shape<xpu, 2, real_t>(Shape2(batch_size, k), s);
-      ret_indices = tcast<real_t>(slice<1>(inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
+      ret_indices = tcast<real_t>(slice<1>(
+                      inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
     }
   } else {
     indices -= batch_id * element_num;
@@ -298,7 +300,8 @@ void TopKImpl(RunContext ctx,
       Tensor<xpu, 2, real_t> ret_indices =
         ret[1].get_with_shape<xpu, 2, real_t>(Shape2(batch_size, k), s);
       ret_value = slice<1>(inplace_reshape(sorted_dat, Shape2(batch_size, element_num)), 0, k);
-      ret_indices = tcast<real_t>(slice<1>(inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
+      ret_indices = tcast<real_t>(slice<1>(
+                      inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
     }
   }
 }
