@@ -2,7 +2,7 @@
 
 Indicate your preferred configuration. Then, follow the customized commands to install *MXNet*.
 
-<script type="text/javascript" src='../../_static/js/options.js'></script>
+<script type="text/javascript" src='../_static/js/options.js'></script>
 
 <!-- START - OS Menu -->
 
@@ -1462,3 +1462,5 @@ Will be available soon.
 
 </div>
 </div>
+
+# Download Source Package

@@ -105,6 +105,7 @@ try {
         node('mxnetlinux') {
           ws('workspace/sanity') {
             init_git()
+            sh "python tools/license_header.py check"
             make('lint', 'cpplint rcpplint jnilint')
             make('lint', 'pylint')
           }
@@ -324,11 +325,11 @@ try {
             init_git()
             unpack_lib('gpu')
             timeout(time: max_time, unit: 'MINUTES') {
-              sh "${docker_run} cpu rm -rf .Renviron"
+              sh "${docker_run} gpu rm -rf .Renviron"
               sh "${docker_run} gpu mkdir -p /workspace/ut-r-gpu/site-library"
               sh "${docker_run} gpu make rpkg USE_BLAS=openblas R_LIBS=/workspace/ut-r-gpu/site-library"
               sh "${docker_run} gpu R CMD INSTALL --library=/workspace/ut-r-gpu/site-library mxnet_current_r.tar.gz"
-              sh "${docker_run} gpu make rpkgtest R_LIBS=/workspace/ut-r-gpu/site-library"
+              sh "${docker_run} gpu make rpkgtest R_LIBS=/workspace/ut-r-gpu/site-library R_GPU_ENABLE=1"
             }
           }
         }
@@ -421,6 +422,7 @@ try {
         ws('workspace/docs') {
           if (env.BRANCH_NAME == "master") {
             init_git()
+            sh "make clean"
             sh "make docs"
           }
         }

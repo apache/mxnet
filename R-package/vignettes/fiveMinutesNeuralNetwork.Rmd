@@ -1,16 +1,8 @@
-Neural Network with MXNet in Five Minutes
-=============================================
+# Neural Network with MXNet in Five Minutes
 
 This is the first tutorial for new users of the R package `mxnet`. You will learn to construct a neural network to do regression in 5 minutes.
 
 We will show you how to do classification and regression tasks respectively. The data we use comes from the package `mlbench`.
-
-## Preface
-
-This tutorial is written in Rmarkdown.
-
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.io/en/latest/packages/r/fiveMinutesNeuralNetwork.html)
-- You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/fiveMinutesNeuralNetwork.Rmd)
 
 ## Classification
 
@@ -177,3 +169,5 @@ dim(test.y)
 ```
 Congratulations! Now you have learnt the basic for using `mxnet`. Please check the other tutorials for advanced features.
 
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

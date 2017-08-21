@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
@@ -67,6 +84,11 @@ def test_basic():
     assert x.shape == (32, 32)
     x.wait_to_read()
 
+    model.collect_params().setattr('grad_req', 'null')
+    assert list(model.collect_params().values())[0]._grad is None
+    model.collect_params().setattr('grad_req', 'write')
+    assert list(model.collect_params().values())[0]._grad is not None
+
 
 def test_symbol_block():
     model = nn.HybridSequential()
@@ -91,14 +113,18 @@ def test_symbol_block():
 
 def check_layer_forward(layer, dshape):
     layer.collect_params().initialize()
+    x = mx.nd.ones(shape=dshape)
+    x.attach_grad()
     with mx.autograd.record():
-        out = layer(mx.nd.ones(shape=dshape))
+        out = layer(x)
     out.backward()
 
     layer.hybridize()
 
+    x = mx.nd.ones(shape=dshape)
+    x.attach_grad()
     with mx.autograd.record():
-        out = layer(mx.nd.ones(shape=dshape))
+        out = layer(x)
     out.backward()
 
 def test_conv():

@@ -1,4 +1,4 @@
-<img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo-m/mxnet2.png width=135/> *for Deep Learning*
+Apache MXNet (incubating) for Deep Learning
 =====
 
 [![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
@@ -7,7 +7,7 @@
 
 ![banner](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/banner.png)
 
-MXNet is a deep learning framework designed for both *efficiency* and *flexibility*.
+Apache MXNet (incubating) is a deep learning framework designed for both *efficiency* and *flexibility*.
 It allows you to ***mix*** [symbolic and imperative programming](http://mxnet.io/architecture/index.html#deep-learning-system-design-concepts)
 to ***maximize*** efficiency and productivity.
 At its core, MXNet contains a dynamic dependency scheduler that automatically parallelizes both symbolic and imperative operations on the fly.
@@ -22,6 +22,7 @@ deep learning systems, and interesting insights of DL systems for hackers.
 
 What's New
 ----------
+* [Version 0.11.0-rc2 Release](https://github.com/apache/incubator-mxnet/releases/tag/0.11.0.rc2) - MXNet 0.11.0-rc2 Release.
 * [Apache Incubator](http://incubator.apache.org/projects/mxnet.html) - We are now an Apache Incubator project.
 * [Version 0.10.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.10.0) - MXNet 0.10.0 Release.
 * [Version 0.9.3 Release](./docs/architecture/release_note_0_9.md) - First 0.9 official release.

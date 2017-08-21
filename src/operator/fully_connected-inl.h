@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file fully_connect_op-inl.h
  * \brief fully connect operator and symbol
 */
@@ -15,7 +33,7 @@
 #include <utility>
 #include "./operator_common.h"
 #include "./elemwise_op_common.h"
-
+#include "linalg.h"
 
 namespace mxnet {
 namespace op {
@@ -78,7 +96,9 @@ class FullyConnectedOp : public Operator {
     Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
     Tensor<xpu, 2, DType> out = out_data[fullc::kOut].get_with_shape<xpu, 2, DType>(
         Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())), s);
-    out = dot(data, wmat.T());
+    // Legacy approach shown here for comparison:
+    //   out = dot(data, wmat.T());
+    linalg_gemm(data, wmat, out, false, true, s);
     if (!param_.no_bias) {
       Tensor<xpu, 1, DType> bias = in_data[fullc::kBias].get<xpu, 1, DType>(s);
       out += repmat(bias, data.size(0));
@@ -118,7 +138,9 @@ class FullyConnectedOp : public Operator {
     CHECK_NE(req[fullc::kWeight], kWriteInplace) << "cannot write weight inplace";
     // gradient of weight
     Tensor<xpu, 2, DType> gwmat = in_grad[fullc::kWeight].get<xpu, 2, DType>(s);
-    Assign(gwmat, req[fullc::kWeight], dot(grad.T(), data));
+    // Legacy approach shown here for comparison:
+    //   Assign(gwmat, req[fullc::kWeight], dot(grad.T(), data));
+    linalg_gemm(grad, data, gwmat, true, false, s, req[fullc::kWeight]);
     // gradient of bias
     if (!param_.no_bias) {
       Tensor<xpu, 1, DType> gbias = in_grad[fullc::kBias].get<xpu, 1, DType>(s);
@@ -127,7 +149,9 @@ class FullyConnectedOp : public Operator {
     // gradient of data
     Tensor<xpu, 2, DType> gdata = in_grad[fullc::kData].get_with_shape<xpu, 2, DType>(
         Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);
-    Assign(gdata, req[fullc::kData], dot(grad, wmat));
+    // Legacy approach shown here for comparison:
+    //   Assign(gdata, req[fullc::kData], dot(grad, wmat));
+    linalg_gemm(grad, wmat, gdata, false, false, s, req[fullc::kData]);
   }
 
  private:

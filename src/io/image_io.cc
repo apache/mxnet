@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file optimizer_op-inl.h
  * \brief Optimizer operators
  * \author Junyuan Xie
@@ -14,6 +32,8 @@
 #include <nnvm/op.h>
 #include <nnvm/op_attr_types.h>
 #include <nnvm/tuple.h>
+
+#include <fstream>
 
 #include "../operator/elemwise_op_common.h"
 
@@ -90,7 +110,65 @@ struct ImdecodeParam : public dmlc::Parameter<ImdecodeParam> {
               "(instead of opencv's default BGR).");
   }
 };
+
 DMLC_REGISTER_PARAMETER(ImdecodeParam);
+
+struct ImreadParam : public dmlc::Parameter<ImreadParam> {
+  std::string filename;
+  int flag;
+  bool to_rgb;
+  DMLC_DECLARE_PARAMETER(ImreadParam) {
+    DMLC_DECLARE_FIELD(filename)
+    .describe("Name of the image file to be loaded.");
+    DMLC_DECLARE_FIELD(flag)
+    .set_lower_bound(0)
+    .set_default(1)
+    .describe("Convert decoded image to grayscale (0) or color (1).");
+    DMLC_DECLARE_FIELD(to_rgb)
+    .set_default(true)
+    .describe("Whether to convert decoded image to mxnet's default RGB format "
+              "(instead of opencv's default BGR).");
+  }
+};
+
+DMLC_REGISTER_PARAMETER(ImreadParam);
+
+
+#if MXNET_USE_OPENCV
+void ImdecodeImpl(int flag, bool to_rgb, void* data, size_t size,
+                  NDArray* out) {
+  cv::Mat buf(1, size, CV_8U, data);
+  cv::Mat dst;
+  if (out->is_none()) {
+    cv::Mat res = cv::imdecode(buf, flag);
+    if (res.empty()) {
+      LOG(INFO) << "Invalid image file. Only supports png and jpg.";
+      *out = NDArray();
+      return;
+    }
+    *out = NDArray(mshadow::Shape3(res.rows, res.cols, flag == 0 ? 1 : 3),
+                   Context::CPU(), false, mshadow::kUint8);
+    dst = cv::Mat(out->shape()[0], out->shape()[1], flag == 0 ? CV_8U : CV_8UC3,
+                  out->data().dptr_);
+    res.copyTo(dst);
+  } else {
+    dst = cv::Mat(out->shape()[0], out->shape()[1], flag == 0 ? CV_8U : CV_8UC3,
+                out->data().dptr_);
+#if (CV_MAJOR_VERSION > 2 || (CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >=4))
+    cv::imdecode(buf, flag, &dst);
+#else
+    cv::Mat tmp = cv::imdecode(buf, flag);
+    CHECK(!tmp.empty());
+    tmp.copyTo(dst);
+#endif
+  }
+  CHECK(!dst.empty());
+  CHECK_EQ(static_cast<void*>(dst.ptr()), out->data().dptr_);
+  if (to_rgb && flag != 0) {
+    cv::cvtColor(dst, dst, CV_BGR2RGB);
+  }
+}
+#endif  // MXNET_USE_OPENCV
 
 void Imdecode(const nnvm::NodeAttrs& attrs,
               const std::vector<NDArray>& inputs,
@@ -100,62 +178,70 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
 
   CHECK_EQ(inputs[0].ctx().dev_mask(), cpu::kDevMask) << "Only supports cpu input";
   CHECK_EQ(inputs[0].dtype(), mshadow::kUint8) << "Input needs to be uint8 buffer";
-  const uint8_t* str_img = reinterpret_cast<uint8_t*>(inputs[0].data().dptr_);
-  uint32_t len = inputs[0].shape().Size();
+  inputs[0].WaitToRead();
 
-  NDArray ndin = inputs[0];
-  ndin.WaitToRead();
+  uint8_t* str_img = inputs[0].data().dptr<uint8_t>();
+  size_t len = inputs[0].shape().Size();
   TShape oshape(3);
   oshape[2] = param.flag == 0 ? 1 : 3;
   if (get_jpeg_size(str_img, len, &oshape[1], &oshape[0])) {
   } else if (get_png_size(str_img, len, &oshape[1], &oshape[0])) {
   } else {
-    cv::Mat buf(1, ndin.shape().Size(), CV_8U, ndin.data().dptr_);
-    cv::Mat res = cv::imdecode(buf, param.flag);
-    if (res.empty()) {
-      LOG(INFO) << "Invalid image file. Only supports png and jpg.";
-      (*outputs)[0] = NDArray();
-      return;
-    }
-    oshape[0] = res.rows;
-    oshape[1] = res.cols;
-    NDArray ndout(oshape, Context::CPU(), false, mshadow::kUint8);
-    cv::Mat dst(ndout.shape()[0], ndout.shape()[1],
-                param.flag == 0 ? CV_8U : CV_8UC3,
-                ndout.data().dptr_);
-    res.copyTo(dst);
-    if (param.to_rgb && param.flag != 0) {
-      cv::cvtColor(dst, dst, CV_BGR2RGB);
-    }
-    (*outputs)[0] = ndout;
+    (*outputs)[0] = NDArray();
+    ImdecodeImpl(param.flag, param.to_rgb, str_img, len, &((*outputs)[0]));
     return;
   }
 
-  NDArray ndout(oshape, Context::CPU(), true, mshadow::kUint8);
-  Engine::Get()->PushSync([ndin, ndout, param](RunContext ctx){
-      cv::Mat buf(1, ndin.shape().Size(), CV_8U, ndin.data().dptr_);
-      cv::Mat dst(ndout.shape()[0], ndout.shape()[1],
-                  param.flag == 0 ? CV_8U : CV_8UC3,
-                  ndout.data().dptr_);
-#if (CV_MAJOR_VERSION > 2 || (CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >=4))
-      cv::imdecode(buf, param.flag, &dst);
-#else
-      cv::Mat tmp = cv::imdecode(buf, param.flag);
-      CHECK(!tmp.empty());
-      tmp.copyTo(dst);
-#endif
-      CHECK(!dst.empty());
-      CHECK_EQ(static_cast<void*>(dst.ptr()), ndout.data().dptr_);
-      if (param.to_rgb && param.flag != 0) {
-        cv::cvtColor(dst, dst, CV_BGR2RGB);
-      }
+  const NDArray& ndin = inputs[0];
+  NDArray& ndout = (*outputs)[0];
+  ndout = NDArray(oshape, Context::CPU(), true, mshadow::kUint8);
+  Engine::Get()->PushSync([ndin, ndout, str_img, len, param](RunContext ctx){
+      ImdecodeImpl(param.flag, param.to_rgb, str_img, len,
+                   const_cast<NDArray*>(&ndout));
     }, ndout.ctx(), {ndin.var()}, {ndout.var()},
     FnProperty::kNormal, 0, PROFILER_MESSAGE("Imdecode"));
-  (*outputs)[0] = ndout;
 #else
   LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";
 #endif  // MXNET_USE_OPENCV
 }
+
+void Imread(const nnvm::NodeAttrs& attrs,
+            const std::vector<NDArray>& inputs,
+            std::vector<NDArray>* outputs) {
+#if MXNET_USE_OPENCV
+  const auto& param = nnvm::get<ImreadParam>(attrs.parsed);
+
+  std::ifstream file(param.filename, std::ios::binary | std::ios::ate);
+  size_t fsize = file.tellg();
+  file.seekg(0, std::ios::beg);
+  auto buff = new uint8_t[fsize];
+  file.read(reinterpret_cast<char*>(buff), fsize);
+  CHECK(file.good()) << "Failed reading image file " << param.filename;
+
+  TShape oshape(3);
+  oshape[2] = param.flag == 0 ? 1 : 3;
+  if (get_jpeg_size(buff, fsize, &oshape[1], &oshape[0])) {
+  } else if (get_png_size(buff, fsize, &oshape[1], &oshape[0])) {
+  } else {
+    (*outputs)[0] = NDArray();
+    ImdecodeImpl(param.flag, param.to_rgb, buff, fsize, &((*outputs)[0]));
+    delete buff;
+    return;
+  }
+
+  NDArray& ndout = (*outputs)[0];
+  ndout = NDArray(oshape, Context::CPU(), true, mshadow::kUint8);
+  Engine::Get()->PushSync([ndout, buff, fsize, param](RunContext ctx){
+      ImdecodeImpl(param.flag, param.to_rgb, buff, fsize,
+                   const_cast<NDArray*>(&ndout));
+      delete buff;
+    }, ndout.ctx(), {}, {ndout.var()},
+    FnProperty::kNormal, 0, PROFILER_MESSAGE("Imread"));
+#else
+  LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";
+#endif  // MXNET_USE_OPENCV
+}
+
 
 struct ResizeParam : public dmlc::Parameter<ResizeParam> {
   int w;
@@ -282,6 +368,16 @@ NNVM_REGISTER_OP(_cvimdecode)
 .set_attr<FNDArrayFunction>("FNDArrayFunction", Imdecode)
 .add_argument("buf", "NDArray", "Buffer containing binary encoded image")
 .add_arguments(ImdecodeParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_cvimread)
+.describe("Read and decode image with OpenCV. \n"
+          "Note: return image in RGB by default, "
+          "instead of OpenCV's default BGR.")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(op::ParamParser<ImreadParam>)
+.set_attr<FNDArrayFunction>("FNDArrayFunction", Imread)
+.add_arguments(ImreadParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_cvimresize)
 .describe("Resize image with OpenCV. \n")

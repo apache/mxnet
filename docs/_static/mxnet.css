@@ -717,6 +717,14 @@ li.dropdown-submenu ul.dropdown-menu a {
     filter: grayscale(0%);
 }
 
+.section-disclaimer {
+    padding: 3em 3em 3em;
+}
+
+.section-disclaimer p {
+    padding-top: 2em;
+}
+
 .footer{
     padding-top: 40px;
 }
@@ -1243,4 +1251,10 @@ div.download_btn a:hover {
     color: #888;
     padding-bottom: 3px;
     font-style: italic;
+}
+
+/*------------Download source-----------------*/
+#download-source-package {
+    display: none;
+    padding-top: 40px;
 }

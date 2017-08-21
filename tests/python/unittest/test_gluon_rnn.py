@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 from mxnet import gluon
 import numpy as np
@@ -164,6 +181,7 @@ def test_zoneout():
 
 
 def check_rnn_forward(layer, inputs):
+    inputs.attach_grad()
     layer.collect_params().initialize()
     with mx.autograd.record():
         layer.unroll(3, inputs, merge_outputs=True)[0].backward()
@@ -191,6 +209,35 @@ def test_rnn_cells():
     net.add(gluon.rnn.RNNCell(100, input_size=100))
     net.add(gluon.rnn.GRUCell(100, input_size=100))
     check_rnn_forward(net, mx.nd.ones((8, 3, 200)))
+
+def check_rnn_layer_forward(layer, inputs, states=None):
+    layer.collect_params().initialize()
+    with mx.autograd.record():
+        out = layer(inputs, states)
+        if states is not None:
+            assert isinstance(out, tuple) and len(out) == 2
+            out = out[0]
+        else:
+            assert isinstance(out, mx.nd.NDArray)
+        out.backward()
+    mx.nd.waitall()
+
+def test_rnn_layers():
+    check_rnn_layer_forward(gluon.rnn.RNN(10, 2), mx.nd.ones((8, 3, 20)))
+    check_rnn_layer_forward(gluon.rnn.RNN(10, 2), mx.nd.ones((8, 3, 20)), mx.nd.ones((2, 3, 10)))
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2), mx.nd.ones((8, 3, 20)))
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2), mx.nd.ones((8, 3, 20)), [mx.nd.ones((2, 3, 10)), mx.nd.ones((2, 3, 10))])
+    check_rnn_layer_forward(gluon.rnn.GRU(10, 2), mx.nd.ones((8, 3, 20)))
+    check_rnn_layer_forward(gluon.rnn.GRU(10, 2), mx.nd.ones((8, 3, 20)), mx.nd.ones((2, 3, 10)))
+
+    net = gluon.nn.Sequential()
+    net.add(gluon.rnn.LSTM(10, 2, bidirectional=True))
+    net.add(gluon.nn.BatchNorm(axis=2))
+    net.add(gluon.nn.Flatten())
+    net.add(gluon.nn.Dense(3, activation='relu'))
+    net.collect_params().initialize()
+    with mx.autograd.record():
+        net(mx.nd.ones((2, 3, 10))).backward()
 
 
 if __name__ == '__main__':

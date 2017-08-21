@@ -1,5 +1,22 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
-# pylint: disable= arguments-differ
+# pylint: disable= arguments-differ, too-many-lines
 """Convolutional neural network layers."""
 from ..block import HybridBlock
 from ... import symbol
@@ -65,7 +82,7 @@ class _Conv(HybridBlock):
     def __init__(self, channels, kernel_size, strides, padding, dilation,
                  groups, layout, in_channels=0, activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
-                 op_name='Convolution', prefix=None, params=None, **kwargs):
+                 op_name='Convolution', adj=None, prefix=None, params=None):
         super(_Conv, self).__init__(prefix=prefix, params=params)
         with self.name_scope():
             self._channels = channels
@@ -81,7 +98,8 @@ class _Conv(HybridBlock):
                 'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
                 'pad': padding, 'num_filter': channels, 'num_group': groups,
                 'no_bias': not use_bias, 'layout': layout}
-            self._kwargs.update(kwargs)
+            if adj is not None:
+                self._kwargs['adj'] = adj
 
             dshape = [0]*(len(kernel_size) + 2)
             dshape[layout.find('N')] = 1

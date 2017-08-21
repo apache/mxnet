@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=
 """Dataset generator."""
@@ -34,6 +51,13 @@ class DataLoader(object):
         Whether to shuffle the samples.
     sampler : Sampler
         The sampler to use. Either specify sampler or shuffle, not both.
+    last_batch : {'keep', 'discard', 'rollover'}
+        How to handle the last batch if batch_size does not evenly divide
+        `len(dataset)`.
+
+        keep - A batch with less samples than previous batches is returned.
+        discard - The last batch is discarded if its incomplete.
+        rollover - The remaining samples are rolled over to the next epoch.
     batch_sampler : Sampler
         A sampler that returns mini-batches. Do not specify batch_size,
         shuffle, sampler, and last_batch if batch_sampler is specified.
@@ -54,7 +78,8 @@ class DataLoader(object):
             elif shuffle:
                 raise ValueError("shuffle must not be specified if sampler is specified")
 
-            batch_sampler = _sampler.BatchSampler(sampler, batch_size, last_batch)
+            batch_sampler = _sampler.BatchSampler(
+                sampler, batch_size, last_batch if last_batch else 'keep')
         elif batch_size is not None or shuffle or sampler is not None or \
                 last_batch is not None:
             raise ValueError("batch_size, shuffle, sampler and last_batch must " \

@@ -1,5 +1,10 @@
 require(mxnet)
 
+if (Sys.getenv("R_GPU_ENABLE") != "" & as.integer(Sys.getenv("R_GPU_ENABLE")) == 1) {
+  mx.ctx.default(new = mx.gpu())
+  message("Using GPU for testing.")
+}
+
 context("lstm models")
 
 get.nll <- function(s) {
@@ -26,7 +31,7 @@ test_that("training error decreasing", {
     X.train <- list(data=array(1:16, dim=c(2,8)), label=array(2:17, dim=c(2,8)))
 
     s <- capture.output(model <- mx.lstm( X.train, 
-                                          ctx=mx.cpu(),
+                                          ctx=mx.ctx.default(),
                                           num.round=num.round, 
                                           update.period=update.period,
                                           num.lstm.layer=num.lstm.layer, 

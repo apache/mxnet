@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /**
- * Copyright (c) 2015 by Contributors
  * @file   kvstore_dist.h
  * @brief  distributed implementation based on ps-lite
  */
@@ -100,23 +118,22 @@ class KVStoreDist : public KVStoreLocal {
       if (recv_buf.is_none()) {
         // it may happen for the first time a no-rank-0 worker pull the weight.
         recv_buf = NDArray(
-          grouped_vals[i][0]->shape(), pinned_ctx_, false, grouped_vals[i][0]->dtype());
+          grouped_vals[i][0]->shape(), pinned_ctx_, true, grouped_vals[i][0]->dtype());
       }
-#if MKL_EXPERIMENTAL == 1
-      mkl_set_tblob_eager_mode(recv_buf.data());
-#endif
-      real_t* data = static_cast<real_t*>(recv_buf.data().dptr_);
-      size_t size = recv_buf.shape().Size();
-
-      auto pull_from_servers = [this, key, data, size](
+      auto pull_from_servers = [this, key, recv_buf](
           RunContext rctx, Engine::CallbackOnComplete cb) {
         // convert to ps keys
+        size_t size = recv_buf.shape().Size();
         PSKV& pskv = EncodeKey(key, size);
-
-        // issue pull, false means no delete
+#if MKL_EXPERIMENTAL == 1
+        mkl_set_tblob_eager_mode(recv_buf.data());
+#endif
+        real_t* data = static_cast<real_t*>(recv_buf.data().dptr_);
+        // false means not to delete data when SArray is deleted
         auto vals = new ps::SArray<real_t>(data, size, false);
+        // issue pull
         CHECK_NOTNULL(ps_worker_)->ZPull(
-        pskv.keys, vals, &pskv.lens, 0, [vals, cb](){ delete vals; cb(); });
+            pskv.keys, vals, &pskv.lens, 0, [vals, cb](){ delete vals; cb(); });
       };
 
       CHECK_NOTNULL(Engine::Get())->PushAsync(
@@ -208,27 +225,26 @@ class KVStoreDist : public KVStoreLocal {
         send_buf = merged;  // avoid memory copy
       } else {
         if (send_buf.is_none()) {
-          send_buf = NDArray(merged.shape(), pinned_ctx_, false, merged.dtype());
+          send_buf = NDArray(merged.shape(), pinned_ctx_, true, merged.dtype());
         }
         CopyFromTo(merged, &send_buf);
       }
 
       // push to servers
-      send_buf.WaitToRead();
-      size_t size = send_buf.shape().Size();
-#if MKL_EXPERIMENTAL == 1
-      mkl_set_tblob_eager_mode(send_buf.data());
-#endif
-      real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
       auto push_to_servers =
-          [this, key, data, size](RunContext rctx, Engine::CallbackOnComplete cb) {
-         // convert to ps keys
+          [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
+        // convert to ps keys
+        size_t size = send_buf.shape().Size();
         PSKV& pskv = EncodeKey(key, size);
 
+#if MKL_EXPERIMENTAL == 1
+        mkl_set_tblob_eager_mode(send_buf.data());
+#endif
+        real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
         // do push. false means no delete
         ps::SArray<real_t> vals(data, size, false);
         CHECK_NOTNULL(ps_worker_)->ZPush(
-        pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
+            pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
       };
       Engine::Get()->PushAsync(
           push_to_servers,

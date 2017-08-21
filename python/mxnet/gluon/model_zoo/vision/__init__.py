@@ -1,6 +1,24 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=wildcard-import, arguments-differ
 r"""Module for pre-defined neural network models.
+
 This module contains definitions for the following model architectures:
 -  `AlexNet`_
 -  `DenseNet`_
@@ -9,21 +27,26 @@ This module contains definitions for the following model architectures:
 -  `ResNet V2`_
 -  `SqueezeNet`_
 -  `VGG`_
+
 You can construct a model with random weights by calling its constructor:
-.. code:: python
+.. code::
+
     import mxnet.gluon.models as models
     resnet18 = models.resnet18_v1()
     alexnet = models.alexnet()
     squeezenet = models.squeezenet1_0()
     densenet = models.densenet_161()
+
 We provide pre-trained models for all the models except ResNet V2.
 These can constructed by passing
 ``pretrained=True``:
-.. code:: python
+.. code::
+
     import mxnet.gluon.models as models
     resnet18 = models.resnet18_v1(pretrained=True)
     alexnet = models.alexnet(pretrained=True)
-Pretrained model is converted from torchvision.
+
+Pretrained models are converted from torchvision.
 All pre-trained models expect input images normalized in the same way,
 i.e. mini-batches of 3-channel RGB images of shape (N x 3 x H x W),
 where N is the batch size, and H and W are expected to be at least 224.
@@ -31,6 +54,7 @@ The images have to be loaded in to a range of [0, 1] and then normalized
 using ``mean = [0.485, 0.456, 0.406]`` and ``std = [0.229, 0.224, 0.225]``.
 The transformation should preferrably happen at preprocessing. You can use
 ``mx.image.color_normalize`` for such transformation::
+
     image = image/255
     normalized = mx.image.color_normalize(image,
                                           mean=mx.nd.array([0.485, 0.456, 0.406]),

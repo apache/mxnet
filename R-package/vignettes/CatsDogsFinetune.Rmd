@@ -1,5 +1,4 @@
-Dogs vs. Cats classification with mxnet and R
-=============================================
+# Dogs vs. Cats classification with mxnet and R
 
 ## Packages and prerequisites
 
@@ -13,10 +12,10 @@ It is an end-to-end R solution for the dogs vs cats Kaggle competition (https://
 and it can be used as an example for fine-tuning.
 All the code has been test on Ubuntu 16.04.
 
-
 ```{r, echo=FALSE}
 knitr::opts_chunk$set(eval = FALSE)
 ```
+
 
 ```{r}
 library(imager)
@@ -104,12 +103,30 @@ Map(function(x, y) {
 }, x = files, y = new_names)
 ```
 
-### Creating .rec files using im2rec.py
+### Creating .rec files
 
-```{bash, eval = FALSE}
-python im2rec.py --list=1 --recursive=1 --train-ratio=0.8 cats_dogs train_pad_224x224
-python im2rec.py --num-thread=4 --pass-through=1 cats_dogs_train.lst train_pad_224x224
-python im2rec.py --num-thread=4 --pass-through=1 cats_dogs_val.lst train_pad_224x224
+```{r}
+cat_files <- list.files("train_pad_224x224/cat/", recursive=TRUE)
+cat_files <- paste0("cat/", cat_files)
+
+dog_files <- list.files("train_pad_224x224/dog/", recursive=TRUE)
+dog_files <- paste0("dog/", dog_files)
+
+train_ind <- sample(length(cat_files), length(cat_files) * 0.8)
+train_data <- c(1:(length(train_ind) * 2))
+train_data <- cbind(train_data, c(rep(0, length(train_ind)), rep(1, length(train_ind))))
+train_data <- cbind(train_data, c(cat_files[train_ind], dog_files[train_ind]))
+train_data <- train_data[sample(nrow(train_data)),]
+write.table(train_data, "cats_dogs_train.lst", quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
+im2rec("cats_dogs_train.lst", "train_pad_224x224/", "cats_dogs_train.rec")
+
+val_ind <- c(1:length(cat_files))[!c(1:length(cat_files)) %in% train_ind]
+val_data <- c(1:(length(val_ind) * 2))
+val_data <- cbind(val_data, c(rep(0, length(val_ind)), rep(1, length(val_ind))))
+val_data <- cbind(val_data, c(cat_files[val_ind], dog_files[val_ind]))
+val_data <- val_data[sample(nrow(val_data)),]
+write.table(val_data, "cats_dogs_val.lst", quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
+im2rec("cats_dogs_val.lst", "train_pad_224x224/", "cats_dogs_val.rec")
 ```
 
 ## The data iterator
@@ -151,6 +168,8 @@ and we need to replace the last fully connected layer with a new layer for 2 cla
 
 
 ```{r}
+download.file('http://data.dmlc.ml/data/Inception.zip', destfile = 'Inception.zip')
+unzip("Inception.zip")
 inception_bn <- mx.model.load("./Inception-BN", iteration = 126)
 
 symbol <- inception_bn$symbol
@@ -215,21 +234,20 @@ preprocImage<- function(src, # URL or file location
                         num_channels = 3, # 3 for RGB, 1 for grayscale
                         mult_by = 1,      # set to 255 for normalized image
                         crop = FALSE) {   # no crop by default
-	
-	im <- load.image(src)
-	
-	if (crop) {
-		shape <- dim(im)
+  im <- load.image(src)
+
+  if (crop) {
+    shape <- dim(im)
     short_edge <- min(shape[1:2])
-		xx <- floor((shape[1] - short_edge) / 2)
-    yy <- floor((shape[2] - short_edge) / 2) 
+    xx <- floor((shape[1] - short_edge) / 2)
+    yy <- floor((shape[2] - short_edge) / 2)
     im <- crop.borders(im, xx, yy)
-	}
-	
-	resized <- resize(im,  size_x = width, size_y = height)
-	arr <- as.array(resized) * mult_by
-	dim(arr) <- c(width, height, num_channels, 1)
-	return(arr)
+  }
+
+  resized <- resize(im,  size_x = width, size_y = height)
+  arr <- as.array(resized) * mult_by
+  dim(arr) <- c(width, height, num_channels, 1)
+  return(arr)
 } 
 ```
 
@@ -249,3 +267,6 @@ probs <- t(do.call(cbind, probs))
 preds <- data.frame(id = 1:12500, label = probs[, 2])
 write.csv(preds, "subm.csv", row.names = FALSE, quote = FALSE)
 ```
+
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
