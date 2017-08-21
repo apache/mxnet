@@ -954,6 +954,8 @@ def test_convolution_grouping():
 
     for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
         np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
+
+        
 def test_depthwise_convolution():
     for num_base in [32, 64]:
         for kernel in [(3,3), (5,5)]:
