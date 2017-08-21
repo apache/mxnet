@@ -954,6 +954,42 @@ def test_convolution_grouping():
 
     for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
         np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
+def test_depthwise_convolution():
+    for num_base in [32, 64]:
+        for kernel in [(3,3), (5,5)]:
+            for stride in [(1,1), (2,2)]:
+                for pad in [(0,0), (1,1)]:
+                    num_filter = num_base
+                    num_group = num_base
+                    shape = (2, num_base, 32, 32)
+
+                    x = mx.sym.Variable('x')
+                    w = mx.sym.Variable('w')
+                    b = mx.sym.Variable('b')
+                    y1 = mx.sym.Convolution(data=x, weight=w, bias=b, num_filter=num_filter, num_group=num_group,
+                            kernel=kernel, stride=stride, pad=pad)
+                    xslice = mx.sym.SliceChannel(data=x, num_outputs=num_group, axis=1)
+                    wslice = mx.sym.SliceChannel(data=w, num_outputs=num_group, axis=0)
+                    bslice = mx.sym.SliceChannel(data=b, num_outputs=num_group, axis=0)
+                    y2 = mx.sym.Concat(*[mx.sym.Convolution(data=xslice[i], weight=wslice[i], bias=bslice[i],
+                                                            num_filter=num_filter//num_group, kernel=kernel,
+                                                            stride=stride, pad=pad)
+                                       for i in range(num_group)])
+
+                    dev = default_context()
+                    exe1 = y1.simple_bind(dev, x=shape)
+                    exe2 = y2.simple_bind(mx.cpu(), x=shape, w=(num_filter, shape[1]//num_group, kernel[0], kernel[1]),
+                            b=(num_filter,))
+                    for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
+                        arr1[:] = np.random.normal(size=arr1.shape)
+                        arr2[:] = arr1
+                    exe1.forward(is_train=True)
+                    exe1.backward(exe1.outputs[0])
+                    exe2.forward(is_train=True)
+                    exe2.backward(exe2.outputs[0])
+
+                    for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
+                        np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
 
 def gen_broadcast_data(idx):
     # Manually set test cases
@@ -3264,14 +3300,14 @@ def test_quantization_2bit_op():
     residual = mx.nd.array([-3, 1, -1, 5, -2, 2, 3, -7, -2, -100])
     neg_threshold = mx.nd.array([-4.0])
     pos_threshold = mx.nd.array([4.0])
-    out = mx.contrib.ndarray.quantize_2bit(array,
-                                           residual,
-                                           neg_threshold,
-                                           pos_threshold)
-    mx.contrib.ndarray.dequantize_2bit(out, array)
-    out_real = mx.nd.array([-4, 0, 0, 4, 4, 4, 0, -4, -4, -4])
+    out = mx.contrib.nd.quantize_2bit(array,
+                                      residual,
+                                      neg_threshold,
+                                      pos_threshold)
+    mx.contrib.nd.dequantize_2bit(out, array)
+    array_real = mx.nd.array([-4, 0, 0, 4, 4, 4, 0, -4, -4, -4])
     res_real = mx.nd.array([-5, -1, 2, 2, 4, 3, 0, -1, -6, -96])
-    assert same(out.asnumpy(), out_real.asnumpy())
+    assert same(array.asnumpy(), array_real.asnumpy())
     assert same(residual.asnumpy(), res_real.asnumpy())
 
 def test_reciprocal_op():
@@ -3436,6 +3472,7 @@ def test_laop():
     if dev.device_type == 'gpu':
        return
 
+    # enable numerical checking of gradients
     grad_check = 1
 
     data1 = mx.symbol.Variable('data1')
