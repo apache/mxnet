@@ -104,6 +104,8 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(add_n)
 .add_alias("ElementWiseSum")
+.add_alias("_sparse_add_n")
+.add_alias("_sparse_ElementWiseSum")
 .describe(R"doc(Adds all input arguments element-wise.
 
 .. math::

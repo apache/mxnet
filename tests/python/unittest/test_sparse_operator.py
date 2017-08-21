@@ -27,7 +27,7 @@ def check_elemwise_add_ex(lhs_stype, rhs_stype, shape, lhs_grad_stype=None, rhs_
     rhs_np = rhs_nd.asnumpy()
 
     out_np = lhs_np + rhs_np
-    test = mx.symbol.elemwise_add(lhs, rhs)
+    test = mx.symbol.sparse.elemwise_add(lhs, rhs)
     location = {'lhs': lhs_nd, 'rhs': rhs_nd}
     check_symbolic_forward(test, location, [out_np])
     check_numeric_gradient(test, location)
@@ -62,17 +62,17 @@ def test_elemwise_add_ex_multiple_stages():
     val2 = mx.nd.array([[5, 10]]);
     idx1 = mx.nd.array([0], dtype=np.int64);
     idx2 = mx.nd.array([1], dtype=np.int64);
-    sp_nd1 = mx.nd.row_sparse_array(val1, idx1, shape)
-    sp_nd2 = mx.nd.row_sparse_array(val2, idx2, shape)
+    sp_nd1 = mx.nd.sparse.row_sparse_array(val1, idx1, shape)
+    sp_nd2 = mx.nd.sparse.row_sparse_array(val2, idx2, shape)
     ds_nd = mx.nd.array(ds_np)
 
     # sparse + sparse = sparse
     sp_data1 = mx.symbol.Variable('sp_data1', stype='row_sparse')
     sp_data2 = mx.symbol.Variable('sp_data2', stype='row_sparse')
     ds_data = mx.symbol.Variable('ds_data')
-    plus = mx.symbol.elemwise_add(sp_data1, sp_data2, name='plus')
+    plus = mx.symbol.sparse.elemwise_add(sp_data1, sp_data2, name='plus')
     # sparse + dense = dense
-    test = mx.symbol.elemwise_add(plus, ds_data)
+    test = mx.symbol.sparse.elemwise_add(plus, ds_data)
     check_symbolic_forward(test, {'sp_data1': sp_nd1, 'sp_data2': sp_nd2,
                                   'ds_data': ds_nd}, [sp_np1 + sp_np2 + ds_np])
 
@@ -146,7 +146,7 @@ def test_sparse_dot():
         # test symbolic forward
         lhs = mx.symbol.Variable('lhs', stype='csr')
         rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
-        out = mx.symbol.dot(lhs, rhs, transpose_a=trans_lhs)
+        out = mx.symbol.sparse.dot(lhs, rhs, transpose_a=trans_lhs)
         location = {'lhs': lhs_nd, 'rhs': rhs_nd}
         check_symbolic_forward(out, location, [out_np], rtol=1e-3, atol=1e-4)
 
@@ -198,13 +198,13 @@ def test_sparse_retain():
         for i in idx:
             tensor_retained_expected[i][:] = dns[i]
         indices = mx.nd.array(idx, dtype=index_type)
-        rsp_retained = mx.nd.sparse_retain(rsp, indices=indices)
+        rsp_retained = mx.nd.sparse.retain(rsp, indices=indices)
         assert same(tensor_retained_expected, rsp_retained.asnumpy())
 
         # check numeric gradient
         data = mx.symbol.Variable('data')
         idx = mx.symbol.Variable('indices')
-        sym = mx.sym.sparse_retain(data=data, indices=idx)
+        sym = mx.sym.sparse.retain(data=data, indices=idx)
         check_numeric_gradient(sym, [rsp, indices], grad_nodes=['data'],
                                grad_stype_dict={'data': 'row_sparse'})
 
@@ -252,7 +252,7 @@ def test_sparse_square_sum():
                 assert same(ret.asnumpy(), ret_expected.asnumpy())
 
                 rsp_data = mx.sym.Variable('data', stype='row_sparse')
-                test = mx._symbol_internal._square_sum(rsp_data, axis=axis, keepdims=keepdim)
+                test = mx.symbol._internal._square_sum(rsp_data, axis=axis, keepdims=keepdim)
 
                 # check symbolic backward since ograd can be a rsp
                 # and cannot be checked through check_numeric_gradient
@@ -314,7 +314,8 @@ def test_sparse_storage_fallback():
         out = exec1.outputs[0].asnumpy()
         assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=1e-4)
         exec1.backward()
-        assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=1e-4)
+        assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(),
+                            rtol=1e-3, atol=1e-4)
 
     def check_concat(shape, lhs_stype, rhs_stype):
         x = mx.symbol.Variable('x', stype=lhs_stype)
@@ -339,7 +340,7 @@ def test_sparse_elementwise_sum():
     def check_sparse_elementwise_sum_with_shape(stype, shape, n):
         # forward
         inputs = [mx.symbol.Variable('arg%d' % i) for i in range(n)]
-        out = mx.symbol.add_n(*inputs, name='esum')
+        out = mx.symbol.sparse.add_n(*inputs, name='esum')
         arr = []
         arr_grad = [mx.nd.empty(shape) for _ in range(n)]
         densities = [0, 0.01, 0.1, 0.2, 0.3, 0.4, 0.5]

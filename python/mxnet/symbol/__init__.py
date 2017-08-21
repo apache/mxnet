@@ -15,11 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""NDArray API of MXNet."""
+"""Symbol API of MXNet."""
 
 from . import _internal, sparse, op
-from .op import CachedOp
 # pylint: disable=wildcard-import, redefined-builtin
-from .ndarray import *
-from .utils import load, save, zeros, empty, array
-from .sparse import _ndarray_cls
+from .symbol import *
+from ..ndarray import _GRAD_REQ_MAP

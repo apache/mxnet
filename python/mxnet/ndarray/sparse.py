@@ -16,7 +16,8 @@
 # under the License.
 
 # coding: utf-8
-"""SparseNDArray API of mxnet."""
+"""Sparse NDArray API of MXNet."""
+
 from __future__ import absolute_import
 from __future__ import division
 try:
@@ -39,8 +40,10 @@ from ..base import mx_uint, NDArrayHandle, check_call
 from ..context import Context
 from . import _internal
 from .ndarray import _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
-from .ndarray import _STORAGE_TYPE_STR_TO_ID
-from .ndarray import NDArray, _storage_type, _zeros_ndarray, _array
+from .ndarray import _STORAGE_TYPE_STR_TO_ID, NDArrayBase
+from .ndarray import NDArray, _storage_type
+from .ndarray import zeros as _zeros_ndarray
+from .ndarray import array as _array
 from . import cast_storage
 from . import slice as nd_slice
 
@@ -58,6 +61,11 @@ except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from .._ctypes.ndarray import _set_ndarray_class
+
+
+__all__ = ["_ndarray_cls", "csr_matrix", "row_sparse_array",
+           "BaseSparseNDArray", "CSRNDArray", "RowSparseNDArray"]
+
 
 # pylint: enable=unused-import
 _STORAGE_AUX_TYPES = {
@@ -96,6 +104,7 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
         c_array(mx_uint, aux_shapes),
         ctypes.byref(hdl)))
     return hdl
+
 
 class BaseSparseNDArray(NDArray):
     """The base class of an NDArray stored in a sparse storage format.
@@ -176,8 +185,8 @@ class BaseSparseNDArray(NDArray):
         >>> y.dtype
         <type 'numpy.int32'>
         """
-        res = _zeros_sparse_ndarray(shape=self.shape, ctx=self.context,
-                                    dtype=dtype, stype=self.stype)
+        res = zeros(shape=self.shape, ctx=self.context,
+                    dtype=dtype, stype=self.stype)
         self.copyto(res)
         return res
 
@@ -449,6 +458,7 @@ class CSRNDArray(BaseSparseNDArray):
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
 
+
 # pylint: disable=abstract-method
 class RowSparseNDArray(BaseSparseNDArray):
     """A sparse representation of a set of NDArray row slices at given indices.
@@ -661,6 +671,7 @@ class RowSparseNDArray(BaseSparseNDArray):
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
 
+
 def _prepare_src_array(src, dtype, default_dtype):
     """Prepare `src` and its dtype so that they can be used to construct NDArray.
     `src` is converted to a `np.ndarray` if it's neither an `NDArray` nor an `np.ndarray`.
@@ -816,6 +827,7 @@ def row_sparse_array(data, indices, shape, ctx=None, dtype=None, indices_type=No
     check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, indices.handle, ctypes.c_int(0)))
     return result
 
+
 def _ndarray_cls(handle, writable=True, stype=None):
     if stype is None:
         stype = _storage_type(handle)
@@ -832,7 +844,7 @@ def _ndarray_cls(handle, writable=True, stype=None):
 _set_ndarray_class(_ndarray_cls)
 
 
-def _zeros_sparse_ndarray(stype, shape, ctx=None, dtype=None, aux_types=None, **kwargs):
+def zeros(stype, shape, ctx=None, dtype=None, aux_types=None, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
 
     Parameters
@@ -874,7 +886,8 @@ def _zeros_sparse_ndarray(stype, shape, ctx=None, dtype=None, aux_types=None, **
     out = _ndarray_cls(_new_alloc_handle(stype, shape, ctx, True, dtype, aux_types))
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, out=out, **kwargs)
 
-def _empty_sparse_ndarray(stype, shape, ctx=None, dtype=None, aux_types=None):
+
+def empty(stype, shape, ctx=None, dtype=None, aux_types=None):
     """Returns a new array of given shape and type, without initializing entries.
     """
     if isinstance(shape, int):
@@ -885,11 +898,12 @@ def _empty_sparse_ndarray(stype, shape, ctx=None, dtype=None, aux_types=None):
         dtype = mx_real_t
     assert(stype is not None)
     if stype == 'csr' or stype == 'row_sparse':
-        return _zeros_sparse_ndarray(stype, shape, ctx=ctx, dtype=dtype, aux_types=aux_types)
+        return zeros(stype, shape, ctx=ctx, dtype=dtype, aux_types=aux_types)
     else:
         raise Exception("unknown stype : " + str(stype))
 
-def _sparse_array(source_array, ctx=None, dtype=None, aux_types=None):
+
+def array(source_array, ctx=None, dtype=None, aux_types=None):
     """Creates a sparse array from any object exposing the array interface.
     """
     if isinstance(source_array, NDArray):
@@ -901,6 +915,6 @@ def _sparse_array(source_array, ctx=None, dtype=None, aux_types=None):
         # TODO(haibin/anisub) support creation from scipy object when `_sync_copy_from` is ready
         raise NotImplementedError('creating BaseSparseNDArray from ' \
                                   ' a non-NDArray object is not implemented.')
-    arr = _empty_sparse_ndarray(source_array.stype, source_array.shape, ctx, dtype, aux_types)
+    arr = empty(source_array.stype, source_array.shape, ctx, dtype, aux_types)
     arr[:] = source_array
     return arr

@@ -126,8 +126,8 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
     _validate_csr_generation_inputs(num_rows, num_cols, density,
                                     distribution="uniform")
     csr = sp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
-    result = mx.nd.csr_matrix(csr.data, csr.indptr, csr.indices,
-                              (num_rows, num_cols), dtype=dtype)
+    result = mx.nd.sparse.csr_matrix(csr.data, csr.indptr, csr.indices,
+                                     (num_rows, num_cols), dtype=dtype)
     return result
 
 
@@ -228,7 +228,7 @@ def rand_sparse_ndarray(shape, stype, density=None, distribution=None, dtype=Non
             return result, (np.array([], dtype=dtype), np.array([], dtype='int64'))
         # generate random values
         val = rnd.rand(indices.shape[0], *shape[1:]).astype(dtype)
-        arr = mx.nd.row_sparse_array(val, indices, shape, indices_type=np.int64, dtype=dtype)
+        arr = mx.nd.sparse.row_sparse_array(val, indices, shape, indices_type=np.int64, dtype=dtype)
         return arr, (val, indices)
     elif stype == 'csr':
         assert len(shape) == 2

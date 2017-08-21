@@ -402,7 +402,7 @@ struct DotCsrRspDnsByRowBlocks {
       }
       const RType* row_idx_ptr = first;
       // end of binary search
-      if (row_idx_ptr == row_idx_r+nnr_r || *row_idx_ptr> col_idx_l[indptr_l[j+1]-1]) continue;
+      if (row_idx_ptr == row_idx_r+nnr_r || *row_idx_ptr > col_idx_l[indptr_l[j+1]-1]) continue;
       for (IType k = indptr_l[j]; k < indptr_l[j+1] && row_idx_ptr != row_idx_r+nnr_r;) {
         if (col_idx_l[k] == *row_idx_ptr) {
           const dim_t offset_r = (row_idx_ptr - row_idx_r) * num_cols;

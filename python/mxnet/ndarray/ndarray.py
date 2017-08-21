@@ -43,10 +43,10 @@ from . import broadcast_sub, broadcast_div, broadcast_to, broadcast_equal, cast_
 from . import broadcast_greater, broadcast_greater_equal, broadcast_lesser, broadcast_lesser_equal
 from . import zeros_like, slice
 
-__all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",  \
-           "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",   \
-           "imdecode", "lesser", "lesser_equal", "maximum", "minimum", "moveaxis",           \
-           "multiply", "negative", "not_equal", "onehot_encode", "power", "subtract",        \
+__all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
+           "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",
+           "imdecode", "lesser", "lesser_equal", "maximum", "minimum", "moveaxis",
+           "multiply", "negative", "not_equal", "onehot_encode", "power", "subtract",
            "true_divide", "waitall", "_new_empty_handle"]
 
 # pylint: disable= no-member
@@ -83,6 +83,7 @@ _GRAD_REQ_MAP = {
 }
 # pylint: enable= no-member
 
+
 def _new_empty_handle():
     """Returns a new empty handle.
 
@@ -96,6 +97,7 @@ def _new_empty_handle():
     hdl = NDArrayHandle()
     check_call(_LIB.MXNDArrayCreateNone(ctypes.byref(hdl)))
     return hdl
+
 
 def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     """Return a new handle with specified shape and context.
@@ -118,6 +120,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
         ctypes.byref(hdl)))
     return hdl
 
+
 def waitall():
     """Wait for all async operations to finish in MXNet.
 
@@ -125,10 +128,12 @@ def waitall():
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
+
 def _storage_type(handle):
     storage_type = ctypes.c_int(0)
     check_call(_LIB.MXNDArrayGetStorageType(handle, ctypes.byref(storage_type)))
     return _STORAGE_TYPE_ID_TO_STR[storage_type.value]
+
 
 class NDArray(NDArrayBase):
     """An array object representing a multidimensional, homogeneous array of
@@ -948,7 +953,7 @@ fixed-size items.
         >>> y.dtype
         <type 'numpy.int32'>
         """
-        res = _empty_ndarray(self.shape, ctx=self.context, dtype=dtype)
+        res = empty(self.shape, ctx=self.context, dtype=dtype)
         self.copyto(res)
         return res
 
@@ -1120,6 +1125,7 @@ fixed-size items.
         """
         return cast_storage(self, stype=stype)
 
+
 def onehot_encode(indices, out):
     """One-hot encoding indices into matrix out.
 
@@ -1168,6 +1174,7 @@ def ones(shape, ctx=None, dtype=None, **kwargs):
     return _internal._ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
     # pylint: enable= no-member, protected-access
 
+
 def full(shape, val, ctx=None, dtype=mx_real_t, out=None):
     """Returns a new array of given shape and type, filled with the given value `val`.
 
@@ -1198,11 +1205,12 @@ def full(shape, val, ctx=None, dtype=mx_real_t, out=None):
     >>> mx.nd.full((1, 2), 2.0, dtype='float16').asnumpy()
     array([[ 2.,  2.]], dtype=float16)
     """
-    out = _empty_ndarray(shape, ctx, dtype) if out is None else out
+    out = empty(shape, ctx, dtype) if out is None else out
     out[:] = val
     return out
 
-def _array(source_array, ctx=None, dtype=None):
+
+def array(source_array, ctx=None, dtype=None):
     """Creates an array from any object exposing the array interface.
 
     Parameters
@@ -1230,9 +1238,10 @@ def _array(source_array, ctx=None, dtype=None):
                 source_array = np.array(source_array, dtype=dtype)
             except:
                 raise TypeError('source_array must be array like object')
-    arr = _empty_ndarray(source_array.shape, ctx, dtype)
+    arr = empty(source_array.shape, ctx, dtype)
     arr[:] = source_array
     return arr
+
 
 def moveaxis(tensor, source, destination):
     """Moves the `source` axis into the `destination` position
@@ -1320,6 +1329,7 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
                              dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
 
+
 #pylint: disable= too-many-arguments, no-member, protected-access
 def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
     """ Helper function for element-wise operation.
@@ -1367,6 +1377,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
     else:
         raise TypeError('type %s not supported' % str(type(rhs)))
 #pylint: enable= too-many-arguments, no-member, protected-access
+
 
 def add(lhs, rhs):
     """Returns element-wise sum of the input arrays with broadcasting.
@@ -1429,6 +1440,7 @@ def add(lhs, rhs):
         None)
     # pylint: enable= no-member, protected-access
 
+
 def subtract(lhs, rhs):
     """Returns element-wise difference of the input arrays with broadcasting.
 
@@ -1490,6 +1502,7 @@ def subtract(lhs, rhs):
         _internal._rminus_scalar)
     # pylint: enable= no-member, protected-access
 
+
 def multiply(lhs, rhs):
     """Returns element-wise product of the input arrays with broadcasting.
 
@@ -1550,6 +1563,7 @@ def multiply(lhs, rhs):
         None)
     # pylint: enable= no-member, protected-access
 
+
 def divide(lhs, rhs):
     """Returns element-wise division of the input arrays with broadcasting.
 
@@ -1606,6 +1620,7 @@ def divide(lhs, rhs):
         _internal._rdiv_scalar)
     # pylint: enable= no-member, protected-access
 
+
 def modulo(lhs, rhs):
     """Returns element-wise modulo of the input arrays with broadcasting.
 
@@ -1661,6 +1676,7 @@ def modulo(lhs, rhs):
         _internal._mod_scalar,
         _internal._rmod_scalar)
     # pylint: enable= no-member, protected-access
+
 
 def power(base, exp):
     """Returns result of first array elements raised to powers from second array, element-wise
@@ -1723,6 +1739,7 @@ def power(base, exp):
         _internal._rpower_scalar)
     # pylint: enable= no-member, protected-access
 
+
 def maximum(lhs, rhs):
     """Returns element-wise maximum of the input arrays with broadcasting.
 
@@ -1779,6 +1796,7 @@ def maximum(lhs, rhs):
         None)
     # pylint: enable= no-member, protected-access
 
+
 def minimum(lhs, rhs):
     """Returns element-wise minimum of the input arrays with broadcasting.
 
@@ -1834,6 +1852,7 @@ def minimum(lhs, rhs):
         _internal._minimum_scalar,
         None)
     # pylint: enable= no-member, protected-access
+
 
 def equal(lhs, rhs):
     """Returns the result of element-wise **equal to** (==) comparison operation with
@@ -1897,6 +1916,7 @@ def equal(lhs, rhs):
         _internal._equal_scalar,
         None)
     # pylint: enable= no-member, protected-access
+
 
 def not_equal(lhs, rhs):
     """Returns the result of element-wise **not equal to** (!=) comparison operation
@@ -1964,6 +1984,7 @@ def not_equal(lhs, rhs):
         None)
     # pylint: enable= no-member, protected-access
 
+
 def greater(lhs, rhs):
     """Returns the result of element-wise **greater than** (>) comparison operation
     with broadcasting.
@@ -2027,6 +2048,7 @@ def greater(lhs, rhs):
         _internal._lesser_scalar)
     # pylint: enable= no-member, protected-access
 
+
 def greater_equal(lhs, rhs):
     """Returns the result of element-wise **greater than or equal to** (>=) comparison
     operation with broadcasting.
@@ -2089,6 +2111,7 @@ def greater_equal(lhs, rhs):
         _internal._greater_equal_scalar,
         _internal._lesser_equal_scalar)
     # pylint: enable= no-member, protected-access
+
 
 def lesser(lhs, rhs):
     """Returns the result of element-wise **lesser than** (<) comparison operation
@@ -2217,11 +2240,13 @@ def lesser_equal(lhs, rhs):
         _internal._greater_equal_scalar)
     # pylint: enable= no-member, protected-access
 
+
 def true_divide(lhs, rhs):
 
     """This function is similar to :meth:`divide`.
     """
     return divide(lhs, rhs)
+
 
 def negative(arr):
     """Numerical negative, element-wise.
@@ -2246,6 +2271,7 @@ def negative(arr):
            [-1., -1., -1.]], dtype=float32)
     """
     return multiply(arr, -1.0)
+
 
 def concatenate(arrays, axis=0, always_copy=True):
     """DEPRECATED, use ``concat`` instead
@@ -2283,7 +2309,7 @@ def concatenate(arrays, axis=0, always_copy=True):
         assert shape_rest2 == arr.shape[axis+1:]
         assert dtype == arr.dtype
     ret_shape = shape_rest1 + (shape_axis,) + shape_rest2
-    ret = _empty_ndarray(ret_shape, ctx=arrays[0].context, dtype=dtype)
+    ret = empty(ret_shape, ctx=arrays[0].context, dtype=dtype)
 
     idx = 0
     begin = [0 for _ in ret_shape]
@@ -2302,6 +2328,7 @@ def concatenate(arrays, axis=0, always_copy=True):
         idx += arr.shape[axis]
 
     return ret
+
 
 def imdecode(str_img, clip_rect=(0, 0, 0, 0), out=None, index=0, channels=3, mean=None):
     """DEPRECATED, use mx.img instead
@@ -2345,7 +2372,7 @@ def imdecode(str_img, clip_rect=(0, 0, 0, 0), out=None, index=0, channels=3, mea
                                    out=out)
 
 
-def _zeros_ndarray(shape, ctx=None, dtype=None, **kwargs):
+def zeros(shape, ctx=None, dtype=None, **kwargs):
     """Returns a new array filled with all zeros, with the given shape and type.
 
     Parameters
@@ -2381,7 +2408,8 @@ def _zeros_ndarray(shape, ctx=None, dtype=None, **kwargs):
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
     # pylint: enable= no-member, protected-access
 
-def _empty_ndarray(shape, ctx=None, dtype=None):
+
+def empty(shape, ctx=None, dtype=None):
     """Returns a new array of given shape and type, without initializing entries.
 
     Parameters

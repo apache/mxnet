@@ -15,41 +15,41 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Register backend ops in mxnet.ndarray namespace"""
+"""Register backend ops in mxnet.symbol namespace."""
 
 import sys as _sys
 import os as _os
 import ctypes
-import numpy as np
+import numpy as _numpy
 
-from ..ndarray_doc import _build_doc
+from mxnet.base import mx_uint, check_call, _LIB, py_str, OpHandle, c_str
+from mxnet.symbol_doc import _build_doc
 
 # Use different version of SymbolBase
 # When possible, use cython to speedup part of computation.
-# pylint: disable=unused-import
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from .._ctypes.ndarray import NDArrayBase, _STORAGE_TYPE_ID_TO_STR
-        from .._ctypes.ndarray import CachedOp, _imperative_invoke
+        from .._ctypes.symbol import SymbolBase, _set_symbol_class
+        from .._ctypes.symbol import _symbol_creator  # pylint: disable=unused-import
     elif _sys.version_info >= (3, 0):
-        from .._cy3.ndarray import NDArrayBase, _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
-        from .._cy3.ndarray import CachedOp, _imperative_invoke
+        from .._cy3.symbol import SymbolBase, _set_symbol_class
+        from .._cy3.symbol import _symbol_creator  # pylint: disable=unused-import
     else:
-        from .._cy2.ndarray import NDArrayBase, _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
-        from .._cy2.ndarray import CachedOp, _imperative_invoke
+        from .._cy2.symbol import SymbolBase, _set_symbol_class
+        from .._cy2.symbol import _symbol_creator  # pylint: disable=unused-import
 except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
-    from .._ctypes.ndarray import NDArrayBase, _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
-    from .._ctypes.ndarray import CachedOp, _imperative_invoke
+    from .._ctypes.symbol import SymbolBase, _set_symbol_class
+    from .._ctypes.symbol import _symbol_creator  # pylint: disable=unused-import
 
-from ..base import mx_uint, check_call, _LIB, py_str, OpHandle, c_str, _Null
-# pylint: enable=unused-import
+from ..base import _Null  # pylint: disable=unused-import
+from ..name import NameManager  # pylint: disable=unused-import
+from ..attribute import AttrScope  # pylint: disable=unused-import
 
 
-# pylint: disable=too-many-locals, invalid-name
-def _make_ndarray_function(handle, name):
-    """Create a NDArray function from the FunctionHandle."""
+def _make_atomic_symbol_function(handle, name):
+    """Create an atomic symbol function by handle and function name."""
     real_name = ctypes.c_char_p()
     desc = ctypes.c_char_p()
     num_args = mx_uint()
@@ -105,8 +105,10 @@ def _make_ndarray_function(handle, name):
         else:
             signature.append('%s=_Null'%name)
             kwarg_names.append(name)
-    signature.append('out=None')
+    #signature.append('is_train=False')
     signature.append('name=None')
+    signature.append('attr=None')
+    signature.append('out=None')
     signature.append('**kwargs')
     signature = ndsignature + signature
 
@@ -115,35 +117,63 @@ def _make_ndarray_function(handle, name):
         code.append("""
 def %s(*%s, **kwargs):"""%(func_name, arr_name))
         code.append("""
-    ndargs = []
+    sym_args = []
     for i in {}:
-        assert isinstance(i, NDArrayBase), \\
-            "Positional arguments must have NDArray type, " \\
+        assert isinstance(i, SymbolBase), \\
+            "Positional arguments must be Symbol instances, " \\
             "but got %s"%str(i)
-        ndargs.append(i)""".format(arr_name))
+        sym_args.append(i)""".format(arr_name))
         if dtype_name is not None:
             code.append("""
     if '%s' in kwargs:
-        kwargs['%s'] = np.dtype(kwargs['%s']).name"""%(
+        kwargs['%s'] = _numpy.dtype(kwargs['%s']).name"""%(
             dtype_name, dtype_name, dtype_name))
         code.append("""
-    _ = kwargs.pop('name', None)
-    out = kwargs.pop('out', None)
-    keys = list(kwargs.keys())
-    vals = list(kwargs.values())""")
+    attr = kwargs.pop('attr', None)
+    kwargs.update(AttrScope.current.get(attr))
+    name = kwargs.pop('name', None)
+    name = NameManager.current.get(name, '%s')
+    _ = kwargs.pop('out', None)
+    keys = []
+    vals = []
+    sym_kwargs = dict()
+    for k, v in kwargs.items():
+        if isinstance(v, SymbolBase):
+            sym_kwargs[k] = v
+        else:
+            keys.append(k)
+            vals.append(v)"""%(func_name.lower()))
+        if key_var_num_args:
+            code.append("""
+    if '%s' not in kwargs:
+        keys.append('%s')
+        vals.append(len(sym_args) + len(sym_kwargs))"""%(
+            key_var_num_args, key_var_num_args))
+
+        code.append("""
+    return _symbol_creator(%d, sym_args, sym_kwargs, keys, vals, name)"""%(
+        handle.value))
     else:
         code.append("""
 def %s(%s):
-    ndargs = []
-    keys = list(kwargs.keys())
-    vals = list(kwargs.values())"""%(func_name, ', '.join(signature)))
+    kwargs.update(AttrScope.current.get(attr))
+    sym_kwargs = dict()
+    keys = []
+    vals = []"""%(func_name, ', '.join(signature)))
+        code.append("""
+    for k, v in kwargs.items():
+        if isinstance(v, SymbolBase):
+            sym_kwargs[k] = v
+        else:
+            keys.append(k)
+            vals.append(v)""")
         # NDArray args
         for name in ndarg_names: # pylint: disable=redefined-argument-from-local
             code.append("""
     if {name} is not None:
-        assert isinstance({name}, NDArrayBase), \\
-            "Argument {name} must have NDArray type, but got %s"%str({name})
-        ndargs.append({name})""".format(name=name))
+        assert isinstance({name}, SymbolBase), \\
+            "Argument {name} must be Symbol instances, but got %s"%str({name})
+        sym_kwargs['{name}'] = {name}""".format(name=name))
         # kwargs
         for name in kwarg_names: # pylint: disable=redefined-argument-from-local
             code.append("""
@@ -155,24 +185,24 @@ def %s(%s):
             code.append("""
     if %s is not _Null:
         keys.append('%s')
-        vals.append(np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
+        vals.append(_numpy.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
 
-    code.append("""
-    return _imperative_invoke(%d, ndargs, keys, vals, out)"""%(
-        handle.value))
+        code.append("""
+    name = NameManager.current.get(name, '%s')
+    return _symbol_creator(%d, None, sym_kwargs, keys, vals, name)"""%(
+        func_name.lower(), handle.value))
 
     local = {}
     exec(''.join(code), None, local)  # pylint: disable=exec-used
-    ndarray_function = local[func_name]
-    ndarray_function.__name__ = func_name
-    ndarray_function.__doc__ = doc_str
-    ndarray_function.__module__ = 'mxnet.ndarray'
-    return ndarray_function
+    symbol_function = local[func_name]
+    symbol_function.__name__ = func_name
+    symbol_function.__doc__ = doc_str
+    symbol_function.__module__ = 'mxnet.symbol'
+    return symbol_function
 
 
-# pylint: enable=too-many-locals, invalid-name
-def _init_ndarray_module(root_namespace):
-    """List and add all the ndarray functions to current module."""
+def _init_symbol_module(root_namespace):
+    """List and add all the atomic symbol functions to current module."""
     plist = ctypes.POINTER(ctypes.c_char_p)()
     size = ctypes.c_uint()
 
@@ -182,28 +212,29 @@ def _init_ndarray_module(root_namespace):
     for i in range(size.value):
         op_names.append(py_str(plist[i]))
 
-    module_obj = _sys.modules["%s.ndarray" % root_namespace]
-    module_sparse = _sys.modules["%s.ndarray.sparse" % root_namespace]
-    module_internal = _sys.modules["%s.ndarray._internal" % root_namespace]
-    module_contrib = _sys.modules["%s.contrib.ndarray" % root_namespace]
+    module_obj = _sys.modules["%s.symbol" % root_namespace]
+    module_sparse = _sys.modules["%s.symbol.sparse" % root_namespace]
+    module_internal = _sys.modules["%s.symbol._internal" % root_namespace]
+    module_contrib = _sys.modules["%s.contrib.symbol" % root_namespace]
     for name in op_names:
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
-        function = _make_ndarray_function(hdl, name)
+        function = _make_atomic_symbol_function(hdl, name)
         if function.__name__.startswith('_contrib_'):
             function.__name__ = function.__name__[9:]
-            function.__module__ = 'mxnet.contrib.ndarray'
+            function.__module__ = 'mxnet.contrib.symbol'
             setattr(module_contrib, function.__name__, function)
         elif function.__name__.startswith('_'):
             setattr(module_internal, function.__name__, function)
         else:
             setattr(module_obj, function.__name__, function)
 
-        # register sparse ops under mxnet.ndarray.sparse
+        # register sparse ops under mxnet.symbol.sparse
         if function.__name__.startswith('_sparse_'):
             function.__name__ = function.__name__[8:]
-            function.__module__ = 'mxnet.ndarray.sparse'
+            function.__module__ = 'mxnet.symbol.sparse'
             setattr(module_sparse, function.__name__, function)
 
-# register backend operators in mx.nd
-_init_ndarray_module("mxnet")
+
+# Initialize the atomic symbol in startups
+_init_symbol_module("mxnet")

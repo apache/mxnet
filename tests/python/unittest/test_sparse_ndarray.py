@@ -22,7 +22,7 @@ from mxnet.test_utils import *
 from numpy.testing import assert_allclose
 import numpy.random as rnd
 
-from mxnet.ndarray import RowSparseNDArray, CSRNDArray
+from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 
 
 def assert_fcompex(f, *args, **kwargs):
@@ -453,7 +453,8 @@ def test_create_csr():
         data = matrix.data
         indptr = matrix.indptr
         indices = matrix.indices
-        csr_created = mx.nd.csr_matrix(data=data, indptr=indptr, indices=indices, shape=shape)
+        csr_created = mx.nd.sparse.csr_matrix(data=data, indptr=indptr,
+                                              indices=indices, shape=shape)
         assert csr_created.stype == 'csr'
         assert same(csr_created.data.asnumpy(), data.asnumpy())
         assert same(csr_created.indptr.asnumpy(), indptr.asnumpy())
@@ -471,7 +472,7 @@ def test_create_row_sparse():
         matrix = rand_ndarray(shape, 'row_sparse', density)
         data = matrix.data
         indices = matrix.indices
-        rsp_created = mx.nd.row_sparse_array(data=data, indices=indices, shape=shape)
+        rsp_created = mx.nd.sparse.row_sparse_array(data=data, indices=indices, shape=shape)
         assert rsp_created.stype == 'row_sparse'
         assert same(rsp_created.data.asnumpy(), data.asnumpy())
         assert same(rsp_created.indices.asnumpy(), indices.asnumpy())

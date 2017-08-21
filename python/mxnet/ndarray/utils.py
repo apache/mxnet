@@ -20,9 +20,14 @@
 import ctypes
 
 from ..base import _LIB, check_call, py_str, c_str, string_types, mx_uint, NDArrayHandle, c_array
-from .ndarray import NDArray, _zeros_ndarray, _empty_ndarray, _array
-from .sparse_ndarray import _zeros_sparse_ndarray, _empty_sparse_ndarray, _sparse_array
-from .sparse_ndarray import _ndarray_cls
+from .ndarray import NDArray
+from .ndarray import array as _array
+from .ndarray import empty as _empty_ndarray
+from .ndarray import zeros as _zeros_ndarray
+from .sparse import zeros as _zeros_sparse_ndarray
+from .sparse import empty as _empty_sparse_ndarray
+from .sparse import array as _sparse_array
+from .sparse import _ndarray_cls
 
 
 def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
@@ -58,6 +63,7 @@ def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
         return _zeros_ndarray(shape, ctx, dtype, **kwargs)
     else:
         return _zeros_sparse_ndarray(stype, shape, ctx, dtype, aux_types, **kwargs)
+
 
 def empty(shape, ctx=None, dtype=None, stype=None, aux_types=None):
     """Returns a new array of given shape and type, without initializing entries.
@@ -96,6 +102,7 @@ def empty(shape, ctx=None, dtype=None, stype=None, aux_types=None):
         return _empty_ndarray(shape, ctx, dtype)
     else:
         return _empty_sparse_ndarray(stype, shape, ctx, dtype, aux_types)
+
 
 def array(source_array, ctx=None, dtype=None, aux_types=None):
     """Creates an array from any object exposing the array interface.
@@ -138,6 +145,7 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
         return _sparse_array(source_array, ctx=ctx, dtype=dtype, aux_types=aux_types)
     else:
         return _array(source_array, ctx=ctx, dtype=dtype)
+
 
 def load(fname):
     """Loads an array from file.

@@ -475,7 +475,7 @@ def test_factorization_machine_module():
         w1_bias = mx.symbol.var('w1_bias', shape=(1))
         w1 = mx.symbol.broadcast_add(mx.symbol.dot(x, w1_weight), w1_bias)
 
-        v_s = mx._symbol_internal._square_sum(data=v, axis=1, keepdims=True)
+        v_s = mx.symbol._internal._square_sum(data=v, axis=1, keepdims=True)
         x_s = mx.symbol.square(data=x)
         bd_sum = mx.sym.dot(x_s, v_s)
 
@@ -505,7 +505,7 @@ def test_factorization_machine_module():
     import scipy.sparse as sp
     # generate some random scipy csr data
     csr_sp = sp.rand(num_samples, feature_dim, density=0.1, format='csr')
-    csr_nd = mx.nd.csr_matrix(csr_sp.data, csr_sp.indptr, csr_sp.indices,
+    csr_nd = mx.nd.sparse.csr_matrix(csr_sp.data, csr_sp.indptr, csr_sp.indices,
                               (num_samples, feature_dim))
     label = mx.nd.ones((num_samples,1))
     # the alternative is to use LibSVMIter

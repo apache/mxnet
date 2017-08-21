@@ -27,7 +27,7 @@
 namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
-.add_alias("_add").add_alias("_plus").add_alias("_Plus")
+.add_alias("_add").add_alias("_plus").add_alias("_Plus").add_alias("_sparse_elemwise_add")
 .describe(R"code(Adds arguments element-wise.
 
 The storage type of ``elemwise_add`` output depends on storage types of inputs
