@@ -247,6 +247,9 @@ class CSRNDArray(BaseSparseNDArray):
     row i are stored in indices[indptr[i]:indptr[i+1]] and their corresponding values are stored
     in values[indptr[i]:indptr[i+1]].
 
+    The column indices for a given row are expected to be sorted in ascending order.
+    Duplicate column entries for the same row are not allowed.
+
     Example
     -------
     >>> a = mx.nd.array([[0, 1, 0], [2, 0, 0], [0, 0, 0], [0, 0, 3]])
