@@ -127,7 +127,7 @@ void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   // First, init the memory of output to 0x00000000
   Kernel<init_mem_2bit, xpu>::Launch(s, outputs[0].Size(),
-                              outputs[0].dptr<float>()); // output array
+                              outputs[0].dptr<float>());  // output array
   // Then, init threshold
   Kernel<init_threshold_2bit, xpu>::Launch(s, 1,
                               outputs[0].dptr<float>(),  // output array
