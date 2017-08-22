@@ -752,11 +752,17 @@ class MXDataIter(DataIter):
         self.first_batch = None
         self.first_batch = self.next()
         data = self.first_batch.data[0]
-        label = self.first_batch.label[0]
+        label_names = [label_name]
+        if len(self.first_batch.label) > 1:
+            label_names += ["label"+str(i+2) \
+            for i in range(len(self.first_batch.label)-len(label_names))]
+        label_list = []
+        for ind, l in enumerate(self.first_batch.label):
+            label_list.append(DataDesc(label_names[ind], l.shape, l.dtype))
 
         # properties
         self.provide_data = [DataDesc(data_name, data.shape, data.dtype)]
-        self.provide_label = [DataDesc(label_name, label.shape, label.dtype)]
+        self.provide_label = label_list
         self.batch_size = data.shape[0]
 
     def __del__(self):
@@ -776,7 +782,7 @@ class MXDataIter(DataIter):
 
     def next(self):
         if self._debug_skip_load and not self._debug_at_begin:
-            return  DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad(),
+            return  DataBatch(data=[self.getdata()], label=self.getlabel(), pad=self.getpad(),
                               index=self.getindex())
         if self.first_batch is not None:
             batch = self.first_batch
@@ -786,7 +792,7 @@ class MXDataIter(DataIter):
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         if next_res.value:
-            return DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad(),
+            return DataBatch(data=[self.getdata()], label=self.getlabel(), pad=self.getpad(),
                              index=self.getindex())
         else:
             raise StopIteration
@@ -804,9 +810,14 @@ class MXDataIter(DataIter):
         return NDArray(hdl, False)
 
     def getlabel(self):
-        hdl = NDArrayHandle()
-        check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
-        return NDArray(hdl, False)
+        num = ctypes.c_int(0)
+        check_call(_LIB.MXDataIterGetLabelNum(self.handle, ctypes.byref(num)))
+        labels = []
+        for i in range(num.value):
+            hdl = NDArrayHandle()
+            check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl), ctypes.c_int(i)))
+            labels.append(NDArray(hdl, False))
+        return labels
 
     def getindex(self):
         index_size = ctypes.c_uint64(0)
