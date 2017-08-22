@@ -38,6 +38,14 @@ make -C ../.. -j8
 return $?
 }
 
+function get_random_optimizer()
+{
+    optimizers=("sgd" "adagrad" "adam")  # randomly choose an optimizer
+    RANDOM=$$$(date +%s)
+    optimizer=${optimizers[$RANDOM % ${#optimizers[@]} ]}
+    echo $optimizer
+}
+
 cp ../../make/config.mk ../..
 cat >>../../config.mk <<EOF
 USE_CUDA=1
@@ -72,9 +80,15 @@ check_val() {
 example_dir=../../example/image-classification
 # python: lenet + mnist
 test_lenet() {
-    python $example_dir/train_mnist.py \
-        --data-dir `pwd`/data/mnist/ --network lenet --gpus $gpus --num-epochs 10 \
-        2>&1 | tee log
+    optimizer=$(get_random_optimizer)
+    if [ "$optimizer" == "adam" ]; then
+        learning_rate=0.0005
+    else
+        learning_rate=0.01
+    fi
+    python $example_dir/train_mnist.py --lr $learning_rate \
+        --data-dir `pwd`/data/mnist/ --network lenet --optimizer $optimizer --gpus $gpus \
+        --num-epochs 10 2>&1 | tee log
     check_val 0.99
 }
 juLog -name=Python.Lenet.Mnist -error=Fail test_lenet
