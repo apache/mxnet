@@ -40,7 +40,8 @@ NNVM_REGISTER_OP(_backward_sigmoid)
 
 // copy
 NNVM_REGISTER_OP(_copy)
-.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", IdentityComputeEx<gpu>);
 
 NNVM_REGISTER_OP(_backward_copy)
 .set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
@@ -53,7 +54,9 @@ NNVM_REGISTER_OP(make_loss)
 
 // identity output as first input, but attributes are constrainted to be like rhs
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
-.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", IdentityLikeRhsComputeEx<gpu>);
+
 
 NNVM_REGISTER_OP(Cast)
 .set_attr<FCompute>("FCompute<gpu>", CastCompute<gpu>);

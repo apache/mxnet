@@ -27,15 +27,24 @@
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/operator.h>
+#include <mxnet/graph_attr_types.h>
 #include <nnvm/graph.h>
+#include <nnvm/graph_attr_types.h>
 #include <vector>
 #include <memory>
+#include <string>
 
 namespace mxnet {
 namespace exec {
 
 /*! \brief reuse graph definition */
 using nnvm::Graph;
+
+const int kBadStorageID = -1;
+const int kExternalStorageID = -2;
+const int kDynamicStorageID = -3;
+
+const int kNonDefaultStorage = -2;
 
 /*!
  * \brief executor to execute an operator
@@ -44,7 +53,7 @@ using nnvm::Graph;
  */
 class OpExecutor {
  public:
-  /*! \brief input arrays */
+  /*! \brief input data arrays, which may be either input or aux */
   std::vector<NDArray> in_array;
   /*! \brief output data arrays */
   std::vector<NDArray> out_array;
@@ -65,7 +74,7 @@ class OpExecutor {
    *  This function call do not synchronize the stream.
    * \param rctx The runtime context passed in by environment.
    */
-  virtual void Run(RunContext rctx) = 0;
+  virtual void Run(RunContext rctx, bool is_gpu) = 0;
   /*! \return the execution type */
   virtual ExecType exec_type() const = 0;
   /*! \return return engine variable for operator states */
@@ -122,6 +131,45 @@ Graph AttachOpResources(Graph g);
  *  - "skip_plus_node", std::vector<int> if set to 1, current op's execution is skiped.
  */
 Graph DetectInplaceAddTo(Graph g);
+
+/*!
+ * \brief Infer shapes in the graph given the information.
+ * \param graph The input graph.
+ * \param shape_inputs The shapes of input symbols to the graph.
+ * \param shape_attr_key The key to the node attribute that can indicate shape. This is
+ *                       the place where manual hint for shapes could be injected.
+ * \return A graph with new attribute "shape" containing inferred shape of each NodeEntry.
+ *         The index of ShapeVector is given by graph.indexed_graph().entry_id.
+ */
+Graph InferShape(Graph graph,
+                 nnvm::ShapeVector shape_inputs,
+                 const std::string& shape_attr_key = "");
+
+/*!
+ * \brief Infer types in the graph given the information.
+ * \param graph The input graph.
+ * \param dtype_inputs The types of input symbols to the graph.
+ * \param dtype_attr_key The key to the node attribute that can indicate types. This is
+ *                       the place where manual hint for types could be injected.
+ * \return A graph with new attribute "dtype" containing inferred type of each NodeEntry.
+ *         The index of ShapeVector is given by graph.indexed_graph().entry_id.
+ */
+Graph InferType(Graph graph,
+                nnvm::DTypeVector dtype_inputs,
+                const std::string& dtype_attr_key = "");
+
+/*!
+ * \brief Infer storage types in the graph given the information.
+ * \param graph The input graph.
+ * \param storage_type_inputs The storage types of input symbols to the graph.
+ * \param storage_type_attr_key The key to the node attribute that can indicate storage types.
+                                This is the place where manual hint for types could be injected.
+ * \return A graph with new attribute "storage_type" containing inferred type of each NodeEntry.
+ *         The index of StorageTypeVector is given by graph.indexed_graph().entry_id.
+ */
+Graph InferStorageType(Graph graph,
+                       StorageTypeVector storage_type_inputs,
+                       const std::string& storage_type_attr_key = "");
 
 }  // namespace exec
 }  // namespace mxnet
