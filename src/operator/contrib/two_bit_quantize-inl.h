@@ -34,8 +34,6 @@
 namespace mxnet {
 namespace op {
 
-#define TOTAL_BITS 32
-
 struct init_mem_2bit {
   // Initialize output array
   MSHADOW_XINLINE static void Map(int i, float* out) {
@@ -178,7 +176,6 @@ inline bool Quantize2BitType(const nnvm::NodeAttrs& attrs,
   // 3. positive threshold
   CHECK_EQ(in_attrs->size(), 4U);
   // 0. output array
-  // 1. new residual
   CHECK_EQ(out_attrs->size(), 1U);
   // check input
   CHECK_EQ((*in_attrs)[0], mshadow::kFloat32)

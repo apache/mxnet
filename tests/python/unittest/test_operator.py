@@ -3302,10 +3302,13 @@ def test_quantization_2bit_op():
     residual = mx.nd.array([-3, 1, -1, 5, -2, 2, 3, -7, -2, -100])
     neg_threshold = mx.nd.array([-4.0])
     pos_threshold = mx.nd.array([4.0])
+    
     out = mx.contrib.nd.quantize_2bit(array, residual, neg_threshold, pos_threshold)
     mx.contrib.nd.dequantize_2bit(out, array)
-    array_real = mx.nd.array([-4, 0, 0, 4, 4, 4, 0, -4, -4, -4])
-    res_real = mx.nd.array([-5, -1, 2, 2, 4, 3, 0, -1, -6, -96])
+
+    array_real = mx.nd.array([-4., 0., 0., 4., 4., 4., 0., -4., -4., -4.])
+    res_real = mx.nd.array([-5., -1., 2., 2., 4., 3., 0., -1., -6., -96.])
+
     assert same(array.asnumpy(), array_real.asnumpy())
     assert same(residual.asnumpy(), res_real.asnumpy())
 
