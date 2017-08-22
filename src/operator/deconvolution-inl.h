@@ -256,7 +256,7 @@ class DeconvolutionOp : public Operator {
     if (!param_.no_bias) {
       // add bias, broadcast bias to dim 1: channel
       Tensor<xpu, 1, DType> bias = in_data[deconv::kBias].get<xpu, 1, DType>(s);
-      out += broadcast<1>(bias, out.shape_);
+      out += mshadow::expr::broadcast<1>(bias, out.shape_);
     }
   }
 
