@@ -124,6 +124,12 @@ class Dense(HybridBlock):
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
         Whether the layer uses a bias vector.
+    last_axis: bool
+        Whether the dot and addition are applied on the last axis.
+        If true, all but the last axis of input data are kept the same, and the transformation
+        applies on the last axis.
+        If false, all but the first axis of input data are multiplied together to become the
+        in_units.
     weight_initializer : str or `Initializer`
         Initializer for the `kernel` weights matrix.
     bias_initializer: str or `Initializer`
@@ -138,16 +144,27 @@ class Dense(HybridBlock):
         See document of `Block`.
 
 
+    If ``last_axis`` is set to be false, then the shapes are:
     Input shape:
-        A 2D input with shape `(batch_size, in_units)`.
+        An N-D input with shape
+        `(batch_size, x1, x2, ..., xn) with x1 x x2 x ... x xn equals in_units`.
 
     Output shape:
         The output would have shape `(batch_size, units)`.
+
+    If ``last_axis`` is set to be true, then the shapes are:
+    Input shape:
+        An N-D input with shape
+        `(x1, x2, ..., xn, in_units)`.
+
+    Output shape:
+        The output would have shape `(x1, x2, ..., xn, units)`.
     """
-    def __init__(self, units, activation=None, use_bias=True,
+    def __init__(self, units, activation=None, use_bias=True, last_axis=False,
                  weight_initializer=None, bias_initializer='zeros',
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
+        self._last_axis = last_axis
         with self.name_scope():
             self._units = units
             self._in_units = in_units
@@ -166,12 +183,8 @@ class Dense(HybridBlock):
                 self.act = None
 
     def hybrid_forward(self, F, x, weight, bias=None):
-        if bias is None:
-            act = F.FullyConnected(x, weight, no_bias=True, num_hidden=self._units,
-                                   name='fwd')
-        else:
-            act = F.FullyConnected(x, weight, bias, num_hidden=self._units,
-                                   name='fwd')
+        act = F.FullyConnected(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
+                               last_axis=self._last_axis, name='fwd')
         if self.act is not None:
             act = self.act(act)
         return act

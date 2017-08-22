@@ -67,9 +67,9 @@ def test_parameter_sharing():
 
 def test_basic():
     model = nn.Sequential()
-    model.add(nn.Dense(128, activation='tanh', in_units=10))
+    model.add(nn.Dense(128, activation='tanh', in_units=10, last_axis=True))
     model.add(nn.Dropout(0.5))
-    model.add(nn.Dense(64, activation='tanh', in_units=128))
+    model.add(nn.Dense(64, activation='tanh', in_units=256))
     model.add(nn.Dense(32, in_units=64))
     model.add(nn.Activation('relu'))
 
@@ -80,7 +80,7 @@ def test_basic():
 
     # ndarray
     model.collect_params().initialize(mx.init.Xavier(magnitude=2.24))
-    x = model(mx.nd.zeros((32, 10)))
+    x = model(mx.nd.zeros((32, 2, 10)))
     assert x.shape == (32, 32)
     x.wait_to_read()
 
