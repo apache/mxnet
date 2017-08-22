@@ -127,10 +127,10 @@ AutogradRuntime* AutogradRuntime::Get() {
 }
 
 void AutogradRuntime::RecordOp(const nnvm::Op* op,
-                                    const nnvm::NodeAttrs& attrs,
-                                    std::vector<NDArray> *p_inputs,
-                                    std::vector<NDArray> *p_outputs,
-                                    const OpStatePtr& state) {
+                               const nnvm::NodeAttrs& attrs,
+                               std::vector<NDArray> *p_inputs,
+                               std::vector<NDArray> *p_outputs,
+                               const OpStatePtr& state) {
   static auto& fgradient = nnvm::Op::GetAttr<nnvm::FGradient>("FGradient");
   std::vector<NDArray>& inputs  = *p_inputs;
   std::vector<NDArray>& outputs = *p_outputs;
@@ -144,7 +144,6 @@ void AutogradRuntime::RecordOp(const nnvm::Op* op,
       << "Please call backward first to clear the graph or do this out side of "
       << "a record section. ";
   }
-  if (!fgradient.count(attrs.op)) return;
   bool need_grad = false;
   for (const auto& i : inputs) {
     if (!i.entry_.is_none()) {
@@ -163,28 +162,30 @@ void AutogradRuntime::RecordOp(const nnvm::Op* op,
   for (uint32_t i = 0; i < inputs.size(); ++i) {
     nn_node->inputs.emplace_back(NodeEntry{nullptr, i, 0});
   }
-  std::vector<NodeEntry> ograd_entries;
-  for (uint32_t i = 0; i < outputs.size(); ++i) {
-    ograd_entries.emplace_back(NodeEntry{nullptr, i, 1});
-  }
-  auto igrad_entries = fgradient[nn_node->op()](nn_node, ograd_entries);
-  for (const auto& i : igrad_entries) {
-    if (i.node == nullptr && i.version == 0) {
-      save_inputs[i.index] = true;
-    } else if (i.node == nn_node) {
-      save_outputs[i.index] = true;
+  if (fgradient.count(attrs.op)) {
+    std::vector<NodeEntry> ograd_entries;
+    for (uint32_t i = 0; i < outputs.size(); ++i) {
+      ograd_entries.emplace_back(NodeEntry{nullptr, i, 1});
     }
-  }
-  DFSVisit(igrad_entries, [&](const NodePtr& node) {
-      if (!node || node == nn_node) return;
-      for (const auto& i : node->inputs) {
-        if (i.node == nullptr && i.version == 0) {
-          save_inputs[i.index] = true;
-        } else if (i.node == nn_node) {
-          save_outputs[i.index] = true;
-        }
+    auto igrad_entries = fgradient[nn_node->op()](nn_node, ograd_entries);
+    for (const auto& i : igrad_entries) {
+      if (i.node == nullptr && i.version == 0) {
+        save_inputs[i.index] = true;
+      } else if (i.node == nn_node) {
+        save_outputs[i.index] = true;
       }
-    });
+    }
+    DFSVisit(igrad_entries, [&](const NodePtr& node) {
+        if (!node || node == nn_node) return;
+        for (const auto& i : node->inputs) {
+          if (i.node == nullptr && i.version == 0) {
+            save_inputs[i.index] = true;
+          } else if (i.node == nn_node) {
+            save_outputs[i.index] = true;
+          }
+        }
+      });
+  }
 
   AGNodePtr ag_node = AGNode::Create(nn_node);
   ag_node->state = state;

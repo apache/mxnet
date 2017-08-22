@@ -199,6 +199,7 @@ class Parameter(object):
     def _init_impl(self, data, ctx):
         """Sets data and grad."""
         self._data = OrderedDict()
+        self._ctx_list = list(ctx)
         for i in ctx:
             self._data[i] = data.copyto(i)
         self._init_grad()
@@ -377,7 +378,7 @@ class Parameter(object):
             if self._deferred_init:
                 return self._deferred_init[1]
             raise RuntimeError("Parameter %s has not been initialized"%self.name)
-        return list(self._data.keys())
+        return self._ctx_list
 
     def zero_grad(self):
         """Sets gradient buffer on all contexts to 0. No action is taken if
