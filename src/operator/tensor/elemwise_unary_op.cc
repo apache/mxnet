@@ -234,7 +234,6 @@ NNVM_REGISTER_OP(_backward_cast)
   })
 .set_attr<FCompute>("FCompute<cpu>", CastCompute<cpu>);
 
-
 // negative
 MXNET_OPERATOR_REGISTER_UNARY_COMPUTE(negative, cpu, mshadow_op::negation)
 MXNET_ADD_SPARSE_OP_ALIAS(negative)

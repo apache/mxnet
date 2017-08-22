@@ -128,19 +128,6 @@ inline std::string type_string(const int& x) {
   return "unknown";
 }
 
-/*! \brief get string representation of storage_type */
-inline std::string stype_string(const int& x) {
-  switch (x) {
-    case kDefaultStorage:
-      return "default";
-    case kCSRStorage:
-      return "csr";
-    case kRowSparseStorage:
-      return "row_sparse";
-  }
-  return "unknown";
-}
-
 /*!
  * \brief Assign x to y. Checks for compatiblity when y is not empty.
  *  Allow missing dim in both x and y (as 0).

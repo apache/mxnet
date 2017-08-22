@@ -1193,7 +1193,6 @@ void GraphExecutor::InitCachedOps() {
   const auto& vctx = graph_.GetAttr<ContextVector>("context");
   const auto& addto_entry = graph_.GetAttr<std::vector<int> >("addto_entry");
   const auto& skip_plus_node = graph_.GetAttr<std::vector<int> >("skip_plus_node");
-  const auto& vstorage_type = graph_.GetAttr<StorageTypeVector>("storage_type");
 
   op_nodes_.resize(idx.num_nodes());
   // setup the array and requirements.

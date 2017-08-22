@@ -1072,6 +1072,7 @@ def test_sparse_mathematical_core():
                                                 ograd_density=ograd_density,
                                                 force_overlap=force_overlap)
 
+
 def check_elemwise_add_ex(lhs_stype, rhs_stype, shape, lhs_grad_stype=None, rhs_grad_stype=None):
     lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
     rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
@@ -1494,6 +1495,7 @@ def test_sparse_elementwise_sum():
 
         out_grad = mx.nd.empty(shape)
         out_grad[:] = np.random.uniform(-10, 10, shape)
+
         # backward
         exec1.backward([out_grad])
         for a in arr_grad:

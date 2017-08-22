@@ -916,6 +916,7 @@ def test_batchnorm_training():
 
                 in_location = [mx.nd.array(data_tmp).tostype(stype), mx.nd.array(gamma).tostype(stype),
                                mx.nd.array(beta).tostype(stype)]
+
                 xrolling_mean = np.random.uniform(size=channel_count)
                 xrolling_std = np.random.uniform(size=channel_count)
                 xmean_std = [mx.nd.array(xrolling_mean).tostype(stype),
