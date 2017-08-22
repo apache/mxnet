@@ -95,7 +95,6 @@ def test_dense():
     inputs = mx.sym.Variable('data')
     outputs = model(inputs)
     assert set(model.collect_params().keys()) == set(['test_weight', 'test_bias'])
-    print outputs.list_outputs()
     assert outputs.list_outputs() == ['test_tanh_fwd_output']
     args, outs, auxs = outputs.infer_shape(data=(2, 3, 10))
     assert outs == [(2, 3, 128)]
@@ -104,7 +103,6 @@ def test_dense():
     inputs = mx.sym.Variable('data')
     outputs = model(inputs)
     assert set(model.collect_params().keys()) == set(['test2_weight', 'test2_bias'])
-    print outputs.list_outputs()
     assert outputs.list_outputs() == ['test2_relu_fwd_output']
     args, outs, auxs = outputs.infer_shape(data=(17, 2, 5, 3))
     assert outs == [(17, 128)]
