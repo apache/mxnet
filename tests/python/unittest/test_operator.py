@@ -916,7 +916,6 @@ def test_batchnorm_training():
 
                 in_location = [mx.nd.array(data_tmp).tostype(stype), mx.nd.array(gamma).tostype(stype),
                                mx.nd.array(beta).tostype(stype)]
-
                 xrolling_mean = np.random.uniform(size=channel_count)
                 xrolling_std = np.random.uniform(size=channel_count)
                 xmean_std = [mx.nd.array(xrolling_mean).tostype(stype),
@@ -1459,6 +1458,7 @@ def test_reduce():
                         outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
                       mx.symbol.min)
 
+
 def test_broadcast():
     sample_num = 200
     for i in range(sample_num):
@@ -1489,6 +1489,7 @@ def test_broadcast():
             assert_almost_equal(grad_nd.asnumpy(), grad_groundtruth, rtol=1e-4)
         test_broadcasting_ele(sym_bcast_axis)
         test_broadcasting_ele(sym_bcast_to)
+
 
 def test_transpose():
     for ndim in range(1, 7):
@@ -1891,6 +1892,7 @@ def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2
     assert_almost_equal(exe1.grad_dict['img1'].asnumpy(), grad1, rtol=1e-3, atol=1e-4)
     assert_almost_equal(exe1.grad_dict['img2'].asnumpy(), grad2, rtol=1e-3, atol=1e-4)
 
+
 def test_correlation():
 
     unittest_correlation((1,3,10,10), kernel_size = 1,max_displacement = 4,stride1 = 1,stride2 = 1,pad_size = 4,is_multiply = False)
@@ -2236,6 +2238,7 @@ def mathematical_core_binary(name,
     assert_almost_equal(arr_grad1, npout_grad1)
     assert_almost_equal(arr_grad2, npout_grad2)
 
+
 def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_numpy_call, data_init=5., grad_init=2.):
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -2263,6 +2266,7 @@ def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_num
     # print(arr_grad)
     # print(npout_grad)
     assert_almost_equal(arr_grad, npout_grad)
+
 
 def test_special_functions_using_scipy():
     try:
@@ -2293,6 +2297,7 @@ def rounding(name, forward_mxnet_call, forward_numpy_call, data_init=5., grad_in
     out = exe_test.outputs[0].asnumpy()
     npout = forward_numpy_call(data_tmp)
     assert_almost_equal(out, npout)
+
 
 def test_mathematical():
     # rsqrt
@@ -2380,6 +2385,7 @@ def test_mathematical():
     # fix
     rounding("fix", lambda x: mx.sym.fix(x), lambda x: np.fix(x))
 
+
 def test_special_functions_using_scipy():
     try:
         from scipy import special as scipy_special
@@ -2395,6 +2401,7 @@ def test_special_functions_using_scipy():
     mathematical_core("gammaln", lambda x: mx.sym.gammaln(x), lambda x: scipy_special.gammaln(x),
                      lambda x: scipy_special.psi(x), 0.5, 0.5)
 
+
 def test_clip():
     data = mx.symbol.Variable('data')
     shape = (30, 30)
@@ -2403,6 +2410,7 @@ def test_clip():
     check_symbolic_forward(test, [data_tmp], [np.clip(data_tmp, -0.6, 0.6)])
     check_symbolic_backward(test, [data_tmp], [np.ones(shape)],
                             [np.where(data_tmp < 0.6, [1], [0]) * np.where(data_tmp > -0.6, [1], [0])])
+
 
 def test_init():
     def test_basic_val_init(sym_func, np_func, shape, dtype):
@@ -2537,6 +2545,7 @@ def test_blockgrad():
     exe.forward(is_train=True, a=a_npy)
     assert_almost_equal(exe.outputs[0].asnumpy(), a_npy)
     exe.backward()  # No error if BlockGrad works
+
 
 def test_take():
     def check_output_n_grad(data_shape, idx_shape):
@@ -2802,6 +2811,7 @@ def test_bilinear_sampler():
             assert_almost_equal(exe_addto.grad_dict['data'].asnumpy(), data_grad + data_initial_grid, rtol=1e-3,atol=1e-5)
             assert_almost_equal(exe_addto.grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grid, rtol=1e-3,atol=1e-5)
 
+
 def test_index2d():
     for _ in range(30):
         n = np.random.randint(1, 100)
@@ -2810,6 +2820,7 @@ def test_index2d():
         x = mx.nd.array(np.random.randint(0, m, size=n), ctx=default_context(), dtype='int32')
         r = mx.nd.batch_take(data, x)
         assert_almost_equal(r.asnumpy(), data.asnumpy()[np.arange(n), x.asnumpy()])
+
 
 def test_cast():
     for srctype in [np.int32, np.float32, np.float16]:
@@ -3276,6 +3287,7 @@ def check_ctc_loss(acts, labels, loss_truth):
         assert_almost_equal(outTest.asnumpy(), loss_truth)
     # test grad
     check_numeric_gradient(ctc, [acts, labels], grad_nodes=['input'], rtol=0.05, atol=1e-3)
+
 
 def test_ctc_loss():
     # Test 1: check that batches are same + check against Torch WarpCTC

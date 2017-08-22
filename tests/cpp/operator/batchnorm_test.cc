@@ -442,7 +442,7 @@ static StreamType& PRT(
   *os << test::op::BasicOperatorData<DType, AccReal>::bvt2String(bvt) << ": " << idx
       << ": ";
   const TBlob& blob = obj.getBlobVect(bvt)[idx];
-  MSHADOW_REAL_TYPE_SWITCH(blob.type_flag_, DTypeX, { test::print_blob<DTypeX>(os, blob); });
+  test::print(os, blob);
   return *os;
 }
 
@@ -716,14 +716,18 @@ static void timingTest(const std::string& label,
                        const bool stochastic,
                        const test::op::kwargs_t& kwargs,
                        const int dim = 0,
-                       const size_t count = 1) {
+                       size_t count = 1) {
   std::cout << std::endl << std::flush;
 
 #ifdef NDEBUG
-  const size_t COUNT = 50;
+  size_t COUNT = 50;
 #else
-  const size_t COUNT = 5;
+  size_t COUNT = 5;
 #endif
+  if (mxnet::test::quick_test) {
+    COUNT = 2;
+    count = 1;
+  }
 
   test::perf::TimingInstrument timing;
 
@@ -811,10 +815,13 @@ TEST(BATCH_NORM, TestStochasticTiming_2D) {
 /*! \brief Performance tests */
 TEST(BATCH_NORM, TestTiming_2D) {
 #ifdef NDEBUG
-  const size_t THISCOUNT = 10;
+  size_t THISCOUNT = 10;
 #else
-  const size_t THISCOUNT = 2;
+  size_t THISCOUNT = 2;
 #endif
+  if (mxnet::test::quick_test) {
+    THISCOUNT = 1;
+  }
   MSHADOW_REAL_TYPE_SWITCH_EX(
     mshadow::kFloat32, DType, AccReal,
     {
@@ -1335,7 +1342,7 @@ TEST(BATCH_NORM, TestChannelAxisSaveAndLoad) {
   typedef float AccReal;
 
   const std::vector<std::vector<DType>> myData =
-    { { 1.0f, 1.0f, 1.0, 1.0 },
+    { { 1.0f, 1.0f, 1.0f, 1.0f },
       { 2.0f, 2.0f, 2.0f, 2.0f },
       { 3.0f, 3.0f, 3.0f, 3.0f } };
 

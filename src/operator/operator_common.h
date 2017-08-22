@@ -89,7 +89,7 @@ struct InferTypeError : public dmlc::Error {
     : dmlc::Error(msg_), msg(msg_), index(index) {}
 };
 
-/*! \brief check if shape is empty or contains unkown (0) dim. */
+/*! \brief check if shape is empty or contains unknown (0) dim. */
 inline bool shape_is_none(const TShape& x) {
   return x.ndim() == 0 || x.Size() == 0;
 }
@@ -229,8 +229,8 @@ inline bool type_assign(int *y, const int& x) {
     if (!type_assign(&(type_array)[index], type)) {                         \
       std::ostringstream os;                                                \
       os << "Storage type inconsistent, Provided="                          \
-         << stype_string((type_array)[index]) << ','                        \
-         << " inferred storage type=" << stype_string(type);                \
+         << common::stype_string((type_array)[index]) << ','                \
+         << " inferred storage type=" << common::stype_string(type);        \
       throw ::mxnet::op::InferTypeError(os.str(), index);                   \
     }                                                                       \
   }
@@ -334,7 +334,7 @@ inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
     const char* op_name, const nnvm::NodePtr& n,
     const std::vector<nnvm::NodeEntry>& ograds,
     const std::vector<nnvm::NodeEntry>& inputs,
-    const std::unordered_map<std::string, std::string> dict) {
+    const std::unordered_map<std::string, std::string>& dict) {
   if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
   auto p = MakeNode(op_name, n->attrs.name + "_backward",
                     nullptr, &dict, &n);
@@ -414,6 +414,14 @@ void FCompExFallback(const nnvm::NodeAttrs& attrs,
           << ") == " << param << ".shape[0] (" << rsp.shape()[0] << ").";          \
   }
 
+template<typename xpu, int ndim, typename DType>
+inline mshadow::Tensor<xpu, ndim, DType> AllocateTempDataForSparseHandling(
+  const OpContext& op_ctx, const mshadow::Shape<ndim>& shape) {
+  Resource rsc = ResourceManager::Get()->Request(op_ctx.run_ctx.ctx,
+                                                 ResourceRequest(ResourceRequest::kTempSpace));
+  mshadow::Stream<xpu> *stream = op_ctx.run_ctx.get_stream<xpu>();
+  return rsc.get_space_typed<xpu, ndim, DType>(shape, stream);
+}
 
 }  // namespace op
 }  // namespace mxnet

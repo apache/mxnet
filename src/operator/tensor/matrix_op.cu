@@ -28,16 +28,16 @@
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(Reshape)
-.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(Flatten)
-.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(transpose)
 .set_attr<FCompute>("FCompute<gpu>", Transpose<gpu>);
 
 NNVM_REGISTER_OP(expand_dims)
-.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(slice)
 .set_attr<FCompute>("FCompute<gpu>", Slice<gpu>);

@@ -35,6 +35,7 @@
 #include <string>
 #include <utility>
 #include "./operator_common.h"
+#include "./mxnet_op.h"
 
 namespace mxnet {
 namespace op {
@@ -156,6 +157,61 @@ inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
     attrs, in_attrs, out_attrs);
 }
 
+template<int n_out>
+inline bool ElemwiseStorageTypeDenseOutput(const nnvm::NodeAttrs& attrs,
+                                           const Context& ctx,
+                                           std::vector<int> */*in_attrs*/,
+                                           std::vector<int> *out_attrs) {
+  CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
+  for (size_t i = 0; i < n_out; ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, kDefaultStorage);
+  }
+  return true;
+}
+
+/*! \brief Set outputs as storage type of first non-dense input
+ *  Optionally specify a "preferred" output storage type in case they vary
+ */
+template<int n_in, int n_out, NDArrayStorageType prefer = kUndefinedStorage>
+inline bool ElemwiseStorageTypeLeastDense(const nnvm::NodeAttrs& attrs,
+                                          const Context& ctx,
+                                          std::vector<int> *in_attrs,
+                                          std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_in)) << " in operator " << attrs.name;
+  CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
+  NDArrayStorageType stype = kDefaultStorage;
+  for (size_t i = 0; i < n_in; ++i) {
+    const NDArrayStorageType in_stype = static_cast<NDArrayStorageType>((*in_attrs)[i]);
+    if (in_stype != kDefaultStorage) {
+      if (stype == kDefaultStorage || in_stype == prefer) {
+        stype = in_stype;
+      }
+      if (prefer == kUndefinedStorage || stype == prefer) {
+        break;
+      }
+    }
+  }
+  for (size_t i = 0; i < n_out; ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, stype);
+  }
+  return true;
+}
+
+inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
+                                           const Context& ctx,
+                                           std::vector<int> *in_attrs,
+                                           std::vector<int> *out_attrs) {
+  // TODO(junwu): add ctx info into storage inference logic
+  CHECK_EQ(in_attrs->size(), static_cast<size_t>(2)) << " in operator " << attrs.name;
+  CHECK_EQ(out_attrs->size(), static_cast<size_t>(1)) << " in operator " << attrs.name;
+  auto &in = *in_attrs;
+  auto &out = *out_attrs;
+  CHECK_NE(in[1], kUndefinedStorage) << "rhs storage type must be known";
+  if (in[0] == kUndefinedStorage) in[0] = in[1];
+  if (out[0] == kUndefinedStorage) out[0] = in[1];
+  return true;
+}
+
 // Transfer gradient and input to FGradient function
 struct ElemwiseGradUseIn {
   const char *op_name;
@@ -205,16 +261,22 @@ struct ElemwiseGradUseNone {
   }
 };
 
-struct CloneGradient {
-  const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
-    std::vector<nnvm::NodeEntry> ret;
-    for (size_t i = 0; i < n->inputs.size(); ++i)
-      ret.emplace_back(ograds[0]);
-    return ret;
+/*! \brief Generic conversion of F<OP> kernel mapping to Kernel::Launch mapping */
+template<typename OP, int req>
+struct BMap {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out,
+                                  const DType *lhs,
+                                  const DType *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in, const DType value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
   }
 };
+
 }  // namespace op
 }  // namespace mxnet
 
