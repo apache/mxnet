@@ -48,15 +48,15 @@ enum FullyConnectedOpOutputs {kOut};
 struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
   int num_hidden;
   bool no_bias;
-  bool last_axis;
+  bool flatten;
   DMLC_DECLARE_PARAMETER(FullyConnectedParam) {
     // TODO(bing) add support for boolean
     DMLC_DECLARE_FIELD(num_hidden).set_lower_bound(1)
     .describe("Number of hidden nodes of the output.");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
-    DMLC_DECLARE_FIELD(last_axis).set_default(false)
-    .describe("Whether to perform this operation on the last axis of input data.");
+    DMLC_DECLARE_FIELD(flatten).set_default(true)
+    .describe("Whether to collapse all but the first axis of the input data tensor.");
   }
 };
 
@@ -96,7 +96,7 @@ class FullyConnectedOp : public Operator {
 
     Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
     Tensor<xpu, 2, DType> data, out;
-    if (param_.last_axis) {
+    if (!param_.flatten) {
       data = in_data[fullc::kData].get_with_shape<xpu, 2, DType>(
           Shape2(ishape.ProdShape(0, ishape.ndim()-1), ishape[ishape.ndim()-1]), s);
       out = out_data[fullc::kOut].get_with_shape<xpu, 2, DType>(
@@ -138,7 +138,7 @@ class FullyConnectedOp : public Operator {
 
     Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
     Tensor<xpu, 2, DType> data, grad, gdata;
-    if (param_.last_axis) {
+    if (!param_.flatten) {
       data = in_data[fullc::kData].get_with_shape<xpu, 2, DType>(
           Shape2(ishape.ProdShape(0, ishape.ndim()-1), ishape[ishape.ndim()-1]), s);
       grad = out_grad[fullc::kOut].get_with_shape<xpu, 2, DType>(
@@ -222,7 +222,7 @@ class FullyConnectedProp : public OperatorProperty {
     if (dshape.ndim() ==  0) return false;
 
     index_t num_input;
-    if (param_.last_axis) {
+    if (!param_.flatten) {
       num_input = dshape[dshape.ndim()-1];
     } else {
       num_input = dshape.ProdShape(1, dshape.ndim());
@@ -232,7 +232,7 @@ class FullyConnectedProp : public OperatorProperty {
       SHAPE_ASSIGN_CHECK(*in_shape, fullc::kBias, Shape1(param_.num_hidden));
     }
 
-    if (param_.last_axis) {
+    if (!param_.flatten) {
       TShape result_shape(dshape);
       result_shape[dshape.ndim()-1] = param_.num_hidden;
       SHAPE_ASSIGN_CHECK(*out_shape, 0, result_shape);
