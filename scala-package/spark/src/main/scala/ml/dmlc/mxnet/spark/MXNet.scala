@@ -42,8 +42,8 @@ class MXNet extends Serializable {
   private val logger: Logger = LoggerFactory.getLogger(classOf[MXNet])
   private val params: MXNetParams = new MXNetParams
 
-  private var psServerThread: MxNetControllingThread = _
-  private var psSchedulerThread: MxNetControllingThread = _
+  @transient private var psServerThread: MxNetControllingThread = _
+  @transient private var psSchedulerThread: MxNetControllingThread = _
 
   def setBatchSize(batchSize: Int): this.type = {
     params.batchSize = batchSize
@@ -124,16 +124,17 @@ class MXNet extends Serializable {
         schedulerPort: Int,
         sc: SparkContext): Unit = {
       sc.parallelize(1 to params.numServer, params.numServer).foreachPartition { p =>
-        logger.info("Starting server ...")
-        val server = new ParameterServer(params.runtimeClasspath,
-          role = "server",
-          rootUri = schedulerIP, rootPort = schedulerPort,
-          numServer = params.numServer,
-          numWorker = params.numWorker,
-          timeout = params.timeout,
-          java = params.javabin)
-        require(server.startProcess(), "Failed to start ps server process")
-      }
+          logger.info("Starting server ...")
+          val server = new ParameterServer(params.runtimeClasspath,
+            role = "server",
+            rootUri = schedulerIP, rootPort = schedulerPort,
+            numServer = params.numServer,
+            numWorker = params.numWorker,
+            timeout = params.timeout,
+            java = params.javabin)
+          val exitCode = server.startProcess()
+          require(exitCode == 0, s"ps server process quit with exit code $exitCode")
+        }
     }
     psServerThread = new MxNetControllingThread(schedulerIP, schedulerPort, sc, startPSServersInner)
     psServerThread.start()
@@ -153,7 +154,8 @@ class MXNet extends Serializable {
         rootUri = schedulerIP, rootPort = schedulerPort,
         numServer = params.numServer, numWorker = params.numWorker,
         timeout = params.timeout, java = params.javabin)
-      require(scheduler.startProcess(), "Failed to start ps scheduler process")
+      val exitCode = scheduler.startProcess()
+      require(exitCode == 0, s"Failed to start ps scheduler process with exit code $exitCode")
     }
     psSchedulerThread = new MxNetControllingThread(schedulerIP, schedulerPort, sc,
       startPSSchedulerInner)
@@ -255,7 +257,7 @@ class MXNet extends Serializable {
     val mxModel = trainModel(trainData, schedulerIP, schedulerPort)
     logger.info("Waiting for scheduler ...")
     psSchedulerThread.join()
-    psServerThread.interrupt()
+    psServerThread.join()
     mxModel
   }
 }
