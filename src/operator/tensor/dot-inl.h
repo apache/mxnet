@@ -71,7 +71,7 @@ void DotForward_(const nnvm::NodeAttrs& attrs,
       << "dot only supports float32 and float64";
   MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     if (inputs[0].ndim() == 1 && inputs[1].ndim() == 1) {
-      CHECK_NE(req[0], kAddTo) << "AddTo not yet suported";
+      CHECK_NE(req[0], kAddTo) << "AddTo not yet supported";
       Tensor<xpu, 1, DType> out = outputs[0].get<xpu, 1, DType>(s);
       VectorDot(out,
                 inputs[0].get<xpu, 1, DType>(s),
