@@ -36,7 +36,7 @@ namespace op {
 
 class BinaryScalarOp : public UnaryOp {
   /*! \brief FIll dense output block with a single scalar value */
-  template<typename xpu, typename DType, typename OP>
+  template<typename xpu, typename DType>
   static inline void FillDense(mshadow::Stream<xpu> *s,
                                const size_t size,
                                const DType val,
@@ -144,8 +144,8 @@ class BinaryScalarOp : public UnaryOp {
     const size_t item_count = column_indexes.Size();
 
     // Pre-fill dense with 0-input/output value
-    FillDense<cpu, DType, OP>(stream, output.shape().Size(), dense_fill_val,
-                              req, output.data().dptr<DType>());
+    FillDense<cpu, DType>(stream, output.shape().Size(), dense_fill_val,
+                          req, output.data().dptr<DType>());
 
     mshadow::Tensor<cpu, 2, DType> out = AsRowise2D<DType>(stream, output.data());
     if (item_count) {
