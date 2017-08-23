@@ -67,9 +67,9 @@ def test_parameter_sharing():
 
 def test_basic():
     model = nn.Sequential()
-    model.add(nn.Dense(128, activation='tanh', in_units=10))
+    model.add(nn.Dense(128, activation='tanh', in_units=10, flatten=False))
     model.add(nn.Dropout(0.5))
-    model.add(nn.Dense(64, activation='tanh', in_units=128))
+    model.add(nn.Dense(64, activation='tanh', in_units=256))
     model.add(nn.Dense(32, in_units=64))
     model.add(nn.Activation('relu'))
 
@@ -80,7 +80,7 @@ def test_basic():
 
     # ndarray
     model.collect_params().initialize(mx.init.Xavier(magnitude=2.24))
-    x = model(mx.nd.zeros((32, 10)))
+    x = model(mx.nd.zeros((32, 2, 10)))
     assert x.shape == (32, 32)
     x.wait_to_read()
 
@@ -88,6 +88,24 @@ def test_basic():
     assert list(model.collect_params().values())[0]._grad is None
     model.collect_params().setattr('grad_req', 'write')
     assert list(model.collect_params().values())[0]._grad is not None
+
+
+def test_dense():
+    model = nn.Dense(128, activation='tanh', in_units=10, flatten=False, prefix='test_')
+    inputs = mx.sym.Variable('data')
+    outputs = model(inputs)
+    assert set(model.collect_params().keys()) == set(['test_weight', 'test_bias'])
+    assert outputs.list_outputs() == ['test_tanh_fwd_output']
+    args, outs, auxs = outputs.infer_shape(data=(2, 3, 10))
+    assert outs == [(2, 3, 128)]
+
+    model = nn.Dense(128, activation='relu', in_units=30, flatten=True, prefix='test2_')
+    inputs = mx.sym.Variable('data')
+    outputs = model(inputs)
+    assert set(model.collect_params().keys()) == set(['test2_weight', 'test2_bias'])
+    assert outputs.list_outputs() == ['test2_relu_fwd_output']
+    args, outs, auxs = outputs.infer_shape(data=(17, 2, 5, 3))
+    assert outs == [(17, 128)]
 
 
 def test_symbol_block():
