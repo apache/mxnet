@@ -223,11 +223,11 @@ class BinaryScalarOp : public UnaryOp {
   };
 
   template<typename xpu, typename OP>
-  static void BinaryScalarCompute(const nnvm::NodeAttrs &attrs,
-                                  const OpContext &ctx,
-                                  const std::vector<TBlob> &inputs,
-                                  const std::vector<OpReqType> &req,
-                                  const std::vector<TBlob> &outputs) {
+  static void Compute(const nnvm::NodeAttrs &attrs,
+                      const OpContext &ctx,
+                      const std::vector<TBlob> &inputs,
+                      const std::vector<OpReqType> &req,
+                      const std::vector<TBlob> &outputs) {
     DCHECK_EQ(inputs.size(), 1);
     DCHECK_EQ(outputs.size(), 1);
     using namespace mshadow;
@@ -242,24 +242,24 @@ class BinaryScalarOp : public UnaryOp {
   }
 
   template<typename xpu, typename OP>
-  static void BinaryScalarComputeEx(const nnvm::NodeAttrs &attrs,
-                                    const OpContext &ctx,
-                                    const std::vector<NDArray> &inputs,
-                                    const std::vector<OpReqType> &req,
-                                    const std::vector<NDArray> &outputs) {
+  static void ComputeEx(const nnvm::NodeAttrs &attrs,
+                        const OpContext &ctx,
+                        const std::vector<NDArray> &inputs,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<NDArray> &outputs) {
     DCHECK_EQ(inputs.size(), 1);
     DCHECK_EQ(outputs.size(), 1);
     CHECK_NE(inputs[0].storage_type(), kDefaultStorage);
     if (outputs[0].storage_type() != kDefaultStorage) {
       CHECK_EQ(outputs[0].storage_type(), inputs[0].storage_type());
       if (req[0] != kNullOp) {
-        UnaryOp::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, BinaryScalarCompute<xpu, OP>);
+        UnaryOp::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Compute<xpu, OP>);
       }
     } else {
       if (typeid(xpu) == typeid(gpu)) {
         mxnet::op::FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
-                                        BinaryScalarCompute<xpu, OP>,
-                                        "BinaryScalarComputeEx");
+                                        Compute<xpu, OP>,
+                                        "ComputeEx");
       } else {
         MSHADOW_TYPE_SWITCH(outputs[0].data().type_flag_, DType, {
           MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
@@ -271,11 +271,11 @@ class BinaryScalarOp : public UnaryOp {
   }
 
   template<typename xpu, typename OP>
-  static void BinaryScalarBackward(const nnvm::NodeAttrs &attrs,
-                                   const OpContext &ctx,
-                                   const std::vector<TBlob> &inputs,
-                                   const std::vector<OpReqType> &req,
-                                   const std::vector<TBlob> &outputs) {
+  static void Backward(const nnvm::NodeAttrs &attrs,
+                       const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();

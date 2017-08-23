@@ -39,7 +39,7 @@
 namespace mxnet {
 namespace op {
 
-/*! Gather binary operator functions into BinaryOp class */
+/*! Gather binary operator functions into ElemwiseBinaryOp class */
 class ElemwiseBinaryOp : public OpBase {
  public:
   template<typename OP, int Req>
@@ -125,20 +125,18 @@ class ElemwiseBinaryOp : public OpBase {
   }
 
 
-  // TODO(cjolivier01) Optimize: change some bool parameters to template arguments
-  //                   in order to remove runtime checks for these invariant vars
-  //                   (i.e. lhs_is_dense, rhs_is_dense, is_dense_result, etc.)
+  /*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
   template<typename DType, typename IType, typename OP>
-  static void RspRspElemwiseBinaryOp(mshadow::Stream<cpu> *s,
-                                     const nnvm::NodeAttrs &attrs,
-                                     const OpContext &ctx,
-                                     const NDArray& lhs,
-                                     const NDArray& rhs,
-                                     const OpReqType req,
-                                     const NDArray& output,
-                                     const bool lhs_may_be_dense,
-                                     const bool rhs_may_be_dense,
-                                     const bool allow_inplace) {
+  static void RspRspOp(mshadow::Stream<cpu> *s,
+                       const nnvm::NodeAttrs &attrs,
+                       const OpContext &ctx,
+                       const NDArray &lhs,
+                       const NDArray &rhs,
+                       const OpReqType req,
+                       const NDArray &output,
+                       const bool lhs_may_be_dense,
+                       const bool rhs_may_be_dense,
+                       const bool allow_inplace) {
     using namespace mshadow;
     using namespace mxnet_op;
     using namespace mshadow::expr;
@@ -328,13 +326,13 @@ class ElemwiseBinaryOp : public OpBase {
 
   /*! \brief CSR -op- CSR binary operator for non-canonical NDArray */
   template<typename DType, typename IType, typename CType, typename OP>
-  static inline void CsrCsrElemwiseBinaryOp(mshadow::Stream<cpu> *s,
-                                            const nnvm::NodeAttrs &attrs,
-                                            const OpContext &ctx,
-                                            const NDArray& lhs,
-                                            const NDArray& rhs,
-                                            const OpReqType req,
-                                            const NDArray& output) {
+  static inline void CsrCsrOp(mshadow::Stream<cpu> *s,
+                              const nnvm::NodeAttrs &attrs,
+                              const OpContext &ctx,
+                              const NDArray &lhs,
+                              const NDArray &rhs,
+                              const OpReqType req,
+                              const NDArray &output) {
     using namespace mshadow;
     using namespace mxnet_op;
     using namespace mshadow::expr;
@@ -494,7 +492,7 @@ class ElemwiseBinaryOp : public OpBase {
       if (allowed) {
         mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
         MSHADOW_IDX_TYPE_SWITCH(sparse->aux_type(rowsparse::kIdx), IType, {
-          RspRspElemwiseBinaryOp<DType, IType, OP>(
+          RspRspOp<DType, IType, OP>(
             s, attrs, ctx, inputs[0], inputs[1],
             req[0], outputs[0],
             lhs_may_be_dense, rhs_may_be_dense, false);
@@ -509,11 +507,11 @@ class ElemwiseBinaryOp : public OpBase {
   }
 
   template<typename xpu, typename LOP, typename ROP, typename DType>
-  static void BinaryBackwardUseNone_(const nnvm::NodeAttrs &attrs,
-                              const OpContext &ctx,
-                              const std::vector<TBlob> &inputs,
-                              const std::vector<OpReqType> &req,
-                              const std::vector<TBlob> &outputs) {
+  static void BackwardUseNone_(const nnvm::NodeAttrs &attrs,
+                               const OpContext &ctx,
+                               const std::vector<TBlob> &inputs,
+                               const std::vector<OpReqType> &req,
+                               const std::vector<TBlob> &outputs) {
     using namespace mxnet_op;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const int size = static_cast<int>((outputs[0].Size() + DataType<DType>::kLanes - 1)
@@ -538,11 +536,11 @@ class ElemwiseBinaryOp : public OpBase {
   }
 
   template<typename xpu, typename LOP, typename ROP, typename DType>
-  static void BinaryBackwardUseIn_(const nnvm::NodeAttrs &attrs,
-                                   const OpContext &ctx,
-                                   const std::vector<TBlob> &inputs,
-                                   const std::vector<OpReqType> &req,
-                                   const std::vector<TBlob> &outputs) {
+  static void BackwardUseIn_(const nnvm::NodeAttrs &attrs,
+                             const OpContext &ctx,
+                             const std::vector<TBlob> &inputs,
+                             const std::vector<OpReqType> &req,
+                             const std::vector<TBlob> &outputs) {
     DCHECK_EQ(outputs.size(), 2U);
     DCHECK_EQ(inputs.size(), 3U);
     mxnet_op::Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -574,12 +572,12 @@ class ElemwiseBinaryOp : public OpBase {
     bool in1_ok_dense = false,
     bool in2_ok_dense = false,
     typename BackupCompute>
-  static inline void BinaryBackwardUseInEx_(const nnvm::NodeAttrs &attrs,
-                                           const OpContext &ctx,
-                                           const std::vector<NDArray> &inputs,
-                                           const std::vector<OpReqType> &req,
-                                           const std::vector<NDArray> &outputs,
-                                           BackupCompute backup_compute) {
+  static inline void BackwardUseInEx_(const nnvm::NodeAttrs &attrs,
+                                      const OpContext &ctx,
+                                      const std::vector<NDArray> &inputs,
+                                      const std::vector<OpReqType> &req,
+                                      const std::vector<NDArray> &outputs,
+                                      BackupCompute backup_compute) {
     CHECK_EQ(inputs.size(), 3U);  // output grad,
     CHECK_EQ(outputs.size(), 2U);  // lhs input grad, rhs input grad
     if (req[0] != kNullOp) {
@@ -588,31 +586,31 @@ class ElemwiseBinaryOp : public OpBase {
         mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
         // ComputeRspRsp can handle dense outputs so long as OP(0, 0) == 0
         MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-            RspRspElemwiseBinaryOp<DType, IType, LOP>(
-              s, attrs, ctx, inputs[1], inputs[2], req[0], outputs[0],
-              false, false, false);
+          RspRspOp<DType, IType, LOP>(
+            s, attrs, ctx, inputs[1], inputs[2], req[0], outputs[0],
+            false, false, false);
         });
         // LHS in-place
         MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-            RspRspElemwiseBinaryOp<DType, IType, mshadow::op::mul>(
-              s, attrs, ctx, outputs[0], inputs[0], req[0], outputs[0],
-              false, false, true);
+          RspRspOp<DType, IType, mshadow::op::mul>(
+            s, attrs, ctx, outputs[0], inputs[0], req[0], outputs[0],
+            false, false, true);
         });
         MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-            RspRspElemwiseBinaryOp<DType, IType, ROP>(
-              s, attrs, ctx, inputs[1], inputs[2], req[1], outputs[1],
-              false, false, false);
+          RspRspOp<DType, IType, ROP>(
+            s, attrs, ctx, inputs[1], inputs[2], req[1], outputs[1],
+            false, false, false);
         });
         // RHS in-place
         MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-            RspRspElemwiseBinaryOp<DType, IType, mshadow::op::mul>(
-              s, attrs, ctx, inputs[0], outputs[1], req[1], outputs[1],
-              false, false, true);
+          RspRspOp<DType, IType, mshadow::op::mul>(
+            s, attrs, ctx, inputs[0], outputs[1], req[1], outputs[1],
+            false, false, true);
         });
       } else {
         FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
                              backup_compute,
-                             "BinaryBackwardUseInEx_");
+                             "BackwardUseInEx_");
       }
     }
   }
@@ -683,7 +681,7 @@ class ElemwiseBinaryOp : public OpBase {
           case kRowSparseStorage:
             MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
               MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-                RspRspElemwiseBinaryOp<DType, IType, OP>(
+                RspRspOp<DType, IType, OP>(
                   s, attrs, ctx, inputs[0], inputs[1],
                   req[0], outputs[0],
                   false, false, false);
@@ -694,7 +692,7 @@ class ElemwiseBinaryOp : public OpBase {
             MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(csr::kIdx), IType, {
               MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(csr::kIndPtr), CType, {
                 MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-                  CsrCsrElemwiseBinaryOp<DType, IType, CType, OP>(
+                  CsrCsrOp<DType, IType, CType, OP>(
                     s, attrs, ctx, inputs[0], inputs[1],
                     req[0], outputs[0]);
                 });
@@ -726,33 +724,33 @@ class ElemwiseBinaryOp : public OpBase {
   }
 
   template<typename xpu, typename LOP, typename ROP>
-  static inline void BinaryBackwardUseNone(const nnvm::NodeAttrs &attrs,
-                             const OpContext &ctx,
-                             const std::vector<TBlob> &inputs,
-                             const std::vector<OpReqType> &req,
-                             const std::vector<TBlob> &outputs) {
+  static inline void BackwardUseNone(const nnvm::NodeAttrs &attrs,
+                                     const OpContext &ctx,
+                                     const std::vector<TBlob> &inputs,
+                                     const std::vector<OpReqType> &req,
+                                     const std::vector<TBlob> &outputs) {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      BinaryBackwardUseNone_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
+      BackwardUseNone_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
     });
   }
 
   template<typename xpu, typename LOP, typename ROP>
-  static inline void BinaryBackwardUseNoneWithHalf2(const nnvm::NodeAttrs &attrs,
-                                                    const OpContext &ctx,
-                                                    const std::vector<TBlob> &inputs,
-                                                    const std::vector<OpReqType> &req,
-                                                    const std::vector<TBlob> &outputs) {
+  static inline void BackwardUseNoneWithHalf2(const nnvm::NodeAttrs &attrs,
+                                              const OpContext &ctx,
+                                              const std::vector<TBlob> &inputs,
+                                              const std::vector<OpReqType> &req,
+                                              const std::vector<TBlob> &outputs) {
     MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
-      BinaryBackwardUseNone_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
+      BackwardUseNone_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
     });
   }
 
   template<typename xpu, typename LOP, typename ROP>
-  static inline void BinaryBackwardUseNoneEx(const nnvm::NodeAttrs &attrs,
-                                             const OpContext &ctx,
-                                             const std::vector<NDArray> &inputs,
-                                             const std::vector<OpReqType> &req,
-                                             const std::vector<NDArray> &outputs) {
+  static inline void BackwardUseNoneEx(const nnvm::NodeAttrs &attrs,
+                                       const OpContext &ctx,
+                                       const std::vector<NDArray> &inputs,
+                                       const std::vector<OpReqType> &req,
+                                       const std::vector<NDArray> &outputs) {
     CHECK_EQ(inputs.size(), 1U);   // output grad,
     CHECK_EQ(outputs.size(), 2U);  // lhs input grad, rhs input grad
     using namespace mshadow;
@@ -775,45 +773,45 @@ class ElemwiseBinaryOp : public OpBase {
         });
       } else {
         FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
-                             BinaryBackwardUseNone<xpu, LOP, ROP>,
-                             "BinaryBackwardUseNoneEx");
+                             BackwardUseNone<xpu, LOP, ROP>,
+                             "BackwardUseNoneEx");
       }
     }
   }
 
   template<typename xpu, typename LOP, typename ROP>
-  static inline void BinaryBackwardUseIn(const nnvm::NodeAttrs &attrs,
-                                         const OpContext &ctx,
-                                         const std::vector<TBlob> &inputs,
-                                         const std::vector<OpReqType> &req,
-                                         const std::vector<TBlob> &outputs) {
+  static inline void BackwardUseIn(const nnvm::NodeAttrs &attrs,
+                                   const OpContext &ctx,
+                                   const std::vector<TBlob> &inputs,
+                                   const std::vector<OpReqType> &req,
+                                   const std::vector<TBlob> &outputs) {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      BinaryBackwardUseIn_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
+      BackwardUseIn_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
     });
   }
 
   template<typename xpu, typename LOP, typename ROP>
-  static inline void BinaryBackwardUseInWithHalf2(const nnvm::NodeAttrs &attrs,
-                                                  const OpContext &ctx,
-                                                  const std::vector<TBlob> &inputs,
-                                                  const std::vector<OpReqType> &req,
-                                                  const std::vector<TBlob> &outputs) {
+  static inline void BackwardUseInWithHalf2(const nnvm::NodeAttrs &attrs,
+                                            const OpContext &ctx,
+                                            const std::vector<TBlob> &inputs,
+                                            const std::vector<OpReqType> &req,
+                                            const std::vector<TBlob> &outputs) {
     MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
-      BinaryBackwardUseIn_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
+      BackwardUseIn_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
     });
   }
 
   template<
     typename xpu, typename LOP, typename ROP,
     bool in0_ok_dense = false, bool in1_ok_dense = false, bool in2_ok_dense = false>
-  static inline void BinaryBackwardUseInEx(const nnvm::NodeAttrs &attrs,
-                                           const OpContext &ctx,
-                                           const std::vector<NDArray> &inputs,
-                                           const std::vector<OpReqType> &req,
-                                           const std::vector<NDArray> &outputs) {
+  static inline void BackwardUseInEx(const nnvm::NodeAttrs &attrs,
+                                     const OpContext &ctx,
+                                     const std::vector<NDArray> &inputs,
+                                     const std::vector<OpReqType> &req,
+                                     const std::vector<NDArray> &outputs) {
     MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-      BinaryBackwardUseInEx_<xpu, LOP, ROP, DType, in0_ok_dense, in1_ok_dense, in2_ok_dense>(
-        attrs, ctx, inputs, req, outputs, BinaryBackwardUseIn<xpu, LOP, ROP>);
+      BackwardUseInEx_<xpu, LOP, ROP, DType, in0_ok_dense, in1_ok_dense, in2_ok_dense>(
+        attrs, ctx, inputs, req, outputs, BackwardUseIn<xpu, LOP, ROP>);
     });
   }
 };  // class ElemwiseBinaryOp
@@ -848,14 +846,6 @@ class ElemwiseBinaryOp : public OpBase {
   .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageTypeDenseOutput<1>) \
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Launch<cpu, __kernel$>)       \
   .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::LaunchEx<cpu, __kernel$>)
-
-/*! \brief Binary launch, dense rvalue */
-#define MXNET_OPERATOR_REGISTER_BINARY_LAUNCH_CPU_DENSE_LRVALUE(__name$, __kernel$)           \
-  MXNET_OPERATOR_REGISTER_BINARY(__name$)                                                     \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageTypeLeastDense<2, 1>)      \
-  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Launch<cpu, __kernel$>)              \
-  .set_attr<FComputeEx>("FComputeEx<cpu>",                                                    \
-    ElemwiseBinaryOp::LaunchExDenseLRValue<cpu, __kernel$, true, true>)
 
 }  // namespace op
 }  // namespace mxnet
