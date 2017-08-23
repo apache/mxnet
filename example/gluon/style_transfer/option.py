@@ -3,7 +3,7 @@ import os
 
 class Options():
     def __init__(self):
-        self.parser = argparse.ArgumentParser(description="parser for PyTorch-Style-Transfer")
+        self.parser = argparse.ArgumentParser(description="parser for MXNet-Gluon-Style-Transfer")
         subparsers = self.parser.add_subparsers(title="subcommands", dest="subcommand")
 
         # training args
