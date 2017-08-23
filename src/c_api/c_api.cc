@@ -835,10 +835,28 @@ int MXKVStorePullEx(KVStoreHandle handle,
 
 int MXKVStorePullRowSparse(KVStoreHandle handle,
                            mx_uint num,
-                           const char** keys,
+                           const int* keys,
                            NDArrayHandle* vals,
                            const NDArrayHandle* row_ids,
                            int priority) {
+  API_BEGIN();
+  std::vector<int> v_keys(num);
+  std::vector<std::pair<NDArray*, NDArray>> v_val_rowids(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_val_rowids[i] = std::make_pair(static_cast<NDArray*>(vals[i]),
+                                     *static_cast<NDArray*>(row_ids[i]));
+  }
+  static_cast<KVStore*>(handle)->PullRowSparse(v_keys, v_val_rowids, priority);
+  API_END();
+}
+
+int MXKVStorePullRowSparseEx(KVStoreHandle handle,
+                             mx_uint num,
+                             const char** keys,
+                             NDArrayHandle* vals,
+                             const NDArrayHandle* row_ids,
+                             int priority) {
   API_BEGIN();
   std::vector<std::string> v_keys(num);
   std::vector<std::pair<NDArray*, NDArray>> v_val_rowids(num);
@@ -864,6 +882,25 @@ int MXKVStoreSetUpdater(KVStoreHandle handle,
     NDArray* local_copy = new NDArray();
     *local_copy = *local;
     updater_temp(key, recv_copy, local_copy, updater_handle_temp);
+  };
+  static_cast<KVStore*>(handle)->set_updater(updt);
+  API_END();
+}
+
+int MXKVStoreSetStrUpdater(KVStoreHandle handle,
+                           MXKVStoreStrUpdater updater,
+                           void* updater_handle) {
+  API_BEGIN();
+  MXKVStoreStrUpdater * updater_temp = updater;
+  void* updater_handle_temp = updater_handle;
+  std::function<void(const std::string&, const NDArray&, NDArray*)> updt
+  = [updater_temp, updater_handle_temp]
+    (const std::string& key, const NDArray& recv, NDArray* local) {
+    NDArray* recv_copy = new NDArray();
+    *recv_copy = recv;
+    NDArray* local_copy = new NDArray();
+    *local_copy = *local;
+    updater_temp(key.c_str(), recv_copy, local_copy, updater_handle_temp);
   };
   static_cast<KVStore*>(handle)->set_updater(updt);
   API_END();

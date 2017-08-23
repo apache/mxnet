@@ -29,26 +29,34 @@ from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
 
 def _ctype_key_value(keys, vals):
+    """
+    Returns ctype arrays for the key-value args, and the class of the key (either int or str).
+    For internal use only.
+    """
     if isinstance(keys, (tuple, list)):
         assert(len(keys) == len(vals))
         c_keys = []
         c_vals = []
+        key_type = None
         for key, val in zip(keys, vals):
-            c_key_i, c_val_i = _ctype_key_value(key, val)
+            c_key_i, c_val_i, t = _ctype_key_value(key, val)
             c_keys += c_key_i
             c_vals += c_val_i
-        return (c_array(ctypes.c_char_p, c_keys), c_array(NDArrayHandle, c_vals))
-    names = []
-    keys = str(keys)
+            key_type = t if key_type is None else key_type
+            assert(key_type == t), "inconsistent types of keys detected."
+        return (c_array(ctypes.c_char_p, c_keys), c_array(NDArrayHandle, c_vals), key_type)
+
+    assert(isinstance(keys, (int, str))), "unexpected type for keys: " + str(type(keys))
     if isinstance(vals, NDArray):
-        names.append(c_str(keys))
-        return (c_array(ctypes.c_char_p, names),
-                c_array(NDArrayHandle, [vals.handle]))
+        c_keys = c_array(ctypes.c_char_p, [c_str(keys)]) if isinstance(keys, str) \
+                 else c_array(ctypes.c_int, [keys])
+        return (c_keys, c_array(NDArrayHandle, [vals.handle]), type(keys))
     else:
         for value in vals:
             assert(isinstance(value, NDArray))
-        return (c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)),
-                c_array(NDArrayHandle, [value.handle for value in vals]))
+        c_keys = c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)) if isinstance(keys, str) \
+                 else c_array(ctypes.c_int, [keys] * len(vals))
+        return (c_keys, c_array(NDArrayHandle, [value.handle for value in vals]), type(keys))
 
 def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
@@ -74,6 +82,7 @@ class KVStore(object):
         self.handle = handle
         self._updater = None
         self._updater_func = None
+        self._str_updater_func = None
 
     def __del__(self):
         check_call(_LIB.MXKVStoreFree(self.handle))
@@ -88,7 +97,7 @@ class KVStore(object):
 
         Parameters
         ----------
-        key : str or sequence of str
+        key : str, int, or sequence of str or int
             The keys.
         value : NDArray or sequence of NDArray
             Values corresponding to the keys.
@@ -234,10 +243,13 @@ class KVStore(object):
         [ 2.  2.  2.]]
         """
         assert(out is not None)
-        ckeys, cvals = _ctype_key_value(key, out)
-        check_call(_LIB.MXKVStorePullEx(
-            self.handle, mx_uint(len(ckeys)), ckeys, cvals,
-            ctypes.c_int(priority)))
+        ckeys, cvals, key_type = _ctype_key_value(key, out)
+        if key_type == str:
+            check_call(_LIB.MXKVStorePullEx(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
+        else:
+            check_call(_LIB.MXKVStorePull(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
 
     def row_sparse_pull(self, key, out=None, priority=0, row_ids=None):
         """ Pulls a single row_sparse value or a sequence of row_sparse values from the store
@@ -291,12 +303,16 @@ class KVStore(object):
         """
         assert(out is not None)
         assert(row_ids is not None)
-        ckeys, cvals = _ctype_key_value(key, out)
-        _, crow_ids = _ctype_key_value(key, row_ids)
-        assert(len(crow_ids) == len(cvals)), "number of row_ids doesn't match number of values"
-
-        check_call(_LIB.MXKVStorePullRowSparse(
-            self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
+        ckeys, cvals, key_type = _ctype_key_value(key, out)
+        _, crow_ids, _ = _ctype_key_value(key, row_ids)
+        assert(len(crow_ids) == len(cvals)), \
+               "the number of row_ids doesn't match the number of values"
+        if key_type == str:
+            check_call(_LIB.MXKVStorePullRowSparseEx(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
+        else:
+            check_call(_LIB.MXKVStorePullRowSparse(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
 
 
     def set_optimizer(self, optimizer):
@@ -436,10 +452,16 @@ class KVStore(object):
         [ 6.  6.  6.]]
         """
         self._updater = updater
+        # set updater with int keys
         _updater_proto = ctypes.CFUNCTYPE(
             None, ctypes.c_int, NDArrayHandle, NDArrayHandle, ctypes.c_void_p)
         self._updater_func = _updater_proto(_updater_wrapper(updater))
         check_call(_LIB.MXKVStoreSetUpdater(self.handle, self._updater_func, None))
+        # set updater with str keys
+        _str_updater_proto = ctypes.CFUNCTYPE(
+            None, ctypes.c_char_p, NDArrayHandle, NDArrayHandle, ctypes.c_void_p)
+        self._str_updater_func = _str_updater_proto(_updater_wrapper(updater))
+        check_call(_LIB.MXKVStoreSetStrUpdater(self.handle, self._str_updater_func, None))
 
 
     def _barrier(self):

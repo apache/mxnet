@@ -1602,7 +1602,7 @@ MXNET_DLL int MXKVStorePullEx(KVStoreHandle handle,
                               int priority);
 
 /*!
- * \brief pull a list of (key, value) pairs from the kvstore, where each key is a string.
+ * \brief pull a list of (key, value) pairs from the kvstore, where each key is an integer.
  *        The NDArray pulled back will be in row_sparse storage with only the specified
  *        row_ids present based row_ids (others rows are zeros).
  * \param handle handle to the kvstore
@@ -1615,10 +1615,28 @@ MXNET_DLL int MXKVStorePullEx(KVStoreHandle handle,
  */
 MXNET_DLL int MXKVStorePullRowSparse(KVStoreHandle handle,
                                      mx_uint num,
-                                     const char** keys,
+                                     const int* keys,
                                      NDArrayHandle* vals,
                                      const NDArrayHandle* row_ids,
                                      int priority);
+/*!
+ * \brief pull a list of (key, value) pairs from the kvstore, where each key is a string.
+ *        The NDArray pulled back will be in row_sparse storage with only the specified
+ *        row_ids present based row_ids (others rows are zeros).
+ * \param handle handle to the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \param row_ids the list of row_id NDArrays
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePullRowSparseEx(KVStoreHandle handle,
+                                       mx_uint num,
+                                       const char** keys,
+                                       NDArrayHandle* vals,
+                                       const NDArrayHandle* row_ids,
+                                       int priority);
 
 /*!
  * \brief user-defined updater for the kvstore
@@ -1633,6 +1651,18 @@ typedef void (MXKVStoreUpdater)(int key,
                                 NDArrayHandle local,
                                 void *handle);
 /*!
+ * \brief user-defined updater for the kvstore with string keys
+ * It's this updater's responsibility to delete \a recv and \a local
+ * \param the key
+ * \param recv the pushed value on this key
+ * \param local the value stored on local on this key
+ * \param handle The additional handle to the updater
+ */
+typedef void (MXKVStoreStrUpdater)(const char* key,
+                                   NDArrayHandle recv,
+                                   NDArrayHandle local,
+                                   void *handle);
+/*!
  * \brief register an push updater
  * \param handle handle to the KVStore
  * \param updater udpater function
@@ -1642,6 +1672,16 @@ typedef void (MXKVStoreUpdater)(int key,
 MXNET_DLL int MXKVStoreSetUpdater(KVStoreHandle handle,
                                   MXKVStoreUpdater updater,
                                   void *updater_handle);
+/*!
+ * \brief register an push updater
+ * \param handle handle to the KVStore
+ * \param updater updater function
+ * \param updater_handle The additional handle used to invoke the updater
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreSetStrUpdater(KVStoreHandle handle,
+                                     MXKVStoreStrUpdater updater,
+                                     void *updater_handle);
 /*!
  * \brief get the type of the kvstore
  * \param handle handle to the KVStore

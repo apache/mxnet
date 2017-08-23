@@ -76,6 +76,8 @@ class KVStoreLocal : public KVStore {
             << "duplicate init of key " << str_key;
       auto key = next_str_key_++;
       str_key_dict_[str_key] = key;
+      // record reverse mapping from int to string
+      reverse_str_key_dict_[key] = str_key;
       keys[i] = key;
     }
     Init(keys, values);
@@ -84,30 +86,7 @@ class KVStoreLocal : public KVStore {
   void Push(const std::vector<int>& keys,
             const std::vector<NDArray>& values,
             int priority) override {
-    std::vector<int> uniq_keys;
-    std::vector<std::vector<NDArray> > grouped_vals;
-    GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
-
-    for (size_t i = 0; i < uniq_keys.size(); ++i) {
-      int key = uniq_keys[i];
-      const NDArray& merged = comm_->Reduce(key, grouped_vals[i], priority);
-      NDArray& local = local_[key];
-      if (updater_ != nullptr) {
-        CHECK(!local.is_none()) << "key " << key << " has not been inited";
-        // if merged is on gpu, we may need copy weight from cpu to gpu
-        if (merged.ctx().dev_mask() != cpu::kDevMask &&
-            local.ctx().dev_mask() == cpu::kDevMask) {
-          local = local.Copy(merged.ctx());
-        }
-        updater_(key, merged,  &local);
-      } else {
-        if (merged.storage_type() != local.storage_type()) {
-          local = merged.Copy(local.ctx());
-        } else {
-          local = merged;
-        }
-      }
-    }
+    Push_(keys, values, priority, false);
   }
 
   void Pull(const std::vector<int>& keys,
@@ -154,7 +133,7 @@ class KVStoreLocal : public KVStore {
             int priority) override {
     std::vector<int> keys(str_keys.size());
     LookupKeys(str_keys, &keys);
-    Push(keys, values, priority);
+    Push_(keys, values, priority, true);
   }
 
   void Pull(const std::vector<std::string>& str_keys,
@@ -309,6 +288,8 @@ class KVStoreLocal : public KVStore {
   std::unordered_map<int, NDArray> local_;
   /// key mapping for string -> integer
   std::unordered_map<std::string, int> str_key_dict_;
+  /// reverse key mapping for integer -> string
+  std::unordered_map<int, std::string> reverse_str_key_dict_;
   /// the next available integer for string->int key mapping
   int next_str_key_ = 0;
   /// whether printed warning due to mismatch stype in each key

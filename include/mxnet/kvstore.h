@@ -202,6 +202,10 @@ class KVStore {
    * \brief the prototype of user-defined updater
    */
   typedef std::function<void(int, const NDArray&, NDArray*)> Updater;
+  /**
+   * \brief the prototype of user-defined updater with string keys
+   */
+  typedef std::function<void(const std::string&, const NDArray&, NDArray*)> StrUpdater;
   /*!
    * \brief set an updater
    *
@@ -214,6 +218,19 @@ class KVStore {
   virtual void set_updater(const Updater& updater) {
     CHECK(updater) << "invalid updater";
     updater_ = updater;
+  }
+  /*!
+   * \brief set an updater with string keys
+   *
+   * Given a string key, assume \a x is the received (pushed) value and \a y is the
+   * value stored on the store node. The store updates \a y by `h(x, &y)`. The
+   * default \a h is ASSIGN, namely `*y = x`.
+   *
+   * \param updater user-defined string updater, default is assign
+   */
+  virtual void set_updater(const StrUpdater& updater) {
+    CHECK(updater) << "invalid updater";
+    str_updater_ = updater;
   }
 
   /******************************************************
@@ -356,9 +373,14 @@ class KVStore {
 
  protected:
   /**
-   * \brief the user-defined  updater
+   * \brief the user-defined updater
    */
   Updater updater_;
+
+  /**
+   * \brief the user-defined updater with string keys
+   */
+  StrUpdater str_updater_;
 
   /**
    * \brief the kvstore type

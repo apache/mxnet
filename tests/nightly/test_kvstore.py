@@ -37,7 +37,7 @@ data = [[[np.random.random(s)*2-1 for i in range(nworker)] for s in shapes] for 
 def test_kvstore(kv_type):
     print(kv_type)
     kv = mx.kv.create(kv_type)
-    kv.set_optimizer(mx.optimizer.create('test', lr))
+    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=lr))
     for k, s in zip(keys, shapes):
         kv.init(k, mx.nd.zeros(s))
 
