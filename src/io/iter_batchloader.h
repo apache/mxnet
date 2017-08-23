@@ -41,7 +41,7 @@ namespace io {
 class BatchLoader : public IIterator<TBlobBatch> {
  public:
   explicit BatchLoader(IIterator<DataInst> *base):
-      base_(base), head_(1), num_overflow_(0) {
+    head_(1), num_overflow_(0), base_(base) {
   }
 
   virtual ~BatchLoader(void) {
@@ -52,7 +52,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     // init batch param, it could have similar param with
     kwargs_left = param_.InitAllowUnknown(kwargs);
-    // Init space for out_
+    // Init space for out
     out_.inst_index = new unsigned[param_.batch_size];
     out_.batch_size = param_.batch_size;
     out_.data.clear();
@@ -69,6 +69,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
     }
     head_ = 1;
   }
+
   virtual bool Next(void) {
     out_.num_batch_padd = 0;
     out_.batch_size = param_.batch_size;
@@ -128,23 +129,25 @@ class BatchLoader : public IIterator<TBlobBatch> {
     return out_;
   }
 
- private:
+ protected:
   /*! \brief batch parameters */
   BatchParam param_;
   /*! \brief output data */
   TBlobBatch out_;
-  /*! \brief base iterator */
-  IIterator<DataInst> *base_;
   /*! \brief on first */
   int head_;
   /*! \brief number of overflow instances that readed in round_batch mode */
   int num_overflow_;
+  /*! \brief tensor to hold data */
+  std::vector<TBlobContainer> data_;
+
+ private:
+  /*! \brief base iterator */
+  IIterator<DataInst> *base_;
   /*! \brief data shape */
   std::vector<TShape> shape_;
   /*! \brief unit size */
   std::vector<size_t> unit_size_;
-  /*! \brief tensor to hold data */
-  std::vector<TBlobContainer> data_;
   // initialize the data holder by using from the first batch.
   inline void InitData(const DataInst& first_batch) {
     shape_.resize(first_batch.data.size());

@@ -27,7 +27,7 @@ import numpy as np
 
 from ..base import numeric_types
 from .. import ndarray as nd
-from .._ndarray_internal import _cvcopyMakeBorder as copyMakeBorder
+from ..ndarray._internal import _cvcopyMakeBorder as copyMakeBorder
 from .. import io
 from .image import RandomOrderAug, ColorJitterAug, LightingAug, ColorNormalizeAug
 from .image import ResizeAug, ForceResizeAug, CastAug, HueJitterAug, RandomGrayAug

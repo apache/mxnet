@@ -163,10 +163,17 @@ def fit(args, network, data_loader, **kwargs):
     lr_scheduler  = lr_scheduler
     optimizer_params = {
             'learning_rate': lr,
-            'momentum' : args.mom,
             'wd' : args.wd,
-            'lr_scheduler': lr_scheduler,
-            'multi_precision': True}
+            'lr_scheduler': lr_scheduler}
+
+    # Add 'multi_precision' parameter only for SGD optimizer
+    if args.optimizer == 'sgd':
+        optimizer_params['multi_precision'] = True
+
+    # Only a limited number of optimizers have 'momentum' property
+    has_momentum = {'sgd', 'dcasgd'}
+    if args.optimizer in has_momentum:
+        optimizer_params['momentum'] = args.mom
 
     monitor = mx.mon.Monitor(args.monitor, pattern=".*") if args.monitor > 0 else None
 

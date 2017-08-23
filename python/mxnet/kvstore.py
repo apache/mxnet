@@ -22,6 +22,7 @@ from __future__ import absolute_import
 import ctypes
 import pickle
 from .ndarray import NDArray
+from .ndarray import _ndarray_cls
 from .base import _LIB
 from .base import check_call, c_array, c_str, string_types, mx_uint, py_str
 from .base import NDArrayHandle, KVStoreHandle
@@ -53,8 +54,8 @@ def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
     def updater_handle(key, lhs_handle, rhs_handle, _):
         """ ctypes function """
-        lhs = NDArray(NDArrayHandle(lhs_handle))
-        rhs = NDArray(NDArrayHandle(rhs_handle))
+        lhs = _ndarray_cls(NDArrayHandle(lhs_handle))
+        rhs = _ndarray_cls(NDArrayHandle(rhs_handle))
         updater(key, lhs, rhs)
     return updater_handle
 
@@ -186,6 +187,8 @@ class KVStore(object):
 
         The returned values are gauranteed to be the latest values in the store.
 
+        For row_sparse values, please use `row_sparse_pull` instead.
+
         Parameters
         ----------
         key : int or list of int
@@ -235,6 +238,66 @@ class KVStore(object):
         check_call(_LIB.MXKVStorePullEx(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
+
+    def row_sparse_pull(self, key, out=None, priority=0, row_ids=None):
+        """ Pulls a single row_sparse value or a sequence of row_sparse values from the store
+         with specified row_ids.
+
+        `row_sparse_pull` is executed asynchronously after all previous
+        `push`/`pull`/`row_sparse_pull` calls for the same input key(s) are finished.
+
+        The returned values are guaranteed to be the latest values in the store.
+
+        Parameters
+        ----------
+        key : str or list of str
+            Keys.
+
+        out: NDArray or list of NDArray or list of list of NDArray
+            Values corresponding to the keys. The stype is expected to be row_sparse
+
+        priority : int, optional
+            The priority of the pull operation.
+            Higher priority pull operations are likely to be executed before
+            other pull actions.
+
+        row_ids : NDArray or list of NDArray
+            The row_ids for which to pull for each value. Each row_id is an 1D-NDArray \
+            whose values don't have to be unique nor sorted.
+
+        Examples
+        --------
+        >>> shape = (3, 3)
+        >>> kv.init('3', mx.nd.ones(shape).tostype('row_sparse'))
+        >>> a = mx.nd.zeros(shape, stype='row_sparse')
+        >>> row_ids = mx.nd.array([0, 2], dtype='int64')
+        >>> kv.row_sparse_pull('3', out=a, row_ids=row_ids)
+        >>> print a.asnumpy()
+        [[ 1.  1.  1.]
+        [ 0.  0.  0.]
+        [ 1.  1.  1.]]
+        >>> duplicate_row_ids = mx.nd.array([2, 2], dtype='int64')
+        >>> kv.row_sparse_pull('3', out=a, row_ids=duplicate_row_ids)
+        >>> print a.asnumpy()
+        [[ 0.  0.  0.]
+        [ 0.  0.  0.]
+        [ 1.  1.  1.]]
+        >>> unsorted_row_ids = mx.nd.array([1, 0], dtype='int64')
+        >>> kv.row_sparse_pull('3', out=a, row_ids=unsorted_row_ids)
+        >>> print a.asnumpy()
+        [[ 1.  1.  1.]
+        [ 1.  1.  1.]
+        [ 0.  0.  0.]]
+        """
+        assert(out is not None)
+        assert(row_ids is not None)
+        ckeys, cvals = _ctype_key_value(key, out)
+        _, crow_ids = _ctype_key_value(key, row_ids)
+        assert(len(crow_ids) == len(cvals)), "number of row_ids doesn't match number of values"
+
+        check_call(_LIB.MXKVStorePullRowSparse(
+            self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
+
 
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.
