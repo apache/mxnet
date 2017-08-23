@@ -3283,7 +3283,6 @@ def test_ctc_loss():
     true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
     check_ctc_loss(acts2, labels2, true_loss)
 
-
 def test_quantization_op():
     min0 = mx.nd.array([0.0])
     max0 = mx.nd.array([1.0])
@@ -3296,21 +3295,6 @@ def test_quantization_op():
 
     assert same(qa.asnumpy(), qa_real.asnumpy())
     assert same(a_.asnumpy(),  a_real.asnumpy())
-
-def test_quantization_2bit_op():
-    array = mx.nd.array([-6, -2, 3, 1, 10, 5, -3, 2, -8, 0])
-    residual = mx.nd.array([-3, 1, -1, 5, -2, 2, 3, -7, -2, -100])
-    neg_threshold = mx.nd.array([-4.0])
-    pos_threshold = mx.nd.array([4.0])
-    
-    out = mx.contrib.nd.quantize_2bit(array, residual, neg_threshold, pos_threshold)
-    mx.contrib.nd.dequantize_2bit(out, array)
-
-    array_real = mx.nd.array([-4., 0., 0., 4., 4., 4., 0., -4., -4., -4.])
-    res_real = mx.nd.array([-5., -1., 2., 2., 4., 3., 0., -1., -6., -96.])
-
-    assert same(array.asnumpy(), array_real.asnumpy())
-    assert same(residual.asnumpy(), res_real.asnumpy())
 
 def test_reciprocal_op():
     data_tmp = np.random.rand(3, 4) * 10 - 5
