@@ -196,17 +196,22 @@ def test_vardrop():
     cell.collect_params().initialize(init='xavier')
     input_data = mx.nd.random_uniform(shape=(10, 3, 50), ctx=mx.context.current_context())
     with mx.autograd.record():
-        cell.unroll(3, input_data, merge_outputs=True)
+        outputs1, _ = cell.unroll(3, input_data, merge_outputs=True)
         mask1 = cell.drop_outputs_mask.asnumpy()
-        cell.unroll(3, input_data, merge_outputs=True)
+        mx.nd.waitall()
+        outputs2, _ = cell.unroll(3, input_data, merge_outputs=True)
         mask2 = cell.drop_outputs_mask.asnumpy()
     assert not almost_equal(mask1, mask2)
+    assert not almost_equal(outputs1.asnumpy(), outputs2.asnumpy())
 
+    cell.reset()
     cell.hybridize()
     with mx.autograd.record():
-        outputs1, _ = cell.unroll(3, input_data, merge_outputs=True)
-        outputs2, _ = cell.unroll(3, input_data, merge_outputs=True)
-    assert not almost_equal(outputs1.asnumpy(), outputs2.asnumpy())
+        outputs3, _ = cell.unroll(3, input_data, merge_outputs=True)
+        mx.nd.waitall()
+        outputs4, _ = cell.unroll(3, input_data, merge_outputs=True)
+    assert not almost_equal(outputs3.asnumpy(), outputs4.asnumpy())
+    assert not almost_equal(outputs1.asnumpy(), outputs3.asnumpy())
 
 
 def check_rnn_forward(layer, inputs, deterministic=True):
