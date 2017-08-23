@@ -41,11 +41,11 @@ from .op import NDArrayBase, _STORAGE_TYPE_ID_TO_STR
 from . import broadcast_add, broadcast_mul, transpose, broadcast_not_equal, broadcast_power
 from . import broadcast_sub, broadcast_div, broadcast_to, broadcast_equal, cast_storage
 from . import broadcast_greater, broadcast_greater_equal, broadcast_lesser, broadcast_lesser_equal
-from . import zeros_like, slice
+from . import zeros_like, slice, broadcast_minimum, broadcast_maximum, broadcast_mod
 
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
            "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",
-           "imdecode", "lesser", "lesser_equal", "maximum", "minimum", "moveaxis",
+           "imdecode", "lesser", "lesser_equal", "maximum", "minimum", "moveaxis", "modulo",
            "multiply", "negative", "not_equal", "onehot_encode", "power", "subtract",
            "true_divide", "waitall", "_new_empty_handle"]
 
