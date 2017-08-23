@@ -44,8 +44,9 @@ use AI::MXNet::Visualization;
 use AI::MXNet::RecordIO;
 use AI::MXNet::Image;
 use AI::MXNet::Contrib;
-use AI::MXNet::Contrib::AutoGrad;
 use AI::MXNet::CachedOp;
+use AI::MXNet::AutoGrad;
+use AI::MXNet::Gluon;
 our $VERSION = '1.0102';
 
 sub import
@@ -81,7 +82,9 @@ sub import
             sub rnn { 'AI::MXNet::RNN' }
             sub callback { 'AI::MXNet::Callback' }
             sub img { 'AI::MXNet::Image' }
+            sub image { 'AI::MXNet::Image' }
             sub contrib { 'AI::MXNet::Contrib' }
+            sub autograd { 'AI::MXNet::AutoGrad' }
             sub name { '$short_name' }
             sub AttrScope { shift; AI::MXNet::Symbol::AttrScope->new(\@_) }
             *AI::MXNet::Symbol::AttrScope::current = sub { \$${short_name}::AttrScope; };

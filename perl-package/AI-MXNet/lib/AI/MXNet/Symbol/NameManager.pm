@@ -75,10 +75,10 @@ method get(Maybe[Str] $name, Str $hint)
 
 method current()
 {
-    $AI::MXNet::current_nm_ldr;
+    $mx::NameManager;
 }
 
-$AI::MXNet::current_nm_ldr = __PACKAGE__->new;
+$mx::NameManager = __PACKAGE__->new;
 
 package AI::MXNet::Symbol::Prefix;
 use Mouse;

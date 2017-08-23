@@ -216,9 +216,11 @@ method reset(){}
 method list()
 {
     my @ret;
-    while(<$self>)
+    while(my $data = <$self>)
     {
-        push @ret, $_;
+        $data->label([map { $_->copy } @{ $data->label }]);
+        $data->data([map { $_->copy } @{ $data->data }]);
+        push @ret, $data;
     }
     return \@ret;
 }
@@ -596,7 +598,6 @@ method getpad()
         return 0;
     }
 }
-
 package AI::MXNet::MXDataIter;
 use Mouse;
 use AI::MXNet::Base;
@@ -667,6 +668,7 @@ method reset()
     $self->first_batch(undef);
     check_call(AI::MXNetCAPI::DataIterBeforeFirst($self->handle));
 }
+
 
 method next()
 {

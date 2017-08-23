@@ -30,7 +30,7 @@ use base qw(Exporter);
 use List::Util qw(shuffle);
 
 @AI::MXNet::Base::EXPORT = qw(product enumerate assert zip check_call build_param_doc
-                              pdl cat dog svd bisect_left pdl_shuffle
+                              pdl cat dog svd bisect_left pdl_shuffle as_array
                               DTYPE_STR_TO_MX DTYPE_MX_TO_STR DTYPE_MX_TO_PDL
                               DTYPE_PDL_TO_MX DTYPE_MX_TO_PERL GRAD_REQ_MAP);
 @AI::MXNet::Base::EXPORT_OK = qw(pzeros pceil);
@@ -279,6 +279,52 @@ sub _notify_shutdown
     check_call(AI::MXNetCAPI::NotifyShutdown());
 }
 
+sub _indent
+{
+    my ($s_, $numSpaces) = @_;
+    my @s = split(/\n/, $s_);
+    if (@s == 1)
+    {
+        return $s_;
+    }
+    my $first = shift(@s);
+    @s = ($first, map { (' 'x$numSpaces) . $_ } @s);
+    return join("\n", @s);
+}
+
+sub as_array
+{
+    return ref $_[0] eq 'ARRAY' ? $_[0] : [$_[0]];
+}
+
+my %internal_arguments = (prefix => 1, params => 1, shared => 1);
+my %attributes_per_class;
+sub process_arguments
+{
+    my $orig  = shift;
+    my $class = shift;
+    if($class->can('python_constructor_arguments'))
+    {
+        if(not exists $attributes_per_class{$class})
+        {
+            %{ $attributes_per_class{$class} } = map { $_->name => 1 } $class->meta->get_all_attributes;
+        }
+        my %kwargs;
+        while(@_ >= 2 and not ref $_[-2] and (exists $attributes_per_class{$class}{ $_[-2] } or exists $internal_arguments{ $_[-2] }))
+        {
+            my $v = pop(@_);
+            my $k = pop(@_);
+            $kwargs{ $k } = $v;
+        }
+        if(@_)
+        {
+            @kwargs{ @{ $class->python_constructor_arguments }[0..@_-1] } = @_;
+        }
+        return $class->$orig(%kwargs);
+    }
+    return $class->$orig(@_);
+}
+
 END {
     _notify_shutdown();
     Time::HiRes::sleep(0.01);
@@ -288,5 +334,18 @@ END {
 *pceil  = \&ceil;
 ## making sure that we can stringify arbitrarily large piddles
 $PDL::toolongtoprint = 1000_000_000;
+## convenience subs
+{
+    my $orig_at = PDL->can('at');
+    no warnings 'redefine';
+    *PDL::at = sub {
+        my ($self, @args) = @_;
+        return $orig_at->($self, @args) if @args != 1;
+        return $orig_at->($self, @args) if $self->ndims == 1;
+        return $self->slice(('X')x($self->ndims-1), $args[0])->squeeze;
+    };
+    *PDL::len    = sub { shift->dim(-1) };
+    *PDL::dtype  = sub { DTYPE_MX_TO_STR->{ DTYPE_PDL_TO_MX->{ shift->type->numval } } };
+}
 
 1;

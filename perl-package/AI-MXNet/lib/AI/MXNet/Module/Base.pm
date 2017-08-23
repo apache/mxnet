@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+use strict;
+use warnings;
 package AI::MXNet::BatchEndParam;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -283,7 +285,7 @@ method score(
             );
             for my $callback (@{ _as_list($batch_end_callback) })
             {
-                &{$callback}($batch_end_params);
+                $callback->($batch_end_params);
             }
         }
         $actual_num_batch++;
@@ -298,7 +300,7 @@ method score(
         );
         for my $callback (@{ _as_list($score_end_callback) })
         {
-            &{callback}($params);
+            $callback->($params);
         }
     }
     return $eval_metric->get_name_value;
@@ -567,7 +569,7 @@ method fit(
                 );
                 for my $callback (@{ _as_list($batch_end_callback) })
                 {
-                    &{$callback}($batch_end_params);
+                    $callback->($batch_end_params);
                 }
             }
             $nbatch++;
@@ -589,7 +591,7 @@ method fit(
         {
             for my $callback (@{ _as_list($epoch_end_callback) })
             {
-                &{$callback}($epoch, $self->get_symbol, $arg_params, $aux_params);
+                $callback->($epoch, $self->get_symbol, $arg_params, $aux_params);
             }
         }
         #----------------------------------------

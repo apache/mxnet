@@ -82,13 +82,29 @@
     }
 }
 
-%typemap(in,numinputs=0) (int *out) (int temp)
+%typemap(in) (void **out_pdata) (void *temp)
+{
+    temp = NULL;
+    $1 = &temp;
+}
+
+%typemap(argout) (void **out_pdata)
+{
+    if(!result)
+    {
+        $result = newSVpvn((char*)(*$1), SvIV(ST(1)));
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
+%typemap(in,numinputs=0) (int *out) (int temp), (bool *out) (bool temp)
 {
     temp = 0;
     $1 = &temp;
 }
 
-%typemap(argout) (int *out)
+%typemap(argout) (int *out), (bool *out)
 {
     if(!result)
     {

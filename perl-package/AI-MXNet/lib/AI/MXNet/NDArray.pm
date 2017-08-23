@@ -49,7 +49,8 @@ use overload
     '<'  => \&lesser,
     '<=' => \&lesser_equal,
     '.=' => \&set,
-    '=' => sub { $_[0] };
+    '@{}'=> \&split_array,
+    '='  => sub { $_[0] };
 
 extends 'AI::MXNet::NDArray::Base';
 has 'writable' => (is => 'rw', isa => 'Int', default => 1, lazy => 1);
@@ -75,6 +76,11 @@ method STORABLE_thaw($cloning, $buf, $writable)
     );
     $self->handle($handle);
     $self->writable($$writable);
+}
+
+method split_array(@args)
+{
+     $self->shape->[0] > 1 ? $self->split(num_outputs => $self->shape->[0], squeeze_axis => 1, axis => 0) : [$self];
 }
 
 method at(Index @indices)
@@ -106,6 +112,8 @@ method at(Index @indices)
     return $self->slice(@indices);
 }
 
+method len() { $self->shape->[0] }
+
 method slice(Slice @slices)
 {
     confess("No slices supplied") unless @slices;
@@ -121,7 +129,7 @@ method slice(Slice @slices)
     my $i = -1;
     @slices = map {
         ++$i;
-        ref $_ ? (@$_ == 1 ? [$_->[0], $shape->[$i] - 1] : $_) : ($_ eq 'X' ? [0, $shape->[$i] - 1] : [$_, $_]);
+        ref $_ ? (@$_ == 1 ? [$_->[0], $_->[0]] : $_) : ($_ eq 'X' ? [0, $shape->[$i] - 1] : [$_, $_]);
     } @slices;
     zip(sub {
         my ($slice, $dim_size) = @_;
@@ -156,7 +164,7 @@ method set(AcceptableInput $value, $reverse=)
     ## plain number
     if(not ref $value)
     {
-        $self->_set_value($value, { out => $self });
+        $self->_set_value($value, out => $self);
     }
     # ndarray
     elsif(blessed($value) and $value->isa(__PACKAGE__))
@@ -179,7 +187,14 @@ method set(AcceptableInput $value, $reverse=)
 method asscalar()
 {
     confess("ndarray size must be 1") unless $self->size == 1;
-    return $self->aspdl->at(0);
+    $self->wait_to_read;
+    my $perl_pack_type = DTYPE_MX_TO_PERL->{$self->dtype};
+    my $length = {qw/f 4 d 8 S 2 C 1 l 4/}->{$perl_pack_type};
+    return
+    (map {
+            $perl_pack_type eq 'S' ? AI::MXNetCAPI::_half_to_float($_) : $_
+         } unpack("$perl_pack_type", check_call(AI::MXNetCAPI::NDArrayGetData($self->handle, $length)))
+    )[0];
 }
 
 method _sync_copyfrom(ArrayRef|PDL|PDL::Matrix $source_array)
@@ -342,9 +357,16 @@ method reshape(ArrayRef[Int] $new_shape)
     my $i = -1;
     my @inferred = map { $i++; $_ == -1 ? ($i) : () } @$new_shape;
     assert((@inferred <= 1), 'Only one dimension can be inferred.');
+    $i = -1;
+    my @keep = map { $i++; $_ == 0 ? ($i) : () } @$new_shape;
+    my $shape = $self->shape;
+    if(@keep)
+    {
+        @{$new_shape}[@keep] = @{$shape}[@keep];
+    }
     if(@inferred)
     {
-        $new_shape->[$inferred[0]] = product(@{ $self->shape })/product(map { abs($_) } @{ $new_shape });
+        $new_shape->[$inferred[0]] = product(@{ $shape })/product(map { abs($_) } @{ $new_shape });
     }
     my $handle = check_call(
                     AI::MXNetCAPI::NDArrayReshape(
@@ -953,7 +975,8 @@ method zeros(
     Shape $shape,
     AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx,
     Dtype :$dtype='float32',
-    Maybe[AI::MXNet::NDArray] :$out=
+    Maybe[AI::MXNet::NDArray] :$out=,
+    Maybe[Str] :$name=
 )
 {
     return __PACKAGE__->_zeros({ shape => $shape, ctx => "$ctx", dtype => $dtype, ($out ? (out => $out) : ())  });
@@ -984,7 +1007,8 @@ method ones(
     Shape $shape,
     AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx,
     Dtype :$dtype='float32',
-    Maybe[AI::MXNet::NDArray] :$out=
+    Maybe[AI::MXNet::NDArray] :$out=,
+    Maybe[Str] :$name=
 )
 {
     return __PACKAGE__->_ones({ shape => $shape, ctx => "$ctx", dtype => $dtype, ($out ? (out => $out) : ()) });
@@ -1017,7 +1041,8 @@ method ones(
 method full(
     Shape $shape, Num $val,
     AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx,
-    Dtype :$dtype='float32', Maybe[AI::MXNet::NDArray] :$out=
+    Dtype :$dtype='float32', Maybe[AI::MXNet::NDArray] :$out=,
+    Maybe[Str] :$name=
 )
 {
     return __PACKAGE__->_set_value({ src => $val, out => $out ? $out : __PACKAGE__->empty($shape, ctx => $ctx, dtype => $dtype) });
@@ -1397,14 +1422,81 @@ method detach()
     return __PACKAGE__->new(handle => $handle);
 }
 
-method backward(Maybe[AI::MXNet::NDArray] $out_grad=, Bool $retain_graph=0)
+=head2 attach_grad
+
+        Attach a gradient buffer to this NDArray, so that `backward`
+        can compute gradient with respect to it.
+
+        Parameters
+        ----------
+        GradReq :$grad_req='write' : {'write', 'add', 'null'}
+            How gradient will be accumulated.
+            - 'write': gradient will be overwritten on every backward.
+            - 'add': gradient will be added to existing value on every backward.
+            - 'null': do not compute gradient for this NDArray.
+        Maybe[Str] :$stype= : str, optional
+            The storage type of the gradient array. Defaults to the same stype of this NDArray.
+=cut
+
+method attach_grad(GradReq :$grad_req='write', Maybe[Str] :$stype=)
+{
+    my $grad;
+    if(defined $stype)
+    {
+        $grad = __PACKAGE__->_zeros($self->shape, stype=>$stype);
+    }
+    else
+    {
+        $grad = $self->zeros_like;
+    }
+    $grad_req = GRAD_REQ_MAP->{$grad_req};
+    check_call(
+        AI::MXNetCAPI::AutogradMarkVariables(
+            1,
+            [$self->handle],
+            [$grad_req],
+            [$grad->handle]
+        )
+    );
+}
+
+=head2 grad
+
+    Returns gradient buffer attached to this NDArray.
+=cut
+
+method grad()
+{
+    my $handle = check_call(AI::MXNetCAPI::NDArrayGetGrad($self->handle));
+    return undef unless defined $handle;
+    return __PACKAGE__->new(handle => $handle);
+}
+
+=head2 backward
+
+    Compute the gradients of this NDArray w.r.t variables.
+
+    Parameters
+    ----------
+    :$out_grad= : NDArray, optional
+        Gradient with respect to head.
+    :$retain_graph=0 : bool, optional
+        Whether to retain the computaion graph for another backward
+        pass on the same graph. By default the computaion history
+        is cleared.
+    :$train_mode=1 : bool, optional
+        Whether to compute gradient for training or inference.
+=cut
+
+method backward(Maybe[AI::MXNet::NDArray] :$out_grad=, Bool :$retain_graph=0, Bool :$train_mode=1)
 {
     check_call(
-        AI::MXNetCAPI::AutogradBackward(
+        AI::MXNetCAPI::AutogradBackwardEx(
             1,
             [$self->handle],
             [defined $out_grad ? $out_grad->handle : undef],
-            $retain_graph
+            $retain_graph,
+            $train_mode
         )
     )
 }
@@ -1420,5 +1512,8 @@ eval << "EOV" if ($^V and $^V >= 5.006007);
   $lvalue_methods
 }
 EOV
+
+sub contrib { 'AI::MXNet::Contrib::NDArray' }
+sub random  { 'AI::MXNet::Random' }
 
 __PACKAGE__->meta->make_immutable;

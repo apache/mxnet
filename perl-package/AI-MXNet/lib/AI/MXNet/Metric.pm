@@ -219,7 +219,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
             $pred_label = AI::MXNet::NDArray->argmax_channel($pred_label);
         }
         AI::MXNet::Metric::check_label_shapes($label, $pred_label);
-        my $sum = ($pred_label->aspdl->flat == $label->aspdl->flat)->sum;
+        my $sum = ($pred_label->reshape([-1]) == $label->reshape([-1]))->sum->asscalar;
         $self->sum_metric($self->sum_metric + $sum);
         $self->num_inst($self->num_inst + $pred_label->size);
     }, $labels, $preds);
@@ -483,7 +483,7 @@ use Mouse;
 use AI::MXNet::Base;
 extends 'AI::MXNet::EvalMetric';
 has '+name'   => (default => 'cross-entropy');
-has 'eps'     => (is => 'ro', isa => 'Num', default => 1e-8);
+has 'eps'     => (is => 'ro', isa => 'Num', default => 1e-12);
 around BUILDARGS => sub {
     my $orig  = shift;
     my $class = shift;

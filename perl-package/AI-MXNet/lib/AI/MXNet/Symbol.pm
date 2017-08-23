@@ -73,7 +73,11 @@ method STORABLE_thaw($cloning, $json)
 method stringify($other=, $reverse=)
 {
     my $name = $self->name;
-    sprintf("<%s %s>", ref($self), $name ? $name : 'Grouped');
+    sprintf(
+        "<%s %s%s>",
+        ref($self),
+        $name ? ($name, '') : ('group [', join(', ', map { $_->name } @{ $self }) . ']')
+    );
 }
 
 method add(AI::MXNet::Symbol|Num $other, $reverse=)
@@ -1462,5 +1466,7 @@ sub  _ufunc_helper
         return __PACKAGE__->can($fn_symbol)->(__PACKAGE__, $lhs, $rhs);
     }
 }
+
+sub contrib { 'AI::MXNet::Contrib::Symbol' }
 
 1;

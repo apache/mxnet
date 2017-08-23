@@ -15,12 +15,31 @@
 # specific language governing permissions and limitations
 # under the License.
 
-package AI::MXNet::Contrib::AutoGrad;
+package AI::MXNet::AutoGrad;
 use strict;
 use warnings;
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
 use Scalar::Util qw(blessed);
+use Carp qw(confess);
+
+sub import
+{
+    my ($class, $short_name) = @_;
+    if($short_name)
+    {
+        $short_name =~ s/[^\w:]//g;
+        if(length $short_name)
+        {
+            my $short_name_package =<<"EOP";
+            package $short_name;
+            use parent 'AI::MXNet::AutoGrad';
+            1;
+EOP
+            eval $short_name_package;
+        }
+    }
+}
 
 =head1 NAME
 
@@ -46,8 +65,54 @@ use Scalar::Util qw(blessed);
 
 method set_is_training(Bool $is_train)
 {
-    my $prev = scalar(check_call(AI::MXNetCAPI::AutogradSetIsTraining($is_train ? 1 : 0)));
-    return $prev ? 1 : 0
+    return scalar(check_call(AI::MXNetCAPI::AutogradSetIsTraining($is_train)));
+}
+
+=head2 set_is_recording
+
+    Set status to recording/not recording. When recording, graph will be constructed
+    for gradient computation.
+
+    Parameters
+    ----------
+    is_recoding: bool
+
+    Returns
+    -------
+    previous state before this set.
+=cut
+
+method set_is_recording(Bool $is_recording)
+{
+    return scalar(check_call(AI::MXNetCAPI::AutogradSetIsRecording($is_recording)));
+}
+
+=head2 is_recording
+
+    Get status on recording/not recording.
+
+    Returns
+    -------
+    Current state of recording.
+=cut
+
+method is_recording()
+{
+    return scalar(check_call(AI::MXNetCAPI::AutogradIsRecording()));
+}
+
+=head2 is_training
+
+    Get status on training/predicting.
+
+    Returns
+    -------
+    Current state of training/predicting.
+=cut
+
+method is_training()
+{
+    return scalar(check_call(AI::MXNetCAPI::AutogradIsTraining()));
 }
 
 =head2 mark_variables
@@ -56,15 +121,15 @@ method set_is_training(Bool $is_train)
 
     Parameters
     ----------
-    variables: array ref of AI::MXNet::NDArrays
-    gradients: array ref of AI::MXNet::NDArrays
-    grad_reqs: array ref of strings
+    ArrayRef[AI::MXNet::NDArray] $variables
+    ArrayRef[AI::MXNet::NDArray] $gradients
+    GradReq|ArrayRef[GradReq]   :$grad_reqs='write'
 =cut
 
 method mark_variables(
     ArrayRef[AI::MXNet::NDArray]  $variables,
     ArrayRef[AI::MXNet::NDArray]  $gradients,
-    GradReq|ArrayRef[GradReq]     $grad_reqs='write'
+    GradReq|ArrayRef[GradReq]    :$grad_reqs='write'
 )
 {
     my @variable_handles = map { $_->handle } @{ $variables };
@@ -97,24 +162,26 @@ method mark_variables(
      outputs: array ref of NDArray
      out_grads: array ref of NDArray or undef
      retain_graph: bool, defaults to false
+     train_mode: bool, defaluts to true
 =cut
-
 
 method backward(
     ArrayRef[AI::MXNet::NDArray] $outputs,
     Maybe[ArrayRef[AI::MXNet::NDArray|Undef]] $out_grads=,
-    Bool $retain_graph=0
+    Bool $retain_graph=0,
+    Bool $train_mode=1
 )
 {
     my @output_handles = map { $_->handle } @{ $outputs };
     if(not defined $out_grads)
     {
         check_call(
-            AI::MXNetCAPI::AutogradBackward(
+            AI::MXNetCAPI::AutogradBackwardEx(
                 scalar(@output_handles),
                 \@output_handles,
                 [],
-                $retain_graph
+                $retain_graph,
+                $train_mode
             )
         );
         return;
@@ -131,11 +198,12 @@ method backward(
     );
 
     check_call(
-        AI::MXNetCAPI::AutogradBackward(
+        AI::MXNetCAPI::AutogradBackwardEx(
             scalar(@output_handles),
             \@output_handles,
             \@ograd_handles,
-            $retain_graph
+            $retain_graph,
+            $train_mode
         )
     );
 }
@@ -184,7 +252,7 @@ method grad_and_loss(CodeRef $func, Maybe[Int|ArrayRef[Int]] $argnum=)
         if(defined $argnum)
         {
             my @argnum = ref $argnum ? @$argnum : ($argnum);
-            @variables = map { $_[$_] } @argnum;
+            @variables = map { $args[$_] } @argnum;
         }
         map {
             assert(
@@ -193,10 +261,9 @@ method grad_and_loss(CodeRef $func, Maybe[Int|ArrayRef[Int]] $argnum=)
         } @variables;
         my @grads = map { $_->zeros_like } @variables;
         __PACKAGE__->mark_variables(\@variables, \@grads);
-        my $prev = __PACKAGE__->set_is_training(1);
-        my $outputs = $func->(@args);
-        __PACKAGE__->set_is_training(0) unless $prev;
-        __PACKAGE__->compute_gradient(ref $outputs eq 'ARRAY' ? $outputs : [$outputs]);
+        my $outputs;
+        __PACKAGE__->record(sub { $outputs = $func->(@args) });
+        __PACKAGE__->backward(ref $outputs eq 'ARRAY' ? $outputs : [$outputs]);
         return (\@grads, $outputs);
     };
 }
@@ -227,18 +294,110 @@ method grad(CodeRef $func, Maybe[Int|ArrayRef[Int]] $argnum=)
     };
 }
 
-method train_section(CodeRef $sub)
+=head2 train_mode
+
+    Executes $sub within an autograd training scope context.
+    Parameters
+    ----------
+    CodeRef $sub: a perl sub
+=cut
+
+method train_mode(CodeRef $sub)
 {
     my $prev = __PACKAGE__->set_is_training(1);
-    $sub->();
+    eval { $sub->(); };
     __PACKAGE__->set_is_training(0) unless $prev;
+    confess($@) if $@;
 }
 
-method test_section(CodeRef $sub)
+=head2 predict_mode
+
+    Executes $sub within an autograd predicting scope context.
+    Parameters
+    ----------
+    CodeRef $sub: a perl sub
+=cut
+
+method predict_mode(CodeRef $sub)
 {
     my $prev = __PACKAGE__->set_is_training(0);
-    $sub->();
+    eval { $sub->(); };
     __PACKAGE__->set_is_training(1) if $prev;
+    confess($@) if $@;
+}
+
+=head2 record
+
+    Executes $sub within an autograd recording scope context
+    and captures code that needs gradients to be calculated.
+    Parameters
+    ----------
+    CodeRef $sub: a perl sub
+    Maybe[Bool] :$train_mode=1
+=cut
+
+method record(CodeRef $sub, Maybe[Bool] :$train_mode=1)
+{
+    my $prev_train;
+    if(defined $train_mode)
+    {
+        $prev_train = __PACKAGE__->set_is_training($train_mode);
+    }
+    my $prev_recording = __PACKAGE__->set_is_recording(1);
+    eval { $sub->(); };
+    if(defined $train_mode)
+    {
+        $prev_train = __PACKAGE__->set_is_training($prev_train) if not $prev_train == $train_mode;
+    }
+    __PACKAGE__->set_is_recording(0) unless $prev_recording;
+    confess($@) if $@;
+}
+
+=head2 pause
+
+    Executes $sub within an autograd recording scope context
+    and captures code that needs gradients to be calculated.
+    Parameters
+    ----------
+    CodeRef $sub: a perl sub
+    Maybe[Bool] :$train_mode=0
+=cut
+
+method pause(CodeRef $sub, Maybe[Bool] :$train_mode=0)
+{
+    my $prev_train;
+    if(defined $train_mode)
+    {
+        $prev_train = __PACKAGE__->set_is_training($train_mode);
+    }
+    my $prev_recording = __PACKAGE__->set_is_recording(0);
+    eval { $sub->(); };
+    if(defined $train_mode)
+    {
+        $prev_train = __PACKAGE__->set_is_training($prev_train) if not $prev_train == $train_mode;
+    }
+    __PACKAGE__->set_is_recording(1) if $prev_recording;
+    confess($@) if $@;
+}
+
+=head2 get_symbol
+
+    Retrieve recorded computation history as `Symbol`.
+
+    Parameters
+    ----------
+    x : NDArray
+        Array representing the head of computation graph.
+    Returns
+    -------
+    Symbol
+        The retrieved Symbol.
+=cut
+
+method get_symbol(AI::MXNet::NDArray $x)
+{
+    my $handle = scalar(check_call(AI::MXNetCAPI::AutogradGetSymbol($x->handle)));
+    return AI::MXNet::Symbol->new(handle => $handle);
 }
 
 1;

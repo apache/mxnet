@@ -65,7 +65,8 @@ use overload
     '""' => sub {
         my ($self) = @_;
         return sprintf("%s(%s)", $self->device_type, $self->device_id);
-    };
+    },
+    fallback => 1;
 =head1 NAME
 
     AI::MXNet::Context - A device context.
