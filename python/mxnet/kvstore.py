@@ -44,7 +44,10 @@ def _ctype_key_value(keys, vals):
             c_vals += c_val_i
             key_type = t if key_type is None else key_type
             assert(key_type == t), "inconsistent types of keys detected."
-        return (c_array(ctypes.c_char_p, c_keys), c_array(NDArrayHandle, c_vals), key_type)
+        c_keys_arr = c_array(ctypes.c_char_p, c_keys) if key_type == str \
+                     else c_array(ctypes.c_int, c_keys)
+        c_vals_arr = c_array(NDArrayHandle, c_vals)
+        return (c_keys_arr, c_vals_arr, key_type)
 
     assert(isinstance(keys, (int, str))), "unexpected type for keys: " + str(type(keys))
     if isinstance(vals, NDArray):
@@ -115,11 +118,14 @@ class KVStore(object):
         [ 2.  2.  2.]]
 
         >>> # init a list of key-value pairs
-        >>> keys = ['5', '7', '9']
+        >>> keys = [5, 7, 9]
         >>> kv.init(keys, [mx.nd.ones(shape)]*len(keys))
         """
-        ckeys, cvals = _ctype_key_value(key, value)
-        check_call(_LIB.MXKVStoreInitEx(self.handle, mx_uint(len(ckeys)), ckeys, cvals))
+        ckeys, cvals, key_type = _ctype_key_value(key, value)
+        if key_type == str:
+            check_call(_LIB.MXKVStoreInitEx(self.handle, mx_uint(len(ckeys)), ckeys, cvals))
+        else:
+            check_call(_LIB.MXKVStoreInit(self.handle, mx_uint(len(ckeys)), ckeys, cvals))
 
     def push(self, key, value, priority=0):
         """ Pushes a single or a sequence of key-value pairs into the store.
@@ -178,10 +184,13 @@ class KVStore(object):
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
         """
-        ckeys, cvals = _ctype_key_value(key, value)
-        check_call(_LIB.MXKVStorePushEx(
-            self.handle, mx_uint(len(ckeys)), ckeys, cvals,
-            ctypes.c_int(priority)))
+        ckeys, cvals, key_type = _ctype_key_value(key, value)
+        if key_type == str:
+            check_call(_LIB.MXKVStorePushEx(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
+        else:
+            check_call(_LIB.MXKVStorePush(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
 
 
     def pull(self, key, out=None, priority=0):

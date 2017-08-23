@@ -152,6 +152,46 @@ class KVStoreLocal : public KVStore {
     PullRowSparse(keys, val_rowids, priority);
   }
 
+ private:
+  void Push_(const std::vector<int>& keys,
+             const std::vector<NDArray>& values,
+             int priority, bool use_str_key) {
+    std::vector<int> uniq_keys;
+    std::vector<std::vector<NDArray> > grouped_vals;
+    GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
+    for (size_t i = 0; i < uniq_keys.size(); ++i) {
+      int key = uniq_keys[i];
+      const NDArray& merged = comm_->Reduce(key, grouped_vals[i], priority);
+      NDArray& local = local_[key];
+      if (updater_ != nullptr) {
+        CHECK(!local.is_none()) << "key " << key << " has not been inited";
+        // if merged is on gpu, we may need copy weight from cpu to gpu
+        if (merged.ctx().dev_mask() != cpu::kDevMask &&
+            local.ctx().dev_mask() == cpu::kDevMask) {
+          local = local.Copy(merged.ctx());
+        }
+        // call the updater with string keys
+        // if string keys are used and str_updater_ is available
+        // otherwise fallback to updater_ which uses int key interface
+        if (use_str_key && str_updater_ != nullptr) {
+          // TODO(haibin) CHECK(str_updater_ != nullptr) if use_str_key
+          // after all language bindings picks up string interface changes
+          const std::string &str_key = reverse_str_key_dict_[key];
+          // TODO(haibin) avoid reverse key lookup if use_str_key
+          str_updater_(str_key, merged,  &local);
+        } else {
+          updater_(key, merged,  &local);
+        }
+      } else {
+        if (merged.storage_type() != local.storage_type()) {
+          local = merged.Copy(local.ctx());
+        } else {
+          local = merged;
+        }
+      }
+    }
+  }
+
  protected:
   /**
    * \brief group values on keys for push

@@ -181,8 +181,13 @@ def test_sparse_aggregator():
 
 def updater(key, recv, local):
     """use updater: +="""
+    assert(isinstance(key, int))
     local += recv
 
+def str_updater(key, recv, local):
+    """use updater: +="""
+    assert(isinstance(key, str))
+    local += recv
 
 def test_updater(dev = 'cpu'):
     """updater"""
@@ -219,7 +224,7 @@ def test_updater(dev = 'cpu'):
     check_updater(kv, 3, keys)
 
     str_kv = init_kv_with_str()
-    str_kv._set_updater(updater)
+    str_kv._set_updater(str_updater)
     check_updater(str_kv, 'a', str_keys)
 
 def test_get_type():
@@ -228,12 +233,14 @@ def test_get_type():
     assert kv.type == kvtype
 
 def test_invalid_pull():
-    def check_invalid_single_kv_pair(kv, key):
-        dns_val = mx.nd.ones(shape) * 2
-        rsp_val = dns_val.tostype('row_sparse')
+    def check_ignored_single_kv_pair(kv, key):
+        rsp_val = (mx.nd.ones(shape) * 2).tostype('row_sparse')
         kv.pull(key, out=rsp_val)
         # pull should be ignored with no values updated
         check_diff_to_scalar(rsp_val, 2)
+
+    def check_invalid_single_kv_pair(kv, key):
+        dns_val = mx.nd.ones(shape) * 2
         try:
             # row_sparse_pull should be aborted when vals.stype != row_sparse
             kv.row_sparse_pull(key, out=dns_val, rowids=mx.nd.array([1]))
@@ -241,15 +248,20 @@ def test_invalid_pull():
         except:
             pass
 
-    def check_invalid_list_kv_pair(kv, key):
+    def check_ignored_list_kv_pair(kv, key):
         dns_val = [mx.nd.ones(shape) * 2] * len(key)
         rsp_val = [val.tostype('row_sparse') for val in dns_val]
         kv.pull(key, out=rsp_val)
         for v in rsp_val:
             # pull should be ignored with no values updated
             check_diff_to_scalar(v, 2)
+
+    def check_invalid_list_kv_pair(kv, key):
+        dns_val = [mx.nd.ones(shape) * 2] * len(key)
+        rsp_val = [val.tostype('row_sparse') for val in dns_val]
         try:
-            # row_sparse_pull should be aborted when vals.stype != row_sparse
+            # row_sparse_pull should be aborted when vals.stype != row_sparse,
+            # or keys contain both int and str
             kv.row_sparse_pull(key, out=dns_val, rowids=[mx.nd.array([1])] * len(key))
             assert(False)
         except:
@@ -259,17 +271,13 @@ def test_invalid_pull():
     str_kv = init_kv_with_str()
 
     check_invalid_single_kv_pair(int_kv, 3)
+    check_ignored_single_kv_pair(int_kv, 3)
     check_invalid_single_kv_pair(str_kv, 'a')
+    check_ignored_single_kv_pair(str_kv, 'a')
 
     check_invalid_list_kv_pair(int_kv, keys)
-    check_invalid_list_kv_pair(str_kv, str_keys)
+    check_invalid_list_kv_pair(str_kv, [1, 'c', 'd'])
 
 if __name__ == '__main__':
-    test_init()
-    test_get_type()
-    test_single_kv_pair()
-    test_list_kv_pair()
-    test_sparse_aggregator()
-    test_aggregator()
-    test_updater()
-    test_row_sparse_pull()
+    import nose
+    nose.runmodule()
