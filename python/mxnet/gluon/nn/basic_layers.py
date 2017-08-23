@@ -442,3 +442,41 @@ class Flatten(HybridBlock):
 
     def __repr__(self):
         return self.__class__.__name__
+
+class InstanceNorm(HybridBlock):
+    def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=False,
+                 beta_initializer='zeros', gamma_initializer='ones',
+                 in_channels=0, **kwargs):
+        super(InstanceNorm, self).__init__(**kwargs)
+        self._kwargs = {'eps': epsilon}
+        if in_channels != 0:
+            self.in_channels = in_channels
+        self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
+                                     shape=(in_channels,), init=gamma_initializer,
+                                     allow_deferred_init=True)
+        self.beta = self.params.get('beta', grad_req='write' if center else 'null',
+                                    shape=(in_channels,), init=beta_initializer,
+                                    allow_deferred_init=True)
+
+    def hybrid_forward(self, F, x, gamma, beta):
+        return F.InstanceNorm(x, gamma, beta,
+                           name='fwd', **self._kwargs)
+
+    def __repr__(self):
+        s = '{name}({content}'
+        if hasattr(self, 'in_channels'):
+            s += ', in_channels={0}'.format(self.in_channels)
+        s += ')'
+        return s.format(name=self.__class__.__name__,
+                        content=', '.join(['='.join([k, v.__repr__()])
+                                           for k, v in self._kwargs.items()]))
+
+
+class ReflectancePadding(HybridBlock):
+    def __init__(self, pad_width=None, **kwargs):
+        super(ReflectancePadding, self).__init__(**kwargs)
+        self.pad_width = pad_width
+        
+    def forward(self, x):
+        return F.pad(x, mode='reflect', pad_width=self.pad_width)
+
