@@ -1663,7 +1663,7 @@ typedef void (MXKVStoreStrUpdater)(const char* key,
                                    NDArrayHandle local,
                                    void *handle);
 /*!
- * \brief register an push updater
+ * \brief register a push updater
  * \param handle handle to the KVStore
  * \param updater udpater function
  * \param updater_handle The additional handle used to invoke the updater
@@ -1673,15 +1673,17 @@ MXNET_DLL int MXKVStoreSetUpdater(KVStoreHandle handle,
                                   MXKVStoreUpdater updater,
                                   void *updater_handle);
 /*!
- * \brief register an push updater
+ * \brief register a push updater with int keys and one with string keys
  * \param handle handle to the KVStore
- * \param updater updater function
+ * \param updater updater function with int keys
+ * \param str_updater updater function with string keys
  * \param updater_handle The additional handle used to invoke the updater
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXKVStoreSetStrUpdater(KVStoreHandle handle,
-                                     MXKVStoreStrUpdater updater,
-                                     void *updater_handle);
+MXNET_DLL int MXKVStoreSetUpdaterEx(KVStoreHandle handle,
+                                    MXKVStoreUpdater updater,
+                                    MXKVStoreStrUpdater str_updater,
+                                    void *updater_handle);
 /*!
  * \brief get the type of the kvstore
  * \param handle handle to the KVStore

@@ -180,12 +180,12 @@ def test_sparse_aggregator():
         assert_almost_equal(result_sum, expected_sum * num_devs)
 
 def updater(key, recv, local):
-    """use updater: +="""
+    """use updater: += with int keys"""
     assert(isinstance(key, int))
     local += recv
 
 def str_updater(key, recv, local):
-    """use updater: +="""
+    """use updater: += with str keys"""
     assert(isinstance(key, str))
     local += recv
 

@@ -138,7 +138,7 @@ class KVStore(object):
 
         Parameters
         ----------
-        key : str or list of str
+        key : str, int, or sequence of str or int
             Keys.
 
         value : NDArray or list of NDArray or list of list of NDArray
@@ -169,6 +169,7 @@ class KVStore(object):
 
         >>> # push a list of keys.
         >>> # single device
+        >>> keys = [4, 5, 6]
         >>> kv.push(keys, [mx.nd.ones(shape)]*len(keys))
         >>> b = [mx.nd.zeros(shape)]*len(keys)
         >>> kv.pull(keys, out=b)
@@ -177,6 +178,7 @@ class KVStore(object):
         [ 1.  1.  1.]]
 
         >>> # multiple devices:
+        >>> keys = ['7', '8', '9']
         >>> b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)
         >>> kv.push(keys, b)
         >>> kv.pull(keys, out=b)
@@ -209,7 +211,7 @@ class KVStore(object):
 
         Parameters
         ----------
-        key : int or list of int
+        key : str, int, or sequence of str or int
             Keys.
 
         out: NDArray or list of NDArray or list of list of NDArray
@@ -238,13 +240,14 @@ class KVStore(object):
 
         >>> # pull a list of key-value pairs.
         >>> # On single device
-        >>> keys = ['5', '7', '9']
+        >>> keys = [5, 7, 9]
         >>> b = [mx.nd.zeros(shape)]*len(keys)
         >>> kv.pull(keys, out=b)
         >>> print b[1].asnumpy()
         [[ 2.  2.  2.]
         [ 2.  2.  2.]]
         >>> # On multiple devices
+        >>> keys = ['6', '8', '10']
         >>> b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)
         >>> kv.pull(keys, out=b)
         >>> print b[1][1].asnumpy()
@@ -271,7 +274,7 @@ class KVStore(object):
 
         Parameters
         ----------
-        key : str or list of str
+        key : str, int, or sequence of str or int
             Keys.
 
         out: NDArray or list of NDArray or list of list of NDArray
@@ -465,12 +468,12 @@ class KVStore(object):
         _updater_proto = ctypes.CFUNCTYPE(
             None, ctypes.c_int, NDArrayHandle, NDArrayHandle, ctypes.c_void_p)
         self._updater_func = _updater_proto(_updater_wrapper(updater))
-        check_call(_LIB.MXKVStoreSetUpdater(self.handle, self._updater_func, None))
         # set updater with str keys
         _str_updater_proto = ctypes.CFUNCTYPE(
             None, ctypes.c_char_p, NDArrayHandle, NDArrayHandle, ctypes.c_void_p)
         self._str_updater_func = _str_updater_proto(_updater_wrapper(updater))
-        check_call(_LIB.MXKVStoreSetStrUpdater(self.handle, self._str_updater_func, None))
+        check_call(_LIB.MXKVStoreSetUpdaterEx(self.handle, self._updater_func,
+                                              self._str_updater_func, None))
 
 
     def _barrier(self):

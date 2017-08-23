@@ -887,11 +887,15 @@ int MXKVStoreSetUpdater(KVStoreHandle handle,
   API_END();
 }
 
-int MXKVStoreSetStrUpdater(KVStoreHandle handle,
-                           MXKVStoreStrUpdater updater,
-                           void* updater_handle) {
+int MXKVStoreSetUpdaterEx(KVStoreHandle handle,
+                          MXKVStoreUpdater updater,
+                          MXKVStoreStrUpdater str_updater,
+                          void* updater_handle) {
   API_BEGIN();
-  MXKVStoreStrUpdater * updater_temp = updater;
+  // set updater with int keys
+  MXKVStoreSetUpdater(handle, updater, updater_handle);
+  // set updater with string keys
+  MXKVStoreStrUpdater * updater_temp = str_updater;
   void* updater_handle_temp = updater_handle;
   std::function<void(const std::string&, const NDArray&, NDArray*)> updt
   = [updater_temp, updater_handle_temp]
