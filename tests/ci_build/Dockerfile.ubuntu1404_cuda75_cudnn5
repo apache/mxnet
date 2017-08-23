@@ -23,7 +23,7 @@ RUN cd /usr/src/gtest && cmake CMakeLists.txt && make && cp *.a /usr/lib
 RUN pip install nose cpplint 'pylint==1.4.4' 'astroid==1.3.6'
 
 # MAVEN
-RUN apt-get install -y maven default-jdk
+RUN apt-get install -y maven openjdk-8-jdk
 
 # R
 RUN apt-get install -y software-properties-common r-base-core libcurl4-openssl-dev libssl-dev libxml2-dev
