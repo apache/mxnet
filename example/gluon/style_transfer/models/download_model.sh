@@ -1,3 +1,3 @@
 cd models
-wget -O 21styles.params https://www.dropbox.com/s/mchm6tnpsb44zvl/21styles.params?dl=0?dl=1
+wget -O https://apache-mxnet.s3-accelerate.amazonaws.com/gluon/models/21styles-32f7205c.params
 cd ..
