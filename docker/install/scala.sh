@@ -20,11 +20,11 @@
 # install libraries for mxnet's scala package on ubuntu
 
 
-apt-get install software-properties-common
+apt-get install -y software-properties-common
 add-apt-repository ppa:webupd8team/java -y
 apt-get update
-apt-get install oracle-java8-installer
-apt-get install oracle-java8-set-default
+apt-get install -y oracle-java8-installer
+apt-get install -y oracle-java8-set-default
 
 apt-get install -y maven 
 
