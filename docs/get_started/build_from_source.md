@@ -367,7 +367,11 @@ Both JDK and Maven are required to build the Scala package.
 <div class="ubuntu">
 
 ```bash
-sudo apt-get install -y maven openjdk-8-jdk
+add-apt-repository ppa:webupd8team/java -y
+apt-get update
+apt-get install oracle-java8-installer
+apt-get install oracle-java8-set-default
+apt-get install -y maven
 ```
 
 </div>

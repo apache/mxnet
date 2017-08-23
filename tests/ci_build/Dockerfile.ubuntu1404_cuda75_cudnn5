@@ -23,6 +23,10 @@ RUN cd /usr/src/gtest && cmake CMakeLists.txt && make && cp *.a /usr/lib
 RUN pip install nose cpplint 'pylint==1.4.4' 'astroid==1.3.6'
 
 # MAVEN
+RUN add-apt-repository ppa:webupd8team/java -y
+RUN apt-get update
+RUN apt-get install oracle-java8-installer
+RUN apt-get install oracle-java8-set-default
 RUN apt-get install -y maven openjdk-8-jdk
 
 # R

@@ -19,5 +19,9 @@
 
 # install libraries for mxnet's scala package on ubuntu
 
-apt-get update && apt-get install -y \
-    maven openjdk-8-jdk
+add-apt-repository ppa:webupd8team/java -y
+apt-get update
+apt-get install oracle-java8-installer
+apt-get install oracle-java8-set-default
+
+apt-get update && apt-get install -y maven
