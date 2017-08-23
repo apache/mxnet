@@ -74,8 +74,9 @@ class CuDNNAlgoReg {
             CuDNNAlgo<cudnnConvolutionFwdAlgo_t> *fwd,
             CuDNNAlgo<cudnnConvolutionBwdDataAlgo_t> *bwd,
             CuDNNAlgo<cudnnConvolutionBwdFilterAlgo_t> *flt) {
-    ParamKey key{param, in_shape, out_shape, cudnn_data_type, cudnn_forward_compute_type,
-                 cudnn_backward_compute_type, sm_arch};
+    CHECK(in_shape.size() == 2 || in_shape.size() == 3);
+    ParamKey key{param, in_shape[0], in_shape[1], out_shape[0], cudnn_data_type,
+                 cudnn_forward_compute_type, cudnn_backward_compute_type, sm_arch};
     std::lock_guard<std::mutex> guard(lock_);
     auto i = reg_.find(key);
     if (i != reg_.end()) {
@@ -97,8 +98,9 @@ class CuDNNAlgoReg {
                 const CuDNNAlgo<cudnnConvolutionFwdAlgo_t> &fwd,
                 const CuDNNAlgo<cudnnConvolutionBwdDataAlgo_t> &bwd,
                 const CuDNNAlgo<cudnnConvolutionBwdFilterAlgo_t> &flt) {
-    ParamKey key{param, in_shape, out_shape, cudnn_data_type, cudnn_forward_compute_type,
-                 cudnn_backward_compute_type, sm_arch};
+    CHECK(in_shape.size() == 2 || in_shape.size() == 3);
+    ParamKey key{param, in_shape[0], in_shape[1], out_shape[0], cudnn_data_type,
+                 cudnn_forward_compute_type, cudnn_backward_compute_type, sm_arch};
     std::lock_guard<std::mutex> guard(lock_);
     if (reg_.size() % 50 == 0) {
       LOG(INFO) << "Running performance tests to find the best convolution "
@@ -128,8 +130,7 @@ class CuDNNAlgoReg {
 
   struct ParamKey {
     ParamType param;
-    std::vector<TShape> in_shape;
-    std::vector<TShape> out_shape;
+    TShape data_shape, weight_shape, out_shape;
     cudnnDataType_t cudnn_data_type;
     cudnnDataType_t cudnn_forward_compute_type;
     cudnnDataType_t cudnn_backward_compute_type;
@@ -137,7 +138,8 @@ class CuDNNAlgoReg {
 
     bool operator==(const ParamKey& other) const {
       return this->param == other.param &&
-             this->in_shape == other.in_shape &&
+             this->data_shape == other.data_shape &&
+             this->weight_shape == other.weight_shape &&
              this->out_shape == other.out_shape &&
              this->cudnn_data_type == other.cudnn_data_type &&
              this->cudnn_forward_compute_type == other.cudnn_forward_compute_type &&
@@ -150,7 +152,9 @@ class CuDNNAlgoReg {
     size_t operator()(const ParamKey& key) const {
       std::hash<ParamType> hash_param;
       size_t ret = hash_param(key.param);
-      for (const auto& i : key.in_shape) ret = dmlc::HashCombine(ret, i);
+      ret = dmlc::HashCombine(ret, key.data_shape);
+      ret = dmlc::HashCombine(ret, key.weight_shape);
+      ret = dmlc::HashCombine(ret, key.out_shape);
       for (const auto& i : key.out_shape) ret = dmlc::HashCombine(ret, i);
       ret = dmlc::HashCombine(ret, static_cast<int>(key.cudnn_data_type));
       ret = dmlc::HashCombine(ret, static_cast<int>(key.cudnn_forward_compute_type));
