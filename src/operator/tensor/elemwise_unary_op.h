@@ -158,6 +158,18 @@ class OpBase {
     }
     return mshadow::Tensor<xpu, 2, DType>();
   }
+
+  /*! \brief Fill dense output block with a single scalar value */
+  template<typename xpu, typename DType>
+  static inline void FillDense(mshadow::Stream<xpu> *s,
+                               const size_t size,
+                               const DType val,
+                               const OpReqType req,
+                               DType *out) {
+    MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+      mxnet_op::Kernel<MapSetToScalar<Req>, xpu>::Launch(s, size, out, val);
+    });
+  }
 };  // OpBase
 
 /*! \brief Unary operator class */
@@ -233,12 +245,13 @@ class UnaryOp : public OpBase {
                       const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-      ASSIGN_DISPATCH(out, req[0], F<OP>(inputs[0].FlatTo1D<xpu, DType>(s)));
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        mxnet_op::Kernel<MShadowToKernel<OP, Req>, xpu>::Launch(s, inputs[0].Size(),
+                                                                outputs[0].dptr<DType>(),
+                                                                inputs[0].dptr<DType>());
+      });
     });
   }
 
@@ -259,33 +272,33 @@ class UnaryOp : public OpBase {
   }
 
   template<typename xpu, typename op>
-  static void Launch(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
+  static void KernelCompute(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& outputs) {
     using namespace mshadow;
     using namespace mxnet_op;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-
     CHECK_EQ(inputs.size(), 1U);
     CHECK_EQ(outputs.size(), 1U);
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Kernel<op, xpu>::Launch(s, outputs[0].Size(),
-                              outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
-    });
+    if (req[0] != kNullOp) {
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        Kernel<op, xpu>::Launch(s, outputs[0].Size(),
+                                outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
+      });
+    }
   }
 
   template<typename xpu, typename op>
-  static void LaunchWithHalf2(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
+  static void ComputeWithHalf2(const nnvm::NodeAttrs &attrs,
+                               const OpContext &ctx,
+                               const std::vector<TBlob> &inputs,
+                               const std::vector<OpReqType> &req,
+                               const std::vector<TBlob> &outputs) {
     using namespace mshadow;
     using namespace mxnet_op;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-
     CHECK_EQ(inputs.size(), 1U);
     CHECK_EQ(outputs.size(), 1U);
     MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
@@ -295,18 +308,18 @@ class UnaryOp : public OpBase {
   }
 
   template<typename xpu, typename OP>
-  static void LaunchEx(const nnvm::NodeAttrs& attrs,
-                       const OpContext& ctx,
-                       const std::vector<NDArray>& inputs,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<NDArray>& outputs) {
+  static void KernelComputeEx(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
     CHECK_EQ(inputs.size(), 1U);
     CHECK_EQ(outputs.size(), 1U);
     CHECK_NE(inputs[0].storage_type(), kDefaultStorage);
     CHECK_NE(outputs[0].storage_type(), kDefaultStorage)
       << "Operation requires a sparse output storage type";
     if (inputs[0].storage_shape().Size()) {
-      MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Launch<xpu, OP>);
+      MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, KernelCompute<xpu, OP>);
     }
   }
 
@@ -469,17 +482,6 @@ struct relu_grad {
 /*! \brief Register scalar op name as an alias */
 #define MXNET_ADD_SPARSE_OP_ALIAS(__name$) \
   .add_alias("_sparse_" #__name$)
-
-/*! \brief Unary launch */
-#define MXNET_OPERATOR_REGISTER_UNARY_LAUNCH(__name$, __xpu$, __kernel$)                   \
-  MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                   \
-  .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Launch<__xpu$, __kernel$>)         \
-  .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::LaunchEx<__xpu$, __kernel$>)
-
-/*! \brief Unary launch, dense result */
-#define MXNET_OPERATOR_REGISTER_UNARY_LAUNCH_DR(__name$, __xpu$, __kernel$)                \
-  MXNET_OPERATOR_REGISTER_UNARY_DR(__name$)                                                \
-  .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Launch<__xpu$, __kernel$>)
 
 /*! \brief Unary compute */
 #define MXNET_OPERATOR_REGISTER_UNARY_COMPUTE(__name$, __xpu$, __kernel$)                  \

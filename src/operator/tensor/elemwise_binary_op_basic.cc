@@ -26,7 +26,7 @@
 
 namespace mxnet {
 namespace op {
-MXNET_OPERATOR_REGISTER_BINARY_LAUNCH_CPU(elemwise_add, mshadow::op::plus)
+MXNET_OPERATOR_REGISTER_BINARY_COMPUTE_CPU(elemwise_add, mshadow::op::plus)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_add)
 .add_alias("_add").add_alias("_plus").add_alias("_Plus").add_alias("_sparse_elemwise_add")
 .describe(R"code(Adds arguments element-wise.
@@ -41,7 +41,7 @@ The storage type of ``elemwise_add`` output depends on storage types of inputs
 
 // specialized gradient add function to do add to optimization
 // this must differ from elemwise_add to prevent add to optimization in forward pass.
-MXNET_OPERATOR_REGISTER_BINARY_LAUNCH_CPU(_grad_add, mshadow::op::plus);
+MXNET_OPERATOR_REGISTER_BINARY_COMPUTE_CPU(_grad_add, mshadow::op::plus);
 
 NNVM_REGISTER_OP(_backward_add)
   .set_num_inputs(1)
@@ -59,7 +59,7 @@ NNVM_REGISTER_OP(_backward_add)
                           mshadow_op::identity>)
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 2>);
 
-MXNET_OPERATOR_REGISTER_BINARY_LAUNCH_CPU(elemwise_sub, mshadow::op::minus)
+MXNET_OPERATOR_REGISTER_BINARY_COMPUTE_CPU(elemwise_sub, mshadow::op::minus)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_sub)
 .add_alias("_sub").add_alias("_minus").add_alias("_Minus")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_sub"});
@@ -119,7 +119,7 @@ NNVM_REGISTER_OP(_backward_mul)
   .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::BackwardUseInEx<
     cpu, mshadow_op::right, mshadow_op::left>);;
 
-MXNET_OPERATOR_REGISTER_BINARY_LAUNCH_CPU_DR(elemwise_div, mshadow::op::div)
+MXNET_OPERATOR_REGISTER_BINARY_COMPUTE_CPU_DR(elemwise_div, mshadow::op::div)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_div)
 .add_alias("_div").add_alias("_Div")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_div"});
@@ -136,7 +136,7 @@ NNVM_REGISTER_OP(_backward_div)
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<
     cpu, mshadow_op::div_grad, mshadow_op::div_rgrad>);
 
-MXNET_OPERATOR_REGISTER_BINARY_LAUNCH_CPU(_mod, mshadow_op::mod)
+MXNET_OPERATOR_REGISTER_BINARY_COMPUTE_CPU(_mod, mshadow_op::mod)
 .add_alias("_Mod")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_mod"});
 

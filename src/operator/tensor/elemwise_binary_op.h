@@ -82,19 +82,6 @@ class ElemwiseBinaryOp : public OpBase {
   };
 
  private:
-  /*! \brief Fill dense output block with a single scalar value */
-  template<typename xpu, typename DType>
-  static inline void Fill(mshadow::Stream<xpu> *s,
-                          const DType val,
-                          const OpReqType req,
-                          const TBlob& blob) {
-    using namespace mxnet_op;
-    using namespace mshadow::expr;
-    MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      Kernel<MapSetToScalar<Req>, xpu>::Launch(s, blob.Size(), blob.dptr<DType>(), val);
-    });
-  }
-
   /*! \brief Fill contiguous dense output rows with value computed from 0 lhs and 0 rhs input */
   template<typename xpu, typename DType, typename OP>
   static inline size_t FillDense(mshadow::Stream<xpu> *s,
@@ -249,7 +236,7 @@ class ElemwiseBinaryOp : public OpBase {
         Tensor<cpu, 1, DType> rvalue = !rhs_is_dense ? data_r[iter_r++] : data_r[idx_r];
         DCHECK_EQ(lvalue.shape_.Size(), rvalue.shape_.Size());
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-          Kernel<BMap<OP, Req>, cpu>::Launch(
+          Kernel<OpWithReq<OP, Req>, cpu>::Launch(
             s, lvalue.shape_.Size(), out[iter_out].dptr_, lvalue.dptr_, rvalue.dptr_);
         });
         num_common_rows++;
@@ -365,9 +352,9 @@ class ElemwiseBinaryOp : public OpBase {
                                            Shape1(nr_cols));
     mshadow::Tensor<cpu, 1, DType> rhs_row(lhs_row.dptr_ + nr_cols, Shape1(nr_cols));
 
-    Fill<cpu, IType>(s, IType(-1), req, next);
-    Fill<cpu, DType>(s, DType(0),  req, lhs_row);
-    Fill<cpu, DType>(s, DType(0),  req, rhs_row);
+    OpBase::FillDense<cpu, IType>(s, next.shape_.Size(), IType(-1), req, next.dptr_);
+    OpBase::FillDense<cpu, DType>(s, lhs_row.shape_.Size(), DType(0),  req, lhs_row.dptr_);
+    OpBase::FillDense<cpu, DType>(s, rhs_row.shape_.Size(), DType(0),  req, rhs_row.dptr_);
 
     // Column indices
     const Tensor<cpu, 1, IType> col_indices_l = lhs.aux_data(csr::kIdx).FlatTo1D<cpu, IType>(s);
@@ -631,7 +618,7 @@ class ElemwiseBinaryOp : public OpBase {
         MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
           const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
           + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
-          Kernel<BMap<OP, Req>, xpu>::Launch(s, size,
+          Kernel<OpWithReq<OP, Req>, xpu>::Launch(s, size,
           outputs[0].dptr<DType>(),
           inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
         });
@@ -654,7 +641,7 @@ class ElemwiseBinaryOp : public OpBase {
         MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
           const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
           + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
-          Kernel<BMap<OP, Req>, xpu>::Launch(s, size,
+          Kernel<OpWithReq<OP, Req>, xpu>::Launch(s, size,
           outputs[0].dptr<DType>(),
           inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
         });
@@ -764,12 +751,12 @@ class ElemwiseBinaryOp : public OpBase {
         DCHECK_LT(fabs(static_cast<float>(ROP::Map(0))), 1e-5f);  // op requires 0-input
                                                                   // returns 0-output
         MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-          UnaryOp::LaunchEx<xpu, BinaryOpBackwardUseNone<LOP, Req>>(attrs, ctx, inputs,
-                                                                    req, {outputs[0]});
+          UnaryOp::KernelComputeEx<xpu, BinaryOpBackwardUseNone<LOP, Req>>(attrs, ctx, inputs,
+                                                                           req, {outputs[0]});
         });
         MXNET_ASSIGN_REQ_SWITCH(req[1], Req, {
-          UnaryOp::LaunchEx<xpu, BinaryOpBackwardUseNone<ROP, Req>>(attrs, ctx, inputs,
-                                                                    req, {outputs[1]});
+          UnaryOp::KernelComputeEx<xpu, BinaryOpBackwardUseNone<ROP, Req>>(attrs, ctx, inputs,
+                                                                           req, {outputs[1]});
         });
       } else {
         FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
@@ -834,14 +821,14 @@ class ElemwiseBinaryOp : public OpBase {
   .add_argument("rhs", "NDArray-or-Symbol", "second input")
 
 /*! \brief Binary launch */
-#define MXNET_OPERATOR_REGISTER_BINARY_LAUNCH_CPU(__name$, __kernel$)                \
+#define MXNET_OPERATOR_REGISTER_BINARY_COMPUTE_CPU(__name$, __kernel$)               \
   MXNET_OPERATOR_REGISTER_BINARY(__name$)                                            \
   .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1>)       \
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Launch<cpu, __kernel$>)     \
   .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::LaunchEx<cpu, __kernel$>)
 
 /*! \brief Binary launch, dense result */
-#define MXNET_OPERATOR_REGISTER_BINARY_LAUNCH_CPU_DR(__name$, __kernel$)               \
+#define MXNET_OPERATOR_REGISTER_BINARY_COMPUTE_CPU_DR(__name$, __kernel$)              \
   MXNET_OPERATOR_REGISTER_BINARY(__name$)                                              \
   .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageTypeDenseOutput<1>) \
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Launch<cpu, __kernel$>)       \

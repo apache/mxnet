@@ -26,14 +26,14 @@
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(relu)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Launch<gpu, kernel_launch_op::relu>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::LaunchEx<gpu, kernel_launch_op::relu>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::KernelCompute<gpu, kernel_launch_op::relu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::KernelComputeEx<gpu, kernel_launch_op::relu>);
 
 NNVM_REGISTER_OP(_backward_relu)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Launch<gpu, kernel_launch_op::relu_grad>);
 
 NNVM_REGISTER_OP(sigmoid)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Launch<gpu, kernel_launch_op::sigmoid>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::KernelCompute<gpu, kernel_launch_op::sigmoid>);
 
 NNVM_REGISTER_OP(_backward_sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Launch<gpu, kernel_launch_op::sigmoid_grad>);

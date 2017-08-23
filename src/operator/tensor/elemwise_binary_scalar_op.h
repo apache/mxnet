@@ -35,28 +35,14 @@ namespace mxnet {
 namespace op {
 
 class BinaryScalarOp : public UnaryOp {
-  /*! \brief FIll dense output block with a single scalar value */
-  template<typename xpu, typename DType>
-  static inline void FillDense(mshadow::Stream<xpu> *s,
-                               const size_t size,
-                               const DType val,
-                               const OpReqType req,
-                               DType *out) {
-    using namespace mxnet_op;
-    using namespace mshadow::expr;
-    MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      Kernel<MapSetToScalar<Req>, xpu>::Launch(s, size, out, val);
-    });
-  }
-
   /*! \brief Tensor operation against a scalar with a dense result */
   template<typename OP, typename DType, typename IType>
-  static void LaunchExDenseResultRSP(mshadow::Stream<cpu> *stream,
-                                     const nnvm::NodeAttrs &attrs,
-                                     const OpContext &ctx,
-                                     const NDArray& input,
-                                     const OpReqType req,
-                                     const NDArray& output) {
+  static void ComputeExDenseResultRSP(mshadow::Stream<cpu> *stream,
+                                      const nnvm::NodeAttrs &attrs,
+                                      const OpContext &ctx,
+                                      const NDArray &input,
+                                      const OpReqType req,
+                                      const NDArray &output) {
     const double alpha = nnvm::get<double>(attrs.parsed);
     CHECK_EQ(output.shape(), input.shape());
     const int64_t row_count = output.shape()[0];
@@ -102,7 +88,7 @@ class BinaryScalarOp : public UnaryOp {
         const int64_t sparse_block_count = next_non_contiguous_sparse - input_iter + 1;
         if (sparse_block_count > 0) {
           MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-            mxnet_op::Kernel<BMap<OP, Req>, cpu>::Launch(
+            mxnet_op::Kernel<OpWithReq<OP, Req>, cpu>::Launch(
               stream,
               items_per_row * sparse_block_count,
               &output_data.dptr_[items_per_row * output_row],
@@ -118,7 +104,7 @@ class BinaryScalarOp : public UnaryOp {
       // All rows exist (eventually we don't have to do complex
       // things to call GPU kernels because we don't need to access row indices)
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        mxnet_op::Kernel<BMap<OP, Req>, cpu>::Launch(
+        mxnet_op::Kernel<OpWithReq<OP, Req>, cpu>::Launch(
           stream,
           items_per_row * row_count,
           output_data.dptr_,
@@ -130,12 +116,12 @@ class BinaryScalarOp : public UnaryOp {
 
   /*! \brief Tensor operation against a scalar with a dense result */
   template<typename OP, typename DType, typename IType, typename CType>
-  static void LaunchExDenseResultCSR(mshadow::Stream<cpu> *stream,
-                                     const nnvm::NodeAttrs &attrs,
-                                     const OpContext &ctx,
-                                     const NDArray& input,
-                                     const OpReqType req,
-                                     const NDArray& output) {
+  static void ComputeExDenseResultCSR(mshadow::Stream<cpu> *stream,
+                                      const nnvm::NodeAttrs &attrs,
+                                      const OpContext &ctx,
+                                      const NDArray &input,
+                                      const OpReqType req,
+                                      const NDArray &output) {
     CHECK_EQ(output.shape(), input.shape());
 
     const double alpha = nnvm::get<double>(attrs.parsed);
@@ -190,21 +176,21 @@ class BinaryScalarOp : public UnaryOp {
   }
 
   template<typename xpu, typename OP, typename DType, typename IType>
-  static void LaunchExDenseResult(const nnvm::NodeAttrs &attrs,
-                                  const OpContext &ctx,
-                                  const NDArray &input,
-                                  const OpReqType req,
-                                  const NDArray output) {
+  static void ComputeExDenseResult(const nnvm::NodeAttrs &attrs,
+                                   const OpContext &ctx,
+                                   const NDArray &input,
+                                   const OpReqType req,
+                                   const NDArray output) {
     mshadow::Stream<xpu> *stream = ctx.get_stream<xpu>();
     CHECK_EQ(output.storage_type(), kDefaultStorage);
     switch (input.storage_type()) {
       case kRowSparseStorage: {
-        LaunchExDenseResultRSP<OP, DType, IType>(stream, attrs, ctx, input, req, output);
+        ComputeExDenseResultRSP<OP, DType, IType>(stream, attrs, ctx, input, req, output);
         break;
       }
       case kCSRStorage: {
         MSHADOW_IDX_TYPE_SWITCH(input.aux_data(csr::kIndPtr).type_flag_, CType, {
-          LaunchExDenseResultCSR<OP, DType, IType, CType>(stream, attrs, ctx, input, req, output);
+          ComputeExDenseResultCSR<OP, DType, IType, CType>(stream, attrs, ctx, input, req, output);
         });
         break;
       }
@@ -235,9 +221,13 @@ class BinaryScalarOp : public UnaryOp {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const double alpha = nnvm::get<double>(attrs.parsed);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-      Tensor<xpu, 1, DType> lhs = inputs[0].FlatTo1D<xpu, DType>(s);
-      ASSIGN_DISPATCH(out, req[0], F<OP>(lhs, scalar < DType > (DType(alpha))));
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        mxnet_op::Kernel<OpWithReq<OP, Req>, xpu>::Launch(s,
+                                                          inputs[0].Size(),
+                                                          outputs[0].dptr<DType>(),
+                                                          inputs[0].dptr<DType>(),
+                                                          DType(alpha));
+      });
     });
   }
 
@@ -263,7 +253,7 @@ class BinaryScalarOp : public UnaryOp {
       } else {
         MSHADOW_TYPE_SWITCH(outputs[0].data().type_flag_, DType, {
           MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-            LaunchExDenseResult<xpu, OP, DType, IType>(attrs, ctx, inputs[0], req[0], outputs[0]);
+            ComputeExDenseResult<xpu, OP, DType, IType>(attrs, ctx, inputs[0], req[0], outputs[0]);
           });
         });
       }
@@ -299,23 +289,6 @@ class BinaryScalarOp : public UnaryOp {
   .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
   .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>) \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
-    [](const NodeAttrs& attrs){                                     \
-      return std::vector<std::pair<int, int> >{{0, 0}};             \
-    })                                                              \
-  .add_argument("data", "NDArray-or-Symbol", "source input")                   \
-  .add_argument("scalar", "float", "scalar input")
-
-#define MXNET_OPERATOR_REGISTER_BINARY_SCALAR_DR(name)              \
-  NNVM_REGISTER_OP(name)                                            \
-  .set_num_inputs(1)                                                \
-  .set_num_outputs(1)                                               \
-  .set_attr_parser([](NodeAttrs* attrs) {                           \
-      attrs->parsed = std::stod(attrs->dict["scalar"]);             \
-    })                                                              \
-  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
-  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageTypeDenseOutput<1>) \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \
       return std::vector<std::pair<int, int> >{{0, 0}};             \
