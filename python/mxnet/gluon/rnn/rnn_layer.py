@@ -141,7 +141,7 @@ class _RNNLayer(Block):
         batch_size: int
             Only required for `NDArray` API. Size of the batch ('N' in layout).
             Dimension of the input.
-        func : callable, default `symbol.zeros`
+        func : callable, default `ndarray.zeros`
             Function for creating initial state.
 
             For Symbol API, func can be `symbol.zeros`, `symbol.uniform`,
@@ -172,7 +172,7 @@ class _RNNLayer(Block):
         batch_size = inputs.shape[self._layout.find('N')]
         skip_states = states is None
         if skip_states:
-            states = self.begin_state(batch_size)
+            states = self.begin_state(batch_size, ctx=inputs.context)
         if isinstance(states, ndarray.NDArray):
             states = [states]
         for state, info in zip(states, self.state_info(batch_size)):
