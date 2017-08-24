@@ -31,15 +31,17 @@
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../special_functions-inl.h"
+#include "./broadcast_reduce-inl.h"
+#include "./init_op.h"
 
 namespace mxnet {
 namespace op {
 template<typename xpu, typename op>
 void UnaryLaunch(const nnvm::NodeAttrs& attrs,
-                        const OpContext& ctx,
-                        const std::vector<TBlob>& inputs,
-                        const std::vector<OpReqType>& req,
-                        const std::vector<TBlob>& outputs) {
+                 const OpContext& ctx,
+                 const std::vector<TBlob>& inputs,
+                 const std::vector<OpReqType>& req,
+                 const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -93,6 +95,108 @@ void IdentityCompute(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(out, req[0], F<mshadow_op::identity>(inputs[0].FlatTo1D<xpu, DType>(s)));
   });
+}
+
+template<typename xpu>
+void IdentityComputeRspRspImpl(const nnvm::NodeAttrs& attrs,
+                               mshadow::Stream<xpu> *s,
+                               const NDArray& input,
+                               const OpReqType req,
+                               NDArray* output) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace rowsparse;
+  if (req == kNullOp) return;
+  CHECK_EQ(req, kWriteTo) << "kWriteTo is expected for IdentityComputeRspRspImpl";
+  if (!input.storage_initialized()) {
+    FillZerosRspImpl(s, output);
+    return;
+  }
+  TShape shape = input.aux_shape(kIdx);
+  output->CheckAndAlloc({shape});
+  MSHADOW_TYPE_SWITCH(output->dtype(), DType, {
+    MSHADOW_TYPE_SWITCH(output->aux_type(kIdx), AuxType, {
+      auto out_d = output->data().FlatTo1D<xpu, DType>(s);
+      auto out_aux = output->aux_data(kIdx).FlatTo1D<xpu, AuxType>(s);
+      auto in_aux = input.aux_data(kIdx).FlatTo1D<xpu, AuxType>(s);
+      ASSIGN_DISPATCH(out_d, req,
+                      F<mshadow_op::identity>(input.data().FlatTo1D<xpu, DType>(s)));
+      ASSIGN_DISPATCH(out_aux, req, F<mshadow_op::identity>(in_aux));
+    });
+  });
+}
+
+template<typename xpu>
+void IdentityComputeEx(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<NDArray>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  const auto in_stype = inputs[0].storage_type();
+  const auto out_stype = outputs[0].storage_type();
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  if (req[0] == kNullOp) return;
+  if (in_stype == out_stype) {
+    if (in_stype == kDefaultStorage) {  // dense ndarray
+      IdentityCompute<xpu>(attrs, ctx, {inputs[0].data()}, req, {outputs[0].data()});
+    } else if (in_stype == kRowSparseStorage || in_stype == kCSRStorage) {  // sparse ndarray
+      if (!inputs[0].storage_initialized()) {
+        FillComputeZerosEx<xpu>(attrs, ctx, inputs, req, outputs);
+        return;
+      }
+      CHECK_NE(req[0], kAddTo) << "kAddTo is not supported for IdentityComputeEx";
+      const size_t n = mxnet::num_aux_data(out_stype);
+      outputs[0].CheckAndAlloc(inputs[0].aux_shapes());
+      IdentityCompute<xpu>(attrs, ctx, {inputs[0].data()}, req, {outputs[0].data()});
+      for (size_t i = 0; i < n; ++i) {
+        IdentityCompute<xpu>(attrs, ctx, {inputs[0].aux_data(i)}, req, {outputs[0].aux_data(i)});
+      }
+    } else {
+      LOG(FATAL) << "IdentityComputeEx does not support input stype = " << in_stype;
+    }
+  } else {
+    FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs, IdentityCompute<xpu>, "IdentityCompute");
+  }
+}
+
+inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
+                                           const Context& ctx,
+                                           std::vector<int> *in_attrs,
+                                           std::vector<int> *out_attrs) {
+  // TODO(junwu): add ctx info into storage inference logic
+  CHECK_EQ(in_attrs->size(), static_cast<size_t>(2)) << " in operator " << attrs.name;
+  CHECK_EQ(out_attrs->size(), static_cast<size_t>(1)) << " in operator " << attrs.name;
+  auto &in = *in_attrs;
+  auto &out = *out_attrs;
+  CHECK_NE(in[1], kUndefinedStorage) << "rhs storage type must be known";
+  if (in[0] == kUndefinedStorage) STORAGE_TYPE_ASSIGN_CHECK(in, 0, in[1]);
+  if (out[0] == kUndefinedStorage) STORAGE_TYPE_ASSIGN_CHECK(out, 0, in[1]);
+  return true;
+}
+
+template<typename xpu>
+void IdentityLikeRhsComputeEx(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  CHECK_EQ(inputs.size(), 2);
+  CHECK_EQ(outputs.size(), 1);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const auto in_stype = inputs[0].storage_type();
+  const auto out_stype = outputs[0].storage_type();
+  if (in_stype == out_stype) {
+    std::vector<NDArray> in{inputs[0]};
+    IdentityComputeEx<xpu>(attrs, ctx, in, req, outputs);
+  } else {
+    LOG(FATAL) << "IdentityLikeRhsComputeEx not implemented for in_stype = " << in_stype
+               << " out_stype = " << out_stype;
+  }
 }
 
 struct CastParam : public dmlc::Parameter<CastParam> {
@@ -186,4 +290,5 @@ struct relu_grad {
 
 }  // namespace op
 }  // namespace mxnet
+
 #endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_UNARY_OP_H_

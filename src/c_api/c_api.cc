@@ -172,6 +172,39 @@ int MXNDArrayCreateEx(const mx_uint *shape,
   API_END();
 }
 
+int MXNDArrayCreateSparseEx(int storage_type,
+                    const mx_uint *shape,
+                    mx_uint ndim,
+                    int dev_type,
+                    int dev_id,
+                    int delay_alloc,
+                    int dtype,
+                    mx_uint num_aux,
+                    int *aux_type,
+                    mx_uint *aux_ndims,
+                    const mx_uint *aux_shape,
+                    NDArrayHandle *out) {
+  API_BEGIN();
+  std::vector<int> aux_types;
+  std::vector<TShape> aux_shapes;
+  auto shape_start = aux_shape;
+  for (size_t i = 0; i < num_aux; i++) {
+    // types
+    aux_types.push_back(aux_type[i]);
+    // shapes
+    aux_shapes.emplace_back(shape_start, shape_start + aux_ndims[i]);
+    shape_start += aux_ndims[i];
+  }
+  *out = new NDArray(
+      NDArrayStorageType(storage_type),
+      TShape(shape, shape + ndim),
+      Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
+      delay_alloc != 0,
+      dtype, aux_types, aux_shapes);
+  API_END();
+}
+
+
 int MXNDArrayLoadFromRawBytes(const void *buf,
                               size_t size,
                               NDArrayHandle *out) {
@@ -212,6 +245,23 @@ int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
                            size_t size) {
   API_BEGIN();
   static_cast<NDArray*>(handle)->SyncCopyToCPU(data, size);
+  API_END();
+}
+
+/*!
+ * \brief Copy src.data() to dst.data() if i = -1, else dst.aux_data(i) if i >= 0
+ * This function blocks. Do not use it in performance critical code.
+ * \param handle_dst handle of a dst ndarray whose data/aux_data has been allocated
+ * \param handle_src handle of a src ndarray which has default storage type
+ * \param i dst data blob indicator
+ */
+int MXNDArraySyncCopyFromNDArray(NDArrayHandle handle_dst,
+                                 const NDArrayHandle handle_src,
+                                 const int i) {
+  API_BEGIN();
+  NDArray* dst = static_cast<NDArray*>(handle_dst);
+  NDArray* src = static_cast<NDArray*>(handle_src);
+  dst->SyncCopyFromNDArray(*src, -1, i);
   API_END();
 }
 
@@ -351,6 +401,18 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
   API_END_HANDLE_ERROR(delete ptr);
 }
 
+int MXNDArrayGetStorageType(NDArrayHandle handle,
+                     int *out_storage_type) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  if (!arr->is_none()) {
+    *out_storage_type = arr->storage_type();
+  } else {
+    *out_storage_type = kUndefinedStorage;
+  }
+  API_END();
+}
+
 int MXNDArrayGetShape(NDArrayHandle handle,
                       mx_uint *out_dim,
                       const mx_uint **out_pdata) {
@@ -397,6 +459,42 @@ int MXNDArrayGetDType(NDArrayHandle handle,
   } else {
     *out_dtype = -1;
   }
+  API_END();
+}
+
+int MXNDArrayGetAuxType(NDArrayHandle handle,
+                        mx_uint i,
+                        int *out_type) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  *out_type = arr->aux_type(i);
+  API_END();
+}
+
+/*!
+ * \brief Get a deep copy of the ith aux data blob
+ * in the form of an NDArray of default storage type.
+ * This function blocks. Do not use it in performance critical code.
+ */
+int MXNDArrayGetAuxNDArray(NDArrayHandle handle,
+                           mx_uint i,
+                           NDArrayHandle *out) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  *out = new NDArray(arr->aux_ndarray(i));
+  API_END();
+}
+
+/*!
+ * \brief Get a deep copy of the data blob
+ * in the form of an NDArray of default storage type.
+ * This function blocks. Do not use it in performance critical code.
+ */
+int MXNDArrayGetDataNDArray(NDArrayHandle handle,
+                            NDArrayHandle *out) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  *out = new NDArray(arr->data_ndarray());
   API_END();
 }
 
@@ -732,6 +830,24 @@ int MXKVStorePullEx(KVStoreHandle handle,
     v_vals[i] = static_cast<NDArray*>(vals[i]);
   }
   static_cast<KVStore*>(handle)->Pull(v_keys, v_vals, priority);
+  API_END();
+}
+
+int MXKVStorePullRowSparse(KVStoreHandle handle,
+                           mx_uint num,
+                           const char** keys,
+                           NDArrayHandle* vals,
+                           const NDArrayHandle* row_ids,
+                           int priority) {
+  API_BEGIN();
+  std::vector<std::string> v_keys(num);
+  std::vector<std::pair<NDArray*, NDArray>> v_val_rowids(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_val_rowids[i] = std::make_pair(static_cast<NDArray*>(vals[i]),
+                                     *static_cast<NDArray*>(row_ids[i]));
+  }
+  static_cast<KVStore*>(handle)->PullRowSparse(v_keys, v_val_rowids, priority);
   API_END();
 }
 
