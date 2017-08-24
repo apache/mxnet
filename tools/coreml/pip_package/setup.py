@@ -15,11 +15,15 @@ except ImportError:
 
 
 def readme():
+    """
+    Reads README.rst file and allows us to provide
+    a better experience for pypi webpage.
+    """
     with open('README.rst') as f:
         return f.read()
 
 setup(name='mxnet-coreml-converter',
-      version='0.1.0a0',
+      version='0.1.0a10',
       description='Tool to convert MXNet models into Apple CoreML model format.',
       long_description=readme(),
       classifiers=[
