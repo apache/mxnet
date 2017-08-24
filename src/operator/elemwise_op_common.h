@@ -188,7 +188,7 @@ inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
 struct ElemwiseGradUseIn {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
     return MakeNonlossGradNode(op_name, n, ograds, n->inputs, n->attrs.dict);
   }
 };
@@ -197,7 +197,7 @@ struct ElemwiseGradUseIn {
 struct ElemwiseGradUseOut {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads;
     index_t n_out = n->num_outputs();
     for (index_t i = 0; i < n_out; ++i) {
@@ -211,7 +211,7 @@ struct ElemwiseGradUseOut {
 struct ElemwiseGradUseInOut {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
     for (auto& h : n->inputs) {
       heads.push_back(h);
@@ -228,8 +228,21 @@ struct ElemwiseGradUseInOut {
 struct ElemwiseGradUseNone {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
     return MakeNonlossGradNode(op_name, n, ograds, {}, n->attrs.dict);
+  }
+};
+
+struct CloneGradient {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
+    std::vector<nnvm::NodeEntry> ret;
+    const size_t input_count = n->inputs.size();
+    ret.reserve(input_count);
+    for (size_t i = 0; i < input_count; ++i)
+      ret.emplace_back(ograds[0]);
+    return ret;
   }
 };
 

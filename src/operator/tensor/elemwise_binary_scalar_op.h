@@ -66,7 +66,7 @@ class BinaryScalarOp : public UnaryOp {
         const int64_t dense_block_count = next_input_row - output_row;
         if (dense_block_count > 0) {
           MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-            mxnet_op::Kernel<MapSetToScalar<Req>, cpu>::Launch(
+            KernelEx<SetToScalar<Req>, cpu>::LaunchEx(
               stream,
               items_per_row * dense_block_count,
               output_data.dptr_ + items_per_row * output_row,
@@ -88,7 +88,7 @@ class BinaryScalarOp : public UnaryOp {
         const int64_t sparse_block_count = next_non_contiguous_sparse - input_iter + 1;
         if (sparse_block_count > 0) {
           MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-            mxnet_op::Kernel<OpWithReq<OP, Req>, cpu>::Launch(
+            KernelEx<OpWithReq<OP, Req>, cpu>::LaunchEx(
               stream,
               items_per_row * sparse_block_count,
               &output_data.dptr_[items_per_row * output_row],
@@ -104,7 +104,7 @@ class BinaryScalarOp : public UnaryOp {
       // All rows exist (eventually we don't have to do complex
       // things to call GPU kernels because we don't need to access row indices)
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        mxnet_op::Kernel<OpWithReq<OP, Req>, cpu>::Launch(
+        KernelEx<OpWithReq<OP, Req>, cpu>::LaunchEx(
           stream,
           items_per_row * row_count,
           output_data.dptr_,
@@ -201,13 +201,6 @@ class BinaryScalarOp : public UnaryOp {
   }
 
  public:
-  struct scalar_only {
-    template<typename DType>
-    MSHADOW_XINLINE static DType Map(DType a) {
-      return a;
-    }
-  };
-
   template<typename xpu, typename OP>
   static void Compute(const nnvm::NodeAttrs &attrs,
                       const OpContext &ctx,
@@ -274,7 +267,7 @@ class BinaryScalarOp : public UnaryOp {
       Tensor<xpu, 1, DType> igrad = outputs[0].FlatTo1D<xpu, DType>(s);
       Tensor<xpu, 1, DType> ograd = inputs[0].FlatTo1D<xpu, DType>(s);
       Tensor<xpu, 1, DType> lhs = inputs[1].FlatTo1D<xpu, DType>(s);
-      ASSIGN_DISPATCH(igrad, req[0], ograd * F<OP>(lhs, scalar < DType > (DType(alpha))));
+      ASSIGN_DISPATCH(igrad, req[0], ograd * F<OP>(lhs, scalar<DType>(DType(alpha))));
     });
   }
 };

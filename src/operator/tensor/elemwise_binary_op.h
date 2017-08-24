@@ -86,7 +86,6 @@ class ElemwiseBinaryOp : public OpBase {
                                  const OpReqType req,
                                  mshadow::Tensor<xpu, 2, DType> *out,
                                  const size_t iter_out) {
-    using namespace mxnet_op;
     using namespace mshadow::expr;
     const int index_out_min = std::min(idx_l, idx_r);
     if (index_out_min > iter_out) {
@@ -95,7 +94,8 @@ class ElemwiseBinaryOp : public OpBase {
       #pragma omp parallel for
       for (int i = static_cast<int>(iter_out); i < index_out_min; ++i) {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-          Kernel<MapSetToScalar<Req>, xpu>::Launch(s, size, (*out)[i].dptr_, zero_input_val);
+          KernelEx<SetToScalar<Req>, xpu>::LaunchEx(s, size, (*out)[i].dptr_,
+                                                         zero_input_val);
         });
       }
     }
@@ -106,7 +106,6 @@ class ElemwiseBinaryOp : public OpBase {
   static inline bool IsSameArray(const NDArray& a1, const NDArray& a2) {
     return a1.var() == a2.var();
   }
-
 
   /*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
   template<typename DType, typename IType, typename OP>
@@ -121,7 +120,6 @@ class ElemwiseBinaryOp : public OpBase {
                        const bool rhs_may_be_dense,
                        const bool allow_inplace) {
     using namespace mshadow;
-    using namespace mxnet_op;
     using namespace mshadow::expr;
 
     const bool is_dense_result = output.storage_type() == kDefaultStorage;
@@ -232,7 +230,7 @@ class ElemwiseBinaryOp : public OpBase {
         Tensor<cpu, 1, DType> rvalue = !rhs_is_dense ? data_r[iter_r++] : data_r[idx_r];
         DCHECK_EQ(lvalue.shape_.Size(), rvalue.shape_.Size());
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-          Kernel<OpWithReq<OP, Req>, cpu>::Launch(
+          KernelEx<OpWithReq<OP, Req>, cpu>::LaunchEx(
             s, lvalue.shape_.Size(), out[iter_out].dptr_, lvalue.dptr_, rvalue.dptr_);
         });
         num_common_rows++;
@@ -243,7 +241,7 @@ class ElemwiseBinaryOp : public OpBase {
         }
         Tensor<cpu, 1, DType> lvalue = !lhs_is_dense ? data_l[iter_l++] : data_l[idx_l];
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-          Kernel<MissingRValueOp<OP, Req>, cpu>::Launch(
+          KernelEx<MissingRValueOp<OP, Req>, cpu>::LaunchEx(
             s, lvalue.shape_.Size(), out[iter_out].dptr_, lvalue.dptr_);
         });
       } else {
@@ -253,7 +251,7 @@ class ElemwiseBinaryOp : public OpBase {
         }
         Tensor<cpu, 1, DType> rvalue = !rhs_is_dense ? data_r[iter_r++] : data_r[idx_r];
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-          Kernel<MissingLValueOp<OP, Req>, cpu>::Launch(
+          KernelEx<MissingLValueOp<OP, Req>, cpu>::LaunchEx(
             s, rvalue.shape_.Size(), out[iter_out].dptr_, rvalue.dptr_);
         });
       }
@@ -269,7 +267,7 @@ class ElemwiseBinaryOp : public OpBase {
       }
       Tensor<cpu, 1, DType> lvalue = data_l[iter_l++];
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        Kernel<MissingRValueOp<OP, Req>, cpu>::Launch(
+        KernelEx<MissingRValueOp<OP, Req>, cpu>::LaunchEx(
           s, lvalue.shape_.Size(), out[iter_out++].dptr_, lvalue.dptr_);
       });
     }
@@ -282,7 +280,7 @@ class ElemwiseBinaryOp : public OpBase {
       }
       Tensor<cpu, 1, DType> rvalue = data_r[iter_r++];
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        Kernel<MissingLValueOp<OP, Req>, cpu>::Launch(
+        KernelEx<MissingLValueOp<OP, Req>, cpu>::LaunchEx(
           s, rvalue.shape_.Size(), out[iter_out++].dptr_, rvalue.dptr_);
       });
     }
@@ -337,8 +335,9 @@ class ElemwiseBinaryOp : public OpBase {
 
     const size_t alloc_size = nr_cols * sizeof(IType) + 2 * nr_cols * sizeof(DType);
 
+    SparseTempStorage<uint8_t> sparseTempStorage(ctx);
     mshadow::Tensor<cpu, 1, uint8_t> workspace =
-      AllocateTempDataForSparseHandling<cpu, 1, uint8_t>(ctx, mshadow::Shape1(alloc_size));
+      sparseTempStorage.get_space_typed<cpu, 1>(mshadow::Shape1(alloc_size));
 
     // Allocate temp space and partition into three tensors
     mshadow::Tensor<cpu, 1, IType> next(reinterpret_cast<IType *>(workspace.dptr_),

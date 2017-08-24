@@ -401,14 +401,53 @@ void FCompExFallback(const nnvm::NodeAttrs& attrs,
           << ") == " << param << ".shape[0] (" << rsp.shape()[0] << ").";          \
   }
 
-template<typename xpu, int ndim, typename DType>
-inline mshadow::Tensor<xpu, ndim, DType> AllocateTempDataForSparseHandling(
-  const OpContext& op_ctx, const mshadow::Shape<ndim>& shape) {
-  Resource rsc = ResourceManager::Get()->Request(op_ctx.run_ctx.ctx,
-                                                 ResourceRequest(ResourceRequest::kTempSpace));
-  mshadow::Stream<xpu> *stream = op_ctx.run_ctx.get_stream<xpu>();
-  return rsc.get_space_typed<xpu, ndim, DType>(shape, stream);
-}
+/*! \brief Temporary storage for Alpha release of Sparse Tensors. Please do not use, as this
+ * function will be removed
+ */
+template<typename DType>
+class SparseTempStorage {
+  inline DType *Alloc(const size_t count) {
+    CHECK_GT(count, 0U);  // You've probably made a mistake
+    CHECK_EQ(handle_.dptr, static_cast<void *>(nullptr));
+    Storage *storage = mxnet::Storage::Get();
+    if (storage) {
+      handle_ = storage->Alloc(count * sizeof(DType), op_ctx_.run_ctx.ctx);
+    }
+    return static_cast<DType *>(handle_.dptr);
+  }
+  inline void Free() {
+    if (handle_.dptr) {
+      Storage *storage = mxnet::Storage::Get();
+      if (storage) {
+        storage->DirectFree(handle_);
+        handle_.dptr = nullptr;
+      }
+    }
+  }
+  inline DType *dptr() {
+    return static_cast<DType *>(handle_.dptr);
+  }
+
+ public:
+  explicit inline SparseTempStorage(const OpContext& op_ctx)
+    : op_ctx_(op_ctx) {
+    handle_.dptr = nullptr;
+  }
+  inline ~SparseTempStorage() {
+    Free();
+  }
+  template<typename xpu, int ndim>
+  inline mshadow::Tensor<xpu, ndim, DType> get_space_typed(const mshadow::Shape<ndim>& shape) {
+    if (!dptr()) {
+      Alloc(shape.Size());
+    }
+    return mshadow::Tensor<xpu, ndim, DType>(dptr(), shape, op_ctx_.run_ctx.get_stream<xpu>());
+  }
+
+ private:
+  const OpContext& op_ctx_;
+  Storage::Handle  handle_;
+};
 
 }  // namespace op
 }  // namespace mxnet
