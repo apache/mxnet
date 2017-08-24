@@ -375,7 +375,7 @@ int MXNDArrayGetData(NDArrayHandle handle,
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
-    *out_data = arr->data().dptr_;
+    *out_pdata = arr->data().dptr_;
   } else {
     *out_pdata = nullptr;
   }
