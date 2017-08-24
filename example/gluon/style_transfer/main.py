@@ -30,7 +30,7 @@ import mxnet.ndarray as F
 import net
 import utils
 from option import Options
-from data import datasets
+import data
 
 def train(args):
     np.random.seed(args.seed)
@@ -43,7 +43,7 @@ def train(args):
                                utils.CenterCrop(args.image_size),
                                utils.ToTensor(ctx),
                                ])
-    train_dataset = datasets.ImageFolder(args.dataset, transform)
+    train_dataset = data.ImageFolder(args.dataset, transform)
     train_loader = gluon.data.DataLoader(train_dataset, batch_size=args.batch_size, last_batch='discard')
     style_loader = utils.StyleLoader(args.style_folder, args.style_size, ctx=ctx)
     print('len(style_loader):',style_loader.size())
