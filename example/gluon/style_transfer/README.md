@@ -1,6 +1,6 @@
 # MXNet-Gluon-Style-Transfer
 
-This repo provides MXNet Implementation of **[Neural Style Transfer](#neural-style)** and **[MSG-Net](#msg-net)**. 
+This repo provides MXNet Implementation of **[Neural Style Transfer](#neural-style)** and **[MSG-Net](#real-time-style-transfer)**. 
 
 **Tabe of content**
 
