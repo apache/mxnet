@@ -307,9 +307,9 @@ inline bool Dequantize2BitType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 0U);
   // check input
   CHECK_EQ((*in_attrs)[0], mshadow::kFloat32)
-    << "`dquantize_2bit_` only supports float32 input for now";
+    << "`dequantize_2bit_` only supports float32 input for now";
   CHECK_EQ((*in_attrs)[1], mshadow::kFloat32)
-    << "`dquantize_2bit_` only supports float32 input for now";
+    << "`dequantize_2bit_` only supports float32 input for now";
   return true;
 }
 
