@@ -2,11 +2,11 @@ MXNet Change Log
 ================
 ## 0.11.0-rc3
 ### - Major Features
-  - Apple Core ML model converter
-  - Support for Keras v1.2.2
-  - Gluon Interface(experimental)
-  - For more information see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/v0.11.0+Release+Notes)
+  - [Apple Core ML model converter](https://github.com/apache/incubator-mxnet/blob/master/tools/coreml/README.md)
+  - Support for [Keras v1.2.2](https://github.com/dmlc/keras/wiki/Installation)
+  - [Gluon Interface(experimental)](https://github.com/apache/incubator-mxnet/blob/v0.11.0/docs/api/python/gluon.md)
   - Updated [LICENSE and NOTICE](https://github.com/apache/incubator-mxnet/pull/7565) files.
+  - For more information see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/v0.11.0+Release+Notes)  
 ### - API Changes
   - Added `CachedOp`. You can now cache the operators that’s called frequently with the same set of arguments to reduce overhead.
   - Added sample_multinomial for sampling from multinomial distributions.
