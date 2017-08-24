@@ -47,7 +47,6 @@ from .ndarray import array as _array
 from . import cast_storage
 from . import slice as nd_slice
 
-# Use different verison of SymbolBase
 # When possible, use cython to speedup part of computation.
 # pylint: disable=unused-import
 try:
@@ -111,6 +110,13 @@ class BaseSparseNDArray(NDArray):
 
     See CSRNDArray and RowSparseNDArray for more details.
     """
+
+    def __repr__(self):
+        """Returns a string representation of the sparse array."""
+        shape_info = 'x'.join(['%d' % x for x in self.shape])
+        # The data content is not displayed since the array usually has big shape
+        return '\n<%s %s @%s>' % (self.__class__.__name__,
+                                      shape_info, self.context)
 
     def __iadd__(self, other):
         raise NotImplementedError()
