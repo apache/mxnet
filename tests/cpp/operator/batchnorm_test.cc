@@ -19,7 +19,7 @@
 
 /*!
  * \file batchnorm_test.cc
- * \brief operator unit test utility functions
+ * \brief batchnorm operator unit test utility functions
  * \author Chris Olivier
 */
 
@@ -892,8 +892,8 @@ TEST(BATCH_NORM, TestIterAll) {
           kwargs.push_back({ "cudnn_off", "True" });
         }
         for (TShape shape : shapes) {
-          for (int g1 = 0; g1 < 2U; ++g1) {
-            for (int g2 = 0; g2 < 2U; ++g2) {
+          for (int g1 = 0; g1 < 2; ++g1) {
+            for (int g2 = 0; g2 < 2; ++g2) {
               for (int type : v2_types) {
                 MSHADOW_REAL_TYPE_SWITCH_EX(
                   type, DType, AccReal,

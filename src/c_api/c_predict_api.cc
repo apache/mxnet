@@ -32,6 +32,7 @@
 #include <unordered_map>
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
+#include "../executor/exec_pass.h"
 
 using namespace mxnet;
 
@@ -194,7 +195,7 @@ int MXPredCreatePartialOut(const char* symbol_json_str,
       }
     }
     nnvm::Graph g; g.outputs = sym.outputs;
-    g = nnvm::pass::InferShape(std::move(g), in_shapes, "__shape__");
+    g = mxnet::exec::InferShape(std::move(g), in_shapes, "__shape__");
     bool infer_complete = (g.GetAttr<size_t>("shape_num_unknown_nodes") == 0);
     CHECK(infer_complete)
       << "The shape information of is not enough to get the shapes";

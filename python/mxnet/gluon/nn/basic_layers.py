@@ -102,7 +102,7 @@ class HybridSequential(HybridBlock):
 
 
 class Dense(HybridBlock):
-    """Just your regular densely-connected NN layer.
+    r"""Just your regular densely-connected NN layer.
 
     `Dense` implements the operation:
     `output = activation(dot(input, weight) + bias)`
@@ -124,6 +124,11 @@ class Dense(HybridBlock):
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
         Whether the layer uses a bias vector.
+    flatten: bool
+        Whether the input tensor should be flattened.
+        If true, all but the first axis of input data are collapsed together.
+        If false, all but the last axis of input data are kept the same, and the transformation
+        applies on the last axis.
     weight_initializer : str or `Initializer`
         Initializer for the `kernel` weights matrix.
     bias_initializer: str or `Initializer`
@@ -138,16 +143,27 @@ class Dense(HybridBlock):
         See document of `Block`.
 
 
+    If ``flatten`` is set to be True, then the shapes are:
     Input shape:
-        A 2D input with shape `(batch_size, in_units)`.
+        An N-D input with shape
+        `(batch_size, x1, x2, ..., xn) with x1 * x2 * ... * xn equal to in_units`.
 
     Output shape:
         The output would have shape `(batch_size, units)`.
+
+    If ``flatten`` is set to be false, then the shapes are:
+    Input shape:
+        An N-D input with shape
+        `(x1, x2, ..., xn, in_units)`.
+
+    Output shape:
+        The output would have shape `(x1, x2, ..., xn, units)`.
     """
-    def __init__(self, units, activation=None, use_bias=True,
+    def __init__(self, units, activation=None, use_bias=True, flatten=True,
                  weight_initializer=None, bias_initializer='zeros',
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
+        self._flatten = flatten
         with self.name_scope():
             self._units = units
             self._in_units = in_units
@@ -166,12 +182,8 @@ class Dense(HybridBlock):
                 self.act = None
 
     def hybrid_forward(self, F, x, weight, bias=None):
-        if bias is None:
-            act = F.FullyConnected(x, weight, no_bias=True, num_hidden=self._units,
-                                   name='fwd')
-        else:
-            act = F.FullyConnected(x, weight, bias, num_hidden=self._units,
-                                   name='fwd')
+        act = F.FullyConnected(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
+                               flatten=self._flatten, name='fwd')
         if self.act is not None:
             act = self.act(act)
         return act
@@ -308,18 +320,22 @@ class BatchNorm(HybridBlock):
 
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
                                      shape=(in_channels,), init=gamma_initializer,
-                                     allow_deferred_init=True)
+                                     allow_deferred_init=True,
+                                     differentiable=scale)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
                                     shape=(in_channels,), init=beta_initializer,
-                                    allow_deferred_init=True)
+                                    allow_deferred_init=True,
+                                    differentiable=center)
         self.running_mean = self.params.get('running_mean', grad_req='null',
                                             shape=(in_channels,),
                                             init=running_mean_initializer,
-                                            allow_deferred_init=True)
+                                            allow_deferred_init=True,
+                                            differentiable=False)
         self.running_var = self.params.get('running_var', grad_req='null',
                                            shape=(in_channels,),
                                            init=running_variance_initializer,
-                                           allow_deferred_init=True)
+                                           allow_deferred_init=True,
+                                           differentiable=False)
 
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.BatchNorm(x, gamma, beta, running_mean, running_var,

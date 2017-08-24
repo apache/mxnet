@@ -26,6 +26,8 @@
 #define MXNET_OPERATOR_LINALG_H_
 
 #include <mshadow/tensor.h>
+#include <mxnet/op_attr_types.h>
+
 #include "./c_lapack_api.h"
 using namespace mshadow;
 
@@ -61,6 +63,14 @@ template<typename xpu, typename DType>
 void linalg_batch_gemm(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B,
                        const Tensor<xpu, 3, DType>& C, DType alpha, DType beta,
                        bool tA, bool tB, Stream<xpu> *s = 0);
+
+template<typename xpu, typename DType>
+inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
+                        const Tensor<xpu, 2, DType>& B,
+                        const Tensor<xpu, 2, DType>& C,
+                        bool tA, bool tB,
+                        Stream<xpu> *s = 0,
+                        mxnet::OpReqType req = mxnet::kWriteTo);
 
 //////////////////////////////// TRSM ////////////////////////////////////////////
 

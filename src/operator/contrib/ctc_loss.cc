@@ -31,7 +31,7 @@ namespace mshadow {
 template <typename DType>
 ctcStatus_t compute_ctc_cost(const Tensor<cpu, 3, DType> activations,
                              DType *costs, DType *grads, int *labels,
-                             int *label_lengths, int *input_lengths,
+                             int *label_lengths, int *data_lengths,
                              void *workspace, int train) {
   int minibatch = static_cast<int>(activations.size(1));
   int alphabet_size = static_cast<int>(activations.size(2));
@@ -39,10 +39,10 @@ ctcStatus_t compute_ctc_cost(const Tensor<cpu, 3, DType> activations,
   mxnet_warpctc::CpuCTC<DType> ctc(alphabet_size, minibatch, workspace, blank_label);
   if (train)
     return ctc.cost_and_grad(activations.dptr_, grads, costs, labels,
-                             label_lengths, input_lengths);
+                             label_lengths, data_lengths);
   else
     return ctc.score_forward(activations.dptr_, costs, labels, label_lengths,
-                             input_lengths);
+                             data_lengths);
 }
 
 }  // namespace mshadow
@@ -100,6 +100,12 @@ information.
     .add_argument("data", "NDArray-or-Symbol", "Input data to the ctc_loss op.")
     .add_argument("label", "NDArray-or-Symbol",
                   "Ground-truth labels for the loss.")
+    .add_argument("data_lengths", "NDArray-or-Symbol",
+                  "Lengths of data for each of the samples. Only required "
+                  "when use_data_lengths is true.")
+    .add_argument("label_lengths", "NDArray-or-Symbol",
+                  "Lengths of labels for each of the samples. Only required "
+                  "when use_label_lengths is true.")
     .add_arguments(CTCLossParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_contrib_CTCLoss).add_alias("_contrib_ctc_loss");

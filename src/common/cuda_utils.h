@@ -153,6 +153,16 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
   return "Unknown cuRAND status";
 }
 
+template <typename DType>
+inline DType __device__ CudaMax(DType a, DType b) {
+    return a > b ? a : b;
+}
+
+template <typename DType>
+inline DType __device__ CudaMin(DType a, DType b) {
+    return a < b ? a : b;
+}
+
 }  // namespace cuda
 }  // namespace common
 }  // namespace mxnet
@@ -190,7 +200,7 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
   {                                                             \
     cublasStatus_t e = (func);                                  \
     CHECK_EQ(e, CUBLAS_STATUS_SUCCESS)                          \
-        << "cuBLAS: " << common::cuda::CublasGetErrorString(e); \
+        << "cuBLAS: " << mxnet::common::cuda::CublasGetErrorString(e); \
   }
 
 /*!
@@ -203,7 +213,7 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
   {                                                                 \
     cusolverStatus_t e = (func);                                    \
     CHECK_EQ(e, CUSOLVER_STATUS_SUCCESS)                            \
-        << "cuSolver: " << common::cuda::CusolverGetErrorString(e); \
+        << "cuSolver: " << mxnet::common::cuda::CusolverGetErrorString(e); \
   }
 
 /*!
@@ -216,8 +226,16 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
   {                                                             \
     curandStatus_t e = (func);                                  \
     CHECK_EQ(e, CURAND_STATUS_SUCCESS)                          \
-        << "cuRAND: " << common::cuda::CurandGetErrorString(e); \
+        << "cuRAND: " << mxnet::common::cuda::CurandGetErrorString(e); \
   }
+
+#if !defined(_MSC_VER)
+#define CUDA_UNROLL _Pragma("unroll")
+#define CUDA_NOUNROLL _Pragma("nounroll")
+#else
+#define CUDA_UNROLL
+#define CUDA_NOUNROLL
+#endif
 
 /*!
  * \brief Determine major version number of the gpu's cuda compute architecture.
@@ -256,26 +274,31 @@ inline int SMArch(int device_id) {
 
 /*!
  * \brief Determine whether a cuda-capable gpu's architecture supports float16 math.
+ *        Assume not if device_id is negative.
  * \param device_id The device index of the cuda-capable gpu of interest.
  * \return whether the gpu's architecture supports float16 math.
  */
 inline bool SupportsFloat16Compute(int device_id) {
-  // Kepler and most Maxwell GPUs do not support fp16 compute
-  int computeCapabilityMajor = ComputeCapabilityMajor(device_id);
-  int computeCapabilityMinor = ComputeCapabilityMinor(device_id);
-  return (computeCapabilityMajor > 5) ||
-      (computeCapabilityMajor == 5 && computeCapabilityMinor >= 3);
+  if (device_id < 0) {
+    return false;
+  } else {
+    // Kepler and most Maxwell GPUs do not support fp16 compute
+    int computeCapabilityMajor = ComputeCapabilityMajor(device_id);
+    return (computeCapabilityMajor > 5) ||
+           (computeCapabilityMajor == 5 && ComputeCapabilityMinor(device_id) >= 3);
+  }
 }
 
 /*!
  * \brief Determine whether a cuda-capable gpu's architecture supports Tensor Core math.
+ *        Assume not if device_id is negative.
  * \param device_id The device index of the cuda-capable gpu of interest.
  * \return whether the gpu's architecture supports Tensor Core math.
  */
 inline bool SupportsTensorCore(int device_id) {
   // Volta (sm_70) supports TensorCore algos
-  int computeCapabilityMajor = ComputeCapabilityMajor(device_id);
-  return (computeCapabilityMajor >= 7);
+  return device_id >= 0 &&
+         ComputeCapabilityMajor(device_id) >=7;
 }
 
 // The policy if the user hasn't set the environment variable MXNET_CUDA_ALLOW_TENSOR_CORE
@@ -286,11 +309,30 @@ inline bool SupportsTensorCore(int device_id) {
  * \return whether to allow TensorCore algo (if not specified by the Operator locally).
  */
 inline bool GetEnvAllowTensorCore() {
-  // Use of optional<bool> here permits: "0", "1", "true" and "false" to all be legal.
-  bool default_value = MXNET_CUDA_ALLOW_TENSOR_CORE_DEFAULT;
-  return dmlc::GetEnv("MXNET_CUDA_ALLOW_TENSOR_CORE",
-                      dmlc::optional<bool>(default_value)).value();
+  // Since these statics are in the '.h' file, they will exist and will be set
+  // separately in each compilation unit.  Not ideal, but cleaner than creating a
+  // cuda_utils.cc solely to have a single instance and initialization.
+  static bool allow_tensor_core = false;
+  static bool is_set = false;
+  if (!is_set) {
+    // Use of optional<bool> here permits: "0", "1", "true" and "false" to all be legal.
+    bool default_value = MXNET_CUDA_ALLOW_TENSOR_CORE_DEFAULT;
+    allow_tensor_core = dmlc::GetEnv("MXNET_CUDA_ALLOW_TENSOR_CORE",
+                                     dmlc::optional<bool>(default_value)).value();
+    is_set = true;
+  }
+  return allow_tensor_core;
 }
+
+#if CUDA_VERSION >= 9000
+// Sets the cuBLAS math mode that determines the 'allow TensorCore' policy.  Returns previous.
+inline cublasMath_t SetCublasMathMode(cublasHandle_t blas_handle, cublasMath_t new_math_type) {
+  auto handle_math_mode = CUBLAS_DEFAULT_MATH;
+  CUBLAS_CALL(cublasGetMathMode(blas_handle, &handle_math_mode));
+  CUBLAS_CALL(cublasSetMathMode(blas_handle, new_math_type));
+  return handle_math_mode;
+}
+#endif
 
 #endif  // MXNET_USE_CUDA
 
@@ -400,6 +442,15 @@ static inline __device__ void atomicAdd(mshadow::half::half_t *address,
               : (old & 0xffff0000) | hsum.half_;
     old = atomicCAS(address_as_ui, assumed, old);
   } while (assumed != old);
+}
+
+template <typename DType>
+__device__ inline DType ldg(const DType* address) {
+#if __CUDA_ARCH__ >= 350
+    return __ldg(address);
+#else
+    return *address;
+#endif
 }
 #endif
 

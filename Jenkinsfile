@@ -154,7 +154,8 @@ try {
         node('mxnetlinux') {
           ws('workspace/amalgamation') {
             init_git()
-            make('cpu', '-C amalgamation/ USE_BLAS=openblas MIN=1')
+            make('cpu', '-C amalgamation/ clean')
+            make('cpu', '-C amalgamation/ USE_BLAS=openblas')
           }
         }
       },
@@ -422,6 +423,7 @@ try {
         ws('workspace/docs') {
           if (env.BRANCH_NAME == "master") {
             init_git()
+            sh "make clean"
             sh "make docs"
           }
         }

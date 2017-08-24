@@ -14,7 +14,7 @@
   <name>MXNet Scala Package - Spark ML</name>
 
   <properties>
-    <spark.version>1.6.1</spark.version>
+    <spark.version>1.6.3</spark.version>
   </properties>
 
   <dependencies>

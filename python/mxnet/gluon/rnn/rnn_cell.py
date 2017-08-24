@@ -121,6 +121,8 @@ class RecurrentCell(Block):
         """Reset before re-using the cell for another graph."""
         self._init_counter = -1
         self._counter = -1
+        for cell in self._children:
+            cell.reset()
 
     def state_info(self, batch_size=0):
         """shape and layout information of states"""
