@@ -263,7 +263,7 @@ The `benchmark.py` can be used to run a series of benchmarks against different i
 - `--worker_file`: file that contains a list of worker hostnames or list of worker ip addresses that have passwordless ssh enabled.
 - `--worker_count`: number of workers to run benchmark on.
 - `--gpu_count`: number of gpus on each worker to use.
-- `--networks`: one or more networks in the format mode:network_name:batch_size:image_size. (Use `native` mode for imagenet benchmarks and symbolic/imperative/hybrid for gluon benchmarks). Be sure to use appropriate models according to the mode you are using.
+- `--networks`: one or more networks in the format mode:network_name:batch_size:image_size. (Use `native` mode for imagenet benchmarks and any of the symbolic/imperative/hybrid for gluon benchmarks). Be sure to use appropriate models according to the mode you are using.
 
 The `benchmark.py` script runs benchmarks on variable number of gpus upto gpu_count starting from 1 gpu doubling the number of gpus in each run using `kv-store=device` and after that running on variable number of nodes on all gpus starting with 1 node upto `worker_count` doubling the number of nodes used in each run using `kv-store=dist_sync_device`.
 
