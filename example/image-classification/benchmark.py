@@ -30,12 +30,9 @@ import importlib
 import collections
 import threading
 import copy
-
 '''
 Setup Logger and LogLevel
 '''
-
-
 def setup_logging(log_loc):
     if os.path.exists(log_loc):
         shutil.move(log_loc, log_loc + "_" + str(int(os.path.getctime(log_loc))))
@@ -53,14 +50,10 @@ def setup_logging(log_loc):
     LOGGER.addHandler(file_handler)
     LOGGER.addHandler(console_handler)
     return LOGGER
-
-
 '''
 Runs the command given in the cmd_args for specified timeout period
 and terminates after
 '''
-
-
 class RunCmd(threading.Thread):
     def __init__(self, cmd_args, logfile):
         threading.Thread.__init__(self)
@@ -165,8 +158,6 @@ def series(max_count):
 '''
 Choose the middle iteration to get the images processed per sec
 '''
-
-
 def images_processed(log_loc, mode):
     f = open(log_loc)
     if mode == 'native':
