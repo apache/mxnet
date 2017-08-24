@@ -139,7 +139,6 @@ def parse_args():
                         required=True)
     parser.add_argument('--worker_count', type=int, help='number of workers to run benchmark on.', required=True)
     parser.add_argument('--gpu_count', type=int, help='number of gpus on each worker to use.', required=True)
-    #  parser.add_argument('--mode', type=str, default='native', help='Run benchmark for native imagenet or gluon vision models(symbolic, imperative, hybrid)')
     args = parser.parse_args()
     return args
 
