@@ -33,6 +33,10 @@ from data import *
 parser = argparse.ArgumentParser(description='Train a model for image classification.')
 parser.add_argument('--dataset', type=str, default='mnist',
                     help='dataset to use. options are mnist, cifar10, and dummy.')
+parser.add_argument('--train-data', type=str, default='',
+                    help='training record file to use, required for imagenet.')
+parser.add_argument('--val-data', type=str, default='',
+                    help='validation record file to use, required for imagenet.')
 parser.add_argument('--batch-size', type=int, default=32,
                     help='training batch size per device (CPU/GPU).')
 parser.add_argument('--gpus', type=int, default=0,
@@ -41,6 +45,8 @@ parser.add_argument('--epochs', type=int, default=3,
                     help='number of training epochs.')
 parser.add_argument('--lr', type=float, default=0.01,
                     help='learning rate. default is 0.01.')
+parser.add_argument('-momentum', type=float, default=0.9,
+                    help='momentum value for optimizer, default is 0.9.')
 parser.add_argument('--wd', type=float, default=0.0001,
                     help='weight decay rate. default is 0.0001.')
 parser.add_argument('--seed', type=int, default=123,
@@ -62,7 +68,7 @@ parser.add_argument('--kvstore', type=str, default='device',
 parser.add_argument('--log-interval', type=int, default=50, help='Number of batches to wait before logging.')
 opt = parser.parse_args()
 
-print(opt)
+logging.info(opt)
 
 mx.random.seed(opt.seed)
 
@@ -95,6 +101,13 @@ if dataset == 'mnist':
     train_data, val_data = mnist_iterator(batch_size, (1, 32, 32))
 elif dataset == 'cifar10':
     train_data, val_data = cifar10_iterator(batch_size, (3, 32, 32))
+elif dataset == 'imagenet':
+    if model_name == 'inceptionv3':
+        train_data, val_data = imagenet_iterator(opt.train_data, opt.val_data,
+                                              batch_size, (3, 299, 299))
+    else:
+        train_data, val_data = imagenet_iterator(opt.train_data, opt.val_data,
+                                                 batch_size, (3, 224, 224))
 elif dataset == 'dummy':
     if model_name == 'inceptionv3':
         train_data, val_data = dummy_iterator(batch_size, (3, 299, 299))
@@ -117,8 +130,9 @@ def test(ctx):
 def train(epochs, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
-    net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': opt.lr, 'wd': opt.wd},
+    net.initialize(mx.init.Xavier(magnitude=2), ctx=ctx)
+    trainer = gluon.Trainer(net.collect_params(), 'sgd',
+                            {'learning_rate': opt.lr, 'wd': opt.wd, 'momentum': opt.momentum},
                             kvstore = opt.kvstore)
     metric = mx.metric.Accuracy()
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
@@ -165,8 +179,16 @@ if __name__ == '__main__':
         out = net(data)
         softmax = mx.sym.SoftmaxOutput(out, name='softmax')
         mod = mx.mod.Module(softmax, context=[mx.gpu(i) for i in range(gpus)] if gpus > 0 else [mx.cpu()])
-        mod.fit(train_data, num_epoch=opt.epochs, kvstore=opt.kvstore,
-                batch_end_callback = mx.callback.Speedometer(batch_size, 1))
+        mod.fit(train_data,
+                eval_data = val_data,
+                num_epoch=opt.epochs,
+                kvstore=opt.kvstore,
+                batch_end_callback = mx.callback.Speedometer(batch_size, max(1, opt.log_interval)),
+                epoch_end_callback = mx.callback.do_checkpoint('image-classifier-%s'% opt.model),
+                optimizer = 'sgd',
+                optimizer_params = {'learning_rate': opt.lr, 'wd': opt.wd, 'momentum': opt.momentum},
+                initializer = mx.init.Xavier(magnitude=2))
+        mod.save_params('image-classifier-%s-%d-final.params'%(opt.model, epochs))
     else:
         if opt.mode == 'hybrid':
             net.hybridize()

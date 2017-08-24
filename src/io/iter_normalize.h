@@ -47,7 +47,7 @@ namespace io {
 class ImageNormalizeIter : public IIterator<DataInst> {
  public:
   explicit ImageNormalizeIter(IIterator<DataInst> *base)
-      : base_(base), meanfile_ready_(false) {
+      : base_(base), meanfile_ready_(false), stdimg_ready_(false) {
   }
 
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
@@ -100,14 +100,18 @@ class ImageNormalizeIter : public IIterator<DataInst> {
  private:
   /*! \brief base iterator */
   std::unique_ptr<IIterator<DataInst> > base_;
-  // whether mean image is ready.
+  /*! whether mean image is ready */
   bool meanfile_ready_;
+  /*! whether std image is ready */
+  bool stdimg_ready_;
   /*! \brief output data */
   DataInst out_;
   // normalize parameter.
   ImageNormalizeParam param_;
   /*! \brief mean image, if needed */
   mshadow::TensorContainer<cpu, 3> meanimg_;
+  /*! \brief std image */
+  mshadow::TensorContainer<cpu, 3> stdimg_;
   /*! \brief temp space for output image */
   mshadow::TensorContainer<cpu, 3> outimg_;
   /*! \brief random numeber engine */
@@ -144,35 +148,72 @@ class ImageNormalizeIter : public IIterator<DataInst> {
     float illumination =
         rand_uniform(rnd_) * param_.max_random_illumination * 2 - param_.max_random_illumination;
 
-    if (param_.mean_r > 0.0f || param_.mean_g > 0.0f ||
-        param_.mean_b > 0.0f || param_.mean_a > 0.0f) {
-      // subtract mean per channel
-      data[0] -= param_.mean_r;
-      if (data.shape_[0] >= 3) {
-        data[1] -= param_.mean_g;
-        data[2] -= param_.mean_b;
+    // setup mean if not loaded from file, should happen only once
+    if (!meanfile_ready_ || (meanimg_.shape_ != data.shape_)) {
+      if (param_.mean_r > 0.0f || param_.mean_g > 0.0f ||
+          param_.mean_b > 0.0f || param_.mean_a > 0.0f) {
+        // setup meanimg using mean_r/g/b/a
+        meanimg_.Resize(data.shape_);
+        switch (static_cast<int>(data.shape_[0])) {
+          case 4: {
+            meanimg_[3] = param_.mean_a;
+          }
+          case 3: {
+            meanimg_[2] = param_.mean_b;
+          }
+          case 2: {
+            meanimg_[1] = param_.mean_g;
+          }
+          case 1: {
+            meanimg_[0] = param_.mean_r;
+            break;
+          }
+          default: {
+            LOG(FATAL) << "Invalid image channels: " << data.shape_[0]
+            << " expected in range [1, 4].";
+          }
+        }
+        meanfile_ready_ = true;
       }
-      if (data.shape_[0] == 4) {
-        data[3] -= param_.mean_a;
+    }
+
+    // setup division buffer including std and scale, should happen only once
+    if (!stdimg_ready_ || (stdimg_.shape_ != data.shape_)) {
+      stdimg_.Resize(data.shape_);
+      switch (static_cast<int>(data.shape_[0])) {
+        case 4: {
+          stdimg_[3] = param_.scale / param_.std_a;
+        }
+        case 3: {
+          stdimg_[2] = param_.scale / param_.std_b;
+        }
+        case 2: {
+          stdimg_[1] = param_.scale / param_.std_g;
+        }
+        case 1: {
+          stdimg_[0] = param_.scale / param_.std_r;
+          break;
+        }
+        default: {
+          LOG(FATAL) << "Invalid image channels: " << data.shape_[0]
+          << " expected in range [1, 4].";
+        }
       }
-      if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
-        outimg_ = mirror(data * contrast + illumination) * param_.scale;
+      stdimg_ready_ = true;
+    }
+
+    CHECK_EQ(stdimg_ready_, true);
+    if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
+      if (meanfile_ready_) {
+        outimg_ = mirror((data - meanimg_) * contrast + illumination) * stdimg_;
       } else {
-        outimg_ = (data * contrast + illumination) * param_.scale;
-      }
-    } else if (!meanfile_ready_ || param_.mean_img.length() == 0) {
-      // do not subtract anything
-      if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
-        outimg_ = mirror(data) * param_.scale;
-      } else {
-        outimg_ = F<mshadow::op::identity>(data) * param_.scale;
+        outimg_ = mirror(data * contrast + illumination) * stdimg_;
       }
     } else {
-      CHECK(meanfile_ready_);
-      if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
-        outimg_ = mirror((data - meanimg_) * contrast + illumination) * param_.scale;
+      if (meanfile_ready_) {
+        outimg_ = ((data - meanimg_) * contrast + illumination) * stdimg_;
       } else {
-        outimg_ = ((data - meanimg_) * contrast + illumination) * param_.scale;
+        outimg_ = (data * contrast + illumination) * stdimg_;
       }
     }
   }
