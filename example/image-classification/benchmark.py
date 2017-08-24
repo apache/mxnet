@@ -197,7 +197,7 @@ def run_benchmark(kv_store, data_shape, batch_size, num_gpus, num_nodes, network
         benchmark_args = ['python', '../gluon/image_classification.py', '--dataset', 'dummy', '--gpus', str(num_gpus), \
                           '--epochs', '1', '--benchmark', '--mode', mode, '--model', network, '--batch-size',
                           str(batch_size), \
-                          '--log-interval', str(1), '--kv-store', kv_store]
+                          '--log-interval', str(1), '--kvstore', kv_store]
 
     log = log_loc + '/' + network + '_' + str(num_nodes * num_gpus) + '_log'
     hosts = log_loc + '/' + network + '_' + str(num_nodes * num_gpus) + '_workers'

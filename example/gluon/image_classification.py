@@ -147,7 +147,7 @@ def train(epochs, ctx):
             metric.update(label, outputs)
             if opt.log_interval and not (i+1)%opt.log_interval:
                 name, acc = metric.get()
-                logging.info('[Epoch %d Batch %d] speed: %f samples/s, training: %s=%f'%(
+                logging.info('Epoch[%d] Batch [%d]\tSpeed: %f samples/sec\t%s=%f'%(
                                epoch, i, batch_size/(time.time()-btic), name, acc))
             btic = time.time()
 
