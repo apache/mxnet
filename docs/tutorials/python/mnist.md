@@ -114,6 +114,7 @@ After the above training completes, we can evaluate the trained model by running
 
 ```python
 test_iter = mx.io.NDArrayIter(mnist['test_data'], None, batch_size)
+mlp_model.bind(data_shapes=test_iter.provide_data, force_rebind=True, for_training=False)
 prob = mlp_model.predict(test_iter)
 assert prob.shape == (10000, 10)
 ```
@@ -122,6 +123,9 @@ Since the dataset also has labels for all test images, we can compute the accura
 
 ```python
 test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
+mlp_model.bind(data_shapes=test_iter.provide_data, label_shapes=test_iter.provide_label,
+              force_rebind=True, for_training=False)
+
 # predict accuracy of mlp
 acc = mx.metric.Accuracy()
 mlp_model.score(test_iter, acc)
@@ -182,8 +186,12 @@ Finally, we'll use the trained LeNet model to generate predictions for the test 
 
 ```python
 test_iter = mx.io.NDArrayIter(mnist['test_data'], None, batch_size)
+lenet_model.bind(data_shapes=test_iter.provide_data, force_rebind=True, for_training=False)
 prob = lenet_model.predict(test_iter)
+
 test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
+lenet_model.bind(data_shapes=test_iter.provide_data, label_shapes=test_iter.provide_label,
+              force_rebind=True, for_training=False)
 # predict accuracy for lenet
 acc = mx.metric.Accuracy()
 lenet_model.score(test_iter, acc)
