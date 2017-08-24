@@ -458,11 +458,11 @@ def test_create_csr():
         csr_copy = mx.nd.array(csr_created)
         assert(same(csr_copy.asnumpy(), csr_created.asnumpy()))
 
-    def check_create_csr_from_scipy(shape, density):
+    def check_create_csr_from_scipy(shape, density, f):
         try:
             import scipy.sparse as sp
             csr_sp = sp.rand(shape[0], shape[1], density, format="csr")
-            csr_nd = mx.nd.sparse.array(csr_sp)
+            csr_nd = f(csr_sp)
             assert same(csr_nd.data.asnumpy(), csr_sp.data)
             assert same(csr_nd.indptr.asnumpy(), csr_sp.indptr)
             assert same(csr_nd.indices.asnumpy(), csr_sp.indices)
@@ -475,7 +475,8 @@ def test_create_csr():
     for density in densities:
         shape = rand_shape_2d(dim0, dim1)
         check_create_csr_from_nd(shape, density)
-        check_create_csr_from_scipy(shape, density)
+        check_create_csr_from_scipy(shape, density, mx.nd.sparse.array)
+        check_create_csr_from_scipy(shape, density, mx.nd.array)
 
 
 def test_create_row_sparse():

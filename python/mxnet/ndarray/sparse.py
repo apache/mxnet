@@ -908,10 +908,40 @@ def empty(stype, shape, ctx=None, dtype=None, aux_types=None):
 
 def array(source_array, ctx=None, dtype=None, aux_types=None):
     """Creates a sparse array from any object exposing the array interface.
+
+    Parameters
+    ----------
+    source_array : RowSparseNDArray, CSRNDArray or scipy.sparse.csr.csr_matrix
+        The source sparse array
+    ctx : Context, optional
+        Device context (default is the current default context).
+    dtype : str or numpy.dtype, optional
+        The data type of the output array. The default dtype is ``source_array.dtype``
+        if `source_array` is an `NDArray`, `float32` otherwise.
+    aux_types: list of numpy.dtype, optional
+        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray.
+        The default value for CSRNDArray is [`int64`, `int64`] for `indptr` and `indices`.
+        The default value for RowSparseNDArray is [`int64`] for `indices`.
+
+    Returns
+    -------
+    RowSparseNDArray or CSRNDArray
+        An array with the same contents as the `source_array`.
+
+    Examples
+    --------
+    >>> import scipy.sparse as sp
+    >>> csr = sp.csr_matrix((2, 100))
+    >>> mx.nd.sparse.array(csr)
+    <CSRNDArray 2x100 @cpu(0)>
+    >>> mx.nd.sparse.array(mx.nd.zeros((3, 2), stype='csr'))
+    <CSRNDArray 3x2 @cpu(0)>
+    >>> mx.nd.sparse.array(mx.nd.zeros((3, 2), stype='row_sparse'))
+    <RowSparseNDArray 3x2 @cpu(0)>
     """
     if isinstance(source_array, NDArray):
         assert(source_array.stype != 'default'), \
-               "Please use `cast_storage` to create BaseSparseNDArray from an NDArray"
+               "Please use `cast_storage` to create RowSparseNDArray or CSRNDArray from an NDArray"
         dtype = source_array.dtype if dtype is None else dtype
         aux_types = source_array._aux_types if aux_types is None else aux_types
         arr = empty(source_array.stype, source_array.shape, ctx, dtype, aux_types)
