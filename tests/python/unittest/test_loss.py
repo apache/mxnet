@@ -165,6 +165,36 @@ def test_l1_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
 
 
+def test_ctc_loss():
+    loss = gluon.loss.CTCLoss(padding_mask=0)
+    l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[2,1,0,0],[3,2,2,0]]))
+    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+
+    loss = gluon.loss.CTCLoss(layout='TNC', padding_mask=0)
+    l = loss(mx.nd.ones((20,2,4)), mx.nd.array([[2,1,0,0],[3,2,2,0]]))
+    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+
+    loss = gluon.loss.CTCLoss(layout='TNC', label_layout='TN', padding_mask=0)
+    l = loss(mx.nd.ones((20,2,4)), mx.nd.array([[2,1,0,0],[3,2,2,0]]).T)
+    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+
+    loss = gluon.loss.CTCLoss(padding_mask=-1)
+    l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[2,1,-1,-1],[3,2,2,-1]]))
+    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+
+    loss = gluon.loss.CTCLoss()
+    l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[2,1,2,2],[3,2,2,2]]), None, mx.nd.array([2,3]))
+    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+
+    loss = gluon.loss.CTCLoss()
+    l = loss(mx.nd.ones((2,25,4)), mx.nd.array([[2,1,-1,-1],[3,2,2,-1]]), mx.nd.array([20,20]))
+    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+
+    loss = gluon.loss.CTCLoss()
+    l = loss(mx.nd.ones((2,25,4)), mx.nd.array([[2,1,3,3],[3,2,2,3]]), mx.nd.array([20,20]), mx.nd.array([2,3]))
+    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+
+
 def test_sample_weight_loss():
     mx.random.seed(1234)
     np.random.seed(1234)
