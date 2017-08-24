@@ -1,9 +1,10 @@
 MXNet Change Log
 ================
-## 0.11.0-rc2
+## 0.11.0-rc3
 ### - Major Features
   - Apple Core ML model converter
   - Support for Keras v1.2.2
+  - Gluon Interface(experimental)
   - For more information see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/v0.11.0+Release+Notes)
   - Updated [LICENSE and NOTICE](https://github.com/apache/incubator-mxnet/pull/7565) files.
 ### - API Changes
