@@ -444,11 +444,7 @@ def test_sparse_nd_unsupported():
             pass
 
 def test_create_csr():
-    dim0 = 50
-    dim1 = 50
-    densities = [0, 0.01, 0.1, 0.2, 0.5]
-    for density in densities:
-        shape = rand_shape_2d(dim0, dim1)
+    def check_create_csr_from_nd(shape, density):
         matrix = rand_ndarray(shape, 'csr', density)
         data = matrix.data
         indptr = matrix.indptr
@@ -461,6 +457,25 @@ def test_create_csr():
         assert same(csr_created.indices.asnumpy(), indices.asnumpy())
         csr_copy = mx.nd.array(csr_created)
         assert(same(csr_copy.asnumpy(), csr_created.asnumpy()))
+
+    def check_create_csr_from_scipy(shape, density):
+        try:
+            import scipy.sparse as sp
+            csr_sp = sp.rand(shape[0], shape[1], density, format="csr")
+            csr_nd = mx.nd.sparse.array(csr_sp)
+            assert same(csr_nd.data.asnumpy(), csr_sp.data)
+            assert same(csr_nd.indptr.asnumpy(), csr_sp.indptr)
+            assert same(csr_nd.indices.asnumpy(), csr_sp.indices)
+        except:
+            print("Could not import scipy.sparse. Skipping unit tests for scipy csr creation")
+
+    dim0 = 50
+    dim1 = 50
+    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    for density in densities:
+        shape = rand_shape_2d(dim0, dim1)
+        check_create_csr_from_nd(shape, density)
+        check_create_csr_from_scipy(shape, density)
 
 
 def test_create_row_sparse():

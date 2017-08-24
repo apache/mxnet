@@ -914,10 +914,25 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
                "Please use `cast_storage` to create BaseSparseNDArray from an NDArray"
         dtype = source_array.dtype if dtype is None else dtype
         aux_types = source_array._aux_types if aux_types is None else aux_types
+        arr = empty(source_array.stype, source_array.shape, ctx, dtype, aux_types)
+        arr[:] = source_array
     else:
-        # TODO(haibin/anisub) support creation from scipy object when `_sync_copy_from` is ready
-        raise NotImplementedError('creating BaseSparseNDArray from ' \
-                                  ' a non-NDArray object is not implemented.')
-    arr = empty(source_array.stype, source_array.shape, ctx, dtype, aux_types)
-    arr[:] = source_array
+        try:
+            import scipy.sparse as sp
+            if isinstance(source_array, sp.csr.csr_matrix):
+                # TODO(haibin/anisub) implement `_sync_copy_from` with scipy csr object
+                # to reduce a copy
+                indptr_type = None
+                indices_type = None
+                if aux_types is not None:
+                    assert(len(aux_types) == 2), "Expected types for both indices and indptr"
+                    indptr_type = aux_types[0]
+                    indices_type = aux_types[1]
+                csr = source_array
+                arr = csr_matrix(csr.data, csr.indptr, csr.indices, csr.shape, dtype=dtype,
+                                 indptr_type=indptr_type, indices_type=indices_type)
+            else:
+                ValueError("Unexpected source_array type: ", type(source_array))
+        except:
+            raise ValueError("Unexpected source_array type: ", type(source_array))
     return arr
