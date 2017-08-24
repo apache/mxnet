@@ -484,13 +484,13 @@ struct relu_grad {
   .add_alias("_sparse_" #__name$)
 
 /*! \brief Unary compute */
-#define MXNET_OPERATOR_REGISTER_UNARY_COMPUTE(__name$, __xpu$, __kernel$)                  \
+#define MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(__name$, __xpu$, __kernel$)              \
   MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                   \
   .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)        \
   .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
 
 /*! \brief Unary compute, dense result */
-#define MXNET_OPERATOR_REGISTER_UNARY_COMPUTE_DR(__name$, __xpu$, __kernel$)               \
+#define MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$)           \
   MXNET_OPERATOR_REGISTER_UNARY_DR(__name$)                                                \
   .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)
 
