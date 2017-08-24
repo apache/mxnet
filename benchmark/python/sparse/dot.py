@@ -161,7 +161,7 @@ def _compare_sparse_dense(data_dir, file_name, mini_file_name, feature_dim,
         weight_row_dim = batch_size if transpose else feature_dim
         weight_shape = (weight_row_dim, output_dim)
         if not rsp:
-            weight = mx.nd.random_uniform(low=0, high=1, shape=weight_shape)
+            weight = mx.nd.random.uniform(low=0, high=1, shape=weight_shape)
         else:
             weight = rand_ndarray(weight_shape, "row_sparse", density=0.05, distribution="uniform")
         total_cost = {}

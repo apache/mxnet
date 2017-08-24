@@ -15,10 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Symbol API of MXNet."""
-
-from . import _internal, contrib, linalg, random, sparse
-# pylint: disable=wildcard-import, redefined-builtin
-from .op import *
-from .symbol import *
-# pylint: enable=wildcard-import
+"""Linear Algebra NDArray API of MXNet."""
+__all__ = []
