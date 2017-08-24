@@ -147,33 +147,58 @@ class ImageNormalizeIter : public IIterator<DataInst> {
     if (param_.mean_r > 0.0f || param_.mean_g > 0.0f ||
         param_.mean_b > 0.0f || param_.mean_a > 0.0f) {
       // subtract mean per channel
-      data[0] -= param_.mean_r;
-      if (data.shape_[0] >= 3) {
-        data[1] -= param_.mean_g;
-        data[2] -= param_.mean_b;
-      }
-      if (data.shape_[0] == 4) {
-        data[3] -= param_.mean_a;
-      }
-      if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
-        outimg_ = mirror(data * contrast + illumination) * param_.scale;
-      } else {
-        outimg_ = (data * contrast + illumination) * param_.scale;
+      switch (data.shape_[0]) {
+        case 4: {
+          data[3] -= param_.mean_a;
+        }
+        case 3: {
+          data[2] -= param_.mean_b;
+        }
+        case 2: {
+          data[1] -= param_.mean_g;
+        }
+        case 1: {
+          data[0] -= param_.mean_r;
+          break;
+        }
+        default: {
+          // possible?
+        }
       }
     } else if (!meanfile_ready_ || param_.mean_img.length() == 0) {
       // do not subtract anything
-      if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
-        outimg_ = mirror(data) * param_.scale;
-      } else {
-        outimg_ = F<mshadow::op::identity>(data) * param_.scale;
-      }
     } else {
       CHECK(meanfile_ready_);
-      if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
-        outimg_ = mirror((data - meanimg_) * contrast + illumination) * param_.scale;
-      } else {
-        outimg_ = ((data - meanimg_) * contrast + illumination) * param_.scale;
+      data -= meanimg_;
+    }
+    // apply contrast and illumination jitter
+    data = data * contrast + illumination;
+    // apply std per channel
+    switch (data.shape_[0]) {
+      case 4: {
+        if (param_.std_a > 0.0f) data[3] /= param_.std_a;
       }
+      case 3: {
+        if (param_.std_b > 0.0f) data[2] /= param_.std_b;
+      }
+      case 2: {
+        if (param_.std_g > 0.0f) data[1] /= param_.std_g;
+      }
+      case 1: {
+        if (param_.std_r > 0.0f) data[0] /= param_.std_r;
+        break;
+      }
+      default: {
+        // possible?
+      }
+    }
+    // scale the values globally
+    data *= param_.scale;
+    // flip and assign
+    if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
+      outimg_ = mirror(data);
+    } else {
+      outimg_ = F<mshadow::op::identity>(data);
     }
   }
   // creat mean image.
