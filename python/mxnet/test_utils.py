@@ -146,7 +146,7 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None,
     if shuffle_csr_indices is True:
         shuffle_csr_column_indices(csr)
     result = mx.nd.sparse.csr_matrix(csr.data, csr.indptr, csr.indices,
-                                    (num_rows, num_cols), dtype=dtype)
+                                     (num_rows, num_cols), dtype=dtype)
     return result
 
 
@@ -200,12 +200,12 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
         return mx.nd.array(output_arr).tostype("csr")
 
 
-def assign_each(input, function):
+def assign_each(the_input, function):
     """Return ndarray composed of passing each array value through some function"""
     if function is not None:
-        it_input = np.nditer(input, flags=['f_index'])
+        it_input = np.nditer(the_input, flags=['f_index'])
 
-        output = np.zeros(input.shape)
+        output = np.zeros(the_input.shape)
         it_out = np.nditer(output, flags=['f_index'], op_flags=['writeonly'])
 
         while not it_input.finished:
@@ -216,7 +216,7 @@ def assign_each(input, function):
 
         return output
     else:
-        return np.array(input)
+        return np.array(the_input)
 
 def assign_each2(input1, input2, function):
     """Return ndarray composed of passing two array values through some function"""
@@ -238,7 +238,7 @@ def assign_each2(input1, input2, function):
 
         return output
     else:
-        return np.array(input)
+        return np.array(input1)
 
 # TODO(haibin) also include types in arguments
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
@@ -324,6 +324,7 @@ def rand_ndarray(shape, stype, density=None, dtype=None,
 def create_sparse_array(shape, stype, data_init=None, rsp_indices=None,
                         dtype=None, modifier_func=None, density=.5,
                         shuffle_csr_indices=False):
+    """Create a sparse array, For Rsp, assure indices are in a canonical format"""
     if stype == 'row_sparse':
         if rsp_indices is not None:
             arr_indices = np.asarray(rsp_indices)
@@ -350,7 +351,7 @@ def create_sparse_array(shape, stype, data_init=None, rsp_indices=None,
 
 
 def create_sparse_array_zd(shape, stype, density, data_init=None,
-                           rsp_indices=None, dtype=None,modifier_func=None,
+                           rsp_indices=None, dtype=None, modifier_func=None,
                            shuffle_csr_indices=False):
     """Create sparse array, using only rsp_indices to determine density"""
     if stype == 'row_sparse':
