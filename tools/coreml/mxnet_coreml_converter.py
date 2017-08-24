@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -18,7 +19,7 @@
 from __future__ import print_function
 import argparse
 from converter._mxnet_converter import convert
-from utils import load_model
+from converter.utils import load_model
 import yaml
 from ast import literal_eval
 
