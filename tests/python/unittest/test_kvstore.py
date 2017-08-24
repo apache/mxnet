@@ -19,6 +19,7 @@
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import rand_ndarray, assert_almost_equal
+from mxnet.base import py_str
 
 shape = (4, 4)
 keys = [5, 7, 11]
@@ -186,6 +187,8 @@ def updater(key, recv, local):
 
 def str_updater(key, recv, local):
     """use updater: += with str keys"""
+    if isinstance(key, bytes):
+        key = py_str(key)
     assert(isinstance(key, str))
     local += recv
 
