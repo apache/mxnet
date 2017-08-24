@@ -17,9 +17,9 @@
  * under the License.
  */
 
-/*!
+/*
  * \file batchnorm_test.cc
- * \brief operator unit test utility functions
+ * \brief batchnorm operator unit test utility functions
  * \author Chris Olivier
 */
 
@@ -892,8 +892,8 @@ TEST(BATCH_NORM, TestIterAll) {
           kwargs.push_back({ "cudnn_off", "True" });
         }
         for (TShape shape : shapes) {
-          for (index_t g1 = 0; g1 < 2U; ++g1) {
-            for (index_t g2 = 0; g2 < 2U; ++g2) {
+          for (int g1 = 0; g1 < 2; ++g1) {
+            for (int g2 = 0; g2 < 2; ++g2) {
               for (int type : v2_types) {
                 MSHADOW_REAL_TYPE_SWITCH_EX(
                   type, DType, AccReal,
@@ -1539,8 +1539,8 @@ TEST(BATCH_NORM, TestChannelAxis) {
       kwargs.push_back({"use_global_stats", tof[x2]});
       for (size_t x3 = 0; x3 < 2U; ++x3) {
         kwargs.push_back({"cudnn_off", tof[x3]});
-        for (index_t g1 = 0; g1 < 2U; ++g1) {
-          for (index_t g2 = 0; g2 < 2U; ++g2) {
+        for (int g1 = 0; g1 < 2; ++g1) {
+          for (int g2 = 0; g2 < 2; ++g2) {
             for (const std::vector<index_t> &simpleShape : shapes) {
               const int dim = static_cast<int>(simpleShape.size());
               for (signed int channelAxis = -dim, shapeDim = dim;
