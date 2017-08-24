@@ -30,22 +30,19 @@ import mxnet.ndarray as F
 import net
 import utils
 from option import Options
+from data import datasets
 
 def train(args):
-    # temporary solutution for dataloader
-    from torchvision import datasets
-    from torchvision import transforms
-
     np.random.seed(args.seed)
     if args.cuda:
         ctx = mx.gpu(0)
     else:
         ctx = mx.cpu(0)
     # dataloader
-    transform = transforms.Compose([transforms.Scale(args.image_size),
-                                    transforms.CenterCrop(args.image_size),
-                                    utils.ToTensor(ctx),
-                                    ])
+    transform = utils.Compose([utils.Scale(args.image_size),
+                               utils.CenterCrop(args.image_size),
+                               utils.ToTensor(ctx),
+                               ])
     train_dataset = datasets.ImageFolder(args.dataset, transform)
     train_loader = gluon.data.DataLoader(train_dataset, batch_size=args.batch_size, last_batch='discard')
     style_loader = utils.StyleLoader(args.style_folder, args.style_size, ctx=ctx)
