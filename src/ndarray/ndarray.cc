@@ -91,7 +91,8 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
   using namespace autograd;
   using namespace mshadow;
   CHECK(!is_none()) << "NDArray is not initialized";
-  CHECK_LT(begin, end) << "Invalid slicing range [" << begin << ", " << end << ")";
+  CHECK_LE(begin, end)
+      << "Invalid slicing range [" << begin << ", " << end << ")";
   CHECK_GE(shape_[0], end) << "Slice end index out of range";
   CHECK_EQ(storage_type(), kDefaultStorage);
   NDArray ret = *this;
