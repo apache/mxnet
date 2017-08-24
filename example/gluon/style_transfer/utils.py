@@ -134,3 +134,5 @@ def init_vgg_params(vgg, model_folder, ctx):
     if not os.path.exists(os.path.join(model_folder, 'mxvgg.params')):
         os.system('wget https://www.dropbox.com/s/7c92s0guekwrwzf/mxvgg.params?dl=1 -O' + os.path.join(model_folder, 'mxvgg.params'))
     vgg.collect_params().load(os.path.join(model_folder, 'mxvgg.params'), ctx=ctx)
+    for param in vgg.collect_params().values():
+        param.grad_req = 'null'

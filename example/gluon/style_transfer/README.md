@@ -57,7 +57,7 @@ python main.py optim --content-image images/content/venice-boat.jpg --style-imag
 ### Stylize Images Using Pre-trained MSG-Net
 0. Download the pre-trained model
 	```bash
-	bash models/download_model.sh
+	python models/download_model.py
 	```
 0. Test the model
 	```bash
@@ -86,7 +86,7 @@ python main.py optim --content-image images/content/venice-boat.jpg --style-imag
 ### Train Your Own MSG-Net Model
 0. Download the COCO dataset
 	```bash
-	bash dataset/download_dataset.sh
+	python dataset/download_dataset.py
 	```
 0. Train the model
 	```bash
