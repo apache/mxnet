@@ -375,17 +375,7 @@ int MXNDArrayGetData(NDArrayHandle handle,
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
-    const TBlob &b = arr->data();
-    CHECK(b.CheckContiguous());
-    if(arr->ctx().dev_mask() == cpu::kDevMask){
-        MSHADOW_REAL_TYPE_SWITCH(arr->dtype(), DType, {
-          *out_pdata = b.FlatTo2D<cpu, DType>().dptr_;
-        });
-    }else{
-        MSHADOW_REAL_TYPE_SWITCH(arr->dtype(), DType, {
-          *out_pdata = b.FlatTo2D<gpu, DType>().dptr_;
-        });
-    }
+    *out_data = arr->data().dptr_;
   } else {
     *out_pdata = nullptr;
   }
