@@ -604,18 +604,9 @@ class NDArrayIter(DataIter):
         self.label = _init_data(label, allow_empty=True, default_name=label_name)
 
         self.idx = np.arange(self.data[0][1].shape[0])
-        # shuffle data
-        if shuffle:
-            np.random.shuffle(self.idx)
-            self.data = [(k, array(v.asnumpy()[self.idx], v.context))
-                         if not (isinstance(v, h5py.Dataset)
-                                 if h5py else False) else (k, v)
-                         for k, v in self.data]
-            self.label = [(k, array(v.asnumpy()[self.idx], v.context))
-                          if not (isinstance(v, h5py.Dataset)
-                                  if h5py else False) else (k, v)
-                          for k, v in self.label]
-
+        self.shuffle = shuffle
+        if self.shuffle:
+            self._shuffle()
         # batching
         if last_batch_handle == 'discard':
             new_n = self.data[0][1].shape[0] - self.data[0][1].shape[0] % batch_size
@@ -630,6 +621,19 @@ class NDArrayIter(DataIter):
         self.batch_size = batch_size
         self.last_batch_handle = last_batch_handle
 
+    def _shuffle(self):
+        """shuffle data"""
+        # shuffle data
+        np.random.shuffle(self.idx)
+        self.data = [(k, array(v.asnumpy()[self.idx], v.context))
+                     if not (isinstance(v, h5py.Dataset)
+                             if h5py else False) else (k, v)
+                     for k, v in self.data]
+        self.label = [(k, array(v.asnumpy()[self.idx], v.context))
+                      if not (isinstance(v, h5py.Dataset)
+                              if h5py else False) else (k, v)
+                      for k, v in self.label]
+    
     @property
     def provide_data(self):
         """The name and shape of data provided by this iterator."""
@@ -651,6 +655,8 @@ class NDArrayIter(DataIter):
         self.cursor = -self.batch_size
 
     def reset(self):
+        if self.shuffle:
+            self._shuffle()
         if self.last_batch_handle == 'roll_over' and self.cursor > self.num_data:
             self.cursor = -self.batch_size + (self.cursor%self.num_data)%self.batch_size
         else:
