@@ -1,1 +1,0 @@
-# mxnet-amazon
