@@ -365,19 +365,19 @@ inline void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A,
       break;
     case kWriteTo:
     case kWriteInplace:
-  	  if (tA) {
-  	    if (tB) {
-  	      const_cast<Tensor<cpu, 2, DType>&>(C) = dot(A.T(), B.T());
-  	    } else {
-  	      const_cast<Tensor<cpu, 2, DType>&>(C) = dot(A.T(), B);
-  	    }
-  	  } else {
-  	    if (tB) {
-  	      const_cast<Tensor<cpu, 2, DType>&>(C) = dot(A, B.T());
-  	    } else {
-  	      const_cast<Tensor<cpu, 2, DType>&>(C) = dot(A, B);
-  	    }
-  	  }
+     if (tA) {
+       if (tB) {
+         const_cast<Tensor<cpu, 2, DType>&>(C) = dot(A.T(), B.T());
+       } else {
+         const_cast<Tensor<cpu, 2, DType>&>(C) = dot(A.T(), B);
+       }
+     } else {
+       if (tB) {
+         const_cast<Tensor<cpu, 2, DType>&>(C) = dot(A, B.T());
+       } else {
+         const_cast<Tensor<cpu, 2, DType>&>(C) = dot(A, B);
+       }
+     }
       break;
     case kAddTo:
       if (tA) {
