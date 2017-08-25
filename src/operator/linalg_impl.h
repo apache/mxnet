@@ -324,9 +324,9 @@ LINALG_GPU_BATCH_TRSM(DtrsmBatched, double)
  * \param A the first operand of the gemm
  * \param B the second operand of the gemm
  * \param C the data to be assigned
- * \tparam tA whether the `A` operand should be transposed first.
- * \tparam tB whether the `B` operand should be transposed first.
- * \tparam s the stream to perform the operation
+ * \param tA whether the `A` operand should be transposed first.
+ * \param tB whether the `B` operand should be transposed first.
+ * \param s the stream to perform the operation
  * \param req the assignment request
  */
 template<typename xpu, typename DType>
@@ -353,8 +353,8 @@ inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
 
 // A cpu specialization for linalg_gemm<xpu, DType> that uses mshadow::dot(), if no cblas.
 #if (MSHADOW_USE_CBLAS == 0)
-template<typename DType>
-inline void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A,
+template<typename xpu, typename DType>
+inline void linalg_gemm(const Tensor<cpu, 2, DType>& A,
                         const Tensor<cpu, 2, DType>& B,
                         const Tensor<cpu, 2, DType>& C,
                         bool tA, bool tB, Stream<cpu> *s,
