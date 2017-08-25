@@ -33,9 +33,7 @@
 #include <utility>
 #include "./operator_common.h"
 #include "./elemwise_op_common.h"
-#if (MSHADOW_USE_CBLAS != 0)
 #include "linalg.h"
-#endif
 
 namespace mxnet {
 namespace op {
@@ -110,12 +108,9 @@ class FullyConnectedOp : public Operator {
           Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())), s);
     }
 
-#if (MSHADOW_USE_CBLAS == 0)
-    // Legacy approach for amalgamation build w/out cblas
-    out = dot(data, wmat.T());
-#else
+    // Legacy approach shown here for comparison:
+    //   out = dot(data, wmat.T());
     linalg_gemm(data, wmat, out, false, true, s);
-#endif
     if (!param_.no_bias) {
       Tensor<xpu, 1, DType> bias = in_data[fullc::kBias].get<xpu, 1, DType>(s);
       out += repmat(bias, data.size(0));
@@ -167,24 +162,18 @@ class FullyConnectedOp : public Operator {
     CHECK_NE(req[fullc::kWeight], kWriteInplace) << "cannot write weight inplace";
     // gradient of weight
     Tensor<xpu, 2, DType> gwmat = in_grad[fullc::kWeight].get<xpu, 2, DType>(s);
-#if (MSHADOW_USE_CBLAS == 0)
-    // Legacy approach for amalgamation build w/out cblas
-    Assign(gwmat, req[fullc::kWeight], dot(grad.T(), data));
-#else
+    // Legacy approach shown here for comparison:
+    //   out = Assign(gwmat, req[fullc::kWeight], dot(grad.T(), data));
     linalg_gemm(grad, data, gwmat, true, false, s, req[fullc::kWeight]);
-#endif
     // gradient of bias
     if (!param_.no_bias) {
       Tensor<xpu, 1, DType> gbias = in_grad[fullc::kBias].get<xpu, 1, DType>(s);
       Assign(gbias, req[fullc::kBias], sum_rows(grad));
     }
     // gradient of data
-#if (MSHADOW_USE_CBLAS == 0)
-    // Legacy approach for amalgamation build w/out cblas
-    Assign(gdata, req[fullc::kData], dot(grad, wmat));
-#else
+    // Legacy approach shown here for comparison:
+    //   Assign(gdata, req[fullc::kData], dot(grad, wmat));
     linalg_gemm(grad, wmat, gdata, false, false, s, req[fullc::kData]);
-#endif
   }
 
  private:

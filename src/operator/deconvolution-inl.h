@@ -34,6 +34,7 @@
 #include <string>
 #include <utility>
 #include "./operator_common.h"
+#include "./linalg.h"
 
 
 namespace mxnet {
@@ -227,7 +228,9 @@ class DeconvolutionOp : public Operator {
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
         mshadow::Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid,
                                               gstride * (gid + 1));
-        tmpc = dot(wmat[gid].T(), temp_dst[gid]);
+        // Legacy approach shown here for comparison:
+        //   tmpc = dot(wmat[gid].T(), temp_dst[gid]);
+        linalg_gemm(wmat[gid], temp_dst[gid], tmpc, true, false, s);
       }
       if (o_pad[0] == 0 && o_pad[1] == 0) {
         out.Slice(i, i + step) = pack_col2patch(temp_col,
@@ -335,16 +338,23 @@ class DeconvolutionOp : public Operator {
         Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
         if (i == 0) {
           Tensor<xpu, 2, DType> tmp_gwmat = gwmat[gid];
-          Assign(tmp_gwmat, req[deconv::kWeight], dot(temp_dst[gid], tmpc.T()));
+          // Legacy approach shown here for comparison:
+          //   Assign(tmp_gwmat, req[deconv::kWeight], dot(temp_dst[gid], tmpc.T()));
+          linalg_gemm(temp_dst[gid], tmpc, tmp_gwmat, false, true, s, req[deconv::kWeight]);
         } else {
-          gwmat[gid] += dot(temp_dst[gid], tmpc.T());
+          // Legacy approach shown here for comparison:
+          //   gwmat[gid] += dot(temp_dst[gid], tmpc.T());
+          linalg_gemm(temp_dst[gid], tmpc, gwmat[gid], false, true, s, kAddTo);
         }
       }
-      if (req[deconv::kData] == kWriteTo || req[deconv::kData] == kWriteInplace
-                                         || req[deconv::kData] == kAddTo) {
+      if (req[deconv::kData] == kWriteTo ||
+          req[deconv::kData] == kWriteInplace ||
+          req[deconv::kData] == kAddTo) {
         for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
           Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
-          temp_dst[gid] = dot(wmat[gid], tmpc);
+          // Legacy approach shown here for comparison:
+          //   temp_dst[gid] = dot(wmat[gid], tmpc);
+          linalg_gemm(wmat[gid], tmpc, temp_dst[gid], false, false, s);
         }
         Assign(gdata.Slice(i, i + step),
                req[deconv::kData],
