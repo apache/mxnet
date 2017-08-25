@@ -132,6 +132,27 @@ class ConvolutionOp : public Operator {
     CHECK_EQ(req[conv::kOut], kWriteTo);
     LayerSetUp(in_data[conv::kData].shape_, out_data[conv::kOut].shape_);
     Stream<xpu>* s = ctx.get_stream<xpu>();
+
+    // initialize weight and col_buffer 3D tensors for using gemm
+    index_t M = conv_out_channels_ / group_;
+    index_t N = conv_out_spatial_dim_;
+    index_t K = kernel_dim_;
+    Tensor<xpu, 3, DType> weight_3d = in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(
+      Shape3(group_, M, K), s);
+    Tensor<xpu, 4, DType> output_4d = out_data[conv::kOut].get_with_shape<xpu, 4, DType>(
+      Shape4(num_, group_, M, N), s);
+
+    // no need to allocating memory and reordering in memory
+    if (is_1x1_) {
+      Tensor<xpu, 4, DType> input_4d = in_data[conv::kData].get_with_shape<xpu, 4, DType>(Shape4(num_, group_, K, N), s);
+      for (index_t n = 0; n < num_; ++n) {
+        Tensor<xpu, 3, DType> input_3d = input_4d[n];
+        Tensor<xpu, 3, DType> output_3d = output_4d[n];
+        for (index_t g = 0; g < group_; ++g) {
+          linalg_gemm(weight_3d[g], input_3d[g], output_3d[g], false, false, s, req[conv::kOut]);
+        }
+      }
+    } else {
     // allocate workspace for col_buffer
     Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace]
       .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_), s);
@@ -143,17 +164,8 @@ class ConvolutionOp : public Operator {
     }
     // create a column buffer using workspace and col_buffer_shape
     TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
-
-    // initialize weight and col_buffer 3D tensors for using gemm
-    index_t M = conv_out_channels_ / group_;
-    index_t N = conv_out_spatial_dim_;
-    index_t K = kernel_dim_;
-    Tensor<xpu, 3, DType> weight_3d = in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(
-      Shape3(group_, M, K), s);
     Tensor<xpu, 3, DType> col_buffer_3d = col_buffer.get_with_shape<xpu, 3, DType>(
       Shape3(group_, K, N), s);
-    Tensor<xpu, 4, DType> output_4d = out_data[conv::kOut].get_with_shape<xpu, 4, DType>(
-      Shape4(num_, group_, M, N), s);
     for (index_t n = 0; n < num_; ++n) {
       // transform image to col_buffer in order to use gemm
       im2col(s, in_data[conv::kData].dptr<DType>()+n*input_dim_, in_data[conv::kData].shape_,
@@ -166,6 +178,8 @@ class ConvolutionOp : public Operator {
         linalg_gemm(weight_3d[g], col_buffer_3d[g], output_3d[g], false, false, s, req[conv::kOut]);
       }
     }
+  }
+
     if (bias_term_) {
       Tensor<xpu, 1, DType> bias = in_data[conv::kBias].get<xpu, 1, DType>(s);
       Tensor<xpu, 3, DType> output_3d = out_data[conv::kOut].get_with_shape<xpu, 3, DType>(
@@ -191,6 +205,36 @@ class ConvolutionOp : public Operator {
     CHECK_EQ(in_data[conv::kWeight].CheckContiguous(), true);
     LayerSetUp(in_grad[conv::kData].shape_, out_grad[conv::kOut].shape_);
     Stream<xpu> *s = ctx.get_stream<xpu>();
+
+    // initialize weight and col_buffer 3D tensors for using gemm
+    // For computing dLoss/d(in_data[kData])
+    index_t M = kernel_dim_;
+    index_t N = conv_out_spatial_dim_;
+    index_t K = conv_out_channels_ / group_;
+    Tensor<xpu, 3, DType> weight_3d = in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(
+      Shape3(group_, K, M), s);
+    Tensor<xpu, 4, DType> out_grad_4d = out_grad[conv::kOut].get_with_shape<xpu, 4, DType>(
+      Shape4(num_, group_, K, N), s);
+    // For computing dLoss/dWeight
+    Tensor<xpu, 3, DType> dweight_3d = in_grad[conv::kWeight].get_with_shape<xpu, 3, DType>(
+      Shape3(group_, K, M), s);
+
+  // no need to allocating memory and reordering in memory
+  if (is_1x1_) {
+    Tensor<xpu, 4, DType> input_4d = in_data[conv::kData].get_with_shape<xpu, 4, DType>(Shape4(num_, group_, M, N), s);
+    Tensor<xpu, 4, DType> in_grad_4d = in_grad[conv::kData].get_with_shape<xpu, 4, DType>(Shape4(num_, group_, M, N), s);
+    for (index_t n = 0; n < num_; ++n) {
+      Tensor<xpu, 3, DType> input_3d = input_4d[n];
+      Tensor<xpu, 3, DType> in_grad_3d = in_grad_4d[n];
+      Tensor<xpu, 3, DType> out_grad_3d = out_grad_4d[n];
+      // gradient w.r.t. input data
+      for (index_t g = 0; g < group_; ++g) {
+        linalg_gemm(weight_3d[g], out_grad_3d[g], in_grad_3d[g], true, false, s);
+        auto request = (n == 0) ? req[conv::kWeight] : kAddTo;
+        linalg_gemm(out_grad_3d[g], input_3d[g], dweight_3d[g], false, true, s, request);
+      }
+    }
+  } else {
     // allocate workspace for col_buffer
     Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace]
       .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_), s);
@@ -202,22 +246,8 @@ class ConvolutionOp : public Operator {
     }
     // create a column buffer using workspace and col_buffer_shape
     TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
-
-    // initialize weight and col_buffer 3D tensors for using gemm
-    // For computing dLoss/d(in_data[kData])
-    index_t M = kernel_dim_;
-    index_t N = conv_out_spatial_dim_;
-    index_t K = conv_out_channels_ / group_;
-    Tensor<xpu, 3, DType> weight_3d = in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(
-      Shape3(group_, K, M), s);
-    Tensor<xpu, 4, DType> out_grad_4d = out_grad[conv::kOut].get_with_shape<xpu, 4, DType>(
-      Shape4(num_, group_, K, N), s);
     Tensor<xpu, 3, DType> col_buffer_3d = col_buffer.get_with_shape<xpu, 3, DType>(
       Shape3(group_, M, N), s);
-    // For computing dLoss/dWeight
-    Tensor<xpu, 3, DType> dweight_3d = in_grad[conv::kWeight].get_with_shape<xpu, 3, DType>(
-      Shape3(group_, K, M), s);
-
     for (index_t n = 0; n < num_; ++n) {
       Tensor<xpu, 3, DType> out_grad_3d = out_grad_4d[n];
       // gradient w.r.t. input data
@@ -241,6 +271,7 @@ class ConvolutionOp : public Operator {
         linalg_gemm(out_grad_3d[g], col_buffer_3d[g], dweight_3d[g], false, true, s, request);
       }
     }
+  }
 
     // gradient w.r.t bias
     if (bias_term_) {
