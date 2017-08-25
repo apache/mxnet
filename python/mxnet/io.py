@@ -815,10 +815,13 @@ class MXDataIter(DataIter):
         check_call(_LIB.MXDataIterGetIndex(self.handle,
                                            ctypes.byref(index_data),
                                            ctypes.byref(index_size)))
-        address = ctypes.addressof(index_data.contents)
-        dbuffer = (ctypes.c_uint64* index_size.value).from_address(address)
-        np_index = np.frombuffer(dbuffer, dtype=np.uint64)
-        return np_index.copy()
+        if index_size.value:
+            address = ctypes.addressof(index_data.contents)
+            dbuffer = (ctypes.c_uint64* index_size.value).from_address(address)
+            np_index = np.frombuffer(dbuffer, dtype=np.uint64)
+            return np_index.copy()
+        else:
+            return None
 
     def getpad(self):
         pad = ctypes.c_int(0)
