@@ -334,6 +334,39 @@ class Huber(Loss):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
+class EpsilonInsensitive(Loss):
+    """Calculates Huber's robust loss function yielding a trimmed mean estimator, i.e. 
+       L2 loss in the center and L1 loss for deviations beyond rho:
+
+    .. math::
+        L = \\mathrm{max}(0, |{output}_i - {label}_i| - \\epsilon)
+
+    Output and label must have the same shape. This is a scalar loss function.
+
+    Parameters
+    ----------
+    epsilon : float
+        Threshold for trimmed epsilon-insensitivity parameter. By default set to 0.1
+    weight : float or None
+        Global scalar weight for loss.
+    sample_weight : Symbol or None
+        Per sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has
+        shape (64, 10) and you want to weight each sample
+        in the batch, `sample_weight` should have shape (64, 1).
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+    """
+    def __init__(self, epsilon=0.1, weight=None, batch_axis=0, **kwargs):
+        super(EpsilonInsensitive, self).__init__(weight, batch_axis, **kwargs)
+        self._epsilon = epsilon
+
+    def hybrid_forward(self, F, output, label, sample_weight=None):
+        label = _reshape_label_as_output(F, output, label)
+        loss = F.maximum(F.abs(output - label) - self._epsilon, F.zeros_like(output))
+        loss = _apply_weighting(F, loss, self._weight, sample_weight)
+        return F.mean(loss, axis=self._batch_axis, exclude=True)
+
 class SoftMargin(Loss):
     """Calculates the soft-margin loss function used in SVMs:
 
@@ -482,6 +515,7 @@ class Quantile(Loss):
     def hybrid_forward(self, F, output, label, sample_weight=None):
         label = _reshape_label_as_output(F, output, label)
         loss = output - label
+        # loss = F.maximum(self._tau * loss, (self._tau - 1.0)* loss)
         loss = F.maximum(self._tau * loss, (self._tau - 1.0)* loss)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
@@ -580,11 +614,11 @@ class RelativeNovelty(Loss):
     .. math::
         L = \\begin{cases}
             \\exp(f - rho) & \\text{ if } y = -1 \\\
-             -f-1 & \\text{ if } y = 1 \\text{ and } f > 0
+             -f-1 & \\text{ if } y = 1 \\text{ and } f > 0 \\
             \\exp(f) & \\text{ if } y = 1 \\text{ and } f <= 0
           \\end{cases}
 
-    Output and label must have the same shape. This is a scalar loss function.
+    output and label must have the same shape. This is a scalar loss function.
 
     Parameters
     ----------
@@ -608,7 +642,7 @@ class RelativeNovelty(Loss):
     def hybrid_forward(self, F, output, label, sample_weight=None):
         label = _reshape_label_as_output(F, output, label)
         loss = -(output > 0) * (output + 1) - (output <= 0) * F.exp(output)
-        loss = (label == 1) * loss + (label == -1) * F.exp(f - self._rho)
+        loss = (label == 1) * loss + (label == -1) * F.exp(output - self._rho)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
     
@@ -640,7 +674,7 @@ class LogCosh(Loss):
     def hybrid_forward(self, F, output, label, sample_weight=None):
         label = _reshape_label_as_output(F, output, label)
         loss = F.abs(label - output)
-        loss += F.log(1.0 + F.exp(-loss))
+        loss = loss + F.log(0.5 + 0.5 * F.exp(-2 * loss))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
     
@@ -721,8 +755,8 @@ class MaxMargin(Loss):
     def hybrid_forward(self, F, output, label, sample_weight=None):
         # Check if the cost matrix has been defined. If not, use a
         # dumb (0,1) loss. This is only executed once, the first time
-        # you invoke the loss. 
-        if (self._delta == None):
+        # you invoke the loss.
+        if (self._delta is None):
             classes = output.shape[self._axis]
             self._delta = F.ones(shape=(classes, classes))
             for i in range(classes):
@@ -763,7 +797,7 @@ class TripletLoss(Loss):
         self._axis = axis
         
     def hybrid_forward(self, F, output1, output2, output3, sample_weight=None):
-        loss = F.sum((f1-f2)**2 - (f1-f3)**2, axis=self._axis) + self._margin
-        loss = nd.maximum(loss, F.zeros_like(loss))
+        loss = F.sum((output1-output2)**2 - (output1-output3)**2, axis=self._axis) + self._margin
+        loss = F.maximum(loss, F.zeros_like(loss))
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
