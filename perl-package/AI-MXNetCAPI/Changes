@@ -1,0 +1,27 @@
+Revision history for Perl extension AI::MXNetCAPI
+
+1.01    Sat Jun 10 23:57:27 PDT 2017
+        - sync with python.
+
+0.9507  Thu May 11 17:04:44 PDT 2017
+        - Added Autograd.
+
+0.9506  Sat Apr 29 20:26:50 PDT 2017
+        - removed compiled swig file.
+
+0.9504  Wed Apr 19 19:07:02 PDT 2017
+        - callbacks bugfix.
+
+0.95  Sun Mar 26 17:42:02 PDT 2017
+        - visible on http://mxnet.io
+
+0.03  Sat Feb 25 13:21:07 PST 2017
+	- sync up with the Python interface.
+
+0.02  Tue Feb 14 07:08:37 PST 2017
+	- prepared for inclusion to the mxnet code repository.
+
+
+0.01  Fri Jan  6 19:40:53 2017
+	- original version
+

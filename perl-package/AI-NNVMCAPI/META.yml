@@ -1,0 +1,22 @@
+---
+abstract: 'Swig interface to nnvm c api'
+author:
+  - 'Sergey Kolychev <sergeykolychev.github@gmail.com>'
+build_requires:
+  ExtUtils::MakeMaker: '0'
+configure_requires:
+  ExtUtils::MakeMaker: '0'
+dynamic_config: 0
+generated_by: 'ExtUtils::MakeMaker version 7.24, CPAN::Meta::Converter version 2.143240'
+license: apache
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: '1.4'
+name: AI-NNVMCAPI
+no_index:
+  directory:
+    - t
+    - inc
+requires:
+  Test::More: '0'
+version: '1.01'

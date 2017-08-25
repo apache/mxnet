@@ -1,0 +1,48 @@
+sudo: false
+
+language: cpp
+
+os:
+  - linux
+# disable for now since clang doesn't support openmp
+#  - osx
+
+env:
+  # code analysis
+  - TASK=lint
+  # TODO: build example
+  - TASK=build
+
+# dependent apt packages
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc-4.8
+      - g++-4.8
+#      - wget
+#      - git
+#      - libcurl4-openssl-dev
+#      - unzip
+#      - libatlas-dev
+#      - libopencv-dev
+
+before_install:
+
+install:
+  - source tests/travis/setup.sh
+
+script:
+  - tests/travis/run_test.sh
+
+cache:
+  directories:
+    - ${HOME}/.cache/usr
+
+notifications:
+# Emails are sent to the committer's git-configured email address by default,
+  email:
+    on_success: change
+    on_failure: always
+  #slack: dmlc:NmroCzntCiWOuxUZpii40USd

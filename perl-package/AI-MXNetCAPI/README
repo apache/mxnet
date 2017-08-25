@@ -1,0 +1,25 @@
+AI-MXNetCAPI version 1.01
+=====================
+
+Swig interface to MXNet c api.
+
+INSTALLATION
+
+To install this module type the following:
+
+   perl Makefile.PL
+   make
+   make test
+   make install
+
+DEPENDENCIES
+
+This module requires mxnet http://mxnet.io
+It's used by AI::MXNet
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2017 by Sergey Kolychev <sergeykolychev.github@gmail.com>
+
+This library is licensed under Apache 2.0 license https://www.apache.org/licenses/LICENSE-2.0
+

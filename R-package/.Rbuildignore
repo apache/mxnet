@@ -1,0 +1,7 @@
+\.o$
+src/*.so$
+\.dll$
+^.*\.Rproj$
+^\.Rproj\.user$
+
+README.md

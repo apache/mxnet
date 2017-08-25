@@ -1,0 +1,3 @@
+
+PKG_CPPFLAGS = -I../inst/include
+PKG_LIBS =  $(LAPACK_LIBS) $(BLAS_LIBS) -L../inst/libs/x64/ -llibmxnet

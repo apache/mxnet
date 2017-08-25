@@ -1,0 +1,305 @@
+---
+title: "Dogs vs. Cats classification with mxnet and R"
+author: "Andrey Ogurtsov (https://github.com/statist-bhfz/)"
+date: "February 25, 2017"
+---
+
+## 1. Packages and prerequisites
+
+Ubuntu 16, **mxnet** 0.9.4 (compiled with GPU support), **imager** for image processind, **abind** for manipulations with arrays. It is almost end-to-end R solution for Kaggle competition https://www.kaggle.com/c/dogs-vs-cats-redux-kernels-edition/, we will use Python only for creating .rec-files.
+
+Thanks to [jeremiedb](https://github.com/jeremiedb), my code for fine-tuning is largely based on his [answers](https://github.com/dmlc/mxnet/issues/4817).
+
+```{r}
+knitr::opts_chunk$set(eval = FALSE)
+```
+
+```{r}
+library(imager)
+library(mxnet)
+library(abind)
+```
+
+
+## 2. Image processing
+
+### 2.1. Renaming train files
+
+```{r}
+files <- list.files("train")
+old_names <- sapply(files, strsplit, split = ".", fixed = TRUE)
+max_length <- max(sapply(old_names, function(x) nchar(x[[2]])))
+zeros <- max_length - sapply(old_names, function(x) nchar(x[[2]]))
+zeros <- sapply(zeros, function(x) paste(rep(0, x), collapse = ""))
+new_names <- Map(function(x, y) {paste0("./train/", 
+                                        x[1], 
+                                        "/",
+                                        y,
+                                        x[2],
+                                        ".jpg")},
+                 x = old_names, y = zeros
+                 )
+
+# Full names
+files <- paste0("./train/", files)
+
+dir.create("./train/cat")
+dir.create("./train/dog")
+
+# New names will be in 00001.jpg format
+Map(function(x, y) file.rename(from = x, to = y), files, new_names)
+```
+
+### 2.2. Train images: 224x224, padded with empty space
+
+```{r}
+files <- list.files("train", recursive = TRUE)
+new_names <- paste0("train_pad_224x224/", files)
+files <- paste0("./train/", files)
+dir.create("./train_pad_224x224/")
+dir.create("./train_pad_224x224/cat")
+dir.create("./train_pad_224x224/dog")
+
+padImage <- function(x) {
+    long_side <- max(dim(x)[1:2])
+    short_side <- min(dim(x)[1:2])
+    pad_img <- pad(x, 
+                   nPix = long_side - short_side,
+                   axes = ifelse(dim(x)[1] < dim(x)[2], "x", "y"))
+    return(pad_img)
+}
+
+Map(function(x, y) {
+    pad_img <- padImage(load.image(x))
+    res_img <- resize(pad_img,  size_x = 224, size_y = 224)
+    imager::save.image(res_img, y)
+}, x = files, y = new_names)
+```
+
+### 2.3. Renaming test files
+
+```{r}
+files <- list.files("test")
+max_length <- max(sapply(files, nchar))
+zeros <- max_length - sapply(files, nchar)
+zeros <- sapply(zeros, function(x) paste(rep(0, x), collapse = ""))
+newnames <- paste0("./test/", zeros, files)
+
+files <- paste0("./test/", files)
+
+Map(function(x, y) file.rename(from = x, to = y), files, newnames)
+```
+
+
+### 2.4. Test images: 224x224, padded with empty space
+
+```{r}
+files <- list.files("test")
+new_names <- paste0("test_pad_224x224/", files)
+files <- paste0("./test/", files)
+dir.create("./test_pad_224x224/")
+
+Map(function(x, y) {
+    pad_img <- padImage(load.image(x))
+    res_img <- resize(pad_img,  size_x = 224, size_y = 224)
+    imager::save.image(res_img, y)
+}, x = files, y = new_names)
+```
+
+### 2.5. Creating .rec files
+
+```{bash, eval = FALSE}
+python ~/mxnet/tools/im2rec.py --list=1 --recursive=1 --train-ratio=0.8 cats_dogs train_pad_224x224
+python ~/mxnet/tools/im2rec.py --num-thread=4 --pass-through=1 cats_dogs_train.lst train_pad_224x224
+python ~/mxnet/tools/im2rec.py --num-thread=4 --pass-through=1 cats_dogs_val.lst train_pad_224x224
+```
+
+
+## 3. Iterators
+
+```{r}
+get_iterator <- function(data_shape, 
+						 train_data, 
+						 val_data, 
+						 batch_size = 128) {
+    train <- mx.io.ImageRecordIter(
+    	path.imgrec = train_data,
+    	batch.size  = batch_size,
+        data.shape  = data_shape,
+    	rand.crop   = TRUE,
+    	rand.mirror = TRUE)
+  
+    val <- mx.io.ImageRecordIter(
+    	path.imgrec = val_data,
+    	batch.size  = batch_size,
+    	data.shape  = data_shape,
+    	rand.crop   = FALSE,
+    	rand.mirror = FALSE
+    	)
+ 
+  return(list(train = train, val = val))
+}
+```
+
+
+```{r}
+data  <- get_iterator(data_shape = c(224, 224, 3),
+         train_data = "/media/andrey/Data/KAGGLE/cats_dogs/cats_dogs_train.rec",
+         val_data   = "/media/andrey/Data/KAGGLE/cats_dogs/cats_dogs_val.rec",
+         batch_size = 8)
+train <- data$train
+val   <- data$val
+```
+
+
+## 4. Load pretrained model
+
+Model from http://data.dmlc.ml/models/imagenet/
+Last fully connected layes for 1000 classes replaced with new layer for 2 classes.
+
+
+```{r}
+inception_bn <- mx.model.load("models/inception_bn/Inception-BN", 
+							  iteration = 126)
+
+symbol <- inception_bn$symbol
+# check symbol$arguments for layer names
+internals <- symbol$get.internals()
+outputs <- internals$outputs
+
+flatten <- internals$get.output(which(outputs == "flatten_output"))
+
+new_fc <- mx.symbol.FullyConnected(data = flatten, 
+                                   num_hidden = 2, 
+                                   name = "fc1") 
+                        # set name to original name in symbol$arguments
+new_soft <- mx.symbol.SoftmaxOutput(data = new_fc, 
+                                    name = "softmax")
+                        # set name to original name in symbol$arguments
+
+arg_params_new <- mxnet:::mx.model.init.params(
+	symbol = new_soft, 
+    input.shape = c(224, 224, 3, 8), 
+    initializer = mxnet:::mx.init.uniform(0.1), 
+    ctx = mx.gpu(0)
+	)$arg.params
+fc1_weights_new <- arg_params_new[["fc1_weight"]]
+fc1_bias_new <- arg_params_new[["fc1_bias"]]
+
+arg_params_new <- inception_bn$arg.params
+
+arg_params_new[["fc1_weight"]] <- fc1_weights_new 
+arg_params_new[["fc1_bias"]] <- fc1_bias_new 
+```
+
+
+## 5. Train (fine-tune) model
+
+```{r}
+model <- mx.model.FeedForward.create(
+  symbol             = new_soft,
+  X                  = train,
+  eval.data          = val,
+  ctx                = mx.gpu(0),
+  eval.metric        = mx.metric.accuracy,
+  num.round          = 1,
+  learning.rate      = 0.05,
+  momentum           = 0.9,
+  wd                 = 0.00001,
+  kvstore            = "local",
+  array.batch.size   = 128,
+  epoch.end.callback = mx.callback.save.checkpoint("inception_bn"),
+  batch.end.callback = mx.callback.log.train.metric(150),
+  initializer        = mx.init.Xavier(factor_type = "in", magnitude = 2.34),
+  optimizer          = "sgd",
+  arg.params         = arg_params_new,
+  aux.params         = inception_bn$aux.params
+)
+```
+
+```{r}
+model <- mx.model.load("inception_bn", 1)
+```
+
+Continue training with decreased speed (`learning.rate = 0.03`):
+
+```{r}
+model <- mx.model.FeedForward.create(
+  symbol             = model$symbol,
+  X                  = train,
+  eval.data          = val,
+  ctx                = mx.gpu(0),
+  eval.metric        = mx.metric.accuracy,
+  num.round          = 5,
+  learning.rate      = 0.03,
+  momentum           = 0.9,
+  wd                 = 0.00001,
+  kvstore            = "local",
+  array.batch.size   = 100,
+  epoch.end.callback = mx.callback.save.checkpoint("inception_bn"),
+  batch.end.callback = mx.callback.log.train.metric(150),
+  initializer        = mx.init.Xavier(factor_type = "in", magnitude = 2.34),
+  optimizer          = "sgd",
+  arg.params         = model$arg.params, 
+  aux.params         = model$aux.params
+)
+```
+
+```{r}
+model <- mx.model.load("inception_bn", 1)
+```
+
+My R session crashed after each iteration, so I made some iterations manually.
+
+
+## 6. Make predictions
+
+```{r}
+preprocImage<- function(src,              # URL or file location
+						height = 224,        
+						width = 224,  
+						num_channels = 3, # 3 for RGB, 1 for grayscale
+						mult_by = 1,      # set to 255 for normalized image
+						crop = FALSE) {   # no crop by default
+	
+	im <- load.image(src)
+	
+	if (crop) {
+		shape <- dim(im)
+        short_edge <- min(shape[1:2])
+		xx <- floor((shape[1] - short_edge) / 2)
+        yy <- floor((shape[2] - short_edge) / 2) 
+        im <- crop.borders(im, xx, yy)
+	}
+	
+	resized <- resize(im,  size_x = width, size_y = height)
+	arr <- as.array(resized) * mult_by
+	dim(arr) <- c(width, height, num_channels, 1)
+	return(arr)
+} 
+```
+
+```{r}
+files <- list.files("test_pad_224x224/")
+files <- paste0("./test_pad_224x224/", files)
+
+# ind <- seq(1, 12500, 1250) 
+# probs <- numeric()
+# for (i in ind) {
+#    images <- lapply(files[i:i+1249], preprocImage, mult_by = 255)
+#    images <- do.call(abind, images)
+#    probs[i:i+1249] <- predict(model, X = images, ctx = mx.gpu(0))
+# }
+
+files <- split(files, rep(1:1250, each = 10))
+probs <- lapply(files, function(x) {
+    images <- lapply(x, preprocImage, mult_by = 255)
+    images <- do.call(abind, images)
+    probs <- predict(model, X = images, ctx = mx.gpu(0))
+})
+saveRDS(probs, "probs.rds")
+probs <- t(do.call(cbind, probs))
+
+preds <- data.frame(id = 1:12500, label = probs[, 2])
+write.csv(preds, "subm.csv", row.names = FALSE, quote = FALSE)
+```

@@ -1,0 +1,148 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+*~
+
+# doc
+doc/html
+doc/latex
+doc/doc
+docs/web-data
+
+#dmlc
+config.mk
+
+*.pyc
+.Rhistory
+*log
+Debug
+*suo
+tracker
+
+# vim
+*.swp
+*.swo
+*.swn
+.vimrc
+.ycm_extra_conf.py
+.ycm_extra_conf.pyc
+.clang-format
+
+# Emacs
+.#*
+.clang_complete
+.dir-locals.el
+__pycache__
+*.pkl
+*.params
+*.json
+*.d
+build
+cmake-build*
+data
+recommonmark
+deps
+
+# R
+*.Rcheck
+*.rds
+*.Rproj
+.Rproj.user
+R-package/inst/*
+*.tar.gz
+*.tgz
+R-package/man/*.Rd
+R-package/R/mxnet_generated.R
+
+# data
+*.rec
+*.lst
+*.zip
+*ubyte
+*.bin
+*.txt
+!CMakeLists.txt
+
+# ipython notebook
+*_pb2.py
+*.ipynb_checkpoints*
+input.txt*
+
+# Jetbrain
+.idea
+
+# ctags
+tags
+
+# Scala package
+*.class
+scala-package/*/target/
+scala-package/*/*/target/
+*.scala_dependencies
+*.worksheet
+*.idea
+*.iml
+*.classpath
+*.project
+*.settings
+!scala-package/*/bin
+*.bak
+*/node_modules/
+
+# Eclipse project config
+.project
+.cproject
+.pydevproject
+CMakeFiles
+cmake_install.cmake
+lib
+
+# Visual Studio Code
+.vscode
+
+# Mac OS X
+.DS_Store
+
+#Notebook Automated Test
+!tests/nightly/test_tutorial_config.txt
+!tests/nightly/TestNotebook
+
+# pip building tools
+tools/pip_package/build
+tools/pip_package/dist
+tools/pip_package/mxnet.egg-info
+tools/pip_package/mxnet
+
+# temporary path for building dependencies when building wheel
+./deps/
+bld
+./tmp/*
+*.jar
+target
+
+bin/im2rec

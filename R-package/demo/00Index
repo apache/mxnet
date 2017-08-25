@@ -1,0 +1,7 @@
+basic_bench                 Basic benchmark
+basic_executor              Basic executor operations
+basic_kvstore               Basic kvstore operations
+basic_model                 Basic model operations
+basic_ndarray               Basic ndarray operations
+basic_random                Basic random number generators
+basic_symbol                Basic symbol operations

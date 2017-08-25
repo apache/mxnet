@@ -1,0 +1,10 @@
+Changes
+Makefile.PL
+MANIFEST
+META.json
+META.yml
+README
+t/AI-NNVMCAPI.t
+lib/AI/NNVMCAPI.pm
+nnvm.i
+nnvm_typemaps.i

@@ -1,0 +1,47 @@
+{
+   "abstract" : "Perl interface to MXNet machine learning library",
+   "author" : [
+      "Sergey Kolychev <sergeykolychev.github@gmail.com>"
+   ],
+   "dynamic_config" : 0,
+   "generated_by" : "ExtUtils::MakeMaker version 7.24, CPAN::Meta::Converter version 2.143240",
+   "license" : [
+      "apache_2_0"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "AI-MXNet",
+   "no_index" : {
+      "directory" : [
+         "t",
+         "inc"
+      ]
+   },
+   "prereqs" : {
+      "build" : {
+         "requires" : {}
+      },
+      "configure" : {
+         "requires" : {
+            "ExtUtils::MakeMaker" : "6.30"
+         }
+      },
+      "runtime" : {
+         "requires" : {
+            "AI::MXNetCAPI" : "1.01",
+            "AI::NNVMCAPI" : "1.01",
+            "Function::Parameters" : "1.0705",
+            "GraphViz" : "2.14",
+            "Mouse" : "v2.1.0",
+            "PDL" : "2.007"
+         }
+      },
+      "test" : {
+         "requires" : {}
+      }
+   },
+   "release_status" : "stable",
+   "version" : "1.01"
+}

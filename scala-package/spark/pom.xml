@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>ml.dmlc.mxnet</groupId>
+    <artifactId>mxnet-parent_2.11</artifactId>
+    <version>0.10.1-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>mxnet-spark_2.11</artifactId>
+  <version>0.10.1-SNAPSHOT</version>
+  <name>MXNet Scala Package - Spark ML</name>
+
+  <properties>
+    <spark.version>1.6.1</spark.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>ml.dmlc.mxnet</groupId>
+      <artifactId>mxnet-core_${scala.binary.version}</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-mllib_${scala.binary.version}</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>args4j</groupId>
+      <artifactId>args4j</artifactId>
+      <version>2.33</version>
+    </dependency>
+  </dependencies>
+</project>
