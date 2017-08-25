@@ -22,12 +22,12 @@ def readme():
     with open('README.rst') as f:
         return f.read()
 
-setup(name='mxnet-coreml-converter',
-      version='0.1.0a13',
+setup(name='mxnet-to-coreml',
+      version='0.1.0',
       description='Tool to convert MXNet models into Apple CoreML model format.',
       long_description=readme(),
       classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: MacOS :: MacOS X',
