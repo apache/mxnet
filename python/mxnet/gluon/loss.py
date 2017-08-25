@@ -379,13 +379,13 @@ class CTCLoss(Loss):
         return _apply_weighting(F, loss, self._weight, sample_weight)
 
 class Huber(Loss):
-    """Calculates Huber's robust loss function yielding a trimmed mean estimator, i.e. 
+    """Calculates Huber's robust loss function yielding a trimmed mean estimator, i.e.
        L2 loss in the center and L1 loss for deviations beyond rho:
 
     .. math::
-        L = \\begin{cases} \\frac{1}{2 \\rho} ({output}_i - {label}_i)^2 & 
+        L = \\begin{cases} \\frac{1}{2 \\rho} ({output}_i - {label}_i)^2 &
                            \\text{ if } |{output}_i - {label}_i| < \\rho \\\
-                           |{output}_i - {label}_i| - \\frac{\\rho}{2} & 
+                           |{output}_i - {label}_i| - \\frac{\\rho}{2} &
                            \\text{ otherwise }
             \\end{cases}
 
@@ -417,7 +417,7 @@ class Huber(Loss):
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 class EpsilonInsensitive(Loss):
-    """Calculates Huber's robust loss function yielding a trimmed mean estimator, i.e. 
+    """Calculates Huber's robust loss function yielding a trimmed mean estimator, i.e.
        L2 loss in the center and L1 loss for deviations beyond rho:
 
     .. math::
@@ -506,7 +506,7 @@ class SquaredSoftMargin(Loss):
         loss = F.maximum(1.0 - output * label, F.zeros_like(output))**2
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
-    
+   
 class Exponential(Loss):
     """Calculates the exponential hinge loss (quite obscure):
 
@@ -535,7 +535,7 @@ class Exponential(Loss):
         loss = F.exp(-output * label)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
-    
+   
 class Logistic(Loss):
     """Calculates the logistic loss (for binary losses only):
 
@@ -564,7 +564,7 @@ class Logistic(Loss):
         loss = F.log(1.0 + F.exp(-output * label))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
-    
+   
 class Quantile(Loss):
     """Calculates Koenker's quantile regression loss function yielding an estimate of the
        appropriately chosen quantile rather than the mean (or median):
@@ -603,17 +603,17 @@ class Quantile(Loss):
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 class Langford(Loss):
-    """Calculates the Huberized soft-margin loss that is used in VW (Vowpal Wabbit). 
-       It is given by a squared loss for margin values of [-1, 0] and by a linear 
-       loss for values larger than that. 
+    """Calculates the Huberized soft-margin loss that is used in VW (Vowpal Wabbit).
+       It is given by a squared loss for margin values of [-1, 0] and by a linear
+       loss for values larger than that.
 
     .. math::
         L = \\begin{cases}
-          0 & 
+          0 &
           \\text{ if } {output}_i {label}_i > 1 \\\
-          \\frac{1}{2} - {output}_i {label}_i & 
+          \\frac{1}{2} - {output}_i {label}_i &
           \\text{ if } {output}_i {label}_i < 0 \\\
-          \\frac{1}{2} (1 - {output}_i {label}_i)^2 & 
+          \\frac{1}{2} (1 - {output}_i {label}_i)^2 &
           \\text{ otherwise }
           \\end{cases}
 
@@ -685,7 +685,7 @@ class DualKL(Loss):
         loss = (label == -1) * F.exp(output) - (label == 1) * (output + 1)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
-    
+   
 class RelativeNovelty(Loss):
     """Estimates a relative novelty detector. See the Song, Teo and
        Smola (STS), 2009 for details. The main point is to estimate
@@ -727,11 +727,11 @@ class RelativeNovelty(Loss):
         loss = (label == 1) * loss + (label == -1) * F.exp(output - self._rho)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
-    
+   
 class LogCosh(Loss):
     """Calculates the smoothed L1 loss, aka log cosh loss in a
        numerically stable manner (i.e. without exponentiating large
-       values of the cosh function. 
+       values of the cosh function.
 
     .. math::
         L = \\log 2 \\cosh ({output}_i - {label}_i)
@@ -759,18 +759,18 @@ class LogCosh(Loss):
         loss = loss + F.log(0.5 + 0.5 * F.exp(-2 * loss))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
-    
+   
 class Poisson(Loss):
     """Calculates the Poisson loss function (up to the normalization
        by a factorial in the label, due to computational efficiency
-       reasons). 
-       
+       reasons).
+      
        NOTE THAT THIS IS DIFFERENT FROM THE POISSON LOSS IN PYTORCH
        AND KERAS INSOFAR AS IT USES THE EPXONENTIAL VERSION. THAT ONE
        DOESN'T SUFFER FROM LOG 0 PROBLEMS.
 
     .. math::
-        L = -\\log p({label}_i|{output}_i) 
+        L = -\\log p({label}_i|{output}_i)
           = \\log {label}_i! + \\exp({output}_i) - {output}_i {label}_i
 
     Output and label must have the same shape. This is a scalar loss function.
@@ -802,7 +802,7 @@ class MaxMargin(Loss):
        which measures the cost for misclassifying label y as y'. This
        matrix can be specified at construction time. If it does not
        exist, we will susbstitute it with a 0-1 loss with automagic
-       size inference. 
+       size inference.
 
     .. math::
        L = {max}_{y} [\\delta({label}, y) + {output}[y]] - {output}_{label}
@@ -815,9 +815,9 @@ class MaxMargin(Loss):
     delta : loss matrix, default None. In this case it is presumed to
         be a (0,1) loss, i.e. a constant loss of 1 for all
         misclassifications. Otherwise its dimensionality must match
-        that of the number of classes. 
+        that of the number of classes.
     axis : int, default -1
-        The axis to sum over when taking the maximum. 
+        The axis to sum over when taking the maximum.
     weight : float or None
         Global scalar weight for loss.
     sample_weight : Symbol or None
@@ -842,7 +842,7 @@ class MaxMargin(Loss):
             classes = output.shape[self._axis]
             self._delta = F.ones(shape=(classes, classes))
             for i in range(classes):
-                self._delta[i,i] = 0
+                self._delta[i, i] = 0
         loss = -F.pick(output, label, axis=self._axis, keepdims=True)
         loss += F.max(output + F.take(self._delta, label), axis=self._axis, keepdims=True)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
@@ -860,7 +860,7 @@ class TripletLoss(Loss):
     Parameters
     ----------
     margin : float
-        Margin of separation between correct and incorrect pair. 
+        Margin of separation between correct and incorrect pair.
     weight : float or None
         Global scalar weight for loss.
     sample_weight : Symbol or None
@@ -869,7 +869,7 @@ class TripletLoss(Loss):
         shape (64, 10) and you want to weight each sample
         in the batch, `sample_weight` should have shape (64, 1).
     axis : int, default 1
-        The axis over which to sum distances. 
+        The axis over which to sum distances.
     batch_axis : int, default 0
         The axis that represents mini-batch.
     """
@@ -877,9 +877,10 @@ class TripletLoss(Loss):
         super(TripletLoss, self).__init__(weight, batch_axis, **kwargs)
         self._margin = margin
         self._axis = axis
-        
+       
     def hybrid_forward(self, F, output1, output2, output3, sample_weight=None):
         loss = F.sum((output1-output2)**2 - (output1-output3)**2, axis=self._axis) + self._margin
         loss = F.maximum(loss, F.zeros_like(loss))
+        loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
