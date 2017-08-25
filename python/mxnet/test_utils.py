@@ -346,7 +346,9 @@ def create_sparse_array(shape, stype, data_init=None, rsp_indices=None,
                                                   modifier_func=modifier_func,
                                                   shuffle_csr_indices=shuffle_csr_indices)
     else:
-        raise str("Unknown storage type: " + stype)
+        msg = "Unknown storage type: " + stype
+        raise AssertionError(msg)
+
     return arr_data
 
 
