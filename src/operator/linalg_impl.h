@@ -342,6 +342,8 @@ inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
     case kWriteTo:
     case kWriteInplace:
       linalg_gemm(A, B, C, DType(1.0), DType(0.0), tA, tB, s);
+
+
       break;
     case kAddTo:
       linalg_gemm(A, B, C, DType(1.0), DType(1.0), tA, tB, s);
@@ -365,10 +367,34 @@ inline void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A,
       break;
     case kWriteTo:
     case kWriteInplace:
-      C = dot(tA ? A.T() : A, tB ? B.T() : B);
+  	  if (tA) {
+  	    if (tB) {
+  	      const_cast<Tensor<xpu, 2, DType>&>(C) = dot(A.T(), B.T());
+  	    } else {
+  	      const_cast<Tensor<xpu, 2, DType>&>(C) = dot(A.T(), B);
+  	    }
+  	  } else {
+  	    if (tB) {
+  	      const_cast<Tensor<xpu, 2, DType>&>(C) = dot(A, B.T());
+  	    } else {
+  	      const_cast<Tensor<xpu, 2, DType>&>(C) = dot(A, B);
+  	    }
+  	  }
       break;
     case kAddTo:
-      C += dot(tA ? A.T() : A, tB ? B.T() : B);
+      if (tA) {
+        if (tB) {
+          const_cast<Tensor<xpu, 2, DType>&>(C) += dot(A.T(), B.T());
+        } else {
+          const_cast<Tensor<xpu, 2, DType>&>(C) += dot(A.T(), B);
+        }
+      } else {
+        if (tB) {
+          const_cast<Tensor<xpu, 2, DType>&>(C) += dot(A, B.T());
+        } else {
+          const_cast<Tensor<xpu, 2, DType>&>(C) += dot(A, B);
+        }
+      }
       break;
     default:
       LOG(FATAL) << "not reached";
