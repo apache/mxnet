@@ -30,36 +30,38 @@ from . import optimizer as opt
 
 def _ctype_key_value(keys, vals):
     """
-    Returns ctype arrays for the key-value args, and the class of the key (either int or str).
+    Returns ctype arrays for the key-value args, and the whether string keys are used.
     For internal use only.
     """
     if isinstance(keys, (tuple, list)):
         assert(len(keys) == len(vals))
         c_keys = []
         c_vals = []
-        key_type = None
+        use_str_keys = None
         for key, val in zip(keys, vals):
-            c_key_i, c_val_i, t = _ctype_key_value(key, val)
+            c_key_i, c_val_i, str_keys_i = _ctype_key_value(key, val)
             c_keys += c_key_i
             c_vals += c_val_i
-            key_type = t if key_type is None else key_type
-            assert(key_type == t), "inconsistent types of keys detected."
-        c_keys_arr = c_array(ctypes.c_char_p, c_keys) if key_type == str \
+            use_str_keys = str_keys_i if use_str_keys is None else use_str_keys
+            assert(use_str_keys == str_keys_i), "inconsistent types of keys detected."
+        c_keys_arr = c_array(ctypes.c_char_p, c_keys) if use_str_keys \
                      else c_array(ctypes.c_int, c_keys)
         c_vals_arr = c_array(NDArrayHandle, c_vals)
-        return (c_keys_arr, c_vals_arr, key_type)
+        return (c_keys_arr, c_vals_arr, use_str_keys)
 
-    assert(isinstance(keys, (int, str))), "unexpected type for keys: " + str(type(keys))
+    assert(isinstance(keys, (int,) + string_types)), \
+           "unexpected type for keys: " + str(type(keys))
+    use_str_keys = isinstance(keys, string_types)
     if isinstance(vals, NDArray):
-        c_keys = c_array(ctypes.c_char_p, [c_str(keys)]) if isinstance(keys, str) \
+        c_keys = c_array(ctypes.c_char_p, [c_str(keys)]) if use_str_keys \
                  else c_array(ctypes.c_int, [keys])
-        return (c_keys, c_array(NDArrayHandle, [vals.handle]), type(keys))
+        return (c_keys, c_array(NDArrayHandle, [vals.handle]), use_str_keys)
     else:
         for value in vals:
             assert(isinstance(value, NDArray))
-        c_keys = c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)) if isinstance(keys, str) \
+        c_keys = c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)) if use_str_keys \
                  else c_array(ctypes.c_int, [keys] * len(vals))
-        return (c_keys, c_array(NDArrayHandle, [value.handle for value in vals]), type(keys))
+        return (c_keys, c_array(NDArrayHandle, [value.handle for value in vals]), use_str_keys)
 
 def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
@@ -121,8 +123,8 @@ class KVStore(object):
         >>> keys = [5, 7, 9]
         >>> kv.init(keys, [mx.nd.ones(shape)]*len(keys))
         """
-        ckeys, cvals, key_type = _ctype_key_value(key, value)
-        if key_type == str:
+        ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
+        if use_str_keys:
             check_call(_LIB.MXKVStoreInitEx(self.handle, mx_uint(len(ckeys)), ckeys, cvals))
         else:
             check_call(_LIB.MXKVStoreInit(self.handle, mx_uint(len(ckeys)), ckeys, cvals))
@@ -186,8 +188,8 @@ class KVStore(object):
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
         """
-        ckeys, cvals, key_type = _ctype_key_value(key, value)
-        if key_type == str:
+        ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
+        if use_str_keys:
             check_call(_LIB.MXKVStorePushEx(
                 self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
         else:
@@ -255,8 +257,8 @@ class KVStore(object):
         [ 2.  2.  2.]]
         """
         assert(out is not None)
-        ckeys, cvals, key_type = _ctype_key_value(key, out)
-        if key_type == str:
+        ckeys, cvals, use_str_keys = _ctype_key_value(key, out)
+        if use_str_keys:
             check_call(_LIB.MXKVStorePullEx(
                 self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
         else:
@@ -315,11 +317,11 @@ class KVStore(object):
         """
         assert(out is not None)
         assert(row_ids is not None)
-        ckeys, cvals, key_type = _ctype_key_value(key, out)
+        ckeys, cvals, use_str_keys = _ctype_key_value(key, out)
         _, crow_ids, _ = _ctype_key_value(key, row_ids)
         assert(len(crow_ids) == len(cvals)), \
                "the number of row_ids doesn't match the number of values"
-        if key_type == str:
+        if use_str_keys:
             check_call(_LIB.MXKVStorePullRowSparseEx(
                 self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
         else:
