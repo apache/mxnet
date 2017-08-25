@@ -290,7 +290,7 @@ class KVStoreDistServer {
                                     inputs.push_back(recved);
                                     inputs.push_back(merged.array);
                                     outputs.push_back(out);
-                                    op::ElemwiseBinaryOp::LaunchEx<cpu, mshadow::op::plus>(
+                                    op::ElemwiseBinaryOp::ComputeEx<cpu, mshadow::op::plus>(
                                       {}, {}, inputs, {kWriteTo}, outputs);
                                   }, recved.ctx(), const_vars, {out.var()},
                                   FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);

@@ -182,7 +182,20 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeFirstItemsEx<cpu>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", IdentityAttrLikeRhsStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs& attrs,
+                                                     const Context& ctx,
+                                                     std::vector<int> *in_attrs,
+                                                     std::vector<int> *out_attrs) {
+  // TODO(junwu): add ctx info into storage inference logic
+  CHECK_EQ(in_attrs->size(), static_cast<size_t>(2)) << " in operator " << attrs.name;
+  CHECK_EQ(out_attrs->size(), static_cast<size_t>(1)) << " in operator " << attrs.name;
+  auto &in = *in_attrs;
+  auto &out = *out_attrs;
+  CHECK_NE(in[1], kUndefinedStorage) << "rhs storage type must be known";
+  if (in[0] == kUndefinedStorage) in[0] = in[1];
+  if (out[0] == kUndefinedStorage) out[0] = in[1];
+  return true;
+})
 .set_attr<nnvm::FGradient>(
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
@@ -272,7 +285,7 @@ The storage type of ``reciprocal`` output is always dense
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_reciprocal)
 .set_attr<FCompute>("FCompute<cpu>",
-  ElemwiseBinaryOp::Launch<cpu, unary_bwd<mshadow_op::reciprocal_grad> >);
+  ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::reciprocal_grad> >);
 
 // abs
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(abs, cpu, mshadow_op::abs)

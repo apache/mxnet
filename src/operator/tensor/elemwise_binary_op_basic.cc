@@ -81,10 +81,10 @@ NNVM_REGISTER_OP(_backward_sub)
 
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_mul)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_mul)
-.set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs& attrs,
-                                                     const Context& ctx,
-                                                     std::vector<int> *in_attrs,
-                                                     std::vector<int> *out_attrs) {
+  .set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs &attrs,
+                                                       const Context &ctx,
+                                                       std::vector<int> *in_attrs,
+                                                       std::vector<int> *out_attrs) {
     CHECK_EQ(in_attrs->size(), 2U) << " in operator " << attrs.name;
     CHECK_EQ(out_attrs->size(), 1U) << " in operator " << attrs.name;
     NDArrayStorageType stype = kDefaultStorage;
@@ -99,9 +99,9 @@ MXNET_ADD_SPARSE_OP_ALIAS(elemwise_mul)
     STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, stype);
     return true;
   })
-.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Launch<cpu, mshadow::op::mul>)
-.set_attr<FComputeEx>("FComputeEx<cpu>",
-                      ElemwiseBinaryOp::LaunchExDenseLRValue<cpu, mshadow::op::mul, true, true>)
+  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow::op::mul>)
+  .set_attr<FComputeEx>("FComputeEx<cpu>",
+                        ElemwiseBinaryOp::ComputeExDenseLRValue<cpu, mshadow::op::mul, true, true>)
 .add_alias("_mul").add_alias("_Mul")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_mul"});
 

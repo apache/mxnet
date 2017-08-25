@@ -26,10 +26,10 @@
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(elemwise_add)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::LaunchWithHalf2<gpu, mshadow::op::plus>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, mshadow::op::plus>);
 
 NNVM_REGISTER_OP(_grad_add)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::LaunchWithHalf2<gpu, mshadow::op::plus>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, mshadow::op::plus>);
 
 NNVM_REGISTER_OP(_backward_add)
 .set_attr<FCompute>("FCompute<gpu>",
@@ -37,14 +37,14 @@ NNVM_REGISTER_OP(_backward_add)
     mshadow_op::identity>);
 
 NNVM_REGISTER_OP(_sub)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::LaunchWithHalf2<gpu, mshadow::op::minus>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, mshadow::op::minus>);
 
 NNVM_REGISTER_OP(_backward_sub)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::BackwardUseNoneWithHalf2<
   gpu, mshadow_op::identity, mshadow_op::negation>);
 
 NNVM_REGISTER_OP(_mul)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::LaunchWithHalf2<gpu, mshadow::op::mul>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, mshadow::op::mul>);
 
 NNVM_REGISTER_OP(_backward_mul)
 .set_attr<FCompute>("FCompute<gpu>",
@@ -52,14 +52,14 @@ NNVM_REGISTER_OP(_backward_mul)
 
 NNVM_REGISTER_OP(_div)
 .set_attr<FCompute>("FCompute<gpu>",
-  ElemwiseBinaryOp::ElemwiseBinaryOp::LaunchWithHalf2<gpu, mshadow::op::div>);
+  ElemwiseBinaryOp::ElemwiseBinaryOp::ComputeWithHalf2<gpu, mshadow::op::div>);
 
 NNVM_REGISTER_OP(_backward_div)
 .set_attr<FCompute>("FCompute<gpu>",
   ElemwiseBinaryOp::BackwardUseInWithHalf2<gpu, mshadow_op::div_grad, mshadow_op::div_rgrad>);
 
 NNVM_REGISTER_OP(_mod)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::LaunchWithHalf2<gpu, mshadow_op::mod>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, mshadow_op::mod>);
 
 NNVM_REGISTER_OP(_backward_mod)
 .set_attr<FCompute>("FCompute<gpu>",

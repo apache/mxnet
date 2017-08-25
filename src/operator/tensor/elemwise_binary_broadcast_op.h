@@ -144,7 +144,7 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   int ndim = BinaryBroadcastShapeCompact(inputs[0].shape_, inputs[1].shape_, outputs[0].shape_,
                                          &new_lshape, &new_rshape, &new_oshape);
   if (!ndim) {
-    ElemwiseBinaryOp::Launch<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    ElemwiseBinaryOp::Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
   } else {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {

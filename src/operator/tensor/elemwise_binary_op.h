@@ -436,12 +436,12 @@ class ElemwiseBinaryOp : public OpBase {
   /*! \brief LaunchEx allowing dense lvalue and/or rvalue */
   template<typename xpu, typename OP, typename DType,
     bool lhs_may_be_dense, bool rhs_may_be_dense, typename BackupCompute>
-  static void LaunchExDenseLRValue_(const nnvm::NodeAttrs &attrs,
-                                    const OpContext &ctx,
-                                    const std::vector<NDArray> &inputs,
-                                    const std::vector<OpReqType> &req,
-                                    const std::vector<NDArray> &outputs,
-                                    BackupCompute backup_compute) {
+  static void ComputeExDenseLRValue_(const nnvm::NodeAttrs &attrs,
+                                     const OpContext &ctx,
+                                     const std::vector<NDArray> &inputs,
+                                     const std::vector<OpReqType> &req,
+                                     const std::vector<NDArray> &outputs,
+                                     BackupCompute backup_compute) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(inputs.size(), 2);
@@ -453,7 +453,7 @@ class ElemwiseBinaryOp : public OpBase {
         if (sparse->storage_type() == kDefaultStorage) {
           // Do we need to worry about sparse result here?
           CHECK_EQ(outputs[0].storage_type(), kDefaultStorage);
-          MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Launch<xpu, OP>);
+          MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Compute<xpu, OP>);
           return;
         }
       }
@@ -483,7 +483,7 @@ class ElemwiseBinaryOp : public OpBase {
         // May be lhs=dense, rhs=sparse
         FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
                              backup_compute,
-                             "LaunchExDenseLRValue_");
+                             "ComputeExDenseLRValue_");
       }
     }
   }
@@ -599,11 +599,11 @@ class ElemwiseBinaryOp : public OpBase {
 
  public:
   template<typename xpu, typename OP>
-  static void Launch(const nnvm::NodeAttrs &attrs,
-                     const OpContext &ctx,
-                     const std::vector<TBlob> &inputs,
-                     const std::vector<OpReqType> &req,
-                     const std::vector<TBlob> &outputs) {
+  static void Compute(const nnvm::NodeAttrs &attrs,
+                      const OpContext &ctx,
+                      const std::vector<TBlob> &inputs,
+                      const std::vector<OpReqType> &req,
+                      const std::vector<TBlob> &outputs) {
     using namespace mxnet_op;
     if (req[0] != kNullOp) {
       Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -622,11 +622,11 @@ class ElemwiseBinaryOp : public OpBase {
   }
 
   template<typename xpu, typename OP>
-  static void LaunchWithHalf2(const nnvm::NodeAttrs &attrs,
-                     const OpContext &ctx,
-                     const std::vector<TBlob> &inputs,
-                     const std::vector<OpReqType> &req,
-                     const std::vector<TBlob> &outputs) {
+  static void ComputeWithHalf2(const nnvm::NodeAttrs &attrs,
+                               const OpContext &ctx,
+                               const std::vector<TBlob> &inputs,
+                               const std::vector<OpReqType> &req,
+                               const std::vector<TBlob> &outputs) {
     using namespace mxnet_op;
     if (req[0] != kNullOp) {
       Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -645,11 +645,11 @@ class ElemwiseBinaryOp : public OpBase {
   }
 
   template<typename xpu, typename OP>
-  static void LaunchEx(const nnvm::NodeAttrs &attrs,
-                       const OpContext &ctx,
-                       const std::vector<NDArray> &inputs,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<NDArray> &outputs) {
+  static void ComputeEx(const nnvm::NodeAttrs &attrs,
+                        const OpContext &ctx,
+                        const std::vector<NDArray> &inputs,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<NDArray> &outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(inputs.size(), 2);
@@ -682,26 +682,26 @@ class ElemwiseBinaryOp : public OpBase {
             });
             break;
           default:
-            CHECK(false) << "Unsupported storage type for LaunchEx" << inputs[0].storage_type();
+            CHECK(false) << "Unsupported storage type for ComputeEx" << inputs[0].storage_type();
             break;
         }
       } else {
         FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
-                             Launch<xpu, OP>, "LaunchEx");
+                             Compute<xpu, OP>, "ComputeEx");
       }
     }
   }
 
   /*! \brief LaunchEx allowing dense lvalue and/or rvalue */
   template<typename xpu, typename OP, bool lhs_may_be_dense, bool rhs_may_be_dense>
-  static void LaunchExDenseLRValue(const nnvm::NodeAttrs &attrs,
-                                  const OpContext &ctx,
-                                  const std::vector<NDArray> &inputs,
-                                  const std::vector<OpReqType> &req,
-                                  const std::vector<NDArray> &outputs) {
+  static void ComputeExDenseLRValue(const nnvm::NodeAttrs &attrs,
+                                    const OpContext &ctx,
+                                    const std::vector<NDArray> &inputs,
+                                    const std::vector<OpReqType> &req,
+                                    const std::vector<NDArray> &outputs) {
     MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-      LaunchExDenseLRValue_<xpu, OP, DType, lhs_may_be_dense, rhs_may_be_dense>(
-        attrs, ctx, inputs, req, outputs, Launch<xpu, OP>);
+      ComputeExDenseLRValue_<xpu, OP, DType, lhs_may_be_dense, rhs_may_be_dense>(
+        attrs, ctx, inputs, req, outputs, Compute<xpu, OP>);
     });
   }
 
@@ -816,18 +816,18 @@ class ElemwiseBinaryOp : public OpBase {
   .add_argument("rhs", "NDArray-or-Symbol", "second input")
 
 /*! \brief Binary launch */
-#define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(__name$, __kernel$)               \
+#define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(__name$, __kernel$)           \
   MXNET_OPERATOR_REGISTER_BINARY(__name$)                                            \
   .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1>)       \
-  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Launch<cpu, __kernel$>)     \
-  .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::LaunchEx<cpu, __kernel$>)
+  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)    \
+  .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>)
 
 /*! \brief Binary launch, dense result */
-#define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(__name$, __kernel$)              \
+#define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(__name$, __kernel$)          \
   MXNET_OPERATOR_REGISTER_BINARY(__name$)                                              \
   .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageTypeDenseOutput<1>) \
-  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Launch<cpu, __kernel$>)       \
-  .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::LaunchEx<cpu, __kernel$>)
+  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)      \
+  .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>)
 
 }  // namespace op
 }  // namespace mxnet
