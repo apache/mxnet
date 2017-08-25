@@ -148,8 +148,10 @@
 
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mxnet-icon.png">
   </head>
-  <body role="document">
+  <body role="document" background="{{ pathto('_static/redesign-resource/mxnet-background.png', 1) }}">
+    <div class='content-block'>
     {%- include "navbar.html" %}
+    
 
     {% if pagename != 'index' %}
     <div class="container">
@@ -169,6 +171,7 @@
     {%- include "index.html" %}
     {%- include "footer.html" %}
     {%- endif %} <!-- pagename != index -->
+    </div>
 
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
     <script type="text/javascript" src="{{ pathto('_static/js/sidebar.js', 1) }}"></script>
