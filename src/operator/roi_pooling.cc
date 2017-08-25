@@ -52,7 +52,6 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
   const int pooled_width_ = out.size(3);
 
   const int num_rois = bbox.size(0);
-  const int batch_size = data.size(0);
   const int data_size = data.size(1) * data.size(2) * data.size(3);
   // For each ROI R = [batch_index x1 y1 x2 y2]: max pool over R
   for (int n = 0; n < num_rois; ++n) {
