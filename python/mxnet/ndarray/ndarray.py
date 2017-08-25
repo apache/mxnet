@@ -587,8 +587,14 @@ fixed-size items.
         array([], shape=(0, 2), dtype=float32)
         """
         handle = NDArrayHandle()
-        start = mx_uint(start) if start else mx_uint(0)
-        stop = mx_uint(stop) if stop else mx_uint(self.shape[0])
+        start = mx_uint(start) if start is not None else mx_uint(0)
+        if stop is None:
+            stop = mx_uint(self.shape[0])
+        elif stop < 0:
+            length = self.shape[0]
+            stop += length
+            assert stop >= 0, "Slicing end %d exceeds limit of %d"%(stop-length, length)
+        stop = mx_uint(stop)
         check_call(_LIB.MXNDArraySlice(
             self.handle, start, stop, ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
