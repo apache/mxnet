@@ -271,7 +271,7 @@ def test_CSVIter():
 
         data_train = mx.io.CSVIter(data_csv=data_path, data_shape=(8,8),
                                    label_csv=label_path, batch_size=100)
-        expected = mx.nd.ones((100, 8,8))
+        expected = mx.nd.ones((100, 8, 8))
         for batch in iter(data_train):
             assert_almost_equal(data_train.getdata().asnumpy(), expected.asnumpy())
 
