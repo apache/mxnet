@@ -316,7 +316,7 @@ void linalg_batch_trsm<gpu, DType>(const Tensor<gpu, 3, DType>& A, const Tensor<
 LINALG_GPU_BATCH_TRSM(StrsmBatched, float)
 LINALG_GPU_BATCH_TRSM(DtrsmBatched, double)
 
-#endif // __CUDACC__
+#endif  // __CUDACC__
 
 /*!
  * \brief Performs gemm, setting alpha and beta as appropriate for `req`.
@@ -449,7 +449,7 @@ LINALG_GPU_TRMM(Dtrmm, double)
 LINALG_XPU_BATCH_TRMM(gpu, float)
 LINALG_XPU_BATCH_TRMM(gpu, double)
 
-#endif // __CUDACC__
+#endif  // __CUDACC__
 
 //////////////////////////////// POTRF ////////////////////////////////////////////
 
