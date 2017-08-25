@@ -89,13 +89,13 @@ inline int get_num_threads<cpu>(const int N) {
   case kWriteInplace:                               \
   case kWriteTo:                                    \
     {                                               \
-      const int ReqType = kWriteTo;                 \
+      const OpReqType ReqType = kWriteTo;           \
       {__VA_ARGS__}                                 \
     }                                               \
     break;                                          \
   case kAddTo:                                      \
     {                                               \
-      const int ReqType = kAddTo;                   \
+      const OpReqType ReqType = kAddTo;             \
       {__VA_ARGS__}                                 \
     }                                               \
     break;                                          \

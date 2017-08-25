@@ -281,9 +281,6 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
           shape_vec.push_back(src_shape[dim]);
         }
         TShape dst_shape(shape_vec.begin(), shape_vec.end());
-        auto dtype = prefetch_param_.dtype
-          ? prefetch_param_.dtype.value()
-          : first_batch.data[i].type_flag_;
         out->data.at(i) = NDArray(dst_shape, Context::CPUPinned(0), false, src_type_flag);
         unit_size_[i] = src_shape.Size();
       }

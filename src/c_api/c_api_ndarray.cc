@@ -184,7 +184,9 @@ void SetShapeType(const nnvm::Op* op,
   std::vector<int>& in_types = ret->arg_types;
   std::vector<int>& out_types = ret->out_types;
   in_types.clear();
+  in_types.reserve(ndinputs.size());
   out_types.clear();
+  out_types.reserve(ndoutputs.size());
 
   for (auto& i : ndinputs) {
     in_types.push_back(i.dtype());
@@ -201,7 +203,10 @@ void SetShapeType(const nnvm::Op* op,
   auto& in_storage_types = ret->arg_storage_types;
   auto& out_storage_types = ret->out_storage_types;
   in_storage_types.clear();
+  in_storage_types.reserve(ndinputs.size());
   out_storage_types.clear();
+  out_storage_types.reserve(ndoutputs.size());
+
   for (auto& i : ndinputs) {
     in_storage_types.push_back(i.storage_type());
   }
@@ -766,7 +771,6 @@ int MXAutogradBackwardEx(mx_uint num_output,
                          int retain_graph,
                          int is_train) {
   API_BEGIN();
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
   std::vector<NDArray> outputs, ograds;
   outputs.reserve(num_output);

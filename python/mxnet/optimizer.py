@@ -363,7 +363,6 @@ class SGD(Optimizer):
 
     def create_state(self, index, weight):
         momentum = None
-        weight_master_copy = None
         if self.multi_precision and weight.dtype == numpy.float16:
             weight_master_copy = array(weight, ctx=weight.context, dtype=numpy.float32)
             if self.momentum != 0.0:
