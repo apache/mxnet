@@ -879,7 +879,7 @@ class TripletLoss(Loss):
         self._margin = margin
         self._axis = axis
 
-        def hybrid_forward(self, F, output1, output2, output3, sample_weight=None):
+    def hybrid_forward(self, F, output1, output2, output3, sample_weight=None):
         loss = F.sum((output1-output2)**2 - (output1-output3)**2, axis=self._axis) + self._margin
         loss = F.maximum(loss, F.zeros_like(loss))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
