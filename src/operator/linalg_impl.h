@@ -365,10 +365,34 @@ inline void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A,
       break;
     case kWriteTo:
     case kWriteInplace:
-      C = dot(tA ? A.T() : A, tB ? B.T() : B);
+      if (tA) {
+        if (tB) {
+          C = dot(A.T(), B.T());
+        } else {
+          C = dot(A.T(), B);
+        }
+      } else {
+        if (tB) {
+          C = dot(A, B.T());
+        } else {
+          C = dot(A, B);
+        }
+      }
       break;
     case kAddTo:
-      C += dot(tA ? A.T() : A, tB ? B.T() : B);
+      if (tA) {
+        if (tB) {
+          C += dot(A.T(), B.T());
+        } else {
+          C += dot(A.T(), B);
+        }
+      } else {
+        if (tB) {
+          C += dot(A, B.T());
+        } else {
+          C += dot(A, B);
+        }
+      }
       break;
     default:
       LOG(FATAL) << "not reached";
