@@ -189,7 +189,9 @@ img {
     text-decoration: none;
 }
 
-#dropdown-menu-position-anchor {
+#dropdown-menu-position-anchor, 
+#dropdown-menu-position-anchor-version, 
+#dropdown-menu-position-anchor-version-mobile {
     position: relative;
 }
 
@@ -358,7 +360,6 @@ div .burgerIcon a {
 
 li.dropdown-submenu ul.dropdown-menu {
     min-width: 75px;
-    width: 75px
 }
 
 li.dropdown-submenu ul.dropdown-menu li {
@@ -714,6 +715,14 @@ li.dropdown-submenu ul.dropdown-menu a {
 .section-inst img:hover {
     -webkit-filter: grayscale(0%); /* Chrome, Safari, Opera */
     filter: grayscale(0%);
+}
+
+.section-disclaimer {
+    padding: 3em 3em 3em;
+}
+
+.section-disclaimer p {
+    padding-top: 2em;
 }
 
 .footer{
@@ -1242,4 +1251,10 @@ div.download_btn a:hover {
     color: #888;
     padding-bottom: 3px;
     font-style: italic;
+}
+
+/*------------Download source-----------------*/
+#download-source-package {
+    display: none;
+    padding-top: 40px;
 }

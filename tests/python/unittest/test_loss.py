@@ -1,6 +1,24 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 import numpy as np
 from mxnet import gluon
+from mxnet.test_utils import assert_almost_equal
 
 
 def test_loss_ndarray():
@@ -64,6 +82,34 @@ def test_ce_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
 
 
+def test_bce_loss():
+    mx.random.seed(1234)
+    np.random.seed(1234)
+    N = 20
+    data = mx.random.uniform(-1, 1, shape=(N, 20))
+    label = mx.nd.array(np.random.randint(2, size=(N,)), dtype='float32')
+    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
+    output = get_net(1)
+    fc2 = output.get_internals()['fc2_output']
+    l = mx.symbol.Variable('label')
+    Loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
+    loss = Loss(output, l)
+    loss = mx.sym.make_loss(loss)
+    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.},
+            eval_metric=mx.metric.Loss())
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
+
+def test_bce_equal_ce2():
+    N = 100
+    loss1 = gluon.loss.SigmoidBCELoss(from_sigmoid=True)
+    loss2 = gluon.loss.SoftmaxCELoss(from_logits=True)
+    out1 = mx.random.uniform(0, 1, shape=(N, 1))
+    out2 = mx.nd.log(mx.nd.concat(1-out1, out1, dim=1) + 1e-8)
+    label = mx.nd.round(mx.random.uniform(0, 1, shape=(N, 1)))
+    assert_almost_equal(loss1(out1, label).asnumpy(), loss2(out2, label).asnumpy())
+
+
 def test_kl_loss():
     mx.random.seed(1234)
     np.random.seed(1234)
@@ -100,6 +146,7 @@ def test_l2_loss():
             eval_metric=mx.metric.Loss())
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
+
 def test_l1_loss():
     mx.random.seed(1234)
     np.random.seed(1234)
@@ -116,6 +163,36 @@ def test_l1_loss():
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.1},
             initializer=mx.init.Uniform(0.5), eval_metric=mx.metric.Loss())
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
+
+
+def test_ctc_loss():
+    loss = gluon.loss.CTCLoss(padding_mask=0)
+    l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[2,1,0,0],[3,2,2,0]]))
+    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+
+    loss = gluon.loss.CTCLoss(layout='TNC', padding_mask=0)
+    l = loss(mx.nd.ones((20,2,4)), mx.nd.array([[2,1,0,0],[3,2,2,0]]))
+    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+
+    loss = gluon.loss.CTCLoss(layout='TNC', label_layout='TN', padding_mask=0)
+    l = loss(mx.nd.ones((20,2,4)), mx.nd.array([[2,1,0,0],[3,2,2,0]]).T)
+    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+
+    loss = gluon.loss.CTCLoss(padding_mask=-1)
+    l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[2,1,-1,-1],[3,2,2,-1]]))
+    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+
+    loss = gluon.loss.CTCLoss()
+    l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[2,1,2,2],[3,2,2,2]]), None, mx.nd.array([2,3]))
+    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+
+    loss = gluon.loss.CTCLoss()
+    l = loss(mx.nd.ones((2,25,4)), mx.nd.array([[2,1,-1,-1],[3,2,2,-1]]), mx.nd.array([20,20]))
+    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+
+    loss = gluon.loss.CTCLoss()
+    l = loss(mx.nd.ones((2,25,4)), mx.nd.array([[2,1,3,3],[3,2,2,3]]), mx.nd.array([20,20]), mx.nd.array([2,3]))
+    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
 
 def test_sample_weight_loss():

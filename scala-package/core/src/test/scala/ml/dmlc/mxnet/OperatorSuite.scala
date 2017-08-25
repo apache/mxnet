@@ -37,7 +37,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     exec.forward()
     val forwardOutput = exec.outputs(0)
     val forwardOutputExpected = arr.reduce(_ + _)
-    assert(reldiff(forwardOutput, forwardOutputExpected) < 1e-6)
+    assert(reldiff(forwardOutput, forwardOutputExpected) < 2e-6)
 
     // backward
     val outGrad = Random.uniform(-10, 10, shape)
@@ -239,7 +239,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       var exe = x.simpleBind(ctx = Context.cpu(), gradReq = "write", shapeDict = Map())
       exe.forward(isTrain = false)
       assert(exe.gradArrays.length == 0)
-      assert(CheckUtils.reldiff(result.toArray, exe.outputs.head.toArray) <= 1e-5f)
+      assert(CheckUtils.reldiff(result.toArray, exe.outputs.head.toArray) <= 1e-4f)
     }
   }
 

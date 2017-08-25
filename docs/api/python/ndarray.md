@@ -64,9 +64,21 @@ A detailed tutorial is available at
 ```
 
 In the rest of this document, we first overview the methods provided by the
-`ndarray.NDArray` class, and then list other routines provided by the
-`ndarray` package.
+`ndarray.NDArray` class and its subclasses, and then list other routines
+provided by the `ndarray` package.
 
+The `ndarray` package provides several classes:
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray
+    sparse.CSRNDArray
+    sparse.RowSparseNDArray
+```
+
+We summarize the interface for each class in the following sections.
 
 ## The `NDArray` class
 
@@ -80,6 +92,7 @@ In the rest of this document, we first overview the methods provided by the
     NDArray.size
     NDArray.context
     NDArray.dtype
+    NDArray.stype
 ```
 
 ### Array conversion
@@ -94,6 +107,7 @@ In the rest of this document, we first overview the methods provided by the
     NDArray.asnumpy
     NDArray.asscalar
     NDArray.astype
+    NDArray.tostype
 ```
 
 ### Array change shape
@@ -169,6 +183,35 @@ In the rest of this document, we first overview the methods provided by the
     :nosignatures:
 
     NDArray.wait_to_read
+```
+
+## The `sparse.RowSparseNDArray` Class
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sparse.RowSparseNDArray.copyto
+    sparse.RowSparseNDArray.tostype
+    sparse.RowSparseNDArray.__setitem__
+    sparse.RowSparseNDArray.__getitem__
+    sparse.RowSparseNDArray.data
+    sparse.RowSparseNDArray.indices
+```
+
+## The `sparse.CSRNDArray` Class
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sparse.CSRNDArray.copyto
+    sparse.CSRNDArray.tostype
+    sparse.CSRNDArray.__setitem__
+    sparse.CSRNDArray.__getitem__
+    sparse.CSRNDArray.data
+    sparse.CSRNDArray.indices
+    sparse.CSRNDArray.indptr
 ```
 
 ## Array creation routines
@@ -463,15 +506,65 @@ In the rest of this document, we first overview the methods provided by the
     Custom
 ```
 
+## Contrib
+
+```eval_rst
+.. warning:: This package contains experimental APIs and may change in the near future.
+```
+
+The `contrib.ndarray` module contains many useful experimental APIs for new features. This is a place for the community to try out the new features, so that feature contributors can receive feedback.
+
+```eval_rst
+.. currentmodule:: mxnet.contrib.ndarray
+
+.. autosummary::
+    :nosignatures:
+
+    CTCLoss
+    DeformableConvolution
+    DeformablePSROIPooling
+    MultiBoxDetection
+    MultiBoxPrior
+    MultiBoxTarget
+    MultiProposal
+    PSROIPooling
+    Proposal
+    count_sketch
+    ctc_loss
+    dequantize
+    fft
+    ifft
+    quantize
+```
+
 ## API Reference
 
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
+
+.. autoclass:: mxnet.ndarray.NDArray
+    :members:
+    :special-members:
+
+.. autoclass:: mxnet.ndarray.sparse.CSRNDArray
+    :members:
+    :special-members:
+
+.. autoclass:: mxnet.ndarray.sparse.RowSparseNDArray
+    :members:
+    :special-members:
+
 .. automodule:: mxnet.ndarray
     :members:
+    :imported-members:
+    :special-members:
+    :exclude-members: CachedOp, BaseSparseNDArray, NDArray, CSRNDArray, RowSparseNDArray
 
 .. automodule:: mxnet.random
+    :members:
+
+.. automodule:: mxnet.contrib.ndarray
     :members:
 
 ```

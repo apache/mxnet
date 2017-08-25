@@ -3,6 +3,7 @@ var TITLE = ['/get_started/', '/tutorials/', '/how_to/', '/api/', '/architecture
 var APIsubMenu;
 $("#burgerMenu").children().each(function () {
     if($(this).children().first().html() == 'API') APIsubMenu = $(this).clone()
+    if($(this).children().first().html().startsWith('Versions')) VersionsubMenu = $(this).clone()
 });
 
 function navbar() {
@@ -38,8 +39,11 @@ function navbar() {
     }
     $("#plusMenu").empty();
     for (var i = 0; i < plusMenuList.length; ++i) {
-        if(plusMenuList[i].html().length > 20) {
+        if(plusMenuList[i].attr('id') == 'dropdown-menu-position-anchor') {
             $("#plusMenu").append(APIsubMenu);
+        }
+        else if(plusMenuList[i].attr('id') == 'dropdown-menu-position-anchor-version') {
+            $("#plusMenu").append(VersionsubMenu);
         }
         else {
             $("#plusMenu").append("<li></li>");

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint:skip-file
 from __future__ import print_function
 import logging
@@ -55,7 +72,7 @@ def get_net(vocab_size, seq_len, num_label, num_lstm_layer, num_hidden):
         state = LSTMState(c=mx.sym.Variable("l%d_init_c" % i),
                           h=mx.sym.Variable("l%d_init_h" % i))
         last_states.append(state)
-        
+
     data = mx.sym.Variable('data')
     label = mx.sym.Variable('label')
     label_weight = mx.sym.Variable('label_weight')
@@ -76,7 +93,7 @@ def get_net(vocab_size, seq_len, num_label, num_lstm_layer, num_hidden):
     probs = []
     for seqidx in range(seq_len):
         hidden = datavec[seqidx]
-        
+
         for i in range(num_lstm_layer):
             next_state = lstm(num_hidden, indata = hidden,
                               prev_state = last_states[i],
@@ -84,7 +101,7 @@ def get_net(vocab_size, seq_len, num_label, num_lstm_layer, num_hidden):
                               seqidx = seqidx, layeridx = i)
             hidden = next_state.h
             last_states[i] = next_state
-            
+
         probs.append(nce_loss(data = hidden,
                               label = labelvec[seqidx],
                               label_weight = labelweightvec[seqidx],
@@ -149,7 +166,7 @@ class DataIter(mx.io.DataIter):
         self.provide_data = [('data', (batch_size, seq_len))] + init_states
         self.provide_label = [('label', (self.batch_size, seq_len, num_label)),
                               ('label_weight', (self.batch_size, seq_len, num_label))]
-        
+
     def sample_ne(self):
         return self.negative[random.randint(0, len(self.negative) - 1)]
 
@@ -203,7 +220,7 @@ if __name__ == '__main__':
 
     data_train = DataIter("./data/text8", batch_size, seq_len, num_label,
                           init_states)
-    
+
     network = get_net(data_train.vocab_size, seq_len, num_label, num_lstm_layer, num_hidden)
     options, args = parser.parse_args()
     devs = mx.cpu()
@@ -216,7 +233,7 @@ if __name__ == '__main__':
                                  momentum = 0.9,
                                  wd = 0.0000,
                                  initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
-    
+
     metric = NceLSTMAuc()
     model.fit(X = data_train,
               eval_metric = metric,

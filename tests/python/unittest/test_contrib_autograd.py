@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet.ndarray as nd
 from mxnet.contrib.autograd import *
 from mxnet.test_utils import *
@@ -150,13 +167,16 @@ def test_retain_grad():
         y.backward(retain_graph=False)
     assert (dx.asnumpy() == 2).all()
 
-    try:
-        with train_section():
-            y = x + 1
-            y.backward()
-            y.backward()
-    except Exception:
-        return
+    # The following sequence should throw an exception. We discard the expected
+    # stderr stack trace output for this operation to keep the test logs clean.
+    with discard_stderr():
+        try:
+            with train_section():
+                y = x + 1
+                y.backward()
+                y.backward()
+        except Exception:
+            return
 
     raise AssertionError(
         "differentiating the same graph twice without retain_graph should fail")

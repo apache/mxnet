@@ -1,9 +1,28 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file elemwise_sum.cc
  * \brief elementwise sum operator
 */
 #include "./elemwise_sum.h"
+#include "../../ndarray/ndarray_function.h"
 
 namespace mxnet {
 namespace op {
@@ -36,14 +55,69 @@ std::vector<nnvm::NodeEntry> ElementWiseSumGrad(
   return ret;
 }
 
+bool ElementWiseSumShape(const nnvm::NodeAttrs& attrs,
+                         std::vector<TShape> *in_attrs,
+                         std::vector<TShape> *out_attrs) {
+  CHECK_EQ(out_attrs->size(), 1);
+  return ElemwiseAttr<TShape, shape_is_none, shape_assign, true, shape_string>(
+    attrs, in_attrs, out_attrs, TShape());
+}
+
+bool ElementWiseSumType(const nnvm::NodeAttrs& attrs,
+                        std::vector<int> *in_attrs,
+                        std::vector<int> *out_attrs) {
+  CHECK_EQ(out_attrs->size(), 1);
+  return ElemwiseAttr<int, type_is_none, type_assign, true, type_string>(
+    attrs, in_attrs, out_attrs, -1);
+}
+
+bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                           const Context& ctx,
+                                           std::vector<int> *in_attrs,
+                                           std::vector<int> *out_attrs) {
+  CHECK(!in_attrs->empty());
+  CHECK_EQ(out_attrs->size(), 1U);
+  return ElemwiseStorageAttr<int, type_is_none, type_assign, false, true>(
+      attrs, in_attrs, out_attrs);
+}
+
+void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<NDArray>& outputs) {
+  CHECK(!inputs.empty());
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  if (req[0] == kNullOp) return;
+  CHECK_EQ(req[0], kWriteTo) << "ElementWiseSumComputeExCPU only supports req = kWriteTo";
+  using namespace mshadow;
+  Stream<cpu>* s = ctx.get_stream<cpu>();
+  NDArray out_nd = outputs[0];
+  if (inputs[0].storage_type() == kRowSparseStorage) {
+    mxnet::ndarray::ElementwiseSum<cpu>(s, inputs, &out_nd);
+  } else {
+    FCompExFallback<cpu>(attrs, ctx, inputs, req, outputs,
+                         ElementWiseSumCompute<cpu>, "ElementWiseSumCompute<cpu>");
+  }
+}
+
 NNVM_REGISTER_OP(add_n)
 .add_alias("ElementWiseSum")
+.add_alias("_sparse_add_n")
+.add_alias("_sparse_ElementWiseSum")
 .describe(R"doc(Adds all input arguments element-wise.
 
 .. math::
    add\_n(a_1, a_2, ..., a_n) = a_1 + a_2 + ... + a_n
 
 ``add_n`` is potentially more efficient than calling ``add`` by `n` times.
+
+The storage type of ``add_n`` output depends on storage types of inputs
+
+- add_n(row_sparse, row_sparse, ..) = row_sparse
+- otherwise, ``add_n`` generates output with default storage
+
 )doc" ADD_FILELINE)
 .set_attr_parser(ParamParser<ElementWiseSumParam>)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
@@ -61,16 +135,16 @@ NNVM_REGISTER_OP(add_n)
   })
 .set_attr<std::string>("key_var_num_args", "num_args")
 .set_attr<FCompute>("FCompute<cpu>", ElementWiseSumCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ElementWiseSumComputeExCPU)
 .set_attr<nnvm::FInplaceOption>(
     "FInplaceOption", [](const NodeAttrs& attrs) {
       return std::vector<std::pair<int, int> >{{0, 0}};
     })
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<-1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, 1>)
-.set_attr<nnvm::FGradient>("FGradient", CloneGradient{"_backward_add_n"})
+.set_attr<nnvm::FInferShape>("FInferShape", ElementWiseSumShape)
+.set_attr<nnvm::FInferType>("FInferType", ElementWiseSumType)
+.set_attr<FInferStorageType>("FInferStorageType", ElementWiseSumForwardInferStorageType)
+.set_attr<nnvm::FGradient>("FGradient", ElementWiseSumGrad)
 .add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments");
-
-
 
 }  // namespace op
 }  // namespace mxnet

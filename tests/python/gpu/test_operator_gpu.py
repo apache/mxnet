@@ -1,9 +1,26 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import sys
 import os
 import time
 import mxnet as mx
 import numpy as np
-from mxnet.test_utils import check_consistency, set_default_context
+from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
 from numpy.testing import assert_allclose
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
@@ -11,9 +28,13 @@ sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from test_operator import *
 from test_optimizer import *
 from test_random import *
-from test_nn import *
+from test_gluon import *
+from test_loss import *
 #from test_rnn import *
 from test_gluon_rnn import *
+from test_sparse_operator import test_cast_storage_ex, test_sparse_dot
+from test_sparse_operator import test_sparse_nd_zeros, test_sparse_retain
+from test_sparse_ndarray import test_create_csr, test_create_row_sparse
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm
@@ -606,7 +627,6 @@ def test_bilinear_sampler_with_type():
     check_consistency(sym, ctx_list)
     check_consistency(sym, ctx_list, grad_req="add")
 
-
 def test_grid_generator_with_type():
     data = mx.sym.Variable('data')
     sym = mx.sym.GridGenerator(data=data, transform_type='affine', target_shape=(20, 20))
@@ -620,6 +640,19 @@ def test_grid_generator_with_type():
     check_consistency(sym, ctx_list)
     check_consistency(sym, ctx_list, grad_req="add")
 
+def test_spatial_transformer_with_type():
+    np.random.seed(1234)
+    data = mx.sym.Variable('data')
+    loc = mx.sym.Flatten(data)
+    loc = mx.sym.FullyConnected(data=loc, num_hidden=10)
+    loc = mx.sym.Activation(data=loc, act_type='relu')
+    loc = mx.sym.FullyConnected(data=loc, num_hidden=6)
+    sym = mx.sym.SpatialTransformer(data=data, loc=loc, target_shape=(10, 10),
+                                    transform_type="affine", sampler_type="bilinear")
+    ctx_list = [{'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float32}},
+                {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float32}}]
+    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, grad_req="add")
 
 # Checking max pooling consistency over the data sets of different float types is problematic
 # as one max value in a float32 data set may not be the max value in a float16 data set.
@@ -896,6 +929,11 @@ def test_fullyconnected_with_type():
                 {'ctx': mx.gpu(0), 'inner_data': (2, 10), 'type_dict': {'inner_data': np.float16}},
                 {'ctx': mx.cpu(0), 'inner_data': (2, 10), 'type_dict': {'inner_data': np.float64}},
                 {'ctx': mx.cpu(0), 'inner_data': (2, 10), 'type_dict': {'inner_data': np.float32}}]
+    check_consistency(sym, ctx_list)
+    # Sizes are divisible by 8 to test TensorCore on Volta GPU.
+    sym = mx.sym.FullyConnected(num_hidden=8, name='inner')
+    ctx_list = [{'ctx': mx.gpu(0), 'inner_data': (16, 24), 'type_dict': {'inner_data': np.float16}},
+                {'ctx': mx.cpu(0), 'inner_data': (16, 24), 'type_dict': {'inner_data': np.float32}}]
     check_consistency(sym, ctx_list)
 
 
@@ -1289,9 +1327,9 @@ def check_rnn_layer(layer):
         states = layer.begin_state(16)
         co, cs = layer(x, states)
 
-    assert_allclose(go.asnumpy(), co.asnumpy(), rtol=1e-2)
+    assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-8)
     for g, c in zip(gs, cs):
-        assert_allclose(g.asnumpy(), c.asnumpy(), rtol=1e-2)
+        assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-8)
 
 
 def test_rnn_layer():
@@ -1305,6 +1343,17 @@ def test_rnn_layer():
 
 def test_sequence_reverse():
     check_sequence_reverse(mx.gpu(0))
+
+
+def test_autograd_save_memory():
+    x = mx.nd.zeros((128, 1024, 1024), ctx=mx.gpu(0))
+    x.attach_grad()
+
+    with mx.autograd.record():
+        for i in range(50):
+            x = x + 1
+            x.wait_to_read()
+    x.backward()
 
 
 if __name__ == '__main__':

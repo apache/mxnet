@@ -1,12 +1,41 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Convert caffe model
 """
 from __future__ import print_function
 import argparse
 import sys
+import re
 import caffe_parser
 import mxnet as mx
 import numpy as np
 from convert_symbol import convert_symbol
+
+def prob_label(arg_names):
+    candidates = [arg for arg in arg_names if
+                  not arg.endswith('data') and
+                  not arg.endswith('_weight') and
+                  not arg.endswith('_bias') and
+                  not arg.endswith('_gamma') and
+                  not arg.endswith('_beta')]
+    if len(candidates) == 0:
+        return 'prob_label'
+    return candidates[-1]
 
 def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
     """Convert caffe model
@@ -53,8 +82,8 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
            or layer_type == 'Deconvolution' or layer_type == 39:
             if layer_type == 'PReLU':
                 assert (len(layer_blobs) == 1)
-                wmat = layer_blobs[0].data
                 weight_name = layer_name + '_gamma'
+                wmat = np.array(layer_blobs[0].data).reshape(arg_shape_dic[weight_name])
                 arg_params[weight_name] = mx.nd.zeros(wmat.shape)
                 arg_params[weight_name][:] = wmat
                 continue
@@ -148,7 +177,7 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
             aux_params[var_name] = mx.nd.zeros(var.shape)
             # Get the original epsilon
             for idx, layer in enumerate(layers_proto):
-                if layer.name == bn_name:
+                if layer.name == bn_name or re.sub('[-/]', '_', layer.name) == bn_name:
                     bn_index = idx
             eps_caffe = layers_proto[bn_index].batch_norm_param.eps
             # Compensate for the epsilon shift performed in convert_symbol
@@ -180,7 +209,7 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
             assert len(layer_blobs) == 0
 
     if output_prefix is not None:
-        model = mx.mod.Module(symbol=sym, label_names=['prob_label', ])
+        model = mx.mod.Module(symbol=sym, label_names=[prob_label(arg_names), ])
         model.bind(data_shapes=[('data', tuple(input_dim))])
         model.init_params(arg_params=arg_params, aux_params=aux_params)
         model.save_checkpoint(output_prefix, 0)

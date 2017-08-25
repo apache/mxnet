@@ -9,7 +9,6 @@ You can either use a prebuilt binary package or build from source to build the M
 MXNet provides a prebuilt package for Windows. The prebuilt package includes the MXNet library, all of the dependent third-party libraries, a sample C++ solution for Visual Studio, and the Python installation script. To install the prebuilt package:
 
 1. Download the latest prebuilt package from the [Releases](https://github.com/dmlc/mxnet/releases) tab of MXNet.
-   There are two versions. One with GPU support (using CUDA and CUDNN v3), and one without GPU support. Choose the version that suits your hardware configuration. For more information on which version works on each hardware configuration, see [Requirements for GPU](http://mxnet.io/get_started/setup.html#requirements-for-using-gpus).
 2. Unpack the package into a folder, with an appropriate name, such as ```D:\MXNet```.
 3. Open the folder, and install the package by double-clicking ```setupenv.cmd```. This sets up all of the environment variables required by MXNet.
 4. Test the installation by opening the provided sample C++ Visual Studio solution and building it.
@@ -23,7 +22,7 @@ This produces a library called ```libmxnet.dll```.
 To build and install MXNet yourself, you need the following dependencies. Install the required dependencies:
 
 1. If [Microsoft Visual Studio 2013](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
-2. Install [Visual C++ Compiler Nov 2013 CTP](https://www.microsoft.com/en-us/download/details.aspx?id=41151).
+2. Install [Visual C++ Compiler](http://landinghub.visualstudio.com/visual-cpp-build-tools).
 3. Back up all of the files in the ```C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC``` folder to a different location.
 4. Copy all of the files in the ```C:\Program Files (x86)\Microsoft Visual C++ Compiler Nov 2013 CTP``` folder (or the folder where you extracted the zip archive) to the ```C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC``` folder, and overwrite all existing files.
 5. Download and install [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download).

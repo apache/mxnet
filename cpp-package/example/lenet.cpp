@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  */
 #include <iostream>
 #include <fstream>
@@ -118,7 +136,12 @@ class Lenet {
     Optimizer* opt = OptimizerRegistry::Find("ccsgd");
     opt->SetParam("momentum", 0.9)
        ->SetParam("rescale_grad", 1.0)
-       ->SetParam("clip_gradient", 10);
+       ->SetParam("clip_gradient", 10)
+       ->SetParam("lr", learning_rate)
+       ->SetParam("wd", weight_decay);
+
+    Executor *exe = lenet.SimpleBind(ctx_dev, args_map);
+    auto arg_names = lenet.ListArguments();
 
     for (int ITER = 0; ITER < max_epoch; ++ITER) {
       size_t start_index = 0;
@@ -135,17 +158,19 @@ class Lenet {
         start_index += batch_size;
         NDArray::WaitAll();
 
-        Executor *exe = lenet.SimpleBind(ctx_dev, args_map);
         exe->Forward(true);
         exe->Backward();
-        exe->UpdateAll(opt, learning_rate, weight_decay);
-
-        delete exe;
+        // Update parameters
+        for (size_t i = 0; i < arg_names.size(); ++i) {
+          if (arg_names[i] == "data" || arg_names[i] == "data_label") continue;
+          opt->Update(i, exe->arg_arrays[i], exe->grad_arrays[i]);
+        }
       }
 
       LG << "Iter " << ITER
          << ", accuracy: " << ValAccuracy(batch_size * 10, lenet);
     }
+    delete exe;
   }
 
  private:

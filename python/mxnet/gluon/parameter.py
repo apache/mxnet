@@ -1,8 +1,26 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=
 """Neural network parameter."""
 
 from collections import OrderedDict
+import warnings
 import numpy as np
 
 
@@ -23,7 +41,7 @@ class DeferredInitializationError(MXNetError):
 class Parameter(object):
     """A Container holding parameters (weights) of `Block`s.
 
-    `Parameter` holds a copy of the the parameter on each `Context` after
+    `Parameter` holds a copy of the parameter on each `Context` after
     it is initialized with `Parameter.initialize(...)`. If `grad_req` is
     not `null`, it will also hold a gradient array on each `Context`::
 
@@ -62,9 +80,22 @@ class Parameter(object):
     init : Initializer, default None
         Initializer of this parameter. Will use the global initializer by default.
 
+    Attributes
+    ----------
+    grad_req : {'write', 'add', 'null'}
+        This can be set before or after initialization. Setting grad_req to null
+        with `x.grad_req = 'null'` saves memory and computation when you don't
+        need gradient w.r.t x.
     """
     def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
-                 lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False):
+                 lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
+                 differentiable=True):
+        self._var = None
+        self._data = None
+        self._grad = None
+        self._deferred_init = ()
+        self._differentiable = differentiable
+        self._grad_req = None
         self.name = name
         self.shape = shape
         self.dtype = dtype
@@ -73,16 +104,125 @@ class Parameter(object):
         self.grad_req = grad_req
         self.init = init
         self.allow_deferred_init = allow_deferred_init
-        self._var = None
-        self._data = None
-        self._grad = None
-        self._defered_init = ()
 
     def __repr__(self):
         s = 'Parameter {name} (shape={shape}, dtype={dtype})'
         return s.format(**self.__dict__)
 
-    def initialize(self, init=None, ctx=None, default_init=initializer.Uniform()):
+    @property
+    def grad_req(self):
+        return self._grad_req
+
+    @grad_req.setter
+    def grad_req(self, req):
+        assert req in ['write', 'add', 'null'], \
+            "grad_req must be one of write, add, or null, but got %s"%req
+        if not self._differentiable:
+            req = 'null'
+        if self._grad_req == req:
+            return
+        self._grad_req = req
+        if req == 'null' and self._grad is not None:
+            self._grad = None
+            for ctx in self._data:
+                self._data[ctx] = self._data[ctx].detach()
+        elif self._data is not None:
+            self._init_grad()
+
+    def _check_initialized(self, ctx=None):
+        if self._data is not None:
+            if ctx is not None and ctx not in self._data:
+                raise RuntimeError(
+                    "Parameter %s was not initialized on context %s. "
+                    "It was only initialized on %s."%(
+                        self.name, str(ctx), str(self.list_ctx())))
+            return
+        if self._deferred_init:
+            raise DeferredInitializationError
+        raise RuntimeError(
+            "Parameter %s has not been initialized. Note that " \
+            "you should initialize parameters and create Trainer " \
+            "with Block.collect_params() instead of Block.params " \
+            "because the later does not include Parameters of " \
+            "nested child Blocks"%(self.name))
+
+    def _load_init(self, data, ctx):
+        """(Re)initializes by loading from data."""
+        if self.shape:
+            for i, j in zip(self.shape, data.shape):
+                assert i == 0 or i == j, \
+                    "Failed loading Parameter %s from saved params: " \
+                    "shape incompatible expacted %s vs saved %s"%(
+                        self.name, str(self.shape), str(data.shape))
+        if self.dtype:
+            assert np.dtype(self.dtype).type == data.dtype, \
+                "Failed loading Parameter %s from saved params: " \
+                "dtype incompatible expacted %s vs saved %s"%(
+                    self.name, str(self.dtype), str(data.dtype))
+        if isinstance(ctx, Context):
+            ctx = [ctx]
+        if self._data is None:
+            if self._deferred_init:
+                assert set(ctx) == set(self._deferred_init[1]), \
+                    "Failed to load Parameter %s on %s because it was " \
+                    "previous initialized on %s."%(
+                        self.name, str(ctx), str(self.list_ctx()))
+            self._init_impl(data, ctx)
+        else:
+            assert set(ctx) == set(self.list_ctx()), \
+                "Failed to load Parameter %s on %s because it was " \
+                "previous initialized on %s."%(
+                    self.name, str(ctx), str(self.list_ctx()))
+            self.set_data(data)
+        self._deferred_init = ()
+
+    def _finish_deferred_init(self):
+        """Finishes deferred initialization."""
+        if not self._deferred_init:
+            return
+        init, ctx, default_init = self._deferred_init
+        self._deferred_init = ()
+        assert self.shape is not None and np.prod(self.shape) > 0, \
+            "Cannot initialize Parameter %s because it has " \
+            "invalid shape: %s. Please specify in_units, " \
+            "in_channels, etc for `Block`s."%(
+                self.name, str(self.shape))
+
+        with autograd.pause():
+            data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
+                                 ctx=context.cpu())
+            initializer.create(default_init)(
+                initializer.InitDesc(self.name, {'__init__': init}), data)
+
+            self._init_impl(data, ctx)
+
+    def _init_impl(self, data, ctx):
+        """Sets data and grad."""
+        self._data = OrderedDict()
+        for i in ctx:
+            self._data[i] = data.copyto(i)
+        self._init_grad()
+
+    def _init_grad(self):
+        """Initialize grad buffers."""
+        if self.grad_req == 'null':
+            self._grad = None
+            return
+
+        self._grad = OrderedDict()
+        for i in self._data:
+            self._grad[i] = ndarray.zeros_like(self._data[i])
+
+        autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
+
+    def _reduce(self):
+        """Reduce data from multiple context."""
+        block = self.list_data()
+        data = ndarray.add_n(*(w.copyto(context.cpu()) for w in block)) / len(block)
+        return data
+
+    def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
+                   force_reinit=False):
         """Initializes parameter and gradient arrays. Only used for `NDArray` API.
 
         Parameters
@@ -97,6 +237,8 @@ class Parameter(object):
             their values consistent when updating. Normally `gluon.Trainer` does this for you.
         default_init : Initializer
             Default initializer is used when both `init` and `Parameter.init` are `None`.
+        force_reinit : bool, default False
+            Whether to force re-initialization if parameter is already initialized.
 
         Examples
         --------
@@ -120,6 +262,12 @@ class Parameter(object):
          [ 0.05484822 -0.06206018]]
         <NDArray 2x2 @gpu(1)>
         """
+        if self._data is not None and not force_reinit:
+            warnings.warn("Parameter %s is already initialized, ignoring. " \
+                          "Set force_reinit=True to re-initialize."%self.name)
+            return
+        self._data = self._grad = None
+
         if ctx is None:
             ctx = [context.current_context()]
         if isinstance(ctx, Context):
@@ -128,79 +276,36 @@ class Parameter(object):
             init = default_init if self.init is None else self.init
         if not self.shape or np.prod(self.shape) <= 0:
             if self.allow_deferred_init:
-                self._defered_init = (init, ctx, default_init)
+                self._deferred_init = (init, ctx, default_init)
                 return
             raise ValueError("Cannot initialize Parameter %s because it has " \
                              "invalid shape: %s."%(self.name, str(self.shape)))
 
-        self._defered_init = (init, ctx, default_init)
+        self._deferred_init = (init, ctx, default_init)
         self._finish_deferred_init()
 
-    def _load_init(self, data, ctx):
-        """(Re)initializes by loading from data."""
-        if self.shape:
-            for i, j in zip(self.shape, data.shape):
-                assert i == 0 or i == j, \
-                    "Failed loading Parameter %s from saved params: " \
-                    "shape incompatible expacted %s vs saved %s"%(
-                        self.name, str(self.shape), str(data.shape))
-        if self.dtype:
-            assert np.dtype(self.dtype).type == data.dtype, \
-                "Failed loading Parameter %s from saved params: " \
-                "dtype incompatible expacted %s vs saved %s"%(
-                    self.name, str(self.dtype), str(data.dtype))
+    def reset_ctx(self, ctx):
+        """Re-assign Parameter to other contexts.
+
+        ctx : Context or list of Context, default `context.current_context()`.
+            Assign Parameter to given context. If ctx is a list of Context, a
+            copy will be made for each context.
+        """
+        if ctx is None:
+            ctx = [context.current_context()]
         if isinstance(ctx, Context):
             ctx = [ctx]
-        if self._data is None:
-            if self._defered_init:
-                assert set(ctx) == set(self._defered_init[1]), \
-                    "Failed to load Parameter %s on %s because it was " \
-                    "previous initialized on %s."%(
-                        self.name, str(ctx), str(self.list_ctx()))
-            self._init_impl(data, ctx)
+        if self._data:
+            data = self._reduce()
+            with autograd.pause():
+                self._init_impl(data, ctx)
+        elif self._deferred_init:
+            init, _, default_init = self._deferred_init
+            self._deferred_init = (init, ctx, default_init)
         else:
-            assert set(ctx) == set(self.list_ctx()), \
-                "Failed to load Parameter %s on %s because it was " \
-                "previous initialized on %s."%(
-                    self.name, str(ctx), str(self.list_ctx()))
-            self.set_data(data)
-        self._defered_init = ()
+            raise ValueError("Cannot reset context for Parameter %s because it "
+                             "has not been initialized."%self.name)
 
-    def _finish_deferred_init(self):
-        """Finishes deferred initialization."""
-        if not self._defered_init:
-            return
-        init, ctx, default_init = self._defered_init
-        self._defered_init = ()
-        assert self.shape is not None and np.prod(self.shape) > 0, \
-            "Cannot initialize Parameter %s because it has " \
-            "invalid shape: %s. Please specify in_units, " \
-            "in_channels, etc for `Block`s."%(
-                self.name, str(self.shape))
-
-        with autograd.pause():
-            data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
-                                 ctx=context.cpu())
-            initializer.create(default_init)(
-                initializer.InitDesc(self.name, {'__init__': init}), data)
-
-            self._init_impl(data, ctx)
-
-    def _init_impl(self, data, ctx):
-        """Sets data and grad."""
-        self._data = OrderedDict()
-        for i in ctx:
-            self._data[i] = data.copyto(i)
-
-        if self.grad_req == 'null':
-            self._grad = None
-            return
-
-        self._grad = OrderedDict()
-        for i in ctx:
-            self._grad[i] = ndarray.zeros_like(self._data[i])
-
-        autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
 
     def set_data(self, data):
         """Sets this parameter's value on all contexts to data."""
@@ -208,23 +313,6 @@ class Parameter(object):
             "Parameter %s has not been initialized"%self.name
         for arr in self.list_data():
             arr[:] = data
-
-    def _check_initialized(self, ctx=None):
-        if self._data is not None:
-            if ctx is not None and ctx not in self._data:
-                raise RuntimeError(
-                    "Parameter %s was not initialized on context %s. "
-                    "It was only initialized on %s."%(
-                        self.name, str(ctx), str(self.list_ctx())))
-            return
-        if self._defered_init:
-            raise DeferredInitializationError
-        raise RuntimeError(
-            "Parameter %s has not been initialized. Note that " \
-            "you should initialize parameters and create Trainer " \
-            "with Block.collect_params() instead of Block.params " \
-            "because the later does not include Parameters of " \
-            "nested child Blocks"%(self.name))
 
     def data(self, ctx=None):
         """Returns a copy of this parameter on one context. Must have been
@@ -286,8 +374,8 @@ class Parameter(object):
     def list_ctx(self):
         """Returns a list of contexts this parameter is initialized on."""
         if self._data is None:
-            if self._defered_init:
-                return self._defered_init[1]
+            if self._deferred_init:
+                return self._deferred_init[1]
             raise RuntimeError("Parameter %s has not been initialized"%self.name)
         return list(self._data.keys())
 
@@ -296,7 +384,7 @@ class Parameter(object):
         parameter is uninitialized or doesn't require gradient."""
         if self._grad is None:
             return
-        for i in self._grad:
+        for i in self._grad.values():
             i[:] = 0
 
     def var(self):
@@ -314,7 +402,7 @@ class ParameterDict(object):
     Parameters
     ----------
     prefix : str, default ''
-        The prefix to be prepended to all Parameters' name created by this dict.
+        The prefix to be prepended to all Parameters' names created by this dict.
     shared : ParameterDict or None
         If not `None`, when this dict's `get` method creates a new parameter, will
         first try to retrieve it from `shared` dict. Usually used for sharing
@@ -322,11 +410,8 @@ class ParameterDict(object):
     """
     def __init__(self, prefix='', shared=None):
         self._prefix = prefix
-        self._params = {}
+        self._params = OrderedDict()
         self._shared = shared
-
-    def __getitem__(self, key):
-        return self._params[key]
 
     def __repr__(self):
         s = '{name}(\n{content}\n)'
@@ -334,6 +419,12 @@ class ParameterDict(object):
         return s.format(name=name,
                         content='\n'.join([_indent('  {0}'.format(v), 2)
                                            for v in self.values()]))
+
+    def __getitem__(self, key):
+        return self._params[key]
+
+    def __iter__(self):
+        return iter(self._params)
 
     def items(self):
         return self._params.items()
@@ -404,7 +495,8 @@ class ParameterDict(object):
             else:
                 self._params[k] = v
 
-    def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False):
+    def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False,
+                   force_reinit=False):
         """Initializes all Parameters managed by this dictionary to be used for `NDArray`
         API. It has no effect when using `Symbol` API.
 
@@ -415,16 +507,50 @@ class ParameterDict(object):
             Otherwise, `Parameter.init` takes precedence.
         ctx : Context or list of Context
             Keeps a copy of Parameters on one or many context(s).
+        force_reinit : bool, default False
+            Whether to force re-initialization if parameter is already initialized.
         """
         if verbose:
             init.set_verbosity(verbose=verbose)
         for _, v in self.items():
-            v.initialize(None, ctx, init)
+            v.initialize(None, ctx, init, force_reinit=force_reinit)
 
     def zero_grad(self):
         """Sets all Parameters' gradient buffer to 0."""
         for i in self.values():
             i.zero_grad()
+
+    def reset_ctx(self, ctx):
+        """Re-assign all Parameters to other contexts.
+
+        ctx : Context or list of Context, default `context.current_context()`.
+            Assign Parameter to given context. If ctx is a list of Context, a
+            copy will be made for each context.
+        """
+        for i in self.values():
+            i.reset_ctx(ctx)
+
+    def setattr(self, name, value):
+        """Set an attribute to a new value for all Parameters.
+
+        For example, set grad_req to null if you don't need gradient w.r.t a
+        model's Parameters::
+
+            model.collect_params().setattr('grad_req', 'null')
+
+        or change the learning rate multiplier::
+
+            model.collect_params().setattr('lr_mult', 0.5)
+
+        Parameters
+        ----------
+        name : str
+            Name of the attribute.
+        value : valid type for attribute name
+            The new value for the attribute.
+        """
+        for i in self.values():
+            setattr(i, name, value)
 
     def save(self, filename, strip_prefix=''):
         """Save parameters to file.
@@ -436,8 +562,7 @@ class ParameterDict(object):
         """
         arg_dict = {}
         for param in self.values():
-            block = param.list_data()
-            weight = sum(w.copyto(context.cpu()) for w in block) / len(block)
+            weight = param._reduce()
             if not param.name.startswith(strip_prefix):
                 raise ValueError(
                     "Prefix %s is to be striped before saving, but Parameter " \
