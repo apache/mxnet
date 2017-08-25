@@ -851,7 +851,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arctanh,
 // gamma
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(gamma, cpu, mshadow_op::gamma)
 MXNET_ADD_SPARSE_OP_ALIAS(gamma)
-.MXNET_DESCRIBE(R"code(Returns the gamma function (extension of the factorial function
+.MXNET_DESCRIBE("code(Returns the gamma function (extension of the factorial function
 to the reals), computed element-wise on the input array.
 
 The storage type of ``gamma`` output is always dense
@@ -865,7 +865,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_gamma,
 // gammaln
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(gammaln, cpu, mshadow_op::gammaln)
 MXNET_ADD_SPARSE_OP_ALIAS(gammaln)
-.MXNET_DESCRIBE(R"code(Returns element-wise log of the absolute value of the gamma function
+.MXNET_DESCRIBE("code(Returns element-wise log of the absolute value of the gamma function
 of the input.
 
 The storage type of ``gammaln`` output is always dense
