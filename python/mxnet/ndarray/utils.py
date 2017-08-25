@@ -80,8 +80,9 @@ def empty(shape, ctx=None, dtype=None, stype=None, aux_types=None):
     stype : str, optional
         An optional storage type (default is `default`).
     aux_types: list of numpy.dtype, optional
-        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray
-        (default values depend on the storage type)
+        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray.
+        The default value for CSRNDArray is [`int64`, `int64`] for `indptr` and `indices`.
+        The default value for RowSparseNDArray is [`int64`] for `indices`.
 
     Returns
     -------
