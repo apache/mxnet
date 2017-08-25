@@ -138,7 +138,7 @@ class Profiler {
   /*! \brief filename to output profile file */
   std::string filename_;
   /*! \brief profile statistics consist of multiple device statistics */
-  std::unique_ptr<DevStat> profile_stat_;
+  std::shared_ptr<DevStat> profile_stat_;
   /*! \brief cpu number on the machine */
   unsigned int cpu_num_;
   /*! \brief gpu number on the machine */
