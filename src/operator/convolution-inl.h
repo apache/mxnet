@@ -185,7 +185,8 @@ class ConvolutionOp : public Operator {
 
     // no need to allocating memory and reordering in memory
     if (is_1x1_) {
-      Tensor<xpu, 4, DType> input_4d = in_data[conv::kData].get_with_shape<xpu, 4, DType>(Shape4(num_, group_, K, N), s);
+      Tensor<xpu, 4, DType> input_4d = in_data[conv::kData].get_with_shape<xpu, 4, DType>(
+        Shape4(num_, group_, K, N), s);
       for (index_t n = 0; n < num_; ++n) {
         Tensor<xpu, 3, DType> input_3d = input_4d[n];
         Tensor<xpu, 3, DType> output_3d = output_4d[n];
@@ -262,8 +263,10 @@ class ConvolutionOp : public Operator {
 
   // no need to allocating memory and reordering in memory
   if (is_1x1_) {
-    Tensor<xpu, 4, DType> input_4d = in_data[conv::kData].get_with_shape<xpu, 4, DType>(Shape4(num_, group_, M, N), s);
-    Tensor<xpu, 4, DType> in_grad_4d = in_grad[conv::kData].get_with_shape<xpu, 4, DType>(Shape4(num_, group_, M, N), s);
+    Tensor<xpu, 4, DType> input_4d = in_data[conv::kData].get_with_shape<xpu, 4, DType>(
+      Shape4(num_, group_, M, N), s);
+    Tensor<xpu, 4, DType> in_grad_4d = in_grad[conv::kData].get_with_shape<xpu, 4, DType>(
+      Shape4(num_, group_, M, N), s);
     for (index_t n = 0; n < num_; ++n) {
       Tensor<xpu, 3, DType> input_3d = input_4d[n];
       Tensor<xpu, 3, DType> in_grad_3d = in_grad_4d[n];
