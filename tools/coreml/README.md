@@ -3,8 +3,8 @@
 This tool helps convert MXNet models into [Apple CoreML](https://developer.apple.com/documentation/coreml) format which can then be run on Apple devices.
 
 ## Installation
-In order to use this tool you need to have these installed:
-* MacOS - High Sierra 10.12 or higher.
+In order to use this tool you need to have these:
+* MacOS - 10.11 (El Capitan) or higher (for running inferences on the converted model MacOS 10.13 or higher (for phones: iOS 11 or above) is needed)
 * python 2.7
 * mxnet-coreml-converter: 
 
@@ -109,7 +109,3 @@ mxnet_coreml_converter.py --model-prefix='vgg16' --epoch=0 --input-shape='{"data
 
 ## Known issues
 * [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz) model can be converted into CoreML format but is unable to run on Xcode.
-
-## This tool has been tested with:
-* MacOS - High Sierra 10.13 Beta.
-* Xcode 9 beta 5.

@@ -9,7 +9,7 @@ This tool helps convert `MXNet models <https://github.com/apache/incubator-mxnet
 
 Prerequisites
 -------------
-This package can only be installed on MacOS X since it relies on Apple's CoreML SDK. It can be run on MacOS 10.12 or higher though for running inferences on the converted model MacOS 10.13 or higher is needed (or for phones, iOS 11 or above).
+This package can only be installed on MacOS X since it relies on Apple's CoreML SDK. It can be run on MacOS 10.11 or higher though for running inferences on the converted model MacOS 10.13 or higher is needed (or for phones, iOS 11 or above).
 
 Installation
 ------------
