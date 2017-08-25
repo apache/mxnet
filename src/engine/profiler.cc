@@ -54,15 +54,15 @@ Profiler::Profiler()
   this->gpu_num_ = 0;
 #endif
 
-  this->profile_stat = new DevStat[cpu_num_ + gpu_num_ + 1];
-  this->profile_stat->opr_exec_stats.reserve(INITIAL_SIZE);
+  this->profile_stat_.reset(new DevStat[cpu_num_ + gpu_num_ + 1]);
+  this->profile_stat_->opr_exec_stats.reserve(INITIAL_SIZE);
   for (unsigned int i = 0; i < cpu_num_; ++i) {
-    profile_stat[i].dev_name = "cpu/" + std::to_string(i);
+    profile_stat_.get()[i].dev_name = "cpu/" + std::to_string(i);
   }
   for (unsigned int i = 0; i < gpu_num_; ++i) {
-    profile_stat[cpu_num_ + i].dev_name = "gpu/" + std::to_string(i);
+    profile_stat_.get()[cpu_num_ + i].dev_name = "gpu/" + std::to_string(i);
   }
-  profile_stat[cpu_num_ + gpu_num_].dev_name = "cpu pinned/";
+  profile_stat_.get()[cpu_num_ + gpu_num_].dev_name = "cpu pinned/";
 
   mode_ = (ProfilerMode)dmlc::GetEnv("MXNET_PROFILER_MODE", static_cast<int>(kOnlySymbolic));
   if (dmlc::GetEnv("MXNET_PROFILER_AUTOSTART", 0)) {
@@ -116,7 +116,7 @@ OprExecStat *Profiler::AddOprStat(int dev_type, uint32_t dev_id) {
       return NULL;
   }
 
-  DevStat& dev_stat = profile_stat[idx];
+  DevStat& dev_stat = profile_stat_.get()[idx];
   {
     std::lock_guard<std::mutex> lock{dev_stat.m_};
     dev_stat.opr_exec_stats.push_back(opr_stat);
@@ -162,14 +162,14 @@ void Profiler::DumpProfile() {
   uint32_t dev_num = cpu_num_ + gpu_num_ + 1;
 
   for (uint32_t i = 0; i < dev_num; ++i) {
-    const DevStat &d = profile_stat[i];
+    const DevStat &d = profile_stat_.get()[i];
     this->EmitPid(&file, d.dev_name, i);
     file << ",\n";
   }
 
   bool first_flag = true;
   for (uint32_t i = 0; i < dev_num; ++i) {
-    DevStat &d = profile_stat[i];
+    DevStat &d = profile_stat_.get()[i];
     std::lock_guard<std::mutex> lock(d.m_);
     uint32_t opr_num = d.opr_exec_stats.size();
 
