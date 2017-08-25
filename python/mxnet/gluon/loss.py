@@ -412,7 +412,8 @@ class Huber(Loss):
     def hybrid_forward(self, F, output, label, sample_weight=None):
         label = _reshape_label_as_output(F, output, label)
         loss = F.abs(output - label)
-        loss = (loss > self._rho) * (loss - 0.5 * self._rho) + (0.5/self._rho) * (loss <= self._rho) * loss**2
+        loss = ((loss > self._rho) * (loss - 0.5 * self._rho) +
+               (0.5/self._rho) * (loss <= self._rho) * loss**2)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
@@ -506,7 +507,7 @@ class SquaredSoftMargin(Loss):
         loss = F.maximum(1.0 - output * label, F.zeros_like(output))**2
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
-   
+
 class Exponential(Loss):
     """Calculates the exponential hinge loss (quite obscure):
 
@@ -535,7 +536,7 @@ class Exponential(Loss):
         loss = F.exp(-output * label)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
-   
+
 class Logistic(Loss):
     """Calculates the logistic loss (for binary losses only):
 
@@ -564,7 +565,7 @@ class Logistic(Loss):
         loss = F.log(1.0 + F.exp(-output * label))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
-   
+
 class Quantile(Loss):
     """Calculates Koenker's quantile regression loss function yielding an estimate of the
        appropriately chosen quantile rather than the mean (or median):
@@ -685,7 +686,7 @@ class DualKL(Loss):
         loss = (label == -1) * F.exp(output) - (label == 1) * (output + 1)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
-   
+
 class RelativeNovelty(Loss):
     """Estimates a relative novelty detector. See the Song, Teo and
        Smola (STS), 2009 for details. The main point is to estimate
@@ -727,7 +728,7 @@ class RelativeNovelty(Loss):
         loss = (label == 1) * loss + (label == -1) * F.exp(output - self._rho)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
-   
+
 class LogCosh(Loss):
     """Calculates the smoothed L1 loss, aka log cosh loss in a
        numerically stable manner (i.e. without exponentiating large
@@ -759,12 +760,12 @@ class LogCosh(Loss):
         loss = loss + F.log(0.5 + 0.5 * F.exp(-2 * loss))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
-   
+
 class Poisson(Loss):
     """Calculates the Poisson loss function (up to the normalization
        by a factorial in the label, due to computational efficiency
        reasons).
-      
+
        NOTE THAT THIS IS DIFFERENT FROM THE POISSON LOSS IN PYTORCH
        AND KERAS INSOFAR AS IT USES THE EPXONENTIAL VERSION. THAT ONE
        DOESN'T SUFFER FROM LOG 0 PROBLEMS.
@@ -877,8 +878,8 @@ class TripletLoss(Loss):
         super(TripletLoss, self).__init__(weight, batch_axis, **kwargs)
         self._margin = margin
         self._axis = axis
-       
-    def hybrid_forward(self, F, output1, output2, output3, sample_weight=None):
+
+        def hybrid_forward(self, F, output1, output2, output3, sample_weight=None):
         loss = F.sum((output1-output2)**2 - (output1-output3)**2, axis=self._axis) + self._margin
         loss = F.maximum(loss, F.zeros_like(loss))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
