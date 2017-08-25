@@ -169,7 +169,7 @@ struct TBlobBatch {
   }
   /*! \brief destructor */
   ~TBlobBatch() {
-    delete inst_index;
+    delete[] inst_index;
   }
 };  // struct TBlobBatch
 
