@@ -40,6 +40,7 @@
 #include <utility>
 #include "./operator_common.h"
 #include "./nn/im2col.h"
+#include "./linalg.h"
 
 
 namespace mxnet {
@@ -160,7 +161,9 @@ class ConvolutionOp : public Operator {
              col_buffer.dptr<DType>());
       Tensor<xpu, 3, DType> output_3d = output_4d[n];
       for (index_t g = 0; g < group_; ++g) {
-        ASSIGN_DISPATCH(output_3d[g], req[conv::kOut], dot(weight_3d[g], col_buffer_3d[g]));
+        // Legacy approach shown here for comparison:
+        //   Assign(output_3d[g], req[conv::kOut], dot(weight_3d[g], col_buffer_3d[g]));
+        linalg_gemm(weight_3d[g], col_buffer_3d[g], output_3d[g], false, false, s, req[conv::kOut]);
       }
     }
     if (bias_term_) {
@@ -219,7 +222,9 @@ class ConvolutionOp : public Operator {
       Tensor<xpu, 3, DType> out_grad_3d = out_grad_4d[n];
       // gradient w.r.t. input data
       for (index_t g = 0; g < group_; ++g) {
-        col_buffer_3d[g] = dot(weight_3d[g].T(), out_grad_3d[g]);
+        // Legacy approach shown here for comparison:
+        //   col_buffer_3d[g] = dot(weight_3d[g].T(), out_grad_3d[g]);
+        linalg_gemm(weight_3d[g], out_grad_3d[g], col_buffer_3d[g], true, false, s);
       }
       col2im(s, col_buffer.dptr<DType>(), in_grad[conv::kData].shape_, col_buffer.shape_,
              param_.kernel, param_.pad, param_.stride, param_.dilate,
@@ -230,12 +235,10 @@ class ConvolutionOp : public Operator {
              col_buffer.shape_, param_.kernel, param_.pad, param_.stride, param_.dilate,
              col_buffer.dptr<DType>());
       for (index_t g = 0; g < group_; ++g) {
-        if (0 == n) {
-          ASSIGN_DISPATCH(dweight_3d[g], req[conv::kWeight],
-                          dot(out_grad_3d[g], col_buffer_3d[g].T()));
-        } else {
-          dweight_3d[g] += dot(out_grad_3d[g], col_buffer_3d[g].T());
-        }
+        auto request = (n == 0) ? req[conv::kWeight] : kAddTo;
+        // Legacy approach shown here for comparison:
+        //   Assign(dweight_3d[g], request, dot(out_grad_3d[g], col_buffer_3d[g].T()));
+        linalg_gemm(out_grad_3d[g], col_buffer_3d[g], dweight_3d[g], false, true, s, request);
       }
     }
 

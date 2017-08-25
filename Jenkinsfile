@@ -155,7 +155,7 @@ try {
           ws('workspace/amalgamation') {
             init_git()
             make('cpu', '-C amalgamation/ clean')
-            make('cpu', '-C amalgamation/ USE_BLAS=openblas')
+            make('cpu', '-C amalgamation/ USE_BLAS=openblas MIN=1')
           }
         }
       },
