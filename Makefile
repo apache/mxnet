@@ -29,7 +29,7 @@ endif
 # use customized config file
 include $(config)
 
-ifeq ($(USE_MKL2017), 1)
+ifeq ($(USE_MKLDNN), 1)
 # must run ./prepare_mkl before including mshadow.mk
 	RETURN_STRING = $(shell ./prepare_mkl.sh $(MKLML_ROOT))
 	MKLROOT = $(firstword $(RETURN_STRING))
@@ -45,7 +45,6 @@ CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror
-	NVCCFLAGS += -Werror cross-execution-space-call
 endif
 
 # CFLAGS for debug
@@ -57,9 +56,9 @@ endif
 CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
-	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
-	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
 # CFLAGS for profiler
@@ -94,17 +93,33 @@ ifeq ($(USE_NNPACK), 1)
 	LDFLAGS += -lnnpack
 endif
 
+# ifeq ($(USE_MKLDNN), 1)
+# 	# CFLAGS += -DMXNET_USE_MKL2017=1
+# 	CFLAGS += -DUSE_MKL=1
+# 	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
+# 	CFLAGS += -I$(MKLML_ROOT)/include
+# 	LDFLAGS += -L$(MKLML_ROOT)/lib
+# ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
+# 	CFLAGS += -DMKL_EXPERIMENTAL=1
+# else
+# 	CFLAGS += -DMKL_EXPERIMENTAL=0
+# endif
+ifeq ($(USE_MKLDNN), 1)
+	CFLAGS += -DMKL_EXPERIMENTAL=1
+	CFLAGS += -DUSE_MKL=1
+	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
+	CFLAGS += -I$(MKLML_ROOT)/include
+	LDFLAGS += -L$(MKLML_ROOT)/lib
+	CFLAGS += -DMXNET_USE_MKLDNN=1
+endif
+
 ifeq ($(USE_MKL2017), 1)
+	CFLAGS += -DMKL_EXPERIMENTAL=1
 	CFLAGS += -DMXNET_USE_MKL2017=1
 	CFLAGS += -DUSE_MKL=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
 	CFLAGS += -I$(MKLML_ROOT)/include
 	LDFLAGS += -L$(MKLML_ROOT)/lib
-ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
-	CFLAGS += -DMKL_EXPERIMENTAL=1
-else
-	CFLAGS += -DMKL_EXPERIMENTAL=0
-endif
 endif
 
 # verify existence of separate lapack library when using blas/openblas/atlas
@@ -383,23 +398,16 @@ rpkg:
 	cp -rf include/* R-package/inst/include
 	cp -rf dmlc-core/include/* R-package/inst/include/
 	cp -rf nnvm/include/* R-package/inst/include
-	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
-	Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(pkg='R-package', dependencies = TRUE)"
 	echo "import(Rcpp)" > R-package/NAMESPACE
 	echo "import(methods)" >> R-package/NAMESPACE
 	R CMD INSTALL R-package
-	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package')"
+	Rscript -e "require(mxnet); mxnet:::mxnet.export(\"R-package\")"
 	rm -rf R-package/NAMESPACE
-	Rscript -e "if (!require('roxygen2')||packageVersion('roxygen2')!= '5.0.1'){\
-	devtools::install_version('roxygen2',version='5.0.1',\
-	repo='https://cloud.r-project.org/',quiet=TRUE)}"
-	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package')"
+	Rscript -e "require(devtools); install_version(\"roxygen2\", version = \"5.0.1\", repos = \"https://cloud.r-project.org/\", quiet = TRUE)"
+	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
 	R CMD build --no-build-vignettes R-package
 	rm -rf mxnet_current_r.tar.gz
 	mv mxnet_*.tar.gz mxnet_current_r.tar.gz
-
-rpkgtest:
-	Rscript -e "require(testthat);res<-test_dir('R-package/tests/testthat');if(!testthat:::all_passed(res)){stop('Test failures', call. = FALSE)}"
 
 scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
