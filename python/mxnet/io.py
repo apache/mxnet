@@ -34,6 +34,7 @@ from .base import DataIterHandle, NDArrayHandle
 from .base import mx_real_t
 from .base import check_call, build_param_doc as _build_param_doc
 from .ndarray import NDArray
+from .ndarray import _ndarray_cls
 from .ndarray import array
 from .ndarray import concatenate
 
@@ -801,12 +802,12 @@ class MXDataIter(DataIter):
     def getdata(self):
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
-        return NDArray(hdl, False)
+        return _ndarray_cls(hdl, False)
 
     def getlabel(self):
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
-        return NDArray(hdl, False)
+        return _ndarray_cls(hdl, False)
 
     def getindex(self):
         index_size = ctypes.c_uint64(0)
@@ -814,10 +815,13 @@ class MXDataIter(DataIter):
         check_call(_LIB.MXDataIterGetIndex(self.handle,
                                            ctypes.byref(index_data),
                                            ctypes.byref(index_size)))
-        address = ctypes.addressof(index_data.contents)
-        dbuffer = (ctypes.c_uint64* index_size.value).from_address(address)
-        np_index = np.frombuffer(dbuffer, dtype=np.uint64)
-        return np_index.copy()
+        if index_size.value:
+            address = ctypes.addressof(index_data.contents)
+            dbuffer = (ctypes.c_uint64* index_size.value).from_address(address)
+            np_index = np.frombuffer(dbuffer, dtype=np.uint64)
+            return np_index.copy()
+        else:
+            return None
 
     def getpad(self):
         pad = ctypes.c_int(0)

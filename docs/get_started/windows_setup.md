@@ -9,7 +9,6 @@ You can either use a prebuilt binary package or build from source to build the M
 MXNet provides a prebuilt package for Windows. The prebuilt package includes the MXNet library, all of the dependent third-party libraries, a sample C++ solution for Visual Studio, and the Python installation script. To install the prebuilt package:
 
 1. Download the latest prebuilt package from the [Releases](https://github.com/dmlc/mxnet/releases) tab of MXNet.
-   There are two versions. One with GPU support (using CUDA and CUDNN v3), and one without GPU support. Choose the version that suits your hardware configuration. For more information on which version works on each hardware configuration, see [Requirements for GPU](http://mxnet.io/get_started/setup.html#requirements-for-using-gpus).
 2. Unpack the package into a folder, with an appropriate name, such as ```D:\MXNet```.
 3. Open the folder, and install the package by double-clicking ```setupenv.cmd```. This sets up all of the environment variables required by MXNet.
 4. Test the installation by opening the provided sample C++ Visual Studio solution and building it.

@@ -2,7 +2,7 @@
 
 Indicate your preferred configuration. Then, follow the customized commands to install *MXNet*.
 
-<script type="text/javascript" src='../../_static/js/options.js'></script>
+<script type="text/javascript" src='../_static/js/options.js'></script>
 
 <!-- START - OS Menu -->
 
@@ -149,6 +149,11 @@ pip install graphviz
 ```
 
 **Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-mkl
+```
 
 </div>
 
@@ -312,6 +317,11 @@ pip install graphviz
 ```
 
 **Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-cu80mkl
+```
 
 </div>
 

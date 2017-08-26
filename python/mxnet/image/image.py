@@ -34,9 +34,9 @@ except ImportError:
 
 from ..base import numeric_types
 from .. import ndarray as nd
-from .. import _ndarray_internal as _internal
-from .._ndarray_internal import _cvimresize as imresize
-from .._ndarray_internal import _cvcopyMakeBorder as copyMakeBorder
+from ..ndarray import _internal
+from ..ndarray._internal import _cvimresize as imresize
+from ..ndarray._internal import _cvcopyMakeBorder as copyMakeBorder
 from .. import io
 from .. import recordio
 

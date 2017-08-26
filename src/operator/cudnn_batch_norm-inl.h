@@ -112,7 +112,7 @@ class CuDNNBatchNormOp : public Operator {
 
     Tensor<gpu, 4, DType> y =
       out_data[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, DType>(shape_, s);
-#if CUDNN_VERSION >= 7000
+#if CUDNN_VERSION >= 7003
     auto mode = CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
 #else
     auto mode = CUDNN_BATCHNORM_SPATIAL;
@@ -201,7 +201,7 @@ class CuDNNBatchNormOp : public Operator {
       out_grad[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, DType>(shape_, s);
 
 #if CUDNN_VERSION >= 4007
-#if CUDNN_VERSION >= 7000
+#if CUDNN_VERSION >= 7003
     auto mode = CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
 #else
     auto mode = CUDNN_BATCHNORM_SPATIAL;

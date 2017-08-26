@@ -27,10 +27,19 @@
 namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
-.add_alias("_add").add_alias("_plus").add_alias("_Plus")
-.describe("Adds arguments element-wise.")
+.add_alias("_add").add_alias("_plus").add_alias("_Plus").add_alias("_sparse_elemwise_add")
+.describe(R"code(Adds arguments element-wise.
+
+The storage type of ``elemwise_add`` output depends on storage types of inputs
+
+- elemwise_add(row_sparse, row_sparse) = row_sparse
+- otherwise, ``elemwise_add`` generates output with default storage
+
+)code")
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, mshadow::op::plus>)
-.set_attr<nnvm::FGradient>("FGradient", CloneGradient{"_backward_add"});
+.set_attr<nnvm::FGradient>("FGradient", CloneGradient{"_backward_add"})
+.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryComputeEx<cpu, mshadow::op::plus>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1>);
 
 // specialized gradient add function to do add to optimization
 // this must differ from elemwise_add to prevent add to optimization in forward pass.
@@ -46,7 +55,10 @@ NNVM_REGISTER_OP(_backward_add)
     return std::vector<std::pair<int, int> >{{0, 0}, {0, 1}};
   })
 .set_attr<FCompute>("FCompute<cpu>", BinaryBackwardUseNone<cpu, mshadow_op::identity,
-                                                                mshadow_op::identity>);
+                                                                mshadow_op::identity>)
+.set_attr<FComputeEx>("FComputeEx<cpu>",
+                      BinaryBackwardUseNoneEx<cpu, mshadow_op::identity, mshadow_op::identity>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 2>);
 
 MXNET_OPERATOR_REGISTER_BINARY(_sub)
 .add_alias("_minus").add_alias("_Minus")

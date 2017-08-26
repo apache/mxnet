@@ -29,8 +29,12 @@ from test_operator import *
 from test_optimizer import *
 from test_random import *
 from test_gluon import *
+from test_loss import *
 #from test_rnn import *
 from test_gluon_rnn import *
+from test_sparse_operator import test_cast_storage_ex, test_sparse_dot
+from test_sparse_operator import test_sparse_nd_zeros, test_sparse_retain
+from test_sparse_ndarray import test_create_csr, test_create_row_sparse
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm
@@ -925,6 +929,11 @@ def test_fullyconnected_with_type():
                 {'ctx': mx.gpu(0), 'inner_data': (2, 10), 'type_dict': {'inner_data': np.float16}},
                 {'ctx': mx.cpu(0), 'inner_data': (2, 10), 'type_dict': {'inner_data': np.float64}},
                 {'ctx': mx.cpu(0), 'inner_data': (2, 10), 'type_dict': {'inner_data': np.float32}}]
+    check_consistency(sym, ctx_list)
+    # Sizes are divisible by 8 to test TensorCore on Volta GPU.
+    sym = mx.sym.FullyConnected(num_hidden=8, name='inner')
+    ctx_list = [{'ctx': mx.gpu(0), 'inner_data': (16, 24), 'type_dict': {'inner_data': np.float16}},
+                {'ctx': mx.cpu(0), 'inner_data': (16, 24), 'type_dict': {'inner_data': np.float32}}]
     check_consistency(sym, ctx_list)
 
 
