@@ -56,6 +56,7 @@ A detailed tutorial is available at
 
     io.NDArrayIter
     io.CSVIter
+    io.LibSVMIter
     io.ImageRecordIter
     io.ImageRecordUInt8Iter
     io.MNISTIter
