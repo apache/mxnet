@@ -5,7 +5,9 @@ mx.model.train.rnn.buckets <- function(ctx, symbol,
                                        begin.round, end.round, optimizer, train.data, eval.data, metric, 
                                        epoch.end.callback, batch.end.callback, kvstore, verbose = TRUE) {
   
-  arguments <- symbol$arguments
+  if (is.list(symbol)) sym_ini <- symbol[[names(train.data$bucketID())]] else sym_ini <- symbol
+  
+  arguments <- sym_ini$arguments
   arg.params.fix.names <- names(arg.params.fix)
   arg.params.names <- names(arg.params)
   input.names <- names(dlist)
@@ -22,12 +24,7 @@ mx.model.train.rnn.buckets <- function(ctx, symbol,
   # Arg array order
   update_names <- c(input.names, arg.params.fix.names, arg.params.names)
   arg_update_idx <- match(arguments, update_names)
-  
-  # Initial binding
-  # dlist <- lapply(input.shape, function(shape) {
-  #   mx.nd.zeros(shape = shape, ctx = mx.cpu()) 
-  # })
-  
+
   slices <- lapply(1:ndevice, function(i) {
     sapply(names(dlist), function(n) mx.nd.split(data=dlist[[n]], num_outputs = ndevice, axis = 0, squeeze_axis = F))
   })
@@ -69,7 +66,7 @@ mx.model.train.rnn.buckets <- function(ctx, symbol,
     while (train.data$iter.next()) {
       
       # Get iterator data
-      dlist <- train.data$value()
+      dlist <- train.data$value()[input.names]
       
       # Slice inputs for multi-devices
       slices <- lapply(1:ndevice, function(i) {
@@ -77,12 +74,21 @@ mx.model.train.rnn.buckets <- function(ctx, symbol,
       })
       
       # Assign input to each executor - bug on inference if using BatchNorm
-      train.execs <- lapply(1:ndevice, function(i) {
-        s <- slices[[i]]
-        mxnet:::mx.symbol.bind(symbol = symbol, 
-                               arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.fix.names], train.execs[[i]]$arg.arrays[arg.params.names])[arg_update_idx],
-                               aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad_req)
-      })
+      if (is.list(symbol)) {
+        train.execs <- lapply(1:ndevice, function(i) {
+          s <- slices[[i]]
+          mxnet:::mx.symbol.bind(symbol = symbol[[names(train.data$bucketID())]], 
+                                 arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.fix.names], train.execs[[i]]$arg.arrays[arg.params.names])[arg_update_idx],
+                                 aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad_req)
+        })
+      } else {
+        train.execs <- lapply(1:ndevice, function(i) {
+          s <- slices[[i]]
+          mxnet:::mx.symbol.bind(symbol = symbol, 
+                                 arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.fix.names], train.execs[[i]]$arg.arrays[arg.params.names])[arg_update_idx],
+                                 aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad_req)
+        })
+      }
       
       for (texec in train.execs) {
         mx.exec.forward(texec, is.train = TRUE)
@@ -151,20 +157,29 @@ mx.model.train.rnn.buckets <- function(ctx, symbol,
       while (eval.data$iter.next()) {
         
         # Get iterator data
-        dlist <- eval.data$value()
+        dlist <- eval.data$value()[input.names]
         
         # Slice input to multiple devices
         slices <- lapply(1:ndevice, function(i) {
           sapply(names(dlist), function(n) mx.nd.split(data=dlist[[n]], num_outputs = ndevice, axis = 0, squeeze_axis = F))
         })
         
-        # Assign input to each executor
-        train.execs <- lapply(1:ndevice, function(i) {
-          s <- slices[[i]]
-          mxnet:::mx.symbol.bind(symbol = symbol, 
-                                 arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.fix.names], train.execs[[i]]$arg.arrays[arg.params.names])[arg_update_idx],
-                                 aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad_req)
-        })
+        # Assign input to each executor - bug on inference if using BatchNorm
+        if (is.list(symbol)) {
+          train.execs <- lapply(1:ndevice, function(i) {
+            s <- slices[[i]]
+            mxnet:::mx.symbol.bind(symbol = symbol[[names(eval.data$bucketID())]], 
+                                   arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.fix.names], train.execs[[i]]$arg.arrays[arg.params.names])[arg_update_idx],
+                                   aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad_req)
+          })
+        } else {
+          train.execs <- lapply(1:ndevice, function(i) {
+            s <- slices[[i]]
+            mxnet:::mx.symbol.bind(symbol = symbol, 
+                                   arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.fix.names], train.execs[[i]]$arg.arrays[arg.params.names])[arg_update_idx],
+                                   aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad_req)
+          })
+        }
         
         for (texec in train.execs) {
           mx.exec.forward(texec, is.train = FALSE)
@@ -212,7 +227,7 @@ mx.model.train.rnn.buckets <- function(ctx, symbol,
 # 
 #' Train RNN with bucket support
 #'
-#' @param symbol Symbolic representation of the model
+#' @param symbol Symbol or list of Symbols representing the model
 #' @param train.data Training data created by mx.io.bucket.iter
 #' @param eval.data Evaluation data created by mx.io.bucket.iter
 #' @param num.round int, number of epoch
@@ -266,14 +281,16 @@ mx.rnn.buckets <- function(symbol, train.data, eval.data = NULL, init.state = NU
     optimizer <- mx.opt.create(optimizer, rescale.grad = (1/batchsize), ...)
   }
   
-  arguments <- symbol$arguments
-  input.names <- names(train.data$value())
+  if (is.list(symbol)) sym_ini <- symbol[[names(train.data$bucketID())]] else sym_ini <- symbol
+    
+  arguments <- sym_ini$arguments
+  input.names <- intersect(names(train.data$value()), arguments)
   
   input.shape <- sapply(input.names, function(n) {
     dim(train.data$value()[[n]])
   }, simplify = FALSE)
   
-  shapes <- symbol$infer.shape(input.shape)
+  shapes <- sym_ini$infer.shape(input.shape)
   
   # initialize all arguments with zeros
   arguments.ini <- lapply(shapes$arg.shapes, function(shape) {
@@ -301,14 +318,6 @@ mx.rnn.buckets <- function(symbol, train.data, eval.data = NULL, init.state = NU
   if (length(aux.params) > 0) {
     aux.params[names(aux.params.ini)] <- aux.params.ini
   } else aux.params <- NULL
-  
-  # arg.arrays <- sapply(slist$arg.shapes, function(shape) {
-  #   mx.nd.zeros(shape, ctx)
-  # }, simplify = FALSE, USE.NAMES = TRUE)
-  # 
-  # arg.params <- mx.init.create(initializer, shapes$arg.shapes, ctx = mx.cpu(), skip.unknown = TRUE)
-  # 
-  # params <- mx.model.init.params(symbol = symbol, input.shape = input.shape, output.shape = NULL, initializer, mx.cpu())
   
   kvstore <- mxnet:::mx.model.create.kvstore(kvstore, params$arg.params, length(ctx), 
                                              verbose = verbose)

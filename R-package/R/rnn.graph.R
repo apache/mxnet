@@ -17,7 +17,7 @@ rnn.graph <- function(num.rnn.layer,
                       num.hidden,
                       num.label,
                       dropout = 0,
-                      ignore_label = 0,
+                      ignore_label = -1,
                       config,
                       cell.type,
                       masking = T,
@@ -56,7 +56,7 @@ rnn.graph <- function(num.rnn.layer,
   if (config=="seq-to-one") {
     
     if (masking) mask <- mx.symbol.SequenceLast(data=rnn[[1]], use.sequence.length = T, sequence_length = seq.mask, name = "mask") else
-      mask <- mx.symbol.identity(data = rnn[[1]], name = "mask")
+      mask <- mx.symbol.SequenceLast(data=rnn[[1]], use.sequence.length = F, name = "mask")
     
     fc <- mx.symbol.FullyConnected(data=mask,
                                    weight=cls.weight,
@@ -64,7 +64,7 @@ rnn.graph <- function(num.rnn.layer,
                                    num.hidden=num.label,
                                    name = "decode")
     
-    loss <- mx.symbol.SoftmaxOutput(data=fc, label=label, ignore_label=ignore_label, name="loss")
+    loss <- mx.symbol.SoftmaxOutput(data=fc, label=label, use_ignore = !ignore_label == -1, ignore_label = ignore_label, name = "loss")
     
   } else if (config=="one-to-one"){
     
@@ -82,7 +82,7 @@ rnn.graph <- function(num.rnn.layer,
                                    name = "decode")
     
     label <- mx.symbol.reshape(data=label, shape=c(-1))
-    loss <- mx.symbol.SoftmaxOutput(data=decode, label=label, ignore_label=ignore_label, name="loss")
+    loss <- mx.symbol.SoftmaxOutput(data=decode, label=label, use_ignore = !ignore_label == -1, ignore_label = ignore_label, name = "loss")
     
   }
   

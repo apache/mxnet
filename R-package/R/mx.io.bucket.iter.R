@@ -1,7 +1,7 @@
 
 BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "batch.size", 
                                                    "data.mask.element", "shuffle", "bucket.plan", "bucketID", "epoch", "batch", "batch.per.bucket", 
-                                                   "last.batch.pad", "batch.per.epoch", "seed"), contains = "Rcpp_MXArrayDataIter", 
+                                                   "last.batch.pad", "batch.per.epoch", "seed"), 
                           methods = list(
                             initialize = function(buckets, 
                                                   batch.size, data.mask.element = 0, shuffle = FALSE, seed = 123) {
