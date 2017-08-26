@@ -1,7 +1,25 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2017 by Contributors
  * \file batchnorm_test.cc
- * \brief operator unit test utility functions
+ * \brief batchnorm operator unit test utility functions
  * \author Chris Olivier
 */
 
@@ -874,8 +892,8 @@ TEST(BATCH_NORM, TestIterAll) {
           kwargs.push_back({ "cudnn_off", "True" });
         }
         for (TShape shape : shapes) {
-          for (int g1 = 0; g1 < 2U; ++g1) {
-            for (int g2 = 0; g2 < 2U; ++g2) {
+          for (int g1 = 0; g1 < 2; ++g1) {
+            for (int g2 = 0; g2 < 2; ++g2) {
               for (int type : v2_types) {
                 MSHADOW_REAL_TYPE_SWITCH_EX(
                   type, DType, AccReal,

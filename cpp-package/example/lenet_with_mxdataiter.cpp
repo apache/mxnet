@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2016 by Contributors
  */
 #include <iostream>
 #include <fstream>
@@ -85,7 +103,13 @@ int main(int argc, char const *argv[]) {
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
   opt->SetParam("momentum", 0.9)
      ->SetParam("rescale_grad", 1.0)
-     ->SetParam("clip_gradient", 10);
+     ->SetParam("clip_gradient", 10)
+     ->SetParam("lr", learning_rate)
+     ->SetParam("wd", weight_decay);
+
+
+  auto *exec = lenet.SimpleBind(Context::gpu(), args_map);
+  auto arg_names = lenet.ListArguments();
 
   for (int iter = 0; iter < max_epoch; ++iter) {
     LG << "Epoch: " << iter;
@@ -95,11 +119,13 @@ int main(int argc, char const *argv[]) {
       args_map["data"] = data_batch.data.Copy(Context::gpu());
       args_map["data_label"] = data_batch.label.Copy(Context::gpu());
       NDArray::WaitAll();
-      auto *exec = lenet.SimpleBind(Context::gpu(), args_map);
       exec->Forward(true);
       exec->Backward();
-      exec->UpdateAll(opt, learning_rate, weight_decay);
-      delete exec;
+      // Update parameters
+      for (size_t i = 0; i < arg_names.size(); ++i) {
+        if (arg_names[i] == "data" || arg_names[i] == "data_label") continue;
+        opt->Update(i, exec->arg_arrays[i], exec->grad_arrays[i]);
+      }
     }
 
     Accuracy acu;
@@ -109,14 +135,14 @@ int main(int argc, char const *argv[]) {
       args_map["data"] = data_batch.data.Copy(Context::gpu());
       args_map["data_label"] = data_batch.label.Copy(Context::gpu());
       NDArray::WaitAll();
-      auto *exec = lenet.SimpleBind(Context::gpu(), args_map);
       exec->Forward(false);
       NDArray::WaitAll();
       acu.Update(data_batch.label, exec->outputs[0]);
-      delete exec;
     }
     LG << "Accuracy: " << acu.Get();
   }
+
+  delete exec;
   MXNotifyShutdown();
   return 0;
 }

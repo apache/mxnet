@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2017 by Contributors
  * \file test_op.h
  * \brief operator unit test utility functions
  * \author Chris Olivier
@@ -17,8 +35,8 @@
  * test_perf.h: Performance-related classes
  * test_op.h:   Operator-specific testing classes
  */
-#ifndef TESTS_CPP_INCLUDE_TEST_OP_H_
-#define TESTS_CPP_INCLUDE_TEST_OP_H_
+#ifndef TEST_OP_H_
+#define TEST_OP_H_
 
 #include "test_perf.h"
 #include "test_util.h"
@@ -57,7 +75,8 @@ class BasicOperatorData {
     : opContext_(*opContext) {
       CHECK_EQ(opContext_.run_ctx.stream == nullptr, true)
         << "Invalid runtime context stream state";
-      opContext_.run_ctx.stream = mshadow::NewStream<gpu>(true, true);
+      auto device_id = opContext->run_ctx.get_ctx().dev_id;
+      opContext_.run_ctx.stream = mshadow::NewStream<gpu>(true, true, device_id);
       CHECK_EQ(opContext_.run_ctx.stream != nullptr, true)
         << "Unable to allocate a GPU stream";
     }
@@ -705,4 +724,4 @@ static test::op::OpInfo<OperatorProp, DType, AccReal> createOpAndInfoF(const boo
 }  // namespace test
 }  // namespace mxnet
 
-#endif  // TESTS_CPP_INCLUDE_TEST_OP_H_
+#endif  // TEST_OP_H_

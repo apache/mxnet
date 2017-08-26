@@ -1,10 +1,27 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Base;
 use strict;
 use warnings;
 use PDL;
 use PDL::Types qw();
-use AI::MXNetCAPI 0.9506;
-use AI::NNVMCAPI 0.95;
+use AI::MXNetCAPI 1.0102;
+use AI::NNVMCAPI 1.01;
 use AI::MXNet::Types;
 use Time::HiRes;
 use Carp;
@@ -12,7 +29,7 @@ use Exporter;
 use base qw(Exporter);
 use List::Util qw(shuffle);
 
-@AI::MXNet::Base::EXPORT = qw(product enumerate assert zip check_call build_param_doc 
+@AI::MXNet::Base::EXPORT = qw(product enumerate assert zip check_call build_param_doc
                               pdl cat dog svd bisect_left pdl_shuffle
                               DTYPE_STR_TO_MX DTYPE_MX_TO_STR DTYPE_MX_TO_PDL
                               DTYPE_PDL_TO_MX DTYPE_MX_TO_PERL GRAD_REQ_MAP);
@@ -239,12 +256,12 @@ sub build_param_doc
     $remove_dup //= 1;
     my %param_keys;
     my @param_str;
-    zip(sub { 
+    zip(sub {
             my ($key, $type_info, $desc) = @_;
             return if exists $param_keys{$key} and $remove_dup;
             $param_keys{$key} = 1;
             my $ret = sprintf("%s : %s", $key, $type_info);
-            $ret .= "\n    ".$desc if length($desc); 
+            $ret .= "\n    ".$desc if length($desc);
             push @param_str,  $ret;
         },
         $arg_names, $arg_types, $arg_descs

@@ -550,6 +550,18 @@ NDArray::RObjectType DispatchOps(SEXP op, SEXP lhs, SEXP rhs) {
   static OpHandle mod = NDArrayFunction::FindHandle("_mod");
   static OpHandle mod_scalar = NDArrayFunction::FindHandle("_mod_scalar");
   static OpHandle rmod_scalar = NDArrayFunction::FindHandle("_rmod_scalar");
+  static OpHandle equal = NDArrayFunction::FindHandle("_equal");
+  static OpHandle equal_scalar = NDArrayFunction::FindHandle("_equal_scalar");
+  static OpHandle not_equal = NDArrayFunction::FindHandle("_not_equal");
+  static OpHandle not_equal_scalar = NDArrayFunction::FindHandle("_not_equal_scalar");
+  static OpHandle greater = NDArrayFunction::FindHandle("_greater");
+  static OpHandle greater_scalar = NDArrayFunction::FindHandle("_greater_scalar");
+  static OpHandle greater_equal = NDArrayFunction::FindHandle("_greater_equal");
+  static OpHandle greater_equal_scalar = NDArrayFunction::FindHandle("_greater_equal_scalar");
+  static OpHandle lesser = NDArrayFunction::FindHandle("_lesser");
+  static OpHandle lesser_scalar = NDArrayFunction::FindHandle("_lesser_scalar");
+  static OpHandle lesser_equal = NDArrayFunction::FindHandle("_lesser_equal");
+  static OpHandle lesser_equal_scalar = NDArrayFunction::FindHandle("_lesser_equal_scalar");
   // parse the arguments
   std::string values[2];
   NDArrayHandle handles[2];
@@ -610,8 +622,68 @@ NDArray::RObjectType DispatchOps(SEXP op, SEXP lhs, SEXP rhs) {
       }
       break;
     }
+    case '=': {
+      if (lhs_nd && rhs_nd) {
+        out = BinaryOp(equal, handles);
+      } else if (lhs_nd && !rhs_nd) {
+        out = BinaryScalarOp(equal_scalar, handles[0], values[1]);
+      } else {
+        out = BinaryScalarOp(equal_scalar, handles[1], values[0]);
+      }
+      break;
+    }
+    case '!': {
+      if (lhs_nd && rhs_nd) {
+        out = BinaryOp(not_equal, handles);
+      } else if (lhs_nd && !rhs_nd) {
+        out = BinaryScalarOp(not_equal_scalar, handles[0], values[1]);
+      } else {
+        out = BinaryScalarOp(not_equal_scalar, handles[1], values[0]);
+      }
+      break;
+    }
+    case '>': {
+      if (sop == ">=") {
+        if (lhs_nd && rhs_nd) {
+          out = BinaryOp(greater_equal, handles);
+        } else if (lhs_nd && !rhs_nd) {
+          out = BinaryScalarOp(greater_equal_scalar, handles[0], values[1]);
+        } else {
+          out = BinaryScalarOp(lesser_equal_scalar, handles[1], values[0]);
+        }
+      } else {
+        if (lhs_nd && rhs_nd) {
+          out = BinaryOp(greater, handles);
+        } else if (lhs_nd && !rhs_nd) {
+          out = BinaryScalarOp(greater_scalar, handles[0], values[1]);
+        } else {
+          out = BinaryScalarOp(lesser_scalar, handles[1], values[0]);
+        }
+      }
+      break;
+    }
+    case '<': {
+      if (sop == "<=") {
+        if (lhs_nd && rhs_nd) {
+          out = BinaryOp(lesser_equal, handles);
+        } else if (lhs_nd && !rhs_nd) {
+          out = BinaryScalarOp(lesser_equal_scalar, handles[0], values[1]);
+        } else {
+          out = BinaryScalarOp(greater_equal_scalar, handles[1], values[0]);
+        }
+      } else {
+        if (lhs_nd && rhs_nd) {
+          out = BinaryOp(lesser, handles);
+        } else if (lhs_nd && !rhs_nd) {
+          out = BinaryScalarOp(lesser_scalar, handles[0], values[1]);
+        } else {
+          out = BinaryScalarOp(greater_scalar, handles[1], values[0]);
+        }
+      }
+      break;
+    }
     default: {
-      RLOG_FATAL << "Operator " << sop << "not supported for MXNDArray";
+      RLOG_FATAL << "Operator " << sop << " not supported for MXNDArray";
     }
   }
   return NDArray::RObject(out, true);

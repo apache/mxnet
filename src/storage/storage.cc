@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  */
 #include <mxnet/storage.h>
 #include <mshadow/tensor.h>
@@ -37,11 +55,6 @@ class StorageImpl : public Storage {
       case Context::kGPU:
       case Context::kCPUPinned: {
 #if MXNET_USE_CUDA
-          num_gpu_device = 0;
-          cudaError_t e = cudaGetDeviceCount(&num_gpu_device);
-          if (e != cudaSuccess) {
-            num_gpu_device = 0;
-          }
           if (num_gpu_device > 0) {
             CUDA_CALL(cudaSetDevice(ctx.dev_id));
           }
@@ -76,6 +89,11 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
           }
           case Context::kCPUPinned: {
 #if MXNET_USE_CUDA
+            num_gpu_device = 0;
+            cudaError_t e = cudaGetDeviceCount(&num_gpu_device);
+            if (e != cudaSuccess) {
+              num_gpu_device = 0;
+            }
             if (num_gpu_device > 0) {
               ptr = new storage::NaiveStorageManager<storage::PinnedMemoryStorage>();
             } else {
@@ -88,6 +106,8 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
           }
           case Context::kGPU: {
 #if MXNET_USE_CUDA
+            CUDA_CALL(cudaGetDeviceCount(&num_gpu_device));
+            CHECK_GT(num_gpu_device, 0) << "GPU usage requires at least 1 GPU";
             ptr = new storage::GPUPooledStorageManager();
 #else
             LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";

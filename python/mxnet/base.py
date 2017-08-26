@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=invalid-name, no-member
 """ctypes library of mxnet and helper functions."""
@@ -18,13 +35,15 @@ __all__ = ['MXNetError']
 #----------------------------
 if sys.version_info[0] == 3:
     string_types = str,
-    numeric_types = (float, int, np.float32, np.int32)
+    numeric_types = (float, int, np.generic)
+    integer_types = int
     # this function is needed for python3
     # to convert ctypes.char_p .value back to python str
     py_str = lambda x: x.decode('utf-8')
 else:
     string_types = basestring,
-    numeric_types = (float, int, long, np.float32, np.int32)
+    numeric_types = (float, int, long, np.generic)
+    integer_types = (int, long)
     py_str = lambda x: x
 
 class _NullType(object):
@@ -38,8 +57,47 @@ class MXNetError(Exception):
     """Error that will be throwed by all mxnet functions."""
     pass
 
+class NotImplementedForSymbol(MXNetError):
+    def __init__(self, function, alias, *args):
+        super(NotImplementedForSymbol, self).__init__()
+        self.function = function.__name__
+        self.alias = alias
+        self.args = [str(type(a)) for a in args]
+    def __str__(self):
+        msg = 'Function {}'.format(self.function)
+        if self.alias:
+            msg += ' (namely operator "{}")'.format(self.alias)
+        if self.args:
+            msg += ' with arguments ({})'.format(', '.join(self.args))
+        msg += ' is not implemented for Symbol and only available in NDArray.'
+        return msg
+
+class NotSupportedForSparseNDArray(MXNetError):
+    def __init__(self, function, alias, *args):
+        super(NotSupportedForSparseNDArray, self).__init__()
+        self.function = function.__name__
+        self.alias = alias
+        self.args = [str(type(a)) for a in args]
+    def __str__(self):
+        msg = 'Function {}'.format(self.function)
+        if self.alias:
+            msg += ' (namely operator "{}")'.format(self.alias)
+        if self.args:
+            msg += ' with arguments ({})'.format(', '.join(self.args))
+        msg += ' is not supported for SparseNDArray and only available in NDArray.'
+        return msg
+
+class MXCallbackList(ctypes.Structure):
+    """Structure that holds Callback information. Passed to CustomOpProp."""
+    _fields_ = [
+        ('num_callbacks', ctypes.c_int),
+        ('callbacks', ctypes.POINTER(ctypes.CFUNCTYPE(ctypes.c_int))),
+        ('contexts', ctypes.POINTER(ctypes.c_void_p))
+        ]
+
+
 def _load_lib():
-    """Load libary by searching possible path."""
+    """Load library by searching possible path."""
     lib_path = libinfo.find_lib_path()
     lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_LOCAL)
     # DMatrix functions
@@ -283,3 +341,21 @@ def add_fileline_to_docstring(module, incursive=True):
             _add_fileline(obj.__func__)
         if inspect.isclass(obj) and incursive:
             add_fileline_to_docstring(obj, False)
+
+def _as_list(obj):
+    """A utility function that converts the argument to a list if it is not already.
+
+    Parameters
+    ----------
+    obj : object
+
+    Returns
+    -------
+    If `obj` is a list or tuple, return it. Otherwise, return `[obj]` as a
+    single-element list.
+
+    """
+    if isinstance(obj, (list, tuple)):
+        return obj
+    else:
+        return [obj]

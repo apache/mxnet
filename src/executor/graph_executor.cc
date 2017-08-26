@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file graph_executor.cc
  * \brief graph executor
  */
@@ -12,9 +30,15 @@
 #include "./exec_pass.h"
 #include "./graph_executor.h"
 #include "../engine/profiler.h"
+#include "../common/utils.h"
 
 namespace mxnet {
 namespace exec {
+
+GraphExecutor::GraphExecutor() {
+  log_verbose_ = dmlc::GetEnv("MXNET_EXEC_VERBOSE_LOGGING", false);
+}
+
 GraphExecutor::~GraphExecutor() {
   for (auto& n : op_nodes_) {
     if (n.cached_opr != nullptr) {
@@ -29,6 +53,30 @@ GraphExecutor::~GraphExecutor() {
   }
 }
 
+inline NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
+                                const Context &ctx, const int dtype) {
+  // NDArray with default storage
+  if (stype == kDefaultStorage) {
+    NDArray ret(shape, ctx, false, dtype);
+    ret = 0;
+    return ret;
+  }
+  // NDArray with non-default storage. Storage allocation is always delayed.
+  return NDArray(stype, shape, ctx, true, dtype);
+}
+
+inline void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape,
+                             const Context &ctx, const int dtype,
+                             std::vector<NDArray> *vec) {
+  // NDArray with default storage
+  if (stype == kDefaultStorage) {
+    vec->emplace_back(shape, ctx, false, dtype);
+    vec->back() = 0;
+  } else {
+    // NDArray with non-default storage. Storage allocation is always delayed.
+    vec->emplace_back(stype, shape, ctx, true, dtype);
+  }
+}
 void GraphExecutor::Forward(bool is_train) {
   RunOps(is_train, 0, num_forward_nodes_);
 }
@@ -42,7 +90,7 @@ void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
   *step_left = static_cast<int>(num_forward_nodes_ - sstep - 1);
 }
 
-void GraphExecutor::Backward(const std::vector<NDArray>& head_grads) {
+void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_train) {
   const auto& idx = graph_.indexed_graph();
   if (num_forward_inputs_ != idx.input_nodes().size()) {
     for (size_t i = 0; i < head_grad_array_.size(); ++i) {
@@ -57,7 +105,7 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads) {
       }
     }
   }
-  RunOps(true, num_forward_nodes_, idx.num_nodes());
+  RunOps(is_train, num_forward_nodes_, idx.num_nodes());
 }
 
 void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
@@ -355,6 +403,21 @@ Graph AssignContext(Graph g,
       vcontext.push_back(ctx_list[assigned_device[i]]);
     }
   }
+
+  // after device planning, we should check again
+  // if the assigned device of gradient node
+  // corresponds to storage of grads
+  auto &new_idx = g.indexed_graph();
+  for (size_t i = num_forward_outputs; i < g.outputs.size(); ++i) {
+    const uint32_t nid = new_idx.outputs()[i].node_id;
+    Context ctx = arg_grad_ctxes[i - num_forward_outputs];
+    CHECK(ctx == vcontext[nid])
+      << "Trying to save gradient to " << ctx
+      << " while its source node \"" << new_idx[nid].source->attrs.name
+      << "\" computes it on " << vcontext[nid]
+      << ". Check your ctx in NDArray allocation.";
+  }
+
   g.attrs["context"] = std::make_shared<nnvm::any>(std::move(vcontext));
   return g;
 }
@@ -405,6 +468,29 @@ void HandleInferTypeError(const size_t num_forward_inputs,
              << oss.str();
 }
 
+void HandleInferStorageTypeError(const size_t num_forward_inputs,
+                                 const nnvm::IndexedGraph& idx,
+                                 const StorageTypeVector& inferred_stypes) {
+  int cnt = 10;
+  std::ostringstream oss;
+  for (size_t i = 0; i < num_forward_inputs; ++i) {
+    const uint32_t nid = idx.input_nodes().at(i);
+    const uint32_t eid = idx.entry_id(nid, 0);
+    const int inferred_stype = inferred_stypes[eid];
+    if (inferred_stype == -1) {
+      const std::string& arg_name = idx[nid].source->attrs.name;
+      oss << arg_name << ": " << inferred_stype << ", ";
+      if (--cnt == 0) {
+        oss << "...";
+        break;
+      }
+    }
+  }
+  LOG(FATAL) << "InferStoragetType pass cannot decide storage type for the following arguments "
+                "(-1 means unknown stype). Please consider providing them as inputs:\n"
+             << oss.str();
+}
+
 /*!
  * \brief GraphExecutor initializer for regular bind flow in which
  * input arguments and gradients are provided by users. This initializer
@@ -442,21 +528,25 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   data_entry_.resize(idx.num_node_entries());
   nnvm::ShapeVector arg_shapes;
   nnvm::DTypeVector arg_dtypes;
+  StorageTypeVector arg_stypes;
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& arg_name = idx[nid].source->attrs.name;
+    size_t eid = idx.entry_id(nid, 0);
     if (mutable_nodes.count(nid)) {
       CHECK_LT(aux_top, aux_states.size());
-      data_entry_[idx.entry_id(nid, 0)] = aux_states[aux_top];
+      data_entry_[eid] = aux_states[aux_top];
       arg_shapes.push_back(aux_states[aux_top].shape());
       arg_dtypes.push_back(aux_states[aux_top].dtype());
+      arg_stypes.push_back(aux_states[aux_top].storage_type());
       aux_state_map_.emplace(arg_name, aux_states[aux_top]);
       ++aux_top;
     } else {
       CHECK_LT(arg_top, in_args.size());
-      data_entry_[idx.entry_id(nid, 0)] = in_args[arg_top];
+      data_entry_[eid] = in_args[arg_top];
       arg_shapes.push_back(in_args[arg_top].shape());
       arg_dtypes.push_back(in_args[arg_top].dtype());
+      arg_stypes.push_back(in_args[arg_top].storage_type());
       in_arg_map_.emplace(arg_name, in_args[arg_top]);
       if (kNullOp != grad_req_types[arg_top]) {
         grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_store[arg_top]);
@@ -464,21 +554,31 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
       }
       ++arg_top;
     }
+    if (log_verbose_) {
+      LOG(INFO) << "\tassign data entry\t" << eid << " as stype "
+                << data_entry_[eid].storage_type() << " (input)";
+    }
   }
 
   // expand arg_shapes and arg_dtypes to contain backward inputs
   arg_shapes.resize(idx.input_nodes().size(), TShape());
-  g = nnvm::pass::InferShape(g, arg_shapes, "__shape__");
+  g = InferShape(std::move(g), arg_shapes, "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
     HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
                           g.GetAttr<nnvm::ShapeVector>("shape"));
   }
 
   arg_dtypes.resize(idx.input_nodes().size(), -1);
-  g = nnvm::pass::InferType(g, arg_dtypes, "__dtype__");
+  g = InferType(std::move(g), arg_dtypes, "__dtype__");
   if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
     HandleInferTypeError(num_forward_inputs_, g.indexed_graph(),
                          g.GetAttr<nnvm::DTypeVector>("dtype"));
+  }
+
+  g = InferStorageType(std::move(g), arg_stypes, "__storage_type__");
+  if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
+    HandleInferStorageTypeError(num_forward_inputs_, g.indexed_graph(),
+                                g.GetAttr<StorageTypeVector>("storage_type"));
   }
 
   // Initialize the rest attributes of the graph.
@@ -496,6 +596,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
 void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
                                   const nnvm::ShapeVector& inferred_shapes,
                                   const nnvm::DTypeVector& inferred_dtypes,
+                                  const StorageTypeVector& inferred_stypes,
                                   const std::vector<Context>& in_arg_ctxes,
                                   const std::vector<Context>& arg_grad_ctxes,
                                   const std::vector<Context>& aux_state_ctxes,
@@ -513,22 +614,37 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
     const uint32_t eid = idx.entry_id(nid, 0);
     const TShape& inferred_shape = inferred_shapes[eid];
     const int inferred_dtype = inferred_dtypes[eid];
+    const NDArrayStorageType inferred_stype = (NDArrayStorageType) inferred_stypes[eid];
     const std::string& arg_name = idx[nid].source->attrs.name;
     if (mutable_nodes.count(nid)) {  // aux_states
-      aux_state_vec->emplace_back(inferred_shape, aux_state_ctxes[aux_top], false, inferred_dtype);
-      aux_state_vec->back() = 0;
+      EmplaceBackZeros(inferred_stype, inferred_shape, aux_state_ctxes[aux_top],
+                       inferred_dtype, aux_state_vec);
       data_entry_[eid] = aux_state_vec->back();
       aux_state_map_.emplace(arg_name, aux_state_vec->back());
       ++aux_top;
+      if (log_verbose_) {
+        LOG(INFO) << "\tassign aux entry\t" << eid << "\t as stype " << inferred_stype;
+      }
     } else {  // in_args
-      in_arg_vec->emplace_back(inferred_shape, in_arg_ctxes[arg_top], false, inferred_dtype);
-      in_arg_vec->back() = 0;
+      EmplaceBackZeros(inferred_stype, inferred_shape, in_arg_ctxes[arg_top],
+                       inferred_dtype, in_arg_vec);
       data_entry_[eid] = in_arg_vec->back();
+      if (log_verbose_) {
+        LOG(INFO) << "\tassign data entry\t" << eid << "\tas stype " << inferred_stype;
+      }
+      // Get the storage type for grad
       if (kNullOp == grad_req_types[arg_top]) {
         arg_grad_vec->emplace_back();
       } else {
-        arg_grad_vec->emplace_back(inferred_shape, arg_grad_ctxes[arg_top], false, inferred_dtype);
-        arg_grad_vec->back() = 0;
+        // Init based on storage type
+        auto grad_oid = grad_store_.size() + num_forward_outputs_;
+        auto grad_eid = idx.entry_id(idx.outputs()[grad_oid]);
+        auto grad_stype = (NDArrayStorageType) inferred_stypes[grad_eid];
+        EmplaceBackZeros(grad_stype, inferred_shape, arg_grad_ctxes[arg_top],
+                         inferred_dtype, arg_grad_vec);
+        if (log_verbose_) {
+          LOG(INFO) << "\tassign grad entry\t" << grad_eid << "\tas stype " << grad_stype;
+        }
         grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
         arg_grad_map_.emplace(arg_name, arg_grad_vec->back());
       }
@@ -540,33 +656,40 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
 
 /*!
  * \brief If the requested ndarray's shape size is less than
- * the corresponding shared_data_array's shape size, reuse
- * the memory allocation; otherwise, create a zero ndarray.
+ * the corresponding shared_data_array's shape size and the
+ * storage type is default storage, reuse the memory allocation
+ * in shared_buffer; otherwise, create a zero ndarray.
  */
 NDArray ReshapeOrCreate(const std::string& name,
                         const TShape& dest_arg_shape,
                         const int dest_arg_dtype,
+                        const NDArrayStorageType dest_arg_stype,
                         const Context& ctx,
                         std::unordered_map<std::string, NDArray>* shared_buffer) {
+  if (dest_arg_dtype != kDefaultStorage) {
+    return InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
+  }
   auto it = shared_buffer->find(name);
   if (it != shared_buffer->end()) {
     if (it->second.shape().Size() >= dest_arg_shape.Size()) {  // memory can be reused
       CHECK_EQ(it->second.dtype(), dest_arg_dtype)
         << "Requested arg array's dtype does not match the reusable ndarray";
+      CHECK_EQ(it->second.storage_type(), kDefaultStorage)
+               << "shared_buffer should only contain NDArrays with default storage type.";
       return it->second.Reshape(dest_arg_shape);
     } else {
       LOG(WARNING) << "Bucketing: data " << name << " has a shape " << dest_arg_shape
                    << ", which is larger than already allocated shape " << it->second.shape()
                    << ". Need to re-allocate. Consider putting default bucket key to be "
                    << "the bucket taking the largest input for better memory sharing.";
-      it->second = NDArray(dest_arg_shape, ctx, false, dest_arg_dtype);
-      it->second = 0;
+      // the NDArrays in shared_buffer are guaranteed to be of default storage
+      it->second = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
       return it->second;
     }  // arg_array.shape().Size() >= arg_shape.Size()
   } else {
-    auto p = shared_buffer->emplace(name, NDArray(dest_arg_shape, ctx, false, dest_arg_dtype));
-    p.first->second = 0;
-    return p.first->second;
+    auto ret = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
+    shared_buffer->emplace(name, ret);
+    return ret;
   }  // if (it != shared_buffer->end())
 }
 
@@ -579,6 +702,7 @@ NDArray ReshapeOrCreate(const std::string& name,
 void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
                                   const nnvm::ShapeVector& inferred_shapes,
                                   const nnvm::DTypeVector& inferred_dtypes,
+                                  const StorageTypeVector& inferred_stypes,
                                   const std::vector<Context>& in_arg_ctxes,
                                   const std::vector<Context>& arg_grad_ctxes,
                                   const std::vector<Context>& aux_state_ctxes,
@@ -598,9 +722,12 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
     const uint32_t eid = idx.entry_id(nid, 0);
     const TShape& inferred_shape = inferred_shapes[eid];
     const int inferred_dtype = inferred_dtypes[eid];
+    const NDArrayStorageType inferred_stype = (NDArrayStorageType) inferred_stypes[eid];
     const std::string& arg_name = idx[nid].source->attrs.name;
-    if (mutable_nodes.count(nid)) {  // aux_states
-      if (nullptr != shared_exec) {
+    // aux_states
+    if (mutable_nodes.count(nid)) {
+      if (nullptr != shared_exec && inferred_stype == kDefaultStorage &&
+          shared_exec->aux_state_map().at(arg_name).storage_type() == kDefaultStorage) {
         const NDArray& aux_nd = shared_exec->aux_state_map().at(arg_name);
         CHECK_EQ(inferred_shape, aux_nd.shape())
           << "Inferred shape does not match shared_exec.aux_array's shape."
@@ -614,16 +741,18 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
           << arg_name << " for the current executor";
         aux_state_vec->emplace_back(aux_nd);
       } else {
-        aux_state_vec->emplace_back(inferred_shape, aux_state_ctxes[aux_top],
-                                    false, inferred_dtype);
-        aux_state_vec->back() = 0;
+        EmplaceBackZeros(inferred_stype, inferred_shape, aux_state_ctxes[aux_top],
+                         inferred_dtype, aux_state_vec);
       }  // if (has_shared_exec)
       data_entry_[eid] = aux_state_vec->back();
       aux_state_map_.emplace(arg_name, aux_state_vec->back());
       ++aux_top;
-    } else {  // in_args
+    } else {  // in_args and grad for in_args
       if (shared_arg_names.count(arg_name)) {  // model parameter
-        if (nullptr != shared_exec) {
+        // model parameter
+        if (nullptr != shared_exec && inferred_stype == kDefaultStorage &&
+            shared_exec->in_arg_map().at(arg_name).storage_type() == kDefaultStorage) {
+          // try to reuse memory from shared_exec
           const NDArray& in_arg_nd = shared_exec->in_arg_map().at(arg_name);
           CHECK_EQ(inferred_shape, in_arg_nd.shape())
             << "Inferred shape does not match shared_exec.arg_array's shape"
@@ -636,33 +765,43 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
                " be resued for creating NDArray of the argument"
             << arg_name << " for the current executor";
           in_arg_vec->emplace_back(in_arg_nd);
-          if (kNullOp == grad_req_types[arg_top]) {
-            arg_grad_vec->emplace_back();
-          } else {
-            arg_grad_vec->emplace_back(shared_exec->arg_grad_map().at(arg_name));
-            grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
-          }  // if (kNullOp == grad_req_types[arg_top])
-        } else {  // !has shared_exec
-          in_arg_vec->emplace_back(inferred_shape, in_arg_ctxes[arg_top], false, inferred_dtype);
-          in_arg_vec->back() = 0;
-          if (kNullOp == grad_req_types[arg_top]) {
-            arg_grad_vec->emplace_back();
-          } else {
-            arg_grad_vec->emplace_back(inferred_shape, arg_grad_ctxes[arg_top],
-                                       false, inferred_dtype);
-            arg_grad_vec->back() = 0;
-            grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
-          }  // if (kNullOp == grad_req_types[arg_top])
-        }  // if (has_shared_exec)
-      } else {  // !shared_arg_names.count(arg_name)
-        in_arg_vec->emplace_back(ReshapeOrCreate(arg_name, inferred_shape, inferred_dtype,
-                                                 in_arg_ctxes[arg_top], shared_buffer));
+        } else {
+          // doesn't have shared_exec, or non-default storage
+          EmplaceBackZeros(inferred_stype, inferred_shape, in_arg_ctxes[arg_top],
+                           inferred_dtype, in_arg_vec);
+        }
+        // gradient for model parameter
         if (kNullOp == grad_req_types[arg_top]) {
           arg_grad_vec->emplace_back();
         } else {
+          auto grad_oid = grad_store_.size() + num_forward_outputs_;
+          auto grad_eid = idx.entry_id(idx.outputs()[grad_oid]);
+          auto grad_stype = (NDArrayStorageType) inferred_stypes[grad_eid];
+          if (nullptr != shared_exec && grad_stype == kDefaultStorage &&
+              shared_exec->arg_grad_map().at(arg_name).storage_type() == kDefaultStorage) {
+            // try to reuse memory from shared_exec
+            arg_grad_vec->emplace_back(shared_exec->arg_grad_map().at(arg_name));
+          } else {
+            EmplaceBackZeros(grad_stype, inferred_shape, arg_grad_ctxes[arg_top],
+                             inferred_dtype, arg_grad_vec);
+          }
+          grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
+        }
+      } else {  // !shared_arg_names.count(arg_name)
+        // model parameter
+        in_arg_vec->emplace_back(ReshapeOrCreate(arg_name, inferred_shape, inferred_dtype,
+                                                 inferred_stype, in_arg_ctxes[arg_top],
+                                                 shared_buffer));
+        // gradient for model parameter
+        if (kNullOp == grad_req_types[arg_top]) {
+          arg_grad_vec->emplace_back();
+        } else {
+          auto grad_oid = grad_store_.size() + num_forward_outputs_;
+          auto grad_eid = idx.entry_id(idx.outputs()[grad_oid]);
+          auto grad_stype = (NDArrayStorageType) inferred_stypes[grad_eid];
           arg_grad_vec->emplace_back(ReshapeOrCreate("grad of " + arg_name, inferred_shape,
-                                                     inferred_dtype, arg_grad_ctxes[arg_top],
-                                                     shared_buffer));
+                                                     inferred_dtype, grad_stype,
+                                                     arg_grad_ctxes[arg_top], shared_buffer));
           grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
         }  // if (kNullOp == grad_req_types[arg_top])
       }  // if (shared_arg_names.count(arg_name))
@@ -685,14 +824,35 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
                                     Executor* shared_exec,
                                     const nnvm::NodeEntryMap<NDArray>& feed_dict) {
   const auto& idx = g.indexed_graph();
+  // dispatch based on stype per operator
+  const auto& vstorage_type = g.GetAttr<StorageTypeVector>("storage_type");
+  StorageTypeVector dispatch_stypes(idx.num_nodes(), kUndefinedStorage);
+  for (size_t nid = 0; nid < idx.num_nodes(); nid++) {
+      const auto& inode = idx[nid];
+      auto num_outputs = inode.source->num_outputs();
+      auto num_inputs = inode.inputs.size();
+      StorageTypeVector vs(num_inputs + num_outputs, kUndefinedStorage);
+      for (size_t i = 0; i < num_inputs; i++) {
+        auto e = inode.inputs[i];
+        vs[i] = vstorage_type[idx.entry_id(e)];
+        CHECK_NE(vs[i], kUndefinedStorage);
+      }
+      for (uint32_t i = 0; i < num_outputs; ++i) {
+        uint32_t eid = idx.entry_id(nid, i);
+        vs[i + num_inputs] = vstorage_type[eid];
+      }
+      bool contains_non_default = common::ContainsNonDefaultStorage(vs);
+      dispatch_stypes[nid] = contains_non_default ? kNonDefaultStorage : kDefaultStorage;
+  }
+  g.attrs["dispatch_stypes"] = std::make_shared<dmlc::any>(std::move(dispatch_stypes));
+
+  // data entries for output gradients
   for (size_t j = num_forward_outputs_; j < idx.outputs().size(); ++j) {
     data_entry_[idx.entry_id(idx.outputs()[j])] = grad_store_[j - num_forward_outputs_].second;
   }
 
   {
     // memory allocator
-    const int kBadStorageID = -1;
-    const int kExternalStorageID = -2;
     nnvm::StorageVector arg_storage_id(idx.num_node_entries(), kBadStorageID);
     for (size_t j = num_forward_outputs_; j < idx.outputs().size(); ++j) {
       arg_storage_id[idx.entry_id(idx.outputs()[j])] = kExternalStorageID;
@@ -702,12 +862,15 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
       data_entry_[eid] = kv.second;
       arg_storage_id[eid] = kExternalStorageID;
     }
+    for (size_t i = 0; i < idx.num_node_entries(); i++) {
+      if (vstorage_type[i] != kDefaultStorage) arg_storage_id[i] = kDynamicStorageID;
+    }
     g.attrs["storage"] = std::make_shared<dmlc::any>(std::move(arg_storage_id));
     g = nnvm::ApplyPass(g, "PlanMemory");
   }
   g = DetectInplaceAddTo(g);
 
-  g.attrs["saved_opr"] = std::make_shared<nnvm::any>(std::move(saved_opr_));
+  g.attrs["saved_states"] = std::make_shared<nnvm::any>(std::move(saved_states_));
   g = AttachOpExecs(g);
   g = AttachOpResources(g);
   graph_ = std::move(g);
@@ -759,6 +922,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          const std::vector<Context>& aux_state_ctxes,
                          const std::unordered_map<std::string, TShape>& arg_shape_map,
                          const std::unordered_map<std::string, int>& arg_dtype_map,
+                         const std::unordered_map<std::string, int>& arg_stype_map,
                          const std::vector<OpReqType>& grad_req_types,
                          const std::unordered_set<std::string>& shared_arg_names,
                          std::vector<NDArray>* in_arg_vec,
@@ -778,6 +942,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   const nnvm::IndexedGraph& idx = g.indexed_graph();
   nnvm::ShapeVector arg_shapes(idx.input_nodes().size(), TShape());
   nnvm::DTypeVector arg_dtypes(idx.input_nodes().size(), -1);
+  StorageTypeVector arg_stypes(idx.input_nodes().size(), kUndefinedStorage);
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& name = idx[nid].source->attrs.name;
@@ -789,17 +954,27 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
     if (arg_dtype_map.end() != it2) {
       arg_dtypes[i] = it2->second;
     }
+    auto it3 = arg_stype_map.find(name);
+    if (arg_stype_map.end() != it3) {
+      arg_stypes[i] = it3->second;
+    }
   }
-  g = nnvm::pass::InferShape(g, arg_shapes, "__shape__");
+  g = InferShape(std::move(g), arg_shapes, "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
     HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
                           g.GetAttr<nnvm::ShapeVector>("shape"));
   }
 
-  g = nnvm::pass::InferType(g, arg_dtypes, "__dtype__");
+  g = InferType(std::move(g), arg_dtypes, "__dtype__");
   if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
     HandleInferTypeError(num_forward_inputs_, g.indexed_graph(),
                          g.GetAttr<nnvm::DTypeVector>("dtype"));
+  }
+
+  g = InferStorageType(std::move(g), arg_stypes, "__storage_type__");
+  if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
+    HandleInferStorageTypeError(num_forward_inputs_, g.indexed_graph(),
+                                g.GetAttr<StorageTypeVector>("storage_type"));
   }
 
   // Create in_args, arg_grads, and aux_states using
@@ -807,11 +982,13 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   if (nullptr == shared_buffer) {  // regular simple bind
     InitArguments(idx, g.GetAttr<nnvm::ShapeVector>("shape"),
                   g.GetAttr<nnvm::DTypeVector>("dtype"),
+                  g.GetAttr<StorageTypeVector>("storage_type"),
                   in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
                   grad_req_types, in_arg_vec, arg_grad_vec, aux_state_vec);
   } else {  // simple bind using shared data arrays and shared_exec
     InitArguments(idx, g.GetAttr<nnvm::ShapeVector>("shape"),
                   g.GetAttr<nnvm::DTypeVector>("dtype"),
+                  g.GetAttr<StorageTypeVector>("storage_type"),
                   in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
                   grad_req_types, shared_arg_names, shared_exec,
                   shared_buffer, in_arg_vec, arg_grad_vec, aux_state_vec);
@@ -872,20 +1049,29 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   const auto& vdtype = graph_.GetAttr<DTypeVector>("dtype");
   const auto& vshape = graph_.GetAttr<ShapeVector>("shape");
   const auto& vstorage = graph_.GetAttr<StorageVector>("storage_id");
+  const auto& vstorage_type = graph_.GetAttr<StorageTypeVector>("storage_type");
   const auto& vctx = graph_.GetAttr<ContextVector>("context");
   CHECK_EQ(idx.num_node_entries(), vshape.size());
   CHECK_EQ(idx.num_node_entries(), vdtype.size());
   CHECK_EQ(idx.num_node_entries(), vstorage.size());
   CHECK_EQ(data_entry_.size(), vshape.size());
   std::vector<Context> data_context(idx.num_node_entries());
+  std::vector<NDArrayStorageType> data_storage_type(idx.num_node_entries(), kUndefinedStorage);
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     for (uint32_t i = 0; i < idx[nid].source->num_outputs(); ++i) {
-      data_context[idx.entry_id(nid, i)] = vctx[nid];
+      auto eid = idx.entry_id(nid, i);
+      data_context[eid] = vctx[nid];
+      CHECK_NE(vstorage_type[nid], kUndefinedStorage);
+      data_storage_type[eid] = (NDArrayStorageType) vstorage_type[nid];
     }
   }
 
   // information about the pool
-  using PoolEntry = std::pair<Context, size_t>;
+  struct PoolEntry {
+    Context ctx;
+    size_t bytes;
+    NDArrayStorageType stype;
+  };
   std::vector<PoolEntry> pool_info;
 
   // assign array to head gradient
@@ -893,26 +1079,36 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     uint32_t nid = idx.input_nodes().at(i);
     uint32_t oid = head_grad_map_.at(idx[nid].source);
     uint32_t eid = idx.entry_id(idx.outputs()[oid]);
+    NDArrayStorageType stype = (NDArrayStorageType) vstorage_type[eid];
     CHECK_NE(vshape[eid].ndim(), 0U);
     CHECK_NE(vdtype[eid], -1);
-    data_entry_[idx.entry_id(nid, 0)] =
-        NDArray(vshape[eid], data_context[eid], false, vdtype[eid]);
+    auto data_eid = idx.entry_id(nid, 0);
+    // initialize based on storage_type
+    if (stype != kDefaultStorage) {
+      data_entry_[data_eid] = NDArray(stype, vshape[eid], data_context[eid], true, vdtype[eid]);
+    } else {
+      data_entry_[data_eid] = NDArray(vshape[eid], data_context[eid], false, vdtype[eid]);
+    }
+    if (log_verbose_) {
+      LOG(INFO) << "\tinit head_g entry\t" << data_eid << "\tas stype " << stype;
+    }
   }
   // get maximum bytes in each pool
   for (size_t i = 0; i < vshape.size(); ++i) {
     if (!data_entry_[i].is_none()) continue;
     size_t bytes = vshape[i].Size() * mshadow::mshadow_sizeof(vdtype[i]);
     int storage_id = vstorage[i];
+    // skip pool allocation for kBadStorageID, kExternalStorageID and kDynamicStorageID
     if (storage_id < 0) continue;
     size_t sid = static_cast<size_t>(storage_id);
     if (sid >= pool_info.size()) {
-      pool_info.resize(sid + 1, PoolEntry{Context::CPU(), size_t(0)});
+      pool_info.resize(sid + 1, PoolEntry{Context::CPU(), size_t(0), kUndefinedStorage});
     }
     PoolEntry& info = pool_info[sid];
-    if (info.second == 0) {
-      info = PoolEntry{data_context[i], bytes};
+    if (info.bytes == 0) {
+      info = PoolEntry{data_context[i], bytes, data_storage_type[i]};
     } else {
-      info.second = std::max(info.second, bytes);
+      info.bytes = std::max(info.bytes, bytes);
     }
   }
   // construct the re-use pool, if needed
@@ -933,13 +1129,14 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     sorted_pool_index.push_back(i);
   }
   auto pool_comparator = [&pool_info](int lhs, int rhs){
-    return pool_info[lhs].second > pool_info[rhs].second;
+    return pool_info[lhs].bytes > pool_info[rhs].bytes;
   };
   std::sort(sorted_pool_index.begin(), sorted_pool_index.end(), pool_comparator);
 
   for (size_t i : sorted_pool_index) {
-    const Context& ctx = pool_info[i].first;
-    size_t bytes = pool_info[i].second;
+    const Context& ctx = pool_info[i].ctx;
+    size_t bytes = pool_info[i].bytes;
+    NDArrayStorageType storage_type = pool_info[i].stype;
     bool allocated = false;
     for (auto it = free_pool.lower_bound(bytes); it != free_pool.end(); ++it) {
       if (it->second.ctx() == ctx && it->first >= bytes) {
@@ -954,7 +1151,9 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
       CHECK_LE(nword, std::numeric_limits<nnvm::dim_t>::max());
       // allocate float arrays
       TShape shape{static_cast<nnvm::dim_t>(nword)};
-      NDArray nd(shape, ctx);
+      // TODO(junwu): adding delay_alloc=true to create nd
+      // is a temporary solution.
+      NDArray nd(shape, ctx, true);
       data_pool_[i] = nd;
       // put the new allocated arrays to shared pool
       if (shared_pool != nullptr)  {
@@ -964,15 +1163,22 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   }
   CHECK_EQ(data_pool_.size(), pool_info.size());
   // assign the data entries
-
   for (size_t i = 0; i < data_entry_.size(); ++i) {
     // avoid pre-allocated arrays
     if (!data_entry_[i].is_none()) continue;
     // assign allocated array by storage id
     int storage_id = vstorage[i];
-    CHECK_GE(storage_id, 0) << "Do not support runtime shape op yet";
-    const NDArray& src = data_pool_.at(storage_id);
-    data_entry_[i] = src.AsArray(vshape[i], vdtype[i]);
+    auto storage_type = (NDArrayStorageType) vstorage_type[i];
+    if (storage_type == kDefaultStorage) {
+      CHECK_GE(storage_id, 0) << "Do not support runtime shape op yet";
+      const NDArray& src = data_pool_.at(storage_id);
+      data_entry_[i] = src.AsArray(vshape[i], vdtype[i]);
+    } else {
+      data_entry_[i] = NDArray(storage_type, vshape[i], data_context[i]);
+    }
+    if (log_verbose_) {
+      LOG(INFO) << "\tinit data entry\t" << i << "\tas stype " << storage_type;
+    }
   }
 }
 
@@ -987,11 +1193,28 @@ void GraphExecutor::InitCachedOps() {
   const auto& vctx = graph_.GetAttr<ContextVector>("context");
   const auto& addto_entry = graph_.GetAttr<std::vector<int> >("addto_entry");
   const auto& skip_plus_node = graph_.GetAttr<std::vector<int> >("skip_plus_node");
+  const auto& vstorage_type = graph_.GetAttr<StorageTypeVector>("storage_type");
 
   op_nodes_.resize(idx.num_nodes());
   // setup the array and requirements.
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
+    if (log_verbose_) {
+      if (inode.source->is_variable()) {
+        LOG(INFO) << "node " << nid << " var";
+      } else {
+        LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name;
+        auto exec = op_execs[nid];
+        for (const auto& e : inode.inputs) {
+          auto eid = idx.entry_id(e);
+          LOG(INFO) << "\t\tinput " << eid << " stype: " << vstorage_type[eid];
+        }
+        for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
+          uint32_t eid = idx.entry_id(nid, index);
+          LOG(INFO) << "\t\toutput " << eid << " stype: " << vstorage_type[eid];
+        }
+      }
+    }
     if (inode.source->is_variable()) continue;
 #if MXNET_USE_PROFILER
     op_nodes_[nid].opr_name = inode.source->op()->name.c_str();
@@ -1037,7 +1260,7 @@ void GraphExecutor::InitCachedOps() {
     if (inode.source->is_variable()) continue;
     if (op_nodes_[nid].skip_exec_node) continue;
     auto& exec = op_nodes_[nid].exec;
-    bool is_async = op_nodes_[nid].exec->exec_type() == Operator::kAsync;
+    bool is_async = op_nodes_[nid].exec->exec_type() == ExecType::kAsync;
     bool is_gpu = op_nodes_[nid].ctx.dev_mask() == gpu::kDevMask;
 
     // the variables
@@ -1051,6 +1274,9 @@ void GraphExecutor::InitCachedOps() {
     }
     for (auto& nd : exec->out_array) {
       mutate_vars.push_back(nd.var());
+    }
+    if (exec->var() != nullptr) {
+      mutate_vars.push_back(exec->var());
     }
     // dedup vars
     Engine::Get()->DeduplicateVarHandle(&use_vars, &mutate_vars);
@@ -1068,7 +1294,7 @@ void GraphExecutor::InitCachedOps() {
       if (is_async) {
         exec->op_ctx.async_on_complete = on_complete;
       }
-      exec->Run(ctx);
+      exec->Run(ctx, is_gpu);
       // call on complete only if it is async op
       if (!is_async) {
         if (is_gpu) {
@@ -1100,16 +1326,15 @@ void GraphExecutor::InitOpSegs() {
 
   // Generate segments based on the graph structure
   bool prefer_bulk_exec_inference = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_INFERENCE", true);
-  if (prefer_bulk_exec_inference && num_forward_nodes_ == total_num_nodes) {
-    // bulk the whole graph for inference
-    cached_seg_opr_[0] = this->CreateCachedSegOpr(0, num_forward_nodes_);
-    return;
-  }
-
   // Whether to perform bulk exec for training
   bool prefer_bulk_exec = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_TRAIN", 1);
   // The maximum number of node in a segment executed in bulk
   size_t num_nodes_threshold = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15);
+  if (prefer_bulk_exec_inference && num_forward_nodes_ == total_num_nodes) {
+    // bulk the whole graph for inference
+    num_nodes_threshold = std::numeric_limits<size_t>::max();
+  }
+
   // create forward segments for training
   if (prefer_bulk_exec > 0) {
     size_t topo_start = 0;
@@ -1119,7 +1344,7 @@ void GraphExecutor::InitOpSegs() {
       // check if the segment relies on external input, or exceeds maxinum number of node,
       // or requires async ops
       if (node->is_variable() || nid - topo_start > num_nodes_threshold ||
-          op_node.exec->exec_type() != Operator::kSync) {
+          op_node.exec->exec_type() != ExecType::kSync) {
         // create a new segment for the previous nodes if the current one cannot be bulked
         cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
         topo_start = nid + 1;
@@ -1146,7 +1371,7 @@ void GraphExecutor::InitOpSegs() {
         continue;
       }
       if (idx[nid].source->is_variable() || nid - topo_start > num_nodes_threshold ||
-          op_node.exec->exec_type() != Operator::kSync) {
+          op_node.exec->exec_type() != ExecType::kSync) {
         cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
         topo_start = nid + 1;
       } else {
@@ -1224,11 +1449,14 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     OpNode& opnode = op_nodes_[nid];
     if (op_nodes_[nid].skip_exec_node) continue;
     opnode.exec->op_ctx.is_train = is_train;
-    if (opnode.exec->exec_type() == Operator::kCrossDeviceCopy) {
+    if (opnode.exec->exec_type() == ExecType::kCrossDeviceCopy) {
       CHECK_EQ(inode.inputs.size(), 1U);
       CHECK_EQ(opnode.exec->in_array.size(), 1U);
       CHECK_EQ(opnode.exec->out_array.size(), 1U);
       CopyFromTo(opnode.exec->in_array[0], &(opnode.exec->out_array[0]));
+    } else if (opnode.exec->exec_type() == ExecType::kLocal) {
+      bool is_gpu = opnode.ctx.dev_mask() == gpu::kDevMask;
+      opnode.exec->Run(RunContext{opnode.ctx, nullptr}, is_gpu);
     } else if (opnode.cached_opr != nullptr) {
 #if MXNET_USE_PROFILER
       bool profiling = engine::Profiler::Get()->GetState() == engine::Profiler::kRunning;
@@ -1271,7 +1499,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     OpNode& op_node = op_nodes_[nid];
     if (op_node.skip_exec_node) continue;
     if (inode.source->is_variable()) continue;
-    if (op_node.exec->exec_type() != Operator::kSync) {
+    if (op_node.exec->exec_type() != ExecType::kSync) {
       return ret;
     }
     if (pctx == nullptr) pctx = &(op_node.ctx);
@@ -1283,7 +1511,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
               std::inserter(mutate_vars, mutate_vars.end()));
     std::copy(op_node.use_vars.begin(), op_node.use_vars.end(),
               std::inserter(use_vars, use_vars.end()));
-    ret.exec_list.push_back(exec.get());
+    ret.exec_list.push_back(exec);
 #if MXNET_USE_PROFILER
     opr_names += inode.source->op()->name + ",";
 #endif
@@ -1298,7 +1526,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
       RunContext ctx, Engine::CallbackOnComplete on_complete) {
     // Run all opr in the sub-graph
     for (auto &exec : exec_list) {
-      exec->Run(ctx);
+      exec->Run(ctx, is_gpu);
     }
     if (is_gpu) {
 #if MXNET_USE_CUDA
@@ -1333,6 +1561,7 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
                                const std::vector<Context>& aux_state_ctxes,
                                const std::unordered_map<std::string, TShape>& arg_shape_map,
                                const std::unordered_map<std::string, int>& arg_dtype_map,
+                               const std::unordered_map<std::string, int>& arg_stype_map,
                                const std::vector<OpReqType>& grad_req_types,
                                const std::unordered_set<std::string>& shared_arg_names,
                                std::vector<NDArray>* in_args,
@@ -1343,7 +1572,7 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
   auto exec = new exec::GraphExecutor();
   exec->Init(symbol, default_ctx, group2ctx,
              in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
-             arg_shape_map, arg_dtype_map,
+             arg_shape_map, arg_dtype_map, arg_stype_map,
              grad_req_types, shared_arg_names,
              in_args, arg_grads, aux_states,
              shared_buffer, shared_exec);

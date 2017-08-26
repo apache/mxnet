@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Types;
 use strict;
 use warnings;
@@ -17,6 +34,7 @@ class_type 'AI::MXNet::Callback';
 class_type 'AI::MXNet::EvalMetric';
 class_type 'AI::MXNet::DataParallelExecutorGroup';
 class_type 'AI::MXNet::Optimizer';
+class_type 'AI::MXNet::Initializer';
 class_type 'AI::MXNet::InitDesc';
 class_type 'AI::MXNet::IRHeader';
 subtype "AcceptableInput" => as "Num|PDL|PDL::Matrix|AI::MXNet::NDArray|AI::MXNet::NDArray::Slice|ArrayRef";
@@ -38,6 +56,7 @@ subtype "NameShape"       => as "ArrayRef" => where {
 subtype "Callback"        => as "CodeRef|ArrayRef[Coderef]|AI::MXNet::Callback|ArrayRef[AI::MXNet::Callback]";
 subtype "EvalMetric"      => as "AI::MXNet::EvalMetric|Str|CodeRef";
 subtype "Optimizer"       => as "AI::MXNet::Optimizer|Str";
-subtype "Activation"      => as "AI::MXNet::Symbol|Str";
+subtype "Initializer"     => as "AI::MXNet::Initializer|Str";
+subtype "Activation"      => as "AI::MXNet::Symbol|Str|CodeRef";
 subtype "SymbolOrArrayOfSymbols" => as "AI::MXNet::Symbol|ArrayRef[AI::MXNet::Symbol]";
 subtype "NameShapeOrDataDesc" => as "NameShape|AI::MXNet::DataDesc";

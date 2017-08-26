@@ -13,6 +13,7 @@ endif
 ifndef DMLC_CORE
 	DMLC_CORE = $(ROOTDIR)/dmlc-core
 endif
+CORE_INC = $(wildcard $(DMLC_CORE)/include/*/*.h)
 
 ifndef NNVM_PATH
 	NNVM_PATH = $(ROOTDIR)/nnvm
@@ -20,6 +21,10 @@ endif
 
 ifndef DLPACK_PATH
 	DLPACK_PATH = $(ROOTDIR)/dlpack
+endif
+
+ifndef AMALGAMATION_PATH
+	AMALGAMATION_PATH = $(ROOTDIR)/amalgamation
 endif
 
 ifneq ($(USE_OPENMP), 1)
@@ -31,8 +36,8 @@ include $(config)
 
 ifeq ($(USE_MKLDNN), 1)
 # must run ./prepare_mkl before including mshadow.mk
-	RETURN_STRING = $(shell ./prepare_mkl.sh $(MKLML_ROOT))
-	MKLROOT = $(firstword $(RETURN_STRING))
+	RETURN_STRING := $(shell ./prepare_mkl.sh $(MKLML_ROOT))
+	MKLROOT := $(firstword $(RETURN_STRING))
 	export USE_MKLML = $(lastword $(RETURN_STRING))
 endif
 
@@ -176,8 +181,8 @@ endif
 
 # Sets 'CUDA_ARCH', which determines the GPU architectures supported
 # by the compiled kernels.  Users can edit the KNOWN_CUDA_ARCHS list below
-# to remove archs they don't wish to support to speed compilation, or they
-# can pre-set the CUDA_ARCH args in config.mk for full control.
+# to remove archs they don't wish to support to speed compilation, or they can
+# pre-set the CUDA_ARCH args in config.mk to a non-null value for full control.
 #
 # For archs in this list, nvcc will create a fat-binary that will include
 # the binaries (SASS) for all architectures supported by the installed version
@@ -185,8 +190,8 @@ endif
 # If these kernels are then run on a newer-architecture GPU, the binary will
 # be JIT-compiled by the updated driver from the included PTX.
 ifeq ($(USE_CUDA), 1)
-ifeq ($(origin CUDA_ARCH), undefined)
-	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61
+ifeq ($(CUDA_ARCH),)
+	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61 70
 	# Run nvcc on a zero-length file to check architecture-level support.
 	# Create args to include SASS in the fat binary for supported levels.
 	CUDA_ARCH := $(foreach arch,$(KNOWN_CUDA_ARCHS), \
@@ -306,7 +311,7 @@ build/plugin/%.o: plugin/%.cc
 	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" -M -MT $*_gpu.o $< >$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" $<
 
-%.o: %.cc
+%.o: %.cc $(CORE_INC)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
 
@@ -393,6 +398,7 @@ rcpplint:
 rpkg:
 	mkdir -p R-package/inst
 	mkdir -p R-package/inst/libs
+	cp src/io/image_recordio.h R-package/src
 	cp -rf lib/libmxnet.so R-package/inst/libs
 	mkdir -p R-package/inst/include
 	cp -rf include/* R-package/inst/include
@@ -407,6 +413,7 @@ rpkg:
 	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
 	R CMD build --no-build-vignettes R-package
 	rm -rf mxnet_current_r.tar.gz
+	rm -rf R-package/src/image_recordio.h
 	mv mxnet_*.tar.gz mxnet_current_r.tar.gz
 
 scalapkg:
@@ -444,15 +451,17 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
+	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
 clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
+		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
+	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 endif
 
 clean_all: clean

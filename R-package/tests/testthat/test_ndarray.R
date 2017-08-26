@@ -2,9 +2,14 @@ require(mxnet)
 
 context("ndarray")
 
+if (Sys.getenv("R_GPU_ENABLE") != "" & as.integer(Sys.getenv("R_GPU_ENABLE")) == 1) {
+  mx.ctx.default(new = mx.gpu())
+  message("Using GPU for testing.")
+}
+
 test_that("element-wise calculation for vector", {
   x = 1:10
-  mat = mx.nd.array(as.array(x), mx.cpu(0))
+  mat = mx.nd.array(as.array(x), mx.ctx.default())
   expect_equal(x, as.array(mat))
   expect_equal(x + 1, as.array(mat + 1))
   expect_equal(x - 10, as.array(mat - 10))
@@ -26,7 +31,7 @@ test_that("element-wise calculation for vector", {
 
 test_that("element-wise calculation for matrix", {
   x = matrix(1:4, 2, 2)
-  mat = mx.nd.array(as.array(x), mx.cpu(0))
+  mat = mx.nd.array(as.array(x), mx.ctx.default())
   expect_equal(x, as.array(mat))
   expect_equal(x + 1, as.array(mat + 1))
   expect_equal(x - 10, as.array(mat - 10))
@@ -107,4 +112,83 @@ test_that("ndarray crop", {
   arr_x[c(1:2), 1 , c(1:3)] <- 0
   
   expect_equal(as.array(x), arr_x)
+})
+
+test_that("ndarray negate", {
+  arr <- array(runif(24, -10, 10), dim = c(2, 3, 4))
+  nd <- mx.nd.array(arr)
+  
+  expect_equal(arr, as.array(nd), tolerance = 1e-6)
+  expect_equal(-arr, as.array(-nd), tolerance = 1e-6)
+  expect_equal(arr, as.array(nd), tolerance = 1e-6)
+})
+
+test_that("ndarray equal", {
+  x <- mx.nd.zeros(c(2, 3))
+  y <- mx.nd.ones(c(2, 3))
+  z = x == y
+  expect_equal(as.array(z), array(0, c(2,3)))
+  
+  z = 0 == x
+  expect_equal(as.array(z), array(1, c(2,3)))
+})
+
+test_that("ndarray not equal", {
+  x <- mx.nd.zeros(c(2, 3))
+  y <- mx.nd.ones(c(2, 3))
+  z = x != y
+  expect_equal(as.array(z), array(1, c(2,3)))
+  
+  z = 0 != x
+  expect_equal(as.array(z), array(0, c(2,3)))
+})
+
+test_that("ndarray greater", {
+  x <- mx.nd.zeros(c(2, 3))
+  y <- mx.nd.ones(c(2, 3))
+  z = x > y
+  expect_equal(as.array(z), array(0, c(2,3)))
+  
+  z = y > 0
+  expect_equal(as.array(z), array(1, c(2,3)))
+  
+  z = 0 > y
+  expect_equal(as.array(z), array(0, c(2,3)))
+  
+  z = x >= y
+  expect_equal(as.array(z), array(0, c(2,3)))
+  
+  z = y >= 0
+  expect_equal(as.array(z), array(1, c(2,3)))
+  
+  z = 0 >= y
+  expect_equal(as.array(z), array(0, c(2,3)))
+  
+  z = y >= 1
+  expect_equal(as.array(z), array(1, c(2,3)))
+})
+
+test_that("ndarray lesser", {
+  x <- mx.nd.zeros(c(2, 3))
+  y <- mx.nd.ones(c(2, 3))
+  z = x < y
+  expect_equal(as.array(z), array(1, c(2,3)))
+  
+  z = y < 0
+  expect_equal(as.array(z), array(0, c(2,3)))
+  
+  z = 0 < y
+  expect_equal(as.array(z), array(1, c(2,3)))
+  
+  z = x <= y
+  expect_equal(as.array(z), array(1, c(2,3)))
+  
+  z = y <= 0
+  expect_equal(as.array(z), array(0, c(2,3)))
+  
+  z = 0 <= y
+  expect_equal(as.array(z), array(1, c(2,3)))
+  
+  z = y <= 1
+  expect_equal(as.array(z), array(1, c(2,3)))
 })

@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file naive_engine.cc
  * \brief Implementation of NaiveEngine
  */
@@ -136,16 +154,14 @@ class NaiveEngine final : public Engine {
         streams_.resize(dev_id + 1, nullptr);
       }
       if (streams_[dev_id] == nullptr) {
-        streams_[dev_id] = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0);
+        streams_[dev_id] = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, dev_id);
       }
-      ctx_.stream = streams_[dev_id];
-      exec_fun(ctx_, callback);
+      exec_fun(RunContext{exec_ctx, streams_[dev_id]}, callback);
 #else
       LOG(FATAL) << "GPU is not enabled";
 #endif
     } else {
-      ctx_.stream = &cpu_stream_;
-      exec_fun(ctx_, callback);
+      exec_fun(RunContext{exec_ctx, &cpu_stream_}, callback);
     }
     CHECK(this->req_completed_)
         << "NaiveEngine only support synchronize Push so far";
@@ -176,8 +192,6 @@ class NaiveEngine final : public Engine {
   static void OnComplete(Engine *engine, void *param) {
     static_cast<NaiveEngine*>(engine)->req_completed_ = true;
   }
-  // runtime contetxt
-  RunContext ctx_;
   // whether action is completed
   bool req_completed_;
   // counter

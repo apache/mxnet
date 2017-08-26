@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 import numpy as np
 from mxnet.executor_manager import _split_input_slice
@@ -148,11 +165,16 @@ class ROIIter(mx.io.DataIter):
                 vert = np.logical_not(horz)
                 horz_inds = np.where(horz)[0]
                 vert_inds = np.where(vert)[0]
+                # Avoid putting different aspect ratio image into the same bucket,
+                # which may cause bucketing warning.
+                pad_horz = self.batch_size - len(horz_inds) % self.batch_size
+                pad_vert = self.batch_size - len(vert_inds) % self.batch_size
+                horz_inds = np.hstack([horz_inds, horz_inds[:pad_horz]])
+                vert_inds = np.hstack([vert_inds, vert_inds[:pad_vert]])
                 inds = np.hstack((np.random.permutation(horz_inds), np.random.permutation(vert_inds)))
-                extra = inds.shape[0] % self.batch_size
-                inds_ = np.reshape(inds[:-extra], (-1, self.batch_size))
-                row_perm = np.random.permutation(np.arange(inds_.shape[0]))
-                inds[:-extra] = np.reshape(inds_[row_perm, :], (-1,))
+                inds = np.reshape(inds[:], (-1, self.batch_size))
+                row_perm = np.random.permutation(np.arange(inds.shape[0]))
+                inds = np.reshape(inds[row_perm, :], (-1,))
                 self.index = inds
             else:
                 np.random.shuffle(self.index)

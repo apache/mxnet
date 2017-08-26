@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Executor::Group;
 use strict;
 use warnings;
@@ -203,8 +220,8 @@ use List::Util qw(sum);
     shared_group : AI::MXNet::DataParallelExecutorGroup
         Default is undef. This is used in bucketing. When not undef, it should be a executor
         group corresponding to a different bucket. In other words, it will correspond to a different
-        symbol but with the same set of parameters (e.g. unrolled RNNs with different lengths).
-        In this case, many memory will be shared.
+        symbol with the same set of parameters (e.g. unrolled RNNs with different lengths).
+        In this case the memory regions of the parameters will be shared.
     logger : Logger
         Default is AI::MXNet::Logging->get_logger.
     fixed_param_names: Maybe[ArrayRef[Str]]
@@ -549,9 +566,9 @@ method reshape(
         A dictionary of name to AI::MXNet::NDArray auxiliary variable mapping.
 =cut
 
-method set_params(HashRef[AI::MXNet::NDArray] $arg_params, HashRef[AI::MXNet::NDArray] $aux_params)
+method set_params(HashRef[AI::MXNet::NDArray] $arg_params, HashRef[AI::MXNet::NDArray] $aux_params, Bool $allow_extra=0)
 {
-    $_->copy_params_from($arg_params, $aux_params) for @{ $self->_p->execs };
+    $_->copy_params_from($arg_params, $aux_params, $allow_extra) for @{ $self->_p->execs };
 }
 
 =head2 get_params

@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file optimizer_op.cc
  * \brief Optimizer operators
  * \author Junyuan Xie
@@ -22,6 +40,9 @@ It updates the weights using::
 
  weight = weight - learning_rate * gradient
 
+If weight is stored with `row_sparse` storage type,
+only the row slices whose indices appear in grad.indices are updated.
+
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
@@ -29,6 +50,7 @@ It updates the weights using::
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FCompute>("FCompute<cpu>", SGDUpdate<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SGDUpdateEx<cpu>)
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
 .add_argument("grad", "NDArray-or-Symbol", "Gradient")
 .add_arguments(SGDParam::__FIELDS__());
@@ -52,6 +74,9 @@ It updates the weights using::
 
 Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
 
+If weights are stored with `row_sparse` storage type,
+only the row slices whose indices appear in grad.indices are updated (for both weight and momentum).
+
 )code" ADD_FILELINE)
 .set_num_inputs(3)
 .set_num_outputs(1)
@@ -63,6 +88,7 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
     return std::vector<uint32_t>{2};
   })
 .set_attr<FCompute>("FCompute<cpu>", SGDMomUpdate<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SGDMomUpdateEx<cpu>)
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
 .add_argument("grad", "NDArray-or-Symbol", "Gradient")
 .add_argument("mom", "NDArray-or-Symbol", "Momentum")
@@ -134,6 +160,7 @@ It updates the weights using::
     return std::vector<uint32_t>{2, 3};
   })
 .set_attr<FCompute>("FCompute<cpu>", AdamUpdate<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", AdamUpdateEx<cpu>)
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
 .add_argument("grad", "NDArray-or-Symbol", "Gradient")
 .add_argument("mean", "NDArray-or-Symbol", "Moving mean")
