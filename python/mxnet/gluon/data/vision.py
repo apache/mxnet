@@ -70,14 +70,14 @@ class MNIST(_DownloadedDataset):
 
             transform=lambda data, label: (data.astype(np.float32)/255, label)
     """
-    def __init__(self, root='~/.mxnet/datasets/', train=True,
+    def __init__(self, root='~/.mxnet/datasets/mnist', train=True,
                  transform=None):
         super(MNIST, self).__init__(root, train, transform)
 
     def _get_data(self):
         if not os.path.isdir(self._root):
             os.makedirs(self._root)
-        url = 'http://data.mxnet.io/data/mnist/'
+        url = 'https://apache-mxnet.s3.amazonaws.com/gluon/dataset/mnist/'
         if self._train:
             data_file = download(url+'train-images-idx3-ubyte.gz', self._root,
                                  sha1_hash='6c95f4b05d2bf285e1bfb0e7960c31bd3b3f8a7d')
@@ -88,6 +88,56 @@ class MNIST(_DownloadedDataset):
                                  sha1_hash='c3a25af1f52dad7f726cce8cacb138654b760d48')
             label_file = download(url+'t10k-labels-idx1-ubyte.gz', self._root,
                                   sha1_hash='763e7fa3757d93b0cdec073cef058b2004252c17')
+
+        with gzip.open(label_file, 'rb') as fin:
+            struct.unpack(">II", fin.read(8))
+            label = np.fromstring(fin.read(), dtype=np.uint8).astype(np.int32)
+
+        with gzip.open(data_file, 'rb') as fin:
+            struct.unpack(">IIII", fin.read(16))
+            data = np.fromstring(fin.read(), dtype=np.uint8)
+            data = data.reshape(len(label), 28, 28, 1)
+
+        self._data = [nd.array(x, dtype=x.dtype) for x in data]
+        self._label = label
+
+
+class FashionMNIST(_DownloadedDataset):
+    """A dataset of Zalando's article images consisting of fashion products,
+    a drop-in replacement of the original MNIST dataset from
+    `https://github.com/zalandoresearch/fashion-mnist`_.
+
+    Each sample is an image (in 3D NDArray) with shape (28, 28, 1).
+
+    Parameters
+    ----------
+    root : str
+        Path to temp folder for storing data.
+    train : bool
+        Whether to load the training or testing set.
+    transform : function
+        A user defined callback that transforms each instance. For example::
+
+            transform=lambda data, label: (data.astype(np.float32)/255, label)
+    """
+    def __init__(self, root='~/.mxnet/datasets/fashion-mnist', train=True,
+                 transform=None):
+        super(FashionMNIST, self).__init__(root, train, transform)
+
+    def _get_data(self):
+        if not os.path.isdir(self._root):
+            os.makedirs(self._root)
+        url = 'https://apache-mxnet.s3.amazonaws.com/gluon/dataset/fashion-mnist/'
+        if self._train:
+            data_file = download(url+'train-images-idx3-ubyte.gz', self._root,
+                                 sha1_hash='0cf37b0d40ed5169c6b3aba31069a9770ac9043d')
+            label_file = download(url+'train-labels-idx1-ubyte.gz', self._root,
+                                  sha1_hash='236021d52f1e40852b06a4c3008d8de8aef1e40b')
+        else:
+            data_file = download(url+'t10k-images-idx3-ubyte.gz', self._root,
+                                 sha1_hash='626ed6a7c06dd17c0eec72fa3be1740f146a2863')
+            label_file = download(url+'t10k-labels-idx1-ubyte.gz', self._root,
+                                  sha1_hash='17f9ab60e7257a1620f4ad76bbbaf857c3920701')
 
         with gzip.open(label_file, 'rb') as fin:
             struct.unpack(">II", fin.read(8))
@@ -118,7 +168,7 @@ class CIFAR10(_DownloadedDataset):
 
             transform=lambda data, label: (data.astype(np.float32)/255, label)
     """
-    def __init__(self, root='~/.mxnet/datasets/', train=True,
+    def __init__(self, root='~/.mxnet/datasets/cifar10', train=True,
                  transform=None):
         self._file_hashes = {'data_batch_1.bin': 'aadd24acce27caa71bf4b10992e9e7b2d74c2540',
                              'data_batch_2.bin': 'c0ba65cce70568cd57b4e03e9ac8d2a5367c1795',
