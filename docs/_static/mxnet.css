@@ -1,3 +1,22 @@
+/*-------------------- AmazonEmber font -----------------------------------*/
+@font-face {
+    font-family: AmazonEmber;
+    src: url(font/AmazonEmber_Rg.ttf);
+    font-weight: normal;
+}
+
+@font-face {
+    font-family: AmazonEmber;
+    src: url(font/AmazonEmber_Bd.ttf);
+    font-weight: bold;
+}
+
+@font-face {
+    font-family: AmazonEmber;
+    src: url(font/AmazonEmber_Th.ttf);
+    font-weight: 300;
+}
+
 
 /*-------------------- basic html elements and classes --------------------*/
 html, body {
@@ -9,6 +28,7 @@ html, body {
 body {
     display: block;
     visibility: hidden;
+    background-size: 100% 100%;
 }
 
 body, div {
@@ -90,7 +110,6 @@ img {
 
 /*-----------------------nav bar-----------------------*/
 .navbar {
-    background-color:#0079b2;
     opacity: 0.9;
     border: 0px;
     height: 60px;
@@ -175,10 +194,7 @@ img {
     color: #fff;
     text-decoration: none;
     line-height: 50px;
-    opacity: .7;
-    -webkit-transition: .2s;
-    transition: .2s;
-    font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: AmazonEmber;
     display: inline-block;
     padding: 0 15px;
 }
@@ -447,8 +463,6 @@ li.dropdown-submenu ul.dropdown-menu a {
 /*--------------------------banner---------------------------*/
 #splash{
     padding:60px 0 50px 0;
-    background-color:#0079b2;
-    /* background-image:url(../img/bg.jpg); */
     background-size:cover;
     background-attachment:fixed;
     color:#fff;
@@ -459,31 +473,46 @@ li.dropdown-submenu ul.dropdown-menu a {
     text-align: center
 }
 
-#splash #banner-title {
+#banner-title span {
+    font-family: AmazonEmber;
+    font-weight: bold;
+}
+
+#banner-title {
     padding: 20px 0 10px 0;
     font-size: 40px;
-    line-height: 1.15;
+    line-height: 55px;
     font-weight: 300;
-    font-family: Lato, Helvetica Neue, Helvetica, Arial, sans-serif;
+    font-family: AmazonEmber;
     color: #fff;
+    max-width: 500px;
+    text-align: left;
+    margin-left: 30px;
 }
 
 @media screen and (min-width:769px) {
-    #splash #banner-title {
+    #banner-title {
         padding-top: 100px;
     }
 }
 
 @media screen and (max-width:768px) {
-    #splash #banner-title {
-            font-size: 30px;
-            padding: 60px 30px 10px 30px;
+    #banner-title {
+        font-size: 30px;
+        padding: 60px 30px 10px 30px;
+        margin-left: 10%;
+    }
+}
+
+@media screen and (max-width:570px) {
+    #banner-title {
+        margin-left: 0;
     }
 }
 
 @media screen and (max-width:510px) {
-    #splash #banner-title {
-            padding-top: 60px;
+    #banner-title {
+        padding-top: 60px;
     }
 }
 
@@ -496,62 +525,55 @@ li.dropdown-submenu ul.dropdown-menu a {
     margin:2em 0 4em 0;
 }
 
-#why_mxnet, #install_blk {
-    margin:2em 0
+#landing-btn-blk {
+    margin-top: 2em;
 }
 
-#why_mxnet_btn, #install_btn, #release_btn {
+#why_mxnet, #install_blk {
+    margin:2em 0;
+    display: inline;
+}
+
+#install_blk {
+    padding-left: 20px;
+}
+
+@media screen and (max-width:400px) {
+    #install_blk, #install_blk{
+        display: block;
+    }
+    
+    #install_blk {
+        padding-left: 0;
+        margin-top: 0;
+    }
+}
+
+#why_mxnet_btn {
     border: 1.8px solid #FFFFFF;
     color: #FFFFFF;
-    display: inline-block;
+    display: inline;
     font-size: 18px;
-    font-family: Helvetica, Helvetica Neue, Arial, sans-serif;
+    font-family: AmazonEmber;
     padding: 8px 20px;
     -webkit-transition: .2s;
     transition: .2s;
-    width: 160px;
-    border-radius: 30px;
+}
+
+#install_btn {
+    border: 1.8px solid #FFFFFF;
+    color: #fff;
+    display: inline;
+    font-size: 18px;
+    font-family: AmazonEmber;
+    padding: 8px 40px;
+    -webkit-transition: .2s;
+    transition: .2s;
 }
 
 #release_btn {
     width: auto;
     border: none;
-}
-
-@media (min-width: 768px) {
-    #why_mxnet_btn {
-        margin-right: -45%;
-    }
-    #install_btn {
-        margin-left: -45%;
-    }
-}
-
-@media (min-width: 992px) {
-    #why_mxnet_btn {
-        margin-right: -55%;
-    }
-    #install_btn {
-        margin-left: -55%;
-    }
-}
-
-@media (min-width: 1200px) {
-    #why_mxnet_btn {
-        margin-right: -65%;
-    }
-    #install_btn {
-        margin-left: -65%;
-    }
-}
-
-@media (max-width: 767px) {
-    #why_mxnet_btn {
-        margin-bottom: -20%;
-    }
-    #install_btn {
-        margin-top: -20%;
-    }
 }
 
 #why_mxnet_btn:hover, #install_btn:hover {
