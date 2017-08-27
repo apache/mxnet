@@ -871,7 +871,7 @@ def _ndarray_cls(handle, writable=True, stype=_STORAGE_TYPE_UNDEFINED):
     elif stype == _STORAGE_TYPE_ROW_SPARSE:
         return RowSparseNDArray(handle, writable=writable)
     else:
-        raise Exception("unknown storage type")
+        raise Exception("unknown storage type: %s"%stype)
 
 
 _set_ndarray_class(_ndarray_cls)
