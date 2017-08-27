@@ -257,6 +257,26 @@ def test_LibSVMIter():
     check_libSVMIter_synthetic()
     check_libSVMIter_news_data()
 
+def test_CSVIter():
+    def check_CSVIter_synthetic():
+        cwd = os.getcwd()
+        data_path = os.path.join(cwd, 'data.t')
+        label_path = os.path.join(cwd, 'label.t')
+        with open(data_path, 'w') as fout:
+            for i in range(1000):
+                fout.write(','.join(['1' for _ in range(8*8)]) + '\n')
+        with open(label_path, 'w') as fout:
+            for i in range(1000):
+                fout.write('0\n')
+
+        data_train = mx.io.CSVIter(data_csv=data_path, data_shape=(8,8),
+                                   label_csv=label_path, batch_size=100)
+        expected = mx.nd.ones((100, 8, 8))
+        for batch in iter(data_train):
+            assert_almost_equal(data_train.getdata().asnumpy(), expected.asnumpy())
+
+    check_CSVIter_synthetic()
+
 if __name__ == "__main__":
     test_NDArrayIter()
     if h5py:
@@ -265,3 +285,4 @@ if __name__ == "__main__":
     test_Cifar10Rec()
     test_LibSVMIter()
     test_NDArrayIter_csr()
+    test_CSVIter()
