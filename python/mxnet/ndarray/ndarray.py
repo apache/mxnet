@@ -617,7 +617,6 @@ fixed-size items.
             stop = mx_uint(stop)
         else:
             stop = mx_uint(stop)
-
         check_call(_LIB.MXNDArraySlice(
             self.handle, start, stop, ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)

@@ -46,30 +46,6 @@
 #endif
 
 namespace mxnet {
-
-namespace autograd {
-class AGNode;
-
-using AGNodePtr = std::shared_ptr<AGNode>;
-
-class AGNodeEntry {
- public:
-  AGNodePtr ag_node;
-  uint32_t index;
-  uint32_t version;
-
-  void clear() {
-    ag_node.reset();
-    index = version = 0;
-  }
-
-  nnvm::NodeEntry nn_entry() const;
-  bool is_none() const;
-};
-
-class AutogradRuntime;
-}  // namespace autograd
-
 // enum for storage types
 namespace csr {
 enum CSRAuxType {kIndPtr, kIdx};
@@ -434,11 +410,6 @@ class NDArray {
    */
   NDArray &operator/=(const real_t &src);
   /*!
-   * \brief return transpose of current NDArray
-   * \return a new transposed NDArray
-   */
-  NDArray T() const;
-  /*!
    * \brief return a new copy this NDArray
    * \param ctx the new context of this NDArray
    * \return the new copy
@@ -479,14 +450,25 @@ class NDArray {
    * \return sliced NDArray
    */
   NDArray Slice(index_t begin, index_t end) const;
-
+  /*!
+   * \brief Slice a NDArray. Supports recording with autograd
+   * \param begin begin index in first dim (inclusive)
+   * \param end end index in first dim (exclusive)
+   * \return sliced NDArray
+   */
+  NDArray SliceWithRecord(index_t begin, index_t end);
   /*!
    * \brief Index a NDArray
    * \param idx the index
    * \return idx-th sub array NDArray
    */
   NDArray At(index_t idx) const;
-
+  /*!
+   * \brief Index a NDArray
+   * \param idx the index
+   * \return idx-th sub array NDArray
+   */
+  NDArray AtWithRecord(index_t idx);
   /*!
    * \brief Generate a deep copy of aux_data(i) returned as
    * a default storage type NDArray
@@ -530,21 +512,21 @@ class NDArray {
    */
   NDArray Reshape(const TShape &shape) const;
   /*!
+   * \brief Get an reshaped NDArray. Supports autograd recording
+   * \param shape new shape
+   * \return NDArray in new shape
+   */
+  NDArray ReshapeWithRecord(const TShape &shape);
+  /*!
    * \brief Return a copy of this NDArray without autograd history
    */
   NDArray Detach() const {
     NDArray ret(*this);
-    ret.entry_ = autograd::AGNodeEntry{nullptr, 0, 0};
+    ret.entry_ = nnvm::NodeEntry{nullptr, 0, 0};
     return ret;
   }
 
-  nnvm::Symbol get_autograd_symbol() {
-    CHECK(!entry_.is_none())
-      << "NDArray is not part of a computation graph. Did you forget to turn on recording?";
-    nnvm::Symbol ret;
-    ret.outputs.emplace_back(entry_.nn_entry());
-    return ret;
-  }
+  nnvm::Symbol get_autograd_symbol() const;
   /*!
    * \brief Allocate the space if it is delayed allocated.
    * This is an internal function used by system that normal user should not use
@@ -609,7 +591,7 @@ class NDArray {
                    std::vector<std::string>* keys);
 
  private:
-  friend class autograd::AutogradRuntime;
+  friend class ImperativeRuntime;
   /*! \brief the real data chunk that backs NDArray */
   // shandle is used to store the actual values in the NDArray
   // aux_handles store the aux data(such as indices) if it's needed by non-default storage.
@@ -876,7 +858,7 @@ class NDArray {
   /*! \brief type of data */
   int dtype_ = -1;
   /*! \brief node entry for autograd */
-  autograd::AGNodeEntry entry_;
+  nnvm::NodeEntry entry_;
   /*!
    * \brief internal TBlob
    * \note When user access tblob_ by some const methods like
