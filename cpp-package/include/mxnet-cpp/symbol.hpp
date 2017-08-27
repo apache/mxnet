@@ -103,6 +103,7 @@ inline Symbol Symbol::Load(const std::string &file_name) {
   return Symbol(handle);
 }
 inline Symbol Symbol::LoadJSON(const std::string &json_str) {
+  op_map();
   SymbolHandle handle;
   CHECK_EQ(MXSymbolCreateFromJSON(json_str.c_str(), &(handle)), 0);
   return Symbol(handle);

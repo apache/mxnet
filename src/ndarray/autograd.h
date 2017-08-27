@@ -95,17 +95,19 @@ class AutogradRuntime {
   void MarkVariables(const std::vector<NDArray*>& variables,
                      const std::vector<mx_uint>& grad_reqs,
                      const std::vector<NDArray*>& gradients);
-  /*! \brief record imperative operator which is executed by fcompute. */
-  void RecordImperativeFCompute(const nnvm::Op* op,
-                                const nnvm::NodeAttrs& attrs,
-                                std::vector<NDArray>* p_inputs,
-                                std::vector<NDArray>* p_outputs);
-  /*! \brief record imperative operator which is executed by operator. */
-  void RecordImperativeOperator(const OpStatePtr& state,
-                                const nnvm::Op* op,
-                                const nnvm::NodeAttrs& attrs,
-                                std::vector<NDArray>* p_inputs,
-                                std::vector<NDArray>* p_outputs);
+  /*! \brief find the input/output ndarrays that are needed for backward */
+  void GetBackwardDependency(
+      const nnvm::NodePtr& node,
+      uint32_t num_inputs, uint32_t num_outputs,
+      std::vector<bool> *p_save_inputs,
+      std::vector<bool> *p_save_outputs);
+  /*! \brief to record operator, return corresponding node. */
+  void RecordOp(nnvm::NodeAttrs&& attrs,
+                std::vector<NDArray>* p_inputs,
+                std::vector<NDArray>* p_outputs,
+                const OpStatePtr& state = OpStatePtr(),
+                std::vector<bool>* p_save_inputs = nullptr,
+                std::vector<bool>* p_save_outputs = nullptr);
   /*! \brief compute the gradient of outputs w.r.t variables. */
   void ComputeGradient(const std::vector<NDArray>& outputs,
                        const std::vector<NDArray>& ograds,
@@ -126,12 +128,6 @@ class AutogradRuntime {
   AutogradRuntime();
 
  private:
-  /*! \brief to record operator, return corresponding node. */
-  void RecordOp(const nnvm::Op* op,
-                     const nnvm::NodeAttrs& attrs,
-                     std::vector<NDArray>* p_inputs,
-                     std::vector<NDArray>* p_outputs,
-                     const OpStatePtr& state);
   /*! \brief AutogradRuntime singleton. */
   static AutogradRuntime* instance_;
   /*! \brief indicate whether is training. */

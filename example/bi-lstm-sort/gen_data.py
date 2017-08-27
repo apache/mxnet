@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,12 +15,23 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# install libraries for mxnet's scala package on ubuntu
+import random
 
-apt-get install -y software-properties-common
-add-apt-repository -y ppa:webupd8team/java
-apt-get update
-echo "oracle-java8-installer shared/accepted-oracle-license-v1-1 select true" | debconf-set-selections
-apt-get install -y oracle-java8-installer
-apt-get install -y oracle-java8-set-default
-apt-get update && apt-get install -y maven
+vocab = [str(x) for x in range(100, 1000)]
+sw_train = open("sort.train.txt", "w")
+sw_test = open("sort.test.txt", "w")
+sw_valid = open("sort.valid.txt", "w")
+
+for i in range(1000000):
+    seq = " ".join([vocab[random.randint(0, len(vocab) - 1)] for j in range(5)])
+    k = i % 50
+    if k == 0:
+        sw_test.write(seq + "\n")
+    elif k == 1:
+        sw_valid.write(seq + "\n")
+    else:
+        sw_train.write(seq + "\n")
+
+sw_train.close()
+sw_test.close()
+sw_valid.close()
