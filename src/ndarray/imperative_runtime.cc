@@ -107,11 +107,13 @@ void SetShapeType(const Context& ctx,
   // infer type
   std::vector<int>& in_types = ret->arg_types;
   in_types.clear();
+  in_types.reserve(inputs.size());
   for (auto& i : inputs) {
     in_types.push_back(i->dtype());
   }
   std::vector<int>& out_types = ret->out_types;
   out_types.clear();
+  out_types.reserve(outputs.size());
   for (auto& i : outputs) {
     out_types.push_back(i->dtype());
   }
@@ -123,11 +125,13 @@ void SetShapeType(const Context& ctx,
   // infer storage type
   auto& in_storage_types = ret->arg_storage_types;
   in_storage_types.clear();
+  in_storage_types.reserve(inputs.size());
   for (auto& i : inputs) {
     in_storage_types.push_back(i->storage_type());
   }
   auto& out_storage_types = ret->out_storage_types;
   out_storage_types.clear();
+  out_storage_types.reserve(outputs.size());
   for (auto& i : outputs) {
     out_storage_types.push_back(i->storage_type());
   }
@@ -196,9 +200,11 @@ void SetDependency(const nnvm::NodeAttrs& attrs,
     CHECK_LE(ntmp, 1) << "Only support 1 temp space request";
   }
 
+  read_vars.reserve(inputs.size());
   for (auto& i : inputs) {
     read_vars.push_back(i->var());
   }
+  write_vars.reserve(outputs.size());
   for (auto& i : outputs) {
     write_vars.push_back(i->var());
   }
