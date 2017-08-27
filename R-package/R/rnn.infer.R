@@ -22,7 +22,7 @@ mx.rnn.infer.buckets <- function(infer.data, model, ctx = mx.cpu()) {
   
   ndevice <- length(ctx)
   symbol <- model$symbol
-  if (is.list(symbol)) sym_ini <- symbol[[names(train.data$bucketID())]] else sym_ini <- symbol
+  if (is.list(symbol)) sym_ini <- symbol[[names(train.data$bucketID)]] else sym_ini <- symbol
   
   arguments <- sym_ini$arguments
   input.names <- intersect(names(infer.data$value()), arguments)
@@ -52,14 +52,14 @@ mx.rnn.infer.buckets <- function(infer.data, model, ctx = mx.cpu()) {
   arg.params.fix <- arguments.ini[arg.params.fix.names]
   
   # Grad request
-  grad_req <- rep("null", length(arguments))
+  grad.req <- rep("null", length(arguments))
   
   # Arg array order
   update_names <- c(input.names, arg.params.fix.names, arg.params.names)
   arg_update_idx <- match(arguments, update_names)
   
   execs <- mxnet:::mx.symbol.bind(symbol = symbol, arg.arrays = c(dlist, arg.params.fix, arg.params)[arg_update_idx], 
-                                  aux.arrays = aux.params, ctx = ctx[[1]], grad.req = grad_req)
+                                  aux.arrays = aux.params, ctx = ctx[[1]], grad.req = grad.req)
   
   # Initial input shapes - need to be adapted for multi-devices - divide highest
   # dimension by device nb
@@ -72,7 +72,7 @@ mx.rnn.infer.buckets <- function(infer.data, model, ctx = mx.cpu()) {
     dlist <- infer.data$value()  #[input.names]
     
     execs <- mxnet:::mx.symbol.bind(symbol = symbol, arg.arrays = c(dlist, execs$arg.arrays[arg.params.fix.names], execs$arg.arrays[arg.params.names])[arg_update_idx], 
-                                    aux.arrays = execs$aux.arrays, ctx = ctx[[1]], grad.req = grad_req)
+                                    aux.arrays = execs$aux.arrays, ctx = ctx[[1]], grad.req = grad.req)
     
     mx.exec.forward(execs, is.train = FALSE)
     
@@ -138,7 +138,7 @@ mx.rnn.infer.buckets.one <- function(infer.data,
   aux.params <- aux.params
   
   # Grad request
-  grad_req <- rep("null", length(arguments))
+  grad.req <- rep("null", length(arguments))
   
   # Arg array order
   update_names <- c(input.names, arg.params.fix.names, arg.params.names)
@@ -147,7 +147,7 @@ mx.rnn.infer.buckets.one <- function(infer.data,
   # Initial binding
   execs <- mxnet:::mx.symbol.bind(symbol = symbol, 
                                   arg.arrays = c(dlist, arg.params.fix, arg.params)[arg_update_idx], 
-                                  aux.arrays = aux.params, ctx = ctx[[1]], grad.req = grad_req)
+                                  aux.arrays = aux.params, ctx = ctx[[1]], grad.req = grad.req)
   
   # Initial input shapes - need to be adapted for multi-devices - divide highest
   # dimension by device nb
@@ -160,7 +160,7 @@ mx.rnn.infer.buckets.one <- function(infer.data,
     
     execs <- mxnet:::mx.symbol.bind(symbol = symbol, 
                                     arg.arrays = c(dlist, execs$arg.arrays[arg.params.fix.names], execs$arg.arrays[arg.params.names])[arg_update_idx],
-                                    aux.arrays = execs$aux.arrays, ctx = ctx[[1]], grad.req = grad_req)
+                                    aux.arrays = execs$aux.arrays, ctx = ctx[[1]], grad.req = grad.req)
     
     mx.exec.forward(execs, is.train = FALSE)
     
