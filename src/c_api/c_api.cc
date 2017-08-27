@@ -869,10 +869,9 @@ int MXKVStorePullRowSparseEx(KVStoreHandle handle,
   API_END();
 }
 
-int MXKVStoreSetUpdater(KVStoreHandle handle,
-                        MXKVStoreUpdater updater,
-                        void* updater_handle) {
-  API_BEGIN();
+void MXKVStoreSetUpdaterImpl(KVStoreHandle handle,
+                             MXKVStoreUpdater updater,
+                             void* updater_handle) {
   MXKVStoreUpdater * updater_temp = updater;
   void* updater_handle_temp = updater_handle;
   std::function<void(int, const NDArray&, NDArray*)> updt
@@ -884,6 +883,13 @@ int MXKVStoreSetUpdater(KVStoreHandle handle,
     updater_temp(key, recv_copy, local_copy, updater_handle_temp);
   };
   static_cast<KVStore*>(handle)->set_updater(updt);
+}
+
+int MXKVStoreSetUpdater(KVStoreHandle handle,
+                        MXKVStoreUpdater updater,
+                        void* updater_handle) {
+  API_BEGIN();
+  MXKVStoreSetUpdaterImpl(handle, updater, updater_handle);
   API_END();
 }
 
@@ -893,7 +899,7 @@ int MXKVStoreSetUpdaterEx(KVStoreHandle handle,
                           void* updater_handle) {
   API_BEGIN();
   // set updater with int keys
-  MXKVStoreSetUpdater(handle, updater, updater_handle);
+  MXKVStoreSetUpdaterImpl(handle, updater, updater_handle);
   // set updater with string keys
   MXKVStoreStrUpdater * updater_temp = str_updater;
   void* updater_handle_temp = updater_handle;
