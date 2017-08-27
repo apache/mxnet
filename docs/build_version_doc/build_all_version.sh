@@ -57,12 +57,12 @@ for tag in $tag_list; do
     cd docs
     make clean
     make html USE_OPENMP=0 || exit 1
-    python ../../AddVersion.py --file_path "_build/html/" --current_version "$tag" || exit 1
+    python build_version_doc/AddVersion.py --file_path "_build/html/" --current_version "$tag" || exit 1
 
     if [ $tag != 'master' ]
     then 
-        python ../../AddPackageLink.py --file_path "_build/html/get_started/install.html" \
-                                       --current_version "$tag" || exit 1
+        python build_version_doc/AddPackageLink.py --file_path "_build/html/get_started/install.html" \
+                                                   --current_version "$tag" || exit 1
     fi
 
     if [ $version_num == 0 ]
