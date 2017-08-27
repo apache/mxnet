@@ -21,7 +21,7 @@
 # Built files are stored in $built
 # Version numbers are stored in $tag_list.
 # Version numbers are ordered from latest to old and final one is master.
-tag_list="0.11.0.rc3 0.11.0.rc2 master"
+tag_list="0.11.0.rc3 master"
 
 mxnet_url="https://github.com/apache/incubator-mxnet.git"
 mxnet_folder="apache_mxnet"
@@ -33,7 +33,7 @@ git clone $mxnet_url $mxnet_folder --recursive
 cd "$mxnet_folder/docs"
 tag_file="tag_list.txt"
 
-# Wite all version numbers into $tag_file
+# Write all version numbers into $tag_file
 for tag in $tag_list; do
     if [ $tag != 'master' ]
     then
