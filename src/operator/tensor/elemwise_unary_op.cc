@@ -23,7 +23,7 @@
  */
 #include <mxnet/base.h>
 #include "./elemwise_unary_op.h"
-#include "./elemwise_binary_op.h"
+#include "./elemwise_binary_op-inl.h"
 
 namespace mxnet {
 namespace op {

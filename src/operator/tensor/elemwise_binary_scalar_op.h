@@ -66,7 +66,7 @@ class BinaryScalarOp : public UnaryOp {
         const int64_t dense_block_count = next_input_row - output_row;
         if (dense_block_count > 0) {
           MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-            KernelEx<SetToScalar<Req>, cpu>::LaunchEx(
+            KernelEx<OpBase::SetToScalar<Req>, cpu>::LaunchEx(
               stream,
               items_per_row * dense_block_count,
               output_data.dptr_ + items_per_row * output_row,

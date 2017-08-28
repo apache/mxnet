@@ -33,7 +33,7 @@
 #include <vector>
 #include "ps/ps.h"
 #include "mxnet/kvstore.h"
-#include "../operator/tensor/elemwise_binary_op.h"
+#include "../operator/tensor/elemwise_binary_op-inl.h"
 #include "../operator/tensor/init_op.h"
 
 namespace mxnet {
