@@ -442,11 +442,11 @@ class ProposalGPUOp : public Operator{
     base_anchor[1] = 0.0;
     base_anchor[2] = param_.feature_stride - 1.0;
     base_anchor[3] = param_.feature_stride - 1.0;
-    CHECK_EQ(num_anchors, param_.ratios.info.size() * param_.scales.info.size());
+    CHECK_EQ(num_anchors, param_.ratios.ndim() * param_.scales.ndim());
     std::vector<float> anchors;
     utils::GenerateAnchors(base_anchor,
-                           param_.ratios.info,
-                           param_.scales.info,
+                           param_.ratios,
+                           param_.scales,
                            &anchors);
 
     // Copy generated anchors to GPU

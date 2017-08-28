@@ -144,7 +144,52 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   index_t DilatedKernelSize(int dim) const {
     return 1 + (kernel[dim] - 1) * dilate[dim];
   }
+
+  bool operator==(const DeconvolutionParam& other) const {
+    return this->kernel == other.kernel &&
+           this->stride == other.stride &&
+           this->dilate == other.dilate &&
+           this->pad == other.pad &&
+           this->adj == other.adj &&
+           this->target_shape == other.target_shape &&
+           this->num_filter == other.num_filter &&
+           this->num_group == other.num_group &&
+           this->workspace == other.workspace &&
+           this->no_bias == other.no_bias &&
+           this->cudnn_tune == other.cudnn_tune &&
+           this->cudnn_off == other.cudnn_off &&
+           this->layout == other.layout;
+  }
 };
+
+}  // namespace op
+}  // namespace mxnet
+
+namespace std {
+template<>
+struct hash<mxnet::op::DeconvolutionParam> {
+  size_t operator()(const mxnet::op::DeconvolutionParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.kernel);
+    ret = dmlc::HashCombine(ret, val.stride);
+    ret = dmlc::HashCombine(ret, val.dilate);
+    ret = dmlc::HashCombine(ret, val.pad);
+    ret = dmlc::HashCombine(ret, val.adj);
+    ret = dmlc::HashCombine(ret, val.target_shape);
+    ret = dmlc::HashCombine(ret, val.num_filter);
+    ret = dmlc::HashCombine(ret, val.num_group);
+    ret = dmlc::HashCombine(ret, val.workspace);
+    ret = dmlc::HashCombine(ret, val.no_bias);
+    ret = dmlc::HashCombine(ret, val.cudnn_tune);
+    ret = dmlc::HashCombine(ret, val.cudnn_off);
+    ret = dmlc::HashCombine(ret, val.layout);
+    return ret;
+  }
+};
+}  // namespace std
+
+namespace mxnet {
+namespace op {
 
 template<typename xpu, typename DType>
 class DeconvolutionOp : public Operator {

@@ -198,19 +198,21 @@ class LibSVMIter: public SparseIIterator<DataInst> {
 DMLC_REGISTER_PARAMETER(LibSVMIterParam);
 
 MXNET_REGISTER_IO_ITER(LibSVMIter)
-.describe(R"code(Returns the LibSVM file iterator. This iterator is experimental and
-should be used with care.
+.describe(R"code(Returns the libsvm file iterator which returns sparse data with `csr`
+storage type. This iterator is experimental and should be used with care.
 
-The input data is similar to libsvm file format, except that the indices are expected to be
-zero-based instead of one-based. Details of the libsvm format are available at
-`https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/`
+The input data is stored in a format similar to libsvm file format, except that the indices
+are expected to be zero-based instead of one-based. Details of the libsvm format are available
+at `https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/`
 
 In this function, the `data_shape` parameter is used to set the shape of each line of the data.
 The dimension of both `data_shape` and `label_shape` are expected to be 1.
 
 When `label_libsvm` is set to ``NULL``, both data and label are read from the same file specified
-by `data_libsvm`. Otherwise, data is read from `data_libsvm` and label from `label_libsvm`,
-in this case, if `data_libsvm` contains label, it will ignored.
+by `data_libsvm`. In this case, the data is stored in `csr` storage type, while the label is a 1D
+dense array. Otherwise, data is read from `data_libsvm` and label from `label_libsvm`,
+in this case, both data and label are stored in csr storage type. If `data_libsvm` contains label,
+it will ignored.
 
 The `LibSVMIter` only support `round_batch` parameter set to ``True`` for now. So, if `batch_size`
 is 3 and there are 4 total rows in libsvm file, 2 more examples
@@ -221,58 +223,62 @@ If ``data_libsvm = 'data/'`` is set, then all the files in this directory will b
 
 Examples::
 
-  // Contents of libsvm file ``data.t``.
+  # Contents of libsvm file ``data.t``.
   1.0 0:0.5 2:1.2
   -2.0
   -3.0 0:0.6 1:2.4 2:1.2
   4 2:-1.2
 
-  // Creates a `LibSVMIter` with `batch_size`=3.
-  LibSVMIter = mx.io.LibSVMIter(data_libsvm = 'data.t', data_shape = (3,),
-  batch_size = 3)
-
-  // The first batch (data and label)
-  [[ 0.5         0.          1.2 ]
-   [ 0.          0.          0.  ]
-   [ 0.6         2.4         1.2 ]]
-
+  # Creates a `LibSVMIter` with `batch_size`=3.
+  >>> data_iter = mx.io.LibSVMIter(data_libsvm = 'data.t', data_shape = (3,), batch_size = 3)
+  # The data of the first batch is stored in csr storage type
+  >>> batch = data_iter.next()
+  >>> csr = batch.data[0]
+  <CSRNDArray 3x3 @cpu(0)>
+  >>> csr.asnumpy()
+  [[ 0.5        0.          1.2 ]
+  [ 0.          0.          0.  ]
+  [ 0.6         2.4         1.2]]
+  # The label of first batch
+  >>> label = batch.label[0]
+  >>> label
   [ 1. -2. -3.]
+  <NDArray 3 @cpu(0)>
 
-  // The second batch (data and label)
+  >>> second_batch = data_iter.next()
+  # The data of the second batch
+  >>> second_batch.data[0].asnumpy()
   [[ 0.          0.         -1.2 ]
    [ 0.5         0.          1.2 ]
    [ 0.          0.          0. ]]
-
+  # The label of the second batch
+  >>> second_batch.label[0].asnumpy()
   [ 4.  1. -2.]
 
-  // Contents of libsvm file ``label.t``
+  # Contents of libsvm file ``label.t``
   1.0
   -2.0 0:0.125
   -3.0 2:1.2
   4 1:1.0 2:-1.2
 
-  // Creates a `LibSVMIter` with specified label file
-  LibSVMIter = mx.io.LibSVMIter(data_libsvm = 'data.t', data_shape = (3,),
-  label_libsvm = 'label.t', label_shape = (3,), batch_size = 3)
+  # Creates a `LibSVMIter` with specified label file
+  >>> data_iter = mx.io.LibSVMIter(data_libsvm = 'data.t', data_shape = (3,),
+                   label_libsvm = 'label.t', label_shape = (3,), batch_size = 3)
 
-  // Two batches of data read from the above iterator are as follows(data and label):
-  // The first batch
-  [[ 0.5         0.          1.2       ]
-   [ 0.          0.          0.        ]
-   [ 0.6         2.4         1.2      ]]
-
-  [[ 0.          0.          0.        ]
-   [ 0.125       0.          0.        ]
-   [ 0.          0.          1.2      ]]
-
-  // The second batch
-  [[ 0.          0.         -1.2       ]
-   [ 0.5         0.          1.2       ]
-   [ 0.          0.          0.        ]]
-
-  [[ 0.          1.         -1.2       ]
-   [ 0.          0.          0.        ]
-   [ 0.125       0.          0.        ]]
+  # Both data and label are in csr storage type
+  >>> batch = data_iter.next()
+  >>> csr_data = batch.data[0]
+  <CSRNDArray 3x3 @cpu(0)>
+  >>> csr_data.asnumpy()
+  [[ 0.5         0.          1.2  ]
+   [ 0.          0.          0.   ]
+   [ 0.6         2.4         1.2 ]]
+  >>> csr_label = batch.label[0]
+  <CSRNDArray 3x3 @cpu(0)>
+  >>> csr_label.asnumpy()
+  [[ 0.          0.          0.   ]
+   [ 0.125       0.          0.   ]
+   [ 0.          0.          1.2 ]]
 
 )code" ADD_FILELINE)
 .add_arguments(LibSVMIterParam::__FIELDS__())

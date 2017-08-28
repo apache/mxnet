@@ -129,14 +129,22 @@ class Parameter(object):
         elif self._data is not None:
             self._init_grad()
 
-    def _check_initialized(self, ctx=None):
-        if self._data is not None:
-            if ctx is not None and ctx not in self._data:
-                raise RuntimeError(
-                    "Parameter %s was not initialized on context %s. "
-                    "It was only initialized on %s."%(
-                        self.name, str(ctx), str(self.list_ctx())))
-            return
+    def _check_and_get(self, arr_dict, ctx):
+        if arr_dict is not None:
+            if ctx is list:
+                return list(arr_dict.values())
+            if ctx is None:
+                if len(self._ctx_list) == 1:
+                    ctx = self._ctx_list[0]
+                else:
+                    ctx = context.current_context()
+            ret = arr_dict.get(ctx, None)
+            if ret is not None:
+                return ret
+            raise RuntimeError(
+                "Parameter %s was not initialized on context %s. "
+                "It was only initialized on %s."%(
+                    self.name, str(ctx), str(self._ctx_list)))
         if self._deferred_init:
             raise DeferredInitializationError
         raise RuntimeError(
@@ -199,6 +207,7 @@ class Parameter(object):
     def _init_impl(self, data, ctx):
         """Sets data and grad."""
         self._data = OrderedDict()
+        self._ctx_list = list(ctx)
         for i in ctx:
             self._data[i] = data.copyto(i)
         self._init_grad()
@@ -327,20 +336,12 @@ class Parameter(object):
         -------
         NDArray on ctx
         """
-        if ctx is None:
-            list_ctx = self.list_ctx()
-            if len(list_ctx) == 1:
-                ctx = list_ctx[0]
-            else:
-                ctx = context.current_context()
-        self._check_initialized(ctx)
-        return self._data[ctx]
+        return self._check_and_get(self._data, ctx)
 
     def list_data(self):
         """Returns copies of this parameter on all contexts, in the same order
         as creation."""
-        self._check_initialized()
-        return list(self._data.values())
+        return self._check_and_get(self._data, list)
 
     def grad(self, ctx=None):
         """Returns a gradient buffer for this parameter on one context.
@@ -350,26 +351,20 @@ class Parameter(object):
         ctx : Context
             Desired context.
         """
-        if ctx is None:
-            list_ctx = self.list_ctx()
-            if len(list_ctx) == 1:
-                ctx = list_ctx[0]
-            else:
-                ctx = context.current_context()
-        self._check_initialized(ctx)
-        if self._grad is None:
+        if self._data is not None and self._grad is None:
             raise RuntimeError(
                 "Cannot get gradient array for Parameter %s " \
                 "because grad_req='null'"%(self.name))
-        return self._grad[ctx]
+        return self._check_and_get(self._grad, ctx)
 
     def list_grad(self):
         """Returns gradient buffers on all contexts, in the same order
         as `values`."""
-        self._check_initialized()
-        assert self._grad is not None, \
-            "Parameter %s does not have gradients because grad_req='null'"%self.name
-        return list(self._grad.values())
+        if self._data is not None and self._grad is None:
+            raise RuntimeError(
+                "Cannot get gradient array for Parameter %s " \
+                "because grad_req='null'"%(self.name))
+        return self._check_and_get(self._grad, list)
 
     def list_ctx(self):
         """Returns a list of contexts this parameter is initialized on."""
@@ -377,7 +372,7 @@ class Parameter(object):
             if self._deferred_init:
                 return self._deferred_init[1]
             raise RuntimeError("Parameter %s has not been initialized"%self.name)
-        return list(self._data.keys())
+        return self._ctx_list
 
     def zero_grad(self):
         """Sets gradient buffer on all contexts to 0. No action is taken if
