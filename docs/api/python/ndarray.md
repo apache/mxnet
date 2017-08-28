@@ -207,6 +207,7 @@ We summarize the interface for each class in the following sections.
 
     sparse.CSRNDArray.copyto
     sparse.CSRNDArray.tostype
+    sparse.CSRNDArray.asscipy
     sparse.CSRNDArray.__setitem__
     sparse.CSRNDArray.__getitem__
     sparse.CSRNDArray.data

@@ -147,7 +147,7 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
         import scipy.sparse as sp
         if isinstance(source_array, sp.csr.csr_matrix):
             return _sparse_array(source_array, ctx=ctx, dtype=dtype, aux_types=aux_types)
-    except:
+    except ImportError:
         pass
     if isinstance(source_array, NDArray) and source_array.stype != 'default':
         return _sparse_array(source_array, ctx=ctx, dtype=dtype, aux_types=aux_types)
