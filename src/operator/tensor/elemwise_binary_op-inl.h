@@ -24,6 +24,7 @@
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_OP_INL_H_
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_OP_INL_H_
 
+#include <algorithm>
 #include "./elemwise_binary_op.h"
 
 namespace mxnet {
