@@ -15,7 +15,7 @@ Installation
 ------------
 The method for installing this tool follows the `standard python package installation steps <https://packaging.python.org/installing/>`_. Once you have set up a python environment, run::
 
-  pip install mxnet-coreml-converter
+  pip install mxnet-to-coreml
 
 The package `documentation <https://github.com/apache/incubator-mxnet/tree/master/tools/coreml>`_ contains more details on how to use coremltools.
 

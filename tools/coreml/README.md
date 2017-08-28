@@ -6,10 +6,10 @@ This tool helps convert MXNet models into [Apple CoreML](https://developer.apple
 In order to use this tool you need to have these:
 * MacOS - 10.11 (El Capitan) or higher (for running inferences on the converted model MacOS 10.13 or higher (for phones: iOS 11 or above) is needed)
 * python 2.7
-* mxnet-coreml-converter: 
+* mxnet-to-coreml tool: 
 
 ```bash
-pip install mxnet-coreml-converter
+pip install mxnet-to-coreml
 ```
 
 ## How to use
