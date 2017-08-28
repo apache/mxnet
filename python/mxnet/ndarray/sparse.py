@@ -423,6 +423,19 @@ class CSRNDArray(BaseSparseNDArray):
         """
         return self._data()
 
+    @indices.setter
+    def indices(self, indices):
+        raise NotImplementedError()
+
+    @indptr.setter
+    def indptr(self, indptr):
+        raise NotImplementedError()
+
+    @data.setter
+    def data(self, data):
+        raise NotImplementedError()
+
+
     def tostype(self, stype):
         """Return a copy of the array with chosen storage type.
 
@@ -653,6 +666,14 @@ class RowSparseNDArray(BaseSparseNDArray):
             This RowSparseNDArray's data array.
         """
         return self._data()
+
+    @indices.setter
+    def indices(self, indices):
+        raise NotImplementedError()
+
+    @data.setter
+    def data(self, data):
+        raise NotImplementedError()
 
     def tostype(self, stype):
         """Return a copy of the array with chosen storage type.
