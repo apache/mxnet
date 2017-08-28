@@ -262,7 +262,7 @@ def rand_shape_3d(dim0=10, dim1=10, dim2=10):
 
 
 def rand_shape_nd(num_dim, dim=10):
-    return tuple(rnd.randint(1, dim+1, size=n))
+    return tuple(rnd.randint(1, dim+1, size=num_dim))
 
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
