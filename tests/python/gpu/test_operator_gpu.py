@@ -1346,11 +1346,11 @@ def test_sequence_reverse():
 
 
 def test_autograd_save_memory():
-    x = mx.nd.zeros((128, 1024, 1024), ctx=mx.gpu(0))
+    x = mx.nd.zeros((128, 512, 512), ctx=mx.gpu(0))
     x.attach_grad()
 
     with mx.autograd.record():
-        for i in range(50):
+        for i in range(200):
             x = x + 1
             x.wait_to_read()
     x.backward()

@@ -10,8 +10,6 @@ docker_run = 'tests/ci_build/ci_build.sh'
 max_time = 60
 // assign any caught errors here
 err = null
-// set build status to success by default
-currentBuild.result = "SUCCESS"
 
 // initialize source codes
 def init_git() {
@@ -147,6 +145,15 @@ try {
             make('gpu', flag)
             pack_lib('gpu')
             stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
+          }
+        }
+      },
+      'Amalgamation MIN': {
+        node('mxnetlinux') {
+          ws('workspace/amalgamation') {
+            init_git()
+            make('cpu', '-C amalgamation/ clean')
+            make('cpu', '-C amalgamation/ USE_BLAS=openblas MIN=1')
           }
         }
       },
@@ -429,6 +436,8 @@ try {
         }
       }
     }
+  // set build status to success at the end
+  currentBuild.result = "SUCCESS"
 } catch (caughtError) {
     node("mxnetlinux") {
         sh "echo caught error"

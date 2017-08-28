@@ -128,7 +128,7 @@ to calculate the accuracy.
 | `imagenet1k-resnet-152`        | 0.7653 | 0.9312 |
 | `imagenet1k-resnext-50`        | 0.7689 | 0.9332 |
 | `imagenet1k-resnext-101`       | 0.7828 | 0.9408 |
-| `imagenet1k-rexnext-101-64x4d` | 0.7911 | 0.9430 |
+| `imagenet1k-resnext-101-64x4d` | 0.7911 | 0.9430 |
 
 Note:
 - our Resnet does not need to specify the RGB mean due the data batch

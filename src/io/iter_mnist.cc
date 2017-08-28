@@ -103,7 +103,7 @@ class MNISTIter: public IIterator<TBlobBatch> {
     out_.batch_size = param_.batch_size;
     if (param_.shuffle) this->Shuffle();
     if (param_.silent == 0) {
-      mshadow::TShape s;
+      TShape s;
       s = batch_data_.shape_;
       if (param_.flat) {
         LOG(INFO) << "MNISTIter: load " << (unsigned)img_.size(0) << " images, shuffle="

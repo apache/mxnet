@@ -35,7 +35,7 @@ Let's see a complete example of how to use data iterator in model training.
 >>> data = mx.sym.Variable('data')
 >>> label = mx.sym.Variable('softmax_label')
 >>> fullc = mx.sym.FullyConnected(data=data, num_hidden=1)
->>> loss = mx.sym.SoftmaxOutput(data=data, label=label)
+>>> loss = mx.sym.SoftmaxOutput(data=fullc, label=label)
 >>> mod = mx.mod.Module(loss, data_names=['data'], label_names=['softmax_label'])
 >>> mod.bind(data_shapes=nd_iter.provide_data, label_shapes=nd_iter.provide_label)
 >>> mod.fit(nd_iter, num_epoch=2)
@@ -56,6 +56,7 @@ A detailed tutorial is available at
 
     io.NDArrayIter
     io.CSVIter
+    io.LibSVMIter
     io.ImageRecordIter
     io.ImageRecordUInt8Iter
     io.MNISTIter

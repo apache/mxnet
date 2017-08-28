@@ -19,23 +19,33 @@
 
 
 # setup
-export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=`pwd`/`dirname $0`/lib:/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+export PYTHONPATH=`pwd`/`dirname $0`/python
+# bc is required by sh2ju.sh
+apt-get install bc
 cd `pwd`/`dirname $0`
 . sh2ju.sh
+
 ## clean last build log
 juLogClean
-if [ $# -eq 1 ]; then
-    num_gpus=$1
+
+if [ -f $(which nvidia-smi) ]; then
+    if [ $# -eq 1 ]; then
+        num_gpus=$1
+    else
+        num_gpus=$(nvidia-smi -L | grep "GPU" | wc -l)
+    fi
+    gpus=`seq 0 $((num_gpus-1)) | paste -sd ","`
+    device_arg="--gpus $gpus"
 else
-    num_gpus=4
+    device_arg=""
 fi
-gpus=`seq 0 $((num_gpus-1)) | paste -sd ","`
 
 # build
 build() {
-make -C ../.. clean
-make -C ../.. -j8
-return $?
+    make -C ../.. clean
+    make -C ../.. -j8
+    return $?
 }
 
 cp ../../make/config.mk ../..
@@ -48,26 +58,15 @@ EOF
 
 juLog -name=Build -error=Error build
 
-# python: local kvstore
-juLog -name=Python.Local.KVStore -error=Error python test_kvstore.py
-
-# python: distributed kvstore
-juLog -name=Python.Distributed.KVStore -error=Error ../../tools/launch.py -n 4 python dist_sync_kvstore.py
-
-# download data
-juLog -name=DownloadData bash ./download.sh
-
-
 # check if the final evaluation accuracy exceed the threshold
 check_val() {
     expected=$1
-    pass="Final validation >= $expected, Pass"
-    fail="Final validation < $expected, Fail"
+    pass="Final validation >= $expected, PASS"
+    fail="Final validation < $expected, FAIL"
     python ../../tools/parse_log.py log --format none | tail -n1 | \
         awk "{ if (\$3~/^[.0-9]+$/ && \$3 > $expected) print \"$pass\"; else print \"$fail\"}"
     rm -f log
 }
-
 
 example_dir=../../example/image-classification
 # python: lenet + mnist
@@ -91,35 +90,6 @@ test_lenet() {
        check_val $desired_accuracy
     done
 }
-juLog -name=Python.Lenet.Mnist -error=Fail test_lenet
-
-# python: distributed lenet + mnist
-test_dist_lenet() {
-    ../../tools/launch.py -n ${num_gpus} \
-        python ./dist_lenet.py --data-dir `pwd`/data/mnist/ \
-        --kv-store dist_sync \
-        --num-epochs 10 \
-        2>&1 | tee log
-    check_val 0.98
-}
-juLog -name=Python.Distributed.Lenet.Mnist -error=Fail test_dist_lenet
-
-# python: inception + cifar10
-test_inception_cifar10() {
-    python $example_dir/train_cifar10.py \
-        --data-dir `pwd`/data/cifar10/ --gpus $gpus --num-epochs 20 --batch-size 256 \
-        2>&1 | tee log
-    check_val 0.82
-}
-juLog -name=Python.Inception.Cifar10 -error=Fail test_inception_cifar10
-
-# build without CUDNN
-cat >>../../config.mk <<EOF
-USE_CUDNN=0
-EOF
-juLog -name=BuildWithoutCUDNN -error=Error build
-
-# python: multi gpus lenet + mnist
-juLog -name=Python.Multi.Lenet.Mnist -error=Error python multi_lenet.py
+juLog -name=Python.Lenet.Mnist -error=FAIL test_lenet
 
 exit $errors
