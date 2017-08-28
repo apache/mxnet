@@ -62,6 +62,10 @@ except ImportError:
     from .._ctypes.ndarray import _set_ndarray_class
 # pylint: enable=unused-import
 
+try:
+    import scipy.sparse as spsp
+except ImportError:
+    spsp = None
 
 __all__ = ["_ndarray_cls", "csr_matrix", "row_sparse_array",
            "BaseSparseNDArray", "CSRNDArray", "RowSparseNDArray"]
@@ -973,23 +977,19 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
         arr = empty(source_array.stype, source_array.shape, ctx, dtype, aux_types)
         arr[:] = source_array
         return arr
-    try:
-        import scipy.sparse as sp
-        if isinstance(source_array, sp.csr.csr_matrix):
-            # TODO(haibin) implement `_sync_copy_from` with scipy csr object to reduce a copy
-            indptr_type = None
-            indices_type = None
-            if aux_types is not None:
-                assert(len(aux_types) == 2), "Expected types for both indices and indptr"
-                indptr_type = aux_types[0]
-                indices_type = aux_types[1]
-            # preprocess scipy csr to canonical form
-            csr = source_array.sorted_indices()
-            csr.sum_duplicates()
-            arr = csr_matrix(csr.data, csr.indptr, csr.indices, csr.shape, dtype=dtype,
-                             indptr_type=indptr_type, indices_type=indices_type)
-            return arr
-        else:
-            raise ValueError("Unexpected source_array type: ", type(source_array))
-    except ImportError:
+    if spsp is not None and isinstance(source_array, spsp.csr.csr_matrix):
+        # TODO(haibin) implement `_sync_copy_from` with scipy csr object to reduce a copy
+        indptr_type = None
+        indices_type = None
+        if aux_types is not None:
+            assert(len(aux_types) == 2), "Expected types for both indices and indptr"
+            indptr_type = aux_types[0]
+            indices_type = aux_types[1]
+        # preprocess scipy csr to canonical form
+        csr = source_array.sorted_indices()
+        csr.sum_duplicates()
+        arr = csr_matrix(csr.data, csr.indptr, csr.indices, csr.shape, dtype=dtype,
+                         indptr_type=indptr_type, indices_type=indices_type)
+        return arr
+    else:
         raise ValueError("Unexpected source_array type: ", type(source_array))

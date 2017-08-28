@@ -154,7 +154,6 @@ def test_NDArrayIter_h5py():
             assert(labelcount[i] == 100)
 
 def test_NDArrayIter_csr():
-    import scipy.sparse as sp
     # creating toy data
     num_rows = rnd.randint(5, 15)
     num_cols = rnd.randint(1, 20)

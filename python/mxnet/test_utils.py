@@ -124,8 +124,8 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
     """
     _validate_csr_generation_inputs(num_rows, num_cols, density,
                                     distribution="uniform")
-    from scipy import sparse as sp
-    csr = sp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
+    from scipy import sparse as spsp
+    csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
     result = mx.nd.sparse.csr_matrix(csr.data, csr.indptr, csr.indices,
                                      (num_rows, num_cols), dtype=dtype)
     return result
