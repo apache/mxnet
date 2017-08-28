@@ -34,12 +34,24 @@ endif
 # use customized config file
 include $(config)
 
+# prepare_mkl = 0
 ifeq ($(USE_MKLDNN), 1)
-# must run ./prepare_mkl before including mshadow.mk
+	RETURN_STRING := $(shell ./prepare_mkl.sh $(MKLML_ROOT))
+	MKLROOT := $(firstword $(RETURN_STRING))
+	export USE_MKLML = $(lastword $(RETURN_STRING))
+	USE_MKL2017 := 0
+endif
+ifeq ($(USE_MKL2017), 1)
 	RETURN_STRING := $(shell ./prepare_mkl.sh $(MKLML_ROOT))
 	MKLROOT := $(firstword $(RETURN_STRING))
 	export USE_MKLML = $(lastword $(RETURN_STRING))
 endif
+# ifeq($(prepare_mkl), 1)
+# # must run ./prepare_mkl before including mshadow.mk
+# 	RETURN_STRING := $(shell ./prepare_mkl.sh $(MKLML_ROOT))
+# 	MKLROOT := $(firstword $(RETURN_STRING))
+# 	export USE_MKLML = $(lastword $(RETURN_STRING))
+# endif
 
 include mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
@@ -109,6 +121,7 @@ endif
 # else
 # 	CFLAGS += -DMKL_EXPERIMENTAL=0
 # endif
+include Makefile.mkldnn
 ifeq ($(USE_MKLDNN), 1)
 	CFLAGS += -DMKL_EXPERIMENTAL=1
 	CFLAGS += -DUSE_MKL=1
