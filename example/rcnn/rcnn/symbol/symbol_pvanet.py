@@ -25,7 +25,8 @@ def get_pvanet_conv(data):
     conv5_4 = inception_last(data=conv5_3, middle_filter=[64, [96, 192], [32, 64, 64]], num_filter=384, kernel=(3, 3), stride=(1, 1), proj=False, name='conv5_4', suffix='')  # (33*20)x384/(33*20)x384
     bsr = bn_scale_relu(data=conv5_4, name='bsr', suffix='last')
     upscale = mx.sym.Deconvolution(data=bsr, num_filter=384, kernel=(4, 4), stride=(2, 2), pad=(1, 1), name='deconv')  # (33*20)x384/(66*40)x384
-    concat = mx.sym.concat(downscale, conv4_4, upscale, name='concat')  # (66*40)x768/(66*40)x768
+    crop = mx.sym.Crop(upscale, downscale, name='crop')
+    concat = mx.sym.concat(downscale, conv4_4, crop, name='concat')  # (66*40)x768/(66*40)x768
     convf = mx.sym.Convolution(data=concat, num_filter=512, kernel=(1, 1), stride=(1, 1), pad=(0, 0), name='convf')  # (66*40)x768/(66*40)x512
     return convf
 
