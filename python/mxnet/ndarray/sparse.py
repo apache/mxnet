@@ -116,7 +116,7 @@ class BaseSparseNDArray(NDArray):
         shape_info = 'x'.join(['%d' % x for x in self.shape])
         # The data content is not displayed since the array usually has big shape
         return '\n<%s %s @%s>' % (self.__class__.__name__,
-                                      shape_info, self.context)
+                                  shape_info, self.context)
 
     def __iadd__(self, other):
         raise NotImplementedError()
