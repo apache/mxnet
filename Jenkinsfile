@@ -455,9 +455,11 @@ try {
       node('mxnetlinux') {
         ws('workspace/docs') {
           if (env.BRANCH_NAME == "master") {
-            init_git()
-            sh "make clean"
-            sh "make docs"
+            retry(2) {
+              init_git()
+              sh "make clean"
+              sh "make docs"
+            }
           }
         }
       }
