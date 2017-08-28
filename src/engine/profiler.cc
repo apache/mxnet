@@ -112,7 +112,7 @@ OprExecStat *Profiler::AddOprStat(int dev_type, uint32_t dev_id) {
   }
 
   std::shared_ptr<DevStat> pstat = profile_stat_;  // hold a ref count
-  if(pstat.get()) {
+  if (pstat.get()) {
     DevStat &dev_stat = pstat.get()[idx];
     {
       std::lock_guard<std::mutex> lock{dev_stat.m_};
@@ -160,7 +160,7 @@ void Profiler::DumpProfile() {
   uint32_t dev_num = cpu_num_ + gpu_num_ + 1;
 
   std::shared_ptr<DevStat> pstat = profile_stat_;  // hold a ref count
-  if(pstat.get()) {
+  if (pstat.get()) {
     for (uint32_t i = 0; i < dev_num; ++i) {
       const DevStat &d = pstat.get()[i];
       this->EmitPid(&file, d.dev_name, i);
