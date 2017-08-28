@@ -230,7 +230,7 @@ class ElemwiseBinaryOp : public OpBase {
         Tensor<cpu, 1, DType> rvalue = !rhs_is_dense ? data_r[iter_r++] : data_r[idx_r];
         DCHECK_EQ(lvalue.shape_.Size(), rvalue.shape_.Size());
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-          KernelEx<OpWithReq<OP, Req>, cpu>::LaunchEx(
+          KernelEx<mxnet_op::op_with_req<OP, Req>, cpu>::LaunchEx(
             s, lvalue.shape_.Size(), out[iter_out].dptr_, lvalue.dptr_, rvalue.dptr_);
         });
         num_common_rows++;
@@ -613,7 +613,7 @@ class ElemwiseBinaryOp : public OpBase {
         MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
           const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
           + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
-          Kernel<OpWithReq<OP, Req>, xpu>::Launch(s, size,
+          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
           outputs[0].dptr<DType>(),
           inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
         });
@@ -636,7 +636,7 @@ class ElemwiseBinaryOp : public OpBase {
         MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
           const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
           + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
-          Kernel<OpWithReq<OP, Req>, xpu>::Launch(s, size,
+          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
           outputs[0].dptr<DType>(),
           inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
         });

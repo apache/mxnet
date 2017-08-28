@@ -231,31 +231,6 @@ struct CloneGradient {
   }
 };
 
-/*! \brief Generic conversion of F<OP> kernel mapping to Kernel::Launch mapping */
-template<typename OP, int req>
-struct OpWithReq {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out,
-                                  const DType *lhs,
-                                  const DType *rhs) {
-    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
-  }
-
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in, const DType value) {
-    KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
-  }
-};
-
-/*! \brief Old mshadow Compute (F<OP>) mapping to Kernel<OP>::Launch mapping */
-template<typename OP, int Req>
-struct MShadowToKernel {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in) {
-    KERNEL_ASSIGN(out[i], Req, OP::Map(in[i]));
-  }
-};
-
 }  // namespace op
 }  // namespace mxnet
 

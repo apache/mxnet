@@ -299,9 +299,8 @@ class UnaryOp : public OpBase {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        mxnet_op::Kernel<MShadowToKernel<OP, Req>, xpu>::Launch(s, inputs[0].Size(),
-                                                                outputs[0].dptr<DType>(),
-                                                                inputs[0].dptr<DType>());
+        mxnet_op::Kernel<mxnet_op::mshadow_to_kernel<OP, Req>, xpu>::Launch(
+          s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
       });
     });
   }

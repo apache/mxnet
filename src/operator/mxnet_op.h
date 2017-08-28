@@ -27,6 +27,7 @@
 
 #include <dmlc/omp.h>
 #include <mxnet/base.h>
+#include <mxnet/op_attr_types.h>
 #include <algorithm>
 #ifdef __CUDACC__
 #include "../common/cuda_utils.h"
@@ -212,6 +213,30 @@ struct set_zero {
   }
 };
 
+/*! \brief Select assignment operation based upon the req value */
+template<typename OP, int req>
+struct op_with_req {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out,
+                                  const DType *lhs,
+                                  const DType *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in, const DType value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
+  }
+};
+
+/*! \brief Old mshadow Compute (F<OP>) mapping to Kernel<OP>::Launch mapping */
+template<typename OP, int Req>
+struct mshadow_to_kernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in) {
+    KERNEL_ASSIGN(out[i], Req, OP::Map(in[i]));
+  }
+};
 
 template<typename OP, typename xpu>
 struct Kernel;
@@ -251,7 +276,6 @@ struct Kernel<OP, gpu> {
   }
 };
 #endif  // __CUDACC__
-
 
 }  // namespace mxnet_op
 }  // namespace op

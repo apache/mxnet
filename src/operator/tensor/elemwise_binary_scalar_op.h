@@ -88,7 +88,7 @@ class BinaryScalarOp : public UnaryOp {
         const int64_t sparse_block_count = next_non_contiguous_sparse - input_iter + 1;
         if (sparse_block_count > 0) {
           MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-            KernelEx<OpWithReq<OP, Req>, cpu>::LaunchEx(
+            KernelEx<mxnet_op::op_with_req<OP, Req>, cpu>::LaunchEx(
               stream,
               items_per_row * sparse_block_count,
               &output_data.dptr_[items_per_row * output_row],
@@ -104,7 +104,7 @@ class BinaryScalarOp : public UnaryOp {
       // All rows exist (eventually we don't have to do complex
       // things to call GPU kernels because we don't need to access row indices)
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        KernelEx<OpWithReq<OP, Req>, cpu>::LaunchEx(
+        KernelEx<mxnet_op::op_with_req<OP, Req>, cpu>::LaunchEx(
           stream,
           items_per_row * row_count,
           output_data.dptr_,
@@ -215,11 +215,11 @@ class BinaryScalarOp : public UnaryOp {
     const double alpha = nnvm::get<double>(attrs.parsed);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        mxnet_op::Kernel<OpWithReq<OP, Req>, xpu>::Launch(s,
-                                                          inputs[0].Size(),
-                                                          outputs[0].dptr<DType>(),
-                                                          inputs[0].dptr<DType>(),
-                                                          DType(alpha));
+        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s,
+                                                                      inputs[0].Size(),
+                                                                      outputs[0].dptr<DType>(),
+                                                                      inputs[0].dptr<DType>(),
+                                                                      DType(alpha));
       });
     });
   }
