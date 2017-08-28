@@ -36,7 +36,7 @@ parser.add_argument('--dummy-iter', type=int, default=0,
 parser.add_argument('--kvstore', type=str, default='local',
                     help='what kvstore to use [local, dist_sync, etc]')
 parser.add_argument('--sparse-log-level', type=str, default='INFO',
-                    help='logging level [debug, info, error]')
+                    help='logging level [DEBUG, INFO, ERROR]')
 parser.add_argument('--dataset', type=str, default='avazu',
                     help='what test dataset to use')
 parser.add_argument('--num-gpu', type=int, default=0,
@@ -47,7 +47,7 @@ parser.add_argument('--output-dim', type=int, default=4,
 parser.add_argument('--dummy-metric', type=int, default=0,
                     help='whether to call update_metric')
 parser.add_argument('--enable-logging-for', default="0",
-                    help="Enable logging for the specified workers")
+                    help="Enable logging for the specified list of workers")
 
 
 def get_libsvm_data(data_dir, data_name, url, data_origin_name):
