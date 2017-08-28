@@ -10,8 +10,6 @@ docker_run = 'tests/ci_build/ci_build.sh'
 max_time = 60
 // assign any caught errors here
 err = null
-// set build status to success by default
-currentBuild.result = "SUCCESS"
 
 // initialize source codes
 def init_git() {
@@ -438,6 +436,8 @@ try {
         }
       }
     }
+  // set build status to success at the end
+  currentBuild.result = "SUCCESS"
 } catch (caughtError) {
     node("mxnetlinux") {
         sh "echo caught error"

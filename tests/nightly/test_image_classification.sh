@@ -21,6 +21,8 @@
 # setup
 export LD_LIBRARY_PATH=`pwd`/`dirname $0`/lib:/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 export PYTHONPATH=`pwd`/`dirname $0`/python
+# bc is required by sh2ju.sh
+apt-get install bc
 cd `pwd`/`dirname $0`
 . sh2ju.sh
 
@@ -59,8 +61,8 @@ juLog -name=Build -error=Error build
 # check if the final evaluation accuracy exceed the threshold
 check_val() {
     expected=$1
-    pass="Final validation >= $expected, Pass"
-    fail="Final validation < $expected, Fail"
+    pass="Final validation >= $expected, PASS"
+    fail="Final validation < $expected, FAIL"
     python ../../tools/parse_log.py log --format none | tail -n1 | \
         awk "{ if (\$3~/^[.0-9]+$/ && \$3 > $expected) print \"$pass\"; else print \"$fail\"}"
     rm -f log
@@ -88,6 +90,6 @@ test_lenet() {
        check_val $desired_accuracy
     done
 }
-juLog -name=Python.Lenet.Mnist -error=Fail test_lenet
+juLog -name=Python.Lenet.Mnist -error=FAIL test_lenet
 
 exit $errors
