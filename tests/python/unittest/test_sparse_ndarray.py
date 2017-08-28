@@ -463,10 +463,6 @@ def test_create_csr():
             assert_almost_equal(nd.data.asnumpy(), sp.data)
             assert_almost_equal(nd.indptr.asnumpy(), sp.indptr)
             assert_almost_equal(nd.indices.asnumpy(), sp.indices)
-            sp2 = nd.asscipy()
-            assert_almost_equal(sp2.data, sp.data)
-            assert_almost_equal(sp2.indptr, sp.indptr)
-            assert_almost_equal(sp2.indices, sp.indices)
 
         try:
             import scipy.sparse as sp
