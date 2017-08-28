@@ -56,6 +56,8 @@ inline void check_gemm(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DTyp
     << "Non compatible matrix dimensions between inputs A and B for gemm";
 }
 
+#if MSHADOW_USE_CBLAS == 1
+
 #define LINALG_CPU_GEMM(fname, DType) \
 template<> inline \
 void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2, DType>& B, \
@@ -66,8 +68,6 @@ void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2
                 C.size(0), C.size(1), (tA ? A.size(0) : A.size(1)), alpha, \
                 A.dptr_, A.stride_, B.dptr_, B.stride_, beta, C.dptr_, C.stride_); \
 }
-LINALG_CPU_GEMM(sgemm, float)
-LINALG_CPU_GEMM(dgemm, double)
 
 #define LINALG_CPU_BATCH_GEMM(DType) \
 template<> inline \
@@ -79,8 +79,43 @@ void linalg_batch_gemm<cpu, DType>(const Tensor<cpu, 3, DType>& A, const Tensor<
     linalg_gemm(A[i], B[i], C[i], alpha, beta, tA, tB); \
   } \
 }
+
+#else
+
+#define LINALG_CPU_GEMM(fname, DType) \
+template<> inline \
+void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2, DType>& B, \
+                             const Tensor<cpu, 2, DType>& C, DType alpha, DType beta, \
+                             bool tA, bool tB, Stream<cpu> *s) { \
+  LOG(FATAL) << "linalg_gemm (without req arg) not implemented by mxnet for cpu, needs cblas!"; \
+}
+
+#define LINALG_CPU_BATCH_GEMM(DType) \
+template<> inline \
+void linalg_batch_gemm<cpu, DType>(const Tensor<cpu, 3, DType>& A, const Tensor<cpu, 3, DType>& B, \
+                                   const Tensor<cpu, 3, DType>& C, DType alpha, DType beta, \
+                                   bool tA, bool tB, Stream<cpu> *s) { \
+  LOG(FATAL) << "linalg_batch_gemm not implemented by mxnet for cpu, needs cblas!"; \
+}
+
+#endif  // MSHADOW_USE_CBLAS == 1
+
+LINALG_CPU_GEMM(sgemm, float)
+LINALG_CPU_GEMM(dgemm, double)
+
 LINALG_CPU_BATCH_GEMM(float)
 LINALG_CPU_BATCH_GEMM(double)
+
+// Specialization of linalg_gemm<cpu, DType> for DType=mshadow::half::half_t.
+template<> inline
+void linalg_gemm<cpu, mshadow::half::half_t>(const Tensor<cpu, 2, mshadow::half::half_t>& A,
+                                             const Tensor<cpu, 2, mshadow::half::half_t>& B,
+                                             const Tensor<cpu, 2, mshadow::half::half_t>& C,
+                                             mshadow::half::half_t alpha,
+                                             mshadow::half::half_t beta,
+                                             bool tA, bool tB, Stream<cpu> *s) {
+  LOG(FATAL) << "FP16 gemm on cpu not implemented!";
+}
 
 #ifdef __CUDACC__
 
@@ -198,7 +233,7 @@ void linalg_batch_gemm<gpu, DType>(const Tensor<gpu, 3, DType>& A, const Tensor<
 LINALG_GPU_BATCH_GEMM(SgemmBatched, float)
 LINALG_GPU_BATCH_GEMM(DgemmBatched, double)
 
-#endif
+#endif  // __CUDACC__
 
 //////////////////////////////// TRSM ////////////////////////////////////////////
 
@@ -218,6 +253,8 @@ inline void check_trsm(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DTyp
     << "Non compatible matrix dimensions between inputs A and B for trsm";
 }
 
+#if MSHADOW_USE_CBLAS == 1
+
 #define LINALG_CPU_TRSM(fname, DType) \
 template<> inline \
 void linalg_trsm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2, DType>& B, \
@@ -228,8 +265,6 @@ void linalg_trsm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2
                 CblasNonUnit, B.size(0), B.size(1), alpha, A.dptr_, \
                 A.stride_, B.dptr_, B.stride_); \
 }
-LINALG_CPU_TRSM(strsm, float)
-LINALG_CPU_TRSM(dtrsm, double)
 
 #define LINALG_CPU_BATCH_TRSM(DType) \
 template<> inline \
@@ -240,6 +275,28 @@ void linalg_batch_trsm<cpu, DType>(const Tensor<cpu, 3, DType>& A, const Tensor<
     linalg_trsm(A[i], B[i], alpha, rightside, lower, transpose); \
   } \
 }
+
+#else
+
+#define LINALG_CPU_TRSM(fname, DType) \
+template<> inline \
+void linalg_trsm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2, DType>& B, \
+                 DType alpha, bool rightside, bool lower, bool transpose, Stream<cpu> *s) { \
+  LOG(FATAL) << "linalg_trsm not implemented, needs cblas!"; \
+}
+
+#define LINALG_CPU_BATCH_TRSM(DType) \
+template<> inline \
+void linalg_batch_trsm<cpu, DType>(const Tensor<cpu, 3, DType>& A, const Tensor<cpu, 3, DType>& B, \
+                   DType alpha, bool rightside, bool lower, bool transpose, Stream<cpu> *s) { \
+  LOG(FATAL) << "linalg_batch_trsm not implemented, needs cblas!"; \
+}
+
+#endif  // MSHADOW_USE_CBLAS == 1
+
+LINALG_CPU_TRSM(strsm, float)
+LINALG_CPU_TRSM(dtrsm, double)
+
 LINALG_CPU_BATCH_TRSM(float)
 LINALG_CPU_BATCH_TRSM(double)
 
@@ -297,7 +354,7 @@ void linalg_batch_trsm<gpu, DType>(const Tensor<gpu, 3, DType>& A, const Tensor<
 LINALG_GPU_BATCH_TRSM(StrsmBatched, float)
 LINALG_GPU_BATCH_TRSM(DtrsmBatched, double)
 
-#endif
+#endif  // __CUDACC__
 
 /*!
  * \brief Performs gemm, setting alpha and beta as appropriate for `req`.
@@ -305,9 +362,9 @@ LINALG_GPU_BATCH_TRSM(DtrsmBatched, double)
  * \param A the first operand of the gemm
  * \param B the second operand of the gemm
  * \param C the data to be assigned
- * \tparam tA whether the `A` operand should be transposed first.
- * \tparam tB whether the `B` operand should be transposed first.
- * \tparam s the stream to perform the operation
+ * \param tA whether the `A` operand should be transposed first.
+ * \param tB whether the `B` operand should be transposed first.
+ * \param s the stream to perform the operation
  * \param req the assignment request
  */
 template<typename xpu, typename DType>
@@ -332,6 +389,61 @@ inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
   }
 }
 
+#if MSHADOW_USE_CBLAS == 0
+
+// A template for a cpu linalg_gemm implementation using mshadow::dot()
+#define LINALG_CPU_GEMM_NO_CBLAS(DType) \
+template<> inline \
+void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                             const Tensor<cpu, 2, DType>& B, \
+                             const Tensor<cpu, 2, DType>& C, \
+                             bool tA, bool tB, Stream<cpu> *s, \
+                             mxnet::OpReqType req) { \
+  using namespace mxnet; \
+  switch (req) { \
+    case kNullOp: \
+      break; \
+    case kWriteTo: \
+    case kWriteInplace: \
+      if (tA) { \
+        if (tB) { \
+          const_cast<Tensor<cpu, 2, DType>&>(C) = dot(A.T(), B.T()); \
+        } else { \
+          const_cast<Tensor<cpu, 2, DType>&>(C) = dot(A.T(), B); \
+        } \
+      } else { \
+        if (tB) { \
+          const_cast<Tensor<cpu, 2, DType>&>(C) = dot(A, B.T()); \
+        } else { \
+          const_cast<Tensor<cpu, 2, DType>&>(C) = dot(A, B); \
+        } \
+      } \
+      break; \
+    case kAddTo: \
+      if (tA) { \
+        if (tB) { \
+          const_cast<Tensor<cpu, 2, DType>&>(C) += dot(A.T(), B.T()); \
+        } else { \
+          const_cast<Tensor<cpu, 2, DType>&>(C) += dot(A.T(), B); \
+        } \
+      } else { \
+        if (tB) { \
+          const_cast<Tensor<cpu, 2, DType>&>(C) += dot(A, B.T()); \
+        } else { \
+          const_cast<Tensor<cpu, 2, DType>&>(C) += dot(A, B); \
+        } \
+      } \
+      break; \
+    default: \
+      LOG(FATAL) << "not reached"; \
+  } \
+}
+
+LINALG_CPU_GEMM_NO_CBLAS(float)
+LINALG_CPU_GEMM_NO_CBLAS(double)
+
+#endif  // (MSHADOW_USE_CBLAS == 0)
+
 //////////////////////////////// TRMM ////////////////////////////////////////////
 
 // CPU/GPU-versions of BLAS3 function "trmm". Please refer to the BLAS3-documentation
@@ -350,6 +462,8 @@ inline void check_trmm(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DTyp
     << "Non compatible matrix dimensions between inputs A and B for trmm";
 }
 
+#if MSHADOW_USE_CBLAS == 1
+
 #define LINALG_CPU_TRMM(fname, DType) \
 template<> inline \
 void linalg_trmm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2, DType>& B, \
@@ -360,8 +474,17 @@ void linalg_trmm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2
                 CblasNonUnit, B.size(0), B.size(1), alpha, A.dptr_, \
                 A.stride_, B.dptr_, B.stride_); \
 }
-LINALG_CPU_TRMM(strmm, float)
-LINALG_CPU_TRMM(dtrmm, double)
+
+#else
+
+#define LINALG_CPU_TRMM(fname, DType) \
+template<> inline \
+void linalg_trmm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2, DType>& B, \
+                 DType alpha, bool rightside, bool lower, bool transpose, Stream<cpu> *s) { \
+  LOG(FATAL) << "linalg_trmm not implemented, needs cblas!"; \
+}
+
+#endif  // MSHADOW_USE_CBLAS == 1
 
 #define LINALG_XPU_BATCH_TRMM(xpu, DType) \
 template<> inline \
@@ -372,6 +495,10 @@ void linalg_batch_trmm<xpu, DType>(const Tensor<xpu, 3, DType>& A, const Tensor<
     linalg_trmm(A[i], B[i], alpha, rightside, lower, transpose, s); \
   } \
 }
+
+LINALG_CPU_TRMM(strmm, float)
+LINALG_CPU_TRMM(dtrmm, double)
+
 LINALG_XPU_BATCH_TRMM(cpu, float)
 LINALG_XPU_BATCH_TRMM(cpu, double)
 
@@ -401,7 +528,7 @@ LINALG_GPU_TRMM(Dtrmm, double)
 LINALG_XPU_BATCH_TRMM(gpu, float)
 LINALG_XPU_BATCH_TRMM(gpu, double)
 
-#endif
+#endif  // __CUDACC__
 
 //////////////////////////////// POTRF ////////////////////////////////////////////
 
@@ -437,7 +564,7 @@ void linalg_batch_potrf<cpu, DType>(const Tensor<cpu, 3, DType>& A, bool lower, 
 LINALG_CPU_BATCH_POTRF(float)
 LINALG_CPU_BATCH_POTRF(double)
 
-#if MXNET_USE_CUSOLVER == 1
+#if defined(__CUDACC__) && MXNET_USE_CUSOLVER == 1
 
 #define LINALG_GPU_BUFFSIZE_POTRF(fname, DType) \
 inline int linalg_potrf_buffsize(const Tensor<gpu, 2, DType>& A, bool lower, Stream<gpu> *s) { \

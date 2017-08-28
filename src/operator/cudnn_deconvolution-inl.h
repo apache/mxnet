@@ -598,11 +598,11 @@ class CuDNNDeconvolutionOp : public Operator {
                   const std::vector<TShape>& out_shape,
                   cudnnDataType_t cudnn_forward_compute_type,
                   cudnnDataType_t cudnn_backward_compute_type) {
-    std::string key = CuDNNAlgoReg::Get()->GetKey(param_, in_shape, out_shape, dtype_,
-                                                  cudnn_forward_compute_type,
-                                                  cudnn_backward_compute_type,
-                                                  SMArch(ctx.dev_id));
-    if (!CuDNNAlgoReg::Get()->Find(key, &forward_algo_, &back_algo_, &back_algo_w_)) {
+    if (!CuDNNDeconvAlgoReg::Get()->Find(param_, in_shape, out_shape, dtype_,
+                                         cudnn_forward_compute_type,
+                                         cudnn_backward_compute_type,
+                                         SMArch(ctx.dev_id), &forward_algo_,
+                                         &back_algo_, &back_algo_w_)) {
       // Not in algo registry, must determine via *Get*() or *Find*()
       Engine::VarHandle var = Engine::Get()->NewVariable();
       Engine::Get()->PushSync([=](RunContext rctx) {
@@ -793,8 +793,11 @@ class CuDNNDeconvolutionOp : public Operator {
         // convolution will match only if identically specified.
         // We're caching results of *Get* as well as *Find*, but these records
         // will be held distinctly because param_.cudnn_tune is part of the key.
-        CuDNNAlgoReg::Get()->Register(key, this->forward_algo_, this->back_algo_,
-                                      this->back_algo_w_);
+        CuDNNDeconvAlgoReg::Get()->Register(param_, in_shape, out_shape, dtype_,
+                                            cudnn_forward_compute_type,
+                                            cudnn_backward_compute_type,
+                                            SMArch(ctx.dev_id), this->forward_algo_,
+                                            this->back_algo_, this->back_algo_w_);
       }, ctx, {}, {var});
       Engine::Get()->WaitForVar(var);
       Engine::Get()->DeleteVariable([](RunContext s) {}, ctx, var);
