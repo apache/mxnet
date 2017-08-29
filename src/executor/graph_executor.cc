@@ -486,7 +486,7 @@ void HandleInferStorageTypeError(const size_t num_forward_inputs,
       }
     }
   }
-  LOG(FATAL) << "InferStoragetType pass cannot decide storage type for the following arguments "
+  LOG(FATAL) << "InferStorageType pass cannot decide storage type for the following arguments "
                 "(-1 means unknown stype). Please consider providing them as inputs:\n"
              << oss.str();
 }
