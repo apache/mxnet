@@ -25,6 +25,3 @@ from .ndarray import *
 from .utils import load, save, zeros, empty, array
 from .sparse import _ndarray_cls
 from .ndarray import _GRAD_REQ_MAP
-
-__all__ = op.__all__ + ndarray.__all__ + contrib.__all__\
-          + linalg.__all__ + random.__all__ + sparse.__all__
