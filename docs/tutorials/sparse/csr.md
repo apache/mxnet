@@ -6,7 +6,7 @@ while most users only made a few purchases, leading to feature vectors with high
 (i.e. most of the elements are zeros).
 
 Storing and manipulating such large sparse matrices in the default dense structure results
-in wated memory and processing on the zeros.
+in wasted memory and processing on the zeros.
 To take advantage of the sparse structure of the matrix, the ``CSRNDArray`` in MXNet
 stores the matrix in [compressed sparse row(CSR)](https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_.28CSR.2C_CRS_or_Yale_format.29) format
 and uses specialized algorithms in operators.
@@ -153,34 +153,17 @@ dense = mx.nd.sparse.cast_storage(csr, 'default')
 
 ## Copies
 
-When assigning an CSRNDArray to another Python variable, we copy a reference to the
-*same* CSRNDArray. However, we often need to make a copy of the data, so that we
-can manipulate the new array without overwriting the original values.
+The `copy` method makes a deep copy of the array and its data, and `copyto` method or the slice
+operator `[]` to copy to an existing array.
 
 ```python
-a = mx.nd.sparse.zeros('csr', (2,2))
-b = a
-b is a # will be True
-```
-
-The `copy` method makes a deep copy of the array and its data:
-
-```python
+a = mx.nd.ones((2,2)).tostype('csr')
 b = a.copy()
-b is a  # will be False
-```
-
-The above code allocates a new CSRNDArray and then assigns to *b*. When we do not
-want to allocate additional memory, we can use the `copyto` method or the slice
-operator `[]` instead.
-
-```python
-b = mx.nd.sparse.zeros('csr', a.shape)
-c = b
+c = mx.nd.sparse.zeros('csr', (2,2))
 c[:] = a
-d = b
+d = mx.nd.sparse.zeros('csr', (2,2))
 a.copyto(d)
-(c is b, d is b)  # Both will be True
+{'b is a': b is a, 'b.asnumpy()':b.asnumpy(), 'c.asnumpy()':c.asnumpy(), 'd.asnumpy()':d.asnumpy()}
 ```
 
 If the storage types of source array and destination array doesn't match,
@@ -189,12 +172,11 @@ the slice operator `[]`.
 
 ```python
 e = mx.nd.sparse.zeros('csr', (2,2))
-f = mx.nd.ones(e.shape)
-g = e
-g[:] = f
-h = e
-f.copyto(h)
-{'g.stype':g.stype, 'h.stype':h.stype}
+f = mx.nd.sparse.zeros('csr', (2,2))
+g = mx.nd.ones(e.shape)
+e[:] = g
+g.copyto(f)
+{'e.stype':e.stype, 'f.stype':f.stype}
 ```
 
 ## Indexing and Slicing
@@ -249,37 +231,6 @@ Sparse data stored in libsvm file format can be loaded with [mx.io.LibSVMIter](h
 Note that the indices are expected to be zero-based instead of one-based.
 
 ## Advanced Topics
-
-### Serialize From/To Filesystems
-
-* We can save (load) data to (from) disk by using the ``pickle`` function:
-
-```python
-import pickle as pkl
-a = mx.nd.ones((2, 3)).tostype('csr')
-# pack and then dump into disk
-data = pkl.dumps(a)
-pkl.dump(data, open('tmp.pickle', 'wb'))
-# load from disk and then unpack
-data = pkl.load(open('tmp.pickle', 'rb'))
-b = pkl.loads(data)
-b
-```
-
-* We can also directly dump to disk in binary format by using the ``save``
-and ``load`` methods:
-
-```python
-a = mx.nd.ones((2,3)).tostype('csr')
-b = mx.nd.ones((5,6))
-mx.nd.save("temp.ndarray", [a,b])
-c = mx.nd.load("temp.ndarray")
-c
-d = {'a':a, 'b':b}
-mx.nd.save("temp.ndarray", d)
-e = mx.nd.load("temp.ndarray")
-e
-```
 
 ### GPU Support
 
