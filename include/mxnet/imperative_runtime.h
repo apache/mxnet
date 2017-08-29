@@ -70,7 +70,8 @@ class ImperativeRuntime {
   OpStatePtr InvokeOp(const Context& ctx,
                       const nnvm::NodeAttrs& attrs,
                       const std::vector<NDArray*>& inputs,
-                      const std::vector<NDArray*>& outputs);
+                      const std::vector<NDArray*>& outputs,
+                      OpStatePtr state = OpStatePtr());
   /*! \brief mark variables for computing gradients. */
   void MarkVariables(const std::vector<NDArray*>& variables,
                      const std::vector<mx_uint>& grad_reqs,
@@ -96,7 +97,7 @@ class ImperativeRuntime {
       grad_req(kNullOp), fresh_out_grad(false) {}
 
     void clear() {
-      if (out_grads.size()) return;
+      if (grad_req != kNullOp) return;
       outputs.clear();
       state.reset();
     }

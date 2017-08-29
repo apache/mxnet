@@ -299,7 +299,7 @@ inline bool DefaultType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-nnvm::Graph InferShape(nnvm::Graph graph,
+nnvm::Graph InferShape(nnvm::Graph&& graph,
                        nnvm::ShapeVector shape_inputs,
                        const std::string& shape_attr_key) {
   using dmlc::any;
@@ -317,7 +317,7 @@ nnvm::Graph InferShape(nnvm::Graph graph,
       nullptr, true);
 }
 
-nnvm::Graph InferType(nnvm::Graph graph,
+nnvm::Graph InferType(nnvm::Graph&& graph,
                       nnvm::DTypeVector dtype_inputs,
                       const std::string& dtype_attr_key) {
   using dmlc::any;
@@ -335,7 +335,7 @@ nnvm::Graph InferType(nnvm::Graph graph,
       SameType, true);
 }
 
-nnvm::Graph InferStorageType(nnvm::Graph graph,
+nnvm::Graph InferStorageType(nnvm::Graph&& graph,
                              StorageTypeVector storage_type_inputs,
                              const std::string& storage_type_attr_key) {
   using dmlc::any;
