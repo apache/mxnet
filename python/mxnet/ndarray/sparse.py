@@ -85,6 +85,8 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
         A new empty ndarray handle
     """
     hdl = NDArrayHandle()
+    for aux_t in aux_types:
+        assert(np.dtype(aux_t) == np.dtype("int64")), "only int64 is supported for aux types"
     aux_type_ids = [int(_DTYPE_NP_TO_MX[np.dtype(aux_t).type]) for aux_t in aux_types]
     aux_shapes = [(0,) for aux_t in aux_types] if aux_shapes is None else aux_shapes
     aux_shape_lens = [len(aux_shape) for aux_shape in aux_shapes]
