@@ -35,8 +35,8 @@ parser.add_argument('--dummy-iter', type=int, default=0,
                     help='whether to use dummy iterator to exclude io cost')
 parser.add_argument('--kvstore', type=str, default='local',
                     help='what kvstore to use [local, dist_sync, etc]')
-parser.add_argument('--log-level', type=str, default='debug',
-                    help='logging level [debug, info, error]')
+parser.add_argument('--sparse-log-level', type=str, default='INFO',
+                    help='logging level [DEBUG, INFO, ERROR]')
 parser.add_argument('--dataset', type=str, default='avazu',
                     help='what test dataset to use')
 parser.add_argument('--num-gpu', type=int, default=0,
@@ -46,6 +46,8 @@ parser.add_argument('--output-dim', type=int, default=4,
                     help='number of columns of the forward output')
 parser.add_argument('--dummy-metric', type=int, default=0,
                     help='whether to call update_metric')
+parser.add_argument('--enable-logging-for', default="0",
+                    help="Enable logging for the specified list of workers")
 
 
 def get_libsvm_data(data_dir, data_name, url, data_origin_name):
@@ -101,7 +103,7 @@ def get_sym(feature_dim):
      x = mx.symbol.Variable("data", stype='csr')
      norm_init = mx.initializer.Normal(sigma=0.01)
      w = mx.symbol.Variable("w", shape=(feature_dim, args.output_dim), init=norm_init, stype='row_sparse')
-     embed = mx.symbol.dot(x, w)
+     embed = mx.symbol.sparse.dot(x, w)
      y = mx.symbol.Variable("softmax_label")
      model = mx.symbol.SoftmaxOutput(data=embed, label=y, name="out")
      return model
@@ -137,7 +139,7 @@ if __name__ == '__main__':
     batch_size = args.batch_size if args.num_gpu == 0 else args.num_gpu * args.batch_size
     dummy_iter = args.dummy_iter
     dataset = args.dataset
-    log_level = args.log_level
+    log_level = args.sparse_log_level
     contexts = mx.context.cpu(0) if args.num_gpu < 1\
         else [mx.context.gpu(i) for i in range(args.num_gpu)]
 
@@ -148,12 +150,17 @@ if __name__ == '__main__':
 
     # only print log for rank 0 worker
     import logging
-    if rank != 0:
+    if log_level == 'ERROR':
         log_level = logging.ERROR
     elif log_level == 'DEBUG':
         log_level = logging.DEBUG
     else:
         log_level = logging.INFO
+
+    # Only log if it is in the list of workers to be logged
+    logging_workers_list = [int(i) for i in args.enable_logging_for.split(",")]
+    log_level = log_level if rank in logging_workers_list else logging.CRITICAL
+
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=log_level, format=head)
 
