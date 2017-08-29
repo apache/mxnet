@@ -1357,6 +1357,26 @@ def test_autograd_save_memory():
             x.wait_to_read()
     x.backward()
 
+def test_gluon_ctc_consistency():
+    loss = mx.gluon.loss.CTCLoss(padding_mask=0)
+    data = mx.nd.arange(0, 4, repeat=40, ctx=mx.gpu(0)).reshape((2,20,4)).flip(axis=0)
+    cpu_label = mx.nd.array([[2,1,0,0],[3,2,2,0]], ctx=mx.cpu(0))
+    gpu_label = mx.nd.array([[2,1,0,0],[3,2,2,0]], ctx=mx.gpu(0))
+
+    cpu_data = data.copy().as_in_context(mx.cpu(0))
+    cpu_data.attach_grad()
+    with mx.autograd.record():
+        l_cpu = loss(cpu_data, cpu_label)
+        l_cpu.backward()
+
+    gpu_data = data.copyto(mx.gpu(0))
+    gpu_data.attach_grad()
+    with mx.autograd.record():
+        l_gpu = loss(gpu_data, gpu_label)
+        l_gpu.backward()
+
+    assert_almost_equal(cpu_data.grad.asnumpy(), gpu_data.grad.asnumpy(), atol=1e-3, rtol=1e-3)
+
 
 if __name__ == '__main__':
     import nose
