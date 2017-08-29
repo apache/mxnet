@@ -110,25 +110,18 @@ ifeq ($(USE_NNPACK), 1)
 	LDFLAGS += -lnnpack
 endif
 
-# ifeq ($(USE_MKLDNN), 1)
-# 	# CFLAGS += -DMXNET_USE_MKL2017=1
-# 	CFLAGS += -DUSE_MKL=1
-# 	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
-# 	CFLAGS += -I$(MKLML_ROOT)/include
-# 	LDFLAGS += -L$(MKLML_ROOT)/lib
-# ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
-# 	CFLAGS += -DMKL_EXPERIMENTAL=1
-# else
-# 	CFLAGS += -DMKL_EXPERIMENTAL=0
-# endif
-include Makefile.mkldnn
+# include Makefile.mkldnn
 ifeq ($(USE_MKLDNN), 1)
 	CFLAGS += -DMKL_EXPERIMENTAL=1
 	CFLAGS += -DUSE_MKL=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
 	CFLAGS += -I$(MKLML_ROOT)/include
-	LDFLAGS += -L$(MKLML_ROOT)/lib
+	CFLAGS += -I$(ROOTDIR)/eternal/mkldnn/install/include
 	CFLAGS += -DMXNET_USE_MKLDNN=1
+	LDFLAGS += -L$(MKLML_ROOT)/lib
+	LDFLAGS += -lmkldnn -L$(ROOTDIR)/eternal/mkldnn/install/lib
+	# disable MKL 2017 to avoid any interferences
+	USE_MKL2017 := 0
 endif
 
 ifeq ($(USE_MKL2017), 1)

@@ -73,7 +73,7 @@ USE_OPENMP = 1
 # MKL ML Library folder, need to be root for /usr/local
 # Change to User Home directory for standard user
 # For USE_BLAS!=mkl only
-MKLML_ROOT=/home/hadoop/mxnet/mklml_lnx_2018.0.20170425
+MKLML_ROOT=/usr/lib
 
 # whether use MKL2017 library
 USE_MKL2017 = 0
@@ -82,9 +82,7 @@ USE_MKL2017 = 0
 # Prerequisite USE_MKL2017=1
 USE_MKL2017_EXPERIMENTAL = 1
 
-USE_BLAS = mkl
-
-# whether use MKL DNN Open Source Library for Inference, Prerequisite USE_BLAS = mkl
+# whether use MKL DNN Open Source Library for Inference
 USE_MKLDNN = 1
 
 # whether use NNPACK library
@@ -109,7 +107,7 @@ USE_LAPACK_PATH =
 
 # add path to intel library, you may need it for MKL, if you did not add the path
 # to environment variable
-USE_INTEL_PATH = /home/hadoop/mxnet/mklml_lnx_2018.0.20170425
+USE_INTEL_PATH = /usr/lib
 
 # If use MKL only for BLAS, choose static link automatically to allow python wrapper
 ifeq ($(USE_MKL2017), 0)
