@@ -76,11 +76,10 @@ test_lenet() {
         echo "OPTIMIZER: $optimizer"
         if [ "$optimizer" == "adam" ]; then
             learning_rate=0.0005
-            desired_accuracy=0.98
         else
             learning_rate=0.01
-            desired_accuracy=0.99
         fi
+        desired_accuracy=0.98
         python $example_dir/train_mnist.py --lr $learning_rate \
             --network lenet --optimizer $optimizer --gpus $gpus \
             --num-epochs 10 2>&1 | tee log
