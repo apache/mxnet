@@ -40,7 +40,11 @@ from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from ..ndarray import _ndarray_cls
 from ..executor import Executor
-from . import _internal, reshape
+from . import _internal, reshape, transpose, zeros_like, ones_like, broadcast_axes, broadcast_to
+from . import flatten, norm, rint, fix, floor, ceil, split, slice_axis, one_hot, pick, take
+from . import trunc, expand_dims, flip, tile, repeat, pad, clip, sign
+from . import nansum, prod, nanprod, mean, sort, topk, argsort, argmax, argmin
+from . import sum, round, max, min, slice, abs # pylint: disable=redefined-builtin
 from .op import SymbolBase, _set_symbol_class, AttrScope, _Null  # pylint: disable=unused-import
 
 
@@ -64,8 +68,8 @@ class Symbol(SymbolBase):
 
         One can loop through the returned object list to get outputs.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.Variable('a')
         >>> b = mx.sym.Variable('b')
         >>> c = a+b
@@ -120,8 +124,8 @@ class Symbol(SymbolBase):
 
         Only `NDArray` is supported for now.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> x = mx.nd.ones((2,3))*3
         >>> y = mx.nd.ones((2,3))
         >>> x.__rsub__(y).asnumpy()
@@ -168,8 +172,8 @@ class Symbol(SymbolBase):
 
         Only `NDArray` is supported for now.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> x = mx.nd.ones((2,3))*3
         >>> y = mx.nd.ones((2,3))
         >>> x.__rdiv__(y).asnumpy()
@@ -198,8 +202,8 @@ class Symbol(SymbolBase):
 
         Only `NDArray` is supported for now.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> x = mx.nd.ones((2,3))*3
         >>> y = mx.nd.ones((2,3))
         >>> x.__rmod__(y).asnumpy()
@@ -243,8 +247,8 @@ class Symbol(SymbolBase):
 
         Numerical negative, element-wise.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.Variable('a')
         >>> a
         <Symbol a>
@@ -270,8 +274,8 @@ class Symbol(SymbolBase):
 
         Any changes made to the deep copy do not reflect in the original object.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> import copy
         >>> data = mx.sym.Variable('data')
         >>> data_1 = copy.deepcopy(data)
@@ -383,8 +387,8 @@ class Symbol(SymbolBase):
         This function internally calls `_compose` to compose the symbol and
         returns the composed symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> data = mx.symbol.Variable('data')
         >>> net1 = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
         >>> net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
@@ -418,8 +422,8 @@ class Symbol(SymbolBase):
 
         This function mutates the current symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> data = mx.symbol.Variable('data')
         >>> net1 = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
         >>> net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
@@ -471,8 +475,8 @@ class Symbol(SymbolBase):
 
         Returns a sliced view of the input symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.var('a')
         >>> a.__getitem__(0)
         <Symbol a>
@@ -536,8 +540,8 @@ class Symbol(SymbolBase):
 
         This function only works for non-grouped symbols.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> data = mx.sym.Variable('data', attr={'mood': 'angry'})
         >>> data.attr('mood')
         'angry'
@@ -564,8 +568,8 @@ class Symbol(SymbolBase):
     def list_attr(self, recursive=False):
         """Gets all attributes from the symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> data = mx.sym.Variable('data', attr={'mood': 'angry'})
         >>> data.list_attr()
         {'mood': 'angry'}
@@ -587,8 +591,8 @@ class Symbol(SymbolBase):
     def attr_dict(self):
         """Recursively gets all attributes from the symbol and its children.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.Variable('a', attr={'a1':'a2'})
         >>> b = mx.sym.Variable('b', attr={'b1':'b2'})
         >>> c = a+b
@@ -638,8 +642,8 @@ class Symbol(SymbolBase):
 
         Consider the following code:
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.var('a')
         >>> b = mx.sym.var('b')
         >>> c = a + b
@@ -664,8 +668,8 @@ class Symbol(SymbolBase):
         """Gets a new grouped symbol whose output contains
         inputs to output nodes of the original symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> x = mx.sym.Variable('x')
         >>> y = mx.sym.Variable('y')
         >>> z = mx.sym.Variable('z')
@@ -695,8 +699,8 @@ class Symbol(SymbolBase):
     def list_arguments(self):
         """Lists all the arguments in the symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.var('a')
         >>> b = mx.sym.var('b')
         >>> c = a + b
@@ -717,8 +721,8 @@ class Symbol(SymbolBase):
     def list_outputs(self):
         """Lists all the outputs in the symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.var('a')
         >>> b = mx.sym.var('b')
         >>> c = a + b
@@ -742,8 +746,8 @@ class Symbol(SymbolBase):
     def list_auxiliary_states(self):
         """Lists all the auxiliary states in the symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.var('a')
         >>> b = mx.sym.var('b')
         >>> c = a + b
@@ -811,8 +815,8 @@ class Symbol(SymbolBase):
 
         Inconsistencies in the known types will cause an error to be raised.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.var('a')
         >>> b = mx.sym.var('b')
         >>> c = a + b
@@ -906,8 +910,8 @@ class Symbol(SymbolBase):
         or keyword argument way as input. It returns a tuple of `None` values
         if there is not enough information to deduce the missing shapes.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.var('a')
         >>> b = mx.sym.var('b')
         >>> c = a + b
@@ -989,8 +993,8 @@ class Symbol(SymbolBase):
         In the following example, information about fc2 is not available. So, `infer_shape`
         will return a tuple of `None` values but `infer_shape_partial` will return partial values.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> data = mx.sym.Variable('data')
         >>> prev = mx.sym.Variable('prev')
         >>> fc1  = mx.sym.FullyConnected(data=data, name='fc1', num_hidden=128)
@@ -1253,8 +1257,8 @@ class Symbol(SymbolBase):
         Before binding the executor, the function allocates arguments and auxiliary states
         that were not explicitly specified. Allows specifying data types.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> x = mx.sym.Variable('x')
         >>> y = mx.sym.FullyConnected(x, num_hidden=4)
         >>> exe = y.simple_bind(mx.cpu(), x=(5,4), grad_req='null')
@@ -1515,8 +1519,8 @@ class Symbol(SymbolBase):
         This function returns an executor which provides method `forward()` method for evaluation
         and a `outputs()` method to get all the results.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.Variable('a')
         >>> b = mx.sym.Variable('b')
         >>> c = a + b
@@ -1702,8 +1706,8 @@ class Symbol(SymbolBase):
         In that case, you should call `bind` once and then repeatedly call forward.
         This function allows simpler syntax for less cumbersome introspection.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.Variable('a')
         >>> b = mx.sym.Variable('b')
         >>> c = a + b
@@ -1732,24 +1736,341 @@ class Symbol(SymbolBase):
             ctx = Context.default_ctx
         return self.bind(ctx, kwargs).forward()
 
-    def reshape(self, shape):
-        """Shorthand for mxnet.sym.reshape.
+    def reshape(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`reshape`.
 
-        Parameters
-        ----------
-        shape : tuple of int
-            The new shape should not change the array size, namely
-            ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
-            One shape dimension can be -1. In this case, the value is inferred
-            from the length of the array and remaining dimensions.
-
-
-        Returns
-        -------
-        Symbol
-            A reshaped symbol.
+        The arguments are the same as for :py:func:`reshape`, with
+        this array as data.
         """
-        return reshape(self, shape=shape)
+        return reshape(self, *args, **kwargs)
+
+    def astype(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`cast`.
+
+        The arguments are the same as for :py:func:`cast`, with
+        this array as data.
+        """
+        return cast(self, *args, **kwargs)
+
+    def zeros_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`zeros_like`.
+
+        The arguments are the same as for :py:func:`zeros_like`, with
+        this array as data.
+        """
+        return zeros_like(self, *args, **kwargs)
+
+    def ones_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`ones_like`.
+
+        The arguments are the same as for :py:func:`ones_like`, with
+        this array as data.
+        """
+        return ones_like(self, *args, **kwargs)
+
+    def broadcast_axes(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`broadcast_axes`.
+
+        The arguments are the same as for :py:func:`broadcast_axes`, with
+        this array as data.
+        """
+        return broadcast_axes(self, *args, **kwargs)
+
+    def repeat(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`repeat`.
+
+        The arguments are the same as for :py:func:`repeat`, with
+        this array as data.
+        """
+        return repeat(self, *args, **kwargs)
+
+    def pad(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`pad`.
+
+        The arguments are the same as for :py:func:`pad`, with
+        this array as data.
+        """
+        return pad(self, *args, **kwargs)
+
+    def swapaxes(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`swapaxes`.
+
+        The arguments are the same as for :py:func:`swapaxes`, with
+        this array as data.
+        """
+        return swapaxes(self, *args, **kwargs)
+
+    def split(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`split`.
+
+        The arguments are the same as for :py:func:`split`, with
+        this array as data.
+        """
+        return split(self, *args, **kwargs)
+
+    def slice(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`slice`.
+
+        The arguments are the same as for :py:func:`slice`, with
+        this array as data.
+        """
+        return slice(self, *args, **kwargs)
+
+    def slice_axis(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`slice_axis`.
+
+        The arguments are the same as for :py:func:`slice_axis`, with
+        this array as data.
+        """
+        return slice_axis(self, *args, **kwargs)
+
+    def take(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`take`.
+
+        The arguments are the same as for :py:func:`take`, with
+        this array as data.
+        """
+        return take(self, *args, **kwargs)
+
+    def one_hot(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`one_hot`.
+
+        The arguments are the same as for :py:func:`one_hot`, with
+        this array as data.
+        """
+        return one_hot(self, *args, **kwargs)
+
+    def pick(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`pick`.
+
+        The arguments are the same as for :py:func:`pick`, with
+        this array as data.
+        """
+        return pick(self, *args, **kwargs)
+
+    def sort(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sort`.
+
+        The arguments are the same as for :py:func:`sort`, with
+        this array as data.
+        """
+        return sort(self, *args, **kwargs)
+
+    def topk(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`topk`.
+
+        The arguments are the same as for :py:func:`topk`, with
+        this array as data.
+        """
+        return topk(self, *args, **kwargs)
+
+    def argsort(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`argsort`.
+
+        The arguments are the same as for :py:func:`argsort`, with
+        this array as data.
+        """
+        return argsort(self, *args, **kwargs)
+
+    def argmax(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`argmax`.
+
+        The arguments are the same as for :py:func:`argmax`, with
+        this array as data.
+        """
+        return argmax(self, *args, **kwargs)
+
+    def argmin(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`argmin`.
+
+        The arguments are the same as for :py:func:`argmin`, with
+        this array as data.
+        """
+        return argmin(self, *args, **kwargs)
+
+    def clip(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`clip`.
+
+        The arguments are the same as for :py:func:`clip`, with
+        this array as data.
+        """
+        return clip(self, *args, **kwargs)
+
+    def abs(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`abs`.
+
+        The arguments are the same as for :py:func:`abs`, with
+        this array as data.
+        """
+        return abs(self, *args, **kwargs)
+
+    def sign(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sign`.
+
+        The arguments are the same as for :py:func:`sign`, with
+        this array as data.
+        """
+        return sign(self, *args, **kwargs)
+
+    def flatten(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`flatten`.
+
+        The arguments are the same as for :py:func:`flatten`, with
+        this array as data.
+        """
+        return flatten(self, *args, **kwargs)
+
+    def expand_dims(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`expand_dims`.
+
+        The arguments are the same as for :py:func:`expand_dims`, with
+        this array as data.
+        """
+        return expand_dims(self, *args, **kwargs)
+
+    def broadcast_to(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`broadcast_to`.
+
+        The arguments are the same as for :py:func:`broadcast_to`, with
+        this array as data.
+        """
+        return broadcast_to(self, *args, **kwargs)
+
+    def tile(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`tile`.
+
+        The arguments are the same as for :py:func:`tile`, with
+        this array as data.
+        """
+        return tile(self, *args, **kwargs)
+
+    def transpose(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`transpose`.
+
+        The arguments are the same as for :py:func:`transpose`, with
+        this array as data.
+        """
+        return transpose(self, *args, **kwargs)
+
+    def flip(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`flip`.
+
+        The arguments are the same as for :py:func:`flip`, with
+        this array as data.
+        """
+        return flip(self, *args, **kwargs)
+
+    def sum(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sum`.
+
+        The arguments are the same as for :py:func:`sum`, with
+        this array as data.
+        """
+        return sum(self, *args, **kwargs)
+
+    def nansum(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`nansum`.
+
+        The arguments are the same as for :py:func:`nansum`, with
+        this array as data.
+        """
+        return nansum(self, *args, **kwargs)
+
+    def prod(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`prod`.
+
+        The arguments are the same as for :py:func:`prod`, with
+        this array as data.
+        """
+        return prod(self, *args, **kwargs)
+
+    def nanprod(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`nanprod`.
+
+        The arguments are the same as for :py:func:`nanprod`, with
+        this array as data.
+        """
+        return nanprod(self, *args, **kwargs)
+
+    def mean(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`mean`.
+
+        The arguments are the same as for :py:func:`mean`, with
+        this array as data.
+        """
+        return mean(self, *args, **kwargs)
+
+    def max(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`max`.
+
+        The arguments are the same as for :py:func:`max`, with
+        this array as data.
+        """
+        return max(self, *args, **kwargs)
+
+    def min(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`min`.
+
+        The arguments are the same as for :py:func:`min`, with
+        this array as data.
+        """
+        return min(self, *args, **kwargs)
+
+    def norm(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`norm`.
+
+        The arguments are the same as for :py:func:`norm`, with
+        this array as data.
+        """
+        return norm(self, *args, **kwargs)
+
+    def round(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`round`.
+
+        The arguments are the same as for :py:func:`round`, with
+        this array as data.
+        """
+        return round(self, *args, **kwargs)
+
+    def rint(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`rint`.
+
+        The arguments are the same as for :py:func:`rint`, with
+        this array as data.
+        """
+        return rint(self, *args, **kwargs)
+
+    def fix(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`fix`.
+
+        The arguments are the same as for :py:func:`fix`, with
+        this array as data.
+        """
+        return fix(self, *args, **kwargs)
+
+    def floor(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`floor`.
+
+        The arguments are the same as for :py:func:`floor`, with
+        this array as data.
+        """
+        return floor(self, *args, **kwargs)
+
+    def ceil(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`ceil`.
+
+        The arguments are the same as for :py:func:`ceil`, with
+        this array as data.
+        """
+        return ceil(self, *args, **kwargs)
+
+    def trunc(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`trunc`.
+
+        The arguments are the same as for :py:func:`trunc`, with
+        this array as data.
+        """
+        return trunc(self, *args, **kwargs)
 
     def wait_to_read(self):
         raise NotImplementedForSymbol(self.wait_to_read, None)
@@ -1759,9 +2080,6 @@ class Symbol(SymbolBase):
 
     def asscalar(self):
         raise NotImplementedForSymbol(self.asscalar, None)
-
-    def astype(self):
-        raise NotImplementedForSymbol(self.astype, None)
 
     def copy(self):
         raise NotImplementedForSymbol(self.copy, None)
@@ -1779,8 +2097,8 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         init=None, stype=None, **kwargs):
     """Creates a symbolic variable with specified name.
 
-    Example usage:
-    ----------
+    Example
+    -------
     >>> data = mx.sym.Variable('data', attr={'a': 'b'})
     >>> data
     <Symbol data>
@@ -1852,8 +2170,8 @@ Variable = var
 def Group(symbols):
     """Creates a symbol that contains a collection of other symbols, grouped together.
 
-    Example usage:
-    ----------
+    Example
+    -------
     >>> a = mx.sym.Variable('a')
     >>> b = mx.sym.Variable('b')
     >>> mx.sym.Group([a,b])
@@ -2180,7 +2498,7 @@ def full(shape, val, dtype=None, **kwargs):
         dtype = _numpy.float32
     return _internal._MulScalar(ones(shape=shape, dtype=dtype, **kwargs), scalar=val)
 
-
+# pylint: disable=redefined-outer-name
 def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
     """Returns evenly spaced values within a given interval.
 
