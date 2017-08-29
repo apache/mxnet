@@ -37,16 +37,8 @@ from ..base import mx_uint, NDArrayHandle, check_call
 from ..base import ctypes2buffer
 from ..context import Context
 from . import _internal
-from .op import NDArrayBase, _STORAGE_TYPE_ID_TO_STR
-from . import cast_storage
-from . import broadcast_add, broadcast_mul, transpose, broadcast_not_equal, broadcast_power
-from . import broadcast_sub, broadcast_div, broadcast_to, broadcast_axes, broadcast_equal
-from . import broadcast_greater, broadcast_greater_equal, broadcast_lesser, broadcast_lesser_equal
-from . import zeros_like, ones_like, broadcast_minimum, broadcast_maximum, broadcast_mod
-from . import flatten, norm, rint, fix, floor, ceil, split, slice_axis, one_hot, pick, take
-from . import trunc, expand_dims, flip, tile, repeat, pad, clip, sign
-from . import nansum, prod, nanprod, mean, sort, topk, argsort, argmax, argmin
-from . import sum, round, max, min, slice, abs # pylint: disable=redefined-builtin
+from . import op
+from .op import NDArrayBase
 
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
            "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",
@@ -54,33 +46,48 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "multiply", "negative", "not_equal", "onehot_encode", "power", "subtract",
            "true_divide", "waitall", "_new_empty_handle"]
 
+_STORAGE_TYPE_UNDEFINED = -1
+_STORAGE_TYPE_DEFAULT = 0
+_STORAGE_TYPE_ROW_SPARSE = 1
+_STORAGE_TYPE_CSR = 2
+
 # pylint: disable= no-member
 _DTYPE_NP_TO_MX = {
-    None       : -1,
-    np.float32 : 0,
-    np.float64 : 1,
-    np.float16 : 2,
-    np.uint8   : 3,
-    np.int32   : 4,
-    np.int8    : 5,
-    np.int64   : 6,
+    None: -1,
+    np.float32: 0,
+    np.float64: 1,
+    np.float16: 2,
+    np.uint8: 3,
+    np.int32: 4,
+    np.int8: 5,
+    np.int64: 6,
 }
+
 _DTYPE_MX_TO_NP = {
-    -1 : None,
-    0 : np.float32,
-    1 : np.float64,
-    2 : np.float16,
-    3 : np.uint8,
-    4 : np.int32,
-    5 : np.int8,
-    6 : np.int64,
+    -1: None,
+    0: np.float32,
+    1: np.float64,
+    2: np.float16,
+    3: np.uint8,
+    4: np.int32,
+    5: np.int8,
+    6: np.int64,
 }
+
 _STORAGE_TYPE_STR_TO_ID = {
-    'undefined'  : -1,
-    'default'    : 0,
-    'row_sparse' : 1,
-    'csr'        : 2,
+    'undefined': _STORAGE_TYPE_UNDEFINED,
+    'default': _STORAGE_TYPE_DEFAULT,
+    'row_sparse': _STORAGE_TYPE_ROW_SPARSE,
+    'csr': _STORAGE_TYPE_CSR,
 }
+
+_STORAGE_TYPE_ID_TO_STR = {
+    _STORAGE_TYPE_UNDEFINED: 'undefined',
+    _STORAGE_TYPE_DEFAULT: 'default',
+    _STORAGE_TYPE_ROW_SPARSE: 'row_sparse',
+    _STORAGE_TYPE_CSR: 'csr',
+}
+
 _GRAD_REQ_MAP = {
     'null': 0,
     'write': 1,
@@ -137,7 +144,7 @@ def waitall():
 def _storage_type(handle):
     storage_type = ctypes.c_int(0)
     check_call(_LIB.MXNDArrayGetStorageType(handle, ctypes.byref(storage_type)))
-    return _STORAGE_TYPE_ID_TO_STR[storage_type.value]
+    return storage_type.value
 
 
 class NDArray(NDArrayBase):
@@ -169,7 +176,7 @@ fixed-size items.
         if not self.writable:
             raise ValueError('trying to add to a readonly NDArray')
         if isinstance(other, NDArray):
-            return broadcast_add(self, other, out=self)
+            return op.broadcast_add(self, other, out=self)
         elif isinstance(other, numeric_types):
             return _internal._plus_scalar(self, float(other), out=self)
         else:
@@ -187,7 +194,7 @@ fixed-size items.
         if not self.writable:
             raise ValueError('trying to subtract from a readonly NDArray')
         if isinstance(other, NDArray):
-            return broadcast_sub(self, other, out=self)
+            return op.broadcast_sub(self, other, out=self)
         elif isinstance(other, numeric_types):
             return _internal._minus_scalar(self, float(other), out=self)
         else:
@@ -210,7 +217,7 @@ fixed-size items.
         if not self.writable:
             raise ValueError('trying to multiply to a readonly NDArray')
         if isinstance(other, NDArray):
-            return broadcast_mul(self, other, out=self)
+            return op.broadcast_mul(self, other, out=self)
         elif isinstance(other, numeric_types):
             return _internal._mul_scalar(self, float(other), out=self)
         else:
@@ -232,7 +239,7 @@ fixed-size items.
         if not self.writable:
             raise ValueError('trying to divide from a readonly NDArray')
         if isinstance(other, NDArray):
-            return broadcast_div(self, other, out=self)
+            return op.broadcast_div(self, other, out=self)
         elif isinstance(other, numeric_types):
             return _internal._div_scalar(self, float(other), out=self)
         else:
@@ -260,7 +267,7 @@ fixed-size items.
         if not self.writable:
             raise ValueError('trying to take modulo from a readonly NDArray')
         if isinstance(other, NDArray):
-            return broadcast_mod(self, other, out=self)
+            return op.broadcast_mod(self, other, out=self)
         elif isinstance(other, numeric_types):
             return _internal._mod_scalar(self, float(other), out=self)
         else:
@@ -525,7 +532,7 @@ fixed-size items.
             oshape.extend(shape[i+1:])
             if len(oshape) == 0:
                 oshape.append(1)
-            return slice(self, begin, end).reshape(oshape)
+            return op.slice(self, begin, end).reshape(oshape)
         else:
             raise ValueError(
                 "NDArray does not support slicing with key %s of type %s."%(
@@ -684,7 +691,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`zeros_like`, with
         this array as data.
         """
-        return zeros_like(self, *args, **kwargs)
+        return op.zeros_like(self, *args, **kwargs)
 
     def ones_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`ones_like`.
@@ -692,7 +699,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`ones_like`, with
         this array as data.
         """
-        return ones_like(self, *args, **kwargs)
+        return op.ones_like(self, *args, **kwargs)
 
     def broadcast_axes(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`broadcast_axes`.
@@ -700,7 +707,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`broadcast_axes`, with
         this array as data.
         """
-        return broadcast_axes(self, *args, **kwargs)
+        return op.broadcast_axes(self, *args, **kwargs)
 
     def repeat(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`repeat`.
@@ -708,7 +715,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`repeat`, with
         this array as data.
         """
-        return repeat(self, *args, **kwargs)
+        return op.repeat(self, *args, **kwargs)
 
     def pad(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pad`.
@@ -716,7 +723,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`pad`, with
         this array as data.
         """
-        return pad(self, *args, **kwargs)
+        return op.pad(self, *args, **kwargs)
 
     def swapaxes(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`swapaxes`.
@@ -724,7 +731,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`swapaxes`, with
         this array as data.
         """
-        return swapaxes(self, *args, **kwargs)
+        return op.swapaxes(self, *args, **kwargs)
 
     def split(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`split`.
@@ -732,7 +739,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`split`, with
         this array as data.
         """
-        return split(self, *args, **kwargs)
+        return op.split(self, *args, **kwargs)
 
     def slice(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`slice`.
@@ -740,7 +747,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`slice`, with
         this array as data.
         """
-        return slice(self, *args, **kwargs)
+        return op.slice(self, *args, **kwargs)
 
     def slice_axis(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`slice_axis`.
@@ -748,7 +755,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`slice_axis`, with
         this array as data.
         """
-        return slice_axis(self, *args, **kwargs)
+        return op.slice_axis(self, *args, **kwargs)
 
     def take(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`take`.
@@ -756,7 +763,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`take`, with
         this array as data.
         """
-        return take(self, *args, **kwargs)
+        return op.take(self, *args, **kwargs)
 
     def one_hot(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`one_hot`.
@@ -764,7 +771,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`one_hot`, with
         this array as data.
         """
-        return one_hot(self, *args, **kwargs)
+        return op.one_hot(self, *args, **kwargs)
 
     def pick(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pick`.
@@ -772,7 +779,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`pick`, with
         this array as data.
         """
-        return pick(self, *args, **kwargs)
+        return op.pick(self, *args, **kwargs)
 
     def sort(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sort`.
@@ -780,7 +787,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`sort`, with
         this array as data.
         """
-        return sort(self, *args, **kwargs)
+        return op.sort(self, *args, **kwargs)
 
     def topk(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`topk`.
@@ -788,7 +795,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`topk`, with
         this array as data.
         """
-        return topk(self, *args, **kwargs)
+        return op.topk(self, *args, **kwargs)
 
     def argsort(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argsort`.
@@ -796,7 +803,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`argsort`, with
         this array as data.
         """
-        return argsort(self, *args, **kwargs)
+        return op.argsort(self, *args, **kwargs)
 
     def argmax(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax`.
@@ -804,7 +811,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`argmax`, with
         this array as data.
         """
-        return argmax(self, *args, **kwargs)
+        return op.argmax(self, *args, **kwargs)
 
     def argmin(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmin`.
@@ -812,7 +819,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`argmin`, with
         this array as data.
         """
-        return argmin(self, *args, **kwargs)
+        return op.argmin(self, *args, **kwargs)
 
     def clip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`clip`.
@@ -820,7 +827,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`clip`, with
         this array as data.
         """
-        return clip(self, *args, **kwargs)
+        return op.clip(self, *args, **kwargs)
 
     def abs(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`abs`.
@@ -828,7 +835,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`abs`, with
         this array as data.
         """
-        return abs(self, *args, **kwargs)
+        return op.abs(self, *args, **kwargs)
 
     def sign(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sign`.
@@ -836,7 +843,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`sign`, with
         this array as data.
         """
-        return sign(self, *args, **kwargs)
+        return op.sign(self, *args, **kwargs)
 
     def flatten(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flatten`.
@@ -844,7 +851,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`flatten`, with
         this array as data.
         """
-        return flatten(self, *args, **kwargs)
+        return op.flatten(self, *args, **kwargs)
 
     def expand_dims(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`expand_dims`.
@@ -852,7 +859,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`expand_dims`, with
         this array as data.
         """
-        return expand_dims(self, *args, **kwargs)
+        return op.expand_dims(self, *args, **kwargs)
 
     def tile(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`tile`.
@@ -860,7 +867,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`tile`, with
         this array as data.
         """
-        return tile(self, *args, **kwargs)
+        return op.tile(self, *args, **kwargs)
 
     def transpose(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`transpose`.
@@ -868,7 +875,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`transpose`, with
         this array as data.
         """
-        return transpose(self, *args, **kwargs)
+        return op.transpose(self, *args, **kwargs)
 
     def flip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flip`.
@@ -876,7 +883,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`flip`, with
         this array as data.
         """
-        return flip(self, *args, **kwargs)
+        return op.flip(self, *args, **kwargs)
 
     def sum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sum`.
@@ -884,7 +891,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`sum`, with
         this array as data.
         """
-        return sum(self, *args, **kwargs)
+        return op.sum(self, *args, **kwargs)
 
     def nansum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nansum`.
@@ -892,7 +899,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`nansum`, with
         this array as data.
         """
-        return nansum(self, *args, **kwargs)
+        return op.nansum(self, *args, **kwargs)
 
     def prod(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`prod`.
@@ -900,7 +907,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`prod`, with
         this array as data.
         """
-        return prod(self, *args, **kwargs)
+        return op.prod(self, *args, **kwargs)
 
     def nanprod(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nanprod`.
@@ -908,7 +915,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`nanprod`, with
         this array as data.
         """
-        return nanprod(self, *args, **kwargs)
+        return op.nanprod(self, *args, **kwargs)
 
     def mean(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`mean`.
@@ -916,7 +923,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`mean`, with
         this array as data.
         """
-        return mean(self, *args, **kwargs)
+        return op.mean(self, *args, **kwargs)
 
     def max(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`max`.
@@ -924,7 +931,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`max`, with
         this array as data.
         """
-        return max(self, *args, **kwargs)
+        return op.max(self, *args, **kwargs)
 
     def min(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`min`.
@@ -932,7 +939,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`min`, with
         this array as data.
         """
-        return min(self, *args, **kwargs)
+        return op.min(self, *args, **kwargs)
 
     def norm(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`norm`.
@@ -940,7 +947,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`norm`, with
         this array as data.
         """
-        return norm(self, *args, **kwargs)
+        return op.norm(self, *args, **kwargs)
 
     def round(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`round`.
@@ -948,7 +955,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`round`, with
         this array as data.
         """
-        return round(self, *args, **kwargs)
+        return op.round(self, *args, **kwargs)
 
     def rint(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`rint`.
@@ -956,7 +963,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`rint`, with
         this array as data.
         """
-        return rint(self, *args, **kwargs)
+        return op.rint(self, *args, **kwargs)
 
     def fix(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`fix`.
@@ -964,7 +971,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`fix`, with
         this array as data.
         """
-        return fix(self, *args, **kwargs)
+        return op.fix(self, *args, **kwargs)
 
     def floor(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`floor`.
@@ -972,7 +979,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`floor`, with
         this array as data.
         """
-        return floor(self, *args, **kwargs)
+        return op.floor(self, *args, **kwargs)
 
     def ceil(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`ceil`.
@@ -980,7 +987,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`ceil`, with
         this array as data.
         """
-        return ceil(self, *args, **kwargs)
+        return op.ceil(self, *args, **kwargs)
 
     def trunc(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`trunc`.
@@ -988,7 +995,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`trunc`, with
         this array as data.
         """
-        return trunc(self, *args, **kwargs)
+        return op.trunc(self, *args, **kwargs)
 
     # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
@@ -1038,9 +1045,9 @@ fixed-size items.
         if (cur_shape_arr[broadcasting_axes] != 1).any():
             raise ValueError(err_str)
         if cur_shape != self.shape:
-            return broadcast_to(self.reshape(cur_shape), shape=shape)
+            return op.broadcast_to(self.reshape(cur_shape), shape=shape)
         else:
-            return broadcast_to(self, shape=tuple(shape))
+            return op.broadcast_to(self, shape=tuple(shape))
     # pylint: enable= undefined-variable
 
     def wait_to_read(self):
@@ -1166,7 +1173,7 @@ fixed-size items.
     def stype(self):
         """Storage-type of the array.
         """
-        return _storage_type(self.handle)
+        return _STORAGE_TYPE_ID_TO_STR[_storage_type(self.handle)]
 
     @property
     # pylint: disable= invalid-name, undefined-variable
@@ -1193,7 +1200,7 @@ fixed-size items.
         """
         if len(self.shape) < 2:
             return self
-        return transpose(self)
+        return op.transpose(self)
     # pylint: enable= invalid-name, undefined-variable
 
     @property
@@ -1381,7 +1388,7 @@ fixed-size items.
             - 'add': gradient will be added to existing value on every backward.
             - 'null': do not compute gradient for this NDArray.
         """
-        grad = zeros_like(self)  # pylint: disable=undefined-variable
+        grad = op.zeros_like(self)  # pylint: disable=undefined-variable
         grad_req = _GRAD_REQ_MAP[grad_req]
         check_call(_LIB.MXAutogradMarkVariables(
             1, ctypes.pointer(self.handle),
@@ -1440,7 +1447,7 @@ fixed-size items.
         NDArray, CSRNDArray or RowSparseNDArray
             A copy of the array with the chosen storage stype
         """
-        return cast_storage(self, stype=stype)
+        return op.cast_storage(self, stype=stype)
 
 
 def onehot_encode(indices, out):
@@ -1595,7 +1602,7 @@ def moveaxis(tensor, source, destination):
     except IndexError:
         raise ValueError('Destination should verify 0 <= destination < tensor.ndim'
                          'Got %d' % destination)
-    return transpose(tensor, axes)
+    return op.transpose(tensor, axes)
 
 
 # pylint: disable= no-member, protected-access, too-many-arguments, redefined-outer-name
@@ -1751,7 +1758,7 @@ def add(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        broadcast_add,
+        op.broadcast_add,
         operator.add,
         _internal._plus_scalar,
         None)
@@ -1813,7 +1820,7 @@ def subtract(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        broadcast_sub,
+        op.broadcast_sub,
         operator.sub,
         _internal._minus_scalar,
         _internal._rminus_scalar)
@@ -1874,7 +1881,7 @@ def multiply(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        broadcast_mul,
+        op.broadcast_mul,
         operator.mul,
         _internal._mul_scalar,
         None)
@@ -1931,7 +1938,7 @@ def divide(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        broadcast_div,
+        op.broadcast_div,
         operator.truediv,
         _internal._div_scalar,
         _internal._rdiv_scalar)
@@ -1988,7 +1995,7 @@ def modulo(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        broadcast_mod,
+        op.broadcast_mod,
         operator.mod,
         _internal._mod_scalar,
         _internal._rmod_scalar)
@@ -2050,7 +2057,7 @@ def power(base, exp):
     return _ufunc_helper(
         base,
         exp,
-        broadcast_power,
+        op.broadcast_power,
         operator.pow,
         _internal._power_scalar,
         _internal._rpower_scalar)
@@ -2107,7 +2114,7 @@ def maximum(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        broadcast_maximum,
+        op.broadcast_maximum,
         lambda x, y: x if x > y else y,
         _internal._maximum_scalar,
         None)
@@ -2164,7 +2171,7 @@ def minimum(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        broadcast_minimum,
+        op.broadcast_minimum,
         lambda x, y: x if x < y else y,
         _internal._minimum_scalar,
         None)
@@ -2228,7 +2235,7 @@ def equal(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        broadcast_equal,
+        op.broadcast_equal,
         lambda x, y: 1 if x == y else 0,
         _internal._equal_scalar,
         None)
@@ -2295,7 +2302,7 @@ def not_equal(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        broadcast_not_equal,
+        op.broadcast_not_equal,
         lambda x, y: 1 if x != y else 0,
         _internal._not_equal_scalar,
         None)
@@ -2359,7 +2366,7 @@ def greater(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        broadcast_greater,
+        op.broadcast_greater,
         lambda x, y: 1 if x > y else 0,
         _internal._greater_scalar,
         _internal._lesser_scalar)
@@ -2423,7 +2430,7 @@ def greater_equal(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        broadcast_greater_equal,
+        op.broadcast_greater_equal,
         lambda x, y: 1 if x >= y else 0,
         _internal._greater_equal_scalar,
         _internal._lesser_equal_scalar)
@@ -2487,7 +2494,7 @@ def lesser(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        broadcast_lesser,
+        op.broadcast_lesser,
         lambda x, y: 1 if x < y else 0,
         _internal._lesser_scalar,
         _internal._greater_scalar)
@@ -2551,7 +2558,7 @@ def lesser_equal(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        broadcast_lesser_equal,
+        op.broadcast_lesser_equal,
         lambda x, y: 1 if x <= y else 0,
         _internal._lesser_equal_scalar,
         _internal._greater_equal_scalar)

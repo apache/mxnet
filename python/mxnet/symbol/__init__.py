@@ -17,7 +17,10 @@
 
 """Symbol API of MXNet."""
 
-from . import _internal, sparse, op
+from . import _internal, contrib, linalg, random, sparse
 # pylint: disable=wildcard-import, redefined-builtin
+from .op import *
 from .symbol import *
-from ..ndarray import _GRAD_REQ_MAP
+# pylint: enable=wildcard-import
+
+__all__ = op.__all__ + symbol.__all__ + ['contrib', 'linalg', 'random', 'sparse']
