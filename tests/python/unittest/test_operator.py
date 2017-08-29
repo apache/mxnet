@@ -3297,7 +3297,6 @@ def test_quantization_op():
     assert same(qa.asnumpy(), qa_real.asnumpy())
     assert same(a_.asnumpy(),  a_real.asnumpy())
 
-
 def test_reciprocal_op():
     data_tmp = np.random.rand(3, 4) * 10 - 5
     # Avoid possible division by 0 errors
