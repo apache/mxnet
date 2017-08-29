@@ -302,7 +302,7 @@ try {
       },
       'Python2: MKLML-CPU': {
         node('mxnetlinux') {
-          ws('workspace/ut-python2-mklml') {
+          ws('workspace/ut-python2-mklml-cpu') {
             init_git()
             unpack_lib('mklml')
             python2_ut('mklml_gpu')
@@ -311,7 +311,7 @@ try {
       },
       'Python2: MKLML-GPU': {
         node('mxnetlinux') {
-          ws('workspace/ut-python2-mklml') {
+          ws('workspace/ut-python2-mklml-gpu') {
             init_git()
             unpack_lib('mklml')
             python2_gpu_ut('mklml_gpu')
@@ -320,7 +320,7 @@ try {
       },
       'Python3: MKLML-CPU': {
         node('mxnetlinux') {
-          ws('workspace/ut-python-mklml') {
+          ws('workspace/ut-python3-mklml-cpu') {
             init_git()
             unpack_lib('mklml')
             python3_ut('mklml_gpu')
@@ -329,7 +329,7 @@ try {
       },
       'Python3: MKLML-GPU': {
         node('mxnetlinux') {
-          ws('workspace/ut-python-mklml') {
+          ws('workspace/ut-python3-mklml-gpu') {
             init_git()
             unpack_lib('mklml')
             python3_gpu_ut('mklml_gpu')
