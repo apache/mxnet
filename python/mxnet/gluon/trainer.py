@@ -147,7 +147,6 @@ class Trainer(object):
                             %(param.name, str(data.context)))
 
             if self._kvstore:
-                print param.list_grad();
                 self._kvstore.push(i, param.list_grad(), priority=-i)
                 if self._update_on_kvstore:
                     self._kvstore.pull(i, param.list_data(), priority=-i)
