@@ -43,6 +43,14 @@ class Trainer(object):
     kvstore : str or KVStore
         kvstore type for multi-gpu and distributed training. See help on
         :any:`mxnet.kvstore.create` for more information.
+
+    Properties
+    ----------
+    learning_rate: float
+        The learning rate of the optimizer or the learning rate of the
+        LRScheduler of the optimizer if the LRScheduler is defined. Given a
+        Trainer object trainer, the learning rate can be accessed as
+        trainer.learning_rate and can be set as trainer.learning_rate = val.
     """
     def __init__(self, params, optimizer, optimizer_params=None, kvstore='device'):
         if isinstance(params, (dict, ParameterDict)):
@@ -112,6 +120,25 @@ class Trainer(object):
             self._update_on_kvstore = None
 
         self._kv_initialized = True
+
+
+    @property
+    def learning_rate(self):
+        if not isinstance(self._optimizer, opt.Optimizer):
+            raise UserWarning("Optimizer has to be defined before its learning "
+                              "rate can be accessed.")
+        else:
+            return self._optimizer.learning_rate
+
+
+    @learning_rate.setter
+    def learning_rate(self, lr):
+        if not isinstance(self._optimizer, opt.Optimizer):
+            raise UserWarning("Optimizer has to be defined before its learning "
+                              "rate is mutated.")
+        else:
+            self._optimizer.learning_rate = lr
+
 
     def step(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update. Should be called after
