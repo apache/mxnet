@@ -374,22 +374,6 @@ try {
           }
          }
        },
-       'Python 3: GPU Win':{
-         node('mxnetwindows') {
-           ws('workspace/ut-python-gpu') {
-             init_git_win()
-             unstash 'vc14_gpu'
-             bat '''rmdir /s/q pkg_vc14_gpu
-    7z x -y vc14_gpu.7z'''
-             bat """xcopy C:\\mxnet\\data data /E /I /Y
-    xcopy C:\\mxnet\\model model /E /I /Y
-    call activate py3
-    set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
-    del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
-    C:\\mxnet\\test_gpu.bat"""
-           }
-         }
-       },
        'Python 2: GPU Win':{
          node('mxnetwindows') {
            ws('workspace/ut-python-gpu') {
@@ -400,6 +384,22 @@ try {
              bat """xcopy C:\\mxnet\\data data /E /I /Y
     xcopy C:\\mxnet\\model model /E /I /Y
     call activate py2
+    set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
+    del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
+    C:\\mxnet\\test_gpu.bat"""
+           }
+         }
+       },
+       'Python 3: GPU Win':{
+         node('mxnetwindows') {
+           ws('workspace/ut-python-gpu') {
+             init_git_win()
+             unstash 'vc14_gpu'
+             bat '''rmdir /s/q pkg_vc14_gpu
+    7z x -y vc14_gpu.7z'''
+             bat """xcopy C:\\mxnet\\data data /E /I /Y
+    xcopy C:\\mxnet\\model model /E /I /Y
+    call activate py3
     set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
     del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
     C:\\mxnet\\test_gpu.bat"""
