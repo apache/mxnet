@@ -40,12 +40,12 @@ from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from ..ndarray import _ndarray_cls
 from ..executor import Executor
-from . import _internal, reshape, transpose, zeros_like, ones_like, broadcast_axes, broadcast_to
-from . import flatten, norm, rint, fix, floor, ceil, split, slice_axis, one_hot, pick, take
-from . import trunc, expand_dims, flip, tile, repeat, pad, clip, sign
-from . import nansum, prod, nanprod, mean, sort, topk, argsort, argmax, argmin
-from . import sum, round, max, min, slice, abs # pylint: disable=redefined-builtin
+from . import _internal
+from . import op
 from .op import SymbolBase, _set_symbol_class, AttrScope, _Null  # pylint: disable=unused-import
+
+__all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
+           "pow", "maximum", "minimum", "hypot", "zeros", "ones", "full", "arange"]
 
 
 class Symbol(SymbolBase):
@@ -1497,7 +1497,7 @@ class Symbol(SymbolBase):
                 shared_buffer[k] = v
 
         # create in_args, arg_grads, and aux_states for the current executor
-        arg_arrays = [_ndarray_cls(NDArrayHandle(in_arg_handles[i])) \
+        arg_arrays = [_ndarray_cls(NDArrayHandle(in_arg_handles[i]))
                       for i in range(num_in_args.value)]
         grad_arrays = [_ndarray_cls(NDArrayHandle(arg_grad_handles[i]))
                        if arg_grad_handles[i] is not None
@@ -1742,7 +1742,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`reshape`, with
         this array as data.
         """
-        return reshape(self, *args, **kwargs)
+        return op.reshape(self, *args, **kwargs)
 
     def astype(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`cast`.
@@ -1750,7 +1750,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`cast`, with
         this array as data.
         """
-        return cast(self, *args, **kwargs)
+        return op.cast(self, *args, **kwargs)
 
     def zeros_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`zeros_like`.
@@ -1758,7 +1758,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`zeros_like`, with
         this array as data.
         """
-        return zeros_like(self, *args, **kwargs)
+        return op.zeros_like(self, *args, **kwargs)
 
     def ones_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`ones_like`.
@@ -1766,7 +1766,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`ones_like`, with
         this array as data.
         """
-        return ones_like(self, *args, **kwargs)
+        return op.ones_like(self, *args, **kwargs)
 
     def broadcast_axes(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`broadcast_axes`.
@@ -1774,7 +1774,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`broadcast_axes`, with
         this array as data.
         """
-        return broadcast_axes(self, *args, **kwargs)
+        return op.broadcast_axes(self, *args, **kwargs)
 
     def repeat(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`repeat`.
@@ -1782,7 +1782,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`repeat`, with
         this array as data.
         """
-        return repeat(self, *args, **kwargs)
+        return op.repeat(self, *args, **kwargs)
 
     def pad(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pad`.
@@ -1790,7 +1790,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`pad`, with
         this array as data.
         """
-        return pad(self, *args, **kwargs)
+        return op.pad(self, *args, **kwargs)
 
     def swapaxes(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`swapaxes`.
@@ -1798,7 +1798,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`swapaxes`, with
         this array as data.
         """
-        return swapaxes(self, *args, **kwargs)
+        return op.swapaxes(self, *args, **kwargs)
 
     def split(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`split`.
@@ -1806,7 +1806,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`split`, with
         this array as data.
         """
-        return split(self, *args, **kwargs)
+        return op.split(self, *args, **kwargs)
 
     def slice(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`slice`.
@@ -1814,7 +1814,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`slice`, with
         this array as data.
         """
-        return slice(self, *args, **kwargs)
+        return op.slice(self, *args, **kwargs)
 
     def slice_axis(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`slice_axis`.
@@ -1822,7 +1822,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`slice_axis`, with
         this array as data.
         """
-        return slice_axis(self, *args, **kwargs)
+        return op.slice_axis(self, *args, **kwargs)
 
     def take(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`take`.
@@ -1830,7 +1830,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`take`, with
         this array as data.
         """
-        return take(self, *args, **kwargs)
+        return op.take(self, *args, **kwargs)
 
     def one_hot(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`one_hot`.
@@ -1838,7 +1838,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`one_hot`, with
         this array as data.
         """
-        return one_hot(self, *args, **kwargs)
+        return op.one_hot(self, *args, **kwargs)
 
     def pick(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pick`.
@@ -1846,7 +1846,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`pick`, with
         this array as data.
         """
-        return pick(self, *args, **kwargs)
+        return op.pick(self, *args, **kwargs)
 
     def sort(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sort`.
@@ -1854,7 +1854,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`sort`, with
         this array as data.
         """
-        return sort(self, *args, **kwargs)
+        return op.sort(self, *args, **kwargs)
 
     def topk(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`topk`.
@@ -1862,7 +1862,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`topk`, with
         this array as data.
         """
-        return topk(self, *args, **kwargs)
+        return op.topk(self, *args, **kwargs)
 
     def argsort(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argsort`.
@@ -1870,7 +1870,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`argsort`, with
         this array as data.
         """
-        return argsort(self, *args, **kwargs)
+        return op.argsort(self, *args, **kwargs)
 
     def argmax(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax`.
@@ -1878,7 +1878,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`argmax`, with
         this array as data.
         """
-        return argmax(self, *args, **kwargs)
+        return op.argmax(self, *args, **kwargs)
 
     def argmin(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmin`.
@@ -1886,7 +1886,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`argmin`, with
         this array as data.
         """
-        return argmin(self, *args, **kwargs)
+        return op.argmin(self, *args, **kwargs)
 
     def clip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`clip`.
@@ -1894,7 +1894,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`clip`, with
         this array as data.
         """
-        return clip(self, *args, **kwargs)
+        return op.clip(self, *args, **kwargs)
 
     def abs(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`abs`.
@@ -1902,7 +1902,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`abs`, with
         this array as data.
         """
-        return abs(self, *args, **kwargs)
+        return op.abs(self, *args, **kwargs)
 
     def sign(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sign`.
@@ -1910,7 +1910,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`sign`, with
         this array as data.
         """
-        return sign(self, *args, **kwargs)
+        return op.sign(self, *args, **kwargs)
 
     def flatten(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flatten`.
@@ -1918,7 +1918,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`flatten`, with
         this array as data.
         """
-        return flatten(self, *args, **kwargs)
+        return op.flatten(self, *args, **kwargs)
 
     def expand_dims(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`expand_dims`.
@@ -1926,7 +1926,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`expand_dims`, with
         this array as data.
         """
-        return expand_dims(self, *args, **kwargs)
+        return op.expand_dims(self, *args, **kwargs)
 
     def broadcast_to(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`broadcast_to`.
@@ -1934,7 +1934,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`broadcast_to`, with
         this array as data.
         """
-        return broadcast_to(self, *args, **kwargs)
+        return op.broadcast_to(self, *args, **kwargs)
 
     def tile(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`tile`.
@@ -1942,7 +1942,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`tile`, with
         this array as data.
         """
-        return tile(self, *args, **kwargs)
+        return op.tile(self, *args, **kwargs)
 
     def transpose(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`transpose`.
@@ -1950,7 +1950,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`transpose`, with
         this array as data.
         """
-        return transpose(self, *args, **kwargs)
+        return op.transpose(self, *args, **kwargs)
 
     def flip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flip`.
@@ -1958,7 +1958,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`flip`, with
         this array as data.
         """
-        return flip(self, *args, **kwargs)
+        return op.flip(self, *args, **kwargs)
 
     def sum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sum`.
@@ -1966,7 +1966,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`sum`, with
         this array as data.
         """
-        return sum(self, *args, **kwargs)
+        return op.sum(self, *args, **kwargs)
 
     def nansum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nansum`.
@@ -1974,7 +1974,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`nansum`, with
         this array as data.
         """
-        return nansum(self, *args, **kwargs)
+        return op.nansum(self, *args, **kwargs)
 
     def prod(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`prod`.
@@ -1982,7 +1982,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`prod`, with
         this array as data.
         """
-        return prod(self, *args, **kwargs)
+        return op.prod(self, *args, **kwargs)
 
     def nanprod(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nanprod`.
@@ -1990,7 +1990,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`nanprod`, with
         this array as data.
         """
-        return nanprod(self, *args, **kwargs)
+        return op.nanprod(self, *args, **kwargs)
 
     def mean(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`mean`.
@@ -1998,7 +1998,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`mean`, with
         this array as data.
         """
-        return mean(self, *args, **kwargs)
+        return op.mean(self, *args, **kwargs)
 
     def max(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`max`.
@@ -2006,7 +2006,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`max`, with
         this array as data.
         """
-        return max(self, *args, **kwargs)
+        return op.max(self, *args, **kwargs)
 
     def min(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`min`.
@@ -2014,7 +2014,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`min`, with
         this array as data.
         """
-        return min(self, *args, **kwargs)
+        return op.min(self, *args, **kwargs)
 
     def norm(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`norm`.
@@ -2022,7 +2022,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`norm`, with
         this array as data.
         """
-        return norm(self, *args, **kwargs)
+        return op.norm(self, *args, **kwargs)
 
     def round(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`round`.
@@ -2030,7 +2030,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`round`, with
         this array as data.
         """
-        return round(self, *args, **kwargs)
+        return op.round(self, *args, **kwargs)
 
     def rint(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`rint`.
@@ -2038,7 +2038,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`rint`, with
         this array as data.
         """
-        return rint(self, *args, **kwargs)
+        return op.rint(self, *args, **kwargs)
 
     def fix(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`fix`.
@@ -2046,7 +2046,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`fix`, with
         this array as data.
         """
-        return fix(self, *args, **kwargs)
+        return op.fix(self, *args, **kwargs)
 
     def floor(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`floor`.
@@ -2054,7 +2054,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`floor`, with
         this array as data.
         """
-        return floor(self, *args, **kwargs)
+        return op.floor(self, *args, **kwargs)
 
     def ceil(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`ceil`.
@@ -2062,7 +2062,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`ceil`, with
         this array as data.
         """
-        return ceil(self, *args, **kwargs)
+        return op.ceil(self, *args, **kwargs)
 
     def trunc(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`trunc`.
@@ -2070,7 +2070,7 @@ class Symbol(SymbolBase):
         The arguments are the same as for :py:func:`trunc`, with
         this array as data.
         """
-        return trunc(self, *args, **kwargs)
+        return op.trunc(self, *args, **kwargs)
 
     def wait_to_read(self):
         raise NotImplementedForSymbol(self.wait_to_read, None)

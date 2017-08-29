@@ -348,7 +348,7 @@ def test_sparse_nd_transpose():
 def test_sparse_nd_output_fallback():
     shape = (10, 10)
     out = mx.nd.zeros(shape=shape, stype='row_sparse')
-    mx.nd.random_normal(shape=shape, out=out)
+    mx.nd.random.normal(shape=shape, out=out)
     assert(np.sum(out.asnumpy()) != 0)
 
 def test_sparse_nd_random():
@@ -357,7 +357,7 @@ def test_sparse_nd_random():
     if default_context().device_type is 'gpu':
         return
     shape = (100, 100)
-    fns = [mx.nd.random_uniform, mx.nd.random_normal, mx.nd.random_gamma]
+    fns = [mx.nd.random.uniform, mx.nd.random.normal, mx.nd.random.gamma]
     for fn in fns:
         rsp_out = mx.nd.zeros(shape=shape, stype='row_sparse')
         dns_out = mx.nd.zeros(shape=shape, stype='default')
