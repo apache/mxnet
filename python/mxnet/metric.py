@@ -19,7 +19,7 @@
 # pylint: disable=no-member, too-many-lines
 
 """Online evaluation metric module."""
-from __future__ import absolute_import
+from __future__ import absolute_import, division
 import math
 from collections import OrderedDict
 
@@ -567,6 +567,147 @@ class F1(EvalMetric):
 
             self.sum_metric += f1_score
             self.num_inst += 1
+
+@register
+@alias('top_k_precision')
+class TopKPrecision(EvalMetric):
+    """Computes top k precision metric.
+    top k differs from regular precision in that the score is only
+    computed for the top k predictions. "correct" or "wrong" entries
+    outside the top k are ignored
+    Parameters
+    ----------
+    top_k : int
+        Whether targets are in top k predictions.
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+
+    Examples
+    --------
+    >>>ytrue = [[1.,0.,1.,0.],[0.,1.,1.,0.]]
+    >>>ytrue = mx.nd.array(ytrue)
+    >>>yhat = [[0.4,0.8,0.1,0.1],[0.4,0.8,0.8,0.4]]
+    >>>yhat = mx.nd.array(yhat)
+    >>>pre = mx.metric.create('top_k_precision',top_k=2)
+    >>>pre.update(preds = [yhat], labels = [ytrue])
+    >>>print pre.get()[1]
+    >>> 0.75
+
+    """
+
+    def __init__(self, top_k=1, name='top_k_precision',
+                 output_names=None, label_names=None):
+        super(TopKPrecision, self).__init__(
+            name, top_k=top_k,
+            output_names=output_names, label_names=label_names)
+        self.top_k = top_k
+
+
+    def update(self, labels, preds):
+        """Updates the internal evaluation result.
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data. (binary)
+        preds : list of `NDArray`
+            Predicted values. (float)
+
+        Returns:
+        --------
+        The precision at K (float)
+        """
+        check_label_shapes(labels, preds)
+
+        for label, pred_label in zip(labels, preds):
+            assert(len(pred_label.shape) <= 2), 'Predictions should be no more than 2 dims'
+            pred_label = numpy.argsort(-pred_label.asnumpy().astype('float32'), axis=1)
+            label = label.asnumpy().astype('int32')
+            check_label_shapes(label, pred_label)
+            num_samples = pred_label.shape[0]
+            local_precision = 0.0
+            for s in range(num_samples):
+                truepos = set(numpy.ravel(numpy.argwhere(label[s, :] == 1)))
+                predpos = set(numpy.ravel(pred_label[s, :self.top_k]))
+                local_precision += len(truepos.intersection(predpos))/self.top_k
+            self.sum_metric += local_precision
+            self.num_inst += num_samples
+
+
+@register
+@alias('top_k_recall')
+class TopKRecall(EvalMetric):
+    """Computes top k recall metric.
+    top k differs from regular recall in that the score is only
+    computed for the top k predictions. "correct" or "wrong" entries
+    outside the top k are ignored
+    Parameters
+    ----------
+    top_k : int
+        Whether targets are in top k predictions.
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+
+    Examples
+    --------
+    >>>ytrue = [[1.,0.,1.,0.],[0.,1.,1.,0.]]
+    >>>ytrue = mx.nd.array(ytrue)
+    >>>yhat = [[0.4,0.8,0.1,0.1],[0.4,0.8,0.8,0.4]]
+    >>>yhat = mx.nd.array(yhat)
+    >>>pre = mx.metric.create('top_k_precision',top_k=2)
+    >>>rec.update(preds = [yhat], labels = [ytrue])
+    >>>print rec.get()[1]
+    >>> 0.75
+
+    """
+
+    def __init__(self, top_k=1, name='top_k_recall',
+                 output_names=None, label_names=None):
+        super(TopKRecall, self).__init__(
+            name, top_k=top_k,
+            output_names=output_names, label_names=label_names)
+        self.top_k = top_k
+
+    def update(self, labels, preds):
+        """Updates the internal evaluation result.
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data. (binary)
+        preds : list of `NDArray`
+            Predicted values. (float)
+
+        Returns:
+        --------
+        The recall at K (float)
+        """
+        check_label_shapes(labels, preds)
+
+        for label, pred_label in zip(labels, preds):
+            assert(len(pred_label.shape) <= 2), 'Predictions should be no more than 2 dims'
+            pred_label = numpy.argsort(-pred_label.asnumpy().astype('float32'), axis=1)
+            label = label.asnumpy().astype('int32')
+            check_label_shapes(label, pred_label)
+            num_samples = pred_label.shape[0]
+            local_recall = 0.0
+            for s in range(num_samples):
+                truepos = set(numpy.ravel(numpy.argwhere(label[s, :] == 1)))
+                predpos = set(numpy.ravel(pred_label[s, :self.top_k]))
+                local_recall += len(truepos.intersection(predpos))/len(truepos)
+            self.sum_metric += local_recall
+            self.num_inst += num_samples
+
 
 
 @register
