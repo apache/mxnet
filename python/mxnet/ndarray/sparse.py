@@ -991,5 +991,8 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
         arr = csr_matrix(csr.data, csr.indptr, csr.indices, csr.shape, dtype=dtype,
                          indptr_type=indptr_type, indices_type=indices_type)
         return arr
+    elif isinstance(source_array, (np.ndarray, np.generic)):
+        raise ValueError("Please use mx.nd.array to create an NDArray with source_array of type ",
+                          type(source_array))
     else:
         raise ValueError("Unexpected source_array type: ", type(source_array))

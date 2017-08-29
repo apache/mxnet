@@ -28,6 +28,10 @@ from .sparse import zeros as _zeros_sparse_ndarray
 from .sparse import empty as _empty_sparse_ndarray
 from .sparse import array as _sparse_array
 from .sparse import _ndarray_cls
+try:
+    import scipy.sparse as spsp
+except ImportError:
+    spsp = None
 
 
 def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
@@ -143,13 +147,9 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
     >>> mx.nd.array(mx.nd.zeros((3, 2), stype='row_sparse'))
     <RowSparseNDArray 3x2 @cpu(0)>
     """
-    try:
-        import scipy.sparse as sp
-        if isinstance(source_array, sp.csr.csr_matrix):
-            return _sparse_array(source_array, ctx=ctx, dtype=dtype, aux_types=aux_types)
-    except ImportError:
-        pass
-    if isinstance(source_array, NDArray) and source_array.stype != 'default':
+    if spsp is not None and isinstance(source_array, spsp.csr.csr_matrix):
+        return _sparse_array(source_array, ctx=ctx, dtype=dtype, aux_types=aux_types)
+    elif isinstance(source_array, NDArray) and source_array.stype != 'default':
         return _sparse_array(source_array, ctx=ctx, dtype=dtype, aux_types=aux_types)
     else:
         return _array(source_array, ctx=ctx, dtype=dtype)
