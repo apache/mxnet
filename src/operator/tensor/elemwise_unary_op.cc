@@ -62,7 +62,7 @@ The storage type of ``sigmoid`` output is always denseThe storage type of ``sigm
  is always dense
 
 )code" ADD_FILELINE)
-  .set_attr<FCompute>("FCompute<cpu>", UnaryOp::KernelCompute<
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::KernelCompute<
   cpu, kernel_launch_op::sigmoid>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sigmoid"});
 
