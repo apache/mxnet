@@ -71,6 +71,7 @@ def test_sampler():
 
 def test_datasets():
     assert len(gluon.data.vision.MNIST(root='data')) == 60000
+    assert len(gluon.data.vision.FashionMNIST(root='data')) == 60000
     assert len(gluon.data.vision.CIFAR10(root='data', train=False)) == 10000
 
 def test_image_folder_dataset():
