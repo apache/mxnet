@@ -47,7 +47,8 @@ class Trainer(object):
     Properties
     ----------
     learning_rate: float
-        The learning rate of the optimizer or the LRScheduler (if defined).
+        The learning rate of the optimizer or the LRScheduler (if LRScheduler is
+        defined).
     """
     def __init__(self, params, optimizer, optimizer_params=None, kvstore='device'):
         if isinstance(params, (dict, ParameterDict)):
