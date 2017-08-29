@@ -176,7 +176,8 @@ class ConvolutionOp : public Operator {
         for (index_t g = 0; g < group_; ++g) {
           // Legacy approach shown here for comparison:
           //   Assign(output_3d[g], req[conv::kOut], dot(weight_3d[g], col_buffer_3d[g]));
-          linalg_gemm(weight_3d[g], col_buffer_3d[g], output_3d[g], false, false, s, req[conv::kOut]);
+          linalg_gemm(weight_3d[g], col_buffer_3d[g], output_3d[g], false, false, s,
+            req[conv::kOut]);
         }
       }
     }
