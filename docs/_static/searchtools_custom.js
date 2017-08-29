@@ -756,15 +756,17 @@ var Search = {
 };
 
 $(document).ready(function() {
-  var searchBoxWidth = 140;
-  var searchBoxWidthModifier = 200;
-    
+  var searchBoxWidth = 200;
+  var searchBoxWidthModifier = 200; 
   var focusInputColor = "white";
   var focusIconColor = "dimgray";
   var focusPlaceColor = "searchBoxExp";
-  var normalInputColor = "#87CEFA";
+  var normalInputColor = "transparent";
   var normalIconColor = "white";
   var normalPlaceColor = "searchBoxNorm";
+  if($(window).width() <= 510) {
+      searchBoxWidthModifier = 0;
+  }
     
   function focusOut() {
     $("#search-input-wrap").width(searchBoxWidth);
