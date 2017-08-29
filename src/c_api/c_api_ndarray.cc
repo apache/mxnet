@@ -147,7 +147,9 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
   SetNDInputsOutputs(op, &ndinputs, &ndoutputs, num_inputs, inputs,
       num_outputs, infered_num_outputs, num_visible_outputs, outputs);
 
-  ImperativeRuntime::Get()->Invoke(Context::CPU(), std::move(attrs), ndinputs, ndoutputs);
+  auto state = ImperativeRuntime::Get()->Invoke(Context::CPU(), attrs, ndinputs, ndoutputs);
+  ImperativeRuntime::Get()->RecordOp(std::move(attrs), ndinputs, ndoutputs, state);
+
 
   for (int i = *num_outputs; i < infered_num_outputs; ++i) delete ndoutputs[i];
 
@@ -276,9 +278,11 @@ int MXInvokeCachedOp(CachedOpHandle handle,
       ndoutputs.emplace_back(arrays[idx.entry_id(i, j)]);
     }
 
-    ImperativeRuntime::Get()->Invoke(
-        default_ctx, nnvm::NodeAttrs(node.source->attrs), ndinputs, ndoutputs,
-        &save_inputs[i], &save_outputs[i]);
+    auto state = ImperativeRuntime::Get()->Invoke(
+        default_ctx, node.source->attrs, ndinputs, ndoutputs);
+    ImperativeRuntime::Get()->RecordOp(
+        nnvm::NodeAttrs(node.source->attrs), ndinputs, ndoutputs,
+        state, &save_inputs[i], &save_outputs[i]);
   }
 
   if (out_array != nullptr) {
@@ -381,18 +385,18 @@ int MXAutogradBackwardEx(mx_uint num_output,
                          int is_train) {
   API_BEGIN();
 
-  std::vector<NDArray> outputs, ograds;
+  std::vector<NDArray*> outputs, ograds;
   outputs.reserve(num_output);
   for (mx_uint i = 0; i < num_output; ++i) {
-    outputs.emplace_back(*static_cast<NDArray*>(output_handles[i]));
+    outputs.emplace_back(reinterpret_cast<NDArray*>(output_handles[i]));
   }
 
   ograds.reserve(num_output);
   for (mx_uint i = 0; i < num_output; ++i) {
-    if (ograd_handles != nullptr && ograd_handles[i] != nullptr) {
-      ograds.emplace_back(*static_cast<NDArray*>(ograd_handles[i]));
+    if (ograd_handles != nullptr) {
+      ograds.emplace_back(reinterpret_cast<NDArray*>(ograd_handles[i]));
     } else {
-      ograds.emplace_back();
+      ograds.emplace_back(nullptr);
     }
   }
 

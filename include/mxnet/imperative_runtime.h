@@ -56,25 +56,28 @@ class ImperativeRuntime {
   }
   /*! \brief to record operator, return corresponding node. */
   void RecordOp(nnvm::NodeAttrs&& attrs,
-              const std::vector<NDArray*>& inputs,
-              const std::vector<NDArray*>& outputs,
-              const OpStatePtr& state = OpStatePtr(),
-              std::vector<bool>* p_save_inputs = nullptr,
-              std::vector<bool>* p_save_outputs = nullptr);
+                const std::vector<NDArray*>& inputs,
+                const std::vector<NDArray*>& outputs,
+                const OpStatePtr& state = OpStatePtr(),
+                std::vector<bool>* p_save_inputs = nullptr,
+                std::vector<bool>* p_save_outputs = nullptr);
   /*! \brief */
-  void Invoke(const Context& default_ctx,
-              nnvm::NodeAttrs&& attrs,
-              const std::vector<NDArray*>& inputs,
-              const std::vector<NDArray*>& outputs,
-              std::vector<bool>* p_save_inputs = nullptr,
-              std::vector<bool>* p_save_outputs = nullptr);
+  OpStatePtr Invoke(const Context& default_ctx,
+                    const nnvm::NodeAttrs& attrs,
+                    const std::vector<NDArray*>& inputs,
+                    const std::vector<NDArray*>& outputs);
+  /*! \brief */
+  OpStatePtr InvokeOp(const Context& ctx,
+                      const nnvm::NodeAttrs& attrs,
+                      const std::vector<NDArray*>& inputs,
+                      const std::vector<NDArray*>& outputs);
   /*! \brief mark variables for computing gradients. */
   void MarkVariables(const std::vector<NDArray*>& variables,
                      const std::vector<mx_uint>& grad_reqs,
                      const std::vector<NDArray*>& gradients);
   /*! \brief compute the gradient of outputs w.r.t variables. */
-  void Backward(const std::vector<NDArray>& outputs,
-                const std::vector<NDArray>& ograds,
+  void Backward(const std::vector<NDArray*>& outputs,
+                const std::vector<NDArray*>& ograds,
                 bool is_train, bool retain_graph);
   /*! \return AutogradRuntime singleton */
   static ImperativeRuntime* Get();
@@ -91,6 +94,12 @@ class ImperativeRuntime {
 
     explicit AGInfo() :
       grad_req(kNullOp), fresh_out_grad(false) {}
+
+    void clear() {
+      if (out_grads.size()) return;
+      outputs.clear();
+      state.reset();
+    }
 
     static AGInfo& Get(const nnvm::NodePtr& node) {
       return dmlc::get<AGInfo>(node->info);
