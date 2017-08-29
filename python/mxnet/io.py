@@ -189,6 +189,7 @@ class DataIter(object):
     --------
     NDArrayIter : Data-iterator for MXNet NDArray or numpy-ndarray objects.
     CSVIter : Data-iterator for csv data.
+    LibSVMIter : Data-iterator for libsvm data.
     ImageIter : Data-iterator for images.
     """
     def __init__(self, batch_size=0):
@@ -721,7 +722,7 @@ class MXDataIter(DataIter):
     """A python wrapper a C++ data iterator.
 
     This iterator is the Python wrapper to all native C++ data iterators, such
-    as `CSVIter, `ImageRecordIter`, `MNISTIter`, etc. When initializing
+    as `CSVIter`, `ImageRecordIter`, `MNISTIter`, etc. When initializing
     `CSVIter` for example, you will get an `MXDataIter` instance to use in your
     Python code. Calls to `next`, `reset`, etc will be delegated to the
     underlying C++ data iterators.

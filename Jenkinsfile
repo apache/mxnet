@@ -10,8 +10,6 @@ docker_run = 'tests/ci_build/ci_build.sh'
 max_time = 60
 // assign any caught errors here
 err = null
-// set build status to success by default
-currentBuild.result = "SUCCESS"
 
 // initialize source codes
 def init_git() {
@@ -344,7 +342,7 @@ try {
           }
         }
       },
-      'Python2/3: CPU Win':{
+      'Python 2: CPU Win':{
         node('mxnetwindows') {
           ws('workspace/ut-python-cpu') {
             init_git_win()
@@ -353,12 +351,6 @@ try {
     7z x -y vc14_cpu.7z'''
             bat """xcopy C:\\mxnet\\data data /E /I /Y
     xcopy C:\\mxnet\\model model /E /I /Y
-    call activate py3
-    set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
-    del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
-    C:\\mxnet\\test_cpu.bat"""
-                            bat """xcopy C:\\mxnet\\data data /E /I /Y
-    xcopy C:\\mxnet\\model model /E /I /Y
     call activate py2
     set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
     del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
@@ -366,7 +358,39 @@ try {
           }
          }
        },
-       'Python2/3: GPU Win':{
+       'Python 3: CPU Win': {
+          node('mxnetwindows') {
+          ws('workspace/ut-python-cpu') {
+            init_git_win()
+            unstash 'vc14_cpu'
+            bat '''rmdir /s/q pkg_vc14_cpu
+    7z x -y vc14_cpu.7z'''
+          bat """xcopy C:\\mxnet\\data data /E /I /Y
+    xcopy C:\\mxnet\\model model /E /I /Y
+    call activate py3
+    set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
+    del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
+    C:\\mxnet\\test_cpu.bat"""
+          }
+         }
+       },
+       'Python 2: GPU Win':{
+         node('mxnetwindows') {
+           ws('workspace/ut-python-gpu') {
+             init_git_win()
+             unstash 'vc14_gpu'
+             bat '''rmdir /s/q pkg_vc14_gpu
+    7z x -y vc14_gpu.7z'''
+             bat """xcopy C:\\mxnet\\data data /E /I /Y
+    xcopy C:\\mxnet\\model model /E /I /Y
+    call activate py2
+    set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
+    del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
+    C:\\mxnet\\test_gpu.bat"""
+           }
+         }
+       },
+       'Python 3: GPU Win':{
          node('mxnetwindows') {
            ws('workspace/ut-python-gpu') {
              init_git_win()
@@ -379,15 +403,9 @@ try {
     set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
     del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
     C:\\mxnet\\test_gpu.bat"""
-             bat """xcopy C:\\mxnet\\data data /E /I /Y
-    xcopy C:\\mxnet\\model model /E /I /Y
-    call activate py2
-    set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
-    del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
-    C:\\mxnet\\test_gpu.bat"""
            }
          }
-       }
+        }
     }
 
     stage('Integration Test') {
@@ -438,6 +456,8 @@ try {
         }
       }
     }
+  // set build status to success at the end
+  currentBuild.result = "SUCCESS"
 } catch (caughtError) {
     node("mxnetlinux") {
         sh "echo caught error"

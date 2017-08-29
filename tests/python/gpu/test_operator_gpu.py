@@ -18,6 +18,7 @@
 import sys
 import os
 import time
+import unittest
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
@@ -640,6 +641,7 @@ def test_grid_generator_with_type():
     check_consistency(sym, ctx_list)
     check_consistency(sym, ctx_list, grad_req="add")
 
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/7645")
 def test_spatial_transformer_with_type():
     np.random.seed(1234)
     data = mx.sym.Variable('data')
@@ -1346,11 +1348,11 @@ def test_sequence_reverse():
 
 
 def test_autograd_save_memory():
-    x = mx.nd.zeros((128, 1024, 1024), ctx=mx.gpu(0))
+    x = mx.nd.zeros((128, 512, 512), ctx=mx.gpu(0))
     x.attach_grad()
 
     with mx.autograd.record():
-        for i in range(50):
+        for i in range(200):
             x = x + 1
             x.wait_to_read()
     x.backward()

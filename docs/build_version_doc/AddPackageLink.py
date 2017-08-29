@@ -30,13 +30,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
     tag = args.current_version
 
-    src_url = "http://www.apache.org/dyn/closer.cgi/incubator/" \
+    src_url = "https://www.apache.org/dyn/closer.cgi/incubator/" \
               "mxnet/%s-incubating/apache-mxnet-src-%s-incubating.tar.gz" % (tag, tag)
-    pgp_url = "http://www.apache.org/dyn/closer.cgi/incubator/" \
+    pgp_url = "https://www.apache.org/dyn/closer.cgi/incubator/" \
               "mxnet/%s-incubating/apache-mxnet-src-%s-incubating.tar.gz.asc" % (tag, tag)
-    sha_url = "http://www.apache.org/dyn/closer.cgi/incubator/" \
+    sha_url = "https://www.apache.org/dyn/closer.cgi/incubator/" \
               "mxnet/%s-incubating/apache-mxnet-src-%s-incubating.tar.gz.sha" % (tag, tag)
-    md5_url = "http://www.apache.org/dyn/closer.cgi/incubator/" \
+    md5_url = "https://www.apache.org/dyn/closer.cgi/incubator/" \
               "mxnet/%s-incubating/apache-mxnet-src-%s-incubating.tar.gz.md5" % (tag, tag)
 
     download_str = "<div class='btn-group' role='group'>"
