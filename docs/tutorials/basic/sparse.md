@@ -214,15 +214,21 @@ Operators that have specialized implementation for sparse arrays can be accessed
 You can read the [mxnet.ndarray.sparse API documentation](mxnet.io/api/python/ndarray.html) to find
 what sparse operators are available.
 
-For any sparse operator, the storage type of output array is inferred based on inputs. You can either read
-the documentation or inspect the `stype` attribute of output array to know what storage type is inferred:
-
 ```python
 shape = (3, 4)
 data = [7, 8, 9]
 indptr = [0, 2, 2, 3]
 indices = [0, 2, 1]
-a = mx.nd.sparse.csr_matrix(data, indptr, indices, shape)
+a = mx.nd.sparse.csr_matrix(data, indptr, indices, shape) # a csr matrix as lhs
+rhs = mx.nd.ones((4, 1))      # a dense vector as rhs
+out = mx.nd.sparse.dot(a, rhs)  # invoke sparse dot operator specialized for dot(csr, dense)
+{'out':out}
+```
+
+For any sparse operator, the storage type of output array is inferred based on inputs. You can either read
+the documentation or inspect the `stype` attribute of output array to know what storage type is inferred:
+
+```python
 b = a * 2  # b will be a CSRNDArray since zero multiplied by 2 is still zero
 c = a + 1  # c will be a dense NDArray
 {'b.stype':b.stype, 'c.stype':c.stype}
@@ -237,9 +243,57 @@ d = mx.nd.log(a) # warnings will be printed
 {'a.stype':a.stype, 'd':d} # stype of a is not changed
 ```
 
-## Loading Sparse Data
+## Loading LibSVM Data
 
 Sparse data stored in libsvm file format can be loaded with [mx.io.LibSVMIter](https://mxnet.incubator.apache.org/versions/master/api/python/io.html#mxnet.io.LibSVMIter).
 Note that the indices are expected to be zero-based instead of one-based.
+
+## Advanced Topics
+
+### Serialize From/To Filesystems
+
+* We can save (load) data to (from) disk by using the ``pickle`` function:
+
+```python
+import pickle as pkl
+a = mx.nd.ones((2, 3)).tostype('csr')
+# pack and then dump into disk
+data = pkl.dumps(a)
+pkl.dump(data, open('tmp.pickle', 'wb'))
+# load from disk and then unpack
+data = pkl.load(open('tmp.pickle', 'rb'))
+b = pkl.loads(data)
+b
+```
+
+* We can also directly dump to disk in binary format by using the ``save``
+and ``load`` methods:
+
+```python
+a = mx.nd.ones((2,3)).tostype('csr')
+b = mx.nd.ones((5,6))
+mx.nd.save("temp.ndarray", [a,b])
+c = mx.nd.load("temp.ndarray")
+c
+d = {'a':a, 'b':b}
+mx.nd.save("temp.ndarray", d)
+e = mx.nd.load("temp.ndarray")
+e
+```
+
+### GPU Support
+
+By default, CSRNDArray operators are executed on CPU. In MXNet, GPU support for CSRNDArray is experimental
+with few sparse operators such as cast_storage and dot.
+
+To create a CSRNDArray on gpu, we need to explicitly specify the context:
+
+**Note** In order to execute the following section on a cpu set gpu_device to mx.cpu().
+```python
+gpu_device=mx.gpu() # Change this to mx.cpu() in absence of GPUs.
+
+a = mx.nd.sparse.zeros('csr', (100, 100), ctx=gpu_device)
+a
+```
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
