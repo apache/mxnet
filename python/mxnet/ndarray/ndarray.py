@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable= too-many-lines, redefined-builtin, protected-access
+# pylint: disable=too-many-lines, protected-access
 # pylint: disable=import-error, no-name-in-module, undefined-variable
 """NDArray API of MXNet."""
 from __future__ import absolute_import
@@ -38,10 +38,15 @@ from ..base import ctypes2buffer
 from ..context import Context
 from . import _internal
 from .op import NDArrayBase, _STORAGE_TYPE_ID_TO_STR
+from . import cast_storage
 from . import broadcast_add, broadcast_mul, transpose, broadcast_not_equal, broadcast_power
-from . import broadcast_sub, broadcast_div, broadcast_to, broadcast_equal, cast_storage
+from . import broadcast_sub, broadcast_div, broadcast_to, broadcast_axes, broadcast_equal
 from . import broadcast_greater, broadcast_greater_equal, broadcast_lesser, broadcast_lesser_equal
-from . import zeros_like, slice, broadcast_minimum, broadcast_maximum, broadcast_mod
+from . import zeros_like, ones_like, broadcast_minimum, broadcast_maximum, broadcast_mod
+from . import flatten, norm, rint, fix, floor, ceil, split, slice_axis, one_hot, pick, take
+from . import trunc, expand_dims, flip, tile, repeat, pad, clip, sign
+from . import nansum, prod, nanprod, mean, sort, topk, argsort, argmax, argmin
+from . import sum, round, max, min, slice, abs # pylint: disable=redefined-builtin
 
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
            "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",
@@ -673,6 +678,318 @@ fixed-size items.
                                          ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
+    def zeros_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`zeros_like`.
+
+        The arguments are the same as for :py:func:`zeros_like`, with
+        this array as data.
+        """
+        return zeros_like(self, *args, **kwargs)
+
+    def ones_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`ones_like`.
+
+        The arguments are the same as for :py:func:`ones_like`, with
+        this array as data.
+        """
+        return ones_like(self, *args, **kwargs)
+
+    def broadcast_axes(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`broadcast_axes`.
+
+        The arguments are the same as for :py:func:`broadcast_axes`, with
+        this array as data.
+        """
+        return broadcast_axes(self, *args, **kwargs)
+
+    def repeat(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`repeat`.
+
+        The arguments are the same as for :py:func:`repeat`, with
+        this array as data.
+        """
+        return repeat(self, *args, **kwargs)
+
+    def pad(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`pad`.
+
+        The arguments are the same as for :py:func:`pad`, with
+        this array as data.
+        """
+        return pad(self, *args, **kwargs)
+
+    def swapaxes(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`swapaxes`.
+
+        The arguments are the same as for :py:func:`swapaxes`, with
+        this array as data.
+        """
+        return swapaxes(self, *args, **kwargs)
+
+    def split(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`split`.
+
+        The arguments are the same as for :py:func:`split`, with
+        this array as data.
+        """
+        return split(self, *args, **kwargs)
+
+    def slice(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`slice`.
+
+        The arguments are the same as for :py:func:`slice`, with
+        this array as data.
+        """
+        return slice(self, *args, **kwargs)
+
+    def slice_axis(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`slice_axis`.
+
+        The arguments are the same as for :py:func:`slice_axis`, with
+        this array as data.
+        """
+        return slice_axis(self, *args, **kwargs)
+
+    def take(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`take`.
+
+        The arguments are the same as for :py:func:`take`, with
+        this array as data.
+        """
+        return take(self, *args, **kwargs)
+
+    def one_hot(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`one_hot`.
+
+        The arguments are the same as for :py:func:`one_hot`, with
+        this array as data.
+        """
+        return one_hot(self, *args, **kwargs)
+
+    def pick(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`pick`.
+
+        The arguments are the same as for :py:func:`pick`, with
+        this array as data.
+        """
+        return pick(self, *args, **kwargs)
+
+    def sort(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sort`.
+
+        The arguments are the same as for :py:func:`sort`, with
+        this array as data.
+        """
+        return sort(self, *args, **kwargs)
+
+    def topk(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`topk`.
+
+        The arguments are the same as for :py:func:`topk`, with
+        this array as data.
+        """
+        return topk(self, *args, **kwargs)
+
+    def argsort(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`argsort`.
+
+        The arguments are the same as for :py:func:`argsort`, with
+        this array as data.
+        """
+        return argsort(self, *args, **kwargs)
+
+    def argmax(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`argmax`.
+
+        The arguments are the same as for :py:func:`argmax`, with
+        this array as data.
+        """
+        return argmax(self, *args, **kwargs)
+
+    def argmin(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`argmin`.
+
+        The arguments are the same as for :py:func:`argmin`, with
+        this array as data.
+        """
+        return argmin(self, *args, **kwargs)
+
+    def clip(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`clip`.
+
+        The arguments are the same as for :py:func:`clip`, with
+        this array as data.
+        """
+        return clip(self, *args, **kwargs)
+
+    def abs(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`abs`.
+
+        The arguments are the same as for :py:func:`abs`, with
+        this array as data.
+        """
+        return abs(self, *args, **kwargs)
+
+    def sign(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sign`.
+
+        The arguments are the same as for :py:func:`sign`, with
+        this array as data.
+        """
+        return sign(self, *args, **kwargs)
+
+    def flatten(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`flatten`.
+
+        The arguments are the same as for :py:func:`flatten`, with
+        this array as data.
+        """
+        return flatten(self, *args, **kwargs)
+
+    def expand_dims(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`expand_dims`.
+
+        The arguments are the same as for :py:func:`expand_dims`, with
+        this array as data.
+        """
+        return expand_dims(self, *args, **kwargs)
+
+    def tile(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`tile`.
+
+        The arguments are the same as for :py:func:`tile`, with
+        this array as data.
+        """
+        return tile(self, *args, **kwargs)
+
+    def transpose(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`transpose`.
+
+        The arguments are the same as for :py:func:`transpose`, with
+        this array as data.
+        """
+        return transpose(self, *args, **kwargs)
+
+    def flip(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`flip`.
+
+        The arguments are the same as for :py:func:`flip`, with
+        this array as data.
+        """
+        return flip(self, *args, **kwargs)
+
+    def sum(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sum`.
+
+        The arguments are the same as for :py:func:`sum`, with
+        this array as data.
+        """
+        return sum(self, *args, **kwargs)
+
+    def nansum(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`nansum`.
+
+        The arguments are the same as for :py:func:`nansum`, with
+        this array as data.
+        """
+        return nansum(self, *args, **kwargs)
+
+    def prod(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`prod`.
+
+        The arguments are the same as for :py:func:`prod`, with
+        this array as data.
+        """
+        return prod(self, *args, **kwargs)
+
+    def nanprod(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`nanprod`.
+
+        The arguments are the same as for :py:func:`nanprod`, with
+        this array as data.
+        """
+        return nanprod(self, *args, **kwargs)
+
+    def mean(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`mean`.
+
+        The arguments are the same as for :py:func:`mean`, with
+        this array as data.
+        """
+        return mean(self, *args, **kwargs)
+
+    def max(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`max`.
+
+        The arguments are the same as for :py:func:`max`, with
+        this array as data.
+        """
+        return max(self, *args, **kwargs)
+
+    def min(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`min`.
+
+        The arguments are the same as for :py:func:`min`, with
+        this array as data.
+        """
+        return min(self, *args, **kwargs)
+
+    def norm(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`norm`.
+
+        The arguments are the same as for :py:func:`norm`, with
+        this array as data.
+        """
+        return norm(self, *args, **kwargs)
+
+    def round(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`round`.
+
+        The arguments are the same as for :py:func:`round`, with
+        this array as data.
+        """
+        return round(self, *args, **kwargs)
+
+    def rint(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`rint`.
+
+        The arguments are the same as for :py:func:`rint`, with
+        this array as data.
+        """
+        return rint(self, *args, **kwargs)
+
+    def fix(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`fix`.
+
+        The arguments are the same as for :py:func:`fix`, with
+        this array as data.
+        """
+        return fix(self, *args, **kwargs)
+
+    def floor(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`floor`.
+
+        The arguments are the same as for :py:func:`floor`, with
+        this array as data.
+        """
+        return floor(self, *args, **kwargs)
+
+    def ceil(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`ceil`.
+
+        The arguments are the same as for :py:func:`ceil`, with
+        this array as data.
+        """
+        return ceil(self, *args, **kwargs)
+
+    def trunc(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`trunc`.
+
+        The arguments are the same as for :py:func:`trunc`, with
+        this array as data.
+        """
+        return trunc(self, *args, **kwargs)
+
     # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
         """Broadcasts the input array to a new shape.
@@ -1281,7 +1598,7 @@ def moveaxis(tensor, source, destination):
     return transpose(tensor, axes)
 
 
-# pylint: disable= no-member, protected-access, too-many-arguments
+# pylint: disable= no-member, protected-access, too-many-arguments, redefined-outer-name
 def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
     """Returns evenly spaced values within a given interval.
 
@@ -2330,6 +2647,7 @@ def concatenate(arrays, axis=0, always_copy=True):
     return ret
 
 
+# pylint: disable=redefined-outer-name
 def imdecode(str_img, clip_rect=(0, 0, 0, 0), out=None, index=0, channels=3, mean=None):
     """DEPRECATED, use mx.img instead
 
