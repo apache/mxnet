@@ -40,7 +40,6 @@ rnn.graph <- function(num.rnn.layer,
   cls.weight <- mx.symbol.Variable("cls.weight")
   cls.bias <- mx.symbol.Variable("cls.bias")
   
-  data <- mx.symbol.transpose(data=data)  
   embed <- mx.symbol.Embedding(data=data, input_dim=input.size,
                                weight=embed.weight, output_dim=num.embed, name="embed")
   
@@ -70,18 +69,16 @@ rnn.graph <- function(num.rnn.layer,
     
     if (masking) mask <- mx.symbol.SequenceMask(data = rnn[[1]], use.sequence.length = T, sequence_length = seq.mask, value = 0, name = "mask") else
       mask <- mx.symbol.identity(data = rnn[[1]], name = "mask")
+
+    reshape = mx.symbol.reshape(mask, shape=c(num.hidden, -1))
     
-    reshape = mx.symbol.transpose(mask)
-    flatten = mx.symbol.flatten(reshape)
-    transpose = mx.symbol.transpose(flatten)
-    
-    decode <- mx.symbol.FullyConnected(data=transpose,
+    decode <- mx.symbol.FullyConnected(data=reshape,
                                        weight=cls.weight,
                                        bias=cls.bias,
                                        num.hidden=num.label,
                                        name = "decode")
     
-    label <- mx.symbol.reshape(data=label, shape=c(-1))
+    label <- mx.symbol.reshape(data=label, shape=c(-1), name = "label_reshape")
     loss <- mx.symbol.SoftmaxOutput(data=decode, label=label, use_ignore = !ignore_label == -1, ignore_label = ignore_label, name = "loss")
     
   }
@@ -221,16 +218,16 @@ rnn.unroll <- function(num.rnn.layer,
   label <- mx.symbol.Variable("label")
   data <- mx.symbol.Variable("data")
   
-  embed <- mx.symbol.Embedding(data=data, input_dim=input.size,
-                               weight=embed.weight, output_dim=num.embed, name="embed")
+  embed <- mx.symbol.Embedding(data = data, input_dim = input.size,
+                               weight=embed.weight, output_dim = num.embed, name = "embed")
   
-  wordvec <- mx.symbol.split(data=embed, axis=1, num.outputs=seq.len, squeeze_axis=T)
+  embed <- mx.symbol.split(data = embed, axis = 0, num.outputs = seq.len, squeeze_axis = T)
   
   last.hidden <- list()
   last.states <- list()
   
   for (seqidx in 1:seq.len) {
-    hidden <- wordvec[[seqidx]]
+    hidden <- embed[[seqidx]]
     
     for (i in 1:num.rnn.layer) {
       
@@ -243,14 +240,13 @@ rnn.unroll <- function(num.rnn.layer,
       }
       
       next.state <- cell.symbol(num.hidden = num.hidden, 
-                                indata=hidden,
-                                prev.state=prev.state,
-                                param=param.cells[[i]],
-                                seqidx=seqidx, 
-                                layeridx=i,
-                                dropout=dropout)
+                                indata = hidden,
+                                prev.state = prev.state,
+                                param = param.cells[[i]],
+                                seqidx = seqidx, 
+                                layeridx = i,
+                                dropout = dropout)
       hidden <- next.state$h
-      #if (dropout > 0) hidden <- mx.symbol.Dropout(data=hidden, p=dropout)
       last.states[[i]] <- next.state
     }
     
@@ -261,26 +257,26 @@ rnn.unroll <- function(num.rnn.layer,
   }
   
   if (config=="seq-to-one"){
-    fc <- mx.symbol.FullyConnected(data=hidden,
-                                   weight=cls.weight,
-                                   bias=cls.bias,
-                                   num.hidden=num.label)
+    fc <- mx.symbol.FullyConnected(data = hidden,
+                                   weight = cls.weight,
+                                   bias = cls.bias,
+                                   num.hidden = num.label)
     
-    loss <- mx.symbol.SoftmaxOutput(data=fc, name="sm", label=label, use_ignore = !ignore_label == -1, ignore_label = ignore_label)
+    loss <- mx.symbol.SoftmaxOutput(data = fc, name="sm", label=label, use_ignore = !ignore_label == -1, ignore_label = ignore_label)
     
   } else if (config=="one-to-one"){
     
-    last.hidden_expand = lapply(last.hidden, function(i) mx.symbol.expand_dims(i, axis=1))
-    concat <-mx.symbol.concat(last.hidden_expand, num.args = seq.len, dim = 1)
-    reshape = mx.symbol.reshape(concat, shape=c(num.hidden, -1))
+    # concat hidden units - concat seq.len blocks of dimension num.hidden x batch.size
+    concat <- mx.symbol.concat(data = last.hidden, num.args = seq.len, dim = 0, name = "concat")
     
-    fc <- mx.symbol.FullyConnected(data=reshape,
-                                   weight=cls.weight,
-                                   bias=cls.bias,
-                                   num.hidden=num.label)
+    decode <- mx.symbol.FullyConnected(data = concat,
+                                       weight = cls.weight,
+                                       bias = cls.bias,
+                                       num.hidden = num.label,
+                                       name = "decode")
     
-    label <- mx.symbol.reshape(data=label, shape=c(-1))
-    loss <- mx.symbol.SoftmaxOutput(data=fc, name="sm", label=label, use_ignore = !ignore_label == -1, ignore_label = ignore_label)
+    label <- mx.symbol.reshape(data = label, shape = -1, name = "label_reshape")
+    loss <- mx.symbol.SoftmaxOutput(data = decode, name="sm", label = label, use_ignore = !ignore_label == -1, ignore_label = ignore_label)
     
   }
   return(loss)

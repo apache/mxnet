@@ -21,11 +21,11 @@ BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "b
                             }, reset = function() {
                               buckets_nb <- length(bucket.names)
                               buckets_id <- 1:buckets_nb
-                              buckets_size <- sapply(.self$buckets, function(x) {
-                                dim(x$data)[length(dim(x$data))]
+                              buckets.size <- sapply(.self$buckets, function(x) {
+                                dim(x$data)[length(dim(x$data)) - 1]
                               })
-                              .self$batch.per.bucket <- ceiling(buckets_size/.self$batch.size)
-                              .self$last.batch.pad <- .self$batch.size - buckets_size %% .self$batch.size
+                              .self$batch.per.bucket <- ceiling(buckets.size/.self$batch.size)
+                              .self$last.batch.pad <- .self$batch.size - buckets.size %% .self$batch.size
                               .self$last.batch.pad[.self$last.batch.pad == .self$batch.size] <- 0
                               
                               .self$batch.per.epoch <- sum(.self$batch.per.bucket)
@@ -44,11 +44,11 @@ BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "b
                                 .self$bucketID <- .self$bucket.plan[1]
                                 
                                 .self$buckets <- lapply(.self$buckets, function(x) {
-                                  shuffle_id <- sample(ncol(x$data))
+                                  shuffle_id <- sample(dim(x$data)[length(dim(x$data)) - 1])
                                   if (length(dim(x$label)) == 0) {
-                                    list(data = x$data[, shuffle_id], label = x$label[shuffle_id])
+                                    list(data = x$data[shuffle_id, ], label = x$label[shuffle_id])
                                   } else {
-                                    list(data = x$data[, shuffle_id], label = x$label[, shuffle_id])
+                                    list(data = x$data[shuffle_id, ], label = x$label[shuffle_id, ])
                                   }
                                 })
                               } else {
@@ -77,12 +77,12 @@ BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "b
                                 idx <- c(idx[1:(.self$batch.size - .self$last.batch.pad[names(.self$bucketID)])], 1:(.self$last.batch.pad[names(.self$bucketID)]))
                               }
                               
-                              data <- .self$buckets[[names(.self$bucketID)]]$data[, idx, drop = F]
-                              seq.mask <- as.integer(names(bucketID)) - apply(data==.self$data.mask.element, 2, sum)
+                              data <- .self$buckets[[names(.self$bucketID)]]$data[idx, , drop = F]
+                              seq.mask <- as.integer(names(bucketID)) - apply(data==.self$data.mask.element, 1, sum)
                               if (length(dim(.self$buckets[[names(.self$bucketID)]]$label)) == 0) {
                                 label <- .self$buckets[[names(.self$bucketID)]]$label[idx]
                               } else {
-                                label <- .self$buckets[[names(.self$bucketID)]]$label[, idx, drop = F]
+                                label <- .self$buckets[[names(.self$bucketID)]]$label[idx, , drop = F]
                               }
                               return(list(data = mx.nd.array(data), seq.mask = mx.nd.array(seq.mask), 
                                           label = mx.nd.array(label)))

@@ -118,7 +118,7 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
       # Update the evaluation metrics
       if (!is.null(metric)) {
         for (i in 1:ndevice) {
-          train.metric <- metric$update(label = mx.nd.reshape(slices[[i]][[length(slices[[i]])]], shape=-1), 
+          train.metric <- metric$update(label = slices[[i]][[length(slices[[i]])]], 
                                         pred = out.preds[[i]], state = train.metric)
         }
       }
@@ -177,7 +177,7 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
         
         if (!is.null(metric)) {
           for (i in 1:ndevice) {
-            eval.metric <- metric$update(mx.nd.reshape(slices[[i]][[length(slices[[i]])]], shape=-1), 
+            eval.metric <- metric$update(slices[[i]][[length(slices[[i]])]], 
                                          out.preds[[i]], eval.metric)
           }
         }

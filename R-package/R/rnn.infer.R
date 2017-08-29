@@ -6,7 +6,7 @@
 #' @param ctx The element to mask
 #'
 #' @export
-mx.rnn.infer.buckets <- function(infer.data, model, ctx = mx.cpu()) {
+mx.infer.buckets <- function(infer.data, model, ctx = mx.cpu()) {
   
   ### Initialise the iterator
   infer.data$reset()
@@ -90,9 +90,9 @@ mx.rnn.infer.buckets <- function(infer.data, model, ctx = mx.cpu()) {
 
 
 ### inference for one-to-one models
-mx.rnn.infer.buckets.one <- function(infer.data, 
-                                     symbol, arg.params, aux.params, input.params = NULL, 
-                                     ctx = mx.cpu()) {
+mx.infer.buckets.one <- function(infer.data, 
+                                 symbol, arg.params, aux.params, input.params = NULL, 
+                                 ctx = mx.cpu()) {
   
   ### Initialise the iterator
   infer.data$reset()
