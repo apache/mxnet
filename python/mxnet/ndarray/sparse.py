@@ -31,6 +31,9 @@ import warnings
 import os as _os
 import sys as _sys
 
+__all__ = ["_ndarray_cls", "csr_matrix", "row_sparse_array",
+           "BaseSparseNDArray", "CSRNDArray", "RowSparseNDArray"]
+
 # import operator
 import numpy as np
 from ..base import NotSupportedForSparseNDArray
@@ -41,11 +44,12 @@ from ..context import Context
 from . import _internal
 from .ndarray import _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .ndarray import _STORAGE_TYPE_STR_TO_ID
+from .ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
+from .ndarray import _STORAGE_TYPE_ROW_SPARSE, _STORAGE_TYPE_CSR
 from .ndarray import NDArray, _storage_type
 from .ndarray import zeros as _zeros_ndarray
 from .ndarray import array as _array
-from . import cast_storage
-from . import slice as nd_slice
+from . import op
 
 # Use different verison of SymbolBase
 # When possible, use cython to speedup part of computation.
@@ -62,10 +66,6 @@ except ImportError:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from .._ctypes.ndarray import _set_ndarray_class
 # pylint: enable=unused-import
-
-
-__all__ = ["_ndarray_cls", "csr_matrix", "row_sparse_array",
-           "BaseSparseNDArray", "CSRNDArray", "RowSparseNDArray"]
 
 
 _STORAGE_AUX_TYPES = {
@@ -300,7 +300,7 @@ class CSRNDArray(BaseSparseNDArray):
         >>> indptr = np.array([0, 2, 3, 6])
         >>> indices = np.array([0, 2, 2, 0, 1, 2])
         >>> data = np.array([1, 2, 3, 4, 5, 6])
-        >>> a = mx.nd.csr_matrix(data, indptr, indices, (3, 3))
+        >>> a = mx.nd.sparse.csr_matrix(data, indptr, indices, (3, 3))
         >>> a.asnumpy()
         array([[1, 0, 2],
                [0, 0, 3],
@@ -316,7 +316,7 @@ class CSRNDArray(BaseSparseNDArray):
             if key.start is not None or key.stop is not None:
                 begin = key.start if key.start else 0
                 end = key.stop if key.stop else self.shape[0]
-                return nd_slice(self, begin=begin, end=end)
+                return op.slice(self, begin=begin, end=end)
             else:
                 return self
         if isinstance(key, tuple):
@@ -427,7 +427,7 @@ class CSRNDArray(BaseSparseNDArray):
         """
         if stype == 'row_sparse':
             raise ValueError("cast_storage from csr to row_sparse is not supported")
-        return cast_storage(self, stype=stype)
+        return op.cast_storage(self, stype=stype)
 
     def copyto(self, other):
         """Copies the value of this array to another array.
@@ -640,7 +640,7 @@ class RowSparseNDArray(BaseSparseNDArray):
         """
         if stype == 'csr':
             raise ValueError("cast_storage from row_sparse to csr is not supported")
-        return cast_storage(self, stype=stype)
+        return op.cast_storage(self, stype=stype)
 
     def copyto(self, other):
         """Copies the value of this array to another array.
@@ -725,7 +725,7 @@ def csr_matrix(data, indptr, indices, shape, ctx=None, dtype=None, indptr_type=N
     Example
     -------
     >>> import mxnet as mx
-    >>> a = mx.nd.csr_matrix([1, 2, 3], [0, 1, 2, 2, 3], [1, 0, 2], (4, 3))
+    >>> a = mx.nd.sparse.csr_matrix([1, 2, 3], [0, 1, 2, 2, 3], [1, 0, 2], (4, 3))
     >>> a.asnumpy()
     array([[ 0.,  1.,  0.],
            [ 2.,  0.,  0.],
@@ -794,7 +794,7 @@ def row_sparse_array(data, indices, shape, ctx=None, dtype=None, indices_type=No
 
     Example
     -------
-    >>> a = mx.nd.row_sparse_array([[1, 2], [3, 4]], [1, 4], (6, 2))
+    >>> a = mx.nd.sparse.row_sparse_array([[1, 2], [3, 4]], [1, 4], (6, 2))
     >>> a.asnumpy()
     array([[ 0.,  0.],
            [ 1.,  2.],
@@ -831,14 +831,14 @@ def row_sparse_array(data, indices, shape, ctx=None, dtype=None, indices_type=No
     return result
 
 
-def _ndarray_cls(handle, writable=True, stype=None):
-    if stype is None:
+def _ndarray_cls(handle, writable=True, stype=_STORAGE_TYPE_UNDEFINED):
+    if stype == _STORAGE_TYPE_UNDEFINED:
         stype = _storage_type(handle)
-    if stype == 'default':
+    if stype == _STORAGE_TYPE_DEFAULT:
         return NDArray(handle, writable=writable)
-    elif stype == 'csr':
+    elif stype == _STORAGE_TYPE_CSR:
         return CSRNDArray(handle, writable=writable)
-    elif stype == 'row_sparse':
+    elif stype == _STORAGE_TYPE_ROW_SPARSE:
         return RowSparseNDArray(handle, writable=writable)
     else:
         raise Exception("unknown storage type")
@@ -910,13 +910,13 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
     """Creates a sparse array from any object exposing the array interface.
     """
     if isinstance(source_array, NDArray):
-        assert(source_array.stype != 'default'), \
-               "Please use `cast_storage` to create BaseSparseNDArray from an NDArray"
+        assert(source_array.stype != 'default'),\
+            "Please use `cast_storage` to create BaseSparseNDArray from an NDArray"
         dtype = source_array.dtype if dtype is None else dtype
         aux_types = source_array._aux_types if aux_types is None else aux_types
     else:
         # TODO(haibin/anisub) support creation from scipy object when `_sync_copy_from` is ready
-        raise NotImplementedError('creating BaseSparseNDArray from ' \
+        raise NotImplementedError('creating BaseSparseNDArray from '
                                   ' a non-NDArray object is not implemented.')
     arr = empty(source_array.stype, source_array.shape, ctx, dtype, aux_types)
     arr[:] = source_array

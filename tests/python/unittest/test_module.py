@@ -587,8 +587,8 @@ def test_forward_reshape():
     mod.init_optimizer(optimizer_params={'learning_rate': 0.01})
 
     # Train with original data shapes
-    data_batch = mx.io.DataBatch(data=[mx.nd.random_uniform(0, 9, dshape1),
-                                       mx.nd.random_uniform(5, 15, dshape2)],
+    data_batch = mx.io.DataBatch(data=[mx.nd.random.uniform(0, 9, dshape1),
+                                       mx.nd.random.uniform(5, 15, dshape2)],
                                  label=[mx.nd.ones(lshape)])
     mod.forward(data_batch)
     assert mod.get_outputs()[0].shape == tuple([lshape[0], num_class])
@@ -599,8 +599,8 @@ def test_forward_reshape():
     dshape1 = (3, 3, 64, 64)
     dshape2 = (3, 3, 32, 32)
     lshape = (3,)
-    data_batch = mx.io.DataBatch(data=[mx.nd.random_uniform(0, 9, dshape1),
-                                       mx.nd.random_uniform(5, 15, dshape2)],
+    data_batch = mx.io.DataBatch(data=[mx.nd.random.uniform(0, 9, dshape1),
+                                       mx.nd.random.uniform(5, 15, dshape2)],
                                  label=[mx.nd.ones(lshape)])
     mod.forward(data_batch)
     assert mod.get_outputs()[0].shape == tuple([lshape[0], num_class])
@@ -610,8 +610,8 @@ def test_forward_reshape():
     dshape1 = (20, 3, 64, 64)
     dshape2 = (20, 3, 32, 32)
     lshape = (20,)
-    data_batch = mx.io.DataBatch(data=[mx.nd.random_uniform(3, 5, dshape1),
-                                       mx.nd.random_uniform(10, 25, dshape2)],
+    data_batch = mx.io.DataBatch(data=[mx.nd.random.uniform(3, 5, dshape1),
+                                       mx.nd.random.uniform(10, 25, dshape2)],
                                  label=[mx.nd.ones(lshape)])
     mod.forward(data_batch)
     assert mod.get_outputs()[0].shape == tuple([lshape[0], num_class])
@@ -622,8 +622,8 @@ def test_forward_reshape():
     dshape1 = (20, 3, 120, 120)
     dshape2 = (20, 3, 32, 64)
     lshape = (20,)
-    data_batch = mx.io.DataBatch(data=[mx.nd.random_uniform(0, 9, dshape1),
-                                       mx.nd.random_uniform(5, 15, dshape2)],
+    data_batch = mx.io.DataBatch(data=[mx.nd.random.uniform(0, 9, dshape1),
+                                       mx.nd.random.uniform(5, 15, dshape2)],
                                  label=[mx.nd.ones(lshape)])
     mod.forward(data_batch)
     assert mod.get_outputs()[0].shape == tuple([lshape[0], num_class])
@@ -633,8 +633,8 @@ def test_forward_reshape():
     dshape1 = (5, 3, 28, 40)
     dshape2 = (5, 3, 24, 16)
     lshape = (5,)
-    data_batch = mx.io.DataBatch(data=[mx.nd.random_uniform(0, 9, dshape1),
-                                       mx.nd.random_uniform(15, 25, dshape2)],
+    data_batch = mx.io.DataBatch(data=[mx.nd.random.uniform(0, 9, dshape1),
+                                       mx.nd.random.uniform(15, 25, dshape2)],
                                  label=[mx.nd.ones(lshape)])
     mod.forward(data_batch)
     assert mod.get_outputs()[0].shape == tuple([lshape[0], num_class])
@@ -646,8 +646,8 @@ def test_forward_reshape():
     dataset_shape2 = (30, 3, 20, 40)
     labelset_shape = (30,)
 
-    eval_dataiter = mx.io.NDArrayIter(data=[mx.nd.random_uniform(0, 9, dataset_shape1),
-                                            mx.nd.random_uniform(15, 25, dataset_shape2)],
+    eval_dataiter = mx.io.NDArrayIter(data=[mx.nd.random.uniform(0, 9, dataset_shape1),
+                                            mx.nd.random.uniform(15, 25, dataset_shape2)],
                                       label=[mx.nd.ones(labelset_shape)],
                                       batch_size=5)
     assert len(mod.score(eval_data=eval_dataiter, eval_metric='acc')) == 1
@@ -658,8 +658,8 @@ def test_forward_reshape():
     dataset_shape1 = (10, 3, 30, 30)
     dataset_shape2 = (10, 3, 20, 40)
 
-    pred_dataiter = mx.io.NDArrayIter(data=[mx.nd.random_uniform(0, 9, dataset_shape1),
-                                            mx.nd.random_uniform(15, 25, dataset_shape2)])
+    pred_dataiter = mx.io.NDArrayIter(data=[mx.nd.random.uniform(0, 9, dataset_shape1),
+                                            mx.nd.random.uniform(15, 25, dataset_shape2)])
     mod.bind(data_shapes=[('data1', dshape1), ('data2', dshape2)],
              for_training=False, force_rebind=True)
     assert mod.predict(pred_dataiter).shape == tuple([10, num_class])
