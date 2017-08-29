@@ -113,6 +113,36 @@ class Trainer(object):
 
         self._kv_initialized = True
 
+
+    @property
+    def learning_rate(self):
+        return self._optimizer.lr
+
+
+    @property
+    def lr_scheduler(self):
+        return self._optimizer.lr_scheduler
+
+
+    def set_learning_rate(self, lr):
+        """Mutate the learning rate.
+
+        Parameters
+        ----------
+        lr : float
+            The new learning rate.
+        """
+        if not isinstance(self._optimizer, opt.Optimizer):
+            raise UserWarning("Optimizer has to be defined before its learning"
+                              "rate is mutated.")
+        elif self._optimizer.lr_scheduler is not None:
+            raise UserWarning("set_learning_rate mutates the value of the"
+                              "learning rate only when the LRScheduler of"
+                              "the optimizer is undefined.")
+        else:
+            self._optimizer.lr = lr
+
+
     def step(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update. Should be called after
         `autograd.compute_gradient` and outside of `record()` scope.
