@@ -300,22 +300,38 @@ try {
           }
         }
       },
-      'Python2: MKLML': {
+      'Python2: MKLML-CPU': {
         node('mxnetlinux') {
           ws('workspace/ut-python2-mklml') {
             init_git()
             unpack_lib('mklml')
             python2_ut('mklml_gpu')
+          }
+        }
+      },
+      'Python2: MKLML-GPU': {
+        node('mxnetlinux') {
+          ws('workspace/ut-python2-mklml') {
+            init_git()
+            unpack_lib('mklml')
             python2_gpu_ut('mklml_gpu')
           }
         }
       },
-      'Python3: MKLML': {
+      'Python3: MKLML-CPU': {
         node('mxnetlinux') {
           ws('workspace/ut-python-mklml') {
             init_git()
             unpack_lib('mklml')
             python3_ut('mklml_gpu')
+          }
+        }
+      },
+      'Python3: MKLML-GPU': {
+        node('mxnetlinux') {
+          ws('workspace/ut-python-mklml') {
+            init_git()
+            unpack_lib('mklml')
             python3_gpu_ut('mklml_gpu')
           }
         }
