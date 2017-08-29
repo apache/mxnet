@@ -24,6 +24,11 @@
 */
 
 #include "./deconvolution-inl.h"
+#if MXNET_USE_MKLDNN == 1
+#include <mkl_memory.h>
+#include "./mkl/mkldnn_memory-inl.h"
+#include "./mkl/mkldnn_deconvolution-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -33,6 +38,18 @@ Operator* CreateOp<cpu>(DeconvolutionParam param, int dtype,
                         std::vector<TShape> *out_shape,
                         Context ctx) {
   Operator *op = NULL;
+  #if MXNET_USE_MKLDNN == 1
+  if (param.kernel.ndim() == 2) {
+    switch (dtype) {
+    case mshadow::kFloat32:
+      return new MKLDNNDeConvolutionOp<cpu, float>(param);
+    default:
+      break;
+    }
+  }
+  if (enableMKLDNNWarnGenerated())
+    LOG(INFO) << "MKLDNNDeConvolutionOp Skip MKL DNN optimization";
+#endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new DeconvolutionOp<cpu, DType>(param);
   });

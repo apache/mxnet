@@ -25,6 +25,11 @@
 #if MXNET_USE_NNPACK == 1
 #include "./nnpack/nnpack_fully_connected-inl.h"
 #endif  // MXNET_USE_NNPACK
+#if MXNET_USE_MKLDNN == 1
+#include <mkl_memory.h>
+#include "./mkl/mkldnn_memory-inl.h"
+#include "./mkl/mkldnn_fully_connected-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -34,6 +39,16 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype,
                         std::vector<TShape> *out_shape,
                         Context ctx) {
   Operator *op = NULL;
+#if MXNET_USE_MKLDNN == 1
+  switch (dtype) {
+  case mshadow::kFloat32:
+    return new MKLDNNFullyConnectedOp<cpu, float>(param);
+  default:
+    break;
+  }
+  if (enableMKLDNNWarnGenerated())
+    LOG(INFO) << "MKLDNNFullyConnectedOp Skip MKL DNN optimization";
+#endif
 #if MXNET_USE_NNPACK == 1
   const size_t batch_size = (*in_shape)[0][0];
   // nnp_fully_connected_inference will do optimization for batch-size = 1
